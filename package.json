@@ -6,6 +6,13 @@
 		"packages/*"
 	],
 	"type": "module",
+	"scripts": {
+		"format": "oxfmt --check",
+		"format:fix": "oxfmt",
+		"lint": "oxlint",
+		"lint:fix": "oxlint --fix",
+		"typecheck": "tsc --noEmit"
+	},
 	"dependencies": {
 		"@total-typescript/ts-reset": "^0.6.1",
 		"@total-typescript/tsconfig": "^1.0.4",

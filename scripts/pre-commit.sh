@@ -2,17 +2,17 @@
 
 set -e
 
-bunx oxfmt --check . || {
-  echo "❌ Formatting issues found. Run 'bunx oxfmt .' to fix."
+bun format || {
+  echo "❌ Formatting issues found. Run 'bun format:fix' to fix."
   exit 1
 }
 
-bunx oxlint . || {
-  echo "❌ Linting issues found. Run 'bunx oxlint --fix .' to fix."
+bun lint || {
+  echo "❌ Linting issues found. Run 'bun lint:fix' to fix."
   exit 1
 }
 
-bunx tsgo || {
+bun typecheck || {
   echo "❌ Type checking failed."
   exit 1
 }
