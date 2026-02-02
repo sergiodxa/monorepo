@@ -267,7 +267,7 @@ function Pricing({
 
 						<a
 							href={pkg.link}
-							className="flex-shrink-0 px-5 py-2.5 rounded-xs relative bg-stone-950 text-stone-50 dark:bg-stone-50 dark:text-stone-950 group-data-[status=success]:bg-green-500 dark:group-data-[status=success]:bg-green-600 w-fit"
+							className="shrink-0 px-5 py-2.5 rounded-xs relative bg-stone-950 text-stone-50 dark:bg-stone-50 dark:text-stone-950 group-data-[status=success]:bg-green-500 dark:group-data-[status=success]:bg-green-600 w-fit"
 						>
 							<span>Purchase for</span>{" "}
 							{pkg.discount ? (
@@ -297,7 +297,7 @@ function Pricing({
 				</div>
 				<Link
 					to={href("/upgrade")}
-					className="flex-shrink-0 px-5 py-2.5 rounded-xs relative bg-stone-950 text-stone-50 dark:bg-stone-50 dark:text-stone-950 group-data-[status=success]:bg-green-500 dark:group-data-[status=success]:bg-green-600 w-fit"
+					className="shrink-0 px-5 py-2.5 rounded-xs relative bg-stone-950 text-stone-50 dark:bg-stone-50 dark:text-stone-950 group-data-[status=success]:bg-green-500 dark:group-data-[status=success]:bg-green-600 w-fit"
 				>
 					Upgrade now →
 				</Link>
@@ -348,7 +348,7 @@ function Author() {
 			<img
 				src={avatar}
 				alt="Sergio Xalambrí"
-				className="size-50 rounded-full order-first mx-auto lg:mx-0 lg:order-none"
+				className="size-50 rounded-full order-first mx-auto lg:mx-0 lg:order-last"
 			/>
 		</section>
 	);

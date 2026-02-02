@@ -97,7 +97,7 @@ export default function Component() {
 
 					<button
 						type="submit"
-						className="flex-shrink-0 px-5 py-2.5 rounded-xs relative bg-stone-950 text-stone-50 dark:bg-stone-50 dark:text-stone-950 group-data-[status=success]:bg-green-500 dark:group-data-[status=success]:bg-green-600"
+						className="shrink-0 px-5 py-2.5 rounded-xs relative bg-stone-950 text-stone-50 dark:bg-stone-50 dark:text-stone-950 group-data-[status=success]:bg-green-500 dark:group-data-[status=success]:bg-green-600"
 						disabled={status !== "idle"}
 					>
 						<span className="hidden absolute inset-0 items-center justify-center group-data-[status=loading]:flex">

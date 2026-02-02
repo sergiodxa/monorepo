@@ -42,5 +42,5 @@
 }
 
 .parity-banner.parity-banner-has-logo {
-	@apply !pl-0;
+	padding-left: 0 !important;
 }
