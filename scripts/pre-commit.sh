@@ -2,6 +2,14 @@
 
 set -e
 
-bunx oxfmt . || exit 1
-bunx oxlint --fix . || exit 1
+bunx oxfmt --check . || {
+  echo "❌ Formatting issues found. Run 'bunx oxfmt .' to fix."
+  exit 1
+}
+
+bunx oxlint . || {
+  echo "❌ Linting issues found. Run 'bunx oxlint --fix .' to fix."
+  exit 1
+}
+
 bunx tsgo || exit 1
