@@ -11,7 +11,7 @@ export default function Home() {
 				</h1>
 
 				<p className="text-lg">
-					A practical, modern guide to implementing
+					A practical, modern guide to implementing{" "}
 					<strong className="font-semibold">OAuth2 authentication</strong> in React Router and Remix
 					apps—built on patterns you can apply to any web application.
 				</p>
