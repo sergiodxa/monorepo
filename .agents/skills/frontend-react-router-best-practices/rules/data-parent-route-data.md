@@ -25,8 +25,7 @@ import type { loader as parentLoader } from "~/routes/_layout/route";
 
 export default function ChildRoute() {
   // Route ID matches the file path without extension
-  let parentData =
-    useRouteLoaderData<typeof parentLoader>("routes/_layout");
+  let parentData = useRouteLoaderData<typeof parentLoader>("routes/_layout");
 
   if (!parentData) return null;
 
@@ -87,8 +86,7 @@ function Child() {
 const rootData = useRouteLoaderData<typeof rootLoader>("root");
 
 // Access authenticated layout data
-const layoutData =
-  useRouteLoaderData<typeof layoutLoader>("routes/_layout");
+const layoutData = useRouteLoaderData<typeof layoutLoader>("routes/_layout");
 
 // Access settings layout data
 const settingsData =

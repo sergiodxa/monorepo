@@ -18,6 +18,7 @@ Build and send HTML emails using React components. A modern, component-based app
 - Integrating with email providers like Resend, SendGrid, Postmark
 
 **When NOT to use:**
+
 - Simple plain-text emails
 - Emails that don't need cross-client compatibility
 - Projects without React/Node.js
@@ -88,15 +89,18 @@ import {
   Text,
   Button,
   Tailwind,
-  pixelBasedPreset
-} from '@react-email/components';
+  pixelBasedPreset,
+} from "@react-email/components";
 
 interface WelcomeEmailProps {
   name: string;
   verificationUrl: string;
 }
 
-export default function WelcomeEmail({ name, verificationUrl }: WelcomeEmailProps) {
+export default function WelcomeEmail({
+  name,
+  verificationUrl,
+}: WelcomeEmailProps) {
   return (
     <Html lang="en">
       <Tailwind
@@ -105,7 +109,7 @@ export default function WelcomeEmail({ name, verificationUrl }: WelcomeEmailProp
           theme: {
             extend: {
               colors: {
-                brand: '#007bff',
+                brand: "#007bff",
               },
             },
           },
@@ -113,11 +117,9 @@ export default function WelcomeEmail({ name, verificationUrl }: WelcomeEmailProp
       >
         <Head />
         <Body className="bg-gray-100 font-sans">
-        <Preview>Welcome - Verify your email</Preview>
+          <Preview>Welcome - Verify your email</Preview>
           <Container className="max-w-xl mx-auto p-5">
-            <Heading className="text-2xl text-gray-800">
-              Welcome!
-            </Heading>
+            <Heading className="text-2xl text-gray-800">Welcome!</Heading>
             <Text className="text-base text-gray-800">
               Hi {name}, thanks for signing up!
             </Text>
@@ -135,8 +137,8 @@ export default function WelcomeEmail({ name, verificationUrl }: WelcomeEmailProp
 }
 
 WelcomeEmail.PreviewProps = {
-  name: 'John Doe',
-  verificationUrl: 'https://example.com/verify/abc123'
+  name: "John Doe",
+  verificationUrl: "https://example.com/verify/abc123",
 } satisfies WelcomeEmailProps;
 
 export { WelcomeEmail };
@@ -147,6 +149,7 @@ export { WelcomeEmail };
 See [references/COMPONENTS.md](references/COMPONENTS.md) for complete component documentation.
 
 **Core Structure:**
+
 - `Html` - Root wrapper with `lang` attribute
 - `Head` - Meta elements, styles, fonts
 - `Body` - Main content wrapper
@@ -156,6 +159,7 @@ See [references/COMPONENTS.md](references/COMPONENTS.md) for complete component 
 - `Tailwind` - Enables Tailwind CSS utility classes
 
 **Content:**
+
 - `Preview` - Inbox preview text, place immediately after `Body` opening tag
 - `Heading` - h1-h6 headings
 - `Text` - Paragraphs
@@ -165,6 +169,7 @@ See [references/COMPONENTS.md](references/COMPONENTS.md) for complete component 
 - `Hr` - Horizontal dividers
 
 **Specialized:**
+
 - `CodeBlock` - Syntax-highlighted code
 - `CodeInline` - Inline code
 - `Markdown` - Render markdown
@@ -199,6 +204,7 @@ Never write the `{{variableName}}` pattern directly in the component structure -
 See [references/STYLING.md](references/STYLING.md) for complete styling documentation, including shared Tailwind config patterns for multiple templates.
 
 **Key rules:**
+
 - Use `pixelBasedPreset` - email clients don't support `rem` units
 - Never use flexbox/grid - use `Row`/`Column` components
 - Never use SVG/WEBP images - use PNG/JPEG only
@@ -211,23 +217,23 @@ See [references/STYLING.md](references/STYLING.md) for complete styling document
 ### Convert to HTML
 
 ```tsx
-import { render } from '@react-email/components';
-import { WelcomeEmail } from './emails/welcome';
+import { render } from "@react-email/components";
+import { WelcomeEmail } from "./emails/welcome";
 
 const html = await render(
-  <WelcomeEmail name="John" verificationUrl="https://example.com/verify" />
+  <WelcomeEmail name="John" verificationUrl="https://example.com/verify" />,
 );
 ```
 
 ### Convert to Plain Text
 
 ```tsx
-import { render } from '@react-email/components';
-import { WelcomeEmail } from './emails/welcome';
+import { render } from "@react-email/components";
+import { WelcomeEmail } from "./emails/welcome";
 
 const text = await render(
   <WelcomeEmail name="John" verificationUrl="https://example.com/verify" />,
-  { plainText: true }
+  { plainText: true },
 );
 ```
 
@@ -238,20 +244,22 @@ React Email supports any email service provider. See [references/SENDING.md](ref
 Quick example using Resend:
 
 ```tsx
-import { Resend } from 'resend';
-import { WelcomeEmail } from './emails/welcome';
+import { Resend } from "resend";
+import { WelcomeEmail } from "./emails/welcome";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
 const { data, error } = await resend.emails.send({
-  from: 'Acme <onboarding@resend.dev>',
-  to: ['user@example.com'],
-  subject: 'Welcome to Acme',
-  react: <WelcomeEmail name="John" verificationUrl="https://example.com/verify" />
+  from: "Acme <onboarding@resend.dev>",
+  to: ["user@example.com"],
+  subject: "Welcome to Acme",
+  react: (
+    <WelcomeEmail name="John" verificationUrl="https://example.com/verify" />
+  ),
 });
 
 if (error) {
-  console.error('Failed to send:', error);
+  console.error("Failed to send:", error);
 }
 ```
 
@@ -263,16 +271,16 @@ See [references/I18N.md](references/I18N.md) for complete i18n documentation wit
 
 ## Common Mistakes
 
-| Mistake | Fix |
-|---------|-----|
-| Using flexbox/grid | Use `Row` and `Column` components or tables |
-| Using `rem` units | Use `pixelBasedPreset` with Tailwind |
-| Using SVG images | Use PNG or JPG instead |
-| Using media queries (sm:, md:) | Design mobile-first with stacked layouts |
-| Template vars in JSX (`{{name}}`) | Use props: `{props.name}` |
-| Missing border type | Always specify: `border-solid`, `border-dashed`, etc. |
+| Mistake                                  | Fix                                                        |
+| ---------------------------------------- | ---------------------------------------------------------- |
+| Using flexbox/grid                       | Use `Row` and `Column` components or tables                |
+| Using `rem` units                        | Use `pixelBasedPreset` with Tailwind                       |
+| Using SVG images                         | Use PNG or JPG instead                                     |
+| Using media queries (sm:, md:)           | Design mobile-first with stacked layouts                   |
+| Template vars in JSX (`{{name}}`)        | Use props: `{props.name}`                                  |
+| Missing border type                      | Always specify: `border-solid`, `border-dashed`, etc.      |
 | Fixed image dimensions on content images | Use responsive: `w-full h-auto` (fixed OK for small icons) |
-| Emails over 102KB | Gmail clips larger emails - reduce size |
+| Emails over 102KB                        | Gmail clips larger emails - reduce size                    |
 
 ## Best Practices
 

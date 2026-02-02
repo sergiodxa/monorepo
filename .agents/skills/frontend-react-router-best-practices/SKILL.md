@@ -192,7 +192,9 @@ export const middleware: Route.MiddlewareFunction[] = [sessionMiddleware];
 Store context/request in AsyncLocalStorage for arg-less helpers.
 
 ```ts
-export const middleware: Route.MiddlewareFunction[] = [contextStorageMiddleware];
+export const middleware: Route.MiddlewareFunction[] = [
+  contextStorageMiddleware,
+];
 ```
 
 #### middleware-batcher - @rules/middleware-batcher.md
@@ -240,7 +242,8 @@ let cache = getSingleton(context);
 Reject cross-site mutation requests via Sec-Fetch headers.
 
 ```ts
-if (fetchSite(request) === "cross-site") throw new Response(null, { status: 403 });
+if (fetchSite(request) === "cross-site")
+  throw new Response(null, { status: 403 });
 ```
 
 #### form-honeypot - @rules/form-honeypot.md

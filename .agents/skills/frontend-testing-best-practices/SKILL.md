@@ -100,7 +100,11 @@ test.describe("Orders", () => {
     await createTestingAccount(page, { account_status: "active" });
     let cookies = await context.cookies();
     let account_id = cookies.find((c) => c.name === "account_id").value;
-    await addAccountBalance({ account_id, amount: 10000, replaceBalance: true });
+    await addAccountBalance({
+      account_id,
+      amount: 10000,
+      replaceBalance: true,
+    });
   });
 
   test("place order with default values", async ({ page }) => {

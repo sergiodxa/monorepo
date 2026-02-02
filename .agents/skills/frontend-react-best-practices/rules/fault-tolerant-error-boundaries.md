@@ -18,11 +18,11 @@ Add error boundaries around independent features, not just at the top and not ar
 
 ```tsx
 // Good: boundaries at feature seams
-<ErrorBoundary fallback={<SidebarError />}> 
+<ErrorBoundary fallback={<SidebarError />}>
   <Sidebar />
 </ErrorBoundary>
 
-<ErrorBoundary fallback={<FeedError />}> 
+<ErrorBoundary fallback={<FeedError />}>
   <Feed />
 </ErrorBoundary>
 

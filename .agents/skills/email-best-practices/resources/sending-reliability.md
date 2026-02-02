@@ -18,25 +18,28 @@ Send a unique key with each request. If the same key is sent again, the server r
 // Generate deterministic key based on the business event
 const idempotencyKey = `password-reset-${userId}-${resetRequestId}`;
 
-await resend.emails.send({
-  from: 'noreply@example.com',
-  to: user.email,
-  subject: 'Reset your password',
-  html: emailHtml,
-}, {
-  headers: {
-    'Idempotency-Key': idempotencyKey
-  }
-});
+await resend.emails.send(
+  {
+    from: "noreply@example.com",
+    to: user.email,
+    subject: "Reset your password",
+    html: emailHtml,
+  },
+  {
+    headers: {
+      "Idempotency-Key": idempotencyKey,
+    },
+  },
+);
 ```
 
 ### Key Generation Strategies
 
-| Strategy | Example | Use When |
-|----------|---------|----------|
-| Event-based | `order-confirm-${orderId}` | One email per event (recommended) |
-| Request-scoped | `reset-${userId}-${resetRequestId}` | Retries within same request |
-| UUID | `crypto.randomUUID()` | No natural key (generate once, reuse on retry) |
+| Strategy       | Example                             | Use When                                       |
+| -------------- | ----------------------------------- | ---------------------------------------------- |
+| Event-based    | `order-confirm-${orderId}`          | One email per event (recommended)              |
+| Request-scoped | `reset-${userId}-${resetRequestId}` | Retries within same request                    |
+| UUID           | `crypto.randomUUID()`               | No natural key (generate once, reuse on retry) |
 
 **Best practice:** Use deterministic keys based on the business event. If you retry the same logical send, the same key must be generated. Avoid `Date.now()` or random values generated fresh on each attempt.
 
@@ -48,13 +51,13 @@ Handle transient failures with exponential backoff.
 
 ### When to Retry
 
-| Error Type | Retry? | Notes |
-|------------|--------|-------|
+| Error Type         | Retry? | Notes                        |
+| ------------------ | ------ | ---------------------------- |
 | 5xx (server error) | ✅ Yes | Transient, likely to resolve |
-| 429 (rate limit) | ✅ Yes | Wait for rate limit window |
-| 4xx (client error) | ❌ No | Fix the request first |
-| Network timeout | ✅ Yes | Transient |
-| DNS failure | ✅ Yes | May be transient |
+| 429 (rate limit)   | ✅ Yes | Wait for rate limit window   |
+| 4xx (client error) | ❌ No  | Fix the request first        |
+| Network timeout    | ✅ Yes | Transient                    |
+| DNS failure        | ✅ Yes | May be transient             |
 
 ### Exponential Backoff
 
@@ -74,9 +77,11 @@ async function sendWithRetry(emailData, maxRetries = 3) {
 }
 
 function isRetryable(error) {
-  return error.statusCode >= 500 ||
-         error.statusCode === 429 ||
-         error.code === 'ETIMEDOUT';
+  return (
+    error.statusCode >= 500 ||
+    error.statusCode === 429 ||
+    error.code === "ETIMEDOUT"
+  );
 }
 ```
 
@@ -86,16 +91,16 @@ function isRetryable(error) {
 
 ### Common Error Codes
 
-| Code | Meaning | Action |
-|------|---------|--------|
-| 400 | Bad request | Fix payload (invalid email, missing field) |
-| 401 | Unauthorized | Check API key |
-| 403 | Forbidden | Check permissions, domain verification |
-| 404 | Not found | Check endpoint URL |
-| 422 | Validation error | Fix request data |
-| 429 | Rate limited | Back off, retry after delay |
-| 500 | Server error | Retry with backoff |
-| 503 | Service unavailable | Retry with backoff |
+| Code | Meaning             | Action                                     |
+| ---- | ------------------- | ------------------------------------------ |
+| 400  | Bad request         | Fix payload (invalid email, missing field) |
+| 401  | Unauthorized        | Check API key                              |
+| 403  | Forbidden           | Check permissions, domain verification     |
+| 404  | Not found           | Check endpoint URL                         |
+| 422  | Validation error    | Fix request data                           |
+| 429  | Rate limited        | Back off, retry after delay                |
+| 500  | Server error        | Retry with backoff                         |
+| 503  | Service unavailable | Retry with backoff                         |
 
 ### Error Handling Pattern
 
@@ -120,12 +125,14 @@ try {
 For critical emails, use a queue to ensure delivery even if the initial send fails.
 
 **Benefits:**
+
 - Survives application restarts
 - Automatic retry handling
 - Rate limit management
 - Audit trail
 
 **Simple pattern:**
+
 1. Write email to queue/database with "pending" status
 2. Process queue, attempt send
 3. On success: mark "sent", store message ID

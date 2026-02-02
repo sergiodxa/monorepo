@@ -7,12 +7,12 @@ Agents can receive and reply to emails via Cloudflare Email Routing.
 ```jsonc
 {
   "durable_objects": {
-    "bindings": [{ "name": "EmailAgent", "class_name": "EmailAgent" }]
+    "bindings": [{ "name": "EmailAgent", "class_name": "EmailAgent" }],
   },
   "migrations": [{ "tag": "v1", "new_sqlite_classes": ["EmailAgent"] }],
   "send_email": [
-    { "name": "SEB", "destination_address": "reply@yourdomain.com" }
-  ]
+    { "name": "SEB", "destination_address": "reply@yourdomain.com" },
+  ],
 }
 ```
 
@@ -24,7 +24,14 @@ Configure Email Routing in Cloudflare dashboard to forward to your Worker.
 import { Agent, AgentEmail } from "agents";
 import PostalMime from "postal-mime";
 
-type State = { emails: Array<{ from: string; subject: string; text: string; timestamp: Date }> };
+type State = {
+  emails: Array<{
+    from: string;
+    subject: string;
+    text: string;
+    timestamp: Date;
+  }>;
+};
 
 export class EmailAgent extends Agent<Env, State> {
   initialState: State = { emails: [] };
@@ -42,12 +49,15 @@ export class EmailAgent extends Agent<Env, State> {
 
     // Update state
     this.setState({
-      emails: [...this.state.emails, {
-        from: email.from,
-        subject: parsed.subject ?? "",
-        text: parsed.text ?? "",
-        timestamp: new Date()
-      }]
+      emails: [
+        ...this.state.emails,
+        {
+          from: email.from,
+          subject: parsed.subject ?? "",
+          text: parsed.text ?? "",
+          timestamp: new Date(),
+        },
+      ],
     });
 
     // Reply
@@ -55,13 +65,14 @@ export class EmailAgent extends Agent<Env, State> {
       fromName: "My Agent",
       subject: `Re: ${email.headers.get("subject")}`,
       body: "Thanks for your email! I'll process it shortly.",
-      contentType: "text/plain"
+      contentType: "text/plain",
     });
   }
 }
 ```
 
 **Install postal-mime for parsing:**
+
 ```bash
 npm install postal-mime
 ```
@@ -69,18 +80,25 @@ npm install postal-mime
 ## Route Emails to Agent
 
 ```typescript
-import { routeAgentRequest, routeAgentEmail, createAddressBasedEmailResolver } from "agents";
+import {
+  routeAgentRequest,
+  routeAgentEmail,
+  createAddressBasedEmailResolver,
+} from "agents";
 
 export default {
   async email(message, env) {
     await routeAgentEmail(message, env, {
-      resolver: createAddressBasedEmailResolver("EmailAgent")
+      resolver: createAddressBasedEmailResolver("EmailAgent"),
     });
   },
 
   async fetch(request, env) {
-    return routeAgentRequest(request, env) ?? new Response("Not found", { status: 404 });
-  }
+    return (
+      routeAgentRequest(request, env) ??
+      new Response("Not found", { status: 404 })
+    );
+  },
 };
 ```
 
@@ -94,7 +112,7 @@ Routes based on X-Agent headers in replies:
 import { createHeaderBasedEmailResolver } from "agents";
 
 await routeAgentEmail(message, env, {
-  resolver: createHeaderBasedEmailResolver()
+  resolver: createHeaderBasedEmailResolver(),
 });
 ```
 
@@ -104,14 +122,14 @@ await routeAgentEmail(message, env, {
 const customResolver = async (email, env) => {
   // Parse recipient to determine agent
   const [localPart] = email.to.split("@");
-  
+
   if (localPart.startsWith("support-")) {
     return {
       agentName: "SupportAgent",
-      agentId: localPart.replace("support-", "")
+      agentId: localPart.replace("support-", ""),
     };
   }
-  
+
   return null; // Don't route
 };
 

@@ -19,22 +19,22 @@ Agents require a binding in `wrangler.jsonc`:
 {
   "durable_objects": {
     // "class_name" must match your Agent class name exactly
-    "bindings": [{ "name": "Counter", "class_name": "Counter" }]
+    "bindings": [{ "name": "Counter", "class_name": "Counter" }],
   },
   "migrations": [
     // Required: list all Agent classes for SQLite storage
-    { "tag": "v1", "new_sqlite_classes": ["Counter"] }
-  ]
+    { "tag": "v1", "new_sqlite_classes": ["Counter"] },
+  ],
 }
 ```
 
 ## Choosing an Agent Type
 
-| Use Case | Base Class | Package |
-|----------|------------|---------|
-| Custom state + RPC, no chat | `Agent` | `agents` |
+| Use Case                      | Base Class    | Package               |
+| ----------------------------- | ------------- | --------------------- |
+| Custom state + RPC, no chat   | `Agent`       | `agents`              |
 | Chat with message persistence | `AIChatAgent` | `@cloudflare/ai-chat` |
-| Building an MCP server | `McpAgent` | `agents/mcp` |
+| Building an MCP server        | `McpAgent`    | `agents/mcp`          |
 
 ## Key Concepts
 
@@ -47,17 +47,17 @@ Agents require a binding in `wrangler.jsonc`:
 
 ## Quick Reference
 
-| Task | API |
-|------|-----|
-| Persist state | `this.setState({ count: 1 })` |
-| Read state | `this.state.count` |
-| Schedule task | `this.schedule(60, "taskMethod", payload)` |
-| Schedule cron | `this.schedule("0 * * * *", "hourlyTask")` |
-| Cancel schedule | `this.cancelSchedule(id)` |
-| Queue task | `this.queue("processItem", payload)` |
-| SQL query | `` this.sql`SELECT * FROM users WHERE id = ${id}` `` |
-| RPC method | `@callable() async myMethod() { ... }` |
-| Streaming RPC | `@callable({ streaming: true }) async stream(res) { ... }` |
+| Task            | API                                                        |
+| --------------- | ---------------------------------------------------------- |
+| Persist state   | `this.setState({ count: 1 })`                              |
+| Read state      | `this.state.count`                                         |
+| Schedule task   | `this.schedule(60, "taskMethod", payload)`                 |
+| Schedule cron   | `this.schedule("0 * * * *", "hourlyTask")`                 |
+| Cancel schedule | `this.cancelSchedule(id)`                                  |
+| Queue task      | `this.queue("processItem", payload)`                       |
+| SQL query       | `` this.sql`SELECT * FROM users WHERE id = ${id}` ``       |
+| RPC method      | `@callable() async myMethod() { ... }`                     |
+| Streaming RPC   | `@callable({ streaming: true }) async stream(res) { ... }` |
 
 ## Minimal Agent
 
@@ -77,7 +77,8 @@ export class Counter extends Agent<Env, State> {
 }
 
 export default {
-  fetch: (req, env) => routeAgentRequest(req, env) ?? new Response("Not found", { status: 404 })
+  fetch: (req, env) =>
+    routeAgentRequest(req, env) ?? new Response("Not found", { status: 404 }),
 };
 ```
 
@@ -86,17 +87,19 @@ export default {
 Use `AIChatAgent` for chat with automatic message persistence and resumable streaming.
 
 **Install additional dependencies first:**
+
 ```bash
 npm install @cloudflare/ai-chat ai @ai-sdk/openai
 ```
 
 **Add wrangler.jsonc config** (same pattern as base Agent):
+
 ```jsonc
 {
   "durable_objects": {
-    "bindings": [{ "name": "Chat", "class_name": "Chat" }]
+    "bindings": [{ "name": "Chat", "class_name": "Chat" }],
   },
-  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["Chat"] }]
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["Chat"] }],
 }
 ```
 
@@ -111,18 +114,20 @@ export class Chat extends AIChatAgent<Env> {
     const result = streamText({
       model: openai("gpt-4o"),
       messages: await convertToModelMessages(this.messages),
-      onFinish
+      onFinish,
     });
     return result.toUIMessageStreamResponse();
   }
 }
 
 export default {
-  fetch: (req, env) => routeAgentRequest(req, env) ?? new Response("Not found", { status: 404 })
+  fetch: (req, env) =>
+    routeAgentRequest(req, env) ?? new Response("Not found", { status: 404 }),
 };
 ```
 
 **Client** (React):
+
 ```tsx
 import { useAgent } from "agents/react";
 import { useAgentChat } from "@cloudflare/ai-chat/react";

@@ -18,7 +18,6 @@ Use shouldRevalidate to prevent unnecessary data fetching.
 ## Basic Pattern
 
 ```tsx
-
 export const shouldRevalidate: Route.ShouldRevalidateFunction = ({
   currentUrl,
   nextUrl,

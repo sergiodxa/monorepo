@@ -20,10 +20,9 @@ Create a per-request singleton for caches or shared services.
 // app/middleware/singleton.server.ts
 import { createSingletonMiddleware } from "remix-utils/middleware/singleton";
 
-export const [singletonMiddleware, getSingleton] =
-  createSingletonMiddleware({
-    instantiator: () => new RequestCache(),
-  });
+export const [singletonMiddleware, getSingleton] = createSingletonMiddleware({
+  instantiator: () => new RequestCache(),
+});
 ```
 
 ```ts

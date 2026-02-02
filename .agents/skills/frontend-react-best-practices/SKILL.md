@@ -309,9 +309,7 @@ Suppress expected hydration mismatches.
 Render browser-only components with ClientOnly and a fallback.
 
 ```tsx
-<ClientOnly fallback={<Skeleton />}>
-  {() => <Map />}
-</ClientOnly>
+<ClientOnly fallback={<Skeleton />}>{() => <Map />}</ClientOnly>
 ```
 
 #### rendering-use-hydrated - @rules/rendering-use-hydrated.md

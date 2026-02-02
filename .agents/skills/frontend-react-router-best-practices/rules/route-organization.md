@@ -52,13 +52,13 @@ routes/
 
 ## Naming Conventions
 
-| Pattern                     | Meaning                | URL                      |
-| --------------------------- | ---------------------- | ------------------------ |
-| `_.projects/route.tsx`      | Nested under \_ layout | `/projects`              |
-| `_._profile/route.tsx`      | Layout route           | (no URL)                 |
-| `_._profile.home/route.tsx` | Child of layout        | `/home`                  |
-| `_.projects_.$projectId/`   | Dynamic segment        | `/projects/:projectId`   |
-| `api.search.items.tsx`      | Resource route (no UI) | `/api/search/items`      |
+| Pattern                     | Meaning                | URL                    |
+| --------------------------- | ---------------------- | ---------------------- |
+| `_.projects/route.tsx`      | Nested under \_ layout | `/projects`            |
+| `_._profile/route.tsx`      | Layout route           | (no URL)               |
+| `_._profile.home/route.tsx` | Child of layout        | `/home`                |
+| `_.projects_.$projectId/`   | Dynamic segment        | `/projects/:projectId` |
+| `api.search.items.tsx`      | Resource route (no UI) | `/api/search/items`    |
 
 ## File Naming
 

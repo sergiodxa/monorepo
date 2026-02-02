@@ -37,19 +37,23 @@ test.describe("Orders", () => {
 
     // Get account_id from cookies
     let cookies = await context.cookies();
-    let account_id = cookies.find((cookie) => cookie.name === "account_id").value;
+    let account_id = cookies.find(
+      (cookie) => cookie.name === "account_id",
+    ).value;
 
     // Set up test data
-    await addAccountBalance({ account_id, amount: 10000, replaceBalance: true });
+    await addAccountBalance({
+      account_id,
+      amount: 10000,
+      replaceBalance: true,
+    });
   });
 
   test("place order with default values", async ({ page }) => {
     await page.goto("/catalog");
 
     // Search for item
-    await page
-      .getByPlaceholder("Search by name or ID")
-      .fill("example");
+    await page.getByPlaceholder("Search by name or ID").fill("example");
 
     await page.getByRole("heading", { name: "Example Item" }).click();
     await page.getByRole("link", { name: "Buy" }).first().click();

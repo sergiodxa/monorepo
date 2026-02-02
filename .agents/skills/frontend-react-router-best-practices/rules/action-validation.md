@@ -25,8 +25,8 @@ export async function validate<Schema extends StandardSchemaV1>(
   input: FormData | Request,
   schema: Schema,
 ): Promise<
-  ReturnType<typeof success<StandardSchemaV1.InferOutput<Schema>>> |
-    ReturnType<typeof failure<ValidationError>>
+  | ReturnType<typeof success<StandardSchemaV1.InferOutput<Schema>>>
+  | ReturnType<typeof failure<ValidationError>>
 > {
   if (input instanceof Request) input = await input.formData();
   let entries = Object.fromEntries(input.entries());

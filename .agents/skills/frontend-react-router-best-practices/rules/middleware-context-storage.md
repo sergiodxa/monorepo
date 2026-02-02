@@ -25,7 +25,9 @@ export const [contextStorageMiddleware, getContext, getRequest] =
 ```
 
 ```ts
-export const middleware: Route.MiddlewareFunction[] = [contextStorageMiddleware];
+export const middleware: Route.MiddlewareFunction[] = [
+  contextStorageMiddleware,
+];
 
 export function getUserFromContext() {
   let context = getContext();

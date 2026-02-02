@@ -20,7 +20,6 @@ Return field values from the action when validation fails, then use `defaultValu
 When a form submission fails validation, the page reloads (in no-JS) or re-renders. Without preserving field values, users lose their input:
 
 ```tsx
-
 // Action only returns errors - fields are lost on no-JS
 export async function action({ request }: Route.ActionArgs) {
   let formData = await request.formData();
@@ -127,7 +126,6 @@ This pattern complements `form-reset-on-success.md`:
 - **On success**: Reset form to clear all fields
 
 ```tsx
-
 export async function action({ request }: Route.ActionArgs) {
   let formData = await request.formData();
   let fields = { title: formData.get("title")?.toString() ?? "" };

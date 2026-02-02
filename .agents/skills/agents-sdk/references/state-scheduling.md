@@ -7,17 +7,17 @@ State persists automatically to SQLite and broadcasts to connected clients.
 ### Define Typed State
 
 ```typescript
-type State = { 
+type State = {
   count: number;
   items: string[];
   lastUpdated: Date;
 };
 
 export class MyAgent extends Agent<Env, State> {
-  initialState: State = { 
-    count: 0, 
+  initialState: State = {
+    count: 0,
     items: [],
-    lastUpdated: new Date()
+    lastUpdated: new Date(),
   };
 }
 ```
@@ -29,9 +29,9 @@ export class MyAgent extends Agent<Env, State> {
 const count = this.state.count;
 
 // Update (persists to SQLite, broadcasts to clients)
-this.setState({ 
-  ...this.state, 
-  count: this.state.count + 1 
+this.setState({
+  ...this.state,
+  count: this.state.count + 1,
 });
 ```
 
@@ -54,11 +54,11 @@ import { useState } from "react";
 
 function App() {
   const [state, setLocalState] = useState<State>({ count: 0 });
-  
+
   const agent = useAgent<State>({
     agent: "MyAgent",
     name: "instance-1",
-    onStateUpdate: (newState) => setLocalState(newState)
+    onStateUpdate: (newState) => setLocalState(newState),
   });
 
   const increment = () => {
@@ -79,7 +79,9 @@ Schedule methods to run at specific times using `this.schedule()`.
 
 ```typescript
 // At specific Date
-await this.schedule(new Date("2025-12-25T00:00:00Z"), "sendGreeting", { to: "user" });
+await this.schedule(new Date("2025-12-25T00:00:00Z"), "sendGreeting", {
+  to: "user",
+});
 
 // Delay in seconds
 await this.schedule(60, "checkStatus", { id: "abc123" }); // 1 minute
@@ -110,8 +112,8 @@ const schedules = this.getSchedules();
 const crons = this.getSchedules({ type: "cron" });
 
 // Get by time range
-const upcoming = this.getSchedules({ 
-  timeRange: { start: new Date(), end: nextWeek } 
+const upcoming = this.getSchedules({
+  timeRange: { start: new Date(), end: nextWeek },
 });
 
 // Cancel

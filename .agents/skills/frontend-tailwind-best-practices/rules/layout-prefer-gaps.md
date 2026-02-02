@@ -55,7 +55,7 @@ function Card() {
 <div className="v-stack gap-4">
   <Card />
   <Card />
-</div>
+</div>;
 ```
 
 ## Responsive Layouts

@@ -21,7 +21,11 @@ import { data, Outlet } from "react-router";
 import { useEffect } from "react";
 import type { Route } from "./+types/root";
 import { useTranslation } from "react-i18next";
-import { getLocale, i18nextMiddleware, localeCookie } from "~/middleware/i18next";
+import {
+  getLocale,
+  i18nextMiddleware,
+  localeCookie,
+} from "~/middleware/i18next";
 
 export const middleware = [i18nextMiddleware];
 

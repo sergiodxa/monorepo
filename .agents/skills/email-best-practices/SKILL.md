@@ -31,18 +31,18 @@ Guidance for building deliverable, compliant, user-friendly emails.
 
 ## Quick Reference
 
-| Need to... | See |
-|------------|-----|
-| Set up SPF/DKIM/DMARC, fix spam issues | [Deliverability](./resources/deliverability.md) |
-| Build password reset, OTP, confirmations | [Transactional Emails](./resources/transactional-emails.md) |
-| Plan which emails your app needs | [Transactional Email Catalog](./resources/transactional-email-catalog.md) |
-| Build newsletter signup, validate emails | [Email Capture](./resources/email-capture.md) |
-| Send newsletters, promotions | [Marketing Emails](./resources/marketing-emails.md) |
-| Ensure CAN-SPAM/GDPR/CASL compliance | [Compliance](./resources/compliance.md) |
-| Decide transactional vs marketing | [Email Types](./resources/email-types.md) |
-| Handle retries, idempotency, errors | [Sending Reliability](./resources/sending-reliability.md) |
-| Process delivery events, set up webhooks | [Webhooks & Events](./resources/webhooks-events.md) |
-| Manage bounces, complaints, suppression | [List Management](./resources/list-management.md) |
+| Need to...                               | See                                                                       |
+| ---------------------------------------- | ------------------------------------------------------------------------- |
+| Set up SPF/DKIM/DMARC, fix spam issues   | [Deliverability](./resources/deliverability.md)                           |
+| Build password reset, OTP, confirmations | [Transactional Emails](./resources/transactional-emails.md)               |
+| Plan which emails your app needs         | [Transactional Email Catalog](./resources/transactional-email-catalog.md) |
+| Build newsletter signup, validate emails | [Email Capture](./resources/email-capture.md)                             |
+| Send newsletters, promotions             | [Marketing Emails](./resources/marketing-emails.md)                       |
+| Ensure CAN-SPAM/GDPR/CASL compliance     | [Compliance](./resources/compliance.md)                                   |
+| Decide transactional vs marketing        | [Email Types](./resources/email-types.md)                                 |
+| Handle retries, idempotency, errors      | [Sending Reliability](./resources/sending-reliability.md)                 |
+| Process delivery events, set up webhooks | [Webhooks & Events](./resources/webhooks-events.md)                       |
+| Manage bounces, complaints, suppression  | [List Management](./resources/list-management.md)                         |
 
 ## Start Here
 

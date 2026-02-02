@@ -20,8 +20,7 @@ Generate a request ID and store it in context for logging/correlation.
 // app/middleware/request-id.server.ts
 import { createRequestIDMiddleware } from "remix-utils/middleware/request-id";
 
-export const [requestIDMiddleware, getRequestID] =
-  createRequestIDMiddleware();
+export const [requestIDMiddleware, getRequestID] = createRequestIDMiddleware();
 ```
 
 ```ts
