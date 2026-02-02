@@ -1,0 +1,46 @@
+@import "tailwindcss";
+@plugin "@tailwindcss/typography";
+
+@custom-variant user-invalid {
+	&:user-invalid {
+		@slot;
+	}
+}
+
+@custom-variant user-valid {
+	&:user-valid {
+		@slot;
+	}
+}
+
+@layer base {
+	html {
+		scroll-behavior: smooth;
+	}
+
+	input:-webkit-autofill {
+		box-shadow: 0 0 0px 1000px white inset;
+		-webkit-box-shadow: 0 0 0px 1000px white inset;
+		-webkit-text-fill-color: #000;
+	}
+
+	@media (prefers-color-scheme: dark) {
+		input:-webkit-autofill {
+			box-shadow: 0 0 0px 1000px #000 inset;
+			-webkit-box-shadow: 0 0 0px 1000px #000 inset;
+			-webkit-text-fill-color: #fff;
+		}
+	}
+}
+
+.parity-banner {
+	@apply w-full;
+}
+
+.parity-banner-logo {
+	@apply hidden;
+}
+
+.parity-banner.parity-banner-has-logo {
+	@apply !pl-0;
+}

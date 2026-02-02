@@ -1,0 +1,25 @@
+{
+	"$schema": "https://unpkg.com/wrangler@latest/config-schema.json",
+	"name": "books",
+	"main": "./app/entry.worker.ts",
+	"compatibility_date": "2025-02-02",
+	"compatibility_flags": ["nodejs_compat"],
+	"workers_dev": true,
+	"dev": { "port": 3000 },
+	"placement": { "mode": "off" },
+	"observability": { "enabled": true },
+	"assets": { "directory": "./build/client" },
+
+	"vars": {
+		"BUTTONDOWN_API_VERSION": "2024-07-01",
+		"LOGSNAG_PROJECT": "sergiodxa",
+	},
+
+	"routes": [{ "pattern": "books.sergiodxa.com", "custom_domain": true }],
+
+	"env": {
+		"preview": {
+			"name": "books-preview",
+		},
+	},
+}
