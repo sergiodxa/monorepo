@@ -19,6 +19,8 @@
 		"@edgefirst-dev/data": "^0.0.4",
 		"@logsnag/node": "^1.0.1",
 		"@markdoc/markdoc": "^0.5.4",
+		"@pkg/get-client-ip": "workspace:*",
+		"@pkg/response": "workspace:*",
 		"@polar-sh/sdk": "^0.42.5",
 		"@react-router/cloudflare": "^7.13.0",
 		"@react-router/serve": "^7.13.0",

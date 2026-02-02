@@ -1,8 +1,8 @@
 import { FormParser } from "@edgefirst-dev/data/parser";
+import { getClientIP } from "@pkg/get-client-ip";
+import { badRequest } from "@pkg/response";
 import { redirect } from "react-router";
 import { SubscribePayload } from "~/data/subscribe-payload";
-import { getClientIPAddress } from "~/helpers/get-client-ip";
-import { badRequest } from "~/helpers/response";
 import { ButtondownError } from "~/services/buttondown";
 import { subscribe } from "~/use-case/subscribe";
 import type { Route } from "./+types/api.subscribe";
@@ -11,7 +11,7 @@ export async function action({ request }: Route.ActionArgs) {
 	const formData = await request.formData();
 	const parser = new FormParser(formData);
 	const payload = new SubscribePayload(parser);
-	const ipAddress = getClientIPAddress(request);
+	const ipAddress = getClientIP(request);
 
 	try {
 		await subscribe(payload, ipAddress);
