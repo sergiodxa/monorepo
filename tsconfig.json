@@ -3,12 +3,11 @@
 	"files": [],
 	"references": [],
 	"compilerOptions": {
-		"baseUrl": ".",
 		"jsx": "react-jsx",
 		"types": ["@total-typescript/ts-reset"],
 		"moduleResolution": "bundler",
 		"paths": {
-			"@/*": ["./*"]
+			"*": ["./*"]
 		}
 	}
 }
