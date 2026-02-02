@@ -7,7 +7,6 @@
 		"build": "vite build",
 		"start": "vite preview",
 		"deploy": "wrangler deploy",
-		"deploy:preview": "wrangler deploy --env preview",
 		"typecheck": "tsc --noEmit",
 		"rr:typegen": "react-router typegen",
 		"rr:routes": "react-router routes",

@@ -6,8 +6,14 @@
 	"compatibility_flags": ["nodejs_compat"],
 	"workers_dev": true,
 	"dev": { "port": 3000 },
-	"placement": { "mode": "off" },
-	"observability": { "enabled": true },
+	"placement": { "mode": "smart" },
+	"observability": {
+		"enabled": true,
+		"traces": {
+			"enabled": true,
+			"head_sampling_rate": 0.1,
+		},
+	},
 	"assets": { "directory": "./build/client" },
 
 	"vars": {
@@ -16,10 +22,4 @@
 	},
 
 	"routes": [{ "pattern": "books.sergiodxa.com", "custom_domain": true }],
-
-	"env": {
-		"preview": {
-			"name": "books-preview",
-		},
-	},
 }
