@@ -28,11 +28,11 @@ Screen readers don't automatically announce content that changes after page load
 ```tsx
 // Error container - announced immediately
 {
-  error && (
-    <p role="alert" className="text-failure-600">
-      {error}
-    </p>
-  );
+	error && (
+		<p role="alert" className="text-failure-600">
+			{error}
+		</p>
+	);
 }
 ```
 
@@ -41,7 +41,7 @@ Screen readers don't automatically announce content that changes after page load
 ```tsx
 // Status updates - announced politely
 <div role="status" aria-live="polite">
-  {isLoading ? t("Loading...") : t("Loaded {{count}} results", { count })}
+	{isLoading ? t("Loading...") : t("Loaded {{count}} results", { count })}
 </div>
 ```
 
@@ -49,14 +49,14 @@ Screen readers don't automatically announce content that changes after page load
 
 ```tsx
 function Toast({ message, variant }: ToastProps) {
-  return (
-    <div
-      role={variant === "error" ? "alert" : "status"}
-      aria-live={variant === "error" ? "assertive" : "polite"}
-    >
-      {message}
-    </div>
-  );
+	return (
+		<div
+			role={variant === "error" ? "alert" : "status"}
+			aria-live={variant === "error" ? "assertive" : "polite"}
+		>
+			{message}
+		</div>
+	);
 }
 ```
 
@@ -64,11 +64,11 @@ function Toast({ message, variant }: ToastProps) {
 
 ```tsx
 <Region>
-  <Heading className="sr-only">{t("Search results")}</Heading>
-  <p role="status" aria-live="polite">
-    {t("{{count}} results found", { count: results.length })}
-  </p>
-  <ResultsList results={results} />
+	<Heading className="sr-only">{t("Search results")}</Heading>
+	<p role="status" aria-live="polite">
+		{t("{{count}} results found", { count: results.length })}
+	</p>
+	<ResultsList results={results} />
 </Region>
 ```
 
@@ -76,17 +76,17 @@ function Toast({ message, variant }: ToastProps) {
 
 ```tsx
 function SubmitButton({ isSubmitting, isSuccess }: Props) {
-  return (
-    <>
-      <Button type="submit" disabled={isSubmitting}>
-        {isSubmitting ? t("Saving...") : t("Save")}
-      </Button>
-      <div role="status" aria-live="polite" className="sr-only">
-        {isSubmitting && t("Saving your changes...")}
-        {isSuccess && t("Changes saved successfully")}
-      </div>
-    </>
-  );
+	return (
+		<>
+			<Button type="submit" disabled={isSubmitting}>
+				{isSubmitting ? t("Saving...") : t("Save")}
+			</Button>
+			<div role="status" aria-live="polite" className="sr-only">
+				{isSubmitting && t("Saving your changes...")}
+				{isSuccess && t("Changes saved successfully")}
+			</div>
+		</>
+	);
 }
 ```
 
@@ -97,28 +97,28 @@ function SubmitButton({ isSubmitting, isSuccess }: Props) {
 ```tsx
 // Bad - screen reader won't announce this
 function SearchResults({ results }) {
-  return (
-    <div>
-      <p>{results.length} results</p>
-      {results.map((r) => (
-        <Result key={r.id} {...r} />
-      ))}
-    </div>
-  );
+	return (
+		<div>
+			<p>{results.length} results</p>
+			{results.map((r) => (
+				<Result key={r.id} {...r} />
+			))}
+		</div>
+	);
 }
 
 // Good - announced to screen readers
 function SearchResults({ results }) {
-  return (
-    <div>
-      <p role="status" aria-live="polite">
-        {t("{{count}} results", { count: results.length })}
-      </p>
-      {results.map((r) => (
-        <Result key={r.id} {...r} />
-      ))}
-    </div>
-  );
+	return (
+		<div>
+			<p role="status" aria-live="polite">
+				{t("{{count}} results", { count: results.length })}
+			</p>
+			{results.map((r) => (
+				<Result key={r.id} {...r} />
+			))}
+		</div>
+	);
 }
 ```
 

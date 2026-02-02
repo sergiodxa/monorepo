@@ -23,35 +23,35 @@ const data = localStorage.getItem("userConfig");
 const VERSION = "v2";
 
 function saveConfig(config: { theme: string; language: string }) {
-  try {
-    localStorage.setItem(`userConfig:${VERSION}`, JSON.stringify(config));
-  } catch {
-    // Throws in incognito/private browsing, quota exceeded, or disabled
-  }
+	try {
+		localStorage.setItem(`userConfig:${VERSION}`, JSON.stringify(config));
+	} catch {
+		// Throws in incognito/private browsing, quota exceeded, or disabled
+	}
 }
 
 function loadConfig() {
-  try {
-    let data = localStorage.getItem(`userConfig:${VERSION}`);
-    return data ? JSON.parse(data) : null;
-  } catch {
-    return null;
-  }
+	try {
+		let data = localStorage.getItem(`userConfig:${VERSION}`);
+		return data ? JSON.parse(data) : null;
+	} catch {
+		return null;
+	}
 }
 
 // Migration from v1 to v2
 function migrate() {
-  try {
-    let v1 = localStorage.getItem("userConfig:v1");
-    if (v1) {
-      let old = JSON.parse(v1);
-      saveConfig({
-        theme: old.darkMode ? "dark" : "light",
-        language: old.lang,
-      });
-      localStorage.removeItem("userConfig:v1");
-    }
-  } catch {}
+	try {
+		let v1 = localStorage.getItem("userConfig:v1");
+		if (v1) {
+			let old = JSON.parse(v1);
+			saveConfig({
+				theme: old.darkMode ? "dark" : "light",
+				language: old.lang,
+			});
+			localStorage.removeItem("userConfig:v1");
+		}
+	} catch {}
 }
 ```
 
@@ -60,15 +60,15 @@ function migrate() {
 ```typescript
 // User object has 20+ fields, only store what UI needs
 function cachePrefs(user: FullUser) {
-  try {
-    localStorage.setItem(
-      "prefs:v1",
-      JSON.stringify({
-        theme: user.preferences.theme,
-        notifications: user.preferences.notifications,
-      }),
-    );
-  } catch {}
+	try {
+		localStorage.setItem(
+			"prefs:v1",
+			JSON.stringify({
+				theme: user.preferences.theme,
+				notifications: user.preferences.notifications,
+			}),
+		);
+	} catch {}
 }
 ```
 

@@ -5,11 +5,7 @@
 ### Basic (Implicit Rendering)
 
 ```html
-<script
-  src="https://challenges.cloudflare.com/turnstile/v0/api.js"
-  async
-  defer
-></script>
+<script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
 ```
 
 Automatically renders widgets with `class="cf-turnstile"` on page load.
@@ -27,10 +23,10 @@ Manual control over when/where widgets render via `window.turnstile.render()`.
 ```html
 <script src="https://challenges.cloudflare.com/turnstile/v0/api.js?onload=myCallback"></script>
 <script>
-  function myCallback() {
-    // API ready
-    window.turnstile.render("#container", { sitekey: "YOUR_SITE_KEY" });
-  }
+	function myCallback() {
+		// API ready
+		window.turnstile.render("#container", { sitekey: "YOUR_SITE_KEY" });
+	}
 </script>
 ```
 
@@ -136,11 +132,11 @@ For implicit rendering, use data attributes on `<div class="cf-turnstile">`:
 
 ```html
 <div
-  class="cf-turnstile"
-  data-sitekey="YOUR_SITE_KEY"
-  data-theme="dark"
-  data-callback="onTurnstileSuccess"
-  data-error-callback="onTurnstileError"
+	class="cf-turnstile"
+	data-sitekey="YOUR_SITE_KEY"
+	data-theme="dark"
+	data-callback="onTurnstileSuccess"
+	data-error-callback="onTurnstileError"
 ></div>
 ```
 
@@ -157,8 +153,8 @@ frame-src https://challenges.cloudflare.com;
 
 ```html
 <meta
-  http-equiv="Content-Security-Policy"
-  content="default-src 'self'; 
+	http-equiv="Content-Security-Policy"
+	content="default-src 'self'; 
                script-src 'self' https://challenges.cloudflare.com; 
                frame-src https://challenges.cloudflare.com;"
 />
@@ -186,7 +182,7 @@ npm install vue-turnstile
 
 ```vue
 <template>
-  <VueTurnstile site-key="YOUR_SITE_KEY" @success="onSuccess" />
+	<VueTurnstile site-key="YOUR_SITE_KEY" @success="onSuccess" />
 </template>
 <script setup>
 import VueTurnstile from "vue-turnstile";
@@ -214,19 +210,19 @@ import Turnstile from 'svelte-turnstile';
 import { useEffect, useRef } from "react";
 
 export default function TurnstileWidget({ sitekey, onSuccess }) {
-  const ref = useRef<HTMLDivElement>(null);
+	const ref = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    if (ref.current && window.turnstile) {
-      const widgetId = window.turnstile.render(ref.current, {
-        sitekey,
-        callback: onSuccess,
-      });
-      return () => window.turnstile.remove(widgetId);
-    }
-  }, [sitekey, onSuccess]);
+	useEffect(() => {
+		if (ref.current && window.turnstile) {
+			const widgetId = window.turnstile.render(ref.current, {
+				sitekey,
+				callback: onSuccess,
+			});
+			return () => window.turnstile.remove(widgetId);
+		}
+	}, [sitekey, onSuccess]);
 
-  return <div ref={ref} />;
+	return <div ref={ref} />;
 }
 ```
 
@@ -241,7 +237,7 @@ npm install @cloudflare/pages-plugin-turnstile
 import turnstilePlugin from "@cloudflare/pages-plugin-turnstile";
 
 export const onRequest = turnstilePlugin({
-  secret: "YOUR_SECRET_KEY",
-  onError: () => new Response("CAPTCHA failed", { status: 403 }),
+	secret: "YOUR_SECRET_KEY",
+	onError: () => new Response("CAPTCHA failed", { status: 403 }),
 });
 ```

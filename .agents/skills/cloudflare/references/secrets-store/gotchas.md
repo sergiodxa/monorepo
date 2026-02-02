@@ -9,9 +9,9 @@
 
 ```typescript
 try {
-  const key = await env.API_KEY.get();
+	const key = await env.API_KEY.get();
 } catch (error) {
-  return new Response("Configuration error", { status: 500 });
+	return new Response("Configuration error", { status: 500 });
 }
 ```
 
@@ -51,11 +51,11 @@ Runtime parsing with error handling:
 
 ```typescript
 try {
-  const configStr = await env.CONFIG.get();
-  const config = JSON.parse(configStr);
+	const configStr = await env.CONFIG.get();
+	const config = JSON.parse(configStr);
 } catch (error) {
-  console.error("Invalid config JSON:", error);
-  return new Response("Invalid configuration", { status: 500 });
+	console.error("Invalid config JSON:", error);
+	return new Response("Invalid configuration", { status: 500 });
 }
 ```
 

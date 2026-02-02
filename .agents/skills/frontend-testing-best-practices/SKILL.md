@@ -34,17 +34,17 @@ Default to E2E tests. Only write unit tests for pure functions.
 ```typescript
 // E2E test (PREFERRED) - tests real user flow
 test("user can place an order", async ({ page }) => {
-  await createTestingAccount(page, { account_status: "active" });
-  await page.goto("/catalog");
-  await page.getByRole("heading", { name: "Example Item" }).click();
-  await page.getByRole("link", { name: "Buy" }).click();
-  // ... complete flow
-  await expect(page.getByAltText("Thank you")).toBeVisible();
+	await createTestingAccount(page, { account_status: "active" });
+	await page.goto("/catalog");
+	await page.getByRole("heading", { name: "Example Item" }).click();
+	await page.getByRole("link", { name: "Buy" }).click();
+	// ... complete flow
+	await expect(page.getByAltText("Thank you")).toBeVisible();
 });
 
 // Unit test - ONLY for pure functions
 test("formatCurrency formats with two decimals", () => {
-  expect(formatCurrency(1234.5)).toBe("$1,234.50");
+	expect(formatCurrency(1234.5)).toBe("$1,234.50");
 });
 ```
 
@@ -79,9 +79,7 @@ vi.mock("~/lib/transactions");
 vi.mock("~/hooks/useAccount");
 
 // GOOD: Simple MSW mock for loader test
-mockServer.use(
-  http.get("/api/user", () => HttpResponse.json({ name: "John" })),
-);
+mockServer.use(http.get("/api/user", () => HttpResponse.json({ name: "John" })));
 ```
 
 ### E2E Tests (HIGH)
@@ -96,21 +94,17 @@ import { test, expect } from "@playwright/test";
 import { addAccountBalance, createTestingAccount } from "./utils";
 
 test.describe("Orders", () => {
-  test.beforeEach(async ({ page, context }) => {
-    await createTestingAccount(page, { account_status: "active" });
-    let cookies = await context.cookies();
-    let account_id = cookies.find((c) => c.name === "account_id").value;
-    await addAccountBalance({
-      account_id,
-      amount: 10000,
-      replaceBalance: true,
-    });
-  });
+	test.beforeEach(async ({ page, context }) => {
+		await createTestingAccount(page, { account_status: "active" });
+		let cookies = await context.cookies();
+		let account_id = cookies.find((c) => c.name === "account_id").value;
+		await addAccountBalance({ account_id, amount: 10000, replaceBalance: true });
+	});
 
-  test("place order with default values", async ({ page }) => {
-    await page.goto("/catalog");
-    // ... user flow
-  });
+	test("place order with default values", async ({ page }) => {
+		await page.goto("/catalog");
+		// ... user flow
+	});
 });
 ```
 
@@ -145,13 +139,13 @@ import { describe, test, expect } from "vitest";
 import { formatCurrency } from "./format";
 
 describe("formatCurrency", () => {
-  test("formats positive amounts", () => {
-    expect(formatCurrency(1234.5)).toBe("$1,234.50");
-  });
+	test("formats positive amounts", () => {
+		expect(formatCurrency(1234.5)).toBe("$1,234.50");
+	});
 
-  test("handles zero", () => {
-    expect(formatCurrency(0)).toBe("$0.00");
-  });
+	test("handles zero", () => {
+		expect(formatCurrency(0)).toBe("$0.00");
+	});
 });
 ```
 

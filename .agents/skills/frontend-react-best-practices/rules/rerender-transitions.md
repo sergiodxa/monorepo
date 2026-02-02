@@ -13,12 +13,12 @@ Mark frequent, non-urgent state updates as transitions to maintain UI responsive
 
 ```tsx
 function ScrollTracker() {
-  let [scrollY, setScrollY] = useState(0);
-  useEffect(() => {
-    let handler = () => setScrollY(window.scrollY);
-    window.addEventListener("scroll", handler, { passive: true });
-    return () => window.removeEventListener("scroll", handler);
-  }, []);
+	let [scrollY, setScrollY] = useState(0);
+	useEffect(() => {
+		let handler = () => setScrollY(window.scrollY);
+		window.addEventListener("scroll", handler, { passive: true });
+		return () => window.removeEventListener("scroll", handler);
+	}, []);
 }
 ```
 
@@ -28,13 +28,13 @@ function ScrollTracker() {
 import { startTransition } from "react";
 
 function ScrollTracker() {
-  let [scrollY, setScrollY] = useState(0);
-  useEffect(() => {
-    let handler = () => {
-      startTransition(() => setScrollY(window.scrollY));
-    };
-    window.addEventListener("scroll", handler, { passive: true });
-    return () => window.removeEventListener("scroll", handler);
-  }, []);
+	let [scrollY, setScrollY] = useState(0);
+	useEffect(() => {
+		let handler = () => {
+			startTransition(() => setScrollY(window.scrollY));
+		};
+		window.addEventListener("scroll", handler, { passive: true });
+		return () => window.removeEventListener("scroll", handler);
+	}, []);
 }
 ```

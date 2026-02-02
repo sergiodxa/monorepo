@@ -34,12 +34,12 @@ Check for secure session management including cookie flags, token storage, and s
 ```typescript
 // Bad: No security flags on cookie
 return new Response("OK", {
-  headers: { "Set-Cookie": `session=${sessionId}` },
+	headers: { "Set-Cookie": `session=${sessionId}` },
 });
 
 // Bad: Session never expires
 await db.session.create({
-  data: { id: sessionId, userId }, // No expiresAt!
+	data: { id: sessionId, userId }, // No expiresAt!
 });
 
 // Bad: Predictable session ID
@@ -51,59 +51,59 @@ const sessionId = `${Date.now()}-${Math.random()}`;
 ```typescript
 // Good: Secure cookie with all flags
 async function createSession(userId: string): Promise<Response> {
-  let sessionId = crypto.randomBytes(32).toString("hex");
+	let sessionId = crypto.randomBytes(32).toString("hex");
 
-  await db.session.create({
-    data: {
-      id: sessionId,
-      userId,
-      expiresAt: new Date(Date.now() + 60 * 60 * 1000), // 1 hour
-      createdAt: new Date(),
-    },
-  });
+	await db.session.create({
+		data: {
+			id: sessionId,
+			userId,
+			expiresAt: new Date(Date.now() + 60 * 60 * 1000), // 1 hour
+			createdAt: new Date(),
+		},
+	});
 
-  return new Response("OK", {
-    headers: {
-      "Set-Cookie": [
-        `session=${sessionId}`,
-        "HttpOnly",
-        "Secure",
-        "SameSite=Strict",
-        "Path=/",
-        "Max-Age=3600",
-      ].join("; "),
-    },
-  });
+	return new Response("OK", {
+		headers: {
+			"Set-Cookie": [
+				`session=${sessionId}`,
+				"HttpOnly",
+				"Secure",
+				"SameSite=Strict",
+				"Path=/",
+				"Max-Age=3600",
+			].join("; "),
+		},
+	});
 }
 
 // Good: Session validation with expiry
 async function validateSession(req: Request): Promise<string | null> {
-  let sessionId = getCookie(req, "session");
-  if (!sessionId) return null;
+	let sessionId = getCookie(req, "session");
+	if (!sessionId) return null;
 
-  let session = await db.session.findUnique({ where: { id: sessionId } });
-  if (!session || session.expiresAt < new Date()) {
-    if (session) await db.session.delete({ where: { id: sessionId } });
-    return null;
-  }
+	let session = await db.session.findUnique({ where: { id: sessionId } });
+	if (!session || session.expiresAt < new Date()) {
+		if (session) await db.session.delete({ where: { id: sessionId } });
+		return null;
+	}
 
-  // Extend session (sliding expiration)
-  await db.session.update({
-    where: { id: sessionId },
-    data: { expiresAt: new Date(Date.now() + 60 * 60 * 1000) },
-  });
+	// Extend session (sliding expiration)
+	await db.session.update({
+		where: { id: sessionId },
+		data: { expiresAt: new Date(Date.now() + 60 * 60 * 1000) },
+	});
 
-  return session.userId;
+	return session.userId;
 }
 
 // Good: Logout invalidates session
 async function logout(req: Request): Promise<Response> {
-  let sessionId = getCookie(req, "session");
-  if (sessionId) await db.session.delete({ where: { id: sessionId } });
+	let sessionId = getCookie(req, "session");
+	if (sessionId) await db.session.delete({ where: { id: sessionId } });
 
-  return new Response("OK", {
-    headers: { "Set-Cookie": "session=; Max-Age=0; Path=/" },
-  });
+	return new Response("OK", {
+		headers: { "Set-Cookie": "session=; Max-Age=0; Path=/" },
+	});
 }
 ```
 

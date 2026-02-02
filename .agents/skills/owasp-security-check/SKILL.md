@@ -60,24 +60,24 @@ Check for missing authorization, IDOR, privilege escalation.
 ```typescript
 // Bad: No authorization check
 async function getUser(req: Request): Promise<Response> {
-  let url = new URL(req.url);
-  let userId = url.searchParams.get("id");
-  let user = await db.user.findUnique({ where: { id: userId } });
-  return new Response(JSON.stringify(user));
+	let url = new URL(req.url);
+	let userId = url.searchParams.get("id");
+	let user = await db.user.findUnique({ where: { id: userId } });
+	return new Response(JSON.stringify(user));
 }
 
 // Good: Verify ownership
 async function getUser(req: Request): Promise<Response> {
-  let session = await getSession(req);
-  let url = new URL(req.url);
-  let userId = url.searchParams.get("id");
+	let session = await getSession(req);
+	let url = new URL(req.url);
+	let userId = url.searchParams.get("id");
 
-  if (session.userId !== userId && !session.isAdmin) {
-    return new Response("Forbidden", { status: 403 });
-  }
+	if (session.userId !== userId && !session.isAdmin) {
+		return new Response("Forbidden", { status: 403 });
+	}
 
-  let user = await db.user.findUnique({ where: { id: userId } });
-  return new Response(JSON.stringify(user));
+	let user = await db.user.findUnique({ where: { id: userId } });
+	return new Response(JSON.stringify(user));
 }
 ```
 
@@ -88,17 +88,17 @@ Check for weak authentication, missing MFA, session issues.
 ```typescript
 // Bad: Weak password check
 if (password.length >= 6) {
-  /* allow */
+	/* allow */
 }
 
 // Good: Strong password requirements
 function validatePassword(password: string) {
-  if (password.length < 12) return false;
-  if (!/[A-Z]/.test(password)) return false;
-  if (!/[a-z]/.test(password)) return false;
-  if (!/[0-9]/.test(password)) return false;
-  if (!/[^A-Za-z0-9]/.test(password)) return false;
-  return true;
+	if (password.length < 12) return false;
+	if (!/[A-Z]/.test(password)) return false;
+	if (!/[a-z]/.test(password)) return false;
+	if (!/[0-9]/.test(password)) return false;
+	if (!/[^A-Za-z0-9]/.test(password)) return false;
+	return true;
 }
 ```
 
@@ -126,11 +126,11 @@ return new Response(JSON.stringify(user)); // Contains password hash, email, etc
 
 // Good: Return only needed fields
 return new Response(
-  JSON.stringify({
-    id: user.id,
-    username: user.username,
-    displayName: user.displayName,
-  }),
+	JSON.stringify({
+		id: user.id,
+		username: user.username,
+		displayName: user.displayName,
+	}),
 );
 ```
 
@@ -142,7 +142,7 @@ Check for unsigned data, insecure deserialization.
 // Bad: Trusting unsigned JWT
 let decoded = JSON.parse(atob(token.split(".")[1]));
 if (decoded.isAdmin) {
-  /* grant access */
+	/* grant access */
 }
 
 // Good: Verify signature
@@ -189,7 +189,7 @@ let response = await fetch(url);
 const ALLOWED_DOMAINS = ["api.example.com", "cdn.example.com"];
 let url = new URL(await req.json().then((d) => d.url));
 if (!ALLOWED_DOMAINS.includes(url.hostname)) {
-  return new Response("Invalid URL", { status: 400 });
+	return new Response("Invalid URL", { status: 400 });
 }
 ```
 
@@ -208,7 +208,7 @@ const ALLOWED_EXTS = [".jpg", ".jpeg", ".png", ".webp"];
 let file = await req.formData().then((fd) => fd.get("file") as File);
 
 if (!ALLOWED_TYPES.includes(file.type)) {
-  return new Response("Invalid file type", { status: 400 });
+	return new Response("Invalid file type", { status: 400 });
 }
 ```
 
@@ -225,7 +225,7 @@ return Response.redirect(returnUrl);
 let returnUrl = new URL(req.url).searchParams.get("return");
 let allowed = ["/dashboard", "/profile", "/settings"];
 if (!allowed.includes(returnUrl)) {
-  return Response.redirect("/");
+	return Response.redirect("/");
 }
 ```
 
@@ -242,10 +242,10 @@ let isAdmin = req.headers.get("x-admin-secret") === "admin123";
 // Good: Proper role-based access control
 let session = await getSession(req);
 let isAdmin = await db.user
-  .findUnique({
-    where: { id: session.userId },
-  })
-  .then((u) => u.role === "ADMIN");
+	.findUnique({
+		where: { id: session.userId },
+	})
+	.then((u) => u.role === "ADMIN");
 ```
 
 #### security-misconfiguration - @rules/security-misconfiguration.md
@@ -275,12 +275,12 @@ return new Response(html);
 
 // Good: Security headers set
 return new Response(html, {
-  headers: {
-    "Content-Security-Policy": "default-src 'self'",
-    "X-Frame-Options": "DENY",
-    "X-Content-Type-Options": "nosniff",
-    "Strict-Transport-Security": "max-age=31536000; includeSubDomains",
-  },
+	headers: {
+		"Content-Security-Policy": "default-src 'self'",
+		"X-Frame-Options": "DENY",
+		"X-Content-Type-Options": "nosniff",
+		"Strict-Transport-Security": "max-age=31536000; includeSubDomains",
+	},
 });
 ```
 
@@ -297,7 +297,7 @@ headers.set("Access-Control-Allow-Credentials", "true");
 let allowedOrigins = ["https://app.example.com"];
 let origin = req.headers.get("origin");
 if (origin && allowedOrigins.includes(origin)) {
-  headers.set("Access-Control-Allow-Origin", origin);
+	headers.set("Access-Control-Allow-Origin", origin);
 }
 ```
 
@@ -312,9 +312,9 @@ let session = await getSession(cookies.sessionId);
 
 // Good: SameSite cookie + token validation
 return new Response("OK", {
-  headers: {
-    "Set-Cookie": "session=abc; SameSite=Strict; Secure; HttpOnly",
-  },
+	headers: {
+		"Set-Cookie": "session=abc; SameSite=Strict; Secure; HttpOnly",
+	},
 });
 ```
 
@@ -325,15 +325,14 @@ Check for cookie flags, JWT issues, token storage.
 ```typescript
 // Bad: Insecure cookie
 return new Response("OK", {
-  headers: { "Set-Cookie": "session=abc123" },
+	headers: { "Set-Cookie": "session=abc123" },
 });
 
 // Good: Secure cookie with all flags
 return new Response("OK", {
-  headers: {
-    "Set-Cookie":
-      "session=abc123; Secure; HttpOnly; SameSite=Strict; Path=/; Max-Age=3600",
-  },
+	headers: {
+		"Set-Cookie": "session=abc123; Secure; HttpOnly; SameSite=Strict; Path=/; Max-Age=3600",
+	},
 });
 ```
 
@@ -351,8 +350,8 @@ await db.user.update({ where: { id }, data: userData });
 // Good: Explicitly allow fields
 let { displayName, bio } = await req.json();
 await db.user.update({
-  where: { id },
-  data: { displayName, bio }, // Only allowed fields
+	where: { id },
+	data: { displayName, bio }, // Only allowed fields
 });
 ```
 
@@ -363,15 +362,15 @@ Check for missing rate limits, brute force prevention.
 ```typescript
 // Bad: No rate limiting
 async function login(req: Request): Promise<Response> {
-  let { email, password } = await req.json();
-  // Allows unlimited login attempts
+	let { email, password } = await req.json();
+	// Allows unlimited login attempts
 }
 
 // Good: Rate limiting
 let ip = req.headers.get("x-forwarded-for");
 let { success } = await ratelimit.limit(ip);
 if (!success) {
-  return new Response("Too many requests", { status: 429 });
+	return new Response("Too many requests", { status: 429 });
 }
 ```
 
@@ -385,9 +384,9 @@ console.log("User login:", { email, password, ssn });
 
 // Good: Log events without sensitive data
 console.log("User login attempt", {
-  email,
-  ip: req.headers.get("x-forwarded-for"),
-  timestamp: new Date().toISOString(),
+	email,
+	ip: req.headers.get("x-forwarded-for"),
+	timestamp: new Date().toISOString(),
 });
 ```
 

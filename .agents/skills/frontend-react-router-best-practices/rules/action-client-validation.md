@@ -32,25 +32,22 @@ Build validation in layers, each enhancing the previous:
 import { z } from "zod";
 
 export const createPostSchema = z.object({
-  title: z.string().min(1, "Title is required").max(100),
-  content: z.string().min(1, "Content is required"),
+	title: z.string().min(1, "Title is required").max(100),
+	content: z.string().min(1, "Content is required"),
 });
 
 // route.tsx
 export async function action({ request }: Route.ActionArgs) {
-  let formData = await request.formData();
+	let formData = await request.formData();
 
-  let result = createPostSchema.safeParse(Object.fromEntries(formData));
+	let result = createPostSchema.safeParse(Object.fromEntries(formData));
 
-  if (!result.success) {
-    return data(
-      { ok: false, errors: result.error.flatten().fieldErrors },
-      { status: 400 },
-    );
-  }
+	if (!result.success) {
+		return data({ ok: false, errors: result.error.flatten().fieldErrors }, { status: 400 });
+	}
 
-  await createPost(result.data);
-  return data({ ok: true });
+	await createPost(result.data);
+	return data({ ok: true });
 }
 ```
 
@@ -58,25 +55,19 @@ export async function action({ request }: Route.ActionArgs) {
 
 ```tsx
 // route.tsx
-export async function clientAction({
-  request,
-  serverAction,
-}: Route.ClientActionArgs) {
-  let formData = await request.clone().formData();
+export async function clientAction({ request, serverAction }: Route.ClientActionArgs) {
+	let formData = await request.clone().formData();
 
-  // Validate on client first
-  let result = createPostSchema.safeParse(Object.fromEntries(formData));
+	// Validate on client first
+	let result = createPostSchema.safeParse(Object.fromEntries(formData));
 
-  if (!result.success) {
-    // Return errors without hitting server
-    return data(
-      { ok: false, errors: result.error.flatten().fieldErrors },
-      { status: 400 },
-    );
-  }
+	if (!result.success) {
+		// Return errors without hitting server
+		return data({ ok: false, errors: result.error.flatten().fieldErrors }, { status: 400 });
+	}
 
-  // Validation passed, call server action
-  return serverAction<typeof action>();
+	// Validation passed, call server action
+	return serverAction<typeof action>();
 }
 ```
 
@@ -144,8 +135,8 @@ routes/
 import { z } from "zod";
 
 export const createPostSchema = z.object({
-  title: z.string().min(1).max(100),
-  content: z.string().min(1),
+	title: z.string().min(1).max(100),
+	content: z.string().min(1),
 });
 ```
 
@@ -156,25 +147,19 @@ For translated error messages, you may need different approaches for client vs s
 ```tsx
 // Server action - has access to i18n
 export async function action({ request }: Route.ActionArgs) {
-  let t = await i18next.getFixedT(request);
-  let schema = createPostSchema(t); // Schema factory with translations
-  // ...
+	let t = await i18next.getFixedT(request);
+	let schema = createPostSchema(t); // Schema factory with translations
+	// ...
 }
 
 // Client action - simpler approach
-export async function clientAction({
-  request,
-  serverAction,
-}: Route.ClientActionArgs) {
-  let result = createPostSchemaBasic.safeParse(/* ... */);
-  if (!result.success) {
-    // Return generic errors, server will return translated ones if needed
-    return data(
-      { ok: false, errors: result.error.flatten().fieldErrors },
-      { status: 400 },
-    );
-  }
-  return serverAction<typeof action>();
+export async function clientAction({ request, serverAction }: Route.ClientActionArgs) {
+	let result = createPostSchemaBasic.safeParse(/* ... */);
+	if (!result.success) {
+		// Return generic errors, server will return translated ones if needed
+		return data({ ok: false, errors: result.error.flatten().fieldErrors }, { status: 400 });
+	}
+	return serverAction<typeof action>();
 }
 ```
 

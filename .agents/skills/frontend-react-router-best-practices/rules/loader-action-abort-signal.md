@@ -20,11 +20,11 @@ Use `request.signal` to abort in-flight async work when the client cancels a nav
 import { data } from "react-router";
 
 export async function loader({ request }: Route.LoaderArgs) {
-  let response = await fetch("https://example.com/api", {
-    signal: request.signal,
-  });
+	let response = await fetch("https://example.com/api", {
+		signal: request.signal,
+	});
 
-  return data(await response.json());
+	return data(await response.json());
 }
 ```
 
@@ -32,12 +32,12 @@ export async function loader({ request }: Route.LoaderArgs) {
 
 ```ts
 export async function loader({ request }: Route.LoaderArgs) {
-  let [a, b] = await Promise.all([
-    fetch(urlA, { signal: request.signal }),
-    fetch(urlB, { signal: request.signal }),
-  ]);
+	let [a, b] = await Promise.all([
+		fetch(urlA, { signal: request.signal }),
+		fetch(urlB, { signal: request.signal }),
+	]);
 
-  return data({ a: await a.json(), b: await b.json() });
+	return data({ a: await a.json(), b: await b.json() });
 }
 ```
 
@@ -45,15 +45,15 @@ export async function loader({ request }: Route.LoaderArgs) {
 
 ```ts
 export async function loader({ request }: Route.LoaderArgs) {
-  try {
-    let response = await fetch(url, { signal: request.signal });
-    return data(await response.json());
-  } catch (error) {
-    if (error instanceof Error && error.name === "AbortError") {
-      return new Response(null, { status: 204 });
-    }
-    throw error;
-  }
+	try {
+		let response = await fetch(url, { signal: request.signal });
+		return data(await response.json());
+	} catch (error) {
+		if (error instanceof Error && error.name === "AbortError") {
+			return new Response(null, { status: 204 });
+		}
+		throw error;
+	}
 }
 ```
 
@@ -63,13 +63,13 @@ If an API doesn't accept an `AbortSignal`, check manually between steps:
 
 ```ts
 export async function action({ request }: Route.ActionArgs) {
-  let first = await doStepOne();
-  if (request.signal.aborted) throw new Error("AbortError");
+	let first = await doStepOne();
+	if (request.signal.aborted) throw new Error("AbortError");
 
-  let second = await doStepTwo();
-  if (request.signal.aborted) throw new Error("AbortError");
+	let second = await doStepTwo();
+	if (request.signal.aborted) throw new Error("AbortError");
 
-  return data({ first, second });
+	return data({ first, second });
 }
 ```
 
@@ -79,15 +79,15 @@ If the action touches your database, wrap the steps in a transaction so an abort
 
 ```ts
 export async function action({ request }: Route.ActionArgs) {
-  return db.transaction(async (trx) => {
-    let a = await createA(trx);
-    if (request.signal.aborted) throw new Error("AbortError");
+	return db.transaction(async (trx) => {
+		let a = await createA(trx);
+		if (request.signal.aborted) throw new Error("AbortError");
 
-    let b = await createB(trx, a.id);
-    if (request.signal.aborted) throw new Error("AbortError");
+		let b = await createB(trx, a.id);
+		if (request.signal.aborted) throw new Error("AbortError");
 
-    return data({ a, b });
-  });
+		return data({ a, b });
+	});
 }
 ```
 

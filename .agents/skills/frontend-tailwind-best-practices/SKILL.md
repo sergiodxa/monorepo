@@ -87,7 +87,7 @@ Use class-based color schemes with a custom `dark` variant.
 
 ```tsx
 <button className="rounded-full bg-gray-900 px-4 py-2 text-white dark:bg-gray-100 dark:text-gray-900">
-  Toggle
+	Toggle
 </button>
 ```
 
@@ -101,18 +101,18 @@ Always use `cn()` to merge classNames in components.
 import { cn } from "~/lib/cn";
 
 function Button({ className, variant }: Props) {
-  return (
-    <button
-      className={cn(
-        "base-classes",
-        {
-          "variant-primary": variant === "primary",
-          "variant-secondary": variant === "secondary",
-        },
-        className, // external className always last
-      )}
-    />
-  );
+	return (
+		<button
+			className={cn(
+				"base-classes",
+				{
+					"variant-primary": variant === "primary",
+					"variant-secondary": variant === "secondary",
+				},
+				className, // external className always last
+			)}
+		/>
+	);
 }
 ```
 
@@ -125,12 +125,12 @@ import type { ClassName, ClassNameRecord } from "~/lib/cn";
 
 // Single element
 type Props = {
-  className?: ClassName;
+	className?: ClassName;
 };
 
 // Multiple elements
 type Props = {
-  className?: ClassNameRecord<"root" | "label" | "input">;
+	className?: ClassNameRecord<"root" | "label" | "input">;
 };
 
 // Usage
@@ -145,7 +145,7 @@ Define element-agnostic visual patterns that compose with utilities.
 
 ```tsx
 <label className="ui-button" htmlFor="document-upload">
-  Choose file
+	Choose file
 </label>
 ```
 
@@ -182,7 +182,7 @@ Design for input capabilities (pointer/hover) instead of device labels.
 
 ```tsx
 <button className="h-10 w-10 pointer-coarse:h-12 pointer-coarse:w-12">
-  <Icon />
+	<Icon />
 </button>
 ```
 

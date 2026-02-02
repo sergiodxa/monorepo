@@ -42,13 +42,13 @@ Would testing it require complex mocking?
 import { test, expect } from "@playwright/test";
 
 test("user can place an order", async ({ page }) => {
-  await page.goto("/catalog");
+	await page.goto("/catalog");
 
-  await page.getByLabel("Quantity").fill("1");
-  await page.getByLabel("Item").selectOption("item-123");
-  await page.getByRole("button", { name: "Buy" }).click();
+	await page.getByLabel("Quantity").fill("1");
+	await page.getByLabel("Item").selectOption("item-123");
+	await page.getByRole("button", { name: "Buy" }).click();
 
-  await expect(page.getByText("Thanks for your order")).toBeVisible();
+	await expect(page.getByText("Thanks for your order")).toBeVisible();
 });
 ```
 
@@ -60,13 +60,13 @@ import { describe, test, expect } from "vitest";
 import { formatCurrency } from "./format";
 
 describe("formatCurrency", () => {
-  test("formats dollars with two decimals", () => {
-    expect(formatCurrency(1234.5)).toBe("$1,234.50");
-  });
+	test("formats dollars with two decimals", () => {
+		expect(formatCurrency(1234.5)).toBe("$1,234.50");
+	});
 
-  test("handles zero", () => {
-    expect(formatCurrency(0)).toBe("$0.00");
-  });
+	test("handles zero", () => {
+		expect(formatCurrency(0)).toBe("$0.00");
+	});
 });
 ```
 
@@ -79,21 +79,19 @@ import { loader } from "./route";
 import { mockServer, http, HttpResponse } from "~/lib/test-utils";
 
 beforeEach(() => {
-  mockServer.use(
-    http.get("/api/user", () => HttpResponse.json({ name: "John" })),
-  );
+	mockServer.use(http.get("/api/user", () => HttpResponse.json({ name: "John" })));
 });
 
 describe("profile loader", () => {
-  test("returns user data", async () => {
-    let response = await loader({
-      request: new Request("http://test"),
-      params: {},
-      context: {},
-    });
-    let data = await response.json();
-    expect(data.user.name).toBe("John");
-  });
+	test("returns user data", async () => {
+		let response = await loader({
+			request: new Request("http://test"),
+			params: {},
+			context: {},
+		});
+		let data = await response.json();
+		expect(data.user.name).toBe("John");
+	});
 });
 ```
 

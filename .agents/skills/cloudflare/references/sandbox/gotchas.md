@@ -10,10 +10,10 @@
 ```typescript
 const sandbox = getSandbox(env.Sandbox, "temp", { keepAlive: true });
 try {
-  const result = await sandbox.exec("python script.py");
-  return result.stdout;
+	const result = await sandbox.exec("python script.py");
+	return result.stdout;
 } finally {
-  await sandbox.destroy(); // REQUIRED to free resources
+	await sandbox.destroy(); // REQUIRED to free resources
 }
 ```
 
@@ -24,17 +24,17 @@ try {
 
 ```typescript
 async function execWithRetry(sandbox, cmd) {
-  for (let i = 0; i < 3; i++) {
-    try {
-      return await sandbox.exec(cmd);
-    } catch (e) {
-      if (e.code === "CONTAINER_NOT_READY") {
-        await new Promise((r) => setTimeout(r, 2000));
-        continue;
-      }
-      throw e;
-    }
-  }
+	for (let i = 0; i < 3; i++) {
+		try {
+			return await sandbox.exec(cmd);
+		} catch (e) {
+			if (e.code === "CONTAINER_NOT_READY") {
+				await new Promise((r) => setTimeout(r, 2000));
+				continue;
+			}
+			throw e;
+		}
+	}
 }
 ```
 
@@ -139,7 +139,7 @@ const result = await sandbox.exec("python3 /workspace/user_code.py");
 ```typescript
 // Timeout long-running commands
 const result = await sandbox.exec("python3 script.py", {
-  timeout: 30000, // 30 seconds
+	timeout: 30000, // 30 seconds
 });
 ```
 
@@ -154,7 +154,7 @@ const token = env.GITHUB_TOKEN;
 
 // Pass to sandbox via exec env
 const result = await sandbox.exec("git clone ...", {
-  env: { GIT_TOKEN: token },
+	env: { GIT_TOKEN: token },
 });
 ```
 

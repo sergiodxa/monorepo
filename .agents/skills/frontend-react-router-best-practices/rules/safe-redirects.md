@@ -15,9 +15,9 @@ import { redirect } from "react-router";
 import { safeRedirect } from "remix-utils/safe-redirect";
 
 export async function loader({ request }: Route.LoaderArgs) {
-  let url = new URL(request.url);
-  let redirectTo = url.searchParams.get("redirectTo");
-  return redirect(safeRedirect(redirectTo, "/"));
+	let url = new URL(request.url);
+	let redirectTo = url.searchParams.get("redirectTo");
+	return redirect(safeRedirect(redirectTo, "/"));
 }
 ```
 
@@ -25,7 +25,7 @@ export async function loader({ request }: Route.LoaderArgs) {
 import { redirectBack } from "remix-utils/redirect-back";
 
 export async function action({ request }: Route.ActionArgs) {
-  throw redirectBack(request, { fallback: "/" });
+	throw redirectBack(request, { fallback: "/" });
 }
 ```
 

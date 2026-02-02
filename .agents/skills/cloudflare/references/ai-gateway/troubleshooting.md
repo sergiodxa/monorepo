@@ -12,8 +12,8 @@
 
 ```typescript
 const client = new OpenAI({
-  baseURL: `https://gateway.ai.cloudflare.com/v1/${accountId}/${gatewayId}/openai`,
-  defaultHeaders: { "cf-aig-authorization": `Bearer ${CF_API_TOKEN}` },
+	baseURL: `https://gateway.ai.cloudflare.com/v1/${accountId}/${gatewayId}/openai`,
+	defaultHeaders: { "cf-aig-authorization": `Bearer ${CF_API_TOKEN}` },
 });
 ```
 
@@ -21,17 +21,17 @@ const client = new OpenAI({
 
 ```typescript
 async function requestWithRetry(fn, maxRetries = 3) {
-  for (let i = 0; i < maxRetries; i++) {
-    try {
-      return await fn();
-    } catch (e) {
-      if (e.status === 429 && i < maxRetries - 1) {
-        await new Promise((r) => setTimeout(r, Math.pow(2, i) * 1000));
-        continue;
-      }
-      throw e;
-    }
-  }
+	for (let i = 0; i < maxRetries; i++) {
+		try {
+			return await fn();
+		} catch (e) {
+			if (e.status === 429 && i < maxRetries - 1) {
+				await new Promise((r) => setTimeout(r, Math.pow(2, i) * 1000));
+				continue;
+			}
+			throw e;
+		}
+	}
 }
 ```
 

@@ -8,11 +8,11 @@ The `ASSETS` binding provides access to static assets via the `Fetcher` interfac
 
 ```typescript
 interface Env {
-  ASSETS: Fetcher;
+	ASSETS: Fetcher;
 }
 
 interface Fetcher {
-  fetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response>;
+	fetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response>;
 }
 ```
 
@@ -30,10 +30,10 @@ await env.ASSETS.fetch(new URL("/index.html", request.url));
 
 // 4. Constructed Request object
 await env.ASSETS.fetch(
-  new Request(new URL("/logo.png", request.url), {
-    method: "GET",
-    headers: request.headers,
-  }),
+	new Request(new URL("/logo.png", request.url), {
+		method: "GET",
+		headers: request.headers,
+	}),
 );
 ```
 
@@ -161,12 +161,12 @@ const response = await env.ASSETS.fetch(request);
 
 // Clone and modify
 return new Response(response.body, {
-  status: response.status,
-  headers: {
-    ...Object.fromEntries(response.headers),
-    "Cache-Control": "public, max-age=31536000",
-    "X-Custom": "value",
-  },
+	status: response.status,
+	headers: {
+		...Object.fromEntries(response.headers),
+		"Cache-Control": "public, max-age=31536000",
+		"X-Custom": "value",
+	},
 });
 ```
 
@@ -178,8 +178,8 @@ See patterns.md:27-35 for full example.
 const response = await env.ASSETS.fetch(request);
 
 if (!response.ok) {
-  // Asset not found or error
-  return new Response("Custom error page", { status: 404 });
+	// Asset not found or error
+	return new Response("Custom error page", { status: 404 });
 }
 
 return response;
@@ -192,7 +192,7 @@ const url = new URL(request.url);
 
 // Serve different assets based on conditions
 if (url.pathname === "/") {
-  return env.ASSETS.fetch("/index.html");
+	return env.ASSETS.fetch("/index.html");
 }
 
 return env.ASSETS.fetch(request);

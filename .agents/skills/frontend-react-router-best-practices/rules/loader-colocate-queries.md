@@ -35,25 +35,22 @@ routes/
 import type { APIClient } from "~/lib/api.server";
 
 export async function queryItems(client: APIClient) {
-  let items = await client.items.list();
-  return items.map((item) => ({
-    id: item.id,
-    title: item.title,
-    slug: item.slug,
-  }));
+	let items = await client.items.list();
+	return items.map((item) => ({
+		id: item.id,
+		title: item.title,
+		slug: item.slug,
+	}));
 }
 
 export async function queryFeaturedItems(client: APIClient) {
-  return client.items.featured();
+	return client.items.featured();
 }
 
-export async function querySuggestedItems(
-  client: APIClient,
-  existingItems: { id: string }[],
-) {
-  let suggestions = await client.items.suggested();
-  let existingIds = new Set(existingItems.map((i) => i.id));
-  return suggestions.filter((s) => !existingIds.has(s.id));
+export async function querySuggestedItems(client: APIClient, existingItems: { id: string }[]) {
+	let suggestions = await client.items.suggested();
+	let existingIds = new Set(existingItems.map((i) => i.id));
+	return suggestions.filter((s) => !existingIds.has(s.id));
 }
 ```
 
@@ -62,23 +59,19 @@ export async function querySuggestedItems(
 ```tsx
 // route.tsx
 import { data } from "react-router";
-import {
-  queryItems,
-  queryFeaturedItems,
-  querySuggestedItems,
-} from "./queries.server";
+import { queryItems, queryFeaturedItems, querySuggestedItems } from "./queries.server";
 
 export async function loader({ request, context }: Route.LoaderArgs) {
-  let client = await authenticate(request);
+	let client = await authenticate(request);
 
-  const [featuredItems, items] = await Promise.all([
-    queryFeaturedItems(client),
-    queryItems(client),
-  ]);
+	const [featuredItems, items] = await Promise.all([
+		queryFeaturedItems(client),
+		queryItems(client),
+	]);
 
-  let suggestedItems = await querySuggestedItems(client, items);
+	let suggestedItems = await querySuggestedItems(client, items);
 
-  return data({ featuredItems, items, suggestedItems });
+	return data({ featuredItems, items, suggestedItems });
 }
 ```
 

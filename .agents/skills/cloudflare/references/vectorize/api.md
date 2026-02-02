@@ -4,10 +4,10 @@
 
 ```typescript
 interface VectorizeVector {
-  id: string; // Max 64 bytes
-  values: number[]; // Must match index dimensions
-  namespace?: string; // Optional partition (max 64 bytes)
-  metadata?: Record<string, any>; // Max 10 KiB
+	id: string; // Max 64 bytes
+	values: number[]; // Must match index dimensions
+	namespace?: string; // Optional partition (max 64 bytes)
+	metadata?: Record<string, any>; // Max 10 KiB
 }
 ```
 
@@ -15,11 +15,11 @@ interface VectorizeVector {
 
 ```typescript
 const matches = await env.VECTORIZE.query(queryVector, {
-  topK: 10, // Max 100 (or 20 with returnValues/returnMetadata:"all")
-  returnMetadata: "indexed", // "none" | "indexed" | "all"
-  returnValues: false,
-  namespace: "tenant-123",
-  filter: { category: "docs" },
+	topK: 10, // Max 100 (or 20 with returnValues/returnMetadata:"all")
+	returnMetadata: "indexed", // "none" | "indexed" | "all"
+	returnValues: false,
+	namespace: "tenant-123",
+	filter: { category: "docs" },
 });
 // matches.matches[0] = { id, score, metadata? }
 ```
@@ -84,6 +84,6 @@ Requires metadata index. Filter operators:
 
 ```typescript
 for (let i = 0; i < vectors.length; i += 500) {
-  await env.VECTORIZE.upsert(vectors.slice(i, i + 500));
+	await env.VECTORIZE.upsert(vectors.slice(i, i + 500));
 }
 ```

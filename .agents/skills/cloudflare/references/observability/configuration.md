@@ -4,10 +4,10 @@
 
 ```jsonc
 {
-  "observability": {
-    "enabled": true,
-    "head_sampling_rate": 1, // 100% sampling (default)
-  },
+	"observability": {
+		"enabled": true,
+		"head_sampling_rate": 1, // 100% sampling (default)
+	},
 }
 ```
 
@@ -16,10 +16,10 @@
 ```typescript
 // Good - structured logging
 console.log({
-  user_id: 123,
-  action: "login",
-  status: "success",
-  duration_ms: 45,
+	user_id: 123,
+	action: "login",
+	status: "success",
+	duration_ms: 45,
 });
 
 // Avoid - unstructured string
@@ -30,12 +30,12 @@ console.log("user_id: 123 logged in successfully in 45ms");
 
 ```jsonc
 {
-  "observability": {
-    "traces": {
-      "enabled": true,
-      "head_sampling_rate": 0.05, // 5% sampling
-    },
-  },
+	"observability": {
+		"traces": {
+			"enabled": true,
+			"head_sampling_rate": 0.05, // 5% sampling
+		},
+	},
 }
 ```
 
@@ -56,20 +56,20 @@ analytics_engine_datasets = [
 
 ```typescript
 export interface Env {
-  ANALYTICS: AnalyticsEngineDataset;
+	ANALYTICS: AnalyticsEngineDataset;
 }
 
 export default {
-  async fetch(request: Request, env: Env): Promise<Response> {
-    // Track metrics
-    env.ANALYTICS.writeDataPoint({
-      blobs: ["customer_123", "POST", "/api/v1/users"],
-      doubles: [1, 245.5], // request_count, response_time_ms
-      indexes: ["customer_123"], // for efficient filtering
-    });
+	async fetch(request: Request, env: Env): Promise<Response> {
+		// Track metrics
+		env.ANALYTICS.writeDataPoint({
+			blobs: ["customer_123", "POST", "/api/v1/users"],
+			doubles: [1, 245.5], // request_count, response_time_ms
+			indexes: ["customer_123"], // for efficient filtering
+		});
 
-    return new Response("OK");
-  },
+		return new Response("OK");
+	},
 };
 ```
 
@@ -92,23 +92,22 @@ service = "my-worker" # Worker to tail
 
 ```typescript
 export default {
-  async tail(events: TraceItem[], env: Env, ctx: ExecutionContext) {
-    // Filter errors only
-    const errors = events.filter(
-      (event) =>
-        event.outcome === "exception" || event.outcome === "exceededCpu",
-    );
+	async tail(events: TraceItem[], env: Env, ctx: ExecutionContext) {
+		// Filter errors only
+		const errors = events.filter(
+			(event) => event.outcome === "exception" || event.outcome === "exceededCpu",
+		);
 
-    if (errors.length > 0) {
-      // Send to external monitoring
-      ctx.waitUntil(
-        fetch("https://monitoring.example.com/errors", {
-          method: "POST",
-          body: JSON.stringify(errors),
-        }),
-      );
-    }
-  },
+		if (errors.length > 0) {
+			// Send to external monitoring
+			ctx.waitUntil(
+				fetch("https://monitoring.example.com/errors", {
+					method: "POST",
+					body: JSON.stringify(errors),
+				}),
+			);
+		}
+	},
 };
 ```
 
@@ -147,13 +146,13 @@ curl -X POST "https://api.cloudflare.com/client/v4/accounts/{account_id}/logpush
 ```jsonc
 // wrangler.dev.jsonc
 {
-  "observability": {
-    "enabled": true,
-    "head_sampling_rate": 1.0,
-    "traces": {
-      "enabled": true,
-    },
-  },
+	"observability": {
+		"enabled": true,
+		"head_sampling_rate": 1.0,
+		"traces": {
+			"enabled": true,
+		},
+	},
 }
 ```
 
@@ -162,13 +161,13 @@ curl -X POST "https://api.cloudflare.com/client/v4/accounts/{account_id}/logpush
 ```jsonc
 // wrangler.prod.jsonc
 {
-  "observability": {
-    "enabled": true,
-    "head_sampling_rate": 0.1, // 10% sampling
-    "traces": {
-      "enabled": true,
-    },
-  },
+	"observability": {
+		"enabled": true,
+		"head_sampling_rate": 0.1, // 10% sampling
+		"traces": {
+			"enabled": true,
+		},
+	},
 }
 ```
 

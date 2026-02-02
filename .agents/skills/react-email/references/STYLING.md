@@ -10,18 +10,18 @@ Use the `Tailwind` component for styling if the project uses Tailwind CSS. Other
 import { Tailwind, pixelBasedPreset } from "@react-email/components";
 
 <Tailwind
-  config={{
-    presets: [pixelBasedPreset],
-    theme: {
-      extend: {
-        colors: {
-          brand: "#007bff",
-        },
-      },
-    },
-  }}
+	config={{
+		presets: [pixelBasedPreset],
+		theme: {
+			extend: {
+				colors: {
+					brand: "#007bff",
+				},
+			},
+		},
+	}}
 >
-  {/* Email content */}
+	{/* Email content */}
 </Tailwind>;
 ```
 
@@ -70,10 +70,10 @@ Always define `<Head />` inside `<Tailwind>` when using Tailwind CSS:
 
 ```tsx
 <Html>
-  <Tailwind config={{ presets: [pixelBasedPreset] }}>
-    <Head />
-    <Body>...</Body>
-  </Tailwind>
+	<Tailwind config={{ presets: [pixelBasedPreset] }}>
+		<Head />
+		<Body>...</Body>
+	</Tailwind>
 </Html>
 ```
 
@@ -83,15 +83,15 @@ Only include props that the component actually uses:
 
 ```tsx
 const Email = ({ source }: { source: string }) => {
-  return (
-    <div>
-      <a href={source}>Click here</a>
-    </div>
-  );
+	return (
+		<div>
+			<a href={source}>Click here</a>
+		</div>
+	);
 };
 
 Email.PreviewProps = {
-  source: "https://example.com",
+	source: "https://example.com",
 };
 ```
 
@@ -117,9 +117,9 @@ Include physical address, unsubscribe link, current year:
 
 ```tsx
 <Section className="text-center text-gray-500 text-sm">
-  <Text className="m-0">123 Main St, City, State 12345</Text>
-  <Text className="m-0">&copy; {new Date().getFullYear()} Company Name</Text>
-  <Link href={unsubscribeUrl}>Unsubscribe</Link>
+	<Text className="m-0">123 Main St, City, State 12345</Text>
+	<Text className="m-0">&copy; {new Date().getFullYear()} Company Name</Text>
+	<Link href={unsubscribeUrl}>Unsubscribe</Link>
 </Section>
 ```
 
@@ -156,11 +156,7 @@ Use consistent spacing that respects content hierarchy. Larger margins for headi
 - Include `alt` text for accessibility
 
 ```tsx
-<Img
-  src="https://example.com/image.png"
-  alt="Description"
-  className="w-full h-auto"
-/>
+<Img src="https://example.com/image.png" alt="Description" className="w-full h-auto" />
 ```
 
 ## Buttons
@@ -169,10 +165,10 @@ Always use `box-border` to prevent padding overflow:
 
 ```tsx
 <Button
-  href="https://example.com"
-  className="bg-blue-600 text-white px-5 py-3 rounded box-border block text-center no-underline"
+	href="https://example.com"
+	className="bg-blue-600 text-white px-5 py-3 rounded box-border block text-center no-underline"
 >
-  Click Here
+	Click Here
 </Button>
 ```
 
@@ -192,8 +188,8 @@ Use `Row` and `Column` components instead of flexbox/grid:
 
 ```tsx
 <Row>
-  <Column className="w-1/2">Left content</Column>
-  <Column className="w-1/2">Right content</Column>
+	<Column className="w-1/2">Left content</Column>
+	<Column className="w-1/2">Right content</Column>
 </Row>
 ```
 
@@ -231,26 +227,26 @@ Create a centralized Tailwind config file that all email templates import. Using
 import { pixelBasedPreset, type TailwindConfig } from "@react-email/components";
 
 export default {
-  presets: [pixelBasedPreset],
-  theme: {
-    extend: {
-      colors: {
-        brand: {
-          primary: "#007bff",
-          secondary: "#6c757d",
-        },
-      },
-    },
-  },
+	presets: [pixelBasedPreset],
+	theme: {
+		extend: {
+			colors: {
+				brand: {
+					primary: "#007bff",
+					secondary: "#6c757d",
+				},
+			},
+		},
+	},
 } satisfies TailwindConfig;
 
 // For non-Tailwind brand assets (optional)
 export const brandAssets = {
-  logo: {
-    src: "https://example.com/logo.png",
-    alt: "Company Name",
-    width: 120,
-  },
+	logo: {
+		src: "https://example.com/logo.png",
+		alt: "Company Name",
+		width: 120,
+	},
 };
 ```
 
@@ -262,16 +258,12 @@ Import the shared config in every email template:
 import tailwindConfig, { brandAssets } from "./tailwind.config";
 
 <Tailwind config={tailwindConfig}>
-  <Body className="bg-gray-100 font-sans">
-    <Container className="bg-white p-6">
-      <Img
-        src={brandAssets.logo.src}
-        alt={brandAssets.logo.alt}
-        width={brandAssets.logo.width}
-      />
-      <Button className="bg-brand-primary text-white">Action</Button>
-    </Container>
-  </Body>
+	<Body className="bg-gray-100 font-sans">
+		<Container className="bg-white p-6">
+			<Img src={brandAssets.logo.src} alt={brandAssets.logo.alt} width={brandAssets.logo.width} />
+			<Button className="bg-brand-primary text-white">Action</Button>
+		</Container>
+	</Body>
 </Tailwind>;
 ```
 

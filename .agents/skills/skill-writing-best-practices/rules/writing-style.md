@@ -21,6 +21,7 @@ Don't use `---` as section separators:
 
 ```markdown
 # Bad
+
 ## Section One
 
 Content here.
@@ -34,6 +35,7 @@ More content.
 ---
 
 # Good
+
 ## Section One
 
 Content here.
@@ -51,12 +53,14 @@ Cut phrases that add no information:
 
 ```markdown
 # Bad
+
 "In this section, we will explore the various ways in which..."
 "It's important to note that..."
 "As mentioned previously..."
 "Let's take a look at..."
 
 # Good
+
 Just say the thing directly.
 ```
 
@@ -66,12 +70,15 @@ Don't bold or bullet everything:
 
 ```markdown
 # Bad: Everything is emphasized
+
 **Always** use `after_commit` for jobs because:
+
 - **It ensures** transaction safety
 - **It prevents** race conditions
 - **It guarantees** data consistency
 
 # Good: Emphasis is meaningful
+
 Use `after_commit` for jobs. This ensures the transaction has committed
 before the job runs, preventing race conditions where the job can't find
 the record.
@@ -83,11 +90,13 @@ Reserve bold for terms being defined or key concepts in lists.
 
 ```markdown
 # Bad: Passive and hedging
+
 "It is recommended that consideration be given to..."
 "One approach that could potentially be utilized..."
 "It should be noted that in some cases..."
 
 # Good: Direct
+
 "Use X when Y."
 "Consider X for Y situations."
 "X doesn't apply when Y."
@@ -99,11 +108,13 @@ Long paragraphs are hard to scan:
 
 ```markdown
 # Bad: Wall of text
+
 When implementing the pattern you should consider that there are multiple
 approaches and each has tradeoffs. The first approach involves X which has
 the benefit of Y but the downside of Z. The second approach...
 
 # Good: Broken up
+
 Consider two approaches:
 
 **First approach**: X. Benefits from Y but has Z downside.

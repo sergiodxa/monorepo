@@ -8,9 +8,9 @@ Runtime error or syntax error. Wrap code in try/catch:
 
 ```javascript
 try {
-  return await fetch(request);
+	return await fetch(request);
 } catch (error) {
-  return new Response(`Error: ${error.message}`, { status: 500 });
+	return new Response(`Error: ${error.message}`, { status: 500 });
 }
 ```
 

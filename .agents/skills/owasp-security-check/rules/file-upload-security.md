@@ -33,13 +33,13 @@ Check for secure file upload handling including type validation, size limits, an
 ```typescript
 // Bad: No validation
 async function uploadFile(req: Request): Promise<Response> {
-  let formData = await req.formData();
-  let file = formData.get("file") as File;
+	let formData = await req.formData();
+	let file = formData.get("file") as File;
 
-  // No type or size checking!
-  await writeFile(`./uploads/${file.name}`, file);
+	// No type or size checking!
+	await writeFile(`./uploads/${file.name}`, file);
 
-  return new Response("Uploaded");
+	return new Response("Uploaded");
 }
 
 // Bad: Using original filename
@@ -56,48 +56,48 @@ const ALLOWED_EXTENSIONS = [".jpg", ".jpeg", ".png", ".webp"];
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 
 async function uploadFile(req: Request): Promise<Response> {
-  let formData = await req.formData();
-  let file = formData.get("file") as File;
+	let formData = await req.formData();
+	let file = formData.get("file") as File;
 
-  if (!file) {
-    return new Response("No file provided", { status: 400 });
-  }
+	if (!file) {
+		return new Response("No file provided", { status: 400 });
+	}
 
-  if (!ALLOWED_MIME_TYPES.includes(file.type)) {
-    return new Response("Invalid file type", { status: 400 });
-  }
+	if (!ALLOWED_MIME_TYPES.includes(file.type)) {
+		return new Response("Invalid file type", { status: 400 });
+	}
 
-  if (file.size > MAX_FILE_SIZE) {
-    return new Response("File too large", { status: 400 });
-  }
+	if (file.size > MAX_FILE_SIZE) {
+		return new Response("File too large", { status: 400 });
+	}
 
-  let ext = path.extname(file.name).toLowerCase();
-  if (!ALLOWED_EXTENSIONS.includes(ext)) {
-    return new Response("Invalid file extension", { status: 400 });
-  }
+	let ext = path.extname(file.name).toLowerCase();
+	if (!ALLOWED_EXTENSIONS.includes(ext)) {
+		return new Response("Invalid file extension", { status: 400 });
+	}
 
-  // Generate safe random filename
-  let randomName = crypto.randomBytes(16).toString("hex");
-  let safeFilename = `${randomName}${ext}`;
+	// Generate safe random filename
+	let randomName = crypto.randomBytes(16).toString("hex");
+	let safeFilename = `${randomName}${ext}`;
 
-  // Store outside web root
-  let uploadPath = path.join(process.cwd(), "private", "uploads", safeFilename);
+	// Store outside web root
+	let uploadPath = path.join(process.cwd(), "private", "uploads", safeFilename);
 
-  let buffer = await file.arrayBuffer();
-  await writeFile(uploadPath, Buffer.from(buffer));
+	let buffer = await file.arrayBuffer();
+	await writeFile(uploadPath, Buffer.from(buffer));
 
-  // Store metadata
-  let uploadedFile = await db.file.create({
-    data: {
-      filename: safeFilename,
-      originalName: file.name.slice(0, 255),
-      mimeType: file.type,
-      size: file.size,
-      uploadedAt: new Date(),
-    },
-  });
+	// Store metadata
+	let uploadedFile = await db.file.create({
+		data: {
+			filename: safeFilename,
+			originalName: file.name.slice(0, 255),
+			mimeType: file.type,
+			size: file.size,
+			uploadedAt: new Date(),
+		},
+	});
 
-  return Response.json(uploadedFile, { status: 201 });
+	return Response.json(uploadedFile, { status: 201 });
 }
 ```
 

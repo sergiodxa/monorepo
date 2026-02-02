@@ -79,48 +79,56 @@ git commit -m "feat(apps/books): add search functionality."
 ## Commit Types
 
 **feat**: A new feature or enhancement
+
 ```bash
 feat(apps/books): add book recommendation engine
 feat(packages/auth): add OAuth2 support
 ```
 
 **fix**: A bug fix
+
 ```bash
 fix(apps/books): resolve search pagination issue
 fix(packages/db): prevent connection pool exhaustion
 ```
 
 **docs**: Documentation changes only
+
 ```bash
 docs(apps/books): update search API documentation
 docs(packages/auth): add OAuth setup instructions
 ```
 
 **refactor**: Code restructuring without behavior change
+
 ```bash
 refactor(apps/books): extract search logic to service
 refactor(packages/ui): simplify button component props
 ```
 
 **test**: Adding or updating tests
+
 ```bash
 test(apps/books): add unit tests for search service
 test(packages/auth): add E2E tests for login flow
 ```
 
 **chore**: Build, dependencies, tooling
+
 ```bash
 chore(apps/books): update dependencies
 chore(packages/db): configure connection pooling
 ```
 
 **style**: Code formatting, whitespace, etc.
+
 ```bash
 style(apps/books): apply ESLint fixes
 style(packages/ui): format with prettier
 ```
 
 **perf**: Performance improvements
+
 ```bash
 perf(apps/books): add caching to search queries
 perf(packages/db): optimize database indexes
@@ -148,6 +156,7 @@ chore(root): update workspace dependencies
 ## Description Guidelines
 
 The description should:
+
 - Start with lowercase
 - Use imperative mood ("add" not "added" or "adds")
 - Be concise (under 72 characters)

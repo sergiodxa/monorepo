@@ -24,10 +24,10 @@ import { data } from "react-router";
 
 // routes/api.search.tsx - RESOURCE ROUTE
 export async function loader({ request }: Route.LoaderArgs) {
-  let url = new URL(request.url);
-  let query = url.searchParams.get("q");
-  let results = await search(query);
-  return data({ results });
+	let url = new URL(request.url);
+	let query = url.searchParams.get("q");
+	let results = await search(query);
+	return data({ results });
 }
 
 // No default export = resource route
@@ -42,13 +42,13 @@ import { data } from "react-router";
 
 // routes/api.search.tsx
 export async function loader({ request }: Route.LoaderArgs) {
-  let url = new URL(request.url);
-  let query = url.searchParams.get("q") || "";
-  let limit = Number(url.searchParams.get("limit")) || 10;
+	let url = new URL(request.url);
+	let query = url.searchParams.get("q") || "";
+	let limit = Number(url.searchParams.get("limit")) || 10;
 
-  let results = await search(query, limit);
+	let results = await search(query, limit);
 
-  return data({ results });
+	return data({ results });
 }
 ```
 
@@ -56,16 +56,16 @@ Usage with fetcher:
 
 ```tsx
 function SearchWidget() {
-  let fetcher = useFetcher<typeof searchLoader>();
+	let fetcher = useFetcher<typeof searchLoader>();
 
-  return (
-    <fetcher.Form action="/api/search" method="get">
-      <input name="q" onChange={(e) => fetcher.submit(e.currentTarget.form)} />
-      {fetcher.data?.results.map((item) => (
-        <SearchItem key={item.id} item={item} />
-      ))}
-    </fetcher.Form>
-  );
+	return (
+		<fetcher.Form action="/api/search" method="get">
+			<input name="q" onChange={(e) => fetcher.submit(e.currentTarget.form)} />
+			{fetcher.data?.results.map((item) => (
+				<SearchItem key={item.id} item={item} />
+			))}
+		</fetcher.Form>
+	);
 }
 ```
 
@@ -74,15 +74,15 @@ function SearchWidget() {
 ```tsx
 // routes/api.reports.$reportId.download.tsx
 export async function loader({ params }: Route.LoaderArgs) {
-  let report = await getReport(params.reportId);
-  let pdf = await generatePDF(report);
+	let report = await getReport(params.reportId);
+	let pdf = await generatePDF(report);
 
-  return new Response(pdf, {
-    headers: {
-      "Content-Type": "application/pdf",
-      "Content-Disposition": `attachment; filename="${report.name}.pdf"`,
-    },
-  });
+	return new Response(pdf, {
+		headers: {
+			"Content-Type": "application/pdf",
+			"Content-Disposition": `attachment; filename="${report.name}.pdf"`,
+		},
+	});
 }
 ```
 
@@ -91,17 +91,17 @@ export async function loader({ params }: Route.LoaderArgs) {
 ```tsx
 // routes/api.og-image.tsx
 export async function loader({ request }: Route.LoaderArgs) {
-  let url = new URL(request.url);
-  let title = url.searchParams.get("title") || "Default Title";
+	let url = new URL(request.url);
+	let title = url.searchParams.get("title") || "Default Title";
 
-  let image = await generateOGImage({ title });
+	let image = await generateOGImage({ title });
 
-  return new Response(image, {
-    headers: {
-      "Content-Type": "image/png",
-      "Cache-Control": "public, max-age=31536000",
-    },
-  });
+	return new Response(image, {
+		headers: {
+			"Content-Type": "image/png",
+			"Cache-Control": "public, max-age=31536000",
+		},
+	});
 }
 ```
 
@@ -112,19 +112,19 @@ import { data } from "react-router";
 
 // routes/api.webhooks.provider.tsx
 export async function action({ request }: Route.ActionArgs) {
-  let payload = await request.text();
-  let signature = request.headers.get("x-signature");
+	let payload = await request.text();
+	let signature = request.headers.get("x-signature");
 
-  let event = verifyWebhook(payload, signature);
+	let event = verifyWebhook(payload, signature);
 
-  switch (event.type) {
-    case "order.completed":
-      await handleOrderComplete(event.data);
-      break;
-    // ... other events
-  }
+	switch (event.type) {
+		case "order.completed":
+			await handleOrderComplete(event.data);
+			break;
+		// ... other events
+	}
 
-  return data({ received: true });
+	return data({ received: true });
 }
 ```
 
@@ -135,15 +135,15 @@ import { data } from "react-router";
 
 // routes/api.toggle-favorite.tsx
 export async function action({ request }: Route.ActionArgs) {
-  let client = await authenticate(request);
-  let formData = await request.formData();
+	let client = await authenticate(request);
+	let formData = await request.formData();
 
-  let itemId = z.string().parse(formData.get("itemId"));
-  let favorited = formData.get("favorited") === "true";
+	let itemId = z.string().parse(formData.get("itemId"));
+	let favorited = formData.get("favorited") === "true";
 
-  let count = await toggleFavorite(client, itemId, favorited);
+	let count = await toggleFavorite(client, itemId, favorited);
 
-  return data({ count });
+	return data({ count });
 }
 ```
 
@@ -161,9 +161,9 @@ api.reports.$id.download.tsx -> /api/reports/:id/download
 import type { loader as searchLoader } from "~/routes/api.search";
 
 function SearchComponent() {
-  let fetcher = useFetcher<typeof searchLoader>();
+	let fetcher = useFetcher<typeof searchLoader>();
 
-  // fetcher.data is typed from loader return type
-  let results = fetcher.data?.results ?? [];
+	// fetcher.data is typed from loader return type
+	let results = fetcher.data?.results ?? [];
 }
 ```

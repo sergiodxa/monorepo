@@ -27,6 +27,7 @@ tags: [relevant, tags, here]
 ```
 
 **Impact levels**:
+
 - `CRITICAL` or `HIGH` - Core patterns, always follow
 - `MEDIUM` - Important but with flexibility
 - `LOW` - Nice-to-haves, edge cases
@@ -66,34 +67,36 @@ Show the main pattern with code. Lead with the bad pattern, then show good:
 ## Pattern
 
 \`\`\`ruby
+
 # Bad: Explanation of what's wrong
+
 class BadExample
-  def scattered_logic
-    # logic here, there, everywhere
-  end
+def scattered_logic # logic here, there, everywhere
+end
 end
 
 # Good: Explanation of improvement
+
 class GoodExample
-  def focused_logic
-    delegate_to_model
-  end
+def focused_logic
+delegate_to_model
+end
 end
 \`\`\`
 
 \`\`\`typescript
 // Bad: Explanation of what's wrong
 function BadExample() {
-  // logic scattered in component
-  const data = fetch(...);
-  const processed = data.map(...);
-  return <div>{processed}</div>;
+// logic scattered in component
+const data = fetch(...);
+const processed = data.map(...);
+return <div>{processed}</div>;
 }
 
 // Good: Explanation of improvement
 function GoodExample() {
-  const { data } = useProcessedData();
-  return <div>{data}</div>;
+const { data } = useProcessedData();
+return <div>{data}</div>;
 }
 \`\`\`
 ```
@@ -158,19 +161,22 @@ Jobs should be thin wrappers that call model methods. All business logic belongs
 ## Pattern
 
 \`\`\`ruby
+
 # Bad: Logic in job
+
 class ProcessOrderJob < ApplicationJob
-  def perform(order)
-    order.items.each { |i| i.product.decrement!(:stock) }
-    order.update!(status: :processing)
-  end
+def perform(order)
+order.items.each { |i| i.product.decrement!(:stock) }
+order.update!(status: :processing)
+end
 end
 
 # Good: Job delegates to model
+
 class ProcessOrderJob < ApplicationJob
-  def perform(order)
-    order.process
-  end
+def perform(order)
+order.process
+end
 end
 \`\`\`
 
@@ -205,7 +211,7 @@ Use named exports instead of default exports for better tooling support and expl
 \`\`\`typescript
 // Bad: Default export
 export default function formatCurrency(amount: number) {
-  return `$${amount.toFixed(2)}`;
+return `$${amount.toFixed(2)}`;
 }
 
 // Importing - name can be anything, easy to mismatch
@@ -213,7 +219,7 @@ import format from "./format";
 
 // Good: Named export
 export function formatCurrency(amount: number) {
-  return `$${amount.toFixed(2)}`;
+return `$${amount.toFixed(2)}`;
 }
 
 // Importing - name must match, IDE autocompletes
@@ -227,7 +233,7 @@ Remix route components use default exports by convention:
 \`\`\`typescript
 // app/routes/dashboard.tsx
 export default function Dashboard() {
-  return <div>...</div>;
+return <div>...</div>;
 }
 \`\`\`
 

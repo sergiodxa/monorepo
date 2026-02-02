@@ -20,15 +20,15 @@ Use named function declarations instead of arrow functions in `useEffect`. Also 
 ```tsx
 // Bad: anonymous functions hide intent
 useEffect(() => {
-  document.title = title;
+	document.title = title;
 }, [title]);
 
 useEffect(() => {
-  let handler = (e: KeyboardEvent) => {
-    if (e.key === "Escape") onClose();
-  };
-  window.addEventListener("keydown", handler);
-  return () => window.removeEventListener("keydown", handler);
+	let handler = (e: KeyboardEvent) => {
+		if (e.key === "Escape") onClose();
+	};
+	window.addEventListener("keydown", handler);
+	return () => window.removeEventListener("keydown", handler);
 }, [onClose]);
 ```
 
@@ -39,24 +39,24 @@ When these effects error, the stack trace shows `anonymous` or `<anonymous>`.
 ```tsx
 // Good: named functions are self-documenting
 useEffect(
-  function syncDocumentTitle() {
-    document.title = title;
-  },
-  [title],
+	function syncDocumentTitle() {
+		document.title = title;
+	},
+	[title],
 );
 
 useEffect(
-  function handleEscapeKey() {
-    let handler = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
-    window.addEventListener("keydown", handler);
+	function handleEscapeKey() {
+		let handler = (e: KeyboardEvent) => {
+			if (e.key === "Escape") onClose();
+		};
+		window.addEventListener("keydown", handler);
 
-    return function removeEscapeKeyHandler() {
-      window.removeEventListener("keydown", handler);
-    };
-  },
-  [onClose],
+		return function removeEscapeKeyHandler() {
+			window.removeEventListener("keydown", handler);
+		};
+	},
+	[onClose],
 );
 ```
 
@@ -68,10 +68,10 @@ Stack traces now show `syncDocumentTitle` or `handleEscapeKey`.
 
 ```tsx
 useEffect(
-  function syncLocalStorage() {
-    localStorage.setItem("preferences", JSON.stringify(preferences));
-  },
-  [preferences],
+	function syncLocalStorage() {
+		localStorage.setItem("preferences", JSON.stringify(preferences));
+	},
+	[preferences],
 );
 ```
 
@@ -79,20 +79,20 @@ useEffect(
 
 ```tsx
 useEffect(function subscribeToOnlineStatus() {
-  function handleOnline() {
-    setIsOnline(true);
-  }
-  function handleOffline() {
-    setIsOnline(false);
-  }
+	function handleOnline() {
+		setIsOnline(true);
+	}
+	function handleOffline() {
+		setIsOnline(false);
+	}
 
-  window.addEventListener("online", handleOnline);
-  window.addEventListener("offline", handleOffline);
+	window.addEventListener("online", handleOnline);
+	window.addEventListener("offline", handleOffline);
 
-  return function unsubscribeFromOnlineStatus() {
-    window.removeEventListener("online", handleOnline);
-    window.removeEventListener("offline", handleOffline);
-  };
+	return function unsubscribeFromOnlineStatus() {
+		window.removeEventListener("online", handleOnline);
+		window.removeEventListener("offline", handleOffline);
+	};
 }, []);
 ```
 
@@ -100,12 +100,12 @@ useEffect(function subscribeToOnlineStatus() {
 
 ```tsx
 useEffect(
-  function resetFormOnSuccess() {
-    if (fetcher.state === "idle" && fetcher.data?.ok) {
-      formRef.current?.reset();
-    }
-  },
-  [fetcher.state, fetcher.data],
+	function resetFormOnSuccess() {
+		if (fetcher.state === "idle" && fetcher.data?.ok) {
+			formRef.current?.reset();
+		}
+	},
+	[fetcher.state, fetcher.data],
 );
 ```
 
@@ -113,14 +113,14 @@ useEffect(
 
 ```tsx
 useEffect(function initializeMap() {
-  if (!mapRef.current) return;
+	if (!mapRef.current) return;
 
-  let map = new MapLibrary(mapRef.current, { center });
-  mapInstanceRef.current = map;
+	let map = new MapLibrary(mapRef.current, { center });
+	mapInstanceRef.current = map;
 
-  return function destroyMap() {
-    map.destroy();
-  };
+	return function destroyMap() {
+		map.destroy();
+	};
 }, []);
 ```
 
@@ -128,10 +128,10 @@ useEffect(function initializeMap() {
 
 ```tsx
 useEffect(
-  function trackPageView() {
-    analytics.page(pathname);
-  },
-  [pathname],
+	function trackPageView() {
+		analytics.page(pathname);
+	},
+	[pathname],
 );
 ```
 
@@ -153,24 +153,24 @@ Named functions make it clear why you have separate effects:
 
 ```tsx
 function UserProfile({ userId }: Props) {
-  useEffect(
-    function fetchUserData() {
-      // Fetch user when userId changes
-    },
-    [userId],
-  );
+	useEffect(
+		function fetchUserData() {
+			// Fetch user when userId changes
+		},
+		[userId],
+	);
 
-  useEffect(
-    function trackProfileView() {
-      // Analytics - separate concern
-      analytics.track("profile_viewed", { userId });
-    },
-    [userId],
-  );
+	useEffect(
+		function trackProfileView() {
+			// Analytics - separate concern
+			analytics.track("profile_viewed", { userId });
+		},
+		[userId],
+	);
 
-  useEffect(function setupKeyboardShortcuts() {
-    // Keyboard handling - separate concern
-  }, []);
+	useEffect(function setupKeyboardShortcuts() {
+		// Keyboard handling - separate concern
+	}, []);
 }
 ```
 

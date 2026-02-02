@@ -22,41 +22,41 @@ Pass an explicit back target when you link to a detail route:
 import { Link, useLocation, useNavigate } from "react-router";
 
 function useCurrentURL() {
-  let location = useLocation();
-  return location.pathname + location.search;
+	let location = useLocation();
+	return location.pathname + location.search;
 }
 
 function useBackNavigation() {
-  let navigate = useNavigate();
-  let location = useLocation();
+	let navigate = useNavigate();
+	let location = useLocation();
 
-  return (event: React.MouseEvent<HTMLAnchorElement>) => {
-    let back = location.state?.back;
-    if (back) {
-      event.preventDefault();
-      navigate(back);
-    }
-  };
+	return (event: React.MouseEvent<HTMLAnchorElement>) => {
+		let back = location.state?.back;
+		if (back) {
+			event.preventDefault();
+			navigate(back);
+		}
+	};
 }
 
 export function ListItemLink({ id }: { id: string }) {
-  let back = useCurrentURL();
+	let back = useCurrentURL();
 
-  return (
-    <Link to={`/items/${id}`} state={{ back }}>
-      View
-    </Link>
-  );
+	return (
+		<Link to={`/items/${id}`} state={{ back }}>
+			View
+		</Link>
+	);
 }
 
 export function BackLink() {
-  let onClick = useBackNavigation();
+	let onClick = useBackNavigation();
 
-  return (
-    <Link to="/items" onClick={onClick}>
-      Back
-    </Link>
-  );
+	return (
+		<Link to="/items" onClick={onClick}>
+			Back
+		</Link>
+	);
 }
 ```
 

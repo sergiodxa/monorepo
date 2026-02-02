@@ -31,20 +31,18 @@ Use useFetcher for in-place updates (no navigation). Use Form for navigation aft
 ```tsx
 // Like button - no navigation needed
 function LikeButton({ postId, liked }: { postId: string; liked: boolean }) {
-  let fetcher = useFetcher();
+	let fetcher = useFetcher();
 
-  // Optimistic UI
-  let isLiked = fetcher.formData
-    ? fetcher.formData.get("liked") === "true"
-    : liked;
+	// Optimistic UI
+	let isLiked = fetcher.formData ? fetcher.formData.get("liked") === "true" : liked;
 
-  return (
-    <fetcher.Form method="post" action="/api/like">
-      <input type="hidden" name="postId" value={postId} />
-      <input type="hidden" name="liked" value={String(!isLiked)} />
-      <button type="submit">{isLiked ? "Unlike" : "Like"}</button>
-    </fetcher.Form>
-  );
+	return (
+		<fetcher.Form method="post" action="/api/like">
+			<input type="hidden" name="postId" value={postId} />
+			<input type="hidden" name="liked" value={String(!isLiked)} />
+			<button type="submit">{isLiked ? "Unlike" : "Like"}</button>
+		</fetcher.Form>
+	);
 }
 ```
 
@@ -53,18 +51,18 @@ function LikeButton({ postId, liked }: { postId: string; liked: boolean }) {
 ```tsx
 // Create form - navigates to new item
 function CreatePostForm() {
-  let navigation = useNavigation();
-  let isSubmitting = navigation.state === "submitting";
+	let navigation = useNavigation();
+	let isSubmitting = navigation.state === "submitting";
 
-  return (
-    <Form method="post" action="/posts/new">
-      <input name="title" required />
-      <textarea name="content" required />
-      <Button type="submit" isDisabled={isSubmitting}>
-        {isSubmitting ? "Creating..." : "Create Post"}
-      </Button>
-    </Form>
-  );
+	return (
+		<Form method="post" action="/posts/new">
+			<input name="title" required />
+			<textarea name="content" required />
+			<Button type="submit" isDisabled={isSubmitting}>
+				{isSubmitting ? "Creating..." : "Create Post"}
+			</Button>
+		</Form>
+	);
 }
 ```
 
@@ -73,35 +71,35 @@ function CreatePostForm() {
 ```tsx
 // Each item has its own fetcher - they work independently
 function ItemList({ items }) {
-  return (
-    <ul>
-      {items.map((item) => (
-        <ItemRow key={item.id} item={item} />
-      ))}
-    </ul>
-  );
+	return (
+		<ul>
+			{items.map((item) => (
+				<ItemRow key={item.id} item={item} />
+			))}
+		</ul>
+	);
 }
 
 function ItemRow({ item }) {
-  let fetcher = useFetcher();
-  let isDeleting = fetcher.state !== "idle";
+	let fetcher = useFetcher();
+	let isDeleting = fetcher.state !== "idle";
 
-  // Hide item immediately when deleting (optimistic)
-  if (fetcher.formData?.get("intent") === "delete") {
-    return null;
-  }
+	// Hide item immediately when deleting (optimistic)
+	if (fetcher.formData?.get("intent") === "delete") {
+		return null;
+	}
 
-  return (
-    <li className={isDeleting ? "opacity-50" : ""}>
-      {item.name}
-      <fetcher.Form method="post">
-        <input type="hidden" name="id" value={item.id} />
-        <button type="submit" name="intent" value="delete">
-          Delete
-        </button>
-      </fetcher.Form>
-    </li>
-  );
+	return (
+		<li className={isDeleting ? "opacity-50" : ""}>
+			{item.name}
+			<fetcher.Form method="post">
+				<input type="hidden" name="id" value={item.id} />
+				<button type="submit" name="intent" value="delete">
+					Delete
+				</button>
+			</fetcher.Form>
+		</li>
+	);
 }
 ```
 
@@ -110,15 +108,15 @@ function ItemRow({ item }) {
 ```tsx
 // Submit to different route's action
 function QuickOrder({ itemId }: { itemId: string }) {
-  let fetcher = useFetcher();
+	let fetcher = useFetcher();
 
-  return (
-    <fetcher.Form method="post" action="/api/quick-order">
-      <input type="hidden" name="itemId" value={itemId} />
-      <input type="number" name="amount" placeholder="Amount" />
-      <button type="submit">Buy</button>
-    </fetcher.Form>
-  );
+	return (
+		<fetcher.Form method="post" action="/api/quick-order">
+			<input type="hidden" name="itemId" value={itemId} />
+			<input type="number" name="amount" placeholder="Amount" />
+			<button type="submit">Buy</button>
+		</fetcher.Form>
+	);
 }
 ```
 
@@ -127,12 +125,12 @@ function QuickOrder({ itemId }: { itemId: string }) {
 ```tsx
 // Search form - updates URL with query
 function SearchForm() {
-  return (
-    <Form method="get" action="/search">
-      <input type="search" name="q" placeholder="Search..." />
-      <button type="submit">Search</button>
-    </Form>
-  );
+	return (
+		<Form method="get" action="/search">
+			<input type="search" name="q" placeholder="Search..." />
+			<button type="submit">Search</button>
+		</Form>
+	);
 }
 // Submitting navigates to /search?q=query
 ```

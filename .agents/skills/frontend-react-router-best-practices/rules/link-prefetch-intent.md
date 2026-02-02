@@ -21,7 +21,7 @@ Use `prefetch="intent"` on links for faster perceived navigation.
 import { Link } from "react-router";
 
 <Link to="/dashboard" prefetch="intent">
-  Dashboard
+	Dashboard
 </Link>;
 ```
 
@@ -72,7 +72,7 @@ The LinkButton component should also support prefetch:
 
 ```tsx
 <LinkButton to="/settings" prefetch="intent">
-  Settings
+	Settings
 </LinkButton>
 ```
 
@@ -99,13 +99,11 @@ The LinkButton component should also support prefetch:
 import { NavLink } from "react-router";
 
 <NavLink
-  to="/dashboard"
-  prefetch="intent"
-  className={({ isActive }) =>
-    isActive ? "text-accent-600 font-medium" : "text-neutral-600"
-  }
+	to="/dashboard"
+	prefetch="intent"
+	className={({ isActive }) => (isActive ? "text-accent-600 font-medium" : "text-neutral-600")}
 >
-  Dashboard
+	Dashboard
 </NavLink>;
 ```
 
@@ -113,6 +111,6 @@ import { NavLink } from "react-router";
 
 ```tsx
 <Link to="/checkout" prefetch="intent" state={{ from: "cart" }}>
-  Proceed to Checkout
+	Proceed to Checkout
 </Link>
 ```

@@ -19,17 +19,17 @@ Send a unique key with each request. If the same key is sent again, the server r
 const idempotencyKey = `password-reset-${userId}-${resetRequestId}`;
 
 await resend.emails.send(
-  {
-    from: "noreply@example.com",
-    to: user.email,
-    subject: "Reset your password",
-    html: emailHtml,
-  },
-  {
-    headers: {
-      "Idempotency-Key": idempotencyKey,
-    },
-  },
+	{
+		from: "noreply@example.com",
+		to: user.email,
+		subject: "Reset your password",
+		html: emailHtml,
+	},
+	{
+		headers: {
+			"Idempotency-Key": idempotencyKey,
+		},
+	},
 );
 ```
 
@@ -63,25 +63,21 @@ Handle transient failures with exponential backoff.
 
 ```typescript
 async function sendWithRetry(emailData, maxRetries = 3) {
-  for (let attempt = 0; attempt < maxRetries; attempt++) {
-    try {
-      return await resend.emails.send(emailData);
-    } catch (error) {
-      if (!isRetryable(error) || attempt === maxRetries - 1) {
-        throw error;
-      }
-      const delay = Math.min(1000 * Math.pow(2, attempt), 30000);
-      await sleep(delay + Math.random() * 1000); // Add jitter
-    }
-  }
+	for (let attempt = 0; attempt < maxRetries; attempt++) {
+		try {
+			return await resend.emails.send(emailData);
+		} catch (error) {
+			if (!isRetryable(error) || attempt === maxRetries - 1) {
+				throw error;
+			}
+			const delay = Math.min(1000 * Math.pow(2, attempt), 30000);
+			await sleep(delay + Math.random() * 1000); // Add jitter
+		}
+	}
 }
 
 function isRetryable(error) {
-  return (
-    error.statusCode >= 500 ||
-    error.statusCode === 429 ||
-    error.code === "ETIMEDOUT"
-  );
+	return error.statusCode >= 500 || error.statusCode === 429 || error.code === "ETIMEDOUT";
 }
 ```
 
@@ -106,17 +102,17 @@ function isRetryable(error) {
 
 ```typescript
 try {
-  const result = await resend.emails.send(emailData);
-  await logSuccess(result.id, emailData);
+	const result = await resend.emails.send(emailData);
+	await logSuccess(result.id, emailData);
 } catch (error) {
-  if (error.statusCode === 429) {
-    await queueForRetry(emailData, error.retryAfter);
-  } else if (error.statusCode >= 500) {
-    await queueForRetry(emailData);
-  } else {
-    await logFailure(error, emailData);
-    await alertOnCriticalEmail(emailData); // For password resets, etc.
-  }
+	if (error.statusCode === 429) {
+		await queueForRetry(emailData, error.retryAfter);
+	} else if (error.statusCode >= 500) {
+		await queueForRetry(emailData);
+	} else {
+		await logFailure(error, emailData);
+		await alertOnCriticalEmail(emailData); // For password resets, etc.
+	}
 }
 ```
 
@@ -148,9 +144,9 @@ const controller = new AbortController();
 const timeout = setTimeout(() => controller.abort(), 10000);
 
 try {
-  await resend.emails.send(emailData, { signal: controller.signal });
+	await resend.emails.send(emailData, { signal: controller.signal });
 } finally {
-  clearTimeout(timeout);
+	clearTimeout(timeout);
 }
 ```
 

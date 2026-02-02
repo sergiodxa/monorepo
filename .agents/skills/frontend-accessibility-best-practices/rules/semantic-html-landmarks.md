@@ -31,14 +31,14 @@ Use semantic HTML elements to create page landmarks that screen readers can navi
 ```tsx
 // Generic divs provide no semantic meaning
 function Page() {
-  return (
-    <div className="page">
-      <div className="header">...</div>
-      <div className="sidebar">...</div>
-      <div className="content">...</div>
-      <div className="footer">...</div>
-    </div>
-  );
+	return (
+		<div className="page">
+			<div className="header">...</div>
+			<div className="sidebar">...</div>
+			<div className="content">...</div>
+			<div className="footer">...</div>
+		</div>
+	);
 }
 ```
 
@@ -48,20 +48,20 @@ function Page() {
 import { Main } from "~/components/heading";
 
 function Page() {
-  return (
-    <>
-      <header>
-        <nav aria-label={t("Primary")}>...</nav>
-      </header>
+	return (
+		<>
+			<header>
+				<nav aria-label={t("Primary")}>...</nav>
+			</header>
 
-      <Main>
-        <article>...</article>
-        <aside>...</aside>
-      </Main>
+			<Main>
+				<article>...</article>
+				<aside>...</aside>
+			</Main>
 
-      <footer>...</footer>
-    </>
-  );
+			<footer>...</footer>
+		</>
+	);
 }
 ```
 

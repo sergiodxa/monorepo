@@ -4,25 +4,25 @@
 
 ```typescript
 interface Env {
-  DISPATCHER: DispatchNamespace;
-  CUSTOMERS_KV: KVNamespace;
+	DISPATCHER: DispatchNamespace;
+	CUSTOMERS_KV: KVNamespace;
 }
 
 export default {
-  async fetch(request: Request, env: Env): Promise<Response> {
-    const userWorkerName = new URL(request.url).hostname.split(".")[0];
-    const customerPlan = await env.CUSTOMERS_KV.get(userWorkerName);
+	async fetch(request: Request, env: Env): Promise<Response> {
+		const userWorkerName = new URL(request.url).hostname.split(".")[0];
+		const customerPlan = await env.CUSTOMERS_KV.get(userWorkerName);
 
-    const plans = {
-      enterprise: { cpuMs: 50, subRequests: 50 },
-      pro: { cpuMs: 20, subRequests: 20 },
-      free: { cpuMs: 10, subRequests: 5 },
-    };
-    const limits = plans[customerPlan as keyof typeof plans] || plans.free;
+		const plans = {
+			enterprise: { cpuMs: 50, subRequests: 50 },
+			pro: { cpuMs: 20, subRequests: 20 },
+			free: { cpuMs: 10, subRequests: 5 },
+		};
+		const limits = plans[customerPlan as keyof typeof plans] || plans.free;
 
-    const userWorker = env.DISPATCHER.get(userWorkerName, {}, { limits });
-    return await userWorker.fetch(request);
-  },
+		const userWorker = env.DISPATCHER.get(userWorkerName, {}, { limits });
+		return await userWorker.fetch(request);
+	},
 };
 ```
 
@@ -36,11 +36,11 @@ export default {
 
 ```typescript
 const bindings = [
-  {
-    type: "kv_namespace",
-    name: "USER_KV",
-    namespace_id: `customer-${customerId}-kv`,
-  },
+	{
+		type: "kv_namespace",
+		name: "USER_KV",
+		namespace_id: `customer-${customerId}-kv`,
+	},
 ];
 ```
 
@@ -67,19 +67,19 @@ Configure `*/*` route on SaaS domain → dispatch Worker
 
 ```typescript
 export default {
-  async fetch(request: Request, env: Env): Promise<Response> {
-    const hostname = new URL(request.url).hostname;
-    const hostnameData = await env.ROUTING_KV.get(`hostname:${hostname}`, {
-      type: "json",
-    });
+	async fetch(request: Request, env: Env): Promise<Response> {
+		const hostname = new URL(request.url).hostname;
+		const hostnameData = await env.ROUTING_KV.get(`hostname:${hostname}`, {
+			type: "json",
+		});
 
-    if (!hostnameData?.workerName) {
-      return new Response("Hostname not configured", { status: 404 });
-    }
+		if (!hostnameData?.workerName) {
+			return new Response("Hostname not configured", { status: 404 });
+		}
 
-    const userWorker = env.DISPATCHER.get(hostnameData.workerName);
-    return await userWorker.fetch(request);
-  },
+		const userWorker = env.DISPATCHER.get(hostnameData.workerName);
+		return await userWorker.fetch(request);
+	},
 };
 ```
 
@@ -122,8 +122,8 @@ For Cloudflare for SaaS: Store worker name in custom hostname `custom_metadata`,
 ```typescript
 // Track violations
 env.ANALYTICS.writeDataPoint({
-  indexes: [customerName],
-  blobs: ["cpu_limit_exceeded"],
+	indexes: [customerName],
+	blobs: ["cpu_limit_exceeded"],
 });
 ```
 
@@ -131,19 +131,17 @@ env.ANALYTICS.writeDataPoint({
 
 ```graphql
 query {
-  viewer {
-    accounts(filter: { accountTag: $accountId }) {
-      workersInvocationsAdaptive(
-        filter: { dispatchNamespaceName: "production" }
-      ) {
-        sum {
-          requests
-          errors
-          cpuTime
-        }
-      }
-    }
-  }
+	viewer {
+		accounts(filter: { accountTag: $accountId }) {
+			workersInvocationsAdaptive(filter: { dispatchNamespaceName: "production" }) {
+				sum {
+					requests
+					errors
+					cpuTime
+				}
+			}
+		}
+	}
 }
 ```
 
@@ -153,26 +151,18 @@ query {
 
 ```typescript
 async function deployGeneratedCode(name: string, code: string) {
-  const file = new File([code], `${name}.mjs`, {
-    type: "application/javascript+module",
-  });
-  await client.workersForPlatforms.dispatch.namespaces.scripts.update(
-    "production",
-    name,
-    {
-      account_id: accountId,
-      metadata: { main_module: `${name}.mjs`, tags: [name, "ai-generated"] },
-      files: [file],
-    },
-  );
+	const file = new File([code], `${name}.mjs`, {
+		type: "application/javascript+module",
+	});
+	await client.workersForPlatforms.dispatch.namespaces.scripts.update("production", name, {
+		account_id: accountId,
+		metadata: { main_module: `${name}.mjs`, tags: [name, "ai-generated"] },
+		files: [file],
+	});
 }
 
 // Short limits for untrusted code
-const userWorker = env.DISPATCHER.get(
-  sessionId,
-  {},
-  { limits: { cpuMs: 5, subRequests: 3 } },
-);
+const userWorker = env.DISPATCHER.get(sessionId, {}, { limits: { cpuMs: 5, subRequests: 3 } });
 ```
 
 **VibeSDK:** For AI-powered code generation + deployment platforms, see [VibeSDK](https://github.com/cloudflare/vibesdk) - handles AI generation, sandbox execution, live preview, and deployment.
@@ -183,9 +173,7 @@ Reference: [AI Vibe Coding Platform Architecture](https://developers.cloudflare.
 
 ```typescript
 // Route: /customer-id/function-name
-const [customerId, functionName] = new URL(request.url).pathname
-  .split("/")
-  .filter(Boolean);
+const [customerId, functionName] = new URL(request.url).pathname.split("/").filter(Boolean);
 const workerName = `${customerId}-${functionName}`;
 const userWorker = env.DISPATCHER.get(workerName);
 ```

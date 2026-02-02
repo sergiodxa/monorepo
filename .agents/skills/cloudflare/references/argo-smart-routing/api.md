@@ -36,15 +36,15 @@ curl -X GET "https://api.cloudflare.com/client/v4/zones/{zone_id}/argo/smart_rou
 
 ```json
 {
-  "result": {
-    "id": "smart_routing",
-    "value": "on",
-    "editable": true,
-    "modified_on": "2024-01-11T12:00:00Z"
-  },
-  "success": true,
-  "errors": [],
-  "messages": []
+	"result": {
+		"id": "smart_routing",
+		"value": "on",
+		"editable": true,
+		"modified_on": "2024-01-11T12:00:00Z"
+	},
+	"success": true,
+	"errors": [],
+	"messages": []
 }
 ```
 
@@ -54,7 +54,7 @@ curl -X GET "https://api.cloudflare.com/client/v4/zones/{zone_id}/argo/smart_rou
 import Cloudflare from "cloudflare";
 
 const client = new Cloudflare({
-  apiToken: process.env.CLOUDFLARE_API_TOKEN,
+	apiToken: process.env.CLOUDFLARE_API_TOKEN,
 });
 
 const status = await client.argo.smartRouting.get({ zone_id: "your-zone-id" });
@@ -82,7 +82,7 @@ print(f"Argo status: {status.value}, editable: {status.editable}")
 
 ```json
 {
-  "value": "on" // or "off"
+	"value": "on" // or "off"
 }
 ```
 
@@ -99,8 +99,8 @@ curl -X PATCH "https://api.cloudflare.com/client/v4/zones/{zone_id}/argo/smart_r
 
 ```typescript
 const result = await client.argo.smartRouting.edit({
-  zone_id: "your-zone-id",
-  value: "on",
+	zone_id: "your-zone-id",
+	value: "on",
 });
 console.log(`Updated: ${result.value} at ${result.modified_on}`);
 ```
@@ -122,27 +122,22 @@ print(f"Updated: {result.value} at {result.modified_on}")
 **Pattern:**
 
 ```typescript
-async function safelyEnableArgo(
-  client: Cloudflare,
-  zoneId: string,
-): Promise<boolean> {
-  const status = await client.argo.smartRouting.get({ zone_id: zoneId });
+async function safelyEnableArgo(client: Cloudflare, zoneId: string): Promise<boolean> {
+	const status = await client.argo.smartRouting.get({ zone_id: zoneId });
 
-  if (!status.editable) {
-    console.error(
-      "Cannot modify Argo: editable=false (check billing/permissions)",
-    );
-    return false;
-  }
+	if (!status.editable) {
+		console.error("Cannot modify Argo: editable=false (check billing/permissions)");
+		return false;
+	}
 
-  if (status.value === "on") {
-    console.log("Argo already enabled");
-    return true;
-  }
+	if (status.value === "on") {
+		console.log("Argo already enabled");
+		return true;
+	}
 
-  await client.argo.smartRouting.edit({ zone_id: zoneId, value: "on" });
-  console.log("Argo enabled successfully");
-  return true;
+	await client.argo.smartRouting.edit({ zone_id: zoneId, value: "on" });
+	console.log("Argo enabled successfully");
+	return true;
 }
 ```
 
@@ -174,34 +169,31 @@ import Cloudflare from "cloudflare";
 import { APIError, APIConnectionError, RateLimitError } from "cloudflare";
 
 async function enableArgoWithErrorHandling(client: Cloudflare, zoneId: string) {
-  try {
-    const result = await client.argo.smartRouting.edit({
-      zone_id: zoneId,
-      value: "on",
-    });
-    return result;
-  } catch (error) {
-    if (error instanceof RateLimitError) {
-      console.error(
-        "Rate limited. Retry after:",
-        error.response?.headers.get("retry-after"),
-      );
-      // Implement exponential backoff
-    } else if (error instanceof APIError) {
-      console.error("API error:", error.status, error.message);
-      if (error.status === 403) {
-        console.error("Permission denied - check API token scopes");
-      } else if (error.status === 400) {
-        console.error("Bad request - verify zone_id and payload");
-      }
-    } else if (error instanceof APIConnectionError) {
-      console.error("Connection failed:", error.message);
-      // Retry with exponential backoff
-    } else {
-      console.error("Unexpected error:", error);
-    }
-    throw error;
-  }
+	try {
+		const result = await client.argo.smartRouting.edit({
+			zone_id: zoneId,
+			value: "on",
+		});
+		return result;
+	} catch (error) {
+		if (error instanceof RateLimitError) {
+			console.error("Rate limited. Retry after:", error.response?.headers.get("retry-after"));
+			// Implement exponential backoff
+		} else if (error instanceof APIError) {
+			console.error("API error:", error.status, error.message);
+			if (error.status === 403) {
+				console.error("Permission denied - check API token scopes");
+			} else if (error.status === 400) {
+				console.error("Bad request - verify zone_id and payload");
+			}
+		} else if (error instanceof APIConnectionError) {
+			console.error("Connection failed:", error.message);
+			// Retry with exponential backoff
+		} else {
+			console.error("Unexpected error:", error);
+		}
+		throw error;
+	}
 }
 ```
 
@@ -235,18 +227,18 @@ All Argo Smart Routing API responses follow this structure:
 
 ```typescript
 interface ArgoSmartRoutingResponse {
-  result: {
-    id: "smart_routing";
-    value: "on" | "off";
-    editable: boolean;
-    modified_on: string; // ISO 8601 timestamp
-  };
-  success: boolean;
-  errors: Array<{
-    code: number;
-    message: string;
-  }>;
-  messages: Array<string>;
+	result: {
+		id: "smart_routing";
+		value: "on" | "off";
+		editable: boolean;
+		modified_on: string; // ISO 8601 timestamp
+	};
+	success: boolean;
+	errors: Array<{
+		code: number;
+		message: string;
+	}>;
+	messages: Array<string>;
 }
 ```
 

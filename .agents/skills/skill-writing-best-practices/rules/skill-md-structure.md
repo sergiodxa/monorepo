@@ -50,6 +50,7 @@ Keep the intro to 1-2 sentences. The bullet list helps agents quickly assess rel
 ## 3. Rules Summary
 
 Group rules by category with impact levels. Each rule gets:
+
 - Header linking to full file
 - One-sentence description
 - Short code example showing the core pattern
@@ -64,10 +65,13 @@ Group rules by category with impact levels. Each rule gets:
 One sentence explaining what to do.
 
 \`\`\`ruby
+
 # Bad
+
 bad_example
 
 # Good
+
 good_example
 \`\`\`
 
@@ -77,6 +81,7 @@ Another one-sentence explanation.
 ```
 
 Impact levels:
+
 - **CRITICAL/HIGH** - Core patterns, always follow
 - **MEDIUM** - Important but flexible
 - **LOW** - Nice-to-haves
@@ -120,11 +125,13 @@ Patterns for examples. Contains 3 rules in 2 categories.
 Examples should be self-contained.
 
 \`\`\`ruby
+
 # Good: Complete example
+
 def complete_example
-  setup
-  action
-  verify
+setup
+action
+verify
 end
 \`\`\`
 

@@ -18,14 +18,14 @@ Show loading states with useNavigation or fetcher.state. Use useSpinDelay to avo
 
 ```tsx
 function SubmitButton() {
-  let fetcher = useFetcher();
-  let isPending = fetcher.state !== "idle";
+	let fetcher = useFetcher();
+	let isPending = fetcher.state !== "idle";
 
-  return (
-    <Button type="submit" isDisabled={isPending}>
-      {isPending ? "Submitting..." : "Submit"}
-    </Button>
-  );
+	return (
+		<Button type="submit" isDisabled={isPending}>
+			{isPending ? "Submitting..." : "Submit"}
+		</Button>
+	);
 }
 ```
 
@@ -37,21 +37,21 @@ Avoid flicker for fast operations:
 import { useSpinDelay } from "spin-delay";
 
 function SubmitButton() {
-  let fetcher = useFetcher();
+	let fetcher = useFetcher();
 
-  // Only show spinner if pending for >50ms
-  let isPending = useSpinDelay(fetcher.state !== "idle", { delay: 50 });
+	// Only show spinner if pending for >50ms
+	let isPending = useSpinDelay(fetcher.state !== "idle", { delay: 50 });
 
-  return (
-    <Button type="submit" isDisabled={isPending} className="relative">
-      {isPending && (
-        <div className="absolute inset-0 center">
-          <Spinner />
-        </div>
-      )}
-      <span className={isPending ? "invisible" : ""}>Submit</span>
-    </Button>
-  );
+	return (
+		<Button type="submit" isDisabled={isPending} className="relative">
+			{isPending && (
+				<div className="absolute inset-0 center">
+					<Spinner />
+				</div>
+			)}
+			<span className={isPending ? "invisible" : ""}>Submit</span>
+		</Button>
+	);
 }
 ```
 
@@ -61,20 +61,19 @@ function SubmitButton() {
 import { Form, useNavigation } from "react-router";
 
 function CreateForm() {
-  let navigation = useNavigation();
+	let navigation = useNavigation();
 
-  // Check if THIS form is submitting
-  let isSubmitting =
-    navigation.state === "submitting" && navigation.formAction === "/items/new";
+	// Check if THIS form is submitting
+	let isSubmitting = navigation.state === "submitting" && navigation.formAction === "/items/new";
 
-  return (
-    <Form method="post" action="/items/new">
-      <input name="title" disabled={isSubmitting} />
-      <Button type="submit" isDisabled={isSubmitting}>
-        {isSubmitting ? "Creating..." : "Create"}
-      </Button>
-    </Form>
-  );
+	return (
+		<Form method="post" action="/items/new">
+			<input name="title" disabled={isSubmitting} />
+			<Button type="submit" isDisabled={isSubmitting}>
+				{isSubmitting ? "Creating..." : "Create"}
+			</Button>
+		</Form>
+	);
 }
 ```
 
@@ -82,18 +81,18 @@ function CreateForm() {
 
 ```tsx
 function EditForm() {
-  let fetcher = useFetcher();
-  let isPending = fetcher.state !== "idle";
+	let fetcher = useFetcher();
+	let isPending = fetcher.state !== "idle";
 
-  return (
-    <fetcher.Form method="post">
-      <fieldset disabled={isPending}>
-        <input name="name" />
-        <input name="email" />
-        <Button type="submit">{isPending ? "Saving..." : "Save"}</Button>
-      </fieldset>
-    </fetcher.Form>
-  );
+	return (
+		<fetcher.Form method="post">
+			<fieldset disabled={isPending}>
+				<input name="name" />
+				<input name="email" />
+				<Button type="submit">{isPending ? "Saving..." : "Save"}</Button>
+			</fieldset>
+		</fetcher.Form>
+	);
 }
 ```
 
@@ -101,20 +100,20 @@ function EditForm() {
 
 ```tsx
 function EditModal({ isOpen, onClose }) {
-  let fetcher = useFetcher();
-  let isPending = fetcher.state !== "idle";
+	let fetcher = useFetcher();
+	let isPending = fetcher.state !== "idle";
 
-  return (
-    <Modal
-      isOpen={isOpen}
-      onOpenChange={(open) => {
-        // Don't allow close while submitting
-        if (!open && isPending) return;
-        if (!open) onClose();
-      }}
-    >
-      <fetcher.Form method="post">{/* Form content */}</fetcher.Form>
-    </Modal>
-  );
+	return (
+		<Modal
+			isOpen={isOpen}
+			onOpenChange={(open) => {
+				// Don't allow close while submitting
+				if (!open && isPending) return;
+				if (!open) onClose();
+			}}
+		>
+			<fetcher.Form method="post">{/* Form content */}</fetcher.Form>
+		</Modal>
+	);
 }
 ```

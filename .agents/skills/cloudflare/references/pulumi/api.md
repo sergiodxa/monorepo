@@ -17,16 +17,16 @@ Implicit dependencies via outputs:
 
 ```typescript
 const kv = new cloudflare.WorkersKvNamespace("kv", {
-  accountId: accountId,
-  title: "my-kv",
+	accountId: accountId,
+	title: "my-kv",
 });
 
 // Worker depends on KV (implicit via kv.id)
 const worker = new cloudflare.WorkerScript("worker", {
-  accountId: accountId,
-  name: "my-worker",
-  content: code,
-  kvNamespaceBindings: [{ name: "MY_KV", namespaceId: kv.id }], // Creates dependency
+	accountId: accountId,
+	name: "my-worker",
+	content: code,
+	kvNamespaceBindings: [{ name: "MY_KV", namespaceId: kv.id }], // Creates dependency
 });
 ```
 
@@ -34,22 +34,22 @@ Explicit dependencies:
 
 ```typescript
 const migration = new command.local.Command(
-  "migration",
-  {
-    create: pulumi.interpolate`wrangler d1 execute ${db.name} --file ./schema.sql`,
-  },
-  { dependsOn: [db] },
+	"migration",
+	{
+		create: pulumi.interpolate`wrangler d1 execute ${db.name} --file ./schema.sql`,
+	},
+	{ dependsOn: [db] },
 );
 
 const worker = new cloudflare.WorkerScript(
-  "worker",
-  {
-    accountId: accountId,
-    name: "worker",
-    content: code,
-    d1DatabaseBindings: [{ name: "DB", databaseId: db.id }],
-  },
-  { dependsOn: [migration] },
+	"worker",
+	{
+		accountId: accountId,
+		name: "worker",
+		content: code,
+		d1DatabaseBindings: [{ name: "DB", databaseId: db.id }],
+	},
+	{ dependsOn: [migration] },
 ); // Ensure migrations run first
 ```
 
@@ -59,18 +59,18 @@ const worker = new cloudflare.WorkerScript(
 const db = new cloudflare.D1Database("db", { accountId, name: "my-db" });
 
 db.id.apply(async (dbId) => {
-  const response = await fetch(
-    `https://api.cloudflare.com/client/v4/accounts/${accountId}/d1/database/${dbId}/query`,
-    {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiToken}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ sql: "CREATE TABLE users (id INT)" }),
-    },
-  );
-  return response.json();
+	const response = await fetch(
+		`https://api.cloudflare.com/client/v4/accounts/${accountId}/d1/database/${dbId}/query`,
+		{
+			method: "POST",
+			headers: {
+				Authorization: `Bearer ${apiToken}`,
+				"Content-Type": "application/json",
+			},
+			body: JSON.stringify({ sql: "CREATE TABLE users (id INT)" }),
+		},
+	);
+	return response.json();
 });
 ```
 
@@ -82,49 +82,45 @@ For resources not in provider:
 import * as pulumi from "@pulumi/pulumi";
 
 class D1MigrationProvider implements pulumi.dynamic.ResourceProvider {
-  async create(inputs: any): Promise<pulumi.dynamic.CreateResult> {
-    const response = await fetch(
-      `https://api.cloudflare.com/client/v4/accounts/${inputs.accountId}/d1/database/${inputs.databaseId}/query`,
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${inputs.apiToken}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ sql: inputs.sql }),
-      },
-    );
-    return {
-      id: `${inputs.databaseId}-${Date.now()}`,
-      outs: await response.json(),
-    };
-  }
-  async update(
-    id: string,
-    olds: any,
-    news: any,
-  ): Promise<pulumi.dynamic.UpdateResult> {
-    if (olds.sql !== news.sql) await this.create(news);
-    return {};
-  }
-  async delete(id: string, props: any): Promise<void> {}
+	async create(inputs: any): Promise<pulumi.dynamic.CreateResult> {
+		const response = await fetch(
+			`https://api.cloudflare.com/client/v4/accounts/${inputs.accountId}/d1/database/${inputs.databaseId}/query`,
+			{
+				method: "POST",
+				headers: {
+					Authorization: `Bearer ${inputs.apiToken}`,
+					"Content-Type": "application/json",
+				},
+				body: JSON.stringify({ sql: inputs.sql }),
+			},
+		);
+		return {
+			id: `${inputs.databaseId}-${Date.now()}`,
+			outs: await response.json(),
+		};
+	}
+	async update(id: string, olds: any, news: any): Promise<pulumi.dynamic.UpdateResult> {
+		if (olds.sql !== news.sql) await this.create(news);
+		return {};
+	}
+	async delete(id: string, props: any): Promise<void> {}
 }
 
 class D1Migration extends pulumi.dynamic.Resource {
-  constructor(name: string, args: any, opts?: pulumi.CustomResourceOptions) {
-    super(new D1MigrationProvider(), name, args, opts);
-  }
+	constructor(name: string, args: any, opts?: pulumi.CustomResourceOptions) {
+		super(new D1MigrationProvider(), name, args, opts);
+	}
 }
 
 const migration = new D1Migration(
-  "migration",
-  {
-    accountId,
-    databaseId: db.id,
-    apiToken,
-    sql: "CREATE TABLE users (id INT)",
-  },
-  { dependsOn: [db] },
+	"migration",
+	{
+		accountId,
+		databaseId: db.id,
+		apiToken,
+		sql: "CREATE TABLE users (id INT)",
+	},
+	{ dependsOn: [db] },
 );
 ```
 
@@ -168,10 +164,10 @@ const config = new pulumi.Config();
 const apiKey = config.requireSecret("apiKey"); // Encrypted in state
 
 const worker = new cloudflare.WorkerScript("worker", {
-  accountId: accountId,
-  name: "my-worker",
-  content: code,
-  secretTextBindings: [{ name: "API_KEY", text: apiKey }],
+	accountId: accountId,
+	name: "my-worker",
+	content: code,
+	secretTextBindings: [{ name: "API_KEY", text: apiKey }],
 });
 ```
 
@@ -189,18 +185,18 @@ Modify resource args before creation:
 import { Transform } from "@pulumi/pulumi";
 
 interface BucketArgs {
-  accountId: pulumi.Input<string>;
-  transform?: { bucket?: Transform<cloudflare.R2BucketArgs> };
+	accountId: pulumi.Input<string>;
+	transform?: { bucket?: Transform<cloudflare.R2BucketArgs> };
 }
 
 function createBucket(name: string, args: BucketArgs) {
-  const bucketArgs: cloudflare.R2BucketArgs = {
-    accountId: args.accountId,
-    name: name,
-    location: "auto",
-  };
-  const finalArgs = args.transform?.bucket?.(bucketArgs) ?? bucketArgs;
-  return new cloudflare.R2Bucket(name, finalArgs);
+	const bucketArgs: cloudflare.R2BucketArgs = {
+		accountId: args.accountId,
+		name: name,
+		location: "auto",
+	};
+	const finalArgs = args.transform?.bucket?.(bucketArgs) ?? bucketArgs;
+	return new cloudflare.R2Bucket(name, finalArgs);
 }
 ```
 
@@ -217,10 +213,10 @@ export const workerId = worker.id;
 
 ```typescript
 const version = new cloudflare.WorkerVersion("v1", {
-  accountId,
-  workerId: worker.id,
-  content: fs.readFileSync("./dist/worker.js", "utf8"),
-  compatibilityDate: "2025-01-01",
+	accountId,
+	workerId: worker.id,
+	content: fs.readFileSync("./dist/worker.js", "utf8"),
+	compatibilityDate: "2025-01-01",
 });
 export const versionId = version.id;
 ```
@@ -229,10 +225,10 @@ export const versionId = version.id;
 
 ```typescript
 const deployment = new cloudflare.WorkersDeployment("prod", {
-  accountId,
-  workerId: worker.id,
-  versionId: version.id,
-  kvNamespaceBindings: [{ name: "MY_KV", namespaceId: kv.id }],
+	accountId,
+	workerId: worker.id,
+	versionId: version.id,
+	kvNamespaceBindings: [{ name: "MY_KV", namespaceId: kv.id }],
 });
 ```
 

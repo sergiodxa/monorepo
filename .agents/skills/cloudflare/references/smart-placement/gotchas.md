@@ -128,19 +128,19 @@ This is one of the most common and impactful Smart Placement misconfigurations.
 ```typescript
 // ❌ RPC - Smart Placement has NO EFFECT
 export class BackendRPC extends WorkerEntrypoint {
-  async getData() {
-    // ALWAYS runs at edge
-    return await this.env.DATABASE.prepare("SELECT * FROM table").all();
-  }
+	async getData() {
+		// ALWAYS runs at edge
+		return await this.env.DATABASE.prepare("SELECT * FROM table").all();
+	}
 }
 
 // ✅ Fetch - Smart Placement WORKS
 export default {
-  async fetch(request: Request, env: Env): Promise<Response> {
-    // Runs close to DATABASE when Smart Placement enabled
-    const data = await env.DATABASE.prepare("SELECT * FROM table").all();
-    return Response.json(data);
-  },
+	async fetch(request: Request, env: Env): Promise<Response> {
+		// Runs close to DATABASE when Smart Placement enabled
+		const data = await env.DATABASE.prepare("SELECT * FROM table").all();
+		return Response.json(data);
+	},
 };
 ```
 

@@ -23,12 +23,12 @@ Migrate from defer() to data() pattern for Single Fetch. Promises automatically 
 import { defer } from "react-router";
 
 export async function loader({ request }: Route.LoaderArgs) {
-  let criticalData = await getCriticalData();
+	let criticalData = await getCriticalData();
 
-  return defer({
-    critical: criticalData,
-    lazy: getLazyData(), // Promise - must use defer for streaming
-  });
+	return defer({
+		critical: criticalData,
+		lazy: getLazyData(), // Promise - must use defer for streaming
+	});
 }
 ```
 
@@ -38,12 +38,12 @@ export async function loader({ request }: Route.LoaderArgs) {
 import { data } from "react-router";
 
 export async function loader({ request }: Route.LoaderArgs) {
-  let criticalData = await getCriticalData();
+	let criticalData = await getCriticalData();
 
-  return data({
-    critical: criticalData,
-    lazy: getLazyData(), // Promise - automatically streams with Single Fetch
-  });
+	return data({
+		critical: criticalData,
+		lazy: getLazyData(), // Promise - automatically streams with Single Fetch
+	});
 }
 ```
 
@@ -53,22 +53,19 @@ export async function loader({ request }: Route.LoaderArgs) {
 import { data } from "react-router";
 
 export async function loader({ request, context }: Route.LoaderArgs) {
-  let client = await authenticate(request);
+	let client = await authenticate(request);
 
-  // Critical data - await before returning
-  const [profile, settings] = await Promise.all([
-    queryProfile(client),
-    querySettings(client),
-  ]);
+	// Critical data - await before returning
+	const [profile, settings] = await Promise.all([queryProfile(client), querySettings(client)]);
 
-  return data({
-    profile,
-    settings,
-    // Non-critical data - streams automatically
-    activities: queryActivities(client),
-    notifications: queryNotifications(client),
-    recommendations: queryRecommendations(client),
-  });
+	return data({
+		profile,
+		settings,
+		// Non-critical data - streams automatically
+		activities: queryActivities(client),
+		notifications: queryNotifications(client),
+		recommendations: queryRecommendations(client),
+	});
 }
 ```
 
@@ -81,21 +78,19 @@ import { Await, useLoaderData } from "react-router";
 import { Suspense } from "react";
 
 export default function Component() {
-  const { profile, activities } = useLoaderData<typeof loader>();
+	const { profile, activities } = useLoaderData<typeof loader>();
 
-  return (
-    <div>
-      {/* Critical data renders immediately */}
-      <h1>{profile.name}</h1>
+	return (
+		<div>
+			{/* Critical data renders immediately */}
+			<h1>{profile.name}</h1>
 
-      {/* Streamed data with Suspense */}
-      <Suspense fallback={<ActivitySkeleton />}>
-        <Await resolve={activities}>
-          {(data) => <ActivityFeed activities={data} />}
-        </Await>
-      </Suspense>
-    </div>
-  );
+			{/* Streamed data with Suspense */}
+			<Suspense fallback={<ActivitySkeleton />}>
+				<Await resolve={activities}>{(data) => <ActivityFeed activities={data} />}</Await>
+			</Suspense>
+		</div>
+	);
 }
 ```
 
@@ -103,14 +98,14 @@ export default function Component() {
 
 ```tsx
 return data({
-  // AWAIT: Critical for initial render, SEO, or needed by other data
-  user: await getUser(request), // Await - needed for auth
-  title: await getPageTitle(), // Await - needed for SEO
+	// AWAIT: Critical for initial render, SEO, or needed by other data
+	user: await getUser(request), // Await - needed for auth
+	title: await getPageTitle(), // Await - needed for SEO
 
-  // STREAM: Non-critical, below fold, or slow queries
-  comments: getComments(postId), // Stream - below fold
-  recommendations: getRecommendations(), // Stream - non-critical
-  analytics: getAnalytics(), // Stream - slow query
+	// STREAM: Non-critical, below fold, or slow queries
+	comments: getComments(postId), // Stream - below fold
+	recommendations: getRecommendations(), // Stream - non-critical
+	analytics: getAnalytics(), // Stream - slow query
 });
 ```
 
@@ -122,8 +117,8 @@ When all data is critical and needs to be sent at once:
 import { data } from "react-router";
 
 export async function loader({ request }: Route.LoaderArgs) {
-  const [a, b, c] = await Promise.all([getA(), getB(), getC()]);
-  return data({ a, b, c }); // All data sent at once, no streaming
+	const [a, b, c] = await Promise.all([getA(), getB(), getC()]);
+	return data({ a, b, c }); // All data sent at once, no streaming
 }
 ```
 

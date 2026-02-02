@@ -31,34 +31,34 @@ Check for REST API vulnerabilities including mass assignment, lack of validation
 ```typescript
 // Bad: Mass assignment
 async function updateUser(req: Request): Promise<Response> {
-  let session = await getSession(req);
-  let data = await req.json();
+	let session = await getSession(req);
+	let data = await req.json();
 
-  // VULNERABLE: User can set isAdmin, role, etc.!
-  await db.users.update({
-    where: { id: session.userId },
-    data, // Dangerous - accepts all fields!
-  });
+	// VULNERABLE: User can set isAdmin, role, etc.!
+	await db.users.update({
+		where: { id: session.userId },
+		data, // Dangerous - accepts all fields!
+	});
 
-  return new Response("Updated");
+	return new Response("Updated");
 }
 
 // Bad: No pagination
 async function getUsers(req: Request): Promise<Response> {
-  // VULNERABLE: Could return millions of records
-  let users = await db.users.findMany();
+	// VULNERABLE: Could return millions of records
+	let users = await db.users.findMany();
 
-  return Response.json(users);
+	return Response.json(users);
 }
 
 // Bad: No input validation
 async function createPost(req: Request): Promise<Response> {
-  let data = await req.json();
+	let data = await req.json();
 
-  // VULNERABLE: No validation of data types or values
-  await db.posts.create({ data });
+	// VULNERABLE: No validation of data types or values
+	await db.posts.create({ data });
 
-  return new Response("Created", { status: 201 });
+	return new Response("Created", { status: 201 });
 }
 ```
 
@@ -67,74 +67,63 @@ async function createPost(req: Request): Promise<Response> {
 ```typescript
 // Good: Explicit field allowlist
 async function updateUser(req: Request): Promise<Response> {
-  let session = await getSession(req);
-  let body = await req.json();
+	let session = await getSession(req);
+	let body = await req.json();
 
-  let allowedFields = {
-    displayName: body.displayName,
-    bio: body.bio,
-    avatar: body.avatar,
-  };
+	let allowedFields = {
+		displayName: body.displayName,
+		bio: body.bio,
+		avatar: body.avatar,
+	};
 
-  if (
-    allowedFields.displayName &&
-    typeof allowedFields.displayName !== "string"
-  ) {
-    return new Response("Invalid displayName", { status: 400 });
-  }
+	if (allowedFields.displayName && typeof allowedFields.displayName !== "string") {
+		return new Response("Invalid displayName", { status: 400 });
+	}
 
-  await db.users.update({
-    where: { id: session.userId },
-    data: allowedFields,
-  });
+	await db.users.update({
+		where: { id: session.userId },
+		data: allowedFields,
+	});
 
-  return new Response("Updated");
+	return new Response("Updated");
 }
 
 // Good: Pagination with limits
 async function getUsers(req: Request): Promise<Response> {
-  let url = new URL(req.url);
-  let page = parseInt(url.searchParams.get("page") || "1");
-  let limit = Math.min(parseInt(url.searchParams.get("limit") || "20"), 100);
+	let url = new URL(req.url);
+	let page = parseInt(url.searchParams.get("page") || "1");
+	let limit = Math.min(parseInt(url.searchParams.get("limit") || "20"), 100);
 
-  let users = await db.users.findMany({
-    take: limit,
-    skip: (page - 1) * limit,
-  });
+	let users = await db.users.findMany({
+		take: limit,
+		skip: (page - 1) * limit,
+	});
 
-  return Response.json({ data: users, page, limit });
+	return Response.json({ data: users, page, limit });
 }
 
 // Good: Input validation
 async function createPost(req: Request): Promise<Response> {
-  let session = await getSession(req);
-  let body = await req.json();
+	let session = await getSession(req);
+	let body = await req.json();
 
-  if (
-    !body.title ||
-    typeof body.title !== "string" ||
-    body.title.length > 200
-  ) {
-    return new Response("Invalid title", { status: 400 });
-  }
+	if (!body.title || typeof body.title !== "string" || body.title.length > 200) {
+		return new Response("Invalid title", { status: 400 });
+	}
 
-  if (
-    !body.content ||
-    typeof body.content !== "string" ||
-    body.content.length > 50000
-  ) {
-    return new Response("Invalid content", { status: 400 });
-  }
+	if (!body.content || typeof body.content !== "string" || body.content.length > 50000) {
+		return new Response("Invalid content", { status: 400 });
+	}
 
-  await db.posts.create({
-    data: {
-      title: body.title,
-      content: body.content,
-      authorId: session.userId,
-    },
-  });
+	await db.posts.create({
+		data: {
+			title: body.title,
+			content: body.content,
+			authorId: session.userId,
+		},
+	});
 
-  return new Response("Created", { status: 201 });
+	return new Response("Created", { status: 201 });
 }
 ```
 

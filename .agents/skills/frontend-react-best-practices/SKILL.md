@@ -40,9 +40,9 @@ Load modules only when feature is activated.
 
 ```tsx
 useEffect(() => {
-  if (enabled && typeof window !== "undefined") {
-    import("./heavy-module").then((mod) => setModule(mod));
-  }
+	if (enabled && typeof window !== "undefined") {
+		import("./heavy-module").then((mod) => setModule(mod));
+	}
 }, [enabled]);
 ```
 
@@ -52,11 +52,11 @@ Preload on hover/focus for perceived speed.
 
 ```tsx
 <button
-  onMouseEnter={() => import("./editor")}
-  onFocus={() => import("./editor")}
-  onClick={openEditor}
+	onMouseEnter={() => import("./editor")}
+	onFocus={() => import("./editor")}
+	onClick={openEditor}
 >
-  Open Editor
+	Open Editor
 </button>
 ```
 
@@ -69,15 +69,15 @@ Use functional setState for stable callbacks.
 ```tsx
 // Bad: stale closure risk, recreates on items change
 const addItem = useCallback(
-  (item) => {
-    setItems([...items, item]);
-  },
-  [items],
+	(item) => {
+		setItems([...items, item]);
+	},
+	[items],
 );
 
 // Good: always uses latest state, stable reference
 const addItem = useCallback((item) => {
-  setItems((curr) => [...curr, item]);
+	setItems((curr) => [...curr, item]);
 }, []);
 ```
 
@@ -89,7 +89,7 @@ Derive state during render, not in effects.
 // Bad: extra state and effect, extra render
 const [fullName, setFullName] = useState("");
 useEffect(() => {
-  setFullName(firstName + " " + lastName);
+	setFullName(firstName + " " + lastName);
 }, [firstName, lastName]);
 
 // Good: derived directly during render
@@ -115,12 +115,12 @@ Use primitive dependencies in effects.
 ```tsx
 // Bad: runs on any user field change
 useEffect(() => {
-  console.log(user.id);
+	console.log(user.id);
 }, [user]);
 
 // Good: runs only when id changes
 useEffect(() => {
-  console.log(user.id);
+	console.log(user.id);
 }, [user.id]);
 ```
 
@@ -144,13 +144,13 @@ Extract expensive work into memoized components.
 ```tsx
 // Good: skips computation when loading
 const UserAvatar = memo(function UserAvatar({ user }) {
-  let id = useMemo(() => computeAvatarId(user), [user]);
-  return <Avatar id={id} />;
+	let id = useMemo(() => computeAvatarId(user), [user]);
+	return <Avatar id={id} />;
 });
 
 function Profile({ user, loading }) {
-  if (loading) return <Skeleton />;
-  return <UserAvatar user={user} />;
+	if (loading) return <Skeleton />;
+	return <UserAvatar user={user} />;
 }
 ```
 
@@ -186,7 +186,7 @@ Put interaction logic in event handlers, not effects.
 ```tsx
 // Bad: effect re-runs on theme change
 useEffect(() => {
-  if (submitted) post("/api/register");
+	if (submitted) post("/api/register");
 }, [submitted, theme]);
 
 // Good: in handler
@@ -200,7 +200,7 @@ Use startTransition for non-urgent updates.
 ```tsx
 // Good: non-blocking scroll tracking
 const handler = () => {
-  startTransition(() => setScrollY(window.scrollY));
+	startTransition(() => setScrollY(window.scrollY));
 };
 ```
 
@@ -214,12 +214,12 @@ const lastXRef = useRef(0);
 const dotRef = useRef<HTMLDivElement>(null);
 
 useEffect(() => {
-  let onMove = (e) => {
-    lastXRef.current = e.clientX;
-    dotRef.current?.style.transform = `translateX(${e.clientX}px)`;
-  };
-  window.addEventListener("mousemove", onMove);
-  return () => window.removeEventListener("mousemove", onMove);
+	let onMove = (e) => {
+		lastXRef.current = e.clientX;
+		dotRef.current?.style.transform = `translateX(${e.clientX}px)`;
+	};
+	window.addEventListener("mousemove", onMove);
+	return () => window.removeEventListener("mousemove", onMove);
 }, []);
 ```
 
@@ -232,12 +232,12 @@ Use ternary, not && for conditionals with numbers.
 ```tsx
 // Bad: renders "0" when count is 0
 {
-  count && <Badge>{count}</Badge>;
+	count && <Badge>{count}</Badge>;
 }
 
 // Good: renders nothing when count is 0
 {
-  count > 0 ? <Badge>{count}</Badge> : null;
+	count > 0 ? <Badge>{count}</Badge> : null;
 }
 ```
 
@@ -250,7 +250,7 @@ Extract static JSX outside components.
 const skeleton = <div className="animate-pulse h-20 bg-gray-200" />;
 
 function Container({ loading }) {
-  return loading ? skeleton : <Content />;
+	return loading ? skeleton : <Content />;
 }
 ```
 
@@ -260,8 +260,8 @@ Use content-visibility for long lists.
 
 ```css
 .list-item {
-  content-visibility: auto;
-  contain-intrinsic-size: 0 80px;
+	content-visibility: auto;
+	contain-intrinsic-size: 0 80px;
 }
 ```
 
@@ -272,7 +272,7 @@ Animate wrapper div, not SVG element (for GPU acceleration).
 ```tsx
 // Good: hardware accelerated
 <div className="animate-spin">
-  <svg>...</svg>
+	<svg>...</svg>
 </div>
 ```
 
@@ -329,10 +329,10 @@ Prefer useTransition over manual loading states.
 const [isPending, startTransition] = useTransition();
 
 let handleSearch = (value) => {
-  startTransition(async () => {
-    let data = await fetchResults(value);
-    setResults(data);
-  });
+	startTransition(async () => {
+		let data = await fetchResults(value);
+		setResults(data);
+	});
 };
 ```
 
@@ -342,7 +342,7 @@ Place error boundaries at feature boundaries.
 
 ```tsx
 <ErrorBoundary fallback={<SidebarError />}>
-  <Sidebar />
+	<Sidebar />
 </ErrorBoundary>
 ```
 
@@ -365,9 +365,9 @@ Version and minimize localStorage data.
 const VERSION = "v2";
 
 function saveConfig(config: Config) {
-  try {
-    localStorage.setItem(`config:${VERSION}`, JSON.stringify(config));
-  } catch {} // Handle incognito/quota exceeded
+	try {
+		localStorage.setItem(`config:${VERSION}`, JSON.stringify(config));
+	} catch {} // Handle incognito/quota exceeded
 }
 ```
 
@@ -381,7 +381,7 @@ Use useEffect only when absolutely necessary. Prefer derived state or event hand
 // Bad: useEffect to derive state
 let [filtered, setFiltered] = useState(items);
 useEffect(() => {
-  setFiltered(items.filter((i) => i.active));
+	setFiltered(items.filter((i) => i.active));
 }, [items]);
 
 // Good: derive during render
@@ -398,23 +398,23 @@ Use named function declarations in useEffect for better debugging and self-docum
 ```tsx
 // Bad: anonymous arrow function
 useEffect(() => {
-  document.title = title;
+	document.title = title;
 }, [title]);
 
 // Good: named function
 useEffect(
-  function syncDocumentTitle() {
-    document.title = title;
-  },
-  [title],
+	function syncDocumentTitle() {
+		document.title = title;
+	},
+	[title],
 );
 
 // Good: also name cleanup functions
 useEffect(function subscribeToOnlineStatus() {
-  window.addEventListener("online", handleOnline);
-  return function unsubscribeFromOnlineStatus() {
-    window.removeEventListener("online", handleOnline);
-  };
+	window.addEventListener("online", handleOnline);
+	return function unsubscribeFromOnlineStatus() {
+		window.removeEventListener("online", handleOnline);
+	};
 }, []);
 ```
 
@@ -440,12 +440,12 @@ Structure complex components as compound components with shared context.
 ```tsx
 // Good: compound components
 <Composer.Provider state={state} actions={actions}>
-  <Composer.Frame>
-    <Composer.Input />
-    <Composer.Footer>
-      <Composer.Submit />
-    </Composer.Footer>
-  </Composer.Frame>
+	<Composer.Frame>
+		<Composer.Input />
+		<Composer.Footer>
+			<Composer.Submit />
+		</Composer.Footer>
+	</Composer.Frame>
 </Composer.Provider>
 ```
 
@@ -456,11 +456,11 @@ Lift state into provider components for cross-component access.
 ```tsx
 // Good: state in provider, accessible anywhere inside
 <ForwardMessageProvider>
-  <Dialog>
-    <Composer.Input />
-    <MessagePreview /> {/* Can read state */}
-    <ForwardButton /> {/* Can call submit */}
-  </Dialog>
+	<Dialog>
+		<Composer.Input />
+		<MessagePreview /> {/* Can read state */}
+		<ForwardButton /> {/* Can call submit */}
+	</Dialog>
 </ForwardMessageProvider>
 ```
 
@@ -471,15 +471,15 @@ Create explicit variant components instead of prop combinations.
 ```tsx
 // Good: self-documenting variants
 function ThreadComposer({ channelId }) {
-  return (
-    <ThreadProvider channelId={channelId}>
-      <Composer.Frame>
-        <Composer.Input />
-        <AlsoSendToChannelField />
-        <Composer.Submit />
-      </Composer.Frame>
-    </ThreadProvider>
-  );
+	return (
+		<ThreadProvider channelId={channelId}>
+			<Composer.Frame>
+				<Composer.Input />
+				<AlsoSendToChannelField />
+				<Composer.Submit />
+			</Composer.Frame>
+		</ThreadProvider>
+	);
 }
 ```
 

@@ -13,11 +13,11 @@ Use a module-level Map to cache function results when the same function is calle
 
 ```typescript
 function processProjects(projects: Project[]) {
-  return projects.map((project) => {
-    // slugify() called 100+ times for same project names
-    let slug = slugify(project.name);
-    return { ...project, slug };
-  });
+	return projects.map((project) => {
+		// slugify() called 100+ times for same project names
+		let slug = slugify(project.name);
+		return { ...project, slug };
+	});
 }
 ```
 
@@ -28,20 +28,20 @@ function processProjects(projects: Project[]) {
 const slugifyCache = new Map<string, string>();
 
 function cachedSlugify(text: string): string {
-  if (slugifyCache.has(text)) {
-    return slugifyCache.get(text)!;
-  }
-  let result = slugify(text);
-  slugifyCache.set(text, result);
-  return result;
+	if (slugifyCache.has(text)) {
+		return slugifyCache.get(text)!;
+	}
+	let result = slugify(text);
+	slugifyCache.set(text, result);
+	return result;
 }
 
 function processProjects(projects: Project[]) {
-  return projects.map((project) => {
-    // Computed only once per unique project name
-    let slug = cachedSlugify(project.name);
-    return { ...project, slug };
-  });
+	return projects.map((project) => {
+		// Computed only once per unique project name
+		let slug = cachedSlugify(project.name);
+		return { ...project, slug };
+	});
 }
 ```
 
@@ -51,17 +51,17 @@ function processProjects(projects: Project[]) {
 let isLoggedInCache: boolean | null = null;
 
 function isLoggedIn(): boolean {
-  if (isLoggedInCache !== null) {
-    return isLoggedInCache;
-  }
+	if (isLoggedInCache !== null) {
+		return isLoggedInCache;
+	}
 
-  isLoggedInCache = document.cookie.includes("auth=");
-  return isLoggedInCache;
+	isLoggedInCache = document.cookie.includes("auth=");
+	return isLoggedInCache;
 }
 
 // Clear cache when auth changes
 function onAuthChange() {
-  isLoggedInCache = null;
+	isLoggedInCache = null;
 }
 ```
 
@@ -71,19 +71,19 @@ function onAuthChange() {
 const MAX_CACHE_SIZE = 1000;
 
 function cachedSlugify(text: string): string {
-  if (slugifyCache.has(text)) {
-    return slugifyCache.get(text)!;
-  }
+	if (slugifyCache.has(text)) {
+		return slugifyCache.get(text)!;
+	}
 
-  // Prevent unbounded growth
-  if (slugifyCache.size >= MAX_CACHE_SIZE) {
-    let firstKey = slugifyCache.keys().next().value;
-    slugifyCache.delete(firstKey);
-  }
+	// Prevent unbounded growth
+	if (slugifyCache.size >= MAX_CACHE_SIZE) {
+		let firstKey = slugifyCache.keys().next().value;
+		slugifyCache.delete(firstKey);
+	}
 
-  let result = slugify(text);
-  slugifyCache.set(text, result);
-  return result;
+	let result = slugify(text);
+	slugifyCache.set(text, result);
+	return result;
 }
 ```
 

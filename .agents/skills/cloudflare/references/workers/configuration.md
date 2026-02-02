@@ -4,26 +4,24 @@
 
 ```jsonc
 {
-  "$schema": "./node_modules/wrangler/config-schema.json",
-  "name": "my-worker",
-  "main": "src/index.ts",
-  "compatibility_date": "2025-01-01", // Use current date for new projects
+	"$schema": "./node_modules/wrangler/config-schema.json",
+	"name": "my-worker",
+	"main": "src/index.ts",
+	"compatibility_date": "2025-01-01", // Use current date for new projects
 
-  // Bindings (non-inheritable)
-  "vars": { "ENVIRONMENT": "production" },
-  "kv_namespaces": [{ "binding": "MY_KV", "id": "abc123" }],
-  "r2_buckets": [{ "binding": "MY_BUCKET", "bucket_name": "my-bucket" }],
-  "d1_databases": [
-    { "binding": "DB", "database_name": "my-db", "database_id": "xyz789" },
-  ],
+	// Bindings (non-inheritable)
+	"vars": { "ENVIRONMENT": "production" },
+	"kv_namespaces": [{ "binding": "MY_KV", "id": "abc123" }],
+	"r2_buckets": [{ "binding": "MY_BUCKET", "bucket_name": "my-bucket" }],
+	"d1_databases": [{ "binding": "DB", "database_name": "my-db", "database_id": "xyz789" }],
 
-  // Environments
-  "env": {
-    "staging": {
-      "vars": { "ENVIRONMENT": "staging" },
-      "kv_namespaces": [{ "binding": "MY_KV", "id": "staging-id" }],
-    },
-  },
+	// Environments
+	"env": {
+		"staging": {
+			"vars": { "ENVIRONMENT": "staging" },
+			"kv_namespaces": [{ "binding": "MY_KV", "id": "staging-id" }],
+		},
+	},
 }
 ```
 
@@ -39,36 +37,34 @@
 
 ```jsonc
 {
-  // Environment variables - access via env.VAR_NAME
-  "vars": { "ENVIRONMENT": "production" },
+	// Environment variables - access via env.VAR_NAME
+	"vars": { "ENVIRONMENT": "production" },
 
-  // KV (key-value storage)
-  "kv_namespaces": [{ "binding": "MY_KV", "id": "abc123" }],
+	// KV (key-value storage)
+	"kv_namespaces": [{ "binding": "MY_KV", "id": "abc123" }],
 
-  // R2 (object storage)
-  "r2_buckets": [{ "binding": "MY_BUCKET", "bucket_name": "my-bucket" }],
+	// R2 (object storage)
+	"r2_buckets": [{ "binding": "MY_BUCKET", "bucket_name": "my-bucket" }],
 
-  // D1 (SQL database)
-  "d1_databases": [
-    { "binding": "DB", "database_name": "my-db", "database_id": "xyz789" },
-  ],
+	// D1 (SQL database)
+	"d1_databases": [{ "binding": "DB", "database_name": "my-db", "database_id": "xyz789" }],
 
-  // Durable Objects (stateful coordination)
-  "durable_objects": {
-    "bindings": [{ "name": "COUNTER", "class_name": "Counter" }],
-  },
+	// Durable Objects (stateful coordination)
+	"durable_objects": {
+		"bindings": [{ "name": "COUNTER", "class_name": "Counter" }],
+	},
 
-  // Queues (message queues)
-  "queues": {
-    "producers": [{ "binding": "MY_QUEUE", "queue": "my-queue" }],
-    "consumers": [{ "queue": "my-queue", "max_batch_size": 10 }],
-  },
+	// Queues (message queues)
+	"queues": {
+		"producers": [{ "binding": "MY_QUEUE", "queue": "my-queue" }],
+		"consumers": [{ "queue": "my-queue", "max_batch_size": 10 }],
+	},
 
-  // Service bindings (worker-to-worker RPC)
-  "services": [{ "binding": "SERVICE_B", "service": "service-b" }],
+	// Service bindings (worker-to-worker RPC)
+	"services": [{ "binding": "SERVICE_B", "service": "service-b" }],
 
-  // Analytics Engine
-  "analytics_engine_datasets": [{ "binding": "ANALYTICS" }],
+	// Analytics Engine
+	"analytics_engine_datasets": [{ "binding": "ANALYTICS" }],
 }
 ```
 
@@ -94,10 +90,10 @@ Bindings without IDs are auto-created:
 
 ```jsonc
 {
-  "routes": [{ "pattern": "example.com/*", "zone_name": "example.com" }],
-  "triggers": {
-    "crons": ["0 */6 * * *"], // Every 6 hours
-  },
+	"routes": [{ "pattern": "example.com/*", "zone_name": "example.com" }],
+	"triggers": {
+		"crons": ["0 */6 * * *"], // Every 6 hours
+	},
 }
 ```
 
@@ -114,12 +110,12 @@ npx wrangler types  # Generates .wrangler/types/runtime.d.ts from wrangler.jsonc
 
 ```jsonc
 {
-  "compilerOptions": {
-    "target": "ES2022",
-    "lib": ["ES2022"],
-    "types": ["@cloudflare/workers-types"],
-  },
-  "include": [".wrangler/types/**/*.ts", "src/**/*"],
+	"compilerOptions": {
+		"target": "ES2022",
+		"lib": ["ES2022"],
+		"types": ["@cloudflare/workers-types"],
+	},
+	"include": [".wrangler/types/**/*.ts", "src/**/*"],
 }
 ```
 
@@ -129,14 +125,10 @@ Import generated types:
 import type { Env } from "./.wrangler/types/runtime";
 
 export default {
-  async fetch(
-    request: Request,
-    env: Env,
-    ctx: ExecutionContext,
-  ): Promise<Response> {
-    await env.MY_KV.get("key"); // Fully typed, autocomplete works
-    return new Response("OK");
-  },
+	async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
+		await env.MY_KV.get("key"); // Fully typed, autocomplete works
+		return new Response("OK");
+	},
 };
 ```
 
@@ -146,9 +138,9 @@ Re-run `npx wrangler types` after changing bindings in wrangler.jsonc
 
 ```typescript
 interface Env {
-  MY_KV: KVNamespace;
-  DB: D1Database;
-  API_KEY: string;
+	MY_KV: KVNamespace;
+	DB: D1Database;
+	API_KEY: string;
 }
 ```
 
@@ -156,14 +148,14 @@ interface Env {
 
 ```jsonc
 {
-  // Auto-locate compute near data sources
-  "placement": { "mode": "smart" },
+	// Auto-locate compute near data sources
+	"placement": { "mode": "smart" },
 
-  // Enable Node.js built-ins (Buffer, process, path, etc.)
-  "compatibility_flags": ["nodejs_compat_v2"],
+	// Enable Node.js built-ins (Buffer, process, path, etc.)
+	"compatibility_flags": ["nodejs_compat_v2"],
 
-  // Observability (10% sampling)
-  "observability": { "enabled": true, "head_sampling_rate": 0.1 },
+	// Observability (10% sampling)
+	"observability": { "enabled": true, "head_sampling_rate": 0.1 },
 }
 ```
 

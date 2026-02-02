@@ -6,11 +6,11 @@ Minimal configuration requires only `assets.directory`:
 
 ```jsonc
 {
-  "name": "my-worker",
-  "compatibility_date": "2025-01-01", // Use current date for new projects
-  "assets": {
-    "directory": "./dist",
-  },
+	"name": "my-worker",
+	"compatibility_date": "2025-01-01", // Use current date for new projects
+	"assets": {
+		"directory": "./dist",
+	},
 }
 ```
 
@@ -18,16 +18,16 @@ Minimal configuration requires only `assets.directory`:
 
 ```jsonc
 {
-  "name": "my-worker",
-  "main": "src/index.ts",
-  "compatibility_date": "2025-01-01",
-  "assets": {
-    "directory": "./dist",
-    "binding": "ASSETS",
-    "not_found_handling": "single-page-application",
-    "html_handling": "auto-trailing-slash",
-    "run_worker_first": ["/api/*", "!/api/docs/*"],
-  },
+	"name": "my-worker",
+	"main": "src/index.ts",
+	"compatibility_date": "2025-01-01",
+	"assets": {
+		"directory": "./dist",
+		"binding": "ASSETS",
+		"not_found_handling": "single-page-application",
+		"html_handling": "auto-trailing-slash",
+		"run_worker_first": ["/api/*", "!/api/docs/*"],
+	},
 }
 ```
 
@@ -71,9 +71,9 @@ Controls which requests invoke Worker before checking assets.
 
 ```jsonc
 {
-  "assets": {
-    "run_worker_first": true, // ALL requests invoke Worker
-  },
+	"assets": {
+		"run_worker_first": true, // ALL requests invoke Worker
+	},
 }
 ```
 
@@ -81,13 +81,13 @@ Controls which requests invoke Worker before checking assets.
 
 ```jsonc
 {
-  "assets": {
-    "run_worker_first": [
-      "/api/*", // Positive pattern: match API routes
-      "/admin/*", // Match admin routes
-      "!/admin/assets/*", // Negative pattern: exclude admin assets
-    ],
-  },
+	"assets": {
+		"run_worker_first": [
+			"/api/*", // Positive pattern: match API routes
+			"/admin/*", // Match admin routes
+			"!/admin/assets/*", // Negative pattern: exclude admin assets
+		],
+	},
 }
 ```
 
@@ -134,14 +134,14 @@ import { defineConfig } from "vite";
 import { cloudflare } from "@cloudflare/vite-plugin";
 
 export default defineConfig({
-  plugins: [
-    cloudflare({
-      assets: {
-        directory: "./dist",
-        binding: "ASSETS",
-      },
-    }),
-  ],
+	plugins: [
+		cloudflare({
+			assets: {
+				directory: "./dist",
+				binding: "ASSETS",
+			},
+		}),
+	],
 });
 ```
 
@@ -166,20 +166,20 @@ Use `wrangler.jsonc` environments for different configs:
 
 ```jsonc
 {
-  "name": "my-worker",
-  "assets": { "directory": "./dist" },
-  "env": {
-    "staging": {
-      "assets": {
-        "not_found_handling": "404-page",
-      },
-    },
-    "production": {
-      "assets": {
-        "not_found_handling": "single-page-application",
-      },
-    },
-  },
+	"name": "my-worker",
+	"assets": { "directory": "./dist" },
+	"env": {
+		"staging": {
+			"assets": {
+				"not_found_handling": "404-page",
+			},
+		},
+		"production": {
+			"assets": {
+				"not_found_handling": "single-page-application",
+			},
+		},
+	},
 }
 ```
 

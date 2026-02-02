@@ -18,15 +18,15 @@ Use the `sr-only` class to provide text for screen readers that is visually hidd
 
 ```css
 .sr-only {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  padding: 0;
-  margin: -1px;
-  overflow: hidden;
-  clip: rect(0, 0, 0, 0);
-  white-space: nowrap;
-  border-width: 0;
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	padding: 0;
+	margin: -1px;
+	overflow: hidden;
+	clip: rect(0, 0, 0, 0);
+	white-space: nowrap;
+	border-width: 0;
 }
 ```
 
@@ -56,14 +56,14 @@ Use the `sr-only` class to provide text for screen readers that is visually hidd
 
 ```tsx
 <table>
-  <thead className="sr-only">
-    <tr>
-      <th>{t("Item name")}</th>
-      <th>{t("Amount")}</th>
-      <th>{t("Date")}</th>
-    </tr>
-  </thead>
-  <tbody>{/* Visual rows with no visible headers */}</tbody>
+	<thead className="sr-only">
+		<tr>
+			<th>{t("Item name")}</th>
+			<th>{t("Amount")}</th>
+			<th>{t("Date")}</th>
+		</tr>
+	</thead>
+	<tbody>{/* Visual rows with no visible headers */}</tbody>
 </table>
 ```
 
@@ -73,8 +73,8 @@ Use the `sr-only` class to provide text for screen readers that is visually hidd
 import { Region, Heading } from "~/components/heading";
 
 <Region>
-  <Heading className="sr-only">{t("Search results")}</Heading>
-  <SearchResultsList />
+	<Heading className="sr-only">{t("Search results")}</Heading>
+	<SearchResultsList />
 </Region>;
 ```
 
@@ -90,9 +90,9 @@ import { Region, Heading } from "~/components/heading";
 ```tsx
 // Badge that's visually clear but needs context
 <Badge variant="success">
-  <CheckIcon aria-hidden="true" />
-  <span className="sr-only">{t("Status:")}</span>
-  {t("Approved")}
+	<CheckIcon aria-hidden="true" />
+	<span className="sr-only">{t("Status:")}</span>
+	{t("Approved")}
 </Badge>
 ```
 

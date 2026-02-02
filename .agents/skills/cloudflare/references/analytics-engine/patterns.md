@@ -14,9 +14,9 @@
 
 ```typescript
 env.ANALYTICS.writeDataPoint({
-  blobs: [pathname, method, status, tier],
-  doubles: [1, computeUnits, bytes, latencyMs],
-  indexes: [apiKey],
+	blobs: [pathname, method, status, tier],
+	doubles: [1, computeUnits, bytes, latencyMs],
+	indexes: [apiKey],
 });
 
 // Query: Monthly usage by customer
@@ -28,9 +28,9 @@ env.ANALYTICS.writeDataPoint({
 
 ```typescript
 env.ANALYTICS.writeDataPoint({
-  blobs: [endpoint, method, errorName, errorMessage.slice(0, 1000)],
-  doubles: [1, timeToErrorMs],
-  indexes: [customerId],
+	blobs: [endpoint, method, errorName, errorMessage.slice(0, 1000)],
+	doubles: [1, timeToErrorMs],
+	indexes: [customerId],
 });
 ```
 
@@ -38,9 +38,9 @@ env.ANALYTICS.writeDataPoint({
 
 ```typescript
 env.ANALYTICS.writeDataPoint({
-  blobs: [pathname, method, cacheStatus, status],
-  doubles: [latencyMs, 1],
-  indexes: [userId],
+	blobs: [pathname, method, cacheStatus, status],
+	doubles: [latencyMs, 1],
+	indexes: [userId],
 });
 
 // Query: P95 latency by endpoint

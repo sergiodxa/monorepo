@@ -4,14 +4,14 @@
 
 ```typescript
 const sandbox = getSandbox(env.Sandbox, "sandbox-id", {
-  normalizeId: true, // lowercase ID (required for preview URLs)
-  sleepAfter: "10m", // sleep after inactivity: '5m', '1h', '2d' (default: '10m')
-  keepAlive: false, // false = auto-timeout, true = never sleep
+	normalizeId: true, // lowercase ID (required for preview URLs)
+	sleepAfter: "10m", // sleep after inactivity: '5m', '1h', '2d' (default: '10m')
+	keepAlive: false, // false = auto-timeout, true = never sleep
 
-  containerTimeouts: {
-    instanceGetTimeoutMS: 30000, // 30s for provisioning (default: 30000)
-    portReadyTimeoutMS: 90000, // 90s for container startup (default: 90000)
-  },
+	containerTimeouts: {
+		instanceGetTimeoutMS: 30000, // 30s for provisioning (default: 30000)
+		portReadyTimeoutMS: 90000, // 90s for container startup (default: 90000)
+	},
 });
 ```
 
@@ -75,16 +75,16 @@ wrangler secret put KEY         # Set secret
 
 ```jsonc
 {
-  "vars": {
-    "ENVIRONMENT": "production",
-    "API_URL": "https://api.example.com",
-  },
-  "r2_buckets": [
-    {
-      "binding": "DATA_BUCKET",
-      "bucket_name": "my-data-bucket",
-    },
-  ],
+	"vars": {
+		"ENVIRONMENT": "production",
+		"API_URL": "https://api.example.com",
+	},
+	"r2_buckets": [
+		{
+			"binding": "DATA_BUCKET",
+			"bucket_name": "my-data-bucket",
+		},
+	],
 }
 ```
 
@@ -93,7 +93,7 @@ wrangler secret put KEY         # Set secret
 ```typescript
 const token = env.GITHUB_TOKEN; // From wrangler secret
 await sandbox.exec("git clone ...", {
-  env: { GIT_TOKEN: token },
+	env: { GIT_TOKEN: token },
 });
 ```
 
@@ -110,18 +110,18 @@ await sandbox.exec("git clone ...", {
 
 ```jsonc
 {
-  "triggers": {
-    "crons": ["*/5 * * * *"], // Every 5 minutes
-  },
+	"triggers": {
+		"crons": ["*/5 * * * *"], // Every 5 minutes
+	},
 }
 ```
 
 ```typescript
 export default {
-  async scheduled(event: ScheduledEvent, env: Env) {
-    const sandbox = getSandbox(env.Sandbox, "main");
-    await sandbox.exec('echo "keepalive"'); // Wake sandbox
-  },
+	async scheduled(event: ScheduledEvent, env: Env) {
+		const sandbox = getSandbox(env.Sandbox, "main");
+		await sandbox.exec('echo "keepalive"'); // Wake sandbox
+	},
 };
 ```
 
@@ -131,10 +131,10 @@ export default {
 
 ```jsonc
 {
-  "vars": {
-    "SANDBOX_LOG_LEVEL": "debug", // debug | info | warn | error (default: info)
-    "SANDBOX_LOG_FORMAT": "pretty", // json | pretty (default: json)
-  },
+	"vars": {
+		"SANDBOX_LOG_LEVEL": "debug", // debug | info | warn | error (default: info)
+		"SANDBOX_LOG_FORMAT": "pretty", // json | pretty (default: json)
+	},
 }
 ```
 
@@ -146,9 +146,9 @@ Override default timeouts via environment variables:
 
 ```jsonc
 {
-  "vars": {
-    "SANDBOX_INSTANCE_TIMEOUT_MS": "60000", // Override instanceGetTimeoutMS
-    "SANDBOX_PORT_TIMEOUT_MS": "120000", // Override portReadyTimeoutMS
-  },
+	"vars": {
+		"SANDBOX_INSTANCE_TIMEOUT_MS": "60000", // Override instanceGetTimeoutMS
+		"SANDBOX_PORT_TIMEOUT_MS": "120000", // Override portReadyTimeoutMS
+	},
 }
 ```

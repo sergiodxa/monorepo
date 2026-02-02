@@ -34,6 +34,7 @@ feat(apps/store): add shipping address autocomplete
 ```
 
 **Use feat when:**
+
 - Adding completely new functionality
 - Adding new options, fields, or capabilities to existing features
 - Implementing new user-facing behavior
@@ -54,6 +55,7 @@ fix(packages/db): prevent connection pool exhaustion
 ```
 
 **Use fix when:**
+
 - Correcting incorrect behavior
 - Resolving errors or exceptions
 - Fixing broken functionality
@@ -74,6 +76,7 @@ refactor(apps/books): convert class components to hooks
 ```
 
 **Use refactor when:**
+
 - Restructuring code without changing behavior
 - Extracting functions or components
 - Improving code quality or readability
@@ -95,6 +98,7 @@ docs(packages/ui): fix broken links in component docs
 ```
 
 **Use docs when:**
+
 - Only README, documentation, or comments change
 - No code changes
 
@@ -114,6 +118,7 @@ test(packages/ui): fix flaky button component tests
 ```
 
 **Use test when:**
+
 - Only test files change
 - No production code changes
 
@@ -138,6 +143,7 @@ chore(packages/auth): configure CORS settings
 ```
 
 **Use chore when:**
+
 - Updating dependencies
 - Changing build configuration
 - Modifying tooling or scripts
@@ -159,6 +165,7 @@ style(apps/books): fix indentation
 ```
 
 **Use style when:**
+
 - Only formatting changes (prettier, eslint --fix)
 - No logic or behavior changes
 - Whitespace, indentation, etc.
@@ -179,6 +186,7 @@ perf(packages/ui): memoize expensive calculations
 ```
 
 **Use perf when:**
+
 - Improving speed or efficiency
 - Reducing resource usage
 - Optimizing algorithms or queries
@@ -228,6 +236,7 @@ perf(apps/books): optimize search algorithm for faster results
 ## When in Doubt
 
 Ask yourself:
+
 - **Does it add new functionality?** → `feat:`
 - **Does it fix broken behavior?** → `fix:`
 - **Does it improve performance?** → `perf:`

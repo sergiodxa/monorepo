@@ -21,6 +21,7 @@ Don't just show what to do. Explain why it matters. Rules without reasoning feel
 ## Pattern
 
 # Ruby example
+
 Use `after_create_commit` instead of `after_create` for jobs.
 
 \`\`\`ruby
@@ -28,11 +29,12 @@ after_create_commit :notify_later
 \`\`\`
 
 # TypeScript example
+
 Use `useCallback` for event handlers passed to children.
 
 \`\`\`typescript
 const handleClick = useCallback(() => {
-  doSomething();
+doSomething();
 }, []);
 \`\`\`
 ```
@@ -50,10 +52,13 @@ These tell you what to do but not why. Someone might wonder: "What's wrong with 
 ## Pattern
 
 \`\`\`ruby
+
 # Bad: Job might run before transaction commits
+
 after_create :notify_later
 
 # Good: Job runs after transaction is committed
+
 after_create_commit :notify_later
 \`\`\`
 ```
@@ -69,14 +74,14 @@ after_create_commit :notify_later
 \`\`\`typescript
 // Bad: New function every render, children re-render
 function Parent() {
-  const handleClick = () => doSomething();
-  return <Child onClick={handleClick} />;
+const handleClick = () => doSomething();
+return <Child onClick={handleClick} />;
 }
 
 // Good: Stable reference, children don't re-render
 function Parent() {
-  const handleClick = useCallback(() => doSomething(), []);
-  return <Child onClick={handleClick} />;
+const handleClick = useCallback(() => doSomething(), []);
+return <Child onClick={handleClick} />;
 }
 \`\`\`
 ```
@@ -96,12 +101,14 @@ Use bulleted list with bold benefit names:
 ```
 
 Each bullet should be:
+
 1. A bolded benefit name (one or two words)
 2. A concrete explanation (one sentence)
 
 ## Good Why Statements
 
 **Concrete and specific**:
+
 - "Jobs enqueued in `after_create` might run before the transaction commits"
 - "Model methods can be tested without spinning up job infrastructure"
 - "Without `useCallback`, the function reference changes every render"
@@ -110,11 +117,13 @@ Each bullet should be:
 **Bad Why Statements**
 
 **Too vague**:
+
 - "It's better practice"
 - "It's more maintainable"
 - "It follows the principle of X"
 
 **Too theoretical**:
+
 - "This adheres to SOLID principles"
 - "It reduces coupling"
 - "It improves separation of concerns"
@@ -127,6 +136,7 @@ Some patterns are genuinely conventions without deep reasoning:
 
 ```markdown
 # Naming convention - just explain it
+
 Ruby: Use `-able` suffix for behavior concerns: `Closeable`, `Searchable`.
 TypeScript: Use PascalCase for components: `UserCard`, `OrderList`.
 ```
@@ -135,6 +145,7 @@ But even here, you can add light reasoning:
 
 ```markdown
 # Better
+
 Use `-able` suffix for behavior concerns. This communicates that the concern
 adds a capability: something that "can be closed" or "can be searched."
 

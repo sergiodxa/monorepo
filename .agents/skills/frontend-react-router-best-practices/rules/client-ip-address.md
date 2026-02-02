@@ -14,8 +14,8 @@ Extract client IP from trusted proxy headers when you need it.
 import { getClientIPAddress } from "remix-utils/get-client-ip-address";
 
 export async function loader({ request }: Route.LoaderArgs) {
-  let ip = getClientIPAddress(request) ?? "unknown";
-  return { ip };
+	let ip = getClientIPAddress(request) ?? "unknown";
+	return { ip };
 }
 ```
 

@@ -6,11 +6,7 @@
 
 ```typescript
 interface ExportedHandler<Env = unknown> {
-  email?(
-    message: ForwardableEmailMessage,
-    env: Env,
-    ctx: ExecutionContext,
-  ): void | Promise<void>;
+	email?(message: ForwardableEmailMessage, env: Env, ctx: ExecutionContext): void | Promise<void>;
 }
 ```
 
@@ -20,13 +16,13 @@ Main interface for incoming emails:
 
 ```typescript
 interface ForwardableEmailMessage {
-  readonly from: string; // Envelope sender (e.g., "sender@example.com")
-  readonly to: string; // Envelope recipient (e.g., "you@yourdomain.com")
-  readonly headers: Headers; // Web API Headers object
-  readonly raw: ReadableStream; // Raw MIME message stream
+	readonly from: string; // Envelope sender (e.g., "sender@example.com")
+	readonly to: string; // Envelope recipient (e.g., "you@yourdomain.com")
+	readonly headers: Headers; // Web API Headers object
+	readonly raw: ReadableStream; // Raw MIME message stream
 
-  setReject(reason: string): void;
-  forward(rcptTo: string, headers?: Headers): Promise<void>;
+	setReject(reason: string): void;
+	forward(rcptTo: string, headers?: Headers): Promise<void>;
 }
 ```
 
@@ -57,7 +53,7 @@ const messageId = message.headers.get("message-id");
 // Check spam score
 const spamScore = parseFloat(message.headers.get("x-cf-spamh-score") || "0");
 if (spamScore > 5) {
-  message.setReject("Spam detected");
+	message.setReject("Spam detected");
 }
 ```
 
@@ -100,7 +96,7 @@ Outbound email API for transactional messages.
 ```jsonc
 // wrangler.jsonc
 {
-  "send_email": [{ "name": "EMAIL" }],
+	"send_email": [{ "name": "EMAIL" }],
 }
 ```
 
@@ -108,24 +104,21 @@ Outbound email API for transactional messages.
 
 ```typescript
 interface Env {
-  EMAIL: SendEmail;
+	EMAIL: SendEmail;
 }
 
 interface SendEmail {
-  send(message: EmailMessage): Promise<void>;
+	send(message: EmailMessage): Promise<void>;
 }
 
 interface EmailMessage {
-  from: string | { name?: string; email: string };
-  to:
-    | string
-    | { name?: string; email: string }
-    | Array<string | { name?: string; email: string }>;
-  subject: string;
-  text?: string;
-  html?: string;
-  headers?: Headers;
-  reply_to?: string | { name?: string; email: string };
+	from: string | { name?: string; email: string };
+	to: string | { name?: string; email: string } | Array<string | { name?: string; email: string }>;
+	subject: string;
+	text?: string;
+	html?: string;
+	headers?: Headers;
+	reply_to?: string | { name?: string; email: string };
 }
 ```
 
@@ -133,22 +126,22 @@ interface EmailMessage {
 
 ```typescript
 interface Env {
-  EMAIL: SendEmail;
+	EMAIL: SendEmail;
 }
 
 export default {
-  async fetch(request, env, ctx): Promise<Response> {
-    await env.EMAIL.send({
-      from: { name: "Acme Corp", email: "noreply@yourdomain.com" },
-      to: [{ name: "Alice", email: "alice@example.com" }, "bob@example.com"],
-      subject: "Your order #12345 has shipped",
-      text: "Track your package at: https://track.example.com/12345",
-      html: "<p>Track your package at: <a href='https://track.example.com/12345'>View tracking</a></p>",
-      reply_to: { name: "Support", email: "support@yourdomain.com" },
-    });
+	async fetch(request, env, ctx): Promise<Response> {
+		await env.EMAIL.send({
+			from: { name: "Acme Corp", email: "noreply@yourdomain.com" },
+			to: [{ name: "Alice", email: "alice@example.com" }, "bob@example.com"],
+			subject: "Your order #12345 has shipped",
+			text: "Track your package at: https://track.example.com/12345",
+			html: "<p>Track your package at: <a href='https://track.example.com/12345'>View tracking</a></p>",
+			reply_to: { name: "Support", email: "support@yourdomain.com" },
+		});
 
-    return new Response("Email sent");
-  },
+		return new Response("Email sent");
+	},
 } satisfies ExportedHandler<Env>;
 ```
 

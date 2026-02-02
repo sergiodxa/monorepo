@@ -19,13 +19,13 @@ Use a single namespace for small apps, and multiple namespaces for large apps.
 ```ts
 // app/locales/en/translation.ts
 export default {
-  home: {
-    title: "Home",
-    description: "Welcome",
-  },
-  settings: {
-    title: "Settings",
-  },
+	home: {
+		title: "Home",
+		description: "Welcome",
+	},
+	settings: {
+		title: "Settings",
+	},
 };
 ```
 

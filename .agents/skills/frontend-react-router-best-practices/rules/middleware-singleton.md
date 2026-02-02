@@ -21,7 +21,7 @@ Create a per-request singleton for caches or shared services.
 import { createSingletonMiddleware } from "remix-utils/middleware/singleton";
 
 export const [singletonMiddleware, getSingleton] = createSingletonMiddleware({
-  instantiator: () => new RequestCache(),
+	instantiator: () => new RequestCache(),
 });
 ```
 
@@ -29,9 +29,9 @@ export const [singletonMiddleware, getSingleton] = createSingletonMiddleware({
 export const middleware: Route.MiddlewareFunction[] = [singletonMiddleware];
 
 export async function loader({ context }: Route.LoaderArgs) {
-  let cache = getSingleton(context);
-  let value = await cache.get("key");
-  return data({ value });
+	let cache = getSingleton(context);
+	let value = await cache.get("key");
+	return data({ value });
 }
 ```
 

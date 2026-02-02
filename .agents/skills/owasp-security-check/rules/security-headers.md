@@ -33,18 +33,18 @@ Check for proper HTTP security headers that protect against XSS, clickjacking, M
 ```typescript
 // Bad: No security headers
 async function handler(req: Request): Promise<Response> {
-  let html = "<html><body>Hello</body></html>";
+	let html = "<html><body>Hello</body></html>";
 
-  // VULNERABLE: Missing all security headers
-  return new Response(html, {
-    headers: { "Content-Type": "text/html" },
-  });
+	// VULNERABLE: Missing all security headers
+	return new Response(html, {
+		headers: { "Content-Type": "text/html" },
+	});
 }
 
 // Bad: Permissive CSP
 const headers = {
-  // VULNERABLE: unsafe-inline allows XSS
-  "Content-Security-Policy": "default-src * 'unsafe-inline' 'unsafe-eval'",
+	// VULNERABLE: unsafe-inline allows XSS
+	"Content-Security-Policy": "default-src * 'unsafe-inline' 'unsafe-eval'",
 };
 ```
 
@@ -53,42 +53,42 @@ const headers = {
 ```typescript
 // Good: Comprehensive security headers
 function getSecurityHeaders(): Record<string, string> {
-  return {
-    "Content-Security-Policy": [
-      "default-src 'self'",
-      "script-src 'self'",
-      "style-src 'self' 'unsafe-inline'",
-      "img-src 'self' data: https:",
-      "font-src 'self'",
-      "connect-src 'self'",
-      "frame-ancestors 'none'",
-      "base-uri 'self'",
-      "form-action 'self'",
-    ].join("; "),
-    "X-Frame-Options": "DENY",
-    "Strict-Transport-Security": "max-age=31536000; includeSubDomains; preload",
-    "X-Content-Type-Options": "nosniff",
-    "Referrer-Policy": "strict-origin-when-cross-origin",
-    "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
-  };
+	return {
+		"Content-Security-Policy": [
+			"default-src 'self'",
+			"script-src 'self'",
+			"style-src 'self' 'unsafe-inline'",
+			"img-src 'self' data: https:",
+			"font-src 'self'",
+			"connect-src 'self'",
+			"frame-ancestors 'none'",
+			"base-uri 'self'",
+			"form-action 'self'",
+		].join("; "),
+		"X-Frame-Options": "DENY",
+		"Strict-Transport-Security": "max-age=31536000; includeSubDomains; preload",
+		"X-Content-Type-Options": "nosniff",
+		"Referrer-Policy": "strict-origin-when-cross-origin",
+		"Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+	};
 }
 
 async function handler(req: Request): Promise<Response> {
-  let html = "<html><body>Hello</body></html>";
+	let html = "<html><body>Hello</body></html>";
 
-  return new Response(html, {
-    headers: {
-      "Content-Type": "text/html",
-      ...getSecurityHeaders(),
-    },
-  });
+	return new Response(html, {
+		headers: {
+			"Content-Type": "text/html",
+			...getSecurityHeaders(),
+		},
+	});
 }
 
 // Good: CSP with nonces for inline scripts
 async function renderPage(req: Request): Promise<Response> {
-  let nonce = crypto.randomBytes(16).toString("base64");
+	let nonce = crypto.randomBytes(16).toString("base64");
 
-  let html = `
+	let html = `
     <!DOCTYPE html>
     <html>
       <head>
@@ -100,12 +100,12 @@ async function renderPage(req: Request): Promise<Response> {
     </html>
   `;
 
-  return new Response(html, {
-    headers: {
-      "Content-Type": "text/html",
-      "Content-Security-Policy": `default-src 'self'; script-src 'self' 'nonce-${nonce}'`,
-    },
-  });
+	return new Response(html, {
+		headers: {
+			"Content-Type": "text/html",
+			"Content-Security-Policy": `default-src 'self'; script-src 'self' 'nonce-${nonce}'`,
+		},
+	});
 }
 ```
 

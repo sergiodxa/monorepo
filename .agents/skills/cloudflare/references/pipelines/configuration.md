@@ -5,7 +5,7 @@
 ```jsonc
 // wrangler.jsonc
 {
-  "pipelines": [{ "pipeline": "<STREAM_ID>", "binding": "STREAM" }],
+	"pipelines": [{ "pipeline": "<STREAM_ID>", "binding": "STREAM" }],
 }
 ```
 
@@ -15,12 +15,12 @@ Get stream ID: `npx wrangler pipelines streams list`
 
 ```json
 {
-  "fields": [
-    { "name": "user_id", "type": "string", "required": true },
-    { "name": "event_type", "type": "string", "required": true },
-    { "name": "amount", "type": "float64", "required": false },
-    { "name": "timestamp", "type": "timestamp", "required": true }
-  ]
+	"fields": [
+		{ "name": "user_id", "type": "string", "required": true },
+		{ "name": "event_type", "type": "string", "required": true },
+		{ "name": "amount", "type": "float64", "required": false },
+		{ "name": "timestamp", "type": "timestamp", "required": true }
+	]
 }
 ```
 

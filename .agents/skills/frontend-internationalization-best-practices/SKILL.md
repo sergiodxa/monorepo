@@ -23,16 +23,15 @@ Guidelines for building a React Router i18n setup with `remix-i18next`. Focuses 
 Configure `createI18nextMiddleware` and type-safe resources.
 
 ```ts
-export const [i18nextMiddleware, getLocale, getInstance] =
-  createI18nextMiddleware({
-    detection: {
-      supportedLanguages: ["es", "en"],
-      fallbackLanguage: "en",
-      cookie: localeCookie,
-    },
-    i18next: { resources },
-    plugins: [initReactI18next],
-  });
+export const [i18nextMiddleware, getLocale, getInstance] = createI18nextMiddleware({
+	detection: {
+		supportedLanguages: ["es", "en"],
+		fallbackLanguage: "en",
+		cookie: localeCookie,
+	},
+	i18next: { resources },
+	plugins: [initReactI18next],
+});
 ```
 
 #### locales-structure - @rules/locales-structure.md
@@ -63,7 +62,7 @@ Prefer cookie/session for speed, with DB as source of truth.
 
 ```ts
 export const [i18nextMiddleware, getLocale] = createI18nextMiddleware({
-  detection: { cookie: localeCookie, fallbackLanguage: "en" },
+	detection: { cookie: localeCookie, fallbackLanguage: "en" },
 });
 ```
 
@@ -72,10 +71,7 @@ export const [i18nextMiddleware, getLocale] = createI18nextMiddleware({
 Store locale in cookie/session and keep it in sync.
 
 ```ts
-return data(
-  { locale },
-  { headers: { "Set-Cookie": await localeCookie.serialize(locale) } },
-);
+return data({ locale }, { headers: { "Set-Cookie": await localeCookie.serialize(locale) } });
 ```
 
 ### Client & Server Integration (CRITICAL)
@@ -86,11 +82,8 @@ Send locale to the UI and sync `<html lang dir>`.
 
 ```tsx
 export async function loader({ context }: Route.LoaderArgs) {
-  let locale = getLocale(context);
-  return data(
-    { locale },
-    { headers: { "Set-Cookie": await localeCookie.serialize(locale) } },
-  );
+	let locale = getLocale(context);
+	return data({ locale }, { headers: { "Set-Cookie": await localeCookie.serialize(locale) } });
 }
 ```
 
@@ -108,7 +101,7 @@ Reuse the middleware instance in SSR with `I18nextProvider`.
 
 ```tsx
 <I18nextProvider i18n={getInstance(routerContext)}>
-  <ServerRouter context={entryContext} url={request.url} />
+	<ServerRouter context={entryContext} url={request.url} />
 </I18nextProvider>
 ```
 

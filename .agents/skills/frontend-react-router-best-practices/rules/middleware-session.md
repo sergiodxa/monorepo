@@ -22,11 +22,10 @@ import { createCookieSessionStorage } from "react-router";
 import { createSessionMiddleware } from "remix-utils/middleware/session";
 
 let sessionStorage = createCookieSessionStorage({
-  cookie: { name: "session", path: "/", sameSite: "lax" },
+	cookie: { name: "session", path: "/", sameSite: "lax" },
 });
 
-export const [sessionMiddleware, getSession] =
-  createSessionMiddleware(sessionStorage);
+export const [sessionMiddleware, getSession] = createSessionMiddleware(sessionStorage);
 ```
 
 ### Optimize Commits
@@ -37,8 +36,8 @@ Customize commit behavior so you only write when session data changes:
 import { dequal } from "dequal";
 
 export const [sessionMiddleware, getSession] = createSessionMiddleware(
-  sessionStorage,
-  (previous, next) => !dequal(previous, next),
+	sessionStorage,
+	(previous, next) => !dequal(previous, next),
 );
 ```
 
@@ -46,8 +45,8 @@ You can also commit only when specific fields change:
 
 ```ts
 export const [sessionMiddleware, getSession] = createSessionMiddleware(
-  sessionStorage,
-  (previous, next) => previous.user?.id !== next.user?.id,
+	sessionStorage,
+	(previous, next) => previous.user?.id !== next.user?.id,
 );
 ```
 
@@ -55,9 +54,9 @@ export const [sessionMiddleware, getSession] = createSessionMiddleware(
 export const middleware: Route.MiddlewareFunction[] = [sessionMiddleware];
 
 export async function loader({ context }: Route.LoaderArgs) {
-  let session = await getSession(context);
-  session.set("user", { id: "123" });
-  return data({ ok: true });
+	let session = await getSession(context);
+	session.set("user", { id: "123" });
+	return data({ ok: true });
 }
 ```
 

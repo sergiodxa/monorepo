@@ -17,22 +17,19 @@ import type { Route } from "./+types/_index";
 import { localeCookie, getLocale } from "~/middleware/i18next";
 
 export async function loader({ context }: Route.LoaderArgs) {
-  let locale = getLocale(context);
-  return data(
-    { locale },
-    { headers: { "Set-Cookie": await localeCookie.serialize(locale) } },
-  );
+	let locale = getLocale(context);
+	return data({ locale }, { headers: { "Set-Cookie": await localeCookie.serialize(locale) } });
 }
 ```
 
 ```tsx
 export function LanguageSwitcher() {
-  return (
-    <div>
-      <a href="/?lng=en">English</a>
-      <a href="/?lng=es">Espanol</a>
-    </div>
-  );
+	return (
+		<div>
+			<a href="/?lng=en">English</a>
+			<a href="/?lng=es">Espanol</a>
+		</div>
+	);
 }
 ```
 

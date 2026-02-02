@@ -5,27 +5,27 @@
 ```typescript
 // Producer: Accept request, queue work
 export default {
-  async fetch(request: Request, env: Env): Promise<Response> {
-    const { userId, reportType } = await request.json();
-    await env.REPORT_QUEUE.send({
-      userId,
-      reportType,
-      requestedAt: Date.now(),
-    });
-    return Response.json({ message: "Report queued", status: "pending" });
-  },
+	async fetch(request: Request, env: Env): Promise<Response> {
+		const { userId, reportType } = await request.json();
+		await env.REPORT_QUEUE.send({
+			userId,
+			reportType,
+			requestedAt: Date.now(),
+		});
+		return Response.json({ message: "Report queued", status: "pending" });
+	},
 };
 
 // Consumer: Process reports
 export default {
-  async queue(batch: MessageBatch, env: Env): Promise<void> {
-    for (const msg of batch.messages) {
-      const { userId, reportType } = msg.body;
-      const report = await generateReport(userId, reportType, env);
-      await env.REPORTS_BUCKET.put(`${userId}/${reportType}.pdf`, report);
-      msg.ack();
-    }
-  },
+	async queue(batch: MessageBatch, env: Env): Promise<void> {
+		for (const msg of batch.messages) {
+			const { userId, reportType } = msg.body;
+			const report = await generateReport(userId, reportType, env);
+			await env.REPORTS_BUCKET.put(`${userId}/${reportType}.pdf`, report);
+			msg.ack();
+		}
+	},
 };
 ```
 
@@ -70,17 +70,17 @@ async queue(batch: MessageBatch, env: Env): Promise<void> {
 ```typescript
 // R2 event → Queue → Worker
 export default {
-  async queue(batch: MessageBatch, env: Env): Promise<void> {
-    for (const msg of batch.messages) {
-      const event = msg.body;
-      if (event.action === "PutObject") {
-        await processNewFile(event.object.key, env);
-      } else if (event.action === "DeleteObject") {
-        await cleanupReferences(event.object.key, env);
-      }
-      msg.ack();
-    }
-  },
+	async queue(batch: MessageBatch, env: Env): Promise<void> {
+		for (const msg of batch.messages) {
+			const event = msg.body;
+			if (event.action === "PutObject") {
+				await processNewFile(event.object.key, env);
+			} else if (event.action === "DeleteObject") {
+				await cleanupReferences(event.object.key, env);
+			}
+			msg.ack();
+		}
+	},
 };
 ```
 
@@ -89,26 +89,26 @@ export default {
 ```typescript
 // Main queue: After max_retries, goes to DLQ automatically
 export default {
-  async queue(batch: MessageBatch, env: Env): Promise<void> {
-    for (const msg of batch.messages) {
-      try {
-        await riskyOperation(msg.body);
-        msg.ack();
-      } catch (error) {
-        console.error(`Failed after ${msg.attempts} attempts:`, error);
-      }
-    }
-  },
+	async queue(batch: MessageBatch, env: Env): Promise<void> {
+		for (const msg of batch.messages) {
+			try {
+				await riskyOperation(msg.body);
+				msg.ack();
+			} catch (error) {
+				console.error(`Failed after ${msg.attempts} attempts:`, error);
+			}
+		}
+	},
 };
 
 // DLQ consumer: Log and store failed messages
 export default {
-  async queue(batch: MessageBatch, env: Env): Promise<void> {
-    for (const msg of batch.messages) {
-      await env.FAILED_KV.put(msg.id, JSON.stringify(msg.body));
-      msg.ack();
-    }
-  },
+	async queue(batch: MessageBatch, env: Env): Promise<void> {
+		for (const msg of batch.messages) {
+			await env.FAILED_KV.put(msg.id, JSON.stringify(msg.body));
+			msg.ack();
+		}
+	},
 };
 ```
 

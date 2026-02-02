@@ -26,8 +26,8 @@ dig app.example.com
 ```typescript
 // Enable in Spectrum app
 const app = await client.spectrum.apps.create({
-  // ...
-  proxy_protocol: "v1", // TCP: v1/v2; UDP: simple
+	// ...
+	proxy_protocol: "v1", // TCP: v1/v2; UDP: simple
 });
 ```
 
@@ -126,11 +126,11 @@ frontend ft_ssh
 
 ```typescript
 const app = await client.spectrum.apps.create({
-  // ...
-  edge_ips: {
-    type: "dynamic",
-    connectivity: "ipv4", // Options: 'all', 'ipv4', 'ipv6'
-  },
+	// ...
+	edge_ips: {
+		type: "dynamic",
+		connectivity: "ipv4", // Options: 'all', 'ipv4', 'ipv6'
+	},
 });
 ```
 

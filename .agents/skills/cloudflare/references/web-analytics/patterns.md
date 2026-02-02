@@ -17,11 +17,11 @@ Dashboard → Core Web Vitals → Click metric → Debug View shows top 5 proble
 ```css
 /* Reserve space */
 .ad-container {
-  min-height: 250px;
+	min-height: 250px;
 }
 img {
-  width: 400px;
-  height: 300px;
+	width: 400px;
+	height: 300px;
 } /* Explicit dimensions */
 ```
 
@@ -51,10 +51,10 @@ await task2();
 // Load beacon only after consent
 const consent = localStorage.getItem("analytics-consent");
 if (consent === "accepted") {
-  const script = document.createElement("script");
-  script.src = "https://static.cloudflareinsights.com/beacon.min.js";
-  script.setAttribute("data-cf-beacon", '{"token": "TOKEN", "spa": true}');
-  document.body.appendChild(script);
+	const script = document.createElement("script");
+	script.src = "https://static.cloudflareinsights.com/beacon.min.js";
+	script.setAttribute("data-cf-beacon", '{"token": "TOKEN", "spa": true}');
+	document.body.appendChild(script);
 }
 ```
 

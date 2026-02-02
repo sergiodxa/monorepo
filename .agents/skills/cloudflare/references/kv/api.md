@@ -28,28 +28,25 @@ console.log(results.get("missing:key")); // null
 
 // Process results with null handling
 for (const [key, value] of results) {
-  if (value !== null) {
-    // Handle found keys
-    console.log(`${key}: ${value}`);
-  }
+	if (value !== null) {
+		// Handle found keys
+		console.log(`${key}: ${value}`);
+	}
 }
 
 // TypeScript with generics (type-safe JSON parsing)
 interface UserProfile {
-  name: string;
-  email: string;
+	name: string;
+	email: string;
 }
 const profile = await env.USERS.get<UserProfile>("user:123", "json");
 // profile is typed as UserProfile | null
 if (profile) {
-  console.log(profile.name); // Type-safe access
+	console.log(profile.name); // Type-safe access
 }
 
 // Bulk get with type
-const configs = await env.MY_KV.get<Config>(
-  ["config:app", "config:feature"],
-  "json",
-);
+const configs = await env.MY_KV.get<Config>(["config:app", "config:feature"], "json");
 // Map<string, Config | null>
 ```
 
@@ -62,7 +59,7 @@ await env.MY_KV.put("config", JSON.stringify({ theme: "dark" }));
 
 // With expiration (UNIX timestamp)
 await env.MY_KV.put("session", token, {
-  expiration: Math.floor(Date.now() / 1000) + 3600,
+	expiration: Math.floor(Date.now() / 1000) + 3600,
 });
 
 // With TTL (seconds from now, min 60)
@@ -70,13 +67,13 @@ await env.MY_KV.put("cache", data, { expirationTtl: 300 });
 
 // With metadata (max 1024 bytes)
 await env.MY_KV.put("user:profile", userData, {
-  metadata: { version: 2, lastUpdated: Date.now() },
+	metadata: { version: 2, lastUpdated: Date.now() },
 });
 
 // Combined
 await env.MY_KV.put("temp", value, {
-  expirationTtl: 3600,
-  metadata: { temporary: true },
+	expirationTtl: 3600,
+	metadata: { temporary: true },
 });
 ```
 
@@ -88,7 +85,7 @@ const result = await env.MY_KV.getWithMetadata("user:profile");
 // { value: string | null, metadata: any | null }
 
 if (result.value && result.metadata) {
-  const { version, lastUpdated } = result.metadata;
+	const { version, lastUpdated } = result.metadata;
 }
 
 // Multiple keys (bulk)
@@ -97,11 +94,11 @@ const results = await env.MY_KV.getWithMetadata(keys);
 // Returns Map<string, { value, metadata, cacheStatus? }>
 
 for (const [key, result] of results) {
-  if (result.value) {
-    console.log(`${key}: ${result.value}`);
-    console.log(`Metadata: ${JSON.stringify(result.metadata)}`);
-    // cacheStatus field indicates cache hit/miss (when available)
-  }
+	if (result.value) {
+		console.log(`${key}: ${result.value}`);
+		console.log(`Metadata: ${JSON.stringify(result.metadata)}`);
+		// cacheStatus field indicates cache hit/miss (when available)
+	}
 }
 
 // With type
@@ -129,9 +126,9 @@ const userKeys = await env.MY_KV.list({ prefix: "user:" });
 let cursor: string | undefined;
 let allKeys = [];
 do {
-  const result = await env.MY_KV.list({ cursor, limit: 1000 });
-  allKeys.push(...result.keys);
-  cursor = result.cursor;
+	const result = await env.MY_KV.list({ cursor, limit: 1000 });
+	allKeys.push(...result.keys);
+	cursor = result.cursor;
 } while (!result.list_complete);
 ```
 
@@ -151,9 +148,9 @@ do {
 ```typescript
 // Efficient parallel reads with Promise.all()
 const [user, settings, cache] = await Promise.all([
-  env.USERS.get("user:123", "json"),
-  env.SETTINGS.get("config:app", "json"),
-  env.CACHE.get("data:latest"),
+	env.USERS.get("user:123", "json"),
+	env.SETTINGS.get("config:app", "json"),
+	env.CACHE.get("data:latest"),
 ]);
 ```
 

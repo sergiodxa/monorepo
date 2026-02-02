@@ -4,35 +4,30 @@
 
 ```typescript
 class Miniflare {
-  constructor(options: MiniflareOptions);
+	constructor(options: MiniflareOptions);
 
-  // Lifecycle
-  ready: Promise<URL>; // Resolves when server ready, returns URL
-  dispose(): Promise<void>; // Cleanup resources
-  setOptions(options: MiniflareOptions): Promise<void>; // Reload config
+	// Lifecycle
+	ready: Promise<URL>; // Resolves when server ready, returns URL
+	dispose(): Promise<void>; // Cleanup resources
+	setOptions(options: MiniflareOptions): Promise<void>; // Reload config
 
-  // Event dispatching
-  dispatchFetch(
-    url: string | URL | Request,
-    init?: RequestInit,
-  ): Promise<Response>;
-  getWorker(name?: string): Promise<Worker>;
+	// Event dispatching
+	dispatchFetch(url: string | URL | Request, init?: RequestInit): Promise<Response>;
+	getWorker(name?: string): Promise<Worker>;
 
-  // Bindings access
-  getBindings<Bindings = Record<string, unknown>>(
-    name?: string,
-  ): Promise<Bindings>;
-  getCf(name?: string): Promise<IncomingRequestCfProperties | undefined>;
-  getKVNamespace(name: string): Promise<KVNamespace>;
-  getR2Bucket(name: string): Promise<R2Bucket>;
-  getDurableObjectNamespace(name: string): Promise<DurableObjectNamespace>;
-  getDurableObjectStorage(id: DurableObjectId): Promise<DurableObjectStorage>;
-  getD1Database(name: string): Promise<D1Database>;
-  getCaches(): Promise<CacheStorage>;
-  getQueueProducer(name: string): Promise<QueueProducer>;
+	// Bindings access
+	getBindings<Bindings = Record<string, unknown>>(name?: string): Promise<Bindings>;
+	getCf(name?: string): Promise<IncomingRequestCfProperties | undefined>;
+	getKVNamespace(name: string): Promise<KVNamespace>;
+	getR2Bucket(name: string): Promise<R2Bucket>;
+	getDurableObjectNamespace(name: string): Promise<DurableObjectNamespace>;
+	getDurableObjectStorage(id: DurableObjectId): Promise<DurableObjectStorage>;
+	getD1Database(name: string): Promise<D1Database>;
+	getCaches(): Promise<CacheStorage>;
+	getQueueProducer(name: string): Promise<QueueProducer>;
 
-  // Debugging
-  getInspectorURL(): Promise<URL>; // Chrome DevTools inspector URL
+	// Debugging
+	getInspectorURL(): Promise<URL>; // Chrome DevTools inspector URL
 }
 ```
 
@@ -42,9 +37,9 @@ class Miniflare {
 
 ```js
 const res = await mf.dispatchFetch("http://localhost:8787/path", {
-  method: "POST",
-  headers: { Authorization: "Bearer token" },
-  body: JSON.stringify({ data: "value" }),
+	method: "POST",
+	headers: { Authorization: "Bearer token" },
+	body: JSON.stringify({ data: "value" }),
 });
 ```
 
@@ -52,7 +47,7 @@ const res = await mf.dispatchFetch("http://localhost:8787/path", {
 
 ```js
 const res = await mf.dispatchFetch("http://localhost:8787/", {
-  headers: { Host: "api.example.com" },
+	headers: { Host: "api.example.com" },
 });
 ```
 
@@ -69,7 +64,7 @@ const result = await worker.scheduled({ cron: "30 * * * *" });
 ```js
 const worker = await mf.getWorker();
 const result = await worker.queue("queue-name", [
-  { id: "msg1", timestamp: new Date(), body: "data", attempts: 1 },
+	{ id: "msg1", timestamp: new Date(), body: "data", attempts: 1 },
 ]);
 // result: { outcome: "ok", retryAll: false, ackAll: false, ... }
 ```
@@ -160,8 +155,8 @@ await producer.send({ body: "message data" });
 
 ```js
 await mf.setOptions({
-  scriptPath: "worker.js",
-  bindings: { VERSION: "2.0" },
+	scriptPath: "worker.js",
+	bindings: { VERSION: "2.0" },
 });
 ```
 
@@ -174,8 +169,8 @@ const config = { scriptPath: "worker.js" };
 const mf = new Miniflare(config);
 
 watch("worker.js", async () => {
-  console.log("Reloading...");
-  await mf.setOptions(config);
+	console.log("Reloading...");
+	await mf.setOptions(config);
 });
 ```
 

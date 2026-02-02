@@ -70,6 +70,7 @@ This defeats the purpose of having hooks in the first place.
 ## Common Hook Types
 
 **Pre-commit hooks:**
+
 - Linting (ESLint, Prettier)
 - Type checking (TypeScript)
 - Unit tests
@@ -77,11 +78,13 @@ This defeats the purpose of having hooks in the first place.
 - File size limits
 
 **Commit-msg hooks:**
+
 - Conventional commit validation
 - Message length checks
 - Issue reference requirements
 
 **Pre-push hooks:**
+
 - Integration tests
 - Build verification
 
@@ -156,6 +159,7 @@ Even then, warn the user about the risks:
 ## Bad Excuses for Skipping
 
 Don't skip hooks because:
+
 - "The linting error is minor" → Fix it
 - "The tests are flaky" → Fix the tests
 - "It's just a quick fix" → Hooks are for all commits

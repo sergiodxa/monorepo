@@ -5,7 +5,7 @@
 ```typescript
 // step.do()
 const result = await step.do("step name", async () => {
-  /* logic */
+	/* logic */
 });
 const result = await step.do("step name", { retries, timeout }, async () => {});
 
@@ -18,16 +18,16 @@ await step.sleepUntil("description", Date.parse("2024-12-31"));
 
 // step.waitForEvent()
 const data = await step.waitForEvent<PayloadType>("wait", {
-  event: "webhook-type",
-  timeout: "24h",
+	event: "webhook-type",
+	timeout: "24h",
 }); // Default 24h, max 365d
 try {
-  const event = await step.waitForEvent("wait", {
-    event: "approval",
-    timeout: "1h",
-  });
+	const event = await step.waitForEvent("wait", {
+		event: "approval",
+		timeout: "1h",
+	});
 } catch (e) {
-  /* Timeout */
+	/* Timeout */
 }
 ```
 
@@ -36,21 +36,21 @@ try {
 ```typescript
 // Create single
 const instance = await env.MY_WORKFLOW.create({
-  id: crypto.randomUUID(),
-  params: { userId: "user123" },
+	id: crypto.randomUUID(),
+	params: { userId: "user123" },
 }); // id optional, auto-generated if omitted
 
 // Create with custom retention (default: 3 days free, 30 days paid)
 const instance = await env.MY_WORKFLOW.create({
-  id: crypto.randomUUID(),
-  params: { userId: "user123" },
-  retention: "30 days", // Override default retention period
+	id: crypto.randomUUID(),
+	params: { userId: "user123" },
+	retention: "30 days", // Override default retention period
 });
 
 // Batch (max 100, idempotent: skips existing IDs)
 const instances = await env.MY_WORKFLOW.createBatch([
-  { id: "user1", params: { name: "John" } },
-  { id: "user2", params: { name: "Jane" } },
+	{ id: "user1", params: { name: "John" } },
+	{ id: "user2", params: { name: "Jane" } },
 ]);
 
 // Get & Status
@@ -72,46 +72,46 @@ await instance.sendEvent({ type: "approval", payload: { approved: true } }); // 
 ```typescript
 // From Worker
 export default {
-  async fetch(req, env) {
-    const instance = await env.MY_WORKFLOW.create({
-      id: crypto.randomUUID(),
-      params: { userId: "user123" },
-    });
-    return Response.json({ id: instance.id });
-  },
+	async fetch(req, env) {
+		const instance = await env.MY_WORKFLOW.create({
+			id: crypto.randomUUID(),
+			params: { userId: "user123" },
+		});
+		return Response.json({ id: instance.id });
+	},
 };
 
 // From Queue
 export default {
-  async queue(batch, env) {
-    for (const msg of batch.messages) {
-      await env.MY_WORKFLOW.create({ id: `job-${msg.id}`, params: msg.body });
-    }
-  },
+	async queue(batch, env) {
+		for (const msg of batch.messages) {
+			await env.MY_WORKFLOW.create({ id: `job-${msg.id}`, params: msg.body });
+		}
+	},
 };
 
 // From Cron
 export default {
-  async scheduled(event, env) {
-    await env.CLEANUP_WORKFLOW.create({
-      id: `cleanup-${Date.now()}`,
-      params: { timestamp: event.scheduledTime },
-    });
-  },
+	async scheduled(event, env) {
+		await env.CLEANUP_WORKFLOW.create({
+			id: `cleanup-${Date.now()}`,
+			params: { timestamp: event.scheduledTime },
+		});
+	},
 };
 
 // From Another Workflow (non-blocking)
 export class ParentWorkflow extends WorkflowEntrypoint<Env, Params> {
-  async run(event, step) {
-    const child = await step.do(
-      "start child",
-      async () =>
-        await this.env.CHILD_WORKFLOW.create({
-          id: `child-${event.instanceId}`,
-          params: {},
-        }),
-    );
-  }
+	async run(event, step) {
+		const child = await step.do(
+			"start child",
+			async () =>
+				await this.env.CHILD_WORKFLOW.create({
+					id: `child-${event.instanceId}`,
+					params: {},
+				}),
+		);
+	}
 }
 ```
 
@@ -122,33 +122,30 @@ import { NonRetryableError } from "cloudflare:workers";
 
 // NonRetryableError
 await step.do("validate", async () => {
-  if (!event.params.paymentMethod)
-    throw new NonRetryableError("Payment method required");
-  const res = await fetch("https://api.example.com/charge", { method: "POST" });
-  if (res.status === 401) throw new NonRetryableError("Invalid credentials"); // Don't retry
-  if (!res.ok) throw new Error("Retryable failure"); // Will retry
-  return res.json();
+	if (!event.params.paymentMethod) throw new NonRetryableError("Payment method required");
+	const res = await fetch("https://api.example.com/charge", { method: "POST" });
+	if (res.status === 401) throw new NonRetryableError("Invalid credentials"); // Don't retry
+	if (!res.ok) throw new Error("Retryable failure"); // Will retry
+	return res.json();
 });
 
 // Catching Errors
 try {
-  await step.do("risky op", async () => {
-    throw new NonRetryableError("Failed");
-  });
+	await step.do("risky op", async () => {
+		throw new NonRetryableError("Failed");
+	});
 } catch (e) {
-  await step.do("cleanup", async () => {});
+	await step.do("cleanup", async () => {});
 }
 
 // Idempotency
 await step.do("charge", async () => {
-  const sub = await fetch(`https://api/subscriptions/${id}`).then((r) =>
-    r.json(),
-  );
-  if (sub.charged) return sub; // Already done
-  return await fetch(`https://api/subscriptions/${id}`, {
-    method: "POST",
-    body: JSON.stringify({ amount: 10.0 }),
-  }).then((r) => r.json());
+	const sub = await fetch(`https://api/subscriptions/${id}`).then((r) => r.json());
+	if (sub.charged) return sub; // Already done
+	return await fetch(`https://api/subscriptions/${id}`, {
+		method: "POST",
+		body: JSON.stringify({ amount: 10.0 }),
+	}).then((r) => r.json());
 });
 ```
 
@@ -159,22 +156,22 @@ Params and step returns must be `Rpc.Serializable<T>`:
 ```typescript
 // ✅ Valid types
 type ValidParams = {
-  userId: string;
-  count: number;
-  tags: string[];
-  metadata: Record<string, unknown>;
+	userId: string;
+	count: number;
+	tags: string[];
+	metadata: Record<string, unknown>;
 };
 
 // ❌ Invalid types
 type InvalidParams = {
-  callback: () => void; // Functions not serializable
-  symbol: symbol; // Symbols not serializable
-  circular: any; // Circular references not allowed
+	callback: () => void; // Functions not serializable
+	symbol: symbol; // Symbols not serializable
+	circular: any; // Circular references not allowed
 };
 
 // Step returns follow same rules
 const result = await step.do("fetch", async () => {
-  return { userId: "123", data: [1, 2, 3] }; // ✅ Plain object
+	return { userId: "123", data: [1, 2, 3] }; // ✅ Plain object
 });
 ```
 
@@ -200,8 +197,8 @@ Sleeping instances don't count toward concurrency.
 
 ```typescript
 const instance = await env.MY_WORKFLOW.create({
-  id: crypto.randomUUID(),
-  params: { userId: "user123", email: "user@example.com" },
+	id: crypto.randomUUID(),
+	params: { userId: "user123", email: "user@example.com" },
 });
 ```
 

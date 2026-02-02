@@ -33,15 +33,15 @@ npx wrangler hyperdrive create my-db \
 
 ```jsonc
 {
-  "compatibility_date": "2025-01-01", // Use latest for new projects
-  "compatibility_flags": ["nodejs_compat"],
-  "hyperdrive": [
-    {
-      "binding": "HYPERDRIVE",
-      "id": "<HYPERDRIVE_ID>",
-      "localConnectionString": "postgres://user:pass@localhost:5432/dev",
-    },
-  ],
+	"compatibility_date": "2025-01-01", // Use latest for new projects
+	"compatibility_flags": ["nodejs_compat"],
+	"hyperdrive": [
+		{
+			"binding": "HYPERDRIVE",
+			"id": "<HYPERDRIVE_ID>",
+			"localConnectionString": "postgres://user:pass@localhost:5432/dev",
+		},
+	],
 }
 ```
 
@@ -51,10 +51,10 @@ npx wrangler hyperdrive create my-db \
 
 ```jsonc
 {
-  "hyperdrive": [
-    { "binding": "HYPERDRIVE_CACHED", "id": "<ID1>" },
-    { "binding": "HYPERDRIVE_NO_CACHE", "id": "<ID2>" },
-  ],
+	"hyperdrive": [
+		{ "binding": "HYPERDRIVE_CACHED", "id": "<ID1>" },
+		{ "binding": "HYPERDRIVE_NO_CACHE", "id": "<ID2>" },
+	],
 }
 ```
 
@@ -87,17 +87,17 @@ For Workers making **multiple queries** per request, enable Smart Placement to e
 
 ```jsonc
 {
-  "compatibility_date": "2025-01-01",
-  "compatibility_flags": ["nodejs_compat"],
-  "placement": {
-    "mode": "smart",
-  },
-  "hyperdrive": [
-    {
-      "binding": "HYPERDRIVE",
-      "id": "<HYPERDRIVE_ID>",
-    },
-  ],
+	"compatibility_date": "2025-01-01",
+	"compatibility_flags": ["nodejs_compat"],
+	"placement": {
+		"mode": "smart",
+	},
+	"hyperdrive": [
+		{
+			"binding": "HYPERDRIVE",
+			"id": "<HYPERDRIVE_ID>",
+		},
+	],
 }
 ```
 

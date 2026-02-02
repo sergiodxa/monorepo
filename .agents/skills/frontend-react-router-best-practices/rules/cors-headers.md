@@ -15,8 +15,8 @@ import { cors } from "remix-utils/cors";
 import { data } from "react-router";
 
 export async function loader({ request }: Route.LoaderArgs) {
-  let response = data(await getData());
-  return await cors(request, response);
+	let response = data(await getData());
+	return await cors(request, response);
 }
 ```
 

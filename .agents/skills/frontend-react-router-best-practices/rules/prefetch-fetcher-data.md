@@ -21,16 +21,14 @@ When using `fetcher.load()` to load data (e.g., for a modal), the data fetch onl
 
 ```tsx
 function ItemDetails({ itemId }: { itemId: string }) {
-  let fetcher = useFetcher<typeof resourceLoader>();
+	let fetcher = useFetcher<typeof resourceLoader>();
 
-  return (
-    <>
-      <button onClick={() => fetcher.load(`/api/items/${itemId}`)}>
-        View Details
-      </button>
-      {fetcher.data && <Modal data={fetcher.data} />}
-    </>
-  );
+	return (
+		<>
+			<button onClick={() => fetcher.load(`/api/items/${itemId}`)}>View Details</button>
+			{fetcher.data && <Modal data={fetcher.data} />}
+		</>
+	);
 }
 ```
 
@@ -44,19 +42,17 @@ Render `<PrefetchPageLinks>` to start preloading the data immediately:
 import { useFetcher, PrefetchPageLinks } from "react-router";
 
 function ItemDetails({ itemId }: { itemId: string }) {
-  let fetcher = useFetcher<typeof resourceLoader>();
+	let fetcher = useFetcher<typeof resourceLoader>();
 
-  return (
-    <>
-      {/* Preload data for this resource route */}
-      <PrefetchPageLinks page={`/api/items/${itemId}`} />
+	return (
+		<>
+			{/* Preload data for this resource route */}
+			<PrefetchPageLinks page={`/api/items/${itemId}`} />
 
-      <button onClick={() => fetcher.load(`/api/items/${itemId}`)}>
-        View Details
-      </button>
-      {fetcher.data && <Modal data={fetcher.data} />}
-    </>
-  );
+			<button onClick={() => fetcher.load(`/api/items/${itemId}`)}>View Details</button>
+			{fetcher.data && <Modal data={fetcher.data} />}
+		</>
+	);
 }
 ```
 
@@ -67,11 +63,7 @@ When the component renders, it starts prefetching. By the time the user clicks, 
 `<PrefetchPageLinks>` renders `<link rel="prefetch">` tags in the document head:
 
 ```html
-<link
-  rel="prefetch"
-  as="fetch"
-  href="/api/items/123?_data=routes/api.items.$itemId"
-/>
+<link rel="prefetch" as="fetch" href="/api/items/123?_data=routes/api.items.$itemId" />
 ```
 
 The browser prefetches the data in the background. When `fetcher.load()` is called, it uses the cached response.
@@ -82,31 +74,28 @@ The browser prefetches the data in the background. When `fetcher.load()` is call
 
 ```tsx
 function UserRow({ user }: { user: User }) {
-  let [isOpen, setIsOpen] = useState(false);
-  let fetcher = useFetcher<typeof userDetailsLoader>();
+	let [isOpen, setIsOpen] = useState(false);
+	let fetcher = useFetcher<typeof userDetailsLoader>();
 
-  return (
-    <tr>
-      <PrefetchPageLinks page={`/api/users/${user.id}/details`} />
-      <td>{user.name}</td>
-      <td>
-        <button
-          onClick={() => {
-            fetcher.load(`/api/users/${user.id}/details`);
-            setIsOpen(true);
-          }}
-        >
-          View Profile
-        </button>
-      </td>
-      {isOpen && fetcher.data && (
-        <UserProfileModal
-          user={fetcher.data}
-          onClose={() => setIsOpen(false)}
-        />
-      )}
-    </tr>
-  );
+	return (
+		<tr>
+			<PrefetchPageLinks page={`/api/users/${user.id}/details`} />
+			<td>{user.name}</td>
+			<td>
+				<button
+					onClick={() => {
+						fetcher.load(`/api/users/${user.id}/details`);
+						setIsOpen(true);
+					}}
+				>
+					View Profile
+				</button>
+			</td>
+			{isOpen && fetcher.data && (
+				<UserProfileModal user={fetcher.data} onClose={() => setIsOpen(false)} />
+			)}
+		</tr>
+	);
 }
 ```
 
@@ -114,23 +103,23 @@ function UserRow({ user }: { user: User }) {
 
 ```tsx
 function AccordionItem({ sectionId, title }: Props) {
-  let [isExpanded, setIsExpanded] = useState(false);
-  let fetcher = useFetcher<typeof sectionLoader>();
+	let [isExpanded, setIsExpanded] = useState(false);
+	let fetcher = useFetcher<typeof sectionLoader>();
 
-  return (
-    <div>
-      <PrefetchPageLinks page={`/api/sections/${sectionId}`} />
-      <button
-        onClick={() => {
-          if (!fetcher.data) fetcher.load(`/api/sections/${sectionId}`);
-          setIsExpanded((isExpanded) => !isExpanded);
-        }}
-      >
-        {title}
-      </button>
-      {isExpanded && fetcher.data && <div>{fetcher.data.content}</div>}
-    </div>
-  );
+	return (
+		<div>
+			<PrefetchPageLinks page={`/api/sections/${sectionId}`} />
+			<button
+				onClick={() => {
+					if (!fetcher.data) fetcher.load(`/api/sections/${sectionId}`);
+					setIsExpanded((isExpanded) => !isExpanded);
+				}}
+			>
+				{title}
+			</button>
+			{isExpanded && fetcher.data && <div>{fetcher.data.content}</div>}
+		</div>
+	);
 }
 ```
 
@@ -140,17 +129,15 @@ Only prefetch when likely to be used:
 
 ```tsx
 function ItemCard({ item, isHovered }: Props) {
-  let fetcher = useFetcher<typeof detailsLoader>();
+	let fetcher = useFetcher<typeof detailsLoader>();
 
-  return (
-    <div>
-      {/* Only prefetch when user hovers */}
-      {isHovered && <PrefetchPageLinks page={`/api/items/${item.id}`} />}
-      <button onClick={() => fetcher.load(`/api/items/${item.id}`)}>
-        Details
-      </button>
-    </div>
-  );
+	return (
+		<div>
+			{/* Only prefetch when user hovers */}
+			{isHovered && <PrefetchPageLinks page={`/api/items/${item.id}`} />}
+			<button onClick={() => fetcher.load(`/api/items/${item.id}`)}>Details</button>
+		</div>
+	);
 }
 ```
 

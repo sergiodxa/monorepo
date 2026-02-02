@@ -14,11 +14,7 @@ Render browser-only components on the client with a stable SSR fallback.
 import { ClientOnly } from "remix-utils/client-only";
 
 export function MapSection() {
-  return (
-    <ClientOnly fallback={<StaticMapPreview />}>
-      {() => <InteractiveMap />}
-    </ClientOnly>
-  );
+	return <ClientOnly fallback={<StaticMapPreview />}>{() => <InteractiveMap />}</ClientOnly>;
 }
 ```
 

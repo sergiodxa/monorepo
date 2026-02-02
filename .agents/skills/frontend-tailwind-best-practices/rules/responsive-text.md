@@ -42,17 +42,13 @@ Scale text sizes responsively across breakpoints.
 ### Page Title
 
 ```tsx
-<h1 className="text-2xl md:text-3xl lg:text-4xl font-bold text-neutral-900">
-  Page Title
-</h1>
+<h1 className="text-2xl md:text-3xl lg:text-4xl font-bold text-neutral-900">Page Title</h1>
 ```
 
 ### Section Heading
 
 ```tsx
-<h2 className="text-xl md:text-2xl font-semibold text-neutral-900">
-  Section Title
-</h2>
+<h2 className="text-xl md:text-2xl font-semibold text-neutral-900">Section Title</h2>
 ```
 
 ### Card Title
@@ -65,7 +61,7 @@ Scale text sizes responsively across breakpoints.
 
 ```tsx
 <p className="text-sm md:text-base text-neutral-600 leading-relaxed">
-  Body content that's readable on all devices.
+	Body content that's readable on all devices.
 </p>
 ```
 

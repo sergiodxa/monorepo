@@ -96,31 +96,31 @@ import { ImageGallery } from "./components/image-gallery";
 import { currentUser } from "~/lib/authorize.server";
 
 export async function loader({ request, params }: Route.LoaderArgs) {
-  let user = currentUser();
-  let itemId = z.string().parse(params.itemId);
+	let user = currentUser();
+	let itemId = z.string().parse(params.itemId);
 
-  let [item, toolbar] = await Promise.all([
-    queryItem(user.id, itemId),
-    queryToolbar(user.id, itemId),
-  ]);
+	let [item, toolbar] = await Promise.all([
+		queryItem(user.id, itemId),
+		queryToolbar(user.id, itemId),
+	]);
 
-  return data({ item, toolbar });
+	return data({ item, toolbar });
 }
 
 export async function action({ request, params }: Route.ActionArgs) {
-  // ... uses actions.server.ts
+	// ... uses actions.server.ts
 }
 
 export default function Component() {
-  const { item, toolbar } = useLoaderData<typeof loader>();
+	const { item, toolbar } = useLoaderData<typeof loader>();
 
-  return (
-    <div>
-      <Toolbar {...toolbar} />
-      <ImageGallery images={item.images} />
-      {/* ... */}
-    </div>
-  );
+	return (
+		<div>
+			<Toolbar {...toolbar} />
+			<ImageGallery images={item.images} />
+			{/* ... */}
+		</div>
+	);
 }
 ```
 
@@ -134,32 +134,32 @@ import { z } from "zod";
 
 // URL params validation (no i18n needed - internal errors)
 export const paramsSchema = z.object({
-  itemId: z.string(),
+	itemId: z.string(),
 });
 
 // Search params validation (no i18n needed - internal errors)
 export const searchParamsSchema = z.object({
-  page: z.coerce.number().optional().default(1),
-  sort: z.enum(["newest", "oldest"]).optional().default("newest"),
-  query: z.string().nullish(),
+	page: z.coerce.number().optional().default(1),
+	sort: z.enum(["newest", "oldest"]).optional().default("newest"),
+	query: z.string().nullish(),
 });
 
 // Form data validation - factory function for i18n error messages
 export function actionSchema(t: TFunction) {
-  return z.discriminatedUnion("intent", [
-    z.object({
-      intent: z.literal("update"),
-      title: z.string().min(1, t("Title is required")),
-      amount: z.coerce
-        .number({ message: t("Amount must be a number") })
-        .positive(t("Amount must be positive"))
-        .max(10000, t("Amount cannot exceed {{max}}", { max: 10000 })),
-      description: z.string().optional(),
-    }),
-    z.object({
-      intent: z.literal("delete"),
-    }),
-  ]);
+	return z.discriminatedUnion("intent", [
+		z.object({
+			intent: z.literal("update"),
+			title: z.string().min(1, t("Title is required")),
+			amount: z.coerce
+				.number({ message: t("Amount must be a number") })
+				.positive(t("Amount must be positive"))
+				.max(10000, t("Amount cannot exceed {{max}}", { max: 10000 })),
+			description: z.string().optional(),
+		}),
+		z.object({
+			intent: z.literal("delete"),
+		}),
+	]);
 }
 ```
 
@@ -167,57 +167,51 @@ export function actionSchema(t: TFunction) {
 
 ```tsx
 export async function queryItem(userId: string, itemId: string) {
-  let item = await fetchItem(userId, itemId);
-  return {
-    id: item.id,
-    title: item.title,
-    images: item.images,
-  };
+	let item = await fetchItem(userId, itemId);
+	return {
+		id: item.id,
+		title: item.title,
+		images: item.images,
+	};
 }
 ```
 
 ### route.tsx using schemas
 
 ```tsx
-import {
-  paramsSchema,
-  searchParamsSchema,
-  actionSchema,
-} from "./schemas.server";
+import { paramsSchema, searchParamsSchema, actionSchema } from "./schemas.server";
 import { queryItem } from "./queries.server";
 import { getInstance } from "~/middleware/i18next";
 import { currentUser } from "~/lib/authorize.server";
 
 export async function loader({ request, params }: Route.LoaderArgs) {
-  let user = currentUser();
-  let { itemId } = paramsSchema.parse(params);
+	let user = currentUser();
+	let { itemId } = paramsSchema.parse(params);
 
-  let url = new URL(request.url);
-  let { page, sort } = searchParamsSchema.parse(
-    Object.fromEntries(url.searchParams),
-  );
+	let url = new URL(request.url);
+	let { page, sort } = searchParamsSchema.parse(Object.fromEntries(url.searchParams));
 
-  let item = await queryItem(user, itemId);
-  return data({ item, page, sort });
+	let item = await queryItem(user, itemId);
+	return data({ item, page, sort });
 }
 
 export async function action({ request, params }: Route.ActionArgs) {
-  let user = currentUser();
-  let t = getInstance(context).t;
-  let { itemId } = paramsSchema.parse(params);
-  let formData = await request.formData();
+	let user = currentUser();
+	let t = getInstance(context).t;
+	let { itemId } = paramsSchema.parse(params);
+	let formData = await request.formData();
 
-  // Pass t to schema factory for translated error messages
-  let body = actionSchema(t).parse(Object.fromEntries(formData.entries()));
+	// Pass t to schema factory for translated error messages
+	let body = actionSchema(t).parse(Object.fromEntries(formData.entries()));
 
-  if (body.intent === "update") {
-    await updateItem(user, itemId, body);
-    throw redirect(`/items/${itemId}`);
-  }
+	if (body.intent === "update") {
+		await updateItem(user, itemId, body);
+		throw redirect(`/items/${itemId}`);
+	}
 
-  if (body.intent === "delete") {
-    await deleteItem(user, itemId);
-    throw redirect("/items");
-  }
+	if (body.intent === "delete") {
+		await deleteItem(user, itemId);
+		throw redirect("/items");
+	}
 }
 ```

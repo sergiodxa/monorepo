@@ -18,11 +18,11 @@ Sequential fetches add up latency. If you have 3 queries each taking 100ms, sequ
 import { data } from "react-router";
 
 export async function loader({ request }: Route.LoaderArgs) {
-  let user = await getUser(request);
-  let posts = await getPosts(user.id);
-  let comments = await getComments(user.id);
-  let notifications = await getNotifications(user.id);
-  return data({ user, posts, comments, notifications });
+	let user = await getUser(request);
+	let posts = await getPosts(user.id);
+	let comments = await getComments(user.id);
+	let notifications = await getNotifications(user.id);
+	return data({ user, posts, comments, notifications });
 }
 ```
 
@@ -34,15 +34,15 @@ Each await blocks the next query. Total time = sum of all query times.
 import { data } from "react-router";
 
 export async function loader({ request }: Route.LoaderArgs) {
-  let user = await getUser(request); // Need user.id first
+	let user = await getUser(request); // Need user.id first
 
-  const [posts, comments, notifications] = await Promise.all([
-    getPosts(user.id),
-    getComments(user.id),
-    getNotifications(user.id),
-  ]);
+	const [posts, comments, notifications] = await Promise.all([
+		getPosts(user.id),
+		getComments(user.id),
+		getNotifications(user.id),
+	]);
 
-  return data({ user, posts, comments, notifications });
+	return data({ user, posts, comments, notifications });
 }
 ```
 
@@ -58,8 +58,5 @@ const user = await getUser(request);
 const posts = await getPosts(user.id);
 
 // But these can be parallel since they both just need user.id
-const [comments, likes] = await Promise.all([
-  getComments(user.id),
-  getLikes(user.id),
-]);
+const [comments, likes] = await Promise.all([getComments(user.id), getLikes(user.id)]);
 ```

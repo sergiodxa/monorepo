@@ -25,9 +25,9 @@ let testers: User[] = [];
 let inactive: User[] = [];
 
 for (let user of users) {
-  if (user.isAdmin) admins.push(user);
-  if (user.isTester) testers.push(user);
-  if (!user.isActive) inactive.push(user);
+	if (user.isAdmin) admins.push(user);
+	if (user.isTester) testers.push(user);
+	if (!user.isActive) inactive.push(user);
 }
 ```
 
@@ -37,12 +37,12 @@ for (let user of users) {
 type UserGroup = "admins" | "testers" | "inactive";
 
 let { admins, testers, inactive } = users.reduce(
-  (acc, user) => {
-    if (user.isAdmin) acc.admins.push(user);
-    if (user.isTester) acc.testers.push(user);
-    if (!user.isActive) acc.inactive.push(user);
-    return acc;
-  },
-  { admins: [], testers: [], inactive: [] } as Record<UserGroup, User[]>,
+	(acc, user) => {
+		if (user.isAdmin) acc.admins.push(user);
+		if (user.isTester) acc.testers.push(user);
+		if (!user.isActive) acc.inactive.push(user);
+		return acc;
+	},
+	{ admins: [], testers: [], inactive: [] } as Record<UserGroup, User[]>,
 );
 ```

@@ -20,18 +20,15 @@ Store `context` and `request` in AsyncLocalStorage so helpers can access them wi
 // app/middleware/context-storage.server.ts
 import { createContextStorageMiddleware } from "remix-utils/middleware/context-storage";
 
-export const [contextStorageMiddleware, getContext, getRequest] =
-  createContextStorageMiddleware();
+export const [contextStorageMiddleware, getContext, getRequest] = createContextStorageMiddleware();
 ```
 
 ```ts
-export const middleware: Route.MiddlewareFunction[] = [
-  contextStorageMiddleware,
-];
+export const middleware: Route.MiddlewareFunction[] = [contextStorageMiddleware];
 
 export function getUserFromContext() {
-  let context = getContext();
-  return context.get(userContext);
+	let context = getContext();
+	return context.get(userContext);
 }
 ```
 

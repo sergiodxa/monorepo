@@ -32,9 +32,9 @@ Check for PII, credentials, and sensitive data exposed in API responses, error m
 ```typescript
 // Bad: Returning all user fields including sensitive data
 async function getUser(req: Request): Promise<Response> {
-  let user = await db.users.findUnique({ where: { id } });
-  // Returns password hash, email, tokens, etc.
-  return Response.json(user);
+	let user = await db.users.findUnique({ where: { id } });
+	// Returns password hash, email, tokens, etc.
+	return Response.json(user);
 }
 
 // Bad: Logging sensitive data
@@ -42,8 +42,8 @@ console.log("User login:", { email, password, creditCard });
 
 // Bad: Exposing internal IDs
 return Response.json({
-  internalUserId: user.id,
-  databaseId: user.dbId,
+	internalUserId: user.id,
+	databaseId: user.dbId,
 });
 ```
 
@@ -52,69 +52,69 @@ return Response.json({
 ```typescript
 // Good: Explicit field selection
 async function getUser(req: Request): Promise<Response> {
-  let session = await getSession(req);
+	let session = await getSession(req);
 
-  let user = await db.users.findUnique({
-    where: { id: session.userId },
-    select: {
-      id: true,
-      name: true,
-      avatar: true,
-      createdAt: true,
-      // Excludes: password, email, tokens, etc.
-    },
-  });
+	let user = await db.users.findUnique({
+		where: { id: session.userId },
+		select: {
+			id: true,
+			name: true,
+			avatar: true,
+			createdAt: true,
+			// Excludes: password, email, tokens, etc.
+		},
+	});
 
-  return Response.json(user);
+	return Response.json(user);
 }
 
 // Good: DTO for public profiles
 async function getUserProfile(req: Request): Promise<Response> {
-  let url = new URL(req.url);
-  let userId = url.searchParams.get("id");
+	let url = new URL(req.url);
+	let userId = url.searchParams.get("id");
 
-  let user = await db.users.findUnique({
-    where: { id: userId },
-    select: { id: true, name: true, avatar: true, bio: true },
-  });
+	let user = await db.users.findUnique({
+		where: { id: userId },
+		select: { id: true, name: true, avatar: true, bio: true },
+	});
 
-  return Response.json(user);
+	return Response.json(user);
 }
 
 // Good: Conditional field exposure
 async function getUserProfile(req: Request): Promise<Response> {
-  let session = await getSession(req);
-  let url = new URL(req.url);
-  let userId = url.searchParams.get("id");
-  let isOwn = session?.userId === userId;
+	let session = await getSession(req);
+	let url = new URL(req.url);
+	let userId = url.searchParams.get("id");
+	let isOwn = session?.userId === userId;
 
-  let user = await db.users.findUnique({
-    where: { id: userId },
-    select: {
-      id: true,
-      name: true,
-      avatar: true,
-      bio: true,
-      email: isOwn,
-      emailVerified: isOwn,
-    },
-  });
+	let user = await db.users.findUnique({
+		where: { id: userId },
+		select: {
+			id: true,
+			name: true,
+			avatar: true,
+			bio: true,
+			email: isOwn,
+			emailVerified: isOwn,
+		},
+	});
 
-  return Response.json(user);
+	return Response.json(user);
 }
 
 // Good: Sanitize logs
 function sanitizeForLogging(obj: any): any {
-  let sensitive = ["password", "token", "secret", "apiKey", "creditCard"];
-  let sanitized = { ...obj };
+	let sensitive = ["password", "token", "secret", "apiKey", "creditCard"];
+	let sanitized = { ...obj };
 
-  for (const key of Object.keys(sanitized)) {
-    if (sensitive.some((s) => key.toLowerCase().includes(s))) {
-      sanitized[key] = "[REDACTED]";
-    }
-  }
+	for (const key of Object.keys(sanitized)) {
+		if (sensitive.some((s) => key.toLowerCase().includes(s))) {
+			sanitized[key] = "[REDACTED]";
+		}
+	}
 
-  return sanitized;
+	return sanitized;
 }
 
 console.log("Login attempt:", sanitizeForLogging({ email, password }));

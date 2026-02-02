@@ -13,13 +13,13 @@ Don't create RegExp inside loops or frequently-called functions. Hoist to module
 
 ```typescript
 function highlightMatches(text: string, query: string) {
-  let regex = new RegExp(`(${query})`, "gi"); // Created every call
-  return text.split(regex);
+	let regex = new RegExp(`(${query})`, "gi"); // Created every call
+	return text.split(regex);
 }
 
 // In a loop - creates regex 1000 times
 items.forEach((item) => {
-  let matches = highlightMatches(item.text, searchQuery);
+	let matches = highlightMatches(item.text, searchQuery);
 });
 ```
 
@@ -30,7 +30,7 @@ const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const URL_REGEX = /https?:\/\/[^\s]+/g;
 
 function isValidEmail(email: string) {
-  return EMAIL_REGEX.test(email);
+	return EMAIL_REGEX.test(email);
 }
 ```
 
@@ -40,15 +40,15 @@ function isValidEmail(email: string) {
 const regexCache = new Map<string, RegExp>();
 
 function getHighlightRegex(query: string): RegExp {
-  if (!regexCache.has(query)) {
-    regexCache.set(query, new RegExp(`(${escapeRegex(query)})`, "gi"));
-  }
-  return regexCache.get(query)!;
+	if (!regexCache.has(query)) {
+		regexCache.set(query, new RegExp(`(${escapeRegex(query)})`, "gi"));
+	}
+	return regexCache.get(query)!;
 }
 
 function highlightMatches(text: string, query: string) {
-  let regex = getHighlightRegex(query);
-  return text.split(regex);
+	let regex = getHighlightRegex(query);
+	return text.split(regex);
 }
 ```
 

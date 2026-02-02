@@ -21,29 +21,29 @@ Define affordances with `@utility` so they are tree-shakeable and show up in Int
 
 ```css
 @utility ui-button {
-  :where(&) {
-    @apply inline-flex items-center gap-2 rounded-md px-4 py-2 text-sm font-semibold;
-    @apply bg-primary text-primary-foreground shadow-sm;
+	:where(&) {
+		@apply inline-flex items-center gap-2 rounded-md px-4 py-2 text-sm font-semibold;
+		@apply bg-primary text-primary-foreground shadow-sm;
 
-    @variant hover {
-      @apply bg-primary/90;
-    }
+		@variant hover {
+			@apply bg-primary/90;
+		}
 
-    @variant focus-visible {
-      @apply outline-2 outline-offset-2 outline-primary;
-    }
-  }
+		@variant focus-visible {
+			@apply outline-2 outline-offset-2 outline-primary;
+		}
+	}
 }
 
 @utility ui-input {
-  :where(&) {
-    @apply block w-full rounded-md border border-neutral-300 bg-white px-3 py-2;
-    @apply text-neutral-900;
+	:where(&) {
+		@apply block w-full rounded-md border border-neutral-300 bg-white px-3 py-2;
+		@apply text-neutral-900;
 
-    @variant focus-visible {
-      @apply border-primary outline-2 outline-offset-2 outline-primary;
-    }
-  }
+		@variant focus-visible {
+			@apply border-primary outline-2 outline-offset-2 outline-primary;
+		}
+	}
 }
 ```
 

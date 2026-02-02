@@ -13,13 +13,13 @@ Extract expensive work into memoized components to enable early returns before c
 
 ```tsx
 function Profile({ user, loading }: Props) {
-  let avatar = useMemo(() => {
-    let id = computeAvatarId(user);
-    return <Avatar id={id} />;
-  }, [user]);
+	let avatar = useMemo(() => {
+		let id = computeAvatarId(user);
+		return <Avatar id={id} />;
+	}, [user]);
 
-  if (loading) return <Skeleton />;
-  return <div>{avatar}</div>;
+	if (loading) return <Skeleton />;
+	return <div>{avatar}</div>;
 }
 ```
 
@@ -27,16 +27,16 @@ function Profile({ user, loading }: Props) {
 
 ```tsx
 const UserAvatar = memo(function UserAvatar({ user }: { user: User }) {
-  let id = useMemo(() => computeAvatarId(user), [user]);
-  return <Avatar id={id} />;
+	let id = useMemo(() => computeAvatarId(user), [user]);
+	return <Avatar id={id} />;
 });
 
 function Profile({ user, loading }: Props) {
-  if (loading) return <Skeleton />;
-  return (
-    <div>
-      <UserAvatar user={user} />
-    </div>
-  );
+	if (loading) return <Skeleton />;
+	return (
+		<div>
+			<UserAvatar user={user} />
+		</div>
+	);
 }
 ```

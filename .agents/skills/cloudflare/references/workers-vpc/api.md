@@ -16,8 +16,8 @@ Creates an outbound TCP connection to the specified address.
 
 ```typescript
 interface SocketAddress {
-  hostname: string; // DNS hostname or IP address
-  port: number; // TCP port (1-65535, excluding blocked ports)
+	hostname: string; // DNS hostname or IP address
+	port: number; // TCP port (1-65535, excluding blocked ports)
 }
 ```
 
@@ -32,8 +32,8 @@ DNS names are resolved at connection time. IPv4, IPv6, and private IPs (10.x, 17
 
 ```typescript
 interface SocketOptions {
-  secureTransport?: "off" | "on" | "starttls";
-  allowHalfOpen?: boolean;
+	secureTransport?: "off" | "on" | "starttls";
+	allowHalfOpen?: boolean;
 }
 ```
 
@@ -60,17 +60,17 @@ A `Socket` object with readable/writable streams.
 
 ```typescript
 interface Socket {
-  // Streams
-  readable: ReadableStream<Uint8Array>;
-  writable: WritableStream<Uint8Array>;
+	// Streams
+	readable: ReadableStream<Uint8Array>;
+	writable: WritableStream<Uint8Array>;
 
-  // Connection state
-  opened: Promise<SocketInfo>;
-  closed: Promise<void>;
+	// Connection state
+	opened: Promise<SocketInfo>;
+	closed: Promise<void>;
 
-  // Methods
-  close(): Promise<void>;
-  startTls(): Socket;
+	// Methods
+	close(): Promise<void>;
+	startTls(): Socket;
 }
 ```
 
@@ -101,14 +101,14 @@ Promise that resolves when connection succeeds, rejects on failure.
 
 ```typescript
 interface SocketInfo {
-  remoteAddress?: string; // May be undefined
-  localAddress?: string; // May be undefined
+	remoteAddress?: string; // May be undefined
+	localAddress?: string; // May be undefined
 }
 
 try {
-  const info = await socket.opened;
+	const info = await socket.opened;
 } catch (error) {
-  // Connection failed
+	// Connection failed
 }
 ```
 
@@ -125,9 +125,9 @@ Closes the socket gracefully, waiting for pending writes to complete.
 ```typescript
 const socket = connect({ hostname: "api.internal", port: 443 });
 try {
-  // Use socket
+	// Use socket
 } finally {
-  await socket.close(); // Always call in finally block
+	await socket.close(); // Always call in finally block
 }
 ```
 
@@ -136,10 +136,7 @@ try {
 Upgrades connection to TLS. Only available when `secureTransport: "starttls"` was specified.
 
 ```typescript
-const socket = connect(
-  { hostname: "db.internal", port: 5432 },
-  { secureTransport: "starttls" },
-);
+const socket = connect({ hostname: "db.internal", port: 5432 }, { secureTransport: "starttls" });
 
 // Send protocol-specific StartTLS command
 const writer = socket.writable.getWriter();
@@ -156,27 +153,24 @@ const secureWriter = secureSocket.writable.getWriter();
 import { connect } from "cloudflare:sockets";
 
 export default {
-  async fetch(req: Request): Promise<Response> {
-    const socket = connect(
-      { hostname: "echo.example.com", port: 7 },
-      { secureTransport: "on" },
-    );
+	async fetch(req: Request): Promise<Response> {
+		const socket = connect({ hostname: "echo.example.com", port: 7 }, { secureTransport: "on" });
 
-    try {
-      await socket.opened;
+		try {
+			await socket.opened;
 
-      const writer = socket.writable.getWriter();
-      await writer.write(new TextEncoder().encode("Hello, TCP!\n"));
-      await writer.close();
+			const writer = socket.writable.getWriter();
+			await writer.write(new TextEncoder().encode("Hello, TCP!\n"));
+			await writer.close();
 
-      const reader = socket.readable.getReader();
-      const { value } = await reader.read();
+			const reader = socket.readable.getReader();
+			const { value } = await reader.read();
 
-      return new Response(value);
-    } finally {
-      await socket.close();
-    }
-  },
+			return new Response(value);
+		} finally {
+			await socket.close();
+		}
+	},
 };
 ```
 

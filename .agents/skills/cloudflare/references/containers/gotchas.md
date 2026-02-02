@@ -44,13 +44,13 @@ return container.fetch(request);
 
 ```typescript
 const interval = setInterval(() => {
-  this.ctx.storage.put("keepalive", Date.now());
+	this.ctx.storage.put("keepalive", Date.now());
 }, 60000);
 
 try {
-  await this.doLongWork(data);
+	await this.doLongWork(data);
 } finally {
-  clearInterval(interval);
+	clearInterval(interval);
 }
 ```
 
@@ -62,10 +62,10 @@ try {
 
 ```typescript
 await this.ctx.blockConcurrencyWhile(async () => {
-  if (!this.initialized) {
-    await this.startAndWaitForPorts();
-    this.initialized = true;
-  }
+	if (!this.initialized) {
+		await this.startAndWaitForPorts();
+		this.initialized = true;
+	}
 });
 ```
 

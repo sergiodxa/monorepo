@@ -6,13 +6,13 @@
 
 ```jsonc
 {
-  "$schema": "./node_modules/wrangler/config-schema.json",
-  "dispatch_namespaces": [
-    {
-      "binding": "DISPATCHER",
-      "namespace": "production",
-    },
-  ],
+	"$schema": "./node_modules/wrangler/config-schema.json",
+	"dispatch_namespaces": [
+		{
+			"binding": "DISPATCHER",
+			"namespace": "production",
+		},
+	],
 }
 ```
 
@@ -47,16 +47,16 @@ curl -X PUT \
 
 ```jsonc
 {
-  "dispatch_namespaces": [
-    {
-      "binding": "DISPATCHER",
-      "namespace": "production",
-      "outbound": {
-        "service": "outbound-worker",
-        "parameters": ["customer_context"],
-      },
-    },
-  ],
+	"dispatch_namespaces": [
+		{
+			"binding": "DISPATCHER",
+			"namespace": "production",
+			"outbound": {
+				"service": "outbound-worker",
+				"parameters": ["customer_context"],
+			},
+		},
+	],
 }
 ```
 
@@ -76,14 +76,14 @@ Set CPU time and subrequest limits per invocation:
 
 ```typescript
 const userWorker = env.DISPATCHER.get(
-  workerName,
-  {},
-  {
-    limits: {
-      cpuMs: 10, // Max CPU ms
-      subRequests: 5, // Max fetch() calls
-    },
-  },
+	workerName,
+	{},
+	{
+		limits: {
+			cpuMs: 10, // Max CPU ms
+			subRequests: 5, // Max fetch() calls
+		},
+	},
 );
 ```
 
@@ -91,12 +91,12 @@ Handle limit violations:
 
 ```typescript
 try {
-  return await userWorker.fetch(request);
+	return await userWorker.fetch(request);
 } catch (e) {
-  if (e.message.includes("CPU time limit")) {
-    return new Response("CPU limit exceeded", { status: 429 });
-  }
-  throw e;
+	if (e.message.includes("CPU time limit")) {
+		return new Response("CPU limit exceeded", { status: 429 });
+	}
+	throw e;
 }
 ```
 
@@ -108,12 +108,12 @@ Deploy HTML/CSS/images with Workers. See [api.md](./api.md#static-assets) for up
 
 ```jsonc
 {
-  "name": "customer-site",
-  "main": "./src/index.js",
-  "assets": {
-    "directory": "./public",
-    "binding": "ASSETS",
-  },
+	"name": "customer-site",
+	"main": "./src/index.js",
+	"assets": {
+		"directory": "./public",
+		"binding": "ASSETS",
+	},
 }
 ```
 
@@ -156,11 +156,11 @@ Add via API metadata (see [api.md](./api.md#deploy-with-bindings)):
 
 ```json
 {
-  "bindings": [
-    { "type": "kv_namespace", "name": "USER_KV", "namespace_id": "..." },
-    { "type": "r2_bucket", "name": "STORAGE", "bucket_name": "..." },
-    { "type": "d1", "name": "DB", "id": "..." }
-  ]
+	"bindings": [
+		{ "type": "kv_namespace", "name": "USER_KV", "namespace_id": "..." },
+		{ "type": "r2_bucket", "name": "STORAGE", "bucket_name": "..." },
+		{ "type": "d1", "name": "DB", "id": "..." }
+	]
 }
 ```
 
@@ -168,10 +168,8 @@ Preserve existing bindings:
 
 ```json
 {
-  "bindings": [
-    { "type": "r2_bucket", "name": "STORAGE", "bucket_name": "new" }
-  ],
-  "keep_bindings": ["kv_namespace", "d1"] // Preserves existing bindings of these types
+	"bindings": [{ "type": "r2_bucket", "name": "STORAGE", "bucket_name": "new" }],
+	"keep_bindings": ["kv_namespace", "d1"] // Preserves existing bindings of these types
 }
 ```
 

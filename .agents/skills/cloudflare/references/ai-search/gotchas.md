@@ -84,9 +84,9 @@ const answer = await env.AI.autorag(env.AI_SEARCH_INSTANCE).aiSearch({...});
 
 ```typescript
 if (error instanceof AutoRAGNotFoundError) {
-  /* 404 */
+	/* 404 */
 }
 if (error instanceof AutoRAGUnauthorizedError) {
-  /* 401 */
+	/* 401 */
 }
 ```

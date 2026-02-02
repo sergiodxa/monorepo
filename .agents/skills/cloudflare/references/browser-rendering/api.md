@@ -77,8 +77,8 @@ await page.getByTestId("search").fill("query");
 
 // Context for isolation
 const context = await browser.newContext({
-  viewport: { width: 1920, height: 1080 },
-  userAgent: "custom",
+	viewport: { width: 1920, height: 1080 },
+	userAgent: "custom",
 });
 
 await browser.close();

@@ -19,8 +19,8 @@ Switch layout direction at breakpoints using stack utilities with responsive pre
 ```tsx
 // Mobile: vertical, Desktop: horizontal
 <div className="v-stack lg:h-stack gap-4">
-  <main className="grow">Main content</main>
-  <aside className="shrink-0 lg:w-80">Sidebar</aside>
+	<main className="grow">Main content</main>
+	<aside className="shrink-0 lg:w-80">Sidebar</aside>
 </div>
 ```
 
@@ -30,10 +30,8 @@ Switch layout direction at breakpoints using stack utilities with responsive pre
 
 ```tsx
 <div className="v-stack lg:h-stack gap-6">
-  <main className="grow v-stack gap-4">{/* Main content */}</main>
-  <aside className="shrink-0 w-full lg:max-w-xs v-stack gap-4">
-    {/* Sidebar content */}
-  </aside>
+	<main className="grow v-stack gap-4">{/* Main content */}</main>
+	<aside className="shrink-0 w-full lg:max-w-xs v-stack gap-4">{/* Sidebar content */}</aside>
 </div>
 ```
 
@@ -55,18 +53,18 @@ Switch layout direction at breakpoints using stack utilities with responsive pre
 
 ```tsx
 <header className="h-stack items-center justify-between">
-  <Logo />
+	<Logo />
 
-  {/* Desktop nav */}
-  <nav className="h-stack gap-4 max-md:hidden">
-    <Link to="/about">About</Link>
-    <Link to="/contact">Contact</Link>
-  </nav>
+	{/* Desktop nav */}
+	<nav className="h-stack gap-4 max-md:hidden">
+		<Link to="/about">About</Link>
+		<Link to="/contact">Contact</Link>
+	</nav>
 
-  {/* Mobile menu button */}
-  <button className="md:hidden">
-    <MenuIcon />
-  </button>
+	{/* Mobile menu button */}
+	<button className="md:hidden">
+		<MenuIcon />
+	</button>
 </header>
 ```
 
@@ -75,8 +73,8 @@ Switch layout direction at breakpoints using stack utilities with responsive pre
 ```tsx
 // Side-by-side on desktop, stacked on mobile
 <div className="v-stack md:h-stack gap-4">
-  <Input label="First Name" className="md:w-1/2" />
-  <Input label="Last Name" className="md:w-1/2" />
+	<Input label="First Name" className="md:w-1/2" />
+	<Input label="Last Name" className="md:w-1/2" />
 </div>
 ```
 
@@ -85,8 +83,8 @@ Switch layout direction at breakpoints using stack utilities with responsive pre
 ```tsx
 // Normal order on mobile, reversed on desktop
 <div className="v-stack lg:h-stack-reverse">
-  <Content /> {/* First on mobile, second on desktop */}
-  <Sidebar /> {/* Second on mobile, first on desktop */}
+	<Content /> {/* First on mobile, second on desktop */}
+	<Sidebar /> {/* Second on mobile, first on desktop */}
 </div>
 ```
 
@@ -94,14 +92,14 @@ Switch layout direction at breakpoints using stack utilities with responsive pre
 
 ```tsx
 <div className="v-stack lg:h-stack gap-4">
-  {/* Takes remaining space */}
-  <div className="grow min-w-0">
-    <Content />
-  </div>
+	{/* Takes remaining space */}
+	<div className="grow min-w-0">
+		<Content />
+	</div>
 
-  {/* Fixed width, doesn't shrink */}
-  <div className="shrink-0 lg:w-64">
-    <Sidebar />
-  </div>
+	{/* Fixed width, doesn't shrink */}
+	<div className="shrink-0 lg:w-64">
+		<Sidebar />
+	</div>
 </div>
 ```

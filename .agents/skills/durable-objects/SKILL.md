@@ -49,10 +49,10 @@ Search: `blockConcurrencyWhile`, `idFromName`, `getByName`, `setAlarm`, `sql.exe
 ```jsonc
 // wrangler.jsonc
 {
-  "durable_objects": {
-    "bindings": [{ "name": "MY_DO", "class_name": "MyDurableObject" }],
-  },
-  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["MyDurableObject"] }],
+	"durable_objects": {
+		"bindings": [{ "name": "MY_DO", "class_name": "MyDurableObject" }],
+	},
+	"migrations": [{ "tag": "v1", "new_sqlite_classes": ["MyDurableObject"] }],
 }
 ```
 
@@ -62,37 +62,37 @@ Search: `blockConcurrencyWhile`, `idFromName`, `getByName`, `setAlarm`, `sql.exe
 import { DurableObject } from "cloudflare:workers";
 
 export interface Env {
-  MY_DO: DurableObjectNamespace<MyDurableObject>;
+	MY_DO: DurableObjectNamespace<MyDurableObject>;
 }
 
 export class MyDurableObject extends DurableObject<Env> {
-  constructor(ctx: DurableObjectState, env: Env) {
-    super(ctx, env);
-    ctx.blockConcurrencyWhile(async () => {
-      this.ctx.storage.sql.exec(`
+	constructor(ctx: DurableObjectState, env: Env) {
+		super(ctx, env);
+		ctx.blockConcurrencyWhile(async () => {
+			this.ctx.storage.sql.exec(`
         CREATE TABLE IF NOT EXISTS items (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
           data TEXT NOT NULL
         )
       `);
-    });
-  }
+		});
+	}
 
-  async addItem(data: string): Promise<number> {
-    const result = this.ctx.storage.sql.exec<{ id: number }>(
-      "INSERT INTO items (data) VALUES (?) RETURNING id",
-      data,
-    );
-    return result.one().id;
-  }
+	async addItem(data: string): Promise<number> {
+		const result = this.ctx.storage.sql.exec<{ id: number }>(
+			"INSERT INTO items (data) VALUES (?) RETURNING id",
+			data,
+		);
+		return result.one().id;
+	}
 }
 
 export default {
-  async fetch(request: Request, env: Env): Promise<Response> {
-    const stub = env.MY_DO.getByName("my-instance");
-    const id = await stub.addItem("hello");
-    return Response.json({ id });
-  },
+	async fetch(request: Request, env: Env): Promise<Response> {
+		const stub = env.MY_DO.getByName("my-instance");
+		const id = await stub.addItem("hello");
+		return Response.json({ id });
+	},
 };
 ```
 
@@ -164,10 +164,10 @@ import { env } from "cloudflare:test";
 import { describe, it, expect } from "vitest";
 
 describe("MyDO", () => {
-  it("should work", async () => {
-    const stub = env.MY_DO.getByName("test");
-    const result = await stub.addItem("test");
-    expect(result).toBe(1);
-  });
+	it("should work", async () => {
+		const stub = env.MY_DO.getByName("test");
+		const result = await stub.addItem("test");
+		expect(result).toBe(1);
+	});
 });
 ```

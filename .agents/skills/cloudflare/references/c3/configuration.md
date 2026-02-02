@@ -15,10 +15,10 @@ my-app/
 
 ```jsonc
 {
-  "$schema": "https://raw.githubusercontent.com/cloudflare/workers-sdk/main/packages/wrangler/config-schema.json",
-  "name": "my-app",
-  "main": "src/index.ts",
-  "compatibility_date": "2026-01-27",
+	"$schema": "https://raw.githubusercontent.com/cloudflare/workers-sdk/main/packages/wrangler/config-schema.json",
+	"name": "my-app",
+	"main": "src/index.ts",
+	"compatibility_date": "2026-01-27",
 }
 ```
 
@@ -28,8 +28,8 @@ C3 generates **placeholder IDs** that must be replaced before deploy:
 
 ```jsonc
 {
-  "kv_namespaces": [{ "binding": "MY_KV", "id": "placeholder_kv_id" }],
-  "d1_databases": [{ "binding": "DB", "database_id": "00000000-..." }],
+	"kv_namespaces": [{ "binding": "MY_KV", "id": "placeholder_kv_id" }],
+	"d1_databases": [{ "binding": "DB", "database_id": "00000000-..." }],
 }
 ```
 
@@ -50,11 +50,11 @@ Error: Invalid KV namespace ID "placeholder_kv_id"
 
 ```json
 {
-  "scripts": {
-    "dev": "wrangler dev",
-    "deploy": "wrangler deploy",
-    "cf-typegen": "wrangler types"
-  }
+	"scripts": {
+		"dev": "wrangler dev",
+		"deploy": "wrangler deploy",
+		"cf-typegen": "wrangler types"
+	}
 }
 ```
 
@@ -70,8 +70,8 @@ Generates `.wrangler/types/runtime.d.ts`:
 
 ```typescript
 interface Env {
-  MY_KV: KVNamespace;
-  DB: D1Database;
+	MY_KV: KVNamespace;
+	DB: D1Database;
 }
 ```
 

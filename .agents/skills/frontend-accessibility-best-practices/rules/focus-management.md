@@ -45,7 +45,7 @@ button:focus {
 ```tsx
 // Good - custom focus style that's still visible
 <button className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-600 focus-visible:ring-offset-2">
-  Click me
+	Click me
 </button>
 ```
 
@@ -61,16 +61,16 @@ Modal and Dialog from react-aria-components automatically trap focus:
 import { Modal, Dialog } from "react-aria-components";
 
 function MyModal({ isOpen, onClose }) {
-  return (
-    <Modal isOpen={isOpen} onOpenChange={onClose}>
-      <Dialog>
-        {/* Focus is automatically trapped here */}
-        <Heading slot="title">Modal Title</Heading>
-        <p>Modal content...</p>
-        <Button onPress={onClose}>Close</Button>
-      </Dialog>
-    </Modal>
-  );
+	return (
+		<Modal isOpen={isOpen} onOpenChange={onClose}>
+			<Dialog>
+				{/* Focus is automatically trapped here */}
+				<Heading slot="title">Modal Title</Heading>
+				<p>Modal content...</p>
+				<Button onPress={onClose}>Close</Button>
+			</Dialog>
+		</Modal>
+	);
 }
 ```
 
@@ -82,13 +82,13 @@ If not using react-aria, implement focus trapping:
 import { useFocusTrap } from "@mantine/hooks"; // or similar
 
 function Modal({ children, onClose }) {
-  let focusTrapRef = useFocusTrap();
+	let focusTrapRef = useFocusTrap();
 
-  return (
-    <div ref={focusTrapRef} role="dialog" aria-modal="true">
-      {children}
-    </div>
-  );
+	return (
+		<div ref={focusTrapRef} role="dialog" aria-modal="true">
+			{children}
+		</div>
+	);
 }
 ```
 
@@ -99,10 +99,10 @@ Return focus to the trigger element when a modal closes:
 ```tsx
 // react-aria handles this automatically
 <DialogTrigger>
-  <Button>Open Dialog</Button>
-  <Modal>
-    <Dialog>{/* When closed, focus returns to the trigger button */}</Dialog>
-  </Modal>
+	<Button>Open Dialog</Button>
+	<Modal>
+		<Dialog>{/* When closed, focus returns to the trigger button */}</Dialog>
+	</Modal>
 </DialogTrigger>
 ```
 
@@ -112,29 +112,29 @@ Move focus to important content:
 
 ```tsx
 function SearchResults({ results, error }) {
-  let errorRef = useRef<HTMLDivElement>(null);
-  let resultsRef = useRef<HTMLDivElement>(null);
+	let errorRef = useRef<HTMLDivElement>(null);
+	let resultsRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    if (error) {
-      errorRef.current?.focus();
-    } else if (results.length > 0) {
-      resultsRef.current?.focus();
-    }
-  }, [error, results]);
+	useEffect(() => {
+		if (error) {
+			errorRef.current?.focus();
+		} else if (results.length > 0) {
+			resultsRef.current?.focus();
+		}
+	}, [error, results]);
 
-  return (
-    <>
-      {error && (
-        <div ref={errorRef} tabIndex={-1} role="alert">
-          {error}
-        </div>
-      )}
-      <div ref={resultsRef} tabIndex={-1}>
-        {/* Results */}
-      </div>
-    </>
-  );
+	return (
+		<>
+			{error && (
+				<div ref={errorRef} tabIndex={-1} role="alert">
+					{error}
+				</div>
+			)}
+			<div ref={resultsRef} tabIndex={-1}>
+				{/* Results */}
+			</div>
+		</>
+	);
 }
 ```
 
@@ -144,18 +144,18 @@ Add skip links for keyboard users to bypass navigation:
 
 ```tsx
 function Layout({ children }) {
-  return (
-    <>
-      <a
-        href="#main-content"
-        className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-50 focus:bg-white focus:p-4"
-      >
-        {t("Skip to main content")}
-      </a>
-      <Header />
-      <Main id="main-content">{children}</Main>
-    </>
-  );
+	return (
+		<>
+			<a
+				href="#main-content"
+				className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-50 focus:bg-white focus:p-4"
+			>
+				{t("Skip to main content")}
+			</a>
+			<Header />
+			<Main id="main-content">{children}</Main>
+		</>
+	);
 }
 ```
 

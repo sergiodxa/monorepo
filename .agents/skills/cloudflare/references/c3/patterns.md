@@ -57,12 +57,10 @@ npm create cloudflare@latest my-app -- --template=../my-template
 
 ```json
 {
-  "name": "my-template",
-  "category": "hello-world",
-  "copies": [{ "path": "src/" }, { "path": "wrangler.jsonc" }],
-  "transforms": [
-    { "path": "package.json", "jsonc": { "name": "{{projectName}}" } }
-  ]
+	"name": "my-template",
+	"category": "hello-world",
+	"copies": [{ "path": "src/" }, { "path": "wrangler.jsonc" }],
+	"transforms": [{ "path": "package.json", "jsonc": { "name": "{{projectName}}" } }]
 }
 ```
 

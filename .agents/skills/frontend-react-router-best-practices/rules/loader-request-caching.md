@@ -27,17 +27,17 @@ When you call the same API function with the same parameters in multiple loaders
 ```tsx
 // routes/dashboard.tsx (parent)
 export async function loader({ request, context }: Route.LoaderArgs) {
-  let client = await authenticate(request, { context });
-  let user = await getUser(client); // First call - makes network request
-  return data({ user });
+	let client = await authenticate(request, { context });
+	let user = await getUser(client); // First call - makes network request
+	return data({ user });
 }
 
 // routes/dashboard.settings.tsx (child)
 export async function loader({ request, context }: Route.LoaderArgs) {
-  let client = await authenticate(request, { context });
-  let user = await getUser(client); // Same call - returns cached result
-  let settings = await getSettings(client, user.id);
-  return data({ user, settings });
+	let client = await authenticate(request, { context });
+	let user = await getUser(client); // Same call - returns cached result
+	let settings = await getSettings(client, user.id);
+	return data({ user, settings });
 }
 ```
 
@@ -54,10 +54,10 @@ Both loaders run in parallel. The `context` contains the batcher (`context.batch
 ```tsx
 // Child loader needs user.id to fetch settings
 export async function loader({ request, context }: Route.LoaderArgs) {
-  let client = await authenticate(request, { context });
-  let user = await getUser(client); // Need user.id for next call
-  let settings = await getSettings(client, user.id);
-  return data({ settings });
+	let client = await authenticate(request, { context });
+	let user = await getUser(client); // Need user.id for next call
+	let settings = await getSettings(client, user.id);
+	return data({ settings });
 }
 ```
 
@@ -70,9 +70,8 @@ export async function loader({ request, context }: Route.LoaderArgs) {
 ```tsx
 // Child only needs user for display
 export default function Component() {
-  const { user } =
-    useRouteLoaderData<typeof dashboardLoader>("routes/dashboard");
-  return <WelcomeMessage name={user.name} />;
+	const { user } = useRouteLoaderData<typeof dashboardLoader>("routes/dashboard");
+	return <WelcomeMessage name={user.name} />;
 }
 ```
 
@@ -94,11 +93,11 @@ import { batcherMiddleware, getBatcher } from "~/middleware/batcher.server";
 export const middleware: Route.MiddlewareFunction[] = [batcherMiddleware];
 
 export async function loader({ context }: Route.LoaderArgs) {
-  let batcher = getBatcher(context);
-  let result = await batcher.batch("key", async () => {
-    return await getData();
-  });
-  return data({ result });
+	let batcher = getBatcher(context);
+	let result = await batcher.batch("key", async () => {
+		return await getData();
+	});
+	return data({ result });
 }
 ```
 

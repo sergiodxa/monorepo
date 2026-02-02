@@ -20,16 +20,14 @@ Use `Sec-Fetch-*` headers to reject cross-site mutation requests in middleware.
 // app/middleware/sec-fetch.server.ts
 import { fetchSite } from "remix-utils/sec-fetch";
 
-export const secFetchMiddleware: Route.MiddlewareFunction = async ({
-  request,
-}) => {
-  let method = request.method.toUpperCase();
-  if (method === "GET" || method === "HEAD") return;
+export const secFetchMiddleware: Route.MiddlewareFunction = async ({ request }) => {
+	let method = request.method.toUpperCase();
+	if (method === "GET" || method === "HEAD") return;
 
-  let site = fetchSite(request);
-  if (site === "cross-site" || site === "none") {
-    throw new Response("Forbidden", { status: 403 });
-  }
+	let site = fetchSite(request);
+	if (site === "cross-site" || site === "none") {
+		throw new Response("Forbidden", { status: 403 });
+	}
 };
 ```
 

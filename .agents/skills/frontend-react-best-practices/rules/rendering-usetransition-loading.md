@@ -13,25 +13,25 @@ Use `useTransition` instead of manual `useState` for loading states. This provid
 
 ```tsx
 function SearchResults() {
-  let [query, setQuery] = useState("");
-  let [results, setResults] = useState([]);
-  let [isLoading, setIsLoading] = useState(false);
+	let [query, setQuery] = useState("");
+	let [results, setResults] = useState([]);
+	let [isLoading, setIsLoading] = useState(false);
 
-  let handleSearch = async (value: string) => {
-    setIsLoading(true);
-    setQuery(value);
-    let data = await fetchResults(value);
-    setResults(data);
-    setIsLoading(false);
-  };
+	let handleSearch = async (value: string) => {
+		setIsLoading(true);
+		setQuery(value);
+		let data = await fetchResults(value);
+		setResults(data);
+		setIsLoading(false);
+	};
 
-  return (
-    <>
-      <input onChange={(e) => handleSearch(e.target.value)} />
-      {isLoading && <Spinner />}
-      <ResultsList results={results} />
-    </>
-  );
+	return (
+		<>
+			<input onChange={(e) => handleSearch(e.target.value)} />
+			{isLoading && <Spinner />}
+			<ResultsList results={results} />
+		</>
+	);
 }
 ```
 
@@ -41,27 +41,27 @@ function SearchResults() {
 import { useTransition, useState } from "react";
 
 function SearchResults() {
-  let [query, setQuery] = useState("");
-  let [results, setResults] = useState([]);
-  let [isPending, startTransition] = useTransition();
+	let [query, setQuery] = useState("");
+	let [results, setResults] = useState([]);
+	let [isPending, startTransition] = useTransition();
 
-  let handleSearch = (value: string) => {
-    setQuery(value); // Update input immediately
+	let handleSearch = (value: string) => {
+		setQuery(value); // Update input immediately
 
-    startTransition(async () => {
-      // Fetch and update results
-      let data = await fetchResults(value);
-      setResults(data);
-    });
-  };
+		startTransition(async () => {
+			// Fetch and update results
+			let data = await fetchResults(value);
+			setResults(data);
+		});
+	};
 
-  return (
-    <>
-      <input onChange={(e) => handleSearch(e.target.value)} />
-      {isPending && <Spinner />}
-      <ResultsList results={results} />
-    </>
-  );
+	return (
+		<>
+			<input onChange={(e) => handleSearch(e.target.value)} />
+			{isPending && <Spinner />}
+			<ResultsList results={results} />
+		</>
+	);
 }
 ```
 

@@ -48,12 +48,14 @@ current-in-other-contexts.md
 ## What Goes Where
 
 **SKILL.md** contains:
+
 - Frontmatter with name and description
 - Overview and "When to Apply" section
 - Condensed summaries of all rules with short examples
 - Links to full rule files
 
-**rules/*.md** contain:
+**rules/\*.md** contain:
+
 - Detailed explanation of one specific rule
 - Full code examples with bad/good patterns
 - Edge cases and exceptions

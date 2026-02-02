@@ -11,10 +11,8 @@
 
 ```jsonc
 {
-  "name": "my-worker",
-  "analytics_engine_datasets": [
-    { "binding": "ANALYTICS", "dataset": "my_events" },
-  ],
+	"name": "my-worker",
+	"analytics_engine_datasets": [{ "binding": "ANALYTICS", "dataset": "my_events" }],
 }
 ```
 
@@ -22,10 +20,10 @@ Multiple datasets for separate concerns:
 
 ```jsonc
 {
-  "analytics_engine_datasets": [
-    { "binding": "API_ANALYTICS", "dataset": "api_requests" },
-    { "binding": "USER_EVENTS", "dataset": "user_activity" },
-  ],
+	"analytics_engine_datasets": [
+		{ "binding": "API_ANALYTICS", "dataset": "api_requests" },
+		{ "binding": "USER_EVENTS", "dataset": "user_activity" },
+	],
 }
 ```
 
@@ -33,19 +31,19 @@ Multiple datasets for separate concerns:
 
 ```typescript
 interface Env {
-  ANALYTICS: AnalyticsEngineDataset;
+	ANALYTICS: AnalyticsEngineDataset;
 }
 
 export default {
-  async fetch(request: Request, env: Env) {
-    // No await - returns void, fire-and-forget
-    env.ANALYTICS.writeDataPoint({
-      blobs: [pathname, method, status], // String dimensions (max 20)
-      doubles: [latency, 1], // Numeric metrics (max 20)
-      indexes: [apiKey], // High-cardinality filter (max 1)
-    });
-    return response;
-  },
+	async fetch(request: Request, env: Env) {
+		// No await - returns void, fire-and-forget
+		env.ANALYTICS.writeDataPoint({
+			blobs: [pathname, method, status], // String dimensions (max 20)
+			doubles: [latency, 1], // Numeric metrics (max 20)
+			indexes: [apiKey], // High-cardinality filter (max 1)
+		});
+		return response;
+	},
 };
 ```
 
@@ -85,16 +83,12 @@ export default {
 
 ```jsonc
 {
-  "analytics_engine_datasets": [
-    { "binding": "ANALYTICS", "dataset": "prod_events" },
-  ],
-  "env": {
-    "staging": {
-      "analytics_engine_datasets": [
-        { "binding": "ANALYTICS", "dataset": "staging_events" },
-      ],
-    },
-  },
+	"analytics_engine_datasets": [{ "binding": "ANALYTICS", "dataset": "prod_events" }],
+	"env": {
+		"staging": {
+			"analytics_engine_datasets": [{ "binding": "ANALYTICS", "dataset": "staging_events" }],
+		},
+	},
 }
 ```
 

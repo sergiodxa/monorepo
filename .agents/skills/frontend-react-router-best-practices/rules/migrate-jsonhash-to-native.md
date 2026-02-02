@@ -20,13 +20,13 @@ Replace jsonHash from remix-utils with native Promise.all or data() patterns.
 import { jsonHash } from "remix-utils/json-hash";
 
 export async function loader({ request }: Route.LoaderArgs) {
-  let client = await authenticate(request);
+	let client = await authenticate(request);
 
-  return jsonHash({
-    items: client.items.list(),
-    categories: client.categories.list(),
-    user: client.users.current(),
-  });
+	return jsonHash({
+		items: client.items.list(),
+		categories: client.categories.list(),
+		user: client.users.current(),
+	});
 }
 ```
 
@@ -38,15 +38,15 @@ When all data is needed before render:
 import { data } from "react-router";
 
 export async function loader({ request }: Route.LoaderArgs) {
-  let client = await authenticate(request);
+	let client = await authenticate(request);
 
-  let [items, categories, user] = await Promise.all([
-    client.items.list(),
-    client.categories.list(),
-    client.users.current(),
-  ]);
+	let [items, categories, user] = await Promise.all([
+		client.items.list(),
+		client.categories.list(),
+		client.users.current(),
+	]);
 
-  return data({ items, categories, user });
+	return data({ items, categories, user });
 }
 ```
 
@@ -58,17 +58,17 @@ When some data can stream in later:
 import { data } from "react-router";
 
 export async function loader({ request }: Route.LoaderArgs) {
-  let client = await authenticate(request);
+	let client = await authenticate(request);
 
-  // Critical data - await immediately
-  let items = await client.items.list();
+	// Critical data - await immediately
+	let items = await client.items.list();
 
-  return data({
-    items,
-    // Non-critical data - streams automatically with Single Fetch
-    categories: client.categories.list(),
-    recommendations: client.recommendations.list(),
-  });
+	return data({
+		items,
+		// Non-critical data - streams automatically with Single Fetch
+		categories: client.categories.list(),
+		recommendations: client.recommendations.list(),
+	});
 }
 ```
 
@@ -81,8 +81,8 @@ import { data } from "react-router";
 
 // Before
 return jsonHash({
-  a: getA(),
-  b: getB(),
+	a: getA(),
+	b: getB(),
 });
 
 // After
@@ -97,20 +97,17 @@ import { data } from "react-router";
 
 // Before
 return jsonHash({
-  async items() {
-    let raw = await fetchItems();
-    return transformItems(raw);
-  },
-  async metadata() {
-    return fetchMetadata();
-  },
+	async items() {
+		let raw = await fetchItems();
+		return transformItems(raw);
+	},
+	async metadata() {
+		return fetchMetadata();
+	},
 });
 
 // After
-const [items, metadata] = await Promise.all([
-  fetchItems().then(transformItems),
-  fetchMetadata(),
-]);
+const [items, metadata] = await Promise.all([fetchItems().then(transformItems), fetchMetadata()]);
 return data({ items, metadata });
 ```
 
@@ -121,10 +118,10 @@ import { data } from "react-router";
 
 // Before
 return jsonHash({
-  asyncData: fetchData(),
-  syncData() {
-    return computeSync();
-  },
+	asyncData: fetchData(),
+	syncData() {
+		return computeSync();
+	},
 });
 
 // After

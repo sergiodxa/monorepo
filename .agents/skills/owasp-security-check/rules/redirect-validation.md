@@ -31,21 +31,21 @@ Check for unvalidated redirect and forward URLs that could be used for phishing 
 ```typescript
 // Bad: Unvalidated redirect
 async function callback(req: Request): Promise<Response> {
-  let url = new URL(req.url);
-  let returnUrl = url.searchParams.get("return");
+	let url = new URL(req.url);
+	let returnUrl = url.searchParams.get("return");
 
-  // Attacker can set return=https://evil.com
-  return Response.redirect(returnUrl!);
+	// Attacker can set return=https://evil.com
+	return Response.redirect(returnUrl!);
 }
 
 // Bad: No validation on OAuth callback
 async function oauthCallback(req: Request): Promise<Response> {
-  let url = new URL(req.url);
-  let redirectUri = url.searchParams.get("redirect_uri");
+	let url = new URL(req.url);
+	let redirectUri = url.searchParams.get("redirect_uri");
 
-  // Complete OAuth flow...
+	// Complete OAuth flow...
 
-  return Response.redirect(redirectUri!);
+	return Response.redirect(redirectUri!);
 }
 ```
 
@@ -56,48 +56,48 @@ async function oauthCallback(req: Request): Promise<Response> {
 const ALLOWED_REDIRECTS = ["/dashboard", "/profile", "/settings"];
 
 async function callback(req: Request): Promise<Response> {
-  let url = new URL(req.url);
-  let returnUrl = url.searchParams.get("return") || "/";
+	let url = new URL(req.url);
+	let returnUrl = url.searchParams.get("return") || "/";
 
-  if (!ALLOWED_REDIRECTS.includes(returnUrl)) {
-    return Response.redirect("/");
-  }
+	if (!ALLOWED_REDIRECTS.includes(returnUrl)) {
+		return Response.redirect("/");
+	}
 
-  return Response.redirect(returnUrl);
+	return Response.redirect(returnUrl);
 }
 
 // Good: Validate URL is relative
 function isValidRedirect(url: string): boolean {
-  return url.startsWith("/") && !url.startsWith("//");
+	return url.startsWith("/") && !url.startsWith("//");
 }
 
 async function callback(req: Request): Promise<Response> {
-  let url = new URL(req.url);
-  let returnUrl = url.searchParams.get("return") || "/";
+	let url = new URL(req.url);
+	let returnUrl = url.searchParams.get("return") || "/";
 
-  if (!isValidRedirect(returnUrl)) {
-    return Response.redirect("/");
-  }
+	if (!isValidRedirect(returnUrl)) {
+		return Response.redirect("/");
+	}
 
-  return Response.redirect(returnUrl);
+	return Response.redirect(returnUrl);
 }
 
 // Good: Validate OAuth redirect_uri
 const ALLOWED_OAUTH_REDIRECTS = [
-  "https://app.example.com/callback",
-  "https://admin.example.com/callback",
+	"https://app.example.com/callback",
+	"https://admin.example.com/callback",
 ];
 
 async function oauthCallback(req: Request): Promise<Response> {
-  let url = new URL(req.url);
-  let redirectUri = url.searchParams.get("redirect_uri");
+	let url = new URL(req.url);
+	let redirectUri = url.searchParams.get("redirect_uri");
 
-  if (!redirectUri || !ALLOWED_OAUTH_REDIRECTS.includes(redirectUri)) {
-    return new Response("Invalid redirect_uri", { status: 400 });
-  }
+	if (!redirectUri || !ALLOWED_OAUTH_REDIRECTS.includes(redirectUri)) {
+		return new Response("Invalid redirect_uri", { status: 400 });
+	}
 
-  // Complete OAuth flow...
-  return Response.redirect(redirectUri);
+	// Complete OAuth flow...
+	return Response.redirect(redirectUri);
 }
 ```
 

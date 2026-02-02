@@ -6,8 +6,8 @@ Configure complex routing in dashboard without code changes. Use route names ins
 
 ```typescript
 const response = await client.chat.completions.create({
-  model: "dynamic/smart-chat", // Route name from dashboard
-  messages: [{ role: "user", content: "Hello!" }],
+	model: "dynamic/smart-chat", // Route name from dashboard
+	messages: [{ role: "user", content: "Hello!" }],
 });
 ```
 

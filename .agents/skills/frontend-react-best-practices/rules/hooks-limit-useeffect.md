@@ -23,28 +23,25 @@ Use `useEffect` only when absolutely necessary. Prefer derived state, event hand
 ```tsx
 // Bad: useEffect to derive state
 function FilteredList({ items, query }: Props) {
-  let [filtered, setFiltered] = useState(items);
+	let [filtered, setFiltered] = useState(items);
 
-  useEffect(() => {
-    setFiltered(items.filter((item) => item.name.includes(query)));
-  }, [items, query]);
+	useEffect(() => {
+		setFiltered(items.filter((item) => item.name.includes(query)));
+	}, [items, query]);
 
-  return <List items={filtered} />;
+	return <List items={filtered} />;
 }
 
 // Good: derive during render
 function FilteredList({ items, query }: Props) {
-  let filtered = items.filter((item) => item.name.includes(query));
-  return <List items={filtered} />;
+	let filtered = items.filter((item) => item.name.includes(query));
+	return <List items={filtered} />;
 }
 
 // Good: useMemo if expensive
 function FilteredList({ items, query }: Props) {
-  let filtered = useMemo(
-    () => items.filter((item) => item.name.includes(query)),
-    [items, query],
-  );
-  return <List items={filtered} />;
+	let filtered = useMemo(() => items.filter((item) => item.name.includes(query)), [items, query]);
+	return <List items={filtered} />;
 }
 ```
 
@@ -53,27 +50,27 @@ function FilteredList({ items, query }: Props) {
 ```tsx
 // Bad: useEffect to handle form submission result
 function Form() {
-  let [submitted, setSubmitted] = useState(false);
+	let [submitted, setSubmitted] = useState(false);
 
-  useEffect(() => {
-    if (submitted) {
-      showToast("Submitted!");
-      navigate("/success");
-    }
-  }, [submitted]);
+	useEffect(() => {
+		if (submitted) {
+			showToast("Submitted!");
+			navigate("/success");
+		}
+	}, [submitted]);
 
-  return <form onSubmit={() => setSubmitted(true)}>...</form>;
+	return <form onSubmit={() => setSubmitted(true)}>...</form>;
 }
 
 // Good: handle in event handler
 function Form() {
-  function handleSubmit() {
-    // Do it directly in the handler
-    showToast("Submitted!");
-    navigate("/success");
-  }
+	function handleSubmit() {
+		// Do it directly in the handler
+		showToast("Submitted!");
+		navigate("/success");
+	}
 
-  return <form onSubmit={handleSubmit}>...</form>;
+	return <form onSubmit={handleSubmit}>...</form>;
 }
 ```
 
@@ -82,11 +79,11 @@ function Form() {
 ```tsx
 // Bad: useEffect to reset state
 function UserProfile({ userId }: Props) {
-  let [user, setUser] = useState(null);
+	let [user, setUser] = useState(null);
 
-  useEffect(() => {
-    setUser(null); // Reset when userId changes
-  }, [userId]);
+	useEffect(() => {
+		setUser(null); // Reset when userId changes
+	}, [userId]);
 }
 
 // Good: use key to reset component
@@ -98,17 +95,17 @@ function UserProfile({ userId }: Props) {
 ```tsx
 // Bad: useEffect to transform
 function Chart({ data }: Props) {
-  let [chartData, setChartData] = useState([]);
+	let [chartData, setChartData] = useState([]);
 
-  useEffect(() => {
-    setChartData(data.map((d) => ({ x: d.date, y: d.value })));
-  }, [data]);
+	useEffect(() => {
+		setChartData(data.map((d) => ({ x: d.date, y: d.value })));
+	}, [data]);
 }
 
 // Good: transform during render
 function Chart({ data }: Props) {
-  let chartData = data.map((d) => ({ x: d.date, y: d.value }));
-  return <LineChart data={chartData} />;
+	let chartData = data.map((d) => ({ x: d.date, y: d.value }));
+	return <LineChart data={chartData} />;
 }
 ```
 
@@ -119,26 +116,26 @@ function Chart({ data }: Props) {
 ```tsx
 // Good: subscribing to browser APIs
 function useOnlineStatus() {
-  let [isOnline, setIsOnline] = useState(navigator.onLine);
+	let [isOnline, setIsOnline] = useState(navigator.onLine);
 
-  useEffect(() => {
-    function handleOnline() {
-      setIsOnline(true);
-    }
-    function handleOffline() {
-      setIsOnline(false);
-    }
+	useEffect(() => {
+		function handleOnline() {
+			setIsOnline(true);
+		}
+		function handleOffline() {
+			setIsOnline(false);
+		}
 
-    window.addEventListener("online", handleOnline);
-    window.addEventListener("offline", handleOffline);
+		window.addEventListener("online", handleOnline);
+		window.addEventListener("offline", handleOffline);
 
-    return () => {
-      window.removeEventListener("online", handleOnline);
-      window.removeEventListener("offline", handleOffline);
-    };
-  }, []);
+		return () => {
+			window.removeEventListener("online", handleOnline);
+			window.removeEventListener("offline", handleOffline);
+		};
+	}, []);
 
-  return isOnline;
+	return isOnline;
 }
 ```
 
@@ -147,25 +144,25 @@ function useOnlineStatus() {
 ```tsx
 // Good: integrating with non-React code
 function Map({ center }: Props) {
-  let mapRef = useRef<HTMLDivElement>(null);
-  let mapInstance = useRef<MapLibrary | null>(null);
+	let mapRef = useRef<HTMLDivElement>(null);
+	let mapInstance = useRef<MapLibrary | null>(null);
 
-  useEffect(() => {
-    if (!mapRef.current) return;
+	useEffect(() => {
+		if (!mapRef.current) return;
 
-    mapInstance.current = new MapLibrary(mapRef.current, { center });
+		mapInstance.current = new MapLibrary(mapRef.current, { center });
 
-    return () => {
-      mapInstance.current?.destroy();
-    };
-  }, []);
+		return () => {
+			mapInstance.current?.destroy();
+		};
+	}, []);
 
-  // Update map when center changes
-  useEffect(() => {
-    mapInstance.current?.setCenter(center);
-  }, [center]);
+	// Update map when center changes
+	useEffect(() => {
+		mapInstance.current?.setCenter(center);
+	}, [center]);
 
-  return <div ref={mapRef} />;
+	return <div ref={mapRef} />;
 }
 ```
 
@@ -174,7 +171,7 @@ function Map({ center }: Props) {
 ```tsx
 // Good: logging page views
 useEffect(() => {
-  analytics.logPageView(pathname);
+	analytics.logPageView(pathname);
 }, [pathname]);
 ```
 

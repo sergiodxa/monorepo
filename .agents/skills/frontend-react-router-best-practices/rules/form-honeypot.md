@@ -14,8 +14,7 @@ Use `remix-utils` honeypot to block basic spam bots on public forms.
 // app/middleware/honeypot.server.ts
 import { createHoneypotMiddleware } from "remix-utils/middleware/honeypot";
 
-export const [honeypotMiddleware, getHoneypotInputProps] =
-  createHoneypotMiddleware();
+export const [honeypotMiddleware, getHoneypotInputProps] = createHoneypotMiddleware();
 ```
 
 ```tsx
@@ -25,16 +24,16 @@ import { HoneypotProvider } from "remix-utils/honeypot/react";
 export const middleware: Route.MiddlewareFunction[] = [honeypotMiddleware];
 
 export async function loader() {
-  let honeypotInputProps = await getHoneypotInputProps();
-  return data({ honeypotInputProps });
+	let honeypotInputProps = await getHoneypotInputProps();
+	return data({ honeypotInputProps });
 }
 
 export default function App({ loaderData }: Route.ComponentProps) {
-  return (
-    <HoneypotProvider {...loaderData.honeypotInputProps}>
-      <Outlet />
-    </HoneypotProvider>
-  );
+	return (
+		<HoneypotProvider {...loaderData.honeypotInputProps}>
+			<Outlet />
+		</HoneypotProvider>
+	);
 }
 ```
 
@@ -43,8 +42,8 @@ export default function App({ loaderData }: Route.ComponentProps) {
 import { HoneypotInputs } from "remix-utils/honeypot/react";
 
 <Form method="post">
-  <HoneypotInputs />
-  {/* form fields */}
+	<HoneypotInputs />
+	{/* form fields */}
 </Form>;
 ```
 

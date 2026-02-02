@@ -14,8 +14,8 @@ Use the middleware instance’s bound `t()` in loaders and keep UI hooks for com
 import { getInstance } from "~/middleware/i18next";
 
 export async function loader({ context }: Route.LoaderArgs) {
-  let t = getInstance(context).t;
-  return { title: t("title"), description: t("description") };
+	let t = getInstance(context).t;
+	return { title: t("title"), description: t("description") };
 }
 ```
 
@@ -23,8 +23,8 @@ export async function loader({ context }: Route.LoaderArgs) {
 import { useTranslation } from "react-i18next";
 
 export default function Component() {
-  let { t } = useTranslation();
-  return <h1>{t("title")}</h1>;
+	let { t } = useTranslation();
+	return <h1>{t("title")}</h1>;
 }
 ```
 
@@ -36,9 +36,9 @@ If you need a specific namespace, use `getFixedT` with the current locale and na
 
 ```ts
 export async function loader({ context }: Route.LoaderArgs) {
-  let i18n = getInstance(context);
-  let t = i18n.getFixedT(i18n.language, "notFound");
-  return { title: t("title") };
+	let i18n = getInstance(context);
+	let t = i18n.getFixedT(i18n.language, "notFound");
+	return { title: t("title") };
 }
 ```
 

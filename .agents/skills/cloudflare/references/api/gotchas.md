@@ -96,7 +96,7 @@ const page = await client.zones.list();
 // ✅ CORRECT - All results
 const zones = [];
 for await (const zone of client.zones.list()) {
-  zones.push(zone);
+	zones.push(zone);
 }
 ```
 
@@ -133,7 +133,7 @@ const zones = await client.zones.list();
 ```typescript
 // Verify token is set
 if (!process.env.CLOUDFLARE_API_TOKEN) {
-  throw new Error("CLOUDFLARE_API_TOKEN not set");
+	throw new Error("CLOUDFLARE_API_TOKEN not set");
 }
 
 // Test token
@@ -152,14 +152,14 @@ console.log("Token valid:", user.status);
 ```typescript
 // Increase timeout
 const client = new Cloudflare({
-  timeout: 300000, // 5 minutes
+	timeout: 300000, // 5 minutes
 });
 
 // Or split operations
 const batchSize = 100;
 for (let i = 0; i < records.length; i += batchSize) {
-  const batch = records.slice(i, i + batchSize);
-  await processBatch(batch);
+	const batch = records.slice(i, i + batchSize);
+	await processBatch(batch);
 }
 ```
 
@@ -178,7 +178,7 @@ for (let i = 0; i < records.length; i += batchSize) {
 ```typescript
 // List all zones to find correct ID
 for await (const zone of client.zones.list()) {
-  console.log(zone.id, zone.name);
+	console.log(zone.id, zone.name);
 }
 ```
 
@@ -214,13 +214,13 @@ for await (const zone of client.zones.list()) {
 ```typescript
 // Create reusable client instance
 export const cfClient = new Cloudflare({
-  apiToken: process.env.CLOUDFLARE_API_TOKEN,
-  maxRetries: 5,
+	apiToken: process.env.CLOUDFLARE_API_TOKEN,
+	maxRetries: 5,
 });
 
 // Wrap common operations
 export async function getZoneDetails(zoneId: string) {
-  return await cfClient.zones.get({ zone_id: zoneId });
+	return await cfClient.zones.get({ zone_id: zoneId });
 }
 ```
 

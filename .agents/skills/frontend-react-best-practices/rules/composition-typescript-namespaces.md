@@ -39,34 +39,30 @@ export namespace Button {
 // components/button.tsx
 
 export namespace Button {
-  export type Variant = "solid" | "ghost" | "outline";
-  export type Size = "sm" | "md" | "lg";
+	export type Variant = "solid" | "ghost" | "outline";
+	export type Size = "sm" | "md" | "lg";
 
-  export interface Props {
-    variant?: Variant;
-    size?: Size;
-    children: React.ReactNode;
-    onClick?: () => void;
-    disabled?: boolean;
-  }
+	export interface Props {
+		variant?: Variant;
+		size?: Size;
+		children: React.ReactNode;
+		onClick?: () => void;
+		disabled?: boolean;
+	}
 }
 
 export function Button({
-  variant = "solid",
-  size = "md",
-  children,
-  onClick,
-  disabled,
+	variant = "solid",
+	size = "md",
+	children,
+	onClick,
+	disabled,
 }: Button.Props) {
-  return (
-    <button
-      className={getButtonClasses(variant, size)}
-      onClick={onClick}
-      disabled={disabled}
-    >
-      {children}
-    </button>
-  );
+	return (
+		<button className={getButtonClasses(variant, size)} onClick={onClick} disabled={disabled}>
+			{children}
+		</button>
+	);
 }
 ```
 
@@ -79,24 +75,24 @@ import { Button } from "~/components/button";
 
 // Use the component
 <Button variant="ghost" size="lg">
-  Click me
+	Click me
 </Button>;
 
 // Use the types
 function CustomButton(props: Button.Props) {
-  return <Button {...props} />;
+	return <Button {...props} />;
 }
 
 // Use specific type
 function getVariantColor(variant: Button.Variant): string {
-  switch (variant) {
-    case "solid":
-      return "blue";
-    case "ghost":
-      return "transparent";
-    case "outline":
-      return "white";
-  }
+	switch (variant) {
+		case "solid":
+			return "blue";
+		case "ghost":
+			return "transparent";
+		case "outline":
+			return "white";
+	}
 }
 ```
 
@@ -104,12 +100,7 @@ function getVariantColor(variant: Button.Variant): string {
 
 ```tsx
 // Without namespace - multiple exports, potential naming conflicts
-import {
-  Button,
-  ButtonProps,
-  ButtonVariant,
-  ButtonSize,
-} from "~/components/button";
+import { Button, ButtonProps, ButtonVariant, ButtonSize } from "~/components/button";
 
 // Or with renaming
 import { Button, type Props as ButtonProps } from "~/components/button";
@@ -124,18 +115,18 @@ When creating a component that extends another:
 import { Button } from "./button";
 
 export namespace IconButton {
-  export interface Props extends Omit<Button.Props, "children"> {
-    icon: React.ReactNode;
-    label: string; // For accessibility
-  }
+	export interface Props extends Omit<Button.Props, "children"> {
+		icon: React.ReactNode;
+		label: string; // For accessibility
+	}
 }
 
 export function IconButton({ icon, label, ...buttonProps }: IconButton.Props) {
-  return (
-    <Button {...buttonProps} aria-label={label}>
-      {icon}
-    </Button>
-  );
+	return (
+		<Button {...buttonProps} aria-label={label}>
+			{icon}
+		</Button>
+	);
 }
 ```
 
@@ -145,31 +136,31 @@ export function IconButton({ icon, label, ...buttonProps }: IconButton.Props) {
 // components/select.tsx
 
 export namespace Select {
-  export interface Option<T = string> {
-    value: T;
-    label: string;
-    disabled?: boolean;
-  }
+	export interface Option<T = string> {
+		value: T;
+		label: string;
+		disabled?: boolean;
+	}
 
-  export interface Props<T = string> {
-    options: Option<T>[];
-    value: T;
-    onChange: (value: T) => void;
-    placeholder?: string;
-    disabled?: boolean;
-  }
+	export interface Props<T = string> {
+		options: Option<T>[];
+		value: T;
+		onChange: (value: T) => void;
+		placeholder?: string;
+		disabled?: boolean;
+	}
 
-  export type Size = "sm" | "md" | "lg";
+	export type Size = "sm" | "md" | "lg";
 }
 
 export function Select<T extends string>({
-  options,
-  value,
-  onChange,
-  placeholder,
-  disabled,
+	options,
+	value,
+	onChange,
+	placeholder,
+	disabled,
 }: Select.Props<T>) {
-  // Implementation
+	// Implementation
 }
 ```
 
@@ -181,9 +172,9 @@ import { Select } from "~/components/select";
 type Status = "active" | "inactive" | "pending";
 
 let options: Select.Option<Status>[] = [
-  { value: "active", label: "Active" },
-  { value: "inactive", label: "Inactive" },
-  { value: "pending", label: "Pending" },
+	{ value: "active", label: "Active" },
+	{ value: "inactive", label: "Inactive" },
+	{ value: "pending", label: "Pending" },
 ];
 
 <Select<Status> options={options} value={status} onChange={setStatus} />;

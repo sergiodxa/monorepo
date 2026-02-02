@@ -14,29 +14,29 @@ Prefer function declarations for named functions. Use arrow functions for inline
 ```typescript
 // Good: function declaration
 function calculateTotal(items: Item[]): number {
-  let total = 0;
-  for (let item of items) {
-    total += item.price * item.quantity;
-  }
-  return total;
+	let total = 0;
+	for (let item of items) {
+		total += item.price * item.quantity;
+	}
+	return total;
 }
 
 function formatUser(user: User): string {
-  return `${user.firstName} ${user.lastName}`;
+	return `${user.firstName} ${user.lastName}`;
 }
 
 async function fetchUsers(): Promise<User[]> {
-  let response = await fetch("/api/users");
-  return response.json();
+	let response = await fetch("/api/users");
+	return response.json();
 }
 
 // Avoid: arrow function for named functions
 const calculateTotal = (items: Item[]): number => {
-  let total = 0;
-  for (let item of items) {
-    total += item.price * item.quantity;
-  }
-  return total;
+	let total = 0;
+	for (let item of items) {
+		total += item.price * item.quantity;
+	}
+	return total;
 };
 ```
 
@@ -52,7 +52,7 @@ let sorted = items.toSorted((a, b) => a.price - b.price);
 
 // Avoid: function expression for simple callbacks
 let activeUsers = users.filter(function (user) {
-  return user.isActive;
+	return user.isActive;
 });
 ```
 

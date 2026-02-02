@@ -13,10 +13,10 @@ In API routes and loaders, start independent operations immediately, even if you
 
 ```typescript
 export async function loader({ request }: LoaderFunctionArgs) {
-  let session = await auth();
-  let config = await fetchConfig();
-  let data = await fetchData(session.user.id);
-  return json({ data, config });
+	let session = await auth();
+	let config = await fetchConfig();
+	let data = await fetchData(session.user.id);
+	return json({ data, config });
 }
 ```
 
@@ -24,14 +24,11 @@ export async function loader({ request }: LoaderFunctionArgs) {
 
 ```typescript
 export async function loader({ request }: LoaderFunctionArgs) {
-  let sessionPromise = auth();
-  let configPromise = fetchConfig();
-  let session = await sessionPromise;
-  let [config, data] = await Promise.all([
-    configPromise,
-    fetchData(session.user.id),
-  ]);
-  return json({ data, config });
+	let sessionPromise = auth();
+	let configPromise = fetchConfig();
+	let session = await sessionPromise;
+	let [config, data] = await Promise.all([configPromise, fetchData(session.user.id)]);
+	return json({ data, config });
 }
 ```
 

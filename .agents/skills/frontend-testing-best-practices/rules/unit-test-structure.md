@@ -24,23 +24,23 @@ import { describe, test, expect } from "vitest";
 import { formatCurrency, formatPercentage } from "./format";
 
 describe("formatCurrency", () => {
-  test("formats positive amounts with two decimals", () => {
-    expect(formatCurrency(1234.5)).toBe("$1,234.50");
-  });
+	test("formats positive amounts with two decimals", () => {
+		expect(formatCurrency(1234.5)).toBe("$1,234.50");
+	});
 
-  test("formats zero", () => {
-    expect(formatCurrency(0)).toBe("$0.00");
-  });
+	test("formats zero", () => {
+		expect(formatCurrency(0)).toBe("$0.00");
+	});
 
-  test("formats negative amounts", () => {
-    expect(formatCurrency(-100)).toBe("-$100.00");
-  });
+	test("formats negative amounts", () => {
+		expect(formatCurrency(-100)).toBe("-$100.00");
+	});
 });
 
 describe("formatPercentage", () => {
-  test("formats decimal as percentage", () => {
-    expect(formatPercentage(0.25)).toBe("25%");
-  });
+	test("formats decimal as percentage", () => {
+		expect(formatPercentage(0.25)).toBe("25%");
+	});
 });
 ```
 
@@ -53,17 +53,17 @@ import { describe, test, expect } from "vitest";
 import { slugify } from "./string";
 
 const testCases: [string, string][] = [
-  ["Hello World", "hello-world"],
-  ["Multiple   Spaces", "multiple-spaces"],
-  ["Special @#$ Characters", "special-characters"],
-  ["Already-slugified", "already-slugified"],
-  ["", ""],
+	["Hello World", "hello-world"],
+	["Multiple   Spaces", "multiple-spaces"],
+	["Special @#$ Characters", "special-characters"],
+	["Already-slugified", "already-slugified"],
+	["", ""],
 ];
 
 describe("slugify", () => {
-  test.each(testCases)('slugify("%s") returns "%s"', (input, expected) => {
-    expect(slugify(input)).toBe(expected);
-  });
+	test.each(testCases)('slugify("%s") returns "%s"', (input, expected) => {
+		expect(slugify(input)).toBe(expected);
+	});
 });
 ```
 
@@ -74,13 +74,13 @@ import { describe, test, expect } from "vitest";
 import { parseAmount } from "./parse";
 
 describe("parseAmount", () => {
-  test("throws for invalid input", () => {
-    expect(() => parseAmount("not-a-number")).toThrow("Invalid amount");
-  });
+	test("throws for invalid input", () => {
+		expect(() => parseAmount("not-a-number")).toThrow("Invalid amount");
+	});
 
-  test("throws for negative amounts", () => {
-    expect(() => parseAmount("-100")).toThrow("Amount must be positive");
-  });
+	test("throws for negative amounts", () => {
+		expect(() => parseAmount("-100")).toThrow("Amount must be positive");
+	});
 });
 ```
 
@@ -91,17 +91,17 @@ import { describe, test, expect } from "vitest";
 import { fetchUserData } from "./api";
 
 describe("fetchUserData", () => {
-  test("returns user data for valid ID", async () => {
-    let user = await fetchUserData("user-123");
-    expect(user).toEqual({
-      id: "user-123",
-      name: expect.any(String),
-    });
-  });
+	test("returns user data for valid ID", async () => {
+		let user = await fetchUserData("user-123");
+		expect(user).toEqual({
+			id: "user-123",
+			name: expect.any(String),
+		});
+	});
 
-  test("throws for non-existent user", async () => {
-    await expect(fetchUserData("invalid")).rejects.toThrow("User not found");
-  });
+	test("throws for non-existent user", async () => {
+		await expect(fetchUserData("invalid")).rejects.toThrow("User not found");
+	});
 });
 ```
 

@@ -34,9 +34,9 @@ Use breakpoints for layout clusters, not specific devices:
 
 ```tsx
 <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-  {items.map((item) => (
-    <Card key={item.id} />
-  ))}
+	{items.map((item) => (
+		<Card key={item.id} />
+	))}
 </div>
 ```
 

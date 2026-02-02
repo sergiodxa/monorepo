@@ -32,26 +32,26 @@ Check for security anti-patterns and flaws in application architecture that can'
 ```typescript
 // Bad: Security by obscurity
 if (req.headers.get("x-admin-secret") === "admin123") {
-  // Admin operations
+	// Admin operations
 }
 
 // Bad: Race condition in balance check
 const balance = await getBalance(from);
 if (balance >= amount) {
-  // Race: balance could change here!
-  await updateBalance(from, balance - amount);
+	// Race: balance could change here!
+	await updateBalance(from, balance - amount);
 }
 
 // Bad: No rate limiting
 async function generateReport(req: Request): Promise<Response> {
-  const report = await runExpensiveQuery(); // Can DoS
-  return new Response(report);
+	const report = await runExpensiveQuery(); // Can DoS
+	return new Response(report);
 }
 
 // Bad: Trust user role from client
 const { isAdmin } = await req.json();
 if (isAdmin) {
-  await db.users.delete({ where: { id } }); // User can claim admin!
+	await db.users.delete({ where: { id } }); // User can claim admin!
 }
 ```
 
@@ -60,73 +60,73 @@ if (isAdmin) {
 ```typescript
 // Good: Proper RBAC
 async function adminEndpoint(req: Request): Promise<Response> {
-  let session = await getSession(req);
-  let user = await db.users.findUnique({
-    where: { id: session.userId },
-    select: { role: true },
-  });
+	let session = await getSession(req);
+	let user = await db.users.findUnique({
+		where: { id: session.userId },
+		select: { role: true },
+	});
 
-  if (user.role !== "ADMIN") {
-    return new Response("Forbidden", { status: 403 });
-  }
+	if (user.role !== "ADMIN") {
+		return new Response("Forbidden", { status: 403 });
+	}
 
-  // Admin operations
+	// Admin operations
 }
 
 // Good: Transaction for atomic operations
 async function transferMoney(from: string, to: string, amount: number) {
-  await db.$transaction(async (tx) => {
-    let fromAccount = await tx.account.findUnique({
-      where: { id: from },
-      select: { balance: true },
-    });
+	await db.$transaction(async (tx) => {
+		let fromAccount = await tx.account.findUnique({
+			where: { id: from },
+			select: { balance: true },
+		});
 
-    if (!fromAccount || fromAccount.balance < amount) {
-      throw new Error("Insufficient funds");
-    }
+		if (!fromAccount || fromAccount.balance < amount) {
+			throw new Error("Insufficient funds");
+		}
 
-    await tx.account.update({
-      where: { id: from },
-      data: { balance: { decrement: amount } },
-    });
+		await tx.account.update({
+			where: { id: from },
+			data: { balance: { decrement: amount } },
+		});
 
-    await tx.account.update({
-      where: { id: to },
-      data: { balance: { increment: amount } },
-    });
-  });
+		await tx.account.update({
+			where: { id: to },
+			data: { balance: { increment: amount } },
+		});
+	});
 }
 
 // Good: Rate limiting on expensive operations
 async function generateReport(req: Request): Promise<Response> {
-  let session = await getSession(req);
+	let session = await getSession(req);
 
-  let { success } = await reportLimit.limit(session.userId);
-  if (!success) {
-    return new Response("Rate limit exceeded", { status: 429 });
-  }
+	let { success } = await reportLimit.limit(session.userId);
+	if (!success) {
+		return new Response("Rate limit exceeded", { status: 429 });
+	}
 
-  let report = await runExpensiveQuery();
-  return new Response(report);
+	let report = await runExpensiveQuery();
+	return new Response(report);
 }
 
 // Good: Server-side role verification
 async function deleteUser(req: Request): Promise<Response> {
-  let session = await getSession(req);
+	let session = await getSession(req);
 
-  let user = await db.users.findUnique({
-    where: { id: session.userId },
-    select: { role: true },
-  });
+	let user = await db.users.findUnique({
+		where: { id: session.userId },
+		select: { role: true },
+	});
 
-  if (user.role !== "ADMIN") {
-    return new Response("Forbidden", { status: 403 });
-  }
+	if (user.role !== "ADMIN") {
+		return new Response("Forbidden", { status: 403 });
+	}
 
-  let { targetUserId } = await req.json();
-  await db.users.delete({ where: { id: targetUserId } });
+	let { targetUserId } = await req.json();
+	await db.users.delete({ where: { id: targetUserId } });
 
-  return new Response("Deleted");
+	return new Response("Deleted");
 }
 ```
 

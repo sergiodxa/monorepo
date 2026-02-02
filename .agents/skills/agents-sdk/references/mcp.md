@@ -8,22 +8,22 @@ Agents include a multi-server MCP client for connecting to external MCP servers.
 import { Agent, callable } from "agents";
 
 export class MyAgent extends Agent<Env, State> {
-  @callable()
-  async addServer(name: string, url: string) {
-    const result = await this.addMcpServer(
-      name,
-      url,
-      "https://my-worker.workers.dev", // callback host for OAuth
-      "agents", // routing prefix
-    );
+	@callable()
+	async addServer(name: string, url: string) {
+		const result = await this.addMcpServer(
+			name,
+			url,
+			"https://my-worker.workers.dev", // callback host for OAuth
+			"agents", // routing prefix
+		);
 
-    if (result.state === "authenticating") {
-      // OAuth required - redirect user to result.authUrl
-      return { needsAuth: true, authUrl: result.authUrl };
-    }
+		if (result.state === "authenticating") {
+			// OAuth required - redirect user to result.authUrl
+			return { needsAuth: true, authUrl: result.authUrl };
+		}
 
-    return { ready: true, id: result.id };
-  }
+		return { ready: true, id: result.id };
+	}
 }
 ```
 
@@ -85,10 +85,10 @@ npm install @modelcontextprotocol/sdk zod
 
 ```jsonc
 {
-  "durable_objects": {
-    "bindings": [{ "name": "MyMCP", "class_name": "MyMCP" }],
-  },
-  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["MyMCP"] }],
+	"durable_objects": {
+		"bindings": [{ "name": "MyMCP", "class_name": "MyMCP" }],
+	},
+	"migrations": [{ "tag": "v1", "new_sqlite_classes": ["MyMCP"] }],
 }
 ```
 
@@ -102,34 +102,34 @@ import { z } from "zod";
 type State = { counter: number };
 
 export class MyMCP extends McpAgent<Env, State, {}> {
-  server = new McpServer({
-    name: "MyMCPServer",
-    version: "1.0.0",
-  });
+	server = new McpServer({
+		name: "MyMCPServer",
+		version: "1.0.0",
+	});
 
-  initialState = { counter: 0 };
+	initialState = { counter: 0 };
 
-  async init() {
-    // Register a resource
-    this.server.resource("counter", "mcp://resource/counter", (uri) => ({
-      contents: [{ text: String(this.state.counter), uri: uri.href }],
-    }));
+	async init() {
+		// Register a resource
+		this.server.resource("counter", "mcp://resource/counter", (uri) => ({
+			contents: [{ text: String(this.state.counter), uri: uri.href }],
+		}));
 
-    // Register a tool
-    this.server.registerTool(
-      "increment",
-      {
-        description: "Increment the counter",
-        inputSchema: { amount: z.number().default(1) },
-      },
-      async ({ amount }) => {
-        this.setState({ counter: this.state.counter + amount });
-        return {
-          content: [{ text: `Counter: ${this.state.counter}`, type: "text" }],
-        };
-      },
-    );
-  }
+		// Register a tool
+		this.server.registerTool(
+			"increment",
+			{
+				description: "Increment the counter",
+				inputSchema: { amount: z.number().default(1) },
+			},
+			async ({ amount }) => {
+				this.setState({ counter: this.state.counter + amount });
+				return {
+					content: [{ text: `Counter: ${this.state.counter}`, type: "text" }],
+				};
+			},
+		);
+	}
 }
 ```
 
@@ -137,24 +137,20 @@ export class MyMCP extends McpAgent<Env, State, {}> {
 
 ```typescript
 export default {
-  fetch(request: Request, env: Env, ctx: ExecutionContext) {
-    const url = new URL(request.url);
+	fetch(request: Request, env: Env, ctx: ExecutionContext) {
+		const url = new URL(request.url);
 
-    // SSE transport (legacy)
-    if (url.pathname.startsWith("/sse")) {
-      return MyMCP.serveSSE("/sse", { binding: "MyMCP" }).fetch(
-        request,
-        env,
-        ctx,
-      );
-    }
+		// SSE transport (legacy)
+		if (url.pathname.startsWith("/sse")) {
+			return MyMCP.serveSSE("/sse", { binding: "MyMCP" }).fetch(request, env, ctx);
+		}
 
-    // Streamable HTTP transport (recommended)
-    if (url.pathname.startsWith("/mcp")) {
-      return MyMCP.serve("/mcp", { binding: "MyMCP" }).fetch(request, env, ctx);
-    }
+		// Streamable HTTP transport (recommended)
+		if (url.pathname.startsWith("/mcp")) {
+			return MyMCP.serve("/mcp", { binding: "MyMCP" }).fetch(request, env, ctx);
+		}
 
-    return new Response("Not found", { status: 404 });
-  },
+		return new Response("Not found", { status: 404 });
+	},
 };
 ```

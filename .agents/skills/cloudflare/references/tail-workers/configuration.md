@@ -8,15 +8,15 @@ Create a Worker with a `tail()` handler:
 
 ```typescript
 export default {
-  async tail(events, env, ctx) {
-    // Process events from producer Worker
-    ctx.waitUntil(
-      fetch(env.LOG_ENDPOINT, {
-        method: "POST",
-        body: JSON.stringify(events),
-      }),
-    );
-  },
+	async tail(events, env, ctx) {
+		// Process events from producer Worker
+		ctx.waitUntil(
+			fetch(env.LOG_ENDPOINT, {
+				method: "POST",
+				body: JSON.stringify(events),
+			}),
+		);
+	},
 };
 ```
 
@@ -26,12 +26,12 @@ In producer's `wrangler.jsonc`:
 
 ```jsonc
 {
-  "name": "my-producer-worker",
-  "tail_consumers": [
-    {
-      "service": "my-tail-worker",
-    },
-  ],
+	"name": "my-producer-worker",
+	"tail_consumers": [
+		{
+			"service": "my-tail-worker",
+		},
+	],
 }
 ```
 
@@ -53,12 +53,12 @@ wrangler deploy
 
 ```jsonc
 {
-  "name": "producer-worker",
-  "tail_consumers": [
-    {
-      "service": "logging-tail-worker",
-    },
-  ],
+	"name": "producer-worker",
+	"tail_consumers": [
+		{
+			"service": "logging-tail-worker",
+		},
+	],
 }
 ```
 
@@ -66,15 +66,15 @@ wrangler deploy
 
 ```jsonc
 {
-  "name": "producer-worker",
-  "tail_consumers": [
-    {
-      "service": "logging-tail-worker",
-    },
-    {
-      "service": "metrics-tail-worker",
-    },
-  ],
+	"name": "producer-worker",
+	"tail_consumers": [
+		{
+			"service": "logging-tail-worker",
+		},
+		{
+			"service": "metrics-tail-worker",
+		},
+	],
 }
 ```
 
@@ -84,7 +84,7 @@ wrangler deploy
 
 ```jsonc
 {
-  "tail_consumers": [],
+	"tail_consumers": [],
 }
 ```
 
@@ -96,16 +96,16 @@ Tail Workers use same binding syntax as regular Workers:
 
 ```jsonc
 {
-  "name": "my-tail-worker",
-  "vars": {
-    "LOG_ENDPOINT": "https://logs.example.com/ingest",
-  },
-  "kv_namespaces": [
-    {
-      "binding": "LOGS_KV",
-      "id": "abc123...",
-    },
-  ],
+	"name": "my-tail-worker",
+	"vars": {
+		"LOG_ENDPOINT": "https://logs.example.com/ingest",
+	},
+	"kv_namespaces": [
+		{
+			"binding": "LOGS_KV",
+			"id": "abc123...",
+		},
+	],
 }
 ```
 
@@ -161,12 +161,12 @@ For dynamic dispatch Workers, both dispatch and user Worker events sent to tail 
 
 ```jsonc
 {
-  "name": "dispatch-worker",
-  "tail_consumers": [
-    {
-      "service": "platform-tail-worker",
-    },
-  ],
+	"name": "dispatch-worker",
+	"tail_consumers": [
+		{
+			"service": "platform-tail-worker",
+		},
+	],
 }
 ```
 

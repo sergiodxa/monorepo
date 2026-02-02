@@ -22,14 +22,14 @@ When a form submission fails validation, the page reloads (in no-JS) or re-rende
 ```tsx
 // Action only returns errors - fields are lost on no-JS
 export async function action({ request }: Route.ActionArgs) {
-  let formData = await request.formData();
-  let result = schema.safeParse(Object.fromEntries(formData));
+	let formData = await request.formData();
+	let result = schema.safeParse(Object.fromEntries(formData));
 
-  if (!result.success) {
-    return data({ errors: result.error.flatten() }, { status: 400 });
-  }
+	if (!result.success) {
+		return data({ errors: result.error.flatten() }, { status: 400 });
+	}
 
-  // ...
+	// ...
 }
 ```
 
@@ -39,27 +39,27 @@ export async function action({ request }: Route.ActionArgs) {
 import { data, redirect } from "react-router";
 
 export async function action({ request }: Route.ActionArgs) {
-  let formData = await request.formData();
+	let formData = await request.formData();
 
-  let fields = {
-    email: formData.get("email")?.toString() ?? "",
-    name: formData.get("name")?.toString() ?? "",
-  };
+	let fields = {
+		email: formData.get("email")?.toString() ?? "",
+		name: formData.get("name")?.toString() ?? "",
+	};
 
-  let result = schema.safeParse(fields);
+	let result = schema.safeParse(fields);
 
-  if (!result.success) {
-    return data(
-      {
-        errors: result.error.flatten().fieldErrors,
-        fields, // Return the submitted values
-      },
-      { status: 400 },
-    );
-  }
+	if (!result.success) {
+		return data(
+			{
+				errors: result.error.flatten().fieldErrors,
+				fields, // Return the submitted values
+			},
+			{ status: 400 },
+		);
+	}
 
-  await createUser(result.data);
-  throw redirect("/success");
+	await createUser(result.data);
+	throw redirect("/success");
 }
 ```
 
@@ -69,34 +69,29 @@ export async function action({ request }: Route.ActionArgs) {
 import { Form, useActionData } from "react-router";
 
 export default function SignupForm() {
-  let actionData = useActionData<typeof action>();
+	let actionData = useActionData<typeof action>();
 
-  return (
-    <Form method="post">
-      <div>
-        <label htmlFor="name">Name</label>
-        <input id="name" name="name" defaultValue={actionData?.fields?.name} />
-        {actionData?.errors?.name && (
-          <p className="text-failure-600">{actionData.errors.name[0]}</p>
-        )}
-      </div>
+	return (
+		<Form method="post">
+			<div>
+				<label htmlFor="name">Name</label>
+				<input id="name" name="name" defaultValue={actionData?.fields?.name} />
+				{actionData?.errors?.name && (
+					<p className="text-failure-600">{actionData.errors.name[0]}</p>
+				)}
+			</div>
 
-      <div>
-        <label htmlFor="email">Email</label>
-        <input
-          id="email"
-          name="email"
-          type="email"
-          defaultValue={actionData?.fields?.email}
-        />
-        {actionData?.errors?.email && (
-          <p className="text-failure-600">{actionData.errors.email[0]}</p>
-        )}
-      </div>
+			<div>
+				<label htmlFor="email">Email</label>
+				<input id="email" name="email" type="email" defaultValue={actionData?.fields?.email} />
+				{actionData?.errors?.email && (
+					<p className="text-failure-600">{actionData.errors.email[0]}</p>
+				)}
+			</div>
 
-      <button type="submit">Sign Up</button>
-    </Form>
-  );
+			<button type="submit">Sign Up</button>
+		</Form>
+	);
 }
 ```
 
@@ -106,15 +101,15 @@ Same pattern works with fetcher forms:
 
 ```tsx
 function InlineForm() {
-  let fetcher = useFetcher<typeof action>();
+	let fetcher = useFetcher<typeof action>();
 
-  return (
-    <fetcher.Form method="post">
-      <input name="email" defaultValue={fetcher.data?.fields?.email} />
-      {fetcher.data?.errors?.email && <p>{fetcher.data.errors.email[0]}</p>}
-      <button type="submit">Submit</button>
-    </fetcher.Form>
-  );
+	return (
+		<fetcher.Form method="post">
+			<input name="email" defaultValue={fetcher.data?.fields?.email} />
+			{fetcher.data?.errors?.email && <p>{fetcher.data.errors.email[0]}</p>}
+			<button type="submit">Submit</button>
+		</fetcher.Form>
+	);
 }
 ```
 
@@ -127,22 +122,19 @@ This pattern complements `form-reset-on-success.md`:
 
 ```tsx
 export async function action({ request }: Route.ActionArgs) {
-  let formData = await request.formData();
-  let fields = { title: formData.get("title")?.toString() ?? "" };
+	let formData = await request.formData();
+	let fields = { title: formData.get("title")?.toString() ?? "" };
 
-  let result = schema.safeParse(fields);
+	let result = schema.safeParse(fields);
 
-  if (!result.success) {
-    // Error: return fields for persistence
-    return data(
-      { ok: false, errors: result.error.flatten().fieldErrors, fields },
-      { status: 400 },
-    );
-  }
+	if (!result.success) {
+		// Error: return fields for persistence
+		return data({ ok: false, errors: result.error.flatten().fieldErrors, fields }, { status: 400 });
+	}
 
-  await createItem(result.data);
-  // Success: return ok for reset trigger (no fields needed)
-  return data({ ok: true });
+	await createItem(result.data);
+	// Success: return ok for reset trigger (no fields needed)
+	return data({ ok: true });
 }
 ```
 
@@ -152,14 +144,14 @@ Don't return sensitive fields like passwords:
 
 ```tsx
 let fields = {
-  email: formData.get("email")?.toString() ?? "",
-  // Don't include password in returned fields
+	email: formData.get("email")?.toString() ?? "",
+	// Don't include password in returned fields
 };
 
 // Validate including password, but don't return it
 let result = schema.safeParse({
-  ...fields,
-  password: formData.get("password")?.toString() ?? "",
+	...fields,
+	password: formData.get("password")?.toString() ?? "",
 });
 ```
 

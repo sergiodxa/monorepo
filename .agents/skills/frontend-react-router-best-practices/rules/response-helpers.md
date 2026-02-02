@@ -11,18 +11,11 @@ Use `remix-utils/responses` to return typed resource responses.
 ## Pattern
 
 ```ts
-import {
-  html,
-  javascript,
-  stylesheet,
-  xml,
-  txt,
-  notModified,
-} from "remix-utils/responses";
+import { html, javascript, stylesheet, xml, txt, notModified } from "remix-utils/responses";
 
 export async function loader() {
-  if (shouldUseCache) return notModified();
-  return html("<h1>Hello</h1>");
+	if (shouldUseCache) return notModified();
+	return html("<h1>Hello</h1>");
 }
 ```
 

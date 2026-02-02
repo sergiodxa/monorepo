@@ -22,12 +22,12 @@ When using uncontrolled inputs (no `value` prop), the input values persist after
 ```tsx
 // Form stays filled after submission - bad UX
 export default function Component() {
-  return (
-    <Form method="post">
-      <input name="title" />
-      <button type="submit">Create</button>
-    </Form>
-  );
+	return (
+		<Form method="post">
+			<input name="title" />
+			<button type="submit">Create</button>
+		</Form>
+	);
 }
 ```
 
@@ -40,25 +40,25 @@ import { Form, useActionData, useNavigation } from "react-router";
 import { useEffect, useRef } from "react";
 
 export default function Component() {
-  let formRef = useRef<HTMLFormElement>(null);
-  let navigation = useNavigation();
-  let actionData = useActionData<typeof action>();
+	let formRef = useRef<HTMLFormElement>(null);
+	let navigation = useNavigation();
+	let actionData = useActionData<typeof action>();
 
-  useEffect(
-    function resetFormOnSuccess() {
-      if (navigation.state === "idle" && actionData?.ok) {
-        formRef.current?.reset();
-      }
-    },
-    [navigation.state, actionData],
-  );
+	useEffect(
+		function resetFormOnSuccess() {
+			if (navigation.state === "idle" && actionData?.ok) {
+				formRef.current?.reset();
+			}
+		},
+		[navigation.state, actionData],
+	);
 
-  return (
-    <Form method="post" ref={formRef}>
-      <input name="title" />
-      <button type="submit">Create</button>
-    </Form>
-  );
+	return (
+		<Form method="post" ref={formRef}>
+			<input name="title" />
+			<button type="submit">Create</button>
+		</Form>
+	);
 }
 ```
 
@@ -69,24 +69,24 @@ import { useFetcher } from "react-router";
 import { useEffect, useRef } from "react";
 
 function CreateItemForm() {
-  let formRef = useRef<HTMLFormElement>(null);
-  let fetcher = useFetcher<typeof action>();
+	let formRef = useRef<HTMLFormElement>(null);
+	let fetcher = useFetcher<typeof action>();
 
-  useEffect(
-    function resetFormOnSuccess() {
-      if (fetcher.state === "idle" && fetcher.data?.ok) {
-        formRef.current?.reset();
-      }
-    },
-    [fetcher.state, fetcher.data],
-  );
+	useEffect(
+		function resetFormOnSuccess() {
+			if (fetcher.state === "idle" && fetcher.data?.ok) {
+				formRef.current?.reset();
+			}
+		},
+		[fetcher.state, fetcher.data],
+	);
 
-  return (
-    <fetcher.Form method="post" ref={formRef}>
-      <input name="title" />
-      <button type="submit">Create</button>
-    </fetcher.Form>
-  );
+	return (
+		<fetcher.Form method="post" ref={formRef}>
+			<input name="title" />
+			<button type="submit">Create</button>
+		</fetcher.Form>
+	);
 }
 ```
 
@@ -96,14 +96,14 @@ Return a success indicator from your action:
 
 ```tsx
 export async function action({ request }: Route.ActionArgs) {
-  let formData = await request.formData();
+	let formData = await request.formData();
 
-  try {
-    await createItem(formData);
-    return data({ ok: true });
-  } catch (error) {
-    return data({ ok: false, error: "Failed to create" }, { status: 400 });
-  }
+	try {
+		await createItem(formData);
+		return data({ ok: true });
+	} catch (error) {
+		return data({ ok: false, error: "Failed to create" }, { status: 400 });
+	}
 }
 ```
 
@@ -114,7 +114,7 @@ return data({ status: "success" as const });
 
 // In component
 if (fetcher.state === "idle" && fetcher.data?.status === "success") {
-  formRef.current?.reset();
+	formRef.current?.reset();
 }
 ```
 
@@ -124,21 +124,21 @@ For simpler cases, use a key to force React to remount the form:
 
 ```tsx
 function CreateItemForm() {
-  let [key, setKey] = useState(0);
-  let fetcher = useFetcher<typeof action>();
+	let [key, setKey] = useState(0);
+	let fetcher = useFetcher<typeof action>();
 
-  useEffect(() => {
-    if (fetcher.state === "idle" && fetcher.data?.ok) {
-      setKey((k) => k + 1); // Remounts entire form
-    }
-  }, [fetcher.state, fetcher.data]);
+	useEffect(() => {
+		if (fetcher.state === "idle" && fetcher.data?.ok) {
+			setKey((k) => k + 1); // Remounts entire form
+		}
+	}, [fetcher.state, fetcher.data]);
 
-  return (
-    <fetcher.Form method="post" key={key}>
-      <input name="title" />
-      <button type="submit">Create</button>
-    </fetcher.Form>
-  );
+	return (
+		<fetcher.Form method="post" key={key}>
+			<input name="title" />
+			<button type="submit">Create</button>
+		</fetcher.Form>
+	);
 }
 ```
 

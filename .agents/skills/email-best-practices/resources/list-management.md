@@ -20,31 +20,26 @@ A suppression list prevents sending to addresses that should never receive email
 ```typescript
 // Suppression list schema
 interface SuppressionEntry {
-  email: string;
-  reason:
-    | "hard_bounce"
-    | "complaint"
-    | "unsubscribe"
-    | "soft_bounce"
-    | "manual";
-  created_at: Date;
-  source_email_id?: string; // Which email triggered this
+	email: string;
+	reason: "hard_bounce" | "complaint" | "unsubscribe" | "soft_bounce" | "manual";
+	created_at: Date;
+	source_email_id?: string; // Which email triggered this
 }
 
 // Check before every send
 async function canSendTo(email: string): Promise<boolean> {
-  const suppressed = await db.suppressions.findOne({ email });
-  return !suppressed;
+	const suppressed = await db.suppressions.findOne({ email });
+	return !suppressed;
 }
 
 // Add to suppression list
 async function suppressEmail(email: string, reason: string, sourceId?: string) {
-  await db.suppressions.upsert({
-    email: email.toLowerCase(),
-    reason,
-    created_at: new Date(),
-    source_email_id: sourceId,
-  });
+	await db.suppressions.upsert({
+		email: email.toLowerCase(),
+		reason,
+		created_at: new Date(),
+		source_email_id: sourceId,
+	});
 }
 ```
 
@@ -54,12 +49,12 @@ async function suppressEmail(email: string, reason: string, sourceId?: string) {
 
 ```typescript
 async function sendEmail(to: string, emailData: EmailData) {
-  if (!(await canSendTo(to))) {
-    console.log(`Skipping suppressed email: ${to}`);
-    return { skipped: true, reason: "suppressed" };
-  }
+	if (!(await canSendTo(to))) {
+		console.log(`Skipping suppressed email: ${to}`);
+		return { skipped: true, reason: "suppressed" };
+	}
 
-  return await resend.emails.send({ to, ...emailData });
+	return await resend.emails.send({ to, ...emailData });
 }
 ```
 
@@ -90,16 +85,16 @@ Before removing inactive subscribers:
 
 ```typescript
 async function runReengagement() {
-  const inactive = await getInactiveSubscribers(90); // 90 days
+	const inactive = await getInactiveSubscribers(90); // 90 days
 
-  for (const subscriber of inactive) {
-    if (!subscriber.reengagement_sent) {
-      await sendReengagementEmail(subscriber);
-      await markReengagementSent(subscriber.email);
-    } else if (daysSince(subscriber.reengagement_sent) > 30) {
-      await removeFromMarketingLists(subscriber.email);
-    }
-  }
+	for (const subscriber of inactive) {
+		if (!subscriber.reengagement_sent) {
+			await sendReengagementEmail(subscriber);
+			await markReengagementSent(subscriber.email);
+		} else if (daysSince(subscriber.reengagement_sent) > 30) {
+			await removeFromMarketingLists(subscriber.email);
+		}
+	}
 }
 ```
 
@@ -121,19 +116,19 @@ async function runReengagement() {
 ```typescript
 // Daily cleanup job
 async function cleanupOldData() {
-  const now = new Date();
+	const now = new Date();
 
-  // Delete old email logs (keep 90 days)
-  await db.emailLogs.deleteMany({
-    created_at: { $lt: subDays(now, 90) },
-  });
+	// Delete old email logs (keep 90 days)
+	await db.emailLogs.deleteMany({
+		created_at: { $lt: subDays(now, 90) },
+	});
 
-  // Delete old email content (keep 30 days)
-  await db.emailContent.deleteMany({
-    created_at: { $lt: subDays(now, 30) },
-  });
+	// Delete old email content (keep 30 days)
+	await db.emailContent.deleteMany({
+		created_at: { $lt: subDays(now, 30) },
+	});
 
-  // Never delete: suppressions, consent records
+	// Never delete: suppressions, consent records
 }
 ```
 

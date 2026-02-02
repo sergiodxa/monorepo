@@ -39,14 +39,8 @@
 
 ```typescript
 const session = env.DB.withSession();
-await session
-  .prepare("INSERT INTO users (name) VALUES (?)")
-  .bind("Alice")
-  .run();
-const user = await session
-  .prepare("SELECT * FROM users WHERE name = ?")
-  .bind("Alice")
-  .first(); // Guaranteed to see Alice
+await session.prepare("INSERT INTO users (name) VALUES (?)").bind("Alice").run();
+const user = await session.prepare("SELECT * FROM users WHERE name = ?").bind("Alice").first(); // Guaranteed to see Alice
 ```
 
 **When to use sessions:** Write → Read patterns, transactions requiring consistency
@@ -72,26 +66,25 @@ Then import: `import type { Env } from './.wrangler/types/runtime';`
 ```typescript
 // ❌ Old fetch pattern
 export class MyDO {
-  async fetch(request: Request) {
-    const { method } = await request.json();
-    if (method === "increment")
-      return new Response(String(await this.increment()));
-  }
-  async increment() {
-    return ++this.value;
-  }
+	async fetch(request: Request) {
+		const { method } = await request.json();
+		if (method === "increment") return new Response(String(await this.increment()));
+	}
+	async increment() {
+		return ++this.value;
+	}
 }
 const stub = env.DO.get(id);
 const res = await stub.fetch("http://x", {
-  method: "POST",
-  body: JSON.stringify({ method: "increment" }),
+	method: "POST",
+	body: JSON.stringify({ method: "increment" }),
 });
 
 // ✅ RPC pattern (type-safe, no serialization overhead)
 export class MyDO {
-  async increment() {
-    return ++this.value;
-  }
+	async increment() {
+		return ++this.value;
+	}
 }
 const stub = env.DO.get(id);
 const count = await stub.increment(); // Direct method call
@@ -104,12 +97,12 @@ const count = await stub.increment(); // Direct method call
 
 ```typescript
 export class WebSocketDO {
-  async webSocketMessage(ws: WebSocket, message: string) {
-    // Handle message
-  }
-  async webSocketClose(ws: WebSocket, code: number) {
-    // Cleanup
-  }
+	async webSocketMessage(ws: WebSocket, message: string) {
+		// Handle message
+	}
+	async webSocketClose(ws: WebSocket, code: number) {
+		// Cleanup
+	}
 }
 ```
 
@@ -125,7 +118,7 @@ Hibernation automatically suspends inactive connections, wakes on events
 import { Hono } from "hono";
 const app = new Hono();
 app.use("*", async (c, next) => {
-  /* middleware */ await next();
+	/* middleware */ await next();
 });
 ```
 

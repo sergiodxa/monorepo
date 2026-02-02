@@ -20,18 +20,17 @@ Add `Server-Timing` headers to measure loader/action performance.
 // app/middleware/server-timing.server.ts
 import { createServerTimingMiddleware } from "remix-utils/middleware/server-timing";
 
-export const [serverTimingMiddleware, getTimingCollector] =
-  createServerTimingMiddleware();
+export const [serverTimingMiddleware, getTimingCollector] = createServerTimingMiddleware();
 ```
 
 ```ts
 export const middleware: Route.MiddlewareFunction[] = [serverTimingMiddleware];
 
 export async function loader() {
-  let timing = getTimingCollector();
-  return timing.measure("load-data", "Load data", async () => {
-    return data(await getData());
-  });
+	let timing = getTimingCollector();
+	return timing.measure("load-data", "Load data", async () => {
+		return data(await getData());
+	});
 }
 ```
 

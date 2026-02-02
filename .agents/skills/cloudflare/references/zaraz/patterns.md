@@ -46,11 +46,11 @@ zaraz.track("experiment_conversion", { experiment_id, variant, value });
 
 ```typescript
 export default {
-  async fetch(request, env) {
-    const body = await request.json();
-    body.system.userRegion = request.cf?.region;
-    return Response.json(body);
-  },
+	async fetch(request, env) {
+		const body = await request.json();
+		body.system.userRegion = request.cf?.region;
+		return Response.json(body);
+	},
 };
 ```
 

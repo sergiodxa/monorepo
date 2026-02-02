@@ -38,14 +38,12 @@ let config = rawConfig as Config;
 
 ```typescript
 function isUser(data: unknown): data is User {
-  return (
-    typeof data === "object" && data !== null && "id" in data && "name" in data
-  );
+	return typeof data === "object" && data !== null && "id" in data && "name" in data;
 }
 
 // Good: validated at runtime
 if (isUser(response.data)) {
-  let user = response.data; // Typed as User
+	let user = response.data; // Typed as User
 }
 ```
 
@@ -55,9 +53,9 @@ if (isUser(response.data)) {
 import { z } from "zod";
 
 const UserSchema = z.object({
-  id: z.string(),
-  name: z.string(),
-  email: z.string().email(),
+	id: z.string(),
+	name: z.string(),
+	email: z.string().email(),
 });
 
 // Good: validated and typed
@@ -73,7 +71,7 @@ let button = document.querySelector(".btn") as HTMLButtonElement;
 // Good: check for null and instanceof
 let element = document.querySelector(".btn");
 if (element instanceof HTMLButtonElement) {
-  element.disabled = true;
+	element.disabled = true;
 }
 ```
 
@@ -82,13 +80,13 @@ if (element instanceof HTMLButtonElement) {
 ```typescript
 // Bad
 function getData<T>(key: string): T {
-  return localStorage.getItem(key) as T;
+	return localStorage.getItem(key) as T;
 }
 
 // Good: return unknown, let caller validate
 function getData(key: string): unknown {
-  let value = localStorage.getItem(key);
-  return value ? JSON.parse(value) : null;
+	let value = localStorage.getItem(key);
+	return value ? JSON.parse(value) : null;
 }
 
 // Caller validates
@@ -104,7 +102,7 @@ let result = processData(input) as ExpectedOutput;
 
 // Good: fix the function's return type
 function processData(input: Input): ExpectedOutput {
-  // ...
+	// ...
 }
 ```
 
@@ -115,8 +113,8 @@ function processData(input: Input): ExpectedOutput {
 ```typescript
 // Acceptable: branding IDs in deserializers
 const Schema = z.object({
-  id: z.string().transform((id) => id as UserId),
-  name: z.string(),
+	id: z.string().transform((id) => id as UserId),
+	name: z.string(),
 });
 ```
 

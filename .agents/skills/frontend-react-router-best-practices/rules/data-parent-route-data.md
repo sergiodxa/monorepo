@@ -24,12 +24,12 @@ import { useRouteLoaderData } from "react-router";
 import type { loader as parentLoader } from "~/routes/_layout/route";
 
 export default function ChildRoute() {
-  // Route ID matches the file path without extension
-  let parentData = useRouteLoaderData<typeof parentLoader>("routes/_layout");
+	// Route ID matches the file path without extension
+	let parentData = useRouteLoaderData<typeof parentLoader>("routes/_layout");
 
-  if (!parentData) return null;
+	if (!parentData) return null;
 
-  return <div>Welcome, {parentData.user.name}</div>;
+	return <div>Welcome, {parentData.user.name}</div>;
 }
 ```
 
@@ -41,13 +41,13 @@ Access all matched routes and their data:
 import { useMatches } from "react-router";
 
 export default function Component() {
-  let matches = useMatches();
+	let matches = useMatches();
 
-  // Find a specific match by ID or pathname
-  let layoutMatch = matches.find((m) => m.id === "routes/_layout");
-  let layoutData = layoutMatch?.data as LayoutLoaderData | undefined;
+	// Find a specific match by ID or pathname
+	let layoutMatch = matches.find((m) => m.id === "routes/_layout");
+	let layoutData = layoutMatch?.data as LayoutLoaderData | undefined;
 
-  return <div>{layoutData?.user.name}</div>;
+	return <div>{layoutData?.user.name}</div>;
 }
 ```
 
@@ -65,17 +65,17 @@ export default function Component() {
 ```tsx
 // Bad: Outlet context
 export default function Parent() {
-  let data = useLoaderData<typeof loader>();
-  return <Outlet context={data} />;
+	let data = useLoaderData<typeof loader>();
+	return <Outlet context={data} />;
 }
 
 function Child() {
-  let data = useOutletContext<ParentData>();
+	let data = useOutletContext<ParentData>();
 }
 
 // Good: useRouteLoaderData
 function Child() {
-  let data = useRouteLoaderData<typeof parentLoader>("routes/parent");
+	let data = useRouteLoaderData<typeof parentLoader>("routes/parent");
 }
 ```
 
@@ -89,6 +89,5 @@ const rootData = useRouteLoaderData<typeof rootLoader>("root");
 const layoutData = useRouteLoaderData<typeof layoutLoader>("routes/_layout");
 
 // Access settings layout data
-const settingsData =
-  useRouteLoaderData<typeof settingsLoader>("routes/_.settings");
+const settingsData = useRouteLoaderData<typeof settingsLoader>("routes/_.settings");
 ```

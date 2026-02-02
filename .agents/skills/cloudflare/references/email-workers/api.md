@@ -8,15 +8,15 @@ The main interface passed to email handlers.
 
 ```typescript
 interface ForwardableEmailMessage {
-  readonly from: string; // Envelope MAIL FROM (SMTP sender)
-  readonly to: string; // Envelope RCPT TO (SMTP recipient)
-  readonly headers: Headers; // Web-standard Headers object
-  readonly raw: ReadableStream; // Raw MIME message (single-use stream)
-  readonly rawSize: number; // Total message size in bytes
+	readonly from: string; // Envelope MAIL FROM (SMTP sender)
+	readonly to: string; // Envelope RCPT TO (SMTP recipient)
+	readonly headers: Headers; // Web-standard Headers object
+	readonly raw: ReadableStream; // Raw MIME message (single-use stream)
+	readonly rawSize: number; // Total message size in bytes
 
-  setReject(reason: string): void;
-  forward(rcptTo: string, headers?: Headers): Promise<void>;
-  reply(message: EmailMessage): Promise<void>;
+	setReject(reason: string): void;
+	forward(rcptTo: string, headers?: Headers): Promise<void>;
+	reply(message: EmailMessage): Promise<void>;
 }
 ```
 
@@ -38,7 +38,7 @@ Reject with permanent SMTP 5xx error. Email not delivered, sender may receive bo
 
 ```typescript
 if (blockList.includes(message.from)) {
-  message.setReject("Sender blocked");
+	message.setReject("Sender blocked");
 }
 ```
 
@@ -70,13 +70,11 @@ msg.setSubject(`Re: ${message.headers.get("Subject")}`);
 msg.setHeader("In-Reply-To", message.headers.get("Message-ID"));
 msg.setHeader("References", message.headers.get("References") || "");
 msg.addMessage({
-  contentType: "text/plain",
-  data: "Thank you for your message.",
+	contentType: "text/plain",
+	data: "Thank you for your message.",
 });
 
-await message.reply(
-  new EmailMessage("support@example.com", message.from, msg.asRaw()),
-);
+await message.reply(new EmailMessage("support@example.com", message.from, msg.asRaw()));
 ```
 
 **Requirements**:
@@ -101,7 +99,7 @@ Used for sending emails (replies or via SendEmail binding). Domain must be verif
 
 ```typescript
 interface SendEmail {
-  send(message: EmailMessage): Promise<void>;
+	send(message: EmailMessage): Promise<void>;
 }
 
 // Usage
@@ -112,15 +110,15 @@ await env.EMAIL.send(new EmailMessage(from, to, mimeContent));
 
 ```jsonc
 {
-  "send_email": [
-    { "name": "EMAIL" }, // Type 1: Any verified address
-    { "name": "LOGS", "destination_address": "logs@example.com" }, // Type 2: Single dest
-    {
-      "name": "TEAM",
-      "allowed_destination_addresses": ["a@ex.com", "b@ex.com"],
-    }, // Type 3: Dest allowlist
-    { "name": "NOREPLY", "allowed_sender_addresses": ["noreply@ex.com"] }, // Type 4: Sender allowlist
-  ],
+	"send_email": [
+		{ "name": "EMAIL" }, // Type 1: Any verified address
+		{ "name": "LOGS", "destination_address": "logs@example.com" }, // Type 2: Single dest
+		{
+			"name": "TEAM",
+			"allowed_destination_addresses": ["a@ex.com", "b@ex.com"],
+		}, // Type 3: Dest allowlist
+		{ "name": "NOREPLY", "allowed_sender_addresses": ["noreply@ex.com"] }, // Type 4: Sender allowlist
+	],
 }
 ```
 
@@ -130,29 +128,26 @@ postal-mime v2.7.3 parses incoming emails into structured data.
 
 ```typescript
 interface ParsedEmail {
-  headers: Array<{ key: string; value: string }>;
-  from: { name: string; address: string } | null;
-  to:
-    | Array<{ name: string; address: string }>
-    | { name: string; address: string }
-    | null;
-  cc: Array<{ name: string; address: string }> | null;
-  bcc: Array<{ name: string; address: string }> | null;
-  subject: string;
-  messageId: string | null;
-  inReplyTo: string | null;
-  references: string | null;
-  date: string | null;
-  html: string | null;
-  text: string | null;
-  attachments: Array<{
-    filename: string;
-    mimeType: string;
-    disposition: string | null;
-    related: boolean;
-    contentId: string | null;
-    content: Uint8Array;
-  }>;
+	headers: Array<{ key: string; value: string }>;
+	from: { name: string; address: string } | null;
+	to: Array<{ name: string; address: string }> | { name: string; address: string } | null;
+	cc: Array<{ name: string; address: string }> | null;
+	bcc: Array<{ name: string; address: string }> | null;
+	subject: string;
+	messageId: string | null;
+	inReplyTo: string | null;
+	references: string | null;
+	date: string | null;
+	html: string | null;
+	text: string | null;
+	attachments: Array<{
+		filename: string;
+		mimeType: string;
+		disposition: string | null;
+		related: boolean;
+		contentId: string | null;
+		content: Uint8Array;
+	}>;
 }
 ```
 
@@ -196,20 +191,20 @@ msg.setHeader("Message-ID", `<${crypto.randomUUID()}@example.com>`);
 
 // Content
 msg.addMessage({
-  contentType: "text/plain",
-  data: "Plain text content",
+	contentType: "text/plain",
+	data: "Plain text content",
 });
 
 msg.addMessage({
-  contentType: "text/html",
-  data: "<p>HTML content</p>",
+	contentType: "text/html",
+	data: "<p>HTML content</p>",
 });
 
 // Attachments
 msg.addAttachment({
-  filename: "report.pdf",
-  contentType: "application/pdf",
-  data: pdfBuffer, // Uint8Array or base64 string
+	filename: "report.pdf",
+	contentType: "application/pdf",
+	data: pdfBuffer, // Uint8Array or base64 string
 });
 
 // Generate raw MIME
@@ -222,18 +217,14 @@ const raw = msg.asRaw(); // Returns string
 import { ForwardableEmailMessage, EmailMessage } from "cloudflare:email";
 
 interface Env {
-  EMAIL: SendEmail;
-  EMAIL_ARCHIVE: KVNamespace;
-  ALLOWED_SENDERS: KVNamespace;
+	EMAIL: SendEmail;
+	EMAIL_ARCHIVE: KVNamespace;
+	ALLOWED_SENDERS: KVNamespace;
 }
 
 export default {
-  async email(
-    message: ForwardableEmailMessage,
-    env: Env,
-    ctx: ExecutionContext,
-  ): Promise<void> {
-    // Fully typed
-  },
+	async email(message: ForwardableEmailMessage, env: Env, ctx: ExecutionContext): Promise<void> {
+		// Fully typed
+	},
 };
 ```

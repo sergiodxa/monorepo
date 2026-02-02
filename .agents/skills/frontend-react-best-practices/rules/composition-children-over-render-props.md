@@ -19,34 +19,34 @@ Use `children` for composition instead of `renderX` props. Children are more rea
 
 ```tsx
 function Composer({
-  renderHeader,
-  renderFooter,
-  renderActions,
+	renderHeader,
+	renderFooter,
+	renderActions,
 }: {
-  renderHeader?: () => React.ReactNode;
-  renderFooter?: () => React.ReactNode;
-  renderActions?: () => React.ReactNode;
+	renderHeader?: () => React.ReactNode;
+	renderFooter?: () => React.ReactNode;
+	renderActions?: () => React.ReactNode;
 }) {
-  return (
-    <form>
-      {renderHeader?.()}
-      <Input />
-      {renderFooter ? renderFooter() : <DefaultFooter />}
-      {renderActions?.()}
-    </form>
-  );
+	return (
+		<form>
+			{renderHeader?.()}
+			<Input />
+			{renderFooter ? renderFooter() : <DefaultFooter />}
+			{renderActions?.()}
+		</form>
+	);
 }
 
 // Usage is awkward
 <Composer
-  renderHeader={() => <CustomHeader />}
-  renderFooter={() => (
-    <>
-      <Formatting />
-      <Emojis />
-    </>
-  )}
-  renderActions={() => <SubmitButton />}
+	renderHeader={() => <CustomHeader />}
+	renderFooter={() => (
+		<>
+			<Formatting />
+			<Emojis />
+		</>
+	)}
+	renderActions={() => <SubmitButton />}
 />;
 ```
 
@@ -54,22 +54,22 @@ function Composer({
 
 ```tsx
 function ComposerFrame({ children }: { children: React.ReactNode }) {
-  return <form className="composer">{children}</form>;
+	return <form className="composer">{children}</form>;
 }
 
 function ComposerFooter({ children }: { children: React.ReactNode }) {
-  return <footer className="composer-footer">{children}</footer>;
+	return <footer className="composer-footer">{children}</footer>;
 }
 
 // Usage is natural JSX
 <Composer.Frame>
-  <CustomHeader />
-  <Composer.Input />
-  <Composer.Footer>
-    <Composer.Formatting />
-    <Composer.Emojis />
-    <SubmitButton />
-  </Composer.Footer>
+	<CustomHeader />
+	<Composer.Input />
+	<Composer.Footer>
+		<Composer.Formatting />
+		<Composer.Emojis />
+		<SubmitButton />
+	</Composer.Footer>
 </Composer.Frame>;
 ```
 
@@ -113,9 +113,9 @@ Render props work well when the parent needs to **provide data** to the child:
 ```tsx
 // Children for layout
 <Card>
-  <Card.Header>Title</Card.Header>
-  <Card.Body>Content</Card.Body>
-  <Card.Footer>Actions</Card.Footer>
+	<Card.Header>Title</Card.Header>
+	<Card.Body>Content</Card.Body>
+	<Card.Footer>Actions</Card.Footer>
 </Card>
 ```
 
@@ -124,13 +124,13 @@ Render props work well when the parent needs to **provide data** to the child:
 ```tsx
 // Render props when providing data
 <Autocomplete
-  options={options}
-  renderOption={(option, { selected, active }) => (
-    <div className={cn(active && "bg-blue-100")}>
-      {selected && <Check />}
-      {option.label}
-    </div>
-  )}
+	options={options}
+	renderOption={(option, { selected, active }) => (
+		<div className={cn(active && "bg-blue-100")}>
+			{selected && <Check />}
+			{option.label}
+		</div>
+	)}
 />
 ```
 
@@ -139,12 +139,12 @@ Render props work well when the parent needs to **provide data** to the child:
 ```tsx
 // Compound components for named slots
 <Dialog>
-  <Dialog.Title>Confirm</Dialog.Title>
-  <Dialog.Description>Are you sure?</Dialog.Description>
-  <Dialog.Actions>
-    <Button>Cancel</Button>
-    <Button>Confirm</Button>
-  </Dialog.Actions>
+	<Dialog.Title>Confirm</Dialog.Title>
+	<Dialog.Description>Are you sure?</Dialog.Description>
+	<Dialog.Actions>
+		<Button>Cancel</Button>
+		<Button>Confirm</Button>
+	</Dialog.Actions>
 </Dialog>
 ```
 

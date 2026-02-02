@@ -19,8 +19,8 @@ Organize translations under `app/locales/{lng}` and re-export them in a single r
 ```ts
 // app/locales/en/translation.ts
 export default {
-  title: "Example",
-  description: "A React Router + remix-i18next example",
+	title: "Example",
+	description: "A React Router + remix-i18next example",
 };
 
 // app/locales/en/index.ts
@@ -33,8 +33,8 @@ export default { translation } satisfies ResourceLanguage;
 ```ts
 // app/locales/es/translation.ts
 export default {
-  title: "Ejemplo",
-  description: "Un ejemplo de React Router + remix-i18next",
+	title: "Ejemplo",
+	description: "Un ejemplo de React Router + remix-i18next",
 } satisfies typeof import("~/locales/en/translation").default;
 
 // app/locales/es/index.ts

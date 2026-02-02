@@ -20,27 +20,27 @@ Only the route's default export component should call `useLoaderData` and `useAc
 ```tsx
 // route.tsx
 export async function loader({ request }: Route.LoaderArgs) {
-  let client = await authenticate(request);
-  let items = await getItems(client);
-  return data({ items });
+	let client = await authenticate(request);
+	let items = await getItems(client);
+	return data({ items });
 }
 
 export async function action({ request }: Route.ActionArgs) {
-  // ... handle action
-  return data({ errors: [] });
+	// ... handle action
+	return data({ errors: [] });
 }
 
 // Only the route component calls the hooks
 export default function Component() {
-  const { items } = useLoaderData<typeof loader>();
-  let actionData = useActionData<typeof action>();
+	const { items } = useLoaderData<typeof loader>();
+	let actionData = useActionData<typeof action>();
 
-  return (
-    <div>
-      {actionData?.errors && <ErrorList errors={actionData.errors} />}
-      <ItemList items={items} />
-    </div>
-  );
+	return (
+		<div>
+			{actionData?.errors && <ErrorList errors={actionData.errors} />}
+			<ItemList items={items} />
+		</div>
+	);
 }
 ```
 
@@ -49,27 +49,27 @@ export default function Component() {
 ```tsx
 // components/item-list.tsx
 interface ItemListProps {
-  items: Item[];
+	items: Item[];
 }
 
 // Component receives data as props, doesn't call useLoaderData
 export function ItemList({ items }: ItemListProps) {
-  return (
-    <ul>
-      {items.map((item) => (
-        <ItemCard key={item.id} item={item} />
-      ))}
-    </ul>
-  );
+	return (
+		<ul>
+			{items.map((item) => (
+				<ItemCard key={item.id} item={item} />
+			))}
+		</ul>
+	);
 }
 
 // components/item-card.tsx
 interface ItemCardProps {
-  item: Item;
+	item: Item;
 }
 
 export function ItemCard({ item }: ItemCardProps) {
-  return <li>{item.name}</li>;
+	return <li>{item.name}</li>;
 }
 ```
 
@@ -80,9 +80,9 @@ For deeply nested components that need parent route data, use `useRouteLoaderDat
 ```tsx
 // Deeply nested component needing user from parent layout
 function UserAvatar() {
-  // This is acceptable for layout-level data
-  let data = useRouteLoaderData<typeof profileLoader>("routes/_._profile");
-  return <Avatar src={data?.user.avatar} />;
+	// This is acceptable for layout-level data
+	let data = useRouteLoaderData<typeof profileLoader>("routes/_._profile");
+	return <Avatar src={data?.user.avatar} />;
 }
 ```
 
@@ -94,8 +94,8 @@ import { render } from "@testing-library/react";
 import { ItemList } from "./item-list";
 
 test("renders items", () => {
-  let items = [{ id: "1", name: "Test" }];
-  render(<ItemList items={items} />);
-  // No need to mock useLoaderData
+	let items = [{ id: "1", name: "Test" }];
+	render(<ItemList items={items} />);
+	// No need to mock useLoaderData
 });
 ```

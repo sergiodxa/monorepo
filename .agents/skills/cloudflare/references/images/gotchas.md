@@ -73,9 +73,7 @@ Verify API token has `Cloudflare Images → Edit` permission
 - **Browser detection**:
 
 ```typescript
-const format = /image\/avif/.test(request.headers.get("Accept") || "")
-  ? "avif"
-  : "webp";
+const format = /image\/avif/.test(request.headers.get("Accept") || "") ? "avif" : "webp";
 ```
 
 ## Anti-Patterns

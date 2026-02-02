@@ -5,18 +5,18 @@
 ```jsonc
 // wrangler.jsonc
 {
-  "ai": { "binding": "AI" },
+	"ai": { "binding": "AI" },
 }
 ```
 
 ```typescript
 interface Env {
-  AI: Ai;
+	AI: Ai;
 }
 
 const answer = await env.AI.autorag("my-instance").aiSearch({
-  query: "How do I configure caching?",
-  model: "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
+	query: "How do I configure caching?",
+	model: "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
 });
 ```
 

@@ -67,18 +67,15 @@ Update CSP: script-src 'self' /cdn-cgi/challenge-platform/;
 
 ```html
 <script>
-  function jsdOnload() {
-    window.cloudflare.jsd.executeOnce({
-      callback: function (result) {
-        console.log("JSD:", result);
-      },
-    });
-  }
+	function jsdOnload() {
+		window.cloudflare.jsd.executeOnce({
+			callback: function (result) {
+				console.log("JSD:", result);
+			},
+		});
+	}
 </script>
-<script
-  src="/cdn-cgi/challenge-platform/scripts/jsd/api.js?onload=jsdOnload"
-  async
-></script>
+<script src="/cdn-cgi/challenge-platform/scripts/jsd/api.js?onload=jsdOnload" async></script>
 ```
 
 **Use API for**: Selective deployment on specific pages  

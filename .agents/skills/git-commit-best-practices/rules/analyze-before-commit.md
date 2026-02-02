@@ -55,12 +55,14 @@ $ git diff --staged
 ## What to Look For
 
 **In git status:**
+
 - Verify all intended files are staged
 - Check for untracked files that should be included
 - Identify files staged by mistake
 - Determine the correct scope (apps/X or packages/Y)
 
 **In git diff --staged:**
+
 - Confirm changes match your intent
 - Spot debugging code or secrets that shouldn't be committed
 - Verify changes are cohesive and related

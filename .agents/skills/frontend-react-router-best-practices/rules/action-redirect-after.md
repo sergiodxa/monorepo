@@ -51,25 +51,25 @@ Use session flash for success/error messages:
 import { commitSession, getSession } from "~/lib/session.server";
 
 export async function action({ request }: Route.ActionArgs) {
-  let session = await getSession(request);
+	let session = await getSession(request);
 
-  try {
-    await createItem(client, data);
+	try {
+		await createItem(client, data);
 
-    session.flash("success", "Item created successfully");
+		session.flash("success", "Item created successfully");
 
-    throw redirect("/items", {
-      headers: {
-        "Set-Cookie": await commitSession(session),
-      },
-    });
-  } catch (error) {
-    // Let redirects bubble up - redirect() returns a Response
-    if (error instanceof Response) throw error;
+		throw redirect("/items", {
+			headers: {
+				"Set-Cookie": await commitSession(session),
+			},
+		});
+	} catch (error) {
+		// Let redirects bubble up - redirect() returns a Response
+		if (error instanceof Response) throw error;
 
-    // Handle actual errors...
-    return data({ errors: ["Something went wrong"] }, { status: 500 });
-  }
+		// Handle actual errors...
+		return data({ errors: ["Something went wrong"] }, { status: 500 });
+	}
 }
 ```
 
@@ -80,19 +80,19 @@ When using `throw redirect()` inside a try block, the redirect is caught by the 
 ```tsx
 // Bad: redirect gets swallowed by catch
 try {
-  await createItem(client, data);
-  throw redirect("/success");
+	await createItem(client, data);
+	throw redirect("/success");
 } catch (error) {
-  return data({ errors: ["Failed"] }, { status: 500 });
+	return data({ errors: ["Failed"] }, { status: 500 });
 }
 
 // Good: re-throw Response to let redirect bubble up
 try {
-  await createItem(client, data);
-  throw redirect("/success");
+	await createItem(client, data);
+	throw redirect("/success");
 } catch (error) {
-  if (error instanceof Response) throw error;
-  return data({ errors: ["Failed"] }, { status: 500 });
+	if (error instanceof Response) throw error;
+	return data({ errors: ["Failed"] }, { status: 500 });
 }
 ```
 
@@ -105,16 +105,16 @@ import { data } from "react-router";
 
 // In-place updates with fetcher - return data, no redirect
 export async function action({ request }: Route.ActionArgs) {
-  let formData = await request.formData();
-  let intent = formData.get("intent");
+	let formData = await request.formData();
+	let intent = formData.get("intent");
 
-  if (intent === "like") {
-    let postId = z.string().parse(formData.get("postId"));
-    let likes = await toggleLike(postId);
-    return data({ likes }); // Return updated count
-  }
+	if (intent === "like") {
+		let postId = z.string().parse(formData.get("postId"));
+		let likes = await toggleLike(postId);
+		return data({ likes }); // Return updated count
+	}
 
-  throw new Error(`Unknown intent: ${intent}`);
+	throw new Error(`Unknown intent: ${intent}`);
 }
 ```
 

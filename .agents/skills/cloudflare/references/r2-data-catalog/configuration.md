@@ -50,11 +50,11 @@ curl -X POST \
 
 ```json
 {
-  "result": {
-    "catalog_uri": "https://<account-id>.r2.cloudflarestorage.com/iceberg/<bucket>",
-    "warehouse": "<bucket>"
-  },
-  "success": true
+	"result": {
+		"catalog_uri": "https://<account-id>.r2.cloudflarestorage.com/iceberg/<bucket>",
+		"warehouse": "<bucket>"
+	},
+	"success": true
 }
 ```
 

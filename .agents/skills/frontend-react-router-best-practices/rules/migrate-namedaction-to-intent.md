@@ -56,42 +56,42 @@ import { data, redirect } from "react-router";
 import { z } from "zod";
 
 export async function action({ request }: Route.ActionArgs) {
-  let client = await authenticate(request);
-  let formData = await request.formData();
+	let client = await authenticate(request);
+	let formData = await request.formData();
 
-  let body = z
-    .discriminatedUnion("intent", [
-      z.object({
-        intent: z.literal("create"),
-        title: z.string().min(1),
-        amount: z.coerce.number().positive(),
-      }),
-      z.object({
-        intent: z.literal("update"),
-        id: z.string(),
-        title: z.string().min(1),
-      }),
-      z.object({
-        intent: z.literal("delete"),
-        id: z.string(),
-      }),
-    ])
-    .parse(Object.fromEntries(formData.entries()));
+	let body = z
+		.discriminatedUnion("intent", [
+			z.object({
+				intent: z.literal("create"),
+				title: z.string().min(1),
+				amount: z.coerce.number().positive(),
+			}),
+			z.object({
+				intent: z.literal("update"),
+				id: z.string(),
+				title: z.string().min(1),
+			}),
+			z.object({
+				intent: z.literal("delete"),
+				id: z.string(),
+			}),
+		])
+		.parse(Object.fromEntries(formData.entries()));
 
-  if (body.intent === "create") {
-    await createItem(client, body); // body is typed with title, amount
-    throw redirect("/items");
-  }
+	if (body.intent === "create") {
+		await createItem(client, body); // body is typed with title, amount
+		throw redirect("/items");
+	}
 
-  if (body.intent === "update") {
-    await updateItem(client, body); // body is typed with id, title
-    throw redirect("/items");
-  }
+	if (body.intent === "update") {
+		await updateItem(client, body); // body is typed with id, title
+		throw redirect("/items");
+	}
 
-  if (body.intent === "delete") {
-    await deleteItem(client, body.id); // body is typed with id
-    throw redirect("/items");
-  }
+	if (body.intent === "delete") {
+		await deleteItem(client, body.id); // body is typed with id
+		throw redirect("/items");
+	}
 }
 ```
 
@@ -101,9 +101,9 @@ No changes needed to form markup - both patterns use the same `intent` field:
 
 ```tsx
 <fetcher.Form method="post">
-  <input type="hidden" name="intent" value="create" />
-  <input name="title" />
-  <button type="submit">Create</button>
+	<input type="hidden" name="intent" value="create" />
+	<input name="title" />
+	<button type="submit">Create</button>
 </fetcher.Form>
 ```
 
@@ -113,13 +113,13 @@ Use button's name/value attributes for intent instead of hidden input:
 
 ```tsx
 <fetcher.Form method="post">
-  <input type="hidden" name="id" value={item.id} />
-  <Button type="submit" name="intent" value="archive">
-    Archive
-  </Button>
-  <Button type="submit" name="intent" value="delete" color="danger">
-    Delete
-  </Button>
+	<input type="hidden" name="id" value={item.id} />
+	<Button type="submit" name="intent" value="archive">
+		Archive
+	</Button>
+	<Button type="submit" name="intent" value="delete" color="danger">
+		Delete
+	</Button>
 </fetcher.Form>
 ```
 
@@ -156,57 +156,54 @@ import { Logger } from "~/lib/logger.server";
 
 const logger = Logger.getLogger("routes/items/actions.server");
 
-export async function createItem(
-  client: APIClient,
-  data: { title: string; amount: number },
-) {
-  try {
-    return await client.items.create(data);
-  } catch (error) {
-    logger.error(error);
-    throw error;
-  }
+export async function createItem(client: APIClient, data: { title: string; amount: number }) {
+	try {
+		return await client.items.create(data);
+	} catch (error) {
+		logger.error(error);
+		throw error;
+	}
 }
 
 export async function deleteItem(client: APIClient, id: string) {
-  try {
-    await client.items.delete(id);
-  } catch (error) {
-    logger.error(error);
-    throw error;
-  }
+	try {
+		await client.items.delete(id);
+	} catch (error) {
+		logger.error(error);
+		throw error;
+	}
 }
 
 // route.tsx
 import { createItem, deleteItem } from "./actions.server";
 
 export async function action({ request }: Route.ActionArgs) {
-  let client = await authenticate(request);
-  let formData = await request.formData();
+	let client = await authenticate(request);
+	let formData = await request.formData();
 
-  let body = z
-    .discriminatedUnion("intent", [
-      z.object({
-        intent: z.literal("create"),
-        title: z.string().min(1),
-        amount: z.coerce.number().positive(),
-      }),
-      z.object({
-        intent: z.literal("delete"),
-        id: z.string(),
-      }),
-    ])
-    .parse(Object.fromEntries(formData.entries()));
+	let body = z
+		.discriminatedUnion("intent", [
+			z.object({
+				intent: z.literal("create"),
+				title: z.string().min(1),
+				amount: z.coerce.number().positive(),
+			}),
+			z.object({
+				intent: z.literal("delete"),
+				id: z.string(),
+			}),
+		])
+		.parse(Object.fromEntries(formData.entries()));
 
-  if (body.intent === "create") {
-    await createItem(client, body);
-    throw redirect("/items");
-  }
+	if (body.intent === "create") {
+		await createItem(client, body);
+		throw redirect("/items");
+	}
 
-  if (body.intent === "delete") {
-    await deleteItem(client, body.id);
-    throw redirect("/items");
-  }
+	if (body.intent === "delete") {
+		await deleteItem(client, body.id);
+		throw redirect("/items");
+	}
 }
 ```
 
@@ -216,35 +213,32 @@ Re-throw `Response` objects (redirects), return validation errors:
 
 ```tsx
 export async function action({ request }: Route.ActionArgs) {
-  let client = await authenticate(request);
-  let formData = await request.formData();
+	let client = await authenticate(request);
+	let formData = await request.formData();
 
-  try {
-    let body = z
-      .discriminatedUnion("intent", [
-        z.object({
-          intent: z.literal("create"),
-          title: z.string().min(1),
-        }),
-      ])
-      .parse(Object.fromEntries(formData.entries()));
+	try {
+		let body = z
+			.discriminatedUnion("intent", [
+				z.object({
+					intent: z.literal("create"),
+					title: z.string().min(1),
+				}),
+			])
+			.parse(Object.fromEntries(formData.entries()));
 
-    if (body.intent === "create") {
-      await createItem(client, body);
-      throw redirect("/items");
-    }
-  } catch (error) {
-    // Let redirects bubble up
-    if (error instanceof Response) throw error;
+		if (body.intent === "create") {
+			await createItem(client, body);
+			throw redirect("/items");
+		}
+	} catch (error) {
+		// Let redirects bubble up
+		if (error instanceof Response) throw error;
 
-    if (error instanceof z.ZodError) {
-      return data(
-        { errors: error.issues.map(({ message }) => message) },
-        { status: 400 },
-      );
-    }
+		if (error instanceof z.ZodError) {
+			return data({ errors: error.issues.map(({ message }) => message) }, { status: 400 });
+		}
 
-    throw error; // Re-throw unknown errors
-  }
+		throw error; // Re-throw unknown errors
+	}
 }
 ```

@@ -19,14 +19,14 @@ Use shouldRevalidate to prevent unnecessary data fetching.
 
 ```tsx
 export const shouldRevalidate: Route.ShouldRevalidateFunction = ({
-  currentUrl,
-  nextUrl,
-  formAction,
-  formMethod,
-  defaultShouldRevalidate,
+	currentUrl,
+	nextUrl,
+	formAction,
+	formMethod,
+	defaultShouldRevalidate,
 }) => {
-  // Your logic here
-  return defaultShouldRevalidate;
+	// Your logic here
+	return defaultShouldRevalidate;
 };
 ```
 
@@ -36,15 +36,15 @@ export const shouldRevalidate: Route.ShouldRevalidateFunction = ({
 
 ```tsx
 export const shouldRevalidate: Route.ShouldRevalidateFunction = ({
-  currentUrl,
-  nextUrl,
-  defaultShouldRevalidate,
+	currentUrl,
+	nextUrl,
+	defaultShouldRevalidate,
 }) => {
-  // Don't revalidate if only hash changed
-  if (currentUrl.pathname === nextUrl.pathname) {
-    return false;
-  }
-  return defaultShouldRevalidate;
+	// Don't revalidate if only hash changed
+	if (currentUrl.pathname === nextUrl.pathname) {
+		return false;
+	}
+	return defaultShouldRevalidate;
 };
 ```
 
@@ -52,14 +52,14 @@ export const shouldRevalidate: Route.ShouldRevalidateFunction = ({
 
 ```tsx
 export const shouldRevalidate: Route.ShouldRevalidateFunction = ({
-  formAction,
-  defaultShouldRevalidate,
+	formAction,
+	defaultShouldRevalidate,
 }) => {
-  // Don't revalidate for "like" actions
-  if (formAction?.includes("/api/like")) {
-    return false;
-  }
-  return defaultShouldRevalidate;
+	// Don't revalidate for "like" actions
+	if (formAction?.includes("/api/like")) {
+		return false;
+	}
+	return defaultShouldRevalidate;
 };
 ```
 
@@ -67,15 +67,15 @@ export const shouldRevalidate: Route.ShouldRevalidateFunction = ({
 
 ```tsx
 export const shouldRevalidate: Route.ShouldRevalidateFunction = ({
-  formAction,
-  defaultShouldRevalidate,
+	formAction,
+	defaultShouldRevalidate,
 }) => {
-  // Only revalidate for actions related to this route's data
-  let relatedActions = ["/dashboard", "/items", "/settings"];
-  if (formAction && !relatedActions.some((a) => formAction.startsWith(a))) {
-    return false;
-  }
-  return defaultShouldRevalidate;
+	// Only revalidate for actions related to this route's data
+	let relatedActions = ["/dashboard", "/items", "/settings"];
+	if (formAction && !relatedActions.some((a) => formAction.startsWith(a))) {
+		return false;
+	}
+	return defaultShouldRevalidate;
 };
 ```
 
@@ -83,19 +83,16 @@ export const shouldRevalidate: Route.ShouldRevalidateFunction = ({
 
 ```tsx
 export const shouldRevalidate: Route.ShouldRevalidateFunction = ({
-  currentUrl,
-  nextUrl,
-  defaultShouldRevalidate,
+	currentUrl,
+	nextUrl,
+	defaultShouldRevalidate,
 }) => {
-  // Don't revalidate if only search params changed
-  // (loader reads params, so this might vary by use case)
-  if (
-    currentUrl.pathname === nextUrl.pathname &&
-    currentUrl.search !== nextUrl.search
-  ) {
-    return false;
-  }
-  return defaultShouldRevalidate;
+	// Don't revalidate if only search params changed
+	// (loader reads params, so this might vary by use case)
+	if (currentUrl.pathname === nextUrl.pathname && currentUrl.search !== nextUrl.search) {
+		return false;
+	}
+	return defaultShouldRevalidate;
 };
 ```
 
@@ -104,8 +101,8 @@ export const shouldRevalidate: Route.ShouldRevalidateFunction = ({
 ```tsx
 // For static marketing pages
 export const shouldRevalidate: Route.ShouldRevalidateFunction = () => {
-  // Static page data never changes, no need to revalidate
-  return false;
+	// Static page data never changes, no need to revalidate
+	return false;
 };
 ```
 
@@ -113,17 +110,17 @@ export const shouldRevalidate: Route.ShouldRevalidateFunction = () => {
 
 ```tsx
 export const shouldRevalidate: Route.ShouldRevalidateFunction = ({
-  currentUrl, // URL before navigation
-  nextUrl, // URL after navigation
-  currentParams, // Route params before
-  nextParams, // Route params after
-  formAction, // Action URL if form submitted
-  formMethod, // GET, POST, etc.
-  formData, // Form data if available
-  actionResult, // Result from action
-  defaultShouldRevalidate, // What React Router would do
+	currentUrl, // URL before navigation
+	nextUrl, // URL after navigation
+	currentParams, // Route params before
+	nextParams, // Route params after
+	formAction, // Action URL if form submitted
+	formMethod, // GET, POST, etc.
+	formData, // Form data if available
+	actionResult, // Result from action
+	defaultShouldRevalidate, // What React Router would do
 }) => {
-  // ...
+	// ...
 };
 ```
 
@@ -138,9 +135,7 @@ Don't skip revalidation when:
 
 ```tsx
 // When in doubt, use default
-export const shouldRevalidate: Route.ShouldRevalidateFunction = ({
-  defaultShouldRevalidate,
-}) => {
-  return defaultShouldRevalidate;
+export const shouldRevalidate: Route.ShouldRevalidateFunction = ({ defaultShouldRevalidate }) => {
+	return defaultShouldRevalidate;
 };
 ```

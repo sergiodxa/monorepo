@@ -48,55 +48,55 @@ const content = await fs.readFile(`./uploads/${filename}`, "utf-8");
 ```typescript
 // Good: Verify ownership before access
 async function getUserProfile(req: Request): Promise<Response> {
-  let session = await getSession(req);
-  let url = new URL(req.url);
-  let userId = url.searchParams.get("id");
+	let session = await getSession(req);
+	let url = new URL(req.url);
+	let userId = url.searchParams.get("id");
 
-  if (session.userId !== userId && !session.isAdmin) {
-    return new Response("Forbidden", { status: 403 });
-  }
+	if (session.userId !== userId && !session.isAdmin) {
+		return new Response("Forbidden", { status: 403 });
+	}
 
-  let user = await db.users.findUnique({ where: { id: userId } });
-  return Response.json(user);
+	let user = await db.users.findUnique({ where: { id: userId } });
+	return Response.json(user);
 }
 
 // Good: Role-based access control
 async function deleteUser(req: Request): Promise<Response> {
-  let session = await getSession(req);
+	let session = await getSession(req);
 
-  let user = await db.users.findUnique({
-    where: { id: session.userId },
-    select: { role: true },
-  });
+	let user = await db.users.findUnique({
+		where: { id: session.userId },
+		select: { role: true },
+	});
 
-  if (user.role !== "ADMIN") {
-    return new Response("Forbidden", { status: 403 });
-  }
+	if (user.role !== "ADMIN") {
+		return new Response("Forbidden", { status: 403 });
+	}
 
-  let url = new URL(req.url);
-  let userId = url.searchParams.get("id");
+	let url = new URL(req.url);
+	let userId = url.searchParams.get("id");
 
-  await db.users.delete({ where: { id: userId } });
-  return new Response("Deleted");
+	await db.users.delete({ where: { id: userId } });
+	return new Response("Deleted");
 }
 
 // Good: Prevent path traversal
 async function downloadFile(req: Request): Promise<Response> {
-  let url = new URL(req.url);
-  let filename = url.searchParams.get("file");
-  let ALLOWED = ["terms.pdf", "privacy.pdf", "guide.pdf"];
+	let url = new URL(req.url);
+	let filename = url.searchParams.get("file");
+	let ALLOWED = ["terms.pdf", "privacy.pdf", "guide.pdf"];
 
-  if (
-    !filename ||
-    !ALLOWED.includes(filename) ||
-    filename.includes("..") ||
-    filename.includes("/")
-  ) {
-    return new Response("Invalid file", { status: 400 });
-  }
+	if (
+		!filename ||
+		!ALLOWED.includes(filename) ||
+		filename.includes("..") ||
+		filename.includes("/")
+	) {
+		return new Response("Invalid file", { status: 400 });
+	}
 
-  let content = await fs.readFile(`./documents/${filename}`, "utf-8");
-  return new Response(content);
+	let content = await fs.readFile(`./documents/${filename}`, "utf-8");
+	return new Response(content);
 }
 ```
 

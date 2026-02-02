@@ -21,22 +21,22 @@ Use named exports for all modules. Avoid default exports.
 ```typescript
 // Bad: default export
 export default function formatCurrency(amount: number) {
-  return `$${amount.toFixed(2)}`;
+	return `$${amount.toFixed(2)}`;
 }
 
 // Bad: default export class
 export default class UserService {
-  // ...
+	// ...
 }
 
 // Good: named export
 export function formatCurrency(amount: number) {
-  return `$${amount.toFixed(2)}`;
+	return `$${amount.toFixed(2)}`;
 }
 
 // Good: named export class
 export class UserService {
-  // ...
+	// ...
 }
 ```
 
@@ -45,12 +45,12 @@ export class UserService {
 ```tsx
 // Bad: default export component
 export default function UserCard({ user }: Props) {
-  return <div>{user.name}</div>;
+	return <div>{user.name}</div>;
 }
 
 // Good: named export component
 export function UserCard({ user }: Props) {
-  return <div>{user.name}</div>;
+	return <div>{user.name}</div>;
 }
 ```
 
@@ -73,18 +73,18 @@ Remix requires a default export for the route component. Name it `Component`:
 ```tsx
 // app/routes/_.users/route.tsx
 export async function loader() {
-  // ...
+	// ...
 }
 
 export async function action() {
-  // ...
+	// ...
 }
 
 // Exception: Remix requires default export for route component
 // Always name it "Component"
 export default function Component() {
-  let data = useLoaderData<typeof loader>();
-  return <div>{/* ... */}</div>;
+	let data = useLoaderData<typeof loader>();
+	return <div>{/* ... */}</div>;
 }
 ```
 

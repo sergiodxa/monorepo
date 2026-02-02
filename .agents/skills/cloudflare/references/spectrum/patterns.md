@@ -28,12 +28,12 @@ resource "cloudflare_spectrum_application" "ssh" {
 
 ```typescript
 const app = await client.spectrum.apps.create({
-  zone_id: "your-zone-id",
-  protocol: "tcp/25565",
-  dns: { type: "CNAME", name: "mc.example.com" },
-  origin_direct: ["tcp://192.168.1.10:25565"],
-  proxy_protocol: "v1", // Preserves player IPs
-  argo_smart_routing: true,
+	zone_id: "your-zone-id",
+	protocol: "tcp/25565",
+	dns: { type: "CNAME", name: "mc.example.com" },
+	origin_direct: ["tcp://192.168.1.10:25565"],
+	proxy_protocol: "v1", // Preserves player IPs
+	argo_smart_routing: true,
 });
 ```
 
@@ -47,11 +47,11 @@ IoT device communication.
 
 ```typescript
 const mqttApp = await client.spectrum.apps.create({
-  zone_id: "your-zone-id",
-  protocol: "tcp/8883", // Use 1883 for plain MQTT
-  dns: { type: "CNAME", name: "mqtt.example.com" },
-  origin_direct: ["tcp://mqtt-broker.internal:8883"],
-  tls: "full", // Use 'off' for plain MQTT
+	zone_id: "your-zone-id",
+	protocol: "tcp/8883", // Use 1883 for plain MQTT
+	dns: { type: "CNAME", name: "mqtt.example.com" },
+	origin_direct: ["tcp://mqtt-broker.internal:8883"],
+	tls: "full", // Use 'off' for plain MQTT
 });
 ```
 
@@ -92,13 +92,13 @@ MySQL/PostgreSQL. **Use with caution** - security critical.
 
 ```typescript
 const postgresApp = await client.spectrum.apps.create({
-  zone_id: "your-zone-id",
-  protocol: "tcp/5432",
-  dns: { type: "CNAME", name: "postgres.example.com" },
-  origin_dns: { name: "db-primary.internal.example.com" },
-  origin_port: 5432,
-  tls: "strict", // REQUIRED
-  ip_firewall: true, // REQUIRED
+	zone_id: "your-zone-id",
+	protocol: "tcp/5432",
+	dns: { type: "CNAME", name: "postgres.example.com" },
+	origin_dns: { name: "db-primary.internal.example.com" },
+	origin_port: 5432,
+	tls: "strict", // REQUIRED
+	ip_firewall: true, // REQUIRED
 });
 ```
 

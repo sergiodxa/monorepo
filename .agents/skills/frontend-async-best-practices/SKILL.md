@@ -32,11 +32,7 @@ const posts = await fetchPosts();
 const comments = await fetchComments();
 
 // Good: 1 parallel round trip
-const [user, posts, comments] = await Promise.all([
-  fetchUser(),
-  fetchPosts(),
-  fetchComments(),
-]);
+const [user, posts, comments] = await Promise.all([fetchUser(), fetchPosts(), fetchComments()]);
 ```
 
 ### defer-await (HIGH) — @rules/defer-await.md
@@ -46,16 +42,16 @@ Move await into branches where actually used.
 ```typescript
 // Bad: always waits even when skipping
 async function handle(skip: boolean) {
-  let data = await fetchData();
-  if (skip) return { skipped: true };
-  return process(data);
+	let data = await fetchData();
+	if (skip) return { skipped: true };
+	return process(data);
 }
 
 // Good: only waits when needed
 async function handle(skip: boolean) {
-  if (skip) return { skipped: true };
-  let data = await fetchData();
-  return process(data);
+	if (skip) return { skipped: true };
+	let data = await fetchData();
+	return process(data);
 }
 ```
 
@@ -72,11 +68,7 @@ const profile = await fetchProfile(user.id);
 const userPromise = fetchUser();
 const profilePromise = userPromise.then((user) => fetchProfile(user.id));
 
-const [user, config, profile] = await Promise.all([
-  userPromise,
-  fetchConfig(),
-  profilePromise,
-]);
+const [user, config, profile] = await Promise.all([userPromise, fetchConfig(), profilePromise]);
 ```
 
 ### api-routes (CRITICAL) — @rules/api-routes.md
@@ -86,17 +78,17 @@ Start promises early, await late in loaders.
 ```typescript
 // Bad: sequential execution
 export async function loader() {
-  let session = await auth();
-  let config = await fetchConfig();
-  return { session, config };
+	let session = await auth();
+	let config = await fetchConfig();
+	return { session, config };
 }
 
 // Good: parallel execution
 export async function loader() {
-  let sessionPromise = auth();
-  let configPromise = fetchConfig();
-  const [session, config] = await Promise.all([sessionPromise, configPromise]);
-  return { session, config };
+	let sessionPromise = auth();
+	let configPromise = fetchConfig();
+	const [session, config] = await Promise.all([sessionPromise, configPromise]);
+	return { session, config };
 }
 ```
 
@@ -107,22 +99,22 @@ Use Suspense to show UI immediately while data loads.
 ```tsx
 // Bad: entire page blocked by data
 async function Page() {
-  let data = await fetchData();
-  return (
-    <Layout>
-      <Content data={data} />
-    </Layout>
-  );
+	let data = await fetchData();
+	return (
+		<Layout>
+			<Content data={data} />
+		</Layout>
+	);
 }
 
 // Good: layout shows immediately, content streams in
 function Page() {
-  return (
-    <Layout>
-      <Suspense fallback={<Skeleton />}>
-        <Content />
-      </Suspense>
-    </Layout>
-  );
+	return (
+		<Layout>
+			<Suspense fallback={<Skeleton />}>
+				<Content />
+			</Suspense>
+		</Layout>
+	);
 }
 ```

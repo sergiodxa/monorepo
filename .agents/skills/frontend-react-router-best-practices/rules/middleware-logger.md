@@ -21,7 +21,7 @@ Log request/response details consistently with `createLoggerMiddleware`.
 import { createLoggerMiddleware } from "remix-utils/middleware/logger";
 
 export const [loggerMiddleware] = createLoggerMiddleware({
-  precision: 2,
+	precision: 2,
 });
 ```
 

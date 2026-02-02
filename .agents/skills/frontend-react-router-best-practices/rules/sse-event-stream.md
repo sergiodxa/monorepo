@@ -15,12 +15,12 @@ Use `eventStream` in a resource route and `useEventSource` in the UI for live up
 import { eventStream } from "remix-utils/sse/server";
 
 export async function loader({ request }: Route.LoaderArgs) {
-  return eventStream(request.signal, (send) => {
-    let intervalId = setInterval(() => {
-      send({ event: "time", data: new Date().toISOString() });
-    }, 1000);
-    return () => clearInterval(intervalId);
-  });
+	return eventStream(request.signal, (send) => {
+		let intervalId = setInterval(() => {
+			send({ event: "time", data: new Date().toISOString() });
+		}, 1000);
+		return () => clearInterval(intervalId);
+	});
 }
 ```
 
@@ -28,9 +28,9 @@ export async function loader({ request }: Route.LoaderArgs) {
 import { useEventSource } from "remix-utils/sse/react";
 
 export function Clock() {
-  let time = useEventSource("/sse/time", { event: "time" });
-  if (!time) return null;
-  return <time dateTime={time}>{time}</time>;
+	let time = useEventSource("/sse/time", { event: "time" });
+	if (!time) return null;
+	return <time dateTime={time}>{time}</time>;
 }
 ```
 

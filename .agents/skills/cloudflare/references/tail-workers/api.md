@@ -4,13 +4,9 @@
 
 ```typescript
 export default {
-  async tail(
-    events: TraceItem[],
-    env: Env,
-    ctx: ExecutionContext,
-  ): Promise<void> {
-    // Process events
-  },
+	async tail(events: TraceItem[], env: Env, ctx: ExecutionContext): Promise<void> {
+		// Process events
+	},
 } satisfies ExportedHandler<Env>;
 ```
 
@@ -26,48 +22,48 @@ export default {
 
 ```typescript
 interface TraceItem {
-  scriptName: string; // Producer Worker name
-  eventTimestamp: number; // Epoch milliseconds
-  outcome:
-    | "ok"
-    | "exception"
-    | "exceededCpu"
-    | "exceededMemory"
-    | "canceled"
-    | "scriptNotFound"
-    | "responseStreamDisconnected"
-    | "unknown";
+	scriptName: string; // Producer Worker name
+	eventTimestamp: number; // Epoch milliseconds
+	outcome:
+		| "ok"
+		| "exception"
+		| "exceededCpu"
+		| "exceededMemory"
+		| "canceled"
+		| "scriptNotFound"
+		| "responseStreamDisconnected"
+		| "unknown";
 
-  event?: {
-    request?: {
-      url: string; // Redacted by default
-      method: string;
-      headers: Record<string, string>; // Sensitive headers redacted
-      cf?: IncomingRequestCfProperties;
-      getUnredacted(): TraceRequest; // Bypass redaction (use carefully)
-    };
-    response?: {
-      status: number;
-    };
-  };
+	event?: {
+		request?: {
+			url: string; // Redacted by default
+			method: string;
+			headers: Record<string, string>; // Sensitive headers redacted
+			cf?: IncomingRequestCfProperties;
+			getUnredacted(): TraceRequest; // Bypass redaction (use carefully)
+		};
+		response?: {
+			status: number;
+		};
+	};
 
-  logs: Array<{
-    timestamp: number; // Epoch milliseconds
-    level: "debug" | "info" | "log" | "warn" | "error";
-    message: unknown[]; // Args passed to console function
-  }>;
+	logs: Array<{
+		timestamp: number; // Epoch milliseconds
+		level: "debug" | "info" | "log" | "warn" | "error";
+		message: unknown[]; // Args passed to console function
+	}>;
 
-  exceptions: Array<{
-    timestamp: number; // Epoch milliseconds
-    name: string; // Error type (Error, TypeError, etc.)
-    message: string; // Error description
-  }>;
+	exceptions: Array<{
+		timestamp: number; // Epoch milliseconds
+		name: string; // Error type (Error, TypeError, etc.)
+		message: string; // Error description
+	}>;
 
-  diagnosticsChannelEvents: Array<{
-    channel: string;
-    message: unknown;
-    timestamp: number; // Epoch milliseconds
-  }>;
+	diagnosticsChannelEvents: Array<{
+		channel: string;
+		message: unknown;
+		timestamp: number; // Epoch milliseconds
+	}>;
 }
 ```
 
@@ -107,13 +103,13 @@ Redacted values show as `"REDACTED"`.
 
 ```typescript
 export default {
-  async tail(events, env, ctx) {
-    for (const event of events) {
-      // ⚠️ Use with extreme caution
-      const unredacted = event.event?.request?.getUnredacted();
-      // unredacted.url and unredacted.headers contain raw values
-    }
-  },
+	async tail(events, env, ctx) {
+		for (const event of events) {
+			// ⚠️ Use with extreme caution
+			const unredacted = event.event?.request?.getUnredacted();
+			// unredacted.url and unredacted.headers contain raw values
+		}
+	},
 };
 ```
 
@@ -128,34 +124,30 @@ export default {
 
 ```typescript
 interface Env {
-  LOGS_KV: KVNamespace;
-  ANALYTICS: AnalyticsEngineDataset;
-  LOG_ENDPOINT: string;
-  API_TOKEN: string;
+	LOGS_KV: KVNamespace;
+	ANALYTICS: AnalyticsEngineDataset;
+	LOG_ENDPOINT: string;
+	API_TOKEN: string;
 }
 
 export default {
-  async tail(
-    events: TraceItem[],
-    env: Env,
-    ctx: ExecutionContext,
-  ): Promise<void> {
-    const payload = events.map((event) => ({
-      script: event.scriptName,
-      timestamp: event.eventTimestamp,
-      outcome: event.outcome,
-      url: event.event?.request?.url,
-      status: event.event?.response?.status,
-    }));
+	async tail(events: TraceItem[], env: Env, ctx: ExecutionContext): Promise<void> {
+		const payload = events.map((event) => ({
+			script: event.scriptName,
+			timestamp: event.eventTimestamp,
+			outcome: event.outcome,
+			url: event.event?.request?.url,
+			status: event.event?.response?.status,
+		}));
 
-    ctx.waitUntil(
-      fetch(env.LOG_ENDPOINT, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      }),
-    );
-  },
+		ctx.waitUntil(
+			fetch(env.LOG_ENDPOINT, {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify(payload),
+			}),
+		);
+	},
 } satisfies ExportedHandler<Env>;
 ```
 
@@ -170,12 +162,12 @@ export default {
 ```typescript
 // ✅ Check outcome for script execution status
 if (event.outcome === "exception") {
-  // Script threw uncaught exception
+	// Script threw uncaught exception
 }
 
 // ✅ Check HTTP status separately
 if (event.event?.response?.status === 500) {
-  // HTTP 500 returned (script may have handled error)
+	// HTTP 500 returned (script may have handled error)
 }
 ```
 
@@ -189,17 +181,17 @@ JSON.stringify(events);
 
 // ✅ Safe serialization
 const safePayload = events.map((event) => ({
-  ...event,
-  logs: event.logs.map((log) => ({
-    ...log,
-    message: log.message.map((m) => {
-      try {
-        return JSON.parse(JSON.stringify(m));
-      } catch {
-        return String(m);
-      }
-    }),
-  })),
+	...event,
+	logs: event.logs.map((log) => ({
+		...log,
+		message: log.message.map((m) => {
+			try {
+				return JSON.parse(JSON.stringify(m));
+			} catch {
+				return String(m);
+			}
+		}),
+	})),
 }));
 ```
 

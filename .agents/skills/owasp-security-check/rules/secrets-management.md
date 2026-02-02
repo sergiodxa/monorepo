@@ -60,16 +60,16 @@ console.log("Connecting with API key:", process.env.API_KEY);
 const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY;
 
 if (!STRIPE_SECRET_KEY) {
-  throw new Error("STRIPE_SECRET_KEY not set");
+	throw new Error("STRIPE_SECRET_KEY not set");
 }
 
 // Good: Validate env vars at startup
 function validateEnv() {
-  let required = ["DATABASE_URL", "JWT_SECRET", "STRIPE_SECRET_KEY"];
-  let missing = required.filter((key) => !process.env[key]);
-  if (missing.length > 0) {
-    throw new Error(`Missing env vars: ${missing.join(", ")}`);
-  }
+	let required = ["DATABASE_URL", "JWT_SECRET", "STRIPE_SECRET_KEY"];
+	let missing = required.filter((key) => !process.env[key]);
+	if (missing.length > 0) {
+		throw new Error(`Missing env vars: ${missing.join(", ")}`);
+	}
 }
 
 // Good: Add .env to .gitignore (never commit secrets)
@@ -77,25 +77,25 @@ function validateEnv() {
 
 // Good: Secret rotation
 async function rotateApiKey(userId: string) {
-  let newKey = crypto.randomBytes(32).toString("hex");
-  await db.apiKeys.create({
-    data: {
-      userId,
-      key: newKey,
-      expiresAt: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000),
-    },
-  });
-  return newKey;
+	let newKey = crypto.randomBytes(32).toString("hex");
+	await db.apiKeys.create({
+		data: {
+			userId,
+			key: newKey,
+			expiresAt: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000),
+		},
+	});
+	return newKey;
 }
 
 // Good: Use secret management service
 async function getSecret(name: string): Promise<string> {
-  if (process.env.NODE_ENV === "production") {
-    return await secretsManager.getSecretValue(name);
-  }
-  let value = process.env[name];
-  if (!value) throw new Error(`Secret ${name} not found`);
-  return value;
+	if (process.env.NODE_ENV === "production") {
+		return await secretsManager.getSecretValue(name);
+	}
+	let value = process.env[name];
+	if (!value) throw new Error(`Secret ${name} not found`);
+	return value;
 }
 ```
 

@@ -13,7 +13,7 @@ In SSR frameworks, some values are intentionally different on server vs client (
 
 ```tsx
 function Timestamp() {
-  return <span>{new Date().toLocaleString()}</span>;
+	return <span>{new Date().toLocaleString()}</span>;
 }
 ```
 
@@ -21,6 +21,6 @@ function Timestamp() {
 
 ```tsx
 function Timestamp() {
-  return <span suppressHydrationWarning>{new Date().toLocaleString()}</span>;
+	return <span suppressHydrationWarning>{new Date().toLocaleString()}</span>;
 }
 ```

@@ -37,6 +37,7 @@ refactor(apps/store): changes
 ## Length Guidelines
 
 **Description (after colon):**
+
 - Target: 20-50 characters
 - Maximum: 72 characters
 - Should fit on one line in git log
@@ -94,6 +95,7 @@ perf(apps/dashboard): make queries better
 ## Common Patterns
 
 **Features:**
+
 ```bash
 feat(apps/books): add <what> to <benefit>
 feat(apps/store): implement <what> for <purpose>
@@ -101,6 +103,7 @@ feat(packages/ui): enable <what> to <benefit>
 ```
 
 **Fixes:**
+
 ```bash
 fix(apps/books): resolve <problem> to <prevent>
 fix(packages/auth): prevent <issue> by <solution>
@@ -108,6 +111,7 @@ fix(apps/store): correct <error> in <component>
 ```
 
 **Refactoring:**
+
 ```bash
 refactor(apps/books): extract <what> to <improve>
 refactor(packages/ui): simplify <what> for <benefit>

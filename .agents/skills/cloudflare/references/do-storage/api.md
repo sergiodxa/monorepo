@@ -36,10 +36,10 @@ for (let [key, value] of this.ctx.storage.kv.list()) {
 
 // List options: start, prefix, reverse, limit
 this.ctx.storage.kv.list({
-  start: "user:",
-  prefix: "user:",
-  reverse: true,
-  limit: 100,
+	start: "user:",
+	prefix: "user:",
+	reverse: true,
+	limit: 100,
 });
 ```
 
@@ -57,8 +57,8 @@ await this.ctx.storage.list({ prefix: "user:", limit: 100 });
 // Options: allowConcurrency, noCache, allowUnconfirmed
 await this.ctx.storage.get("key", { allowConcurrency: true, noCache: true });
 await this.ctx.storage.put("key", value, {
-  allowUnconfirmed: true,
-  noCache: true,
+	allowUnconfirmed: true,
+	noCache: true,
 });
 ```
 
@@ -75,24 +75,16 @@ await this.ctx.storage.put("key", value, {
 ```typescript
 // Sync (SQL/sync KV only)
 this.ctx.storage.transactionSync(() => {
-  this.sql.exec(
-    "UPDATE accounts SET balance = balance - ? WHERE id = ?",
-    100,
-    1,
-  );
-  this.sql.exec(
-    "UPDATE accounts SET balance = balance + ? WHERE id = ?",
-    100,
-    2,
-  );
-  return "result";
+	this.sql.exec("UPDATE accounts SET balance = balance - ? WHERE id = ?", 100, 1);
+	this.sql.exec("UPDATE accounts SET balance = balance + ? WHERE id = ?", 100, 2);
+	return "result";
 });
 
 // Async
 await this.ctx.storage.transaction(async () => {
-  const value = await this.ctx.storage.get("counter");
-  await this.ctx.storage.put("counter", value + 1);
-  if (value > 100) this.ctx.storage.rollback(); // Explicit rollback
+	const value = await this.ctx.storage.get("counter");
+	await this.ctx.storage.put("counter", value + 1);
+	if (value > 100) this.ctx.storage.rollback(); // Explicit rollback
 });
 ```
 

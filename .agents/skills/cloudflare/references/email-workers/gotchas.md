@@ -6,9 +6,7 @@
 
 ```typescript
 // ❌ WRONG: Stream consumed twice
-const email = await PostalMime.parse(
-  await new Response(message.raw).arrayBuffer(),
-);
+const email = await PostalMime.parse(await new Response(message.raw).arrayBuffer());
 const rawText = await new Response(message.raw).text(); // EMPTY!
 
 // ✅ CORRECT: Buffer first
@@ -25,9 +23,9 @@ ctx.waitUntil(fetch(webhookUrl, { method: "POST", body: data }));
 
 // ✅ Catch and log
 ctx.waitUntil(
-  fetch(webhookUrl, { method: "POST", body: data }).catch((err) =>
-    env.ERROR_LOG.put(`error:${Date.now()}`, err.message),
-  ),
+	fetch(webhookUrl, { method: "POST", body: data }).catch((err) =>
+		env.ERROR_LOG.put(`error:${Date.now()}`, err.message),
+	),
 );
 ```
 
@@ -45,12 +43,12 @@ const headerFrom = (await PostalMime.parse(buffer)).from?.address; // (untrusted
 
 ```typescript
 if (message.rawSize > 5_000_000) {
-  message.setReject("Too large");
-  return;
+	message.setReject("Too large");
+	return;
 }
 if ((message.headers.get("Subject") || "").length > 1000) {
-  message.setReject("Invalid subject");
-  return;
+	message.setReject("Invalid subject");
+	return;
 }
 ```
 
@@ -65,9 +63,7 @@ Replies fail silently without DMARC. Verify: `dig TXT _dmarc.example.com`
 ```typescript
 const email = await PostalMime.parse(buffer);
 const fromAddress = email.from?.address || "unknown";
-const toAddresses = Array.isArray(email.to)
-  ? email.to.map((t) => t.address)
-  : [email.to?.address];
+const toAddresses = Array.isArray(email.to) ? email.to.map((t) => t.address) : [email.to?.address];
 ```
 
 ### Character Encoding
@@ -81,8 +77,8 @@ Let postal-mime handle decoding - `email.subject`, `email.text`, `email.html` ar
 ```typescript
 // setReject() for SMTP rejection
 if (blockList.includes(message.from)) {
-  message.setReject("Blocked");
-  return;
+	message.setReject("Blocked");
+	return;
 }
 
 // throw for worker errors
@@ -101,9 +97,7 @@ headers.set("Subject", "Modified"); // ❌ Dropped
 ```typescript
 // Use same domain as receiving address
 const receivingDomain = message.to.split("@")[1];
-await message.reply(
-  new EmailMessage(`noreply@${receivingDomain}`, message.from, rawMime),
-);
+await message.reply(new EmailMessage(`noreply@${receivingDomain}`, message.from, rawMime));
 ```
 
 ## Performance
@@ -113,8 +107,8 @@ await message.reply(
 ```typescript
 // Skip parsing large emails
 if (message.rawSize > 5_000_000) {
-  await message.forward("inbox@example.com");
-  return;
+	await message.forward("inbox@example.com");
+	return;
 }
 ```
 

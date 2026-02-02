@@ -8,17 +8,17 @@ State persists automatically to SQLite and broadcasts to connected clients.
 
 ```typescript
 type State = {
-  count: number;
-  items: string[];
-  lastUpdated: Date;
+	count: number;
+	items: string[];
+	lastUpdated: Date;
 };
 
 export class MyAgent extends Agent<Env, State> {
-  initialState: State = {
-    count: 0,
-    items: [],
-    lastUpdated: new Date(),
-  };
+	initialState: State = {
+		count: 0,
+		items: [],
+		lastUpdated: new Date(),
+	};
 }
 ```
 
@@ -30,8 +30,8 @@ const count = this.state.count;
 
 // Update (persists to SQLite, broadcasts to clients)
 this.setState({
-  ...this.state,
-  count: this.state.count + 1,
+	...this.state,
+	count: this.state.count + 1,
 });
 ```
 
@@ -53,19 +53,19 @@ import { useAgent } from "agents/react";
 import { useState } from "react";
 
 function App() {
-  const [state, setLocalState] = useState<State>({ count: 0 });
+	const [state, setLocalState] = useState<State>({ count: 0 });
 
-  const agent = useAgent<State>({
-    agent: "MyAgent",
-    name: "instance-1",
-    onStateUpdate: (newState) => setLocalState(newState),
-  });
+	const agent = useAgent<State>({
+		agent: "MyAgent",
+		name: "instance-1",
+		onStateUpdate: (newState) => setLocalState(newState),
+	});
 
-  const increment = () => {
-    agent.setState({ ...state, count: state.count + 1 });
-  };
+	const increment = () => {
+		agent.setState({ ...state, count: state.count + 1 });
+	};
 
-  return <button onClick={increment}>Count: {state.count}</button>;
+	return <button onClick={increment}>Count: {state.count}</button>;
 }
 ```
 
@@ -80,7 +80,7 @@ Schedule methods to run at specific times using `this.schedule()`.
 ```typescript
 // At specific Date
 await this.schedule(new Date("2025-12-25T00:00:00Z"), "sendGreeting", {
-  to: "user",
+	to: "user",
 });
 
 // Delay in seconds
@@ -95,10 +95,10 @@ await this.schedule("0 9 * * 1-5", "weekdayReport", {}); // 9am weekdays
 
 ```typescript
 export class MyAgent extends Agent<Env, State> {
-  async sendGreeting(payload: { to: string }, schedule: Schedule) {
-    console.log(`Sending greeting to ${payload.to}`);
-    // Cron schedules automatically reschedule; one-time schedules are deleted
-  }
+	async sendGreeting(payload: { to: string }, schedule: Schedule) {
+		console.log(`Sending greeting to ${payload.to}`);
+		// Cron schedules automatically reschedule; one-time schedules are deleted
+	}
 }
 ```
 
@@ -113,7 +113,7 @@ const crons = this.getSchedules({ type: "cron" });
 
 // Get by time range
 const upcoming = this.getSchedules({
-  timeRange: { start: new Date(), end: nextWeek },
+	timeRange: { start: new Date(), end: nextWeek },
 });
 
 // Cancel
@@ -183,28 +183,28 @@ const items = this.sql<{ id: string; name: string }>`
 
 ```typescript
 export class MyAgent extends Agent<Env, State> {
-  // Called when agent starts (after hibernation or first create)
-  async onStart() {
-    console.log("Agent started:", this.name);
-  }
+	// Called when agent starts (after hibernation or first create)
+	async onStart() {
+		console.log("Agent started:", this.name);
+	}
 
-  // WebSocket connected
-  onConnect(conn: Connection, ctx: ConnectionContext) {
-    console.log("Client connected:", conn.id);
-  }
+	// WebSocket connected
+	onConnect(conn: Connection, ctx: ConnectionContext) {
+		console.log("Client connected:", conn.id);
+	}
 
-  // WebSocket message (non-RPC)
-  onMessage(conn: Connection, message: WSMessage) {
-    console.log("Received:", message);
-  }
+	// WebSocket message (non-RPC)
+	onMessage(conn: Connection, message: WSMessage) {
+		console.log("Received:", message);
+	}
 
-  // State changed
-  onStateUpdate(state: State, source: Connection | "server") {}
+	// State changed
+	onStateUpdate(state: State, source: Connection | "server") {}
 
-  // Error handler
-  onError(error: unknown) {
-    console.error("Agent error:", error);
-    throw error; // Re-throw to propagate
-  }
+	// Error handler
+	onError(error: unknown) {
+		console.error("Agent error:", error);
+		throw error; // Re-throw to propagate
+	}
 }
 ```

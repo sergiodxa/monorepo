@@ -49,7 +49,7 @@ await env.MY_BUCKET.put(key, data, { sha256: hash });
 ```typescript
 // Precondition failure returns object WITHOUT body
 const object = await env.MY_BUCKET.get(key, {
-  onlyIf: { etagMatches: '"wrong"' },
+	onlyIf: { etagMatches: '"wrong"' },
 });
 
 // Check for body, not just null
@@ -66,7 +66,7 @@ await env.MY_BUCKET.get(key);
 
 // ✅ SAFE: Validate keys
 if (!key || key.includes("..") || key.startsWith("/")) {
-  return new Response("Invalid key", { status: 400 });
+	return new Response("Invalid key", { status: 400 });
 }
 ```
 
@@ -89,9 +89,9 @@ await env.MY_BUCKET.put(key, data);
 
 // OR: Pass Content-Length if known
 const object = await env.MY_BUCKET.put(key, request.body, {
-  httpMetadata: {
-    contentLength: parseInt(request.headers.get("content-length") || "0"),
-  },
+	httpMetadata: {
+		contentLength: parseInt(request.headers.get("content-length") || "0"),
+	},
 });
 ```
 
@@ -144,8 +144,8 @@ const url = await getSignedUrl(s3, command, { expiresIn: 60 });
 
 // ✅ CORRECT: Return expiry to client
 return Response.json({
-  uploadUrl: url,
-  expiresAt: new Date(Date.now() + 60000).toISOString(),
+	uploadUrl: url,
+	expiresAt: new Date(Date.now() + 60000).toISOString(),
 });
 ```
 

@@ -9,9 +9,9 @@
 const apiKey = env.API_KEY; // ERROR: env not available in global scope
 
 export default {
-  async fetch(request: Request, env: Env) {
-    // Uses undefined or stale value!
-  },
+	async fetch(request: Request, env: Env) {
+		// Uses undefined or stale value!
+	},
 };
 ```
 
@@ -25,9 +25,9 @@ export default {
 
 ```typescript
 export default {
-  async fetch(request: Request, env: Env) {
-    const apiKey = env.API_KEY; // Fresh every request
-  },
+	async fetch(request: Request, env: Env) {
+		const apiKey = env.API_KEY; // Fresh every request
+	},
 };
 ```
 
@@ -142,10 +142,7 @@ const user = await env.DB.prepare("...").first();
 const config = await env.MY_KV.get("config");
 
 // ✅ Parallel
-const [user, config] = await Promise.all([
-  env.DB.prepare("...").first(),
-  env.MY_KV.get("config"),
-]);
+const [user, config] = await Promise.all([env.DB.prepare("...").first(), env.MY_KV.get("config")]);
 ```
 
 ## Security Gotchas

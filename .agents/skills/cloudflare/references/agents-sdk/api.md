@@ -11,20 +11,20 @@ import { AIChatAgent } from "agents";
 import { openai } from "@ai-sdk/openai";
 
 export class ChatAgent extends AIChatAgent<Env> {
-  async onChatMessage(onFinish) {
-    return this.streamText({
-      model: openai("gpt-4"),
-      messages: this.messages, // Auto-managed message history
-      tools: {
-        getWeather: {
-          description: "Get weather",
-          parameters: z.object({ city: z.string() }),
-          execute: async ({ city }) => `Sunny, 72°F in ${city}`,
-        },
-      },
-      onFinish, // Persist response to this.messages
-    });
-  }
+	async onChatMessage(onFinish) {
+		return this.streamText({
+			model: openai("gpt-4"),
+			messages: this.messages, // Auto-managed message history
+			tools: {
+				getWeather: {
+					description: "Get weather",
+					parameters: z.object({ city: z.string() }),
+					execute: async ({ city }) => `Sunny, 72°F in ${city}`,
+				},
+			},
+			onFinish, // Persist response to this.messages
+		});
+	}
 }
 ```
 
@@ -36,7 +36,7 @@ Full control for custom logic, WebSockets, email, and SQL.
 import { Agent } from "agents";
 
 export class MyAgent extends Agent<Env, State> {
-  // Lifecycle methods below
+	// Lifecycle methods below
 }
 ```
 
@@ -97,14 +97,14 @@ await this.cancelSchedule(scheduleId);
 import { Agent, callable } from "agents";
 
 export class MyAgent extends Agent<Env> {
-  @callable()
-  async processTask(input: { text: string }): Promise<{ result: string }> {
-    return {
-      result: await this.env.AI.run("@cf/meta/llama-3.1-8b-instruct", {
-        prompt: input.text,
-      }),
-    };
-  }
+	@callable()
+	async processTask(input: { text: string }): Promise<{ result: string }> {
+		return {
+			result: await this.env.AI.run("@cf/meta/llama-3.1-8b-instruct", {
+				prompt: input.text,
+			}),
+		};
+	}
 }
 // Client: const result = await agent.processTask({ text: "Hello" });
 // Must return JSON-serializable values
@@ -123,12 +123,12 @@ const r = await this.env.AI.run("@cf/meta/llama-3.1-8b-instruct", { prompt });
 
 // Manual streaming (prefer AIChatAgent)
 const stream = await client.chat.completions.create({
-  model: "gpt-4",
-  messages,
-  stream: true,
+	model: "gpt-4",
+	messages,
+	stream: true,
 });
 for await (const chunk of stream)
-  conn.send(JSON.stringify({ chunk: chunk.choices[0].delta.content }));
+	conn.send(JSON.stringify({ chunk: chunk.choices[0].delta.content }));
 ```
 
 **Type-safe state:** `Agent<Env, State, ConnState>` - third param types `conn.state`
@@ -140,19 +140,19 @@ Model Context Protocol for exposing tools:
 ```ts
 // Register & use MCP server
 await this.mcp.registerServer("github", {
-  url: env.MCP_SERVER_URL,
-  auth: {
-    type: "oauth",
-    clientId: env.GITHUB_CLIENT_ID,
-    clientSecret: env.GITHUB_CLIENT_SECRET,
-  },
+	url: env.MCP_SERVER_URL,
+	auth: {
+		type: "oauth",
+		clientId: env.GITHUB_CLIENT_ID,
+		clientSecret: env.GITHUB_CLIENT_SECRET,
+	},
 });
 const tools = await this.mcp.getAITools(["github"]);
 return this.streamText({
-  model: openai("gpt-4"),
-  messages: this.messages,
-  tools,
-  onFinish,
+	model: openai("gpt-4"),
+	messages: this.messages,
+	tools,
+	onFinish,
 });
 ```
 
@@ -178,13 +178,13 @@ const r = await this.env.AI.run("@cf/meta/llama-3.1-8b-instruct", { prompt });
 
 // Manual streaming (prefer AIChatAgent for auto-streaming)
 const stream = await client.chat.completions.create({
-  model: "gpt-4",
-  messages,
-  stream: true,
+	model: "gpt-4",
+	messages,
+	stream: true,
 });
 for await (const chunk of stream) {
-  if (chunk.choices[0]?.delta?.content)
-    conn.send(JSON.stringify({ chunk: chunk.choices[0].delta.content }));
+	if (chunk.choices[0]?.delta?.content)
+		conn.send(JSON.stringify({ chunk: chunk.choices[0].delta.content }));
 }
 ```
 
@@ -200,23 +200,15 @@ const result = await agent.processTask({ text: "Hello" }); // Call @callable met
 // useAgentChat() - AI chat UI
 import { useAgentChat } from "agents/ai-react";
 const agent = useAgent({ agent: "ChatAgent" });
-const {
-  messages,
-  input,
-  handleInputChange,
-  handleSubmit,
-  isLoading,
-  stop,
-  clearHistory,
-} = useAgentChat({
-  agent,
-  maxSteps: 5, // Max tool iterations
-  resume: true, // Auto-resume on disconnect
-  onToolCall: async (toolCall) => {
-    // Client tools (human-in-the-loop)
-    if (toolCall.toolName === "confirm")
-      return { ok: window.confirm("Proceed?") };
-  },
-});
+const { messages, input, handleInputChange, handleSubmit, isLoading, stop, clearHistory } =
+	useAgentChat({
+		agent,
+		maxSteps: 5, // Max tool iterations
+		resume: true, // Auto-resume on disconnect
+		onToolCall: async (toolCall) => {
+			// Client tools (human-in-the-loop)
+			if (toolCall.toolName === "confirm") return { ok: window.confirm("Proceed?") };
+		},
+	});
 // status: "ready" | "submitted" | "streaming" | "error"
 ```

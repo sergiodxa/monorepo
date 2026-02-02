@@ -89,8 +89,8 @@ Response.json({ key: "value" }, { status: 200 });
 
 // HTML
 new Response("<h1>Hi</h1>", {
-  status: 200,
-  headers: { "Content-Type": "text/html" },
+	status: 200,
+	headers: { "Content-Type": "text/html" },
 });
 
 // Redirect
@@ -205,10 +205,10 @@ Content-Type: application/json
 
 ```javascript
 export default {
-  async fetch(request) {
-    // Your logic here
-    const response = await fetch(request);
-    return response; // or modified response
-  },
+	async fetch(request) {
+		// Your logic here
+		const response = await fetch(request);
+		return response; // or modified response
+	},
 };
 ```

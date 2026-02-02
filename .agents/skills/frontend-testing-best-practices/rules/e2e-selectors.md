@@ -93,17 +93,13 @@ await page.locator("[class*='Button_primary']").click();
 ```typescript
 // Filter within results
 await page
-  .getByRole("listitem")
-  .filter({ hasText: "Red Cross" })
-  .getByRole("button", { name: "Donate" })
-  .click();
+	.getByRole("listitem")
+	.filter({ hasText: "Red Cross" })
+	.getByRole("button", { name: "Donate" })
+	.click();
 
 // Within a specific region
-await page
-  .getByRole("region", { name: "Order history" })
-  .getByRole("row")
-  .first()
-  .click();
+await page.getByRole("region", { name: "Order history" }).getByRole("row").first().click();
 ```
 
 ## Waiting for Elements

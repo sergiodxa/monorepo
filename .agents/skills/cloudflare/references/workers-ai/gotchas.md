@@ -89,15 +89,15 @@ First request: 1-3s. Use AI Gateway caching for frequent prompts.
 
 ```typescript
 interface Env {
-  AI: Ai; // From @cloudflare/workers-types
+	AI: Ai; // From @cloudflare/workers-types
 }
 
 interface TextGenerationResponse {
-  response: string;
+	response: string;
 }
 interface EmbeddingResponse {
-  data: number[][];
-  shape: number[];
+	data: number[][];
+	shape: number[];
 }
 ```
 
@@ -112,7 +112,7 @@ Check exact model name at developers.cloudflare.com/workers-ai/models/
 ```typescript
 // Text gen requires messages array
 await env.AI.run("@cf/meta/llama-3.1-8b-instruct", {
-  messages: [{ role: "user", content: "Hello" }], // ✅
+	messages: [{ role: "user", content: "Hello" }], // ✅
 });
 
 // Embeddings require text
@@ -124,7 +124,7 @@ await env.AI.run("@cf/baai/bge-base-en-v1.5", { text: "Hello" }); // ✅
 ```typescript
 import { openai } from "@ai-sdk/openai";
 const model = openai("gpt-3.5-turbo", {
-  baseURL: "https://api.cloudflare.com/client/v4/accounts/<ACCOUNT_ID>/ai/v1",
-  headers: { Authorization: "Bearer <API_TOKEN>" },
+	baseURL: "https://api.cloudflare.com/client/v4/accounts/<ACCOUNT_ID>/ai/v1",
+	headers: { Authorization: "Bearer <API_TOKEN>" },
 });
 ```

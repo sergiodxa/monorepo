@@ -11,28 +11,28 @@
 ```typescript
 // ❌ WRONG - fire and forget
 export default {
-  async tail(events) {
-    fetch(endpoint, { body: JSON.stringify(events) });
-  },
+	async tail(events) {
+		fetch(endpoint, { body: JSON.stringify(events) });
+	},
 };
 
 // ❌ WRONG - blocking await
 export default {
-  async tail(events, env, ctx) {
-    await fetch(endpoint, { body: JSON.stringify(events) });
-  },
+	async tail(events, env, ctx) {
+		await fetch(endpoint, { body: JSON.stringify(events) });
+	},
 };
 
 // ✅ CORRECT
 export default {
-  async tail(events, env, ctx) {
-    ctx.waitUntil(
-      (async () => {
-        await fetch(endpoint, { body: JSON.stringify(events) });
-        await processMore();
-      })(),
-    );
-  },
+	async tail(events, env, ctx) {
+		ctx.waitUntil(
+			(async () => {
+				await fetch(endpoint, { body: JSON.stringify(events) });
+				await processMore();
+			})(),
+		);
+	},
 };
 ```
 
@@ -50,15 +50,15 @@ export default {
 ```typescript
 // ❌ WRONG
 if (event.outcome === 500) {
-  /* never matches */
+	/* never matches */
 }
 
 // ✅ CORRECT
 if (event.outcome === "exception") {
-  /* script threw */
+	/* script threw */
 }
 if (event.event?.response?.status === 500) {
-  /* HTTP 500 */
+	/* HTTP 500 */
 }
 ```
 
@@ -80,9 +80,9 @@ if (event.event?.response?.status === 500) {
 ```typescript
 import type { TraceItem } from "@cloudflare/workers-types";
 export default {
-  async tail(events: TraceItem[], env, ctx) {
-    /* ... */
-  },
+	async tail(events: TraceItem[], env, ctx) {
+		/* ... */
+	},
 };
 ```
 
@@ -94,10 +94,10 @@ export default {
 
 ```typescript
 export default {
-  async tail(events, env, ctx) {
-    if (Math.random() > 0.1) return; // 10% sample
-    ctx.waitUntil(sendToEndpoint(events));
-  },
+	async tail(events, env, ctx) {
+		if (Math.random() > 0.1) return; // 10% sample
+		ctx.waitUntil(sendToEndpoint(events));
+	},
 };
 ```
 
@@ -109,17 +109,17 @@ export default {
 
 ```typescript
 const safePayload = events.map((e) => ({
-  ...e,
-  logs: e.logs.map((log) => ({
-    ...log,
-    message: log.message.map((m) => {
-      try {
-        return JSON.parse(JSON.stringify(m));
-      } catch {
-        return String(m);
-      }
-    }),
-  })),
+	...e,
+	logs: e.logs.map((log) => ({
+		...log,
+		message: log.message.map((m) => {
+			try {
+				return JSON.parse(JSON.stringify(m));
+			} catch {
+				return String(m);
+			}
+		}),
+	})),
 }));
 ```
 
@@ -131,14 +131,14 @@ const safePayload = events.map((e) => ({
 
 ```typescript
 ctx.waitUntil(
-  (async () => {
-    try {
-      await fetch(env.ENDPOINT, { body: JSON.stringify(events) });
-    } catch (error) {
-      console.error("Tail error:", error);
-      await env.FALLBACK_KV.put(`failed:${Date.now()}`, JSON.stringify(events));
-    }
-  })(),
+	(async () => {
+		try {
+			await fetch(env.ENDPOINT, { body: JSON.stringify(events) });
+		} catch (error) {
+			console.error("Tail error:", error);
+			await env.FALLBACK_KV.put(`failed:${Date.now()}`, JSON.stringify(events));
+		}
+	})(),
 );
 ```
 
@@ -177,13 +177,13 @@ Add test endpoint to producer:
 
 ```typescript
 export default {
-  async fetch(request) {
-    if (request.url.includes("/test")) {
-      console.log("Test log");
-      throw new Error("Test error");
-    }
-    return new Response("OK");
-  },
+	async fetch(request) {
+		if (request.url.includes("/test")) {
+			console.log("Test log");
+			throw new Error("Test error");
+		}
+		return new Response("OK");
+	},
 };
 ```
 

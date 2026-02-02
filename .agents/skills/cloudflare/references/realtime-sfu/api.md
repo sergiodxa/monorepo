@@ -83,10 +83,10 @@ GET /v1/apps/{appId}/sessions/{sessionId}
 
 ```typescript
 interface TrackMetadata {
-  trackName: string;
-  location: "local" | "remote";
-  sessionId?: string; // For remote tracks
-  mid?: string; // WebRTC mid
+	trackName: string;
+	location: "local" | "remote";
+	sessionId?: string; // For remote tracks
+	mid?: string; // WebRTC mid
 }
 ```
 
@@ -95,13 +95,13 @@ interface TrackMetadata {
 ```typescript
 // 1. Create PeerConnection
 const pc = new RTCPeerConnection({
-  iceServers: [{ urls: "stun:stun.cloudflare.com:3478" }],
+	iceServers: [{ urls: "stun:stun.cloudflare.com:3478" }],
 });
 
 // 2. Add tracks
 const stream = await navigator.mediaDevices.getUserMedia({
-  video: true,
-  audio: true,
+	video: true,
+	audio: true,
 });
 stream.getTracks().forEach((track) => pc.addTrack(track, stream));
 
@@ -111,8 +111,8 @@ await pc.setLocalDescription(offer);
 
 // 4. Send to backend → Cloudflare API
 const response = await fetch("/api/new-session", {
-  method: "POST",
-  body: JSON.stringify({ sdp: offer.sdp }),
+	method: "POST",
+	body: JSON.stringify({ sdp: offer.sdp }),
 });
 
 // 5. Set remote answer
@@ -127,11 +127,11 @@ const offer = await pc.createOffer();
 await pc.setLocalDescription(offer);
 
 const res = await fetch(`/api/sessions/${sessionId}/tracks`, {
-  method: "POST",
-  body: JSON.stringify({
-    sdp: offer.sdp,
-    tracks: [{ location: "local", trackName: "my-video" }],
-  }),
+	method: "POST",
+	body: JSON.stringify({
+		sdp: offer.sdp,
+		tracks: [{ location: "local", trackName: "my-video" }],
+	}),
 });
 
 const { sessionDescription, tracks } = await res.json();
@@ -143,16 +143,16 @@ const publishedTrackId = tracks[0].trackName; // Share with others
 
 ```typescript
 const res = await fetch(`/api/sessions/${sessionId}/tracks`, {
-  method: "POST",
-  body: JSON.stringify({
-    tracks: [
-      {
-        location: "remote",
-        trackName: remoteTrackId,
-        sessionId: remoteSessionId,
-      },
-    ],
-  }),
+	method: "POST",
+	body: JSON.stringify({
+		tracks: [
+			{
+				location: "remote",
+				trackName: remoteTrackId,
+				sessionId: remoteSessionId,
+			},
+		],
+	}),
 });
 
 const { sessionDescription } = await res.json();
@@ -162,12 +162,12 @@ const answer = await pc.createAnswer();
 await pc.setLocalDescription(answer);
 
 await fetch(`/api/sessions/${sessionId}/renegotiate`, {
-  method: "PUT",
-  body: JSON.stringify({ sdp: answer.sdp }),
+	method: "PUT",
+	body: JSON.stringify({ sdp: answer.sdp }),
 });
 
 pc.ontrack = (event) => {
-  const [remoteStream] = event.streams;
-  videoElement.srcObject = remoteStream;
+	const [remoteStream] = event.streams;
+	videoElement.srcObject = remoteStream;
 };
 ```

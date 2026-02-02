@@ -4,31 +4,31 @@
 
 ```jsonc
 {
-  "name": "my-worker",
-  "main": "src/index.ts",
-  "compatibility_date": "2026-01-10",
-  "containers": [
-    {
-      "class_name": "MyContainer",
-      "image": "./Dockerfile", // Path to Dockerfile or directory with Dockerfile
-      "instance_type": "standard-1", // Predefined or custom (see below)
-      "max_instances": 10,
-    },
-  ],
-  "durable_objects": {
-    "bindings": [
-      {
-        "name": "MY_CONTAINER",
-        "class_name": "MyContainer",
-      },
-    ],
-  },
-  "migrations": [
-    {
-      "tag": "v1",
-      "new_sqlite_classes": ["MyContainer"], // Must use new_sqlite_classes
-    },
-  ],
+	"name": "my-worker",
+	"main": "src/index.ts",
+	"compatibility_date": "2026-01-10",
+	"containers": [
+		{
+			"class_name": "MyContainer",
+			"image": "./Dockerfile", // Path to Dockerfile or directory with Dockerfile
+			"instance_type": "standard-1", // Predefined or custom (see below)
+			"max_instances": 10,
+		},
+	],
+	"durable_objects": {
+		"bindings": [
+			{
+				"name": "MY_CONTAINER",
+				"class_name": "MyContainer",
+			},
+		],
+	},
+	"migrations": [
+		{
+			"tag": "v1",
+			"new_sqlite_classes": ["MyContainer"], // Must use new_sqlite_classes
+		},
+	],
 }
 ```
 
@@ -54,13 +54,13 @@ Key config requirements:
 
 ```jsonc
 {
-  "containers": [
-    {
-      "class_name": "MyContainer",
-      "image": "./Dockerfile",
-      "instance_type": "standard-2", // Use predefined type
-    },
-  ],
+	"containers": [
+		{
+			"class_name": "MyContainer",
+			"image": "./Dockerfile",
+			"instance_type": "standard-2", // Use predefined type
+		},
+	],
 }
 ```
 
@@ -68,17 +68,17 @@ Key config requirements:
 
 ```jsonc
 {
-  "containers": [
-    {
-      "class_name": "MyContainer",
-      "image": "./Dockerfile",
-      "instance_type_custom": {
-        "vcpu": 2, // 1-4 vCPU
-        "memory_mib": 8192, // 512-12288 MiB (up to 12 GiB)
-        "disk_mib": 16384, // 2048-20480 MiB (up to 20 GB)
-      },
-    },
-  ],
+	"containers": [
+		{
+			"class_name": "MyContainer",
+			"image": "./Dockerfile",
+			"instance_type_custom": {
+				"vcpu": 2, // 1-4 vCPU
+				"memory_mib": 8192, // 512-12288 MiB (up to 12 GiB)
+				"disk_mib": 16384, // 2048-20480 MiB (up to 20 GB)
+			},
+		},
+	],
 }
 ```
 
@@ -103,28 +103,28 @@ Key config requirements:
 import { Container } from "@cloudflare/containers";
 
 export class MyContainer extends Container {
-  // Port Configuration
-  defaultPort = 8080; // Default port for fetch() calls
-  requiredPorts = [8080, 9090]; // Ports to wait for in startAndWaitForPorts()
+	// Port Configuration
+	defaultPort = 8080; // Default port for fetch() calls
+	requiredPorts = [8080, 9090]; // Ports to wait for in startAndWaitForPorts()
 
-  // Lifecycle
-  sleepAfter = "30m"; // Inactivity timeout (5m, 30m, 2h, etc.)
+	// Lifecycle
+	sleepAfter = "30m"; // Inactivity timeout (5m, 30m, 2h, etc.)
 
-  // Network
-  enableInternet = true; // Allow outbound internet access
+	// Network
+	enableInternet = true; // Allow outbound internet access
 
-  // Health Check
-  pingEndpoint = "/health"; // Health check endpoint path
+	// Health Check
+	pingEndpoint = "/health"; // Health check endpoint path
 
-  // Environment
-  envVars = {
-    // Environment variables passed to container
-    NODE_ENV: "production",
-    LOG_LEVEL: "info",
-  };
+	// Environment
+	envVars = {
+		// Environment variables passed to container
+		NODE_ENV: "production",
+		LOG_LEVEL: "info",
+	};
 
-  // Startup
-  entrypoint = ["/bin/start.sh"]; // Override image entrypoint (optional)
+	// Startup
+	entrypoint = ["/bin/start.sh"]; // Override image entrypoint (optional)
 }
 ```
 

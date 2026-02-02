@@ -25,28 +25,27 @@ import resources from "~/locales";
 import "i18next";
 
 export const localeCookie = createCookie("lng", {
-  path: "/",
-  sameSite: "lax",
-  secure: process.env.NODE_ENV === "production",
-  httpOnly: true,
+	path: "/",
+	sameSite: "lax",
+	secure: process.env.NODE_ENV === "production",
+	httpOnly: true,
 });
 
-export const [i18nextMiddleware, getLocale, getInstance] =
-  createI18nextMiddleware({
-    detection: {
-      supportedLanguages: ["es", "en"],
-      fallbackLanguage: "en",
-      cookie: localeCookie,
-    },
-    i18next: { resources },
-    plugins: [initReactI18next],
-  });
+export const [i18nextMiddleware, getLocale, getInstance] = createI18nextMiddleware({
+	detection: {
+		supportedLanguages: ["es", "en"],
+		fallbackLanguage: "en",
+		cookie: localeCookie,
+	},
+	i18next: { resources },
+	plugins: [initReactI18next],
+});
 
 declare module "i18next" {
-  interface CustomTypeOptions {
-    defaultNS: "translation";
-    resources: typeof resources.en;
-  }
+	interface CustomTypeOptions {
+		defaultNS: "translation";
+		resources: typeof resources.en;
+	}
 }
 ```
 

@@ -14,16 +14,12 @@ Use `useHydrated` to render safe SSR fallbacks without mismatches.
 import { useHydrated } from "remix-utils/use-hydrated";
 
 export function CopyButton({ text }: { text: string }) {
-  let hydrated = useHydrated();
-  return (
-    <button
-      type="button"
-      disabled={!hydrated}
-      onClick={() => navigator.clipboard.writeText(text)}
-    >
-      Copy
-    </button>
-  );
+	let hydrated = useHydrated();
+	return (
+		<button type="button" disabled={!hydrated} onClick={() => navigator.clipboard.writeText(text)}>
+			Copy
+		</button>
+	);
 }
 ```
 

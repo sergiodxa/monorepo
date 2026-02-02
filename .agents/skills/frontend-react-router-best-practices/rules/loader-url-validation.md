@@ -18,9 +18,9 @@ URL params are user input. Validate early to fail fast with clear errors and ens
 import { data } from "react-router";
 
 export async function loader({ params }: Route.LoaderArgs) {
-  // params.id is string | undefined - could be missing or invalid
-  let item = await getItem(params.id);
-  return data({ item });
+	// params.id is string | undefined - could be missing or invalid
+	let item = await getItem(params.id);
+	return data({ item });
 }
 ```
 
@@ -31,9 +31,9 @@ import { data } from "react-router";
 import { z } from "zod";
 
 export async function loader({ params }: Route.LoaderArgs) {
-  let itemId = z.string().parse(params.itemId);
-  let item = await getItem(itemId);
-  return data({ item });
+	let itemId = z.string().parse(params.itemId);
+	let item = await getItem(itemId);
+	return data({ item });
 }
 ```
 
@@ -44,15 +44,15 @@ import { data } from "react-router";
 import { z } from "zod";
 
 export async function loader({ params }: Route.LoaderArgs) {
-  const { userId, postId } = z
-    .object({
-      userId: z.string(),
-      postId: z.string().uuid(),
-    })
-    .parse(params);
+	const { userId, postId } = z
+		.object({
+			userId: z.string(),
+			postId: z.string().uuid(),
+		})
+		.parse(params);
 
-  let post = await getPost(userId, postId);
-  return data({ post });
+	let post = await getPost(userId, postId);
+	return data({ post });
 }
 ```
 
@@ -63,17 +63,17 @@ import { data } from "react-router";
 import { z } from "zod";
 
 export async function loader({ request }: Route.LoaderArgs) {
-  let url = new URL(request.url);
+	let url = new URL(request.url);
 
-  const { page, limit, sort } = z
-    .object({
-      page: z.coerce.number().min(1).default(1),
-      limit: z.coerce.number().min(1).max(100).default(20),
-      sort: z.enum(["newest", "oldest", "popular"]).default("newest"),
-    })
-    .parse(Object.fromEntries(url.searchParams));
+	const { page, limit, sort } = z
+		.object({
+			page: z.coerce.number().min(1).default(1),
+			limit: z.coerce.number().min(1).max(100).default(20),
+			sort: z.enum(["newest", "oldest", "popular"]).default("newest"),
+		})
+		.parse(Object.fromEntries(url.searchParams));
 
-  let items = await getItems({ page, limit, sort });
-  return data({ items, page, limit, sort });
+	let items = await getItems({ page, limit, sort });
+	return data({ items, page, limit, sort });
 }
 ```

@@ -21,23 +21,23 @@ Use meta function with loader data for dynamic SEO and OpenGraph tags.
 import { data } from "react-router";
 
 export async function loader({ params }: Route.LoaderArgs) {
-  let item = await getItem(params.itemId);
-  return data({
-    item,
-    title: item.name,
-    description: item.summary,
-  });
+	let item = await getItem(params.itemId);
+	return data({
+		item,
+		title: item.name,
+		description: item.summary,
+	});
 }
 
 export const meta: Route.MetaFunction<typeof loader> = ({ data }) => {
-  if (!data) return [];
+	if (!data) return [];
 
-  return [
-    { title: data.title },
-    { name: "description", content: data.description },
-    { property: "og:title", content: data.title },
-    { property: "og:description", content: data.description },
-  ];
+	return [
+		{ title: data.title },
+		{ name: "description", content: data.description },
+		{ property: "og:title", content: data.title },
+		{ property: "og:description", content: data.description },
+	];
 };
 ```
 
@@ -50,50 +50,49 @@ import { data } from "react-router";
 import { seo } from "~/lib/seo.server";
 
 export async function loader({ request }: Route.LoaderArgs) {
-  let t = await i18n.getFixedT(request);
-  let item = await getItem();
+	let t = await i18n.getFixedT(request);
+	let item = await getItem();
 
-  return data({
-    item,
-    meta: seo(t, {
-      title: t("Page Title - {{name}}", { name: item.name }),
-      description: t("Description for {{name}}", { name: item.name }),
-      og: {
-        title: item.name,
-        description: item.summary,
-        image: item.imageUrl,
-      },
-    }),
-  });
+	return data({
+		item,
+		meta: seo(t, {
+			title: t("Page Title - {{name}}", { name: item.name }),
+			description: t("Description for {{name}}", { name: item.name }),
+			og: {
+				title: item.name,
+				description: item.summary,
+				image: item.imageUrl,
+			},
+		}),
+	});
 }
 
-export const meta: Route.MetaFunction<typeof loader> = ({ data }) =>
-  data?.meta ?? [];
+export const meta: Route.MetaFunction<typeof loader> = ({ data }) => data?.meta ?? [];
 ```
 
 ## OpenGraph Tags
 
 ```tsx
 export const meta: Route.MetaFunction<typeof loader> = ({ data }) => {
-  if (!data) return [];
+	if (!data) return [];
 
-  return [
-    { title: data.title },
-    { name: "description", content: data.description },
+	return [
+		{ title: data.title },
+		{ name: "description", content: data.description },
 
-    // OpenGraph
-    { property: "og:type", content: "website" },
-    { property: "og:title", content: data.title },
-    { property: "og:description", content: data.description },
-    { property: "og:image", content: data.imageUrl },
-    { property: "og:url", content: data.canonicalUrl },
+		// OpenGraph
+		{ property: "og:type", content: "website" },
+		{ property: "og:title", content: data.title },
+		{ property: "og:description", content: data.description },
+		{ property: "og:image", content: data.imageUrl },
+		{ property: "og:url", content: data.canonicalUrl },
 
-    // Twitter
-    { name: "twitter:card", content: "summary_large_image" },
-    { name: "twitter:title", content: data.title },
-    { name: "twitter:description", content: data.description },
-    { name: "twitter:image", content: data.imageUrl },
-  ];
+		// Twitter
+		{ name: "twitter:card", content: "summary_large_image" },
+		{ name: "twitter:title", content: data.title },
+		{ name: "twitter:description", content: data.description },
+		{ name: "twitter:image", content: data.imageUrl },
+	];
 };
 ```
 
@@ -104,13 +103,13 @@ Access parent route loader data:
 ```tsx
 import type { loader as parentLoader } from "../_layout/route";
 
-export const meta: Route.MetaFunction<
-  typeof loader,
-  { "routes/_layout": typeof parentLoader }
-> = ({ data, matches }) => {
-  let parentData = matches.find((m) => m.id === "routes/_layout")?.data;
+export const meta: Route.MetaFunction<typeof loader, { "routes/_layout": typeof parentLoader }> = ({
+	data,
+	matches,
+}) => {
+	let parentData = matches.find((m) => m.id === "routes/_layout")?.data;
 
-  return [{ title: `${data?.item.name} | ${parentData?.siteName}` }];
+	return [{ title: `${data?.item.name} | ${parentData?.siteName}` }];
 };
 ```
 
@@ -120,15 +119,12 @@ Always handle the case where data might be undefined (error states):
 
 ```tsx
 export const meta: Route.MetaFunction<typeof loader> = ({ data }) => {
-  // Return empty array or default meta when data is missing
-  if (!data) {
-    return [{ title: "Error" }];
-  }
+	// Return empty array or default meta when data is missing
+	if (!data) {
+		return [{ title: "Error" }];
+	}
 
-  return [
-    { title: data.title },
-    { name: "description", content: data.description },
-  ];
+	return [{ title: data.title }, { name: "description", content: data.description }];
 };
 ```
 
@@ -138,7 +134,7 @@ For routes with static meta, you can return a simple array:
 
 ```tsx
 export const meta: Route.MetaFunction = () => [
-  { title: "About Us" },
-  { name: "description", content: "Learn more about our company" },
+	{ title: "About Us" },
+	{ name: "description", content: "Learn more about our company" },
 ];
 ```

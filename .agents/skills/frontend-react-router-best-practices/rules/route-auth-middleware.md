@@ -34,8 +34,7 @@ Use `remix-utils` to store the router context and request in AsyncLocalStorage s
 // app/middleware/context-storage.server.ts
 import { createContextStorageMiddleware } from "remix-utils/middleware/context-storage";
 
-export const [contextStorageMiddleware, getContext, getRequest] =
-  createContextStorageMiddleware();
+export const [contextStorageMiddleware, getContext, getRequest] = createContextStorageMiddleware();
 ```
 
 ### Session middleware (remix-utils)
@@ -46,11 +45,10 @@ import { createCookie, createCookieSessionStorage } from "react-router";
 import { createSessionMiddleware } from "remix-utils/middleware/session";
 
 let sessionStorage = createCookieSessionStorage({
-  cookie: createCookie("session", { path: "/", sameSite: "lax" }),
+	cookie: createCookie("session", { path: "/", sameSite: "lax" }),
 });
 
-export const [sessionMiddleware, getSession] =
-  createSessionMiddleware(sessionStorage);
+export const [sessionMiddleware, getSession] = createSessionMiddleware(sessionStorage);
 ```
 
 ### Auth middleware (loads user into context)
@@ -62,9 +60,9 @@ import { getUserById } from "~/lib/users.server";
 import { userContext } from "~/context";
 
 export function authenticate({ context }: MiddlewareFunctionArgs<Response>) {
-  let session = getSession(context);
-  let userId = session?.get("userId");
-  if (userId) context.set(userContext, await getUserById(userId));
+	let session = getSession(context);
+	let userId = session?.get("userId");
+	if (userId) context.set(userContext, await getUserById(userId));
 }
 ```
 
@@ -78,56 +76,53 @@ import { getContext, getRequest } from "~/middleware/context-storage.server";
 import { getSession } from "~/middleware/session.server";
 
 function getUser() {
-  return getContext().get(userContext);
+	return getContext().get(userContext);
 }
 
 export function anonymous() {
-  let user = getUser();
-  if (user) throw redirect("/");
+	let user = getUser();
+	if (user) throw redirect("/");
 }
 
 export function currentUser() {
-  let user = getUser();
-  if (user) return user;
-  let request = getRequest();
-  let returnTo = new URL(request.url).pathname;
-  throw redirect(`/login?returnTo=${encodeURIComponent(returnTo)}`);
+	let user = getUser();
+	if (user) return user;
+	let request = getRequest();
+	let returnTo = new URL(request.url).pathname;
+	throw redirect(`/login?returnTo=${encodeURIComponent(returnTo)}`);
 }
 
 export function onboarded() {
-  let user = currentUser();
-  return Boolean(user.onboardingComplete);
+	let user = currentUser();
+	return Boolean(user.onboardingComplete);
 }
 
 export function role(name: string) {
-  let user = currentUser();
-  return Boolean(user.role === name);
+	let user = currentUser();
+	return Boolean(user.role === name);
 }
 
 export function permission(name: string) {
-  let user = currentUser();
-  return Boolean(user && user.permissions?.includes(name));
+	let user = currentUser();
+	return Boolean(user && user.permissions?.includes(name));
 }
 
 export function feature(flag: string) {
-  let user = currentUser();
-  return Boolean(user && user.featureFlags?.includes(flag));
+	let user = currentUser();
+	return Boolean(user && user.featureFlags?.includes(flag));
 }
 
 export function mfa(maxAgeMs = 60 * 60 * 1000) {
-  let session = getSession(getContext());
-  if (!session) return false;
+	let session = getSession(getContext());
+	if (!session) return false;
 
-  let verifiedAt = session.get("mfaVerifiedAt");
-  if (!verifiedAt) return false;
+	let verifiedAt = session.get("mfaVerifiedAt");
+	if (!verifiedAt) return false;
 
-  let verifiedAtMs =
-    typeof verifiedAt === "number"
-      ? verifiedAt
-      : Date.parse(String(verifiedAt));
-  if (Number.isNaN(verifiedAtMs)) return false;
+	let verifiedAtMs = typeof verifiedAt === "number" ? verifiedAt : Date.parse(String(verifiedAt));
+	if (Number.isNaN(verifiedAtMs)) return false;
 
-  return Date.now() - verifiedAtMs <= maxAgeMs;
+	return Date.now() - verifiedAtMs <= maxAgeMs;
 }
 ```
 
@@ -139,40 +134,40 @@ import { contextStorageMiddleware } from "~/middleware/context-storage.server";
 import { sessionMiddleware } from "~/middleware/session.server";
 import { authenticate } from "~/middleware/auth.server";
 import {
-  anonymous,
-  currentUser,
-  feature,
-  mfa,
-  onboarded,
-  permission,
-  role,
+	anonymous,
+	currentUser,
+	feature,
+	mfa,
+	onboarded,
+	permission,
+	role,
 } from "~/lib/authorize.server";
 
 export const middleware: Route.MiddlewareFunction[] = [
-  contextStorageMiddleware,
-  sessionMiddleware,
-  authenticate,
+	contextStorageMiddleware,
+	sessionMiddleware,
+	authenticate,
 ];
 
 export async function loader() {
-  let user = currentUser();
-  if (onboarded()) return data({ user });
-  throw redirect("/onboarding");
+	let user = currentUser();
+	if (onboarded()) return data({ user });
+	throw redirect("/onboarding");
 }
 
 export async function action() {
-  let user = currentUser();
+	let user = currentUser();
 
-  if (!permission("account:delete")) {
-    throw redirect("/forbidden");
-  }
+	if (!permission("account:delete")) {
+		throw redirect("/forbidden");
+	}
 
-  if (!mfa(5 * 60 * 1000)) {
-    throw redirect("/confirm-2fa");
-  }
+	if (!mfa(5 * 60 * 1000)) {
+		throw redirect("/confirm-2fa");
+	}
 
-  // ... handle mutation
-  return null;
+	// ... handle mutation
+	return null;
 }
 ```
 

@@ -15,11 +15,11 @@ import { isPrefetch } from "remix-utils/is-prefetch";
 import { data } from "react-router";
 
 export async function loader({ request }: Route.LoaderArgs) {
-  let headers = new Headers();
-  if (isPrefetch(request)) {
-    headers.set("Cache-Control", "private, max-age=5, smax-age=0");
-  }
-  return data(await getData(), { headers });
+	let headers = new Headers();
+	if (isPrefetch(request)) {
+		headers.set("Cache-Control", "private, max-age=5, smax-age=0");
+	}
+	return data(await getData(), { headers });
 }
 ```
 

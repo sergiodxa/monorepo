@@ -27,9 +27,9 @@ export const [requestIDMiddleware, getRequestID] = createRequestIDMiddleware();
 export const middleware: Route.MiddlewareFunction[] = [requestIDMiddleware];
 
 export async function loader() {
-  let requestId = getRequestID();
-  log.info({ requestId }, "request");
-  return data({ ok: true });
+	let requestId = getRequestID();
+	log.info({ requestId }, "request");
+	return data({ ok: true });
 }
 ```
 

@@ -56,12 +56,12 @@
 const status = await client.argo.smartRouting.get({ zone_id: zoneId });
 
 if (!status.editable) {
-  // Don't attempt to modify - will fail
-  console.error("Cannot modify Argo settings:");
-  console.error("- Check billing is configured");
-  console.error("- Verify zone has Enterprise+ plan");
-  console.error("- Confirm API token has Edit permission");
-  throw new Error("Argo is not editable for this zone");
+	// Don't attempt to modify - will fail
+	console.error("Cannot modify Argo settings:");
+	console.error("- Check billing is configured");
+	console.error("- Verify zone has Enterprise+ plan");
+	console.error("- Confirm API token has Edit permission");
+	throw new Error("Argo is not editable for this zone");
 }
 
 // Safe to proceed with enable/disable
@@ -80,18 +80,16 @@ await client.argo.smartRouting.edit({ zone_id: zoneId, value: "on" });
 import { RateLimitError } from "cloudflare";
 
 try {
-  await client.argo.smartRouting.edit({ zone_id: zoneId, value: "on" });
+	await client.argo.smartRouting.edit({ zone_id: zoneId, value: "on" });
 } catch (error) {
-  if (error instanceof RateLimitError) {
-    const retryAfter = error.response?.headers.get("retry-after");
-    console.log(`Rate limited. Retry after ${retryAfter} seconds`);
+	if (error instanceof RateLimitError) {
+		const retryAfter = error.response?.headers.get("retry-after");
+		console.log(`Rate limited. Retry after ${retryAfter} seconds`);
 
-    // Implement exponential backoff
-    await new Promise((resolve) =>
-      setTimeout(resolve, (retryAfter || 60) * 1000),
-    );
-    // Retry request
-  }
+		// Implement exponential backoff
+		await new Promise((resolve) => setTimeout(resolve, (retryAfter || 60) * 1000));
+		// Retry request
+	}
 }
 ```
 

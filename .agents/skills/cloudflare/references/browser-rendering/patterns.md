@@ -6,16 +6,16 @@
 import puppeteer from "@cloudflare/puppeteer";
 
 export default {
-  async fetch(request, env) {
-    const browser = await puppeteer.launch(env.MYBROWSER);
-    try {
-      const page = await browser.newPage();
-      await page.goto("https://example.com");
-      return new Response(await page.content());
-    } finally {
-      await browser.close(); // ALWAYS in finally
-    }
-  },
+	async fetch(request, env) {
+		const browser = await puppeteer.launch(env.MYBROWSER);
+		try {
+			const page = await browser.newPage();
+			await page.goto("https://example.com");
+			return new Response(await page.content());
+		} finally {
+			await browser.close(); // ALWAYS in finally
+		}
+	},
 };
 ```
 
@@ -26,12 +26,12 @@ Keep sessions alive for performance:
 ```typescript
 let sessionId = await env.SESSION_KV.get("browser-session");
 if (sessionId) {
-  browser = await puppeteer.connect(env.MYBROWSER, sessionId);
+	browser = await puppeteer.connect(env.MYBROWSER, sessionId);
 } else {
-  browser = await puppeteer.launch(env.MYBROWSER, { keep_alive: 600000 });
-  await env.SESSION_KV.put("browser-session", browser.sessionId(), {
-    expirationTtl: 600,
-  });
+	browser = await puppeteer.launch(env.MYBROWSER, { keep_alive: 600000 });
+	await env.SESSION_KV.put("browser-session", browser.sessionId(), {
+		expirationTtl: 600,
+	});
 }
 // Don't close browser to keep session alive
 ```
@@ -85,13 +85,12 @@ if (limits.remaining < 60000) return new Response("Quota low", { status: 429 });
 
 ```typescript
 try {
-  await page.goto(url, { timeout: 30000, waitUntil: "networkidle0" });
+	await page.goto(url, { timeout: 30000, waitUntil: "networkidle0" });
 } catch (e) {
-  if (e.message.includes("timeout"))
-    return new Response("Timeout", { status: 504 });
-  if (e.message.includes("Session limit"))
-    return new Response("Too many sessions", { status: 429 });
+	if (e.message.includes("timeout")) return new Response("Timeout", { status: 504 });
+	if (e.message.includes("Session limit"))
+		return new Response("Too many sessions", { status: 429 });
 } finally {
-  if (browser) await browser.close();
+	if (browser) await browser.close();
 }
 ```

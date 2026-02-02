@@ -17,14 +17,14 @@ Agents require a binding in `wrangler.jsonc`:
 
 ```jsonc
 {
-  "durable_objects": {
-    // "class_name" must match your Agent class name exactly
-    "bindings": [{ "name": "Counter", "class_name": "Counter" }],
-  },
-  "migrations": [
-    // Required: list all Agent classes for SQLite storage
-    { "tag": "v1", "new_sqlite_classes": ["Counter"] },
-  ],
+	"durable_objects": {
+		// "class_name" must match your Agent class name exactly
+		"bindings": [{ "name": "Counter", "class_name": "Counter" }],
+	},
+	"migrations": [
+		// Required: list all Agent classes for SQLite storage
+		{ "tag": "v1", "new_sqlite_classes": ["Counter"] },
+	],
 }
 ```
 
@@ -67,18 +67,17 @@ import { Agent, routeAgentRequest, callable } from "agents";
 type State = { count: number };
 
 export class Counter extends Agent<Env, State> {
-  initialState = { count: 0 };
+	initialState = { count: 0 };
 
-  @callable()
-  increment() {
-    this.setState({ count: this.state.count + 1 });
-    return this.state.count;
-  }
+	@callable()
+	increment() {
+		this.setState({ count: this.state.count + 1 });
+		return this.state.count;
+	}
 }
 
 export default {
-  fetch: (req, env) =>
-    routeAgentRequest(req, env) ?? new Response("Not found", { status: 404 }),
+	fetch: (req, env) => routeAgentRequest(req, env) ?? new Response("Not found", { status: 404 }),
 };
 ```
 
@@ -96,10 +95,10 @@ npm install @cloudflare/ai-chat ai @ai-sdk/openai
 
 ```jsonc
 {
-  "durable_objects": {
-    "bindings": [{ "name": "Chat", "class_name": "Chat" }],
-  },
-  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["Chat"] }],
+	"durable_objects": {
+		"bindings": [{ "name": "Chat", "class_name": "Chat" }],
+	},
+	"migrations": [{ "tag": "v1", "new_sqlite_classes": ["Chat"] }],
 }
 ```
 
@@ -110,19 +109,18 @@ import { streamText, convertToModelMessages } from "ai";
 import { openai } from "@ai-sdk/openai";
 
 export class Chat extends AIChatAgent<Env> {
-  async onChatMessage(onFinish) {
-    const result = streamText({
-      model: openai("gpt-4o"),
-      messages: await convertToModelMessages(this.messages),
-      onFinish,
-    });
-    return result.toUIMessageStreamResponse();
-  }
+	async onChatMessage(onFinish) {
+		const result = streamText({
+			model: openai("gpt-4o"),
+			messages: await convertToModelMessages(this.messages),
+			onFinish,
+		});
+		return result.toUIMessageStreamResponse();
+	}
 }
 
 export default {
-  fetch: (req, env) =>
-    routeAgentRequest(req, env) ?? new Response("Not found", { status: 404 }),
+	fetch: (req, env) => routeAgentRequest(req, env) ?? new Response("Not found", { status: 404 }),
 };
 ```
 

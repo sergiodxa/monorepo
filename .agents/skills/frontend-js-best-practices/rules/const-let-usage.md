@@ -31,22 +31,22 @@ const SLUG_PATTERN = /^[a-z0-9-]+$/;
 
 ```typescript
 function processUsers(users: User[]) {
-  // Always use let inside functions, even for values that don't change
-  let total = 0;
-  let activeCount = 0;
-  let result = [];
+	// Always use let inside functions, even for values that don't change
+	let total = 0;
+	let activeCount = 0;
+	let result = [];
 
-  for (let user of users) {
-    let isActive = user.status === "active";
-    if (isActive) {
-      activeCount += 1;
-      result.push(user);
-    }
-    total += 1;
-  }
+	for (let user of users) {
+		let isActive = user.status === "active";
+		if (isActive) {
+			activeCount += 1;
+			result.push(user);
+		}
+		total += 1;
+	}
 
-  let summary = { total, activeCount };
-  return { result, summary };
+	let summary = { total, activeCount };
+	return { result, summary };
 }
 ```
 

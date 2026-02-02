@@ -8,30 +8,30 @@
 
 ```graphql
 query {
-  viewer {
-    accounts(filter: { accountTag: $accountId }) {
-      workersInvocationsAdaptive(
-        limit: 100
-        filter: {
-          datetime_geq: "2025-01-01T00:00:00Z"
-          datetime_leq: "2025-01-31T23:59:59Z"
-          scriptName: "my-worker"
-        }
-      ) {
-        sum {
-          requests
-          errors
-          subrequests
-        }
-        quantiles {
-          cpuTimeP50
-          cpuTimeP99
-          wallTimeP50
-          wallTimeP99
-        }
-      }
-    }
-  }
+	viewer {
+		accounts(filter: { accountTag: $accountId }) {
+			workersInvocationsAdaptive(
+				limit: 100
+				filter: {
+					datetime_geq: "2025-01-01T00:00:00Z"
+					datetime_leq: "2025-01-31T23:59:59Z"
+					scriptName: "my-worker"
+				}
+			) {
+				sum {
+					requests
+					errors
+					subrequests
+				}
+				quantiles {
+					cpuTimeP50
+					cpuTimeP99
+					wallTimeP50
+					wallTimeP99
+				}
+			}
+		}
+	}
 }
 ```
 
@@ -94,11 +94,11 @@ console.debug("debug message");
 
 // Structured logging (recommended)
 console.log({
-  level: "info",
-  user_id: "123",
-  action: "checkout",
-  amount: 99.99,
-  currency: "USD",
+	level: "info",
+	user_id: "123",
+	action: "checkout",
+	amount: 99.99,
+	currency: "USD",
 });
 ```
 
@@ -106,9 +106,9 @@ console.log({
 
 ```typescript
 console.log({
-  level: "error",
-  message: "Payment failed",
-  error_code: "CARD_DECLINED",
+	level: "error",
+	message: "Payment failed",
+	error_code: "CARD_DECLINED",
 });
 ```
 
@@ -116,18 +116,18 @@ console.log({
 
 ```typescript
 interface AnalyticsEngineDataset {
-  writeDataPoint(event: AnalyticsEngineDataPoint): void;
+	writeDataPoint(event: AnalyticsEngineDataPoint): void;
 }
 
 interface AnalyticsEngineDataPoint {
-  // Indexed strings (use for filtering/grouping)
-  indexes?: string[];
+	// Indexed strings (use for filtering/grouping)
+	indexes?: string[];
 
-  // Non-indexed strings (metadata, IDs, URLs)
-  blobs?: string[];
+	// Non-indexed strings (metadata, IDs, URLs)
+	blobs?: string[];
 
-  // Numeric values (counts, durations, amounts)
-  doubles?: number[];
+	// Numeric values (counts, durations, amounts)
+	doubles?: number[];
 }
 ```
 
@@ -142,27 +142,27 @@ interface AnalyticsEngineDataPoint {
 
 ```typescript
 interface TraceItem {
-  event: TraceEvent;
-  logs: TraceLog[];
-  exceptions: TraceException[];
-  scriptName?: string;
+	event: TraceEvent;
+	logs: TraceLog[];
+	exceptions: TraceException[];
+	scriptName?: string;
 }
 
 interface TraceEvent {
-  outcome: "ok" | "exception" | "exceededCpu" | "exceededMemory" | "unknown";
-  cpuTime: number; // microseconds
-  wallTime: number; // microseconds
+	outcome: "ok" | "exception" | "exceededCpu" | "exceededMemory" | "unknown";
+	cpuTime: number; // microseconds
+	wallTime: number; // microseconds
 }
 
 interface TraceLog {
-  timestamp: number;
-  level: "log" | "info" | "debug" | "warn" | "error";
-  message: any; // string or structured object
+	timestamp: number;
+	level: "log" | "info" | "debug" | "warn" | "error";
+	message: any; // string or structured object
 }
 
 interface TraceException {
-  name: string;
-  message: string;
-  timestamp: number;
+	name: string;
+	message: string;
+	timestamp: number;
 }
 ```

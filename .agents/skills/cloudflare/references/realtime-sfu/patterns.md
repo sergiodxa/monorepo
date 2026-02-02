@@ -74,14 +74,11 @@ Express:
 
 ```js
 app.post("/api/new-session", async (req, res) => {
-  const r = await fetch(
-    `${CALLS_API}/apps/${process.env.CALLS_APP_ID}/sessions/new`,
-    {
-      method: "POST",
-      headers: { Authorization: `Bearer ${process.env.CALLS_APP_SECRET}` },
-    },
-  );
-  res.json(await r.json());
+	const r = await fetch(`${CALLS_API}/apps/${process.env.CALLS_APP_ID}/sessions/new`, {
+		method: "POST",
+		headers: { Authorization: `Bearer ${process.env.CALLS_APP_SECRET}` },
+	});
+	res.json(await r.json());
 });
 ```
 
@@ -94,19 +91,19 @@ DO Presence: See configuration.md for boilerplate
 ```typescript
 // Attach analyzer to audio track
 function attachAudioLevelDetector(track: MediaStreamTrack) {
-  const ctx = new AudioContext();
-  const analyzer = ctx.createAnalyser();
-  const src = ctx.createMediaStreamSource(new MediaStream([track]));
-  src.connect(analyzer);
+	const ctx = new AudioContext();
+	const analyzer = ctx.createAnalyser();
+	const src = ctx.createMediaStreamSource(new MediaStream([track]));
+	src.connect(analyzer);
 
-  const data = new Uint8Array(analyzer.frequencyBinCount);
-  const checkLevel = () => {
-    analyzer.getByteFrequencyData(data);
-    const level = data.reduce((a, b) => a + b) / data.length;
-    if (level > 30) console.log("Speaking:", level); // Trigger UI update
-    requestAnimationFrame(checkLevel);
-  };
-  checkLevel();
+	const data = new Uint8Array(analyzer.frequencyBinCount);
+	const checkLevel = () => {
+		analyzer.getByteFrequencyData(data);
+		const level = data.reduce((a, b) => a + b) / data.length;
+		if (level > 30) console.log("Speaking:", level); // Trigger UI update
+		requestAnimationFrame(checkLevel);
+	};
+	checkLevel();
 }
 ```
 
@@ -114,14 +111,14 @@ function attachAudioLevelDetector(track: MediaStreamTrack) {
 
 ```typescript
 pc.getStats().then((stats) => {
-  stats.forEach((report) => {
-    if (report.type === "inbound-rtp" && report.kind === "video") {
-      const { packetsLost, packetsReceived, jitter } = report;
-      const lossRate = packetsLost / (packetsLost + packetsReceived);
-      if (lossRate > 0.05) console.warn("High packet loss:", lossRate);
-      if (jitter > 100) console.warn("High jitter:", jitter);
-    }
-  });
+	stats.forEach((report) => {
+		if (report.type === "inbound-rtp" && report.kind === "video") {
+			const { packetsLost, packetsReceived, jitter } = report;
+			const lossRate = packetsLost / (packetsLost + packetsReceived);
+			if (lossRate > 0.05) console.warn("High packet loss:", lossRate);
+			if (jitter > 100) console.warn("High jitter:", jitter);
+		}
+	});
 });
 ```
 
@@ -132,27 +129,23 @@ pc.getStats().then((stats) => {
 let activeSubscriptions = new Set<string>();
 
 function updateStage(topSpeakers: string[]) {
-  const toAdd = topSpeakers
-    .filter((id) => !activeSubscriptions.has(id))
-    .slice(0, 6);
-  const toRemove = [...activeSubscriptions].filter(
-    (id) => !topSpeakers.includes(id),
-  );
+	const toAdd = topSpeakers.filter((id) => !activeSubscriptions.has(id)).slice(0, 6);
+	const toRemove = [...activeSubscriptions].filter((id) => !topSpeakers.includes(id));
 
-  toRemove.forEach((id) => {
-    pc.getSenders()
-      .find((s) => s.track?.id === id)
-      ?.track?.stop();
-    activeSubscriptions.delete(id);
-  });
+	toRemove.forEach((id) => {
+		pc.getSenders()
+			.find((s) => s.track?.id === id)
+			?.track?.stop();
+		activeSubscriptions.delete(id);
+	});
 
-  toAdd.forEach(async (id) => {
-    await fetch(`/api/subscribe`, {
-      method: "POST",
-      body: JSON.stringify({ trackId: id }),
-    });
-    activeSubscriptions.add(id);
-  });
+	toAdd.forEach(async (id) => {
+		await fetch(`/api/subscribe`, {
+			method: "POST",
+			body: JSON.stringify({ trackId: id }),
+		});
+		activeSubscriptions.add(id);
+	});
 }
 ```
 
@@ -173,12 +166,12 @@ Simulcast (CF auto-forwards best layer):
 
 ```ts
 pc.addTransceiver("video", {
-  direction: "sendonly",
-  sendEncodings: [
-    { rid: "high", maxBitrate: 1200000 },
-    { rid: "med", maxBitrate: 600000, scaleResolutionDownBy: 2 },
-    { rid: "low", maxBitrate: 200000, scaleResolutionDownBy: 4 },
-  ],
+	direction: "sendonly",
+	sendEncodings: [
+		{ rid: "high", maxBitrate: 1200000 },
+		{ rid: "med", maxBitrate: 600000, scaleResolutionDownBy: 2 },
+		{ rid: "low", maxBitrate: 200000, scaleResolutionDownBy: 4 },
+	],
 });
 ```
 

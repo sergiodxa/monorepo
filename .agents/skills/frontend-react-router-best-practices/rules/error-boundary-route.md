@@ -30,48 +30,44 @@ Add ErrorBoundary to:
 import { data } from "react-router";
 
 export async function loader({ params }: Route.LoaderArgs) {
-  let item = await getItem(params.itemId);
-  if (!item) {
-    throw data({ message: "Item not found" }, { status: 404 });
-  }
-  return data({ item });
+	let item = await getItem(params.itemId);
+	if (!item) {
+		throw data({ message: "Item not found" }, { status: 404 });
+	}
+	return data({ item });
 }
 
 export async function action({ request }: Route.ActionArgs) {
-  // Action that might fail
+	// Action that might fail
 }
 
 export default function ItemPage() {
-  const { item } = useLoaderData<typeof loader>();
-  return <ItemDetails item={item} />;
+	const { item } = useLoaderData<typeof loader>();
+	return <ItemDetails item={item} />;
 }
 
 // Catches errors from loader, action, and component
 export function ErrorBoundary() {
-  let error = useRouteError();
+	let error = useRouteError();
 
-  if (isRouteErrorResponse(error) && error.status === 404) {
-    return (
-      <div className="p-8 text-center">
-        <h1 className="text-xl font-semibold">Item Not Found</h1>
-        <p className="mt-2 text-neutral-600">
-          The item you're looking for doesn't exist.
-        </p>
-        <Link to="/items" className="mt-4 inline-block text-accent-600">
-          Browse all items
-        </Link>
-      </div>
-    );
-  }
+	if (isRouteErrorResponse(error) && error.status === 404) {
+		return (
+			<div className="p-8 text-center">
+				<h1 className="text-xl font-semibold">Item Not Found</h1>
+				<p className="mt-2 text-neutral-600">The item you're looking for doesn't exist.</p>
+				<Link to="/items" className="mt-4 inline-block text-accent-600">
+					Browse all items
+				</Link>
+			</div>
+		);
+	}
 
-  return (
-    <div className="p-8 text-center">
-      <h1 className="text-xl font-semibold">Error Loading Item</h1>
-      <p className="mt-2 text-neutral-600">
-        Something went wrong. Please try again.
-      </p>
-    </div>
-  );
+	return (
+		<div className="p-8 text-center">
+			<h1 className="text-xl font-semibold">Error Loading Item</h1>
+			<p className="mt-2 text-neutral-600">Something went wrong. Please try again.</p>
+		</div>
+	);
 }
 ```
 
@@ -93,35 +89,35 @@ The root route should always have an ErrorBoundary as the last line of defense:
 ```tsx
 // root.tsx
 export function ErrorBoundary() {
-  let error = useRouteError();
+	let error = useRouteError();
 
-  return (
-    <html>
-      <head>
-        <title>Error</title>
-        <Meta />
-        <Links />
-      </head>
-      <body>
-        <div className="min-h-screen flex items-center justify-center">
-          <div className="text-center">
-            <h1 className="text-2xl font-bold">Something went wrong</h1>
-            {isRouteErrorResponse(error) ? (
-              <p>
-                {error.status}: {error.statusText}
-              </p>
-            ) : (
-              <p>An unexpected error occurred</p>
-            )}
-            <a href="/" className="mt-4 inline-block text-accent-600">
-              Go home
-            </a>
-          </div>
-        </div>
-        <Scripts />
-      </body>
-    </html>
-  );
+	return (
+		<html>
+			<head>
+				<title>Error</title>
+				<Meta />
+				<Links />
+			</head>
+			<body>
+				<div className="min-h-screen flex items-center justify-center">
+					<div className="text-center">
+						<h1 className="text-2xl font-bold">Something went wrong</h1>
+						{isRouteErrorResponse(error) ? (
+							<p>
+								{error.status}: {error.statusText}
+							</p>
+						) : (
+							<p>An unexpected error occurred</p>
+						)}
+						<a href="/" className="mt-4 inline-block text-accent-600">
+							Go home
+						</a>
+					</div>
+				</div>
+				<Scripts />
+			</body>
+		</html>
+	);
 }
 ```
 
@@ -138,6 +134,6 @@ throw new Error("Database connection failed");
 
 // Trigger from action
 if (!isValid) {
-  throw data({ errors: ["Invalid data"] }, { status: 400 });
+	throw data({ errors: ["Invalid data"] }, { status: 400 });
 }
 ```

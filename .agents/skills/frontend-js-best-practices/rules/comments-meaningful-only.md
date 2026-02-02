@@ -26,14 +26,14 @@ let userName = user.name;
 // Bad: obvious from the code
 // Loop through the items
 for (let item of items) {
-  // Process the item
-  processItem(item);
+	// Process the item
+	processItem(item);
 }
 
 // Bad: describes the function name
 // Calculate the total
 function calculateTotal(items: Item[]) {
-  // ...
+	// ...
 }
 
 // Bad: describes variable assignment
@@ -48,7 +48,7 @@ let results = [];
 ```typescript
 // Transactions under $250 don't require written acknowledgment per policy
 if (transaction.amount < 250) {
-  return { requiresAcknowledgment: false };
+	return { requiresAcknowledgment: false };
 }
 ```
 
@@ -80,7 +80,7 @@ let userById = new Map(users.map((u) => [u.id, u]));
 // Copied from lodash/debounce to avoid adding the full dependency
 // https://github.com/lodash/lodash/blob/main/debounce.js
 function debounce(fn: Function, wait: number) {
-  // ...
+	// ...
 }
 ```
 
@@ -110,7 +110,7 @@ Use JSDoc for exported functions, especially utilities:
  * @returns Formatted string like "$1,234" or "$1,234.56"
  */
 export function formatCurrency(amount: number, showDecimals = false): string {
-  // ...
+	// ...
 }
 ```
 

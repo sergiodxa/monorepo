@@ -13,7 +13,7 @@ Insert/upsert/delete return immediately but vectors aren't queryable for 5-10 se
 ```typescript
 // ✅ Chunk into 500
 for (let i = 0; i < vectors.length; i += 500) {
-  await env.VECTORIZE.upsert(vectors.slice(i, i + 500));
+	await env.VECTORIZE.upsert(vectors.slice(i, i + 500));
 }
 ```
 

@@ -11,17 +11,13 @@
 ```javascript
 // CORRECT - Server validates token
 app.post("/submit", async (req, res) => {
-  const token = req.body["cf-turnstile-response"];
-  const validation = await fetch(
-    "https://challenges.cloudflare.com/turnstile/v0/siteverify",
-    {
-      method: "POST",
-      body: JSON.stringify({ secret: SECRET, response: token }),
-    },
-  ).then((r) => r.json());
+	const token = req.body["cf-turnstile-response"];
+	const validation = await fetch("https://challenges.cloudflare.com/turnstile/v0/siteverify", {
+		method: "POST",
+		body: JSON.stringify({ secret: SECRET, response: token }),
+	}).then((r) => r.json());
 
-  if (!validation.success)
-    return res.status(403).json({ error: "CAPTCHA failed" });
+	if (!validation.success) return res.status(403).json({ error: "CAPTCHA failed" });
 });
 ```
 
@@ -49,9 +45,9 @@ if (!response.ok) window.turnstile.reset(widgetId);
 
 ```javascript
 window.turnstile.render("#container", {
-  sitekey: "YOUR_SITE_KEY",
-  "refresh-expired": "auto", // or 'manual' with expired-callback
-  "expired-callback": () => window.turnstile.reset(widgetId),
+	sitekey: "YOUR_SITE_KEY",
+	"refresh-expired": "auto", // or 'manual' with expired-callback
+	"expired-callback": () => window.turnstile.reset(widgetId),
 });
 ```
 
@@ -74,25 +70,25 @@ window.turnstile.render("#container", {
 
 ```tsx
 function TurnstileWidget({ onToken }) {
-  const containerRef = useRef(null);
-  const widgetIdRef = useRef(null);
+	const containerRef = useRef(null);
+	const widgetIdRef = useRef(null);
 
-  useEffect(() => {
-    if (containerRef.current && !widgetIdRef.current) {
-      widgetIdRef.current = window.turnstile.render(containerRef.current, {
-        sitekey: "YOUR_SITE_KEY",
-        callback: onToken,
-      });
-    }
-    return () => {
-      if (widgetIdRef.current) {
-        window.turnstile.remove(widgetIdRef.current);
-        widgetIdRef.current = null;
-      }
-    };
-  }, []);
+	useEffect(() => {
+		if (containerRef.current && !widgetIdRef.current) {
+			widgetIdRef.current = window.turnstile.render(containerRef.current, {
+				sitekey: "YOUR_SITE_KEY",
+				callback: onToken,
+			});
+		}
+		return () => {
+			if (widgetIdRef.current) {
+				window.turnstile.remove(widgetIdRef.current);
+				widgetIdRef.current = null;
+			}
+		};
+	}, []);
 
-  return <div ref={containerRef} />;
+	return <div ref={containerRef} />;
 }
 ```
 
@@ -104,8 +100,8 @@ function TurnstileWidget({ onToken }) {
 
 ```tsx
 useEffect(() => {
-  const widgetId = window.turnstile.render("#container", { sitekey });
-  return () => window.turnstile.remove(widgetId);
+	const widgetId = window.turnstile.render("#container", { sitekey });
+	return () => window.turnstile.remove(widgetId);
 }, []);
 ```
 
@@ -118,7 +114,7 @@ useEffect(() => {
 ```tsx
 "use client";
 export default function Turnstile() {
-  /* component */
+	/* component */
 }
 ```
 
@@ -146,8 +142,8 @@ useEffect(() => () => window.turnstile.remove(widgetId), []);
 
 ```html
 <meta
-  http-equiv="Content-Security-Policy"
-  content="script-src 'self' https://challenges.cloudflare.com; 
+	http-equiv="Content-Security-Policy"
+	content="script-src 'self' https://challenges.cloudflare.com; 
                frame-src https://challenges.cloudflare.com;"
 />
 ```
@@ -186,11 +182,11 @@ const ip = request.headers.get("X-Forwarded-For")?.split(",")[0];
 
 ```javascript
 window.turnstile.render("#container", {
-  sitekey: "YOUR_SITE_KEY",
-  callback: (token) => console.log("✓ Token:", token),
-  "error-callback": (code) => console.error("✗ Error:", code),
-  "expired-callback": () => console.warn("⏱ Expired"),
-  "timeout-callback": () => console.warn("⏱ Timeout"),
+	sitekey: "YOUR_SITE_KEY",
+	callback: (token) => console.log("✓ Token:", token),
+	"error-callback": (code) => console.error("✗ Error:", code),
+	"expired-callback": () => console.warn("⏱ Expired"),
+	"timeout-callback": () => console.warn("⏱ Timeout"),
 });
 ```
 
@@ -231,9 +227,9 @@ Always develop with test keys before production:
 
 ```javascript
 const SITE_KEY =
-  process.env.NODE_ENV === "production"
-    ? process.env.TURNSTILE_SITE_KEY
-    : "1x00000000000000000000AA";
+	process.env.NODE_ENV === "production"
+		? process.env.TURNSTILE_SITE_KEY
+		: "1x00000000000000000000AA";
 ```
 
 ### Missing Environment Variables

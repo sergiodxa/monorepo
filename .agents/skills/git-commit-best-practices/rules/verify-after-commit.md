@@ -65,6 +65,7 @@ git commit -m "style: apply auto-formatting from pre-commit hook"
 ```
 
 **NEVER amend** unless:
+
 1. User explicitly requested amend, OR
 2. Commit succeeded but hook auto-modified files that logically belong in the same commit
 

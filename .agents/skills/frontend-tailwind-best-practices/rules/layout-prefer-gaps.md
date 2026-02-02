@@ -44,17 +44,17 @@ Avoid margins inside components. Instead, let parents decide spacing:
 ```tsx
 // Bad: component defines its own spacing
 function Card() {
-  return <div className="mb-4 rounded-lg border p-4" />;
+	return <div className="mb-4 rounded-lg border p-4" />;
 }
 
 // Good: parent controls spacing
 function Card() {
-  return <div className="rounded-lg border p-4" />;
+	return <div className="rounded-lg border p-4" />;
 }
 
 <div className="v-stack gap-4">
-  <Card />
-  <Card />
+	<Card />
+	<Card />
 </div>;
 ```
 
@@ -63,9 +63,9 @@ function Card() {
 ```tsx
 // Switch direction without touching children
 <div className="flex flex-col gap-4 md:flex-row">
-  <Item />
-  <Item />
-  <Item />
+	<Item />
+	<Item />
+	<Item />
 </div>
 ```
 

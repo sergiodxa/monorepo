@@ -21,29 +21,29 @@ Implement ErrorBoundary with useRouteError and handle different error types.
 import { useRouteError, isRouteErrorResponse } from "react-router";
 
 export function ErrorBoundary() {
-  let error = useRouteError();
+	let error = useRouteError();
 
-  // Handle HTTP Response errors (404, 500, etc.)
-  if (isRouteErrorResponse(error)) {
-    return (
-      <div className="p-8 text-center">
-        <h1 className="text-2xl font-bold">
-          {error.status} {error.statusText}
-        </h1>
-        <p className="mt-2 text-neutral-600">{error.data}</p>
-      </div>
-    );
-  }
+	// Handle HTTP Response errors (404, 500, etc.)
+	if (isRouteErrorResponse(error)) {
+		return (
+			<div className="p-8 text-center">
+				<h1 className="text-2xl font-bold">
+					{error.status} {error.statusText}
+				</h1>
+				<p className="mt-2 text-neutral-600">{error.data}</p>
+			</div>
+		);
+	}
 
-  // Handle JavaScript errors
-  return (
-    <div className="p-8 text-center">
-      <h1 className="text-2xl font-bold">Something went wrong</h1>
-      <p className="mt-2 text-neutral-600">
-        {error instanceof Error ? error.message : "Unknown error occurred"}
-      </p>
-    </div>
-  );
+	// Handle JavaScript errors
+	return (
+		<div className="p-8 text-center">
+			<h1 className="text-2xl font-bold">Something went wrong</h1>
+			<p className="mt-2 text-neutral-600">
+				{error instanceof Error ? error.message : "Unknown error occurred"}
+			</p>
+		</div>
+	);
 }
 ```
 
@@ -54,32 +54,32 @@ For nested routes, the error boundary replaces only the errored route's content,
 ```tsx
 // routes/_._profile/route.tsx - Layout route
 export default function ProfileLayout() {
-  return (
-    <div className="flex">
-      <Sidebar />
-      <main>
-        <Outlet /> {/* Child errors render here */}
-      </main>
-    </div>
-  );
+	return (
+		<div className="flex">
+			<Sidebar />
+			<main>
+				<Outlet /> {/* Child errors render here */}
+			</main>
+		</div>
+	);
 }
 
 // routes/_._profile.settings/route.tsx - Child route
 export async function loader() {
-  throw new Error("Failed to load settings");
+	throw new Error("Failed to load settings");
 }
 
 export function ErrorBoundary() {
-  let error = useRouteError();
+	let error = useRouteError();
 
-  // This renders INSIDE the ProfileLayout
-  return (
-    <div className="p-8">
-      <h1>Settings Error</h1>
-      <p>{error instanceof Error ? error.message : "Unknown error"}</p>
-      <Link to="/profile">Back to Profile</Link>
-    </div>
-  );
+	// This renders INSIDE the ProfileLayout
+	return (
+		<div className="p-8">
+			<h1>Settings Error</h1>
+			<p>{error instanceof Error ? error.message : "Unknown error"}</p>
+			<Link to="/profile">Back to Profile</Link>
+		</div>
+	);
 }
 ```
 
@@ -90,32 +90,32 @@ import { data } from "react-router";
 
 // In loader/action - throw typed errors
 export async function loader({ params }: Route.LoaderArgs) {
-  let item = await getItem(params.id);
+	let item = await getItem(params.id);
 
-  if (!item) {
-    throw data({ message: "Item not found", id: params.id }, { status: 404 });
-  }
+	if (!item) {
+		throw data({ message: "Item not found", id: params.id }, { status: 404 });
+	}
 
-  return data({ item });
+	return data({ item });
 }
 
 // In ErrorBoundary - handle typed data
 export function ErrorBoundary() {
-  let error = useRouteError();
+	let error = useRouteError();
 
-  if (isRouteErrorResponse(error)) {
-    if (error.status === 404) {
-      return (
-        <div>
-          <h1>Not Found</h1>
-          <p>{error.data.message}</p>
-          <p>Looking for ID: {error.data.id}</p>
-        </div>
-      );
-    }
-  }
+	if (isRouteErrorResponse(error)) {
+		if (error.status === 404) {
+			return (
+				<div>
+					<h1>Not Found</h1>
+					<p>{error.data.message}</p>
+					<p>Looking for ID: {error.data.id}</p>
+				</div>
+			);
+		}
+	}
 
-  // ... handle other errors
+	// ... handle other errors
 }
 ```
 
@@ -123,34 +123,34 @@ export function ErrorBoundary() {
 
 ```tsx
 export function ErrorBoundary() {
-  let error = useRouteError();
+	let error = useRouteError();
 
-  if (isRouteErrorResponse(error)) {
-    switch (error.status) {
-      case 400:
-        return <BadRequestError message={error.data} />;
-      case 401:
-        return <UnauthorizedError />;
-      case 403:
-        return <ForbiddenError />;
-      case 404:
-        return <NotFoundError />;
-      case 500:
-        return <ServerError />;
-      default:
-        return <GenericError status={error.status} />;
-    }
-  }
+	if (isRouteErrorResponse(error)) {
+		switch (error.status) {
+			case 400:
+				return <BadRequestError message={error.data} />;
+			case 401:
+				return <UnauthorizedError />;
+			case 403:
+				return <ForbiddenError />;
+			case 404:
+				return <NotFoundError />;
+			case 500:
+				return <ServerError />;
+			default:
+				return <GenericError status={error.status} />;
+		}
+	}
 
-  // Log unexpected errors
-  console.error(error);
+	// Log unexpected errors
+	console.error(error);
 
-  return (
-    <div>
-      <h1>Unexpected Error</h1>
-      <p>Please try again later.</p>
-    </div>
-  );
+	return (
+		<div>
+			<h1>Unexpected Error</h1>
+			<p>Please try again later.</p>
+		</div>
+	);
 }
 ```
 
@@ -158,22 +158,18 @@ export function ErrorBoundary() {
 
 ```tsx
 export function ErrorBoundary() {
-  let error = useRouteError();
+	let error = useRouteError();
 
-  return (
-    <div className="p-8">
-      <h1>Error</h1>
+	return (
+		<div className="p-8">
+			<h1>Error</h1>
 
-      {process.env.NODE_ENV === "development" && error instanceof Error && (
-        <pre className="mt-4 p-4 bg-red-50 text-red-900 overflow-auto">
-          {error.stack}
-        </pre>
-      )}
+			{process.env.NODE_ENV === "development" && error instanceof Error && (
+				<pre className="mt-4 p-4 bg-red-50 text-red-900 overflow-auto">{error.stack}</pre>
+			)}
 
-      {process.env.NODE_ENV === "production" && (
-        <p>Something went wrong. Please try again.</p>
-      )}
-    </div>
-  );
+			{process.env.NODE_ENV === "production" && <p>Something went wrong. Please try again.</p>}
+		</div>
+	);
 }
 ```

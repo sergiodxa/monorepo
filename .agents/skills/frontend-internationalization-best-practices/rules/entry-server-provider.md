@@ -18,17 +18,17 @@ import { I18nextProvider } from "react-i18next";
 import { getInstance } from "~/middleware/i18next";
 
 export default function handleRequest(
-  request: Request,
-  responseStatusCode: number,
-  responseHeaders: Headers,
-  entryContext: EntryContext,
-  routerContext: RouterContextProvider,
+	request: Request,
+	responseStatusCode: number,
+	responseHeaders: Headers,
+	entryContext: EntryContext,
+	routerContext: RouterContextProvider,
 ) {
-  return (
-    <I18nextProvider i18n={getInstance(routerContext)}>
-      <ServerRouter context={entryContext} url={request.url} />
-    </I18nextProvider>
-  );
+	return (
+		<I18nextProvider i18n={getInstance(routerContext)}>
+			<ServerRouter context={entryContext} url={request.url} />
+		</I18nextProvider>
+	);
 }
 ```
 

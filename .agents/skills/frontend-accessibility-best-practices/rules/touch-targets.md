@@ -46,11 +46,11 @@ Ensure interactive elements have sufficient target size and spacing across input
 ```tsx
 // Good - padding on the link (target) itself
 <nav>
-  {links.map((link) => (
-    <Link key={link.href} to={link.href} className="block px-4 py-3">
-      {link.label}
-    </Link>
-  ))}
+	{links.map((link) => (
+		<Link key={link.href} to={link.href} className="block px-4 py-3">
+			{link.label}
+		</Link>
+	))}
 </nav>
 ```
 
@@ -59,8 +59,8 @@ Ensure interactive elements have sufficient target size and spacing across input
 ```tsx
 // Good - label wraps input for larger tap area
 <label className="flex items-center gap-3 py-2 cursor-pointer">
-  <input type="checkbox" className="h-5 w-5" />
-  <span>{t("Accept terms")}</span>
+	<input type="checkbox" className="h-5 w-5" />
+	<span>{t("Accept terms")}</span>
 </label>
 ```
 
@@ -87,9 +87,9 @@ Ensure interactive elements have sufficient target size and spacing across input
 ```tsx
 // Good - adequate spacing between targets
 <div className="flex gap-4">
-  <Button>Option A</Button>
-  <Button>Option B</Button>
-  <Button>Option C</Button>
+	<Button>Option A</Button>
+	<Button>Option B</Button>
+	<Button>Option C</Button>
 </div>
 ```
 

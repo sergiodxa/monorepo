@@ -77,11 +77,10 @@ const display = message.headers.get("from");
 **Solution:**
 
 ```typescript
-const size =
-  parseInt(message.headers.get("content-length") || "0") / 1024 / 1024;
+const size = parseInt(message.headers.get("content-length") || "0") / 1024 / 1024;
 if (size > 20) {
-  message.setReject("Too large");
-  return;
+	message.setReject("Too large");
+	return;
 }
 
 ctx.waitUntil(expensiveWork());
@@ -144,15 +143,15 @@ npx wrangler tail
 
 ```typescript
 export default {
-  async email(message, env, ctx) {
-    try {
-      console.log("From:", message.from);
-      await process(message, env);
-    } catch (err) {
-      console.error(err);
-      message.setReject(err.message);
-    }
-  },
+	async email(message, env, ctx) {
+		try {
+			console.log("From:", message.from);
+			await process(message, env);
+		} catch (err) {
+			console.error(err);
+			message.setReject(err.message);
+		}
+	},
 } satisfies ExportedHandler;
 ```
 
@@ -163,14 +162,14 @@ export default {
 ```typescript
 const auth = message.headers.get("authentication-results") || "";
 console.log({
-  spf: auth.includes("spf=pass"),
-  dkim: auth.includes("dkim=pass"),
-  dmarc: auth.includes("dmarc=pass"),
+	spf: auth.includes("spf=pass"),
+	dkim: auth.includes("dkim=pass"),
+	dmarc: auth.includes("dmarc=pass"),
 });
 
 if (!auth.includes("pass")) {
-  message.setReject("Failed auth");
-  return;
+	message.setReject("Failed auth");
+	return;
 }
 ```
 

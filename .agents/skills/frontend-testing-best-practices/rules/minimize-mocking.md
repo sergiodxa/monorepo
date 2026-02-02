@@ -26,12 +26,12 @@ vi.mock("~/lib/transactions");
 vi.mock("~/hooks/useUser");
 vi.mock("~/hooks/useCart");
 vi.mock("@remix-run/react", () => ({
-  useNavigate: () => vi.fn(),
-  useLoaderData: () => mockLoaderData,
+	useNavigate: () => vi.fn(),
+	useLoaderData: () => mockLoaderData,
 }));
 
 describe("CheckoutPage", () => {
-  // This test provides false confidence
+	// This test provides false confidence
 });
 ```
 
@@ -43,15 +43,13 @@ describe("CheckoutPage", () => {
 import { mockServer, http, HttpResponse } from "~/lib/test-utils";
 
 beforeEach(() => {
-  mockServer.use(
-    http.get("/api/user", () => HttpResponse.json({ id: 1, name: "John" })),
-  );
+	mockServer.use(http.get("/api/user", () => HttpResponse.json({ id: 1, name: "John" })));
 });
 
 test("loader returns user data", async () => {
-  let response = await loader({ request, params: {}, context: {} });
-  let data = await response.json();
-  expect(data.user.name).toBe("John");
+	let response = await loader({ request, params: {}, context: {} });
+	let data = await response.json();
+	expect(data.user.name).toBe("John");
 });
 ```
 
@@ -61,16 +59,16 @@ test("loader returns user data", async () => {
 import { vi, beforeAll, afterAll } from "vitest";
 
 beforeAll(() => {
-  vi.useFakeTimers();
-  vi.setSystemTime(new Date("2025-01-15"));
+	vi.useFakeTimers();
+	vi.setSystemTime(new Date("2025-01-15"));
 });
 
 afterAll(() => {
-  vi.useRealTimers();
+	vi.useRealTimers();
 });
 
 test("isExpired returns true for past dates", () => {
-  expect(isExpired(new Date("2025-01-01"))).toBe(true);
+	expect(isExpired(new Date("2025-01-01"))).toBe(true);
 });
 ```
 
@@ -78,10 +76,10 @@ test("isExpired returns true for past dates", () => {
 
 ```typescript
 test("uses production API in production", async () => {
-  vi.stubEnv("NODE_ENV", "production");
-  const { apiUrl } = await import("./config");
-  expect(apiUrl).toBe("https://api.example.com");
-  vi.unstubAllEnvs();
+	vi.stubEnv("NODE_ENV", "production");
+	const { apiUrl } = await import("./config");
+	expect(apiUrl).toBe("https://api.example.com");
+	vi.unstubAllEnvs();
 });
 ```
 
@@ -92,9 +90,9 @@ test("uses production API in production", async () => {
 ```typescript
 // BAD: Mocking hooks
 vi.mock("react", async () => ({
-  ...(await vi.importActual("react")),
-  useState: vi.fn(),
-  useEffect: vi.fn(),
+	...(await vi.importActual("react")),
+	useState: vi.fn(),
+	useEffect: vi.fn(),
 }));
 ```
 
@@ -103,9 +101,9 @@ vi.mock("react", async () => ({
 ```typescript
 // BAD: Mocking Remix internals
 vi.mock("@remix-run/react", () => ({
-  useLoaderData: () => ({ user: { name: "John" } }),
-  useActionData: () => null,
-  useNavigation: () => ({ state: "idle" }),
+	useLoaderData: () => ({ user: { name: "John" } }),
+	useActionData: () => null,
+	useNavigation: () => ({ state: "idle" }),
 }));
 ```
 

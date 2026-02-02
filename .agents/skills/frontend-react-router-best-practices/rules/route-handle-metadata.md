@@ -25,13 +25,13 @@ The basic handle for all routes:
 
 ```tsx
 export const handle: Handle = {
-  // Enable client-side JavaScript for this route
-  hydrate: true,
+	// Enable client-side JavaScript for this route
+	hydrate: true,
 };
 
 // Or conditionally based on loader data
 export const handle: Handle<typeof loader> = {
-  hydrate: (data) => data.needsInteractivity,
+	hydrate: (data) => data.needsInteractivity,
 };
 ```
 
@@ -41,29 +41,29 @@ For routes within the main layout:
 
 ```tsx
 export const handle: LayoutHandle<typeof loader> = {
-  hydrate: true,
-  stickyHeader: true,
-  footerType: "app", // "app" | "public"
-  canvasColor: "white", // "white" | "neutral"
+	hydrate: true,
+	stickyHeader: true,
+	footerType: "app", // "app" | "public"
+	canvasColor: "white", // "white" | "neutral"
 
-  // Dynamic banner above header
-  banner: (data) =>
-    data.showBanner
-      ? {
-          title: "Special offer",
-          link: "/offer",
-        }
-      : null,
+	// Dynamic banner above header
+	banner: (data) =>
+		data.showBanner
+			? {
+					title: "Special offer",
+					link: "/offer",
+				}
+			: null,
 
-  // CTA buttons in header
-  mainCTA: (data) => ({
-    label: "Upgrade",
-    to: "/upgrade",
-  }),
-  secondaryCTA: (data) => ({
-    label: "Contact Sales",
-    to: "/contact",
-  }),
+	// CTA buttons in header
+	mainCTA: (data) => ({
+		label: "Upgrade",
+		to: "/upgrade",
+	}),
+	secondaryCTA: (data) => ({
+		label: "Contact Sales",
+		to: "/contact",
+	}),
 };
 ```
 
@@ -73,11 +73,11 @@ For authenticated app routes (extends LayoutHandle):
 
 ```tsx
 export const handle: AppHandle<typeof loader> = {
-  hydrate: true,
-  footerType: "app",
+	hydrate: true,
+	footerType: "app",
 
-  // Render a component in the right aside column
-  Aside: (data) => <SidebarWidget data={data} />,
+	// Render a component in the right aside column
+	Aside: (data) => <SidebarWidget data={data} />,
 };
 ```
 
@@ -88,17 +88,17 @@ export const handle: AppHandle<typeof loader> = {
 ```tsx
 // Always hydrate (needs JS)
 export const handle: Handle = {
-  hydrate: true,
+	hydrate: true,
 };
 
 // Never hydrate (static page)
 export const handle: Handle = {
-  hydrate: false,
+	hydrate: false,
 };
 
 // Conditional hydration
 export const handle: Handle<typeof loader> = {
-  hydrate: (data) => data.hasInteractiveFeatures,
+	hydrate: (data) => data.hasInteractiveFeatures,
 };
 ```
 
@@ -106,13 +106,13 @@ export const handle: Handle<typeof loader> = {
 
 ```tsx
 export const handle: Handle<typeof loader> = {
-  hydrate: true,
-  scripts: (data) => [
-    {
-      src: "https://example.com/widget.js",
-      async: true,
-    },
-  ],
+	hydrate: true,
+	scripts: (data) => [
+		{
+			src: "https://example.com/widget.js",
+			async: true,
+		},
+	],
 };
 ```
 
@@ -120,10 +120,10 @@ export const handle: Handle<typeof loader> = {
 
 ```tsx
 export const handle: LayoutHandle = {
-  hydrate: true,
-  stickyHeader: true,
-  canvasColor: "neutral",
-  footerType: "public",
+	hydrate: true,
+	stickyHeader: true,
+	canvasColor: "neutral",
+	footerType: "public",
 };
 ```
 
@@ -131,14 +131,14 @@ export const handle: LayoutHandle = {
 
 ```tsx
 export const handle: AppHandle<typeof loader> = {
-  hydrate: true,
-  Aside: (data) => (
-    <aside className="p-4">
-      <h2>Related Items</h2>
-      {data.relatedItems.map((item) => (
-        <ItemCard key={item.id} item={item} />
-      ))}
-    </aside>
-  ),
+	hydrate: true,
+	Aside: (data) => (
+		<aside className="p-4">
+			<h2>Related Items</h2>
+			{data.relatedItems.map((item) => (
+				<ItemCard key={item.id} item={item} />
+			))}
+		</aside>
+	),
 };
 ```

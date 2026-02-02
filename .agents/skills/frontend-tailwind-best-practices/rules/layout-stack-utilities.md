@@ -32,49 +32,49 @@ Use custom stack utilities instead of raw flex classes.
 
 ```css
 @utility v-stack {
-  display: flex;
-  flex-direction: column;
+	display: flex;
+	flex-direction: column;
 }
 
 @utility v-stack-reverse {
-  display: flex;
-  flex-direction: column-reverse;
+	display: flex;
+	flex-direction: column-reverse;
 }
 
 @utility h-stack {
-  display: flex;
-  flex-direction: row;
+	display: flex;
+	flex-direction: row;
 }
 
 @utility h-stack-reverse {
-  display: flex;
-  flex-direction: row-reverse;
+	display: flex;
+	flex-direction: row-reverse;
 }
 
 @utility z-stack {
-  display: grid;
-  align-items: center;
-  justify-items: center;
+	display: grid;
+	align-items: center;
+	justify-items: center;
 
-  & > * {
-    grid-area: 1 / 1 / 1 / 2;
-  }
+	& > * {
+		grid-area: 1 / 1 / 1 / 2;
+	}
 }
 
 @utility center {
-  display: flex;
-  justify-content: center;
-  align-items: center;
+	display: flex;
+	justify-content: center;
+	align-items: center;
 }
 
 @utility spacer {
-  flex: 1 1 auto;
+	flex: 1 1 auto;
 }
 
 @utility circle {
-  aspect-ratio: 1 / 1;
-  border-radius: 9999px;
-  flex-shrink: 0;
+	aspect-ratio: 1 / 1;
+	border-radius: 9999px;
+	flex-shrink: 0;
 }
 ```
 

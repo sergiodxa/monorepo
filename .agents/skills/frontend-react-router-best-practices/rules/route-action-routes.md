@@ -48,23 +48,23 @@ import { data, redirect } from "react-router";
 import { z } from "zod";
 
 const schema = z.object({
-  title: z.string().min(1),
-  content: z.string().min(1),
+	title: z.string().min(1),
+	content: z.string().min(1),
 });
 
 export async function action({ request, context }: Route.ActionArgs) {
-  let client = await authenticate(request, { context });
+	let client = await authenticate(request, { context });
 
-  let formData = await request.formData();
-  let result = schema.safeParse(Object.fromEntries(formData));
+	let formData = await request.formData();
+	let result = schema.safeParse(Object.fromEntries(formData));
 
-  if (!result.success) {
-    return data({ ok: false, errors: result.error.flatten() }, { status: 400 });
-  }
+	if (!result.success) {
+		return data({ ok: false, errors: result.error.flatten() }, { status: 400 });
+	}
 
-  let post = await createPost(client, result.data);
+	let post = await createPost(client, result.data);
 
-  return data({ ok: true, post }, { status: 201 });
+	return data({ ok: true, post }, { status: 201 });
 }
 
 // No default export = resource route
@@ -79,15 +79,15 @@ Handle toasts and redirects in `clientAction`:
 import { redirect } from "react-router";
 
 export async function clientAction({ serverAction }: Route.ClientActionArgs) {
-  let result = await serverAction<typeof action>();
+	let result = await serverAction<typeof action>();
 
-  if (result.ok) {
-    toast.success("Post created successfully");
-    return redirect(`/posts/${result.post.id}`);
-  }
+	if (result.ok) {
+		toast.success("Post created successfully");
+		return redirect(`/posts/${result.post.id}`);
+	}
 
-  toast.error("Failed to create post");
-  return result;
+	toast.error("Failed to create post");
+	return result;
 }
 ```
 
@@ -106,19 +106,19 @@ import { useFetcher } from "react-router";
 import type { action } from "~/routes/actions.post-create";
 
 function CreatePostButton() {
-  let fetcher = useFetcher<typeof action>();
-  let isPending = fetcher.state !== "idle";
+	let fetcher = useFetcher<typeof action>();
+	let isPending = fetcher.state !== "idle";
 
-  return (
-    <fetcher.Form method="post" action="/actions/post-create">
-      <input name="title" required />
-      <textarea name="content" required />
-      <button type="submit" disabled={isPending}>
-        {isPending ? "Creating..." : "Create Post"}
-      </button>
-      {fetcher.data?.errors && <FieldErrors errors={fetcher.data.errors} />}
-    </fetcher.Form>
-  );
+	return (
+		<fetcher.Form method="post" action="/actions/post-create">
+			<input name="title" required />
+			<textarea name="content" required />
+			<button type="submit" disabled={isPending}>
+				{isPending ? "Creating..." : "Create Post"}
+			</button>
+			{fetcher.data?.errors && <FieldErrors errors={fetcher.data.errors} />}
+		</fetcher.Form>
+	);
 }
 ```
 
@@ -128,17 +128,14 @@ function CreatePostButton() {
 import { data } from "react-router";
 
 export async function action({ request, context }: Route.ActionArgs) {
-  let client = await authenticate(request, { context });
+	let client = await authenticate(request, { context });
 
-  // Check permissions
-  if (!(await hasActiveSubscription(client))) {
-    return data(
-      { ok: false, error: "Upgrade to create posts." },
-      { status: 403 },
-    );
-  }
+	// Check permissions
+	if (!(await hasActiveSubscription(client))) {
+		return data({ ok: false, error: "Upgrade to create posts." }, { status: 403 });
+	}
 
-  // ... rest of action
+	// ... rest of action
 }
 ```
 

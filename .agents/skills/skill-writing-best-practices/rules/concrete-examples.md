@@ -19,6 +19,7 @@ Every rule needs code examples. Abstract advice without examples is hard to appl
 
 ```markdown
 # Bad: Too vague
+
 "Keep your code organized and maintainable."
 
 "Use appropriate design patterns."
@@ -34,30 +35,32 @@ Show directory structures:
 
 ```markdown
 # Ruby example
+
 "Place model-specific concerns in `app/models/model_name/`."
 
 \`\`\`
 app/models/
 ├── card.rb
 ├── card/
-│   ├── closeable.rb     # Card::Closeable
-│   └── searchable.rb    # Card::Searchable
-└── concerns/            # Only shared concerns
-    └── mentionable.rb
+│ ├── closeable.rb # Card::Closeable
+│ └── searchable.rb # Card::Searchable
+└── concerns/ # Only shared concerns
+└── mentionable.rb
 \`\`\`
 
 # TypeScript example
+
 "Co-locate components with their tests and styles."
 
 \`\`\`
 app/components/
 ├── Button/
-│   ├── Button.tsx
-│   ├── Button.test.tsx
-│   └── index.ts
+│ ├── Button.tsx
+│ ├── Button.test.tsx
+│ └── index.ts
 └── Card/
-    ├── Card.tsx
-    └── index.ts
+├── Card.tsx
+└── index.ts
 \`\`\`
 ```
 
@@ -69,19 +72,24 @@ When showing a pattern, include before and after:
 
 ```markdown
 # Ruby example
+
 \`\`\`ruby
+
 # Bad: Custom controller action
+
 resources :cards do
-  post :close
+post :close
 end
 
 # Good: Resource controller
+
 resources :cards do
-  resource :closure, only: [:create, :destroy]
+resource :closure, only: [:create, :destroy]
 end
 \`\`\`
 
 # TypeScript example
+
 \`\`\`typescript
 // Bad: Inline conditional classes
 <button className={`btn ${isActive ? 'btn-active' : ''} ${isDisabled ? 'btn-disabled' : ''}`}>
@@ -99,38 +107,39 @@ Patterns from real codebases are more convincing:
 
 ```markdown
 # Ruby example from Fizzy:
+
 \`\`\`ruby
 module Card::Closeable
-  extend ActiveSupport::Concern
+extend ActiveSupport::Concern
 
-  included do
-    has_one :closure, dependent: :destroy
-    scope :closed, -> { joins(:closure) }
-  end
+included do
+has_one :closure, dependent: :destroy
+scope :closed, -> { joins(:closure) }
+end
 
-  def close
-    create_closure!(user: Current.user)
-  end
+def close
+create_closure!(user: Current.user)
+end
 end
 \`\`\`
 
 # TypeScript example from a React codebase:
+
 \`\`\`typescript
 function Button({ className, variant, children }: ButtonProps) {
-  return (
-    <button
-      className={cn(
-        "inline-flex items-center rounded-lg font-medium",
-        {
-          "bg-teal-500 text-white": variant === "primary",
-          "bg-neutral-100 text-neutral-900": variant === "secondary",
-        },
-        className
-      )}
-    >
-      {children}
-    </button>
-  );
+return (
+<button
+className={cn(
+"inline-flex items-center rounded-lg font-medium",
+{
+"bg-teal-500 text-white": variant === "primary",
+"bg-neutral-100 text-neutral-900": variant === "secondary",
+},
+className
+)} >
+{children}
+</button>
+);
 }
 \`\`\`
 ```
@@ -143,19 +152,23 @@ Simple rules get simple examples:
 
 ```markdown
 # Ruby: Simple rule, simple example
+
 Use `_later` suffix for async methods.
 
 \`\`\`ruby
 def notify
-  # sync
+
+# sync
+
 end
 
 def notify_later
-  NotifyJob.perform_later(self)
+NotifyJob.perform_later(self)
 end
 \`\`\`
 
 # TypeScript: Simple rule, simple example
+
 Use named exports, not default exports.
 
 \`\`\`typescript
@@ -171,37 +184,40 @@ Complex rules may need longer examples with comments:
 
 ```markdown
 # Ruby: Complex rule, annotated example
+
 \`\`\`ruby
 module CurrentAttributesJobExtensions
-  def initialize(...)
-    super
-    @account = Current.account  # Capture at enqueue time
-  end
+def initialize(...)
+super
+@account = Current.account # Capture at enqueue time
+end
 
-  def serialize
-    super.merge("account" => @account&.to_gid)  # Store in job payload
-  end
+def serialize
+super.merge("account" => @account&.to_gid) # Store in job payload
+end
 
-  def perform_now
-    Current.with_account(account) { super }  # Set before perform
-  end
+def perform_now
+Current.with_account(account) { super } # Set before perform
+end
 end
 \`\`\`
 
 # TypeScript: Complex rule, annotated example
+
 \`\`\`typescript
 function useDebounce<T>(value: T, delay: number): T {
-  let [debouncedValue, setDebouncedValue] = useState(value);
+let [debouncedValue, setDebouncedValue] = useState(value);
 
-  useEffect(() => {
-    // Set up timer to update debounced value
-    let timer = setTimeout(() => setDebouncedValue(value), delay);
+useEffect(() => {
+// Set up timer to update debounced value
+let timer = setTimeout(() => setDebouncedValue(value), delay);
 
     // Clean up timer on value change or unmount
     return () => clearTimeout(timer);
-  }, [value, delay]);
 
-  return debouncedValue;
+}, [value, delay]);
+
+return debouncedValue;
 }
 \`\`\`
 ```

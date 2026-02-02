@@ -113,31 +113,31 @@ But NOT conditional rendering logic.
 ```tsx
 // Shared compound components
 function ThreadComposer({ channelId }) {
-  return (
-    <Composer.Frame>
-      <Composer.Input /> {/* Shared */}
-      <AlsoSendToChannel /> {/* Thread-specific */}
-      <Composer.Footer>
-        {" "}
-        {/* Shared */}
-        <Composer.Submit /> {/* Shared */}
-      </Composer.Footer>
-    </Composer.Frame>
-  );
+	return (
+		<Composer.Frame>
+			<Composer.Input /> {/* Shared */}
+			<AlsoSendToChannel /> {/* Thread-specific */}
+			<Composer.Footer>
+				{" "}
+				{/* Shared */}
+				<Composer.Submit /> {/* Shared */}
+			</Composer.Footer>
+		</Composer.Frame>
+	);
 }
 
 function DMComposer({ dmId }) {
-  return (
-    <Composer.Frame>
-      <Composer.Input /> {/* Shared */}
-      <AlsoSendToDM /> {/* DM-specific */}
-      <Composer.Footer>
-        {" "}
-        {/* Shared */}
-        <Composer.Submit /> {/* Shared */}
-      </Composer.Footer>
-    </Composer.Frame>
-  );
+	return (
+		<Composer.Frame>
+			<Composer.Input /> {/* Shared */}
+			<AlsoSendToDM /> {/* DM-specific */}
+			<Composer.Footer>
+				{" "}
+				{/* Shared */}
+				<Composer.Submit /> {/* Shared */}
+			</Composer.Footer>
+		</Composer.Frame>
+	);
 }
 ```
 

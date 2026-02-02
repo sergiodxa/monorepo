@@ -32,24 +32,24 @@ Check for unvalidated URLs that allow attackers to make requests to internal ser
 ```typescript
 // Bad: Fetching user-provided URL
 async function fetchUrl(req: Request): Promise<Response> {
-  let { url } = await req.json();
+	let { url } = await req.json();
 
-  // SSRF: Can access internal services!
-  let response = await fetch(url);
-  let data = await response.text();
+	// SSRF: Can access internal services!
+	let response = await fetch(url);
+	let data = await response.text();
 
-  return new Response(data);
+	return new Response(data);
 }
 
 // Bad: No validation on webhook URL
 async function registerWebhook(req: Request): Promise<Response> {
-  let { webhookUrl } = await req.json();
+	let { webhookUrl } = await req.json();
 
-  await db.webhook.create({
-    data: { url: webhookUrl },
-  });
+	await db.webhook.create({
+		data: { url: webhookUrl },
+	});
 
-  // Later: fetch(webhookUrl) - could be internal
+	// Later: fetch(webhookUrl) - could be internal
 }
 ```
 
@@ -60,34 +60,34 @@ async function registerWebhook(req: Request): Promise<Response> {
 const ALLOWED_DOMAINS = ["api.example.com", "cdn.example.com"];
 
 async function fetchUrl(req: Request): Promise<Response> {
-  let { url } = await req.json();
-  let parsedUrl = new URL(url);
+	let { url } = await req.json();
+	let parsedUrl = new URL(url);
 
-  if (parsedUrl.protocol !== "https:") {
-    return new Response("Only HTTPS allowed", { status: 400 });
-  }
+	if (parsedUrl.protocol !== "https:") {
+		return new Response("Only HTTPS allowed", { status: 400 });
+	}
 
-  if (!ALLOWED_DOMAINS.includes(parsedUrl.hostname)) {
-    return new Response("Domain not allowed", { status: 400 });
-  }
+	if (!ALLOWED_DOMAINS.includes(parsedUrl.hostname)) {
+		return new Response("Domain not allowed", { status: 400 });
+	}
 
-  if (isInternalIP(parsedUrl.hostname)) {
-    return new Response("Internal IPs not allowed", { status: 400 });
-  }
+	if (isInternalIP(parsedUrl.hostname)) {
+		return new Response("Internal IPs not allowed", { status: 400 });
+	}
 
-  let response = await fetch(url, { redirect: "manual" });
-  return new Response(await response.text());
+	let response = await fetch(url, { redirect: "manual" });
+	return new Response(await response.text());
 }
 
 function isInternalIP(hostname: string): boolean {
-  return [
-    /^127\./,
-    /^10\./,
-    /^172\.(1[6-9]|2[0-9]|3[0-1])\./,
-    /^192\.168\./,
-    /^169\.254\./,
-    /^localhost$/i,
-  ].some((range) => range.test(hostname));
+	return [
+		/^127\./,
+		/^10\./,
+		/^172\.(1[6-9]|2[0-9]|3[0-1])\./,
+		/^192\.168\./,
+		/^169\.254\./,
+		/^localhost$/i,
+	].some((range) => range.test(hostname));
 }
 ```
 

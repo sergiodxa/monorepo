@@ -65,16 +65,16 @@ Announce dynamic content changes to screen readers.
 ```tsx
 // Error messages - announced immediately
 {
-  error && (
-    <p role="alert" className="text-failure-600">
-      {error}
-    </p>
-  );
+	error && (
+		<p role="alert" className="text-failure-600">
+			{error}
+		</p>
+	);
 }
 
 // Status updates - announced politely
 <div role="status" aria-live="polite">
-  {t("{{count}} results found", { count })}
+	{t("{{count}} results found", { count })}
 </div>;
 ```
 
@@ -102,14 +102,12 @@ Show visible focus indicators and trap focus in modals.
 
 ```tsx
 // Always use focus-visible for focus styles
-<button className="focus-visible:ring-2 focus-visible:ring-teal-600">
-  Click me
-</button>;
+<button className="focus-visible:ring-2 focus-visible:ring-teal-600">Click me</button>;
 
 // react-aria Modal handles focus trapping automatically
 import { Modal, Dialog } from "react-aria-components";
 <Modal isOpen={isOpen}>
-  <Dialog>{/* Focus automatically trapped here */}</Dialog>
+	<Dialog>{/* Focus automatically trapped here */}</Dialog>
 </Modal>;
 ```
 
@@ -123,15 +121,13 @@ Respect prefers-reduced-motion setting.
 import { usePrefersReducedMotion } from "~/hooks/use-prefers-reduced-motion";
 
 // CSS approach
-<div className="animate-bounce motion-reduce:animate-none">
-  Bouncing content
-</div>;
+<div className="animate-bounce motion-reduce:animate-none">Bouncing content</div>;
 
 // JS approach
 function AnimatedCounter({ value }) {
-  let prefersReducedMotion = usePrefersReducedMotion();
-  if (prefersReducedMotion) return <span>{value}</span>;
-  return <CountUp target={value} />;
+	let prefersReducedMotion = usePrefersReducedMotion();
+	if (prefersReducedMotion) return <span>{value}</span>;
+	return <CountUp target={value} />;
 }
 ```
 

@@ -33,23 +33,23 @@ Check for insufficient logging of security events, missing monitoring, and lack 
 ```typescript
 // Bad: No logging of security events
 async function login(req: Request): Promise<Response> {
-  let { email, password } = await req.json();
+	let { email, password } = await req.json();
 
-  let user = await authenticate(email, password);
+	let user = await authenticate(email, password);
 
-  if (!user) {
-    // No logging of failed attempt
-    return new Response("Invalid credentials", { status: 401 });
-  }
+	if (!user) {
+		// No logging of failed attempt
+		return new Response("Invalid credentials", { status: 401 });
+	}
 
-  return createSession(user);
+	return createSession(user);
 }
 
 // Bad: Logging sensitive data
 console.log("User data:", {
-  email,
-  password, // Don't log passwords!
-  creditCard,
+	email,
+	password, // Don't log passwords!
+	creditCard,
 });
 
 // Bad: No structured logging
@@ -61,79 +61,77 @@ console.log("User logged in");
 ```typescript
 // Good: Log security events with context
 async function login(req: Request): Promise<Response> {
-  let { email, password } = await req.json();
-  let ip = req.headers.get("x-forwarded-for");
+	let { email, password } = await req.json();
+	let ip = req.headers.get("x-forwarded-for");
 
-  let user = await authenticate(email, password);
+	let user = await authenticate(email, password);
 
-  if (!user) {
-    logger.warn("Failed login", {
-      email,
-      ip,
-      timestamp: new Date().toISOString(),
-    });
-    return new Response("Invalid credentials", { status: 401 });
-  }
+	if (!user) {
+		logger.warn("Failed login", {
+			email,
+			ip,
+			timestamp: new Date().toISOString(),
+		});
+		return new Response("Invalid credentials", { status: 401 });
+	}
 
-  logger.info("Successful login", { userId: user.id, email, ip });
-  return createSession(user);
+	logger.info("Successful login", { userId: user.id, email, ip });
+	return createSession(user);
 }
 
 // Good: Structured logging with sanitization
 function createLogger() {
-  let sensitiveKeys = ["password", "token", "secret", "apiKey"];
+	let sensitiveKeys = ["password", "token", "secret", "apiKey"];
 
-  function sanitize(obj: any): any {
-    if (typeof obj !== "object" || obj === null) return obj;
-    let sanitized: any = {};
-    for (const [key, value] of Object.entries(obj)) {
-      sanitized[key] = sensitiveKeys.some((sk) =>
-        key.toLowerCase().includes(sk),
-      )
-        ? "[REDACTED]"
-        : typeof value === "object"
-          ? sanitize(value)
-          : value;
-    }
-    return sanitized;
-  }
+	function sanitize(obj: any): any {
+		if (typeof obj !== "object" || obj === null) return obj;
+		let sanitized: any = {};
+		for (const [key, value] of Object.entries(obj)) {
+			sanitized[key] = sensitiveKeys.some((sk) => key.toLowerCase().includes(sk))
+				? "[REDACTED]"
+				: typeof value === "object"
+					? sanitize(value)
+					: value;
+		}
+		return sanitized;
+	}
 
-  return {
-    info(message: string, context?: Record<string, unknown>) {
-      console.log(
-        JSON.stringify({
-          level: "info",
-          message,
-          context: context ? sanitize(context) : undefined,
-          timestamp: new Date().toISOString(),
-        }),
-      );
-    },
-    warn(message: string, context?: Record<string, unknown>) {
-      console.warn(
-        JSON.stringify({
-          level: "warn",
-          message,
-          context: context ? sanitize(context) : undefined,
-          timestamp: new Date().toISOString(),
-        }),
-      );
-    },
-    error(message: string, error: Error, context?: Record<string, unknown>) {
-      console.error(
-        JSON.stringify({
-          level: "error",
-          message,
-          context: {
-            error: error.message,
-            stack: error.stack,
-            ...sanitize(context || {}),
-          },
-          timestamp: new Date().toISOString(),
-        }),
-      );
-    },
-  };
+	return {
+		info(message: string, context?: Record<string, unknown>) {
+			console.log(
+				JSON.stringify({
+					level: "info",
+					message,
+					context: context ? sanitize(context) : undefined,
+					timestamp: new Date().toISOString(),
+				}),
+			);
+		},
+		warn(message: string, context?: Record<string, unknown>) {
+			console.warn(
+				JSON.stringify({
+					level: "warn",
+					message,
+					context: context ? sanitize(context) : undefined,
+					timestamp: new Date().toISOString(),
+				}),
+			);
+		},
+		error(message: string, error: Error, context?: Record<string, unknown>) {
+			console.error(
+				JSON.stringify({
+					level: "error",
+					message,
+					context: {
+						error: error.message,
+						stack: error.stack,
+						...sanitize(context || {}),
+					},
+					timestamp: new Date().toISOString(),
+				}),
+			);
+		},
+	};
 }
 
 const logger = createLogger();

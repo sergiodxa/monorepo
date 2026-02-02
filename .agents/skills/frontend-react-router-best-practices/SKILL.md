@@ -29,25 +29,25 @@ All data fetching happens in loaders. Never fetch in components with useEffect.
 ```tsx
 // BAD: fetching in component
 function Profile() {
-  const [user, setUser] = useState(null);
-  useEffect(() => {
-    fetch("/api/user")
-      .then((r) => r.json())
-      .then(setUser);
-  }, []);
-  if (!user) return <Spinner />;
-  return <div>{user.name}</div>;
+	const [user, setUser] = useState(null);
+	useEffect(() => {
+		fetch("/api/user")
+			.then((r) => r.json())
+			.then(setUser);
+	}, []);
+	if (!user) return <Spinner />;
+	return <div>{user.name}</div>;
 }
 
 // GOOD: fetch in loader
 export async function loader({ request }: Route.LoaderArgs) {
-  let user = await getUser(request);
-  return data({ user });
+	let user = await getUser(request);
+	return data({ user });
 }
 
 export default function Component() {
-  const { user } = useLoaderData<typeof loader>();
-  return <div>{user.name}</div>;
+	const { user } = useLoaderData<typeof loader>();
+	return <div>{user.name}</div>;
 }
 ```
 
@@ -60,20 +60,17 @@ import { data } from "react-router";
 
 // Bad: sequential fetches (slow)
 export async function loader({ request }: Route.LoaderArgs) {
-  let user = await getUser(request);
-  let posts = await getPosts(user.id);
-  let comments = await getComments(user.id);
-  return data({ user, posts, comments });
+	let user = await getUser(request);
+	let posts = await getPosts(user.id);
+	let comments = await getComments(user.id);
+	return data({ user, posts, comments });
 }
 
 // Good: parallel fetches
 export async function loader({ request }: Route.LoaderArgs) {
-  let user = await getUser(request);
-  let [posts, comments] = await Promise.all([
-    getPosts(user.id),
-    getComments(user.id),
-  ]);
-  return data({ user, posts, comments });
+	let user = await getUser(request);
+	let [posts, comments] = await Promise.all([getPosts(user.id), getComments(user.id)]);
+	return data({ user, posts, comments });
 }
 ```
 
@@ -84,9 +81,9 @@ API clients dedupe calls within the same request via context. Fetch in each load
 ```tsx
 // Both loaders can call getUser - cached per request
 export async function loader({ request, context }: Route.LoaderArgs) {
-  let client = await authenticate(request, context);
-  let user = await getUser(client); // Uses cached result if already fetched
-  return data({ user });
+	let client = await authenticate(request, context);
+	let user = await getUser(client); // Uses cached result if already fetched
+	return data({ user });
 }
 ```
 
@@ -98,9 +95,9 @@ Use useRevalidator for polling, focus, and reconnect revalidation.
 const { revalidate } = useRevalidator();
 
 useEffect(() => {
-  if (visibilityState === "hidden") return; // Don't poll hidden tabs
-  let id = setInterval(revalidate, 30000);
-  return () => clearInterval(id);
+	if (visibilityState === "hidden") return; // Don't poll hidden tabs
+	let id = setInterval(revalidate, 30000);
+	return () => clearInterval(id);
 }, [revalidate, visibilityState]);
 ```
 
@@ -114,12 +111,12 @@ import { data } from "react-router";
 import { useLoaderData } from "react-router";
 
 export async function loader({ request, params }: Route.LoaderArgs) {
-  return data({ user: await getUser(params.id) });
+	return data({ user: await getUser(params.id) });
 }
 
 export default function Component() {
-  const { user } = useLoaderData<typeof loader>();
-  return <div>{user.name}</div>;
+	const { user } = useLoaderData<typeof loader>();
+	return <div>{user.name}</div>;
 }
 ```
 
@@ -133,8 +130,8 @@ import { data } from "react-router";
 import { z } from "zod";
 
 export async function loader({ params }: Route.LoaderArgs) {
-  let itemId = z.string().parse(params.itemId);
-  return data({ item: await getItem(itemId) });
+	let itemId = z.string().parse(params.itemId);
+	return data({ item: await getItem(itemId) });
 }
 ```
 
@@ -144,8 +141,8 @@ Abort async work when the request is canceled.
 
 ```ts
 export async function loader({ request }: Route.LoaderArgs) {
-  let response = await fetch(url, { signal: request.signal });
-  return data(await response.json());
+	let response = await fetch(url, { signal: request.signal });
+	return data(await response.json());
 }
 ```
 
@@ -166,14 +163,11 @@ routes/
 Authenticate via middleware and authorize in each loader/action.
 
 ```ts
-export const middleware: Route.MiddlewareFunction[] = [
-  sessionMiddleware,
-  authMiddleware,
-];
+export const middleware: Route.MiddlewareFunction[] = [sessionMiddleware, authMiddleware];
 
 export async function loader({ context }: Route.LoaderArgs) {
-  authorize(context, { requireUser: true, onboardingComplete: true });
-  return null;
+	authorize(context, { requireUser: true, onboardingComplete: true });
+	return null;
 }
 ```
 
@@ -192,9 +186,7 @@ export const middleware: Route.MiddlewareFunction[] = [sessionMiddleware];
 Store context/request in AsyncLocalStorage for arg-less helpers.
 
 ```ts
-export const middleware: Route.MiddlewareFunction[] = [
-  contextStorageMiddleware,
-];
+export const middleware: Route.MiddlewareFunction[] = [contextStorageMiddleware];
 ```
 
 #### middleware-batcher - @rules/middleware-batcher.md
@@ -242,8 +234,7 @@ let cache = getSingleton(context);
 Reject cross-site mutation requests via Sec-Fetch headers.
 
 ```ts
-if (fetchSite(request) === "cross-site")
-  throw new Response(null, { status: 403 });
+if (fetchSite(request) === "cross-site") throw new Response(null, { status: 403 });
 ```
 
 #### form-honeypot - @rules/form-honeypot.md
@@ -252,7 +243,7 @@ Add honeypot inputs for public forms.
 
 ```tsx
 <Form method="post">
-  <HoneypotInputs />
+	<HoneypotInputs />
 </Form>
 ```
 
@@ -295,16 +286,16 @@ Use `useRouteLoaderData` for UI-only access to parent data. For loader logic, fe
 ```tsx
 // UI-only access - use useRouteLoaderData
 export default function ChildRoute() {
-  const { user } = useRouteLoaderData<typeof profileLoader>("routes/_layout");
-  return <div>Welcome, {user.name}</div>;
+	const { user } = useRouteLoaderData<typeof profileLoader>("routes/_layout");
+	return <div>Welcome, {user.name}</div>;
 }
 
 // Loader needs data - fetch again (cached, no extra request)
 export async function loader({ request }: Route.LoaderArgs) {
-  let client = await authenticate(request);
-  let user = await getUser(client); // Uses cached result
-  let settings = await getSettings(client, user.id);
-  return data({ settings });
+	let client = await authenticate(request);
+	let user = await getUser(client); // Uses cached result
+	let settings = await getSettings(client, user.id);
+	return data({ settings });
 }
 ```
 
@@ -315,19 +306,19 @@ Only route components call `useLoaderData`/`useActionData`. Children receive pro
 ```tsx
 // route.tsx - only place that calls useLoaderData
 export default function ItemsRoute() {
-  const { items } = useLoaderData<typeof loader>();
-  return <ItemList items={items} />;
+	const { items } = useLoaderData<typeof loader>();
+	return <ItemList items={items} />;
 }
 
 // components/item-list.tsx - receives data as props
 export function ItemList({ items }: { items: Item[] }) {
-  return (
-    <ul>
-      {items.map((item) => (
-        <li key={item.id}>{item.name}</li>
-      ))}
-    </ul>
-  );
+	return (
+		<ul>
+			{items.map((item) => (
+				<li key={item.id}>{item.name}</li>
+			))}
+		</ul>
+	);
 }
 ```
 
@@ -340,32 +331,26 @@ Validate form data with zod schemas.
 ```tsx
 // Good: schema validation with i18n error messages
 export async function action({ request }: Route.ActionArgs) {
-  let t = await i18n.getFixedT(request);
-  let formData = await request.formData();
+	let t = await i18n.getFixedT(request);
+	let formData = await request.formData();
 
-  try {
-    const { amount } = z
-      .object({
-        amount: z.coerce
-          .number()
-          .min(
-            minimumAmount,
-            t("Amount must be at least {{min}}.", { min: minimumAmount }),
-          ),
-      })
-      .parse({ amount: formData.get("amount") });
+	try {
+		const { amount } = z
+			.object({
+				amount: z.coerce
+					.number()
+					.min(minimumAmount, t("Amount must be at least {{min}}.", { min: minimumAmount })),
+			})
+			.parse({ amount: formData.get("amount") });
 
-    await processAmount(amount);
-    throw redirect("/success");
-  } catch (error) {
-    if (error instanceof z.ZodError) {
-      return data(
-        { errors: error.issues.map(({ message }) => message) },
-        { status: 400 },
-      );
-    }
-    throw error;
-  }
+		await processAmount(amount);
+		throw redirect("/success");
+	} catch (error) {
+		if (error instanceof z.ZodError) {
+			return data({ errors: error.issues.map(({ message }) => message) }, { status: 400 });
+		}
+		throw error;
+	}
 }
 ```
 
@@ -376,21 +361,18 @@ Return validation errors, don't throw. Re-throw redirects and unknown errors.
 ```tsx
 // Good: proper error handling
 export async function action({ request }: Route.ActionArgs) {
-  try {
-    // ... validation and mutation
-    throw redirect("/success");
-  } catch (error) {
-    if (error instanceof z.ZodError) {
-      return data(
-        { errors: error.issues.map(({ message }) => message) },
-        { status: 400 },
-      );
-    }
-    if (error instanceof Error) {
-      return data({ errors: [error.message] }, { status: 400 });
-    }
-    throw error; // Re-throw redirects and unknown errors
-  }
+	try {
+		// ... validation and mutation
+		throw redirect("/success");
+	} catch (error) {
+		if (error instanceof z.ZodError) {
+			return data({ errors: error.issues.map(({ message }) => message) }, { status: 400 });
+		}
+		if (error instanceof Error) {
+			return data({ errors: [error.message] }, { status: 400 });
+		}
+		throw error; // Re-throw redirects and unknown errors
+	}
 }
 ```
 
@@ -401,8 +383,8 @@ Redirect after successful mutations to prevent resubmission.
 ```tsx
 // Good: redirect after mutation
 export async function action({ request }: Route.ActionArgs) {
-  await createItem(formData);
-  throw redirect("/items"); // Use throw for redirect
+	await createItem(formData);
+	throw redirect("/items"); // Use throw for redirect
 }
 ```
 
@@ -412,20 +394,20 @@ Use Zod .transform() for input sanitization during validation.
 
 ```tsx
 const schema = z.object({
-  // Trim and lowercase email
-  email: z.string().trim().toLowerCase().pipe(z.string().email()),
+	// Trim and lowercase email
+	email: z.string().trim().toLowerCase().pipe(z.string().email()),
 
-  // Parse currency string to number
-  amount: z
-    .string()
-    .transform((val) => parseFloat(val.replace(/[,$]/g, "")))
-    .pipe(z.number().positive()),
+	// Parse currency string to number
+	amount: z
+		.string()
+		.transform((val) => parseFloat(val.replace(/[,$]/g, "")))
+		.pipe(z.number().positive()),
 
-  // Convert checkbox to boolean
-  subscribe: z
-    .string()
-    .optional()
-    .transform((val) => val === "on"),
+	// Convert checkbox to boolean
+	subscribe: z
+		.string()
+		.optional()
+		.transform((val) => val === "on"),
 });
 ```
 
@@ -434,21 +416,15 @@ const schema = z.object({
 Use clientAction for instant client-side validation before hitting the server.
 
 ```tsx
-export async function clientAction({
-  request,
-  serverAction,
-}: Route.ClientActionArgs) {
-  let formData = await request.formData();
-  let result = schema.safeParse(Object.fromEntries(formData));
+export async function clientAction({ request, serverAction }: Route.ClientActionArgs) {
+	let formData = await request.formData();
+	let result = schema.safeParse(Object.fromEntries(formData));
 
-  if (!result.success) {
-    return data(
-      { errors: result.error.flatten().fieldErrors },
-      { status: 400 },
-    );
-  }
+	if (!result.success) {
+		return data({ errors: result.error.flatten().fieldErrors }, { status: 400 });
+	}
 
-  return serverAction<typeof action>(); // Validation passed, call server
+	return serverAction<typeof action>(); // Validation passed, call server
 }
 ```
 
@@ -461,23 +437,23 @@ Use useFetcher for non-navigation mutations, Form for navigation.
 ```tsx
 // Good: useFetcher for in-place updates (no navigation)
 function LikeButton({ postId }: { postId: string }) {
-  let fetcher = useFetcher();
-  return (
-    <fetcher.Form method="post" action="/api/like">
-      <input type="hidden" name="postId" value={postId} />
-      <button type="submit">Like</button>
-    </fetcher.Form>
-  );
+	let fetcher = useFetcher();
+	return (
+		<fetcher.Form method="post" action="/api/like">
+			<input type="hidden" name="postId" value={postId} />
+			<button type="submit">Like</button>
+		</fetcher.Form>
+	);
 }
 
 // Good: Form for navigation after submit
 function CreatePostForm() {
-  return (
-    <Form method="post" action="/posts/new">
-      <input name="title" />
-      <button type="submit">Create</button>
-    </Form>
-  );
+	return (
+		<Form method="post" action="/posts/new">
+			<input name="title" />
+			<button type="submit">Create</button>
+		</Form>
+	);
 }
 ```
 
@@ -488,14 +464,14 @@ Show loading states with useNavigation or fetcher.state.
 ```tsx
 // Good: pending state with fetcher
 function SubmitButton() {
-  let fetcher = useFetcher();
-  let isPending = fetcher.state !== "idle";
+	let fetcher = useFetcher();
+	let isPending = fetcher.state !== "idle";
 
-  return (
-    <Button type="submit" isDisabled={isPending}>
-      {isPending ? <Spinner /> : "Submit"}
-    </Button>
-  );
+	return (
+		<Button type="submit" isDisabled={isPending}>
+			{isPending ? <Spinner /> : "Submit"}
+		</Button>
+	);
 }
 
 // Good: with useSpinDelay to avoid flicker
@@ -511,18 +487,18 @@ const formRef = useRef<HTMLFormElement>(null);
 const fetcher = useFetcher<typeof action>();
 
 useEffect(
-  function resetFormOnSuccess() {
-    if (fetcher.state === "idle" && fetcher.data?.ok) {
-      formRef.current?.reset();
-    }
-  },
-  [fetcher.state, fetcher.data],
+	function resetFormOnSuccess() {
+		if (fetcher.state === "idle" && fetcher.data?.ok) {
+			formRef.current?.reset();
+		}
+	},
+	[fetcher.state, fetcher.data],
 );
 
 return (
-  <fetcher.Form method="post" ref={formRef}>
-    ...
-  </fetcher.Form>
+	<fetcher.Form method="post" ref={formRef}>
+		...
+	</fetcher.Form>
 );
 ```
 
@@ -533,17 +509,14 @@ Return field values from actions on validation errors to repopulate inputs.
 ```tsx
 // Action returns fields on error
 export async function action({ request }: Route.ActionArgs) {
-  let formData = await request.formData();
-  let fields = { email: formData.get("email")?.toString() ?? "" };
-  let result = schema.safeParse(fields);
+	let formData = await request.formData();
+	let fields = { email: formData.get("email")?.toString() ?? "" };
+	let result = schema.safeParse(fields);
 
-  if (!result.success) {
-    return data(
-      { errors: result.error.flatten().fieldErrors, fields },
-      { status: 400 },
-    );
-  }
-  // ...
+	if (!result.success) {
+		return data({ errors: result.error.flatten().fieldErrors, fields }, { status: 400 });
+	}
+	// ...
 }
 
 // Component uses defaultValue
@@ -559,12 +532,9 @@ Use clientLoader/clientAction to debounce at the route level.
 ```tsx
 import { setTimeout } from "node:timers/promises";
 
-export async function clientLoader({
-  request,
-  serverLoader,
-}: Route.ClientLoaderArgs) {
-  // Debounce by 500ms - request.signal aborts if called again
-  return await setTimeout(500, serverLoader, { signal: request.signal });
+export async function clientLoader({ request, serverLoader }: Route.ClientLoaderArgs) {
+	// Debounce by 500ms - request.signal aborts if called again
+	return await setTimeout(500, serverLoader, { signal: request.signal });
 }
 
 clientLoader.hydrate = true;
@@ -581,20 +551,20 @@ Migrate from defer() to data() with promises for Single Fetch.
 import { defer } from "react-router";
 
 export async function loader({ request }: Route.LoaderArgs) {
-  return defer({
-    critical: await getCriticalData(),
-    lazy: getLazyData(), // Promise
-  });
+	return defer({
+		critical: await getCriticalData(),
+		lazy: getLazyData(), // Promise
+	});
 }
 
 // Good: Single Fetch with data() - promises auto-stream
 import { data } from "react-router";
 
 export async function loader({ request }: Route.LoaderArgs) {
-  return data({
-    critical: await getCriticalData(),
-    lazy: getLazyData(), // Promise automatically streamed
-  });
+	return data({
+		critical: await getCriticalData(),
+		lazy: getLazyData(), // Promise automatically streamed
+	});
 }
 ```
 
@@ -610,16 +580,16 @@ import { Await, useLoaderData } from "react-router";
 import { Suspense } from "react";
 
 export default function Component() {
-  const { critical, lazy } = useLoaderData<typeof loader>();
+	const { critical, lazy } = useLoaderData<typeof loader>();
 
-  return (
-    <div>
-      <div>{critical.name}</div>
-      <Suspense fallback={<Skeleton />}>
-        <Await resolve={lazy}>{(data) => <LazyContent data={data} />}</Await>
-      </Suspense>
-    </div>
-  );
+	return (
+		<div>
+			<div>{critical.name}</div>
+			<Suspense fallback={<Skeleton />}>
+				<Await resolve={lazy}>{(data) => <LazyContent data={data} />}</Await>
+			</Suspense>
+		</div>
+	);
 }
 ```
 
@@ -632,26 +602,26 @@ Stop using jsonHash, use native Promise.all or data() patterns.
 import { jsonHash } from "remix-utils/json-hash";
 
 export async function loader({ request }: Route.LoaderArgs) {
-  return jsonHash({
-    a: getDataA(),
-    b: getDataB(),
-  });
+	return jsonHash({
+		a: getDataA(),
+		b: getDataB(),
+	});
 }
 
 // Good: native Promise.all
 export async function loader({ request }: Route.LoaderArgs) {
-  const [a, b] = await Promise.all([getDataA(), getDataB()]);
-  return data({ a, b });
+	const [a, b] = await Promise.all([getDataA(), getDataB()]);
+	return data({ a, b });
 }
 
 // Good: data() with promises for streaming
 import { data } from "react-router";
 
 export async function loader({ request }: Route.LoaderArgs) {
-  return data({
-    a: getDataA(), // Streams automatically
-    b: getDataB(),
-  });
+	return data({
+		a: getDataA(), // Streams automatically
+		b: getDataB(),
+	});
 }
 ```
 
@@ -664,16 +634,16 @@ Migrate from deprecated json() to data().
 import { json } from "react-router";
 
 export async function loader({ request }: Route.LoaderArgs) {
-  let items = await getItems();
-  return json({ items });
+	let items = await getItems();
+	return json({ items });
 }
 
 // Good: use data() for all responses
 import { data } from "react-router";
 
 export async function loader({ request }: Route.LoaderArgs) {
-  let items = await getItems();
-  return data({ items });
+	let items = await getItems();
+	return data({ items });
 }
 
 // With status codes
@@ -692,38 +662,38 @@ Migrate from namedAction helper to z.discriminatedUnion pattern.
 import { namedAction } from "remix-utils/named-action";
 
 export async function action({ request }: Route.ActionArgs) {
-  let formData = await request.formData();
+	let formData = await request.formData();
 
-  return namedAction(formData, {
-    async create() {
-      return data({ success: true });
-    },
-    async delete() {
-      return data({ success: true });
-    },
-  });
+	return namedAction(formData, {
+		async create() {
+			return data({ success: true });
+		},
+		async delete() {
+			return data({ success: true });
+		},
+	});
 }
 
 // Good: z.discriminatedUnion for type-safe intent validation
 export async function action({ request }: Route.ActionArgs) {
-  let formData = await request.formData();
+	let formData = await request.formData();
 
-  let body = z
-    .discriminatedUnion("intent", [
-      z.object({ intent: z.literal("create"), title: z.string() }),
-      z.object({ intent: z.literal("delete"), id: z.string() }),
-    ])
-    .parse(Object.fromEntries(formData.entries()));
+	let body = z
+		.discriminatedUnion("intent", [
+			z.object({ intent: z.literal("create"), title: z.string() }),
+			z.object({ intent: z.literal("delete"), id: z.string() }),
+		])
+		.parse(Object.fromEntries(formData.entries()));
 
-  if (body.intent === "create") {
-    await createItem(client, body);
-    throw redirect("/items");
-  }
+	if (body.intent === "create") {
+		await createItem(client, body);
+		throw redirect("/items");
+	}
 
-  if (body.intent === "delete") {
-    await deleteItem(client, body.id);
-    throw redirect("/items");
-  }
+	if (body.intent === "delete") {
+		await deleteItem(client, body.id);
+		throw redirect("/items");
+	}
 }
 ```
 
@@ -737,25 +707,25 @@ Implement layout-aware ErrorBoundary with useRouteError.
 import { useRouteError, isRouteErrorResponse } from "react-router";
 
 export function ErrorBoundary() {
-  let error = useRouteError();
+	let error = useRouteError();
 
-  if (isRouteErrorResponse(error)) {
-    return (
-      <div>
-        <h1>
-          {error.status} {error.statusText}
-        </h1>
-        <p>{error.data}</p>
-      </div>
-    );
-  }
+	if (isRouteErrorResponse(error)) {
+		return (
+			<div>
+				<h1>
+					{error.status} {error.statusText}
+				</h1>
+				<p>{error.data}</p>
+			</div>
+		);
+	}
 
-  return (
-    <div>
-      <h1>Error</h1>
-      <p>{error instanceof Error ? error.message : "Unknown error"}</p>
-    </div>
-  );
+	return (
+		<div>
+			<h1>Error</h1>
+			<p>{error instanceof Error ? error.message : "Unknown error"}</p>
+		</div>
+	);
 }
 ```
 
@@ -766,15 +736,15 @@ Add ErrorBoundary to routes with data fetching to catch loader/action errors.
 ```tsx
 // Good: route with error boundary
 export async function loader() {
-  // May throw
+	// May throw
 }
 
 export default function Component() {
-  // Main component
+	// Main component
 }
 
 export function ErrorBoundary() {
-  // Catches loader errors
+	// Catches loader errors
 }
 ```
 
@@ -804,7 +774,7 @@ Avoid `navigate(-1)` for in-app back links.
 
 ```tsx
 <Link to={`/items/${id}`} state={{ back: location.pathname }}>
-  View
+	View
 </Link>
 ```
 
@@ -816,17 +786,15 @@ Use PrefetchPageLinks to preload data for fetcher.load() calls.
 import { useFetcher, PrefetchPageLinks } from "react-router";
 
 function ItemDetails({ itemId }: { itemId: string }) {
-  let fetcher = useFetcher<typeof resourceLoader>();
+	let fetcher = useFetcher<typeof resourceLoader>();
 
-  return (
-    <>
-      <PrefetchPageLinks page={`/api/items/${itemId}`} />
-      <button onClick={() => fetcher.load(`/api/items/${itemId}`)}>
-        View Details
-      </button>
-      {fetcher.data && <Modal data={fetcher.data} />}
-    </>
-  );
+	return (
+		<>
+			<PrefetchPageLinks page={`/api/items/${itemId}`} />
+			<button onClick={() => fetcher.load(`/api/items/${itemId}`)}>View Details</button>
+			{fetcher.data && <Modal data={fetcher.data} />}
+		</>
+	);
 }
 ```
 
@@ -846,7 +814,7 @@ Stream updates with `eventStream` and `useEventSource`.
 
 ```ts
 return eventStream(request.signal, (send) => {
-  send({ event: "time", data: new Date().toISOString() });
+	send({ event: "time", data: new Date().toISOString() });
 });
 ```
 
@@ -882,10 +850,10 @@ Use resource routes for API-like endpoints without UI.
 ```tsx
 // routes/api.search.tsx - resource route (no default export)
 export async function loader({ request }: Route.LoaderArgs) {
-  let url = new URL(request.url);
-  let query = url.searchParams.get("q");
-  let results = await search(query);
-  return data({ results });
+	let url = new URL(request.url);
+	let query = url.searchParams.get("q");
+	let results = await search(query);
+	return data({ results });
 }
 
 // No default export = resource route
@@ -900,19 +868,19 @@ Centralize reusable actions in dedicated resource routes using `actions.noun-ver
 import { data, redirect } from "react-router";
 
 export async function action({ request, context }: Route.ActionArgs) {
-  let client = await authenticate(request, { context });
-  // validation, create post...
-  return data({ ok: true, post }, { status: 201 });
+	let client = await authenticate(request, { context });
+	// validation, create post...
+	return data({ ok: true, post }, { status: 201 });
 }
 
 export async function clientAction({ serverAction }: Route.ClientActionArgs) {
-  let result = await serverAction<typeof action>();
-  if (result.ok) {
-    toast.success("Post created");
-    return redirect(`/posts/${result.post.id}`);
-  }
-  toast.error("Failed to create post");
-  return result;
+	let result = await serverAction<typeof action>();
+	if (result.ok) {
+		toast.success("Post created");
+		return redirect(`/posts/${result.post.id}`);
+	}
+	toast.error("Failed to create post");
+	return result;
 }
 
 // Usage: <fetcher.Form method="post" action="/actions/post-create">
@@ -924,17 +892,12 @@ Optimize revalidation with shouldRevalidate.
 
 ```tsx
 // Good: prevent unnecessary revalidation
-export function shouldRevalidate({
-  currentUrl,
-  nextUrl,
-  formAction,
-  defaultShouldRevalidate,
-}) {
-  // Don't revalidate if only hash changed
-  if (currentUrl.pathname === nextUrl.pathname) {
-    return false;
-  }
-  return defaultShouldRevalidate;
+export function shouldRevalidate({ currentUrl, nextUrl, formAction, defaultShouldRevalidate }) {
+	// Don't revalidate if only hash changed
+	if (currentUrl.pathname === nextUrl.pathname) {
+		return false;
+	}
+	return defaultShouldRevalidate;
 }
 ```
 
@@ -945,14 +908,14 @@ Use handle export with app-defined handle types for route metadata.
 ```tsx
 // Good: handle for hydration and layout control
 export const handle: Handle = {
-  hydrate: true,
+	hydrate: true,
 };
 
 // For layout routes with more options
 export const handle: LayoutHandle = {
-  hydrate: true,
-  stickyHeader: true,
-  footerType: "app",
+	hydrate: true,
+	stickyHeader: true,
+	footerType: "app",
 };
 ```
 
@@ -964,32 +927,31 @@ Use meta function with loader data for dynamic SEO.
 
 ```tsx
 export const meta: Route.MetaFunction<typeof loader> = ({ data }) => {
-  if (!data) return [];
+	if (!data) return [];
 
-  return [
-    { title: data.title },
-    { name: "description", content: data.description },
-    { property: "og:title", content: data.title },
-    { property: "og:description", content: data.description },
-    { property: "og:image", content: data.image },
-  ];
+	return [
+		{ title: data.title },
+		{ name: "description", content: data.description },
+		{ property: "og:title", content: data.title },
+		{ property: "og:description", content: data.description },
+		{ property: "og:image", content: data.image },
+	];
 };
 
 // Or return from loader for centralized SEO logic
 export async function loader({ request }: Route.LoaderArgs) {
-  let t = await i18n.getFixedT(request);
-  return data({
-    // ... data
-    meta: seo(t, {
-      title: t("Page Title"),
-      description: t("Page description"),
-      og: { title: t("OG Title"), image: "/og-image.png" },
-    }),
-  });
+	let t = await i18n.getFixedT(request);
+	return data({
+		// ... data
+		meta: seo(t, {
+			title: t("Page Title"),
+			description: t("Page description"),
+			og: { title: t("OG Title"), image: "/og-image.png" },
+		}),
+	});
 }
 
-export const meta: Route.MetaFunction<typeof loader> = ({ data }) =>
-  data?.meta ?? [];
+export const meta: Route.MetaFunction<typeof loader> = ({ data }) => data?.meta ?? [];
 ```
 
 ### Route Conventions (MEDIUM)

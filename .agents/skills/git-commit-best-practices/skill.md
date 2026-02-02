@@ -109,7 +109,7 @@ Use the correct type prefix that accurately reflects the nature of changes.
 ```bash
 # Good: Accurate prefixes
 feat: add    # Wholly new feature/capability
-feat: update # Enhancement to existing feature  
+feat: update # Enhancement to existing feature
 fix:         # Bug fix
 refactor:    # Code restructuring, no behavior change
 docs:        # Documentation only

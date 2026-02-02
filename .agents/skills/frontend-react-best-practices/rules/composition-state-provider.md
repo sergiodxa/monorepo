@@ -19,29 +19,29 @@ Move state management into dedicated provider components. This allows sibling co
 
 ```tsx
 function ForwardMessageComposer() {
-  let [state, setState] = useState(initialState);
-  let forwardMessage = useForwardMessage();
+	let [state, setState] = useState(initialState);
+	let forwardMessage = useForwardMessage();
 
-  return (
-    <Composer.Frame>
-      <Composer.Input />
-      <Composer.Footer />
-    </Composer.Frame>
-  );
+	return (
+		<Composer.Frame>
+			<Composer.Input />
+			<Composer.Footer />
+		</Composer.Frame>
+	);
 }
 
 // Problem: How does ForwardButton access composer state?
 function ForwardMessageDialog() {
-  return (
-    <Dialog>
-      <ForwardMessageComposer />
-      <MessagePreview /> {/* Needs composer state - can't access it */}
-      <DialogActions>
-        <CancelButton />
-        <ForwardButton /> {/* Needs to call submit - can't access it */}
-      </DialogActions>
-    </Dialog>
-  );
+	return (
+		<Dialog>
+			<ForwardMessageComposer />
+			<MessagePreview /> {/* Needs composer state - can't access it */}
+			<DialogActions>
+				<CancelButton />
+				<ForwardButton /> {/* Needs to call submit - can't access it */}
+			</DialogActions>
+		</Dialog>
+	);
 }
 ```
 
@@ -49,22 +49,22 @@ function ForwardMessageDialog() {
 
 ```tsx
 function ForwardMessageDialog() {
-  const [input, setInput] = useState("");
-  return (
-    <Dialog>
-      <ForwardMessageComposer onInputChange={setInput} />
-      <MessagePreview input={input} />
-    </Dialog>
-  );
+	const [input, setInput] = useState("");
+	return (
+		<Dialog>
+			<ForwardMessageComposer onInputChange={setInput} />
+			<MessagePreview input={input} />
+		</Dialog>
+	);
 }
 
 function ForwardMessageComposer({ onInputChange }) {
-  const [state, setState] = useState(initialState);
+	const [state, setState] = useState(initialState);
 
-  // Syncing state on every change is messy
-  useEffect(() => {
-    onInputChange(state.input);
-  }, [state.input, onInputChange]);
+	// Syncing state on every change is messy
+	useEffect(() => {
+		onInputChange(state.input);
+	}, [state.input, onInputChange]);
 }
 ```
 
@@ -72,44 +72,44 @@ function ForwardMessageComposer({ onInputChange }) {
 
 ```tsx
 function ForwardMessageProvider({ children }: { children: React.ReactNode }) {
-  let [state, setState] = useState(initialState);
-  let forwardMessage = useForwardMessage();
-  let inputRef = useRef(null);
+	let [state, setState] = useState(initialState);
+	let forwardMessage = useForwardMessage();
+	let inputRef = useRef(null);
 
-  return (
-    <Composer.Provider
-      state={state}
-      actions={{ update: setState, submit: forwardMessage }}
-      meta={{ inputRef }}
-    >
-      {children}
-    </Composer.Provider>
-  );
+	return (
+		<Composer.Provider
+			state={state}
+			actions={{ update: setState, submit: forwardMessage }}
+			meta={{ inputRef }}
+		>
+			{children}
+		</Composer.Provider>
+	);
 }
 
 function ForwardMessageDialog() {
-  return (
-    <ForwardMessageProvider>
-      <Dialog>
-        <ForwardMessageComposer />
-        <MessagePreview /> {/* Can access state via context */}
-        <DialogActions>
-          <CancelButton />
-          <ForwardButton /> {/* Can access submit via context */}
-        </DialogActions>
-      </Dialog>
-    </ForwardMessageProvider>
-  );
+	return (
+		<ForwardMessageProvider>
+			<Dialog>
+				<ForwardMessageComposer />
+				<MessagePreview /> {/* Can access state via context */}
+				<DialogActions>
+					<CancelButton />
+					<ForwardButton /> {/* Can access submit via context */}
+				</DialogActions>
+			</Dialog>
+		</ForwardMessageProvider>
+	);
 }
 
 function ForwardButton() {
-  const { actions } = useComposer();
-  return <Button onPress={actions.submit}>Forward</Button>;
+	const { actions } = useComposer();
+	return <Button onPress={actions.submit}>Forward</Button>;
 }
 
 function MessagePreview() {
-  const { state } = useComposer();
-  return <Preview message={state.input} attachments={state.attachments} />;
+	const { state } = useComposer();
+	return <Preview message={state.input} attachments={state.attachments} />;
 }
 ```
 
@@ -158,24 +158,24 @@ function ChannelProvider({ channelId, children }) {
 
 ```tsx
 interface ComposerState {
-  input: string;
-  attachments: Attachment[];
-  isSubmitting: boolean;
+	input: string;
+	attachments: Attachment[];
+	isSubmitting: boolean;
 }
 
 interface ComposerActions {
-  update: (updater: (state: ComposerState) => ComposerState) => void;
-  submit: () => void;
+	update: (updater: (state: ComposerState) => ComposerState) => void;
+	submit: () => void;
 }
 
 interface ComposerMeta {
-  inputRef: React.RefObject<HTMLTextAreaElement>;
+	inputRef: React.RefObject<HTMLTextAreaElement>;
 }
 
 interface ComposerContextValue {
-  state: ComposerState;
-  actions: ComposerActions;
-  meta: ComposerMeta;
+	state: ComposerState;
+	actions: ComposerActions;
+	meta: ComposerMeta;
 }
 ```
 

@@ -4,16 +4,14 @@
 
 ```jsonc
 {
-  "kv_namespaces": [{ "binding": "MY_KV", "id": "..." }],
-  "r2_buckets": [{ "binding": "MY_BUCKET", "bucket_name": "my-bucket" }],
-  "d1_databases": [
-    { "binding": "DB", "database_name": "my-db", "database_id": "..." },
-  ],
-  "durable_objects": {
-    "bindings": [{ "name": "MY_DO", "class_name": "MyDO" }],
-  },
-  "vectorize": [{ "binding": "VECTORIZE", "index_name": "my-index" }],
-  "queues": { "producers": [{ "binding": "MY_QUEUE", "queue": "my-queue" }] },
+	"kv_namespaces": [{ "binding": "MY_KV", "id": "..." }],
+	"r2_buckets": [{ "binding": "MY_BUCKET", "bucket_name": "my-bucket" }],
+	"d1_databases": [{ "binding": "DB", "database_name": "my-db", "database_id": "..." }],
+	"durable_objects": {
+		"bindings": [{ "name": "MY_DO", "class_name": "MyDO" }],
+	},
+	"vectorize": [{ "binding": "VECTORIZE", "index_name": "my-index" }],
+	"queues": { "producers": [{ "binding": "MY_QUEUE", "queue": "my-queue" }] },
 }
 ```
 
@@ -38,16 +36,16 @@ npx wrangler queues list
 
 ```jsonc
 {
-  "services": [
-    {
-      "binding": "MY_SERVICE",
-      "service": "other-worker",
-      "environment": "production", // Optional: target specific env
-    },
-  ],
-  "ai": { "binding": "AI" },
-  "browser": { "binding": "BROWSER" },
-  "workflows": [{ "binding": "MY_WORKFLOW", "name": "my-workflow" }],
+	"services": [
+		{
+			"binding": "MY_SERVICE",
+			"service": "other-worker",
+			"environment": "production", // Optional: target specific env
+		},
+	],
+	"ai": { "binding": "AI" },
+	"browser": { "binding": "BROWSER" },
+	"workflows": [{ "binding": "MY_WORKFLOW", "name": "my-workflow" }],
 }
 ```
 
@@ -61,14 +59,12 @@ npx wrangler workflows create my-workflow
 
 ```jsonc
 {
-  "analytics_engine_datasets": [{ "binding": "ANALYTICS" }],
-  "mtls_certificates": [{ "binding": "MY_CERT", "certificate_id": "..." }],
-  "hyperdrive": [{ "binding": "HYPERDRIVE", "id": "..." }],
-  "unsafe": {
-    "bindings": [
-      { "name": "RATE_LIMITER", "type": "ratelimit", "namespace_id": "..." },
-    ],
-  },
+	"analytics_engine_datasets": [{ "binding": "ANALYTICS" }],
+	"mtls_certificates": [{ "binding": "MY_CERT", "certificate_id": "..." }],
+	"hyperdrive": [{ "binding": "HYPERDRIVE", "id": "..." }],
+	"unsafe": {
+		"bindings": [{ "name": "RATE_LIMITER", "type": "ratelimit", "namespace_id": "..." }],
+	},
 }
 ```
 
@@ -76,13 +72,13 @@ npx wrangler workflows create my-workflow
 
 ```jsonc
 {
-  "vars": {
-    "API_URL": "https://api.example.com",
-    "MAX_RETRIES": "3",
-  },
-  "text_blobs": { "MY_TEXT": "./data/template.html" },
-  "data_blobs": { "MY_DATA": "./data/config.bin" },
-  "wasm_modules": { "MY_WASM": "./build/module.wasm" },
+	"vars": {
+		"API_URL": "https://api.example.com",
+		"MAX_RETRIES": "3",
+	},
+	"text_blobs": { "MY_TEXT": "./data/template.html" },
+	"data_blobs": { "MY_DATA": "./data/config.bin" },
+	"wasm_modules": { "MY_WASM": "./build/module.wasm" },
 }
 ```
 
@@ -96,16 +92,16 @@ npx wrangler secret put API_KEY
 
 ```jsonc
 {
-  "name": "my-worker",
-  "vars": { "ENV": "production" },
-  "kv_namespaces": [{ "binding": "CACHE", "id": "prod-kv-id" }],
+	"name": "my-worker",
+	"vars": { "ENV": "production" },
+	"kv_namespaces": [{ "binding": "CACHE", "id": "prod-kv-id" }],
 
-  "env": {
-    "staging": {
-      "vars": { "ENV": "staging" },
-      "kv_namespaces": [{ "binding": "CACHE", "id": "staging-kv-id" }],
-    },
-  },
+	"env": {
+		"staging": {
+			"vars": { "ENV": "staging" },
+			"kv_namespaces": [{ "binding": "CACHE", "id": "staging-kv-id" }],
+		},
+	},
 }
 ```
 
@@ -120,13 +116,13 @@ npx wrangler deploy --env staging
 
 ```jsonc
 {
-  "kv_namespaces": [
-    {
-      "binding": "MY_KV",
-      "id": "prod-id",
-      "preview_id": "dev-id", // Used in wrangler dev
-    },
-  ],
+	"kv_namespaces": [
+		{
+			"binding": "MY_KV",
+			"id": "prod-id",
+			"preview_id": "dev-id", // Used in wrangler dev
+		},
+	],
 }
 ```
 
@@ -140,19 +136,17 @@ npx wrangler dev --remote  # Uses production bindings
 
 ```jsonc
 {
-  "$schema": "./node_modules/wrangler/config-schema.json",
-  "name": "my-app",
-  "main": "src/index.ts",
-  "compatibility_date": "2025-01-01",
+	"$schema": "./node_modules/wrangler/config-schema.json",
+	"name": "my-app",
+	"main": "src/index.ts",
+	"compatibility_date": "2025-01-01",
 
-  "vars": { "API_URL": "https://api.example.com" },
-  "kv_namespaces": [{ "binding": "CACHE", "id": "abc123" }],
-  "r2_buckets": [{ "binding": "ASSETS", "bucket_name": "my-assets" }],
-  "d1_databases": [
-    { "binding": "DB", "database_name": "my-db", "database_id": "xyz789" },
-  ],
-  "services": [{ "binding": "AUTH", "service": "auth-worker" }],
-  "ai": { "binding": "AI" },
+	"vars": { "API_URL": "https://api.example.com" },
+	"kv_namespaces": [{ "binding": "CACHE", "id": "abc123" }],
+	"r2_buckets": [{ "binding": "ASSETS", "bucket_name": "my-assets" }],
+	"d1_databases": [{ "binding": "DB", "database_name": "my-db", "database_id": "xyz789" }],
+	"services": [{ "binding": "AUTH", "service": "auth-worker" }],
+	"ai": { "binding": "AI" },
 }
 ```
 
@@ -162,28 +156,28 @@ npx wrangler dev --remote  # Uses production bindings
 
 ```jsonc
 {
-  "durable_objects": {
-    "bindings": [
-      {
-        "name": "COUNTER",
-        "class_name": "Counter",
-        "script_name": "my-worker",
-      },
-    ],
-  },
+	"durable_objects": {
+		"bindings": [
+			{
+				"name": "COUNTER",
+				"class_name": "Counter",
+				"script_name": "my-worker",
+			},
+		],
+	},
 }
 ```
 
 ```typescript
 // In same Worker or script_name Worker
 export class Counter {
-  constructor(
-    private state: DurableObjectState,
-    private env: Env,
-  ) {}
-  async fetch(request: Request) {
-    /* ... */
-  }
+	constructor(
+		private state: DurableObjectState,
+		private env: Env,
+	) {}
+	async fetch(request: Request) {
+		/* ... */
+	}
 }
 ```
 
@@ -191,10 +185,10 @@ export class Counter {
 
 ```jsonc
 {
-  "queues": {
-    "producers": [{ "binding": "MY_QUEUE", "queue": "my-queue" }],
-    "consumers": [{ "queue": "my-queue", "max_batch_size": 10 }],
-  },
+	"queues": {
+		"producers": [{ "binding": "MY_QUEUE", "queue": "my-queue" }],
+		"consumers": [{ "queue": "my-queue", "max_batch_size": 10 }],
+	},
 }
 ```
 

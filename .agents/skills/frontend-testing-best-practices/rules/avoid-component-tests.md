@@ -51,15 +51,15 @@ Why this is bad:
 import { test, expect } from "@playwright/test";
 
 test("order history shows pending orders", async ({ page }) => {
-  // Create a pending order via API or test setup
-  await createTestOrder({ status: "pending" });
+	// Create a pending order via API or test setup
+	await createTestOrder({ status: "pending" });
 
-  await page.goto("/orders");
+	await page.goto("/orders");
 
-  // The OrderCard component is tested implicitly
-  await expect(page.getByText("$100")).toBeVisible();
-  await expect(page.getByText("Example Item")).toBeVisible();
-  await expect(page.getByText("Pending")).toBeVisible();
+	// The OrderCard component is tested implicitly
+	await expect(page.getByText("$100")).toBeVisible();
+	await expect(page.getByText("Example Item")).toBeVisible();
+	await expect(page.getByText("Pending")).toBeVisible();
 });
 ```
 
@@ -90,42 +90,42 @@ If a component has complex logic, extract it:
 ```typescript
 // BAD: Complex logic in component, tested via component test
 function OrderForm() {
-  let [amount, setAmount] = useState(0);
-  let [fee, setFee] = useState(0);
+	let [amount, setAmount] = useState(0);
+	let [fee, setFee] = useState(0);
 
-  useEffect(() => {
-    // Complex fee calculation
-    let baseFee = amount * 0.029 + 0.3;
-    let adjustedFee = amount > 1000 ? baseFee * 0.9 : baseFee;
-    setFee(adjustedFee);
-  }, [amount]);
+	useEffect(() => {
+		// Complex fee calculation
+		let baseFee = amount * 0.029 + 0.3;
+		let adjustedFee = amount > 1000 ? baseFee * 0.9 : baseFee;
+		setFee(adjustedFee);
+	}, [amount]);
 
-  // ...
+	// ...
 }
 
 // GOOD: Extract logic to hook, test the hook
 function useOrderFee(amount: number) {
-  return useMemo(() => {
-    let baseFee = amount * 0.029 + 0.3;
-    return amount > 1000 ? baseFee * 0.9 : baseFee;
-  }, [amount]);
+	return useMemo(() => {
+		let baseFee = amount * 0.029 + 0.3;
+		return amount > 1000 ? baseFee * 0.9 : baseFee;
+	}, [amount]);
 }
 
 // Or even better: pure function
 function calculateOrderFee(amount: number): number {
-  let baseFee = amount * 0.029 + 0.3;
-  return amount > 1000 ? baseFee * 0.9 : baseFee;
+	let baseFee = amount * 0.029 + 0.3;
+	return amount > 1000 ? baseFee * 0.9 : baseFee;
 }
 
 // Test the pure function
 describe("calculateOrderFee", () => {
-  test("calculates standard fee", () => {
-    expect(calculateOrderFee(100)).toBe(3.2);
-  });
+	test("calculates standard fee", () => {
+		expect(calculateOrderFee(100)).toBe(3.2);
+	});
 
-  test("applies discount for large orders", () => {
-    expect(calculateOrderFee(2000)).toBe(52.47);
-  });
+	test("applies discount for large orders", () => {
+		expect(calculateOrderFee(2000)).toBe(52.47);
+	});
 });
 ```
 

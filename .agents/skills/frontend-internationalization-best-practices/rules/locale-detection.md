@@ -19,19 +19,19 @@ Use cookie or session for fast locale access, and fall back to DB when needed.
 ```ts
 // app/middleware/i18next.ts
 export const [i18nextMiddleware, getLocale] = createI18nextMiddleware({
-  detection: {
-    supportedLanguages: ["es", "en"],
-    fallbackLanguage: "en",
-    cookie: localeCookie,
-    async findLocale(request) {
-      let locale = await getLocaleFromSession(request);
-      if (locale) return locale;
+	detection: {
+		supportedLanguages: ["es", "en"],
+		fallbackLanguage: "en",
+		cookie: localeCookie,
+		async findLocale(request) {
+			let locale = await getLocaleFromSession(request);
+			if (locale) return locale;
 
-      let userLocale = await getLocaleFromDatabase(request);
-      return userLocale ?? "en";
-    },
-  },
-  i18next: { resources },
+			let userLocale = await getLocaleFromDatabase(request);
+			return userLocale ?? "en";
+		},
+	},
+	i18next: { resources },
 });
 ```
 

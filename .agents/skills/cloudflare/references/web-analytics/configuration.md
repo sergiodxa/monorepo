@@ -27,9 +27,9 @@ Dashboard → Web Analytics → Add site → Enter hostname → Copy snippet
 
 ```html
 <script
-  defer
-  src="https://static.cloudflareinsights.com/beacon.min.js"
-  data-cf-beacon='{"token": "YOUR_TOKEN", "spa": true}'
+	defer
+	src="https://static.cloudflareinsights.com/beacon.min.js"
+	data-cf-beacon='{"token": "YOUR_TOKEN", "spa": true}'
 ></script>
 ```
 
@@ -54,7 +54,7 @@ Dashboard → Web Analytics → Add site → Enter hostname → Copy snippet
 ```typescript
 // Only load in production
 if (process.env.NODE_ENV === "production") {
-  // Load beacon
+	// Load beacon
 }
 ```
 

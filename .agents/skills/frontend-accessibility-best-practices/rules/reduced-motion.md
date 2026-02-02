@@ -34,10 +34,10 @@ Or use CSS media query directly:
 
 ```css
 @media (prefers-reduced-motion: reduce) {
-  .animated-element {
-    animation: none;
-    transition: none;
-  }
+	.animated-element {
+		animation: none;
+		transition: none;
+	}
 }
 ```
 
@@ -49,15 +49,15 @@ Use the `usePrefersReducedMotion` hook:
 import { usePrefersReducedMotion } from "~/hooks/use-prefers-reduced-motion";
 
 function AnimatedCounter({ value }) {
-  let prefersReducedMotion = usePrefersReducedMotion();
+	let prefersReducedMotion = usePrefersReducedMotion();
 
-  if (prefersReducedMotion) {
-    // Show static value immediately
-    return <span>{value}</span>;
-  }
+	if (prefersReducedMotion) {
+		// Show static value immediately
+		return <span>{value}</span>;
+	}
 
-  // Show animated count-up
-  return <CountUp target={value} duration={1000} />;
+	// Show animated count-up
+	return <CountUp target={value} duration={1000} />;
 }
 ```
 
@@ -67,16 +67,12 @@ function AnimatedCounter({ value }) {
 import { usePrefersReducedMotion } from "~/hooks/use-prefers-reduced-motion";
 
 function CarouselControls() {
-  let prefersReducedMotion = usePrefersReducedMotion();
+	let prefersReducedMotion = usePrefersReducedMotion();
 
-  // Disable auto-play for reduced motion users
-  let [isAutoPlaying, setIsAutoPlaying] = useState(!prefersReducedMotion);
+	// Disable auto-play for reduced motion users
+	let [isAutoPlaying, setIsAutoPlaying] = useState(!prefersReducedMotion);
 
-  return (
-    <Carousel autoPlay={isAutoPlaying && !prefersReducedMotion}>
-      {/* slides */}
-    </Carousel>
-  );
+	return <Carousel autoPlay={isAutoPlaying && !prefersReducedMotion}>{/* slides */}</Carousel>;
 }
 ```
 
@@ -104,12 +100,12 @@ function CarouselControls() {
 ```tsx
 // Bad - no reduced motion consideration
 function Banner() {
-  return (
-    <div className="animate-pulse">
-      <FloatingParticles />
-      <ParallaxBackground />
-    </div>
-  );
+	return (
+		<div className="animate-pulse">
+			<FloatingParticles />
+			<ParallaxBackground />
+		</div>
+	);
 }
 ```
 
@@ -117,14 +113,14 @@ function Banner() {
 
 ```tsx
 function Banner() {
-  let prefersReducedMotion = usePrefersReducedMotion();
+	let prefersReducedMotion = usePrefersReducedMotion();
 
-  return (
-    <div className="motion-reduce:animate-none animate-pulse">
-      {!prefersReducedMotion && <FloatingParticles />}
-      <StaticBackground />
-    </div>
-  );
+	return (
+		<div className="motion-reduce:animate-none animate-pulse">
+			{!prefersReducedMotion && <FloatingParticles />}
+			<StaticBackground />
+		</div>
+	);
 }
 ```
 

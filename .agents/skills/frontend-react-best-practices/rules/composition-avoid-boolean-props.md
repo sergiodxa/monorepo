@@ -19,43 +19,31 @@ Don't add boolean props like `isThread`, `isEditing`, `isDMThread` to customize 
 
 ```tsx
 function Composer({
-  onSubmit,
-  isThread,
-  channelId,
-  isDMThread,
-  dmId,
-  isEditing,
-  isForwarding,
+	onSubmit,
+	isThread,
+	channelId,
+	isDMThread,
+	dmId,
+	isEditing,
+	isForwarding,
 }: Props) {
-  return (
-    <form>
-      <Header />
-      <Input />
-      {isDMThread ? (
-        <AlsoSendToDMField id={dmId} />
-      ) : isThread ? (
-        <AlsoSendToChannelField id={channelId} />
-      ) : null}
-      {isEditing ? (
-        <EditActions />
-      ) : isForwarding ? (
-        <ForwardActions />
-      ) : (
-        <DefaultActions />
-      )}
-      <Footer onSubmit={onSubmit} />
-    </form>
-  );
+	return (
+		<form>
+			<Header />
+			<Input />
+			{isDMThread ? (
+				<AlsoSendToDMField id={dmId} />
+			) : isThread ? (
+				<AlsoSendToChannelField id={channelId} />
+			) : null}
+			{isEditing ? <EditActions /> : isForwarding ? <ForwardActions /> : <DefaultActions />}
+			<Footer onSubmit={onSubmit} />
+		</form>
+	);
 }
 
 // Usage: what does this actually render?
-<Composer
-  isThread
-  isEditing={false}
-  channelId="abc"
-  showAttachments
-  showFormatting={false}
-/>;
+<Composer isThread isEditing={false} channelId="abc" showAttachments showFormatting={false} />;
 ```
 
 ## Good: Explicit Variants via Composition

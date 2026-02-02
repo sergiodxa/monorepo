@@ -12,13 +12,13 @@ npm install @cloudflare/puppeteer  # or @cloudflare/playwright
 
 ```json
 {
-  "name": "browser-worker",
-  "main": "src/index.ts",
-  "compatibility_date": "2025-01-01",
-  "compatibility_flags": ["nodejs_compat"],
-  "browser": {
-    "binding": "MYBROWSER"
-  }
+	"name": "browser-worker",
+	"main": "src/index.ts",
+	"compatibility_date": "2025-01-01",
+	"compatibility_flags": ["nodejs_compat"],
+	"browser": {
+		"binding": "MYBROWSER"
+	}
 }
 ```
 
@@ -28,13 +28,13 @@ npm install @cloudflare/puppeteer  # or @cloudflare/playwright
 
 ```typescript
 interface Env {
-  MYBROWSER: Fetcher;
+	MYBROWSER: Fetcher;
 }
 
 export default {
-  async fetch(request: Request, env: Env): Promise<Response> {
-    // ...
-  },
+	async fetch(request: Request, env: Env): Promise<Response> {
+		// ...
+	},
 } satisfies ExportedHandler<Env>;
 ```
 

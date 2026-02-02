@@ -13,13 +13,13 @@ npx wrangler vectorize create my-index --dimensions=768 --metric=cosine
 ```jsonc
 // wrangler.jsonc
 {
-  "vectorize": [{ "binding": "VECTORIZE", "index_name": "my-index" }],
+	"vectorize": [{ "binding": "VECTORIZE", "index_name": "my-index" }],
 }
 ```
 
 ```typescript
 interface Env {
-  VECTORIZE: Vectorize;
+	VECTORIZE: Vectorize;
 }
 ```
 
@@ -72,12 +72,12 @@ Bucket high-cardinality data:
 ```typescript
 // ❌ Millisecond timestamps
 metadata: {
-  timestamp: Date.now();
+	timestamp: Date.now();
 }
 
 // ✅ 5-minute buckets
 metadata: {
-  timestamp_bucket: Math.floor(Date.now() / 300000) * 300000;
+	timestamp_bucket: Math.floor(Date.now() / 300000) * 300000;
 }
 ```
 

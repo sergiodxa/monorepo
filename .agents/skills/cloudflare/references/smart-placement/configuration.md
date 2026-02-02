@@ -4,10 +4,10 @@
 
 ```jsonc
 {
-  "$schema": "./node_modules/wrangler/config-schema.json",
-  "placement": {
-    "mode": "smart",
-  },
+	"$schema": "./node_modules/wrangler/config-schema.json",
+	"placement": {
+		"mode": "smart",
+	},
 }
 ```
 
@@ -28,15 +28,15 @@
 ```jsonc
 // frontend-worker/wrangler.jsonc
 {
-  "name": "frontend",
-  "main": "frontend-worker.ts",
-  // No "placement" - runs at edge
-  "services": [
-    {
-      "binding": "BACKEND",
-      "service": "backend-api",
-    },
-  ],
+	"name": "frontend",
+	"main": "frontend-worker.ts",
+	// No "placement" - runs at edge
+	"services": [
+		{
+			"binding": "BACKEND",
+			"service": "backend-api",
+		},
+	],
 }
 ```
 
@@ -45,17 +45,17 @@
 ```jsonc
 // backend-api/wrangler.jsonc
 {
-  "name": "backend-api",
-  "main": "backend-worker.ts",
-  "placement": {
-    "mode": "smart",
-  },
-  "d1_databases": [
-    {
-      "binding": "DATABASE",
-      "database_id": "xxx",
-    },
-  ],
+	"name": "backend-api",
+	"main": "backend-worker.ts",
+	"placement": {
+		"mode": "smart",
+	},
+	"d1_databases": [
+		{
+			"binding": "DATABASE",
+			"database_id": "xxx",
+		},
+	],
 }
 ```
 
@@ -86,24 +86,24 @@ Smart Placement is fundamentally limited to Workers with default `fetch` handler
 ```typescript
 // ✅ Smart Placement affects this:
 export default {
-  async fetch(request: Request, env: Env): Promise<Response> {
-    // This runs close to backend when Smart Placement enabled
-    const data = await env.DATABASE.prepare("SELECT * FROM users").all();
-    return Response.json(data);
-  },
+	async fetch(request: Request, env: Env): Promise<Response> {
+		// This runs close to backend when Smart Placement enabled
+		const data = await env.DATABASE.prepare("SELECT * FROM users").all();
+		return Response.json(data);
+	},
 };
 
 // ❌ Smart Placement DOES NOT affect these:
 export class MyRPC extends WorkerEntrypoint {
-  async myMethod() {
-    // This ALWAYS runs at edge, Smart Placement has NO EFFECT
-    const data = await this.env.DATABASE.prepare("SELECT * FROM users").all();
-    return data;
-  }
+	async myMethod() {
+		// This ALWAYS runs at edge, Smart Placement has NO EFFECT
+		const data = await this.env.DATABASE.prepare("SELECT * FROM users").all();
+		return data;
+	}
 }
 
 export async function scheduled(event: ScheduledEvent, env: Env) {
-  // NOT affected by Smart Placement
+	// NOT affected by Smart Placement
 }
 ```
 
@@ -141,15 +141,15 @@ Smart Placement automatically routes 1% of requests WITHOUT optimization as base
 
 ```typescript
 interface Env {
-  BACKEND: Fetcher;
-  DATABASE: D1Database;
+	BACKEND: Fetcher;
+	DATABASE: D1Database;
 }
 
 export default {
-  async fetch(request: Request, env: Env): Promise<Response> {
-    const data = await env.DATABASE.prepare("SELECT * FROM table").all();
-    return Response.json(data);
-  },
+	async fetch(request: Request, env: Env): Promise<Response> {
+		const data = await env.DATABASE.prepare("SELECT * FROM table").all();
+		return Response.json(data);
+	},
 } satisfies ExportedHandler<Env>;
 ```
 

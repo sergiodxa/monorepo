@@ -31,12 +31,12 @@ const userCache = new Map<string, User>();
 
 // Inside functions: always let
 function process(items: Item[]) {
-  let total = 0;
-  let result = [];
-  for (let item of items) {
-    total += item.price;
-  }
-  return { total, result };
+	let total = 0;
+	let result = [];
+	for (let item of items) {
+		total += item.price;
+	}
+	return { total, result };
 }
 ```
 
@@ -47,11 +47,11 @@ Prefer function declarations over arrow functions for named functions.
 ```typescript
 // Good: function declaration
 function calculateTotal(items: Item[]): number {
-  let total = 0;
-  for (let item of items) {
-    total += item.price;
-  }
-  return total;
+	let total = 0;
+	for (let item of items) {
+		total += item.price;
+	}
+	return total;
 }
 
 // Good: arrow for inline callbacks
@@ -59,7 +59,7 @@ let active = users.filter((u) => u.isActive);
 
 // Good: arrow when type requires it
 const handler: ActionFunction = async ({ request }) => {
-  // ...
+	// ...
 };
 ```
 
@@ -91,7 +91,7 @@ let user = UserSchema.parse(response.data);
 
 // Good: type guard
 if (isUser(response.data)) {
-  let user = response.data;
+	let user = response.data;
 }
 ```
 
@@ -107,7 +107,7 @@ let userName = user.name;
 // Good: explains business rule
 // Transactions under $250 don't require written acknowledgment per policy
 if (transaction.amount < 250) {
-  return { requiresAcknowledgment: false };
+	return { requiresAcknowledgment: false };
 }
 ```
 
@@ -132,15 +132,15 @@ Build Map once for repeated lookups.
 ```typescript
 // Bad: O(n) per lookup = O(n*m) total
 orders.map((order) => ({
-  ...order,
-  user: users.find((u) => u.id === order.userId),
+	...order,
+	user: users.find((u) => u.id === order.userId),
 }));
 
 // Good: O(1) per lookup = O(n+m) total
 const userById = new Map(users.map((u) => [u.id, u]));
 orders.map((order) => ({
-  ...order,
-  user: userById.get(order.userId),
+	...order,
+	user: userById.get(order.userId),
 }));
 ```
 
@@ -168,12 +168,12 @@ const inactive = users.filter((u) => !u.isActive);
 
 // Good: 1 iteration
 const admins: User[] = [],
-  testers: User[] = [],
-  inactive: User[] = [];
+	testers: User[] = [],
+	inactive: User[] = [];
 for (const user of users) {
-  if (user.isAdmin) admins.push(user);
-  if (user.isTester) testers.push(user);
-  if (!user.isActive) inactive.push(user);
+	if (user.isAdmin) admins.push(user);
+	if (user.isTester) testers.push(user);
+	if (!user.isActive) inactive.push(user);
 }
 ```
 
@@ -184,14 +184,14 @@ Cache object properties in loops.
 ```typescript
 // Bad: repeated lookups
 for (let i = 0; i < arr.length; i++) {
-  process(obj.config.settings.value);
+	process(obj.config.settings.value);
 }
 
 // Good: cached lookup
 const value = obj.config.settings.value;
 const len = arr.length;
 for (let i = 0; i < len; i++) {
-  process(value);
+	process(value);
 }
 ```
 
@@ -203,10 +203,10 @@ Cache expensive function results in module-level Map.
 const slugifyCache = new Map<string, string>();
 
 function cachedSlugify(text: string): string {
-  if (!slugifyCache.has(text)) {
-    slugifyCache.set(text, slugify(text));
-  }
-  return slugifyCache.get(text)!;
+	if (!slugifyCache.has(text)) {
+		slugifyCache.set(text, slugify(text));
+	}
+	return slugifyCache.get(text)!;
 }
 ```
 
@@ -218,10 +218,10 @@ Cache localStorage/sessionStorage reads in memory.
 const storageCache = new Map<string, string | null>();
 
 function getLocalStorage(key: string) {
-  if (!storageCache.has(key)) {
-    storageCache.set(key, localStorage.getItem(key));
-  }
-  return storageCache.get(key);
+	if (!storageCache.has(key)) {
+		storageCache.set(key, localStorage.getItem(key));
+	}
+	return storageCache.get(key);
 }
 ```
 
@@ -232,19 +232,19 @@ Return early when result is determined.
 ```typescript
 // Bad: continues after finding error
 function validate(users: User[]) {
-  let error = "";
-  for (const user of users) {
-    if (!user.email) error = "Email required";
-  }
-  return error ? { error } : { valid: true };
+	let error = "";
+	for (const user of users) {
+		if (!user.email) error = "Email required";
+	}
+	return error ? { error } : { valid: true };
 }
 
 // Good: returns immediately
 function validate(users: User[]) {
-  for (const user of users) {
-    if (!user.email) return { error: "Email required" };
-  }
-  return { valid: true };
+	for (const user of users) {
+		if (!user.email) return { error: "Email required" };
+	}
+	return { valid: true };
 }
 ```
 
@@ -255,15 +255,15 @@ Check array length before expensive comparison.
 ```typescript
 // Bad: always sorts even when lengths differ
 function hasChanges(a: string[], b: string[]) {
-  return a.sort().join() !== b.sort().join();
+	return a.sort().join() !== b.sort().join();
 }
 
 // Good: early return if lengths differ
 function hasChanges(a: string[], b: string[]) {
-  if (a.length !== b.length) return true;
-  let aSorted = a.toSorted();
-  let bSorted = b.toSorted();
-  return aSorted.some((v, i) => v !== bSorted[i]);
+	if (a.length !== b.length) return true;
+	let aSorted = a.toSorted();
+	let bSorted = b.toSorted();
+	return aSorted.some((v, i) => v !== bSorted[i]);
 }
 ```
 
@@ -278,7 +278,7 @@ const latest = [...projects].sort((a, b) => b.updatedAt - a.updatedAt)[0];
 // Good: O(n)
 let latest = projects[0];
 for (const p of projects) {
-  if (p.updatedAt > latest.updatedAt) latest = p;
+	if (p.updatedAt > latest.updatedAt) latest = p;
 }
 ```
 

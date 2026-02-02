@@ -61,27 +61,21 @@ Use context for shared config instead of adding more props to every child:
 ```tsx
 const SelectContext = React.createContext({ variant: "default" });
 
-function Select({
-  variant = "default",
-  children,
-  ...props
-}: SelectProps & { variant?: string }) {
-  return (
-    <select {...props}>
-      <SelectContext.Provider value={{ variant }}>
-        {children}
-      </SelectContext.Provider>
-    </select>
-  );
+function Select({ variant = "default", children, ...props }: SelectProps & { variant?: string }) {
+	return (
+		<select {...props}>
+			<SelectContext.Provider value={{ variant }}>{children}</SelectContext.Provider>
+		</select>
+	);
 }
 
 function Option({ children, ...props }: OptionProps) {
-  let { variant } = React.useContext(SelectContext);
-  return (
-    <option {...props} data-variant={variant}>
-      {children}
-    </option>
-  );
+	let { variant } = React.useContext(SelectContext);
+	return (
+		<option {...props} data-variant={variant}>
+			{children}
+		</option>
+	);
 }
 ```
 

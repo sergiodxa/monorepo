@@ -10,18 +10,18 @@ After running `wrangler types`, TypeScript knows your bindings:
 
 ```typescript
 interface Env {
-  // From wrangler.jsonc bindings
-  MY_KV: KVNamespace;
-  MY_BUCKET: R2Bucket;
-  DB: D1Database;
-  MY_SERVICE: Fetcher;
-  AI: Ai;
+	// From wrangler.jsonc bindings
+	MY_KV: KVNamespace;
+	MY_BUCKET: R2Bucket;
+	DB: D1Database;
+	MY_SERVICE: Fetcher;
+	AI: Ai;
 
-  // From vars
-  API_URL: string;
+	// From vars
+	API_URL: string;
 
-  // From secrets (set via wrangler secret put)
-  API_KEY: string;
+	// From secrets (set via wrangler secret put)
+	API_KEY: string;
 }
 ```
 
@@ -51,14 +51,10 @@ interface Env {
 
 ```typescript
 export default {
-  async fetch(
-    request: Request,
-    env: Env,
-    ctx: ExecutionContext,
-  ): Promise<Response> {
-    const value = await env.MY_KV.get("key");
-    return new Response(value);
-  },
+	async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
+		const value = await env.MY_KV.get("key");
+		return new Response(value);
+	},
 };
 ```
 
@@ -72,8 +68,8 @@ import { Hono } from "hono";
 const app = new Hono<{ Bindings: Env }>();
 
 app.get("/", async (c) => {
-  const value = await c.env.MY_KV.get("key");
-  return c.json({ value });
+	const value = await c.env.MY_KV.get("key");
+	return c.json({ value });
 });
 
 export default app;
@@ -84,16 +80,13 @@ export default app;
 ### Method 3: Module Workers (Legacy)
 
 ```typescript
-export async function handleRequest(
-  request: Request,
-  env: Env,
-): Promise<Response> {
-  const value = await env.MY_KV.get("key");
-  return new Response(value);
+export async function handleRequest(request: Request, env: Env): Promise<Response> {
+	const value = await env.MY_KV.get("key");
+	return new Response(value);
 }
 
 addEventListener("fetch", (event) => {
-  // env not directly available - requires workarounds
+	// env not directly available - requires workarounds
 });
 ```
 

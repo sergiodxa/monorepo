@@ -32,13 +32,13 @@ Check for Cross-Site Request Forgery protection on state-changing operations.
 ```typescript
 // Bad: No SameSite on cookie
 return new Response("OK", {
-  headers: { "Set-Cookie": "session=abc123; HttpOnly; Secure" },
+	headers: { "Set-Cookie": "session=abc123; HttpOnly; Secure" },
 });
 
 // Bad: State change via GET
 async function deleteAccount(req: Request): Promise<Response> {
-  let userId = new URL(req.url).searchParams.get("id");
-  await db.users.delete({ where: { id: userId } });
+	let userId = new URL(req.url).searchParams.get("id");
+	await db.users.delete({ where: { id: userId } });
 }
 
 // Bad: No CSRF token
@@ -51,75 +51,72 @@ await transfer(to, amount); // Attacker can trigger!
 ```typescript
 // Good: SameSite cookie
 async function login(req: Request): Promise<Response> {
-  return new Response("OK", {
-    headers: {
-      "Set-Cookie": "session=abc123; HttpOnly; Secure; SameSite=Strict; Path=/",
-    },
-  });
+	return new Response("OK", {
+		headers: {
+			"Set-Cookie": "session=abc123; HttpOnly; Secure; SameSite=Strict; Path=/",
+		},
+	});
 }
 
 // Good: CSRF token validation
 async function generateCSRFToken(sessionId: string): Promise<string> {
-  let token = crypto.randomBytes(32).toString("hex");
+	let token = crypto.randomBytes(32).toString("hex");
 
-  await db.csrfToken.create({
-    data: {
-      token,
-      sessionId,
-      expiresAt: new Date(Date.now() + 60 * 60 * 1000),
-    },
-  });
+	await db.csrfToken.create({
+		data: {
+			token,
+			sessionId,
+			expiresAt: new Date(Date.now() + 60 * 60 * 1000),
+		},
+	});
 
-  return token;
+	return token;
 }
 
-async function validateCSRFToken(
-  sessionId: string,
-  token: string,
-): Promise<boolean> {
-  let stored = await db.csrfToken.findFirst({
-    where: { token, sessionId, expiresAt: { gt: new Date() } },
-  });
+async function validateCSRFToken(sessionId: string, token: string): Promise<boolean> {
+	let stored = await db.csrfToken.findFirst({
+		where: { token, sessionId, expiresAt: { gt: new Date() } },
+	});
 
-  if (stored) {
-    await db.csrfToken.delete({ where: { id: stored.id } });
-    return true;
-  }
-  return false;
+	if (stored) {
+		await db.csrfToken.delete({ where: { id: stored.id } });
+		return true;
+	}
+	return false;
 }
 
 async function transferMoney(req: Request): Promise<Response> {
-  let session = await getSession(req);
-  let { to, amount, csrfToken } = await req.json();
+	let session = await getSession(req);
+	let { to, amount, csrfToken } = await req.json();
 
-  if (!(await validateCSRFToken(session.id, csrfToken))) {
-    return new Response("Invalid CSRF token", { status: 403 });
-  }
+	if (!(await validateCSRFToken(session.id, csrfToken))) {
+		return new Response("Invalid CSRF token", { status: 403 });
+	}
 
-  await transfer(to, amount);
-  return new Response("OK");
+	await transfer(to, amount);
+	return new Response("OK");
 }
 
 // Good: Double-submit cookie pattern
 async function setupCSRF(req: Request): Promise<Response> {
-  let token = crypto.randomBytes(32).toString("hex");
+	let token = crypto.randomBytes(32).toString("hex");
 
-  return Response.json(
-    { csrfToken: token },
-    {
-      headers: {
-        "Set-Cookie": `csrf=${token}; SameSite=Strict; Secure`,
-        "Content-Type": "application/json",
-      },
-    },
-  );
+	return Response.json(
+		{ csrfToken: token },
+		{
+			headers: {
+				"Set-Cookie": `csrf=${token}; SameSite=Strict; Secure`,
+				"Content-Type": "application/json",
+			},
+		},
+	);
 }
 
 async function validateDoubleSubmit(req: Request): Promise<boolean> {
-  let cookies = parseCookies(req.headers.get("cookie"));
-  let { csrfToken } = await req.json();
+	let cookies = parseCookies(req.headers.get("cookie"));
+	let { csrfToken } = await req.json();
 
-  return cookies.csrf === csrfToken;
+	return cookies.csrf === csrfToken;
 }
 ```
 

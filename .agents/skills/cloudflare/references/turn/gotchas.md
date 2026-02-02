@@ -83,15 +83,15 @@ setInterval(() => refreshCredentials(pc), 3000000); // 50 min
 ```typescript
 // ❌ BAD: No recovery from TURN maintenance
 pc.addEventListener("iceconnectionstatechange", () => {
-  console.log("State changed:", pc.iceConnectionState);
+	console.log("State changed:", pc.iceConnectionState);
 });
 
 // ✅ GOOD: Implement ICE restart
 pc.addEventListener("iceconnectionstatechange", async () => {
-  if (pc.iceConnectionState === "failed") {
-    await refreshCredentials(pc);
-    pc.restartIce();
-  }
+	if (pc.iceConnectionState === "failed") {
+		await refreshCredentials(pc);
+		pc.restartIce();
+	}
 });
 ```
 
@@ -101,7 +101,7 @@ pc.addEventListener("iceconnectionstatechange", async () => {
 // ❌ BAD: Secret exposed to client
 const secret = "your-turn-key-secret";
 const response = await fetch(`https://rtc.live.cloudflare.com/v1/turn/...`, {
-  headers: { Authorization: `Bearer ${secret}` },
+	headers: { Authorization: `Bearer ${secret}` },
 });
 
 // ✅ GOOD: Generate credentials server-side
@@ -121,16 +121,13 @@ Implement in all production apps:
 
 ```typescript
 pc.addEventListener("iceconnectionstatechange", async () => {
-  if (
-    pc.iceConnectionState === "failed" ||
-    pc.iceConnectionState === "disconnected"
-  ) {
-    await refreshTURNCredentials(pc);
-    pc.restartIce();
-    const offer = await pc.createOffer({ iceRestart: true });
-    await pc.setLocalDescription(offer);
-    // Send offer to peer via signaling...
-  }
+	if (pc.iceConnectionState === "failed" || pc.iceConnectionState === "disconnected") {
+		await refreshTURNCredentials(pc);
+		pc.restartIce();
+		const offer = await pc.createOffer({ iceRestart: true });
+		await pc.setLocalDescription(offer);
+		// Send offer to peer via signaling...
+	}
 });
 ```
 
@@ -164,7 +161,7 @@ Reference: [RFC 8445 Section 2.4](https://datatracker.ietf.org/doc/html/rfc8445#
 ```typescript
 // Validate before using
 if (ttl > 172800) {
-  throw new Error("TTL cannot exceed 48 hours");
+	throw new Error("TTL cannot exceed 48 hours");
 }
 ```
 
@@ -200,7 +197,7 @@ if (ttl > 172800) {
 // Refresh credentials before expiry
 const refreshInterval = ttl * 1000 - 60000; // 1 min early
 setInterval(async () => {
-  await refreshTURNCredentials(pc);
+	await refreshTURNCredentials(pc);
 }, refreshInterval);
 ```
 

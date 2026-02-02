@@ -61,18 +61,18 @@ Components may import `loader` or `action` types for `useFetcher` type inference
 import type { action } from "~/routes/api.orders/route";
 
 type Props = {
-  itemId: string;
+	itemId: string;
 };
 
 export function OrderForm({ itemId }: Props) {
-  // Type inference for fetcher data
-  let fetcher = useFetcher<typeof action>();
+	// Type inference for fetcher data
+	let fetcher = useFetcher<typeof action>();
 
-  return (
-    <fetcher.Form method="post" action="/api/orders">
-      {/* ... */}
-    </fetcher.Form>
-  );
+	return (
+		<fetcher.Form method="post" action="/api/orders">
+			{/* ... */}
+		</fetcher.Form>
+	);
 }
 ```
 
@@ -81,16 +81,16 @@ export function OrderForm({ itemId }: Props) {
 import type { loader } from "~/routes/api.search/route";
 
 export function SearchResults() {
-  let fetcher = useFetcher<typeof loader>();
+	let fetcher = useFetcher<typeof loader>();
 
-  // fetcher.data is typed based on loader return
-  return (
-    <div>
-      {fetcher.data?.results.map((result) => (
-        <SearchResultItem key={result.id} result={result} />
-      ))}
-    </div>
-  );
+	// fetcher.data is typed based on loader return
+	return (
+		<div>
+			{fetcher.data?.results.map((result) => (
+				<SearchResultItem key={result.id} result={result} />
+			))}
+		</div>
+	);
 }
 ```
 

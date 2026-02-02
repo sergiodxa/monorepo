@@ -37,7 +37,7 @@ type Style = CSSProperties & { [key: `--${string}`]: string };
 export type StyleRecord<Key extends string> = { [K in Key]?: Style };
 
 export function cn(...classes: ClassName[]): string {
-  return twMerge(clsx(...classes));
+	return twMerge(clsx(...classes));
 }
 ```
 
@@ -45,30 +45,30 @@ export function cn(...classes: ClassName[]): string {
 
 ```tsx
 function Button({ className, variant, size, disabled }: Props) {
-  return (
-    <button
-      className={cn(
-        // Base classes always applied
-        "inline-flex items-center justify-center rounded-lg font-medium",
-        // Variant classes (conditional object)
-        {
-          "bg-teal-500 text-white": variant === "primary",
-          "bg-neutral-100 text-neutral-900": variant === "secondary",
-          "bg-transparent text-teal-600": variant === "ghost",
-        },
-        // Size classes
-        {
-          "px-3 py-1.5 text-sm": size === "sm",
-          "px-4 py-2 text-base": size === "md",
-          "px-6 py-3 text-lg": size === "lg",
-        },
-        // State classes
-        disabled && "opacity-50 cursor-not-allowed",
-        // External className ALWAYS LAST
-        className,
-      )}
-    />
-  );
+	return (
+		<button
+			className={cn(
+				// Base classes always applied
+				"inline-flex items-center justify-center rounded-lg font-medium",
+				// Variant classes (conditional object)
+				{
+					"bg-teal-500 text-white": variant === "primary",
+					"bg-neutral-100 text-neutral-900": variant === "secondary",
+					"bg-transparent text-teal-600": variant === "ghost",
+				},
+				// Size classes
+				{
+					"px-3 py-1.5 text-sm": size === "sm",
+					"px-4 py-2 text-base": size === "md",
+					"px-6 py-3 text-lg": size === "lg",
+				},
+				// State classes
+				disabled && "opacity-50 cursor-not-allowed",
+				// External className ALWAYS LAST
+				className,
+			)}
+		/>
+	);
 }
 ```
 
@@ -113,14 +113,14 @@ Always put the `className` prop last so consumers can override:
 ```tsx
 // Component
 function Card({ className }: { className?: ClassName }) {
-  return (
-    <div
-      className={cn(
-        "rounded-xl bg-white p-4",
-        className, // Can override padding, background, etc.
-      )}
-    />
-  );
+	return (
+		<div
+			className={cn(
+				"rounded-xl bg-white p-4",
+				className, // Can override padding, background, etc.
+			)}
+		/>
+	);
 }
 
 // Usage - override works

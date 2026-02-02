@@ -22,14 +22,14 @@ import { useRevalidator } from "react-router";
 import { useEffect } from "react";
 
 export default function Component() {
-  let { revalidate } = useRevalidator();
+	let { revalidate } = useRevalidator();
 
-  useEffect(() => {
-    let id = setInterval(revalidate, 30000); // Every 30 seconds
-    return () => clearInterval(id);
-  }, [revalidate]);
+	useEffect(() => {
+		let id = setInterval(revalidate, 30000); // Every 30 seconds
+		return () => clearInterval(id);
+	}, [revalidate]);
 
-  // ... render with loader data
+	// ... render with loader data
 }
 ```
 
@@ -43,25 +43,25 @@ Only revalidate when it makes sense - don't waste bandwidth or server resources.
 import { useSyncExternalStore } from "react";
 
 function useVisibilityState() {
-  return useSyncExternalStore(
-    (callback) => {
-      document.addEventListener("visibilitychange", callback);
-      return () => document.removeEventListener("visibilitychange", callback);
-    },
-    () => document.visibilityState,
-    () => "visible" as const,
-  );
+	return useSyncExternalStore(
+		(callback) => {
+			document.addEventListener("visibilitychange", callback);
+			return () => document.removeEventListener("visibilitychange", callback);
+		},
+		() => document.visibilityState,
+		() => "visible" as const,
+	);
 }
 
 export default function Component() {
-  let { revalidate } = useRevalidator();
-  let visibilityState = useVisibilityState();
+	let { revalidate } = useRevalidator();
+	let visibilityState = useVisibilityState();
 
-  useEffect(() => {
-    if (visibilityState === "hidden") return; // Don't poll hidden tabs
-    let id = setInterval(revalidate, 30000);
-    return () => clearInterval(id);
-  }, [revalidate, visibilityState]);
+	useEffect(() => {
+		if (visibilityState === "hidden") return; // Don't poll hidden tabs
+		let id = setInterval(revalidate, 30000);
+		return () => clearInterval(id);
+	}, [revalidate, visibilityState]);
 }
 ```
 
@@ -69,32 +69,32 @@ export default function Component() {
 
 ```tsx
 function useOnlineStatus() {
-  return useSyncExternalStore(
-    (callback) => {
-      window.addEventListener("online", callback);
-      window.addEventListener("offline", callback);
-      return () => {
-        window.removeEventListener("online", callback);
-        window.removeEventListener("offline", callback);
-      };
-    },
-    () => navigator.onLine,
-    () => true,
-  );
+	return useSyncExternalStore(
+		(callback) => {
+			window.addEventListener("online", callback);
+			window.addEventListener("offline", callback);
+			return () => {
+				window.removeEventListener("online", callback);
+				window.removeEventListener("offline", callback);
+			};
+		},
+		() => navigator.onLine,
+		() => true,
+	);
 }
 
 export default function Component() {
-  let { revalidate } = useRevalidator();
-  let isOnline = useOnlineStatus();
-  let visibilityState = useVisibilityState();
+	let { revalidate } = useRevalidator();
+	let isOnline = useOnlineStatus();
+	let visibilityState = useVisibilityState();
 
-  useEffect(() => {
-    if (!isOnline) return; // Offline
-    if (visibilityState === "hidden") return; // Hidden tab
+	useEffect(() => {
+		if (!isOnline) return; // Offline
+		if (visibilityState === "hidden") return; // Hidden tab
 
-    let id = setInterval(revalidate, 30000);
-    return () => clearInterval(id);
-  }, [revalidate, isOnline, visibilityState]);
+		let id = setInterval(revalidate, 30000);
+		return () => clearInterval(id);
+	}, [revalidate, isOnline, visibilityState]);
 }
 ```
 
@@ -104,23 +104,23 @@ Refresh data when user returns to the tab:
 
 ```tsx
 export default function Component() {
-  const { revalidate } = useRevalidator();
+	const { revalidate } = useRevalidator();
 
-  useEffect(() => {
-    function onFocus() {
-      revalidate();
-    }
+	useEffect(() => {
+		function onFocus() {
+			revalidate();
+		}
 
-    window.addEventListener("focus", onFocus);
-    window.addEventListener("visibilitychange", () => {
-      if (document.visibilityState === "visible") onFocus();
-    });
+		window.addEventListener("focus", onFocus);
+		window.addEventListener("visibilitychange", () => {
+			if (document.visibilityState === "visible") onFocus();
+		});
 
-    return () => {
-      window.removeEventListener("focus", onFocus);
-      window.removeEventListener("visibilitychange", onFocus);
-    };
-  }, [revalidate]);
+		return () => {
+			window.removeEventListener("focus", onFocus);
+			window.removeEventListener("visibilitychange", onFocus);
+		};
+	}, [revalidate]);
 }
 ```
 
@@ -130,12 +130,12 @@ Refresh when internet connection is restored:
 
 ```tsx
 export default function Component() {
-  const { revalidate } = useRevalidator();
+	const { revalidate } = useRevalidator();
 
-  useEffect(() => {
-    window.addEventListener("online", revalidate);
-    return () => window.removeEventListener("online", revalidate);
-  }, [revalidate]);
+	useEffect(() => {
+		window.addEventListener("online", revalidate);
+		return () => window.removeEventListener("online", revalidate);
+	}, [revalidate]);
 }
 ```
 
@@ -145,55 +145,55 @@ Create a reusable hook for common patterns:
 
 ```tsx
 interface UseSmartRevalidationOptions {
-  interval?: number; // Polling interval in ms (0 = disabled)
-  onFocus?: boolean; // Revalidate when tab gains focus
-  onReconnect?: boolean; // Revalidate when coming back online
+	interval?: number; // Polling interval in ms (0 = disabled)
+	onFocus?: boolean; // Revalidate when tab gains focus
+	onReconnect?: boolean; // Revalidate when coming back online
 }
 
 function useSmartRevalidation({
-  interval = 0,
-  onFocus = false,
-  onReconnect = false,
+	interval = 0,
+	onFocus = false,
+	onReconnect = false,
 }: UseSmartRevalidationOptions = {}) {
-  let { revalidate } = useRevalidator();
-  let isOnline = useOnlineStatus();
-  let visibilityState = useVisibilityState();
+	let { revalidate } = useRevalidator();
+	let isOnline = useOnlineStatus();
+	let visibilityState = useVisibilityState();
 
-  // Interval polling
-  useEffect(() => {
-    if (interval <= 0) return;
-    if (!isOnline) return;
-    if (visibilityState === "hidden") return;
+	// Interval polling
+	useEffect(() => {
+		if (interval <= 0) return;
+		if (!isOnline) return;
+		if (visibilityState === "hidden") return;
 
-    let id = setInterval(revalidate, interval);
-    return () => clearInterval(id);
-  }, [revalidate, interval, isOnline, visibilityState]);
+		let id = setInterval(revalidate, interval);
+		return () => clearInterval(id);
+	}, [revalidate, interval, isOnline, visibilityState]);
 
-  // On focus
-  useEffect(() => {
-    if (!onFocus) return;
-    window.addEventListener("focus", revalidate);
-    return () => window.removeEventListener("focus", revalidate);
-  }, [revalidate, onFocus]);
+	// On focus
+	useEffect(() => {
+		if (!onFocus) return;
+		window.addEventListener("focus", revalidate);
+		return () => window.removeEventListener("focus", revalidate);
+	}, [revalidate, onFocus]);
 
-  // On reconnect
-  useEffect(() => {
-    if (!onReconnect) return;
-    window.addEventListener("online", revalidate);
-    return () => window.removeEventListener("online", revalidate);
-  }, [revalidate, onReconnect]);
+	// On reconnect
+	useEffect(() => {
+		if (!onReconnect) return;
+		window.addEventListener("online", revalidate);
+		return () => window.removeEventListener("online", revalidate);
+	}, [revalidate, onReconnect]);
 }
 
 // Usage
 export default function Dashboard() {
-  useSmartRevalidation({
-    interval: 30000, // Poll every 30s
-    onFocus: true, // Refresh on tab focus
-    onReconnect: true, // Refresh when back online
-  });
+	useSmartRevalidation({
+		interval: 30000, // Poll every 30s
+		onFocus: true, // Refresh on tab focus
+		onReconnect: true, // Refresh when back online
+	});
 
-  const { data } = useLoaderData<typeof loader>();
-  // ...
+	const { data } = useLoaderData<typeof loader>();
+	// ...
 }
 ```
 
@@ -222,8 +222,8 @@ Respect users who have enabled data-saving:
 const saveData = navigator.connection?.saveData ?? false;
 
 useEffect(() => {
-  if (saveData) return; // Don't poll on save-data mode
-  // ... polling logic
+	if (saveData) return; // Don't poll on save-data mode
+	// ... polling logic
 }, [saveData /* ... */]);
 ```
 

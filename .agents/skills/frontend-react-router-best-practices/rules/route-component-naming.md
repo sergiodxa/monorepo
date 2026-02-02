@@ -23,24 +23,24 @@ import { data } from "react-router";
 import { useLoaderData } from "react-router";
 
 export async function loader({ request }: Route.LoaderArgs) {
-  // ...
-  return data({ users });
+	// ...
+	return data({ users });
 }
 
 export async function action({ request }: Route.ActionArgs) {
-  // ...
+	// ...
 }
 
 // Always name the default export "Component"
 export default function Component() {
-  let { users } = useLoaderData<typeof loader>();
+	let { users } = useLoaderData<typeof loader>();
 
-  return (
-    <div>
-      <h1>Users</h1>
-      <UserList users={users} />
-    </div>
-  );
+	return (
+		<div>
+			<h1>Users</h1>
+			<UserList users={users} />
+		</div>
+	);
 }
 ```
 
@@ -49,22 +49,22 @@ export default function Component() {
 ```tsx
 // Bad: route-specific name
 export default function UsersPage() {
-  // ...
+	// ...
 }
 
 // Bad: generic name
 export default function Page() {
-  // ...
+	// ...
 }
 
 // Bad: index name
 export default function Index() {
-  // ...
+	// ...
 }
 
 // Good: always "Component"
 export default function Component() {
-  // ...
+	// ...
 }
 ```
 
@@ -73,17 +73,17 @@ export default function Component() {
 ```tsx
 // app/routes/_.users/route.tsx
 export async function loader() {
-  // ...
+	// ...
 }
 
 export default function Component() {
-  // Main route component
+	// Main route component
 }
 
 // ErrorBoundary is a named export, not default
 export function ErrorBoundary() {
-  let error = useRouteError();
-  // ...
+	let error = useRouteError();
+	// ...
 }
 ```
 

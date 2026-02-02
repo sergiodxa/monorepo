@@ -21,11 +21,10 @@ Use `createBatcherMiddleware` for request-scoped deduping of expensive calls.
 import { createBatcherMiddleware } from "remix-utils/middleware/batcher";
 import { getContext } from "~/middleware/context-storage.server";
 
-export const [batcherMiddleware, getBatcherFromContext] =
-  createBatcherMiddleware();
+export const [batcherMiddleware, getBatcherFromContext] = createBatcherMiddleware();
 
 export function getBatcher() {
-  return getBatcherFromContext(getContext());
+	return getBatcherFromContext(getContext());
 }
 ```
 
@@ -33,9 +32,9 @@ export function getBatcher() {
 export const middleware: Route.MiddlewareFunction[] = [batcherMiddleware];
 
 export async function loader() {
-  let batcher = getBatcher();
-  let result = await batcher.batch("key", async () => getData());
-  return data({ result });
+	let batcher = getBatcher();
+	let result = await batcher.batch("key", async () => getData());
+	return data({ result });
 }
 ```
 

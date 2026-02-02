@@ -24,11 +24,7 @@ Timeline: `[user + config] -> [profile]` (2 sequential steps)
 const userPromise = fetchUser();
 const profilePromise = userPromise.then((user) => fetchProfile(user.id));
 
-const [user, config, profile] = await Promise.all([
-  userPromise,
-  fetchConfig(),
-  profilePromise,
-]);
+const [user, config, profile] = await Promise.all([userPromise, fetchConfig(), profilePromise]);
 ```
 
 Timeline: `[user + config]` and `[user -> profile]` run in parallel (profile starts as soon as user completes, doesn't wait for config)
@@ -46,11 +42,11 @@ const settingsPromise = profilePromise.then((p) => fetchSettings(p.id));
 const permissionsPromise = userPromise.then((u) => fetchPermissions(u.id));
 
 const [user, config, profile, settings, permissions] = await Promise.all([
-  userPromise,
-  fetchConfig(),
-  profilePromise,
-  settingsPromise,
-  permissionsPromise,
+	userPromise,
+	fetchConfig(),
+	profilePromise,
+	settingsPromise,
+	permissionsPromise,
 ]);
 ```
 

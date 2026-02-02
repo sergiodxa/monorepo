@@ -58,9 +58,9 @@
 
 ```typescript
 await client.networkInterconnects.slots.list({
-  account_id: id,
-  occupied: false,
-  facility: "EWR1",
+	account_id: id,
+	occupied: false,
+	facility: "EWR1",
 });
 ```
 

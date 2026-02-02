@@ -16,18 +16,18 @@ import { data, Link } from "react-router";
 import { useTranslation } from "react-i18next";
 
 export async function loader() {
-  return data(null, { status: 404 });
+	return data(null, { status: 404 });
 }
 
 export default function Component() {
-  let { t } = useTranslation("notFound");
-  return (
-    <div>
-      <h1>{t("title")}</h1>
-      <p>{t("description")}</p>
-      <Link to="/">{t("backToHome")}</Link>
-    </div>
-  );
+	let { t } = useTranslation("notFound");
+	return (
+		<div>
+			<h1>{t("title")}</h1>
+			<p>{t("description")}</p>
+			<Link to="/">{t("backToHome")}</Link>
+		</div>
+	);
 }
 ```
 

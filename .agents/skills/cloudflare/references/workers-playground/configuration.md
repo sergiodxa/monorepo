@@ -33,9 +33,9 @@ Must export default object with `fetch` handler:
 
 ```javascript
 export default {
-  async fetch(request, env, ctx) {
-    return new Response("Hello World");
-  },
+	async fetch(request, env, ctx) {
+		return new Response("Hello World");
+	},
 };
 ```
 
@@ -58,11 +58,11 @@ import { Hono } from "https://esm.sh/hono@3";
 // (See patterns.md for multi-module examples)
 
 export default {
-  async fetch(request) {
-    const app = new Hono();
-    app.get("/", (c) => c.text("Hello"));
-    return app.fetch(request);
-  },
+	async fetch(request) {
+		const app = new Hono();
+		app.get("/", (c) => c.text("Hello"));
+		return app.fetch(request);
+	},
 };
 ```
 

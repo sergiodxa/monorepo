@@ -27,8 +27,8 @@
 
 ```js
 new Miniflare({
-  modules: true,
-  modulesRules: [{ type: "ESModule", include: ["**/*.js"] }],
+	modules: true,
+	modulesRules: [{ type: "ESModule", include: ["**/*.js"] }],
 });
 ```
 
@@ -160,10 +160,10 @@ Miniflare doesn't auto-read `wrangler.toml`:
 ```js
 // Translate manually:
 new Miniflare({
-  scriptPath: "dist/worker.js",
-  compatibilityDate: "2026-01-01",
-  kvNamespaces: ["KV"],
-  bindings: { API_KEY: process.env.API_KEY },
+	scriptPath: "dist/worker.js",
+	compatibilityDate: "2026-01-01",
+	kvNamespaces: ["KV"],
+	bindings: { API_KEY: process.env.API_KEY },
 });
 ```
 

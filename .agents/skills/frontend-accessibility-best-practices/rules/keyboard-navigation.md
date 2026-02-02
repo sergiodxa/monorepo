@@ -55,17 +55,17 @@ If you absolutely must use a non-semantic element, add keyboard support:
 ```tsx
 // Only when semantic elements aren't possible
 <div
-  role="button"
-  tabIndex={0}
-  onClick={handleClick}
-  onKeyDown={(e) => {
-    if (e.key === "Enter" || e.key === " ") {
-      e.preventDefault();
-      handleClick();
-    }
-  }}
+	role="button"
+	tabIndex={0}
+	onClick={handleClick}
+	onKeyDown={(e) => {
+		if (e.key === "Enter" || e.key === " ") {
+			e.preventDefault();
+			handleClick();
+		}
+	}}
 >
-  Click me
+	Click me
 </div>
 ```
 
@@ -87,10 +87,10 @@ Elements are focused in DOM order. Structure your HTML logically:
 ```tsx
 // Good - logical order matches visual order
 <form>
-  <input name="firstName" />
-  <input name="lastName" />
-  <input name="email" />
-  <button type="submit">Submit</button>
+	<input name="firstName" />
+	<input name="lastName" />
+	<input name="email" />
+	<button type="submit">Submit</button>
 </form>
 ```
 
@@ -115,7 +115,7 @@ Use `tabIndex={-1}` for elements that should be focusable programmatically but n
 ```tsx
 // Programmatically focusable, not in tab order
 <div tabIndex={-1} ref={errorRef}>
-  {error}
+	{error}
 </div>
 
 // Later: errorRef.current?.focus()
@@ -129,15 +129,15 @@ For custom shortcuts, use react-aria hooks:
 import { useKeyboard } from "react-aria";
 
 function SearchInput() {
-  const { keyboardProps } = useKeyboard({
-    onKeyDown: (e) => {
-      if (e.key === "Escape") {
-        clearSearch();
-      }
-    },
-  });
+	const { keyboardProps } = useKeyboard({
+		onKeyDown: (e) => {
+			if (e.key === "Escape") {
+				clearSearch();
+			}
+		},
+	});
 
-  return <input {...keyboardProps} />;
+	return <input {...keyboardProps} />;
 }
 ```
 

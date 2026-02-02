@@ -17,12 +17,12 @@ Proper typing catches errors at compile time and provides autocomplete for loade
 ```tsx
 // No types - no autocomplete, no compile-time checks
 export async function loader({ request, params }) {
-  return data({ user: await getUser(params.id) });
+	return data({ user: await getUser(params.id) });
 }
 
 export default function Component() {
-  let loaderData = useLoaderData(); // any type
-  return <div>{loaderData.user.name}</div>; // No type safety
+	let loaderData = useLoaderData(); // any type
+	return <div>{loaderData.user.name}</div>; // No type safety
 }
 ```
 
@@ -33,12 +33,12 @@ import { data } from "react-router";
 import { useLoaderData } from "react-router";
 
 export async function loader({ request, params }: Route.LoaderArgs) {
-  return data({ user: await getUser(params.id) });
+	return data({ user: await getUser(params.id) });
 }
 
 export default function Component() {
-  const { user } = useLoaderData<typeof loader>();
-  return <div>{user.name}</div>; // Type-safe
+	const { user } = useLoaderData<typeof loader>();
+	return <div>{user.name}</div>; // Type-safe
 }
 ```
 
@@ -48,16 +48,16 @@ export default function Component() {
 import { data } from "react-router";
 
 export async function loader({ request, params }: Route.LoaderArgs) {
-  let user = await getUser(params.id);
-  if (!user) {
-    throw data({ message: "User not found" }, { status: 404 });
-  }
-  return data({ user });
+	let user = await getUser(params.id);
+	if (!user) {
+		throw data({ message: "User not found" }, { status: 404 });
+	}
+	return data({ user });
 }
 
 export default function Component() {
-  const { user } = useLoaderData<typeof loader>();
-  // user is properly typed from the return type
+	const { user } = useLoaderData<typeof loader>();
+	// user is properly typed from the return type
 }
 ```
 
@@ -73,6 +73,6 @@ import type { SerializeFrom } from "react-router";
 type LoaderData = SerializeFrom<typeof loader>;
 
 function UserCard({ user }: { user: LoaderData["user"] }) {
-  return <div>{user.name}</div>;
+	return <div>{user.name}</div>;
 }
 ```

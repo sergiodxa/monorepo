@@ -23,11 +23,11 @@ const limits = await puppeteer.limits(env.MYBROWSER);
 ```typescript
 const browser = await puppeteer.launch(env.MYBROWSER);
 try {
-  const page = await browser.newPage();
-  await page.goto("https://example.com");
-  return new Response(await page.content());
+	const page = await browser.newPage();
+	await page.goto("https://example.com");
+	return new Response(await page.content());
 } finally {
-  await browser.close(); // ALWAYS in finally
+	await browser.close(); // ALWAYS in finally
 }
 ```
 
@@ -64,10 +64,7 @@ const selector = "h1";
 await page.evaluate(() => document.querySelector(selector));
 
 // ✅ Pass as argument
-await page.evaluate(
-  (sel) => document.querySelector(sel)?.textContent,
-  selector,
-);
+await page.evaluate((sel) => document.querySelector(sel)?.textContent, selector);
 ```
 
 ## Performance
@@ -83,11 +80,11 @@ await page.evaluate(
 ```typescript
 await page.setRequestInterception(true);
 page.on("request", (req) => {
-  if (["image", "stylesheet", "font"].includes(req.resourceType())) {
-    req.abort();
-  } else {
-    req.continue();
-  }
+	if (["image", "stylesheet", "font"].includes(req.resourceType())) {
+		req.abort();
+	} else {
+		req.continue();
+	}
 });
 ```
 

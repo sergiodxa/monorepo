@@ -25,18 +25,15 @@ import { setTimeout } from "node:timers/promises";
 import { data } from "react-router";
 
 export async function loader({ request }: Route.LoaderArgs) {
-  let url = new URL(request.url);
-  let query = url.searchParams.get("query") ?? "";
-  let results = await searchItems(query);
-  return data({ results });
+	let url = new URL(request.url);
+	let query = url.searchParams.get("query") ?? "";
+	let results = await searchItems(query);
+	return data({ results });
 }
 
-export async function clientLoader({
-  request,
-  serverLoader,
-}: Route.ClientLoaderArgs) {
-  // Debounce by 500ms - if user types again, request.signal aborts this
-  return await setTimeout(500, serverLoader, { signal: request.signal });
+export async function clientLoader({ request, serverLoader }: Route.ClientLoaderArgs) {
+	// Debounce by 500ms - if user types again, request.signal aborts this
+	return await setTimeout(500, serverLoader, { signal: request.signal });
 }
 
 // Required to enable clientLoader
@@ -54,18 +51,15 @@ import { setTimeout } from "node:timers/promises";
 import { data } from "react-router";
 
 export async function action({ request, params }: Route.ActionArgs) {
-  let formData = await request.formData();
-  let scrollY = Number(formData.get("scrollY"));
-  await updateReadProgress(params.postId, scrollY);
-  return data({ ok: true });
+	let formData = await request.formData();
+	let scrollY = Number(formData.get("scrollY"));
+	await updateReadProgress(params.postId, scrollY);
+	return data({ ok: true });
 }
 
-export async function clientAction({
-  request,
-  serverAction,
-}: Route.ClientActionArgs) {
-  // Debounce by 50ms for scroll events
-  return await setTimeout(50, serverAction, { signal: request.signal });
+export async function clientAction({ request, serverAction }: Route.ClientActionArgs) {
+	// Debounce by 50ms for scroll events
+	return await setTimeout(50, serverAction, { signal: request.signal });
 }
 ```
 
@@ -82,23 +76,23 @@ No special handling needed in components:
 
 ```tsx
 export default function SearchPage() {
-  let { results } = useLoaderData<typeof loader>();
-  let [searchParams, setSearchParams] = useSearchParams();
+	let { results } = useLoaderData<typeof loader>();
+	let [searchParams, setSearchParams] = useSearchParams();
 
-  return (
-    <div>
-      <input
-        type="search"
-        defaultValue={searchParams.get("query") ?? ""}
-        onChange={(e) => setSearchParams({ query: e.target.value })}
-      />
-      <ul>
-        {results.map((item) => (
-          <li key={item.id}>{item.name}</li>
-        ))}
-      </ul>
-    </div>
-  );
+	return (
+		<div>
+			<input
+				type="search"
+				defaultValue={searchParams.get("query") ?? ""}
+				onChange={(e) => setSearchParams({ query: e.target.value })}
+			/>
+			<ul>
+				{results.map((item) => (
+					<li key={item.id}>{item.name}</li>
+				))}
+			</ul>
+		</div>
+	);
 }
 ```
 

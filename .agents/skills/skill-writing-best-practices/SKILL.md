@@ -84,10 +84,13 @@ What to do and why.
 ## Pattern
 
 \`\`\`ruby
+
 # Bad
+
 bad_code
 
 # Good
+
 good_code
 \`\`\`
 
@@ -105,13 +108,17 @@ Every rule needs code examples. Abstract advice is hard to apply.
 
 ```markdown
 # Bad: Too abstract
+
 "Keep your code organized."
 
 # Good: Concrete
+
 "Place concerns in `app/models/model_name/` not `app/models/concerns/`."
 
 \`\`\`ruby
+
 # Shows exactly what to do
+
 app/models/card/closeable.rb
 \`\`\`
 ```
@@ -136,11 +143,13 @@ Write naturally. Avoid AI-isms and excessive formatting.
 
 ```markdown
 # Bad
----
-Here is an overview of the key points:
+
 ---
 
+## Here is an overview of the key points:
+
 # Good
+
 Group related rules by category. Each rule gets a one-sentence
 description and a short code example.
 ```

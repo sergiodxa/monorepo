@@ -36,24 +36,24 @@ const hash = crypto.createHash("sha256").update(password).digest("hex");
 
 // Bad: No password requirements
 async function signup(req: Request): Promise<Response> {
-  let { email, password } = await req.json();
-  // Accepts "123" as valid password!
-  await db.users.create({
-    data: { email, password: await bcrypt(password, 10) },
-  });
+	let { email, password } = await req.json();
+	// Accepts "123" as valid password!
+	await db.users.create({
+		data: { email, password: await bcrypt(password, 10) },
+	});
 }
 
 // Bad: Timing attack reveals if email exists
 const user = await db.users.findUnique({ where: { email } });
 if (!user) return new Response("Invalid", { status: 401 }); // Early return!
 if (!(await bcrypt.compare(password, user.password))) {
-  return new Response("Invalid", { status: 401 });
+	return new Response("Invalid", { status: 401 });
 }
 
 // Bad: No rate limiting or account lockout
 async function login(req: Request): Promise<Response> {
-  // Unlimited attempts allowed!
-  let user = await authenticate(email, password);
+	// Unlimited attempts allowed!
+	let user = await authenticate(email, password);
 }
 ```
 
@@ -65,71 +65,70 @@ const hash = await bcrypt(password, 12); // Cost factor 12+
 
 // Good: Strong password validation
 function validatePassword(password: string): string | null {
-  if (password.length < 12) return "Password must be ≥12 characters";
-  if (!/[A-Z]/.test(password)) return "Must include uppercase";
-  if (!/[a-z]/.test(password)) return "Must include lowercase";
-  if (!/[0-9]/.test(password)) return "Must include number";
-  return null;
+	if (password.length < 12) return "Password must be ≥12 characters";
+	if (!/[A-Z]/.test(password)) return "Must include uppercase";
+	if (!/[a-z]/.test(password)) return "Must include lowercase";
+	if (!/[0-9]/.test(password)) return "Must include number";
+	return null;
 }
 
 async function signup(req: Request): Promise<Response> {
-  let { email, password } = await req.json();
+	let { email, password } = await req.json();
 
-  let error = validatePassword(password);
-  if (error) return new Response(error, { status: 400 });
+	let error = validatePassword(password);
+	if (error) return new Response(error, { status: 400 });
 
-  await db.users.create({
-    data: { email, password: await bcrypt(password, 12) },
-  });
+	await db.users.create({
+		data: { email, password: await bcrypt(password, 12) },
+	});
 }
 
 // Good: Constant-time comparison
 async function login(req: Request): Promise<Response> {
-  let { email, password } = await req.json();
-  let user = await db.users.findUnique({ where: { email } });
+	let { email, password } = await req.json();
+	let user = await db.users.findUnique({ where: { email } });
 
-  // Always compare (constant time)
-  let hash = user?.password || "$2b$12$fakehash...";
-  let valid = await bcrypt.compare(password, hash);
+	// Always compare (constant time)
+	let hash = user?.password || "$2b$12$fakehash...";
+	let valid = await bcrypt.compare(password, hash);
 
-  if (!user || !valid) {
-    return new Response("Invalid credentials", { status: 401 });
-  }
+	if (!user || !valid) {
+		return new Response("Invalid credentials", { status: 401 });
+	}
 
-  return createSession(user);
+	return createSession(user);
 }
 
 // Good: Account lockout after failed attempts
 async function loginWithLockout(req: Request): Promise<Response> {
-  let { email, password } = await req.json();
-  let user = await db.users.findUnique({ where: { email } });
+	let { email, password } = await req.json();
+	let user = await db.users.findUnique({ where: { email } });
 
-  if (user?.lockedUntil && user.lockedUntil > new Date()) {
-    return new Response("Account locked", { status: 423 });
-  }
+	if (user?.lockedUntil && user.lockedUntil > new Date()) {
+		return new Response("Account locked", { status: 423 });
+	}
 
-  let valid = user && (await bcrypt.compare(password, user.password));
+	let valid = user && (await bcrypt.compare(password, user.password));
 
-  if (!user || !valid) {
-    let attempts = (user?.failedAttempts || 0) + 1;
-    await db.users.update({
-      where: { email },
-      data: {
-        failedAttempts: attempts,
-        lockedUntil:
-          attempts >= 5 ? new Date(Date.now() + 30 * 60 * 1000) : null,
-      },
-    });
-    return new Response("Invalid credentials", { status: 401 });
-  }
+	if (!user || !valid) {
+		let attempts = (user?.failedAttempts || 0) + 1;
+		await db.users.update({
+			where: { email },
+			data: {
+				failedAttempts: attempts,
+				lockedUntil: attempts >= 5 ? new Date(Date.now() + 30 * 60 * 1000) : null,
+			},
+		});
+		return new Response("Invalid credentials", { status: 401 });
+	}
 
-  // Reset on success
-  await db.users.update({
-    where: { id: user.id },
-    data: { failedAttempts: 0, lockedUntil: null },
-  });
+	// Reset on success
+	await db.users.update({
+		where: { id: user.id },
+		data: { failedAttempts: 0, lockedUntil: null },
+	});
 
-  return createSession(user);
+	return createSession(user);
 }
 ```
 

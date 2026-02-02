@@ -57,24 +57,20 @@ SQL API is synchronous:
 
 ```typescript
 // Write
-this.ctx.storage.sql.exec(
-  "INSERT INTO items (name, value) VALUES (?, ?)",
-  name,
-  value,
-);
+this.ctx.storage.sql.exec("INSERT INTO items (name, value) VALUES (?, ?)", name, value);
 
 // Read
 const rows = this.ctx.storage.sql
-  .exec<{
-    id: number;
-    name: string;
-  }>("SELECT * FROM items WHERE name = ?", name)
-  .toArray();
+	.exec<{
+		id: number;
+		name: string;
+	}>("SELECT * FROM items WHERE name = ?", name)
+	.toArray();
 
 // Single row
 const row = this.ctx.storage.sql
-  .exec<{ count: number }>("SELECT COUNT(*) as count FROM items")
-  .one();
+	.exec<{ count: number }>("SELECT COUNT(*) as count FROM items")
+	.one();
 ```
 
 ### Migrations
@@ -139,21 +135,13 @@ Multiple writes without `await` between them are batched atomically:
 
 ```typescript
 // ✅ Good: All three writes commit atomically
+this.ctx.storage.sql.exec("UPDATE accounts SET balance = balance - ? WHERE id = ?", amount, fromId);
+this.ctx.storage.sql.exec("UPDATE accounts SET balance = balance + ? WHERE id = ?", amount, toId);
 this.ctx.storage.sql.exec(
-  "UPDATE accounts SET balance = balance - ? WHERE id = ?",
-  amount,
-  fromId,
-);
-this.ctx.storage.sql.exec(
-  "UPDATE accounts SET balance = balance + ? WHERE id = ?",
-  amount,
-  toId,
-);
-this.ctx.storage.sql.exec(
-  "INSERT INTO transfers (from_id, to_id, amount) VALUES (?, ?, ?)",
-  fromId,
-  toId,
-  amount,
+	"INSERT INTO transfers (from_id, to_id, amount) VALUES (?, ?, ?)",
+	fromId,
+	toId,
+	amount,
 );
 
 // ❌ Bad: await breaks coalescing
@@ -205,15 +193,15 @@ Use RPC (compatibility date >= 2024-04-03) instead of fetch() handler:
 
 ```typescript
 export class ChatRoom extends DurableObject<Env> {
-  async sendMessage(userId: string, content: string): Promise<Message> {
-    // Public methods are RPC endpoints
-    const result = this.ctx.storage.sql.exec<{ id: number }>(
-      "INSERT INTO messages (user_id, content) VALUES (?, ?) RETURNING id",
-      userId,
-      content,
-    );
-    return { id: result.one().id, userId, content };
-  }
+	async sendMessage(userId: string, content: string): Promise<Message> {
+		// Public methods are RPC endpoints
+		const result = this.ctx.storage.sql.exec<{ id: number }>(
+			"INSERT INTO messages (user_id, content) VALUES (?, ?) RETURNING id",
+			userId,
+			content,
+		);
+		return { id: result.one().id, userId, content };
+	}
 }
 
 // Caller

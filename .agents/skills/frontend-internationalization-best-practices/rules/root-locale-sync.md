@@ -21,38 +21,31 @@ import { data, Outlet } from "react-router";
 import { useEffect } from "react";
 import type { Route } from "./+types/root";
 import { useTranslation } from "react-i18next";
-import {
-  getLocale,
-  i18nextMiddleware,
-  localeCookie,
-} from "~/middleware/i18next";
+import { getLocale, i18nextMiddleware, localeCookie } from "~/middleware/i18next";
 
 export const middleware = [i18nextMiddleware];
 
 export async function loader({ context }: Route.LoaderArgs) {
-  let locale = getLocale(context);
-  return data(
-    { locale },
-    { headers: { "Set-Cookie": await localeCookie.serialize(locale) } },
-  );
+	let locale = getLocale(context);
+	return data({ locale }, { headers: { "Set-Cookie": await localeCookie.serialize(locale) } });
 }
 
 export function Layout({ children }: { children: React.ReactNode }) {
-  let { i18n } = useTranslation();
-  return (
-    <html lang={i18n.language} dir={i18n.dir(i18n.language)}>
-      <body>{children}</body>
-    </html>
-  );
+	let { i18n } = useTranslation();
+	return (
+		<html lang={i18n.language} dir={i18n.dir(i18n.language)}>
+			<body>{children}</body>
+		</html>
+	);
 }
 
 export default function App({ loaderData: { locale } }: Route.ComponentProps) {
-  let { i18n } = useTranslation();
-  useEffect(() => {
-    if (i18n.language !== locale) i18n.changeLanguage(locale);
-  }, [i18n, locale]);
+	let { i18n } = useTranslation();
+	useEffect(() => {
+		if (i18n.language !== locale) i18n.changeLanguage(locale);
+	}, [i18n, locale]);
 
-  return <Outlet />;
+	return <Outlet />;
 }
 ```
 

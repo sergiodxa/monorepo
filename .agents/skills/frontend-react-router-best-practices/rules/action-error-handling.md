@@ -73,27 +73,24 @@ return redirect("/success");
 
 ```tsx
 try {
-  // ... validation and mutation
+	// ... validation and mutation
 } catch (error) {
-  // 1. Zod validation errors -> return 400
-  if (error instanceof z.ZodError) {
-    return data(
-      { errors: error.issues.map(({ message }) => message) },
-      { status: 400 },
-    );
-  }
+	// 1. Zod validation errors -> return 400
+	if (error instanceof z.ZodError) {
+		return data({ errors: error.issues.map(({ message }) => message) }, { status: 400 });
+	}
 
-  // 2. Custom business errors -> return 400
-  if (error instanceof BusinessError) {
-    return data({ errors: [error.message] }, { status: 400 });
-  }
+	// 2. Custom business errors -> return 400
+	if (error instanceof BusinessError) {
+		return data({ errors: [error.message] }, { status: 400 });
+	}
 
-  // 3. Generic errors -> return 400
-  if (error instanceof Error) {
-    return data({ errors: [error.message] }, { status: 400 });
-  }
+	// 3. Generic errors -> return 400
+	if (error instanceof Error) {
+		return data({ errors: [error.message] }, { status: 400 });
+	}
 
-  // 4. Everything else (redirects, Response objects) -> re-throw
-  throw error;
+	// 4. Everything else (redirects, Response objects) -> re-throw
+	throw error;
 }
 ```

@@ -6,13 +6,13 @@ Instead of `run_worker_first = true`, use array patterns:
 
 ```jsonc
 {
-  "assets": {
-    "run_worker_first": [
-      "/api/*", // API routes
-      "/admin/*", // Admin area
-      "!/admin/assets/*", // Except admin assets
-    ],
-  },
+	"assets": {
+		"run_worker_first": [
+			"/api/*", // API routes
+			"/admin/*", // Admin area
+			"!/admin/assets/*", // Except admin assets
+		],
+	},
 }
 ```
 
@@ -28,10 +28,10 @@ For SPAs, use `compatibility_date = "2025-04-01"` or later:
 
 ```jsonc
 {
-  "compatibility_date": "2025-04-01",
-  "assets": {
-    "not_found_handling": "single-page-application",
-  },
+	"compatibility_date": "2025-04-01",
+	"assets": {
+		"not_found_handling": "single-page-application",
+	},
 }
 ```
 
@@ -43,7 +43,7 @@ Always type your environment:
 
 ```typescript
 interface Env {
-  ASSETS: Fetcher;
+	ASSETS: Fetcher;
 }
 ```
 
@@ -129,10 +129,10 @@ Serve assets directly when possible:
 
 ```jsonc
 {
-  "assets": {
-    // Only invoke Worker for dynamic routes
-    "run_worker_first": ["/api/*", "/auth/*"],
-  },
+	"assets": {
+		// Only invoke Worker for dynamic routes
+		"run_worker_first": ["/api/*", "/auth/*"],
+	},
 }
 ```
 

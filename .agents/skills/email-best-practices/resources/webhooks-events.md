@@ -25,11 +25,11 @@ Your endpoint must:
 
 ```typescript
 app.post("/webhooks/resend", async (req, res) => {
-  // Return 200 immediately to acknowledge receipt
-  res.status(200).send("OK");
+	// Return 200 immediately to acknowledge receipt
+	res.status(200).send("OK");
 
-  // Process asynchronously
-  processWebhookAsync(req.body).catch(console.error);
+	// Process asynchronously
+	processWebhookAsync(req.body).catch(console.error);
 });
 ```
 
@@ -43,16 +43,16 @@ import { Webhook } from "svix";
 const webhook = new Webhook(process.env.RESEND_WEBHOOK_SECRET);
 
 app.post("/webhooks/resend", (req, res) => {
-  try {
-    const payload = webhook.verify(JSON.stringify(req.body), {
-      "svix-id": req.headers["svix-id"],
-      "svix-timestamp": req.headers["svix-timestamp"],
-      "svix-signature": req.headers["svix-signature"],
-    });
-    // Process verified payload
-  } catch (err) {
-    return res.status(400).send("Invalid signature");
-  }
+	try {
+		const payload = webhook.verify(JSON.stringify(req.body), {
+			"svix-id": req.headers["svix-id"],
+			"svix-timestamp": req.headers["svix-timestamp"],
+			"svix-signature": req.headers["svix-signature"],
+		});
+		// Process verified payload
+	} catch (err) {
+		return res.status(400).send("Invalid signature");
+	}
 });
 ```
 
@@ -66,20 +66,20 @@ Configure your webhook endpoint in the Resend dashboard or via API.
 
 ```typescript
 async function handleBounce(event) {
-  const { email_id, email, bounce_type } = event.data;
+	const { email_id, email, bounce_type } = event.data;
 
-  if (bounce_type === "hard") {
-    // Permanent failure - remove from all lists
-    await suppressEmail(email, "hard_bounce");
-    await removeFromAllLists(email);
-  } else {
-    // Soft bounce - track and remove after threshold
-    await incrementSoftBounce(email);
-    const count = await getSoftBounceCount(email);
-    if (count >= 3) {
-      await suppressEmail(email, "soft_bounce_limit");
-    }
-  }
+	if (bounce_type === "hard") {
+		// Permanent failure - remove from all lists
+		await suppressEmail(email, "hard_bounce");
+		await removeFromAllLists(email);
+	} else {
+		// Soft bounce - track and remove after threshold
+		await incrementSoftBounce(email);
+		const count = await getSoftBounceCount(email);
+		if (count >= 3) {
+			await suppressEmail(email, "soft_bounce_limit");
+		}
+	}
 }
 ```
 
@@ -87,12 +87,12 @@ async function handleBounce(event) {
 
 ```typescript
 async function handleComplaint(event) {
-  const { email } = event.data;
+	const { email } = event.data;
 
-  // Immediate suppression - no exceptions
-  await suppressEmail(email, "complaint");
-  await removeFromAllLists(email);
-  await logComplaint(event); // For analysis
+	// Immediate suppression - no exceptions
+	await suppressEmail(email, "complaint");
+	await removeFromAllLists(email);
+	await logComplaint(event); // For analysis
 }
 ```
 
@@ -100,8 +100,8 @@ async function handleComplaint(event) {
 
 ```typescript
 async function handleDelivered(event) {
-  const { email_id } = event.data;
-  await updateEmailStatus(email_id, "delivered");
+	const { email_id } = event.data;
+	await updateEmailStatus(email_id, "delivered");
 }
 ```
 
@@ -111,18 +111,18 @@ Webhooks may be sent multiple times. Use event IDs to prevent duplicate processi
 
 ```typescript
 async function processWebhook(event) {
-  const eventId = event.id;
+	const eventId = event.id;
 
-  // Check if already processed
-  if (await isEventProcessed(eventId)) {
-    return; // Skip duplicate
-  }
+	// Check if already processed
+	if (await isEventProcessed(eventId)) {
+		return; // Skip duplicate
+	}
 
-  // Process event
-  await handleEvent(event);
+	// Process event
+	await handleEvent(event);
 
-  // Mark as processed
-  await markEventProcessed(eventId);
+	// Mark as processed
+	await markEventProcessed(eventId);
 }
 ```
 

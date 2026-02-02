@@ -9,13 +9,13 @@
 
 ```typescript
 try {
-  const userWorker = env.DISPATCHER.get(workerName);
-  return userWorker.fetch(request);
+	const userWorker = env.DISPATCHER.get(workerName);
+	return userWorker.fetch(request);
 } catch (e) {
-  if (e.message.startsWith("Worker not found")) {
-    return new Response("Worker not found", { status: 404 });
-  }
-  throw e; // Re-throw unexpected errors
+	if (e.message.startsWith("Worker not found")) {
+		return new Response("Worker not found", { status: 404 });
+	}
+	throw e; // Re-throw unexpected errors
 }
 ```
 
@@ -66,17 +66,17 @@ try {
 
 ```typescript
 async function deployWithBackoff(deploy: () => Promise<void>, maxRetries = 3) {
-  for (let i = 0; i < maxRetries; i++) {
-    try {
-      return await deploy();
-    } catch (e) {
-      if (e.status === 429 && i < maxRetries - 1) {
-        await new Promise((r) => setTimeout(r, Math.pow(2, i) * 1000));
-        continue;
-      }
-      throw e;
-    }
-  }
+	for (let i = 0; i < maxRetries; i++) {
+		try {
+			return await deploy();
+		} catch (e) {
+			if (e.status === 429 && i < maxRetries - 1) {
+				await new Promise((r) => setTimeout(r, Math.pow(2, i) * 1000));
+				continue;
+			}
+			throw e;
+		}
+	}
 }
 ```
 
