@@ -6,7 +6,7 @@
 		"dev": "vite dev",
 		"build": "vite build",
 		"start": "vite preview",
-		"deploy": "wrangler deploy",
+		"cf:deploy": "wrangler deploy",
 		"cf:typegen": "wrangler types",
 		"rr:typegen": "react-router typegen",
 		"rr:routes": "react-router routes",
