@@ -1,5 +1,11 @@
 import { describe, expect, test } from "bun:test";
-import { cn, type ClassName, type ClassNameRecord, type StyleRecord } from "./index";
+import {
+	cn,
+	extendClassName,
+	type ClassName,
+	type ClassNameRecord,
+	type StyleRecord,
+} from "./index";
 
 describe("cn", () => {
 	describe("basic usage", () => {
@@ -195,5 +201,78 @@ describe("types", () => {
 		styles.invalid = { display: "flex" };
 
 		expect(styles.root).toBeUndefined();
+	});
+});
+
+describe("extendClassName", () => {
+	test("creates custom cn with class groups", () => {
+		let customCn = extendClassName({
+			extend: {
+				classGroups: {
+					stack: ["stack-v", "stack-h"],
+				},
+			},
+		});
+
+		// Custom classes in same group should dedupe
+		expect(customCn("stack-v", "stack-h")).toBe("stack-h");
+		expect(customCn("stack-h", "stack-v")).toBe("stack-v");
+	});
+
+	test("custom cn still handles standard Tailwind classes", () => {
+		let customCn = extendClassName({
+			extend: {
+				classGroups: {
+					stack: ["stack-v", "stack-h"],
+				},
+			},
+		});
+
+		expect(customCn("p-4", "p-8")).toBe("p-8");
+		expect(customCn("stack-v", "p-4")).toBe("stack-v p-4");
+	});
+
+	test("supports conflictingClassGroups", () => {
+		let customCn = extendClassName({
+			extend: {
+				classGroups: {
+					stack: ["stack-v", "stack-h"],
+				},
+				conflictingClassGroups: {
+					stack: ["flex-direction"],
+				},
+			},
+		});
+
+		// stack should override flex-direction classes
+		expect(customCn("flex-col", "stack-h")).toBe("stack-h");
+		expect(customCn("flex-row", "stack-v")).toBe("stack-v");
+	});
+
+	test("supports clsx features like conditionals and arrays", () => {
+		let customCn = extendClassName({
+			extend: {
+				classGroups: {
+					stack: ["stack-v", "stack-h"],
+				},
+			},
+		});
+
+		expect(customCn("stack-v", { "stack-h": true })).toBe("stack-h");
+		expect(customCn(["stack-v"], "stack-h")).toBe("stack-h");
+		expect(customCn("stack-v", undefined, "stack-h")).toBe("stack-h");
+	});
+
+	test("Config type is accessible via namespace", () => {
+		let config: extendClassName.Config = {
+			extend: {
+				classGroups: {
+					custom: ["custom-a", "custom-b"],
+				},
+			},
+		};
+
+		let customCn = extendClassName(config);
+		expect(customCn("custom-a", "custom-b")).toBe("custom-b");
 	});
 });

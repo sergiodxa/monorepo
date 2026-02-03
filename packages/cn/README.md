@@ -63,3 +63,23 @@ let style: StyleRecord<ButtonSlots> = {
 	root: { display: "flex", "--button-gap": "8px" },
 };
 ```
+
+### `extendClassName(config): (...classes: ClassName[]) => string`
+
+Factory function to create a custom `cn` with extended tailwind-merge configuration. Useful for apps with custom utility classes that should conflict with each other.
+
+```typescript
+import { extendClassName } from "@pkg/cn";
+
+const cn = extendClassName({
+	extend: {
+		classGroups: {
+			stack: ["stack-v", "stack-h"],
+		},
+	},
+});
+
+cn("stack-v", "stack-h"); // => "stack-h"
+```
+
+The config type is available via `extendClassName.Config`.
