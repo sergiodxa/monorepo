@@ -5,9 +5,9 @@ import { isFailure } from "@pkg/result";
 import { validate, ValidationError } from "@pkg/validate";
 import { badRequest } from "@pkg/response";
 import { Product } from "~/data/product";
-import { upgradeSchema } from "~/schemas/upgrade";
+import { upgradeSchema } from "./schemas.server";
 import polar from "~/services/polar";
-import type { Route } from "./+types/upgrade";
+import type { Route } from "./+types/route";
 
 export async function action({ request }: Route.ActionArgs) {
 	const formData = await request.formData();
