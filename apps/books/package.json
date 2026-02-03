@@ -7,12 +7,9 @@
 		"build": "vite build",
 		"start": "vite preview",
 		"deploy": "wrangler deploy",
-		"typecheck": "tsc --noEmit",
 		"rr:typegen": "react-router typegen",
 		"rr:routes": "react-router routes",
-		"cf:typegen": "wrangler types",
-		"lint": "oxlint",
-		"format": "oxfmt"
+		"cf:typegen": "wrangler types"
 	},
 	"dependencies": {
 		"@edgefirst-dev/api-client": "^0.3.0",

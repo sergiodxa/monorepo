@@ -7,9 +7,6 @@
 		".": "./src/index.ts"
 	},
 	"scripts": {
-		"typecheck": "tsc --noEmit",
-		"lint": "oxlint",
-		"format": "oxfmt",
 		"test": "bun test"
 	},
 	"dependencies": {
