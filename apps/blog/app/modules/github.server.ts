@@ -169,8 +169,7 @@ export class GitHub {
 				name: z.string(),
 				avatar_url: z.string().url(),
 			})
-			.promise()
-			.parse(response.json());
+			.parseAsync(response.json());
 	}
 }
 

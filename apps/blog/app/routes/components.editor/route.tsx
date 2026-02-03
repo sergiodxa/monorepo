@@ -21,8 +21,7 @@ export async function action({ request }: Route.ActionArgs) {
 	try {
 		let { content } = await Schemas.formData()
 			.pipe(z.object({ content: z.string() }))
-			.promise()
-			.parse(request.formData());
+			.parseAsync(request.formData());
 
 		return ok({ content: Markdown.parse(content) });
 	} catch {

@@ -24,8 +24,7 @@ export const middleware: Route.MiddlewareFunction[] = [
 		let redirectConfig = await z
 			.object({ from: z.string(), to: z.string() })
 			.nullish()
-			.promise()
-			.parse(getBindings().kv.redirects.get(params["*"], "json"));
+			.parseAsync(getBindings().kv.redirects.get(params["*"], "json"));
 
 		if (redirectConfig?.from === `/${params.postType}/${params["*"]}`) {
 			throw redirect(redirectConfig.to);

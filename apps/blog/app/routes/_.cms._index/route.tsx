@@ -63,7 +63,7 @@ export async function action({ request }: Route.ActionArgs) {
 					errors: error.issues.reduce(
 						(errors, issue) => {
 							let [path] = issue.path;
-							if (path) errors[path] = issue.message;
+							if (typeof path === "string") errors[path] = issue.message;
 							return errors;
 						},
 						{} as Record<string, string>,
