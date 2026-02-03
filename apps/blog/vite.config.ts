@@ -6,9 +6,6 @@ import tsconfigPaths from "vite-tsconfig-paths";
 
 export default defineConfig({
 	server: { port: 3000 },
-	esbuild: {
-		exclude: ["cloudflare:workers"],
-	},
 	plugins: [
 		cloudflare({ viteEnvironment: { name: "ssr" } }),
 		tailwindcss(),
