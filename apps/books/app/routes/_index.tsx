@@ -4,9 +4,9 @@ import type { action } from "./api.subscribe";
 
 export default function Home() {
 	return (
-		<div className="w-full max-w-5xl flex flex-col gap-10 py-5">
-			<header className="max-w-prose flex flex-col gap-5 font-serif px-5">
-				<h1 className="text-3xl lg:text-4xl leading-none font-light text-balance">
+		<div className="flex w-full max-w-5xl flex-col gap-10 py-5">
+			<header className="flex max-w-prose flex-col gap-5 px-5 font-serif">
+				<h1 className="text-3xl leading-none font-light text-balance lg:text-4xl">
 					React Router OAuth2 Handbook
 				</h1>
 
@@ -45,7 +45,7 @@ function SubscribeForm({ title, label }: SubscribeFormProps) {
 		<fetcher.Form
 			method="POST"
 			action="/api/subscribe"
-			className="flex flex-col gap-2.5 w-full max-w-xl group"
+			className="group flex w-full max-w-xl flex-col gap-2.5"
 			data-status={status}
 		>
 			<input type="hidden" name="source" value={searchParams.get("utm_source") ?? ""} />
@@ -53,9 +53,9 @@ function SubscribeForm({ title, label }: SubscribeFormProps) {
 			<input type="hidden" name="medium" value={searchParams.get("utm_medium") ?? ""} />
 			<input type="hidden" name="referral" value={searchParams.get("utm_referral") ?? ""} />
 
-			<h2 className="font-semibold text-base px-5">{title}</h2>
+			<h2 className="px-5 text-base font-semibold">{title}</h2>
 
-			<div className="flex items-stretch gap-2.5 max-lg:px-5 flex-col lg:flex-row">
+			<div className="flex flex-col items-stretch gap-2.5 max-lg:px-5 lg:flex-row">
 				<div className="w-full">
 					<label htmlFor="email" className="sr-only">
 						{label}
@@ -65,7 +65,7 @@ function SubscribeForm({ title, label }: SubscribeFormProps) {
 						type="email"
 						name="email"
 						required
-						className="w-full px-5 py-2.5 rounded-xs border-2 border-stone-200 dark:border-stone-800 outline-none focus-visible:border-black placeholder-stone-500 dark:focus-visible:border-white group-data-[status=failure]:border-red-500 group-data-[status=success]:border-green-500 bg-white dark:bg-black dark:placeholder-stone-300 dark:text-stone-100"
+						className="w-full rounded-xs border-2 border-stone-200 bg-white px-5 py-2.5 placeholder-stone-500 outline-none group-data-[status=failure]:border-red-500 group-data-[status=success]:border-green-500 focus-visible:border-black dark:border-stone-800 dark:bg-black dark:text-stone-100 dark:placeholder-stone-300 dark:focus-visible:border-white"
 						placeholder="user@domain.tld"
 						readOnly={status !== "idle"}
 					/>
@@ -73,12 +73,12 @@ function SubscribeForm({ title, label }: SubscribeFormProps) {
 
 				<button
 					type="submit"
-					className="shrink-0 px-5 py-2.5 rounded-xs relative bg-stone-950 text-stone-50 dark:bg-stone-50 dark:text-stone-950 group-data-[status=success]:bg-green-500 dark:group-data-[status=success]:bg-green-600"
+					className="relative shrink-0 rounded-xs bg-stone-950 px-5 py-2.5 text-stone-50 group-data-[status=success]:bg-green-500 dark:bg-stone-50 dark:text-stone-950 dark:group-data-[status=success]:bg-green-600"
 					disabled={status !== "idle"}
 				>
-					<span className="hidden absolute inset-0 items-center justify-center group-data-[status=loading]:flex">
+					<span className="absolute inset-0 hidden items-center justify-center group-data-[status=loading]:flex">
 						<svg
-							className="group-data-[status=loading]:animate-spin size-5 text-white dark:text-black"
+							className="size-5 text-white group-data-[status=loading]:animate-spin dark:text-black"
 							xmlns="http://www.w3.org/2000/svg"
 							fill="none"
 							viewBox="0 0 24 24"
@@ -104,7 +104,7 @@ function SubscribeForm({ title, label }: SubscribeFormProps) {
 						Subscribe
 					</span>
 
-					<span className="hidden absolute inset-0 items-center justify-center group-data-[status=success]:flex text-green-100">
+					<span className="absolute inset-0 hidden items-center justify-center text-green-100 group-data-[status=success]:flex">
 						<svg
 							className="size-5"
 							xmlns="http://www.w3.org/2000/svg"
@@ -124,10 +124,10 @@ function SubscribeForm({ title, label }: SubscribeFormProps) {
 				</button>
 			</div>
 
-			<small className="text-stone-700 dark:text-stone-300 text-pretty lg:px-5 flex flex-col gap-0.5 items-baseline">
+			<small className="flex flex-col items-baseline gap-0.5 text-pretty text-stone-700 lg:px-5 dark:text-stone-300">
 				<span>No spam. Unsubscribe anytime.</span>
 				{fetcher.data?.ok === false && (
-					<em className="text-red-500 dark:text-red-400 not-italic font-medium whitespace-pre-line">
+					<em className="font-medium whitespace-pre-line text-red-500 not-italic dark:text-red-400">
 						{fetcher.data.error}
 					</em>
 				)}

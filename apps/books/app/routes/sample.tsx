@@ -65,7 +65,7 @@ export async function action({ request }: Route.ActionArgs) {
 export default function Component({ actionData }: Route.ComponentProps) {
 	if (actionData?.ok) {
 		return (
-			<article className="prose prose-stone dark:prose-invert py-10 lg:py-20 px-5 max-w-prose mx-auto lg:prose-xl">
+			<article className="mx-auto prose max-w-prose px-5 py-10 prose-stone lg:prose-xl lg:py-20 dark:prose-invert">
 				<link rel="stylesheet" href={dark} media="(prefers-color-scheme: dark)" />
 				<link rel="stylesheet" href={light} media="(prefers-color-scheme: light)" />
 				{Markdoc.renderers.react(actionData.value, React, {

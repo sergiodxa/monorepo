@@ -5,7 +5,7 @@ import styles from "./app.css?url";
 
 export function Layout({ children }: { children: React.ReactNode }) {
 	return (
-		<html lang="en" className="bg-white dark:bg-stone-900 text-black dark:text-stone-100">
+		<html lang="en" className="bg-white text-black dark:bg-stone-900 dark:text-stone-100">
 			<head>
 				<meta charSet="utf-8" />
 				<meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -27,7 +27,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
 				<meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
 				<meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)" />
 			</head>
-			<body className="font-sans min-h-dvh w-full flex flex-col justify-center items-center">
+			<body className="flex min-h-dvh w-full flex-col items-center justify-center font-sans">
 				{children}
 				<ScrollRestoration />
 				<Scripts />
@@ -60,11 +60,11 @@ export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
 	}
 
 	return (
-		<main className="pt-16 p-4 container mx-auto">
+		<main className="container mx-auto p-4 pt-16">
 			<h1>{message}</h1>
 			<p>{details}</p>
 			{stack && (
-				<pre className="w-full p-4 overflow-x-auto">
+				<pre className="w-full overflow-x-auto p-4">
 					<code>{stack}</code>
 				</pre>
 			)}

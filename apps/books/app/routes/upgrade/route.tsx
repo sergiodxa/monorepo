@@ -73,9 +73,9 @@ export default function Component({ actionData }: Route.ComponentProps) {
 	}, [navigation.state, actionData]);
 
 	return (
-		<section id="sample" className="flex flex-col gap-10 w-full max-w-5xl py-5 max-lg:px-5">
-			<header className="lg:px-5 flex flex-col gap-2.5">
-				<h2 className="font-serif text-3xl lg:text-4xl leading-none font-light text-balance capitalize">
+		<section id="sample" className="flex w-full max-w-5xl flex-col gap-10 py-5 max-lg:px-5">
+			<header className="flex flex-col gap-2.5 lg:px-5">
+				<h2 className="font-serif text-3xl leading-none font-light text-balance capitalize lg:text-4xl">
 					Upgrade to the Complete Package
 				</h2>
 
@@ -87,7 +87,7 @@ export default function Component({ actionData }: Route.ComponentProps) {
 
 			<Form
 				method="POST"
-				className="flex flex-col gap-2.5 w-full max-w-xl group"
+				className="group flex w-full max-w-xl flex-col gap-2.5"
 				data-status={status}
 				reloadDocument
 			>
@@ -96,7 +96,7 @@ export default function Component({ actionData }: Route.ComponentProps) {
 				<input type="hidden" name="medium" value={searchParams.get("utm_medium") ?? ""} />
 				<input type="hidden" name="referral" value={searchParams.get("utm_referral") ?? ""} />
 
-				<div className="flex items-stretch gap-2.5 flex-col lg:flex-row">
+				<div className="flex flex-col items-stretch gap-2.5 lg:flex-row">
 					<div className="w-full">
 						<label htmlFor="email" className="sr-only">
 							Email address
@@ -106,7 +106,7 @@ export default function Component({ actionData }: Route.ComponentProps) {
 							type="email"
 							name="email"
 							required
-							className="w-full px-5 py-2.5 rounded-xs border-2 border-stone-200 dark:border-black outline-none focus-visible:border-black placeholder-stone-500 dark:focus-visible:border-white group-data-[status=failure]:border-red-500 group-data-[status=success]:border-green-500 bg-white dark:bg-black dark:placeholder-stone-300 dark:text-stone-100"
+							className="w-full rounded-xs border-2 border-stone-200 bg-white px-5 py-2.5 placeholder-stone-500 outline-none group-data-[status=failure]:border-red-500 group-data-[status=success]:border-green-500 focus-visible:border-black dark:border-black dark:bg-black dark:text-stone-100 dark:placeholder-stone-300 dark:focus-visible:border-white"
 							placeholder="user@domain.tld"
 							readOnly={status !== "idle"}
 						/>
@@ -114,12 +114,12 @@ export default function Component({ actionData }: Route.ComponentProps) {
 
 					<button
 						type="submit"
-						className="shrink-0 px-5 py-2.5 rounded-xs relative bg-stone-950 text-stone-50 dark:bg-stone-50 dark:text-stone-950 group-data-[status=success]:bg-green-500 dark:group-data-[status=success]:bg-green-600"
+						className="relative shrink-0 rounded-xs bg-stone-950 px-5 py-2.5 text-stone-50 group-data-[status=success]:bg-green-500 dark:bg-stone-50 dark:text-stone-950 dark:group-data-[status=success]:bg-green-600"
 						disabled={status !== "idle"}
 					>
-						<span className="hidden absolute inset-0 items-center justify-center group-data-[status=loading]:flex">
+						<span className="absolute inset-0 hidden items-center justify-center group-data-[status=loading]:flex">
 							<svg
-								className="group-data-[status=loading]:animate-spin size-5 text-white dark:text-black"
+								className="size-5 text-white group-data-[status=loading]:animate-spin dark:text-black"
 								xmlns="http://www.w3.org/2000/svg"
 								fill="none"
 								viewBox="0 0 24 24"
@@ -141,7 +141,7 @@ export default function Component({ actionData }: Route.ComponentProps) {
 							</svg>
 						</span>
 
-						<span className="group-data-[status=loading]:invisible group-data-[status=success]:invisible capitalize">
+						<span className="capitalize group-data-[status=loading]:invisible group-data-[status=success]:invisible">
 							Get Upgrade Link
 						</span>
 					</button>

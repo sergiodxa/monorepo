@@ -69,7 +69,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
 				<Author />
 				<hr className="border-stone-300" />
 				<FrequentQuestions />
-				<footer className="text-center font-light text-sm">
+				<footer className="text-center text-sm font-light">
 					© 2025 Sergio Xalambrí. All Rights Reserved.
 				</footer>
 			</div>
@@ -79,19 +79,19 @@ export default function Home({ loaderData }: Route.ComponentProps) {
 
 function Hero() {
 	return (
-		<div id="hero" className="w-full max-w-5xl flex flex-col gap-10 p-5">
+		<div id="hero" className="flex w-full max-w-5xl flex-col gap-10 p-5">
 			<header className="flex flex-col gap-5 font-serif">
-				<h1 className="text-4xl lg:text-8xl leading-none font-light text-balance">
+				<h1 className="text-4xl leading-none font-light text-balance lg:text-8xl">
 					React Router OAuth2 Handbook
 				</h1>
 
-				<p className="text-xl lg:text-3xl max-w-prose">
+				<p className="max-w-prose text-xl lg:text-3xl">
 					A practical, modern guide to implementing{" "}
 					<strong className="font-semibold">OAuth2 authentication</strong> in React Router and Remix
 					apps—built on patterns you can apply to any web application.
 				</p>
 
-				<a href="#pricing" className="underline capitalize underline-offset-6">
+				<a href="#pricing" className="capitalize underline underline-offset-6">
 					⬇️ View the packages
 				</a>
 			</header>
@@ -124,12 +124,12 @@ function Description() {
 	];
 
 	return (
-		<section id="description" className="w-full max-w-5xl flex flex-col gap-7 p-5">
-			<h2 className="font-serif text-3xl lg:text-4xl leading-none font-light text-balance capitalize">
+		<section id="description" className="flex w-full max-w-5xl flex-col gap-7 p-5">
+			<h2 className="font-serif text-3xl leading-none font-light text-balance capitalize lg:text-4xl">
 				What’s inside
 			</h2>
 
-			<dl className="grid lg:grid-cols-2 gap-10">
+			<dl className="grid gap-10 lg:grid-cols-2">
 				{blocks.map((block) => (
 					<div key={block.title} className="flex flex-col gap-4">
 						<dt className="font-serif text-2xl font-medium lg:leading-none">{block.title}</dt>
@@ -145,22 +145,22 @@ function Testimonial() {
 	return (
 		<section
 			id="testimonial"
-			className="w-full max-w-5xl flex flex-col lg:flex-row items-center gap-5 p-5"
+			className="flex w-full max-w-5xl flex-col items-center gap-5 p-5 lg:flex-row"
 		>
-			<img src={alem} alt="Alem Tuzlak" className="rounded-full size-24" />
+			<img src={alem} alt="Alem Tuzlak" className="size-24 rounded-full" />
 
-			<div className="flex flex-col gap-2 max-w-prose text-center lg:text-left">
-				<blockquote className="text-balance italic before:content-['“'] after:content-['”'] before:text-balance after:text-balance">
+			<div className="flex max-w-prose flex-col gap-2 text-center lg:text-left">
+				<blockquote className="text-balance italic before:text-balance before:content-['“'] after:text-balance after:content-['”']">
 					I always learned enough of <strong>OAuth2</strong> to get the job done, after reading this
 					I finally understand how it works.
 				</blockquote>
 				<div className="flex flex-col gap-2">
-					<h2 className="text-lg lg:text-xl leading-none font-medium text-balance">
+					<h2 className="text-lg leading-none font-medium text-balance lg:text-xl">
 						<a href="https://x.com/AlemTuzlak" target="_blank" rel="noreferrer">
 							Alem Tuzlak
 						</a>
 					</h2>
-					<p className="leading-none text-sm font-light">
+					<p className="text-sm leading-none font-light">
 						Co-founder of{" "}
 						<a href="https://x.com/forge42dev" target="_blank" rel="noreferrer">
 							Forge 42
@@ -195,7 +195,7 @@ function Pricing({
 
 					<p>Includes:</p>
 
-					<ul className="list-disc list-inside pl-2 space-y-1.5">
+					<ul className="list-inside list-disc space-y-1.5 pl-2">
 						<li>
 							📘 <strong>The Book</strong> — 47-page guide in PDF and EPUB formats
 						</li>
@@ -236,9 +236,9 @@ function Pricing({
 	];
 
 	return (
-		<section id="pricing" className="flex flex-col gap-10 w-full max-w-5xl p-5">
+		<section id="pricing" className="flex w-full max-w-5xl flex-col gap-10 p-5">
 			<header className="flex flex-col gap-2">
-				<h2 className="font-serif text-3xl lg:text-4xl leading-none font-light text-balance capitalize">
+				<h2 className="font-serif text-3xl leading-none font-light text-balance capitalize lg:text-4xl">
 					Get React Router OAuth2 Handbook
 				</h2>
 
@@ -250,15 +250,15 @@ function Pricing({
 
 			{packages.map((pkg) => (
 				<article key={pkg.title} className="flex flex-col gap-3">
-					<h3 className="font-serif text-xl lg:text-2xl leading-none font-medium text-balance">
+					<h3 className="font-serif text-xl leading-none font-medium text-balance lg:text-2xl">
 						{pkg.title}
 					</h3>
 
-					<div className="flex flex-col gap-2 max-w-prose">{pkg.description}</div>
+					<div className="flex max-w-prose flex-col gap-2">{pkg.description}</div>
 
 					<div className="flex flex-col items-start gap-1">
 						{pkg.discount && (
-							<mark className="text-sm font-light py-1 px-2 rounded-xs animate-bounce mt-2 text-center">
+							<mark className="mt-2 animate-bounce rounded-xs px-2 py-1 text-center text-sm font-light">
 								Limited time offer – only{" "}
 								<time dateTime={pkg.discount.endsAt.toISOString()} className="font-bold">
 									{differenceInCalendarDays(pkg.discount.endsAt, new Date())}
@@ -269,7 +269,7 @@ function Pricing({
 
 						<a
 							href={pkg.link}
-							className="shrink-0 px-5 py-2.5 rounded-xs relative bg-stone-950 text-stone-50 dark:bg-stone-50 dark:text-stone-950 group-data-[status=success]:bg-green-500 dark:group-data-[status=success]:bg-green-600 w-fit"
+							className="relative w-fit shrink-0 rounded-xs bg-stone-950 px-5 py-2.5 text-stone-50 group-data-[status=success]:bg-green-500 dark:bg-stone-50 dark:text-stone-950 dark:group-data-[status=success]:bg-green-600"
 						>
 							<span>Purchase for</span>{" "}
 							{pkg.discount ? (
@@ -285,21 +285,21 @@ function Pricing({
 				</article>
 			))}
 
-			<div className="bg-stone-100 dark:bg-stone-950 border border-stone-800 rounded-2xl p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 lg:-mx-6">
+			<div className="flex flex-col items-start justify-between gap-4 rounded-2xl border border-stone-800 bg-stone-100 p-6 sm:flex-row sm:items-center lg:-mx-6 dark:bg-stone-950">
 				<div>
-					<p className="text-sm text-stone-600 dark:text-stone-400 mb-1">
+					<p className="mb-1 text-sm text-stone-600 dark:text-stone-400">
 						Do you already have The Book?
 					</p>
 					<h3 className="text-lg font-medium dark:text-white">
 						Upgrade to the <strong>Complete Package</strong>
 					</h3>
-					<p className="text-sm text-stone-500 mt-1">
+					<p className="mt-1 text-sm text-stone-500">
 						You only pay the difference and get access to the app + community.
 					</p>
 				</div>
 				<Link
 					to={href("/upgrade")}
-					className="shrink-0 px-5 py-2.5 rounded-xs relative bg-stone-950 text-stone-50 dark:bg-stone-50 dark:text-stone-950 group-data-[status=success]:bg-green-500 dark:group-data-[status=success]:bg-green-600 w-fit"
+					className="relative w-fit shrink-0 rounded-xs bg-stone-950 px-5 py-2.5 text-stone-50 group-data-[status=success]:bg-green-500 dark:bg-stone-50 dark:text-stone-950 dark:group-data-[status=success]:bg-green-600"
 				>
 					Upgrade now →
 				</Link>
@@ -310,9 +310,9 @@ function Pricing({
 
 function Author() {
 	return (
-		<section id="author" className="flex flex-col lg:flex-row gap-5 w-full max-w-5xl p-5">
-			<div className="flex flex-col gap-2 max-w-prose">
-				<h2 className="font-serif text-3xl lg:text-4xl leading-none font-light text-balance capitalize">
+		<section id="author" className="flex w-full max-w-5xl flex-col gap-5 p-5 lg:flex-row">
+			<div className="flex max-w-prose flex-col gap-2">
+				<h2 className="font-serif text-3xl leading-none font-light text-balance capitalize lg:text-4xl">
 					About the Author
 				</h2>
 
@@ -320,7 +320,7 @@ function Author() {
 					Hi,{" "}
 					<a
 						href="https://x.com/sergiodxa"
-						className="underline font-semibold"
+						className="font-semibold underline"
 						target="_blank"
 						rel="noreferrer"
 					>
@@ -335,7 +335,7 @@ function Author() {
 					Everything{" "}
 					<a
 						href="https://sergiodxa.com"
-						className="underline font-semibold"
+						className="font-semibold underline"
 						target="_blank"
 						rel="noreferrer"
 					>
@@ -350,7 +350,7 @@ function Author() {
 			<img
 				src={avatar}
 				alt="Sergio Xalambrí"
-				className="size-50 rounded-full order-first mx-auto lg:mx-0 lg:order-last"
+				className="order-first mx-auto size-50 rounded-full lg:order-last lg:mx-0"
 			/>
 		</section>
 	);
@@ -358,8 +358,8 @@ function Author() {
 
 function FrequentQuestions() {
 	return (
-		<section id="faq" className="flex flex-col gap-10 w-full max-w-5xl p-5">
-			<h2 className="font-serif text-3xl lg:text-4xl leading-none font-light text-balance capitalize">
+		<section id="faq" className="flex w-full max-w-5xl flex-col gap-10 p-5">
+			<h2 className="font-serif text-3xl leading-none font-light text-balance capitalize lg:text-4xl">
 				Frequently Asked Questions
 			</h2>
 
@@ -369,7 +369,7 @@ function FrequentQuestions() {
 					<dl key={index} className="flex flex-col gap-5">
 						{block.map((item) => (
 							<div key={item.q} className="flex flex-col gap-4 text-balance">
-								<dt className="font-serif text-lg lg:text-xl font-semibold">{item.q}</dt>
+								<dt className="font-serif text-lg font-semibold lg:text-xl">{item.q}</dt>
 								<dd className="font-light whitespace-pre-line">{item.a}</dd>
 							</div>
 						))}
