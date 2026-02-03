@@ -7,7 +7,8 @@ describe("Location", () => {
 			let location = new Location({ pathname: "/users" });
 
 			expect(location.pathname).toBe("/users");
-			expect(location.search.toString()).toBe("");
+			expect(location.search).toBe("");
+			expect(location.searchParams.toString()).toBe("");
 			expect(location.hash).toBe("");
 			expect(location.toString()).toBe("/users");
 		});
@@ -19,8 +20,9 @@ describe("Location", () => {
 			});
 
 			expect(location.pathname).toBe("/search");
-			expect(location.search.get("q")).toBe("test");
-			expect(location.search.get("page")).toBe("1");
+			expect(location.searchParams.get("q")).toBe("test");
+			expect(location.searchParams.get("page")).toBe("1");
+			expect(location.search).toBe("?q=test&page=1");
 			expect(location.toString()).toBe("/search?q=test&page=1");
 		});
 
@@ -31,8 +33,8 @@ describe("Location", () => {
 				search: params,
 			});
 
-			expect(location.search.get("q")).toBe("test");
-			expect(location.search.get("page")).toBe("1");
+			expect(location.searchParams.get("q")).toBe("test");
+			expect(location.searchParams.get("page")).toBe("1");
 		});
 
 		test("creates location with hash", () => {
@@ -67,8 +69,8 @@ describe("Location", () => {
 
 		test("updates search params", () => {
 			let location = new Location({ pathname: "/search" });
-			location.search.set("q", "test");
-			location.search.set("page", "2");
+			location.searchParams.set("q", "test");
+			location.searchParams.set("page", "2");
 
 			expect(location.toString()).toBe("/search?q=test&page=2");
 		});
@@ -91,12 +93,12 @@ describe("Location", () => {
 			expect(location.toString()).toBe("/docs#section-2");
 		});
 
-		test("clears hash when set to undefined", () => {
+		test("clears hash when set to empty string", () => {
 			let location = new Location({
 				pathname: "/docs",
 				hash: "section-1",
 			});
-			location.hash = undefined;
+			location.hash = "";
 
 			expect(location.hash).toBe("");
 			expect(location.toString()).toBe("/docs");
@@ -136,7 +138,7 @@ describe("Location", () => {
 
 		test("handles empty search params correctly", () => {
 			let location = new Location({ pathname: "/users" });
-			location.search.set("key", "");
+			location.searchParams.set("key", "");
 
 			expect(location.toString()).toBe("/users?key=");
 		});
@@ -169,7 +171,8 @@ describe("Location", () => {
 			let location = Location.from("https://example.com/users?page=1#top");
 
 			expect(location?.pathname).toBe("/users");
-			expect(location?.search.get("page")).toBe("1");
+			expect(location?.searchParams.get("page")).toBe("1");
+			expect(location?.search).toBe("?page=1");
 			expect(location?.hash).toBe("#top");
 		});
 
@@ -177,7 +180,8 @@ describe("Location", () => {
 			let location = Location.from("/users?page=1#top");
 
 			expect(location?.pathname).toBe("/users");
-			expect(location?.search.get("page")).toBe("1");
+			expect(location?.searchParams.get("page")).toBe("1");
+			expect(location?.search).toBe("?page=1");
 			expect(location?.hash).toBe("#top");
 		});
 
@@ -186,7 +190,8 @@ describe("Location", () => {
 			let location = Location.from(url);
 
 			expect(location?.pathname).toBe("/users");
-			expect(location?.search.get("page")).toBe("1");
+			expect(location?.searchParams.get("page")).toBe("1");
+			expect(location?.search).toBe("?page=1");
 			expect(location?.hash).toBe("#top");
 		});
 

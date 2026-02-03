@@ -6,7 +6,10 @@ export namespace Location {
 	}
 }
 
-export class Location {
+export class Location implements Omit<
+	URL,
+	"origin" | "protocol" | "username" | "password" | "host" | "hostname" | "port" | "href"
+> {
 	#pathname: string;
 	#search: URLSearchParams;
 	#hash: string;
@@ -21,7 +24,12 @@ export class Location {
 		return this.#pathname;
 	}
 
-	get search(): URLSearchParams {
+	get search(): string {
+		let search = this.#search.toString();
+		return search ? `?${search}` : "";
+	}
+
+	get searchParams(): URLSearchParams {
 		return this.#search;
 	}
 
@@ -33,12 +41,12 @@ export class Location {
 		this.#pathname = value;
 	}
 
-	set search(value: string | URLSearchParams | undefined) {
-		this.#search = new URLSearchParams(value);
+	set search(value: string) {
+		this.#search = new URLSearchParams(value.startsWith("?") ? value.slice(1) : value);
 	}
 
-	set hash(value: string | undefined) {
-		this.#hash = value || "";
+	set hash(value: string) {
+		this.#hash = value;
 	}
 
 	toString() {
