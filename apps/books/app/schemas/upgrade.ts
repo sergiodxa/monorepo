@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 export const upgradeSchema = z.object({
-	email: z.string().email("Invalid email address"),
+	email: z.email({ message: "Invalid email address" }),
 	source: z.string().optional(),
 	campaign: z.string().optional(),
 	medium: z.string().optional(),
