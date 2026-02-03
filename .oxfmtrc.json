@@ -3,6 +3,22 @@
 	"ignorePatterns": [],
 	"useTabs": true,
 	"experimentalSortPackageJson": true,
+	"experimentalSortImports": {
+		"groups": [
+			["side-effect"],
+			["builtin"],
+			["type-external"],
+			["external"],
+			["type-internal"],
+			["internal"],
+			["type-parent"],
+			["parent"],
+			["type-sibling"],
+			["sibling"],
+			["type-index"],
+			["index"]
+		]
+	},
 	"overrides": [
 		{
 			"files": ["apps/books/**/*.{js,jsx,ts,tsx}"],
