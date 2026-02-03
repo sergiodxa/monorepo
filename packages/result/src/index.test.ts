@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+
 import { success, failure, isSuccess, isFailure, succeeded, failed, type Result } from "./index";
 
 describe("Result", () => {

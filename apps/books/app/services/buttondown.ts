@@ -1,6 +1,6 @@
 import { APIClient } from "@edgefirst-dev/api-client";
-import { z } from "zod";
 import { env } from "cloudflare:workers";
+import { z } from "zod";
 
 class Buttondown extends APIClient {
 	constructor(protected override readonly options: { apiKey: string; fetch: typeof fetch }) {

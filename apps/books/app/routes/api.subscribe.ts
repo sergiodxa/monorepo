@@ -3,9 +3,11 @@ import { badRequest } from "@pkg/response";
 import { isFailure } from "@pkg/result";
 import { validate, ValidationError } from "@pkg/validate";
 import { href, redirect } from "react-router";
+
 import { subscribeSchema } from "~/schemas/subscribe";
 import { ButtondownError } from "~/services/buttondown";
 import { subscribe } from "~/use-case/subscribe";
+
 import type { Route } from "./+types/api.subscribe";
 
 export async function action({ request }: Route.ActionArgs) {

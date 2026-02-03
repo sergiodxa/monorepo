@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+
 import { cn, extendClassName } from "./index";
 
 describe("cn", () => {

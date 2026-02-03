@@ -1,5 +1,3 @@
-import Prism from "prismjs";
-
 // Load the grammars you want to support
 import "prismjs/components/prism-cshtml";
 import "prismjs/components/prism-css";
@@ -7,6 +5,8 @@ import "prismjs/components/prism-javascript";
 import "prismjs/components/prism-json";
 import "prismjs/components/prism-jsx";
 import "prismjs/components/prism-typescript";
+
+import Prism from "prismjs";
 
 type FenceProps = {
 	children: string;

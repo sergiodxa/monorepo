@@ -1,13 +1,16 @@
-import { useMemo } from "react";
-import { Form, href, redirectDocument, useNavigation, useSearchParams } from "react-router";
 import { Location } from "@pkg/location";
+import { badRequest } from "@pkg/response";
 import { isFailure } from "@pkg/result";
 import { validate, ValidationError } from "@pkg/validate";
-import { badRequest } from "@pkg/response";
+import { useMemo } from "react";
+import { Form, href, redirectDocument, useNavigation, useSearchParams } from "react-router";
+
 import { Product } from "~/data/product";
-import { upgradeSchema } from "./schemas.server";
 import polar from "~/services/polar";
+
 import type { Route } from "./+types/route";
+
+import { upgradeSchema } from "./schemas.server";
 
 export async function action({ request }: Route.ActionArgs) {
 	let formData = await request.formData();

@@ -6,12 +6,14 @@ import { validate, ValidationError } from "@pkg/validate";
 import dark from "prism-theme-github/themes/prism-theme-github-copilot.css?url";
 import light from "prism-theme-github/themes/prism-theme-github-light.css?url";
 import * as React from "react";
+
 import { Fence, fence } from "~/components/fence";
 import { SampleChapterForm } from "~/components/sample-chapter-form";
 import sample from "~/data/sample.md?raw";
 import { subscribeSchema } from "~/schemas/subscribe";
 import { ButtondownError } from "~/services/buttondown";
 import { subscribe } from "~/use-case/subscribe";
+
 import type { Route } from "./+types/sample";
 
 export async function action({ request }: Route.ActionArgs) {

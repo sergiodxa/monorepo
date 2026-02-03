@@ -1,6 +1,8 @@
 import { describe, expect, test } from "bun:test";
+
 import { Location } from "@pkg/location";
 import { data } from "react-router";
+
 import {
 	badRequest,
 	forbidden,

@@ -1,6 +1,7 @@
 import { differenceInCalendarDays } from "date-fns/differenceInCalendarDays";
 import { href, Link } from "react-router";
 import { z } from "zod";
+
 import alem from "~/assets/alem.png";
 import avatar from "~/assets/avatar.png";
 import { SampleChapterForm } from "~/components/sample-chapter-form";
@@ -8,6 +9,7 @@ import frequentQuestions from "~/data/frequent-questions";
 import { Discounts, Product } from "~/data/product";
 import polar from "~/services/polar";
 import { findApplicableDiscount } from "~/use-case/find-applicable-discount";
+
 import type { Route } from "./+types/release";
 
 const priceFormatter = new Intl.NumberFormat("en-US", {

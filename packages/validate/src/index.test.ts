@@ -1,7 +1,9 @@
 import { describe, expect, test } from "bun:test";
+
 import { isSuccess, isFailure } from "@pkg/result";
-import { validate, ValidationError } from "./index";
 import { z } from "zod";
+
+import { validate, ValidationError } from "./index";
 
 // Define schemas using Zod
 let userSchema = z.object({

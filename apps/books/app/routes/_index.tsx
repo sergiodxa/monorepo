@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import { useFetcher, useSearchParams } from "react-router";
+
 import type { action } from "./api.subscribe";
 
 export default function Home() {

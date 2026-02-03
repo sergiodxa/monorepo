@@ -1,11 +1,13 @@
-import { validateEvent } from "@polar-sh/sdk/webhooks";
-import { success, failure } from "@pkg/result";
 import { ok, badRequest } from "@pkg/response";
+import { success, failure } from "@pkg/result";
+import { validateEvent } from "@polar-sh/sdk/webhooks";
+import { env } from "cloudflare:workers";
+
 import { Product } from "~/data/product";
 import buttondown from "~/services/buttondown";
 import logsnag from "~/services/logsnag";
+
 import type { Route } from "./+types/webhooks.polar";
-import { env } from "cloudflare:workers";
 
 async function processWebhook(request: Request) {
 	if (!env.POLAR_WEBHOOK_SECRET) {

@@ -1,6 +1,9 @@
 import type { Result } from "@pkg/result";
+
 import { success, failure } from "@pkg/result";
+
 import type { SubscribeOutput } from "~/schemas/subscribe";
+
 import buttondown, { ButtondownError } from "~/services/buttondown";
 import logsnag from "~/services/logsnag";
 

@@ -1,6 +1,7 @@
 import { isRouteErrorResponse, Outlet, Scripts, ScrollRestoration } from "react-router";
 
 import type { Route } from "./+types/root";
+
 import styles from "./app.css?url";
 
 export function Layout({ children }: { children: React.ReactNode }) {
