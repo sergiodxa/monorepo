@@ -18,7 +18,6 @@
 
 	"vars": {
 		"BUTTONDOWN_API_VERSION": "2024-07-01",
-		"LOGSNAG_PROJECT": "sergiodxa",
 	},
 
 	"routes": [{ "pattern": "books.sergiodxa.com", "custom_domain": true }],
