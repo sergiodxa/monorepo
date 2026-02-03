@@ -61,7 +61,7 @@ export class Location implements Omit<
 	static from(input: string | URL | Location): Location | undefined {
 		if (typeof input === "string") {
 			if (URL.canParse(input)) return Location.from(new URL(input));
-			let url = new URL(input, "https://www.daffy.org");
+			let url = new URL(input, "https://example.com");
 			return Location.from(url);
 		}
 
@@ -87,7 +87,7 @@ export class Location implements Omit<
 		if (input instanceof Location) return true;
 		if (typeof input === "string") {
 			if (URL.canParse(input)) return true;
-			if (URL.canParse(input, "https://www.daffy.org")) return true;
+			if (URL.canParse(input, "https://example.com")) return true;
 		}
 		return false;
 	}
