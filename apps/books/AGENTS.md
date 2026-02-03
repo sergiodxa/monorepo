@@ -156,6 +156,8 @@ When making changes, test:
 5. ✅ Sample content rendering (Markdoc + Prism syntax highlighting)
 6. ✅ All environment variables are properly bound
 
+If needed, use `hello@sergiodxa.com` as a test email.
+
 ## Troubleshooting
 
 ### "Illegal invocation" errors
@@ -185,8 +187,8 @@ When making changes, test:
 
 ```
 app/
-├── assets/          # Images and static assets
-├── components/      # Reusable React components
+├── assets/         # Images and static assets
+├── components/     # Reusable React components
 ├── data/           # Static data and content
 ├── helpers/        # Utility functions
 ├── routes/         # Route handlers and pages
