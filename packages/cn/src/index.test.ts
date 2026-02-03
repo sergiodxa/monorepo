@@ -1,11 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import {
-	cn,
-	extendClassName,
-	type ClassName,
-	type ClassNameRecord,
-	type StyleRecord,
-} from "./index";
+import { cn, extendClassName } from "./index";
 
 describe("cn", () => {
 	describe("basic usage", () => {
@@ -127,37 +121,37 @@ describe("cn", () => {
 });
 
 describe("types", () => {
-	describe("ClassName type", () => {
+	describe("cn.ClassName type", () => {
 		test("accepts string", () => {
-			let value: ClassName = "foo";
+			let value: cn.ClassName = "foo";
 			expect(cn(value)).toBe("foo");
 		});
 
 		test("accepts undefined", () => {
-			let value: ClassName = undefined;
+			let value: cn.ClassName = undefined;
 			expect(cn(value)).toBe("");
 		});
 
 		test("accepts boolean", () => {
-			let value: ClassName = false;
+			let value: cn.ClassName = false;
 			expect(cn(value)).toBe("");
 		});
 
 		test("accepts object", () => {
-			let value: ClassName = { foo: true, bar: false };
+			let value: cn.ClassName = { foo: true, bar: false };
 			expect(cn(value)).toBe("foo");
 		});
 
 		test("accepts array", () => {
-			let value: ClassName = ["foo", "bar"];
+			let value: cn.ClassName = ["foo", "bar"];
 			expect(cn(value)).toBe("foo bar");
 		});
 	});
 
-	describe("ClassNameRecord type", () => {
+	describe("cn.ClassNameRecord type", () => {
 		test("creates typed record with optional ClassName values", () => {
 			type ButtonSlots = "root" | "icon" | "label";
-			let classNames: ClassNameRecord<ButtonSlots> = {
+			let classNames: cn.ClassNameRecord<ButtonSlots> = {
 				root: "flex items-center",
 				icon: ["w-4", "h-4"],
 				// label is optional, can be omitted
@@ -169,38 +163,16 @@ describe("types", () => {
 		});
 	});
 
-	describe("StyleRecord type", () => {
-		test("creates typed record with CSS properties", () => {
-			type ButtonSlots = "root" | "icon";
-			let styles: StyleRecord<ButtonSlots> = {
-				root: { display: "flex", "--custom-var": "value" },
-			};
-
-			expect(styles.root?.display).toBe("flex");
-			expect(styles.root?.["--custom-var"]).toBe("value");
-		});
-	});
-
 	// Type-level tests using @ts-expect-error
 	// These verify that invalid usage produces type errors
-	test("type errors for invalid ClassNameRecord keys", () => {
+	test("type errors for invalid cn.ClassNameRecord keys", () => {
 		type Slots = "a" | "b";
-		let record: ClassNameRecord<Slots> = { a: "foo" };
+		let record: cn.ClassNameRecord<Slots> = { a: "foo" };
 
 		// @ts-expect-error - 'c' is not a valid key
 		record.c = "invalid";
 
 		expect(record.a).toBe("foo");
-	});
-
-	test("type errors for invalid StyleRecord keys", () => {
-		type Slots = "root";
-		let styles: StyleRecord<Slots> = {};
-
-		// @ts-expect-error - 'invalid' is not a valid key
-		styles.invalid = { display: "flex" };
-
-		expect(styles.root).toBeUndefined();
 	});
 });
 
@@ -274,5 +246,18 @@ describe("extendClassName", () => {
 
 		let customCn = extendClassName(config);
 		expect(customCn("custom-a", "custom-b")).toBe("custom-b");
+	});
+
+	test("ClassName and ClassNameRecord types are accessible via namespace", () => {
+		let value: extendClassName.ClassName = "foo";
+		expect(cn(value)).toBe("foo");
+
+		type Slots = "root" | "icon";
+		let classNames: extendClassName.ClassNameRecord<Slots> = {
+			root: "flex",
+			icon: ["w-4", "h-4"],
+		};
+		expect(cn(classNames.root)).toBe("flex");
+		expect(cn(classNames.icon)).toBe("w-4 h-4");
 	});
 });

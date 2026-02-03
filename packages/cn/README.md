@@ -33,38 +33,27 @@ cn("base", isLoading ? "opacity-50" : "opacity-100");
 
 ## API
 
-### `cn(...classes: ClassName[]): string`
+### `cn(...classes: cn.ClassName[]): string`
 
 Merges class names with Tailwind-aware conflict resolution.
 
-### `ClassName`
+### `cn.ClassName`
 
 Re-export of `ClassValue` from clsx. Accepts strings, objects, arrays, and falsy values.
 
-### `ClassNameRecord<Key extends string>`
+### `cn.ClassNameRecord<Key extends string>`
 
 Typed record for component slot className.
 
 ```typescript
 type ButtonSlots = "root" | "icon" | "label";
-let className: ClassNameRecord<ButtonSlots> = {
+let className: cn.ClassNameRecord<ButtonSlots> = {
 	root: "flex items-center",
 	icon: ["w-4", "h-4"],
 };
 ```
 
-### `StyleRecord<Key extends string>`
-
-Typed record for component slot styles, including CSS custom properties.
-
-```typescript
-type ButtonSlots = "root" | "icon";
-let style: StyleRecord<ButtonSlots> = {
-	root: { display: "flex", "--button-gap": "8px" },
-};
-```
-
-### `extendClassName(config): (...classes: ClassName[]) => string`
+### `extendClassName(config): (...classes: cn.ClassName[]) => string`
 
 Factory function to create a custom `cn` with extended tailwind-merge configuration. Useful for apps with custom utility classes that should conflict with each other.
 
@@ -82,4 +71,28 @@ const cn = extendClassName({
 cn("stack-v", "stack-h"); // => "stack-h"
 ```
 
-The config type is available via `extendClassName.Config`.
+Types are available via both `cn` and `extendClassName` namespaces:
+
+- `extendClassName.Config` - Configuration type for extendClassName
+- `extendClassName.ClassName` - Same as `cn.ClassName`
+- `extendClassName.ClassNameRecord<Key>` - Same as `cn.ClassNameRecord<Key>`
+
+When using `extendClassName`, you may want to also export a `cn` namespace from your app to keep the types accessible:
+
+```typescript
+// app/lib/cn.ts
+import { extendClassName } from "@pkg/cn";
+
+export const cn = extendClassName({
+	extend: {
+		classGroups: {
+			stack: ["stack-v", "stack-h"],
+		},
+	},
+});
+
+export namespace cn {
+	export type ClassName = extendClassName.ClassName;
+	export type ClassNameRecord<Key extends string> = extendClassName.ClassNameRecord<Key>;
+}
+```
