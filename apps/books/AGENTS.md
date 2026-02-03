@@ -203,24 +203,6 @@ build/              # Build output (gitignored)
 node_modules/       # Dependencies (gitignored)
 ```
 
-## Dependencies
-
-### Core
-
-- `react-router` - Framework
-- `@react-router/cloudflare` - Cloudflare adapter
-- `vite` - Build tool
-- `tailwindcss` - Styling
-
-### Integrations
-
-- `@edgefirst-dev/api-client` - HTTP client wrapper
-- `@edgefirst-dev/data` - Form parsing utilities
-- `@polar-sh/sdk` - Polar API client
-- `@logsnag/node` - LogSnag client
-- `@markdoc/markdoc` - Content rendering
-- `prismjs` - Syntax highlighting
-
 ## Performance Considerations
 
 - Assets are served from Cloudflare's edge network
