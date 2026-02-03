@@ -1,6 +1,5 @@
 import { APIClient } from "@edgefirst-dev/api-client";
 import { z } from "zod";
-import type { UTMPayload } from "../data/utm-payload";
 import { env } from "cloudflare:workers";
 
 class Buttondown extends APIClient {
@@ -27,7 +26,11 @@ class Buttondown extends APIClient {
 		return false;
 	}
 
-	async subscribe(email: string, utm: UTMPayload, ipAddress: string | null) {
+	async subscribe(
+		email: string,
+		utm: { source?: string; campaign?: string; medium?: string },
+		ipAddress: string | null,
+	) {
 		const response = await this.post("/v1/subscribers", {
 			body: JSON.stringify({
 				email,
