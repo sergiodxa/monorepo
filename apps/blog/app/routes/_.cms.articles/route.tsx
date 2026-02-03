@@ -36,7 +36,7 @@ export async function loader(_: Route.LoaderArgs) {
 	});
 }
 
-export async function action({ request, context }: Route.ActionArgs) {
+export async function action({ request }: Route.ActionArgs) {
 	let formData = await request.formData();
 	let intent = z.enum([INTENT.delete, INTENT.moveToTutorial]).parse(formData.get("intent"));
 

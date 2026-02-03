@@ -15,7 +15,7 @@ export async function loader(_: Route.LoaderArgs) {
 	let list = z
 		.object({ from: z.string(), to: z.string() })
 		.array()
-		.parse(keys.map((key: { metadata: unknown }) => key.metadata));
+		.parse(keys.map((key) => key.metadata));
 
 	return ok({ list });
 }

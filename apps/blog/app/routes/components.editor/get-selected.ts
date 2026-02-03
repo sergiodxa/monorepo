@@ -5,7 +5,7 @@ import type { SelectionType } from "./get-selection";
  * the selections positios
  * @param content The full content string
  * @param selection The selections positions
- * @return The sliced string
+ * @returns The sliced string
  */
 export function getSelected(content: string, selection: SelectionType) {
 	if (typeof content !== "string") {

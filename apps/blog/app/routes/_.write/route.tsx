@@ -4,7 +4,7 @@ import { Editor } from "~/routes/components.editor/route";
 
 import type { Route } from "./+types/route";
 
-export async function loader({ request }: Route.LoaderArgs) {
+export async function loader(_: Route.LoaderArgs) {
 	let i18n = getI18nextInstance();
 	let t = i18n.getFixedT(getLocale());
 

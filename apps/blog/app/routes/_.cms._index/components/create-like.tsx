@@ -2,7 +2,7 @@ import { Heading } from "react-aria-components";
 import { useTranslation } from "react-i18next";
 
 import { Button } from "~/ui/Button";
-import { Form, type ValidationErrors } from "~/ui/Form";
+import { Form } from "~/ui/Form";
 import { TextField } from "~/ui/TextField";
 
 import type { Route } from "../+types/route";

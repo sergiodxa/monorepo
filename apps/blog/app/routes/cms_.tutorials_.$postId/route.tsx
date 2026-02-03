@@ -1,7 +1,7 @@
 import dark from "prism-theme-github/themes/prism-theme-github-copilot.css?url";
 import light from "prism-theme-github/themes/prism-theme-github-light.css?url";
 import { useEffect, useMemo, useRef } from "react";
-import { href, redirectDocument, useFetcher } from "react-router";
+import { redirectDocument, useFetcher } from "react-router";
 import { z } from "zod";
 
 import { badRequest, ok } from "~/helpers/response";
@@ -101,7 +101,7 @@ export async function action({ request, params }: Route.ActionArgs) {
 		try {
 			let content = await prettify(body.content);
 			return ok({ intent, content });
-		} catch (error) {
+		} catch {
 			return ok({ intent, content: body.content });
 		}
 	}

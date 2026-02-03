@@ -10,7 +10,7 @@ export type ChangeEventType = Record<string, never>;
  * @param selection The selection position
  * @param  markdown  The current value
  * @param native The native triggered DOM event
- * @return The ChangeEvent object
+ * @returns The ChangeEvent object
  */
 export function createChangeEvent(
 	selected: string,

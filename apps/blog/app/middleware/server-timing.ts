@@ -1,11 +1,10 @@
 import type { Timing } from "@edgefirst-dev/server-timing";
 
-import { unstable_createServerTimingMiddleware } from "remix-utils/middleware/server-timing";
+import { createServerTimingMiddleware } from "remix-utils/middleware/server-timing";
 
 import { getContext } from "./context-storage";
 
-const [serverTimingMiddleware, getTimingCollectorFromContext] =
-	unstable_createServerTimingMiddleware();
+const [serverTimingMiddleware, getTimingCollectorFromContext] = createServerTimingMiddleware();
 
 export { serverTimingMiddleware };
 

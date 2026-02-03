@@ -1,7 +1,7 @@
 import { createWorkersKVSessionStorage } from "@react-router/cloudflare";
 import { env } from "cloudflare:workers";
 import { createCookie, href, redirect } from "react-router";
-import { unstable_createSessionMiddleware } from "remix-utils/middleware/session";
+import { createSessionMiddleware } from "remix-utils/middleware/session";
 import { z } from "zod";
 
 import { getContext } from "./context-storage";
@@ -38,9 +38,9 @@ const sessionStorage = createWorkersKVSessionStorage<SessionData>({
 	cookie,
 });
 
-const [sessionMiddleware, getSessionFromContext] = unstable_createSessionMiddleware(
+const [sessionMiddleware, getSessionFromContext] = createSessionMiddleware(
 	sessionStorage,
-	(prev, next) => {
+	(prev: SessionData, next: SessionData) => {
 		// Check if the session data changed (only user id)
 		if (prev.user?.id !== next.user?.id) return true;
 		// A user logged out

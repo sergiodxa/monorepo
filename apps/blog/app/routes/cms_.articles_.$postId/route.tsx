@@ -63,7 +63,7 @@ export async function loader({ params }: Route.LoaderArgs) {
 	});
 }
 
-export async function action({ request, params, context }: Route.ActionArgs) {
+export async function action({ request, params }: Route.ActionArgs) {
 	let formData = await request.formData();
 
 	let result = Schemas.formData()
@@ -93,7 +93,7 @@ export async function action({ request, params, context }: Route.ActionArgs) {
 		try {
 			let content = await prettify(body.content);
 			return ok({ intent, content });
-		} catch (error) {
+		} catch {
 			return ok({ intent, content: body.content });
 		}
 	}

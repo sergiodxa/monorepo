@@ -17,7 +17,7 @@ export async function loader({ params }: Route.LoaderArgs) {
 		invariant(Object.keys(PROJECTS).includes(project), `The project "${project}" is not supported`);
 
 		return redirectDocument(PROJECTS[project as keyof typeof PROJECTS]);
-	} catch (error) {
+	} catch {
 		return redirect("/");
 	}
 }

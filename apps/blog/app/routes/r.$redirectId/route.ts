@@ -21,7 +21,7 @@ export async function loader({ params }: Route.LoaderArgs) {
 		);
 
 		return redirectDocument(REDIRECTS[redirectId as keyof typeof REDIRECTS]);
-	} catch (error) {
+	} catch {
 		return redirect(href("/"));
 	}
 }

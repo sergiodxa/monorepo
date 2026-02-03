@@ -34,7 +34,7 @@ import { getUser, sessionMiddleware } from "./middleware/session";
 
 export const meta: Route.MetaFunction = ({ data }) => data?.meta ?? [];
 
-export const unstable_middleware = [
+export const middleware = [
 	noWWWMiddleware,
 	noTrailingSlashMiddleware,
 	contextStorageMiddleware,

@@ -49,7 +49,7 @@ export async function loader({ params }: Route.LoaderArgs) {
 	});
 }
 
-export async function action({ request, params, context }: Route.ActionArgs) {
+export async function action({ request, params }: Route.ActionArgs) {
 	let formData = await request.formData();
 
 	let intent = formData.get("intent");
@@ -75,10 +75,7 @@ export async function action({ request, params, context }: Route.ActionArgs) {
 		let cache = getCache();
 		let cacheKey = await cache.list("feed:glossary:");
 
-		await Promise.all([
-			cache.delete("feed:glossary"),
-			await Promise.all(cacheKey.map((key) => cache.delete(key))),
-		]);
+		await Promise.all([cache.delete("feed:glossary"), ...cacheKey.map((key) => cache.delete(key))]);
 
 		return redirectDocument(`${href("/glossary")}#${slug}`);
 	}
@@ -113,10 +110,7 @@ export async function action({ request, params, context }: Route.ActionArgs) {
 		let cache = getCache();
 		let cacheKey = await cache.list("feed:glossary:");
 
-		await Promise.all([
-			cache.delete("feed:glossary"),
-			await Promise.all(cacheKey.map((key) => cache.delete(key))),
-		]);
+		await Promise.all([cache.delete("feed:glossary"), ...cacheKey.map((key) => cache.delete(key))]);
 
 		return redirectDocument(`${href("/glossary")}#${slug}`);
 	}

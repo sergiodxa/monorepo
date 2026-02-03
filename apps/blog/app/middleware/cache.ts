@@ -1,11 +1,11 @@
-import { unstable_createSingletonMiddleware } from "remix-utils/middleware/singleton";
+import { createSingletonMiddleware } from "remix-utils/middleware/singleton";
 
-import { Cache } from "~/modules/cache.server";
+import { Cache } from "~/modules/cache";
 
 import { getBindings } from "./bindings";
 import { getContext } from "./context-storage";
 
-const [cacheMiddleware, getCacheFromContext] = unstable_createSingletonMiddleware({
+const [cacheMiddleware, getCacheFromContext] = createSingletonMiddleware({
 	instantiator: () => {
 		return new Cache.KVStore(getBindings().kv.cache, getBindings().waitUntil);
 	},
