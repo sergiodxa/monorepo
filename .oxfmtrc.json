@@ -2,5 +2,16 @@
 	"$schema": "./node_modules/oxfmt/configuration_schema.json",
 	"ignorePatterns": [],
 	"useTabs": true,
-	"experimentalSortPackageJson": true
+	"experimentalSortPackageJson": true,
+	"overrides": [
+		{
+			"files": ["apps/books/**/*.{js,jsx,ts,tsx}"],
+			"options": {
+				"experimentalTailwindcss": {
+					"stylesheet": "./apps/books/app/app.css",
+					"functions": ["cn"]
+				}
+			}
+		}
+	]
 }
