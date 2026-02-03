@@ -1,6 +1,6 @@
-import "react-router";
-
 import type { Config } from "@react-router/dev/config";
+
+import "react-router";
 
 export default {
 	future: {

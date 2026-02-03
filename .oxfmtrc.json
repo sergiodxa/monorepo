@@ -5,7 +5,6 @@
 	"experimentalSortPackageJson": true,
 	"experimentalSortImports": {
 		"groups": [
-			["side-effect"],
 			["builtin"],
 			["type-external"],
 			["external"],
@@ -16,7 +15,8 @@
 			["type-sibling"],
 			["sibling"],
 			["type-index"],
-			["index"]
+			["index"],
+			["side-effect"]
 		]
 	},
 	"overrides": [
