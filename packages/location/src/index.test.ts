@@ -56,6 +56,29 @@ describe("Location", () => {
 
 			expect(location.toString()).toBe("/users/123?tab=profile#details");
 		});
+
+		test("clones existing Location", () => {
+			let original = new Location({
+				pathname: "/users",
+				search: "page=1",
+				hash: "top",
+			});
+			let clone = new Location(original);
+
+			expect(clone.toString()).toBe(original.toString());
+			expect(clone).not.toBe(original);
+			expect(clone.searchParams).not.toBe(original.searchParams);
+		});
+
+		test("creates from URL object", () => {
+			let url = new URL("https://example.com/users?page=1#top");
+			let location = new Location(url);
+
+			expect(location.pathname).toBe("/users");
+			expect(location.searchParams.get("page")).toBe("1");
+			expect(location.search).toBe("?page=1");
+			expect(location.hash).toBe("#top");
+		});
 	});
 
 	describe("getters and setters", () => {
@@ -205,6 +228,15 @@ describe("Location", () => {
 
 			expect(clone?.toString()).toBe(original.toString());
 			expect(clone).not.toBe(original); // Different instances
+		});
+
+		test("throws TypeError for invalid input", () => {
+			// @ts-expect-error Testing runtime behavior with invalid input
+			expect(() => Location.from(123)).toThrow(TypeError);
+			// @ts-expect-error Testing runtime behavior with invalid input
+			expect(() => Location.from(null)).toThrow(TypeError);
+			// @ts-expect-error Testing runtime behavior with invalid input
+			expect(() => Location.from({})).toThrow(TypeError);
 		});
 	});
 

@@ -14,10 +14,10 @@ export class Location implements Omit<
 	#search: URLSearchParams;
 	#hash: string;
 
-	constructor(options: Location.Options) {
-		this.#pathname = options.pathname;
-		this.#search = new URLSearchParams(options.search);
-		this.#hash = options.hash || "";
+	constructor(input: URL | Location | Location.Options) {
+		this.#pathname = input.pathname;
+		this.#search = new URLSearchParams(input.search);
+		this.#hash = input.hash || "";
 	}
 
 	get pathname() {
@@ -58,26 +58,20 @@ export class Location implements Omit<
 		return this.toString();
 	}
 
-	static from(input: string | URL | Location): Location | undefined {
+	static from(input: string | URL | Location): Location {
 		if (typeof input === "string") {
 			return Location.from(new URL(input, "https://example.com"));
 		}
 
 		if (input instanceof Location) {
-			return new Location({
-				pathname: input.pathname,
-				search: input.search,
-				hash: input.hash,
-			});
+			return new Location(input);
 		}
 
 		if (input instanceof URL) {
-			return new Location({
-				pathname: input.pathname,
-				search: input.searchParams,
-				hash: input.hash,
-			});
+			return new Location(input);
 		}
+
+		throw new TypeError("Location.from expects a string, URL, or Location");
 	}
 
 	static canParse(input: unknown): boolean {
