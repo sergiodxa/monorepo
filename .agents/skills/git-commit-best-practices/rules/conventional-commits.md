@@ -6,7 +6,7 @@ tags: [message, structure, convention]
 
 # Use Conventional Commits
 
-All commits MUST follow the Conventional Commits specification with type, scope, and description.
+All commits MUST follow the Conventional Commits specification with type, optional scope, and description.
 
 ## Why
 
@@ -19,138 +19,106 @@ All commits MUST follow the Conventional Commits specification with type, scope,
 
 ```
 <type>(<scope>): <description>
+<type>: <description>
 
-# Required parts:
-# - type: feat, fix, docs, refactor, test, chore, style, perf
-# - scope: app or package name (apps/books, packages/auth, etc.)
-# - description: brief summary of the change
+# Parts:
+# - type (required): feat, fix, docs, refactor, test, chore, style, perf
+# - scope (optional): identifies what was changed
+# - description (required): brief summary of the change
+```
+
+## Determining the Scope
+
+The scope identifies what part of the codebase was changed. To find the correct scope:
+
+1. **Single app/package**: Use the directory name from `package.json` `name` field (e.g., if `name` is `@apps/my-app`, use `my-app`)
+2. **Root-level changes**: Use `root` for changes to root configuration files (package.json, tsconfig.json, pre-commit hooks, etc.)
+3. **Multiple packages**: Omit the scope entirely when changes span multiple apps/packages
+4. **Tooling configs**: Use the tool name when adding/configuring tooling (e.g., `oxfmt`, `eslint`)
+
+```bash
+# Check package.json to find the scope name
+cat apps/*/package.json | grep '"name"'
+cat packages/*/package.json | grep '"name"'
 ```
 
 ## Good: Proper Conventional Commits
 
 ```bash
-# Feature in an app
-git commit -m "feat(apps/books): add book search functionality"
+# Single package change - scope from package name
+git commit -m "feat(<app-name>): add search functionality"
+git commit -m "fix(<package-name>): resolve timeout issue"
 
-# Bug fix in a package
-git commit -m "fix(packages/auth): resolve token expiration issue"
+# Root-level changes
+git commit -m "chore(root): add pre-commit hook"
+git commit -m "chore(root): update workspace dependencies"
 
-# Documentation update
-git commit -m "docs(apps/store): update API integration guide"
+# Tooling configuration
+git commit -m "feat(<tool-name>): enable import sorting"
 
-# Refactoring
-git commit -m "refactor(packages/ui): extract button variants to constants"
-
-# Tests
-git commit -m "test(apps/books): add integration tests for search"
-
-# Chore (deps, build, etc.)
-git commit -m "chore(packages/db): update prisma to v5.8.0"
-
-# Performance improvement
-git commit -m "perf(apps/dashboard): optimize chart rendering"
-
-# Code style/formatting
-git commit -m "style(packages/ui): apply prettier formatting"
+# Global changes across multiple packages - no scope
+git commit -m "refactor: sort imports across codebase"
+git commit -m "chore: update dependencies in all packages"
+git commit -m "style: apply new formatting rules"
 ```
 
 ## Bad: Missing or Incorrect Format
 
 ```bash
-# Bad: No scope
-git commit -m "feat: add search"
-
 # Bad: No type
-git commit -m "add book search"
-
-# Bad: Wrong scope format (should be apps/ or packages/)
-git commit -m "feat(books): add search"
+git commit -m "add search"
 
 # Bad: No colon after scope
-git commit -m "feat(apps/books) add search"
+git commit -m "feat(<scope>) add search"
 
 # Bad: Capitalized description
-git commit -m "feat(apps/books): Add search functionality"
+git commit -m "feat(<scope>): Add search functionality"
 
 # Bad: Period at end
-git commit -m "feat(apps/books): add search functionality."
+git commit -m "feat(<scope>): add search functionality."
+
+# Bad: Missing scope for single-package change
+git commit -m "feat: add search"  # Should include scope if only one package changed
+
+# Bad: Using wildcards or invented scopes for global changes
+git commit -m "refactor(*): sort imports"    # Should omit scope
+git commit -m "chore(all): update deps"      # Should omit scope
+git commit -m "chore(global): apply format"  # Should omit scope
 ```
 
 ## Commit Types
 
 **feat**: A new feature or enhancement
 
-```bash
-feat(apps/books): add book recommendation engine
-feat(packages/auth): add OAuth2 support
-```
-
 **fix**: A bug fix
-
-```bash
-fix(apps/books): resolve search pagination issue
-fix(packages/db): prevent connection pool exhaustion
-```
 
 **docs**: Documentation changes only
 
-```bash
-docs(apps/books): update search API documentation
-docs(packages/auth): add OAuth setup instructions
-```
-
 **refactor**: Code restructuring without behavior change
-
-```bash
-refactor(apps/books): extract search logic to service
-refactor(packages/ui): simplify button component props
-```
 
 **test**: Adding or updating tests
 
-```bash
-test(apps/books): add unit tests for search service
-test(packages/auth): add E2E tests for login flow
-```
-
 **chore**: Build, dependencies, tooling
-
-```bash
-chore(apps/books): update dependencies
-chore(packages/db): configure connection pooling
-```
 
 **style**: Code formatting, whitespace, etc.
 
-```bash
-style(apps/books): apply ESLint fixes
-style(packages/ui): format with prettier
-```
-
 **perf**: Performance improvements
 
-```bash
-perf(apps/books): add caching to search queries
-perf(packages/db): optimize database indexes
-```
+## When to Omit Scope
 
-## Scope Format
-
-Scope MUST indicate the app or package:
+Omit the scope when changes affect multiple apps/packages across the monorepo:
 
 ```bash
-# Apps
-feat(apps/books):
-feat(apps/store):
-feat(apps/dashboard):
+# Good: No scope for cross-cutting changes
+refactor: apply new code style across codebase
+chore: update TypeScript version in all packages
+style: sort imports with new configuration
 
-# Packages
-fix(packages/auth):
-fix(packages/ui):
-fix(packages/db):
-
-# Monorepo root (rarely used)
-chore(root): update workspace dependencies
+# Bad: Don't invent scopes for global changes
+refactor(*): apply new code style
+chore(all): update TypeScript
+chore(global): sort imports
+chore(monorepo): update dependencies
 ```
 
 ## Description Guidelines
@@ -164,12 +132,12 @@ The description should:
 
 ```bash
 # Good
-feat(apps/books): add search functionality
-fix(packages/auth): resolve session timeout issue
+feat(<scope>): add search functionality
+fix(<scope>): resolve session timeout issue
 
 # Bad
-feat(apps/books): Added search functionality  # Not imperative, capitalized
-fix(packages/auth): Fixes session timeout.    # Not imperative, has period
+feat(<scope>): Added search functionality  # Not imperative, capitalized
+fix(<scope>): Fixes session timeout.       # Not imperative, has period
 ```
 
 ## Breaking Changes
@@ -177,22 +145,23 @@ fix(packages/auth): Fixes session timeout.    # Not imperative, has period
 Use `!` after the scope for breaking changes:
 
 ```bash
-feat(packages/auth)!: remove deprecated login method
-refactor(apps/books)!: change search API response format
+feat(<scope>)!: remove deprecated login method
+refactor(<scope>)!: change API response format
 ```
 
 Or add `BREAKING CHANGE:` in the commit body:
 
 ```bash
-git commit -m "feat(packages/auth): update authentication flow
+git commit -m "feat(<scope>): update authentication flow
 
 BREAKING CHANGE: removed support for API key authentication"
 ```
 
 ## Rules
 
-1. Every commit MUST follow format: `<type>(<scope>): <description>`
-2. Scope MUST be `apps/<name>` or `packages/<name>`
-3. Description MUST start lowercase, use imperative mood
-4. No period at end of description
-5. Use `!` for breaking changes
+1. Every commit MUST follow format: `<type>(<scope>): <description>` or `<type>: <description>`
+2. Scope is derived from the package name or use `root` for root-level changes
+3. Omit scope when changes affect multiple packages across the monorepo
+4. Description MUST start lowercase, use imperative mood
+5. No period at end of description
+6. Use `!` for breaking changes
