@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { Form, redirectDocument, useNavigation, useSearchParams } from "react-router";
+import { Form, href, redirectDocument, useNavigation, useSearchParams } from "react-router";
 import { Location } from "@pkg/location";
 import { isFailure } from "@pkg/result";
 import { validate, ValidationError } from "@pkg/validate";
@@ -27,7 +27,7 @@ export async function action({ request }: Route.ActionArgs) {
 	// The user never purchased anything
 	if (!customers.result.items[0]) {
 		let location = new Location({
-			pathname: "/api/checkout/complete",
+			pathname: href("/api/checkout/:type", { type: "complete" }),
 			search: new URLSearchParams({ email }),
 		});
 
@@ -43,7 +43,7 @@ export async function action({ request }: Route.ActionArgs) {
 	// The user has never purchased the Essentials package
 	if (!orders.result.items[0]) {
 		let location = new Location({
-			pathname: "/api/checkout/complete",
+			pathname: href("/api/checkout/:type", { type: "complete" }),
 			search: new URLSearchParams({ email }),
 		});
 

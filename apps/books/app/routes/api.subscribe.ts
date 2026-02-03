@@ -2,7 +2,7 @@ import { getClientIP } from "@pkg/get-client-ip";
 import { badRequest } from "@pkg/response";
 import { isFailure } from "@pkg/result";
 import { validate, ValidationError } from "@pkg/validate";
-import { redirect } from "react-router";
+import { href, redirect } from "react-router";
 import { subscribeSchema } from "~/schemas/subscribe";
 import { ButtondownError } from "~/services/buttondown";
 import { subscribe } from "~/use-case/subscribe";
@@ -42,11 +42,11 @@ export async function action({ request }: Route.ActionArgs) {
 				});
 			}
 
-			if (error.code === "email_already_exists") return redirect("/release");
+			if (error.code === "email_already_exists") return redirect(href("/release"));
 		}
 
 		return badRequest({ error: error.message });
 	}
 
-	return redirect("/release");
+	return redirect(href("/release"));
 }
