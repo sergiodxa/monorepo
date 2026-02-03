@@ -16,3 +16,8 @@ bun typecheck || {
   echo "❌ Type checking failed."
   exit 1
 }
+
+bun test || {
+  echo "❌ Tests failed."
+  exit 1
+}
