@@ -20,11 +20,13 @@
       "name": "@apps/books",
       "dependencies": {
         "@edgefirst-dev/api-client": "^0.3.0",
-        "@edgefirst-dev/data": "^0.0.4",
         "@logsnag/node": "^1.0.1",
         "@markdoc/markdoc": "^0.5.4",
         "@pkg/get-client-ip": "workspace:*",
+        "@pkg/location": "workspace:*",
         "@pkg/response": "workspace:*",
+        "@pkg/result": "workspace:*",
+        "@pkg/validate": "workspace:*",
         "@polar-sh/sdk": "^0.42.5",
         "@react-router/cloudflare": "^7.13.0",
         "@react-router/serve": "^7.13.0",
@@ -183,8 +185,6 @@
     "@cspotcode/source-map-support": ["@cspotcode/source-map-support@0.8.1", "", { "dependencies": { "@jridgewell/trace-mapping": "0.3.9" } }, "sha512-IchNf6dN4tHoMFIn/7OE8LWZ19Y6q/67Bmf6vnGREv8RSbBVb9LPJxEcnwrcwX6ixSvaiGoomAUvu4YSxXrVgw=="],
 
     "@edgefirst-dev/api-client": ["@edgefirst-dev/api-client@0.3.0", "", {}, "sha512-x47XQgrDuX89RGvqvs+0MeHJ6IcWDCuoS2ht5oA0og6/GtVh5OvMTiwzzzigkHdj/LXGtCv60zg7E8VAJKiXoQ=="],
-
-    "@edgefirst-dev/data": ["@edgefirst-dev/data@0.0.4", "", {}, "sha512-VLhlvEPDJ0Sd0pE6sAYTQkIqZCXVonaWlgRJIQQHzfjTXCadF77qqHj5NxaPSc4wCul0DJO/0MnejVqJAXUiRg=="],
 
     "@emnapi/runtime": ["@emnapi/runtime@1.8.1", "", { "dependencies": { "tslib": "^2.4.0" } }, "sha512-mehfKSMWjjNol8659Z8KxEMrdSJDDot5SXMq00dM8BN4o+CLNXQ0xH2V7EchNHV4RmbZLmmPdEaXZc5H2FXmDg=="],
 
