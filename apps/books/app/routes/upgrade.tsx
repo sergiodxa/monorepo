@@ -1,40 +1,56 @@
 import { useMemo } from "react";
-import { Form, href, redirectDocument, useNavigation, useSearchParams } from "react-router";
-import { z } from "zod";
+import { Form, redirectDocument, useNavigation, useSearchParams } from "react-router";
+import { Location } from "@pkg/location";
+import { isFailure } from "@pkg/result";
+import { validate, ValidationError } from "@pkg/validate";
+import { badRequest } from "@pkg/response";
 import { Product } from "~/data/product";
+import { upgradeSchema } from "~/schemas/upgrade";
 import polar from "~/services/polar";
 import type { Route } from "./+types/upgrade";
 
 export async function action({ request }: Route.ActionArgs) {
 	const formData = await request.formData();
-	let email = z.string().email().parse(formData.get("email"));
-	let customers = await polar.customers.list({ email });
+	const validationResult = await validate(formData, upgradeSchema);
+
+	if (isFailure(validationResult)) {
+		const error = validationResult.error;
+		if (error instanceof ValidationError && error.issues[0]) {
+			return badRequest({ error: error.issues[0].message });
+		}
+		return badRequest({ error: "Invalid form data" });
+	}
+
+	const { email } = validationResult.data;
+	const customers = await polar.customers.list({ email });
 
 	// The user never purchased anything
 	if (!customers.result.items[0]) {
-		let url = new URL(href("/api/checkout/:type", { type: "complete" }), request.url);
+		const location = new Location({
+			pathname: "/api/checkout/complete",
+			search: new URLSearchParams({ email }),
+		});
 
-		url.searchParams.set("email", email);
-
-		return redirectDocument(url.toString());
+		return redirectDocument(location.toString());
 	}
 
-	let [customer] = customers.result.items;
-	let orders = await polar.orders.list({
+	const [customer] = customers.result.items;
+	const orders = await polar.orders.list({
 		customerId: customer.id,
 		productId: Product.Essentials,
 	});
 
 	// The user has never purchased the Essentials package
 	if (!orders.result.items[0]) {
-		let url = new URL(href("/api/checkout/:type", { type: "complete" }), request.url);
+		const location = new Location({
+			pathname: "/api/checkout/complete",
+			search: new URLSearchParams({ email }),
+		});
 
-		url.searchParams.set("email", email);
-
-		return redirectDocument(url.toString());
+		return redirectDocument(location.toString());
 	}
 
-	let checkout = await polar.checkouts.create({
+	const checkout = await polar.checkouts.create({
 		customerId: customer.id,
 		discountId: "e0fa5513-ad25-4140-a72a-b5d0cd88c29d",
 		products: [Product.Complete],
@@ -44,16 +60,17 @@ export async function action({ request }: Route.ActionArgs) {
 	return redirectDocument(checkout.url);
 }
 
-export default function Component() {
+export default function Component({ actionData }: Route.ComponentProps) {
 	const [searchParams] = useSearchParams();
 
 	let navigation = useNavigation();
 
-	const status = useMemo<"idle" | "loading">(() => {
+	const status = useMemo<"idle" | "loading" | "failure">(() => {
+		if (actionData?.ok === false) return "failure";
 		if (navigation.state === "submitting") return "loading";
 		if (navigation.state === "loading") return "loading";
 		return "idle";
-	}, [navigation.state]);
+	}, [navigation.state, actionData]);
 
 	return (
 		<section id="sample" className="flex flex-col gap-10 w-full max-w-5xl py-5 max-lg:px-5">
@@ -129,6 +146,10 @@ export default function Component() {
 						</span>
 					</button>
 				</div>
+
+				{actionData?.ok === false && (
+					<p className="text-sm text-red-600 dark:text-red-400">{actionData.error}</p>
+				)}
 			</Form>
 		</section>
 	);

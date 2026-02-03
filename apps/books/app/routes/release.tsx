@@ -18,13 +18,15 @@ const priceFormatter = new Intl.NumberFormat("en-US", {
 });
 
 export async function loader() {
-	let [essentials, complete, discount] = await Promise.all([
+	const [essentials, complete, discountResult] = await Promise.all([
 		polar.products.get({ id: Product.Essentials }),
 		polar.products.get({ id: Product.Complete }),
 		findApplicableDiscount(),
 	]);
 
-	let pricesSchema = z
+	const discount = discountResult.status === "success" ? discountResult.data : undefined;
+
+	const pricesSchema = z
 		.object({
 			prices: z
 				.object({ priceAmount: z.number().transform((v) => v / 100) })

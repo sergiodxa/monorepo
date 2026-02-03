@@ -1,13 +1,15 @@
 import { validateEvent } from "@polar-sh/sdk/webhooks";
+import { success, failure } from "@pkg/result";
+import { ok, badRequest } from "@pkg/response";
 import { Product } from "~/data/product";
 import buttondown from "~/services/buttondown";
 import logsnag from "~/services/logsnag";
 import type { Route } from "./+types/webhooks.polar";
 import { env } from "cloudflare:workers";
 
-export async function action({ request }: Route.ActionArgs) {
+async function processWebhook(request: Request) {
 	if (!env.POLAR_WEBHOOK_SECRET) {
-		throw new Error("POLAR_WEBHOOK_SECRET is not set");
+		return failure(new Error("POLAR_WEBHOOK_SECRET is not set"));
 	}
 
 	try {
@@ -19,7 +21,7 @@ export async function action({ request }: Route.ActionArgs) {
 
 		if (event.type === "order.paid") {
 			if (!event.data.product) {
-				return new Response("Product is required", { status: 400 });
+				return failure(new Error("Product is required"));
 			}
 
 			const productId = event.data.product.id;
@@ -45,8 +47,21 @@ export async function action({ request }: Route.ActionArgs) {
 			});
 		}
 
-		return new Response("OK", { status: 200 });
-	} catch {
-		return new Response("Error processing webhook", { status: 400 });
+		return success("OK");
+	} catch (error) {
+		if (error instanceof Error) {
+			return failure(error);
+		}
+		return failure(new Error("Error processing webhook"));
 	}
+}
+
+export async function action({ request }: Route.ActionArgs) {
+	const result = await processWebhook(request);
+
+	if (result.status === "success") {
+		return ok(null);
+	}
+
+	return badRequest({ error: result.error.message });
 }
