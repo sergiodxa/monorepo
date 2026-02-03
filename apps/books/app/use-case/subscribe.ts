@@ -1,11 +1,11 @@
 import type { Result } from "@pkg/result";
 
+import { logger } from "@pkg/logger";
 import { success, failure } from "@pkg/result";
 
 import type { SubscribeOutput } from "~/schemas/subscribe";
 
 import buttondown, { ButtondownError } from "~/services/buttondown";
-import logsnag from "~/services/logsnag";
 
 export async function subscribe(
 	payload: SubscribeOutput,
@@ -30,12 +30,12 @@ export async function subscribe(
 			ipAddress,
 		);
 
-		await logsnag.track({
+		logger.info("user_subscribed", {
 			channel: "newsletter",
-			event: "User Subscribed",
-			timestamp: new Date(),
-			user_id: payload.email,
-			description: "User subscribed to React Router OAuth2 Handbook Newsletter",
+			email: payload.email,
+			source: payload.source,
+			campaign: payload.campaign,
+			medium: payload.medium,
 		});
 
 		return success("Subscribed");

@@ -1,3 +1,4 @@
+import { logger } from "@pkg/logger";
 import { ok, badRequest } from "@pkg/response";
 import { success, failure } from "@pkg/result";
 import { validateEvent } from "@polar-sh/sdk/webhooks";
@@ -5,7 +6,6 @@ import { env } from "cloudflare:workers";
 
 import { Product } from "~/data/product";
 import buttondown from "~/services/buttondown";
-import logsnag from "~/services/logsnag";
 
 import type { Route } from "./+types/webhooks.polar";
 
@@ -40,12 +40,11 @@ async function processWebhook(request: Request) {
 				}
 			}
 
-			await logsnag.track({
+			logger.info("order_paid", {
 				channel: "payments",
-				event: "Order Paid",
-				timestamp: event.data.createdAt,
-				user_id: customerEmail,
-				description: `Order paid for ${productName} (${productId})`,
+				email: customerEmail,
+				product: productName,
+				productId,
 			});
 		}
 

@@ -13,10 +13,10 @@
 	},
 	"dependencies": {
 		"@edgefirst-dev/api-client": "^0.3.0",
-		"@logsnag/node": "^1.0.1",
 		"@markdoc/markdoc": "^0.5.4",
 		"@pkg/get-client-ip": "workspace:*",
 		"@pkg/location": "workspace:*",
+		"@pkg/logger": "workspace:*",
 		"@pkg/response": "workspace:*",
 		"@pkg/result": "workspace:*",
 		"@pkg/validate": "workspace:*",

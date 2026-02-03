@@ -8,7 +8,7 @@ This is a landing page and sales funnel for the "React Router OAuth2 Handbook" b
 - **Runtime**: Cloudflare Workers
 - **Styling**: Tailwind CSS v4
 - **Content**: Markdoc for sample chapter rendering
-- **Integrations**: Buttondown (email), Polar (payments), LogSnag (analytics)
+- **Integrations**: Buttondown (email), Polar (payments)
 
 ## Architecture
 
@@ -42,10 +42,6 @@ All services use the `cloudflare:workers` module for environment variables:
    - Checkout session creation
    - Customer management
 
-3. **LogSnag** (`app/services/logsnag.ts`)
-   - Event tracking
-   - Analytics logging
-
 ### Configuration Files
 
 - `wrangler.jsonc` - Cloudflare Workers configuration
@@ -78,8 +74,6 @@ Required in `.dev.vars`:
 ```
 BUTTONDOWN_API_KEY=your_key
 BUTTONDOWN_API_VERSION=2024-07-01
-LOGSNAG_API_KEY=your_key
-LOGSNAG_PROJECT=sergiodxa
 POLAR_ACCESS_TOKEN=your_token
 POLAR_WEBHOOK_SECRET=your_secret
 ```
