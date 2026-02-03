@@ -9,24 +9,24 @@ import { subscribe } from "~/use-case/subscribe";
 import type { Route } from "./+types/api.subscribe";
 
 export async function action({ request }: Route.ActionArgs) {
-	const formData = await request.formData();
-	const validationResult = await validate(formData, subscribeSchema);
+	let formData = await request.formData();
+	let validationResult = await validate(formData, subscribeSchema);
 
 	if (isFailure(validationResult)) {
-		const error = validationResult.error;
+		let error = validationResult.error;
 		if (error instanceof ValidationError && error.issues[0]) {
 			return badRequest({ error: error.issues[0].message });
 		}
 		return badRequest({ error: "Invalid form data" });
 	}
 
-	const payload = validationResult.data;
-	const ipAddress = getClientIP(request);
+	let payload = validationResult.data;
+	let ipAddress = getClientIP(request);
 
-	const result = await subscribe(payload, ipAddress);
+	let result = await subscribe(payload, ipAddress);
 
 	if (isFailure(result)) {
-		const error = result.error;
+		let error = result.error;
 
 		if (error instanceof ButtondownError) {
 			if (error.code === "subscriber_blocked") {

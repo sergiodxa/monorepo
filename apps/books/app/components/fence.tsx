@@ -14,7 +14,7 @@ type FenceProps = {
 };
 
 export function Fence({ children, language }: FenceProps) {
-	const grammar = Prism.languages[language];
+	let grammar = Prism.languages[language];
 	if (!grammar) return <pre className={`language-${language}`}>{children}</pre>;
 
 	let content = Prism.highlight(children, grammar, language);

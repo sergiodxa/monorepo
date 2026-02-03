@@ -7,10 +7,10 @@ type DiscountItem = Awaited<ReturnType<typeof polar.discounts.list>>["result"]["
 
 export async function findApplicableDiscount(): Promise<Result<DiscountItem | undefined, Error>> {
 	try {
-		const discounts = await polar.discounts.list({ limit: 12 });
-		const now = new Date();
+		let discounts = await polar.discounts.list({ limit: 12 });
+		let now = new Date();
 
-		const discount = discounts.result.items
+		let discount = discounts.result.items
 			.filter(
 				(item) =>
 					item.id === Discounts.EARLY ||

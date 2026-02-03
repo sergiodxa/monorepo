@@ -100,7 +100,7 @@ function Hero() {
 }
 
 function Description() {
-	let blocks = [
+	const blocks = [
 		{
 			title: "📘 47-page handbook",
 			description:
@@ -181,7 +181,7 @@ function Pricing({
 	essentials: number;
 	complete: number;
 }) {
-	let packages = [
+	const packages = [
 		{
 			title: "🚀 Complete Package",
 			link: href("/api/checkout/:type", { type: "complete" }),

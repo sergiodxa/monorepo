@@ -10,23 +10,23 @@ import polar from "~/services/polar";
 import type { Route } from "./+types/route";
 
 export async function action({ request }: Route.ActionArgs) {
-	const formData = await request.formData();
-	const validationResult = await validate(formData, upgradeSchema);
+	let formData = await request.formData();
+	let validationResult = await validate(formData, upgradeSchema);
 
 	if (isFailure(validationResult)) {
-		const error = validationResult.error;
+		let error = validationResult.error;
 		if (error instanceof ValidationError && error.issues[0]) {
 			return badRequest({ error: error.issues[0].message });
 		}
 		return badRequest({ error: "Invalid form data" });
 	}
 
-	const { email } = validationResult.data;
-	const customers = await polar.customers.list({ email });
+	let { email } = validationResult.data;
+	let customers = await polar.customers.list({ email });
 
 	// The user never purchased anything
 	if (!customers.result.items[0]) {
-		const location = new Location({
+		let location = new Location({
 			pathname: "/api/checkout/complete",
 			search: new URLSearchParams({ email }),
 		});
@@ -34,15 +34,15 @@ export async function action({ request }: Route.ActionArgs) {
 		return redirectDocument(location.toString());
 	}
 
-	const [customer] = customers.result.items;
-	const orders = await polar.orders.list({
+	let [customer] = customers.result.items;
+	let orders = await polar.orders.list({
 		customerId: customer.id,
 		productId: Product.Essentials,
 	});
 
 	// The user has never purchased the Essentials package
 	if (!orders.result.items[0]) {
-		const location = new Location({
+		let location = new Location({
 			pathname: "/api/checkout/complete",
 			search: new URLSearchParams({ email }),
 		});
@@ -50,7 +50,7 @@ export async function action({ request }: Route.ActionArgs) {
 		return redirectDocument(location.toString());
 	}
 
-	const checkout = await polar.checkouts.create({
+	let checkout = await polar.checkouts.create({
 		customerId: customer.id,
 		discountId: "e0fa5513-ad25-4140-a72a-b5d0cd88c29d",
 		products: [Product.Complete],
@@ -63,7 +63,7 @@ export async function action({ request }: Route.ActionArgs) {
 export default function Component({ actionData }: Route.ComponentProps) {
 	const [searchParams] = useSearchParams();
 
-	let navigation = useNavigation();
+	const navigation = useNavigation();
 
 	const status = useMemo<"idle" | "loading" | "failure">(() => {
 		if (actionData?.ok === false) return "failure";

@@ -10,7 +10,7 @@ type SampleChapterFormProps = {
 export function SampleChapterForm({ error }: SampleChapterFormProps) {
 	const [searchParams] = useSearchParams();
 
-	let navigation = useNavigation();
+	const navigation = useNavigation();
 
 	const status = useMemo<SampleChapterFormStatus>(() => {
 		if (navigation.state === "submitting") return "loading";

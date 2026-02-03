@@ -13,7 +13,7 @@ async function processWebhook(request: Request) {
 	}
 
 	try {
-		const event = validateEvent(
+		let event = validateEvent(
 			await request.text(),
 			Object.fromEntries(request.headers),
 			env.POLAR_WEBHOOK_SECRET,
@@ -24,9 +24,9 @@ async function processWebhook(request: Request) {
 				return failure(new Error("Product is required"));
 			}
 
-			const productId = event.data.product.id;
-			const productName = event.data.product.name;
-			const customerEmail = event.data.customer.email;
+			let productId = event.data.product.id;
+			let productName = event.data.product.name;
+			let customerEmail = event.data.customer.email;
 
 			if (await buttondown.isSubscribed(customerEmail)) {
 				if (productId === Product.Complete) {
@@ -57,7 +57,7 @@ async function processWebhook(request: Request) {
 }
 
 export async function action({ request }: Route.ActionArgs) {
-	const result = await processWebhook(request);
+	let result = await processWebhook(request);
 
 	if (result.status === "success") {
 		return ok(null);
