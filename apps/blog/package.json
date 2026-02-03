@@ -1,20 +1,16 @@
 {
 	"name": "@apps/blog",
 	"private": true,
-	"description": "The code behind sergiodxa.com",
-	"license": "MIT",
 	"type": "module",
 	"scripts": {
 		"dev": "vite dev",
 		"build": "vite build",
 		"start": "vite preview",
-		"cf:deploy": "wrangler deploy",
+		"deploy": "wrangler deploy",
 		"cf:typegen": "wrangler types",
 		"rr:typegen": "react-router typegen",
 		"rr:routes": "react-router routes",
 		"check:types": "tsc",
-		"check:quality": "biome check .",
-		"check:quality:fix": "biome check . --write --unsafe",
 		"db:local:migrate": "wrangler d1 migrations apply --local",
 		"db:remote:migrate": "wrangler d1 migrations apply --remote"
 	},
@@ -62,7 +58,6 @@
 		"zod": "^3.25.67"
 	},
 	"devDependencies": {
-		"@biomejs/biome": "^2.0.4",
 		"@cloudflare/vite-plugin": "^1.7.4",
 		"@cloudflare/workers-types": "^4.20250620.0",
 		"@react-router/dev": "^7.6.2",
