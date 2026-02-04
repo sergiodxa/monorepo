@@ -6,6 +6,7 @@ import { z } from "zod";
 
 import { connections, users } from "~/db/schema";
 import { getDB } from "~/middleware/drizzle";
+import { logger } from "~/middleware/logger";
 import { getSession } from "~/middleware/session";
 import { authenticate } from "~/modules/auth.server";
 import { GitHub } from "~/modules/github.server";
@@ -23,6 +24,8 @@ export async function loader({ request }: Route.LoaderArgs) {
 	succeeded(profileResult, "Failed to fetch GitHub profile");
 	let profile = profileResult.data;
 
+	logger.info("github_profile_fetched", { login: profile.login });
+
 	let db = getDB();
 
 	let connection = await db.query.connections.findFirst({
@@ -36,6 +39,7 @@ export async function loader({ request }: Route.LoaderArgs) {
 		let isSponsorResult = await gh.isSponsoringMe(profile.node_id);
 		succeeded(isSponsorResult, "Failed to check sponsor status");
 
+		logger.info("user_login", { userId: user.id, username: user.username });
 		session.set("user", {
 			...user,
 			githubId: profile.node_id,
@@ -58,13 +62,18 @@ export async function loader({ request }: Route.LoaderArgs) {
 		.onConflictDoNothing({ target: users.email });
 
 	user = result.at(0);
-	if (!user) throw new Error("User was not created or found");
+	if (!user) {
+		logger.error("user_creation_failed", { email: profile.email });
+		throw new Error("User was not created or found");
+	}
 
 	await db.insert(connections).values({
 		userId: user.id,
 		providerName: "github",
 		providerId: profile.node_id,
 	});
+
+	logger.info("user_registered", { userId: user.id, username: user.username });
 
 	let isSponsorResult = await gh.isSponsoringMe(profile.node_id);
 	succeeded(isSponsorResult, "Failed to check sponsor status");

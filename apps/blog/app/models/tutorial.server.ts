@@ -1,4 +1,3 @@
-import { logger } from "@pkg/logger";
 import { and, eq, sql } from "drizzle-orm";
 import Fuse from "fuse.js";
 import * as semver from "semver";
@@ -8,6 +7,7 @@ import type { Database } from "~/db";
 import type { UUID } from "~/utils/uuid";
 
 import * as schema from "~/db/schema";
+import { logger } from "~/middleware/logger";
 import { measure } from "~/middleware/server-timing";
 import { Markdown } from "~/utils/markdown";
 import { assertUUID } from "~/utils/uuid";

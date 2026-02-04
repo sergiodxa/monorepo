@@ -3,6 +3,8 @@ import { Octokit } from "@octokit/core";
 import { type Result, failure, success } from "@pkg/result";
 import { z } from "zod";
 
+import { logger } from "~/middleware/logger";
+
 export class GitHub {
 	private octokit: Octokit;
 
@@ -30,12 +32,18 @@ export class GitHub {
 
 			let createdAt = await this.fetchFileFirstCommitDate(path);
 
+			logger.info("github_file_fetched", { path });
 			return success({ content: atob(response.data.content), createdAt });
 		} catch (error) {
 			if (error instanceof Error && error.name === "HttpError" && error.message === "Not Found") {
+				logger.warn("github_file_not_found", { path });
 				return failure(new GitHubError(path));
 			}
 
+			logger.error("github_api_error", {
+				path,
+				error: error instanceof Error ? error.message : "Unknown error",
+			});
 			throw error;
 		}
 	}
@@ -143,7 +151,13 @@ export class GitHub {
 			})
 			.safeParse(result);
 
-		if (!parsed.success) return failure(new GitHubError("Failed to parse sponsors response"));
+		if (!parsed.success) {
+			logger.error("github_sponsors_parse_failed");
+			return failure(new GitHubError("Failed to parse sponsors response"));
+		}
+		logger.info("github_sponsors_fetched", {
+			count: parsed.data.node.sponsorshipsAsMaintainer.nodes.length,
+		});
 		return success(parsed.data);
 	}
 
@@ -159,7 +173,14 @@ export class GitHub {
 		let parsed = z
 			.object({ node: z.object({ isSponsoringViewer: z.boolean() }) })
 			.safeParse(result);
-		if (!parsed.success) return failure(new GitHubError("Failed to parse sponsoring status"));
+		if (!parsed.success) {
+			logger.error("github_sponsoring_parse_failed", { id });
+			return failure(new GitHubError("Failed to parse sponsoring status"));
+		}
+		logger.info("github_sponsoring_check", {
+			id,
+			isSponsoring: parsed.data.node.isSponsoringViewer,
+		});
 		return success(parsed.data.node.isSponsoringViewer);
 	}
 
@@ -194,7 +215,11 @@ export class GitHub {
 			})
 			.safeParse(json);
 
-		if (!parsed.success) return failure(new GitHubError("Failed to parse user profile"));
+		if (!parsed.success) {
+			logger.error("github_profile_parse_failed");
+			return failure(new GitHubError("Failed to parse user profile"));
+		}
+		logger.info("github_profile_fetch_success", { login: parsed.data.login });
 		return success(parsed.data);
 	}
 }

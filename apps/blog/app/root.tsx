@@ -27,6 +27,7 @@ import type { Route } from "./+types/root";
 import { cacheMiddleware } from "./middleware/cache";
 import { contextStorageMiddleware } from "./middleware/context-storage";
 import { drizzleMiddleware } from "./middleware/drizzle";
+import { loggerMiddleware } from "./middleware/logger";
 import { noTrailingSlashMiddleware } from "./middleware/no-trailing-slash";
 import { rollingCookieMiddleware } from "./middleware/rolling-cookie";
 import { serverTimingMiddleware } from "./middleware/server-timing";
@@ -38,6 +39,7 @@ export const middleware = [
 	noWWWMiddleware,
 	noTrailingSlashMiddleware,
 	contextStorageMiddleware,
+	loggerMiddleware,
 	rollingCookieMiddleware,
 	serverTimingMiddleware,
 	i18nextMiddleware,

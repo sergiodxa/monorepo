@@ -1,7 +1,7 @@
-import { logger } from "@pkg/logger";
 import { isFailure } from "@pkg/result";
 
 import { getI18nextInstance, getLocale } from "~/middleware/i18next";
+import { logger } from "~/middleware/logger";
 import findArticleBySlug from "~/services/find-article-by-slug";
 import findTutorialBySlug from "~/services/find-tutorial-by-slug";
 

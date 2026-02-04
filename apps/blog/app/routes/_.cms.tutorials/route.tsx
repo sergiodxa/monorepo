@@ -1,10 +1,10 @@
-import { logger } from "@pkg/logger";
 import { ok } from "@pkg/response";
 import { href, redirect } from "react-router";
 import { z } from "zod";
 
 import { getDB } from "~/middleware/drizzle";
 import { getLocale } from "~/middleware/i18next";
+import { logger } from "~/middleware/logger";
 import { Tutorial } from "~/models/tutorial.server";
 import { Button } from "~/ui/Button";
 import { Form } from "~/ui/Form";
