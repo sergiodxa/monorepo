@@ -145,9 +145,10 @@ describe("BatchedLogger", () => {
 
 			expect(consoleInfoSpy).toHaveBeenCalledTimes(1);
 			expect(consoleInfoSpy).toHaveBeenCalledWith("GET https://example.com/test", {
+				timestamp: 1738590000000,
 				events: [
-					{ level: "info", event: "event1", key: "value1", timestamp: 1738590000000 },
-					{ level: "info", event: "event2", key: "value2", timestamp: 1738590000000 },
+					{ level: "info", event: "event1", key: "value1" },
+					{ level: "info", event: "event2", key: "value2" },
 				],
 			});
 		});
@@ -201,9 +202,10 @@ describe("BatchedLogger", () => {
 			batchedLogger.flush();
 
 			expect(consoleErrorSpy).toHaveBeenCalledWith("GET https://example.com/test", {
+				timestamp: 1738590000000,
 				events: [
-					{ level: "info", event: "info_event", timestamp: 1738590000000 },
-					{ level: "error", event: "error_event", timestamp: 1738590000000 },
+					{ level: "info", event: "info_event" },
+					{ level: "error", event: "error_event" },
 				],
 			});
 		});
@@ -215,13 +217,13 @@ describe("BatchedLogger", () => {
 			batchedLogger.flush();
 
 			expect(consoleInfoSpy).toHaveBeenCalledWith("GET https://example.com/test", {
+				timestamp: 1738590000000,
 				events: [
 					{
 						level: "info",
 						event: "user_subscribed",
 						email: "test@example.com",
 						source: "homepage",
-						timestamp: 1738590000000,
 					},
 				],
 			});

@@ -8,7 +8,6 @@ type LogEntry = {
 	level: LogLevel;
 	event: string;
 	payload?: LogPayload;
-	timestamp: number;
 };
 
 /**
@@ -55,7 +54,6 @@ export class BatchedLogger {
 			level: "info",
 			event,
 			payload,
-			timestamp: Date.now(),
 		});
 	}
 
@@ -64,7 +62,6 @@ export class BatchedLogger {
 			level: "error",
 			event,
 			payload,
-			timestamp: Date.now(),
 		});
 	}
 
@@ -79,11 +76,11 @@ export class BatchedLogger {
 		let hasError = this.events.some((e) => e.level === "error");
 
 		let output = {
-			events: this.events.map(({ level, event, payload, timestamp }) => ({
+			timestamp: Date.now(),
+			events: this.events.map(({ level, event, payload }) => ({
 				level,
 				event,
 				...payload,
-				timestamp,
 			})),
 		};
 
