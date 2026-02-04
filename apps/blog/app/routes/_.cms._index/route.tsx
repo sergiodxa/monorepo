@@ -1,5 +1,5 @@
 import { badRequest, ok } from "@pkg/response";
-import { isFailure } from "@pkg/result";
+import { isFailure, isSuccess } from "@pkg/result";
 import { validate } from "@pkg/validate";
 import { href, redirect } from "react-router";
 import { z } from "zod";
@@ -27,8 +27,10 @@ export async function loader(_: Route.LoaderArgs) {
 	let bindings = getBindings();
 
 	let gh = new GitHub(bindings.env.GH_APP_ID, bindings.env.GH_APP_PEM);
-	let result = await gh.sponsors();
-	let sponsors = result.node.sponsorshipsAsMaintainer.nodes.map((n) => n.sponsorEntity);
+	let sponsorsResult = await gh.sponsors();
+	let sponsors = isSuccess(sponsorsResult)
+		? sponsorsResult.data.node.sponsorshipsAsMaintainer.nodes.map((n) => n.sponsorEntity)
+		: [];
 
 	return ok({ stats, lastDaySearch, sponsors });
 }

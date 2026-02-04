@@ -1,3 +1,4 @@
+import { succeeded } from "@pkg/result";
 import { env } from "cloudflare:workers";
 import { and, eq } from "drizzle-orm";
 import { href, redirect } from "react-router";
@@ -18,7 +19,9 @@ export async function loader({ request }: Route.LoaderArgs) {
 	let tokens = await authenticate(request);
 	let gh = new GitHub(env.GH_APP_ID, env.GH_APP_PEM);
 
-	let profile = await gh.fetchUserProfile(tokens.accessToken());
+	let profileResult = await gh.fetchUserProfile(tokens.accessToken());
+	succeeded(profileResult, "Failed to fetch GitHub profile");
+	let profile = profileResult.data;
 
 	let db = getDB();
 
@@ -30,10 +33,13 @@ export async function loader({ request }: Route.LoaderArgs) {
 	let user = connection?.user;
 
 	if (user) {
+		let isSponsorResult = await gh.isSponsoringMe(profile.node_id);
+		succeeded(isSponsorResult, "Failed to check sponsor status");
+
 		session.set("user", {
 			...user,
 			githubId: profile.node_id,
-			isSponsor: await gh.isSponsoringMe(profile.node_id),
+			isSponsor: isSponsorResult.data,
 		});
 
 		return redirect(href("/"));
@@ -60,6 +66,9 @@ export async function loader({ request }: Route.LoaderArgs) {
 		providerId: profile.node_id,
 	});
 
+	let isSponsorResult = await gh.isSponsoringMe(profile.node_id);
+	succeeded(isSponsorResult, "Failed to check sponsor status");
+
 	session.set("user", {
 		id: user.id,
 		role: user.role,
@@ -68,7 +77,7 @@ export async function loader({ request }: Route.LoaderArgs) {
 		username: user.username,
 		displayName: user.displayName,
 		githubId: profile.node_id,
-		isSponsor: await gh.isSponsoringMe(profile.node_id),
+		isSponsor: isSponsorResult.data,
 	});
 
 	return redirect(href("/"));

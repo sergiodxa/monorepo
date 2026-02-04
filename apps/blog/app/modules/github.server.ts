@@ -1,5 +1,6 @@
 import { createAppAuth } from "@octokit/auth-app";
 import { Octokit } from "@octokit/core";
+import { type Result, failure, success } from "@pkg/result";
 import { z } from "zod";
 
 export class GitHub {
@@ -12,7 +13,9 @@ export class GitHub {
 		});
 	}
 
-	async fetchMarkdownFile(filename: string) {
+	async fetchMarkdownFile(
+		filename: string,
+	): Promise<Result<{ content: string; createdAt: string | null | undefined }, GitHubError>> {
 		let path = filename.startsWith("content/") ? filename : `content/${filename}`;
 
 		try {
@@ -22,22 +25,22 @@ export class GitHub {
 				path,
 			});
 
-			if (Array.isArray(response.data)) throw new GitHubError("Not a file");
-			if (response.data.type !== "file") throw new GitHubError("Not a file");
+			if (Array.isArray(response.data)) return failure(new GitHubError("Not a file"));
+			if (response.data.type !== "file") return failure(new GitHubError("Not a file"));
 
 			let createdAt = await this.fetchFileFirstCommitDate(path);
 
-			return { content: atob(response.data.content), createdAt };
+			return success({ content: atob(response.data.content), createdAt });
 		} catch (error) {
 			if (error instanceof Error && error.name === "HttpError" && error.message === "Not Found") {
-				throw new GitHubError(path);
+				return failure(new GitHubError(path));
 			}
 
 			throw error;
 		}
 	}
 
-	async listMarkdownFiles(path: string) {
+	async listMarkdownFiles(path: string): Promise<Result<string[], GitHubError>> {
 		try {
 			let response = await this.octokit.request("GET /repos/{owner}/{repo}/contents/{path}", {
 				owner: "sergiodxa",
@@ -45,15 +48,17 @@ export class GitHub {
 				path: `content/${path}`,
 			});
 
-			if (!Array.isArray(response.data)) throw new GitHubError("Not a folder");
+			if (!Array.isArray(response.data)) return failure(new GitHubError("Not a folder"));
 
-			return response.data.map((item) => {
-				if (item.type !== "file") throw new GitHubError("Not a file");
-				return item.path;
-			});
+			let files: string[] = [];
+			for (let item of response.data) {
+				if (item.type !== "file") return failure(new GitHubError("Not a file"));
+				files.push(item.path);
+			}
+			return success(files);
 		} catch (error) {
 			if (error instanceof Error && error.name === "HttpError" && error.message === "Not Found") {
-				throw new GitHubError(path);
+				return failure(new GitHubError(path));
 			}
 
 			throw error;
@@ -109,7 +114,7 @@ export class GitHub {
 			}
 		`);
 
-		return z
+		let parsed = z
 			.object({
 				node: z.object({
 					sponsorshipsAsMaintainer: z.object({
@@ -136,10 +141,13 @@ export class GitHub {
 					}),
 				}),
 			})
-			.parse(result);
+			.safeParse(result);
+
+		if (!parsed.success) return failure(new GitHubError("Failed to parse sponsors response"));
+		return success(parsed.data);
 	}
 
-	async isSponsoringMe(id: string) {
+	async isSponsoringMe(id: string): Promise<Result<boolean, GitHubError>> {
 		let result = await this.octokit.graphql(gql`query {
 	node(id: "${id}") {
 		... on Sponsorable {
@@ -148,11 +156,25 @@ export class GitHub {
 	}
 }`);
 
-		return z.object({ node: z.object({ isSponsoringViewer: z.boolean() }) }).parse(result).node
-			.isSponsoringViewer;
+		let parsed = z
+			.object({ node: z.object({ isSponsoringViewer: z.boolean() }) })
+			.safeParse(result);
+		if (!parsed.success) return failure(new GitHubError("Failed to parse sponsoring status"));
+		return success(parsed.data.node.isSponsoringViewer);
 	}
 
-	async fetchUserProfile(accessToken: string) {
+	async fetchUserProfile(accessToken: string): Promise<
+		Result<
+			{
+				node_id: string;
+				email: string;
+				login: string;
+				name: string;
+				avatar_url: string;
+			},
+			GitHubError
+		>
+	> {
 		let response = await fetch("https://api.github.com/user", {
 			headers: {
 				Accept: "application/vnd.github.v3+json",
@@ -162,7 +184,7 @@ export class GitHub {
 		});
 
 		let json = await response.json();
-		return z
+		let parsed = z
 			.object({
 				node_id: z.string(),
 				email: z.string().email(),
@@ -170,7 +192,10 @@ export class GitHub {
 				name: z.string(),
 				avatar_url: z.string().url(),
 			})
-			.parse(json);
+			.safeParse(json);
+
+		if (!parsed.success) return failure(new GitHubError("Failed to parse user profile"));
+		return success(parsed.data);
 	}
 }
 
