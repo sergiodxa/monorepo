@@ -13,11 +13,13 @@ import type { Route } from "./+types/root";
 
 import { drizzleMiddleware } from "./middleware/drizzle";
 import { i18nextMiddleware } from "./middleware/i18next";
+import { loggerMiddleware } from "./middleware/logger";
 import { sessionMiddleware } from "./middleware/session";
 import styles from "./styles.css?url";
 
 export const middleware = [
 	contextStorageMiddleware,
+	loggerMiddleware,
 	i18nextMiddleware,
 	drizzleMiddleware,
 	sessionMiddleware,

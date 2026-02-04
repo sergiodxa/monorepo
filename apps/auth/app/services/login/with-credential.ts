@@ -5,6 +5,7 @@ import bcrypt from "bcryptjs";
 
 import { MissingValidationError } from "~/errors";
 import { db } from "~/middleware/drizzle";
+import { logger } from "~/middleware/logger";
 import Credential from "~/models/credential";
 import Subject from "~/models/subject";
 
@@ -30,12 +31,14 @@ export default async function loginWithCredential(input: Input) {
 
 		if (credential) {
 			if (credential.verifiedAt === null) {
+				logger.info("login_email_verification_required", { subjectId: subject.id });
 				return failure(new MissingValidationError("Verify your email address."));
 			}
 		}
 
 		if (!credential) {
 			await Credential.create(db(), subject.id, await bcrypt.hash(input.password, 10));
+			logger.info("credential_created", { subjectId: subject.id });
 
 			return failure(new MissingValidationError("Verify your email address."));
 		}
@@ -50,6 +53,7 @@ export default async function loginWithCredential(input: Input) {
 		});
 
 		await Credential.create(db(), subject.id, await bcrypt.hash(input.password, 10));
+		logger.info("subject_created", { subjectId: subject.id, email: input.email });
 	}
 
 	let result = await generateCode({
@@ -61,6 +65,7 @@ export default async function loginWithCredential(input: Input) {
 
 	if (isFailure(result)) return result;
 
+	logger.info("login_code_generated", { subjectId: subject.id });
 	let url = new URL(input.redirectUri);
 	url.searchParams.set("state", input.state);
 	url.searchParams.set("code", result.data.code);

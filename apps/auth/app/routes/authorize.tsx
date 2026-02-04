@@ -6,6 +6,7 @@ import { Form, href, redirectDocument } from "react-router";
 import { z } from "zod";
 
 import { badRequest, notFound, ok, StatusCode } from "~/helpers/response";
+import { logger } from "~/middleware/logger";
 import { session } from "~/middleware/session";
 import generateCode from "~/services/login/generate-code";
 import loginWithCredential from "~/services/login/with-credential";
@@ -25,7 +26,10 @@ export async function loader({ request }: Route.LoaderArgs) {
 	let url = new URL(request.url);
 
 	let result = await validate(url.searchParams, LoaderSchema);
-	if (isFailure(result)) return badRequest({ message: "Invalid request" });
+	if (isFailure(result)) {
+		logger.warn("authz_request_invalid");
+		return badRequest({ message: "Invalid request" });
+	}
 
 	let searchParams = result.data;
 
@@ -36,9 +40,11 @@ export async function loader({ request }: Route.LoaderArgs) {
 
 	if (flowResult.status === "failure") {
 		if (flowResult.error.code === "invalid_client") {
+			logger.warn("authz_invalid_client", { clientId: searchParams.client_id });
 			return notFound({ message: flowResult.error.description });
 		}
 
+		logger.warn("authz_flow_error", { code: flowResult.error.code });
 		return badRequest({ message: flowResult.error.description });
 	}
 
@@ -57,15 +63,18 @@ export async function loader({ request }: Route.LoaderArgs) {
 		url.searchParams.set("state", searchParams.state);
 
 		if (codeResult.status === "failure") {
+			logger.error("authz_sso_code_failed", { subjectId, error: codeResult.error.code });
 			url.searchParams.set("error", codeResult.error.code);
 			url.searchParams.set("error_description", codeResult.error.description);
 			return redirectDocument(url.toString());
 		}
 
+		logger.info("authz_sso_code_generated", { subjectId, clientId: flowResult.data.client.id });
 		url.searchParams.set("code", codeResult.data.code);
 		return redirectDocument(url.toString());
 	}
 
+	logger.info("authz_session_started", { clientId: searchParams.client_id });
 	session().set("authz", {
 		clientId: searchParams.client_id,
 		state: searchParams.state,
@@ -88,10 +97,16 @@ let ActionSchema = z.object({
 
 export async function action({ request }: Route.ActionArgs) {
 	let authz = session().get("authz");
-	if (!authz) return badRequest({ message: "Invalid request" });
+	if (!authz) {
+		logger.warn("authz_action_missing_session");
+		return badRequest({ message: "Invalid request" });
+	}
 
 	let result = await validate(request, ActionSchema);
-	if (isFailure(result)) return badRequest({ message: "Invalid request" });
+	if (isFailure(result)) {
+		logger.warn("authz_action_validation_failed");
+		return badRequest({ message: "Invalid request" });
+	}
 
 	let loginResult = await loginWithCredential({
 		email: result.data.email,
@@ -106,9 +121,14 @@ export async function action({ request }: Route.ActionArgs) {
 	});
 
 	if (loginResult.status === "failure") {
+		logger.warn("authz_credential_login_failed", {
+			email: result.data.email,
+			error: loginResult.error.code,
+		});
 		return ok({ message: loginResult.error.description });
 	}
 
+	logger.info("authz_credential_login_success", { subjectId: loginResult.data.subjectId });
 	session().unset("authz"); // Remove the authz object from the session
 	session().set("sub", loginResult.data.subjectId); // Keep the subject for SSO
 	return redirectDocument(loginResult.data.url.toString());

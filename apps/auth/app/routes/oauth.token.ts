@@ -3,6 +3,7 @@ import { validate } from "@pkg/validate";
 import { base64url } from "jose";
 import { z } from "zod/v4";
 
+import { logger } from "~/middleware/logger";
 import { OAuth2Error } from "~/modules/oauth2";
 import oidc from "~/services/oidc";
 
@@ -42,6 +43,7 @@ export async function action({ request }: Route.ActionArgs) {
 	let result = await validate(request, Schema);
 
 	if (isFailure(result)) {
+		logger.warn("token_request_invalid");
 		return Response.json(
 			{ error: "invalid_request", error_description: "Invalid request body" },
 			{ status: 400 },
@@ -58,6 +60,7 @@ export async function action({ request }: Route.ActionArgs) {
 				codeVerifier: body.code_verifier,
 				redirectUri: body.redirect_uri,
 			});
+			logger.info("token_issued", { grant_type: "authorization_code" });
 			return Response.json(tokenResult, { status: 200 });
 		}
 
@@ -67,6 +70,7 @@ export async function action({ request }: Route.ActionArgs) {
 				refreshToken: body.refresh_token,
 			});
 
+			logger.info("token_issued", { grant_type: "refresh_token" });
 			return Response.json(tokenResult, { status: 200 });
 		}
 
@@ -74,6 +78,7 @@ export async function action({ request }: Route.ActionArgs) {
 			let clientCredentials = getClientCredentialsFromHeader(request.headers);
 
 			if (!clientCredentials) {
+				logger.warn("token_missing_credentials");
 				return Response.json(
 					{
 						error: "invalid_request",
@@ -89,10 +94,15 @@ export async function action({ request }: Route.ActionArgs) {
 				...clientCredentials,
 			});
 
+			logger.info("token_issued", {
+				grant_type: "client_credentials",
+				clientId: clientCredentials.clientId,
+			});
 			return Response.json(tokenResult, { status: 200 });
 		}
 	} catch (error) {
 		if (error instanceof OAuth2Error) {
+			logger.warn("token_oauth2_error", { code: error.code, message: error.message });
 			return Response.json(
 				{ error: error.code, error_description: error.message },
 				{ status: 400 },
@@ -100,6 +110,7 @@ export async function action({ request }: Route.ActionArgs) {
 		}
 
 		if (error instanceof Error) {
+			logger.error("token_exchange_error", { error: error.message });
 			return Response.json(
 				{
 					error: "server_error",
@@ -109,6 +120,7 @@ export async function action({ request }: Route.ActionArgs) {
 			);
 		}
 
+		logger.error("token_exchange_error", { error: "Unknown error" });
 		return Response.json(
 			{
 				error: "server_error",
@@ -118,6 +130,7 @@ export async function action({ request }: Route.ActionArgs) {
 		);
 	}
 
+	logger.warn("token_unsupported_grant");
 	return Response.json(
 		{
 			error: "unsupported_grant_type",

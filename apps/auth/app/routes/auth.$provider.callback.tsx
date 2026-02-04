@@ -3,6 +3,7 @@ import { redirectDocument } from "react-router";
 
 import { badRequest } from "~/helpers/response";
 import { db } from "~/middleware/drizzle";
+import { logger } from "~/middleware/logger";
 import { session } from "~/middleware/session";
 import { github } from "~/providers/github";
 import loginWithProvider from "~/services/login/with-provider";
@@ -10,16 +11,22 @@ import loginWithProvider from "~/services/login/with-provider";
 import type { Route } from "./+types/auth.$provider.callback";
 
 export async function loader({ request, params }: Route.LoaderArgs) {
+	logger.info("oauth_callback_received", { provider: params.provider });
+
 	let sub: string;
 
 	if (params.provider === "github") {
 		sub = await github(db(), request);
 	} else {
+		logger.warn("oauth_invalid_provider", { provider: params.provider });
 		return badRequest({ message: "Invalid provider" });
 	}
 
 	let authz = session().get("authz");
-	if (!authz) return badRequest({ message: "Invalid request" });
+	if (!authz) {
+		logger.warn("oauth_missing_authz_session");
+		return badRequest({ message: "Invalid request" });
+	}
 
 	let result = await loginWithProvider({
 		subjectId: sub,
@@ -31,11 +38,13 @@ export async function loader({ request, params }: Route.LoaderArgs) {
 	});
 
 	if (result.status === "success") {
+		logger.info("oauth_login_success", { provider: params.provider, subjectId: sub });
 		session().unset("authz"); // Remove the authz object from the session
 		session().set("sub", sub); // Keep the subject logged-in for SSO
 		return redirectDocument(result.data.url.toString());
 	}
 
+	logger.error("oauth_login_failed", { provider: params.provider, error: result.error.code });
 	let url = new URL(authz.redirectUri);
 	url.searchParams.set("state", authz.state);
 	url.searchParams.set("error", result.error.code);

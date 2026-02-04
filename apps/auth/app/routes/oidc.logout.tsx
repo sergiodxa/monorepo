@@ -5,6 +5,7 @@ import { Form, redirect, redirectDocument } from "react-router";
 import { z } from "zod";
 
 import { db } from "~/middleware/drizzle";
+import { logger } from "~/middleware/logger";
 import { session } from "~/middleware/session";
 import Session from "~/models/session";
 import oidc from "~/services/oidc";
@@ -21,7 +22,10 @@ export async function loader({ request }: Route.LoaderArgs) {
 	let url = new URL(request.url);
 
 	let params = await validate(url.searchParams, LogoutSchema);
-	if (isFailure(params)) return null;
+	if (isFailure(params)) {
+		logger.warn("logout_invalid_params");
+		return null;
+	}
 
 	let result = await oidc.logout({
 		idTokenHint: params.data.id_token_hint,
@@ -30,6 +34,7 @@ export async function loader({ request }: Route.LoaderArgs) {
 	});
 
 	await Session.deleteBySubjectId(db(), result.subjectId);
+	logger.info("logout_success", { subjectId: result.subjectId });
 	session().unset("sub");
 
 	return redirectDocument(result.redirectUri, {
@@ -45,6 +50,7 @@ export async function action(_: Route.ActionArgs) {
 
 	if (subjectId) {
 		await Session.deleteBySubjectId(db(), subjectId);
+		logger.info("logout_success", { subjectId });
 		session().unset("sub");
 	}
 

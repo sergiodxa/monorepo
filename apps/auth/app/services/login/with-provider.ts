@@ -1,6 +1,7 @@
 import { failure, isFailure, success } from "@pkg/result";
 
 import { InternalServerError } from "~/errors";
+import { logger } from "~/middleware/logger";
 
 import generateCode from "./generate-code";
 
@@ -28,8 +29,12 @@ export default async function loginWithProvider(input: Input) {
 		url.searchParams.set("state", input.state);
 		url.searchParams.set("code", result.data.code);
 
+		logger.info("provider_login_code_generated", { subjectId: input.subjectId });
 		return success({ url, subjectId: input.subjectId });
 	} catch (error) {
+		logger.error("provider_login_error", {
+			error: error instanceof Error ? error.message : "Unknown error",
+		});
 		if (error instanceof Error) {
 			return failure(new InternalServerError(error.message));
 		}
