@@ -40,26 +40,52 @@ export async function action({ request }: Route.ActionArgs) {
 
 All response helpers accept an optional `init` parameter of type `Omit<ResponseInit, "status" | "statusText">` for additional headers, etc.
 
-### Success Responses
+### Success Responses (2xx)
+
+All success responses (except `noContent`) add `ok: true` to the data for type discrimination.
 
 #### `ok<T>(input: T, init?: Init)`
 
 Returns a successful response with status 200 and adds `ok: true` to the data.
-
-**Parameters:**
-
-- `input`: The data to return
-- `init`: Optional ResponseInit for additional headers, etc.
-
-**Returns:**
-
-- A React Router `data()` response with status 200 and `ok: true`
 
 **Example:**
 
 ```typescript
 return ok({ message: "Success" });
 // Returns: { message: "Success", ok: true }
+```
+
+#### `created<T>(input: T, init?: Init)`
+
+Returns a created response with status 201 and adds `ok: true` to the data. Use when a resource has been successfully created.
+
+**Example:**
+
+```typescript
+return created({ id: "123", message: "User created" });
+// Returns: { id: "123", message: "User created", ok: true }
+```
+
+#### `accepted<T>(input: T, init?: Init)`
+
+Returns an accepted response with status 202 and adds `ok: true` to the data. Use when a request has been accepted for asynchronous processing.
+
+**Example:**
+
+```typescript
+return accepted({ jobId: "456", status: "processing" });
+// Returns: { jobId: "456", status: "processing", ok: true }
+```
+
+#### `noContent(init?: Init)`
+
+Returns an empty response with status 204 and `null` body. Per HTTP specification, this response has no content.
+
+**Example:**
+
+```typescript
+return noContent();
+// Returns: data(null) with status 204
 ```
 
 ### Redirects
@@ -202,6 +228,83 @@ return notFound({ error: "Resource not found" });
 // Returns: { error: "Resource not found", ok: false }
 ```
 
+#### `methodNotAllowed<T>(input: T, init?: Init)`
+
+Returns a method not allowed response with status 405 and adds `ok: false`.
+
+**Example:**
+
+```typescript
+return methodNotAllowed({ error: "GET not allowed on this endpoint" });
+// Returns: { error: "GET not allowed on this endpoint", ok: false }
+```
+
+#### `notAcceptable<T>(input: T, init?: Init)`
+
+Returns a not acceptable response with status 406 and adds `ok: false`.
+
+**Example:**
+
+```typescript
+return notAcceptable({ error: "Cannot produce requested content type" });
+// Returns: { error: "Cannot produce requested content type", ok: false }
+```
+
+#### `conflict<T>(input: T, init?: Init)`
+
+Returns a conflict response with status 409 and adds `ok: false`.
+
+**Example:**
+
+```typescript
+return conflict({ error: "Resource already exists" });
+// Returns: { error: "Resource already exists", ok: false }
+```
+
+#### `gone<T>(input: T, init?: Init)`
+
+Returns a gone response with status 410 and adds `ok: false`.
+
+**Example:**
+
+```typescript
+return gone({ error: "Resource has been permanently removed" });
+// Returns: { error: "Resource has been permanently removed", ok: false }
+```
+
+#### `preconditionFailed<T>(input: T, init?: Init)`
+
+Returns a precondition failed response with status 412 and adds `ok: false`.
+
+**Example:**
+
+```typescript
+return preconditionFailed({ error: "ETag mismatch" });
+// Returns: { error: "ETag mismatch", ok: false }
+```
+
+#### `requestEntityTooLarge<T>(input: T, init?: Init)`
+
+Returns a request entity too large response with status 413 and adds `ok: false`.
+
+**Example:**
+
+```typescript
+return requestEntityTooLarge({ error: "File exceeds 10MB limit" });
+// Returns: { error: "File exceeds 10MB limit", ok: false }
+```
+
+#### `unsupportedMediaType<T>(input: T, init?: Init)`
+
+Returns an unsupported media type response with status 415 and adds `ok: false`.
+
+**Example:**
+
+```typescript
+return unsupportedMediaType({ error: "Only JSON content is accepted" });
+// Returns: { error: "Only JSON content is accepted", ok: false }
+```
+
 #### `unprocessableEntity<T>(input: T, init?: Init)`
 
 Returns an unprocessable entity response with status 422 and adds `ok: false`.
@@ -213,6 +316,76 @@ return unprocessableEntity({
 	errors: { email: "Invalid format", age: "Must be 18+" },
 });
 // Returns: { errors: {...}, ok: false }
+```
+
+#### `tooManyRequests<T>(input: T, init?: Init)`
+
+Returns a too many requests response with status 429 and adds `ok: false`.
+
+**Example:**
+
+```typescript
+return tooManyRequests({ error: "Rate limit exceeded", retryAfter: 60 });
+// Returns: { error: "Rate limit exceeded", retryAfter: 60, ok: false }
+```
+
+### Server Error Responses (5xx)
+
+All server error responses add `ok: false` to the data for type discrimination.
+
+#### `internalServerError<T>(input: T, init?: Init)`
+
+Returns an internal server error response with status 500 and adds `ok: false`.
+
+**Example:**
+
+```typescript
+return internalServerError({ error: "An unexpected error occurred" });
+// Returns: { error: "An unexpected error occurred", ok: false }
+```
+
+#### `notImplemented<T>(input: T, init?: Init)`
+
+Returns a not implemented response with status 501 and adds `ok: false`.
+
+**Example:**
+
+```typescript
+return notImplemented({ error: "This feature is not yet available" });
+// Returns: { error: "This feature is not yet available", ok: false }
+```
+
+#### `badGateway<T>(input: T, init?: Init)`
+
+Returns a bad gateway response with status 502 and adds `ok: false`.
+
+**Example:**
+
+```typescript
+return badGateway({ error: "Upstream server returned invalid response" });
+// Returns: { error: "Upstream server returned invalid response", ok: false }
+```
+
+#### `serviceUnavailable<T>(input: T, init?: Init)`
+
+Returns a service unavailable response with status 503 and adds `ok: false`.
+
+**Example:**
+
+```typescript
+return serviceUnavailable({ error: "Service temporarily unavailable", retryAfter: 300 });
+// Returns: { error: "Service temporarily unavailable", retryAfter: 300, ok: false }
+```
+
+#### `gatewayTimeout<T>(input: T, init?: Init)`
+
+Returns a gateway timeout response with status 504 and adds `ok: false`.
+
+**Example:**
+
+```typescript
+return gatewayTimeout({ error: "Upstream server timed out" });
+// Returns: { error: "Upstream server timed out", ok: false }
 ```
 
 ## Type Safety
@@ -284,11 +457,40 @@ export default function Component({ actionData }: Route.ComponentProps) {
 
 ## Status Code Reference
 
+### Success (2xx)
+
 - `200` - OK (success)
-- `302` - Redirect
+- `201` - Created (resource created)
+- `202` - Accepted (async processing)
+- `204` - No Content (empty response)
+
+### Redirects (3xx)
+
+- `303` - See Other (POST → GET redirect)
+- `307` - Temporary Redirect (preserves method)
+- `308` - Permanent Redirect (preserves method)
+
+### Client Errors (4xx)
+
 - `400` - Bad Request (client error)
 - `401` - Unauthorized (authentication required)
 - `402` - Payment Required
 - `403` - Forbidden (insufficient permissions)
 - `404` - Not Found
+- `405` - Method Not Allowed
+- `406` - Not Acceptable
+- `409` - Conflict
+- `410` - Gone
+- `412` - Precondition Failed
+- `413` - Request Entity Too Large
+- `415` - Unsupported Media Type
 - `422` - Unprocessable Entity (validation errors)
+- `429` - Too Many Requests (rate limiting)
+
+### Server Errors (5xx)
+
+- `500` - Internal Server Error
+- `501` - Not Implemented
+- `502` - Bad Gateway
+- `503` - Service Unavailable
+- `504` - Gateway Timeout
