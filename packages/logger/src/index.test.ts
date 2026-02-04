@@ -109,6 +109,8 @@ describe("BatchedLogger", () => {
 	let consoleErrorSpy: ReturnType<typeof spyOn>;
 	let dateNowSpy: ReturnType<typeof spyOn>;
 
+	let testRequest = new Request("https://example.com/test");
+
 	beforeEach(() => {
 		consoleInfoSpy = spyOn(console, "info").mockImplementation(() => {});
 		consoleErrorSpy = spyOn(console, "error").mockImplementation(() => {});
@@ -123,7 +125,7 @@ describe("BatchedLogger", () => {
 
 	describe("accumulation", () => {
 		test("does not log immediately when calling info/error", () => {
-			let batchedLogger = new BatchedLogger();
+			let batchedLogger = new BatchedLogger(testRequest);
 
 			batchedLogger.info("event1");
 			batchedLogger.error("event2");
@@ -134,15 +136,15 @@ describe("BatchedLogger", () => {
 	});
 
 	describe("flush", () => {
-		test("outputs all events in a single console call", () => {
-			let batchedLogger = new BatchedLogger();
+		test("outputs all events in a single console call with request info", () => {
+			let batchedLogger = new BatchedLogger(testRequest);
 
 			batchedLogger.info("event1", { key: "value1" });
 			batchedLogger.info("event2", { key: "value2" });
 			batchedLogger.flush();
 
 			expect(consoleInfoSpy).toHaveBeenCalledTimes(1);
-			expect(consoleInfoSpy).toHaveBeenCalledWith({
+			expect(consoleInfoSpy).toHaveBeenCalledWith("GET https://example.com/test", {
 				events: [
 					{ level: "info", event: "event1", key: "value1", timestamp: 1738590000000 },
 					{ level: "info", event: "event2", key: "value2", timestamp: 1738590000000 },
@@ -151,7 +153,7 @@ describe("BatchedLogger", () => {
 		});
 
 		test("uses console.error when any error is present", () => {
-			let batchedLogger = new BatchedLogger();
+			let batchedLogger = new BatchedLogger(testRequest);
 
 			batchedLogger.info("info_event");
 			batchedLogger.error("error_event");
@@ -162,7 +164,7 @@ describe("BatchedLogger", () => {
 		});
 
 		test("uses console.info when only info events are present", () => {
-			let batchedLogger = new BatchedLogger();
+			let batchedLogger = new BatchedLogger(testRequest);
 
 			batchedLogger.info("info_event1");
 			batchedLogger.info("info_event2");
@@ -173,7 +175,7 @@ describe("BatchedLogger", () => {
 		});
 
 		test("clears events after flushing", () => {
-			let batchedLogger = new BatchedLogger();
+			let batchedLogger = new BatchedLogger(testRequest);
 
 			batchedLogger.info("event1");
 			batchedLogger.flush();
@@ -183,7 +185,7 @@ describe("BatchedLogger", () => {
 		});
 
 		test("does nothing when no events are accumulated", () => {
-			let batchedLogger = new BatchedLogger();
+			let batchedLogger = new BatchedLogger(testRequest);
 
 			batchedLogger.flush();
 
@@ -192,13 +194,13 @@ describe("BatchedLogger", () => {
 		});
 
 		test("includes level in each event output", () => {
-			let batchedLogger = new BatchedLogger();
+			let batchedLogger = new BatchedLogger(testRequest);
 
 			batchedLogger.info("info_event");
 			batchedLogger.error("error_event");
 			batchedLogger.flush();
 
-			expect(consoleErrorSpy).toHaveBeenCalledWith({
+			expect(consoleErrorSpy).toHaveBeenCalledWith("GET https://example.com/test", {
 				events: [
 					{ level: "info", event: "info_event", timestamp: 1738590000000 },
 					{ level: "error", event: "error_event", timestamp: 1738590000000 },
@@ -207,12 +209,12 @@ describe("BatchedLogger", () => {
 		});
 
 		test("includes payload in event output", () => {
-			let batchedLogger = new BatchedLogger();
+			let batchedLogger = new BatchedLogger(testRequest);
 
 			batchedLogger.info("user_subscribed", { email: "test@example.com", source: "homepage" });
 			batchedLogger.flush();
 
-			expect(consoleInfoSpy).toHaveBeenCalledWith({
+			expect(consoleInfoSpy).toHaveBeenCalledWith("GET https://example.com/test", {
 				events: [
 					{
 						level: "info",
@@ -224,6 +226,19 @@ describe("BatchedLogger", () => {
 				],
 			});
 		});
+
+		test("includes correct method for POST requests", () => {
+			let postRequest = new Request("https://example.com/api/subscribe", { method: "POST" });
+			let batchedLogger = new BatchedLogger(postRequest);
+
+			batchedLogger.info("subscription_created");
+			batchedLogger.flush();
+
+			expect(consoleInfoSpy).toHaveBeenCalledWith(
+				"POST https://example.com/api/subscribe",
+				expect.any(Object),
+			);
+		});
 	});
 });
 
@@ -231,6 +246,8 @@ describe("middleware", () => {
 	let consoleInfoSpy: ReturnType<typeof spyOn>;
 	let consoleErrorSpy: ReturnType<typeof spyOn>;
 	let dateNowSpy: ReturnType<typeof spyOn>;
+
+	let testRequest = new Request("https://example.com/test");
 
 	beforeEach(() => {
 		consoleInfoSpy = spyOn(console, "info").mockImplementation(() => {});
@@ -250,7 +267,7 @@ describe("middleware", () => {
 			let context = new RouterContextProvider();
 			let capturedLogger: BatchedLogger | undefined;
 
-			await middleware({ context }, async () => {
+			await middleware({ context, request: testRequest }, async () => {
 				capturedLogger = context.get(LoggerContext);
 				return new Response("OK");
 			});
@@ -262,7 +279,7 @@ describe("middleware", () => {
 			let middleware = createLoggerMiddleware();
 			let context = new RouterContextProvider();
 
-			await middleware({ context }, async () => {
+			await middleware({ context, request: testRequest }, async () => {
 				let logger = context.get(LoggerContext)!;
 				logger.info("test_event");
 				return new Response("OK");
@@ -276,7 +293,7 @@ describe("middleware", () => {
 			let context = new RouterContextProvider();
 
 			try {
-				await middleware({ context }, async () => {
+				await middleware({ context, request: testRequest }, async () => {
 					let logger = context.get(LoggerContext)!;
 					logger.error("error_before_throw");
 					throw new Error("Handler error");
@@ -292,7 +309,7 @@ describe("middleware", () => {
 			let middleware = createLoggerMiddleware();
 			let context = new RouterContextProvider();
 
-			let response = await middleware({ context }, async () => {
+			let response = await middleware({ context, request: testRequest }, async () => {
 				return new Response("Test body", { status: 201 });
 			});
 
@@ -306,7 +323,7 @@ describe("middleware", () => {
 			let middleware = createLoggerMiddleware();
 			let context = new RouterContextProvider();
 
-			await middleware({ context }, async () => {
+			await middleware({ context, request: testRequest }, async () => {
 				let logger = getLoggerFromContext(context);
 				expect(logger).toBeInstanceOf(BatchedLogger);
 				return new Response("OK");

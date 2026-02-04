@@ -40,6 +40,15 @@ export let logger = new Logger();
  */
 export class BatchedLogger {
 	private events: LogEntry[] = [];
+	private readonly request: Request;
+
+	constructor(request: Request) {
+		this.request = request;
+	}
+
+	private get requestInfo(): string {
+		return `${this.request.method} ${this.request.url}`;
+	}
 
 	info(event: string, payload?: LogPayload) {
 		this.events.push({
@@ -79,9 +88,9 @@ export class BatchedLogger {
 		};
 
 		if (hasError) {
-			console.error(output);
+			console.error(this.requestInfo, output);
 		} else {
-			console.info(output);
+			console.info(this.requestInfo, output);
 		}
 
 		this.events = [];
@@ -99,10 +108,10 @@ export const LoggerContext = createContext<BatchedLogger>();
  */
 export function createLoggerMiddleware() {
 	return async function loggerMiddleware(
-		{ context }: { context: RouterContextProvider },
+		{ context, request }: { context: RouterContextProvider; request: Request },
 		next: () => Promise<Response>,
 	) {
-		let logger = new BatchedLogger();
+		let logger = new BatchedLogger(request);
 		context.set(LoggerContext, logger);
 
 		try {
