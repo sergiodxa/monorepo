@@ -1,5 +1,6 @@
 import type { EntryContext } from "react-router";
 
+import { logger } from "@pkg/logger";
 import { isbot } from "isbot";
 import { renderToReadableStream } from "react-dom/server";
 import { I18nextProvider } from "react-i18next";
@@ -23,7 +24,9 @@ export default async function handleRequest(
 		{
 			signal: request.signal,
 			onError(error) {
-				console.error(error);
+				logger.error("render-error", {
+					error: error instanceof Error ? error.message : String(error),
+				});
 				// biome-ignore lint/style/noParameterAssign: It's ok
 				status = 500;
 			},

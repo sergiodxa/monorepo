@@ -1,3 +1,5 @@
+import { logger } from "@pkg/logger";
+
 import { getI18nextInstance, getLocale } from "~/middleware/i18next";
 import findArticleBySlug from "~/services/find-article-by-slug";
 import findTutorialBySlug from "~/services/find-tutorial-by-slug";
@@ -9,7 +11,10 @@ export async function queryArticle(slug: string) {
 
 		return [`# ${article.title}`, article.content].join("\n\n");
 	} catch (error) {
-		console.error(error);
+		logger.error("query-article-failed", {
+			slug,
+			error: error instanceof Error ? error.message : String(error),
+		});
 		throw new Error("Article not found");
 	}
 }
@@ -37,7 +42,10 @@ export async function queryTutorial(slug: string) {
 
 		return value.join("\n\n");
 	} catch (error) {
-		console.error(error);
+		logger.error("query-tutorial-failed", {
+			slug,
+			error: error instanceof Error ? error.message : String(error),
+		});
 		throw new Error("Tutorial not found");
 	}
 }

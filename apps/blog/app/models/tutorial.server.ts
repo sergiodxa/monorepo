@@ -1,3 +1,4 @@
+import { logger } from "@pkg/logger";
 import { and, eq, sql } from "drizzle-orm";
 import Fuse from "fuse.js";
 import * as semver from "semver";
@@ -237,7 +238,7 @@ export class Tutorial extends Post<TutorialMeta> {
 		if (!tag.startsWith("@")) {
 			let result = z.tuple([z.string(), z.string()]).safeParse(tag.split("@"));
 			if (result.error) {
-				console.error(result.error);
+				logger.warn("parse-tag-failed", { tag, issues: result.error.issues });
 				return { name: "", version: "" };
 			}
 			return { name: result.data[0], version: result.data[1] };
@@ -246,7 +247,7 @@ export class Tutorial extends Post<TutorialMeta> {
 		let result = z.tuple([z.string(), z.string(), z.string()]).safeParse(tag.split("@"));
 
 		if (result.error) {
-			console.error(result.error);
+			logger.warn("parse-scoped-tag-failed", { tag, issues: result.error.issues });
 			return { name: "", version: "" };
 		}
 		return { name: `@${result.data[1]}`, version: result.data[2] };

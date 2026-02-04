@@ -1,3 +1,4 @@
+import { logger } from "@pkg/logger";
 import { type MetaDescriptor, href } from "react-router";
 
 import { getI18nextInstance, getLocale } from "~/middleware/i18next";
@@ -67,7 +68,10 @@ export async function queryArticle(request: Request, slug: string) {
 			] satisfies MetaDescriptor[],
 		};
 	} catch (error) {
-		console.error(error);
+		logger.error("query-article-failed", {
+			slug,
+			error: error instanceof Error ? error.message : String(error),
+		});
 		throw new Error("Article not found");
 	}
 }
@@ -151,7 +155,10 @@ export async function queryTutorial(request: Request, slug: string) {
 			] satisfies MetaDescriptor[],
 		};
 	} catch (error) {
-		console.error(error);
+		logger.error("query-tutorial-failed", {
+			slug,
+			error: error instanceof Error ? error.message : String(error),
+		});
 		throw new Error("Tutorial not found");
 	}
 }

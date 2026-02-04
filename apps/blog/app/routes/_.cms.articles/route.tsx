@@ -1,3 +1,4 @@
+import { logger } from "@pkg/logger";
 import { ok } from "@pkg/response";
 import { href, redirect } from "react-router";
 import { z } from "zod";
@@ -56,7 +57,8 @@ export async function action({ request }: Route.ActionArgs) {
 		throw redirect(href("/cms/articles"));
 	} catch (exception) {
 		if (exception instanceof Response) throw exception;
-		if (exception instanceof Error) console.error(exception);
+		if (exception instanceof Error)
+			logger.error("cms-articles-action-failed", { error: exception.message });
 		throw redirect(href("/cms/articles"));
 	}
 }
