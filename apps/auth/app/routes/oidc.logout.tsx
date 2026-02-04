@@ -1,5 +1,5 @@
 import { useTranslation } from "react-i18next";
-import { Form, redirectDocument } from "react-router";
+import { Form, redirect, redirectDocument } from "react-router";
 import { z } from "zod";
 
 import { db } from "~/middleware/drizzle";
@@ -32,6 +32,22 @@ export async function loader({ request }: Route.LoaderArgs) {
 	session().unset("sub");
 
 	return redirectDocument(result.redirectUri, {
+		headers: {
+			"Set-Cookie": await sessionStorage.destroySession(session()),
+			"Clear-Site-Data": '"*"',
+		},
+	});
+}
+
+export async function action(_: Route.ActionArgs) {
+	let subjectId = session().get("sub");
+
+	if (subjectId) {
+		await Session.deleteBySubjectId(db(), subjectId);
+		session().unset("sub");
+	}
+
+	return redirect("https://sergiodxa.com", {
 		headers: {
 			"Set-Cookie": await sessionStorage.destroySession(session()),
 			"Clear-Site-Data": '"*"',
