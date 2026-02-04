@@ -25,6 +25,7 @@
         "@octokit/core": "^7.0.2",
         "@paralleldrive/cuid2": "^3.3.0",
         "@pkg/cn": "workspace:*",
+        "@pkg/response": "workspace:*",
         "@react-router/cloudflare": "^7.6.2",
         "@react-router/fs-routes": "^7.6.2",
         "@react-types/shared": "^3.32.1",

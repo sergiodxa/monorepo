@@ -1,7 +1,7 @@
+import { ok } from "@pkg/response";
 import { useTranslation } from "react-i18next";
 import { href, redirect } from "react-router";
 
-import { ok } from "~/helpers/response";
 import { getUser } from "~/middleware/session";
 import { authenticate } from "~/modules/auth.server";
 import { Button } from "~/ui/Button";

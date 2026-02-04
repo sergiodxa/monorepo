@@ -1,6 +1,7 @@
 import type { ValidationErrors } from "@react-types/shared";
 
-import { badRequest, ok } from "~/helpers/response";
+import { badRequest, ok } from "@pkg/response";
+
 import { getDB } from "~/middleware/drizzle";
 import { getLocale } from "~/middleware/i18next";
 import { Like } from "~/models/like.server";

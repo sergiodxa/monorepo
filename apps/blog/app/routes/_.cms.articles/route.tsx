@@ -1,7 +1,7 @@
+import { ok } from "@pkg/response";
 import { href, redirect } from "react-router";
 import { z } from "zod";
 
-import { ok } from "~/helpers/response";
 import { getDB } from "~/middleware/drizzle";
 import { getLocale } from "~/middleware/i18next";
 import { Article } from "~/models/article.server";

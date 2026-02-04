@@ -1,7 +1,7 @@
+import { badRequest, ok } from "@pkg/response";
 import { href, redirect } from "react-router";
 import { z } from "zod";
 
-import { badRequest, ok } from "~/helpers/response";
 import { getBindings } from "~/middleware/bindings";
 import { requireUser } from "~/middleware/session";
 import { GitHub } from "~/modules/github.server";

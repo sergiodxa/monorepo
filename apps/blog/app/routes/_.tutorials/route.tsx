@@ -1,10 +1,10 @@
+import { ok } from "@pkg/response";
 import { cacheHeader } from "pretty-cache-header";
 import { useTranslation } from "react-i18next";
 import { z } from "zod";
 
 import { PageHeader } from "~/components/page-header";
 import { Subscribe } from "~/components/subscribe";
-import { ok } from "~/helpers/response";
 import { useUser } from "~/hooks/use-user";
 import { Button } from "~/ui/Button";
 import { Form } from "~/ui/Form";

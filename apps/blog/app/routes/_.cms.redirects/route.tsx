@@ -1,8 +1,8 @@
+import { ok } from "@pkg/response";
 import { useId } from "react";
 import { Form } from "react-router";
 import { z } from "zod";
 
-import { ok } from "~/helpers/response";
 import { getBindings } from "~/middleware/bindings";
 
 import type { Route } from "./+types/route";

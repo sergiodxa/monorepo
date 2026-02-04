@@ -1,10 +1,10 @@
+import { ok } from "@pkg/response";
 import { cacheHeader } from "pretty-cache-header";
 import { useTranslation } from "react-i18next";
 import { z } from "zod";
 
 import { PageHeader } from "~/components/page-header";
 import { Subscribe } from "~/components/subscribe";
-import { ok } from "~/helpers/response";
 import { getI18nextInstance } from "~/middleware/i18next";
 
 import type { Route } from "./+types/route";

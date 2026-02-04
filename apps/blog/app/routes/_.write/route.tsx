@@ -1,4 +1,5 @@
-import { ok } from "~/helpers/response";
+import { ok } from "@pkg/response";
+
 import { getI18nextInstance, getLocale } from "~/middleware/i18next";
 import { Editor } from "~/routes/components.editor/route";
 

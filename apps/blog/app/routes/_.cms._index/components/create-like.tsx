@@ -28,7 +28,7 @@ export function CreateLike({ actionData }: CreateLikeProps) {
 				method="post"
 				className="gap-2 rounded-lg bg-white px-4 py-5 shadow sm:p-6 dark:bg-zinc-600"
 				reloadDocument
-				errors={actionData?.status === 400 ? actionData.errors : undefined}
+				errors={actionData?.ok === false ? actionData.errors : undefined}
 			>
 				<input type="hidden" name="intent" value={INTENT.createLike} />
 

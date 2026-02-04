@@ -1,6 +1,5 @@
+import { notFound } from "@pkg/response";
 import { z } from "zod";
-
-import { notFound } from "~/helpers/response";
 
 import type { Route } from "./+types/route";
 

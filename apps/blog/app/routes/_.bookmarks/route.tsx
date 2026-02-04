@@ -1,8 +1,8 @@
+import { ok } from "@pkg/response";
 import { useTranslation } from "react-i18next";
 
 import { PageHeader } from "~/components/page-header";
 import { Subscribe } from "~/components/subscribe";
-import { ok } from "~/helpers/response";
 import { getI18nextInstance } from "~/middleware/i18next";
 import { Link } from "~/ui/Link";
 

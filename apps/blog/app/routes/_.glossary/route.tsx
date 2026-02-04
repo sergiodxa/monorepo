@@ -1,7 +1,7 @@
+import { ok } from "@pkg/response";
 import { useTranslation } from "react-i18next";
 
 import { PageHeader } from "~/components/page-header";
-import { ok } from "~/helpers/response";
 import { useUser } from "~/hooks/use-user";
 import { Button } from "~/ui/Button";
 import { Form } from "~/ui/Form";

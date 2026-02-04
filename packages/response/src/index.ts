@@ -58,3 +58,7 @@ export function notFound<T>(input: T, init?: Init) {
 export function unprocessableEntity<T>(input: T, init?: Init) {
 	return data({ ...input, ok: false as const }, { ...init, status: 422 });
 }
+
+export function internalServerError<T>(input: T, init?: Init) {
+	return data({ ...input, ok: false as const }, { ...init, status: 500 });
+}
