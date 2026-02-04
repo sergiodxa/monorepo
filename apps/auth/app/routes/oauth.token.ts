@@ -1,3 +1,5 @@
+import { isFailure } from "@pkg/result";
+import { validate } from "@pkg/validate";
 import { base64url } from "jose";
 import { z } from "zod/v4";
 
@@ -37,37 +39,38 @@ const Schema = z.discriminatedUnion("grant_type", [
 ]);
 
 export async function action({ request }: Route.ActionArgs) {
-	let formData = await request.formData();
-	let bodyResult = Schema.safeParse(Object.fromEntries(formData));
+	let result = await validate(request, Schema);
 
-	if (!bodyResult.success) {
+	if (isFailure(result)) {
 		return Response.json(
 			{ error: "invalid_request", error_description: "Invalid request body" },
 			{ status: 400 },
 		);
 	}
 
+	let body = result.data;
+
 	try {
-		if (bodyResult.data.grant_type === "authorization_code") {
-			let result = await oidc.token({
+		if (body.grant_type === "authorization_code") {
+			let tokenResult = await oidc.token({
 				type: "authorization_code",
-				code: bodyResult.data.code,
-				codeVerifier: bodyResult.data.code_verifier,
-				redirectUri: bodyResult.data.redirect_uri,
+				code: body.code,
+				codeVerifier: body.code_verifier,
+				redirectUri: body.redirect_uri,
 			});
-			return Response.json(result, { status: 200 });
+			return Response.json(tokenResult, { status: 200 });
 		}
 
-		if (bodyResult.data.grant_type === "refresh_token") {
-			let result = await oidc.token({
+		if (body.grant_type === "refresh_token") {
+			let tokenResult = await oidc.token({
 				type: "refresh_token",
-				refreshToken: bodyResult.data.refresh_token,
+				refreshToken: body.refresh_token,
 			});
 
-			return Response.json(result, { status: 200 });
+			return Response.json(tokenResult, { status: 200 });
 		}
 
-		if (bodyResult.data.grant_type === "client_credentials") {
+		if (body.grant_type === "client_credentials") {
 			let clientCredentials = getClientCredentialsFromHeader(request.headers);
 
 			if (!clientCredentials) {
@@ -80,13 +83,13 @@ export async function action({ request }: Route.ActionArgs) {
 				);
 			}
 
-			let result = await oidc.token({
+			let tokenResult = await oidc.token({
 				type: "client_credentials",
-				resource: bodyResult.data.resource ?? [],
+				resource: body.resource ?? [],
 				...clientCredentials,
 			});
 
-			return Response.json(result, { status: 200 });
+			return Response.json(tokenResult, { status: 200 });
 		}
 	} catch (error) {
 		if (error instanceof OAuth2Error) {

@@ -1,3 +1,5 @@
+import { isFailure } from "@pkg/result";
+import { validate } from "@pkg/validate";
 import { useTranslation } from "react-i18next";
 import { Form, redirect, redirectDocument } from "react-router";
 import { z } from "zod";
@@ -10,21 +12,20 @@ import { sessionStorage } from "~/session";
 
 import type { Route } from "./+types/oidc.logout";
 
+let LogoutSchema = z.object({
+	id_token_hint: z.string(),
+	post_logout_redirect_uri: z.string().optional(),
+});
+
 export async function loader({ request }: Route.LoaderArgs) {
 	let url = new URL(request.url);
 
-	let searchParams = z
-		.object({
-			id_token_hint: z.string(),
-			post_logout_redirect_uri: z.string().optional(),
-		})
-		.safeParse(Object.fromEntries(url.searchParams));
-
-	if (!searchParams.success) return null;
+	let params = await validate(url.searchParams, LogoutSchema);
+	if (isFailure(params)) return null;
 
 	let result = await oidc.logout({
-		idTokenHint: searchParams.data.id_token_hint,
-		postLogoutRedirectUri: searchParams.data.post_logout_redirect_uri,
+		idTokenHint: params.data.id_token_hint,
+		postLogoutRedirectUri: params.data.post_logout_redirect_uri,
 		sessionSubject: session().get("sub"),
 	});
 

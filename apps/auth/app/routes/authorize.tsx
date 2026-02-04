@@ -1,3 +1,6 @@
+import { getClientIP } from "@pkg/get-client-ip";
+import { isFailure } from "@pkg/result";
+import { validate } from "@pkg/validate";
 import { useTranslation } from "react-i18next";
 import { Form, href, redirectDocument } from "react-router";
 import { z } from "zod";
@@ -10,24 +13,21 @@ import startAuthorizationFlow from "~/services/start-authz-flow";
 
 import type { Route } from "./+types/authorize";
 
+let LoaderSchema = z.object({
+	response_type: z.literal("code"),
+	client_id: z.string().uuid(),
+	redirect_uri: z.string().url(),
+	state: z.string(),
+	provider: z.string().optional(),
+});
+
 export async function loader({ request }: Route.LoaderArgs) {
 	let url = new URL(request.url);
 
-	let bodyResult = z
-		.object({
-			response_type: z.literal("code"),
-			client_id: z.string().uuid(),
-			redirect_uri: z.string().url(),
-			state: z.string(),
-			provider: z.string().optional(),
-		})
-		.safeParse(Object.fromEntries(url.searchParams));
+	let result = await validate(url.searchParams, LoaderSchema);
+	if (isFailure(result)) return badRequest({ message: "Invalid request" });
 
-	if (bodyResult.success === false) {
-		return badRequest({ message: "Invalid request" });
-	}
-
-	let searchParams = bodyResult.data;
+	let searchParams = result.data;
 
 	let flowResult = await startAuthorizationFlow({
 		clientId: searchParams.client_id,
@@ -46,23 +46,23 @@ export async function loader({ request }: Route.LoaderArgs) {
 	// to the redirect_uri with the code, state, and error parameters if any.
 	let subjectId = session().get("sub");
 	if (subjectId) {
-		let result = await generateCode({
+		let codeResult = await generateCode({
 			subjectId,
 			clientId: flowResult.payload.client.id,
-			ip: null,
+			ip: getClientIP(request),
 			ua: request.headers.get("user-agent"),
 		});
 
 		let url = new URL(searchParams.redirect_uri);
 		url.searchParams.set("state", searchParams.state);
 
-		if (result.status === "failure") {
-			url.searchParams.set("error", result.error.code);
-			url.searchParams.set("error_description", result.error.description);
+		if (codeResult.status === "failure") {
+			url.searchParams.set("error", codeResult.error.code);
+			url.searchParams.set("error_description", codeResult.error.description);
 			return redirectDocument(url.toString());
 		}
 
-		url.searchParams.set("code", result.payload.code);
+		url.searchParams.set("code", codeResult.payload.code);
 		return redirectDocument(url.toString());
 	}
 
@@ -79,42 +79,39 @@ export async function loader({ request }: Route.LoaderArgs) {
 	return ok({ client: { name: flowResult.payload.client.name } });
 }
 
+let ActionSchema = z.object({
+	email: z.string().email(),
+	password: z.string().min(8),
+	name: z.string().min(1),
+	username: z.string().min(1),
+});
+
 export async function action({ request }: Route.ActionArgs) {
 	let authz = session().get("authz");
 	if (!authz) return badRequest({ message: "Invalid request" });
 
-	let formData = await request.formData();
+	let result = await validate(request, ActionSchema);
+	if (isFailure(result)) return badRequest({ message: "Invalid request" });
 
-	let bodyResult = z
-		.object({
-			email: z.string().email(),
-			password: z.string().min(8),
-			name: z.string().min(1),
-			username: z.string().min(1),
-		})
-		.safeParse(Object.fromEntries(formData));
-
-	if (!bodyResult.success) return badRequest({ message: "Invalid request" });
-
-	let result = await loginWithCredential({
-		email: bodyResult.data.email,
-		password: bodyResult.data.password,
-		name: bodyResult.data.name,
-		username: bodyResult.data.username,
+	let loginResult = await loginWithCredential({
+		email: result.data.email,
+		password: result.data.password,
+		name: result.data.name,
+		username: result.data.username,
 		clientId: authz.clientId,
-		ip: null,
+		ip: getClientIP(request),
 		ua: request.headers.get("user-agent"),
 		redirectUri: authz.redirectUri,
 		state: authz.state,
 	});
 
-	if (result.status === "failure") {
-		return ok({ message: result.error.description });
+	if (loginResult.status === "failure") {
+		return ok({ message: loginResult.error.description });
 	}
 
 	session().unset("authz"); // Remove the authz object from the session
-	session().set("sub", result.payload.subjectId); // Keep the subject for SSO
-	return redirectDocument(result.payload.url.toString());
+	session().set("sub", loginResult.payload.subjectId); // Keep the subject for SSO
+	return redirectDocument(loginResult.payload.url.toString());
 }
 
 export default function Component({ loaderData }: Route.ComponentProps) {

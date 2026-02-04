@@ -1,3 +1,4 @@
+import { getClientIP } from "@pkg/get-client-ip";
 import { redirectDocument } from "react-router";
 
 import { badRequest } from "~/helpers/response";
@@ -23,7 +24,7 @@ export async function loader({ request, params }: Route.LoaderArgs) {
 	let result = await loginWithProvider({
 		subjectId: sub,
 		clientId: authz.clientId,
-		ip: null,
+		ip: getClientIP(request),
 		ua: request.headers.get("user-agent"),
 		redirectUri: authz.redirectUri,
 		state: authz.state,
