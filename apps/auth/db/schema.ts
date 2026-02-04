@@ -16,6 +16,7 @@ export const subjects = sqliteTable("subjects", {
 	// Timestamps
 	createdAt,
 	updatedAt,
+	emailVerifiedAt: timestamp("email_verified_at"),
 	// Attributes
 	displayName: text("display_name", { mode: "text" }).notNull(),
 	avatar: url("avatar").notNull(),

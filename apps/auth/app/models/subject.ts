@@ -29,6 +29,7 @@ export default class Subject {
 			displayName: string;
 			username: string;
 			avatar: string;
+			emailVerifiedAt?: Date | null;
 		},
 	) {
 		let [subject] = await db.insert(schema.subjects).values(input).returning();

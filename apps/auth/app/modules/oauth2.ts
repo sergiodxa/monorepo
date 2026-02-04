@@ -251,6 +251,7 @@ export namespace OIDCProvider {
 				username: string;
 				displayName: string;
 				emailAddress: string;
+				emailVerifiedAt: Date | null;
 			}>
 		>;
 	}
@@ -347,7 +348,7 @@ export class OIDCProvider extends OAuth2Provider<OIDCProvider.Repository> {
 					avatar: subject.avatar,
 					username: subject.username,
 					displayName: subject.displayName,
-					emailVerified: true, // TODO: Check if email is verified
+					emailVerified: subject.emailVerifiedAt !== null,
 				},
 				{ id: authz.clientId },
 			),
@@ -377,7 +378,7 @@ export class OIDCProvider extends OAuth2Provider<OIDCProvider.Repository> {
 					avatar: subject.avatar,
 					username: subject.username,
 					displayName: subject.displayName,
-					emailVerified: true, // TODO: Check if email is verified
+					emailVerified: subject.emailVerifiedAt !== null,
 				},
 				{ id: session.clientId },
 			),

@@ -48,6 +48,7 @@ export function github(db: Database, request: Request) {
 							displayName: user.name ?? user.login,
 							username: user.login,
 							avatar: user.avatar_url,
+							emailVerifiedAt: new Date(),
 						})
 						.returning(),
 					db

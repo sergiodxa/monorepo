@@ -15,6 +15,13 @@
 			"when": 1748245051692,
 			"tag": "20250526073731_plain_toro",
 			"breakpoints": true
+		},
+		{
+			"idx": 2,
+			"version": "6",
+			"when": 1770195676258,
+			"tag": "20260204090116_add-email-verified-at",
+			"breakpoints": true
 		}
 	]
 }

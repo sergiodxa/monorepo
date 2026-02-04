@@ -32,7 +32,7 @@ export async function loader({ request }: Route.LoaderArgs) {
 						avatar: subject.avatar,
 						username: subject.username,
 						displayName: subject.displayName,
-						emailVerified: true, // TODO: Check if email is verified
+						emailVerified: subject.emailVerifiedAt !== null,
 					},
 					{ id: result.clientId },
 				),
