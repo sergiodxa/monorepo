@@ -1,0 +1,30 @@
+{
+	"$schema": "https://unpkg.com/wrangler@latest/config-schema.json",
+	"name": "auth",
+	"main": "./app/entry.worker.ts",
+	"compatibility_date": "2025-04-07",
+	"compatibility_flags": ["nodejs_compat"],
+	"workers_dev": true,
+	"dev": { "port": 3001 },
+	"placement": { "mode": "off" },
+	"observability": { "enabled": true },
+	"assets": { "directory": "./build/client" },
+	"triggers": { "crons": ["0 0 * * *"] },
+	"d1_databases": [
+		{
+			"binding": "DB",
+			"database_name": "auth",
+			"database_id": "1549b30f-b4ba-48b0-b08a-76b8003a37db",
+			"preview_database_id": "1549b30f-b4ba-48b0-b08a-76b8003a37db",
+			"migrations_dir": "./db/migrations",
+		},
+	],
+	"kv_namespaces": [
+		{
+			"binding": "KV",
+			"id": "848d0b8592b64956999bc9769bee6c8e",
+			"preview_id": "848d0b8592b64956999bc9769bee6c8e",
+		},
+	],
+	"r2_buckets": [{ "binding": "R2", "bucket_name": "auth", "preview_bucket_name": "auth" }],
+}
