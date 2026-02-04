@@ -1,51 +1,46 @@
 import { logger } from "@pkg/logger";
+import { isFailure } from "@pkg/result";
 
 import { getI18nextInstance, getLocale } from "~/middleware/i18next";
 import findArticleBySlug from "~/services/find-article-by-slug";
 import findTutorialBySlug from "~/services/find-tutorial-by-slug";
 
 export async function queryArticle(slug: string) {
-	try {
-		let article = await findArticleBySlug(slug);
-		if (!article) throw new Error("Article not found");
+	let result = await findArticleBySlug(slug);
 
-		return [`# ${article.title}`, article.content].join("\n\n");
-	} catch (error) {
-		logger.error("query-article-failed", {
-			slug,
-			error: error instanceof Error ? error.message : String(error),
-		});
+	if (isFailure(result)) {
+		logger.error("query-article-failed", { slug, error: result.error.message });
 		throw new Error("Article not found");
 	}
+
+	let article = result.data;
+	return [`# ${article.title}`, article.content].join("\n\n");
 }
 
 export async function queryTutorial(slug: string) {
 	let locale = getLocale();
 	let i18next = getI18nextInstance();
 
-	try {
-		let tutorial = await findTutorialBySlug(slug);
-		if (!tutorial) throw new Error("Tutorial not found");
+	let result = await findTutorialBySlug(slug);
 
-		let value = [`# ${tutorial.title}`];
-
-		if (tutorial.tags?.[0]) {
-			let list = new Intl.ListFormat(locale, {
-				style: "long",
-				type: "conjunction",
-			});
-
-			value.push(`${i18next.t("tutorial.tags")}: ${list.format(tutorial.tags)}`);
-		}
-
-		value.push(tutorial.content);
-
-		return value.join("\n\n");
-	} catch (error) {
-		logger.error("query-tutorial-failed", {
-			slug,
-			error: error instanceof Error ? error.message : String(error),
-		});
+	if (isFailure(result)) {
+		logger.error("query-tutorial-failed", { slug, error: result.error.message });
 		throw new Error("Tutorial not found");
 	}
+
+	let tutorial = result.data;
+	let value = [`# ${tutorial.title}`];
+
+	if (tutorial.tags?.[0]) {
+		let list = new Intl.ListFormat(locale, {
+			style: "long",
+			type: "conjunction",
+		});
+
+		value.push(`${i18next.t("tutorial.tags")}: ${list.format(tutorial.tags)}`);
+	}
+
+	value.push(tutorial.content);
+
+	return value.join("\n\n");
 }
