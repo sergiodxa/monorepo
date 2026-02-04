@@ -12,20 +12,17 @@ import {
 
 describe("logger (singleton)", () => {
 	let consoleInfoSpy: ReturnType<typeof spyOn>;
-	let consoleWarnSpy: ReturnType<typeof spyOn>;
 	let consoleErrorSpy: ReturnType<typeof spyOn>;
 	let dateNowSpy: ReturnType<typeof spyOn>;
 
 	beforeEach(() => {
 		consoleInfoSpy = spyOn(console, "info").mockImplementation(() => {});
-		consoleWarnSpy = spyOn(console, "warn").mockImplementation(() => {});
 		consoleErrorSpy = spyOn(console, "error").mockImplementation(() => {});
 		dateNowSpy = spyOn(Date, "now").mockReturnValue(1738590000000);
 	});
 
 	afterEach(() => {
 		consoleInfoSpy.mockRestore();
-		consoleWarnSpy.mockRestore();
 		consoleErrorSpy.mockRestore();
 		dateNowSpy.mockRestore();
 	});
@@ -47,28 +44,6 @@ describe("logger (singleton)", () => {
 				email: "test@example.com",
 				source: "homepage",
 				event: "user_subscribed",
-				timestamp: 1738590000000,
-			});
-		});
-	});
-
-	describe("logger.warn", () => {
-		test("calls console.warn with correct structure", () => {
-			logger.warn("test_warning");
-
-			expect(consoleWarnSpy).toHaveBeenCalledWith({
-				event: "test_warning",
-				timestamp: 1738590000000,
-			});
-		});
-
-		test("includes payload in output", () => {
-			logger.warn("rate_limit_approaching", { current: 90, limit: 100 });
-
-			expect(consoleWarnSpy).toHaveBeenCalledWith({
-				current: 90,
-				limit: 100,
-				event: "rate_limit_approaching",
 				timestamp: 1738590000000,
 			});
 		});
@@ -131,34 +106,29 @@ describe("logger (singleton)", () => {
 
 describe("BatchedLogger", () => {
 	let consoleInfoSpy: ReturnType<typeof spyOn>;
-	let consoleWarnSpy: ReturnType<typeof spyOn>;
 	let consoleErrorSpy: ReturnType<typeof spyOn>;
 	let dateNowSpy: ReturnType<typeof spyOn>;
 
 	beforeEach(() => {
 		consoleInfoSpy = spyOn(console, "info").mockImplementation(() => {});
-		consoleWarnSpy = spyOn(console, "warn").mockImplementation(() => {});
 		consoleErrorSpy = spyOn(console, "error").mockImplementation(() => {});
 		dateNowSpy = spyOn(Date, "now").mockReturnValue(1738590000000);
 	});
 
 	afterEach(() => {
 		consoleInfoSpy.mockRestore();
-		consoleWarnSpy.mockRestore();
 		consoleErrorSpy.mockRestore();
 		dateNowSpy.mockRestore();
 	});
 
 	describe("accumulation", () => {
-		test("does not log immediately when calling info/warn/error", () => {
+		test("does not log immediately when calling info/error", () => {
 			let batchedLogger = new BatchedLogger();
 
 			batchedLogger.info("event1");
-			batchedLogger.warn("event2");
-			batchedLogger.error("event3");
+			batchedLogger.error("event2");
 
 			expect(consoleInfoSpy).not.toHaveBeenCalled();
-			expect(consoleWarnSpy).not.toHaveBeenCalled();
 			expect(consoleErrorSpy).not.toHaveBeenCalled();
 		});
 	});
@@ -184,25 +154,11 @@ describe("BatchedLogger", () => {
 			let batchedLogger = new BatchedLogger();
 
 			batchedLogger.info("info_event");
-			batchedLogger.warn("warn_event");
 			batchedLogger.error("error_event");
 			batchedLogger.flush();
 
 			expect(consoleErrorSpy).toHaveBeenCalledTimes(1);
 			expect(consoleInfoSpy).not.toHaveBeenCalled();
-			expect(consoleWarnSpy).not.toHaveBeenCalled();
-		});
-
-		test("uses console.warn when warn is present but no error", () => {
-			let batchedLogger = new BatchedLogger();
-
-			batchedLogger.info("info_event");
-			batchedLogger.warn("warn_event");
-			batchedLogger.flush();
-
-			expect(consoleWarnSpy).toHaveBeenCalledTimes(1);
-			expect(consoleInfoSpy).not.toHaveBeenCalled();
-			expect(consoleErrorSpy).not.toHaveBeenCalled();
 		});
 
 		test("uses console.info when only info events are present", () => {
@@ -213,7 +169,6 @@ describe("BatchedLogger", () => {
 			batchedLogger.flush();
 
 			expect(consoleInfoSpy).toHaveBeenCalledTimes(1);
-			expect(consoleWarnSpy).not.toHaveBeenCalled();
 			expect(consoleErrorSpy).not.toHaveBeenCalled();
 		});
 
@@ -233,7 +188,6 @@ describe("BatchedLogger", () => {
 			batchedLogger.flush();
 
 			expect(consoleInfoSpy).not.toHaveBeenCalled();
-			expect(consoleWarnSpy).not.toHaveBeenCalled();
 			expect(consoleErrorSpy).not.toHaveBeenCalled();
 		});
 
@@ -241,14 +195,12 @@ describe("BatchedLogger", () => {
 			let batchedLogger = new BatchedLogger();
 
 			batchedLogger.info("info_event");
-			batchedLogger.warn("warn_event");
 			batchedLogger.error("error_event");
 			batchedLogger.flush();
 
 			expect(consoleErrorSpy).toHaveBeenCalledWith({
 				events: [
 					{ level: "info", event: "info_event", timestamp: 1738590000000 },
-					{ level: "warn", event: "warn_event", timestamp: 1738590000000 },
 					{ level: "error", event: "error_event", timestamp: 1738590000000 },
 				],
 			});

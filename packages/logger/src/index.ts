@@ -2,7 +2,7 @@ import { createContext, type RouterContextProvider } from "react-router";
 
 type LogPayload = Record<string, unknown>;
 
-type LogLevel = "info" | "warn" | "error";
+type LogLevel = "info" | "error";
 
 type LogEntry = {
 	level: LogLevel;
@@ -22,10 +22,6 @@ export class Logger {
 
 	info(event: string, payload?: LogPayload) {
 		console.info(this.createLogData(event, payload));
-	}
-
-	warn(event: string, payload?: LogPayload) {
-		console.warn(this.createLogData(event, payload));
 	}
 
 	error(event: string, payload?: LogPayload) {
@@ -54,15 +50,6 @@ export class BatchedLogger {
 		});
 	}
 
-	warn(event: string, payload?: LogPayload) {
-		this.events.push({
-			level: "warn",
-			event,
-			payload,
-			timestamp: Date.now(),
-		});
-	}
-
 	error(event: string, payload?: LogPayload) {
 		this.events.push({
 			level: "error",
@@ -74,14 +61,13 @@ export class BatchedLogger {
 
 	/**
 	 * Flushes all accumulated log entries to console as a single log call.
-	 * Uses the highest severity level present (error > warn > info).
+	 * Uses console.error if any error is present, otherwise console.info.
 	 * Clears the internal buffer after flushing.
 	 */
 	flush() {
 		if (this.events.length === 0) return;
 
 		let hasError = this.events.some((e) => e.level === "error");
-		let hasWarn = this.events.some((e) => e.level === "warn");
 
 		let output = {
 			events: this.events.map(({ level, event, payload, timestamp }) => ({
@@ -94,8 +80,6 @@ export class BatchedLogger {
 
 		if (hasError) {
 			console.error(output);
-		} else if (hasWarn) {
-			console.warn(output);
 		} else {
 			console.info(output);
 		}
