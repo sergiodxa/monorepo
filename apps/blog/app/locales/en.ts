@@ -44,14 +44,13 @@ export default {
 			title: "Activity",
 			description: "My latests activity",
 
-			article: "I wrote about <link:article>{{title}}</link:article>",
+			article: "I wrote about <articleLink>{{title}}</articleLink>",
 
-			tutorial: "I published how to <link:tutorial>{{title}}</link:tutorial>",
+			tutorial: "I published how to <tutorialLink>{{title}}</tutorialLink>",
 
-			bookmark: "I saved <link:bookmark>{{title}}</link:bookmark>",
+			bookmark: "I saved <bookmarkLink>{{title}}</bookmarkLink>",
 
-			glossary:
-				"I added the definition of <link:glossary>{{title}}</link:glossary> to the glossary",
+			glossary: "I added the definition of <glossaryLink>{{title}}</glossaryLink> to the glossary",
 		},
 	},
 

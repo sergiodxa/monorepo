@@ -19,9 +19,10 @@ import { Provider, useEditor } from "./use-editor";
 
 export async function action({ request }: Route.ActionArgs) {
 	try {
-		let { content } = await Schemas.formData()
+		let formData = await request.formData();
+		let { content } = Schemas.formData()
 			.pipe(z.object({ content: z.string() }))
-			.parseAsync(request.formData());
+			.parse(formData);
 
 		return ok({ content: Markdown.parse(content) });
 	} catch {

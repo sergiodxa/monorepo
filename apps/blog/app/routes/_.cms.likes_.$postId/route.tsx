@@ -30,9 +30,10 @@ export async function action({ request, params }: Route.ActionArgs) {
 
 	let db = getDB();
 
-	let { title, url } = await Schemas.formData()
+	let formData = await request.formData();
+	let { title, url } = Schemas.formData()
 		.pipe(z.object({ title: z.string(), url: z.string().url() }))
-		.parseAsync(request.formData());
+		.parse(formData);
 
 	let user = requireUser();
 	await Like.update({ db }, id, { authorId: user.id, title, url });

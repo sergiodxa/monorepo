@@ -161,7 +161,8 @@ export class GitHub {
 			},
 		});
 
-		return await z
+		let json = await response.json();
+		return z
 			.object({
 				node_id: z.string(),
 				email: z.string().email(),
@@ -169,7 +170,7 @@ export class GitHub {
 				name: z.string(),
 				avatar_url: z.string().url(),
 			})
-			.parseAsync(response.json());
+			.parse(json);
 	}
 }
 

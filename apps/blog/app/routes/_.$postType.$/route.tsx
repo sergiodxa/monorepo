@@ -21,10 +21,8 @@ export const links: Route.LinksFunction = () => [
 
 export const middleware: Route.MiddlewareFunction[] = [
 	async function redirectsMiddleware({ params }, next) {
-		let redirectConfig = await z
-			.object({ from: z.string(), to: z.string() })
-			.nullish()
-			.parseAsync(getBindings().kv.redirects.get(params["*"], "json"));
+		let kvResult = await getBindings().kv.redirects.get(params["*"], "json");
+		let redirectConfig = z.object({ from: z.string(), to: z.string() }).nullish().parse(kvResult);
 
 		if (redirectConfig?.from === `/${params.postType}/${params["*"]}`) {
 			throw redirect(redirectConfig.to);
