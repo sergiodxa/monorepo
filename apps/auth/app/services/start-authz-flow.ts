@@ -1,4 +1,6 @@
-import { failure, success } from "~/helpers/result";
+import { failure, success } from "@pkg/result";
+
+import { InvalidClientError, InvalidGrantError } from "~/errors";
 import { db } from "~/middleware/drizzle";
 import Client from "~/models/client";
 
@@ -10,11 +12,13 @@ interface Input {
 export default async function startAuthorizationFlow(input: Input) {
 	let client = await Client.findById(db(), input.clientId);
 
-	if (!client) return failure("invalid_client", "The client is not registered");
+	if (!client) {
+		return failure(new InvalidClientError("The client is not registered"));
+	}
+
 	if (client.redirectUri !== input.redirectUri) {
 		return failure(
-			"invalid_grant",
-			"The redirect URI does not match the client's registered redirect URI",
+			new InvalidGrantError("The redirect URI does not match the client's registered redirect URI"),
 		);
 	}
 

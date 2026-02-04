@@ -1,4 +1,6 @@
-import { failure, success } from "~/helpers/result";
+import { failure, isFailure, success } from "@pkg/result";
+
+import { InternalServerError } from "~/errors";
 
 import generateCode from "./generate-code";
 
@@ -20,18 +22,18 @@ export default async function loginWithProvider(input: Input) {
 			ua: input.ua,
 		});
 
-		if (result.status === "failure") return result;
+		if (isFailure(result)) return result;
 
 		let url = new URL(input.redirectUri);
 		url.searchParams.set("state", input.state);
-		url.searchParams.set("code", result.payload.code);
+		url.searchParams.set("code", result.data.code);
 
 		return success({ url, subjectId: input.subjectId });
 	} catch (error) {
 		if (error instanceof Error) {
-			return failure("internal_server_error", error.message);
+			return failure(new InternalServerError(error.message));
 		}
 
-		return failure("internal_server_error", "Internal server error");
+		return failure(new InternalServerError());
 	}
 }

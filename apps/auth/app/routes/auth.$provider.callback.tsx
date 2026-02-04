@@ -33,7 +33,7 @@ export async function loader({ request, params }: Route.LoaderArgs) {
 	if (result.status === "success") {
 		session().unset("authz"); // Remove the authz object from the session
 		session().set("sub", sub); // Keep the subject logged-in for SSO
-		return redirectDocument(result.payload.url.toString());
+		return redirectDocument(result.data.url.toString());
 	}
 
 	let url = new URL(authz.redirectUri);

@@ -48,7 +48,7 @@ export async function loader({ request }: Route.LoaderArgs) {
 	if (subjectId) {
 		let codeResult = await generateCode({
 			subjectId,
-			clientId: flowResult.payload.client.id,
+			clientId: flowResult.data.client.id,
 			ip: getClientIP(request),
 			ua: request.headers.get("user-agent"),
 		});
@@ -62,7 +62,7 @@ export async function loader({ request }: Route.LoaderArgs) {
 			return redirectDocument(url.toString());
 		}
 
-		url.searchParams.set("code", codeResult.payload.code);
+		url.searchParams.set("code", codeResult.data.code);
 		return redirectDocument(url.toString());
 	}
 
@@ -76,7 +76,7 @@ export async function loader({ request }: Route.LoaderArgs) {
 		return redirectDocument(href("/auth/:provider", { provider: searchParams.provider }));
 	}
 
-	return ok({ client: { name: flowResult.payload.client.name } });
+	return ok({ client: { name: flowResult.data.client.name } });
 }
 
 let ActionSchema = z.object({
@@ -110,8 +110,8 @@ export async function action({ request }: Route.ActionArgs) {
 	}
 
 	session().unset("authz"); // Remove the authz object from the session
-	session().set("sub", loginResult.payload.subjectId); // Keep the subject for SSO
-	return redirectDocument(loginResult.payload.url.toString());
+	session().set("sub", loginResult.data.subjectId); // Keep the subject for SSO
+	return redirectDocument(loginResult.data.url.toString());
 }
 
 export default function Component({ loaderData }: Route.ComponentProps) {

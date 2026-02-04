@@ -1,5 +1,7 @@
+import { failure, success } from "@pkg/result";
+
 import AuthzCode from "~/entities/authz-code";
-import { failure, success } from "~/helpers/result";
+import { InternalServerError } from "~/errors";
 import { db } from "~/middleware/drizzle";
 import Session from "~/models/session";
 
@@ -19,9 +21,9 @@ export default async function generateCode(input: Input) {
 		return success({ code });
 	} catch (error) {
 		if (error instanceof Error) {
-			return failure("internal_server_error", error.message);
+			return failure(new InternalServerError(error.message));
 		}
 
-		return failure("internal_server_error", "Internal server error");
+		return failure(new InternalServerError());
 	}
 }

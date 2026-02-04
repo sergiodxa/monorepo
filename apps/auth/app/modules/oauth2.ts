@@ -4,6 +4,16 @@ import { base64url } from "jose";
 
 import AccessToken from "../entities/access-token";
 import IdToken from "../entities/id-token";
+import {
+	InvalidClientError,
+	InvalidGrantError,
+	InvalidRequestError,
+	OAuth2Error,
+	UnauthorizedClientError,
+	UnsupportedGrantTypeError,
+} from "../errors";
+
+export { OAuth2Error };
 
 type Nullable<T> = T | null;
 
@@ -375,51 +385,6 @@ export class OIDCProvider extends OAuth2Provider<OIDCProvider.Repository> {
 
 		return { ...result, id_token: idToken };
 	}
-}
-
-export abstract class OAuth2Error extends globalThis.Error {
-	override name = "OAuth2Error";
-	abstract code: string;
-}
-
-class InvalidRequestError extends OAuth2Error {
-	override name = "InvalidRequestError";
-	code = "invalid_request";
-}
-
-class UnauthorizedClientError extends OAuth2Error {
-	override name = "UnauthorizedClientError";
-	code = "unauthorized_client";
-}
-
-class _AccessDeniedError extends OAuth2Error {
-	override name = "AccessDeniedError";
-	code = "access_denied";
-}
-
-class _UnsupportedResponseTypeError extends OAuth2Error {
-	override name = "UnsupportedResponseTypeError";
-	code = "unsupported_response_type";
-}
-
-class _InvalidScopeError extends OAuth2Error {
-	override name = "InvalidScopeError";
-	code = "invalid_scope";
-}
-
-class InvalidClientError extends OAuth2Error {
-	override name = "InvalidClientError";
-	override code = "invalid_client";
-}
-
-class InvalidGrantError extends OAuth2Error {
-	override name = "InvalidGrantError";
-	override code = "invalid_grant";
-}
-
-class UnsupportedGrantTypeError extends OAuth2Error {
-	override name = "UnsupportedGrantTypeError";
-	override code = "unsupported_grant_type";
 }
 
 class CodeChallenge {
