@@ -2,6 +2,8 @@ import type { RenderableTreeNode } from "@markdoc/markdoc";
 import type { Dispatch, RefObject } from "react";
 
 import { ok } from "@pkg/response";
+import { isFailure } from "@pkg/result";
+import { validate } from "@pkg/validate";
 import { useEffect, useMemo, useRef } from "react";
 import { useFetcher } from "react-router";
 import { z } from "zod";
@@ -9,7 +11,6 @@ import { z } from "zod";
 import { MarkdownView } from "~/components/markdown";
 import { Toolbar } from "~/ui/Toolbar";
 import { Markdown } from "~/utils/markdown";
-import { Schemas } from "~/utils/schemas";
 
 import type { Route } from "./+types/route";
 import type { Actions } from "./use-editor";
@@ -18,16 +19,9 @@ import { Button } from "./buttons";
 import { Provider, useEditor } from "./use-editor";
 
 export async function action({ request }: Route.ActionArgs) {
-	try {
-		let formData = await request.formData();
-		let { content } = Schemas.formData()
-			.pipe(z.object({ content: z.string() }))
-			.parse(formData);
-
-		return ok({ content: Markdown.parse(content) });
-	} catch {
-		return ok({ content: null });
-	}
+	let result = await validate(request, z.object({ content: z.string() }));
+	if (isFailure(result)) return ok({ content: null });
+	return ok({ content: Markdown.parse(result.data.content) });
 }
 
 type TextboxProps = {

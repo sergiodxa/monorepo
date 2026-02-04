@@ -1,11 +1,12 @@
 import { badRequest, ok } from "@pkg/response";
+import { isFailure } from "@pkg/result";
+import { validate } from "@pkg/validate";
 import { href, redirect } from "react-router";
 import { z } from "zod";
 
 import { getBindings } from "~/middleware/bindings";
 import { requireUser } from "~/middleware/session";
 import { GitHub } from "~/modules/github.server";
-import { Schemas } from "~/utils/schemas";
 import { assertUUID } from "~/utils/uuid";
 
 import type { Route } from "./+types/route";
@@ -41,43 +42,43 @@ export async function action({ request }: Route.ActionArgs) {
 	if (formData.get("intent") === INTENT.createLike) {
 		assertUUID(user.id);
 
-		try {
-			let { url } = Schemas.formData()
-				.pipe(
-					z.object({
-						url: z
-							.string()
-							.url()
-							.transform((value) => new URL(value)),
-					}),
-				)
-				.parse(formData);
+		let result = await validate(
+			formData,
+			z.object({
+				url: z
+					.string()
+					.url()
+					.transform((value) => new URL(value)),
+			}),
+		);
 
-			await createQuickLike(url, user.id);
+		if (isFailure(result)) {
+			return badRequest({
+				intent: INTENT.createLike,
+				errors: result.error.issues.reduce(
+					(errors, issue) => {
+						let path = issue.path?.[0];
+						if (typeof path === "string" || typeof path === "number") {
+							errors[String(path)] = issue.message;
+						}
+						return errors;
+					},
+					{} as Record<string, string>,
+				),
+			});
+		}
+
+		try {
+			await createQuickLike(result.data.url, user.id);
 			throw redirect("/cms");
 		} catch (error) {
 			if (error instanceof Response) throw error;
-			if (error instanceof z.ZodError) {
-				return badRequest({
-					intent: INTENT.createLike,
-					errors: error.issues.reduce(
-						(errors, issue) => {
-							let [path] = issue.path;
-							if (typeof path === "string") errors[path] = issue.message;
-							return errors;
-						},
-						{} as Record<string, string>,
-					),
-				});
-			}
-
 			if (error instanceof Error) {
 				return badRequest({
 					intent: INTENT.createLike,
 					errors: { url: error.message },
 				});
 			}
-
 			throw error;
 		}
 	}

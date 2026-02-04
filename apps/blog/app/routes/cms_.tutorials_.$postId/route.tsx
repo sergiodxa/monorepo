@@ -1,4 +1,6 @@
 import { badRequest, ok } from "@pkg/response";
+import { isFailure } from "@pkg/result";
+import { validate } from "@pkg/validate";
 import dark from "prism-theme-github/themes/prism-theme-github-copilot.css?url";
 import light from "prism-theme-github/themes/prism-theme-github-light.css?url";
 import { useEffect, useMemo, useRef } from "react";
@@ -10,7 +12,6 @@ import { getDB } from "~/middleware/drizzle";
 import { requireUser } from "~/middleware/session";
 import { Tutorial } from "~/models/tutorial.server";
 import { Form } from "~/ui/Form";
-import { Schemas } from "~/utils/schemas";
 import { assertUUID } from "~/utils/uuid";
 
 import type { action as editorAction } from "../components.editor/route";
@@ -70,26 +71,25 @@ export async function action({ request, params }: Route.ActionArgs) {
 
 	let formData = await request.formData();
 
-	let result = Schemas.formData()
-		.pipe(
-			z.object({
-				content: z.string(),
-				title: z.string().max(140),
-				slug: z.string(),
-				excerpt: z
-					.string()
-					.nullish()
-					.default("")
-					.transform((v) => v ?? ""),
-				tags: z
-					.string()
-					.optional()
-					.transform((value) => value?.split(" ")),
-			}),
-		)
-		.safeParse(formData);
+	let result = await validate(
+		formData,
+		z.object({
+			content: z.string(),
+			title: z.string().max(140),
+			slug: z.string(),
+			excerpt: z
+				.string()
+				.nullish()
+				.default("")
+				.transform((v) => v ?? ""),
+			tags: z
+				.string()
+				.optional()
+				.transform((value) => value?.split(" ")),
+		}),
+	);
 
-	if (!result.success) return badRequest({ error: result.error.issues });
+	if (isFailure(result)) return badRequest({ error: result.error.issues });
 
 	let body = result.data;
 

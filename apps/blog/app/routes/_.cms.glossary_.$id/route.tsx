@@ -1,4 +1,6 @@
 import { ok } from "@pkg/response";
+import { succeeded } from "@pkg/result";
+import { validate } from "@pkg/validate";
 import { parameterize } from "inflected";
 import { redirect, redirectDocument } from "react-router";
 import { href } from "react-router";
@@ -11,7 +13,6 @@ import { Glossary } from "~/models/glossary.server";
 import { Button } from "~/ui/Button";
 import { Form } from "~/ui/Form";
 import { TextField } from "~/ui/TextField";
-import { Schemas } from "~/utils/schemas";
 import { assertUUID } from "~/utils/uuid";
 
 import type { Route } from "./+types/route";
@@ -55,22 +56,31 @@ export async function action({ request, params }: Route.ActionArgs) {
 	let intent = formData.get("intent");
 
 	if (intent === INTENT.create) {
-		let { term, title, definition } = Schemas.formData()
-			.pipe(
-				z.object({
-					term: z.string(),
-					title: z.string().optional(),
-					definition: z.string(),
-				}),
-			)
-			.parse(formData);
+		let result = await validate(
+			formData,
+			z.object({
+				term: z.string(),
+				title: z.string().optional(),
+				definition: z.string(),
+			}),
+		);
+		succeeded(result, "Invalid form data");
 
-		let slug = parameterize(term);
+		let slug = parameterize(result.data.term);
 
 		let db = getDB();
 		let user = requireUser();
 
-		await Glossary.create({ db }, { authorId: user.id, slug, term, title, definition });
+		await Glossary.create(
+			{ db },
+			{
+				authorId: user.id,
+				slug,
+				term: result.data.term,
+				title: result.data.title,
+				definition: result.data.definition,
+			},
+		);
 
 		let cache = getCache();
 		let cacheKey = await cache.list("feed:glossary:");
@@ -81,16 +91,16 @@ export async function action({ request, params }: Route.ActionArgs) {
 	}
 
 	if (intent === INTENT.update) {
-		let { term, title, definition, slug } = Schemas.formData()
-			.pipe(
-				z.object({
-					term: z.string(),
-					title: z.string().optional(),
-					definition: z.string(),
-					slug: z.string(),
-				}),
-			)
-			.parse(formData);
+		let result = await validate(
+			formData,
+			z.object({
+				term: z.string(),
+				title: z.string().optional(),
+				definition: z.string(),
+				slug: z.string(),
+			}),
+		);
+		succeeded(result, "Invalid form data");
 
 		let db = getDB();
 
@@ -101,10 +111,10 @@ export async function action({ request, params }: Route.ActionArgs) {
 
 		await Glossary.update({ db }, id, {
 			authorId: user.id,
-			term,
-			title,
-			definition,
-			slug,
+			term: result.data.term,
+			title: result.data.title,
+			definition: result.data.definition,
+			slug: result.data.slug,
 		});
 
 		let cache = getCache();
@@ -112,7 +122,7 @@ export async function action({ request, params }: Route.ActionArgs) {
 
 		await Promise.all([cache.delete("feed:glossary"), ...cacheKey.map((key) => cache.delete(key))]);
 
-		return redirectDocument(`${href("/glossary")}#${slug}`);
+		return redirectDocument(`${href("/glossary")}#${result.data.slug}`);
 	}
 
 	return redirect(href("/glossary"));

@@ -1,4 +1,6 @@
 import { ok } from "@pkg/response";
+import { succeeded } from "@pkg/result";
+import { validate } from "@pkg/validate";
 import { href, redirect } from "react-router";
 import { z } from "zod";
 
@@ -8,7 +10,6 @@ import { Like } from "~/models/like.server";
 import { Button } from "~/ui/Button";
 import { Form } from "~/ui/Form";
 import { TextField } from "~/ui/TextField";
-import { Schemas } from "~/utils/schemas";
 import { assertUUID } from "~/utils/uuid";
 
 import type { Route } from "./+types/route";
@@ -30,13 +31,15 @@ export async function action({ request, params }: Route.ActionArgs) {
 
 	let db = getDB();
 
-	let formData = await request.formData();
-	let { title, url } = Schemas.formData()
-		.pipe(z.object({ title: z.string(), url: z.string().url() }))
-		.parse(formData);
+	let result = await validate(request, z.object({ title: z.string(), url: z.string().url() }));
+	succeeded(result, "Invalid form data");
 
 	let user = requireUser();
-	await Like.update({ db }, id, { authorId: user.id, title, url });
+	await Like.update({ db }, id, {
+		authorId: user.id,
+		title: result.data.title,
+		url: result.data.url,
+	});
 
 	return redirect(href("/cms/likes"));
 }

@@ -23,6 +23,8 @@
 		"@pkg/cn": "workspace:*",
 		"@pkg/logger": "workspace:*",
 		"@pkg/response": "workspace:*",
+		"@pkg/result": "workspace:*",
+		"@pkg/validate": "workspace:*",
 		"@react-router/cloudflare": "^7.6.2",
 		"@react-router/fs-routes": "^7.6.2",
 		"@react-types/shared": "^3.32.1",
