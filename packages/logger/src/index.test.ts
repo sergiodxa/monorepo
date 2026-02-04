@@ -1,8 +1,16 @@
 import { describe, test, expect, spyOn, beforeEach, afterEach } from "bun:test";
 
-import { logger } from "./index";
+import { RouterContextProvider } from "react-router";
 
-describe("logger", () => {
+import {
+	logger,
+	BatchedLogger,
+	LoggerContext,
+	createLoggerMiddleware,
+	getLoggerFromContext,
+} from "./index";
+
+describe("logger (singleton)", () => {
 	let consoleInfoSpy: ReturnType<typeof spyOn>;
 	let consoleWarnSpy: ReturnType<typeof spyOn>;
 	let consoleErrorSpy: ReturnType<typeof spyOn>;
@@ -117,6 +125,247 @@ describe("logger", () => {
 				event: "test_event",
 				timestamp: 1738590000000,
 			});
+		});
+	});
+});
+
+describe("BatchedLogger", () => {
+	let consoleInfoSpy: ReturnType<typeof spyOn>;
+	let consoleWarnSpy: ReturnType<typeof spyOn>;
+	let consoleErrorSpy: ReturnType<typeof spyOn>;
+	let dateNowSpy: ReturnType<typeof spyOn>;
+
+	beforeEach(() => {
+		consoleInfoSpy = spyOn(console, "info").mockImplementation(() => {});
+		consoleWarnSpy = spyOn(console, "warn").mockImplementation(() => {});
+		consoleErrorSpy = spyOn(console, "error").mockImplementation(() => {});
+		dateNowSpy = spyOn(Date, "now").mockReturnValue(1738590000000);
+	});
+
+	afterEach(() => {
+		consoleInfoSpy.mockRestore();
+		consoleWarnSpy.mockRestore();
+		consoleErrorSpy.mockRestore();
+		dateNowSpy.mockRestore();
+	});
+
+	describe("accumulation", () => {
+		test("does not log immediately when calling info/warn/error", () => {
+			let batchedLogger = new BatchedLogger();
+
+			batchedLogger.info("event1");
+			batchedLogger.warn("event2");
+			batchedLogger.error("event3");
+
+			expect(consoleInfoSpy).not.toHaveBeenCalled();
+			expect(consoleWarnSpy).not.toHaveBeenCalled();
+			expect(consoleErrorSpy).not.toHaveBeenCalled();
+		});
+	});
+
+	describe("flush", () => {
+		test("outputs all events in a single console call", () => {
+			let batchedLogger = new BatchedLogger();
+
+			batchedLogger.info("event1", { key: "value1" });
+			batchedLogger.info("event2", { key: "value2" });
+			batchedLogger.flush();
+
+			expect(consoleInfoSpy).toHaveBeenCalledTimes(1);
+			expect(consoleInfoSpy).toHaveBeenCalledWith({
+				events: [
+					{ level: "info", event: "event1", key: "value1", timestamp: 1738590000000 },
+					{ level: "info", event: "event2", key: "value2", timestamp: 1738590000000 },
+				],
+			});
+		});
+
+		test("uses console.error when any error is present", () => {
+			let batchedLogger = new BatchedLogger();
+
+			batchedLogger.info("info_event");
+			batchedLogger.warn("warn_event");
+			batchedLogger.error("error_event");
+			batchedLogger.flush();
+
+			expect(consoleErrorSpy).toHaveBeenCalledTimes(1);
+			expect(consoleInfoSpy).not.toHaveBeenCalled();
+			expect(consoleWarnSpy).not.toHaveBeenCalled();
+		});
+
+		test("uses console.warn when warn is present but no error", () => {
+			let batchedLogger = new BatchedLogger();
+
+			batchedLogger.info("info_event");
+			batchedLogger.warn("warn_event");
+			batchedLogger.flush();
+
+			expect(consoleWarnSpy).toHaveBeenCalledTimes(1);
+			expect(consoleInfoSpy).not.toHaveBeenCalled();
+			expect(consoleErrorSpy).not.toHaveBeenCalled();
+		});
+
+		test("uses console.info when only info events are present", () => {
+			let batchedLogger = new BatchedLogger();
+
+			batchedLogger.info("info_event1");
+			batchedLogger.info("info_event2");
+			batchedLogger.flush();
+
+			expect(consoleInfoSpy).toHaveBeenCalledTimes(1);
+			expect(consoleWarnSpy).not.toHaveBeenCalled();
+			expect(consoleErrorSpy).not.toHaveBeenCalled();
+		});
+
+		test("clears events after flushing", () => {
+			let batchedLogger = new BatchedLogger();
+
+			batchedLogger.info("event1");
+			batchedLogger.flush();
+			batchedLogger.flush();
+
+			expect(consoleInfoSpy).toHaveBeenCalledTimes(1);
+		});
+
+		test("does nothing when no events are accumulated", () => {
+			let batchedLogger = new BatchedLogger();
+
+			batchedLogger.flush();
+
+			expect(consoleInfoSpy).not.toHaveBeenCalled();
+			expect(consoleWarnSpy).not.toHaveBeenCalled();
+			expect(consoleErrorSpy).not.toHaveBeenCalled();
+		});
+
+		test("includes level in each event output", () => {
+			let batchedLogger = new BatchedLogger();
+
+			batchedLogger.info("info_event");
+			batchedLogger.warn("warn_event");
+			batchedLogger.error("error_event");
+			batchedLogger.flush();
+
+			expect(consoleErrorSpy).toHaveBeenCalledWith({
+				events: [
+					{ level: "info", event: "info_event", timestamp: 1738590000000 },
+					{ level: "warn", event: "warn_event", timestamp: 1738590000000 },
+					{ level: "error", event: "error_event", timestamp: 1738590000000 },
+				],
+			});
+		});
+
+		test("includes payload in event output", () => {
+			let batchedLogger = new BatchedLogger();
+
+			batchedLogger.info("user_subscribed", { email: "test@example.com", source: "homepage" });
+			batchedLogger.flush();
+
+			expect(consoleInfoSpy).toHaveBeenCalledWith({
+				events: [
+					{
+						level: "info",
+						event: "user_subscribed",
+						email: "test@example.com",
+						source: "homepage",
+						timestamp: 1738590000000,
+					},
+				],
+			});
+		});
+	});
+});
+
+describe("middleware", () => {
+	let consoleInfoSpy: ReturnType<typeof spyOn>;
+	let consoleErrorSpy: ReturnType<typeof spyOn>;
+	let dateNowSpy: ReturnType<typeof spyOn>;
+
+	beforeEach(() => {
+		consoleInfoSpy = spyOn(console, "info").mockImplementation(() => {});
+		consoleErrorSpy = spyOn(console, "error").mockImplementation(() => {});
+		dateNowSpy = spyOn(Date, "now").mockReturnValue(1738590000000);
+	});
+
+	afterEach(() => {
+		consoleInfoSpy.mockRestore();
+		consoleErrorSpy.mockRestore();
+		dateNowSpy.mockRestore();
+	});
+
+	describe("createLoggerMiddleware", () => {
+		test("creates a BatchedLogger and stores it in context", async () => {
+			let middleware = createLoggerMiddleware();
+			let context = new RouterContextProvider();
+			let capturedLogger: BatchedLogger | undefined;
+
+			await middleware({ context }, async () => {
+				capturedLogger = context.get(LoggerContext);
+				return new Response("OK");
+			});
+
+			expect(capturedLogger).toBeInstanceOf(BatchedLogger);
+		});
+
+		test("flushes logger after handler completes", async () => {
+			let middleware = createLoggerMiddleware();
+			let context = new RouterContextProvider();
+
+			await middleware({ context }, async () => {
+				let logger = context.get(LoggerContext)!;
+				logger.info("test_event");
+				return new Response("OK");
+			});
+
+			expect(consoleInfoSpy).toHaveBeenCalledTimes(1);
+		});
+
+		test("flushes logger even if handler throws", async () => {
+			let middleware = createLoggerMiddleware();
+			let context = new RouterContextProvider();
+
+			try {
+				await middleware({ context }, async () => {
+					let logger = context.get(LoggerContext)!;
+					logger.error("error_before_throw");
+					throw new Error("Handler error");
+				});
+			} catch {
+				// Expected
+			}
+
+			expect(consoleErrorSpy).toHaveBeenCalledTimes(1);
+		});
+
+		test("returns the response from the handler", async () => {
+			let middleware = createLoggerMiddleware();
+			let context = new RouterContextProvider();
+
+			let response = await middleware({ context }, async () => {
+				return new Response("Test body", { status: 201 });
+			});
+
+			expect(response.status).toBe(201);
+			expect(await response.text()).toBe("Test body");
+		});
+	});
+
+	describe("getLoggerFromContext", () => {
+		test("retrieves the BatchedLogger from context", async () => {
+			let middleware = createLoggerMiddleware();
+			let context = new RouterContextProvider();
+
+			await middleware({ context }, async () => {
+				let logger = getLoggerFromContext(context);
+				expect(logger).toBeInstanceOf(BatchedLogger);
+				return new Response("OK");
+			});
+		});
+
+		test("throws error if logger middleware was not used", () => {
+			let context = new RouterContextProvider();
+
+			// React Router's context.get throws "No value found for context" when key doesn't exist
+			expect(() => getLoggerFromContext(context)).toThrow();
 		});
 	});
 });
