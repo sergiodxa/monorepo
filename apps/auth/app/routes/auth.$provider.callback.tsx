@@ -4,7 +4,6 @@ import { badRequest } from "~/helpers/response";
 import { db } from "~/middleware/drizzle";
 import { session } from "~/middleware/session";
 import { github } from "~/providers/github";
-import { google } from "~/providers/google";
 import loginWithProvider from "~/services/login/with-provider";
 
 import type { Route } from "./+types/auth.$provider.callback";
@@ -14,8 +13,6 @@ export async function loader({ request, params }: Route.LoaderArgs) {
 
 	if (params.provider === "github") {
 		sub = await github(db(), request);
-	} else if (params.provider === "google") {
-		sub = await google(db(), request);
 	} else {
 		return badRequest({ message: "Invalid provider" });
 	}

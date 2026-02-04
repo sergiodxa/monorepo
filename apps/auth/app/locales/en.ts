@@ -46,11 +46,6 @@ export default {
 				cta: "Login with GitHub",
 				reminder: "Last time you logged in with GitHub",
 			},
-
-			google: {
-				cta: "Login with Google",
-				reminder: "Last time you logged in with Google",
-			},
 		},
 	},
 
