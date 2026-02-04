@@ -1,10 +1,10 @@
-import { logger } from "@pkg/logger";
 import { ok, badRequest } from "@pkg/response";
 import { success, failure } from "@pkg/result";
 import { validateEvent } from "@polar-sh/sdk/webhooks";
 import { env } from "cloudflare:workers";
 
 import { Product } from "~/data/product";
+import { logger } from "~/middleware/logger";
 import buttondown from "~/services/buttondown";
 
 import type { Route } from "./+types/webhooks.polar";

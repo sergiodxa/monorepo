@@ -2,6 +2,8 @@ import { APIClient } from "@edgefirst-dev/api-client";
 import { env } from "cloudflare:workers";
 import { z } from "zod";
 
+import { logger } from "~/middleware/logger";
+
 class Buttondown extends APIClient {
 	constructor(protected override readonly options: { apiKey: string; fetch: typeof fetch }) {
 		super(new URL("https://api.buttondown.com"), options);
@@ -15,6 +17,7 @@ class Buttondown extends APIClient {
 
 	protected override async after(_: Request, response: Response): Promise<Response> {
 		if (response.status === 403) {
+			logger.error("buttondown_forbidden", { status: response.status });
 			throw new Error("Forbidden");
 		}
 		return response;
@@ -22,8 +25,9 @@ class Buttondown extends APIClient {
 
 	async isSubscribed(email: string) {
 		const response = await this.get(`/v1/subscribers/${email}`);
-		if (response.ok) return true;
-		return false;
+		let subscribed = response.ok;
+		logger.info("buttondown_subscriber_check", { email, subscribed });
+		return subscribed;
 	}
 
 	async subscribe(
@@ -41,12 +45,16 @@ class Buttondown extends APIClient {
 			}),
 		});
 
-		if (response.ok) return await response.json();
+		if (response.ok) {
+			logger.info("buttondown_subscribe_success", { email });
+			return await response.json();
+		}
 
 		let error = await z
 			.object({ code: z.string(), detail: z.string() })
 			.parseAsync(await response.json());
 
+		logger.error("buttondown_subscribe_error", { email, code: error.code });
 		throw new ButtondownError(error.detail, error.code);
 	}
 
@@ -55,7 +63,12 @@ class Buttondown extends APIClient {
 			body: JSON.stringify({ metadata }),
 		});
 
-		if (response.ok) return await response.json();
+		if (response.ok) {
+			logger.info("buttondown_metadata_updated", { email, metadata });
+			return await response.json();
+		}
+
+		logger.error("buttondown_metadata_failed", { email });
 		throw new Error("Failed to add metadata");
 	}
 }

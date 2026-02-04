@@ -4,6 +4,7 @@ import { isFailure } from "@pkg/result";
 import { validate, ValidationError } from "@pkg/validate";
 import { href, redirect } from "react-router";
 
+import { logger } from "~/middleware/logger";
 import { subscribeSchema } from "~/schemas/subscribe";
 import { ButtondownError } from "~/services/buttondown";
 import { subscribe } from "~/use-case/subscribe";
@@ -17,8 +18,10 @@ export async function action({ request }: Route.ActionArgs) {
 	if (isFailure(validationResult)) {
 		let error = validationResult.error;
 		if (error instanceof ValidationError && error.issues[0]) {
+			logger.warn("subscribe_validation_failed", { issue: error.issues[0].message });
 			return badRequest({ error: error.issues[0].message });
 		}
+		logger.warn("subscribe_validation_failed", { error: "Invalid form data" });
 		return badRequest({ error: "Invalid form data" });
 	}
 
@@ -32,6 +35,7 @@ export async function action({ request }: Route.ActionArgs) {
 
 		if (error instanceof ButtondownError) {
 			if (error.code === "subscriber_blocked") {
+				logger.warn("subscriber_blocked", { email: payload.email });
 				return badRequest({
 					error:
 						"My upstream provider is blocking you for some reason.\nPlease try with another email address and sorry for the inconvenience.",
@@ -39,14 +43,19 @@ export async function action({ request }: Route.ActionArgs) {
 			}
 
 			if (error.code === "email_invalid") {
+				logger.warn("subscribe_email_invalid", { email: payload.email });
 				return badRequest({
 					error: "Invalid email address. \nPlease try with another email address.",
 				});
 			}
 
-			if (error.code === "email_already_exists") return redirect(href("/release"));
+			if (error.code === "email_already_exists") {
+				logger.info("subscribe_already_exists", { email: payload.email });
+				return redirect(href("/release"));
+			}
 		}
 
+		logger.error("subscribe_error", { email: payload.email, error: error.message });
 		return badRequest({ error: error.message });
 	}
 

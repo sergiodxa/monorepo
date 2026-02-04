@@ -1,10 +1,10 @@
 import type { Result } from "@pkg/result";
 
-import { logger } from "@pkg/logger";
 import { success, failure } from "@pkg/result";
 
 import type { SubscribeOutput } from "~/schemas/subscribe";
 
+import { logger } from "~/middleware/logger";
 import buttondown, { ButtondownError } from "~/services/buttondown";
 
 export async function subscribe(

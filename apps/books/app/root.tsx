@@ -3,6 +3,10 @@ import { isRouteErrorResponse, Outlet, Scripts, ScrollRestoration } from "react-
 import type { Route } from "./+types/root";
 
 import styles from "./app.css?url";
+import { contextStorageMiddleware } from "./middleware/context-storage";
+import { loggerMiddleware } from "./middleware/logger";
+
+export const middleware = [contextStorageMiddleware, loggerMiddleware];
 
 export function Layout({ children }: { children: React.ReactNode }) {
 	return (
