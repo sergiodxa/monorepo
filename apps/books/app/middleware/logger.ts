@@ -10,6 +10,5 @@ export function getLogger(): BatchedLogger {
 
 export const logger = {
 	info: (event: string, payload?: Record<string, unknown>) => getLogger().info(event, payload),
-	warn: (event: string, payload?: Record<string, unknown>) => getLogger().warn(event, payload),
 	error: (event: string, payload?: Record<string, unknown>) => getLogger().error(event, payload),
 };
