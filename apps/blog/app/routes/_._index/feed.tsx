@@ -1,11 +1,11 @@
 import type { TFunction } from "i18next";
 import type { ReactNode } from "react";
 
+import { cn } from "@pkg/cn";
 import { BookIcon, BookmarkIcon, PencilIcon } from "lucide-react";
 import { Trans, useTranslation } from "react-i18next";
 
 import { Link } from "~/ui/Link";
-import { cn } from "~/utils/cn";
 
 import type { FeedItem } from "./types";
 

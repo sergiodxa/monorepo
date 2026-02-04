@@ -1,3 +1,4 @@
+import { cn } from "@pkg/cn";
 import { Suspense } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import { Await, Link as RemixLink, href, useAsyncValue } from "react-router";
@@ -9,7 +10,6 @@ import { Button } from "~/ui/Button";
 import { Form } from "~/ui/Form";
 import { Link } from "~/ui/Link";
 import { Tag, TagGroup } from "~/ui/TagGroup";
-import { cn } from "~/utils/cn";
 
 type Post = Awaited<ReturnType<typeof import("../queries").queryTutorial>>;
 type RecommendationsList = Post["recommendations"];
