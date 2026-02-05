@@ -1,7 +1,7 @@
-import { eachDayOfInterval, endOfWeek, startOfDay, startOfWeek, subYears } from "date-fns";
+import { eachDayOfInterval, endOfYear, startOfYear } from "date-fns";
 
 export default function daysOfYear(today: Date) {
-	let end = endOfWeek(startOfDay(today));
-	let start = startOfWeek(subYears(end, 1));
+	let start = startOfYear(today);
+	let end = endOfYear(today);
 	return eachDayOfInterval({ start, end });
 }
