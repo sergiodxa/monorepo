@@ -53,7 +53,7 @@ export function Textbox(props: TextboxProps) {
 					let value = event.currentTarget.value;
 					props.dispatch({ type: "write", payload: { value } });
 				}}
-				className="mx-2 mb-2 flex-grow resize-none rounded-md border-none font-mono ring-blue-600 focus:outline-none focus:ring-2"
+				className="mx-2 mb-2 flex-grow resize-none rounded-md border-none font-mono ring-blue-600 focus:ring-2 focus:outline-none"
 			/>
 		</div>
 	);
@@ -65,7 +65,7 @@ type PreviewProps = {
 
 export function Preview(props: PreviewProps) {
 	return (
-		<div className="prose prose-blue max-w-prose overflow-y-auto sm:prose-lg dark:prose-invert">
+		<div className="prose max-w-prose overflow-y-auto prose-blue sm:prose-lg dark:prose-invert">
 			{props.rendereable ? <MarkdownView content={props.rendereable} /> : null}
 		</div>
 	);

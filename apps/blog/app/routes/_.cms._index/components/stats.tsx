@@ -49,7 +49,7 @@ export function Stats(props: { stats: Stats }) {
 
 	return (
 		<div className="flex flex-col gap-5">
-			<Heading className="text-base font-semibold leading-6 text-zinc-900 dark:text-zinc-50">
+			<Heading className="text-base leading-6 font-semibold text-zinc-900 dark:text-zinc-50">
 				{t("title")}
 			</Heading>
 
@@ -57,7 +57,7 @@ export function Stats(props: { stats: Stats }) {
 				{stats.map((item) => (
 					<div
 						key={item.name}
-						className="relative overflow-hidden rounded-lg bg-white px-4 pb-12 pt-5 shadow sm:px-6 sm:pt-6 dark:bg-zinc-600"
+						className="relative overflow-hidden rounded-lg bg-white px-4 pt-5 pb-12 shadow sm:px-6 sm:pt-6 dark:bg-zinc-600"
 					>
 						<dt>
 							<p className="truncate text-sm font-medium text-zinc-500 dark:text-zinc-300">

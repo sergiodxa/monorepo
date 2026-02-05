@@ -141,7 +141,7 @@ function Item({ body, index, size, iconColor, icon, createdAt }: FeedItemProps) 
 			<div className="relative pb-8">
 				{index !== size ? (
 					<span
-						className="absolute left-4 top-4 -ml-px h-full w-0.5 bg-white dark:bg-zinc-900"
+						className="absolute top-4 left-4 -ml-px h-full w-0.5 bg-white dark:bg-zinc-900"
 						aria-hidden
 					/>
 				) : null}
@@ -159,7 +159,7 @@ function Item({ body, index, size, iconColor, icon, createdAt }: FeedItemProps) 
 					<div className="flex min-w-0 flex-1 justify-between space-x-4 pt-1.5">
 						{body}
 
-						<div className="whitespace-nowrap text-right text-sm tabular-nums text-zinc-500">
+						<div className="text-right text-sm whitespace-nowrap text-zinc-500 tabular-nums">
 							<time dateTime={createdAt.toISOString()}>
 								{createdAt.toLocaleDateString(i18n.language, {
 									month: "short",

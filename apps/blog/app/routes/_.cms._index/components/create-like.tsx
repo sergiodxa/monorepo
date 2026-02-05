@@ -20,7 +20,7 @@ export function CreateLike({ actionData }: CreateLikeProps) {
 
 	return (
 		<div className="flex flex-col gap-5">
-			<Heading className="text-base font-semibold leading-6 text-zinc-900 dark:text-zinc-50">
+			<Heading className="text-base leading-6 font-semibold text-zinc-900 dark:text-zinc-50">
 				{t("title")}
 			</Heading>
 

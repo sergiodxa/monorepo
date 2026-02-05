@@ -16,7 +16,7 @@ export const middleware: Route.MiddlewareFunction[] = [
 
 export default function Component() {
 	return (
-		<main className="-my-4 mx-auto flex max-w-screen-xl flex-col gap-8">
+		<main className="mx-auto -my-4 flex max-w-screen-xl flex-col gap-8">
 			<Navigation />
 			<Outlet />
 		</main>

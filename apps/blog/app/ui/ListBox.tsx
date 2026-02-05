@@ -56,7 +56,7 @@ export function ListBoxItem(props: ListBoxItemProps) {
 			{composeRenderProps(props.children, (children) => (
 				<>
 					{children}
-					<div className="absolute bottom-0 left-4 right-4 hidden h-px bg-white/20 forced-colors:bg-[HighlightText] [.group[data-selected]:has(+[data-selected])_&]:block" />
+					<div className="absolute right-4 bottom-0 left-4 hidden h-px bg-white/20 forced-colors:bg-[HighlightText] [.group[data-selected]:has(+[data-selected])_&]:block" />
 				</>
 			))}
 		</AriaListBoxItem>
@@ -83,7 +83,7 @@ export function DropdownItem(props: ListBoxItemProps) {
 		<AriaListBoxItem {...props} textValue={textValue} className={dropdownItemStyles}>
 			{composeRenderProps(props.children, (children, { isSelected }) => (
 				<>
-					<span className="flex flex-1 items-center gap-2 truncate font-normal group-selected:font-semibold">
+					<span className="group-selected:font-semibold flex flex-1 items-center gap-2 truncate font-normal">
 						{children}
 					</span>
 					<span className="flex w-5 items-center">

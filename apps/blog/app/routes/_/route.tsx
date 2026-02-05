@@ -35,7 +35,7 @@ export function ErrorBoundary() {
 		<>
 			<Header />
 
-			<article className="prose prose-blue mx-auto flex max-w-screen-md flex-col gap-8 px-4 pb-14 pt-20 dark:prose-invert">
+			<article className="mx-auto prose flex max-w-screen-md flex-col gap-8 px-4 pt-20 pb-14 prose-blue dark:prose-invert">
 				<header className="gap-4 md:flex md:items-start md:justify-between">
 					<h1>{title}</h1>
 				</header>

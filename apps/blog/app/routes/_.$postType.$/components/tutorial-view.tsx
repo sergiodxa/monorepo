@@ -22,7 +22,7 @@ export function TutorialView({ post }: { post: Post }) {
 
 	return (
 		<article className="mx-auto flex max-w-screen-md flex-col gap-8 pb-14">
-			<div className="prose prose-blue mx-auto w-full max-w-prose space-y-8 sm:prose-lg dark:prose-invert">
+			<div className="mx-auto prose w-full max-w-prose space-y-8 prose-blue sm:prose-lg dark:prose-invert">
 				<div className="flex flex-col gap-2 sm:flex-row sm:items-baseline sm:justify-between">
 					<Tags
 						tags={
@@ -118,7 +118,7 @@ function Recommendations() {
 	return (
 		<section className="not-prose mt-4 space-y-4">
 			<header className="border-b border-zinc-200 pb-5">
-				<h2 className="text-lg font-medium leading-6 text-zinc-900 dark:text-zinc-100">
+				<h2 className="text-lg leading-6 font-medium text-zinc-900 dark:text-zinc-100">
 					{t("title")}
 				</h2>
 			</header>

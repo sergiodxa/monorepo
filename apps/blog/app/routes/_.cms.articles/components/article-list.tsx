@@ -38,7 +38,7 @@ function Item(props: Article) {
 		<li className="flex items-center justify-between gap-3 gap-x-6 py-5">
 			<div className="flex flex-col gap-1">
 				<Link href={props.path}>
-					<h3 className="text-sm font-semibold leading-6 text-zinc-900 underline dark:text-zinc-50">
+					<h3 className="text-sm leading-6 font-semibold text-zinc-900 underline dark:text-zinc-50">
 						{props.title}
 					</h3>
 				</Link>

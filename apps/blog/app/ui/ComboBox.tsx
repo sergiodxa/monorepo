@@ -38,7 +38,7 @@ export function ComboBox<T extends object>({
 			<Label>{label}</Label>
 			<FieldGroup>
 				<Input />
-				<Button variant="icon" className="mr-1 w-6 rounded outline-offset-0 ">
+				<Button variant="icon" className="mr-1 w-6 rounded outline-offset-0">
 					<ChevronDown aria-hidden className="h-4 w-4" />
 				</Button>
 			</FieldGroup>
