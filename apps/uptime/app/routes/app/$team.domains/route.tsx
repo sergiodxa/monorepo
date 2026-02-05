@@ -1,0 +1,398 @@
+import { cn } from "@pkg/cn";
+import {
+	BadgeMinusIcon,
+	BadgePlusIcon,
+	ClipboardCopyIcon,
+	EllipsisVerticalIcon,
+	LoaderIcon,
+	RefreshCcwIcon,
+} from "lucide-react";
+import { useId } from "react";
+import { TextField } from "react-aria-components";
+import { Trans, useTranslation } from "react-i18next";
+import { data, href, isRouteErrorResponse, Link, useFetcher } from "react-router";
+import { useSpinDelay } from "spin-delay";
+
+import { AppHeader } from "~/components/app-header";
+import { Alert } from "~/components/ui/alert";
+import { Button } from "~/components/ui/button";
+import { Description, FieldError, Input, Label } from "~/components/ui/field";
+import { LinkButton } from "~/components/ui/link-button";
+import { Menu } from "~/components/ui/menu";
+import { ColumnAlignment, Table } from "~/components/ui/table";
+import { useTeam } from "~/hooks/use-team";
+import { hasActiveSubscription } from "~/middleware/customer-subscription";
+import { db } from "~/middleware/drizzle";
+import { measure } from "~/middleware/server-timing";
+import { team } from "~/middleware/team";
+
+import type { Route } from "./+types/route";
+
+export async function loader() {
+	let { memberships, id } = team();
+	let subjectMembership = memberships[0];
+
+	if (subjectMembership.role === "member") {
+		throw data(
+			{ status: 403, hasActiveSubscription: await hasActiveSubscription() },
+			{ status: 403, statusText: "Forbidden" },
+		);
+	}
+
+	let domains = await measure("findVerifiedDomains", async () => {
+		return await db().query.teamDomains.findMany({
+			where(fields, operators) {
+				return operators.eq(fields.teamId, id);
+			},
+		});
+	});
+
+	return { domains, hasActiveSubscription: await hasActiveSubscription() };
+}
+
+export default function Component({ loaderData, params }: Route.ComponentProps) {
+	let { t } = useTranslation("translation", { keyPrefix: "page.domains" });
+	let id = useId();
+
+	let columns = [
+		{
+			id: "hostname" as const,
+			name: t("table.columns.hostname"),
+			align: ColumnAlignment.Left,
+		},
+		{
+			id: "id" as const,
+			name: t("table.columns.id"),
+			align: ColumnAlignment.Right,
+		},
+		{
+			id: "verifiedAt" as const,
+			name: t("table.columns.verifiedAt"),
+			align: ColumnAlignment.Right,
+		},
+		{
+			id: "actions" as const,
+			name: t("table.columns.actions"),
+			align: ColumnAlignment.Center,
+		},
+	];
+
+	let hasPendingVerification = loaderData.domains.some((domain) => !domain.verifiedAt);
+
+	return (
+		<>
+			<AppHeader heading={t("header.title")}>
+				<LinkButton
+					color="neutral"
+					href={href("/app/:team/domains/new", params)}
+					className="flex-shrink-0 px-2"
+				>
+					<BadgePlusIcon className="size-5" aria-hidden />
+					<span className="max-sm:sr-only">{t("header.action.addDomain")}</span>
+				</LinkButton>
+			</AppHeader>
+
+			{loaderData.hasActiveSubscription ? null : (
+				<div className="p-4">
+					<Alert
+						intent="warning"
+						title={t("alert.subscription.title")}
+						description={t("alert.subscription.description")}
+						cta={
+							<Link to={href("/app/:team/checkout", params)}>{t("alert.subscription.cta")}</Link>
+						}
+					/>
+				</div>
+			)}
+
+			<div className="p-12 flex flex-col gap-12">
+				{loaderData.domains.length === 0 ? (
+					<CreateDomainForm />
+				) : (
+					<>
+						<div className="flex flex-col gap-4">
+							<h2 id={`${id}-members-table`}>{t("table.label")}</h2>
+
+							<Table aria-labelledby={`{id}-members-table`}>
+								<Table.Header columns={columns}>
+									{(column) => {
+										return (
+											<Table.Column align={column.align} isRowHeader={column.id === "hostname"}>
+												<span
+													className={cn({
+														"sr-only":
+															column.id === "actions" ||
+															(!hasPendingVerification && column.id === "id"),
+													})}
+												>
+													{column.name}
+												</span>
+											</Table.Column>
+										);
+									}}
+								</Table.Header>
+
+								<Table.Body items={loaderData.domains}>
+									{(domain) => <DomainTableRow domain={domain} />}
+								</Table.Body>
+							</Table>
+						</div>
+
+						{hasPendingVerification && <Instructions />}
+					</>
+				)}
+			</div>
+		</>
+	);
+}
+
+function DomainTableRow(props: { domain: Route.ComponentProps["loaderData"]["domains"][number] }) {
+	let { t, i18n } = useTranslation("translation", {
+		keyPrefix: "page.domains.table",
+	});
+
+	let team = useTeam();
+
+	let verifiedAt = props.domain.verifiedAt
+		? new Date(props.domain.verifiedAt).toLocaleString(i18n.language, {
+				dateStyle: "long",
+			})
+		: t("verifiedAt.pending", { id: props.domain.id });
+
+	let removeDomainFetcher = useFetcher();
+	let isRemovingDomain = useSpinDelay(removeDomainFetcher.state !== "idle", {
+		minDuration: 100,
+		delay: 50,
+	});
+
+	let retryDomainVerificationFetcher = useFetcher();
+	let isRetryingDomainVerification = useSpinDelay(retryDomainVerificationFetcher.state !== "idle", {
+		minDuration: 100,
+		delay: 50,
+	});
+
+	let verificationId = `ping_${props.domain.id}`;
+
+	return (
+		<Table.Row>
+			<Table.Cell>{props.domain.hostname}</Table.Cell>
+			{props.domain.verifiedAt ? (
+				<Table.Cell>{null}</Table.Cell>
+			) : (
+				<Table.Cell className="text-right w-110">{verificationId}</Table.Cell>
+			)}
+			<Table.Cell className="text-right w-60">{verifiedAt}</Table.Cell>
+			<Table.Cell className="text-center w-17">
+				<Menu.Trigger>
+					<Button type="button" color="neutral" className="p-2">
+						<EllipsisVerticalIcon className="size-5" />
+						<span className="sr-only">{t("actions.menu")}</span>
+					</Button>
+
+					<Menu.Popover placement="left top">
+						<Menu>
+							{!props.domain.verifiedAt && (
+								<>
+									<Menu.Item
+										isDisabled={isRetryingDomainVerification}
+										onAction={() => {
+											retryDomainVerificationFetcher.submit(
+												{ domainId: props.domain.id },
+												{
+													method: "POST",
+													action: href("/actions/:team/retry-domain-verification", {
+														team: team.slug,
+													}),
+												},
+											);
+										}}
+									>
+										<RefreshCcwIcon aria-hidden className="size-5" />
+										<span>{t("actions.retryVerification")}</span>
+									</Menu.Item>
+
+									<Menu.Item onAction={() => navigator.clipboard.writeText(verificationId)}>
+										<ClipboardCopyIcon aria-hidden className="size-5" />
+										<span>{t("actions.copy")}</span>
+										<span className="sr-only">{props.domain.id}</span>
+									</Menu.Item>
+
+									<Menu.Separator />
+								</>
+							)}
+
+							<Menu.Item
+								isDisabled={isRemovingDomain}
+								onAction={() => {
+									if (window.confirm(t("confirmation.removeDomain", props.domain))) {
+										removeDomainFetcher.submit(
+											{
+												domainId: props.domain.id,
+												hostname: props.domain.hostname,
+											},
+											{
+												method: "POST",
+												action: href("/actions/:team/remove-domain", {
+													team: team.slug,
+												}),
+											},
+										);
+									}
+								}}
+							>
+								<BadgeMinusIcon aria-hidden className="size-5" />
+								<span>{t(`actions.remove`)}</span>
+								{isRemovingDomain && (
+									<LoaderIcon aria-hidden className="size-5 animate-spin ml-auto" />
+								)}
+							</Menu.Item>
+						</Menu>
+					</Menu.Popover>
+				</Menu.Trigger>
+			</Table.Cell>
+		</Table.Row>
+	);
+}
+
+function CreateDomainForm() {
+	let { t } = useTranslation("translation", {
+		keyPrefix: "page.domains.form",
+	});
+	let team = useTeam();
+
+	let fetcher = useFetcher();
+	let isPending = useSpinDelay(fetcher.state !== "idle", {
+		minDuration: 100,
+		delay: 50,
+	});
+
+	return (
+		<fetcher.Form
+			method="POST"
+			action={href("/actions/:team/add-domain", { team: team.slug })}
+			className="max-w-prose w-full mx-auto flex flex-col gap-6"
+		>
+			<TextField
+				type="text"
+				name="hostname"
+				className="flex flex-col gap-1"
+				isRequired
+				autoComplete="off"
+			>
+				<Label>{t("fields.hostname.label")}</Label>
+				<Input placeholder={t("fields.hostname.placeholder")} className="mt-2" />
+				<Description>
+					{t("fields.hostname.description", {
+						team: team.name,
+					})}
+				</Description>
+				<FieldError />
+			</TextField>
+
+			<Button
+				type="submit"
+				className="flex items-center justify-between self-end"
+				isPending={isPending}
+				name="intent"
+			>
+				<span>{t("cta")}</span>
+				{isPending && <LoaderIcon className="size-5 animate-spin" />}
+			</Button>
+		</fetcher.Form>
+	);
+}
+
+function Instructions() {
+	let { t } = useTranslation("translation", {
+		keyPrefix: "page.domains.instructions",
+	});
+
+	return (
+		<aside className="border border-neutral-300 dark:border-neutral-700 rounded-2xl p-4 flex flex-col gap-2">
+			<h3 className="text-xl font-semibold">{t("title")}</h3>
+
+			<p>{t("description")}</p>
+
+			<dl className="flex flex-col gap-2 my-2 [&_div]:flex [&_div]:gap-2 [&_div]:ml-2 [&_dt]:font-semibold [&_code]:bg-neutral-100 [&_code]:dark:bg-neutral-800 [&_code]:rounded-lg [&_code]:py-1 [&_code]:px-1.5 [&_code]:text-sm">
+				<div>
+					<dt>{t("record.name.label")}</dt>
+					<dd>
+						<code>{t("record.name.value")}</code>
+					</dd>
+				</div>
+
+				<div>
+					<dt>{t("record.content.label")}</dt>
+					<dd>
+						<code>{t("record.content.value")}</code>
+					</dd>
+				</div>
+			</dl>
+
+			<Trans
+				parent="p"
+				t={t}
+				i18nKey="note"
+				components={{
+					code: <code className="bg-neutral-100 dark:bg-neutral-800 rounded-lg py-1 px-1.5" />,
+				}}
+			/>
+
+			<p className="mt-2">{t("disclaimer")}</p>
+		</aside>
+	);
+}
+
+export function ErrorBoundary({ error, params }: Route.ErrorBoundaryProps) {
+	let { t } = useTranslation("translation", { keyPrefix: "page.domains" });
+
+	if (isRouteErrorResponse(error)) {
+		let data = error.data as {
+			hasActiveSubscription: boolean;
+			status: number;
+		};
+
+		return (
+			<>
+				<AppHeader heading={t("header.title")} />
+
+				{data.hasActiveSubscription ? null : (
+					<div className="p-4">
+						<Alert
+							intent="warning"
+							title={t("alert.subscription.title")}
+							description={t("alert.subscription.description")}
+							cta={
+								<Link to={href("/app/:team/checkout", params)}>{t("alert.subscription.cta")}</Link>
+							}
+						/>
+					</div>
+				)}
+
+				<div className="p-12 flex flex-col gap-4">
+					{data.status === 403 ? (
+						<>
+							<h2>{t("error.forbidden.title")}</h2>
+							<p>{t("error.forbidden.description")}</p>
+						</>
+					) : (
+						<>
+							<h2>{t("error.unknown.title")}</h2>
+							<p>{t("error.unknown.description")}</p>
+						</>
+					)}
+				</div>
+			</>
+		);
+	}
+
+	return (
+		<>
+			<AppHeader heading={t("header.title")} />
+			<div className="p-12 flex flex-col gap-4">
+				<h2>{t("error.unknown.title")}</h2>
+				<p>{t("error.unknown.description")}</p>
+			</div>
+		</>
+	);
+}

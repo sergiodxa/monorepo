@@ -1,0 +1,101 @@
+import type { RequestHandler } from "react-router";
+
+import { env, waitUntil } from "cloudflare:workers";
+
+import GeoFetchDO from "./do/geo-fetch";
+import Ping from "./workflows/ping";
+
+let handler: RequestHandler;
+
+export { Ping, GeoFetchDO };
+
+export default {
+	async fetch(request) {
+		let build = await import("virtual:react-router/server-build");
+
+		let { createRequestHandler, RouterContextProvider } = await import("react-router");
+
+		if (!handler) handler = createRequestHandler(build, import.meta.env.MODE);
+
+		let context = new RouterContextProvider();
+		return await handler(request, context);
+	},
+
+	async scheduled(controller) {
+		// Every minute
+		if (controller.cron === "* * * * *") {
+			let database = await import("../db").then((m) => m.default);
+			let Monitor = await import("./models/monitor").then((m) => m.default);
+			let db = database(env.DB);
+			let scheduledDate = new Date(controller.scheduledTime);
+			waitUntil(Monitor.pingLater(db, scheduledDate));
+		}
+
+		// Every 10 minutes
+		if (controller.cron === "*/10 * * * *") {
+			waitUntil(env.QUEUE.send({ type: "enqueuePendingDomains" }));
+		}
+
+		// Every day at midnight
+		if (controller.cron === "0 0 * * *") {
+			waitUntil(env.QUEUE.send({ type: "clean" }));
+		}
+	},
+
+	async queue(batch) {
+		let { z } = await import("zod/v4");
+
+		for (let message of batch.messages) {
+			console.debug("Processing message:", message.body);
+			let result = z
+				.discriminatedUnion("type", [
+					z.object({
+						type: z.literal("ping"),
+						payload: z.object({ monitorId: z.uuid(), ownerId: z.uuid() }),
+					}),
+					z.object({ type: z.literal("clean") }),
+					z.object({ type: z.literal("enqueuePendingDomains") }),
+					z.object({
+						type: z.literal("verifyDomainOwnership"),
+						teamDomainId: z.uuid(),
+					}),
+				])
+				.safeParse(message.body);
+
+			console.debug("Parsed message result:", result);
+
+			if (result.success === false) {
+				console.error(result.error);
+				message.retry();
+				continue;
+			}
+
+			if (result.data.type === "ping") {
+				let PingJob = await import("./jobs/ping").then((m) => m.default);
+				waitUntil(new PingJob(result.data.payload).run(message));
+			}
+
+			if (result.data.type === "clean") {
+				let CleanJob = await import("./jobs/clean").then((m) => m.default);
+				waitUntil(new CleanJob().run(message));
+			}
+
+			if (result.data.type === "enqueuePendingDomains") {
+				let EnqueuePendingDomainsJob = await import("./jobs/enqueue-pending-domains").then(
+					(m) => m.default,
+				);
+				waitUntil(new EnqueuePendingDomainsJob().run(message));
+			}
+
+			if (result.data.type === "verifyDomainOwnership") {
+				console.log("Enqueuing domain verification for teamDomainId:", result.data.teamDomainId);
+
+				let VerifyDomainOwnershipJob = await import("./jobs/verify-domain-ownership").then(
+					(m) => m.default,
+				);
+
+				waitUntil(new VerifyDomainOwnershipJob(result.data.teamDomainId).run(message));
+			}
+		}
+	},
+} satisfies ExportedHandler<Cloudflare.Env>;

@@ -1,0 +1,644 @@
+{
+	"version": "6",
+	"dialect": "sqlite",
+	"id": "106afa37-437c-4371-a700-5f63d70e27fd",
+	"prevId": "d9243015-341d-4956-8a82-7d818350c752",
+	"tables": {
+		"alerts": {
+			"name": "alerts",
+			"columns": {
+				"id": {
+					"name": "id",
+					"type": "text(36)",
+					"primaryKey": true,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"created_at": {
+					"name": "created_at",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"updated_at": {
+					"name": "updated_at",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"team_id": {
+					"name": "team_id",
+					"type": "text(36)",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"monitor_id": {
+					"name": "monitor_id",
+					"type": "text(36)",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"strategy": {
+					"name": "strategy",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"config": {
+					"name": "config",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				}
+			},
+			"indexes": {
+				"alerts_id_unique": {
+					"name": "alerts_id_unique",
+					"columns": ["id"],
+					"isUnique": true
+				}
+			},
+			"foreignKeys": {
+				"alerts_team_id_teams_id_fk": {
+					"name": "alerts_team_id_teams_id_fk",
+					"tableFrom": "alerts",
+					"tableTo": "teams",
+					"columnsFrom": ["team_id"],
+					"columnsTo": ["id"],
+					"onDelete": "no action",
+					"onUpdate": "no action"
+				},
+				"alerts_monitor_id_monitors_id_fk": {
+					"name": "alerts_monitor_id_monitors_id_fk",
+					"tableFrom": "alerts",
+					"tableTo": "monitors",
+					"columnsFrom": ["monitor_id"],
+					"columnsTo": ["id"],
+					"onDelete": "no action",
+					"onUpdate": "no action"
+				}
+			},
+			"compositePrimaryKeys": {},
+			"uniqueConstraints": {},
+			"checkConstraints": {}
+		},
+		"invites": {
+			"name": "invites",
+			"columns": {
+				"id": {
+					"name": "id",
+					"type": "text(36)",
+					"primaryKey": true,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"created_at": {
+					"name": "created_at",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"updated_at": {
+					"name": "updated_at",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"accepted_at": {
+					"name": "accepted_at",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"sender_id": {
+					"name": "sender_id",
+					"type": "text(36)",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"team_id": {
+					"name": "team_id",
+					"type": "text(36)",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"email": {
+					"name": "email",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				}
+			},
+			"indexes": {
+				"invites_id_unique": {
+					"name": "invites_id_unique",
+					"columns": ["id"],
+					"isUnique": true
+				},
+				"invites_sender_id_unique": {
+					"name": "invites_sender_id_unique",
+					"columns": ["sender_id"],
+					"isUnique": true
+				}
+			},
+			"foreignKeys": {
+				"invites_team_id_teams_id_fk": {
+					"name": "invites_team_id_teams_id_fk",
+					"tableFrom": "invites",
+					"tableTo": "teams",
+					"columnsFrom": ["team_id"],
+					"columnsTo": ["id"],
+					"onDelete": "no action",
+					"onUpdate": "no action"
+				}
+			},
+			"compositePrimaryKeys": {},
+			"uniqueConstraints": {},
+			"checkConstraints": {}
+		},
+		"memberships": {
+			"name": "memberships",
+			"columns": {
+				"id": {
+					"name": "id",
+					"type": "text(36)",
+					"primaryKey": true,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"created_at": {
+					"name": "created_at",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"updated_at": {
+					"name": "updated_at",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"subject_id": {
+					"name": "subject_id",
+					"type": "text(36)",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"team_id": {
+					"name": "team_id",
+					"type": "text(36)",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"role": {
+					"name": "role",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false,
+					"default": "'member'"
+				}
+			},
+			"indexes": {
+				"memberships_id_unique": {
+					"name": "memberships_id_unique",
+					"columns": ["id"],
+					"isUnique": true
+				},
+				"memberships_subject_id_unique": {
+					"name": "memberships_subject_id_unique",
+					"columns": ["subject_id"],
+					"isUnique": true
+				},
+				"memberships_team_idx": {
+					"name": "memberships_team_idx",
+					"columns": ["team_id"],
+					"isUnique": false
+				},
+				"memberships_subject_idx": {
+					"name": "memberships_subject_idx",
+					"columns": ["subject_id"],
+					"isUnique": false
+				},
+				"memberships_subject_team_idx": {
+					"name": "memberships_subject_team_idx",
+					"columns": ["subject_id", "team_id"],
+					"isUnique": false
+				}
+			},
+			"foreignKeys": {
+				"memberships_team_id_teams_id_fk": {
+					"name": "memberships_team_id_teams_id_fk",
+					"tableFrom": "memberships",
+					"tableTo": "teams",
+					"columnsFrom": ["team_id"],
+					"columnsTo": ["id"],
+					"onDelete": "no action",
+					"onUpdate": "no action"
+				}
+			},
+			"compositePrimaryKeys": {},
+			"uniqueConstraints": {},
+			"checkConstraints": {}
+		},
+		"monitor_results": {
+			"name": "monitor_results",
+			"columns": {
+				"id": {
+					"name": "id",
+					"type": "text(36)",
+					"primaryKey": true,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"created_at": {
+					"name": "created_at",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"updated_at": {
+					"name": "updated_at",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"completed_at": {
+					"name": "completed_at",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"monitor_id": {
+					"name": "monitor_id",
+					"type": "text(36)",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"response_status": {
+					"name": "response_status",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"response_time_ms": {
+					"name": "response_time_ms",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				}
+			},
+			"indexes": {
+				"monitor_results_id_unique": {
+					"name": "monitor_results_id_unique",
+					"columns": ["id"],
+					"isUnique": true
+				},
+				"monitor_results_created_at_idx": {
+					"name": "monitor_results_created_at_idx",
+					"columns": ["created_at"],
+					"isUnique": false
+				},
+				"monitor_results_monitor_completed_at_response_status_response_time_idx": {
+					"name": "monitor_results_monitor_completed_at_response_status_response_time_idx",
+					"columns": ["monitor_id", "completed_at", "response_status", "response_time_ms"],
+					"isUnique": false
+				}
+			},
+			"foreignKeys": {
+				"monitor_results_monitor_id_monitors_id_fk": {
+					"name": "monitor_results_monitor_id_monitors_id_fk",
+					"tableFrom": "monitor_results",
+					"tableTo": "monitors",
+					"columnsFrom": ["monitor_id"],
+					"columnsTo": ["id"],
+					"onDelete": "no action",
+					"onUpdate": "no action"
+				}
+			},
+			"compositePrimaryKeys": {},
+			"uniqueConstraints": {},
+			"checkConstraints": {}
+		},
+		"monitors": {
+			"name": "monitors",
+			"columns": {
+				"id": {
+					"name": "id",
+					"type": "text(36)",
+					"primaryKey": true,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"created_at": {
+					"name": "created_at",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"updated_at": {
+					"name": "updated_at",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"enabled_at": {
+					"name": "enabled_at",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"team_id": {
+					"name": "team_id",
+					"type": "text(36)",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"author_id": {
+					"name": "author_id",
+					"type": "text(36)",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"name": {
+					"name": "name",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"url": {
+					"name": "url",
+					"type": "text(2048)",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"method": {
+					"name": "method",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false,
+					"default": "'HEAD'"
+				},
+				"expected_status": {
+					"name": "expected_status",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false,
+					"default": 200
+				},
+				"interval_seconds": {
+					"name": "interval_seconds",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false,
+					"default": 60
+				},
+				"timeout_seconds": {
+					"name": "timeout_seconds",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false,
+					"default": 10
+				},
+				"visibility": {
+					"name": "visibility",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false,
+					"default": "'private'"
+				},
+				"location_hint": {
+					"name": "location_hint",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false,
+					"default": "'wnam'"
+				}
+			},
+			"indexes": {
+				"monitors_id_unique": {
+					"name": "monitors_id_unique",
+					"columns": ["id"],
+					"isUnique": true
+				},
+				"monitors_created_at_idx": {
+					"name": "monitors_created_at_idx",
+					"columns": ["created_at"],
+					"isUnique": false
+				},
+				"monitors_team_idx": {
+					"name": "monitors_team_idx",
+					"columns": ["team_id"],
+					"isUnique": false
+				},
+				"monitors_team_visiblity_idx": {
+					"name": "monitors_team_visiblity_idx",
+					"columns": ["team_id", "visibility"],
+					"isUnique": false
+				}
+			},
+			"foreignKeys": {
+				"monitors_team_id_teams_id_fk": {
+					"name": "monitors_team_id_teams_id_fk",
+					"tableFrom": "monitors",
+					"tableTo": "teams",
+					"columnsFrom": ["team_id"],
+					"columnsTo": ["id"],
+					"onDelete": "no action",
+					"onUpdate": "no action"
+				}
+			},
+			"compositePrimaryKeys": {},
+			"uniqueConstraints": {},
+			"checkConstraints": {}
+		},
+		"team_domains": {
+			"name": "team_domains",
+			"columns": {
+				"id": {
+					"name": "id",
+					"type": "text(36)",
+					"primaryKey": true,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"created_at": {
+					"name": "created_at",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"updated_at": {
+					"name": "updated_at",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"verified_at": {
+					"name": "verified_at",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"team_id": {
+					"name": "team_id",
+					"type": "text(36)",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"hostname": {
+					"name": "hostname",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				}
+			},
+			"indexes": {
+				"team_domains_id_unique": {
+					"name": "team_domains_id_unique",
+					"columns": ["id"],
+					"isUnique": true
+				},
+				"team_domains_verified_hostname_idx": {
+					"name": "team_domains_verified_hostname_idx",
+					"columns": ["verified_at", "hostname"],
+					"isUnique": false
+				}
+			},
+			"foreignKeys": {
+				"team_domains_team_id_teams_id_fk": {
+					"name": "team_domains_team_id_teams_id_fk",
+					"tableFrom": "team_domains",
+					"tableTo": "teams",
+					"columnsFrom": ["team_id"],
+					"columnsTo": ["id"],
+					"onDelete": "no action",
+					"onUpdate": "no action"
+				}
+			},
+			"compositePrimaryKeys": {},
+			"uniqueConstraints": {},
+			"checkConstraints": {}
+		},
+		"teams": {
+			"name": "teams",
+			"columns": {
+				"id": {
+					"name": "id",
+					"type": "text(36)",
+					"primaryKey": true,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"created_at": {
+					"name": "created_at",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"updated_at": {
+					"name": "updated_at",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"owner_id": {
+					"name": "owner_id",
+					"type": "text(36)",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"name": {
+					"name": "name",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"slug": {
+					"name": "slug",
+					"type": "text(255)",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"logo": {
+					"name": "logo",
+					"type": "text(2048)",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				}
+			},
+			"indexes": {
+				"teams_id_unique": {
+					"name": "teams_id_unique",
+					"columns": ["id"],
+					"isUnique": true
+				},
+				"teams_owner_id_unique": {
+					"name": "teams_owner_id_unique",
+					"columns": ["owner_id"],
+					"isUnique": true
+				}
+			},
+			"foreignKeys": {},
+			"compositePrimaryKeys": {},
+			"uniqueConstraints": {},
+			"checkConstraints": {}
+		}
+	},
+	"views": {},
+	"enums": {},
+	"_meta": {
+		"schemas": {},
+		"tables": {},
+		"columns": {}
+	},
+	"internal": {
+		"indexes": {}
+	}
+}

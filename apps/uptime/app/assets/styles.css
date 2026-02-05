@@ -1,0 +1,185 @@
+@import "tailwindcss";
+@plugin "@tailwindcss/typography";
+
+@theme {
+	--font-sans:
+		"Mona Sans", ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji",
+		"Segoe UI Symbol", "Noto Color Emoji";
+
+	--color-*: initial;
+
+	--color-neutral-50: #f7f9f8;
+	--color-neutral-100: #eef1f0;
+	--color-neutral-200: #dce2e0;
+	--color-neutral-300: #c1c9c6;
+	--color-neutral-400: #a4aeaa;
+	--color-neutral-500: #8a938e;
+	--color-neutral-600: #707972;
+	--color-neutral-700: #585f5a;
+	--color-neutral-800: #404542;
+	--color-neutral-900: #2b302d;
+	--color-neutral-950: #191c1a;
+
+	--color-primary-50: #f7fdf7;
+	--color-primary-100: #ecfaeb;
+	--color-primary-200: #d2f3d0;
+	--color-primary-300: #afe7aa;
+	--color-primary-400: #87d77f;
+	--color-primary-500: #66c35e;
+	--color-primary-600: #4fa44a;
+	--color-primary-700: #3d833b;
+	--color-primary-800: #2f662f;
+	--color-primary-900: #224a24;
+	--color-primary-950: #142d15;
+
+	--color-warning-50: #fffcf5;
+	--color-warning-100: #fff7e0;
+	--color-warning-200: #ffedb8;
+	--color-warning-300: #ffe08b;
+	--color-warning-400: #ffd157;
+	--color-warning-500: #f5bd31;
+	--color-warning-600: #d49d20;
+	--color-warning-700: #aa7a18;
+	--color-warning-800: #805915;
+	--color-warning-900: #5a3d10;
+	--color-warning-950: #2f2309;
+
+	--color-danger-50: #fef8f8;
+	--color-danger-100: #fdeeee;
+	--color-danger-200: #fbd5d5;
+	--color-danger-300: #f5aaaa;
+	--color-danger-400: #e88080;
+	--color-danger-500: #d25d5d;
+	--color-danger-600: #b44646;
+	--color-danger-700: #933636;
+	--color-danger-800: #712929;
+	--color-danger-900: #511d1d;
+	--color-danger-950: #2e0f0f;
+
+	--animate-indeterminate: indeterminate 500ms linear;
+}
+
+@layer base {
+	@font-face {
+		font-family: "Mona Sans";
+		font-display: swap;
+		font-weight: 100 900;
+		src:
+			local("Mona Sans"),
+			url("./fonts/sans.woff2") format("woff2");
+	}
+
+	@keyframes indeterminate {
+		from {
+			width: 0;
+		}
+		to {
+			width: 100%;
+		}
+	}
+
+	html {
+		scroll-behavior: smooth;
+	}
+
+	input:-webkit-autofill {
+		box-shadow: 0 0 0px 1000px white inset !important;
+		-webkit-box-shadow: 0 0 0px 1000px white inset !important;
+		-webkit-text-fill-color: #000 !important;
+	}
+
+	@media (prefers-color-scheme: dark) {
+		input:-webkit-autofill {
+			box-shadow: 0 0 0px 1000px #000 inset !important;
+			-webkit-box-shadow: 0 0 0px 1000px #000 inset !important;
+			-webkit-text-fill-color: #fff !important;
+		}
+	}
+}
+
+@layer components {
+	/* Make clicks pass-through */
+	#nprogress {
+		pointer-events: none;
+	}
+
+	#nprogress .bar {
+		background: var(--color-primary-500);
+
+		position: fixed;
+		z-index: 1031;
+		top: 0;
+		left: 0;
+
+		width: 100%;
+		height: 2px;
+	}
+
+	/* Fancy blur effect */
+	#nprogress .peg {
+		display: block;
+		position: absolute;
+		right: 0px;
+		width: 100px;
+		height: 100%;
+		box-shadow:
+			0 0 10px var(--color-primary-500),
+			0 0 5px var(--color-primary-500);
+		opacity: 1;
+
+		-webkit-transform: rotate(3deg) translate(0px, -4px);
+		-ms-transform: rotate(3deg) translate(0px, -4px);
+		transform: rotate(3deg) translate(0px, -4px);
+	}
+
+	/* Remove these to get rid of the spinner */
+	#nprogress .spinner {
+		display: block;
+		position: fixed;
+		z-index: 1031;
+		top: 15px;
+		right: 15px;
+	}
+
+	#nprogress .spinner-icon {
+		width: 18px;
+		height: 18px;
+		box-sizing: border-box;
+
+		border: solid 2px transparent;
+		border-top-color: var(--color-primary-500);
+		border-left-color: var(--color-primary-500);
+		border-radius: 50%;
+
+		-webkit-animation: nprogress-spinner 400ms linear infinite;
+		animation: nprogress-spinner 400ms linear infinite;
+	}
+
+	.nprogress-custom-parent {
+		overflow: hidden;
+		position: relative;
+	}
+
+	.nprogress-custom-parent #nprogress .spinner,
+	.nprogress-custom-parent #nprogress .bar {
+		position: absolute;
+	}
+
+	@-webkit-keyframes nprogress-spinner {
+		0% {
+			-webkit-transform: rotate(0deg);
+		}
+		100% {
+			-webkit-transform: rotate(360deg);
+		}
+	}
+
+	@keyframes nprogress-spinner {
+		0% {
+			transform: rotate(0deg);
+		}
+		100% {
+			transform: rotate(360deg);
+		}
+	}
+}
