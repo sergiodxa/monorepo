@@ -16,7 +16,7 @@ const cookie = createCookie("sdx:i18n", {
 
 const [i18nextMiddleware, _, getInstanceFromContext] = createI18nextMiddleware({
 	detection: { supportedLanguages: ["en"], fallbackLanguage: "en", cookie },
-	i18next: { resources: { en: { translation: en } } },
+	i18next: { resources: { en: { translation: en } }, showSupportNotice: false },
 });
 
 export function getI18nextInstance() {

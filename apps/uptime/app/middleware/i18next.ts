@@ -11,6 +11,7 @@ const [i18nextMiddleware, getLocaleFromContext, getInstanceFromContext] = create
 	i18next: {
 		resources: { en: { translation: en } },
 		interpolation: { escapeValue: false },
+		showSupportNotice: false,
 	},
 });
 

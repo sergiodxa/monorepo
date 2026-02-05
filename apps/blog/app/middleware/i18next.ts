@@ -26,6 +26,7 @@ const [i18nextMiddleware, getLocaleFromContext, getInstanceFromContext] = create
 			en: { translation: en },
 			es: { translation: es },
 		},
+		showSupportNotice: false,
 	},
 });
 
