@@ -1,0 +1,1876 @@
+/**
+ * @pkg/ui - Affordance Classes
+ *
+ * These utilities provide themed, accessible UI styles using semantic color tokens.
+ * Apps must define these CSS variables in their @theme block:
+ *
+ * @theme {
+ *   --color-neutral-50 through --color-neutral-950;
+ *   --color-primary-50 through --color-primary-950;
+ *   --color-danger-50 through --color-danger-950;
+ *   --color-warning-50 through --color-warning-950;
+ * }
+ */
+
+/* =============================================================================
+   Button
+   ============================================================================= */
+
+@utility ui-button {
+	:where(&) {
+		@apply inline-flex items-center justify-center gap-2 rounded-md font-medium transition;
+		@apply cursor-default select-none;
+
+		/* Default size: md */
+		@apply px-4 py-2 text-sm;
+
+		/* Size variants */
+		&[data-size="sm"] {
+			@apply px-3 py-1.5 text-xs;
+		}
+		&[data-size="lg"] {
+			@apply px-5 py-2.5 text-base;
+		}
+
+		/* Solid variant (default) */
+		&[data-variant="solid"] {
+			&[data-color="primary"] {
+				@apply bg-primary-600 text-white;
+				&:hover {
+					@apply bg-primary-700;
+				}
+				&[data-pressed] {
+					@apply bg-primary-800;
+				}
+			}
+			&[data-color="neutral"] {
+				@apply bg-neutral-900 text-white dark:bg-neutral-100 dark:text-neutral-900;
+				&:hover {
+					@apply bg-neutral-800 dark:bg-neutral-200;
+				}
+				&[data-pressed] {
+					@apply bg-neutral-700 dark:bg-neutral-300;
+				}
+			}
+			&[data-color="danger"] {
+				@apply bg-danger-600 text-white;
+				&:hover {
+					@apply bg-danger-700;
+				}
+				&[data-pressed] {
+					@apply bg-danger-800;
+				}
+			}
+			&[data-color="warning"] {
+				@apply bg-warning-600 text-white;
+				&:hover {
+					@apply bg-warning-700;
+				}
+				&[data-pressed] {
+					@apply bg-warning-800;
+				}
+			}
+		}
+
+		/* Outline variant */
+		&[data-variant="outline"] {
+			@apply border-2 bg-transparent;
+			&[data-color="primary"] {
+				@apply border-primary-600 text-primary-600;
+				&:hover {
+					@apply bg-primary-50 dark:bg-primary-950;
+				}
+				&[data-pressed] {
+					@apply bg-primary-100 dark:bg-primary-900;
+				}
+			}
+			&[data-color="neutral"] {
+				@apply border-neutral-600 text-neutral-600 dark:border-neutral-400 dark:text-neutral-400;
+				&:hover {
+					@apply bg-neutral-50 dark:bg-neutral-900;
+				}
+				&[data-pressed] {
+					@apply bg-neutral-100 dark:bg-neutral-800;
+				}
+			}
+			&[data-color="danger"] {
+				@apply border-danger-600 text-danger-600;
+				&:hover {
+					@apply bg-danger-50 dark:bg-danger-950;
+				}
+				&[data-pressed] {
+					@apply bg-danger-100 dark:bg-danger-900;
+				}
+			}
+			&[data-color="warning"] {
+				@apply border-warning-600 text-warning-600;
+				&:hover {
+					@apply bg-warning-50 dark:bg-warning-950;
+				}
+				&[data-pressed] {
+					@apply bg-warning-100 dark:bg-warning-900;
+				}
+			}
+		}
+
+		/* Ghost variant */
+		&[data-variant="ghost"] {
+			@apply bg-transparent;
+			&[data-color="primary"] {
+				@apply text-primary-600;
+				&:hover {
+					@apply bg-primary-50 dark:bg-primary-950;
+				}
+				&[data-pressed] {
+					@apply bg-primary-100 dark:bg-primary-900;
+				}
+			}
+			&[data-color="neutral"] {
+				@apply text-neutral-600 dark:text-neutral-400;
+				&:hover {
+					@apply bg-neutral-100 dark:bg-neutral-800;
+				}
+				&[data-pressed] {
+					@apply bg-neutral-200 dark:bg-neutral-700;
+				}
+			}
+			&[data-color="danger"] {
+				@apply text-danger-600;
+				&:hover {
+					@apply bg-danger-50 dark:bg-danger-950;
+				}
+				&[data-pressed] {
+					@apply bg-danger-100 dark:bg-danger-900;
+				}
+			}
+			&[data-color="warning"] {
+				@apply text-warning-600;
+				&:hover {
+					@apply bg-warning-50 dark:bg-warning-950;
+				}
+				&[data-pressed] {
+					@apply bg-warning-100 dark:bg-warning-900;
+				}
+			}
+		}
+
+		/* States */
+		&[data-disabled] {
+			@apply cursor-not-allowed opacity-50;
+		}
+		&[data-focus-visible] {
+			@apply outline-2 outline-offset-2 outline-primary-500;
+		}
+	}
+}
+
+/* =============================================================================
+   Field Components
+   ============================================================================= */
+
+@utility ui-label {
+	:where(&) {
+		@apply text-sm font-medium text-neutral-700 dark:text-neutral-300;
+	}
+}
+
+@utility ui-description {
+	:where(&) {
+		@apply text-sm text-neutral-500 dark:text-neutral-400;
+	}
+}
+
+@utility ui-field-error {
+	:where(&) {
+		@apply text-sm text-danger-600 dark:text-danger-400;
+	}
+}
+
+@utility ui-input {
+	:where(&) {
+		@apply block w-full rounded-md border px-3 py-2 text-sm transition;
+		@apply border-neutral-300 bg-white text-neutral-900;
+		@apply dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-100;
+		@apply placeholder:text-neutral-400 dark:placeholder:text-neutral-500;
+
+		&:hover {
+			@apply border-neutral-400 dark:border-neutral-600;
+		}
+		&[data-focused] {
+			@apply border-primary-500 outline-2 outline-offset-0 outline-primary-500;
+		}
+		&[data-invalid] {
+			@apply border-danger-500;
+		}
+		&[data-disabled] {
+			@apply cursor-not-allowed bg-neutral-100 opacity-50 dark:bg-neutral-800;
+		}
+	}
+}
+
+@utility ui-textarea {
+	:where(&) {
+		@apply ui-input resize-y;
+	}
+}
+
+@utility ui-field-group {
+	:where(&) {
+		@apply flex flex-col gap-1;
+	}
+}
+
+/* =============================================================================
+   Checkbox
+   ============================================================================= */
+
+@utility ui-checkbox {
+	:where(&) {
+		@apply flex items-center gap-2;
+	}
+}
+
+@utility ui-checkbox-box {
+	:where(&) {
+		@apply size-5 rounded border-2 transition;
+		@apply border-neutral-400 bg-white dark:border-neutral-600 dark:bg-neutral-900;
+		@apply flex items-center justify-center;
+
+		&[data-selected] {
+			@apply border-primary-600 bg-primary-600 text-white;
+		}
+		&[data-indeterminate] {
+			@apply border-primary-600 bg-primary-600 text-white;
+		}
+		&[data-focus-visible] {
+			@apply outline-2 outline-offset-2 outline-primary-500;
+		}
+		&[data-disabled] {
+			@apply cursor-not-allowed opacity-50;
+		}
+
+		/* Color variants when selected */
+		[data-color="primary"] &[data-selected],
+		[data-color="primary"] &[data-indeterminate] {
+			@apply border-primary-600 bg-primary-600 text-white;
+		}
+		[data-color="neutral"] &[data-selected],
+		[data-color="neutral"] &[data-indeterminate] {
+			@apply border-neutral-600 bg-neutral-600 text-white;
+		}
+		[data-color="danger"] &[data-selected],
+		[data-color="danger"] &[data-indeterminate] {
+			@apply border-danger-600 bg-danger-600 text-white;
+		}
+		[data-color="warning"] &[data-selected],
+		[data-color="warning"] &[data-indeterminate] {
+			@apply border-warning-600 bg-warning-600 text-white;
+		}
+	}
+}
+
+/* =============================================================================
+   Switch
+   ============================================================================= */
+
+@utility ui-switch {
+	:where(&) {
+		@apply flex items-center gap-2;
+	}
+}
+
+@utility ui-switch-track {
+	:where(&) {
+		@apply h-6 w-11 rounded-full transition;
+		@apply bg-neutral-300 dark:bg-neutral-700;
+
+		&[data-selected] {
+			@apply bg-primary-600;
+		}
+		&[data-focus-visible] {
+			@apply outline-2 outline-offset-2 outline-primary-500;
+		}
+		&[data-disabled] {
+			@apply cursor-not-allowed opacity-50;
+		}
+	}
+}
+
+@utility ui-switch-thumb {
+	:where(&) {
+		@apply block size-5 rounded-full bg-white shadow transition-transform;
+		@apply translate-x-0.5;
+
+		&[data-selected] {
+			@apply translate-x-5;
+		}
+	}
+}
+
+/* =============================================================================
+   Select
+   ============================================================================= */
+
+@utility ui-select-trigger {
+	:where(&) {
+		@apply ui-input flex cursor-default items-center justify-between;
+	}
+}
+
+@utility ui-select-value {
+	:where(&) {
+		@apply flex-1 truncate text-left;
+
+		&[data-placeholder] {
+			@apply text-neutral-400 dark:text-neutral-500;
+		}
+	}
+}
+
+/* =============================================================================
+   Popover
+   ============================================================================= */
+
+@utility ui-popover {
+	:where(&) {
+		@apply rounded-lg border bg-white shadow-lg dark:border-neutral-700 dark:bg-neutral-800;
+		@apply border-neutral-200;
+
+		&[data-entering] {
+			@apply animate-in fade-in;
+		}
+		&[data-exiting] {
+			@apply animate-out fade-out;
+		}
+	}
+}
+
+/* =============================================================================
+   ListBox (used by Select, ComboBox)
+   ============================================================================= */
+
+@utility ui-listbox {
+	:where(&) {
+		@apply max-h-60 overflow-auto p-1 outline-none;
+	}
+}
+
+@utility ui-listbox-item {
+	:where(&) {
+		@apply cursor-default rounded-md px-3 py-2 text-sm outline-none transition;
+		@apply text-neutral-900 dark:text-neutral-100;
+
+		&[data-focused] {
+			@apply bg-primary-100 dark:bg-primary-900;
+		}
+		&[data-selected] {
+			@apply bg-primary-600 text-white;
+		}
+		&[data-disabled] {
+			@apply opacity-50;
+		}
+	}
+}
+
+/* =============================================================================
+   Menu
+   ============================================================================= */
+
+@utility ui-menu {
+	:where(&) {
+		@apply ui-popover min-w-40 p-1 outline-none;
+	}
+}
+
+@utility ui-menu-item {
+	:where(&) {
+		@apply ui-listbox-item flex items-center gap-2;
+
+		&[data-danger] {
+			@apply text-danger-600 dark:text-danger-400;
+			&[data-focused] {
+				@apply bg-danger-100 dark:bg-danger-900;
+			}
+		}
+	}
+}
+
+@utility ui-menu-separator {
+	:where(&) {
+		@apply my-1 h-px bg-neutral-200 dark:bg-neutral-700;
+	}
+}
+
+/* =============================================================================
+   Dialog / Modal
+   ============================================================================= */
+
+@utility ui-modal-overlay {
+	:where(&) {
+		@apply fixed inset-0 z-50 flex items-center justify-center;
+		@apply bg-black/50;
+
+		&[data-entering] {
+			@apply animate-in fade-in;
+		}
+		&[data-exiting] {
+			@apply animate-out fade-out;
+		}
+	}
+}
+
+@utility ui-modal {
+	:where(&) {
+		@apply relative max-h-[90vh] w-full max-w-md overflow-auto rounded-lg;
+		@apply bg-white shadow-xl dark:bg-neutral-900;
+
+		&[data-entering] {
+			@apply animate-in zoom-in-95;
+		}
+		&[data-exiting] {
+			@apply animate-out zoom-out-95;
+		}
+	}
+}
+
+@utility ui-dialog {
+	:where(&) {
+		@apply p-6 outline-none;
+	}
+}
+
+@utility ui-dialog-title {
+	:where(&) {
+		@apply text-lg font-semibold text-neutral-900 dark:text-neutral-100;
+	}
+}
+
+/* =============================================================================
+   Table
+   ============================================================================= */
+
+@utility ui-table {
+	:where(&) {
+		@apply w-full border-collapse text-sm;
+	}
+}
+
+@utility ui-table-header {
+	:where(&) {
+		@apply border-b border-neutral-200 dark:border-neutral-700;
+	}
+}
+
+@utility ui-column {
+	:where(&) {
+		@apply px-4 py-3 text-left font-medium text-neutral-700 dark:text-neutral-300;
+
+		&[data-align="center"] {
+			@apply text-center;
+		}
+		&[data-align="right"] {
+			@apply text-right;
+		}
+
+		/* Sortable column */
+		&[data-allows-sorting] {
+			@apply cursor-pointer select-none;
+			&:hover {
+				@apply bg-neutral-50 dark:bg-neutral-800;
+			}
+		}
+	}
+}
+
+@utility ui-table-body {
+	:where(&) {
+		@apply divide-y divide-neutral-200 dark:divide-neutral-700;
+	}
+}
+
+@utility ui-row {
+	:where(&) {
+		@apply transition;
+
+		&:hover {
+			@apply bg-neutral-50 dark:bg-neutral-800/50;
+		}
+		&[data-selected] {
+			@apply bg-primary-50 dark:bg-primary-900/20;
+		}
+	}
+}
+
+@utility ui-cell {
+	:where(&) {
+		@apply px-4 py-3 text-neutral-900 dark:text-neutral-100;
+	}
+}
+
+/* =============================================================================
+   Alert
+   ============================================================================= */
+
+@utility ui-alert {
+	:where(&) {
+		@apply flex items-start gap-3 rounded-lg border p-4;
+
+		&[data-variant="info"] {
+			@apply border-primary-200 bg-primary-50 text-primary-900;
+			@apply dark:border-primary-800 dark:bg-primary-950 dark:text-primary-100;
+		}
+		&[data-variant="warning"] {
+			@apply border-warning-200 bg-warning-50 text-warning-900;
+			@apply dark:border-warning-800 dark:bg-warning-950 dark:text-warning-100;
+		}
+		&[data-variant="danger"] {
+			@apply border-danger-200 bg-danger-50 text-danger-900;
+			@apply dark:border-danger-800 dark:bg-danger-950 dark:text-danger-100;
+		}
+		&[data-variant="success"] {
+			@apply border-primary-200 bg-primary-50 text-primary-900;
+			@apply dark:border-primary-800 dark:bg-primary-950 dark:text-primary-100;
+		}
+	}
+}
+
+@utility ui-alert-title {
+	:where(&) {
+		@apply font-semibold;
+	}
+}
+
+@utility ui-alert-description {
+	:where(&) {
+		@apply text-sm opacity-90;
+	}
+}
+
+@utility ui-alert-icon {
+	:where(&) {
+		@apply flex-shrink-0;
+	}
+}
+
+@utility ui-alert-content {
+	:where(&) {
+		@apply flex flex-1 flex-col gap-1;
+	}
+}
+
+@utility ui-alert-action {
+	:where(&) {
+		@apply flex-shrink-0;
+	}
+}
+
+/* =============================================================================
+   Link
+   ============================================================================= */
+
+@utility ui-link {
+	:where(&) {
+		@apply rounded underline transition;
+		@apply cursor-pointer;
+
+		&[data-variant="default"] {
+			&[data-color="primary"] {
+				@apply text-primary-600 decoration-primary-600/60;
+				&:hover {
+					@apply decoration-primary-600;
+				}
+			}
+			&[data-color="neutral"] {
+				@apply text-neutral-700 decoration-neutral-700/50 dark:text-neutral-300 dark:decoration-neutral-300/50;
+				&:hover {
+					@apply decoration-neutral-700 dark:decoration-neutral-300;
+				}
+			}
+			&[data-color="danger"] {
+				@apply text-danger-600 decoration-danger-600/60;
+				&:hover {
+					@apply decoration-danger-600;
+				}
+			}
+			&[data-color="warning"] {
+				@apply text-warning-600 decoration-warning-600/60;
+				&:hover {
+					@apply decoration-warning-600;
+				}
+			}
+		}
+
+		&[data-variant="subtle"] {
+			@apply no-underline;
+			&:hover {
+				@apply underline;
+			}
+		}
+
+		&[data-focus-visible] {
+			@apply outline-2 outline-offset-2 outline-primary-500;
+		}
+		&[data-disabled] {
+			@apply cursor-not-allowed no-underline opacity-50;
+		}
+	}
+}
+
+/* =============================================================================
+   NavLink
+   ============================================================================= */
+
+@utility ui-nav-link {
+	:where(&) {
+		@apply rounded transition;
+		@apply cursor-pointer;
+
+		&[data-variant="default"] {
+			&[data-color="primary"] {
+				@apply text-primary-600;
+				&[data-active] {
+					@apply font-medium text-primary-700;
+				}
+			}
+			&[data-color="neutral"] {
+				@apply text-neutral-600 dark:text-neutral-400;
+				&[data-active] {
+					@apply font-medium text-neutral-900 dark:text-neutral-100;
+				}
+			}
+			&[data-color="danger"] {
+				@apply text-danger-600;
+				&[data-active] {
+					@apply font-medium text-danger-700;
+				}
+			}
+			&[data-color="warning"] {
+				@apply text-warning-600;
+				&[data-active] {
+					@apply font-medium text-warning-700;
+				}
+			}
+		}
+
+		&[data-variant="subtle"] {
+			@apply text-neutral-600 dark:text-neutral-400;
+			&[data-active] {
+				@apply font-medium text-neutral-900 dark:text-neutral-100;
+			}
+		}
+
+		&[data-active] {
+			@apply font-medium;
+		}
+		&[data-pending] {
+			@apply opacity-70;
+		}
+		&:focus-visible {
+			@apply outline-2 outline-offset-2 outline-primary-500;
+		}
+	}
+}
+
+/* =============================================================================
+   Form
+   ============================================================================= */
+
+@utility ui-form {
+	:where(&) {
+		@apply flex flex-col gap-4;
+	}
+}
+
+/* =============================================================================
+   Radio Group
+   ============================================================================= */
+
+@utility ui-radio-group {
+	:where(&) {
+		@apply flex flex-col gap-2;
+
+		&[data-orientation="horizontal"] {
+			@apply flex-row gap-4;
+		}
+	}
+}
+
+@utility ui-radio {
+	:where(&) {
+		@apply flex cursor-default items-center gap-2 text-sm;
+		@apply text-neutral-900 dark:text-neutral-100;
+
+		&[data-disabled] {
+			@apply cursor-not-allowed opacity-50;
+		}
+	}
+}
+
+@utility ui-radio-indicator {
+	:where(&) {
+		@apply size-5 rounded-full border-2 transition;
+		@apply border-neutral-400 bg-white dark:border-neutral-600 dark:bg-neutral-900;
+		@apply flex items-center justify-center;
+
+		&::after {
+			content: "";
+			@apply size-2.5 scale-0 rounded-full bg-white transition-transform;
+		}
+
+		[data-selected] > & {
+			@apply border-primary-600 bg-primary-600;
+			&::after {
+				@apply scale-100;
+			}
+		}
+		[data-focus-visible] > & {
+			@apply outline-2 outline-offset-2 outline-primary-500;
+		}
+	}
+}
+
+/* =============================================================================
+   Tabs
+   ============================================================================= */
+
+@utility ui-tabs {
+	:where(&) {
+		@apply flex flex-col;
+
+		&[data-orientation="horizontal"] {
+			@apply flex-col;
+		}
+		&[data-orientation="vertical"] {
+			@apply flex-row;
+		}
+	}
+}
+
+@utility ui-tab-list {
+	:where(&) {
+		@apply flex gap-1 border-b border-neutral-200 dark:border-neutral-700;
+
+		[data-orientation="vertical"] > & {
+			@apply flex-col border-b-0 border-r;
+		}
+	}
+}
+
+@utility ui-tab {
+	:where(&) {
+		@apply -mb-px cursor-default px-4 py-2 text-sm font-medium transition;
+		@apply border-b-2 border-transparent text-neutral-600 dark:text-neutral-400;
+
+		&:hover {
+			@apply text-neutral-900 dark:text-neutral-100;
+		}
+		&[data-selected] {
+			@apply border-primary-600 text-primary-600 dark:border-primary-400 dark:text-primary-400;
+		}
+		&[data-focus-visible] {
+			@apply outline-2 outline-offset-2 outline-primary-500;
+		}
+		&[data-disabled] {
+			@apply cursor-not-allowed opacity-50;
+		}
+
+		[data-orientation="vertical"] > & {
+			@apply -mr-px mb-0 border-b-0 border-r-2;
+		}
+	}
+}
+
+@utility ui-tab-panels {
+	:where(&) {
+		@apply flex-1;
+	}
+}
+
+@utility ui-tab-panel {
+	:where(&) {
+		@apply p-4 outline-none;
+
+		&[data-focus-visible] {
+			@apply outline-2 outline-offset-2 outline-primary-500;
+		}
+	}
+}
+
+/* =============================================================================
+   Tooltip
+   ============================================================================= */
+
+@utility ui-tooltip {
+	:where(&) {
+		@apply rounded-md px-2 py-1 text-sm shadow-md;
+		@apply bg-neutral-900 text-white dark:bg-neutral-100 dark:text-neutral-900;
+
+		&[data-entering] {
+			@apply animate-in fade-in zoom-in-95;
+		}
+		&[data-exiting] {
+			@apply animate-out fade-out zoom-out-95;
+		}
+	}
+}
+
+@utility ui-tooltip-arrow {
+	:where(&) {
+		@apply fill-neutral-900 dark:fill-neutral-100;
+
+		&[data-placement="bottom"] {
+			@apply -top-1;
+		}
+		&[data-placement="top"] {
+			@apply -bottom-1 rotate-180;
+		}
+		&[data-placement="left"] {
+			@apply -right-1 rotate-90;
+		}
+		&[data-placement="right"] {
+			@apply -left-1 -rotate-90;
+		}
+	}
+}
+
+/* =============================================================================
+   Search Field
+   ============================================================================= */
+
+@utility ui-search-field {
+	:where(&) {
+		@apply flex flex-col gap-1;
+	}
+}
+
+@utility ui-search-field-input-wrapper {
+	:where(&) {
+		@apply relative flex items-center;
+	}
+}
+
+@utility ui-search-field-icon {
+	:where(&) {
+		@apply pointer-events-none absolute left-3 size-4 text-neutral-400;
+	}
+}
+
+@utility ui-search-field-input {
+	:where(&) {
+		@apply ui-input pl-9 pr-8;
+	}
+}
+
+@utility ui-search-field-clear {
+	:where(&) {
+		@apply absolute right-2 rounded p-0.5 text-neutral-400 transition;
+		@apply hover:bg-neutral-100 hover:text-neutral-600;
+		@apply dark:hover:bg-neutral-800 dark:hover:text-neutral-300;
+
+		&[data-focus-visible] {
+			@apply outline-2 outline-primary-500;
+		}
+	}
+}
+
+/* =============================================================================
+   Number Field
+   ============================================================================= */
+
+@utility ui-number-field {
+	:where(&) {
+		@apply flex flex-col gap-1;
+	}
+}
+
+@utility ui-number-field-group {
+	:where(&) {
+		@apply flex items-center;
+	}
+}
+
+@utility ui-number-field-input {
+	:where(&) {
+		@apply ui-input flex-1 text-center;
+	}
+}
+
+@utility ui-number-field-button {
+	:where(&) {
+		@apply flex size-10 items-center justify-center rounded-md transition;
+		@apply bg-neutral-100 text-neutral-700 dark:bg-neutral-800 dark:text-neutral-300;
+
+		&:hover {
+			@apply bg-neutral-200 dark:bg-neutral-700;
+		}
+		&[data-pressed] {
+			@apply bg-neutral-300 dark:bg-neutral-600;
+		}
+		&[data-disabled] {
+			@apply cursor-not-allowed opacity-50;
+		}
+		&[data-focus-visible] {
+			@apply outline-2 outline-offset-2 outline-primary-500;
+		}
+	}
+}
+
+/* =============================================================================
+   Slider
+   ============================================================================= */
+
+@utility ui-slider {
+	:where(&) {
+		@apply flex flex-col gap-2;
+
+		&[data-orientation="horizontal"] {
+			@apply w-full min-w-40;
+		}
+		&[data-orientation="vertical"] {
+			@apply h-40 items-center;
+		}
+	}
+}
+
+@utility ui-slider-track {
+	:where(&) {
+		@apply relative rounded-full;
+		@apply bg-neutral-200 dark:bg-neutral-700;
+
+		[data-orientation="horizontal"] > & {
+			@apply h-2 w-full;
+		}
+		[data-orientation="vertical"] > & {
+			@apply h-full w-2;
+		}
+
+		&::before {
+			content: "";
+			@apply absolute rounded-full bg-primary-600;
+
+			[data-orientation="horizontal"] & {
+				@apply left-0 top-0 h-full;
+				width: var(--slider-fill-width, 0%);
+			}
+			[data-orientation="vertical"] & {
+				@apply bottom-0 left-0 w-full;
+				height: var(--slider-fill-height, 0%);
+			}
+		}
+	}
+}
+
+@utility ui-slider-thumb {
+	:where(&) {
+		@apply size-5 rounded-full border-2 shadow transition;
+		@apply border-primary-600 bg-white;
+
+		&[data-dragging] {
+			@apply scale-110;
+		}
+		&[data-focus-visible] {
+			@apply outline-2 outline-offset-2 outline-primary-500;
+		}
+		&[data-disabled] {
+			@apply opacity-50;
+		}
+	}
+}
+
+@utility ui-slider-output {
+	:where(&) {
+		@apply text-sm text-neutral-600 dark:text-neutral-400;
+	}
+}
+
+/* =============================================================================
+   Meter
+   ============================================================================= */
+
+@utility ui-meter {
+	:where(&) {
+		@apply flex flex-col gap-1;
+	}
+}
+
+@utility ui-meter-track {
+	:where(&) {
+		@apply h-2 w-full overflow-hidden rounded-full;
+		@apply bg-neutral-200 dark:bg-neutral-700;
+	}
+}
+
+@utility ui-meter-fill {
+	:where(&) {
+		@apply h-full rounded-full transition-all;
+		width: var(--meter-percentage, 0%);
+
+		[data-color="primary"] & {
+			@apply bg-primary-600;
+		}
+		[data-color="success"] & {
+			@apply bg-primary-600;
+		}
+		[data-color="warning"] & {
+			@apply bg-warning-500;
+		}
+		[data-color="danger"] & {
+			@apply bg-danger-600;
+		}
+	}
+}
+
+@utility ui-meter-value {
+	:where(&) {
+		@apply text-sm text-neutral-600 dark:text-neutral-400;
+	}
+}
+
+/* =============================================================================
+   Progress Bar
+   ============================================================================= */
+
+@utility ui-progress-bar {
+	:where(&) {
+		@apply flex flex-col gap-1;
+	}
+}
+
+@utility ui-progress-bar-track {
+	:where(&) {
+		@apply h-2 w-full overflow-hidden rounded-full;
+		@apply bg-neutral-200 dark:bg-neutral-700;
+	}
+}
+
+@utility ui-progress-bar-fill {
+	:where(&) {
+		@apply h-full rounded-full bg-primary-600 transition-all;
+		width: var(--progress-percentage, 0%);
+
+		&[data-indeterminate] {
+			@apply animate-pulse;
+		}
+	}
+}
+
+@utility ui-progress-bar-value {
+	:where(&) {
+		@apply text-sm text-neutral-600 dark:text-neutral-400;
+	}
+}
+
+/* =============================================================================
+   Tag Group
+   ============================================================================= */
+
+@utility ui-tag-group {
+	:where(&) {
+		@apply flex flex-col gap-1;
+	}
+}
+
+@utility ui-tag-list {
+	:where(&) {
+		@apply flex flex-wrap gap-2;
+	}
+}
+
+@utility ui-tag {
+	:where(&) {
+		@apply inline-flex cursor-default items-center gap-1 rounded-full px-3 py-1 text-sm transition;
+
+		&[data-color="neutral"] {
+			@apply bg-neutral-100 text-neutral-700 dark:bg-neutral-800 dark:text-neutral-300;
+		}
+		&[data-color="primary"] {
+			@apply bg-primary-100 text-primary-700 dark:bg-primary-900 dark:text-primary-300;
+		}
+		&[data-color="danger"] {
+			@apply bg-danger-100 text-danger-700 dark:bg-danger-900 dark:text-danger-300;
+		}
+		&[data-color="warning"] {
+			@apply bg-warning-100 text-warning-700 dark:bg-warning-900 dark:text-warning-300;
+		}
+		&[data-color="success"] {
+			@apply bg-primary-100 text-primary-700 dark:bg-primary-900 dark:text-primary-300;
+		}
+
+		&[data-selected] {
+			@apply bg-primary-600 text-white;
+		}
+		&[data-focus-visible] {
+			@apply outline-2 outline-offset-2 outline-primary-500;
+		}
+		&[data-disabled] {
+			@apply opacity-50;
+		}
+	}
+}
+
+@utility ui-tag-remove {
+	:where(&) {
+		@apply -mr-1 rounded-full p-0.5 transition;
+		@apply hover:bg-black/10 dark:hover:bg-white/10;
+
+		&[data-focus-visible] {
+			@apply outline-2 outline-primary-500;
+		}
+	}
+}
+
+/* =============================================================================
+   Breadcrumbs
+   ============================================================================= */
+
+@utility ui-breadcrumbs {
+	:where(&) {
+		@apply flex items-center gap-1;
+	}
+}
+
+@utility ui-breadcrumb {
+	:where(&) {
+		@apply flex items-center gap-1;
+
+		/* CSS separator using ::after on non-last items */
+		&:not(:last-child)::after {
+			content: "›";
+			@apply mx-1 text-sm text-neutral-400;
+		}
+	}
+}
+
+@utility ui-breadcrumb-link {
+	:where(&) {
+		@apply rounded text-sm text-neutral-500 outline-none transition;
+		@apply hover:text-neutral-700 dark:hover:text-neutral-300;
+
+		&[data-current] {
+			@apply font-medium text-neutral-900 dark:text-neutral-100;
+		}
+		&[data-focus-visible] {
+			@apply outline-2 outline-offset-2 outline-primary-500;
+		}
+		&[data-disabled] {
+			@apply cursor-not-allowed opacity-50;
+		}
+	}
+}
+
+/* =============================================================================
+   Toggle Button
+   ============================================================================= */
+
+@utility ui-toggle-button {
+	:where(&) {
+		@apply ui-button;
+
+		&[data-selected] {
+			&[data-variant="outline"][data-color="primary"],
+			&[data-variant="ghost"][data-color="primary"] {
+				@apply bg-primary-100 dark:bg-primary-900;
+			}
+			&[data-variant="outline"][data-color="neutral"],
+			&[data-variant="ghost"][data-color="neutral"] {
+				@apply bg-neutral-200 dark:bg-neutral-700;
+			}
+			&[data-variant="outline"][data-color="danger"],
+			&[data-variant="ghost"][data-color="danger"] {
+				@apply bg-danger-100 dark:bg-danger-900;
+			}
+			&[data-variant="outline"][data-color="warning"],
+			&[data-variant="ghost"][data-color="warning"] {
+				@apply bg-warning-100 dark:bg-warning-900;
+			}
+		}
+	}
+}
+
+@utility ui-toggle-button-group {
+	:where(&) {
+		@apply flex gap-1;
+
+		&[data-orientation="vertical"] {
+			@apply flex-col;
+		}
+	}
+}
+
+/* =============================================================================
+   Separator
+   ============================================================================= */
+
+@utility ui-separator {
+	:where(&) {
+		@apply bg-neutral-200 dark:bg-neutral-700;
+
+		&[aria-orientation="horizontal"] {
+			@apply h-px w-full;
+		}
+		&[aria-orientation="vertical"] {
+			@apply h-full min-h-4 w-px;
+		}
+	}
+}
+
+/* =============================================================================
+   Toolbar
+   ============================================================================= */
+
+@utility ui-toolbar {
+	:where(&) {
+		@apply flex items-center gap-2 rounded-lg border p-2;
+		@apply border-neutral-200 bg-neutral-50 dark:border-neutral-700 dark:bg-neutral-900;
+
+		&[data-orientation="vertical"] {
+			@apply flex-col items-start;
+		}
+	}
+}
+
+/* =============================================================================
+   Group
+   ============================================================================= */
+
+@utility ui-group {
+	:where(&) {
+		@apply flex items-center;
+
+		&[data-focus-within] {
+			@apply outline-2 outline-offset-2 outline-primary-500;
+		}
+		&[data-invalid] {
+			@apply outline-danger-500;
+		}
+	}
+}
+
+/* =============================================================================
+   Calendar
+   ============================================================================= */
+
+@utility ui-calendar {
+	:where(&) {
+		@apply inline-block rounded-lg p-3;
+		@apply bg-white dark:bg-neutral-900;
+	}
+}
+
+@utility ui-calendar-header {
+	:where(&) {
+		@apply mb-4 flex items-center justify-between;
+	}
+}
+
+@utility ui-calendar-heading {
+	:where(&) {
+		@apply flex-1 text-center text-sm font-semibold;
+		@apply text-neutral-900 dark:text-neutral-100;
+	}
+}
+
+@utility ui-calendar-nav-button {
+	:where(&) {
+		@apply flex size-8 items-center justify-center rounded-full transition;
+		@apply text-neutral-600 dark:text-neutral-400;
+		@apply hover:bg-neutral-100 dark:hover:bg-neutral-800;
+
+		&[data-disabled] {
+			@apply cursor-not-allowed opacity-50;
+		}
+		&[data-focus-visible] {
+			@apply outline-2 outline-offset-2 outline-primary-500;
+		}
+	}
+}
+
+@utility ui-calendar-grid {
+	:where(&) {
+		@apply border-separate border-spacing-1;
+	}
+}
+
+@utility ui-calendar-grid-header {
+	:where(&) {
+	}
+}
+
+@utility ui-calendar-header-cell {
+	:where(&) {
+		@apply pb-2 text-xs font-medium text-neutral-500;
+	}
+}
+
+@utility ui-calendar-grid-body {
+	:where(&) {
+	}
+}
+
+@utility ui-calendar-cell {
+	:where(&) {
+		@apply flex size-9 cursor-default items-center justify-center rounded-full text-sm transition;
+		@apply text-neutral-900 dark:text-neutral-100;
+
+		&:hover {
+			@apply bg-neutral-100 dark:bg-neutral-800;
+		}
+		&[data-selected] {
+			@apply bg-primary-600 text-white;
+		}
+		&[data-disabled] {
+			@apply cursor-not-allowed opacity-30;
+		}
+		&[data-unavailable] {
+			@apply text-neutral-400 line-through;
+		}
+		&[data-outside-month] {
+			@apply text-neutral-400 dark:text-neutral-600;
+		}
+		&[data-focus-visible] {
+			@apply outline-2 outline-offset-2 outline-primary-500;
+		}
+		&[data-invalid] {
+			@apply bg-danger-600 text-white;
+		}
+	}
+}
+
+/* =============================================================================
+   Date Field
+   ============================================================================= */
+
+@utility ui-date-field {
+	:where(&) {
+		@apply flex flex-col gap-1;
+	}
+}
+
+@utility ui-date-input {
+	:where(&) {
+		@apply ui-input flex items-center;
+	}
+}
+
+@utility ui-date-segment {
+	:where(&) {
+		@apply rounded px-0.5 tabular-nums outline-none;
+		@apply focus:bg-primary-600 focus:text-white;
+
+		&[data-placeholder] {
+			@apply text-neutral-400 dark:text-neutral-500;
+		}
+	}
+}
+
+/* =============================================================================
+   Date Picker
+   ============================================================================= */
+
+@utility ui-date-picker {
+	:where(&) {
+		@apply flex flex-col gap-1;
+	}
+}
+
+@utility ui-date-range-picker {
+	:where(&) {
+		@apply flex flex-col gap-1;
+	}
+}
+
+@utility ui-date-picker-group {
+	:where(&) {
+		@apply flex items-center;
+
+		&[data-focus-within] {
+			@apply outline-2 outline-offset-2 outline-primary-500;
+		}
+	}
+}
+
+@utility ui-date-picker-button {
+	:where(&) {
+		@apply -ml-9 flex size-8 items-center justify-center rounded transition;
+		@apply text-neutral-600 dark:text-neutral-400;
+		@apply hover:bg-neutral-100 dark:hover:bg-neutral-800;
+
+		&[data-focus-visible] {
+			@apply outline-2 outline-primary-500;
+		}
+	}
+}
+
+/* =============================================================================
+   ComboBox
+   ============================================================================= */
+
+@utility ui-combobox {
+	:where(&) {
+		@apply flex flex-col gap-1;
+	}
+}
+
+@utility ui-combobox-group {
+	:where(&) {
+		@apply flex items-center;
+	}
+}
+
+@utility ui-combobox-input {
+	:where(&) {
+		@apply ui-input flex-1 pr-9;
+	}
+}
+
+@utility ui-combobox-button {
+	:where(&) {
+		@apply -ml-8 flex size-7 items-center justify-center rounded transition;
+		@apply text-neutral-600 dark:text-neutral-400;
+		@apply hover:bg-neutral-100 dark:hover:bg-neutral-800;
+
+		&[data-focus-visible] {
+			@apply outline-2 outline-primary-500;
+		}
+	}
+}
+
+/* =============================================================================
+   Grid List
+   ============================================================================= */
+
+@utility ui-grid-list {
+	:where(&) {
+		@apply flex flex-col gap-1 rounded-lg border p-2 outline-none;
+		@apply border-neutral-200 dark:border-neutral-700;
+
+		&[data-layout="grid"] {
+			@apply grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4;
+		}
+
+		&[data-focus-visible] {
+			@apply outline-2 outline-offset-2 outline-primary-500;
+		}
+	}
+}
+
+@utility ui-grid-list-item {
+	:where(&) {
+		@apply flex cursor-default items-center gap-2 rounded-md p-2 outline-none transition;
+		@apply text-neutral-900 dark:text-neutral-100;
+
+		&[data-focused] {
+			@apply bg-neutral-100 dark:bg-neutral-800;
+		}
+		&[data-selected] {
+			@apply bg-primary-100 dark:bg-primary-900;
+		}
+		&[data-disabled] {
+			@apply opacity-50;
+		}
+	}
+}
+
+@utility ui-grid-list-drag-handle {
+	:where(&) {
+		@apply cursor-grab text-neutral-400;
+
+		&[data-dragging] {
+			@apply cursor-grabbing;
+		}
+	}
+}
+
+/* =============================================================================
+   Disclosure
+   ============================================================================= */
+
+@utility ui-disclosure {
+	:where(&) {
+		@apply rounded-lg border;
+		@apply border-neutral-200 dark:border-neutral-700;
+	}
+}
+
+@utility ui-disclosure-group {
+	:where(&) {
+		@apply flex flex-col;
+
+		& > .ui-disclosure {
+			@apply rounded-none border-x-0 border-t-0;
+
+			&:first-child {
+				@apply rounded-t-lg border-t;
+			}
+			&:last-child {
+				@apply rounded-b-lg;
+			}
+		}
+	}
+}
+
+@utility ui-disclosure-header {
+	:where(&) {
+		@apply m-0;
+	}
+}
+
+@utility ui-disclosure-trigger {
+	:where(&) {
+		@apply flex w-full items-center gap-2 rounded-lg p-3 text-left font-medium transition;
+		@apply text-neutral-900 dark:text-neutral-100;
+		@apply hover:bg-neutral-50 dark:hover:bg-neutral-800;
+
+		&[data-focus-visible] {
+			@apply outline-2 outline-offset-2 outline-primary-500;
+		}
+		&[data-disabled] {
+			@apply cursor-not-allowed opacity-50;
+		}
+	}
+}
+
+@utility ui-disclosure-panel {
+	:where(&) {
+		@apply overflow-hidden;
+		height: var(--disclosure-panel-height, auto);
+
+		&[data-exiting] {
+			@apply transition-[height] duration-200;
+		}
+	}
+}
+
+/* =============================================================================
+   Drop Zone
+   ============================================================================= */
+
+@utility ui-drop-zone {
+	:where(&) {
+		@apply flex min-h-24 flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed p-6 text-center transition;
+		@apply border-neutral-300 bg-neutral-50 text-neutral-600;
+		@apply dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-400;
+
+		&[data-drop-target] {
+			@apply border-primary-500 bg-primary-50 dark:bg-primary-950;
+		}
+		&[data-focus-visible] {
+			@apply outline-2 outline-offset-2 outline-primary-500;
+		}
+	}
+}
+
+/* =============================================================================
+   Checkbox Group
+   ============================================================================= */
+
+@utility ui-checkbox-group {
+	:where(&) {
+		@apply flex flex-col gap-2;
+
+		&[data-orientation="horizontal"] {
+			@apply flex-row gap-4;
+		}
+		&[data-invalid] {
+			@apply text-danger-600;
+		}
+	}
+}
+
+/* =============================================================================
+   Range Calendar
+   ============================================================================= */
+
+@utility ui-range-calendar {
+	:where(&) {
+		@apply ui-calendar;
+	}
+}
+
+/* Calendar cell range selection states */
+@utility ui-calendar-cell {
+	:where(&) {
+		/* Range selection start */
+		&[data-selection-start] {
+			@apply rounded-r-none bg-primary-600 text-white;
+		}
+		/* Range selection end */
+		&[data-selection-end] {
+			@apply rounded-l-none bg-primary-600 text-white;
+		}
+		/* Cells in the middle of a range */
+		&[data-selected]:not([data-selection-start]):not([data-selection-end]) {
+			@apply rounded-none bg-primary-100 text-primary-900 dark:bg-primary-900 dark:text-primary-100;
+		}
+	}
+}
+
+/* =============================================================================
+   Date Range Picker
+   ============================================================================= */
+
+@utility ui-date-range-picker {
+	:where(&) {
+		@apply flex flex-col gap-1;
+	}
+}
+
+@utility ui-date-range-picker-group {
+	:where(&) {
+		@apply ui-date-picker-group;
+	}
+}
+
+@utility ui-date-picker-dialog {
+	:where(&) {
+		@apply p-4 outline-none;
+	}
+}
+
+/* =============================================================================
+   Time Field
+   ============================================================================= */
+
+@utility ui-time-field {
+	:where(&) {
+		@apply flex flex-col gap-1;
+	}
+}
+
+/* =============================================================================
+   Tree
+   ============================================================================= */
+
+@utility ui-tree {
+	:where(&) {
+		@apply flex flex-col rounded-lg border p-2 outline-none;
+		@apply border-neutral-200 dark:border-neutral-700;
+
+		&[data-empty] {
+			@apply items-center justify-center py-8 text-neutral-500;
+		}
+		&[data-focus-visible] {
+			@apply outline-2 outline-offset-2 outline-primary-500;
+		}
+	}
+}
+
+@utility ui-tree-item {
+	:where(&) {
+		@apply flex cursor-default items-center gap-2 rounded-md py-1.5 pr-3 text-sm outline-none transition;
+		@apply text-neutral-900 dark:text-neutral-100;
+		/* Indentation based on level using CSS custom property set by RAC */
+		padding-left: calc(0.75rem + var(--tree-item-level, 0) * 1.25rem);
+
+		&[data-focused] {
+			@apply bg-neutral-100 dark:bg-neutral-800;
+		}
+		&[data-selected] {
+			@apply bg-primary-100 dark:bg-primary-900;
+		}
+		&[data-disabled] {
+			@apply opacity-50;
+		}
+		&[data-expanded] .ui-tree-expand-button {
+			@apply rotate-90;
+		}
+	}
+}
+
+@utility ui-tree-expand-button {
+	:where(&) {
+		@apply flex size-5 flex-shrink-0 items-center justify-center rounded transition;
+		@apply text-neutral-500 dark:text-neutral-400;
+
+		&:hover {
+			@apply bg-neutral-200 dark:bg-neutral-700;
+		}
+		&[data-focus-visible] {
+			@apply outline-2 outline-primary-500;
+		}
+	}
+}
+
+@utility ui-tree-load-more-item {
+	:where(&) {
+		@apply flex items-center justify-center py-2 text-sm text-neutral-500;
+	}
+}
+
+/* =============================================================================
+   Menu Section & Submenu
+   ============================================================================= */
+
+@utility ui-menu-section {
+	:where(&) {
+		@apply py-1;
+
+		&:not(:first-child) {
+			@apply border-t border-neutral-200 dark:border-neutral-700;
+		}
+	}
+}
+
+/* =============================================================================
+   Table Resizing & Load More
+   ============================================================================= */
+
+@utility ui-table-resizable-container {
+	:where(&) {
+		@apply relative w-full overflow-auto;
+	}
+}
+
+@utility ui-column-resizer {
+	:where(&) {
+		@apply box-content w-px cursor-col-resize rounded bg-clip-content px-2;
+		@apply bg-neutral-300 dark:bg-neutral-600;
+
+		&:hover {
+			@apply bg-neutral-400 dark:bg-neutral-500;
+		}
+		&[data-resizing] {
+			@apply w-0.5 bg-primary-600;
+		}
+		&[data-focus-visible] {
+			@apply outline-2 outline-primary-500;
+		}
+	}
+}
+
+@utility ui-table-load-more-item {
+	:where(&) {
+		@apply flex items-center justify-center py-4 text-sm text-neutral-500;
+	}
+}
+
+/* =============================================================================
+   Grid List Section, Header & Load More
+   ============================================================================= */
+
+@utility ui-grid-list-section {
+	:where(&) {
+		@apply flex flex-col gap-1;
+
+		&:not(:first-child) {
+			@apply mt-2 border-t border-neutral-200 pt-2 dark:border-neutral-700;
+		}
+	}
+}
+
+@utility ui-grid-list-header {
+	:where(&) {
+		@apply px-2 py-1 text-xs font-semibold uppercase tracking-wider;
+		@apply text-neutral-500 dark:text-neutral-400;
+	}
+}
+
+@utility ui-grid-list-load-more-item {
+	:where(&) {
+		@apply flex items-center justify-center py-2 text-sm text-neutral-500;
+	}
+}
+
+/* =============================================================================
+   ListBox Section & Load More
+   ============================================================================= */
+
+@utility ui-listbox-section {
+	:where(&) {
+		@apply py-1;
+
+		&:not(:first-child) {
+			@apply border-t border-neutral-200 dark:border-neutral-700;
+		}
+	}
+}
+
+@utility ui-listbox-load-more-item {
+	:where(&) {
+		@apply flex items-center justify-center py-2 text-sm text-neutral-500;
+	}
+}
+
+/* =============================================================================
+   Utility Components
+   ============================================================================= */
+
+@utility ui-header {
+	:where(&) {
+		@apply px-3 py-1.5 text-xs font-semibold uppercase tracking-wider;
+		@apply text-neutral-500 dark:text-neutral-400;
+	}
+}
+
+@utility ui-heading {
+	:where(&) {
+		@apply text-lg font-semibold text-neutral-900 dark:text-neutral-100;
+	}
+}
+
+@utility ui-text {
+	:where(&) {
+		@apply text-neutral-700 dark:text-neutral-300;
+	}
+}
+
+@utility ui-section {
+	:where(&) {
+		@apply py-1;
+	}
+}
+
+@utility ui-keyboard {
+	:where(&) {
+		@apply ml-auto text-xs text-neutral-400 dark:text-neutral-500;
+	}
+}
+
+@utility ui-overlay-arrow {
+	:where(&) {
+		@apply fill-white dark:fill-neutral-800;
+
+		&[data-placement="bottom"] {
+			@apply -top-2;
+		}
+		&[data-placement="top"] {
+			@apply -bottom-2 rotate-180;
+		}
+		&[data-placement="left"] {
+			@apply -right-2 rotate-90;
+		}
+		&[data-placement="right"] {
+			@apply -left-2 -rotate-90;
+		}
+	}
+}
+
+@utility ui-drop-indicator {
+	:where(&) {
+		@apply h-0.5 w-full rounded-full bg-primary-500;
+
+		&[data-drop-target] {
+			@apply bg-primary-600;
+		}
+	}
+}
+
+@utility ui-selection-indicator {
+	:where(&) {
+		@apply size-4 text-current;
+
+		&[data-selected] {
+			@apply visible;
+		}
+		&:not([data-selected]) {
+			@apply invisible;
+		}
+	}
+}
+
+@utility ui-shared-element {
+	:where(&) {
+		/* SharedElement styles are typically handled by View Transitions API */
+		view-transition-name: var(--shared-element-id);
+	}
+}

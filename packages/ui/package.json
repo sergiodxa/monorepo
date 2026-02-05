@@ -1,0 +1,24 @@
+{
+	"name": "@pkg/ui",
+	"version": "0.0.1",
+	"private": true,
+	"type": "module",
+	"exports": {
+		".": "./src/index.ts",
+		"./styles.css": "./src/styles.css"
+	},
+	"dependencies": {
+		"@pkg/cn": "workspace:*",
+		"@standard-schema/spec": "^1.1.0",
+		"lucide-react": "^0.563.0",
+		"react-aria-components": "^1.15.0"
+	},
+	"devDependencies": {
+		"@types/react": "^19.2.10"
+	},
+	"peerDependencies": {
+		"react": "^19.0.0",
+		"react-dom": "^19.0.0",
+		"react-router": "^7.0.0"
+	}
+}
