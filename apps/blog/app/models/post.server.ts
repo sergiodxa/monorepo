@@ -240,13 +240,10 @@ function reduceMeta<Meta extends BaseMeta>(meta: schema.SelectPostMeta[]): Meta 
 		if (meta.key in acc) {
 			let value = acc[meta.key];
 			if (Array.isArray(value)) {
-				// biome-ignore lint/performance/noAccumulatingSpread: It's fine here
 				return { ...acc, [meta.key]: [...value, meta.value] };
 			}
-			// biome-ignore lint/performance/noAccumulatingSpread: It's fine here
 			return { ...acc, [meta.key]: [value, meta.value] };
 		}
-		// biome-ignore lint/performance/noAccumulatingSpread: It's fine here
 		return { ...acc, [meta.key]: meta.value };
 	}, {} as Meta);
 }

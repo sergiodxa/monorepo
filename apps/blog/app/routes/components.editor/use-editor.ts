@@ -33,7 +33,6 @@ const context = createContext<{
 }>({
 	element: createRef<HTMLTextAreaElement>(),
 	state: initialState,
-	// biome-ignore lint/suspicious/noEmptyBlockStatements: Needed
 	dispatch() {},
 });
 

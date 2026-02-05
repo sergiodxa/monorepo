@@ -37,7 +37,6 @@ export function Fence({ content, language, path }: FenceProps) {
 					<span className="text-xs leading-none">{path}</span>
 				</header>
 			)}
-			{/* biome-ignore lint/security/noDangerouslySetInnerHtml: Required to pass highlighted code here */}
 			<code dangerouslySetInnerHTML={{ __html: content }} />
 		</pre>
 	);

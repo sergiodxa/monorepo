@@ -27,7 +27,6 @@ export default async function handleRequest(
 				logger.error("render-error", {
 					error: error instanceof Error ? error.message : String(error),
 				});
-				// biome-ignore lint/style/noParameterAssign: It's ok
 				status = 500;
 			},
 		},

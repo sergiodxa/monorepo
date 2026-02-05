@@ -5,7 +5,6 @@ import removeMarkdown from "remove-markdown";
 
 import { fence } from "~/components/md/fence";
 
-// biome-ignore lint/complexity/noStaticOnlyClass: I want to use static methods
 export class Markdown {
 	static parse(content: string, options: Omit<Config, "nodes"> = {}) {
 		return transform(markdocParse(content), { ...options, nodes: { fence } });

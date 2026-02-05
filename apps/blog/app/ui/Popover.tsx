@@ -31,8 +31,8 @@ export function Popover({ children, showArrow, className, ...props }: PopoverPro
 		>
 			{showArrow && (
 				<OverlayArrow className="group">
-					{/* biome-ignore lint/a11y/noSvgWithoutTitle: <explanation> */}
 					<svg
+						aria-hidden="true"
 						width={12}
 						height={12}
 						viewBox="0 0 12 12"

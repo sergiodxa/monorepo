@@ -5,7 +5,6 @@ export { href };
 
 export default function Icon({ icon, ...props }: SVGProps<SVGSVGElement> & { icon: IconName }) {
 	return (
-		// biome-ignore lint/a11y/noSvgWithoutTitle: It can be a prop
 		<svg {...props}>
 			<use href={`${href}#${icon}`} />
 		</svg>

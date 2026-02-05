@@ -15,7 +15,6 @@ export const MarkdownSchema = z
 
 			return {
 				attributes: {
-					// biome-ignore lint/style/noNonNullAssertion: I check this exists
 					title: title!.slice(1).trim(),
 					tags: [],
 				},
@@ -29,9 +28,7 @@ export const MarkdownSchema = z
 
 		return {
 			attributes: {
-				// biome-ignore lint/style/noNonNullAssertion: I check this exists
 				title: title!.slice(1).trim(),
-				// biome-ignore lint/style/noNonNullAssertion: I check this exists
 				tags: tags!
 					.split("#")
 					.map((tag) => tag.trim())

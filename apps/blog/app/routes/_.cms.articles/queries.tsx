@@ -18,7 +18,6 @@ export const MarkdownSchema = z
 			let plain = body.join("\n").trimStart();
 
 			return {
-				// biome-ignore lint/style/noNonNullAssertion: I check this exists
 				attributes: { title: title!.slice(1).trim() },
 				body: plain,
 			};
@@ -28,7 +27,6 @@ export const MarkdownSchema = z
 		let plain = body.join("\n").trimStart();
 
 		return {
-			// biome-ignore lint/style/noNonNullAssertion: I check this exists
 			attributes: { title: title!.slice(1).trim() },
 			body: plain,
 		};
