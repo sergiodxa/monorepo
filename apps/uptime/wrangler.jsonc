@@ -6,13 +6,6 @@
 	"compatibility_flags": ["nodejs_compat"],
 	"workers_dev": true,
 	"dev": { "port": 3002 },
-	"vars": {
-		"CLIENT_ID": "",
-		"CLIENT_SECRET": "",
-		"POLAR_ACCESS_TOKEN": "",
-		"RESEND_API_TOKEN": "",
-		"COOKIE_SESSION_SECRET": "",
-	},
 	"placement": { "mode": "off" },
 	"observability": { "enabled": true },
 	"assets": { "directory": "./build/client" },
