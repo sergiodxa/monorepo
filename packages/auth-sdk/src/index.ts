@@ -42,7 +42,9 @@ export class AuthSDK extends APIClient {
 	client: AuthSDKOptions["client"];
 
 	constructor(options: AuthSDKOptions) {
-		super(new URL("https://auth.sergiodxa.com"));
+		super(new URL("https://auth.sergiodxa.com"), {
+			fetch: globalThis.fetch.bind(globalThis),
+		});
 		this.client = options.client;
 	}
 
