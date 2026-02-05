@@ -76,7 +76,7 @@ export async function loader({ request, params, context }: Route.LoaderArgs) {
 
 export default function Component({ loaderData }: Route.ComponentProps) {
 	return (
-		<main className="h-screen flex items-center justify-center text-center">
+		<main className="flex h-screen items-center justify-center text-center">
 			<p className="text-2xl font-semibold">{loaderData.message}</p>
 		</main>
 	);

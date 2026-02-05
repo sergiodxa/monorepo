@@ -13,9 +13,9 @@ export function Button({
 		<AriaButton
 			{...props}
 			className={cn(
-				"flex items-center flex-shrink-0 gap-2 py-2 px-4 rounded-md",
-				"focus:outline-none focus:ring-2 focus:ring-offset-2",
-				"text-sm font-medium text-white",
+				"flex flex-shrink-0 items-center gap-2 rounded-md px-4 py-2",
+				"focus:ring-2 focus:ring-offset-2 focus:outline-none",
+				"text-white text-sm font-medium",
 				props.className,
 				{
 					"bg-neutral-950 hover:bg-neutral-800 focus:ring-primary-500 text-neutral-50 dark:text-neutral-950 dark:bg-neutral-50 dark:hover:bg-neutral-200":

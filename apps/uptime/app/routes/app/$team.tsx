@@ -180,7 +180,7 @@ export default function Component({ loaderData }: Route.ComponentProps) {
 			<SubjectProvider subject={loaderData.viewer}>
 				<SidebarStatusProvider>
 					{(status) => (
-						<div className="flex w-full h-screen font-mono">
+						<div className="flex h-screen w-full font-mono">
 							<Sidebar
 								team={loaderData.team}
 								teams={teams}

@@ -43,14 +43,14 @@ export function CellTooltip(props: { children: React.ReactNode; message: string 
 
 			<AriaTooltip
 				className={cn(
-					"whitespace-pre-line rounded-lg p-2 text-sm font-medium mb-2",
+					"mb-2 rounded-lg p-2 text-sm font-medium whitespace-pre-line",
 					"border border-neutral-300 shadow shadow-neutral-300",
 					"bg-neutral-50 text-neutral-950",
 					"dark:border-neutral-700 dark:shadow-neutral-700",
 					"dark:bg-neutral-950 dark:text-neutral-50",
 				)}
 			>
-				<AriaOverlayArrow className="text-white dark:text-neutral-900 drop-shadow">
+				<AriaOverlayArrow className="text-white drop-shadow dark:text-neutral-900">
 					<svg width={8} height={8} viewBox="0 0 8 8">
 						<title>Arrow</title>
 						<path d="M0 0 L4 4 L8 0" fill="currentColor" />
@@ -71,7 +71,7 @@ export function Table(props: { dates: Date[][]; children(date: Date): React.Reac
 	}, [props.dates]);
 
 	return (
-		<div className="w-full flex flex-row gap-1">
+		<div className="flex w-full flex-row gap-1">
 			<AriaCollection items={rows}>
 				{({ dates }) => {
 					return (
@@ -96,13 +96,13 @@ export function DayLabels() {
 	];
 
 	return (
-		<div className="flex flex-col gap-1 justify-between">
+		<div className="flex flex-col justify-between gap-1">
 			<span />
 			{dayLabels.map((label) => {
 				return (
 					<span
 						key={label}
-						className="text-xs text-neutral-500 font-semibold text-left font-mono dark:text-neutral-300"
+						className="text-left font-mono text-xs font-semibold text-neutral-500 dark:text-neutral-300"
 					>
 						{label}
 					</span>
@@ -121,7 +121,7 @@ export function Legend(props: { size: Cell.Size }) {
 	return (
 		<div
 			className={cn(
-				"flex flex-row gap-2 sm:gap-8 ml-auto items-center text-sm",
+				"ml-auto flex flex-row items-center gap-2 text-sm sm:gap-8",
 				"text-neutral-900 dark:text-neutral-100",
 			)}
 		>

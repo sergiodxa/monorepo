@@ -98,7 +98,7 @@ export default function Component({ loaderData, params }: Route.ComponentProps) 
 				</div>
 			)}
 
-			<div className="p-12 flex flex-col gap-12">
+			<div className="flex flex-col gap-12 p-12">
 				{loaderData.alerts.length === 0 ? (
 					<CreateAlertForm />
 				) : (
@@ -155,7 +155,7 @@ function CreateAlertForm() {
 		<fetcher.Form
 			method="POST"
 			action={href("/actions/:team/create-alert", { team: team.slug })}
-			className="max-w-prose w-full mx-auto flex flex-col gap-6"
+			className="mx-auto flex w-full max-w-prose flex-col gap-6"
 		>
 			<TextField type="text" name="name" className="flex flex-col gap-1" isRequired>
 				<Label>{t("fields.name.label")}</Label>
@@ -175,7 +175,7 @@ function CreateAlertForm() {
 
 				<AriaButton
 					className={
-						"border border-solid border-neutral-400 rounded focus:outline-2 focus:outline-primary-500 py-2 px-4 ring-0 user-invalid:outline-red-500 user-invalid:outline-2 flex items-center justify-between gap-2"
+						"user-invalid:outline-red-500 flex items-center justify-between gap-2 rounded border border-solid border-neutral-400 px-4 py-2 ring-0 user-invalid:outline-2 focus:outline-2 focus:outline-primary-500"
 					}
 				>
 					<SelectValue />
@@ -187,7 +187,7 @@ function CreateAlertForm() {
 				<Description>{t("fields.strategy.description")}</Description>
 
 				<Popover
-					className="bg-white shadow dark:bg-neutral-800 rounded-lg"
+					className="bg-white rounded-lg shadow dark:bg-neutral-800"
 					style={{ minWidth: "var(--trigger-width)" }}
 				>
 					<ListBox className="flex flex-col gap-0.5 p-1" items={strategies}>
@@ -197,7 +197,7 @@ function CreateAlertForm() {
 								className={cn(
 									// Default
 									"flex items-center justify-between",
-									"cursor-default py-1 px-2 rounded",
+									"cursor-default rounded px-2 py-1",
 									// Selected
 									"data-[selected]:after:content-['✓']",
 									// Hovered
@@ -207,7 +207,7 @@ function CreateAlertForm() {
 									"data-[focused]:bg-primary-50 data-[focused]:text-primary-900",
 									"dark:data-[focused]:bg-primary-800 dark:data-[focused]:text-primary-200",
 									// Disabled
-									"data-[disabled]:text-neutral-400 data-[disabled]:cursor-not-allowed",
+									"data-[disabled]:cursor-not-allowed data-[disabled]:text-neutral-400",
 								)}
 							>
 								{strategy.textValue}
@@ -291,7 +291,7 @@ function AlertTableRow(props: { alert: Route.ComponentProps["loaderData"]["alert
 			<Table.Cell className="w-28 text-right">
 				{props.alert.config.strategy === "email" ? t("types.email") : t("types.webhook")}
 			</Table.Cell>
-			<Table.Cell className="text-center w-17">
+			<Table.Cell className="w-17 text-center">
 				<Menu.Trigger>
 					<Button type="button" color="neutral" className="p-2">
 						<EllipsisVerticalIcon className="size-5" />
@@ -319,7 +319,7 @@ function AlertTableRow(props: { alert: Route.ComponentProps["loaderData"]["alert
 								<BellMinusIcon aria-hidden className="size-5" />
 								<span>{t(`actions.remove`)}</span>
 								{isRemovingAlert && (
-									<LoaderIcon aria-hidden className="size-5 animate-spin ml-auto" />
+									<LoaderIcon aria-hidden className="ml-auto size-5 animate-spin" />
 								)}
 							</Menu.Item>
 						</Menu>

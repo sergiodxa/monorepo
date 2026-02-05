@@ -106,7 +106,7 @@ export function Sidebar(props: {
 	return (
 		<nav
 			className={cn(
-				"flex-col flex-shrink-0 gap-2",
+				"flex-shrink-0 flex-col gap-2",
 				"w-72",
 				"border-r border-neutral-300 dark:border-neutral-700",
 				"bg-neutral-100 text-neutral-950",
@@ -117,11 +117,11 @@ export function Sidebar(props: {
 				},
 			)}
 		>
-			<div className="p-2 h-16 border-b border-neutral-300 dark:border-neutral-700">
+			<div className="h-16 border-b border-neutral-300 p-2 dark:border-neutral-700">
 				<TeamPicker active={props.team} teams={props.teams} />
 			</div>
 
-			<div className="flex flex-col flex-grow gap-2 px-2 overflow-y-auto">
+			<div className="flex flex-grow flex-col gap-2 overflow-y-auto px-2">
 				<Navigation items={primaryNavItems} />
 			</div>
 
@@ -129,7 +129,7 @@ export function Sidebar(props: {
 				<Navigation items={secondaryNavItems} />
 			</div>
 
-			<div className="p-2 h-16 border-t border-neutral-300 dark:border-neutral-700">
+			<div className="h-16 border-t border-neutral-300 p-2 dark:border-neutral-700">
 				<UserMenu user={props.viewer} />
 			</div>
 		</nav>
@@ -149,12 +149,12 @@ function NavItemContent(props: {
 	return (
 		<>
 			{props.icon && (
-				<div aria-hidden className="flex-shrink-0 size-5 flex items-center justify-center">
+				<div aria-hidden className="flex size-5 flex-shrink-0 items-center justify-center">
 					<props.icon className="size-4" />
 				</div>
 			)}
 			<span className="line-clamp-1">{props.label}</span>
-			{isPending && <LoaderIcon className="size-4 animate-spin ml-auto flex-shrink-0" />}
+			{isPending && <LoaderIcon className="ml-auto size-4 flex-shrink-0 animate-spin" />}
 		</>
 	);
 }
@@ -177,13 +177,13 @@ function Navigation(props: {
 			{(item) => {
 				if (item.to) {
 					return (
-						<div className="flex flex-col gap-1 w-full">
+						<div className="flex w-full flex-col gap-1">
 							<NavLink
 								to={item.to}
 								end
 								className={({ isActive, isPending }) =>
 									cn(
-										"flex items-center justify-start gap-2 w-full p-2 rounded-lg",
+										"flex w-full items-center justify-start gap-2 rounded-lg p-2",
 										"hover:bg-primary-200 hover:text-primary-950",
 										"dark:hover:bg-primary-800 dark:hover:text-primary-50",
 										{
@@ -211,7 +211,7 @@ function Navigation(props: {
 											end
 											className={({ isActive, isPending }) =>
 												cn(
-													"flex items-center justify-start gap-2 w-full p-2 rounded-lg",
+													"flex w-full items-center justify-start gap-2 rounded-lg p-2",
 													"hover:bg-primary-200 hover:text-primary-950",
 													"dark:hover:bg-primary-800 dark:hover:text-primary-50",
 													{
@@ -243,10 +243,10 @@ function Navigation(props: {
 				}
 
 				return (
-					<div className="flex flex-col gap-0.5 w-full mt-2">
-						<div className="flex items-center justify-start gap-2 w-full p-2 text-sm dark:text-neutral-300">
+					<div className="mt-2 flex w-full flex-col gap-0.5">
+						<div className="flex w-full items-center justify-start gap-2 p-2 text-sm dark:text-neutral-300">
 							{item.icon && (
-								<div aria-hidden className="flex-shrink-0 size-4 flex items-center justify-center">
+								<div aria-hidden className="flex size-4 flex-shrink-0 items-center justify-center">
 									<item.icon className="size-4" />
 								</div>
 							)}
@@ -262,7 +262,7 @@ function Navigation(props: {
 										end
 										className={({ isActive, isPending }) =>
 											cn(
-												"flex items-center justify-start gap-2 w-full p-2 rounded-lg",
+												"flex w-full items-center justify-start gap-2 rounded-lg p-2",
 												"hover:bg-primary-200 hover:text-primary-950",
 												"dark:hover:bg-primary-800 dark:hover:text-primary-50",
 												{

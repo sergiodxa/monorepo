@@ -15,7 +15,7 @@ export function Table(props: ComponentProps<typeof AriaTable>) {
 		<AriaTable
 			{...props}
 			className={cn(
-				"w-full border-collapse rounded-lg overflow-hidden",
+				"w-full border-collapse overflow-hidden rounded-lg",
 				"bg-neutral-100 dark:bg-neutral-900",
 				"text-neutral-950 dark:text-neutral-50",
 				"border border-neutral-300 dark:border-neutral-700",
@@ -50,7 +50,7 @@ Table.Column = function Column({
 	return (
 		<AriaColumn
 			{...props}
-			className={cn("text-sm font-medium leading-none p-4", {
+			className={cn("p-4 text-sm leading-none font-medium", {
 				"text-left": align === ColumnAlignment.Left,
 				"text-center": align === ColumnAlignment.Center,
 				"text-right": align === ColumnAlignment.Right,

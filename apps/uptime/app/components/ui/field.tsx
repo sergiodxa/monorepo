@@ -32,7 +32,7 @@ export function Input(
 				{...props}
 				list={id}
 				className={cn(
-					"border border-solid border-neutral-400 rounded focus:outline-2 focus:outline-primary-500 py-2 px-4 ring-0 user-invalid:outline-red-500 user-invalid:outline-2",
+					"user-invalid:outline-red-500 rounded border border-solid border-neutral-400 px-4 py-2 ring-0 user-invalid:outline-2 focus:outline-2 focus:outline-primary-500",
 					props.className,
 				)}
 			/>
@@ -65,7 +65,7 @@ export function Description({
 }
 
 export function Group({ children }: { children: React.ReactNode }) {
-	return <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full">{children}</div>;
+	return <div className="grid w-full grid-cols-1 gap-4 sm:grid-cols-2">{children}</div>;
 }
 
 export function FieldError(props: React.ComponentProps<typeof AriaFieldError>) {
@@ -96,12 +96,12 @@ export function Slider(props: {
 			maxValue={props.maxValue}
 			step={props.step}
 			formatOptions={props.formatOptions}
-			className="flex flex-col w-full"
+			className="flex w-full flex-col"
 		>
 			<Label>{props.label}</Label>
 
-			<AriaSliderTrack className="relative py-4 w-full">
-				<div className="absolute top-3.5 left-0 w-full h-1 bg-neutral-200 rounded-full">
+			<AriaSliderTrack className="relative w-full py-4">
+				<div className="absolute top-3.5 left-0 h-1 w-full rounded-full bg-neutral-200">
 					<div
 						className="absolute top-0 left-0 h-full rounded-full bg-primary-300"
 						// style={{
@@ -111,7 +111,7 @@ export function Slider(props: {
 				</div>
 				<AriaSliderThumb
 					name={props.name}
-					className="flex justify-center items-center size-4 rounded-full bg-primary-300"
+					className="flex size-4 items-center justify-center rounded-full bg-primary-300"
 				/>
 			</AriaSliderTrack>
 

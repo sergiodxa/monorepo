@@ -26,8 +26,8 @@ export function UserMenu(props: { user: { avatar: string; name: string; email: s
 			<AriaButton
 				className={cn(
 					"flex items-center justify-start gap-2",
-					"w-full p-2 rounded-lg",
-					"text-left text-sm font-medium leading-tight",
+					"w-full rounded-lg p-2",
+					"text-left text-sm leading-tight font-medium",
 					"hover:bg-primary-200 hover:text-primary-950",
 					"aria-[expanded=true]:bg-primary-200 aria-[expanded=true]:text-primary-950",
 					"dark:hover:bg-primary-800 dark:hover:text-primary-50",
@@ -37,10 +37,10 @@ export function UserMenu(props: { user: { avatar: string; name: string; email: s
 				<img
 					src={props.user.avatar ?? undefined}
 					alt={props.user.name}
-					className="size-8 rounded-full object-cover flex-shrink-0 bg-neutral-50 border border-neutral-300"
+					className="size-8 flex-shrink-0 rounded-full border border-neutral-300 bg-neutral-50 object-cover"
 				/>
 				<span>{props.user.name}</span>
-				<ChevronsUpDownIcon className="size-4 flex-shrink-0 ml-auto" aria-hidden />
+				<ChevronsUpDownIcon className="ml-auto size-4 flex-shrink-0" aria-hidden />
 			</AriaButton>
 
 			<AriaPopover
@@ -68,7 +68,7 @@ export function UserMenu(props: { user: { avatar: string; name: string; email: s
 							className={cn(
 								// Default
 								"flex items-center justify-between",
-								"cursor-default py-2 px-4 rounded text-sm",
+								"cursor-default rounded px-4 py-2 text-sm",
 								// Selected
 								"data-[selected]:after:content-['✓']",
 								// Hovered
@@ -78,7 +78,7 @@ export function UserMenu(props: { user: { avatar: string; name: string; email: s
 								"data-[focused]:bg-primary-100 data-[focused]:text-primary-900",
 								"dark:data-[focused]:bg-primary-800 dark:data-[focused]:text-primary-50",
 								// Disabled
-								"data-[disabled]:text-neutral-400 data-[disabled]:cursor-not-allowed",
+								"data-[disabled]:cursor-not-allowed data-[disabled]:text-neutral-400",
 								"dark:data-[disabled]:text-neutral-600",
 							)}
 						>

@@ -169,7 +169,7 @@ export default function Component({ loaderData, params }: Route.ComponentProps) 
 				</div>
 			)}
 
-			<div className="p-12 flex flex-col gap-12">
+			<div className="flex flex-col gap-12 p-12">
 				<div className="flex flex-col gap-4">
 					<h2 id={`${id}-members-table`}>{t("membersTable.label")}</h2>
 
@@ -259,11 +259,11 @@ function MemberTableRow(props: { member: Route.ComponentProps["loaderData"]["mem
 					<img
 						src={props.member.avatar}
 						alt=""
-						className="size-12.5 rounded-full object-cover flex-shrink-0 bg-neutral-50 border border-neutral-300"
+						className="size-12.5 flex-shrink-0 rounded-full border border-neutral-300 bg-neutral-50 object-cover"
 					/>
 
 					<div className="flex flex-col gap-0.5">
-						<span className="font-medium text-lg">{props.member.name}</span>
+						<span className="text-lg font-medium">{props.member.name}</span>
 						<a href={`mailto:${props.member.email}`} className="text-sm hover:underline">
 							{props.member.email}
 						</a>
@@ -273,11 +273,11 @@ function MemberTableRow(props: { member: Route.ComponentProps["loaderData"]["mem
 
 			<Table.Cell className="w-36 text-right">{t(`role.${props.member.role}`)}</Table.Cell>
 
-			<Table.Cell className="text-center w-17">
+			<Table.Cell className="w-17 text-center">
 				<Menu.Trigger>
 					<Button
 						type="button"
-						className={cn("p-2 ml-auto", {
+						className={cn("ml-auto p-2", {
 							hidden: !canTransferOwnership && !canRemoveMember,
 						})}
 						color="neutral"
@@ -310,7 +310,7 @@ function MemberTableRow(props: { member: Route.ComponentProps["loaderData"]["mem
 									<UserCogIcon aria-hidden className="size-5" />
 									<span>{t(`actions.changeRole.${props.member.role}`)}</span>
 									{isRemovingMember && (
-										<LoaderIcon aria-hidden className="size-5 animate-spin ml-auto" />
+										<LoaderIcon aria-hidden className="ml-auto size-5 animate-spin" />
 									)}
 								</Menu.Item>
 							)}
@@ -345,7 +345,7 @@ function MemberTableRow(props: { member: Route.ComponentProps["loaderData"]["mem
 									<UserMinusIcon aria-hidden className="size-5" />
 									<span>{t("actions.remove")}</span>
 									{isRemovingMember && (
-										<LoaderIcon aria-hidden className="size-5 animate-spin ml-auto" />
+										<LoaderIcon aria-hidden className="ml-auto size-5 animate-spin" />
 									)}
 								</Menu.Item>
 							)}
@@ -357,7 +357,7 @@ function MemberTableRow(props: { member: Route.ComponentProps["loaderData"]["mem
 										<HandshakeIcon aria-hidden className="size-5" />
 										<span>{t("actions.transfer")}</span>
 										{isTransferringOwnership && (
-											<LoaderIcon aria-hidden className="size-5 animate-spin ml-auto" />
+											<LoaderIcon aria-hidden className="ml-auto size-5 animate-spin" />
 										)}
 									</Menu.Item>
 								</>
@@ -390,9 +390,9 @@ function InvitedMemberTableRow(props: {
 		<Table.Row>
 			<Table.Cell>{props.member.email}</Table.Cell>
 
-			<Table.Cell className="text-center w-17">
+			<Table.Cell className="w-17 text-center">
 				<Menu.Trigger>
-					<Button type="button" className="p-2 ml-auto" color="primary">
+					<Button type="button" className="ml-auto p-2" color="primary">
 						<EllipsisVerticalIcon className="size-5" />
 						<span className="sr-only">{t("actions.menu")}</span>
 					</Button>
@@ -435,7 +435,7 @@ function InvitedMemberTableRow(props: {
 								<UserMinusIcon aria-hidden className="size-5" />
 								<span>{t("actions.revoke")}</span>
 								{isRevokingInvite && (
-									<LoaderIcon className="size-5 animate-spin ml-auto" aria-hidden />
+									<LoaderIcon className="ml-auto size-5 animate-spin" aria-hidden />
 								)}
 							</Menu.Item>
 						</Menu>
@@ -472,7 +472,7 @@ export function ErrorBoundary({ error, params }: Route.ErrorBoundaryProps) {
 					</div>
 				)}
 
-				<div className="p-12 flex flex-col gap-4">
+				<div className="flex flex-col gap-4 p-12">
 					{data.status === 403 ? (
 						<>
 							<h2>{t("error.forbidden.title")}</h2>
@@ -492,7 +492,7 @@ export function ErrorBoundary({ error, params }: Route.ErrorBoundaryProps) {
 	return (
 		<>
 			<AppHeader heading={t("header.title")} />
-			<div className="p-12 flex flex-col gap-4">
+			<div className="flex flex-col gap-4 p-12">
 				<h2>{t("error.unknown.title")}</h2>
 				<p>{t("error.unknown.description")}</p>
 			</div>

@@ -67,22 +67,22 @@ function Header(props: { isSignedIn: boolean }) {
 	let { t } = useTranslation("translation", { keyPrefix: "landing.header" });
 
 	return (
-		<header className="border-b border-neutral-300 backdrop-blur-sm sticky top-0 z-50 bg-white/80 dark:bg-neutral-900/80">
-			<div className="flex items-center max-w-5xl mx-auto h-16 gap-8 max-lg:px-6 ">
+		<header className="bg-white/80 sticky top-0 z-50 border-b border-neutral-300 backdrop-blur-sm dark:bg-neutral-900/80">
+			<div className="mx-auto flex h-16 max-w-5xl items-center gap-8 max-lg:px-6">
 				<div className="flex items-center gap-1 text-primary-500">
 					<Logo className="size-10" />
 					<h1 className="text-xl/none font-bold">{t("title")}</h1>
 				</div>
 
-				<nav className="flex items-center gap-4 ml-auto max-lg:hidden">
+				<nav className="ml-auto flex items-center gap-4 max-lg:hidden">
 					<a
-						className="underline text-primary-900 dark:text-primary-500 dark:hover:text-primary-400"
+						className="text-primary-900 underline dark:text-primary-500 dark:hover:text-primary-400"
 						href="#features"
 					>
 						{t("nav.features")}
 					</a>
 					<a
-						className="underline text-primary-900 dark:text-primary-500 dark:hover:text-primary-400"
+						className="text-primary-900 underline dark:text-primary-500 dark:hover:text-primary-400"
 						href="#pricing"
 					>
 						{t("nav.pricing")}
@@ -92,7 +92,7 @@ function Header(props: { isSignedIn: boolean }) {
 				<Link
 					to={props.isSignedIn ? href("/app") : href("/auth")}
 					reloadDocument={!props.isSignedIn}
-					className="bg-primary-600 hover:bg-primary-700 text-primary-50 font-medium px-5 py-2 rounded-lg transition shadow-sm hover:shadow max-lg:ml-auto"
+					className="rounded-lg bg-primary-600 px-5 py-2 font-medium text-primary-50 shadow-sm transition hover:bg-primary-700 hover:shadow max-lg:ml-auto"
 				>
 					{props.isSignedIn ? t("nav.cta.in") : t("nav.cta.out")}
 				</Link>
@@ -105,40 +105,40 @@ function Hero(props: { isSignedIn: boolean }) {
 	let { t } = useTranslation("translation", { keyPrefix: "landing.hero" });
 
 	return (
-		<div id="hero" className="max-w-5xl mx-auto">
-			<div className="grid lg:grid-cols-2 gap-x-4 gap-y-8 my-10 lg:my-20 max-lg:px-6">
-				<div className="flex flex-col gap-4 text-balance max-lg:text-center items-center lg:items-start">
+		<div id="hero" className="mx-auto max-w-5xl">
+			<div className="my-10 grid gap-x-4 gap-y-8 max-lg:px-6 lg:my-20 lg:grid-cols-2">
+				<div className="flex flex-col items-center gap-4 text-balance max-lg:text-center lg:items-start">
 					<Trans
 						parent="h2"
 						t={t}
 						i18nKey="title"
-						className="text-4xl md:text-5xl lg:text-6xl font-bold leading-none"
+						className="text-4xl leading-none font-bold md:text-5xl lg:text-6xl"
 						components={{
 							strong: <strong className="text-primary-500 max-lg:hidden" />,
 						}}
 					/>
 
-					<p className="text-lg text-neutral-600 max-w-lg dark:text-neutral-400">
+					<p className="max-w-lg text-lg text-neutral-600 dark:text-neutral-400">
 						{t("description")}
 					</p>
 
 					<Link
 						to={props.isSignedIn ? href("/app") : href("/auth")}
 						reloadDocument={!props.isSignedIn}
-						className="bg-primary-600 hover:bg-primary-700 text-primary-50 font-medium px-8 py-3 rounded-lg transition shadow-md hover:shadow-lg text-lg max-lg:mt-4"
+						className="rounded-lg bg-primary-600 px-8 py-3 text-lg font-medium text-primary-50 shadow-md transition hover:bg-primary-700 hover:shadow-lg max-lg:mt-4"
 					>
 						{props.isSignedIn ? t("cta.in") : t("cta.out")}
 					</Link>
 				</div>
 
-				<div className="relative rounded-xl overflow-hidden flex items-center justify-center">
+				<div className="relative flex items-center justify-center overflow-hidden rounded-xl">
 					<picture>
 						<source media="(prefers-color-scheme: dark)" srcSet={screenshotDark} />
 						<source media="(prefers-color-scheme: light)" srcSet={screenshotLight} />
 						<img
 							src={screenshotLight}
 							alt={t("screenshot.alt")}
-							className="w-full h-auto object-cover drop-shadow-sm drop-shadow-primary-300 dark:drop-shadow-primary-900"
+							className="h-auto w-full object-cover drop-shadow-sm drop-shadow-primary-300 dark:drop-shadow-primary-900"
 						/>
 					</picture>
 				</div>
@@ -173,29 +173,29 @@ function Features() {
 	return (
 		<section
 			id="features"
-			className="max-w-5xl mx-auto my-10 lg:my-20 max-lg:px-6 flex flex-col gap-16 scroll-mt-20"
+			className="mx-auto my-10 flex max-w-5xl scroll-mt-20 flex-col gap-16 max-lg:px-6 lg:my-20"
 		>
 			<header className="flex flex-col items-center gap-4">
-				<h2 className="text-3xl font-bold text-center">{t("title")}</h2>
-				<p className="text-neutral-600 dark:text-neutral-400 max-w-2xl mx-auto text-center text-balance">
+				<h2 className="text-center text-3xl font-bold">{t("title")}</h2>
+				<p className="mx-auto max-w-2xl text-center text-balance text-neutral-600 dark:text-neutral-400">
 					{t("description")}
 				</p>
 			</header>
 
-			<div className="grid md:grid-cols-3 gap-8">
+			<div className="grid gap-8 md:grid-cols-3">
 				{list.map((item) => (
 					<div
 						key={item.title}
-						className="bg-neutral-50 lg:p-8 rounded-xl shadow-sm hover:shadow-md transition flex flex-col gap-3 dark:bg-neutral-950/30 items-start"
+						className="flex flex-col items-start gap-3 rounded-xl bg-neutral-50 shadow-sm transition hover:shadow-md lg:p-8 dark:bg-neutral-950/30"
 					>
 						<figure
 							aria-hidden
-							className="bg-primary-100 text-primary-800 rounded-full p-4 flex items-center justify-center mb-3 dark:bg-primary-500 dark:text-primary-950"
+							className="mb-3 flex items-center justify-center rounded-full bg-primary-100 p-4 text-primary-800 dark:bg-primary-500 dark:text-primary-950"
 						>
 							{item.icon}
 						</figure>
 
-						<h3 className="text-xl font-semibold w-full">{item.title}</h3>
+						<h3 className="w-full text-xl font-semibold">{item.title}</h3>
 
 						<p className="text-neutral-600 dark:text-neutral-400">{t("list.first.description")}</p>
 					</div>
@@ -216,11 +216,11 @@ function Pricing(props: {
 	return (
 		<section
 			id="pricing"
-			className="max-w-5xl w-full mx-auto my-10 lg:my-20 max-lg:px-6 flex flex-col gap-16 scroll-mt-20"
+			className="mx-auto my-10 flex w-full max-w-5xl scroll-mt-20 flex-col gap-16 max-lg:px-6 lg:my-20"
 		>
 			<header className="flex flex-col items-center gap-4">
-				<h2 className="text-3xl font-bold text-center">{t("title")}</h2>
-				<p className="text-neutral-600 dark:text-neutral-400 max-w-2xl mx-auto text-center text-balance">
+				<h2 className="text-center text-3xl font-bold">{t("title")}</h2>
+				<p className="mx-auto max-w-2xl text-center text-balance text-neutral-600 dark:text-neutral-400">
 					{t("description")}
 				</p>
 			</header>
@@ -262,32 +262,32 @@ function FAQ() {
 	return (
 		<section
 			id="faq"
-			className="max-w-5xl mx-auto my-10 lg:my-20 max-lg:px-6 flex flex-col gap-16 scroll-mt-20"
+			className="mx-auto my-10 flex max-w-5xl scroll-mt-20 flex-col gap-16 max-lg:px-6 lg:my-20"
 		>
 			<header className="flex flex-col items-center gap-4">
-				<h2 className="text-3xl font-bold text-center">{t("title")}</h2>
-				<p className="text-neutral-600 dark:text-neutral-400 max-w-2xl mx-auto text-center text-balance">
+				<h2 className="text-center text-3xl font-bold">{t("title")}</h2>
+				<p className="mx-auto max-w-2xl text-center text-balance text-neutral-600 dark:text-neutral-400">
 					{t("description")}
 				</p>
 			</header>
 
-			<dl className="grid sm:grid-cols-2 gap-6 mx-auto">
-				<div className="flex flex-col gap-6 max-sm:max-w-prose mx-auto">
+			<dl className="mx-auto grid gap-6 sm:grid-cols-2">
+				<div className="mx-auto flex flex-col gap-6 max-sm:max-w-prose">
 					{firstHalf.map((item) => (
 						<div key={item.q} className="flex flex-col gap-3">
 							<dt className="text-xl font-semibold">{item.q}</dt>
-							<dd className="text-neutral-600 dark:text-neutral-400 whitespace-pre-line">
+							<dd className="whitespace-pre-line text-neutral-600 dark:text-neutral-400">
 								{item.a}
 							</dd>
 						</div>
 					))}
 				</div>
 
-				<div className="flex flex-col gap-6 max-sm:max-w-prose mx-auto">
+				<div className="mx-auto flex flex-col gap-6 max-sm:max-w-prose">
 					{secondHalf.map((item) => (
 						<div key={item.q} className="flex flex-col gap-3">
 							<dt className="text-xl font-semibold">{item.q}</dt>
-							<dd className="text-neutral-600 dark:text-neutral-400 whitespace-pre-line">
+							<dd className="whitespace-pre-line text-neutral-600 dark:text-neutral-400">
 								{item.a}
 							</dd>
 						</div>
@@ -302,7 +302,7 @@ function Footer() {
 	let { t } = useTranslation("translation", { keyPrefix: "landing.footer" });
 
 	return (
-		<footer className="max-w-5xl mx-auto p-6 lg:px-0 lg:py-10 text-center">
+		<footer className="mx-auto max-w-5xl p-6 text-center lg:px-0 lg:py-10">
 			<p className="text-neutral-600 dark:text-neutral-400">
 				{t("copyright", {
 					year: new Date().getFullYear(),
@@ -330,14 +330,14 @@ function Calculator(props: {
 	);
 
 	return (
-		<section className="bg-neutral-50 lg:p-8 rounded-xl shadow-sm hover:shadow-md transition flex flex-col gap-3 dark:bg-neutral-950/30">
+		<section className="flex flex-col gap-3 rounded-xl bg-neutral-50 shadow-sm transition hover:shadow-md lg:p-8 dark:bg-neutral-950/30">
 			<header className="flex flex-col gap-3">
-				<div className="flex items-baseline justify-between gap-y-4 gap-2">
-					<h3 className="font-semibold tracking-tight text-2xl">{t("title")}</h3>
+				<div className="flex items-baseline justify-between gap-2 gap-y-4">
+					<h3 className="text-2xl font-semibold tracking-tight">{t("title")}</h3>
 
 					<button
 						type="button"
-						className="flex items-center gap-2 flex-shrink-0"
+						className="flex flex-shrink-0 items-center gap-2"
 						onClick={() => setMonitors((c) => c.concat({ id: crypto.randomUUID(), frequency: 10 }))}
 					>
 						<span className="text-sm">{t("add")}</span>
@@ -370,7 +370,7 @@ function Calculator(props: {
 				</ul>
 			</div>
 
-			<div className="grid lg:grid-cols-2 gap-4">
+			<div className="grid gap-4 lg:grid-cols-2">
 				<CalculatorStats pingsPerMonth={pingsPerMonth} />
 				<HowPricingWorks />
 			</div>
@@ -407,7 +407,7 @@ function CalculatorMonitor(props: {
 				minimumFractionDigits: 0,
 				maximumFractionDigits: 0,
 			}}
-			className="flex flex-col w-full"
+			className="flex w-full flex-col"
 		>
 			<div className="flex items-center justify-between gap-2">
 				<Label className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
@@ -425,8 +425,8 @@ function CalculatorMonitor(props: {
 				)}
 			</div>
 
-			<SliderTrack className="relative py-4 w-full">
-				<div className="absolute top-3.5 left-0 w-full h-1 bg-neutral-200 rounded-full">
+			<SliderTrack className="relative w-full py-4">
+				<div className="absolute top-3.5 left-0 h-1 w-full rounded-full bg-neutral-200">
 					<div
 						className="absolute top-0 left-0 h-full rounded-full bg-primary-300"
 						style={{
@@ -434,7 +434,7 @@ function CalculatorMonitor(props: {
 						}}
 					/>
 				</div>
-				<SliderThumb className="flex justify-center items-center size-4 rounded-full bg-primary-300" />
+				<SliderThumb className="flex size-4 items-center justify-center rounded-full bg-primary-300" />
 			</SliderTrack>
 
 			<div className="flex justify-between text-sm text-neutral-500">
@@ -464,8 +464,8 @@ function HowPricingWorks() {
 
 	return (
 		<aside>
-			<article className="rounded-lg shadow-sm shadow-primary-200 dark:shadow-primary-800 border-2 border-primary-200 dark:border-primary-800 bg-primary-50 dark:bg-primary-950 p-6 flex flex-col gap-4">
-				<h3 className="font-semibold tracking-tight text-xl text-primary-900 dark:text-primary-50">
+			<article className="flex flex-col gap-4 rounded-lg border-2 border-primary-200 bg-primary-50 p-6 shadow-sm shadow-primary-200 dark:border-primary-800 dark:bg-primary-950 dark:shadow-primary-800">
+				<h3 className="text-xl font-semibold tracking-tight text-primary-900 dark:text-primary-50">
 					{t("title")}
 				</h3>
 
@@ -473,7 +473,7 @@ function HowPricingWorks() {
 					{list.map((item) => (
 						<li
 							key={item.title}
-							className="before:content-[counter(step)] before:size-6 before:bg-primary-400 before:text-primary-950 before:rounded-full before:p-4 before:flex before:items-center before:justify-center before:dark:bg-primary-600 before:dark:text-primary-50 before:tabular-nums flex items-start gap-3"
+							className="flex items-start gap-3 before:flex before:size-6 before:items-center before:justify-center before:rounded-full before:bg-primary-400 before:p-4 before:text-primary-950 before:tabular-nums before:content-[counter(step)] before:dark:bg-primary-600 before:dark:text-primary-50"
 							style={{ counterIncrement: "step 1" }}
 						>
 							<div>
@@ -503,8 +503,8 @@ function CalculatorStats(props: { pingsPerMonth: number }) {
 	let totalCost = basePrice + additionalPingsCost;
 
 	return (
-		<dl className="bg-neutral-100 dark:bg-neutral-800 rounded-lg p-4 flex flex-col gap-3">
-			<div className="flex justify-between items-center">
+		<dl className="flex flex-col gap-3 rounded-lg bg-neutral-100 p-4 dark:bg-neutral-800">
+			<div className="flex items-center justify-between">
 				<dt className="text-neutral-600 dark:text-neutral-200">{t("pingsPerMonth")}</dt>
 				<dd className="font-semibold">
 					{props.pingsPerMonth.toLocaleString(i18n.language, {
@@ -513,8 +513,8 @@ function CalculatorStats(props: { pingsPerMonth: number }) {
 					})}
 				</dd>
 			</div>
-			<div className="border-t border-neutral-200 dark:border-neutral-600 pt-3 flex flex-col gap-2">
-				<div className="flex justify-between items-center">
+			<div className="flex flex-col gap-2 border-t border-neutral-200 pt-3 dark:border-neutral-600">
+				<div className="flex items-center justify-between">
 					<dt className="text-neutral-600 dark:text-neutral-200">{t("baseSubscription")}</dt>
 					<dd className="font-medium">
 						{basePrice.toLocaleString(i18n.language, {
@@ -525,7 +525,7 @@ function CalculatorStats(props: { pingsPerMonth: number }) {
 						})}
 					</dd>
 				</div>
-				<div className="flex justify-between items-center text-sm text-neutral-500 dark:text-neutral-400">
+				<div className="flex items-center justify-between text-sm text-neutral-500 dark:text-neutral-400">
 					<span className="ml-4">
 						{t("includes", {
 							amount: includedPings.toLocaleString(i18n.language, {
@@ -535,7 +535,7 @@ function CalculatorStats(props: { pingsPerMonth: number }) {
 						})}
 					</span>
 				</div>
-				<div className="flex justify-between items-center">
+				<div className="flex items-center justify-between">
 					<dt className="text-neutral-600 dark:text-neutral-200">{t("additionalPings")}</dt>
 					<dd className="font-medium">
 						{additionalPingsCost.toLocaleString(i18n.language, {
@@ -546,7 +546,7 @@ function CalculatorStats(props: { pingsPerMonth: number }) {
 						})}
 					</dd>
 				</div>
-				<div className="flex justify-between items-center text-sm text-neutral-500 dark:text-neutral-400">
+				<div className="flex items-center justify-between text-sm text-neutral-500 dark:text-neutral-400">
 					<span className="ml-4">
 						{t("additionalPingsCost", {
 							pings: additionalPings.toLocaleString(i18n.language, {
@@ -564,8 +564,8 @@ function CalculatorStats(props: { pingsPerMonth: number }) {
 					<span />
 				</div>
 			</div>
-			<div className="border-t border-neutral-200 dark:border-neutral-600 pt-3 mt-auto">
-				<div className="flex justify-between items-center text-lg font-bold">
+			<div className="mt-auto border-t border-neutral-200 pt-3 dark:border-neutral-600">
+				<div className="flex items-center justify-between text-lg font-bold">
 					<span>{t("totalCost")}</span>
 					<span className="text-primary-600">
 						{totalCost.toLocaleString(i18n.language, {

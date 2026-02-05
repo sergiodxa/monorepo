@@ -48,7 +48,7 @@ export default function Component({ loaderData, params }: Route.ComponentProps) 
 				</div>
 			)}
 
-			<div className="p-12 flex flex-col gap-12">
+			<div className="flex flex-col gap-12 p-12">
 				<CreateDomainForm />
 			</div>
 		</>
@@ -71,7 +71,7 @@ function CreateDomainForm() {
 		<fetcher.Form
 			method="POST"
 			action={href("/actions/:team/add-domain", { team: team.slug })}
-			className="max-w-prose w-full mx-auto flex flex-col gap-6"
+			className="mx-auto flex w-full max-w-prose flex-col gap-6"
 		>
 			<TextField
 				type="text"
@@ -129,7 +129,7 @@ export function ErrorBoundary({ error, params }: Route.ErrorBoundaryProps) {
 					</div>
 				)}
 
-				<div className="p-12 flex flex-col gap-4">
+				<div className="flex flex-col gap-4 p-12">
 					{data.status === 403 ? (
 						<>
 							<h2>{t("error.forbidden.title")}</h2>
@@ -149,7 +149,7 @@ export function ErrorBoundary({ error, params }: Route.ErrorBoundaryProps) {
 	return (
 		<>
 			<AppHeader heading={t("header.title")} />
-			<div className="p-12 flex flex-col gap-4">
+			<div className="flex flex-col gap-4 p-12">
 				<h2>{t("error.unknown.title")}</h2>
 				<p>{t("error.unknown.description")}</p>
 			</div>

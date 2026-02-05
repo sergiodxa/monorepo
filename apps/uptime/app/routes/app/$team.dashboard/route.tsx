@@ -124,8 +124,8 @@ export default function Component({ loaderData, params }: Route.ComponentProps) 
 				</div>
 			)}
 
-			<div className="p-5 lg:p-12 flex flex-col gap-6 lg:gap-12">
-				<div className="grid lg:grid-cols-3 gap-4 lg:gap-8">
+			<div className="flex flex-col gap-6 p-5 lg:gap-12 lg:p-12">
+				<div className="grid gap-4 lg:grid-cols-3 lg:gap-8">
 					<StatCard
 						label={t("stats.monitors.label")}
 						value={
@@ -300,14 +300,14 @@ function MonitorTableRow(props: {
 						team: props.team,
 						monitorId: props.monitor.id,
 					})}
-					className="hover:underline line-clamp-1 inline"
+					className="line-clamp-1 inline hover:underline"
 				>
 					{props.monitor.name}
 				</Link>
 			</Table.Cell>
 
-			<Table.Cell className="text-left w-50">
-				<ClientOnly fallback={<div className="w-50 h-6" />}>
+			<Table.Cell className="w-50 text-left">
+				<ClientOnly fallback={<div className="h-6 w-50" />}>
 					{() => (
 						<LineChart
 							width={200}
@@ -321,7 +321,7 @@ function MonitorTableRow(props: {
 				</ClientOnly>
 			</Table.Cell>
 
-			<Table.Cell className="text-left w-44">
+			<Table.Cell className="w-44 text-left">
 				{props.monitor.status === "unknown" && (
 					<StatusPill status="unknown" label={t("status.unknown")} />
 				)}
@@ -333,14 +333,14 @@ function MonitorTableRow(props: {
 			</Table.Cell>
 
 			{props.showLastIncident && (
-				<Table.Cell className="text-right w-52">{props.monitor.lastIncident}</Table.Cell>
+				<Table.Cell className="w-52 text-right">{props.monitor.lastIncident}</Table.Cell>
 			)}
 
-			<Table.Cell className="text-right w-36">{props.monitor.responseTime}</Table.Cell>
+			<Table.Cell className="w-36 text-right">{props.monitor.responseTime}</Table.Cell>
 
-			<Table.Cell className="text-right w-17">
+			<Table.Cell className="w-17 text-right">
 				<Menu.Trigger>
-					<Button color="neutral" type="button" className="p-2 ml-auto">
+					<Button color="neutral" type="button" className="ml-auto p-2">
 						<EllipsisVerticalIcon className="size-5" />
 						<span className="sr-only">{t("actions.menu")}</span>
 					</Button>
@@ -373,7 +373,7 @@ function MonitorTableRow(props: {
 							>
 								<PlayIcon className="size-5" />
 								<span>{t("actions.play")}</span>
-								{isPlaying && <LoaderIcon aria-hidden className="size-5 animate-spin ml-auto" />}
+								{isPlaying && <LoaderIcon aria-hidden className="ml-auto size-5 animate-spin" />}
 							</Menu.Item>
 
 							<Menu.Item isDisabled>
@@ -394,7 +394,7 @@ function MonitorTableRow(props: {
 									"data-[focused]:bg-danger-100 data-[focused]:text-danger-900",
 									"dark:data-[focused]:bg-danger-800 dark:data-[focused]:text-danger-50",
 									// Disabled
-									"data-[disabled]:text-neutral-400 data-[disabled]:cursor-not-allowed",
+									"data-[disabled]:cursor-not-allowed data-[disabled]:text-neutral-400",
 									"dark:data-[disabled]:text-neutral-600",
 								)}
 								onAction={() => {
@@ -419,7 +419,7 @@ function MonitorTableRow(props: {
 							>
 								<TrashIcon className="size-5" />
 								<span>{t("actions.delete")}</span>
-								{isDeleting && <LoaderIcon aria-hidden className="size-5 animate-spin ml-auto" />}
+								{isDeleting && <LoaderIcon aria-hidden className="ml-auto size-5 animate-spin" />}
 							</Menu.Item>
 						</Menu>
 					</Menu.Popover>
@@ -432,7 +432,7 @@ function MonitorTableRow(props: {
 function StatusPill(props: { status: "up" | "down" | "degraded" | "unknown"; label: string }) {
 	return (
 		<span
-			className={cn("leading-none py-1 px-2 rounded-full border", {
+			className={cn("rounded-full border px-2 py-1 leading-none", {
 				"text-primary-950 bg-primary-100 border-primary-300 dark:text-primary-300 dark:bg-primary-900 dark:border-primary-300":
 					props.status === "up",
 				"text-warning-950 bg-warning-100 border-warning-300 dark:text-warning-300 dark:bg-warning-900 dark:border-warning-300":

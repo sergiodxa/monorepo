@@ -9,8 +9,8 @@ export function AppHeader(props: { heading: string; children?: ReactNode }) {
 	let toggleSidebar = useToggleSidebarStatus();
 
 	return (
-		<header className="flex h-16 flex-shrink-0 items-center gap-2 px-4 border-b border-neutral-300 dark:border-neutral-700 sticky top-0 z-10 bg-neutral-50/80 dark:bg-neutral-950/80">
-			<Button type="button" onPress={() => toggleSidebar()} className="p-2 lg:hidden mr-2">
+		<header className="sticky top-0 z-10 flex h-16 flex-shrink-0 items-center gap-2 border-b border-neutral-300 bg-neutral-50/80 px-4 dark:border-neutral-700 dark:bg-neutral-950/80">
+			<Button type="button" onPress={() => toggleSidebar()} className="mr-2 p-2 lg:hidden">
 				<PanelLeftIcon aria-hidden className="size-4" />
 				<span className="sr-only">Toggle sidebar</span>
 			</Button>

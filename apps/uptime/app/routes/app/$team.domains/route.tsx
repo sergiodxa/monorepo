@@ -105,7 +105,7 @@ export default function Component({ loaderData, params }: Route.ComponentProps) 
 				</div>
 			)}
 
-			<div className="p-12 flex flex-col gap-12">
+			<div className="flex flex-col gap-12 p-12">
 				{loaderData.domains.length === 0 ? (
 					<CreateDomainForm />
 				) : (
@@ -179,10 +179,10 @@ function DomainTableRow(props: { domain: Route.ComponentProps["loaderData"]["dom
 			{props.domain.verifiedAt ? (
 				<Table.Cell>{null}</Table.Cell>
 			) : (
-				<Table.Cell className="text-right w-110">{verificationId}</Table.Cell>
+				<Table.Cell className="w-110 text-right">{verificationId}</Table.Cell>
 			)}
-			<Table.Cell className="text-right w-60">{verifiedAt}</Table.Cell>
-			<Table.Cell className="text-center w-17">
+			<Table.Cell className="w-60 text-right">{verifiedAt}</Table.Cell>
+			<Table.Cell className="w-17 text-center">
 				<Menu.Trigger>
 					<Button type="button" color="neutral" className="p-2">
 						<EllipsisVerticalIcon className="size-5" />
@@ -243,7 +243,7 @@ function DomainTableRow(props: { domain: Route.ComponentProps["loaderData"]["dom
 								<BadgeMinusIcon aria-hidden className="size-5" />
 								<span>{t(`actions.remove`)}</span>
 								{isRemovingDomain && (
-									<LoaderIcon aria-hidden className="size-5 animate-spin ml-auto" />
+									<LoaderIcon aria-hidden className="ml-auto size-5 animate-spin" />
 								)}
 							</Menu.Item>
 						</Menu>
@@ -270,7 +270,7 @@ function CreateDomainForm() {
 		<fetcher.Form
 			method="POST"
 			action={href("/actions/:team/add-domain", { team: team.slug })}
-			className="max-w-prose w-full mx-auto flex flex-col gap-6"
+			className="mx-auto flex w-full max-w-prose flex-col gap-6"
 		>
 			<TextField
 				type="text"
@@ -308,12 +308,12 @@ function Instructions() {
 	});
 
 	return (
-		<aside className="border border-neutral-300 dark:border-neutral-700 rounded-2xl p-4 flex flex-col gap-2">
+		<aside className="flex flex-col gap-2 rounded-2xl border border-neutral-300 p-4 dark:border-neutral-700">
 			<h3 className="text-xl font-semibold">{t("title")}</h3>
 
 			<p>{t("description")}</p>
 
-			<dl className="flex flex-col gap-2 my-2 [&_div]:flex [&_div]:gap-2 [&_div]:ml-2 [&_dt]:font-semibold [&_code]:bg-neutral-100 [&_code]:dark:bg-neutral-800 [&_code]:rounded-lg [&_code]:py-1 [&_code]:px-1.5 [&_code]:text-sm">
+			<dl className="my-2 flex flex-col gap-2 [&_code]:rounded-lg [&_code]:bg-neutral-100 [&_code]:px-1.5 [&_code]:py-1 [&_code]:text-sm [&_code]:dark:bg-neutral-800 [&_div]:ml-2 [&_div]:flex [&_div]:gap-2 [&_dt]:font-semibold">
 				<div>
 					<dt>{t("record.name.label")}</dt>
 					<dd>
@@ -334,7 +334,7 @@ function Instructions() {
 				t={t}
 				i18nKey="note"
 				components={{
-					code: <code className="bg-neutral-100 dark:bg-neutral-800 rounded-lg py-1 px-1.5" />,
+					code: <code className="rounded-lg bg-neutral-100 px-1.5 py-1 dark:bg-neutral-800" />,
 				}}
 			/>
 
@@ -369,7 +369,7 @@ export function ErrorBoundary({ error, params }: Route.ErrorBoundaryProps) {
 					</div>
 				)}
 
-				<div className="p-12 flex flex-col gap-4">
+				<div className="flex flex-col gap-4 p-12">
 					{data.status === 403 ? (
 						<>
 							<h2>{t("error.forbidden.title")}</h2>
@@ -389,7 +389,7 @@ export function ErrorBoundary({ error, params }: Route.ErrorBoundaryProps) {
 	return (
 		<>
 			<AppHeader heading={t("header.title")} />
-			<div className="p-12 flex flex-col gap-4">
+			<div className="flex flex-col gap-4 p-12">
 				<h2>{t("error.unknown.title")}</h2>
 				<p>{t("error.unknown.description")}</p>
 			</div>

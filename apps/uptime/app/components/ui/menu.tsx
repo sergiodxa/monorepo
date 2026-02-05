@@ -39,7 +39,7 @@ Menu.Item = function MenuItem(props: ComponentProps<typeof AriaMenuItem>) {
 			className={cn(
 				// Default
 				"flex items-center justify-start gap-2",
-				"cursor-default p-2 rounded text-sm",
+				"cursor-default rounded p-2 text-sm",
 				// Selected
 				"data-[selected]:after:content-['✓']",
 				// Hovered
@@ -49,7 +49,7 @@ Menu.Item = function MenuItem(props: ComponentProps<typeof AriaMenuItem>) {
 				"data-[focused]:bg-primary-100 data-[focused]:text-primary-900",
 				"dark:data-[focused]:bg-primary-800 dark:data-[focused]:text-primary-50",
 				// Disabled
-				"data-[disabled]:text-neutral-400 data-[disabled]:cursor-not-allowed",
+				"data-[disabled]:cursor-not-allowed data-[disabled]:text-neutral-400",
 				"dark:data-[disabled]:text-neutral-600",
 				props.className,
 			)}
@@ -61,7 +61,7 @@ Menu.Separator = function Separator(props: ComponentProps<typeof AriaSeparator>)
 	return (
 		<AriaSeparator
 			{...props}
-			className={cn("my-1 -mx-1 h-px bg-neutral-300 dark:bg-neutral-700", props.className)}
+			className={cn("-mx-1 my-1 h-px bg-neutral-300 dark:bg-neutral-700", props.className)}
 		/>
 	);
 };

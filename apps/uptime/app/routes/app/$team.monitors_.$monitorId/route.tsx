@@ -151,7 +151,7 @@ export default function Component({ loaderData, params }: Route.ComponentProps) 
 				</div>
 			)}
 
-			<div className="p-12 flex flex-col gap-12">
+			<div className="flex flex-col gap-12 p-12">
 				<div className="grid grid-cols-3 gap-8">
 					<StatCard
 						label={t("stats.monitors.label")}

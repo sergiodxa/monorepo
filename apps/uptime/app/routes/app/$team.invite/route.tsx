@@ -49,11 +49,11 @@ export default function Component({ params }: Route.ComponentProps) {
 		<>
 			<AppHeader heading={t("header.title")} />
 
-			<div className="p-12 flex flex-col gap-4">
+			<div className="flex flex-col gap-4 p-12">
 				<fetcher.Form
 					method="POST"
 					action={href("/actions/:team/create-invite", params)}
-					className="max-w-prose w-full mx-auto flex flex-col gap-6"
+					className="mx-auto flex w-full max-w-prose flex-col gap-6"
 					ref={$form}
 					onSubmit={(event) => {
 						event.preventDefault();
