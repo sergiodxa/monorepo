@@ -1,0 +1,22 @@
+{
+	"name": "@pkg/auth-sdk",
+	"version": "0.0.0",
+	"type": "module",
+	"exports": {
+		".": "./src/index.ts"
+	},
+	"dependencies": {
+		"@pkg/result": "workspace:*"
+	},
+	"devDependencies": {
+		"@edgefirst-dev/api-client": "^0.3.0",
+		"jose": "^6.0.0",
+		"typescript": "^5.8.3",
+		"zod": "^4.0.0"
+	},
+	"peerDependencies": {
+		"@edgefirst-dev/api-client": "^0.3.0",
+		"jose": "^6.0.0",
+		"zod": "^4.0.0"
+	}
+}
