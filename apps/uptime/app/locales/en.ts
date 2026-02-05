@@ -1,12 +1,12 @@
 export default {
 	landing: {
 		meta: {
-			title: "Ping by Sergio Xalambrí",
+			title: "Uptime by Sergio Xalambrí",
 			description: "Simple & reliable uptime monitoring for developers",
 		},
 
 		header: {
-			title: "Ping",
+			title: "Uptime",
 
 			nav: {
 				pricing: "Pricing",
@@ -115,17 +115,17 @@ export default {
 
 		faq: {
 			title: "Frequently Asked Questions",
-			description: "Find answers to common questions about Ping",
+			description: "Find answers to common questions about Uptime",
 
 			list: {
 				first: {
-					q: "How does Ping monitor my services?",
-					a: "Ping sends regular HTTP or HTTPS requests to your endpoints. We check response codes and response times to determine if your service is available and responsive.",
+					q: "How does Uptime monitor my services?",
+					a: "Uptime sends regular HTTP or HTTPS requests to your endpoints. We check response codes and response times to determine if your service is available and responsive.",
 				},
 
 				second: {
 					q: "What happens when an outage is detected?",
-					a: "When Ping detects an outage, it immediately sends an alert through your configured channels.",
+					a: "When Uptime detects an outage, it immediately sends an alert through your configured channels.",
 				},
 
 				third: {
@@ -160,7 +160,7 @@ export default {
 
 				ninth: {
 					q: "Can I monitor APIs?",
-					a: "Absolutely. Ping is designed to monitor both websites and APIs. You can set the endpoint, method, headers, and expected responses to monitor your API effectively.",
+					a: "Absolutely. Uptime is designed to monitor both websites and APIs. You can set the endpoint, method, headers, and expected responses to monitor your API effectively.",
 				},
 
 				tenth: {
@@ -210,15 +210,15 @@ export default {
 
 				nineteenth: {
 					q: "From which regions can I monitor my services?",
-					a: "Ping supports monitoring from multiple regions: Africa, Asia-Pacific, Eastern and Western Europe, Eastern and Western North America, Middle East, Oceania, and South America.\n\nYou can choose one region per monitor. The region is treated as a hint, the actual ping will originate from a server in or near that region.",
+					a: "Uptime supports monitoring from multiple regions: Africa, Asia-Pacific, Eastern and Western Europe, Eastern and Western North America, Middle East, Oceania, and South America.\n\nYou can choose one region per monitor. The region is treated as a hint, the actual ping will originate from a server in or near that region.",
 				},
 			},
 		},
 
 		footer: {
-			name: "Ping",
+			name: "Uptime",
 			description: "Simple, reliable monitoring for your websites and APIs.",
-			copyright: "© {{year}} Ping by Sergio Xalambrí. All rights reserved.",
+			copyright: "© {{year}} Uptime by Sergio Xalambrí. All rights reserved.",
 			links: {
 				privacy: "Privacy",
 				terms: "Terms of Service",
@@ -229,7 +229,7 @@ export default {
 
 	app: {
 		meta: {
-			title: "Ping by Sergio Xalambrí",
+			title: "Uptime by Sergio Xalambrí",
 			description: "Simple & reliable uptime monitoring for developers",
 		},
 
@@ -437,7 +437,7 @@ export default {
 
 		createInvite: {
 			email: {
-				subject: "You've been invited to join {{team}} on Ping",
+				subject: "You've been invited to join {{team}} on Uptime",
 			},
 
 			errors: {
@@ -995,7 +995,7 @@ export default {
 
 							subjectPrefix: {
 								label: "Subject Prefix",
-								placeholder: "[Ping Alert]",
+								placeholder: "[Uptime Alert]",
 								description:
 									"An optional prefix to add to the email subject. Useful to filter alerts in your inbox.",
 							},
@@ -1085,7 +1085,7 @@ export default {
 
 							subjectPrefix: {
 								label: "Subject Prefix",
-								placeholder: "[Ping Alert]",
+								placeholder: "[Uptime Alert]",
 								description:
 									"An optional prefix to add to the email subject. Useful to filter alerts in your inbox.",
 							},

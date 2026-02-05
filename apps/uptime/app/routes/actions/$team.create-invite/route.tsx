@@ -89,7 +89,7 @@ export async function action({ request, context }: Route.ActionArgs) {
 		waitUntil(
 			resend.emails.send({
 				to: result.data.email,
-				from: "Ping <no-reply@ping.sergiodxa.com>",
+				from: "Uptime <no-reply@ping.sergiodxa.com>",
 				replyTo: "hello@sergiodxa.com",
 				subject: t("actions.createInvite.email.subject", {
 					team: team().name,

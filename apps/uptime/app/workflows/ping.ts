@@ -128,7 +128,7 @@ export default class Ping extends WorkflowEntrypoint<Cloudflare.Env> {
 					if (alert.config.strategy === "email") {
 						await resend.emails.send({
 							to: alert.config.config.to,
-							from: "Ping <no-reply@ping.sergiodxa.com>",
+							from: "Uptime <no-reply@ping.sergiodxa.com>",
 							replyTo: "hello@sergiodxa.com",
 							subject: this.emailSubject(
 								status,
