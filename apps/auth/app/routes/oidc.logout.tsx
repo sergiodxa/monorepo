@@ -77,7 +77,7 @@ export default function Component() {
 
 			<button
 				type="submit"
-				className="w-full bg-rose-800 dark:bg-rose-700 text-white py-3 rounded-lg hover:bg-rose-900 dark:hover:bg-rose-600 transition-colors duration-200 font-medium shadow-sm flex items-center justify-center gap-2"
+				className="flex w-full items-center justify-center gap-2 rounded-lg bg-rose-800 py-3 font-medium text-white shadow-sm transition-colors duration-200 hover:bg-rose-900 dark:bg-rose-700 dark:hover:bg-rose-600"
 			>
 				{t("logout.cta")}
 			</button>

@@ -139,8 +139,8 @@ export default function Component({ loaderData }: Route.ComponentProps) {
 
 	if (loaderData.status === StatusCode.NotFound) {
 		return (
-			<main className="bg-white dark:bg-gray-800 p-8 rounded-xl shadow-lg w-full max-w-md">
-				<h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-8 text-center">
+			<main className="w-full max-w-md rounded-xl bg-white p-8 shadow-lg dark:bg-gray-800">
+				<h1 className="mb-8 text-center text-3xl font-bold text-gray-900 dark:text-white">
 					{t("authorize.errors.unauthorizedClient.title")}
 				</h1>
 				<p>{t("authorize.errors.unauthorizedClient.description")}</p>
@@ -150,8 +150,8 @@ export default function Component({ loaderData }: Route.ComponentProps) {
 
 	if (loaderData.status === StatusCode.BadRequest) {
 		return (
-			<main className="bg-white dark:bg-gray-800 p-8 rounded-xl shadow-lg w-full max-w-md">
-				<h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-8 text-center">
+			<main className="w-full max-w-md rounded-xl bg-white p-8 shadow-lg dark:bg-gray-800">
+				<h1 className="mb-8 text-center text-3xl font-bold text-gray-900 dark:text-white">
 					{t("authorize.errors.invalidRequest.title")}
 				</h1>
 				<p>{t("authorize.errors.invalidRequest.description")}</p>
@@ -160,18 +160,18 @@ export default function Component({ loaderData }: Route.ComponentProps) {
 	}
 
 	return (
-		<main className="bg-white dark:bg-gray-800 p-8 rounded-xl shadow-lg w-full max-w-md">
-			<h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-8 text-center">
+		<main className="w-full max-w-md rounded-xl bg-white p-8 shadow-lg dark:bg-gray-800">
+			<h1 className="mb-8 text-center text-3xl font-bold text-gray-900 dark:text-white">
 				{t("authorize.header.title", { client: loaderData.client.name })}
 			</h1>
 
-			<Form method="POST" className="space-y-6 mb-6 hidden">
+			<Form method="POST" className="mb-6 hidden space-y-6">
 				<input
 					type="text"
 					name="name"
 					placeholder={t("authorize.forms.credentials.fields.name.placeholder")}
 					required
-					className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400"
+					className="w-full rounded-lg border border-gray-300 px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:outline-none dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400"
 				/>
 
 				<input
@@ -179,7 +179,7 @@ export default function Component({ loaderData }: Route.ComponentProps) {
 					name="username"
 					placeholder={t("authorize.forms.credentials.fields.username.placeholder")}
 					required
-					className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400"
+					className="w-full rounded-lg border border-gray-300 px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:outline-none dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400"
 				/>
 
 				<input
@@ -187,7 +187,7 @@ export default function Component({ loaderData }: Route.ComponentProps) {
 					name="email"
 					placeholder={t("authorize.forms.credentials.fields.email.placeholder")}
 					required
-					className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400"
+					className="w-full rounded-lg border border-gray-300 px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:outline-none dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400"
 				/>
 
 				<input
@@ -195,11 +195,11 @@ export default function Component({ loaderData }: Route.ComponentProps) {
 					name="password"
 					placeholder={t("authorize.forms.credentials.fields.password.placeholder")}
 					required
-					className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400"
+					className="w-full rounded-lg border border-gray-300 px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:outline-none dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400"
 				/>
 				<button
 					type="submit"
-					className="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 transition-colors duration-200 font-medium shadow-sm"
+					className="w-full rounded-lg bg-blue-600 py-3 font-medium text-white shadow-sm transition-colors duration-200 hover:bg-blue-700"
 				>
 					{t("authorize.forms.credentials.cta")}
 				</button>
@@ -207,7 +207,7 @@ export default function Component({ loaderData }: Route.ComponentProps) {
 
 			<div className="relative my-6 hidden">
 				<hr className="border-t border-gray-300 dark:border-gray-600" />
-				<span className="absolute left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white dark:bg-gray-800 px-4 text-sm text-gray-500 dark:text-gray-400">
+				<span className="absolute left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white px-4 text-sm text-gray-500 dark:bg-gray-800 dark:text-gray-400">
 					{t("authorize.forms.separator")}
 				</span>
 			</div>
@@ -215,9 +215,9 @@ export default function Component({ loaderData }: Route.ComponentProps) {
 			<Form action={href("/auth/:provider", { provider: "github" })} method="POST">
 				<button
 					type="submit"
-					className="w-full bg-gray-800 dark:bg-gray-700 text-white py-3 rounded-lg hover:bg-gray-900 dark:hover:bg-gray-600 transition-colors duration-200 font-medium shadow-sm flex items-center justify-center gap-2"
+					className="flex w-full items-center justify-center gap-2 rounded-lg bg-gray-800 py-3 font-medium text-white shadow-sm transition-colors duration-200 hover:bg-gray-900 dark:bg-gray-700 dark:hover:bg-gray-600"
 				>
-					<svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+					<svg className="h-5 w-5" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
 						<path
 							fillRule="evenodd"
 							clipRule="evenodd"
