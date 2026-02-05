@@ -1,4 +1,4 @@
-import { id, pk, timestamp, url } from "@pkg/db-helpers";
+import { uuid, pk, timestamp, url } from "@pkg/db-helpers";
 import { relations } from "drizzle-orm";
 import { index, integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
 
@@ -17,7 +17,7 @@ export const teams = sqliteTable("teams", {
 	createdAt,
 	updatedAt,
 	// Relations
-	ownerId: id("owner_id").notNull(),
+	ownerId: uuid("owner_id").notNull(),
 	// Attributes
 	name: text("name").notNull(),
 	slug: text("slug", { mode: "text", length: 255 }).notNull(),
@@ -32,8 +32,8 @@ export const memberships = sqliteTable(
 		createdAt,
 		updatedAt,
 		// Relations
-		subjectId: id("subject_id").notNull(),
-		teamId: id("team_id").notNull(),
+		subjectId: uuid("subject_id").notNull(),
+		teamId: uuid("team_id").notNull(),
 		// Attributes
 		role: text("role", { enum: ["member", "admin"] })
 			.notNull()
@@ -53,8 +53,8 @@ export const invites = sqliteTable("invites", {
 	updatedAt,
 	acceptedAt: timestamp("accepted_at"),
 	// Relations
-	senderId: id("sender_id").notNull(),
-	teamId: id("team_id").notNull(),
+	senderId: uuid("sender_id").notNull(),
+	teamId: uuid("team_id").notNull(),
 	// Attributes
 	email: text("email").notNull(),
 });
@@ -68,7 +68,7 @@ export const teamDomains = sqliteTable(
 		updatedAt,
 		verifiedAt: timestamp("verified_at"),
 		// Relations
-		teamId: id("team_id").notNull(),
+		teamId: uuid("team_id").notNull(),
 		// Attributes
 		hostname: text("hostname").notNull(),
 	},
@@ -84,8 +84,8 @@ export const monitors = sqliteTable(
 		updatedAt,
 		enabledAt: timestamp("enabled_at").$defaultFn(() => new Date()),
 		// Relations
-		teamId: id("team_id").notNull(),
-		authorId: id("author_id").notNull(),
+		teamId: uuid("team_id").notNull(),
+		authorId: uuid("author_id").notNull(),
 		// Attributes
 		name: text("name").notNull(),
 		url: url("url").notNull(),
@@ -119,7 +119,7 @@ export const monitorResults = sqliteTable(
 		updatedAt,
 		completedAt: timestamp("completed_at"),
 		// Relations
-		monitorId: id("monitor_id").notNull(),
+		monitorId: uuid("monitor_id").notNull(),
 		// Attributes
 		responseStatus: integer("response_status"),
 		responseTimeMs: integer("response_time_ms"),
@@ -141,8 +141,8 @@ export const alerts = sqliteTable("alerts", {
 	createdAt,
 	updatedAt,
 	// Relations
-	teamId: id("team_id").notNull(),
-	monitorId: id("monitor_id"),
+	teamId: uuid("team_id").notNull(),
+	monitorId: uuid("monitor_id"),
 	// Attributes
 	name: text("name").notNull(),
 	config: text("config", { mode: "json" })
