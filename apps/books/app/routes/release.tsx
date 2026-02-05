@@ -367,7 +367,6 @@ function FrequentQuestions() {
 
 			<div className="grid gap-5 lg:grid-cols-2 lg:gap-10">
 				{frequentQuestions.map((block, index) => (
-					// biome-ignore lint/suspicious/noArrayIndexKey: This is static
 					<dl key={index} className="flex flex-col gap-5">
 						{block.map((item) => (
 							<div key={item.q} className="flex flex-col gap-4 text-balance">

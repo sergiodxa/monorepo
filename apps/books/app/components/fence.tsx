@@ -18,13 +18,7 @@ export function Fence({ children, language }: FenceProps) {
 
 	let content = Prism.highlight(children, grammar, language);
 
-	return (
-		<pre
-			className={`language-${language}`}
-			// biome-ignore lint/security/noDangerouslySetInnerHtml: Needed
-			dangerouslySetInnerHTML={{ __html: content }}
-		/>
-	);
+	return <pre className={`language-${language}`} dangerouslySetInnerHTML={{ __html: content }} />;
 }
 
 export const fence = {
