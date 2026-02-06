@@ -1,7 +1,6 @@
-import type { cn } from "@pkg/cn";
 import type { ComponentProps } from "react";
 
-import { cn as classNames } from "@pkg/cn";
+import { cn } from "@pkg/cn";
 import { Text } from "react-aria-components";
 
 export namespace Description {
@@ -11,5 +10,5 @@ export namespace Description {
 }
 
 export function Description({ className, ...props }: Description.Props) {
-	return <Text {...props} slot="description" className={classNames("ui-description", className)} />;
+	return <Text {...props} slot="description" className={cn("ui-description", className)} />;
 }

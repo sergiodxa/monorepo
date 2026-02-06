@@ -1,7 +1,6 @@
-import type { cn } from "@pkg/cn";
 import type { ComponentProps } from "react";
 
-import { cn as classNames } from "@pkg/cn";
+import { cn } from "@pkg/cn";
 import { Heading as AriaHeading } from "react-aria-components";
 
 export namespace Heading {
@@ -11,5 +10,5 @@ export namespace Heading {
 }
 
 export function Heading({ className, ...props }: Heading.Props) {
-	return <AriaHeading {...props} className={classNames("ui-heading", className)} />;
+	return <AriaHeading {...props} className={cn("ui-heading", className)} />;
 }

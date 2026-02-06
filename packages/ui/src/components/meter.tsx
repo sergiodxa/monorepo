@@ -1,7 +1,6 @@
-import type { cn } from "@pkg/cn";
 import type { ComponentProps } from "react";
 
-import { cn as classNames } from "@pkg/cn";
+import { cn } from "@pkg/cn";
 import { Meter as AriaMeter } from "react-aria-components";
 
 export namespace Meter {
@@ -30,18 +29,18 @@ export namespace Meter {
 }
 
 export function Meter({ className, color = "primary", ...props }: Meter.Props) {
-	return <AriaMeter {...props} data-color={color} className={classNames("ui-meter", className)} />;
+	return <AriaMeter {...props} data-color={color} className={cn("ui-meter", className)} />;
 }
 
 Meter.Track = function MeterTrack({ className, ...props }: Meter.TrackProps) {
-	return <div {...props} className={classNames("ui-meter-track", className)} />;
+	return <div {...props} className={cn("ui-meter-track", className)} />;
 };
 
 Meter.Fill = function MeterFill({ className, percentage, style, ...props }: Meter.FillProps) {
 	return (
 		<div
 			{...props}
-			className={classNames("ui-meter-fill", className)}
+			className={cn("ui-meter-fill", className)}
 			style={
 				{
 					...style,
@@ -53,5 +52,5 @@ Meter.Fill = function MeterFill({ className, percentage, style, ...props }: Mete
 };
 
 Meter.ValueLabel = function MeterValueLabel({ className, ...props }: Meter.ValueLabelProps) {
-	return <span {...props} className={classNames("ui-meter-value", className)} />;
+	return <span {...props} className={cn("ui-meter-value", className)} />;
 };

@@ -339,6 +339,7 @@
         "@standard-schema/spec": "^1.1.0",
         "lucide-react": "^0.563.0",
         "react-aria-components": "^1.15.0",
+        "sonner": "^2.0.7",
       },
       "devDependencies": {
         "@internationalized/date": "^3.8.0",

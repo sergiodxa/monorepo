@@ -1,8 +1,7 @@
-import type { cn } from "@pkg/cn";
 import type { ComponentProps } from "react";
 import type { LinkProps as ReactRouterLinkProps } from "react-router";
 
-import { cn as classNames } from "@pkg/cn";
+import { cn } from "@pkg/cn";
 import { useState } from "react";
 import { Link as AriaLink } from "react-aria-components";
 import { PrefetchPageLinks } from "react-router";
@@ -40,7 +39,7 @@ export function Link({ className, color = "primary", prefetch, ...props }: Link.
 			<AriaLink
 				{...props}
 				data-color={color}
-				className={classNames("ui-link", className)}
+				className={cn("ui-link", className)}
 				onHoverStart={(e) => {
 					setShouldPrefetch(true);
 					props.onHoverStart?.(e);

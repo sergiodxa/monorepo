@@ -181,6 +181,7 @@ function Navigation(props: {
 							<NavLink
 								to={item.to}
 								end
+								data-has-background
 								className={({ isActive, isPending }) =>
 									cn(
 										"flex w-full items-center justify-start gap-2 rounded-lg p-2",
@@ -209,6 +210,7 @@ function Navigation(props: {
 											key={subItem.id}
 											to={subItem.to}
 											end
+											data-has-background
 											className={({ isActive, isPending }) =>
 												cn(
 													"flex w-full items-center justify-start gap-2 rounded-lg p-2",
@@ -225,15 +227,13 @@ function Navigation(props: {
 												)
 											}
 										>
-											{({ isPending }) => {
-												return (
-													<NavItemContent
-														isPending={isPending}
-														label={subItem.label}
-														icon={CornerDownRightIcon}
-													/>
-												);
-											}}
+											{({ isPending }) => (
+												<NavItemContent
+													isPending={isPending}
+													label={subItem.label}
+													icon={CornerDownRightIcon}
+												/>
+											)}
 										</NavLink>
 									))}
 								</ul>
@@ -260,6 +260,7 @@ function Navigation(props: {
 										key={subItem.id}
 										to={subItem.to}
 										end
+										data-has-background
 										className={({ isActive, isPending }) =>
 											cn(
 												"flex w-full items-center justify-start gap-2 rounded-lg p-2",
@@ -276,15 +277,13 @@ function Navigation(props: {
 											)
 										}
 									>
-										{({ isPending }) => {
-											return (
-												<NavItemContent
-													isPending={isPending}
-													label={subItem.label}
-													icon={subItem.icon ?? CornerDownRightIcon}
-												/>
-											);
-										}}
+										{({ isPending }) => (
+											<NavItemContent
+												isPending={isPending}
+												label={subItem.label}
+												icon={subItem.icon ?? CornerDownRightIcon}
+											/>
+										)}
 									</NavLink>
 								))}
 							</ul>

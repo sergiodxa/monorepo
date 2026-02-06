@@ -1,8 +1,7 @@
-import type { cn } from "@pkg/cn";
 import type { StandardSchemaV1 } from "@standard-schema/spec";
 import type { FormProps as ReactRouterFormProps } from "react-router";
 
-import { cn as classNames } from "@pkg/cn";
+import { cn } from "@pkg/cn";
 import { FormValidationContext } from "react-aria-components";
 import { Form as ReactRouterForm } from "react-router";
 
@@ -12,7 +11,7 @@ export namespace Form {
 	export interface Props extends Omit<ReactRouterFormProps, "className"> {
 		className?: cn.ClassName;
 		/**
-		 * Validation issues from @pkg/validate or any Standard Schema compliant validator.
+		 * Validation issues from `@pkg/validate` or any Standard Schema compliant validator.
 		 * Issues are automatically mapped to form fields by their path.
 		 *
 		 * @example
@@ -62,7 +61,7 @@ export function Form({ issues, className, ...props }: Form.Props) {
 
 	return (
 		<FormValidationContext.Provider value={validationErrors}>
-			<ReactRouterForm {...props} className={classNames("ui-form", className)} />
+			<ReactRouterForm {...props} className={cn("ui-form", className)} />
 		</FormValidationContext.Provider>
 	);
 }

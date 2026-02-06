@@ -1,10 +1,12 @@
 import type { Meta, StoryObj } from "@storybook/react";
 
-import { Heading } from "react-aria-components";
-
 import { Button } from "./button";
 import { Dialog, DialogTrigger } from "./dialog";
+import { Input } from "./input";
+import { Label } from "./label";
 import { Modal } from "./modal";
+import { TextField } from "./text-field";
+import { TextArea } from "./textarea";
 
 const meta: Meta<typeof Dialog> = {
 	title: "Overlays/Dialog",
@@ -20,17 +22,22 @@ export const Default: Story = {
 			<Button>Open Dialog</Button>
 			<Modal.Overlay>
 				<Modal>
-					<Dialog {...args} className="p-6">
-						<Heading slot="title" className="mb-4 text-xl font-semibold">
-							Dialog Title
-						</Heading>
-						<p className="mb-4">This is the dialog content. You can put any content here.</p>
-						<div className="flex justify-end gap-2">
-							<Button variant="outline" slot="close">
+					<Dialog {...args}>
+						<Dialog.Header>
+							<Dialog.Title>Dialog Title</Dialog.Title>
+							<Dialog.Description>
+								This is the dialog description. You can put any content here.
+							</Dialog.Description>
+						</Dialog.Header>
+						<p className="mt-4 text-sm text-neutral-600 dark:text-neutral-400">
+							This is the dialog content. You can put any content here.
+						</p>
+						<Dialog.Footer>
+							<Button variant="outline" color="neutral" slot="close">
 								Cancel
 							</Button>
 							<Button slot="close">Confirm</Button>
-						</div>
+						</Dialog.Footer>
 					</Dialog>
 				</Modal>
 			</Modal.Overlay>
@@ -38,27 +45,24 @@ export const Default: Story = {
 	),
 };
 
-export const AlertDialog: Story = {
+export const WithCloseButton: Story = {
 	render: () => (
 		<DialogTrigger>
-			<Button color="danger">Delete Item</Button>
+			<Button>Open Dialog</Button>
 			<Modal.Overlay>
 				<Modal>
-					<Dialog role="alertdialog" className="p-6">
-						<Heading slot="title" className="mb-4 text-xl font-semibold">
-							Delete Item
-						</Heading>
-						<p className="mb-4">
-							Are you sure you want to delete this item? This action cannot be undone.
+					<Dialog>
+						<Dialog.Close />
+						<Dialog.Header>
+							<Dialog.Title>Settings</Dialog.Title>
+							<Dialog.Description>Manage your account settings and preferences.</Dialog.Description>
+						</Dialog.Header>
+						<p className="mt-4 text-sm text-neutral-600 dark:text-neutral-400">
+							Your settings content goes here.
 						</p>
-						<div className="flex justify-end gap-2">
-							<Button variant="outline" slot="close">
-								Cancel
-							</Button>
-							<Button color="danger" slot="close">
-								Delete
-							</Button>
-						</div>
+						<Dialog.Footer>
+							<Button slot="close">Save Changes</Button>
+						</Dialog.Footer>
 					</Dialog>
 				</Modal>
 			</Modal.Overlay>
@@ -71,42 +75,32 @@ export const WithForm: Story = {
 		<DialogTrigger>
 			<Button>Edit Profile</Button>
 			<Modal.Overlay>
-				<Modal>
-					<Dialog className="w-96 p-6">
-						<Heading slot="title" className="mb-4 text-xl font-semibold">
-							Edit Profile
-						</Heading>
-						<form className="flex flex-col gap-4">
-							<label className="flex flex-col gap-1">
-								<span className="text-sm font-medium">Name</span>
-								<input
-									type="text"
-									className="rounded border px-3 py-2"
-									placeholder="Enter your name"
-								/>
-							</label>
-							<label className="flex flex-col gap-1">
-								<span className="text-sm font-medium">Email</span>
-								<input
-									type="email"
-									className="rounded border px-3 py-2"
-									placeholder="Enter your email"
-								/>
-							</label>
-							<label className="flex flex-col gap-1">
-								<span className="text-sm font-medium">Bio</span>
-								<textarea
-									className="rounded border px-3 py-2"
-									rows={3}
-									placeholder="Tell us about yourself"
-								/>
-							</label>
-							<div className="flex justify-end gap-2">
-								<Button variant="outline" slot="close">
+				<Modal className="w-96">
+					<Dialog>
+						<Dialog.Close />
+						<Dialog.Header>
+							<Dialog.Title>Edit Profile</Dialog.Title>
+							<Dialog.Description>Update your profile information below.</Dialog.Description>
+						</Dialog.Header>
+						<form className="mt-4 flex flex-col gap-4">
+							<TextField>
+								<Label>Name</Label>
+								<Input placeholder="Enter your name" />
+							</TextField>
+							<TextField>
+								<Label>Email</Label>
+								<Input type="email" placeholder="Enter your email" />
+							</TextField>
+							<TextField>
+								<Label>Bio</Label>
+								<TextArea rows={3} placeholder="Tell us about yourself" />
+							</TextField>
+							<Dialog.Footer>
+								<Button variant="outline" color="neutral" slot="close">
 									Cancel
 								</Button>
 								<Button type="submit">Save Changes</Button>
-							</div>
+							</Dialog.Footer>
 						</form>
 					</Dialog>
 				</Modal>
@@ -120,12 +114,12 @@ export const LongContent: Story = {
 		<DialogTrigger>
 			<Button>Terms and Conditions</Button>
 			<Modal.Overlay>
-				<Modal>
-					<Dialog className="max-h-[80vh] w-full max-w-md overflow-y-auto p-6">
-						<Heading slot="title" className="mb-4 text-xl font-semibold">
-							Terms and Conditions
-						</Heading>
-						<div className="mb-4 space-y-4 text-sm">
+				<Modal className="max-w-md">
+					<Dialog className="max-h-[80vh] overflow-y-auto">
+						<Dialog.Header>
+							<Dialog.Title>Terms and Conditions</Dialog.Title>
+						</Dialog.Header>
+						<div className="mt-4 space-y-4 text-sm text-neutral-600 dark:text-neutral-400">
 							<p>
 								Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor
 								incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud
@@ -153,12 +147,12 @@ export const LongContent: Story = {
 								quis nostrum exercitationem ullam corporis suscipit laboriosam.
 							</p>
 						</div>
-						<div className="flex justify-end gap-2">
-							<Button variant="outline" slot="close">
+						<Dialog.Footer>
+							<Button variant="outline" color="neutral" slot="close">
 								Decline
 							</Button>
 							<Button slot="close">Accept</Button>
-						</div>
+						</Dialog.Footer>
 					</Dialog>
 				</Modal>
 			</Modal.Overlay>
@@ -172,17 +166,19 @@ export const ConfirmationDialog: Story = {
 			<Button>Submit Order</Button>
 			<Modal.Overlay>
 				<Modal>
-					<Dialog className="p-6">
-						<Heading slot="title" className="mb-4 text-xl font-semibold">
-							Confirm Order
-						</Heading>
-						<p className="mb-4">You are about to submit an order for $99.99. Continue?</p>
-						<div className="flex justify-end gap-2">
-							<Button variant="outline" slot="close">
+					<Dialog>
+						<Dialog.Header>
+							<Dialog.Title>Confirm Order</Dialog.Title>
+							<Dialog.Description>
+								You are about to submit an order for $99.99. Continue?
+							</Dialog.Description>
+						</Dialog.Header>
+						<Dialog.Footer>
+							<Button variant="outline" color="neutral" slot="close">
 								Go Back
 							</Button>
 							<Button slot="close">Place Order</Button>
-						</div>
+						</Dialog.Footer>
 					</Dialog>
 				</Modal>
 			</Modal.Overlay>

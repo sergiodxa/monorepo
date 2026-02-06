@@ -1,7 +1,6 @@
-import type { cn } from "@pkg/cn";
 import type { ComponentProps } from "react";
 
-import { cn as classNames } from "@pkg/cn";
+import { cn } from "@pkg/cn";
 import { RadioGroup as AriaRadioGroup, Radio as AriaRadio } from "react-aria-components";
 
 export namespace RadioGroup {
@@ -11,7 +10,7 @@ export namespace RadioGroup {
 }
 
 export function RadioGroup({ className, ...props }: RadioGroup.Props) {
-	return <AriaRadioGroup {...props} className={classNames("ui-radio-group", className)} />;
+	return <AriaRadioGroup {...props} className={cn("ui-radio-group", className)} />;
 }
 
 export namespace Radio {
@@ -22,7 +21,7 @@ export namespace Radio {
 
 export function Radio({ className, children, ...props }: Radio.Props) {
 	return (
-		<AriaRadio {...props} className={classNames("ui-radio", className)}>
+		<AriaRadio {...props} className={cn("ui-radio", className)}>
 			{(renderProps) => (
 				<>
 					<span className="ui-radio-indicator" />

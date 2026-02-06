@@ -1,7 +1,6 @@
-import type { cn } from "@pkg/cn";
 import type { ComponentProps } from "react";
 
-import { cn as classNames } from "@pkg/cn";
+import { cn } from "@pkg/cn";
 import { SelectionIndicator as AriaSelectionIndicator } from "react-aria-components";
 
 export namespace SelectionIndicator {
@@ -24,10 +23,5 @@ export namespace SelectionIndicator {
  * ```
  */
 export function SelectionIndicator({ className, ...props }: SelectionIndicator.Props) {
-	return (
-		<AriaSelectionIndicator
-			{...props}
-			className={classNames("ui-selection-indicator", className)}
-		/>
-	);
+	return <AriaSelectionIndicator {...props} className={cn("ui-selection-indicator", className)} />;
 }

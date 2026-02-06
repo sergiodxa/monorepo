@@ -1,7 +1,6 @@
-import type { cn } from "@pkg/cn";
 import type { ComponentProps } from "react";
 
-import { cn as classNames } from "@pkg/cn";
+import { cn } from "@pkg/cn";
 import {
 	Table as AriaTable,
 	TableHeader as AriaTableHeader,
@@ -75,25 +74,25 @@ export namespace Table {
 }
 
 export function Table({ className, ...props }: Table.Props) {
-	return <AriaTable {...props} className={classNames("ui-table", className)} />;
+	return <AriaTable {...props} className={cn("ui-table", className)} />;
 }
 
 Table.Header = function TableHeader<T extends object>({
 	className,
 	...props
 }: Table.HeaderProps<T>) {
-	return <AriaTableHeader {...props} className={classNames("ui-table-header", className)} />;
+	return <AriaTableHeader {...props} className={cn("ui-table-header", className)} />;
 };
 
 Table.Body = function TableBody<T extends object>({ className, ...props }: Table.BodyProps<T>) {
-	return <AriaTableBody {...props} className={classNames("ui-table-body", className)} />;
+	return <AriaTableBody {...props} className={cn("ui-table-body", className)} />;
 };
 
 Table.Column = function TableColumn({ className, align, ...props }: Table.ColumnProps) {
 	return (
 		<AriaColumn
 			{...props}
-			className={classNames("ui-column", className)}
+			className={cn("ui-column", className)}
 			data-align={align}
 			data-allows-sorting={props.allowsSorting || undefined}
 		/>
@@ -101,11 +100,11 @@ Table.Column = function TableColumn({ className, align, ...props }: Table.Column
 };
 
 Table.Row = function TableRow<T extends object>({ className, ...props }: Table.RowProps<T>) {
-	return <AriaRow {...props} className={classNames("ui-row", className)} />;
+	return <AriaRow {...props} className={cn("ui-row", className)} />;
 };
 
 Table.Cell = function TableCell({ className, ...props }: Table.CellProps) {
-	return <AriaCell {...props} className={classNames("ui-cell", className)} />;
+	return <AriaCell {...props} className={cn("ui-cell", className)} />;
 };
 
 Table.ResizableContainer = function TableResizableContainer({
@@ -115,7 +114,7 @@ Table.ResizableContainer = function TableResizableContainer({
 	return (
 		<AriaResizableTableContainer
 			{...props}
-			className={classNames("ui-table-resizable-container", className)}
+			className={cn("ui-table-resizable-container", className)}
 		/>
 	);
 };
@@ -124,14 +123,9 @@ Table.ColumnResizer = function TableColumnResizer({
 	className,
 	...props
 }: Table.ColumnResizerProps) {
-	return <AriaColumnResizer {...props} className={classNames("ui-column-resizer", className)} />;
+	return <AriaColumnResizer {...props} className={cn("ui-column-resizer", className)} />;
 };
 
 Table.LoadMoreItem = function TableLoadMoreItem({ className, ...props }: Table.LoadMoreItemProps) {
-	return (
-		<AriaTableLoadMoreItem
-			{...props}
-			className={classNames("ui-table-load-more-item", className)}
-		/>
-	);
+	return <AriaTableLoadMoreItem {...props} className={cn("ui-table-load-more-item", className)} />;
 };

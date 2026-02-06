@@ -1,7 +1,6 @@
-import type { cn } from "@pkg/cn";
 import type { ComponentProps } from "react";
 
-import { cn as classNames } from "@pkg/cn";
+import { cn } from "@pkg/cn";
 import { ChevronRightIcon } from "lucide-react";
 import {
 	Tree as AriaTree,
@@ -44,11 +43,11 @@ export namespace Tree {
 }
 
 export function Tree<T extends object>({ className, ...props }: Tree.Props<T>) {
-	return <AriaTree {...props} className={classNames("ui-tree", className)} />;
+	return <AriaTree {...props} className={cn("ui-tree", className)} />;
 }
 
 Tree.Item = function TreeItem<T extends object>({ className, ...props }: Tree.ItemProps<T>) {
-	return <AriaTreeItem {...props} className={classNames("ui-tree-item", className)} />;
+	return <AriaTreeItem {...props} className={cn("ui-tree-item", className)} />;
 };
 
 /**
@@ -58,9 +57,7 @@ Tree.Item = function TreeItem<T extends object>({ className, ...props }: Tree.It
 Tree.ItemContent = AriaTreeItemContent;
 
 Tree.LoadMoreItem = function TreeLoadMoreItem({ className, ...props }: Tree.LoadMoreItemProps) {
-	return (
-		<AriaTreeLoadMoreItem {...props} className={classNames("ui-tree-load-more-item", className)} />
-	);
+	return <AriaTreeLoadMoreItem {...props} className={cn("ui-tree-load-more-item", className)} />;
 };
 
 Tree.ExpandButton = function TreeExpandButton({
@@ -69,7 +66,7 @@ Tree.ExpandButton = function TreeExpandButton({
 	...props
 }: Tree.ExpandButtonProps) {
 	return (
-		<Button {...props} slot="chevron" className={classNames("ui-tree-expand-button", className)}>
+		<Button {...props} slot="chevron" className={cn("ui-tree-expand-button", className)}>
 			{children ?? <ChevronRightIcon className="size-4" aria-hidden />}
 		</Button>
 	);

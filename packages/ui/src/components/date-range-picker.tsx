@@ -1,8 +1,7 @@
-import type { cn } from "@pkg/cn";
 import type { ComponentProps } from "react";
 import type { DateValue } from "react-aria-components";
 
-import { cn as classNames } from "@pkg/cn";
+import { cn } from "@pkg/cn";
 import { CalendarIcon } from "lucide-react";
 import {
 	DateRangePicker as AriaDateRangePicker,
@@ -49,16 +48,14 @@ export function DateRangePicker<T extends DateValue>({
 	className,
 	...props
 }: DateRangePicker.Props<T>) {
-	return (
-		<AriaDateRangePicker {...props} className={classNames("ui-date-range-picker", className)} />
-	);
+	return <AriaDateRangePicker {...props} className={cn("ui-date-range-picker", className)} />;
 }
 
 DateRangePicker.Group = function DateRangePickerGroup({
 	className,
 	...props
 }: DateRangePicker.GroupProps) {
-	return <Group {...props} className={classNames("ui-date-range-picker-group", className)} />;
+	return <Group {...props} className={cn("ui-date-range-picker-group", className)} />;
 };
 
 DateRangePicker.StartInput = function DateRangePickerStartInput({
@@ -66,7 +63,7 @@ DateRangePicker.StartInput = function DateRangePickerStartInput({
 	...props
 }: DateRangePicker.InputProps) {
 	return (
-		<AriaDateInput {...props} slot="start" className={classNames("ui-date-input", className)}>
+		<AriaDateInput {...props} slot="start" className={cn("ui-date-input", className)}>
 			{(segment) => <AriaDateSegment segment={segment} className="ui-date-segment" />}
 		</AriaDateInput>
 	);
@@ -77,7 +74,7 @@ DateRangePicker.EndInput = function DateRangePickerEndInput({
 	...props
 }: DateRangePicker.InputProps) {
 	return (
-		<AriaDateInput {...props} slot="end" className={classNames("ui-date-input", className)}>
+		<AriaDateInput {...props} slot="end" className={cn("ui-date-input", className)}>
 			{(segment) => <AriaDateSegment segment={segment} className="ui-date-segment" />}
 		</AriaDateInput>
 	);
@@ -89,7 +86,7 @@ DateRangePicker.Button = function DateRangePickerButton({
 	...props
 }: DateRangePicker.ButtonProps) {
 	return (
-		<Button {...props} className={classNames("ui-date-picker-button", className)}>
+		<Button {...props} className={cn("ui-date-picker-button", className)}>
 			{children ?? <CalendarIcon className="size-4" aria-hidden />}
 		</Button>
 	);
@@ -99,5 +96,5 @@ DateRangePicker.Dialog = function DateRangePickerDialog({
 	className,
 	...props
 }: DateRangePicker.DialogProps) {
-	return <Dialog {...props} className={classNames("ui-date-picker-dialog", className)} />;
+	return <Dialog {...props} className={cn("ui-date-picker-dialog", className)} />;
 };

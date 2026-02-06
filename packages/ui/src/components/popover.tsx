@@ -1,7 +1,6 @@
-import type { cn } from "@pkg/cn";
 import type { ComponentProps } from "react";
 
-import { cn as classNames } from "@pkg/cn";
+import { cn } from "@pkg/cn";
 import { Popover as AriaPopover } from "react-aria-components";
 
 export namespace Popover {
@@ -11,5 +10,5 @@ export namespace Popover {
 }
 
 export function Popover({ className, ...props }: Popover.Props) {
-	return <AriaPopover {...props} className={classNames("ui-popover", className)} />;
+	return <AriaPopover {...props} className={cn("ui-popover", className)} />;
 }

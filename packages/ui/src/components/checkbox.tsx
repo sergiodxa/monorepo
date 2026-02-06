@@ -1,7 +1,6 @@
-import type { cn } from "@pkg/cn";
 import type { ComponentProps, ReactNode } from "react";
 
-import { cn as classNames } from "@pkg/cn";
+import { cn } from "@pkg/cn";
 import { CheckIcon, MinusIcon } from "lucide-react";
 import { Checkbox as AriaCheckbox } from "react-aria-components";
 
@@ -17,7 +16,7 @@ export namespace Checkbox {
 
 export function Checkbox({ className, color = "primary", children, ...props }: Checkbox.Props) {
 	return (
-		<AriaCheckbox {...props} data-color={color} className={classNames("ui-checkbox", className)}>
+		<AriaCheckbox {...props} data-color={color} className={cn("ui-checkbox", className)}>
 			{(renderProps) => (
 				<>
 					<div

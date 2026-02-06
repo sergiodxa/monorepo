@@ -1,7 +1,6 @@
-import type { cn } from "@pkg/cn";
 import type { ComponentProps } from "react";
 
-import { cn as classNames } from "@pkg/cn";
+import { cn } from "@pkg/cn";
 import { OverlayArrow as AriaOverlayArrow } from "react-aria-components";
 
 export namespace OverlayArrow {
@@ -26,5 +25,5 @@ export namespace OverlayArrow {
  * ```
  */
 export function OverlayArrow({ className, ...props }: OverlayArrow.Props) {
-	return <AriaOverlayArrow {...props} className={classNames("ui-overlay-arrow", className)} />;
+	return <AriaOverlayArrow {...props} className={cn("ui-overlay-arrow", className)} />;
 }

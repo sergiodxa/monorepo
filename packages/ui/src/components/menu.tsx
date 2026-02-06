@@ -1,7 +1,6 @@
-import type { cn } from "@pkg/cn";
 import type { ComponentProps } from "react";
 
-import { cn as classNames } from "@pkg/cn";
+import { cn } from "@pkg/cn";
 import {
 	Menu as AriaMenu,
 	MenuItem as AriaMenuItem,
@@ -39,7 +38,7 @@ export namespace Menu {
 }
 
 export function Menu<T extends object>({ className, ...props }: Menu.Props<T>) {
-	return <AriaMenu {...props} className={classNames("ui-menu", className)} />;
+	return <AriaMenu {...props} className={cn("ui-menu", className)} />;
 }
 
 Menu.Trigger = MenuTrigger;
@@ -48,7 +47,7 @@ Menu.Item = function MenuItem({ className, danger, ...props }: Menu.ItemProps) {
 	return (
 		<AriaMenuItem
 			{...props}
-			className={classNames("ui-menu-item", className)}
+			className={cn("ui-menu-item", className)}
 			data-danger={danger || undefined}
 		/>
 	);
@@ -58,7 +57,7 @@ Menu.Section = function MenuSection<T extends object>({
 	className,
 	...props
 }: Menu.SectionProps<T>) {
-	return <AriaMenuSection {...props} className={classNames("ui-menu-section", className)} />;
+	return <AriaMenuSection {...props} className={cn("ui-menu-section", className)} />;
 };
 
 /**
@@ -68,5 +67,5 @@ Menu.Section = function MenuSection<T extends object>({
 Menu.SubmenuTrigger = AriaSubmenuTrigger;
 
 Menu.Separator = function MenuSeparator({ className, ...props }: Menu.SeparatorProps) {
-	return <AriaSeparator {...props} className={classNames("ui-menu-separator", className)} />;
+	return <AriaSeparator {...props} className={cn("ui-menu-separator", className)} />;
 };

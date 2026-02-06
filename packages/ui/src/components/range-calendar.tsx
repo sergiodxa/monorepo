@@ -1,8 +1,7 @@
-import type { cn } from "@pkg/cn";
 import type { ComponentProps } from "react";
 import type { DateValue } from "react-aria-components";
 
-import { cn as classNames } from "@pkg/cn";
+import { cn } from "@pkg/cn";
 import { RangeCalendar as AriaRangeCalendar } from "react-aria-components";
 
 export namespace RangeCalendar {
@@ -41,5 +40,5 @@ export function RangeCalendar<T extends DateValue>({
 	className,
 	...props
 }: RangeCalendar.Props<T>) {
-	return <AriaRangeCalendar {...props} className={classNames("ui-range-calendar", className)} />;
+	return <AriaRangeCalendar {...props} className={cn("ui-range-calendar", className)} />;
 }

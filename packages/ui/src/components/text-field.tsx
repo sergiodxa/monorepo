@@ -1,7 +1,6 @@
-import type { cn } from "@pkg/cn";
 import type { ComponentProps } from "react";
 
-import { cn as classNames } from "@pkg/cn";
+import { cn } from "@pkg/cn";
 import { TextField as AriaTextField } from "react-aria-components";
 
 export namespace TextField {
@@ -11,5 +10,5 @@ export namespace TextField {
 }
 
 export function TextField({ className, ...props }: TextField.Props) {
-	return <AriaTextField {...props} className={classNames("ui-field-group", className)} />;
+	return <AriaTextField {...props} className={cn("ui-field-group", className)} />;
 }

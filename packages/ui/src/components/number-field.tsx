@@ -1,7 +1,6 @@
-import type { cn } from "@pkg/cn";
 import type { ComponentProps } from "react";
 
-import { cn as classNames } from "@pkg/cn";
+import { cn } from "@pkg/cn";
 import { PlusIcon, MinusIcon } from "lucide-react";
 import { NumberField as AriaNumberField, Group, Input, Button } from "react-aria-components";
 
@@ -34,15 +33,15 @@ export namespace NumberField {
 }
 
 export function NumberField({ className, ...props }: NumberField.Props) {
-	return <AriaNumberField {...props} className={classNames("ui-number-field", className)} />;
+	return <AriaNumberField {...props} className={cn("ui-number-field", className)} />;
 }
 
 NumberField.Group = function NumberFieldGroup({ className, ...props }: NumberField.GroupProps) {
-	return <Group {...props} className={classNames("ui-number-field-group", className)} />;
+	return <Group {...props} className={cn("ui-number-field-group", className)} />;
 };
 
 NumberField.Input = function NumberFieldInput({ className, ...props }: NumberField.InputProps) {
-	return <Input {...props} className={classNames("ui-number-field-input", className)} />;
+	return <Input {...props} className={cn("ui-number-field-input", className)} />;
 };
 
 NumberField.IncrementButton = function NumberFieldIncrementButton({
@@ -50,7 +49,7 @@ NumberField.IncrementButton = function NumberFieldIncrementButton({
 	...props
 }: NumberField.IncrementButtonProps) {
 	return (
-		<Button {...props} slot="increment" className={classNames("ui-number-field-button", className)}>
+		<Button {...props} slot="increment" className={cn("ui-number-field-button", className)}>
 			<PlusIcon className="size-4" aria-hidden />
 		</Button>
 	);
@@ -61,7 +60,7 @@ NumberField.DecrementButton = function NumberFieldDecrementButton({
 	...props
 }: NumberField.DecrementButtonProps) {
 	return (
-		<Button {...props} slot="decrement" className={classNames("ui-number-field-button", className)}>
+		<Button {...props} slot="decrement" className={cn("ui-number-field-button", className)}>
 			<MinusIcon className="size-4" aria-hidden />
 		</Button>
 	);

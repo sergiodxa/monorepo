@@ -1,7 +1,6 @@
-import type { cn } from "@pkg/cn";
 import type { ComponentProps } from "react";
 
-import { cn as classNames } from "@pkg/cn";
+import { cn } from "@pkg/cn";
 import {
 	ToggleButton as AriaToggleButton,
 	ToggleButtonGroup as AriaToggleButtonGroup,
@@ -33,7 +32,7 @@ export function ToggleButton({
 			data-color={color}
 			data-variant={variant}
 			data-size={size}
-			className={classNames("ui-toggle-button", className)}
+			className={cn("ui-toggle-button", className)}
 		/>
 	);
 }
@@ -45,7 +44,5 @@ export namespace ToggleButtonGroup {
 }
 
 export function ToggleButtonGroup({ className, ...props }: ToggleButtonGroup.Props) {
-	return (
-		<AriaToggleButtonGroup {...props} className={classNames("ui-toggle-button-group", className)} />
-	);
+	return <AriaToggleButtonGroup {...props} className={cn("ui-toggle-button-group", className)} />;
 }

@@ -1,4 +1,3 @@
-import type { cn } from "@pkg/cn";
 import type { HTMLAttributes, ReactNode } from "react";
 
 export namespace Alert {
@@ -58,7 +57,7 @@ export namespace Alert {
 	}
 }
 
-import { cn as classNames } from "@pkg/cn";
+import { cn } from "@pkg/cn";
 import { Children, isValidElement } from "react";
 
 export function Alert({
@@ -83,7 +82,7 @@ export function Alert({
 			data-color={color}
 			data-has-icon={hasIcon || undefined}
 			data-slot="alert"
-			className={classNames("ui-alert", className)}
+			className={cn("ui-alert", className)}
 		>
 			{children}
 		</div>
@@ -96,7 +95,7 @@ Alert.Icon = function AlertIcon({ children, className, ...props }: Alert.IconPro
 	return (
 		<div
 			{...rest}
-			className={classNames("ui-alert-icon", className)}
+			className={cn("ui-alert-icon", className)}
 			aria-hidden={ariaHidden}
 			data-slot="icon"
 		>
@@ -107,7 +106,7 @@ Alert.Icon = function AlertIcon({ children, className, ...props }: Alert.IconPro
 
 Alert.Content = function AlertContent({ children, className, ...props }: Alert.ContentProps) {
 	return (
-		<div {...props} className={classNames("ui-alert-content", className)} data-slot="content">
+		<div {...props} className={cn("ui-alert-content", className)} data-slot="content">
 			{children}
 		</div>
 	);
@@ -115,7 +114,7 @@ Alert.Content = function AlertContent({ children, className, ...props }: Alert.C
 
 Alert.Title = function AlertTitle({ children, className, ...props }: Alert.TitleProps) {
 	return (
-		<h3 {...props} className={classNames("ui-alert-title", className)} data-slot="title">
+		<h3 {...props} className={cn("ui-alert-title", className)} data-slot="title">
 			{children}
 		</h3>
 	);
@@ -127,7 +126,7 @@ Alert.Description = function AlertDescription({
 	...props
 }: Alert.DescriptionProps) {
 	return (
-		<p {...props} className={classNames("ui-alert-description", className)} data-slot="description">
+		<p {...props} className={cn("ui-alert-description", className)} data-slot="description">
 			{children}
 		</p>
 	);
@@ -135,7 +134,7 @@ Alert.Description = function AlertDescription({
 
 Alert.Action = function AlertAction({ children, className, ...props }: Alert.ActionProps) {
 	return (
-		<div {...props} className={classNames("ui-alert-action", className)} data-slot="action">
+		<div {...props} className={cn("ui-alert-action", className)} data-slot="action">
 			{children}
 		</div>
 	);

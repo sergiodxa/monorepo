@@ -1,8 +1,9 @@
-import type { cn } from "@pkg/cn";
-import type { ComponentProps } from "react";
+import type { ComponentProps, ReactNode } from "react";
 
-import { cn as classNames } from "@pkg/cn";
+import { cn } from "@pkg/cn";
 import { Button as AriaButton } from "react-aria-components";
+
+import { Spinner } from "./spinner";
 
 export namespace Button {
 	export type Color = "primary" | "neutral" | "danger" | "warning" | "success";
@@ -14,6 +15,9 @@ export namespace Button {
 		color?: Color;
 		variant?: Variant;
 		size?: Size;
+		/** Shows a loading spinner and disables the button */
+		isPending?: boolean;
+		children?: ReactNode;
 	}
 }
 
@@ -21,16 +25,31 @@ export function Button({
 	color = "primary",
 	variant = "solid",
 	size = "md",
+	isPending = false,
 	className,
+	children,
 	...props
 }: Button.Props) {
 	return (
 		<AriaButton
 			{...props}
-			className={classNames("ui-button", className)}
+			isDisabled={props.isDisabled || isPending}
+			className={cn("ui-button", className)}
 			data-color={color}
 			data-variant={variant}
 			data-size={size}
-		/>
+			data-pending={isPending || undefined}
+		>
+			{isPending ? (
+				<>
+					<span role="status" aria-label="Loading" data-size={size} className="ui-button-spinner">
+						<Spinner.Ring />
+					</span>
+					<span className="ui-button-pending-content">{children}</span>
+				</>
+			) : (
+				children
+			)}
+		</AriaButton>
 	);
 }

@@ -807,6 +807,733 @@ import { FileTrigger, DropZone } from "@pkg/ui";
 </DropZone>
 ```
 
+### Avatar
+
+Circular image placeholder for user profiles with fallback support and grouping.
+
+```tsx
+import { Avatar } from "@pkg/ui";
+
+// Basic avatar with image
+<Avatar size="md">
+  <Avatar.Image src="/user.jpg" alt="John Doe" />
+  <Avatar.Fallback>JD</Avatar.Fallback>
+</Avatar>
+
+// Avatar sizes: sm, md, lg
+<Avatar size="sm">
+  <Avatar.Image src="/user.jpg" alt="User" />
+  <Avatar.Fallback>U</Avatar.Fallback>
+</Avatar>
+
+// Avatar with status badge
+<Avatar>
+  <Avatar.Image src="/user.jpg" alt="User" />
+  <Avatar.Fallback>JD</Avatar.Fallback>
+  <Avatar.Badge className="bg-success-500" />
+</Avatar>
+
+// Avatar group (stacked avatars)
+<Avatar.Group>
+  <Avatar size="sm">
+    <Avatar.Image src="/user1.jpg" alt="User 1" />
+    <Avatar.Fallback>U1</Avatar.Fallback>
+  </Avatar>
+  <Avatar size="sm">
+    <Avatar.Image src="/user2.jpg" alt="User 2" />
+    <Avatar.Fallback>U2</Avatar.Fallback>
+  </Avatar>
+  <Avatar size="sm">
+    <Avatar.Image src="/user3.jpg" alt="User 3" />
+    <Avatar.Fallback>U3</Avatar.Fallback>
+  </Avatar>
+  <Avatar.Group.Count>+5</Avatar.Group.Count>
+</Avatar.Group>
+```
+
+### Logo
+
+Similar to Avatar but with rounded corners instead of circular shape. Ideal for company logos and brand images.
+
+```tsx
+import { Logo } from "@pkg/ui";
+
+// Basic logo with image
+<Logo size="md">
+  <Logo.Image src="/company-logo.png" alt="Acme Inc" />
+  <Logo.Fallback>AC</Logo.Fallback>
+</Logo>
+
+// Logo sizes: sm, md, lg
+<Logo size="lg">
+  <Logo.Image src="/logo.png" alt="Company" />
+  <Logo.Fallback>CO</Logo.Fallback>
+</Logo>
+
+// Logo with badge
+<Logo>
+  <Logo.Image src="/logo.png" alt="Company" />
+  <Logo.Fallback>CO</Logo.Fallback>
+  <Logo.Badge className="bg-primary-500" />
+</Logo>
+
+// Logo group
+<Logo.Group>
+  <Logo size="sm">
+    <Logo.Image src="/logo1.png" alt="Company 1" />
+    <Logo.Fallback>C1</Logo.Fallback>
+  </Logo>
+  <Logo size="sm">
+    <Logo.Image src="/logo2.png" alt="Company 2" />
+    <Logo.Fallback>C2</Logo.Fallback>
+  </Logo>
+  <Logo.Group.Count>+3</Logo.Group.Count>
+</Logo.Group>
+```
+
+### Spinner
+
+Loading indicator with customizable colors and sizes.
+
+```tsx
+import { Spinner } from "@pkg/ui";
+
+// Basic spinner
+<Spinner aria-label="Loading">
+  <Spinner.Ring />
+</Spinner>
+
+// Spinner with label
+<Spinner color="primary" size="md">
+  <Spinner.Ring />
+  <Spinner.Label>Loading...</Spinner.Label>
+</Spinner>
+
+// Spinner sizes: sm, md, lg
+<Spinner size="lg" color="neutral">
+  <Spinner.Ring />
+</Spinner>
+
+// Spinner colors: primary, neutral, success, warning, danger
+<Spinner color="danger" aria-label="Error loading">
+  <Spinner.Ring />
+</Spinner>
+```
+
+### Carousel
+
+Horizontal scrolling carousel for images, cards, or any content.
+
+```tsx
+import { Carousel } from "@pkg/ui";
+
+// Basic carousel
+<Carousel aria-label="Featured items">
+  <Carousel.Viewport>
+    <Carousel.Track>
+      <Carousel.Slide>Slide 1</Carousel.Slide>
+      <Carousel.Slide>Slide 2</Carousel.Slide>
+      <Carousel.Slide>Slide 3</Carousel.Slide>
+    </Carousel.Track>
+  </Carousel.Viewport>
+  <Carousel.Controls>
+    <Carousel.Previous />
+    <Carousel.Next />
+  </Carousel.Controls>
+</Carousel>
+
+// Carousel with custom buttons
+<Carousel aria-label="Products">
+  <Carousel.Viewport>
+    <Carousel.Track>
+      {products.map((product) => (
+        <Carousel.Slide key={product.id}>
+          <ProductCard product={product} />
+        </Carousel.Slide>
+      ))}
+    </Carousel.Track>
+  </Carousel.Viewport>
+  <Carousel.Previous>
+    <Button slot="previous" variant="outline">Back</Button>
+  </Carousel.Previous>
+  <Carousel.Next>
+    <Button slot="next" variant="outline">Forward</Button>
+  </Carousel.Next>
+</Carousel>
+```
+
+### Command
+
+Command palette for searching and executing actions. Features built-in filtering.
+
+```tsx
+import { Command } from "@pkg/ui";
+
+// Basic command palette
+<Command>
+  <Command.Input placeholder="Search..." />
+  <Command.List>
+    <Command.Item onAction={() => console.log("new")}>New File</Command.Item>
+    <Command.Item onAction={() => console.log("open")}>Open File</Command.Item>
+    <Command.Item onAction={() => console.log("save")}>Save</Command.Item>
+  </Command.List>
+  <Command.Empty>No results found.</Command.Empty>
+</Command>
+
+// Command palette in a dialog
+<DialogTrigger>
+  <Button>Open Command Palette</Button>
+  <Modal>
+    <Dialog>
+      <Command>
+        <Command.Input placeholder="Type a command..." />
+        <Command.List>
+          <Command.Item textValue="Settings">
+            <SettingsIcon />
+            Settings
+          </Command.Item>
+          <Command.Item textValue="Profile">
+            <UserIcon />
+            Profile
+          </Command.Item>
+        </Command.List>
+      </Command>
+    </Dialog>
+  </Modal>
+</DialogTrigger>
+```
+
+### ContextMenu
+
+Right-click context menu with support for submenus, checkboxes, and radio groups.
+
+```tsx
+import { ContextMenu } from "@pkg/ui";
+
+// Basic context menu
+<ContextMenu>
+  <ContextMenu.Trigger>
+    <div className="p-4 border">Right-click me</div>
+  </ContextMenu.Trigger>
+  <ContextMenu.Content>
+    <ContextMenu.Item onAction={() => console.log("cut")}>Cut</ContextMenu.Item>
+    <ContextMenu.Item onAction={() => console.log("copy")}>Copy</ContextMenu.Item>
+    <ContextMenu.Item onAction={() => console.log("paste")}>Paste</ContextMenu.Item>
+    <ContextMenu.Separator />
+    <ContextMenu.Item danger onAction={() => console.log("delete")}>Delete</ContextMenu.Item>
+  </ContextMenu.Content>
+</ContextMenu>
+
+// Context menu with groups and shortcuts
+<ContextMenu>
+  <ContextMenu.Trigger>
+    <div>Right-click for options</div>
+  </ContextMenu.Trigger>
+  <ContextMenu.Content>
+    <ContextMenu.Group>
+      <ContextMenu.Label>Edit</ContextMenu.Label>
+      <ContextMenu.Item>
+        Cut
+        <ContextMenu.Shortcut>Cmd+X</ContextMenu.Shortcut>
+      </ContextMenu.Item>
+      <ContextMenu.Item>
+        Copy
+        <ContextMenu.Shortcut>Cmd+C</ContextMenu.Shortcut>
+      </ContextMenu.Item>
+    </ContextMenu.Group>
+    <ContextMenu.Separator />
+    <ContextMenu.Sub>
+      <ContextMenu.SubTrigger>Share</ContextMenu.SubTrigger>
+      <ContextMenu.SubContent>
+        <ContextMenu.Item>Email</ContextMenu.Item>
+        <ContextMenu.Item>Slack</ContextMenu.Item>
+      </ContextMenu.SubContent>
+    </ContextMenu.Sub>
+  </ContextMenu.Content>
+</ContextMenu>
+```
+
+### HoverCard
+
+Card that appears on hover, useful for previews and additional information.
+
+```tsx
+import { HoverCard, HoverCardTrigger } from "@pkg/ui";
+
+// Basic hover card
+<HoverCardTrigger>
+  <Link href="/user/john">@john</Link>
+  <HoverCard>
+    <div className="p-4">
+      <Avatar>
+        <Avatar.Image src="/john.jpg" alt="John" />
+        <Avatar.Fallback>JD</Avatar.Fallback>
+      </Avatar>
+      <h4>John Doe</h4>
+      <p>Software Engineer at Acme Inc.</p>
+    </div>
+  </HoverCard>
+</HoverCardTrigger>
+
+// Hover card with custom delays
+<HoverCardTrigger openDelay={200} closeDelay={100}>
+  <span>Hover for details</span>
+  <HoverCard showArrow={false}>
+    <p>Quick preview content</p>
+  </HoverCard>
+</HoverCardTrigger>
+```
+
+### Sheet
+
+Slide-in panel from the left or right side of the screen.
+
+```tsx
+import { Sheet, SheetTrigger } from "@pkg/ui";
+
+// Basic sheet (slides from right by default)
+<SheetTrigger>
+  <Button>Open Sheet</Button>
+  <Sheet.Overlay isDismissable>
+    <Sheet side="right">
+      <Sheet.Content>
+        <Sheet.Header>
+          <Sheet.Title>Settings</Sheet.Title>
+          <Sheet.Description>Configure your preferences.</Sheet.Description>
+        </Sheet.Header>
+        <div className="p-4">
+          {/* Sheet content */}
+        </div>
+        <Sheet.Footer>
+          <Button variant="outline" slot="close">Cancel</Button>
+          <Button slot="close">Save</Button>
+        </Sheet.Footer>
+      </Sheet.Content>
+    </Sheet>
+  </Sheet.Overlay>
+</SheetTrigger>
+
+// Sheet from left side
+<SheetTrigger>
+  <Button>Open Navigation</Button>
+  <Sheet.Overlay isDismissable>
+    <Sheet side="left">
+      <Sheet.Content>
+        <Sheet.Header>
+          <Sheet.Title>Navigation</Sheet.Title>
+        </Sheet.Header>
+        <nav>{/* Navigation items */}</nav>
+      </Sheet.Content>
+    </Sheet>
+  </Sheet.Overlay>
+</SheetTrigger>
+```
+
+### Drawer
+
+Slide-in panel from the top or bottom of the screen, ideal for mobile interfaces.
+
+```tsx
+import { Drawer } from "@pkg/ui";
+import { DialogTrigger } from "@pkg/ui";
+
+// Drawer from bottom (default)
+<DialogTrigger>
+  <Button>Open Drawer</Button>
+  <Drawer.Overlay isDismissable>
+    <Drawer placement="bottom">
+      <div className="p-4">
+        <h2>Drawer Content</h2>
+        <p>This slides up from the bottom.</p>
+      </div>
+    </Drawer>
+  </Drawer.Overlay>
+</DialogTrigger>
+
+// Drawer from top
+<DialogTrigger>
+  <Button>Show Notification</Button>
+  <Drawer.Overlay>
+    <Drawer placement="top">
+      <div className="p-4">
+        <p>Notification content here</p>
+      </div>
+    </Drawer>
+  </Drawer.Overlay>
+</DialogTrigger>
+```
+
+### Toaster
+
+Toast notifications using Sonner. Add the Toaster component once at your app root.
+
+```tsx
+import { Toaster } from "@pkg/ui";
+import { toast } from "sonner";
+
+// Add Toaster to your app root
+function App() {
+  return (
+    <>
+      {/* Your app content */}
+      <Toaster position="bottom-right" />
+    </>
+  );
+}
+
+// Show toasts from anywhere
+<Button onPress={() => toast("Event created")}>
+  Show Toast
+</Button>
+
+<Button onPress={() => toast.success("Successfully saved!")}>
+  Success Toast
+</Button>
+
+<Button onPress={() => toast.error("Something went wrong")}>
+  Error Toast
+</Button>
+
+<Button onPress={() => toast.promise(saveData(), {
+  loading: "Saving...",
+  success: "Saved!",
+  error: "Failed to save",
+})}>
+  Promise Toast
+</Button>
+```
+
+### Sidebar
+
+Collapsible sidebar navigation with support for mobile, keyboard shortcuts, and nested menus.
+
+```tsx
+import { Sidebar, useSidebar } from "@pkg/ui";
+
+// Basic sidebar layout
+<Sidebar.Provider defaultOpen>
+	<Sidebar variant="sidebar" collapsible="icon" side="left">
+		<Sidebar.Header>
+			<Logo>
+				<Logo.Image src="/logo.png" alt="App" />
+				<Logo.Fallback>A</Logo.Fallback>
+			</Logo>
+		</Sidebar.Header>
+
+		<Sidebar.Content>
+			<Sidebar.Group>
+				<Sidebar.GroupLabel>Navigation</Sidebar.GroupLabel>
+				<Sidebar.GroupContent>
+					<Sidebar.Menu>
+						<Sidebar.MenuItem>
+							<Sidebar.MenuLink href="/dashboard" active tooltip="Dashboard">
+								<DashboardIcon />
+								<span>Dashboard</span>
+							</Sidebar.MenuLink>
+						</Sidebar.MenuItem>
+						<Sidebar.MenuItem>
+							<Sidebar.MenuLink href="/projects" tooltip="Projects">
+								<ProjectsIcon />
+								<span>Projects</span>
+							</Sidebar.MenuLink>
+						</Sidebar.MenuItem>
+					</Sidebar.Menu>
+				</Sidebar.GroupContent>
+			</Sidebar.Group>
+		</Sidebar.Content>
+
+		<Sidebar.Footer>
+			<Sidebar.Menu>
+				<Sidebar.MenuItem>
+					<Sidebar.MenuButton tooltip="Settings">
+						<SettingsIcon />
+						<span>Settings</span>
+					</Sidebar.MenuButton>
+				</Sidebar.MenuItem>
+			</Sidebar.Menu>
+		</Sidebar.Footer>
+
+		<Sidebar.Rail />
+	</Sidebar>
+
+	<Sidebar.Inset>
+		<header>
+			<Sidebar.Trigger>
+				<MenuIcon />
+			</Sidebar.Trigger>
+		</header>
+		<main>{/* Page content */}</main>
+	</Sidebar.Inset>
+</Sidebar.Provider>;
+
+// Using the sidebar hook
+function SidebarToggle() {
+	let { state, toggleSidebar } = useSidebar();
+	return <Button onPress={toggleSidebar}>{state === "expanded" ? "Collapse" : "Expand"}</Button>;
+}
+```
+
+### OtpField
+
+One-time password input with support for pasting, keyboard navigation, and validation.
+
+```tsx
+import { OtpField, Label, FieldError } from "@pkg/ui";
+
+// Basic OTP field
+<OtpField length={6} name="code" aria-label="Verification code">
+  <Label>Enter verification code</Label>
+  <OtpField.Slots />
+  <FieldError />
+</OtpField>
+
+// OTP with separator
+<OtpField length={6}>
+  <Label>Code</Label>
+  <OtpField.Slots separator="-" />
+</OtpField>
+
+// OTP with custom pattern (letters allowed)
+<OtpField
+  length={4}
+  allowedCharacters={/[A-Z0-9]/i}
+  inputMode="text"
+  autoComplete="one-time-code"
+>
+  <Label>Backup code</Label>
+  <OtpField.Slots />
+</OtpField>
+
+// Controlled OTP field
+function VerificationForm() {
+  let [code, setCode] = useState("");
+
+  return (
+    <OtpField value={code} onChange={setCode} length={6}>
+      <Label>Enter the code sent to your email</Label>
+      <OtpField.Slots />
+    </OtpField>
+  );
+}
+```
+
+### Pagination
+
+Navigation for paginated content with links and buttons.
+
+```tsx
+import {
+	Pagination,
+	PaginationList,
+	PaginationItem,
+	PaginationLink,
+	PaginationButton,
+} from "@pkg/ui";
+
+// Basic pagination
+<Pagination aria-label="Pagination">
+	<PaginationList>
+		<PaginationItem>
+			<PaginationButton aria-label="Previous page" isDisabled>
+				Previous
+			</PaginationButton>
+		</PaginationItem>
+		<PaginationItem>
+			<PaginationLink href="/items?page=1" isCurrent>
+				1
+			</PaginationLink>
+		</PaginationItem>
+		<PaginationItem>
+			<PaginationLink href="/items?page=2">2</PaginationLink>
+		</PaginationItem>
+		<PaginationItem>
+			<PaginationLink href="/items?page=3">3</PaginationLink>
+		</PaginationItem>
+		<PaginationItem>
+			<PaginationButton aria-label="Next page">Next</PaginationButton>
+		</PaginationItem>
+	</PaginationList>
+</Pagination>;
+```
+
+### NavigationMenu
+
+Horizontal navigation menu with dropdown support for complex navigation structures.
+
+```tsx
+import { NavigationMenu } from "@pkg/ui";
+
+// Basic navigation menu
+<NavigationMenu>
+	<NavigationMenu.List>
+		<NavigationMenu.Item>
+			<NavigationMenu.Link href="/products">Products</NavigationMenu.Link>
+		</NavigationMenu.Item>
+		<NavigationMenu.Item>
+			<NavigationMenu.Trigger>Solutions</NavigationMenu.Trigger>
+			<NavigationMenu.Content>
+				<div className="p-4 grid gap-2">
+					<NavigationMenu.Link href="/solutions/enterprise">Enterprise</NavigationMenu.Link>
+					<NavigationMenu.Link href="/solutions/startups">Startups</NavigationMenu.Link>
+					<NavigationMenu.Link href="/solutions/developers">Developers</NavigationMenu.Link>
+				</div>
+			</NavigationMenu.Content>
+		</NavigationMenu.Item>
+		<NavigationMenu.Item>
+			<NavigationMenu.Link href="/pricing">Pricing</NavigationMenu.Link>
+		</NavigationMenu.Item>
+	</NavigationMenu.List>
+</NavigationMenu>;
+```
+
+### Resizable
+
+Resizable panels with drag handles and keyboard support.
+
+```tsx
+import { Resizable } from "@pkg/ui";
+
+// Horizontal resizable panels
+<Resizable orientation="horizontal">
+  <Resizable.Panel defaultSize={30} minSize={20}>
+    <div className="p-4">Left Panel</div>
+  </Resizable.Panel>
+  <Resizable.Handle />
+  <Resizable.Panel defaultSize={70}>
+    <div className="p-4">Right Panel</div>
+  </Resizable.Panel>
+</Resizable>
+
+// Vertical resizable panels
+<Resizable orientation="vertical" className="h-96">
+  <Resizable.Panel defaultSize={50} minSize={20} maxSize={80}>
+    <div className="p-4">Top Panel</div>
+  </Resizable.Panel>
+  <Resizable.Handle />
+  <Resizable.Panel>
+    <div className="p-4">Bottom Panel</div>
+  </Resizable.Panel>
+</Resizable>
+
+// Controlled resizable
+function ControlledPanels() {
+  let [sizes, setSizes] = useState([30, 70]);
+
+  return (
+    <Resizable sizes={sizes} onSizesChange={setSizes}>
+      <Resizable.Panel>Panel 1</Resizable.Panel>
+      <Resizable.Handle />
+      <Resizable.Panel>Panel 2</Resizable.Panel>
+    </Resizable>
+  );
+}
+```
+
+### ScrollArea
+
+Custom scrollable area with styled scrollbars.
+
+```tsx
+import { ScrollArea } from "@pkg/ui";
+
+// Vertical scroll area
+<ScrollArea className="h-72 w-48">
+  <ScrollArea.Viewport>
+    <div className="p-4">
+      {/* Long content */}
+    </div>
+  </ScrollArea.Viewport>
+</ScrollArea>
+
+// Horizontal scroll area
+<ScrollArea className="w-96">
+  <ScrollArea.Viewport orientation="horizontal">
+    <div className="flex gap-4 p-4">
+      {items.map((item) => (
+        <div key={item.id} className="w-48 shrink-0">{item.name}</div>
+      ))}
+    </div>
+  </ScrollArea.Viewport>
+</ScrollArea>
+
+// Both directions
+<ScrollArea className="h-72 w-96">
+  <ScrollArea.Viewport orientation="both">
+    <div className="w-[800px] h-[600px]">
+      {/* Large content */}
+    </div>
+  </ScrollArea.Viewport>
+</ScrollArea>
+```
+
+### Skeleton
+
+Placeholder loading state for content.
+
+```tsx
+import { Skeleton } from "@pkg/ui";
+
+// Basic skeleton
+<Skeleton className="h-4 w-48" />
+
+// Card skeleton
+<div className="flex items-center gap-4">
+  <Skeleton className="h-12 w-12 rounded-full" />
+  <div className="space-y-2">
+    <Skeleton className="h-4 w-32" />
+    <Skeleton className="h-4 w-24" />
+  </div>
+</div>
+
+// List skeleton
+<div className="space-y-3">
+  {[1, 2, 3].map((i) => (
+    <Skeleton key={i} className="h-16 w-full rounded" />
+  ))}
+</div>
+```
+
+### Empty
+
+Empty state component for when there's no content to display.
+
+```tsx
+import { Empty, Button } from "@pkg/ui";
+
+// Basic empty state
+<Empty color="neutral">
+  <Empty.Icon>
+    <InboxIcon />
+  </Empty.Icon>
+  <Empty.Title>No messages</Empty.Title>
+  <Empty.Description>You don't have any messages yet.</Empty.Description>
+  <Empty.Action>
+    <Button>Compose</Button>
+  </Empty.Action>
+</Empty>
+
+// Empty state with different colors
+<Empty color="primary">
+  <Empty.Icon>
+    <SearchIcon />
+  </Empty.Icon>
+  <Empty.Title>No results found</Empty.Title>
+  <Empty.Description>Try adjusting your search criteria.</Empty.Description>
+</Empty>
+
+// Error empty state
+<Empty color="danger">
+  <Empty.Icon>
+    <AlertIcon />
+  </Empty.Icon>
+  <Empty.Title>Failed to load</Empty.Title>
+  <Empty.Description>Something went wrong. Please try again.</Empty.Description>
+  <Empty.Action>
+    <Button color="danger" variant="outline">Retry</Button>
+  </Empty.Action>
+</Empty>
+```
+
 ## Customizing Styles
 
 All components use Tailwind v4 `@utility` with `:where()` for zero specificity, making them easy to override:

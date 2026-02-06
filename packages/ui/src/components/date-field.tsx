@@ -1,8 +1,7 @@
-import type { cn } from "@pkg/cn";
 import type { ComponentProps } from "react";
 import type { DateValue } from "react-aria-components";
 
-import { cn as classNames } from "@pkg/cn";
+import { cn } from "@pkg/cn";
 import {
 	DateField as AriaDateField,
 	DateInput as AriaDateInput,
@@ -27,13 +26,13 @@ export namespace DateField {
 }
 
 export function DateField<T extends DateValue>({ className, ...props }: DateField.Props<T>) {
-	return <AriaDateField {...props} className={classNames("ui-date-field", className)} />;
+	return <AriaDateField {...props} className={cn("ui-date-field", className)} />;
 }
 
 DateField.Input = function DateFieldInput({ className, ...props }: DateField.InputProps) {
-	return <AriaDateInput {...props} className={classNames("ui-date-input", className)} />;
+	return <AriaDateInput {...props} className={cn("ui-date-input", className)} />;
 };
 
 DateField.Segment = function DateFieldSegment({ className, ...props }: DateField.SegmentProps) {
-	return <AriaDateSegment {...props} className={classNames("ui-date-segment", className)} />;
+	return <AriaDateSegment {...props} className={cn("ui-date-segment", className)} />;
 };

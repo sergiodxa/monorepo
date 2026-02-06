@@ -1,7 +1,6 @@
-import type { cn } from "@pkg/cn";
 import type { ComponentProps } from "react";
 
-import { cn as classNames } from "@pkg/cn";
+import { cn } from "@pkg/cn";
 import { ProgressBar as AriaProgressBar } from "react-aria-components";
 
 export namespace ProgressBar {
@@ -28,11 +27,11 @@ export namespace ProgressBar {
 }
 
 export function ProgressBar({ className, ...props }: ProgressBar.Props) {
-	return <AriaProgressBar {...props} className={classNames("ui-progress-bar", className)} />;
+	return <AriaProgressBar {...props} className={cn("ui-progress-bar", className)} />;
 }
 
 ProgressBar.Track = function ProgressBarTrack({ className, ...props }: ProgressBar.TrackProps) {
-	return <div {...props} className={classNames("ui-progress-bar-track", className)} />;
+	return <div {...props} className={cn("ui-progress-bar-track", className)} />;
 };
 
 ProgressBar.Fill = function ProgressBarFill({
@@ -46,7 +45,7 @@ ProgressBar.Fill = function ProgressBarFill({
 		<div
 			{...props}
 			data-indeterminate={isIndeterminate || undefined}
-			className={classNames("ui-progress-bar-fill", className)}
+			className={cn("ui-progress-bar-fill", className)}
 			style={
 				{
 					...style,
@@ -61,5 +60,5 @@ ProgressBar.ValueLabel = function ProgressBarValueLabel({
 	className,
 	...props
 }: ProgressBar.ValueLabelProps) {
-	return <span {...props} className={classNames("ui-progress-bar-value", className)} />;
+	return <span {...props} className={cn("ui-progress-bar-value", className)} />;
 };

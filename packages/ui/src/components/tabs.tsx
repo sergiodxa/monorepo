@@ -1,7 +1,6 @@
-import type { cn } from "@pkg/cn";
 import type { ComponentProps } from "react";
 
-import { cn as classNames } from "@pkg/cn";
+import { cn } from "@pkg/cn";
 import { useEffect, useRef } from "react";
 import {
 	Tabs as AriaTabs,
@@ -40,7 +39,7 @@ export namespace Tabs {
 }
 
 export function Tabs({ className, ...props }: Tabs.Props) {
-	return <AriaTabs {...props} className={classNames("ui-tabs", className)} />;
+	return <AriaTabs {...props} className={cn("ui-tabs", className)} />;
 }
 
 Tabs.List = function TabsList<T extends object>({ className, ...props }: Tabs.ListProps<T>) {
@@ -100,27 +99,29 @@ Tabs.List = function TabsList<T extends object>({ className, ...props }: Tabs.Li
 		});
 
 		schedule();
-		window.addEventListener("resize", () => schedule(), { signal: controller.signal });
+
+		// Use AbortController signal for all event listeners
+		window.addEventListener("resize", schedule, { signal: controller.signal });
 
 		return () => {
+			controller.abort();
 			cancelAnimationFrame(frame);
 			resizeObserver.disconnect();
 			mutationObserver.disconnect();
-			controller.abort();
 		};
 	}, []);
 
-	return <AriaTabList ref={listRef} {...props} className={classNames("ui-tab-list", className)} />;
+	return <AriaTabList ref={listRef} {...props} className={cn("ui-tab-list", className)} />;
 };
 
 Tabs.Tab = function TabsTab({ className, ...props }: Tabs.TabProps) {
-	return <AriaTab {...props} className={classNames("ui-tab", className)} />;
+	return <AriaTab {...props} className={cn("ui-tab", className)} />;
 };
 
 Tabs.Panels = function TabsPanels<T extends object>({ className, ...props }: Tabs.PanelsProps<T>) {
-	return <AriaTabPanels {...props} className={classNames("ui-tab-panels", className)} />;
+	return <AriaTabPanels {...props} className={cn("ui-tab-panels", className)} />;
 };
 
 Tabs.Panel = function TabsPanel({ className, ...props }: Tabs.PanelProps) {
-	return <AriaTabPanel {...props} className={classNames("ui-tab-panel", className)} />;
+	return <AriaTabPanel {...props} className={cn("ui-tab-panel", className)} />;
 };

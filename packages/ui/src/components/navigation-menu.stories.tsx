@@ -22,15 +22,17 @@ type Story = StoryObj<StoryArgs>;
 
 export const Default: Story = {
 	render: ({ orientation }) => (
-		<NavigationMenu>
-			<NavigationMenu.List orientation={orientation}>
+		<NavigationMenu aria-label="Primary">
+			<NavigationMenu.List aria-label="Main navigation" orientation={orientation}>
 				<NavigationMenu.Item>
 					<NavigationMenu.Link href="#">Overview</NavigationMenu.Link>
 				</NavigationMenu.Item>
 				<NavigationMenu.Item>
 					<NavigationMenu.Trigger>Products</NavigationMenu.Trigger>
-					<NavigationMenu.Content>
-						<div className="grid gap-2">
+					<NavigationMenu.Content
+						placement={orientation === "vertical" ? "right top" : "bottom start"}
+					>
+						<div className="ui-navigation-menu-content-list">
 							<NavigationMenu.Link href="#">Analytics</NavigationMenu.Link>
 							<NavigationMenu.Link href="#">Automation</NavigationMenu.Link>
 							<NavigationMenu.Link href="#">Integrations</NavigationMenu.Link>
@@ -50,18 +52,18 @@ export const Default: Story = {
 
 export const MegaMenu: Story = {
 	render: () => (
-		<NavigationMenu>
-			<NavigationMenu.List>
+		<NavigationMenu aria-label="Resources">
+			<NavigationMenu.List aria-label="Resources" orientation="horizontal">
 				<NavigationMenu.Item>
 					<NavigationMenu.Trigger>Resources</NavigationMenu.Trigger>
-					<NavigationMenu.Content>
-						<div className="grid w-[28rem] grid-cols-2 gap-3">
-							<div className="space-y-1">
+					<NavigationMenu.Content className="ui-navigation-menu-content-wide">
+						<div className="ui-navigation-menu-content-grid">
+							<div className="ui-navigation-menu-content-column">
 								<NavigationMenu.Link href="#">Getting Started</NavigationMenu.Link>
 								<NavigationMenu.Link href="#">Guides</NavigationMenu.Link>
 								<NavigationMenu.Link href="#">API Reference</NavigationMenu.Link>
 							</div>
-							<div className="space-y-1">
+							<div className="ui-navigation-menu-content-column">
 								<NavigationMenu.Link href="#">Changelog</NavigationMenu.Link>
 								<NavigationMenu.Link href="#">Community</NavigationMenu.Link>
 								<NavigationMenu.Link href="#">Support</NavigationMenu.Link>

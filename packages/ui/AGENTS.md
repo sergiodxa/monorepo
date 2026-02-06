@@ -15,6 +15,29 @@ Guidance for implementing and updating UI components and stories in `packages/ui
 - Prefer `data-focus-visible` for focus outlines, not focus/active clicks.
 - Keep story examples minimal and use-case focused; one main customizable story with controls plus composition examples.
 
+## TypeScript Rules
+
+- Prefer `interface` over `type` unless you need features only `type` provides (unions, mapped types, etc.).
+- Use compound component pattern (e.g., `Component.SubComponent`) for composable UI.
+- If a component must render multiple HTML elements internally, use `cn.ClassNameRecord` to allow customization of each element individually.
+
+## Compound Component Pattern
+
+Components should follow the compound pattern for composability:
+
+```tsx
+// Good: Compound pattern
+<Avatar>
+  <Avatar.Image src="..." alt="..." />
+  <Avatar.Fallback>AB</Avatar.Fallback>
+</Avatar>
+
+// Bad: Implicit rendering
+<Avatar src="..." fallback="AB" />
+```
+
+Components should accept `children` and let consumers compose subcomponents. Avoid internal logic that decides what to render based on props.
+
 ## CSS & Styling Rules
 
 - All component styling lives in `packages/ui/src/styles.css` using Tailwind v4 `@utility` blocks.

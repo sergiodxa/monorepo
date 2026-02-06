@@ -1,7 +1,6 @@
-import type { cn } from "@pkg/cn";
 import type { ComponentProps } from "react";
 
-import { cn as classNames } from "@pkg/cn";
+import { cn } from "@pkg/cn";
 import { Link as AriaLink } from "react-aria-components";
 
 export namespace LinkButton {
@@ -27,7 +26,7 @@ export function LinkButton({
 	return (
 		<AriaLink
 			{...props}
-			className={classNames("ui-button", className)}
+			className={cn("ui-button", className)}
 			data-color={color}
 			data-variant={variant}
 			data-size={size}

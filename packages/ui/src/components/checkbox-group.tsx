@@ -1,7 +1,6 @@
-import type { cn } from "@pkg/cn";
 import type { ComponentProps } from "react";
 
-import { cn as classNames } from "@pkg/cn";
+import { cn } from "@pkg/cn";
 import { CheckboxGroup as AriaCheckboxGroup } from "react-aria-components";
 
 export namespace CheckboxGroup {
@@ -11,5 +10,5 @@ export namespace CheckboxGroup {
 }
 
 export function CheckboxGroup({ className, ...props }: CheckboxGroup.Props) {
-	return <AriaCheckboxGroup {...props} className={classNames("ui-checkbox-group", className)} />;
+	return <AriaCheckboxGroup {...props} className={cn("ui-checkbox-group", className)} />;
 }

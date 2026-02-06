@@ -1,7 +1,6 @@
-import type { cn } from "@pkg/cn";
 import type { ComponentProps } from "react";
 
-import { cn as classNames } from "@pkg/cn";
+import { cn } from "@pkg/cn";
 import {
 	Disclosure as AriaDisclosure,
 	DisclosureGroup as AriaDisclosureGroup,
@@ -34,13 +33,11 @@ export namespace Disclosure {
 }
 
 export function Disclosure({ className, ...props }: Disclosure.Props) {
-	return <AriaDisclosure {...props} className={classNames("ui-disclosure", className)} />;
+	return <AriaDisclosure {...props} className={cn("ui-disclosure", className)} />;
 }
 
 Disclosure.Group = function DisclosureGroup({ className, ...props }: Disclosure.GroupProps) {
-	return (
-		<AriaDisclosureGroup {...props} className={classNames("ui-disclosure-group", className)} />
-	);
+	return <AriaDisclosureGroup {...props} className={cn("ui-disclosure-group", className)} />;
 };
 
 Disclosure.Trigger = function DisclosureTrigger({
@@ -49,14 +46,12 @@ Disclosure.Trigger = function DisclosureTrigger({
 	...props
 }: Disclosure.TriggerProps) {
 	return (
-		<Button {...props} slot="trigger" className={classNames("ui-disclosure-trigger", className)}>
+		<Button {...props} slot="trigger" className={cn("ui-disclosure-trigger", className)}>
 			{children}
 		</Button>
 	);
 };
 
 Disclosure.Panel = function DisclosurePanel({ className, ...props }: Disclosure.PanelProps) {
-	return (
-		<AriaDisclosurePanel {...props} className={classNames("ui-disclosure-panel", className)} />
-	);
+	return <AriaDisclosurePanel {...props} className={cn("ui-disclosure-panel", className)} />;
 };

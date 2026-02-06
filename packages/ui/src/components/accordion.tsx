@@ -1,17 +1,14 @@
-import type { cn } from "@pkg/cn";
-import type { ComponentProps } from "react";
+import type { ComponentProps, ReactNode } from "react";
 import type { Key } from "react-aria-components";
 
-import { cn as classNames } from "@pkg/cn";
-import { useState } from "react";
+import { cn } from "@pkg/cn";
+import { createContext, useContext, useState } from "react";
 import {
 	Button,
 	Disclosure as AriaDisclosure,
 	DisclosureGroup as AriaDisclosureGroup,
 	DisclosurePanel as AriaDisclosurePanel,
 } from "react-aria-components";
-
-type AccordionType = "single" | "multiple";
 
 type AccordionSingleProps = {
 	type: "single";
@@ -39,15 +36,27 @@ type AccordionBaseProps = Omit<
 	className?: cn.ClassName;
 };
 
+type AccordionItemState = {
+	isExpanded: boolean;
+	isDisabled: boolean;
+};
+
+const AccordionItemContext = createContext<AccordionItemState | null>(null);
+
+function useAccordionItemContext() {
+	return useContext(AccordionItemContext);
+}
+
 export namespace Accordion {
 	export type Props = AccordionBaseProps & (AccordionSingleProps | AccordionMultipleProps);
 
 	export interface ItemProps extends Omit<
 		ComponentProps<typeof AriaDisclosure>,
-		"className" | "id"
+		"className" | "id" | "children"
 	> {
 		className?: cn.ClassName;
 		value: string;
+		children?: ReactNode;
 	}
 
 	export interface TriggerProps extends Omit<ComponentProps<typeof Button>, "slot" | "className"> {
@@ -81,6 +90,7 @@ export function Accordion(props: Accordion.Props) {
 		return (
 			<AriaDisclosureGroup
 				{...groupProps}
+				data-type={type}
 				allowsMultipleExpanded
 				expandedKeys={value ? new Set<Key>(value) : undefined}
 				defaultExpandedKeys={defaultValue ? new Set<Key>(defaultValue) : undefined}
@@ -91,7 +101,7 @@ export function Accordion(props: Accordion.Props) {
 							}
 						: undefined
 				}
-				className={classNames("ui-accordion", className)}
+				className={cn("ui-accordion", className)}
 			/>
 		);
 	}
@@ -116,6 +126,8 @@ export function Accordion(props: Accordion.Props) {
 	return (
 		<AriaDisclosureGroup
 			{...groupProps}
+			data-type={type}
+			data-collapsible={collapsible === false ? "false" : "true"}
 			allowsMultipleExpanded={false}
 			expandedKeys={expandedKeys}
 			defaultExpandedKeys={defaultExpandedKeys}
@@ -126,14 +138,31 @@ export function Accordion(props: Accordion.Props) {
 				}
 				onValueChange?.(toSingle(keys));
 			}}
-			className={classNames("ui-accordion", className)}
+			className={cn("ui-accordion", className)}
 		/>
 	);
 }
 
-Accordion.Item = function AccordionItem({ className, value, ...props }: Accordion.ItemProps) {
+Accordion.Item = function AccordionItem({
+	className,
+	value,
+	children,
+	...props
+}: Accordion.ItemProps) {
 	return (
-		<AriaDisclosure {...props} id={value} className={classNames("ui-accordion-item", className)} />
+		<AriaDisclosure
+			{...props}
+			id={value}
+			data-value={value}
+			data-disabled={props.isDisabled || undefined}
+			className={cn("ui-accordion-item", className)}
+		>
+			{({ isExpanded, isDisabled }) => (
+				<AccordionItemContext.Provider value={{ isExpanded, isDisabled }}>
+					{children}
+				</AccordionItemContext.Provider>
+			)}
+		</AriaDisclosure>
 	);
 };
 
@@ -142,15 +171,30 @@ Accordion.Trigger = function AccordionTrigger({
 	children,
 	...props
 }: Accordion.TriggerProps) {
+	let itemState = useAccordionItemContext();
+	let dataState = itemState ? (itemState.isExpanded ? "open" : "closed") : undefined;
 	return (
-		<Button {...props} slot="trigger" className={classNames("ui-accordion-trigger", className)}>
+		<Button
+			{...props}
+			slot="trigger"
+			data-state={dataState}
+			data-disabled={itemState?.isDisabled || undefined}
+			className={cn("ui-accordion-trigger", className)}
+		>
 			{children}
 		</Button>
 	);
 };
 
 Accordion.Content = function AccordionContent({ className, ...props }: Accordion.ContentProps) {
+	let itemState = useAccordionItemContext();
+	let dataState = itemState ? (itemState.isExpanded ? "open" : "closed") : undefined;
 	return (
-		<AriaDisclosurePanel {...props} className={classNames("ui-accordion-content", className)} />
+		<AriaDisclosurePanel
+			{...props}
+			data-state={dataState}
+			data-disabled={itemState?.isDisabled || undefined}
+			className={cn("ui-accordion-content", className)}
+		/>
 	);
 };

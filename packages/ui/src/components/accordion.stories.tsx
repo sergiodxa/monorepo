@@ -4,6 +4,7 @@ import { Accordion } from "./accordion";
 
 type StoryArgs = {
 	type: "single" | "multiple";
+	collapsible: boolean;
 };
 
 const meta: Meta<StoryArgs> = {
@@ -11,9 +12,11 @@ const meta: Meta<StoryArgs> = {
 	component: Accordion as unknown as Meta<StoryArgs>["component"],
 	args: {
 		type: "single",
+		collapsible: true,
 	},
 	argTypes: {
 		type: { control: "select", options: ["single", "multiple"] },
+		collapsible: { control: "boolean" },
 	},
 };
 
@@ -21,8 +24,8 @@ export default meta;
 type Story = StoryObj<StoryArgs>;
 
 export const Default: Story = {
-	render: ({ type }) => (
-		<Accordion type={type} className="w-80">
+	render: ({ type, collapsible }) => (
+		<Accordion type={type} {...(type === "single" ? { collapsible } : {})} className="max-w-sm">
 			<Accordion.Item value="overview">
 				<Accordion.Trigger>
 					<span>Product overview</span>
@@ -62,11 +65,11 @@ export const Default: Story = {
 
 export const Composition: Story = {
 	render: () => (
-		<Accordion type="multiple" className="w-96">
+		<Accordion type="multiple" className="max-w-md">
 			<Accordion.Item value="billing">
 				<Accordion.Trigger>
 					<span>Billing cycles</span>
-					<span className="text-xs text-neutral-500">Updated weekly</span>
+					<span>Updated weekly</span>
 					<svg viewBox="0 0 20 20" className="size-4" data-accordion-icon aria-hidden>
 						<path fill="currentColor" d="M6 8l4 4 4-4" />
 					</svg>
@@ -85,7 +88,7 @@ export const Composition: Story = {
 			<Accordion.Item value="invoices">
 				<Accordion.Trigger>
 					<span>Invoices</span>
-					<span className="text-xs text-neutral-500">3 pending</span>
+					<span>3 pending</span>
 					<svg viewBox="0 0 20 20" className="size-4" data-accordion-icon aria-hidden>
 						<path fill="currentColor" d="M6 8l4 4 4-4" />
 					</svg>

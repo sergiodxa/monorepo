@@ -1,7 +1,6 @@
-import type { cn } from "@pkg/cn";
 import type { ComponentProps } from "react";
 
-import { cn as classNames } from "@pkg/cn";
+import { cn } from "@pkg/cn";
 import {
 	Slider as AriaSlider,
 	SliderTrack as AriaSliderTrack,
@@ -31,17 +30,17 @@ export namespace Slider {
 }
 
 export function Slider<T extends number | number[]>({ className, ...props }: Slider.Props<T>) {
-	return <AriaSlider {...props} className={classNames("ui-slider", className)} />;
+	return <AriaSlider {...props} className={cn("ui-slider", className)} />;
 }
 
 Slider.Track = function SliderTrack({ className, ...props }: Slider.TrackProps) {
-	return <AriaSliderTrack {...props} className={classNames("ui-slider-track", className)} />;
+	return <AriaSliderTrack {...props} className={cn("ui-slider-track", className)} />;
 };
 
 Slider.Thumb = function SliderThumb({ className, ...props }: Slider.ThumbProps) {
-	return <AriaSliderThumb {...props} className={classNames("ui-slider-thumb", className)} />;
+	return <AriaSliderThumb {...props} className={cn("ui-slider-thumb", className)} />;
 };
 
 Slider.Output = function SliderOutput({ className, ...props }: Slider.OutputProps) {
-	return <AriaSliderOutput {...props} className={classNames("ui-slider-output", className)} />;
+	return <AriaSliderOutput {...props} className={cn("ui-slider-output", className)} />;
 };

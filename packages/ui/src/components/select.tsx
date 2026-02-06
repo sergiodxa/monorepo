@@ -1,7 +1,6 @@
-import type { cn } from "@pkg/cn";
 import type { ComponentProps } from "react";
 
-import { cn as classNames } from "@pkg/cn";
+import { cn } from "@pkg/cn";
 import { ChevronDownIcon } from "lucide-react";
 import {
 	Select as AriaSelect,
@@ -32,12 +31,12 @@ export namespace Select {
 }
 
 export function Select<T extends object>({ className, ...props }: Select.Props<T>) {
-	return <AriaSelect {...props} className={classNames("ui-field-group", className)} />;
+	return <AriaSelect {...props} className={cn("ui-field-group", className)} />;
 }
 
 Select.Trigger = function SelectTrigger({ className, children, ...props }: Select.TriggerProps) {
 	return (
-		<Button {...props} className={classNames("ui-select-trigger", className)}>
+		<Button {...props} className={cn("ui-select-trigger", className)}>
 			{children ?? (
 				<>
 					<SelectValue className="ui-select-value" />

@@ -1,7 +1,6 @@
-import type { cn } from "@pkg/cn";
 import type { ComponentProps } from "react";
 
-import { cn as classNames } from "@pkg/cn";
+import { cn } from "@pkg/cn";
 import { SearchIcon, XIcon } from "lucide-react";
 import { SearchField as AriaSearchField, Button, Input } from "react-aria-components";
 
@@ -23,14 +22,14 @@ export namespace SearchField {
 }
 
 export function SearchField({ className, ...props }: SearchField.Props) {
-	return <AriaSearchField {...props} className={classNames("ui-search-field", className)} />;
+	return <AriaSearchField {...props} className={cn("ui-search-field", className)} />;
 }
 
 SearchField.Input = function SearchFieldInput({ className, ...props }: SearchField.InputProps) {
 	return (
 		<div className="ui-search-field-input-wrapper">
 			<SearchIcon className="ui-search-field-icon" aria-hidden />
-			<Input {...props} className={classNames("ui-search-field-input", className)} />
+			<Input {...props} className={cn("ui-search-field-input", className)} />
 		</div>
 	);
 };
@@ -40,7 +39,7 @@ SearchField.ClearButton = function SearchFieldClearButton({
 	...props
 }: SearchField.ClearButtonProps) {
 	return (
-		<Button {...props} className={classNames("ui-search-field-clear", className)}>
+		<Button {...props} className={cn("ui-search-field-clear", className)}>
 			<XIcon className="size-3.5" aria-hidden />
 		</Button>
 	);

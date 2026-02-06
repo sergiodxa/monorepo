@@ -1,7 +1,6 @@
-import type { cn } from "@pkg/cn";
 import type { ComponentProps } from "react";
 
-import { cn as classNames } from "@pkg/cn";
+import { cn } from "@pkg/cn";
 import { GripVerticalIcon } from "lucide-react";
 import {
 	GridList as AriaGridList,
@@ -54,24 +53,22 @@ export namespace GridList {
 }
 
 export function GridList<T extends object>({ className, ...props }: GridList.Props<T>) {
-	return <AriaGridList {...props} className={classNames("ui-grid-list", className)} />;
+	return <AriaGridList {...props} className={cn("ui-grid-list", className)} />;
 }
 
 GridList.Item = function GridListItem({ className, ...props }: GridList.ItemProps) {
-	return <AriaGridListItem {...props} className={classNames("ui-grid-list-item", className)} />;
+	return <AriaGridListItem {...props} className={cn("ui-grid-list-item", className)} />;
 };
 
 GridList.Section = function GridListSection<T extends object>({
 	className,
 	...props
 }: GridList.SectionProps<T>) {
-	return (
-		<AriaGridListSection {...props} className={classNames("ui-grid-list-section", className)} />
-	);
+	return <AriaGridListSection {...props} className={cn("ui-grid-list-section", className)} />;
 };
 
 GridList.Header = function GridListHeader({ className, ...props }: GridList.HeaderProps) {
-	return <AriaGridListHeader {...props} className={classNames("ui-grid-list-header", className)} />;
+	return <AriaGridListHeader {...props} className={cn("ui-grid-list-header", className)} />;
 };
 
 GridList.LoadMoreItem = function GridListLoadMoreItem({
@@ -79,10 +76,7 @@ GridList.LoadMoreItem = function GridListLoadMoreItem({
 	...props
 }: GridList.LoadMoreItemProps) {
 	return (
-		<AriaGridListLoadMoreItem
-			{...props}
-			className={classNames("ui-grid-list-load-more-item", className)}
-		/>
+		<AriaGridListLoadMoreItem {...props} className={cn("ui-grid-list-load-more-item", className)} />
 	);
 };
 
@@ -91,7 +85,7 @@ GridList.DragHandle = function GridListDragHandle({
 	...props
 }: GridList.DragHandleProps) {
 	return (
-		<Button {...props} slot="drag" className={classNames("ui-grid-list-drag-handle", className)}>
+		<Button {...props} slot="drag" className={cn("ui-grid-list-drag-handle", className)}>
 			<GripVerticalIcon className="size-4" aria-hidden />
 		</Button>
 	);

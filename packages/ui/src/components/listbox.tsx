@@ -1,7 +1,6 @@
-import type { cn } from "@pkg/cn";
 import type { ComponentProps } from "react";
 
-import { cn as classNames } from "@pkg/cn";
+import { cn } from "@pkg/cn";
 import {
 	ListBox as AriaListBox,
 	ListBoxItem as AriaListBoxItem,
@@ -37,18 +36,18 @@ export namespace ListBox {
 }
 
 export function ListBox<T extends object>({ className, ...props }: ListBox.Props<T>) {
-	return <AriaListBox {...props} className={classNames("ui-listbox", className)} />;
+	return <AriaListBox {...props} className={cn("ui-listbox", className)} />;
 }
 
 ListBox.Item = function ListBoxItem({ className, ...props }: ListBox.ItemProps) {
-	return <AriaListBoxItem {...props} className={classNames("ui-listbox-item", className)} />;
+	return <AriaListBoxItem {...props} className={cn("ui-listbox-item", className)} />;
 };
 
 ListBox.Section = function ListBoxSection<T extends object>({
 	className,
 	...props
 }: ListBox.SectionProps<T>) {
-	return <AriaListBoxSection {...props} className={classNames("ui-listbox-section", className)} />;
+	return <AriaListBoxSection {...props} className={cn("ui-listbox-section", className)} />;
 };
 
 ListBox.LoadMoreItem = function ListBoxLoadMoreItem({
@@ -56,9 +55,6 @@ ListBox.LoadMoreItem = function ListBoxLoadMoreItem({
 	...props
 }: ListBox.LoadMoreItemProps) {
 	return (
-		<AriaListBoxLoadMoreItem
-			{...props}
-			className={classNames("ui-listbox-load-more-item", className)}
-		/>
+		<AriaListBoxLoadMoreItem {...props} className={cn("ui-listbox-load-more-item", className)} />
 	);
 };

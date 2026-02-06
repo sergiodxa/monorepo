@@ -1,8 +1,7 @@
-import type { cn } from "@pkg/cn";
 import type { ComponentProps } from "react";
 import type { DateValue } from "react-aria-components";
 
-import { cn as classNames } from "@pkg/cn";
+import { cn } from "@pkg/cn";
 import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
 import {
 	Calendar as AriaCalendar,
@@ -77,12 +76,12 @@ export namespace Calendar {
 }
 
 export function Calendar<T extends DateValue>({ className, ...props }: Calendar.Props<T>) {
-	return <AriaCalendar {...props} className={classNames("ui-calendar", className)} />;
+	return <AriaCalendar {...props} className={cn("ui-calendar", className)} />;
 }
 
 Calendar.Header = function CalendarHeader({ className, children, ...props }: Calendar.HeaderProps) {
 	return (
-		<header {...props} className={classNames("ui-calendar-header", className)}>
+		<header {...props} className={cn("ui-calendar-header", className)}>
 			{children}
 		</header>
 	);
@@ -97,7 +96,7 @@ Calendar.PreviousButton = function CalendarPreviousButton({
 	let Icon = direction === "rtl" ? ChevronRightIcon : ChevronLeftIcon;
 
 	return (
-		<Button {...props} slot="previous" className={classNames("ui-calendar-nav-button", className)}>
+		<Button {...props} slot="previous" className={cn("ui-calendar-nav-button", className)}>
 			{children ?? <Icon className="size-4" aria-hidden />}
 		</Button>
 	);
@@ -112,50 +111,38 @@ Calendar.NextButton = function CalendarNextButton({
 	let Icon = direction === "rtl" ? ChevronLeftIcon : ChevronRightIcon;
 
 	return (
-		<Button {...props} slot="next" className={classNames("ui-calendar-nav-button", className)}>
+		<Button {...props} slot="next" className={cn("ui-calendar-nav-button", className)}>
 			{children ?? <Icon className="size-4" aria-hidden />}
 		</Button>
 	);
 };
 
 Calendar.Heading = function CalendarHeading({ className, ...props }: Calendar.HeadingProps) {
-	return <Heading {...props} className={classNames("ui-calendar-heading", className)} />;
+	return <Heading {...props} className={cn("ui-calendar-heading", className)} />;
 };
 
 Calendar.Grid = function CalendarGrid({ className, ...props }: Calendar.GridProps) {
-	return <AriaCalendarGrid {...props} className={classNames("ui-calendar-grid", className)} />;
+	return <AriaCalendarGrid {...props} className={cn("ui-calendar-grid", className)} />;
 };
 
 Calendar.GridHeader = function CalendarGridHeader({
 	className,
 	...props
 }: Calendar.GridHeaderProps) {
-	return (
-		<AriaCalendarGridHeader
-			{...props}
-			className={classNames("ui-calendar-grid-header", className)}
-		/>
-	);
+	return <AriaCalendarGridHeader {...props} className={cn("ui-calendar-grid-header", className)} />;
 };
 
 Calendar.HeaderCell = function CalendarHeaderCell({
 	className,
 	...props
 }: Calendar.HeaderCellProps) {
-	return (
-		<AriaCalendarHeaderCell
-			{...props}
-			className={classNames("ui-calendar-header-cell", className)}
-		/>
-	);
+	return <AriaCalendarHeaderCell {...props} className={cn("ui-calendar-header-cell", className)} />;
 };
 
 Calendar.GridBody = function CalendarGridBody({ className, ...props }: Calendar.GridBodyProps) {
-	return (
-		<AriaCalendarGridBody {...props} className={classNames("ui-calendar-grid-body", className)} />
-	);
+	return <AriaCalendarGridBody {...props} className={cn("ui-calendar-grid-body", className)} />;
 };
 
 Calendar.Cell = function CalendarCell({ className, ...props }: Calendar.CellProps) {
-	return <AriaCalendarCell {...props} className={classNames("ui-calendar-cell", className)} />;
+	return <AriaCalendarCell {...props} className={cn("ui-calendar-cell", className)} />;
 };

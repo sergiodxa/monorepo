@@ -1,7 +1,6 @@
-import type { cn } from "@pkg/cn";
 import type { ComponentProps } from "react";
 
-import { cn as classNames } from "@pkg/cn";
+import { cn } from "@pkg/cn";
 import {
 	Tooltip as AriaTooltip,
 	TooltipTrigger as AriaTooltipTrigger,
@@ -32,7 +31,7 @@ export function Tooltip({
 	...props
 }: Tooltip.Props) {
 	return (
-		<AriaTooltip {...props} offset={offset} className={classNames("ui-tooltip", className)}>
+		<AriaTooltip {...props} offset={offset} className={cn("ui-tooltip", className)}>
 			{(renderProps) => (
 				<>
 					{showArrow && (

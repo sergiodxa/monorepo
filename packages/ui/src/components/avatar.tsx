@@ -1,18 +1,24 @@
-import type { cn } from "@pkg/cn";
 import type { ComponentPropsWithoutRef, ReactNode } from "react";
 
-import { cn as classNames } from "@pkg/cn";
-import { createContext, useContext, useEffect, useMemo, useState } from "react";
+import { cn } from "@pkg/cn";
+
+import {
+	ImagePlaceholderBadge,
+	ImagePlaceholderFallback,
+	ImagePlaceholderImage,
+	ImagePlaceholderRoot,
+	type ImagePlaceholderSize,
+	useImagePlaceholderContext,
+} from "./image-placeholder";
 
 export namespace Avatar {
 	export type Status = "idle" | "loaded" | "error";
+	export type Size = ImagePlaceholderSize;
 
 	export interface Props extends Omit<ComponentPropsWithoutRef<"span">, "className" | "children"> {
-		src?: string;
-		alt?: string;
-		fallback?: string;
-		children?: ReactNode;
+		children: ReactNode;
 		className?: cn.ClassName;
+		size?: Size;
 	}
 
 	export interface ImageProps extends Omit<
@@ -20,7 +26,7 @@ export namespace Avatar {
 		"className" | "src" | "alt"
 	> {
 		src: string;
-		alt?: string;
+		alt: string;
 		className?: cn.ClassName;
 	}
 
@@ -28,74 +34,72 @@ export namespace Avatar {
 		ComponentPropsWithoutRef<"span">,
 		"className" | "children"
 	> {
-		children?: ReactNode;
+		children: ReactNode;
+		className?: cn.ClassName;
+	}
+
+	export interface BadgeProps extends Omit<ComponentPropsWithoutRef<"span">, "className"> {
+		className?: cn.ClassName;
+	}
+
+	export interface GroupProps extends Omit<ComponentPropsWithoutRef<"div">, "className"> {
+		className?: cn.ClassName;
+	}
+
+	export interface GroupCountProps extends Omit<ComponentPropsWithoutRef<"span">, "className"> {
 		className?: cn.ClassName;
 	}
 }
 
-type AvatarContextValue = {
-	status: Avatar.Status;
-	setStatus: (status: Avatar.Status) => void;
-};
-
-let AvatarContext = createContext<AvatarContextValue | null>(null);
-
-function useAvatarContext() {
-	return useContext(AvatarContext);
-}
-
-export function Avatar({ src, alt, fallback, children, className, ...props }: Avatar.Props) {
-	let [status, setStatus] = useState<Avatar.Status>(src ? "idle" : "error");
-
-	useEffect(() => {
-		setStatus(src ? "idle" : "error");
-	}, [src]);
-
-	let value = useMemo(() => ({ status, setStatus }), [status]);
-	let showImage = Boolean(src) && status !== "error";
-	let showFallback = !src || status !== "loaded";
-
+export function Avatar({ children, className, size = "md", ...props }: Avatar.Props) {
 	return (
-		<span {...props} data-status={status} className={classNames("ui-avatar", className)}>
-			<AvatarContext.Provider value={value}>
-				{children ?? (
-					<>
-						{showImage && <Avatar.Image src={src ?? ""} alt={alt} />}
-						{showFallback && fallback ? <Avatar.Fallback>{fallback}</Avatar.Fallback> : null}
-					</>
-				)}
-			</AvatarContext.Provider>
-		</span>
+		<ImagePlaceholderRoot {...props} size={size} className={["ui-avatar", className]}>
+			{children}
+		</ImagePlaceholderRoot>
 	);
 }
 
-Avatar.Image = function AvatarImage({ className, onLoad, onError, ...props }: Avatar.ImageProps) {
-	let context = useAvatarContext();
+Avatar.Image = function AvatarImage({ className, ...props }: Avatar.ImageProps) {
+	// Validate we're inside Avatar context
+	useImagePlaceholderContext("Avatar");
 
-	return (
-		<img
-			{...props}
-			className={classNames("ui-avatar-image", className)}
-			alt={props.alt ?? ""}
-			onLoad={(event) => {
-				context?.setStatus("loaded");
-				onLoad?.(event);
-			}}
-			onError={(event) => {
-				context?.setStatus("error");
-				onError?.(event);
-			}}
-		/>
-	);
+	return <ImagePlaceholderImage {...props} className={["ui-avatar-image", className]} />;
 };
 
 Avatar.Fallback = function AvatarFallback({ className, children, ...props }: Avatar.FallbackProps) {
-	let context = useAvatarContext();
-	let hidden = context?.status === "loaded";
+	// Validate we're inside Avatar context
+	useImagePlaceholderContext("Avatar");
 
 	return (
-		<span {...props} hidden={hidden} className={classNames("ui-avatar-fallback", className)}>
+		<ImagePlaceholderFallback {...props} className={["ui-avatar-fallback", className]}>
+			{children}
+		</ImagePlaceholderFallback>
+	);
+};
+
+Avatar.Badge = function AvatarBadge({ className, children, ...props }: Avatar.BadgeProps) {
+	return (
+		<ImagePlaceholderBadge {...props} className={["ui-avatar-badge", className]}>
+			{children}
+		</ImagePlaceholderBadge>
+	);
+};
+
+function AvatarGroup({ className, children, ...props }: Avatar.GroupProps) {
+	return (
+		<div {...props} className={cn("ui-avatar-group", className)}>
+			{children}
+		</div>
+	);
+}
+
+function AvatarGroupCount({ className, children, ...props }: Avatar.GroupCountProps) {
+	return (
+		<span {...props} className={cn("ui-avatar-group-count", className)}>
 			{children}
 		</span>
 	);
-};
+}
+
+AvatarGroup.Count = AvatarGroupCount;
+Avatar.Group = AvatarGroup;

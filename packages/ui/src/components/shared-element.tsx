@@ -1,7 +1,6 @@
-import type { cn } from "@pkg/cn";
 import type { ComponentProps } from "react";
 
-import { cn as classNames } from "@pkg/cn";
+import { cn } from "@pkg/cn";
 import { SharedElement as AriaSharedElement } from "react-aria-components";
 
 export namespace SharedElement {
@@ -27,5 +26,5 @@ export namespace SharedElement {
  * ```
  */
 export function SharedElement({ className, ...props }: SharedElement.Props) {
-	return <AriaSharedElement {...props} className={classNames("ui-shared-element", className)} />;
+	return <AriaSharedElement {...props} className={cn("ui-shared-element", className)} />;
 }

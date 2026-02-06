@@ -1,7 +1,6 @@
-import type { cn } from "@pkg/cn";
 import type { NavLinkProps as ReactRouterNavLinkProps } from "react-router";
 
-import { cn as classNames } from "@pkg/cn";
+import { cn } from "@pkg/cn";
 import { useRef, useState } from "react";
 import { NavLink as ReactRouterNavLink, PrefetchPageLinks } from "react-router";
 
@@ -13,6 +12,8 @@ export namespace NavLink {
 		color?: Color;
 		/** Class name - can be a static value or a function receiving active/pending state */
 		className?: cn.ClassName | ((props: { isActive: boolean; isPending: boolean }) => cn.ClassName);
+		/** When true, removes underline styling since hover state is indicated by background color */
+		hasBackground?: boolean;
 	}
 }
 
@@ -32,6 +33,7 @@ export function NavLink({
 	color = "primary",
 	prefetch,
 	children,
+	hasBackground,
 	...props
 }: NavLink.Props) {
 	let [shouldPrefetch, setShouldPrefetch] = useState(false);
@@ -43,6 +45,7 @@ export function NavLink({
 				{...props}
 				ref={ref}
 				data-color={color}
+				data-has-background={hasBackground || undefined}
 				prefetch={prefetch}
 				onMouseEnter={(e) => {
 					setShouldPrefetch(true);
@@ -66,7 +69,7 @@ export function NavLink({
 							delete ref.current.dataset.pending;
 						}
 					}
-					return classNames(
+					return cn(
 						"ui-nav-link",
 						typeof className === "function" ? className({ isActive, isPending }) : className,
 					);

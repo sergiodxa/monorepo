@@ -1,7 +1,6 @@
-import type { cn } from "@pkg/cn";
 import type { ComponentProps } from "react";
 
-import { cn as classNames } from "@pkg/cn";
+import { cn } from "@pkg/cn";
 import { DropIndicator as AriaDropIndicator } from "react-aria-components";
 
 export namespace DropIndicator {
@@ -26,5 +25,5 @@ export namespace DropIndicator {
  * ```
  */
 export function DropIndicator({ className, ...props }: DropIndicator.Props) {
-	return <AriaDropIndicator {...props} className={classNames("ui-drop-indicator", className)} />;
+	return <AriaDropIndicator {...props} className={cn("ui-drop-indicator", className)} />;
 }

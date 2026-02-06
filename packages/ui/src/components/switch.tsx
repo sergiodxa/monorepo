@@ -1,7 +1,6 @@
-import type { cn } from "@pkg/cn";
 import type { ComponentProps, ReactNode } from "react";
 
-import { cn as classNames } from "@pkg/cn";
+import { cn } from "@pkg/cn";
 import { Switch as AriaSwitch } from "react-aria-components";
 
 export namespace Switch {
@@ -13,7 +12,7 @@ export namespace Switch {
 
 export function Switch({ className, children, ...props }: Switch.Props) {
 	return (
-		<AriaSwitch className={classNames("ui-switch", className)} {...props}>
+		<AriaSwitch className={cn("ui-switch", className)} {...props}>
 			{(renderProps) => (
 				<>
 					<div

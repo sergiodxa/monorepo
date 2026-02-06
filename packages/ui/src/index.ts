@@ -18,6 +18,7 @@ export { FieldError } from "./components/field-error";
 export { TextField } from "./components/text-field";
 export { SearchField } from "./components/search-field";
 export { NumberField } from "./components/number-field";
+export { OtpField } from "./components/otp-field";
 export { Group } from "./components/group";
 
 // Selection
@@ -33,6 +34,7 @@ export { ComboBox } from "./components/combobox";
 export { Slider } from "./components/slider";
 export { Meter } from "./components/meter";
 export { ProgressBar } from "./components/progress-bar";
+export { Spinner } from "./components/spinner";
 
 // Dates
 export { Calendar } from "./components/calendar";
@@ -44,15 +46,28 @@ export { TimeField } from "./components/time-field";
 
 // Overlays
 export { Popover } from "./components/popover";
+export { HoverCard, HoverCardTrigger } from "./components/hover-card";
 export { Tooltip, TooltipTrigger } from "./components/tooltip";
 export { Dialog, DialogTrigger } from "./components/dialog";
+export { AlertDialog, AlertDialogTrigger } from "./components/alert-dialog";
 export { Modal } from "./components/modal";
+export { Drawer } from "./components/drawer";
+export { Sheet, SheetTrigger } from "./components/sheet";
 export { Menu } from "./components/menu";
+export { ContextMenu } from "./components/context-menu";
+export { Command } from "./components/command";
 export { OverlayArrow } from "./components/overlay-arrow";
 
 // Navigation
 export { Tabs } from "./components/tabs";
-export { Breadcrumbs, Breadcrumb } from "./components/breadcrumbs";
+export { Breadcrumbs, Breadcrumb, BreadcrumbLink } from "./components/breadcrumbs";
+export {
+	Pagination,
+	PaginationButton,
+	PaginationItem,
+	PaginationLink,
+	PaginationList,
+} from "./components/pagination";
 
 // Collections
 export { TagGroup } from "./components/tag-group";
@@ -63,11 +78,15 @@ export { Tree } from "./components/tree";
 // Layout
 export { Separator } from "./components/separator";
 export { Toolbar } from "./components/toolbar";
+export { ScrollArea } from "./components/scroll-area";
 export { Disclosure } from "./components/disclosure";
 export { Accordion } from "./components/accordion";
+export { Carousel } from "./components/carousel";
 export { Card } from "./components/card";
+export { AspectRatio } from "./components/aspect-ratio";
 export { NavigationMenu } from "./components/navigation-menu";
-export { Sidebar } from "./components/sidebar";
+export { Sidebar, useSidebar } from "./components/sidebar";
+export { Resizable } from "./components/resizable";
 
 // Files
 export { FileTrigger } from "./components/file-trigger";
@@ -75,13 +94,17 @@ export { DropZone } from "./components/drop-zone";
 
 // Feedback
 export { Alert } from "./components/alert";
+export { Empty } from "./components/empty";
 export { Badge } from "./components/badge";
+export { Toaster, toast } from "./components/toaster";
 
 // Utilities
 export { Avatar } from "./components/avatar";
+export { Logo } from "./components/logo";
 export { Header } from "./components/header";
 export { Heading } from "./components/heading";
 export { Text } from "./components/text";
+export { Skeleton } from "./components/skeleton";
 export { Section } from "./components/section";
 export { Keyboard } from "./components/keyboard";
 export { DropIndicator } from "./components/drop-indicator";

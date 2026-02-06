@@ -1,7 +1,6 @@
-import type { cn } from "@pkg/cn";
 import type { ComponentProps } from "react";
 
-import { cn as classNames } from "@pkg/cn";
+import { cn } from "@pkg/cn";
 import { XIcon } from "lucide-react";
 import {
 	TagGroup as AriaTagGroup,
@@ -31,14 +30,14 @@ export namespace TagGroup {
 }
 
 export function TagGroup({ className, ...props }: TagGroup.Props) {
-	return <AriaTagGroup {...props} className={classNames("ui-tag-group", className)} />;
+	return <AriaTagGroup {...props} className={cn("ui-tag-group", className)} />;
 }
 
 TagGroup.List = function TagGroupList<T extends object>({
 	className,
 	...props
 }: TagGroup.ListProps<T>) {
-	return <AriaTagList {...props} className={classNames("ui-tag-list", className)} />;
+	return <AriaTagList {...props} className={cn("ui-tag-list", className)} />;
 };
 
 TagGroup.Tag = function TagGroupTag({
@@ -54,7 +53,7 @@ TagGroup.Tag = function TagGroupTag({
 			{...props}
 			textValue={textValue}
 			data-color={color}
-			className={classNames("ui-tag", className)}
+			className={cn("ui-tag", className)}
 		>
 			{(renderProps) => (
 				<>

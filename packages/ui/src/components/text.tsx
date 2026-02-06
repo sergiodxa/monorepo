@@ -1,7 +1,6 @@
-import type { cn } from "@pkg/cn";
 import type { ComponentProps } from "react";
 
-import { cn as classNames } from "@pkg/cn";
+import { cn } from "@pkg/cn";
 import { Text as AriaText } from "react-aria-components";
 
 export namespace Text {
@@ -11,5 +10,5 @@ export namespace Text {
 }
 
 export function Text({ className, ...props }: Text.Props) {
-	return <AriaText {...props} className={classNames("ui-text", className)} />;
+	return <AriaText {...props} className={cn("ui-text", className)} />;
 }

@@ -85,19 +85,11 @@ export const InCard: Story = {
 export const InNavigation: Story = {
 	render: () => (
 		<nav className="flex items-center gap-2">
-			<a href="#" className="px-3 py-2 hover:bg-gray-100 rounded">
-				Dashboard
-			</a>
-			<a href="#" className="px-3 py-2 hover:bg-gray-100 rounded">
-				Analytics
-			</a>
+			<span className="px-3 py-2 hover:bg-gray-100 rounded cursor-pointer">Dashboard</span>
+			<span className="px-3 py-2 hover:bg-gray-100 rounded cursor-pointer">Analytics</span>
 			<Separator orientation="vertical" className="h-6" />
-			<a href="#" className="px-3 py-2 hover:bg-gray-100 rounded">
-				Settings
-			</a>
-			<a href="#" className="px-3 py-2 hover:bg-gray-100 rounded">
-				Help
-			</a>
+			<span className="px-3 py-2 hover:bg-gray-100 rounded cursor-pointer">Settings</span>
+			<span className="px-3 py-2 hover:bg-gray-100 rounded cursor-pointer">Help</span>
 		</nav>
 	),
 };

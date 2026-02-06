@@ -1,12 +1,11 @@
-import type { cn } from "@pkg/cn";
 import type { ComponentProps, ReactNode } from "react";
 
-import { cn as classNames } from "@pkg/cn";
+import { cn } from "@pkg/cn";
 import { Children, isValidElement } from "react";
 import {
 	Button as AriaButton,
+	DialogTrigger,
 	Link as AriaLink,
-	MenuTrigger,
 	Toolbar as AriaToolbar,
 } from "react-aria-components";
 
@@ -44,7 +43,7 @@ export namespace NavigationMenu {
 }
 
 export function NavigationMenu({ className, ...props }: NavigationMenu.Props) {
-	return <nav {...props} className={classNames("ui-navigation-menu", className)} />;
+	return <nav {...props} className={cn("ui-navigation-menu", className)} />;
 }
 
 NavigationMenu.List = function NavigationMenuList({
@@ -56,7 +55,7 @@ NavigationMenu.List = function NavigationMenuList({
 		<AriaToolbar
 			{...props}
 			orientation={orientation}
-			className={classNames("ui-navigation-menu-list", className)}
+			className={cn("ui-navigation-menu-list", className)}
 			data-orientation={orientation}
 		/>
 	);
@@ -66,14 +65,21 @@ NavigationMenu.Trigger = function NavigationMenuTrigger({
 	className,
 	...props
 }: NavigationMenu.TriggerProps) {
-	return <AriaButton {...props} className={classNames("ui-navigation-menu-trigger", className)} />;
+	return <AriaButton {...props} className={cn("ui-navigation-menu-trigger", className)} />;
 };
 
 NavigationMenu.Content = function NavigationMenuContent({
 	className,
+	placement = "bottom start",
 	...props
 }: NavigationMenu.ContentProps) {
-	return <Popover {...props} className={classNames("ui-navigation-menu-content", className)} />;
+	return (
+		<Popover
+			{...props}
+			placement={placement}
+			className={cn("ui-navigation-menu-content", className)}
+		/>
+	);
 };
 
 NavigationMenu.Item = function NavigationMenuItem({
@@ -89,10 +95,10 @@ NavigationMenu.Item = function NavigationMenuItem({
 	return (
 		<div
 			{...props}
-			className={classNames("ui-navigation-menu-item", className)}
+			className={cn("ui-navigation-menu-item", className)}
 			data-has-content={hasContent || undefined}
 		>
-			{hasContent ? <MenuTrigger>{children}</MenuTrigger> : children}
+			{hasContent ? <DialogTrigger>{children}</DialogTrigger> : children}
 		</div>
 	);
 };
@@ -101,12 +107,12 @@ NavigationMenu.Link = function NavigationMenuLink({
 	className,
 	...props
 }: NavigationMenu.LinkProps) {
-	return <AriaLink {...props} className={classNames("ui-navigation-menu-link", className)} />;
+	return <AriaLink {...props} className={cn("ui-navigation-menu-link", className)} />;
 };
 
 NavigationMenu.Viewport = function NavigationMenuViewport({
 	className,
 	...props
 }: NavigationMenu.ViewportProps) {
-	return <div {...props} className={classNames("ui-navigation-menu-viewport", className)} />;
+	return <div {...props} className={cn("ui-navigation-menu-viewport", className)} />;
 };
