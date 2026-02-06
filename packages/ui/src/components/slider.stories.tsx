@@ -154,3 +154,28 @@ export const Disabled: Story = {
 		</Slider>
 	),
 };
+
+export const Vertical: Story = {
+	render: (args) => (
+		<Slider {...args} orientation="vertical" className="h-40">
+			<Label>Vertical</Label>
+			<Slider.Track>
+				<Slider.Thumb />
+			</Slider.Track>
+			<Slider.Output />
+		</Slider>
+	),
+};
+
+export const VerticalRange: Story = {
+	render: () => (
+		<Slider<number[]> defaultValue={[25, 75]} orientation="vertical" className="h-40">
+			<Label>Vertical Range</Label>
+			<Slider.Track>
+				<Slider.Thumb index={0} />
+				<Slider.Thumb index={1} />
+			</Slider.Track>
+			<Slider.Output />
+		</Slider>
+	),
+};

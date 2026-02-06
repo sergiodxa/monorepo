@@ -2785,35 +2785,62 @@
 
 @utility ui-slider-track {
 	:where(&) {
-		@apply relative h-5 w-full;
+		@apply relative;
 
-		/* Visible track bar - centered in container */
+		/* Horizontal (default) - track container is 20px tall, full width */
+		[data-orientation="horizontal"] > &,
+		:not([data-orientation="vertical"]) > & {
+			@apply h-5 w-full;
+		}
+
+		/* Vertical - track container is flexible height, 20px wide */
+		[data-orientation="vertical"] > & {
+			@apply min-h-0 w-5 flex-1 overflow-hidden;
+		}
+
+		/* Visible track bar */
 		&::before {
 			content: "";
-			@apply absolute inset-x-0 top-1/2 h-2 -translate-y-1/2 rounded-full;
+			@apply absolute rounded-full;
 			background-color: var(--ui-neutral-border);
 		}
 
-		/* Fill bar - also centered */
+		/* Fill bar */
 		&::after {
 			content: "";
-			@apply absolute left-0 top-1/2 h-2 -translate-y-1/2 rounded-full;
+			@apply absolute rounded-full;
 			background-color: var(--ui-primary-bg-solid);
+		}
+
+		/* Horizontal track bar (default) - h-2 thick, centered vertically */
+		[data-orientation="horizontal"] > &::before,
+		:not([data-orientation="vertical"]) > &::before {
+			@apply left-0 right-0 top-1/2 h-2 -translate-y-1/2;
+		}
+
+		/* Horizontal fill bar - h-2 thick, grows from left (or from --slider-fill-start for range) */
+		[data-orientation="horizontal"] > &::after,
+		:not([data-orientation="vertical"]) > &::after {
+			@apply top-1/2 h-2 -translate-y-1/2;
+			left: var(--slider-fill-start, 0%);
 			width: var(--slider-fill-width, 0%);
 		}
 
-		/* Vertical orientation */
-		[data-orientation="vertical"] > & {
-			@apply h-full w-5;
+		/* Vertical track bar - w-2 thick, centered horizontally, full height */
+		[data-orientation="vertical"] > &::before {
+			@apply top-0 w-2;
+			left: 50%;
+			transform: translateX(-50%);
+			height: 100%;
+		}
 
-			&::before {
-				@apply inset-x-auto inset-y-0 left-1/2 top-0 h-full w-2 -translate-x-1/2 translate-y-0;
-			}
-			&::after {
-				@apply bottom-0 left-1/2 top-auto h-auto w-2 -translate-x-1/2 translate-y-0;
-				height: var(--slider-fill-height, 0%);
-				width: auto;
-			}
+		/* Vertical fill bar - w-2 thick, grows from bottom (or from --slider-fill-start for range) */
+		[data-orientation="vertical"] > &::after {
+			@apply w-2;
+			left: 50%;
+			transform: translateX(-50%);
+			bottom: var(--slider-fill-start, 0%);
+			height: var(--slider-fill-height, 0%);
 		}
 	}
 }
