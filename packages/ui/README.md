@@ -170,6 +170,50 @@ function CustomComponent({ color: colorProp }: { color?: Color }) {
 }
 ```
 
+### Semantic Color Variables
+
+The library defines semantic CSS variables that map color shades to specific uses. These variables automatically adapt to light/dark mode.
+
+| Variable                        | Purpose             | Light | Dark  |
+| ------------------------------- | ------------------- | ----- | ----- |
+| `--ui-{color}-bg-tint`          | Subtle background   | 50    | 950   |
+| `--ui-{color}-bg-tint-hover`    | Tint hover state    | 100   | 900   |
+| `--ui-{color}-bg-tint-pressed`  | Tint pressed state  | 200   | 800   |
+| `--ui-{color}-bg-solid`         | Solid background    | 600   | 600   |
+| `--ui-{color}-bg-solid-hover`   | Solid hover state   | 700   | 700   |
+| `--ui-{color}-bg-solid-pressed` | Solid pressed state | 800   | 800   |
+| `--ui-{color}-border`           | Subtle border       | 200   | 800   |
+| `--ui-{color}-border-strong`    | Strong border       | 600   | 600   |
+| `--ui-{color}-ring`             | Focus ring          | 500   | 500   |
+| `--ui-{color}-fg`               | Foreground text     | 600   | 400   |
+| `--ui-{color}-fg-muted`         | Muted text          | 500   | 400   |
+| `--ui-{color}-fg-emphasis`      | Emphasized text     | 900   | 100   |
+| `--ui-{color}-fg-on-solid`      | Text on solid bg    | white | white |
+
+**Neutral is special:** Solid backgrounds use inverted shades (dark on light, light on dark) for better contrast:
+
+| Variable                        | Light | Dark |
+| ------------------------------- | ----- | ---- |
+| `--ui-neutral-bg-solid`         | 900   | 100  |
+| `--ui-neutral-bg-solid-hover`   | 800   | 200  |
+| `--ui-neutral-bg-solid-pressed` | 700   | 300  |
+| `--ui-neutral-fg-on-solid`      | white | 900  |
+
+**Using in custom styles:**
+
+```css
+/* Your app's CSS */
+.custom-card {
+	background-color: var(--ui-primary-bg-tint);
+	border-color: var(--ui-primary-border);
+	color: var(--ui-primary-fg-emphasis);
+}
+
+.custom-card:hover {
+	background-color: var(--ui-primary-bg-tint-hover);
+}
+```
+
 ### Data Attributes for Variants
 
 Components use data attributes instead of conditional classes. CSS handles all styling:

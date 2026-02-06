@@ -9,8 +9,171 @@
  *   --color-primary-50 through --color-primary-950;
  *   --color-danger-50 through --color-danger-950;
  *   --color-warning-50 through --color-warning-950;
+ *   --color-success-50 through --color-success-950;
  * }
  */
+
+/* =============================================================================
+   Semantic Color Variables
+   
+   These variables map color shades to semantic uses. Components use these
+   variables instead of raw shade values for consistency.
+   
+   Naming convention: --ui-{color}-{property}-{state}
+   - color: primary, neutral, danger, warning, success
+   - property: bg-tint, bg-solid, border, ring, fg
+   - state: hover, pressed (optional)
+   ============================================================================= */
+
+:root {
+	/* Primary */
+	--ui-primary-bg-tint: var(--color-primary-50);
+	--ui-primary-bg-tint-hover: var(--color-primary-100);
+	--ui-primary-bg-tint-pressed: var(--color-primary-200);
+	--ui-primary-bg-solid: var(--color-primary-600);
+	--ui-primary-bg-solid-hover: var(--color-primary-700);
+	--ui-primary-bg-solid-pressed: var(--color-primary-800);
+	--ui-primary-border: var(--color-primary-200);
+	--ui-primary-border-strong: var(--color-primary-600);
+	--ui-primary-ring: var(--color-primary-500);
+	--ui-primary-fg: var(--color-primary-600);
+	--ui-primary-fg-muted: var(--color-primary-500);
+	--ui-primary-fg-emphasis: var(--color-primary-900);
+	--ui-primary-fg-on-solid: white;
+
+	/* Neutral - Note: solid backgrounds use inverted shades (dark on light) */
+	--ui-neutral-bg-tint: var(--color-neutral-50);
+	--ui-neutral-bg-tint-hover: var(--color-neutral-100);
+	--ui-neutral-bg-tint-pressed: var(--color-neutral-200);
+	--ui-neutral-bg-solid: var(--color-neutral-900);
+	--ui-neutral-bg-solid-hover: var(--color-neutral-800);
+	--ui-neutral-bg-solid-pressed: var(--color-neutral-700);
+	--ui-neutral-border: var(--color-neutral-200);
+	--ui-neutral-border-strong: var(--color-neutral-600);
+	--ui-neutral-ring: var(--color-neutral-500);
+	--ui-neutral-fg: var(--color-neutral-600);
+	--ui-neutral-fg-muted: var(--color-neutral-500);
+	--ui-neutral-fg-emphasis: var(--color-neutral-900);
+	--ui-neutral-fg-on-solid: white;
+
+	/* Danger */
+	--ui-danger-bg-tint: var(--color-danger-50);
+	--ui-danger-bg-tint-hover: var(--color-danger-100);
+	--ui-danger-bg-tint-pressed: var(--color-danger-200);
+	--ui-danger-bg-solid: var(--color-danger-600);
+	--ui-danger-bg-solid-hover: var(--color-danger-700);
+	--ui-danger-bg-solid-pressed: var(--color-danger-800);
+	--ui-danger-border: var(--color-danger-200);
+	--ui-danger-border-strong: var(--color-danger-600);
+	--ui-danger-ring: var(--color-danger-500);
+	--ui-danger-fg: var(--color-danger-600);
+	--ui-danger-fg-muted: var(--color-danger-500);
+	--ui-danger-fg-emphasis: var(--color-danger-900);
+	--ui-danger-fg-on-solid: white;
+
+	/* Warning */
+	--ui-warning-bg-tint: var(--color-warning-50);
+	--ui-warning-bg-tint-hover: var(--color-warning-100);
+	--ui-warning-bg-tint-pressed: var(--color-warning-200);
+	--ui-warning-bg-solid: var(--color-warning-600);
+	--ui-warning-bg-solid-hover: var(--color-warning-700);
+	--ui-warning-bg-solid-pressed: var(--color-warning-800);
+	--ui-warning-border: var(--color-warning-200);
+	--ui-warning-border-strong: var(--color-warning-600);
+	--ui-warning-ring: var(--color-warning-500);
+	--ui-warning-fg: var(--color-warning-600);
+	--ui-warning-fg-muted: var(--color-warning-500);
+	--ui-warning-fg-emphasis: var(--color-warning-900);
+	--ui-warning-fg-on-solid: white;
+
+	/* Success */
+	--ui-success-bg-tint: var(--color-success-50);
+	--ui-success-bg-tint-hover: var(--color-success-100);
+	--ui-success-bg-tint-pressed: var(--color-success-200);
+	--ui-success-bg-solid: var(--color-success-600);
+	--ui-success-bg-solid-hover: var(--color-success-700);
+	--ui-success-bg-solid-pressed: var(--color-success-800);
+	--ui-success-border: var(--color-success-200);
+	--ui-success-border-strong: var(--color-success-600);
+	--ui-success-ring: var(--color-success-500);
+	--ui-success-fg: var(--color-success-600);
+	--ui-success-fg-muted: var(--color-success-500);
+	--ui-success-fg-emphasis: var(--color-success-900);
+	--ui-success-fg-on-solid: white;
+}
+
+.dark {
+	/* Primary */
+	--ui-primary-bg-tint: var(--color-primary-950);
+	--ui-primary-bg-tint-hover: var(--color-primary-900);
+	--ui-primary-bg-tint-pressed: var(--color-primary-800);
+	--ui-primary-bg-solid: var(--color-primary-600);
+	--ui-primary-bg-solid-hover: var(--color-primary-700);
+	--ui-primary-bg-solid-pressed: var(--color-primary-800);
+	--ui-primary-border: var(--color-primary-800);
+	--ui-primary-border-strong: var(--color-primary-600);
+	--ui-primary-ring: var(--color-primary-500);
+	--ui-primary-fg: var(--color-primary-400);
+	--ui-primary-fg-muted: var(--color-primary-400);
+	--ui-primary-fg-emphasis: var(--color-primary-100);
+
+	/* Neutral - Note: solid backgrounds use inverted shades (light on dark) */
+	--ui-neutral-bg-tint: var(--color-neutral-950);
+	--ui-neutral-bg-tint-hover: var(--color-neutral-900);
+	--ui-neutral-bg-tint-pressed: var(--color-neutral-800);
+	--ui-neutral-bg-solid: var(--color-neutral-100);
+	--ui-neutral-bg-solid-hover: var(--color-neutral-200);
+	--ui-neutral-bg-solid-pressed: var(--color-neutral-300);
+	--ui-neutral-border: var(--color-neutral-800);
+	--ui-neutral-border-strong: var(--color-neutral-400);
+	--ui-neutral-ring: var(--color-neutral-500);
+	--ui-neutral-fg: var(--color-neutral-400);
+	--ui-neutral-fg-muted: var(--color-neutral-400);
+	--ui-neutral-fg-emphasis: var(--color-neutral-100);
+	--ui-neutral-fg-on-solid: var(--color-neutral-900);
+
+	/* Danger */
+	--ui-danger-bg-tint: var(--color-danger-950);
+	--ui-danger-bg-tint-hover: var(--color-danger-900);
+	--ui-danger-bg-tint-pressed: var(--color-danger-800);
+	--ui-danger-bg-solid: var(--color-danger-600);
+	--ui-danger-bg-solid-hover: var(--color-danger-700);
+	--ui-danger-bg-solid-pressed: var(--color-danger-800);
+	--ui-danger-border: var(--color-danger-800);
+	--ui-danger-border-strong: var(--color-danger-600);
+	--ui-danger-ring: var(--color-danger-500);
+	--ui-danger-fg: var(--color-danger-400);
+	--ui-danger-fg-muted: var(--color-danger-400);
+	--ui-danger-fg-emphasis: var(--color-danger-100);
+
+	/* Warning */
+	--ui-warning-bg-tint: var(--color-warning-950);
+	--ui-warning-bg-tint-hover: var(--color-warning-900);
+	--ui-warning-bg-tint-pressed: var(--color-warning-800);
+	--ui-warning-bg-solid: var(--color-warning-600);
+	--ui-warning-bg-solid-hover: var(--color-warning-700);
+	--ui-warning-bg-solid-pressed: var(--color-warning-800);
+	--ui-warning-border: var(--color-warning-800);
+	--ui-warning-border-strong: var(--color-warning-600);
+	--ui-warning-ring: var(--color-warning-500);
+	--ui-warning-fg: var(--color-warning-400);
+	--ui-warning-fg-muted: var(--color-warning-400);
+	--ui-warning-fg-emphasis: var(--color-warning-100);
+
+	/* Success */
+	--ui-success-bg-tint: var(--color-success-950);
+	--ui-success-bg-tint-hover: var(--color-success-900);
+	--ui-success-bg-tint-pressed: var(--color-success-800);
+	--ui-success-bg-solid: var(--color-success-600);
+	--ui-success-bg-solid-hover: var(--color-success-700);
+	--ui-success-bg-solid-pressed: var(--color-success-800);
+	--ui-success-border: var(--color-success-800);
+	--ui-success-border-strong: var(--color-success-600);
+	--ui-success-ring: var(--color-success-500);
+	--ui-success-fg: var(--color-success-400);
+	--ui-success-fg-muted: var(--color-success-400);
+	--ui-success-fg-emphasis: var(--color-success-100);
+}
 
 /* =============================================================================
    Button
@@ -35,48 +198,53 @@
 		/* Solid variant (default) */
 		&[data-variant="solid"] {
 			&[data-color="primary"] {
-				@apply bg-primary-600 text-white;
+				background-color: var(--ui-primary-bg-solid);
+				color: var(--ui-primary-fg-on-solid);
 				&:hover {
-					@apply bg-primary-700;
+					background-color: var(--ui-primary-bg-solid-hover);
 				}
 				&[data-pressed] {
-					@apply bg-primary-800;
+					background-color: var(--ui-primary-bg-solid-pressed);
 				}
 			}
 			&[data-color="neutral"] {
-				@apply bg-neutral-900 text-white dark:bg-neutral-100 dark:text-neutral-900;
+				background-color: var(--ui-neutral-bg-solid);
+				color: var(--ui-neutral-fg-on-solid);
 				&:hover {
-					@apply bg-neutral-800 dark:bg-neutral-200;
+					background-color: var(--ui-neutral-bg-solid-hover);
 				}
 				&[data-pressed] {
-					@apply bg-neutral-700 dark:bg-neutral-300;
+					background-color: var(--ui-neutral-bg-solid-pressed);
 				}
 			}
 			&[data-color="success"] {
-				@apply bg-success-600 text-white;
+				background-color: var(--ui-success-bg-solid);
+				color: var(--ui-success-fg-on-solid);
 				&:hover {
-					@apply bg-success-700;
+					background-color: var(--ui-success-bg-solid-hover);
 				}
 				&[data-pressed] {
-					@apply bg-success-800;
+					background-color: var(--ui-success-bg-solid-pressed);
 				}
 			}
 			&[data-color="danger"] {
-				@apply bg-danger-600 text-white;
+				background-color: var(--ui-danger-bg-solid);
+				color: var(--ui-danger-fg-on-solid);
 				&:hover {
-					@apply bg-danger-700;
+					background-color: var(--ui-danger-bg-solid-hover);
 				}
 				&[data-pressed] {
-					@apply bg-danger-800;
+					background-color: var(--ui-danger-bg-solid-pressed);
 				}
 			}
 			&[data-color="warning"] {
-				@apply bg-warning-600 text-white;
+				background-color: var(--ui-warning-bg-solid);
+				color: var(--ui-warning-fg-on-solid);
 				&:hover {
-					@apply bg-warning-700;
+					background-color: var(--ui-warning-bg-solid-hover);
 				}
 				&[data-pressed] {
-					@apply bg-warning-800;
+					background-color: var(--ui-warning-bg-solid-pressed);
 				}
 			}
 		}
@@ -85,48 +253,53 @@
 		&[data-variant="outline"] {
 			@apply border-2 bg-transparent;
 			&[data-color="primary"] {
-				@apply border-primary-600 text-primary-600;
+				border-color: var(--ui-primary-border-strong);
+				color: var(--ui-primary-fg);
 				&:hover {
-					@apply bg-primary-50 dark:bg-primary-950;
+					background-color: var(--ui-primary-bg-tint);
 				}
 				&[data-pressed] {
-					@apply bg-primary-100 dark:bg-primary-900;
+					background-color: var(--ui-primary-bg-tint-hover);
 				}
 			}
 			&[data-color="neutral"] {
-				@apply border-neutral-600 text-neutral-600 dark:border-neutral-400 dark:text-neutral-400;
+				border-color: var(--ui-neutral-border-strong);
+				color: var(--ui-neutral-fg);
 				&:hover {
-					@apply bg-neutral-50 dark:bg-neutral-900;
+					background-color: var(--ui-neutral-bg-tint);
 				}
 				&[data-pressed] {
-					@apply bg-neutral-100 dark:bg-neutral-800;
+					background-color: var(--ui-neutral-bg-tint-hover);
 				}
 			}
 			&[data-color="success"] {
-				@apply border-success-600 text-success-600;
+				border-color: var(--ui-success-border-strong);
+				color: var(--ui-success-fg);
 				&:hover {
-					@apply bg-success-50 dark:bg-success-950;
+					background-color: var(--ui-success-bg-tint);
 				}
 				&[data-pressed] {
-					@apply bg-success-100 dark:bg-success-900;
+					background-color: var(--ui-success-bg-tint-hover);
 				}
 			}
 			&[data-color="danger"] {
-				@apply border-danger-600 text-danger-600;
+				border-color: var(--ui-danger-border-strong);
+				color: var(--ui-danger-fg);
 				&:hover {
-					@apply bg-danger-50 dark:bg-danger-950;
+					background-color: var(--ui-danger-bg-tint);
 				}
 				&[data-pressed] {
-					@apply bg-danger-100 dark:bg-danger-900;
+					background-color: var(--ui-danger-bg-tint-hover);
 				}
 			}
 			&[data-color="warning"] {
-				@apply border-warning-600 text-warning-600;
+				border-color: var(--ui-warning-border-strong);
+				color: var(--ui-warning-fg);
 				&:hover {
-					@apply bg-warning-50 dark:bg-warning-950;
+					background-color: var(--ui-warning-bg-tint);
 				}
 				&[data-pressed] {
-					@apply bg-warning-100 dark:bg-warning-900;
+					background-color: var(--ui-warning-bg-tint-hover);
 				}
 			}
 		}
@@ -135,48 +308,48 @@
 		&[data-variant="ghost"] {
 			@apply bg-transparent;
 			&[data-color="primary"] {
-				@apply text-primary-600;
+				color: var(--ui-primary-fg);
 				&:hover {
-					@apply bg-primary-50 dark:bg-primary-950;
+					background-color: var(--ui-primary-bg-tint);
 				}
 				&[data-pressed] {
-					@apply bg-primary-100 dark:bg-primary-900;
+					background-color: var(--ui-primary-bg-tint-hover);
 				}
 			}
 			&[data-color="neutral"] {
-				@apply text-neutral-600 dark:text-neutral-400;
+				color: var(--ui-neutral-fg);
 				&:hover {
-					@apply bg-neutral-100 dark:bg-neutral-800;
+					background-color: var(--ui-neutral-bg-tint-hover);
 				}
 				&[data-pressed] {
-					@apply bg-neutral-200 dark:bg-neutral-700;
+					background-color: var(--ui-neutral-bg-tint-pressed);
 				}
 			}
 			&[data-color="success"] {
-				@apply text-success-600;
+				color: var(--ui-success-fg);
 				&:hover {
-					@apply bg-success-50 dark:bg-success-950;
+					background-color: var(--ui-success-bg-tint);
 				}
 				&[data-pressed] {
-					@apply bg-success-100 dark:bg-success-900;
+					background-color: var(--ui-success-bg-tint-hover);
 				}
 			}
 			&[data-color="danger"] {
-				@apply text-danger-600;
+				color: var(--ui-danger-fg);
 				&:hover {
-					@apply bg-danger-50 dark:bg-danger-950;
+					background-color: var(--ui-danger-bg-tint);
 				}
 				&[data-pressed] {
-					@apply bg-danger-100 dark:bg-danger-900;
+					background-color: var(--ui-danger-bg-tint-hover);
 				}
 			}
 			&[data-color="warning"] {
-				@apply text-warning-600;
+				color: var(--ui-warning-fg);
 				&:hover {
-					@apply bg-warning-50 dark:bg-warning-950;
+					background-color: var(--ui-warning-bg-tint);
 				}
 				&[data-pressed] {
-					@apply bg-warning-100 dark:bg-warning-900;
+					background-color: var(--ui-warning-bg-tint-hover);
 				}
 			}
 		}
@@ -186,7 +359,8 @@
 			@apply cursor-not-allowed opacity-50;
 		}
 		&[data-focus-visible] {
-			@apply outline-2 outline-offset-2 outline-primary-500;
+			@apply outline-2 outline-offset-2;
+			outline-color: var(--ui-primary-ring);
 		}
 		&[data-pending] {
 			@apply cursor-wait;
