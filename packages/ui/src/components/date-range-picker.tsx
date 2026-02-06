@@ -25,7 +25,10 @@ export namespace DateRangePicker {
 		className?: cn.ClassName;
 	}
 
-	export interface InputProps extends Omit<ComponentProps<typeof AriaDateInput>, "className"> {
+	export interface InputProps extends Omit<
+		ComponentProps<typeof AriaDateInput>,
+		"className" | "children" | "slot"
+	> {
 		className?: cn.ClassName;
 	}
 

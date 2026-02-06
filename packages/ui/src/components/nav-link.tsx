@@ -6,14 +6,11 @@ import { useRef, useState } from "react";
 import { NavLink as ReactRouterNavLink, PrefetchPageLinks } from "react-router";
 
 export namespace NavLink {
-	export type Color = "primary" | "neutral" | "danger" | "warning";
-	export type Variant = "default" | "subtle";
+	export type Color = "primary" | "neutral" | "danger" | "warning" | "success";
 
 	export interface Props extends Omit<ReactRouterNavLinkProps, "className"> {
 		/** The color scheme of the nav link */
 		color?: Color;
-		/** The visual variant of the nav link */
-		variant?: Variant;
 		/** Class name - can be a static value or a function receiving active/pending state */
 		className?: cn.ClassName | ((props: { isActive: boolean; isPending: boolean }) => cn.ClassName);
 	}
@@ -33,7 +30,6 @@ export namespace NavLink {
 export function NavLink({
 	className,
 	color = "primary",
-	variant = "default",
 	prefetch,
 	children,
 	...props
@@ -47,7 +43,6 @@ export function NavLink({
 				{...props}
 				ref={ref}
 				data-color={color}
-				data-variant={variant}
 				prefetch={prefetch}
 				onMouseEnter={(e) => {
 					setShouldPrefetch(true);

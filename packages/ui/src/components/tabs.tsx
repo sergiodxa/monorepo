@@ -2,6 +2,7 @@ import type { cn } from "@pkg/cn";
 import type { ComponentProps } from "react";
 
 import { cn as classNames } from "@pkg/cn";
+import { useEffect, useRef } from "react";
 import {
 	Tabs as AriaTabs,
 	TabList as AriaTabList,
@@ -43,7 +44,73 @@ export function Tabs({ className, ...props }: Tabs.Props) {
 }
 
 Tabs.List = function TabsList<T extends object>({ className, ...props }: Tabs.ListProps<T>) {
-	return <AriaTabList {...props} className={classNames("ui-tab-list", className)} />;
+	let listRef = useRef<HTMLDivElement>(null);
+
+	useEffect(() => {
+		let list = listRef.current;
+		if (!list) return;
+
+		let frame = 0;
+		let observedSelected: HTMLElement | null = null;
+		let controller = new AbortController();
+
+		let updateIndicator = () => {
+			let selected = list.querySelector<HTMLElement>("[data-selected]");
+			if (selected !== observedSelected) {
+				if (observedSelected) resizeObserver.unobserve(observedSelected);
+				if (selected) resizeObserver.observe(selected);
+				observedSelected = selected;
+			}
+
+			if (!selected) {
+				list.style.setProperty("--ui-tab-indicator-opacity", "0");
+				return;
+			}
+
+			let listRect = list.getBoundingClientRect();
+			let selectedRect = selected.getBoundingClientRect();
+			let isVertical = Boolean(list.closest('[data-orientation="vertical"]'));
+
+			if (isVertical) {
+				let top = selectedRect.top - listRect.top + list.scrollTop;
+				list.style.setProperty("--ui-tab-indicator-top", `${top}px`);
+				list.style.setProperty("--ui-tab-indicator-height", `${selectedRect.height}px`);
+			} else {
+				let left = selectedRect.left - listRect.left + list.scrollLeft;
+				list.style.setProperty("--ui-tab-indicator-left", `${left}px`);
+				list.style.setProperty("--ui-tab-indicator-width", `${selectedRect.width}px`);
+			}
+
+			list.style.setProperty("--ui-tab-indicator-opacity", "1");
+		};
+
+		let schedule = () => {
+			cancelAnimationFrame(frame);
+			frame = requestAnimationFrame(updateIndicator);
+		};
+
+		let resizeObserver = new ResizeObserver(schedule);
+		let mutationObserver = new MutationObserver(schedule);
+
+		resizeObserver.observe(list);
+		mutationObserver.observe(list, {
+			subtree: true,
+			attributes: true,
+			attributeFilter: ["data-selected"],
+		});
+
+		schedule();
+		window.addEventListener("resize", () => schedule(), { signal: controller.signal });
+
+		return () => {
+			cancelAnimationFrame(frame);
+			resizeObserver.disconnect();
+			mutationObserver.disconnect();
+			controller.abort();
+		};
+	}, []);
+
+	return <AriaTabList ref={listRef} {...props} className={classNames("ui-tab-list", className)} />;
 };
 
 Tabs.Tab = function TabsTab({ className, ...props }: Tabs.TabProps) {

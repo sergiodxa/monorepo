@@ -7,6 +7,10 @@
 		".": "./src/index.ts",
 		"./styles.css": "./src/styles.css"
 	},
+	"scripts": {
+		"storybook": "storybook dev -p 6006",
+		"build-storybook": "storybook build"
+	},
 	"dependencies": {
 		"@pkg/cn": "workspace:*",
 		"@standard-schema/spec": "^1.1.0",
@@ -14,7 +18,16 @@
 		"react-aria-components": "^1.15.0"
 	},
 	"devDependencies": {
-		"@types/react": "^19.2.10"
+		"@internationalized/date": "^3.8.0",
+		"@storybook/addon-a11y": "^10.2.7",
+		"@storybook/react": "^10.2.7",
+		"@storybook/react-vite": "^10.2.7",
+		"@tailwindcss/vite": "^4.1.18",
+		"@types/react": "^19.2.10",
+		"storybook": "^10.2.7",
+		"tailwindcss": "^4.1.18",
+		"tailwindcss-animate": "^1.0.7",
+		"vite": "^7.3.1"
 	},
 	"peerDependencies": {
 		"react": "^19.0.0",

@@ -8,14 +8,11 @@ import { Link as AriaLink } from "react-aria-components";
 import { PrefetchPageLinks } from "react-router";
 
 export namespace Link {
-	export type Color = "primary" | "neutral" | "danger" | "warning";
-	export type Variant = "default" | "subtle";
+	export type Color = "primary" | "neutral" | "danger" | "warning" | "success";
 
 	export interface Props extends Omit<ComponentProps<typeof AriaLink>, "className"> {
 		/** The color scheme of the link */
 		color?: Color;
-		/** The visual variant of the link */
-		variant?: Variant;
 		/** Prefetch behavior for React Router integration */
 		prefetch?: ReactRouterLinkProps["prefetch"];
 		className?: cn.ClassName;
@@ -35,13 +32,7 @@ export namespace Link {
  * <Link href="/settings" prefetch="intent">Settings</Link>
  * ```
  */
-export function Link({
-	className,
-	color = "primary",
-	variant = "default",
-	prefetch,
-	...props
-}: Link.Props) {
+export function Link({ className, color = "primary", prefetch, ...props }: Link.Props) {
 	let [shouldPrefetch, setShouldPrefetch] = useState(false);
 
 	return (
@@ -49,7 +40,6 @@ export function Link({
 			<AriaLink
 				{...props}
 				data-color={color}
-				data-variant={variant}
 				className={classNames("ui-link", className)}
 				onHoverStart={(e) => {
 					setShouldPrefetch(true);

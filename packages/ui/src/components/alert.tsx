@@ -1,52 +1,88 @@
 import type { cn } from "@pkg/cn";
-import type { ReactNode } from "react";
+import type { HTMLAttributes, ReactNode } from "react";
 
 export namespace Alert {
-	export type Variant = "info" | "warning" | "danger" | "success";
+	export type Color = "primary" | "success" | "warning" | "danger" | "neutral";
 	export type Live = "polite" | "assertive" | "off";
 
-	export interface Props {
-		variant?: Variant;
+	export interface Props extends Omit<
+		HTMLAttributes<HTMLDivElement>,
+		"color" | "children" | "className"
+	> {
+		/** The color scheme of the alert */
+		color?: Color;
 		/** Controls aria-live behavior for dynamic alerts. Default: "polite" */
 		live?: Live;
 		children: ReactNode;
 		className?: cn.ClassName;
 	}
 
-	export interface IconProps {
+	export interface IconProps extends Omit<
+		HTMLAttributes<HTMLDivElement>,
+		"children" | "className"
+	> {
 		children: ReactNode;
 		className?: cn.ClassName;
 	}
 
-	export interface ContentProps {
+	export interface ContentProps extends Omit<
+		HTMLAttributes<HTMLDivElement>,
+		"children" | "className"
+	> {
 		children: ReactNode;
 		className?: cn.ClassName;
 	}
 
-	export interface TitleProps {
+	export interface TitleProps extends Omit<
+		HTMLAttributes<HTMLHeadingElement>,
+		"children" | "className"
+	> {
 		children: ReactNode;
 		className?: cn.ClassName;
 	}
 
-	export interface DescriptionProps {
+	export interface DescriptionProps extends Omit<
+		HTMLAttributes<HTMLParagraphElement>,
+		"children" | "className"
+	> {
 		children: ReactNode;
 		className?: cn.ClassName;
 	}
 
-	export interface ActionProps {
+	export interface ActionProps extends Omit<
+		HTMLAttributes<HTMLDivElement>,
+		"children" | "className"
+	> {
 		children: ReactNode;
 		className?: cn.ClassName;
 	}
 }
 
 import { cn as classNames } from "@pkg/cn";
+import { Children, isValidElement } from "react";
 
-export function Alert({ variant = "info", live = "polite", children, className }: Alert.Props) {
+export function Alert({
+	color = "primary",
+	live = "polite",
+	children,
+	className,
+	role = "alert",
+	...props
+}: Alert.Props) {
+	let ariaLive = props["aria-live"] ?? (live === "off" ? undefined : live);
+	let hasIcon = Children.toArray(children).some(
+		(child) => isValidElement(child) && child.type === Alert.Icon,
+	);
+
 	return (
 		<div
-			role="alert"
-			aria-live={live === "off" ? undefined : live}
-			data-variant={variant}
+			{...props}
+			role={role}
+			aria-live={ariaLive}
+			aria-atomic={props["aria-atomic"] ?? true}
+			data-color={color}
+			data-has-icon={hasIcon || undefined}
+			data-slot="alert"
 			className={classNames("ui-alert", className)}
 		>
 			{children}
@@ -54,26 +90,53 @@ export function Alert({ variant = "info", live = "polite", children, className }
 	);
 }
 
-Alert.Icon = function AlertIcon({ children, className }: Alert.IconProps) {
+Alert.Icon = function AlertIcon({ children, className, ...props }: Alert.IconProps) {
+	let { ["aria-hidden"]: ariaHidden = true, ...rest } = props;
+
 	return (
-		<div className={classNames("ui-alert-icon", className)} aria-hidden>
+		<div
+			{...rest}
+			className={classNames("ui-alert-icon", className)}
+			aria-hidden={ariaHidden}
+			data-slot="icon"
+		>
 			{children}
 		</div>
 	);
 };
 
-Alert.Content = function AlertContent({ children, className }: Alert.ContentProps) {
-	return <div className={classNames("ui-alert-content", className)}>{children}</div>;
+Alert.Content = function AlertContent({ children, className, ...props }: Alert.ContentProps) {
+	return (
+		<div {...props} className={classNames("ui-alert-content", className)} data-slot="content">
+			{children}
+		</div>
+	);
 };
 
-Alert.Title = function AlertTitle({ children, className }: Alert.TitleProps) {
-	return <h3 className={classNames("ui-alert-title", className)}>{children}</h3>;
+Alert.Title = function AlertTitle({ children, className, ...props }: Alert.TitleProps) {
+	return (
+		<h3 {...props} className={classNames("ui-alert-title", className)} data-slot="title">
+			{children}
+		</h3>
+	);
 };
 
-Alert.Description = function AlertDescription({ children, className }: Alert.DescriptionProps) {
-	return <p className={classNames("ui-alert-description", className)}>{children}</p>;
+Alert.Description = function AlertDescription({
+	children,
+	className,
+	...props
+}: Alert.DescriptionProps) {
+	return (
+		<p {...props} className={classNames("ui-alert-description", className)} data-slot="description">
+			{children}
+		</p>
+	);
 };
 
-Alert.Action = function AlertAction({ children, className }: Alert.ActionProps) {
-	return <div className={classNames("ui-alert-action", className)}>{children}</div>;
+Alert.Action = function AlertAction({ children, className, ...props }: Alert.ActionProps) {
+	return (
+		<div {...props} className={classNames("ui-alert-action", className)} data-slot="action">
+			{children}
+		</div>
+	);
 };

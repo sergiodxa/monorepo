@@ -6,7 +6,7 @@ import { CheckIcon, MinusIcon } from "lucide-react";
 import { Checkbox as AriaCheckbox } from "react-aria-components";
 
 export namespace Checkbox {
-	export type Color = "primary" | "neutral" | "danger" | "warning";
+	export type Color = "primary" | "neutral" | "danger" | "warning" | "success";
 
 	export interface Props extends Omit<ComponentProps<typeof AriaCheckbox>, "className"> {
 		color?: Color;

@@ -5,7 +5,7 @@ import { cn as classNames } from "@pkg/cn";
 import { Link as AriaLink } from "react-aria-components";
 
 export namespace LinkButton {
-	export type Color = "primary" | "neutral" | "danger" | "warning";
+	export type Color = "primary" | "neutral" | "danger" | "warning" | "success";
 	export type Variant = "solid" | "outline" | "ghost";
 	export type Size = "sm" | "md" | "lg";
 

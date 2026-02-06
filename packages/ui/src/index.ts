@@ -64,6 +64,10 @@ export { Tree } from "./components/tree";
 export { Separator } from "./components/separator";
 export { Toolbar } from "./components/toolbar";
 export { Disclosure } from "./components/disclosure";
+export { Accordion } from "./components/accordion";
+export { Card } from "./components/card";
+export { NavigationMenu } from "./components/navigation-menu";
+export { Sidebar } from "./components/sidebar";
 
 // Files
 export { FileTrigger } from "./components/file-trigger";
@@ -71,8 +75,10 @@ export { DropZone } from "./components/drop-zone";
 
 // Feedback
 export { Alert } from "./components/alert";
+export { Badge } from "./components/badge";
 
 // Utilities
+export { Avatar } from "./components/avatar";
 export { Header } from "./components/header";
 export { Heading } from "./components/heading";
 export { Text } from "./components/text";

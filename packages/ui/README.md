@@ -20,11 +20,15 @@ bun add react react-dom react-router
 
 ### 1. Import Styles
 
-Import the component styles in your app's CSS:
+Import the component styles in your app's CSS using `@import`:
 
 ```css
+@import "tailwindcss";
+
 @import "@pkg/ui/styles.css";
 ```
+
+> **Note:** The styles use Tailwind v4's `@utility` directive and must be processed by Tailwind. Import the file from your main stylesheet so Tailwind can pick it up.
 
 ### 2. Define Theme Tokens
 
@@ -83,6 +87,19 @@ Components use semantic color tokens. Define these in your Tailwind v4 `@theme` 
 	--color-warning-800: oklch(0.36 0.14 85);
 	--color-warning-900: oklch(0.28 0.1 85);
 	--color-warning-950: oklch(0.2 0.08 85);
+
+	/* Success palette (green) */
+	--color-success-50: oklch(0.98 0.02 155);
+	--color-success-100: oklch(0.96 0.05 155);
+	--color-success-200: oklch(0.92 0.09 155);
+	--color-success-300: oklch(0.86 0.15 155);
+	--color-success-400: oklch(0.78 0.2 155);
+	--color-success-500: oklch(0.7 0.2 155);
+	--color-success-600: oklch(0.62 0.18 155);
+	--color-success-700: oklch(0.52 0.14 155);
+	--color-success-800: oklch(0.44 0.11 155);
+	--color-success-900: oklch(0.38 0.09 155);
+	--color-success-950: oklch(0.26 0.06 155);
 }
 ```
 
@@ -123,7 +140,7 @@ Components use data attributes instead of conditional classes. CSS handles all s
 Multi-part components use the `Component.SubComponent` pattern:
 
 ```tsx
-<Alert variant="warning">
+<Alert color="warning">
 	<Alert.Icon>
 		<WarningIcon />
 	</Alert.Icon>
@@ -148,7 +165,7 @@ import { Button } from "@pkg/ui";
 type Props = Button.Props;
 
 // Access variant types
-type Color = Button.Color; // "primary" | "neutral" | "danger" | "warning"
+type Color = Button.Color; // "primary" | "neutral" | "danger" | "warning" | "success"
 type Variant = Button.Variant; // "solid" | "outline" | "ghost"
 type Size = Button.Size; // "sm" | "md" | "lg"
 ```
@@ -754,7 +771,7 @@ import { Separator, Toolbar, Disclosure } from "@pkg/ui";
 ```tsx
 import { Alert } from "@pkg/ui";
 
-<Alert variant="info">
+<Alert color="primary">
   <Alert.Icon><InfoIcon /></Alert.Icon>
   <Alert.Content>
     <Alert.Title>Information</Alert.Title>
@@ -762,7 +779,7 @@ import { Alert } from "@pkg/ui";
   </Alert.Content>
 </Alert>
 
-<Alert variant="danger" live="assertive">
+<Alert color="danger" live="assertive">
   <Alert.Icon><ErrorIcon /></Alert.Icon>
   <Alert.Content>
     <Alert.Title>Error</Alert.Title>
@@ -818,9 +835,9 @@ All components are built on React Aria Components, providing:
 The `Alert` component includes `aria-live` regions for dynamic content:
 
 ```tsx
-<Alert variant="success" live="polite">...</Alert>   {/* Default: polite */}
-<Alert variant="danger" live="assertive">...</Alert> {/* Urgent messages */}
-<Alert variant="info" live="off">...</Alert>         {/* Static alerts */}
+<Alert color="success" live="polite">...</Alert>   {/* Default: polite */}
+<Alert color="danger" live="assertive">...</Alert> {/* Urgent messages */}
+<Alert color="primary" live="off">...</Alert>       {/* Static alerts */}
 ```
 
 ## Utility Components

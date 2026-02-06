@@ -8,7 +8,7 @@ import {
 } from "react-aria-components";
 
 export namespace ToggleButton {
-	export type Color = "primary" | "neutral" | "danger" | "warning";
+	export type Color = "primary" | "neutral" | "danger" | "warning" | "success";
 	export type Variant = "solid" | "outline" | "ghost";
 	export type Size = "sm" | "md" | "lg";
 

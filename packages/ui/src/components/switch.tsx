@@ -21,8 +21,13 @@ export function Switch({ className, children, ...props }: Switch.Props) {
 						data-selected={renderProps.isSelected || undefined}
 						data-focus-visible={renderProps.isFocusVisible || undefined}
 						data-disabled={renderProps.isDisabled || undefined}
+						data-pressed={renderProps.isPressed || undefined}
 					>
-						<span className="ui-switch-thumb" data-selected={renderProps.isSelected || undefined} />
+						<span
+							className="ui-switch-thumb"
+							data-selected={renderProps.isSelected || undefined}
+							data-pressed={renderProps.isPressed || undefined}
+						/>
 					</div>
 					{children}
 				</>

@@ -5,7 +5,7 @@ import { cn as classNames } from "@pkg/cn";
 import { Button as AriaButton } from "react-aria-components";
 
 export namespace Button {
-	export type Color = "primary" | "neutral" | "danger" | "warning";
+	export type Color = "primary" | "neutral" | "danger" | "warning" | "success";
 	export type Variant = "solid" | "outline" | "ghost";
 	export type Size = "sm" | "md" | "lg";
 
