@@ -381,40 +381,49 @@
 
 @utility ui-label {
 	:where(&) {
-		@apply text-sm font-medium leading-none text-neutral-900 dark:text-neutral-100;
+		@apply text-sm font-medium leading-none;
+		color: var(--ui-neutral-fg-emphasis);
 	}
 }
 
 @utility ui-description {
 	:where(&) {
-		@apply text-sm text-neutral-500 dark:text-neutral-400;
+		@apply text-sm;
+		color: var(--ui-neutral-fg-muted);
 	}
 }
 
 @utility ui-field-error {
 	:where(&) {
-		@apply text-sm font-medium text-danger-600 dark:text-danger-400;
+		@apply text-sm font-medium;
+		color: var(--ui-danger-fg);
 	}
 }
 
 @utility ui-input {
 	:where(&) {
 		@apply block h-10 w-full rounded-md border px-3 py-2 text-sm transition;
-		@apply border-neutral-300 bg-white text-neutral-900;
-		@apply dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-100;
-		@apply placeholder:text-neutral-400 dark:placeholder:text-neutral-500;
+		border-color: var(--ui-neutral-border);
+		background-color: var(--ui-neutral-bg-tint);
+		color: var(--ui-neutral-fg-emphasis);
+		&::placeholder {
+			color: var(--ui-neutral-fg-muted);
+		}
 
 		&:hover {
-			@apply border-neutral-400 dark:border-neutral-600;
+			border-color: var(--ui-neutral-border-strong);
 		}
 		&[data-focused] {
-			@apply border-primary-500 outline-2 outline-offset-0 outline-primary-500;
+			@apply outline-2 outline-offset-0;
+			border-color: var(--ui-primary-ring);
+			outline-color: var(--ui-primary-ring);
 		}
 		&[data-invalid] {
-			@apply border-danger-500;
+			border-color: var(--ui-danger-ring);
 		}
 		&[data-disabled] {
-			@apply cursor-not-allowed bg-neutral-100 opacity-50 dark:bg-neutral-800;
+			@apply cursor-not-allowed opacity-50;
+			background-color: var(--ui-neutral-bg-tint-hover);
 		}
 	}
 }
@@ -446,29 +455,36 @@
 @utility ui-otp-slot {
 	:where(&) {
 		@apply size-10 rounded-md border text-center text-base font-medium transition;
-		@apply border-neutral-300 bg-white text-neutral-900;
-		@apply dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-100;
-		@apply placeholder:text-neutral-400 dark:placeholder:text-neutral-500;
 		@apply tabular-nums;
+		border-color: var(--ui-neutral-border);
+		background-color: var(--ui-neutral-bg-tint);
+		color: var(--ui-neutral-fg-emphasis);
+		&::placeholder {
+			color: var(--ui-neutral-fg-muted);
+		}
 
 		&:hover {
-			@apply border-neutral-400 dark:border-neutral-600;
+			border-color: var(--ui-neutral-border-strong);
 		}
 		&:focus-visible {
-			@apply border-primary-500 outline-2 outline-offset-2 outline-primary-500;
+			@apply outline-2 outline-offset-2;
+			border-color: var(--ui-primary-ring);
+			outline-color: var(--ui-primary-ring);
 		}
 		&[data-invalid] {
-			@apply border-danger-500;
+			border-color: var(--ui-danger-ring);
 		}
 		&[data-disabled] {
-			@apply cursor-not-allowed bg-neutral-100 opacity-50 dark:bg-neutral-800;
+			@apply cursor-not-allowed opacity-50;
+			background-color: var(--ui-neutral-bg-tint-hover);
 		}
 	}
 }
 
 @utility ui-otp-separator {
 	:where(&) {
-		@apply text-sm text-neutral-400;
+		@apply text-sm;
+		color: var(--ui-neutral-fg-muted);
 	}
 }
 
@@ -485,17 +501,23 @@
 @utility ui-checkbox-box {
 	:where(&) {
 		@apply size-5 rounded border-2 transition;
-		@apply border-neutral-400 bg-white dark:border-neutral-600 dark:bg-neutral-900;
 		@apply flex items-center justify-center;
+		border-color: var(--ui-neutral-border-strong);
+		background-color: var(--ui-neutral-bg-tint);
 
 		&[data-selected] {
-			@apply border-primary-600 bg-primary-600 text-white;
+			border-color: var(--ui-primary-bg-solid);
+			background-color: var(--ui-primary-bg-solid);
+			color: var(--ui-primary-fg-on-solid);
 		}
 		&[data-indeterminate] {
-			@apply border-primary-600 bg-primary-600 text-white;
+			border-color: var(--ui-primary-bg-solid);
+			background-color: var(--ui-primary-bg-solid);
+			color: var(--ui-primary-fg-on-solid);
 		}
 		&[data-focus-visible] {
-			@apply outline-2 outline-offset-2 outline-primary-500;
+			@apply outline-2 outline-offset-2;
+			outline-color: var(--ui-primary-ring);
 		}
 		&[data-disabled] {
 			@apply cursor-not-allowed opacity-50;
@@ -504,23 +526,33 @@
 		/* Color variants when selected */
 		[data-color="primary"] &[data-selected],
 		[data-color="primary"] &[data-indeterminate] {
-			@apply border-primary-600 bg-primary-600 text-white;
+			border-color: var(--ui-primary-bg-solid);
+			background-color: var(--ui-primary-bg-solid);
+			color: var(--ui-primary-fg-on-solid);
 		}
 		[data-color="neutral"] &[data-selected],
 		[data-color="neutral"] &[data-indeterminate] {
-			@apply border-neutral-600 bg-neutral-600 text-white;
+			border-color: var(--ui-neutral-bg-solid);
+			background-color: var(--ui-neutral-bg-solid);
+			color: var(--ui-neutral-fg-on-solid);
 		}
 		[data-color="success"] &[data-selected],
 		[data-color="success"] &[data-indeterminate] {
-			@apply border-success-600 bg-success-600 text-white;
+			border-color: var(--ui-success-bg-solid);
+			background-color: var(--ui-success-bg-solid);
+			color: var(--ui-success-fg-on-solid);
 		}
 		[data-color="danger"] &[data-selected],
 		[data-color="danger"] &[data-indeterminate] {
-			@apply border-danger-600 bg-danger-600 text-white;
+			border-color: var(--ui-danger-bg-solid);
+			background-color: var(--ui-danger-bg-solid);
+			color: var(--ui-danger-fg-on-solid);
 		}
 		[data-color="warning"] &[data-selected],
 		[data-color="warning"] &[data-indeterminate] {
-			@apply border-warning-600 bg-warning-600 text-white;
+			border-color: var(--ui-warning-bg-solid);
+			background-color: var(--ui-warning-bg-solid);
+			color: var(--ui-warning-fg-on-solid);
 		}
 	}
 }
@@ -540,19 +572,20 @@
 	:where(&) {
 		@apply inline-flex h-6 w-11 items-center rounded-full p-0.5 transition-colors;
 		@apply shrink-0;
-		@apply bg-neutral-300 dark:bg-neutral-700;
+		background-color: var(--ui-neutral-border);
 
 		&[data-selected] {
-			@apply bg-primary-600;
+			background-color: var(--ui-primary-bg-solid);
 		}
 		&[data-pressed] {
-			@apply bg-neutral-400 dark:bg-neutral-600;
+			background-color: var(--ui-neutral-border-strong);
 		}
 		&[data-selected][data-pressed] {
-			@apply bg-primary-700;
+			background-color: var(--ui-primary-bg-solid-hover);
 		}
 		&[data-focus-visible] {
-			@apply outline-2 outline-offset-2 outline-primary-500;
+			@apply outline-2 outline-offset-2;
+			outline-color: var(--ui-primary-ring);
 		}
 		&[data-disabled] {
 			@apply cursor-not-allowed opacity-50;
@@ -589,7 +622,7 @@
 		@apply flex-1 truncate text-left;
 
 		&[data-placeholder] {
-			@apply text-neutral-400 dark:text-neutral-500;
+			color: var(--ui-neutral-fg-muted);
 		}
 	}
 }
@@ -600,8 +633,9 @@
 
 @utility ui-popover {
 	:where(&) {
-		@apply relative rounded-lg border bg-white shadow-lg dark:border-neutral-700 dark:bg-neutral-800;
-		@apply border-neutral-200;
+		@apply relative rounded-lg border shadow-lg;
+		border-color: var(--ui-neutral-border);
+		background-color: var(--ui-neutral-bg-tint);
 
 		&[data-entering] {
 			@apply animate-in fade-in;
@@ -619,7 +653,7 @@
 @utility ui-hover-card {
 	:where(&) {
 		@apply ui-popover w-72 p-4 text-sm;
-		@apply text-neutral-900 dark:text-neutral-100;
+		color: var(--ui-neutral-fg-emphasis);
 	}
 }
 
@@ -642,19 +676,20 @@
 @utility ui-listbox-item {
 	:where(&) {
 		@apply cursor-default rounded-md px-3 py-2 text-sm outline-none transition;
-		@apply text-neutral-900 dark:text-neutral-100;
+		color: var(--ui-neutral-fg-emphasis);
 
 		&:hover {
-			@apply bg-neutral-100 dark:bg-neutral-800;
+			background-color: var(--ui-neutral-bg-tint-hover);
 		}
 		&[data-pressed] {
-			@apply bg-neutral-200 dark:bg-neutral-700;
+			background-color: var(--ui-neutral-bg-tint-pressed);
 		}
 		&[data-focused] {
-			@apply bg-primary-100 dark:bg-primary-900;
+			background-color: var(--ui-primary-bg-tint);
 		}
 		&[data-selected] {
-			@apply bg-primary-600 text-white;
+			background-color: var(--ui-primary-bg-solid);
+			color: var(--ui-primary-fg-on-solid);
 		}
 		&[data-disabled] {
 			@apply opacity-50;
@@ -669,25 +704,30 @@
 @utility ui-command {
 	:where(&) {
 		@apply flex flex-col overflow-hidden rounded-lg border shadow-lg;
-		@apply border-neutral-200 bg-white text-neutral-900;
-		@apply dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-100;
+		border-color: var(--ui-neutral-border);
+		background-color: var(--ui-neutral-bg-tint);
+		color: var(--ui-neutral-fg-emphasis);
 	}
 }
 
 @utility ui-command-input {
 	:where(&) {
-		@apply border-b border-neutral-200 px-3 py-2 dark:border-neutral-700;
+		@apply border-b px-3 py-2;
+		border-color: var(--ui-neutral-border);
 	}
 }
 
 @utility ui-command-input-field {
 	:where(&) {
 		@apply h-10 w-full bg-transparent text-sm outline-none;
-		@apply text-neutral-900 placeholder:text-neutral-400;
-		@apply dark:text-neutral-100 dark:placeholder:text-neutral-500;
+		color: var(--ui-neutral-fg-emphasis);
+		&::placeholder {
+			color: var(--ui-neutral-fg-muted);
+		}
 
 		&[data-focus-visible] {
-			@apply outline-2 outline-offset-2 outline-primary-500;
+			@apply outline-2 outline-offset-2;
+			outline-color: var(--ui-primary-ring);
 		}
 		&[data-disabled] {
 			@apply cursor-not-allowed opacity-50;
@@ -710,7 +750,7 @@
 @utility ui-command-empty {
 	:where(&) {
 		@apply px-3 py-6 text-center text-sm;
-		@apply text-neutral-500 dark:text-neutral-400;
+		color: var(--ui-neutral-fg-muted);
 	}
 }
 
@@ -729,15 +769,15 @@
 		@apply ui-listbox-item flex items-center gap-2;
 
 		&[data-danger] {
-			@apply text-danger-600 dark:text-danger-400;
+			color: var(--ui-danger-fg);
 			&:hover {
-				@apply bg-danger-100 dark:bg-danger-900;
+				background-color: var(--ui-danger-bg-tint);
 			}
 			&[data-pressed] {
-				@apply bg-danger-200 dark:bg-danger-800;
+				background-color: var(--ui-danger-bg-tint-pressed);
 			}
 			&[data-focused] {
-				@apply bg-danger-100 dark:bg-danger-900;
+				background-color: var(--ui-danger-bg-tint);
 			}
 		}
 	}
@@ -745,7 +785,8 @@
 
 @utility ui-menu-separator {
 	:where(&) {
-		@apply my-1 h-px bg-neutral-200 dark:bg-neutral-700;
+		@apply my-1 h-px;
+		background-color: var(--ui-neutral-border);
 	}
 }
 
@@ -786,13 +827,14 @@
 @utility ui-context-menu-label {
 	:where(&) {
 		@apply px-2 py-1 text-xs font-semibold;
-		@apply text-neutral-500 dark:text-neutral-400;
+		color: var(--ui-neutral-fg-muted);
 	}
 }
 
 @utility ui-context-menu-shortcut {
 	:where(&) {
-		@apply ml-auto text-xs text-neutral-500 dark:text-neutral-400;
+		@apply ml-auto text-xs;
+		color: var(--ui-neutral-fg-muted);
 	}
 }
 
@@ -834,8 +876,8 @@
 
 @utility ui-modal {
 	:where(&) {
-		@apply relative max-h-[90vh] w-full max-w-md overflow-auto rounded-lg;
-		@apply bg-white shadow-xl dark:bg-neutral-900;
+		@apply relative max-h-[90vh] w-full max-w-md overflow-auto rounded-lg shadow-xl;
+		background-color: var(--ui-neutral-bg-tint);
 
 		&[data-entering] {
 			@apply animate-in zoom-in-95;
@@ -874,7 +916,8 @@
 
 @utility ui-drawer {
 	:where(&) {
-		@apply relative overflow-auto bg-white shadow-xl dark:bg-neutral-900;
+		@apply relative overflow-auto shadow-xl;
+		background-color: var(--ui-neutral-bg-tint);
 		@apply outline-none transition-transform duration-300 ease-out motion-reduce:transition-none;
 		@apply will-change-transform;
 		@apply translate-x-0 translate-y-0;
@@ -923,24 +966,28 @@
 
 @utility ui-sheet {
 	:where(&) {
-		@apply fixed z-50 flex h-full w-[90vw] flex-col bg-white shadow-xl outline-none;
-		@apply dark:bg-neutral-900 sm:w-96;
+		@apply fixed z-50 flex h-full w-[90vw] flex-col shadow-xl outline-none sm:w-96;
+		background-color: var(--ui-neutral-bg-tint);
 	}
 
 	:where(&)[data-side="right"] {
-		@apply inset-y-0 right-0 border-l border-neutral-200 dark:border-neutral-800;
+		@apply inset-y-0 right-0 border-l;
+		border-color: var(--ui-neutral-border);
 	}
 
 	:where(&)[data-side="left"] {
-		@apply inset-y-0 left-0 border-r border-neutral-200 dark:border-neutral-800;
+		@apply inset-y-0 left-0 border-r;
+		border-color: var(--ui-neutral-border);
 	}
 
 	:where(&)[data-side="top"] {
-		@apply inset-x-0 top-0 h-auto max-h-[85vh] w-full border-b border-neutral-200 dark:border-neutral-800;
+		@apply inset-x-0 top-0 h-auto max-h-[85vh] w-full border-b;
+		border-color: var(--ui-neutral-border);
 	}
 
 	:where(&)[data-side="bottom"] {
-		@apply inset-x-0 bottom-0 h-auto max-h-[85vh] w-full border-t border-neutral-200 dark:border-neutral-800;
+		@apply inset-x-0 bottom-0 h-auto max-h-[85vh] w-full border-t;
+		border-color: var(--ui-neutral-border);
 	}
 
 	:where(&)[data-entering][data-side="right"] {
@@ -996,13 +1043,15 @@
 
 @utility ui-sheet-title {
 	:where(&) {
-		@apply text-lg font-semibold leading-none tracking-tight text-neutral-900 dark:text-neutral-100;
+		@apply text-lg font-semibold leading-none tracking-tight;
+		color: var(--ui-neutral-fg-emphasis);
 	}
 }
 
 @utility ui-sheet-description {
 	:where(&) {
-		@apply text-sm text-neutral-600 dark:text-neutral-400;
+		@apply text-sm;
+		color: var(--ui-neutral-fg);
 	}
 }
 
@@ -1020,13 +1069,15 @@
 
 @utility ui-dialog-title {
 	:where(&) {
-		@apply text-lg font-semibold leading-none tracking-tight text-neutral-900 dark:text-neutral-100;
+		@apply text-lg font-semibold leading-none tracking-tight;
+		color: var(--ui-neutral-fg-emphasis);
 	}
 }
 
 @utility ui-dialog-description {
 	:where(&) {
-		@apply text-sm text-neutral-500 dark:text-neutral-400;
+		@apply text-sm;
+		color: var(--ui-neutral-fg-muted);
 	}
 }
 
@@ -1063,13 +1114,15 @@
 
 @utility ui-alert-dialog-title {
 	:where(&) {
-		@apply text-lg font-semibold text-neutral-900 dark:text-neutral-100;
+		@apply text-lg font-semibold;
+		color: var(--ui-neutral-fg-emphasis);
 	}
 }
 
 @utility ui-alert-dialog-description {
 	:where(&) {
-		@apply text-sm text-neutral-500 dark:text-neutral-400;
+		@apply text-sm;
+		color: var(--ui-neutral-fg-muted);
 	}
 }
 
@@ -1091,13 +1144,15 @@
 
 @utility ui-table-header {
 	:where(&) {
-		@apply border-b border-neutral-200 dark:border-neutral-700;
+		@apply border-b;
+		border-color: var(--ui-neutral-border);
 	}
 }
 
 @utility ui-column {
 	:where(&) {
-		@apply px-4 py-3 text-left font-medium text-neutral-700 dark:text-neutral-300;
+		@apply px-4 py-3 text-left font-medium;
+		color: var(--ui-neutral-fg);
 
 		&[data-align="center"] {
 			@apply text-center;
@@ -1110,7 +1165,7 @@
 		&[data-allows-sorting] {
 			@apply cursor-pointer select-none;
 			&:hover {
-				@apply bg-neutral-50 dark:bg-neutral-800;
+				background-color: var(--ui-neutral-bg-tint);
 			}
 		}
 	}
@@ -1118,7 +1173,9 @@
 
 @utility ui-table-body {
 	:where(&) {
-		@apply divide-y divide-neutral-200 dark:divide-neutral-700;
+		@apply divide-y;
+		--tw-divide-opacity: 1;
+		border-color: var(--ui-neutral-border);
 	}
 }
 
@@ -1127,17 +1184,18 @@
 		@apply transition;
 
 		&:hover {
-			@apply bg-neutral-50 dark:bg-neutral-800/50;
+			background-color: var(--ui-neutral-bg-tint);
 		}
 		&[data-selected] {
-			@apply bg-primary-50 dark:bg-primary-900/20;
+			background-color: var(--ui-primary-bg-tint);
 		}
 	}
 }
 
 @utility ui-cell {
 	:where(&) {
-		@apply px-4 py-3 text-neutral-900 dark:text-neutral-100;
+		@apply px-4 py-3;
+		color: var(--ui-neutral-fg-emphasis);
 	}
 }
 
@@ -1162,7 +1220,8 @@
 		-webkit-overflow-scrolling: touch;
 
 		&:focus-visible {
-			@apply outline-2 outline-offset-2 outline-primary-500;
+			@apply outline-2 outline-offset-2;
+			outline-color: var(--ui-primary-ring);
 		}
 	}
 }
@@ -1207,32 +1266,37 @@
 
 		/* Neutral (default) */
 		&[data-color="neutral"] {
-			@apply border-neutral-200 bg-white text-neutral-900;
-			@apply dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-100;
+			border-color: var(--ui-neutral-border);
+			background-color: var(--ui-neutral-bg-tint);
+			color: var(--ui-neutral-fg-emphasis);
 		}
 
 		/* Primary */
 		&[data-color="primary"] {
-			@apply border-primary-200 bg-primary-50 text-primary-900;
-			@apply dark:border-primary-800 dark:bg-primary-950 dark:text-primary-100;
+			border-color: var(--ui-primary-border);
+			background-color: var(--ui-primary-bg-tint);
+			color: var(--ui-primary-fg-emphasis);
 		}
 
 		/* Success */
 		&[data-color="success"] {
-			@apply border-success-200 bg-success-50 text-success-900;
-			@apply dark:border-success-800 dark:bg-success-950 dark:text-success-100;
+			border-color: var(--ui-success-border);
+			background-color: var(--ui-success-bg-tint);
+			color: var(--ui-success-fg-emphasis);
 		}
 
 		/* Warning */
 		&[data-color="warning"] {
-			@apply border-warning-200 bg-warning-50 text-warning-900;
-			@apply dark:border-warning-800 dark:bg-warning-950 dark:text-warning-100;
+			border-color: var(--ui-warning-border);
+			background-color: var(--ui-warning-bg-tint);
+			color: var(--ui-warning-fg-emphasis);
 		}
 
 		/* Danger */
 		&[data-color="danger"] {
-			@apply border-danger-200 bg-danger-50 text-danger-900;
-			@apply dark:border-danger-800 dark:bg-danger-950 dark:text-danger-100;
+			border-color: var(--ui-danger-border);
+			background-color: var(--ui-danger-bg-tint);
+			color: var(--ui-danger-fg-emphasis);
 		}
 	}
 }
@@ -1280,24 +1344,29 @@
 		}
 
 		&[data-color="primary"] {
-			@apply border-primary-200 bg-primary-50 text-primary-900;
-			@apply dark:border-primary-800 dark:bg-primary-950 dark:text-primary-100;
+			border-color: var(--ui-primary-border);
+			background-color: var(--ui-primary-bg-tint);
+			color: var(--ui-primary-fg-emphasis);
 		}
 		&[data-color="neutral"] {
-			@apply border-neutral-200 bg-neutral-50 text-neutral-900;
-			@apply dark:border-neutral-800 dark:bg-neutral-950 dark:text-neutral-100;
+			border-color: var(--ui-neutral-border);
+			background-color: var(--ui-neutral-bg-tint);
+			color: var(--ui-neutral-fg-emphasis);
 		}
 		&[data-color="success"] {
-			@apply border-success-200 bg-success-50 text-success-900;
-			@apply dark:border-success-800 dark:bg-success-950 dark:text-success-100;
+			border-color: var(--ui-success-border);
+			background-color: var(--ui-success-bg-tint);
+			color: var(--ui-success-fg-emphasis);
 		}
 		&[data-color="warning"] {
-			@apply border-warning-200 bg-warning-50 text-warning-900;
-			@apply dark:border-warning-800 dark:bg-warning-950 dark:text-warning-100;
+			border-color: var(--ui-warning-border);
+			background-color: var(--ui-warning-bg-tint);
+			color: var(--ui-warning-fg-emphasis);
 		}
 		&[data-color="danger"] {
-			@apply border-danger-200 bg-danger-50 text-danger-900;
-			@apply dark:border-danger-800 dark:bg-danger-950 dark:text-danger-100;
+			border-color: var(--ui-danger-border);
+			background-color: var(--ui-danger-bg-tint);
+			color: var(--ui-danger-fg-emphasis);
 		}
 	}
 }
@@ -1347,25 +1416,30 @@
 @utility ui-toast {
 	:where(&) {
 		@apply pointer-events-auto relative flex w-full items-start gap-3 rounded-lg border p-4 shadow-lg;
-		@apply border-neutral-200 bg-white text-neutral-900;
-		@apply dark:border-neutral-800 dark:bg-neutral-950 dark:text-neutral-50;
+		border-color: var(--ui-neutral-border);
+		background-color: var(--ui-neutral-bg-tint);
+		color: var(--ui-neutral-fg-emphasis);
 	}
 
 	&[data-type="success"] {
-		@apply border-success-200 bg-success-50 text-success-900;
-		@apply dark:border-success-800 dark:bg-success-950 dark:text-success-100;
+		border-color: var(--ui-success-border);
+		background-color: var(--ui-success-bg-tint);
+		color: var(--ui-success-fg-emphasis);
 	}
 	&[data-type="warning"] {
-		@apply border-warning-200 bg-warning-50 text-warning-900;
-		@apply dark:border-warning-800 dark:bg-warning-950 dark:text-warning-100;
+		border-color: var(--ui-warning-border);
+		background-color: var(--ui-warning-bg-tint);
+		color: var(--ui-warning-fg-emphasis);
 	}
 	&[data-type="error"] {
-		@apply border-danger-200 bg-danger-50 text-danger-900;
-		@apply dark:border-danger-800 dark:bg-danger-950 dark:text-danger-100;
+		border-color: var(--ui-danger-border);
+		background-color: var(--ui-danger-bg-tint);
+		color: var(--ui-danger-fg-emphasis);
 	}
 	&[data-type="info"] {
-		@apply border-primary-200 bg-primary-50 text-primary-900;
-		@apply dark:border-primary-800 dark:bg-primary-950 dark:text-primary-100;
+		border-color: var(--ui-primary-border);
+		background-color: var(--ui-primary-bg-tint);
+		color: var(--ui-primary-fg-emphasis);
 	}
 }
 
@@ -1402,26 +1476,27 @@
 
 @utility ui-toast-cancel {
 	:where(&) {
-		@apply inline-flex items-center justify-center rounded-md border px-3 py-1 text-xs font-medium;
-		@apply border-neutral-300 text-neutral-600 transition;
-		@apply dark:border-neutral-700 dark:text-neutral-300;
+		@apply inline-flex items-center justify-center rounded-md border px-3 py-1 text-xs font-medium transition;
+		border-color: var(--ui-neutral-border);
+		color: var(--ui-neutral-fg);
 		&:hover {
-			@apply bg-neutral-100 text-neutral-700;
-			@apply dark:bg-neutral-900 dark:text-neutral-100;
+			background-color: var(--ui-neutral-bg-tint-hover);
+			color: var(--ui-neutral-fg-emphasis);
 		}
 		&:active {
-			@apply bg-neutral-200;
-			@apply dark:bg-neutral-800;
+			background-color: var(--ui-neutral-bg-tint-pressed);
 		}
 	}
 }
 
 @utility ui-toast-close {
 	:where(&) {
-		@apply absolute right-2 top-2 inline-flex size-6 items-center justify-center rounded-md;
-		@apply text-neutral-500 transition;
-		@apply hover:bg-neutral-100 hover:text-neutral-700;
-		@apply dark:text-neutral-400 dark:hover:bg-neutral-900 dark:hover:text-neutral-100;
+		@apply absolute right-2 top-2 inline-flex size-6 items-center justify-center rounded-md transition;
+		color: var(--ui-neutral-fg-muted);
+		&:hover {
+			background-color: var(--ui-neutral-bg-tint-hover);
+			color: var(--ui-neutral-fg-emphasis);
+		}
 	}
 }
 
@@ -1438,28 +1513,34 @@
 @utility ui-empty {
 	:where(&) {
 		@apply flex w-full flex-col items-center gap-3 rounded-xl border border-dashed p-8 text-center;
-		@apply border-neutral-200 bg-neutral-50 text-neutral-900;
-		@apply dark:border-neutral-800 dark:bg-neutral-950 dark:text-neutral-100;
+		border-color: var(--ui-neutral-border);
+		background-color: var(--ui-neutral-bg-tint);
+		color: var(--ui-neutral-fg-emphasis);
 
 		&[data-color="primary"] {
-			@apply border-primary-200 bg-primary-50 text-primary-900;
-			@apply dark:border-primary-800 dark:bg-primary-950 dark:text-primary-100;
+			border-color: var(--ui-primary-border);
+			background-color: var(--ui-primary-bg-tint);
+			color: var(--ui-primary-fg-emphasis);
 		}
 		&[data-color="neutral"] {
-			@apply border-neutral-200 bg-neutral-50 text-neutral-900;
-			@apply dark:border-neutral-800 dark:bg-neutral-950 dark:text-neutral-100;
+			border-color: var(--ui-neutral-border);
+			background-color: var(--ui-neutral-bg-tint);
+			color: var(--ui-neutral-fg-emphasis);
 		}
 		&[data-color="success"] {
-			@apply border-success-200 bg-success-50 text-success-900;
-			@apply dark:border-success-800 dark:bg-success-950 dark:text-success-100;
+			border-color: var(--ui-success-border);
+			background-color: var(--ui-success-bg-tint);
+			color: var(--ui-success-fg-emphasis);
 		}
 		&[data-color="warning"] {
-			@apply border-warning-200 bg-warning-50 text-warning-900;
-			@apply dark:border-warning-800 dark:bg-warning-950 dark:text-warning-100;
+			border-color: var(--ui-warning-border);
+			background-color: var(--ui-warning-bg-tint);
+			color: var(--ui-warning-fg-emphasis);
 		}
 		&[data-color="danger"] {
-			@apply border-danger-200 bg-danger-50 text-danger-900;
-			@apply dark:border-danger-800 dark:bg-danger-950 dark:text-danger-100;
+			border-color: var(--ui-danger-border);
+			background-color: var(--ui-danger-bg-tint);
+			color: var(--ui-danger-fg-emphasis);
 		}
 	}
 }
@@ -1499,62 +1580,81 @@
 
 		&[data-variant="default"] {
 			&[data-color="primary"] {
-				@apply border-primary-600 bg-primary-600 text-white;
+				border-color: var(--ui-primary-bg-solid);
+				background-color: var(--ui-primary-bg-solid);
+				color: var(--ui-primary-fg-on-solid);
 			}
 			&[data-color="neutral"] {
-				@apply border-neutral-900 bg-neutral-900 text-white;
-				@apply dark:border-neutral-100 dark:bg-neutral-100 dark:text-neutral-900;
+				border-color: var(--ui-neutral-bg-solid);
+				background-color: var(--ui-neutral-bg-solid);
+				color: var(--ui-neutral-fg-on-solid);
 			}
 			&[data-color="success"] {
-				@apply border-success-600 bg-success-600 text-white;
+				border-color: var(--ui-success-bg-solid);
+				background-color: var(--ui-success-bg-solid);
+				color: var(--ui-success-fg-on-solid);
 			}
 			&[data-color="warning"] {
-				@apply border-warning-600 bg-warning-600 text-white;
+				border-color: var(--ui-warning-bg-solid);
+				background-color: var(--ui-warning-bg-solid);
+				color: var(--ui-warning-fg-on-solid);
 			}
 			&[data-color="danger"] {
-				@apply border-danger-600 bg-danger-600 text-white;
+				border-color: var(--ui-danger-bg-solid);
+				background-color: var(--ui-danger-bg-solid);
+				color: var(--ui-danger-fg-on-solid);
 			}
 		}
 
 		&[data-variant="secondary"] {
 			&[data-color="primary"] {
-				@apply border-primary-200 bg-primary-100 text-primary-700;
-				@apply dark:border-primary-800 dark:bg-primary-900/40 dark:text-primary-200;
+				border-color: var(--ui-primary-border);
+				background-color: var(--ui-primary-bg-tint);
+				color: var(--ui-primary-fg);
 			}
 			&[data-color="neutral"] {
-				@apply border-neutral-200 bg-neutral-100 text-neutral-700;
-				@apply dark:border-neutral-800 dark:bg-neutral-900/40 dark:text-neutral-200;
+				border-color: var(--ui-neutral-border);
+				background-color: var(--ui-neutral-bg-tint);
+				color: var(--ui-neutral-fg);
 			}
 			&[data-color="success"] {
-				@apply border-success-200 bg-success-100 text-success-700;
-				@apply dark:border-success-800 dark:bg-success-900/40 dark:text-success-200;
+				border-color: var(--ui-success-border);
+				background-color: var(--ui-success-bg-tint);
+				color: var(--ui-success-fg);
 			}
 			&[data-color="warning"] {
-				@apply border-warning-200 bg-warning-100 text-warning-800;
-				@apply dark:border-warning-800 dark:bg-warning-900/40 dark:text-warning-200;
+				border-color: var(--ui-warning-border);
+				background-color: var(--ui-warning-bg-tint);
+				color: var(--ui-warning-fg);
 			}
 			&[data-color="danger"] {
-				@apply border-danger-200 bg-danger-100 text-danger-700;
-				@apply dark:border-danger-800 dark:bg-danger-900/40 dark:text-danger-200;
+				border-color: var(--ui-danger-border);
+				background-color: var(--ui-danger-bg-tint);
+				color: var(--ui-danger-fg);
 			}
 		}
 
 		&[data-variant="outline"] {
 			@apply bg-transparent;
 			&[data-color="primary"] {
-				@apply border-primary-600 text-primary-700 dark:text-primary-300;
+				border-color: var(--ui-primary-border-strong);
+				color: var(--ui-primary-fg);
 			}
 			&[data-color="neutral"] {
-				@apply border-neutral-300 text-neutral-700 dark:border-neutral-700 dark:text-neutral-300;
+				border-color: var(--ui-neutral-border);
+				color: var(--ui-neutral-fg);
 			}
 			&[data-color="success"] {
-				@apply border-success-600 text-success-700 dark:text-success-300;
+				border-color: var(--ui-success-border-strong);
+				color: var(--ui-success-fg);
 			}
 			&[data-color="warning"] {
-				@apply border-warning-600 text-warning-800 dark:text-warning-300;
+				border-color: var(--ui-warning-border-strong);
+				color: var(--ui-warning-fg);
 			}
 			&[data-color="danger"] {
-				@apply border-danger-600 text-danger-700 dark:text-danger-300;
+				border-color: var(--ui-danger-border-strong);
+				color: var(--ui-danger-fg);
 			}
 		}
 	}
@@ -1583,38 +1683,44 @@
 		@apply cursor-pointer;
 
 		&[data-color="primary"] {
-			@apply text-primary-600 decoration-primary-600/60;
+			color: var(--ui-primary-fg);
+			text-decoration-color: color-mix(in srgb, var(--ui-primary-fg) 60%, transparent);
 			&:hover {
-				@apply decoration-primary-600;
+				text-decoration-color: var(--ui-primary-fg);
 			}
 		}
 		&[data-color="neutral"] {
-			@apply text-neutral-700 decoration-neutral-700/50 dark:text-neutral-300 dark:decoration-neutral-300/50;
+			color: var(--ui-neutral-fg);
+			text-decoration-color: color-mix(in srgb, var(--ui-neutral-fg) 50%, transparent);
 			&:hover {
-				@apply decoration-neutral-700 dark:decoration-neutral-300;
+				text-decoration-color: var(--ui-neutral-fg);
 			}
 		}
 		&[data-color="success"] {
-			@apply text-success-600 decoration-success-600/60;
+			color: var(--ui-success-fg);
+			text-decoration-color: color-mix(in srgb, var(--ui-success-fg) 60%, transparent);
 			&:hover {
-				@apply decoration-success-600;
+				text-decoration-color: var(--ui-success-fg);
 			}
 		}
 		&[data-color="danger"] {
-			@apply text-danger-600 decoration-danger-600/60;
+			color: var(--ui-danger-fg);
+			text-decoration-color: color-mix(in srgb, var(--ui-danger-fg) 60%, transparent);
 			&:hover {
-				@apply decoration-danger-600;
+				text-decoration-color: var(--ui-danger-fg);
 			}
 		}
 		&[data-color="warning"] {
-			@apply text-warning-600 decoration-warning-600/60;
+			color: var(--ui-warning-fg);
+			text-decoration-color: color-mix(in srgb, var(--ui-warning-fg) 60%, transparent);
 			&:hover {
-				@apply decoration-warning-600;
+				text-decoration-color: var(--ui-warning-fg);
 			}
 		}
 
 		&[data-focus-visible] {
-			@apply outline-2 outline-offset-2 outline-primary-500;
+			@apply outline-2 outline-offset-2;
+			outline-color: var(--ui-primary-ring);
 		}
 		&[data-disabled] {
 			@apply cursor-not-allowed no-underline opacity-50;
@@ -1636,33 +1742,38 @@
 		}
 
 		&[data-color="primary"] {
-			@apply text-primary-600;
+			color: var(--ui-primary-fg);
 			&[data-active] {
-				@apply font-medium text-primary-700;
+				@apply font-medium;
+				color: var(--ui-primary-fg-emphasis);
 			}
 		}
 		&[data-color="neutral"] {
-			@apply text-neutral-600 dark:text-neutral-400;
+			color: var(--ui-neutral-fg);
 			&[data-active] {
-				@apply font-medium text-neutral-900 dark:text-neutral-100;
+				@apply font-medium;
+				color: var(--ui-neutral-fg-emphasis);
 			}
 		}
 		&[data-color="success"] {
-			@apply text-success-600;
+			color: var(--ui-success-fg);
 			&[data-active] {
-				@apply font-medium text-success-700;
+				@apply font-medium;
+				color: var(--ui-success-fg-emphasis);
 			}
 		}
 		&[data-color="danger"] {
-			@apply text-danger-600;
+			color: var(--ui-danger-fg);
 			&[data-active] {
-				@apply font-medium text-danger-700;
+				@apply font-medium;
+				color: var(--ui-danger-fg-emphasis);
 			}
 		}
 		&[data-color="warning"] {
-			@apply text-warning-600;
+			color: var(--ui-warning-fg);
 			&[data-active] {
-				@apply font-medium text-warning-700;
+				@apply font-medium;
+				color: var(--ui-warning-fg-emphasis);
 			}
 		}
 
@@ -1680,7 +1791,8 @@
 			@apply opacity-70;
 		}
 		&:focus-visible {
-			@apply outline-2 outline-offset-2 outline-primary-500;
+			@apply outline-2 outline-offset-2;
+			outline-color: var(--ui-primary-ring);
 		}
 	}
 }
@@ -1714,18 +1826,22 @@
 @utility ui-navigation-menu-trigger {
 	:where(&) {
 		@apply inline-flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition;
-		@apply text-neutral-700 dark:text-neutral-300;
-		@apply hover:bg-neutral-100 hover:text-neutral-900;
-		@apply dark:hover:bg-neutral-800 dark:hover:text-neutral-100;
+		color: var(--ui-neutral-fg);
+		&:hover {
+			background-color: var(--ui-neutral-bg-tint-hover);
+			color: var(--ui-neutral-fg-emphasis);
+		}
 
 		&[data-state="open"],
 		&[data-expanded],
 		&[data-open] {
-			@apply bg-neutral-100 text-neutral-900 dark:bg-neutral-800 dark:text-neutral-100;
+			background-color: var(--ui-neutral-bg-tint-hover);
+			color: var(--ui-neutral-fg-emphasis);
 		}
 
 		&[data-focus-visible] {
-			@apply outline-2 outline-offset-2 outline-primary-500;
+			@apply outline-2 outline-offset-2;
+			outline-color: var(--ui-primary-ring);
 		}
 		&[data-disabled] {
 			@apply cursor-not-allowed opacity-50;
@@ -1746,7 +1862,8 @@
 		}
 
 		&[data-focus-visible] {
-			@apply outline-2 outline-offset-2 outline-primary-500;
+			@apply outline-2 outline-offset-2;
+			outline-color: var(--ui-primary-ring);
 		}
 	}
 	:where(&) :where(.ui-navigation-menu-link) {
@@ -1758,16 +1875,19 @@
 	:where(&) {
 		@apply inline-flex select-none items-center gap-2 rounded-md px-3 py-2 text-sm font-medium leading-none;
 		@apply no-underline transition;
-		@apply text-neutral-700 dark:text-neutral-300;
-		@apply hover:bg-neutral-100 hover:text-neutral-900;
-		@apply dark:hover:bg-neutral-800 dark:hover:text-neutral-100;
+		color: var(--ui-neutral-fg);
+		&:hover {
+			background-color: var(--ui-neutral-bg-tint-hover);
+			color: var(--ui-neutral-fg-emphasis);
+		}
 
 		&[data-active] {
-			@apply bg-neutral-100 text-neutral-900;
-			@apply dark:bg-neutral-800 dark:text-neutral-100;
+			background-color: var(--ui-neutral-bg-tint-hover);
+			color: var(--ui-neutral-fg-emphasis);
 		}
 		&[data-focus-visible] {
-			@apply outline-2 outline-offset-2 outline-primary-500;
+			@apply outline-2 outline-offset-2;
+			outline-color: var(--ui-primary-ring);
 		}
 		&[data-disabled] {
 			@apply cursor-not-allowed opacity-50;
@@ -1801,9 +1921,10 @@
 
 @utility ui-navigation-menu-viewport {
 	:where(&) {
-		@apply relative mt-2 overflow-hidden rounded-lg border bg-white shadow-lg;
-		@apply border-neutral-200 dark:border-neutral-700 dark:bg-neutral-900;
+		@apply relative mt-2 overflow-hidden rounded-lg border shadow-lg;
 		@apply transition-[width,height] duration-200 ease-out;
+		border-color: var(--ui-neutral-border);
+		background-color: var(--ui-neutral-bg-tint);
 		width: var(--navigation-menu-viewport-width, auto);
 		height: var(--navigation-menu-viewport-height, auto);
 
@@ -1832,23 +1953,24 @@
 
 @utility ui-sidebar {
 	:where(&) {
-		@apply relative flex h-full w-[var(--sidebar-width)] flex-col;
-		@apply border-r border-neutral-200 bg-white text-neutral-900;
-		@apply dark:border-neutral-800 dark:bg-neutral-950 dark:text-neutral-100;
+		@apply relative flex h-full w-[var(--sidebar-width)] flex-col border-r;
 		@apply transition-[width,transform] duration-200 ease-in-out;
+		border-color: var(--ui-neutral-border);
+		background-color: var(--ui-neutral-bg-tint);
+		color: var(--ui-neutral-fg-emphasis);
 
 		/* Floating variant - elevated with shadow and rounded corners */
 		&[data-variant="floating"] {
-			@apply m-2 rounded-xl border shadow-lg;
-			@apply border-neutral-200/80 bg-white/95 backdrop-blur-sm;
-			@apply dark:border-neutral-700/80 dark:bg-neutral-900/95;
+			@apply m-2 rounded-xl border shadow-lg backdrop-blur-sm;
+			border-color: color-mix(in srgb, var(--ui-neutral-border) 80%, transparent);
+			background-color: color-mix(in srgb, var(--ui-neutral-bg-tint) 95%, transparent);
 		}
 
 		/* Inset variant - subtle border with background */
 		&[data-variant="inset"] {
 			@apply rounded-xl border shadow-sm;
-			@apply border-neutral-200 bg-neutral-50;
-			@apply dark:border-neutral-800 dark:bg-neutral-900;
+			border-color: var(--ui-neutral-border);
+			background-color: var(--ui-neutral-bg-tint);
 		}
 
 		/* Right side positioning */
@@ -1906,15 +2028,15 @@
 @utility ui-sidebar-mobile-inner {
 	:where(&) {
 		@apply flex h-full w-full flex-col border-0;
-		@apply bg-white text-neutral-900;
-		@apply dark:bg-neutral-950 dark:text-neutral-100;
+		background-color: var(--ui-neutral-bg-tint);
+		color: var(--ui-neutral-fg-emphasis);
 	}
 }
 
 @utility ui-sidebar-header {
 	:where(&) {
 		@apply flex shrink-0 items-center gap-2 border-b px-4 py-4;
-		@apply border-neutral-200/80 dark:border-neutral-800/80;
+		border-color: color-mix(in srgb, var(--ui-neutral-border) 80%, transparent);
 	}
 }
 
@@ -1923,7 +2045,7 @@
 		@apply flex flex-1 flex-col gap-4 overflow-y-auto overflow-x-hidden px-3 py-4;
 		/* Custom scrollbar styling */
 		scrollbar-width: thin;
-		scrollbar-color: var(--color-neutral-300) transparent;
+		scrollbar-color: var(--ui-neutral-border) transparent;
 
 		&::-webkit-scrollbar {
 			@apply w-1.5;
@@ -1932,10 +2054,11 @@
 			@apply bg-transparent;
 		}
 		&::-webkit-scrollbar-thumb {
-			@apply rounded-full bg-neutral-300 dark:bg-neutral-700;
+			@apply rounded-full;
+			background-color: var(--ui-neutral-border);
 		}
 		&::-webkit-scrollbar-thumb:hover {
-			@apply bg-neutral-400 dark:bg-neutral-600;
+			background-color: var(--ui-neutral-border-strong);
 		}
 	}
 }
@@ -1943,7 +2066,7 @@
 @utility ui-sidebar-footer {
 	:where(&) {
 		@apply flex shrink-0 items-center gap-2 border-t px-4 py-4;
-		@apply border-neutral-200/80 dark:border-neutral-800/80;
+		border-color: color-mix(in srgb, var(--ui-neutral-border) 80%, transparent);
 	}
 }
 
@@ -1959,7 +2082,8 @@
 
 		/* Add visual separation between groups */
 		& + & {
-			@apply mt-2 border-t border-neutral-200/60 pt-4 dark:border-neutral-800/60;
+			@apply mt-2 border-t pt-4;
+			border-color: color-mix(in srgb, var(--ui-neutral-border) 60%, transparent);
 		}
 	}
 }
@@ -1967,19 +2091,23 @@
 @utility ui-sidebar-group-label {
 	:where(&) {
 		@apply mb-1 flex items-center justify-between px-2 py-1.5 text-[11px] font-semibold uppercase tracking-wider;
-		@apply text-neutral-500 dark:text-neutral-400;
 		@apply select-none;
+		color: var(--ui-neutral-fg-muted);
 	}
 }
 
 @utility ui-sidebar-group-action {
 	:where(&) {
-		@apply inline-flex size-5 items-center justify-center rounded text-neutral-400 transition-colors;
-		@apply hover:bg-neutral-100 hover:text-neutral-700;
-		@apply dark:text-neutral-500 dark:hover:bg-neutral-800 dark:hover:text-neutral-300;
+		@apply inline-flex size-5 items-center justify-center rounded transition-colors;
+		color: var(--ui-neutral-fg-muted);
+		&:hover {
+			background-color: var(--ui-neutral-bg-tint-hover);
+			color: var(--ui-neutral-fg);
+		}
 
 		&[data-focus-visible] {
-			@apply outline-2 outline-offset-2 outline-primary-500;
+			@apply outline-2 outline-offset-2;
+			outline-color: var(--ui-primary-ring);
 		}
 		&[data-disabled] {
 			@apply cursor-not-allowed opacity-50;
@@ -1995,71 +2123,76 @@
 
 @utility ui-sidebar-item {
 	:where(&) {
-		@apply flex min-h-9 items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors;
-		@apply text-neutral-600 no-underline dark:text-neutral-400;
-		@apply hover:bg-neutral-100 hover:text-neutral-900;
-		@apply dark:hover:bg-neutral-800 dark:hover:text-neutral-100;
+		@apply flex min-h-9 items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors no-underline;
+		color: var(--ui-neutral-fg);
+		&:hover {
+			background-color: var(--ui-neutral-bg-tint-hover);
+			color: var(--ui-neutral-fg-emphasis);
+		}
 
 		/* Icon styling */
 		& > svg,
 		& > [data-slot="icon"] {
-			@apply size-4 shrink-0 text-neutral-500 dark:text-neutral-400;
+			@apply size-4 shrink-0;
+			color: var(--ui-neutral-fg-muted);
 		}
 
 		/* Current/active state */
 		&[data-current] {
-			@apply bg-neutral-100 text-neutral-900;
-			@apply dark:bg-neutral-800 dark:text-neutral-100;
+			background-color: var(--ui-neutral-bg-tint-hover);
+			color: var(--ui-neutral-fg-emphasis);
 
 			& > svg,
 			& > [data-slot="icon"] {
-				@apply text-neutral-900 dark:text-neutral-100;
+				color: var(--ui-neutral-fg-emphasis);
 			}
 		}
 
 		/* Color variants for active state */
 		&[data-current][data-color="primary"] {
-			@apply bg-primary-50 text-primary-700;
-			@apply dark:bg-primary-950/50 dark:text-primary-300;
+			background-color: var(--ui-primary-bg-tint);
+			color: var(--ui-primary-fg);
 
 			& > svg,
 			& > [data-slot="icon"] {
-				@apply text-primary-600 dark:text-primary-400;
+				color: var(--ui-primary-fg);
 			}
 		}
 		&[data-current][data-color="success"] {
-			@apply bg-success-50 text-success-700;
-			@apply dark:bg-success-950/50 dark:text-success-300;
+			background-color: var(--ui-success-bg-tint);
+			color: var(--ui-success-fg);
 
 			& > svg,
 			& > [data-slot="icon"] {
-				@apply text-success-600 dark:text-success-400;
+				color: var(--ui-success-fg);
 			}
 		}
 		&[data-current][data-color="warning"] {
-			@apply bg-warning-50 text-warning-700;
-			@apply dark:bg-warning-950/50 dark:text-warning-300;
+			background-color: var(--ui-warning-bg-tint);
+			color: var(--ui-warning-fg);
 
 			& > svg,
 			& > [data-slot="icon"] {
-				@apply text-warning-600 dark:text-warning-400;
+				color: var(--ui-warning-fg);
 			}
 		}
 		&[data-current][data-color="danger"] {
-			@apply bg-danger-50 text-danger-700;
-			@apply dark:bg-danger-950/50 dark:text-danger-300;
+			background-color: var(--ui-danger-bg-tint);
+			color: var(--ui-danger-fg);
 
 			& > svg,
 			& > [data-slot="icon"] {
-				@apply text-danger-600 dark:text-danger-400;
+				color: var(--ui-danger-fg);
 			}
 		}
 
 		&[data-pressed] {
-			@apply scale-[0.98] bg-neutral-200 dark:bg-neutral-700;
+			@apply scale-[0.98];
+			background-color: var(--ui-neutral-bg-tint-pressed);
 		}
 		&[data-focus-visible] {
-			@apply outline-2 outline-offset-2 outline-primary-500;
+			@apply outline-2 outline-offset-2;
+			outline-color: var(--ui-primary-ring);
 		}
 		&[data-disabled] {
 			@apply cursor-not-allowed opacity-50;
@@ -2081,11 +2214,11 @@
 		}
 
 		&:hover::after {
-			@apply bg-neutral-300 dark:bg-neutral-600;
+			background-color: var(--ui-neutral-border);
 		}
 
 		&[data-pressed]::after {
-			@apply bg-primary-500;
+			background-color: var(--ui-primary-ring);
 		}
 
 		/* Right side rail positioning */
@@ -2098,16 +2231,19 @@
 @utility ui-sidebar-trigger {
 	:where(&) {
 		@apply inline-flex size-8 items-center justify-center rounded-md transition-colors;
-		@apply text-neutral-500 dark:text-neutral-400;
-		@apply hover:bg-neutral-100 hover:text-neutral-900;
-		@apply dark:hover:bg-neutral-800 dark:hover:text-neutral-100;
+		color: var(--ui-neutral-fg-muted);
+		&:hover {
+			background-color: var(--ui-neutral-bg-tint-hover);
+			color: var(--ui-neutral-fg-emphasis);
+		}
 
 		& > svg {
 			@apply size-4;
 		}
 
 		&[data-focus-visible] {
-			@apply outline-2 outline-offset-2 outline-primary-500;
+			@apply outline-2 outline-offset-2;
+			outline-color: var(--ui-primary-ring);
 		}
 		&[data-disabled] {
 			@apply cursor-not-allowed opacity-50;
@@ -2118,8 +2254,8 @@
 @utility ui-sidebar-inset {
 	:where(&) {
 		@apply relative flex min-h-screen flex-1 flex-col;
-		@apply bg-white dark:bg-neutral-950;
 		@apply transition-[margin] duration-200 ease-in-out;
+		background-color: var(--ui-neutral-bg-tint);
 	}
 }
 
@@ -2137,16 +2273,18 @@
 
 @utility ui-sidebar-menu-button {
 	:where(&) {
-		@apply flex w-full min-w-0 items-center gap-3 overflow-hidden rounded-lg px-3 py-2 text-left text-sm font-medium outline-none transition-colors;
-		@apply text-neutral-600 dark:text-neutral-400;
-		@apply hover:bg-neutral-100 hover:text-neutral-900;
-		@apply dark:hover:bg-neutral-800 dark:hover:text-neutral-100;
-		@apply no-underline;
+		@apply flex w-full min-w-0 items-center gap-3 overflow-hidden rounded-lg px-3 py-2 text-left text-sm font-medium outline-none transition-colors no-underline;
+		color: var(--ui-neutral-fg);
+		&:hover {
+			background-color: var(--ui-neutral-bg-tint-hover);
+			color: var(--ui-neutral-fg-emphasis);
+		}
 
 		/* Icon styling */
 		& > svg:first-child,
 		& > [data-slot="icon"]:first-child {
-			@apply size-4 shrink-0 text-neutral-500 dark:text-neutral-400;
+			@apply size-4 shrink-0;
+			color: var(--ui-neutral-fg-muted);
 		}
 
 		/* Text content styling */
@@ -2177,20 +2315,22 @@
 
 		/* Active state */
 		&[data-active] {
-			@apply bg-neutral-100 text-neutral-900;
-			@apply dark:bg-neutral-800 dark:text-neutral-100;
+			background-color: var(--ui-neutral-bg-tint-hover);
+			color: var(--ui-neutral-fg-emphasis);
 
 			& > svg:first-child,
 			& > [data-slot="icon"]:first-child {
-				@apply text-neutral-900 dark:text-neutral-100;
+				color: var(--ui-neutral-fg-emphasis);
 			}
 		}
 
 		&[data-pressed] {
-			@apply scale-[0.98] bg-neutral-200 dark:bg-neutral-700;
+			@apply scale-[0.98];
+			background-color: var(--ui-neutral-bg-tint-pressed);
 		}
 		&[data-focus-visible] {
-			@apply outline-2 outline-offset-2 outline-primary-500;
+			@apply outline-2 outline-offset-2;
+			outline-color: var(--ui-primary-ring);
 		}
 		&[data-disabled] {
 			@apply cursor-not-allowed opacity-50;
@@ -2202,17 +2342,20 @@
 	:where(&) {
 		@apply absolute right-1.5 top-1/2 -translate-y-1/2;
 		@apply inline-flex size-6 items-center justify-center rounded-md transition-colors;
-		@apply text-neutral-400 dark:text-neutral-500;
 		@apply opacity-0 group-hover/menu-item:opacity-100 group-focus-within/menu-item:opacity-100;
-		@apply hover:bg-neutral-200 hover:text-neutral-700;
-		@apply dark:hover:bg-neutral-700 dark:hover:text-neutral-300;
+		color: var(--ui-neutral-fg-muted);
+		&:hover {
+			background-color: var(--ui-neutral-bg-tint-pressed);
+			color: var(--ui-neutral-fg);
+		}
 
 		& > svg {
 			@apply size-3.5;
 		}
 
 		&[data-focus-visible] {
-			@apply opacity-100 outline-2 outline-offset-2 outline-primary-500;
+			@apply opacity-100 outline-2 outline-offset-2;
+			outline-color: var(--ui-primary-ring);
 		}
 		&[data-disabled] {
 			@apply cursor-not-allowed opacity-50;
@@ -2228,8 +2371,8 @@
 @utility ui-sidebar-menu-badge {
 	:where(&) {
 		@apply ml-auto shrink-0 rounded-md px-1.5 py-0.5 text-[10px] font-semibold tabular-nums;
-		@apply bg-neutral-100 text-neutral-600;
-		@apply dark:bg-neutral-800 dark:text-neutral-300;
+		background-color: var(--ui-neutral-bg-tint-hover);
+		color: var(--ui-neutral-fg);
 	}
 }
 
@@ -2241,22 +2384,24 @@
 
 @utility ui-sidebar-menu-skeleton-icon {
 	:where(&) {
-		@apply size-4 shrink-0 rounded bg-neutral-200 dark:bg-neutral-800;
+		@apply size-4 shrink-0 rounded;
 		@apply motion-safe:animate-pulse;
+		background-color: var(--ui-neutral-border);
 	}
 }
 
 @utility ui-sidebar-menu-skeleton-text {
 	:where(&) {
-		@apply h-4 flex-1 rounded bg-neutral-200 dark:bg-neutral-800;
+		@apply h-4 flex-1 rounded;
 		@apply motion-safe:animate-pulse;
+		background-color: var(--ui-neutral-border);
 	}
 }
 
 @utility ui-sidebar-menu-sub {
 	:where(&) {
-		@apply relative ml-3.5 flex flex-col gap-0.5 border-l border-neutral-200 pl-3.5;
-		@apply dark:border-neutral-800;
+		@apply relative ml-3.5 flex flex-col gap-0.5 border-l pl-3.5;
+		border-color: var(--ui-neutral-border);
 	}
 }
 
@@ -2268,23 +2413,27 @@
 
 @utility ui-sidebar-menu-sub-button {
 	:where(&) {
-		@apply flex min-h-8 w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-sm transition-colors;
-		@apply text-neutral-500 dark:text-neutral-400;
-		@apply hover:bg-neutral-100 hover:text-neutral-900;
-		@apply dark:hover:bg-neutral-800 dark:hover:text-neutral-100;
-		@apply no-underline;
+		@apply flex min-h-8 w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-sm transition-colors no-underline;
+		color: var(--ui-neutral-fg-muted);
+		&:hover {
+			background-color: var(--ui-neutral-bg-tint-hover);
+			color: var(--ui-neutral-fg-emphasis);
+		}
 
 		/* Active state */
 		&[data-active] {
-			@apply bg-neutral-100 font-medium text-neutral-900;
-			@apply dark:bg-neutral-800 dark:text-neutral-100;
+			@apply font-medium;
+			background-color: var(--ui-neutral-bg-tint-hover);
+			color: var(--ui-neutral-fg-emphasis);
 		}
 
 		&[data-pressed] {
-			@apply scale-[0.98] bg-neutral-200 dark:bg-neutral-700;
+			@apply scale-[0.98];
+			background-color: var(--ui-neutral-bg-tint-pressed);
 		}
 		&[data-focus-visible] {
-			@apply outline-2 outline-offset-2 outline-primary-500;
+			@apply outline-2 outline-offset-2;
+			outline-color: var(--ui-primary-ring);
 		}
 		&[data-disabled] {
 			@apply cursor-not-allowed opacity-50;
@@ -2295,7 +2444,8 @@
 /* Sidebar Separator for visual division between sections */
 @utility ui-sidebar-separator {
 	:where(&) {
-		@apply mx-2 my-2 h-px bg-neutral-200 dark:bg-neutral-800;
+		@apply mx-2 my-2 h-px;
+		background-color: var(--ui-neutral-border);
 	}
 }
 
@@ -2337,7 +2487,7 @@
 @utility ui-radio {
 	:where(&) {
 		@apply flex cursor-default items-center gap-2 text-sm;
-		@apply text-neutral-900 dark:text-neutral-100;
+		color: var(--ui-neutral-fg-emphasis);
 
 		&[data-disabled] {
 			@apply cursor-not-allowed opacity-50;
@@ -2348,22 +2498,26 @@
 @utility ui-radio-indicator {
 	:where(&) {
 		@apply size-5 rounded-full border-2 transition;
-		@apply border-neutral-400 bg-white dark:border-neutral-600 dark:bg-neutral-900;
 		@apply flex items-center justify-center;
+		border-color: var(--ui-neutral-border-strong);
+		background-color: var(--ui-neutral-bg-tint);
 
 		&::after {
 			content: "";
-			@apply size-2.5 scale-0 rounded-full bg-white transition-transform;
+			@apply size-2.5 scale-0 rounded-full transition-transform;
+			background-color: var(--ui-primary-fg-on-solid);
 		}
 
 		[data-selected] > & {
-			@apply border-primary-600 bg-primary-600;
+			border-color: var(--ui-primary-bg-solid);
+			background-color: var(--ui-primary-bg-solid);
 			&::after {
 				@apply scale-100;
 			}
 		}
 		[data-focus-visible] > & {
-			@apply outline-2 outline-offset-2 outline-primary-500;
+			@apply outline-2 outline-offset-2;
+			outline-color: var(--ui-primary-ring);
 		}
 	}
 }
@@ -2387,12 +2541,14 @@
 
 @utility ui-tab-list {
 	:where(&) {
-		@apply relative flex gap-1 border-b border-neutral-200 dark:border-neutral-700;
+		@apply relative flex gap-1 border-b;
+		border-color: var(--ui-neutral-border);
 
 		&::after {
 			content: "";
-			@apply absolute left-0 h-0.5 bg-primary-600 dark:bg-primary-400;
+			@apply absolute left-0 h-0.5;
 			@apply transition-[transform,width,height,opacity] duration-200 ease-out;
+			background-color: var(--ui-primary-fg);
 			bottom: -1px;
 			width: var(--ui-tab-indicator-width, 0px);
 			transform: translateX(var(--ui-tab-indicator-left, 0px));
@@ -2415,16 +2571,18 @@
 @utility ui-tab {
 	:where(&) {
 		@apply -mb-px cursor-default px-4 py-2 text-sm font-medium transition;
-		@apply border-b-2 border-transparent text-neutral-600 dark:text-neutral-400;
+		@apply border-b-2 border-transparent;
+		color: var(--ui-neutral-fg);
 
 		&:hover {
-			@apply text-neutral-900 dark:text-neutral-100;
+			color: var(--ui-neutral-fg-emphasis);
 		}
 		&[data-selected] {
-			@apply text-primary-600 dark:text-primary-400;
+			color: var(--ui-primary-fg);
 		}
 		&[data-focus-visible] {
-			@apply outline-2 outline-offset-2 outline-primary-500;
+			@apply outline-2 outline-offset-2;
+			outline-color: var(--ui-primary-ring);
 		}
 		&[data-disabled] {
 			@apply cursor-not-allowed opacity-50;
@@ -2447,7 +2605,8 @@
 		@apply p-4 outline-none;
 
 		&[data-focus-visible] {
-			@apply outline-2 outline-offset-2 outline-primary-500;
+			@apply outline-2 outline-offset-2;
+			outline-color: var(--ui-primary-ring);
 		}
 	}
 }
@@ -2459,7 +2618,8 @@
 @utility ui-tooltip {
 	:where(&) {
 		@apply relative rounded-md px-2 py-1 text-sm shadow-md;
-		@apply bg-neutral-900 text-white dark:bg-neutral-100 dark:text-neutral-900;
+		background-color: var(--ui-neutral-bg-solid);
+		color: var(--ui-neutral-fg-on-solid);
 
 		&[data-entering] {
 			@apply animate-in fade-in zoom-in-95;
@@ -2472,7 +2632,8 @@
 
 @utility ui-tooltip-arrow {
 	:where(&) {
-		@apply absolute pointer-events-none fill-neutral-900 dark:fill-neutral-100;
+		@apply absolute pointer-events-none;
+		fill: var(--ui-neutral-bg-solid);
 
 		&[data-placement^="bottom"] {
 			@apply -top-1 left-1/2 -translate-x-1/2 rotate-180;
@@ -2507,7 +2668,8 @@
 
 @utility ui-search-field-icon {
 	:where(&) {
-		@apply pointer-events-none absolute left-3 size-4 text-neutral-400;
+		@apply pointer-events-none absolute left-3 size-4;
+		color: var(--ui-neutral-fg-muted);
 	}
 }
 
@@ -2519,12 +2681,16 @@
 
 @utility ui-search-field-clear {
 	:where(&) {
-		@apply absolute right-2 rounded p-0.5 text-neutral-400 transition;
-		@apply hover:bg-neutral-100 hover:text-neutral-600;
-		@apply dark:hover:bg-neutral-800 dark:hover:text-neutral-300;
+		@apply absolute right-2 rounded p-0.5 transition;
+		color: var(--ui-neutral-fg-muted);
+		&:hover {
+			background-color: var(--ui-neutral-bg-tint-hover);
+			color: var(--ui-neutral-fg);
+		}
 
 		&[data-focus-visible] {
-			@apply outline-2 outline-primary-500;
+			@apply outline-2;
+			outline-color: var(--ui-primary-ring);
 		}
 	}
 }
@@ -2542,14 +2708,17 @@
 @utility ui-number-field-group {
 	:where(&) {
 		@apply inline-flex w-full items-stretch rounded-md border transition;
-		@apply border-neutral-300 bg-white text-neutral-900;
-		@apply dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-100;
+		border-color: var(--ui-neutral-border);
+		background-color: var(--ui-neutral-bg-tint);
+		color: var(--ui-neutral-fg-emphasis);
 
 		&:hover {
-			@apply border-neutral-400 dark:border-neutral-600;
+			border-color: var(--ui-neutral-border-strong);
 		}
 		&:focus-within {
-			@apply border-primary-500 outline-2 outline-offset-0 outline-primary-500;
+			@apply outline-2 outline-offset-0;
+			border-color: var(--ui-primary-ring);
+			outline-color: var(--ui-primary-ring);
 		}
 	}
 }
@@ -2564,29 +2733,29 @@
 			@apply cursor-not-allowed opacity-50;
 		}
 		&[data-invalid] {
-			@apply text-danger-700;
+			color: var(--ui-danger-fg);
 		}
 	}
 }
 
 @utility ui-number-field-button {
 	:where(&) {
-		@apply flex w-10 items-center justify-center transition;
-		@apply rounded-none bg-transparent text-neutral-700;
-		@apply dark:text-neutral-300;
-		@apply border-neutral-300 dark:border-neutral-700;
+		@apply flex w-10 items-center justify-center transition rounded-none bg-transparent;
+		color: var(--ui-neutral-fg);
+		border-color: var(--ui-neutral-border);
 
 		&:hover {
-			@apply bg-neutral-100 dark:bg-neutral-800;
+			background-color: var(--ui-neutral-bg-tint-hover);
 		}
 		&[data-pressed] {
-			@apply bg-neutral-200 dark:bg-neutral-700;
+			background-color: var(--ui-neutral-bg-tint-pressed);
 		}
 		&[data-disabled] {
 			@apply cursor-not-allowed opacity-50;
 		}
 		&[data-focus-visible] {
-			@apply outline-2 outline-offset-2 outline-primary-500;
+			@apply outline-2 outline-offset-2;
+			outline-color: var(--ui-primary-ring);
 		}
 		&[slot="decrement"] {
 			@apply border-r;
@@ -2616,27 +2785,34 @@
 
 @utility ui-slider-track {
 	:where(&) {
-		@apply relative h-2 w-full rounded-full;
-		@apply bg-neutral-200 dark:bg-neutral-700;
+		@apply relative h-5 w-full;
 
-		[data-orientation="horizontal"] > & {
-			@apply h-2 w-full;
-		}
-		[data-orientation="vertical"] > & {
-			@apply h-full w-2;
-		}
-
+		/* Visible track bar - centered in container */
 		&::before {
 			content: "";
-			@apply absolute rounded-full bg-primary-600;
+			@apply absolute inset-x-0 top-1/2 h-2 -translate-y-1/2 rounded-full;
+			background-color: var(--ui-neutral-border);
+		}
 
-			[data-orientation="horizontal"] & {
-				@apply left-0 top-0 h-full;
-				width: var(--slider-fill-width, 0%);
+		/* Fill bar - also centered */
+		&::after {
+			content: "";
+			@apply absolute left-0 top-1/2 h-2 -translate-y-1/2 rounded-full;
+			background-color: var(--ui-primary-bg-solid);
+			width: var(--slider-fill-width, 0%);
+		}
+
+		/* Vertical orientation */
+		[data-orientation="vertical"] > & {
+			@apply h-full w-5;
+
+			&::before {
+				@apply inset-x-auto inset-y-0 left-1/2 top-0 h-full w-2 -translate-x-1/2 translate-y-0;
 			}
-			[data-orientation="vertical"] & {
-				@apply bottom-0 left-0 w-full;
+			&::after {
+				@apply bottom-0 left-1/2 top-auto h-auto w-2 -translate-x-1/2 translate-y-0;
 				height: var(--slider-fill-height, 0%);
+				width: auto;
 			}
 		}
 	}
@@ -2644,19 +2820,27 @@
 
 @utility ui-slider-thumb {
 	:where(&) {
-		@apply absolute size-5 rounded-full border-2 shadow transition;
-		@apply top-1/2 -translate-x-1/2 -translate-y-1/2;
-		@apply border-primary-600 bg-white;
+		/* React Aria applies inline: position: absolute; left: X%; transform: translate(-50%, -50%); */
+		/* We need to set top: 50% to work with RAC's translateY(-50%) for vertical centering */
+		@apply top-1/2 size-5 rounded-full border-2 shadow;
+		/* Use transition-shadow to avoid interfering with RAC's transform */
+		transition:
+			box-shadow 150ms,
+			scale 150ms;
+		border-color: var(--ui-primary-bg-solid);
+		background-color: var(--ui-neutral-bg-tint);
 
+		/* Vertical orientation - RAC sets top: X%, we need left: 50% */
 		[data-orientation="vertical"] & {
-			@apply left-1/2;
+			@apply left-1/2 top-auto;
 		}
 
 		&[data-dragging] {
 			@apply scale-110;
 		}
 		&[data-focus-visible] {
-			@apply outline-2 outline-offset-2 outline-primary-500;
+			@apply outline-2 outline-offset-2;
+			outline-color: var(--ui-primary-ring);
 		}
 		&[data-disabled] {
 			@apply opacity-50;
@@ -2666,7 +2850,8 @@
 
 @utility ui-slider-output {
 	:where(&) {
-		@apply text-sm text-neutral-600 dark:text-neutral-400;
+		@apply text-sm;
+		color: var(--ui-neutral-fg);
 	}
 }
 
@@ -2683,7 +2868,7 @@
 @utility ui-meter-track {
 	:where(&) {
 		@apply h-2 w-full overflow-hidden rounded-full;
-		@apply bg-neutral-200 dark:bg-neutral-700;
+		background-color: var(--ui-neutral-border);
 	}
 }
 
@@ -2693,26 +2878,27 @@
 		width: var(--meter-percentage, 0%);
 
 		[data-color="primary"] & {
-			@apply bg-primary-600;
+			background-color: var(--ui-primary-bg-solid);
 		}
 		[data-color="neutral"] & {
-			@apply bg-neutral-600 dark:bg-neutral-400;
+			background-color: var(--ui-neutral-bg-solid);
 		}
 		[data-color="success"] & {
-			@apply bg-success-600;
+			background-color: var(--ui-success-bg-solid);
 		}
 		[data-color="warning"] & {
-			@apply bg-warning-500;
+			background-color: var(--ui-warning-bg-solid);
 		}
 		[data-color="danger"] & {
-			@apply bg-danger-600;
+			background-color: var(--ui-danger-bg-solid);
 		}
 	}
 }
 
 @utility ui-meter-value {
 	:where(&) {
-		@apply text-sm text-neutral-600 dark:text-neutral-400;
+		@apply text-sm;
+		color: var(--ui-neutral-fg);
 	}
 }
 
@@ -2729,13 +2915,14 @@
 @utility ui-progress-bar-track {
 	:where(&) {
 		@apply h-2 w-full overflow-hidden rounded-full;
-		@apply bg-neutral-200 dark:bg-neutral-700;
+		background-color: var(--ui-neutral-border);
 	}
 }
 
 @utility ui-progress-bar-fill {
 	:where(&) {
-		@apply h-full rounded-full bg-primary-600 transition-all;
+		@apply h-full rounded-full transition-all;
+		background-color: var(--ui-primary-bg-solid);
 		width: var(--progress-percentage, 0%);
 
 		&[data-indeterminate] {
@@ -2746,7 +2933,8 @@
 
 @utility ui-progress-bar-value {
 	:where(&) {
-		@apply text-sm text-neutral-600 dark:text-neutral-400;
+		@apply text-sm;
+		color: var(--ui-neutral-fg);
 	}
 }
 
@@ -2759,19 +2947,19 @@
 		@apply inline-flex items-center justify-center;
 
 		&[data-color="primary"] {
-			@apply text-primary-600;
+			color: var(--ui-primary-fg);
 		}
 		&[data-color="neutral"] {
-			@apply text-neutral-600 dark:text-neutral-400;
+			color: var(--ui-neutral-fg);
 		}
 		&[data-color="success"] {
-			@apply text-success-600;
+			color: var(--ui-success-fg);
 		}
 		&[data-color="warning"] {
-			@apply text-warning-600;
+			color: var(--ui-warning-fg);
 		}
 		&[data-color="danger"] {
-			@apply text-danger-600;
+			color: var(--ui-danger-fg);
 		}
 
 		/* Inside buttons, inherit the button's text color */
@@ -2815,26 +3003,33 @@
 		@apply inline-flex cursor-default items-center gap-1 rounded-full px-3 py-1 text-sm transition;
 
 		&[data-color="neutral"] {
-			@apply bg-neutral-100 text-neutral-700 dark:bg-neutral-800 dark:text-neutral-300;
+			background-color: var(--ui-neutral-bg-tint-hover);
+			color: var(--ui-neutral-fg);
 		}
 		&[data-color="primary"] {
-			@apply bg-primary-100 text-primary-700 dark:bg-primary-900 dark:text-primary-300;
+			background-color: var(--ui-primary-bg-tint);
+			color: var(--ui-primary-fg);
 		}
 		&[data-color="danger"] {
-			@apply bg-danger-100 text-danger-700 dark:bg-danger-900 dark:text-danger-300;
+			background-color: var(--ui-danger-bg-tint);
+			color: var(--ui-danger-fg);
 		}
 		&[data-color="warning"] {
-			@apply bg-warning-100 text-warning-700 dark:bg-warning-900 dark:text-warning-300;
+			background-color: var(--ui-warning-bg-tint);
+			color: var(--ui-warning-fg);
 		}
 		&[data-color="success"] {
-			@apply bg-primary-100 text-primary-700 dark:bg-primary-900 dark:text-primary-300;
+			background-color: var(--ui-success-bg-tint);
+			color: var(--ui-success-fg);
 		}
 
 		&[data-selected] {
-			@apply bg-primary-600 text-white;
+			background-color: var(--ui-primary-bg-solid);
+			color: var(--ui-primary-fg-on-solid);
 		}
 		&[data-focus-visible] {
-			@apply outline-2 outline-offset-2 outline-primary-500;
+			@apply outline-2 outline-offset-2;
+			outline-color: var(--ui-primary-ring);
 		}
 		&[data-disabled] {
 			@apply opacity-50;
@@ -2870,21 +3065,27 @@
 		/* CSS separator using ::after on non-last items */
 		&:not(:last-child)::after {
 			content: "›";
-			@apply mx-1 text-sm text-neutral-400;
+			@apply mx-1 text-sm;
+			color: var(--ui-neutral-fg-muted);
 		}
 	}
 }
 
 @utility ui-breadcrumb-link {
 	:where(&) {
-		@apply rounded text-sm text-neutral-500 outline-none transition;
-		@apply hover:text-neutral-700 dark:hover:text-neutral-300;
+		@apply rounded text-sm outline-none transition;
+		color: var(--ui-neutral-fg-muted);
+		&:hover {
+			color: var(--ui-neutral-fg);
+		}
 
 		&[data-current] {
-			@apply font-medium text-neutral-900 dark:text-neutral-100;
+			@apply font-medium;
+			color: var(--ui-neutral-fg-emphasis);
 		}
 		&[data-focus-visible] {
-			@apply outline-2 outline-offset-2 outline-primary-500;
+			@apply outline-2 outline-offset-2;
+			outline-color: var(--ui-primary-ring);
 		}
 		&[data-disabled] {
 			@apply cursor-not-allowed opacity-50;
@@ -2917,16 +3118,20 @@
 
 @utility ui-pagination-link {
 	:where(&) {
-		@apply inline-flex h-9 min-w-9 items-center justify-center rounded-md px-3 text-sm font-medium transition;
-		@apply text-neutral-700 no-underline;
-		@apply hover:bg-neutral-100 hover:text-neutral-900;
-		@apply dark:text-neutral-300 dark:hover:bg-neutral-800 dark:hover:text-neutral-100;
+		@apply inline-flex h-9 min-w-9 items-center justify-center rounded-md px-3 text-sm font-medium transition no-underline;
+		color: var(--ui-neutral-fg);
+		&:hover {
+			background-color: var(--ui-neutral-bg-tint-hover);
+			color: var(--ui-neutral-fg-emphasis);
+		}
 
 		&[data-current] {
-			@apply bg-primary-600 text-white;
+			background-color: var(--ui-primary-bg-solid);
+			color: var(--ui-primary-fg-on-solid);
 		}
 		&[data-focus-visible] {
-			@apply outline-2 outline-offset-2 outline-primary-500;
+			@apply outline-2 outline-offset-2;
+			outline-color: var(--ui-primary-ring);
 		}
 		&[data-disabled] {
 			@apply cursor-not-allowed opacity-50;
@@ -2937,15 +3142,18 @@
 @utility ui-pagination-button {
 	:where(&) {
 		@apply inline-flex h-9 min-w-9 items-center justify-center rounded-md px-3 text-sm font-medium transition;
-		@apply text-neutral-700 dark:text-neutral-300;
-		@apply hover:bg-neutral-100 hover:text-neutral-900;
-		@apply dark:hover:bg-neutral-800 dark:hover:text-neutral-100;
+		color: var(--ui-neutral-fg);
+		&:hover {
+			background-color: var(--ui-neutral-bg-tint-hover);
+			color: var(--ui-neutral-fg-emphasis);
+		}
 
 		&[data-pressed] {
-			@apply bg-neutral-200 dark:bg-neutral-700;
+			background-color: var(--ui-neutral-bg-tint-pressed);
 		}
 		&[data-focus-visible] {
-			@apply outline-2 outline-offset-2 outline-primary-500;
+			@apply outline-2 outline-offset-2;
+			outline-color: var(--ui-primary-ring);
 		}
 		&[data-disabled] {
 			@apply cursor-not-allowed opacity-50;
@@ -2964,23 +3172,23 @@
 		&[data-selected] {
 			&[data-variant="outline"][data-color="primary"],
 			&[data-variant="ghost"][data-color="primary"] {
-				@apply bg-primary-100 dark:bg-primary-900;
+				background-color: var(--ui-primary-bg-tint);
 			}
 			&[data-variant="outline"][data-color="neutral"],
 			&[data-variant="ghost"][data-color="neutral"] {
-				@apply bg-neutral-200 dark:bg-neutral-700;
+				background-color: var(--ui-neutral-bg-tint-pressed);
 			}
 			&[data-variant="outline"][data-color="success"],
 			&[data-variant="ghost"][data-color="success"] {
-				@apply bg-success-100 dark:bg-success-900;
+				background-color: var(--ui-success-bg-tint);
 			}
 			&[data-variant="outline"][data-color="danger"],
 			&[data-variant="ghost"][data-color="danger"] {
-				@apply bg-danger-100 dark:bg-danger-900;
+				background-color: var(--ui-danger-bg-tint);
 			}
 			&[data-variant="outline"][data-color="warning"],
 			&[data-variant="ghost"][data-color="warning"] {
-				@apply bg-warning-100 dark:bg-warning-900;
+				background-color: var(--ui-warning-bg-tint);
 			}
 		}
 	}
@@ -3002,7 +3210,7 @@
 
 @utility ui-separator {
 	:where(&) {
-		@apply bg-neutral-200 dark:bg-neutral-700;
+		background-color: var(--ui-neutral-border);
 
 		&[aria-orientation="horizontal"] {
 			@apply h-px w-full;
@@ -3020,7 +3228,8 @@
 @utility ui-toolbar {
 	:where(&) {
 		@apply flex items-center gap-2 rounded-lg border p-2;
-		@apply border-neutral-200 bg-neutral-50 dark:border-neutral-700 dark:bg-neutral-900;
+		border-color: var(--ui-neutral-border);
+		background-color: var(--ui-neutral-bg-tint);
 
 		&[data-orientation="vertical"] {
 			@apply flex-col items-start;
@@ -3035,7 +3244,7 @@
 @utility ui-scroll-area {
 	:where(&) {
 		@apply relative rounded-lg border;
-		@apply border-neutral-200 dark:border-neutral-700;
+		border-color: var(--ui-neutral-border);
 	}
 }
 
@@ -3046,7 +3255,8 @@
 		scrollbar-gutter: stable;
 
 		&:focus-visible {
-			@apply outline-2 outline-offset-2 outline-primary-500;
+			@apply outline-2 outline-offset-2;
+			outline-color: var(--ui-primary-ring);
 		}
 	}
 
@@ -3067,12 +3277,13 @@
 		@apply bg-transparent;
 	}
 	:where(&)::-webkit-scrollbar-thumb {
-		@apply rounded-full bg-neutral-300 dark:bg-neutral-700;
+		@apply rounded-full;
+		background-color: var(--ui-neutral-border);
 		border: 3px solid transparent;
 		background-clip: content-box;
 	}
 	:where(&)::-webkit-scrollbar-thumb:hover {
-		@apply bg-neutral-400 dark:bg-neutral-600;
+		background-color: var(--ui-neutral-border-strong);
 	}
 }
 
@@ -3085,10 +3296,11 @@
 		@apply flex items-center;
 
 		&[data-focus-visible] {
-			@apply outline-2 outline-offset-2 outline-primary-500;
+			@apply outline-2 outline-offset-2;
+			outline-color: var(--ui-primary-ring);
 		}
 		&[data-invalid] {
-			@apply outline-danger-500;
+			outline-color: var(--ui-danger-ring);
 		}
 	}
 }
@@ -3100,7 +3312,7 @@
 @utility ui-calendar {
 	:where(&) {
 		@apply inline-block rounded-lg p-3;
-		@apply bg-white dark:bg-neutral-900;
+		background-color: var(--ui-neutral-bg-tint);
 	}
 }
 
@@ -3113,21 +3325,24 @@
 @utility ui-calendar-heading {
 	:where(&) {
 		@apply flex-1 text-center text-sm font-semibold;
-		@apply text-neutral-900 dark:text-neutral-100;
+		color: var(--ui-neutral-fg-emphasis);
 	}
 }
 
 @utility ui-calendar-nav-button {
 	:where(&) {
 		@apply flex size-8 items-center justify-center rounded-full transition;
-		@apply text-neutral-600 dark:text-neutral-400;
-		@apply hover:bg-neutral-100 dark:hover:bg-neutral-800;
+		color: var(--ui-neutral-fg);
+		&:hover {
+			background-color: var(--ui-neutral-bg-tint-hover);
+		}
 
 		&[data-disabled] {
 			@apply cursor-not-allowed opacity-50;
 		}
 		&[data-focus-visible] {
-			@apply outline-2 outline-offset-2 outline-primary-500;
+			@apply outline-2 outline-offset-2;
+			outline-color: var(--ui-primary-ring);
 		}
 	}
 }
@@ -3145,7 +3360,8 @@
 
 @utility ui-calendar-header-cell {
 	:where(&) {
-		@apply pb-2 text-xs font-medium text-neutral-500;
+		@apply pb-2 text-xs font-medium;
+		color: var(--ui-neutral-fg-muted);
 	}
 }
 
@@ -3157,28 +3373,32 @@
 @utility ui-calendar-cell {
 	:where(&) {
 		@apply flex size-9 cursor-default items-center justify-center rounded-full text-sm transition;
-		@apply text-neutral-900 dark:text-neutral-100;
+		color: var(--ui-neutral-fg-emphasis);
 
 		&:hover {
-			@apply bg-neutral-100 dark:bg-neutral-800;
+			background-color: var(--ui-neutral-bg-tint-hover);
 		}
 		&[data-selected] {
-			@apply bg-primary-600 text-white;
+			background-color: var(--ui-primary-bg-solid);
+			color: var(--ui-primary-fg-on-solid);
 		}
 		&[data-disabled] {
 			@apply cursor-not-allowed opacity-30;
 		}
 		&[data-unavailable] {
-			@apply text-neutral-400 line-through;
+			@apply line-through;
+			color: var(--ui-neutral-fg-muted);
 		}
 		&[data-outside-month] {
-			@apply text-neutral-400 dark:text-neutral-600;
+			color: var(--ui-neutral-fg-muted);
 		}
 		&[data-focus-visible] {
-			@apply outline-2 outline-offset-2 outline-primary-500;
+			@apply outline-2 outline-offset-2;
+			outline-color: var(--ui-primary-ring);
 		}
 		&[data-invalid] {
-			@apply bg-danger-600 text-white;
+			background-color: var(--ui-danger-bg-solid);
+			color: var(--ui-danger-fg-on-solid);
 		}
 	}
 }
@@ -3202,10 +3422,13 @@
 @utility ui-date-segment {
 	:where(&) {
 		@apply rounded px-0.5 tabular-nums outline-none;
-		@apply focus:bg-primary-600 focus:text-white;
+		&:focus {
+			background-color: var(--ui-primary-bg-solid);
+			color: var(--ui-primary-fg-on-solid);
+		}
 
 		&[data-placeholder] {
-			@apply text-neutral-400 dark:text-neutral-500;
+			color: var(--ui-neutral-fg-muted);
 		}
 	}
 }
@@ -3231,7 +3454,8 @@
 		@apply flex items-center;
 
 		&[data-focus-within] {
-			@apply outline-2 outline-offset-2 outline-primary-500;
+			@apply outline-2 outline-offset-2;
+			outline-color: var(--ui-primary-ring);
 		}
 	}
 }
@@ -3239,11 +3463,14 @@
 @utility ui-date-picker-button {
 	:where(&) {
 		@apply -ml-9 flex size-8 items-center justify-center rounded transition;
-		@apply text-neutral-600 dark:text-neutral-400;
-		@apply hover:bg-neutral-100 dark:hover:bg-neutral-800;
+		color: var(--ui-neutral-fg);
+		&:hover {
+			background-color: var(--ui-neutral-bg-tint-hover);
+		}
 
 		&[data-focus-visible] {
-			@apply outline-2 outline-primary-500;
+			@apply outline-2;
+			outline-color: var(--ui-primary-ring);
 		}
 	}
 }
@@ -3273,11 +3500,14 @@
 @utility ui-combobox-button {
 	:where(&) {
 		@apply -ml-8 flex size-7 items-center justify-center rounded transition;
-		@apply text-neutral-600 dark:text-neutral-400;
-		@apply hover:bg-neutral-100 dark:hover:bg-neutral-800;
+		color: var(--ui-neutral-fg);
+		&:hover {
+			background-color: var(--ui-neutral-bg-tint-hover);
+		}
 
 		&[data-focus-visible] {
-			@apply outline-2 outline-primary-500;
+			@apply outline-2;
+			outline-color: var(--ui-primary-ring);
 		}
 	}
 }
@@ -3289,14 +3519,15 @@
 @utility ui-grid-list {
 	:where(&) {
 		@apply flex flex-col gap-1 rounded-lg border p-2 outline-none;
-		@apply border-neutral-200 dark:border-neutral-700;
+		border-color: var(--ui-neutral-border);
 
 		&[data-layout="grid"] {
 			@apply grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4;
 		}
 
 		&[data-focus-visible] {
-			@apply outline-2 outline-offset-2 outline-primary-500;
+			@apply outline-2 outline-offset-2;
+			outline-color: var(--ui-primary-ring);
 		}
 	}
 }
@@ -3304,19 +3535,19 @@
 @utility ui-grid-list-item {
 	:where(&) {
 		@apply flex cursor-default items-center gap-2 rounded-md p-2 outline-none transition;
-		@apply text-neutral-900 dark:text-neutral-100;
+		color: var(--ui-neutral-fg-emphasis);
 
 		&:hover {
-			@apply bg-neutral-100 dark:bg-neutral-800;
+			background-color: var(--ui-neutral-bg-tint-hover);
 		}
 		&[data-pressed] {
-			@apply bg-neutral-200 dark:bg-neutral-700;
+			background-color: var(--ui-neutral-bg-tint-pressed);
 		}
 		&[data-focused] {
-			@apply bg-neutral-100 dark:bg-neutral-800;
+			background-color: var(--ui-neutral-bg-tint-hover);
 		}
 		&[data-selected] {
-			@apply bg-primary-100 dark:bg-primary-900;
+			background-color: var(--ui-primary-bg-tint);
 		}
 		&[data-disabled] {
 			@apply opacity-50;
@@ -3326,7 +3557,8 @@
 
 @utility ui-grid-list-drag-handle {
 	:where(&) {
-		@apply cursor-grab text-neutral-400;
+		@apply cursor-grab;
+		color: var(--ui-neutral-fg-muted);
 
 		&[data-dragging] {
 			@apply cursor-grabbing;
@@ -3341,7 +3573,7 @@
 @utility ui-disclosure {
 	:where(&) {
 		@apply rounded-lg border;
-		@apply border-neutral-200 dark:border-neutral-700;
+		border-color: var(--ui-neutral-border);
 	}
 }
 
@@ -3371,11 +3603,14 @@
 @utility ui-disclosure-trigger {
 	:where(&) {
 		@apply flex w-full items-center gap-2 rounded-lg p-3 text-left font-medium transition;
-		@apply text-neutral-900 dark:text-neutral-100;
-		@apply hover:bg-neutral-50 dark:hover:bg-neutral-800;
+		color: var(--ui-neutral-fg-emphasis);
+		&:hover {
+			background-color: var(--ui-neutral-bg-tint);
+		}
 
 		&[data-focus-visible] {
-			@apply outline-2 outline-offset-2 outline-primary-500;
+			@apply outline-2 outline-offset-2;
+			outline-color: var(--ui-primary-ring);
 		}
 		&[data-disabled] {
 			@apply cursor-not-allowed opacity-50;
@@ -3406,7 +3641,8 @@
 
 @utility ui-accordion-item {
 	:where(&) {
-		@apply border-b border-neutral-200 dark:border-neutral-700;
+		@apply border-b;
+		border-color: var(--ui-neutral-border);
 
 		&:first-child {
 			@apply border-t;
@@ -3420,11 +3656,12 @@
 @utility ui-accordion-trigger {
 	:where(&) {
 		@apply flex w-full items-center justify-between py-4 text-left font-medium transition;
-		@apply text-neutral-900 dark:text-neutral-100;
+		color: var(--ui-neutral-fg-emphasis);
 		@apply hover:underline;
 
 		&[data-focus-visible] {
-			@apply outline-2 outline-offset-2 outline-primary-500;
+			@apply outline-2 outline-offset-2;
+			outline-color: var(--ui-primary-ring);
 		}
 		&[data-disabled] {
 			@apply cursor-not-allowed opacity-50;
@@ -3443,7 +3680,8 @@
 
 @utility ui-accordion-content {
 	:where(&) {
-		@apply overflow-hidden pb-4 text-sm text-neutral-600 dark:text-neutral-400;
+		@apply overflow-hidden pb-4 text-sm;
+		color: var(--ui-neutral-fg);
 		height: var(--disclosure-panel-height, auto);
 
 		&[data-entering],
@@ -3460,14 +3698,17 @@
 @utility ui-drop-zone {
 	:where(&) {
 		@apply flex min-h-24 flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed p-6 text-center transition;
-		@apply border-neutral-300 bg-neutral-50 text-neutral-600;
-		@apply dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-400;
+		border-color: var(--ui-neutral-border);
+		background-color: var(--ui-neutral-bg-tint);
+		color: var(--ui-neutral-fg);
 
 		&[data-drop-target] {
-			@apply border-primary-500 bg-primary-50 dark:bg-primary-950;
+			border-color: var(--ui-primary-ring);
+			background-color: var(--ui-primary-bg-tint);
 		}
 		&[data-focus-visible] {
-			@apply outline-2 outline-offset-2 outline-primary-500;
+			@apply outline-2 outline-offset-2;
+			outline-color: var(--ui-primary-ring);
 		}
 	}
 }
@@ -3484,7 +3725,7 @@
 			@apply flex-row gap-4;
 		}
 		&[data-invalid] {
-			@apply text-danger-600;
+			color: var(--ui-danger-fg);
 		}
 	}
 }
@@ -3504,15 +3745,21 @@
 	:where(&) {
 		/* Range selection start */
 		&[data-selection-start] {
-			@apply rounded-r-none bg-primary-600 text-white;
+			@apply rounded-r-none;
+			background-color: var(--ui-primary-bg-solid);
+			color: var(--ui-primary-fg-on-solid);
 		}
 		/* Range selection end */
 		&[data-selection-end] {
-			@apply rounded-l-none bg-primary-600 text-white;
+			@apply rounded-l-none;
+			background-color: var(--ui-primary-bg-solid);
+			color: var(--ui-primary-fg-on-solid);
 		}
 		/* Cells in the middle of a range */
 		&[data-selected]:not([data-selection-start]):not([data-selection-end]) {
-			@apply rounded-none bg-primary-100 text-primary-900 dark:bg-primary-900 dark:text-primary-100;
+			@apply rounded-none;
+			background-color: var(--ui-primary-bg-tint);
+			color: var(--ui-primary-fg-emphasis);
 		}
 	}
 }
@@ -3556,13 +3803,15 @@
 @utility ui-tree {
 	:where(&) {
 		@apply flex flex-col rounded-lg border p-1 outline-none;
-		@apply border-neutral-200 dark:border-neutral-700;
+		border-color: var(--ui-neutral-border);
 
 		&[data-empty] {
-			@apply items-center justify-center py-8 text-neutral-500;
+			@apply items-center justify-center py-8;
+			color: var(--ui-neutral-fg-muted);
 		}
 		&[data-focus-visible] {
-			@apply outline-2 outline-offset-2 outline-primary-500;
+			@apply outline-2 outline-offset-2;
+			outline-color: var(--ui-primary-ring);
 		}
 	}
 }
@@ -3570,21 +3819,21 @@
 @utility ui-tree-item {
 	:where(&) {
 		@apply flex cursor-default items-center gap-2 rounded-md py-1.5 pr-3 text-sm outline-none transition;
-		@apply text-neutral-900 dark:text-neutral-100;
+		color: var(--ui-neutral-fg-emphasis);
 		/* Indentation based on level using CSS custom property set by RAC */
 		padding-left: calc(0.5rem + var(--tree-item-level, 0) * 1.25rem);
 
 		&:hover {
-			@apply bg-neutral-100 dark:bg-neutral-800;
+			background-color: var(--ui-neutral-bg-tint-hover);
 		}
 		&[data-pressed] {
-			@apply bg-neutral-200 dark:bg-neutral-700;
+			background-color: var(--ui-neutral-bg-tint-pressed);
 		}
 		&[data-focused] {
-			@apply bg-neutral-100 dark:bg-neutral-800;
+			background-color: var(--ui-neutral-bg-tint-hover);
 		}
 		&[data-selected] {
-			@apply bg-primary-100 dark:bg-primary-900;
+			background-color: var(--ui-primary-bg-tint);
 		}
 		&[data-disabled] {
 			@apply opacity-50;
@@ -3598,20 +3847,22 @@
 @utility ui-tree-expand-button {
 	:where(&) {
 		@apply flex size-5 flex-shrink-0 items-center justify-center rounded transition;
-		@apply text-neutral-500 dark:text-neutral-400;
+		color: var(--ui-neutral-fg-muted);
 
 		&:hover {
-			@apply bg-neutral-200 dark:bg-neutral-700;
+			background-color: var(--ui-neutral-bg-tint-pressed);
 		}
 		&[data-focus-visible] {
-			@apply outline-2 outline-primary-500;
+			@apply outline-2;
+			outline-color: var(--ui-primary-ring);
 		}
 	}
 }
 
 @utility ui-tree-load-more-item {
 	:where(&) {
-		@apply flex items-center justify-center py-2 text-sm text-neutral-500;
+		@apply flex items-center justify-center py-2 text-sm;
+		color: var(--ui-neutral-fg-muted);
 	}
 }
 
@@ -3624,7 +3875,8 @@
 		@apply py-1;
 
 		&:not(:first-child) {
-			@apply border-t border-neutral-200 dark:border-neutral-700;
+			@apply border-t;
+			border-color: var(--ui-neutral-border);
 		}
 	}
 }
@@ -3642,23 +3894,26 @@
 @utility ui-column-resizer {
 	:where(&) {
 		@apply box-content w-px cursor-col-resize rounded bg-clip-content px-2;
-		@apply bg-neutral-300 dark:bg-neutral-600;
+		background-color: var(--ui-neutral-border);
 
 		&:hover {
-			@apply bg-neutral-400 dark:bg-neutral-500;
+			background-color: var(--ui-neutral-border-strong);
 		}
 		&[data-resizing] {
-			@apply w-0.5 bg-primary-600;
+			@apply w-0.5;
+			background-color: var(--ui-primary-bg-solid);
 		}
 		&[data-focus-visible] {
-			@apply outline-2 outline-primary-500;
+			@apply outline-2;
+			outline-color: var(--ui-primary-ring);
 		}
 	}
 }
 
 @utility ui-table-load-more-item {
 	:where(&) {
-		@apply flex items-center justify-center py-4 text-sm text-neutral-500;
+		@apply flex items-center justify-center py-4 text-sm;
+		color: var(--ui-neutral-fg-muted);
 	}
 }
 
@@ -3668,8 +3923,9 @@
 
 @utility ui-resizable {
 	:where(&) {
-		@apply grid w-full overflow-hidden rounded-lg border border-neutral-200;
-		@apply bg-white dark:border-neutral-800 dark:bg-neutral-950;
+		@apply grid w-full overflow-hidden rounded-lg border;
+		border-color: var(--ui-neutral-border);
+		background-color: var(--ui-neutral-bg-tint);
 		--resizable-handle-size: 0.75rem;
 
 		&[data-orientation="horizontal"] {
@@ -3692,7 +3948,8 @@
 
 @utility ui-resizable-handle {
 	:where(&) {
-		@apply relative flex items-center justify-center bg-transparent text-neutral-500;
+		@apply relative flex items-center justify-center bg-transparent;
+		color: var(--ui-neutral-fg-muted);
 		@apply select-none touch-none;
 
 		&[data-orientation="horizontal"] {
@@ -3704,7 +3961,8 @@
 
 		&::before {
 			content: "";
-			@apply rounded-full bg-neutral-300 dark:bg-neutral-700;
+			@apply rounded-full;
+			background-color: var(--ui-neutral-border);
 		}
 		&[data-orientation="horizontal"]::before {
 			@apply h-10 w-0.5;
@@ -3713,16 +3971,17 @@
 			@apply h-0.5 w-10;
 		}
 		&:hover::before {
-			@apply bg-neutral-400 dark:bg-neutral-500;
+			background-color: var(--ui-neutral-border-strong);
 		}
 		&[data-resizing]::before {
-			@apply bg-primary-600;
+			background-color: var(--ui-primary-bg-solid);
 		}
 		&[data-disabled] {
 			@apply cursor-not-allowed opacity-50;
 		}
 		&[data-focus-visible] {
-			@apply outline-2 outline-primary-500;
+			@apply outline-2;
+			outline-color: var(--ui-primary-ring);
 		}
 	}
 }
@@ -3736,7 +3995,8 @@
 		@apply flex flex-col gap-1;
 
 		&:not(:first-child) {
-			@apply mt-2 border-t border-neutral-200 pt-2 dark:border-neutral-700;
+			@apply mt-2 border-t pt-2;
+			border-color: var(--ui-neutral-border);
 		}
 	}
 }
@@ -3744,13 +4004,14 @@
 @utility ui-grid-list-header {
 	:where(&) {
 		@apply px-2 py-1 text-xs font-semibold uppercase tracking-wider;
-		@apply text-neutral-500 dark:text-neutral-400;
+		color: var(--ui-neutral-fg-muted);
 	}
 }
 
 @utility ui-grid-list-load-more-item {
 	:where(&) {
-		@apply flex items-center justify-center py-2 text-sm text-neutral-500;
+		@apply flex items-center justify-center py-2 text-sm;
+		color: var(--ui-neutral-fg-muted);
 	}
 }
 
@@ -3763,14 +4024,16 @@
 		@apply py-1;
 
 		&:not(:first-child) {
-			@apply border-t border-neutral-200 dark:border-neutral-700;
+			@apply border-t;
+			border-color: var(--ui-neutral-border);
 		}
 	}
 }
 
 @utility ui-listbox-load-more-item {
 	:where(&) {
-		@apply flex items-center justify-center py-2 text-sm text-neutral-500;
+		@apply flex items-center justify-center py-2 text-sm;
+		color: var(--ui-neutral-fg-muted);
 	}
 }
 
@@ -3785,7 +4048,8 @@
 @utility ui-avatar {
 	:where(&) {
 		@apply relative inline-flex size-10 shrink-0 select-none items-center justify-center rounded-full;
-		@apply bg-neutral-100 text-neutral-900 dark:bg-neutral-800 dark:text-neutral-100;
+		background-color: var(--ui-neutral-bg-tint-hover);
+		color: var(--ui-neutral-fg-emphasis);
 
 		&[data-size="sm"] {
 			@apply size-8 text-xs;
@@ -3798,7 +4062,8 @@
 		}
 
 		&[data-focus-visible] {
-			@apply outline-2 outline-offset-2 outline-primary-500;
+			@apply outline-2 outline-offset-2;
+			outline-color: var(--ui-primary-ring);
 		}
 	}
 }
@@ -3816,14 +4081,16 @@
 @utility ui-avatar-fallback {
 	:where(&) {
 		@apply absolute inset-0 flex size-full items-center justify-center overflow-hidden rounded-full text-xs font-medium uppercase;
-		@apply bg-neutral-200 text-neutral-600 dark:bg-neutral-700 dark:text-neutral-200;
+		background-color: var(--ui-neutral-bg-tint-pressed);
+		color: var(--ui-neutral-fg);
 	}
 }
 
 @utility ui-avatar-badge {
 	:where(&) {
-		@apply absolute bottom-0 right-0 size-3 rounded-full;
-		@apply border-2 border-white bg-neutral-400 dark:border-neutral-900;
+		@apply absolute bottom-0 right-0 size-3 rounded-full border-2;
+		border-color: var(--ui-neutral-bg-tint);
+		background-color: var(--ui-neutral-border-strong);
 	}
 }
 
@@ -3832,16 +4099,19 @@
 		@apply flex -space-x-3;
 
 		& > .ui-avatar {
-			@apply ring-2 ring-white dark:ring-neutral-900;
+			@apply ring-2;
+			--tw-ring-color: var(--ui-neutral-bg-tint);
 		}
 	}
 }
 
 @utility ui-avatar-group-count {
 	:where(&) {
-		@apply relative inline-flex size-10 shrink-0 select-none items-center justify-center overflow-hidden rounded-full;
-		@apply bg-neutral-100 text-sm font-medium text-neutral-600 ring-2 ring-white;
-		@apply dark:bg-neutral-800 dark:text-neutral-300 dark:ring-neutral-900;
+		@apply relative inline-flex size-10 shrink-0 select-none items-center justify-center overflow-hidden rounded-full ring-2;
+		@apply text-sm font-medium;
+		background-color: var(--ui-neutral-bg-tint-hover);
+		color: var(--ui-neutral-fg);
+		--tw-ring-color: var(--ui-neutral-bg-tint);
 	}
 }
 
@@ -3852,7 +4122,8 @@
 @utility ui-logo {
 	:where(&) {
 		@apply relative inline-flex size-10 shrink-0 select-none items-center justify-center overflow-hidden rounded-lg;
-		@apply bg-neutral-100 text-neutral-900 dark:bg-neutral-800 dark:text-neutral-100;
+		background-color: var(--ui-neutral-bg-tint-hover);
+		color: var(--ui-neutral-fg-emphasis);
 
 		&[data-size="sm"] {
 			@apply size-8 text-xs;
@@ -3865,7 +4136,8 @@
 		}
 
 		&[data-focus-visible] {
-			@apply outline-2 outline-offset-2 outline-primary-500;
+			@apply outline-2 outline-offset-2;
+			outline-color: var(--ui-primary-ring);
 		}
 	}
 }
@@ -3883,14 +4155,16 @@
 @utility ui-logo-fallback {
 	:where(&) {
 		@apply absolute inset-0 flex size-full items-center justify-center rounded-lg text-xs font-medium uppercase;
-		@apply bg-neutral-200 text-neutral-600 dark:bg-neutral-700 dark:text-neutral-200;
+		background-color: var(--ui-neutral-bg-tint-pressed);
+		color: var(--ui-neutral-fg);
 	}
 }
 
 @utility ui-logo-badge {
 	:where(&) {
-		@apply absolute bottom-0 right-0 size-3 rounded-full;
-		@apply border-2 border-white bg-neutral-400 dark:border-neutral-900;
+		@apply absolute bottom-0 right-0 size-3 rounded-full border-2;
+		border-color: var(--ui-neutral-bg-tint);
+		background-color: var(--ui-neutral-border-strong);
 	}
 }
 
@@ -3899,42 +4173,48 @@
 		@apply flex -space-x-3;
 
 		& > .ui-logo {
-			@apply ring-2 ring-white dark:ring-neutral-900;
+			@apply ring-2;
+			--tw-ring-color: var(--ui-neutral-bg-tint);
 		}
 	}
 }
 
 @utility ui-logo-group-count {
 	:where(&) {
-		@apply relative inline-flex size-10 shrink-0 select-none items-center justify-center overflow-hidden rounded-lg;
-		@apply bg-neutral-100 text-sm font-medium text-neutral-600 ring-2 ring-white;
-		@apply dark:bg-neutral-800 dark:text-neutral-300 dark:ring-neutral-900;
+		@apply relative inline-flex size-10 shrink-0 select-none items-center justify-center overflow-hidden rounded-lg ring-2;
+		@apply text-sm font-medium;
+		background-color: var(--ui-neutral-bg-tint-hover);
+		color: var(--ui-neutral-fg);
+		--tw-ring-color: var(--ui-neutral-bg-tint);
 	}
 }
 
 @utility ui-header {
 	:where(&) {
 		@apply px-3 py-1.5 text-xs font-semibold uppercase tracking-wider;
-		@apply text-neutral-500 dark:text-neutral-400;
+		color: var(--ui-neutral-fg-muted);
 	}
 }
 
 @utility ui-heading {
 	:where(&) {
-		@apply text-lg font-semibold leading-none tracking-tight text-neutral-900 dark:text-neutral-100;
+		@apply text-lg font-semibold leading-none tracking-tight;
+		color: var(--ui-neutral-fg-emphasis);
 	}
 }
 
 @utility ui-text {
 	:where(&) {
-		@apply text-sm text-neutral-700 dark:text-neutral-300;
+		@apply text-sm;
+		color: var(--ui-neutral-fg);
 	}
 }
 
 @utility ui-skeleton {
 	:where(&) {
-		@apply h-4 w-full rounded-md bg-neutral-200 dark:bg-neutral-800;
+		@apply h-4 w-full rounded-md;
 		@apply motion-safe:animate-pulse;
+		background-color: var(--ui-neutral-border);
 	}
 }
 
@@ -3946,13 +4226,15 @@
 
 @utility ui-keyboard {
 	:where(&) {
-		@apply ml-auto text-xs text-neutral-400 dark:text-neutral-500;
+		@apply ml-auto text-xs;
+		color: var(--ui-neutral-fg-muted);
 	}
 }
 
 @utility ui-overlay-arrow {
 	:where(&) {
-		@apply absolute pointer-events-none fill-white dark:fill-neutral-800;
+		@apply absolute pointer-events-none;
+		fill: var(--ui-neutral-bg-tint);
 
 		&[data-placement^="bottom"] {
 			@apply -top-2 left-1/2 -translate-x-1/2 rotate-180;
@@ -3971,10 +4253,11 @@
 
 @utility ui-drop-indicator {
 	:where(&) {
-		@apply h-0.5 w-full rounded-full bg-primary-500;
+		@apply h-0.5 w-full rounded-full;
+		background-color: var(--ui-primary-ring);
 
 		&[data-drop-target] {
-			@apply bg-primary-600;
+			background-color: var(--ui-primary-bg-solid);
 		}
 	}
 }
