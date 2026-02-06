@@ -17,45 +17,32 @@ const meta: Meta<typeof Spinner> = {
 	},
 	args: {
 		size: "md",
-		color: "primary",
 	},
 };
 
 export default meta;
 type Story = StoryObj<typeof Spinner>;
 
-export const Default: Story = {
-	render: (args) => (
-		<Spinner {...args}>
-			<Spinner.Ring />
-			<Spinner.Label>Loading...</Spinner.Label>
-		</Spinner>
-	),
-};
-
-export const RingOnly: Story = {
-	render: (args) => (
-		<Spinner {...args} aria-label="Loading">
-			<Spinner.Ring />
-		</Spinner>
-	),
-};
+export const Default: Story = {};
 
 export const Sizes: Story = {
 	render: () => (
 		<div className="flex items-center gap-4">
-			<Spinner size="sm">
-				<Spinner.Ring />
-				<Spinner.Label>Loading small</Spinner.Label>
-			</Spinner>
-			<Spinner size="md">
-				<Spinner.Ring />
-				<Spinner.Label>Loading medium</Spinner.Label>
-			</Spinner>
-			<Spinner size="lg">
-				<Spinner.Ring />
-				<Spinner.Label>Loading large</Spinner.Label>
-			</Spinner>
+			<Spinner size="sm" aria-label="Loading small" />
+			<Spinner size="md" aria-label="Loading medium" />
+			<Spinner size="lg" aria-label="Loading large" />
+		</div>
+	),
+};
+
+export const Colors: Story = {
+	render: () => (
+		<div className="flex items-center gap-4">
+			<Spinner color="primary" aria-label="Primary" />
+			<Spinner color="neutral" aria-label="Neutral" />
+			<Spinner color="success" aria-label="Success" />
+			<Spinner color="warning" aria-label="Warning" />
+			<Spinner color="danger" aria-label="Danger" />
 		</div>
 	),
 };

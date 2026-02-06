@@ -12,6 +12,8 @@ import {
 	TooltipTrigger as AriaTooltipTrigger,
 } from "react-aria-components";
 
+import { type Color, ColorProvider, useColor } from "./color-context";
+
 const MOBILE_BREAKPOINT = 768;
 const SIDEBAR_COOKIE_NAME = "sidebar:state";
 const SIDEBAR_COOKIE_MAX_AGE = 60 * 60 * 24 * 7; // 7 days
@@ -161,14 +163,12 @@ export namespace Sidebar {
 		className?: cn.ClassName;
 	}
 
-	export type ItemColor = "primary" | "neutral" | "danger" | "warning" | "success";
-
 	export interface ItemProps extends Omit<
 		ComponentProps<typeof AriaLink>,
 		"className" | "aria-current"
 	> {
 		className?: cn.ClassName;
-		color?: ItemColor;
+		color?: Color;
 		current?: boolean;
 		"aria-current"?: ComponentProps<"a">["aria-current"];
 	}
@@ -537,11 +537,13 @@ Sidebar.Nav = function SidebarNav({ className, ...props }: Sidebar.NavProps) {
 
 Sidebar.Item = function SidebarItem({
 	className,
-	color = "neutral",
+	color: colorProp,
 	current,
 	"aria-current": ariaCurrent,
 	...props
 }: Sidebar.ItemProps) {
+	let color = useColor(colorProp);
+
 	let resolvedAriaCurrent = ariaCurrent;
 	if (current && resolvedAriaCurrent == null) {
 		resolvedAriaCurrent = "page";
@@ -553,14 +555,16 @@ Sidebar.Item = function SidebarItem({
 	}
 
 	return (
-		<AriaLink
-			{...props}
-			aria-current={resolvedAriaCurrent}
-			data-slot="item"
-			data-color={color}
-			data-current={isCurrent || undefined}
-			className={cn("ui-sidebar-item", className)}
-		/>
+		<ColorProvider color={color}>
+			<AriaLink
+				{...props}
+				aria-current={resolvedAriaCurrent}
+				data-slot="item"
+				data-color={color}
+				data-current={isCurrent || undefined}
+				className={cn("ui-sidebar-item", className)}
+			/>
+		</ColorProvider>
 	);
 };
 

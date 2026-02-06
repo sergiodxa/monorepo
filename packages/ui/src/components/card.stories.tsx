@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react";
 
+import { Badge } from "./badge";
 import { Button } from "./button";
 import { Card } from "./card";
 
@@ -24,6 +25,7 @@ const meta: Meta<StoryArgs> = {
 		showDescription: true,
 		showFooter: true,
 		className: "max-w-md",
+		color: "neutral",
 	},
 	argTypes: {
 		title: { control: "text" },
@@ -33,6 +35,10 @@ const meta: Meta<StoryArgs> = {
 		showDescription: { control: "boolean" },
 		showFooter: { control: "boolean" },
 		className: { control: "text" },
+		color: {
+			control: "select",
+			options: ["primary", "neutral", "success", "warning", "danger"],
+		},
 	},
 };
 
@@ -67,5 +73,105 @@ export const WithActions: Story = {
 				<Button size="sm">Upgrade</Button>
 			</Card.Footer>
 		</Card>
+	),
+};
+
+export const Colors: Story = {
+	render: () => (
+		<div className="grid grid-cols-2 gap-4">
+			<Card color="neutral" className="max-w-xs">
+				<Card.Header>
+					<Card.Title>Neutral Card</Card.Title>
+					<Card.Description>Default neutral styling</Card.Description>
+				</Card.Header>
+				<Card.Footer>
+					<Button size="sm">Action</Button>
+				</Card.Footer>
+			</Card>
+
+			<Card color="primary" className="max-w-xs">
+				<Card.Header>
+					<Card.Title>Primary Card</Card.Title>
+					<Card.Description>Highlighted content</Card.Description>
+				</Card.Header>
+				<Card.Footer>
+					<Button size="sm">Action</Button>
+				</Card.Footer>
+			</Card>
+
+			<Card color="success" className="max-w-xs">
+				<Card.Header>
+					<Card.Title>Success Card</Card.Title>
+					<Card.Description>Positive feedback</Card.Description>
+				</Card.Header>
+				<Card.Footer>
+					<Button size="sm">Action</Button>
+				</Card.Footer>
+			</Card>
+
+			<Card color="warning" className="max-w-xs">
+				<Card.Header>
+					<Card.Title>Warning Card</Card.Title>
+					<Card.Description>Attention needed</Card.Description>
+				</Card.Header>
+				<Card.Footer>
+					<Button size="sm">Action</Button>
+				</Card.Footer>
+			</Card>
+
+			<Card color="danger" className="max-w-xs">
+				<Card.Header>
+					<Card.Title>Danger Card</Card.Title>
+					<Card.Description>Critical information</Card.Description>
+				</Card.Header>
+				<Card.Footer>
+					<Button size="sm">Action</Button>
+				</Card.Footer>
+			</Card>
+		</div>
+	),
+};
+
+export const ColorInheritance: Story = {
+	render: () => (
+		<div className="flex flex-col gap-4">
+			<Card color="primary" className="max-w-md">
+				<Card.Header>
+					<Card.Title>Primary Card with Inherited Colors</Card.Title>
+					<Card.Description>
+						Nested components inherit the primary color from the Card
+					</Card.Description>
+				</Card.Header>
+				<Card.Content className="flex gap-2">
+					<Badge>Inherits primary</Badge>
+					<Badge color="danger">Explicit danger</Badge>
+				</Card.Content>
+				<Card.Footer className="gap-2">
+					<Button variant="outline" size="sm">
+						Inherits primary
+					</Button>
+					<Button color="neutral" variant="outline" size="sm">
+						Explicit neutral
+					</Button>
+				</Card.Footer>
+			</Card>
+
+			<Card color="danger" className="max-w-md">
+				<Card.Header>
+					<Card.Title>Danger Zone</Card.Title>
+					<Card.Description>All nested components inherit danger color by default</Card.Description>
+				</Card.Header>
+				<Card.Content className="flex gap-2">
+					<Badge>Inherits danger</Badge>
+					<Badge color="success">Explicit success</Badge>
+				</Card.Content>
+				<Card.Footer className="gap-2">
+					<Button size="sm">Delete Account</Button>
+					<Button color="neutral" variant="outline" size="sm">
+						Cancel
+					</Button>
+				</Card.Footer>
+			</Card>
+		</div>
 	),
 };

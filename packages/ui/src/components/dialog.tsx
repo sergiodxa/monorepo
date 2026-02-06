@@ -70,7 +70,7 @@ function Close({ className, "aria-label": ariaLabel = "Close" }: Dialog.ClosePro
 			slot="close"
 			variant="ghost"
 			color="neutral"
-			size="icon-sm"
+			size="sm"
 			aria-label={ariaLabel}
 			className={cn("ui-dialog-close", className)}
 		>

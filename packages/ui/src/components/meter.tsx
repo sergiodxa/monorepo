@@ -3,9 +3,9 @@ import type { ComponentProps } from "react";
 import { cn } from "@pkg/cn";
 import { Meter as AriaMeter } from "react-aria-components";
 
-export namespace Meter {
-	export type Color = "primary" | "success" | "warning" | "danger";
+import { type Color, ColorProvider, useColor } from "./color-context";
 
+export namespace Meter {
 	export interface Props extends Omit<ComponentProps<typeof AriaMeter>, "className"> {
 		className?: cn.ClassName;
 		color?: Color;
@@ -28,8 +28,13 @@ export namespace Meter {
 	}
 }
 
-export function Meter({ className, color = "primary", ...props }: Meter.Props) {
-	return <AriaMeter {...props} data-color={color} className={cn("ui-meter", className)} />;
+export function Meter({ className, color: colorProp, ...props }: Meter.Props) {
+	let color = useColor(colorProp);
+	return (
+		<ColorProvider color={color}>
+			<AriaMeter {...props} data-color={color} className={cn("ui-meter", className)} />
+		</ColorProvider>
+	);
 }
 
 Meter.Track = function MeterTrack({ className, ...props }: Meter.TrackProps) {

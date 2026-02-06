@@ -1,7 +1,8 @@
 import type { HTMLAttributes, ReactNode } from "react";
 
+import { type Color, ColorProvider, useColor } from "./color-context";
+
 export namespace Alert {
-	export type Color = "primary" | "success" | "warning" | "danger" | "neutral";
 	export type Live = "polite" | "assertive" | "off";
 
 	export interface Props extends Omit<
@@ -61,31 +62,34 @@ import { cn } from "@pkg/cn";
 import { Children, isValidElement } from "react";
 
 export function Alert({
-	color = "primary",
+	color: colorProp,
 	live = "polite",
 	children,
 	className,
 	role = "alert",
 	...props
 }: Alert.Props) {
+	let color = useColor(colorProp);
 	let ariaLive = props["aria-live"] ?? (live === "off" ? undefined : live);
 	let hasIcon = Children.toArray(children).some(
 		(child) => isValidElement(child) && child.type === Alert.Icon,
 	);
 
 	return (
-		<div
-			{...props}
-			role={role}
-			aria-live={ariaLive}
-			aria-atomic={props["aria-atomic"] ?? true}
-			data-color={color}
-			data-has-icon={hasIcon || undefined}
-			data-slot="alert"
-			className={cn("ui-alert", className)}
-		>
-			{children}
-		</div>
+		<ColorProvider color={color}>
+			<div
+				{...props}
+				role={role}
+				aria-live={ariaLive}
+				aria-atomic={props["aria-atomic"] ?? true}
+				data-color={color}
+				data-has-icon={hasIcon || undefined}
+				data-slot="alert"
+				className={cn("ui-alert", className)}
+			>
+				{children}
+			</div>
+		</ColorProvider>
 	);
 }
 

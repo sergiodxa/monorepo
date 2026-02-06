@@ -194,13 +194,6 @@
 	}
 }
 
-@utility ui-button-spinner {
-	:where(&) {
-		/* Inherit text color from button */
-		@apply inline-flex text-current;
-	}
-}
-
 @utility ui-button-pending-content {
 	:where(&) {
 		/* Screen reader only - content is still accessible but spinner is visible */
@@ -1036,8 +1029,37 @@
 
 @utility ui-card {
 	:where(&) {
-		@apply rounded-lg border bg-white text-neutral-900 shadow-sm;
-		@apply border-neutral-200 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-100;
+		@apply rounded-lg border shadow-sm;
+
+		/* Neutral (default) */
+		&[data-color="neutral"] {
+			@apply border-neutral-200 bg-white text-neutral-900;
+			@apply dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-100;
+		}
+
+		/* Primary */
+		&[data-color="primary"] {
+			@apply border-primary-200 bg-primary-50 text-primary-900;
+			@apply dark:border-primary-800 dark:bg-primary-950 dark:text-primary-100;
+		}
+
+		/* Success */
+		&[data-color="success"] {
+			@apply border-success-200 bg-success-50 text-success-900;
+			@apply dark:border-success-800 dark:bg-success-950 dark:text-success-100;
+		}
+
+		/* Warning */
+		&[data-color="warning"] {
+			@apply border-warning-200 bg-warning-50 text-warning-900;
+			@apply dark:border-warning-800 dark:bg-warning-950 dark:text-warning-100;
+		}
+
+		/* Danger */
+		&[data-color="danger"] {
+			@apply border-danger-200 bg-danger-50 text-danger-900;
+			@apply dark:border-danger-800 dark:bg-danger-950 dark:text-danger-100;
+		}
 	}
 }
 
@@ -1055,7 +1077,7 @@
 
 @utility ui-card-description {
 	:where(&) {
-		@apply text-sm text-neutral-500 dark:text-neutral-400;
+		@apply text-sm opacity-70;
 	}
 }
 
@@ -2499,8 +2521,11 @@
 		[data-color="primary"] & {
 			@apply bg-primary-600;
 		}
+		[data-color="neutral"] & {
+			@apply bg-neutral-600 dark:bg-neutral-400;
+		}
 		[data-color="success"] & {
-			@apply bg-primary-600;
+			@apply bg-success-600;
 		}
 		[data-color="warning"] & {
 			@apply bg-warning-500;
@@ -2558,8 +2583,10 @@
 @utility ui-spinner {
 	:where(&) {
 		@apply inline-flex items-center justify-center;
-		@apply text-primary-600;
 
+		&[data-color="primary"] {
+			@apply text-primary-600;
+		}
 		&[data-color="neutral"] {
 			@apply text-neutral-600 dark:text-neutral-400;
 		}
@@ -2572,12 +2599,17 @@
 		&[data-color="danger"] {
 			@apply text-danger-600;
 		}
+
+		/* Inside buttons, inherit the button's text color */
+		.ui-button & {
+			@apply text-current;
+		}
 	}
 }
 
-@utility ui-spinner-ring {
+@utility ui-spinner-icon {
 	:where(&) {
-		@apply size-5 animate-spin rounded-full border-2 border-current/30 border-t-current;
+		@apply size-5 animate-spin;
 
 		[data-size="sm"] & {
 			@apply size-4;
@@ -2585,12 +2617,6 @@
 		[data-size="lg"] & {
 			@apply size-7;
 		}
-	}
-}
-
-@utility ui-spinner-label {
-	:where(&) {
-		@apply sr-only;
 	}
 }
 

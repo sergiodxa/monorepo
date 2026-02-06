@@ -1,3 +1,6 @@
+// Color System
+export { type Color, ColorProvider, useColor } from "./components/color-context";
+
 // Buttons
 export { Button } from "./components/button";
 export { LinkButton } from "./components/link-button";

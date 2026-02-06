@@ -6,9 +6,9 @@ import { useState } from "react";
 import { Link as AriaLink } from "react-aria-components";
 import { PrefetchPageLinks } from "react-router";
 
-export namespace Link {
-	export type Color = "primary" | "neutral" | "danger" | "warning" | "success";
+import { type Color, ColorProvider, useColor } from "./color-context";
 
+export namespace Link {
 	export interface Props extends Omit<ComponentProps<typeof AriaLink>, "className"> {
 		/** The color scheme of the link */
 		color?: Color;
@@ -31,11 +31,12 @@ export namespace Link {
  * <Link href="/settings" prefetch="intent">Settings</Link>
  * ```
  */
-export function Link({ className, color = "primary", prefetch, ...props }: Link.Props) {
+export function Link({ className, color: colorProp, prefetch, ...props }: Link.Props) {
+	let color = useColor(colorProp);
 	let [shouldPrefetch, setShouldPrefetch] = useState(false);
 
 	return (
-		<>
+		<ColorProvider color={color}>
 			<AriaLink
 				{...props}
 				data-color={color}
@@ -53,6 +54,6 @@ export function Link({ className, color = "primary", prefetch, ...props }: Link.
 			{props.href && shouldPrefetch && prefetch === "intent" && (
 				<PrefetchPageLinks page={props.href} />
 			)}
-		</>
+		</ColorProvider>
 	);
 }

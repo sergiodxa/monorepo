@@ -9,6 +9,8 @@ import {
 	Button,
 } from "react-aria-components";
 
+import { type Color, ColorProvider, useColor } from "./color-context";
+
 export namespace TagGroup {
 	export interface Props extends Omit<ComponentProps<typeof AriaTagGroup>, "className"> {
 		className?: cn.ClassName;
@@ -21,11 +23,9 @@ export namespace TagGroup {
 		className?: cn.ClassName;
 	}
 
-	export type TagColor = "primary" | "neutral" | "danger" | "warning" | "success";
-
 	export interface TagProps extends Omit<ComponentProps<typeof AriaTag>, "className"> {
 		className?: cn.ClassName;
-		color?: TagColor;
+		color?: Color;
 	}
 }
 
@@ -42,29 +42,32 @@ TagGroup.List = function TagGroupList<T extends object>({
 
 TagGroup.Tag = function TagGroupTag({
 	className,
-	color = "neutral",
+	color: colorProp,
 	children,
 	...props
 }: TagGroup.TagProps) {
+	let color = useColor(colorProp);
 	let textValue = typeof children === "string" ? children : undefined;
 
 	return (
-		<AriaTag
-			{...props}
-			textValue={textValue}
-			data-color={color}
-			className={cn("ui-tag", className)}
-		>
-			{(renderProps) => (
-				<>
-					{typeof children === "function" ? children(renderProps) : children}
-					{renderProps.allowsRemoving && (
-						<Button slot="remove" className="ui-tag-remove">
-							<XIcon className="size-3" aria-hidden />
-						</Button>
-					)}
-				</>
-			)}
-		</AriaTag>
+		<ColorProvider color={color}>
+			<AriaTag
+				{...props}
+				textValue={textValue}
+				data-color={color}
+				className={cn("ui-tag", className)}
+			>
+				{(renderProps) => (
+					<>
+						{typeof children === "function" ? children(renderProps) : children}
+						{renderProps.allowsRemoving && (
+							<Button slot="remove" className="ui-tag-remove">
+								<XIcon className="size-3" aria-hidden />
+							</Button>
+						)}
+					</>
+				)}
+			</AriaTag>
+		</ColorProvider>
 	);
 };

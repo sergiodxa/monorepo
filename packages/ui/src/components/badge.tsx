@@ -2,8 +2,9 @@ import type { ComponentProps } from "react";
 
 import { cn } from "@pkg/cn";
 
+import { type Color, ColorProvider, useColor } from "./color-context";
+
 export namespace Badge {
-	export type Color = "primary" | "neutral" | "success" | "warning" | "danger";
 	export type Variant = "default" | "secondary" | "outline";
 
 	export interface Props extends Omit<ComponentProps<"span">, "className"> {
@@ -21,19 +22,17 @@ export namespace Badge {
 	}
 }
 
-export function Badge({
-	color = "neutral",
-	variant = "default",
-	className,
-	...props
-}: Badge.Props) {
+export function Badge({ color: colorProp, variant = "default", className, ...props }: Badge.Props) {
+	let color = useColor(colorProp);
 	return (
-		<span
-			{...props}
-			data-color={color}
-			data-variant={variant}
-			className={cn("ui-badge", className)}
-		/>
+		<ColorProvider color={color}>
+			<span
+				{...props}
+				data-color={color}
+				data-variant={variant}
+				className={cn("ui-badge", className)}
+			/>
+		</ColorProvider>
 	);
 }
 

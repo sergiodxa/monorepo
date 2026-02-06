@@ -4,9 +4,9 @@ import { cn } from "@pkg/cn";
 import { useRef, useState } from "react";
 import { NavLink as ReactRouterNavLink, PrefetchPageLinks } from "react-router";
 
-export namespace NavLink {
-	export type Color = "primary" | "neutral" | "danger" | "warning" | "success";
+import { type Color, ColorProvider, useColor } from "./color-context";
 
+export namespace NavLink {
 	export interface Props extends Omit<ReactRouterNavLinkProps, "className"> {
 		/** The color scheme of the nav link */
 		color?: Color;
@@ -30,17 +30,18 @@ export namespace NavLink {
  */
 export function NavLink({
 	className,
-	color = "primary",
+	color: colorProp,
 	prefetch,
 	children,
 	hasBackground,
 	...props
 }: NavLink.Props) {
+	let color = useColor(colorProp);
 	let [shouldPrefetch, setShouldPrefetch] = useState(false);
 	let ref = useRef<HTMLAnchorElement>(null);
 
 	return (
-		<>
+		<ColorProvider color={color}>
 			<ReactRouterNavLink
 				{...props}
 				ref={ref}
@@ -79,6 +80,6 @@ export function NavLink({
 			</ReactRouterNavLink>
 			{prefetch === "render" && <PrefetchPageLinks page={props.to.toString()} />}
 			{shouldPrefetch && prefetch === "intent" && <PrefetchPageLinks page={props.to.toString()} />}
-		</>
+		</ColorProvider>
 	);
 }

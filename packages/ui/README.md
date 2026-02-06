@@ -124,6 +124,52 @@ function App() {
 
 ## Component Patterns
 
+### Color System & Inheritance
+
+Components use a shared color system with five semantic colors: `primary`, `neutral`, `success`, `warning`, and `danger`. The default color is `neutral`.
+
+```tsx
+import { Button, Card, Badge } from "@pkg/ui";
+
+// Explicit color
+<Button color="primary">Primary Button</Button>
+<Button color="danger">Danger Button</Button>
+
+// Default is neutral
+<Button>Neutral Button</Button>
+```
+
+**Color Inheritance:** Colors cascade from parent to child components via React Context. Any component with a `color` prop both consumes and provides color to its children:
+
+```tsx
+// All nested components inherit the Card's color
+<Card color="danger">
+	<Card.Header>
+		<Card.Title>Danger Zone</Card.Title>
+	</Card.Header>
+	<Card.Footer>
+		<Button>Inherits danger</Button>
+		<Button color="neutral">Explicit neutral override</Button>
+	</Card.Footer>
+</Card>
+```
+
+**Building Custom Colored Components:** Use the exported hooks to integrate with the color system:
+
+```tsx
+import { useColor, ColorProvider, type Color } from "@pkg/ui";
+
+function CustomComponent({ color: colorProp }: { color?: Color }) {
+	let color = useColor(colorProp); // Resolves from prop or context
+
+	return (
+		<ColorProvider color={color}>
+			<div data-color={color}>{/* Children will inherit this color */}</div>
+		</ColorProvider>
+	);
+}
+```
+
 ### Data Attributes for Variants
 
 Components use data attributes instead of conditional classes. CSS handles all styling:
@@ -893,31 +939,27 @@ import { Logo } from "@pkg/ui";
 
 ### Spinner
 
-Loading indicator with customizable colors and sizes.
+Loading indicator with customizable colors and sizes. Uses React Aria's ProgressBar with `isIndeterminate` for proper accessibility.
 
 ```tsx
 import { Spinner } from "@pkg/ui";
 
-// Basic spinner
-<Spinner aria-label="Loading">
-  <Spinner.Ring />
-</Spinner>
+// Basic spinner (defaults to neutral color via ColorContext)
+<Spinner aria-label="Loading" />
 
-// Spinner with label
-<Spinner color="primary" size="md">
-  <Spinner.Ring />
-  <Spinner.Label>Loading...</Spinner.Label>
-</Spinner>
+// Spinner with explicit color
+<Spinner color="primary" aria-label="Loading" />
 
 // Spinner sizes: sm, md, lg
-<Spinner size="lg" color="neutral">
-  <Spinner.Ring />
-</Spinner>
+<Spinner size="lg" aria-label="Loading" />
 
-// Spinner colors: primary, neutral, success, warning, danger
-<Spinner color="danger" aria-label="Error loading">
-  <Spinner.Ring />
-</Spinner>
+// Spinner inherits color from parent
+<Card color="danger">
+  <Spinner /> {/* Inherits danger color */}
+</Card>
+
+// Button with loading state (Spinner inherits Button's color)
+<Button isPending>Saving...</Button>
 ```
 
 ### Carousel

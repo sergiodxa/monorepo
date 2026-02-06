@@ -6,8 +6,9 @@ import {
 	ToggleButtonGroup as AriaToggleButtonGroup,
 } from "react-aria-components";
 
+import { type Color, ColorProvider, useColor } from "./color-context";
+
 export namespace ToggleButton {
-	export type Color = "primary" | "neutral" | "danger" | "warning" | "success";
 	export type Variant = "solid" | "outline" | "ghost";
 	export type Size = "sm" | "md" | "lg";
 
@@ -21,19 +22,22 @@ export namespace ToggleButton {
 
 export function ToggleButton({
 	className,
-	color = "neutral",
+	color: colorProp,
 	variant = "outline",
 	size = "md",
 	...props
 }: ToggleButton.Props) {
+	let color = useColor(colorProp);
 	return (
-		<AriaToggleButton
-			{...props}
-			data-color={color}
-			data-variant={variant}
-			data-size={size}
-			className={cn("ui-toggle-button", className)}
-		/>
+		<ColorProvider color={color}>
+			<AriaToggleButton
+				{...props}
+				data-color={color}
+				data-variant={variant}
+				data-size={size}
+				className={cn("ui-toggle-button", className)}
+			/>
+		</ColorProvider>
 	);
 }
 

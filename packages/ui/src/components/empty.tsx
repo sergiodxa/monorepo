@@ -2,9 +2,9 @@ import type { HTMLAttributes, ReactNode } from "react";
 
 import { cn } from "@pkg/cn";
 
-export namespace Empty {
-	export type Color = "primary" | "success" | "warning" | "danger" | "neutral";
+import { type Color, ColorProvider, useColor } from "./color-context";
 
+export namespace Empty {
 	export interface Props extends Omit<
 		HTMLAttributes<HTMLDivElement>,
 		"children" | "className" | "color"
@@ -39,11 +39,14 @@ export namespace Empty {
 	}
 }
 
-export function Empty({ color = "neutral", children, className, ...props }: Empty.Props) {
+export function Empty({ color: colorProp, children, className, ...props }: Empty.Props) {
+	let color = useColor(colorProp);
 	return (
-		<div {...props} data-color={color} data-slot="empty" className={cn("ui-empty", className)}>
-			{children}
-		</div>
+		<ColorProvider color={color}>
+			<div {...props} data-color={color} data-slot="empty" className={cn("ui-empty", className)}>
+				{children}
+			</div>
+		</ColorProvider>
 	);
 }
 
