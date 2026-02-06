@@ -1,9 +1,24 @@
 import type { Meta, StoryObj } from "@storybook/react";
 
+import {
+	Activity,
+	BarChart3,
+	Bell,
+	ChevronDown,
+	CreditCard,
+	DollarSign,
+	Home,
+	PanelLeft,
+	Settings,
+	TrendingUp,
+	Users,
+} from "lucide-react";
+
 import { Avatar } from "../components/avatar";
 import { Badge } from "../components/badge";
 import { Button } from "../components/button";
 import { Card } from "../components/card";
+import { Empty } from "../components/empty";
 import { Menu } from "../components/menu";
 import { Popover } from "../components/popover";
 import { Separator } from "../components/separator";
@@ -17,218 +32,6 @@ const meta: Meta = {
 
 export default meta;
 type Story = StoryObj;
-
-// Icons as simple SVG components
-function HomeIcon() {
-	return (
-		<svg
-			xmlns="http://www.w3.org/2000/svg"
-			width="16"
-			height="16"
-			viewBox="0 0 24 24"
-			fill="none"
-			stroke="currentColor"
-			strokeWidth="2"
-			strokeLinecap="round"
-			strokeLinejoin="round"
-		>
-			<path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
-			<polyline points="9 22 9 12 15 12 15 22" />
-		</svg>
-	);
-}
-
-function BarChartIcon() {
-	return (
-		<svg
-			xmlns="http://www.w3.org/2000/svg"
-			width="16"
-			height="16"
-			viewBox="0 0 24 24"
-			fill="none"
-			stroke="currentColor"
-			strokeWidth="2"
-			strokeLinecap="round"
-			strokeLinejoin="round"
-		>
-			<line x1="12" x2="12" y1="20" y2="10" />
-			<line x1="18" x2="18" y1="20" y2="4" />
-			<line x1="6" x2="6" y1="20" y2="16" />
-		</svg>
-	);
-}
-
-function TrendingUpIcon() {
-	return (
-		<svg
-			xmlns="http://www.w3.org/2000/svg"
-			width="16"
-			height="16"
-			viewBox="0 0 24 24"
-			fill="none"
-			stroke="currentColor"
-			strokeWidth="2"
-			strokeLinecap="round"
-			strokeLinejoin="round"
-		>
-			<polyline points="22 7 13.5 15.5 8.5 10.5 2 17" />
-			<polyline points="16 7 22 7 22 13" />
-		</svg>
-	);
-}
-
-function UsersIcon() {
-	return (
-		<svg
-			xmlns="http://www.w3.org/2000/svg"
-			width="16"
-			height="16"
-			viewBox="0 0 24 24"
-			fill="none"
-			stroke="currentColor"
-			strokeWidth="2"
-			strokeLinecap="round"
-			strokeLinejoin="round"
-		>
-			<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
-			<circle cx="9" cy="7" r="4" />
-			<path d="M22 21v-2a4 4 0 0 0-3-3.87" />
-			<path d="M16 3.13a4 4 0 0 1 0 7.75" />
-		</svg>
-	);
-}
-
-function SettingsIcon() {
-	return (
-		<svg
-			xmlns="http://www.w3.org/2000/svg"
-			width="16"
-			height="16"
-			viewBox="0 0 24 24"
-			fill="none"
-			stroke="currentColor"
-			strokeWidth="2"
-			strokeLinecap="round"
-			strokeLinejoin="round"
-		>
-			<path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z" />
-			<circle cx="12" cy="12" r="3" />
-		</svg>
-	);
-}
-
-function BellIcon() {
-	return (
-		<svg
-			xmlns="http://www.w3.org/2000/svg"
-			width="16"
-			height="16"
-			viewBox="0 0 24 24"
-			fill="none"
-			stroke="currentColor"
-			strokeWidth="2"
-			strokeLinecap="round"
-			strokeLinejoin="round"
-		>
-			<path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" />
-			<path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" />
-		</svg>
-	);
-}
-
-function DollarIcon() {
-	return (
-		<svg
-			xmlns="http://www.w3.org/2000/svg"
-			width="16"
-			height="16"
-			viewBox="0 0 24 24"
-			fill="none"
-			stroke="currentColor"
-			strokeWidth="2"
-			strokeLinecap="round"
-			strokeLinejoin="round"
-		>
-			<line x1="12" x2="12" y1="2" y2="22" />
-			<path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
-		</svg>
-	);
-}
-
-function CreditCardIcon() {
-	return (
-		<svg
-			xmlns="http://www.w3.org/2000/svg"
-			width="16"
-			height="16"
-			viewBox="0 0 24 24"
-			fill="none"
-			stroke="currentColor"
-			strokeWidth="2"
-			strokeLinecap="round"
-			strokeLinejoin="round"
-		>
-			<rect width="20" height="14" x="2" y="5" rx="2" />
-			<line x1="2" x2="22" y1="10" y2="10" />
-		</svg>
-	);
-}
-
-function ActivityIcon() {
-	return (
-		<svg
-			xmlns="http://www.w3.org/2000/svg"
-			width="16"
-			height="16"
-			viewBox="0 0 24 24"
-			fill="none"
-			stroke="currentColor"
-			strokeWidth="2"
-			strokeLinecap="round"
-			strokeLinejoin="round"
-		>
-			<path d="M22 12h-2.48a2 2 0 0 0-1.93 1.46l-2.35 8.36a.25.25 0 0 1-.48 0L9.24 2.18a.25.25 0 0 0-.48 0l-2.35 8.36A2 2 0 0 1 4.49 12H2" />
-		</svg>
-	);
-}
-
-function ChevronDownIcon() {
-	return (
-		<svg
-			xmlns="http://www.w3.org/2000/svg"
-			width="16"
-			height="16"
-			viewBox="0 0 24 24"
-			fill="none"
-			stroke="currentColor"
-			strokeWidth="2"
-			strokeLinecap="round"
-			strokeLinejoin="round"
-		>
-			<path d="m6 9 6 6 6-6" />
-		</svg>
-	);
-}
-
-function MenuIcon() {
-	return (
-		<svg
-			xmlns="http://www.w3.org/2000/svg"
-			width="20"
-			height="20"
-			viewBox="0 0 24 24"
-			fill="none"
-			stroke="currentColor"
-			strokeWidth="2"
-			strokeLinecap="round"
-			strokeLinejoin="round"
-		>
-			<line x1="4" x2="20" y1="12" y2="12" />
-			<line x1="4" x2="20" y1="6" y2="6" />
-			<line x1="4" x2="20" y1="18" y2="18" />
-		</svg>
-	);
-}
 
 // Sample data
 interface Order {
@@ -313,18 +116,20 @@ function MetricCard({
 	return (
 		<Card>
 			<Card.Header className="flex-row items-center justify-between pb-2">
-				<Card.Title className="text-sm font-medium text-neutral-500">{title}</Card.Title>
-				<span className="text-neutral-400">{icon}</span>
+				<Card.Title className="text-sm font-medium text-neutral-500 dark:text-neutral-400">
+					{title}
+				</Card.Title>
+				<span className="text-neutral-400 dark:text-neutral-500">{icon}</span>
 			</Card.Header>
 			<Card.Content className="pt-0">
 				<div className="text-2xl font-bold">{value}</div>
 				<p
 					className={`text-xs ${
 						changeType === "positive"
-							? "text-success-600"
+							? "text-success-600 dark:text-success-400"
 							: changeType === "negative"
-								? "text-danger-600"
-								: "text-neutral-500"
+								? "text-danger-600 dark:text-danger-400"
+								: "text-neutral-500 dark:text-neutral-400"
 					}`}
 				>
 					{change}
@@ -340,7 +145,7 @@ function DashboardSidebar({ currentItem }: { currentItem: string }) {
 		<Sidebar>
 			<Sidebar.Header>
 				<div className="flex items-center gap-2 px-2">
-					<div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary-600 font-bold text-white">
+					<div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary-600 dark:bg-primary-500 font-bold text-white">
 						A
 					</div>
 					<span className="font-semibold">Acme Inc</span>
@@ -354,20 +159,20 @@ function DashboardSidebar({ currentItem }: { currentItem: string }) {
 						<Sidebar.Menu>
 							<Sidebar.MenuItem>
 								<Sidebar.MenuLink href="#" active={currentItem === "dashboard"}>
-									<HomeIcon />
+									<Home size={16} />
 									<span>Dashboard</span>
 								</Sidebar.MenuLink>
 							</Sidebar.MenuItem>
 							<Sidebar.MenuItem>
 								<Sidebar.MenuLink href="#" active={currentItem === "orders"}>
-									<CreditCardIcon />
+									<CreditCard size={16} />
 									<span>Orders</span>
+									<Sidebar.MenuBadge>12</Sidebar.MenuBadge>
 								</Sidebar.MenuLink>
-								<Sidebar.MenuBadge>12</Sidebar.MenuBadge>
 							</Sidebar.MenuItem>
 							<Sidebar.MenuItem>
 								<Sidebar.MenuLink href="#" active={currentItem === "customers"}>
-									<UsersIcon />
+									<Users size={16} />
 									<span>Customers</span>
 								</Sidebar.MenuLink>
 							</Sidebar.MenuItem>
@@ -381,19 +186,19 @@ function DashboardSidebar({ currentItem }: { currentItem: string }) {
 						<Sidebar.Menu>
 							<Sidebar.MenuItem>
 								<Sidebar.MenuLink href="#" active={currentItem === "reports"}>
-									<BarChartIcon />
+									<BarChart3 size={16} />
 									<span>Reports</span>
 								</Sidebar.MenuLink>
 							</Sidebar.MenuItem>
 							<Sidebar.MenuItem>
 								<Sidebar.MenuLink href="#" active={currentItem === "insights"}>
-									<TrendingUpIcon />
+									<TrendingUp size={16} />
 									<span>Insights</span>
 								</Sidebar.MenuLink>
 							</Sidebar.MenuItem>
 							<Sidebar.MenuItem>
 								<Sidebar.MenuLink href="#" active={currentItem === "activity"}>
-									<ActivityIcon />
+									<Activity size={16} />
 									<span>Activity</span>
 								</Sidebar.MenuLink>
 							</Sidebar.MenuItem>
@@ -407,13 +212,13 @@ function DashboardSidebar({ currentItem }: { currentItem: string }) {
 						<Sidebar.Menu>
 							<Sidebar.MenuItem>
 								<Sidebar.MenuLink href="#" active={currentItem === "settings"}>
-									<SettingsIcon />
+									<Settings size={16} />
 									<span>General</span>
 								</Sidebar.MenuLink>
 							</Sidebar.MenuItem>
 							<Sidebar.MenuItem>
 								<Sidebar.MenuLink href="#" active={currentItem === "notifications"}>
-									<BellIcon />
+									<Bell size={16} />
 									<span>Notifications</span>
 								</Sidebar.MenuLink>
 							</Sidebar.MenuItem>
@@ -433,7 +238,7 @@ function DashboardSidebar({ currentItem }: { currentItem: string }) {
 					</Avatar>
 					<div className="flex flex-col text-sm">
 						<span className="font-medium">John Doe</span>
-						<span className="text-xs text-neutral-500">john@acme.com</span>
+						<span className="text-xs text-neutral-500 dark:text-neutral-400">john@acme.com</span>
 					</div>
 				</div>
 			</Sidebar.Footer>
@@ -444,18 +249,18 @@ function DashboardSidebar({ currentItem }: { currentItem: string }) {
 // Dashboard Header Component
 function DashboardHeader() {
 	return (
-		<header className="flex h-14 items-center justify-between border-b border-neutral-200 bg-white px-6">
+		<header className="flex h-14 items-center justify-between border-b border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 px-3 sm:px-6">
 			<div className="flex items-center gap-4">
-				<Sidebar.Trigger className="flex items-center justify-center rounded-md p-2 hover:bg-neutral-100">
-					<MenuIcon />
+				<Sidebar.Trigger>
+					<PanelLeft size={20} />
 				</Sidebar.Trigger>
 				<h1 className="text-lg font-semibold">Dashboard</h1>
 			</div>
 
 			<div className="flex items-center gap-3">
 				<Button variant="ghost" size="sm" className="relative">
-					<BellIcon />
-					<span className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-danger-500 text-[10px] text-white">
+					<Bell size={16} />
+					<span className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-danger-500 dark:bg-danger-600 text-[10px] text-white">
 						3
 					</span>
 				</Button>
@@ -472,7 +277,7 @@ function DashboardHeader() {
 							<Avatar.Fallback>JD</Avatar.Fallback>
 						</Avatar>
 						<span className="hidden sm:inline">John Doe</span>
-						<ChevronDownIcon />
+						<ChevronDown size={16} />
 					</Button>
 					<Popover placement="bottom end">
 						<Menu>
@@ -497,14 +302,14 @@ function OrdersTable() {
 				<Card.Title>Recent Orders</Card.Title>
 				<Card.Description>A list of recent orders from your store.</Card.Description>
 			</Card.Header>
-			<Card.Content>
+			<Card.Content className="overflow-x-auto">
 				<Table aria-label="Recent orders">
 					<Table.Header>
 						<Table.Column isRowHeader>Order</Table.Column>
 						<Table.Column>Customer</Table.Column>
-						<Table.Column>Status</Table.Column>
+						<Table.Column className="hidden sm:table-cell">Status</Table.Column>
 						<Table.Column align="right">Amount</Table.Column>
-						<Table.Column>Date</Table.Column>
+						<Table.Column className="hidden md:table-cell">Date</Table.Column>
 					</Table.Header>
 					<Table.Body>
 						{orders.map((order) => (
@@ -513,16 +318,23 @@ function OrdersTable() {
 								<Table.Cell>
 									<div className="flex flex-col">
 										<span>{order.customer}</span>
-										<span className="text-xs text-neutral-500">{order.email}</span>
+										<span className="text-xs text-neutral-500 dark:text-neutral-400 sm:hidden">
+											{order.status}
+										</span>
+										<span className="hidden text-xs text-neutral-500 dark:text-neutral-400 md:inline">
+											{order.email}
+										</span>
 									</div>
 								</Table.Cell>
-								<Table.Cell>
+								<Table.Cell className="hidden sm:table-cell">
 									<Badge color={getStatusColor(order.status)} variant="secondary">
 										{order.status}
 									</Badge>
 								</Table.Cell>
 								<Table.Cell className="text-right">{order.amount}</Table.Cell>
-								<Table.Cell className="text-neutral-500">{order.date}</Table.Cell>
+								<Table.Cell className="hidden text-neutral-500 dark:text-neutral-400 md:table-cell">
+									{order.date}
+								</Table.Cell>
 							</Table.Row>
 						))}
 					</Table.Body>
@@ -554,19 +366,37 @@ function AnalyticsTabs() {
 					</Tabs.List>
 					<Tabs.Panels className="mt-4">
 						<Tabs.Panel id="overview">
-							<div className="flex h-64 items-center justify-center rounded-lg border border-dashed border-neutral-300 bg-neutral-50">
-								<p className="text-neutral-500">Overview chart placeholder</p>
-							</div>
+							<Empty>
+								<Empty.Icon>
+									<BarChart3 />
+								</Empty.Icon>
+								<Empty.Title>No overview data</Empty.Title>
+								<Empty.Description>
+									Overview analytics will appear here once data is available.
+								</Empty.Description>
+							</Empty>
 						</Tabs.Panel>
 						<Tabs.Panel id="revenue">
-							<div className="flex h-64 items-center justify-center rounded-lg border border-dashed border-neutral-300 bg-neutral-50">
-								<p className="text-neutral-500">Revenue chart placeholder</p>
-							</div>
+							<Empty>
+								<Empty.Icon>
+									<DollarSign />
+								</Empty.Icon>
+								<Empty.Title>No revenue data</Empty.Title>
+								<Empty.Description>
+									Revenue analytics will appear here once data is available.
+								</Empty.Description>
+							</Empty>
 						</Tabs.Panel>
 						<Tabs.Panel id="customers">
-							<div className="flex h-64 items-center justify-center rounded-lg border border-dashed border-neutral-300 bg-neutral-50">
-								<p className="text-neutral-500">Customers chart placeholder</p>
-							</div>
+							<Empty>
+								<Empty.Icon>
+									<Users />
+								</Empty.Icon>
+								<Empty.Title>No customer data</Empty.Title>
+								<Empty.Description>
+									Customer analytics will appear here once data is available.
+								</Empty.Description>
+							</Empty>
 						</Tabs.Panel>
 					</Tabs.Panels>
 				</Tabs>
@@ -579,58 +409,58 @@ function AnalyticsTabs() {
 function Dashboard() {
 	return (
 		<Sidebar.Provider defaultOpen>
-			<div className="flex h-[800px] w-full bg-neutral-50">
+			<div className="flex min-h-screen w-full bg-neutral-50 dark:bg-neutral-950">
 				<DashboardSidebar currentItem="dashboard" />
 
 				<div className="flex flex-1 flex-col overflow-hidden">
 					<DashboardHeader />
 
-					<main className="flex-1 overflow-auto p-6">
+					<main className="flex-1 overflow-auto p-3 sm:p-6">
 						{/* Metrics Grid */}
-						<div className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+						<div className="mb-4 grid gap-3 sm:mb-6 sm:gap-4 sm:grid-cols-2 lg:grid-cols-4">
 							<MetricCard
 								title="Total Revenue"
 								value="$45,231.89"
 								change="+20.1% from last month"
 								changeType="positive"
-								icon={<DollarIcon />}
+								icon={<DollarSign size={16} />}
 							/>
 							<MetricCard
 								title="Subscriptions"
 								value="+2,350"
 								change="+180.1% from last month"
 								changeType="positive"
-								icon={<UsersIcon />}
+								icon={<Users size={16} />}
 							/>
 							<MetricCard
 								title="Sales"
 								value="+12,234"
 								change="+19% from last month"
 								changeType="positive"
-								icon={<CreditCardIcon />}
+								icon={<CreditCard size={16} />}
 							/>
 							<MetricCard
 								title="Active Now"
 								value="+573"
 								change="+201 since last hour"
 								changeType="neutral"
-								icon={<ActivityIcon />}
+								icon={<Activity size={16} />}
 							/>
 						</div>
 
 						{/* Main Content Grid */}
-						<div className="grid gap-6 lg:grid-cols-7">
-							<div className="lg:col-span-4">
+						<div className="grid gap-4 sm:gap-6 lg:grid-cols-7">
+							<div className="min-w-0 lg:col-span-4">
 								<AnalyticsTabs />
 							</div>
-							<div className="lg:col-span-3">
+							<div className="min-w-0 lg:col-span-3">
 								<Card className="h-full">
 									<Card.Header>
 										<Card.Title>Recent Activity</Card.Title>
 										<Card.Description>Your latest transactions and updates.</Card.Description>
 									</Card.Header>
-									<Card.Content>
-										<div className="space-y-4">
+									<Card.Content className="px-3 sm:px-6">
+										<div className="space-y-3 sm:space-y-4">
 											{[
 												{
 													name: "Alice Johnson",
@@ -657,7 +487,7 @@ function Dashboard() {
 													time: "5 hours ago",
 												},
 											].map((activity, index) => (
-												<div key={index} className="flex items-center gap-3">
+												<div key={index} className="flex items-center gap-2 sm:gap-3">
 													<Avatar size="sm">
 														<Avatar.Fallback>
 															{activity.name
@@ -666,13 +496,19 @@ function Dashboard() {
 																.join("")}
 														</Avatar.Fallback>
 													</Avatar>
-													<div className="flex-1 min-w-0">
-														<p className="text-sm font-medium truncate">{activity.name}</p>
-														<p className="text-xs text-neutral-500 truncate">{activity.action}</p>
+													<div className="min-w-0 flex-1 overflow-hidden">
+														<p className="truncate text-xs font-medium sm:text-sm">
+															{activity.name}
+														</p>
+														<p className="truncate text-xs text-neutral-500 dark:text-neutral-400">
+															{activity.action}
+														</p>
 													</div>
-													<div className="text-right">
-														<p className="text-sm font-medium">{activity.amount}</p>
-														<p className="text-xs text-neutral-500">{activity.time}</p>
+													<div className="shrink-0 text-right text-xs sm:text-sm">
+														<p className="font-medium">{activity.amount}</p>
+														<p className="text-neutral-500 dark:text-neutral-400">
+															{activity.time}
+														</p>
 													</div>
 												</div>
 											))}
@@ -704,55 +540,57 @@ export const Default: Story = {
 export const CollapsedSidebar: Story = {
 	render: () => (
 		<Sidebar.Provider defaultOpen={false}>
-			<div className="flex h-[800px] w-full bg-neutral-50">
+			<div className="flex min-h-screen w-full bg-neutral-50 dark:bg-neutral-950">
 				<DashboardSidebar currentItem="dashboard" />
 
 				<div className="flex flex-1 flex-col overflow-hidden">
 					<DashboardHeader />
 
-					<main className="flex-1 overflow-auto p-6">
-						<div className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+					<main className="flex-1 overflow-auto p-3 sm:p-6">
+						<div className="mb-4 grid gap-3 sm:mb-6 sm:gap-4 sm:grid-cols-2 lg:grid-cols-4">
 							<MetricCard
 								title="Total Revenue"
 								value="$45,231.89"
 								change="+20.1% from last month"
 								changeType="positive"
-								icon={<DollarIcon />}
+								icon={<DollarSign size={16} />}
 							/>
 							<MetricCard
 								title="Subscriptions"
 								value="+2,350"
 								change="+180.1% from last month"
 								changeType="positive"
-								icon={<UsersIcon />}
+								icon={<Users size={16} />}
 							/>
 							<MetricCard
 								title="Sales"
 								value="+12,234"
 								change="+19% from last month"
 								changeType="positive"
-								icon={<CreditCardIcon />}
+								icon={<CreditCard size={16} />}
 							/>
 							<MetricCard
 								title="Active Now"
 								value="+573"
 								change="+201 since last hour"
 								changeType="neutral"
-								icon={<ActivityIcon />}
+								icon={<Activity size={16} />}
 							/>
 						</div>
 
-						<div className="grid gap-6 lg:grid-cols-7">
-							<div className="lg:col-span-4">
+						<div className="grid gap-4 sm:gap-6 lg:grid-cols-7">
+							<div className="min-w-0 lg:col-span-4">
 								<AnalyticsTabs />
 							</div>
-							<div className="lg:col-span-3">
+							<div className="min-w-0 lg:col-span-3">
 								<Card className="h-full">
 									<Card.Header>
 										<Card.Title>Recent Activity</Card.Title>
 									</Card.Header>
 									<Card.Content>
-										<p className="text-neutral-500">Activity feed content...</p>
+										<p className="text-neutral-500 dark:text-neutral-400">
+											Activity feed content...
+										</p>
 									</Card.Content>
 								</Card>
 							</div>

@@ -2011,10 +2011,14 @@
 
 		/* Offcanvas collapsible mode - slides out completely */
 		&[data-collapsible="offcanvas"][data-collapsed] {
-			@apply -translate-x-full;
+			@apply -translate-x-full overflow-hidden;
+			width: 0;
+			border-width: 0;
 		}
 		&[data-collapsible="offcanvas"][data-side="right"][data-collapsed] {
-			@apply translate-x-full;
+			@apply translate-x-full overflow-hidden;
+			width: 0;
+			border-width: 0;
 		}
 	}
 }
