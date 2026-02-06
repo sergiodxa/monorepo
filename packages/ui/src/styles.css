@@ -2849,13 +2849,17 @@
 	:where(&) {
 		/* React Aria applies inline: position: absolute; left: X%; transform: translate(-50%, -50%); */
 		/* We need to set top: 50% to work with RAC's translateY(-50%) for vertical centering */
-		@apply top-1/2 size-5 rounded-full border-2 shadow;
+		@apply top-1/2 z-10 size-5 rounded-full border-2 shadow;
 		/* Use transition-shadow to avoid interfering with RAC's transform */
 		transition:
 			box-shadow 150ms,
 			scale 150ms;
 		border-color: var(--ui-primary-bg-solid);
-		background-color: var(--ui-neutral-bg-tint);
+		/* Solid background to cover the track fill bar beneath */
+		background-color: white;
+		.dark & {
+			background-color: var(--color-neutral-900);
+		}
 
 		/* Vertical orientation - RAC sets top: X%, we need left: 50% */
 		[data-orientation="vertical"] & {
@@ -2870,7 +2874,8 @@
 			outline-color: var(--ui-primary-ring);
 		}
 		&[data-disabled] {
-			@apply opacity-50;
+			@apply cursor-not-allowed shadow-none;
+			border-color: var(--ui-neutral-border);
 		}
 	}
 }
