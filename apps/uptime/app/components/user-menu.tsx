@@ -3,6 +3,8 @@ import { ChevronsUpDownIcon } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { href, useNavigate } from "react-router";
 
+import { useTeam } from "~/hooks/use-team";
+
 function getInitials(name: string): string {
 	return name
 		.split(" ")
@@ -14,12 +16,13 @@ function getInitials(name: string): string {
 
 export function UserMenu(props: { user: { avatar: string; name: string; email: string } }) {
 	let navigate = useNavigate();
+	let team = useTeam();
 	let { t } = useTranslation("translation", {
 		keyPrefix: "app.layout.sidebar.userMenu",
 	});
 
 	let items = [
-		{ key: "account", textValue: "Account", to: href("/app/account") },
+		{ key: "account", textValue: "Account", to: href("/app/:team/account", { team: team.slug }) },
 		{ key: "logout", textValue: "Logout", to: href("/logout") },
 	];
 

@@ -2,8 +2,8 @@ import type { RouterContextProvider } from "react-router";
 
 import { cn } from "@pkg/cn";
 import { isFailure, succeeded } from "@pkg/result";
-import { Avatar, Button, Card, confirm, LinkButton, Logo, Menu, Popover, Table } from "@pkg/ui";
-import { EllipsisVerticalIcon, LoaderIcon, LogOutIcon, PlusIcon, UsersIcon } from "lucide-react";
+import { Avatar, Button, Card, confirm, Logo, Menu, Popover, Table } from "@pkg/ui";
+import { EllipsisVerticalIcon, LoaderIcon, LogOutIcon, UsersIcon } from "lucide-react";
 import { useId } from "react";
 import { useTranslation } from "react-i18next";
 import { href, useFetcher, useFetchers } from "react-router";
@@ -223,16 +223,10 @@ function TeamsSection(props: { teams: Team[]; userId: string }) {
 
 	return (
 		<section id="teams" className="space-y-6">
-			<div className="flex items-start justify-between gap-4">
-				<hgroup>
-					<h2 className="text-xl font-semibold tracking-tight">{t("title")}</h2>
-					<p className="text-sm text-neutral-500 dark:text-neutral-400">{t("description")}</p>
-				</hgroup>
-				<LinkButton color="neutral" href="/app/account/new-team" className="flex-shrink-0">
-					<PlusIcon className="size-5" aria-hidden />
-					<span className="max-sm:sr-only">{t("actions.createTeam")}</span>
-				</LinkButton>
-			</div>
+			<hgroup>
+				<h2 className="text-xl font-semibold tracking-tight">{t("title")}</h2>
+				<p className="text-sm text-neutral-500 dark:text-neutral-400">{t("description")}</p>
+			</hgroup>
 
 			{visibleTeams.length === 0 ? (
 				<Card>
@@ -244,7 +238,6 @@ function TeamsSection(props: { teams: Team[]; userId: string }) {
 								{t("empty.description")}
 							</p>
 						</div>
-						<LinkButton href="/app/account/new-team">{t("empty.cta")}</LinkButton>
 					</Card.Content>
 				</Card>
 			) : (
