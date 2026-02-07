@@ -459,6 +459,15 @@ export default {
 			success: "{{name}} monitor was created.",
 		},
 
+		updateMonitor: {
+			errors: {
+				generic: "Oops! Something went wrong.",
+				notFound: "This monitor does not exist.",
+			},
+
+			success: "{{name}} monitor was updated.",
+		},
+
 		deleteMonitor: {
 			errors: {
 				generic: "Oops! Something went wrong.",
@@ -554,6 +563,17 @@ export default {
 
 			success: "{{team}} has been deleted.",
 		},
+
+		leaveTeam: {
+			errors: {
+				generic: "Oops! Something went wrong.",
+				notMember: "You are not a member of this team.",
+				ownerCannotLeave: "Team owners cannot leave their team. Transfer ownership first.",
+				adminCannotLeave: "Admins cannot leave the team. Ask the owner to demote you first.",
+			},
+
+			success: "You have left {{team}}.",
+		},
 	},
 
 	page: {
@@ -572,6 +592,12 @@ export default {
 					description: "A subscription is required to continue monitoring automatically.",
 					cta: "Start Monitoring",
 				},
+			},
+
+			empty: {
+				title: "No monitors yet",
+				description: "Create your first monitor to start tracking your services.",
+				cta: "Create Monitor",
 			},
 
 			stats: {
@@ -714,12 +740,80 @@ export default {
 			},
 		},
 
+		editMonitor: {
+			header: {
+				title: "Edit Monitor",
+			},
+
+			alert: {
+				subscription: {
+					title: "Your monitors are paused!",
+					description: "A subscription is required to continue monitoring automatically.",
+					cta: "Start Monitoring",
+				},
+			},
+
+			form: {
+				fields: {
+					name: {
+						label: "Monitor Name",
+						placeholder: "Landing Page",
+						description: "A descriptive name for your monitor.",
+					},
+					url: {
+						label: "URL to Monitor",
+						placeholder: "https://example.com/healthcheck",
+						description: "The URL of the service you want to monitor.",
+					},
+					method: {
+						label: "Request Method",
+						placeholder: "HEAD",
+						description: "The HTTP method to use for the request.",
+					},
+					status: {
+						label: "Expected Status Code",
+						placeholder: "200",
+						description: "The HTTP status code you expect to receive.",
+					},
+					interval: {
+						label: "Check Interval",
+						placeholder: "60",
+						description: "Interval in seconds. Minimum is 60 seconds.",
+					},
+					visibility: {
+						label: "Visibility",
+						description: "Public monitors can be shared with anyone.",
+						options: { public: "Public", private: "Private" },
+					},
+					region: {
+						label: "Region",
+						description: "The region from which the ping will run.",
+						placeholder: "wnam",
+						options: {
+							afr: "{{emoji}} Africa",
+							apac: "{{emoji}} Asia-Pacific",
+							eeur: "{{emoji}} Eastern Europe",
+							enam: "{{emoji}} Eastern North America",
+							me: "{{emoji}} Middle East",
+							oc: "{{emoji}} Oceania",
+							sam: "{{emoji}} South America",
+							weur: "{{emoji}} Western Europe",
+							wnam: "{{emoji}} Western North America",
+						},
+					},
+				},
+
+				cta: "Save Changes",
+			},
+		},
+
 		monitor: {
 			header: {
 				title: 'Monitor "{{name}}"',
 
 				action: {
 					play: "Run Monitor",
+					edit: "Edit Monitor",
 					refresh: "Refresh",
 				},
 			},
@@ -1001,6 +1095,12 @@ export default {
 				},
 			},
 
+			empty: {
+				title: "No alerts configured",
+				description: "Create an alert to get notified when your monitors go down.",
+				cta: "Create Alert",
+			},
+
 			form: {
 				fields: {
 					name: {
@@ -1155,6 +1255,63 @@ export default {
 			},
 		},
 
+		account: {
+			meta: {
+				title: "Account - Uptime",
+				description: "Manage your account settings and teams.",
+			},
+
+			header: {
+				title: "Account",
+			},
+
+			profile: {
+				title: "Profile",
+				description: "Your personal information.",
+			},
+
+			teams: {
+				title: "Your Teams",
+				description: "Teams you are a member of.",
+
+				actions: {
+					createTeam: "Create Team",
+				},
+
+				empty: {
+					title: "No teams yet",
+					description: "Create a team to start monitoring your services.",
+					cta: "Create Team",
+				},
+
+				table: {
+					label: "Teams",
+					description: "All teams you belong to.",
+
+					columns: {
+						team: "Team",
+						role: "Role",
+						actions: "Actions",
+					},
+
+					role: {
+						member: "Member",
+						admin: "Admin",
+						owner: "Owner",
+					},
+
+					actions: {
+						menu: "Actions Menu",
+						leave: "Leave Team",
+					},
+
+					confirmation: {
+						leaveTeam: "Are you sure you want to leave {{name}}?",
+					},
+				},
+			},
+		},
+
 		settings: {
 			header: {
 				title: "Team Settings",
@@ -1246,7 +1403,12 @@ export default {
 
 					columns: {
 						email: "Email",
+						expires: "Expires",
 						actions: "Actions",
+					},
+
+					expires: {
+						expired: "Expired",
 					},
 
 					actions: {
