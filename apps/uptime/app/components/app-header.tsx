@@ -5,7 +5,7 @@ import { PanelLeftIcon } from "lucide-react";
 
 export function AppHeader(props: { heading: string; children?: ReactNode }) {
 	return (
-		<header className="sticky top-0 z-10 flex h-16 flex-shrink-0 items-center gap-2 border-b border-neutral-300 bg-neutral-50/80 px-4 dark:border-neutral-700 dark:bg-neutral-950/80">
+		<header className="sticky top-0 z-10 flex h-16 flex-shrink-0 items-center gap-2 border-b border-neutral-200 bg-neutral-50/80 px-4 dark:border-neutral-800 dark:bg-neutral-950/80">
 			<Sidebar.Trigger className="mr-2 p-2 md:hidden">
 				<PanelLeftIcon aria-hidden className="size-4" />
 				<span className="sr-only">Toggle sidebar</span>
