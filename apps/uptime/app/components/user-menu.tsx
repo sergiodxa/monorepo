@@ -19,7 +19,7 @@ export function UserMenu(props: { user: { avatar: string; name: string; email: s
 	});
 
 	let items = [
-		{ key: "account", textValue: "Account", to: href("/app") },
+		{ key: "account", textValue: "Account", to: href("/app/account") },
 		{ key: "logout", textValue: "Logout", to: href("/logout") },
 	];
 
