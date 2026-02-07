@@ -516,24 +516,24 @@
 			border-color: var(--ui-neutral-border-strong);
 		}
 		&[data-focus-visible] {
-			@apply outline-2 outline-offset-0;
+			@apply outline-2 outline-offset-2;
 			border-color: var(--ui-neutral-border-strong);
-			outline-color: var(--ui-neutral-border-strong);
+			outline-color: var(--ui-neutral-ring);
 		}
 		[data-color="primary"] &[data-focus-visible] {
-			border-color: var(--ui-primary-ring);
+			border-color: var(--ui-primary-border-strong);
 			outline-color: var(--ui-primary-ring);
 		}
 		[data-color="success"] &[data-focus-visible] {
-			border-color: var(--ui-success-ring);
+			border-color: var(--ui-success-border-strong);
 			outline-color: var(--ui-success-ring);
 		}
 		[data-color="danger"] &[data-focus-visible] {
-			border-color: var(--ui-danger-ring);
+			border-color: var(--ui-danger-border-strong);
 			outline-color: var(--ui-danger-ring);
 		}
 		[data-color="warning"] &[data-focus-visible] {
-			border-color: var(--ui-warning-ring);
+			border-color: var(--ui-warning-border-strong);
 			outline-color: var(--ui-warning-ring);
 		}
 		&[data-invalid] {
