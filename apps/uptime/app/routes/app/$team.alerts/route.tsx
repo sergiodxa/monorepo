@@ -1,29 +1,14 @@
 import { cn } from "@pkg/cn";
+import { Alert, Button, confirm, Empty, LinkButton, Menu, Popover, Skeleton, Table } from "@pkg/ui";
 import {
-	Alert,
-	Button,
-	confirm,
-	Description,
-	FieldError,
-	Input,
-	Label,
-	LinkButton,
-	ListBox,
-	Menu,
-	Popover,
-	Select,
-	Table,
-	TextField,
-} from "@pkg/ui";
-import {
+	BellIcon,
 	BellMinusIcon,
 	BellPlusIcon,
 	EllipsisVerticalIcon,
 	LoaderIcon,
 	TriangleAlertIcon,
 } from "lucide-react";
-import { useId, useState } from "react";
-import { type Key } from "react-aria-components";
+import { useId } from "react";
 import { useTranslation } from "react-i18next";
 import { href, Link, useFetcher } from "react-router";
 import { useSpinDelay } from "spin-delay";
@@ -36,6 +21,67 @@ import { measure } from "~/middleware/server-timing";
 import { team } from "~/middleware/team";
 
 import type { Route } from "./+types/route";
+
+export async function clientLoader({ serverLoader }: Route.ClientLoaderArgs) {
+	return await serverLoader();
+}
+
+clientLoader.hydrate = true as const;
+
+export function HydrateFallback() {
+	return (
+		<>
+			<header className="sticky top-0 z-10 flex h-16 flex-shrink-0 items-center gap-2 border-b border-neutral-200 bg-neutral-50/80 px-4 dark:border-neutral-800 dark:bg-neutral-950/80">
+				<Skeleton className="h-6 w-24" />
+				<aside className="ml-auto flex items-center gap-2">
+					<Skeleton className="h-10 w-24 rounded-lg" />
+				</aside>
+			</header>
+
+			<div className="flex flex-col gap-6 p-5 md:gap-12 md:p-12">
+				<div className="flex flex-col gap-4">
+					<Skeleton className="h-6 w-32" />
+
+					<AlertsTableSkeleton />
+				</div>
+			</div>
+		</>
+	);
+}
+
+function AlertsTableSkeleton() {
+	return (
+		<Table aria-label="Loading alerts">
+			<Table.Header>
+				<Table.Column isRowHeader>
+					<Skeleton className="h-4 w-16" />
+				</Table.Column>
+				<Table.Column align="right">
+					<Skeleton className="ml-auto h-4 w-16" />
+				</Table.Column>
+				<Table.Column align="center">
+					<span className="sr-only">Actions</span>
+				</Table.Column>
+			</Table.Header>
+
+			<Table.Body items={[{ id: "1" }, { id: "2" }, { id: "3" }]}>
+				{(item) => (
+					<Table.Row key={item.id}>
+						<Table.Cell>
+							<Skeleton className="h-4 w-32" />
+						</Table.Cell>
+						<Table.Cell className="w-28 text-right">
+							<Skeleton className="ml-auto h-4 w-16" />
+						</Table.Cell>
+						<Table.Cell className="w-17 text-center">
+							<Skeleton className="mx-auto h-10 w-10 rounded-lg" />
+						</Table.Cell>
+					</Table.Row>
+				)}
+			</Table.Body>
+		</Table>
+	);
+}
 
 export async function loader() {
 	let alerts = await measure("findAlerts", () => {
@@ -103,9 +149,21 @@ export default function Component({ loaderData, params }: Route.ComponentProps) 
 				</div>
 			)}
 
-			<div className="flex flex-col gap-12 p-12">
+			<div className="flex flex-col gap-6 p-5 md:gap-12 md:p-12">
 				{loaderData.alerts.length === 0 ? (
-					<CreateAlertForm />
+					<Empty className="mx-auto max-w-md py-16">
+						<Empty.Icon>
+							<BellIcon className="size-12" />
+						</Empty.Icon>
+						<Empty.Title>{t("empty.title")}</Empty.Title>
+						<Empty.Description>{t("empty.description")}</Empty.Description>
+						<Empty.Action>
+							<LinkButton href={href("/app/:team/alerts/new", params)}>
+								<BellPlusIcon className="size-5" aria-hidden />
+								{t("empty.cta")}
+							</LinkButton>
+						</Empty.Action>
+					</Empty>
 				) : (
 					<div className="flex flex-col gap-4">
 						<h2 id={`${id}-members-table`}>{t("table.label")}</h2>
@@ -135,99 +193,6 @@ export default function Component({ loaderData, params }: Route.ComponentProps) 
 				)}
 			</div>
 		</>
-	);
-}
-
-function CreateAlertForm() {
-	let { t } = useTranslation("translation", {
-		keyPrefix: "page.alerts.form",
-	});
-	let team = useTeam();
-
-	let fetcher = useFetcher();
-	let isPending = useSpinDelay(fetcher.state !== "idle", {
-		minDuration: 100,
-		delay: 50,
-	});
-
-	let [strategy, setStrategy] = useState<Key>("email");
-	let strategies = [
-		{ id: "email", textValue: t("fields.strategy.options.email") },
-		{ id: "webhook", textValue: t("fields.strategy.options.webhook") },
-	] as const;
-
-	return (
-		<fetcher.Form
-			method="POST"
-			action={href("/actions/:team/create-alert", { team: team.slug })}
-			className="mx-auto flex w-full max-w-prose flex-col gap-6"
-		>
-			<TextField type="text" name="name" isRequired>
-				<Label>{t("fields.name.label")}</Label>
-				<Input placeholder={t("fields.name.placeholder")} />
-				<Description>{t("fields.name.description")}</Description>
-				<FieldError />
-			</TextField>
-
-			<Select
-				name="strategy"
-				isRequired
-				selectedKey={strategy}
-				onSelectionChange={(selection: Key | null) => selection && setStrategy(selection)}
-			>
-				<Label>{t("fields.strategy.label")}</Label>
-				<Select.Trigger />
-				<FieldError />
-				<Description>{t("fields.strategy.description")}</Description>
-				<Popover>
-					<ListBox items={strategies}>
-						{(strategy: (typeof strategies)[number]) => (
-							<Select.Item id={strategy.id}>{strategy.textValue}</Select.Item>
-						)}
-					</ListBox>
-				</Popover>
-			</Select>
-
-			{strategy === "email" && (
-				<>
-					<TextField type="email" name="email" isRequired>
-						<Label>{t("fields.config.email.to.label")}</Label>
-						<Input placeholder={t("fields.config.email.to.placeholder")} />
-						<Description>{t("fields.config.email.to.description")}</Description>
-						<FieldError />
-					</TextField>
-
-					<TextField type="text" name="subjectPrefix">
-						<Label>{t("fields.config.email.subjectPrefix.label")}</Label>
-						<Input placeholder={t("fields.config.email.subjectPrefix.placeholder")} />
-						<Description>{t("fields.config.email.subjectPrefix.description")}</Description>
-						<FieldError />
-					</TextField>
-				</>
-			)}
-
-			{strategy === "webhook" && (
-				<>
-					<TextField type="url" name="url" isRequired>
-						<Label>{t("fields.config.webhook.url.label")}</Label>
-						<Input placeholder={t("fields.config.webhook.url.placeholder")} />
-						<Description>{t("fields.config.webhook.url.description")}</Description>
-						<FieldError />
-					</TextField>
-
-					<TextField type="text" name="secret">
-						<Label>{t("fields.config.webhook.secret.label")}</Label>
-						<Input placeholder={t("fields.config.webhook.secret.placeholder")} />
-						<Description>{t("fields.config.webhook.secret.description")}</Description>
-						<FieldError />
-					</TextField>
-				</>
-			)}
-
-			<Button type="submit" className="self-end" isPending={isPending} name="intent">
-				{t("cta")}
-			</Button>
-		</fetcher.Form>
 	);
 }
 
