@@ -516,7 +516,7 @@
 			border-color: var(--ui-neutral-border-strong);
 		}
 		&[data-focus-visible] {
-			@apply outline-2 outline-offset-2;
+			@apply outline-2 outline-solid outline-offset-2;
 			border-color: var(--ui-neutral-border-strong);
 			outline-color: var(--ui-neutral-ring);
 		}
