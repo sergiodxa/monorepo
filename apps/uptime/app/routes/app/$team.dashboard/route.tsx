@@ -100,7 +100,7 @@ function MonitorsTableSkeleton() {
 						<Skeleton className="h-4 w-16" />
 					</Table.Column>
 					<Table.Column>
-						<Skeleton className="h-4 w-20 max-md:hidden" />
+						<Skeleton className="h-4 w-20 max-lg:hidden" />
 					</Table.Column>
 					<Table.Column>
 						<Skeleton className="h-4 w-12" />
@@ -119,7 +119,7 @@ function MonitorsTableSkeleton() {
 							<Table.Cell>
 								<Skeleton className="h-4 w-32" />
 							</Table.Cell>
-							<Table.Cell className="w-50 max-md:hidden">
+							<Table.Cell className="w-50 max-lg:hidden">
 								<Skeleton className="h-6 w-50" />
 							</Table.Cell>
 							<Table.Cell className="w-44">
@@ -379,7 +379,8 @@ function MonitorsTable(props: {
 								<span
 									className={cn({
 										"sr-only": column.id === "actions",
-										"max-md:hidden": column.id === "latencyChart" || column.id === "lastIncident",
+										"max-lg:hidden": column.id === "latencyChart",
+										"max-md:hidden": column.id === "lastIncident",
 									})}
 								>
 									{column.name}
@@ -438,7 +439,7 @@ function MonitorTableRow(props: {
 				</Link>
 			</Table.Cell>
 
-			<Table.Cell className="w-50 text-left max-md:hidden">
+			<Table.Cell className="w-50 text-left max-lg:hidden">
 				<ClientOnly fallback={<div className="h-6 w-50" />}>
 					{() => (
 						<LineChart
