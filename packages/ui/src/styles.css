@@ -442,15 +442,22 @@
 			outline-color: var(--ui-primary-ring);
 		}
 		&[data-pending] {
-			@apply cursor-wait;
+			@apply relative cursor-wait;
 		}
 	}
 }
 
 @utility ui-button-pending-content {
 	:where(&) {
-		/* Screen reader only - content is still accessible but spinner is visible */
-		@apply sr-only;
+		/* Keep content in flow for width but make it invisible */
+		@apply invisible;
+	}
+}
+
+@utility ui-button-spinner {
+	:where(&) {
+		/* Position spinner absolutely centered over the invisible content */
+		@apply absolute inset-0 flex items-center justify-center;
 	}
 }
 
@@ -1136,7 +1143,7 @@
 
 @utility ui-dialog {
 	:where(&) {
-		@apply relative p-6 outline-none;
+		@apply relative flex flex-col gap-6 p-6 outline-none;
 	}
 }
 
@@ -1162,7 +1169,7 @@
 
 @utility ui-dialog-footer {
 	:where(&) {
-		@apply mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end;
+		@apply flex flex-col-reverse gap-2 sm:flex-row sm:justify-end;
 	}
 }
 

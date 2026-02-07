@@ -243,9 +243,11 @@ export default {
 						dashboard: "Dashboard",
 						alerts: "Alerts",
 						monitors: "Monitors",
+						settings: "Settings",
 						billing: "Billing",
 						domains: "Domains",
 						members: "Members",
+						team: "Team",
 					},
 				},
 			},
@@ -531,6 +533,27 @@ export default {
 
 			success: "{{email}}'s invite was revoked from {{team}}.",
 		},
+
+		updateTeam: {
+			errors: {
+				generic: "Oops! Something went wrong.",
+				forbidden: "You are not allowed to update team settings.",
+			},
+
+			success: {
+				updated: "Team settings were updated successfully.",
+			},
+		},
+
+		deleteTeam: {
+			errors: {
+				generic: "Oops! Something went wrong while deleting the team.",
+				forbidden: "Only the team owner can delete the team.",
+				confirmationRequired: "Please type DELETE to confirm.",
+			},
+
+			success: "{{team}} has been deleted.",
+		},
 	},
 
 	page: {
@@ -761,8 +784,16 @@ export default {
 				},
 			},
 
+			sections: {
+				members: {
+					title: "Members",
+					description: "Manage your team members and their roles.",
+				},
+			},
+
 			membersTable: {
 				label: "Current Members",
+				description: "People who have access to this team.",
 
 				columns: {
 					name: "Name",
@@ -793,7 +824,8 @@ export default {
 			},
 
 			invitedMembersTable: {
-				label: "Invited Members",
+				label: "Pending Invitations",
+				description: "People who have been invited but haven't joined yet.",
 
 				columns: {
 					email: "Email",
@@ -827,6 +859,11 @@ export default {
 		invite: {
 			header: {
 				title: "Invite Team Member",
+				description: "Send an invitation to join your team.",
+			},
+
+			dialog: {
+				close: "Close dialog",
 			},
 
 			form: {
@@ -838,6 +875,7 @@ export default {
 					},
 				},
 
+				cancel: "Cancel",
 				cta: "Invite Member",
 			},
 		},
@@ -865,6 +903,13 @@ export default {
 				},
 			},
 
+			sections: {
+				domains: {
+					title: "Domains",
+					description: "Manage verified domains for your team.",
+				},
+			},
+
 			form: {
 				fields: {
 					hostname: {
@@ -878,7 +923,8 @@ export default {
 			},
 
 			table: {
-				label: "Domains",
+				label: "Verified Domains",
+				description: "Domains that can be used for auto-provisioning team members.",
 
 				columns: {
 					hostname: "Hostname",
@@ -1106,6 +1152,224 @@ export default {
 			notFound: {
 				title: "Not Found",
 				description: "The page you are looking for does not exist.",
+			},
+		},
+
+		settings: {
+			header: {
+				title: "Team Settings",
+			},
+
+			alert: {
+				subscription: {
+					title: "Your monitors are paused!",
+					description: "A subscription is required to continue monitoring automatically.",
+					cta: "Start Monitoring",
+				},
+			},
+
+			sections: {
+				general: {
+					title: "General",
+					description: "Manage your team's basic information.",
+				},
+			},
+
+			form: {
+				card: {
+					title: "Team Profile",
+					description: "Update your team's name and logo.",
+				},
+
+				fields: {
+					logo: {
+						label: "Logo URL",
+						placeholder: "https://example.com/logo.png",
+						description: "A URL to your team's logo image.",
+					},
+					name: {
+						label: "Team Name",
+						placeholder: "My Team",
+						description: "The name of your team.",
+					},
+				},
+
+				actions: {
+					cancel: "Cancel",
+					save: "Save Changes",
+				},
+			},
+
+			members: {
+				title: "Members",
+				description: "Manage your team members and their roles.",
+
+				actions: {
+					invite: "Invite Member",
+				},
+
+				table: {
+					label: "Current Members",
+					description: "People who have access to this team.",
+
+					columns: {
+						name: "Name",
+						role: "Role",
+						actions: "Actions",
+					},
+
+					role: {
+						member: "Member",
+						admin: "Admin",
+						owner: "Owner",
+					},
+
+					actions: {
+						menu: "Actions Menu",
+						remove: "Remove from Team",
+						transfer: "Transfer Ownership",
+						changeRole: {
+							member: "Convert to Admin",
+							admin: "Convert to Member",
+							owner: "Can't change owner",
+						},
+					},
+
+					confirmation: {
+						removeMember: "Are you sure you want to remove {{name}} from the team?",
+					},
+				},
+
+				invitedTable: {
+					label: "Pending Invitations",
+					description: "People who have been invited but haven't joined yet.",
+
+					columns: {
+						email: "Email",
+						actions: "Actions",
+					},
+
+					actions: {
+						menu: "Actions Menu",
+						copy: "Copy Invite Link",
+						revoke: "Revoke Invite",
+					},
+
+					confirmation: {
+						revokeInvite: "Are you sure you want to revoke {{email}}'s invite?",
+					},
+				},
+			},
+
+			domains: {
+				title: "Domains",
+				description: "Manage verified domains for your team.",
+
+				actions: {
+					addDomain: "Add Domain",
+				},
+
+				table: {
+					label: "Verified Domains",
+					description: "Domains that can be used for auto-provisioning team members.",
+
+					columns: {
+						hostname: "Hostname",
+						id: "Verification ID",
+						verifiedAt: "Verified At",
+						actions: "Actions",
+					},
+
+					verifiedAt: {
+						pending: "Awaiting verification",
+					},
+
+					actions: {
+						menu: "Actions Menu",
+						copy: "Copy Verification ID",
+						remove: "Remove Domain",
+						retryVerification: "Retry Verification",
+					},
+
+					confirmation: {
+						removeDomain: "Are you sure you want to remove {{hostname}} from the team?",
+					},
+				},
+
+				form: {
+					fields: {
+						hostname: {
+							label: "Domain",
+							placeholder: "example.com",
+							description: "The domain you want to add to {{team}}.",
+						},
+					},
+
+					cta: "Add Domain",
+				},
+
+				instructions: {
+					title: "How to verify your domain",
+					description: "To verify your domain, add the following TXT record to your DNS settings:",
+
+					record: {
+						name: {
+							label: "Name",
+							value: "_ping-verification",
+						},
+						content: {
+							label: "Content",
+							value: "VERIFICATION_ID",
+						},
+					},
+
+					note: "Make sure to replace <code>VERIFICATION_ID</code> with the actual verification ID shown above.",
+					disclaimer:
+						"DNS changes may take some time to propagate, so verification might be delayed.",
+				},
+			},
+
+			billing: {
+				title: "Billing",
+				description: "Manage your subscription and payment details.",
+
+				card: {
+					title: "Subscription & Payments",
+					description: "View invoices, update payment methods, and manage your subscription.",
+					notice:
+						"You will be redirected to Polar's customer portal to manage your billing settings.",
+					cta: "Open Billing Portal",
+				},
+			},
+
+			danger: {
+				title: "Danger Zone",
+				description: "Irreversible actions that affect your team.",
+
+				card: {
+					title: "Delete Team",
+					description:
+						"Permanently delete this team and all of its data. This action cannot be undone.",
+					warning:
+						"This will cancel your subscription and delete all monitors, alerts, domains, members, and invites.",
+					confirmation: {
+						label: "Type DELETE to confirm",
+						placeholder: "DELETE",
+					},
+					cta: "Delete Team",
+				},
+			},
+
+			error: {
+				forbidden: {
+					title: "You do not have permission to access this page.",
+					description: "Please contact your team administrator for assistance.",
+				},
+
+				unknown: {
+					title: "An unexpected error occurred.",
+					description: "Please try again later or contact support.",
+				},
 			},
 		},
 	},

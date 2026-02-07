@@ -1,7 +1,8 @@
+import { forbidden } from "@pkg/response";
 import { Alert, Button, Description, FieldError, Input, Label, TextField } from "@pkg/ui";
-import { LoaderIcon, TriangleAlertIcon } from "lucide-react";
+import { TriangleAlertIcon } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { data, href, isRouteErrorResponse, Link, useFetcher } from "react-router";
+import { href, isRouteErrorResponse, Link, useFetcher } from "react-router";
 import { useSpinDelay } from "spin-delay";
 
 import { AppHeader } from "~/components/app-header";
@@ -16,10 +17,7 @@ export async function loader() {
 	let subjectMembership = memberships[0];
 
 	if (subjectMembership.role === "member") {
-		throw data(
-			{ status: 403, hasActiveSubscription: await hasActiveSubscription() },
-			{ status: 403, statusText: "Forbidden" },
-		);
+		throw forbidden({ hasActiveSubscription: await hasActiveSubscription() });
 	}
 
 	return { hasActiveSubscription: await hasActiveSubscription() };
@@ -85,14 +83,8 @@ function CreateDomainForm() {
 				<FieldError />
 			</TextField>
 
-			<Button
-				type="submit"
-				className="flex items-center justify-between self-end"
-				isPending={isPending}
-				name="intent"
-			>
-				<span>{t("cta")}</span>
-				{isPending && <LoaderIcon className="size-5 animate-spin" />}
+			<Button type="submit" className="self-end" isPending={isPending} name="intent">
+				{t("cta")}
 			</Button>
 		</fetcher.Form>
 	);
@@ -102,16 +94,16 @@ export function ErrorBoundary({ error, params }: Route.ErrorBoundaryProps) {
 	let { t } = useTranslation("translation", { keyPrefix: "page.domains" });
 
 	if (isRouteErrorResponse(error)) {
-		let data = error.data as {
+		let errorData = error.data as {
 			hasActiveSubscription: boolean;
-			status: number;
+			ok: boolean;
 		};
 
 		return (
 			<>
 				<AppHeader heading={t("header.title")} />
 
-				{data.hasActiveSubscription ? null : (
+				{errorData.hasActiveSubscription ? null : (
 					<div className="p-4">
 						<Alert color="warning">
 							<Alert.Icon>
@@ -129,7 +121,7 @@ export function ErrorBoundary({ error, params }: Route.ErrorBoundaryProps) {
 				)}
 
 				<div className="flex flex-col gap-4 p-12">
-					{data.status === 403 ? (
+					{error.status === 403 ? (
 						<>
 							<h2>{t("error.forbidden.title")}</h2>
 							<p>{t("error.forbidden.description")}</p>

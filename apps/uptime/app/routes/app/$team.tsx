@@ -179,14 +179,16 @@ export default function Component({ loaderData }: Route.ComponentProps) {
 			<SubjectProvider subject={loaderData.viewer}>
 				<Sidebar.Provider defaultOpen>
 					<div className="flex min-h-screen w-full font-mono">
-						<AppSidebar
-							team={loaderData.team}
-							teams={teams}
-							viewer={loaderData.viewer}
-							monitors={loaderData.monitors}
-						/>
+						<div className="sticky top-0 h-screen">
+							<AppSidebar
+								team={loaderData.team}
+								teams={teams}
+								viewer={loaderData.viewer}
+								monitors={loaderData.monitors}
+							/>
+						</div>
 						<Sidebar.Inset>
-							<main className="flex-1 overflow-auto">
+							<main className="flex-1">
 								<Outlet />
 							</main>
 						</Sidebar.Inset>

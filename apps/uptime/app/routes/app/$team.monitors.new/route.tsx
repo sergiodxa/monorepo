@@ -12,7 +12,6 @@ import {
 	Slider,
 	TextField,
 } from "@pkg/ui";
-import { LoaderIcon } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { href, Link, useFetcher } from "react-router";
 import { useSpinDelay } from "spin-delay";
@@ -170,8 +169,7 @@ function CreateMonitorForm() {
 			</Select>
 
 			<Button type="submit" className="self-end" isPending={isPending} name="intent" value={INTENT}>
-				<span>{t("cta")}</span>
-				{isPending && <LoaderIcon className="size-5 animate-spin" />}
+				{t("cta")}
 			</Button>
 		</fetcher.Form>
 	);

@@ -52,10 +52,8 @@ export function AlertDialog({ className, ...props }: AlertDialog.Props) {
 
 function Content({ className, overlayClassName, children, ...props }: AlertDialog.ContentProps) {
 	return (
-		<Modal.Overlay className={overlayClassName} isDismissable={false}>
-			<Modal {...props} className={cn("ui-alert-dialog-content", className)}>
-				{children}
-			</Modal>
+		<Modal.Overlay {...props} className={overlayClassName} isDismissable={false}>
+			<Modal className={cn("ui-alert-dialog-content", className)}>{children}</Modal>
 		</Modal.Overlay>
 	);
 }

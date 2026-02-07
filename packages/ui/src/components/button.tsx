@@ -45,7 +45,9 @@ export function Button({
 			>
 				{isPending ? (
 					<>
-						<Spinner size={size === "lg" ? "md" : "sm"} />
+						<span className="ui-button-spinner">
+							<Spinner size={size === "lg" ? "md" : "sm"} />
+						</span>
 						<span className="ui-button-pending-content">{children}</span>
 					</>
 				) : (

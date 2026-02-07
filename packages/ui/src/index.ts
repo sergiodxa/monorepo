@@ -100,6 +100,7 @@ export { Alert } from "./components/alert";
 export { Empty } from "./components/empty";
 export { Badge } from "./components/badge";
 export { Toaster, toast } from "./components/toaster";
+export { ConfirmDialog, confirm } from "./components/confirm";
 
 // Utilities
 export { Avatar } from "./components/avatar";

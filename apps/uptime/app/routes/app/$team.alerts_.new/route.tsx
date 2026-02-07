@@ -10,7 +10,7 @@ import {
 	Select,
 	TextField,
 } from "@pkg/ui";
-import { LoaderIcon, TriangleAlertIcon } from "lucide-react";
+import { TriangleAlertIcon } from "lucide-react";
 import { useState } from "react";
 import { type Key } from "react-aria-components";
 import { useTranslation } from "react-i18next";
@@ -144,15 +144,8 @@ function CreateAlertForm() {
 				</>
 			)}
 
-			<Button
-				color="primary"
-				type="submit"
-				className="flex items-center justify-between self-end"
-				isPending={isPending}
-				name="intent"
-			>
-				<span>{t("cta")}</span>
-				{isPending && <LoaderIcon className="size-5 animate-spin" />}
+			<Button type="submit" className="self-end" isPending={isPending} name="intent">
+				{t("cta")}
 			</Button>
 		</fetcher.Form>
 	);

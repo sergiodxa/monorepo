@@ -1,19 +1,10 @@
 import { Sidebar } from "@pkg/ui";
-import {
-	ActivityIcon,
-	BadgeCheckIcon,
-	BellIcon,
-	CreditCardIcon,
-	MonitorCogIcon,
-	PlusIcon,
-	UsersIcon,
-} from "lucide-react";
+import { ActivityIcon, BellIcon, MonitorCogIcon, PlusIcon, SettingsIcon } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { href, Link, useMatch } from "react-router";
 
 import { TeamPicker } from "~/components/team-picker";
 import { UserMenu } from "~/components/user-menu";
-import { useTeam } from "~/hooks/use-team";
 
 export function AppSidebar(props: {
 	team: { id: string; slug: string; name: string; logo: string | null };
@@ -36,21 +27,14 @@ export function AppSidebar(props: {
 		keyPrefix: "app.layout.sidebar",
 	});
 
-	let team = useTeam();
-
 	let dashboardPath = href("/app/:team/dashboard", { team: props.team.slug });
 	let alertsPath = href("/app/:team/alerts", { team: props.team.slug });
-	let checkoutPath = href("/app/:team/checkout", { team: props.team.slug });
-	let domainsPath = href("/app/:team/domains", { team: props.team.slug });
-	let membersPath = href("/app/:team/members", { team: props.team.slug });
+	let settingsPath = href("/app/:team/settings", { team: props.team.slug });
 
 	let isDashboardActive = useMatch("/app/:team/dashboard") !== null;
 	let isAlertsActive = useMatch("/app/:team/alerts") !== null;
-	let isCheckoutActive = useMatch("/app/:team/checkout") !== null;
-	let isDomainsActive = useMatch("/app/:team/domains") !== null;
-	let isMembersActive = useMatch("/app/:team/members") !== null;
+	let isSettingsActive = useMatch("/app/:team/settings") !== null;
 
-	let isOwner = team.ownerId === props.viewer.id;
 	let isAdmin = props.viewer.isAdmin;
 
 	return (
@@ -114,51 +98,23 @@ export function AppSidebar(props: {
 					</>
 				)}
 
-				{(isOwner || isAdmin) && (
-					<>
-						<Sidebar.Group className="mt-auto">
-							<Sidebar.GroupContent>
-								<Sidebar.Menu>
-									{isOwner && (
-										<Sidebar.MenuItem>
-											<Sidebar.MenuLink
-												href={checkoutPath}
-												active={isCheckoutActive}
-												tooltip={t("navigation.items.billing")}
-											>
-												<CreditCardIcon size={16} />
-												<span>{t("navigation.items.billing")}</span>
-											</Sidebar.MenuLink>
-										</Sidebar.MenuItem>
-									)}
-									{isAdmin && (
-										<>
-											<Sidebar.MenuItem>
-												<Sidebar.MenuLink
-													href={domainsPath}
-													active={isDomainsActive}
-													tooltip={t("navigation.items.domains")}
-												>
-													<BadgeCheckIcon size={16} />
-													<span>{t("navigation.items.domains")}</span>
-												</Sidebar.MenuLink>
-											</Sidebar.MenuItem>
-											<Sidebar.MenuItem>
-												<Sidebar.MenuLink
-													href={membersPath}
-													active={isMembersActive}
-													tooltip={t("navigation.items.members")}
-												>
-													<UsersIcon size={16} />
-													<span>{t("navigation.items.members")}</span>
-												</Sidebar.MenuLink>
-											</Sidebar.MenuItem>
-										</>
-									)}
-								</Sidebar.Menu>
-							</Sidebar.GroupContent>
-						</Sidebar.Group>
-					</>
+				{isAdmin && (
+					<Sidebar.Group className="mt-auto">
+						<Sidebar.GroupContent>
+							<Sidebar.Menu>
+								<Sidebar.MenuItem>
+									<Sidebar.MenuLink
+										href={settingsPath}
+										active={isSettingsActive}
+										tooltip={t("navigation.items.settings")}
+									>
+										<SettingsIcon size={16} />
+										<span>{t("navigation.items.settings")}</span>
+									</Sidebar.MenuLink>
+								</Sidebar.MenuItem>
+							</Sidebar.Menu>
+						</Sidebar.GroupContent>
+					</Sidebar.Group>
 				)}
 			</Sidebar.Content>
 

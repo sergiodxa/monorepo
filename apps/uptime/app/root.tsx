@@ -1,5 +1,5 @@
 import { createLoggerMiddleware } from "@pkg/logger";
-import { Toaster } from "@pkg/ui";
+import { ConfirmDialog, Toaster } from "@pkg/ui";
 import NProgress from "nprogress";
 import { useEffect } from "react";
 import { RouterProvider } from "react-aria-components";
@@ -70,6 +70,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
 			<body className="flex min-h-dvh flex-col bg-neutral-50 font-sans text-neutral-950 dark:bg-neutral-950 dark:text-neutral-50">
 				{children}
 				<Toaster />
+				<ConfirmDialog />
 				<ScrollRestoration />
 				<Scripts />
 				{process.env.NODE_ENV === "production" ? (
@@ -85,7 +86,11 @@ export function Layout({ children }: { children: React.ReactNode }) {
 }
 
 export default function App({ loaderData }: Route.ComponentProps) {
-	let navigate = useNavigate();
+	let reactRouterNavigate = useNavigate();
+
+	function navigate(href: string, routerOptions?: { preventScrollReset?: boolean }) {
+		reactRouterNavigate(href, routerOptions);
+	}
 
 	return (
 		<RouterProvider navigate={navigate} useHref={useHref}>

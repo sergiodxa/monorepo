@@ -1,5 +1,5 @@
 import { cn } from "@pkg/cn";
-import { Alert, Badge, Button, LinkButton, Menu, Popover, Table } from "@pkg/ui";
+import { Alert, Badge, Button, confirm, LinkButton, Menu, Popover, Table } from "@pkg/ui";
 import {
 	EllipsisVerticalIcon,
 	LoaderIcon,
@@ -387,14 +387,17 @@ function MonitorTableRow(props: {
 							<Menu.Item
 								danger
 								isDisabled={isDeleting}
-								onAction={() => {
-									if (
-										window.confirm(
-											t("confirmation.deleteMonitor", {
-												name: props.monitor.name,
-											}),
-										)
-									) {
+								onAction={async () => {
+									let confirmed = await confirm(
+										t("confirmation.deleteMonitor", {
+											name: props.monitor.name,
+										}),
+										{
+											confirmLabel: t("actions.delete"),
+											color: "danger",
+										},
+									);
+									if (confirmed) {
 										deleteMonitorFetcher.submit(
 											{ monitorId: props.monitor.id },
 											{

@@ -2,6 +2,7 @@ import { cn } from "@pkg/cn";
 import {
 	Alert,
 	Button,
+	confirm,
 	Description,
 	FieldError,
 	Input,
@@ -223,15 +224,8 @@ function CreateAlertForm() {
 				</>
 			)}
 
-			<Button
-				color="primary"
-				type="submit"
-				className="flex items-center justify-between self-end"
-				isPending={isPending}
-				name="intent"
-			>
-				<span>{t("cta")}</span>
-				{isPending && <LoaderIcon className="size-5 animate-spin" />}
+			<Button type="submit" className="self-end" isPending={isPending} name="intent">
+				{t("cta")}
 			</Button>
 		</fetcher.Form>
 	);
@@ -270,8 +264,12 @@ function AlertTableRow(props: { alert: Route.ComponentProps["loaderData"]["alert
 							<Menu.Item
 								danger
 								isDisabled={isRemovingAlert}
-								onAction={() => {
-									if (window.confirm(t("confirmation.deleteAlert", props.alert))) {
+								onAction={async () => {
+									let confirmed = await confirm(t("confirmation.deleteAlert", props.alert), {
+										confirmLabel: t("actions.remove"),
+										color: "danger",
+									});
+									if (confirmed) {
 										removeAlert.submit(
 											{ alertId: props.alert.id },
 											{
