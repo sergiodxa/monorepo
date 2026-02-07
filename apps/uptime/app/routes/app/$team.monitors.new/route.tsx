@@ -54,7 +54,7 @@ export default function MonitorsNew({ loaderData, params }: Route.ComponentProps
 				</div>
 			)}
 
-			<div className="flex flex-col gap-12 p-12">
+			<div className="flex flex-col gap-6 p-5 md:gap-12 md:p-12">
 				<CreateMonitorForm />
 			</div>
 		</>

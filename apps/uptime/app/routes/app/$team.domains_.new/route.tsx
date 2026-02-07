@@ -47,7 +47,7 @@ export default function Component({ loaderData, params }: Route.ComponentProps) 
 				</div>
 			)}
 
-			<div className="flex flex-col gap-12 p-12">
+			<div className="flex flex-col gap-6 p-5 md:gap-12 md:p-12">
 				<CreateDomainForm />
 			</div>
 		</>
@@ -120,7 +120,7 @@ export function ErrorBoundary({ error, params }: Route.ErrorBoundaryProps) {
 					</div>
 				)}
 
-				<div className="flex flex-col gap-4 p-12">
+				<div className="flex flex-col gap-4 p-5 md:p-12">
 					{error.status === 403 ? (
 						<>
 							<h2>{t("error.forbidden.title")}</h2>
@@ -140,7 +140,7 @@ export function ErrorBoundary({ error, params }: Route.ErrorBoundaryProps) {
 	return (
 		<>
 			<AppHeader heading={t("header.title")} />
-			<div className="flex flex-col gap-4 p-12">
+			<div className="flex flex-col gap-4 p-5 md:p-12">
 				<h2>{t("error.unknown.title")}</h2>
 				<p>{t("error.unknown.description")}</p>
 			</div>
