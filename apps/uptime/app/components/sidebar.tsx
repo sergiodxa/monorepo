@@ -99,22 +99,18 @@ export function AppSidebar(props: {
 				)}
 
 				{isAdmin && (
-					<Sidebar.Group className="mt-auto">
-						<Sidebar.GroupContent>
-							<Sidebar.Menu>
-								<Sidebar.MenuItem>
-									<Sidebar.MenuLink
-										href={settingsPath}
-										active={isSettingsActive}
-										tooltip={t("navigation.items.settings")}
-									>
-										<SettingsIcon size={16} />
-										<span>{t("navigation.items.settings")}</span>
-									</Sidebar.MenuLink>
-								</Sidebar.MenuItem>
-							</Sidebar.Menu>
-						</Sidebar.GroupContent>
-					</Sidebar.Group>
+					<Sidebar.Menu className="mt-auto">
+						<Sidebar.MenuItem>
+							<Sidebar.MenuLink
+								href={settingsPath}
+								active={isSettingsActive}
+								tooltip={t("navigation.items.settings")}
+							>
+								<SettingsIcon size={16} />
+								<span>{t("navigation.items.settings")}</span>
+							</Sidebar.MenuLink>
+						</Sidebar.MenuItem>
+					</Sidebar.Menu>
 				)}
 			</Sidebar.Content>
 

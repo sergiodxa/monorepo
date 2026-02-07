@@ -922,7 +922,7 @@ function DangerZoneSection(props: { params: { team: string }; teamName: string }
 				<p className="text-sm text-neutral-500 dark:text-neutral-400">{t("description")}</p>
 			</hgroup>
 
-			<Card className="border-red-200 dark:border-red-900 min-[672px]:-mx-6">
+			<Card color="danger" className="min-[672px]:-mx-6">
 				<fetcher.Form
 					method="POST"
 					action={href("/actions/:team/delete-team", props.params)}
