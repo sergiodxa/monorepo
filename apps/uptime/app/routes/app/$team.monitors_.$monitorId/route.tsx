@@ -1,7 +1,7 @@
 import { cn } from "@pkg/cn";
-import { Alert, Button } from "@pkg/ui";
+import { Alert, Button, Card, LinkButton, Skeleton } from "@pkg/ui";
 import { subDays } from "date-fns";
-import { PlayIcon, RefreshCwIcon } from "lucide-react";
+import { PencilIcon, PlayIcon, RefreshCwIcon } from "lucide-react";
 import { Trans, useTranslation } from "react-i18next";
 import { href, Link, redirect, useRevalidator } from "react-router";
 import { useSpinDelay } from "spin-delay";
@@ -21,6 +21,62 @@ import daysOfYear from "~/utils/days-of-year";
 import groupDatesPerWeek from "~/utils/group-dates-per-week";
 
 import type { Route } from "./+types/route";
+
+export async function clientLoader({ serverLoader }: Route.ClientLoaderArgs) {
+	return await serverLoader();
+}
+
+clientLoader.hydrate = true as const;
+
+export function HydrateFallback() {
+	return (
+		<>
+			<header className="sticky top-0 z-10 flex h-16 flex-shrink-0 items-center gap-2 border-b border-neutral-200 bg-neutral-50/80 px-4 dark:border-neutral-800 dark:bg-neutral-950/80">
+				<Skeleton className="h-6 w-48" />
+				<aside className="ml-auto flex items-center gap-2">
+					<Skeleton className="h-10 w-20 rounded-lg" />
+					<Skeleton className="h-10 w-24 rounded-lg" />
+				</aside>
+			</header>
+
+			<div className="flex flex-col gap-12 p-12">
+				<div className="grid grid-cols-3 gap-8">
+					<StatCardSkeleton />
+					<StatCardSkeleton />
+					<StatCardSkeleton />
+				</div>
+
+				<HeatmapSkeleton />
+			</div>
+		</>
+	);
+}
+
+function StatCardSkeleton() {
+	return (
+		<Card>
+			<Card.Header className="pb-2">
+				<Skeleton className="h-4 w-24" />
+			</Card.Header>
+			<Card.Content className="pt-0">
+				<Skeleton className="mb-2 h-8 w-20" />
+				<Skeleton className="h-3 w-40" />
+			</Card.Content>
+		</Card>
+	);
+}
+
+function HeatmapSkeleton() {
+	return (
+		<div className="flex flex-col gap-4">
+			<div className="flex justify-between">
+				<Skeleton className="h-4 w-16" />
+				<Skeleton className="h-4 w-16" />
+			</div>
+			<Skeleton className="h-40 w-full rounded-lg" />
+		</div>
+	);
+}
 
 export async function loader({ params }: Route.LoaderArgs) {
 	let dates = daysOfYear(new Date());
@@ -117,8 +173,21 @@ export default function Component({ loaderData, params }: Route.ComponentProps) 
 					color="neutral"
 					action={href("/actions/:team/play-monitor", params)}
 				>
-					<PlayIcon className="size-5" />
+					<PlayIcon aria-hidden className="size-4.5" />
+					<span className="max-sm:sr-only">{t("header.action.play")}</span>
 				</ActionButton>
+
+				<LinkButton
+					color="neutral"
+					href={href("/app/:team/monitors/:monitorId/edit", {
+						team: params.team,
+						monitorId: loaderData.monitor.id,
+					})}
+					className="flex-shrink-0 px-2"
+				>
+					<PencilIcon aria-hidden className="size-4.5" />
+					<span className="max-sm:sr-only">{t("header.action.edit")}</span>
+				</LinkButton>
 
 				<Button
 					color="neutral"
@@ -151,8 +220,8 @@ export default function Component({ loaderData, params }: Route.ComponentProps) 
 				</div>
 			)}
 
-			<div className="flex flex-col gap-12 p-12">
-				<div className="grid grid-cols-3 gap-8">
+			<div className="flex flex-col gap-6 p-5 md:gap-12 md:p-12">
+				<div className="grid gap-4 md:grid-cols-3 md:gap-8">
 					<StatCard
 						label={t("stats.monitors.label")}
 						value={

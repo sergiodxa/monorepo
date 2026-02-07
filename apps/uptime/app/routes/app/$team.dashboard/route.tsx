@@ -1,6 +1,19 @@
 import { cn } from "@pkg/cn";
-import { Alert, Badge, Button, confirm, LinkButton, Menu, Popover, Table } from "@pkg/ui";
 import {
+	Alert,
+	Badge,
+	Button,
+	Card,
+	confirm,
+	Empty,
+	LinkButton,
+	Menu,
+	Popover,
+	Skeleton,
+	Table,
+} from "@pkg/ui";
+import {
+	ActivityIcon,
 	EllipsisVerticalIcon,
 	LoaderIcon,
 	PencilIcon,
@@ -33,6 +46,98 @@ import { getHints } from "~/utils/client-hints";
 import type { Route } from "./+types/route";
 
 import { getDashboardDataByTeamId } from "./query.server";
+
+export async function clientLoader({ serverLoader }: Route.ClientLoaderArgs) {
+	return await serverLoader();
+}
+
+clientLoader.hydrate = true as const;
+
+export function HydrateFallback() {
+	return (
+		<>
+			<header className="sticky top-0 z-10 flex h-16 flex-shrink-0 items-center gap-2 border-b border-neutral-200 bg-neutral-50/80 px-4 dark:border-neutral-800 dark:bg-neutral-950/80">
+				<Skeleton className="h-6 w-32" />
+				<aside className="ml-auto flex items-center gap-2">
+					<Skeleton className="h-10 w-24 rounded-lg" />
+					<Skeleton className="h-10 w-24 rounded-lg" />
+				</aside>
+			</header>
+
+			<div className="flex flex-col gap-6 p-5 lg:gap-12 lg:p-12">
+				<div className="grid gap-4 lg:grid-cols-3 lg:gap-8">
+					<StatCardSkeleton />
+					<StatCardSkeleton />
+					<StatCardSkeleton />
+				</div>
+
+				<MonitorsTableSkeleton />
+			</div>
+		</>
+	);
+}
+
+function StatCardSkeleton() {
+	return (
+		<Card>
+			<Card.Header className="pb-2">
+				<Skeleton className="h-4 w-24" />
+			</Card.Header>
+			<Card.Content className="pt-0">
+				<Skeleton className="mb-2 h-8 w-20" />
+				<Skeleton className="h-3 w-40" />
+			</Card.Content>
+		</Card>
+	);
+}
+
+function MonitorsTableSkeleton() {
+	return (
+		<div className="-mx-5 w-[calc(100%+2.5rem)] overflow-x-auto px-5 md:mx-0 md:w-full md:px-0">
+			<Table aria-label="Loading monitors">
+				<Table.Header>
+					<Table.Column isRowHeader>
+						<Skeleton className="h-4 w-16" />
+					</Table.Column>
+					<Table.Column>
+						<Skeleton className="h-4 w-20 max-md:hidden" />
+					</Table.Column>
+					<Table.Column>
+						<Skeleton className="h-4 w-12" />
+					</Table.Column>
+					<Table.Column align="right">
+						<Skeleton className="ml-auto h-4 w-24" />
+					</Table.Column>
+					<Table.Column align="right">
+						<span className="sr-only">Actions</span>
+					</Table.Column>
+				</Table.Header>
+
+				<Table.Body items={[{ id: "1" }, { id: "2" }, { id: "3" }, { id: "4" }, { id: "5" }]}>
+					{(item) => (
+						<Table.Row key={item.id}>
+							<Table.Cell>
+								<Skeleton className="h-4 w-32" />
+							</Table.Cell>
+							<Table.Cell className="w-50 max-md:hidden">
+								<Skeleton className="h-6 w-50" />
+							</Table.Cell>
+							<Table.Cell className="w-44">
+								<Skeleton className="h-6 w-16 rounded-full" />
+							</Table.Cell>
+							<Table.Cell className="w-36 text-right">
+								<Skeleton className="ml-auto h-4 w-16" />
+							</Table.Cell>
+							<Table.Cell className="w-17 text-right">
+								<Skeleton className="ml-auto h-10 w-10 rounded-lg" />
+							</Table.Cell>
+						</Table.Row>
+					)}
+				</Table.Body>
+			</Table>
+		</div>
+	);
+}
 
 export async function loader({ request }: Route.LoaderArgs) {
 	let [{ monitorsCount, uptime, slowestEndpoint, monitors }, consumedPings, estimatedPings] =
@@ -205,6 +310,27 @@ function MonitorsTable(props: {
 	let { t } = useTranslation("translation", {
 		keyPrefix: "page.dashboard.table",
 	});
+	let { t: tPage } = useTranslation("translation", {
+		keyPrefix: "page.dashboard",
+	});
+
+	if (props.monitors.length === 0) {
+		return (
+			<Empty className="mx-auto max-w-md py-16">
+				<Empty.Icon>
+					<ActivityIcon className="size-12" />
+				</Empty.Icon>
+				<Empty.Title>{tPage("empty.title")}</Empty.Title>
+				<Empty.Description>{tPage("empty.description")}</Empty.Description>
+				<Empty.Action>
+					<LinkButton href={href("/app/:team/monitors/new", { team: props.team })}>
+						<PlusIcon className="size-5" aria-hidden />
+						{tPage("empty.cta")}
+					</LinkButton>
+				</Empty.Action>
+			</Empty>
+		);
+	}
 
 	let showLastIncident = props.monitors.some((m) => m.lastIncident);
 
@@ -244,13 +370,20 @@ function MonitorsTable(props: {
 	].filter(Boolean);
 
 	return (
-		<div className="w-full overflow-x-auto">
+		<div className="-mx-5 w-[calc(100%+2.5rem)] overflow-x-auto px-5 md:mx-0 md:w-full md:px-0">
 			<Table aria-label={t("label")} className="min-w-full">
 				<Table.Header columns={columns}>
 					{(column) => {
 						return (
 							<Table.Column align={column.align} isRowHeader={column.id === "name"}>
-								<span className={cn({ "sr-only": column.id === "actions" })}>{column.name}</span>
+								<span
+									className={cn({
+										"sr-only": column.id === "actions",
+										"max-md:hidden": column.id === "latencyChart" || column.id === "lastIncident",
+									})}
+								>
+									{column.name}
+								</span>
 							</Table.Column>
 						);
 					}}
@@ -305,7 +438,7 @@ function MonitorTableRow(props: {
 				</Link>
 			</Table.Cell>
 
-			<Table.Cell className="w-50 text-left">
+			<Table.Cell className="w-50 text-left max-md:hidden">
 				<ClientOnly fallback={<div className="h-6 w-50" />}>
 					{() => (
 						<LineChart
@@ -344,7 +477,9 @@ function MonitorTableRow(props: {
 			</Table.Cell>
 
 			{props.showLastIncident && (
-				<Table.Cell className="w-52 text-right">{props.monitor.lastIncident}</Table.Cell>
+				<Table.Cell className="w-52 text-right max-md:hidden">
+					{props.monitor.lastIncident}
+				</Table.Cell>
 			)}
 
 			<Table.Cell className="w-36 text-right">{props.monitor.responseTime}</Table.Cell>
@@ -377,7 +512,12 @@ function MonitorTableRow(props: {
 								{isPlaying && <LoaderIcon aria-hidden className="ml-auto size-5 animate-spin" />}
 							</Menu.Item>
 
-							<Menu.Item isDisabled>
+							<Menu.Item
+								href={href("/app/:team/monitors/:monitorId/edit", {
+									team: props.team,
+									monitorId: props.monitor.id,
+								})}
+							>
 								<PencilIcon className="size-5" />
 								<span>{t("actions.edit")}</span>
 							</Menu.Item>

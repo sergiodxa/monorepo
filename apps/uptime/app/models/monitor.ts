@@ -158,6 +158,28 @@ export default class Monitor {
 		waitUntil(env.QUEUE.sendBatch(messages));
 	}
 
+	static async updateById(
+		db: Database,
+		monitorId: string,
+		input: Partial<{
+			name: string;
+			url: string;
+			method: schema.InsertMonitor["method"];
+			expectedStatus: number;
+			intervalSeconds: number;
+			locationHint: schema.InsertMonitor["locationHint"];
+		}>,
+	) {
+		let [monitor] = await db
+			.update(schema.monitors)
+			.set(input)
+			.where(eq(schema.monitors.id, monitorId))
+			.returning();
+
+		if (monitor) return monitor;
+		throw new Error(`Failed to update monitor ${monitorId}`);
+	}
+
 	static async deleteById(db: Database, monitorId: string) {
 		let monitor = await db.query.monitors.findFirst({
 			columns: { name: true },
