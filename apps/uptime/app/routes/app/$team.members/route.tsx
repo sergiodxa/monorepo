@@ -1,10 +1,12 @@
 import { cn } from "@pkg/cn";
 import { isFailure, succeeded } from "@pkg/result";
+import { Alert, Avatar, Button, LinkButton, Menu, Popover, Table } from "@pkg/ui";
 import {
 	ClipboardCopyIcon,
 	EllipsisVerticalIcon,
 	HandshakeIcon,
 	LoaderIcon,
+	TriangleAlertIcon,
 	UserCogIcon,
 	UserMinusIcon,
 	UserPlusIcon,
@@ -16,11 +18,6 @@ import { useSpinDelay } from "spin-delay";
 
 import auth from "~/clients/auth";
 import { AppHeader } from "~/components/app-header";
-import { Alert } from "~/components/ui/alert";
-import { Button } from "~/components/ui/button";
-import { LinkButton } from "~/components/ui/link-button";
-import { Menu } from "~/components/ui/menu";
-import { ColumnAlignment, Table } from "~/components/ui/table";
 import { useSubject } from "~/hooks/use-subject";
 import { useTeam } from "~/hooks/use-team";
 import { hasActiveSubscription } from "~/middleware/customer-subscription";
@@ -29,6 +26,16 @@ import { measure } from "~/middleware/server-timing";
 import { team } from "~/middleware/team";
 
 import type { Route } from "./+types/route";
+
+function getInitials(name: string): string {
+	return name
+		.split(" ")
+		.map((part) => part[0])
+		.filter(Boolean)
+		.slice(0, 2)
+		.join("")
+		.toUpperCase();
+}
 
 export async function loader() {
 	let { memberships, id, ownerId } = team();
@@ -110,17 +117,17 @@ export default function Component({ loaderData, params }: Route.ComponentProps) 
 		{
 			id: "name" as const,
 			name: t("membersTable.columns.name"),
-			align: ColumnAlignment.Left,
+			align: "left" as const,
 		},
 		{
 			id: "role" as const,
 			name: t("membersTable.columns.role"),
-			align: ColumnAlignment.Right,
+			align: "right" as const,
 		},
 		{
 			id: "actions" as const,
 			name: t("membersTable.columns.actions"),
-			align: ColumnAlignment.Center,
+			align: "center" as const,
 		},
 	];
 
@@ -128,12 +135,12 @@ export default function Component({ loaderData, params }: Route.ComponentProps) 
 		{
 			id: "email" as const,
 			name: t("invitedMembersTable.columns.email"),
-			align: ColumnAlignment.Left,
+			align: "left" as const,
 		},
 		{
 			id: "actions" as const,
 			name: t("invitedMembersTable.columns.actions"),
-			align: ColumnAlignment.Center,
+			align: "center" as const,
 		},
 	];
 
@@ -158,14 +165,18 @@ export default function Component({ loaderData, params }: Route.ComponentProps) 
 
 			{loaderData.hasActiveSubscription ? null : (
 				<div className="p-4">
-					<Alert
-						intent="warning"
-						title={t("alert.subscription.title")}
-						description={t("alert.subscription.description")}
-						cta={
+					<Alert color="warning">
+						<Alert.Icon>
+							<TriangleAlertIcon className="size-5" />
+						</Alert.Icon>
+						<Alert.Content>
+							<Alert.Title>{t("alert.subscription.title")}</Alert.Title>
+							<Alert.Description>{t("alert.subscription.description")}</Alert.Description>
+						</Alert.Content>
+						<Alert.Action>
 							<Link to={href("/app/:team/checkout", params)}>{t("alert.subscription.cta")}</Link>
-						}
-					/>
+						</Alert.Action>
+					</Alert>
 				</div>
 			)}
 
@@ -256,11 +267,10 @@ function MemberTableRow(props: { member: Route.ComponentProps["loaderData"]["mem
 		<Table.Row>
 			<Table.Cell>
 				<div className="flex items-center gap-3">
-					<img
-						src={props.member.avatar}
-						alt=""
-						className="size-12.5 flex-shrink-0 rounded-full border border-neutral-300 bg-neutral-50 object-cover"
-					/>
+					<Avatar size="lg">
+						<Avatar.Image src={props.member.avatar} alt="" />
+						<Avatar.Fallback>{getInitials(props.member.name)}</Avatar.Fallback>
+					</Avatar>
 
 					<div className="flex flex-col gap-0.5">
 						<span className="text-lg font-medium">{props.member.name}</span>
@@ -286,7 +296,7 @@ function MemberTableRow(props: { member: Route.ComponentProps["loaderData"]["mem
 						<span className="sr-only">{t("actions.menu")}</span>
 					</Button>
 
-					<Menu.Popover placement="left top">
+					<Popover placement="left top">
 						<Menu>
 							{canChangeRole && (
 								<Menu.Item
@@ -317,6 +327,7 @@ function MemberTableRow(props: { member: Route.ComponentProps["loaderData"]["mem
 
 							{canRemoveMember && (
 								<Menu.Item
+									danger
 									isDisabled={!canRemoveMember || isRemovingMember}
 									onAction={() => {
 										if (
@@ -363,7 +374,7 @@ function MemberTableRow(props: { member: Route.ComponentProps["loaderData"]["mem
 								</>
 							)}
 						</Menu>
-					</Menu.Popover>
+					</Popover>
 				</Menu.Trigger>
 			</Table.Cell>
 		</Table.Row>
@@ -397,7 +408,7 @@ function InvitedMemberTableRow(props: {
 						<span className="sr-only">{t("actions.menu")}</span>
 					</Button>
 
-					<Menu.Popover
+					<Popover
 						style={{ minWidth: "var(--trigger-width)" }}
 						placement="left top"
 						className={cn(
@@ -419,6 +430,7 @@ function InvitedMemberTableRow(props: {
 								<span>{t("actions.copy")}</span>
 							</Menu.Item>
 							<Menu.Item
+								danger
 								isDisabled={isRevokingInvite}
 								onAction={() => {
 									if (window.confirm(t("confirmation.revokeInvite", props.member))) {
@@ -439,7 +451,7 @@ function InvitedMemberTableRow(props: {
 								)}
 							</Menu.Item>
 						</Menu>
-					</Menu.Popover>
+					</Popover>
 				</Menu.Trigger>
 			</Table.Cell>
 		</Table.Row>
@@ -461,14 +473,18 @@ export function ErrorBoundary({ error, params }: Route.ErrorBoundaryProps) {
 
 				{data.hasActiveSubscription ? null : (
 					<div className="p-4">
-						<Alert
-							intent="warning"
-							title={t("alert.subscription.title")}
-							description={t("alert.subscription.description")}
-							cta={
+						<Alert color="warning">
+							<Alert.Icon>
+								<TriangleAlertIcon className="size-5" />
+							</Alert.Icon>
+							<Alert.Content>
+								<Alert.Title>{t("alert.subscription.title")}</Alert.Title>
+								<Alert.Description>{t("alert.subscription.description")}</Alert.Description>
+							</Alert.Content>
+							<Alert.Action>
 								<Link to={href("/app/:team/checkout", params)}>{t("alert.subscription.cta")}</Link>
-							}
-						/>
+							</Alert.Action>
+						</Alert>
 					</div>
 				)}
 

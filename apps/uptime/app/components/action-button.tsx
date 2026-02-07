@@ -1,12 +1,10 @@
 import type { ComponentProps } from "react";
 
-import { LoaderIcon } from "lucide-react";
+import { Button } from "@pkg/ui";
 import { useFetcher } from "react-router";
 import { useSpinDelay } from "spin-delay";
 
 import type { SelectMonitor } from "~/db/schema";
-
-import { Button } from "~/components/ui/button";
 
 export function ActionButton(props: {
 	id: SelectMonitor["id"];
@@ -33,7 +31,7 @@ export function ActionButton(props: {
 			<input type="hidden" name="monitorId" value={props.id} />
 			<input type="hidden" name="intent" value={props.intent} />
 			<Button type="submit" className="p-2" isPending={isPending} color={props.color}>
-				{isPending ? <LoaderIcon className="size-5 animate-spin" /> : props.children}
+				{props.children}
 				<span className="sr-only">{props.label}</span>
 			</Button>
 		</fetcher.Form>

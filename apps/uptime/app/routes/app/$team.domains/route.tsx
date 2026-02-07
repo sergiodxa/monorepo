@@ -1,25 +1,32 @@
 import { cn } from "@pkg/cn";
 import {
+	Alert,
+	Button,
+	Description,
+	FieldError,
+	Input,
+	Label,
+	LinkButton,
+	Menu,
+	Popover,
+	Table,
+	TextField,
+} from "@pkg/ui";
+import {
 	BadgeMinusIcon,
 	BadgePlusIcon,
 	ClipboardCopyIcon,
 	EllipsisVerticalIcon,
 	LoaderIcon,
 	RefreshCcwIcon,
+	TriangleAlertIcon,
 } from "lucide-react";
 import { useId } from "react";
-import { TextField } from "react-aria-components";
 import { Trans, useTranslation } from "react-i18next";
 import { data, href, isRouteErrorResponse, Link, useFetcher } from "react-router";
 import { useSpinDelay } from "spin-delay";
 
 import { AppHeader } from "~/components/app-header";
-import { Alert } from "~/components/ui/alert";
-import { Button } from "~/components/ui/button";
-import { Description, FieldError, Input, Label } from "~/components/ui/field";
-import { LinkButton } from "~/components/ui/link-button";
-import { Menu } from "~/components/ui/menu";
-import { ColumnAlignment, Table } from "~/components/ui/table";
 import { useTeam } from "~/hooks/use-team";
 import { hasActiveSubscription } from "~/middleware/customer-subscription";
 import { db } from "~/middleware/drizzle";
@@ -58,22 +65,22 @@ export default function Component({ loaderData, params }: Route.ComponentProps) 
 		{
 			id: "hostname" as const,
 			name: t("table.columns.hostname"),
-			align: ColumnAlignment.Left,
+			align: "left" as const,
 		},
 		{
 			id: "id" as const,
 			name: t("table.columns.id"),
-			align: ColumnAlignment.Right,
+			align: "right" as const,
 		},
 		{
 			id: "verifiedAt" as const,
 			name: t("table.columns.verifiedAt"),
-			align: ColumnAlignment.Right,
+			align: "right" as const,
 		},
 		{
 			id: "actions" as const,
 			name: t("table.columns.actions"),
-			align: ColumnAlignment.Center,
+			align: "center" as const,
 		},
 	];
 
@@ -94,14 +101,18 @@ export default function Component({ loaderData, params }: Route.ComponentProps) 
 
 			{loaderData.hasActiveSubscription ? null : (
 				<div className="p-4">
-					<Alert
-						intent="warning"
-						title={t("alert.subscription.title")}
-						description={t("alert.subscription.description")}
-						cta={
+					<Alert color="warning">
+						<Alert.Icon>
+							<TriangleAlertIcon className="size-5" />
+						</Alert.Icon>
+						<Alert.Content>
+							<Alert.Title>{t("alert.subscription.title")}</Alert.Title>
+							<Alert.Description>{t("alert.subscription.description")}</Alert.Description>
+						</Alert.Content>
+						<Alert.Action>
 							<Link to={href("/app/:team/checkout", params)}>{t("alert.subscription.cta")}</Link>
-						}
-					/>
+						</Alert.Action>
+					</Alert>
 				</div>
 			)}
 
@@ -189,7 +200,7 @@ function DomainTableRow(props: { domain: Route.ComponentProps["loaderData"]["dom
 						<span className="sr-only">{t("actions.menu")}</span>
 					</Button>
 
-					<Menu.Popover placement="left top">
+					<Popover placement="left top">
 						<Menu>
 							{!props.domain.verifiedAt && (
 								<>
@@ -222,6 +233,7 @@ function DomainTableRow(props: { domain: Route.ComponentProps["loaderData"]["dom
 							)}
 
 							<Menu.Item
+								danger
 								isDisabled={isRemovingDomain}
 								onAction={() => {
 									if (window.confirm(t("confirmation.removeDomain", props.domain))) {
@@ -247,7 +259,7 @@ function DomainTableRow(props: { domain: Route.ComponentProps["loaderData"]["dom
 								)}
 							</Menu.Item>
 						</Menu>
-					</Menu.Popover>
+					</Popover>
 				</Menu.Trigger>
 			</Table.Cell>
 		</Table.Row>
@@ -272,15 +284,9 @@ function CreateDomainForm() {
 			action={href("/actions/:team/add-domain", { team: team.slug })}
 			className="mx-auto flex w-full max-w-prose flex-col gap-6"
 		>
-			<TextField
-				type="text"
-				name="hostname"
-				className="flex flex-col gap-1"
-				isRequired
-				autoComplete="off"
-			>
+			<TextField type="text" name="hostname" isRequired autoComplete="off">
 				<Label>{t("fields.hostname.label")}</Label>
-				<Input placeholder={t("fields.hostname.placeholder")} className="mt-2" />
+				<Input placeholder={t("fields.hostname.placeholder")} />
 				<Description>
 					{t("fields.hostname.description", {
 						team: team.name,
@@ -358,14 +364,18 @@ export function ErrorBoundary({ error, params }: Route.ErrorBoundaryProps) {
 
 				{data.hasActiveSubscription ? null : (
 					<div className="p-4">
-						<Alert
-							intent="warning"
-							title={t("alert.subscription.title")}
-							description={t("alert.subscription.description")}
-							cta={
+						<Alert color="warning">
+							<Alert.Icon>
+								<TriangleAlertIcon className="size-5" />
+							</Alert.Icon>
+							<Alert.Content>
+								<Alert.Title>{t("alert.subscription.title")}</Alert.Title>
+								<Alert.Description>{t("alert.subscription.description")}</Alert.Description>
+							</Alert.Content>
+							<Alert.Action>
 								<Link to={href("/app/:team/checkout", params)}>{t("alert.subscription.cta")}</Link>
-							}
-						/>
+							</Alert.Action>
+						</Alert>
 					</div>
 				)}
 

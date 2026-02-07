@@ -1,24 +1,23 @@
-import { cn } from "@pkg/cn";
-import { ChevronDownIcon, LoaderIcon } from "lucide-react";
-import { useState } from "react";
 import {
-	Button as AriaButton,
-	type Key,
+	Alert,
+	Button,
+	Description,
+	FieldError,
+	Input,
+	Label,
 	ListBox,
-	ListBoxItem,
 	Popover,
 	Select,
-	SelectValue,
 	TextField,
-} from "react-aria-components";
+} from "@pkg/ui";
+import { LoaderIcon, TriangleAlertIcon } from "lucide-react";
+import { useState } from "react";
+import { type Key } from "react-aria-components";
 import { useTranslation } from "react-i18next";
 import { href, Link, useFetcher } from "react-router";
 import { useSpinDelay } from "spin-delay";
 
 import { AppHeader } from "~/components/app-header";
-import { Alert } from "~/components/ui/alert";
-import { Button } from "~/components/ui/button";
-import { Description, FieldError, Input, Label } from "~/components/ui/field";
 import { useTeam } from "~/hooks/use-team";
 import { hasActiveSubscription } from "~/middleware/customer-subscription";
 
@@ -37,14 +36,18 @@ export default function Component({ loaderData, params }: Route.ComponentProps) 
 
 			{loaderData.hasActiveSubscription ? null : (
 				<div className="p-4">
-					<Alert
-						intent="warning"
-						title={t("alert.subscription.title")}
-						description={t("alert.subscription.description")}
-						cta={
+					<Alert color="warning">
+						<Alert.Icon>
+							<TriangleAlertIcon className="size-5" />
+						</Alert.Icon>
+						<Alert.Content>
+							<Alert.Title>{t("alert.subscription.title")}</Alert.Title>
+							<Alert.Description>{t("alert.subscription.description")}</Alert.Description>
+						</Alert.Content>
+						<Alert.Action>
 							<Link to={href("/app/:team/checkout", params)}>{t("alert.subscription.cta")}</Link>
-						}
-					/>
+						</Alert.Action>
+					</Alert>
 				</div>
 			)}
 
@@ -79,61 +82,27 @@ function CreateAlertForm() {
 			action={href("/actions/:team/create-alert", { team: team.slug })}
 			className="mx-auto flex w-full max-w-prose flex-col gap-6"
 		>
-			<TextField type="text" name="name" className="flex flex-col gap-1" isRequired>
+			<TextField type="text" name="name" isRequired>
 				<Label>{t("fields.name.label")}</Label>
-				<Input placeholder={t("fields.name.placeholder")} className="mt-2" />
+				<Input placeholder={t("fields.name.placeholder")} />
 				<Description>{t("fields.name.description")}</Description>
 				<FieldError />
 			</TextField>
 
 			<Select
 				name="strategy"
-				className="flex flex-col gap-1"
 				isRequired
 				selectedKey={strategy}
-				onSelectionChange={(selection) => selection && setStrategy(selection)}
+				onSelectionChange={(selection: Key | null) => selection && setStrategy(selection)}
 			>
 				<Label>{t("fields.strategy.label")}</Label>
-
-				<AriaButton
-					className={
-						"user-invalid:outline-red-500 flex items-center justify-between gap-2 rounded border border-solid border-neutral-400 px-4 py-2 ring-0 user-invalid:outline-2 focus:outline-2 focus:outline-primary-500"
-					}
-				>
-					<SelectValue />
-					<ChevronDownIcon className="size-4" aria-hidden />
-				</AriaButton>
-
+				<Select.Trigger />
 				<FieldError />
-
 				<Description>{t("fields.strategy.description")}</Description>
-
-				<Popover
-					className="bg-white rounded-lg shadow dark:bg-neutral-800"
-					style={{ minWidth: "var(--trigger-width)" }}
-				>
-					<ListBox className="flex flex-col gap-0.5 p-1" items={strategies}>
-						{(strategy) => (
-							<ListBoxItem
-								textValue={strategy.textValue}
-								className={cn(
-									// Default
-									"flex items-center justify-between",
-									"cursor-default rounded px-2 py-1",
-									// Selected
-									"data-[selected]:after:content-['✓']",
-									// Hovered
-									"data-[hovered]:bg-primary-50 data-[hovered]:text-primary-900",
-									"dark:data-[hovered]:bg-primary-800 dark:data-[hovered]:text-primary-200",
-									// Focused
-									"data-[focused]:bg-primary-50 data-[focused]:text-primary-900",
-									"dark:data-[focused]:bg-primary-800 dark:data-[focused]:text-primary-200",
-									// Disabled
-									"data-[disabled]:cursor-not-allowed data-[disabled]:text-neutral-400",
-								)}
-							>
-								{strategy.textValue}
-							</ListBoxItem>
+				<Popover>
+					<ListBox items={strategies}>
+						{(strategy: (typeof strategies)[number]) => (
+							<Select.Item id={strategy.id}>{strategy.textValue}</Select.Item>
 						)}
 					</ListBox>
 				</Popover>
@@ -141,19 +110,16 @@ function CreateAlertForm() {
 
 			{strategy === "email" && (
 				<>
-					<TextField type="email" name="email" className="flex flex-col gap-1" isRequired>
+					<TextField type="email" name="email" isRequired>
 						<Label>{t("fields.config.email.to.label")}</Label>
-						<Input placeholder={t("fields.config.email.to.placeholder")} className="mt-2" />
+						<Input placeholder={t("fields.config.email.to.placeholder")} />
 						<Description>{t("fields.config.email.to.description")}</Description>
 						<FieldError />
 					</TextField>
 
-					<TextField type="text" name="subjectPrefix" className="flex flex-col gap-1">
+					<TextField type="text" name="subjectPrefix">
 						<Label>{t("fields.config.email.subjectPrefix.label")}</Label>
-						<Input
-							placeholder={t("fields.config.email.subjectPrefix.placeholder")}
-							className="mt-2"
-						/>
+						<Input placeholder={t("fields.config.email.subjectPrefix.placeholder")} />
 						<Description>{t("fields.config.email.subjectPrefix.description")}</Description>
 						<FieldError />
 					</TextField>
@@ -162,16 +128,16 @@ function CreateAlertForm() {
 
 			{strategy === "webhook" && (
 				<>
-					<TextField type="url" name="url" className="flex flex-col gap-1" isRequired>
+					<TextField type="url" name="url" isRequired>
 						<Label>{t("fields.config.webhook.url.label")}</Label>
-						<Input placeholder={t("fields.config.webhook.url.placeholder")} className="mt-2" />
+						<Input placeholder={t("fields.config.webhook.url.placeholder")} />
 						<Description>{t("fields.config.webhook.url.description")}</Description>
 						<FieldError />
 					</TextField>
 
-					<TextField type="text" name="secret" className="flex flex-col gap-1">
+					<TextField type="text" name="secret">
 						<Label>{t("fields.config.webhook.secret.label")}</Label>
-						<Input placeholder={t("fields.config.webhook.secret.placeholder")} className="mt-2" />
+						<Input placeholder={t("fields.config.webhook.secret.placeholder")} />
 						<Description>{t("fields.config.webhook.secret.description")}</Description>
 						<FieldError />
 					</TextField>

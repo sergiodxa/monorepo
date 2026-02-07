@@ -11,6 +11,18 @@
  *   --color-warning-50 through --color-warning-950;
  *   --color-success-50 through --color-success-950;
  * }
+ *
+ * Dark Mode:
+ * - Add .dark class to <html> for forced dark mode
+ * - Add .system class to <html> for system preference (prefers-color-scheme)
+ * - For Tailwind dark: variant to work with .system, add this custom variant:
+ *
+ *   @custom-variant dark {
+ *     &:where(.dark, .dark *) { @slot; }
+ *     @media (prefers-color-scheme: dark) {
+ *       &:where(.system, .system *) { @slot; }
+ *     }
+ *   }
  */
 
 /* =============================================================================
@@ -102,8 +114,8 @@
 	--ui-success-fg-on-solid: white;
 }
 
-.dark {
-	/* Primary */
+/* Dark mode variables - forced dark with .dark class */
+:is(.dark, .dark *) {
 	--ui-primary-bg-tint: var(--color-primary-950);
 	--ui-primary-bg-tint-hover: var(--color-primary-900);
 	--ui-primary-bg-tint-pressed: var(--color-primary-800);
@@ -117,7 +129,6 @@
 	--ui-primary-fg-muted: var(--color-primary-400);
 	--ui-primary-fg-emphasis: var(--color-primary-100);
 
-	/* Neutral - Note: solid backgrounds use inverted shades (light on dark) */
 	--ui-neutral-bg-tint: var(--color-neutral-950);
 	--ui-neutral-bg-tint-hover: var(--color-neutral-900);
 	--ui-neutral-bg-tint-pressed: var(--color-neutral-800);
@@ -132,7 +143,6 @@
 	--ui-neutral-fg-emphasis: var(--color-neutral-100);
 	--ui-neutral-fg-on-solid: var(--color-neutral-900);
 
-	/* Danger */
 	--ui-danger-bg-tint: var(--color-danger-950);
 	--ui-danger-bg-tint-hover: var(--color-danger-900);
 	--ui-danger-bg-tint-pressed: var(--color-danger-800);
@@ -146,7 +156,6 @@
 	--ui-danger-fg-muted: var(--color-danger-400);
 	--ui-danger-fg-emphasis: var(--color-danger-100);
 
-	/* Warning */
 	--ui-warning-bg-tint: var(--color-warning-950);
 	--ui-warning-bg-tint-hover: var(--color-warning-900);
 	--ui-warning-bg-tint-pressed: var(--color-warning-800);
@@ -160,7 +169,6 @@
 	--ui-warning-fg-muted: var(--color-warning-400);
 	--ui-warning-fg-emphasis: var(--color-warning-100);
 
-	/* Success */
 	--ui-success-bg-tint: var(--color-success-950);
 	--ui-success-bg-tint-hover: var(--color-success-900);
 	--ui-success-bg-tint-pressed: var(--color-success-800);
@@ -173,6 +181,77 @@
 	--ui-success-fg: var(--color-success-400);
 	--ui-success-fg-muted: var(--color-success-400);
 	--ui-success-fg-emphasis: var(--color-success-100);
+}
+
+/* Dark mode variables - system preference with .system class */
+@media (prefers-color-scheme: dark) {
+	:is(.system, .system *) {
+		--ui-primary-bg-tint: var(--color-primary-950);
+		--ui-primary-bg-tint-hover: var(--color-primary-900);
+		--ui-primary-bg-tint-pressed: var(--color-primary-800);
+		--ui-primary-bg-solid: var(--color-primary-600);
+		--ui-primary-bg-solid-hover: var(--color-primary-700);
+		--ui-primary-bg-solid-pressed: var(--color-primary-800);
+		--ui-primary-border: var(--color-primary-800);
+		--ui-primary-border-strong: var(--color-primary-600);
+		--ui-primary-ring: var(--color-primary-500);
+		--ui-primary-fg: var(--color-primary-400);
+		--ui-primary-fg-muted: var(--color-primary-400);
+		--ui-primary-fg-emphasis: var(--color-primary-100);
+
+		--ui-neutral-bg-tint: var(--color-neutral-950);
+		--ui-neutral-bg-tint-hover: var(--color-neutral-900);
+		--ui-neutral-bg-tint-pressed: var(--color-neutral-800);
+		--ui-neutral-bg-solid: var(--color-neutral-100);
+		--ui-neutral-bg-solid-hover: var(--color-neutral-200);
+		--ui-neutral-bg-solid-pressed: var(--color-neutral-300);
+		--ui-neutral-border: var(--color-neutral-800);
+		--ui-neutral-border-strong: var(--color-neutral-400);
+		--ui-neutral-ring: var(--color-neutral-500);
+		--ui-neutral-fg: var(--color-neutral-400);
+		--ui-neutral-fg-muted: var(--color-neutral-400);
+		--ui-neutral-fg-emphasis: var(--color-neutral-100);
+		--ui-neutral-fg-on-solid: var(--color-neutral-900);
+
+		--ui-danger-bg-tint: var(--color-danger-950);
+		--ui-danger-bg-tint-hover: var(--color-danger-900);
+		--ui-danger-bg-tint-pressed: var(--color-danger-800);
+		--ui-danger-bg-solid: var(--color-danger-600);
+		--ui-danger-bg-solid-hover: var(--color-danger-700);
+		--ui-danger-bg-solid-pressed: var(--color-danger-800);
+		--ui-danger-border: var(--color-danger-800);
+		--ui-danger-border-strong: var(--color-danger-600);
+		--ui-danger-ring: var(--color-danger-500);
+		--ui-danger-fg: var(--color-danger-400);
+		--ui-danger-fg-muted: var(--color-danger-400);
+		--ui-danger-fg-emphasis: var(--color-danger-100);
+
+		--ui-warning-bg-tint: var(--color-warning-950);
+		--ui-warning-bg-tint-hover: var(--color-warning-900);
+		--ui-warning-bg-tint-pressed: var(--color-warning-800);
+		--ui-warning-bg-solid: var(--color-warning-600);
+		--ui-warning-bg-solid-hover: var(--color-warning-700);
+		--ui-warning-bg-solid-pressed: var(--color-warning-800);
+		--ui-warning-border: var(--color-warning-800);
+		--ui-warning-border-strong: var(--color-warning-600);
+		--ui-warning-ring: var(--color-warning-500);
+		--ui-warning-fg: var(--color-warning-400);
+		--ui-warning-fg-muted: var(--color-warning-400);
+		--ui-warning-fg-emphasis: var(--color-warning-100);
+
+		--ui-success-bg-tint: var(--color-success-950);
+		--ui-success-bg-tint-hover: var(--color-success-900);
+		--ui-success-bg-tint-pressed: var(--color-success-800);
+		--ui-success-bg-solid: var(--color-success-600);
+		--ui-success-bg-solid-hover: var(--color-success-700);
+		--ui-success-bg-solid-pressed: var(--color-success-800);
+		--ui-success-border: var(--color-success-800);
+		--ui-success-border-strong: var(--color-success-600);
+		--ui-success-ring: var(--color-success-500);
+		--ui-success-fg: var(--color-success-400);
+		--ui-success-fg-muted: var(--color-success-400);
+		--ui-success-fg-emphasis: var(--color-success-100);
+	}
 }
 
 /* =============================================================================
@@ -2026,6 +2105,11 @@
 @utility ui-sidebar-mobile {
 	:where(&) {
 		@apply w-[var(--sidebar-width-mobile)];
+
+		/* Override sheet-content padding for sidebar mobile */
+		& .ui-sheet-content {
+			@apply p-0;
+		}
 	}
 }
 
@@ -2039,7 +2123,7 @@
 
 @utility ui-sidebar-header {
 	:where(&) {
-		@apply flex shrink-0 items-center gap-2 border-b px-4 py-4;
+		@apply flex h-16 shrink-0 items-center gap-2 border-b px-4;
 		border-color: color-mix(in srgb, var(--ui-neutral-border) 80%, transparent);
 	}
 }
@@ -2861,8 +2945,13 @@
 		border-color: var(--ui-primary-bg-solid);
 		/* Solid background to cover the track fill bar beneath */
 		background-color: white;
-		.dark & {
+		:is(.dark, .dark *) & {
 			background-color: var(--color-neutral-900);
+		}
+		@media (prefers-color-scheme: dark) {
+			:is(.system, .system *) & {
+				background-color: var(--color-neutral-900);
+			}
 		}
 
 		/* Vertical orientation - RAC sets top: X%, we need left: 50% */
@@ -4106,11 +4195,7 @@
 
 @utility ui-avatar-image {
 	:where(&) {
-		@apply absolute inset-0 size-full overflow-hidden rounded-full object-cover opacity-0 transition-opacity;
-
-		&[data-status="loaded"] {
-			@apply opacity-100;
-		}
+		@apply absolute inset-0 size-full overflow-hidden rounded-full object-cover;
 	}
 }
 
@@ -4180,11 +4265,7 @@
 
 @utility ui-logo-image {
 	:where(&) {
-		@apply absolute inset-0 size-full rounded-lg object-cover opacity-0 transition-opacity;
-
-		&[data-status="loaded"] {
-			@apply opacity-100;
-		}
+		@apply absolute inset-0 size-full rounded-lg object-cover;
 	}
 }
 

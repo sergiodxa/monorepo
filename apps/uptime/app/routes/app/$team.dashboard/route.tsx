@@ -1,4 +1,5 @@
 import { cn } from "@pkg/cn";
+import { Alert, Badge, Button, LinkButton, Menu, Popover, Table } from "@pkg/ui";
 import {
 	EllipsisVerticalIcon,
 	LoaderIcon,
@@ -7,6 +8,7 @@ import {
 	PlusIcon,
 	RefreshCwIcon,
 	TrashIcon,
+	TriangleAlertIcon,
 } from "lucide-react";
 import { useEffect, useRef } from "react";
 import { Trans, useTranslation } from "react-i18next";
@@ -18,11 +20,6 @@ import { useSpinDelay } from "spin-delay";
 
 import { AppHeader } from "~/components/app-header";
 import { StatCard } from "~/components/stat-card";
-import { Alert } from "~/components/ui/alert";
-import { Button } from "~/components/ui/button";
-import { LinkButton } from "~/components/ui/link-button";
-import { Menu } from "~/components/ui/menu";
-import { ColumnAlignment, Table } from "~/components/ui/table";
 import { getContext } from "~/middleware/context-storage";
 import { hasActiveSubscription } from "~/middleware/customer-subscription";
 import { db } from "~/middleware/drizzle";
@@ -99,28 +96,30 @@ export default function Component({ loaderData, params }: Route.ComponentProps) 
 					/>
 					<span className="max-sm:sr-only">{t("header.action.refresh")}</span>
 				</Button>
-				{loaderData.monitors.length > 0 && (
-					<LinkButton
-						color="neutral"
-						href={href("/app/:team/monitors/new", params)}
-						className="flex-shrink-0 px-2"
-					>
-						<PlusIcon className="size-5" aria-hidden />
-						<span className="max-sm:sr-only">{t("header.action.create")}</span>
-					</LinkButton>
-				)}
+				<LinkButton
+					color="neutral"
+					href={href("/app/:team/monitors/new", params)}
+					className="flex-shrink-0 px-2"
+				>
+					<PlusIcon className="size-5" aria-hidden />
+					<span className="max-sm:sr-only">{t("header.action.create")}</span>
+				</LinkButton>
 			</AppHeader>
 
 			{loaderData.hasActiveSubscription ? null : (
 				<div className="p-4">
-					<Alert
-						intent="warning"
-						title={t("alert.subscription.title")}
-						description={t("alert.subscription.description")}
-						cta={
+					<Alert color="warning">
+						<Alert.Icon>
+							<TriangleAlertIcon className="size-5" />
+						</Alert.Icon>
+						<Alert.Content>
+							<Alert.Title>{t("alert.subscription.title")}</Alert.Title>
+							<Alert.Description>{t("alert.subscription.description")}</Alert.Description>
+						</Alert.Content>
+						<Alert.Action>
 							<Link to={href("/app/:team/checkout", params)}>{t("alert.subscription.cta")}</Link>
-						}
-					/>
+						</Alert.Action>
+					</Alert>
 				</div>
 			)}
 
@@ -213,34 +212,34 @@ function MonitorsTable(props: {
 		{
 			id: "name" as const,
 			name: t("columns.name"),
-			align: ColumnAlignment.Left,
+			align: "left" as const,
 		},
 		{
 			id: "latencyChart" as const,
 			name: t("columns.latencyChart"),
-			align: ColumnAlignment.Left,
+			align: "left" as const,
 		},
 		{
 			id: "status" as const,
 			name: t("columns.status"),
-			align: ColumnAlignment.Left,
+			align: "left" as const,
 		},
 		showLastIncident
 			? {
 					id: "lastIncident" as const,
 					name: t("columns.lastIncident"),
-					align: ColumnAlignment.Right,
+					align: "right" as const,
 				}
 			: null,
 		{
 			id: "responseTime" as const,
 			name: t("columns.responseTime"),
-			align: ColumnAlignment.Right,
+			align: "right" as const,
 		},
 		{
 			id: "actions" as const,
 			name: t("columns.actions"),
-			align: ColumnAlignment.Right,
+			align: "right" as const,
 		},
 	].filter(Boolean);
 
@@ -323,13 +322,25 @@ function MonitorTableRow(props: {
 
 			<Table.Cell className="w-44 text-left">
 				{props.monitor.status === "unknown" && (
-					<StatusPill status="unknown" label={t("status.unknown")} />
+					<Badge color="neutral" variant="outline">
+						{t("status.unknown")}
+					</Badge>
 				)}
-				{props.monitor.status === "up" && <StatusPill status="up" label={t("status.up")} />}
+				{props.monitor.status === "up" && (
+					<Badge color="primary" variant="outline">
+						{t("status.up")}
+					</Badge>
+				)}
 				{props.monitor.status === "degraded" && (
-					<StatusPill status="degraded" label={t("status.degraded")} />
+					<Badge color="warning" variant="outline">
+						{t("status.degraded")}
+					</Badge>
 				)}
-				{props.monitor.status === "down" && <StatusPill status="down" label={t("status.down")} />}
+				{props.monitor.status === "down" && (
+					<Badge color="danger" variant="outline">
+						{t("status.down")}
+					</Badge>
+				)}
 			</Table.Cell>
 
 			{props.showLastIncident && (
@@ -345,17 +356,7 @@ function MonitorTableRow(props: {
 						<span className="sr-only">{t("actions.menu")}</span>
 					</Button>
 
-					<Menu.Popover
-						style={{ minWidth: "var(--trigger-width)" }}
-						placement="left top"
-						className={cn(
-							"rounded-lg",
-							"border border-neutral-300 shadow shadow-neutral-300",
-							"bg-neutral-50 text-neutral-950",
-							"dark:border-neutral-700 dark:shadow-neutral-700",
-							"dark:bg-neutral-950 dark:text-neutral-50",
-						)}
-					>
+					<Popover placement="left top">
 						<Menu>
 							<Menu.Item
 								isDisabled={isPlaying}
@@ -384,19 +385,8 @@ function MonitorTableRow(props: {
 							<Menu.Separator />
 
 							<Menu.Item
+								danger
 								isDisabled={isDeleting}
-								className={cn(
-									"text-danger-500",
-									// Hovered
-									"data-[hovered]:bg-danger-100 data-[hovered]:text-danger-900",
-									"dark:data-[hovered]:bg-danger-800 dark:data-[hovered]:text-danger-50",
-									// Focused
-									"data-[focused]:bg-danger-100 data-[focused]:text-danger-900",
-									"dark:data-[focused]:bg-danger-800 dark:data-[focused]:text-danger-50",
-									// Disabled
-									"data-[disabled]:cursor-not-allowed data-[disabled]:text-neutral-400",
-									"dark:data-[disabled]:text-neutral-600",
-								)}
 								onAction={() => {
 									if (
 										window.confirm(
@@ -422,29 +412,10 @@ function MonitorTableRow(props: {
 								{isDeleting && <LoaderIcon aria-hidden className="ml-auto size-5 animate-spin" />}
 							</Menu.Item>
 						</Menu>
-					</Menu.Popover>
+					</Popover>
 				</Menu.Trigger>
 			</Table.Cell>
 		</Table.Row>
-	);
-}
-
-function StatusPill(props: { status: "up" | "down" | "degraded" | "unknown"; label: string }) {
-	return (
-		<span
-			className={cn("rounded-full border px-2 py-1 leading-none", {
-				"text-primary-950 bg-primary-100 border-primary-300 dark:text-primary-300 dark:bg-primary-900 dark:border-primary-300":
-					props.status === "up",
-				"text-warning-950 bg-warning-100 border-warning-300 dark:text-warning-300 dark:bg-warning-900 dark:border-warning-300":
-					props.status === "degraded",
-				"text-danger-950 bg-danger-100 border-danger-300 dark:text-danger-300 dark:bg-danger-900 dark:border-danger-300":
-					props.status === "down",
-				"text-neutral-950 bg-neutral-50 border-neutral-300 dark:text-neutral-300 dark:bg-neutral-900 dark:border-neutral-300":
-					props.status === "unknown",
-			})}
-		>
-			{props.label}
-		</span>
 	);
 }
 

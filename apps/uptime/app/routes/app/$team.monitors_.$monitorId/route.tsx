@@ -1,4 +1,5 @@
 import { cn } from "@pkg/cn";
+import { Alert, Button } from "@pkg/ui";
 import { subDays } from "date-fns";
 import { PlayIcon, RefreshCwIcon } from "lucide-react";
 import { Trans, useTranslation } from "react-i18next";
@@ -9,8 +10,6 @@ import { ActionButton } from "~/components/action-button";
 import { AppHeader } from "~/components/app-header";
 import { Heatmap } from "~/components/heatmap";
 import { StatCard } from "~/components/stat-card";
-import { Alert } from "~/components/ui/alert";
-import { Button } from "~/components/ui/button";
 import { hasActiveSubscription } from "~/middleware/customer-subscription";
 import { db } from "~/middleware/drizzle";
 import { locale } from "~/middleware/i18next";
@@ -140,14 +139,15 @@ export default function Component({ loaderData, params }: Route.ComponentProps) 
 
 			{loaderData.hasActiveSubscription ? null : (
 				<div className="p-4">
-					<Alert
-						intent="warning"
-						title={t("alert.subscription.title")}
-						description={t("alert.subscription.description")}
-						cta={
+					<Alert color="warning">
+						<Alert.Content>
+							<Alert.Title>{t("alert.subscription.title")}</Alert.Title>
+							<Alert.Description>{t("alert.subscription.description")}</Alert.Description>
+						</Alert.Content>
+						<Alert.Action>
 							<Link to={href("/app/:team/checkout", params)}>{t("alert.subscription.cta")}</Link>
-						}
-					/>
+						</Alert.Action>
+					</Alert>
 				</div>
 			)}
 

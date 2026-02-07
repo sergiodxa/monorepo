@@ -27,6 +27,7 @@
 		"@pkg/logger": "workspace:*",
 		"@pkg/response": "workspace:*",
 		"@pkg/result": "workspace:*",
+		"@pkg/ui": "workspace:*",
 		"@pkg/validate": "workspace:*",
 		"@polar-sh/sdk": "^0.34.17",
 		"@react-router/fs-routes": "^7.6.2",
@@ -52,6 +53,7 @@
 		"resend": "^6.9.1",
 		"sonner": "^2.0.7",
 		"spin-delay": "^2.0.1",
+		"tailwindcss-animate": "^1.0.7",
 		"zod": "^4.3.6"
 	},
 	"devDependencies": {

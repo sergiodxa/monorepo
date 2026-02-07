@@ -1,28 +1,21 @@
-import type { LucideProps } from "lucide-react";
-import type { ComponentProps } from "react";
-
-import { cn } from "@pkg/cn";
+import { Sidebar } from "@pkg/ui";
 import {
 	ActivityIcon,
 	BadgeCheckIcon,
 	BellIcon,
-	CornerDownRightIcon,
 	CreditCardIcon,
-	LoaderIcon,
 	MonitorCogIcon,
+	PlusIcon,
 	UsersIcon,
 } from "lucide-react";
-import { Collection as AriaCollection } from "react-aria-components";
 import { useTranslation } from "react-i18next";
-import { href, NavLink } from "react-router";
-import { useSpinDelay } from "spin-delay";
+import { href, Link, useMatch } from "react-router";
 
 import { TeamPicker } from "~/components/team-picker";
 import { UserMenu } from "~/components/user-menu";
-import { useSidebarStatus } from "~/hooks/use-sidebar-status";
 import { useTeam } from "~/hooks/use-team";
 
-export function Sidebar(props: {
+export function AppSidebar(props: {
 	team: { id: string; slug: string; name: string; logo: string | null };
 	teams: Array<{
 		id: string;
@@ -43,254 +36,152 @@ export function Sidebar(props: {
 		keyPrefix: "app.layout.sidebar",
 	});
 
-	let sidebarStatus = useSidebarStatus();
+	let team = useTeam();
 
-	let primaryNavItems: ComponentProps<typeof Navigation>["items"] = [
-		{
-			key: t("navigation.items.dashboard"),
-			to: href("/app/:team/dashboard", { team: props.team.slug }),
-			icon: ActivityIcon,
-			items: null,
-		},
-		{
-			key: t("navigation.items.alerts"),
-			to: href("/app/:team/alerts", { team: props.team.slug }),
-			icon: BellIcon,
-			items: null,
-		},
-	];
+	let dashboardPath = href("/app/:team/dashboard", { team: props.team.slug });
+	let alertsPath = href("/app/:team/alerts", { team: props.team.slug });
+	let checkoutPath = href("/app/:team/checkout", { team: props.team.slug });
+	let domainsPath = href("/app/:team/domains", { team: props.team.slug });
+	let membersPath = href("/app/:team/members", { team: props.team.slug });
 
-	if (props.monitors.length > 0) {
-		primaryNavItems.push({
-			key: t("navigation.items.monitors"),
-			items: props.monitors.map((monitor) => {
-				return {
-					id: monitor.id,
-					label: monitor.name,
-					icon: MonitorCogIcon,
-					to: href("/app/:team/monitors/:monitorId", {
-						team: props.team.slug,
-						monitorId: monitor.id,
-					}),
-				};
-			}),
-		});
-	}
+	let isDashboardActive = useMatch("/app/:team/dashboard") !== null;
+	let isAlertsActive = useMatch("/app/:team/alerts") !== null;
+	let isCheckoutActive = useMatch("/app/:team/checkout") !== null;
+	let isDomainsActive = useMatch("/app/:team/domains") !== null;
+	let isMembersActive = useMatch("/app/:team/members") !== null;
 
-	let secondaryNavItems: ComponentProps<typeof Navigation>["items"] = [];
-
-	if (useTeam().ownerId === props.viewer.id) {
-		secondaryNavItems.push({
-			key: t("navigation.items.billing"),
-			to: href("/app/:team/checkout", { team: props.team.slug }),
-			icon: CreditCardIcon,
-			items: null,
-		});
-	}
-
-	if (props.viewer.isAdmin) {
-		secondaryNavItems.push({
-			key: t("navigation.items.domains"),
-			to: href("/app/:team/domains", { team: props.team.slug }),
-			icon: BadgeCheckIcon,
-			items: null,
-		});
-		secondaryNavItems.push({
-			key: t("navigation.items.members"),
-			to: href("/app/:team/members", { team: props.team.slug }),
-			icon: UsersIcon,
-			items: null,
-		});
-	}
+	let isOwner = team.ownerId === props.viewer.id;
+	let isAdmin = props.viewer.isAdmin;
 
 	return (
-		<nav
-			className={cn(
-				"flex-shrink-0 flex-col gap-2",
-				"w-72",
-				"border-r border-neutral-300 dark:border-neutral-700",
-				"bg-neutral-100 text-neutral-950",
-				"dark:bg-neutral-900 dark:text-neutral-50",
-				{
-					"hidden lg:flex": sidebarStatus === "closed",
-					"flex max-lg:fixed max-lg:inset-0 max-lg:z-100": sidebarStatus === "open",
-				},
-			)}
-		>
-			<div className="h-16 border-b border-neutral-300 p-2 dark:border-neutral-700">
+		<Sidebar>
+			<Sidebar.Header>
 				<TeamPicker active={props.team} teams={props.teams} />
-			</div>
+			</Sidebar.Header>
 
-			<div className="flex flex-grow flex-col gap-2 overflow-y-auto px-2">
-				<Navigation items={primaryNavItems} />
-			</div>
+			<Sidebar.Content>
+				<Sidebar.Group>
+					<Sidebar.GroupContent>
+						<Sidebar.Menu>
+							<Sidebar.MenuItem>
+								<Sidebar.MenuLink
+									href={dashboardPath}
+									active={isDashboardActive}
+									tooltip={t("navigation.items.dashboard")}
+								>
+									<ActivityIcon size={16} />
+									<span>{t("navigation.items.dashboard")}</span>
+								</Sidebar.MenuLink>
+							</Sidebar.MenuItem>
+							<Sidebar.MenuItem>
+								<Sidebar.MenuLink
+									href={alertsPath}
+									active={isAlertsActive}
+									tooltip={t("navigation.items.alerts")}
+								>
+									<BellIcon size={16} />
+									<span>{t("navigation.items.alerts")}</span>
+								</Sidebar.MenuLink>
+							</Sidebar.MenuItem>
+						</Sidebar.Menu>
+					</Sidebar.GroupContent>
+				</Sidebar.Group>
 
-			<div className="flex flex-col gap-2 px-2">
-				<Navigation items={secondaryNavItems} />
-			</div>
-
-			<div className="h-16 border-t border-neutral-300 p-2 dark:border-neutral-700">
-				<UserMenu user={props.viewer} />
-			</div>
-		</nav>
-	);
-}
-
-function NavItemContent(props: {
-	isPending: boolean;
-	label: string;
-	icon?: React.ForwardRefExoticComponent<Omit<LucideProps, "ref">>;
-}) {
-	let isPending = useSpinDelay(props.isPending, {
-		minDuration: 100,
-		delay: 50,
-	});
-
-	return (
-		<>
-			{props.icon && (
-				<div aria-hidden className="flex size-5 flex-shrink-0 items-center justify-center">
-					<props.icon className="size-4" />
-				</div>
-			)}
-			<span className="line-clamp-1">{props.label}</span>
-			{isPending && <LoaderIcon className="ml-auto size-4 flex-shrink-0 animate-spin" />}
-		</>
-	);
-}
-
-function Navigation(props: {
-	items: Array<{
-		key: string;
-		to?: string;
-		icon?: React.ForwardRefExoticComponent<Omit<LucideProps, "ref">>;
-		items: Array<{
-			id: string;
-			label: string;
-			to: string;
-			icon?: React.ForwardRefExoticComponent<Omit<LucideProps, "ref">>;
-		}> | null;
-	}>;
-}) {
-	return (
-		<AriaCollection items={props.items}>
-			{(item) => {
-				if (item.to) {
-					return (
-						<div className="flex w-full flex-col gap-1">
-							<NavLink
-								to={item.to}
-								end
-								data-has-background
-								className={({ isActive, isPending }) =>
-									cn(
-										"flex w-full items-center justify-start gap-2 rounded-lg p-2",
-										"hover:bg-primary-200 hover:text-primary-950",
-										"dark:hover:bg-primary-800 dark:hover:text-primary-50",
-										{
-											"bg-primary-200 text-primary-950 dark:bg-primary-800 dark:text-primary-50":
-												isActive,
-										},
-										{
-											"bg-neutral-200 text-neutral-950 dark:bg-neutral-800 dark:text-neutral-50":
-												isPending,
-										},
-									)
-								}
-							>
-								{({ isPending }) => {
-									return <NavItemContent isPending={isPending} label={item.key} icon={item.icon} />;
-								}}
-							</NavLink>
-
-							{item.items && item.items.length > 0 && (
-								<ul className="flex flex-col gap-1 pl-7">
-									{item.items.map((subItem) => (
-										<NavLink
-											key={subItem.id}
-											to={subItem.to}
-											end
-											data-has-background
-											className={({ isActive, isPending }) =>
-												cn(
-													"flex w-full items-center justify-start gap-2 rounded-lg p-2",
-													"hover:bg-primary-200 hover:text-primary-950",
-													"dark:hover:bg-primary-800 dark:hover:text-primary-50",
-													{
-														"bg-primary-200 text-primary-950 dark:bg-primary-800 dark:text-primary-50":
-															isActive,
-													},
-													{
-														"bg-neutral-200 text-neutral-950 dark:bg-neutral-800 dark:text-neutral-50":
-															isPending,
-													},
-												)
-											}
-										>
-											{({ isPending }) => (
-												<NavItemContent
-													isPending={isPending}
-													label={subItem.label}
-													icon={CornerDownRightIcon}
-												/>
-											)}
-										</NavLink>
+				{props.monitors.length > 0 && (
+					<>
+						<Sidebar.Group>
+							<Sidebar.GroupLabel>
+								<span>{t("navigation.items.monitors")}</span>
+								<Link
+									to={href("/app/:team/monitors/new", { team: props.team.slug })}
+									className="ui-sidebar-group-action"
+								>
+									<PlusIcon size={14} />
+								</Link>
+							</Sidebar.GroupLabel>
+							<Sidebar.GroupContent>
+								<Sidebar.Menu>
+									{props.monitors.map((monitor) => (
+										<MonitorMenuItem
+											key={monitor.id}
+											monitor={monitor}
+											teamSlug={props.team.slug}
+										/>
 									))}
-								</ul>
-							)}
-						</div>
-					);
-				}
+								</Sidebar.Menu>
+							</Sidebar.GroupContent>
+						</Sidebar.Group>
+					</>
+				)}
 
-				return (
-					<div className="mt-2 flex w-full flex-col gap-0.5">
-						<div className="flex w-full items-center justify-start gap-2 p-2 text-sm dark:text-neutral-300">
-							{item.icon && (
-								<div aria-hidden className="flex size-4 flex-shrink-0 items-center justify-center">
-									<item.icon className="size-4" />
-								</div>
-							)}
-							<span className="line-clamp-1">{item.key}</span>
-						</div>
+				{(isOwner || isAdmin) && (
+					<>
+						<Sidebar.Group className="mt-auto">
+							<Sidebar.GroupContent>
+								<Sidebar.Menu>
+									{isOwner && (
+										<Sidebar.MenuItem>
+											<Sidebar.MenuLink
+												href={checkoutPath}
+												active={isCheckoutActive}
+												tooltip={t("navigation.items.billing")}
+											>
+												<CreditCardIcon size={16} />
+												<span>{t("navigation.items.billing")}</span>
+											</Sidebar.MenuLink>
+										</Sidebar.MenuItem>
+									)}
+									{isAdmin && (
+										<>
+											<Sidebar.MenuItem>
+												<Sidebar.MenuLink
+													href={domainsPath}
+													active={isDomainsActive}
+													tooltip={t("navigation.items.domains")}
+												>
+													<BadgeCheckIcon size={16} />
+													<span>{t("navigation.items.domains")}</span>
+												</Sidebar.MenuLink>
+											</Sidebar.MenuItem>
+											<Sidebar.MenuItem>
+												<Sidebar.MenuLink
+													href={membersPath}
+													active={isMembersActive}
+													tooltip={t("navigation.items.members")}
+												>
+													<UsersIcon size={16} />
+													<span>{t("navigation.items.members")}</span>
+												</Sidebar.MenuLink>
+											</Sidebar.MenuItem>
+										</>
+									)}
+								</Sidebar.Menu>
+							</Sidebar.GroupContent>
+						</Sidebar.Group>
+					</>
+				)}
+			</Sidebar.Content>
 
-						{item.items && item.items.length > 0 && (
-							<ul className="flex flex-col gap-1">
-								{item.items?.map((subItem) => (
-									<NavLink
-										key={subItem.id}
-										to={subItem.to}
-										end
-										data-has-background
-										className={({ isActive, isPending }) =>
-											cn(
-												"flex w-full items-center justify-start gap-2 rounded-lg p-2",
-												"hover:bg-primary-200 hover:text-primary-950",
-												"dark:hover:bg-primary-800 dark:hover:text-primary-50",
-												{
-													"bg-primary-200 text-primary-950 dark:bg-primary-800 dark:text-primary-50":
-														isActive,
-												},
-												{
-													"bg-neutral-200 text-neutral-950 dark:bg-neutral-800 dark:text-neutral-50":
-														isPending,
-												},
-											)
-										}
-									>
-										{({ isPending }) => (
-											<NavItemContent
-												isPending={isPending}
-												label={subItem.label}
-												icon={subItem.icon ?? CornerDownRightIcon}
-											/>
-										)}
-									</NavLink>
-								))}
-							</ul>
-						)}
-					</div>
-				);
-			}}
-		</AriaCollection>
+			<Sidebar.Footer>
+				<UserMenu user={props.viewer} />
+			</Sidebar.Footer>
+		</Sidebar>
+	);
+}
+
+function MonitorMenuItem(props: { monitor: { id: string; name: string }; teamSlug: string }) {
+	let monitorPath = href("/app/:team/monitors/:monitorId", {
+		team: props.teamSlug,
+		monitorId: props.monitor.id,
+	});
+	let isActive = useMatch("/app/:team/monitors/:monitorId") !== null;
+
+	return (
+		<Sidebar.MenuItem>
+			<Sidebar.MenuLink href={monitorPath} active={isActive} tooltip={props.monitor.name}>
+				<MonitorCogIcon size={16} />
+				<span>{props.monitor.name}</span>
+			</Sidebar.MenuLink>
+		</Sidebar.MenuItem>
 	);
 }

@@ -1,20 +1,16 @@
 import type { ComponentPropsWithoutRef, ReactNode } from "react";
 
 import { cn } from "@pkg/cn";
-import { createContext, useContext, useMemo, useState } from "react";
 
 /**
- * Base component for Avatar and Logo - handles image loading state management.
+ * Base component for Avatar and Logo.
  * Not exported publicly, used internally by Avatar and Logo.
+ *
+ * The app is responsible for deciding whether to render Image or Fallback.
+ * Typically: image ? <Image src={image} /> : <Fallback>initials</Fallback>
  */
 
-export type ImagePlaceholderStatus = "idle" | "loaded" | "error";
 export type ImagePlaceholderSize = "sm" | "md" | "lg";
-
-export interface ImagePlaceholderContextValue {
-	status: ImagePlaceholderStatus;
-	setStatus: (status: ImagePlaceholderStatus) => void;
-}
 
 export interface ImagePlaceholderRootProps extends Omit<
 	ComponentPropsWithoutRef<"span">,
@@ -49,60 +45,26 @@ export interface ImagePlaceholderBadgeProps extends Omit<
 	className?: cn.ClassName;
 }
 
-let ImagePlaceholderContext = createContext<ImagePlaceholderContextValue | null>(null);
-
-export function useImagePlaceholderContext(componentName: string) {
-	let context = useContext(ImagePlaceholderContext);
-	if (!context) {
-		throw new Error(`${componentName} compound components must be used within ${componentName}`);
-	}
-	return context;
-}
-
 export function ImagePlaceholderRoot({
 	children,
 	className,
 	size = "md",
 	...props
 }: ImagePlaceholderRootProps) {
-	let [status, setStatus] = useState<ImagePlaceholderStatus>("idle");
-
-	let value = useMemo(() => ({ status, setStatus }), [status]);
-
 	return (
-		<span {...props} data-status={status} data-size={size} className={cn(className)}>
-			<ImagePlaceholderContext.Provider value={value}>{children}</ImagePlaceholderContext.Provider>
+		<span {...props} data-size={size} className={cn(className)}>
+			{children}
 		</span>
 	);
 }
 
 export function ImagePlaceholderImage({
 	className,
-	onLoad,
-	onError,
 	src,
 	alt,
 	...props
 }: ImagePlaceholderImageProps) {
-	let context = useContext(ImagePlaceholderContext);
-
-	return (
-		<img
-			{...props}
-			src={src}
-			alt={alt}
-			className={cn(className)}
-			data-status={context?.status}
-			onLoad={(event) => {
-				context?.setStatus("loaded");
-				onLoad?.(event);
-			}}
-			onError={(event) => {
-				context?.setStatus("error");
-				onError?.(event);
-			}}
-		/>
-	);
+	return <img {...props} src={src} alt={alt} className={cn(className)} />;
 }
 
 export function ImagePlaceholderFallback({
@@ -110,10 +72,6 @@ export function ImagePlaceholderFallback({
 	children,
 	...props
 }: ImagePlaceholderFallbackProps) {
-	let context = useContext(ImagePlaceholderContext);
-
-	if (context?.status === "loaded") return null;
-
 	return (
 		<span {...props} className={cn(className)}>
 			{children}
@@ -131,4 +89,9 @@ export function ImagePlaceholderBadge({
 			{children}
 		</span>
 	);
+}
+
+// Keep for backwards compatibility but it's now a no-op
+export function useImagePlaceholderContext(_componentName: string) {
+	return null;
 }

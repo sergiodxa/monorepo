@@ -1,13 +1,10 @@
-import { LoaderIcon } from "lucide-react";
-import { TextField } from "react-aria-components";
+import { Alert, Button, Description, FieldError, Input, Label, TextField } from "@pkg/ui";
+import { LoaderIcon, TriangleAlertIcon } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { data, href, isRouteErrorResponse, Link, useFetcher } from "react-router";
 import { useSpinDelay } from "spin-delay";
 
 import { AppHeader } from "~/components/app-header";
-import { Alert } from "~/components/ui/alert";
-import { Button } from "~/components/ui/button";
-import { Description, FieldError, Input, Label } from "~/components/ui/field";
 import { useTeam } from "~/hooks/use-team";
 import { hasActiveSubscription } from "~/middleware/customer-subscription";
 import { team } from "~/middleware/team";
@@ -37,14 +34,18 @@ export default function Component({ loaderData, params }: Route.ComponentProps) 
 
 			{loaderData.hasActiveSubscription ? null : (
 				<div className="p-4">
-					<Alert
-						intent="warning"
-						title={t("alert.subscription.title")}
-						description={t("alert.subscription.description")}
-						cta={
+					<Alert color="warning">
+						<Alert.Icon>
+							<TriangleAlertIcon className="size-5" />
+						</Alert.Icon>
+						<Alert.Content>
+							<Alert.Title>{t("alert.subscription.title")}</Alert.Title>
+							<Alert.Description>{t("alert.subscription.description")}</Alert.Description>
+						</Alert.Content>
+						<Alert.Action>
 							<Link to={href("/app/:team/checkout", params)}>{t("alert.subscription.cta")}</Link>
-						}
-					/>
+						</Alert.Action>
+					</Alert>
 				</div>
 			)}
 
@@ -73,15 +74,9 @@ function CreateDomainForm() {
 			action={href("/actions/:team/add-domain", { team: team.slug })}
 			className="mx-auto flex w-full max-w-prose flex-col gap-6"
 		>
-			<TextField
-				type="text"
-				name="hostname"
-				className="flex flex-col gap-1"
-				isRequired
-				autoComplete="off"
-			>
+			<TextField type="text" name="hostname" isRequired autoComplete="off">
 				<Label>{t("fields.hostname.label")}</Label>
-				<Input placeholder={t("fields.hostname.placeholder")} className="mt-2" />
+				<Input placeholder={t("fields.hostname.placeholder")} />
 				<Description>
 					{t("fields.hostname.description", {
 						team: team.name,
@@ -118,14 +113,18 @@ export function ErrorBoundary({ error, params }: Route.ErrorBoundaryProps) {
 
 				{data.hasActiveSubscription ? null : (
 					<div className="p-4">
-						<Alert
-							intent="warning"
-							title={t("alert.subscription.title")}
-							description={t("alert.subscription.description")}
-							cta={
+						<Alert color="warning">
+							<Alert.Icon>
+								<TriangleAlertIcon className="size-5" />
+							</Alert.Icon>
+							<Alert.Content>
+								<Alert.Title>{t("alert.subscription.title")}</Alert.Title>
+								<Alert.Description>{t("alert.subscription.description")}</Alert.Description>
+							</Alert.Content>
+							<Alert.Action>
 								<Link to={href("/app/:team/checkout", params)}>{t("alert.subscription.cta")}</Link>
-							}
-						/>
+							</Alert.Action>
+						</Alert>
 					</div>
 				)}
 

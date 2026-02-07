@@ -1,22 +1,23 @@
-import { cn } from "@pkg/cn";
-import { ChevronDownIcon, LoaderIcon } from "lucide-react";
 import {
-	Button as AriaButton,
+	Alert,
+	Button,
+	ComboBox,
+	Description,
+	FieldError,
+	Input,
+	Label,
 	ListBox,
-	ListBoxItem,
 	Popover,
 	Select,
-	SelectValue,
+	Slider,
 	TextField,
-} from "react-aria-components";
+} from "@pkg/ui";
+import { LoaderIcon } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { href, Link, useFetcher } from "react-router";
 import { useSpinDelay } from "spin-delay";
 
 import { AppHeader } from "~/components/app-header";
-import { Alert } from "~/components/ui/alert";
-import { Button } from "~/components/ui/button";
-import * as Field from "~/components/ui/field";
 import { useTeam } from "~/hooks/use-team";
 import { hasActiveSubscription } from "~/middleware/customer-subscription";
 import regionToEmoji from "~/utils/region-to-emoji";
@@ -42,14 +43,15 @@ export default function MonitorsNew({ loaderData, params }: Route.ComponentProps
 
 			{loaderData.hasActiveSubscription ? null : (
 				<div className="p-4">
-					<Alert
-						intent="warning"
-						title={t("alert.subscription.title")}
-						description={t("alert.subscription.description")}
-						cta={
+					<Alert color="warning">
+						<Alert.Content>
+							<Alert.Title>{t("alert.subscription.title")}</Alert.Title>
+							<Alert.Description>{t("alert.subscription.description")}</Alert.Description>
+						</Alert.Content>
+						<Alert.Action>
 							<Link to={href("/app/:team/checkout", params)}>{t("alert.subscription.cta")}</Link>
-						}
-					/>
+						</Alert.Action>
+					</Alert>
 				</div>
 			)}
 
@@ -79,134 +81,95 @@ function CreateMonitorForm() {
 			className="mx-auto flex w-full max-w-prose flex-col gap-6"
 			action={href("/actions/:team/create-monitor", { team: team.slug })}
 		>
-			<TextField type="text" name="name" className="flex flex-col gap-1" isRequired>
-				<Field.Label>{t("fields.name.label")}</Field.Label>
-				<Field.Input placeholder={t("fields.name.placeholder")} />
-				<Field.FieldError />
-				<Field.Description>{t("fields.name.description")}</Field.Description>
+			<TextField type="text" name="name" isRequired>
+				<Label>{t("fields.name.label")}</Label>
+				<Input placeholder={t("fields.name.placeholder")} />
+				<FieldError />
+				<Description>{t("fields.name.description")}</Description>
 			</TextField>
 
-			<Field.Group>
-				<TextField type="url" name="url" className="flex flex-col gap-1" isRequired>
-					<Field.Label>{t("fields.url.label")}</Field.Label>
-					<Field.Input type="url" placeholder={t("fields.url.placeholder")} />
-					<Field.FieldError />
-					<Field.Description>{t("fields.url.description")}</Field.Description>
-				</TextField>
+			<TextField type="url" name="url" isRequired>
+				<Label>{t("fields.url.label")}</Label>
+				<Input type="url" placeholder={t("fields.url.placeholder")} />
+				<FieldError />
+				<Description>{t("fields.url.description")}</Description>
+			</TextField>
 
-				<Field.Slider
-					name="intervalSeconds"
-					minValue={1}
-					minValueLabel="1m"
-					maxValueLabel="60m"
-					defaultValue={10}
-					maxValue={60} // 24 hours
-					step={1}
-					label={t("fields.interval.label")}
-					formatOptions={{
-						style: "unit",
-						unit: "minute",
-						unitDisplay: "narrow",
-						minimumFractionDigits: 0,
-						maximumFractionDigits: 0,
-					}}
-				/>
-			</Field.Group>
-
-			<Field.Group>
-				<TextField
-					type="text"
-					name="expectedStatus"
-					className="flex flex-col gap-1"
-					isRequired
-					defaultValue="200"
-				>
-					<Field.Label>{t("fields.status.label")}</Field.Label>
-
-					<Field.Input
-						inputMode="numeric"
-						placeholder={t("fields.status.placeholder")}
-						datalist={[
-							{ value: "200", label: "Ok" },
-							{ value: "201", label: "Created" },
-							{ value: "202", label: "Accepted" },
-							{ value: "204", label: "No Content" },
-							{ value: "301", label: "Moved Permanently" },
-							{ value: "302", label: "Found" },
-							{ value: "303", label: "See Other" },
-							{ value: "304", label: "Not Modified" },
-							{ value: "307", label: "Temporary Redirect" },
-							{ value: "308", label: "Permanent Redirect" },
-							{ value: "400", label: "Bad Request" },
-							{ value: "401", label: "Unauthorized" },
-							{ value: "403", label: "Forbidden" },
-							{ value: "404", label: "Not Found" },
-							{ value: "405", label: "Method Not Allowed" },
-							{ value: "500", label: "Internal Server Error" },
-						]}
-					/>
-					<Field.FieldError />
-
-					<Field.Description>{t("fields.status.description")}</Field.Description>
-				</TextField>
-
-				<Select name="region" className="flex flex-col gap-1" isRequired>
-					<Field.Label>{t("fields.region.label")}</Field.Label>
-
-					<AriaButton
-						className={
-							"user-invalid:outline-red-500 flex items-center justify-between gap-2 rounded border border-solid border-neutral-400 px-4 py-2 ring-0 user-invalid:outline-2 focus:outline-2 focus:outline-primary-500"
-						}
-					>
-						<SelectValue />
-						<ChevronDownIcon className="size-4" aria-hidden />
-					</AriaButton>
-
-					<Field.FieldError />
-
-					<Field.Description>{t("fields.region.description")}</Field.Description>
-
-					<Popover
-						className="bg-white rounded-lg shadow dark:bg-neutral-800"
-						style={{ minWidth: "var(--trigger-width)" }}
-					>
-						<ListBox className="flex flex-col gap-0.5 p-1">
-							{REGIONS.map((region) => (
-								<ListBoxItem
-									key={region}
-									className={cn(
-										// Default
-										"flex items-center justify-between",
-										"cursor-default rounded px-2 py-1",
-										// Selected
-										"data-[selected]:after:content-['✓']",
-										// Hovered
-										"data-[hovered]:bg-primary-50 data-[hovered]:text-primary-900",
-										"dark:data-[hovered]:bg-primary-800 dark:data-[hovered]:text-primary-200",
-										// Focused
-										"data-[focused]:bg-primary-50 data-[focused]:text-primary-900",
-										"dark:data-[focused]:bg-primary-800 dark:data-[focused]:text-primary-200",
-										// Disabled
-										"data-[disabled]:cursor-not-allowed data-[disabled]:text-neutral-400",
-									)}
-								>
-									{t(`fields.region.options.${region}`, {
-										emoji: regionToEmoji(region),
-									})}
-								</ListBoxItem>
-							))}
-						</ListBox>
-					</Popover>
-				</Select>
-			</Field.Group>
-
-			<Button
-				type="submit"
-				className="flex items-center justify-between self-end"
-				isPending={isPending}
-				name="intent"
-				value={INTENT}
+			<Slider
+				minValue={1}
+				maxValue={60}
+				step={1}
+				defaultValue={10}
+				formatOptions={{
+					style: "unit",
+					unit: "minute",
+					unitDisplay: "narrow",
+					minimumFractionDigits: 0,
+					maximumFractionDigits: 0,
+				}}
 			>
+				<div className="flex justify-between">
+					<Label>{t("fields.interval.label")}</Label>
+					<Slider.Output />
+				</div>
+				<Slider.Track>
+					<Slider.Thumb name="intervalSeconds" />
+				</Slider.Track>
+				<div className="flex justify-between text-sm text-neutral-500 dark:text-neutral-400">
+					<span>1m</span>
+					<span>60m</span>
+				</div>
+			</Slider>
+
+			<ComboBox name="expectedStatus" defaultSelectedKey="200" isRequired>
+				<Label>{t("fields.status.label")}</Label>
+				<ComboBox.Group>
+					<ComboBox.Input inputMode="numeric" />
+					<ComboBox.Button />
+				</ComboBox.Group>
+				<FieldError />
+				<Description>{t("fields.status.description")}</Description>
+				<Popover>
+					<ListBox>
+						<ListBox.Item id="200">200 OK</ListBox.Item>
+						<ListBox.Item id="201">201 Created</ListBox.Item>
+						<ListBox.Item id="202">202 Accepted</ListBox.Item>
+						<ListBox.Item id="204">204 No Content</ListBox.Item>
+						<ListBox.Item id="301">301 Moved Permanently</ListBox.Item>
+						<ListBox.Item id="302">302 Found</ListBox.Item>
+						<ListBox.Item id="303">303 See Other</ListBox.Item>
+						<ListBox.Item id="304">304 Not Modified</ListBox.Item>
+						<ListBox.Item id="307">307 Temporary Redirect</ListBox.Item>
+						<ListBox.Item id="308">308 Permanent Redirect</ListBox.Item>
+						<ListBox.Item id="400">400 Bad Request</ListBox.Item>
+						<ListBox.Item id="401">401 Unauthorized</ListBox.Item>
+						<ListBox.Item id="403">403 Forbidden</ListBox.Item>
+						<ListBox.Item id="404">404 Not Found</ListBox.Item>
+						<ListBox.Item id="405">405 Method Not Allowed</ListBox.Item>
+						<ListBox.Item id="500">500 Internal Server Error</ListBox.Item>
+					</ListBox>
+				</Popover>
+			</ComboBox>
+
+			<Select name="region" isRequired>
+				<Label>{t("fields.region.label")}</Label>
+				<Select.Trigger />
+				<FieldError />
+				<Description>{t("fields.region.description")}</Description>
+				<Popover>
+					<ListBox>
+						{REGIONS.map((region) => (
+							<ListBox.Item key={region} id={region}>
+								{t(`fields.region.options.${region}`, {
+									emoji: regionToEmoji(region),
+								})}
+							</ListBox.Item>
+						))}
+					</ListBox>
+				</Popover>
+			</Select>
+
+			<Button type="submit" className="self-end" isPending={isPending} name="intent" value={INTENT}>
 				<span>{t("cta")}</span>
 				{isPending && <LoaderIcon className="size-5 animate-spin" />}
 			</Button>

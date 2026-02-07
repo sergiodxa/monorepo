@@ -1,19 +1,15 @@
 import type { ReactNode } from "react";
 
+import { Sidebar } from "@pkg/ui";
 import { PanelLeftIcon } from "lucide-react";
 
-import { Button } from "~/components/ui/button";
-import { useToggleSidebarStatus } from "~/hooks/use-sidebar-status";
-
 export function AppHeader(props: { heading: string; children?: ReactNode }) {
-	let toggleSidebar = useToggleSidebarStatus();
-
 	return (
 		<header className="sticky top-0 z-10 flex h-16 flex-shrink-0 items-center gap-2 border-b border-neutral-300 bg-neutral-50/80 px-4 dark:border-neutral-700 dark:bg-neutral-950/80">
-			<Button type="button" onPress={() => toggleSidebar()} className="mr-2 p-2 lg:hidden">
+			<Sidebar.Trigger className="mr-2 p-2 md:hidden">
 				<PanelLeftIcon aria-hidden className="size-4" />
 				<span className="sr-only">Toggle sidebar</span>
-			</Button>
+			</Sidebar.Trigger>
 
 			<h1>{props.heading}</h1>
 

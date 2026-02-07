@@ -1,3 +1,4 @@
+import { Card } from "@pkg/ui";
 import { startOfYear } from "date-fns";
 import { useTranslation } from "react-i18next";
 import { data, href, redirectDocument } from "react-router";
@@ -55,22 +56,24 @@ export default function Component({ loaderData }: Route.ComponentProps) {
 		<>
 			<AppHeader heading={t("header.title")} />
 
-			<ol>
-				{loaderData.quantities.map((q) => {
-					return (
-						<li key={q.timestamp.getTime()}>
-							<time dateTime={q.timestamp.toISOString()}>
-								{new Date(q.timestamp).toLocaleDateString(i18n.language)}
-							</time>
-							-
-							{q.quantity.toLocaleString(i18n.language, {
-								minimumFractionDigits: 0,
-								maximumFractionDigits: 0,
-							})}
-						</li>
-					);
-				})}
-			</ol>
+			<Card>
+				<Card.Header>
+					<Card.Title>Usage Quantities</Card.Title>
+					<Card.Description>Your monitored quantities over time</Card.Description>
+				</Card.Header>
+				<Card.Content>
+					<ol className="space-y-2">
+						{loaderData.quantities.map((q) => (
+							<li key={q.timestamp.getTime()} className="flex justify-between text-sm">
+								<time dateTime={q.timestamp.toISOString()}>
+									{new Date(q.timestamp).toLocaleDateString(i18n.language)}
+								</time>
+								<span className="font-medium">{q.quantity.toLocaleString(i18n.language)}</span>
+							</li>
+						))}
+					</ol>
+				</Card.Content>
+			</Card>
 		</>
 	);
 }

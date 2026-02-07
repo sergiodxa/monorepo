@@ -8,11 +8,9 @@ import {
 	ImagePlaceholderImage,
 	ImagePlaceholderRoot,
 	type ImagePlaceholderSize,
-	useImagePlaceholderContext,
 } from "./image-placeholder";
 
 export namespace Logo {
-	export type Status = "idle" | "loaded" | "error";
 	export type Size = ImagePlaceholderSize;
 
 	export interface Props extends Omit<ComponentPropsWithoutRef<"span">, "className" | "children"> {
@@ -60,16 +58,10 @@ export function Logo({ children, className, size = "md", ...props }: Logo.Props)
 }
 
 Logo.Image = function LogoImage({ className, ...props }: Logo.ImageProps) {
-	// Validate we're inside Logo context
-	useImagePlaceholderContext("Logo");
-
 	return <ImagePlaceholderImage {...props} className={["ui-logo-image", className]} />;
 };
 
 Logo.Fallback = function LogoFallback({ className, children, ...props }: Logo.FallbackProps) {
-	// Validate we're inside Logo context
-	useImagePlaceholderContext("Logo");
-
 	return (
 		<ImagePlaceholderFallback {...props} className={["ui-logo-fallback", className]}>
 			{children}

@@ -67,7 +67,7 @@ function Header(props: { isSignedIn: boolean }) {
 	let { t } = useTranslation("translation", { keyPrefix: "landing.header" });
 
 	return (
-		<header className="bg-white/80 sticky top-0 z-50 border-b border-neutral-300 backdrop-blur-sm dark:bg-neutral-900/80">
+		<header className="sticky top-0 z-50 border-b border-neutral-300 bg-white/80 backdrop-blur-sm dark:bg-neutral-900/80">
 			<div className="mx-auto flex h-16 max-w-5xl items-center gap-8 max-lg:px-6">
 				<div className="flex items-center gap-1 text-primary-500">
 					<Logo className="size-10" />

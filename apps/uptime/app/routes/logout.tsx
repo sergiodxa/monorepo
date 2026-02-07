@@ -1,7 +1,7 @@
+import { Button } from "@pkg/ui";
 import { useTranslation } from "react-i18next";
 import { Form, href, redirect } from "react-router";
 
-import { Button } from "~/components/ui/button";
 import { getSession } from "~/middleware/session";
 import { logout } from "~/modules/auth";
 

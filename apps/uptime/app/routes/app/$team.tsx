@@ -1,11 +1,10 @@
-import { cn } from "@pkg/cn";
+import { Sidebar } from "@pkg/ui";
 import { waitUntil } from "cloudflare:workers";
 import { useTranslation } from "react-i18next";
 import { href, Outlet, redirect } from "react-router";
 import { z } from "zod/v4";
 
-import { Sidebar } from "~/components/sidebar";
-import { SidebarStatusProvider } from "~/hooks/use-sidebar-status";
+import { AppSidebar } from "~/components/sidebar";
 import { SubjectProvider } from "~/hooks/use-subject";
 import { TeamProvider } from "~/hooks/use-team";
 import { CustomerSubscriptionContext } from "~/middleware/customer-subscription";
@@ -178,27 +177,21 @@ export default function Component({ loaderData }: Route.ComponentProps) {
 	return (
 		<TeamProvider team={loaderData.team}>
 			<SubjectProvider subject={loaderData.viewer}>
-				<SidebarStatusProvider>
-					{(status) => (
-						<div className="flex h-screen w-full font-mono">
-							<Sidebar
-								team={loaderData.team}
-								teams={teams}
-								viewer={loaderData.viewer}
-								monitors={loaderData.monitors}
-							/>
-
-							<main
-								className={cn("flex-grow overflow-y-auto", {
-									"max-lg:ml-72 max-lg:overflow-y-hidden max-lg:overflow-x-hidden":
-										status === "open",
-								})}
-							>
+				<Sidebar.Provider defaultOpen>
+					<div className="flex min-h-screen w-full font-mono">
+						<AppSidebar
+							team={loaderData.team}
+							teams={teams}
+							viewer={loaderData.viewer}
+							monitors={loaderData.monitors}
+						/>
+						<Sidebar.Inset>
+							<main className="flex-1 overflow-auto">
 								<Outlet />
 							</main>
-						</div>
-					)}
-				</SidebarStatusProvider>
+						</Sidebar.Inset>
+					</div>
+				</Sidebar.Provider>
 			</SubjectProvider>
 		</TeamProvider>
 	);

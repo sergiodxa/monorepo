@@ -8,11 +8,9 @@ import {
 	ImagePlaceholderImage,
 	ImagePlaceholderRoot,
 	type ImagePlaceholderSize,
-	useImagePlaceholderContext,
 } from "./image-placeholder";
 
 export namespace Avatar {
-	export type Status = "idle" | "loaded" | "error";
 	export type Size = ImagePlaceholderSize;
 
 	export interface Props extends Omit<ComponentPropsWithoutRef<"span">, "className" | "children"> {
@@ -60,16 +58,10 @@ export function Avatar({ children, className, size = "md", ...props }: Avatar.Pr
 }
 
 Avatar.Image = function AvatarImage({ className, ...props }: Avatar.ImageProps) {
-	// Validate we're inside Avatar context
-	useImagePlaceholderContext("Avatar");
-
 	return <ImagePlaceholderImage {...props} className={["ui-avatar-image", className]} />;
 };
 
 Avatar.Fallback = function AvatarFallback({ className, children, ...props }: Avatar.FallbackProps) {
-	// Validate we're inside Avatar context
-	useImagePlaceholderContext("Avatar");
-
 	return (
 		<ImagePlaceholderFallback {...props} className={["ui-avatar-fallback", className]}>
 			{children}

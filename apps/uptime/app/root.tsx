@@ -1,6 +1,8 @@
 import { createLoggerMiddleware } from "@pkg/logger";
+import { Toaster } from "@pkg/ui";
 import NProgress from "nprogress";
 import { useEffect } from "react";
+import { RouterProvider } from "react-aria-components";
 import { useTranslation } from "react-i18next";
 import {
 	isRouteErrorResponse,
@@ -9,9 +11,10 @@ import {
 	Outlet,
 	Scripts,
 	ScrollRestoration,
+	useHref,
+	useNavigate,
 } from "react-router";
 import { useGlobalPendingState } from "remix-utils/use-global-navigation-state";
-import { Toaster } from "sonner";
 
 import sansFont from "~/assets/fonts/sans.woff2";
 import styles from "~/assets/styles.css?url";
@@ -56,7 +59,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
 	}, [state]);
 
 	return (
-		<html lang={i18n.language} dir={i18n.dir(i18n.language)} className="h-full">
+		<html lang={i18n.language} dir={i18n.dir(i18n.language)} className="system h-full">
 			<head>
 				<meta charSet="utf-8" />
 				<meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -66,7 +69,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
 			</head>
 			<body className="flex min-h-dvh flex-col bg-neutral-50 font-sans text-neutral-950 dark:bg-neutral-950 dark:text-neutral-50">
 				{children}
-				<Toaster richColors />
+				<Toaster />
 				<ScrollRestoration />
 				<Scripts />
 				{process.env.NODE_ENV === "production" ? (
@@ -82,11 +85,13 @@ export function Layout({ children }: { children: React.ReactNode }) {
 }
 
 export default function App({ loaderData }: Route.ComponentProps) {
+	let navigate = useNavigate();
+
 	return (
-		<>
+		<RouterProvider navigate={navigate} useHref={useHref}>
 			<ClientHintCheck nonce={loaderData.nonce} />
 			<Outlet />
-		</>
+		</RouterProvider>
 	);
 }
 

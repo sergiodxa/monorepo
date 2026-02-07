@@ -1,14 +1,12 @@
+import { Button, Description, FieldError, Input, Label, TextField } from "@pkg/ui";
 import { LoaderIcon } from "lucide-react";
 import { useActionState, useRef } from "react";
-import { TextField } from "react-aria-components";
 import { useTranslation } from "react-i18next";
 import { data, href, useFetcher } from "react-router";
 
 import type { clientAction } from "~/routes/actions/$team.create-invite/route";
 
 import { AppHeader } from "~/components/app-header";
-import { Button } from "~/components/ui/button";
-import { Description, FieldError, Input, Label } from "~/components/ui/field";
 import { useTeam } from "~/hooks/use-team";
 import { hasActiveSubscription } from "~/middleware/customer-subscription";
 import { team } from "~/middleware/team";
@@ -60,15 +58,9 @@ export default function Component({ params }: Route.ComponentProps) {
 						action();
 					}}
 				>
-					<TextField
-						type="email"
-						name="email"
-						className="flex flex-col gap-1"
-						isRequired
-						autoComplete="off"
-					>
+					<TextField type="email" name="email" isRequired autoComplete="off">
 						<Label>{t("form.fields.email.label")}</Label>
-						<Input placeholder={t("form.fields.email.placeholder")} className="mt-2" />
+						<Input placeholder={t("form.fields.email.placeholder")} />
 						<Description>
 							{t("form.fields.email.description", {
 								team: team.name,
