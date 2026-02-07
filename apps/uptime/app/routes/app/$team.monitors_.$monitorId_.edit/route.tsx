@@ -6,6 +6,7 @@ import {
 	FieldError,
 	Input,
 	Label,
+	LinkButton,
 	ListBox,
 	Popover,
 	Select,
@@ -211,9 +212,17 @@ function EditMonitorForm({
 				</Popover>
 			</Select>
 
-			<Button type="submit" className="self-end" isPending={isPending}>
-				{t("cta")}
-			</Button>
+			<div className="flex justify-end gap-2">
+				<LinkButton
+					color="neutral"
+					href={href("/app/:team/monitors/:monitorId", { team: team.slug, monitorId: monitor.id })}
+				>
+					{t("cancel")}
+				</LinkButton>
+				<Button type="submit" isPending={isPending}>
+					{t("cta")}
+				</Button>
+			</div>
 		</fetcher.Form>
 	);
 }

@@ -810,6 +810,7 @@ export default {
 					},
 				},
 
+				cancel: "Cancel",
 				cta: "Save Changes",
 			},
 		},
