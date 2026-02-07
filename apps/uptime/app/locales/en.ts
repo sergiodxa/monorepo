@@ -658,7 +658,8 @@ export default {
 				},
 
 				confirmation: {
-					deleteMonitor: "Are you sure you want to delete the monitor {{name}}?",
+					deleteMonitor:
+						"Are you sure you want to delete the monitor {{name}}? This action cannot be undone.",
 				},
 			},
 		},
