@@ -1,7 +1,8 @@
-import { Sidebar } from "@pkg/ui";
+import { Sidebar, useSidebar } from "@pkg/ui";
 import { waitUntil } from "cloudflare:workers";
+import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
-import { href, Outlet, redirect } from "react-router";
+import { href, Outlet, redirect, useNavigation } from "react-router";
 import { z } from "zod/v4";
 
 import { AppSidebar } from "~/components/sidebar";
@@ -193,12 +194,26 @@ export async function loader({ request, context }: Route.LoaderArgs) {
 	};
 }
 
+function CloseSidebarOnNavigation() {
+	let navigation = useNavigation();
+	let { setOpenMobile, isMobile } = useSidebar();
+
+	useEffect(() => {
+		if (isMobile && navigation.state === "loading") {
+			setOpenMobile(false);
+		}
+	}, [navigation.state, isMobile, setOpenMobile]);
+
+	return null;
+}
+
 export default function Component({ loaderData }: Route.ComponentProps) {
 	let teams = loaderData.memberships.map((it) => it.team);
 	return (
 		<TeamProvider team={loaderData.team}>
 			<SubjectProvider subject={loaderData.viewer}>
 				<Sidebar.Provider defaultOpen>
+					<CloseSidebarOnNavigation />
 					<div className="flex min-h-screen w-full font-mono">
 						<div className="sticky top-0 h-screen">
 							<AppSidebar

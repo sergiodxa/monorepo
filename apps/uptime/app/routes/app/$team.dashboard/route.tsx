@@ -106,7 +106,7 @@ function MonitorsTableSkeleton() {
 						<Skeleton className="h-4 w-12" />
 					</Table.Column>
 					<Table.Column align="right">
-						<Skeleton className="ml-auto h-4 w-24" />
+						<Skeleton className="ml-auto h-4 w-24 max-sm:hidden" />
 					</Table.Column>
 					<Table.Column align="right">
 						<span className="sr-only">Actions</span>
@@ -125,7 +125,7 @@ function MonitorsTableSkeleton() {
 							<Table.Cell className="w-44">
 								<Skeleton className="h-6 w-16 rounded-full" />
 							</Table.Cell>
-							<Table.Cell className="w-36 text-right">
+							<Table.Cell className="w-36 text-right max-sm:hidden">
 								<Skeleton className="ml-auto h-4 w-16" />
 							</Table.Cell>
 							<Table.Cell className="w-17 text-right">
@@ -381,6 +381,7 @@ function MonitorsTable(props: {
 										"sr-only": column.id === "actions",
 										"max-lg:hidden": column.id === "latencyChart",
 										"max-md:hidden": column.id === "lastIncident",
+										"max-sm:hidden": column.id === "responseTime",
 									})}
 								>
 									{column.name}
@@ -483,7 +484,9 @@ function MonitorTableRow(props: {
 				</Table.Cell>
 			)}
 
-			<Table.Cell className="w-36 text-right">{props.monitor.responseTime}</Table.Cell>
+			<Table.Cell className="w-36 text-right max-sm:hidden">
+				{props.monitor.responseTime}
+			</Table.Cell>
 
 			<Table.Cell className="w-17 text-right">
 				<Menu.Trigger>

@@ -116,7 +116,7 @@ export function HydrateFallback() {
 						</Card.Header>
 
 						<Card.Content className="space-y-6">
-							<div className="flex items-center gap-6">
+							<div className="flex flex-col items-start gap-6 sm:flex-row sm:items-center">
 								<Skeleton className="h-16 w-16 rounded-full" />
 								<div className="flex flex-1 flex-col gap-2">
 									<Skeleton className="h-4 w-16" />

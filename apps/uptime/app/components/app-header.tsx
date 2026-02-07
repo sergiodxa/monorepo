@@ -19,11 +19,14 @@ export function AppHeader(props: { heading: string; breadcrumbs?: Crumb[]; child
 			<div className="flex flex-col justify-center gap-0.5">
 				{props.breadcrumbs && props.breadcrumbs.length > 0 && (
 					<Breadcrumbs className="text-xs">
-						{props.breadcrumbs.map((crumb, index) => (
-							<Breadcrumb key={crumb.href ?? index}>
-								<BreadcrumbLink href={crumb.href}>{crumb.label}</BreadcrumbLink>
-							</Breadcrumb>
-						))}
+						{props.breadcrumbs.map((crumb, index) => {
+							let isLast = index === props.breadcrumbs!.length - 1;
+							return (
+								<Breadcrumb key={crumb.href ?? index} className={isLast ? "" : "max-md:hidden"}>
+									<BreadcrumbLink href={crumb.href}>{crumb.label}</BreadcrumbLink>
+								</Breadcrumb>
+							);
+						})}
 					</Breadcrumbs>
 				)}
 				<h1 className={props.breadcrumbs ? "text-sm font-medium" : ""}>{props.heading}</h1>
