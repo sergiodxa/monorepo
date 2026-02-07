@@ -28,7 +28,7 @@ export default {
 			cta: {
 				in: "Open Dashboard",
 				out: "Start Monitoring",
-				demo: "View Demo",
+				pricing: "View Pricing",
 			},
 
 			screenshot: {
@@ -139,8 +139,8 @@ export default {
 				},
 
 				fifth: {
-					q: "Is there a free trial?",
-					a: "Sort of, you can create unlimited monitors and trigger pings manually for free. Scheduled automatic pings require a subscription.",
+					q: "Is there a free tier?",
+					a: "Yes! You can create unlimited monitors and trigger pings manually for free, forever. Scheduled automatic monitoring requires a subscription.",
 				},
 
 				sixth: {
@@ -579,6 +579,16 @@ export default {
 			},
 
 			success: "You have left {{team}}.",
+		},
+
+		createTeam: {
+			errors: {
+				generic: "Oops! Something went wrong while creating the team.",
+			},
+
+			success: {
+				created: "{{name}} team was created successfully.",
+			},
 		},
 	},
 
@@ -1317,6 +1327,30 @@ export default {
 						leaveTeam: "Are you sure you want to leave {{name}}?",
 					},
 				},
+			},
+		},
+
+		createTeam: {
+			header: {
+				title: "Create Team",
+				description: "Create a new team to monitor your services.",
+			},
+
+			dialog: {
+				close: "Close dialog",
+			},
+
+			form: {
+				fields: {
+					name: {
+						label: "Team Name",
+						placeholder: "My Awesome Team",
+						description: "Choose a name for your new team.",
+					},
+				},
+
+				cancel: "Cancel",
+				cta: "Create Team",
 			},
 		},
 

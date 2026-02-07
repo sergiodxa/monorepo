@@ -1,5 +1,18 @@
 import { cn } from "@pkg/cn";
-import { ActivityIcon, BellIcon, CreditCardIcon, PlusIcon, XIcon } from "lucide-react";
+import { Accordion, Badge, Card, Separator } from "@pkg/ui";
+import {
+	ActivityIcon,
+	ArrowRightIcon,
+	BellIcon,
+	CheckIcon,
+	ChevronDownIcon,
+	CreditCardIcon,
+	GlobeIcon,
+	PlusIcon,
+	ShieldCheckIcon,
+	XIcon,
+	ZapIcon,
+} from "lucide-react";
 import { useState } from "react";
 import { Label, Slider, SliderOutput, SliderThumb, SliderTrack } from "react-aria-components";
 import { Trans, useTranslation } from "react-i18next";
@@ -52,14 +65,17 @@ export async function loader({ request, context }: Route.LoaderArgs) {
 
 export default function Landing({ loaderData }: Route.ComponentProps) {
 	return (
-		<>
+		<div className="min-h-screen bg-white dark:bg-neutral-950">
 			<Header isSignedIn={loaderData.isSignedIn} />
-			<Hero isSignedIn={loaderData.isSignedIn} />
-			<Features />
-			<Pricing initialMonitors={loaderData.initialMonitors} />
-			<FAQ />
+			<main>
+				<Hero isSignedIn={loaderData.isSignedIn} />
+				<TrustIndicators />
+				<Features />
+				<Pricing initialMonitors={loaderData.initialMonitors} />
+				<FAQ />
+			</main>
 			<Footer />
-		</>
+		</div>
 	);
 }
 
@@ -67,34 +83,45 @@ function Header(props: { isSignedIn: boolean }) {
 	let { t } = useTranslation("translation", { keyPrefix: "landing.header" });
 
 	return (
-		<header className="sticky top-0 z-50 border-b border-neutral-300 bg-white/80 backdrop-blur-sm dark:bg-neutral-900/80">
-			<div className="mx-auto flex h-16 max-w-5xl items-center gap-8 max-lg:px-6">
-				<div className="flex items-center gap-1 text-primary-500">
-					<Logo className="size-10" />
-					<h1 className="text-xl/none font-bold">{t("title")}</h1>
-				</div>
+		<header className="sticky top-0 z-50 border-b border-neutral-200 bg-white/80 backdrop-blur-md dark:border-neutral-800 dark:bg-neutral-950/80">
+			<div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6 lg:px-8">
+				<div className="flex items-center gap-8">
+					<Link to={href("/")} className="flex items-center gap-2 no-underline">
+						<Logo className="size-9 text-primary-500" />
+						<span className="text-xl font-bold text-neutral-900 dark:text-neutral-50">
+							{t("title")}
+						</span>
+					</Link>
 
-				<nav className="ml-auto flex items-center gap-4 max-lg:hidden">
-					<a
-						className="text-primary-900 underline dark:text-primary-500 dark:hover:text-primary-400"
-						href="#features"
-					>
-						{t("nav.features")}
-					</a>
-					<a
-						className="text-primary-900 underline dark:text-primary-500 dark:hover:text-primary-400"
-						href="#pricing"
-					>
-						{t("nav.pricing")}
-					</a>
-				</nav>
+					<nav className="hidden items-center gap-6 md:flex">
+						<a
+							href="#features"
+							className="text-sm font-medium text-neutral-600 transition hover:text-primary-600 dark:text-neutral-400 dark:hover:text-primary-400"
+						>
+							{t("nav.features")}
+						</a>
+						<a
+							href="#pricing"
+							className="text-sm font-medium text-neutral-600 transition hover:text-primary-600 dark:text-neutral-400 dark:hover:text-primary-400"
+						>
+							{t("nav.pricing")}
+						</a>
+						<a
+							href="#faq"
+							className="text-sm font-medium text-neutral-600 transition hover:text-primary-600 dark:text-neutral-400 dark:hover:text-primary-400"
+						>
+							FAQ
+						</a>
+					</nav>
+				</div>
 
 				<Link
 					to={props.isSignedIn ? href("/app") : href("/auth")}
 					reloadDocument={!props.isSignedIn}
-					className="rounded-lg bg-primary-600 px-5 py-2 font-medium text-primary-50 shadow-sm transition hover:bg-primary-700 hover:shadow max-lg:ml-auto"
+					className="inline-flex items-center gap-2 rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-primary-700 hover:shadow-md"
 				>
 					{props.isSignedIn ? t("nav.cta.in") : t("nav.cta.out")}
+					<ArrowRightIcon className="size-4" />
 				</Link>
 			</div>
 		</header>
@@ -105,45 +132,115 @@ function Hero(props: { isSignedIn: boolean }) {
 	let { t } = useTranslation("translation", { keyPrefix: "landing.hero" });
 
 	return (
-		<div id="hero" className="mx-auto max-w-5xl">
-			<div className="my-10 grid gap-x-4 gap-y-8 max-lg:px-6 lg:my-20 lg:grid-cols-2">
-				<div className="flex flex-col items-center gap-4 text-balance max-lg:text-center lg:items-start">
-					<Trans
-						parent="h2"
-						t={t}
-						i18nKey="title"
-						className="text-4xl leading-none font-bold md:text-5xl lg:text-6xl"
-						components={{
-							strong: <strong className="text-primary-500 max-lg:hidden" />,
-						}}
-					/>
+		<section className="relative overflow-hidden bg-gradient-to-b from-primary-50 to-white py-16 sm:py-24 lg:py-32 dark:from-primary-950/20 dark:to-neutral-950">
+			{/* Background decoration */}
+			<div aria-hidden className="absolute inset-0 overflow-hidden">
+				<div className="absolute top-0 left-1/2 size-[800px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary-100/50 blur-3xl dark:bg-primary-900/20" />
+			</div>
 
-					<p className="max-w-lg text-lg text-neutral-600 dark:text-neutral-400">
-						{t("description")}
-					</p>
+			<div className="relative mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+				<div className="grid items-center gap-12 lg:grid-cols-2 lg:gap-16">
+					<div className="flex flex-col items-center text-center lg:items-start lg:text-left">
+						<Badge color="primary" variant="secondary" className="mb-6">
+							{t("pill")}
+						</Badge>
 
-					<Link
-						to={props.isSignedIn ? href("/app") : href("/auth")}
-						reloadDocument={!props.isSignedIn}
-						className="rounded-lg bg-primary-600 px-8 py-3 text-lg font-medium text-primary-50 shadow-md transition hover:bg-primary-700 hover:shadow-lg max-lg:mt-4"
-					>
-						{props.isSignedIn ? t("cta.in") : t("cta.out")}
-					</Link>
-				</div>
-
-				<div className="relative flex items-center justify-center overflow-hidden rounded-xl">
-					<picture>
-						<source media="(prefers-color-scheme: dark)" srcSet={screenshotDark} />
-						<source media="(prefers-color-scheme: light)" srcSet={screenshotLight} />
-						<img
-							src={screenshotLight}
-							alt={t("screenshot.alt")}
-							className="h-auto w-full object-cover drop-shadow-sm drop-shadow-primary-300 dark:drop-shadow-primary-900"
+						<Trans
+							parent="h1"
+							t={t}
+							i18nKey="title"
+							className="text-4xl font-bold tracking-tight text-neutral-900 sm:text-5xl lg:text-6xl dark:text-neutral-50"
+							components={{
+								strong: <strong className="text-primary-600 dark:text-primary-400" />,
+							}}
 						/>
-					</picture>
+
+						<p className="mt-6 max-w-xl text-lg leading-relaxed text-neutral-600 dark:text-neutral-400">
+							{t("description")}
+						</p>
+
+						<div className="mt-8 flex flex-col items-center gap-4 sm:flex-row">
+							<Link
+								to={props.isSignedIn ? href("/app") : href("/auth")}
+								reloadDocument={!props.isSignedIn}
+								className="inline-flex items-center gap-2 rounded-lg bg-primary-600 px-6 py-3 text-base font-semibold text-white shadow-lg transition hover:bg-primary-700 hover:shadow-xl"
+							>
+								{props.isSignedIn ? t("cta.in") : t("cta.out")}
+								<ArrowRightIcon className="size-5" />
+							</Link>
+							<a
+								href="#pricing"
+								className="inline-flex items-center gap-2 rounded-lg border border-neutral-300 bg-white px-6 py-3 text-base font-semibold text-neutral-700 shadow-sm transition hover:bg-neutral-50 hover:shadow-md dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-300 dark:hover:bg-neutral-800"
+							>
+								{t("cta.pricing")}
+							</a>
+						</div>
+
+						<div className="mt-8 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-sm text-neutral-500 lg:justify-start dark:text-neutral-400">
+							<div className="flex items-center gap-2">
+								<CheckIcon className="size-4 text-success-500" />
+								<span>Free to start</span>
+							</div>
+							<div className="flex items-center gap-2">
+								<CheckIcon className="size-4 text-success-500" />
+								<span>Pay for automation</span>
+							</div>
+							<div className="flex items-center gap-2">
+								<CheckIcon className="size-4 text-success-500" />
+								<span>Cancel anytime</span>
+							</div>
+						</div>
+					</div>
+
+					<div className="relative">
+						<div className="absolute -inset-4 rounded-2xl bg-gradient-to-tr from-primary-500/20 to-primary-300/20 blur-2xl dark:from-primary-500/10 dark:to-primary-700/10" />
+						<picture className="relative block overflow-hidden rounded-xl shadow-2xl ring-1 ring-neutral-200/50 dark:ring-neutral-800/50">
+							<source media="(prefers-color-scheme: dark)" srcSet={screenshotDark} />
+							<source media="(prefers-color-scheme: light)" srcSet={screenshotLight} />
+							<img src={screenshotLight} alt={t("screenshot.alt")} className="h-auto w-full" />
+						</picture>
+					</div>
 				</div>
 			</div>
-		</div>
+		</section>
+	);
+}
+
+function TrustIndicators() {
+	return (
+		<section className="border-y border-neutral-200 bg-neutral-50 py-8 dark:border-neutral-800 dark:bg-neutral-900/50">
+			<div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+				<div className="grid grid-cols-2 gap-8 md:grid-cols-4">
+					<div className="flex flex-col items-center gap-2 text-center">
+						<div className="flex items-center gap-1 text-3xl font-bold text-neutral-900 dark:text-neutral-50">
+							<ZapIcon className="size-6 text-primary-500" />
+							99.9%
+						</div>
+						<p className="text-sm text-neutral-600 dark:text-neutral-400">Uptime SLA</p>
+					</div>
+					<div className="flex flex-col items-center gap-2 text-center">
+						<div className="flex items-center gap-1 text-3xl font-bold text-neutral-900 dark:text-neutral-50">
+							<GlobeIcon className="size-6 text-primary-500" />9
+						</div>
+						<p className="text-sm text-neutral-600 dark:text-neutral-400">Global Regions</p>
+					</div>
+					<div className="flex flex-col items-center gap-2 text-center">
+						<div className="flex items-center gap-1 text-3xl font-bold text-neutral-900 dark:text-neutral-50">
+							<ShieldCheckIcon className="size-6 text-primary-500" />
+							365
+						</div>
+						<p className="text-sm text-neutral-600 dark:text-neutral-400">Days Data Retention</p>
+					</div>
+					<div className="flex flex-col items-center gap-2 text-center">
+						<div className="flex items-center gap-1 text-3xl font-bold text-neutral-900 dark:text-neutral-50">
+							<BellIcon className="size-6 text-primary-500" />
+							&lt;1s
+						</div>
+						<p className="text-sm text-neutral-600 dark:text-neutral-400">Alert Latency</p>
+					</div>
+				</div>
+			</div>
+		</section>
 	);
 }
 
@@ -156,50 +253,48 @@ function Features() {
 		{
 			title: t("list.first.title"),
 			description: t("list.first.description"),
-			icon: <ActivityIcon className="size-8" />,
+			icon: <ActivityIcon className="size-6" />,
 		},
 		{
 			title: t("list.second.title"),
 			description: t("list.second.description"),
-			icon: <BellIcon className="size-8" />,
+			icon: <BellIcon className="size-6" />,
 		},
 		{
 			title: t("list.third.title"),
 			description: t("list.third.description"),
-			icon: <CreditCardIcon className="size-8" />,
+			icon: <CreditCardIcon className="size-6" />,
 		},
 	] as const;
 
 	return (
-		<section
-			id="features"
-			className="mx-auto my-10 flex max-w-5xl scroll-mt-20 flex-col gap-16 max-lg:px-6 lg:my-20"
-		>
-			<header className="flex flex-col items-center gap-4">
-				<h2 className="text-center text-3xl font-bold">{t("title")}</h2>
-				<p className="mx-auto max-w-2xl text-center text-balance text-neutral-600 dark:text-neutral-400">
-					{t("description")}
-				</p>
-			</header>
+		<section id="features" className="scroll-mt-20 py-16 sm:py-24 lg:py-32">
+			<div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+				<div className="mx-auto max-w-2xl text-center">
+					<Badge color="primary" variant="secondary" className="mb-4">
+						Features
+					</Badge>
+					<h2 className="text-3xl font-bold tracking-tight text-neutral-900 sm:text-4xl dark:text-neutral-50">
+						{t("title")}
+					</h2>
+					<p className="mt-4 text-lg text-neutral-600 dark:text-neutral-400">{t("description")}</p>
+				</div>
 
-			<div className="grid gap-8 md:grid-cols-3">
-				{list.map((item) => (
-					<div
-						key={item.title}
-						className="flex flex-col items-start gap-3 rounded-xl bg-neutral-50 shadow-sm transition hover:shadow-md lg:p-8 dark:bg-neutral-950/30"
-					>
-						<figure
-							aria-hidden
-							className="mb-3 flex items-center justify-center rounded-full bg-primary-100 p-4 text-primary-800 dark:bg-primary-500 dark:text-primary-950"
-						>
-							{item.icon}
-						</figure>
-
-						<h3 className="w-full text-xl font-semibold">{item.title}</h3>
-
-						<p className="text-neutral-600 dark:text-neutral-400">{t("list.first.description")}</p>
-					</div>
-				))}
+				<div className="mt-16 grid gap-8 md:grid-cols-3">
+					{list.map((item) => (
+						<Card key={item.title} className="transition-shadow hover:shadow-lg">
+							<Card.Header>
+								<div className="mb-4 flex size-12 items-center justify-center rounded-xl bg-primary-100 text-primary-600 dark:bg-primary-900/50 dark:text-primary-400">
+									{item.icon}
+								</div>
+								<Card.Title className="text-xl">{item.title}</Card.Title>
+							</Card.Header>
+							<Card.Content className="pt-0">
+								<p className="text-neutral-600 dark:text-neutral-400">{item.description}</p>
+							</Card.Content>
+						</Card>
+					))}
+				</div>
 			</div>
 		</section>
 	);
@@ -216,16 +311,23 @@ function Pricing(props: {
 	return (
 		<section
 			id="pricing"
-			className="mx-auto my-10 flex w-full max-w-5xl scroll-mt-20 flex-col gap-16 max-lg:px-6 lg:my-20"
+			className="scroll-mt-20 bg-neutral-50 py-16 sm:py-24 lg:py-32 dark:bg-neutral-900/50"
 		>
-			<header className="flex flex-col items-center gap-4">
-				<h2 className="text-center text-3xl font-bold">{t("title")}</h2>
-				<p className="mx-auto max-w-2xl text-center text-balance text-neutral-600 dark:text-neutral-400">
-					{t("description")}
-				</p>
-			</header>
+			<div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+				<div className="mx-auto max-w-2xl text-center">
+					<Badge color="primary" variant="secondary" className="mb-4">
+						Pricing
+					</Badge>
+					<h2 className="text-3xl font-bold tracking-tight text-neutral-900 sm:text-4xl dark:text-neutral-50">
+						{t("title")}
+					</h2>
+					<p className="mt-4 text-lg text-neutral-600 dark:text-neutral-400">{t("description")}</p>
+				</div>
 
-			<Calculator {...props} />
+				<div className="mt-16">
+					<Calculator {...props} />
+				</div>
+			</div>
 		</section>
 	);
 }
@@ -260,40 +362,60 @@ function FAQ() {
 	let secondHalf = list.slice(halfwayIndex);
 
 	return (
-		<section
-			id="faq"
-			className="mx-auto my-10 flex max-w-5xl scroll-mt-20 flex-col gap-16 max-lg:px-6 lg:my-20"
-		>
-			<header className="flex flex-col items-center gap-4">
-				<h2 className="text-center text-3xl font-bold">{t("title")}</h2>
-				<p className="mx-auto max-w-2xl text-center text-balance text-neutral-600 dark:text-neutral-400">
-					{t("description")}
-				</p>
-			</header>
-
-			<dl className="mx-auto grid gap-6 sm:grid-cols-2">
-				<div className="mx-auto flex flex-col gap-6 max-sm:max-w-prose">
-					{firstHalf.map((item) => (
-						<div key={item.q} className="flex flex-col gap-3">
-							<dt className="text-xl font-semibold">{item.q}</dt>
-							<dd className="whitespace-pre-line text-neutral-600 dark:text-neutral-400">
-								{item.a}
-							</dd>
-						</div>
-					))}
+		<section id="faq" className="scroll-mt-20 py-16 sm:py-24 lg:py-32">
+			<div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+				<div className="mx-auto max-w-2xl text-center">
+					<Badge color="primary" variant="secondary" className="mb-4">
+						FAQ
+					</Badge>
+					<h2 className="text-3xl font-bold tracking-tight text-neutral-900 sm:text-4xl dark:text-neutral-50">
+						{t("title")}
+					</h2>
+					<p className="mt-4 text-lg text-neutral-600 dark:text-neutral-400">{t("description")}</p>
 				</div>
 
-				<div className="mx-auto flex flex-col gap-6 max-sm:max-w-prose">
-					{secondHalf.map((item) => (
-						<div key={item.q} className="flex flex-col gap-3">
-							<dt className="text-xl font-semibold">{item.q}</dt>
-							<dd className="whitespace-pre-line text-neutral-600 dark:text-neutral-400">
-								{item.a}
-							</dd>
-						</div>
-					))}
+				<div className="mt-16 grid gap-8 lg:grid-cols-2">
+					<Accordion type="multiple" className="flex flex-col gap-4">
+						{firstHalf.map((item, index) => (
+							<Accordion.Item
+								key={`first-${index}`}
+								value={`first-${index}`}
+								className="overflow-hidden rounded-lg border border-neutral-200 bg-white dark:border-neutral-800 dark:bg-neutral-900"
+							>
+								<Accordion.Trigger className="flex w-full items-center justify-between px-6 py-4 text-left font-semibold text-neutral-900 transition hover:bg-neutral-50 dark:text-neutral-50 dark:hover:bg-neutral-800">
+									<span className="pr-4">{item.q}</span>
+									<ChevronDownIcon className="size-5 shrink-0 text-neutral-500 transition-transform [[data-state=open]>&]:rotate-180" />
+								</Accordion.Trigger>
+								<Accordion.Content className="overflow-hidden transition-all">
+									<div className="border-t border-neutral-200 px-6 py-4 whitespace-pre-line text-neutral-600 dark:border-neutral-800 dark:text-neutral-400">
+										{item.a}
+									</div>
+								</Accordion.Content>
+							</Accordion.Item>
+						))}
+					</Accordion>
+
+					<Accordion type="multiple" className="flex flex-col gap-4">
+						{secondHalf.map((item, index) => (
+							<Accordion.Item
+								key={`second-${index}`}
+								value={`second-${index}`}
+								className="overflow-hidden rounded-lg border border-neutral-200 bg-white dark:border-neutral-800 dark:bg-neutral-900"
+							>
+								<Accordion.Trigger className="flex w-full items-center justify-between px-6 py-4 text-left font-semibold text-neutral-900 transition hover:bg-neutral-50 dark:text-neutral-50 dark:hover:bg-neutral-800">
+									<span className="pr-4">{item.q}</span>
+									<ChevronDownIcon className="size-5 shrink-0 text-neutral-500 transition-transform [[data-state=open]>&]:rotate-180" />
+								</Accordion.Trigger>
+								<Accordion.Content className="overflow-hidden transition-all">
+									<div className="border-t border-neutral-200 px-6 py-4 whitespace-pre-line text-neutral-600 dark:border-neutral-800 dark:text-neutral-400">
+										{item.a}
+									</div>
+								</Accordion.Content>
+							</Accordion.Item>
+						))}
+					</Accordion>
 				</div>
-			</dl>
+			</div>
 		</section>
 	);
 }
@@ -302,12 +424,51 @@ function Footer() {
 	let { t } = useTranslation("translation", { keyPrefix: "landing.footer" });
 
 	return (
-		<footer className="mx-auto max-w-5xl p-6 text-center lg:px-0 lg:py-10">
-			<p className="text-neutral-600 dark:text-neutral-400">
-				{t("copyright", {
-					year: new Date().getFullYear(),
-				})}
-			</p>
+		<footer className="border-t border-neutral-200 bg-white dark:border-neutral-800 dark:bg-neutral-950">
+			<div className="mx-auto max-w-6xl px-4 py-12 sm:px-6 lg:px-8">
+				<div className="flex flex-col items-center gap-8 sm:flex-row sm:items-start sm:justify-between">
+					<div className="text-center sm:text-left">
+						<Link to={href("/")} className="inline-flex items-center gap-2 no-underline">
+							<Logo className="size-9 text-primary-500" />
+							<span className="text-xl font-bold text-neutral-900 dark:text-neutral-50">
+								{t("name")}
+							</span>
+						</Link>
+						<p className="mt-4 max-w-xs text-neutral-600 dark:text-neutral-400">
+							{t("description")}
+						</p>
+					</div>
+
+					<nav className="flex flex-wrap justify-center gap-6 sm:justify-end">
+						<a
+							href="#features"
+							className="text-sm text-neutral-600 transition hover:text-primary-600 dark:text-neutral-400 dark:hover:text-primary-400"
+						>
+							Features
+						</a>
+						<a
+							href="#pricing"
+							className="text-sm text-neutral-600 transition hover:text-primary-600 dark:text-neutral-400 dark:hover:text-primary-400"
+						>
+							Pricing
+						</a>
+						<a
+							href="#faq"
+							className="text-sm text-neutral-600 transition hover:text-primary-600 dark:text-neutral-400 dark:hover:text-primary-400"
+						>
+							FAQ
+						</a>
+					</nav>
+				</div>
+
+				<Separator className="my-8" />
+
+				<p className="text-center text-sm text-neutral-500 dark:text-neutral-400">
+					{t("copyright", {
+						year: new Date().getFullYear(),
+					})}
+				</p>
+			</div>
 		</footer>
 	);
 }
@@ -330,26 +491,28 @@ function Calculator(props: {
 	);
 
 	return (
-		<section className="flex flex-col gap-3 rounded-xl bg-neutral-50 shadow-sm transition hover:shadow-md lg:p-8 dark:bg-neutral-950/30">
-			<header className="flex flex-col gap-3">
-				<div className="flex items-baseline justify-between gap-2 gap-y-4">
-					<h3 className="text-2xl font-semibold tracking-tight">{t("title")}</h3>
+		<Card className="overflow-hidden">
+			<Card.Header className="bg-gradient-to-r from-primary-50 to-primary-100/50 dark:from-primary-950/50 dark:to-primary-900/30">
+				<div className="flex flex-wrap items-baseline justify-between gap-4">
+					<div>
+						<Card.Title className="text-2xl">{t("title")}</Card.Title>
+						<Card.Description className="mt-2">{t("description")}</Card.Description>
+					</div>
 
 					<button
 						type="button"
-						className="flex flex-shrink-0 items-center gap-2"
 						onClick={() => setMonitors((c) => c.concat({ id: crypto.randomUUID(), frequency: 10 }))}
+						className="inline-flex items-center gap-2 rounded-lg border border-primary-300 bg-white px-4 py-2 text-sm font-medium text-primary-700 shadow-sm transition hover:bg-primary-50 dark:border-primary-700 dark:bg-primary-900 dark:text-primary-300 dark:hover:bg-primary-800"
 					>
-						<span className="text-sm">{t("add")}</span>
-						<PlusIcon className="inline size-5" />
+						<PlusIcon className="size-4" />
+						{t("add")}
 					</button>
 				</div>
-				<p className="text-neutral-600 dark:text-neutral-400">{t("description")}</p>
-			</header>
+			</Card.Header>
 
-			<div className="flex flex-col gap-4">
+			<Card.Content className="space-y-6 pt-6">
 				<ul
-					className={cn("grid gap-3", {
+					className={cn("grid gap-4", {
 						"lg:grid-cols-2": monitors.length > 1,
 					})}
 				>
@@ -368,13 +531,15 @@ function Calculator(props: {
 						</li>
 					))}
 				</ul>
-			</div>
 
-			<div className="grid gap-4 lg:grid-cols-2">
-				<CalculatorStats pingsPerMonth={pingsPerMonth} />
-				<HowPricingWorks />
-			</div>
-		</section>
+				<Separator />
+
+				<div className="grid gap-6 lg:grid-cols-2">
+					<CalculatorStats pingsPerMonth={pingsPerMonth} />
+					<HowPricingWorks />
+				</div>
+			</Card.Content>
+		</Card>
 	);
 }
 
@@ -394,57 +559,59 @@ function CalculatorMonitor(props: {
 	let constrainedValue = Math.min(maxValue, Math.max(minValue, props.frequency));
 
 	return (
-		<Slider
-			value={constrainedValue}
-			onChange={props.onFrequencyChange}
-			minValue={minValue}
-			maxValue={maxValue}
-			step={1} // 1 minute step
-			formatOptions={{
-				style: "unit",
-				unit: "minute",
-				unitDisplay: "narrow",
-				minimumFractionDigits: 0,
-				maximumFractionDigits: 0,
-			}}
-			className="flex w-full flex-col"
-		>
-			<div className="flex items-center justify-between gap-2">
-				<Label className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
-					{t("label")}
-				</Label>
-				{!props.isLast && (
-					<button
-						type="button"
-						onClick={props.onDelete}
-						className="text-red-500 hover:text-red-700 flex items-center gap-1"
-					>
-						<span className="sr-only">{t("delete")}</span>
-						<XIcon className="inline size-4" />
-					</button>
-				)}
-			</div>
-
-			<SliderTrack className="relative w-full py-4">
-				<div className="absolute top-3.5 left-0 h-1 w-full rounded-full bg-neutral-200">
-					<div
-						className="absolute top-0 left-0 h-full rounded-full bg-primary-300"
-						style={{
-							width: `${(constrainedValue / (maxValue - minValue)) * 100}%`,
-						}}
-					/>
+		<div className="rounded-lg border border-neutral-200 bg-neutral-50 p-4 dark:border-neutral-700 dark:bg-neutral-800/50">
+			<Slider
+				value={constrainedValue}
+				onChange={props.onFrequencyChange}
+				minValue={minValue}
+				maxValue={maxValue}
+				step={1}
+				formatOptions={{
+					style: "unit",
+					unit: "minute",
+					unitDisplay: "narrow",
+					minimumFractionDigits: 0,
+					maximumFractionDigits: 0,
+				}}
+				className="flex w-full flex-col"
+			>
+				<div className="flex items-center justify-between gap-2">
+					<Label className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
+						{t("label")}
+					</Label>
+					{!props.isLast && (
+						<button
+							type="button"
+							onClick={props.onDelete}
+							className="flex items-center gap-1 text-danger-500 transition hover:text-danger-700"
+						>
+							<span className="sr-only">{t("delete")}</span>
+							<XIcon className="size-4" />
+						</button>
+					)}
 				</div>
-				<SliderThumb className="flex size-4 items-center justify-center rounded-full bg-primary-300" />
-			</SliderTrack>
 
-			<div className="flex justify-between text-sm text-neutral-500">
-				<span>{t("frequency.lower")}</span>
-				<span className="font-medium">
-					<SliderOutput />
-				</span>
-				<span>{t("frequency.upper")}</span>
-			</div>
-		</Slider>
+				<SliderTrack className="relative w-full py-4">
+					<div className="absolute top-3.5 left-0 h-1.5 w-full rounded-full bg-neutral-200 dark:bg-neutral-700">
+						<div
+							className="absolute top-0 left-0 h-full rounded-full bg-primary-500"
+							style={{
+								width: `${(constrainedValue / (maxValue - minValue)) * 100}%`,
+							}}
+						/>
+					</div>
+					<SliderThumb className="flex size-5 cursor-grab items-center justify-center rounded-full bg-primary-500 shadow-md ring-2 ring-white transition active:scale-110 active:cursor-grabbing dark:ring-neutral-900" />
+				</SliderTrack>
+
+				<div className="flex justify-between text-sm text-neutral-500 dark:text-neutral-400">
+					<span>{t("frequency.lower")}</span>
+					<span className="font-semibold text-primary-600 dark:text-primary-400">
+						<SliderOutput />
+					</span>
+					<span>{t("frequency.upper")}</span>
+				</div>
+			</Slider>
+		</div>
 	);
 }
 
@@ -463,30 +630,26 @@ function HowPricingWorks() {
 	];
 
 	return (
-		<aside>
-			<article className="flex flex-col gap-4 rounded-lg border-2 border-primary-200 bg-primary-50 p-6 shadow-sm shadow-primary-200 dark:border-primary-800 dark:bg-primary-950 dark:shadow-primary-800">
-				<h3 className="text-xl font-semibold tracking-tight text-primary-900 dark:text-primary-50">
-					{t("title")}
-				</h3>
+		<article className="flex flex-col gap-4 rounded-lg border-2 border-primary-200 bg-gradient-to-br from-primary-50 to-primary-100/50 p-6 dark:border-primary-800 dark:from-primary-950 dark:to-primary-900/50">
+			<h3 className="text-xl font-semibold tracking-tight text-primary-900 dark:text-primary-50">
+				{t("title")}
+			</h3>
 
-				<ol className="flex flex-col gap-4">
-					{list.map((item) => (
-						<li
-							key={item.title}
-							className="flex items-start gap-3 before:flex before:size-6 before:items-center before:justify-center before:rounded-full before:bg-primary-400 before:p-4 before:text-primary-950 before:tabular-nums before:content-[counter(step)] before:dark:bg-primary-600 before:dark:text-primary-50"
-							style={{ counterIncrement: "step 1" }}
-						>
-							<div>
-								<h4 className="font-semibold text-primary-900 dark:text-primary-50">
-									{item.title}
-								</h4>
-								<p className="text-primary-700 dark:text-primary-100">{item.description}</p>
-							</div>
-						</li>
-					))}
-				</ol>
-			</article>
-		</aside>
+			<ol className="flex flex-col gap-4" style={{ counterReset: "step" }}>
+				{list.map((item) => (
+					<li
+						key={item.title}
+						className="flex items-start gap-3 before:flex before:size-7 before:shrink-0 before:items-center before:justify-center before:rounded-full before:bg-primary-500 before:text-sm before:font-bold before:text-white before:tabular-nums before:content-[counter(step)]"
+						style={{ counterIncrement: "step 1" }}
+					>
+						<div>
+							<h4 className="font-semibold text-primary-900 dark:text-primary-50">{item.title}</h4>
+							<p className="text-sm text-primary-700 dark:text-primary-200">{item.description}</p>
+						</div>
+					</li>
+				))}
+			</ol>
+		</article>
 	);
 }
 
@@ -503,20 +666,23 @@ function CalculatorStats(props: { pingsPerMonth: number }) {
 	let totalCost = basePrice + additionalPingsCost;
 
 	return (
-		<dl className="flex flex-col gap-3 rounded-lg bg-neutral-100 p-4 dark:bg-neutral-800">
+		<dl className="flex flex-col gap-3 rounded-lg border border-neutral-200 bg-white p-5 dark:border-neutral-700 dark:bg-neutral-800">
 			<div className="flex items-center justify-between">
-				<dt className="text-neutral-600 dark:text-neutral-200">{t("pingsPerMonth")}</dt>
-				<dd className="font-semibold">
+				<dt className="text-neutral-600 dark:text-neutral-300">{t("pingsPerMonth")}</dt>
+				<dd className="text-lg font-bold text-neutral-900 dark:text-neutral-50">
 					{props.pingsPerMonth.toLocaleString(i18n.language, {
 						minimumFractionDigits: 0,
 						maximumFractionDigits: 0,
 					})}
 				</dd>
 			</div>
-			<div className="flex flex-col gap-2 border-t border-neutral-200 pt-3 dark:border-neutral-600">
+
+			<Separator />
+
+			<div className="flex flex-col gap-2">
 				<div className="flex items-center justify-between">
-					<dt className="text-neutral-600 dark:text-neutral-200">{t("baseSubscription")}</dt>
-					<dd className="font-medium">
+					<dt className="text-neutral-600 dark:text-neutral-300">{t("baseSubscription")}</dt>
+					<dd className="font-semibold text-neutral-900 dark:text-neutral-50">
 						{basePrice.toLocaleString(i18n.language, {
 							style: "currency",
 							currency: "USD",
@@ -536,8 +702,8 @@ function CalculatorStats(props: { pingsPerMonth: number }) {
 					</span>
 				</div>
 				<div className="flex items-center justify-between">
-					<dt className="text-neutral-600 dark:text-neutral-200">{t("additionalPings")}</dt>
-					<dd className="font-medium">
+					<dt className="text-neutral-600 dark:text-neutral-300">{t("additionalPings")}</dt>
+					<dd className="font-semibold text-neutral-900 dark:text-neutral-50">
 						{additionalPingsCost.toLocaleString(i18n.language, {
 							style: "currency",
 							currency: "USD",
@@ -561,21 +727,23 @@ function CalculatorStats(props: { pingsPerMonth: number }) {
 							}),
 						})}
 					</span>
-					<span />
 				</div>
 			</div>
-			<div className="mt-auto border-t border-neutral-200 pt-3 dark:border-neutral-600">
-				<div className="flex items-center justify-between text-lg font-bold">
-					<span>{t("totalCost")}</span>
-					<span className="text-primary-600">
-						{totalCost.toLocaleString(i18n.language, {
-							style: "currency",
-							currency: "USD",
-							minimumFractionDigits: 0,
-							maximumFractionDigits: 0,
-						})}
-					</span>
-				</div>
+
+			<Separator />
+
+			<div className="flex items-center justify-between rounded-lg bg-primary-50 p-3 dark:bg-primary-950/50">
+				<span className="text-lg font-bold text-neutral-900 dark:text-neutral-50">
+					{t("totalCost")}
+				</span>
+				<span className="text-2xl font-bold text-primary-600 dark:text-primary-400">
+					{totalCost.toLocaleString(i18n.language, {
+						style: "currency",
+						currency: "USD",
+						minimumFractionDigits: 0,
+						maximumFractionDigits: 0,
+					})}
+				</span>
 			</div>
 		</dl>
 	);

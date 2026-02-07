@@ -29,10 +29,19 @@ export async function loader() {
 
 export default function Component({ loaderData, params }: Route.ComponentProps) {
 	let { t } = useTranslation("translation", { keyPrefix: "page.createAlert" });
+	let { t: tSidebar } = useTranslation("translation", {
+		keyPrefix: "app.layout.sidebar.navigation.items",
+	});
 
 	return (
 		<>
-			<AppHeader heading={t("header.title")} />
+			<AppHeader
+				heading={t("header.title")}
+				breadcrumbs={[
+					{ label: tSidebar("alerts"), href: href("/app/:team/alerts", params) },
+					{ label: t("header.title") },
+				]}
+			/>
 
 			{loaderData.hasActiveSubscription ? null : (
 				<div className="p-4">

@@ -32,18 +32,14 @@ export function HydrateFallback() {
 	return (
 		<>
 			<header className="sticky top-0 z-10 flex h-16 flex-shrink-0 items-center gap-2 border-b border-neutral-200 bg-neutral-50/80 px-4 dark:border-neutral-800 dark:bg-neutral-950/80">
-				<Skeleton className="h-6 w-24" />
+				<Skeleton className="h-6 w-16" />
 				<aside className="ml-auto flex items-center gap-2">
-					<Skeleton className="h-10 w-24 rounded-lg" />
+					<Skeleton className="h-10 w-10 rounded-lg max-sm:w-10 sm:w-28" />
 				</aside>
 			</header>
 
 			<div className="flex flex-col gap-6 p-5 md:gap-12 md:p-12">
-				<div className="flex flex-col gap-4">
-					<Skeleton className="h-6 w-32" />
-
-					<AlertsTableSkeleton />
-				</div>
+				<AlertsTableSkeleton />
 			</div>
 		</>
 	);

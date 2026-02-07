@@ -59,10 +59,26 @@ export default function MonitorsEdit({ loaderData, params }: Route.ComponentProp
 	let { t } = useTranslation("translation", {
 		keyPrefix: "page.editMonitor",
 	});
+	let { t: tSidebar } = useTranslation("translation", {
+		keyPrefix: "app.layout.sidebar.navigation.items",
+	});
 
 	return (
 		<>
-			<AppHeader heading={t("header.title")} />
+			<AppHeader
+				heading={t("header.title")}
+				breadcrumbs={[
+					{ label: tSidebar("dashboard"), href: href("/app/:team/dashboard", params) },
+					{
+						label: loaderData.monitor.name,
+						href: href("/app/:team/monitors/:monitorId", {
+							team: params.team,
+							monitorId: loaderData.monitor.id,
+						}),
+					},
+					{ label: t("header.title") },
+				]}
+			/>
 
 			{loaderData.hasActiveSubscription ? null : (
 				<div className="p-4">

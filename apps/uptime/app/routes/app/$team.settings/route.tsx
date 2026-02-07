@@ -98,7 +98,7 @@ export function HydrateFallback() {
 	return (
 		<>
 			<header className="sticky top-0 z-10 flex h-16 flex-shrink-0 items-center gap-2 border-b border-neutral-200 bg-neutral-50/80 px-4 dark:border-neutral-800 dark:bg-neutral-950/80">
-				<Skeleton className="h-6 w-24" />
+				<Skeleton className="h-6 w-28" />
 			</header>
 
 			<div className="flex flex-col gap-8 p-5 md:gap-16 md:p-12">
@@ -514,7 +514,6 @@ function MembersSection(props: {
 					<LinkButton
 						color="neutral"
 						href={href("/app/:team/settings/invite", props.params)}
-						routerOptions={{ preventScrollReset: true }}
 						className="flex-shrink-0"
 					>
 						<UserPlusIcon className="size-5" aria-hidden />

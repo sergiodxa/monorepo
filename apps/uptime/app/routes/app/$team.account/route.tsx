@@ -2,11 +2,11 @@ import type { RouterContextProvider } from "react-router";
 
 import { cn } from "@pkg/cn";
 import { isFailure, succeeded } from "@pkg/result";
-import { Avatar, Button, Card, confirm, Logo, Menu, Popover, Table } from "@pkg/ui";
-import { EllipsisVerticalIcon, LoaderIcon, LogOutIcon, UsersIcon } from "lucide-react";
+import { Avatar, Button, Card, confirm, LinkButton, Logo, Menu, Popover, Table } from "@pkg/ui";
+import { EllipsisVerticalIcon, LoaderIcon, LogOutIcon, PlusIcon, UsersIcon } from "lucide-react";
 import { useId } from "react";
 import { useTranslation } from "react-i18next";
-import { href, useFetcher, useFetchers } from "react-router";
+import { href, Outlet, useFetcher, useFetchers, useParams } from "react-router";
 import { useSpinDelay } from "spin-delay";
 
 import auth from "~/clients/auth";
@@ -125,18 +125,31 @@ export function meta({ data }: { data?: LoaderData }) {
 
 export default function Component({ loaderData }: { loaderData: LoaderData }) {
 	let { t } = useTranslation("translation", { keyPrefix: "page.account" });
+	let params = useParams();
 
 	return (
 		<>
-			<AppHeader heading={t("header.title")} />
+			<AppHeader heading={t("header.title")}>
+				<LinkButton
+					href={href("/app/:team/account/create-team", params as { team: string })}
+					color="neutral"
+					className="flex-shrink-0 px-2"
+				>
+					<PlusIcon className="size-5" aria-hidden />
+					<span className="max-sm:sr-only">{t("teams.actions.createTeam")}</span>
+				</LinkButton>
+			</AppHeader>
 
-			<div className="mx-auto flex w-full max-w-2xl flex-col gap-16 p-12">
+			<div className="mx-auto flex w-full max-w-2xl flex-col gap-16 p-5 md:p-12">
 				{/* User Profile Section */}
 				<ProfileSection user={loaderData.user} />
 
 				{/* Teams Section */}
 				<TeamsSection teams={loaderData.teams} userId={loaderData.user.id} />
 			</div>
+
+			{/* Nested route for create team dialog */}
+			<Outlet />
 		</>
 	);
 }

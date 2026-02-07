@@ -32,15 +32,19 @@ export function HydrateFallback() {
 	return (
 		<>
 			<header className="sticky top-0 z-10 flex h-16 flex-shrink-0 items-center gap-2 border-b border-neutral-200 bg-neutral-50/80 px-4 dark:border-neutral-800 dark:bg-neutral-950/80">
-				<Skeleton className="h-6 w-48" />
+				<div className="flex flex-col justify-center gap-1">
+					<Skeleton className="h-3 w-32" />
+					<Skeleton className="h-4 w-40" />
+				</div>
 				<aside className="ml-auto flex items-center gap-2">
-					<Skeleton className="h-10 w-20 rounded-lg" />
-					<Skeleton className="h-10 w-24 rounded-lg" />
+					<Skeleton className="h-10 w-10 rounded-lg max-sm:w-10 sm:w-28" />
+					<Skeleton className="h-10 w-10 rounded-lg max-sm:w-10 sm:w-20" />
+					<Skeleton className="h-10 w-10 rounded-lg max-sm:w-10 sm:w-20" />
 				</aside>
 			</header>
 
-			<div className="flex flex-col gap-12 p-12">
-				<div className="grid grid-cols-3 gap-8">
+			<div className="flex flex-col gap-6 p-5 lg:gap-12 lg:p-12">
+				<div className="grid gap-4 lg:grid-cols-3 lg:gap-8">
 					<StatCardSkeleton />
 					<StatCardSkeleton />
 					<StatCardSkeleton />
@@ -156,6 +160,9 @@ export async function loader({ params }: Route.LoaderArgs) {
 
 export default function Component({ loaderData, params }: Route.ComponentProps) {
 	let { t } = useTranslation("translation", { keyPrefix: "page.monitor" });
+	let { t: tSidebar } = useTranslation("translation", {
+		keyPrefix: "app.layout.sidebar.navigation.items",
+	});
 
 	let revalidator = useRevalidator();
 	let isRevalidating = useSpinDelay(revalidator.state === "loading", {
@@ -165,7 +172,13 @@ export default function Component({ loaderData, params }: Route.ComponentProps) 
 
 	return (
 		<>
-			<AppHeader heading={t("header.title", { name: loaderData.monitor.name })}>
+			<AppHeader
+				heading={loaderData.monitor.name}
+				breadcrumbs={[
+					{ label: tSidebar("dashboard"), href: href("/app/:team/dashboard", params) },
+					{ label: loaderData.monitor.name },
+				]}
+			>
 				<ActionButton
 					id={loaderData.monitor.id}
 					intent="play"
