@@ -9,7 +9,6 @@ import { useSpinDelay } from "spin-delay";
 import { z } from "zod/v4";
 
 import auth from "~/clients/auth";
-import { AppHeader } from "~/components/app-header";
 import { db } from "~/middleware/drizzle";
 import { i18next } from "~/middleware/i18next";
 import { logger } from "~/middleware/logger";
@@ -133,7 +132,9 @@ export default function Component({ loaderData }: Route.ComponentProps) {
 
 	return (
 		<div className="flex min-h-screen w-full flex-col bg-neutral-50 font-mono dark:bg-neutral-950">
-			<AppHeader heading={t("header.title")} />
+			<header className="sticky top-0 z-10 flex h-16 flex-shrink-0 items-center gap-2 border-b border-neutral-200 bg-neutral-50/80 px-4 dark:border-neutral-800 dark:bg-neutral-950/80">
+				<h1>{t("header.title")}</h1>
+			</header>
 
 			<div className="mx-auto flex w-full max-w-2xl flex-col gap-16 p-12">
 				{/* User Profile Section */}
