@@ -228,7 +228,7 @@ export function Sidebar({
 				className="ui-sheet-overlay"
 			>
 				<AriaModal data-side={side} className={cn("ui-sheet", "ui-sidebar-mobile")}>
-					<AriaDialog className="ui-sheet-content outline-none">
+					<AriaDialog aria-label="Navigation" className="ui-sheet-content outline-none">
 						<aside
 							{...props}
 							data-component="sidebar"
