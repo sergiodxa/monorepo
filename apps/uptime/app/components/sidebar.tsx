@@ -21,7 +21,7 @@ export function AppSidebar(props: {
 		email: string;
 		isAdmin: boolean;
 	};
-	monitors: Array<{ id: string; name: string }>;
+	monitors: Array<{ id: string; name: string; status: "up" | "down" | "unknown" }>;
 }) {
 	let { t } = useTranslation("translation", {
 		keyPrefix: "app.layout.sidebar",
@@ -121,7 +121,10 @@ export function AppSidebar(props: {
 	);
 }
 
-function MonitorMenuItem(props: { monitor: { id: string; name: string }; teamSlug: string }) {
+function MonitorMenuItem(props: {
+	monitor: { id: string; name: string; status: "up" | "down" | "unknown" };
+	teamSlug: string;
+}) {
 	let monitorPath = href("/app/:team/monitors/:monitorId", {
 		team: props.teamSlug,
 		monitorId: props.monitor.id,
@@ -133,7 +136,18 @@ function MonitorMenuItem(props: { monitor: { id: string; name: string }; teamSlu
 			<Sidebar.MenuLink href={monitorPath} active={isActive} tooltip={props.monitor.name}>
 				<MonitorCogIcon size={16} />
 				<span>{props.monitor.name}</span>
+				<StatusIndicator status={props.monitor.status} />
 			</Sidebar.MenuLink>
 		</Sidebar.MenuItem>
 	);
+}
+
+function StatusIndicator(props: { status: "up" | "down" | "unknown" }) {
+	let colorClass = {
+		up: "bg-green-500",
+		down: "bg-red-500",
+		unknown: "bg-neutral-400",
+	}[props.status];
+
+	return <span className={`ml-auto size-2 shrink-0 rounded-full ${colorClass}`} />;
 }

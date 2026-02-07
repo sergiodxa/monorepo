@@ -134,15 +134,36 @@ export async function loader({ request, context }: Route.LoaderArgs) {
 			with: { team: true },
 		}),
 		db().query.monitors.findMany({
-			columns: { id: true, name: true },
+			columns: { id: true, name: true, expectedStatus: true },
 			where(fields, operators) {
 				return operators.eq(fields.teamId, team().id);
 			},
 			orderBy(fields, operators) {
 				return operators.desc(fields.createdAt);
 			},
+			with: {
+				results: {
+					columns: { responseStatus: true, completedAt: true },
+					where(fields, operators) {
+						return operators.isNotNull(fields.completedAt);
+					},
+					orderBy(fields, operators) {
+						return operators.desc(fields.completedAt);
+					},
+					limit: 1,
+				},
+			},
 		}),
 	]);
+
+	let monitorsWithStatus = monitors.map((monitor) => {
+		let lastResult = monitor.results[0];
+		let status: "up" | "down" | "unknown" = "unknown";
+		if (lastResult) {
+			status = lastResult.responseStatus === monitor.expectedStatus ? "up" : "down";
+		}
+		return { id: monitor.id, name: monitor.name, status };
+	});
 
 	return {
 		viewer: {
@@ -159,7 +180,7 @@ export async function loader({ request, context }: Route.LoaderArgs) {
 			ownerId: team().ownerId,
 		},
 		memberships,
-		monitors,
+		monitors: monitorsWithStatus,
 		meta: [
 			{ title: t("app.meta.title") },
 			{ name: "description", content: t("app.meta.description") },
