@@ -1,22 +1,21 @@
+import type { RouterContextProvider } from "react-router";
+
 import { cn } from "@pkg/cn";
 import { isFailure, succeeded } from "@pkg/result";
 import { Avatar, Button, Card, confirm, LinkButton, Logo, Menu, Popover, Table } from "@pkg/ui";
 import { EllipsisVerticalIcon, LoaderIcon, LogOutIcon, PlusIcon, UsersIcon } from "lucide-react";
 import { useId } from "react";
 import { useTranslation } from "react-i18next";
-import { href, redirect, useFetcher, useFetchers } from "react-router";
+import { href, useFetcher, useFetchers } from "react-router";
 import { useSpinDelay } from "spin-delay";
-import { z } from "zod/v4";
 
 import auth from "~/clients/auth";
+import { AppHeader } from "~/components/app-header";
 import { db } from "~/middleware/drizzle";
 import { i18next } from "~/middleware/i18next";
 import { logger } from "~/middleware/logger";
 import { measure } from "~/middleware/server-timing";
-import { getSession } from "~/middleware/session";
-import { SubjectContext, subject } from "~/middleware/subject";
-
-import type { Route } from "./+types/route";
+import { subject } from "~/middleware/subject";
 
 function getTeamInitials(name: string): string {
 	return name.substring(0, 2).toUpperCase();
@@ -32,30 +31,25 @@ function getMemberInitials(name: string): string {
 		.toUpperCase();
 }
 
-export const middleware: Route.MiddlewareFunction[] = [
-	// Read subject from session and ensure it's authenticated
-	async ({ context }, next) => {
-		let session = getSession();
+interface LoaderData {
+	user: {
+		id: string;
+		name: string;
+		email: string;
+		avatar: string;
+	};
+	teams: Array<{
+		id: string;
+		name: string;
+		slug: string;
+		logo: string | null;
+		role: "member" | "admin" | "owner";
+		membershipId: string;
+	}>;
+	meta: Array<{ title: string } | { name: string; content: string }>;
+}
 
-		// User is not authenticated, go to login
-		if (!session.has("id")) throw redirect(href("/auth"));
-
-		let subjectData = z
-			.object({
-				id: z.string(),
-				name: z.string(),
-				avatar: z.url(),
-				email: z.email(),
-			})
-			.parse(session.data);
-
-		context.set(SubjectContext, subjectData);
-
-		return await next();
-	},
-];
-
-export async function loader({ context }: Route.LoaderArgs) {
+export async function loader({ context }: { context: RouterContextProvider }): Promise<LoaderData> {
 	let { t } = i18next(context);
 	let subjectId = subject().id;
 
@@ -121,20 +115,20 @@ export async function loader({ context }: Route.LoaderArgs) {
 		meta: [
 			{ title: t("page.account.meta.title") },
 			{ name: "description", content: t("page.account.meta.description") },
-		] satisfies Route.MetaDescriptors,
+		],
 	};
 }
 
-export const meta: Route.MetaFunction = ({ data }) => data?.meta ?? [];
+export function meta({ data }: { data?: LoaderData }) {
+	return data?.meta ?? [];
+}
 
-export default function Component({ loaderData }: Route.ComponentProps) {
+export default function Component({ loaderData }: { loaderData: LoaderData }) {
 	let { t } = useTranslation("translation", { keyPrefix: "page.account" });
 
 	return (
-		<div className="flex min-h-screen w-full flex-col bg-neutral-50 font-mono dark:bg-neutral-950">
-			<header className="sticky top-0 z-10 flex h-16 flex-shrink-0 items-center gap-2 border-b border-neutral-200 bg-neutral-50/80 px-4 dark:border-neutral-800 dark:bg-neutral-950/80">
-				<h1>{t("header.title")}</h1>
-			</header>
+		<>
+			<AppHeader heading={t("header.title")} />
 
 			<div className="mx-auto flex w-full max-w-2xl flex-col gap-16 p-12">
 				{/* User Profile Section */}
@@ -143,7 +137,7 @@ export default function Component({ loaderData }: Route.ComponentProps) {
 				{/* Teams Section */}
 				<TeamsSection teams={loaderData.teams} userId={loaderData.user.id} />
 			</div>
-		</div>
+		</>
 	);
 }
 
@@ -170,7 +164,7 @@ function ProfileSection(props: {
 
 			<Card>
 				<Card.Content className="flex items-center gap-6 p-6">
-					<Avatar size="xl">
+					<Avatar size="lg" className="size-16">
 						{props.user.avatar ? (
 							<Avatar.Image src={props.user.avatar} alt="" />
 						) : (
@@ -234,7 +228,7 @@ function TeamsSection(props: { teams: Team[]; userId: string }) {
 					<h2 className="text-xl font-semibold tracking-tight">{t("title")}</h2>
 					<p className="text-sm text-neutral-500 dark:text-neutral-400">{t("description")}</p>
 				</hgroup>
-				<LinkButton color="neutral" href={href("/app/account/new-team")} className="flex-shrink-0">
+				<LinkButton color="neutral" href="/app/account/new-team" className="flex-shrink-0">
 					<PlusIcon className="size-5" aria-hidden />
 					<span className="max-sm:sr-only">{t("actions.createTeam")}</span>
 				</LinkButton>
@@ -250,7 +244,7 @@ function TeamsSection(props: { teams: Team[]; userId: string }) {
 								{t("empty.description")}
 							</p>
 						</div>
-						<LinkButton href={href("/app/account/new-team")}>{t("empty.cta")}</LinkButton>
+						<LinkButton href="/app/account/new-team">{t("empty.cta")}</LinkButton>
 					</Card.Content>
 				</Card>
 			) : (

@@ -250,6 +250,12 @@ export default {
 						team: "Team",
 					},
 				},
+
+				account: {
+					title: "Account",
+					overview: "Overview",
+					teams: "Your Teams",
+				},
 			},
 		},
 
