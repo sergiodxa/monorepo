@@ -9,7 +9,7 @@ import type { SelectMonitor } from "~/db/schema";
 export function ActionButton(props: {
 	id: SelectMonitor["id"];
 	intent: string;
-	children: React.JSX.Element;
+	children: React.ReactNode;
 	label: string;
 	color: ComponentProps<typeof Button>["color"];
 	onSubmit?: React.FormEventHandler<HTMLFormElement>;
@@ -30,9 +30,13 @@ export function ActionButton(props: {
 		>
 			<input type="hidden" name="monitorId" value={props.id} />
 			<input type="hidden" name="intent" value={props.intent} />
-			<Button type="submit" className="p-2" isPending={isPending} color={props.color}>
+			<Button
+				type="submit"
+				className="flex-shrink-0 px-2"
+				isPending={isPending}
+				color={props.color}
+			>
 				{props.children}
-				<span className="sr-only">{props.label}</span>
 			</Button>
 		</fetcher.Form>
 	);
