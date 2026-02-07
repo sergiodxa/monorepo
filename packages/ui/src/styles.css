@@ -2416,7 +2416,7 @@
 
 @utility ui-sidebar-inset {
 	:where(&) {
-		@apply relative flex min-h-screen flex-1 flex-col;
+		@apply relative flex min-h-screen min-w-0 flex-1 flex-col;
 		@apply transition-[margin] duration-200 ease-in-out;
 		background-color: var(--ui-neutral-bg-tint);
 	}

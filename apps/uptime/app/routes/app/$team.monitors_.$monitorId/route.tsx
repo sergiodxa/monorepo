@@ -265,7 +265,9 @@ export default function Component({ loaderData, params }: Route.ComponentProps) 
 					/>
 				</div>
 
-				<Heatmap points={loaderData.results} weeks={loaderData.weeks} size="lg" />
+				<div className="-mx-5 overflow-x-auto px-5 md:mx-0 md:px-0">
+					<Heatmap points={loaderData.results} weeks={loaderData.weeks} size="lg" />
+				</div>
 			</div>
 		</>
 	);

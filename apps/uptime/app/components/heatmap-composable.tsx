@@ -121,7 +121,7 @@ export function Legend(props: { size: Cell.Size }) {
 	return (
 		<div
 			className={cn(
-				"ml-auto flex flex-row items-center gap-2 text-sm sm:gap-8",
+				"ml-auto flex flex-row flex-wrap items-center justify-end gap-2 text-sm sm:gap-8",
 				"text-neutral-900 dark:text-neutral-100",
 			)}
 		>
