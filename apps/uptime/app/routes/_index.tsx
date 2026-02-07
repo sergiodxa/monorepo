@@ -386,7 +386,7 @@ function FAQ() {
 									<span className="pr-4">{item.q}</span>
 									<ChevronDownIcon className="size-5 shrink-0 text-neutral-500 transition-transform [[data-state=open]>&]:rotate-180" />
 								</Accordion.Trigger>
-								<Accordion.Content className="overflow-hidden transition-all">
+								<Accordion.Content className="overflow-hidden pb-0 transition-all">
 									<div className="border-t border-neutral-200 px-6 py-4 whitespace-pre-line text-neutral-600 dark:border-neutral-800 dark:text-neutral-400">
 										{item.a}
 									</div>
@@ -406,7 +406,7 @@ function FAQ() {
 									<span className="pr-4">{item.q}</span>
 									<ChevronDownIcon className="size-5 shrink-0 text-neutral-500 transition-transform [[data-state=open]>&]:rotate-180" />
 								</Accordion.Trigger>
-								<Accordion.Content className="overflow-hidden transition-all">
+								<Accordion.Content className="overflow-hidden pb-0 transition-all">
 									<div className="border-t border-neutral-200 px-6 py-4 whitespace-pre-line text-neutral-600 dark:border-neutral-800 dark:text-neutral-400">
 										{item.a}
 									</div>
