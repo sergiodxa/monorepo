@@ -15,6 +15,7 @@ import {
 	Logo,
 	Menu,
 	Popover,
+	Skeleton,
 	Table,
 	TextField,
 } from "@pkg/ui";
@@ -32,8 +33,47 @@ import {
 	UserMinusIcon,
 	UserPlusIcon,
 } from "lucide-react";
-import { useId } from "react";
+import { useId, useMemo, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
+
+const INVITE_EXPIRATION_DAYS = 7;
+
+function getInviteExpirationDate(createdAt: Date): Date {
+	let expirationDate = new Date(createdAt);
+	expirationDate.setDate(expirationDate.getDate() + INVITE_EXPIRATION_DAYS);
+	return expirationDate;
+}
+
+function formatRelativeTime(
+	targetDate: Date,
+	locale: string,
+): { text: string; isExpired: boolean } {
+	let now = new Date();
+	let diffMs = targetDate.getTime() - now.getTime();
+	let isExpired = diffMs <= 0;
+
+	if (isExpired) {
+		return { text: "", isExpired: true };
+	}
+
+	let diffSeconds = Math.floor(diffMs / 1000);
+	let diffMinutes = Math.floor(diffSeconds / 60);
+	let diffHours = Math.floor(diffMinutes / 60);
+	let diffDays = Math.floor(diffHours / 24);
+
+	let rtf = new Intl.RelativeTimeFormat(locale, { numeric: "auto" });
+
+	if (diffDays > 0) {
+		return { text: rtf.format(diffDays, "day"), isExpired: false };
+	}
+	if (diffHours > 0) {
+		return { text: rtf.format(diffHours, "hour"), isExpired: false };
+	}
+	if (diffMinutes > 0) {
+		return { text: rtf.format(diffMinutes, "minute"), isExpired: false };
+	}
+	return { text: rtf.format(diffSeconds, "second"), isExpired: false };
+}
 import { href, isRouteErrorResponse, Link, Outlet, useFetcher, useFetchers } from "react-router";
 import { useSpinDelay } from "spin-delay";
 
@@ -47,6 +87,148 @@ import { measure } from "~/middleware/server-timing";
 import { team } from "~/middleware/team";
 
 import type { Route } from "./+types/route";
+
+export async function clientLoader({ serverLoader }: Route.ClientLoaderArgs) {
+	return await serverLoader();
+}
+
+clientLoader.hydrate = true as const;
+
+export function HydrateFallback() {
+	return (
+		<>
+			<header className="sticky top-0 z-10 flex h-16 flex-shrink-0 items-center gap-2 border-b border-neutral-200 bg-neutral-50/80 px-4 dark:border-neutral-800 dark:bg-neutral-950/80">
+				<Skeleton className="h-6 w-24" />
+			</header>
+
+			<div className="flex flex-col gap-8 p-5 md:gap-16 md:p-12">
+				{/* General Section Skeleton */}
+				<section className="mx-auto w-full max-w-2xl space-y-6">
+					<hgroup>
+						<Skeleton className="mb-2 h-6 w-32" />
+						<Skeleton className="h-4 w-64" />
+					</hgroup>
+
+					<Card className="min-[672px]:-mx-6">
+						<Card.Header>
+							<Skeleton className="mb-2 h-5 w-32" />
+							<Skeleton className="h-4 w-48" />
+						</Card.Header>
+
+						<Card.Content className="space-y-6">
+							<div className="flex items-center gap-6">
+								<Skeleton className="h-16 w-16 rounded-full" />
+								<div className="flex flex-1 flex-col gap-2">
+									<Skeleton className="h-4 w-16" />
+									<Skeleton className="h-10 w-full rounded-lg" />
+									<Skeleton className="h-3 w-48" />
+								</div>
+							</div>
+
+							<div className="flex flex-col gap-2">
+								<Skeleton className="h-4 w-20" />
+								<Skeleton className="h-10 w-full rounded-lg" />
+								<Skeleton className="h-3 w-40" />
+							</div>
+						</Card.Content>
+
+						<Card.Footer className="justify-end gap-2">
+							<Skeleton className="h-10 w-20 rounded-lg" />
+							<Skeleton className="h-10 w-24 rounded-lg" />
+						</Card.Footer>
+					</Card>
+				</section>
+
+				{/* Members Section Skeleton */}
+				<section className="mx-auto w-full max-w-2xl space-y-6">
+					<div className="flex items-start justify-between gap-4">
+						<hgroup>
+							<Skeleton className="mb-2 h-6 w-24" />
+							<Skeleton className="h-4 w-56" />
+						</hgroup>
+						<Skeleton className="h-10 w-28 rounded-lg" />
+					</div>
+
+					<Card className="min-[672px]:-mx-6">
+						<Card.Header>
+							<Skeleton className="mb-2 h-5 w-28" />
+							<Skeleton className="h-4 w-44" />
+						</Card.Header>
+
+						<Card.Content className="p-0">
+							<MembersTableSkeleton />
+						</Card.Content>
+					</Card>
+				</section>
+
+				{/* Domains Section Skeleton */}
+				<section className="mx-auto w-full max-w-2xl space-y-6">
+					<hgroup>
+						<Skeleton className="mb-2 h-6 w-24" />
+						<Skeleton className="h-4 w-48" />
+					</hgroup>
+
+					<Card className="min-[672px]:-mx-6">
+						<Card.Header>
+							<Skeleton className="mb-2 h-5 w-24" />
+							<Skeleton className="h-4 w-40" />
+						</Card.Header>
+						<Card.Content>
+							<div className="flex flex-col gap-6">
+								<div className="flex flex-col gap-2">
+									<Skeleton className="h-4 w-20" />
+									<Skeleton className="h-10 w-full rounded-lg" />
+									<Skeleton className="h-3 w-56" />
+								</div>
+								<Skeleton className="ml-auto h-10 w-28 rounded-lg" />
+							</div>
+						</Card.Content>
+					</Card>
+				</section>
+			</div>
+		</>
+	);
+}
+
+function MembersTableSkeleton() {
+	return (
+		<Table aria-label="Loading members">
+			<Table.Header>
+				<Table.Column isRowHeader>
+					<Skeleton className="h-4 w-16" />
+				</Table.Column>
+				<Table.Column align="right">
+					<Skeleton className="ml-auto h-4 w-12" />
+				</Table.Column>
+				<Table.Column align="center">
+					<span className="sr-only">Actions</span>
+				</Table.Column>
+			</Table.Header>
+
+			<Table.Body items={[{ id: "1" }, { id: "2" }]}>
+				{(item) => (
+					<Table.Row key={item.id}>
+						<Table.Cell>
+							<div className="flex items-center gap-3">
+								<Skeleton className="h-12 w-12 rounded-full" />
+								<div className="flex flex-col gap-1">
+									<Skeleton className="h-5 w-32" />
+									<Skeleton className="h-4 w-40" />
+								</div>
+							</div>
+						</Table.Cell>
+						<Table.Cell className="w-36 text-right">
+							<Skeleton className="ml-auto h-4 w-16" />
+						</Table.Cell>
+						<Table.Cell className="w-17 text-center">
+							<Skeleton className="mx-auto h-10 w-10 rounded-lg" />
+						</Table.Cell>
+					</Table.Row>
+				)}
+			</Table.Body>
+		</Table>
+	);
+}
 
 function getTeamInitials(name: string): string {
 	return name.substring(0, 2).toUpperCase();
@@ -169,7 +351,7 @@ export default function Component({ loaderData, params }: Route.ComponentProps) 
 				</div>
 			)}
 
-			<div className="flex flex-col gap-16 p-12">
+			<div className="flex flex-col gap-8 p-5 md:gap-16 md:p-12">
 				{/* General Section */}
 				<section id="general" className="mx-auto w-full max-w-2xl space-y-6">
 					<hgroup>
@@ -317,6 +499,7 @@ function MembersSection(props: {
 
 	let invitedMembersTableColumns = [
 		{ id: "email" as const, name: t("invitedTable.columns.email"), align: "left" as const },
+		{ id: "expires" as const, name: t("invitedTable.columns.expires"), align: "right" as const },
 		{ id: "actions" as const, name: t("invitedTable.columns.actions"), align: "center" as const },
 	];
 
@@ -535,7 +718,7 @@ function MemberTableRow(props: { member: Member }) {
 }
 
 function InvitedMemberTableRow(props: { member: InvitedMember }) {
-	let { t } = useTranslation("translation", { keyPrefix: "page.settings.members" });
+	let { t, i18n } = useTranslation("translation", { keyPrefix: "page.settings.members" });
 	let team = useTeam();
 
 	let revokeInviteFetcher = useFetcher();
@@ -546,9 +729,24 @@ function InvitedMemberTableRow(props: { member: InvitedMember }) {
 
 	let invitePath = href("/invite/:inviteId", { inviteId: props.member.id });
 
+	let expirationInfo = useMemo(() => {
+		let expirationDate = getInviteExpirationDate(props.member.createdAt);
+		return formatRelativeTime(expirationDate, i18n.language);
+	}, [props.member.createdAt, i18n.language]);
+
 	return (
 		<Table.Row>
 			<Table.Cell>{props.member.email}</Table.Cell>
+
+			<Table.Cell className="w-36 text-right">
+				{expirationInfo.isExpired ? (
+					<span className="text-red-600 dark:text-red-400">
+						{t("invitedTable.expires.expired")}
+					</span>
+				) : (
+					<span>{expirationInfo.text}</span>
+				)}
+			</Table.Cell>
 
 			<Table.Cell className="w-17 text-center">
 				<Menu.Trigger>
@@ -911,6 +1109,9 @@ function DangerZoneSection(props: { params: { team: string }; teamName: string }
 		delay: 50,
 	});
 
+	let [confirmationValue, setConfirmationValue] = useState("");
+	let isDeleteEnabled = confirmationValue === "DELETE";
+
 	let confirmationError = fetcher.data?.issues?.confirmation;
 
 	return (
@@ -952,6 +1153,8 @@ function DangerZoneSection(props: { params: { team: string }; teamName: string }
 							isRequired
 							autoComplete="off"
 							isInvalid={confirmationError !== undefined}
+							value={confirmationValue}
+							onChange={setConfirmationValue}
 						>
 							<Label>{t("card.confirmation.label")}</Label>
 							<Input placeholder={t("card.confirmation.placeholder")} />
@@ -960,7 +1163,12 @@ function DangerZoneSection(props: { params: { team: string }; teamName: string }
 					</Card.Content>
 
 					<Card.Footer className="justify-end">
-						<Button type="submit" color="danger" isPending={isPending}>
+						<Button
+							type="submit"
+							color="danger"
+							isPending={isPending}
+							isDisabled={!isDeleteEnabled}
+						>
 							{t("card.cta")}
 						</Button>
 					</Card.Footer>
@@ -1004,7 +1212,7 @@ export function ErrorBoundary({ error, params }: Route.ErrorBoundaryProps) {
 					</div>
 				)}
 
-				<div className="flex flex-col gap-4 p-12">
+				<div className="flex flex-col gap-4 p-5 md:p-12">
 					{error.status === 403 ? (
 						<>
 							<h2>{t("error.forbidden.title")}</h2>
@@ -1024,7 +1232,7 @@ export function ErrorBoundary({ error, params }: Route.ErrorBoundaryProps) {
 	return (
 		<>
 			<AppHeader heading={t("header.title")} />
-			<div className="flex flex-col gap-4 p-12">
+			<div className="flex flex-col gap-4 p-5 md:p-12">
 				<h2>{t("error.unknown.title")}</h2>
 				<p>{t("error.unknown.description")}</p>
 			</div>
