@@ -35,19 +35,10 @@ export default function MonitorsNew({ loaderData, params }: Route.ComponentProps
 	let { t } = useTranslation("translation", {
 		keyPrefix: "page.createMonitor",
 	});
-	let { t: tSidebar } = useTranslation("translation", {
-		keyPrefix: "app.layout.sidebar.navigation.items",
-	});
 
 	return (
 		<>
-			<AppHeader
-				heading={t("header.title")}
-				breadcrumbs={[
-					{ label: tSidebar("dashboard"), href: href("/app/:team/dashboard", params) },
-					{ label: t("header.title") },
-				]}
-			/>
+			<AppHeader heading={t("header.title")} />
 
 			{loaderData.hasActiveSubscription ? null : (
 				<div className="p-4">

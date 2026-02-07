@@ -455,7 +455,7 @@ function MonitorTableRow(props: {
 				</ClientOnly>
 			</Table.Cell>
 
-			<Table.Cell className="w-44 text-left">
+			<Table.Cell className="text-left sm:w-44">
 				{props.monitor.status === "unknown" && (
 					<Badge color="neutral" variant="outline">
 						{t("status.unknown")}

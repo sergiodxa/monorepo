@@ -129,7 +129,8 @@ function MonitorMenuItem(props: {
 		team: props.teamSlug,
 		monitorId: props.monitor.id,
 	});
-	let isActive = useMatch("/app/:team/monitors/:monitorId") !== null;
+	let match = useMatch("/app/:team/monitors/:monitorId");
+	let isActive = match !== null && match.params.monitorId === props.monitor.id;
 
 	return (
 		<Sidebar.MenuItem>
