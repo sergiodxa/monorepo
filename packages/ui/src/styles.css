@@ -520,6 +520,22 @@
 			border-color: var(--ui-neutral-border-strong);
 			outline-color: var(--ui-neutral-border-strong);
 		}
+		[data-color="primary"] &[data-focus-visible] {
+			border-color: var(--ui-primary-ring);
+			outline-color: var(--ui-primary-ring);
+		}
+		[data-color="success"] &[data-focus-visible] {
+			border-color: var(--ui-success-ring);
+			outline-color: var(--ui-success-ring);
+		}
+		[data-color="danger"] &[data-focus-visible] {
+			border-color: var(--ui-danger-ring);
+			outline-color: var(--ui-danger-ring);
+		}
+		[data-color="warning"] &[data-focus-visible] {
+			border-color: var(--ui-warning-ring);
+			outline-color: var(--ui-warning-ring);
+		}
 		&[data-invalid] {
 			border-color: var(--ui-danger-ring);
 		}
