@@ -20,7 +20,7 @@ export default {
 		},
 
 		hero: {
-			pill: "Überwachen Sie Ihre Dienste mit Zuversicht",
+			pill: "Uptime-Überwachung",
 			title: "Überwachen Sie Ihre Dienste <strong>mit Zuversicht</strong>",
 			description:
 				"Erhalten Sie sofortige Benachrichtigungen, wenn Ihre Websites und APIs ausfallen. Überwachen Sie Ihre Websites und APIs mit Leichtigkeit.",

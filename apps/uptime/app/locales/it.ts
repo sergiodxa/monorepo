@@ -20,7 +20,7 @@ export default {
 		},
 
 		hero: {
-			pill: "Monitora i tuoi servizi con sicurezza",
+			pill: "Monitoraggio Uptime",
 			title: "Monitora i tuoi servizi <strong>con sicurezza</strong>",
 			description:
 				"Riceva avvisi istantanei quando i suoi siti web e API vanno offline. Monitora i suoi siti web e API con facilità.",

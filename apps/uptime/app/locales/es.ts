@@ -20,7 +20,7 @@ export default {
 		},
 
 		hero: {
-			pill: "Monitoree sus servicios con confianza",
+			pill: "Monitoreo de Uptime",
 			title: "Monitoree sus servicios <strong>con confianza</strong>",
 			description:
 				"Reciba alertas instantáneas cuando sus sitios web y APIs dejen de funcionar. Monitoree sus sitios web y APIs con facilidad.",

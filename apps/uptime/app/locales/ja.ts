@@ -20,7 +20,7 @@ export default {
 		},
 
 		hero: {
-			pill: "安心してサービスを監視",
+			pill: "稼働時間監視",
 			title: "安心してサービスを<strong>監視</strong>",
 			description:
 				"ウェブサイトやAPIがダウンした時に即座にアラートを受け取れます。簡単にウェブサイトやAPIを監視できます。",

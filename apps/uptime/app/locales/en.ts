@@ -20,7 +20,7 @@ export default {
 		},
 
 		hero: {
-			pill: "Monitor your services with confidence",
+			pill: "Uptime Monitoring",
 			title: "Monitor your services <strong>with confidence</strong>",
 			description:
 				"Get instant alerts when your websites and APIs go down. Monitor your websites and APIs with ease.",
