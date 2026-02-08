@@ -24,7 +24,10 @@ const inputSchema = z.object({
 	logoUrl: z.url().optional().or(z.literal("")),
 	isPublic: z.preprocess((v) => v === "on" || v === true, z.boolean()).default(false),
 	showOverallStatus: z.preprocess((v) => v === "on" || v === true, z.boolean()).default(true),
-	monitorIds: z.array(z.uuid()).optional().default([]),
+	monitorIds: z
+		.union([z.uuid().transform((v) => [v]), z.array(z.uuid())])
+		.optional()
+		.default([]),
 });
 
 export async function action({ request, context, params }: Route.ActionArgs) {
