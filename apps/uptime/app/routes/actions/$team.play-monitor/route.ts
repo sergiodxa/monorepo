@@ -1,4 +1,4 @@
-import { badRequest, notFound, ok } from "@pkg/response";
+import { badRequest, internalServerError, notFound, ok } from "@pkg/response";
 import { isFailure } from "@pkg/result";
 import { validate } from "@pkg/validate";
 import { toast } from "sonner";
@@ -46,46 +46,50 @@ export async function action({ request, context }: Route.ActionArgs) {
 		monitorId: monitor.id,
 	});
 
-	let promise = retry(500, async ({ stop, retry, attempts }) => {
-		if (attempts > 5) stop("Too many attempts");
-		let { status } = await workflow.status();
-		if (status === "complete") return;
-		if (status === "terminated") stop("Monitor was terminated");
-		if (status === "errored") stop("Monitor encountered an error");
-		if (status === "unknown") stop("Monitor status is unknown");
-		retry();
+	// Wait for workflow to complete before returning
+	try {
+		await retry(500, async ({ stop, retry, attempts }) => {
+			if (attempts > 10) stop("Too many attempts");
+			let { status } = await workflow.status();
+			if (status === "complete") return;
+			if (status === "terminated") stop("Monitor was terminated");
+			if (status === "errored") stop("Monitor encountered an error");
+			if (status === "unknown") stop("Monitor status is unknown");
+			retry();
+		});
+	} catch (error) {
+		logger().error("action.play-monitor.workflow-failed", {
+			teamId: team().id,
+			monitorId: monitor.id,
+			error: error instanceof Error ? error.message : String(error),
+		});
+		return internalServerError({
+			message: t("actions.playMonitor.failure", monitor),
+		});
+	}
+
+	logger().info("action.play-monitor.completed", {
+		teamId: team().id,
+		monitorId: monitor.id,
 	});
 
 	return ok({
-		promise,
-		message: {
-			pending: t("actions.playMonitor.pending", monitor),
-			success: t("actions.playMonitor.success", monitor),
-			failure: t("actions.playMonitor.failure", monitor),
-		},
+		message: t("actions.playMonitor.success", monitor),
 	});
 }
 
 export async function clientAction({ serverAction }: Route.ClientActionArgs) {
-	let result = await serverAction();
+	let promise = serverAction();
 
-	if (result.ok) {
-		toast.promise(result.promise, {
-			loading: result.message.pending,
-			error: result.message.failure,
-			success: result.message.success,
-		});
+	toast.promise(promise, {
+		loading: "Running monitor check...",
+		error(result) {
+			return result.message;
+		},
+		success(result) {
+			return result.message;
+		},
+	});
 
-		// We need to await the promise to ensure revalidation happens after the
-		// promise is resolved
-		try {
-			await result.promise;
-		} catch {
-			// Do nothing in case of error, the toast will handle it
-		}
-	} else {
-		toast.error(result.message);
-	}
-
-	return result;
+	return await promise;
 }
