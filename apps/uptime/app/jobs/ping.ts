@@ -1,4 +1,4 @@
-import { logger } from "@pkg/logger";
+import { BatchedLogger } from "@pkg/logger";
 import { env } from "cloudflare:workers";
 
 import type { SelectMonitor, SelectTeam } from "~/db/schema";
@@ -20,26 +20,37 @@ export default class PingJob implements Job {
 	) {}
 
 	async run(message: Message): Promise<void> {
-		let hasActiveSubscription = await Customer.hasActiveSubscription(this.input.ownerId);
-
-		if (!hasActiveSubscription) {
-			logger.info("ping.skipped_no_subscription", {
-				monitorId: this.input.monitorId,
-				ownerId: this.input.ownerId,
-			});
-			return message.ack();
-		}
+		let logger = new BatchedLogger(`job:ping:${this.input.monitorId}`);
 
 		try {
+			logger.info("job.ping.started", {
+				monitorId: this.input.monitorId,
+				ownerId: this.input.ownerId,
+				messageId: message.id,
+			});
+
+			let hasActiveSubscription = await Customer.hasActiveSubscription(this.input.ownerId);
+
+			if (!hasActiveSubscription) {
+				logger.info("job.ping.skipped", {
+					reason: "no_subscription",
+				});
+				return message.ack();
+			}
+
+			logger.info("job.ping.subscription-verified");
+
 			await Monitor.ping(this.db, this.input.monitorId);
-			logger.info("ping.success", { monitorId: this.input.monitorId });
+
+			logger.info("job.ping.completed", { status: "success" });
 			return message.ack();
 		} catch (error) {
-			logger.error("ping.failed", {
-				monitorId: this.input.monitorId,
+			logger.error("job.ping.failed", {
 				error: error instanceof Error ? error.message : String(error),
 			});
 			return message.retry();
+		} finally {
+			logger.flush();
 		}
 	}
 }

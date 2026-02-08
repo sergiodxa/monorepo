@@ -73,16 +73,17 @@ export default class Ping extends WorkflowEntrypoint<Cloudflare.Env> {
 		}
 
 		logger.info("workflow.ping.monitor-found", {
-			monitorResultId,
 			monitorId: monitorResult.monitor.id,
-			url: monitorResult.monitor.url,
+			teamId: monitorResult.monitor.team.id,
+			method: monitorResult.monitor.method,
+			expectedStatus: monitorResult.monitor.expectedStatus,
+			timeoutSeconds: monitorResult.monitor.timeoutSeconds,
+			locationHint: monitorResult.monitor.locationHint,
+			contentChecksCount: monitorResult.monitor.contentChecks.length,
 		});
 
 		// Get the previous completed result to detect state transitions
 		let previousResult = await step.do("find previous result", async () => {
-			logger.info("workflow.ping.step.find-previous-result", {
-				monitorId: monitorResult.monitor.id,
-			});
 			let { and, eq, isNotNull, lt, desc } = await import("drizzle-orm");
 			let schema = await import("~/db/schema");
 			let db = await this.getDb();
@@ -106,8 +107,9 @@ export default class Ping extends WorkflowEntrypoint<Cloudflare.Env> {
 		let hasContentChecks = monitorResult.monitor.contentChecks.length > 0;
 
 		logger.info("workflow.ping.previous-result", {
-			monitorId: monitorResult.monitor.id,
 			hasPrevious: !!previousResult,
+			previousStatus: previousResult?.responseStatus ?? null,
+			previousResultId: previousResult?.id ?? null,
 		});
 
 		let result = await step.do(
@@ -121,13 +123,6 @@ export default class Ping extends WorkflowEntrypoint<Cloudflare.Env> {
 				timeout: monitorResult.monitor.timeoutSeconds * MILLISECONDS_PER_SECOND,
 			},
 			async () => {
-				logger.info("workflow.ping.step.ping-monitor", {
-					monitorId: monitorResult.monitor.id,
-					url: monitorResult.monitor.url,
-					method: monitorResult.monitor.method,
-					locationHint: monitorResult.monitor.locationHint,
-				});
-
 				let id = env.GEO_FETCH.idFromName(monitorResult.monitor.locationHint);
 
 				// Support GDPR and non-GDPR regions
@@ -154,11 +149,6 @@ export default class Ping extends WorkflowEntrypoint<Cloudflare.Env> {
 
 				let response = await geo.fetch(url, { method: effectiveMethod, signal });
 
-				logger.info("workflow.ping.step.ping-monitor.response", {
-					monitorId: monitorResult.monitor.id,
-					status: response.status,
-				});
-
 				// Get response body for content checks
 				let responseBody: string | null = null;
 				if (hasContentChecks) {
@@ -179,17 +169,14 @@ export default class Ping extends WorkflowEntrypoint<Cloudflare.Env> {
 		);
 
 		logger.info("workflow.ping.ping-completed", {
-			monitorId: monitorResult.monitor.id,
 			responseStatus: result.responseStatus,
 			responseTimeMs: result.responseTimeMs,
+			expectedStatus: monitorResult.monitor.expectedStatus,
+			isSuccess: result.responseStatus === monitorResult.monitor.expectedStatus,
 		});
 
 		// Run content checks if there are any
 		let contentCheckResult = await step.do("run content checks", async () => {
-			logger.info("workflow.ping.step.content-checks", {
-				monitorId: monitorResult.monitor.id,
-				hasContentChecks,
-			});
 			if (!hasContentChecks) {
 				return { allPassed: true, failedCount: 0 };
 			}

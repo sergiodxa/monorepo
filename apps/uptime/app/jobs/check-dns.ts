@@ -1,4 +1,4 @@
-import { logger } from "@pkg/logger";
+import { BatchedLogger } from "@pkg/logger";
 import { env } from "cloudflare:workers";
 import { eq } from "drizzle-orm";
 
@@ -14,9 +14,12 @@ import type { Job } from "./base";
  */
 export default class CheckDnsJob implements Job {
 	private db = database(env.DB);
+	private logger = new BatchedLogger("job:check-dns");
 
 	async run(message: Message): Promise<void> {
 		try {
+			this.logger.info("job.check-dns.started", { messageId: message.id });
+
 			// Get all enabled DNS monitors
 			let monitors = await this.db.query.dnsMonitors.findMany({
 				columns: {
@@ -38,19 +41,33 @@ export default class CheckDnsJob implements Job {
 				},
 			});
 
-			logger.info("check-dns.started", { monitorCount: monitors.length });
+			this.logger.info("job.check-dns.monitors-loaded", { monitorCount: monitors.length });
+
+			let successCount = 0;
+			let errorCount = 0;
 
 			for (let monitor of monitors) {
-				await this.checkMonitorDns(monitor);
+				try {
+					await this.checkMonitorDns(monitor);
+					successCount++;
+				} catch {
+					errorCount++;
+				}
 			}
 
-			logger.info("check-dns.completed", { monitorCount: monitors.length });
+			this.logger.info("job.check-dns.completed", {
+				monitorCount: monitors.length,
+				successCount,
+				errorCount,
+			});
 			return message.ack();
 		} catch (error) {
-			logger.error("check-dns.failed", {
+			this.logger.error("job.check-dns.failed", {
 				error: error instanceof Error ? error.message : String(error),
 			});
 			return message.retry();
+		} finally {
+			this.logger.flush();
 		}
 	}
 
@@ -91,13 +108,9 @@ export default class CheckDnsJob implements Job {
 			})
 			.where(eq(schema.dnsMonitors.id, monitor.id));
 
-		logger.info("check-dns.monitor-checked", {
+		this.logger.info("job.check-dns.monitor-checked", {
 			monitorId: monitor.id,
-			monitorName: monitor.name,
-			domain: monitor.domain,
-			recordType: monitor.recordType,
 			status: result.status,
-			resolvedValue: result.resolvedValue,
 		});
 
 		// Send alerts if status is changed or error
@@ -132,7 +145,7 @@ export default class CheckDnsJob implements Job {
 		});
 
 		if (alerts.length === 0) {
-			logger.info("check-dns.no-alerts-configured", {
+			this.logger.info("job.check-dns.no-alerts-configured", {
 				monitorId: monitor.id,
 			});
 			return;
@@ -157,7 +170,7 @@ export default class CheckDnsJob implements Job {
 						text: this.getEmailBody(monitor, result),
 					});
 
-					logger.info("check-dns.alert-sent", {
+					this.logger.info("job.check-dns.alert-sent", {
 						monitorId: monitor.id,
 						alertId: alert.id,
 						alertType: "email",
@@ -196,7 +209,7 @@ export default class CheckDnsJob implements Job {
 						throw new Error(`Webhook failed with status ${response.status}`);
 					}
 
-					logger.info("check-dns.alert-sent", {
+					this.logger.info("job.check-dns.alert-sent", {
 						monitorId: monitor.id,
 						alertId: alert.id,
 						alertType: "webhook",
@@ -219,7 +232,7 @@ export default class CheckDnsJob implements Job {
 						throw new Error(`Slack webhook failed with status ${response.status}`);
 					}
 
-					logger.info("check-dns.alert-sent", {
+					this.logger.info("job.check-dns.alert-sent", {
 						monitorId: monitor.id,
 						alertId: alert.id,
 						alertType: "slack",
@@ -239,7 +252,7 @@ export default class CheckDnsJob implements Job {
 						throw new Error(`Discord webhook failed with status ${response.status}`);
 					}
 
-					logger.info("check-dns.alert-sent", {
+					this.logger.info("job.check-dns.alert-sent", {
 						monitorId: monitor.id,
 						alertId: alert.id,
 						alertType: "discord",
@@ -250,7 +263,7 @@ export default class CheckDnsJob implements Job {
 
 		let failed = results.filter((r) => r.status === "rejected");
 		if (failed.length > 0) {
-			logger.error("check-dns.some-alerts-failed", {
+			this.logger.error("job.check-dns.some-alerts-failed", {
 				monitorId: monitor.id,
 				failedCount: failed.length,
 				totalCount: results.length,

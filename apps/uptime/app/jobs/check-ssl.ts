@@ -1,4 +1,4 @@
-import { logger } from "@pkg/logger";
+import { BatchedLogger } from "@pkg/logger";
 import { env } from "cloudflare:workers";
 import { eq } from "drizzle-orm";
 
@@ -14,6 +14,7 @@ import type { Job } from "./base";
  */
 export default class CheckSslJob implements Job {
 	private db = database(env.DB);
+	private logger = new BatchedLogger("job:check-ssl");
 
 	async run(message: Message): Promise<void> {
 		try {
@@ -39,19 +40,36 @@ export default class CheckSslJob implements Job {
 				},
 			});
 
-			logger.info("check-ssl.started", { monitorCount: monitors.length });
+			this.logger.info("job.check-ssl.started", {
+				messageId: message.id,
+				monitorCount: monitors.length,
+			});
+
+			let successCount = 0;
+			let errorCount = 0;
 
 			for (let monitor of monitors) {
-				await this.checkMonitorSsl(monitor);
+				try {
+					await this.checkMonitorSsl(monitor);
+					successCount++;
+				} catch {
+					errorCount++;
+				}
 			}
 
-			logger.info("check-ssl.completed", { monitorCount: monitors.length });
+			this.logger.info("job.check-ssl.completed", {
+				monitorCount: monitors.length,
+				successCount,
+				errorCount,
+			});
 			return message.ack();
 		} catch (error) {
-			logger.error("check-ssl.failed", {
+			this.logger.error("job.check-ssl.failed", {
 				error: error instanceof Error ? error.message : String(error),
 			});
 			return message.retry();
+		} finally {
+			this.logger.flush();
 		}
 	}
 
@@ -80,9 +98,8 @@ export default class CheckSslJob implements Job {
 			})
 			.where(eq(schema.monitors.id, monitor.id));
 
-		logger.info("check-ssl.monitor-checked", {
+		this.logger.info("job.check-ssl.monitor-checked", {
 			monitorId: monitor.id,
-			monitorName: monitor.name,
 			status,
 			daysUntilExpiry,
 		});
@@ -123,7 +140,7 @@ export default class CheckSslJob implements Job {
 		});
 
 		if (alerts.length === 0) {
-			logger.info("check-ssl.no-alerts-configured", {
+			this.logger.info("job.check-ssl.no-alerts-configured", {
 				monitorId: monitor.id,
 			});
 			return;
@@ -149,7 +166,7 @@ export default class CheckSslJob implements Job {
 						text: this.getEmailBody(monitor, status, daysUntilExpiry),
 					});
 
-					logger.info("check-ssl.alert-sent", {
+					this.logger.info("job.check-ssl.alert-sent", {
 						monitorId: monitor.id,
 						alertId: alert.id,
 						alertType: "email",
@@ -186,7 +203,7 @@ export default class CheckSslJob implements Job {
 						throw new Error(`Webhook failed with status ${response.status}`);
 					}
 
-					logger.info("check-ssl.alert-sent", {
+					this.logger.info("job.check-ssl.alert-sent", {
 						monitorId: monitor.id,
 						alertId: alert.id,
 						alertType: "webhook",
@@ -197,7 +214,7 @@ export default class CheckSslJob implements Job {
 
 		let failed = results.filter((r) => r.status === "rejected");
 		if (failed.length > 0) {
-			logger.error("check-ssl.some-alerts-failed", {
+			this.logger.error("job.check-ssl.some-alerts-failed", {
 				monitorId: monitor.id,
 				failedCount: failed.length,
 				totalCount: results.length,

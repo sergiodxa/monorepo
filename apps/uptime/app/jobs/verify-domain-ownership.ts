@@ -1,4 +1,4 @@
-import { logger } from "@pkg/logger";
+import { BatchedLogger } from "@pkg/logger";
 import { env } from "cloudflare:workers";
 import { eq } from "drizzle-orm";
 
@@ -10,27 +10,35 @@ import type { Job } from "./base";
 
 export default class VerifyDomainOwnershipJob implements Job {
 	private db = database(env.DB);
+	private logger: BatchedLogger;
 
-	constructor(private teamDomainId: string) {}
+	constructor(private teamDomainId: string) {
+		this.logger = new BatchedLogger(`job:verify-domain-ownership:${teamDomainId}`);
+	}
 
 	async run(message: Message): Promise<void> {
 		let teamDomainId = this.teamDomainId;
 
-		let teamDomain = await this.db.query.teamDomains.findFirst({
-			where(fields, operators) {
-				return operators.eq(fields.id, teamDomainId);
-			},
-		});
-
-		if (!teamDomain) {
-			logger.info("verify-domain-ownership.skipped", {
-				teamDomainId,
-				reason: "not_found",
-			});
-			return message.ack();
-		}
-
 		try {
+			this.logger.info("job.verify-domain-ownership.started", {
+				messageId: message.id,
+				teamDomainId,
+			});
+
+			let teamDomain = await this.db.query.teamDomains.findFirst({
+				where(fields, operators) {
+					return operators.eq(fields.id, teamDomainId);
+				},
+			});
+
+			if (!teamDomain) {
+				this.logger.info("job.verify-domain-ownership.skipped", {
+					teamDomainId,
+					reason: "not_found",
+				});
+				return message.ack();
+			}
+
 			let verified = await dnsLookup(teamDomain.hostname, teamDomain.id);
 
 			if (verified) {
@@ -39,25 +47,25 @@ export default class VerifyDomainOwnershipJob implements Job {
 					.set({ verifiedAt: new Date() })
 					.where(eq(schema.teamDomains.id, teamDomain.id));
 
-				logger.info("verify-domain-ownership.verified", {
+				this.logger.info("job.verify-domain-ownership.verified", {
 					teamDomainId,
-					hostname: teamDomain.hostname,
 				});
 			} else {
-				logger.info("verify-domain-ownership.failed", {
+				this.logger.info("job.verify-domain-ownership.failed", {
 					teamDomainId,
-					hostname: teamDomain.hostname,
 					reason: "dns_lookup_failed",
 				});
 			}
+
+			return message.ack();
 		} catch (error) {
-			logger.error("verify-domain-ownership.error", {
+			this.logger.error("job.verify-domain-ownership.error", {
 				teamDomainId,
-				hostname: teamDomain.hostname,
 				error: error instanceof Error ? error.message : String(error),
 			});
+			return message.retry();
+		} finally {
+			this.logger.flush();
 		}
-
-		return message.ack();
 	}
 }
