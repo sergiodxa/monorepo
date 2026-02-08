@@ -1,5 +1,6 @@
 import type { WorkflowEvent, WorkflowStep } from "cloudflare:workers";
 
+import { logger } from "@pkg/logger";
 import { env, WorkflowEntrypoint } from "cloudflare:workers";
 
 const MILLISECONDS_PER_SECOND = 1000;
@@ -11,11 +12,14 @@ export default class Ping extends WorkflowEntrypoint<Cloudflare.Env> {
 	}
 
 	override async run(event: WorkflowEvent<unknown>, step: WorkflowStep) {
-		let db = await this.getDb();
-
 		let monitorResultId = event.instanceId;
 
+		logger.info("workflow.ping.started", { monitorResultId });
+
+		let db = await this.getDb();
+
 		let monitorResult = await step.do("find monitor by result id", () => {
+			logger.info("workflow.ping.step.find-monitor-result", { monitorResultId });
 			return db.query.monitorResults.findFirst({
 				where(fields, operators) {
 					return operators.eq(fields.id, monitorResultId);
@@ -53,11 +57,21 @@ export default class Ping extends WorkflowEntrypoint<Cloudflare.Env> {
 		});
 
 		if (!monitorResult) {
+			logger.error("workflow.ping.monitor-result-not-found", { monitorResultId });
 			throw new Error(`Monitor result ${monitorResultId} not found`);
 		}
 
+		logger.info("workflow.ping.monitor-found", {
+			monitorResultId,
+			monitorId: monitorResult.monitor.id,
+			url: monitorResult.monitor.url,
+		});
+
 		// Get the previous completed result to detect state transitions
 		let previousResult = await step.do("find previous result", async () => {
+			logger.info("workflow.ping.step.find-previous-result", {
+				monitorId: monitorResult.monitor.id,
+			});
 			let { and, eq, isNotNull, lt, desc } = await import("drizzle-orm");
 			let schema = await import("~/db/schema");
 			let db = await this.getDb();
@@ -80,6 +94,11 @@ export default class Ping extends WorkflowEntrypoint<Cloudflare.Env> {
 
 		let hasContentChecks = monitorResult.monitor.contentChecks.length > 0;
 
+		logger.info("workflow.ping.previous-result", {
+			monitorId: monitorResult.monitor.id,
+			hasPrevious: !!previousResult,
+		});
+
 		let result = await step.do(
 			"ping monitor",
 			{
@@ -91,6 +110,13 @@ export default class Ping extends WorkflowEntrypoint<Cloudflare.Env> {
 				timeout: monitorResult.monitor.timeoutSeconds * MILLISECONDS_PER_SECOND,
 			},
 			async () => {
+				logger.info("workflow.ping.step.ping-monitor", {
+					monitorId: monitorResult.monitor.id,
+					url: monitorResult.monitor.url,
+					method: monitorResult.monitor.method,
+					locationHint: monitorResult.monitor.locationHint,
+				});
+
 				let id = env.GEO_FETCH.idFromName(monitorResult.monitor.locationHint);
 
 				// Support GDPR and non-GDPR regions
@@ -117,6 +143,11 @@ export default class Ping extends WorkflowEntrypoint<Cloudflare.Env> {
 
 				let response = await geo.fetch(url, { method: effectiveMethod, signal });
 
+				logger.info("workflow.ping.step.ping-monitor.response", {
+					monitorId: monitorResult.monitor.id,
+					status: response.status,
+				});
+
 				// Get response body for content checks
 				let responseBody: string | null = null;
 				if (hasContentChecks) {
@@ -136,8 +167,18 @@ export default class Ping extends WorkflowEntrypoint<Cloudflare.Env> {
 			},
 		);
 
+		logger.info("workflow.ping.ping-completed", {
+			monitorId: monitorResult.monitor.id,
+			responseStatus: result.responseStatus,
+			responseTimeMs: result.responseTimeMs,
+		});
+
 		// Run content checks if there are any
 		let contentCheckResult = await step.do("run content checks", async () => {
+			logger.info("workflow.ping.step.content-checks", {
+				monitorId: monitorResult.monitor.id,
+				hasContentChecks,
+			});
 			if (!hasContentChecks) {
 				return { allPassed: true, failedCount: 0 };
 			}
@@ -156,6 +197,8 @@ export default class Ping extends WorkflowEntrypoint<Cloudflare.Env> {
 		});
 
 		let updatedMonitorResult = await step.do("save monitor results", async () => {
+			logger.info("workflow.ping.step.save-results", { monitorResultId });
+
 			let { eq: eqOp } = await import("drizzle-orm");
 			let schema = await import("~/db/schema");
 			let db = await this.getDb();
@@ -174,6 +217,8 @@ export default class Ping extends WorkflowEntrypoint<Cloudflare.Env> {
 		});
 
 		await step.do("send alerts", async () => {
+			logger.info("workflow.ping.step.send-alerts", { monitorId: monitorResult.monitor.id });
+
 			// Status check passes if response status matches expected AND content checks pass
 			let statusMatches =
 				updatedMonitorResult.responseStatus === monitorResult.monitor.expectedStatus;
@@ -345,12 +390,20 @@ export default class Ping extends WorkflowEntrypoint<Cloudflare.Env> {
 		});
 
 		await step.do("ingest usage", async () => {
+			logger.info("workflow.ping.step.ingest-usage", { monitorId: monitorResult.monitor.id });
+
 			const Customer = await import("~/models/customer").then((m) => m.default);
 			return Customer.ingest(monitorResult.monitor.team.ownerId, {
 				monitorId: monitorResult.monitor.id,
 				resultId: monitorResult.id,
 				teamId: monitorResult.monitor.team.id,
 			});
+		});
+
+		logger.info("workflow.ping.completed", {
+			monitorResultId,
+			monitorId: monitorResult.monitor.id,
+			responseStatus: result.responseStatus,
 		});
 	}
 
