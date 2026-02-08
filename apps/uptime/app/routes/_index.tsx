@@ -71,6 +71,7 @@ export default function Landing({ loaderData }: Route.ComponentProps) {
 				<Hero isSignedIn={loaderData.isSignedIn} />
 				<TrustIndicators />
 				<Features />
+				<UseCases />
 				<Pricing initialMonitors={loaderData.initialMonitors} />
 				<FAQ />
 			</main>
@@ -295,6 +296,134 @@ function Features() {
 						</Card>
 					))}
 				</div>
+
+				{/* Feature pages links */}
+				<div className="mt-12 flex flex-wrap items-center justify-center gap-4">
+					<span className="text-sm text-neutral-500 dark:text-neutral-400">Explore features:</span>
+					<Link
+						to={href("/features/monitors")}
+						className="inline-flex items-center gap-1 text-sm font-medium text-primary-600 transition hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300"
+					>
+						Monitors
+						<ArrowRightIcon className="size-3" />
+					</Link>
+					<Link
+						to={href("/features/alerts")}
+						className="inline-flex items-center gap-1 text-sm font-medium text-primary-600 transition hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300"
+					>
+						Alerts
+						<ArrowRightIcon className="size-3" />
+					</Link>
+					<Link
+						to={href("/features/teams")}
+						className="inline-flex items-center gap-1 text-sm font-medium text-primary-600 transition hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300"
+					>
+						Teams
+						<ArrowRightIcon className="size-3" />
+					</Link>
+					<Link
+						to={href("/features/analytics")}
+						className="inline-flex items-center gap-1 text-sm font-medium text-primary-600 transition hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300"
+					>
+						Analytics
+						<ArrowRightIcon className="size-3" />
+					</Link>
+				</div>
+			</div>
+		</section>
+	);
+}
+
+function UseCases() {
+	let useCases = [
+		{
+			title: "Website Monitoring",
+			description: "Track uptime and performance for landing pages, blogs, and web applications.",
+			href: "/use-cases/website-monitoring",
+		},
+		{
+			title: "API Monitoring",
+			description: "Monitor REST APIs, GraphQL endpoints, and webhooks for availability.",
+			href: "/use-cases/api-monitoring",
+		},
+		{
+			title: "SaaS Applications",
+			description: "Keep your SaaS product reliable with proactive monitoring and instant alerts.",
+			href: "/use-cases/saas",
+		},
+		{
+			title: "Microservices",
+			description: "Monitor distributed systems and catch failures before they cascade.",
+			href: "/use-cases/microservices",
+		},
+		{
+			title: "Health Checks",
+			description: "Verify service health and database connections with scheduled pings.",
+			href: "/use-cases/healthcheck",
+		},
+	] as const;
+
+	let audiences = [
+		{ title: "Indie Hackers", href: "/for/indie-hackers" },
+		{ title: "Solo Developers", href: "/for/solo-devs" },
+		{ title: "Startups", href: "/for/startups" },
+		{ title: "Agencies", href: "/for/agencies" },
+		{ title: "Enterprises", href: "/for/enterprises" },
+	] as const;
+
+	return (
+		<section className="bg-neutral-50 py-16 sm:py-24 lg:py-32 dark:bg-neutral-900/50">
+			<div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+				<div className="mx-auto max-w-2xl text-center">
+					<Badge color="primary" variant="secondary" className="mb-4">
+						Use Cases
+					</Badge>
+					<h2 className="text-3xl font-bold tracking-tight text-neutral-900 sm:text-4xl dark:text-neutral-50">
+						Built for every monitoring need
+					</h2>
+					<p className="mt-4 text-lg text-neutral-600 dark:text-neutral-400">
+						From simple health checks to complex distributed systems, we've got you covered.
+					</p>
+				</div>
+
+				<div className="mt-16 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+					{useCases.map((useCase) => (
+						<Link
+							key={useCase.href}
+							to={href(useCase.href)}
+							className="group rounded-xl border border-neutral-200 bg-white p-6 transition hover:border-primary-300 hover:shadow-lg dark:border-neutral-800 dark:bg-neutral-900 dark:hover:border-primary-700"
+						>
+							<h3 className="text-lg font-semibold text-neutral-900 transition group-hover:text-primary-600 dark:text-neutral-50 dark:group-hover:text-primary-400">
+								{useCase.title}
+							</h3>
+							<p className="mt-2 text-sm text-neutral-600 dark:text-neutral-400">
+								{useCase.description}
+							</p>
+							<span className="mt-4 inline-flex items-center gap-1 text-sm font-medium text-primary-600 dark:text-primary-400">
+								Learn more
+								<ArrowRightIcon className="size-4 transition group-hover:translate-x-1" />
+							</span>
+						</Link>
+					))}
+				</div>
+
+				{/* Audience links */}
+				<div className="mt-12 rounded-xl border border-neutral-200 bg-white p-6 dark:border-neutral-800 dark:bg-neutral-900">
+					<p className="text-center text-sm font-medium text-neutral-700 dark:text-neutral-300">
+						Tailored solutions for:
+					</p>
+					<div className="mt-4 flex flex-wrap items-center justify-center gap-3">
+						{audiences.map((audience) => (
+							<Link
+								key={audience.href}
+								to={href(audience.href)}
+								className="rounded-full border border-neutral-200 bg-neutral-50 px-4 py-2 text-sm font-medium text-neutral-700 transition hover:border-primary-300 hover:bg-primary-50 hover:text-primary-700 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-300 dark:hover:border-primary-600 dark:hover:bg-primary-950 dark:hover:text-primary-400"
+							>
+								{audience.title}
+							</Link>
+						))}
+					</div>
+				</div>
 			</div>
 		</section>
 	);
@@ -426,39 +555,191 @@ function Footer() {
 	return (
 		<footer className="border-t border-neutral-200 bg-white dark:border-neutral-800 dark:bg-neutral-950">
 			<div className="mx-auto max-w-6xl px-4 py-12 sm:px-6 lg:px-8">
-				<div className="flex flex-col items-center gap-8 sm:flex-row sm:items-start sm:justify-between">
-					<div className="text-center sm:text-left">
+				<div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-5">
+					{/* Brand */}
+					<div className="sm:col-span-2 lg:col-span-1">
 						<Link to={href("/")} className="inline-flex items-center gap-2 no-underline">
 							<Logo className="size-9 text-primary-500" />
 							<span className="text-xl font-bold text-neutral-900 dark:text-neutral-50">
 								{t("name")}
 							</span>
 						</Link>
-						<p className="mt-4 max-w-xs text-neutral-600 dark:text-neutral-400">
+						<p className="mt-4 max-w-xs text-sm text-neutral-600 dark:text-neutral-400">
 							{t("description")}
 						</p>
 					</div>
 
-					<nav className="flex flex-wrap justify-center gap-6 sm:justify-end">
-						<a
-							href="#features"
-							className="text-sm text-neutral-600 transition hover:text-primary-600 dark:text-neutral-400 dark:hover:text-primary-400"
-						>
+					{/* Product */}
+					<div>
+						<h3 className="mb-4 text-sm font-semibold text-neutral-900 dark:text-neutral-50">
+							Product
+						</h3>
+						<ul className="space-y-3">
+							<li>
+								<a
+									href="#features"
+									className="text-sm text-neutral-600 transition hover:text-primary-600 dark:text-neutral-400 dark:hover:text-primary-400"
+								>
+									Features
+								</a>
+							</li>
+							<li>
+								<a
+									href="#pricing"
+									className="text-sm text-neutral-600 transition hover:text-primary-600 dark:text-neutral-400 dark:hover:text-primary-400"
+								>
+									Pricing
+								</a>
+							</li>
+							<li>
+								<a
+									href="#faq"
+									className="text-sm text-neutral-600 transition hover:text-primary-600 dark:text-neutral-400 dark:hover:text-primary-400"
+								>
+									FAQ
+								</a>
+							</li>
+						</ul>
+					</div>
+
+					{/* Features */}
+					<div>
+						<h3 className="mb-4 text-sm font-semibold text-neutral-900 dark:text-neutral-50">
 							Features
-						</a>
-						<a
-							href="#pricing"
-							className="text-sm text-neutral-600 transition hover:text-primary-600 dark:text-neutral-400 dark:hover:text-primary-400"
-						>
-							Pricing
-						</a>
-						<a
-							href="#faq"
-							className="text-sm text-neutral-600 transition hover:text-primary-600 dark:text-neutral-400 dark:hover:text-primary-400"
-						>
-							FAQ
-						</a>
-					</nav>
+						</h3>
+						<ul className="space-y-3">
+							<li>
+								<Link
+									to={href("/features/monitors")}
+									className="text-sm text-neutral-600 transition hover:text-primary-600 dark:text-neutral-400 dark:hover:text-primary-400"
+								>
+									Monitors
+								</Link>
+							</li>
+							<li>
+								<Link
+									to={href("/features/alerts")}
+									className="text-sm text-neutral-600 transition hover:text-primary-600 dark:text-neutral-400 dark:hover:text-primary-400"
+								>
+									Alerts
+								</Link>
+							</li>
+							<li>
+								<Link
+									to={href("/features/teams")}
+									className="text-sm text-neutral-600 transition hover:text-primary-600 dark:text-neutral-400 dark:hover:text-primary-400"
+								>
+									Teams
+								</Link>
+							</li>
+							<li>
+								<Link
+									to={href("/features/analytics")}
+									className="text-sm text-neutral-600 transition hover:text-primary-600 dark:text-neutral-400 dark:hover:text-primary-400"
+								>
+									Analytics
+								</Link>
+							</li>
+						</ul>
+					</div>
+
+					{/* Use Cases */}
+					<div>
+						<h3 className="mb-4 text-sm font-semibold text-neutral-900 dark:text-neutral-50">
+							Use Cases
+						</h3>
+						<ul className="space-y-3">
+							<li>
+								<Link
+									to={href("/use-cases/website-monitoring")}
+									className="text-sm text-neutral-600 transition hover:text-primary-600 dark:text-neutral-400 dark:hover:text-primary-400"
+								>
+									Website Monitoring
+								</Link>
+							</li>
+							<li>
+								<Link
+									to={href("/use-cases/api-monitoring")}
+									className="text-sm text-neutral-600 transition hover:text-primary-600 dark:text-neutral-400 dark:hover:text-primary-400"
+								>
+									API Monitoring
+								</Link>
+							</li>
+							<li>
+								<Link
+									to={href("/use-cases/saas")}
+									className="text-sm text-neutral-600 transition hover:text-primary-600 dark:text-neutral-400 dark:hover:text-primary-400"
+								>
+									SaaS Applications
+								</Link>
+							</li>
+							<li>
+								<Link
+									to={href("/use-cases/microservices")}
+									className="text-sm text-neutral-600 transition hover:text-primary-600 dark:text-neutral-400 dark:hover:text-primary-400"
+								>
+									Microservices
+								</Link>
+							</li>
+							<li>
+								<Link
+									to={href("/use-cases/healthcheck")}
+									className="text-sm text-neutral-600 transition hover:text-primary-600 dark:text-neutral-400 dark:hover:text-primary-400"
+								>
+									Health Checks
+								</Link>
+							</li>
+						</ul>
+					</div>
+
+					{/* Solutions */}
+					<div>
+						<h3 className="mb-4 text-sm font-semibold text-neutral-900 dark:text-neutral-50">
+							Solutions
+						</h3>
+						<ul className="space-y-3">
+							<li>
+								<Link
+									to={href("/for/indie-hackers")}
+									className="text-sm text-neutral-600 transition hover:text-primary-600 dark:text-neutral-400 dark:hover:text-primary-400"
+								>
+									For Indie Hackers
+								</Link>
+							</li>
+							<li>
+								<Link
+									to={href("/for/solo-devs")}
+									className="text-sm text-neutral-600 transition hover:text-primary-600 dark:text-neutral-400 dark:hover:text-primary-400"
+								>
+									For Solo Developers
+								</Link>
+							</li>
+							<li>
+								<Link
+									to={href("/for/startups")}
+									className="text-sm text-neutral-600 transition hover:text-primary-600 dark:text-neutral-400 dark:hover:text-primary-400"
+								>
+									For Startups
+								</Link>
+							</li>
+							<li>
+								<Link
+									to={href("/for/agencies")}
+									className="text-sm text-neutral-600 transition hover:text-primary-600 dark:text-neutral-400 dark:hover:text-primary-400"
+								>
+									For Agencies
+								</Link>
+							</li>
+							<li>
+								<Link
+									to={href("/for/enterprises")}
+									className="text-sm text-neutral-600 transition hover:text-primary-600 dark:text-neutral-400 dark:hover:text-primary-400"
+								>
+									For Enterprises
+								</Link>
+							</li>
+						</ul>
+					</div>
 				</div>
 
 				<Separator className="my-8" />
