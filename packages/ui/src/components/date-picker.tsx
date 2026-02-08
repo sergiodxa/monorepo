@@ -7,8 +7,14 @@ import {
 	DatePicker as AriaDatePicker,
 	DateRangePicker as AriaDateRangePicker,
 	Button,
+	DateInput,
+	DateSegment,
+	Dialog,
 	Group,
 } from "react-aria-components";
+
+import { Calendar } from "./calendar";
+import { Popover } from "./popover";
 
 export namespace DatePicker {
 	export interface Props<T extends DateValue> extends Omit<
@@ -35,6 +41,10 @@ export namespace DatePicker {
 	> {
 		className?: cn.ClassName;
 	}
+
+	export interface TriggerProps {
+		className?: cn.ClassName;
+	}
 }
 
 export function DatePicker<T extends DateValue>({ className, ...props }: DatePicker.Props<T>) {
@@ -57,5 +67,41 @@ DatePicker.Button = function DatePickerButton({ className, ...props }: DatePicke
 		<Button {...props} className={cn("ui-date-picker-button", className)}>
 			<CalendarIcon className="size-4" aria-hidden />
 		</Button>
+	);
+};
+
+/**
+ * A convenient trigger that combines the date input field, button, and calendar popover.
+ * Use this for a quick setup instead of composing individual pieces.
+ */
+DatePicker.Trigger = function DatePickerTrigger({ className }: DatePicker.TriggerProps) {
+	return (
+		<>
+			<Group className={cn("ui-date-picker-group", className)}>
+				<DateInput className="ui-date-field-input">
+					{(segment) => <DateSegment segment={segment} className="ui-date-field-segment" />}
+				</DateInput>
+				<Button className="ui-date-picker-button">
+					<CalendarIcon className="size-4" aria-hidden />
+				</Button>
+			</Group>
+			<Popover>
+				<Dialog>
+					<Calendar>
+						<Calendar.Header>
+							<Calendar.PreviousButton />
+							<Calendar.Heading />
+							<Calendar.NextButton />
+						</Calendar.Header>
+						<Calendar.Grid>
+							<Calendar.GridHeader>
+								{(day) => <Calendar.HeaderCell>{day}</Calendar.HeaderCell>}
+							</Calendar.GridHeader>
+							<Calendar.GridBody>{(date) => <Calendar.Cell date={date} />}</Calendar.GridBody>
+						</Calendar.Grid>
+					</Calendar>
+				</Dialog>
+			</Popover>
+		</>
 	);
 };

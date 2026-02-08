@@ -1,8 +1,8 @@
 import { cn } from "@pkg/cn";
 import { Badge, Button, confirm, Empty, LinkButton, Menu, Popover, Skeleton, Table } from "@pkg/ui";
 import {
-	DnsIcon,
 	EllipsisVerticalIcon,
+	GlobeIcon,
 	LoaderIcon,
 	PencilIcon,
 	PlayIcon,
@@ -149,7 +149,7 @@ export default function Component({ loaderData, params }: Route.ComponentProps) 
 				{loaderData.dnsMonitors.length === 0 ? (
 					<Empty className="mx-auto max-w-md py-16">
 						<Empty.Icon>
-							<DnsIcon className="size-12" />
+							<GlobeIcon className="size-12" />
 						</Empty.Icon>
 						<Empty.Title>{t("empty.title")}</Empty.Title>
 						<Empty.Description>{t("empty.description")}</Empty.Description>

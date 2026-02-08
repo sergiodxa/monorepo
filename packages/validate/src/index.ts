@@ -6,6 +6,36 @@ import { ValidationError } from "./validation-error";
 
 export { ValidationError };
 
+/**
+ * Convert FormData to object, properly handling arrays (multiple values with same key)
+ */
+function formDataToObject(formData: FormData): Record<string, unknown> {
+	let data: Record<string, unknown> = {};
+	let keys = new Set(formData.keys());
+
+	for (let key of keys) {
+		let values = formData.getAll(key);
+		data[key] = values.length === 1 ? values[0] : values;
+	}
+
+	return data;
+}
+
+/**
+ * Convert URLSearchParams to object, properly handling arrays (multiple values with same key)
+ */
+function urlSearchParamsToObject(params: URLSearchParams): Record<string, unknown> {
+	let data: Record<string, unknown> = {};
+	let keys = new Set(params.keys());
+
+	for (let key of keys) {
+		let values = params.getAll(key);
+		data[key] = values.length === 1 ? values[0] : values;
+	}
+
+	return data;
+}
+
 export async function validate<Schema extends StandardSchemaV1>(
 	input: FormData | URLSearchParams | Request | Record<string, unknown>,
 	schema: Schema,
@@ -43,12 +73,12 @@ export async function validate<Schema extends StandardSchemaV1>(
 	}
 
 	if (input instanceof FormData) {
-		let data = Object.fromEntries(input.entries());
+		let data = formDataToObject(input);
 		return validate(data, schema);
 	}
 
 	if (input instanceof URLSearchParams) {
-		let data = Object.fromEntries(input.entries());
+		let data = urlSearchParamsToObject(input);
 		return validate(data, schema);
 	}
 

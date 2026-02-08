@@ -14,11 +14,13 @@ import { team } from "~/middleware/team";
 
 import type { Route } from "./+types/route";
 
+const scopeEnum = z.enum(["monitors:read", "monitors:write", "alerts:read", "alerts:write"]);
+
 const inputSchema = z.object({
 	name: z.string().min(1).max(255),
 	scopes: z
-		.array(z.enum(["monitors:read", "monitors:write", "alerts:read", "alerts:write"]))
-		.min(1),
+		.union([scopeEnum.transform((v) => [v]), z.array(scopeEnum)])
+		.pipe(z.array(scopeEnum).min(1)),
 	expiresAt: z.coerce.date().optional(),
 });
 

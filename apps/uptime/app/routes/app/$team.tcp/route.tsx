@@ -1,4 +1,4 @@
-import { Alert, Badge, Button, Card, LinkButton, Table } from "@pkg/ui";
+import { Alert, Badge, Button, Card, confirm, LinkButton, Table } from "@pkg/ui";
 import { format } from "date-fns";
 import { NetworkIcon, PlusIcon, TrashIcon } from "lucide-react";
 import { useTranslation } from "react-i18next";
@@ -66,16 +66,6 @@ export default function TcpMonitorsPage({ loaderData, params }: Route.ComponentP
 					</Alert>
 				</div>
 			)}
-
-			{/* TCP Monitoring Limitation Notice */}
-			<div className="p-4">
-				<Alert color="info">
-					<Alert.Content>
-						<Alert.Title>{t("alert.limitation.title")}</Alert.Title>
-						<Alert.Description>{t("alert.limitation.description")}</Alert.Description>
-					</Alert.Content>
-				</Alert>
-			</div>
 
 			<div className="flex flex-col gap-6 p-5 md:gap-12 md:p-12">
 				{loaderData.tcpMonitors.length === 0 ? (
@@ -223,25 +213,29 @@ function TcpMonitorActions({
 			>
 				{t("edit")}
 			</LinkButton>
-			<fetcher.Form
-				method="POST"
-				action={href("/actions/:team/delete-tcp-monitor", { team: team.slug })}
+			<Button
+				type="button"
+				color="danger"
+				size="sm"
+				isPending={isPending}
+				onPress={async () => {
+					let confirmed = await confirm(t("confirmation.delete", { name: monitor.name }), {
+						confirmLabel: t("delete"),
+						color: "danger",
+					});
+					if (confirmed) {
+						fetcher.submit(
+							{ tcpMonitorId: monitor.id },
+							{
+								method: "POST",
+								action: href("/actions/:team/delete-tcp-monitor", { team: team.slug }),
+							},
+						);
+					}
+				}}
 			>
-				<input type="hidden" name="tcpMonitorId" value={monitor.id} />
-				<Button
-					type="submit"
-					color="danger"
-					size="sm"
-					isPending={isPending}
-					onPress={(e) => {
-						if (!confirm(t("confirmation.delete", { name: monitor.name }))) {
-							e.preventDefault();
-						}
-					}}
-				>
-					<TrashIcon className="size-4" />
-				</Button>
-			</fetcher.Form>
+				<TrashIcon className="size-4" />
+			</Button>
 		</div>
 	);
 }

@@ -78,7 +78,15 @@ function CreateMaintenanceForm(props: { monitors: Array<{ id: string; name: stri
 
 	let timeZone = getLocalTimeZone();
 	let currentTime = now(timeZone);
-	let [startsAt, setStartsAt] = useState<CalendarDateTime>(currentTime);
+	let [startsAt, setStartsAt] = useState<CalendarDateTime>(
+		new CalendarDateTime(
+			currentTime.year,
+			currentTime.month,
+			currentTime.day,
+			currentTime.hour,
+			currentTime.minute,
+		),
+	);
 
 	// Calculate end time based on duration
 	function getEndsAt() {
@@ -125,11 +133,7 @@ function CreateMaintenanceForm(props: { monitors: Array<{ id: string; name: stri
 				<FieldError />
 			</TextField>
 
-			<Select
-				name="monitorId"
-				selectedKey={selectedMonitor}
-				onSelectionChange={(key) => setSelectedMonitor(key)}
-			>
+			<Select selectedKey={selectedMonitor} onSelectionChange={(key) => setSelectedMonitor(key)}>
 				<Label>{t("fields.monitor.label")}</Label>
 				<Select.Trigger />
 				<FieldError />
@@ -157,11 +161,7 @@ function CreateMaintenanceForm(props: { monitors: Array<{ id: string; name: stri
 			</DatePicker>
 			<input type="hidden" name="startsAt" value={startsAt.toDate(timeZone).toISOString()} />
 
-			<Select
-				name="duration"
-				selectedKey={duration}
-				onSelectionChange={(key) => key && setDuration(key)}
-			>
+			<Select selectedKey={duration} onSelectionChange={(key) => key && setDuration(key)}>
 				<Label>{t("fields.duration.label")}</Label>
 				<Select.Trigger />
 				<FieldError />

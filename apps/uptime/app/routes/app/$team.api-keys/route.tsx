@@ -340,12 +340,18 @@ function CreateApiKeyForm(props: {
 						<Label>{t("fields.scopes.label")}</Label>
 						<Description>{t("fields.scopes.description")}</Description>
 						<div className="mt-2 grid gap-2 sm:grid-cols-2">
-							<Checkbox value="monitors:read">{t("fields.scopes.options.monitors:read")}</Checkbox>
-							<Checkbox value="monitors:write">
-								{t("fields.scopes.options.monitors:write")}
+							<Checkbox value="monitors:read">
+								{t("fields.scopes.options.monitors:read", { nsSeparator: false })}
 							</Checkbox>
-							<Checkbox value="alerts:read">{t("fields.scopes.options.alerts:read")}</Checkbox>
-							<Checkbox value="alerts:write">{t("fields.scopes.options.alerts:write")}</Checkbox>
+							<Checkbox value="monitors:write">
+								{t("fields.scopes.options.monitors:write", { nsSeparator: false })}
+							</Checkbox>
+							<Checkbox value="alerts:read">
+								{t("fields.scopes.options.alerts:read", { nsSeparator: false })}
+							</Checkbox>
+							<Checkbox value="alerts:write">
+								{t("fields.scopes.options.alerts:write", { nsSeparator: false })}
+							</Checkbox>
 						</div>
 						<FieldError />
 					</CheckboxGroup>

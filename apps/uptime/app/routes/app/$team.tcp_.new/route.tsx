@@ -95,9 +95,9 @@ function CreateTcpMonitorForm() {
 			<NumberField name="port" isRequired minValue={1} maxValue={65535} defaultValue={80}>
 				<Label>{t("fields.port.label")}</Label>
 				<NumberField.Group>
-					<NumberField.Decrement />
+					<NumberField.DecrementButton />
 					<NumberField.Input />
-					<NumberField.Increment />
+					<NumberField.IncrementButton />
 				</NumberField.Group>
 				<FieldError />
 				<Description>{t("fields.port.description")}</Description>
