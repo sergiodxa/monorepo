@@ -11,7 +11,7 @@ import * as schema from "~/db/schema";
 import { db } from "~/middleware/drizzle";
 import { i18next } from "~/middleware/i18next";
 import { logger } from "~/middleware/logger";
-import { subject } from "~/middleware/subject";
+import { requireSubject } from "~/middleware/session";
 
 import type { Route } from "./+types/route";
 
@@ -25,7 +25,7 @@ export async function action({ request, context }: Route.ActionArgs) {
 	logger().info("action.start", { route: "update-language", method: request.method });
 
 	let { t } = i18next(context);
-	let subjectData = subject();
+	let subjectId = requireSubject();
 
 	let result = await validate(request, inputSchema);
 
@@ -41,7 +41,7 @@ export async function action({ request, context }: Route.ActionArgs) {
 	// Check if user preference already exists
 	let existingPreference = await db().query.userPreferences.findFirst({
 		where(fields, operators) {
-			return operators.eq(fields.subjectId, subjectData.id);
+			return operators.eq(fields.subjectId, subjectId);
 		},
 	});
 
@@ -56,13 +56,13 @@ export async function action({ request, context }: Route.ActionArgs) {
 	} else {
 		// Create new preference
 		await db().insert(schema.userPreferences).values({
-			subjectId: subjectData.id,
+			subjectId,
 			preferredLanguage,
 		});
 	}
 
 	logger().info("action.update-language.success", {
-		subjectId: subjectData.id,
+		subjectId,
 		preferredLanguage,
 	});
 

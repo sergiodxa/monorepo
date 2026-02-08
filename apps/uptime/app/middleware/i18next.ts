@@ -16,10 +16,10 @@ export type SupportedLanguage = (typeof supportedLanguages)[number];
 
 export const languageNames: Record<SupportedLanguage, string> = {
 	en: "English",
-	es: "Espanol",
+	es: "Español",
 	de: "Deutsch",
-	ja: "Japanese",
-	fr: "Francais",
+	ja: "日本語",
+	fr: "Français",
 	it: "Italiano",
 };
 
