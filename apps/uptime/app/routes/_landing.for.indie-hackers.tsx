@@ -1,9 +1,11 @@
 import {
+	BellOffIcon,
 	DollarSignIcon,
 	GlobeIcon,
 	GridIcon,
 	RocketIcon,
 	SettingsIcon,
+	ShieldCheckIcon,
 	WebhookIcon,
 	ZapIcon,
 } from "lucide-react";
@@ -112,6 +114,18 @@ export default function ForIndieHackersPage() {
 						icon: <GridIcon className="size-6" />,
 						title: "Visual heatmaps",
 						description: "See your service health at a glance with 365-day historical data.",
+					},
+					{
+						icon: <ShieldCheckIcon className="size-6" />,
+						title: "SSL monitoring",
+						description:
+							"Get alerted before your SSL certificates expire. Never lose traffic to cert errors.",
+					},
+					{
+						icon: <BellOffIcon className="size-6" />,
+						title: "Alert cooldowns",
+						description:
+							"Avoid alert fatigue with smart cooldowns. Get notified once, not every minute.",
 					},
 				]}
 			/>

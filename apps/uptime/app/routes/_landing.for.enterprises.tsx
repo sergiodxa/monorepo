@@ -1,4 +1,11 @@
-import { GlobeIcon, LockIcon, ShieldIcon, UsersIcon } from "lucide-react";
+import {
+	CalendarClockIcon,
+	GlobeIcon,
+	LockIcon,
+	ShieldCheckIcon,
+	ShieldIcon,
+	UsersIcon,
+} from "lucide-react";
 import { useRouteLoaderData } from "react-router";
 
 import {
@@ -94,6 +101,17 @@ export default function ForEnterprisesPage() {
 						title: "Audit-ready",
 						description:
 							"365 days of historical data. Track every check and alert for compliance needs.",
+					},
+					{
+						icon: <CalendarClockIcon className="size-6" />,
+						title: "Maintenance windows",
+						description: "Schedule maintenance periods to suppress alerts during planned downtime.",
+					},
+					{
+						icon: <ShieldCheckIcon className="size-6" />,
+						title: "SSL & DNS monitoring",
+						description:
+							"Monitor SSL certificate expiry and DNS records. Prevent security-related outages.",
 					},
 				]}
 			/>

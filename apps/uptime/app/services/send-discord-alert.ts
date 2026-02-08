@@ -1,5 +1,4 @@
 import { type Result, failure, success } from "@pkg/result";
-import { href } from "react-router";
 
 // Discord embed colors
 const COLORS = {

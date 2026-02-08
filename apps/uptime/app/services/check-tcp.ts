@@ -148,7 +148,7 @@ export async function checkHttpPort(
 		let controller = new AbortController();
 		let timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
-		let response = await fetch(url, {
+		await fetch(url, {
 			method: "HEAD",
 			signal: controller.signal,
 		});

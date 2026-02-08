@@ -1,5 +1,7 @@
 import {
+	BellRingIcon,
 	GlobeIcon,
+	LayoutIcon,
 	MonitorIcon,
 	ShieldCheckIcon,
 	UsersIcon,
@@ -99,6 +101,18 @@ export default function ForStartupsPage() {
 						icon: <GlobeIcon className="size-6" />,
 						title: "Global coverage",
 						description: "Monitor from 9 regions worldwide. Choose the closest to your users.",
+					},
+					{
+						icon: <LayoutIcon className="size-6" />,
+						title: "Status pages",
+						description:
+							"Share a public status page with your users. Build trust with transparent uptime.",
+					},
+					{
+						icon: <BellRingIcon className="size-6" />,
+						title: "Recovery alerts",
+						description:
+							"Know when services recover, not just when they fail. Keep your team informed.",
 					},
 				]}
 			/>

@@ -2,7 +2,6 @@ import { badRequest, created } from "@pkg/response";
 import { isFailure } from "@pkg/result";
 import { validate } from "@pkg/validate";
 import { count, eq } from "drizzle-orm";
-import { href, redirect } from "react-router";
 import { toast } from "sonner";
 import { z } from "zod/v4";
 
@@ -94,7 +93,7 @@ export async function action({ request, context }: Route.ActionArgs) {
 	});
 }
 
-export async function clientAction({ serverAction, params }: Route.ClientActionArgs) {
+export async function clientAction({ serverAction }: Route.ClientActionArgs) {
 	let result = await serverAction();
 	if (result.ok) {
 		// Don't redirect, we need to show the key

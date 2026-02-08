@@ -3,9 +3,11 @@ import {
 	BuildingIcon,
 	DollarSignIcon,
 	GlobeIcon,
+	LayoutIcon,
 	MonitorIcon,
 	RouteIcon,
 	ShieldCheckIcon,
+	TerminalIcon,
 	UsersIcon,
 } from "lucide-react";
 import { useRouteLoaderData } from "react-router";
@@ -106,6 +108,18 @@ export default function ForAgenciesPage() {
 						icon: <DollarSignIcon className="size-6" />,
 						title: "Usage-based pricing",
 						description: "Pay only for actual monitoring. Scale up or down with your client base.",
+					},
+					{
+						icon: <LayoutIcon className="size-6" />,
+						title: "Status pages",
+						description:
+							"Create status pages for each client. Share uptime reports and build trust.",
+					},
+					{
+						icon: <TerminalIcon className="size-6" />,
+						title: "API access",
+						description:
+							"Automate monitor creation via API. Integrate with your client onboarding workflow.",
 					},
 				]}
 			/>

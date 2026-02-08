@@ -79,35 +79,7 @@ function AlertHistoryTableSkeleton() {
 }
 
 export async function loader() {
-	let alertEvents = await measure("findAlertEvents", async () => {
-		return db().query.alertEvents.findMany({
-			where(fields, operators) {
-				// We need to filter by team through the alert relation
-				// First get all alert IDs for this team
-				return operators.inArray(
-					fields.alertId,
-					db()
-						.select({ id: db().query.alerts.findFirst()?.id })
-						.from(db().query.alerts.findFirst()!)
-						.where(operators.eq(db().query.alerts.findFirst()!.teamId, team().id)),
-				);
-			},
-			with: {
-				alert: {
-					columns: { id: true, name: true },
-				},
-				monitor: {
-					columns: { id: true, name: true },
-				},
-			},
-			orderBy(fields, operators) {
-				return operators.desc(fields.sentAt);
-			},
-			limit: 100,
-		});
-	});
-
-	// Fallback to a simpler query approach
+	// Query approach using team alerts
 	let teamAlerts = await measure("findTeamAlerts", () => {
 		return db().query.alerts.findMany({
 			where(fields, operators) {

@@ -1,12 +1,14 @@
 import {
+	BellOffIcon,
+	CalendarIcon,
 	ClockIcon,
 	CodeIcon,
 	DatabaseIcon,
-	GlobeIcon,
-	MousePointerClickIcon,
 	DollarSignIcon,
+	GlobeIcon,
 	LayoutDashboardIcon,
-	CalendarIcon,
+	MousePointerClickIcon,
+	TerminalIcon,
 } from "lucide-react";
 import { useRouteLoaderData } from "react-router";
 
@@ -100,6 +102,18 @@ export default function ForSoloDevs() {
 						icon: <CalendarIcon className="size-6" />,
 						title: "Historical data",
 						description: "365 days of data retention to track trends over time.",
+					},
+					{
+						icon: <TerminalIcon className="size-6" />,
+						title: "API access",
+						description:
+							"Automate everything via API. Integrate monitoring into your deployment workflow.",
+					},
+					{
+						icon: <BellOffIcon className="size-6" />,
+						title: "Alert cooldowns",
+						description:
+							"No alert spam. Smart cooldowns notify you once until the issue is resolved.",
 					},
 				]}
 			/>

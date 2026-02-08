@@ -6,10 +6,18 @@ import {
 	BellIcon,
 	CheckIcon,
 	ChevronDownIcon,
-	CreditCardIcon,
+	CodeIcon,
+	FileTextIcon,
 	GlobeIcon,
+	KeyIcon,
+	LinkIcon,
+	LockIcon,
+	MessageSquareIcon,
+	PauseCircleIcon,
 	PlusIcon,
+	RefreshCwIcon,
 	ShieldCheckIcon,
+	TimerIcon,
 	XIcon,
 	ZapIcon,
 } from "lucide-react";
@@ -71,6 +79,7 @@ export default function Landing({ loaderData }: Route.ComponentProps) {
 				<Hero isSignedIn={loaderData.isSignedIn} />
 				<TrustIndicators />
 				<Features />
+				<CompleteFeatureSet />
 				<UseCases />
 				<Pricing initialMonitors={loaderData.initialMonitors} />
 				<FAQ />
@@ -262,9 +271,28 @@ function Features() {
 			icon: <BellIcon className="size-6" />,
 		},
 		{
-			title: t("list.third.title"),
-			description: t("list.third.description"),
-			icon: <CreditCardIcon className="size-6" />,
+			title: "Status Pages",
+			description:
+				"Create beautiful public status pages to keep your users informed about service availability and incidents.",
+			icon: <GlobeIcon className="size-6" />,
+		},
+		{
+			title: "SSL Monitoring",
+			description:
+				"Track certificate expiry dates and get alerts before your SSL certificates expire to prevent security warnings.",
+			icon: <LockIcon className="size-6" />,
+		},
+		{
+			title: "DNS Monitoring",
+			description:
+				"Detect DNS record changes and propagation issues before they impact your users or get hijacked.",
+			icon: <LinkIcon className="size-6" />,
+		},
+		{
+			title: "Native Integrations",
+			description:
+				"Direct Slack and Discord integrations with rich notifications, not just basic webhooks.",
+			icon: <MessageSquareIcon className="size-6" />,
 		},
 	] as const;
 
@@ -281,7 +309,7 @@ function Features() {
 					<p className="mt-4 text-lg text-neutral-600 dark:text-neutral-400">{t("description")}</p>
 				</div>
 
-				<div className="mt-16 grid gap-8 md:grid-cols-3">
+				<div className="mt-16 grid gap-8 md:grid-cols-2 lg:grid-cols-3">
 					{list.map((item) => (
 						<Card key={item.title} className="transition-shadow hover:shadow-lg">
 							<Card.Header>
@@ -328,6 +356,108 @@ function Features() {
 						Analytics
 						<ArrowRightIcon className="size-3" />
 					</Link>
+					<Link
+						to={href("/features/status-pages")}
+						className="inline-flex items-center gap-1 text-sm font-medium text-primary-600 transition hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300"
+					>
+						Status Pages
+						<ArrowRightIcon className="size-3" />
+					</Link>
+					<Link
+						to={href("/features/ssl")}
+						className="inline-flex items-center gap-1 text-sm font-medium text-primary-600 transition hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300"
+					>
+						SSL
+						<ArrowRightIcon className="size-3" />
+					</Link>
+					<Link
+						to={href("/features/dns")}
+						className="inline-flex items-center gap-1 text-sm font-medium text-primary-600 transition hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300"
+					>
+						DNS
+						<ArrowRightIcon className="size-3" />
+					</Link>
+					<Link
+						to={href("/features/integrations")}
+						className="inline-flex items-center gap-1 text-sm font-medium text-primary-600 transition hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300"
+					>
+						Integrations
+						<ArrowRightIcon className="size-3" />
+					</Link>
+				</div>
+			</div>
+		</section>
+	);
+}
+
+function CompleteFeatureSet() {
+	let features = [
+		{
+			icon: <PauseCircleIcon className="size-5" />,
+			title: "Maintenance Windows",
+			description: "Schedule downtime and suppress alerts during planned maintenance",
+		},
+		{
+			icon: <FileTextIcon className="size-5" />,
+			title: "Content Monitoring",
+			description: "Verify specific keywords or content appear on your pages",
+		},
+		{
+			icon: <RefreshCwIcon className="size-5" />,
+			title: "Recovery Alerts",
+			description: "Get notified when services come back up after an incident",
+		},
+		{
+			icon: <KeyIcon className="size-5" />,
+			title: "API Access",
+			description: "Full REST API with key management for automation",
+		},
+		{
+			icon: <TimerIcon className="size-5" />,
+			title: "Alert Cooldowns",
+			description: "Prevent alert fatigue with configurable cooldown periods",
+		},
+		{
+			icon: <CodeIcon className="size-5" />,
+			title: "Custom Headers",
+			description: "Add authentication headers and custom request parameters",
+		},
+	] as const;
+
+	return (
+		<section className="py-16 sm:py-24 lg:py-32">
+			<div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+				<div className="mx-auto max-w-2xl text-center">
+					<Badge color="primary" variant="secondary" className="mb-4">
+						Complete Feature Set
+					</Badge>
+					<h2 className="text-3xl font-bold tracking-tight text-neutral-900 sm:text-4xl dark:text-neutral-50">
+						Everything you need for reliable monitoring
+					</h2>
+					<p className="mt-4 text-lg text-neutral-600 dark:text-neutral-400">
+						Advanced capabilities that make monitoring effortless and comprehensive.
+					</p>
+				</div>
+
+				<div className="mt-16 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+					{features.map((feature) => (
+						<div
+							key={feature.title}
+							className="flex items-start gap-4 rounded-lg border border-neutral-200 bg-white p-5 transition hover:border-primary-300 hover:shadow-md dark:border-neutral-800 dark:bg-neutral-900 dark:hover:border-primary-700"
+						>
+							<div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-primary-100 text-primary-600 dark:bg-primary-900/50 dark:text-primary-400">
+								{feature.icon}
+							</div>
+							<div>
+								<h3 className="font-semibold text-neutral-900 dark:text-neutral-50">
+									{feature.title}
+								</h3>
+								<p className="mt-1 text-sm text-neutral-600 dark:text-neutral-400">
+									{feature.description}
+								</p>
+							</div>
+						</div>
+					))}
 				</div>
 			</div>
 		</section>
@@ -622,6 +752,38 @@ function Footer() {
 									className="text-sm text-neutral-600 transition hover:text-primary-600 dark:text-neutral-400 dark:hover:text-primary-400"
 								>
 									Alerts
+								</Link>
+							</li>
+							<li>
+								<Link
+									to={href("/features/status-pages")}
+									className="text-sm text-neutral-600 transition hover:text-primary-600 dark:text-neutral-400 dark:hover:text-primary-400"
+								>
+									Status Pages
+								</Link>
+							</li>
+							<li>
+								<Link
+									to={href("/features/ssl")}
+									className="text-sm text-neutral-600 transition hover:text-primary-600 dark:text-neutral-400 dark:hover:text-primary-400"
+								>
+									SSL Monitoring
+								</Link>
+							</li>
+							<li>
+								<Link
+									to={href("/features/dns")}
+									className="text-sm text-neutral-600 transition hover:text-primary-600 dark:text-neutral-400 dark:hover:text-primary-400"
+								>
+									DNS Monitoring
+								</Link>
+							</li>
+							<li>
+								<Link
+									to={href("/features/integrations")}
+									className="text-sm text-neutral-600 transition hover:text-primary-600 dark:text-neutral-400 dark:hover:text-primary-400"
+								>
+									Integrations
 								</Link>
 							</li>
 							<li>
