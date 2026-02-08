@@ -555,7 +555,7 @@ function Footer() {
 	return (
 		<footer className="border-t border-neutral-200 bg-white dark:border-neutral-800 dark:bg-neutral-950">
 			<div className="mx-auto max-w-6xl px-4 py-12 sm:px-6 lg:px-8">
-				<div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-5">
+				<div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-7">
 					{/* Brand */}
 					<div className="sm:col-span-2 lg:col-span-1">
 						<Link to={href("/")} className="inline-flex items-center gap-2 no-underline">
@@ -740,11 +740,83 @@ function Footer() {
 							</li>
 						</ul>
 					</div>
+
+					{/* Compare */}
+					<div>
+						<h3 className="mb-4 text-sm font-semibold text-neutral-900 dark:text-neutral-50">
+							Compare
+						</h3>
+						<ul className="space-y-3">
+							<li>
+								<Link
+									to="/vs/uptimerobot"
+									className="text-sm text-neutral-600 transition hover:text-primary-600 dark:text-neutral-400 dark:hover:text-primary-400"
+								>
+									vs UptimeRobot
+								</Link>
+							</li>
+							<li>
+								<Link
+									to="/vs/pingdom"
+									className="text-sm text-neutral-600 transition hover:text-primary-600 dark:text-neutral-400 dark:hover:text-primary-400"
+								>
+									vs Pingdom
+								</Link>
+							</li>
+							<li>
+								<Link
+									to="/vs/better-uptime"
+									className="text-sm text-neutral-600 transition hover:text-primary-600 dark:text-neutral-400 dark:hover:text-primary-400"
+								>
+									vs Better Uptime
+								</Link>
+							</li>
+							<li>
+								<Link
+									to="/vs/checkly"
+									className="text-sm text-neutral-600 transition hover:text-primary-600 dark:text-neutral-400 dark:hover:text-primary-400"
+								>
+									vs Checkly
+								</Link>
+							</li>
+							<li>
+								<Link
+									to="/vs/statuscake"
+									className="text-sm text-neutral-600 transition hover:text-primary-600 dark:text-neutral-400 dark:hover:text-primary-400"
+								>
+									vs StatusCake
+								</Link>
+							</li>
+						</ul>
+					</div>
+
+					{/* Legal */}
+					<div>
+						<h3 className="mb-4 text-sm font-semibold text-neutral-900 dark:text-neutral-50">
+							Legal
+						</h3>
+						<ul className="space-y-3">
+							<li>
+								<Link
+									to="/terms"
+									className="text-sm text-neutral-600 transition hover:text-primary-600 dark:text-neutral-400 dark:hover:text-primary-400"
+								>
+									Terms of Service
+								</Link>
+							</li>
+							<li>
+								<Link
+									to="/privacy"
+									className="text-sm text-neutral-600 transition hover:text-primary-600 dark:text-neutral-400 dark:hover:text-primary-400"
+								>
+									Privacy Policy
+								</Link>
+							</li>
+						</ul>
+					</div>
 				</div>
 
-				<Separator className="my-8" />
-
-				<p className="text-center text-sm text-neutral-500 dark:text-neutral-400">
+				<p className="mt-12 text-center text-sm text-neutral-500 dark:text-neutral-400">
 					{t("copyright", {
 						year: new Date().getFullYear(),
 					})}

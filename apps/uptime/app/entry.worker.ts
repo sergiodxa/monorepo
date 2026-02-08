@@ -40,6 +40,21 @@ export default {
 		if (controller.cron === "0 0 * * *") {
 			waitUntil(env.QUEUE.send({ type: "clean" }));
 		}
+
+		// Every day at 6 AM UTC - Check SSL certificates
+		if (controller.cron === "0 6 * * *") {
+			waitUntil(env.QUEUE.send({ type: "checkSsl" }));
+		}
+
+		// Every hour - Check DNS monitors
+		if (controller.cron === "0 * * * *") {
+			waitUntil(env.QUEUE.send({ type: "checkDns" }));
+		}
+
+		// Every 5 minutes - Check TCP monitors
+		if (controller.cron === "*/5 * * * *") {
+			waitUntil(env.QUEUE.send({ type: "checkTcp" }));
+		}
 	},
 
 	async queue(batch) {
@@ -59,6 +74,9 @@ export default {
 						type: z.literal("verifyDomainOwnership"),
 						teamDomainId: z.uuid(),
 					}),
+					z.object({ type: z.literal("checkSsl") }),
+					z.object({ type: z.literal("checkDns") }),
+					z.object({ type: z.literal("checkTcp") }),
 				])
 				.safeParse(message.body);
 
@@ -95,6 +113,21 @@ export default {
 				);
 
 				waitUntil(new VerifyDomainOwnershipJob(result.data.teamDomainId).run(message));
+			}
+
+			if (result.data.type === "checkSsl") {
+				let CheckSslJob = await import("./jobs/check-ssl").then((m) => m.default);
+				waitUntil(new CheckSslJob().run(message));
+			}
+
+			if (result.data.type === "checkDns") {
+				let CheckDnsJob = await import("./jobs/check-dns").then((m) => m.default);
+				waitUntil(new CheckDnsJob().run(message));
+			}
+
+			if (result.data.type === "checkTcp") {
+				let CheckTcpJob = await import("./jobs/check-tcp").then((m) => m.default);
+				waitUntil(new CheckTcpJob().run(message));
 			}
 		}
 	},

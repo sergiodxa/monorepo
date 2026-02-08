@@ -14,18 +14,35 @@ import { team } from "~/middleware/team";
 
 import type { Route } from "./+types/route";
 
+const baseFields = {
+	name: z.string(),
+	notifyOnRecovery: z.literal("on").optional(),
+	cooldownMinutes: z.coerce.number().int().min(0).default(0),
+};
+
 const inputSchema = z.discriminatedUnion("strategy", [
 	z.object({
-		name: z.string(),
+		...baseFields,
 		strategy: z.literal("email"),
 		email: z.email(),
 		subjectPrefix: z.string().optional(),
 	}),
 	z.object({
-		name: z.string(),
+		...baseFields,
 		strategy: z.literal("webhook"),
 		url: z.url(),
 		secret: z.string().optional(),
+	}),
+	z.object({
+		...baseFields,
+		strategy: z.literal("slack"),
+		webhookUrl: z.url(),
+		channel: z.string().optional(),
+	}),
+	z.object({
+		...baseFields,
+		strategy: z.literal("discord"),
+		discordWebhookUrl: z.url(),
 	}),
 ]);
 
@@ -56,27 +73,48 @@ export async function action({ request, context }: Route.ActionArgs) {
 		});
 	}
 
+	let config: schema.SelectAlert["config"];
+	if (result.data.strategy === "email") {
+		config = {
+			strategy: "email",
+			config: {
+				to: result.data.email,
+				subjectPrefix: result.data.subjectPrefix ?? "",
+			},
+		};
+	} else if (result.data.strategy === "webhook") {
+		config = {
+			strategy: "webhook",
+			config: {
+				url: result.data.url,
+				secret: result.data.secret ?? "",
+			},
+		};
+	} else if (result.data.strategy === "slack") {
+		config = {
+			strategy: "slack",
+			config: {
+				webhookUrl: result.data.webhookUrl,
+				channel: result.data.channel,
+			},
+		};
+	} else {
+		config = {
+			strategy: "discord",
+			config: {
+				webhookUrl: result.data.discordWebhookUrl,
+			},
+		};
+	}
+
 	let [alert] = await db()
 		.insert(schema.alerts)
 		.values({
 			teamId: team().id,
 			name: result.data.name,
-			config:
-				result.data.strategy === "email"
-					? {
-							strategy: "email",
-							config: {
-								to: result.data.email,
-								subjectPrefix: result.data.subjectPrefix ?? "",
-							},
-						}
-					: {
-							strategy: "webhook",
-							config: {
-								url: result.data.url,
-								secret: result.data.secret ?? "",
-							},
-						},
+			notifyOnRecovery: result.data.notifyOnRecovery === "on",
+			cooldownMinutes: result.data.cooldownMinutes,
+			config,
 		})
 		.returning();
 

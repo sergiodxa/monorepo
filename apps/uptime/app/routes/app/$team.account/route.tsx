@@ -2,7 +2,22 @@ import type { RouterContextProvider } from "react-router";
 
 import { cn } from "@pkg/cn";
 import { isFailure, succeeded } from "@pkg/result";
-import { Avatar, Button, Card, confirm, LinkButton, Logo, Menu, Popover, Table } from "@pkg/ui";
+import {
+	Avatar,
+	Button,
+	Card,
+	confirm,
+	Description,
+	FieldError,
+	Label,
+	LinkButton,
+	ListBox,
+	Logo,
+	Menu,
+	Popover,
+	Select,
+	Table,
+} from "@pkg/ui";
 import { EllipsisVerticalIcon, LoaderIcon, LogOutIcon, PlusIcon, UsersIcon } from "lucide-react";
 import { useId } from "react";
 import { useTranslation } from "react-i18next";
@@ -11,8 +26,9 @@ import { useSpinDelay } from "spin-delay";
 
 import auth from "~/clients/auth";
 import { AppHeader } from "~/components/app-header";
+import { supportedLanguages, type SupportedLanguage } from "~/db/schema";
 import { db } from "~/middleware/drizzle";
-import { i18next } from "~/middleware/i18next";
+import { i18next, languageNames } from "~/middleware/i18next";
 import { logger } from "~/middleware/logger";
 import { measure } from "~/middleware/server-timing";
 import { subject } from "~/middleware/subject";
@@ -46,6 +62,7 @@ interface LoaderData {
 		role: "member" | "admin" | "owner";
 		membershipId: string;
 	}>;
+	preferredLanguage: SupportedLanguage | null;
 	meta: Array<{ title: string } | { name: string; content: string }>;
 }
 
@@ -55,7 +72,7 @@ export async function loader({ context }: { context: RouterContextProvider }): P
 
 	logger().info("account.loader.start", { subjectId });
 
-	let [memberships, tokenResult] = await Promise.all([
+	let [memberships, tokenResult, userPreferences] = await Promise.all([
 		measure("findUserMemberships", async () => {
 			return db().query.memberships.findMany({
 				where(fields, operators) {
@@ -67,6 +84,13 @@ export async function loader({ context }: { context: RouterContextProvider }): P
 			});
 		}),
 		measure("authenticate", () => auth.authenticate()),
+		measure("findUserPreferences", async () => {
+			return db().query.userPreferences.findFirst({
+				where(fields, operators) {
+					return operators.eq(fields.subjectId, subjectId);
+				},
+			});
+		}),
 	]);
 
 	succeeded(tokenResult, "Failed to authenticate with auth service");
@@ -112,6 +136,7 @@ export async function loader({ context }: { context: RouterContextProvider }): P
 			avatar: userProfileResult.data.avatar,
 		},
 		teams: teamsWithRole,
+		preferredLanguage: userPreferences?.preferredLanguage ?? null,
 		meta: [
 			{ title: t("page.account.meta.title") },
 			{ name: "description", content: t("page.account.meta.description") },
@@ -143,6 +168,9 @@ export default function Component({ loaderData }: { loaderData: LoaderData }) {
 			<div className="mx-auto flex w-full max-w-2xl flex-col gap-16 p-5 md:p-12">
 				{/* User Profile Section */}
 				<ProfileSection user={loaderData.user} />
+
+				{/* Language Preference Section */}
+				<LanguageSection preferredLanguage={loaderData.preferredLanguage} />
 
 				{/* Teams Section */}
 				<TeamsSection teams={loaderData.teams} userId={loaderData.user.id} />
@@ -195,6 +223,63 @@ function ProfileSection(props: {
 						</a>
 					</div>
 				</Card.Content>
+			</Card>
+		</section>
+	);
+}
+
+// =============================================================================
+// Language Section
+// =============================================================================
+
+function LanguageSection(props: { preferredLanguage: SupportedLanguage | null }) {
+	let { t } = useTranslation("translation", { keyPrefix: "page.account.language" });
+	let fetcher = useFetcher();
+	let isPending = useSpinDelay(fetcher.state !== "idle", {
+		minDuration: 100,
+		delay: 50,
+	});
+
+	// Build options: auto-detect + all supported languages
+	let languageOptions = [
+		{ id: "auto", name: t("form.fields.language.options.auto") },
+		...supportedLanguages.map((lang) => ({
+			id: lang,
+			name: languageNames[lang],
+		})),
+	];
+
+	let currentValue = props.preferredLanguage ?? "auto";
+
+	return (
+		<section id="language" className="space-y-6">
+			<hgroup>
+				<h2 className="text-xl font-semibold tracking-tight">{t("title")}</h2>
+				<p className="text-sm text-neutral-500 dark:text-neutral-400">{t("description")}</p>
+			</hgroup>
+
+			<Card>
+				<fetcher.Form method="POST" action={href("/actions/update-language")}>
+					<Card.Content className="space-y-6 p-6">
+						<Select name="language" defaultSelectedKey={currentValue} className="w-full max-w-xs">
+							<Label>{t("form.fields.language.label")}</Label>
+							<Select.Trigger />
+							<FieldError />
+							<Description>{t("form.fields.language.description")}</Description>
+							<Popover>
+								<ListBox items={languageOptions}>
+									{(item) => <Select.Item id={item.id}>{item.name}</Select.Item>}
+								</ListBox>
+							</Popover>
+						</Select>
+					</Card.Content>
+
+					<Card.Footer className="justify-end">
+						<Button type="submit" isPending={isPending}>
+							{t("form.cta")}
+						</Button>
+					</Card.Footer>
+				</fetcher.Form>
 			</Card>
 		</section>
 	);

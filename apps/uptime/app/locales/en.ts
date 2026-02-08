@@ -50,7 +50,7 @@ export default {
 				second: {
 					title: "Receive alerts anywhere",
 					description:
-						"Get instant notifications via webhooks wherever you want, when your services experience downtime or performance issues.",
+						"Get instant notifications via email, Slack, Discord, or webhooks when your services experience downtime or performance issues.",
 				},
 				third: {
 					title: "Pay for what you use",
@@ -180,7 +180,7 @@ export default {
 
 				thirteenth: {
 					q: "Do you support status pages?",
-					a: "You can make monitors public and share your team's monitor list. A proper status page feature is in the roadmap.",
+					a: "Yes! Create customizable public status pages to share your service health with users. Include any monitors you want and add your branding.",
 				},
 
 				fourteenth: {
@@ -190,12 +190,12 @@ export default {
 
 				fifteenth: {
 					q: "Which alert channels are supported?",
-					a: "Currently only webhooks. You can use them to integrate with any alerting system. Direct integrations like Slack, email, or others are in the roadmap. Let us know which ones you need.",
+					a: "Email, Slack, Discord, and webhooks. Native integrations make it easy to get alerts where your team already works. Webhooks let you connect to any other service.",
 				},
 
 				sixteenth: {
 					q: "Do you support teams or shared monitors?",
-					a: "Each user starts with a team. Inviting other members is not available yet but is planned, along with user auto provisioning.",
+					a: "Yes! Each user starts with a team. Invite team members with different roles (Owner, Admin, Member). Domain auto-provisioning automatically adds users with verified company email domains.",
 				},
 
 				seventeenth: {
@@ -242,12 +242,17 @@ export default {
 					items: {
 						dashboard: "Dashboard",
 						alerts: "Alerts",
+						maintenance: "Maintenance",
 						monitors: "Monitors",
+						statusPages: "Status Pages",
+						tcpMonitors: "TCP Monitors",
+						dnsMonitors: "DNS Monitors",
 						settings: "Settings",
 						billing: "Billing",
 						domains: "Domains",
 						members: "Members",
 						team: "Team",
+						apiKeys: "API Keys",
 					},
 				},
 
@@ -474,6 +479,15 @@ export default {
 			success: "{{name}} monitor was updated.",
 		},
 
+		updateSsl: {
+			errors: {
+				generic: "Oops! Something went wrong.",
+				notFound: "This monitor does not exist.",
+			},
+
+			success: "SSL settings for {{name}} were updated.",
+		},
+
 		deleteMonitor: {
 			errors: {
 				generic: "Oops! Something went wrong.",
@@ -581,6 +595,61 @@ export default {
 			success: "You have left {{team}}.",
 		},
 
+		createStatusPage: {
+			errors: {
+				generic: "Oops! Something went wrong.",
+				slugTaken: "This slug is already in use.",
+			},
+		},
+
+		updateStatusPage: {
+			errors: {
+				generic: "Oops! Something went wrong.",
+				notFound: "This status page does not exist.",
+				slugTaken: "This slug is already in use.",
+			},
+		},
+
+		deleteStatusPage: {
+			errors: {
+				generic: "Oops! Something went wrong.",
+				notFound: "This status page does not exist.",
+			},
+
+			success: "Status page was deleted.",
+		},
+
+		createMaintenance: {
+			errors: {
+				generic: "Oops! Something went wrong.",
+				invalidDates: "End time must be after start time.",
+			},
+
+			success: {
+				created: "Maintenance window '{{name}}' was created.",
+			},
+		},
+
+		deleteMaintenance: {
+			errors: {
+				generic: "Oops! Something went wrong.",
+				notFound: "This maintenance window does not exist.",
+				forbidden: "You are not allowed to delete this maintenance window.",
+			},
+
+			success: "Maintenance window '{{name}}' was deleted.",
+		},
+
+		endMaintenance: {
+			errors: {
+				generic: "Oops! Something went wrong.",
+				notFound: "This maintenance window does not exist.",
+				forbidden: "You are not allowed to end this maintenance window.",
+			},
+
+			success: "Maintenance window '{{name}}' was ended early.",
+		},
+
 		createTeam: {
 			errors: {
 				generic: "Oops! Something went wrong while creating the team.",
@@ -589,6 +658,96 @@ export default {
 			success: {
 				created: "{{name}} team was created successfully.",
 			},
+		},
+
+		createDnsMonitor: {
+			errors: {
+				generic: "Oops! Something went wrong.",
+				limitExceeded: "You have reached the limit of {{limit}} DNS monitors in this team.",
+			},
+
+			success: {
+				created: "{{name}} DNS monitor was created.",
+			},
+		},
+
+		updateDnsMonitor: {
+			errors: {
+				generic: "Oops! Something went wrong.",
+				notFound: "This DNS monitor does not exist.",
+				forbidden: "You are not allowed to update this DNS monitor.",
+			},
+
+			success: "{{name}} DNS monitor was updated.",
+		},
+
+		deleteDnsMonitor: {
+			errors: {
+				generic: "Oops! Something went wrong.",
+				notFound: "This DNS monitor does not exist.",
+				forbidden: "You are not allowed to delete this DNS monitor.",
+			},
+
+			success: "{{name}} DNS monitor was deleted.",
+		},
+
+		checkDnsMonitor: {
+			errors: {
+				generic: "Oops! Something went wrong.",
+				notFound: "This DNS monitor does not exist.",
+				forbidden: "You are not allowed to check this DNS monitor.",
+			},
+
+			success: "DNS check completed for {{name}}.",
+		},
+
+		createTcpMonitor: {
+			errors: {
+				generic: "Oops! Something went wrong while creating the TCP monitor.",
+			},
+			success: "{{name}} TCP monitor was created.",
+		},
+
+		updateTcpMonitor: {
+			errors: {
+				generic: "Oops! Something went wrong while updating the TCP monitor.",
+				notFound: "This TCP monitor does not exist.",
+			},
+			success: "{{name}} TCP monitor was updated.",
+		},
+
+		deleteTcpMonitor: {
+			errors: {
+				generic: "Oops! Something went wrong while deleting the TCP monitor.",
+				notAllowed: "You are not allowed to delete TCP monitors in this team.",
+				notFound: "This TCP monitor does not exist.",
+			},
+			success: "{{name}} TCP monitor was deleted.",
+		},
+
+		createApiKey: {
+			errors: {
+				generic: "Oops! Something went wrong while creating the API key.",
+				limitExceeded: "You have reached the limit of {{limit}} API keys in this team.",
+			},
+			success: {
+				created: "API key '{{name}}' was created.",
+			},
+		},
+
+		deleteApiKey: {
+			errors: {
+				generic: "Oops! Something went wrong while deleting the API key.",
+				notFound: "This API key does not exist.",
+			},
+			success: "API key '{{name}}' was deleted.",
+		},
+
+		updateLanguage: {
+			errors: {
+				generic: "Oops! Something went wrong while updating your language preference.",
+			},
+			success: "Language preference updated successfully.",
 		},
 	},
 
@@ -818,6 +977,27 @@ export default {
 							wnam: "{{emoji}} Western North America",
 						},
 					},
+					ssl: {
+						enabled: {
+							label: "Enable SSL Monitoring",
+							description: "Monitor SSL certificate expiry and receive alerts before it expires.",
+						},
+						expiresAt: {
+							label: "Certificate Expiry Date",
+							placeholder: "Select expiry date",
+							description:
+								"Enter the expiry date of your SSL certificate. You can find this in your hosting provider's dashboard or by checking the certificate details in your browser.",
+						},
+						issuer: {
+							label: "Certificate Issuer",
+							placeholder: "Let's Encrypt, DigiCert, etc.",
+							description: "The Certificate Authority that issued your SSL certificate (optional).",
+						},
+						warningDays: {
+							label: "Alert Before Expiry",
+							description: "Receive alerts this many days before the certificate expires.",
+						},
+					},
 				},
 
 				cancel: "Cancel",
@@ -870,6 +1050,23 @@ export default {
 					mixed: "Mixed",
 					noData: "No data",
 				},
+			},
+
+			ssl: {
+				title: "SSL Certificate",
+				status: {
+					valid: "Valid",
+					expiring: "Expiring Soon",
+					expired: "Expired",
+					error: "Error",
+					unknown: "Not Configured",
+				},
+				expiresAt: "Expires",
+				expiresIn: "{{days}} days",
+				issuer: "Issuer",
+				lastChecked: "Last Checked",
+				notConfigured: "SSL monitoring is not enabled for this monitor.",
+				configure: "Configure SSL Monitoring",
 			},
 		},
 
@@ -1102,6 +1299,7 @@ export default {
 
 				action: {
 					create: "Create Alert",
+					history: "View History",
 				},
 			},
 
@@ -1133,6 +1331,8 @@ export default {
 						options: {
 							webhook: "Webhook",
 							email: "Email",
+							slack: "Slack",
+							discord: "Discord",
 						},
 					},
 
@@ -1164,6 +1364,54 @@ export default {
 									"An optional prefix to add to the email subject. Useful to filter alerts in your inbox.",
 							},
 						},
+						slack: {
+							webhookUrl: {
+								label: "Slack Webhook URL",
+								placeholder: "https://hooks.slack.com/services/...",
+								description:
+									"The Slack Incoming Webhook URL. Create one at api.slack.com/apps > Incoming Webhooks.",
+							},
+							channel: {
+								label: "Channel Override",
+								placeholder: "#alerts",
+								description:
+									"Optional channel to post to instead of the webhook default. Include the # prefix.",
+							},
+						},
+						discord: {
+							webhookUrl: {
+								label: "Discord Webhook URL",
+								placeholder: "https://discord.com/api/webhooks/...",
+								description:
+									"The Discord Webhook URL. Create one in Server Settings > Integrations > Webhooks.",
+							},
+						},
+					},
+
+					notifyOnRecovery: {
+						label: "Notify on recovery",
+						description:
+							"Send an alert when the monitor recovers from a down state. Includes recovery time and downtime duration.",
+					},
+
+					cooldown: {
+						label: "Alert Cooldown",
+						description:
+							"Minimum time between alerts of the same type. Prevents alert fatigue during ongoing outages.",
+						options: {
+							none: "No cooldown",
+							"5min": "5 minutes",
+							"15min": "15 minutes",
+							"30min": "30 minutes",
+							"1hour": "1 hour",
+							"2hours": "2 hours",
+							custom: "Custom",
+						},
+						custom: {
+							label: "Custom Cooldown (minutes)",
+							placeholder: "Enter minutes",
+							description: "Enter the number of minutes between alerts.",
+						},
 					},
 				},
 
@@ -1176,7 +1424,15 @@ export default {
 				columns: {
 					name: "Name",
 					strategy: "Type",
+					notifyOnRecovery: "Recovery",
+					cooldown: "Cooldown",
 					actions: "Actions",
+				},
+
+				cooldown: {
+					none: "None",
+					minutes: "{{count}} min",
+					hours: "{{count}} hr",
 				},
 
 				actions: {
@@ -1188,10 +1444,491 @@ export default {
 				types: {
 					webhook: "Webhook",
 					email: "Email",
+					slack: "Slack",
+					discord: "Discord",
+				},
+
+				notifyOnRecovery: {
+					enabled: "Yes",
+					disabled: "No",
 				},
 
 				confirmation: {
 					deleteAlert: "Are you sure you want to delete the alert {{name}}?",
+				},
+			},
+		},
+
+		statusPages: {
+			header: {
+				title: "Status Pages",
+
+				action: {
+					create: "Create Status Page",
+				},
+			},
+
+			empty: {
+				title: "No status pages yet",
+				description: "Create a status page to share your system status with your users.",
+				cta: "Create Status Page",
+			},
+
+			table: {
+				label: "Status Pages",
+
+				columns: {
+					name: "Name",
+					slug: "URL",
+					monitors: "Monitors",
+					visibility: "Visibility",
+					actions: "Actions",
+				},
+
+				visibility: {
+					public: "Public",
+					private: "Private",
+				},
+
+				actions: {
+					menu: "Actions Menu",
+					view: "View Page",
+					edit: "Edit Page",
+					delete: "Delete Page",
+				},
+
+				confirmation: {
+					delete: "Are you sure you want to delete the status page {{name}}?",
+				},
+			},
+
+			form: {
+				fields: {
+					name: {
+						label: "Internal Name",
+						placeholder: "Production Status",
+						description: "A name to identify the status page internally.",
+					},
+					slug: {
+						label: "URL Slug",
+						placeholder: "production",
+						description: "The URL path for the public status page (e.g., /status/production).",
+					},
+					title: {
+						label: "Public Title",
+						placeholder: "Acme Inc. Status",
+						description: "The title displayed on the public status page.",
+					},
+					description: {
+						label: "Description",
+						placeholder: "Current status of Acme Inc. services",
+						description: "An optional description for the status page.",
+					},
+					logoUrl: {
+						label: "Logo URL",
+						placeholder: "https://example.com/logo.png",
+						description: "An optional logo to display on the status page.",
+					},
+					isPublic: {
+						label: "Public",
+						description: "Make this status page accessible to anyone with the link.",
+					},
+					showOverallStatus: {
+						label: "Show Overall Status",
+						description: "Display an overall system status banner at the top of the page.",
+					},
+					monitors: {
+						label: "Monitors to Include",
+						description: "Select which monitors to display on this status page.",
+					},
+				},
+
+				cta: "Create Status Page",
+				ctaUpdate: "Save Changes",
+			},
+		},
+
+		createStatusPage: {
+			header: {
+				title: "Create Status Page",
+			},
+		},
+
+		editStatusPage: {
+			header: {
+				title: "Edit Status Page",
+			},
+		},
+
+		dnsMonitors: {
+			header: {
+				title: "DNS Monitors",
+
+				action: {
+					create: "Create DNS Monitor",
+				},
+			},
+
+			empty: {
+				title: "No DNS monitors yet",
+				description: "Create a DNS monitor to track DNS record changes.",
+				cta: "Create DNS Monitor",
+			},
+
+			table: {
+				label: "DNS Monitors",
+
+				columns: {
+					name: "Name",
+					domain: "Domain",
+					recordType: "Type",
+					status: "Status",
+					lastChecked: "Last Checked",
+					actions: "Actions",
+				},
+
+				disabled: "Disabled",
+				neverChecked: "Never",
+
+				actions: {
+					menu: "Actions Menu",
+					check: "Check Now",
+					edit: "Edit",
+					delete: "Delete",
+				},
+
+				confirmation: {
+					delete: "Are you sure you want to delete the DNS monitor {{name}}?",
+				},
+			},
+		},
+
+		createDnsMonitor: {
+			header: {
+				title: "Create DNS Monitor",
+			},
+
+			form: {
+				fields: {
+					name: {
+						label: "Monitor Name",
+						placeholder: "Production DNS",
+						description: "A descriptive name for this DNS monitor.",
+					},
+
+					domain: {
+						label: "Domain",
+						placeholder: "example.com",
+						description: "The domain to monitor DNS records for.",
+					},
+
+					recordType: {
+						label: "Record Type",
+						description: "The type of DNS record to check.",
+					},
+
+					expectedValue: {
+						label: "Expected Value",
+						placeholder: "192.168.1.1",
+						description:
+							"Optional. Alert if the resolved value doesn't match. Leave empty to track changes.",
+					},
+
+					interval: {
+						label: "Check Interval",
+						description: "How often to check the DNS record.",
+						options: {
+							"5m": "5 minutes",
+							"15m": "15 minutes",
+							"30m": "30 minutes",
+							"1h": "1 hour",
+							"6h": "6 hours",
+							"12h": "12 hours",
+							"24h": "24 hours",
+						},
+					},
+
+					isEnabled: {
+						label: "Enable monitoring",
+						description: "Start monitoring this DNS record immediately.",
+					},
+				},
+
+				cta: "Create DNS Monitor",
+			},
+		},
+
+		editDnsMonitor: {
+			header: {
+				title: "Edit DNS Monitor",
+			},
+
+			form: {
+				fields: {
+					name: {
+						label: "Monitor Name",
+						placeholder: "Production DNS",
+						description: "A descriptive name for this DNS monitor.",
+					},
+
+					domain: {
+						label: "Domain",
+						placeholder: "example.com",
+						description: "The domain to monitor DNS records for.",
+					},
+
+					recordType: {
+						label: "Record Type",
+						description: "The type of DNS record to check.",
+					},
+
+					expectedValue: {
+						label: "Expected Value",
+						placeholder: "192.168.1.1",
+						description:
+							"Optional. Alert if the resolved value doesn't match. Leave empty to track changes.",
+					},
+
+					interval: {
+						label: "Check Interval",
+						description: "How often to check the DNS record.",
+						options: {
+							"5m": "5 minutes",
+							"15m": "15 minutes",
+							"30m": "30 minutes",
+							"1h": "1 hour",
+							"6h": "6 hours",
+							"12h": "12 hours",
+							"24h": "24 hours",
+						},
+					},
+
+					isEnabled: {
+						label: "Enable monitoring",
+						description: "Whether to actively monitor this DNS record.",
+					},
+				},
+
+				cancel: "Cancel",
+				cta: "Save Changes",
+			},
+		},
+
+		dnsMonitorDetail: {
+			header: {
+				title: 'DNS Monitor "{{name}}"',
+
+				action: {
+					check: "Check Now",
+					refresh: "Refresh",
+					edit: "Edit",
+				},
+			},
+
+			info: {
+				domain: "Domain",
+				recordType: "Record Type",
+				status: "Status",
+				expectedValue: "Expected Value",
+				currentValue: "Current Value",
+			},
+
+			stats: {
+				totalChecks: {
+					label: "Total Checks",
+					description: "Number of DNS checks performed",
+				},
+
+				successRate: {
+					label: "Success Rate",
+					description: "Percentage of successful checks",
+				},
+
+				avgResponseTime: {
+					label: "Avg. Response Time",
+					description: "Average DNS resolution time",
+				},
+			},
+
+			results: {
+				title: "Check History",
+				empty: "No checks have been performed yet.",
+
+				table: {
+					columns: {
+						checkedAt: "Checked At",
+						status: "Status",
+						value: "Value",
+						responseTime: "Response Time",
+					},
+				},
+			},
+		},
+
+		maintenance: {
+			header: {
+				title: "Maintenance Windows",
+
+				action: {
+					create: "Schedule Maintenance",
+				},
+			},
+
+			empty: {
+				title: "No maintenance windows",
+				description: "Schedule maintenance windows to suppress alerts during planned downtime.",
+				cta: "Schedule Maintenance",
+			},
+
+			tabs: {
+				label: "Maintenance Status",
+				active: "Active",
+				upcoming: "Upcoming",
+				past: "Past",
+			},
+
+			noActive: "No active maintenance windows",
+			noUpcoming: "No upcoming maintenance windows",
+			noPast: "No past maintenance windows",
+
+			table: {
+				columns: {
+					name: "Name",
+					schedule: "Schedule",
+					monitor: "Monitor",
+					status: "Status",
+					actions: "Actions",
+				},
+
+				allMonitors: "All Monitors",
+				recurring: "Recurring",
+
+				status: {
+					active: "Active",
+					upcoming: "Scheduled",
+					past: "Completed",
+				},
+
+				actions: {
+					menu: "Actions Menu",
+					end: "End Now",
+					delete: "Delete",
+				},
+
+				confirmation: {
+					endMaintenance: "Are you sure you want to end '{{name}}' maintenance early?",
+					deleteMaintenance: "Are you sure you want to delete '{{name}}'?",
+				},
+			},
+		},
+
+		createMaintenance: {
+			header: {
+				title: "Schedule Maintenance",
+			},
+
+			form: {
+				fields: {
+					name: {
+						label: "Name",
+						placeholder: "Database upgrade",
+						description: "A description of the maintenance work.",
+					},
+
+					monitor: {
+						label: "Monitor",
+						description: "Select a specific monitor or leave empty for all monitors.",
+						all: "All Monitors",
+					},
+
+					startsAt: {
+						label: "Start Time",
+						description: "When the maintenance window begins.",
+					},
+
+					duration: {
+						label: "Duration",
+						description: "How long the maintenance window lasts.",
+						options: {
+							"15m": "15 minutes",
+							"30m": "30 minutes",
+							"1h": "1 hour",
+							"2h": "2 hours",
+							"4h": "4 hours",
+							"8h": "8 hours",
+						},
+					},
+
+					suppressAlerts: {
+						label: "Suppress alerts",
+						description: "Don't send alerts during this maintenance window.",
+					},
+
+					showOnStatusPage: {
+						label: "Show on status page",
+						description: "Display a maintenance notice on public status pages.",
+					},
+
+					isRecurring: {
+						label: "Recurring",
+						description: "Repeat this maintenance window on a schedule.",
+					},
+
+					recurringPattern: {
+						label: "Recurring Pattern",
+						placeholder: "weekly:monday:02:00-04:00",
+						description: "Pattern format: 'daily:HH:MM-HH:MM' or 'weekly:dayOfWeek:HH:MM-HH:MM'",
+					},
+				},
+
+				preview: {
+					label: "Maintenance window",
+				},
+
+				cta: "Schedule Maintenance",
+			},
+		},
+
+		alertHistory: {
+			header: {
+				title: "Alert History",
+			},
+
+			breadcrumbs: {
+				alerts: "Alerts",
+			},
+
+			empty: {
+				title: "No alert events yet",
+				description:
+					"Alert events will appear here when monitors trigger alerts. Configure alerts to get started.",
+				cta: "View Alerts",
+			},
+
+			table: {
+				label: "Alert Events",
+
+				columns: {
+					alert: "Alert",
+					monitor: "Monitor",
+					eventType: "Event",
+					status: "Status",
+					sentAt: "Time",
+				},
+
+				unknownAlert: "Unknown Alert",
+				unknownMonitor: "Unknown Monitor",
+
+				eventType: {
+					down: "Down",
+					up: "Recovered",
+					degraded: "Degraded",
+				},
+
+				status: {
+					sent: "Sent",
+					skipped_cooldown: "Skipped (Cooldown)",
+					failed: "Failed",
 				},
 			},
 		},
@@ -1223,6 +1960,8 @@ export default {
 						options: {
 							webhook: "Webhook",
 							email: "Email",
+							slack: "Slack",
+							discord: "Discord",
 						},
 					},
 
@@ -1253,6 +1992,54 @@ export default {
 								description:
 									"An optional prefix to add to the email subject. Useful to filter alerts in your inbox.",
 							},
+						},
+						slack: {
+							webhookUrl: {
+								label: "Slack Webhook URL",
+								placeholder: "https://hooks.slack.com/services/...",
+								description:
+									"The Slack Incoming Webhook URL. Create one at api.slack.com/apps > Incoming Webhooks.",
+							},
+							channel: {
+								label: "Channel Override",
+								placeholder: "#alerts",
+								description:
+									"Optional channel to post to instead of the webhook default. Include the # prefix.",
+							},
+						},
+						discord: {
+							webhookUrl: {
+								label: "Discord Webhook URL",
+								placeholder: "https://discord.com/api/webhooks/...",
+								description:
+									"The Discord Webhook URL. Create one in Server Settings > Integrations > Webhooks.",
+							},
+						},
+					},
+
+					notifyOnRecovery: {
+						label: "Notify on recovery",
+						description:
+							"Send an alert when the monitor recovers from a down state. Includes recovery time and downtime duration.",
+					},
+
+					cooldown: {
+						label: "Alert Cooldown",
+						description:
+							"Minimum time between alerts of the same type. Prevents alert fatigue during ongoing outages.",
+						options: {
+							none: "No cooldown",
+							"5min": "5 minutes",
+							"15min": "15 minutes",
+							"30min": "30 minutes",
+							"1hour": "1 hour",
+							"2hours": "2 hours",
+							custom: "Custom",
+						},
+						custom: {
+							label: "Custom Cooldown (minutes)",
+							placeholder: "Enter minutes",
+							description: "Enter the number of minutes between alerts.",
 						},
 					},
 				},
@@ -1286,6 +2073,32 @@ export default {
 			profile: {
 				title: "Profile",
 				description: "Your personal information.",
+			},
+
+			language: {
+				title: "Language Preference",
+				description: "Choose your preferred language for the interface.",
+
+				form: {
+					fields: {
+						language: {
+							label: "Language",
+							description:
+								"Select your preferred language. Auto-detect uses your browser settings.",
+							options: {
+								auto: "Auto-detect",
+								en: "English",
+								es: "Espanol",
+								de: "Deutsch",
+								ja: "Japanese",
+								fr: "Francais",
+								it: "Italiano",
+							},
+						},
+					},
+
+					cta: "Save Language",
+				},
 			},
 
 			teams: {
@@ -1561,6 +2374,315 @@ export default {
 						placeholder: "DELETE",
 					},
 					cta: "Delete Team",
+				},
+			},
+
+			error: {
+				forbidden: {
+					title: "You do not have permission to access this page.",
+					description: "Please contact your team administrator for assistance.",
+				},
+
+				unknown: {
+					title: "An unexpected error occurred.",
+					description: "Please try again later or contact support.",
+				},
+			},
+		},
+
+		tcpMonitors: {
+			header: {
+				title: "TCP Monitors",
+				action: {
+					create: "Create TCP Monitor",
+				},
+			},
+
+			alert: {
+				subscription: {
+					title: "Your monitors are paused!",
+					description: "A subscription is required to continue monitoring automatically.",
+					cta: "Start Monitoring",
+				},
+				limitation: {
+					title: "TCP Monitoring Limitation",
+					description:
+						"TCP port monitoring requires Cloudflare Workers paid plan with socket support. On the free plan, TCP checks will show as unavailable. Consider using HTTP monitoring as an alternative.",
+				},
+			},
+
+			empty: {
+				title: "No TCP monitors yet",
+				description: "Create a TCP monitor to check if ports are open and responsive.",
+				cta: "Create TCP Monitor",
+			},
+
+			table: {
+				label: "TCP Monitors",
+				columns: {
+					name: "Name",
+					endpoint: "Host:Port",
+					status: "Status",
+					lastChecked: "Last Checked",
+					responseTime: "Response Time",
+					actions: "Actions",
+				},
+				status: {
+					up: "Up",
+					down: "Down",
+					timeout: "Timeout",
+					disabled: "Disabled",
+					pending: "Pending",
+				},
+				actions: {
+					edit: "Edit",
+					delete: "Delete",
+					confirmation: {
+						delete: "Are you sure you want to delete {{name}}?",
+					},
+				},
+			},
+		},
+
+		createTcpMonitor: {
+			header: {
+				title: "Create TCP Monitor",
+				breadcrumb: {
+					tcpMonitors: "TCP Monitors",
+				},
+			},
+
+			alert: {
+				subscription: {
+					title: "Your monitors are paused!",
+					description: "A subscription is required to continue monitoring automatically.",
+					cta: "Start Monitoring",
+				},
+			},
+
+			form: {
+				fields: {
+					name: {
+						label: "Monitor Name",
+						placeholder: "Database Server",
+						description: "A descriptive name for this TCP monitor.",
+					},
+					host: {
+						label: "Host",
+						placeholder: "db.example.com",
+						description: "The hostname or IP address to monitor.",
+					},
+					port: {
+						label: "Port",
+						placeholder: "5432",
+						description: "The TCP port to check (1-65535).",
+					},
+					interval: {
+						label: "Check Interval",
+						description: "How often to check the port.",
+					},
+					timeout: {
+						label: "Connection Timeout",
+						description: "How long to wait for a connection before timing out.",
+					},
+				},
+				cta: "Create Monitor",
+			},
+		},
+
+		editTcpMonitor: {
+			header: {
+				title: "Edit TCP Monitor",
+				breadcrumb: {
+					tcpMonitors: "TCP Monitors",
+				},
+			},
+
+			alert: {
+				subscription: {
+					title: "Your monitors are paused!",
+					description: "A subscription is required to continue monitoring automatically.",
+					cta: "Start Monitoring",
+				},
+			},
+
+			form: {
+				fields: {
+					name: {
+						label: "Monitor Name",
+						placeholder: "Database Server",
+						description: "A descriptive name for this TCP monitor.",
+					},
+					host: {
+						label: "Host",
+						placeholder: "db.example.com",
+						description: "The hostname or IP address to monitor.",
+					},
+					port: {
+						label: "Port",
+						placeholder: "5432",
+						description: "The TCP port to check (1-65535).",
+					},
+					interval: {
+						label: "Check Interval",
+						description: "How often to check the port.",
+					},
+					timeout: {
+						label: "Connection Timeout",
+						description: "How long to wait for a connection before timing out.",
+					},
+					isEnabled: {
+						label: "Enable monitoring",
+					},
+				},
+				cancel: "Cancel",
+				cta: "Save Changes",
+			},
+		},
+
+		tcpMonitorDetail: {
+			header: {
+				breadcrumb: {
+					tcpMonitors: "TCP Monitors",
+				},
+				action: {
+					edit: "Edit",
+				},
+			},
+
+			alert: {
+				subscription: {
+					title: "Your monitors are paused!",
+					description: "A subscription is required to continue monitoring automatically.",
+					cta: "Start Monitoring",
+				},
+			},
+
+			info: {
+				title: "Monitor Configuration",
+				endpoint: "Endpoint",
+				status: "Status",
+				interval: "Check Interval",
+				timeout: "Timeout",
+			},
+
+			stats: {
+				uptime: {
+					label: "Uptime",
+					description: "Based on recent checks",
+				},
+				avgResponseTime: {
+					label: "Avg Response Time",
+					description: "Average connection time",
+				},
+				totalChecks: {
+					label: "Total Checks",
+					description: "Number of checks performed",
+				},
+			},
+
+			results: {
+				title: "Check History",
+				description: "Recent TCP connection check results",
+				label: "Results",
+				empty: "No check results yet. Results will appear after the first check runs.",
+				columns: {
+					time: "Time",
+					status: "Status",
+					responseTime: "Response Time",
+					error: "Error",
+				},
+			},
+		},
+
+		apiKeys: {
+			header: {
+				title: "API Keys",
+				action: {
+					create: "Create API Key",
+				},
+			},
+
+			alert: {
+				subscription: {
+					title: "Your monitors are paused!",
+					description: "A subscription is required to continue monitoring automatically.",
+					cta: "Start Monitoring",
+				},
+			},
+
+			empty: {
+				title: "No API keys yet",
+				description: "Create an API key to access the Uptime API programmatically.",
+				cta: "Create API Key",
+			},
+
+			newKey: {
+				title: "API Key '{{name}}' created!",
+				description: "Copy this key now. For security reasons, you won't be able to see it again.",
+				dismiss: "I've copied my key",
+			},
+
+			form: {
+				title: "Create New API Key",
+				description: "API keys allow programmatic access to your monitors and alerts.",
+
+				fields: {
+					name: {
+						label: "Key Name",
+						placeholder: "Production API Key",
+						description: "A name to identify this API key.",
+					},
+					scopes: {
+						label: "Permissions",
+						description: "Select what this API key can access.",
+						options: {
+							"monitors:read": "Read Monitors",
+							"monitors:write": "Write Monitors",
+							"alerts:read": "Read Alerts",
+							"alerts:write": "Write Alerts",
+						},
+					},
+					expiresAt: {
+						label: "Expiration Date (Optional)",
+						description: "Leave empty for a key that never expires.",
+					},
+				},
+
+				actions: {
+					cancel: "Cancel",
+					create: "Create API Key",
+				},
+			},
+
+			table: {
+				label: "API Keys",
+
+				columns: {
+					name: "Name",
+					prefix: "Key",
+					scopes: "Permissions",
+					lastUsed: "Last Used",
+					expires: "Expires",
+					actions: "Actions",
+				},
+
+				lastUsed: {
+					never: "Never",
+				},
+
+				expires: {
+					never: "Never",
+				},
+
+				actions: {
+					menu: "Actions Menu",
+					delete: "Delete Key",
+				},
+
+				confirmation: {
+					delete:
+						"Are you sure you want to delete the API key '{{name}}'? This action cannot be undone.",
 				},
 			},
 

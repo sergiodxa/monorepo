@@ -1,3 +1,5 @@
+import type { TFunction } from "i18next";
+
 import { cn } from "@pkg/cn";
 import { Alert, Button, confirm, Empty, LinkButton, Menu, Popover, Skeleton, Table } from "@pkg/ui";
 import {
@@ -5,6 +7,7 @@ import {
 	BellMinusIcon,
 	BellPlusIcon,
 	EllipsisVerticalIcon,
+	HistoryIcon,
 	LoaderIcon,
 	TriangleAlertIcon,
 } from "lucide-react";
@@ -21,6 +24,17 @@ import { measure } from "~/middleware/server-timing";
 import { team } from "~/middleware/team";
 
 import type { Route } from "./+types/route";
+
+function formatCooldown(minutes: number, t: TFunction<"translation", "page.alerts.table">): string {
+	if (minutes === 0) {
+		return t("cooldown.none");
+	}
+	if (minutes >= 60) {
+		let hours = Math.floor(minutes / 60);
+		return t("cooldown.hours", { count: hours });
+	}
+	return t("cooldown.minutes", { count: minutes });
+}
 
 export async function clientLoader({ serverLoader }: Route.ClientLoaderArgs) {
 	return await serverLoader();
@@ -104,7 +118,17 @@ export default function Component({ loaderData, params }: Route.ComponentProps) 
 		{
 			id: "strategy" as const,
 			name: t("table.columns.strategy"),
-			align: "right" as const,
+			align: "center" as const,
+		},
+		{
+			id: "notifyOnRecovery" as const,
+			name: t("table.columns.notifyOnRecovery"),
+			align: "center" as const,
+		},
+		{
+			id: "cooldown" as const,
+			name: t("table.columns.cooldown"),
+			align: "center" as const,
 		},
 		{
 			id: "actions" as const,
@@ -116,6 +140,14 @@ export default function Component({ loaderData, params }: Route.ComponentProps) 
 	return (
 		<>
 			<AppHeader heading={t("header.title")}>
+				<LinkButton
+					color="neutral"
+					href={href("/app/:team/alert-history", params)}
+					className="flex-shrink-0 px-2"
+				>
+					<HistoryIcon className="size-5" aria-hidden />
+					<span className="max-sm:sr-only">{t("header.action.history")}</span>
+				</LinkButton>
 				{loaderData.alerts.length < 10 && (
 					<LinkButton
 						color="neutral"
@@ -210,8 +242,22 @@ function AlertTableRow(props: { alert: Route.ComponentProps["loaderData"]["alert
 			<Table.Cell>
 				<span className="font-semibold">{props.alert.name}</span>
 			</Table.Cell>
-			<Table.Cell className="w-28 text-right">
-				{props.alert.config.strategy === "email" ? t("types.email") : t("types.webhook")}
+			<Table.Cell className="w-28 text-center">
+				{props.alert.config.strategy === "email"
+					? t("types.email")
+					: props.alert.config.strategy === "slack"
+						? t("types.slack")
+						: props.alert.config.strategy === "discord"
+							? t("types.discord")
+							: t("types.webhook")}
+			</Table.Cell>
+			<Table.Cell className="w-28 text-center">
+				{props.alert.notifyOnRecovery
+					? t("notifyOnRecovery.enabled")
+					: t("notifyOnRecovery.disabled")}
+			</Table.Cell>
+			<Table.Cell className="w-28 text-center">
+				{formatCooldown(props.alert.cooldownMinutes, t)}
 			</Table.Cell>
 			<Table.Cell className="w-17 text-center">
 				<Menu.Trigger>

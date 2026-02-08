@@ -1,7 +1,15 @@
 import { cn } from "@pkg/cn";
-import { Alert, Button, Card, LinkButton, Skeleton } from "@pkg/ui";
-import { subDays } from "date-fns";
-import { PencilIcon, PlayIcon, RefreshCwIcon } from "lucide-react";
+import { Alert, Badge, Button, Card, LinkButton, Skeleton } from "@pkg/ui";
+import { format, subDays } from "date-fns";
+import {
+	LockIcon,
+	PencilIcon,
+	PlayIcon,
+	RefreshCwIcon,
+	ShieldAlertIcon,
+	ShieldCheckIcon,
+	ShieldXIcon,
+} from "lucide-react";
 import { Trans, useTranslation } from "react-i18next";
 import { href, Link, redirect, useRevalidator } from "react-router";
 import { useSpinDelay } from "spin-delay";
@@ -17,6 +25,7 @@ import { measure } from "~/middleware/server-timing";
 import { team } from "~/middleware/team";
 import Customer from "~/models/customer";
 import Monitor from "~/models/monitor";
+import { createSslInfo } from "~/services/check-ssl";
 import daysOfYear from "~/utils/days-of-year";
 import groupDatesPerWeek from "~/utils/group-dates-per-week";
 
@@ -126,6 +135,16 @@ export async function loader({ params }: Route.LoaderArgs) {
 
 	if (!monitor) return redirect(href("/app/:team/dashboard", params));
 
+	// Prepare SSL info
+	let sslInfo = createSslInfo({
+		sslMonitoringEnabled: monitor.sslMonitoringEnabled,
+		sslExpiryWarningDays: monitor.sslExpiryWarningDays,
+		sslExpiresAt: monitor.sslExpiresAt,
+		sslIssuer: monitor.sslIssuer,
+		sslLastCheckedAt: monitor.sslLastCheckedAt,
+		sslStatus: monitor.sslStatus,
+	});
+
 	return {
 		stats: {
 			usage: {
@@ -153,6 +172,7 @@ export async function loader({ params }: Route.LoaderArgs) {
 		},
 		hasActiveSubscription: await hasActiveSubscription(),
 		monitor: { id: monitor.id, name: monitor.name },
+		ssl: sslInfo,
 		results,
 		weeks,
 	};
@@ -265,10 +285,120 @@ export default function Component({ loaderData, params }: Route.ComponentProps) 
 					/>
 				</div>
 
+				{/* SSL Certificate Status Card */}
+				<SslStatusCard
+					ssl={loaderData.ssl}
+					monitorId={loaderData.monitor.id}
+					teamSlug={params.team}
+				/>
+
 				<div className="-mx-5 overflow-x-auto px-5 md:mx-0 md:px-0">
 					<Heatmap points={loaderData.results} weeks={loaderData.weeks} size="lg" />
 				</div>
 			</div>
 		</>
+	);
+}
+
+function SslStatusCard({
+	ssl,
+	monitorId,
+	teamSlug,
+}: {
+	ssl: ReturnType<typeof createSslInfo>;
+	monitorId: string;
+	teamSlug: string;
+}) {
+	let { t } = useTranslation("translation", { keyPrefix: "page.monitor.ssl" });
+
+	let statusIcon = {
+		valid: <ShieldCheckIcon className="text-green-600 dark:text-green-400 size-5" />,
+		expiring: <ShieldAlertIcon className="text-yellow-600 dark:text-yellow-400 size-5" />,
+		expired: <ShieldXIcon className="text-red-600 dark:text-red-400 size-5" />,
+		error: <ShieldXIcon className="text-red-600 dark:text-red-400 size-5" />,
+		unknown: <LockIcon className="size-5 text-neutral-400" />,
+	}[ssl.status];
+
+	let statusColor = {
+		valid: "success",
+		expiring: "warning",
+		expired: "danger",
+		error: "danger",
+		unknown: "neutral",
+	}[ssl.status] as "success" | "warning" | "danger" | "neutral";
+
+	return (
+		<Card>
+			<Card.Header>
+				<div className="flex items-center justify-between">
+					<div className="flex items-center gap-2">
+						{statusIcon}
+						<Card.Title>{t("title")}</Card.Title>
+					</div>
+					<Badge color={statusColor}>{t(`status.${ssl.status}`)}</Badge>
+				</div>
+			</Card.Header>
+			<Card.Content>
+				{ssl.enabled ? (
+					<div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+						<div>
+							<p className="text-sm font-medium text-neutral-500 dark:text-neutral-400">
+								{t("expiresAt")}
+							</p>
+							<p className="text-lg font-semibold">
+								{ssl.expiresAt ? format(ssl.expiresAt, "MMM d, yyyy") : "-"}
+							</p>
+							{ssl.daysUntilExpiry !== null && (
+								<p className="text-sm text-neutral-500 dark:text-neutral-400">
+									{t("expiresIn", { days: ssl.daysUntilExpiry })}
+								</p>
+							)}
+						</div>
+						<div>
+							<p className="text-sm font-medium text-neutral-500 dark:text-neutral-400">
+								{t("issuer")}
+							</p>
+							<p className="text-lg font-semibold">{ssl.issuer || "-"}</p>
+						</div>
+						<div>
+							<p className="text-sm font-medium text-neutral-500 dark:text-neutral-400">
+								{t("lastChecked")}
+							</p>
+							<p className="text-lg font-semibold">
+								{ssl.lastCheckedAt ? format(ssl.lastCheckedAt, "MMM d, yyyy HH:mm") : "-"}
+							</p>
+						</div>
+						<div className="flex items-end justify-end">
+							<LinkButton
+								color="neutral"
+								size="sm"
+								href={href("/app/:team/monitors/:monitorId/edit", {
+									team: teamSlug,
+									monitorId,
+								})}
+							>
+								<PencilIcon className="size-4" />
+								{t("configure")}
+							</LinkButton>
+						</div>
+					</div>
+				) : (
+					<div className="flex items-center justify-between">
+						<p className="text-neutral-500 dark:text-neutral-400">{t("notConfigured")}</p>
+						<LinkButton
+							color="primary"
+							size="sm"
+							href={href("/app/:team/monitors/:monitorId/edit", {
+								team: teamSlug,
+								monitorId,
+							})}
+						>
+							<LockIcon className="size-4" />
+							{t("configure")}
+						</LinkButton>
+					</div>
+				)}
+			</Card.Content>
+		</Card>
 	);
 }

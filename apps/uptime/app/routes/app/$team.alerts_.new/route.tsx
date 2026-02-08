@@ -8,6 +8,7 @@ import {
 	ListBox,
 	Popover,
 	Select,
+	Switch,
 	TextField,
 } from "@pkg/ui";
 import { TriangleAlertIcon } from "lucide-react";
@@ -80,9 +81,23 @@ function CreateAlertForm() {
 	});
 
 	let [strategy, setStrategy] = useState<Key>("email");
+	let [cooldown, setCooldown] = useState<Key>("0");
+
 	let strategies = [
 		{ id: "email", textValue: t("fields.strategy.options.email") },
 		{ id: "webhook", textValue: t("fields.strategy.options.webhook") },
+		{ id: "slack", textValue: t("fields.strategy.options.slack") },
+		{ id: "discord", textValue: t("fields.strategy.options.discord") },
+	] as const;
+
+	let cooldownOptions = [
+		{ id: "0", textValue: t("fields.cooldown.options.none") },
+		{ id: "5", textValue: t("fields.cooldown.options.5min") },
+		{ id: "15", textValue: t("fields.cooldown.options.15min") },
+		{ id: "30", textValue: t("fields.cooldown.options.30min") },
+		{ id: "60", textValue: t("fields.cooldown.options.1hour") },
+		{ id: "120", textValue: t("fields.cooldown.options.2hours") },
+		{ id: "custom", textValue: t("fields.cooldown.options.custom") },
 	] as const;
 
 	return (
@@ -151,6 +166,69 @@ function CreateAlertForm() {
 						<FieldError />
 					</TextField>
 				</>
+			)}
+
+			{strategy === "slack" && (
+				<>
+					<TextField type="url" name="webhookUrl" isRequired>
+						<Label>{t("fields.config.slack.webhookUrl.label")}</Label>
+						<Input placeholder={t("fields.config.slack.webhookUrl.placeholder")} />
+						<Description>{t("fields.config.slack.webhookUrl.description")}</Description>
+						<FieldError />
+					</TextField>
+
+					<TextField type="text" name="channel">
+						<Label>{t("fields.config.slack.channel.label")}</Label>
+						<Input placeholder={t("fields.config.slack.channel.placeholder")} />
+						<Description>{t("fields.config.slack.channel.description")}</Description>
+						<FieldError />
+					</TextField>
+				</>
+			)}
+
+			{strategy === "discord" && (
+				<TextField type="url" name="discordWebhookUrl" isRequired>
+					<Label>{t("fields.config.discord.webhookUrl.label")}</Label>
+					<Input placeholder={t("fields.config.discord.webhookUrl.placeholder")} />
+					<Description>{t("fields.config.discord.webhookUrl.description")}</Description>
+					<FieldError />
+				</TextField>
+			)}
+
+			<div className="flex flex-col gap-1">
+				<Switch name="notifyOnRecovery" defaultSelected>
+					<span className="font-medium">{t("fields.notifyOnRecovery.label")}</span>
+				</Switch>
+				<Description className="text-sm text-neutral-500 dark:text-neutral-400">
+					{t("fields.notifyOnRecovery.description")}
+				</Description>
+			</div>
+
+			<Select
+				name={cooldown === "custom" ? undefined : "cooldownMinutes"}
+				selectedKey={cooldown}
+				onSelectionChange={(selection: Key | null) => selection && setCooldown(selection)}
+			>
+				<Label>{t("fields.cooldown.label")}</Label>
+				<Select.Trigger />
+				<FieldError />
+				<Description>{t("fields.cooldown.description")}</Description>
+				<Popover>
+					<ListBox items={cooldownOptions}>
+						{(option: (typeof cooldownOptions)[number]) => (
+							<Select.Item id={option.id}>{option.textValue}</Select.Item>
+						)}
+					</ListBox>
+				</Popover>
+			</Select>
+
+			{cooldown === "custom" && (
+				<TextField type="number" name="cooldownMinutes" isRequired>
+					<Label>{t("fields.cooldown.custom.label")}</Label>
+					<Input placeholder={t("fields.cooldown.custom.placeholder")} min={1} />
+					<Description>{t("fields.cooldown.custom.description")}</Description>
+					<FieldError />
+				</TextField>
 			)}
 
 			<Button type="submit" className="self-end" isPending={isPending} name="intent">

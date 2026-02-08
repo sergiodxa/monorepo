@@ -1,0 +1,2744 @@
+export default {
+	landing: {
+		meta: {
+			title: "Uptime von Sergio Xalambrí",
+			description: "Einfache und zuverlässige Uptime-Überwachung für Entwickler",
+		},
+
+		header: {
+			title: "Uptime",
+
+			nav: {
+				pricing: "Preise",
+				features: "Funktionen",
+
+				cta: {
+					in: "Dashboard öffnen",
+					out: "Überwachung starten",
+				},
+			},
+		},
+
+		hero: {
+			pill: "Überwachen Sie Ihre Dienste mit Zuversicht",
+			title: "Überwachen Sie Ihre Dienste <strong>mit Zuversicht</strong>",
+			description:
+				"Erhalten Sie sofortige Benachrichtigungen, wenn Ihre Websites und APIs ausfallen. Überwachen Sie Ihre Websites und APIs mit Leichtigkeit.",
+
+			cta: {
+				in: "Dashboard öffnen",
+				out: "Überwachung starten",
+				pricing: "Preise ansehen",
+			},
+
+			screenshot: {
+				alt: "Screenshot eines Uptime-Überwachungs-Dashboards mit zwei Diensten und wöchentlichen Heatmap-Diagrammen. Jeder Punkt repräsentiert eine Prüfung: grün für Erfolg, gelb für gemischt, rot für Fehler und grau für keine Daten. Jeder Monitor zeigt auch Uptime-Prozentsatz, Gesamtprüfungen, letzte Prüfung und 99. Perzentil der Antwortzeit an",
+			},
+		},
+
+		features: {
+			title: "Leistungsstarke Überwachung einfach gemacht",
+			description:
+				"Alles, was Sie brauchen, um Ihre Dienste reibungslos am Laufen zu halten, ohne unnötige Komplexität.",
+
+			list: {
+				first: {
+					title: "Überwachen Sie Ihre Uptime",
+					description:
+						"Verfolgen Sie Ihre Dienste rund um die Uhr mit 99,9% Überwachungszuverlässigkeit. Erhalten Sie detaillierte Metriken und Leistungseinblicke auf einen Blick.",
+				},
+				second: {
+					title: "Erhalten Sie Benachrichtigungen überall",
+					description:
+						"Erhalten Sie sofortige Benachrichtigungen per E-Mail, Slack, Discord oder Webhooks, wenn Ihre Dienste Ausfallzeiten oder Leistungsprobleme haben.",
+				},
+				third: {
+					title: "Zahlen Sie nur, was Sie nutzen",
+					description:
+						"Transparente Preise ohne versteckte Gebühren. Skalieren Sie nach Bedarf hoch oder runter, mit Plänen, die mit Ihren Überwachungsanforderungen wachsen.",
+				},
+			},
+		},
+
+		pricing: {
+			title: "Einfache, transparente Preise",
+			description:
+				"Ein Abonnement, keine Stufen. Zahlen Sie nur für das, was Sie nutzen, mit unserem unkomplizierten Preismodell",
+
+			howItWorks: {
+				title: "So funktioniert die Preisgestaltung",
+
+				list: {
+					first: {
+						title: "Basis-Abonnement",
+						description: "5$/Monat beinhaltet Ihre ersten 5.000 Pings",
+					},
+
+					second: {
+						title: "Zusätzliche Pings",
+						description: "0,001$ pro Ping nach den ersten 5.000",
+					},
+
+					third: {
+						title: "Keine versteckten Gebühren",
+						description:
+							"Keine zusätzlichen Kosten für Funktionen oder Integrationen. Zahlen Sie für die Pings, die Sie nutzen.",
+					},
+				},
+			},
+
+			calculator: {
+				title: "Preisrechner",
+				description:
+					"Berechnen Sie Ihre monatlichen Kosten basierend auf Ihren Überwachungsanforderungen",
+
+				add: "Monitor hinzufügen",
+
+				monitor: {
+					label: "Monitor-Frequenz",
+					delete: "Entfernen",
+					frequency: {
+						lower: "1m",
+						upper: "60m",
+					},
+				},
+
+				stats: {
+					pingsPerMonth: "Pings pro Monat:",
+					baseSubscription: "Basis-Abonnement",
+					includes: "Beinhaltet die ersten {{amount}} Pings",
+					additionalPings: "Zusätzliche Pings:",
+					additionalPingsCost: "{{pings}} × {{costPerPing}}",
+					totalCost: "Monatliche Gesamtkosten:",
+				},
+			},
+		},
+
+		faq: {
+			title: "Häufig gestellte Fragen",
+			description: "Finden Sie Antworten auf häufige Fragen zu Uptime",
+
+			list: {
+				first: {
+					q: "Wie überwacht Uptime meine Dienste?",
+					a: "Uptime sendet regelmäßige HTTP- oder HTTPS-Anfragen an Ihre Endpunkte. Wir prüfen Antwortcodes und Antwortzeiten, um festzustellen, ob Ihr Dienst verfügbar und reaktionsfähig ist.",
+				},
+
+				second: {
+					q: "Was passiert, wenn ein Ausfall erkannt wird?",
+					a: "Wenn Uptime einen Ausfall erkennt, sendet es sofort eine Benachrichtigung über Ihre konfigurierten Kanäle.",
+				},
+
+				third: {
+					q: "Kann ich interne Dienste überwachen?",
+					a: "Ja, solange Ihre internen Dienste über das Internet erreichbar sind. Sie können auch benutzerdefinierte Header konfigurieren, um Anfragen zu authentifizieren.",
+				},
+
+				fourth: {
+					q: "Wie fange ich an?",
+					a: "Melden Sie sich einfach an, erstellen Sie Ihren ersten Monitor und konfigurieren Sie Ihre Benachrichtigungseinstellungen. Sie sind in weniger als einer Minute einsatzbereit.",
+				},
+
+				fifth: {
+					q: "Gibt es eine kostenlose Stufe?",
+					a: "Ja! Sie können unbegrenzt Monitore erstellen und Pings manuell kostenlos auslösen, für immer. Geplante automatische Überwachung erfordert ein Abonnement.",
+				},
+
+				sixth: {
+					q: "Wie lange werden Ping-Daten gespeichert?",
+					a: "Wir speichern Ihre Ping-Ergebnisse 365 Tage lang. Danach werden sie automatisch gelöscht.",
+				},
+
+				seventh: {
+					q: "Kann ich Dienste überwachen, die Authentifizierung erfordern?",
+					a: "Ja. Sie können benutzerdefinierte Header mit Tokens oder Anmeldedaten festlegen, um Ihre Anfragen zu authentifizieren.",
+				},
+
+				eighth: {
+					q: "Kann ich mehrere URLs überwachen?",
+					a: "Ja. Erstellen Sie einfach einen separaten Monitor für jede URL. Jeder Monitor kann seine eigene Prüffrequenz, HTTP-Methode, erwarteten Statuscode und mehr haben.",
+				},
+
+				ninth: {
+					q: "Kann ich APIs überwachen?",
+					a: "Absolut. Uptime ist so konzipiert, dass es sowohl Websites als auch APIs überwacht. Sie können den Endpunkt, die Methode, Header und erwartete Antworten festlegen, um Ihre API effektiv zu überwachen.",
+				},
+
+				tenth: {
+					q: "Kann ich ein Timeout für jeden Ping festlegen?",
+					a: "Ja. Sie können ein Timeout für jeden Monitor konfigurieren. Wenn die Antwort länger als erwartet dauert, wird sie als Fehler gewertet. Dies hilft, langsame Dienste zu erkennen.",
+				},
+
+				eleventh: {
+					q: "Kann ich einen Monitor vorübergehend pausieren oder deaktivieren?",
+					a: "Ja. Sie können jeden Monitor jederzeit einzeln pausieren.",
+				},
+
+				twelfth: {
+					q: "Kann ich einen Monitor sofort nach der Erstellung testen?",
+					a: "Ja. Ein Ping wird automatisch ausgelöst, direkt nachdem Sie einen Monitor erstellt haben.",
+				},
+
+				thirteenth: {
+					q: "Unterstützen Sie Statusseiten?",
+					a: "Ja! Erstellen Sie anpassbare öffentliche Statusseiten, um den Zustand Ihrer Dienste mit Benutzern zu teilen. Fügen Sie beliebige Monitore hinzu und ergänzen Sie Ihr Branding.",
+				},
+
+				fourteenth: {
+					q: "Kann ich historische Leistungstrends einsehen?",
+					a: "Wir speichern alle vergangenen Ergebnisse, sodass Sie eine vollständige Historie erhalten. Leistungstrend-Diagramme sind für eine zukünftige Version geplant.",
+				},
+
+				fifteenth: {
+					q: "Welche Benachrichtigungskanäle werden unterstützt?",
+					a: "E-Mail, Slack, Discord und Webhooks. Native Integrationen machen es einfach, Benachrichtigungen dort zu erhalten, wo Ihr Team bereits arbeitet. Webhooks ermöglichen die Verbindung zu jedem anderen Dienst.",
+				},
+
+				sixteenth: {
+					q: "Unterstützen Sie Teams oder geteilte Monitore?",
+					a: "Ja! Jeder Benutzer beginnt mit einem Team. Laden Sie Teammitglieder mit verschiedenen Rollen ein (Eigentümer, Admin, Mitglied). Die automatische Domain-Bereitstellung fügt automatisch Benutzer mit verifizierten Unternehmens-E-Mail-Domains hinzu.",
+				},
+
+				seventeenth: {
+					q: "Was passiert, wenn ich die Limits meines Plans überschreite?",
+					a: "Ihnen werden 1$ für jede 1.000 Pings über den 5.000 in Ihrem Abonnement enthaltenen berechnet.",
+				},
+
+				eighteenth: {
+					q: "Speichern Sie Anfrage- oder Antwortkörper?",
+					a: "Nein. Wir speichern niemals Body-Daten. Für zusätzliche Privatsphäre und Effizienz empfehlen wir die Verwendung der `HEAD`-Methode.",
+				},
+
+				nineteenth: {
+					q: "Aus welchen Regionen kann ich meine Dienste überwachen?",
+					a: "Uptime unterstützt die Überwachung aus mehreren Regionen: Afrika, Asien-Pazifik, Ost- und Westeuropa, Ost- und West-Nordamerika, Naher Osten, Ozeanien und Südamerika.\n\nSie können eine Region pro Monitor wählen. Die Region wird als Hinweis behandelt, der tatsächliche Ping stammt von einem Server in oder nahe dieser Region.",
+				},
+			},
+		},
+
+		footer: {
+			name: "Uptime",
+			description: "Einfache, zuverlässige Überwachung für Ihre Websites und APIs.",
+			copyright: "© {{year}} Uptime von Sergio Xalambrí. Alle Rechte vorbehalten.",
+			links: {
+				privacy: "Datenschutz",
+				terms: "Nutzungsbedingungen",
+				security: "Sicherheit",
+			},
+		},
+	},
+
+	app: {
+		meta: {
+			title: "Uptime von Sergio Xalambrí",
+			description: "Einfache und zuverlässige Uptime-Überwachung für Entwickler",
+		},
+
+		layout: {
+			sidebar: {
+				teamPicker: { label: "Team auswählen" },
+				userMenu: { label: "Benutzermenü" },
+
+				navigation: {
+					items: {
+						dashboard: "Dashboard",
+						alerts: "Benachrichtigungen",
+						maintenance: "Wartung",
+						monitors: "Monitore",
+						statusPages: "Statusseiten",
+						tcpMonitors: "TCP-Monitore",
+						dnsMonitors: "DNS-Monitore",
+						settings: "Einstellungen",
+						billing: "Abrechnung",
+						domains: "Domains",
+						members: "Mitglieder",
+						team: "Team",
+						apiKeys: "API-Schlüssel",
+					},
+				},
+
+				account: {
+					title: "Konto",
+					overview: "Übersicht",
+					teams: "Ihre Teams",
+				},
+			},
+		},
+
+		errors: {
+			notFound: {
+				title: "404 Nicht gefunden",
+				description: "Das Team, das Sie suchen, existiert nicht.",
+			},
+		},
+	},
+
+	monitorDetail: {
+		header: {
+			region: "{{emoji}} {{code}}",
+		},
+		stats: {
+			title: "Statistiken",
+			uptime: "Uptime",
+			totalChecks: "Gesamtprüfungen",
+			lastCheck: "Letzte Prüfung",
+			p99ResponseTime: "P99 Antwortzeit",
+			p99ResponseTimeValue: "{{value}}",
+			neverRan: "N/V",
+		},
+
+		actions: {
+			refresh: "Aktualisieren",
+			delete: {
+				confirm: "Sind Sie sicher, dass Sie diesen Monitor löschen möchten?",
+				cta: "Monitor löschen",
+			},
+		},
+	},
+
+	monitorList: {
+		header: {
+			title: "Uptime-Monitore",
+			cta: "Monitor erstellen",
+			subscribe: "Ihre Monitore sind pausiert. Abonnieren Sie, um die Überwachung fortzusetzen",
+		},
+	},
+
+	dashboard: {
+		header: {
+			title: "Uptime-Monitore",
+			cta: "Monitor erstellen",
+			subscribe: "Ihre Monitore sind pausiert. Abonnieren Sie, um die Überwachung fortzusetzen",
+		},
+
+		monitor: {
+			stats: {
+				title: "Statistiken",
+				uptime: "Uptime",
+				totalChecks: "Gesamtprüfungen",
+				lastCheck: "Letzte Prüfung",
+				p99ResponseTime: "P99 Antwortzeit",
+				p99ResponseTimeValue: "{{value}} ms",
+				neverRan: "N/V",
+			},
+
+			actions: {
+				refresh: "Aktualisieren",
+				delete: {
+					confirm: "Sind Sie sicher, dass Sie diesen Monitor löschen möchten?",
+					cta: "Monitor löschen",
+				},
+			},
+		},
+	},
+
+	createMonitor: {
+		title: "Neuen Monitor erstellen",
+		fields: {
+			name: {
+				label: "Monitor-Name",
+				placeholder: "Startseite",
+				description: "Ein beschreibender Name für Ihren Monitor.",
+			},
+			url: {
+				label: "Zu überwachende URL",
+				placeholder: "https://example.com/healthcheck",
+				description: "Die URL des Dienstes, den Sie überwachen möchten.",
+			},
+			method: {
+				label: "Anfragemethode",
+				placeholder: "HEAD",
+				description: "Die HTTP-Methode für die Anfrage.",
+			},
+			status: {
+				label: "Erwarteter Statuscode",
+				placeholder: "200",
+				description: "Der HTTP-Statuscode, den Sie erwarten.",
+			},
+			interval: {
+				label: "Prüfintervall",
+				placeholder: "60",
+				description: "Intervall in Sekunden. Minimum ist 60 Sekunden.",
+			},
+			visibility: {
+				label: "Sichtbarkeit",
+				description: "Öffentliche Monitore können mit jedem geteilt werden.",
+				options: { public: "Öffentlich", private: "Privat" },
+			},
+			region: {
+				label: "Region",
+				description: "Die Region, von der aus der Ping ausgeführt wird.",
+				placeholder: "wnam",
+				options: {
+					afr: "{{emoji}} Afrika",
+					apac: "{{emoji}} Asien-Pazifik",
+					eeur: "{{emoji}} Osteuropa",
+					enam: "{{emoji}} Ost-Nordamerika",
+					me: "{{emoji}} Naher Osten",
+					oc: "{{emoji}} Ozeanien",
+					sam: "{{emoji}} Südamerika",
+					weur: "{{emoji}} Westeuropa",
+					wnam: "{{emoji}} West-Nordamerika",
+				},
+			},
+		},
+		cta: "Monitor erstellen",
+	},
+
+	toasts: {
+		refreshMonitor: {
+			pending: "Pinge {{name}}...",
+			success: "Ping von {{name}} beendet.",
+			failure: "Hoppla! Beim Ausführen des Monitors ist etwas schiefgelaufen.",
+		},
+
+		deleteMonitor: {
+			success: "{{name}} wurde gelöscht.",
+			failure: "Wir konnten {{name}} nicht löschen. Bitte versuchen Sie es erneut.",
+		},
+
+		createMonitor: {
+			pending: "Erstelle Monitor {{name}}...",
+			success: "{{name}} wurde erstellt.",
+			failure: "Wir konnten {{name}} nicht erstellen. Bitte versuchen Sie es erneut.",
+		},
+	},
+
+	components: {
+		heatmap: {
+			tooltip: "{{date}}\n{{successRate}} Erfolgsrate\n{{checks}} Prüfungen",
+			legend: {
+				success: "Erfolg",
+				failure: "Fehler",
+				mixed: "Gemischt",
+				noData: "Keine Daten",
+			},
+		},
+	},
+
+	actions: {
+		addDomain: {
+			errors: {
+				generic: "Hoppla! Etwas ist schiefgelaufen.",
+				notAllowed: "Sie sind nicht berechtigt, Domains zu diesem Team hinzuzufügen.",
+				alreadyExists: "{{hostname}} wurde am {{verifiedAt}} hinzugefügt.",
+			},
+
+			success: {
+				accepted: "{{hostname}} wartet noch auf Verifizierung.",
+				created: "{{hostname}} wurde zu {{team}} hinzugefügt. Verifizierung steht aus.",
+			},
+		},
+
+		changeRole: {
+			errors: {
+				generic: "Hoppla! Etwas ist schiefgelaufen.",
+				notAllowed: "Sie sind nicht berechtigt, Rollen in diesem Team zu ändern.",
+				cannotChangeOwner: "Sie können die Rolle des Team-Eigentümers nicht ändern.",
+			},
+
+			success: "Die Rolle von {{name}} wurde in {{team}} zu {{role}} geändert.",
+		},
+
+		createAlert: {
+			errors: {
+				generic: "Hoppla! Etwas ist schiefgelaufen.",
+				notAllowed: "Sie sind nicht berechtigt, Benachrichtigungen in diesem Team zu erstellen.",
+				limitExceeded:
+					"Sie haben das Limit von {{limit}} Benachrichtigungen in diesem Team erreicht.",
+			},
+			success: { created: "Benachrichtigung {{name}} wurde erstellt." },
+		},
+
+		createInvite: {
+			email: {
+				subject: "Sie wurden eingeladen, {{team}} auf Uptime beizutreten",
+			},
+
+			errors: {
+				generic: "Hoppla! Etwas ist schiefgelaufen.",
+				notAllowed: "Sie sind nicht berechtigt, Mitglieder zu diesem Team einzuladen.",
+				alreadyAccepted: "Es gibt bereits ein Mitglied von {{team}} mit dieser E-Mail.",
+			},
+
+			success: "{{email}} wurde eingeladen, {{team}} beizutreten.",
+		},
+
+		createMonitor: {
+			errors: {
+				generic: "Hoppla! Etwas ist schiefgelaufen.",
+			},
+
+			success: "Monitor {{name}} wurde erstellt.",
+		},
+
+		updateMonitor: {
+			errors: {
+				generic: "Hoppla! Etwas ist schiefgelaufen.",
+				notFound: "Dieser Monitor existiert nicht.",
+			},
+
+			success: "Monitor {{name}} wurde aktualisiert.",
+		},
+
+		updateSsl: {
+			errors: {
+				generic: "Hoppla! Etwas ist schiefgelaufen.",
+				notFound: "Dieser Monitor existiert nicht.",
+			},
+
+			success: "SSL-Einstellungen für {{name}} wurden aktualisiert.",
+		},
+
+		deleteMonitor: {
+			errors: {
+				generic: "Hoppla! Etwas ist schiefgelaufen.",
+				notAllowed: "Sie sind nicht berechtigt, Monitore in diesem Team zu löschen.",
+				notFound: "Dieser Monitor existiert nicht.",
+			},
+			success: "Monitor {{name}} wurde gelöscht.",
+		},
+
+		playMonitor: {
+			errors: {
+				generic: "Hoppla! Etwas ist schiefgelaufen.",
+				notFound: "Dieser Monitor existiert nicht.",
+			},
+
+			pending: "Pinge {{name}}...",
+			success: "Ping von {{name}} beendet.",
+			failure: "Hoppla! Beim Ausführen des Monitors ist etwas schiefgelaufen.",
+		},
+
+		removeAlert: {
+			errors: {
+				generic: "Hoppla! Etwas ist schiefgelaufen.",
+				forbidden: "Sie sind nicht berechtigt, Benachrichtigungen in diesem Team zu entfernen.",
+				notFound: "{{name}} existiert nicht.",
+			},
+			success: "Benachrichtigung {{name}} wurde entfernt.",
+		},
+
+		removeDomain: {
+			errors: {
+				generic: "Hoppla! Etwas ist schiefgelaufen.",
+				notAllowed: "Sie sind nicht berechtigt, Domains aus diesem Team zu entfernen.",
+				notFound: "{{hostname}} existiert nicht.",
+			},
+
+			success: "{{hostname}} wurde aus {{team}} entfernt.",
+		},
+
+		removeMember: {
+			errors: {
+				generic: "Hoppla! Etwas ist schiefgelaufen.",
+				notAllowed: "Sie sind nicht berechtigt, Mitglieder aus diesem Team zu entfernen.",
+				cannotRemoveOwner: "Sie können den Team-Eigentümer nicht entfernen.",
+			},
+
+			success: "{{name}} wurde aus {{team}} entfernt.",
+		},
+
+		retryDomainVerification: {
+			errors: {
+				generic: "Hoppla! Etwas ist schiefgelaufen.",
+				notAllowed:
+					"Sie sind nicht berechtigt, die Domain-Verifizierung in diesem Team zu wiederholen.",
+				notFound: "{{hostname}} existiert nicht.",
+				workflowFailed:
+					"Der Verifizierungsprozess für {{hostname}} konnte nicht gestartet werden. Versuchen Sie es später erneut.",
+			},
+
+			success: {
+				alreadyVerified: "{{hostname}} ist bereits verifiziert.",
+				requested: "Wiederholung der Verifizierung für {{hostname}} wurde angefordert.",
+			},
+		},
+
+		revokeInvite: {
+			errors: {
+				generic: "Hoppla! Etwas ist schiefgelaufen.",
+				notAllowed: "Sie sind nicht berechtigt, Einladungen in diesem Team zu widerrufen.",
+				notFound: "Diese Einladung existiert nicht.",
+				alreadyAccepted: "Diese Einladung wurde bereits vom Eingeladenen angenommen.",
+			},
+
+			success: "Die Einladung von {{email}} wurde aus {{team}} widerrufen.",
+		},
+
+		updateTeam: {
+			errors: {
+				generic: "Hoppla! Etwas ist schiefgelaufen.",
+				forbidden: "Sie sind nicht berechtigt, Team-Einstellungen zu aktualisieren.",
+			},
+
+			success: {
+				updated: "Team-Einstellungen wurden erfolgreich aktualisiert.",
+			},
+		},
+
+		deleteTeam: {
+			errors: {
+				generic: "Hoppla! Beim Löschen des Teams ist etwas schiefgelaufen.",
+				forbidden: "Nur der Team-Eigentümer kann das Team löschen.",
+				confirmationRequired: "Bitte geben Sie DELETE zur Bestätigung ein.",
+			},
+
+			success: "{{team}} wurde gelöscht.",
+		},
+
+		leaveTeam: {
+			errors: {
+				generic: "Hoppla! Etwas ist schiefgelaufen.",
+				notMember: "Sie sind kein Mitglied dieses Teams.",
+				ownerCannotLeave:
+					"Team-Eigentümer können ihr Team nicht verlassen. Übertragen Sie zuerst das Eigentum.",
+				adminCannotLeave:
+					"Admins können das Team nicht verlassen. Bitten Sie den Eigentümer, Sie zuerst herabzustufen.",
+			},
+
+			success: "Sie haben {{team}} verlassen.",
+		},
+
+		createStatusPage: {
+			errors: {
+				generic: "Hoppla! Etwas ist schiefgelaufen.",
+				slugTaken: "Dieser Slug wird bereits verwendet.",
+			},
+		},
+
+		updateStatusPage: {
+			errors: {
+				generic: "Hoppla! Etwas ist schiefgelaufen.",
+				notFound: "Diese Statusseite existiert nicht.",
+				slugTaken: "Dieser Slug wird bereits verwendet.",
+			},
+		},
+
+		deleteStatusPage: {
+			errors: {
+				generic: "Hoppla! Etwas ist schiefgelaufen.",
+				notFound: "Diese Statusseite existiert nicht.",
+			},
+
+			success: "Statusseite wurde gelöscht.",
+		},
+
+		createMaintenance: {
+			errors: {
+				generic: "Hoppla! Etwas ist schiefgelaufen.",
+				invalidDates: "Die Endzeit muss nach der Startzeit liegen.",
+			},
+
+			success: {
+				created: "Wartungsfenster '{{name}}' wurde erstellt.",
+			},
+		},
+
+		deleteMaintenance: {
+			errors: {
+				generic: "Hoppla! Etwas ist schiefgelaufen.",
+				notFound: "Dieses Wartungsfenster existiert nicht.",
+				forbidden: "Sie sind nicht berechtigt, dieses Wartungsfenster zu löschen.",
+			},
+
+			success: "Wartungsfenster '{{name}}' wurde gelöscht.",
+		},
+
+		endMaintenance: {
+			errors: {
+				generic: "Hoppla! Etwas ist schiefgelaufen.",
+				notFound: "Dieses Wartungsfenster existiert nicht.",
+				forbidden: "Sie sind nicht berechtigt, dieses Wartungsfenster zu beenden.",
+			},
+
+			success: "Wartungsfenster '{{name}}' wurde vorzeitig beendet.",
+		},
+
+		createTeam: {
+			errors: {
+				generic: "Hoppla! Beim Erstellen des Teams ist etwas schiefgelaufen.",
+			},
+
+			success: {
+				created: "Team {{name}} wurde erfolgreich erstellt.",
+			},
+		},
+
+		createDnsMonitor: {
+			errors: {
+				generic: "Hoppla! Etwas ist schiefgelaufen.",
+				limitExceeded: "Sie haben das Limit von {{limit}} DNS-Monitoren in diesem Team erreicht.",
+			},
+
+			success: {
+				created: "DNS-Monitor {{name}} wurde erstellt.",
+			},
+		},
+
+		updateDnsMonitor: {
+			errors: {
+				generic: "Hoppla! Etwas ist schiefgelaufen.",
+				notFound: "Dieser DNS-Monitor existiert nicht.",
+				forbidden: "Sie sind nicht berechtigt, diesen DNS-Monitor zu aktualisieren.",
+			},
+
+			success: "DNS-Monitor {{name}} wurde aktualisiert.",
+		},
+
+		deleteDnsMonitor: {
+			errors: {
+				generic: "Hoppla! Etwas ist schiefgelaufen.",
+				notFound: "Dieser DNS-Monitor existiert nicht.",
+				forbidden: "Sie sind nicht berechtigt, diesen DNS-Monitor zu löschen.",
+			},
+
+			success: "DNS-Monitor {{name}} wurde gelöscht.",
+		},
+
+		checkDnsMonitor: {
+			errors: {
+				generic: "Hoppla! Etwas ist schiefgelaufen.",
+				notFound: "Dieser DNS-Monitor existiert nicht.",
+				forbidden: "Sie sind nicht berechtigt, diesen DNS-Monitor zu prüfen.",
+			},
+
+			success: "DNS-Prüfung für {{name}} abgeschlossen.",
+		},
+
+		createTcpMonitor: {
+			errors: {
+				generic: "Hoppla! Beim Erstellen des TCP-Monitors ist etwas schiefgelaufen.",
+			},
+			success: "TCP-Monitor {{name}} wurde erstellt.",
+		},
+
+		updateTcpMonitor: {
+			errors: {
+				generic: "Hoppla! Beim Aktualisieren des TCP-Monitors ist etwas schiefgelaufen.",
+				notFound: "Dieser TCP-Monitor existiert nicht.",
+			},
+			success: "TCP-Monitor {{name}} wurde aktualisiert.",
+		},
+
+		deleteTcpMonitor: {
+			errors: {
+				generic: "Hoppla! Beim Löschen des TCP-Monitors ist etwas schiefgelaufen.",
+				notAllowed: "Sie sind nicht berechtigt, TCP-Monitore in diesem Team zu löschen.",
+				notFound: "Dieser TCP-Monitor existiert nicht.",
+			},
+			success: "TCP-Monitor {{name}} wurde gelöscht.",
+		},
+
+		createApiKey: {
+			errors: {
+				generic: "Hoppla! Beim Erstellen des API-Schlüssels ist etwas schiefgelaufen.",
+				limitExceeded: "Sie haben das Limit von {{limit}} API-Schlüsseln in diesem Team erreicht.",
+			},
+			success: {
+				created: "API-Schlüssel '{{name}}' wurde erstellt.",
+			},
+		},
+
+		deleteApiKey: {
+			errors: {
+				generic: "Hoppla! Beim Löschen des API-Schlüssels ist etwas schiefgelaufen.",
+				notFound: "Dieser API-Schlüssel existiert nicht.",
+			},
+			success: "API-Schlüssel '{{name}}' wurde gelöscht.",
+		},
+
+		updateLanguage: {
+			errors: {
+				generic: "Hoppla! Beim Aktualisieren Ihrer Spracheinstellung ist etwas schiefgelaufen.",
+			},
+			success: "Spracheinstellung erfolgreich aktualisiert.",
+		},
+	},
+
+	page: {
+		dashboard: {
+			header: {
+				title: "Dashboard",
+				action: {
+					create: "Monitor erstellen",
+					refresh: "Aktualisieren",
+				},
+			},
+
+			alert: {
+				subscription: {
+					title: "Ihre Monitore sind pausiert!",
+					description:
+						"Ein Abonnement ist erforderlich, um die automatische Überwachung fortzusetzen.",
+					cta: "Überwachung starten",
+				},
+			},
+
+			empty: {
+				title: "Noch keine Monitore",
+				description: "Erstellen Sie Ihren ersten Monitor, um Ihre Dienste zu verfolgen.",
+				cta: "Monitor erstellen",
+			},
+
+			stats: {
+				monitors: {
+					label: "Monatliche Ping-Nutzung",
+					value: "{{consumed}}<small> verwendet</small>",
+					description: "Von {{estimated}} geschätzt",
+				},
+
+				uptime: {
+					label: "Uptime-Prozentsatz",
+					description: "Gesamte System-Uptime",
+				},
+
+				slowestEndpoint: {
+					label: {
+						default: 'Langsamster Endpunkt "<em>{{name}}</em>"',
+						noData: "Langsamster Endpunkt",
+					},
+					value: { noData: "N/V" },
+					description: "In den letzten 24 Stunden",
+				},
+			},
+
+			table: {
+				label: "Monitore",
+
+				columns: {
+					name: "Name",
+					latencyChart: "Latenztrend",
+					status: "Status",
+					lastIncident: "Letzter Vorfall",
+					responseTime: "Durchschn. Latenz",
+					actions: "Aktionen",
+				},
+
+				status: {
+					up: "Aktiv & Läuft",
+					down: "Ausgefallen",
+					degraded: "Beeinträchtigt",
+					unknown: "Keine Daten",
+				},
+
+				lastIncident: { never: "-" },
+				responseTime: "~{{value}}",
+
+				actions: {
+					menu: "Aktionsmenü",
+					edit: "Monitor bearbeiten",
+					delete: "Monitor löschen",
+					play: "Monitor ausführen",
+				},
+
+				confirmation: {
+					deleteMonitor:
+						"Sind Sie sicher, dass Sie den Monitor {{name}} löschen möchten? Diese Aktion kann nicht rückgängig gemacht werden.",
+				},
+			},
+		},
+
+		monitors: {
+			header: {
+				title: "Uptime-Monitore",
+				cta: "Monitor erstellen",
+				subscribe: "Ihre Monitore sind pausiert. Abonnieren Sie, um die Überwachung fortzusetzen",
+			},
+
+			alert: {
+				subscription: {
+					title: "Ihre Monitore sind pausiert!",
+					description:
+						"Ein Abonnement ist erforderlich, um die automatische Überwachung fortzusetzen.",
+					cta: "Überwachung starten",
+				},
+			},
+		},
+
+		createMonitor: {
+			header: {
+				title: "Monitor erstellen",
+			},
+
+			alert: {
+				subscription: {
+					title: "Ihre Monitore sind pausiert!",
+					description:
+						"Ein Abonnement ist erforderlich, um die automatische Überwachung fortzusetzen.",
+					cta: "Überwachung starten",
+				},
+			},
+
+			form: {
+				fields: {
+					name: {
+						label: "Monitor-Name",
+						placeholder: "Startseite",
+						description: "Ein beschreibender Name für Ihren Monitor.",
+					},
+					url: {
+						label: "Zu überwachende URL",
+						placeholder: "https://example.com/healthcheck",
+						description: "Die URL des Dienstes, den Sie überwachen möchten.",
+					},
+					method: {
+						label: "Anfragemethode",
+						placeholder: "HEAD",
+						description: "Die HTTP-Methode für die Anfrage.",
+					},
+					status: {
+						label: "Erwarteter Statuscode",
+						placeholder: "200",
+						description: "Der HTTP-Statuscode, den Sie erwarten.",
+					},
+					interval: {
+						label: "Prüfintervall",
+						placeholder: "60",
+						description: "Intervall in Sekunden. Minimum ist 60 Sekunden.",
+					},
+					visibility: {
+						label: "Sichtbarkeit",
+						description: "Öffentliche Monitore können mit jedem geteilt werden.",
+						options: { public: "Öffentlich", private: "Privat" },
+					},
+					region: {
+						label: "Region",
+						description: "Die Region, von der aus der Ping ausgeführt wird.",
+						placeholder: "wnam",
+						options: {
+							afr: "{{emoji}} Afrika",
+							apac: "{{emoji}} Asien-Pazifik",
+							eeur: "{{emoji}} Osteuropa",
+							enam: "{{emoji}} Ost-Nordamerika",
+							me: "{{emoji}} Naher Osten",
+							oc: "{{emoji}} Ozeanien",
+							sam: "{{emoji}} Südamerika",
+							weur: "{{emoji}} Westeuropa",
+							wnam: "{{emoji}} West-Nordamerika",
+						},
+					},
+				},
+
+				cta: "Monitor erstellen",
+			},
+		},
+
+		editMonitor: {
+			header: {
+				title: "Monitor bearbeiten",
+			},
+
+			alert: {
+				subscription: {
+					title: "Ihre Monitore sind pausiert!",
+					description:
+						"Ein Abonnement ist erforderlich, um die automatische Überwachung fortzusetzen.",
+					cta: "Überwachung starten",
+				},
+			},
+
+			form: {
+				fields: {
+					name: {
+						label: "Monitor-Name",
+						placeholder: "Startseite",
+						description: "Ein beschreibender Name für Ihren Monitor.",
+					},
+					url: {
+						label: "Zu überwachende URL",
+						placeholder: "https://example.com/healthcheck",
+						description: "Die URL des Dienstes, den Sie überwachen möchten.",
+					},
+					method: {
+						label: "Anfragemethode",
+						placeholder: "HEAD",
+						description: "Die HTTP-Methode für die Anfrage.",
+					},
+					status: {
+						label: "Erwarteter Statuscode",
+						placeholder: "200",
+						description: "Der HTTP-Statuscode, den Sie erwarten.",
+					},
+					interval: {
+						label: "Prüfintervall",
+						placeholder: "60",
+						description: "Intervall in Sekunden. Minimum ist 60 Sekunden.",
+					},
+					visibility: {
+						label: "Sichtbarkeit",
+						description: "Öffentliche Monitore können mit jedem geteilt werden.",
+						options: { public: "Öffentlich", private: "Privat" },
+					},
+					region: {
+						label: "Region",
+						description: "Die Region, von der aus der Ping ausgeführt wird.",
+						placeholder: "wnam",
+						options: {
+							afr: "{{emoji}} Afrika",
+							apac: "{{emoji}} Asien-Pazifik",
+							eeur: "{{emoji}} Osteuropa",
+							enam: "{{emoji}} Ost-Nordamerika",
+							me: "{{emoji}} Naher Osten",
+							oc: "{{emoji}} Ozeanien",
+							sam: "{{emoji}} Südamerika",
+							weur: "{{emoji}} Westeuropa",
+							wnam: "{{emoji}} West-Nordamerika",
+						},
+					},
+					ssl: {
+						enabled: {
+							label: "SSL-Überwachung aktivieren",
+							description:
+								"Überwachen Sie den Ablauf des SSL-Zertifikats und erhalten Sie Benachrichtigungen, bevor es abläuft.",
+						},
+						expiresAt: {
+							label: "Zertifikats-Ablaufdatum",
+							placeholder: "Ablaufdatum auswählen",
+							description:
+								"Geben Sie das Ablaufdatum Ihres SSL-Zertifikats ein. Sie finden dies im Dashboard Ihres Hosting-Anbieters oder indem Sie die Zertifikatsdetails in Ihrem Browser überprüfen.",
+						},
+						issuer: {
+							label: "Zertifikatsaussteller",
+							placeholder: "Let's Encrypt, DigiCert, etc.",
+							description:
+								"Die Zertifizierungsstelle, die Ihr SSL-Zertifikat ausgestellt hat (optional).",
+						},
+						warningDays: {
+							label: "Warnung vor Ablauf",
+							description:
+								"Erhalten Sie Benachrichtigungen diese Anzahl von Tagen vor Ablauf des Zertifikats.",
+						},
+					},
+				},
+
+				cancel: "Abbrechen",
+				cta: "Änderungen speichern",
+			},
+		},
+
+		monitor: {
+			header: {
+				title: 'Monitor "{{name}}"',
+
+				action: {
+					play: "Monitor ausführen",
+					edit: "Monitor bearbeiten",
+					refresh: "Aktualisieren",
+				},
+			},
+
+			alert: {
+				subscription: {
+					title: "Ihre Monitore sind pausiert!",
+					description:
+						"Ein Abonnement ist erforderlich, um die automatische Überwachung fortzusetzen.",
+					cta: "Überwachung starten",
+				},
+			},
+
+			stats: {
+				monitors: {
+					label: "Monatliche Ping-Nutzung",
+					value: "{{consumed}}<small> verwendet</small>",
+					description: "Von {{estimated}} geschätzt",
+				},
+
+				uptime: {
+					label: "Uptime-Prozentsatz",
+					description: "Gesamte Monitor-Uptime",
+				},
+
+				slowestResult: {
+					label: "Langsamstes Ergebnis",
+					description: "In den letzten 24 Stunden",
+				},
+			},
+
+			heatmap: {
+				tooltip: "{{date}}\n{{successRate}} Erfolgsrate\n{{checks}} Prüfungen",
+				legend: {
+					success: "Erfolg",
+					failure: "Fehler",
+					mixed: "Gemischt",
+					noData: "Keine Daten",
+				},
+			},
+
+			ssl: {
+				title: "SSL-Zertifikat",
+				status: {
+					valid: "Gültig",
+					expiring: "Läuft bald ab",
+					expired: "Abgelaufen",
+					error: "Fehler",
+					unknown: "Nicht konfiguriert",
+				},
+				expiresAt: "Läuft ab",
+				expiresIn: "{{days}} Tage",
+				issuer: "Aussteller",
+				lastChecked: "Zuletzt geprüft",
+				notConfigured: "SSL-Überwachung ist für diesen Monitor nicht aktiviert.",
+				configure: "SSL-Überwachung konfigurieren",
+			},
+		},
+
+		billing: {
+			header: {
+				title: "Abrechnung",
+			},
+		},
+
+		members: {
+			header: {
+				title: "Team-Mitglieder",
+
+				action: {
+					invite: "Mitglied einladen",
+				},
+			},
+
+			alert: {
+				subscription: {
+					title: "Ihre Monitore sind pausiert!",
+					description:
+						"Ein Abonnement ist erforderlich, um die automatische Überwachung fortzusetzen.",
+					cta: "Überwachung starten",
+				},
+			},
+
+			sections: {
+				members: {
+					title: "Mitglieder",
+					description: "Verwalten Sie Ihre Team-Mitglieder und deren Rollen.",
+				},
+			},
+
+			membersTable: {
+				label: "Aktuelle Mitglieder",
+				description: "Personen, die Zugang zu diesem Team haben.",
+
+				columns: {
+					name: "Name",
+					role: "Team-Rolle",
+					actions: "Aktionen",
+				},
+
+				role: {
+					member: "Mitglied",
+					admin: "Admin",
+					owner: "Eigentümer",
+				},
+
+				actions: {
+					menu: "Aktionsmenü",
+					remove: "Aus Team entfernen",
+					transfer: "Eigentum übertragen",
+					changeRole: {
+						member: "Zu Admin konvertieren",
+						admin: "Zu Mitglied konvertieren",
+						owner: "Eigentümer kann nicht geändert werden",
+					},
+				},
+
+				confirmation: {
+					removeMember: "Sind Sie sicher, dass Sie {{name}} aus dem Team entfernen möchten?",
+				},
+			},
+
+			invitedMembersTable: {
+				label: "Ausstehende Einladungen",
+				description: "Personen, die eingeladen wurden, aber noch nicht beigetreten sind.",
+
+				columns: {
+					email: "E-Mail",
+					actions: "Aktionen",
+				},
+
+				actions: {
+					menu: "Aktionsmenü",
+					copy: "Einladungslink kopieren",
+					revoke: "Einladung widerrufen",
+				},
+
+				confirmation: {
+					revokeInvite: "Sind Sie sicher, dass Sie die Einladung von {{email}} widerrufen möchten?",
+				},
+			},
+
+			error: {
+				forbidden: {
+					title: "Sie haben keine Berechtigung, auf diese Seite zuzugreifen.",
+					description: "Bitte kontaktieren Sie Ihren Team-Administrator für Unterstützung.",
+				},
+
+				unknown: {
+					title: "Ein unerwarteter Fehler ist aufgetreten.",
+					description: "Bitte versuchen Sie es später erneut oder kontaktieren Sie den Support.",
+				},
+			},
+		},
+
+		invite: {
+			header: {
+				title: "Team-Mitglied einladen",
+				description: "Senden Sie eine Einladung, Ihrem Team beizutreten.",
+			},
+
+			dialog: {
+				close: "Dialog schließen",
+			},
+
+			form: {
+				fields: {
+					email: {
+						label: "E-Mail-Adresse",
+						placeholder: "max.mustermann@beispiel.de",
+						description: "Die E-Mail-Adresse der Person, die Sie zu {{team}} einladen möchten.",
+					},
+				},
+
+				cancel: "Abbrechen",
+				cta: "Mitglied einladen",
+			},
+		},
+
+		acceptInvite: {
+			errors: {
+				notFound: "Diese Einladung existiert nicht.",
+				gone: "Diese Einladung wurde bereits angenommen.",
+				forbidden: "Diese Einladung war nicht für Sie bestimmt.",
+				badRequest:
+					"Sie haben anscheinend keine E-Mail-Adresse. Versuchen Sie, sich erneut anzumelden.",
+			},
+		},
+
+		domains: {
+			header: {
+				title: "Team-Domains",
+				action: { addDomain: "Domain hinzufügen" },
+			},
+
+			alert: {
+				subscription: {
+					title: "Ihre Monitore sind pausiert!",
+					description:
+						"Ein Abonnement ist erforderlich, um die automatische Überwachung fortzusetzen.",
+					cta: "Überwachung starten",
+				},
+			},
+
+			sections: {
+				domains: {
+					title: "Domains",
+					description: "Verwalten Sie verifizierte Domains für Ihr Team.",
+				},
+			},
+
+			form: {
+				fields: {
+					hostname: {
+						label: "Domain",
+						placeholder: "beispiel.de",
+						description: "Die Domain, die Sie zu {{team}} hinzufügen möchten.",
+					},
+				},
+
+				cta: "Domain hinzufügen",
+			},
+
+			table: {
+				label: "Verifizierte Domains",
+				description:
+					"Domains, die für die automatische Bereitstellung von Team-Mitgliedern verwendet werden können.",
+
+				columns: {
+					hostname: "Hostname",
+					id: "Verifizierungs-ID",
+					verifiedAt: "Verifiziert am",
+					actions: "Aktionen",
+				},
+
+				verifiedAt: {
+					pending: "Wartet auf Verifizierung",
+				},
+
+				actions: {
+					menu: "Aktionsmenü",
+					copy: "Verifizierungs-ID kopieren",
+					remove: "Domain entfernen",
+					retryVerification: "Verifizierung wiederholen",
+				},
+
+				confirmation: {
+					removeDomain: "Sind Sie sicher, dass Sie {{hostname}} aus dem Team entfernen möchten?",
+				},
+			},
+
+			instructions: {
+				title: "So verifizieren Sie Ihre Domain",
+
+				description:
+					"Um Ihre Domain zu verifizieren, fügen Sie den folgenden `TXT`-Eintrag zu Ihren DNS-Einstellungen hinzu:",
+
+				record: {
+					name: {
+						label: "Name",
+						value: "_ping-verification",
+					},
+					content: {
+						label: "Inhalt",
+						value: "VERIFICATION_ID",
+					},
+				},
+
+				note: "Stellen Sie sicher, dass Sie <code>VERIFICATION_ID</code> durch die oben angezeigte tatsächliche Verifizierungs-ID ersetzen.",
+
+				disclaimer:
+					"DNS-Änderungen können einige Zeit zur Propagierung benötigen, daher kann sich die Verifizierung verzögern.",
+			},
+
+			error: {
+				forbidden: {
+					title: "Sie haben keine Berechtigung, auf diese Seite zuzugreifen.",
+					description: "Bitte kontaktieren Sie Ihren Team-Administrator für Unterstützung.",
+				},
+
+				unknown: {
+					title: "Ein unerwarteter Fehler ist aufgetreten.",
+					description: "Bitte versuchen Sie es später erneut oder kontaktieren Sie den Support.",
+				},
+			},
+		},
+
+		alerts: {
+			header: {
+				title: "Benachrichtigungen",
+
+				action: {
+					create: "Benachrichtigung erstellen",
+					history: "Verlauf anzeigen",
+				},
+			},
+
+			alert: {
+				subscription: {
+					title: "Ihre Monitore sind pausiert!",
+					description:
+						"Ein Abonnement ist erforderlich, um die automatische Überwachung fortzusetzen.",
+					cta: "Überwachung starten",
+				},
+			},
+
+			empty: {
+				title: "Keine Benachrichtigungen konfiguriert",
+				description:
+					"Erstellen Sie eine Benachrichtigung, um informiert zu werden, wenn Ihre Monitore ausfallen.",
+				cta: "Benachrichtigung erstellen",
+			},
+
+			form: {
+				fields: {
+					name: {
+						label: "Name",
+						placeholder: "CTO-Benachrichtigung",
+						description: "Ein Name zur Identifizierung der Benachrichtigung.",
+					},
+
+					strategy: {
+						label: "Strategie",
+						description: "Die Strategie für die Benachrichtigung.",
+						options: {
+							webhook: "Webhook",
+							email: "E-Mail",
+							slack: "Slack",
+							discord: "Discord",
+						},
+					},
+
+					config: {
+						webhook: {
+							url: {
+								label: "Webhook-URL",
+								placeholder: "https://beispiel.de/webhook",
+								description: "Die URL, an die die Benachrichtigungs-Payload gesendet wird.",
+							},
+							secret: {
+								label: "Geheimschlüssel",
+								placeholder: "optionaler-geheimschlüssel",
+								description:
+									"Ein optionaler Geheimschlüssel für die Request-Header. Ein `Webhook-Signature`-Header wird mit einer HMAC SHA256-Signatur der Payload unter Verwendung dieses Geheimnisses hinzugefügt.",
+							},
+						},
+						email: {
+							to: {
+								label: "E-Mail-Adresse",
+								placeholder: "cto@beispiel.de",
+								description: "Die E-Mail-Adresse, an die die Benachrichtigung gesendet wird.",
+							},
+
+							subjectPrefix: {
+								label: "Betreff-Präfix",
+								placeholder: "[Uptime-Benachrichtigung]",
+								description:
+									"Ein optionales Präfix für den E-Mail-Betreff. Nützlich zum Filtern von Benachrichtigungen in Ihrem Posteingang.",
+							},
+						},
+						slack: {
+							webhookUrl: {
+								label: "Slack Webhook-URL",
+								placeholder: "https://hooks.slack.com/services/...",
+								description:
+									"Die Slack Incoming Webhook-URL. Erstellen Sie eine unter api.slack.com/apps > Incoming Webhooks.",
+							},
+							channel: {
+								label: "Kanal-Override",
+								placeholder: "#alerts",
+								description:
+									"Optionaler Kanal anstelle des Webhook-Standards. Fügen Sie das #-Präfix hinzu.",
+							},
+						},
+						discord: {
+							webhookUrl: {
+								label: "Discord Webhook-URL",
+								placeholder: "https://discord.com/api/webhooks/...",
+								description:
+									"Die Discord Webhook-URL. Erstellen Sie eine unter Servereinstellungen > Integrationen > Webhooks.",
+							},
+						},
+					},
+
+					notifyOnRecovery: {
+						label: "Bei Wiederherstellung benachrichtigen",
+						description:
+							"Senden Sie eine Benachrichtigung, wenn der Monitor sich von einem Ausfall erholt. Enthält Wiederherstellungszeit und Ausfalldauer.",
+					},
+
+					cooldown: {
+						label: "Benachrichtigungs-Cooldown",
+						description:
+							"Mindestzeit zwischen Benachrichtigungen desselben Typs. Verhindert Benachrichtigungsmüdigkeit bei andauernden Ausfällen.",
+						options: {
+							none: "Kein Cooldown",
+							"5min": "5 Minuten",
+							"15min": "15 Minuten",
+							"30min": "30 Minuten",
+							"1hour": "1 Stunde",
+							"2hours": "2 Stunden",
+							custom: "Benutzerdefiniert",
+						},
+						custom: {
+							label: "Benutzerdefinierter Cooldown (Minuten)",
+							placeholder: "Minuten eingeben",
+							description: "Geben Sie die Anzahl der Minuten zwischen Benachrichtigungen ein.",
+						},
+					},
+				},
+
+				cta: "Benachrichtigung erstellen",
+			},
+
+			table: {
+				label: "Benachrichtigungen",
+
+				columns: {
+					name: "Name",
+					strategy: "Typ",
+					notifyOnRecovery: "Wiederherstellung",
+					cooldown: "Cooldown",
+					actions: "Aktionen",
+				},
+
+				cooldown: {
+					none: "Keiner",
+					minutes: "{{count}} Min.",
+					hours: "{{count}} Std.",
+				},
+
+				actions: {
+					menu: "Aktionsmenü",
+					edit: "Benachrichtigung bearbeiten",
+					remove: "Benachrichtigung entfernen",
+				},
+
+				types: {
+					webhook: "Webhook",
+					email: "E-Mail",
+					slack: "Slack",
+					discord: "Discord",
+				},
+
+				notifyOnRecovery: {
+					enabled: "Ja",
+					disabled: "Nein",
+				},
+
+				confirmation: {
+					deleteAlert: "Sind Sie sicher, dass Sie die Benachrichtigung {{name}} löschen möchten?",
+				},
+			},
+		},
+
+		statusPages: {
+			header: {
+				title: "Statusseiten",
+
+				action: {
+					create: "Statusseite erstellen",
+				},
+			},
+
+			empty: {
+				title: "Noch keine Statusseiten",
+				description:
+					"Erstellen Sie eine Statusseite, um Ihren Systemstatus mit Ihren Benutzern zu teilen.",
+				cta: "Statusseite erstellen",
+			},
+
+			table: {
+				label: "Statusseiten",
+
+				columns: {
+					name: "Name",
+					slug: "URL",
+					monitors: "Monitore",
+					visibility: "Sichtbarkeit",
+					actions: "Aktionen",
+				},
+
+				visibility: {
+					public: "Öffentlich",
+					private: "Privat",
+				},
+
+				actions: {
+					menu: "Aktionsmenü",
+					view: "Seite anzeigen",
+					edit: "Seite bearbeiten",
+					delete: "Seite löschen",
+				},
+
+				confirmation: {
+					delete: "Sind Sie sicher, dass Sie die Statusseite {{name}} löschen möchten?",
+				},
+			},
+
+			form: {
+				fields: {
+					name: {
+						label: "Interner Name",
+						placeholder: "Produktionsstatus",
+						description: "Ein Name zur internen Identifizierung der Statusseite.",
+					},
+					slug: {
+						label: "URL-Slug",
+						placeholder: "produktion",
+						description: "Der URL-Pfad für die öffentliche Statusseite (z.B. /status/produktion).",
+					},
+					title: {
+						label: "Öffentlicher Titel",
+						placeholder: "Firma GmbH Status",
+						description: "Der Titel, der auf der öffentlichen Statusseite angezeigt wird.",
+					},
+					description: {
+						label: "Beschreibung",
+						placeholder: "Aktueller Status der Firma GmbH Dienste",
+						description: "Eine optionale Beschreibung für die Statusseite.",
+					},
+					logoUrl: {
+						label: "Logo-URL",
+						placeholder: "https://beispiel.de/logo.png",
+						description: "Ein optionales Logo für die Statusseite.",
+					},
+					isPublic: {
+						label: "Öffentlich",
+						description: "Machen Sie diese Statusseite für jeden mit dem Link zugänglich.",
+					},
+					showOverallStatus: {
+						label: "Gesamtstatus anzeigen",
+						description: "Zeigen Sie ein Gesamtstatus-Banner oben auf der Seite an.",
+					},
+					monitors: {
+						label: "Einzuschließende Monitore",
+						description:
+							"Wählen Sie, welche Monitore auf dieser Statusseite angezeigt werden sollen.",
+					},
+				},
+
+				cta: "Statusseite erstellen",
+				ctaUpdate: "Änderungen speichern",
+			},
+		},
+
+		createStatusPage: {
+			header: {
+				title: "Statusseite erstellen",
+			},
+		},
+
+		editStatusPage: {
+			header: {
+				title: "Statusseite bearbeiten",
+			},
+		},
+
+		dnsMonitors: {
+			header: {
+				title: "DNS-Monitore",
+
+				action: {
+					create: "DNS-Monitor erstellen",
+				},
+			},
+
+			empty: {
+				title: "Noch keine DNS-Monitore",
+				description: "Erstellen Sie einen DNS-Monitor, um DNS-Eintragsänderungen zu verfolgen.",
+				cta: "DNS-Monitor erstellen",
+			},
+
+			table: {
+				label: "DNS-Monitore",
+
+				columns: {
+					name: "Name",
+					domain: "Domain",
+					recordType: "Typ",
+					status: "Status",
+					lastChecked: "Zuletzt geprüft",
+					actions: "Aktionen",
+				},
+
+				disabled: "Deaktiviert",
+				neverChecked: "Nie",
+
+				actions: {
+					menu: "Aktionsmenü",
+					check: "Jetzt prüfen",
+					edit: "Bearbeiten",
+					delete: "Löschen",
+				},
+
+				confirmation: {
+					delete: "Sind Sie sicher, dass Sie den DNS-Monitor {{name}} löschen möchten?",
+				},
+			},
+		},
+
+		createDnsMonitor: {
+			header: {
+				title: "DNS-Monitor erstellen",
+			},
+
+			form: {
+				fields: {
+					name: {
+						label: "Monitor-Name",
+						placeholder: "Produktions-DNS",
+						description: "Ein beschreibender Name für diesen DNS-Monitor.",
+					},
+
+					domain: {
+						label: "Domain",
+						placeholder: "beispiel.de",
+						description: "Die Domain, deren DNS-Einträge überwacht werden sollen.",
+					},
+
+					recordType: {
+						label: "Eintragstyp",
+						description: "Der Typ des zu prüfenden DNS-Eintrags.",
+					},
+
+					expectedValue: {
+						label: "Erwarteter Wert",
+						placeholder: "192.168.1.1",
+						description:
+							"Optional. Benachrichtigen Sie, wenn der aufgelöste Wert nicht übereinstimmt. Leer lassen, um Änderungen zu verfolgen.",
+					},
+
+					interval: {
+						label: "Prüfintervall",
+						description: "Wie oft der DNS-Eintrag geprüft werden soll.",
+						options: {
+							"5m": "5 Minuten",
+							"15m": "15 Minuten",
+							"30m": "30 Minuten",
+							"1h": "1 Stunde",
+							"6h": "6 Stunden",
+							"12h": "12 Stunden",
+							"24h": "24 Stunden",
+						},
+					},
+
+					isEnabled: {
+						label: "Überwachung aktivieren",
+						description: "Starten Sie die Überwachung dieses DNS-Eintrags sofort.",
+					},
+				},
+
+				cta: "DNS-Monitor erstellen",
+			},
+		},
+
+		editDnsMonitor: {
+			header: {
+				title: "DNS-Monitor bearbeiten",
+			},
+
+			form: {
+				fields: {
+					name: {
+						label: "Monitor-Name",
+						placeholder: "Produktions-DNS",
+						description: "Ein beschreibender Name für diesen DNS-Monitor.",
+					},
+
+					domain: {
+						label: "Domain",
+						placeholder: "beispiel.de",
+						description: "Die Domain, deren DNS-Einträge überwacht werden sollen.",
+					},
+
+					recordType: {
+						label: "Eintragstyp",
+						description: "Der Typ des zu prüfenden DNS-Eintrags.",
+					},
+
+					expectedValue: {
+						label: "Erwarteter Wert",
+						placeholder: "192.168.1.1",
+						description:
+							"Optional. Benachrichtigen Sie, wenn der aufgelöste Wert nicht übereinstimmt. Leer lassen, um Änderungen zu verfolgen.",
+					},
+
+					interval: {
+						label: "Prüfintervall",
+						description: "Wie oft der DNS-Eintrag geprüft werden soll.",
+						options: {
+							"5m": "5 Minuten",
+							"15m": "15 Minuten",
+							"30m": "30 Minuten",
+							"1h": "1 Stunde",
+							"6h": "6 Stunden",
+							"12h": "12 Stunden",
+							"24h": "24 Stunden",
+						},
+					},
+
+					isEnabled: {
+						label: "Überwachung aktivieren",
+						description: "Ob dieser DNS-Eintrag aktiv überwacht werden soll.",
+					},
+				},
+
+				cancel: "Abbrechen",
+				cta: "Änderungen speichern",
+			},
+		},
+
+		dnsMonitorDetail: {
+			header: {
+				title: 'DNS-Monitor "{{name}}"',
+
+				action: {
+					check: "Jetzt prüfen",
+					refresh: "Aktualisieren",
+					edit: "Bearbeiten",
+				},
+			},
+
+			info: {
+				domain: "Domain",
+				recordType: "Eintragstyp",
+				status: "Status",
+				expectedValue: "Erwarteter Wert",
+				currentValue: "Aktueller Wert",
+			},
+
+			stats: {
+				totalChecks: {
+					label: "Gesamtprüfungen",
+					description: "Anzahl der durchgeführten DNS-Prüfungen",
+				},
+
+				successRate: {
+					label: "Erfolgsrate",
+					description: "Prozentsatz erfolgreicher Prüfungen",
+				},
+
+				avgResponseTime: {
+					label: "Durchschn. Antwortzeit",
+					description: "Durchschnittliche DNS-Auflösungszeit",
+				},
+			},
+
+			results: {
+				title: "Prüfverlauf",
+				empty: "Es wurden noch keine Prüfungen durchgeführt.",
+
+				table: {
+					columns: {
+						checkedAt: "Geprüft am",
+						status: "Status",
+						value: "Wert",
+						responseTime: "Antwortzeit",
+					},
+				},
+			},
+		},
+
+		maintenance: {
+			header: {
+				title: "Wartungsfenster",
+
+				action: {
+					create: "Wartung planen",
+				},
+			},
+
+			empty: {
+				title: "Keine Wartungsfenster",
+				description:
+					"Planen Sie Wartungsfenster, um Benachrichtigungen während geplanter Ausfallzeiten zu unterdrücken.",
+				cta: "Wartung planen",
+			},
+
+			tabs: {
+				label: "Wartungsstatus",
+				active: "Aktiv",
+				upcoming: "Geplant",
+				past: "Vergangen",
+			},
+
+			noActive: "Keine aktiven Wartungsfenster",
+			noUpcoming: "Keine geplanten Wartungsfenster",
+			noPast: "Keine vergangenen Wartungsfenster",
+
+			table: {
+				columns: {
+					name: "Name",
+					schedule: "Zeitplan",
+					monitor: "Monitor",
+					status: "Status",
+					actions: "Aktionen",
+				},
+
+				allMonitors: "Alle Monitore",
+				recurring: "Wiederkehrend",
+
+				status: {
+					active: "Aktiv",
+					upcoming: "Geplant",
+					past: "Abgeschlossen",
+				},
+
+				actions: {
+					menu: "Aktionsmenü",
+					end: "Jetzt beenden",
+					delete: "Löschen",
+				},
+
+				confirmation: {
+					endMaintenance:
+						"Sind Sie sicher, dass Sie die Wartung '{{name}}' vorzeitig beenden möchten?",
+					deleteMaintenance: "Sind Sie sicher, dass Sie '{{name}}' löschen möchten?",
+				},
+			},
+		},
+
+		createMaintenance: {
+			header: {
+				title: "Wartung planen",
+			},
+
+			form: {
+				fields: {
+					name: {
+						label: "Name",
+						placeholder: "Datenbank-Upgrade",
+						description: "Eine Beschreibung der Wartungsarbeiten.",
+					},
+
+					monitor: {
+						label: "Monitor",
+						description:
+							"Wählen Sie einen bestimmten Monitor oder lassen Sie das Feld leer für alle Monitore.",
+						all: "Alle Monitore",
+					},
+
+					startsAt: {
+						label: "Startzeit",
+						description: "Wann das Wartungsfenster beginnt.",
+					},
+
+					duration: {
+						label: "Dauer",
+						description: "Wie lange das Wartungsfenster dauert.",
+						options: {
+							"15m": "15 Minuten",
+							"30m": "30 Minuten",
+							"1h": "1 Stunde",
+							"2h": "2 Stunden",
+							"4h": "4 Stunden",
+							"8h": "8 Stunden",
+						},
+					},
+
+					suppressAlerts: {
+						label: "Benachrichtigungen unterdrücken",
+						description: "Keine Benachrichtigungen während dieses Wartungsfensters senden.",
+					},
+
+					showOnStatusPage: {
+						label: "Auf Statusseite anzeigen",
+						description: "Einen Wartungshinweis auf öffentlichen Statusseiten anzeigen.",
+					},
+
+					isRecurring: {
+						label: "Wiederkehrend",
+						description: "Dieses Wartungsfenster nach einem Zeitplan wiederholen.",
+					},
+
+					recurringPattern: {
+						label: "Wiederholungsmuster",
+						placeholder: "weekly:monday:02:00-04:00",
+						description: "Musterformat: 'daily:HH:MM-HH:MM' oder 'weekly:wochentag:HH:MM-HH:MM'",
+					},
+				},
+
+				preview: {
+					label: "Wartungsfenster",
+				},
+
+				cta: "Wartung planen",
+			},
+		},
+
+		alertHistory: {
+			header: {
+				title: "Benachrichtigungsverlauf",
+			},
+
+			breadcrumbs: {
+				alerts: "Benachrichtigungen",
+			},
+
+			empty: {
+				title: "Noch keine Benachrichtigungsereignisse",
+				description:
+					"Benachrichtigungsereignisse erscheinen hier, wenn Monitore Benachrichtigungen auslösen. Konfigurieren Sie Benachrichtigungen, um zu beginnen.",
+				cta: "Benachrichtigungen anzeigen",
+			},
+
+			table: {
+				label: "Benachrichtigungsereignisse",
+
+				columns: {
+					alert: "Benachrichtigung",
+					monitor: "Monitor",
+					eventType: "Ereignis",
+					status: "Status",
+					sentAt: "Zeit",
+				},
+
+				unknownAlert: "Unbekannte Benachrichtigung",
+				unknownMonitor: "Unbekannter Monitor",
+
+				eventType: {
+					down: "Ausgefallen",
+					up: "Wiederhergestellt",
+					degraded: "Beeinträchtigt",
+				},
+
+				status: {
+					sent: "Gesendet",
+					skipped_cooldown: "Übersprungen (Cooldown)",
+					failed: "Fehlgeschlagen",
+				},
+			},
+		},
+
+		createAlert: {
+			header: {
+				title: "Benachrichtigung erstellen",
+			},
+
+			alert: {
+				subscription: {
+					title: "Ihre Monitore sind pausiert!",
+					description:
+						"Ein Abonnement ist erforderlich, um die automatische Überwachung fortzusetzen.",
+					cta: "Überwachung starten",
+				},
+			},
+
+			form: {
+				fields: {
+					name: {
+						label: "Name",
+						placeholder: "CTO-Benachrichtigung",
+						description: "Ein Name zur Identifizierung der Benachrichtigung.",
+					},
+
+					strategy: {
+						label: "Strategie",
+						description: "Die Strategie für die Benachrichtigung.",
+						options: {
+							webhook: "Webhook",
+							email: "E-Mail",
+							slack: "Slack",
+							discord: "Discord",
+						},
+					},
+
+					config: {
+						webhook: {
+							url: {
+								label: "Webhook-URL",
+								placeholder: "https://beispiel.de/webhook",
+								description: "Die URL, an die die Benachrichtigungs-Payload gesendet wird.",
+							},
+							secret: {
+								label: "Geheimschlüssel",
+								placeholder: "optionaler-geheimschlüssel",
+								description:
+									"Ein optionaler Geheimschlüssel für die Request-Header. Ein `Webhook-Signature`-Header wird mit einer HMAC SHA256-Signatur der Payload unter Verwendung dieses Geheimnisses hinzugefügt.",
+							},
+						},
+						email: {
+							to: {
+								label: "E-Mail-Adresse",
+								placeholder: "cto@beispiel.de",
+								description: "Die E-Mail-Adresse, an die die Benachrichtigung gesendet wird.",
+							},
+
+							subjectPrefix: {
+								label: "Betreff-Präfix",
+								placeholder: "[Uptime-Benachrichtigung]",
+								description:
+									"Ein optionales Präfix für den E-Mail-Betreff. Nützlich zum Filtern von Benachrichtigungen in Ihrem Posteingang.",
+							},
+						},
+						slack: {
+							webhookUrl: {
+								label: "Slack Webhook-URL",
+								placeholder: "https://hooks.slack.com/services/...",
+								description:
+									"Die Slack Incoming Webhook-URL. Erstellen Sie eine unter api.slack.com/apps > Incoming Webhooks.",
+							},
+							channel: {
+								label: "Kanal-Override",
+								placeholder: "#alerts",
+								description:
+									"Optionaler Kanal anstelle des Webhook-Standards. Fügen Sie das #-Präfix hinzu.",
+							},
+						},
+						discord: {
+							webhookUrl: {
+								label: "Discord Webhook-URL",
+								placeholder: "https://discord.com/api/webhooks/...",
+								description:
+									"Die Discord Webhook-URL. Erstellen Sie eine unter Servereinstellungen > Integrationen > Webhooks.",
+							},
+						},
+					},
+
+					notifyOnRecovery: {
+						label: "Bei Wiederherstellung benachrichtigen",
+						description:
+							"Senden Sie eine Benachrichtigung, wenn der Monitor sich von einem Ausfall erholt. Enthält Wiederherstellungszeit und Ausfalldauer.",
+					},
+
+					cooldown: {
+						label: "Benachrichtigungs-Cooldown",
+						description:
+							"Mindestzeit zwischen Benachrichtigungen desselben Typs. Verhindert Benachrichtigungsmüdigkeit bei andauernden Ausfällen.",
+						options: {
+							none: "Kein Cooldown",
+							"5min": "5 Minuten",
+							"15min": "15 Minuten",
+							"30min": "30 Minuten",
+							"1hour": "1 Stunde",
+							"2hours": "2 Stunden",
+							custom: "Benutzerdefiniert",
+						},
+						custom: {
+							label: "Benutzerdefinierter Cooldown (Minuten)",
+							placeholder: "Minuten eingeben",
+							description: "Geben Sie die Anzahl der Minuten zwischen Benachrichtigungen ein.",
+						},
+					},
+				},
+
+				cta: "Benachrichtigung erstellen",
+			},
+		},
+
+		logout: {
+			title: "Sind Sie sicher, dass Sie sich abmelden möchten?",
+			cta: "Abmelden",
+		},
+
+		splat: {
+			notFound: {
+				title: "Nicht gefunden",
+				description: "Die gesuchte Seite existiert nicht.",
+			},
+		},
+
+		account: {
+			meta: {
+				title: "Konto - Uptime",
+				description: "Verwalten Sie Ihre Kontoeinstellungen und Teams.",
+			},
+
+			header: {
+				title: "Konto",
+			},
+
+			profile: {
+				title: "Profil",
+				description: "Ihre persönlichen Informationen.",
+			},
+
+			language: {
+				title: "Spracheinstellung",
+				description: "Wählen Sie Ihre bevorzugte Sprache für die Oberfläche.",
+
+				form: {
+					fields: {
+						language: {
+							label: "Sprache",
+							description:
+								"Wählen Sie Ihre bevorzugte Sprache. Automatische Erkennung verwendet Ihre Browser-Einstellungen.",
+							options: {
+								auto: "Automatisch erkennen",
+								en: "English",
+								es: "Español",
+								de: "Deutsch",
+								ja: "Japanisch",
+								fr: "Français",
+								it: "Italiano",
+							},
+						},
+					},
+
+					cta: "Sprache speichern",
+				},
+			},
+
+			teams: {
+				title: "Ihre Teams",
+				description: "Teams, bei denen Sie Mitglied sind.",
+
+				actions: {
+					createTeam: "Team erstellen",
+				},
+
+				empty: {
+					title: "Noch keine Teams",
+					description: "Erstellen Sie ein Team, um mit der Überwachung Ihrer Dienste zu beginnen.",
+					cta: "Team erstellen",
+				},
+
+				table: {
+					label: "Teams",
+					description: "Alle Teams, denen Sie angehören.",
+
+					columns: {
+						team: "Team",
+						role: "Rolle",
+						actions: "Aktionen",
+					},
+
+					role: {
+						member: "Mitglied",
+						admin: "Admin",
+						owner: "Eigentümer",
+					},
+
+					actions: {
+						menu: "Aktionsmenü",
+						leave: "Team verlassen",
+					},
+
+					confirmation: {
+						leaveTeam: "Sind Sie sicher, dass Sie {{name}} verlassen möchten?",
+					},
+				},
+			},
+		},
+
+		createTeam: {
+			header: {
+				title: "Team erstellen",
+				description: "Erstellen Sie ein neues Team zur Überwachung Ihrer Dienste.",
+			},
+
+			dialog: {
+				close: "Dialog schließen",
+			},
+
+			form: {
+				fields: {
+					name: {
+						label: "Team-Name",
+						placeholder: "Mein großartiges Team",
+						description: "Wählen Sie einen Namen für Ihr neues Team.",
+					},
+				},
+
+				cancel: "Abbrechen",
+				cta: "Team erstellen",
+			},
+		},
+
+		settings: {
+			header: {
+				title: "Team-Einstellungen",
+			},
+
+			alert: {
+				subscription: {
+					title: "Ihre Monitore sind pausiert!",
+					description:
+						"Ein Abonnement ist erforderlich, um die automatische Überwachung fortzusetzen.",
+					cta: "Überwachung starten",
+				},
+			},
+
+			sections: {
+				general: {
+					title: "Allgemein",
+					description: "Verwalten Sie die grundlegenden Informationen Ihres Teams.",
+				},
+			},
+
+			form: {
+				card: {
+					title: "Team-Profil",
+					description: "Aktualisieren Sie den Namen und das Logo Ihres Teams.",
+				},
+
+				fields: {
+					logo: {
+						label: "Logo-URL",
+						placeholder: "https://beispiel.de/logo.png",
+						description: "Eine URL zum Logo-Bild Ihres Teams.",
+					},
+					name: {
+						label: "Team-Name",
+						placeholder: "Mein Team",
+						description: "Der Name Ihres Teams.",
+					},
+				},
+
+				actions: {
+					cancel: "Abbrechen",
+					save: "Änderungen speichern",
+				},
+			},
+
+			members: {
+				title: "Mitglieder",
+				description: "Verwalten Sie Ihre Team-Mitglieder und deren Rollen.",
+
+				actions: {
+					invite: "Mitglied einladen",
+				},
+
+				table: {
+					label: "Aktuelle Mitglieder",
+					description: "Personen, die Zugang zu diesem Team haben.",
+
+					columns: {
+						name: "Name",
+						role: "Rolle",
+						actions: "Aktionen",
+					},
+
+					role: {
+						member: "Mitglied",
+						admin: "Admin",
+						owner: "Eigentümer",
+					},
+
+					actions: {
+						menu: "Aktionsmenü",
+						remove: "Aus Team entfernen",
+						transfer: "Eigentum übertragen",
+						changeRole: {
+							member: "Zu Admin konvertieren",
+							admin: "Zu Mitglied konvertieren",
+							owner: "Eigentümer kann nicht geändert werden",
+						},
+					},
+
+					confirmation: {
+						removeMember: "Sind Sie sicher, dass Sie {{name}} aus dem Team entfernen möchten?",
+					},
+				},
+
+				invitedTable: {
+					label: "Ausstehende Einladungen",
+					description: "Personen, die eingeladen wurden, aber noch nicht beigetreten sind.",
+
+					columns: {
+						email: "E-Mail",
+						expires: "Läuft ab",
+						actions: "Aktionen",
+					},
+
+					expires: {
+						expired: "Abgelaufen",
+					},
+
+					actions: {
+						menu: "Aktionsmenü",
+						copy: "Einladungslink kopieren",
+						revoke: "Einladung widerrufen",
+					},
+
+					confirmation: {
+						revokeInvite:
+							"Sind Sie sicher, dass Sie die Einladung von {{email}} widerrufen möchten?",
+					},
+				},
+			},
+
+			domains: {
+				title: "Domains",
+				description: "Verwalten Sie verifizierte Domains für Ihr Team.",
+
+				actions: {
+					addDomain: "Domain hinzufügen",
+				},
+
+				table: {
+					label: "Verifizierte Domains",
+					description:
+						"Domains, die für die automatische Bereitstellung von Team-Mitgliedern verwendet werden können.",
+
+					columns: {
+						hostname: "Hostname",
+						id: "Verifizierungs-ID",
+						verifiedAt: "Verifiziert am",
+						actions: "Aktionen",
+					},
+
+					verifiedAt: {
+						pending: "Wartet auf Verifizierung",
+					},
+
+					actions: {
+						menu: "Aktionsmenü",
+						copy: "Verifizierungs-ID kopieren",
+						remove: "Domain entfernen",
+						retryVerification: "Verifizierung wiederholen",
+					},
+
+					confirmation: {
+						removeDomain: "Sind Sie sicher, dass Sie {{hostname}} aus dem Team entfernen möchten?",
+					},
+				},
+
+				form: {
+					fields: {
+						hostname: {
+							label: "Domain",
+							placeholder: "beispiel.de",
+							description: "Die Domain, die Sie zu {{team}} hinzufügen möchten.",
+						},
+					},
+
+					cta: "Domain hinzufügen",
+				},
+
+				instructions: {
+					title: "So verifizieren Sie Ihre Domain",
+					description:
+						"Um Ihre Domain zu verifizieren, fügen Sie den folgenden TXT-Eintrag zu Ihren DNS-Einstellungen hinzu:",
+
+					record: {
+						name: {
+							label: "Name",
+							value: "_ping-verification",
+						},
+						content: {
+							label: "Inhalt",
+							value: "VERIFICATION_ID",
+						},
+					},
+
+					note: "Stellen Sie sicher, dass Sie <code>VERIFICATION_ID</code> durch die oben angezeigte tatsächliche Verifizierungs-ID ersetzen.",
+					disclaimer:
+						"DNS-Änderungen können einige Zeit zur Propagierung benötigen, daher kann sich die Verifizierung verzögern.",
+				},
+			},
+
+			billing: {
+				title: "Abrechnung",
+				description: "Verwalten Sie Ihr Abonnement und Zahlungsdetails.",
+
+				card: {
+					title: "Abonnement & Zahlungen",
+					description:
+						"Rechnungen anzeigen, Zahlungsmethoden aktualisieren und Ihr Abonnement verwalten.",
+					notice:
+						"Sie werden zum Kundenportal von Polar weitergeleitet, um Ihre Abrechnungseinstellungen zu verwalten.",
+					cta: "Abrechnungsportal öffnen",
+				},
+			},
+
+			danger: {
+				title: "Gefahrenzone",
+				description: "Unumkehrbare Aktionen, die Ihr Team betreffen.",
+
+				card: {
+					title: "Team löschen",
+					description:
+						"Löschen Sie dieses Team und alle seine Daten dauerhaft. Diese Aktion kann nicht rückgängig gemacht werden.",
+					warning:
+						"Dies wird Ihr Abonnement kündigen und alle Monitore, Benachrichtigungen, Domains, Mitglieder und Einladungen löschen.",
+					confirmation: {
+						label: "Geben Sie DELETE zur Bestätigung ein",
+						placeholder: "DELETE",
+					},
+					cta: "Team löschen",
+				},
+			},
+
+			error: {
+				forbidden: {
+					title: "Sie haben keine Berechtigung, auf diese Seite zuzugreifen.",
+					description: "Bitte kontaktieren Sie Ihren Team-Administrator für Unterstützung.",
+				},
+
+				unknown: {
+					title: "Ein unerwarteter Fehler ist aufgetreten.",
+					description: "Bitte versuchen Sie es später erneut oder kontaktieren Sie den Support.",
+				},
+			},
+		},
+
+		tcpMonitors: {
+			header: {
+				title: "TCP-Monitore",
+				action: {
+					create: "TCP-Monitor erstellen",
+				},
+			},
+
+			alert: {
+				subscription: {
+					title: "Ihre Monitore sind pausiert!",
+					description:
+						"Ein Abonnement ist erforderlich, um die automatische Überwachung fortzusetzen.",
+					cta: "Überwachung starten",
+				},
+				limitation: {
+					title: "TCP-Überwachungsbeschränkung",
+					description:
+						"TCP-Port-Überwachung erfordert den kostenpflichtigen Cloudflare Workers-Plan mit Socket-Unterstützung. Im kostenlosen Plan werden TCP-Prüfungen als nicht verfügbar angezeigt. Erwägen Sie HTTP-Überwachung als Alternative.",
+				},
+			},
+
+			empty: {
+				title: "Noch keine TCP-Monitore",
+				description:
+					"Erstellen Sie einen TCP-Monitor, um zu prüfen, ob Ports offen und reaktionsfähig sind.",
+				cta: "TCP-Monitor erstellen",
+			},
+
+			table: {
+				label: "TCP-Monitore",
+				columns: {
+					name: "Name",
+					endpoint: "Host:Port",
+					status: "Status",
+					lastChecked: "Zuletzt geprüft",
+					responseTime: "Antwortzeit",
+					actions: "Aktionen",
+				},
+				status: {
+					up: "Aktiv",
+					down: "Ausgefallen",
+					timeout: "Zeitüberschreitung",
+					disabled: "Deaktiviert",
+					pending: "Ausstehend",
+				},
+				actions: {
+					edit: "Bearbeiten",
+					delete: "Löschen",
+					confirmation: {
+						delete: "Sind Sie sicher, dass Sie {{name}} löschen möchten?",
+					},
+				},
+			},
+		},
+
+		createTcpMonitor: {
+			header: {
+				title: "TCP-Monitor erstellen",
+				breadcrumb: {
+					tcpMonitors: "TCP-Monitore",
+				},
+			},
+
+			alert: {
+				subscription: {
+					title: "Ihre Monitore sind pausiert!",
+					description:
+						"Ein Abonnement ist erforderlich, um die automatische Überwachung fortzusetzen.",
+					cta: "Überwachung starten",
+				},
+			},
+
+			form: {
+				fields: {
+					name: {
+						label: "Monitor-Name",
+						placeholder: "Datenbankserver",
+						description: "Ein beschreibender Name für diesen TCP-Monitor.",
+					},
+					host: {
+						label: "Host",
+						placeholder: "db.beispiel.de",
+						description: "Der Hostname oder die IP-Adresse zur Überwachung.",
+					},
+					port: {
+						label: "Port",
+						placeholder: "5432",
+						description: "Der zu prüfende TCP-Port (1-65535).",
+					},
+					interval: {
+						label: "Prüfintervall",
+						description: "Wie oft der Port geprüft werden soll.",
+					},
+					timeout: {
+						label: "Verbindungs-Timeout",
+						description:
+							"Wie lange auf eine Verbindung gewartet wird, bevor eine Zeitüberschreitung auftritt.",
+					},
+				},
+				cta: "Monitor erstellen",
+			},
+		},
+
+		editTcpMonitor: {
+			header: {
+				title: "TCP-Monitor bearbeiten",
+				breadcrumb: {
+					tcpMonitors: "TCP-Monitore",
+				},
+			},
+
+			alert: {
+				subscription: {
+					title: "Ihre Monitore sind pausiert!",
+					description:
+						"Ein Abonnement ist erforderlich, um die automatische Überwachung fortzusetzen.",
+					cta: "Überwachung starten",
+				},
+			},
+
+			form: {
+				fields: {
+					name: {
+						label: "Monitor-Name",
+						placeholder: "Datenbankserver",
+						description: "Ein beschreibender Name für diesen TCP-Monitor.",
+					},
+					host: {
+						label: "Host",
+						placeholder: "db.beispiel.de",
+						description: "Der Hostname oder die IP-Adresse zur Überwachung.",
+					},
+					port: {
+						label: "Port",
+						placeholder: "5432",
+						description: "Der zu prüfende TCP-Port (1-65535).",
+					},
+					interval: {
+						label: "Prüfintervall",
+						description: "Wie oft der Port geprüft werden soll.",
+					},
+					timeout: {
+						label: "Verbindungs-Timeout",
+						description:
+							"Wie lange auf eine Verbindung gewartet wird, bevor eine Zeitüberschreitung auftritt.",
+					},
+					isEnabled: {
+						label: "Überwachung aktivieren",
+					},
+				},
+				cancel: "Abbrechen",
+				cta: "Änderungen speichern",
+			},
+		},
+
+		tcpMonitorDetail: {
+			header: {
+				breadcrumb: {
+					tcpMonitors: "TCP-Monitore",
+				},
+				action: {
+					edit: "Bearbeiten",
+				},
+			},
+
+			alert: {
+				subscription: {
+					title: "Ihre Monitore sind pausiert!",
+					description:
+						"Ein Abonnement ist erforderlich, um die automatische Überwachung fortzusetzen.",
+					cta: "Überwachung starten",
+				},
+			},
+
+			info: {
+				title: "Monitor-Konfiguration",
+				endpoint: "Endpunkt",
+				status: "Status",
+				interval: "Prüfintervall",
+				timeout: "Timeout",
+			},
+
+			stats: {
+				uptime: {
+					label: "Uptime",
+					description: "Basierend auf den letzten Prüfungen",
+				},
+				avgResponseTime: {
+					label: "Durchschn. Antwortzeit",
+					description: "Durchschnittliche Verbindungszeit",
+				},
+				totalChecks: {
+					label: "Gesamtprüfungen",
+					description: "Anzahl der durchgeführten Prüfungen",
+				},
+			},
+
+			results: {
+				title: "Prüfverlauf",
+				description: "Aktuelle TCP-Verbindungsprüfungsergebnisse",
+				label: "Ergebnisse",
+				empty: "Noch keine Prüfergebnisse. Ergebnisse erscheinen nach der ersten Prüfung.",
+				columns: {
+					time: "Zeit",
+					status: "Status",
+					responseTime: "Antwortzeit",
+					error: "Fehler",
+				},
+			},
+		},
+
+		apiKeys: {
+			header: {
+				title: "API-Schlüssel",
+				action: {
+					create: "API-Schlüssel erstellen",
+				},
+			},
+
+			alert: {
+				subscription: {
+					title: "Ihre Monitore sind pausiert!",
+					description:
+						"Ein Abonnement ist erforderlich, um die automatische Überwachung fortzusetzen.",
+					cta: "Überwachung starten",
+				},
+			},
+
+			empty: {
+				title: "Noch keine API-Schlüssel",
+				description:
+					"Erstellen Sie einen API-Schlüssel, um programmgesteuert auf die Uptime-API zuzugreifen.",
+				cta: "API-Schlüssel erstellen",
+			},
+
+			newKey: {
+				title: "API-Schlüssel '{{name}}' erstellt!",
+				description:
+					"Kopieren Sie diesen Schlüssel jetzt. Aus Sicherheitsgründen können Sie ihn nicht erneut sehen.",
+				dismiss: "Ich habe meinen Schlüssel kopiert",
+			},
+
+			form: {
+				title: "Neuen API-Schlüssel erstellen",
+				description:
+					"API-Schlüssel ermöglichen programmgesteuerten Zugriff auf Ihre Monitore und Benachrichtigungen.",
+
+				fields: {
+					name: {
+						label: "Schlüsselname",
+						placeholder: "Produktions-API-Schlüssel",
+						description: "Ein Name zur Identifizierung dieses API-Schlüssels.",
+					},
+					scopes: {
+						label: "Berechtigungen",
+						description: "Wählen Sie, worauf dieser API-Schlüssel zugreifen kann.",
+						options: {
+							"monitors:read": "Monitore lesen",
+							"monitors:write": "Monitore schreiben",
+							"alerts:read": "Benachrichtigungen lesen",
+							"alerts:write": "Benachrichtigungen schreiben",
+						},
+					},
+					expiresAt: {
+						label: "Ablaufdatum (optional)",
+						description: "Leer lassen für einen Schlüssel, der nie abläuft.",
+					},
+				},
+
+				actions: {
+					cancel: "Abbrechen",
+					create: "API-Schlüssel erstellen",
+				},
+			},
+
+			table: {
+				label: "API-Schlüssel",
+
+				columns: {
+					name: "Name",
+					prefix: "Schlüssel",
+					scopes: "Berechtigungen",
+					lastUsed: "Zuletzt verwendet",
+					expires: "Läuft ab",
+					actions: "Aktionen",
+				},
+
+				lastUsed: {
+					never: "Nie",
+				},
+
+				expires: {
+					never: "Nie",
+				},
+
+				actions: {
+					menu: "Aktionsmenü",
+					delete: "Schlüssel löschen",
+				},
+
+				confirmation: {
+					delete:
+						"Sind Sie sicher, dass Sie den API-Schlüssel '{{name}}' löschen möchten? Diese Aktion kann nicht rückgängig gemacht werden.",
+				},
+			},
+
+			error: {
+				forbidden: {
+					title: "Sie haben keine Berechtigung, auf diese Seite zuzugreifen.",
+					description: "Bitte kontaktieren Sie Ihren Team-Administrator für Unterstützung.",
+				},
+
+				unknown: {
+					title: "Ein unerwarteter Fehler ist aufgetreten.",
+					description: "Bitte versuchen Sie es später erneut oder kontaktieren Sie den Support.",
+				},
+			},
+		},
+	},
+};
