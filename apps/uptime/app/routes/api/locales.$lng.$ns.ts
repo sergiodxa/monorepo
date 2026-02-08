@@ -2,12 +2,22 @@ import { cacheHeader } from "pretty-cache-header";
 import { data } from "react-router";
 import { z } from "zod";
 
+import deTranslation from "~/locales/de";
 import enTranslation from "~/locales/en";
+import esTranslation from "~/locales/es";
+import frTranslation from "~/locales/fr";
+import itTranslation from "~/locales/it";
+import jaTranslation from "~/locales/ja";
 
 import type { Route } from "./+types/locales.$lng.$ns";
 
 const resources = {
 	en: { translation: enTranslation },
+	es: { translation: esTranslation },
+	de: { translation: deTranslation },
+	ja: { translation: jaTranslation },
+	fr: { translation: frTranslation },
+	it: { translation: itTranslation },
 };
 
 export async function loader({ params }: Route.LoaderArgs) {
