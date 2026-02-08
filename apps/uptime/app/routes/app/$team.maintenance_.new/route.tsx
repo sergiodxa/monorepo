@@ -12,7 +12,7 @@ import {
 	Switch,
 	TextField,
 } from "@pkg/ui";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { type Key } from "react-aria-components";
 import { useTranslation } from "react-i18next";
 import { href, useFetcher } from "react-router";
@@ -87,18 +87,28 @@ function CreateMaintenanceForm(props: { monitors: Array<{ id: string; name: stri
 	let [selectedMonitor, setSelectedMonitor] = useState<Key | null>(null);
 	let [duration, setDuration] = useState<Key>("1h");
 	let [isRecurring, setIsRecurring] = useState(false);
+	let [isHydrated, setIsHydrated] = useState(false);
 
 	let timeZone = getLocalTimeZone();
-	let currentTime = now(timeZone);
+
+	// Use a fixed initial value to avoid hydration mismatch, then update after hydration
 	let [startsAt, setStartsAt] = useState<CalendarDateTime>(
-		new CalendarDateTime(
-			currentTime.year,
-			currentTime.month,
-			currentTime.day,
-			currentTime.hour,
-			currentTime.minute,
-		),
+		() => new CalendarDateTime(2000, 1, 1, 0, 0),
 	);
+
+	useEffect(() => {
+		let currentTime = now(timeZone);
+		setStartsAt(
+			new CalendarDateTime(
+				currentTime.year,
+				currentTime.month,
+				currentTime.day,
+				currentTime.hour,
+				currentTime.minute,
+			),
+		);
+		setIsHydrated(true);
+	}, [timeZone]);
 
 	// Calculate end time based on duration
 	function getEndsAt() {
@@ -186,15 +196,17 @@ function CreateMaintenanceForm(props: { monitors: Array<{ id: string; name: stri
 			</Select>
 			<input type="hidden" name="endsAt" value={endsAt.toDate(timeZone).toISOString()} />
 
-			<div className="rounded-lg border border-neutral-200 bg-neutral-50 p-4 dark:border-neutral-800 dark:bg-neutral-900">
-				<p className="text-sm text-neutral-600 dark:text-neutral-400">
-					{t("preview.label")}:{" "}
-					<span className="font-medium text-neutral-900 dark:text-neutral-100">
-						{startsAt.toDate(timeZone).toLocaleString()} -{" "}
-						{endsAt.toDate(timeZone).toLocaleString()}
-					</span>
-				</p>
-			</div>
+			{isHydrated && (
+				<div className="rounded-lg border border-neutral-200 bg-neutral-50 p-4 dark:border-neutral-800 dark:bg-neutral-900">
+					<p className="text-sm text-neutral-600 dark:text-neutral-400">
+						{t("preview.label")}:{" "}
+						<span className="font-medium text-neutral-900 dark:text-neutral-100">
+							{startsAt.toDate(timeZone).toLocaleString()} -{" "}
+							{endsAt.toDate(timeZone).toLocaleString()}
+						</span>
+					</p>
+				</div>
+			)}
 
 			<div className="flex flex-col gap-4">
 				<div className="flex flex-col gap-1">

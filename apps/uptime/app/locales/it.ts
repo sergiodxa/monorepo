@@ -34,12 +34,27 @@ export default {
 			screenshot: {
 				alt: "Screenshot di una dashboard di monitoraggio uptime che mostra due servizi con grafici heatmap settimanali. Ogni punto rappresenta un controllo: verde per successo, giallo per misto, rosso per fallimento e grigio per nessun dato. Ogni monitor mostra anche la percentuale di uptime, controlli totali, ultimo controllo e tempo di risposta al 99° percentile",
 			},
+
+			trustIndicators: {
+				freeToStart: "Gratis per iniziare",
+				payForAutomation: "Paghi per l'automazione",
+				cancelAnytime: "Annulli quando vuole",
+			},
+		},
+
+		trustIndicators: {
+			uptimeSla: "SLA Uptime",
+			globalRegions: "Regioni Globali",
+			daysDataRetention: "Giorni Conservazione Dati",
+			alertLatency: "Latenza Avvisi",
 		},
 
 		features: {
 			title: "Monitoraggio Potente Reso Semplice",
 			description:
 				"Tutto ciò che Le serve per mantenere i suoi servizi attivi senza inutili complessità.",
+			badge: "Funzionalità",
+			learnMore: "Scopri di più",
 
 			list: {
 				first: {
@@ -57,10 +72,109 @@ export default {
 					description:
 						"Prezzi trasparenti senza costi nascosti. Scala verso l'alto o verso il basso secondo necessità, con piani che crescono con le sue esigenze di monitoraggio.",
 				},
+				fourth: {
+					title: "Pagine di Stato",
+					description:
+						"Crei bellissime pagine di stato pubbliche per tenere informati i suoi utenti sulla disponibilità dei servizi e sugli incidenti.",
+				},
+				fifth: {
+					title: "Monitoraggio SSL",
+					description:
+						"Tenga traccia delle date di scadenza dei certificati e riceva avvisi prima che i suoi certificati SSL scadano per prevenire avvisi di sicurezza.",
+				},
+				sixth: {
+					title: "Monitoraggio DNS",
+					description:
+						"Rilevi modifiche ai record DNS e problemi di propagazione prima che impattino i suoi utenti o vengano dirottati.",
+				},
+				seventh: {
+					title: "Integrazioni Native",
+					description:
+						"Integrazioni dirette con Slack e Discord con notifiche avanzate, non solo webhook di base.",
+				},
+			},
+		},
+
+		completeFeatureSet: {
+			badge: "Set Completo di Funzionalità",
+			title: "Tutto ciò che Le serve per un monitoraggio affidabile",
+			description: "Capacità avanzate che rendono il monitoraggio semplice e completo.",
+
+			list: {
+				maintenanceWindows: {
+					title: "Finestre di Manutenzione",
+					description:
+						"Programmi i tempi di inattività e sopprima gli avvisi durante la manutenzione pianificata",
+				},
+				contentMonitoring: {
+					title: "Monitoraggio Contenuti",
+					description:
+						"Verifichi che parole chiave o contenuti specifici appaiano sulle sue pagine",
+				},
+				recoveryAlerts: {
+					title: "Avvisi di Ripristino",
+					description: "Venga notificato quando i servizi tornano online dopo un incidente",
+				},
+				apiAccess: {
+					title: "Accesso API",
+					description: "API REST completa con gestione delle chiavi per l'automazione",
+				},
+				alertCooldowns: {
+					title: "Cooldown Avvisi",
+					description: "Prevenga l'affaticamento da avvisi con periodi di cooldown configurabili",
+				},
+				customHeaders: {
+					title: "Header Personalizzati",
+					description: "Aggiunga header di autenticazione e parametri di richiesta personalizzati",
+				},
+			},
+		},
+
+		useCases: {
+			badge: "Casi d'Uso",
+			title: "Progettato per ogni esigenza di monitoraggio",
+			description:
+				"Dai semplici controlli di integrità ai sistemi distribuiti complessi, siamo qui per Lei.",
+			learnMore: "Scopri di più",
+			tailoredFor: "Soluzioni su misura per:",
+
+			list: {
+				websiteMonitoring: {
+					title: "Monitoraggio Siti Web",
+					description:
+						"Tenga traccia dell'uptime e delle prestazioni per landing page, blog e applicazioni web.",
+				},
+				apiMonitoring: {
+					title: "Monitoraggio API",
+					description: "Monitori API REST, endpoint GraphQL e webhook per la disponibilità.",
+				},
+				saas: {
+					title: "Applicazioni SaaS",
+					description:
+						"Mantenga affidabile il suo prodotto SaaS con monitoraggio proattivo e avvisi istantanei.",
+				},
+				microservices: {
+					title: "Microservizi",
+					description: "Monitori sistemi distribuiti e rilevi i guasti prima che si propaghino.",
+				},
+				healthChecks: {
+					title: "Controlli di Integrità",
+					description:
+						"Verifichi lo stato dei servizi e le connessioni al database con ping programmati.",
+				},
+			},
+
+			audiences: {
+				indieHackers: "Indie Hacker",
+				soloDevelopers: "Sviluppatori Singoli",
+				startups: "Startup",
+				agencies: "Agenzie",
+				enterprises: "Aziende",
 			},
 		},
 
 		pricing: {
+			badge: "Prezzi",
 			title: "Prezzi Semplici e Trasparenti",
 			description:
 				"Un abbonamento, nessun livello. Paghi solo per quello che usa con il nostro modello di prezzi diretto",
@@ -114,6 +228,7 @@ export default {
 		},
 
 		faq: {
+			badge: "FAQ",
 			title: "Domande Frequenti",
 			description: "Trova risposte alle domande comuni su Uptime",
 
@@ -300,6 +415,79 @@ export default {
 			title: "Monitor Uptime",
 			cta: "Crea Monitor",
 			subscribe: "I suoi monitor sono in pausa. Si abboni per continuare il monitoraggio",
+		},
+	},
+
+	statusPage: {
+		heatmap: {
+			daysAgo: "30 giorni fa",
+			today: "Oggi",
+			legend: {
+				full: "100%",
+				partial: "Parziale",
+				down: "Non Attivo",
+				noData: "Nessun dato",
+			},
+			tooltip: {
+				uptime: "{{percentage}}% uptime",
+				noData: "Nessun dato",
+			},
+		},
+		error: {
+			title: "Pagina di Stato Non Trovata",
+			description: "La pagina di stato che sta cercando non esiste o non è pubblica.",
+			goHome: "Vai alla homepage",
+		},
+	},
+
+	contentMonitoring: {
+		title: "Monitoraggio Contenuti",
+		description:
+			"Controlla il contenuto della risposta per parole chiave o pattern specifici. Il monitor fallirà se un controllo non passa.",
+		empty:
+			"Nessun controllo contenuti configurato. Aggiunga un controllo per monitorare parole chiave o pattern specifici nella risposta.",
+		addButton: "Aggiungi Controllo Contenuti",
+
+		form: {
+			checkType: {
+				label: "Tipo di Controllo",
+				description: "Scelga come confrontare il contenuto della risposta",
+				options: {
+					contains: "Contiene",
+					notContains: "Non Contiene",
+					regex: "Pattern Regex",
+				},
+			},
+			value: {
+				label: "Valore",
+				placeholder: "Inserisca parola chiave o pattern",
+				description: "Il testo o pattern regex da cercare",
+			},
+			caseSensitive: "Corrispondenza maiuscole/minuscole",
+			cancel: "Annulla",
+			add: "Aggiungi Controllo",
+		},
+
+		item: {
+			caseSensitive: "Maiuscole/minuscole",
+			disabled: "Disabilitato",
+			delete: "Elimina",
+		},
+
+		types: {
+			contains: "Contiene",
+			notContains: "Non Contiene",
+			regex: "Regex",
+		},
+	},
+
+	auth: {
+		error: {
+			title: "Errore di Autenticazione",
+			errorCode: "Codice Errore: {{code}}",
+			description: "Descrizione: {{description}}",
+			uri: "URI:",
+			tryAgain: "Per favore riprovi o contatti l'assistenza se il problema persiste.",
 		},
 	},
 

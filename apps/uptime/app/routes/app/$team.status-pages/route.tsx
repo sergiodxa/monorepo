@@ -245,15 +245,15 @@ function StatusPageTableRow(props: {
 				</Link>
 				<p className="text-sm text-neutral-500 dark:text-neutral-400">{props.statusPage.title}</p>
 			</Table.Cell>
-			<Table.Cell className="w-40">
+			<Table.Cell className="max-w-48">
 				<Link
 					to={href("/status/:slug", { slug: props.statusPage.slug })}
 					target="_blank"
 					rel="noopener noreferrer"
 					className="flex items-center gap-1 text-sm text-neutral-600 hover:text-neutral-900 hover:underline dark:text-neutral-400 dark:hover:text-neutral-100"
 				>
-					/{props.statusPage.slug}
-					<ExternalLinkIcon className="size-3" />
+					<span className="truncate">/{props.statusPage.slug}</span>
+					<ExternalLinkIcon className="size-3 flex-shrink-0" />
 				</Link>
 			</Table.Cell>
 			<Table.Cell className="w-28 text-center">{props.statusPage.monitorsCount}</Table.Cell>

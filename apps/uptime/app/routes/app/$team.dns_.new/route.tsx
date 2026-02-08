@@ -130,6 +130,7 @@ function CreateDnsMonitorForm() {
 			>
 				<Label>{t("fields.interval.label")}</Label>
 				<Select
+					aria-label={t("fields.interval.label")}
 					selectedKey={intervalSeconds}
 					onSelectionChange={(key) => key && setIntervalSeconds(Number(key))}
 				>

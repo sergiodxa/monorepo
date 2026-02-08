@@ -34,12 +34,27 @@ export default {
 			screenshot: {
 				alt: "2つのサービスと週間ヒートマップチャートを表示するUptime監視ダッシュボードのスクリーンショット。各ドットはチェックを表しています：緑は成功、黄色は混合、赤は失敗、グレーはデータなし。各モニターはUptime率、総チェック数、最終チェック時刻、99パーセンタイル応答時間も表示しています",
 			},
+
+			trustIndicators: {
+				freeToStart: "無料で開始",
+				payForAutomation: "自動化に課金",
+				cancelAnytime: "いつでもキャンセル可能",
+			},
+		},
+
+		trustIndicators: {
+			uptimeSla: "Uptime SLA",
+			globalRegions: "グローバルリージョン",
+			daysDataRetention: "日間データ保持",
+			alertLatency: "アラート遅延",
 		},
 
 		features: {
 			title: "シンプルで強力な監視",
 			description:
 				"サービスをスムーズに稼働させるために必要なすべてを、不必要な複雑さなしに提供します。",
+			badge: "機能",
+			learnMore: "詳細を見る",
 
 			list: {
 				first: {
@@ -57,10 +72,104 @@ export default {
 					description:
 						"隠れた料金のない透明な価格設定。必要に応じてスケールアップまたはダウンでき、監視ニーズに合わせて成長するプランです。",
 				},
+				fourth: {
+					title: "ステータスページ",
+					description:
+						"ユーザーにサービスの可用性とインシデントを通知するための美しい公開ステータスページを作成できます。",
+				},
+				fifth: {
+					title: "SSL監視",
+					description:
+						"証明書の有効期限を追跡し、SSL証明書が期限切れになる前にアラートを受け取ることで、セキュリティ警告を防ぎます。",
+				},
+				sixth: {
+					title: "DNS監視",
+					description:
+						"DNSレコードの変更や伝播の問題がユーザーに影響を与える前、またはハイジャックされる前に検出します。",
+				},
+				seventh: {
+					title: "ネイティブ統合",
+					description:
+						"基本的なwebhookだけでなく、リッチな通知を備えたSlackとDiscordの直接統合を提供します。",
+				},
+			},
+		},
+
+		completeFeatureSet: {
+			badge: "完全な機能セット",
+			title: "信頼性の高い監視に必要なすべて",
+			description: "監視を簡単かつ包括的にする高度な機能。",
+
+			list: {
+				maintenanceWindows: {
+					title: "メンテナンスウィンドウ",
+					description: "計画されたメンテナンス中のダウンタイムをスケジュールし、アラートを抑制",
+				},
+				contentMonitoring: {
+					title: "コンテンツ監視",
+					description: "ページに特定のキーワードやコンテンツが表示されているかを確認",
+				},
+				recoveryAlerts: {
+					title: "復旧アラート",
+					description: "インシデント後にサービスが復旧した時に通知を受け取る",
+				},
+				apiAccess: {
+					title: "APIアクセス",
+					description: "自動化のためのキー管理を備えた完全なREST API",
+				},
+				alertCooldowns: {
+					title: "アラートクールダウン",
+					description: "設定可能なクールダウン期間でアラート疲れを防止",
+				},
+				customHeaders: {
+					title: "カスタムヘッダー",
+					description: "認証ヘッダーとカスタムリクエストパラメータを追加",
+				},
+			},
+		},
+
+		useCases: {
+			badge: "ユースケース",
+			title: "あらゆる監視ニーズに対応",
+			description: "シンプルなヘルスチェックから複雑な分散システムまで、すべてをカバーします。",
+			learnMore: "詳細を見る",
+			tailoredFor: "対象ソリューション：",
+
+			list: {
+				websiteMonitoring: {
+					title: "ウェブサイト監視",
+					description:
+						"ランディングページ、ブログ、ウェブアプリケーションのアップタイムとパフォーマンスを追跡。",
+				},
+				apiMonitoring: {
+					title: "API監視",
+					description: "REST API、GraphQLエンドポイント、webhookの可用性を監視。",
+				},
+				saas: {
+					title: "SaaSアプリケーション",
+					description: "プロアクティブな監視と即座のアラートでSaaS製品の信頼性を維持。",
+				},
+				microservices: {
+					title: "マイクロサービス",
+					description: "分散システムを監視し、障害がカスケードする前にキャッチ。",
+				},
+				healthChecks: {
+					title: "ヘルスチェック",
+					description: "スケジュールされたpingでサービスの状態とデータベース接続を確認。",
+				},
+			},
+
+			audiences: {
+				indieHackers: "インディーハッカー",
+				soloDevelopers: "ソロ開発者",
+				startups: "スタートアップ",
+				agencies: "代理店",
+				enterprises: "エンタープライズ",
 			},
 		},
 
 		pricing: {
+			badge: "料金",
 			title: "シンプルで透明な料金",
 			description:
 				"単一のサブスクリプション、階層なし。わかりやすい料金モデルで使った分だけお支払い",
@@ -114,6 +223,7 @@ export default {
 		},
 
 		faq: {
+			badge: "FAQ",
 			title: "よくある質問",
 			description: "Uptimeに関するよくある質問への回答",
 
@@ -300,6 +410,79 @@ export default {
 			title: "Uptimeモニター",
 			cta: "モニターを作成",
 			subscribe: "モニターが一時停止されています。監視を続けるにはサブスクリプションが必要です",
+		},
+	},
+
+	statusPage: {
+		heatmap: {
+			daysAgo: "30日前",
+			today: "今日",
+			legend: {
+				full: "100%",
+				partial: "一部",
+				down: "ダウン",
+				noData: "データなし",
+			},
+			tooltip: {
+				uptime: "{{percentage}}% 稼働率",
+				noData: "データなし",
+			},
+		},
+		error: {
+			title: "ステータスページが見つかりません",
+			description: "お探しのステータスページは存在しないか、公開されていません。",
+			goHome: "ホームページへ",
+		},
+	},
+
+	contentMonitoring: {
+		title: "コンテンツ監視",
+		description:
+			"特定のキーワードやパターンのレスポンスコンテンツをチェックします。いずれかのチェックが通らない場合、モニターは失敗となります。",
+		empty:
+			"コンテンツチェックが設定されていません。レスポンス内の特定のキーワードやパターンを監視するためのチェックを追加してください。",
+		addButton: "コンテンツチェックを追加",
+
+		form: {
+			checkType: {
+				label: "チェックタイプ",
+				description: "レスポンスコンテンツのマッチング方法を選択",
+				options: {
+					contains: "含む",
+					notContains: "含まない",
+					regex: "正規表現パターン",
+				},
+			},
+			value: {
+				label: "値",
+				placeholder: "キーワードまたはパターンを入力",
+				description: "チェックするテキストまたは正規表現パターン",
+			},
+			caseSensitive: "大文字小文字を区別",
+			cancel: "キャンセル",
+			add: "チェックを追加",
+		},
+
+		item: {
+			caseSensitive: "大文字小文字を区別",
+			disabled: "無効",
+			delete: "削除",
+		},
+
+		types: {
+			contains: "含む",
+			notContains: "含まない",
+			regex: "正規表現",
+		},
+	},
+
+	auth: {
+		error: {
+			title: "認証エラー",
+			errorCode: "エラーコード: {{code}}",
+			description: "説明: {{description}}",
+			uri: "URI:",
+			tryAgain: "もう一度お試しいただくか、問題が解決しない場合はサポートにお問い合わせください。",
 		},
 	},
 

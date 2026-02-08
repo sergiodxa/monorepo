@@ -34,12 +34,27 @@ export default {
 			screenshot: {
 				alt: "Screenshot eines Uptime-Überwachungs-Dashboards mit zwei Diensten und wöchentlichen Heatmap-Diagrammen. Jeder Punkt repräsentiert eine Prüfung: grün für Erfolg, gelb für gemischt, rot für Fehler und grau für keine Daten. Jeder Monitor zeigt auch Uptime-Prozentsatz, Gesamtprüfungen, letzte Prüfung und 99. Perzentil der Antwortzeit an",
 			},
+
+			trustIndicators: {
+				freeToStart: "Kostenlos starten",
+				payForAutomation: "Zahlen Sie für Automatisierung",
+				cancelAnytime: "Jederzeit kündbar",
+			},
+		},
+
+		trustIndicators: {
+			uptimeSla: "Uptime-SLA",
+			globalRegions: "Globale Regionen",
+			daysDataRetention: "Tage Datenspeicherung",
+			alertLatency: "Benachrichtigungs-Latenz",
 		},
 
 		features: {
 			title: "Leistungsstarke Überwachung einfach gemacht",
 			description:
 				"Alles, was Sie brauchen, um Ihre Dienste reibungslos am Laufen zu halten, ohne unnötige Komplexität.",
+			badge: "Funktionen",
+			learnMore: "Mehr erfahren",
 
 			list: {
 				first: {
@@ -57,10 +72,114 @@ export default {
 					description:
 						"Transparente Preise ohne versteckte Gebühren. Skalieren Sie nach Bedarf hoch oder runter, mit Plänen, die mit Ihren Überwachungsanforderungen wachsen.",
 				},
+				fourth: {
+					title: "Statusseiten",
+					description:
+						"Erstellen Sie ansprechende öffentliche Statusseiten, um Ihre Benutzer über die Dienstverfügbarkeit und Vorfälle zu informieren.",
+				},
+				fifth: {
+					title: "SSL-Überwachung",
+					description:
+						"Verfolgen Sie Zertifikats-Ablaufdaten und erhalten Sie Benachrichtigungen, bevor Ihre SSL-Zertifikate ablaufen, um Sicherheitswarnungen zu vermeiden.",
+				},
+				sixth: {
+					title: "DNS-Überwachung",
+					description:
+						"Erkennen Sie DNS-Eintragsänderungen und Propagierungsprobleme, bevor sie Ihre Benutzer beeinträchtigen oder gekapert werden.",
+				},
+				seventh: {
+					title: "Native Integrationen",
+					description:
+						"Direkte Slack- und Discord-Integrationen mit umfangreichen Benachrichtigungen, nicht nur einfache Webhooks.",
+				},
+			},
+		},
+
+		completeFeatureSet: {
+			badge: "Komplettes Funktionsset",
+			title: "Alles, was Sie für zuverlässige Überwachung brauchen",
+			description: "Erweiterte Funktionen, die die Überwachung mühelos und umfassend machen.",
+
+			list: {
+				maintenanceWindows: {
+					title: "Wartungsfenster",
+					description:
+						"Planen Sie Ausfallzeiten und unterdrücken Sie Benachrichtigungen während geplanter Wartung",
+				},
+				contentMonitoring: {
+					title: "Inhaltsüberwachung",
+					description:
+						"Überprüfen Sie, ob bestimmte Schlüsselwörter oder Inhalte auf Ihren Seiten erscheinen",
+				},
+				recoveryAlerts: {
+					title: "Wiederherstellungs-Benachrichtigungen",
+					description:
+						"Werden Sie benachrichtigt, wenn Dienste nach einem Vorfall wieder verfügbar sind",
+				},
+				apiAccess: {
+					title: "API-Zugang",
+					description: "Vollständige REST-API mit Schlüsselverwaltung für Automatisierung",
+				},
+				alertCooldowns: {
+					title: "Benachrichtigungs-Cooldowns",
+					description:
+						"Verhindern Sie Benachrichtigungsmüdigkeit mit konfigurierbaren Cooldown-Perioden",
+				},
+				customHeaders: {
+					title: "Benutzerdefinierte Header",
+					description:
+						"Fügen Sie Authentifizierungs-Header und benutzerdefinierte Anfrageparameter hinzu",
+				},
+			},
+		},
+
+		useCases: {
+			badge: "Anwendungsfälle",
+			title: "Für jeden Überwachungsbedarf entwickelt",
+			description:
+				"Von einfachen Gesundheitsprüfungen bis hin zu komplexen verteilten Systemen – wir haben Sie abgedeckt.",
+			learnMore: "Mehr erfahren",
+			tailoredFor: "Maßgeschneiderte Lösungen für:",
+
+			list: {
+				websiteMonitoring: {
+					title: "Website-Überwachung",
+					description:
+						"Verfolgen Sie Uptime und Leistung für Landingpages, Blogs und Webanwendungen.",
+				},
+				apiMonitoring: {
+					title: "API-Überwachung",
+					description:
+						"Überwachen Sie REST-APIs, GraphQL-Endpunkte und Webhooks auf Verfügbarkeit.",
+				},
+				saas: {
+					title: "SaaS-Anwendungen",
+					description:
+						"Halten Sie Ihr SaaS-Produkt zuverlässig mit proaktiver Überwachung und sofortigen Benachrichtigungen.",
+				},
+				microservices: {
+					title: "Microservices",
+					description:
+						"Überwachen Sie verteilte Systeme und erkennen Sie Fehler, bevor sie sich ausbreiten.",
+				},
+				healthChecks: {
+					title: "Gesundheitsprüfungen",
+					description:
+						"Überprüfen Sie die Dienstverfügbarkeit und Datenbankverbindungen mit geplanten Pings.",
+				},
+			},
+
+			audiences: {
+				indieHackers: "Indie Hacker",
+				soloDevelopers: "Solo-Entwickler",
+				startups: "Startups",
+				agencies: "Agenturen",
+				enterprises: "Unternehmen",
 			},
 		},
 
 		pricing: {
+			badge: "Preise",
 			title: "Einfache, transparente Preise",
 			description:
 				"Ein Abonnement, keine Stufen. Zahlen Sie nur für das, was Sie nutzen, mit unserem unkomplizierten Preismodell",
@@ -115,6 +234,7 @@ export default {
 		},
 
 		faq: {
+			badge: "FAQ",
 			title: "Häufig gestellte Fragen",
 			description: "Finden Sie Antworten auf häufige Fragen zu Uptime",
 
@@ -301,6 +421,80 @@ export default {
 			title: "Uptime-Monitore",
 			cta: "Monitor erstellen",
 			subscribe: "Ihre Monitore sind pausiert. Abonnieren Sie, um die Überwachung fortzusetzen",
+		},
+	},
+
+	statusPage: {
+		heatmap: {
+			daysAgo: "Vor 30 Tagen",
+			today: "Heute",
+			legend: {
+				full: "100%",
+				partial: "Teilweise",
+				down: "Ausgefallen",
+				noData: "Keine Daten",
+			},
+			tooltip: {
+				uptime: "{{percentage}}% Uptime",
+				noData: "Keine Daten",
+			},
+		},
+		error: {
+			title: "Statusseite nicht gefunden",
+			description: "Die gesuchte Statusseite existiert nicht oder ist nicht öffentlich.",
+			goHome: "Zur Startseite",
+		},
+	},
+
+	contentMonitoring: {
+		title: "Inhaltsüberwachung",
+		description:
+			"Überprüfen Sie Antwortinhalte auf bestimmte Schlüsselwörter oder Muster. Der Monitor schlägt fehl, wenn eine Prüfung nicht besteht.",
+		empty:
+			"Keine Inhaltsprüfungen konfiguriert. Fügen Sie eine Prüfung hinzu, um bestimmte Schlüsselwörter oder Muster in der Antwort zu überwachen.",
+		addButton: "Inhaltsprüfung hinzufügen",
+
+		form: {
+			checkType: {
+				label: "Prüfungstyp",
+				description: "Wählen Sie, wie der Antwortinhalt abgeglichen werden soll",
+				options: {
+					contains: "Enthält",
+					notContains: "Enthält nicht",
+					regex: "Regex-Muster",
+				},
+			},
+			value: {
+				label: "Wert",
+				placeholder: "Schlüsselwort oder Muster eingeben",
+				description: "Der Text oder das Regex-Muster, nach dem gesucht werden soll",
+			},
+			caseSensitive: "Groß-/Kleinschreibung beachten",
+			cancel: "Abbrechen",
+			add: "Prüfung hinzufügen",
+		},
+
+		item: {
+			caseSensitive: "Groß-/Kleinschreibung beachten",
+			disabled: "Deaktiviert",
+			delete: "Löschen",
+		},
+
+		types: {
+			contains: "Enthält",
+			notContains: "Enthält nicht",
+			regex: "Regex",
+		},
+	},
+
+	auth: {
+		error: {
+			title: "Authentifizierungsfehler",
+			errorCode: "Fehlercode: {{code}}",
+			description: "Beschreibung: {{description}}",
+			uri: "URI:",
+			tryAgain:
+				"Bitte versuchen Sie es erneut oder kontaktieren Sie den Support, wenn das Problem weiterhin besteht.",
 		},
 	},
 

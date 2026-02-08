@@ -34,12 +34,27 @@ export default {
 			screenshot: {
 				alt: "Capture d'écran d'un tableau de bord de surveillance de disponibilité affichant deux services avec des graphiques de chaleur hebdomadaires. Chaque point représente une vérification : vert pour succès, jaune pour mixte, rouge pour échec et gris pour aucune donnée. Chaque moniteur affiche également le pourcentage de disponibilité, le nombre total de vérifications, l'heure de la dernière vérification et le temps de réponse au 99e percentile",
 			},
+
+			trustIndicators: {
+				freeToStart: "Gratuit pour commencer",
+				payForAutomation: "Payez pour l'automatisation",
+				cancelAnytime: "Annulez à tout moment",
+			},
+		},
+
+		trustIndicators: {
+			uptimeSla: "SLA de disponibilité",
+			globalRegions: "Régions mondiales",
+			daysDataRetention: "Jours de rétention des données",
+			alertLatency: "Latence des alertes",
 		},
 
 		features: {
 			title: "Une surveillance puissante simplifiée",
 			description:
 				"Tout ce dont vous avez besoin pour maintenir vos services en fonctionnement, sans complexité inutile.",
+			badge: "Fonctionnalités",
+			learnMore: "En savoir plus",
 
 			list: {
 				first: {
@@ -57,10 +72,112 @@ export default {
 					description:
 						"Tarification transparente sans frais cachés. Augmentez ou diminuez selon vos besoins, avec des forfaits qui évoluent avec vos besoins de surveillance.",
 				},
+				fourth: {
+					title: "Pages de statut",
+					description:
+						"Créez de belles pages de statut publiques pour tenir vos utilisateurs informés de la disponibilité des services et des incidents.",
+				},
+				fifth: {
+					title: "Surveillance SSL",
+					description:
+						"Suivez les dates d'expiration des certificats et recevez des alertes avant que vos certificats SSL n'expirent pour éviter les avertissements de sécurité.",
+				},
+				sixth: {
+					title: "Surveillance DNS",
+					description:
+						"Détectez les modifications d'enregistrements DNS et les problèmes de propagation avant qu'ils n'impactent vos utilisateurs ou ne soient détournés.",
+				},
+				seventh: {
+					title: "Intégrations natives",
+					description:
+						"Intégrations directes Slack et Discord avec des notifications enrichies, pas seulement des webhooks basiques.",
+				},
+			},
+		},
+
+		completeFeatureSet: {
+			badge: "Ensemble complet de fonctionnalités",
+			title: "Tout ce dont vous avez besoin pour une surveillance fiable",
+			description: "Des capacités avancées qui rendent la surveillance simple et complète.",
+
+			list: {
+				maintenanceWindows: {
+					title: "Fenêtres de maintenance",
+					description:
+						"Planifiez des temps d'arrêt et supprimez les alertes pendant les maintenances planifiées",
+				},
+				contentMonitoring: {
+					title: "Surveillance du contenu",
+					description:
+						"Vérifiez que des mots-clés ou du contenu spécifique apparaissent sur vos pages",
+				},
+				recoveryAlerts: {
+					title: "Alertes de récupération",
+					description: "Soyez notifié lorsque les services reviennent en ligne après un incident",
+				},
+				apiAccess: {
+					title: "Accès API",
+					description: "API REST complète avec gestion des clés pour l'automatisation",
+				},
+				alertCooldowns: {
+					title: "Délais entre alertes",
+					description: "Évitez la fatigue des alertes avec des périodes de délai configurables",
+				},
+				customHeaders: {
+					title: "En-têtes personnalisés",
+					description:
+						"Ajoutez des en-têtes d'authentification et des paramètres de requête personnalisés",
+				},
+			},
+		},
+
+		useCases: {
+			badge: "Cas d'utilisation",
+			title: "Conçu pour tous les besoins de surveillance",
+			description:
+				"Des simples vérifications de santé aux systèmes distribués complexes, nous avons ce qu'il vous faut.",
+			learnMore: "En savoir plus",
+			tailoredFor: "Solutions adaptées pour :",
+
+			list: {
+				websiteMonitoring: {
+					title: "Surveillance de sites web",
+					description:
+						"Suivez la disponibilité et les performances des pages d'accueil, blogs et applications web.",
+				},
+				apiMonitoring: {
+					title: "Surveillance d'API",
+					description:
+						"Surveillez les API REST, les points de terminaison GraphQL et les webhooks pour leur disponibilité.",
+				},
+				saas: {
+					title: "Applications SaaS",
+					description:
+						"Gardez votre produit SaaS fiable avec une surveillance proactive et des alertes instantanées.",
+				},
+				microservices: {
+					title: "Microservices",
+					description:
+						"Surveillez les systèmes distribués et détectez les pannes avant qu'elles ne se propagent.",
+				},
+				healthChecks: {
+					title: "Vérifications de santé",
+					description:
+						"Vérifiez la santé des services et les connexions aux bases de données avec des pings planifiés.",
+				},
+			},
+
+			audiences: {
+				indieHackers: "Indie Hackers",
+				soloDevelopers: "Développeurs solo",
+				startups: "Startups",
+				agencies: "Agences",
+				enterprises: "Entreprises",
 			},
 		},
 
 		pricing: {
+			badge: "Tarifs",
 			title: "Tarification simple et transparente",
 			description:
 				"Un seul abonnement, pas de niveaux. Payez uniquement ce que vous utilisez avec notre modèle de tarification simple",
@@ -114,6 +231,7 @@ export default {
 		},
 
 		faq: {
+			badge: "FAQ",
 			title: "Questions fréquemment posées",
 			description: "Trouvez des réponses aux questions courantes sur Uptime",
 
@@ -300,6 +418,79 @@ export default {
 			title: "Moniteurs Uptime",
 			cta: "Créer un moniteur",
 			subscribe: "Vos moniteurs sont en pause. Abonnez-vous pour continuer la surveillance",
+		},
+	},
+
+	statusPage: {
+		heatmap: {
+			daysAgo: "Il y a 30 jours",
+			today: "Aujourd'hui",
+			legend: {
+				full: "100%",
+				partial: "Partiel",
+				down: "Hors ligne",
+				noData: "Pas de données",
+			},
+			tooltip: {
+				uptime: "{{percentage}}% de disponibilité",
+				noData: "Pas de données",
+			},
+		},
+		error: {
+			title: "Page de statut introuvable",
+			description: "La page de statut que vous recherchez n'existe pas ou n'est pas publique.",
+			goHome: "Retourner à l'accueil",
+		},
+	},
+
+	contentMonitoring: {
+		title: "Surveillance du contenu",
+		description:
+			"Vérifiez le contenu des réponses pour des mots-clés ou des modèles spécifiques. Le moniteur échouera si une vérification ne passe pas.",
+		empty:
+			"Aucune vérification de contenu configurée. Ajoutez une vérification pour surveiller des mots-clés ou des modèles spécifiques dans la réponse.",
+		addButton: "Ajouter une vérification de contenu",
+
+		form: {
+			checkType: {
+				label: "Type de vérification",
+				description: "Choisissez comment faire correspondre le contenu de la réponse",
+				options: {
+					contains: "Contient",
+					notContains: "Ne contient pas",
+					regex: "Modèle Regex",
+				},
+			},
+			value: {
+				label: "Valeur",
+				placeholder: "Entrez un mot-clé ou un modèle",
+				description: "Le texte ou le modèle regex à vérifier",
+			},
+			caseSensitive: "Correspondance sensible à la casse",
+			cancel: "Annuler",
+			add: "Ajouter la vérification",
+		},
+
+		item: {
+			caseSensitive: "Sensible à la casse",
+			disabled: "Désactivé",
+			delete: "Supprimer",
+		},
+
+		types: {
+			contains: "Contient",
+			notContains: "Ne contient pas",
+			regex: "Regex",
+		},
+	},
+
+	auth: {
+		error: {
+			title: "Erreur d'authentification",
+			errorCode: "Code d'erreur : {{code}}",
+			description: "Description : {{description}}",
+			uri: "URI :",
+			tryAgain: "Veuillez réessayer ou contacter le support si le problème persiste.",
 		},
 	},
 

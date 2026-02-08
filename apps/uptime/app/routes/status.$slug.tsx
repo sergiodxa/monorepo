@@ -148,12 +148,17 @@ export async function loader({ params }: Route.LoaderArgs) {
 	let validMonitors = monitorsWithData.filter((m): m is NonNullable<typeof m> => m !== null);
 
 	let overallStatus: "operational" | "degraded" | "down" = "operational";
-	for (let monitor of validMonitors) {
-		if (monitor.status === "down") {
+	if (validMonitors.length > 0) {
+		let downCount = validMonitors.filter((m) => m.status === "down").length;
+		let degradedCount = validMonitors.filter((m) => m.status === "degraded").length;
+		let totalCount = validMonitors.length;
+		let notOperationalCount = downCount + degradedCount;
+
+		if (notOperationalCount > totalCount / 2) {
+			// Majority of services are down or degraded
 			overallStatus = "down";
-			break;
-		}
-		if (monitor.status === "degraded") {
+		} else if (notOperationalCount > 0) {
+			// Some services are down but majority are up
 			overallStatus = "degraded";
 		}
 	}
