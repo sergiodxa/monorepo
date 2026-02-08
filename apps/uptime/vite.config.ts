@@ -12,4 +12,9 @@ export default defineConfig({
 		reactRouter(),
 		tsconfigPaths(),
 	],
+	build: {
+		rollupOptions: {
+			external: ["node:async_hooks"],
+		},
+	},
 });
