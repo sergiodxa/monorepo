@@ -1,6 +1,6 @@
 import type { WorkflowEvent, WorkflowStep } from "cloudflare:workers";
 
-import { logger } from "@pkg/logger";
+import { BatchedLogger } from "@pkg/logger";
 import { env, WorkflowEntrypoint } from "cloudflare:workers";
 
 const MILLISECONDS_PER_SECOND = 1000;
@@ -12,6 +12,17 @@ export default class Ping extends WorkflowEntrypoint<Cloudflare.Env> {
 	}
 
 	override async run(event: WorkflowEvent<unknown>, step: WorkflowStep) {
+		let monitorResultId = event.instanceId;
+		let logger = new BatchedLogger(`workflow:ping:${monitorResultId}`);
+
+		try {
+			await this.execute(event, step, logger);
+		} finally {
+			logger.flush();
+		}
+	}
+
+	private async execute(event: WorkflowEvent<unknown>, step: WorkflowStep, logger: BatchedLogger) {
 		let monitorResultId = event.instanceId;
 
 		logger.info("workflow.ping.started", { monitorResultId });
