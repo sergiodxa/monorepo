@@ -24,9 +24,10 @@ import { useTranslation } from "react-i18next";
 import { href, Outlet, useFetcher, useFetchers, useParams } from "react-router";
 import { useSpinDelay } from "spin-delay";
 
+import type { SupportedLanguage } from "~/db/schema";
+
 import auth from "~/clients/auth";
 import { AppHeader } from "~/components/app-header";
-import { supportedLanguages, type SupportedLanguage } from "~/db/schema";
 import { db } from "~/middleware/drizzle";
 import { i18next, languageNames } from "~/middleware/i18next";
 import { logger } from "~/middleware/logger";
@@ -63,6 +64,7 @@ interface LoaderData {
 		membershipId: string;
 	}>;
 	preferredLanguage: SupportedLanguage | null;
+	languageNames: Record<string, string>;
 	meta: Array<{ title: string } | { name: string; content: string }>;
 }
 
@@ -137,6 +139,7 @@ export async function loader({ context }: { context: RouterContextProvider }): P
 		},
 		teams: teamsWithRole,
 		preferredLanguage: userPreferences?.preferredLanguage ?? null,
+		languageNames,
 		meta: [
 			{ title: t("page.account.meta.title") },
 			{ name: "description", content: t("page.account.meta.description") },
@@ -170,7 +173,10 @@ export default function Component({ loaderData }: { loaderData: LoaderData }) {
 				<ProfileSection user={loaderData.user} />
 
 				{/* Language Preference Section */}
-				<LanguageSection preferredLanguage={loaderData.preferredLanguage} />
+				<LanguageSection
+					preferredLanguage={loaderData.preferredLanguage}
+					languageNames={loaderData.languageNames}
+				/>
 
 				{/* Teams Section */}
 				<TeamsSection teams={loaderData.teams} userId={loaderData.user.id} />
@@ -232,7 +238,10 @@ function ProfileSection(props: {
 // Language Section
 // =============================================================================
 
-function LanguageSection(props: { preferredLanguage: SupportedLanguage | null }) {
+function LanguageSection(props: {
+	preferredLanguage: SupportedLanguage | null;
+	languageNames: Record<string, string>;
+}) {
 	let { t } = useTranslation("translation", { keyPrefix: "page.account.language" });
 	let fetcher = useFetcher();
 	let isPending = useSpinDelay(fetcher.state !== "idle", {
@@ -243,9 +252,9 @@ function LanguageSection(props: { preferredLanguage: SupportedLanguage | null })
 	// Build options: auto-detect + all supported languages
 	let languageOptions = [
 		{ id: "auto", name: t("form.fields.language.options.auto") },
-		...supportedLanguages.map((lang) => ({
-			id: lang,
-			name: languageNames[lang],
+		...Object.entries(props.languageNames).map(([code, name]) => ({
+			id: code,
+			name,
 		})),
 	];
 
