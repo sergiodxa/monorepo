@@ -264,35 +264,41 @@ function Features() {
 			title: t("list.first.title"),
 			description: t("list.first.description"),
 			icon: <ActivityIcon className="size-6" />,
+			href: "/features/monitors",
 		},
 		{
 			title: t("list.second.title"),
 			description: t("list.second.description"),
 			icon: <BellIcon className="size-6" />,
+			href: "/features/alerts",
 		},
 		{
 			title: "Status Pages",
 			description:
 				"Create beautiful public status pages to keep your users informed about service availability and incidents.",
 			icon: <GlobeIcon className="size-6" />,
+			href: "/features/status-pages",
 		},
 		{
 			title: "SSL Monitoring",
 			description:
 				"Track certificate expiry dates and get alerts before your SSL certificates expire to prevent security warnings.",
 			icon: <LockIcon className="size-6" />,
+			href: "/features/ssl",
 		},
 		{
 			title: "DNS Monitoring",
 			description:
 				"Detect DNS record changes and propagation issues before they impact your users or get hijacked.",
 			icon: <LinkIcon className="size-6" />,
+			href: "/features/dns",
 		},
 		{
 			title: "Native Integrations",
 			description:
 				"Direct Slack and Discord integrations with rich notifications, not just basic webhooks.",
 			icon: <MessageSquareIcon className="size-6" />,
+			href: "/features/integrations",
 		},
 	] as const;
 
@@ -311,79 +317,24 @@ function Features() {
 
 				<div className="mt-16 grid gap-8 md:grid-cols-2 lg:grid-cols-3">
 					{list.map((item) => (
-						<Card key={item.title} className="transition-shadow hover:shadow-lg">
-							<Card.Header>
-								<div className="mb-4 flex size-12 items-center justify-center rounded-xl bg-primary-100 text-primary-600 dark:bg-primary-900/50 dark:text-primary-400">
-									{item.icon}
-								</div>
-								<Card.Title className="text-xl">{item.title}</Card.Title>
-							</Card.Header>
-							<Card.Content className="pt-0">
-								<p className="text-neutral-600 dark:text-neutral-400">{item.description}</p>
-							</Card.Content>
-						</Card>
+						<Link
+							key={item.title}
+							to={href(item.href)}
+							className="group rounded-xl border border-neutral-200 bg-white p-6 transition hover:border-primary-300 hover:shadow-lg dark:border-neutral-800 dark:bg-neutral-900 dark:hover:border-primary-700"
+						>
+							<div className="mb-4 flex size-12 items-center justify-center rounded-xl bg-primary-100 text-primary-600 transition group-hover:bg-primary-200 dark:bg-primary-900/50 dark:text-primary-400 dark:group-hover:bg-primary-900">
+								{item.icon}
+							</div>
+							<h3 className="text-xl font-semibold text-neutral-900 transition group-hover:text-primary-600 dark:text-neutral-50 dark:group-hover:text-primary-400">
+								{item.title}
+							</h3>
+							<p className="mt-2 text-neutral-600 dark:text-neutral-400">{item.description}</p>
+							<span className="mt-4 inline-flex items-center gap-1 text-sm font-medium text-primary-600 dark:text-primary-400">
+								Learn more
+								<ArrowRightIcon className="size-4 transition group-hover:translate-x-1" />
+							</span>
+						</Link>
 					))}
-				</div>
-
-				{/* Feature pages links */}
-				<div className="mt-12 flex flex-wrap items-center justify-center gap-4">
-					<span className="text-sm text-neutral-500 dark:text-neutral-400">Explore features:</span>
-					<Link
-						to={href("/features/monitors")}
-						className="inline-flex items-center gap-1 text-sm font-medium text-primary-600 transition hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300"
-					>
-						Monitors
-						<ArrowRightIcon className="size-3" />
-					</Link>
-					<Link
-						to={href("/features/alerts")}
-						className="inline-flex items-center gap-1 text-sm font-medium text-primary-600 transition hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300"
-					>
-						Alerts
-						<ArrowRightIcon className="size-3" />
-					</Link>
-					<Link
-						to={href("/features/teams")}
-						className="inline-flex items-center gap-1 text-sm font-medium text-primary-600 transition hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300"
-					>
-						Teams
-						<ArrowRightIcon className="size-3" />
-					</Link>
-					<Link
-						to={href("/features/analytics")}
-						className="inline-flex items-center gap-1 text-sm font-medium text-primary-600 transition hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300"
-					>
-						Analytics
-						<ArrowRightIcon className="size-3" />
-					</Link>
-					<Link
-						to={href("/features/status-pages")}
-						className="inline-flex items-center gap-1 text-sm font-medium text-primary-600 transition hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300"
-					>
-						Status Pages
-						<ArrowRightIcon className="size-3" />
-					</Link>
-					<Link
-						to={href("/features/ssl")}
-						className="inline-flex items-center gap-1 text-sm font-medium text-primary-600 transition hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300"
-					>
-						SSL
-						<ArrowRightIcon className="size-3" />
-					</Link>
-					<Link
-						to={href("/features/dns")}
-						className="inline-flex items-center gap-1 text-sm font-medium text-primary-600 transition hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300"
-					>
-						DNS
-						<ArrowRightIcon className="size-3" />
-					</Link>
-					<Link
-						to={href("/features/integrations")}
-						className="inline-flex items-center gap-1 text-sm font-medium text-primary-600 transition hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300"
-					>
-						Integrations
-						<ArrowRightIcon className="size-3" />
-					</Link>
 				</div>
 			</div>
 		</section>
