@@ -1,4 +1,4 @@
-import { Alert, Badge, Button, Card, confirm, LinkButton, Table } from "@pkg/ui";
+import { Alert, Badge, Button, confirm, Empty, LinkButton, Table } from "@pkg/ui";
 import { format } from "date-fns";
 import { NetworkIcon, PlusIcon, TrashIcon } from "lucide-react";
 import { useTranslation } from "react-i18next";
@@ -59,9 +59,9 @@ export default function TcpMonitorsPage({ loaderData, params }: Route.ComponentP
 					{ label: t("header.title") },
 				]}
 			>
-				<LinkButton color="primary" href={href("/app/:team/tcp/new", { team: params.team })}>
-					<PlusIcon className="size-4" />
-					{t("header.action.create")}
+				<LinkButton href={href("/app/:team/tcp/new", { team: params.team })}>
+					<PlusIcon className="size-5" aria-hidden />
+					<span className="max-sm:sr-only">{t("header.action.create")}</span>
 				</LinkButton>
 			</AppHeader>
 
@@ -94,15 +94,19 @@ function EmptyState({ teamSlug }: { teamSlug: string }) {
 	let { t } = useTranslation("translation", { keyPrefix: "page.tcpMonitors.empty" });
 
 	return (
-		<Card className="flex flex-col items-center justify-center p-12 text-center">
-			<NetworkIcon className="mb-4 size-12 text-neutral-400" />
-			<h3 className="text-lg font-semibold">{t("title")}</h3>
-			<p className="mb-6 text-neutral-500 dark:text-neutral-400">{t("description")}</p>
-			<LinkButton color="primary" href={href("/app/:team/tcp/new", { team: teamSlug })}>
-				<PlusIcon className="size-4" />
-				{t("cta")}
-			</LinkButton>
-		</Card>
+		<Empty className="mx-auto max-w-md py-16">
+			<Empty.Icon>
+				<NetworkIcon className="size-12" />
+			</Empty.Icon>
+			<Empty.Title>{t("title")}</Empty.Title>
+			<Empty.Description>{t("description")}</Empty.Description>
+			<Empty.Action>
+				<LinkButton href={href("/app/:team/tcp/new", { team: teamSlug })}>
+					<PlusIcon className="size-5" aria-hidden />
+					{t("cta")}
+				</LinkButton>
+			</Empty.Action>
+		</Empty>
 	);
 }
 
