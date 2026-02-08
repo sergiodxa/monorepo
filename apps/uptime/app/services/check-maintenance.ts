@@ -131,7 +131,7 @@ export async function getActiveMaintenanceWindows(
 
 /**
  * Parse recurring pattern string
- * Format: "weekly:monday:02:00-04:00" or "daily:02:00-04:00"
+ * Format: "weekly:monday:02:00-04:00" or "daily:02:00-04:00" or "monthly:15:02:00-04:00"
  */
 export function parseRecurringPattern(pattern: string): RecurringPattern | null {
 	let parts = pattern.split(":");
@@ -164,14 +164,33 @@ export function parseRecurringPattern(pattern: string): RecurringPattern | null 
 		};
 	}
 
+	if (parts[0] === "monthly") {
+		// Format: "monthly:dayOfMonth:HH:MM-HH:MM"
+		let dayOfMonthStr = parts[1];
+		let dayOfMonth = Number.parseInt(dayOfMonthStr ?? "", 10);
+		let timeRange = parts.slice(2).join(":");
+		let [startTime, endTime] = timeRange.split("-");
+		if (!dayOfMonthStr || Number.isNaN(dayOfMonth) || dayOfMonth < 1 || dayOfMonth > 31)
+			return null;
+		if (!startTime || !endTime) return null;
+
+		return {
+			type: "monthly",
+			dayOfMonth,
+			startTime,
+			endTime,
+		};
+	}
+
 	return null;
 }
 
 type DayOfWeek = "sunday" | "monday" | "tuesday" | "wednesday" | "thursday" | "friday" | "saturday";
 
 interface RecurringPattern {
-	type: "daily" | "weekly";
+	type: "daily" | "weekly" | "monthly";
 	dayOfWeek?: DayOfWeek;
+	dayOfMonth?: number; // 1-31 for monthly patterns
 	startTime: string; // "HH:MM" format
 	endTime: string; // "HH:MM" format
 }
@@ -191,6 +210,7 @@ const DAY_MAP: Record<DayOfWeek, number> = {
  */
 export function isRecurringPatternActive(pattern: RecurringPattern, now: Date): boolean {
 	let currentDay = now.getUTCDay();
+	let currentDayOfMonth = now.getUTCDate();
 	let currentHours = now.getUTCHours();
 	let currentMinutes = now.getUTCMinutes();
 	let currentTimeMinutes = currentHours * 60 + currentMinutes;
@@ -211,6 +231,14 @@ export function isRecurringPatternActive(pattern: RecurringPattern, now: Date): 
 	if (pattern.type === "weekly" && pattern.dayOfWeek) {
 		let targetDay = DAY_MAP[pattern.dayOfWeek];
 		if (currentDay !== targetDay) return false;
+		return currentTimeMinutes >= startTimeMinutes && currentTimeMinutes < endTimeMinutes;
+	}
+
+	if (pattern.type === "monthly" && pattern.dayOfMonth) {
+		// Handle end of month edge case: if dayOfMonth > days in current month, use last day
+		let daysInMonth = new Date(now.getUTCFullYear(), now.getUTCMonth() + 1, 0).getUTCDate();
+		let targetDayOfMonth = Math.min(pattern.dayOfMonth, daysInMonth);
+		if (currentDayOfMonth !== targetDayOfMonth) return false;
 		return currentTimeMinutes >= startTimeMinutes && currentTimeMinutes < endTimeMinutes;
 	}
 

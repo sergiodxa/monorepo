@@ -337,10 +337,49 @@ export default {
 			name: "Uptime",
 			description: "Monitoreo simple y confiable para sus sitios web y APIs.",
 			copyright: "© {{year}} Uptime por Sergio Xalambrí. Todos los derechos reservados.",
-			links: {
-				privacy: "Privacidad",
-				terms: "Términos de servicio",
-				security: "Seguridad",
+			sections: {
+				product: {
+					title: "Producto",
+					features: "Características",
+					pricing: "Precios",
+					faq: "Preguntas frecuentes",
+				},
+				features: {
+					title: "Características",
+					monitors: "Monitores",
+					alerts: "Alertas",
+					teams: "Equipos",
+					analytics: "Analíticas",
+				},
+				useCases: {
+					title: "Casos de uso",
+					websiteMonitoring: "Monitoreo de sitios web",
+					apiMonitoring: "Monitoreo de APIs",
+					saas: "Aplicaciones SaaS",
+					microservices: "Microservicios",
+					healthChecks: "Verificaciones de salud",
+				},
+				solutions: {
+					title: "Soluciones",
+					indieHackers: "Para Indie Hackers",
+					soloDevs: "Para desarrolladores independientes",
+					startups: "Para startups",
+					agencies: "Para agencias",
+					enterprises: "Para empresas",
+				},
+				compare: {
+					title: "Comparar",
+					uptimerobot: "vs UptimeRobot",
+					pingdom: "vs Pingdom",
+					betterUptime: "vs Better Uptime",
+					checkly: "vs Checkly",
+					statuscake: "vs StatusCake",
+				},
+				legal: {
+					title: "Legal",
+					terms: "Términos de servicio",
+					privacy: "Política de privacidad",
+				},
 			},
 		},
 	},
@@ -2082,7 +2121,7 @@ export default {
 						label: "Patrón de recurrencia",
 						placeholder: "weekly:monday:02:00-04:00",
 						description:
-							"Formato del patrón: 'daily:HH:MM-HH:MM' o 'weekly:diaDeLaSemana:HH:MM-HH:MM'",
+							"Formato del patrón: 'daily:HH:MM-HH:MM', 'weekly:diaDeLaSemana:HH:MM-HH:MM', o 'monthly:diaDelMes:HH:MM-HH:MM'",
 					},
 				},
 

@@ -340,10 +340,49 @@ export default {
 			name: "Uptime",
 			description: "Einfache, zuverlässige Überwachung für Ihre Websites und APIs.",
 			copyright: "© {{year}} Uptime von Sergio Xalambrí. Alle Rechte vorbehalten.",
-			links: {
-				privacy: "Datenschutz",
-				terms: "Nutzungsbedingungen",
-				security: "Sicherheit",
+			sections: {
+				product: {
+					title: "Produkt",
+					features: "Funktionen",
+					pricing: "Preise",
+					faq: "FAQ",
+				},
+				features: {
+					title: "Funktionen",
+					monitors: "Monitore",
+					alerts: "Benachrichtigungen",
+					teams: "Teams",
+					analytics: "Analytik",
+				},
+				useCases: {
+					title: "Anwendungsfälle",
+					websiteMonitoring: "Website-Überwachung",
+					apiMonitoring: "API-Überwachung",
+					saas: "SaaS-Anwendungen",
+					microservices: "Microservices",
+					healthChecks: "Health Checks",
+				},
+				solutions: {
+					title: "Lösungen",
+					indieHackers: "Für Indie Hacker",
+					soloDevs: "Für Solo-Entwickler",
+					startups: "Für Startups",
+					agencies: "Für Agenturen",
+					enterprises: "Für Unternehmen",
+				},
+				compare: {
+					title: "Vergleichen",
+					uptimerobot: "vs UptimeRobot",
+					pingdom: "vs Pingdom",
+					betterUptime: "vs Better Uptime",
+					checkly: "vs Checkly",
+					statuscake: "vs StatusCake",
+				},
+				legal: {
+					title: "Rechtliches",
+					terms: "Nutzungsbedingungen",
+					privacy: "Datenschutzerklärung",
+				},
 			},
 		},
 	},
@@ -2096,7 +2135,8 @@ export default {
 					recurringPattern: {
 						label: "Wiederholungsmuster",
 						placeholder: "weekly:monday:02:00-04:00",
-						description: "Musterformat: 'daily:HH:MM-HH:MM' oder 'weekly:wochentag:HH:MM-HH:MM'",
+						description:
+							"Musterformat: 'daily:HH:MM-HH:MM', 'weekly:wochentag:HH:MM-HH:MM', oder 'monthly:tagDesMonats:HH:MM-HH:MM'",
 					},
 				},
 

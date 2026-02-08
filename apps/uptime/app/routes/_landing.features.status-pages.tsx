@@ -1,12 +1,10 @@
 import {
-	BellIcon,
 	CheckCircleIcon,
 	EyeIcon,
 	GlobeIcon,
 	LayoutIcon,
 	PaletteIcon,
 	TrendingUpIcon,
-	UsersIcon,
 } from "lucide-react";
 import { useRouteLoaderData } from "react-router";
 
@@ -27,7 +25,7 @@ export function meta() {
 		{
 			name: "description",
 			content:
-				"Beautiful, customizable status pages to keep your users informed. Public or private pages with real-time updates and incident history.",
+				"Beautiful, customizable status pages to keep your users informed. Public or private pages with real-time updates and uptime history.",
 		},
 	];
 }
@@ -50,7 +48,7 @@ export default function FeaturesStatusPagesPage() {
 					</>
 				}
 				description="Professional status pages that automatically reflect your service health. Reduce support tickets and build trust with transparent communication."
-				highlights={["Custom branding", "Real-time updates", "Incident history"]}
+				highlights={["Custom branding", "Real-time updates", "Uptime history"]}
 			/>
 
 			<LandingTrustIndicators
@@ -86,7 +84,7 @@ export default function FeaturesStatusPagesPage() {
 					{
 						title: "Custom branding",
 						description:
-							"Add your logo, colors, and custom domain to match your brand identity perfectly.",
+							"Add your logo and description to match your brand identity. Professional appearance out of the box.",
 						icon: <PaletteIcon className="size-6" />,
 					},
 					{
@@ -96,28 +94,28 @@ export default function FeaturesStatusPagesPage() {
 						icon: <TrendingUpIcon className="size-6" />,
 					},
 					{
-						title: "Incident management",
+						title: "Monitor selection",
 						description:
-							"Post updates during outages. Keep users informed with timeline of events and resolution status.",
-						icon: <BellIcon className="size-6" />,
+							"Choose which monitors to display on your status page. Customize display names and order.",
+						icon: <LayoutIcon className="size-6" />,
 					},
 					{
-						title: "Component grouping",
+						title: "Overall status banner",
 						description:
-							"Organize services into logical groups. Show users exactly which parts of your system are affected.",
-						icon: <LayoutIcon className="size-6" />,
+							"Automatic overall status calculation. Show users at a glance if systems are operational.",
+						icon: <CheckCircleIcon className="size-6" />,
 					},
 					{
 						title: "Uptime history",
 						description:
-							"Display historical uptime data. Build confidence with transparent reliability metrics.",
-						icon: <CheckCircleIcon className="size-6" />,
+							"Display 30-day uptime heatmaps for each monitor. Build confidence with transparent reliability metrics.",
+						icon: <TrendingUpIcon className="size-6" />,
 					},
 					{
-						title: "Subscriber notifications",
+						title: "Public or private",
 						description:
-							"Let users subscribe to updates. Automatically notify them when incidents occur or resolve.",
-						icon: <UsersIcon className="size-6" />,
+							"Make your status page publicly accessible or keep it private for internal use only.",
+						icon: <EyeIcon className="size-6" />,
 					},
 				]}
 			/>
@@ -129,12 +127,12 @@ export default function FeaturesStatusPagesPage() {
 					{
 						title: "Create your page",
 						description:
-							"Choose a subdomain or connect your custom domain. Add your branding elements.",
+							"Choose a unique slug for your status page URL. Add your logo and description.",
 					},
 					{
-						title: "Add components",
+						title: "Select monitors",
 						description:
-							"Select which monitors to display and organize them into logical service groups.",
+							"Pick which monitors to display. Customize display names and set the order.",
 					},
 					{
 						title: "Go live",
@@ -148,34 +146,34 @@ export default function FeaturesStatusPagesPage() {
 				description="Common questions about status pages."
 				items={[
 					{
-						question: "Can I use my own domain?",
-						answer:
-							"Yes, connect any custom domain like status.yourdomain.com. We handle SSL certificates automatically.",
-					},
-					{
 						question: "Do status pages update automatically?",
 						answer:
 							"Yes, component status reflects your monitor health in real-time. No manual intervention required.",
 					},
 					{
-						question: "Can I post manual incident updates?",
+						question: "Can I customize the display names?",
 						answer:
-							"Absolutely. Create incidents with updates, set status (investigating, identified, monitoring, resolved), and notify subscribers.",
-					},
-					{
-						question: "Can users subscribe to updates?",
-						answer:
-							"Yes, visitors can subscribe via email to receive notifications about incidents and maintenance.",
+							"Yes, each monitor can have a custom display name on the status page, different from its internal name.",
 					},
 					{
 						question: "Can I make my status page private?",
 						answer:
-							"Yes, you can password-protect your status page or restrict access to specific users.",
+							"Yes, you can make your status page private so it's not publicly accessible. Only team members can view private pages.",
 					},
 					{
 						question: "What uptime metrics are displayed?",
 						answer:
-							"Show daily, weekly, and monthly uptime percentages along with response time graphs.",
+							"Each monitor shows a 30-day uptime heatmap with daily success rates, plus current status indicators.",
+					},
+					{
+						question: "How is overall status calculated?",
+						answer:
+							"The overall status banner shows operational (all up), degraded (some issues), or down (majority affected) based on your monitors.",
+					},
+					{
+						question: "Can I add my logo?",
+						answer:
+							"Yes, add a logo URL and description to brand your status page with your company identity.",
 					},
 				]}
 			/>

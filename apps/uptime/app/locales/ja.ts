@@ -329,10 +329,49 @@ export default {
 			name: "Uptime",
 			description: "ウェブサイトとAPIのためのシンプルで信頼性の高い監視。",
 			copyright: "© {{year}} Uptime by Sergio Xalambrí. All rights reserved.",
-			links: {
-				privacy: "プライバシー",
-				terms: "利用規約",
-				security: "セキュリティ",
+			sections: {
+				product: {
+					title: "製品",
+					features: "機能",
+					pricing: "料金",
+					faq: "よくある質問",
+				},
+				features: {
+					title: "機能",
+					monitors: "モニター",
+					alerts: "アラート",
+					teams: "チーム",
+					analytics: "分析",
+				},
+				useCases: {
+					title: "ユースケース",
+					websiteMonitoring: "ウェブサイト監視",
+					apiMonitoring: "API監視",
+					saas: "SaaSアプリケーション",
+					microservices: "マイクロサービス",
+					healthChecks: "ヘルスチェック",
+				},
+				solutions: {
+					title: "ソリューション",
+					indieHackers: "インディーハッカー向け",
+					soloDevs: "個人開発者向け",
+					startups: "スタートアップ向け",
+					agencies: "代理店向け",
+					enterprises: "企業向け",
+				},
+				compare: {
+					title: "比較",
+					uptimerobot: "vs UptimeRobot",
+					pingdom: "vs Pingdom",
+					betterUptime: "vs Better Uptime",
+					checkly: "vs Checkly",
+					statuscake: "vs StatusCake",
+				},
+				legal: {
+					title: "法的情報",
+					terms: "利用規約",
+					privacy: "プライバシーポリシー",
+				},
 			},
 		},
 	},
@@ -2064,7 +2103,8 @@ export default {
 					recurringPattern: {
 						label: "繰り返しパターン",
 						placeholder: "weekly:monday:02:00-04:00",
-						description: "パターン形式：'daily:HH:MM-HH:MM'または'weekly:曜日:HH:MM-HH:MM'",
+						description:
+							"パターン形式：'daily:HH:MM-HH:MM'、'weekly:曜日:HH:MM-HH:MM'、または'monthly:日:HH:MM-HH:MM'",
 					},
 				},
 

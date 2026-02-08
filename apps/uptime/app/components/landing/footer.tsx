@@ -1,8 +1,11 @@
+import { useTranslation } from "react-i18next";
 import { href, Link } from "react-router";
 
 import Logo from "~/components/logo";
 
 export function LandingFooter() {
+	let { t } = useTranslation("translation", { keyPrefix: "landing.footer" });
+
 	return (
 		<footer className="border-t border-neutral-200 bg-white dark:border-neutral-800 dark:bg-neutral-950">
 			<div className="mx-auto max-w-6xl px-4 py-12 sm:px-6 lg:px-8">
@@ -12,18 +15,18 @@ export function LandingFooter() {
 						<Link to={href("/")} className="inline-flex items-center gap-2 no-underline">
 							<Logo className="size-9 text-primary-500" />
 							<span className="text-xl font-bold text-neutral-900 dark:text-neutral-50">
-								Uptime
+								{t("name")}
 							</span>
 						</Link>
 						<p className="mt-4 max-w-xs text-sm text-neutral-600 dark:text-neutral-400">
-							Simple, reliable monitoring for your websites and APIs.
+							{t("description")}
 						</p>
 					</div>
 
 					{/* Product */}
 					<div>
 						<h3 className="mb-4 text-sm font-semibold text-neutral-900 dark:text-neutral-50">
-							Product
+							{t("sections.product.title")}
 						</h3>
 						<ul className="space-y-3">
 							<li>
@@ -31,7 +34,7 @@ export function LandingFooter() {
 									href="/#features"
 									className="text-sm text-neutral-600 transition hover:text-primary-600 dark:text-neutral-400 dark:hover:text-primary-400"
 								>
-									Features
+									{t("sections.product.features")}
 								</a>
 							</li>
 							<li>
@@ -39,7 +42,7 @@ export function LandingFooter() {
 									href="/#pricing"
 									className="text-sm text-neutral-600 transition hover:text-primary-600 dark:text-neutral-400 dark:hover:text-primary-400"
 								>
-									Pricing
+									{t("sections.product.pricing")}
 								</a>
 							</li>
 							<li>
@@ -47,7 +50,7 @@ export function LandingFooter() {
 									href="/#faq"
 									className="text-sm text-neutral-600 transition hover:text-primary-600 dark:text-neutral-400 dark:hover:text-primary-400"
 								>
-									FAQ
+									{t("sections.product.faq")}
 								</a>
 							</li>
 						</ul>
@@ -56,7 +59,7 @@ export function LandingFooter() {
 					{/* Features */}
 					<div>
 						<h3 className="mb-4 text-sm font-semibold text-neutral-900 dark:text-neutral-50">
-							Features
+							{t("sections.features.title")}
 						</h3>
 						<ul className="space-y-3">
 							<li>
@@ -64,7 +67,7 @@ export function LandingFooter() {
 									to={href("/features/monitors")}
 									className="text-sm text-neutral-600 transition hover:text-primary-600 dark:text-neutral-400 dark:hover:text-primary-400"
 								>
-									Monitors
+									{t("sections.features.monitors")}
 								</Link>
 							</li>
 							<li>
@@ -72,7 +75,7 @@ export function LandingFooter() {
 									to={href("/features/alerts")}
 									className="text-sm text-neutral-600 transition hover:text-primary-600 dark:text-neutral-400 dark:hover:text-primary-400"
 								>
-									Alerts
+									{t("sections.features.alerts")}
 								</Link>
 							</li>
 							<li>
@@ -80,7 +83,7 @@ export function LandingFooter() {
 									to={href("/features/teams")}
 									className="text-sm text-neutral-600 transition hover:text-primary-600 dark:text-neutral-400 dark:hover:text-primary-400"
 								>
-									Teams
+									{t("sections.features.teams")}
 								</Link>
 							</li>
 							<li>
@@ -88,7 +91,7 @@ export function LandingFooter() {
 									to={href("/features/analytics")}
 									className="text-sm text-neutral-600 transition hover:text-primary-600 dark:text-neutral-400 dark:hover:text-primary-400"
 								>
-									Analytics
+									{t("sections.features.analytics")}
 								</Link>
 							</li>
 						</ul>
@@ -97,7 +100,7 @@ export function LandingFooter() {
 					{/* Use Cases */}
 					<div>
 						<h3 className="mb-4 text-sm font-semibold text-neutral-900 dark:text-neutral-50">
-							Use Cases
+							{t("sections.useCases.title")}
 						</h3>
 						<ul className="space-y-3">
 							<li>
@@ -105,7 +108,7 @@ export function LandingFooter() {
 									to={href("/use-cases/website-monitoring")}
 									className="text-sm text-neutral-600 transition hover:text-primary-600 dark:text-neutral-400 dark:hover:text-primary-400"
 								>
-									Website Monitoring
+									{t("sections.useCases.websiteMonitoring")}
 								</Link>
 							</li>
 							<li>
@@ -113,7 +116,7 @@ export function LandingFooter() {
 									to={href("/use-cases/api-monitoring")}
 									className="text-sm text-neutral-600 transition hover:text-primary-600 dark:text-neutral-400 dark:hover:text-primary-400"
 								>
-									API Monitoring
+									{t("sections.useCases.apiMonitoring")}
 								</Link>
 							</li>
 							<li>
@@ -121,7 +124,7 @@ export function LandingFooter() {
 									to={href("/use-cases/saas")}
 									className="text-sm text-neutral-600 transition hover:text-primary-600 dark:text-neutral-400 dark:hover:text-primary-400"
 								>
-									SaaS Applications
+									{t("sections.useCases.saas")}
 								</Link>
 							</li>
 							<li>
@@ -129,7 +132,7 @@ export function LandingFooter() {
 									to={href("/use-cases/microservices")}
 									className="text-sm text-neutral-600 transition hover:text-primary-600 dark:text-neutral-400 dark:hover:text-primary-400"
 								>
-									Microservices
+									{t("sections.useCases.microservices")}
 								</Link>
 							</li>
 							<li>
@@ -137,7 +140,7 @@ export function LandingFooter() {
 									to={href("/use-cases/healthcheck")}
 									className="text-sm text-neutral-600 transition hover:text-primary-600 dark:text-neutral-400 dark:hover:text-primary-400"
 								>
-									Health Checks
+									{t("sections.useCases.healthChecks")}
 								</Link>
 							</li>
 						</ul>
@@ -146,7 +149,7 @@ export function LandingFooter() {
 					{/* Solutions */}
 					<div>
 						<h3 className="mb-4 text-sm font-semibold text-neutral-900 dark:text-neutral-50">
-							Solutions
+							{t("sections.solutions.title")}
 						</h3>
 						<ul className="space-y-3">
 							<li>
@@ -154,7 +157,7 @@ export function LandingFooter() {
 									to={href("/for/indie-hackers")}
 									className="text-sm text-neutral-600 transition hover:text-primary-600 dark:text-neutral-400 dark:hover:text-primary-400"
 								>
-									For Indie Hackers
+									{t("sections.solutions.indieHackers")}
 								</Link>
 							</li>
 							<li>
@@ -162,7 +165,7 @@ export function LandingFooter() {
 									to={href("/for/solo-devs")}
 									className="text-sm text-neutral-600 transition hover:text-primary-600 dark:text-neutral-400 dark:hover:text-primary-400"
 								>
-									For Solo Developers
+									{t("sections.solutions.soloDevs")}
 								</Link>
 							</li>
 							<li>
@@ -170,7 +173,7 @@ export function LandingFooter() {
 									to={href("/for/startups")}
 									className="text-sm text-neutral-600 transition hover:text-primary-600 dark:text-neutral-400 dark:hover:text-primary-400"
 								>
-									For Startups
+									{t("sections.solutions.startups")}
 								</Link>
 							</li>
 							<li>
@@ -178,7 +181,7 @@ export function LandingFooter() {
 									to={href("/for/agencies")}
 									className="text-sm text-neutral-600 transition hover:text-primary-600 dark:text-neutral-400 dark:hover:text-primary-400"
 								>
-									For Agencies
+									{t("sections.solutions.agencies")}
 								</Link>
 							</li>
 							<li>
@@ -186,7 +189,7 @@ export function LandingFooter() {
 									to={href("/for/enterprises")}
 									className="text-sm text-neutral-600 transition hover:text-primary-600 dark:text-neutral-400 dark:hover:text-primary-400"
 								>
-									For Enterprises
+									{t("sections.solutions.enterprises")}
 								</Link>
 							</li>
 						</ul>
@@ -195,7 +198,7 @@ export function LandingFooter() {
 					{/* Compare */}
 					<div>
 						<h3 className="mb-4 text-sm font-semibold text-neutral-900 dark:text-neutral-50">
-							Compare
+							{t("sections.compare.title")}
 						</h3>
 						<ul className="space-y-3">
 							<li>
@@ -203,7 +206,7 @@ export function LandingFooter() {
 									to="/vs/uptimerobot"
 									className="text-sm text-neutral-600 transition hover:text-primary-600 dark:text-neutral-400 dark:hover:text-primary-400"
 								>
-									vs UptimeRobot
+									{t("sections.compare.uptimerobot")}
 								</Link>
 							</li>
 							<li>
@@ -211,7 +214,7 @@ export function LandingFooter() {
 									to="/vs/pingdom"
 									className="text-sm text-neutral-600 transition hover:text-primary-600 dark:text-neutral-400 dark:hover:text-primary-400"
 								>
-									vs Pingdom
+									{t("sections.compare.pingdom")}
 								</Link>
 							</li>
 							<li>
@@ -219,7 +222,7 @@ export function LandingFooter() {
 									to="/vs/better-uptime"
 									className="text-sm text-neutral-600 transition hover:text-primary-600 dark:text-neutral-400 dark:hover:text-primary-400"
 								>
-									vs Better Uptime
+									{t("sections.compare.betterUptime")}
 								</Link>
 							</li>
 							<li>
@@ -227,7 +230,7 @@ export function LandingFooter() {
 									to="/vs/checkly"
 									className="text-sm text-neutral-600 transition hover:text-primary-600 dark:text-neutral-400 dark:hover:text-primary-400"
 								>
-									vs Checkly
+									{t("sections.compare.checkly")}
 								</Link>
 							</li>
 							<li>
@@ -235,7 +238,7 @@ export function LandingFooter() {
 									to="/vs/statuscake"
 									className="text-sm text-neutral-600 transition hover:text-primary-600 dark:text-neutral-400 dark:hover:text-primary-400"
 								>
-									vs StatusCake
+									{t("sections.compare.statuscake")}
 								</Link>
 							</li>
 						</ul>
@@ -244,7 +247,7 @@ export function LandingFooter() {
 					{/* Legal */}
 					<div>
 						<h3 className="mb-4 text-sm font-semibold text-neutral-900 dark:text-neutral-50">
-							Legal
+							{t("sections.legal.title")}
 						</h3>
 						<ul className="space-y-3">
 							<li>
@@ -252,7 +255,7 @@ export function LandingFooter() {
 									to="/terms"
 									className="text-sm text-neutral-600 transition hover:text-primary-600 dark:text-neutral-400 dark:hover:text-primary-400"
 								>
-									Terms of Service
+									{t("sections.legal.terms")}
 								</Link>
 							</li>
 							<li>
@@ -260,7 +263,7 @@ export function LandingFooter() {
 									to="/privacy"
 									className="text-sm text-neutral-600 transition hover:text-primary-600 dark:text-neutral-400 dark:hover:text-primary-400"
 								>
-									Privacy Policy
+									{t("sections.legal.privacy")}
 								</Link>
 							</li>
 						</ul>
@@ -268,7 +271,7 @@ export function LandingFooter() {
 				</div>
 
 				<p className="mt-12 text-center text-sm text-neutral-500 dark:text-neutral-400">
-					© {new Date().getFullYear()} Uptime by Sergio Xalambrí. All rights reserved.
+					{t("copyright", { year: new Date().getFullYear() })}
 				</p>
 			</div>
 		</footer>

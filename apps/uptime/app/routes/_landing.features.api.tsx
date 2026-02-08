@@ -102,7 +102,7 @@ export default function FeaturesAPIPage() {
 					{
 						title: "Status page control",
 						description:
-							"Create and manage status pages, components, and incidents programmatically.",
+							"Create and manage status pages programmatically. Control which monitors appear and their display settings.",
 						icon: <CodeIcon className="size-6" />,
 					},
 					{

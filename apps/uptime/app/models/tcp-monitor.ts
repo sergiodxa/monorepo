@@ -151,6 +151,15 @@ export default class TcpMonitor {
 
 	static async getEnabledMonitors(db: Database) {
 		return db.query.tcpMonitors.findMany({
+			columns: {
+				id: true,
+				name: true,
+				host: true,
+				port: true,
+				timeoutMs: true,
+				teamId: true,
+				lastStatus: true,
+			},
 			where(fields, operators) {
 				return operators.eq(fields.isEnabled, true);
 			},

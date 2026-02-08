@@ -331,10 +331,49 @@ export default {
 			name: "Uptime",
 			description: "Simple, reliable monitoring for your websites and APIs.",
 			copyright: "© {{year}} Uptime by Sergio Xalambrí. All rights reserved.",
-			links: {
-				privacy: "Privacy",
-				terms: "Terms of Service",
-				security: "Security",
+			sections: {
+				product: {
+					title: "Product",
+					features: "Features",
+					pricing: "Pricing",
+					faq: "FAQ",
+				},
+				features: {
+					title: "Features",
+					monitors: "Monitors",
+					alerts: "Alerts",
+					teams: "Teams",
+					analytics: "Analytics",
+				},
+				useCases: {
+					title: "Use Cases",
+					websiteMonitoring: "Website Monitoring",
+					apiMonitoring: "API Monitoring",
+					saas: "SaaS Applications",
+					microservices: "Microservices",
+					healthChecks: "Health Checks",
+				},
+				solutions: {
+					title: "Solutions",
+					indieHackers: "For Indie Hackers",
+					soloDevs: "For Solo Developers",
+					startups: "For Startups",
+					agencies: "For Agencies",
+					enterprises: "For Enterprises",
+				},
+				compare: {
+					title: "Compare",
+					uptimerobot: "vs UptimeRobot",
+					pingdom: "vs Pingdom",
+					betterUptime: "vs Better Uptime",
+					checkly: "vs Checkly",
+					statuscake: "vs StatusCake",
+				},
+				legal: {
+					title: "Legal",
+					terms: "Terms of Service",
+					privacy: "Privacy Policy",
+				},
 			},
 		},
 	},
@@ -2062,7 +2101,8 @@ export default {
 					recurringPattern: {
 						label: "Recurring Pattern",
 						placeholder: "weekly:monday:02:00-04:00",
-						description: "Pattern format: 'daily:HH:MM-HH:MM' or 'weekly:dayOfWeek:HH:MM-HH:MM'",
+						description:
+							"Pattern format: 'daily:HH:MM-HH:MM', 'weekly:dayOfWeek:HH:MM-HH:MM', or 'monthly:dayOfMonth:HH:MM-HH:MM'",
 					},
 				},
 

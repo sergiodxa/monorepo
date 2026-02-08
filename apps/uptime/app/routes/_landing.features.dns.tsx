@@ -85,7 +85,7 @@ export default function FeaturesDNSPage() {
 					{
 						title: "All record types",
 						description:
-							"Monitor A, AAAA, CNAME, MX, TXT, NS, and SOA records. Complete coverage for your domains.",
+							"Monitor A, AAAA, CNAME, MX, TXT, and NS records. Complete coverage for your domains.",
 						icon: <DatabaseIcon className="size-6" />,
 					},
 					{
@@ -148,7 +148,7 @@ export default function FeaturesDNSPage() {
 					{
 						question: "What DNS record types can I monitor?",
 						answer:
-							"A, AAAA, CNAME, MX, TXT, NS, and SOA records. Monitor the records that matter to your infrastructure.",
+							"A, AAAA, CNAME, MX, TXT, and NS records. Monitor the records that matter to your infrastructure.",
 					},
 					{
 						question: "How does DNS hijacking detection work?",

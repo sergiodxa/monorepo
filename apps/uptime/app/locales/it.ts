@@ -334,10 +334,49 @@ export default {
 			name: "Uptime",
 			description: "Monitoraggio semplice e affidabile per i suoi siti web e API.",
 			copyright: "© {{year}} Uptime di Sergio Xalambrí. Tutti i diritti riservati.",
-			links: {
-				privacy: "Privacy",
-				terms: "Termini di Servizio",
-				security: "Sicurezza",
+			sections: {
+				product: {
+					title: "Prodotto",
+					features: "Funzionalità",
+					pricing: "Prezzi",
+					faq: "FAQ",
+				},
+				features: {
+					title: "Funzionalità",
+					monitors: "Monitor",
+					alerts: "Avvisi",
+					teams: "Team",
+					analytics: "Analisi",
+				},
+				useCases: {
+					title: "Casi d'uso",
+					websiteMonitoring: "Monitoraggio siti web",
+					apiMonitoring: "Monitoraggio API",
+					saas: "Applicazioni SaaS",
+					microservices: "Microservizi",
+					healthChecks: "Controlli di salute",
+				},
+				solutions: {
+					title: "Soluzioni",
+					indieHackers: "Per Indie Hacker",
+					soloDevs: "Per sviluppatori singoli",
+					startups: "Per startup",
+					agencies: "Per agenzie",
+					enterprises: "Per aziende",
+				},
+				compare: {
+					title: "Confronta",
+					uptimerobot: "vs UptimeRobot",
+					pingdom: "vs Pingdom",
+					betterUptime: "vs Better Uptime",
+					checkly: "vs Checkly",
+					statuscake: "vs StatusCake",
+				},
+				legal: {
+					title: "Legale",
+					terms: "Termini di servizio",
+					privacy: "Informativa sulla privacy",
+				},
 			},
 		},
 	},
@@ -2076,7 +2115,7 @@ export default {
 						label: "Schema Ricorrente",
 						placeholder: "weekly:monday:02:00-04:00",
 						description:
-							"Formato schema: 'daily:HH:MM-HH:MM' o 'weekly:giornoSettimana:HH:MM-HH:MM'",
+							"Formato schema: 'daily:HH:MM-HH:MM', 'weekly:giornoSettimana:HH:MM-HH:MM', o 'monthly:giornoDelMese:HH:MM-HH:MM'",
 					},
 				},
 
