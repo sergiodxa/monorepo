@@ -54,9 +54,10 @@ export const links: Route.LinksFunction = () => [
 export async function loader({ request, context }: Route.LoaderArgs) {
 	let { t } = i18next(context);
 	let session = getSession();
+	let isSignedIn = session.has("id");
 
 	return {
-		isSignedIn: session.has("id"),
+		isSignedIn,
 		initialMonitors: [{ id: crypto.randomUUID(), frequency: 10 }],
 
 		meta: [
@@ -189,15 +190,15 @@ function Hero(props: { isSignedIn: boolean }) {
 						<div className="mt-8 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-sm text-neutral-500 lg:justify-start dark:text-neutral-400">
 							<div className="flex items-center gap-2">
 								<CheckIcon className="size-4 text-success-500" />
-								<span>Free to start</span>
+								<span>{t("trustIndicators.freeToStart")}</span>
 							</div>
 							<div className="flex items-center gap-2">
 								<CheckIcon className="size-4 text-success-500" />
-								<span>Pay for automation</span>
+								<span>{t("trustIndicators.payForAutomation")}</span>
 							</div>
 							<div className="flex items-center gap-2">
 								<CheckIcon className="size-4 text-success-500" />
-								<span>Cancel anytime</span>
+								<span>{t("trustIndicators.cancelAnytime")}</span>
 							</div>
 						</div>
 					</div>
@@ -217,6 +218,8 @@ function Hero(props: { isSignedIn: boolean }) {
 }
 
 function TrustIndicators() {
+	let { t } = useTranslation("translation", { keyPrefix: "landing.trustIndicators" });
+
 	return (
 		<section className="border-y border-neutral-200 bg-neutral-50 py-8 dark:border-neutral-800 dark:bg-neutral-900/50">
 			<div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
@@ -226,27 +229,29 @@ function TrustIndicators() {
 							<ZapIcon className="size-6 text-primary-500" />
 							99.9%
 						</div>
-						<p className="text-sm text-neutral-600 dark:text-neutral-400">Uptime SLA</p>
+						<p className="text-sm text-neutral-600 dark:text-neutral-400">{t("uptimeSla")}</p>
 					</div>
 					<div className="flex flex-col items-center gap-2 text-center">
 						<div className="flex items-center gap-1 text-3xl font-bold text-neutral-900 dark:text-neutral-50">
 							<GlobeIcon className="size-6 text-primary-500" />9
 						</div>
-						<p className="text-sm text-neutral-600 dark:text-neutral-400">Global Regions</p>
+						<p className="text-sm text-neutral-600 dark:text-neutral-400">{t("globalRegions")}</p>
 					</div>
 					<div className="flex flex-col items-center gap-2 text-center">
 						<div className="flex items-center gap-1 text-3xl font-bold text-neutral-900 dark:text-neutral-50">
 							<ShieldCheckIcon className="size-6 text-primary-500" />
 							365
 						</div>
-						<p className="text-sm text-neutral-600 dark:text-neutral-400">Days Data Retention</p>
+						<p className="text-sm text-neutral-600 dark:text-neutral-400">
+							{t("daysDataRetention")}
+						</p>
 					</div>
 					<div className="flex flex-col items-center gap-2 text-center">
 						<div className="flex items-center gap-1 text-3xl font-bold text-neutral-900 dark:text-neutral-50">
 							<BellIcon className="size-6 text-primary-500" />
 							&lt;1s
 						</div>
-						<p className="text-sm text-neutral-600 dark:text-neutral-400">Alert Latency</p>
+						<p className="text-sm text-neutral-600 dark:text-neutral-400">{t("alertLatency")}</p>
 					</div>
 				</div>
 			</div>
@@ -273,30 +278,26 @@ function Features() {
 			href: "/features/alerts",
 		},
 		{
-			title: "Status Pages",
-			description:
-				"Create beautiful public status pages to keep your users informed about service availability and incidents.",
+			title: t("list.fourth.title"),
+			description: t("list.fourth.description"),
 			icon: <GlobeIcon className="size-6" />,
 			href: "/features/status-pages",
 		},
 		{
-			title: "SSL Monitoring",
-			description:
-				"Track certificate expiry dates and get alerts before your SSL certificates expire to prevent security warnings.",
+			title: t("list.fifth.title"),
+			description: t("list.fifth.description"),
 			icon: <LockIcon className="size-6" />,
 			href: "/features/ssl",
 		},
 		{
-			title: "DNS Monitoring",
-			description:
-				"Detect DNS record changes and propagation issues before they impact your users or get hijacked.",
+			title: t("list.sixth.title"),
+			description: t("list.sixth.description"),
 			icon: <LinkIcon className="size-6" />,
 			href: "/features/dns",
 		},
 		{
-			title: "Native Integrations",
-			description:
-				"Direct Slack and Discord integrations with rich notifications, not just basic webhooks.",
+			title: t("list.seventh.title"),
+			description: t("list.seventh.description"),
 			icon: <MessageSquareIcon className="size-6" />,
 			href: "/features/integrations",
 		},
@@ -307,7 +308,7 @@ function Features() {
 			<div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
 				<div className="mx-auto max-w-2xl text-center">
 					<Badge color="primary" variant="secondary" className="mb-4">
-						Features
+						{t("badge")}
 					</Badge>
 					<h2 className="text-3xl font-bold tracking-tight text-neutral-900 sm:text-4xl dark:text-neutral-50">
 						{t("title")}
@@ -318,7 +319,7 @@ function Features() {
 				<div className="mt-16 grid gap-8 md:grid-cols-2 lg:grid-cols-3">
 					{list.map((item) => (
 						<Link
-							key={item.title}
+							key={item.href}
 							to={href(item.href)}
 							className="group rounded-xl border border-neutral-200 bg-white p-6 transition hover:border-primary-300 hover:shadow-lg dark:border-neutral-800 dark:bg-neutral-900 dark:hover:border-primary-700"
 						>
@@ -330,7 +331,7 @@ function Features() {
 							</h3>
 							<p className="mt-2 text-neutral-600 dark:text-neutral-400">{item.description}</p>
 							<span className="mt-4 inline-flex items-center gap-1 text-sm font-medium text-primary-600 dark:text-primary-400">
-								Learn more
+								{t("learnMore")}
 								<ArrowRightIcon className="size-4 transition group-hover:translate-x-1" />
 							</span>
 						</Link>
@@ -342,36 +343,34 @@ function Features() {
 }
 
 function CompleteFeatureSet() {
+	let { t } = useTranslation("translation", {
+		keyPrefix: "landing.completeFeatureSet",
+	});
+
 	let features = [
 		{
 			icon: <PauseCircleIcon className="size-5" />,
-			title: "Maintenance Windows",
-			description: "Schedule downtime and suppress alerts during planned maintenance",
+			key: "maintenanceWindows",
 		},
 		{
 			icon: <FileTextIcon className="size-5" />,
-			title: "Content Monitoring",
-			description: "Verify specific keywords or content appear on your pages",
+			key: "contentMonitoring",
 		},
 		{
 			icon: <RefreshCwIcon className="size-5" />,
-			title: "Recovery Alerts",
-			description: "Get notified when services come back up after an incident",
+			key: "recoveryAlerts",
 		},
 		{
 			icon: <KeyIcon className="size-5" />,
-			title: "API Access",
-			description: "Full REST API with key management for automation",
+			key: "apiAccess",
 		},
 		{
 			icon: <TimerIcon className="size-5" />,
-			title: "Alert Cooldowns",
-			description: "Prevent alert fatigue with configurable cooldown periods",
+			key: "alertCooldowns",
 		},
 		{
 			icon: <CodeIcon className="size-5" />,
-			title: "Custom Headers",
-			description: "Add authentication headers and custom request parameters",
+			key: "customHeaders",
 		},
 	] as const;
 
@@ -380,20 +379,18 @@ function CompleteFeatureSet() {
 			<div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
 				<div className="mx-auto max-w-2xl text-center">
 					<Badge color="primary" variant="secondary" className="mb-4">
-						Complete Feature Set
+						{t("badge")}
 					</Badge>
 					<h2 className="text-3xl font-bold tracking-tight text-neutral-900 sm:text-4xl dark:text-neutral-50">
-						Everything you need for reliable monitoring
+						{t("title")}
 					</h2>
-					<p className="mt-4 text-lg text-neutral-600 dark:text-neutral-400">
-						Advanced capabilities that make monitoring effortless and comprehensive.
-					</p>
+					<p className="mt-4 text-lg text-neutral-600 dark:text-neutral-400">{t("description")}</p>
 				</div>
 
 				<div className="mt-16 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
 					{features.map((feature) => (
 						<div
-							key={feature.title}
+							key={feature.key}
 							className="flex items-start gap-4 rounded-lg border border-neutral-200 bg-white p-5 transition hover:border-primary-300 hover:shadow-md dark:border-neutral-800 dark:bg-neutral-900 dark:hover:border-primary-700"
 						>
 							<div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-primary-100 text-primary-600 dark:bg-primary-900/50 dark:text-primary-400">
@@ -401,10 +398,10 @@ function CompleteFeatureSet() {
 							</div>
 							<div>
 								<h3 className="font-semibold text-neutral-900 dark:text-neutral-50">
-									{feature.title}
+									{t(`list.${feature.key}.title`)}
 								</h3>
 								<p className="mt-1 text-sm text-neutral-600 dark:text-neutral-400">
-									{feature.description}
+									{t(`list.${feature.key}.description`)}
 								</p>
 							</div>
 						</div>
@@ -416,40 +413,24 @@ function CompleteFeatureSet() {
 }
 
 function UseCases() {
+	let { t } = useTranslation("translation", {
+		keyPrefix: "landing.useCases",
+	});
+
 	let useCases = [
-		{
-			title: "Website Monitoring",
-			description: "Track uptime and performance for landing pages, blogs, and web applications.",
-			href: "/use-cases/website-monitoring",
-		},
-		{
-			title: "API Monitoring",
-			description: "Monitor REST APIs, GraphQL endpoints, and webhooks for availability.",
-			href: "/use-cases/api-monitoring",
-		},
-		{
-			title: "SaaS Applications",
-			description: "Keep your SaaS product reliable with proactive monitoring and instant alerts.",
-			href: "/use-cases/saas",
-		},
-		{
-			title: "Microservices",
-			description: "Monitor distributed systems and catch failures before they cascade.",
-			href: "/use-cases/microservices",
-		},
-		{
-			title: "Health Checks",
-			description: "Verify service health and database connections with scheduled pings.",
-			href: "/use-cases/healthcheck",
-		},
+		{ key: "websiteMonitoring", href: "/use-cases/website-monitoring" },
+		{ key: "apiMonitoring", href: "/use-cases/api-monitoring" },
+		{ key: "saas", href: "/use-cases/saas" },
+		{ key: "microservices", href: "/use-cases/microservices" },
+		{ key: "healthChecks", href: "/use-cases/healthcheck" },
 	] as const;
 
 	let audiences = [
-		{ title: "Indie Hackers", href: "/for/indie-hackers" },
-		{ title: "Solo Developers", href: "/for/solo-devs" },
-		{ title: "Startups", href: "/for/startups" },
-		{ title: "Agencies", href: "/for/agencies" },
-		{ title: "Enterprises", href: "/for/enterprises" },
+		{ key: "indieHackers", href: "/for/indie-hackers" },
+		{ key: "soloDevelopers", href: "/for/solo-devs" },
+		{ key: "startups", href: "/for/startups" },
+		{ key: "agencies", href: "/for/agencies" },
+		{ key: "enterprises", href: "/for/enterprises" },
 	] as const;
 
 	return (
@@ -457,14 +438,12 @@ function UseCases() {
 			<div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
 				<div className="mx-auto max-w-2xl text-center">
 					<Badge color="primary" variant="secondary" className="mb-4">
-						Use Cases
+						{t("badge")}
 					</Badge>
 					<h2 className="text-3xl font-bold tracking-tight text-neutral-900 sm:text-4xl dark:text-neutral-50">
-						Built for every monitoring need
+						{t("title")}
 					</h2>
-					<p className="mt-4 text-lg text-neutral-600 dark:text-neutral-400">
-						From simple health checks to complex distributed systems, we've got you covered.
-					</p>
+					<p className="mt-4 text-lg text-neutral-600 dark:text-neutral-400">{t("description")}</p>
 				</div>
 
 				<div className="mt-16 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
@@ -475,13 +454,13 @@ function UseCases() {
 							className="group rounded-xl border border-neutral-200 bg-white p-6 transition hover:border-primary-300 hover:shadow-lg dark:border-neutral-800 dark:bg-neutral-900 dark:hover:border-primary-700"
 						>
 							<h3 className="text-lg font-semibold text-neutral-900 transition group-hover:text-primary-600 dark:text-neutral-50 dark:group-hover:text-primary-400">
-								{useCase.title}
+								{t(`list.${useCase.key}.title`)}
 							</h3>
 							<p className="mt-2 text-sm text-neutral-600 dark:text-neutral-400">
-								{useCase.description}
+								{t(`list.${useCase.key}.description`)}
 							</p>
 							<span className="mt-4 inline-flex items-center gap-1 text-sm font-medium text-primary-600 dark:text-primary-400">
-								Learn more
+								{t("learnMore")}
 								<ArrowRightIcon className="size-4 transition group-hover:translate-x-1" />
 							</span>
 						</Link>
@@ -491,7 +470,7 @@ function UseCases() {
 				{/* Audience links */}
 				<div className="mt-12 rounded-xl border border-neutral-200 bg-white p-6 dark:border-neutral-800 dark:bg-neutral-900">
 					<p className="text-center text-sm font-medium text-neutral-700 dark:text-neutral-300">
-						Tailored solutions for:
+						{t("tailoredFor")}
 					</p>
 					<div className="mt-4 flex flex-wrap items-center justify-center gap-3">
 						{audiences.map((audience) => (
@@ -500,7 +479,7 @@ function UseCases() {
 								to={href(audience.href)}
 								className="rounded-full border border-neutral-200 bg-neutral-50 px-4 py-2 text-sm font-medium text-neutral-700 transition hover:border-primary-300 hover:bg-primary-50 hover:text-primary-700 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-300 dark:hover:border-primary-600 dark:hover:bg-primary-950 dark:hover:text-primary-400"
 							>
-								{audience.title}
+								{t(`audiences.${audience.key}`)}
 							</Link>
 						))}
 					</div>
@@ -526,7 +505,7 @@ function Pricing(props: {
 			<div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
 				<div className="mx-auto max-w-2xl text-center">
 					<Badge color="primary" variant="secondary" className="mb-4">
-						Pricing
+						{t("badge")}
 					</Badge>
 					<h2 className="text-3xl font-bold tracking-tight text-neutral-900 sm:text-4xl dark:text-neutral-50">
 						{t("title")}
@@ -576,7 +555,7 @@ function FAQ() {
 			<div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
 				<div className="mx-auto max-w-2xl text-center">
 					<Badge color="primary" variant="secondary" className="mb-4">
-						FAQ
+						{t("badge")}
 					</Badge>
 					<h2 className="text-3xl font-bold tracking-tight text-neutral-900 sm:text-4xl dark:text-neutral-50">
 						{t("title")}

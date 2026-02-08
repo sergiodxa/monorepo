@@ -34,12 +34,27 @@ export default {
 			screenshot: {
 				alt: "Screenshot of an uptime monitoring dashboard showing two services with weekly heatmap charts. Each dot represents a check: green for success, yellow for mixed, red for failure, and gray for no data. Each monitor also displays uptime percentage, total checks, last check time, and 99th percentile response time",
 			},
+
+			trustIndicators: {
+				freeToStart: "Free to start",
+				payForAutomation: "Pay for automation",
+				cancelAnytime: "Cancel anytime",
+			},
+		},
+
+		trustIndicators: {
+			uptimeSla: "Uptime SLA",
+			globalRegions: "Global Regions",
+			daysDataRetention: "Days Data Retention",
+			alertLatency: "Alert Latency",
 		},
 
 		features: {
 			title: "Powerful Monitoring Made Simple",
 			description:
 				"Everything you need to keep your services running smoothly, with no unnecessary complexity.",
+			badge: "Features",
+			learnMore: "Learn more",
 
 			list: {
 				first: {
@@ -57,10 +72,106 @@ export default {
 					description:
 						"Transparent pricing with no hidden fees. Scale up or down as needed, with plans that grow with your monitoring needs.",
 				},
+				fourth: {
+					title: "Status Pages",
+					description:
+						"Create beautiful public status pages to keep your users informed about service availability and incidents.",
+				},
+				fifth: {
+					title: "SSL Monitoring",
+					description:
+						"Track certificate expiry dates and get alerts before your SSL certificates expire to prevent security warnings.",
+				},
+				sixth: {
+					title: "DNS Monitoring",
+					description:
+						"Detect DNS record changes and propagation issues before they impact your users or get hijacked.",
+				},
+				seventh: {
+					title: "Native Integrations",
+					description:
+						"Direct Slack and Discord integrations with rich notifications, not just basic webhooks.",
+				},
+			},
+		},
+
+		completeFeatureSet: {
+			badge: "Complete Feature Set",
+			title: "Everything you need for reliable monitoring",
+			description: "Advanced capabilities that make monitoring effortless and comprehensive.",
+
+			list: {
+				maintenanceWindows: {
+					title: "Maintenance Windows",
+					description: "Schedule downtime and suppress alerts during planned maintenance",
+				},
+				contentMonitoring: {
+					title: "Content Monitoring",
+					description: "Verify specific keywords or content appear on your pages",
+				},
+				recoveryAlerts: {
+					title: "Recovery Alerts",
+					description: "Get notified when services come back up after an incident",
+				},
+				apiAccess: {
+					title: "API Access",
+					description: "Full REST API with key management for automation",
+				},
+				alertCooldowns: {
+					title: "Alert Cooldowns",
+					description: "Prevent alert fatigue with configurable cooldown periods",
+				},
+				customHeaders: {
+					title: "Custom Headers",
+					description: "Add authentication headers and custom request parameters",
+				},
+			},
+		},
+
+		useCases: {
+			badge: "Use Cases",
+			title: "Built for every monitoring need",
+			description:
+				"From simple health checks to complex distributed systems, we've got you covered.",
+			learnMore: "Learn more",
+			tailoredFor: "Tailored solutions for:",
+
+			list: {
+				websiteMonitoring: {
+					title: "Website Monitoring",
+					description:
+						"Track uptime and performance for landing pages, blogs, and web applications.",
+				},
+				apiMonitoring: {
+					title: "API Monitoring",
+					description: "Monitor REST APIs, GraphQL endpoints, and webhooks for availability.",
+				},
+				saas: {
+					title: "SaaS Applications",
+					description:
+						"Keep your SaaS product reliable with proactive monitoring and instant alerts.",
+				},
+				microservices: {
+					title: "Microservices",
+					description: "Monitor distributed systems and catch failures before they cascade.",
+				},
+				healthChecks: {
+					title: "Health Checks",
+					description: "Verify service health and database connections with scheduled pings.",
+				},
+			},
+
+			audiences: {
+				indieHackers: "Indie Hackers",
+				soloDevelopers: "Solo Developers",
+				startups: "Startups",
+				agencies: "Agencies",
+				enterprises: "Enterprises",
 			},
 		},
 
 		pricing: {
+			badge: "Pricing",
 			title: "Simple, Transparent Pricing",
 			description:
 				"One subscription, no tiers. Pay only for what you use with our straightforward pricing model",
@@ -114,6 +225,7 @@ export default {
 		},
 
 		faq: {
+			badge: "FAQ",
 			title: "Frequently Asked Questions",
 			description: "Find answers to common questions about Uptime",
 
@@ -300,6 +412,79 @@ export default {
 			title: "Uptime Monitors",
 			cta: "Create Monitor",
 			subscribe: "Your monitors are paused. Subscribe to continue monitoring",
+		},
+	},
+
+	statusPage: {
+		heatmap: {
+			daysAgo: "30 days ago",
+			today: "Today",
+			legend: {
+				full: "100%",
+				partial: "Partial",
+				down: "Down",
+				noData: "No data",
+			},
+			tooltip: {
+				uptime: "{{percentage}}% uptime",
+				noData: "No data",
+			},
+		},
+		error: {
+			title: "Status Page Not Found",
+			description: "The status page you're looking for doesn't exist or is not public.",
+			goHome: "Go to homepage",
+		},
+	},
+
+	contentMonitoring: {
+		title: "Content Monitoring",
+		description:
+			"Check response content for specific keywords or patterns. The monitor will fail if any check does not pass.",
+		empty:
+			"No content checks configured. Add a check to monitor for specific keywords or patterns in the response.",
+		addButton: "Add Content Check",
+
+		form: {
+			checkType: {
+				label: "Check Type",
+				description: "Choose how to match the response content",
+				options: {
+					contains: "Contains",
+					notContains: "Does Not Contain",
+					regex: "Regex Pattern",
+				},
+			},
+			value: {
+				label: "Value",
+				placeholder: "Enter keyword or pattern",
+				description: "The text or regex pattern to check for",
+			},
+			caseSensitive: "Case sensitive matching",
+			cancel: "Cancel",
+			add: "Add Check",
+		},
+
+		item: {
+			caseSensitive: "Case sensitive",
+			disabled: "Disabled",
+			delete: "Delete",
+		},
+
+		types: {
+			contains: "Contains",
+			notContains: "Does Not Contain",
+			regex: "Regex",
+		},
+	},
+
+	auth: {
+		error: {
+			title: "Authentication Error",
+			errorCode: "Error Code: {{code}}",
+			description: "Description: {{description}}",
+			uri: "URI:",
+			tryAgain: "Please try again or contact support if the issue persists.",
 		},
 	},
 

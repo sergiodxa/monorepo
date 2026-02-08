@@ -32,6 +32,8 @@ const inputSchema = z
 	);
 
 export async function action({ request }: Route.ActionArgs) {
+	logger().info("action.start", { route: "create-content-check", method: request.method });
+
 	let result = await validate(request, inputSchema);
 
 	if (isFailure(result)) {

@@ -19,17 +19,35 @@ import { AppHeader } from "~/components/app-header";
 import { useTeam } from "~/hooks/use-team";
 import { hasActiveSubscription } from "~/middleware/customer-subscription";
 import { db } from "~/middleware/drizzle";
+import { logger } from "~/middleware/logger";
 import { team } from "~/middleware/team";
 import TcpMonitor from "~/models/tcp-monitor";
 
 import type { Route } from "./+types/route";
 
 export async function loader({ params }: Route.LoaderArgs) {
+	logger().info("tcpMonitorEdit.loader.start", {
+		route: "tcp.$tcpMonitorId.edit",
+		tcpMonitorId: params.tcpMonitorId,
+		teamId: team().id,
+	});
+
 	let tcpMonitor = await TcpMonitor.findByIdAndTeam(db(), params.tcpMonitorId, team().id);
 
 	if (!tcpMonitor) {
+		logger().info("tcpMonitorEdit.loader.not-found", {
+			route: "tcp.$tcpMonitorId.edit",
+			tcpMonitorId: params.tcpMonitorId,
+			teamId: team().id,
+		});
 		return redirect(href("/app/:team/tcp", params));
 	}
+
+	logger().info("tcpMonitorEdit.loader.complete", {
+		route: "tcp.$tcpMonitorId.edit",
+		tcpMonitorId: tcpMonitor.id,
+		teamId: team().id,
+	});
 
 	return {
 		hasActiveSubscription: await hasActiveSubscription(),

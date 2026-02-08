@@ -19,6 +19,8 @@ import { useSpinDelay } from "spin-delay";
 import { AppHeader } from "~/components/app-header";
 import { useTeam } from "~/hooks/use-team";
 import { hasActiveSubscription } from "~/middleware/customer-subscription";
+import { logger } from "~/middleware/logger";
+import { team } from "~/middleware/team";
 import regionToEmoji from "~/utils/region-to-emoji";
 
 import type { Route } from "./+types/route";
@@ -28,7 +30,20 @@ const INTENT = "create";
 const REGIONS = ["afr", "apac", "eeur", "enam", "me", "oc", "sam", "weur", "wnam"] as const;
 
 export async function loader() {
-	return { hasActiveSubscription: await hasActiveSubscription() };
+	logger().info("monitorNew.loader.start", {
+		route: "monitors.new",
+		teamId: team().id,
+	});
+
+	let activeSubscription = await hasActiveSubscription();
+
+	logger().info("monitorNew.loader.complete", {
+		route: "monitors.new",
+		teamId: team().id,
+		hasActiveSubscription: activeSubscription,
+	});
+
+	return { hasActiveSubscription: activeSubscription };
 }
 
 export default function MonitorsNew({ loaderData, params }: Route.ComponentProps) {

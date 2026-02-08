@@ -16,6 +16,8 @@ import type { Route } from "./+types/route";
 const inputSchema = z.object({ subjectId: z.uuid(), name: z.string(), email: z.email() });
 
 export async function action({ request, context }: Route.ActionArgs) {
+	logger().info("action.start", { route: "remove-member", method: request.method });
+
 	let result = await validate(request, inputSchema);
 	let { t } = i18next(context);
 

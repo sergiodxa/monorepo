@@ -10,17 +10,33 @@ import type { clientAction } from "~/routes/actions/$team.create-invite/route";
 
 import { useTeam } from "~/hooks/use-team";
 import { hasActiveSubscription } from "~/middleware/customer-subscription";
+import { logger } from "~/middleware/logger";
 import { team } from "~/middleware/team";
 
 import type { Route } from "./+types/route";
 
 export async function loader() {
+	logger().info("settingsInvite.loader.start", {
+		route: "settings.invite",
+		teamId: team().id,
+	});
+
 	let { memberships } = team();
 	let subjectMembership = memberships[0];
 
 	if (subjectMembership.role === "member") {
+		logger().info("settingsInvite.loader.forbidden", {
+			route: "settings.invite",
+			teamId: team().id,
+			reason: "member role cannot invite",
+		});
 		throw forbidden({ hasActiveSubscription: await hasActiveSubscription() });
 	}
+
+	logger().info("settingsInvite.loader.complete", {
+		route: "settings.invite",
+		teamId: team().id,
+	});
 
 	return null;
 }

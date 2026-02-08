@@ -11,6 +11,7 @@ import { TeamProvider } from "~/hooks/use-team";
 import { CustomerSubscriptionContext } from "~/middleware/customer-subscription";
 import { db } from "~/middleware/drizzle";
 import { i18next } from "~/middleware/i18next";
+import { logger } from "~/middleware/logger";
 import { getSession } from "~/middleware/session";
 import { SubjectContext, subject } from "~/middleware/subject";
 import { type Team, TeamContext, team } from "~/middleware/team";
@@ -127,6 +128,12 @@ export const middleware: Route.MiddlewareFunction[] = [
 export async function loader({ request, context }: Route.LoaderArgs) {
 	let { t } = i18next(context);
 
+	logger().info("team.loader.start", {
+		route: "$team",
+		teamId: team().id,
+		subjectId: subject().id,
+	});
+
 	let [memberships, monitors] = await Promise.all([
 		db().query.memberships.findMany({
 			where(fields, operators) {
@@ -164,6 +171,13 @@ export async function loader({ request, context }: Route.LoaderArgs) {
 			status = lastResult.responseStatus === monitor.expectedStatus ? "up" : "down";
 		}
 		return { id: monitor.id, name: monitor.name, status };
+	});
+
+	logger().info("team.loader.complete", {
+		route: "$team",
+		teamId: team().id,
+		membershipCount: memberships.length,
+		monitorCount: monitors.length,
 	});
 
 	return {

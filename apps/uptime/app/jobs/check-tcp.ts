@@ -64,6 +64,11 @@ export default class CheckTcpJob implements Job {
 		teamId: string;
 		team: { ownerId: string };
 	}): Promise<void> {
+		this.logger.info("tcp.check", {
+			tcpMonitorId: monitor.id,
+			host: monitor.host,
+			port: monitor.port,
+		});
 		let result = await checkTcpConnection(monitor.host, monitor.port, monitor.timeoutMs);
 
 		// Map "unsupported" to "down" for storage (since the enum doesn't include "unsupported")
@@ -71,6 +76,10 @@ export default class CheckTcpJob implements Job {
 			result.status === "unsupported" ? "down" : result.status;
 
 		// Store the result
+		this.logger.info("database.insert", {
+			table: "tcpMonitorResults",
+			tcpMonitorId: monitor.id,
+		});
 		await TcpMonitor.createResult(this.db, monitor.id, {
 			status: storableStatus,
 			responseTimeMs: result.responseTimeMs,
@@ -78,6 +87,11 @@ export default class CheckTcpJob implements Job {
 		});
 
 		// Update the monitor's last status
+		this.logger.info("database.update", {
+			table: "tcpMonitors",
+			tcpMonitorId: monitor.id,
+			status: storableStatus,
+		});
 		await TcpMonitor.updateStatus(this.db, monitor.id, storableStatus, result.responseTimeMs);
 
 		this.logger.info("job.check-tcp.monitor-checked", {

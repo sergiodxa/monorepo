@@ -16,11 +16,18 @@ import { useSpinDelay } from "spin-delay";
 import { AppHeader } from "~/components/app-header";
 import { useTeam } from "~/hooks/use-team";
 import { db } from "~/middleware/drizzle";
+import { logger } from "~/middleware/logger";
 import { team } from "~/middleware/team";
 
 import type { Route } from "./+types/route";
 
 export async function loader({ params }: Route.LoaderArgs) {
+	logger().info("statusPageEdit.loader.start", {
+		route: "status-pages.$statusPageId.edit",
+		statusPageId: params.statusPageId,
+		teamId: team().id,
+	});
+
 	let [statusPage, monitors] = await Promise.all([
 		db().query.statusPages.findFirst({
 			where(fields, operators) {
@@ -45,8 +52,21 @@ export async function loader({ params }: Route.LoaderArgs) {
 	]);
 
 	if (!statusPage) {
+		logger().info("statusPageEdit.loader.not-found", {
+			route: "status-pages.$statusPageId.edit",
+			statusPageId: params.statusPageId,
+			teamId: team().id,
+		});
 		throw redirect(href("/app/:team/status-pages", params));
 	}
+
+	logger().info("statusPageEdit.loader.complete", {
+		route: "status-pages.$statusPageId.edit",
+		statusPageId: statusPage.id,
+		teamId: team().id,
+		monitorsCount: monitors.length,
+		linkedMonitorsCount: statusPage.monitors.length,
+	});
 
 	return {
 		statusPage: {

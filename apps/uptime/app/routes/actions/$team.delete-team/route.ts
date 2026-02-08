@@ -23,6 +23,8 @@ const inputSchema = z.object({
 });
 
 export async function action({ request, context }: Route.ActionArgs) {
+	logger().info("action.start", { route: "delete-team", method: request.method });
+
 	let { t } = i18next(context);
 	let teamData = team();
 	let subjectData = subject();

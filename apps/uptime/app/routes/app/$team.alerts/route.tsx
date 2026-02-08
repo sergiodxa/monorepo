@@ -20,6 +20,7 @@ import { AppHeader } from "~/components/app-header";
 import { useTeam } from "~/hooks/use-team";
 import { hasActiveSubscription } from "~/middleware/customer-subscription";
 import { db } from "~/middleware/drizzle";
+import { logger } from "~/middleware/logger";
 import { measure } from "~/middleware/server-timing";
 import { team } from "~/middleware/team";
 
@@ -94,12 +95,23 @@ function AlertsTableSkeleton() {
 }
 
 export async function loader() {
+	logger().info("alerts.loader.start", {
+		route: "alerts",
+		teamId: team().id,
+	});
+
 	let alerts = await measure("findAlerts", () => {
 		return db().query.alerts.findMany({
 			where(fields, operators) {
 				return operators.eq(fields.teamId, team().id);
 			},
 		});
+	});
+
+	logger().info("alerts.loader.complete", {
+		route: "alerts",
+		teamId: team().id,
+		alertCount: alerts.length,
 	});
 
 	return { alerts, hasActiveSubscription: await hasActiveSubscription() };

@@ -40,6 +40,7 @@ import { AppHeader } from "~/components/app-header";
 import { useTeam } from "~/hooks/use-team";
 import { hasActiveSubscription } from "~/middleware/customer-subscription";
 import { db } from "~/middleware/drizzle";
+import { logger } from "~/middleware/logger";
 import { measure } from "~/middleware/server-timing";
 import { team } from "~/middleware/team";
 
@@ -111,7 +112,18 @@ export async function loader() {
 	let { memberships, id } = team();
 	let subjectMembership = memberships[0];
 
+	logger().info("apiKeys.loader.start", {
+		route: "api-keys",
+		teamId: id,
+		subjectRole: subjectMembership.role,
+	});
+
 	if (subjectMembership.role !== "admin") {
+		logger().info("apiKeys.loader.forbidden", {
+			route: "api-keys",
+			teamId: id,
+			subjectRole: subjectMembership.role,
+		});
 		throw forbidden({ hasActiveSubscription: await hasActiveSubscription() });
 	}
 
@@ -133,6 +145,12 @@ export async function loader() {
 				return operators.desc(fields.createdAt);
 			},
 		});
+	});
+
+	logger().info("apiKeys.loader.complete", {
+		route: "api-keys",
+		teamId: id,
+		apiKeyCount: apiKeys.length,
 	});
 
 	return { apiKeys, hasActiveSubscription: await hasActiveSubscription() };

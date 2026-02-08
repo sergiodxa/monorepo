@@ -17,6 +17,8 @@ import type { Route } from "./+types/route";
 const inputSchema = z.object({ maintenanceId: z.uuid() });
 
 export async function action({ request, context }: Route.ActionArgs) {
+	logger().info("action.start", { route: "end-maintenance", method: request.method });
+
 	let result = await validate(request, inputSchema);
 	let { t } = i18next(context);
 

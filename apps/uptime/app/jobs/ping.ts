@@ -29,6 +29,7 @@ export default class PingJob implements Job {
 				messageId: message.id,
 			});
 
+			logger.info("subscription.check", { ownerId: this.input.ownerId });
 			let hasActiveSubscription = await Customer.hasActiveSubscription(this.input.ownerId);
 
 			if (!hasActiveSubscription) {
@@ -38,8 +39,9 @@ export default class PingJob implements Job {
 				return message.ack();
 			}
 
-			logger.info("job.ping.subscription-verified");
+			logger.info("subscription.verified", { ownerId: this.input.ownerId });
 
+			logger.info("monitor.ping", { monitorId: this.input.monitorId });
 			await Monitor.ping(this.db, this.input.monitorId);
 
 			logger.info("job.ping.completed", { status: "success" });

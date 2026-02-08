@@ -29,6 +29,7 @@ import { AppHeader } from "~/components/app-header";
 import { useTeam } from "~/hooks/use-team";
 import { db } from "~/middleware/drizzle";
 import { locale } from "~/middleware/i18next";
+import { logger } from "~/middleware/logger";
 import { measure } from "~/middleware/server-timing";
 import { team } from "~/middleware/team";
 import { getHints } from "~/utils/client-hints";
@@ -99,6 +100,11 @@ function MaintenanceTableSkeleton() {
 }
 
 export async function loader({ request }: Route.LoaderArgs) {
+	logger().info("maintenance.loader.start", {
+		route: "maintenance",
+		teamId: team().id,
+	});
+
 	let now = new Date();
 	let clientLocale = locale();
 	let timeZone = getHints(request).timeZone;
@@ -144,6 +150,14 @@ export async function loader({ request }: Route.LoaderArgs) {
 			timeZone,
 		});
 	}
+
+	logger().info("maintenance.loader.complete", {
+		route: "maintenance",
+		teamId: team().id,
+		activeCount: active.length,
+		upcomingCount: upcoming.length,
+		pastCount: past.length,
+	});
 
 	return {
 		active: active.map((w) => ({

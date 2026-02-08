@@ -14,6 +14,10 @@ export default class CleanJob implements Job {
 		try {
 			this.logger.info("job.clean.started", { messageId: message.id });
 
+			this.logger.info("database.delete", {
+				table: "monitorResults",
+				operation: "clean_old_results",
+			});
 			let result = await Monitor.cleanResults(this.db);
 
 			this.logger.info("job.clean.completed", { rowsDeleted: result.meta.changes });

@@ -15,6 +15,8 @@ import type { Route } from "./+types/route";
 const inputSchema = z.object({ tcpMonitorId: z.uuid() });
 
 export async function action({ request, context }: Route.ActionArgs) {
+	logger().info("action.start", { route: "delete-tcp-monitor", method: request.method });
+
 	let result = await validate(request, inputSchema);
 	let { t } = i18next(context);
 

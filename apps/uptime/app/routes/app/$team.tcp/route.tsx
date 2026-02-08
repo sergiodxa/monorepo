@@ -9,13 +9,25 @@ import { AppHeader } from "~/components/app-header";
 import { useTeam } from "~/hooks/use-team";
 import { hasActiveSubscription } from "~/middleware/customer-subscription";
 import { db } from "~/middleware/drizzle";
+import { logger } from "~/middleware/logger";
 import { team } from "~/middleware/team";
 import TcpMonitor from "~/models/tcp-monitor";
 
 import type { Route } from "./+types/route";
 
 export async function loader() {
+	logger().info("tcp.loader.start", {
+		route: "tcp",
+		teamId: team().id,
+	});
+
 	let tcpMonitors = await TcpMonitor.listByTeam(db(), team().id);
+
+	logger().info("tcp.loader.complete", {
+		route: "tcp",
+		teamId: team().id,
+		tcpMonitorCount: tcpMonitors.length,
+	});
 
 	return {
 		hasActiveSubscription: await hasActiveSubscription(),

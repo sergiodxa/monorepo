@@ -29,6 +29,8 @@ const schema = z.object({
 });
 
 export async function action({ request, context }: Route.ActionArgs) {
+	logger().info("action.start", { route: "create-monitor", method: request.method });
+
 	let result = await validate(request, schema);
 	let { t } = i18next(context);
 

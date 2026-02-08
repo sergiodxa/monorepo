@@ -34,6 +34,8 @@ const sslSchema = z.object({
 });
 
 export async function action({ request, context }: Route.ActionArgs) {
+	logger().info("action.start", { route: "update-ssl", method: request.method });
+
 	let result = await validate(request, sslSchema);
 	let { t } = i18next(context);
 

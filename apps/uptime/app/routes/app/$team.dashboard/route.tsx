@@ -37,6 +37,7 @@ import { getContext } from "~/middleware/context-storage";
 import { hasActiveSubscription } from "~/middleware/customer-subscription";
 import { db } from "~/middleware/drizzle";
 import { i18next as getI18next, locale } from "~/middleware/i18next";
+import { logger } from "~/middleware/logger";
 import { measure } from "~/middleware/server-timing";
 import { team } from "~/middleware/team";
 import Customer from "~/models/customer";
@@ -140,6 +141,11 @@ function MonitorsTableSkeleton() {
 }
 
 export async function loader({ request }: Route.LoaderArgs) {
+	logger().info("dashboard.loader.start", {
+		route: "dashboard",
+		teamId: team().id,
+	});
+
 	let [{ monitorsCount, uptime, slowestEndpoint, monitors }, consumedPings, estimatedPings] =
 		await Promise.all([
 			measure("getDashboardDataByTeamId", () => {
@@ -158,6 +164,15 @@ export async function loader({ request }: Route.LoaderArgs) {
 				return Monitor.estimateConsumedPingsByTeam(db(), team().id, new Date());
 			}),
 		]);
+
+	logger().info("dashboard.loader.complete", {
+		route: "dashboard",
+		teamId: team().id,
+		monitorsCount,
+		uptime,
+		consumedPings,
+		estimatedPings,
+	});
 
 	return {
 		hasActiveSubscription: await hasActiveSubscription(),

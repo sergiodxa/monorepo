@@ -2,17 +2,37 @@ import { Button } from "@pkg/ui";
 import { useTranslation } from "react-i18next";
 import { Form, href, redirect } from "react-router";
 
+import { logger } from "~/middleware/logger";
 import { getSession } from "~/middleware/session";
 import { logout } from "~/modules/auth";
 
 import type { Route } from "./+types/logout";
 
 export async function loader(_: Route.LoaderArgs) {
-	if (getSession().has("id")) return null;
+	logger().info("logout.loader.start", {
+		route: "logout",
+	});
+
+	if (getSession().has("id")) {
+		logger().info("logout.loader.complete", {
+			route: "logout",
+			hasSession: true,
+		});
+		return null;
+	}
+
+	logger().info("logout.loader.redirect-no-session", {
+		route: "logout",
+	});
+
 	return redirect(href("/"));
 }
 
 export async function action(_: Route.ActionArgs) {
+	logger().info("logout.action.start", {
+		route: "logout",
+	});
+
 	return await logout();
 }
 

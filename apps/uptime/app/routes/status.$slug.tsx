@@ -1,10 +1,12 @@
 import { cn } from "@pkg/cn";
 import { isSameDay } from "date-fns";
 import { CheckCircle2Icon, AlertTriangleIcon, XCircleIcon, MinusCircleIcon } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { href, Link } from "react-router";
 
 import * as BetterHeatmap from "~/components/heatmap-composable";
 import { db } from "~/middleware/drizzle";
+import { logger } from "~/middleware/logger";
 import Monitor from "~/models/monitor";
 import daysOfLastNDays from "~/utils/days-of-last-n-days";
 import getCellColor from "~/utils/get-cell-color";
@@ -25,6 +27,11 @@ export const meta: Route.MetaFunction = ({ data }) => {
 };
 
 export async function loader({ params }: Route.LoaderArgs) {
+	logger().info("statusPage.loader.start", {
+		route: "status.$slug",
+		slug: params.slug,
+	});
+
 	let statusPage = await db().query.statusPages.findFirst({
 		where(fields, operators) {
 			return operators.and(
@@ -42,12 +49,22 @@ export async function loader({ params }: Route.LoaderArgs) {
 	});
 
 	if (!statusPage) {
+		logger().info("statusPage.loader.not-found", {
+			route: "status.$slug",
+			slug: params.slug,
+		});
 		throw new Response("Status page not found", { status: 404 });
 	}
 
 	let monitorIds = statusPage.monitors.map((m) => m.monitorId);
 
 	if (monitorIds.length === 0) {
+		logger().info("statusPage.loader.complete", {
+			route: "status.$slug",
+			slug: params.slug,
+			monitorCount: 0,
+			overallStatus: "operational",
+		});
 		return {
 			statusPage: {
 				title: statusPage.title,
@@ -140,6 +157,13 @@ export async function loader({ params }: Route.LoaderArgs) {
 			overallStatus = "degraded";
 		}
 	}
+
+	logger().info("statusPage.loader.complete", {
+		route: "status.$slug",
+		slug: params.slug,
+		monitorCount: validMonitors.length,
+		overallStatus,
+	});
 
 	return {
 		statusPage: {
@@ -314,11 +338,13 @@ function MonitorCard({
 }
 
 function MiniHeatmap({ data }: { data: Array<{ date: string; successRate: number | null }> }) {
+	let { t } = useTranslation("translation", { keyPrefix: "statusPage.heatmap" });
+
 	return (
 		<div className="flex flex-col gap-1">
 			<div className="flex justify-between text-xs text-neutral-500 dark:text-neutral-400">
-				<span>30 days ago</span>
-				<span>Today</span>
+				<span>{t("daysAgo")}</span>
+				<span>{t("today")}</span>
 			</div>
 			<div className="flex gap-0.5">
 				{data.map((point) => (
@@ -327,7 +353,7 @@ function MiniHeatmap({ data }: { data: Array<{ date: string; successRate: number
 						message={`${new Date(point.date).toLocaleDateString(undefined, {
 							month: "short",
 							day: "numeric",
-						})}: ${point.successRate !== null ? `${point.successRate.toFixed(1)}% uptime` : "No data"}`}
+						})}: ${point.successRate !== null ? t("tooltip.uptime", { percentage: point.successRate.toFixed(1) }) : t("tooltip.noData")}`}
 					>
 						<div className={cn("h-6 flex-1 rounded-sm", getCellColor(point.successRate))} />
 					</BetterHeatmap.CellTooltip>
@@ -336,19 +362,19 @@ function MiniHeatmap({ data }: { data: Array<{ date: string; successRate: number
 			<div className="mt-1 flex items-center justify-end gap-2 text-xs text-neutral-500 dark:text-neutral-400">
 				<div className="flex items-center gap-1">
 					<div className="bg-green-500 h-2.5 w-2.5 rounded-sm" />
-					<span>100%</span>
+					<span>{t("legend.full")}</span>
 				</div>
 				<div className="flex items-center gap-1">
 					<div className="bg-yellow-500 h-2.5 w-2.5 rounded-sm" />
-					<span>Partial</span>
+					<span>{t("legend.partial")}</span>
 				</div>
 				<div className="flex items-center gap-1">
 					<div className="bg-red-500 h-2.5 w-2.5 rounded-sm" />
-					<span>Down</span>
+					<span>{t("legend.down")}</span>
 				</div>
 				<div className="flex items-center gap-1">
 					<div className="h-2.5 w-2.5 rounded-sm bg-neutral-200 dark:bg-neutral-700" />
-					<span>No data</span>
+					<span>{t("legend.noData")}</span>
 				</div>
 			</div>
 		</div>
@@ -356,20 +382,18 @@ function MiniHeatmap({ data }: { data: Array<{ date: string; successRate: number
 }
 
 export function ErrorBoundary() {
+	let { t } = useTranslation("translation", { keyPrefix: "statusPage.error" });
+
 	return (
 		<div className="flex min-h-screen items-center justify-center bg-neutral-50 dark:bg-neutral-950">
 			<div className="text-center">
-				<h1 className="text-2xl font-bold text-neutral-900 dark:text-neutral-100">
-					Status Page Not Found
-				</h1>
-				<p className="mt-2 text-neutral-600 dark:text-neutral-400">
-					The status page you're looking for doesn't exist or is not public.
-				</p>
+				<h1 className="text-2xl font-bold text-neutral-900 dark:text-neutral-100">{t("title")}</h1>
+				<p className="mt-2 text-neutral-600 dark:text-neutral-400">{t("description")}</p>
 				<Link
 					to={href("/")}
 					className="mt-4 inline-block text-sm font-medium text-neutral-600 hover:text-neutral-900 dark:text-neutral-300 dark:hover:text-neutral-100"
 				>
-					Go to homepage
+					{t("goHome")}
 				</Link>
 			</div>
 		</div>

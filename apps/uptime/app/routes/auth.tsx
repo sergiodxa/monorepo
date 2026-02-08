@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { data, href, redirect } from "react-router";
 import { OAuth2RequestError } from "remix-auth-oauth2";
 import { safeRedirect } from "remix-utils/safe-redirect";
@@ -53,16 +54,18 @@ export async function action({ request }: Route.ActionArgs) {
 }
 
 export default function Component({ loaderData }: Route.ComponentProps) {
+	let { t } = useTranslation("translation", { keyPrefix: "auth.error" });
+
 	return (
 		<main>
-			<h1>Authentication Error</h1>
+			<h1>{t("title")}</h1>
 			{loaderData?.code && (
 				<div>
-					<p>Error Code: {loaderData.code}</p>
-					<p>Description: {loaderData.description}</p>
+					<p>{t("errorCode", { code: loaderData.code })}</p>
+					<p>{t("description", { description: loaderData.description })}</p>
 					{loaderData.uri && (
 						<p>
-							URI:{" "}
+							{t("uri")}{" "}
 							<a href={loaderData.uri} target="_blank" rel="noopener noreferrer">
 								{loaderData.uri}
 							</a>
@@ -71,7 +74,7 @@ export default function Component({ loaderData }: Route.ComponentProps) {
 				</div>
 			)}
 
-			<p>Please try again or contact support if the issue persists.</p>
+			<p>{t("tryAgain")}</p>
 		</main>
 	);
 }

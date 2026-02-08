@@ -17,6 +17,12 @@ export default class Ping extends WorkflowEntrypoint<Cloudflare.Env> {
 
 		try {
 			await this.execute(event, step, logger);
+		} catch (error) {
+			logger.error("workflow.ping.error", {
+				monitorResultId,
+				error: error instanceof Error ? error.message : String(error),
+			});
+			throw error;
 		} finally {
 			logger.flush();
 		}
@@ -29,9 +35,9 @@ export default class Ping extends WorkflowEntrypoint<Cloudflare.Env> {
 
 		let db = await this.getDb();
 
-		let monitorResult = await step.do("find monitor by result id", () => {
-			logger.info("workflow.ping.step.find-monitor-result", { monitorResultId });
-			return db.query.monitorResults.findFirst({
+		let monitorResult = await step.do("find monitor by result id", async () => {
+			logger.info("workflow.ping.step.find-monitor-result.start", { monitorResultId });
+			let result = await db.query.monitorResults.findFirst({
 				where(fields, operators) {
 					return operators.eq(fields.id, monitorResultId);
 				},
@@ -65,6 +71,11 @@ export default class Ping extends WorkflowEntrypoint<Cloudflare.Env> {
 					},
 				},
 			});
+			logger.info("workflow.ping.step.find-monitor-result.complete", {
+				monitorResultId,
+				found: !!result,
+			});
+			return result;
 		});
 
 		if (!monitorResult) {
@@ -84,6 +95,9 @@ export default class Ping extends WorkflowEntrypoint<Cloudflare.Env> {
 
 		// Get the previous completed result to detect state transitions
 		let previousResult = await step.do("find previous result", async () => {
+			logger.info("workflow.ping.step.find-previous-result.start", {
+				monitorId: monitorResult.monitor.id,
+			});
 			let { and, eq, isNotNull, lt, desc } = await import("drizzle-orm");
 			let schema = await import("~/db/schema");
 			let db = await this.getDb();
@@ -101,7 +115,13 @@ export default class Ping extends WorkflowEntrypoint<Cloudflare.Env> {
 				.orderBy(desc(schema.monitorResults.createdAt))
 				.limit(1);
 
-			return results[0] ?? null;
+			let result = results[0] ?? null;
+			logger.info("workflow.ping.step.find-previous-result.complete", {
+				monitorId: monitorResult.monitor.id,
+				found: !!result,
+				previousResultId: result?.id ?? null,
+			});
+			return result;
 		});
 
 		let hasContentChecks = monitorResult.monitor.contentChecks.length > 0;
@@ -123,6 +143,12 @@ export default class Ping extends WorkflowEntrypoint<Cloudflare.Env> {
 				timeout: monitorResult.monitor.timeoutSeconds * MILLISECONDS_PER_SECOND,
 			},
 			async () => {
+				logger.info("workflow.ping.step.ping-monitor.start", {
+					monitorId: monitorResult.monitor.id,
+					url: monitorResult.monitor.url,
+					method: monitorResult.monitor.method,
+					locationHint: monitorResult.monitor.locationHint,
+				});
 				let id = env.GEO_FETCH.idFromName(monitorResult.monitor.locationHint);
 
 				// Support GDPR and non-GDPR regions
@@ -159,6 +185,12 @@ export default class Ping extends WorkflowEntrypoint<Cloudflare.Env> {
 					}
 				}
 
+				logger.info("workflow.ping.step.ping-monitor.complete", {
+					monitorId: monitorResult.monitor.id,
+					responseStatus: response.status,
+					responseTimeMs: Number(response.headers.get("X-Response-Time")),
+				});
+
 				return {
 					responseStatus: response.status,
 					responseTimeMs: Number(response.headers.get("X-Response-Time")),
@@ -177,7 +209,17 @@ export default class Ping extends WorkflowEntrypoint<Cloudflare.Env> {
 
 		// Run content checks if there are any
 		let contentCheckResult = await step.do("run content checks", async () => {
+			logger.info("workflow.ping.step.content-checks.start", {
+				monitorId: monitorResult.monitor.id,
+				hasContentChecks,
+				checksCount: monitorResult.monitor.contentChecks.length,
+			});
+
 			if (!hasContentChecks) {
+				logger.info("workflow.ping.step.content-checks.complete", {
+					monitorId: monitorResult.monitor.id,
+					skipped: true,
+				});
 				return { allPassed: true, failedCount: 0 };
 			}
 
@@ -187,6 +229,13 @@ export default class Ping extends WorkflowEntrypoint<Cloudflare.Env> {
 				monitorResult.monitor.contentChecks,
 			);
 
+			logger.info("workflow.ping.step.content-checks.complete", {
+				monitorId: monitorResult.monitor.id,
+				allPassed: summary.allPassed,
+				failedCount: summary.failedCount,
+				totalChecks: monitorResult.monitor.contentChecks.length,
+			});
+
 			return {
 				allPassed: summary.allPassed,
 				failedCount: summary.failedCount,
@@ -195,7 +244,10 @@ export default class Ping extends WorkflowEntrypoint<Cloudflare.Env> {
 		});
 
 		let updatedMonitorResult = await step.do("save monitor results", async () => {
-			logger.info("workflow.ping.step.save-results", { monitorResultId });
+			logger.info("workflow.ping.step.save-results.start", {
+				monitorResultId,
+				monitorId: monitorResult.monitor.id,
+			});
 
 			let { eq: eqOp } = await import("drizzle-orm");
 			let schema = await import("~/db/schema");
@@ -210,12 +262,21 @@ export default class Ping extends WorkflowEntrypoint<Cloudflare.Env> {
 				})
 				.where(eqOp(schema.monitorResults.id, monitorResult.id))
 				.returning();
-			if (updatedMonitorResult) return updatedMonitorResult;
+
+			if (updatedMonitorResult) {
+				logger.info("workflow.ping.step.save-results.complete", {
+					monitorResultId,
+					monitorId: monitorResult.monitor.id,
+					responseStatus: updatedMonitorResult.responseStatus,
+					responseTimeMs: updatedMonitorResult.responseTimeMs,
+				});
+				return updatedMonitorResult;
+			}
 			throw new Error("Failed to update monitor result");
 		});
 
 		await step.do("send alerts", async () => {
-			logger.info("workflow.ping.step.send-alerts", { monitorId: monitorResult.monitor.id });
+			logger.info("workflow.ping.step.send-alerts.start", { monitorId: monitorResult.monitor.id });
 
 			// Status check passes if response status matches expected AND content checks pass
 			let statusMatches =
@@ -379,6 +440,18 @@ export default class Ping extends WorkflowEntrypoint<Cloudflare.Env> {
 				}),
 			);
 
+			let successCount = results.filter((r) => r.status === "fulfilled").length;
+			let failedCount = results.filter((r) => r.status === "rejected").length;
+
+			logger.info("workflow.ping.step.send-alerts.complete", {
+				monitorId: monitorResult.monitor.id,
+				alertsTotal: alerts.length,
+				alertsSent: successCount,
+				alertsFailed: failedCount,
+				currentStatus,
+				isRecovery,
+			});
+
 			if (results.every((alert) => alert.status === "rejected")) {
 				throw new AggregateError(
 					results.filter((r) => r.status === "rejected").map((r) => r.reason),
@@ -388,14 +461,25 @@ export default class Ping extends WorkflowEntrypoint<Cloudflare.Env> {
 		});
 
 		await step.do("ingest usage", async () => {
-			logger.info("workflow.ping.step.ingest-usage", { monitorId: monitorResult.monitor.id });
+			logger.info("workflow.ping.step.ingest-usage.start", {
+				monitorId: monitorResult.monitor.id,
+				teamId: monitorResult.monitor.team.id,
+				ownerId: monitorResult.monitor.team.ownerId,
+			});
 
 			const Customer = await import("~/models/customer").then((m) => m.default);
-			return Customer.ingest(monitorResult.monitor.team.ownerId, {
+			let result = await Customer.ingest(monitorResult.monitor.team.ownerId, {
 				monitorId: monitorResult.monitor.id,
 				resultId: monitorResult.id,
 				teamId: monitorResult.monitor.team.id,
 			});
+
+			logger.info("workflow.ping.step.ingest-usage.complete", {
+				monitorId: monitorResult.monitor.id,
+				teamId: monitorResult.monitor.team.id,
+			});
+
+			return result;
 		});
 
 		logger.info("workflow.ping.completed", {

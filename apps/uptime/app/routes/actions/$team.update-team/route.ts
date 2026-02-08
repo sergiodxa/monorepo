@@ -20,13 +20,15 @@ const inputSchema = z.object({
 });
 
 export async function action({ request, context }: Route.ActionArgs) {
+	logger().info("action.start", { route: "update-team", method: request.method });
+
 	let { t } = i18next(context);
 	let teamData = team();
 
 	// Check if user is admin
 	let subjectMembership = teamData.memberships[0];
 	if (subjectMembership.role !== "admin") {
-		logger().warn("action.update-team.forbidden", {
+		logger().info("action.update-team.forbidden", {
 			teamId: teamData.id,
 			role: subjectMembership.role,
 		});

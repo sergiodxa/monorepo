@@ -8,19 +8,38 @@ import { useSpinDelay } from "spin-delay";
 import { AppHeader } from "~/components/app-header";
 import { useTeam } from "~/hooks/use-team";
 import { hasActiveSubscription } from "~/middleware/customer-subscription";
+import { logger } from "~/middleware/logger";
 import { team } from "~/middleware/team";
 
 import type { Route } from "./+types/route";
 
 export async function loader() {
+	logger().info("domainNew.loader.start", {
+		route: "domains.new",
+		teamId: team().id,
+	});
+
 	let { memberships } = team();
 	let subjectMembership = memberships[0];
 
 	if (subjectMembership.role === "member") {
+		logger().info("domainNew.loader.forbidden", {
+			route: "domains.new",
+			teamId: team().id,
+			reason: "member role cannot add domains",
+		});
 		throw forbidden({ hasActiveSubscription: await hasActiveSubscription() });
 	}
 
-	return { hasActiveSubscription: await hasActiveSubscription() };
+	let activeSubscription = await hasActiveSubscription();
+
+	logger().info("domainNew.loader.complete", {
+		route: "domains.new",
+		teamId: team().id,
+		hasActiveSubscription: activeSubscription,
+	});
+
+	return { hasActiveSubscription: activeSubscription };
 }
 
 export default function Component({ loaderData, params }: Route.ComponentProps) {

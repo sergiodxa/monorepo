@@ -25,6 +25,8 @@ const inputSchema = z.object({
 });
 
 export async function action({ request, context }: Route.ActionArgs) {
+	logger().info("action.start", { route: "create-maintenance", method: request.method });
+
 	let result = await validate(request, inputSchema);
 	let { t } = i18next(context);
 

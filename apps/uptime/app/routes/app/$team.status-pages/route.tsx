@@ -17,6 +17,7 @@ import { useSpinDelay } from "spin-delay";
 import { AppHeader } from "~/components/app-header";
 import { useTeam } from "~/hooks/use-team";
 import { db } from "~/middleware/drizzle";
+import { logger } from "~/middleware/logger";
 import { measure } from "~/middleware/server-timing";
 import { team } from "~/middleware/team";
 
@@ -86,6 +87,11 @@ function StatusPagesTableSkeleton() {
 }
 
 export async function loader() {
+	logger().info("statusPages.loader.start", {
+		route: "status-pages",
+		teamId: team().id,
+	});
+
 	let statusPages = await measure("findStatusPages", () => {
 		return db().query.statusPages.findMany({
 			where(fields, operators) {
@@ -98,6 +104,12 @@ export async function loader() {
 				return operators.desc(fields.createdAt);
 			},
 		});
+	});
+
+	logger().info("statusPages.loader.complete", {
+		route: "status-pages",
+		teamId: team().id,
+		statusPageCount: statusPages.length,
 	});
 
 	return {

@@ -1,9 +1,14 @@
 import { href, redirect } from "react-router";
 
 import { db } from "~/middleware/drizzle";
+import { logger } from "~/middleware/logger";
 import { requireSubject } from "~/middleware/session";
 
 export async function loader() {
+	logger().info("appIndex.loader.start", {
+		route: "app._index",
+	});
+
 	let subjectId = requireSubject();
 	let membership = await db().query.memberships.findFirst({
 		where(fields, operators) {
@@ -19,6 +24,19 @@ export async function loader() {
 		},
 	});
 
-	if (!membership) return redirect(href("/"));
+	if (!membership) {
+		logger().info("appIndex.loader.no-membership", {
+			route: "app._index",
+			subjectId,
+		});
+		return redirect(href("/"));
+	}
+
+	logger().info("appIndex.loader.redirect-to-team", {
+		route: "app._index",
+		subjectId,
+		teamSlug: membership.team.slug,
+	});
+
 	return redirect(href("/app/:team", { team: membership.team.slug }));
 }

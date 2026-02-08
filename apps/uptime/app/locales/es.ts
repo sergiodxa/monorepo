@@ -34,12 +34,27 @@ export default {
 			screenshot: {
 				alt: "Captura de pantalla de un panel de monitoreo de uptime mostrando dos servicios con gráficos de mapa de calor semanal. Cada punto representa una verificación: verde para éxito, amarillo para mixto, rojo para falla y gris para sin datos. Cada monitor también muestra porcentaje de uptime, verificaciones totales, última verificación y tiempo de respuesta del percentil 99",
 			},
+
+			trustIndicators: {
+				freeToStart: "Gratis para empezar",
+				payForAutomation: "Pague por automatización",
+				cancelAnytime: "Cancele cuando quiera",
+			},
+		},
+
+		trustIndicators: {
+			uptimeSla: "SLA de Uptime",
+			globalRegions: "Regiones Globales",
+			daysDataRetention: "Días de Retención",
+			alertLatency: "Latencia de Alertas",
 		},
 
 		features: {
 			title: "Monitoreo potente simplificado",
 			description:
 				"Todo lo que necesita para mantener sus servicios funcionando sin problemas, sin complejidad innecesaria.",
+			badge: "Funciones",
+			learnMore: "Más información",
 
 			list: {
 				first: {
@@ -57,10 +72,112 @@ export default {
 					description:
 						"Precios transparentes sin tarifas ocultas. Escale hacia arriba o hacia abajo según sea necesario, con planes que crecen con sus necesidades de monitoreo.",
 				},
+				fourth: {
+					title: "Páginas de Estado",
+					description:
+						"Cree hermosas páginas de estado públicas para mantener a sus usuarios informados sobre la disponibilidad del servicio e incidentes.",
+				},
+				fifth: {
+					title: "Monitoreo SSL",
+					description:
+						"Rastree las fechas de vencimiento de certificados y reciba alertas antes de que sus certificados SSL expiren para prevenir advertencias de seguridad.",
+				},
+				sixth: {
+					title: "Monitoreo DNS",
+					description:
+						"Detecte cambios en registros DNS y problemas de propagación antes de que afecten a sus usuarios o sean secuestrados.",
+				},
+				seventh: {
+					title: "Integraciones Nativas",
+					description:
+						"Integraciones directas con Slack y Discord con notificaciones enriquecidas, no solo webhooks básicos.",
+				},
+			},
+		},
+
+		completeFeatureSet: {
+			badge: "Conjunto Completo de Funciones",
+			title: "Todo lo que necesita para un monitoreo confiable",
+			description: "Capacidades avanzadas que hacen el monitoreo fácil y completo.",
+
+			list: {
+				maintenanceWindows: {
+					title: "Ventanas de Mantenimiento",
+					description:
+						"Programe tiempo de inactividad y suprima alertas durante mantenimiento planificado",
+				},
+				contentMonitoring: {
+					title: "Monitoreo de Contenido",
+					description:
+						"Verifique que palabras clave o contenido específico aparezcan en sus páginas",
+				},
+				recoveryAlerts: {
+					title: "Alertas de Recuperación",
+					description:
+						"Reciba notificaciones cuando los servicios vuelvan a funcionar después de un incidente",
+				},
+				apiAccess: {
+					title: "Acceso API",
+					description: "API REST completa con gestión de claves para automatización",
+				},
+				alertCooldowns: {
+					title: "Tiempos de Espera de Alertas",
+					description: "Prevenga la fatiga de alertas con períodos de espera configurables",
+				},
+				customHeaders: {
+					title: "Encabezados Personalizados",
+					description:
+						"Agregue encabezados de autenticación y parámetros de solicitud personalizados",
+				},
+			},
+		},
+
+		useCases: {
+			badge: "Casos de Uso",
+			title: "Diseñado para cada necesidad de monitoreo",
+			description:
+				"Desde verificaciones de salud simples hasta sistemas distribuidos complejos, lo tenemos cubierto.",
+			learnMore: "Más información",
+			tailoredFor: "Soluciones personalizadas para:",
+
+			list: {
+				websiteMonitoring: {
+					title: "Monitoreo de Sitios Web",
+					description:
+						"Rastree el uptime y rendimiento de páginas de inicio, blogs y aplicaciones web.",
+				},
+				apiMonitoring: {
+					title: "Monitoreo de APIs",
+					description: "Monitoree APIs REST, endpoints GraphQL y webhooks por disponibilidad.",
+				},
+				saas: {
+					title: "Aplicaciones SaaS",
+					description:
+						"Mantenga su producto SaaS confiable con monitoreo proactivo y alertas instantáneas.",
+				},
+				microservices: {
+					title: "Microservicios",
+					description:
+						"Monitoree sistemas distribuidos y detecte fallas antes de que se propaguen.",
+				},
+				healthChecks: {
+					title: "Verificaciones de Salud",
+					description:
+						"Verifique la salud del servicio y conexiones de base de datos con pings programados.",
+				},
+			},
+
+			audiences: {
+				indieHackers: "Indie Hackers",
+				soloDevelopers: "Desarrolladores Independientes",
+				startups: "Startups",
+				agencies: "Agencias",
+				enterprises: "Empresas",
 			},
 		},
 
 		pricing: {
+			badge: "Precios",
 			title: "Precios simples y transparentes",
 			description:
 				"Una suscripción, sin niveles. Pague solo por lo que usa con nuestro modelo de precios directo",
@@ -114,6 +231,7 @@ export default {
 		},
 
 		faq: {
+			badge: "FAQ",
 			title: "Preguntas frecuentes",
 			description: "Encuentre respuestas a preguntas comunes sobre Uptime",
 
@@ -300,6 +418,79 @@ export default {
 			title: "Monitores de Uptime",
 			cta: "Crear Monitor",
 			subscribe: "Sus monitores están pausados. Suscríbase para continuar monitoreando",
+		},
+	},
+
+	statusPage: {
+		heatmap: {
+			daysAgo: "Hace 30 días",
+			today: "Hoy",
+			legend: {
+				full: "100%",
+				partial: "Parcial",
+				down: "Caído",
+				noData: "Sin datos",
+			},
+			tooltip: {
+				uptime: "{{percentage}}% de uptime",
+				noData: "Sin datos",
+			},
+		},
+		error: {
+			title: "Página de Estado No Encontrada",
+			description: "La página de estado que busca no existe o no es pública.",
+			goHome: "Ir al inicio",
+		},
+	},
+
+	contentMonitoring: {
+		title: "Monitoreo de Contenido",
+		description:
+			"Verifique el contenido de la respuesta para palabras clave o patrones específicos. El monitor fallará si alguna verificación no pasa.",
+		empty:
+			"No hay verificaciones de contenido configuradas. Agregue una verificación para monitorear palabras clave o patrones específicos en la respuesta.",
+		addButton: "Agregar Verificación de Contenido",
+
+		form: {
+			checkType: {
+				label: "Tipo de Verificación",
+				description: "Elija cómo coincidir con el contenido de la respuesta",
+				options: {
+					contains: "Contiene",
+					notContains: "No Contiene",
+					regex: "Patrón Regex",
+				},
+			},
+			value: {
+				label: "Valor",
+				placeholder: "Ingrese palabra clave o patrón",
+				description: "El texto o patrón regex a buscar",
+			},
+			caseSensitive: "Coincidencia sensible a mayúsculas",
+			cancel: "Cancelar",
+			add: "Agregar Verificación",
+		},
+
+		item: {
+			caseSensitive: "Sensible a mayúsculas",
+			disabled: "Deshabilitado",
+			delete: "Eliminar",
+		},
+
+		types: {
+			contains: "Contiene",
+			notContains: "No Contiene",
+			regex: "Regex",
+		},
+	},
+
+	auth: {
+		error: {
+			title: "Error de Autenticación",
+			errorCode: "Código de Error: {{code}}",
+			description: "Descripción: {{description}}",
+			uri: "URI:",
+			tryAgain: "Por favor intente de nuevo o contacte a soporte si el problema persiste.",
 		},
 	},
 

@@ -47,6 +47,8 @@ const inputSchema = z.discriminatedUnion("strategy", [
 ]);
 
 export async function action({ request, context }: Route.ActionArgs) {
+	logger().info("action.start", { route: "create-alert", method: request.method });
+
 	let result = await validate(request, inputSchema);
 	let { t } = i18next(context);
 

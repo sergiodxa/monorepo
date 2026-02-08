@@ -18,6 +18,7 @@ import { AppHeader } from "~/components/app-header";
 import { useTeam } from "~/hooks/use-team";
 import { db } from "~/middleware/drizzle";
 import { locale } from "~/middleware/i18next";
+import { logger } from "~/middleware/logger";
 import { measure } from "~/middleware/server-timing";
 import { team } from "~/middleware/team";
 import { getDnsStatusColor, getDnsStatusText } from "~/services/check-dns";
@@ -95,6 +96,11 @@ function DnsMonitorsTableSkeleton() {
 }
 
 export async function loader({ request }: Route.LoaderArgs) {
+	logger().info("dns.loader.start", {
+		route: "dns",
+		teamId: team().id,
+	});
+
 	let clientLocale = locale();
 	let timeZone = getHints(request).timeZone;
 
@@ -119,6 +125,12 @@ export async function loader({ request }: Route.LoaderArgs) {
 			timeZone,
 		});
 	}
+
+	logger().info("dns.loader.complete", {
+		route: "dns",
+		teamId: team().id,
+		dnsMonitorCount: dnsMonitors.length,
+	});
 
 	return {
 		dnsMonitors: dnsMonitors.map((m) => ({

@@ -6,6 +6,7 @@ import { data, href, redirectDocument } from "react-router";
 import polar from "~/clients/polar";
 import { AppHeader } from "~/components/app-header";
 import { hasActiveSubscription } from "~/middleware/customer-subscription";
+import { logger } from "~/middleware/logger";
 import { subject } from "~/middleware/subject";
 import { team } from "~/middleware/team";
 import Customer from "~/models/customer";
@@ -15,9 +16,20 @@ import type { Route } from "./+types/$team.checkout";
 const PING_METER_ID = "22fabd9b-8b03-4cc2-8981-230717267cd5";
 
 export async function loader({ request }: Route.LoaderArgs) {
+	logger().info("checkout.loader.start", {
+		route: "checkout",
+		teamId: team().id,
+	});
+
 	let ownerId = team().ownerId;
 
 	if (subject().id !== ownerId) {
+		logger().info("checkout.loader.forbidden", {
+			route: "checkout",
+			teamId: team().id,
+			reason: "non-owner accessing checkout",
+		});
+
 		let { total, quantities } = await polar.meters.quantities({
 			externalCustomerId: ownerId,
 			startTimestamp: startOfYear(new Date()),
@@ -33,12 +45,22 @@ export async function loader({ request }: Route.LoaderArgs) {
 	}
 
 	if (await hasActiveSubscription()) {
+		logger().info("checkout.loader.redirect-to-portal", {
+			route: "checkout",
+			teamId: team().id,
+		});
+
 		let { customerPortalUrl } = await polar.customerSessions.create({
 			externalCustomerId: ownerId,
 		});
 
 		return redirectDocument(customerPortalUrl);
 	}
+
+	logger().info("checkout.loader.redirect-to-checkout", {
+		route: "checkout",
+		teamId: team().id,
+	});
 
 	let checkout = await Customer.checkout(
 		ownerId,

@@ -10,6 +10,7 @@ import { StatCard } from "~/components/stat-card";
 import { useTeam } from "~/hooks/use-team";
 import { db } from "~/middleware/drizzle";
 import { locale } from "~/middleware/i18next";
+import { logger } from "~/middleware/logger";
 import { measure } from "~/middleware/server-timing";
 import { team } from "~/middleware/team";
 import { getDnsStatusColor, getDnsStatusText } from "~/services/check-dns";
@@ -47,6 +48,12 @@ export function HydrateFallback() {
 }
 
 export async function loader({ params, request }: Route.LoaderArgs) {
+	logger().info("dnsMonitorDetail.loader.start", {
+		route: "dns.$dnsMonitorId",
+		dnsMonitorId: params.dnsMonitorId,
+		teamId: team().id,
+	});
+
 	let clientLocale = locale();
 	let timeZone = getHints(request).timeZone;
 
@@ -62,6 +69,11 @@ export async function loader({ params, request }: Route.LoaderArgs) {
 	});
 
 	if (!dnsMonitor) {
+		logger().info("dnsMonitorDetail.loader.not-found", {
+			route: "dns.$dnsMonitorId",
+			dnsMonitorId: params.dnsMonitorId,
+			teamId: team().id,
+		});
 		throw data({ message: "DNS Monitor not found" }, { status: 404 });
 	}
 
@@ -99,6 +111,14 @@ export async function loader({ params, request }: Route.LoaderArgs) {
 		responseTimes.length > 0
 			? Math.round(responseTimes.reduce((a, b) => a + b, 0) / responseTimes.length)
 			: null;
+
+	logger().info("dnsMonitorDetail.loader.complete", {
+		route: "dns.$dnsMonitorId",
+		dnsMonitorId: dnsMonitor.id,
+		teamId: team().id,
+		resultsCount: results.length,
+		successRate,
+	});
 
 	return {
 		dnsMonitor: {

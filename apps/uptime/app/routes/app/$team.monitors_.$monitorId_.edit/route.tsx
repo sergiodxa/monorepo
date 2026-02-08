@@ -28,6 +28,7 @@ import { AppHeader } from "~/components/app-header";
 import { useTeam } from "~/hooks/use-team";
 import { hasActiveSubscription } from "~/middleware/customer-subscription";
 import { db } from "~/middleware/drizzle";
+import { logger } from "~/middleware/logger";
 import { team } from "~/middleware/team";
 import regionToEmoji from "~/utils/region-to-emoji";
 
@@ -36,6 +37,12 @@ import type { Route } from "./+types/route";
 const REGIONS = ["afr", "apac", "eeur", "enam", "me", "oc", "sam", "weur", "wnam"] as const;
 
 export async function loader({ params }: Route.LoaderArgs) {
+	logger().info("monitorEdit.loader.start", {
+		route: "monitors.$monitorId.edit",
+		monitorId: params.monitorId,
+		teamId: team().id,
+	});
+
 	let monitor = await db().query.monitors.findFirst({
 		where(fields, operators) {
 			return operators.and(
@@ -53,8 +60,20 @@ export async function loader({ params }: Route.LoaderArgs) {
 	});
 
 	if (!monitor) {
+		logger().info("monitorEdit.loader.not-found", {
+			route: "monitors.$monitorId.edit",
+			monitorId: params.monitorId,
+			teamId: team().id,
+		});
 		return redirect(href("/app/:team/dashboard", params));
 	}
+
+	logger().info("monitorEdit.loader.complete", {
+		route: "monitors.$monitorId.edit",
+		monitorId: monitor.id,
+		teamId: team().id,
+		contentChecksCount: monitor.contentChecks.length,
+	});
 
 	return {
 		hasActiveSubscription: await hasActiveSubscription(),
@@ -279,6 +298,7 @@ function ContentChecksSection({
 	monitorId: string;
 	contentChecks: SelectMonitorContentCheck[];
 }) {
+	let { t } = useTranslation("translation", { keyPrefix: "contentMonitoring" });
 	let teamData = useTeam();
 	let [showAddForm, setShowAddForm] = useState(false);
 
@@ -298,12 +318,9 @@ function ContentChecksSection({
 			<Card.Header>
 				<div className="flex items-center gap-2">
 					<FileSearchIcon className="size-5" />
-					<Card.Title>Content Monitoring</Card.Title>
+					<Card.Title>{t("title")}</Card.Title>
 				</div>
-				<Card.Description>
-					Check response content for specific keywords or patterns. The monitor will fail if any
-					check does not pass.
-				</Card.Description>
+				<Card.Description>{t("description")}</Card.Description>
 			</Card.Header>
 			<Card.Content>
 				<div className="flex flex-col gap-6">
@@ -326,49 +343,50 @@ function ContentChecksSection({
 							<input type="hidden" name="monitorId" value={monitorId} />
 
 							<Select name="type" isRequired defaultSelectedKey="contains">
-								<Label>Check Type</Label>
+								<Label>{t("form.checkType.label")}</Label>
 								<Select.Trigger />
 								<FieldError />
-								<Description>Choose how to match the response content</Description>
+								<Description>{t("form.checkType.description")}</Description>
 								<Popover>
 									<ListBox>
-										<ListBox.Item id="contains">Contains</ListBox.Item>
-										<ListBox.Item id="not_contains">Does Not Contain</ListBox.Item>
-										<ListBox.Item id="regex">Regex Pattern</ListBox.Item>
+										<ListBox.Item id="contains">
+											{t("form.checkType.options.contains")}
+										</ListBox.Item>
+										<ListBox.Item id="not_contains">
+											{t("form.checkType.options.notContains")}
+										</ListBox.Item>
+										<ListBox.Item id="regex">{t("form.checkType.options.regex")}</ListBox.Item>
 									</ListBox>
 								</Popover>
 							</Select>
 
 							<TextField name="value" isRequired>
-								<Label>Value</Label>
-								<Input placeholder="Enter keyword or pattern" />
+								<Label>{t("form.value.label")}</Label>
+								<Input placeholder={t("form.value.placeholder")} />
 								<FieldError />
-								<Description>The text or regex pattern to check for</Description>
+								<Description>{t("form.value.description")}</Description>
 							</TextField>
 
-							<Checkbox name="caseSensitive">Case sensitive matching</Checkbox>
+							<Checkbox name="caseSensitive">{t("form.caseSensitive")}</Checkbox>
 
 							<div className="flex justify-end gap-2">
 								<Button color="neutral" onPress={() => setShowAddForm(false)}>
-									Cancel
+									{t("form.cancel")}
 								</Button>
 								<Button type="submit" isPending={isAddPending}>
-									Add Check
+									{t("form.add")}
 								</Button>
 							</div>
 						</addFetcher.Form>
 					) : (
 						<Button color="neutral" onPress={() => setShowAddForm(true)}>
 							<PlusIcon className="size-4" />
-							Add Content Check
+							{t("addButton")}
 						</Button>
 					)}
 
 					{contentChecks.length === 0 && !showAddForm && (
-						<p className="text-sm text-neutral-500 dark:text-neutral-400">
-							No content checks configured. Add a check to monitor for specific keywords or patterns
-							in the response.
-						</p>
+						<p className="text-sm text-neutral-500 dark:text-neutral-400">{t("empty")}</p>
 					)}
 				</div>
 			</Card.Content>
@@ -383,6 +401,7 @@ function ContentCheckItem({
 	check: SelectMonitorContentCheck;
 	monitorId: string;
 }) {
+	let { t } = useTranslation("translation", { keyPrefix: "contentMonitoring" });
 	let teamData = useTeam();
 	let deleteFetcher = useFetcher();
 	let isDeletePending = useSpinDelay(deleteFetcher.state !== "idle", {
@@ -390,25 +409,21 @@ function ContentCheckItem({
 		delay: 50,
 	});
 
-	let typeLabels: Record<string, string> = {
-		contains: "Contains",
-		not_contains: "Does Not Contain",
-		regex: "Regex",
-	};
-
 	return (
 		<div className="flex items-center justify-between rounded-lg border border-neutral-200 p-3 dark:border-neutral-800">
 			<div className="flex flex-col gap-1">
 				<div className="flex items-center gap-2">
 					<span className="rounded bg-neutral-100 px-2 py-0.5 text-xs font-medium dark:bg-neutral-800">
-						{typeLabels[check.type] ?? check.type}
+						{t(`types.${check.type === "not_contains" ? "notContains" : check.type}`)}
 					</span>
 					{check.caseSensitive && (
-						<span className="text-xs text-neutral-500 dark:text-neutral-400">Case sensitive</span>
+						<span className="text-xs text-neutral-500 dark:text-neutral-400">
+							{t("item.caseSensitive")}
+						</span>
 					)}
 					{!check.isEnabled && (
 						<span className="bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200 rounded px-2 py-0.5 text-xs">
-							Disabled
+							{t("item.disabled")}
 						</span>
 					)}
 				</div>

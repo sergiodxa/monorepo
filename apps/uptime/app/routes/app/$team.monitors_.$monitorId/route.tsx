@@ -21,6 +21,7 @@ import { StatCard } from "~/components/stat-card";
 import { hasActiveSubscription } from "~/middleware/customer-subscription";
 import { db } from "~/middleware/drizzle";
 import { locale } from "~/middleware/i18next";
+import { logger } from "~/middleware/logger";
 import { measure } from "~/middleware/server-timing";
 import { team } from "~/middleware/team";
 import Customer from "~/models/customer";
@@ -92,6 +93,12 @@ function HeatmapSkeleton() {
 }
 
 export async function loader({ params }: Route.LoaderArgs) {
+	logger().info("monitor.loader.start", {
+		route: "monitors.$monitorId",
+		monitorId: params.monitorId,
+		teamId: team().id,
+	});
+
 	let dates = daysOfYear(new Date());
 	let weeks = groupDatesPerWeek(dates);
 
@@ -133,7 +140,14 @@ export async function loader({ params }: Route.LoaderArgs) {
 		}),
 	]);
 
-	if (!monitor) return redirect(href("/app/:team/dashboard", params));
+	if (!monitor) {
+		logger().info("monitor.loader.not-found", {
+			route: "monitors.$monitorId",
+			monitorId: params.monitorId,
+			teamId: team().id,
+		});
+		return redirect(href("/app/:team/dashboard", params));
+	}
 
 	// Prepare SSL info
 	let sslInfo = createSslInfo({
@@ -143,6 +157,14 @@ export async function loader({ params }: Route.LoaderArgs) {
 		sslIssuer: monitor.sslIssuer,
 		sslLastCheckedAt: monitor.sslLastCheckedAt,
 		sslStatus: monitor.sslStatus,
+	});
+
+	logger().info("monitor.loader.complete", {
+		route: "monitors.$monitorId",
+		monitorId: params.monitorId,
+		monitorName: monitor.name,
+		resultsCount: results.length,
+		sslStatus: sslInfo.status,
 	});
 
 	return {

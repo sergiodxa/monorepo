@@ -13,11 +13,18 @@ export default class EnqueuePendingDomainsJob implements Job {
 		try {
 			this.logger.info("job.enqueue-pending-domains.started", { messageId: message.id });
 
+			this.logger.info("database.query", {
+				table: "teamDomains",
+				operation: "select",
+				filter: "verifiedAt=null",
+			});
 			let teamDomains = await this.db.query.teamDomains.findMany({
 				where(fields, operators) {
 					return operators.isNull(fields.verifiedAt);
 				},
 			});
+
+			this.logger.info("database.query.complete", { count: teamDomains.length });
 
 			if (teamDomains.length === 0) {
 				this.logger.info("job.enqueue-pending-domains.skipped", {
@@ -26,6 +33,11 @@ export default class EnqueuePendingDomainsJob implements Job {
 				return message.ack();
 			}
 
+			this.logger.info("queue.send-batch", {
+				queue: "QUEUE",
+				messageType: "verifyDomainOwnership",
+				count: teamDomains.length,
+			});
 			waitUntil(
 				env.QUEUE.sendBatch(
 					teamDomains.map((teamDomain) => {

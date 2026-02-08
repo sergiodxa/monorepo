@@ -8,15 +8,27 @@ import { AppHeader } from "~/components/app-header";
 import { StatCard } from "~/components/stat-card";
 import { hasActiveSubscription } from "~/middleware/customer-subscription";
 import { db } from "~/middleware/drizzle";
+import { logger } from "~/middleware/logger";
 import { team } from "~/middleware/team";
 import TcpMonitor from "~/models/tcp-monitor";
 
 import type { Route } from "./+types/route";
 
 export async function loader({ params }: Route.LoaderArgs) {
+	logger().info("tcpMonitorDetail.loader.start", {
+		route: "tcp.$tcpMonitorId",
+		tcpMonitorId: params.tcpMonitorId,
+		teamId: team().id,
+	});
+
 	let tcpMonitor = await TcpMonitor.findByIdAndTeam(db(), params.tcpMonitorId, team().id);
 
 	if (!tcpMonitor) {
+		logger().info("tcpMonitorDetail.loader.not-found", {
+			route: "tcp.$tcpMonitorId",
+			tcpMonitorId: params.tcpMonitorId,
+			teamId: team().id,
+		});
 		return redirect(href("/app/:team/tcp", params));
 	}
 
@@ -32,6 +44,14 @@ export async function loader({ params }: Route.LoaderArgs) {
 					.reduce((acc, r) => acc + (r.responseTimeMs ?? 0), 0) /
 				results.filter((r) => r.responseTimeMs).length
 			: null;
+
+	logger().info("tcpMonitorDetail.loader.complete", {
+		route: "tcp.$tcpMonitorId",
+		tcpMonitorId: tcpMonitor.id,
+		teamId: team().id,
+		resultsCount: results.length,
+		uptime,
+	});
 
 	return {
 		hasActiveSubscription: await hasActiveSubscription(),

@@ -17,6 +17,8 @@ import type { Route } from "./+types/route";
 const inputSchema = z.object({ hostname: z.string() });
 
 export async function action({ request, context }: Route.ActionArgs) {
+	logger().info("action.start", { route: "add-domain", method: request.method });
+
 	let result = await validate(request, inputSchema);
 	let { t, language } = i18next(context);
 

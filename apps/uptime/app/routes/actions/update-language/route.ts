@@ -22,6 +22,8 @@ const inputSchema = z.object({
 });
 
 export async function action({ request, context }: Route.ActionArgs) {
+	logger().info("action.start", { route: "update-language", method: request.method });
+
 	let { t } = i18next(context);
 	let subjectData = subject();
 

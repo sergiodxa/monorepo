@@ -83,6 +83,7 @@ import { useSubject } from "~/hooks/use-subject";
 import { useTeam } from "~/hooks/use-team";
 import { hasActiveSubscription } from "~/middleware/customer-subscription";
 import { db } from "~/middleware/drizzle";
+import { logger } from "~/middleware/logger";
 import { measure } from "~/middleware/server-timing";
 import { team } from "~/middleware/team";
 
@@ -248,7 +249,18 @@ export async function loader() {
 	let { memberships, id, ownerId } = team();
 	let subjectMembership = memberships[0];
 
+	logger().info("settings.loader.start", {
+		route: "settings",
+		teamId: id,
+		subjectRole: subjectMembership.role,
+	});
+
 	if (subjectMembership.role !== "admin") {
+		logger().info("settings.loader.forbidden", {
+			route: "settings",
+			teamId: id,
+			subjectRole: subjectMembership.role,
+		});
 		throw forbidden({ hasActiveSubscription: await hasActiveSubscription() });
 	}
 
@@ -314,6 +326,14 @@ export async function loader() {
 			});
 		}),
 	]);
+
+	logger().info("settings.loader.complete", {
+		route: "settings",
+		teamId: id,
+		memberCount: members.length,
+		invitedMemberCount: invitedMembers.length,
+		domainCount: domains.length,
+	});
 
 	return {
 		invitedMembers,

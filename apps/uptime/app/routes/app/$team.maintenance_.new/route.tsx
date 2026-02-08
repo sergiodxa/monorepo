@@ -21,11 +21,17 @@ import { useSpinDelay } from "spin-delay";
 import { AppHeader } from "~/components/app-header";
 import { useTeam } from "~/hooks/use-team";
 import { db } from "~/middleware/drizzle";
+import { logger } from "~/middleware/logger";
 import { team } from "~/middleware/team";
 
 import type { Route } from "./+types/route";
 
 export async function loader() {
+	logger().info("maintenanceNew.loader.start", {
+		route: "maintenance.new",
+		teamId: team().id,
+	});
+
 	let monitors = await db().query.monitors.findMany({
 		columns: { id: true, name: true },
 		where(fields, operators) {
@@ -34,6 +40,12 @@ export async function loader() {
 		orderBy(fields, operators) {
 			return operators.asc(fields.name);
 		},
+	});
+
+	logger().info("maintenanceNew.loader.complete", {
+		route: "maintenance.new",
+		teamId: team().id,
+		monitorsCount: monitors.length,
 	});
 
 	return { monitors };

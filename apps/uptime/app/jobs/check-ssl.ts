@@ -18,7 +18,14 @@ export default class CheckSslJob implements Job {
 
 	async run(message: Message): Promise<void> {
 		try {
+			this.logger.info("job.check-ssl.started", { messageId: message.id });
+
 			// Get all monitors with SSL monitoring enabled
+			this.logger.info("database.query", {
+				table: "monitors",
+				operation: "select",
+				filter: "sslMonitoringEnabled=true",
+			});
 			let monitors = await this.db.query.monitors.findMany({
 				columns: {
 					id: true,
@@ -40,10 +47,7 @@ export default class CheckSslJob implements Job {
 				},
 			});
 
-			this.logger.info("job.check-ssl.started", {
-				messageId: message.id,
-				monitorCount: monitors.length,
-			});
+			this.logger.info("database.query.complete", { monitorCount: monitors.length });
 
 			let successCount = 0;
 			let errorCount = 0;

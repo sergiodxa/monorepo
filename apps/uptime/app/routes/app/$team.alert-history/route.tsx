@@ -7,6 +7,7 @@ import { href } from "react-router";
 
 import { AppHeader } from "~/components/app-header";
 import { db } from "~/middleware/drizzle";
+import { logger } from "~/middleware/logger";
 import { measure } from "~/middleware/server-timing";
 import { team } from "~/middleware/team";
 
@@ -79,6 +80,11 @@ function AlertHistoryTableSkeleton() {
 }
 
 export async function loader() {
+	logger().info("alertHistory.loader.start", {
+		route: "alert-history",
+		teamId: team().id,
+	});
+
 	// Query approach using team alerts
 	let teamAlerts = await measure("findTeamAlerts", () => {
 		return db().query.alerts.findMany({
@@ -92,6 +98,12 @@ export async function loader() {
 	let alertIds = teamAlerts.map((a) => a.id);
 
 	if (alertIds.length === 0) {
+		logger().info("alertHistory.loader.complete", {
+			route: "alert-history",
+			teamId: team().id,
+			alertCount: 0,
+			eventCount: 0,
+		});
 		return { events: [], alerts: teamAlerts };
 	}
 
@@ -127,6 +139,13 @@ export async function loader() {
 		alert: alertMap.get(event.alertId),
 		monitor: monitorMap.get(event.monitorId),
 	}));
+
+	logger().info("alertHistory.loader.complete", {
+		route: "alert-history",
+		teamId: team().id,
+		alertCount: teamAlerts.length,
+		eventCount: enrichedEvents.length,
+	});
 
 	return { events: enrichedEvents, alerts: teamAlerts };
 }

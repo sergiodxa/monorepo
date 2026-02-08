@@ -25,6 +25,11 @@ export default class VerifyDomainOwnershipJob implements Job {
 				teamDomainId,
 			});
 
+			this.logger.info("database.query", {
+				table: "teamDomains",
+				operation: "findFirst",
+				teamDomainId,
+			});
 			let teamDomain = await this.db.query.teamDomains.findFirst({
 				where(fields, operators) {
 					return operators.eq(fields.id, teamDomainId);
@@ -39,9 +44,18 @@ export default class VerifyDomainOwnershipJob implements Job {
 				return message.ack();
 			}
 
+			this.logger.info("dns.lookup", {
+				hostname: teamDomain.hostname,
+				teamDomainId,
+			});
 			let verified = await dnsLookup(teamDomain.hostname, teamDomain.id);
 
 			if (verified) {
+				this.logger.info("database.update", {
+					table: "teamDomains",
+					teamDomainId,
+					field: "verifiedAt",
+				});
 				await this.db
 					.update(schema.teamDomains)
 					.set({ verifiedAt: new Date() })
@@ -49,10 +63,12 @@ export default class VerifyDomainOwnershipJob implements Job {
 
 				this.logger.info("job.verify-domain-ownership.verified", {
 					teamDomainId,
+					hostname: teamDomain.hostname,
 				});
 			} else {
 				this.logger.info("job.verify-domain-ownership.failed", {
 					teamDomainId,
+					hostname: teamDomain.hostname,
 					reason: "dns_lookup_failed",
 				});
 			}

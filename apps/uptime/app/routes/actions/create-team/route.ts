@@ -27,6 +27,8 @@ function generateSlug(name: string): string {
 }
 
 export async function action({ request, context }: Route.ActionArgs) {
+	logger().info("action.start", { route: "create-team", method: request.method });
+
 	let { t } = i18next(context);
 	let subjectData = subject();
 

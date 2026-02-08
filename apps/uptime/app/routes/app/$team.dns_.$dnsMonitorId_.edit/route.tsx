@@ -21,11 +21,18 @@ import { useSpinDelay } from "spin-delay";
 import { AppHeader } from "~/components/app-header";
 import { useTeam } from "~/hooks/use-team";
 import { db } from "~/middleware/drizzle";
+import { logger } from "~/middleware/logger";
 import { team } from "~/middleware/team";
 
 import type { Route } from "./+types/route";
 
 export async function loader({ params }: Route.LoaderArgs) {
+	logger().info("dnsMonitorEdit.loader.start", {
+		route: "dns.$dnsMonitorId.edit",
+		dnsMonitorId: params.dnsMonitorId,
+		teamId: team().id,
+	});
+
 	let dnsMonitor = await db().query.dnsMonitors.findFirst({
 		where(fields, operators) {
 			return operators.and(
@@ -36,8 +43,19 @@ export async function loader({ params }: Route.LoaderArgs) {
 	});
 
 	if (!dnsMonitor) {
+		logger().info("dnsMonitorEdit.loader.not-found", {
+			route: "dns.$dnsMonitorId.edit",
+			dnsMonitorId: params.dnsMonitorId,
+			teamId: team().id,
+		});
 		throw data({ message: "DNS Monitor not found" }, { status: 404 });
 	}
+
+	logger().info("dnsMonitorEdit.loader.complete", {
+		route: "dns.$dnsMonitorId.edit",
+		dnsMonitorId: dnsMonitor.id,
+		teamId: team().id,
+	});
 
 	return { dnsMonitor };
 }

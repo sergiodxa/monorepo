@@ -16,11 +16,26 @@ import { useSpinDelay } from "spin-delay";
 import { AppHeader } from "~/components/app-header";
 import { useTeam } from "~/hooks/use-team";
 import { hasActiveSubscription } from "~/middleware/customer-subscription";
+import { logger } from "~/middleware/logger";
+import { team } from "~/middleware/team";
 
 import type { Route } from "./+types/route";
 
 export async function loader() {
-	return { hasActiveSubscription: await hasActiveSubscription() };
+	logger().info("tcpMonitorNew.loader.start", {
+		route: "tcp.new",
+		teamId: team().id,
+	});
+
+	let activeSubscription = await hasActiveSubscription();
+
+	logger().info("tcpMonitorNew.loader.complete", {
+		route: "tcp.new",
+		teamId: team().id,
+		hasActiveSubscription: activeSubscription,
+	});
+
+	return { hasActiveSubscription: activeSubscription };
 }
 
 export default function CreateTcpMonitorPage({ loaderData, params }: Route.ComponentProps) {
