@@ -193,12 +193,7 @@ export default function Component({ loaderData, params }: Route.ComponentProps) 
 					className="flex-shrink-0 px-2"
 					isPending={isRevalidating}
 				>
-					<RefreshCwIcon
-						aria-hidden
-						className={cn("size-4.5", {
-							"animate-spin": isRevalidating,
-						})}
-					/>
+					<RefreshCwIcon aria-hidden className="size-4.5" />
 					<span className="max-sm:sr-only">{t("header.action.refresh")}</span>
 				</Button>
 				<LinkButton
