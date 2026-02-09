@@ -107,22 +107,22 @@ let honestTakeReasons = [
 
 let pricingScenarios = [
 	{
-		scenario: "10 monitors, 1 team member",
+		scenario: "10 monitors at 30-min intervals",
 		competitorCost: "$29/mo",
-		uptimeCost: "~$7/mo",
-		savings: "76%",
+		uptimeCost: "~$15/mo",
+		savings: "48%",
 	},
 	{
-		scenario: "25 monitors, 3 team members",
-		competitorCost: "$87/mo",
-		uptimeCost: "~$12/mo",
-		savings: "86%",
+		scenario: "25 monitors at 60-min intervals",
+		competitorCost: "$29/mo",
+		uptimeCost: "~$18/mo",
+		savings: "38%",
 	},
 	{
-		scenario: "50 monitors, 5 team members",
-		competitorCost: "$145/mo",
-		uptimeCost: "~$20/mo",
-		savings: "86%",
+		scenario: "50 monitors at 60-min intervals",
+		competitorCost: "$29/mo",
+		uptimeCost: "~$36/mo",
+		savings: "Per-seat costs add up",
 	},
 ];
 
@@ -135,7 +135,7 @@ let faqItems = [
 	{
 		question: "How does pricing compare?",
 		answer:
-			"Uptime starts at $5/mo with usage-based pricing. Better Uptime starts at $29/mo per responder. For teams just needing uptime monitoring, Uptime typically costs 75-85% less.",
+			"Uptime starts at $5/mo with usage-based pricing. Better Uptime starts at $29/mo per responder. With longer check intervals (30-60 minutes), Uptime costs 35-50% less and includes unlimited team members instead of per-seat pricing.",
 	},
 	{
 		question: "Do I need on-call scheduling?",

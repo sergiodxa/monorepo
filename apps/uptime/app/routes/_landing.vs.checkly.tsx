@@ -113,22 +113,22 @@ let honestTakeReasons = [
 
 let pricingScenarios = [
 	{
-		scenario: "10 monitors, basic uptime checks",
+		scenario: "10 monitors at 30-min intervals",
 		competitorCost: "$24/mo",
-		uptimeCost: "~$7/mo",
-		savings: "71%",
+		uptimeCost: "~$15/mo",
+		savings: "38%",
 	},
 	{
-		scenario: "25 monitors, 5-minute intervals",
+		scenario: "25 monitors at 60-min intervals",
 		competitorCost: "$24/mo",
-		uptimeCost: "~$12/mo",
-		savings: "50%",
+		uptimeCost: "~$18/mo",
+		savings: "25%",
 	},
 	{
-		scenario: "50 monitors, mixed intervals",
+		scenario: "50 monitors at 60-min intervals",
 		competitorCost: "$45/mo",
-		uptimeCost: "~$20/mo",
-		savings: "56%",
+		uptimeCost: "~$36/mo",
+		savings: "20%",
 	},
 	{
 		scenario: "Team of 5 people",
@@ -147,7 +147,7 @@ let faqItems = [
 	{
 		question: "How does pricing compare?",
 		answer:
-			"Uptime starts at $5/mo with usage-based pricing, while Checkly's Starter plan is $24/mo. Additionally, Checkly charges per team seat while Uptime includes unlimited team members. For basic uptime monitoring, Uptime typically costs 50-70% less.",
+			"Uptime starts at $5/mo with usage-based pricing, while Checkly's Starter plan is $24/mo. With longer check intervals (30-60 minutes), Uptime costs 20-40% less. Additionally, Checkly charges per team seat while Uptime includes unlimited team members.",
 	},
 	{
 		question: "Do I need to write code to use Uptime?",

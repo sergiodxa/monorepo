@@ -102,22 +102,22 @@ let honestTakeReasons = [
 
 let pricingScenarios = [
 	{
-		scenario: "10 monitors, basic uptime checks",
+		scenario: "10 monitors at 30-min intervals",
 		competitorCost: "$15/mo",
-		uptimeCost: "~$7/mo",
-		savings: "53%",
+		uptimeCost: "~$15/mo",
+		savings: "Unlimited team members",
 	},
 	{
-		scenario: "25 monitors, 5-minute intervals",
+		scenario: "25 monitors at 60-min intervals",
 		competitorCost: "$29/mo",
-		uptimeCost: "~$12/mo",
-		savings: "59%",
+		uptimeCost: "~$18/mo",
+		savings: "38%",
 	},
 	{
-		scenario: "50 monitors, mixed intervals",
+		scenario: "50 monitors at 60-min intervals",
 		competitorCost: "$89/mo",
-		uptimeCost: "~$20/mo",
-		savings: "78%",
+		uptimeCost: "~$36/mo",
+		savings: "60%",
 	},
 ];
 
@@ -125,7 +125,7 @@ let faqItems = [
 	{
 		question: "How does Uptime's pricing compare to Pingdom?",
 		answer:
-			"Uptime starts at $5/mo with usage-based pricing, while Pingdom starts at $15/mo with tier-based pricing. For most use cases, Uptime costs 50-80% less than Pingdom.",
+			"Uptime starts at $5/mo with usage-based pricing, while Pingdom starts at $15/mo with tier-based pricing. With longer check intervals (30-60 minutes), Uptime can cost 30-60% less than Pingdom while including unlimited team members.",
 	},
 	{
 		question: "Can I migrate my monitors from Pingdom?",

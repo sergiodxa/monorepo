@@ -107,22 +107,22 @@ let honestTakeReasons = [
 
 let pricingScenarios = [
 	{
-		scenario: "10 monitors, 5-minute intervals",
+		scenario: "10 monitors at 30-min intervals",
 		competitorCost: "$20/mo",
-		uptimeCost: "~$7/mo",
-		savings: "65%",
+		uptimeCost: "~$15/mo",
+		savings: "25%",
 	},
 	{
-		scenario: "25 monitors, mixed intervals",
+		scenario: "25 monitors at 60-min intervals",
 		competitorCost: "$20/mo",
-		uptimeCost: "~$12/mo",
-		savings: "40%",
+		uptimeCost: "~$18/mo",
+		savings: "10%",
 	},
 	{
-		scenario: "50 monitors, 1-minute intervals",
+		scenario: "50 monitors at 60-min intervals",
 		competitorCost: "$66/mo",
-		uptimeCost: "~$25/mo",
-		savings: "62%",
+		uptimeCost: "~$36/mo",
+		savings: "45%",
 	},
 ];
 
@@ -130,7 +130,7 @@ let faqItems = [
 	{
 		question: "How does Uptime's pricing compare to StatusCake?",
 		answer:
-			"Uptime starts at $5/mo with usage-based pricing, while StatusCake starts at $20/mo with tiered pricing. For most uptime monitoring use cases, Uptime costs 40-65% less than StatusCake.",
+			"Uptime starts at $5/mo with usage-based pricing, while StatusCake starts at $20/mo with tiered pricing. With longer check intervals (30-60 minutes), Uptime can cost 10-45% less than StatusCake while including unlimited team members and 365-day data retention.",
 	},
 	{
 		question: "Does StatusCake have a better free tier?",

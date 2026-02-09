@@ -9,8 +9,8 @@ export default {
 			title: "Uptime",
 
 			nav: {
-				pricing: "Pricing",
 				features: "Features",
+				pricing: "Pricing",
 
 				cta: {
 					in: "Open Dashboard",

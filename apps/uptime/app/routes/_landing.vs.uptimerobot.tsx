@@ -106,22 +106,22 @@ let honestTakeReasons = [
 
 let pricingScenarios = [
 	{
-		scenario: "10 monitors at 5-min intervals",
+		scenario: "10 monitors at 30-min intervals",
 		competitorCost: "$7/mo (Solo plan)",
-		uptimeCost: "~$6/mo",
-		savings: "~$12/year",
+		uptimeCost: "~$15/mo",
+		savings: "More features included",
 	},
 	{
-		scenario: "25 monitors at 5-min intervals",
+		scenario: "25 monitors at 60-min intervals",
 		competitorCost: "$21/mo (Team plan)",
-		uptimeCost: "~$14/mo",
-		savings: "~$84/year",
+		uptimeCost: "~$18/mo",
+		savings: "~$36/year",
 	},
 	{
-		scenario: "50 monitors at 1-min intervals",
+		scenario: "50 monitors at 60-min intervals",
 		competitorCost: "$54/mo (Enterprise plan)",
-		uptimeCost: "~$37/mo",
-		savings: "~$204/year",
+		uptimeCost: "~$36/mo",
+		savings: "~$216/year",
 	},
 ];
 
@@ -134,7 +134,7 @@ let faqItems = [
 	{
 		question: "How does usage-based pricing compare to UptimeRobot's tiers?",
 		answer:
-			"With UptimeRobot, you pay for a tier whether you use all the monitors or not. With Uptime, you pay $5/month base plus $0.001 per ping. For most users with 10-50 monitors, this works out cheaper than equivalent UptimeRobot tiers.",
+			"With UptimeRobot, you pay for a tier whether you use all the monitors or not. With Uptime, you pay $5/month base plus $0.001 per ping. For users with longer check intervals (15-60 minutes), this can work out cheaper than UptimeRobot tiers while getting more features like unlimited team members.",
 	},
 	{
 		question: "What if I only need a few monitors?",
