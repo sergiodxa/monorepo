@@ -175,6 +175,14 @@ export function LandingFooter() {
 									{t("sections.useCases.healthChecks")}
 								</Link>
 							</li>
+							<li>
+								<Link
+									to={href("/use-cases/ecommerce")}
+									className="text-sm text-neutral-600 transition hover:text-primary-600 dark:text-neutral-400 dark:hover:text-primary-400"
+								>
+									{t("sections.useCases.ecommerce")}
+								</Link>
+							</li>
 						</ul>
 					</div>
 
@@ -222,6 +230,14 @@ export function LandingFooter() {
 									className="text-sm text-neutral-600 transition hover:text-primary-600 dark:text-neutral-400 dark:hover:text-primary-400"
 								>
 									{t("sections.solutions.enterprises")}
+								</Link>
+							</li>
+							<li>
+								<Link
+									to={href("/for/devops")}
+									className="text-sm text-neutral-600 transition hover:text-primary-600 dark:text-neutral-400 dark:hover:text-primary-400"
+								>
+									{t("sections.solutions.devops")}
 								</Link>
 							</li>
 						</ul>

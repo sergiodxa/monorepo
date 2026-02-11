@@ -357,6 +357,7 @@ export default {
 					saas: "SaaSアプリケーション",
 					microservices: "マイクロサービス",
 					healthChecks: "ヘルスチェック",
+					ecommerce: "Eコマース",
 				},
 				solutions: {
 					title: "ソリューション",
@@ -365,6 +366,7 @@ export default {
 					startups: "スタートアップ向け",
 					agencies: "代理店向け",
 					enterprises: "企業向け",
+					devops: "DevOps向け",
 				},
 				compare: {
 					title: "比較",

@@ -365,6 +365,7 @@ export default {
 					saas: "Aplicaciones SaaS",
 					microservices: "Microservicios",
 					healthChecks: "Verificaciones de salud",
+					ecommerce: "E-commerce",
 				},
 				solutions: {
 					title: "Soluciones",
@@ -373,6 +374,7 @@ export default {
 					startups: "Para startups",
 					agencies: "Para agencias",
 					enterprises: "Para empresas",
+					devops: "Para DevOps",
 				},
 				compare: {
 					title: "Comparar",
