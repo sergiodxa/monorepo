@@ -17,10 +17,26 @@ import type { Route } from "./+types/v1.cron-jobs.$cronJobId.ping";
 
 export const middleware: Route.MiddlewareFunction[] = [
 	async ({ request, context }, next) => {
+		let hasAuthHeader = request.headers.has("Authorization");
+		let url = new URL(request.url);
+
+		logger().info("api.middleware.auth.start", {
+			hasAuthHeader,
+			path: url.pathname,
+			method: request.method,
+		});
+
 		let auth = await verifyApiKey(request);
 		if (!auth) {
+			logger().info("api.middleware.auth.failed", { hasAuthHeader });
 			throw apiError("UNAUTHORIZED", "Invalid or missing API key", 401);
 		}
+
+		logger().info("api.middleware.auth.success", {
+			teamId: auth.team.id,
+			apiKeyId: auth.apiKey.id,
+		});
+
 		context.set(ApiAuthContext, auth);
 		return await next();
 	},

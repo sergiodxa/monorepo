@@ -7,6 +7,7 @@ import * as schema from "~/db/schema";
 
 import { getContext } from "./context-storage";
 import { db } from "./drizzle";
+import { logger } from "./logger";
 
 export interface ApiAuth {
 	apiKey: SelectApiKey;
@@ -48,7 +49,13 @@ export async function verifyApiKey(
 	request: Request,
 ): Promise<{ apiKey: SelectApiKey; team: SelectTeam } | null> {
 	let key = extractApiKey(request);
-	if (!key) return null;
+	if (!key) {
+		logger().info("api.auth.no-key-extracted");
+		return null;
+	}
+
+	// Only log the safe prefix (e.g., "uptime_abc1")
+	logger().info("api.auth.key-extracted", { keyPrefix: key.slice(0, 12) });
 
 	let keyHash = await hashKey(key);
 
@@ -58,10 +65,16 @@ export async function verifyApiKey(
 		},
 	});
 
-	if (!apiKey) return null;
+	if (!apiKey) {
+		logger().info("api.auth.key-not-found-in-db");
+		return null;
+	}
+
+	logger().info("api.auth.key-found", { apiKeyId: apiKey.id, teamId: apiKey.teamId });
 
 	// Check if key is expired
 	if (apiKey.expiresAt && apiKey.expiresAt < new Date()) {
+		logger().info("api.auth.key-expired", { apiKeyId: apiKey.id });
 		return null;
 	}
 
@@ -72,7 +85,12 @@ export async function verifyApiKey(
 		},
 	});
 
-	if (!team) return null;
+	if (!team) {
+		logger().info("api.auth.team-not-found", { teamId: apiKey.teamId });
+		return null;
+	}
+
+	logger().info("api.auth.verified", { apiKeyId: apiKey.id, teamId: team.id });
 
 	// Update lastUsedAt asynchronously (don't block the request)
 	db()
