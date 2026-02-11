@@ -347,7 +347,7 @@ export default class Ping extends WorkflowEntrypoint<Cloudflare.Env> {
 					monitorId: monitorResult.monitor.id,
 					team: monitorResult.monitor.team.id,
 				}),
-				"https://ping.sergiodxa.com",
+				"https://uptime.sergiodxa.com",
 			).toString();
 
 			let now = new Date();
@@ -384,7 +384,7 @@ export default class Ping extends WorkflowEntrypoint<Cloudflare.Env> {
 						if (alert.config.strategy === "email") {
 							await resend.emails.send({
 								to: alert.config.config.to,
-								from: "Uptime <no-reply@ping.sergiodxa.com>",
+								from: "Uptime <no-reply@uptime.sergiodxa.com>",
 								replyTo: "hello@sergiodxa.com",
 								subject: this.emailSubject(
 									isRecovery ? "recovered" : currentStatus,
@@ -505,7 +505,7 @@ export default class Ping extends WorkflowEntrypoint<Cloudflare.Env> {
 				monitorId: monitor.id,
 				team: monitor.team.id,
 			}),
-			"https://ping.sergiodxa.com",
+			"https://uptime.sergiodxa.com",
 		);
 
 		let body = `Monitor ${monitor.name} is ${status.toUpperCase()}.\n\n`;

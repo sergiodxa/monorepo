@@ -10,7 +10,7 @@ export async function pingUptime(cronJobMonitorId: string, apiKey?: string): Pro
 	}
 
 	try {
-		await fetch(`https://ping.sergiodxa.com/api/v1/cron-jobs/${cronJobMonitorId}/ping`, {
+		await fetch(`https://uptime.sergiodxa.com/api/v1/cron-jobs/${cronJobMonitorId}/ping`, {
 			method: "POST",
 			headers: {
 				Authorization: `Bearer ${apiKey}`,

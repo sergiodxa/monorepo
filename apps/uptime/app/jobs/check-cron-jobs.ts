@@ -201,7 +201,7 @@ export default class CheckCronJobsJob implements Job {
 
 						await resend.emails.send({
 							to: alert.config.config.to,
-							from: "Uptime <no-reply@ping.sergiodxa.com>",
+							from: "Uptime <no-reply@uptime.sergiodxa.com>",
 							replyTo: "hello@sergiodxa.com",
 							subject,
 							text: this.getEmailBody(monitor, newStatus),
@@ -403,7 +403,7 @@ export default class CheckCronJobsJob implements Job {
 				? `Cron job ${monitor.name} is running late.`
 				: `Cron job ${monitor.name} has missed its scheduled execution.`;
 
-		let url = `https://ping.sergiodxa.com/app/${monitor.teamId}/cron-jobs/${monitor.id}`;
+		let url = `https://uptime.sergiodxa.com/app/${monitor.teamId}/cron-jobs/${monitor.id}`;
 
 		let body = `${statusMessage}
 

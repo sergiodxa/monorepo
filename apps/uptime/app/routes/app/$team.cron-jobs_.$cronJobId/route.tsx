@@ -300,7 +300,7 @@ function DeleteButton({ cronJob }: { cronJob: { id: string; name: string } }) {
 function IntegrationInstructions({ cronJobId }: { cronJobId: string }) {
 	let { t } = useTranslation("translation", { keyPrefix: "page.cronJobDetail.integration" });
 
-	let pingUrl = `https://ping.sergiodxa.com/api/v1/cron-jobs/${cronJobId}/ping`;
+	let pingUrl = `https://uptime.sergiodxa.com/api/v1/cron-jobs/${cronJobId}/ping`;
 
 	let curlExample = `curl -X POST "${pingUrl}" \\
   -H "Authorization: Bearer YOUR_API_KEY"`;

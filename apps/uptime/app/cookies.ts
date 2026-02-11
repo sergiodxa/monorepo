@@ -4,7 +4,7 @@ import { createCookie } from "react-router";
 const ONE_MINUTE = 60; // 1 minute in seconds
 const ONE_YEAR = ONE_MINUTE * 60 * 24 * 365; // 1 year in seconds
 
-export const session = createCookie("ping:sid", {
+export const session = createCookie("uptime:sid", {
 	path: "/",
 	secure: import.meta.env.PROD,
 	maxAge: ONE_YEAR,
@@ -13,7 +13,7 @@ export const session = createCookie("ping:sid", {
 	secrets: [env.COOKIE_SESSION_SECRET ?? "s3cr3t"],
 });
 
-export const i18n = createCookie("ping:i18n", {
+export const i18n = createCookie("uptime:i18n", {
 	path: "/",
 	secure: import.meta.env.PROD,
 	maxAge: ONE_YEAR,
@@ -22,7 +22,7 @@ export const i18n = createCookie("ping:i18n", {
 	secrets: [env.COOKIE_SESSION_SECRET ?? "s3cr3t"],
 });
 
-export const returnTo = createCookie("ping:return-to", {
+export const returnTo = createCookie("uptime:return-to", {
 	path: "/",
 	secure: import.meta.env.PROD,
 	maxAge: ONE_MINUTE * 5, // 5 minutes
@@ -31,7 +31,7 @@ export const returnTo = createCookie("ping:return-to", {
 	secrets: [env.COOKIE_SESSION_SECRET ?? "s3cr3t"],
 });
 
-export const dashboardTab = createCookie("ping:dashboard-tab", {
+export const dashboardTab = createCookie("uptime:dashboard-tab", {
 	path: "/",
 	secure: import.meta.env.PROD,
 	maxAge: ONE_YEAR,

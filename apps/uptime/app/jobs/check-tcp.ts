@@ -175,7 +175,7 @@ export default class CheckTcpJob implements Job {
 
 					await resend.emails.send({
 						to: alert.config.config.to,
-						from: "Uptime <no-reply@ping.sergiodxa.com>",
+						from: "Uptime <no-reply@uptime.sergiodxa.com>",
 						replyTo: "hello@sergiodxa.com",
 						subject,
 						text: this.getEmailBody(monitor, newStatus, errorMessage, isRecovery),
@@ -314,7 +314,7 @@ export default class CheckTcpJob implements Job {
 				? `TCP monitor ${monitor.name} timed out.`
 				: `TCP monitor ${monitor.name} is DOWN.`;
 
-		let url = `https://ping.sergiodxa.com/app/${monitor.teamId}/tcp/${monitor.name}`;
+		let url = `https://uptime.sergiodxa.com/app/${monitor.teamId}/tcp/${monitor.name}`;
 
 		let body = `${statusMessage}
 

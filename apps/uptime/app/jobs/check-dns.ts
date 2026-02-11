@@ -168,7 +168,7 @@ export default class CheckDnsJob implements Job {
 
 					await resend.emails.send({
 						to: alert.config.config.to,
-						from: "Uptime <no-reply@ping.sergiodxa.com>",
+						from: "Uptime <no-reply@uptime.sergiodxa.com>",
 						replyTo: "hello@sergiodxa.com",
 						subject,
 						text: this.getEmailBody(monitor, result),
@@ -294,7 +294,7 @@ export default class CheckDnsJob implements Job {
 				? `DNS check for ${monitor.name} failed with an error.`
 				: `The DNS ${monitor.recordType} record for ${monitor.domain} has changed.`;
 
-		let url = `https://ping.sergiodxa.com/app/${monitor.team.id}/dns/${monitor.domain}`;
+		let url = `https://uptime.sergiodxa.com/app/${monitor.team.id}/dns/${monitor.domain}`;
 
 		let body = `${statusMessage}
 

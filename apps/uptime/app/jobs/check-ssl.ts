@@ -168,7 +168,7 @@ export default class CheckSslJob implements Job {
 
 					await resend.emails.send({
 						to: alert.config.config.to,
-						from: "Uptime <no-reply@ping.sergiodxa.com>",
+						from: "Uptime <no-reply@uptime.sergiodxa.com>",
 						replyTo: "hello@sergiodxa.com",
 						subject,
 						text: this.getEmailBody(monitor, status, daysUntilExpiry),
@@ -255,7 +255,7 @@ export default class CheckSslJob implements Job {
 				? `The SSL certificate for ${monitor.name} has EXPIRED.`
 				: `The SSL certificate for ${monitor.name} will expire in ${daysUntilExpiry} days.`;
 
-		let url = `https://ping.sergiodxa.com/app/${monitor.team.id}/monitors/${monitor.id}`;
+		let url = `https://uptime.sergiodxa.com/app/${monitor.team.id}/monitors/${monitor.id}`;
 
 		return `${statusMessage}
 
