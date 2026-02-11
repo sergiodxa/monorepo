@@ -1,4 +1,5 @@
 import { env, waitUntil } from "cloudflare:workers";
+import { CronExpressionParser } from "cron-parser";
 import {
 	addSeconds,
 	differenceInSeconds,
@@ -355,23 +356,85 @@ WHERE r.completed_at IS NOT NULL AND r.response_status IS NOT NULL AND m.team_id
 	}
 
 	static async estimateConsumedPingsByTeam(db: Database, teamId: string, date: Date) {
-		let monitors = await db.query.monitors.findMany({
-			columns: { intervalSeconds: true },
-			where(fields, operators) {
-				return operators.and(
-					operators.eq(fields.teamId, teamId),
-					operators.isNotNull(fields.enabledAt),
-				);
-			},
-		});
-
 		let start = startOfMonth(startOfDay(date));
 		let end = endOfMonth(endOfDay(date));
-		let diff = differenceInSeconds(end, start);
+		let monthSeconds = differenceInSeconds(end, start);
 
-		if (monitors.length === 0) return 0;
+		// Fetch all monitor types in parallel
+		let [httpMonitors, dnsMonitors, tcpMonitors, cronJobs] = await Promise.all([
+			db.query.monitors.findMany({
+				columns: { intervalSeconds: true },
+				where(fields, operators) {
+					return operators.and(
+						operators.eq(fields.teamId, teamId),
+						operators.isNotNull(fields.enabledAt),
+					);
+				},
+			}),
+			db.query.dnsMonitors.findMany({
+				columns: { intervalSeconds: true },
+				where(fields, operators) {
+					return operators.and(
+						operators.eq(fields.teamId, teamId),
+						operators.eq(fields.isEnabled, true),
+					);
+				},
+			}),
+			db.query.tcpMonitors.findMany({
+				columns: { intervalSeconds: true },
+				where(fields, operators) {
+					return operators.and(
+						operators.eq(fields.teamId, teamId),
+						operators.eq(fields.isEnabled, true),
+					);
+				},
+			}),
+			db.query.cronJobMonitors.findMany({
+				columns: { cronExpression: true, timezone: true },
+				where(fields, operators) {
+					return operators.and(
+						operators.eq(fields.teamId, teamId),
+						operators.isNotNull(fields.enabledAt),
+					);
+				},
+			}),
+		]);
 
-		return monitors.map((m) => diff / m.intervalSeconds).reduce((a, b) => a + b);
+		// HTTP monitors: pings = monthSeconds / intervalSeconds
+		let httpPings = httpMonitors.reduce((sum, m) => sum + monthSeconds / m.intervalSeconds, 0);
+
+		// DNS monitors: pings = monthSeconds / intervalSeconds
+		let dnsPings = dnsMonitors.reduce((sum, m) => sum + monthSeconds / m.intervalSeconds, 0);
+
+		// TCP monitors: pings = monthSeconds / intervalSeconds
+		let tcpPings = tcpMonitors.reduce((sum, m) => sum + monthSeconds / m.intervalSeconds, 0);
+
+		// Cron jobs: count occurrences in the month using cron-parser
+		let cronPings = 0;
+		for (let job of cronJobs) {
+			try {
+				let interval = CronExpressionParser.parse(job.cronExpression, {
+					currentDate: start,
+					tz: job.timezone ?? "UTC",
+				});
+
+				// Count how many times the cron will run until end of month
+				let occurrences = 0;
+				let next = interval.next();
+				while (next.toDate() <= end) {
+					occurrences++;
+					next = interval.next();
+					// Safety limit to prevent infinite loops
+					if (occurrences > 100000) break;
+				}
+				cronPings += occurrences;
+			} catch {
+				// If cron parsing fails, skip this job
+				continue;
+			}
+		}
+
+		return Math.round(httpPings + dnsPings + tcpPings + cronPings);
 	}
 
 	static async estimateConsumedPingsByMonitor(db: Database, monitorId: string, date: Date) {
