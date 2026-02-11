@@ -31,7 +31,16 @@ export const middleware: Route.MiddlewareFunction[] = [
 export async function loader() {
 	let { apiKey, team } = apiAuth();
 
+	logger().info("api.v1.monitors.list.start", {
+		teamId: team.id,
+		apiKeyId: apiKey.id,
+	});
+
 	if (!hasScope(apiKey, "monitors:read")) {
+		logger().info("api.v1.monitors.list.forbidden", {
+			teamId: team.id,
+			apiKeyId: apiKey.id,
+		});
 		throw apiError("FORBIDDEN", "API key does not have monitors:read scope", 403);
 	}
 
@@ -91,11 +100,26 @@ const createMonitorSchema = z.object({
 export async function action({ request }: Route.ActionArgs) {
 	let { apiKey, team } = apiAuth();
 
+	logger().info("api.v1.monitors.create.start", {
+		teamId: team.id,
+		apiKeyId: apiKey.id,
+		method: request.method,
+	});
+
 	if (request.method !== "POST") {
+		logger().info("api.v1.monitors.create.method-not-allowed", {
+			teamId: team.id,
+			apiKeyId: apiKey.id,
+			method: request.method,
+		});
 		throw apiError("METHOD_NOT_ALLOWED", "Only POST method is allowed", 405);
 	}
 
 	if (!hasScope(apiKey, "monitors:write")) {
+		logger().info("api.v1.monitors.create.forbidden", {
+			teamId: team.id,
+			apiKeyId: apiKey.id,
+		});
 		throw apiError("FORBIDDEN", "API key does not have monitors:write scope", 403);
 	}
 

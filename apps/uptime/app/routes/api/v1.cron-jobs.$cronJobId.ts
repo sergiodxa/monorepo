@@ -32,7 +32,18 @@ export const middleware: Route.MiddlewareFunction[] = [
 export async function loader({ params }: Route.LoaderArgs) {
 	let { apiKey, team } = apiAuth();
 
+	logger().info("api.v1.cron-jobs.get.start", {
+		teamId: team.id,
+		apiKeyId: apiKey.id,
+		cronJobId: params.cronJobId,
+	});
+
 	if (!hasScope(apiKey, "cron-jobs:read")) {
+		logger().info("api.v1.cron-jobs.get.forbidden", {
+			teamId: team.id,
+			apiKeyId: apiKey.id,
+			cronJobId: params.cronJobId,
+		});
 		throw apiError("FORBIDDEN", "API key does not have cron-jobs:read scope", 403);
 	}
 
@@ -61,6 +72,11 @@ export async function loader({ params }: Route.LoaderArgs) {
 	});
 
 	if (!cronJob) {
+		logger().info("api.v1.cron-jobs.get.not-found", {
+			teamId: team.id,
+			apiKeyId: apiKey.id,
+			cronJobId: params.cronJobId,
+		});
 		throw apiError("NOT_FOUND", "Cron job not found", 404);
 	}
 
@@ -88,7 +104,20 @@ const updateCronJobSchema = z.object({
 export async function action({ request, params }: Route.ActionArgs) {
 	let { apiKey, team } = apiAuth();
 
+	logger().info("api.v1.cron-jobs.action.start", {
+		teamId: team.id,
+		apiKeyId: apiKey.id,
+		cronJobId: params.cronJobId,
+		method: request.method,
+	});
+
 	if (!hasScope(apiKey, "cron-jobs:write")) {
+		logger().info("api.v1.cron-jobs.action.forbidden", {
+			teamId: team.id,
+			apiKeyId: apiKey.id,
+			cronJobId: params.cronJobId,
+			method: request.method,
+		});
 		throw apiError("FORBIDDEN", "API key does not have cron-jobs:write scope", 403);
 	}
 
@@ -103,6 +132,12 @@ export async function action({ request, params }: Route.ActionArgs) {
 	});
 
 	if (!existingCronJob) {
+		logger().info("api.v1.cron-jobs.action.not-found", {
+			teamId: team.id,
+			apiKeyId: apiKey.id,
+			cronJobId: params.cronJobId,
+			method: request.method,
+		});
 		throw apiError("NOT_FOUND", "Cron job not found", 404);
 	}
 
@@ -155,6 +190,12 @@ export async function action({ request, params }: Route.ActionArgs) {
 				updateData.cronExpression = result.data.cronExpression;
 				updateData.nextExpectedAt = interval.next().toDate();
 			} catch {
+				logger().info("api.v1.cron-jobs.update.invalid-cron-expression", {
+					teamId: team.id,
+					apiKeyId: apiKey.id,
+					cronJobId: params.cronJobId,
+					cronExpression: result.data.cronExpression,
+				});
 				throw apiError("VALIDATION_ERROR", "Invalid cron expression", 400);
 			}
 		} else if (
@@ -180,6 +221,11 @@ export async function action({ request, params }: Route.ActionArgs) {
 			.returning();
 
 		if (!cronJob) {
+			logger().error("api.v1.cron-jobs.update.failed", {
+				teamId: team.id,
+				apiKeyId: apiKey.id,
+				cronJobId: params.cronJobId,
+			});
 			throw apiError("INTERNAL_ERROR", "Failed to update cron job", 500);
 		}
 
@@ -192,5 +238,11 @@ export async function action({ request, params }: Route.ActionArgs) {
 		return apiSuccess({ cronJob });
 	}
 
+	logger().info("api.v1.cron-jobs.action.method-not-allowed", {
+		teamId: team.id,
+		apiKeyId: apiKey.id,
+		cronJobId: params.cronJobId,
+		method: request.method,
+	});
 	throw apiError("METHOD_NOT_ALLOWED", "Only GET, PUT, and DELETE methods are allowed", 405);
 }

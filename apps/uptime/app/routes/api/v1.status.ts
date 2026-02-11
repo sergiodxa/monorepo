@@ -29,7 +29,16 @@ export const middleware: Route.MiddlewareFunction[] = [
 export async function loader() {
 	let { apiKey, team } = apiAuth();
 
+	logger().info("api.v1.status.get.start", {
+		teamId: team.id,
+		apiKeyId: apiKey.id,
+	});
+
 	if (!hasScope(apiKey, "monitors:read")) {
+		logger().info("api.v1.status.get.forbidden", {
+			teamId: team.id,
+			apiKeyId: apiKey.id,
+		});
 		throw apiError("FORBIDDEN", "API key does not have monitors:read scope", 403);
 	}
 

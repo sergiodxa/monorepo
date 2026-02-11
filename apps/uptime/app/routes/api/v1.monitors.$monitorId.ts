@@ -32,7 +32,18 @@ export const middleware: Route.MiddlewareFunction[] = [
 export async function loader({ params }: Route.LoaderArgs) {
 	let { apiKey, team } = apiAuth();
 
+	logger().info("api.v1.monitors.get.start", {
+		teamId: team.id,
+		apiKeyId: apiKey.id,
+		monitorId: params.monitorId,
+	});
+
 	if (!hasScope(apiKey, "monitors:read")) {
+		logger().info("api.v1.monitors.get.forbidden", {
+			teamId: team.id,
+			apiKeyId: apiKey.id,
+			monitorId: params.monitorId,
+		});
 		throw apiError("FORBIDDEN", "API key does not have monitors:read scope", 403);
 	}
 
@@ -66,6 +77,11 @@ export async function loader({ params }: Route.LoaderArgs) {
 	});
 
 	if (!monitor) {
+		logger().info("api.v1.monitors.get.not-found", {
+			teamId: team.id,
+			apiKeyId: apiKey.id,
+			monitorId: params.monitorId,
+		});
 		throw apiError("NOT_FOUND", "Monitor not found", 404);
 	}
 
@@ -99,7 +115,20 @@ const updateMonitorSchema = z.object({
 export async function action({ request, params }: Route.ActionArgs) {
 	let { apiKey, team } = apiAuth();
 
+	logger().info("api.v1.monitors.action.start", {
+		teamId: team.id,
+		apiKeyId: apiKey.id,
+		monitorId: params.monitorId,
+		method: request.method,
+	});
+
 	if (!hasScope(apiKey, "monitors:write")) {
+		logger().info("api.v1.monitors.action.forbidden", {
+			teamId: team.id,
+			apiKeyId: apiKey.id,
+			monitorId: params.monitorId,
+			method: request.method,
+		});
 		throw apiError("FORBIDDEN", "API key does not have monitors:write scope", 403);
 	}
 
@@ -114,6 +143,12 @@ export async function action({ request, params }: Route.ActionArgs) {
 	});
 
 	if (!existingMonitor) {
+		logger().info("api.v1.monitors.action.not-found", {
+			teamId: team.id,
+			apiKeyId: apiKey.id,
+			monitorId: params.monitorId,
+			method: request.method,
+		});
 		throw apiError("NOT_FOUND", "Monitor not found", 404);
 	}
 
@@ -169,6 +204,11 @@ export async function action({ request, params }: Route.ActionArgs) {
 			.returning();
 
 		if (!monitor) {
+			logger().error("api.v1.monitors.update.failed", {
+				teamId: team.id,
+				apiKeyId: apiKey.id,
+				monitorId: params.monitorId,
+			});
 			throw apiError("INTERNAL_ERROR", "Failed to update monitor", 500);
 		}
 
@@ -181,5 +221,11 @@ export async function action({ request, params }: Route.ActionArgs) {
 		return apiSuccess({ monitor });
 	}
 
+	logger().info("api.v1.monitors.action.method-not-allowed", {
+		teamId: team.id,
+		apiKeyId: apiKey.id,
+		monitorId: params.monitorId,
+		method: request.method,
+	});
 	throw apiError("METHOD_NOT_ALLOWED", "Only GET, PUT, and DELETE methods are allowed", 405);
 }

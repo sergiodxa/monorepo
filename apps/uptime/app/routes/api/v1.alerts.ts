@@ -32,7 +32,16 @@ export const middleware: Route.MiddlewareFunction[] = [
 export async function loader() {
 	let { apiKey, team } = apiAuth();
 
+	logger().info("api.v1.alerts.list.start", {
+		teamId: team.id,
+		apiKeyId: apiKey.id,
+	});
+
 	if (!hasScope(apiKey, "alerts:read")) {
+		logger().info("api.v1.alerts.list.forbidden", {
+			teamId: team.id,
+			apiKeyId: apiKey.id,
+		});
 		throw apiError("FORBIDDEN", "API key does not have alerts:read scope", 403);
 	}
 
@@ -123,11 +132,26 @@ const createAlertSchema = z.discriminatedUnion("strategy", [
 export async function action({ request }: Route.ActionArgs) {
 	let { apiKey, team } = apiAuth();
 
+	logger().info("api.v1.alerts.create.start", {
+		teamId: team.id,
+		apiKeyId: apiKey.id,
+		method: request.method,
+	});
+
 	if (request.method !== "POST") {
+		logger().info("api.v1.alerts.create.method-not-allowed", {
+			teamId: team.id,
+			apiKeyId: apiKey.id,
+			method: request.method,
+		});
 		throw apiError("METHOD_NOT_ALLOWED", "Only POST method is allowed", 405);
 	}
 
 	if (!hasScope(apiKey, "alerts:write")) {
+		logger().info("api.v1.alerts.create.forbidden", {
+			teamId: team.id,
+			apiKeyId: apiKey.id,
+		});
 		throw apiError("FORBIDDEN", "API key does not have alerts:write scope", 403);
 	}
 
@@ -138,6 +162,11 @@ export async function action({ request }: Route.ActionArgs) {
 		.where(eq(schema.alerts.teamId, team.id));
 
 	if ((countResult?.count ?? 0) >= 10) {
+		logger().info("api.v1.alerts.create.limit-exceeded", {
+			teamId: team.id,
+			apiKeyId: apiKey.id,
+			currentCount: countResult?.count,
+		});
 		throw apiError("LIMIT_EXCEEDED", "Maximum of 10 alerts per team", 400);
 	}
 
@@ -164,6 +193,11 @@ export async function action({ request }: Route.ActionArgs) {
 		});
 
 		if (!monitor) {
+			logger().info("api.v1.alerts.create.monitor-not-found", {
+				teamId: team.id,
+				apiKeyId: apiKey.id,
+				monitorId: result.data.monitorId,
+			});
 			throw apiError("NOT_FOUND", "Monitor not found", 404);
 		}
 	}

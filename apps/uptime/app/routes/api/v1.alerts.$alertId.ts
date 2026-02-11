@@ -32,7 +32,18 @@ export const middleware: Route.MiddlewareFunction[] = [
 export async function loader({ params }: Route.LoaderArgs) {
 	let { apiKey, team } = apiAuth();
 
+	logger().info("api.v1.alerts.get.start", {
+		teamId: team.id,
+		apiKeyId: apiKey.id,
+		alertId: params.alertId,
+	});
+
 	if (!hasScope(apiKey, "alerts:read")) {
+		logger().info("api.v1.alerts.get.forbidden", {
+			teamId: team.id,
+			apiKeyId: apiKey.id,
+			alertId: params.alertId,
+		});
 		throw apiError("FORBIDDEN", "API key does not have alerts:read scope", 403);
 	}
 
@@ -56,6 +67,11 @@ export async function loader({ params }: Route.LoaderArgs) {
 	});
 
 	if (!alert) {
+		logger().info("api.v1.alerts.get.not-found", {
+			teamId: team.id,
+			apiKeyId: apiKey.id,
+			alertId: params.alertId,
+		});
 		throw apiError("NOT_FOUND", "Alert not found", 404);
 	}
 
@@ -95,7 +111,20 @@ const updateAlertSchema = z.object({
 export async function action({ request, params }: Route.ActionArgs) {
 	let { apiKey, team } = apiAuth();
 
+	logger().info("api.v1.alerts.action.start", {
+		teamId: team.id,
+		apiKeyId: apiKey.id,
+		alertId: params.alertId,
+		method: request.method,
+	});
+
 	if (!hasScope(apiKey, "alerts:write")) {
+		logger().info("api.v1.alerts.action.forbidden", {
+			teamId: team.id,
+			apiKeyId: apiKey.id,
+			alertId: params.alertId,
+			method: request.method,
+		});
 		throw apiError("FORBIDDEN", "API key does not have alerts:write scope", 403);
 	}
 
@@ -110,6 +139,12 @@ export async function action({ request, params }: Route.ActionArgs) {
 	});
 
 	if (!existingAlert) {
+		logger().info("api.v1.alerts.action.not-found", {
+			teamId: team.id,
+			apiKeyId: apiKey.id,
+			alertId: params.alertId,
+			method: request.method,
+		});
 		throw apiError("NOT_FOUND", "Alert not found", 404);
 	}
 
@@ -150,6 +185,12 @@ export async function action({ request, params }: Route.ActionArgs) {
 			});
 
 			if (!monitor) {
+				logger().info("api.v1.alerts.update.monitor-not-found", {
+					teamId: team.id,
+					apiKeyId: apiKey.id,
+					alertId: params.alertId,
+					monitorId: result.data.monitorId,
+				});
 				throw apiError("NOT_FOUND", "Monitor not found", 404);
 			}
 		}
@@ -169,6 +210,11 @@ export async function action({ request, params }: Route.ActionArgs) {
 			.returning();
 
 		if (!alert) {
+			logger().error("api.v1.alerts.update.failed", {
+				teamId: team.id,
+				apiKeyId: apiKey.id,
+				alertId: params.alertId,
+			});
 			throw apiError("INTERNAL_ERROR", "Failed to update alert", 500);
 		}
 
@@ -192,5 +238,11 @@ export async function action({ request, params }: Route.ActionArgs) {
 		});
 	}
 
+	logger().info("api.v1.alerts.action.method-not-allowed", {
+		teamId: team.id,
+		apiKeyId: apiKey.id,
+		alertId: params.alertId,
+		method: request.method,
+	});
 	throw apiError("METHOD_NOT_ALLOWED", "Only GET, PUT, and DELETE methods are allowed", 405);
 }

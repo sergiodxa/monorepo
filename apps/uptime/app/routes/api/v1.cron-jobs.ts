@@ -31,7 +31,16 @@ export const middleware: Route.MiddlewareFunction[] = [
 export async function loader() {
 	let { apiKey, team } = apiAuth();
 
+	logger().info("api.v1.cron-jobs.list.start", {
+		teamId: team.id,
+		apiKeyId: apiKey.id,
+	});
+
 	if (!hasScope(apiKey, "cron-jobs:read")) {
+		logger().info("api.v1.cron-jobs.list.forbidden", {
+			teamId: team.id,
+			apiKeyId: apiKey.id,
+		});
 		throw apiError("FORBIDDEN", "API key does not have cron-jobs:read scope", 403);
 	}
 
@@ -82,11 +91,26 @@ const createCronJobSchema = z.object({
 export async function action({ request }: Route.ActionArgs) {
 	let { apiKey, team } = apiAuth();
 
+	logger().info("api.v1.cron-jobs.create.start", {
+		teamId: team.id,
+		apiKeyId: apiKey.id,
+		method: request.method,
+	});
+
 	if (request.method !== "POST") {
+		logger().info("api.v1.cron-jobs.create.method-not-allowed", {
+			teamId: team.id,
+			apiKeyId: apiKey.id,
+			method: request.method,
+		});
 		throw apiError("METHOD_NOT_ALLOWED", "Only POST method is allowed", 405);
 	}
 
 	if (!hasScope(apiKey, "cron-jobs:write")) {
+		logger().info("api.v1.cron-jobs.create.forbidden", {
+			teamId: team.id,
+			apiKeyId: apiKey.id,
+		});
 		throw apiError("FORBIDDEN", "API key does not have cron-jobs:write scope", 403);
 	}
 
@@ -109,6 +133,11 @@ export async function action({ request }: Route.ActionArgs) {
 		});
 		nextExpectedAt = interval.next().toDate();
 	} catch {
+		logger().info("api.v1.cron-jobs.create.invalid-cron-expression", {
+			teamId: team.id,
+			apiKeyId: apiKey.id,
+			cronExpression: result.data.cronExpression,
+		});
 		throw apiError("VALIDATION_ERROR", "Invalid cron expression", 400);
 	}
 

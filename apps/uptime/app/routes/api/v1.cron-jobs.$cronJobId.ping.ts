@@ -32,7 +32,18 @@ const RATE_LIMIT_SECONDS = 60;
 export async function loader({ request, params }: Route.LoaderArgs) {
 	let { apiKey, team } = apiAuth();
 
+	logger().info("api.v1.cron-jobs.ping.list.start", {
+		teamId: team.id,
+		apiKeyId: apiKey.id,
+		cronJobId: params.cronJobId,
+	});
+
 	if (!hasScope(apiKey, "cron-jobs:read")) {
+		logger().info("api.v1.cron-jobs.ping.list.forbidden", {
+			teamId: team.id,
+			apiKeyId: apiKey.id,
+			cronJobId: params.cronJobId,
+		});
 		throw apiError("FORBIDDEN", "API key does not have cron-jobs:read scope", 403);
 	}
 
@@ -108,11 +119,29 @@ export async function loader({ request, params }: Route.LoaderArgs) {
 export async function action({ request, params }: Route.ActionArgs) {
 	let { apiKey, team } = apiAuth();
 
+	logger().info("api.v1.cron-jobs.ping.create.start", {
+		teamId: team.id,
+		apiKeyId: apiKey.id,
+		cronJobId: params.cronJobId,
+		method: request.method,
+	});
+
 	if (request.method !== "POST") {
+		logger().info("api.v1.cron-jobs.ping.create.method-not-allowed", {
+			teamId: team.id,
+			apiKeyId: apiKey.id,
+			cronJobId: params.cronJobId,
+			method: request.method,
+		});
 		throw apiError("METHOD_NOT_ALLOWED", "Only POST method is allowed", 405);
 	}
 
 	if (!hasScope(apiKey, "cron-jobs:ping")) {
+		logger().info("api.v1.cron-jobs.ping.create.forbidden", {
+			teamId: team.id,
+			apiKeyId: apiKey.id,
+			cronJobId: params.cronJobId,
+		});
 		throw apiError("FORBIDDEN", "API key does not have cron-jobs:ping scope", 403);
 	}
 
@@ -132,11 +161,21 @@ export async function action({ request, params }: Route.ActionArgs) {
 	});
 
 	if (!cronJob) {
+		logger().info("api.v1.cron-jobs.ping.create.not-found", {
+			teamId: team.id,
+			apiKeyId: apiKey.id,
+			cronJobId: params.cronJobId,
+		});
 		throw apiError("NOT_FOUND", "Cron job not found", 404);
 	}
 
 	// Check if cron job is enabled
 	if (!cronJob.enabledAt) {
+		logger().info("api.v1.cron-jobs.ping.create.disabled", {
+			teamId: team.id,
+			apiKeyId: apiKey.id,
+			cronJobId: cronJob.id,
+		});
 		throw apiError("CONFLICT", "Cron job is disabled", 409);
 	}
 

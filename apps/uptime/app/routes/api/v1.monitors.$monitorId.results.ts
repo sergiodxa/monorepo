@@ -28,7 +28,18 @@ export const middleware: Route.MiddlewareFunction[] = [
 export async function loader({ request, params }: Route.LoaderArgs) {
 	let { apiKey, team } = apiAuth();
 
+	logger().info("api.v1.monitors.results.list.start", {
+		teamId: team.id,
+		apiKeyId: apiKey.id,
+		monitorId: params.monitorId,
+	});
+
 	if (!hasScope(apiKey, "monitors:read")) {
+		logger().info("api.v1.monitors.results.list.forbidden", {
+			teamId: team.id,
+			apiKeyId: apiKey.id,
+			monitorId: params.monitorId,
+		});
 		throw apiError("FORBIDDEN", "API key does not have monitors:read scope", 403);
 	}
 
@@ -44,6 +55,11 @@ export async function loader({ request, params }: Route.LoaderArgs) {
 	});
 
 	if (!monitor) {
+		logger().info("api.v1.monitors.results.list.not-found", {
+			teamId: team.id,
+			apiKeyId: apiKey.id,
+			monitorId: params.monitorId,
+		});
 		throw apiError("NOT_FOUND", "Monitor not found", 404);
 	}
 
