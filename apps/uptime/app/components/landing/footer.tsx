@@ -1,28 +1,13 @@
 import { useTranslation } from "react-i18next";
 import { href, Link } from "react-router";
 
-import Logo from "~/components/logo";
-
 export function LandingFooter() {
 	let { t } = useTranslation("translation", { keyPrefix: "landing.footer" });
 
 	return (
 		<footer className="border-t border-neutral-200 bg-white dark:border-neutral-800 dark:bg-neutral-950">
 			<div className="mx-auto max-w-6xl px-4 py-12 sm:px-6 lg:px-8">
-				<div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-7">
-					{/* Brand */}
-					<div className="sm:col-span-2 lg:col-span-1">
-						<Link to={href("/")} className="inline-flex items-center gap-2 no-underline">
-							<Logo className="size-9 text-primary-500" />
-							<span className="text-xl font-bold text-neutral-900 dark:text-neutral-50">
-								{t("name")}
-							</span>
-						</Link>
-						<p className="mt-4 max-w-xs text-sm text-neutral-600 dark:text-neutral-400">
-							{t("description")}
-						</p>
-					</div>
-
+				<div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-6">
 					{/* Features Column 1 */}
 					<div>
 						<h3 className="mb-4 text-sm font-semibold text-neutral-900 dark:text-neutral-50">
