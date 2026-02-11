@@ -2943,6 +2943,8 @@ export default {
 							"monitors:write": "Écrire les moniteurs",
 							"alerts:read": "Lire les alertes",
 							"alerts:write": "Écrire les alertes",
+							"cron-jobs:read": "Lire les tâches Cron",
+							"cron-jobs:write": "Écrire les tâches Cron",
 							"cron-jobs:ping": "Ping Cron Jobs",
 						},
 					},

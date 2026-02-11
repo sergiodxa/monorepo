@@ -2930,6 +2930,9 @@ export default {
 							"monitors:write": "Write Monitors",
 							"alerts:read": "Read Alerts",
 							"alerts:write": "Write Alerts",
+							"cron-jobs:read": "Read Cron Jobs",
+							"cron-jobs:write": "Write Cron Jobs",
+							"cron-jobs:ping": "Ping Cron Jobs",
 						},
 					},
 					expiresAt: {

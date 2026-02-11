@@ -4,6 +4,7 @@ import { eq } from "drizzle-orm";
 
 import database from "~/db/index";
 import * as schema from "~/db/schema";
+import { pingUptime } from "~/lib/ping-uptime";
 import { checkDns, type DnsRecordType } from "~/services/check-dns";
 
 import type { Job } from "./base";
@@ -19,6 +20,9 @@ export default class CheckDnsJob implements Job {
 	async run(message: Message): Promise<void> {
 		try {
 			this.logger.info("job.check-dns.started", { messageId: message.id });
+
+			// Ping uptime monitor
+			await pingUptime("3a620acd-43f9-4f48-9a32-b9a87698e44e", env.UPTIME_CRON_API_KEY);
 
 			// Get all enabled DNS monitors
 			let monitors = await this.db.query.dnsMonitors.findMany({

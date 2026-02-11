@@ -2964,6 +2964,8 @@ export default {
 							"monitors:write": "Monitore schreiben",
 							"alerts:read": "Benachrichtigungen lesen",
 							"alerts:write": "Benachrichtigungen schreiben",
+							"cron-jobs:read": "Cron Jobs lesen",
+							"cron-jobs:write": "Cron Jobs schreiben",
 							"cron-jobs:ping": "Cron Jobs Ping",
 						},
 					},

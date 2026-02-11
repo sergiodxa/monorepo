@@ -2,6 +2,7 @@ import { BatchedLogger } from "@pkg/logger";
 import { env, waitUntil } from "cloudflare:workers";
 
 import database from "~/db/index";
+import { pingUptime } from "~/lib/ping-uptime";
 
 import type { Job } from "./base";
 
@@ -12,6 +13,9 @@ export default class EnqueuePendingDomainsJob implements Job {
 	async run(message: Message): Promise<void> {
 		try {
 			this.logger.info("job.enqueue-pending-domains.started", { messageId: message.id });
+
+			// Ping uptime monitor
+			await pingUptime("9a2e4fe3-f5fe-4365-8b8f-2f2d90d6101c", env.UPTIME_CRON_API_KEY);
 
 			this.logger.info("database.query", {
 				table: "teamDomains",

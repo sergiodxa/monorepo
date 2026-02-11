@@ -2913,6 +2913,8 @@ export default {
 							"monitors:write": "モニターの書き込み",
 							"alerts:read": "アラートの読み取り",
 							"alerts:write": "アラートの書き込み",
+							"cron-jobs:read": "Cronジョブの読み取り",
+							"cron-jobs:write": "Cronジョブの書き込み",
 							"cron-jobs:ping": "Cronジョブ Ping",
 						},
 					},

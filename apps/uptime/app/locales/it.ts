@@ -2931,6 +2931,8 @@ export default {
 							"monitors:write": "Scrivi Monitor",
 							"alerts:read": "Leggi Avvisi",
 							"alerts:write": "Scrivi Avvisi",
+							"cron-jobs:read": "Leggi Cron Jobs",
+							"cron-jobs:write": "Scrivi Cron Jobs",
 							"cron-jobs:ping": "Ping Cron Jobs",
 						},
 					},

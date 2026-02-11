@@ -2937,6 +2937,9 @@ export default {
 							"monitors:write": "Escribir Monitores",
 							"alerts:read": "Leer Alertas",
 							"alerts:write": "Escribir Alertas",
+							"cron-jobs:read": "Leer Trabajos Cron",
+							"cron-jobs:write": "Escribir Trabajos Cron",
+							"cron-jobs:ping": "Hacer Ping a Trabajos Cron",
 						},
 					},
 					expiresAt: {

@@ -704,6 +704,16 @@ export type InsertStatusPageCronJob = typeof statusPageCronJobs.$inferInsert;
 
 // API Keys
 
+export const apiKeyScopes = [
+	"monitors:read",
+	"monitors:write",
+	"alerts:read",
+	"alerts:write",
+	"cron-jobs:read",
+	"cron-jobs:write",
+	"cron-jobs:ping",
+] as const;
+
 export const apiKeys = sqliteTable(
 	"api_keys",
 	{
@@ -720,17 +730,7 @@ export const apiKeys = sqliteTable(
 		keyHash: text("key_hash").notNull(),
 		keyPrefix: text("key_prefix").notNull(),
 		scopes: text("scopes", { mode: "json" })
-			.$type<
-				Array<
-					| "monitors:read"
-					| "monitors:write"
-					| "alerts:read"
-					| "alerts:write"
-					| "cron-jobs:read"
-					| "cron-jobs:write"
-					| "cron-jobs:ping"
-				>
-			>()
+			.$type<Array<(typeof apiKeyScopes)[number]>>()
 			.notNull(),
 	},
 	(table) => [

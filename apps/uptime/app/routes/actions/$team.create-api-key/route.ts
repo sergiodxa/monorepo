@@ -14,14 +14,17 @@ import { team } from "~/middleware/team";
 
 import type { Route } from "./+types/route";
 
-const scopeEnum = z.enum(["monitors:read", "monitors:write", "alerts:read", "alerts:write"]);
+const scopeEnum = z.enum(schema.apiKeyScopes);
 
 const inputSchema = z.object({
 	name: z.string().min(1).max(255),
 	scopes: z
 		.union([scopeEnum.transform((v) => [v]), z.array(scopeEnum)])
 		.pipe(z.array(scopeEnum).min(1)),
-	expiresAt: z.coerce.date().optional(),
+	expiresAt: z.preprocess(
+		(val) => (val === "" || val === null || val === undefined ? undefined : val),
+		z.coerce.date().optional(),
+	),
 });
 
 export async function action({ request, context }: Route.ActionArgs) {

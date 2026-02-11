@@ -2,6 +2,7 @@ import { BatchedLogger } from "@pkg/logger";
 import { env } from "cloudflare:workers";
 
 import database from "~/db/index";
+import { pingUptime } from "~/lib/ping-uptime";
 import Monitor from "~/models/monitor";
 
 import type { Job } from "./base";
@@ -13,6 +14,9 @@ export default class CleanJob implements Job {
 	async run(message: Message): Promise<void> {
 		try {
 			this.logger.info("job.clean.started", { messageId: message.id });
+
+			// Ping uptime monitor
+			await pingUptime("80294988-476e-4e99-9f5c-abfeb369316a", env.UPTIME_CRON_API_KEY);
 
 			this.logger.info("database.delete", {
 				table: "monitorResults",

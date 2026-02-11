@@ -48,6 +48,10 @@ export default {
 		// Every day at 6 AM UTC - Check SSL certificates
 		if (controller.cron === "0 6 * * *") {
 			waitUntil(env.QUEUE.send({ type: "checkSsl" }));
+
+			// Ping our own cron job monitor for self-monitoring
+			let { pingUptime } = await import("./lib/ping-uptime");
+			waitUntil(pingUptime("5be04c34-f5ab-4338-a39b-da11b3b70f90", env.UPTIME_CRON_API_KEY));
 		}
 
 		// Every hour - Check DNS monitors

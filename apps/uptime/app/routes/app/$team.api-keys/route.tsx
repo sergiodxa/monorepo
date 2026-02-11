@@ -1,24 +1,6 @@
 import { cn } from "@pkg/cn";
 import { forbidden } from "@pkg/response";
-import {
-	Alert,
-	Badge,
-	Button,
-	Card,
-	Checkbox,
-	CheckboxGroup,
-	confirm,
-	Description,
-	Empty,
-	FieldError,
-	Input,
-	Label,
-	Menu,
-	Popover,
-	Skeleton,
-	Table,
-	TextField,
-} from "@pkg/ui";
+import { Alert, Badge, Button, confirm, Empty, Menu, Popover, Skeleton, Table } from "@pkg/ui";
 import {
 	CheckIcon,
 	ClipboardCopyIcon,
@@ -31,9 +13,9 @@ import {
 	Trash2Icon,
 	TriangleAlertIcon,
 } from "lucide-react";
-import { useId, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { href, useFetcher, useRevalidator } from "react-router";
+import { href, Link, useFetcher, useLocation } from "react-router";
 import { useSpinDelay } from "spin-delay";
 
 import { AppHeader } from "~/components/app-header";
@@ -159,11 +141,20 @@ export async function loader() {
 export default function Component({ loaderData, params }: Route.ComponentProps) {
 	let { t } = useTranslation("translation", { keyPrefix: "page.apiKeys" });
 	let id = useId();
-	let [showCreateForm, setShowCreateForm] = useState(false);
+	let location = useLocation();
 	let [createdKey, setCreatedKey] = useState<{
 		key: string;
 		name: string;
 	} | null>(null);
+
+	// Check if we have a newly created key in location state
+	useEffect(() => {
+		if (location.state?.createdKey) {
+			setCreatedKey(location.state.createdKey);
+			// Clear the state so it doesn't persist on refresh
+			window.history.replaceState({}, document.title);
+		}
+	}, [location.state]);
 
 	let columns = [
 		{ id: "name" as const, name: t("table.columns.name"), align: "left" as const },
@@ -177,15 +168,13 @@ export default function Component({ loaderData, params }: Route.ComponentProps) 
 	return (
 		<>
 			<AppHeader heading={t("header.title")}>
-				{loaderData.apiKeys.length < 10 && !showCreateForm && (
-					<Button
-						color="neutral"
-						className="flex-shrink-0 px-2"
-						onPress={() => setShowCreateForm(true)}
-					>
-						<PlusIcon className="size-5" aria-hidden />
-						<span className="max-sm:sr-only">{t("header.action.create")}</span>
-					</Button>
+				{loaderData.apiKeys.length < 10 && (
+					<Link to={href("/app/:team/api-keys/new", params)}>
+						<Button color="neutral" className="flex-shrink-0 px-2">
+							<PlusIcon className="size-5" aria-hidden />
+							<span className="max-sm:sr-only">{t("header.action.create")}</span>
+						</Button>
+					</Link>
 				)}
 			</AppHeader>
 
@@ -215,18 +204,7 @@ export default function Component({ loaderData, params }: Route.ComponentProps) 
 					/>
 				)}
 
-				{showCreateForm && (
-					<CreateApiKeyForm
-						teamSlug={params.team}
-						onCancel={() => setShowCreateForm(false)}
-						onSuccess={(key, name) => {
-							setCreatedKey({ key, name });
-							setShowCreateForm(false);
-						}}
-					/>
-				)}
-
-				{loaderData.apiKeys.length === 0 && !showCreateForm ? (
+				{loaderData.apiKeys.length === 0 ? (
 					<Empty className="mx-auto max-w-md py-16">
 						<Empty.Icon>
 							<KeyIcon className="size-12" />
@@ -234,34 +212,34 @@ export default function Component({ loaderData, params }: Route.ComponentProps) 
 						<Empty.Title>{t("empty.title")}</Empty.Title>
 						<Empty.Description>{t("empty.description")}</Empty.Description>
 						<Empty.Action>
-							<Button onPress={() => setShowCreateForm(true)}>
-								<PlusIcon className="size-5" aria-hidden />
-								{t("empty.cta")}
-							</Button>
+							<Link to={href("/app/:team/api-keys/new", params)}>
+								<Button>
+									<PlusIcon className="size-5" aria-hidden />
+									{t("empty.cta")}
+								</Button>
+							</Link>
 						</Empty.Action>
 					</Empty>
 				) : (
-					loaderData.apiKeys.length > 0 && (
-						<div className="flex flex-col gap-4">
-							<h2 id={`${id}-api-keys-table`}>{t("table.label")}</h2>
+					<div className="flex flex-col gap-4">
+						<h2 id={`${id}-api-keys-table`}>{t("table.label")}</h2>
 
-							<Table aria-labelledby={`${id}-api-keys-table`}>
-								<Table.Header columns={columns}>
-									{(column) => (
-										<Table.Column align={column.align} isRowHeader={column.id === "name"}>
-											<span className={cn({ "sr-only": column.id === "actions" })}>
-												{column.name}
-											</span>
-										</Table.Column>
-									)}
-								</Table.Header>
+						<Table aria-labelledby={`${id}-api-keys-table`}>
+							<Table.Header columns={columns}>
+								{(column) => (
+									<Table.Column align={column.align} isRowHeader={column.id === "name"}>
+										<span className={cn({ "sr-only": column.id === "actions" })}>
+											{column.name}
+										</span>
+									</Table.Column>
+								)}
+							</Table.Header>
 
-								<Table.Body items={loaderData.apiKeys}>
-									{(apiKey) => <ApiKeyTableRow apiKey={apiKey} />}
-								</Table.Body>
-							</Table>
-						</div>
-					)
+							<Table.Body items={loaderData.apiKeys}>
+								{(apiKey) => <ApiKeyTableRow apiKey={apiKey} />}
+							</Table.Body>
+						</Table>
+					</div>
 				)}
 			</div>
 		</>
@@ -310,88 +288,6 @@ function NewKeyAlert(props: { keyName: string; fullKey: string; onDismiss: () =>
 				</Button>
 			</Alert.Action>
 		</Alert>
-	);
-}
-
-function CreateApiKeyForm(props: {
-	teamSlug: string;
-	onCancel: () => void;
-	onSuccess: (key: string, name: string) => void;
-}) {
-	let { t } = useTranslation("translation", { keyPrefix: "page.apiKeys.form" });
-	let fetcher = useFetcher<{
-		ok: boolean;
-		apiKey?: { key: string; name: string };
-	}>();
-	let revalidator = useRevalidator();
-	let isPending = useSpinDelay(fetcher.state !== "idle", {
-		minDuration: 100,
-		delay: 50,
-	});
-
-	// Handle successful creation
-	if (fetcher.data?.ok && fetcher.data.apiKey) {
-		props.onSuccess(fetcher.data.apiKey.key, fetcher.data.apiKey.name);
-		revalidator.revalidate();
-	}
-
-	return (
-		<Card className="mx-auto w-full max-w-2xl">
-			<fetcher.Form
-				method="POST"
-				action={href("/actions/:team/create-api-key", { team: props.teamSlug })}
-			>
-				<Card.Header>
-					<Card.Title>{t("title")}</Card.Title>
-					<Card.Description>{t("description")}</Card.Description>
-				</Card.Header>
-
-				<Card.Content className="space-y-6">
-					<TextField type="text" name="name" isRequired>
-						<Label>{t("fields.name.label")}</Label>
-						<Input placeholder={t("fields.name.placeholder")} />
-						<Description>{t("fields.name.description")}</Description>
-						<FieldError />
-					</TextField>
-
-					<CheckboxGroup name="scopes" isRequired>
-						<Label>{t("fields.scopes.label")}</Label>
-						<Description>{t("fields.scopes.description")}</Description>
-						<div className="mt-2 grid gap-2 sm:grid-cols-2">
-							<Checkbox value="monitors:read">
-								{t("fields.scopes.options.monitors:read", { nsSeparator: false })}
-							</Checkbox>
-							<Checkbox value="monitors:write">
-								{t("fields.scopes.options.monitors:write", { nsSeparator: false })}
-							</Checkbox>
-							<Checkbox value="alerts:read">
-								{t("fields.scopes.options.alerts:read", { nsSeparator: false })}
-							</Checkbox>
-							<Checkbox value="alerts:write">
-								{t("fields.scopes.options.alerts:write", { nsSeparator: false })}
-							</Checkbox>
-						</div>
-						<FieldError />
-					</CheckboxGroup>
-
-					<TextField type="date" name="expiresAt">
-						<Label>{t("fields.expiresAt.label")}</Label>
-						<Input min={new Date().toISOString().split("T")[0]} />
-						<Description>{t("fields.expiresAt.description")}</Description>
-						<FieldError />
-					</TextField>
-				</Card.Content>
-
-				<Card.Footer className="justify-end gap-2">
-					<Button type="button" variant="outline" color="neutral" onPress={props.onCancel}>
-						{t("actions.cancel")}
-					</Button>
-					<Button type="submit" isPending={isPending}>
-						{t("actions.create")}
-					</Button>
-				</Card.Footer>
-			</fetcher.Form>
-		</Card>
 	);
 }
 

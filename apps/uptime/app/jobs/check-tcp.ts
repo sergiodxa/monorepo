@@ -2,6 +2,7 @@ import { BatchedLogger } from "@pkg/logger";
 import { env } from "cloudflare:workers";
 
 import database from "~/db/index";
+import { pingUptime } from "~/lib/ping-uptime";
 import TcpMonitor from "~/models/tcp-monitor";
 import { checkTcpConnection } from "~/services/check-tcp";
 
@@ -20,6 +21,9 @@ export default class CheckTcpJob implements Job {
 
 	async run(message: Message): Promise<void> {
 		try {
+			// Ping uptime monitor
+			await pingUptime("94276ec1-18f9-4dde-8a09-c5a00df29454", env.UPTIME_CRON_API_KEY);
+
 			let monitors = await TcpMonitor.getEnabledMonitors(this.db);
 
 			this.logger.info("job.check-tcp.started", {

@@ -4,6 +4,7 @@ import { eq } from "drizzle-orm";
 
 import database from "~/db/index";
 import * as schema from "~/db/schema";
+import { pingUptime } from "~/lib/ping-uptime";
 
 import type { Job } from "./base";
 
@@ -34,6 +35,9 @@ export default class CheckCronJobsJob implements Job {
 	async run(message: Message): Promise<void> {
 		try {
 			this.logger.info("job.check-cron-jobs.started", { messageId: message.id });
+
+			// Ping uptime monitor
+			await pingUptime("70a5dba9-8447-4cc0-a5f6-d0e41dc6b9e5", env.UPTIME_CRON_API_KEY);
 
 			let now = new Date();
 

@@ -4,6 +4,7 @@ import { eq } from "drizzle-orm";
 
 import database from "~/db/index";
 import * as schema from "~/db/schema";
+import { pingUptime } from "~/lib/ping-uptime";
 import { calculateSslStatus, shouldSendSslAlert } from "~/services/check-ssl";
 
 import type { Job } from "./base";
@@ -19,6 +20,9 @@ export default class CheckSslJob implements Job {
 	async run(message: Message): Promise<void> {
 		try {
 			this.logger.info("job.check-ssl.started", { messageId: message.id });
+
+			// Ping uptime monitor
+			await pingUptime("2140cbc2-e18e-441c-9ef9-3d516a9e3a19", env.UPTIME_CRON_API_KEY);
 
 			// Get all monitors with SSL monitoring enabled
 			this.logger.info("database.query", {
