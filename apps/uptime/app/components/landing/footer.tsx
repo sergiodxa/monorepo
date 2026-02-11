@@ -273,6 +273,30 @@ export function LandingFooter() {
 									{t("sections.compare.statuscake")}
 								</Link>
 							</li>
+							<li>
+								<Link
+									to="/vs/datadog"
+									className="text-sm text-neutral-600 transition hover:text-primary-600 dark:text-neutral-400 dark:hover:text-primary-400"
+								>
+									{t("sections.compare.datadog")}
+								</Link>
+							</li>
+							<li>
+								<Link
+									to="/vs/site24x7"
+									className="text-sm text-neutral-600 transition hover:text-primary-600 dark:text-neutral-400 dark:hover:text-primary-400"
+								>
+									{t("sections.compare.site24x7")}
+								</Link>
+							</li>
+							<li>
+								<Link
+									to="/vs/ohdear"
+									className="text-sm text-neutral-600 transition hover:text-primary-600 dark:text-neutral-400 dark:hover:text-primary-400"
+								>
+									{t("sections.compare.ohdear")}
+								</Link>
+							</li>
 						</ul>
 					</div>
 

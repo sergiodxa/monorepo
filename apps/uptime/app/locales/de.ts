@@ -384,6 +384,9 @@ export default {
 					betterUptime: "vs Better Uptime",
 					checkly: "vs Checkly",
 					statuscake: "vs StatusCake",
+					datadog: "vs Datadog",
+					site24x7: "vs Site24x7",
+					ohdear: "vs Oh Dear",
 				},
 				legal: {
 					title: "Rechtliches",
