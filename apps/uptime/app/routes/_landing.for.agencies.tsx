@@ -20,24 +20,23 @@ import {
 	LandingHowItWorks,
 	LandingTrustIndicators,
 } from "~/components/landing";
+import { generateMeta } from "~/lib/seo";
+import { i18next } from "~/middleware/i18next";
 
 import type { Route } from "./+types/_landing.for.agencies";
 import type { loader as landingLoader } from "./_landing";
 
-export function meta({ data }: Route.MetaArgs) {
-	return data.meta;
-}
+export const meta: Route.MetaFunction = ({ data }) => data?.meta ?? [];
 
-export function loader() {
+export async function loader({ request, context }: Route.LoaderArgs) {
+	let { t } = i18next(context);
+
 	return {
-		meta: [
-			{ title: "Uptime for Agencies | Client Monitoring" },
-			{
-				name: "description",
-				content:
-					"Monitor all your client websites from one dashboard. Proactive uptime monitoring for digital agencies.",
-			},
-		],
+		meta: generateMeta({
+			title: t("landing.for.agencies.meta.title"),
+			description: t("landing.for.agencies.meta.description"),
+			url: request.url,
+		}),
 	};
 }
 

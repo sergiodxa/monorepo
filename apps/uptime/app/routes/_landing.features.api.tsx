@@ -18,18 +18,29 @@ import {
 	LandingHowItWorks,
 	LandingTrustIndicators,
 } from "~/components/landing";
+import { generateMeta, getSoftwareApplicationSchema } from "~/lib/seo";
+import { i18next } from "~/middleware/i18next";
 
+import type { Route } from "./+types/_landing.features.api";
 import type { loader as landingLoader } from "./_landing";
 
-export function meta() {
-	return [
-		{ title: "Public API | Uptime Monitors" },
-		{
-			name: "description",
-			content:
-				"Integrate monitoring into your workflow with our REST API. Create monitors, manage alerts, and access metrics programmatically.",
-		},
-	];
+export const meta: Route.MetaFunction = ({ data }) => data?.meta ?? [];
+
+export async function loader({ request, context }: Route.LoaderArgs) {
+	let { t } = i18next(context);
+
+	return {
+		meta: generateMeta({
+			title: t("landing.features.api.meta.title"),
+			description: t("landing.features.api.meta.description"),
+			url: request.url,
+			jsonLd: getSoftwareApplicationSchema({
+				name: "Uptime API",
+				description:
+					"Integrate monitoring into your workflow with our REST API. Create monitors, manage alerts, and access metrics programmatically.",
+			}),
+		}),
+	};
 }
 
 export default function FeaturesAPIPage() {

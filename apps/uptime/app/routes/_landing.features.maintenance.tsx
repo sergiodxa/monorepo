@@ -17,18 +17,29 @@ import {
 	LandingHowItWorks,
 	LandingTrustIndicators,
 } from "~/components/landing";
+import { generateMeta, getSoftwareApplicationSchema } from "~/lib/seo";
+import { i18next } from "~/middleware/i18next";
 
+import type { Route } from "./+types/_landing.features.maintenance";
 import type { loader as landingLoader } from "./_landing";
 
-export function meta() {
-	return [
-		{ title: "Maintenance Windows | Uptime Monitors" },
-		{
-			name: "description",
-			content:
-				"Schedule maintenance windows to pause alerts during planned downtime. Avoid false alarms and keep your uptime metrics accurate.",
-		},
-	];
+export const meta: Route.MetaFunction = ({ data }) => data?.meta ?? [];
+
+export async function loader({ request, context }: Route.LoaderArgs) {
+	let { t } = i18next(context);
+
+	return {
+		meta: generateMeta({
+			title: t("landing.features.maintenance.meta.title"),
+			description: t("landing.features.maintenance.meta.description"),
+			url: request.url,
+			jsonLd: getSoftwareApplicationSchema({
+				name: "Uptime Maintenance Windows",
+				description:
+					"Schedule maintenance windows to pause alerts during planned downtime. Avoid false alarms and keep your uptime metrics accurate.",
+			}),
+		}),
+	};
 }
 
 export default function FeaturesMaintenancePage() {

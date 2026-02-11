@@ -16,18 +16,29 @@ import {
 	LandingHowItWorks,
 	LandingTrustIndicators,
 } from "~/components/landing";
+import { generateMeta, getSoftwareApplicationSchema } from "~/lib/seo";
+import { i18next } from "~/middleware/i18next";
 
+import type { Route } from "./+types/_landing.features.status-pages";
 import type { loader as landingLoader } from "./_landing";
 
-export function meta() {
-	return [
-		{ title: "Status Pages | Uptime Monitors" },
-		{
-			name: "description",
-			content:
-				"Beautiful, customizable status pages to keep your users informed. Public or private pages with real-time updates and uptime history.",
-		},
-	];
+export const meta: Route.MetaFunction = ({ data }) => data?.meta ?? [];
+
+export async function loader({ request, context }: Route.LoaderArgs) {
+	let { t } = i18next(context);
+
+	return {
+		meta: generateMeta({
+			title: t("landing.features.status-pages.meta.title"),
+			description: t("landing.features.status-pages.meta.description"),
+			url: request.url,
+			jsonLd: getSoftwareApplicationSchema({
+				name: "Uptime Status Pages",
+				description:
+					"Beautiful, customizable status pages to keep your users informed. Public or private pages with real-time updates and uptime history.",
+			}),
+		}),
+	};
 }
 
 export default function FeaturesStatusPagesPage() {

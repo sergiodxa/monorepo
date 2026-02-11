@@ -19,18 +19,29 @@ import {
 	LandingHowItWorks,
 	LandingTrustIndicators,
 } from "~/components/landing";
+import { generateMeta, getSoftwareApplicationSchema } from "~/lib/seo";
+import { i18next } from "~/middleware/i18next";
 
+import type { Route } from "./+types/_landing.features.monitors";
 import type { loader as landingLoader } from "./_landing";
 
-export function meta() {
-	return [
-		{ title: "HTTP Monitoring | Uptime Monitors" },
-		{
-			name: "description",
-			content:
-				"HTTP health checks from 9 global regions. Monitor any URL with 1-60 minute intervals and 365-day data retention.",
-		},
-	];
+export const meta: Route.MetaFunction = ({ data }) => data?.meta ?? [];
+
+export async function loader({ request, context }: Route.LoaderArgs) {
+	let { t } = i18next(context);
+
+	return {
+		meta: generateMeta({
+			title: t("landing.features.monitors.meta.title"),
+			description: t("landing.features.monitors.meta.description"),
+			url: request.url,
+			jsonLd: getSoftwareApplicationSchema({
+				name: "Uptime Monitors",
+				description:
+					"HTTP health checks from 9 global regions. Monitor any URL with 1-60 minute intervals and 365-day data retention.",
+			}),
+		}),
+	};
 }
 
 export default function FeaturesMonitorsPage() {

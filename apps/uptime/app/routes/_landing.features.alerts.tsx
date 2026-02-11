@@ -9,18 +9,29 @@ import {
 	LandingHowItWorks,
 	LandingTrustIndicators,
 } from "~/components/landing";
+import { generateMeta, getSoftwareApplicationSchema } from "~/lib/seo";
+import { i18next } from "~/middleware/i18next";
 
+import type { Route } from "./+types/_landing.features.alerts";
 import type { loader as landingLoader } from "./_landing";
 
-export function meta() {
-	return [
-		{ title: "Uptime Alerts | Email & Webhook Notifications" },
-		{
-			name: "description",
-			content:
-				"Instant email and webhook alerts for downtime detection. Under 1 second delivery. Integrates with Slack, Discord, PagerDuty, and more.",
-		},
-	];
+export const meta: Route.MetaFunction = ({ data }) => data?.meta ?? [];
+
+export async function loader({ request, context }: Route.LoaderArgs) {
+	let { t } = i18next(context);
+
+	return {
+		meta: generateMeta({
+			title: t("landing.features.alerts.meta.title"),
+			description: t("landing.features.alerts.meta.description"),
+			url: request.url,
+			jsonLd: getSoftwareApplicationSchema({
+				name: "Uptime Alerts",
+				description:
+					"Instant email and webhook alerts for downtime detection. Under 1 second delivery. Integrates with Slack, Discord, PagerDuty, and more.",
+			}),
+		}),
+	};
 }
 
 export default function FeaturesAlertsPage() {

@@ -13,24 +13,23 @@ import {
 	ComparePricing,
 	CompareWhySwitch,
 } from "~/components/landing/compare";
+import { generateMeta } from "~/lib/seo";
+import { i18next } from "~/middleware/i18next";
 
 import type { Route } from "./+types/_landing.vs.site24x7";
 import type { loader as landingLoader } from "./_landing";
 
-export function meta({ data }: Route.MetaArgs) {
-	return data.meta;
-}
+export const meta: Route.MetaFunction = ({ data }) => data?.meta ?? [];
 
-export function loader() {
+export async function loader({ request, context }: Route.LoaderArgs) {
+	let { t } = i18next(context);
+
 	return {
-		meta: [
-			{ title: "Uptime vs Site24x7 | Simple Uptime Monitoring Alternative" },
-			{
-				name: "description",
-				content:
-					"Compare Uptime and Site24x7 for uptime monitoring. Get transparent, usage-based pricing instead of complex tiered plans. See features, pricing, and find out which is right for you.",
-			},
-		],
+		meta: generateMeta({
+			title: t("landing.vs.site24x7.meta.title"),
+			description: t("landing.vs.site24x7.meta.description"),
+			url: request.url,
+		}),
 	};
 }
 

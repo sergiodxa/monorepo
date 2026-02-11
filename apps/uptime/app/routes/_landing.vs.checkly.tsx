@@ -12,24 +12,23 @@ import {
 	ComparePricing,
 	CompareWhySwitch,
 } from "~/components/landing/compare";
+import { generateMeta } from "~/lib/seo";
+import { i18next } from "~/middleware/i18next";
 
 import type { Route } from "./+types/_landing.vs.checkly";
 import type { loader as landingLoader } from "./_landing";
 
-export function meta({ data }: Route.MetaArgs) {
-	return data.meta;
-}
+export const meta: Route.MetaFunction = ({ data }) => data?.meta ?? [];
 
-export function loader() {
+export async function loader({ request, context }: Route.LoaderArgs) {
+	let { t } = i18next(context);
+
 	return {
-		meta: [
-			{ title: "Uptime vs Checkly | Simple Uptime Monitoring Without the Code" },
-			{
-				name: "description",
-				content:
-					"Compare Uptime and Checkly side by side. Simple uptime monitoring without the code. See features, pricing, and find out which is right for you.",
-			},
-		],
+		meta: generateMeta({
+			title: t("landing.vs.checkly.meta.title"),
+			description: t("landing.vs.checkly.meta.description"),
+			url: request.url,
+		}),
 	};
 }
 

@@ -5,6 +5,79 @@ export default {
 			description: "Simple & reliable uptime monitoring for developers",
 		},
 
+		vs: {
+			site24x7: {
+				meta: {
+					title: "Uptime vs Site24x7 | Simple Uptime Monitoring Alternative",
+					description:
+						"Compare Uptime and Site24x7 for uptime monitoring. Get transparent, usage-based pricing instead of complex tiered plans. See features, pricing, and find out which is right for you.",
+				},
+			},
+			checkly: {
+				meta: {
+					title: "Uptime vs Checkly | Simple Uptime Monitoring Without the Code",
+					description:
+						"Compare Uptime and Checkly side by side. Simple uptime monitoring without the code. See features, pricing, and find out which is right for you.",
+				},
+			},
+			ohdear: {
+				meta: {
+					title: "Uptime vs Oh Dear | Developer-Focused Monitoring Comparison",
+					description:
+						"Compare Uptime and Oh Dear for uptime monitoring. Both are developer-focused tools - see how usage-based pricing compares to per-site pricing, and find which is right for you.",
+				},
+			},
+			cronitor: {
+				meta: {
+					title: "Uptime vs Cronitor | Simpler Monitoring, Better Pricing",
+					description:
+						"Compare Uptime and Cronitor. Discover why teams choose Uptime for simpler pricing, DNS/TCP monitoring, and a focused approach without feature bloat.",
+				},
+			},
+			healthchecks: {
+				meta: {
+					title: "Uptime vs Healthchecks.io | Complete Monitoring Solution",
+					description:
+						"Compare Uptime and Healthchecks.io. See why teams choose Uptime for complete monitoring with HTTP, DNS, TCP, SSL, and cron job monitoring in one platform.",
+				},
+			},
+			uptimerobot: {
+				meta: {
+					title: "Uptime vs UptimeRobot | Modern Usage-Based Monitoring",
+					description:
+						"Compare Uptime and UptimeRobot. See why teams choose transparent usage-based pricing over tiered plans with hidden limits.",
+				},
+			},
+			betterUptime: {
+				meta: {
+					title: "Uptime vs Better Uptime | Simpler Monitoring Alternative",
+					description:
+						"Compare Uptime and Better Uptime. Discover simpler pricing, powerful features, and why developers are switching.",
+				},
+			},
+			pingdom: {
+				meta: {
+					title: "Uptime vs Pingdom | Affordable Monitoring Alternative",
+					description:
+						"Compare Uptime and Pingdom. Get powerful uptime monitoring without enterprise pricing. See features, pricing, and differences.",
+				},
+			},
+			statuscake: {
+				meta: {
+					title: "Uptime vs StatusCake | Modern Monitoring Comparison",
+					description:
+						"Compare Uptime and StatusCake. Modern interface, transparent pricing, and all the features you need without the complexity.",
+				},
+			},
+			datadog: {
+				meta: {
+					title: "Uptime vs Datadog | Simple Uptime Monitoring Alternative",
+					description:
+						"Compare Uptime and Datadog for uptime monitoring. Get focused monitoring without the complexity of a full observability platform.",
+				},
+			},
+		},
+
 		header: {
 			title: "Uptime",
 
@@ -55,6 +128,102 @@ export default {
 				"Everything you need to keep your services running smoothly, with no unnecessary complexity.",
 			badge: "Features",
 			learnMore: "Learn more",
+
+			monitors: {
+				meta: {
+					title: "HTTP Monitoring | Uptime Monitors",
+					description:
+						"HTTP health checks from 9 global regions. Monitor any URL with 1-60 minute intervals and 365-day data retention.",
+				},
+			},
+
+			alerts: {
+				meta: {
+					title: "Uptime Alerts | Email & Webhook Notifications",
+					description:
+						"Instant email and webhook alerts for downtime detection. Under 1 second delivery. Integrates with Slack, Discord, PagerDuty, and more.",
+				},
+			},
+
+			"status-pages": {
+				meta: {
+					title: "Status Pages | Uptime Monitors",
+					description:
+						"Beautiful, customizable status pages to keep your users informed. Public or private pages with real-time updates and uptime history.",
+				},
+			},
+
+			analytics: {
+				meta: {
+					title: "Uptime Analytics | Heatmaps & Trends",
+					description:
+						"Visual heatmaps, response time tracking, and 365-day data retention. Understand your service reliability at a glance.",
+				},
+			},
+
+			teams: {
+				meta: {
+					title: "Team Collaboration | Uptime Teams",
+					description:
+						"Collaborate on uptime monitoring with unlimited team members. Role-based access and domain auto-provisioning included.",
+				},
+			},
+
+			api: {
+				meta: {
+					title: "Public API | Uptime Monitors",
+					description:
+						"Integrate monitoring into your workflow with our REST API. Create monitors, manage alerts, and access metrics programmatically.",
+				},
+			},
+
+			integrations: {
+				meta: {
+					title: "Integrations | Uptime",
+					description:
+						"Connect monitoring to your workflow with Slack, Discord, PagerDuty, and custom webhooks. Native integrations for instant notifications.",
+				},
+			},
+
+			maintenance: {
+				meta: {
+					title: "Maintenance Windows | Uptime",
+					description:
+						"Schedule planned downtime, suppress alerts during maintenance, and keep your team informed with maintenance windows.",
+				},
+			},
+
+			dns: {
+				meta: {
+					title: "DNS Monitoring | Uptime",
+					description:
+						"Monitor DNS records for unexpected changes. Track A, AAAA, CNAME, MX, TXT, and NS records to catch hijacking attempts.",
+				},
+			},
+
+			ssl: {
+				meta: {
+					title: "SSL Certificate Monitoring | Uptime",
+					description:
+						"Track SSL certificate expiry and get alerts before they expire. Automatic daily checks with configurable warning thresholds.",
+				},
+			},
+
+			"cron-jobs": {
+				meta: {
+					title: "Cron Job Monitoring | Uptime",
+					description:
+						"Monitor scheduled tasks and background jobs. Get alerted when cron jobs are late or miss their execution window.",
+				},
+			},
+
+			"content-monitoring": {
+				meta: {
+					title: "Content Monitoring | Uptime",
+					description:
+						"Verify specific content appears on your pages. Check for keywords, patterns, or specific text to ensure page integrity.",
+				},
+			},
 
 			list: {
 				first: {
@@ -139,6 +308,62 @@ export default {
 				"From simple health checks to complex distributed systems, we've got you covered.",
 			learnMore: "Learn more",
 			tailoredFor: "Tailored solutions for:",
+
+			websiteMonitoring: {
+				meta: {
+					title: "Website Monitoring | Uptime",
+					description:
+						"Monitor website uptime and performance from 9 global regions. Track response times, SSL certificates, and get instant downtime alerts.",
+				},
+			},
+
+			apiMonitoring: {
+				meta: {
+					title: "API Monitoring | Uptime",
+					description:
+						"Monitor REST APIs and endpoints with detailed status checks. Track response codes, measure latency, and verify API health.",
+				},
+			},
+
+			cronJobs: {
+				meta: {
+					title: "Cron Job Monitoring | Uptime",
+					description:
+						"Monitor scheduled tasks and cron jobs. Get alerts when jobs are late, miss their window, or fail to complete.",
+				},
+			},
+
+			healthcheck: {
+				meta: {
+					title: "Health Check Monitoring | Uptime",
+					description:
+						"Automated health checks for your services. Monitor endpoints, databases, and internal services with customizable intervals.",
+				},
+			},
+
+			ecommerce: {
+				meta: {
+					title: "E-commerce Monitoring | Uptime",
+					description:
+						"Protect your online store with uptime monitoring. Track checkout, payments, and product pages to prevent lost sales.",
+				},
+			},
+
+			saas: {
+				meta: {
+					title: "SaaS Application Monitoring | Uptime",
+					description:
+						"Keep your SaaS product reliable with comprehensive monitoring. Track APIs, dashboards, and background jobs in one platform.",
+				},
+			},
+
+			microservices: {
+				meta: {
+					title: "Microservices Monitoring | Uptime",
+					description:
+						"Monitor distributed systems and microservices architecture. Catch failures before they cascade across your infrastructure.",
+				},
+			},
 
 			list: {
 				websiteMonitoring: {
@@ -400,6 +625,68 @@ export default {
 					terms: "Terms of Service",
 					privacy: "Privacy Policy",
 				},
+			},
+		},
+
+		for: {
+			soloDevs: {
+				meta: {
+					title: "Uptime for Solo Developers | Free Monitoring",
+					description:
+						"Professional uptime monitoring for solo developers. Start free, upgrade when ready. Perfect for portfolios and side projects.",
+				},
+			},
+			startups: {
+				meta: {
+					title: "Uptime for Startups | Team Monitoring",
+					description:
+						"Uptime monitoring for startups. Team collaboration, instant alerts, and usage-based pricing that scales with you.",
+				},
+			},
+			agencies: {
+				meta: {
+					title: "Uptime for Agencies | Client Monitoring",
+					description:
+						"Monitor all your client websites from one dashboard. Proactive uptime monitoring for digital agencies.",
+				},
+			},
+			enterprises: {
+				meta: {
+					title: "Uptime for Enterprises | Domain Auto-Provisioning",
+					description:
+						"Enterprise uptime monitoring with domain verification, auto-provisioning, and role-based access. 99.9% SLA guaranteed.",
+				},
+			},
+			devops: {
+				meta: {
+					title: "Uptime for DevOps | API-First Monitoring",
+					description:
+						"Uptime monitoring built for DevOps workflows. API-first design, webhook integrations, and fits into your existing toolchain.",
+				},
+			},
+			indieHackers: {
+				meta: {
+					title: "Uptime for Indie Hackers | Simple Monitoring",
+					description:
+						"Uptime monitoring built for indie hackers. Start free, pay only for what you use. $5/mo includes 5,000 pings.",
+				},
+			},
+		},
+	},
+
+	legal: {
+		terms: {
+			meta: {
+				title: "Terms of Service | Uptime",
+				description:
+					"Terms of Service for Uptime, the uptime monitoring service by Sergio Xalambrí.",
+			},
+		},
+		privacy: {
+			meta: {
+				title: "Privacy Policy | Uptime",
+				description:
+					"Privacy Policy for Uptime. Learn how we collect, use, and protect your data when using our uptime monitoring service.",
 			},
 		},
 	},

@@ -29,6 +29,7 @@ import { href, Link, useRouteLoaderData } from "react-router";
 
 import screenshotDark from "~/assets/screenshot-dark.webp";
 import screenshotLight from "~/assets/screenshot-light.webp";
+import { generateMeta, getWebSiteSchema } from "~/lib/seo";
 import { i18next } from "~/middleware/i18next";
 
 import type { Route } from "./+types/_landing._index";
@@ -56,16 +57,12 @@ export async function loader({ request, context }: Route.LoaderArgs) {
 
 	return {
 		initialMonitors: [{ id: crypto.randomUUID(), frequency: 10 }],
-
-		meta: [
-			{ title: t("landing.meta.title") },
-			{ name: "description", content: t("landing.meta.description") },
-			{ name: "og:title", content: t("landing.meta.title") },
-			{ name: "og:description", content: t("landing.meta.description") },
-			{ name: "og:type", content: "website" },
-			{ name: "og:url", content: request.url },
-			{ name: "twitter:card", content: "summary" },
-		] satisfies Route.MetaDescriptors,
+		meta: generateMeta({
+			title: t("landing.meta.title"),
+			description: t("landing.meta.description"),
+			url: request.url,
+			jsonLd: getWebSiteSchema(),
+		}),
 	};
 }
 

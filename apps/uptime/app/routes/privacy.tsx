@@ -1,12 +1,23 @@
 import { LandingFooter, LandingHeader } from "~/components/landing";
+import { generateMeta } from "~/lib/seo";
+import { i18next } from "~/middleware/i18next";
 import { getSession } from "~/middleware/session";
 
 import type { Route } from "./+types/privacy";
 
-export function loader() {
+export const meta: Route.MetaFunction = ({ data }) => data?.meta ?? [];
+
+export async function loader({ request, context }: Route.LoaderArgs) {
 	let session = getSession();
+	let { t } = i18next(context);
+
 	return {
 		isSignedIn: session.has("id"),
+		meta: generateMeta({
+			title: t("legal.privacy.meta.title"),
+			description: t("legal.privacy.meta.description"),
+			url: request.url,
+		}),
 	};
 }
 

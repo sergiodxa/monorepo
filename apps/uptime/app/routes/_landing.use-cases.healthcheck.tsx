@@ -18,18 +18,24 @@ import {
 	LandingHowItWorks,
 	LandingTrustIndicators,
 } from "~/components/landing";
+import { generateMeta } from "~/lib/seo";
+import { i18next } from "~/middleware/i18next";
 
+import type { Route } from "./+types/_landing.use-cases.healthcheck";
 import type { loader as landingLoader } from "./_landing";
 
-export function meta() {
-	return [
-		{ title: "Health Check Monitoring | /health Endpoint Monitoring" },
-		{
-			name: "description",
-			content:
-				"Monitor /health, /healthz, /ready, and /live endpoints. Purpose-built for Kubernetes and Docker health checks.",
-		},
-	];
+export const meta: Route.MetaFunction = ({ data }) => data?.meta ?? [];
+
+export async function loader({ request, context }: Route.LoaderArgs) {
+	let { t } = i18next(context);
+
+	return {
+		meta: generateMeta({
+			title: t("landing.useCases.healthcheck.meta.title"),
+			description: t("landing.useCases.healthcheck.meta.description"),
+			url: request.url,
+		}),
+	};
 }
 
 const trustIndicators = [

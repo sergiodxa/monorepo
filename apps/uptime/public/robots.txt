@@ -1,2 +1,10 @@
+User-agent: *
 Allow: /
 Disallow: /auth
+Disallow: /app
+Disallow: /api
+Disallow: /actions
+Disallow: /webhooks
+Disallow: /invite
+
+Sitemap: https://uptime.sergiodxa.com/sitemap.xml

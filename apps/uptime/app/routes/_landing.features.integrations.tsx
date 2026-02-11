@@ -18,18 +18,29 @@ import {
 	LandingHowItWorks,
 	LandingTrustIndicators,
 } from "~/components/landing";
+import { generateMeta, getSoftwareApplicationSchema } from "~/lib/seo";
+import { i18next } from "~/middleware/i18next";
 
+import type { Route } from "./+types/_landing.features.integrations";
 import type { loader as landingLoader } from "./_landing";
 
-export function meta() {
-	return [
-		{ title: "Slack & Discord Integrations | Uptime Monitors" },
-		{
-			name: "description",
-			content:
-				"Get instant alerts in Slack and Discord when your services go down. Rich notifications with actionable details delivered where your team works.",
-		},
-	];
+export const meta: Route.MetaFunction = ({ data }) => data?.meta ?? [];
+
+export async function loader({ request, context }: Route.LoaderArgs) {
+	let { t } = i18next(context);
+
+	return {
+		meta: generateMeta({
+			title: t("landing.features.integrations.meta.title"),
+			description: t("landing.features.integrations.meta.description"),
+			url: request.url,
+			jsonLd: getSoftwareApplicationSchema({
+				name: "Uptime Integrations",
+				description:
+					"Get instant alerts in Slack and Discord when your services go down. Rich notifications with actionable details delivered where your team works.",
+			}),
+		}),
+	};
 }
 
 export default function FeaturesIntegrationsPage() {

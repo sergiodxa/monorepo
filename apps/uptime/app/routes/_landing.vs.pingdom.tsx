@@ -12,24 +12,23 @@ import {
 	ComparePricing,
 	CompareWhySwitch,
 } from "~/components/landing/compare";
+import { generateMeta } from "~/lib/seo";
+import { i18next } from "~/middleware/i18next";
 
 import type { Route } from "./+types/_landing.vs.pingdom";
 import type { loader as landingLoader } from "./_landing";
 
-export function meta({ data }: Route.MetaArgs) {
-	return data.meta;
-}
+export const meta: Route.MetaFunction = ({ data }) => data?.meta ?? [];
 
-export function loader() {
+export async function loader({ request, context }: Route.LoaderArgs) {
+	let { t } = i18next(context);
+
 	return {
-		meta: [
-			{ title: "Uptime vs Pingdom | Compare Uptime Monitoring Tools" },
-			{
-				name: "description",
-				content:
-					"Compare Uptime and Pingdom side by side. Enterprise-grade monitoring without the enterprise price tag. See features, pricing, and find out which is right for you.",
-			},
-		],
+		meta: generateMeta({
+			title: t("landing.vs.pingdom.meta.title"),
+			description: t("landing.vs.pingdom.meta.description"),
+			url: request.url,
+		}),
 	};
 }
 

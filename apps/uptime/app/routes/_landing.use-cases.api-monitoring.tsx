@@ -19,18 +19,24 @@ import {
 	LandingHowItWorks,
 	LandingTrustIndicators,
 } from "~/components/landing";
+import { generateMeta } from "~/lib/seo";
+import { i18next } from "~/middleware/i18next";
 
+import type { Route } from "./+types/_landing.use-cases.api-monitoring";
 import type { loader as landingLoader } from "./_landing";
 
-export function meta() {
-	return [
-		{ title: "API Monitoring | REST & GraphQL Health Checks" },
-		{
-			name: "description",
-			content:
-				"Monitor REST APIs, GraphQL endpoints, and webhooks. Validate status codes, track response times from 9 global regions.",
-		},
-	];
+export const meta: Route.MetaFunction = ({ data }) => data?.meta ?? [];
+
+export async function loader({ request, context }: Route.LoaderArgs) {
+	let { t } = i18next(context);
+
+	return {
+		meta: generateMeta({
+			title: t("landing.useCases.apiMonitoring.meta.title"),
+			description: t("landing.useCases.apiMonitoring.meta.description"),
+			url: request.url,
+		}),
+	};
 }
 
 const trustIndicators = [

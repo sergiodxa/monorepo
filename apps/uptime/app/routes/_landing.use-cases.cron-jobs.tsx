@@ -21,18 +21,24 @@ import {
 	LandingHowItWorks,
 	LandingTrustIndicators,
 } from "~/components/landing";
+import { generateMeta } from "~/lib/seo";
+import { i18next } from "~/middleware/i18next";
 
+import type { Route } from "./+types/_landing.use-cases.cron-jobs";
 import type { loader as landingLoader } from "./_landing";
 
-export function meta() {
-	return [
-		{ title: "Cron Job Monitoring Use Cases - Backups, ETL, Billing & More | Uptime" },
-		{
-			name: "description",
-			content:
-				"Monitor database backups, ETL pipelines, subscription billing, and report generation. Never miss a failed cron job again.",
-		},
-	];
+export const meta: Route.MetaFunction = ({ data }) => data?.meta ?? [];
+
+export async function loader({ request, context }: Route.LoaderArgs) {
+	let { t } = i18next(context);
+
+	return {
+		meta: generateMeta({
+			title: t("landing.useCases.cronJobs.meta.title"),
+			description: t("landing.useCases.cronJobs.meta.description"),
+			url: request.url,
+		}),
+	};
 }
 
 interface Scenario {

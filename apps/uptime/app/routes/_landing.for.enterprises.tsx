@@ -16,18 +16,24 @@ import {
 	LandingHowItWorks,
 	LandingTrustIndicators,
 } from "~/components/landing";
+import { generateMeta } from "~/lib/seo";
+import { i18next } from "~/middleware/i18next";
 
+import type { Route } from "./+types/_landing.for.enterprises";
 import type { loader as landingLoader } from "./_landing";
 
-export function meta() {
-	return [
-		{ title: "Uptime for Enterprises | Domain Auto-Provisioning" },
-		{
-			name: "description",
-			content:
-				"Enterprise uptime monitoring with domain verification, auto-provisioning, and role-based access. 99.9% SLA guaranteed.",
-		},
-	];
+export const meta: Route.MetaFunction = ({ data }) => data?.meta ?? [];
+
+export async function loader({ request, context }: Route.LoaderArgs) {
+	let { t } = i18next(context);
+
+	return {
+		meta: generateMeta({
+			title: t("landing.for.enterprises.meta.title"),
+			description: t("landing.for.enterprises.meta.description"),
+			url: request.url,
+		}),
+	};
 }
 
 export default function ForEnterprisesPage() {

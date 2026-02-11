@@ -20,18 +20,24 @@ import {
 	LandingHowItWorks,
 	LandingTrustIndicators,
 } from "~/components/landing";
+import { generateMeta } from "~/lib/seo";
+import { i18next } from "~/middleware/i18next";
 
+import type { Route } from "./+types/_landing.for.solo-devs";
 import type { loader as landingLoader } from "./_landing";
 
-export function meta() {
-	return [
-		{ title: "Uptime for Solo Developers | Free Monitoring" },
-		{
-			name: "description",
-			content:
-				"Professional uptime monitoring for solo developers. Start free, upgrade when ready. Perfect for portfolios and side projects.",
-		},
-	];
+export const meta: Route.MetaFunction = ({ data }) => data?.meta ?? [];
+
+export async function loader({ request, context }: Route.LoaderArgs) {
+	let { t } = i18next(context);
+
+	return {
+		meta: generateMeta({
+			title: t("landing.for.soloDevs.meta.title"),
+			description: t("landing.for.soloDevs.meta.description"),
+			url: request.url,
+		}),
+	};
 }
 
 export default function ForSoloDevs() {

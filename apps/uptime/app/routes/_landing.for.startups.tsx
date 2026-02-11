@@ -18,18 +18,24 @@ import {
 	LandingHowItWorks,
 	LandingTrustIndicators,
 } from "~/components/landing";
+import { generateMeta } from "~/lib/seo";
+import { i18next } from "~/middleware/i18next";
 
+import type { Route } from "./+types/_landing.for.startups";
 import type { loader as landingLoader } from "./_landing";
 
-export function meta() {
-	return [
-		{ title: "Uptime for Startups | Team Monitoring" },
-		{
-			name: "description",
-			content:
-				"Uptime monitoring for startups. Team collaboration, instant alerts, and usage-based pricing that scales with you.",
-		},
-	];
+export const meta: Route.MetaFunction = ({ data }) => data?.meta ?? [];
+
+export async function loader({ request, context }: Route.LoaderArgs) {
+	let { t } = i18next(context);
+
+	return {
+		meta: generateMeta({
+			title: t("landing.for.startups.meta.title"),
+			description: t("landing.for.startups.meta.description"),
+			url: request.url,
+		}),
+	};
 }
 
 export default function ForStartupsPage() {

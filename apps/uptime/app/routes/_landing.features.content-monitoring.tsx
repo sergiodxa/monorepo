@@ -18,18 +18,29 @@ import {
 	LandingHowItWorks,
 	LandingTrustIndicators,
 } from "~/components/landing";
+import { generateMeta, getSoftwareApplicationSchema } from "~/lib/seo";
+import { i18next } from "~/middleware/i18next";
 
+import type { Route } from "./+types/_landing.features.content-monitoring";
 import type { loader as landingLoader } from "./_landing";
 
-export function meta() {
-	return [
-		{ title: "Content Monitoring | Uptime Monitors" },
-		{
-			name: "description",
-			content:
-				"Monitor your pages for specific content changes. Get alerted when keywords appear or disappear, detect defacements, and ensure critical content is present.",
-		},
-	];
+export const meta: Route.MetaFunction = ({ data }) => data?.meta ?? [];
+
+export async function loader({ request, context }: Route.LoaderArgs) {
+	let { t } = i18next(context);
+
+	return {
+		meta: generateMeta({
+			title: t("landing.features.content-monitoring.meta.title"),
+			description: t("landing.features.content-monitoring.meta.description"),
+			url: request.url,
+			jsonLd: getSoftwareApplicationSchema({
+				name: "Uptime Content Monitoring",
+				description:
+					"Monitor your pages for specific content changes. Get alerted when keywords appear or disappear, detect defacements, and ensure critical content is present.",
+			}),
+		}),
+	};
 }
 
 export default function FeaturesContentMonitoringPage() {

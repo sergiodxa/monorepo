@@ -9,18 +9,29 @@ import {
 	LandingHowItWorks,
 	LandingTrustIndicators,
 } from "~/components/landing";
+import { generateMeta, getSoftwareApplicationSchema } from "~/lib/seo";
+import { i18next } from "~/middleware/i18next";
 
+import type { Route } from "./+types/_landing.features.teams";
 import type { loader as landingLoader } from "./_landing";
 
-export function meta() {
-	return [
-		{ title: "Team Collaboration | Uptime Teams" },
-		{
-			name: "description",
-			content:
-				"Collaborate on uptime monitoring with unlimited team members. Role-based access and domain auto-provisioning included.",
-		},
-	];
+export const meta: Route.MetaFunction = ({ data }) => data?.meta ?? [];
+
+export async function loader({ request, context }: Route.LoaderArgs) {
+	let { t } = i18next(context);
+
+	return {
+		meta: generateMeta({
+			title: t("landing.features.teams.meta.title"),
+			description: t("landing.features.teams.meta.description"),
+			url: request.url,
+			jsonLd: getSoftwareApplicationSchema({
+				name: "Uptime Teams",
+				description:
+					"Collaborate on uptime monitoring with unlimited team members. Role-based access and domain auto-provisioning included.",
+			}),
+		}),
+	};
 }
 
 export default function FeaturesTeamsPage() {

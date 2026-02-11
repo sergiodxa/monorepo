@@ -9,18 +9,24 @@ import {
 	LandingHowItWorks,
 	LandingTrustIndicators,
 } from "~/components/landing";
+import { generateMeta } from "~/lib/seo";
+import { i18next } from "~/middleware/i18next";
 
+import type { Route } from "./+types/_landing.use-cases.microservices";
 import type { loader as landingLoader } from "./_landing";
 
-export function meta() {
-	return [
-		{ title: "Microservices Monitoring | Distributed System Health" },
-		{
-			name: "description",
-			content:
-				"Monitor every microservice in your stack. Individual health tracking, per-service alerts, unlimited services.",
-		},
-	];
+export const meta: Route.MetaFunction = ({ data }) => data?.meta ?? [];
+
+export async function loader({ request, context }: Route.LoaderArgs) {
+	let { t } = i18next(context);
+
+	return {
+		meta: generateMeta({
+			title: t("landing.useCases.microservices.meta.title"),
+			description: t("landing.useCases.microservices.meta.description"),
+			url: request.url,
+		}),
+	};
 }
 
 const trustIndicators = [

@@ -12,24 +12,23 @@ import {
 	ComparePricing,
 	CompareWhySwitch,
 } from "~/components/landing/compare";
+import { generateMeta } from "~/lib/seo";
+import { i18next } from "~/middleware/i18next";
 
 import type { Route } from "./+types/_landing.vs.uptimerobot";
 import type { loader as landingLoader } from "./_landing";
 
-export function meta({ data }: Route.MetaArgs) {
-	return data.meta;
-}
+export const meta: Route.MetaFunction = ({ data }) => data?.meta ?? [];
 
-export function loader() {
+export async function loader({ request, context }: Route.LoaderArgs) {
+	let { t } = i18next(context);
+
 	return {
-		meta: [
-			{ title: "Uptime vs UptimeRobot | Modern Usage-Based Monitoring" },
-			{
-				name: "description",
-				content:
-					"Compare Uptime and UptimeRobot. Discover why transparent, usage-based pricing and modern features make Uptime the better choice for your monitoring needs.",
-			},
-		],
+		meta: generateMeta({
+			title: t("landing.vs.uptimerobot.meta.title"),
+			description: t("landing.vs.uptimerobot.meta.description"),
+			url: request.url,
+		}),
 	};
 }
 

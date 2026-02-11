@@ -1,23 +1,26 @@
 import { Link } from "react-router";
 
 import { LandingFooter, LandingHeader } from "~/components/landing";
+import { generateMeta } from "~/lib/seo";
+import { i18next } from "~/middleware/i18next";
 import { getSession } from "~/middleware/session";
 
 import type { Route } from "./+types/terms";
 
-export function meta(): Route.MetaDescriptors {
-	return [
-		{ title: "Terms of Service | Uptime" },
-		{
-			name: "description",
-			content: "Terms of Service for Uptime, the uptime monitoring service by Sergio Xalambrí.",
-		},
-	];
-}
+export const meta: Route.MetaFunction = ({ data }) => data?.meta ?? [];
 
-export function loader() {
+export async function loader({ request, context }: Route.LoaderArgs) {
 	let session = getSession();
-	return { isSignedIn: session.has("id") };
+	let { t } = i18next(context);
+
+	return {
+		isSignedIn: session.has("id"),
+		meta: generateMeta({
+			title: t("legal.terms.meta.title"),
+			description: t("legal.terms.meta.description"),
+			url: request.url,
+		}),
+	};
 }
 
 export default function TermsPage({ loaderData }: Route.ComponentProps) {

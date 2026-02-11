@@ -19,18 +19,29 @@ import {
 	LandingHowItWorks,
 	LandingTrustIndicators,
 } from "~/components/landing";
+import { generateMeta, getSoftwareApplicationSchema } from "~/lib/seo";
+import { i18next } from "~/middleware/i18next";
 
+import type { Route } from "./+types/_landing.features.analytics";
 import type { loader as landingLoader } from "./_landing";
 
-export function meta() {
-	return [
-		{ title: "Uptime Analytics | Heatmaps & Trends" },
-		{
-			name: "description",
-			content:
-				"Visual heatmaps, response time tracking, and 365-day data retention. Understand your service reliability at a glance.",
-		},
-	];
+export const meta: Route.MetaFunction = ({ data }) => data?.meta ?? [];
+
+export async function loader({ request, context }: Route.LoaderArgs) {
+	let { t } = i18next(context);
+
+	return {
+		meta: generateMeta({
+			title: t("landing.features.analytics.meta.title"),
+			description: t("landing.features.analytics.meta.description"),
+			url: request.url,
+			jsonLd: getSoftwareApplicationSchema({
+				name: "Uptime Analytics",
+				description:
+					"Visual heatmaps, response time tracking, and 365-day data retention. Understand your service reliability at a glance.",
+			}),
+		}),
+	};
 }
 
 export default function FeaturesAnalyticsPage() {

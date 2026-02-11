@@ -19,24 +19,23 @@ import {
 	LandingHowItWorks,
 	LandingTrustIndicators,
 } from "~/components/landing";
+import { generateMeta } from "~/lib/seo";
+import { i18next } from "~/middleware/i18next";
 
 import type { Route } from "./+types/_landing.for.indie-hackers";
 import type { loader as landingLoader } from "./_landing";
 
-export function meta({ data }: Route.MetaArgs) {
-	return data.meta;
-}
+export const meta: Route.MetaFunction = ({ data }) => data?.meta ?? [];
 
-export function loader() {
+export async function loader({ request, context }: Route.LoaderArgs) {
+	let { t } = i18next(context);
+
 	return {
-		meta: [
-			{ title: "Uptime for Indie Hackers | Simple Monitoring" },
-			{
-				name: "description",
-				content:
-					"Uptime monitoring built for indie hackers. Start free, pay only for what you use. $5/mo includes 5,000 pings.",
-			},
-		],
+		meta: generateMeta({
+			title: t("landing.for.indieHackers.meta.title"),
+			description: t("landing.for.indieHackers.meta.description"),
+			url: request.url,
+		}),
 	};
 }
 

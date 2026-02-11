@@ -12,24 +12,23 @@ import {
 	ComparePricing,
 	CompareWhySwitch,
 } from "~/components/landing/compare";
+import { generateMeta } from "~/lib/seo";
+import { i18next } from "~/middleware/i18next";
 
 import type { Route } from "./+types/_landing.vs.cronitor";
 import type { loader as landingLoader } from "./_landing";
 
-export function meta({ data }: Route.MetaArgs) {
-	return data.meta;
-}
+export const meta: Route.MetaFunction = ({ data }) => data?.meta ?? [];
 
-export function loader() {
+export async function loader({ request, context }: Route.LoaderArgs) {
+	let { t } = i18next(context);
+
 	return {
-		meta: [
-			{ title: "Uptime vs Cronitor | Simpler Monitoring, Better Pricing" },
-			{
-				name: "description",
-				content:
-					"Compare Uptime and Cronitor. Discover why teams choose Uptime for simpler pricing, DNS/TCP monitoring, and a focused approach without feature bloat.",
-			},
-		],
+		meta: generateMeta({
+			title: t("landing.vs.cronitor.meta.title"),
+			description: t("landing.vs.cronitor.meta.description"),
+			url: request.url,
+		}),
 	};
 }
 

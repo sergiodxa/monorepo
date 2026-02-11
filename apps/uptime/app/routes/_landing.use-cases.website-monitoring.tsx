@@ -18,18 +18,24 @@ import {
 	LandingHowItWorks,
 	LandingTrustIndicators,
 } from "~/components/landing";
+import { generateMeta } from "~/lib/seo";
+import { i18next } from "~/middleware/i18next";
 
+import type { Route } from "./+types/_landing.use-cases.website-monitoring";
 import type { loader as landingLoader } from "./_landing";
 
-export function meta() {
-	return [
-		{ title: "Website Monitoring | Uptime for Websites" },
-		{
-			name: "description",
-			content:
-				"Monitor your landing pages, e-commerce sites, and web apps. Instant alerts when your website goes down.",
-		},
-	];
+export const meta: Route.MetaFunction = ({ data }) => data?.meta ?? [];
+
+export async function loader({ request, context }: Route.LoaderArgs) {
+	let { t } = i18next(context);
+
+	return {
+		meta: generateMeta({
+			title: t("landing.useCases.websiteMonitoring.meta.title"),
+			description: t("landing.useCases.websiteMonitoring.meta.description"),
+			url: request.url,
+		}),
+	};
 }
 
 export default function WebsiteMonitoringPage() {

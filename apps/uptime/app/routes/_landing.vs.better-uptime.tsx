@@ -12,24 +12,23 @@ import {
 	ComparePricing,
 	CompareWhySwitch,
 } from "~/components/landing/compare";
+import { generateMeta } from "~/lib/seo";
+import { i18next } from "~/middleware/i18next";
 
 import type { Route } from "./+types/_landing.vs.better-uptime";
 import type { loader as landingLoader } from "./_landing";
 
-export function meta({ data }: Route.MetaArgs) {
-	return data.meta;
-}
+export const meta: Route.MetaFunction = ({ data }) => data?.meta ?? [];
 
-export function loader() {
+export async function loader({ request, context }: Route.LoaderArgs) {
+	let { t } = i18next(context);
+
 	return {
-		meta: [
-			{ title: "Uptime vs Better Uptime | Feature Comparison" },
-			{
-				name: "description",
-				content:
-					"Compare Uptime vs Better Uptime (BetterStack). See how our focused monitoring solution compares to their full observability platform. Starting at $5/mo vs $29/mo.",
-			},
-		],
+		meta: generateMeta({
+			title: t("landing.vs.betterUptime.meta.title"),
+			description: t("landing.vs.betterUptime.meta.description"),
+			url: request.url,
+		}),
 	};
 }
 

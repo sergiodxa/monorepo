@@ -22,18 +22,29 @@ import {
 	LandingHowItWorks,
 	LandingTrustIndicators,
 } from "~/components/landing";
+import { generateMeta, getSoftwareApplicationSchema } from "~/lib/seo";
+import { i18next } from "~/middleware/i18next";
 
+import type { Route } from "./+types/_landing.features.cron-jobs";
 import type { loader as landingLoader } from "./_landing";
 
-export function meta() {
-	return [
-		{ title: "Cron Job Monitoring - Never Miss a Failed Scheduled Task | Uptime" },
-		{
-			name: "description",
-			content:
-				"Monitor your cron jobs, scheduled tasks, and background processes. Get instant alerts when they fail to run. Simple API integration.",
-		},
-	];
+export const meta: Route.MetaFunction = ({ data }) => data?.meta ?? [];
+
+export async function loader({ request, context }: Route.LoaderArgs) {
+	let { t } = i18next(context);
+
+	return {
+		meta: generateMeta({
+			title: t("landing.features.cron-jobs.meta.title"),
+			description: t("landing.features.cron-jobs.meta.description"),
+			url: request.url,
+			jsonLd: getSoftwareApplicationSchema({
+				name: "Uptime Cron Job Monitoring",
+				description:
+					"Monitor your cron jobs, scheduled tasks, and background processes. Get instant alerts when they fail to run. Simple API integration.",
+			}),
+		}),
+	};
 }
 
 export default function FeaturesCronJobsPage() {

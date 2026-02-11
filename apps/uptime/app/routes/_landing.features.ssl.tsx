@@ -17,18 +17,29 @@ import {
 	LandingHowItWorks,
 	LandingTrustIndicators,
 } from "~/components/landing";
+import { generateMeta, getSoftwareApplicationSchema } from "~/lib/seo";
+import { i18next } from "~/middleware/i18next";
 
+import type { Route } from "./+types/_landing.features.ssl";
 import type { loader as landingLoader } from "./_landing";
 
-export function meta() {
-	return [
-		{ title: "SSL Certificate Monitoring | Uptime Monitors" },
-		{
-			name: "description",
-			content:
-				"Never let SSL certificates expire unexpectedly. Get alerts before expiration, monitor certificate health, and prevent security warnings.",
-		},
-	];
+export const meta: Route.MetaFunction = ({ data }) => data?.meta ?? [];
+
+export async function loader({ request, context }: Route.LoaderArgs) {
+	let { t } = i18next(context);
+
+	return {
+		meta: generateMeta({
+			title: t("landing.features.ssl.meta.title"),
+			description: t("landing.features.ssl.meta.description"),
+			url: request.url,
+			jsonLd: getSoftwareApplicationSchema({
+				name: "Uptime SSL Certificate Monitoring",
+				description:
+					"Never let SSL certificates expire unexpectedly. Get alerts before expiration, monitor certificate health, and prevent security warnings.",
+			}),
+		}),
+	};
 }
 
 export default function FeaturesSSLPage() {

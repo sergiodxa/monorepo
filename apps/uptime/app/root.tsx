@@ -18,6 +18,7 @@ import { useGlobalPendingState } from "remix-utils/use-global-navigation-state";
 
 import sansFont from "~/assets/fonts/sans.woff2";
 import styles from "~/assets/styles.css?url";
+import { getOrganizationSchema } from "~/lib/seo";
 import { contextStorageMiddleware } from "~/middleware/context-storage";
 import { drizzleMiddleware } from "~/middleware/drizzle";
 import { i18nextMiddleware } from "~/middleware/i18next";
@@ -66,6 +67,10 @@ export function Layout({ children }: { children: React.ReactNode }) {
 				<Meta />
 				<link rel="icon" href="/favicon.svg" type="image/svg+xml" />
 				<Links />
+				<script
+					type="application/ld+json"
+					dangerouslySetInnerHTML={{ __html: JSON.stringify(getOrganizationSchema()) }}
+				/>
 			</head>
 			<body className="flex min-h-dvh flex-col bg-neutral-50 font-mono text-neutral-950 dark:bg-neutral-950 dark:text-neutral-50">
 				{children}

@@ -17,18 +17,29 @@ import {
 	LandingHowItWorks,
 	LandingTrustIndicators,
 } from "~/components/landing";
+import { generateMeta, getSoftwareApplicationSchema } from "~/lib/seo";
+import { i18next } from "~/middleware/i18next";
 
+import type { Route } from "./+types/_landing.features.dns";
 import type { loader as landingLoader } from "./_landing";
 
-export function meta() {
-	return [
-		{ title: "DNS Monitoring | Uptime Monitors" },
-		{
-			name: "description",
-			content:
-				"Monitor DNS records for unexpected changes. Get alerted when A, AAAA, CNAME, MX, TXT, or NS records change. Detect DNS hijacking early.",
-		},
-	];
+export const meta: Route.MetaFunction = ({ data }) => data?.meta ?? [];
+
+export async function loader({ request, context }: Route.LoaderArgs) {
+	let { t } = i18next(context);
+
+	return {
+		meta: generateMeta({
+			title: t("landing.features.dns.meta.title"),
+			description: t("landing.features.dns.meta.description"),
+			url: request.url,
+			jsonLd: getSoftwareApplicationSchema({
+				name: "Uptime DNS Monitoring",
+				description:
+					"Monitor DNS records for unexpected changes. Get alerted when A, AAAA, CNAME, MX, TXT, or NS records change. Detect DNS hijacking early.",
+			}),
+		}),
+	};
 }
 
 export default function FeaturesDNSPage() {

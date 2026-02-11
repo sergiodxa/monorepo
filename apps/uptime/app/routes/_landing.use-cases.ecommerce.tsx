@@ -18,18 +18,24 @@ import {
 	LandingHowItWorks,
 	LandingTrustIndicators,
 } from "~/components/landing";
+import { generateMeta } from "~/lib/seo";
+import { i18next } from "~/middleware/i18next";
 
+import type { Route } from "./+types/_landing.use-cases.ecommerce";
 import type { loader as landingLoader } from "./_landing";
 
-export function meta() {
-	return [
-		{ title: "E-commerce Monitoring | Protect Your Revenue with Uptime" },
-		{
-			name: "description",
-			content:
-				"Monitor checkout flows, payment APIs, and product pages. Catch issues before they cost you sales. Usage-based pricing for stores of all sizes.",
-		},
-	];
+export const meta: Route.MetaFunction = ({ data }) => data?.meta ?? [];
+
+export async function loader({ request, context }: Route.LoaderArgs) {
+	let { t } = i18next(context);
+
+	return {
+		meta: generateMeta({
+			title: t("landing.useCases.ecommerce.meta.title"),
+			description: t("landing.useCases.ecommerce.meta.description"),
+			url: request.url,
+		}),
+	};
 }
 
 export default function UseCasesEcommercePage() {
