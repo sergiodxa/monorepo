@@ -30,3 +30,12 @@ export const returnTo = createCookie("ping:return-to", {
 	sameSite: "lax",
 	secrets: [env.COOKIE_SESSION_SECRET ?? "s3cr3t"],
 });
+
+export const dashboardTab = createCookie("ping:dashboard-tab", {
+	path: "/",
+	secure: import.meta.env.PROD,
+	maxAge: ONE_YEAR,
+	httpOnly: true,
+	sameSite: "lax",
+	secrets: [env.COOKIE_SESSION_SECRET ?? "s3cr3t"],
+});
