@@ -67,7 +67,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
 				<link rel="icon" href="/favicon.svg" type="image/svg+xml" />
 				<Links />
 			</head>
-			<body className="flex min-h-dvh flex-col bg-neutral-50 font-sans text-neutral-950 dark:bg-neutral-950 dark:text-neutral-50">
+			<body className="flex min-h-dvh flex-col bg-neutral-50 font-mono text-neutral-950 dark:bg-neutral-950 dark:text-neutral-50">
 				{children}
 				<Toaster />
 				<ConfirmDialog />

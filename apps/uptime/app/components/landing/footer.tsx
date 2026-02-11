@@ -80,6 +80,54 @@ export function LandingFooter() {
 							</li>
 							<li>
 								<Link
+									to={href("/features/status-pages")}
+									className="text-sm text-neutral-600 transition hover:text-primary-600 dark:text-neutral-400 dark:hover:text-primary-400"
+								>
+									{t("sections.features.statusPages")}
+								</Link>
+							</li>
+							<li>
+								<Link
+									to={href("/features/ssl")}
+									className="text-sm text-neutral-600 transition hover:text-primary-600 dark:text-neutral-400 dark:hover:text-primary-400"
+								>
+									{t("sections.features.ssl")}
+								</Link>
+							</li>
+							<li>
+								<Link
+									to={href("/features/dns")}
+									className="text-sm text-neutral-600 transition hover:text-primary-600 dark:text-neutral-400 dark:hover:text-primary-400"
+								>
+									{t("sections.features.dns")}
+								</Link>
+							</li>
+							<li>
+								<Link
+									to={href("/features/content-monitoring")}
+									className="text-sm text-neutral-600 transition hover:text-primary-600 dark:text-neutral-400 dark:hover:text-primary-400"
+								>
+									{t("sections.features.contentMonitoring")}
+								</Link>
+							</li>
+							<li>
+								<Link
+									to={href("/features/maintenance")}
+									className="text-sm text-neutral-600 transition hover:text-primary-600 dark:text-neutral-400 dark:hover:text-primary-400"
+								>
+									{t("sections.features.maintenance")}
+								</Link>
+							</li>
+							<li>
+								<Link
+									to={href("/features/integrations")}
+									className="text-sm text-neutral-600 transition hover:text-primary-600 dark:text-neutral-400 dark:hover:text-primary-400"
+								>
+									{t("sections.features.integrations")}
+								</Link>
+							</li>
+							<li>
+								<Link
 									to={href("/features/teams")}
 									className="text-sm text-neutral-600 transition hover:text-primary-600 dark:text-neutral-400 dark:hover:text-primary-400"
 								>
@@ -92,6 +140,14 @@ export function LandingFooter() {
 									className="text-sm text-neutral-600 transition hover:text-primary-600 dark:text-neutral-400 dark:hover:text-primary-400"
 								>
 									{t("sections.features.analytics")}
+								</Link>
+							</li>
+							<li>
+								<Link
+									to={href("/features/api")}
+									className="text-sm text-neutral-600 transition hover:text-primary-600 dark:text-neutral-400 dark:hover:text-primary-400"
+								>
+									{t("sections.features.api")}
 								</Link>
 							</li>
 						</ul>
