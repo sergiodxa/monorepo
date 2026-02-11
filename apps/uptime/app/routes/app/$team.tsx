@@ -134,50 +134,17 @@ export async function loader({ request, context }: Route.LoaderArgs) {
 		subjectId: subject().id,
 	});
 
-	let [memberships, monitors] = await Promise.all([
-		db().query.memberships.findMany({
-			where(fields, operators) {
-				return operators.eq(fields.subjectId, subject().id);
-			},
-			with: { team: true },
-		}),
-		db().query.monitors.findMany({
-			columns: { id: true, name: true, expectedStatus: true },
-			where(fields, operators) {
-				return operators.eq(fields.teamId, team().id);
-			},
-			orderBy(fields, operators) {
-				return operators.desc(fields.createdAt);
-			},
-			with: {
-				results: {
-					columns: { responseStatus: true, completedAt: true },
-					where(fields, operators) {
-						return operators.isNotNull(fields.completedAt);
-					},
-					orderBy(fields, operators) {
-						return operators.desc(fields.completedAt);
-					},
-					limit: 1,
-				},
-			},
-		}),
-	]);
-
-	let monitorsWithStatus = monitors.map((monitor) => {
-		let lastResult = monitor.results[0];
-		let status: "up" | "down" | "unknown" = "unknown";
-		if (lastResult) {
-			status = lastResult.responseStatus === monitor.expectedStatus ? "up" : "down";
-		}
-		return { id: monitor.id, name: monitor.name, status };
+	let memberships = await db().query.memberships.findMany({
+		where(fields, operators) {
+			return operators.eq(fields.subjectId, subject().id);
+		},
+		with: { team: true },
 	});
 
 	logger().info("team.loader.complete", {
 		route: "$team",
 		teamId: team().id,
 		membershipCount: memberships.length,
-		monitorCount: monitors.length,
 	});
 
 	return {
@@ -195,7 +162,6 @@ export async function loader({ request, context }: Route.LoaderArgs) {
 			ownerId: team().ownerId,
 		},
 		memberships,
-		monitors: monitorsWithStatus,
 		meta: [
 			{ title: t("app.meta.title") },
 			{ name: "description", content: t("app.meta.description") },
@@ -230,12 +196,7 @@ export default function Component({ loaderData }: Route.ComponentProps) {
 					<CloseSidebarOnNavigation />
 					<div className="flex min-h-screen w-full font-mono">
 						<div className="sticky top-0 h-screen">
-							<AppSidebar
-								team={loaderData.team}
-								teams={teams}
-								viewer={loaderData.viewer}
-								monitors={loaderData.monitors}
-							/>
+							<AppSidebar team={loaderData.team} teams={teams} viewer={loaderData.viewer} />
 						</div>
 						<Sidebar.Inset>
 							<main className="flex-1">
