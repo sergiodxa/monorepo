@@ -159,6 +159,11 @@ export default {
 					title: "Health Checks",
 					description: "Verify service health and database connections with scheduled pings.",
 				},
+				ecommerce: {
+					title: "E-commerce",
+					description:
+						"Monitor checkout flows, payment APIs, and product pages to protect revenue.",
+				},
 			},
 
 			audiences: {
@@ -167,6 +172,7 @@ export default {
 				startups: "Startups",
 				agencies: "Agencies",
 				enterprises: "Enterprises",
+				devops: "DevOps",
 			},
 		},
 

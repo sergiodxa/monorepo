@@ -157,6 +157,10 @@ export default {
 					title: "ヘルスチェック",
 					description: "スケジュールされたpingでサービスの状態とデータベース接続を確認。",
 				},
+				ecommerce: {
+					title: "Eコマース",
+					description: "チェックアウトフロー、決済API、商品ページを監視して収益を保護。",
+				},
 			},
 
 			audiences: {
@@ -165,6 +169,7 @@ export default {
 				startups: "スタートアップ",
 				agencies: "代理店",
 				enterprises: "エンタープライズ",
+				devops: "DevOps",
 			},
 		},
 

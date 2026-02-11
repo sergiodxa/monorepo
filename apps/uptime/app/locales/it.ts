@@ -162,6 +162,11 @@ export default {
 					description:
 						"Verifichi lo stato dei servizi e le connessioni al database con ping programmati.",
 				},
+				ecommerce: {
+					title: "E-commerce",
+					description:
+						"Monitori i flussi di checkout, le API di pagamento e le pagine prodotto per proteggere i ricavi.",
+				},
 			},
 
 			audiences: {
@@ -170,6 +175,7 @@ export default {
 				startups: "Startup",
 				agencies: "Agenzie",
 				enterprises: "Aziende",
+				devops: "DevOps",
 			},
 		},
 

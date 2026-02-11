@@ -167,6 +167,11 @@ export default {
 					description:
 						"Überprüfen Sie die Dienstverfügbarkeit und Datenbankverbindungen mit geplanten Pings.",
 				},
+				ecommerce: {
+					title: "E-Commerce",
+					description:
+						"Überwachen Sie Checkout-Abläufe, Zahlungs-APIs und Produktseiten zum Schutz Ihrer Einnahmen.",
+				},
 			},
 
 			audiences: {
@@ -175,6 +180,7 @@ export default {
 				startups: "Startups",
 				agencies: "Agenturen",
 				enterprises: "Unternehmen",
+				devops: "DevOps",
 			},
 		},
 

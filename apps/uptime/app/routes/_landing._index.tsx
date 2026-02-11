@@ -370,6 +370,7 @@ function UseCases() {
 		{ key: "saas", href: "/use-cases/saas" },
 		{ key: "microservices", href: "/use-cases/microservices" },
 		{ key: "healthChecks", href: "/use-cases/healthcheck" },
+		{ key: "ecommerce", href: "/use-cases/ecommerce" },
 	] as const;
 
 	let audiences = [
@@ -378,6 +379,7 @@ function UseCases() {
 		{ key: "startups", href: "/for/startups" },
 		{ key: "agencies", href: "/for/agencies" },
 		{ key: "enterprises", href: "/for/enterprises" },
+		{ key: "devops", href: "/for/devops" },
 	] as const;
 
 	return (
