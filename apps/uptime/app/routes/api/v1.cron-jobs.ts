@@ -14,7 +14,7 @@ import {
 import { db } from "~/middleware/drizzle";
 import { logger } from "~/middleware/logger";
 
-import type { Route } from "./+types/cron-jobs";
+import type { Route } from "./+types/v1.cron-jobs";
 
 export const middleware: Route.MiddlewareFunction[] = [
 	async ({ request, context }, next) => {

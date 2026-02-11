@@ -12,7 +12,7 @@ import {
 import { db } from "~/middleware/drizzle";
 import { logger } from "~/middleware/logger";
 
-import type { Route } from "./+types/status";
+import type { Route } from "./+types/v1.status";
 
 export const middleware: Route.MiddlewareFunction[] = [
 	async ({ request, context }, next) => {

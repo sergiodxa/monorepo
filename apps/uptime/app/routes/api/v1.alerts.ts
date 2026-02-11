@@ -15,7 +15,7 @@ import {
 import { db } from "~/middleware/drizzle";
 import { logger } from "~/middleware/logger";
 
-import type { Route } from "./+types/alerts";
+import type { Route } from "./+types/v1.alerts";
 
 export const middleware: Route.MiddlewareFunction[] = [
 	async ({ request, context }, next) => {
