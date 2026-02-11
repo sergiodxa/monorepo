@@ -12,9 +12,12 @@
 
 	"triggers": {
 		"crons": [
-			"* * * * *", // Every minute
-			"0 0 * * *", // Every day at midnight
-			"*/10 * * * *", // Every 10 minutes
+			"* * * * *", // Every minute - uptime monitors + cron job monitors
+			"*/5 * * * *", // Every 5 minutes - TCP monitors
+			"*/10 * * * *", // Every 10 minutes - domain verification
+			"0 * * * *", // Every hour - DNS monitors
+			"0 0 * * *", // Every day at midnight - cleanup
+			"0 6 * * *", // Every day at 6 AM UTC - SSL checks
 		],
 	},
 
