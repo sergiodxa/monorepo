@@ -58,13 +58,13 @@ export function ComparePricing({ competitor, competitorPrice, scenarios }: Compa
 									<td className="px-6 py-4 text-sm font-medium text-neutral-900 dark:text-neutral-50">
 										{row.scenario}
 									</td>
-									<td className="px-6 py-4 text-center text-sm text-neutral-600 dark:text-neutral-400">
+									<td className="px-6 py-4 text-center font-mono text-sm text-neutral-600 dark:text-neutral-400">
 										{row.competitorCost}
 									</td>
-									<td className="px-6 py-4 text-center text-sm font-semibold text-primary-600 dark:text-primary-400">
+									<td className="px-6 py-4 text-center font-mono text-sm font-semibold text-primary-600 dark:text-primary-400">
 										{row.uptimeCost}
 									</td>
-									<td className="px-6 py-4 text-center text-sm font-semibold text-success-600 dark:text-success-400">
+									<td className="px-6 py-4 text-center font-mono text-sm font-semibold text-success-600 dark:text-success-400">
 										{row.savings}
 									</td>
 								</tr>
@@ -75,7 +75,7 @@ export function ComparePricing({ competitor, competitorPrice, scenarios }: Compa
 
 				<p className="mt-6 text-center text-sm text-neutral-500 dark:text-neutral-400">
 					* Estimates based on typical usage patterns. {competitor} pricing starts at{" "}
-					{competitorPrice}. Actual costs may vary.
+					<span className="font-mono">{competitorPrice}</span>. Actual costs may vary.
 				</p>
 			</div>
 		</section>

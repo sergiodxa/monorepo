@@ -74,7 +74,7 @@ export async function loader({ request, context }: Route.LoaderArgs) {
 
 export default function Landing({ loaderData }: Route.ComponentProps) {
 	return (
-		<div className="min-h-screen bg-white dark:bg-neutral-950">
+		<div className="min-h-screen bg-white font-sans dark:bg-neutral-950">
 			<Header isSignedIn={loaderData.isSignedIn} />
 			<main>
 				<Hero isSignedIn={loaderData.isSignedIn} />
@@ -227,20 +227,21 @@ function TrustIndicators() {
 					<div className="flex flex-col items-center gap-2 text-center">
 						<div className="flex items-center gap-1 text-3xl font-bold text-neutral-900 dark:text-neutral-50">
 							<ZapIcon className="size-6 text-primary-500" />
-							99.9%
+							<span className="font-mono">99.9%</span>
 						</div>
 						<p className="text-sm text-neutral-600 dark:text-neutral-400">{t("uptimeSla")}</p>
 					</div>
 					<div className="flex flex-col items-center gap-2 text-center">
 						<div className="flex items-center gap-1 text-3xl font-bold text-neutral-900 dark:text-neutral-50">
-							<GlobeIcon className="size-6 text-primary-500" />9
+							<GlobeIcon className="size-6 text-primary-500" />
+							<span className="font-mono">9</span>
 						</div>
 						<p className="text-sm text-neutral-600 dark:text-neutral-400">{t("globalRegions")}</p>
 					</div>
 					<div className="flex flex-col items-center gap-2 text-center">
 						<div className="flex items-center gap-1 text-3xl font-bold text-neutral-900 dark:text-neutral-50">
 							<ShieldCheckIcon className="size-6 text-primary-500" />
-							365
+							<span className="font-mono">365</span>
 						</div>
 						<p className="text-sm text-neutral-600 dark:text-neutral-400">
 							{t("daysDataRetention")}
@@ -249,7 +250,7 @@ function TrustIndicators() {
 					<div className="flex flex-col items-center gap-2 text-center">
 						<div className="flex items-center gap-1 text-3xl font-bold text-neutral-900 dark:text-neutral-50">
 							<BellIcon className="size-6 text-primary-500" />
-							&lt;1s
+							<span className="font-mono">&lt;1s</span>
 						</div>
 						<p className="text-sm text-neutral-600 dark:text-neutral-400">{t("alertLatency")}</p>
 					</div>
@@ -1114,7 +1115,7 @@ function CalculatorStats(props: { pingsPerMonth: number }) {
 		<dl className="flex flex-col gap-3 rounded-lg border border-neutral-200 bg-white p-5 dark:border-neutral-700 dark:bg-neutral-800">
 			<div className="flex items-center justify-between">
 				<dt className="text-neutral-600 dark:text-neutral-300">{t("pingsPerMonth")}</dt>
-				<dd className="text-lg font-bold text-neutral-900 dark:text-neutral-50">
+				<dd className="font-mono text-lg font-bold text-neutral-900 dark:text-neutral-50">
 					{props.pingsPerMonth.toLocaleString(i18n.language, {
 						minimumFractionDigits: 0,
 						maximumFractionDigits: 0,
@@ -1127,7 +1128,7 @@ function CalculatorStats(props: { pingsPerMonth: number }) {
 			<div className="flex flex-col gap-2">
 				<div className="flex items-center justify-between">
 					<dt className="text-neutral-600 dark:text-neutral-300">{t("baseSubscription")}</dt>
-					<dd className="font-semibold text-neutral-900 dark:text-neutral-50">
+					<dd className="font-mono font-semibold text-neutral-900 dark:text-neutral-50">
 						{basePrice.toLocaleString(i18n.language, {
 							style: "currency",
 							currency: "USD",
@@ -1148,7 +1149,7 @@ function CalculatorStats(props: { pingsPerMonth: number }) {
 				</div>
 				<div className="flex items-center justify-between">
 					<dt className="text-neutral-600 dark:text-neutral-300">{t("additionalPings")}</dt>
-					<dd className="font-semibold text-neutral-900 dark:text-neutral-50">
+					<dd className="font-mono font-semibold text-neutral-900 dark:text-neutral-50">
 						{additionalPingsCost.toLocaleString(i18n.language, {
 							style: "currency",
 							currency: "USD",
@@ -1181,7 +1182,7 @@ function CalculatorStats(props: { pingsPerMonth: number }) {
 				<span className="text-lg font-bold text-neutral-900 dark:text-neutral-50">
 					{t("totalCost")}
 				</span>
-				<span className="text-2xl font-bold text-primary-600 dark:text-primary-400">
+				<span className="font-mono text-2xl font-bold text-primary-600 dark:text-primary-400">
 					{totalCost.toLocaleString(i18n.language, {
 						style: "currency",
 						currency: "USD",

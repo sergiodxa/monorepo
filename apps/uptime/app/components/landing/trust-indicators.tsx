@@ -19,7 +19,7 @@ export function LandingTrustIndicators({ indicators }: LandingTrustIndicatorsPro
 						<div key={indicator.label} className="flex flex-col items-center gap-2 text-center">
 							<div className="flex items-center gap-1 text-3xl font-bold text-neutral-900 dark:text-neutral-50">
 								{indicator.icon}
-								{indicator.value}
+								<span className="font-mono">{indicator.value}</span>
 							</div>
 							<p className="text-sm text-neutral-600 dark:text-neutral-400">{indicator.label}</p>
 						</div>

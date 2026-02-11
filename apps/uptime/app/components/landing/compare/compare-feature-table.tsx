@@ -19,7 +19,9 @@ function FeatureCell({ value }: { value: string | boolean }) {
 			<XIcon className="mx-auto size-5 text-neutral-400" />
 		);
 	}
-	return <span>{value}</span>;
+	// Apply mono font if the value contains numbers or currency
+	let hasNumbers = /\d/.test(value);
+	return <span className={hasNumbers ? "font-mono" : undefined}>{value}</span>;
 }
 
 export function CompareFeatureTable({ competitor, features }: CompareFeatureTableProps) {

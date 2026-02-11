@@ -16,7 +16,7 @@ export default function LandingLayout({ loaderData }: Route.ComponentProps) {
 	let { isSignedIn } = loaderData;
 
 	return (
-		<div className="min-h-screen bg-white dark:bg-neutral-950">
+		<div className="min-h-screen bg-white font-sans dark:bg-neutral-950">
 			<LandingHeader isSignedIn={isSignedIn} />
 			<main>
 				<Outlet />
