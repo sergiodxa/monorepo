@@ -126,11 +126,20 @@ export async function loader({ request }: Route.LoaderArgs) {
 
 export default function Component({ loaderData, params }: Route.ComponentProps) {
 	let { t } = useTranslation("translation", { keyPrefix: "page.httpMonitors" });
+	let { t: tSidebar } = useTranslation("translation", {
+		keyPrefix: "app.layout.sidebar.navigation.items",
+	});
 	let id = useId();
 
 	return (
 		<>
-			<AppHeader heading={t("header.title")}>
+			<AppHeader
+				heading={t("header.title")}
+				breadcrumbs={[
+					{ label: tSidebar("dashboard"), href: href("/app/:team/dashboard", params) },
+					{ label: t("header.title") },
+				]}
+			>
 				<LinkButton
 					color="neutral"
 					href={href("/app/:team/monitors/new", params)}

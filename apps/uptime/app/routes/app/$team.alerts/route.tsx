@@ -119,6 +119,9 @@ export async function loader() {
 
 export default function Component({ loaderData, params }: Route.ComponentProps) {
 	let { t } = useTranslation("translation", { keyPrefix: "page.alerts" });
+	let { t: tSidebar } = useTranslation("translation", {
+		keyPrefix: "app.layout.sidebar.navigation.items",
+	});
 	let id = useId();
 
 	let columns = [
@@ -151,7 +154,13 @@ export default function Component({ loaderData, params }: Route.ComponentProps) 
 
 	return (
 		<>
-			<AppHeader heading={t("header.title")}>
+			<AppHeader
+				heading={t("header.title")}
+				breadcrumbs={[
+					{ label: tSidebar("dashboard"), href: href("/app/:team/dashboard", params) },
+					{ label: t("header.title") },
+				]}
+			>
 				<LinkButton
 					color="neutral"
 					href={href("/app/:team/alert-history", params)}
