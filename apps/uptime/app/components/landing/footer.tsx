@@ -23,40 +23,7 @@ export function LandingFooter() {
 						</p>
 					</div>
 
-					{/* Product */}
-					<div>
-						<h3 className="mb-4 text-sm font-semibold text-neutral-900 dark:text-neutral-50">
-							{t("sections.product.title")}
-						</h3>
-						<ul className="space-y-3">
-							<li>
-								<a
-									href="/#features"
-									className="text-sm text-neutral-600 transition hover:text-primary-600 dark:text-neutral-400 dark:hover:text-primary-400"
-								>
-									{t("sections.product.features")}
-								</a>
-							</li>
-							<li>
-								<a
-									href="/#pricing"
-									className="text-sm text-neutral-600 transition hover:text-primary-600 dark:text-neutral-400 dark:hover:text-primary-400"
-								>
-									{t("sections.product.pricing")}
-								</a>
-							</li>
-							<li>
-								<a
-									href="/#faq"
-									className="text-sm text-neutral-600 transition hover:text-primary-600 dark:text-neutral-400 dark:hover:text-primary-400"
-								>
-									{t("sections.product.faq")}
-								</a>
-							</li>
-						</ul>
-					</div>
-
-					{/* Features */}
+					{/* Features Column 1 */}
 					<div>
 						<h3 className="mb-4 text-sm font-semibold text-neutral-900 dark:text-neutral-50">
 							{t("sections.features.title")}
@@ -110,6 +77,15 @@ export function LandingFooter() {
 									{t("sections.features.contentMonitoring")}
 								</Link>
 							</li>
+						</ul>
+					</div>
+
+					{/* Features Column 2 */}
+					<div>
+						<h3 className="mb-4 text-sm font-semibold text-neutral-900 dark:text-neutral-50">
+							&nbsp;
+						</h3>
+						<ul className="space-y-3">
 							<li>
 								<Link
 									to={href("/features/maintenance")}
