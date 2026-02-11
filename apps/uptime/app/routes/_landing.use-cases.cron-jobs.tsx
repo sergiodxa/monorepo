@@ -10,7 +10,6 @@ import {
 	MailIcon,
 	RefreshCwIcon,
 	ShieldIcon,
-	ZapIcon,
 } from "lucide-react";
 import { useRouteLoaderData } from "react-router";
 

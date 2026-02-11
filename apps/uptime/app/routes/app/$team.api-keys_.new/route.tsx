@@ -49,7 +49,7 @@ export async function loader() {
 	return { hasActiveSubscription: await hasActiveSubscription() };
 }
 
-export default function Component({ loaderData, params }: Route.ComponentProps) {
+export default function Component({ params }: Route.ComponentProps) {
 	let { t } = useTranslation("translation", { keyPrefix: "page.apiKeys.form" });
 	let navigate = useNavigate();
 	let fetcher = useFetcher<{

@@ -1,5 +1,5 @@
 import { CronExpressionParser } from "cron-parser";
-import { and, count, desc, eq, isNotNull, lt, lte, or, sql } from "drizzle-orm";
+import { count, eq, lt, sql } from "drizzle-orm";
 
 import type { Database } from "~/db/index";
 
