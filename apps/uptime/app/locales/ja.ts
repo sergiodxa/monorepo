@@ -125,6 +125,11 @@ export default {
 					title: "カスタムヘッダー",
 					description: "認証ヘッダーとカスタムリクエストパラメータを追加",
 				},
+				cronMonitoring: {
+					title: "Cronジョブ監視",
+					description:
+						"スケジュールされたジョブとバックグラウンドタスクをハートビートチェックで監視",
+				},
 			},
 		},
 
@@ -348,6 +353,7 @@ export default {
 					statusPages: "ステータスページ",
 					ssl: "SSL監視",
 					dns: "DNS監視",
+					cronJobs: "Cronジョブ監視",
 					contentMonitoring: "コンテンツ監視",
 					maintenance: "メンテナンスウィンドウ",
 					integrations: "インテグレーション",
@@ -360,9 +366,8 @@ export default {
 					websiteMonitoring: "ウェブサイト監視",
 					apiMonitoring: "API監視",
 					saas: "SaaSアプリケーション",
-					microservices: "マイクロサービス",
-					healthChecks: "ヘルスチェック",
 					ecommerce: "Eコマース",
+					cronJobs: "Cronジョブ監視",
 				},
 				solutions: {
 					title: "ソリューション",
@@ -378,11 +383,8 @@ export default {
 					uptimerobot: "vs UptimeRobot",
 					pingdom: "vs Pingdom",
 					betterUptime: "vs Better Uptime",
-					checkly: "vs Checkly",
-					statuscake: "vs StatusCake",
-					datadog: "vs Datadog",
-					site24x7: "vs Site24x7",
-					ohdear: "vs Oh Dear",
+					healthchecks: "vs Healthchecks.io",
+					cronitor: "vs Cronitor",
 				},
 				legal: {
 					title: "法的情報",
@@ -413,6 +415,7 @@ export default {
 						statusPages: "ステータスページ",
 						tcpMonitors: "TCPモニター",
 						dnsMonitors: "DNSモニター",
+						cronJobs: "Cronジョブ",
 						settings: "設定",
 						billing: "請求",
 						domains: "ドメイン",
@@ -989,6 +992,33 @@ export default {
 				generic: "言語設定の更新中にエラーが発生しました。",
 			},
 			success: "言語設定が正常に更新されました。",
+		},
+
+		createCronJob: {
+			errors: {
+				generic: "エラーが発生しました。",
+				limitExceeded: "このチームのCronジョブ上限（{{limit}}個）に達しました。",
+				invalidCron: "無効なCron式です。",
+			},
+			success: "Cronジョブ「{{name}}」が作成されました。",
+		},
+
+		updateCronJob: {
+			errors: {
+				generic: "エラーが発生しました。",
+				notFound: "このCronジョブは存在しません。",
+				invalidCron: "無効なCron式です。",
+			},
+			success: "Cronジョブ「{{name}}」が更新されました。",
+		},
+
+		deleteCronJob: {
+			errors: {
+				generic: "エラーが発生しました。",
+				notFound: "このCronジョブは存在しません。",
+				forbidden: "このCronジョブを削除する権限がありません。",
+			},
+			success: "Cronジョブ「{{name}}」が削除されました。",
 		},
 	},
 
@@ -2883,6 +2913,7 @@ export default {
 							"monitors:write": "モニターの書き込み",
 							"alerts:read": "アラートの読み取り",
 							"alerts:write": "アラートの書き込み",
+							"cron-jobs:ping": "Cronジョブ Ping",
 						},
 					},
 					expiresAt: {
@@ -2937,6 +2968,285 @@ export default {
 					title: "予期しないエラーが発生しました。",
 					description: "後でもう一度お試しいただくか、サポートにお問い合わせください。",
 				},
+			},
+		},
+
+		cronJobs: {
+			header: {
+				title: "Cronジョブ",
+				action: {
+					create: "Cronジョブを作成",
+				},
+			},
+
+			alert: {
+				subscription: {
+					title: "モニターが一時停止されています！",
+					description: "自動監視を続けるにはサブスクリプションが必要です。",
+					cta: "監視を開始",
+				},
+			},
+
+			empty: {
+				title: "Cronジョブがありません",
+				description:
+					"スケジュールされたタスクを追跡するためのCronジョブモニターを作成してください。",
+				cta: "Cronジョブを作成",
+			},
+
+			table: {
+				label: "Cronジョブモニター",
+				columns: {
+					name: "名前",
+					schedule: "スケジュール",
+					status: "ステータス",
+					lastPing: "最終Ping",
+					nextExpected: "次回予定",
+					actions: "アクション",
+				},
+				status: {
+					healthy: "正常",
+					late: "遅延",
+					missed: "未実行",
+					new: "新規",
+				},
+				actions: {
+					edit: "編集",
+					delete: "削除",
+					confirmation: {
+						delete: "{{name}}を削除してもよろしいですか？",
+					},
+				},
+			},
+		},
+
+		createCronJob: {
+			header: {
+				title: "Cronジョブを作成",
+				breadcrumb: {
+					cronJobs: "Cronジョブ",
+				},
+			},
+
+			alert: {
+				subscription: {
+					title: "モニターが一時停止されています！",
+					description: "自動監視を続けるにはサブスクリプションが必要です。",
+					cta: "監視を開始",
+				},
+			},
+
+			form: {
+				fields: {
+					name: {
+						label: "名前",
+						placeholder: "日次バックアップ",
+						description: "このCronジョブモニターの説明的な名前。",
+					},
+					description: {
+						label: "説明",
+						placeholder: "このジョブが何をするかの任意の説明",
+						description: "このCronジョブを識別するための任意の説明。",
+					},
+					cronExpression: {
+						label: "Cron式",
+						placeholder: "0 * * * *",
+						description: "Cronスケジュール式（例：'0 * * * *'は毎時）。",
+					},
+					preset: {
+						label: "一般的なプリセット",
+						description: "一般的なスケジュールを選択するか、カスタム式を入力してください。",
+						options: {
+							custom: "カスタム",
+							everyMinute: "毎分",
+							every5Minutes: "5分ごと",
+							every15Minutes: "15分ごと",
+							everyHour: "毎時",
+							everyDay: "毎日深夜",
+							everyWeek: "毎週（日曜深夜）",
+						},
+					},
+					gracePeriod: {
+						label: "猶予期間",
+						description: "遅延とマークする前に予定時刻からどれくらい待つか。",
+						unit: {
+							minutes: "分",
+							seconds: "秒",
+						},
+					},
+					timezone: {
+						label: "タイムゾーン",
+						placeholder: "タイムゾーンを選択",
+						description: "Cronスケジュールのタイムゾーン。",
+					},
+					alertOnLate: {
+						label: "遅延時にアラート",
+						description: "ジョブが予定時刻に実行されなかった場合にアラートを送信します。",
+					},
+					enabled: {
+						label: "有効",
+						description: "このCronジョブの監視をすぐに開始します。",
+					},
+				},
+				cta: "Cronジョブを作成",
+			},
+		},
+
+		editCronJob: {
+			header: {
+				title: "Cronジョブを編集",
+				breadcrumb: {
+					cronJobs: "Cronジョブ",
+				},
+			},
+
+			alert: {
+				subscription: {
+					title: "モニターが一時停止されています！",
+					description: "自動監視を続けるにはサブスクリプションが必要です。",
+					cta: "監視を開始",
+				},
+			},
+
+			form: {
+				fields: {
+					name: {
+						label: "名前",
+						placeholder: "日次バックアップ",
+						description: "このCronジョブモニターの説明的な名前。",
+					},
+					description: {
+						label: "説明",
+						placeholder: "このジョブが何をするかの任意の説明",
+						description: "このCronジョブを識別するための任意の説明。",
+					},
+					cronExpression: {
+						label: "Cron式",
+						placeholder: "0 * * * *",
+						description: "Cronスケジュール式（例：'0 * * * *'は毎時）。",
+					},
+					preset: {
+						label: "一般的なプリセット",
+						description: "一般的なスケジュールを選択するか、カスタム式を入力してください。",
+						options: {
+							custom: "カスタム",
+							everyMinute: "毎分",
+							every5Minutes: "5分ごと",
+							every15Minutes: "15分ごと",
+							everyHour: "毎時",
+							everyDay: "毎日深夜",
+							everyWeek: "毎週（日曜深夜）",
+						},
+					},
+					gracePeriod: {
+						label: "猶予期間",
+						description: "遅延とマークする前に予定時刻からどれくらい待つか。",
+						unit: {
+							minutes: "分",
+							seconds: "秒",
+						},
+					},
+					timezone: {
+						label: "タイムゾーン",
+						placeholder: "タイムゾーンを選択",
+						description: "Cronスケジュールのタイムゾーン。",
+					},
+					alertOnLate: {
+						label: "遅延時にアラート",
+						description: "ジョブが予定時刻に実行されなかった場合にアラートを送信します。",
+					},
+					enabled: {
+						label: "有効",
+						description: "このCronジョブを有効に監視するかどうか。",
+					},
+				},
+				cancel: "キャンセル",
+				cta: "変更を保存",
+			},
+		},
+
+		cronJobDetail: {
+			header: {
+				breadcrumb: {
+					cronJobs: "Cronジョブ",
+				},
+				action: {
+					edit: "編集",
+					delete: "削除",
+				},
+			},
+
+			alert: {
+				subscription: {
+					title: "モニターが一時停止されています！",
+					description: "自動監視を続けるにはサブスクリプションが必要です。",
+					cta: "監視を開始",
+				},
+			},
+
+			info: {
+				title: "Cronジョブ設定",
+				schedule: "スケジュール",
+				timezone: "タイムゾーン",
+				status: "ステータス",
+				gracePeriod: "猶予期間",
+				description: "説明",
+			},
+
+			stats: {
+				totalPings: {
+					label: "総Ping数",
+					description: "受信したPingの数",
+				},
+				onTimeRate: {
+					label: "時間通り率",
+					description: "時間通りのPingの割合",
+				},
+				lastPing: {
+					label: "最終Ping",
+					description: "最後のPingを受信した時刻",
+				},
+				nextExpected: {
+					label: "次回予定",
+					description: "次のPingが予定されている時刻",
+				},
+			},
+
+			pings: {
+				title: "Ping履歴",
+				description: "このCronジョブから受信した最近のPing",
+				empty:
+					"まだPingを受信していません。ジョブが最初のPingを送信した後、ここにPingが表示されます。",
+				label: "Ping",
+				columns: {
+					time: "時刻",
+					status: "ステータス",
+					sourceIp: "送信元IP",
+				},
+				status: {
+					onTime: "時間通り",
+					late: "遅延",
+				},
+			},
+
+			integration: {
+				title: "統合ガイド",
+				description:
+					"Cronジョブが完了したら、このエンドポイントにPOSTリクエストを送信してください。",
+				endpoint: "Pingエンドポイント",
+				curlExample: "cURLの例",
+				codeExamples: {
+					title: "コード例",
+					bash: "Bash / Cron",
+					python: "Python",
+					nodejs: "Node.js",
+				},
+				apiKeyNote:
+					"'cron-jobs:ping'スコープを持つAPIキーが必要です。APIキー設定で作成してください。",
+			},
+
+			delete: {
+				confirmation: "{{name}}を削除してもよろしいですか？この操作は取り消せません。",
 			},
 		},
 	},

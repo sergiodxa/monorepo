@@ -128,6 +128,11 @@ export default {
 					description:
 						"Ajoutez des en-têtes d'authentification et des paramètres de requête personnalisés",
 				},
+				cronMonitoring: {
+					title: "Surveillance des tâches Cron",
+					description:
+						"Surveillez les tâches planifiées et les tâches en arrière-plan avec des vérifications de heartbeat",
+				},
 			},
 		},
 
@@ -357,6 +362,7 @@ export default {
 					statusPages: "Pages de statut",
 					ssl: "Surveillance SSL",
 					dns: "Surveillance DNS",
+					cronJobs: "Surveillance Cron Jobs",
 					contentMonitoring: "Surveillance de contenu",
 					maintenance: "Fenêtres de maintenance",
 					integrations: "Intégrations",
@@ -369,9 +375,8 @@ export default {
 					websiteMonitoring: "Surveillance de sites web",
 					apiMonitoring: "Surveillance d'API",
 					saas: "Applications SaaS",
-					microservices: "Microservices",
-					healthChecks: "Vérifications de santé",
 					ecommerce: "E-commerce",
+					cronJobs: "Surveillance Cron Jobs",
 				},
 				solutions: {
 					title: "Solutions",
@@ -387,11 +392,8 @@ export default {
 					uptimerobot: "vs UptimeRobot",
 					pingdom: "vs Pingdom",
 					betterUptime: "vs Better Uptime",
-					checkly: "vs Checkly",
-					statuscake: "vs StatusCake",
-					datadog: "vs Datadog",
-					site24x7: "vs Site24x7",
-					ohdear: "vs Oh Dear",
+					healthchecks: "vs Healthchecks.io",
+					cronitor: "vs Cronitor",
 				},
 				legal: {
 					title: "Juridique",
@@ -422,6 +424,7 @@ export default {
 						statusPages: "Pages de statut",
 						tcpMonitors: "Moniteurs TCP",
 						dnsMonitors: "Moniteurs DNS",
+						cronJobs: "Cron Jobs",
 						settings: "Paramètres",
 						billing: "Facturation",
 						domains: "Domaines",
@@ -1000,6 +1003,33 @@ export default {
 					"Oups ! Une erreur s'est produite lors de la mise à jour de votre préférence de langue.",
 			},
 			success: "La préférence de langue a été mise à jour avec succès.",
+		},
+
+		createCronJob: {
+			errors: {
+				generic: "Oups ! Une erreur s'est produite.",
+				limitExceeded: "Vous avez atteint la limite de {{limit}} cron jobs dans cette équipe.",
+				invalidCron: "Expression cron invalide.",
+			},
+			success: "Le cron job '{{name}}' a été créé.",
+		},
+
+		updateCronJob: {
+			errors: {
+				generic: "Oups ! Une erreur s'est produite.",
+				notFound: "Ce cron job n'existe pas.",
+				invalidCron: "Expression cron invalide.",
+			},
+			success: "Le cron job '{{name}}' a été mis à jour.",
+		},
+
+		deleteCronJob: {
+			errors: {
+				generic: "Oups ! Une erreur s'est produite.",
+				notFound: "Ce cron job n'existe pas.",
+				forbidden: "Vous n'êtes pas autorisé à supprimer ce cron job.",
+			},
+			success: "Le cron job '{{name}}' a été supprimé.",
 		},
 	},
 
@@ -2913,6 +2943,7 @@ export default {
 							"monitors:write": "Écrire les moniteurs",
 							"alerts:read": "Lire les alertes",
 							"alerts:write": "Écrire les alertes",
+							"cron-jobs:ping": "Ping Cron Jobs",
 						},
 					},
 					expiresAt: {
@@ -2969,6 +3000,289 @@ export default {
 					title: "Une erreur inattendue s'est produite.",
 					description: "Veuillez réessayer plus tard ou contacter le support.",
 				},
+			},
+		},
+
+		cronJobs: {
+			header: {
+				title: "Cron Jobs",
+				action: {
+					create: "Créer un Cron Job",
+				},
+			},
+
+			alert: {
+				subscription: {
+					title: "Vos moniteurs sont en pause !",
+					description: "Un abonnement est nécessaire pour continuer la surveillance automatique.",
+					cta: "Commencer la surveillance",
+				},
+			},
+
+			empty: {
+				title: "Pas encore de cron jobs",
+				description: "Créez un moniteur de cron job pour suivre vos tâches planifiées.",
+				cta: "Créer un Cron Job",
+			},
+
+			table: {
+				label: "Moniteurs Cron Job",
+				columns: {
+					name: "Nom",
+					schedule: "Planification",
+					status: "Statut",
+					lastPing: "Dernier Ping",
+					nextExpected: "Prochain Attendu",
+					actions: "Actions",
+				},
+				status: {
+					healthy: "Sain",
+					late: "En retard",
+					missed: "Manqué",
+					new: "Nouveau",
+				},
+				actions: {
+					edit: "Modifier",
+					delete: "Supprimer",
+					confirmation: {
+						delete: "Êtes-vous sûr de vouloir supprimer {{name}} ?",
+					},
+				},
+			},
+		},
+
+		createCronJob: {
+			header: {
+				title: "Créer un Cron Job",
+				breadcrumb: {
+					cronJobs: "Cron Jobs",
+				},
+			},
+
+			alert: {
+				subscription: {
+					title: "Vos moniteurs sont en pause !",
+					description: "Un abonnement est nécessaire pour continuer la surveillance automatique.",
+					cta: "Commencer la surveillance",
+				},
+			},
+
+			form: {
+				fields: {
+					name: {
+						label: "Nom",
+						placeholder: "Sauvegarde Quotidienne",
+						description: "Un nom descriptif pour ce moniteur de cron job.",
+					},
+					description: {
+						label: "Description",
+						placeholder: "Description optionnelle de ce que fait ce job",
+						description: "Une description optionnelle pour aider à identifier ce cron job.",
+					},
+					cronExpression: {
+						label: "Expression Cron",
+						placeholder: "0 * * * *",
+						description: "L'expression de planification cron (ex. '0 * * * *' pour chaque heure).",
+					},
+					preset: {
+						label: "Préréglages Courants",
+						description:
+							"Sélectionnez une planification courante ou entrez une expression personnalisée.",
+						options: {
+							custom: "Personnalisé",
+							everyMinute: "Chaque minute",
+							every5Minutes: "Toutes les 5 minutes",
+							every15Minutes: "Toutes les 15 minutes",
+							everyHour: "Chaque heure",
+							everyDay: "Chaque jour à minuit",
+							everyWeek: "Chaque semaine (dimanche minuit)",
+						},
+					},
+					gracePeriod: {
+						label: "Période de Grâce",
+						description:
+							"Combien de temps attendre après l'heure prévue avant de marquer comme en retard.",
+						unit: {
+							minutes: "minutes",
+							seconds: "secondes",
+						},
+					},
+					timezone: {
+						label: "Fuseau Horaire",
+						placeholder: "Sélectionner le fuseau horaire",
+						description: "Le fuseau horaire pour la planification cron.",
+					},
+					alertOnLate: {
+						label: "Alerter en Retard",
+						description: "Envoyer une alerte lorsque le job manque son heure prévue.",
+					},
+					enabled: {
+						label: "Activé",
+						description: "Commencer à surveiller ce cron job immédiatement.",
+					},
+				},
+				cta: "Créer le Cron Job",
+			},
+		},
+
+		editCronJob: {
+			header: {
+				title: "Modifier le Cron Job",
+				breadcrumb: {
+					cronJobs: "Cron Jobs",
+				},
+			},
+
+			alert: {
+				subscription: {
+					title: "Vos moniteurs sont en pause !",
+					description: "Un abonnement est nécessaire pour continuer la surveillance automatique.",
+					cta: "Commencer la surveillance",
+				},
+			},
+
+			form: {
+				fields: {
+					name: {
+						label: "Nom",
+						placeholder: "Sauvegarde Quotidienne",
+						description: "Un nom descriptif pour ce moniteur de cron job.",
+					},
+					description: {
+						label: "Description",
+						placeholder: "Description optionnelle de ce que fait ce job",
+						description: "Une description optionnelle pour aider à identifier ce cron job.",
+					},
+					cronExpression: {
+						label: "Expression Cron",
+						placeholder: "0 * * * *",
+						description: "L'expression de planification cron (ex. '0 * * * *' pour chaque heure).",
+					},
+					preset: {
+						label: "Préréglages Courants",
+						description:
+							"Sélectionnez une planification courante ou entrez une expression personnalisée.",
+						options: {
+							custom: "Personnalisé",
+							everyMinute: "Chaque minute",
+							every5Minutes: "Toutes les 5 minutes",
+							every15Minutes: "Toutes les 15 minutes",
+							everyHour: "Chaque heure",
+							everyDay: "Chaque jour à minuit",
+							everyWeek: "Chaque semaine (dimanche minuit)",
+						},
+					},
+					gracePeriod: {
+						label: "Période de Grâce",
+						description:
+							"Combien de temps attendre après l'heure prévue avant de marquer comme en retard.",
+						unit: {
+							minutes: "minutes",
+							seconds: "secondes",
+						},
+					},
+					timezone: {
+						label: "Fuseau Horaire",
+						placeholder: "Sélectionner le fuseau horaire",
+						description: "Le fuseau horaire pour la planification cron.",
+					},
+					alertOnLate: {
+						label: "Alerter en Retard",
+						description: "Envoyer une alerte lorsque le job manque son heure prévue.",
+					},
+					enabled: {
+						label: "Activé",
+						description: "Si ce cron job doit être activement surveillé.",
+					},
+				},
+				cancel: "Annuler",
+				cta: "Enregistrer les modifications",
+			},
+		},
+
+		cronJobDetail: {
+			header: {
+				breadcrumb: {
+					cronJobs: "Cron Jobs",
+				},
+				action: {
+					edit: "Modifier",
+					delete: "Supprimer",
+				},
+			},
+
+			alert: {
+				subscription: {
+					title: "Vos moniteurs sont en pause !",
+					description: "Un abonnement est nécessaire pour continuer la surveillance automatique.",
+					cta: "Commencer la surveillance",
+				},
+			},
+
+			info: {
+				title: "Configuration du Cron Job",
+				schedule: "Planification",
+				timezone: "Fuseau Horaire",
+				status: "Statut",
+				gracePeriod: "Période de Grâce",
+				description: "Description",
+			},
+
+			stats: {
+				totalPings: {
+					label: "Total des Pings",
+					description: "Nombre de pings reçus",
+				},
+				onTimeRate: {
+					label: "Taux de Ponctualité",
+					description: "Pourcentage de pings à l'heure",
+				},
+				lastPing: {
+					label: "Dernier Ping",
+					description: "Quand le dernier ping a été reçu",
+				},
+				nextExpected: {
+					label: "Prochain Attendu",
+					description: "Quand le prochain ping est attendu",
+				},
+			},
+
+			pings: {
+				title: "Historique des Pings",
+				description: "Pings récents reçus de ce cron job",
+				empty:
+					"Aucun ping reçu encore. Les pings apparaîtront ici après que votre job envoie son premier ping.",
+				label: "Pings",
+				columns: {
+					time: "Heure",
+					status: "Statut",
+					sourceIp: "IP Source",
+				},
+				status: {
+					onTime: "À l'heure",
+					late: "En retard",
+				},
+			},
+
+			integration: {
+				title: "Instructions d'Intégration",
+				description:
+					"Envoyez une requête POST à ce point de terminaison lorsque votre cron job se termine.",
+				endpoint: "Point de Terminaison Ping",
+				curlExample: "Exemple cURL",
+				codeExamples: {
+					title: "Exemples de Code",
+					bash: "Bash / Cron",
+					python: "Python",
+					nodejs: "Node.js",
+				},
+				apiKeyNote:
+					"Vous avez besoin d'une clé API avec la portée 'cron-jobs:ping'. Créez-en une dans les paramètres des Clés API.",
+			},
+
+			delete: {
+				confirmation:
+					"Êtes-vous sûr de vouloir supprimer {{name}} ? Cette action est irréversible.",
 			},
 		},
 	},

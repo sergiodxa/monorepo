@@ -2,6 +2,7 @@ import { Sidebar } from "@pkg/ui";
 import {
 	ActivityIcon,
 	BellIcon,
+	ClockIcon,
 	FileTextIcon,
 	GlobeIcon,
 	KeyIcon,
@@ -44,6 +45,7 @@ export function AppSidebar(props: {
 	let statusPagesPath = href("/app/:team/status-pages", { team: props.team.slug });
 	let dnsMonitorsPath = href("/app/:team/dns", { team: props.team.slug });
 	let tcpMonitorsPath = href("/app/:team/tcp", { team: props.team.slug });
+	let cronJobsPath = href("/app/:team/cron-jobs", { team: props.team.slug });
 	let settingsPath = href("/app/:team/settings", { team: props.team.slug });
 	let apiKeysPath = href("/app/:team/api-keys", { team: props.team.slug });
 
@@ -53,6 +55,7 @@ export function AppSidebar(props: {
 	let isStatusPagesActive = useMatch("/app/:team/status-pages/*") !== null;
 	let isDnsMonitorsActive = useMatch("/app/:team/dns/*") !== null;
 	let isTcpMonitorsActive = useMatch("/app/:team/tcp/*") !== null;
+	let isCronJobsActive = useMatch("/app/:team/cron-jobs/*") !== null;
 	let isSettingsActive = useMatch("/app/:team/settings") !== null;
 	let isApiKeysActive = useMatch("/app/:team/api-keys") !== null;
 
@@ -126,6 +129,16 @@ export function AppSidebar(props: {
 								>
 									<GlobeIcon size={16} />
 									<span>{t("navigation.items.dnsMonitors")}</span>
+								</Sidebar.MenuLink>
+							</Sidebar.MenuItem>
+							<Sidebar.MenuItem>
+								<Sidebar.MenuLink
+									href={cronJobsPath}
+									active={isCronJobsActive}
+									tooltip={t("navigation.items.cronJobs")}
+								>
+									<ClockIcon size={16} />
+									<span>{t("navigation.items.cronJobs")}</span>
 								</Sidebar.MenuLink>
 							</Sidebar.MenuItem>
 						</Sidebar.Menu>

@@ -20,7 +20,7 @@ export default function PrivacyPolicy({ loaderData }: Route.ComponentProps) {
 			<main className="mx-auto max-w-3xl px-4 py-16 sm:px-6 lg:px-8">
 				<article className="prose max-w-none prose-neutral dark:prose-invert">
 					<p className="text-sm text-neutral-500 dark:text-neutral-400">
-						Last updated: February 8, 2026
+						Last updated: February 11, 2026
 					</p>
 
 					<h1>Privacy Policy</h1>
@@ -48,6 +48,19 @@ export default function PrivacyPolicy({ loaderData }: Route.ComponentProps) {
 					<p>
 						We collect data related to the monitors you create, including URLs you choose to
 						monitor, response times, HTTP status codes, and uptime/downtime events.
+					</p>
+
+					<h3>Cron Job Monitoring Data</h3>
+					<p>For cron job (scheduled task) monitoring, we collect:</p>
+					<ul>
+						<li>Ping timestamps (when your scheduled tasks report completion)</li>
+						<li>Source IP addresses of ping requests</li>
+						<li>User agent strings from ping requests</li>
+						<li>Schedule configuration (cron expressions, timezones, grace periods)</li>
+					</ul>
+					<p>
+						This data helps you track whether your scheduled tasks are running on time and enables
+						us to alert you when expected pings are missed.
 					</p>
 
 					<h3>Usage Data</h3>

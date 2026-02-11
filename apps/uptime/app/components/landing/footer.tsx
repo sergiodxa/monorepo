@@ -7,8 +7,8 @@ export function LandingFooter() {
 	return (
 		<footer className="border-t border-neutral-200 bg-white dark:border-neutral-800 dark:bg-neutral-950">
 			<div className="mx-auto max-w-6xl px-4 py-12 sm:px-6 lg:px-8">
-				<div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-6">
-					{/* Features Column 1 */}
+				<div className="grid gap-8 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5">
+					{/* Features */}
 					<div>
 						<h3 className="mb-4 text-sm font-semibold text-neutral-900 dark:text-neutral-50">
 							{t("sections.features.title")}
@@ -56,21 +56,20 @@ export function LandingFooter() {
 							</li>
 							<li>
 								<Link
+									to={href("/features/cron-jobs")}
+									className="text-sm text-neutral-600 transition hover:text-primary-600 dark:text-neutral-400 dark:hover:text-primary-400"
+								>
+									{t("sections.features.cronJobs")}
+								</Link>
+							</li>
+							<li>
+								<Link
 									to={href("/features/content-monitoring")}
 									className="text-sm text-neutral-600 transition hover:text-primary-600 dark:text-neutral-400 dark:hover:text-primary-400"
 								>
 									{t("sections.features.contentMonitoring")}
 								</Link>
 							</li>
-						</ul>
-					</div>
-
-					{/* Features Column 2 */}
-					<div>
-						<h3 className="mb-4 text-sm font-semibold text-neutral-900 dark:text-neutral-50">
-							&nbsp;
-						</h3>
-						<ul className="space-y-3">
 							<li>
 								<Link
 									to={href("/features/maintenance")}
@@ -146,6 +145,22 @@ export function LandingFooter() {
 							</li>
 							<li>
 								<Link
+									to={href("/use-cases/ecommerce")}
+									className="text-sm text-neutral-600 transition hover:text-primary-600 dark:text-neutral-400 dark:hover:text-primary-400"
+								>
+									{t("sections.useCases.ecommerce")}
+								</Link>
+							</li>
+							<li>
+								<Link
+									to={href("/use-cases/cron-jobs")}
+									className="text-sm text-neutral-600 transition hover:text-primary-600 dark:text-neutral-400 dark:hover:text-primary-400"
+								>
+									{t("sections.useCases.cronJobs")}
+								</Link>
+							</li>
+							<li>
+								<Link
 									to={href("/use-cases/microservices")}
 									className="text-sm text-neutral-600 transition hover:text-primary-600 dark:text-neutral-400 dark:hover:text-primary-400"
 								>
@@ -158,14 +173,6 @@ export function LandingFooter() {
 									className="text-sm text-neutral-600 transition hover:text-primary-600 dark:text-neutral-400 dark:hover:text-primary-400"
 								>
 									{t("sections.useCases.healthChecks")}
-								</Link>
-							</li>
-							<li>
-								<Link
-									to={href("/use-cases/ecommerce")}
-									className="text-sm text-neutral-600 transition hover:text-primary-600 dark:text-neutral-400 dark:hover:text-primary-400"
-								>
-									{t("sections.useCases.ecommerce")}
 								</Link>
 							</li>
 						</ul>
@@ -211,18 +218,18 @@ export function LandingFooter() {
 							</li>
 							<li>
 								<Link
-									to={href("/for/enterprises")}
-									className="text-sm text-neutral-600 transition hover:text-primary-600 dark:text-neutral-400 dark:hover:text-primary-400"
-								>
-									{t("sections.solutions.enterprises")}
-								</Link>
-							</li>
-							<li>
-								<Link
 									to={href("/for/devops")}
 									className="text-sm text-neutral-600 transition hover:text-primary-600 dark:text-neutral-400 dark:hover:text-primary-400"
 								>
 									{t("sections.solutions.devops")}
+								</Link>
+							</li>
+							<li>
+								<Link
+									to={href("/for/enterprises")}
+									className="text-sm text-neutral-600 transition hover:text-primary-600 dark:text-neutral-400 dark:hover:text-primary-400"
+								>
+									{t("sections.solutions.enterprises")}
 								</Link>
 							</li>
 						</ul>
@@ -256,6 +263,22 @@ export function LandingFooter() {
 									className="text-sm text-neutral-600 transition hover:text-primary-600 dark:text-neutral-400 dark:hover:text-primary-400"
 								>
 									{t("sections.compare.betterUptime")}
+								</Link>
+							</li>
+							<li>
+								<Link
+									to="/vs/healthchecks"
+									className="text-sm text-neutral-600 transition hover:text-primary-600 dark:text-neutral-400 dark:hover:text-primary-400"
+								>
+									{t("sections.compare.healthchecks")}
+								</Link>
+							</li>
+							<li>
+								<Link
+									to="/vs/cronitor"
+									className="text-sm text-neutral-600 transition hover:text-primary-600 dark:text-neutral-400 dark:hover:text-primary-400"
+								>
+									{t("sections.compare.cronitor")}
 								</Link>
 							</li>
 							<li>

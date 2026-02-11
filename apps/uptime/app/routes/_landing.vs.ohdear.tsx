@@ -56,7 +56,7 @@ let features = [
 	},
 	{ feature: "Broken links checker", uptime: false, competitor: true },
 	{ feature: "Lighthouse audits", uptime: false, competitor: true },
-	{ feature: "Cron job monitoring", uptime: false, competitor: true },
+	{ feature: "Cron Job Monitoring", uptime: false, competitor: true },
 ];
 
 let whySwitchReasons = [

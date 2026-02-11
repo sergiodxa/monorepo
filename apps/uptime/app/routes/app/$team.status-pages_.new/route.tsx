@@ -27,23 +27,35 @@ export async function loader() {
 		teamId: team().id,
 	});
 
-	let monitors = await db().query.monitors.findMany({
-		columns: { id: true, name: true },
-		where(fields, operators) {
-			return operators.eq(fields.teamId, team().id);
-		},
-		orderBy(fields, operators) {
-			return operators.asc(fields.name);
-		},
-	});
+	let [monitors, cronJobs] = await Promise.all([
+		db().query.monitors.findMany({
+			columns: { id: true, name: true },
+			where(fields, operators) {
+				return operators.eq(fields.teamId, team().id);
+			},
+			orderBy(fields, operators) {
+				return operators.asc(fields.name);
+			},
+		}),
+		db().query.cronJobMonitors.findMany({
+			columns: { id: true, name: true },
+			where(fields, operators) {
+				return operators.eq(fields.teamId, team().id);
+			},
+			orderBy(fields, operators) {
+				return operators.asc(fields.name);
+			},
+		}),
+	]);
 
 	logger().info("statusPageNew.loader.complete", {
 		route: "status-pages.new",
 		teamId: team().id,
 		monitorsCount: monitors.length,
+		cronJobsCount: cronJobs.length,
 	});
 
-	return { monitors };
+	return { monitors, cronJobs };
 }
 
 export default function Component({ loaderData, params }: Route.ComponentProps) {
@@ -63,13 +75,16 @@ export default function Component({ loaderData, params }: Route.ComponentProps) 
 			/>
 
 			<div className="flex flex-col gap-6 p-5 md:gap-12 md:p-12">
-				<CreateStatusPageForm monitors={loaderData.monitors} />
+				<CreateStatusPageForm monitors={loaderData.monitors} cronJobs={loaderData.cronJobs} />
 			</div>
 		</>
 	);
 }
 
-function CreateStatusPageForm(props: { monitors: Array<{ id: string; name: string }> }) {
+function CreateStatusPageForm(props: {
+	monitors: Array<{ id: string; name: string }>;
+	cronJobs: Array<{ id: string; name: string }>;
+}) {
 	let { t } = useTranslation("translation", {
 		keyPrefix: "page.statusPages.form",
 	});
@@ -151,6 +166,20 @@ function CreateStatusPageForm(props: { monitors: Array<{ id: string; name: strin
 					{props.monitors.map((monitor) => (
 						<Checkbox key={monitor.id} name="monitorIds" value={monitor.id}>
 							{monitor.name}
+						</Checkbox>
+					))}
+				</fieldset>
+			)}
+
+			{props.cronJobs.length > 0 && (
+				<fieldset className="flex flex-col gap-3">
+					<legend className="mb-2 font-medium">{t("fields.cronJobs.label")}</legend>
+					<Description className="mb-2 text-sm text-neutral-500 dark:text-neutral-400">
+						{t("fields.cronJobs.description")}
+					</Description>
+					{props.cronJobs.map((cronJob) => (
+						<Checkbox key={cronJob.id} name="cronJobIds" value={cronJob.id}>
+							{cronJob.name}
 						</Checkbox>
 					))}
 				</fieldset>

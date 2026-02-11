@@ -1,8 +1,16 @@
 import { cn } from "@pkg/cn";
 import { isSameDay } from "date-fns";
-import { CheckCircle2Icon, AlertTriangleIcon, XCircleIcon, MinusCircleIcon } from "lucide-react";
+import {
+	CheckCircle2Icon,
+	AlertTriangleIcon,
+	XCircleIcon,
+	MinusCircleIcon,
+	ClockIcon,
+} from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { href, Link } from "react-router";
+
+import type { CronJobStatus } from "~/db/schema";
 
 import * as BetterHeatmap from "~/components/heatmap-composable";
 import { db } from "~/middleware/drizzle";
@@ -45,6 +53,11 @@ export async function loader({ params }: Route.LoaderArgs) {
 					return operators.asc(fields.order);
 				},
 			},
+			cronJobs: {
+				orderBy(fields, operators) {
+					return operators.asc(fields.order);
+				},
+			},
 		},
 	});
 
@@ -57,12 +70,14 @@ export async function loader({ params }: Route.LoaderArgs) {
 	}
 
 	let monitorIds = statusPage.monitors.map((m) => m.monitorId);
+	let cronJobIds = statusPage.cronJobs.map((c) => c.cronJobMonitorId);
 
-	if (monitorIds.length === 0) {
+	if (monitorIds.length === 0 && cronJobIds.length === 0) {
 		logger().info("statusPage.loader.complete", {
 			route: "status.$slug",
 			slug: params.slug,
 			monitorCount: 0,
+			cronJobCount: 0,
 			overallStatus: "operational",
 		});
 		return {
@@ -73,34 +88,54 @@ export async function loader({ params }: Route.LoaderArgs) {
 				showOverallStatus: statusPage.showOverallStatus,
 			},
 			monitors: [],
+			cronJobs: [],
 			overallStatus: "operational" as const,
 			lastUpdated: new Date().toISOString(),
 		};
 	}
 
-	let monitors = await db().query.monitors.findMany({
-		columns: {
-			id: true,
-			name: true,
-			expectedStatus: true,
-			degradedAfterMs: true,
-		},
-		where(fields, operators) {
-			return operators.inArray(fields.id, monitorIds);
-		},
-		with: {
-			results: {
-				columns: { responseStatus: true, responseTimeMs: true, completedAt: true },
-				where(fields, operators) {
-					return operators.isNotNull(fields.completedAt);
-				},
-				orderBy(fields, operators) {
-					return operators.desc(fields.completedAt);
-				},
-				limit: 1,
-			},
-		},
-	});
+	let monitors =
+		monitorIds.length > 0
+			? await db().query.monitors.findMany({
+					columns: {
+						id: true,
+						name: true,
+						expectedStatus: true,
+						degradedAfterMs: true,
+					},
+					where(fields, operators) {
+						return operators.inArray(fields.id, monitorIds);
+					},
+					with: {
+						results: {
+							columns: { responseStatus: true, responseTimeMs: true, completedAt: true },
+							where(fields, operators) {
+								return operators.isNotNull(fields.completedAt);
+							},
+							orderBy(fields, operators) {
+								return operators.desc(fields.completedAt);
+							},
+							limit: 1,
+						},
+					},
+				})
+			: [];
+
+	let cronJobMonitors =
+		cronJobIds.length > 0
+			? await db().query.cronJobMonitors.findMany({
+					columns: {
+						id: true,
+						name: true,
+						status: true,
+						cronExpression: true,
+						lastPingAt: true,
+					},
+					where(fields, operators) {
+						return operators.inArray(fields.id, cronJobIds);
+					},
+				})
+			: [];
 
 	let days = daysOfLastNDays(new Date(), 30);
 
@@ -147,11 +182,48 @@ export async function loader({ params }: Route.LoaderArgs) {
 
 	let validMonitors = monitorsWithData.filter((m): m is NonNullable<typeof m> => m !== null);
 
+	// Map cron job status to display status
+	function mapCronJobStatus(
+		status: CronJobStatus,
+	): "operational" | "degraded" | "down" | "unknown" {
+		switch (status) {
+			case "healthy":
+				return "operational";
+			case "late":
+				return "degraded";
+			case "missed":
+				return "down";
+			case "new":
+				return "unknown";
+			default:
+				return "unknown";
+		}
+	}
+
+	let cronJobsWithData = statusPage.cronJobs.map((spc) => {
+		let cronJob = cronJobMonitors.find((c) => c.id === spc.cronJobMonitorId);
+		if (!cronJob) return null;
+
+		return {
+			id: cronJob.id,
+			name: spc.displayName ?? cronJob.name,
+			status: mapCronJobStatus(cronJob.status),
+			cronExpression: cronJob.cronExpression,
+			lastPingAt: cronJob.lastPingAt?.toISOString() ?? null,
+		};
+	});
+
+	let validCronJobs = cronJobsWithData.filter((c): c is NonNullable<typeof c> => c !== null);
+
 	let overallStatus: "operational" | "degraded" | "down" = "operational";
-	if (validMonitors.length > 0) {
-		let downCount = validMonitors.filter((m) => m.status === "down").length;
-		let degradedCount = validMonitors.filter((m) => m.status === "degraded").length;
-		let totalCount = validMonitors.length;
+
+	// Combine monitors and cron jobs for overall status calculation
+	let allItems = [...validMonitors.map((m) => m.status), ...validCronJobs.map((c) => c.status)];
+
+	if (allItems.length > 0) {
+		let downCount = allItems.filter((s) => s === "down").length;
+		let degradedCount = allItems.filter((s) => s === "degraded").length;
+		let totalCount = allItems.length;
 		let notOperationalCount = downCount + degradedCount;
 
 		if (notOperationalCount > totalCount / 2) {
@@ -167,6 +239,7 @@ export async function loader({ params }: Route.LoaderArgs) {
 		route: "status.$slug",
 		slug: params.slug,
 		monitorCount: validMonitors.length,
+		cronJobCount: validCronJobs.length,
 		overallStatus,
 	});
 
@@ -178,13 +251,15 @@ export async function loader({ params }: Route.LoaderArgs) {
 			showOverallStatus: statusPage.showOverallStatus,
 		},
 		monitors: validMonitors,
+		cronJobs: validCronJobs,
 		overallStatus,
 		lastUpdated: new Date().toISOString(),
 	};
 }
 
 export default function Component({ loaderData }: Route.ComponentProps) {
-	let { statusPage, monitors, overallStatus, lastUpdated } = loaderData;
+	let { statusPage, monitors, cronJobs, overallStatus, lastUpdated } = loaderData;
+	let { t } = useTranslation("translation", { keyPrefix: "statusPage" });
 
 	return (
 		<div className="min-h-screen bg-neutral-50 dark:bg-neutral-950">
@@ -204,14 +279,30 @@ export default function Component({ loaderData }: Route.ComponentProps) {
 				{statusPage.showOverallStatus && <OverallStatusBanner status={overallStatus} />}
 
 				<div className="mt-8 space-y-4">
-					{monitors.length === 0 ? (
+					{monitors.length === 0 && cronJobs.length === 0 ? (
 						<div className="rounded-lg border border-neutral-200 bg-white p-8 text-center dark:border-neutral-800 dark:bg-neutral-900">
 							<p className="text-neutral-500 dark:text-neutral-400">
 								No monitors configured for this status page.
 							</p>
 						</div>
 					) : (
-						monitors.map((monitor) => <MonitorCard key={monitor.id} monitor={monitor} />)
+						<>
+							{monitors.map((monitor) => (
+								<MonitorCard key={monitor.id} monitor={monitor} />
+							))}
+							{cronJobs.length > 0 && (
+								<>
+									{monitors.length > 0 && (
+										<h2 className="pt-4 text-lg font-semibold text-neutral-900 dark:text-neutral-100">
+											{t("cronJobs.title")}
+										</h2>
+									)}
+									{cronJobs.map((cronJob) => (
+										<CronJobCard key={cronJob.id} cronJob={cronJob} />
+									))}
+								</>
+							)}
+						</>
 					)}
 				</div>
 
@@ -337,6 +428,89 @@ function MonitorCard({
 
 			<div className="mt-4">
 				<MiniHeatmap data={monitor.heatmap} />
+			</div>
+		</div>
+	);
+}
+
+function CronJobCard({
+	cronJob,
+}: {
+	cronJob: {
+		id: string;
+		name: string;
+		status: "operational" | "degraded" | "down" | "unknown";
+		cronExpression: string;
+		lastPingAt: string | null;
+	};
+}) {
+	let { t } = useTranslation("translation", { keyPrefix: "statusPage.cronJobs" });
+
+	let statusConfig = {
+		operational: {
+			icon: CheckCircle2Icon,
+			label: "Operational",
+			iconColor: "text-green-500",
+			badgeColor: "bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-200",
+		},
+		degraded: {
+			icon: AlertTriangleIcon,
+			label: "Degraded",
+			iconColor: "text-yellow-500",
+			badgeColor: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-200",
+		},
+		down: {
+			icon: XCircleIcon,
+			label: "Down",
+			iconColor: "text-red-500",
+			badgeColor: "bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-200",
+		},
+		unknown: {
+			icon: MinusCircleIcon,
+			label: "Unknown",
+			iconColor: "text-neutral-400",
+			badgeColor: "bg-neutral-100 text-neutral-800 dark:bg-neutral-800 dark:text-neutral-200",
+		},
+	}[cronJob.status];
+
+	let Icon = statusConfig.icon;
+
+	return (
+		<div className="rounded-lg border border-neutral-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-900">
+			<div className="flex items-center justify-between">
+				<div className="flex items-center gap-3">
+					<Icon className={cn("h-5 w-5", statusConfig.iconColor)} />
+					<div className="flex flex-col">
+						<span className="font-medium text-neutral-900 dark:text-neutral-100">
+							{cronJob.name}
+						</span>
+						<div className="flex items-center gap-2 text-xs text-neutral-500 dark:text-neutral-400">
+							<ClockIcon className="h-3 w-3" />
+							<span>
+								{t("schedule")}: {cronJob.cronExpression}
+							</span>
+						</div>
+					</div>
+				</div>
+				<div className="flex flex-col items-end gap-1">
+					<span
+						className={cn(
+							"rounded-full px-2.5 py-0.5 text-xs font-medium",
+							statusConfig.badgeColor,
+						)}
+					>
+						{statusConfig.label}
+					</span>
+					<span className="text-xs text-neutral-500 dark:text-neutral-400">
+						{t("lastPing")}:{" "}
+						{cronJob.lastPingAt
+							? new Date(cronJob.lastPingAt).toLocaleString(undefined, {
+									dateStyle: "short",
+									timeStyle: "short",
+								})
+							: t("never")}
+					</span>
+				</div>
 			</div>
 		</div>
 	);

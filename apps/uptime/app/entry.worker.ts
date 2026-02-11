@@ -29,6 +29,9 @@ export default {
 			let db = database(env.DB);
 			let scheduledDate = new Date(controller.scheduledTime);
 			waitUntil(Monitor.pingLater(db, scheduledDate));
+
+			// Check cron job monitors
+			waitUntil(env.QUEUE.send({ type: "checkCronJobs" }));
 		}
 
 		// Every 10 minutes
@@ -39,6 +42,7 @@ export default {
 		// Every day at midnight
 		if (controller.cron === "0 0 * * *") {
 			waitUntil(env.QUEUE.send({ type: "clean" }));
+			waitUntil(env.QUEUE.send({ type: "cleanCronJobPings" }));
 		}
 
 		// Every day at 6 AM UTC - Check SSL certificates
@@ -69,6 +73,7 @@ export default {
 						payload: z.object({ monitorId: z.uuid(), ownerId: z.uuid() }),
 					}),
 					z.object({ type: z.literal("clean") }),
+					z.object({ type: z.literal("cleanCronJobPings") }),
 					z.object({ type: z.literal("enqueuePendingDomains") }),
 					z.object({
 						type: z.literal("verifyDomainOwnership"),
@@ -77,6 +82,7 @@ export default {
 					z.object({ type: z.literal("checkSsl") }),
 					z.object({ type: z.literal("checkDns") }),
 					z.object({ type: z.literal("checkTcp") }),
+					z.object({ type: z.literal("checkCronJobs") }),
 				])
 				.safeParse(message.body);
 
@@ -96,6 +102,13 @@ export default {
 			if (result.data.type === "clean") {
 				let CleanJob = await import("./jobs/clean").then((m) => m.default);
 				waitUntil(new CleanJob().run(message));
+			}
+
+			if (result.data.type === "cleanCronJobPings") {
+				let CleanCronJobPingsJob = await import("./jobs/clean-cron-job-pings").then(
+					(m) => m.default,
+				);
+				waitUntil(new CleanCronJobPingsJob().run(message));
 			}
 
 			if (result.data.type === "enqueuePendingDomains") {
@@ -128,6 +141,11 @@ export default {
 			if (result.data.type === "checkTcp") {
 				let CheckTcpJob = await import("./jobs/check-tcp").then((m) => m.default);
 				waitUntil(new CheckTcpJob().run(message));
+			}
+
+			if (result.data.type === "checkCronJobs") {
+				let CheckCronJobsJob = await import("./jobs/check-cron-jobs").then((m) => m.default);
+				waitUntil(new CheckCronJobsJob().run(message));
 			}
 		}
 	},

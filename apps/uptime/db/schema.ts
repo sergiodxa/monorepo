@@ -210,6 +210,7 @@ export const teamsRelations = relations(teams, ({ many }) => {
 		dnsMonitors: many(dnsMonitors),
 		tcpMonitors: many(tcpMonitors),
 		apiKeys: many(apiKeys),
+		cronJobMonitors: many(cronJobMonitors),
 	};
 });
 
@@ -337,6 +338,7 @@ export const statusPagesRelations = relations(statusPages, ({ one, many }) => {
 			references: [teams.id],
 		}),
 		monitors: many(statusPageMonitors),
+		cronJobs: many(statusPageCronJobs),
 	};
 });
 
@@ -491,6 +493,107 @@ export const dnsMonitorResultsRelations = relations(dnsMonitorResults, ({ one })
 	};
 });
 
+// Cron Job Monitors
+
+export const cronJobStatusEnum = ["healthy", "late", "missed", "new"] as const;
+export type CronJobStatus = (typeof cronJobStatusEnum)[number];
+
+export const cronJobMonitors = sqliteTable(
+	"cron_job_monitors",
+	{
+		id: pk("id"),
+		// Timestamps
+		createdAt,
+		updatedAt,
+		// Relations
+		teamId: uuid("team_id").notNull(),
+		// Attributes
+		name: text("name").notNull(),
+		description: text("description"),
+		cronExpression: text("cron_expression").notNull(),
+		gracePeriodSeconds: integer("grace_period_seconds").notNull().default(300),
+		timezone: text("timezone").notNull().default("UTC"),
+		status: text("status", { enum: cronJobStatusEnum }).notNull().default("new"),
+		alertOnLate: integer("alert_on_late", { mode: "boolean" }).notNull().default(false),
+		lastPingAt: timestamp("last_ping_at"),
+		nextExpectedAt: timestamp("next_expected_at"),
+		enabledAt: timestamp("enabled_at").$defaultFn(() => new Date()),
+	},
+	(table) => [
+		index("cron_job_monitors_team_idx").on(table.teamId),
+		index("cron_job_monitors_enabled_at_idx").on(table.enabledAt),
+		index("cron_job_monitors_status_next_expected_idx").on(table.status, table.nextExpectedAt),
+	],
+);
+
+export const cronJobPings = sqliteTable(
+	"cron_job_pings",
+	{
+		id: pk("id"),
+		// Timestamps
+		createdAt,
+		// Relations
+		cronJobMonitorId: uuid("cron_job_monitor_id").notNull(),
+		// Attributes
+		wasOnTime: integer("was_on_time", { mode: "boolean" }).notNull(),
+		sourceIp: text("source_ip"),
+		userAgent: text("user_agent"),
+	},
+	(table) => [
+		index("cron_job_pings_cron_job_monitor_idx").on(table.cronJobMonitorId),
+		index("cron_job_pings_created_at_idx").on(table.createdAt),
+	],
+);
+
+export const statusPageCronJobs = sqliteTable(
+	"status_page_cron_jobs",
+	{
+		// Relations
+		statusPageId: uuid("status_page_id").notNull(),
+		cronJobMonitorId: uuid("cron_job_monitor_id").notNull(),
+		// Attributes
+		displayName: text("display_name"),
+		order: integer("order").notNull().default(0),
+	},
+	(table) => [
+		index("status_page_cron_jobs_status_page_idx").on(table.statusPageId),
+		index("status_page_cron_jobs_cron_job_monitor_idx").on(table.cronJobMonitorId),
+	],
+);
+
+export const cronJobMonitorsRelations = relations(cronJobMonitors, ({ one, many }) => {
+	return {
+		team: one(teams, {
+			fields: [cronJobMonitors.teamId],
+			references: [teams.id],
+		}),
+		pings: many(cronJobPings),
+		statusPageCronJobs: many(statusPageCronJobs),
+	};
+});
+
+export const cronJobPingsRelations = relations(cronJobPings, ({ one }) => {
+	return {
+		cronJobMonitor: one(cronJobMonitors, {
+			fields: [cronJobPings.cronJobMonitorId],
+			references: [cronJobMonitors.id],
+		}),
+	};
+});
+
+export const statusPageCronJobsRelations = relations(statusPageCronJobs, ({ one }) => {
+	return {
+		statusPage: one(statusPages, {
+			fields: [statusPageCronJobs.statusPageId],
+			references: [statusPages.id],
+		}),
+		cronJobMonitor: one(cronJobMonitors, {
+			fields: [statusPageCronJobs.cronJobMonitorId],
+			references: [cronJobMonitors.id],
+		}),
+	};
+});
+
 // TCP Monitors
 
 export const tcpMonitors = sqliteTable(
@@ -592,6 +695,12 @@ export type SelectTcpMonitor = typeof tcpMonitors.$inferSelect;
 export type InsertTcpMonitor = typeof tcpMonitors.$inferInsert;
 export type SelectTcpMonitorResult = typeof tcpMonitorResults.$inferSelect;
 export type InsertTcpMonitorResult = typeof tcpMonitorResults.$inferInsert;
+export type SelectCronJobMonitor = typeof cronJobMonitors.$inferSelect;
+export type InsertCronJobMonitor = typeof cronJobMonitors.$inferInsert;
+export type SelectCronJobPing = typeof cronJobPings.$inferSelect;
+export type InsertCronJobPing = typeof cronJobPings.$inferInsert;
+export type SelectStatusPageCronJob = typeof statusPageCronJobs.$inferSelect;
+export type InsertStatusPageCronJob = typeof statusPageCronJobs.$inferInsert;
 
 // API Keys
 
@@ -611,7 +720,17 @@ export const apiKeys = sqliteTable(
 		keyHash: text("key_hash").notNull(),
 		keyPrefix: text("key_prefix").notNull(),
 		scopes: text("scopes", { mode: "json" })
-			.$type<Array<"monitors:read" | "monitors:write" | "alerts:read" | "alerts:write">>()
+			.$type<
+				Array<
+					| "monitors:read"
+					| "monitors:write"
+					| "alerts:read"
+					| "alerts:write"
+					| "cron-jobs:read"
+					| "cron-jobs:write"
+					| "cron-jobs:ping"
+				>
+			>()
 			.notNull(),
 	},
 	(table) => [

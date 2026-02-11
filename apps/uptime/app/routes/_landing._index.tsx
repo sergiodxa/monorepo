@@ -6,6 +6,7 @@ import {
 	BellIcon,
 	CheckIcon,
 	ChevronDownIcon,
+	ClockIcon,
 	CodeIcon,
 	FileTextIcon,
 	GlobeIcon,
@@ -318,6 +319,10 @@ function CompleteFeatureSet() {
 		{
 			icon: <CodeIcon className="size-5" />,
 			key: "customHeaders",
+		},
+		{
+			icon: <ClockIcon className="size-5" />,
+			key: "cronMonitoring",
 		},
 	] as const;
 

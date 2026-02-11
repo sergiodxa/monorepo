@@ -30,7 +30,7 @@ export default function TermsPage({ loaderData }: Route.ComponentProps) {
 			<main className="mx-auto max-w-3xl px-4 py-16 sm:px-6 lg:px-8">
 				<article className="prose max-w-none prose-neutral dark:prose-invert">
 					<p className="text-sm text-neutral-500 dark:text-neutral-400">
-						Last updated: February 8, 2026
+						Last updated: February 11, 2026
 					</p>
 
 					<h1>Terms of Service</h1>
@@ -44,9 +44,11 @@ export default function TermsPage({ loaderData }: Route.ComponentProps) {
 
 					<h2>2. Service Description</h2>
 					<p>
-						Uptime provides HTTP monitoring services that check the availability and response time
-						of your websites, APIs, and other web services. We monitor your endpoints from multiple
-						global regions and notify you when issues are detected.
+						Uptime provides uptime and scheduled task monitoring services, including HTTP endpoint
+						monitoring, DNS monitoring, TCP port monitoring, SSL certificate monitoring, and cron
+						job monitoring. These services help you track the health of your services and scheduled
+						tasks. We monitor your endpoints from multiple global regions and notify you when issues
+						are detected.
 					</p>
 
 					<h2>3. Account Terms</h2>
@@ -71,6 +73,14 @@ export default function TermsPage({ loaderData }: Route.ComponentProps) {
 							limits.
 						</li>
 						<li>Monitor URLs or endpoints that you do not own or have authorization to monitor.</li>
+						<li>
+							Monitor cron jobs or scheduled tasks that you do not own or have authorization to
+							monitor.
+						</li>
+						<li>
+							Use cron job ping endpoints for purposes other than legitimate scheduled task
+							monitoring.
+						</li>
 						<li>Use the service for any illegal or unauthorized purpose.</li>
 						<li>
 							Attempt to gain unauthorized access to our systems or other users&apos; accounts.

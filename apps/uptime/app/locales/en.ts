@@ -125,6 +125,10 @@ export default {
 					title: "Custom Headers",
 					description: "Add authentication headers and custom request parameters",
 				},
+				cronMonitoring: {
+					title: "Cron Job Monitoring",
+					description: "Monitor scheduled jobs and background tasks with heartbeat checks",
+				},
 			},
 		},
 
@@ -351,6 +355,7 @@ export default {
 					statusPages: "Status Pages",
 					ssl: "SSL Monitoring",
 					dns: "DNS Monitoring",
+					cronJobs: "Cron Job Monitoring",
 					contentMonitoring: "Content Monitoring",
 					maintenance: "Maintenance Windows",
 					integrations: "Integrations",
@@ -363,9 +368,10 @@ export default {
 					websiteMonitoring: "Website Monitoring",
 					apiMonitoring: "API Monitoring",
 					saas: "SaaS Applications",
+					ecommerce: "E-commerce",
+					cronJobs: "Cron Job Monitoring",
 					microservices: "Microservices",
 					healthChecks: "Health Checks",
-					ecommerce: "E-commerce",
 				},
 				solutions: {
 					title: "Solutions",
@@ -381,6 +387,8 @@ export default {
 					uptimerobot: "vs UptimeRobot",
 					pingdom: "vs Pingdom",
 					betterUptime: "vs Better Uptime",
+					healthchecks: "vs Healthchecks.io",
+					cronitor: "vs Cronitor",
 					checkly: "vs Checkly",
 					statuscake: "vs StatusCake",
 					datadog: "vs Datadog",
@@ -416,6 +424,7 @@ export default {
 						statusPages: "Status Pages",
 						tcpMonitors: "TCP Monitors",
 						dnsMonitors: "DNS Monitors",
+						cronJobs: "Cron Jobs",
 						settings: "Settings",
 						billing: "Billing",
 						domains: "Domains",
@@ -486,6 +495,12 @@ export default {
 				uptime: "{{percentage}}% uptime",
 				noData: "No data",
 			},
+		},
+		cronJobs: {
+			title: "Scheduled Jobs",
+			lastPing: "Last ping",
+			never: "Never",
+			schedule: "Schedule",
 		},
 		error: {
 			title: "Status Page Not Found",
@@ -990,6 +1005,33 @@ export default {
 				generic: "Oops! Something went wrong while updating your language preference.",
 			},
 			success: "Language preference updated successfully.",
+		},
+
+		createCronJob: {
+			errors: {
+				generic: "Oops! Something went wrong while creating the cron job.",
+				limitExceeded: "You have reached the limit of {{limit}} cron job monitors in this team.",
+				invalidCron: "Invalid cron expression.",
+			},
+			success: "{{name}} cron job was created.",
+		},
+
+		updateCronJob: {
+			errors: {
+				generic: "Oops! Something went wrong while updating the cron job.",
+				notFound: "This cron job does not exist.",
+				invalidCron: "Invalid cron expression.",
+			},
+			success: "{{name}} cron job was updated.",
+		},
+
+		deleteCronJob: {
+			errors: {
+				generic: "Oops! Something went wrong while deleting the cron job.",
+				notFound: "This cron job does not exist.",
+				forbidden: "You are not allowed to delete this cron job.",
+			},
+			success: "{{name}} cron job was deleted.",
 		},
 	},
 
@@ -1782,6 +1824,10 @@ export default {
 					monitors: {
 						label: "Monitors to Include",
 						description: "Select which monitors to display on this status page.",
+					},
+					cronJobs: {
+						label: "Cron Jobs to Include",
+						description: "Select which cron jobs to display on this status page.",
 					},
 				},
 
@@ -2939,6 +2985,282 @@ export default {
 					title: "An unexpected error occurred.",
 					description: "Please try again later or contact support.",
 				},
+			},
+		},
+
+		cronJobs: {
+			header: {
+				title: "Cron Jobs",
+				action: {
+					create: "Create Cron Job",
+				},
+			},
+
+			alert: {
+				subscription: {
+					title: "Your monitors are paused!",
+					description: "A subscription is required to continue monitoring automatically.",
+					cta: "Start Monitoring",
+				},
+			},
+
+			empty: {
+				title: "No cron jobs yet",
+				description: "Create a cron job monitor to track your scheduled tasks.",
+				cta: "Create Cron Job",
+			},
+
+			table: {
+				label: "Cron Job Monitors",
+				columns: {
+					name: "Name",
+					schedule: "Schedule",
+					status: "Status",
+					lastPing: "Last Ping",
+					nextExpected: "Next Expected",
+					actions: "Actions",
+				},
+				status: {
+					healthy: "Healthy",
+					late: "Late",
+					missed: "Missed",
+					new: "New",
+				},
+				actions: {
+					edit: "Edit",
+					delete: "Delete",
+					confirmation: {
+						delete: "Are you sure you want to delete {{name}}?",
+					},
+				},
+			},
+		},
+
+		createCronJob: {
+			header: {
+				title: "Create Cron Job",
+				breadcrumb: {
+					cronJobs: "Cron Jobs",
+				},
+			},
+
+			alert: {
+				subscription: {
+					title: "Your monitors are paused!",
+					description: "A subscription is required to continue monitoring automatically.",
+					cta: "Start Monitoring",
+				},
+			},
+
+			form: {
+				fields: {
+					name: {
+						label: "Name",
+						placeholder: "Daily Backup Job",
+						description: "A descriptive name for this cron job monitor.",
+					},
+					description: {
+						label: "Description",
+						placeholder: "Optional description of what this job does",
+						description: "An optional description to help identify this cron job.",
+					},
+					cronExpression: {
+						label: "Cron Expression",
+						placeholder: "0 * * * *",
+						description: "The cron schedule expression (e.g., '0 * * * *' for every hour).",
+					},
+					preset: {
+						label: "Common Presets",
+						description: "Select a common schedule or enter a custom expression.",
+						options: {
+							custom: "Custom",
+							everyMinute: "Every minute",
+							every5Minutes: "Every 5 minutes",
+							every15Minutes: "Every 15 minutes",
+							everyHour: "Every hour",
+							everyDay: "Every day at midnight",
+							everyWeek: "Every week (Sunday midnight)",
+						},
+					},
+					gracePeriod: {
+						label: "Grace Period",
+						description: "How long to wait after the expected time before marking as late.",
+						unit: {
+							minutes: "minutes",
+							seconds: "seconds",
+						},
+					},
+					timezone: {
+						label: "Timezone",
+						placeholder: "Select timezone",
+						description: "The timezone for the cron schedule.",
+					},
+					alertOnLate: {
+						label: "Alert on Late",
+						description: "Send an alert when the job misses its expected time.",
+					},
+					enabled: {
+						label: "Enabled",
+						description: "Start monitoring this cron job immediately.",
+					},
+				},
+				cta: "Create Cron Job",
+			},
+		},
+
+		editCronJob: {
+			header: {
+				title: "Edit Cron Job",
+				breadcrumb: {
+					cronJobs: "Cron Jobs",
+				},
+			},
+
+			alert: {
+				subscription: {
+					title: "Your monitors are paused!",
+					description: "A subscription is required to continue monitoring automatically.",
+					cta: "Start Monitoring",
+				},
+			},
+
+			form: {
+				fields: {
+					name: {
+						label: "Name",
+						placeholder: "Daily Backup Job",
+						description: "A descriptive name for this cron job monitor.",
+					},
+					description: {
+						label: "Description",
+						placeholder: "Optional description of what this job does",
+						description: "An optional description to help identify this cron job.",
+					},
+					cronExpression: {
+						label: "Cron Expression",
+						placeholder: "0 * * * *",
+						description: "The cron schedule expression (e.g., '0 * * * *' for every hour).",
+					},
+					preset: {
+						label: "Common Presets",
+						description: "Select a common schedule or enter a custom expression.",
+						options: {
+							custom: "Custom",
+							everyMinute: "Every minute",
+							every5Minutes: "Every 5 minutes",
+							every15Minutes: "Every 15 minutes",
+							everyHour: "Every hour",
+							everyDay: "Every day at midnight",
+							everyWeek: "Every week (Sunday midnight)",
+						},
+					},
+					gracePeriod: {
+						label: "Grace Period",
+						description: "How long to wait after the expected time before marking as late.",
+						unit: {
+							minutes: "minutes",
+							seconds: "seconds",
+						},
+					},
+					timezone: {
+						label: "Timezone",
+						placeholder: "Select timezone",
+						description: "The timezone for the cron schedule.",
+					},
+					alertOnLate: {
+						label: "Alert on Late",
+						description: "Send an alert when the job misses its expected time.",
+					},
+					enabled: {
+						label: "Enabled",
+						description: "Whether to actively monitor this cron job.",
+					},
+				},
+				cancel: "Cancel",
+				cta: "Save Changes",
+			},
+		},
+
+		cronJobDetail: {
+			header: {
+				breadcrumb: {
+					cronJobs: "Cron Jobs",
+				},
+				action: {
+					edit: "Edit",
+					delete: "Delete",
+				},
+			},
+
+			alert: {
+				subscription: {
+					title: "Your monitors are paused!",
+					description: "A subscription is required to continue monitoring automatically.",
+					cta: "Start Monitoring",
+				},
+			},
+
+			info: {
+				title: "Cron Job Configuration",
+				schedule: "Schedule",
+				timezone: "Timezone",
+				status: "Status",
+				gracePeriod: "Grace Period",
+				description: "Description",
+			},
+
+			stats: {
+				totalPings: {
+					label: "Total Pings",
+					description: "Number of pings received",
+				},
+				onTimeRate: {
+					label: "On-Time Rate",
+					description: "Percentage of on-time pings",
+				},
+				lastPing: {
+					label: "Last Ping",
+					description: "When the last ping was received",
+				},
+				nextExpected: {
+					label: "Next Expected",
+					description: "When the next ping is expected",
+				},
+			},
+
+			pings: {
+				title: "Ping History",
+				description: "Recent pings received from this cron job",
+				empty: "No pings received yet. Pings will appear here after your job sends its first ping.",
+				label: "Pings",
+				columns: {
+					time: "Time",
+					status: "Status",
+					sourceIp: "Source IP",
+				},
+				status: {
+					onTime: "On Time",
+					late: "Late",
+				},
+			},
+
+			integration: {
+				title: "Integration Instructions",
+				description: "Send a POST request to this endpoint when your cron job completes.",
+				endpoint: "Ping Endpoint",
+				curlExample: "cURL Example",
+				codeExamples: {
+					title: "Code Examples",
+					bash: "Bash / Cron",
+					python: "Python",
+					nodejs: "Node.js",
+				},
+				apiKeyNote:
+					"You need an API key with the 'cron-jobs:ping' scope. Create one in API Keys settings.",
+			},
+
+			delete: {
+				confirmation: "Are you sure you want to delete {{name}}? This action cannot be undone.",
 			},
 		},
 	},

@@ -30,6 +30,10 @@ const inputSchema = z.object({
 		.union([z.uuid().transform((v) => [v]), z.array(z.uuid())])
 		.optional()
 		.default([]),
+	cronJobIds: z
+		.union([z.uuid().transform((v) => [v]), z.array(z.uuid())])
+		.optional()
+		.default([]),
 });
 
 export async function action({ request, context, params }: Route.ActionArgs) {
@@ -104,6 +108,22 @@ export async function action({ request, context, params }: Route.ActionArgs) {
 				result.data.monitorIds.map((monitorId, index) => ({
 					statusPageId: result.data.statusPageId,
 					monitorId,
+					order: index,
+				})),
+			);
+	}
+
+	await db()
+		.delete(schema.statusPageCronJobs)
+		.where(eq(schema.statusPageCronJobs.statusPageId, result.data.statusPageId));
+
+	if (result.data.cronJobIds.length > 0) {
+		await db()
+			.insert(schema.statusPageCronJobs)
+			.values(
+				result.data.cronJobIds.map((cronJobMonitorId, index) => ({
+					statusPageId: result.data.statusPageId,
+					cronJobMonitorId,
 					order: index,
 				})),
 			);

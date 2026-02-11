@@ -44,6 +44,7 @@ let features = [
 	{ feature: "Recovery alerts", uptime: true, competitor: true },
 	{ feature: "API access", uptime: true, competitor: true },
 	{ feature: "Alert cooldowns", uptime: true, competitor: true },
+	{ feature: "Cron Job Monitoring", uptime: true, competitor: true },
 	{
 		feature: "Team collaboration",
 		uptime: "Unlimited",

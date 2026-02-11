@@ -28,7 +28,7 @@ export async function loader({ params }: Route.LoaderArgs) {
 		teamId: team().id,
 	});
 
-	let [statusPage, monitors] = await Promise.all([
+	let [statusPage, monitors, cronJobs] = await Promise.all([
 		db().query.statusPages.findFirst({
 			where(fields, operators) {
 				return operators.and(
@@ -38,9 +38,19 @@ export async function loader({ params }: Route.LoaderArgs) {
 			},
 			with: {
 				monitors: true,
+				cronJobs: true,
 			},
 		}),
 		db().query.monitors.findMany({
+			columns: { id: true, name: true },
+			where(fields, operators) {
+				return operators.eq(fields.teamId, team().id);
+			},
+			orderBy(fields, operators) {
+				return operators.asc(fields.name);
+			},
+		}),
+		db().query.cronJobMonitors.findMany({
 			columns: { id: true, name: true },
 			where(fields, operators) {
 				return operators.eq(fields.teamId, team().id);
@@ -66,6 +76,8 @@ export async function loader({ params }: Route.LoaderArgs) {
 		teamId: team().id,
 		monitorsCount: monitors.length,
 		linkedMonitorsCount: statusPage.monitors.length,
+		cronJobsCount: cronJobs.length,
+		linkedCronJobsCount: statusPage.cronJobs.length,
 	});
 
 	return {
@@ -79,8 +91,10 @@ export async function loader({ params }: Route.LoaderArgs) {
 			isPublic: statusPage.isPublic,
 			showOverallStatus: statusPage.showOverallStatus,
 			monitorIds: statusPage.monitors.map((m) => m.monitorId),
+			cronJobIds: statusPage.cronJobs.map((c) => c.cronJobMonitorId),
 		},
 		monitors,
+		cronJobs,
 	};
 }
 
@@ -102,7 +116,11 @@ export default function Component({ loaderData, params }: Route.ComponentProps) 
 			/>
 
 			<div className="flex flex-col gap-6 p-5 md:gap-12 md:p-12">
-				<EditStatusPageForm statusPage={loaderData.statusPage} monitors={loaderData.monitors} />
+				<EditStatusPageForm
+					statusPage={loaderData.statusPage}
+					monitors={loaderData.monitors}
+					cronJobs={loaderData.cronJobs}
+				/>
 			</div>
 		</>
 	);
@@ -111,6 +129,7 @@ export default function Component({ loaderData, params }: Route.ComponentProps) 
 function EditStatusPageForm(props: {
 	statusPage: Route.ComponentProps["loaderData"]["statusPage"];
 	monitors: Array<{ id: string; name: string }>;
+	cronJobs: Array<{ id: string; name: string }>;
 }) {
 	let { t } = useTranslation("translation", {
 		keyPrefix: "page.statusPages.form",
@@ -200,6 +219,25 @@ function EditStatusPageForm(props: {
 							defaultSelected={props.statusPage.monitorIds.includes(monitor.id)}
 						>
 							{monitor.name}
+						</Checkbox>
+					))}
+				</fieldset>
+			)}
+
+			{props.cronJobs.length > 0 && (
+				<fieldset className="flex flex-col gap-3">
+					<legend className="mb-2 font-medium">{t("fields.cronJobs.label")}</legend>
+					<Description className="mb-2 text-sm text-neutral-500 dark:text-neutral-400">
+						{t("fields.cronJobs.description")}
+					</Description>
+					{props.cronJobs.map((cronJob) => (
+						<Checkbox
+							key={cronJob.id}
+							name="cronJobIds"
+							value={cronJob.id}
+							defaultSelected={props.statusPage.cronJobIds.includes(cronJob.id)}
+						>
+							{cronJob.name}
 						</Checkbox>
 					))}
 				</fieldset>
