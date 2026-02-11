@@ -12,7 +12,7 @@ import {
 } from "@pkg/ui";
 import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
-import { href, useFetcher, useNavigate } from "react-router";
+import { href, useFetcher, useNavigate, useNavigation } from "react-router";
 import { useSpinDelay } from "spin-delay";
 
 import { AppHeader } from "~/components/app-header";
@@ -52,6 +52,7 @@ export async function loader() {
 export default function Component({ params }: Route.ComponentProps) {
 	let { t } = useTranslation("translation", { keyPrefix: "page.apiKeys.form" });
 	let navigate = useNavigate();
+	let navigation = useNavigation();
 	let fetcher = useFetcher<{
 		ok: boolean;
 		apiKey?: { key: string; name: string };
@@ -62,14 +63,15 @@ export default function Component({ params }: Route.ComponentProps) {
 	});
 
 	// Handle successful creation - navigate back to list with the key in state
+	// Only navigate if not already navigating to prevent loop of .data requests
 	useEffect(() => {
-		if (fetcher.data?.ok && fetcher.data.apiKey) {
+		if (fetcher.data?.ok && fetcher.data.apiKey && navigation.state === "idle") {
 			navigate(href("/app/:team/api-keys", params), {
 				state: { createdKey: fetcher.data.apiKey },
 				replace: true,
 			});
 		}
-	}, [fetcher.data, navigate, params]);
+	}, [fetcher.data, navigate, params, navigation.state]);
 
 	return (
 		<>
