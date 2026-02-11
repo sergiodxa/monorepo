@@ -423,6 +423,7 @@ export default {
 						alerts: "Benachrichtigungen",
 						maintenance: "Wartung",
 						monitors: "Monitore",
+						httpMonitors: "HTTP-Monitore",
 						statusPages: "Statusseiten",
 						tcpMonitors: "TCP-Monitore",
 						dnsMonitors: "DNS-Monitore",
@@ -1061,6 +1062,13 @@ export default {
 				cta: "Monitor erstellen",
 			},
 
+			tabs: {
+				http: "HTTP",
+				dns: "DNS",
+				tcp: "TCP",
+				cronJobs: "Cron-Jobs",
+			},
+
 			stats: {
 				monitors: {
 					label: "Monatliche Ping-Nutzung",
@@ -1071,6 +1079,23 @@ export default {
 				uptime: {
 					label: "Uptime-Prozentsatz",
 					description: "Gesamte System-Uptime",
+				},
+
+				httpMonitors: {
+					label: "HTTP-Monitore",
+					description: "{{up}} aktiv / {{down}} ausgefallen",
+				},
+				dnsMonitors: {
+					label: "DNS-Monitore",
+					description: "{{ok}} ok / {{changed}} geändert / {{error}} Fehler",
+				},
+				tcpMonitors: {
+					label: "TCP-Monitore",
+					description: "{{up}} aktiv / {{down}} ausgefallen",
+				},
+				cronJobs: {
+					label: "Cron-Jobs",
+					description: "{{healthy}} gesund / {{late}} verspätet / {{missed}} verpasst",
 				},
 
 				slowestEndpoint: {
@@ -1859,6 +1884,47 @@ export default {
 		editStatusPage: {
 			header: {
 				title: "Statusseite bearbeiten",
+			},
+		},
+
+		httpMonitors: {
+			header: {
+				title: "HTTP-Monitore",
+				action: {
+					create: "Monitor erstellen",
+				},
+			},
+			empty: {
+				title: "Noch keine HTTP-Monitore",
+				description: "Erstellen Sie einen HTTP-Monitor, um Ihre Endpunkte zu überwachen.",
+				cta: "Monitor erstellen",
+			},
+			table: {
+				label: "HTTP-Monitore",
+				columns: {
+					name: "Name",
+					url: "URL",
+					status: "Status",
+					responseTime: "Antwortzeit",
+					lastChecked: "Zuletzt geprüft",
+					actions: "Aktionen",
+				},
+				neverChecked: "Nie",
+				actions: {
+					menu: "Aktionsmenü",
+					view: "Ansehen",
+					edit: "Bearbeiten",
+					delete: "Löschen",
+				},
+				status: {
+					up: "Aktiv",
+					down: "Ausgefallen",
+					degraded: "Beeinträchtigt",
+					unknown: "Unbekannt",
+				},
+				confirmation: {
+					delete: "Sind Sie sicher, dass Sie den Monitor {{name}} löschen möchten?",
+				},
 			},
 		},
 

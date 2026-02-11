@@ -421,6 +421,7 @@ export default {
 						alerts: "Alertas",
 						maintenance: "Mantenimiento",
 						monitors: "Monitores",
+						httpMonitors: "Monitores HTTP",
 						statusPages: "Páginas de estado",
 						tcpMonitors: "Monitores TCP",
 						dnsMonitors: "Monitores DNS",
@@ -1067,6 +1068,23 @@ export default {
 					description: "Uptime general del sistema",
 				},
 
+				httpMonitors: {
+					label: "Monitores HTTP",
+					description: "{{up}} activos / {{down}} caídos",
+				},
+				dnsMonitors: {
+					label: "Monitores DNS",
+					description: "{{ok}} ok / {{changed}} cambiados / {{error}} error",
+				},
+				tcpMonitors: {
+					label: "Monitores TCP",
+					description: "{{up}} activos / {{down}} caídos",
+				},
+				cronJobs: {
+					label: "Trabajos Cron",
+					description: "{{healthy}} saludables / {{late}} retrasados / {{missed}} perdidos",
+				},
+
 				slowestEndpoint: {
 					label: {
 						default: 'Endpoint más lento "<em>{{name}}</em>"',
@@ -1075,6 +1093,13 @@ export default {
 					value: { noData: "N/D" },
 					description: "En las últimas 24 horas",
 				},
+			},
+
+			tabs: {
+				http: "HTTP",
+				dns: "DNS",
+				tcp: "TCP",
+				cronJobs: "Trabajos Cron",
 			},
 
 			table: {
@@ -1846,6 +1871,47 @@ export default {
 		editStatusPage: {
 			header: {
 				title: "Editar Página de estado",
+			},
+		},
+
+		httpMonitors: {
+			header: {
+				title: "Monitores HTTP",
+				action: {
+					create: "Crear Monitor",
+				},
+			},
+			empty: {
+				title: "Aún no hay monitores HTTP",
+				description: "Crea un monitor HTTP para comenzar a rastrear tus endpoints.",
+				cta: "Crear Monitor",
+			},
+			table: {
+				label: "Monitores HTTP",
+				columns: {
+					name: "Nombre",
+					url: "URL",
+					status: "Estado",
+					responseTime: "Tiempo de Respuesta",
+					lastChecked: "Última Verificación",
+					actions: "Acciones",
+				},
+				neverChecked: "Nunca",
+				actions: {
+					menu: "Menú de Acciones",
+					view: "Ver",
+					edit: "Editar",
+					delete: "Eliminar",
+				},
+				status: {
+					up: "Activo",
+					down: "Caído",
+					degraded: "Degradado",
+					unknown: "Desconocido",
+				},
+				confirmation: {
+					delete: "¿Estás seguro de que deseas eliminar el monitor {{name}}?",
+				},
 			},
 		},
 

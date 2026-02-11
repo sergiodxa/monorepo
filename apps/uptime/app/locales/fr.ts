@@ -421,6 +421,7 @@ export default {
 						alerts: "Alertes",
 						maintenance: "Maintenance",
 						monitors: "Moniteurs",
+						httpMonitors: "Moniteurs HTTP",
 						statusPages: "Pages de statut",
 						tcpMonitors: "Moniteurs TCP",
 						dnsMonitors: "Moniteurs DNS",
@@ -1069,6 +1070,23 @@ export default {
 					description: "Disponibilité globale du système",
 				},
 
+				httpMonitors: {
+					label: "Moniteurs HTTP",
+					description: "{{up}} actifs / {{down}} hors service",
+				},
+				dnsMonitors: {
+					label: "Moniteurs DNS",
+					description: "{{ok}} ok / {{changed}} modifiés / {{error}} erreur",
+				},
+				tcpMonitors: {
+					label: "Moniteurs TCP",
+					description: "{{up}} actifs / {{down}} hors service",
+				},
+				cronJobs: {
+					label: "Tâches Cron",
+					description: "{{healthy}} sains / {{late}} en retard / {{missed}} manqués",
+				},
+
 				slowestEndpoint: {
 					label: {
 						default: 'Point de terminaison le plus lent "<em>{{name}}</em>"',
@@ -1077,6 +1095,13 @@ export default {
 					value: { noData: "N/A" },
 					description: "Au cours des dernières 24 heures",
 				},
+			},
+
+			tabs: {
+				http: "HTTP",
+				dns: "DNS",
+				tcp: "TCP",
+				cronJobs: "Tâches Cron",
 			},
 
 			table: {
@@ -1850,6 +1875,47 @@ export default {
 		editStatusPage: {
 			header: {
 				title: "Modifier la page de statut",
+			},
+		},
+
+		httpMonitors: {
+			header: {
+				title: "Moniteurs HTTP",
+				action: {
+					create: "Créer un Moniteur",
+				},
+			},
+			empty: {
+				title: "Pas encore de moniteurs HTTP",
+				description: "Créez un moniteur HTTP pour commencer à suivre vos endpoints.",
+				cta: "Créer un Moniteur",
+			},
+			table: {
+				label: "Moniteurs HTTP",
+				columns: {
+					name: "Nom",
+					url: "URL",
+					status: "Statut",
+					responseTime: "Temps de Réponse",
+					lastChecked: "Dernière Vérification",
+					actions: "Actions",
+				},
+				neverChecked: "Jamais",
+				actions: {
+					menu: "Menu Actions",
+					view: "Voir",
+					edit: "Modifier",
+					delete: "Supprimer",
+				},
+				status: {
+					up: "Actif",
+					down: "Hors Service",
+					degraded: "Dégradé",
+					unknown: "Inconnu",
+				},
+				confirmation: {
+					delete: "Êtes-vous sûr de vouloir supprimer le moniteur {{name}} ?",
+				},
 			},
 		},
 

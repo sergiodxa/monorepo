@@ -412,6 +412,7 @@ export default {
 						alerts: "アラート",
 						maintenance: "メンテナンス",
 						monitors: "モニター",
+						httpMonitors: "HTTPモニター",
 						statusPages: "ステータスページ",
 						tcpMonitors: "TCPモニター",
 						dnsMonitors: "DNSモニター",
@@ -1058,6 +1059,23 @@ export default {
 					description: "システム全体のUptime",
 				},
 
+				httpMonitors: {
+					label: "HTTPモニター",
+					description: "{{up}} 稼働中 / {{down}} 停止中",
+				},
+				dnsMonitors: {
+					label: "DNSモニター",
+					description: "{{ok}} 正常 / {{changed}} 変更 / {{error}} エラー",
+				},
+				tcpMonitors: {
+					label: "TCPモニター",
+					description: "{{up}} 稼働中 / {{down}} 停止中",
+				},
+				cronJobs: {
+					label: "Cronジョブ",
+					description: "{{healthy}} 正常 / {{late}} 遅延 / {{missed}} 未実行",
+				},
+
 				slowestEndpoint: {
 					label: {
 						default: "最も遅いエンドポイント「<em>{{name}}</em>」",
@@ -1066,6 +1084,13 @@ export default {
 					value: { noData: "N/A" },
 					description: "過去24時間",
 				},
+			},
+
+			tabs: {
+				http: "HTTP",
+				dns: "DNS",
+				tcp: "TCP",
+				cronJobs: "Cronジョブ",
 			},
 
 			table: {
@@ -1828,6 +1853,47 @@ export default {
 		editStatusPage: {
 			header: {
 				title: "ステータスページを編集",
+			},
+		},
+
+		httpMonitors: {
+			header: {
+				title: "HTTPモニター",
+				action: {
+					create: "モニターを作成",
+				},
+			},
+			empty: {
+				title: "HTTPモニターがありません",
+				description: "HTTPモニターを作成してエンドポイントの監視を開始します。",
+				cta: "モニターを作成",
+			},
+			table: {
+				label: "HTTPモニター",
+				columns: {
+					name: "名前",
+					url: "URL",
+					status: "ステータス",
+					responseTime: "応答時間",
+					lastChecked: "最終確認",
+					actions: "アクション",
+				},
+				neverChecked: "未確認",
+				actions: {
+					menu: "アクションメニュー",
+					view: "表示",
+					edit: "編集",
+					delete: "削除",
+				},
+				status: {
+					up: "稼働中",
+					down: "停止中",
+					degraded: "低下",
+					unknown: "不明",
+				},
+				confirmation: {
+					delete: "モニター {{name}} を削除してもよろしいですか？",
+				},
 			},
 		},
 

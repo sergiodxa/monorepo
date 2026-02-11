@@ -421,6 +421,7 @@ export default {
 						alerts: "Alerts",
 						maintenance: "Maintenance",
 						monitors: "Monitors",
+						httpMonitors: "HTTP Monitors",
 						statusPages: "Status Pages",
 						tcpMonitors: "TCP Monitors",
 						dnsMonitors: "DNS Monitors",
@@ -1872,6 +1873,47 @@ export default {
 		editStatusPage: {
 			header: {
 				title: "Edit Status Page",
+			},
+		},
+
+		httpMonitors: {
+			header: {
+				title: "HTTP Monitors",
+				action: {
+					create: "Create Monitor",
+				},
+			},
+			empty: {
+				title: "No HTTP monitors yet",
+				description: "Create an HTTP monitor to start tracking your endpoints.",
+				cta: "Create Monitor",
+			},
+			table: {
+				label: "HTTP Monitors",
+				columns: {
+					name: "Name",
+					url: "URL",
+					status: "Status",
+					responseTime: "Response Time",
+					lastChecked: "Last Checked",
+					actions: "Actions",
+				},
+				neverChecked: "Never",
+				actions: {
+					menu: "Actions Menu",
+					view: "View",
+					edit: "Edit",
+					delete: "Delete",
+				},
+				status: {
+					up: "Up",
+					down: "Down",
+					degraded: "Degraded",
+					unknown: "Unknown",
+				},
+				confirmation: {
+					delete: "Are you sure you want to delete the monitor {{name}}?",
+				},
 			},
 		},
 
