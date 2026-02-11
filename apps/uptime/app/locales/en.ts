@@ -1079,6 +1079,33 @@ export default {
 					value: { noData: "N/A" },
 					description: "In the last 24 hours",
 				},
+
+				httpMonitors: {
+					label: "HTTP Monitors",
+					description: "{{up}} up / {{down}} down",
+				},
+
+				dnsMonitors: {
+					label: "DNS Monitors",
+					description: "{{ok}} ok / {{changed}} changed / {{error}} error",
+				},
+
+				tcpMonitors: {
+					label: "TCP Monitors",
+					description: "{{up}} up / {{down}} down",
+				},
+
+				cronJobs: {
+					label: "Cron Jobs",
+					description: "{{healthy}} healthy / {{late}} late / {{missed}} missed",
+				},
+			},
+
+			tabs: {
+				http: "HTTP",
+				dns: "DNS",
+				tcp: "TCP",
+				cronJobs: "Cron Jobs",
 			},
 
 			table: {
