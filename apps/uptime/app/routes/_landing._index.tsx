@@ -24,15 +24,14 @@ import {
 import { useState } from "react";
 import { Label, Slider, SliderOutput, SliderThumb, SliderTrack } from "react-aria-components";
 import { Trans, useTranslation } from "react-i18next";
-import { href, Link } from "react-router";
+import { href, Link, useRouteLoaderData } from "react-router";
 
 import screenshotDark from "~/assets/screenshot-dark.webp";
 import screenshotLight from "~/assets/screenshot-light.webp";
-import Logo from "~/components/logo";
 import { i18next } from "~/middleware/i18next";
-import { getSession } from "~/middleware/session";
 
-import type { Route } from "./+types/_index";
+import type { Route } from "./+types/_landing._index";
+import type { loader as landingLoader } from "./_landing";
 
 export const meta: Route.MetaFunction = ({ data }) => data?.meta ?? [];
 
@@ -53,11 +52,8 @@ export const links: Route.LinksFunction = () => [
 
 export async function loader({ request, context }: Route.LoaderArgs) {
 	let { t } = i18next(context);
-	let session = getSession();
-	let isSignedIn = session.has("id");
 
 	return {
-		isSignedIn,
 		initialMonitors: [{ id: crypto.randomUUID(), frequency: 10 }],
 
 		meta: [
@@ -73,69 +69,19 @@ export async function loader({ request, context }: Route.LoaderArgs) {
 }
 
 export default function Landing({ loaderData }: Route.ComponentProps) {
-	return (
-		<div className="min-h-screen bg-white font-sans dark:bg-neutral-950">
-			<Header isSignedIn={loaderData.isSignedIn} />
-			<main>
-				<Hero isSignedIn={loaderData.isSignedIn} />
-				<TrustIndicators />
-				<Features />
-				<CompleteFeatureSet />
-				<UseCases />
-				<Pricing initialMonitors={loaderData.initialMonitors} />
-				<FAQ />
-			</main>
-			<Footer />
-		</div>
-	);
-}
-
-function Header(props: { isSignedIn: boolean }) {
-	let { t } = useTranslation("translation", { keyPrefix: "landing.header" });
+	let parentData = useRouteLoaderData<typeof landingLoader>("routes/_landing");
+	let isSignedIn = parentData?.isSignedIn ?? false;
 
 	return (
-		<header className="sticky top-0 z-50 border-b border-neutral-200 bg-white/80 backdrop-blur-md dark:border-neutral-800 dark:bg-neutral-950/80">
-			<div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6 lg:px-8">
-				<div className="flex items-center gap-8">
-					<Link to={href("/")} className="flex items-center gap-2 no-underline">
-						<Logo className="size-9 text-primary-500" />
-						<span className="text-xl font-bold text-neutral-900 dark:text-neutral-50">
-							{t("title")}
-						</span>
-					</Link>
-
-					<nav className="hidden items-center gap-6 md:flex">
-						<a
-							href="#features"
-							className="text-sm font-medium text-neutral-600 transition hover:text-primary-600 dark:text-neutral-400 dark:hover:text-primary-400"
-						>
-							{t("nav.features")}
-						</a>
-						<a
-							href="#pricing"
-							className="text-sm font-medium text-neutral-600 transition hover:text-primary-600 dark:text-neutral-400 dark:hover:text-primary-400"
-						>
-							{t("nav.pricing")}
-						</a>
-						<a
-							href="#faq"
-							className="text-sm font-medium text-neutral-600 transition hover:text-primary-600 dark:text-neutral-400 dark:hover:text-primary-400"
-						>
-							FAQ
-						</a>
-					</nav>
-				</div>
-
-				<Link
-					to={props.isSignedIn ? href("/app") : href("/auth")}
-					reloadDocument={!props.isSignedIn}
-					className="inline-flex items-center gap-2 rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-primary-700 hover:shadow-md"
-				>
-					{props.isSignedIn ? t("nav.cta.in") : t("nav.cta.out")}
-					<ArrowRightIcon className="size-4" />
-				</Link>
-			</div>
-		</header>
+		<>
+			<Hero isSignedIn={isSignedIn} />
+			<TrustIndicators />
+			<Features />
+			<CompleteFeatureSet />
+			<UseCases />
+			<Pricing initialMonitors={loaderData.initialMonitors} />
+			<FAQ />
+		</>
 	);
 }
 
@@ -607,315 +553,6 @@ function FAQ() {
 				</div>
 			</div>
 		</section>
-	);
-}
-
-function Footer() {
-	let { t } = useTranslation("translation", { keyPrefix: "landing.footer" });
-
-	return (
-		<footer className="border-t border-neutral-200 bg-white dark:border-neutral-800 dark:bg-neutral-950">
-			<div className="mx-auto max-w-6xl px-4 py-12 sm:px-6 lg:px-8">
-				<div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-7">
-					{/* Brand */}
-					<div className="sm:col-span-2 lg:col-span-1">
-						<Link to={href("/")} className="inline-flex items-center gap-2 no-underline">
-							<Logo className="size-9 text-primary-500" />
-							<span className="text-xl font-bold text-neutral-900 dark:text-neutral-50">
-								{t("name")}
-							</span>
-						</Link>
-						<p className="mt-4 max-w-xs text-sm text-neutral-600 dark:text-neutral-400">
-							{t("description")}
-						</p>
-					</div>
-
-					{/* Product */}
-					<div>
-						<h3 className="mb-4 text-sm font-semibold text-neutral-900 dark:text-neutral-50">
-							Product
-						</h3>
-						<ul className="space-y-3">
-							<li>
-								<a
-									href="#features"
-									className="text-sm text-neutral-600 transition hover:text-primary-600 dark:text-neutral-400 dark:hover:text-primary-400"
-								>
-									Features
-								</a>
-							</li>
-							<li>
-								<a
-									href="#pricing"
-									className="text-sm text-neutral-600 transition hover:text-primary-600 dark:text-neutral-400 dark:hover:text-primary-400"
-								>
-									Pricing
-								</a>
-							</li>
-							<li>
-								<a
-									href="#faq"
-									className="text-sm text-neutral-600 transition hover:text-primary-600 dark:text-neutral-400 dark:hover:text-primary-400"
-								>
-									FAQ
-								</a>
-							</li>
-						</ul>
-					</div>
-
-					{/* Features */}
-					<div>
-						<h3 className="mb-4 text-sm font-semibold text-neutral-900 dark:text-neutral-50">
-							Features
-						</h3>
-						<ul className="space-y-3">
-							<li>
-								<Link
-									to={href("/features/monitors")}
-									className="text-sm text-neutral-600 transition hover:text-primary-600 dark:text-neutral-400 dark:hover:text-primary-400"
-								>
-									Monitors
-								</Link>
-							</li>
-							<li>
-								<Link
-									to={href("/features/alerts")}
-									className="text-sm text-neutral-600 transition hover:text-primary-600 dark:text-neutral-400 dark:hover:text-primary-400"
-								>
-									Alerts
-								</Link>
-							</li>
-							<li>
-								<Link
-									to={href("/features/status-pages")}
-									className="text-sm text-neutral-600 transition hover:text-primary-600 dark:text-neutral-400 dark:hover:text-primary-400"
-								>
-									Status Pages
-								</Link>
-							</li>
-							<li>
-								<Link
-									to={href("/features/ssl")}
-									className="text-sm text-neutral-600 transition hover:text-primary-600 dark:text-neutral-400 dark:hover:text-primary-400"
-								>
-									SSL Monitoring
-								</Link>
-							</li>
-							<li>
-								<Link
-									to={href("/features/dns")}
-									className="text-sm text-neutral-600 transition hover:text-primary-600 dark:text-neutral-400 dark:hover:text-primary-400"
-								>
-									DNS Monitoring
-								</Link>
-							</li>
-							<li>
-								<Link
-									to={href("/features/integrations")}
-									className="text-sm text-neutral-600 transition hover:text-primary-600 dark:text-neutral-400 dark:hover:text-primary-400"
-								>
-									Integrations
-								</Link>
-							</li>
-							<li>
-								<Link
-									to={href("/features/teams")}
-									className="text-sm text-neutral-600 transition hover:text-primary-600 dark:text-neutral-400 dark:hover:text-primary-400"
-								>
-									Teams
-								</Link>
-							</li>
-							<li>
-								<Link
-									to={href("/features/analytics")}
-									className="text-sm text-neutral-600 transition hover:text-primary-600 dark:text-neutral-400 dark:hover:text-primary-400"
-								>
-									Analytics
-								</Link>
-							</li>
-						</ul>
-					</div>
-
-					{/* Use Cases */}
-					<div>
-						<h3 className="mb-4 text-sm font-semibold text-neutral-900 dark:text-neutral-50">
-							Use Cases
-						</h3>
-						<ul className="space-y-3">
-							<li>
-								<Link
-									to={href("/use-cases/website-monitoring")}
-									className="text-sm text-neutral-600 transition hover:text-primary-600 dark:text-neutral-400 dark:hover:text-primary-400"
-								>
-									Website Monitoring
-								</Link>
-							</li>
-							<li>
-								<Link
-									to={href("/use-cases/api-monitoring")}
-									className="text-sm text-neutral-600 transition hover:text-primary-600 dark:text-neutral-400 dark:hover:text-primary-400"
-								>
-									API Monitoring
-								</Link>
-							</li>
-							<li>
-								<Link
-									to={href("/use-cases/saas")}
-									className="text-sm text-neutral-600 transition hover:text-primary-600 dark:text-neutral-400 dark:hover:text-primary-400"
-								>
-									SaaS Applications
-								</Link>
-							</li>
-							<li>
-								<Link
-									to={href("/use-cases/microservices")}
-									className="text-sm text-neutral-600 transition hover:text-primary-600 dark:text-neutral-400 dark:hover:text-primary-400"
-								>
-									Microservices
-								</Link>
-							</li>
-							<li>
-								<Link
-									to={href("/use-cases/healthcheck")}
-									className="text-sm text-neutral-600 transition hover:text-primary-600 dark:text-neutral-400 dark:hover:text-primary-400"
-								>
-									Health Checks
-								</Link>
-							</li>
-						</ul>
-					</div>
-
-					{/* Solutions */}
-					<div>
-						<h3 className="mb-4 text-sm font-semibold text-neutral-900 dark:text-neutral-50">
-							Solutions
-						</h3>
-						<ul className="space-y-3">
-							<li>
-								<Link
-									to={href("/for/indie-hackers")}
-									className="text-sm text-neutral-600 transition hover:text-primary-600 dark:text-neutral-400 dark:hover:text-primary-400"
-								>
-									For Indie Hackers
-								</Link>
-							</li>
-							<li>
-								<Link
-									to={href("/for/solo-devs")}
-									className="text-sm text-neutral-600 transition hover:text-primary-600 dark:text-neutral-400 dark:hover:text-primary-400"
-								>
-									For Solo Developers
-								</Link>
-							</li>
-							<li>
-								<Link
-									to={href("/for/startups")}
-									className="text-sm text-neutral-600 transition hover:text-primary-600 dark:text-neutral-400 dark:hover:text-primary-400"
-								>
-									For Startups
-								</Link>
-							</li>
-							<li>
-								<Link
-									to={href("/for/agencies")}
-									className="text-sm text-neutral-600 transition hover:text-primary-600 dark:text-neutral-400 dark:hover:text-primary-400"
-								>
-									For Agencies
-								</Link>
-							</li>
-							<li>
-								<Link
-									to={href("/for/enterprises")}
-									className="text-sm text-neutral-600 transition hover:text-primary-600 dark:text-neutral-400 dark:hover:text-primary-400"
-								>
-									For Enterprises
-								</Link>
-							</li>
-						</ul>
-					</div>
-
-					{/* Compare */}
-					<div>
-						<h3 className="mb-4 text-sm font-semibold text-neutral-900 dark:text-neutral-50">
-							Compare
-						</h3>
-						<ul className="space-y-3">
-							<li>
-								<Link
-									to="/vs/uptimerobot"
-									className="text-sm text-neutral-600 transition hover:text-primary-600 dark:text-neutral-400 dark:hover:text-primary-400"
-								>
-									vs UptimeRobot
-								</Link>
-							</li>
-							<li>
-								<Link
-									to="/vs/pingdom"
-									className="text-sm text-neutral-600 transition hover:text-primary-600 dark:text-neutral-400 dark:hover:text-primary-400"
-								>
-									vs Pingdom
-								</Link>
-							</li>
-							<li>
-								<Link
-									to="/vs/better-uptime"
-									className="text-sm text-neutral-600 transition hover:text-primary-600 dark:text-neutral-400 dark:hover:text-primary-400"
-								>
-									vs Better Uptime
-								</Link>
-							</li>
-							<li>
-								<Link
-									to="/vs/checkly"
-									className="text-sm text-neutral-600 transition hover:text-primary-600 dark:text-neutral-400 dark:hover:text-primary-400"
-								>
-									vs Checkly
-								</Link>
-							</li>
-							<li>
-								<Link
-									to="/vs/statuscake"
-									className="text-sm text-neutral-600 transition hover:text-primary-600 dark:text-neutral-400 dark:hover:text-primary-400"
-								>
-									vs StatusCake
-								</Link>
-							</li>
-						</ul>
-					</div>
-
-					{/* Legal */}
-					<div>
-						<h3 className="mb-4 text-sm font-semibold text-neutral-900 dark:text-neutral-50">
-							Legal
-						</h3>
-						<ul className="space-y-3">
-							<li>
-								<Link
-									to="/terms"
-									className="text-sm text-neutral-600 transition hover:text-primary-600 dark:text-neutral-400 dark:hover:text-primary-400"
-								>
-									Terms of Service
-								</Link>
-							</li>
-							<li>
-								<Link
-									to="/privacy"
-									className="text-sm text-neutral-600 transition hover:text-primary-600 dark:text-neutral-400 dark:hover:text-primary-400"
-								>
-									Privacy Policy
-								</Link>
-							</li>
-						</ul>
-					</div>
-				</div>
-
-				<p className="mt-12 text-center text-sm text-neutral-500 dark:text-neutral-400">
-					{t("copyright", {
-						year: new Date().getFullYear(),
-					})}
-				</p>
-			</div>
-		</footer>
 	);
 }
 

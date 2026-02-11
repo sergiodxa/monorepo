@@ -35,6 +35,12 @@ export function LandingHeader({ isSignedIn }: LandingHeaderProps) {
 						>
 							{t("nav.pricing")}
 						</a>
+						<a
+							href="/#faq"
+							className="text-sm font-medium text-neutral-600 transition hover:text-primary-600 dark:text-neutral-400 dark:hover:text-primary-400"
+						>
+							FAQ
+						</a>
 					</nav>
 				</div>
 
