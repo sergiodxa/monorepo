@@ -8,12 +8,11 @@ import {
 	KeyIcon,
 	MonitorCogIcon,
 	NetworkIcon,
-	PlusIcon,
 	SettingsIcon,
 	WrenchIcon,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { href, Link, useMatch } from "react-router";
+import { href, useMatch } from "react-router";
 
 import { TeamPicker } from "~/components/team-picker";
 import { UserMenu } from "~/components/user-menu";
@@ -33,7 +32,6 @@ export function AppSidebar(props: {
 		email: string;
 		isAdmin: boolean;
 	};
-	monitors: Array<{ id: string; name: string; status: "up" | "down" | "unknown" }>;
 }) {
 	let { t } = useTranslation("translation", {
 		keyPrefix: "app.layout.sidebar",
@@ -43,6 +41,7 @@ export function AppSidebar(props: {
 	let alertsPath = href("/app/:team/alerts", { team: props.team.slug });
 	let maintenancePath = href("/app/:team/maintenance", { team: props.team.slug });
 	let statusPagesPath = href("/app/:team/status-pages", { team: props.team.slug });
+	let httpMonitorsPath = href("/app/:team/http", { team: props.team.slug });
 	let dnsMonitorsPath = href("/app/:team/dns", { team: props.team.slug });
 	let tcpMonitorsPath = href("/app/:team/tcp", { team: props.team.slug });
 	let cronJobsPath = href("/app/:team/cron-jobs", { team: props.team.slug });
@@ -53,6 +52,7 @@ export function AppSidebar(props: {
 	let isAlertsActive = useMatch("/app/:team/alerts") !== null;
 	let isMaintenanceActive = useMatch("/app/:team/maintenance/*") !== null;
 	let isStatusPagesActive = useMatch("/app/:team/status-pages/*") !== null;
+	let isHttpMonitorsActive = useMatch("/app/:team/http/*") !== null;
 	let isDnsMonitorsActive = useMatch("/app/:team/dns/*") !== null;
 	let isTcpMonitorsActive = useMatch("/app/:team/tcp/*") !== null;
 	let isCronJobsActive = useMatch("/app/:team/cron-jobs/*") !== null;
@@ -79,6 +79,46 @@ export function AppSidebar(props: {
 								>
 									<ActivityIcon size={16} />
 									<span>{t("navigation.items.dashboard")}</span>
+								</Sidebar.MenuLink>
+							</Sidebar.MenuItem>
+							<Sidebar.MenuItem>
+								<Sidebar.MenuLink
+									href={httpMonitorsPath}
+									active={isHttpMonitorsActive}
+									tooltip={t("navigation.items.httpMonitors")}
+								>
+									<MonitorCogIcon size={16} />
+									<span>{t("navigation.items.httpMonitors")}</span>
+								</Sidebar.MenuLink>
+							</Sidebar.MenuItem>
+							<Sidebar.MenuItem>
+								<Sidebar.MenuLink
+									href={dnsMonitorsPath}
+									active={isDnsMonitorsActive}
+									tooltip={t("navigation.items.dnsMonitors")}
+								>
+									<GlobeIcon size={16} />
+									<span>{t("navigation.items.dnsMonitors")}</span>
+								</Sidebar.MenuLink>
+							</Sidebar.MenuItem>
+							<Sidebar.MenuItem>
+								<Sidebar.MenuLink
+									href={tcpMonitorsPath}
+									active={isTcpMonitorsActive}
+									tooltip={t("navigation.items.tcpMonitors")}
+								>
+									<NetworkIcon size={16} />
+									<span>{t("navigation.items.tcpMonitors")}</span>
+								</Sidebar.MenuLink>
+							</Sidebar.MenuItem>
+							<Sidebar.MenuItem>
+								<Sidebar.MenuLink
+									href={cronJobsPath}
+									active={isCronJobsActive}
+									tooltip={t("navigation.items.cronJobs")}
+								>
+									<ClockIcon size={16} />
+									<span>{t("navigation.items.cronJobs")}</span>
 								</Sidebar.MenuLink>
 							</Sidebar.MenuItem>
 							<Sidebar.MenuItem>
@@ -111,66 +151,9 @@ export function AppSidebar(props: {
 									<span>{t("navigation.items.statusPages")}</span>
 								</Sidebar.MenuLink>
 							</Sidebar.MenuItem>
-							<Sidebar.MenuItem>
-								<Sidebar.MenuLink
-									href={tcpMonitorsPath}
-									active={isTcpMonitorsActive}
-									tooltip={t("navigation.items.tcpMonitors")}
-								>
-									<NetworkIcon size={16} />
-									<span>{t("navigation.items.tcpMonitors")}</span>
-								</Sidebar.MenuLink>
-							</Sidebar.MenuItem>
-							<Sidebar.MenuItem>
-								<Sidebar.MenuLink
-									href={dnsMonitorsPath}
-									active={isDnsMonitorsActive}
-									tooltip={t("navigation.items.dnsMonitors")}
-								>
-									<GlobeIcon size={16} />
-									<span>{t("navigation.items.dnsMonitors")}</span>
-								</Sidebar.MenuLink>
-							</Sidebar.MenuItem>
-							<Sidebar.MenuItem>
-								<Sidebar.MenuLink
-									href={cronJobsPath}
-									active={isCronJobsActive}
-									tooltip={t("navigation.items.cronJobs")}
-								>
-									<ClockIcon size={16} />
-									<span>{t("navigation.items.cronJobs")}</span>
-								</Sidebar.MenuLink>
-							</Sidebar.MenuItem>
 						</Sidebar.Menu>
 					</Sidebar.GroupContent>
 				</Sidebar.Group>
-
-				{props.monitors.length > 0 && (
-					<>
-						<Sidebar.Group>
-							<Sidebar.GroupLabel>
-								<span>{t("navigation.items.monitors")}</span>
-								<Link
-									to={href("/app/:team/monitors/new", { team: props.team.slug })}
-									className="ui-sidebar-group-action"
-								>
-									<PlusIcon size={14} />
-								</Link>
-							</Sidebar.GroupLabel>
-							<Sidebar.GroupContent>
-								<Sidebar.Menu>
-									{props.monitors.map((monitor) => (
-										<MonitorMenuItem
-											key={monitor.id}
-											monitor={monitor}
-											teamSlug={props.team.slug}
-										/>
-									))}
-								</Sidebar.Menu>
-							</Sidebar.GroupContent>
-						</Sidebar.Group>
-					</>
-				)}
 
 				{isAdmin && (
 					<Sidebar.Menu className="mt-auto">
@@ -203,36 +186,4 @@ export function AppSidebar(props: {
 			</Sidebar.Footer>
 		</Sidebar>
 	);
-}
-
-function MonitorMenuItem(props: {
-	monitor: { id: string; name: string; status: "up" | "down" | "unknown" };
-	teamSlug: string;
-}) {
-	let monitorPath = href("/app/:team/monitors/:monitorId", {
-		team: props.teamSlug,
-		monitorId: props.monitor.id,
-	});
-	let match = useMatch("/app/:team/monitors/:monitorId");
-	let isActive = match !== null && match.params.monitorId === props.monitor.id;
-
-	return (
-		<Sidebar.MenuItem>
-			<Sidebar.MenuLink href={monitorPath} active={isActive} tooltip={props.monitor.name}>
-				<MonitorCogIcon size={16} />
-				<span>{props.monitor.name}</span>
-				<StatusIndicator status={props.monitor.status} />
-			</Sidebar.MenuLink>
-		</Sidebar.MenuItem>
-	);
-}
-
-function StatusIndicator(props: { status: "up" | "down" | "unknown" }) {
-	let colorClass = {
-		up: "bg-green-500",
-		down: "bg-red-500",
-		unknown: "bg-neutral-400",
-	}[props.status];
-
-	return <span className={`ml-auto size-2 shrink-0 rounded-full ${colorClass}`} />;
 }
