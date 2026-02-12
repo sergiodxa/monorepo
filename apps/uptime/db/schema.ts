@@ -705,13 +705,27 @@ export type InsertStatusPageCronJob = typeof statusPageCronJobs.$inferInsert;
 // API Keys
 
 export const apiKeyScopes = [
+	"teams:read",
+	"teams:write",
+	"invites:read",
+	"invites:write",
+	"team-domains:read",
+	"team-domains:write",
 	"monitors:read",
 	"monitors:write",
+	"maintenance:read",
+	"maintenance:write",
+	"dns-monitors:read",
+	"dns-monitors:write",
 	"alerts:read",
 	"alerts:write",
+	"status-pages:read",
+	"status-pages:write",
 	"cron-jobs:read",
 	"cron-jobs:write",
 	"cron-jobs:ping",
+	"api-keys:read",
+	"api-keys:write",
 ] as const;
 
 export const apiKeys = sqliteTable(
