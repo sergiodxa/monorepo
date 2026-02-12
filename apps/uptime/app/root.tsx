@@ -1,4 +1,3 @@
-import { createLoggerMiddleware } from "@pkg/logger";
 import { ConfirmDialog, Toaster } from "@pkg/ui";
 import NProgress from "nprogress";
 import { useEffect } from "react";
@@ -22,6 +21,7 @@ import { getOrganizationSchema } from "~/lib/seo";
 import { contextStorageMiddleware } from "~/middleware/context-storage";
 import { drizzleMiddleware } from "~/middleware/drizzle";
 import { i18nextMiddleware } from "~/middleware/i18next";
+import { loggerMiddleware } from "~/middleware/logger";
 import { serverTimingMiddleware } from "~/middleware/server-timing";
 import { sessionMiddleware } from "~/middleware/session";
 import { ClientHintCheck, getHints } from "~/utils/client-hints";
@@ -30,7 +30,7 @@ import type { Route } from "./+types/root";
 
 export const middleware = [
 	contextStorageMiddleware,
-	createLoggerMiddleware(),
+	loggerMiddleware,
 	i18nextMiddleware,
 	drizzleMiddleware,
 	sessionMiddleware,

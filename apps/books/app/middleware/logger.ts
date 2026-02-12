@@ -1,8 +1,9 @@
-import { createLoggerMiddleware, getLoggerFromContext, type BatchedLogger } from "@pkg/logger";
+import { createBatchedLoggerMiddleware, type BatchedLogger } from "@pkg/logger";
 
 import { getContext } from "./context-storage";
 
-export const loggerMiddleware = createLoggerMiddleware();
+let [loggerMiddleware, getLoggerFromContext] = createBatchedLoggerMiddleware();
+export { loggerMiddleware };
 
 export function getLogger(): BatchedLogger {
 	return getLoggerFromContext(getContext());
