@@ -146,7 +146,7 @@ export default function Component({ loaderData }: Route.ComponentProps) {
 			<Form method="post" className="h-screen p-4">
 				<Actions mode={loaderData.mode} />
 
-				<div className="flex h-full w-full flex-grow flex-row gap-4 overflow-hidden">
+				<div className="flex h-full w-full grow flex-row gap-4 overflow-hidden">
 					<Controls article={loaderData.article} />
 
 					<Editor
@@ -154,7 +154,7 @@ export default function Component({ loaderData }: Route.ComponentProps) {
 						onChange={(value) => dispatch({ type: "write", payload: { value } })}
 					/>
 
-					<div className="h-full max-w-prose flex-grow overflow-auto">
+					<div className="h-full max-w-prose grow overflow-auto">
 						<Preview rendereable={data?.content} />
 					</div>
 

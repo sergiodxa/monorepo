@@ -26,7 +26,7 @@ export function Controls({ tutorial }: ControlsProps) {
 	let slug = tutorial.slug || parameterize(title);
 
 	return (
-		<div className="flex max-w-sm flex-grow flex-col items-stretch gap-4">
+		<div className="flex max-w-sm grow flex-col items-stretch gap-4">
 			<Heading className="text-2xl font-medium capitalize">Write a Tutorial</Heading>
 
 			<TextField

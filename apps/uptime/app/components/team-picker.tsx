@@ -47,7 +47,7 @@ export function TeamPicker(props: { teams: Team[]; active: Team }) {
 					)}
 				</Logo>
 				<span className="text-sm font-medium">{props.active.name}</span>
-				<ChevronsUpDownIcon className="ml-auto size-4 flex-shrink-0" aria-hidden />
+				<ChevronsUpDownIcon className="ml-auto size-4 shrink-0" aria-hidden />
 			</Button>
 
 			<Popover placement="bottom start">

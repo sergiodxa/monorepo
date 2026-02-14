@@ -98,7 +98,7 @@ clientLoader.hydrate = true as const;
 export function HydrateFallback() {
 	return (
 		<>
-			<header className="sticky top-0 z-10 flex h-16 flex-shrink-0 items-center gap-2 border-b border-neutral-200 bg-neutral-50/80 px-4 dark:border-neutral-800 dark:bg-neutral-950/80">
+			<header className="sticky top-0 z-10 flex h-16 shrink-0 items-center gap-2 border-b border-neutral-200 bg-neutral-50/80 px-4 dark:border-neutral-800 dark:bg-neutral-950/80">
 				<Skeleton className="h-6 w-28" />
 			</header>
 
@@ -534,7 +534,7 @@ function MembersSection(props: {
 					<LinkButton
 						color="neutral"
 						href={href("/app/:team/settings/invite", props.params)}
-						className="flex-shrink-0"
+						className="shrink-0"
 					>
 						<UserPlusIcon className="size-5" aria-hidden />
 						<span className="max-sm:sr-only">{t("actions.invite")}</span>
@@ -868,7 +868,7 @@ function DomainsSection(props: { domains: Domain[]; params: { team: string } }) 
 							<LinkButton
 								color="neutral"
 								href={href("/app/:team/domains/new", props.params)}
-								className="flex-shrink-0 px-2"
+								className="shrink-0 px-2"
 							>
 								<BadgePlusIcon className="size-5" aria-hidden />
 								<span className="max-sm:sr-only">{t("actions.addDomain")}</span>

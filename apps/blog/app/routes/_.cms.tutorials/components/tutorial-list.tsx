@@ -65,7 +65,7 @@ function Item(props: Tutorial) {
 				</div>
 			</div>
 
-			<div className="flex flex-shrink-0 items-center gap-2">
+			<div className="flex shrink-0 items-center gap-2">
 				<Form method="get" action={`/cms/tutorials/${props.id}`}>
 					<Button type="submit" variant="primary">
 						{t("edit")}

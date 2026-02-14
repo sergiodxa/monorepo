@@ -15,7 +15,7 @@ export function Actions({ mode }: ActionsProps) {
 				<ArrowLeft className="size-5" />
 				<span>Go back</span>
 			</Link>
-			<div className="flex-grow" />
+			<div className="grow" />
 			<Button type="submit" variant="primary" name="intent" value={mode}>
 				Save
 			</Button>

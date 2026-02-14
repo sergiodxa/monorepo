@@ -45,7 +45,7 @@ clientLoader.hydrate = true as const;
 export function HydrateFallback() {
 	return (
 		<>
-			<header className="sticky top-0 z-10 flex h-16 flex-shrink-0 items-center gap-2 border-b border-neutral-200 bg-neutral-50/80 px-4 dark:border-neutral-800 dark:bg-neutral-950/80">
+			<header className="sticky top-0 z-10 flex h-16 shrink-0 items-center gap-2 border-b border-neutral-200 bg-neutral-50/80 px-4 dark:border-neutral-800 dark:bg-neutral-950/80">
 				<Skeleton className="h-6 w-24" />
 				<aside className="ml-auto flex items-center gap-2">
 					<Skeleton className="h-10 w-10 rounded-lg max-sm:w-10 sm:w-32" />
@@ -200,7 +200,7 @@ export default function Component({ loaderData, params }: Route.ComponentProps) 
 				<LinkButton
 					color="neutral"
 					href={href("/app/:team/maintenance/new", params)}
-					className="flex-shrink-0 px-2"
+					className="shrink-0 px-2"
 				>
 					<PlusIcon className="size-5" aria-hidden />
 					<span className="max-sm:sr-only">{t("header.action.create")}</span>

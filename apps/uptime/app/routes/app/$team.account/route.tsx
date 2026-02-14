@@ -161,7 +161,7 @@ export default function Component({ loaderData }: { loaderData: LoaderData }) {
 				<LinkButton
 					href={href("/app/:team/account/create-team", params as { team: string })}
 					color="neutral"
-					className="flex-shrink-0 px-2"
+					className="shrink-0 px-2"
 				>
 					<PlusIcon className="size-5" aria-hidden />
 					<span className="max-sm:sr-only">{t("teams.actions.createTeam")}</span>

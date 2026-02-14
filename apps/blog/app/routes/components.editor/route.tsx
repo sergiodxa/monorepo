@@ -53,7 +53,7 @@ export function Textbox(props: TextboxProps) {
 					let value = event.currentTarget.value;
 					props.dispatch({ type: "write", payload: { value } });
 				}}
-				className="mx-2 mb-2 flex-grow resize-none rounded-md border-none font-mono ring-blue-600 focus:ring-2 focus:outline-none"
+				className="mx-2 mb-2 grow resize-none rounded-md border-none font-mono ring-blue-600 focus:ring-2 focus:outline-none"
 			/>
 		</div>
 	);

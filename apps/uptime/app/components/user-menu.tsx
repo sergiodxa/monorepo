@@ -37,7 +37,7 @@ export function UserMenu(props: { user: { avatar: string; name: string; email: s
 					)}
 				</Avatar>
 				<span className="truncate text-sm font-medium">{props.user.name}</span>
-				<ChevronsUpDownIcon className="ml-auto size-4 flex-shrink-0" aria-hidden />
+				<ChevronsUpDownIcon className="ml-auto size-4 shrink-0" aria-hidden />
 			</Button>
 
 			<Popover placement="top start">

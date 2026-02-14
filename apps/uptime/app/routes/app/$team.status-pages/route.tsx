@@ -32,7 +32,7 @@ clientLoader.hydrate = true as const;
 export function HydrateFallback() {
 	return (
 		<>
-			<header className="sticky top-0 z-10 flex h-16 flex-shrink-0 items-center gap-2 border-b border-neutral-200 bg-neutral-50/80 px-4 dark:border-neutral-800 dark:bg-neutral-950/80">
+			<header className="sticky top-0 z-10 flex h-16 shrink-0 items-center gap-2 border-b border-neutral-200 bg-neutral-50/80 px-4 dark:border-neutral-800 dark:bg-neutral-950/80">
 				<Skeleton className="h-6 w-24" />
 				<aside className="ml-auto flex items-center gap-2">
 					<Skeleton className="h-10 w-10 rounded-lg max-sm:w-10 sm:w-28" />
@@ -171,7 +171,7 @@ export default function Component({ loaderData, params }: Route.ComponentProps) 
 				<LinkButton
 					color="neutral"
 					href={href("/app/:team/status-pages/new", params)}
-					className="flex-shrink-0 px-2"
+					className="shrink-0 px-2"
 				>
 					<PlusIcon className="size-5" aria-hidden />
 					<span className="max-sm:sr-only">{t("header.action.create")}</span>
@@ -262,7 +262,7 @@ function StatusPageTableRow(props: {
 					className="flex items-center gap-1 text-sm text-neutral-600 hover:text-neutral-900 hover:underline dark:text-neutral-400 dark:hover:text-neutral-100"
 				>
 					<span className="truncate">/{props.statusPage.slug}</span>
-					<ExternalLinkIcon className="size-3 flex-shrink-0" />
+					<ExternalLinkIcon className="size-3 shrink-0" />
 				</Link>
 			</Table.Cell>
 			<Table.Cell className="w-28 text-center">{props.statusPage.monitorsCount}</Table.Cell>

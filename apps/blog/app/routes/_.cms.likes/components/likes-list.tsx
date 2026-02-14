@@ -50,7 +50,7 @@ function Item(props: Like) {
 				</div>
 			</div>
 
-			<div className="flex flex-shrink-0 items-center gap-1">
+			<div className="flex shrink-0 items-center gap-1">
 				<Link
 					to={props.id}
 					className="block rounded-md bg-white px-2.5 py-1.5 text-sm font-semibold text-gray-900 no-underline shadow-sm ring-1 ring-gray-300 ring-inset visited:text-gray-900 hover:bg-gray-50"

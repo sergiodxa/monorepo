@@ -143,7 +143,7 @@ export default function Component({ loaderData, params }: Route.ComponentProps) 
 				<LinkButton
 					color="neutral"
 					href={href("/app/:team/monitors/new", params)}
-					className="flex-shrink-0 px-2"
+					className="shrink-0 px-2"
 				>
 					<PlusIcon className="size-5" aria-hidden />
 					<span className="max-sm:sr-only">{t("header.action.create")}</span>

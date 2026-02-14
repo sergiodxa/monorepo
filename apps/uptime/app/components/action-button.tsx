@@ -30,12 +30,7 @@ export function ActionButton(props: {
 		>
 			<input type="hidden" name="monitorId" value={props.id} />
 			<input type="hidden" name="intent" value={props.intent} />
-			<Button
-				type="submit"
-				className="flex-shrink-0 px-2"
-				isPending={isPending}
-				color={props.color}
-			>
+			<Button type="submit" className="shrink-0 px-2" isPending={isPending} color={props.color}>
 				{props.children}
 			</Button>
 		</fetcher.Form>

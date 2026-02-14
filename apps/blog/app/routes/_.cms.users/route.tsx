@@ -88,7 +88,7 @@ function SearchForm() {
 
 			<Button
 				type="submit"
-				className="block flex-shrink-0 rounded-md border-2 border-blue-600 bg-blue-100 px-4 py-2 text-center text-base font-medium text-blue-900"
+				className="block shrink-0 rounded-md border-2 border-blue-600 bg-blue-100 px-4 py-2 text-center text-base font-medium text-blue-900"
 			>
 				{t("cta")}
 			</Button>

@@ -24,7 +24,7 @@ export function LastDaySearch({ result }: LastDaySearchProps) {
 
 					<ul className="list-inside list-disc">
 						{result.articles.map((searchTerm) => (
-							<li key={searchTerm} className="flex-grow">
+							<li key={searchTerm} className="grow">
 								{searchTerm}
 							</li>
 						))}
@@ -38,7 +38,7 @@ export function LastDaySearch({ result }: LastDaySearchProps) {
 
 					<ul className="list-inside list-disc">
 						{result.tutorials.map((searchTerm) => (
-							<li key={searchTerm} className="flex-grow">
+							<li key={searchTerm} className="grow">
 								{searchTerm}
 							</li>
 						))}
