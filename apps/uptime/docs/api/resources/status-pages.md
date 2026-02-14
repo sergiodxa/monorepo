@@ -72,6 +72,59 @@ const data = await response.json();
 | 429    | RATE_LIMITED   | Too many requests                              |
 | 500    | INTERNAL_ERROR | Server error                                   |
 
+### Response Schema
+
+```json
+{
+	"$schema": "https://json-schema.org/draft/2020-12/schema",
+	"type": "object",
+	"required": ["statusPages"],
+	"properties": {
+		"statusPages": {
+			"type": "array",
+			"items": {
+				"$ref": "#/$defs/statusPage"
+			}
+		}
+	},
+	"$defs": {
+		"statusPage": {
+			"type": "object",
+			"required": [
+				"id",
+				"name",
+				"slug",
+				"title",
+				"description",
+				"logoUrl",
+				"customDomain",
+				"isPublic",
+				"showOverallStatus",
+				"createdAt",
+				"updatedAt",
+				"monitors",
+				"cronJobs"
+			],
+			"properties": {
+				"id": { "type": "string" },
+				"name": { "type": "string", "minLength": 1, "maxLength": 255 },
+				"slug": { "type": "string", "pattern": "^[a-z0-9-]+$" },
+				"title": { "type": "string", "minLength": 1, "maxLength": 255 },
+				"description": { "type": ["string", "null"], "maxLength": 500 },
+				"logoUrl": { "type": ["string", "null"], "format": "uri" },
+				"customDomain": { "type": ["string", "null"] },
+				"isPublic": { "type": "boolean" },
+				"showOverallStatus": { "type": "boolean" },
+				"createdAt": { "type": "string", "format": "date-time" },
+				"updatedAt": { "type": "string", "format": "date-time" },
+				"monitors": { "type": "array", "items": { "type": "object" } },
+				"cronJobs": { "type": "array", "items": { "type": "object" } }
+			}
+		}
+	}
+}
+```
+
 ## POST /v1/status-pages
 
 Creates a new status page.
@@ -166,6 +219,65 @@ const data = await response.json();
 | 429    | RATE_LIMITED     | Too many requests                               |
 | 500    | INTERNAL_ERROR   | Server error                                    |
 
+### Request Body Schema
+
+```json
+{
+	"$schema": "https://json-schema.org/draft/2020-12/schema",
+	"type": "object",
+	"required": ["name", "slug"],
+	"properties": {
+		"name": { "type": "string", "minLength": 1, "maxLength": 255 },
+		"slug": { "type": "string", "pattern": "^[a-z0-9-]+$" },
+		"title": { "type": "string", "minLength": 1, "maxLength": 255 },
+		"description": { "type": "string", "maxLength": 500 },
+		"logoUrl": { "type": "string", "format": "uri" },
+		"customDomain": { "type": "string" },
+		"isPublic": { "type": "boolean", "default": true },
+		"showOverallStatus": { "type": "boolean", "default": true }
+	}
+}
+```
+
+### Response Schema
+
+```json
+{
+	"$schema": "https://json-schema.org/draft/2020-12/schema",
+	"type": "object",
+	"required": [
+		"id",
+		"name",
+		"slug",
+		"title",
+		"description",
+		"logoUrl",
+		"customDomain",
+		"isPublic",
+		"showOverallStatus",
+		"createdAt",
+		"updatedAt",
+		"monitors",
+		"cronJobs"
+	],
+	"properties": {
+		"id": { "type": "string" },
+		"name": { "type": "string", "minLength": 1, "maxLength": 255 },
+		"slug": { "type": "string", "pattern": "^[a-z0-9-]+$" },
+		"title": { "type": "string", "minLength": 1, "maxLength": 255 },
+		"description": { "type": ["string", "null"], "maxLength": 500 },
+		"logoUrl": { "type": ["string", "null"], "format": "uri" },
+		"customDomain": { "type": ["string", "null"] },
+		"isPublic": { "type": "boolean" },
+		"showOverallStatus": { "type": "boolean" },
+		"createdAt": { "type": "string", "format": "date-time" },
+		"updatedAt": { "type": "string", "format": "date-time" },
+		"monitors": { "type": "array", "items": { "type": "object" } },
+		"cronJobs": { "type": "array", "items": { "type": "object" } }
+	}
+}
+```
+
 ## GET /v1/status-pages/:id
 
 Returns a single status page with its associated monitors and cron jobs.
@@ -247,6 +359,67 @@ const data = await response.json();
 | 404    | NOT_FOUND      | Status page not found                          |
 | 429    | RATE_LIMITED   | Too many requests                              |
 | 500    | INTERNAL_ERROR | Server error                                   |
+
+### Response Schema
+
+```json
+{
+	"$schema": "https://json-schema.org/draft/2020-12/schema",
+	"type": "object",
+	"required": [
+		"id",
+		"name",
+		"slug",
+		"title",
+		"description",
+		"logoUrl",
+		"customDomain",
+		"isPublic",
+		"showOverallStatus",
+		"createdAt",
+		"updatedAt",
+		"monitors",
+		"cronJobs"
+	],
+	"properties": {
+		"id": { "type": "string" },
+		"name": { "type": "string", "minLength": 1, "maxLength": 255 },
+		"slug": { "type": "string", "pattern": "^[a-z0-9-]+$" },
+		"title": { "type": "string", "minLength": 1, "maxLength": 255 },
+		"description": { "type": ["string", "null"], "maxLength": 500 },
+		"logoUrl": { "type": ["string", "null"], "format": "uri" },
+		"customDomain": { "type": ["string", "null"] },
+		"isPublic": { "type": "boolean" },
+		"showOverallStatus": { "type": "boolean" },
+		"createdAt": { "type": "string", "format": "date-time" },
+		"updatedAt": { "type": "string", "format": "date-time" },
+		"monitors": {
+			"type": "array",
+			"items": {
+				"type": "object",
+				"required": ["id", "name", "status"],
+				"properties": {
+					"id": { "type": "string" },
+					"name": { "type": "string" },
+					"status": { "type": "string", "enum": ["up", "down", "degraded", "unknown"] }
+				}
+			}
+		},
+		"cronJobs": {
+			"type": "array",
+			"items": {
+				"type": "object",
+				"required": ["id", "name", "status"],
+				"properties": {
+					"id": { "type": "string" },
+					"name": { "type": "string" },
+					"status": { "type": "string", "enum": ["healthy", "unhealthy", "unknown"] }
+				}
+			}
+		}
+	}
+}
+```
 
 ## PUT /v1/status-pages/:id
 
@@ -343,6 +516,64 @@ const data = await response.json();
 | 429    | RATE_LIMITED     | Too many requests                               |
 | 500    | INTERNAL_ERROR   | Server error                                    |
 
+### Request Body Schema
+
+```json
+{
+	"$schema": "https://json-schema.org/draft/2020-12/schema",
+	"type": "object",
+	"properties": {
+		"name": { "type": "string", "minLength": 1, "maxLength": 255 },
+		"slug": { "type": "string", "pattern": "^[a-z0-9-]+$" },
+		"title": { "type": "string", "minLength": 1, "maxLength": 255 },
+		"description": { "type": "string", "maxLength": 500 },
+		"logoUrl": { "type": "string", "format": "uri" },
+		"customDomain": { "type": "string" },
+		"isPublic": { "type": "boolean" },
+		"showOverallStatus": { "type": "boolean" }
+	}
+}
+```
+
+### Response Schema
+
+```json
+{
+	"$schema": "https://json-schema.org/draft/2020-12/schema",
+	"type": "object",
+	"required": [
+		"id",
+		"name",
+		"slug",
+		"title",
+		"description",
+		"logoUrl",
+		"customDomain",
+		"isPublic",
+		"showOverallStatus",
+		"createdAt",
+		"updatedAt",
+		"monitors",
+		"cronJobs"
+	],
+	"properties": {
+		"id": { "type": "string" },
+		"name": { "type": "string", "minLength": 1, "maxLength": 255 },
+		"slug": { "type": "string", "pattern": "^[a-z0-9-]+$" },
+		"title": { "type": "string", "minLength": 1, "maxLength": 255 },
+		"description": { "type": ["string", "null"], "maxLength": 500 },
+		"logoUrl": { "type": ["string", "null"], "format": "uri" },
+		"customDomain": { "type": ["string", "null"] },
+		"isPublic": { "type": "boolean" },
+		"showOverallStatus": { "type": "boolean" },
+		"createdAt": { "type": "string", "format": "date-time" },
+		"updatedAt": { "type": "string", "format": "date-time" },
+		"monitors": { "type": "array", "items": { "type": "object" } },
+		"cronJobs": { "type": "array", "items": { "type": "object" } }
+	}
+}
+```
+
 ## DELETE /v1/status-pages/:id
 
 Deletes a status page.
@@ -390,6 +621,10 @@ Returns `204 No Content` on success.
 | 404    | NOT_FOUND      | Status page not found                           |
 | 429    | RATE_LIMITED   | Too many requests                               |
 | 500    | INTERNAL_ERROR | Server error                                    |
+
+### Response Schema
+
+Returns `204 No Content` with an empty response body on success.
 
 ## PUT /v1/status-pages/:id/monitors
 
@@ -492,27 +727,27 @@ const data = await response.json();
 | 429    | RATE_LIMITED     | Too many requests                               |
 | 500    | INTERNAL_ERROR   | Server error                                    |
 
-## Response Fields
+### Request Body Schema
 
-| Field               | Type           | Description                                       |
-| ------------------- | -------------- | ------------------------------------------------- |
-| `id`                | string         | Unique status page identifier                     |
-| `name`              | string         | Internal name                                     |
-| `slug`              | string         | URL-friendly identifier                           |
-| `title`             | string         | Display title                                     |
-| `description`       | string \| null | Page description                                  |
-| `logoUrl`           | string \| null | URL to the logo image                             |
-| `customDomain`      | string \| null | Custom domain if configured                       |
-| `isPublic`          | boolean        | Whether the page is publicly accessible           |
-| `showOverallStatus` | boolean        | Whether the overall status indicator is displayed |
-| `createdAt`         | string         | ISO 8601 timestamp of creation                    |
-| `updatedAt`         | string         | ISO 8601 timestamp of last update                 |
-| `monitors`          | array          | Associated monitors with their current status     |
-| `cronJobs`          | array          | Associated cron jobs with their current status    |
+```json
+{
+	"$schema": "https://json-schema.org/draft/2020-12/schema",
+	"type": "object",
+	"required": ["monitorIds", "cronJobIds"],
+	"properties": {
+		"monitorIds": {
+			"type": "array",
+			"items": { "type": "string", "format": "uuid" }
+		},
+		"cronJobIds": {
+			"type": "array",
+			"items": { "type": "string", "format": "uuid" }
+		}
+	}
+}
+```
 
-## JSON Schema
-
-Use this schema to validate status page responses:
+### Response Schema
 
 ```json
 {
@@ -534,64 +769,26 @@ Use this schema to validate status page responses:
 		"cronJobs"
 	],
 	"properties": {
-		"id": {
-			"type": "string"
-		},
-		"name": {
-			"type": "string",
-			"minLength": 1,
-			"maxLength": 255
-		},
-		"slug": {
-			"type": "string",
-			"pattern": "^[a-z0-9-]+$"
-		},
-		"title": {
-			"type": "string",
-			"minLength": 1,
-			"maxLength": 255
-		},
-		"description": {
-			"type": ["string", "null"],
-			"maxLength": 500
-		},
-		"logoUrl": {
-			"type": ["string", "null"],
-			"format": "uri"
-		},
-		"customDomain": {
-			"type": ["string", "null"]
-		},
-		"isPublic": {
-			"type": "boolean"
-		},
-		"showOverallStatus": {
-			"type": "boolean"
-		},
-		"createdAt": {
-			"type": "string",
-			"format": "date-time"
-		},
-		"updatedAt": {
-			"type": "string",
-			"format": "date-time"
-		},
+		"id": { "type": "string" },
+		"name": { "type": "string", "minLength": 1, "maxLength": 255 },
+		"slug": { "type": "string", "pattern": "^[a-z0-9-]+$" },
+		"title": { "type": "string", "minLength": 1, "maxLength": 255 },
+		"description": { "type": ["string", "null"], "maxLength": 500 },
+		"logoUrl": { "type": ["string", "null"], "format": "uri" },
+		"customDomain": { "type": ["string", "null"] },
+		"isPublic": { "type": "boolean" },
+		"showOverallStatus": { "type": "boolean" },
+		"createdAt": { "type": "string", "format": "date-time" },
+		"updatedAt": { "type": "string", "format": "date-time" },
 		"monitors": {
 			"type": "array",
 			"items": {
 				"type": "object",
 				"required": ["id", "name", "status"],
 				"properties": {
-					"id": {
-						"type": "string"
-					},
-					"name": {
-						"type": "string"
-					},
-					"status": {
-						"type": "string",
-						"enum": ["up", "down", "degraded", "unknown"]
-					}
+					"id": { "type": "string" },
+					"name": { "type": "string" },
+					"status": { "type": "string", "enum": ["up", "down", "degraded", "unknown"] }
 				}
 			}
 		},
@@ -601,19 +798,30 @@ Use this schema to validate status page responses:
 				"type": "object",
 				"required": ["id", "name", "status"],
 				"properties": {
-					"id": {
-						"type": "string"
-					},
-					"name": {
-						"type": "string"
-					},
-					"status": {
-						"type": "string",
-						"enum": ["healthy", "unhealthy", "unknown"]
-					}
+					"id": { "type": "string" },
+					"name": { "type": "string" },
+					"status": { "type": "string", "enum": ["healthy", "unhealthy", "unknown"] }
 				}
 			}
 		}
 	}
 }
 ```
+
+## Response Fields
+
+| Field               | Type           | Description                                       |
+| ------------------- | -------------- | ------------------------------------------------- |
+| `id`                | string         | Unique status page identifier                     |
+| `name`              | string         | Internal name                                     |
+| `slug`              | string         | URL-friendly identifier                           |
+| `title`             | string         | Display title                                     |
+| `description`       | string \| null | Page description                                  |
+| `logoUrl`           | string \| null | URL to the logo image                             |
+| `customDomain`      | string \| null | Custom domain if configured                       |
+| `isPublic`          | boolean        | Whether the page is publicly accessible           |
+| `showOverallStatus` | boolean        | Whether the overall status indicator is displayed |
+| `createdAt`         | string         | ISO 8601 timestamp of creation                    |
+| `updatedAt`         | string         | ISO 8601 timestamp of last update                 |
+| `monitors`          | array          | Associated monitors with their current status     |
+| `cronJobs`          | array          | Associated cron jobs with their current status    |

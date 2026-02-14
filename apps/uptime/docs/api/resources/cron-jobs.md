@@ -72,6 +72,57 @@ const data = await response.json();
 | 429    | RATE_LIMITED   | Too many requests                           |
 | 500    | INTERNAL_ERROR | Server error                                |
 
+### Response Schema
+
+```json
+{
+	"$schema": "https://json-schema.org/draft/2020-12/schema",
+	"type": "object",
+	"required": ["data"],
+	"properties": {
+		"data": {
+			"type": "array",
+			"items": { "$ref": "#/$defs/cronJob" }
+		}
+	},
+	"$defs": {
+		"cronJob": {
+			"type": "object",
+			"required": [
+				"id",
+				"name",
+				"description",
+				"cronExpression",
+				"gracePeriodSeconds",
+				"timezone",
+				"status",
+				"alertOnLate",
+				"lastPingAt",
+				"nextExpectedAt",
+				"enabledAt",
+				"createdAt",
+				"updatedAt"
+			],
+			"properties": {
+				"id": { "type": "string", "pattern": "^cron_[a-zA-Z0-9]+$" },
+				"name": { "type": "string", "minLength": 1, "maxLength": 100 },
+				"description": { "type": ["string", "null"], "maxLength": 500 },
+				"cronExpression": { "type": "string" },
+				"gracePeriodSeconds": { "type": "integer", "minimum": 60, "maximum": 86400 },
+				"timezone": { "type": "string" },
+				"status": { "type": "string", "enum": ["healthy", "late", "missed", "new"] },
+				"alertOnLate": { "type": "boolean" },
+				"lastPingAt": { "type": ["string", "null"], "format": "date-time" },
+				"nextExpectedAt": { "type": ["string", "null"], "format": "date-time" },
+				"enabledAt": { "type": ["string", "null"], "format": "date-time" },
+				"createdAt": { "type": "string", "format": "date-time" },
+				"updatedAt": { "type": "string", "format": "date-time" }
+			}
+		}
+	}
+}
+```
+
 ## POST /v1/cron-jobs
 
 Creates a new cron job monitor.
@@ -165,6 +216,73 @@ const data = await response.json();
 | 429    | RATE_LIMITED     | Too many requests                            |
 | 500    | INTERNAL_ERROR   | Server error                                 |
 
+### Request Body Schema
+
+```json
+{
+	"$schema": "https://json-schema.org/draft/2020-12/schema",
+	"type": "object",
+	"required": ["name", "cronExpression"],
+	"properties": {
+		"name": { "type": "string", "minLength": 1, "maxLength": 100 },
+		"cronExpression": { "type": "string" },
+		"description": { "type": "string", "maxLength": 500 },
+		"gracePeriodSeconds": { "type": "integer", "minimum": 60, "maximum": 86400, "default": 300 },
+		"timezone": { "type": "string", "default": "UTC" },
+		"alertOnLate": { "type": "boolean", "default": false },
+		"enabled": { "type": "boolean", "default": true }
+	}
+}
+```
+
+### Response Schema
+
+```json
+{
+	"$schema": "https://json-schema.org/draft/2020-12/schema",
+	"type": "object",
+	"required": ["data"],
+	"properties": {
+		"data": { "$ref": "#/$defs/cronJob" }
+	},
+	"$defs": {
+		"cronJob": {
+			"type": "object",
+			"required": [
+				"id",
+				"name",
+				"description",
+				"cronExpression",
+				"gracePeriodSeconds",
+				"timezone",
+				"status",
+				"alertOnLate",
+				"lastPingAt",
+				"nextExpectedAt",
+				"enabledAt",
+				"createdAt",
+				"updatedAt"
+			],
+			"properties": {
+				"id": { "type": "string", "pattern": "^cron_[a-zA-Z0-9]+$" },
+				"name": { "type": "string", "minLength": 1, "maxLength": 100 },
+				"description": { "type": ["string", "null"], "maxLength": 500 },
+				"cronExpression": { "type": "string" },
+				"gracePeriodSeconds": { "type": "integer", "minimum": 60, "maximum": 86400 },
+				"timezone": { "type": "string" },
+				"status": { "type": "string", "enum": ["healthy", "late", "missed", "new"] },
+				"alertOnLate": { "type": "boolean" },
+				"lastPingAt": { "type": ["string", "null"], "format": "date-time" },
+				"nextExpectedAt": { "type": ["string", "null"], "format": "date-time" },
+				"enabledAt": { "type": ["string", "null"], "format": "date-time" },
+				"createdAt": { "type": "string", "format": "date-time" },
+				"updatedAt": { "type": "string", "format": "date-time" }
+			}
+		}
+	}
+}
+```
+
 ## GET /v1/cron-jobs/:id
 
 Returns a single cron job monitor by ID.
@@ -225,6 +343,54 @@ const data = await response.json();
 | 404    | NOT_FOUND      | Cron job not found                          |
 | 429    | RATE_LIMITED   | Too many requests                           |
 | 500    | INTERNAL_ERROR | Server error                                |
+
+### Response Schema
+
+```json
+{
+	"$schema": "https://json-schema.org/draft/2020-12/schema",
+	"type": "object",
+	"required": ["data"],
+	"properties": {
+		"data": { "$ref": "#/$defs/cronJob" }
+	},
+	"$defs": {
+		"cronJob": {
+			"type": "object",
+			"required": [
+				"id",
+				"name",
+				"description",
+				"cronExpression",
+				"gracePeriodSeconds",
+				"timezone",
+				"status",
+				"alertOnLate",
+				"lastPingAt",
+				"nextExpectedAt",
+				"enabledAt",
+				"createdAt",
+				"updatedAt"
+			],
+			"properties": {
+				"id": { "type": "string", "pattern": "^cron_[a-zA-Z0-9]+$" },
+				"name": { "type": "string", "minLength": 1, "maxLength": 100 },
+				"description": { "type": ["string", "null"], "maxLength": 500 },
+				"cronExpression": { "type": "string" },
+				"gracePeriodSeconds": { "type": "integer", "minimum": 60, "maximum": 86400 },
+				"timezone": { "type": "string" },
+				"status": { "type": "string", "enum": ["healthy", "late", "missed", "new"] },
+				"alertOnLate": { "type": "boolean" },
+				"lastPingAt": { "type": ["string", "null"], "format": "date-time" },
+				"nextExpectedAt": { "type": ["string", "null"], "format": "date-time" },
+				"enabledAt": { "type": ["string", "null"], "format": "date-time" },
+				"createdAt": { "type": "string", "format": "date-time" },
+				"updatedAt": { "type": "string", "format": "date-time" }
+			}
+		}
+	}
+}
+```
 
 ## PUT /v1/cron-jobs/:id
 
@@ -313,6 +479,72 @@ const data = await response.json();
 | 429    | RATE_LIMITED     | Too many requests                            |
 | 500    | INTERNAL_ERROR   | Server error                                 |
 
+### Request Body Schema
+
+```json
+{
+	"$schema": "https://json-schema.org/draft/2020-12/schema",
+	"type": "object",
+	"properties": {
+		"name": { "type": "string", "minLength": 1, "maxLength": 100 },
+		"cronExpression": { "type": "string" },
+		"description": { "type": "string", "maxLength": 500 },
+		"gracePeriodSeconds": { "type": "integer", "minimum": 60, "maximum": 86400 },
+		"timezone": { "type": "string" },
+		"alertOnLate": { "type": "boolean" },
+		"enabled": { "type": "boolean" }
+	}
+}
+```
+
+### Response Schema
+
+```json
+{
+	"$schema": "https://json-schema.org/draft/2020-12/schema",
+	"type": "object",
+	"required": ["data"],
+	"properties": {
+		"data": { "$ref": "#/$defs/cronJob" }
+	},
+	"$defs": {
+		"cronJob": {
+			"type": "object",
+			"required": [
+				"id",
+				"name",
+				"description",
+				"cronExpression",
+				"gracePeriodSeconds",
+				"timezone",
+				"status",
+				"alertOnLate",
+				"lastPingAt",
+				"nextExpectedAt",
+				"enabledAt",
+				"createdAt",
+				"updatedAt"
+			],
+			"properties": {
+				"id": { "type": "string", "pattern": "^cron_[a-zA-Z0-9]+$" },
+				"name": { "type": "string", "minLength": 1, "maxLength": 100 },
+				"description": { "type": ["string", "null"], "maxLength": 500 },
+				"cronExpression": { "type": "string" },
+				"gracePeriodSeconds": { "type": "integer", "minimum": 60, "maximum": 86400 },
+				"timezone": { "type": "string" },
+				"status": { "type": "string", "enum": ["healthy", "late", "missed", "new"] },
+				"alertOnLate": { "type": "boolean" },
+				"lastPingAt": { "type": ["string", "null"], "format": "date-time" },
+				"nextExpectedAt": { "type": ["string", "null"], "format": "date-time" },
+				"enabledAt": { "type": ["string", "null"], "format": "date-time" },
+				"createdAt": { "type": "string", "format": "date-time" },
+				"updatedAt": { "type": "string", "format": "date-time" }
+			}
+		}
+	}
+}
+```
+
 ## DELETE /v1/cron-jobs/:id
 
 Deletes a cron job monitor. This action cannot be undone.
@@ -354,6 +586,10 @@ Returns `204 No Content` on success with an empty response body.
 | 404    | NOT_FOUND      | Cron job not found                           |
 | 429    | RATE_LIMITED   | Too many requests                            |
 | 500    | INTERNAL_ERROR | Server error                                 |
+
+### Response Schema
+
+Returns `204 No Content` with an empty response body on success.
 
 ## GET /v1/cron-jobs/:id/ping
 
@@ -437,6 +673,43 @@ const data = await response.json();
 | 429    | RATE_LIMITED     | Too many requests                           |
 | 500    | INTERNAL_ERROR   | Server error                                |
 
+### Response Schema
+
+```json
+{
+	"$schema": "https://json-schema.org/draft/2020-12/schema",
+	"type": "object",
+	"required": ["data", "pagination"],
+	"properties": {
+		"data": {
+			"type": "array",
+			"items": { "$ref": "#/$defs/ping" }
+		},
+		"pagination": {
+			"type": "object",
+			"required": ["total", "limit", "offset"],
+			"properties": {
+				"total": { "type": "integer", "minimum": 0 },
+				"limit": { "type": "integer", "minimum": 1, "maximum": 100 },
+				"offset": { "type": "integer", "minimum": 0 }
+			}
+		}
+	},
+	"$defs": {
+		"ping": {
+			"type": "object",
+			"required": ["id", "cronJobId", "receivedAt", "status"],
+			"properties": {
+				"id": { "type": "string", "pattern": "^ping_[a-zA-Z0-9]+$" },
+				"cronJobId": { "type": "string", "pattern": "^cron_[a-zA-Z0-9]+$" },
+				"receivedAt": { "type": "string", "format": "date-time" },
+				"status": { "type": "string", "enum": ["on_time", "late"] }
+			}
+		}
+	}
+}
+```
+
 ## POST /v1/cron-jobs/:id/ping
 
 Records a ping for a cron job monitor. Call this endpoint when your scheduled task completes successfully.
@@ -493,6 +766,31 @@ const data = await response.json();
 | 429    | RATE_LIMITED   | More than 1 ping per minute for this job    |
 | 500    | INTERNAL_ERROR | Server error                                |
 
+### Response Schema
+
+```json
+{
+	"$schema": "https://json-schema.org/draft/2020-12/schema",
+	"type": "object",
+	"required": ["data"],
+	"properties": {
+		"data": { "$ref": "#/$defs/ping" }
+	},
+	"$defs": {
+		"ping": {
+			"type": "object",
+			"required": ["id", "cronJobId", "receivedAt", "status"],
+			"properties": {
+				"id": { "type": "string", "pattern": "^ping_[a-zA-Z0-9]+$" },
+				"cronJobId": { "type": "string", "pattern": "^cron_[a-zA-Z0-9]+$" },
+				"receivedAt": { "type": "string", "format": "date-time" },
+				"status": { "type": "string", "enum": ["on_time", "late"] }
+			}
+		}
+	}
+}
+```
+
 ## Response Fields
 
 All cron job responses include these fields:
@@ -512,121 +810,3 @@ All cron job responses include these fields:
 | `enabledAt`          | string \| null | ISO 8601 timestamp when enabled, or `null` if disabled  |
 | `createdAt`          | string         | ISO 8601 timestamp when created                         |
 | `updatedAt`          | string         | ISO 8601 timestamp when last updated                    |
-
-## JSON Schema
-
-Use this schema to validate cron job responses in your integration:
-
-```json
-{
-	"$schema": "https://json-schema.org/draft/2020-12/schema",
-	"type": "object",
-	"required": ["data"],
-	"properties": {
-		"data": {
-			"oneOf": [
-				{ "$ref": "#/$defs/cronJob" },
-				{
-					"type": "array",
-					"items": { "$ref": "#/$defs/cronJob" }
-				}
-			]
-		}
-	},
-	"$defs": {
-		"cronJob": {
-			"type": "object",
-			"required": [
-				"id",
-				"name",
-				"description",
-				"cronExpression",
-				"gracePeriodSeconds",
-				"timezone",
-				"status",
-				"alertOnLate",
-				"lastPingAt",
-				"nextExpectedAt",
-				"enabledAt",
-				"createdAt",
-				"updatedAt"
-			],
-			"properties": {
-				"id": {
-					"type": "string",
-					"pattern": "^cron_[a-zA-Z0-9]+$"
-				},
-				"name": {
-					"type": "string",
-					"minLength": 1,
-					"maxLength": 100
-				},
-				"description": {
-					"type": ["string", "null"],
-					"maxLength": 500
-				},
-				"cronExpression": {
-					"type": "string"
-				},
-				"gracePeriodSeconds": {
-					"type": "integer",
-					"minimum": 60,
-					"maximum": 86400
-				},
-				"timezone": {
-					"type": "string"
-				},
-				"status": {
-					"type": "string",
-					"enum": ["healthy", "late", "unknown"]
-				},
-				"alertOnLate": {
-					"type": "boolean"
-				},
-				"lastPingAt": {
-					"type": ["string", "null"],
-					"format": "date-time"
-				},
-				"nextExpectedAt": {
-					"type": ["string", "null"],
-					"format": "date-time"
-				},
-				"enabledAt": {
-					"type": ["string", "null"],
-					"format": "date-time"
-				},
-				"createdAt": {
-					"type": "string",
-					"format": "date-time"
-				},
-				"updatedAt": {
-					"type": "string",
-					"format": "date-time"
-				}
-			}
-		},
-		"ping": {
-			"type": "object",
-			"required": ["id", "cronJobId", "receivedAt", "status"],
-			"properties": {
-				"id": {
-					"type": "string",
-					"pattern": "^ping_[a-zA-Z0-9]+$"
-				},
-				"cronJobId": {
-					"type": "string",
-					"pattern": "^cron_[a-zA-Z0-9]+$"
-				},
-				"receivedAt": {
-					"type": "string",
-					"format": "date-time"
-				},
-				"status": {
-					"type": "string",
-					"enum": ["on_time", "late"]
-				}
-			}
-		}
-	}
-}
-```

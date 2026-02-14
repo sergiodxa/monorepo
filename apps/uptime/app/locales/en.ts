@@ -84,6 +84,7 @@ export default {
 			nav: {
 				features: "Features",
 				pricing: "Pricing",
+				docs: "Docs",
 
 				cta: {
 					in: "Open Dashboard",
@@ -620,6 +621,12 @@ export default {
 					site24x7: "vs Site24x7",
 					ohdear: "vs Oh Dear",
 				},
+				docs: {
+					title: "Documentation",
+					overview: "Overview",
+					quickstart: "Quick Start",
+					apiReference: "API Reference",
+				},
 				legal: {
 					title: "Legal",
 					terms: "Terms of Service",
@@ -718,6 +725,7 @@ export default {
 						domains: "Domains",
 						members: "Members",
 						team: "Team",
+						docs: "Documentation",
 						apiKeys: "API Keys",
 					},
 				},
@@ -3248,6 +3256,11 @@ export default {
 				},
 			},
 
+			docsLink: {
+				text: "Learn how to use API keys in our",
+				link: "documentation",
+			},
+
 			alert: {
 				subscription: {
 					title: "Your monitors are paused!",
@@ -3270,7 +3283,8 @@ export default {
 
 			form: {
 				title: "Create New API Key",
-				description: "API keys allow programmatic access to your monitors and alerts.",
+				description:
+					"Create an API key to access the Uptime API. See the <link>documentation</link> for usage examples.",
 
 				fields: {
 					name: {
@@ -3629,6 +3643,13 @@ export default {
 			title: "Documentation - Uptime",
 			description:
 				"Documentation for Uptime monitoring service. Learn how to use monitors, alerts, status pages, and more.",
+		},
+
+		header: {
+			cta: {
+				in: "Open Dashboard",
+				out: "Start Monitoring",
+			},
 		},
 
 		sidebar: {

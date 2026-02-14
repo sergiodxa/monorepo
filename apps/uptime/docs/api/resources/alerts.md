@@ -79,6 +79,69 @@ const data = await response.json();
 | 429    | RATE_LIMITED   | Too many requests                        |
 | 500    | INTERNAL_ERROR | Server error                             |
 
+### Response Schema
+
+```json
+{
+	"$schema": "https://json-schema.org/draft/2020-12/schema",
+	"type": "object",
+	"required": ["alerts"],
+	"properties": {
+		"alerts": {
+			"type": "array",
+			"items": {
+				"type": "object",
+				"required": [
+					"id",
+					"name",
+					"strategy",
+					"notifyOnRecovery",
+					"cooldownMinutes",
+					"monitorId",
+					"createdAt",
+					"updatedAt"
+				],
+				"properties": {
+					"id": {
+						"type": "string",
+						"pattern": "^alt_[a-zA-Z0-9]+$"
+					},
+					"name": {
+						"type": "string",
+						"minLength": 1,
+						"maxLength": 100
+					},
+					"strategy": {
+						"type": "string",
+						"enum": ["email", "webhook", "slack", "discord"]
+					},
+					"notifyOnRecovery": {
+						"type": "boolean"
+					},
+					"cooldownMinutes": {
+						"type": "integer",
+						"minimum": 0,
+						"maximum": 1440
+					},
+					"monitorId": {
+						"type": ["string", "null"],
+						"pattern": "^mon_[a-zA-Z0-9]+$"
+					},
+					"createdAt": {
+						"type": "string",
+						"format": "date-time"
+					},
+					"updatedAt": {
+						"type": "string",
+						"format": "date-time"
+					}
+				}
+			}
+		}
+	}
+}
+```
+
 ## POST /v1/alerts
 
 Creates a new alert. The request body varies based on the notification strategy.
@@ -296,6 +359,222 @@ const data = await response.json();
 | 429    | RATE_LIMITED     | Too many requests                               |
 | 500    | INTERNAL_ERROR   | Server error                                    |
 
+### Request Body Schema (Email)
+
+```json
+{
+	"$schema": "https://json-schema.org/draft/2020-12/schema",
+	"type": "object",
+	"required": ["name", "strategy", "email"],
+	"properties": {
+		"name": {
+			"type": "string",
+			"minLength": 1,
+			"maxLength": 100
+		},
+		"strategy": {
+			"const": "email"
+		},
+		"email": {
+			"type": "string",
+			"format": "email"
+		},
+		"subjectPrefix": {
+			"type": "string",
+			"maxLength": 50
+		},
+		"notifyOnRecovery": {
+			"type": "boolean",
+			"default": true
+		},
+		"cooldownMinutes": {
+			"type": "integer",
+			"minimum": 0,
+			"maximum": 1440,
+			"default": 0
+		},
+		"monitorId": {
+			"type": "string",
+			"pattern": "^mon_[a-zA-Z0-9]+$"
+		}
+	}
+}
+```
+
+### Request Body Schema (Webhook)
+
+```json
+{
+	"$schema": "https://json-schema.org/draft/2020-12/schema",
+	"type": "object",
+	"required": ["name", "strategy", "url"],
+	"properties": {
+		"name": {
+			"type": "string",
+			"minLength": 1,
+			"maxLength": 100
+		},
+		"strategy": {
+			"const": "webhook"
+		},
+		"url": {
+			"type": "string",
+			"format": "uri"
+		},
+		"secret": {
+			"type": "string"
+		},
+		"notifyOnRecovery": {
+			"type": "boolean",
+			"default": true
+		},
+		"cooldownMinutes": {
+			"type": "integer",
+			"minimum": 0,
+			"maximum": 1440,
+			"default": 0
+		},
+		"monitorId": {
+			"type": "string",
+			"pattern": "^mon_[a-zA-Z0-9]+$"
+		}
+	}
+}
+```
+
+### Request Body Schema (Slack)
+
+```json
+{
+	"$schema": "https://json-schema.org/draft/2020-12/schema",
+	"type": "object",
+	"required": ["name", "strategy", "webhookUrl"],
+	"properties": {
+		"name": {
+			"type": "string",
+			"minLength": 1,
+			"maxLength": 100
+		},
+		"strategy": {
+			"const": "slack"
+		},
+		"webhookUrl": {
+			"type": "string",
+			"format": "uri"
+		},
+		"channel": {
+			"type": "string"
+		},
+		"notifyOnRecovery": {
+			"type": "boolean",
+			"default": true
+		},
+		"cooldownMinutes": {
+			"type": "integer",
+			"minimum": 0,
+			"maximum": 1440,
+			"default": 0
+		},
+		"monitorId": {
+			"type": "string",
+			"pattern": "^mon_[a-zA-Z0-9]+$"
+		}
+	}
+}
+```
+
+### Request Body Schema (Discord)
+
+```json
+{
+	"$schema": "https://json-schema.org/draft/2020-12/schema",
+	"type": "object",
+	"required": ["name", "strategy", "webhookUrl"],
+	"properties": {
+		"name": {
+			"type": "string",
+			"minLength": 1,
+			"maxLength": 100
+		},
+		"strategy": {
+			"const": "discord"
+		},
+		"webhookUrl": {
+			"type": "string",
+			"format": "uri"
+		},
+		"notifyOnRecovery": {
+			"type": "boolean",
+			"default": true
+		},
+		"cooldownMinutes": {
+			"type": "integer",
+			"minimum": 0,
+			"maximum": 1440,
+			"default": 0
+		},
+		"monitorId": {
+			"type": "string",
+			"pattern": "^mon_[a-zA-Z0-9]+$"
+		}
+	}
+}
+```
+
+### Response Schema
+
+```json
+{
+	"$schema": "https://json-schema.org/draft/2020-12/schema",
+	"type": "object",
+	"required": [
+		"id",
+		"name",
+		"strategy",
+		"notifyOnRecovery",
+		"cooldownMinutes",
+		"monitorId",
+		"createdAt",
+		"updatedAt"
+	],
+	"properties": {
+		"id": {
+			"type": "string",
+			"pattern": "^alt_[a-zA-Z0-9]+$"
+		},
+		"name": {
+			"type": "string",
+			"minLength": 1,
+			"maxLength": 100
+		},
+		"strategy": {
+			"type": "string",
+			"enum": ["email", "webhook", "slack", "discord"]
+		},
+		"notifyOnRecovery": {
+			"type": "boolean"
+		},
+		"cooldownMinutes": {
+			"type": "integer",
+			"minimum": 0,
+			"maximum": 1440
+		},
+		"monitorId": {
+			"type": ["string", "null"],
+			"pattern": "^mon_[a-zA-Z0-9]+$"
+		},
+		"createdAt": {
+			"type": "string",
+			"format": "date-time"
+		},
+		"updatedAt": {
+			"type": "string",
+			"format": "date-time"
+		}
+	}
+}
+```
+
 ## GET /v1/alerts/:id
 
 Returns a single alert by ID.
@@ -349,6 +628,60 @@ const data = await response.json();
 | 404    | NOT_FOUND      | Alert not found                          |
 | 429    | RATE_LIMITED   | Too many requests                        |
 | 500    | INTERNAL_ERROR | Server error                             |
+
+### Response Schema
+
+```json
+{
+	"$schema": "https://json-schema.org/draft/2020-12/schema",
+	"type": "object",
+	"required": [
+		"id",
+		"name",
+		"strategy",
+		"notifyOnRecovery",
+		"cooldownMinutes",
+		"monitorId",
+		"createdAt",
+		"updatedAt"
+	],
+	"properties": {
+		"id": {
+			"type": "string",
+			"pattern": "^alt_[a-zA-Z0-9]+$"
+		},
+		"name": {
+			"type": "string",
+			"minLength": 1,
+			"maxLength": 100
+		},
+		"strategy": {
+			"type": "string",
+			"enum": ["email", "webhook", "slack", "discord"]
+		},
+		"notifyOnRecovery": {
+			"type": "boolean"
+		},
+		"cooldownMinutes": {
+			"type": "integer",
+			"minimum": 0,
+			"maximum": 1440
+		},
+		"monitorId": {
+			"type": ["string", "null"],
+			"pattern": "^mon_[a-zA-Z0-9]+$"
+		},
+		"createdAt": {
+			"type": "string",
+			"format": "date-time"
+		},
+		"updatedAt": {
+			"type": "string",
+			"format": "date-time"
+		}
+	}
+}
+```
 
 ## PUT /v1/alerts/:id
 
@@ -422,6 +755,110 @@ const data = await response.json();
 | 429    | RATE_LIMITED     | Too many requests                                    |
 | 500    | INTERNAL_ERROR   | Server error                                         |
 
+### Request Body Schema
+
+```json
+{
+	"$schema": "https://json-schema.org/draft/2020-12/schema",
+	"type": "object",
+	"properties": {
+		"name": {
+			"type": "string",
+			"minLength": 1,
+			"maxLength": 100
+		},
+		"email": {
+			"type": "string",
+			"format": "email"
+		},
+		"subjectPrefix": {
+			"type": "string",
+			"maxLength": 50
+		},
+		"url": {
+			"type": "string",
+			"format": "uri"
+		},
+		"secret": {
+			"type": "string"
+		},
+		"webhookUrl": {
+			"type": "string",
+			"format": "uri"
+		},
+		"channel": {
+			"type": "string"
+		},
+		"notifyOnRecovery": {
+			"type": "boolean"
+		},
+		"cooldownMinutes": {
+			"type": "integer",
+			"minimum": 0,
+			"maximum": 1440
+		},
+		"monitorId": {
+			"type": ["string", "null"],
+			"pattern": "^mon_[a-zA-Z0-9]+$"
+		}
+	}
+}
+```
+
+### Response Schema
+
+```json
+{
+	"$schema": "https://json-schema.org/draft/2020-12/schema",
+	"type": "object",
+	"required": [
+		"id",
+		"name",
+		"strategy",
+		"notifyOnRecovery",
+		"cooldownMinutes",
+		"monitorId",
+		"createdAt",
+		"updatedAt"
+	],
+	"properties": {
+		"id": {
+			"type": "string",
+			"pattern": "^alt_[a-zA-Z0-9]+$"
+		},
+		"name": {
+			"type": "string",
+			"minLength": 1,
+			"maxLength": 100
+		},
+		"strategy": {
+			"type": "string",
+			"enum": ["email", "webhook", "slack", "discord"]
+		},
+		"notifyOnRecovery": {
+			"type": "boolean"
+		},
+		"cooldownMinutes": {
+			"type": "integer",
+			"minimum": 0,
+			"maximum": 1440
+		},
+		"monitorId": {
+			"type": ["string", "null"],
+			"pattern": "^mon_[a-zA-Z0-9]+$"
+		},
+		"createdAt": {
+			"type": "string",
+			"format": "date-time"
+		},
+		"updatedAt": {
+			"type": "string",
+			"format": "date-time"
+		}
+	}
+}
+```
+
 ## DELETE /v1/alerts/:id
 
 Deletes an alert.
@@ -463,6 +900,10 @@ Returns `204 No Content` on success.
 | 404    | NOT_FOUND      | Alert not found                           |
 | 429    | RATE_LIMITED   | Too many requests                         |
 | 500    | INTERNAL_ERROR | Server error                              |
+
+### Response Schema
+
+Returns `204 No Content` with no response body on success.
 
 ## GET /v1/alerts/:id/events
 
@@ -549,257 +990,46 @@ const data = await response.json();
 | 429    | RATE_LIMITED     | Too many requests                        |
 | 500    | INTERNAL_ERROR   | Server error                             |
 
-## JSON Schema
-
-Use these schemas to validate requests and responses in your integration.
-
-### Alert Response Schema
+### Response Schema
 
 ```json
 {
 	"$schema": "https://json-schema.org/draft/2020-12/schema",
 	"type": "object",
-	"required": [
-		"id",
-		"name",
-		"strategy",
-		"notifyOnRecovery",
-		"cooldownMinutes",
-		"monitorId",
-		"createdAt",
-		"updatedAt"
-	],
+	"required": ["events"],
 	"properties": {
-		"id": {
-			"type": "string",
-			"pattern": "^alt_[a-zA-Z0-9]+$"
-		},
-		"name": {
-			"type": "string",
-			"minLength": 1,
-			"maxLength": 100
-		},
-		"strategy": {
-			"type": "string",
-			"enum": ["email", "webhook", "slack", "discord"]
-		},
-		"notifyOnRecovery": {
-			"type": "boolean"
-		},
-		"cooldownMinutes": {
-			"type": "integer",
-			"minimum": 0,
-			"maximum": 1440
-		},
-		"monitorId": {
-			"type": ["string", "null"],
-			"pattern": "^mon_[a-zA-Z0-9]+$"
-		},
-		"createdAt": {
-			"type": "string",
-			"format": "date-time"
-		},
-		"updatedAt": {
-			"type": "string",
-			"format": "date-time"
-		}
-	}
-}
-```
-
-### Create Alert Request Schema (Email)
-
-```json
-{
-	"$schema": "https://json-schema.org/draft/2020-12/schema",
-	"type": "object",
-	"required": ["name", "strategy", "email"],
-	"properties": {
-		"name": {
-			"type": "string",
-			"minLength": 1,
-			"maxLength": 100
-		},
-		"strategy": {
-			"const": "email"
-		},
-		"email": {
-			"type": "string",
-			"format": "email"
-		},
-		"subjectPrefix": {
-			"type": "string",
-			"maxLength": 50
-		},
-		"notifyOnRecovery": {
-			"type": "boolean",
-			"default": true
-		},
-		"cooldownMinutes": {
-			"type": "integer",
-			"minimum": 0,
-			"maximum": 1440,
-			"default": 0
-		},
-		"monitorId": {
-			"type": "string",
-			"pattern": "^mon_[a-zA-Z0-9]+$"
-		}
-	}
-}
-```
-
-### Create Alert Request Schema (Webhook)
-
-```json
-{
-	"$schema": "https://json-schema.org/draft/2020-12/schema",
-	"type": "object",
-	"required": ["name", "strategy", "url"],
-	"properties": {
-		"name": {
-			"type": "string",
-			"minLength": 1,
-			"maxLength": 100
-		},
-		"strategy": {
-			"const": "webhook"
-		},
-		"url": {
-			"type": "string",
-			"format": "uri"
-		},
-		"secret": {
-			"type": "string"
-		},
-		"notifyOnRecovery": {
-			"type": "boolean",
-			"default": true
-		},
-		"cooldownMinutes": {
-			"type": "integer",
-			"minimum": 0,
-			"maximum": 1440,
-			"default": 0
-		},
-		"monitorId": {
-			"type": "string",
-			"pattern": "^mon_[a-zA-Z0-9]+$"
-		}
-	}
-}
-```
-
-### Create Alert Request Schema (Slack)
-
-```json
-{
-	"$schema": "https://json-schema.org/draft/2020-12/schema",
-	"type": "object",
-	"required": ["name", "strategy", "webhookUrl"],
-	"properties": {
-		"name": {
-			"type": "string",
-			"minLength": 1,
-			"maxLength": 100
-		},
-		"strategy": {
-			"const": "slack"
-		},
-		"webhookUrl": {
-			"type": "string",
-			"format": "uri"
-		},
-		"channel": {
-			"type": "string"
-		},
-		"notifyOnRecovery": {
-			"type": "boolean",
-			"default": true
-		},
-		"cooldownMinutes": {
-			"type": "integer",
-			"minimum": 0,
-			"maximum": 1440,
-			"default": 0
-		},
-		"monitorId": {
-			"type": "string",
-			"pattern": "^mon_[a-zA-Z0-9]+$"
-		}
-	}
-}
-```
-
-### Create Alert Request Schema (Discord)
-
-```json
-{
-	"$schema": "https://json-schema.org/draft/2020-12/schema",
-	"type": "object",
-	"required": ["name", "strategy", "webhookUrl"],
-	"properties": {
-		"name": {
-			"type": "string",
-			"minLength": 1,
-			"maxLength": 100
-		},
-		"strategy": {
-			"const": "discord"
-		},
-		"webhookUrl": {
-			"type": "string",
-			"format": "uri"
-		},
-		"notifyOnRecovery": {
-			"type": "boolean",
-			"default": true
-		},
-		"cooldownMinutes": {
-			"type": "integer",
-			"minimum": 0,
-			"maximum": 1440,
-			"default": 0
-		},
-		"monitorId": {
-			"type": "string",
-			"pattern": "^mon_[a-zA-Z0-9]+$"
-		}
-	}
-}
-```
-
-### Alert Event Schema
-
-```json
-{
-	"$schema": "https://json-schema.org/draft/2020-12/schema",
-	"type": "object",
-	"required": ["id", "alertId", "monitorId", "type", "status", "createdAt"],
-	"properties": {
-		"id": {
-			"type": "string",
-			"pattern": "^evt_[a-zA-Z0-9]+$"
-		},
-		"alertId": {
-			"type": "string",
-			"pattern": "^alt_[a-zA-Z0-9]+$"
-		},
-		"monitorId": {
-			"type": "string",
-			"pattern": "^mon_[a-zA-Z0-9]+$"
-		},
-		"type": {
-			"type": "string",
-			"enum": ["triggered", "recovered"]
-		},
-		"status": {
-			"type": "string",
-			"enum": ["pending", "delivered", "failed"]
-		},
-		"createdAt": {
-			"type": "string",
-			"format": "date-time"
+		"events": {
+			"type": "array",
+			"items": {
+				"type": "object",
+				"required": ["id", "alertId", "monitorId", "type", "status", "createdAt"],
+				"properties": {
+					"id": {
+						"type": "string",
+						"pattern": "^evt_[a-zA-Z0-9]+$"
+					},
+					"alertId": {
+						"type": "string",
+						"pattern": "^alt_[a-zA-Z0-9]+$"
+					},
+					"monitorId": {
+						"type": "string",
+						"pattern": "^mon_[a-zA-Z0-9]+$"
+					},
+					"type": {
+						"type": "string",
+						"enum": ["triggered", "recovered"]
+					},
+					"status": {
+						"type": "string",
+						"enum": ["pending", "delivered", "failed"]
+					},
+					"createdAt": {
+						"type": "string",
+						"format": "date-time"
+					}
+				}
+			}
 		}
 	}
 }

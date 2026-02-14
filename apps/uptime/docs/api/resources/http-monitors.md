@@ -71,6 +71,63 @@ const { data } = await response.json();
 | 401    | UNAUTHORIZED | Missing or invalid API key           |
 | 403    | FORBIDDEN    | API key doesn't have `monitors:read` |
 
+### Response Schema
+
+```json
+{
+	"$schema": "https://json-schema.org/draft/2020-12/schema",
+	"type": "object",
+	"properties": {
+		"data": {
+			"type": "array",
+			"items": {
+				"$ref": "#/$defs/Monitor"
+			}
+		}
+	},
+	"required": ["data"],
+	"$defs": {
+		"Monitor": {
+			"type": "object",
+			"properties": {
+				"id": { "type": "string", "pattern": "^mon_[a-zA-Z0-9]+$" },
+				"name": { "type": "string", "minLength": 1, "maxLength": 255 },
+				"url": { "type": "string", "format": "uri" },
+				"method": { "type": "string", "enum": ["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD"] },
+				"expectedStatus": { "type": "integer", "minimum": 100, "maximum": 599 },
+				"intervalSeconds": { "type": "integer", "minimum": 60, "maximum": 3600 },
+				"degradedAfterMs": { "type": "integer", "minimum": 1000, "maximum": 30000 },
+				"timeoutSeconds": { "type": "integer", "minimum": 1, "maximum": 60 },
+				"locationHint": {
+					"type": "string",
+					"enum": ["wnam", "enam", "sam", "weur", "eeur", "apac", "oc", "afr", "me"]
+				},
+				"sslMonitoringEnabled": { "type": "boolean" },
+				"sslExpiryWarningDays": { "type": "integer", "minimum": 1, "maximum": 365 },
+				"status": { "type": "string", "enum": ["pending", "up", "degraded", "down"] },
+				"lastCheckedAt": { "type": ["string", "null"], "format": "date-time" },
+				"createdAt": { "type": "string", "format": "date-time" },
+				"updatedAt": { "type": "string", "format": "date-time" }
+			},
+			"required": [
+				"id",
+				"name",
+				"url",
+				"method",
+				"expectedStatus",
+				"intervalSeconds",
+				"degradedAfterMs",
+				"timeoutSeconds",
+				"locationHint",
+				"status",
+				"createdAt",
+				"updatedAt"
+			]
+		}
+	}
+}
+```
+
 ## Create Monitor
 
 Create a new HTTP monitor.
@@ -174,6 +231,124 @@ const { data } = await response.json();
 | 401    | UNAUTHORIZED     | Missing or invalid API key             |
 | 403    | FORBIDDEN        | API key doesn't have `monitors:write`  |
 
+### Request Body Schema
+
+```json
+{
+	"$schema": "https://json-schema.org/draft/2020-12/schema",
+	"type": "object",
+	"properties": {
+		"name": {
+			"type": "string",
+			"minLength": 1,
+			"maxLength": 255,
+			"description": "Monitor display name"
+		},
+		"url": { "type": "string", "format": "uri", "description": "URL to monitor" },
+		"method": {
+			"type": "string",
+			"enum": ["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD"],
+			"default": "HEAD",
+			"description": "HTTP method"
+		},
+		"expectedStatus": {
+			"type": "integer",
+			"minimum": 100,
+			"maximum": 599,
+			"default": 200,
+			"description": "Expected HTTP status code"
+		},
+		"intervalSeconds": {
+			"type": "integer",
+			"minimum": 60,
+			"maximum": 3600,
+			"default": 60,
+			"description": "Check interval in seconds"
+		},
+		"degradedAfterMs": {
+			"type": "integer",
+			"minimum": 1000,
+			"maximum": 30000,
+			"default": 5000,
+			"description": "Response time threshold for degraded status"
+		},
+		"timeoutSeconds": {
+			"type": "integer",
+			"minimum": 1,
+			"maximum": 60,
+			"default": 10,
+			"description": "Request timeout in seconds"
+		},
+		"locationHint": {
+			"type": "string",
+			"enum": ["wnam", "enam", "sam", "weur", "eeur", "apac", "oc", "afr", "me"],
+			"default": "wnam",
+			"description": "Preferred check region"
+		},
+		"sslMonitoringEnabled": {
+			"type": "boolean",
+			"description": "Enable SSL certificate monitoring"
+		},
+		"sslExpiryWarningDays": {
+			"type": "integer",
+			"minimum": 1,
+			"maximum": 365,
+			"description": "Days before SSL expiry to warn"
+		}
+	},
+	"required": ["name", "url"]
+}
+```
+
+### Response Schema
+
+```json
+{
+	"$schema": "https://json-schema.org/draft/2020-12/schema",
+	"type": "object",
+	"properties": {
+		"data": {
+			"type": "object",
+			"properties": {
+				"id": { "type": "string", "pattern": "^mon_[a-zA-Z0-9]+$" },
+				"name": { "type": "string", "minLength": 1, "maxLength": 255 },
+				"url": { "type": "string", "format": "uri" },
+				"method": { "type": "string", "enum": ["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD"] },
+				"expectedStatus": { "type": "integer", "minimum": 100, "maximum": 599 },
+				"intervalSeconds": { "type": "integer", "minimum": 60, "maximum": 3600 },
+				"degradedAfterMs": { "type": "integer", "minimum": 1000, "maximum": 30000 },
+				"timeoutSeconds": { "type": "integer", "minimum": 1, "maximum": 60 },
+				"locationHint": {
+					"type": "string",
+					"enum": ["wnam", "enam", "sam", "weur", "eeur", "apac", "oc", "afr", "me"]
+				},
+				"sslMonitoringEnabled": { "type": "boolean" },
+				"sslExpiryWarningDays": { "type": "integer", "minimum": 1, "maximum": 365 },
+				"status": { "type": "string", "enum": ["pending", "up", "degraded", "down"] },
+				"lastCheckedAt": { "type": ["string", "null"], "format": "date-time" },
+				"createdAt": { "type": "string", "format": "date-time" },
+				"updatedAt": { "type": "string", "format": "date-time" }
+			},
+			"required": [
+				"id",
+				"name",
+				"url",
+				"method",
+				"expectedStatus",
+				"intervalSeconds",
+				"degradedAfterMs",
+				"timeoutSeconds",
+				"locationHint",
+				"status",
+				"createdAt",
+				"updatedAt"
+			]
+		}
+	},
+	"required": ["data"]
+}
+```
+
 ## Get Monitor
 
 Retrieve a single HTTP monitor by ID.
@@ -233,6 +408,55 @@ const { data } = await response.json();
 | 401    | UNAUTHORIZED | Missing or invalid API key           |
 | 403    | FORBIDDEN    | API key doesn't have `monitors:read` |
 | 404    | NOT_FOUND    | Monitor not found                    |
+
+### Response Schema
+
+```json
+{
+	"$schema": "https://json-schema.org/draft/2020-12/schema",
+	"type": "object",
+	"properties": {
+		"data": {
+			"type": "object",
+			"properties": {
+				"id": { "type": "string", "pattern": "^mon_[a-zA-Z0-9]+$" },
+				"name": { "type": "string", "minLength": 1, "maxLength": 255 },
+				"url": { "type": "string", "format": "uri" },
+				"method": { "type": "string", "enum": ["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD"] },
+				"expectedStatus": { "type": "integer", "minimum": 100, "maximum": 599 },
+				"intervalSeconds": { "type": "integer", "minimum": 60, "maximum": 3600 },
+				"degradedAfterMs": { "type": "integer", "minimum": 1000, "maximum": 30000 },
+				"timeoutSeconds": { "type": "integer", "minimum": 1, "maximum": 60 },
+				"locationHint": {
+					"type": "string",
+					"enum": ["wnam", "enam", "sam", "weur", "eeur", "apac", "oc", "afr", "me"]
+				},
+				"sslMonitoringEnabled": { "type": "boolean" },
+				"sslExpiryWarningDays": { "type": "integer", "minimum": 1, "maximum": 365 },
+				"status": { "type": "string", "enum": ["pending", "up", "degraded", "down"] },
+				"lastCheckedAt": { "type": ["string", "null"], "format": "date-time" },
+				"createdAt": { "type": "string", "format": "date-time" },
+				"updatedAt": { "type": "string", "format": "date-time" }
+			},
+			"required": [
+				"id",
+				"name",
+				"url",
+				"method",
+				"expectedStatus",
+				"intervalSeconds",
+				"degradedAfterMs",
+				"timeoutSeconds",
+				"locationHint",
+				"status",
+				"createdAt",
+				"updatedAt"
+			]
+		}
+	},
+	"required": ["data"]
+}
+```
 
 ## Update Monitor
 
@@ -311,6 +535,117 @@ const { data } = await response.json();
 | 403    | FORBIDDEN        | API key doesn't have `monitors:write` |
 | 404    | NOT_FOUND        | Monitor not found                     |
 
+### Request Body Schema
+
+```json
+{
+	"$schema": "https://json-schema.org/draft/2020-12/schema",
+	"type": "object",
+	"properties": {
+		"name": {
+			"type": "string",
+			"minLength": 1,
+			"maxLength": 255,
+			"description": "Monitor display name"
+		},
+		"url": { "type": "string", "format": "uri", "description": "URL to monitor" },
+		"method": {
+			"type": "string",
+			"enum": ["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD"],
+			"description": "HTTP method"
+		},
+		"expectedStatus": {
+			"type": "integer",
+			"minimum": 100,
+			"maximum": 599,
+			"description": "Expected HTTP status code"
+		},
+		"intervalSeconds": {
+			"type": "integer",
+			"minimum": 60,
+			"maximum": 3600,
+			"description": "Check interval in seconds"
+		},
+		"degradedAfterMs": {
+			"type": "integer",
+			"minimum": 1000,
+			"maximum": 30000,
+			"description": "Response time threshold for degraded status"
+		},
+		"timeoutSeconds": {
+			"type": "integer",
+			"minimum": 1,
+			"maximum": 60,
+			"description": "Request timeout in seconds"
+		},
+		"locationHint": {
+			"type": "string",
+			"enum": ["wnam", "enam", "sam", "weur", "eeur", "apac", "oc", "afr", "me"],
+			"description": "Preferred check region"
+		},
+		"sslMonitoringEnabled": {
+			"type": "boolean",
+			"description": "Enable SSL certificate monitoring"
+		},
+		"sslExpiryWarningDays": {
+			"type": "integer",
+			"minimum": 1,
+			"maximum": 365,
+			"description": "Days before SSL expiry to warn"
+		}
+	}
+}
+```
+
+### Response Schema
+
+```json
+{
+	"$schema": "https://json-schema.org/draft/2020-12/schema",
+	"type": "object",
+	"properties": {
+		"data": {
+			"type": "object",
+			"properties": {
+				"id": { "type": "string", "pattern": "^mon_[a-zA-Z0-9]+$" },
+				"name": { "type": "string", "minLength": 1, "maxLength": 255 },
+				"url": { "type": "string", "format": "uri" },
+				"method": { "type": "string", "enum": ["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD"] },
+				"expectedStatus": { "type": "integer", "minimum": 100, "maximum": 599 },
+				"intervalSeconds": { "type": "integer", "minimum": 60, "maximum": 3600 },
+				"degradedAfterMs": { "type": "integer", "minimum": 1000, "maximum": 30000 },
+				"timeoutSeconds": { "type": "integer", "minimum": 1, "maximum": 60 },
+				"locationHint": {
+					"type": "string",
+					"enum": ["wnam", "enam", "sam", "weur", "eeur", "apac", "oc", "afr", "me"]
+				},
+				"sslMonitoringEnabled": { "type": "boolean" },
+				"sslExpiryWarningDays": { "type": "integer", "minimum": 1, "maximum": 365 },
+				"status": { "type": "string", "enum": ["pending", "up", "degraded", "down"] },
+				"lastCheckedAt": { "type": ["string", "null"], "format": "date-time" },
+				"createdAt": { "type": "string", "format": "date-time" },
+				"updatedAt": { "type": "string", "format": "date-time" }
+			},
+			"required": [
+				"id",
+				"name",
+				"url",
+				"method",
+				"expectedStatus",
+				"intervalSeconds",
+				"degradedAfterMs",
+				"timeoutSeconds",
+				"locationHint",
+				"status",
+				"createdAt",
+				"updatedAt"
+			]
+		}
+	},
+	"required": ["data"]
+}
+```
+
 ## Delete Monitor
 
 Permanently delete an HTTP monitor and all its check history.
@@ -351,6 +686,10 @@ Returns `204 No Content` on success.
 | 401    | UNAUTHORIZED | Missing or invalid API key            |
 | 403    | FORBIDDEN    | API key doesn't have `monitors:write` |
 | 404    | NOT_FOUND    | Monitor not found                     |
+
+### Response Schema
+
+Returns `204 No Content` with an empty body on success.
 
 ## Get Check Results
 
@@ -432,6 +771,51 @@ const { data } = await response.json();
 | 403    | FORBIDDEN        | API key doesn't have `monitors:read` |
 | 404    | NOT_FOUND        | Monitor not found                    |
 
+### Response Schema
+
+```json
+{
+	"$schema": "https://json-schema.org/draft/2020-12/schema",
+	"type": "object",
+	"properties": {
+		"data": {
+			"type": "array",
+			"items": {
+				"type": "object",
+				"properties": {
+					"id": { "type": "string", "pattern": "^chk_[a-zA-Z0-9]+$" },
+					"monitorId": { "type": "string", "pattern": "^mon_[a-zA-Z0-9]+$" },
+					"status": { "type": "string", "enum": ["up", "degraded", "down"] },
+					"statusCode": { "type": "integer" },
+					"responseTimeMs": { "type": "integer" },
+					"region": { "type": "string" },
+					"checkedAt": { "type": "string", "format": "date-time" }
+				},
+				"required": [
+					"id",
+					"monitorId",
+					"status",
+					"statusCode",
+					"responseTimeMs",
+					"region",
+					"checkedAt"
+				]
+			}
+		},
+		"pagination": {
+			"type": "object",
+			"properties": {
+				"limit": { "type": "integer" },
+				"offset": { "type": "integer" },
+				"total": { "type": "integer" }
+			},
+			"required": ["limit", "offset", "total"]
+		}
+	},
+	"required": ["data", "pagination"]
+}
+```
+
 ## Get Monitor Stats
 
 Retrieve performance statistics for a single monitor.
@@ -497,6 +881,56 @@ const { data } = await response.json();
 | 403    | FORBIDDEN    | API key doesn't have `monitors:read` |
 | 404    | NOT_FOUND    | Monitor not found                    |
 
+### Response Schema
+
+```json
+{
+	"$schema": "https://json-schema.org/draft/2020-12/schema",
+	"type": "object",
+	"properties": {
+		"data": {
+			"type": "object",
+			"properties": {
+				"monitorId": { "type": "string", "pattern": "^mon_[a-zA-Z0-9]+$" },
+				"uptime": {
+					"type": "object",
+					"properties": {
+						"last24Hours": { "type": "number", "minimum": 0, "maximum": 100 },
+						"last7Days": { "type": "number", "minimum": 0, "maximum": 100 },
+						"last30Days": { "type": "number", "minimum": 0, "maximum": 100 }
+					},
+					"required": ["last24Hours", "last7Days", "last30Days"]
+				},
+				"responseTime": {
+					"type": "object",
+					"properties": {
+						"avg": { "type": "integer" },
+						"min": { "type": "integer" },
+						"max": { "type": "integer" },
+						"p50": { "type": "integer" },
+						"p95": { "type": "integer" },
+						"p99": { "type": "integer" }
+					},
+					"required": ["avg", "min", "max", "p50", "p95", "p99"]
+				},
+				"checks": {
+					"type": "object",
+					"properties": {
+						"total": { "type": "integer" },
+						"up": { "type": "integer" },
+						"degraded": { "type": "integer" },
+						"down": { "type": "integer" }
+					},
+					"required": ["total", "up", "degraded", "down"]
+				}
+			},
+			"required": ["monitorId", "uptime", "responseTime", "checks"]
+		}
+	},
+	"required": ["data"]
+}
+```
+
 ## Get Aggregated Stats
 
 Retrieve aggregated statistics across all monitors.
@@ -557,6 +991,52 @@ const { data } = await response.json();
 | 401    | UNAUTHORIZED | Missing or invalid API key           |
 | 403    | FORBIDDEN    | API key doesn't have `monitors:read` |
 
+### Response Schema
+
+```json
+{
+	"$schema": "https://json-schema.org/draft/2020-12/schema",
+	"type": "object",
+	"properties": {
+		"data": {
+			"type": "object",
+			"properties": {
+				"monitors": {
+					"type": "object",
+					"properties": {
+						"total": { "type": "integer" },
+						"up": { "type": "integer" },
+						"degraded": { "type": "integer" },
+						"down": { "type": "integer" }
+					},
+					"required": ["total", "up", "degraded", "down"]
+				},
+				"uptime": {
+					"type": "object",
+					"properties": {
+						"last24Hours": { "type": "number", "minimum": 0, "maximum": 100 },
+						"last7Days": { "type": "number", "minimum": 0, "maximum": 100 },
+						"last30Days": { "type": "number", "minimum": 0, "maximum": 100 }
+					},
+					"required": ["last24Hours", "last7Days", "last30Days"]
+				},
+				"checks": {
+					"type": "object",
+					"properties": {
+						"last24Hours": { "type": "integer" },
+						"last7Days": { "type": "integer" },
+						"last30Days": { "type": "integer" }
+					},
+					"required": ["last24Hours", "last7Days", "last30Days"]
+				}
+			},
+			"required": ["monitors", "uptime", "checks"]
+		}
+	},
+	"required": ["data"]
+}
+```
+
 ## Content Checks
 
 Manage content validation rules for a monitor. Content checks verify that responses contain (or don't contain) specific text or patterns.
@@ -587,101 +1067,29 @@ DELETE /v1/monitors/:id/content-checks/:checkId
 
 See [Content Checks](/docs/concepts/http-monitors#content-checks) for usage details.
 
-## JSON Schema
+### Create Content Check Request Body Schema
 
 ```json
 {
 	"$schema": "https://json-schema.org/draft/2020-12/schema",
-	"title": "HTTP Monitor",
 	"type": "object",
 	"properties": {
-		"id": {
+		"type": {
 			"type": "string",
-			"pattern": "^mon_[a-zA-Z0-9]+$",
-			"description": "Unique monitor identifier"
+			"enum": ["contains", "not_contains", "regex"],
+			"description": "Check type"
 		},
-		"name": {
-			"type": "string",
-			"minLength": 1,
-			"maxLength": 255,
-			"description": "Monitor display name"
-		},
-		"url": {
-			"type": "string",
-			"format": "uri",
-			"description": "URL to monitor"
-		},
-		"method": {
-			"type": "string",
-			"enum": ["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD"],
-			"default": "HEAD",
-			"description": "HTTP method"
-		},
-		"expectedStatus": {
-			"type": "integer",
-			"minimum": 100,
-			"maximum": 599,
-			"default": 200,
-			"description": "Expected HTTP status code"
-		},
-		"intervalSeconds": {
-			"type": "integer",
-			"minimum": 60,
-			"maximum": 3600,
-			"default": 60,
-			"description": "Check interval in seconds"
-		},
-		"degradedAfterMs": {
-			"type": "integer",
-			"minimum": 1000,
-			"maximum": 30000,
-			"default": 5000,
-			"description": "Response time threshold for degraded status"
-		},
-		"timeoutSeconds": {
-			"type": "integer",
-			"minimum": 1,
-			"maximum": 60,
-			"default": 10,
-			"description": "Request timeout in seconds"
-		},
-		"locationHint": {
-			"type": "string",
-			"enum": ["wnam", "enam", "sam", "weur", "eeur", "apac", "oc", "afr", "me"],
-			"default": "wnam",
-			"description": "Preferred check region"
-		},
-		"sslMonitoringEnabled": {
+		"value": { "type": "string", "description": "Text or pattern to match" },
+		"caseSensitive": {
 			"type": "boolean",
-			"description": "Enable SSL certificate monitoring"
-		},
-		"sslExpiryWarningDays": {
-			"type": "integer",
-			"minimum": 1,
-			"maximum": 365,
-			"description": "Days before SSL expiry to warn"
-		},
-		"status": {
-			"type": "string",
-			"enum": ["pending", "up", "degraded", "down"],
-			"description": "Current monitor status"
-		},
-		"lastCheckedAt": {
-			"type": ["string", "null"],
-			"format": "date-time",
-			"description": "Timestamp of last check"
-		},
-		"createdAt": {
-			"type": "string",
-			"format": "date-time",
-			"description": "Creation timestamp"
-		},
-		"updatedAt": {
-			"type": "string",
-			"format": "date-time",
-			"description": "Last update timestamp"
+			"default": false,
+			"description": "Enable case-sensitive matching"
 		}
 	},
-	"required": ["name", "url"]
+	"required": ["type", "value"]
 }
 ```
+
+### Delete Content Check Response Schema
+
+Returns `204 No Content` with an empty body on success.

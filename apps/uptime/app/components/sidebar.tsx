@@ -2,6 +2,7 @@ import { Sidebar } from "@pkg/ui";
 import {
 	ActivityIcon,
 	BellIcon,
+	BookOpenIcon,
 	ClockIcon,
 	FileTextIcon,
 	GlobeIcon,
@@ -157,6 +158,12 @@ export function AppSidebar(props: {
 
 				{isAdmin && (
 					<Sidebar.Menu className="mt-auto">
+						<Sidebar.MenuItem>
+							<Sidebar.MenuLink href="/docs" target="_blank" tooltip={t("navigation.items.docs")}>
+								<BookOpenIcon size={16} />
+								<span>{t("navigation.items.docs")}</span>
+							</Sidebar.MenuLink>
+						</Sidebar.MenuItem>
 						<Sidebar.MenuItem>
 							<Sidebar.MenuLink
 								href={apiKeysPath}

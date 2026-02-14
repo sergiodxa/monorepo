@@ -178,6 +178,17 @@ export default function Component({ loaderData, params }: Route.ComponentProps) 
 				)}
 			</AppHeader>
 
+			<p className="px-5 pt-4 text-sm text-neutral-500 md:px-12 dark:text-neutral-400">
+				{t("docsLink.text")}{" "}
+				<Link
+					to="/docs/api/authentication"
+					className="text-blue-600 dark:text-blue-400 hover:underline"
+				>
+					{t("docsLink.link")}
+				</Link>
+				.
+			</p>
+
 			{loaderData.hasActiveSubscription ? null : (
 				<div className="p-4">
 					<Alert color="warning">

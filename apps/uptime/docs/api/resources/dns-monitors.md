@@ -68,6 +68,98 @@ const { data } = await response.json();
 | 401    | UNAUTHORIZED | Missing or invalid API key              |
 | 403    | FORBIDDEN    | API key lacks `dns-monitors:read` scope |
 
+### Response Schema
+
+```json
+{
+	"$schema": "https://json-schema.org/draft/2020-12/schema",
+	"type": "object",
+	"properties": {
+		"data": {
+			"type": "array",
+			"items": {
+				"type": "object",
+				"properties": {
+					"id": {
+						"type": "string",
+						"description": "Unique identifier for the DNS monitor"
+					},
+					"name": {
+						"type": "string",
+						"minLength": 1,
+						"maxLength": 255,
+						"description": "Human-readable name for the monitor"
+					},
+					"domain": {
+						"type": "string",
+						"minLength": 1,
+						"maxLength": 255,
+						"description": "Domain name to query"
+					},
+					"recordType": {
+						"type": "string",
+						"enum": ["A", "AAAA", "CNAME", "MX", "TXT", "NS"],
+						"description": "DNS record type to check"
+					},
+					"expectedValue": {
+						"type": ["string", "null"],
+						"maxLength": 1024,
+						"description": "Expected value for the DNS record"
+					},
+					"intervalSeconds": {
+						"type": "integer",
+						"minimum": 60,
+						"maximum": 86400,
+						"default": 3600,
+						"description": "Check interval in seconds"
+					},
+					"isEnabled": {
+						"type": "boolean",
+						"default": true,
+						"description": "Whether the monitor is active"
+					},
+					"lastCheckedAt": {
+						"type": ["string", "null"],
+						"format": "date-time",
+						"description": "Timestamp of the last check"
+					},
+					"lastStatus": {
+						"type": ["string", "null"],
+						"enum": ["ok", "changed", "error", null],
+						"description": "Status from the last check"
+					},
+					"lastValue": {
+						"type": ["string", "null"],
+						"description": "Value returned from the last check"
+					},
+					"createdAt": {
+						"type": "string",
+						"format": "date-time",
+						"description": "Timestamp when the monitor was created"
+					},
+					"updatedAt": {
+						"type": "string",
+						"format": "date-time",
+						"description": "Timestamp when the monitor was last updated"
+					}
+				},
+				"required": [
+					"id",
+					"name",
+					"domain",
+					"recordType",
+					"intervalSeconds",
+					"isEnabled",
+					"createdAt",
+					"updatedAt"
+				]
+			}
+		}
+	},
+	"required": ["data"]
+}
+```
+
 ## Create a DNS Monitor
 
 Creates a new DNS monitor.
@@ -154,6 +246,141 @@ const { data } = await response.json();
 | 401    | UNAUTHORIZED     | Missing or invalid API key               |
 | 403    | FORBIDDEN        | API key lacks `dns-monitors:write` scope |
 
+### Request Body Schema
+
+```json
+{
+	"$schema": "https://json-schema.org/draft/2020-12/schema",
+	"type": "object",
+	"properties": {
+		"name": {
+			"type": "string",
+			"minLength": 1,
+			"maxLength": 255,
+			"description": "Human-readable name for the monitor"
+		},
+		"domain": {
+			"type": "string",
+			"minLength": 1,
+			"maxLength": 255,
+			"description": "Domain name to query"
+		},
+		"recordType": {
+			"type": "string",
+			"enum": ["A", "AAAA", "CNAME", "MX", "TXT", "NS"],
+			"description": "DNS record type to check"
+		},
+		"expectedValue": {
+			"type": "string",
+			"maxLength": 1024,
+			"description": "Expected value for the DNS record"
+		},
+		"intervalSeconds": {
+			"type": "integer",
+			"minimum": 60,
+			"maximum": 86400,
+			"default": 3600,
+			"description": "Check interval in seconds"
+		},
+		"isEnabled": {
+			"type": "boolean",
+			"default": true,
+			"description": "Whether the monitor is active"
+		}
+	},
+	"required": ["name", "domain", "recordType"]
+}
+```
+
+### Response Schema
+
+```json
+{
+	"$schema": "https://json-schema.org/draft/2020-12/schema",
+	"type": "object",
+	"properties": {
+		"data": {
+			"type": "object",
+			"properties": {
+				"id": {
+					"type": "string",
+					"description": "Unique identifier for the DNS monitor"
+				},
+				"name": {
+					"type": "string",
+					"minLength": 1,
+					"maxLength": 255,
+					"description": "Human-readable name for the monitor"
+				},
+				"domain": {
+					"type": "string",
+					"minLength": 1,
+					"maxLength": 255,
+					"description": "Domain name to query"
+				},
+				"recordType": {
+					"type": "string",
+					"enum": ["A", "AAAA", "CNAME", "MX", "TXT", "NS"],
+					"description": "DNS record type to check"
+				},
+				"expectedValue": {
+					"type": ["string", "null"],
+					"maxLength": 1024,
+					"description": "Expected value for the DNS record"
+				},
+				"intervalSeconds": {
+					"type": "integer",
+					"minimum": 60,
+					"maximum": 86400,
+					"default": 3600,
+					"description": "Check interval in seconds"
+				},
+				"isEnabled": {
+					"type": "boolean",
+					"default": true,
+					"description": "Whether the monitor is active"
+				},
+				"lastCheckedAt": {
+					"type": ["string", "null"],
+					"format": "date-time",
+					"description": "Timestamp of the last check"
+				},
+				"lastStatus": {
+					"type": ["string", "null"],
+					"enum": ["ok", "changed", "error", null],
+					"description": "Status from the last check"
+				},
+				"lastValue": {
+					"type": ["string", "null"],
+					"description": "Value returned from the last check"
+				},
+				"createdAt": {
+					"type": "string",
+					"format": "date-time",
+					"description": "Timestamp when the monitor was created"
+				},
+				"updatedAt": {
+					"type": "string",
+					"format": "date-time",
+					"description": "Timestamp when the monitor was last updated"
+				}
+			},
+			"required": [
+				"id",
+				"name",
+				"domain",
+				"recordType",
+				"intervalSeconds",
+				"isEnabled",
+				"createdAt",
+				"updatedAt"
+			]
+		}
+	},
+	"required": ["data"]
+}
+```
+
 ## Get a DNS Monitor
 
 Retrieves a single DNS monitor by ID.
@@ -210,6 +437,95 @@ const { data } = await response.json();
 | 401    | UNAUTHORIZED | Missing or invalid API key              |
 | 403    | FORBIDDEN    | API key lacks `dns-monitors:read` scope |
 | 404    | NOT_FOUND    | DNS monitor not found                   |
+
+### Response Schema
+
+```json
+{
+	"$schema": "https://json-schema.org/draft/2020-12/schema",
+	"type": "object",
+	"properties": {
+		"data": {
+			"type": "object",
+			"properties": {
+				"id": {
+					"type": "string",
+					"description": "Unique identifier for the DNS monitor"
+				},
+				"name": {
+					"type": "string",
+					"minLength": 1,
+					"maxLength": 255,
+					"description": "Human-readable name for the monitor"
+				},
+				"domain": {
+					"type": "string",
+					"minLength": 1,
+					"maxLength": 255,
+					"description": "Domain name to query"
+				},
+				"recordType": {
+					"type": "string",
+					"enum": ["A", "AAAA", "CNAME", "MX", "TXT", "NS"],
+					"description": "DNS record type to check"
+				},
+				"expectedValue": {
+					"type": ["string", "null"],
+					"maxLength": 1024,
+					"description": "Expected value for the DNS record"
+				},
+				"intervalSeconds": {
+					"type": "integer",
+					"minimum": 60,
+					"maximum": 86400,
+					"default": 3600,
+					"description": "Check interval in seconds"
+				},
+				"isEnabled": {
+					"type": "boolean",
+					"default": true,
+					"description": "Whether the monitor is active"
+				},
+				"lastCheckedAt": {
+					"type": ["string", "null"],
+					"format": "date-time",
+					"description": "Timestamp of the last check"
+				},
+				"lastStatus": {
+					"type": ["string", "null"],
+					"enum": ["ok", "changed", "error", null],
+					"description": "Status from the last check"
+				},
+				"lastValue": {
+					"type": ["string", "null"],
+					"description": "Value returned from the last check"
+				},
+				"createdAt": {
+					"type": "string",
+					"format": "date-time",
+					"description": "Timestamp when the monitor was created"
+				},
+				"updatedAt": {
+					"type": "string",
+					"format": "date-time",
+					"description": "Timestamp when the monitor was last updated"
+				}
+			},
+			"required": [
+				"id",
+				"name",
+				"domain",
+				"recordType",
+				"intervalSeconds",
+				"isEnabled",
+				"createdAt",
+				"updatedAt"
+			]
+		}
+	},
+	"required": ["data"]
+}
+```
 
 ## Update a DNS Monitor
 
@@ -292,6 +608,138 @@ const { data } = await response.json();
 | 403    | FORBIDDEN        | API key lacks `dns-monitors:write` scope |
 | 404    | NOT_FOUND        | DNS monitor not found                    |
 
+### Request Body Schema
+
+```json
+{
+	"$schema": "https://json-schema.org/draft/2020-12/schema",
+	"type": "object",
+	"properties": {
+		"name": {
+			"type": "string",
+			"minLength": 1,
+			"maxLength": 255,
+			"description": "Human-readable name for the monitor"
+		},
+		"domain": {
+			"type": "string",
+			"minLength": 1,
+			"maxLength": 255,
+			"description": "Domain name to query"
+		},
+		"recordType": {
+			"type": "string",
+			"enum": ["A", "AAAA", "CNAME", "MX", "TXT", "NS"],
+			"description": "DNS record type to check"
+		},
+		"expectedValue": {
+			"type": ["string", "null"],
+			"maxLength": 1024,
+			"description": "Expected value for the DNS record"
+		},
+		"intervalSeconds": {
+			"type": "integer",
+			"minimum": 60,
+			"maximum": 86400,
+			"description": "Check interval in seconds"
+		},
+		"isEnabled": {
+			"type": "boolean",
+			"description": "Whether the monitor is active"
+		}
+	}
+}
+```
+
+### Response Schema
+
+```json
+{
+	"$schema": "https://json-schema.org/draft/2020-12/schema",
+	"type": "object",
+	"properties": {
+		"data": {
+			"type": "object",
+			"properties": {
+				"id": {
+					"type": "string",
+					"description": "Unique identifier for the DNS monitor"
+				},
+				"name": {
+					"type": "string",
+					"minLength": 1,
+					"maxLength": 255,
+					"description": "Human-readable name for the monitor"
+				},
+				"domain": {
+					"type": "string",
+					"minLength": 1,
+					"maxLength": 255,
+					"description": "Domain name to query"
+				},
+				"recordType": {
+					"type": "string",
+					"enum": ["A", "AAAA", "CNAME", "MX", "TXT", "NS"],
+					"description": "DNS record type to check"
+				},
+				"expectedValue": {
+					"type": ["string", "null"],
+					"maxLength": 1024,
+					"description": "Expected value for the DNS record"
+				},
+				"intervalSeconds": {
+					"type": "integer",
+					"minimum": 60,
+					"maximum": 86400,
+					"default": 3600,
+					"description": "Check interval in seconds"
+				},
+				"isEnabled": {
+					"type": "boolean",
+					"default": true,
+					"description": "Whether the monitor is active"
+				},
+				"lastCheckedAt": {
+					"type": ["string", "null"],
+					"format": "date-time",
+					"description": "Timestamp of the last check"
+				},
+				"lastStatus": {
+					"type": ["string", "null"],
+					"enum": ["ok", "changed", "error", null],
+					"description": "Status from the last check"
+				},
+				"lastValue": {
+					"type": ["string", "null"],
+					"description": "Value returned from the last check"
+				},
+				"createdAt": {
+					"type": "string",
+					"format": "date-time",
+					"description": "Timestamp when the monitor was created"
+				},
+				"updatedAt": {
+					"type": "string",
+					"format": "date-time",
+					"description": "Timestamp when the monitor was last updated"
+				}
+			},
+			"required": [
+				"id",
+				"name",
+				"domain",
+				"recordType",
+				"intervalSeconds",
+				"isEnabled",
+				"createdAt",
+				"updatedAt"
+			]
+		}
+	},
+	"required": ["data"]
+}
+```
+
 ## Delete a DNS Monitor
 
 Permanently deletes a DNS monitor and all its historical results.
@@ -332,6 +780,10 @@ Returns `204 No Content` on success.
 | 401    | UNAUTHORIZED | Missing or invalid API key               |
 | 403    | FORBIDDEN    | API key lacks `dns-monitors:write` scope |
 | 404    | NOT_FOUND    | DNS monitor not found                    |
+
+### Response Schema
+
+Returns `204 No Content` with an empty response body on success.
 
 ## Get DNS Monitor Results
 
@@ -400,206 +852,41 @@ const { data } = await response.json();
 | 403    | FORBIDDEN        | API key lacks `dns-monitors:read` scope |
 | 404    | NOT_FOUND        | DNS monitor not found                   |
 
-## JSON Schema
-
-### DNS Monitor Object
+### Response Schema
 
 ```json
 {
 	"$schema": "https://json-schema.org/draft/2020-12/schema",
 	"type": "object",
 	"properties": {
-		"id": {
-			"type": "string",
-			"description": "Unique identifier for the DNS monitor"
-		},
-		"name": {
-			"type": "string",
-			"minLength": 1,
-			"maxLength": 255,
-			"description": "Human-readable name for the monitor"
-		},
-		"domain": {
-			"type": "string",
-			"minLength": 1,
-			"maxLength": 255,
-			"description": "Domain name to query"
-		},
-		"recordType": {
-			"type": "string",
-			"enum": ["A", "AAAA", "CNAME", "MX", "TXT", "NS"],
-			"description": "DNS record type to check"
-		},
-		"expectedValue": {
-			"type": ["string", "null"],
-			"maxLength": 1024,
-			"description": "Expected value for the DNS record"
-		},
-		"intervalSeconds": {
-			"type": "integer",
-			"minimum": 60,
-			"maximum": 86400,
-			"default": 3600,
-			"description": "Check interval in seconds"
-		},
-		"isEnabled": {
-			"type": "boolean",
-			"default": true,
-			"description": "Whether the monitor is active"
-		},
-		"lastCheckedAt": {
-			"type": ["string", "null"],
-			"format": "date-time",
-			"description": "Timestamp of the last check"
-		},
-		"lastStatus": {
-			"type": ["string", "null"],
-			"enum": ["ok", "changed", "error", null],
-			"description": "Status from the last check"
-		},
-		"lastValue": {
-			"type": ["string", "null"],
-			"description": "Value returned from the last check"
-		},
-		"createdAt": {
-			"type": "string",
-			"format": "date-time",
-			"description": "Timestamp when the monitor was created"
-		},
-		"updatedAt": {
-			"type": "string",
-			"format": "date-time",
-			"description": "Timestamp when the monitor was last updated"
+		"data": {
+			"type": "array",
+			"items": {
+				"type": "object",
+				"properties": {
+					"id": {
+						"type": "string",
+						"description": "Unique identifier for the result"
+					},
+					"status": {
+						"type": "string",
+						"enum": ["ok", "changed", "error"],
+						"description": "Check result status"
+					},
+					"value": {
+						"type": ["string", "null"],
+						"description": "Resolved DNS value"
+					},
+					"checkedAt": {
+						"type": "string",
+						"format": "date-time",
+						"description": "Timestamp when the check was performed"
+					}
+				},
+				"required": ["id", "status", "checkedAt"]
+			}
 		}
 	},
-	"required": [
-		"id",
-		"name",
-		"domain",
-		"recordType",
-		"intervalSeconds",
-		"isEnabled",
-		"createdAt",
-		"updatedAt"
-	]
-}
-```
-
-### Create DNS Monitor Request
-
-```json
-{
-	"$schema": "https://json-schema.org/draft/2020-12/schema",
-	"type": "object",
-	"properties": {
-		"name": {
-			"type": "string",
-			"minLength": 1,
-			"maxLength": 255,
-			"description": "Human-readable name for the monitor"
-		},
-		"domain": {
-			"type": "string",
-			"minLength": 1,
-			"maxLength": 255,
-			"description": "Domain name to query"
-		},
-		"recordType": {
-			"type": "string",
-			"enum": ["A", "AAAA", "CNAME", "MX", "TXT", "NS"],
-			"description": "DNS record type to check"
-		},
-		"expectedValue": {
-			"type": "string",
-			"maxLength": 1024,
-			"description": "Expected value for the DNS record"
-		},
-		"intervalSeconds": {
-			"type": "integer",
-			"minimum": 60,
-			"maximum": 86400,
-			"default": 3600,
-			"description": "Check interval in seconds"
-		},
-		"isEnabled": {
-			"type": "boolean",
-			"default": true,
-			"description": "Whether the monitor is active"
-		}
-	},
-	"required": ["name", "domain", "recordType"]
-}
-```
-
-### Update DNS Monitor Request
-
-```json
-{
-	"$schema": "https://json-schema.org/draft/2020-12/schema",
-	"type": "object",
-	"properties": {
-		"name": {
-			"type": "string",
-			"minLength": 1,
-			"maxLength": 255,
-			"description": "Human-readable name for the monitor"
-		},
-		"domain": {
-			"type": "string",
-			"minLength": 1,
-			"maxLength": 255,
-			"description": "Domain name to query"
-		},
-		"recordType": {
-			"type": "string",
-			"enum": ["A", "AAAA", "CNAME", "MX", "TXT", "NS"],
-			"description": "DNS record type to check"
-		},
-		"expectedValue": {
-			"type": ["string", "null"],
-			"maxLength": 1024,
-			"description": "Expected value for the DNS record"
-		},
-		"intervalSeconds": {
-			"type": "integer",
-			"minimum": 60,
-			"maximum": 86400,
-			"description": "Check interval in seconds"
-		},
-		"isEnabled": {
-			"type": "boolean",
-			"description": "Whether the monitor is active"
-		}
-	}
-}
-```
-
-### DNS Monitor Result Object
-
-```json
-{
-	"$schema": "https://json-schema.org/draft/2020-12/schema",
-	"type": "object",
-	"properties": {
-		"id": {
-			"type": "string",
-			"description": "Unique identifier for the result"
-		},
-		"status": {
-			"type": "string",
-			"enum": ["ok", "changed", "error"],
-			"description": "Check result status"
-		},
-		"value": {
-			"type": ["string", "null"],
-			"description": "Resolved DNS value"
-		},
-		"checkedAt": {
-			"type": "string",
-			"format": "date-time",
-			"description": "Timestamp when the check was performed"
-		}
-	},
-	"required": ["id", "status", "checkedAt"]
+	"required": ["data"]
 }
 ```

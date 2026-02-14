@@ -11,8 +11,8 @@ import {
 	TextField,
 } from "@pkg/ui";
 import { useEffect } from "react";
-import { useTranslation } from "react-i18next";
-import { href, useFetcher, useNavigate, useNavigation } from "react-router";
+import { Trans, useTranslation } from "react-i18next";
+import { href, Link, useFetcher, useNavigate, useNavigation } from "react-router";
 import { useSpinDelay } from "spin-delay";
 
 import { AppHeader } from "~/components/app-header";
@@ -85,7 +85,19 @@ export default function Component({ params }: Route.ComponentProps) {
 					>
 						<Card.Header>
 							<Card.Title>{t("title")}</Card.Title>
-							<Card.Description>{t("description")}</Card.Description>
+							<Card.Description>
+								<Trans
+									i18nKey="page.apiKeys.form.description"
+									components={{
+										link: (
+											<Link
+												to="/docs/api/authentication"
+												className="text-blue-600 dark:text-blue-400 hover:underline"
+											/>
+										),
+									}}
+								/>
+							</Card.Description>
 						</Card.Header>
 
 						<Card.Content className="space-y-6">

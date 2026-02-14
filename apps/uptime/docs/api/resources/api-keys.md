@@ -87,6 +87,76 @@ const data = await response.json();
 | 429    | RATE_LIMITED   | Too many requests                          |
 | 500    | INTERNAL_ERROR | Server error                               |
 
+### Response Schema
+
+```json
+{
+	"$schema": "https://json-schema.org/draft/2020-12/schema",
+	"type": "array",
+	"items": {
+		"type": "object",
+		"required": ["id", "name", "scopes", "createdAt", "lastUsedAt", "expiresAt", "keyPrefix"],
+		"properties": {
+			"id": {
+				"type": "string",
+				"pattern": "^key_[a-zA-Z0-9]+$"
+			},
+			"name": {
+				"type": "string",
+				"minLength": 1,
+				"maxLength": 255
+			},
+			"scopes": {
+				"type": "array",
+				"minItems": 1,
+				"items": {
+					"type": "string",
+					"enum": [
+						"teams:read",
+						"teams:write",
+						"invites:read",
+						"invites:write",
+						"team-domains:read",
+						"team-domains:write",
+						"monitors:read",
+						"monitors:write",
+						"maintenance:read",
+						"maintenance:write",
+						"dns-monitors:read",
+						"dns-monitors:write",
+						"alerts:read",
+						"alerts:write",
+						"status-pages:read",
+						"status-pages:write",
+						"cron-jobs:read",
+						"cron-jobs:write",
+						"cron-jobs:ping",
+						"api-keys:read",
+						"api-keys:write"
+					]
+				}
+			},
+			"createdAt": {
+				"type": "string",
+				"format": "date-time"
+			},
+			"lastUsedAt": {
+				"type": ["string", "null"],
+				"format": "date-time"
+			},
+			"expiresAt": {
+				"type": ["string", "null"],
+				"format": "date-time"
+			},
+			"keyPrefix": {
+				"type": "string",
+				"pattern": "^uptime_[a-zA-Z0-9]+$"
+			}
+		}
+	}
+}
+```
+
 ---
 
 ## POST /v1/api-keys
@@ -183,6 +253,129 @@ const data = await response.json();
 | 429    | RATE_LIMITED     | Too many requests                                         |
 | 500    | INTERNAL_ERROR   | Server error                                              |
 
+### Request Body Schema
+
+```json
+{
+	"$schema": "https://json-schema.org/draft/2020-12/schema",
+	"type": "object",
+	"required": ["name", "scopes"],
+	"properties": {
+		"name": {
+			"type": "string",
+			"minLength": 1,
+			"maxLength": 255
+		},
+		"scopes": {
+			"type": "array",
+			"minItems": 1,
+			"items": {
+				"type": "string",
+				"enum": [
+					"teams:read",
+					"teams:write",
+					"invites:read",
+					"invites:write",
+					"team-domains:read",
+					"team-domains:write",
+					"monitors:read",
+					"monitors:write",
+					"maintenance:read",
+					"maintenance:write",
+					"dns-monitors:read",
+					"dns-monitors:write",
+					"alerts:read",
+					"alerts:write",
+					"status-pages:read",
+					"status-pages:write",
+					"cron-jobs:read",
+					"cron-jobs:write",
+					"cron-jobs:ping",
+					"api-keys:read",
+					"api-keys:write"
+				]
+			}
+		},
+		"expiresAt": {
+			"type": "string",
+			"format": "date-time"
+		}
+	}
+}
+```
+
+### Response Schema
+
+```json
+{
+	"$schema": "https://json-schema.org/draft/2020-12/schema",
+	"type": "object",
+	"required": ["id", "name", "scopes", "createdAt", "lastUsedAt", "expiresAt", "keyPrefix", "key"],
+	"properties": {
+		"id": {
+			"type": "string",
+			"pattern": "^key_[a-zA-Z0-9]+$"
+		},
+		"name": {
+			"type": "string",
+			"minLength": 1,
+			"maxLength": 255
+		},
+		"scopes": {
+			"type": "array",
+			"minItems": 1,
+			"items": {
+				"type": "string",
+				"enum": [
+					"teams:read",
+					"teams:write",
+					"invites:read",
+					"invites:write",
+					"team-domains:read",
+					"team-domains:write",
+					"monitors:read",
+					"monitors:write",
+					"maintenance:read",
+					"maintenance:write",
+					"dns-monitors:read",
+					"dns-monitors:write",
+					"alerts:read",
+					"alerts:write",
+					"status-pages:read",
+					"status-pages:write",
+					"cron-jobs:read",
+					"cron-jobs:write",
+					"cron-jobs:ping",
+					"api-keys:read",
+					"api-keys:write"
+				]
+			}
+		},
+		"createdAt": {
+			"type": "string",
+			"format": "date-time"
+		},
+		"lastUsedAt": {
+			"type": ["string", "null"],
+			"format": "date-time"
+		},
+		"expiresAt": {
+			"type": ["string", "null"],
+			"format": "date-time"
+		},
+		"keyPrefix": {
+			"type": "string",
+			"pattern": "^uptime_[a-zA-Z0-9]+$"
+		},
+		"key": {
+			"type": "string",
+			"description": "The full API key value. Only returned once at creation.",
+			"pattern": "^uptime_[a-zA-Z0-9]+$"
+		}
+	}
+}
+```
+
 ---
 
 ## DELETE /v1/api-keys/:id
@@ -245,89 +438,7 @@ const data = await response.json();
 | 429    | RATE_LIMITED   | Too many requests                            |
 | 500    | INTERNAL_ERROR | Server error                                 |
 
----
-
-## JSON Schema
-
-Use these schemas to validate API key data in your integrations.
-
-### API Key Object (List/Create Response)
-
-```json
-{
-	"$schema": "https://json-schema.org/draft/2020-12/schema",
-	"type": "object",
-	"required": ["id", "name", "scopes", "createdAt", "lastUsedAt", "expiresAt", "keyPrefix"],
-	"properties": {
-		"id": {
-			"type": "string",
-			"pattern": "^key_[a-zA-Z0-9]+$"
-		},
-		"name": {
-			"type": "string",
-			"minLength": 1,
-			"maxLength": 255
-		},
-		"scopes": {
-			"type": "array",
-			"minItems": 1,
-			"items": {
-				"type": "string"
-			}
-		},
-		"createdAt": {
-			"type": "string",
-			"format": "date-time"
-		},
-		"lastUsedAt": {
-			"type": ["string", "null"],
-			"format": "date-time"
-		},
-		"expiresAt": {
-			"type": ["string", "null"],
-			"format": "date-time"
-		},
-		"keyPrefix": {
-			"type": "string",
-			"pattern": "^uptime_[a-zA-Z0-9]+$"
-		},
-		"key": {
-			"type": "string",
-			"description": "Only present in POST response"
-		}
-	}
-}
-```
-
-### Create API Key Request
-
-```json
-{
-	"$schema": "https://json-schema.org/draft/2020-12/schema",
-	"type": "object",
-	"required": ["name", "scopes"],
-	"properties": {
-		"name": {
-			"type": "string",
-			"minLength": 1,
-			"maxLength": 255
-		},
-		"scopes": {
-			"type": "array",
-			"minItems": 1,
-			"items": {
-				"type": "string"
-			}
-		},
-		"expiresAt": {
-			"type": "string",
-			"format": "date-time"
-		}
-	}
-}
-```
-
-### Delete Response
+### Response Schema
 
 ```json
 {

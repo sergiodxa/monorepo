@@ -68,6 +68,103 @@ const { data } = await response.json();
 | 401    | UNAUTHORIZED | Missing or invalid API key                |
 | 403    | FORBIDDEN    | API key missing `tcp-monitors:read` scope |
 
+### Response Schema
+
+```json
+{
+	"$schema": "https://json-schema.org/draft/2020-12/schema",
+	"type": "object",
+	"properties": {
+		"data": {
+			"type": "array",
+			"items": {
+				"type": "object",
+				"properties": {
+					"id": {
+						"type": "string",
+						"description": "Unique identifier",
+						"pattern": "^tcpm_[a-zA-Z0-9]+$"
+					},
+					"name": {
+						"type": "string",
+						"description": "Monitor name",
+						"minLength": 1,
+						"maxLength": 255
+					},
+					"host": {
+						"type": "string",
+						"description": "Hostname or IP address",
+						"minLength": 1,
+						"maxLength": 255
+					},
+					"port": {
+						"type": "integer",
+						"description": "TCP port number",
+						"minimum": 1,
+						"maximum": 65535
+					},
+					"timeoutMs": {
+						"type": "integer",
+						"description": "Connection timeout in milliseconds",
+						"minimum": 100,
+						"maximum": 60000,
+						"default": 5000
+					},
+					"intervalSeconds": {
+						"type": "integer",
+						"description": "Check interval in seconds",
+						"minimum": 10,
+						"maximum": 86400,
+						"default": 60
+					},
+					"isEnabled": {
+						"type": "boolean",
+						"description": "Whether the monitor is active",
+						"default": true
+					},
+					"lastCheckedAt": {
+						"type": ["string", "null"],
+						"format": "date-time",
+						"description": "Timestamp of the last check"
+					},
+					"lastStatus": {
+						"type": ["string", "null"],
+						"enum": ["up", "down", "timeout", null],
+						"description": "Status from the last check"
+					},
+					"lastResponseTimeMs": {
+						"type": ["integer", "null"],
+						"description": "Response time from the last check in milliseconds"
+					},
+					"createdAt": {
+						"type": "string",
+						"format": "date-time",
+						"description": "Timestamp when the monitor was created"
+					},
+					"updatedAt": {
+						"type": "string",
+						"format": "date-time",
+						"description": "Timestamp when the monitor was last updated"
+					}
+				},
+				"required": [
+					"id",
+					"name",
+					"host",
+					"port",
+					"timeoutMs",
+					"intervalSeconds",
+					"isEnabled",
+					"createdAt",
+					"updatedAt"
+				]
+			}
+		}
+	},
+	"required": ["data"]
+}
+```
+
 ## Create a TCP Monitor
 
 Create a new TCP monitor to check port connectivity.
@@ -154,6 +251,150 @@ const { data } = await response.json();
 | 401    | UNAUTHORIZED     | Missing or invalid API key                 |
 | 403    | FORBIDDEN        | API key missing `tcp-monitors:write` scope |
 
+### Request Body Schema
+
+```json
+{
+	"$schema": "https://json-schema.org/draft/2020-12/schema",
+	"type": "object",
+	"properties": {
+		"name": {
+			"type": "string",
+			"description": "Monitor name",
+			"minLength": 1,
+			"maxLength": 255
+		},
+		"host": {
+			"type": "string",
+			"description": "Hostname or IP address",
+			"minLength": 1,
+			"maxLength": 255
+		},
+		"port": {
+			"type": "integer",
+			"description": "TCP port number",
+			"minimum": 1,
+			"maximum": 65535
+		},
+		"timeoutMs": {
+			"type": "integer",
+			"description": "Connection timeout in milliseconds",
+			"minimum": 100,
+			"maximum": 60000,
+			"default": 5000
+		},
+		"intervalSeconds": {
+			"type": "integer",
+			"description": "Check interval in seconds",
+			"minimum": 10,
+			"maximum": 86400,
+			"default": 60
+		},
+		"isEnabled": {
+			"type": "boolean",
+			"description": "Whether the monitor is active",
+			"default": true
+		}
+	},
+	"required": ["name", "host", "port"],
+	"additionalProperties": false
+}
+```
+
+### Response Schema
+
+```json
+{
+	"$schema": "https://json-schema.org/draft/2020-12/schema",
+	"type": "object",
+	"properties": {
+		"data": {
+			"type": "object",
+			"properties": {
+				"id": {
+					"type": "string",
+					"description": "Unique identifier",
+					"pattern": "^tcpm_[a-zA-Z0-9]+$"
+				},
+				"name": {
+					"type": "string",
+					"description": "Monitor name",
+					"minLength": 1,
+					"maxLength": 255
+				},
+				"host": {
+					"type": "string",
+					"description": "Hostname or IP address",
+					"minLength": 1,
+					"maxLength": 255
+				},
+				"port": {
+					"type": "integer",
+					"description": "TCP port number",
+					"minimum": 1,
+					"maximum": 65535
+				},
+				"timeoutMs": {
+					"type": "integer",
+					"description": "Connection timeout in milliseconds",
+					"minimum": 100,
+					"maximum": 60000,
+					"default": 5000
+				},
+				"intervalSeconds": {
+					"type": "integer",
+					"description": "Check interval in seconds",
+					"minimum": 10,
+					"maximum": 86400,
+					"default": 60
+				},
+				"isEnabled": {
+					"type": "boolean",
+					"description": "Whether the monitor is active",
+					"default": true
+				},
+				"lastCheckedAt": {
+					"type": ["string", "null"],
+					"format": "date-time",
+					"description": "Timestamp of the last check"
+				},
+				"lastStatus": {
+					"type": ["string", "null"],
+					"enum": ["up", "down", "timeout", null],
+					"description": "Status from the last check"
+				},
+				"lastResponseTimeMs": {
+					"type": ["integer", "null"],
+					"description": "Response time from the last check in milliseconds"
+				},
+				"createdAt": {
+					"type": "string",
+					"format": "date-time",
+					"description": "Timestamp when the monitor was created"
+				},
+				"updatedAt": {
+					"type": "string",
+					"format": "date-time",
+					"description": "Timestamp when the monitor was last updated"
+				}
+			},
+			"required": [
+				"id",
+				"name",
+				"host",
+				"port",
+				"timeoutMs",
+				"intervalSeconds",
+				"isEnabled",
+				"createdAt",
+				"updatedAt"
+			]
+		}
+	},
+	"required": ["data"]
+}
+```
+
 ## Get a TCP Monitor
 
 Retrieve a single TCP monitor by ID.
@@ -210,6 +451,100 @@ const { data } = await response.json();
 | 401    | UNAUTHORIZED | Missing or invalid API key                |
 | 403    | FORBIDDEN    | API key missing `tcp-monitors:read` scope |
 | 404    | NOT_FOUND    | TCP monitor not found                     |
+
+### Response Schema
+
+```json
+{
+	"$schema": "https://json-schema.org/draft/2020-12/schema",
+	"type": "object",
+	"properties": {
+		"data": {
+			"type": "object",
+			"properties": {
+				"id": {
+					"type": "string",
+					"description": "Unique identifier",
+					"pattern": "^tcpm_[a-zA-Z0-9]+$"
+				},
+				"name": {
+					"type": "string",
+					"description": "Monitor name",
+					"minLength": 1,
+					"maxLength": 255
+				},
+				"host": {
+					"type": "string",
+					"description": "Hostname or IP address",
+					"minLength": 1,
+					"maxLength": 255
+				},
+				"port": {
+					"type": "integer",
+					"description": "TCP port number",
+					"minimum": 1,
+					"maximum": 65535
+				},
+				"timeoutMs": {
+					"type": "integer",
+					"description": "Connection timeout in milliseconds",
+					"minimum": 100,
+					"maximum": 60000,
+					"default": 5000
+				},
+				"intervalSeconds": {
+					"type": "integer",
+					"description": "Check interval in seconds",
+					"minimum": 10,
+					"maximum": 86400,
+					"default": 60
+				},
+				"isEnabled": {
+					"type": "boolean",
+					"description": "Whether the monitor is active",
+					"default": true
+				},
+				"lastCheckedAt": {
+					"type": ["string", "null"],
+					"format": "date-time",
+					"description": "Timestamp of the last check"
+				},
+				"lastStatus": {
+					"type": ["string", "null"],
+					"enum": ["up", "down", "timeout", null],
+					"description": "Status from the last check"
+				},
+				"lastResponseTimeMs": {
+					"type": ["integer", "null"],
+					"description": "Response time from the last check in milliseconds"
+				},
+				"createdAt": {
+					"type": "string",
+					"format": "date-time",
+					"description": "Timestamp when the monitor was created"
+				},
+				"updatedAt": {
+					"type": "string",
+					"format": "date-time",
+					"description": "Timestamp when the monitor was last updated"
+				}
+			},
+			"required": [
+				"id",
+				"name",
+				"host",
+				"port",
+				"timeoutMs",
+				"intervalSeconds",
+				"isEnabled",
+				"createdAt",
+				"updatedAt"
+			]
+		}
+	},
+	"required": ["data"]
+}
+```
 
 ## Update a TCP Monitor
 
@@ -292,6 +627,146 @@ const { data } = await response.json();
 | 403    | FORBIDDEN        | API key missing `tcp-monitors:write` scope |
 | 404    | NOT_FOUND        | TCP monitor not found                      |
 
+### Request Body Schema
+
+```json
+{
+	"$schema": "https://json-schema.org/draft/2020-12/schema",
+	"type": "object",
+	"properties": {
+		"name": {
+			"type": "string",
+			"description": "Monitor name",
+			"minLength": 1,
+			"maxLength": 255
+		},
+		"host": {
+			"type": "string",
+			"description": "Hostname or IP address",
+			"minLength": 1,
+			"maxLength": 255
+		},
+		"port": {
+			"type": "integer",
+			"description": "TCP port number",
+			"minimum": 1,
+			"maximum": 65535
+		},
+		"timeoutMs": {
+			"type": "integer",
+			"description": "Connection timeout in milliseconds",
+			"minimum": 100,
+			"maximum": 60000
+		},
+		"intervalSeconds": {
+			"type": "integer",
+			"description": "Check interval in seconds",
+			"minimum": 10,
+			"maximum": 86400
+		},
+		"isEnabled": {
+			"type": "boolean",
+			"description": "Whether the monitor is active"
+		}
+	},
+	"additionalProperties": false
+}
+```
+
+### Response Schema
+
+```json
+{
+	"$schema": "https://json-schema.org/draft/2020-12/schema",
+	"type": "object",
+	"properties": {
+		"data": {
+			"type": "object",
+			"properties": {
+				"id": {
+					"type": "string",
+					"description": "Unique identifier",
+					"pattern": "^tcpm_[a-zA-Z0-9]+$"
+				},
+				"name": {
+					"type": "string",
+					"description": "Monitor name",
+					"minLength": 1,
+					"maxLength": 255
+				},
+				"host": {
+					"type": "string",
+					"description": "Hostname or IP address",
+					"minLength": 1,
+					"maxLength": 255
+				},
+				"port": {
+					"type": "integer",
+					"description": "TCP port number",
+					"minimum": 1,
+					"maximum": 65535
+				},
+				"timeoutMs": {
+					"type": "integer",
+					"description": "Connection timeout in milliseconds",
+					"minimum": 100,
+					"maximum": 60000,
+					"default": 5000
+				},
+				"intervalSeconds": {
+					"type": "integer",
+					"description": "Check interval in seconds",
+					"minimum": 10,
+					"maximum": 86400,
+					"default": 60
+				},
+				"isEnabled": {
+					"type": "boolean",
+					"description": "Whether the monitor is active",
+					"default": true
+				},
+				"lastCheckedAt": {
+					"type": ["string", "null"],
+					"format": "date-time",
+					"description": "Timestamp of the last check"
+				},
+				"lastStatus": {
+					"type": ["string", "null"],
+					"enum": ["up", "down", "timeout", null],
+					"description": "Status from the last check"
+				},
+				"lastResponseTimeMs": {
+					"type": ["integer", "null"],
+					"description": "Response time from the last check in milliseconds"
+				},
+				"createdAt": {
+					"type": "string",
+					"format": "date-time",
+					"description": "Timestamp when the monitor was created"
+				},
+				"updatedAt": {
+					"type": "string",
+					"format": "date-time",
+					"description": "Timestamp when the monitor was last updated"
+				}
+			},
+			"required": [
+				"id",
+				"name",
+				"host",
+				"port",
+				"timeoutMs",
+				"intervalSeconds",
+				"isEnabled",
+				"createdAt",
+				"updatedAt"
+			]
+		}
+	},
+	"required": ["data"]
+}
+```
+
 ## Delete a TCP Monitor
 
 Permanently delete a TCP monitor and all its check history.
@@ -333,6 +808,10 @@ Returns `204 No Content` on success with no response body.
 | 401    | UNAUTHORIZED | Missing or invalid API key                 |
 | 403    | FORBIDDEN    | API key missing `tcp-monitors:write` scope |
 | 404    | NOT_FOUND    | TCP monitor not found                      |
+
+### Response Schema
+
+Returns `204 No Content` with no response body on success.
 
 ## Get Check Results
 
@@ -415,168 +894,64 @@ const { data } = await response.json();
 | 403    | FORBIDDEN        | API key missing `tcp-monitors:read` scope |
 | 404    | NOT_FOUND        | TCP monitor not found                     |
 
-## JSON Schema
-
-### TCP Monitor Object
+### Response Schema
 
 ```json
 {
 	"$schema": "https://json-schema.org/draft/2020-12/schema",
 	"type": "object",
 	"properties": {
-		"id": {
-			"type": "string",
-			"description": "Unique identifier",
-			"pattern": "^tcpm_[a-zA-Z0-9]+$"
+		"data": {
+			"type": "array",
+			"items": {
+				"type": "object",
+				"properties": {
+					"id": {
+						"type": "string",
+						"description": "Unique identifier",
+						"pattern": "^tcpr_[a-zA-Z0-9]+$"
+					},
+					"status": {
+						"type": "string",
+						"enum": ["up", "down", "timeout"],
+						"description": "Result status"
+					},
+					"responseTimeMs": {
+						"type": ["integer", "null"],
+						"description": "Connection time in milliseconds"
+					},
+					"error": {
+						"type": "string",
+						"description": "Error message when status is down or timeout"
+					},
+					"checkedAt": {
+						"type": "string",
+						"format": "date-time",
+						"description": "Timestamp when the check was performed"
+					}
+				},
+				"required": ["id", "status", "checkedAt"]
+			}
 		},
-		"name": {
-			"type": "string",
-			"description": "Monitor name",
-			"minLength": 1,
-			"maxLength": 255
-		},
-		"host": {
-			"type": "string",
-			"description": "Hostname or IP address",
-			"minLength": 1,
-			"maxLength": 255
-		},
-		"port": {
-			"type": "integer",
-			"description": "TCP port number",
-			"minimum": 1,
-			"maximum": 65535
-		},
-		"timeoutMs": {
-			"type": "integer",
-			"description": "Connection timeout in milliseconds",
-			"minimum": 100,
-			"maximum": 60000,
-			"default": 5000
-		},
-		"intervalSeconds": {
-			"type": "integer",
-			"description": "Check interval in seconds",
-			"minimum": 10,
-			"maximum": 86400,
-			"default": 60
-		},
-		"isEnabled": {
-			"type": "boolean",
-			"description": "Whether the monitor is active",
-			"default": true
-		},
-		"lastCheckedAt": {
-			"type": ["string", "null"],
-			"format": "date-time",
-			"description": "Timestamp of the last check"
-		},
-		"lastStatus": {
-			"type": ["string", "null"],
-			"enum": ["up", "down", "timeout", null],
-			"description": "Status from the last check"
-		},
-		"lastResponseTimeMs": {
-			"type": ["integer", "null"],
-			"description": "Response time from the last check in milliseconds"
-		},
-		"createdAt": {
-			"type": "string",
-			"format": "date-time",
-			"description": "Timestamp when the monitor was created"
-		},
-		"updatedAt": {
-			"type": "string",
-			"format": "date-time",
-			"description": "Timestamp when the monitor was last updated"
+		"pagination": {
+			"type": "object",
+			"properties": {
+				"total": {
+					"type": "integer",
+					"description": "Total number of results"
+				},
+				"limit": {
+					"type": "integer",
+					"description": "Number of results per page"
+				},
+				"offset": {
+					"type": "integer",
+					"description": "Number of results skipped"
+				}
+			},
+			"required": ["total", "limit", "offset"]
 		}
 	},
-	"required": [
-		"id",
-		"name",
-		"host",
-		"port",
-		"timeoutMs",
-		"intervalSeconds",
-		"isEnabled",
-		"createdAt",
-		"updatedAt"
-	]
-}
-```
-
-### Create/Update Request
-
-```json
-{
-	"$schema": "https://json-schema.org/draft/2020-12/schema",
-	"type": "object",
-	"properties": {
-		"name": {
-			"type": "string",
-			"minLength": 1,
-			"maxLength": 255
-		},
-		"host": {
-			"type": "string",
-			"minLength": 1,
-			"maxLength": 255
-		},
-		"port": {
-			"type": "integer",
-			"minimum": 1,
-			"maximum": 65535
-		},
-		"timeoutMs": {
-			"type": "integer",
-			"minimum": 100,
-			"maximum": 60000
-		},
-		"intervalSeconds": {
-			"type": "integer",
-			"minimum": 10,
-			"maximum": 86400
-		},
-		"isEnabled": {
-			"type": "boolean"
-		}
-	},
-	"required": ["name", "host", "port"],
-	"additionalProperties": false
-}
-```
-
-### Check Result Object
-
-```json
-{
-	"$schema": "https://json-schema.org/draft/2020-12/schema",
-	"type": "object",
-	"properties": {
-		"id": {
-			"type": "string",
-			"description": "Unique identifier",
-			"pattern": "^tcpr_[a-zA-Z0-9]+$"
-		},
-		"status": {
-			"type": "string",
-			"enum": ["up", "down", "timeout"],
-			"description": "Result status"
-		},
-		"responseTimeMs": {
-			"type": ["integer", "null"],
-			"description": "Connection time in milliseconds"
-		},
-		"error": {
-			"type": "string",
-			"description": "Error message when status is down or timeout"
-		},
-		"checkedAt": {
-			"type": "string",
-			"format": "date-time",
-			"description": "Timestamp when the check was performed"
-		}
-	},
-	"required": ["id", "status", "checkedAt"]
+	"required": ["data", "pagination"]
 }
 ```

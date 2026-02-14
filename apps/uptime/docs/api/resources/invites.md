@@ -85,6 +85,51 @@ const data = await response.json();
 | 429    | RATE_LIMITED   | Too many requests                         |
 | 500    | INTERNAL_ERROR | Server error                              |
 
+### Response Schema
+
+```json
+{
+	"$schema": "https://json-schema.org/draft/2020-12/schema",
+	"type": "array",
+	"items": {
+		"$ref": "#/$defs/invite"
+	},
+	"$defs": {
+		"invite": {
+			"type": "object",
+			"required": ["id", "email", "senderId", "teamId", "acceptedAt", "createdAt", "updatedAt"],
+			"properties": {
+				"id": {
+					"type": "string"
+				},
+				"email": {
+					"type": "string",
+					"format": "email"
+				},
+				"senderId": {
+					"type": "string"
+				},
+				"teamId": {
+					"type": "string"
+				},
+				"acceptedAt": {
+					"type": ["string", "null"],
+					"format": "date-time"
+				},
+				"createdAt": {
+					"type": "string",
+					"format": "date-time"
+				},
+				"updatedAt": {
+					"type": "string",
+					"format": "date-time"
+				}
+			}
+		}
+	}
+}
+```
+
 ## POST /v1/invites
 
 Create a new invitation and send it to the specified email address. The invite expires after 7 days.
@@ -152,6 +197,59 @@ const data = await response.json();
 | 429    | RATE_LIMITED     | Too many requests                          |
 | 500    | INTERNAL_ERROR   | Server error                               |
 
+### Request Body Schema
+
+```json
+{
+	"$schema": "https://json-schema.org/draft/2020-12/schema",
+	"type": "object",
+	"required": ["email"],
+	"properties": {
+		"email": {
+			"type": "string",
+			"format": "email"
+		}
+	}
+}
+```
+
+### Response Schema
+
+```json
+{
+	"$schema": "https://json-schema.org/draft/2020-12/schema",
+	"type": "object",
+	"required": ["id", "email", "senderId", "teamId", "acceptedAt", "createdAt", "updatedAt"],
+	"properties": {
+		"id": {
+			"type": "string"
+		},
+		"email": {
+			"type": "string",
+			"format": "email"
+		},
+		"senderId": {
+			"type": "string"
+		},
+		"teamId": {
+			"type": "string"
+		},
+		"acceptedAt": {
+			"type": ["string", "null"],
+			"format": "date-time"
+		},
+		"createdAt": {
+			"type": "string",
+			"format": "date-time"
+		},
+		"updatedAt": {
+			"type": "string",
+			"format": "date-time"
+		}
+	}
+}
+```
+
 ## DELETE /v1/invites/:id
 
 Revoke a pending invitation. This prevents the invited user from joining the team using this invite.
@@ -206,109 +304,7 @@ const data = await response.json();
 | 429    | RATE_LIMITED   | Too many requests                          |
 | 500    | INTERNAL_ERROR | Server error                               |
 
-## JSON Schema
-
-Use these schemas to validate requests and responses in your integration:
-
-### Invite Object
-
-```json
-{
-	"$schema": "https://json-schema.org/draft/2020-12/schema",
-	"type": "object",
-	"required": ["id", "email", "senderId", "teamId", "acceptedAt", "createdAt", "updatedAt"],
-	"properties": {
-		"id": {
-			"type": "string"
-		},
-		"email": {
-			"type": "string",
-			"format": "email"
-		},
-		"senderId": {
-			"type": "string"
-		},
-		"teamId": {
-			"type": "string"
-		},
-		"acceptedAt": {
-			"type": ["string", "null"],
-			"format": "date-time"
-		},
-		"createdAt": {
-			"type": "string",
-			"format": "date-time"
-		},
-		"updatedAt": {
-			"type": "string",
-			"format": "date-time"
-		}
-	}
-}
-```
-
-### GET /v1/invites Response
-
-```json
-{
-	"$schema": "https://json-schema.org/draft/2020-12/schema",
-	"type": "array",
-	"items": {
-		"$ref": "#/$defs/invite"
-	},
-	"$defs": {
-		"invite": {
-			"type": "object",
-			"required": ["id", "email", "senderId", "teamId", "acceptedAt", "createdAt", "updatedAt"],
-			"properties": {
-				"id": {
-					"type": "string"
-				},
-				"email": {
-					"type": "string",
-					"format": "email"
-				},
-				"senderId": {
-					"type": "string"
-				},
-				"teamId": {
-					"type": "string"
-				},
-				"acceptedAt": {
-					"type": ["string", "null"],
-					"format": "date-time"
-				},
-				"createdAt": {
-					"type": "string",
-					"format": "date-time"
-				},
-				"updatedAt": {
-					"type": "string",
-					"format": "date-time"
-				}
-			}
-		}
-	}
-}
-```
-
-### POST /v1/invites Request
-
-```json
-{
-	"$schema": "https://json-schema.org/draft/2020-12/schema",
-	"type": "object",
-	"required": ["email"],
-	"properties": {
-		"email": {
-			"type": "string",
-			"format": "email"
-		}
-	}
-}
-```
-
-### DELETE /v1/invites/:id Response
+### Response Schema
 
 ```json
 {

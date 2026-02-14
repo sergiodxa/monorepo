@@ -74,6 +74,44 @@ const data = await response.json();
 | 429    | RATE_LIMITED   | Too many requests                       |
 | 500    | INTERNAL_ERROR | Server error                            |
 
+### Response Schema
+
+```json
+{
+	"$schema": "https://json-schema.org/draft/2020-12/schema",
+	"type": "object",
+	"required": ["id", "name", "slug", "logo", "ownerId", "createdAt", "updatedAt"],
+	"properties": {
+		"id": {
+			"type": "string"
+		},
+		"name": {
+			"type": "string",
+			"minLength": 1,
+			"maxLength": 255
+		},
+		"slug": {
+			"type": "string"
+		},
+		"logo": {
+			"type": ["string", "null"],
+			"format": "uri"
+		},
+		"ownerId": {
+			"type": "string"
+		},
+		"createdAt": {
+			"type": "string",
+			"format": "date-time"
+		},
+		"updatedAt": {
+			"type": "string",
+			"format": "date-time"
+		}
+	}
+}
+```
+
 ## PUT /v1/team
 
 Updates the current team's settings. At least one field must be provided.
@@ -144,6 +182,65 @@ const data = await response.json();
 | 403    | FORBIDDEN        | API key doesn't have `teams:write` scope   |
 | 429    | RATE_LIMITED     | Too many requests                          |
 | 500    | INTERNAL_ERROR   | Server error                               |
+
+### Request Body Schema
+
+```json
+{
+	"$schema": "https://json-schema.org/draft/2020-12/schema",
+	"type": "object",
+	"minProperties": 1,
+	"properties": {
+		"name": {
+			"type": "string",
+			"minLength": 1,
+			"maxLength": 255
+		},
+		"logoUrl": {
+			"type": "string",
+			"format": "uri"
+		}
+	}
+}
+```
+
+### Response Schema
+
+```json
+{
+	"$schema": "https://json-schema.org/draft/2020-12/schema",
+	"type": "object",
+	"required": ["id", "name", "slug", "logo", "ownerId", "createdAt", "updatedAt"],
+	"properties": {
+		"id": {
+			"type": "string"
+		},
+		"name": {
+			"type": "string",
+			"minLength": 1,
+			"maxLength": 255
+		},
+		"slug": {
+			"type": "string"
+		},
+		"logo": {
+			"type": ["string", "null"],
+			"format": "uri"
+		},
+		"ownerId": {
+			"type": "string"
+		},
+		"createdAt": {
+			"type": "string",
+			"format": "date-time"
+		},
+		"updatedAt": {
+			"type": "string",
+			"format": "date-time"
+		}
+	}
+}
+```
 
 ## GET /v1/memberships
 
@@ -228,6 +325,48 @@ const data = await response.json();
 | 429    | RATE_LIMITED   | Too many requests                       |
 | 500    | INTERNAL_ERROR | Server error                            |
 
+### Response Schema
+
+```json
+{
+	"$schema": "https://json-schema.org/draft/2020-12/schema",
+	"type": "object",
+	"required": ["memberships"],
+	"properties": {
+		"memberships": {
+			"type": "array",
+			"items": {
+				"type": "object",
+				"required": ["id", "subjectId", "teamId", "role", "createdAt", "updatedAt"],
+				"properties": {
+					"id": {
+						"type": "string"
+					},
+					"subjectId": {
+						"type": "string"
+					},
+					"teamId": {
+						"type": "string"
+					},
+					"role": {
+						"type": "string",
+						"enum": ["owner", "admin", "member"]
+					},
+					"createdAt": {
+						"type": "string",
+						"format": "date-time"
+					},
+					"updatedAt": {
+						"type": "string",
+						"format": "date-time"
+					}
+				}
+			}
+		}
+	}
+}
+```
+
 ## GET /v1/team-domains
 
 Returns all custom domains configured for the team's status pages.
@@ -300,6 +439,46 @@ const data = await response.json();
 | 429    | RATE_LIMITED   | Too many requests                              |
 | 500    | INTERNAL_ERROR | Server error                                   |
 
+### Response Schema
+
+```json
+{
+	"$schema": "https://json-schema.org/draft/2020-12/schema",
+	"type": "object",
+	"required": ["domains"],
+	"properties": {
+		"domains": {
+			"type": "array",
+			"items": {
+				"type": "object",
+				"required": ["id", "hostname", "teamId", "createdAt", "updatedAt"],
+				"properties": {
+					"id": {
+						"type": "string"
+					},
+					"hostname": {
+						"type": "string",
+						"minLength": 1,
+						"maxLength": 255
+					},
+					"teamId": {
+						"type": "string"
+					},
+					"createdAt": {
+						"type": "string",
+						"format": "date-time"
+					},
+					"updatedAt": {
+						"type": "string",
+						"format": "date-time"
+					}
+				}
+			}
+		}
+	}
+}
+```
+
 ## POST /v1/team-domains
 
 Adds a custom domain for the team's status pages.
@@ -367,6 +546,54 @@ const data = await response.json();
 | 429    | RATE_LIMITED     | Too many requests                               |
 | 500    | INTERNAL_ERROR   | Server error                                    |
 
+### Request Body Schema
+
+```json
+{
+	"$schema": "https://json-schema.org/draft/2020-12/schema",
+	"type": "object",
+	"required": ["hostname"],
+	"properties": {
+		"hostname": {
+			"type": "string",
+			"minLength": 1,
+			"maxLength": 255
+		}
+	}
+}
+```
+
+### Response Schema
+
+```json
+{
+	"$schema": "https://json-schema.org/draft/2020-12/schema",
+	"type": "object",
+	"required": ["id", "hostname", "teamId", "createdAt", "updatedAt"],
+	"properties": {
+		"id": {
+			"type": "string"
+		},
+		"hostname": {
+			"type": "string",
+			"minLength": 1,
+			"maxLength": 255
+		},
+		"teamId": {
+			"type": "string"
+		},
+		"createdAt": {
+			"type": "string",
+			"format": "date-time"
+		},
+		"updatedAt": {
+			"type": "string",
+			"format": "date-time"
+		}
+	}
+}
+```
+
 ## DELETE /v1/team-domains
 
 Removes a custom domain from the team.
@@ -430,169 +657,7 @@ const data = await response.json();
 | 429    | RATE_LIMITED     | Too many requests                               |
 | 500    | INTERNAL_ERROR   | Server error                                    |
 
-## JSON Schema
-
-Use these schemas to validate requests and responses in your integration.
-
-### Team Response Schema
-
-```json
-{
-	"$schema": "https://json-schema.org/draft/2020-12/schema",
-	"type": "object",
-	"required": ["id", "name", "slug", "logo", "ownerId", "createdAt", "updatedAt"],
-	"properties": {
-		"id": {
-			"type": "string"
-		},
-		"name": {
-			"type": "string",
-			"minLength": 1,
-			"maxLength": 255
-		},
-		"slug": {
-			"type": "string"
-		},
-		"logo": {
-			"type": ["string", "null"],
-			"format": "uri"
-		},
-		"ownerId": {
-			"type": "string"
-		},
-		"createdAt": {
-			"type": "string",
-			"format": "date-time"
-		},
-		"updatedAt": {
-			"type": "string",
-			"format": "date-time"
-		}
-	}
-}
-```
-
-### Update Team Request Schema
-
-```json
-{
-	"$schema": "https://json-schema.org/draft/2020-12/schema",
-	"type": "object",
-	"minProperties": 1,
-	"properties": {
-		"name": {
-			"type": "string",
-			"minLength": 1,
-			"maxLength": 255
-		},
-		"logoUrl": {
-			"type": "string",
-			"format": "uri"
-		}
-	}
-}
-```
-
-### Memberships Response Schema
-
-```json
-{
-	"$schema": "https://json-schema.org/draft/2020-12/schema",
-	"type": "object",
-	"required": ["memberships"],
-	"properties": {
-		"memberships": {
-			"type": "array",
-			"items": {
-				"type": "object",
-				"required": ["id", "subjectId", "teamId", "role", "createdAt", "updatedAt"],
-				"properties": {
-					"id": {
-						"type": "string"
-					},
-					"subjectId": {
-						"type": "string"
-					},
-					"teamId": {
-						"type": "string"
-					},
-					"role": {
-						"type": "string",
-						"enum": ["owner", "admin", "member"]
-					},
-					"createdAt": {
-						"type": "string",
-						"format": "date-time"
-					},
-					"updatedAt": {
-						"type": "string",
-						"format": "date-time"
-					}
-				}
-			}
-		}
-	}
-}
-```
-
-### Team Domains Response Schema
-
-```json
-{
-	"$schema": "https://json-schema.org/draft/2020-12/schema",
-	"type": "object",
-	"required": ["domains"],
-	"properties": {
-		"domains": {
-			"type": "array",
-			"items": {
-				"type": "object",
-				"required": ["id", "hostname", "teamId", "createdAt", "updatedAt"],
-				"properties": {
-					"id": {
-						"type": "string"
-					},
-					"hostname": {
-						"type": "string",
-						"minLength": 1,
-						"maxLength": 255
-					},
-					"teamId": {
-						"type": "string"
-					},
-					"createdAt": {
-						"type": "string",
-						"format": "date-time"
-					},
-					"updatedAt": {
-						"type": "string",
-						"format": "date-time"
-					}
-				}
-			}
-		}
-	}
-}
-```
-
-### Add Team Domain Request Schema
-
-```json
-{
-	"$schema": "https://json-schema.org/draft/2020-12/schema",
-	"type": "object",
-	"required": ["hostname"],
-	"properties": {
-		"hostname": {
-			"type": "string",
-			"minLength": 1,
-			"maxLength": 255
-		}
-	}
-}
-```
-
-### Delete Team Domain Request Schema
+### Request Body Schema
 
 ```json
 {
@@ -603,6 +668,22 @@ Use these schemas to validate requests and responses in your integration.
 		"id": {
 			"type": "string",
 			"format": "uuid"
+		}
+	}
+}
+```
+
+### Response Schema
+
+```json
+{
+	"$schema": "https://json-schema.org/draft/2020-12/schema",
+	"type": "object",
+	"required": ["success"],
+	"properties": {
+		"success": {
+			"type": "boolean",
+			"const": true
 		}
 	}
 }

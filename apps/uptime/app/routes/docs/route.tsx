@@ -2,14 +2,15 @@ import prismDark from "@pkg/markdown/styles/dark.css?url";
 import prismLight from "@pkg/markdown/styles/light.css?url";
 import { Breadcrumb, BreadcrumbLink, Breadcrumbs, Button, Sheet, SheetTrigger } from "@pkg/ui";
 import Fuse from "fuse.js";
-import { Menu } from "lucide-react";
+import { ArrowRightIcon, Menu } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Outlet, useLocation } from "react-router";
+import { href, Link, Outlet, useLocation } from "react-router";
 
 import { generateMeta } from "~/lib/seo";
 import { i18next } from "~/middleware/i18next";
 import { logger } from "~/middleware/logger";
+import { getSession } from "~/middleware/session";
 import { listDocs } from "~/modules/docs";
 
 import type { Route } from "./+types/route";
@@ -26,6 +27,7 @@ export let meta: Route.MetaFunction = ({ loaderData }) => loaderData?.meta ?? []
 export async function loader({ request, context }: Route.LoaderArgs) {
 	let log = logger();
 	let { t } = i18next(context);
+	let session = getSession();
 
 	let sections = await listDocs();
 
@@ -33,6 +35,7 @@ export async function loader({ request, context }: Route.LoaderArgs) {
 
 	return {
 		sections,
+		isSignedIn: session.has("id"),
 		meta: generateMeta({
 			title: t("docs.meta.title"),
 			description: t("docs.meta.description"),
@@ -44,7 +47,7 @@ export async function loader({ request, context }: Route.LoaderArgs) {
 export default function DocsLayout({ loaderData }: Route.ComponentProps) {
 	let { t } = useTranslation();
 	let location = useLocation();
-	let { sections } = loaderData;
+	let { sections, isSignedIn } = loaderData;
 	let [search, setSearch] = useState("");
 	let [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
@@ -124,6 +127,15 @@ export default function DocsLayout({ loaderData }: Route.ComponentProps) {
 							</Breadcrumb>
 						))}
 					</Breadcrumbs>
+
+					<Link
+						to={isSignedIn ? href("/app") : href("/auth")}
+						reloadDocument={!isSignedIn}
+						className="ml-auto inline-flex items-center gap-2 rounded-lg bg-primary-600 px-3 py-1.5 text-sm font-medium text-white shadow-sm transition hover:bg-primary-700 hover:shadow-md"
+					>
+						{isSignedIn ? t("docs.header.cta.in") : t("docs.header.cta.out")}
+						<ArrowRightIcon className="size-4" />
+					</Link>
 				</div>
 
 				<main className="flex-1">

@@ -70,6 +70,87 @@ const data = await response.json();
 | 429    | RATE_LIMITED   | Too many requests                             |
 | 500    | INTERNAL_ERROR | Server error                                  |
 
+### Response Schema
+
+```json
+{
+	"$schema": "https://json-schema.org/draft/2020-12/schema",
+	"type": "object",
+	"required": ["data"],
+	"properties": {
+		"data": {
+			"type": "array",
+			"items": {
+				"$ref": "#/$defs/maintenanceWindow"
+			}
+		}
+	},
+	"$defs": {
+		"maintenanceWindow": {
+			"type": "object",
+			"required": [
+				"id",
+				"teamId",
+				"monitorId",
+				"name",
+				"startsAt",
+				"endsAt",
+				"endedEarlyAt",
+				"suppressAlerts",
+				"showOnStatusPage",
+				"createdAt",
+				"updatedAt"
+			],
+			"properties": {
+				"id": {
+					"type": "string",
+					"pattern": "^mnt_[a-zA-Z0-9]+$"
+				},
+				"teamId": {
+					"type": "string",
+					"pattern": "^team_[a-zA-Z0-9]+$"
+				},
+				"monitorId": {
+					"type": ["string", "null"],
+					"pattern": "^mon_[a-zA-Z0-9]+$"
+				},
+				"name": {
+					"type": "string",
+					"minLength": 1,
+					"maxLength": 255
+				},
+				"startsAt": {
+					"type": "string",
+					"format": "date-time"
+				},
+				"endsAt": {
+					"type": "string",
+					"format": "date-time"
+				},
+				"endedEarlyAt": {
+					"type": ["string", "null"],
+					"format": "date-time"
+				},
+				"suppressAlerts": {
+					"type": "boolean"
+				},
+				"showOnStatusPage": {
+					"type": "boolean"
+				},
+				"createdAt": {
+					"type": "string",
+					"format": "date-time"
+				},
+				"updatedAt": {
+					"type": "string",
+					"format": "date-time"
+				}
+			}
+		}
+	}
+}
+```
+
 ## POST /v1/maintenance
 
 Creates a new maintenance window.
@@ -161,6 +242,116 @@ const data = await response.json();
 | 429    | RATE_LIMITED       | Too many requests                              |
 | 500    | INTERNAL_ERROR     | Server error                                   |
 
+### Request Body Schema
+
+```json
+{
+	"$schema": "https://json-schema.org/draft/2020-12/schema",
+	"type": "object",
+	"required": ["name", "startsAt", "endsAt"],
+	"properties": {
+		"name": {
+			"type": "string",
+			"minLength": 1,
+			"maxLength": 255
+		},
+		"startsAt": {
+			"type": "string",
+			"format": "date-time"
+		},
+		"endsAt": {
+			"type": "string",
+			"format": "date-time"
+		},
+		"monitorId": {
+			"type": ["string", "null"],
+			"pattern": "^mon_[a-zA-Z0-9]+$"
+		},
+		"suppressAlerts": {
+			"type": "boolean",
+			"default": true
+		},
+		"showOnStatusPage": {
+			"type": "boolean",
+			"default": true
+		}
+	}
+}
+```
+
+### Response Schema
+
+```json
+{
+	"$schema": "https://json-schema.org/draft/2020-12/schema",
+	"type": "object",
+	"required": ["data"],
+	"properties": {
+		"data": {
+			"type": "object",
+			"required": [
+				"id",
+				"teamId",
+				"monitorId",
+				"name",
+				"startsAt",
+				"endsAt",
+				"endedEarlyAt",
+				"suppressAlerts",
+				"showOnStatusPage",
+				"createdAt",
+				"updatedAt"
+			],
+			"properties": {
+				"id": {
+					"type": "string",
+					"pattern": "^mnt_[a-zA-Z0-9]+$"
+				},
+				"teamId": {
+					"type": "string",
+					"pattern": "^team_[a-zA-Z0-9]+$"
+				},
+				"monitorId": {
+					"type": ["string", "null"],
+					"pattern": "^mon_[a-zA-Z0-9]+$"
+				},
+				"name": {
+					"type": "string",
+					"minLength": 1,
+					"maxLength": 255
+				},
+				"startsAt": {
+					"type": "string",
+					"format": "date-time"
+				},
+				"endsAt": {
+					"type": "string",
+					"format": "date-time"
+				},
+				"endedEarlyAt": {
+					"type": ["string", "null"],
+					"format": "date-time"
+				},
+				"suppressAlerts": {
+					"type": "boolean"
+				},
+				"showOnStatusPage": {
+					"type": "boolean"
+				},
+				"createdAt": {
+					"type": "string",
+					"format": "date-time"
+				},
+				"updatedAt": {
+					"type": "string",
+					"format": "date-time"
+				}
+			}
+		}
+	}
+}
+```
+
 ## GET /v1/maintenance/:id
 
 Returns a single maintenance window by ID.
@@ -219,6 +410,79 @@ const data = await response.json();
 | 404    | NOT_FOUND      | Maintenance window not found                  |
 | 429    | RATE_LIMITED   | Too many requests                             |
 | 500    | INTERNAL_ERROR | Server error                                  |
+
+### Response Schema
+
+```json
+{
+	"$schema": "https://json-schema.org/draft/2020-12/schema",
+	"type": "object",
+	"required": ["data"],
+	"properties": {
+		"data": {
+			"type": "object",
+			"required": [
+				"id",
+				"teamId",
+				"monitorId",
+				"name",
+				"startsAt",
+				"endsAt",
+				"endedEarlyAt",
+				"suppressAlerts",
+				"showOnStatusPage",
+				"createdAt",
+				"updatedAt"
+			],
+			"properties": {
+				"id": {
+					"type": "string",
+					"pattern": "^mnt_[a-zA-Z0-9]+$"
+				},
+				"teamId": {
+					"type": "string",
+					"pattern": "^team_[a-zA-Z0-9]+$"
+				},
+				"monitorId": {
+					"type": ["string", "null"],
+					"pattern": "^mon_[a-zA-Z0-9]+$"
+				},
+				"name": {
+					"type": "string",
+					"minLength": 1,
+					"maxLength": 255
+				},
+				"startsAt": {
+					"type": "string",
+					"format": "date-time"
+				},
+				"endsAt": {
+					"type": "string",
+					"format": "date-time"
+				},
+				"endedEarlyAt": {
+					"type": ["string", "null"],
+					"format": "date-time"
+				},
+				"suppressAlerts": {
+					"type": "boolean"
+				},
+				"showOnStatusPage": {
+					"type": "boolean"
+				},
+				"createdAt": {
+					"type": "string",
+					"format": "date-time"
+				},
+				"updatedAt": {
+					"type": "string",
+					"format": "date-time"
+				}
+			}
+		}
+	}
+}
+```
 
 ## PUT /v1/maintenance/:id
 
@@ -303,6 +567,113 @@ const data = await response.json();
 | 429    | RATE_LIMITED       | Too many requests                              |
 | 500    | INTERNAL_ERROR     | Server error                                   |
 
+### Request Body Schema
+
+```json
+{
+	"$schema": "https://json-schema.org/draft/2020-12/schema",
+	"type": "object",
+	"properties": {
+		"name": {
+			"type": "string",
+			"minLength": 1,
+			"maxLength": 255
+		},
+		"startsAt": {
+			"type": "string",
+			"format": "date-time"
+		},
+		"endsAt": {
+			"type": "string",
+			"format": "date-time"
+		},
+		"monitorId": {
+			"type": ["string", "null"],
+			"pattern": "^mon_[a-zA-Z0-9]+$"
+		},
+		"suppressAlerts": {
+			"type": "boolean"
+		},
+		"showOnStatusPage": {
+			"type": "boolean"
+		}
+	}
+}
+```
+
+### Response Schema
+
+```json
+{
+	"$schema": "https://json-schema.org/draft/2020-12/schema",
+	"type": "object",
+	"required": ["data"],
+	"properties": {
+		"data": {
+			"type": "object",
+			"required": [
+				"id",
+				"teamId",
+				"monitorId",
+				"name",
+				"startsAt",
+				"endsAt",
+				"endedEarlyAt",
+				"suppressAlerts",
+				"showOnStatusPage",
+				"createdAt",
+				"updatedAt"
+			],
+			"properties": {
+				"id": {
+					"type": "string",
+					"pattern": "^mnt_[a-zA-Z0-9]+$"
+				},
+				"teamId": {
+					"type": "string",
+					"pattern": "^team_[a-zA-Z0-9]+$"
+				},
+				"monitorId": {
+					"type": ["string", "null"],
+					"pattern": "^mon_[a-zA-Z0-9]+$"
+				},
+				"name": {
+					"type": "string",
+					"minLength": 1,
+					"maxLength": 255
+				},
+				"startsAt": {
+					"type": "string",
+					"format": "date-time"
+				},
+				"endsAt": {
+					"type": "string",
+					"format": "date-time"
+				},
+				"endedEarlyAt": {
+					"type": ["string", "null"],
+					"format": "date-time"
+				},
+				"suppressAlerts": {
+					"type": "boolean"
+				},
+				"showOnStatusPage": {
+					"type": "boolean"
+				},
+				"createdAt": {
+					"type": "string",
+					"format": "date-time"
+				},
+				"updatedAt": {
+					"type": "string",
+					"format": "date-time"
+				}
+			}
+		}
+	}
+}
+```
+
 ## DELETE /v1/maintenance/:id
 
 Deletes a maintenance window.
@@ -346,6 +717,10 @@ Returns `204 No Content` on success.
 | 404    | NOT_FOUND      | Maintenance window not found                   |
 | 429    | RATE_LIMITED   | Too many requests                              |
 | 500    | INTERNAL_ERROR | Server error                                   |
+
+### Response Schema
+
+Returns `204 No Content` with an empty response body on success.
 
 ## POST /v1/maintenance/:id/end
 
@@ -409,6 +784,79 @@ const data = await response.json();
 | 429    | RATE_LIMITED   | Too many requests                              |
 | 500    | INTERNAL_ERROR | Server error                                   |
 
+### Response Schema
+
+```json
+{
+	"$schema": "https://json-schema.org/draft/2020-12/schema",
+	"type": "object",
+	"required": ["data"],
+	"properties": {
+		"data": {
+			"type": "object",
+			"required": [
+				"id",
+				"teamId",
+				"monitorId",
+				"name",
+				"startsAt",
+				"endsAt",
+				"endedEarlyAt",
+				"suppressAlerts",
+				"showOnStatusPage",
+				"createdAt",
+				"updatedAt"
+			],
+			"properties": {
+				"id": {
+					"type": "string",
+					"pattern": "^mnt_[a-zA-Z0-9]+$"
+				},
+				"teamId": {
+					"type": "string",
+					"pattern": "^team_[a-zA-Z0-9]+$"
+				},
+				"monitorId": {
+					"type": ["string", "null"],
+					"pattern": "^mon_[a-zA-Z0-9]+$"
+				},
+				"name": {
+					"type": "string",
+					"minLength": 1,
+					"maxLength": 255
+				},
+				"startsAt": {
+					"type": "string",
+					"format": "date-time"
+				},
+				"endsAt": {
+					"type": "string",
+					"format": "date-time"
+				},
+				"endedEarlyAt": {
+					"type": ["string", "null"],
+					"format": "date-time"
+				},
+				"suppressAlerts": {
+					"type": "boolean"
+				},
+				"showOnStatusPage": {
+					"type": "boolean"
+				},
+				"createdAt": {
+					"type": "string",
+					"format": "date-time"
+				},
+				"updatedAt": {
+					"type": "string",
+					"format": "date-time"
+				}
+			}
+		}
+	}
+}
+```
+
 ## Response Fields
 
 | Field              | Type           | Description                                                 |
@@ -424,109 +872,3 @@ const data = await response.json();
 | `showOnStatusPage` | boolean        | Whether maintenance is displayed on the status page         |
 | `createdAt`        | string         | Creation timestamp in ISO 8601 format                       |
 | `updatedAt`        | string         | Last update timestamp in ISO 8601 format                    |
-
-## JSON Schema
-
-Use this schema to validate maintenance window objects in your integration:
-
-```json
-{
-	"$schema": "https://json-schema.org/draft/2020-12/schema",
-	"type": "object",
-	"required": [
-		"id",
-		"teamId",
-		"monitorId",
-		"name",
-		"startsAt",
-		"endsAt",
-		"endedEarlyAt",
-		"suppressAlerts",
-		"showOnStatusPage",
-		"createdAt",
-		"updatedAt"
-	],
-	"properties": {
-		"id": {
-			"type": "string",
-			"pattern": "^mnt_[a-zA-Z0-9]+$"
-		},
-		"teamId": {
-			"type": "string",
-			"pattern": "^team_[a-zA-Z0-9]+$"
-		},
-		"monitorId": {
-			"type": ["string", "null"],
-			"pattern": "^mon_[a-zA-Z0-9]+$"
-		},
-		"name": {
-			"type": "string",
-			"minLength": 1,
-			"maxLength": 255
-		},
-		"startsAt": {
-			"type": "string",
-			"format": "date-time"
-		},
-		"endsAt": {
-			"type": "string",
-			"format": "date-time"
-		},
-		"endedEarlyAt": {
-			"type": ["string", "null"],
-			"format": "date-time"
-		},
-		"suppressAlerts": {
-			"type": "boolean"
-		},
-		"showOnStatusPage": {
-			"type": "boolean"
-		},
-		"createdAt": {
-			"type": "string",
-			"format": "date-time"
-		},
-		"updatedAt": {
-			"type": "string",
-			"format": "date-time"
-		}
-	}
-}
-```
-
-### Create/Update Request Schema
-
-```json
-{
-	"$schema": "https://json-schema.org/draft/2020-12/schema",
-	"type": "object",
-	"properties": {
-		"name": {
-			"type": "string",
-			"minLength": 1,
-			"maxLength": 255
-		},
-		"startsAt": {
-			"type": "string",
-			"format": "date-time"
-		},
-		"endsAt": {
-			"type": "string",
-			"format": "date-time"
-		},
-		"monitorId": {
-			"type": ["string", "null"],
-			"pattern": "^mon_[a-zA-Z0-9]+$"
-		},
-		"suppressAlerts": {
-			"type": "boolean",
-			"default": true
-		},
-		"showOnStatusPage": {
-			"type": "boolean",
-			"default": true
-		}
-	},
-	"required": ["name", "startsAt", "endsAt"]
-}
-```

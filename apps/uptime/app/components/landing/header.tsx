@@ -41,6 +41,12 @@ export function LandingHeader({ isSignedIn }: LandingHeaderProps) {
 						>
 							FAQ
 						</a>
+						<Link
+							to={href("/docs")}
+							className="text-sm font-medium text-neutral-600 transition hover:text-primary-600 dark:text-neutral-400 dark:hover:text-primary-400"
+						>
+							{t("nav.docs")}
+						</Link>
 					</nav>
 				</div>
 

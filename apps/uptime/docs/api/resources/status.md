@@ -118,7 +118,7 @@ The overall `status` field is calculated based on monitor states:
 | 429    | RATE_LIMITED   | Too many requests                          |
 | 500    | INTERNAL_ERROR | Server error                               |
 
-## JSON Schema
+### Response Schema
 
 Use this schema to validate the response in your integration:
 

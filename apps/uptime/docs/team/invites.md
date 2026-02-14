@@ -61,4 +61,4 @@ When someone accepts an invitation:
 2. They sign in or create an account if they don't have one
 3. They're automatically added to your team as a **Member**
 
-New members receive the **Member** role by default. An Admin or Owner can change their role after they join. See [Roles & Permissions](/docs/team/roles) to learn what each role can do.
+New members receive the **Member** role by default. An Admin or Owner can change their role after they join. See [Team Members](/docs/team/members) to learn what each role can do.

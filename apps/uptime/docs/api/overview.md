@@ -28,17 +28,17 @@ All responses are returned as JSON. Successful responses include a `data` field,
 
 ## Available Resources
 
-- [Status](/docs/api/status) - Check API health and your account status
-- [HTTP Monitors](/docs/api/http-monitors) - Monitor websites and HTTP endpoints
-- [DNS Monitors](/docs/api/dns-monitors) - Monitor DNS records and propagation
-- [TCP Monitors](/docs/api/tcp-monitors) - Monitor TCP ports and services
-- [Cron Jobs](/docs/api/cron-jobs) - Monitor scheduled tasks and cron jobs
-- [Alerts](/docs/api/alerts) - Configure alert channels and notifications
-- [Status Pages](/docs/api/status-pages) - Manage public and private status pages
-- [Maintenance Windows](/docs/api/maintenance-windows) - Schedule maintenance periods
-- [Team](/docs/api/team) - Manage team members and permissions
-- [Invites](/docs/api/invites) - Send and manage team invitations
-- [API Keys](/docs/api/api-keys) - Create and revoke API keys
+- [Status](/docs/api/resources/status) - Check API health and your account status
+- [HTTP Monitors](/docs/api/resources/http-monitors) - Monitor websites and HTTP endpoints
+- [DNS Monitors](/docs/api/resources/dns-monitors) - Monitor DNS records and propagation
+- [TCP Monitors](/docs/api/resources/tcp-monitors) - Monitor TCP ports and services
+- [Cron Jobs](/docs/api/resources/cron-jobs) - Monitor scheduled tasks and cron jobs
+- [Alerts](/docs/api/resources/alerts) - Configure alert channels and notifications
+- [Status Pages](/docs/api/resources/status-pages) - Manage public and private status pages
+- [Maintenance Windows](/docs/api/resources/maintenance) - Schedule maintenance periods
+- [Team](/docs/api/resources/team) - Manage team members and permissions
+- [Invites](/docs/api/resources/invites) - Send and manage team invitations
+- [API Keys](/docs/api/resources/api-keys) - Create and revoke API keys
 
 ## Rate Limits
 

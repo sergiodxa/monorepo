@@ -1,6 +1,6 @@
 ---
-title: Domain Verification
-description: Verify custom domains for your status pages. Add a TXT record to prove domain ownership.
+title: Team Domains
+description: Add verified domains to automatically provision new team members based on their email address.
 section:
   title: Team & Settings
   order: 3
@@ -8,30 +8,38 @@ order: 3
 lastUpdated: 2026-02-14
 ---
 
-Custom domains let you serve status pages from your own domain, like `status.yourcompany.com`, instead of the default Uptime subdomain. This provides a professional, branded experience for your users.
+Team domains let you automatically add new users to your team based on their email address. When you verify a domain like `company.com`, anyone who signs up with an `@company.com` email address is automatically added to your team.
 
-Before you can use a custom domain with a status page, you must verify ownership of that domain. Verification prevents anyone from claiming domains they don't control.
+This streamlines onboarding for organizations where team members share a common email domain.
+
+## How It Works
+
+1. You add and verify a domain (e.g., `company.com`)
+2. A new user signs up with an email like `jane@company.com`
+3. The user is automatically added to your team upon registration
+
+No manual invitations required. Team members can start collaborating immediately after signing up.
 
 ## Adding a Domain
 
 1. Navigate to **Team Settings** in the sidebar
 2. Select the **Domains** tab
 3. Click **Add Domain**
-4. Enter your domain (e.g., `status.yourcompany.com`)
+4. Enter your email domain (e.g., `company.com`)
 5. Click **Add**
 
-The domain appears in your list with a "Pending Verification" status. Uptime generates a unique verification ID that you'll use to prove ownership.
+The domain appears in your list with a "Pending Verification" status. You must verify ownership before auto-provisioning takes effect.
 
 ## Verification Process
 
-Domain verification uses a DNS TXT record to confirm you control the domain. This is the same method used by most services that require domain ownership proof.
+Domain verification uses a DNS TXT record to confirm you control the domain. This prevents unauthorized teams from claiming domains they don't own.
 
 ### Step 1: Copy the Verification Record
 
 After adding a domain, Uptime displays the verification details:
 
 - **Record Type**: TXT
-- **Host/Name**: The domain you're verifying (or `@` for the root domain)
+- **Host/Name**: `_uptime-verification` (or the full record name shown)
 - **Value**: A unique verification string like `uptime-verification=abc123xyz`
 
 Copy the verification value exactly as shown.
@@ -43,16 +51,16 @@ Log into your DNS provider (Cloudflare, Route 53, GoDaddy, Namecheap, etc.) and 
 | Field     | Value                                            |
 | --------- | ------------------------------------------------ |
 | Type      | TXT                                              |
-| Name/Host | `status` (or the subdomain you're verifying)     |
+| Name/Host | `_uptime-verification`                           |
 | Value     | `uptime-verification=abc123xyz` (your unique ID) |
 | TTL       | 300 (or your provider's default)                 |
 
-For example, if you're verifying `status.example.com`:
+For example, if you're verifying `company.com`:
 
-- The **Name** field should be `status`
+- The **Name** field should be `_uptime-verification` (some providers may require `_uptime-verification.company.com`)
 - The **Value** field should be the full verification string provided by Uptime
 
-> **Note**: Some DNS providers require you to enter the full domain (`status.example.com`) in the name field, while others only want the subdomain portion (`status`). Check your provider's documentation if you're unsure.
+> **Note**: Some DNS providers require you to enter the full domain in the name field, while others only want the subdomain portion. Check your provider's documentation if you're unsure.
 
 ### Step 3: Wait for DNS Propagation
 
@@ -61,7 +69,7 @@ DNS changes can take anywhere from a few minutes to 48 hours to propagate global
 You can check if your record has propagated using online DNS lookup tools or by running:
 
 ```bash
-dig TXT status.yourcompany.com
+dig TXT _uptime-verification.company.com
 ```
 
 ### Step 4: Complete Verification
@@ -72,29 +80,51 @@ Once the DNS record is in place:
 2. Find your pending domain
 3. Click **Verify**
 
-Uptime queries DNS for the TXT record. If found and matching, the domain status changes to "Verified."
+Uptime queries DNS for the TXT record. If found and matching, the domain status changes to "Verified" and auto-provisioning becomes active.
 
 If verification fails, click **Retry Verification** after confirming your DNS record is correct and has had time to propagate.
 
-## DNS Record Format
+## Auto-Provisioning Behavior
 
-The TXT record follows this format:
+Once a domain is verified:
 
-```
-uptime-verification=<unique-id>
-```
+- **New signups**: Users who register with a matching email domain are automatically added to your team
+- **Existing users**: Users who already have accounts are not automatically added. You must invite them manually
+- **Role assignment**: Auto-provisioned members receive the default member role. Admins can adjust roles after they join
+- **Multiple teams**: If multiple teams have verified the same domain, users are added to all of them
 
-The `<unique-id>` is generated by Uptime and is unique to your team and domain. Do not modify this value or add extra characters.
+## Managing Domains
 
-### Where to Add the Record
+### Viewing Domain Status
 
-Add the TXT record at the exact domain level you're verifying:
+Navigate to **Team Settings** > **Domains** to see all your domains and their status:
 
-| Domain to Verify         | DNS Record Name |
-| ------------------------ | --------------- |
-| `status.example.com`     | `status`        |
-| `uptime.app.example.com` | `uptime.app`    |
-| `example.com`            | `@` (root)      |
+- **Verified**: Domain is active and auto-provisioning is enabled
+- **Pending Verification**: Domain added but DNS verification not yet complete
+- **Verification Failed**: DNS record not found or doesn't match
+
+### Removing a Domain
+
+To remove a domain:
+
+1. Navigate to **Team Settings** > **Domains**
+2. Find the domain you want to remove
+3. Click the menu icon (three dots)
+4. Select **Remove Domain**
+
+> **Important**: Removing a domain immediately stops auto-provisioning for that email domain. Existing team members are not affected—they remain on the team.
+
+You can optionally remove the TXT verification record from your DNS provider after removing the domain.
+
+### Multiple Domains
+
+You can verify multiple domains for a single team. This is useful if your organization uses multiple email domains:
+
+- `company.com`
+- `company.co.uk`
+- `subsidiary.com`
+
+Each domain requires its own verification process.
 
 ## Common Issues
 
@@ -104,7 +134,7 @@ Add the TXT record at the exact domain level you're verifying:
 
 **Wrong record type.** Ensure you created a TXT record, not a CNAME or A record.
 
-**Incorrect record name.** Double-check the hostname/name field matches exactly what Uptime expects. Some providers automatically append your domain, so `status.example.com` might need to be entered as just `status`.
+**Incorrect record name.** Double-check the hostname/name field matches exactly what Uptime expects. Some providers automatically append your domain.
 
 **Value mismatch.** Copy the verification string exactly as shown, including the `uptime-verification=` prefix. Don't add quotes or extra spaces.
 
@@ -112,52 +142,14 @@ Add the TXT record at the exact domain level you're verifying:
 
 Some DNS providers add quotation marks around TXT values automatically. If you added quotes manually, you may have double quotes in the actual record. Remove any quotes you added and let the provider handle formatting.
 
-### Using a DNS Proxy (Cloudflare)
+### Users Not Being Auto-Provisioned
 
-If you're using Cloudflare with the proxy enabled (orange cloud), the TXT record should still work for verification. TXT records are not proxied and resolve directly.
+**Domain not verified.** Check that the domain status shows "Verified" in Team Settings.
 
-## Removing a Domain
+**User already exists.** Auto-provisioning only applies to new signups. Existing users must be invited manually.
 
-To remove a verified domain:
+**Email domain doesn't match exactly.** The email domain must match the verified domain exactly. Subdomains are not included (e.g., verifying `company.com` does not cover `mail.company.com`).
 
-1. Navigate to **Team Settings** > **Domains**
-2. Find the domain you want to remove
-3. Click the menu icon (three dots)
-4. Select **Remove Domain**
+### Can I Use Subdomains?
 
-> **Warning**: Removing a domain immediately disconnects it from any status pages using it. Visitors to that domain will no longer see your status page until you re-verify and re-configure it.
-
-You should also remove the TXT verification record from your DNS provider, though leaving it has no negative effects.
-
-## Using Verified Domains with Status Pages
-
-After verification, you can assign the domain to a status page:
-
-1. Navigate to **Status Pages**
-2. Select the status page you want to configure
-3. Click **Settings**
-4. In the **Custom Domain** section, select your verified domain from the dropdown
-5. Click **Save**
-
-### Additional DNS Configuration
-
-After assigning a domain to a status page, you need to point the domain to Uptime's servers. Add a CNAME record:
-
-| Field     | Value                        |
-| --------- | ---------------------------- |
-| Type      | CNAME                        |
-| Name/Host | `status` (or your subdomain) |
-| Value     | `status.uptime.dev`          |
-| TTL       | 300 (or default)             |
-
-Once DNS propagates, visitors to your custom domain will see your branded status page.
-
-### Multiple Domains
-
-You can verify multiple domains and assign different domains to different status pages. This is useful if you:
-
-- Have multiple products with separate status pages
-- Want different domains for different audiences (customers vs. developers)
-- Manage status pages for multiple brands
-
-Each domain requires its own verification process and DNS configuration.
+Yes, you can verify subdomains separately. If your team uses `team.company.com` email addresses, verify `team.company.com` as its own domain.
