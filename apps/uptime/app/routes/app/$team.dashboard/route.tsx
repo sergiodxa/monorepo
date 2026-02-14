@@ -239,6 +239,7 @@ export default function Component({ loaderData, params }: Route.ComponentProps) 
 			{
 				method: "POST",
 				action: href("/actions/:team/set-dashboard-tab", { team: params.team }),
+				unstable_defaultShouldRevalidate: false,
 			},
 		);
 	}
