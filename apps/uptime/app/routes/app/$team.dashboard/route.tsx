@@ -27,9 +27,9 @@ import {
 	TrashIcon,
 	TriangleAlertIcon,
 } from "lucide-react";
-import { Suspense, use } from "react";
+import { Suspense } from "react";
 import { Trans, useTranslation } from "react-i18next";
-import { href, Link, useFetcher, useRevalidator } from "react-router";
+import { Await, href, Link, useFetcher, useRevalidator } from "react-router";
 import { Line, LineChart } from "recharts";
 import { ClientOnly } from "remix-utils/client-only";
 import { useSpinDelay } from "spin-delay";
@@ -287,32 +287,48 @@ export default function Component({ loaderData, params }: Route.ComponentProps) 
 				{/* Row 1 - Overview (3 cards) */}
 				<div className="grid gap-4 lg:grid-cols-3 lg:gap-8">
 					<Suspense fallback={<StatCardSkeleton />}>
-						<ConsumedPingsCard
-							consumedPingsPromise={loaderData.consumedPings}
-							estimatedPingsPromise={loaderData.estimatedPings}
-						/>
+						<Await
+							resolve={Promise.all([loaderData.consumedPings, loaderData.estimatedPings])}
+							errorElement={<StatCardError />}
+						>
+							{([consumedPings, estimatedPings]) => (
+								<ConsumedPingsCard consumedPings={consumedPings} estimatedPings={estimatedPings} />
+							)}
+						</Await>
 					</Suspense>
 					<Suspense fallback={<StatCardSkeleton />}>
-						<UptimeCard httpDataPromise={loaderData.httpData} />
+						<Await resolve={loaderData.httpData} errorElement={<StatCardError />}>
+							{(httpData) => <UptimeCard httpData={httpData} />}
+						</Await>
 					</Suspense>
 					<Suspense fallback={<StatCardSkeleton />}>
-						<SlowestEndpointCard httpDataPromise={loaderData.httpData} />
+						<Await resolve={loaderData.httpData} errorElement={<StatCardError />}>
+							{(httpData) => <SlowestEndpointCard httpData={httpData} />}
+						</Await>
 					</Suspense>
 				</div>
 
 				{/* Row 2 - Monitor Breakdown (4 cards) */}
 				<div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 lg:gap-8">
 					<Suspense fallback={<StatCardSkeleton />}>
-						<HttpMonitorsCard httpDataPromise={loaderData.httpData} />
+						<Await resolve={loaderData.httpData} errorElement={<StatCardError />}>
+							{(httpData) => <HttpMonitorsCard httpData={httpData} />}
+						</Await>
 					</Suspense>
 					<Suspense fallback={<StatCardSkeleton />}>
-						<DnsMonitorsCard dnsDataPromise={loaderData.dnsData} />
+						<Await resolve={loaderData.dnsData} errorElement={<StatCardError />}>
+							{(dnsData) => <DnsMonitorsCard dnsData={dnsData} />}
+						</Await>
 					</Suspense>
 					<Suspense fallback={<StatCardSkeleton />}>
-						<TcpMonitorsCard tcpDataPromise={loaderData.tcpData} />
+						<Await resolve={loaderData.tcpData} errorElement={<StatCardError />}>
+							{(tcpData) => <TcpMonitorsCard tcpData={tcpData} />}
+						</Await>
 					</Suspense>
 					<Suspense fallback={<StatCardSkeleton />}>
-						<CronJobsCard cronDataPromise={loaderData.cronData} />
+						<Await resolve={loaderData.cronData} errorElement={<StatCardError />}>
+							{(cronData) => <CronJobsCard cronData={cronData} />}
+						</Await>
 					</Suspense>
 				</div>
 
@@ -328,22 +344,36 @@ export default function Component({ loaderData, params }: Route.ComponentProps) 
 					<Tabs.Panels>
 						<Tabs.Panel id="http">
 							<Suspense fallback={<MonitorsTableSkeleton />}>
-								<HttpMonitorsPanel team={params.team} httpDataPromise={loaderData.httpData} />
+								<Await resolve={loaderData.httpData} errorElement={<MonitorsTableError />}>
+									{(httpData) => (
+										<HttpMonitorsTable team={params.team} monitors={httpData.httpMonitors} />
+									)}
+								</Await>
 							</Suspense>
 						</Tabs.Panel>
 						<Tabs.Panel id="dns">
 							<Suspense fallback={<MonitorsTableSkeleton />}>
-								<DnsMonitorsPanel team={params.team} dnsDataPromise={loaderData.dnsData} />
+								<Await resolve={loaderData.dnsData} errorElement={<MonitorsTableError />}>
+									{(dnsData) => (
+										<DnsMonitorsTable team={params.team} monitors={dnsData.dnsMonitors} />
+									)}
+								</Await>
 							</Suspense>
 						</Tabs.Panel>
 						<Tabs.Panel id="tcp">
 							<Suspense fallback={<MonitorsTableSkeleton />}>
-								<TcpMonitorsPanel team={params.team} tcpDataPromise={loaderData.tcpData} />
+								<Await resolve={loaderData.tcpData} errorElement={<MonitorsTableError />}>
+									{(tcpData) => (
+										<TcpMonitorsTable team={params.team} monitors={tcpData.tcpMonitors} />
+									)}
+								</Await>
 							</Suspense>
 						</Tabs.Panel>
 						<Tabs.Panel id="cron-jobs">
 							<Suspense fallback={<MonitorsTableSkeleton />}>
-								<CronJobsPanel team={params.team} cronDataPromise={loaderData.cronData} />
+								<Await resolve={loaderData.cronData} errorElement={<MonitorsTableError />}>
+									{(cronData) => <CronJobsTable team={params.team} cronJobs={cronData.cronJobs} />}
+								</Await>
 							</Suspense>
 						</Tabs.Panel>
 					</Tabs.Panels>
@@ -353,15 +383,10 @@ export default function Component({ loaderData, params }: Route.ComponentProps) 
 	);
 }
 
-// Streaming card components that use React.use() to suspend until data is ready
+// Resolved data card components (used inside Await)
 
-function ConsumedPingsCard(props: {
-	consumedPingsPromise: Promise<number>;
-	estimatedPingsPromise: Promise<number>;
-}) {
+function ConsumedPingsCard(props: { consumedPings: number; estimatedPings: number }) {
 	let { t, i18n } = useTranslation("translation", { keyPrefix: "page.dashboard" });
-	let consumedPings = use(props.consumedPingsPromise);
-	let estimatedPings = use(props.estimatedPingsPromise);
 
 	return (
 		<StatCard
@@ -371,7 +396,7 @@ function ConsumedPingsCard(props: {
 					t={t}
 					i18nKey="stats.monitors.value"
 					values={{
-						consumed: consumedPings.toLocaleString(i18n.language, {
+						consumed: props.consumedPings.toLocaleString(i18n.language, {
 							minimumFractionDigits: 0,
 							maximumFractionDigits: 0,
 						}),
@@ -382,7 +407,7 @@ function ConsumedPingsCard(props: {
 				/>
 			}
 			description={t("stats.monitors.description", {
-				estimated: estimatedPings.toLocaleString(i18n.language, {
+				estimated: props.estimatedPings.toLocaleString(i18n.language, {
 					minimumFractionDigits: 0,
 					maximumFractionDigits: 0,
 				}),
@@ -391,16 +416,13 @@ function ConsumedPingsCard(props: {
 	);
 }
 
-function UptimeCard(props: {
-	httpDataPromise: Promise<Awaited<ReturnType<typeof getHttpMonitorsData>>>;
-}) {
+function UptimeCard(props: { httpData: Awaited<ReturnType<typeof getHttpMonitorsData>> }) {
 	let { t, i18n } = useTranslation("translation", { keyPrefix: "page.dashboard" });
-	let httpData = use(props.httpDataPromise);
 
 	return (
 		<StatCard
 			label={t("stats.uptime.label")}
-			value={httpData.uptime.toLocaleString(i18n.language, {
+			value={props.httpData.uptime.toLocaleString(i18n.language, {
 				style: "percent",
 				minimumFractionDigits: 0,
 				maximumFractionDigits: 0,
@@ -410,28 +432,25 @@ function UptimeCard(props: {
 	);
 }
 
-function SlowestEndpointCard(props: {
-	httpDataPromise: Promise<Awaited<ReturnType<typeof getHttpMonitorsData>>>;
-}) {
+function SlowestEndpointCard(props: { httpData: Awaited<ReturnType<typeof getHttpMonitorsData>> }) {
 	let { t, i18n } = useTranslation("translation", { keyPrefix: "page.dashboard" });
-	let httpData = use(props.httpDataPromise);
 
-	if (httpData.slowestEndpoint) {
+	if (props.httpData.slowestEndpoint) {
 		return (
 			<StatCard
 				label={
 					<Trans
 						t={t}
 						i18nKey="stats.slowestEndpoint.label.default"
-						values={{ name: httpData.slowestEndpoint.monitorName }}
+						values={{ name: props.httpData.slowestEndpoint.monitorName }}
 						components={{
 							em: <em className="font-medium" />,
 						}}
 					/>
 				}
 				value={
-					httpData.slowestEndpoint.responseTimeMs
-						? httpData.slowestEndpoint.responseTimeMs.toLocaleString(i18n.language, {
+					props.httpData.slowestEndpoint.responseTimeMs
+						? props.httpData.slowestEndpoint.responseTimeMs.toLocaleString(i18n.language, {
 								style: "unit",
 								unit: "millisecond",
 								minimumFractionDigits: 0,
@@ -453,112 +472,91 @@ function SlowestEndpointCard(props: {
 	);
 }
 
-function HttpMonitorsCard(props: {
-	httpDataPromise: Promise<Awaited<ReturnType<typeof getHttpMonitorsData>>>;
-}) {
+function HttpMonitorsCard(props: { httpData: Awaited<ReturnType<typeof getHttpMonitorsData>> }) {
 	let { t } = useTranslation("translation", { keyPrefix: "page.dashboard" });
-	let httpData = use(props.httpDataPromise);
 
 	return (
 		<StatCard
 			label={t("stats.httpMonitors.label")}
-			value={httpData.httpMonitorsCount}
+			value={props.httpData.httpMonitorsCount}
 			description={t("stats.httpMonitors.description", {
-				up: httpData.httpMonitorsUp,
-				down: httpData.httpMonitorsDown,
+				up: props.httpData.httpMonitorsUp,
+				down: props.httpData.httpMonitorsDown,
 			})}
 		/>
 	);
 }
 
-function DnsMonitorsCard(props: {
-	dnsDataPromise: Promise<Awaited<ReturnType<typeof getDnsMonitorsData>>>;
-}) {
+function DnsMonitorsCard(props: { dnsData: Awaited<ReturnType<typeof getDnsMonitorsData>> }) {
 	let { t } = useTranslation("translation", { keyPrefix: "page.dashboard" });
-	let dnsData = use(props.dnsDataPromise);
 
 	return (
 		<StatCard
 			label={t("stats.dnsMonitors.label")}
-			value={dnsData.dnsMonitorsCount}
+			value={props.dnsData.dnsMonitorsCount}
 			description={t("stats.dnsMonitors.description", {
-				ok: dnsData.dnsMonitorsOk,
-				changed: dnsData.dnsMonitorsChanged,
-				error: dnsData.dnsMonitorsError,
+				ok: props.dnsData.dnsMonitorsOk,
+				changed: props.dnsData.dnsMonitorsChanged,
+				error: props.dnsData.dnsMonitorsError,
 			})}
 		/>
 	);
 }
 
-function TcpMonitorsCard(props: {
-	tcpDataPromise: Promise<Awaited<ReturnType<typeof getTcpMonitorsData>>>;
-}) {
+function TcpMonitorsCard(props: { tcpData: Awaited<ReturnType<typeof getTcpMonitorsData>> }) {
 	let { t } = useTranslation("translation", { keyPrefix: "page.dashboard" });
-	let tcpData = use(props.tcpDataPromise);
 
 	return (
 		<StatCard
 			label={t("stats.tcpMonitors.label")}
-			value={tcpData.tcpMonitorsCount}
+			value={props.tcpData.tcpMonitorsCount}
 			description={t("stats.tcpMonitors.description", {
-				up: tcpData.tcpMonitorsUp,
-				down: tcpData.tcpMonitorsDown,
+				up: props.tcpData.tcpMonitorsUp,
+				down: props.tcpData.tcpMonitorsDown,
 			})}
 		/>
 	);
 }
 
-function CronJobsCard(props: {
-	cronDataPromise: Promise<Awaited<ReturnType<typeof getCronJobsData>>>;
-}) {
+function CronJobsCard(props: { cronData: Awaited<ReturnType<typeof getCronJobsData>> }) {
 	let { t } = useTranslation("translation", { keyPrefix: "page.dashboard" });
-	let cronData = use(props.cronDataPromise);
 
 	return (
 		<StatCard
 			label={t("stats.cronJobs.label")}
-			value={cronData.cronJobsCount}
+			value={props.cronData.cronJobsCount}
 			description={t("stats.cronJobs.description", {
-				healthy: cronData.cronJobsHealthy,
-				late: cronData.cronJobsLate,
-				missed: cronData.cronJobsMissed,
+				healthy: props.cronData.cronJobsHealthy,
+				late: props.cronData.cronJobsLate,
+				missed: props.cronData.cronJobsMissed,
 			})}
 		/>
 	);
 }
 
-// Streaming panel components for tabs
+// Error fallback components
 
-function HttpMonitorsPanel(props: {
-	team: string;
-	httpDataPromise: Promise<Awaited<ReturnType<typeof getHttpMonitorsData>>>;
-}) {
-	let httpData = use(props.httpDataPromise);
-	return <HttpMonitorsTable team={props.team} monitors={httpData.httpMonitors} />;
+function StatCardError() {
+	let { t } = useTranslation("translation", { keyPrefix: "page.dashboard" });
+
+	return (
+		<StatCard
+			label={t("error.card.label")}
+			value={t("error.card.value")}
+			description={t("error.card.description")}
+		/>
+	);
 }
 
-function DnsMonitorsPanel(props: {
-	team: string;
-	dnsDataPromise: Promise<Awaited<ReturnType<typeof getDnsMonitorsData>>>;
-}) {
-	let dnsData = use(props.dnsDataPromise);
-	return <DnsMonitorsTable team={props.team} monitors={dnsData.dnsMonitors} />;
-}
+function MonitorsTableError() {
+	let { t } = useTranslation("translation", { keyPrefix: "page.dashboard" });
 
-function TcpMonitorsPanel(props: {
-	team: string;
-	tcpDataPromise: Promise<Awaited<ReturnType<typeof getTcpMonitorsData>>>;
-}) {
-	let tcpData = use(props.tcpDataPromise);
-	return <TcpMonitorsTable team={props.team} monitors={tcpData.tcpMonitors} />;
-}
-
-function CronJobsPanel(props: {
-	team: string;
-	cronDataPromise: Promise<Awaited<ReturnType<typeof getCronJobsData>>>;
-}) {
-	let cronData = use(props.cronDataPromise);
-	return <CronJobsTable team={props.team} cronJobs={cronData.cronJobs} />;
+	return (
+		<div className="flex flex-col items-center justify-center py-16 text-center">
+			<TriangleAlertIcon className="mb-4 size-12 text-warning-500" />
+			<p className="text-neutral-600 dark:text-neutral-400">{t("error.table.message")}</p>
+		</div>
+	);
 }
 
 // HTTP Monitors Table

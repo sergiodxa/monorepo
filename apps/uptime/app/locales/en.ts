@@ -1404,6 +1404,17 @@ export default {
 				cronJobs: "Cron Jobs",
 			},
 
+			error: {
+				card: {
+					label: "Error",
+					value: "-",
+					description: "Failed to load data",
+				},
+				table: {
+					message: "Failed to load monitors. Please try again.",
+				},
+			},
+
 			table: {
 				label: "Monitors",
 
