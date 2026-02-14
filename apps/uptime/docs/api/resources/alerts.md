@@ -29,18 +29,6 @@ curl https://api.uptime.example.com/v1/alerts \
   -H "Authorization: Bearer uptime_your_api_key"
 ```
 
-#### JavaScript (fetch)
-
-```javascript
-const response = await fetch("https://api.uptime.example.com/v1/alerts", {
-	headers: {
-		Authorization: "Bearer uptime_your_api_key",
-	},
-});
-
-const data = await response.json();
-```
-
 ### Response
 
 ```json
@@ -205,28 +193,6 @@ curl -X POST https://api.uptime.example.com/v1/alerts \
   }'
 ```
 
-#### JavaScript (fetch)
-
-```javascript
-const response = await fetch("https://api.uptime.example.com/v1/alerts", {
-	method: "POST",
-	headers: {
-		Authorization: "Bearer uptime_your_api_key",
-		"Content-Type": "application/json",
-	},
-	body: JSON.stringify({
-		name: "Team Email Alert",
-		strategy: "email",
-		email: "alerts@example.com",
-		subjectPrefix: "[Uptime]",
-		notifyOnRecovery: true,
-		cooldownMinutes: 5,
-	}),
-});
-
-const data = await response.json();
-```
-
 ### Example Request (Webhook)
 
 #### cURL
@@ -241,26 +207,6 @@ curl -X POST https://api.uptime.example.com/v1/alerts \
     "url": "https://events.pagerduty.com/integration/abc123/enqueue",
     "secret": "whsec_your_secret_key"
   }'
-```
-
-#### JavaScript (fetch)
-
-```javascript
-const response = await fetch("https://api.uptime.example.com/v1/alerts", {
-	method: "POST",
-	headers: {
-		Authorization: "Bearer uptime_your_api_key",
-		"Content-Type": "application/json",
-	},
-	body: JSON.stringify({
-		name: "PagerDuty Integration",
-		strategy: "webhook",
-		url: "https://events.pagerduty.com/integration/abc123/enqueue",
-		secret: "whsec_your_secret_key",
-	}),
-});
-
-const data = await response.json();
 ```
 
 ### Example Request (Slack)
@@ -279,26 +225,6 @@ curl -X POST https://api.uptime.example.com/v1/alerts \
   }'
 ```
 
-#### JavaScript (fetch)
-
-```javascript
-const response = await fetch("https://api.uptime.example.com/v1/alerts", {
-	method: "POST",
-	headers: {
-		Authorization: "Bearer uptime_your_api_key",
-		"Content-Type": "application/json",
-	},
-	body: JSON.stringify({
-		name: "Slack #incidents",
-		strategy: "slack",
-		webhookUrl: "https://hooks.slack.com/services/T00/B00/xxx",
-		channel: "#incidents",
-	}),
-});
-
-const data = await response.json();
-```
-
 ### Example Request (Discord)
 
 #### cURL
@@ -312,25 +238,6 @@ curl -X POST https://api.uptime.example.com/v1/alerts \
     "strategy": "discord",
     "webhookUrl": "https://discord.com/api/webhooks/123/abc"
   }'
-```
-
-#### JavaScript (fetch)
-
-```javascript
-const response = await fetch("https://api.uptime.example.com/v1/alerts", {
-	method: "POST",
-	headers: {
-		Authorization: "Bearer uptime_your_api_key",
-		"Content-Type": "application/json",
-	},
-	body: JSON.stringify({
-		name: "Discord Server Alert",
-		strategy: "discord",
-		webhookUrl: "https://discord.com/api/webhooks/123/abc",
-	}),
-});
-
-const data = await response.json();
 ```
 
 ### Response
@@ -592,18 +499,6 @@ curl https://api.uptime.example.com/v1/alerts/alt_abc123 \
   -H "Authorization: Bearer uptime_your_api_key"
 ```
 
-#### JavaScript (fetch)
-
-```javascript
-const response = await fetch("https://api.uptime.example.com/v1/alerts/alt_abc123", {
-	headers: {
-		Authorization: "Bearer uptime_your_api_key",
-	},
-});
-
-const data = await response.json();
-```
-
 ### Response
 
 ```json
@@ -708,25 +603,6 @@ curl -X PUT https://api.uptime.example.com/v1/alerts/alt_abc123 \
     "cooldownMinutes": 10,
     "notifyOnRecovery": false
   }'
-```
-
-#### JavaScript (fetch)
-
-```javascript
-const response = await fetch("https://api.uptime.example.com/v1/alerts/alt_abc123", {
-	method: "PUT",
-	headers: {
-		Authorization: "Bearer uptime_your_api_key",
-		"Content-Type": "application/json",
-	},
-	body: JSON.stringify({
-		name: "Updated Alert Name",
-		cooldownMinutes: 10,
-		notifyOnRecovery: false,
-	}),
-});
-
-const data = await response.json();
 ```
 
 ### Response
@@ -876,17 +752,6 @@ curl -X DELETE https://api.uptime.example.com/v1/alerts/alt_abc123 \
   -H "Authorization: Bearer uptime_your_api_key"
 ```
 
-#### JavaScript (fetch)
-
-```javascript
-const response = await fetch("https://api.uptime.example.com/v1/alerts/alt_abc123", {
-	method: "DELETE",
-	headers: {
-		Authorization: "Bearer uptime_your_api_key",
-	},
-});
-```
-
 ### Response
 
 Returns `204 No Content` on success.
@@ -926,21 +791,6 @@ Returns the event history for an alert.
 ```bash
 curl "https://api.uptime.example.com/v1/alerts/alt_abc123/events?limit=10" \
   -H "Authorization: Bearer uptime_your_api_key"
-```
-
-#### JavaScript (fetch)
-
-```javascript
-const response = await fetch(
-	"https://api.uptime.example.com/v1/alerts/alt_abc123/events?limit=10",
-	{
-		headers: {
-			Authorization: "Bearer uptime_your_api_key",
-		},
-	},
-);
-
-const data = await response.json();
 ```
 
 ### Response

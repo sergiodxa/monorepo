@@ -27,18 +27,6 @@ curl https://api.uptime.example.com/v1/status-pages \
   -H "Authorization: Bearer uptime_your_api_key"
 ```
 
-#### JavaScript (fetch)
-
-```javascript
-const response = await fetch("https://api.uptime.example.com/v1/status-pages", {
-	headers: {
-		Authorization: "Bearer uptime_your_api_key",
-	},
-});
-
-const data = await response.json();
-```
-
 ### Response
 
 ```json
@@ -165,29 +153,6 @@ curl -X POST https://api.uptime.example.com/v1/status-pages \
   }'
 ```
 
-#### JavaScript (fetch)
-
-```javascript
-const response = await fetch("https://api.uptime.example.com/v1/status-pages", {
-	method: "POST",
-	headers: {
-		Authorization: "Bearer uptime_your_api_key",
-		"Content-Type": "application/json",
-	},
-	body: JSON.stringify({
-		name: "Production Status",
-		slug: "production-status",
-		title: "Service Status",
-		description: "Real-time status of our production services",
-		logoUrl: "https://example.com/logo.png",
-		isPublic: true,
-		showOverallStatus: true,
-	}),
-});
-
-const data = await response.json();
-```
-
 ### Response
 
 ```json
@@ -299,18 +264,6 @@ Returns a single status page with its associated monitors and cron jobs.
 ```bash
 curl https://api.uptime.example.com/v1/status-pages/sp_abc123 \
   -H "Authorization: Bearer uptime_your_api_key"
-```
-
-#### JavaScript (fetch)
-
-```javascript
-const response = await fetch("https://api.uptime.example.com/v1/status-pages/sp_abc123", {
-	headers: {
-		Authorization: "Bearer uptime_your_api_key",
-	},
-});
-
-const data = await response.json();
 ```
 
 ### Response
@@ -465,25 +418,6 @@ curl -X PUT https://api.uptime.example.com/v1/status-pages/sp_abc123 \
   }'
 ```
 
-#### JavaScript (fetch)
-
-```javascript
-const response = await fetch("https://api.uptime.example.com/v1/status-pages/sp_abc123", {
-	method: "PUT",
-	headers: {
-		Authorization: "Bearer uptime_your_api_key",
-		"Content-Type": "application/json",
-	},
-	body: JSON.stringify({
-		title: "Updated Service Status",
-		description: "Current status of all our services",
-		customDomain: "status.example.com",
-	}),
-});
-
-const data = await response.json();
-```
-
 ### Response
 
 ```json
@@ -597,17 +531,6 @@ curl -X DELETE https://api.uptime.example.com/v1/status-pages/sp_abc123 \
   -H "Authorization: Bearer uptime_your_api_key"
 ```
 
-#### JavaScript (fetch)
-
-```javascript
-const response = await fetch("https://api.uptime.example.com/v1/status-pages/sp_abc123", {
-	method: "DELETE",
-	headers: {
-		Authorization: "Bearer uptime_your_api_key",
-	},
-});
-```
-
 ### Response
 
 Returns `204 No Content` on success.
@@ -659,24 +582,6 @@ curl -X PUT https://api.uptime.example.com/v1/status-pages/sp_abc123/monitors \
     "monitorIds": ["550e8400-e29b-41d4-a716-446655440000", "6ba7b810-9dad-11d1-80b4-00c04fd430c8"],
     "cronJobIds": ["7c9e6679-7425-40de-944b-e07fc1f90ae7"]
   }'
-```
-
-#### JavaScript (fetch)
-
-```javascript
-const response = await fetch("https://api.uptime.example.com/v1/status-pages/sp_abc123/monitors", {
-	method: "PUT",
-	headers: {
-		Authorization: "Bearer uptime_your_api_key",
-		"Content-Type": "application/json",
-	},
-	body: JSON.stringify({
-		monitorIds: ["550e8400-e29b-41d4-a716-446655440000", "6ba7b810-9dad-11d1-80b4-00c04fd430c8"],
-		cronJobIds: ["7c9e6679-7425-40de-944b-e07fc1f90ae7"],
-	}),
-});
-
-const data = await response.json();
 ```
 
 ### Response

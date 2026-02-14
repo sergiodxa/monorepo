@@ -27,18 +27,6 @@ curl https://api.uptime.example.com/v1/maintenance \
   -H "Authorization: Bearer uptime_your_api_key"
 ```
 
-#### JavaScript (fetch)
-
-```javascript
-const response = await fetch("https://api.uptime.example.com/v1/maintenance", {
-	headers: {
-		Authorization: "Bearer uptime_your_api_key",
-	},
-});
-
-const data = await response.json();
-```
-
 ### Response
 
 ```json
@@ -186,28 +174,6 @@ curl -X POST https://api.uptime.example.com/v1/maintenance \
     "suppressAlerts": true,
     "showOnStatusPage": true
   }'
-```
-
-#### JavaScript (fetch)
-
-```javascript
-const response = await fetch("https://api.uptime.example.com/v1/maintenance", {
-	method: "POST",
-	headers: {
-		Authorization: "Bearer uptime_your_api_key",
-		"Content-Type": "application/json",
-	},
-	body: JSON.stringify({
-		name: "Database Migration",
-		startsAt: "2026-02-15T02:00:00Z",
-		endsAt: "2026-02-15T04:00:00Z",
-		monitorId: "mon_def456",
-		suppressAlerts: true,
-		showOnStatusPage: true,
-	}),
-});
-
-const data = await response.json();
 ```
 
 ### Response
@@ -369,18 +335,6 @@ curl https://api.uptime.example.com/v1/maintenance/mnt_abc123 \
   -H "Authorization: Bearer uptime_your_api_key"
 ```
 
-#### JavaScript (fetch)
-
-```javascript
-const response = await fetch("https://api.uptime.example.com/v1/maintenance/mnt_abc123", {
-	headers: {
-		Authorization: "Bearer uptime_your_api_key",
-	},
-});
-
-const data = await response.json();
-```
-
 ### Response
 
 ```json
@@ -515,24 +469,6 @@ curl -X PUT https://api.uptime.example.com/v1/maintenance/mnt_abc123 \
     "name": "Extended Database Migration",
     "endsAt": "2026-02-15T06:00:00Z"
   }'
-```
-
-#### JavaScript (fetch)
-
-```javascript
-const response = await fetch("https://api.uptime.example.com/v1/maintenance/mnt_abc123", {
-	method: "PUT",
-	headers: {
-		Authorization: "Bearer uptime_your_api_key",
-		"Content-Type": "application/json",
-	},
-	body: JSON.stringify({
-		name: "Extended Database Migration",
-		endsAt: "2026-02-15T06:00:00Z",
-	}),
-});
-
-const data = await response.json();
 ```
 
 ### Response
@@ -691,19 +627,6 @@ curl -X DELETE https://api.uptime.example.com/v1/maintenance/mnt_abc123 \
   -H "Authorization: Bearer uptime_your_api_key"
 ```
 
-#### JavaScript (fetch)
-
-```javascript
-const response = await fetch("https://api.uptime.example.com/v1/maintenance/mnt_abc123", {
-	method: "DELETE",
-	headers: {
-		Authorization: "Bearer uptime_your_api_key",
-	},
-});
-
-// 204 No Content on success
-```
-
 ### Response
 
 Returns `204 No Content` on success.
@@ -737,19 +660,6 @@ Ends a maintenance window early. Sets the `endedEarlyAt` timestamp to the curren
 ```bash
 curl -X POST https://api.uptime.example.com/v1/maintenance/mnt_abc123/end \
   -H "Authorization: Bearer uptime_your_api_key"
-```
-
-#### JavaScript (fetch)
-
-```javascript
-const response = await fetch("https://api.uptime.example.com/v1/maintenance/mnt_abc123/end", {
-	method: "POST",
-	headers: {
-		Authorization: "Bearer uptime_your_api_key",
-	},
-});
-
-const data = await response.json();
 ```
 
 ### Response

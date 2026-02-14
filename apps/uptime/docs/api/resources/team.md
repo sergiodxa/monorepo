@@ -27,18 +27,6 @@ curl https://api.uptime.example.com/v1/team \
   -H "Authorization: Bearer uptime_your_api_key"
 ```
 
-#### JavaScript (fetch)
-
-```javascript
-const response = await fetch("https://api.uptime.example.com/v1/team", {
-	headers: {
-		Authorization: "Bearer uptime_your_api_key",
-	},
-});
-
-const data = await response.json();
-```
-
 ### Response
 
 ```json
@@ -141,24 +129,6 @@ curl -X PUT https://api.uptime.example.com/v1/team \
   }'
 ```
 
-#### JavaScript (fetch)
-
-```javascript
-const response = await fetch("https://api.uptime.example.com/v1/team", {
-	method: "PUT",
-	headers: {
-		Authorization: "Bearer uptime_your_api_key",
-		"Content-Type": "application/json",
-	},
-	body: JSON.stringify({
-		name: "Acme Corporation",
-		logoUrl: "https://cdn.example.com/logos/acme-new.png",
-	}),
-});
-
-const data = await response.json();
-```
-
 ### Response
 
 ```json
@@ -257,18 +227,6 @@ Returns all memberships for the current team.
 ```bash
 curl https://api.uptime.example.com/v1/memberships \
   -H "Authorization: Bearer uptime_your_api_key"
-```
-
-#### JavaScript (fetch)
-
-```javascript
-const response = await fetch("https://api.uptime.example.com/v1/memberships", {
-	headers: {
-		Authorization: "Bearer uptime_your_api_key",
-	},
-});
-
-const data = await response.json();
 ```
 
 ### Response
@@ -384,18 +342,6 @@ curl https://api.uptime.example.com/v1/team-domains \
   -H "Authorization: Bearer uptime_your_api_key"
 ```
 
-#### JavaScript (fetch)
-
-```javascript
-const response = await fetch("https://api.uptime.example.com/v1/team-domains", {
-	headers: {
-		Authorization: "Bearer uptime_your_api_key",
-	},
-});
-
-const data = await response.json();
-```
-
 ### Response
 
 ```json
@@ -506,23 +452,6 @@ curl -X POST https://api.uptime.example.com/v1/team-domains \
   }'
 ```
 
-#### JavaScript (fetch)
-
-```javascript
-const response = await fetch("https://api.uptime.example.com/v1/team-domains", {
-	method: "POST",
-	headers: {
-		Authorization: "Bearer uptime_your_api_key",
-		"Content-Type": "application/json",
-	},
-	body: JSON.stringify({
-		hostname: "status.example.com",
-	}),
-});
-
-const data = await response.json();
-```
-
 ### Response
 
 ```json
@@ -619,23 +548,6 @@ curl -X DELETE https://api.uptime.example.com/v1/team-domains \
   -d '{
     "id": "dom_ghi789"
   }'
-```
-
-#### JavaScript (fetch)
-
-```javascript
-const response = await fetch("https://api.uptime.example.com/v1/team-domains", {
-	method: "DELETE",
-	headers: {
-		Authorization: "Bearer uptime_your_api_key",
-		"Content-Type": "application/json",
-	},
-	body: JSON.stringify({
-		id: "dom_ghi789",
-	}),
-});
-
-const data = await response.json();
 ```
 
 ### Response

@@ -27,18 +27,6 @@ curl https://api.uptime.example.com/v1/invites \
   -H "Authorization: Bearer uptime_your_api_key"
 ```
 
-#### JavaScript (fetch)
-
-```javascript
-const response = await fetch("https://api.uptime.example.com/v1/invites", {
-	headers: {
-		Authorization: "Bearer uptime_your_api_key",
-	},
-});
-
-const data = await response.json();
-```
-
 ### Response
 
 ```json
@@ -155,23 +143,6 @@ curl -X POST https://api.uptime.example.com/v1/invites \
   -d '{"email": "newuser@example.com"}'
 ```
 
-#### JavaScript (fetch)
-
-```javascript
-const response = await fetch("https://api.uptime.example.com/v1/invites", {
-	method: "POST",
-	headers: {
-		Authorization: "Bearer uptime_your_api_key",
-		"Content-Type": "application/json",
-	},
-	body: JSON.stringify({
-		email: "newuser@example.com",
-	}),
-});
-
-const data = await response.json();
-```
-
 ### Response
 
 ```json
@@ -271,19 +242,6 @@ Revoke a pending invitation. This prevents the invited user from joining the tea
 ```bash
 curl -X DELETE https://api.uptime.example.com/v1/invites/inv_ghi789 \
   -H "Authorization: Bearer uptime_your_api_key"
-```
-
-#### JavaScript (fetch)
-
-```javascript
-const response = await fetch("https://api.uptime.example.com/v1/invites/inv_ghi789", {
-	method: "DELETE",
-	headers: {
-		Authorization: "Bearer uptime_your_api_key",
-	},
-});
-
-const data = await response.json();
 ```
 
 ### Response

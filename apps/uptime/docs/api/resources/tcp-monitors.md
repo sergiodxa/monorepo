@@ -27,17 +27,6 @@ curl https://api.uptime.example.com/v1/tcp-monitors \
   -H "Authorization: Bearer uptime_your_api_key"
 ```
 
-### JavaScript (fetch)
-
-```javascript
-const response = await fetch("https://api.uptime.example.com/v1/tcp-monitors", {
-	headers: {
-		Authorization: "Bearer uptime_your_api_key",
-	},
-});
-const { data } = await response.json();
-```
-
 ### Response
 
 ```json
@@ -199,26 +188,6 @@ curl https://api.uptime.example.com/v1/tcp-monitors \
     "timeoutMs": 10000,
     "intervalSeconds": 60
   }'
-```
-
-### JavaScript (fetch)
-
-```javascript
-const response = await fetch("https://api.uptime.example.com/v1/tcp-monitors", {
-	method: "POST",
-	headers: {
-		Authorization: "Bearer uptime_your_api_key",
-		"Content-Type": "application/json",
-	},
-	body: JSON.stringify({
-		name: "PostgreSQL Production",
-		host: "db.example.com",
-		port: 5432,
-		timeoutMs: 10000,
-		intervalSeconds: 60,
-	}),
-});
-const { data } = await response.json();
 ```
 
 ### Response
@@ -412,17 +381,6 @@ curl https://api.uptime.example.com/v1/tcp-monitors/tcpm_abc123 \
   -H "Authorization: Bearer uptime_your_api_key"
 ```
 
-### JavaScript (fetch)
-
-```javascript
-const response = await fetch("https://api.uptime.example.com/v1/tcp-monitors/tcpm_abc123", {
-	headers: {
-		Authorization: "Bearer uptime_your_api_key",
-	},
-});
-const { data } = await response.json();
-```
-
 ### Response
 
 ```json
@@ -578,23 +536,6 @@ curl https://api.uptime.example.com/v1/tcp-monitors/tcpm_abc123 \
     "timeoutMs": 15000,
     "isEnabled": false
   }'
-```
-
-### JavaScript (fetch)
-
-```javascript
-const response = await fetch("https://api.uptime.example.com/v1/tcp-monitors/tcpm_abc123", {
-	method: "PUT",
-	headers: {
-		Authorization: "Bearer uptime_your_api_key",
-		"Content-Type": "application/json",
-	},
-	body: JSON.stringify({
-		timeoutMs: 15000,
-		isEnabled: false,
-	}),
-});
-const { data } = await response.json();
 ```
 
 ### Response
@@ -785,18 +726,6 @@ curl https://api.uptime.example.com/v1/tcp-monitors/tcpm_abc123 \
   -H "Authorization: Bearer uptime_your_api_key"
 ```
 
-### JavaScript (fetch)
-
-```javascript
-const response = await fetch("https://api.uptime.example.com/v1/tcp-monitors/tcpm_abc123", {
-	method: "DELETE",
-	headers: {
-		Authorization: "Bearer uptime_your_api_key",
-	},
-});
-// Returns 204 No Content on success
-```
-
 ### Response
 
 Returns `204 No Content` on success with no response body.
@@ -835,21 +764,6 @@ GET /v1/tcp-monitors/:id/results
 ```bash
 curl "https://api.uptime.example.com/v1/tcp-monitors/tcpm_abc123/results?limit=10&offset=0" \
   -H "Authorization: Bearer uptime_your_api_key"
-```
-
-### JavaScript (fetch)
-
-```javascript
-const params = new URLSearchParams({ limit: "10", offset: "0" });
-const response = await fetch(
-	`https://api.uptime.example.com/v1/tcp-monitors/tcpm_abc123/results?${params}`,
-	{
-		headers: {
-			Authorization: "Bearer uptime_your_api_key",
-		},
-	},
-);
-const { data } = await response.json();
 ```
 
 ### Response

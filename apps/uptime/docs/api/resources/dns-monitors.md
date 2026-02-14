@@ -27,17 +27,6 @@ curl https://uptime.example.com/api/v1/dns-monitors \
   -H "Authorization: Bearer uptime_your_api_key"
 ```
 
-### JavaScript (fetch)
-
-```javascript
-const response = await fetch("https://uptime.example.com/api/v1/dns-monitors", {
-	headers: {
-		Authorization: "Bearer uptime_your_api_key",
-	},
-});
-const { data } = await response.json();
-```
-
 ### Response
 
 ```json
@@ -194,26 +183,6 @@ curl https://uptime.example.com/api/v1/dns-monitors \
     "expectedValue": "192.0.2.1",
     "intervalSeconds": 3600
   }'
-```
-
-### JavaScript (fetch)
-
-```javascript
-const response = await fetch("https://uptime.example.com/api/v1/dns-monitors", {
-	method: "POST",
-	headers: {
-		Authorization: "Bearer uptime_your_api_key",
-		"Content-Type": "application/json",
-	},
-	body: JSON.stringify({
-		name: "Production A Record",
-		domain: "example.com",
-		recordType: "A",
-		expectedValue: "192.0.2.1",
-		intervalSeconds: 3600,
-	}),
-});
-const { data } = await response.json();
 ```
 
 ### Response
@@ -398,17 +367,6 @@ curl https://uptime.example.com/api/v1/dns-monitors/dns_abc123 \
   -H "Authorization: Bearer uptime_your_api_key"
 ```
 
-### JavaScript (fetch)
-
-```javascript
-const response = await fetch("https://uptime.example.com/api/v1/dns-monitors/dns_abc123", {
-	headers: {
-		Authorization: "Bearer uptime_your_api_key",
-	},
-});
-const { data } = await response.json();
-```
-
 ### Response
 
 ```json
@@ -559,23 +517,6 @@ curl https://uptime.example.com/api/v1/dns-monitors/dns_abc123 \
     "expectedValue": "192.0.2.2",
     "intervalSeconds": 1800
   }'
-```
-
-### JavaScript (fetch)
-
-```javascript
-const response = await fetch("https://uptime.example.com/api/v1/dns-monitors/dns_abc123", {
-	method: "PUT",
-	headers: {
-		Authorization: "Bearer uptime_your_api_key",
-		"Content-Type": "application/json",
-	},
-	body: JSON.stringify({
-		expectedValue: "192.0.2.2",
-		intervalSeconds: 1800,
-	}),
-});
-const { data } = await response.json();
 ```
 
 ### Response
@@ -758,17 +699,6 @@ curl https://uptime.example.com/api/v1/dns-monitors/dns_abc123 \
   -H "Authorization: Bearer uptime_your_api_key"
 ```
 
-### JavaScript (fetch)
-
-```javascript
-const response = await fetch("https://uptime.example.com/api/v1/dns-monitors/dns_abc123", {
-	method: "DELETE",
-	headers: {
-		Authorization: "Bearer uptime_your_api_key",
-	},
-});
-```
-
 ### Response
 
 Returns `204 No Content` on success.
@@ -806,20 +736,6 @@ GET /v1/dns-monitors/:id/results
 ```bash
 curl "https://uptime.example.com/api/v1/dns-monitors/dns_abc123/results?limit=10" \
   -H "Authorization: Bearer uptime_your_api_key"
-```
-
-### JavaScript (fetch)
-
-```javascript
-const response = await fetch(
-	"https://uptime.example.com/api/v1/dns-monitors/dns_abc123/results?limit=10",
-	{
-		headers: {
-			Authorization: "Bearer uptime_your_api_key",
-		},
-	},
-);
-const { data } = await response.json();
 ```
 
 ### Response

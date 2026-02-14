@@ -29,18 +29,6 @@ curl https://api.uptime.example.com/v1/api-keys \
   -H "Authorization: Bearer uptime_your_api_key"
 ```
 
-#### JavaScript (fetch)
-
-```javascript
-const response = await fetch("https://api.uptime.example.com/v1/api-keys", {
-	headers: {
-		Authorization: "Bearer uptime_your_api_key",
-	},
-});
-
-const data = await response.json();
-```
-
 ### Response
 
 ```json
@@ -190,26 +178,6 @@ curl -X POST https://api.uptime.example.com/v1/api-keys \
     "scopes": ["monitors:read", "monitors:write"],
     "expiresAt": "2027-02-14T00:00:00Z"
   }'
-```
-
-#### JavaScript (fetch)
-
-```javascript
-const response = await fetch("https://api.uptime.example.com/v1/api-keys", {
-	method: "POST",
-	headers: {
-		Authorization: "Bearer uptime_your_api_key",
-		"Content-Type": "application/json",
-	},
-	body: JSON.stringify({
-		name: "GitHub Actions",
-		scopes: ["monitors:read", "monitors:write"],
-		expiresAt: "2027-02-14T00:00:00Z",
-	}),
-});
-
-const data = await response.json();
-// IMPORTANT: Store data.key securely - it will not be shown again!
 ```
 
 ### Response
@@ -399,19 +367,6 @@ Permanently deletes an API key. This action cannot be undone. Any integrations u
 ```bash
 curl -X DELETE https://api.uptime.example.com/v1/api-keys/key_abc123 \
   -H "Authorization: Bearer uptime_your_api_key"
-```
-
-#### JavaScript (fetch)
-
-```javascript
-const response = await fetch("https://api.uptime.example.com/v1/api-keys/key_abc123", {
-	method: "DELETE",
-	headers: {
-		Authorization: "Bearer uptime_your_api_key",
-	},
-});
-
-const data = await response.json();
 ```
 
 ### Response

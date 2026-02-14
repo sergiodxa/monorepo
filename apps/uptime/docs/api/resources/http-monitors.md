@@ -27,17 +27,6 @@ curl https://api.uptime.example.com/v1/monitors \
   -H "Authorization: Bearer uptime_your_api_key"
 ```
 
-### JavaScript (fetch)
-
-```javascript
-const response = await fetch("https://api.uptime.example.com/v1/monitors", {
-	headers: {
-		Authorization: "Bearer uptime_your_api_key",
-	},
-});
-const { data } = await response.json();
-```
-
 ### Response
 
 ```json
@@ -173,29 +162,6 @@ curl https://api.uptime.example.com/v1/monitors \
     "sslMonitoringEnabled": true,
     "sslExpiryWarningDays": 30
   }'
-```
-
-### JavaScript (fetch)
-
-```javascript
-const response = await fetch("https://api.uptime.example.com/v1/monitors", {
-	method: "POST",
-	headers: {
-		Authorization: "Bearer uptime_your_api_key",
-		"Content-Type": "application/json",
-	},
-	body: JSON.stringify({
-		name: "Production API",
-		url: "https://api.example.com/health",
-		method: "GET",
-		expectedStatus: 200,
-		intervalSeconds: 60,
-		degradedAfterMs: 3000,
-		sslMonitoringEnabled: true,
-		sslExpiryWarningDays: 30,
-	}),
-});
-const { data } = await response.json();
 ```
 
 ### Response
@@ -366,17 +332,6 @@ curl https://api.uptime.example.com/v1/monitors/mon_abc123 \
   -H "Authorization: Bearer uptime_your_api_key"
 ```
 
-### JavaScript (fetch)
-
-```javascript
-const response = await fetch("https://api.uptime.example.com/v1/monitors/mon_abc123", {
-	headers: {
-		Authorization: "Bearer uptime_your_api_key",
-	},
-});
-const { data } = await response.json();
-```
-
 ### Response
 
 ```json
@@ -483,23 +438,6 @@ curl https://api.uptime.example.com/v1/monitors/mon_abc123 \
     "name": "Production API v2",
     "intervalSeconds": 120
   }'
-```
-
-### JavaScript (fetch)
-
-```javascript
-const response = await fetch("https://api.uptime.example.com/v1/monitors/mon_abc123", {
-	method: "PUT",
-	headers: {
-		Authorization: "Bearer uptime_your_api_key",
-		"Content-Type": "application/json",
-	},
-	body: JSON.stringify({
-		name: "Production API v2",
-		intervalSeconds: 120,
-	}),
-});
-const { data } = await response.json();
 ```
 
 ### Response
@@ -664,17 +602,6 @@ curl https://api.uptime.example.com/v1/monitors/mon_abc123 \
   -H "Authorization: Bearer uptime_your_api_key"
 ```
 
-### JavaScript (fetch)
-
-```javascript
-const response = await fetch("https://api.uptime.example.com/v1/monitors/mon_abc123", {
-	method: "DELETE",
-	headers: {
-		Authorization: "Bearer uptime_your_api_key",
-	},
-});
-```
-
 ### Response
 
 Returns `204 No Content` on success.
@@ -713,21 +640,6 @@ GET /v1/monitors/:id/results
 ```bash
 curl "https://api.uptime.example.com/v1/monitors/mon_abc123/results?limit=10&offset=0" \
   -H "Authorization: Bearer uptime_your_api_key"
-```
-
-### JavaScript (fetch)
-
-```javascript
-const params = new URLSearchParams({ limit: "10", offset: "0" });
-const response = await fetch(
-	`https://api.uptime.example.com/v1/monitors/mon_abc123/results?${params}`,
-	{
-		headers: {
-			Authorization: "Bearer uptime_your_api_key",
-		},
-	},
-);
-const { data } = await response.json();
 ```
 
 ### Response
@@ -833,17 +745,6 @@ curl https://api.uptime.example.com/v1/monitors/mon_abc123/stats \
   -H "Authorization: Bearer uptime_your_api_key"
 ```
 
-### JavaScript (fetch)
-
-```javascript
-const response = await fetch("https://api.uptime.example.com/v1/monitors/mon_abc123/stats", {
-	headers: {
-		Authorization: "Bearer uptime_your_api_key",
-	},
-});
-const { data } = await response.json();
-```
-
 ### Response
 
 ```json
@@ -946,17 +847,6 @@ GET /v1/monitors/stats
 ```bash
 curl https://api.uptime.example.com/v1/monitors/stats \
   -H "Authorization: Bearer uptime_your_api_key"
-```
-
-### JavaScript (fetch)
-
-```javascript
-const response = await fetch("https://api.uptime.example.com/v1/monitors/stats", {
-	headers: {
-		Authorization: "Bearer uptime_your_api_key",
-	},
-});
-const { data } = await response.json();
 ```
 
 ### Response

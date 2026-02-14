@@ -27,18 +27,6 @@ curl https://api.uptime.example.com/v1/cron-jobs \
   -H "Authorization: Bearer uptime_your_api_key"
 ```
 
-#### JavaScript (fetch)
-
-```javascript
-const response = await fetch("https://api.uptime.example.com/v1/cron-jobs", {
-	headers: {
-		Authorization: "Bearer uptime_your_api_key",
-	},
-});
-
-const data = await response.json();
-```
-
 ### Response
 
 ```json
@@ -161,28 +149,6 @@ curl -X POST https://api.uptime.example.com/v1/cron-jobs \
   }'
 ```
 
-#### JavaScript (fetch)
-
-```javascript
-const response = await fetch("https://api.uptime.example.com/v1/cron-jobs", {
-	method: "POST",
-	headers: {
-		Authorization: "Bearer uptime_your_api_key",
-		"Content-Type": "application/json",
-	},
-	body: JSON.stringify({
-		name: "Daily Backup",
-		cronExpression: "0 2 * * *",
-		description: "Runs database backup every night",
-		gracePeriodSeconds: 600,
-		timezone: "America/New_York",
-		alertOnLate: true,
-	}),
-});
-
-const data = await response.json();
-```
-
 ### Response
 
 ```json
@@ -298,18 +264,6 @@ Returns a single cron job monitor by ID.
 ```bash
 curl https://api.uptime.example.com/v1/cron-jobs/cron_abc123 \
   -H "Authorization: Bearer uptime_your_api_key"
-```
-
-#### JavaScript (fetch)
-
-```javascript
-const response = await fetch("https://api.uptime.example.com/v1/cron-jobs/cron_abc123", {
-	headers: {
-		Authorization: "Bearer uptime_your_api_key",
-	},
-});
-
-const data = await response.json();
 ```
 
 ### Response
@@ -428,24 +382,6 @@ curl -X PUT https://api.uptime.example.com/v1/cron-jobs/cron_abc123 \
   }'
 ```
 
-#### JavaScript (fetch)
-
-```javascript
-const response = await fetch("https://api.uptime.example.com/v1/cron-jobs/cron_abc123", {
-	method: "PUT",
-	headers: {
-		Authorization: "Bearer uptime_your_api_key",
-		"Content-Type": "application/json",
-	},
-	body: JSON.stringify({
-		gracePeriodSeconds: 900,
-		alertOnLate: false,
-	}),
-});
-
-const data = await response.json();
-```
-
 ### Response
 
 ```json
@@ -562,17 +498,6 @@ curl -X DELETE https://api.uptime.example.com/v1/cron-jobs/cron_abc123 \
   -H "Authorization: Bearer uptime_your_api_key"
 ```
 
-#### JavaScript (fetch)
-
-```javascript
-const response = await fetch("https://api.uptime.example.com/v1/cron-jobs/cron_abc123", {
-	method: "DELETE",
-	headers: {
-		Authorization: "Bearer uptime_your_api_key",
-	},
-});
-```
-
 ### Response
 
 Returns `204 No Content` on success with an empty response body.
@@ -613,21 +538,6 @@ Returns the ping history for a cron job monitor.
 ```bash
 curl "https://api.uptime.example.com/v1/cron-jobs/cron_abc123/ping?limit=10&offset=0" \
   -H "Authorization: Bearer uptime_your_api_key"
-```
-
-#### JavaScript (fetch)
-
-```javascript
-const response = await fetch(
-	"https://api.uptime.example.com/v1/cron-jobs/cron_abc123/ping?limit=10&offset=0",
-	{
-		headers: {
-			Authorization: "Bearer uptime_your_api_key",
-		},
-	},
-);
-
-const data = await response.json();
 ```
 
 ### Response
@@ -727,19 +637,6 @@ Records a ping for a cron job monitor. Call this endpoint when your scheduled ta
 ```bash
 curl -X POST https://api.uptime.example.com/v1/cron-jobs/cron_abc123/ping \
   -H "Authorization: Bearer uptime_your_api_key"
-```
-
-#### JavaScript (fetch)
-
-```javascript
-const response = await fetch("https://api.uptime.example.com/v1/cron-jobs/cron_abc123/ping", {
-	method: "POST",
-	headers: {
-		Authorization: "Bearer uptime_your_api_key",
-	},
-});
-
-const data = await response.json();
 ```
 
 ### Response

@@ -324,62 +324,65 @@ export function LandingFooter() {
 						</ul>
 					</div>
 
-					{/* Documentation */}
-					<div>
-						<h3 className="mb-4 text-sm font-semibold text-neutral-900 dark:text-neutral-50">
-							{t("sections.docs.title")}
-						</h3>
-						<ul className="space-y-3">
-							<li>
-								<Link
-									to="/docs/overview"
-									className="text-sm text-neutral-600 transition hover:text-primary-600 dark:text-neutral-400 dark:hover:text-primary-400"
-								>
-									{t("sections.docs.overview")}
-								</Link>
-							</li>
-							<li>
-								<Link
-									to="/docs/quickstart"
-									className="text-sm text-neutral-600 transition hover:text-primary-600 dark:text-neutral-400 dark:hover:text-primary-400"
-								>
-									{t("sections.docs.quickstart")}
-								</Link>
-							</li>
-							<li>
-								<Link
-									to="/docs/api/overview"
-									className="text-sm text-neutral-600 transition hover:text-primary-600 dark:text-neutral-400 dark:hover:text-primary-400"
-								>
-									{t("sections.docs.apiReference")}
-								</Link>
-							</li>
-						</ul>
-					</div>
+					{/* Documentation & Legal */}
+					<div className="flex flex-col gap-8">
+						{/* Documentation */}
+						<div>
+							<h3 className="mb-4 text-sm font-semibold text-neutral-900 dark:text-neutral-50">
+								{t("sections.docs.title")}
+							</h3>
+							<ul className="space-y-3">
+								<li>
+									<Link
+										to="/docs/overview"
+										className="text-sm text-neutral-600 transition hover:text-primary-600 dark:text-neutral-400 dark:hover:text-primary-400"
+									>
+										{t("sections.docs.overview")}
+									</Link>
+								</li>
+								<li>
+									<Link
+										to="/docs/quickstart"
+										className="text-sm text-neutral-600 transition hover:text-primary-600 dark:text-neutral-400 dark:hover:text-primary-400"
+									>
+										{t("sections.docs.quickstart")}
+									</Link>
+								</li>
+								<li>
+									<Link
+										to="/docs/api/overview"
+										className="text-sm text-neutral-600 transition hover:text-primary-600 dark:text-neutral-400 dark:hover:text-primary-400"
+									>
+										{t("sections.docs.apiReference")}
+									</Link>
+								</li>
+							</ul>
+						</div>
 
-					{/* Legal */}
-					<div>
-						<h3 className="mb-4 text-sm font-semibold text-neutral-900 dark:text-neutral-50">
-							{t("sections.legal.title")}
-						</h3>
-						<ul className="space-y-3">
-							<li>
-								<Link
-									to="/terms"
-									className="text-sm text-neutral-600 transition hover:text-primary-600 dark:text-neutral-400 dark:hover:text-primary-400"
-								>
-									{t("sections.legal.terms")}
-								</Link>
-							</li>
-							<li>
-								<Link
-									to="/privacy"
-									className="text-sm text-neutral-600 transition hover:text-primary-600 dark:text-neutral-400 dark:hover:text-primary-400"
-								>
-									{t("sections.legal.privacy")}
-								</Link>
-							</li>
-						</ul>
+						{/* Legal */}
+						<div>
+							<h3 className="mb-4 text-sm font-semibold text-neutral-900 dark:text-neutral-50">
+								{t("sections.legal.title")}
+							</h3>
+							<ul className="space-y-3">
+								<li>
+									<Link
+										to="/terms"
+										className="text-sm text-neutral-600 transition hover:text-primary-600 dark:text-neutral-400 dark:hover:text-primary-400"
+									>
+										{t("sections.legal.terms")}
+									</Link>
+								</li>
+								<li>
+									<Link
+										to="/privacy"
+										className="text-sm text-neutral-600 transition hover:text-primary-600 dark:text-neutral-400 dark:hover:text-primary-400"
+									>
+										{t("sections.legal.privacy")}
+									</Link>
+								</li>
+							</ul>
+						</div>
 					</div>
 				</div>
 
