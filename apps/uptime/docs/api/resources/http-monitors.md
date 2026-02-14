@@ -1,0 +1,687 @@
+---
+title: HTTP Monitors
+description: Create, update, delete, and query HTTP monitors. Get check results and performance statistics.
+section:
+  title: API Resources
+  order: 5
+order: 2
+lastUpdated: 2026-02-14
+---
+
+HTTP monitors check your websites and APIs for availability, performance, and content validity.
+
+## List Monitors
+
+Retrieve all HTTP monitors for your team.
+
+```
+GET /v1/monitors
+```
+
+**Required scope:** `monitors:read`
+
+### cURL
+
+```bash
+curl https://api.uptime.example.com/v1/monitors \
+  -H "Authorization: Bearer uptime_your_api_key"
+```
+
+### JavaScript (fetch)
+
+```javascript
+const response = await fetch("https://api.uptime.example.com/v1/monitors", {
+	headers: {
+		Authorization: "Bearer uptime_your_api_key",
+	},
+});
+const { data } = await response.json();
+```
+
+### Response
+
+```json
+{
+	"data": [
+		{
+			"id": "mon_abc123",
+			"name": "Production API",
+			"url": "https://api.example.com/health",
+			"method": "GET",
+			"expectedStatus": 200,
+			"intervalSeconds": 60,
+			"degradedAfterMs": 5000,
+			"timeoutSeconds": 10,
+			"locationHint": "wnam",
+			"sslMonitoringEnabled": true,
+			"sslExpiryWarningDays": 30,
+			"status": "up",
+			"lastCheckedAt": "2026-02-14T12:00:00Z",
+			"createdAt": "2026-01-01T00:00:00Z",
+			"updatedAt": "2026-01-15T10:30:00Z"
+		}
+	]
+}
+```
+
+### Errors
+
+| Status | Code         | Description                          |
+| ------ | ------------ | ------------------------------------ |
+| 401    | UNAUTHORIZED | Missing or invalid API key           |
+| 403    | FORBIDDEN    | API key doesn't have `monitors:read` |
+
+## Create Monitor
+
+Create a new HTTP monitor.
+
+```
+POST /v1/monitors
+```
+
+**Required scope:** `monitors:write`
+
+### Request Body
+
+| Field                  | Type    | Required | Description                                       |
+| ---------------------- | ------- | -------- | ------------------------------------------------- |
+| `name`                 | string  | Yes      | Monitor name (1-255 characters)                   |
+| `url`                  | string  | Yes      | URL to monitor (must be valid URL)                |
+| `method`               | string  | No       | HTTP method (default: `HEAD`)                     |
+| `expectedStatus`       | integer | No       | Expected status code 100-599 (default: `200`)     |
+| `intervalSeconds`      | integer | No       | Check interval 60-3600 (default: `60`)            |
+| `degradedAfterMs`      | integer | No       | Degraded threshold 1000-30000ms (default: `5000`) |
+| `timeoutSeconds`       | integer | No       | Request timeout 1-60 (default: `10`)              |
+| `locationHint`         | string  | No       | Region hint (default: `wnam`)                     |
+| `sslMonitoringEnabled` | boolean | No       | Enable SSL monitoring                             |
+| `sslExpiryWarningDays` | integer | No       | SSL warning threshold 1-365 days                  |
+
+**Supported HTTP methods:** `GET`, `POST`, `PUT`, `PATCH`, `DELETE`, `HEAD`
+
+**Location hints:** `wnam` (Western North America), `enam` (Eastern North America), `sam` (South America), `weur` (Western Europe), `eeur` (Eastern Europe), `apac` (Asia-Pacific), `oc` (Oceania), `afr` (Africa), `me` (Middle East)
+
+### cURL
+
+```bash
+curl https://api.uptime.example.com/v1/monitors \
+  -H "Authorization: Bearer uptime_your_api_key" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Production API",
+    "url": "https://api.example.com/health",
+    "method": "GET",
+    "expectedStatus": 200,
+    "intervalSeconds": 60,
+    "degradedAfterMs": 3000,
+    "sslMonitoringEnabled": true,
+    "sslExpiryWarningDays": 30
+  }'
+```
+
+### JavaScript (fetch)
+
+```javascript
+const response = await fetch("https://api.uptime.example.com/v1/monitors", {
+	method: "POST",
+	headers: {
+		Authorization: "Bearer uptime_your_api_key",
+		"Content-Type": "application/json",
+	},
+	body: JSON.stringify({
+		name: "Production API",
+		url: "https://api.example.com/health",
+		method: "GET",
+		expectedStatus: 200,
+		intervalSeconds: 60,
+		degradedAfterMs: 3000,
+		sslMonitoringEnabled: true,
+		sslExpiryWarningDays: 30,
+	}),
+});
+const { data } = await response.json();
+```
+
+### Response
+
+```json
+{
+	"data": {
+		"id": "mon_abc123",
+		"name": "Production API",
+		"url": "https://api.example.com/health",
+		"method": "GET",
+		"expectedStatus": 200,
+		"intervalSeconds": 60,
+		"degradedAfterMs": 3000,
+		"timeoutSeconds": 10,
+		"locationHint": "wnam",
+		"sslMonitoringEnabled": true,
+		"sslExpiryWarningDays": 30,
+		"status": "pending",
+		"lastCheckedAt": null,
+		"createdAt": "2026-02-14T12:00:00Z",
+		"updatedAt": "2026-02-14T12:00:00Z"
+	}
+}
+```
+
+### Errors
+
+| Status | Code             | Description                            |
+| ------ | ---------------- | -------------------------------------- |
+| 400    | VALIDATION_ERROR | Invalid request body                   |
+| 400    | LIMIT_EXCEEDED   | Maximum monitors reached for your plan |
+| 401    | UNAUTHORIZED     | Missing or invalid API key             |
+| 403    | FORBIDDEN        | API key doesn't have `monitors:write`  |
+
+## Get Monitor
+
+Retrieve a single HTTP monitor by ID.
+
+```
+GET /v1/monitors/:id
+```
+
+**Required scope:** `monitors:read`
+
+### cURL
+
+```bash
+curl https://api.uptime.example.com/v1/monitors/mon_abc123 \
+  -H "Authorization: Bearer uptime_your_api_key"
+```
+
+### JavaScript (fetch)
+
+```javascript
+const response = await fetch("https://api.uptime.example.com/v1/monitors/mon_abc123", {
+	headers: {
+		Authorization: "Bearer uptime_your_api_key",
+	},
+});
+const { data } = await response.json();
+```
+
+### Response
+
+```json
+{
+	"data": {
+		"id": "mon_abc123",
+		"name": "Production API",
+		"url": "https://api.example.com/health",
+		"method": "GET",
+		"expectedStatus": 200,
+		"intervalSeconds": 60,
+		"degradedAfterMs": 5000,
+		"timeoutSeconds": 10,
+		"locationHint": "wnam",
+		"sslMonitoringEnabled": true,
+		"sslExpiryWarningDays": 30,
+		"status": "up",
+		"lastCheckedAt": "2026-02-14T12:00:00Z",
+		"createdAt": "2026-01-01T00:00:00Z",
+		"updatedAt": "2026-01-15T10:30:00Z"
+	}
+}
+```
+
+### Errors
+
+| Status | Code         | Description                          |
+| ------ | ------------ | ------------------------------------ |
+| 401    | UNAUTHORIZED | Missing or invalid API key           |
+| 403    | FORBIDDEN    | API key doesn't have `monitors:read` |
+| 404    | NOT_FOUND    | Monitor not found                    |
+
+## Update Monitor
+
+Update an existing HTTP monitor.
+
+```
+PUT /v1/monitors/:id
+```
+
+**Required scope:** `monitors:write`
+
+### Request Body
+
+All fields from [Create Monitor](#create-monitor) are accepted. Only include fields you want to change.
+
+### cURL
+
+```bash
+curl https://api.uptime.example.com/v1/monitors/mon_abc123 \
+  -X PUT \
+  -H "Authorization: Bearer uptime_your_api_key" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Production API v2",
+    "intervalSeconds": 120
+  }'
+```
+
+### JavaScript (fetch)
+
+```javascript
+const response = await fetch("https://api.uptime.example.com/v1/monitors/mon_abc123", {
+	method: "PUT",
+	headers: {
+		Authorization: "Bearer uptime_your_api_key",
+		"Content-Type": "application/json",
+	},
+	body: JSON.stringify({
+		name: "Production API v2",
+		intervalSeconds: 120,
+	}),
+});
+const { data } = await response.json();
+```
+
+### Response
+
+```json
+{
+	"data": {
+		"id": "mon_abc123",
+		"name": "Production API v2",
+		"url": "https://api.example.com/health",
+		"method": "GET",
+		"expectedStatus": 200,
+		"intervalSeconds": 120,
+		"degradedAfterMs": 5000,
+		"timeoutSeconds": 10,
+		"locationHint": "wnam",
+		"sslMonitoringEnabled": true,
+		"sslExpiryWarningDays": 30,
+		"status": "up",
+		"lastCheckedAt": "2026-02-14T12:00:00Z",
+		"createdAt": "2026-01-01T00:00:00Z",
+		"updatedAt": "2026-02-14T12:30:00Z"
+	}
+}
+```
+
+### Errors
+
+| Status | Code             | Description                           |
+| ------ | ---------------- | ------------------------------------- |
+| 400    | VALIDATION_ERROR | Invalid request body                  |
+| 401    | UNAUTHORIZED     | Missing or invalid API key            |
+| 403    | FORBIDDEN        | API key doesn't have `monitors:write` |
+| 404    | NOT_FOUND        | Monitor not found                     |
+
+## Delete Monitor
+
+Permanently delete an HTTP monitor and all its check history.
+
+```
+DELETE /v1/monitors/:id
+```
+
+**Required scope:** `monitors:write`
+
+### cURL
+
+```bash
+curl https://api.uptime.example.com/v1/monitors/mon_abc123 \
+  -X DELETE \
+  -H "Authorization: Bearer uptime_your_api_key"
+```
+
+### JavaScript (fetch)
+
+```javascript
+const response = await fetch("https://api.uptime.example.com/v1/monitors/mon_abc123", {
+	method: "DELETE",
+	headers: {
+		Authorization: "Bearer uptime_your_api_key",
+	},
+});
+```
+
+### Response
+
+Returns `204 No Content` on success.
+
+### Errors
+
+| Status | Code         | Description                           |
+| ------ | ------------ | ------------------------------------- |
+| 401    | UNAUTHORIZED | Missing or invalid API key            |
+| 403    | FORBIDDEN    | API key doesn't have `monitors:write` |
+| 404    | NOT_FOUND    | Monitor not found                     |
+
+## Get Check Results
+
+Retrieve the check history for a monitor.
+
+```
+GET /v1/monitors/:id/results
+```
+
+**Required scope:** `monitors:read`
+
+### Query Parameters
+
+| Parameter | Type    | Required | Description                            |
+| --------- | ------- | -------- | -------------------------------------- |
+| `limit`   | integer | No       | Results to return, 1-100 (default: 20) |
+| `offset`  | integer | No       | Results to skip (default: 0)           |
+
+### cURL
+
+```bash
+curl "https://api.uptime.example.com/v1/monitors/mon_abc123/results?limit=10&offset=0" \
+  -H "Authorization: Bearer uptime_your_api_key"
+```
+
+### JavaScript (fetch)
+
+```javascript
+const params = new URLSearchParams({ limit: "10", offset: "0" });
+const response = await fetch(
+	`https://api.uptime.example.com/v1/monitors/mon_abc123/results?${params}`,
+	{
+		headers: {
+			Authorization: "Bearer uptime_your_api_key",
+		},
+	},
+);
+const { data } = await response.json();
+```
+
+### Response
+
+```json
+{
+	"data": [
+		{
+			"id": "chk_xyz789",
+			"monitorId": "mon_abc123",
+			"status": "up",
+			"statusCode": 200,
+			"responseTimeMs": 245,
+			"region": "wnam",
+			"checkedAt": "2026-02-14T12:00:00Z"
+		},
+		{
+			"id": "chk_xyz788",
+			"monitorId": "mon_abc123",
+			"status": "degraded",
+			"statusCode": 200,
+			"responseTimeMs": 5200,
+			"region": "wnam",
+			"checkedAt": "2026-02-14T11:59:00Z"
+		}
+	],
+	"pagination": {
+		"limit": 10,
+		"offset": 0,
+		"total": 1440
+	}
+}
+```
+
+### Errors
+
+| Status | Code             | Description                          |
+| ------ | ---------------- | ------------------------------------ |
+| 400    | VALIDATION_ERROR | Invalid query parameters             |
+| 401    | UNAUTHORIZED     | Missing or invalid API key           |
+| 403    | FORBIDDEN        | API key doesn't have `monitors:read` |
+| 404    | NOT_FOUND        | Monitor not found                    |
+
+## Get Monitor Stats
+
+Retrieve performance statistics for a single monitor.
+
+```
+GET /v1/monitors/:id/stats
+```
+
+**Required scope:** `monitors:read`
+
+### cURL
+
+```bash
+curl https://api.uptime.example.com/v1/monitors/mon_abc123/stats \
+  -H "Authorization: Bearer uptime_your_api_key"
+```
+
+### JavaScript (fetch)
+
+```javascript
+const response = await fetch("https://api.uptime.example.com/v1/monitors/mon_abc123/stats", {
+	headers: {
+		Authorization: "Bearer uptime_your_api_key",
+	},
+});
+const { data } = await response.json();
+```
+
+### Response
+
+```json
+{
+	"data": {
+		"monitorId": "mon_abc123",
+		"uptime": {
+			"last24Hours": 99.95,
+			"last7Days": 99.87,
+			"last30Days": 99.92
+		},
+		"responseTime": {
+			"avg": 245,
+			"min": 120,
+			"max": 890,
+			"p50": 230,
+			"p95": 450,
+			"p99": 780
+		},
+		"checks": {
+			"total": 43200,
+			"up": 43180,
+			"degraded": 15,
+			"down": 5
+		}
+	}
+}
+```
+
+### Errors
+
+| Status | Code         | Description                          |
+| ------ | ------------ | ------------------------------------ |
+| 401    | UNAUTHORIZED | Missing or invalid API key           |
+| 403    | FORBIDDEN    | API key doesn't have `monitors:read` |
+| 404    | NOT_FOUND    | Monitor not found                    |
+
+## Get Aggregated Stats
+
+Retrieve aggregated statistics across all monitors.
+
+```
+GET /v1/monitors/stats
+```
+
+**Required scope:** `monitors:read`
+
+### cURL
+
+```bash
+curl https://api.uptime.example.com/v1/monitors/stats \
+  -H "Authorization: Bearer uptime_your_api_key"
+```
+
+### JavaScript (fetch)
+
+```javascript
+const response = await fetch("https://api.uptime.example.com/v1/monitors/stats", {
+	headers: {
+		Authorization: "Bearer uptime_your_api_key",
+	},
+});
+const { data } = await response.json();
+```
+
+### Response
+
+```json
+{
+	"data": {
+		"monitors": {
+			"total": 15,
+			"up": 12,
+			"degraded": 2,
+			"down": 1
+		},
+		"uptime": {
+			"last24Hours": 98.5,
+			"last7Days": 99.1,
+			"last30Days": 99.3
+		},
+		"checks": {
+			"last24Hours": 21600,
+			"last7Days": 151200,
+			"last30Days": 648000
+		}
+	}
+}
+```
+
+### Errors
+
+| Status | Code         | Description                          |
+| ------ | ------------ | ------------------------------------ |
+| 401    | UNAUTHORIZED | Missing or invalid API key           |
+| 403    | FORBIDDEN    | API key doesn't have `monitors:read` |
+
+## Content Checks
+
+Manage content validation rules for a monitor. Content checks verify that responses contain (or don't contain) specific text or patterns.
+
+### Create Content Check
+
+```
+POST /v1/monitors/:id/content-checks
+```
+
+**Required scope:** `monitors:write`
+
+### Request Body
+
+| Field           | Type    | Required | Description                                     |
+| --------------- | ------- | -------- | ----------------------------------------------- |
+| `type`          | string  | Yes      | Check type: `contains`, `not_contains`, `regex` |
+| `value`         | string  | Yes      | Text or pattern to match                        |
+| `caseSensitive` | boolean | No       | Enable case-sensitive matching (default: false) |
+
+### Delete Content Check
+
+```
+DELETE /v1/monitors/:id/content-checks/:checkId
+```
+
+**Required scope:** `monitors:write`
+
+See [Content Checks](/docs/concepts/http-monitors#content-checks) for usage details.
+
+## JSON Schema
+
+```json
+{
+	"$schema": "https://json-schema.org/draft/2020-12/schema",
+	"title": "HTTP Monitor",
+	"type": "object",
+	"properties": {
+		"id": {
+			"type": "string",
+			"pattern": "^mon_[a-zA-Z0-9]+$",
+			"description": "Unique monitor identifier"
+		},
+		"name": {
+			"type": "string",
+			"minLength": 1,
+			"maxLength": 255,
+			"description": "Monitor display name"
+		},
+		"url": {
+			"type": "string",
+			"format": "uri",
+			"description": "URL to monitor"
+		},
+		"method": {
+			"type": "string",
+			"enum": ["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD"],
+			"default": "HEAD",
+			"description": "HTTP method"
+		},
+		"expectedStatus": {
+			"type": "integer",
+			"minimum": 100,
+			"maximum": 599,
+			"default": 200,
+			"description": "Expected HTTP status code"
+		},
+		"intervalSeconds": {
+			"type": "integer",
+			"minimum": 60,
+			"maximum": 3600,
+			"default": 60,
+			"description": "Check interval in seconds"
+		},
+		"degradedAfterMs": {
+			"type": "integer",
+			"minimum": 1000,
+			"maximum": 30000,
+			"default": 5000,
+			"description": "Response time threshold for degraded status"
+		},
+		"timeoutSeconds": {
+			"type": "integer",
+			"minimum": 1,
+			"maximum": 60,
+			"default": 10,
+			"description": "Request timeout in seconds"
+		},
+		"locationHint": {
+			"type": "string",
+			"enum": ["wnam", "enam", "sam", "weur", "eeur", "apac", "oc", "afr", "me"],
+			"default": "wnam",
+			"description": "Preferred check region"
+		},
+		"sslMonitoringEnabled": {
+			"type": "boolean",
+			"description": "Enable SSL certificate monitoring"
+		},
+		"sslExpiryWarningDays": {
+			"type": "integer",
+			"minimum": 1,
+			"maximum": 365,
+			"description": "Days before SSL expiry to warn"
+		},
+		"status": {
+			"type": "string",
+			"enum": ["pending", "up", "degraded", "down"],
+			"description": "Current monitor status"
+		},
+		"lastCheckedAt": {
+			"type": ["string", "null"],
+			"format": "date-time",
+			"description": "Timestamp of last check"
+		},
+		"createdAt": {
+			"type": "string",
+			"format": "date-time",
+			"description": "Creation timestamp"
+		},
+		"updatedAt": {
+			"type": "string",
+			"format": "date-time",
+			"description": "Last update timestamp"
+		}
+	},
+	"required": ["name", "url"]
+}
+```

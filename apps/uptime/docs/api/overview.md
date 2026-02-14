@@ -1,0 +1,45 @@
+---
+title: API Overview
+description: The Uptime REST API lets you programmatically manage monitors, alerts, status pages, and more.
+section:
+  title: API Reference
+  order: 4
+order: 1
+lastUpdated: 2026-02-14
+---
+
+The Uptime API is a RESTful API that allows you to manage all aspects of your monitoring infrastructure programmatically.
+
+## Base URL
+
+All API requests should be made to:
+
+```
+https://uptime.example.com/api/v1
+```
+
+## Authentication
+
+All API requests require authentication via an API key passed in the `Authorization` header. See [Authentication](/docs/api/authentication) for details on generating and using API keys.
+
+## Response Format
+
+All responses are returned as JSON. Successful responses include a `data` field, while error responses include an `error` field with details about what went wrong. See [Errors](/docs/api/errors) for the complete error format and status codes.
+
+## Available Resources
+
+- [Status](/docs/api/status) - Check API health and your account status
+- [HTTP Monitors](/docs/api/http-monitors) - Monitor websites and HTTP endpoints
+- [DNS Monitors](/docs/api/dns-monitors) - Monitor DNS records and propagation
+- [TCP Monitors](/docs/api/tcp-monitors) - Monitor TCP ports and services
+- [Cron Jobs](/docs/api/cron-jobs) - Monitor scheduled tasks and cron jobs
+- [Alerts](/docs/api/alerts) - Configure alert channels and notifications
+- [Status Pages](/docs/api/status-pages) - Manage public and private status pages
+- [Maintenance Windows](/docs/api/maintenance-windows) - Schedule maintenance periods
+- [Team](/docs/api/team) - Manage team members and permissions
+- [Invites](/docs/api/invites) - Send and manage team invitations
+- [API Keys](/docs/api/api-keys) - Create and revoke API keys
+
+## Rate Limits
+
+API requests are subject to rate limiting based on your plan. See [Rate Limits](/docs/api/rate-limits) for details on limits and how to handle rate limit errors.
