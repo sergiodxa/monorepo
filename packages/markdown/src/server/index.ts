@@ -3,7 +3,8 @@ import type { Result } from "@pkg/result";
 import type { StandardSchemaV1 } from "@standard-schema/spec";
 
 import * as Markdoc from "@markdoc/markdoc";
-import { success, failure, isFailure } from "@pkg/result";
+import { failure, isFailure, success } from "@pkg/result";
+import YAML from "yaml";
 
 import { fence } from "./fence.js";
 
@@ -81,18 +82,12 @@ export class Markdown<Schema extends StandardSchemaV1> {
 			return success({ frontmatter: result.data, content: raw });
 		}
 
-		let object: Record<string, unknown> = {};
-
-		for (let line of frontmatterText.split("\n")) {
-			let colonIndex = line.indexOf(":");
-			if (colonIndex > 0) {
-				let key = line.slice(0, colonIndex).trim();
-				let value = line
-					.slice(colonIndex + 1)
-					.trim()
-					.replace(/^["']|["']$/g, "");
-				object[key] = value;
-			}
+		let object: Record<string, unknown>;
+		try {
+			let parsed = YAML.parse(frontmatterText);
+			object = typeof parsed === "object" && parsed !== null ? parsed : {};
+		} catch {
+			object = {};
 		}
 
 		let result = Markdown.#validateFrontmatter(object, schema);

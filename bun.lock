@@ -198,6 +198,7 @@
         "@pkg/cn": "workspace:*",
         "@pkg/db-helpers": "workspace:*",
         "@pkg/logger": "workspace:*",
+        "@pkg/markdown": "workspace:*",
         "@pkg/response": "workspace:*",
         "@pkg/result": "workspace:*",
         "@pkg/ui": "workspace:*",
@@ -207,6 +208,7 @@
         "cron-parser": "^5.5.0",
         "date-fns": "^4.1.0",
         "drizzle-orm": "^0.45.1",
+        "fuse.js": "^7.1.0",
         "i18next": "^25.8.4",
         "i18next-browser-languagedetector": "^8.2.0",
         "i18next-fetch-backend": "^7.0.0",
@@ -313,6 +315,26 @@
       },
       "peerDependencies": {
         "react-router": "^7.0.0",
+      },
+    },
+    "packages/markdown": {
+      "name": "@pkg/markdown",
+      "version": "0.0.1",
+      "dependencies": {
+        "@markdoc/markdoc": "^0.5.2",
+        "@pkg/cn": "workspace:*",
+        "@pkg/result": "workspace:*",
+        "@pkg/ui": "workspace:*",
+        "@standard-schema/spec": "^1.1.0",
+        "lucide-react": "^0.563.0",
+        "prismjs": "^1.30.0",
+        "yaml": "^2.8.2",
+        "zod": "^4.3.6",
+      },
+      "devDependencies": {
+        "@types/bun": "^1.3.8",
+        "@types/prismjs": "^1.26.5",
+        "@types/react": "^19.2.10",
       },
     },
     "packages/response": {
@@ -718,6 +740,8 @@
     "@pkg/location": ["@pkg/location@workspace:packages/location"],
 
     "@pkg/logger": ["@pkg/logger@workspace:packages/logger"],
+
+    "@pkg/markdown": ["@pkg/markdown@workspace:packages/markdown"],
 
     "@pkg/response": ["@pkg/response@workspace:packages/response"],
 
@@ -1896,6 +1920,8 @@
     "wsl-utils": ["wsl-utils@0.1.0", "", { "dependencies": { "is-wsl": "^3.1.0" } }, "sha512-h3Fbisa2nKGPxCpm89Hk33lBLsnaGBvctQopaBSOW/uIs6FTe1ATyAnKFJrzVs9vpGdsTe73WF3V4lIsk4Gacw=="],
 
     "yallist": ["yallist@3.1.1", "", {}, "sha512-a4UGQaWPH59mOXUYnAG2ewncQS4i4F43Tv3JoAM+s2VDAmS9NsK8GpDMLrCHPksFT7h3K6TOoUNn2pb7RoXx4g=="],
+
+    "yaml": ["yaml@2.8.2", "", { "bin": { "yaml": "bin.mjs" } }, "sha512-mplynKqc1C2hTVYxd0PU2xQAc22TI1vShAYGksCCfxbn/dFwnHTNi1bvYsBTkhdUNtGIf5xNOg938rrSSYvS9A=="],
 
     "youch": ["youch@4.1.0-beta.10", "", { "dependencies": { "@poppinss/colors": "^4.1.5", "@poppinss/dumper": "^0.6.4", "@speed-highlight/core": "^1.2.7", "cookie": "^1.0.2", "youch-core": "^0.3.3" } }, "sha512-rLfVLB4FgQneDr0dv1oddCVZmKjcJ6yX6mS4pU82Mq/Dt9a3cLZQ62pDBL4AUO+uVrCvtWz3ZFUL2HFAFJ/BXQ=="],
 
