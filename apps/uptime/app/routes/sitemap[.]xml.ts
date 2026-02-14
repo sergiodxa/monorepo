@@ -1,3 +1,5 @@
+import { listDocs } from "~/modules/docs";
+
 import type { Route } from "./+types/sitemap[.]xml";
 
 // All landing pages with their paths and priorities
@@ -53,18 +55,32 @@ const LANDING_PAGES = [
 	{ path: "/privacy", priority: 0.3, changefreq: "yearly" },
 ] as const;
 
-export function loader({ request }: Route.LoaderArgs) {
+export async function loader({ request }: Route.LoaderArgs) {
 	let lastmod = new Date().toISOString().split("T")[0]; // YYYY-MM-DD format
 
-	let urls = LANDING_PAGES.map(
-		(page) => `
+	// Get all documentation pages
+	let docSections = await listDocs();
+	let docPages = docSections.flatMap((section) =>
+		section.docs.map((doc) => ({
+			path: doc.path,
+			priority: 0.7,
+			changefreq: "weekly" as const,
+		})),
+	);
+
+	let allPages = [...LANDING_PAGES, ...docPages];
+
+	let urls = allPages
+		.map(
+			(page) => `
   <url>
     <loc>${new URL(page.path, request.url).toString()}</loc>
     <lastmod>${lastmod}</lastmod>
     <changefreq>${page.changefreq}</changefreq>
     <priority>${page.priority}</priority>
   </url>`,
-	).join("");
+		)
+		.join("");
 
 	let sitemap = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
