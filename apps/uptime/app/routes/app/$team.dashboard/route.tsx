@@ -27,12 +27,11 @@ import {
 	TrashIcon,
 	TriangleAlertIcon,
 } from "lucide-react";
-import { Suspense, use, useEffect, useRef } from "react";
+import { Suspense, use } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import { href, Link, useFetcher, useRevalidator } from "react-router";
 import { Line, LineChart } from "recharts";
 import { ClientOnly } from "remix-utils/client-only";
-import { useGlobalPendingState } from "remix-utils/use-global-navigation-state";
 import { useSpinDelay } from "spin-delay";
 
 import { AppHeader } from "~/components/app-header";
@@ -233,8 +232,6 @@ export default function Component({ loaderData, params }: Route.ComponentProps) 
 	});
 
 	let fetcher = useFetcher();
-
-	useRevalidateOnDocumentVisible();
 
 	function handleTabChange(key: React.Key) {
 		fetcher.submit(
@@ -1351,29 +1348,4 @@ function CronJobTableRow(props: {
 			</Table.Cell>
 		</Table.Row>
 	);
-}
-
-function useRevalidateOnDocumentVisible() {
-	let state = useGlobalPendingState();
-	let stateRef = useRef(state);
-
-	useEffect(() => {
-		stateRef.current = state;
-	}, [state]);
-
-	let { revalidate } = useRevalidator();
-	let previousVisibilityState = useRef<DocumentVisibilityState>("visible");
-
-	useEffect(() => {
-		window.addEventListener("visibilitychange", handler);
-		return () => void window.removeEventListener("visibilitychange", handler);
-
-		function handler() {
-			let isVisible = document.visibilityState === "visible";
-			let wasHidden = previousVisibilityState.current === "hidden";
-			let isIdle = stateRef.current === "idle";
-			if (isVisible && wasHidden && isIdle) revalidate();
-			previousVisibilityState.current = document.visibilityState;
-		}
-	}, [revalidate]);
 }
