@@ -1,0 +1,27 @@
+{
+	"name": "@pkg/markdown",
+	"version": "0.0.1",
+	"private": true,
+	"type": "module",
+	"exports": {
+		"./server": "./src/server/index.ts",
+		"./client": "./src/client/index.tsx",
+		"./styles/light.css": "./styles/prism-light.css",
+		"./styles/dark.css": "./styles/prism-dark.css"
+	},
+	"dependencies": {
+		"@markdoc/markdoc": "^0.5.2",
+		"@pkg/cn": "workspace:*",
+		"@pkg/result": "workspace:*",
+		"@pkg/ui": "workspace:*",
+		"@standard-schema/spec": "^1.1.0",
+		"lucide-react": "^0.563.0",
+		"prismjs": "^1.30.0",
+		"zod": "^4.3.6"
+	},
+	"devDependencies": {
+		"@types/bun": "^1.3.8",
+		"@types/prismjs": "^1.26.5",
+		"@types/react": "^19.2.10"
+	}
+}
