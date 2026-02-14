@@ -3344,4 +3344,52 @@ export default {
 			},
 		},
 	},
+
+	docs: {
+		meta: {
+			title: "Documentación - Uptime",
+			description:
+				"Documentación del servicio de monitoreo Uptime. Aprenda a usar monitores, alertas, páginas de estado y más.",
+		},
+
+		sidebar: {
+			title: "Documentación",
+			description: "Guías y referencia",
+			searchPlaceholder: "Buscar...",
+			openMenu: "Abrir menú",
+			closeMenu: "Cerrar menú",
+		},
+
+		breadcrumb: {
+			home: "Inicio",
+		},
+
+		nav: {
+			gettingStarted: "Primeros Pasos",
+			overview: "Descripción General",
+			quickstart: "Inicio Rápido",
+
+			api: "Referencia de API",
+			apiOverview: "Descripción de API",
+			authentication: "Autenticación",
+			errors: "Errores",
+
+			resources: "Recursos",
+			monitors: "Monitores",
+			dnsMonitors: "Monitores DNS",
+			tcpMonitors: "Monitores TCP",
+			cronJobs: "Tareas Cron",
+			alerts: "Alertas",
+			statusPages: "Páginas de Estado",
+		},
+
+		error: {
+			title: "Error de Documentación",
+			description: "Hubo un error al cargar esta página de documentación.",
+			notFoundTitle: "Página No Encontrada",
+			notFoundDescription: "La página de documentación que buscas no existe.",
+		},
+
+		lastUpdated: "Última actualización: {{date}}",
+	},
 };

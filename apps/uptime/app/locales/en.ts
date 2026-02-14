@@ -3623,4 +3623,52 @@ export default {
 			},
 		},
 	},
+
+	docs: {
+		meta: {
+			title: "Documentation - Uptime",
+			description:
+				"Documentation for Uptime monitoring service. Learn how to use monitors, alerts, status pages, and more.",
+		},
+
+		sidebar: {
+			title: "Documentation",
+			description: "Guides and reference",
+			searchPlaceholder: "Search...",
+			openMenu: "Open menu",
+			closeMenu: "Close menu",
+		},
+
+		breadcrumb: {
+			home: "Home",
+		},
+
+		nav: {
+			gettingStarted: "Getting Started",
+			overview: "Overview",
+			quickstart: "Quickstart",
+
+			api: "API Reference",
+			apiOverview: "API Overview",
+			authentication: "Authentication",
+			errors: "Errors",
+
+			resources: "Resources",
+			monitors: "Monitors",
+			dnsMonitors: "DNS Monitors",
+			tcpMonitors: "TCP Monitors",
+			cronJobs: "Cron Jobs",
+			alerts: "Alerts",
+			statusPages: "Status Pages",
+		},
+
+		error: {
+			title: "Documentation Error",
+			description: "There was an error loading this documentation page.",
+			notFoundTitle: "Page Not Found",
+			notFoundDescription: "The documentation page you're looking for doesn't exist.",
+		},
+
+		lastUpdated: "Last updated: {{date}}",
+	},
 };
