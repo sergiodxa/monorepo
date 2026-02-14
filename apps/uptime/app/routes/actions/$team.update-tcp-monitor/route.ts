@@ -31,7 +31,7 @@ const schema = z.object({
 	isEnabled: z
 		.union([z.literal("on"), z.literal("true"), z.literal("false")])
 		.transform((val) => val === "on" || val === "true")
-		.default("true"),
+		.default(true),
 });
 
 export async function action({ request, context }: Route.ActionArgs) {

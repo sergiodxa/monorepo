@@ -1,3 +1,4 @@
+import { Location } from "@pkg/location";
 import { accepted, badRequest, created, forbidden } from "@pkg/response";
 import { isFailure } from "@pkg/result";
 import { validate } from "@pkg/validate";
@@ -115,7 +116,8 @@ export async function clientAction({ serverAction, params }: Route.ClientActionA
 	let result = await serverAction();
 	if (result.ok) {
 		toast.success(result.message);
-		return redirect(href("/app/:team/domains", params));
+		let location = new Location({ pathname: href("/app/:team/settings", params), hash: "domains" });
+		return redirect(location.toString());
 	}
 	toast.error(result.message);
 	return result;

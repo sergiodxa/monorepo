@@ -197,6 +197,7 @@
         "@pkg/auth-sdk": "workspace:*",
         "@pkg/cn": "workspace:*",
         "@pkg/db-helpers": "workspace:*",
+        "@pkg/location": "workspace:*",
         "@pkg/logger": "workspace:*",
         "@pkg/markdown": "workspace:*",
         "@pkg/response": "workspace:*",

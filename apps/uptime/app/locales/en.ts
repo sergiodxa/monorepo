@@ -2194,6 +2194,7 @@ export default {
 					actions: "Actions",
 				},
 				neverChecked: "Never",
+				disabled: "Disabled",
 				actions: {
 					menu: "Actions Menu",
 					view: "View",

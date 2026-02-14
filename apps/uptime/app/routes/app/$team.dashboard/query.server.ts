@@ -6,89 +6,45 @@ import type { Database } from "~/db/index";
 
 import CronJobMonitor from "~/models/cron-job-monitor";
 
-export async function getDashboardDataByTeamId(args: {
+interface BaseArgs {
 	db: Database;
 	teamId: string;
 	locale: string;
 	timeZone?: string;
+}
+
+interface HttpMonitorsArgs extends BaseArgs {
 	t: TFunction<"translation", "page.dashboard.table">;
-}) {
-	// Fetch all data in parallel
-	let [monitors, dnsMonitorsList, tcpMonitorsList, cronJobsList] = await Promise.all([
-		// HTTP monitors with results from the last day
-		args.db.query.monitors.findMany({
-			columns: {
-				id: true,
-				name: true,
-				expectedStatus: true,
-				degradedAfterMs: true,
-			},
-			where(fields, operators) {
-				return operators.eq(fields.teamId, args.teamId);
-			},
-			with: {
-				results: {
-					columns: {
-						responseTimeMs: true,
-						responseStatus: true,
-						completedAt: true,
-					},
-					where(fields, operators) {
-						return operators.and(
-							operators.isNotNull(fields.completedAt),
-							operators.gte(fields.completedAt, subDays(new Date(), 1)),
-						);
-					},
+}
+
+export async function getHttpMonitorsData(args: HttpMonitorsArgs) {
+	let monitors = await args.db.query.monitors.findMany({
+		columns: {
+			id: true,
+			name: true,
+			expectedStatus: true,
+			degradedAfterMs: true,
+		},
+		where(fields, operators) {
+			return operators.eq(fields.teamId, args.teamId);
+		},
+		with: {
+			results: {
+				columns: {
+					responseTimeMs: true,
+					responseStatus: true,
+					completedAt: true,
+				},
+				where(fields, operators) {
+					return operators.and(
+						operators.isNotNull(fields.completedAt),
+						operators.gte(fields.completedAt, subDays(new Date(), 1)),
+					);
 				},
 			},
-		}),
-		// DNS monitors
-		args.db.query.dnsMonitors.findMany({
-			columns: {
-				id: true,
-				name: true,
-				domain: true,
-				recordType: true,
-				lastStatus: true,
-				lastCheckedAt: true,
-				lastValue: true,
-			},
-			where(fields, operators) {
-				return operators.eq(fields.teamId, args.teamId);
-			},
-		}),
-		// TCP monitors
-		args.db.query.tcpMonitors.findMany({
-			columns: {
-				id: true,
-				name: true,
-				host: true,
-				port: true,
-				lastStatus: true,
-				lastResponseTimeMs: true,
-				lastCheckedAt: true,
-			},
-			where(fields, operators) {
-				return operators.eq(fields.teamId, args.teamId);
-			},
-		}),
-		// Cron job monitors
-		args.db.query.cronJobMonitors.findMany({
-			columns: {
-				id: true,
-				name: true,
-				cronExpression: true,
-				status: true,
-				lastPingAt: true,
-				nextExpectedAt: true,
-			},
-			where(fields, operators) {
-				return operators.eq(fields.teamId, args.teamId);
-			},
-		}),
-	]);
+		},
+	});
 
-	// HTTP monitors data
 	let httpMonitorsCount = monitors.length;
 
 	let allResults = monitors.flatMap((m) =>
@@ -117,7 +73,7 @@ export async function getDashboardDataByTeamId(args: {
 		: null;
 
 	// HTTP monitors with aggregated data
-	let monitorsWithData = monitors.map((m) => {
+	let httpMonitors = monitors.map((m) => {
 		let lastResult =
 			m.results
 				.filter((r) => Boolean(r.completedAt))
@@ -177,10 +133,35 @@ export async function getDashboardDataByTeamId(args: {
 	});
 
 	// HTTP monitor status counts
-	let httpMonitorsUp = monitorsWithData.filter((m) => m.status === "up").length;
-	let httpMonitorsDown = monitorsWithData.filter((m) => m.status === "down").length;
+	let httpMonitorsUp = httpMonitors.filter((m) => m.status === "up").length;
+	let httpMonitorsDown = httpMonitors.filter((m) => m.status === "down").length;
 
-	// DNS monitors data
+	return {
+		httpMonitors,
+		httpMonitorsCount,
+		httpMonitorsUp,
+		httpMonitorsDown,
+		uptime,
+		slowestEndpoint,
+	};
+}
+
+export async function getDnsMonitorsData(args: BaseArgs) {
+	let dnsMonitorsList = await args.db.query.dnsMonitors.findMany({
+		columns: {
+			id: true,
+			name: true,
+			domain: true,
+			recordType: true,
+			lastStatus: true,
+			lastCheckedAt: true,
+			lastValue: true,
+		},
+		where(fields, operators) {
+			return operators.eq(fields.teamId, args.teamId);
+		},
+	});
+
 	let dnsMonitorsCount = dnsMonitorsList.length;
 	let dnsMonitorsOk = dnsMonitorsList.filter((m) => m.lastStatus === "ok").length;
 	let dnsMonitorsChanged = dnsMonitorsList.filter((m) => m.lastStatus === "changed").length;
@@ -202,7 +183,31 @@ export async function getDashboardDataByTeamId(args: {
 		lastValue: m.lastValue,
 	}));
 
-	// TCP monitors data
+	return {
+		dnsMonitors,
+		dnsMonitorsCount,
+		dnsMonitorsOk,
+		dnsMonitorsChanged,
+		dnsMonitorsError,
+	};
+}
+
+export async function getTcpMonitorsData(args: BaseArgs) {
+	let tcpMonitorsList = await args.db.query.tcpMonitors.findMany({
+		columns: {
+			id: true,
+			name: true,
+			host: true,
+			port: true,
+			lastStatus: true,
+			lastResponseTimeMs: true,
+			lastCheckedAt: true,
+		},
+		where(fields, operators) {
+			return operators.eq(fields.teamId, args.teamId);
+		},
+	});
+
 	let tcpMonitorsCount = tcpMonitorsList.length;
 	let tcpMonitorsUp = tcpMonitorsList.filter((m) => m.lastStatus === "up").length;
 	let tcpMonitorsDown = tcpMonitorsList.filter(
@@ -225,7 +230,29 @@ export async function getDashboardDataByTeamId(args: {
 			: null,
 	}));
 
-	// Cron jobs data
+	return {
+		tcpMonitors,
+		tcpMonitorsCount,
+		tcpMonitorsUp,
+		tcpMonitorsDown,
+	};
+}
+
+export async function getCronJobsData(args: BaseArgs) {
+	let cronJobsList = await args.db.query.cronJobMonitors.findMany({
+		columns: {
+			id: true,
+			name: true,
+			cronExpression: true,
+			status: true,
+			lastPingAt: true,
+			nextExpectedAt: true,
+		},
+		where(fields, operators) {
+			return operators.eq(fields.teamId, args.teamId);
+		},
+	});
+
 	let cronJobsCount = cronJobsList.length;
 	let cronJobsHealthy = cronJobsList.filter((m) => m.status === "healthy").length;
 	let cronJobsLate = cronJobsList.filter((m) => m.status === "late").length;
@@ -254,28 +281,6 @@ export async function getDashboardDataByTeamId(args: {
 	}));
 
 	return {
-		// HTTP
-		httpMonitorsCount,
-		httpMonitorsUp,
-		httpMonitorsDown,
-		uptime,
-		slowestEndpoint,
-		httpMonitors: monitorsWithData,
-
-		// DNS
-		dnsMonitors,
-		dnsMonitorsCount,
-		dnsMonitorsOk,
-		dnsMonitorsChanged,
-		dnsMonitorsError,
-
-		// TCP
-		tcpMonitors,
-		tcpMonitorsCount,
-		tcpMonitorsUp,
-		tcpMonitorsDown,
-
-		// Cron Jobs
 		cronJobs,
 		cronJobsCount,
 		cronJobsHealthy,
