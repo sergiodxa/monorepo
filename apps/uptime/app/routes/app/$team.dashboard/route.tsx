@@ -227,8 +227,8 @@ export default function Component({ loaderData, params }: Route.ComponentProps) 
 
 	let revalidator = useRevalidator();
 	let isRevalidating = useSpinDelay(revalidator.state === "loading", {
-		minDuration: 100,
-		delay: 50,
+		minDuration: 200,
+		delay: 0,
 	});
 
 	let fetcher = useFetcher();
