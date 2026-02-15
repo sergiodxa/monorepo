@@ -51,6 +51,8 @@ export default class BackfillDailyStatsJob implements Job {
 				return message.ack();
 			}
 
+			this.logger.info("job.backfill-daily-stats.aggregated", { rowCount: rows.length });
+
 			for (let row of rows) {
 				let status = calculateStatus(row.successfulChecks, row.totalChecks);
 				await this.db
