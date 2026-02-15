@@ -37,11 +37,11 @@ export function Button({
 			<AriaButton
 				{...props}
 				isDisabled={props.isDisabled || isPending}
+				isPending={isPending}
 				className={cn("ui-button", className)}
 				data-color={color}
 				data-variant={variant}
 				data-size={size}
-				data-pending={isPending || undefined}
 			>
 				{isPending ? (
 					<>
