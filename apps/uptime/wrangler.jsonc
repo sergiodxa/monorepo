@@ -59,7 +59,7 @@
 
 	"workflows": [{ "name": "ping-workflow", "binding": "PING", "class_name": "Ping" }],
 
-	"analytics_engine_datasets": [{ "binding": "PING_RESULTS", "dataset": "ping_results" }],
+	"analytics_engine_datasets": [{ "binding": "PING_RESULTS", "dataset": "uptime_monitor_results" }],
 
 	"routes": [{ "pattern": "uptime.sergiodxa.com", "custom_domain": true }],
 }

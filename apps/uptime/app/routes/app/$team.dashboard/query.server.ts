@@ -1,11 +1,10 @@
 import type { TFunction } from "i18next";
 
-import { isBefore, subDays } from "date-fns";
-
 import type { Database } from "~/db/index";
 
 import { measure } from "~/middleware/server-timing";
 import CronJobMonitor from "~/models/cron-job-monitor";
+import { buildCacheKey, getCacheTtl, queryAnalyticsCached } from "~/services/analytics.server";
 
 interface BaseArgs {
 	db: Database;
@@ -25,115 +24,136 @@ export const getHttpMonitorsData = query(async (args: HttpMonitorsArgs) => {
 			name: true,
 			expectedStatus: true,
 			degradedAfterMs: true,
+			intervalSeconds: true,
 		},
 		where(fields, operators) {
 			return operators.eq(fields.teamId, args.teamId);
 		},
-		with: {
-			results: {
-				columns: {
-					responseTimeMs: true,
-					responseStatus: true,
-					completedAt: true,
-				},
-				where(fields, operators) {
-					return operators.and(
-						operators.isNotNull(fields.completedAt),
-						operators.gte(fields.completedAt, subDays(new Date(), 1)),
-					);
-				},
-			},
-		},
 	});
 
 	let httpMonitorsCount = monitors.length;
+	let minIntervalSeconds = Math.min(...(monitors.map((m) => m.intervalSeconds) as number[]), 300);
+	if (!Number.isFinite(minIntervalSeconds)) minIntervalSeconds = 60;
+	let ttl = getCacheTtl(minIntervalSeconds);
 
-	let allResults = monitors.flatMap((m) =>
-		m.results.map((r) => ({
-			...r,
-			monitorId: m.id,
-			expectedStatus: m.expectedStatus,
-			degradedAfterMs: m.degradedAfterMs,
-		})),
-	);
+	let analyticsError: string | null = null;
+	let aggregates: Array<{
+		monitorId: string;
+		totalChecks: number;
+		upChecks: number;
+		avgResponseTime: number | null;
+		maxResponseTime: number | null;
+	}> = [];
 
-	// Uptime
-	let totalChecks = allResults.length;
-	let upChecks = allResults.filter((r) => r.responseStatus === r.expectedStatus).length;
+	let samples: Array<{
+		monitorId: string;
+		responseTimeMs: number | null;
+		status: string;
+		timestamp: string;
+	}> = [];
+
+	try {
+		let aggSql = `SELECT
+			blob1 AS monitorId,
+			SUM(double2) AS totalChecks,
+			SUMIf(double2, blob3 = 'up') AS upChecks,
+			AVG(double1) AS avgResponseTime,
+			MAX(double1) AS maxResponseTime
+		FROM uptime_monitor_results
+		WHERE index1 = '${args.teamId}'
+			AND blob2 = 'http'
+			AND timestamp >= NOW() - INTERVAL '24' HOUR
+		GROUP BY monitorId`;
+
+		let samplesSql = `SELECT
+			blob1 AS monitorId,
+			double1 AS responseTimeMs,
+			blob3 AS status,
+			timestamp
+		FROM uptime_monitor_results
+		WHERE index1 = '${args.teamId}'
+			AND blob2 = 'http'
+			AND timestamp >= NOW() - INTERVAL '24' HOUR
+		ORDER BY timestamp DESC
+		LIMIT 5000`;
+
+		aggregates = await queryAnalyticsCached(buildCacheKey(args.teamId, "http-agg"), ttl, aggSql);
+		samples = await queryAnalyticsCached(
+			buildCacheKey(args.teamId, "http-samples"),
+			ttl,
+			samplesSql,
+		);
+	} catch (error) {
+		analyticsError = error instanceof Error ? error.message : "Unknown analytics error";
+	}
+
+	let aggregateMap = new Map(aggregates.map((a) => [a.monitorId, a]));
+	let samplesByMonitor = samples.reduce<Record<string, typeof samples>>(function (acc, sample) {
+		(acc[sample.monitorId] ||= []).push(sample);
+		return acc;
+	}, {});
+
+	let totalChecks = aggregates.reduce((sum, a) => sum + a.totalChecks, 0);
+	let upChecks = aggregates.reduce((sum, a) => sum + a.upChecks, 0);
 	let uptime = totalChecks > 0 ? upChecks / totalChecks : 1;
 
-	// Slowest endpoint
-	let slowestResult = allResults
-		.filter((r) => r.completedAt)
-		.sort((a, b) => (b.responseTimeMs ?? 0) - (a.responseTimeMs ?? 0))[0];
-	let slowestEndpoint = slowestResult
+	let slowestAgg = aggregates
+		.filter((a) => a.maxResponseTime !== null)
+		.sort((a, b) => (b.maxResponseTime ?? 0) - (a.maxResponseTime ?? 0))[0];
+	let slowestEndpoint = slowestAgg
 		? {
-				responseTimeMs: slowestResult.responseTimeMs,
-				monitorName: monitors.find((m) => m.id === slowestResult.monitorId)?.name ?? null,
+				responseTimeMs: slowestAgg.maxResponseTime,
+				monitorName: monitors.find((m) => m.id === slowestAgg.monitorId)?.name ?? null,
 			}
 		: null;
 
-	// HTTP monitors with aggregated data
 	let httpMonitors = monitors.map((m) => {
-		let lastResult =
-			m.results
-				.filter((r) => Boolean(r.completedAt))
-				.sort((a, b) => {
-					if (!a.completedAt && !b.completedAt) return 0;
-					if (!a.completedAt) return 1;
-					if (!b.completedAt) return -1;
-					return isBefore(a.completedAt, b.completedAt) ? 1 : -1;
-				})[0] ?? null;
-
-		let responseTime = lastResult?.responseTimeMs ?? null;
-		let avgResponseTime =
-			m.results
-				.map((r) => r.responseTimeMs)
-				.filter(Boolean)
-				.reduce((sum, n) => sum + n, 0) / (m.results.length || 1);
-
-		let status = lastResult
-			? lastResult.responseStatus !== m.expectedStatus
-				? ("down" as const)
-				: (responseTime ?? 0) >= m.degradedAfterMs
-					? ("degraded" as const)
-					: ("up" as const)
+		let agg = aggregateMap.get(m.id);
+		let monitorSamples = samplesByMonitor[m.id] ?? [];
+		let latestSample = monitorSamples[0];
+		let status = latestSample
+			? latestSample.status === "up"
+				? ("up" as const)
+				: latestSample.status === "timeout"
+					? ("down" as const)
+					: ("down" as const)
 			: ("unknown" as const);
 
-		let lastIncident = m.results
-			.filter((r) => r.responseStatus !== m.expectedStatus)
-			.map((r) => r.completedAt)
-			.filter(Boolean)
-			.sort((a, b) => (isBefore(a, b) ? 1 : -1))[0];
+		let lastIncidentSample = monitorSamples.find((s) => s.status !== "up");
+		let lastIncident = lastIncidentSample
+			? new Date(lastIncidentSample.timestamp).toLocaleString(args.locale, {
+					timeStyle: "short",
+					dateStyle: "short",
+					timeZone: args.timeZone ?? "UTC",
+				})
+			: null;
 
-		let latency = downsample(m.results.map((r) => r.responseTimeMs).filter(Boolean), 100).map(
-			(latency) => ({ latency }),
-		);
+		let latencyValues = monitorSamples
+			.map((s) => s.responseTimeMs)
+			.filter((n): n is number => n != null);
+		let latency = downsample(latencyValues, 100).map((latency) => ({ latency }));
+
+		let avgResponseTime = agg?.avgResponseTime ?? null;
 
 		return {
 			id: m.id,
 			name: m.name,
 			status,
 			latency,
-			lastIncident: lastIncident
-				? lastIncident.toLocaleString(args.locale, {
-						timeStyle: "short",
-						dateStyle: "short",
-						timeZone: args.timeZone ?? "UTC",
+			lastIncident,
+			responseTime: avgResponseTime
+				? args.t("responseTime", {
+						value: avgResponseTime.toLocaleString(args.locale, {
+							style: "unit",
+							unit: "millisecond",
+							minimumFractionDigits: 0,
+							maximumFractionDigits: 0,
+						}),
 					})
-				: null,
-			responseTime: args.t("responseTime", {
-				value: avgResponseTime.toLocaleString(args.locale, {
-					style: "unit",
-					unit: "millisecond",
-					minimumFractionDigits: 0,
-					maximumFractionDigits: 0,
-				}),
-			}),
+				: args.t("responseTime", { value: "–" }),
 		};
 	});
 
-	// HTTP monitor status counts
 	let httpMonitorsUp = httpMonitors.filter((m) => m.status === "up").length;
 	let httpMonitorsDown = httpMonitors.filter((m) => m.status === "down").length;
 
@@ -144,6 +164,7 @@ export const getHttpMonitorsData = query(async (args: HttpMonitorsArgs) => {
 		httpMonitorsDown,
 		uptime,
 		slowestEndpoint,
+		analyticsError,
 	};
 }, "getHttpMonitorsData");
 
@@ -290,6 +311,30 @@ export const getCronJobsData = query(async (args: BaseArgs) => {
 		cronJobsNew,
 	};
 }, "getCronJobsData");
+
+export const getSslMonitorsData = query(async (args: BaseArgs) => {
+	let sslMonitors = await args.db.query.sslMonitors.findMany({
+		columns: {
+			id: true,
+			status: true,
+		},
+		where(fields, operators) {
+			return operators.eq(fields.teamId, args.teamId);
+		},
+	});
+
+	let sslMonitorsCount = sslMonitors.length;
+	let sslMonitorsValid = sslMonitors.filter((m) => m.status === "valid").length;
+	let sslMonitorsExpiring = sslMonitors.filter((m) => m.status === "expiring").length;
+	let sslMonitorsExpired = sslMonitors.filter((m) => m.status === "expired").length;
+
+	return {
+		sslMonitorsCount,
+		sslMonitorsValid,
+		sslMonitorsExpiring,
+		sslMonitorsExpired,
+	};
+}, "getSslMonitorsData");
 
 function downsample(sample: number[], maxPoints = 20) {
 	if (sample.length === 0) {

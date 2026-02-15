@@ -30,6 +30,7 @@ import { HttpMonitorsTable } from "./components/http-monitors-table";
 import { MonitorsTableError } from "./components/monitors-table-error";
 import { MonitorsTableSkeleton } from "./components/monitors-table-skeleton";
 import { SlowestEndpointCard } from "./components/slowest-endpoint-card";
+import { SslMonitorsCard } from "./components/ssl-monitors-card";
 import { StatCardError } from "./components/stat-card-error";
 import { StatCardSkeleton } from "./components/stat-card-skeleton";
 import { TcpMonitorsCard } from "./components/tcp-monitors-card";
@@ -40,6 +41,7 @@ import {
 	getDnsMonitorsData,
 	getHttpMonitorsData,
 	getTcpMonitorsData,
+	getSslMonitorsData,
 } from "./query.server";
 
 type DashboardTab = "http" | "dns" | "tcp" | "cron-jobs";
@@ -76,6 +78,7 @@ export async function loader({ request }: Route.LoaderArgs) {
 		dnsData: getDnsMonitorsData({ db: dbInstance, teamId, locale: localeValue, timeZone }),
 		tcpData: getTcpMonitorsData({ db: dbInstance, teamId, locale: localeValue, timeZone }),
 		cronData: getCronJobsData({ db: dbInstance, teamId, locale: localeValue, timeZone }),
+		sslData: getSslMonitorsData({ db: dbInstance, teamId, locale: localeValue, timeZone }),
 		hasActiveSubscription: await hasActiveSubscription(),
 	};
 }
@@ -143,7 +146,30 @@ export default function Component({ loaderData, params }: Route.ComponentProps) 
 				</div>
 			)}
 
-			<div className="flex flex-col gap-6 p-5 lg:gap-12 lg:p-12">
+			<div className="flex flex-col gap-4 p-5 lg:gap-10 lg:p-12">
+				<Suspense fallback={null}>
+					<Await resolve={loaderData.httpData}>
+						{(httpData) =>
+							httpData.analyticsError ? (
+								<Alert color="warning" className="w-full">
+									<Alert.Icon>
+										<TriangleAlertIcon className="size-4" />
+									</Alert.Icon>
+									<Alert.Content>
+										<Alert.Title>
+											{t("alert.analytics.title", { defaultValue: "Analytics data unavailable" })}
+										</Alert.Title>
+										<Alert.Description>
+											{t("alert.analytics.description", {
+												defaultValue: httpData.analyticsError,
+											})}
+										</Alert.Description>
+									</Alert.Content>
+								</Alert>
+							) : null
+						}
+					</Await>
+				</Suspense>
 				<div className="grid gap-4 lg:grid-cols-3 lg:gap-8">
 					<Suspense key={`pings-${loaderData.nonce}`} fallback={<StatCardSkeleton />}>
 						<Await
@@ -167,7 +193,7 @@ export default function Component({ loaderData, params }: Route.ComponentProps) 
 					</Suspense>
 				</div>
 
-				<div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 lg:gap-8">
+				<div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5 lg:gap-8">
 					<Suspense key={`http-card-${loaderData.nonce}`} fallback={<StatCardSkeleton />}>
 						<Await resolve={loaderData.httpData} errorElement={<StatCardError />}>
 							{(httpData) => <HttpMonitorsCard httpData={httpData} />}
@@ -186,6 +212,11 @@ export default function Component({ loaderData, params }: Route.ComponentProps) 
 					<Suspense key={`cron-card-${loaderData.nonce}`} fallback={<StatCardSkeleton />}>
 						<Await resolve={loaderData.cronData} errorElement={<StatCardError />}>
 							{(cronData) => <CronJobsCard cronData={cronData} />}
+						</Await>
+					</Suspense>
+					<Suspense key={`ssl-card-${loaderData.nonce}`} fallback={<StatCardSkeleton />}>
+						<Await resolve={loaderData.sslData} errorElement={<StatCardError />}>
+							{(sslData) => <SslMonitorsCard sslData={sslData} />}
 						</Await>
 					</Suspense>
 				</div>

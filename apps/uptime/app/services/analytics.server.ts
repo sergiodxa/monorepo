@@ -1,9 +1,15 @@
 import { env } from "cloudflare:workers";
+import { z } from "zod";
 
-interface AnalyticsQueryResult<T> {
-	data: T[];
-	meta: { rows: number };
-}
+let AnalyticsErrorResponse = z.object({
+	errors: z.array(z.object({ code: z.number(), message: z.string() })),
+	success: z.boolean().optional(),
+});
+
+let AnalyticsQueryResponse = z.object({
+	data: z.array(z.unknown()),
+	meta: z.object({ rows: z.number() }),
+});
 
 export async function queryAnalytics<T>(sql: string): Promise<T[]> {
 	let response = await fetch(
@@ -11,7 +17,7 @@ export async function queryAnalytics<T>(sql: string): Promise<T[]> {
 		{
 			method: "POST",
 			headers: {
-				Authorization: `Bearer ${env.CLOUDFLARE_ANALYTICS_API_TOKEN}`,
+				Authorization: `Bearer ${env.CLOUDFLARE_ANALYTICS_TOKEN}`,
 				"Content-Type": "text/plain",
 			},
 			body: sql,
@@ -19,11 +25,24 @@ export async function queryAnalytics<T>(sql: string): Promise<T[]> {
 	);
 
 	if (!response.ok) {
-		throw new Error(`Analytics query failed: ${response.statusText}`);
+		let errorDetails = "";
+		try {
+			let parsedError = AnalyticsErrorResponse.safeParse(await response.json());
+			if (parsedError.success && parsedError.data.errors.length > 0) {
+				errorDetails = `: ${parsedError.data.errors.map((e) => e.message).join(", ")}`;
+			}
+		} catch {
+			// ignore JSON parse errors
+		}
+		throw new Error(`Analytics query failed: ${response.statusText}${errorDetails}`);
 	}
 
-	let result = (await response.json()) as AnalyticsQueryResult<T>;
-	return result.data;
+	let parsed = AnalyticsQueryResponse.safeParse(await response.json());
+	if (!parsed.success) {
+		throw new Error("Analytics query failed: invalid response shape");
+	}
+
+	return parsed.data.data as T[];
 }
 
 export async function queryAnalyticsCached<T>(
