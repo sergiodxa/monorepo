@@ -97,3 +97,73 @@ export function writePingResult(params: {
 		indexes: [params.teamId],
 	});
 }
+
+export async function getLatestStatusFromAnalytics(params: {
+	teamId: string;
+	monitorId: string;
+	monitorType: MonitorType;
+}): Promise<
+	Result<
+		{
+			status: PingStatus | null;
+			timestamp: string | null;
+			responseTimeMs: number | null;
+			responseStatus: number | null;
+			expectedStatus: number | null;
+		},
+		Error
+	>
+> {
+	let sql = `SELECT
+		blob3 AS status,
+		timestamp,
+		double1 AS responseTimeMs,
+		double3 AS responseStatus,
+		double4 AS expectedStatus
+	FROM uptime_monitor_results
+	WHERE index1 = '${params.teamId}'
+		AND blob1 = '${params.monitorId}'
+		AND blob2 = '${params.monitorType}'
+	ORDER BY timestamp DESC
+	LIMIT 1`;
+
+	let result = await queryAnalytics(sql);
+	if (isFailure(result)) return result;
+
+	let row = result.data[0] as
+		| {
+				status?: unknown;
+				timestamp?: string;
+				responseTimeMs?: number;
+				responseStatus?: number;
+				expectedStatus?: number;
+		  }
+		| undefined;
+	if (!row) {
+		return success({
+			status: null,
+			timestamp: null,
+			responseTimeMs: null,
+			responseStatus: null,
+			expectedStatus: null,
+		});
+	}
+
+	let parsedStatus = row.status;
+	if (
+		parsedStatus !== "up" &&
+		parsedStatus !== "down" &&
+		parsedStatus !== "degraded" &&
+		parsedStatus !== "timeout"
+	) {
+		parsedStatus = null;
+	}
+
+	return success({
+		status: parsedStatus as PingStatus | null,
+		timestamp: (row as any).timestamp ?? null,
+		responseTimeMs: (row as any).responseTimeMs ?? null,
+		responseStatus: (row as any).responseStatus ?? null,
+		expectedStatus: (row as any).expectedStatus ?? null,
+	});
+}

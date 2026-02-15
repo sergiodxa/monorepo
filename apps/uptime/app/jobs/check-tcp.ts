@@ -1,10 +1,12 @@
 import { BatchedLogger } from "@pkg/logger";
+import { isFailure } from "@pkg/result";
 import { env } from "cloudflare:workers";
 
 import database from "~/db/index";
 import { pingUptime } from "~/lib/ping-uptime";
 import TcpMonitor from "~/models/tcp-monitor";
 import { recordAlertEvent } from "~/services/alert-cooldown";
+import { getLatestStatusFromAnalytics, writePingResult } from "~/services/analytics.server";
 import { checkTcpConnection } from "~/services/check-tcp";
 
 import type { Job } from "./base";
@@ -70,6 +72,8 @@ export default class CheckTcpJob implements Job {
 		lastStatus: "up" | "down" | "timeout" | null;
 		team: { ownerId: string };
 	}): Promise<void> {
+		let disableD1Results = env.DISABLE_D1_RESULTS !== "false";
+
 		this.logger.info("tcp.check", {
 			tcpMonitorId: monitor.id,
 			host: monitor.host,
@@ -81,19 +85,20 @@ export default class CheckTcpJob implements Job {
 		let storableStatus: "up" | "down" | "timeout" =
 			result.status === "unsupported" ? "down" : result.status;
 
-		// Store the result
-		this.logger.info("database.insert", {
-			table: "tcpMonitorResults",
-			tcpMonitorId: monitor.id,
-		});
-		await TcpMonitor.createResult(this.db, monitor.id, {
-			status: storableStatus,
-			responseTimeMs: result.responseTimeMs,
-			errorMessage: result.errorMessage,
+		// Store the result in AE only
+		let previousStatusFromAe = await getLatestStatusFromAnalytics({
+			teamId: monitor.teamId,
+			monitorId: monitor.id,
+			monitorType: "tcp",
 		});
 
-		// Write to Analytics Engine (dual-write phase)
-		let { writePingResult } = await import("~/services/analytics.server");
+		if (isFailure(previousStatusFromAe)) {
+			this.logger.error("job.check-tcp.previous-status-ae-error", {
+				tcpMonitorId: monitor.id,
+				error: previousStatusFromAe.error.message,
+			});
+		}
+
 		writePingResult({
 			monitorId: monitor.id,
 			monitorType: "tcp",
@@ -110,19 +115,27 @@ export default class CheckTcpJob implements Job {
 		});
 
 		// Check for status change before updating
-		let previousStatus = monitor.lastStatus;
+		let previousStatus: "up" | "down" | "timeout" | null = null;
+		if (!isFailure(previousStatusFromAe) && previousStatusFromAe.data.status) {
+			if (previousStatusFromAe.data.status === "up") previousStatus = "up";
+			else if (previousStatusFromAe.data.status === "timeout") previousStatus = "timeout";
+			else previousStatus = "down";
+		} else if (monitor.lastStatus) {
+			previousStatus = monitor.lastStatus;
+		}
 		let statusChanged =
 			previousStatus !== null &&
 			((previousStatus === "up" && storableStatus !== "up") ||
 				(previousStatus !== "up" && storableStatus === "up"));
 
-		// Update the monitor's last status
-		this.logger.info("database.update", {
-			table: "tcpMonitors",
-			tcpMonitorId: monitor.id,
-			status: storableStatus,
-		});
-		await TcpMonitor.updateStatus(this.db, monitor.id, storableStatus, result.responseTimeMs);
+		if (!disableD1Results) {
+			this.logger.info("database.update", {
+				table: "tcpMonitors",
+				tcpMonitorId: monitor.id,
+				status: storableStatus,
+			});
+			await TcpMonitor.updateStatus(this.db, monitor.id, storableStatus, result.responseTimeMs);
+		}
 
 		this.logger.info("job.check-tcp.monitor-checked", {
 			tcpMonitorId: monitor.id,

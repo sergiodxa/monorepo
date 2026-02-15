@@ -1,7 +1,10 @@
 import type { WorkflowEvent, WorkflowStep } from "cloudflare:workers";
 
 import { BatchedLogger } from "@pkg/logger";
+import { isFailure } from "@pkg/result";
 import { env, WorkflowEntrypoint } from "cloudflare:workers";
+
+import { getLatestStatusFromAnalytics } from "~/services/analytics.server";
 
 const MILLISECONDS_PER_SECOND = 1000;
 
@@ -93,43 +96,30 @@ export default class Ping extends WorkflowEntrypoint<Cloudflare.Env> {
 			contentChecksCount: monitorResult.monitor.contentChecks.length,
 		});
 
-		// Get the previous completed result to detect state transitions
-		let previousResult = await step.do("find previous result", async () => {
-			logger.info("workflow.ping.step.find-previous-result.start", {
+		let previousStatusFromAe = await step.do("get previous status from AE", async () => {
+			let latest = await getLatestStatusFromAnalytics({
+				teamId: monitorResult.monitor.team.id,
 				monitorId: monitorResult.monitor.id,
+				monitorType: "http",
 			});
-			let { and, eq, isNotNull, lt, desc } = await import("drizzle-orm");
-			let schema = await import("~/db/schema");
-			let db = await this.getDb();
 
-			let results = await db
-				.select()
-				.from(schema.monitorResults)
-				.where(
-					and(
-						eq(schema.monitorResults.monitorId, monitorResult.monitor.id),
-						lt(schema.monitorResults.createdAt, monitorResult.createdAt),
-						isNotNull(schema.monitorResults.completedAt),
-					),
-				)
-				.orderBy(desc(schema.monitorResults.createdAt))
-				.limit(1);
+			if (isFailure(latest)) {
+				logger.error("workflow.ping.previous-status.ae-error", {
+					monitorId: monitorResult.monitor.id,
+					error: latest.error.message,
+				});
+				return null;
+			}
 
-			let result = results[0] ?? null;
-			logger.info("workflow.ping.step.find-previous-result.complete", {
-				monitorId: monitorResult.monitor.id,
-				found: !!result,
-				previousResultId: result?.id ?? null,
-			});
-			return result;
+			return latest.data;
 		});
 
 		let hasContentChecks = monitorResult.monitor.contentChecks.length > 0;
 
 		logger.info("workflow.ping.previous-result", {
-			hasPrevious: !!previousResult,
-			previousStatus: previousResult?.responseStatus ?? null,
-			previousResultId: previousResult?.id ?? null,
+			hasPrevious: !!previousStatusFromAe?.status,
+			previousStatus: previousStatusFromAe?.status ?? null,
+			previousTimestamp: previousStatusFromAe?.timestamp ?? null,
 		});
 
 		let result = await step.do(
@@ -243,11 +233,21 @@ export default class Ping extends WorkflowEntrypoint<Cloudflare.Env> {
 			};
 		});
 
+		let disableD1Results = env.DISABLE_D1_RESULTS !== "false";
+
 		let updatedMonitorResult = await step.do("save monitor results", async () => {
-			logger.info("workflow.ping.step.save-results.start", {
-				monitorResultId,
-				monitorId: monitorResult.monitor.id,
-			});
+			if (disableD1Results) {
+				logger.info("workflow.ping.step.save-results.skipped-d1", {
+					monitorResultId,
+					monitorId: monitorResult.monitor.id,
+				});
+				return {
+					...monitorResult,
+					responseStatus: result.responseStatus,
+					responseTimeMs: result.responseTimeMs,
+					completedAt: result.completedAt,
+				};
+			}
 
 			let { eq: eqOp } = await import("drizzle-orm");
 			let schema = await import("~/db/schema");
@@ -317,9 +317,8 @@ export default class Ping extends WorkflowEntrypoint<Cloudflare.Env> {
 
 			// Determine the previous status (null if no previous result)
 			let previousStatus: "up" | "down" | null = null;
-			if (previousResult) {
-				previousStatus =
-					previousResult.responseStatus === monitorResult.monitor.expectedStatus ? "up" : "down";
+			if (previousStatusFromAe?.status) {
+				previousStatus = previousStatusFromAe.status === "up" ? "up" : "down";
 			}
 
 			// Determine if this is a recovery (DOWN -> UP transition)
@@ -327,9 +326,9 @@ export default class Ping extends WorkflowEntrypoint<Cloudflare.Env> {
 
 			// Calculate downtime duration for recovery alerts
 			let downtimeDurationMs: number | null = null;
-			if (isRecovery && previousResult?.completedAt) {
-				downtimeDurationMs =
-					updatedMonitorResult.completedAt!.getTime() - previousResult.completedAt.getTime();
+			if (isRecovery && previousStatusFromAe?.timestamp) {
+				let prevTs = new Date(previousStatusFromAe.timestamp).getTime();
+				downtimeDurationMs = updatedMonitorResult.completedAt!.getTime() - prevTs;
 			}
 
 			// Skip if monitor is up and it's not a recovery
