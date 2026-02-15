@@ -1,6 +1,6 @@
-import { useTranslation } from "react-i18next";
+import type { ResolvedType } from "@pkg/types";
 
-import type { ResolvedType } from "~/types";
+import { useTranslation } from "react-i18next";
 
 import { StatCard } from "~/components/stat-card";
 

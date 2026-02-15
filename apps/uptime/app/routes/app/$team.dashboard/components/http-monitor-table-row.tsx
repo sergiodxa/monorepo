@@ -1,3 +1,5 @@
+import type { ResolvedType } from "@pkg/types";
+
 import { Badge, Button, confirm, Menu, Popover, Table } from "@pkg/ui";
 import { EllipsisVerticalIcon, LoaderIcon, PencilIcon, PlayIcon, TrashIcon } from "lucide-react";
 import { useTranslation } from "react-i18next";
@@ -5,8 +7,6 @@ import { href, Link, useFetcher } from "react-router";
 import { Line, LineChart } from "recharts";
 import { ClientOnly } from "remix-utils/client-only";
 import { useSpinDelay } from "spin-delay";
-
-import type { ResolvedType } from "~/types";
 
 import type { getHttpMonitorsData } from "../query.server";
 

@@ -1,10 +1,10 @@
+import type { ResolvedType } from "@pkg/types";
+
 import { Badge, Button, confirm, Menu, Popover, Table } from "@pkg/ui";
 import { EllipsisVerticalIcon, GlobeIcon, LoaderIcon, PencilIcon, TrashIcon } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { href, Link, useFetcher } from "react-router";
 import { useSpinDelay } from "spin-delay";
-
-import type { ResolvedType } from "~/types";
 
 import { useTeam } from "~/hooks/use-team";
 

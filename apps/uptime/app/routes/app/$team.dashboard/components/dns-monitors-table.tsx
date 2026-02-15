@@ -1,10 +1,10 @@
+import type { ResolvedType } from "@pkg/types";
+
 import { cn } from "@pkg/cn";
 import { Empty, LinkButton, Table } from "@pkg/ui";
 import { GlobeIcon, PlusIcon } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { href } from "react-router";
-
-import type { ResolvedType } from "~/types";
 
 import type { getDnsMonitorsData } from "../query.server";
 
