@@ -100,6 +100,15 @@ export default class BackfillDailyStatsJob implements Job {
 
 	private async sendNotification(params: { rowsWritten: number; error?: string }) {
 		try {
+			if (!env.RESEND_API_TOKEN) {
+				this.logger.info("job.backfill-daily-stats.notify-skipped", {
+					reason: "missing RESEND_API_TOKEN",
+					rowsWritten: params.rowsWritten,
+					error: params.error,
+				});
+				return;
+			}
+
 			let resend = await import("~/clients/resend").then((m) => m.default);
 			let subject = params.error ? "Uptime backfill failed" : "Uptime backfill completed";
 			let statusLine = params.error
@@ -107,12 +116,24 @@ export default class BackfillDailyStatsJob implements Job {
 				: "Status: COMPLETED";
 			let rowsLine = `Rows written: ${params.rowsWritten}`;
 
-			await resend.emails.send({
+			let result = await resend.emails.send({
 				from: "Uptime <no-reply@uptime.sergiodxa.com>",
 				to: "hello@sergiodxa.com",
 				subject,
 				text: [statusLine, rowsLine].join("\n"),
 			});
+
+			if ((result as any)?.error) {
+				this.logger.error("job.backfill-daily-stats.notify-error", {
+					error: (result as any).error,
+					rowsWritten: params.rowsWritten,
+				});
+			} else {
+				this.logger.info("job.backfill-daily-stats.notify-sent", {
+					rowsWritten: params.rowsWritten,
+					id: (result as any)?.data?.id ?? null,
+				});
+			}
 		} catch (error) {
 			this.logger.error("job.backfill-daily-stats.notify-failed", {
 				error: error instanceof Error ? error.message : String(error),
