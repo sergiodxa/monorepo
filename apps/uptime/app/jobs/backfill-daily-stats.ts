@@ -39,21 +39,15 @@ export default class BackfillDailyStatsJob implements Job {
 
 	async run(message: Message): Promise<void> {
 		try {
-			this.logger.info("job.backfill-daily-stats.started", {
-				messageId: message.id,
-				body: message.body,
-			});
+			this.logger.info("job.backfill-daily-stats.started", { messageId: message.id });
 
-			let startDate = null;
-			let endDate = null;
-
-			let httpRows = await this.aggregateHttp(startDate, endDate);
-			let tcpRows = await this.aggregateTcp(startDate, endDate);
+			let httpRows = await this.aggregateHttp();
+			let tcpRows = await this.aggregateTcp();
 
 			let rows = [...httpRows, ...tcpRows];
 
 			if (rows.length === 0) {
-				this.logger.info("job.backfill-daily-stats.no-data", { startDate, endDate });
+				this.logger.info("job.backfill-daily-stats.no-data");
 				return message.ack();
 			}
 
@@ -83,17 +77,9 @@ export default class BackfillDailyStatsJob implements Job {
 				});
 			}
 
-			this.logger.info("job.backfill-daily-stats.completed", {
-				rowsWritten: rows.length,
-				startDate,
-				endDate,
-			});
+			this.logger.info("job.backfill-daily-stats.completed", { rowsWritten: rows.length });
 
-			await this.sendNotification({
-				rowsWritten: rows.length,
-				startDate,
-				endDate,
-			});
+			await this.sendNotification({ rowsWritten: rows.length });
 
 			return message.ack();
 		} catch (error) {
@@ -103,8 +89,6 @@ export default class BackfillDailyStatsJob implements Job {
 			await this.sendNotification({
 				rowsWritten: 0,
 				error: error instanceof Error ? error.message : String(error),
-				startDate: null,
-				endDate: null,
 			});
 			return message.retry();
 		} finally {
@@ -112,26 +96,20 @@ export default class BackfillDailyStatsJob implements Job {
 		}
 	}
 
-	private async sendNotification(params: {
-		rowsWritten: number;
-		startDate: string | null;
-		endDate: string | null;
-		error?: string;
-	}) {
+	private async sendNotification(params: { rowsWritten: number; error?: string }) {
 		try {
 			let resend = await import("~/clients/resend").then((m) => m.default);
 			let subject = params.error ? "Uptime backfill failed" : "Uptime backfill completed";
 			let statusLine = params.error
 				? `Status: FAILED\nError: ${params.error}`
 				: "Status: COMPLETED";
-			let dateLine = `Range: ${params.startDate ?? "(all)"} -> ${params.endDate ?? "(all)"}`;
 			let rowsLine = `Rows written: ${params.rowsWritten}`;
 
 			await resend.emails.send({
 				from: "Uptime <no-reply@uptime.sergiodxa.com>",
 				to: "hello@sergiodxa.com",
 				subject,
-				text: [statusLine, dateLine, rowsLine].join("\n"),
+				text: [statusLine, rowsLine].join("\n"),
 			});
 		} catch (error) {
 			this.logger.error("job.backfill-daily-stats.notify-failed", {
@@ -140,8 +118,7 @@ export default class BackfillDailyStatsJob implements Job {
 		}
 	}
 
-	private async aggregateHttp(startDate: string | null, endDate: string | null) {
-		let dateFilter = this.buildDateFilter("mr.completed_at", startDate, endDate);
+	private async aggregateHttp() {
 		let sql = `
 			SELECT
 				mr.monitor_id as monitorId,
@@ -152,7 +129,7 @@ export default class BackfillDailyStatsJob implements Job {
 				MAX(mr.response_time_ms) as maxResponseTimeMs
 			FROM monitor_results mr
 			JOIN monitors m ON m.id = mr.monitor_id
-			WHERE mr.completed_at IS NOT NULL AND mr.response_status IS NOT NULL ${dateFilter}
+			WHERE mr.completed_at IS NOT NULL AND mr.response_status IS NOT NULL
 			GROUP BY mr.monitor_id, date(mr.completed_at)
 		`;
 
@@ -169,8 +146,7 @@ export default class BackfillDailyStatsJob implements Job {
 		})) satisfies Array<AggregatedRow & { monitorType: "http" }>;
 	}
 
-	private async aggregateTcp(startDate: string | null, endDate: string | null) {
-		let dateFilter = this.buildDateFilter("tmr.checked_at", startDate, endDate);
+	private async aggregateTcp() {
 		let sql = `
 			SELECT
 				tmr.tcp_monitor_id as monitorId,
@@ -180,7 +156,7 @@ export default class BackfillDailyStatsJob implements Job {
 				AVG(tmr.response_time_ms) as avgResponseTimeMs,
 				MAX(tmr.response_time_ms) as maxResponseTimeMs
 			FROM tcp_monitor_results tmr
-			WHERE 1=1 ${dateFilter}
+			WHERE 1=1
 			GROUP BY tmr.tcp_monitor_id, date(tmr.checked_at)
 		`;
 
@@ -195,16 +171,5 @@ export default class BackfillDailyStatsJob implements Job {
 			avgResponseTimeMs: toNumber(row.avgResponseTimeMs),
 			maxResponseTimeMs: toNumber(row.maxResponseTimeMs),
 		})) satisfies Array<AggregatedRow & { monitorType: "tcp" }>;
-	}
-
-	private buildDateFilter(
-		column: string,
-		startDate: string | null,
-		endDate: string | null,
-	): string {
-		let parts: string[] = [];
-		if (startDate) parts.push(`AND date(${column}) >= '${startDate}'`);
-		if (endDate) parts.push(`AND date(${column}) <= '${endDate}'`);
-		return parts.join(" ");
 	}
 }
