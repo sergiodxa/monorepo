@@ -202,6 +202,7 @@
         "@pkg/markdown": "workspace:*",
         "@pkg/response": "workspace:*",
         "@pkg/result": "workspace:*",
+        "@pkg/types": "workspace:*",
         "@pkg/ui": "workspace:*",
         "@pkg/validate": "workspace:*",
         "@polar-sh/sdk": "^0.34.17",
