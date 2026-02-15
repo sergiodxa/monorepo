@@ -1,5 +1,7 @@
 import type { TFunction } from "i18next";
 
+import { isFailure } from "@pkg/result";
+
 import type { Database } from "~/db/index";
 
 import { measure } from "~/middleware/server-timing";
@@ -52,39 +54,53 @@ export const getHttpMonitorsData = query(async (args: HttpMonitorsArgs) => {
 		timestamp: string;
 	}> = [];
 
-	try {
-		let aggSql = `SELECT
-			blob1 AS monitorId,
-			SUM(double2) AS totalChecks,
-			SUMIf(double2, blob3 = 'up') AS upChecks,
-			AVG(double1) AS avgResponseTime,
-			MAX(double1) AS maxResponseTime
-		FROM uptime_monitor_results
-		WHERE index1 = '${args.teamId}'
-			AND blob2 = 'http'
-			AND timestamp >= NOW() - INTERVAL '24' HOUR
-		GROUP BY monitorId`;
+	let aggSql = `SELECT
+		blob1 AS monitorId,
+		SUM(double2) AS totalChecks,
+		SUMIf(double2, blob3 = 'up') AS upChecks,
+		AVG(double1) AS avgResponseTime,
+		MAX(double1) AS maxResponseTime
+	FROM uptime_monitor_results
+	WHERE index1 = '${args.teamId}'
+		AND blob2 = 'http'
+		AND timestamp >= NOW() - INTERVAL '24' HOUR
+	GROUP BY monitorId`;
 
-		let samplesSql = `SELECT
-			blob1 AS monitorId,
-			double1 AS responseTimeMs,
-			blob3 AS status,
-			timestamp
-		FROM uptime_monitor_results
-		WHERE index1 = '${args.teamId}'
-			AND blob2 = 'http'
-			AND timestamp >= NOW() - INTERVAL '24' HOUR
-		ORDER BY timestamp DESC
-		LIMIT 5000`;
+	let samplesSql = `SELECT
+		blob1 AS monitorId,
+		double1 AS responseTimeMs,
+		blob3 AS status,
+		timestamp
+	FROM uptime_monitor_results
+	WHERE index1 = '${args.teamId}'
+		AND blob2 = 'http'
+		AND timestamp >= NOW() - INTERVAL '24' HOUR
+	ORDER BY timestamp DESC
+	LIMIT 5000`;
 
-		aggregates = await queryAnalyticsCached(buildCacheKey(args.teamId, "http-agg"), ttl, aggSql);
-		samples = await queryAnalyticsCached(
-			buildCacheKey(args.teamId, "http-samples"),
-			ttl,
-			samplesSql,
-		);
-	} catch (error) {
-		analyticsError = error instanceof Error ? error.message : "Unknown analytics error";
+	let aggResult = await queryAnalyticsCached<{
+		monitorId: string;
+		totalChecks: number;
+		upChecks: number;
+		avgResponseTime: number | null;
+		maxResponseTime: number | null;
+	}>(buildCacheKey(args.teamId, "http-agg"), ttl, aggSql);
+	if (isFailure(aggResult)) {
+		analyticsError = aggResult.error.message;
+	} else {
+		aggregates = aggResult.data;
+	}
+
+	let samplesResult = await queryAnalyticsCached<{
+		monitorId: string;
+		responseTimeMs: number | null;
+		status: string;
+		timestamp: string;
+	}>(buildCacheKey(args.teamId, "http-samples"), ttl, samplesSql);
+	if (isFailure(samplesResult)) {
+		analyticsError = analyticsError ?? samplesResult.error.message;
+	} else {
+		samples = samplesResult.data;
 	}
 
 	let aggregateMap = new Map(aggregates.map((a) => [a.monitorId, a]));

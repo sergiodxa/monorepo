@@ -1,3 +1,4 @@
+import { failure, isFailure, success, type Result } from "@pkg/result";
 import { env } from "cloudflare:workers";
 import { z } from "zod";
 
@@ -11,7 +12,7 @@ let AnalyticsQueryResponse = z.object({
 	meta: z.object({ rows: z.number() }),
 });
 
-export async function queryAnalytics<T>(sql: string): Promise<T[]> {
+export async function queryAnalytics<T>(sql: string): Promise<Result<T[], Error>> {
 	let response = await fetch(
 		`https://api.cloudflare.com/client/v4/accounts/${env.CLOUDFLARE_ACCOUNT_ID}/analytics_engine/sql`,
 		{
@@ -34,27 +35,29 @@ export async function queryAnalytics<T>(sql: string): Promise<T[]> {
 		} catch {
 			// ignore JSON parse errors
 		}
-		throw new Error(`Analytics query failed: ${response.statusText}${errorDetails}`);
+		return failure(new Error(`Analytics query failed: ${response.statusText}${errorDetails}`));
 	}
 
 	let parsed = AnalyticsQueryResponse.safeParse(await response.json());
 	if (!parsed.success) {
-		throw new Error("Analytics query failed: invalid response shape");
+		return failure(new Error("Analytics query failed: invalid response shape"));
 	}
 
-	return parsed.data.data as T[];
+	return success(parsed.data.data as T[]);
 }
 
 export async function queryAnalyticsCached<T>(
 	cacheKey: string,
 	ttlSeconds: number,
 	sql: string,
-): Promise<T[]> {
+): Promise<Result<T[], Error>> {
 	let cached = await env.KV.get<T[]>(cacheKey, "json");
-	if (cached) return cached;
+	if (cached) return success(cached);
 
 	let data = await queryAnalytics<T>(sql);
-	await env.KV.put(cacheKey, JSON.stringify(data), {
+	if (isFailure(data)) return data;
+
+	await env.KV.put(cacheKey, JSON.stringify(data.data), {
 		expirationTtl: ttlSeconds,
 	});
 
