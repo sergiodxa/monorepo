@@ -141,35 +141,28 @@ export async function loader({ request }: Route.LoaderArgs) {
 	let timeZone = getHints(request).timeZone;
 	let t = getI18next(getContext()).getFixedT(localeValue, "translation", "page.dashboard.table");
 
-	// Return promises for streaming - don't await non-critical data
-	// Critical: hasActiveSubscription and selectedTab are awaited
-	// Non-critical: all monitor data streams in
 	return {
-		hasActiveSubscription: await hasActiveSubscription(),
+		nonce: Date.now(),
 		selectedTab,
-		// Overview cards - stream independently
 		consumedPings: measure("getConsumedPings", () =>
 			Customer.getUsagePerMonth(team().ownerId, { teamId }, new Date()),
 		),
 		estimatedPings: measure("estimateConsumedPingsByTeam", () =>
 			Monitor.estimateConsumedPingsByTeam(dbInstance, teamId, new Date()),
 		),
-		// HTTP monitors data - streams as a unit
 		httpData: measure("getHttpMonitorsData", () =>
 			getHttpMonitorsData({ db: dbInstance, teamId, locale: localeValue, timeZone, t }),
 		),
-		// DNS monitors data - streams as a unit
 		dnsData: measure("getDnsMonitorsData", () =>
 			getDnsMonitorsData({ db: dbInstance, teamId, locale: localeValue, timeZone }),
 		),
-		// TCP monitors data - streams as a unit
 		tcpData: measure("getTcpMonitorsData", () =>
 			getTcpMonitorsData({ db: dbInstance, teamId, locale: localeValue, timeZone }),
 		),
-		// Cron jobs data - streams as a unit
 		cronData: measure("getCronJobsData", () =>
 			getCronJobsData({ db: dbInstance, teamId, locale: localeValue, timeZone }),
 		),
+		hasActiveSubscription: await hasActiveSubscription(),
 	};
 }
 
@@ -241,6 +234,7 @@ export default function Component({ loaderData, params }: Route.ComponentProps) 
 				<div className="grid gap-4 lg:grid-cols-3 lg:gap-8">
 					<Suspense fallback={<StatCardSkeleton />}>
 						<Await
+							key={loaderData.nonce}
 							resolve={Promise.all([loaderData.consumedPings, loaderData.estimatedPings])}
 							errorElement={<StatCardError />}
 						>
@@ -250,12 +244,20 @@ export default function Component({ loaderData, params }: Route.ComponentProps) 
 						</Await>
 					</Suspense>
 					<Suspense fallback={<StatCardSkeleton />}>
-						<Await resolve={loaderData.httpData} errorElement={<StatCardError />}>
+						<Await
+							key={loaderData.nonce}
+							resolve={loaderData.httpData}
+							errorElement={<StatCardError />}
+						>
 							{(httpData) => <UptimeCard httpData={httpData} />}
 						</Await>
 					</Suspense>
 					<Suspense fallback={<StatCardSkeleton />}>
-						<Await resolve={loaderData.httpData} errorElement={<StatCardError />}>
+						<Await
+							key={loaderData.nonce}
+							resolve={loaderData.httpData}
+							errorElement={<StatCardError />}
+						>
 							{(httpData) => <SlowestEndpointCard httpData={httpData} />}
 						</Await>
 					</Suspense>
@@ -264,22 +266,38 @@ export default function Component({ loaderData, params }: Route.ComponentProps) 
 				{/* Row 2 - Monitor Breakdown (4 cards) */}
 				<div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 lg:gap-8">
 					<Suspense fallback={<StatCardSkeleton />}>
-						<Await resolve={loaderData.httpData} errorElement={<StatCardError />}>
+						<Await
+							key={loaderData.nonce}
+							resolve={loaderData.httpData}
+							errorElement={<StatCardError />}
+						>
 							{(httpData) => <HttpMonitorsCard httpData={httpData} />}
 						</Await>
 					</Suspense>
 					<Suspense fallback={<StatCardSkeleton />}>
-						<Await resolve={loaderData.dnsData} errorElement={<StatCardError />}>
+						<Await
+							key={loaderData.nonce}
+							resolve={loaderData.dnsData}
+							errorElement={<StatCardError />}
+						>
 							{(dnsData) => <DnsMonitorsCard dnsData={dnsData} />}
 						</Await>
 					</Suspense>
 					<Suspense fallback={<StatCardSkeleton />}>
-						<Await resolve={loaderData.tcpData} errorElement={<StatCardError />}>
+						<Await
+							key={loaderData.nonce}
+							resolve={loaderData.tcpData}
+							errorElement={<StatCardError />}
+						>
 							{(tcpData) => <TcpMonitorsCard tcpData={tcpData} />}
 						</Await>
 					</Suspense>
 					<Suspense fallback={<StatCardSkeleton />}>
-						<Await resolve={loaderData.cronData} errorElement={<StatCardError />}>
+						<Await
+							key={loaderData.nonce}
+							resolve={loaderData.cronData}
+							errorElement={<StatCardError />}
+						>
 							{(cronData) => <CronJobsCard cronData={cronData} />}
 						</Await>
 					</Suspense>
@@ -297,7 +315,11 @@ export default function Component({ loaderData, params }: Route.ComponentProps) 
 					<Tabs.Panels>
 						<Tabs.Panel id="http">
 							<Suspense fallback={<MonitorsTableSkeleton />}>
-								<Await resolve={loaderData.httpData} errorElement={<MonitorsTableError />}>
+								<Await
+									key={loaderData.nonce}
+									resolve={loaderData.httpData}
+									errorElement={<MonitorsTableError />}
+								>
 									{(httpData) => (
 										<HttpMonitorsTable team={params.team} monitors={httpData.httpMonitors} />
 									)}
@@ -306,7 +328,11 @@ export default function Component({ loaderData, params }: Route.ComponentProps) 
 						</Tabs.Panel>
 						<Tabs.Panel id="dns">
 							<Suspense fallback={<MonitorsTableSkeleton />}>
-								<Await resolve={loaderData.dnsData} errorElement={<MonitorsTableError />}>
+								<Await
+									key={loaderData.nonce}
+									resolve={loaderData.dnsData}
+									errorElement={<MonitorsTableError />}
+								>
 									{(dnsData) => (
 										<DnsMonitorsTable team={params.team} monitors={dnsData.dnsMonitors} />
 									)}
@@ -315,7 +341,11 @@ export default function Component({ loaderData, params }: Route.ComponentProps) 
 						</Tabs.Panel>
 						<Tabs.Panel id="tcp">
 							<Suspense fallback={<MonitorsTableSkeleton />}>
-								<Await resolve={loaderData.tcpData} errorElement={<MonitorsTableError />}>
+								<Await
+									key={loaderData.nonce}
+									resolve={loaderData.tcpData}
+									errorElement={<MonitorsTableError />}
+								>
 									{(tcpData) => (
 										<TcpMonitorsTable team={params.team} monitors={tcpData.tcpMonitors} />
 									)}
@@ -324,7 +354,11 @@ export default function Component({ loaderData, params }: Route.ComponentProps) 
 						</Tabs.Panel>
 						<Tabs.Panel id="cron-jobs">
 							<Suspense fallback={<MonitorsTableSkeleton />}>
-								<Await resolve={loaderData.cronData} errorElement={<MonitorsTableError />}>
+								<Await
+									key={loaderData.nonce}
+									resolve={loaderData.cronData}
+									errorElement={<MonitorsTableError />}
+								>
 									{(cronData) => <CronJobsTable team={params.team} cronJobs={cronData.cronJobs} />}
 								</Await>
 							</Suspense>
