@@ -1,6 +1,6 @@
 import { cn } from "@pkg/cn";
 import { forbidden } from "@pkg/response";
-import { Alert, Badge, Button, confirm, Empty, Menu, Popover, Skeleton, Table } from "@pkg/ui";
+import { Alert, Badge, Button, confirm, Empty, Menu, Popover, Table } from "@pkg/ui";
 import {
 	CheckIcon,
 	ClipboardCopyIcon,
@@ -27,68 +27,6 @@ import { measure } from "~/middleware/server-timing";
 import { team } from "~/middleware/team";
 
 import type { Route } from "./+types/route";
-
-export async function clientLoader({ serverLoader }: Route.ClientLoaderArgs) {
-	return await serverLoader();
-}
-
-clientLoader.hydrate = true as const;
-
-export function HydrateFallback() {
-	return (
-		<>
-			<header className="sticky top-0 z-10 flex h-16 shrink-0 items-center gap-2 border-b border-neutral-200 bg-neutral-50/80 px-4 dark:border-neutral-800 dark:bg-neutral-950/80">
-				<Skeleton className="h-6 w-24" />
-				<aside className="ml-auto flex items-center gap-2">
-					<Skeleton className="h-10 w-10 rounded-lg max-sm:w-10 sm:w-32" />
-				</aside>
-			</header>
-			<div className="flex flex-col gap-6 p-5 md:gap-12 md:p-12">
-				<ApiKeysTableSkeleton />
-			</div>
-		</>
-	);
-}
-
-function ApiKeysTableSkeleton() {
-	return (
-		<Table aria-label="Loading API keys">
-			<Table.Header>
-				<Table.Column isRowHeader>
-					<Skeleton className="h-4 w-16" />
-				</Table.Column>
-				<Table.Column>
-					<Skeleton className="h-4 w-16" />
-				</Table.Column>
-				<Table.Column>
-					<Skeleton className="h-4 w-20" />
-				</Table.Column>
-				<Table.Column align="center">
-					<span className="sr-only">Actions</span>
-				</Table.Column>
-			</Table.Header>
-
-			<Table.Body items={[{ id: "1" }, { id: "2" }, { id: "3" }]}>
-				{(item) => (
-					<Table.Row key={item.id}>
-						<Table.Cell>
-							<Skeleton className="h-4 w-32" />
-						</Table.Cell>
-						<Table.Cell>
-							<Skeleton className="h-4 w-24" />
-						</Table.Cell>
-						<Table.Cell>
-							<Skeleton className="h-4 w-16" />
-						</Table.Cell>
-						<Table.Cell className="w-17 text-center">
-							<Skeleton className="mx-auto h-10 w-10 rounded-lg" />
-						</Table.Cell>
-					</Table.Row>
-				)}
-			</Table.Body>
-		</Table>
-	);
-}
 
 export async function loader() {
 	let { memberships, id } = team();

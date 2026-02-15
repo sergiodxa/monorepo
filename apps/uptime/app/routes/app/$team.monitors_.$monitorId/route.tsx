@@ -1,5 +1,5 @@
 import { cn } from "@pkg/cn";
-import { Alert, Badge, Button, Card, LinkButton, Skeleton } from "@pkg/ui";
+import { Alert, Badge, Button, Card, LinkButton } from "@pkg/ui";
 import { format, subDays } from "date-fns";
 import {
 	LockIcon,
@@ -31,66 +31,6 @@ import daysOfYear from "~/utils/days-of-year";
 import groupDatesPerWeek from "~/utils/group-dates-per-week";
 
 import type { Route } from "./+types/route";
-
-export async function clientLoader({ serverLoader }: Route.ClientLoaderArgs) {
-	return await serverLoader();
-}
-
-clientLoader.hydrate = true as const;
-
-export function HydrateFallback() {
-	return (
-		<>
-			<header className="sticky top-0 z-10 flex h-16 shrink-0 items-center gap-2 border-b border-neutral-200 bg-neutral-50/80 px-4 dark:border-neutral-800 dark:bg-neutral-950/80">
-				<div className="flex flex-col justify-center gap-1">
-					<Skeleton className="h-3 w-32" />
-					<Skeleton className="h-4 w-40" />
-				</div>
-				<aside className="ml-auto flex items-center gap-2">
-					<Skeleton className="h-10 w-10 rounded-lg max-sm:w-10 sm:w-28" />
-					<Skeleton className="h-10 w-10 rounded-lg max-sm:w-10 sm:w-20" />
-					<Skeleton className="h-10 w-10 rounded-lg max-sm:w-10 sm:w-20" />
-				</aside>
-			</header>
-
-			<div className="flex flex-col gap-6 p-5 lg:gap-12 lg:p-12">
-				<div className="grid gap-4 lg:grid-cols-3 lg:gap-8">
-					<StatCardSkeleton />
-					<StatCardSkeleton />
-					<StatCardSkeleton />
-				</div>
-
-				<HeatmapSkeleton />
-			</div>
-		</>
-	);
-}
-
-function StatCardSkeleton() {
-	return (
-		<Card>
-			<Card.Header className="pb-2">
-				<Skeleton className="h-4 w-24" />
-			</Card.Header>
-			<Card.Content className="pt-0">
-				<Skeleton className="mb-2 h-8 w-20" />
-				<Skeleton className="h-3 w-40" />
-			</Card.Content>
-		</Card>
-	);
-}
-
-function HeatmapSkeleton() {
-	return (
-		<div className="flex flex-col gap-4">
-			<div className="flex justify-between">
-				<Skeleton className="h-4 w-16" />
-				<Skeleton className="h-4 w-16" />
-			</div>
-			<Skeleton className="h-40 w-full rounded-lg" />
-		</div>
-	);
-}
 
 export async function loader({ params }: Route.LoaderArgs) {
 	logger().info("monitor.loader.start", {

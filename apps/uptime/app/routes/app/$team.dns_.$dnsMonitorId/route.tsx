@@ -1,4 +1,4 @@
-import { Badge, Button, LinkButton, Skeleton, Table } from "@pkg/ui";
+import { Badge, Button, LinkButton, Table } from "@pkg/ui";
 import { LoaderIcon, PencilIcon, PlayIcon, RefreshCwIcon } from "lucide-react";
 import { useId } from "react";
 import { useTranslation } from "react-i18next";
@@ -17,35 +17,6 @@ import { getDnsStatusColor, getDnsStatusText } from "~/services/check-dns";
 import { getHints } from "~/utils/client-hints";
 
 import type { Route } from "./+types/route";
-
-export async function clientLoader({ serverLoader }: Route.ClientLoaderArgs) {
-	return await serverLoader();
-}
-
-clientLoader.hydrate = true as const;
-
-export function HydrateFallback() {
-	return (
-		<>
-			<header className="sticky top-0 z-10 flex h-16 shrink-0 items-center gap-2 border-b border-neutral-200 bg-neutral-50/80 px-4 dark:border-neutral-800 dark:bg-neutral-950/80">
-				<Skeleton className="h-6 w-48" />
-				<aside className="ml-auto flex items-center gap-2">
-					<Skeleton className="h-10 w-10 rounded-lg" />
-					<Skeleton className="h-10 w-24 rounded-lg" />
-				</aside>
-			</header>
-
-			<div className="flex flex-col gap-6 p-5 md:gap-12 md:p-12">
-				<div className="grid gap-4 md:grid-cols-3">
-					<Skeleton className="h-24 rounded-lg" />
-					<Skeleton className="h-24 rounded-lg" />
-					<Skeleton className="h-24 rounded-lg" />
-				</div>
-				<Skeleton className="h-64 rounded-lg" />
-			</div>
-		</>
-	);
-}
 
 export async function loader({ params, request }: Route.LoaderArgs) {
 	logger().info("dnsMonitorDetail.loader.start", {

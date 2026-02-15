@@ -1,7 +1,7 @@
 import type { TFunction } from "i18next";
 
 import { cn } from "@pkg/cn";
-import { Alert, Button, confirm, Empty, LinkButton, Menu, Popover, Skeleton, Table } from "@pkg/ui";
+import { Alert, Button, confirm, Empty, LinkButton, Menu, Popover, Table } from "@pkg/ui";
 import {
 	BellIcon,
 	BellMinusIcon,
@@ -35,63 +35,6 @@ function formatCooldown(minutes: number, t: TFunction<"translation", "page.alert
 		return t("cooldown.hours", { count: hours });
 	}
 	return t("cooldown.minutes", { count: minutes });
-}
-
-export async function clientLoader({ serverLoader }: Route.ClientLoaderArgs) {
-	return await serverLoader();
-}
-
-clientLoader.hydrate = true as const;
-
-export function HydrateFallback() {
-	return (
-		<>
-			<header className="sticky top-0 z-10 flex h-16 shrink-0 items-center gap-2 border-b border-neutral-200 bg-neutral-50/80 px-4 dark:border-neutral-800 dark:bg-neutral-950/80">
-				<Skeleton className="h-6 w-16" />
-				<aside className="ml-auto flex items-center gap-2">
-					<Skeleton className="h-10 w-10 rounded-lg max-sm:w-10 sm:w-28" />
-				</aside>
-			</header>
-
-			<div className="flex flex-col gap-6 p-5 md:gap-12 md:p-12">
-				<AlertsTableSkeleton />
-			</div>
-		</>
-	);
-}
-
-function AlertsTableSkeleton() {
-	return (
-		<Table aria-label="Loading alerts">
-			<Table.Header>
-				<Table.Column isRowHeader>
-					<Skeleton className="h-4 w-16" />
-				</Table.Column>
-				<Table.Column align="right">
-					<Skeleton className="ml-auto h-4 w-16" />
-				</Table.Column>
-				<Table.Column align="center">
-					<span className="sr-only">Actions</span>
-				</Table.Column>
-			</Table.Header>
-
-			<Table.Body items={[{ id: "1" }, { id: "2" }, { id: "3" }]}>
-				{(item) => (
-					<Table.Row key={item.id}>
-						<Table.Cell>
-							<Skeleton className="h-4 w-32" />
-						</Table.Cell>
-						<Table.Cell className="w-28 text-right">
-							<Skeleton className="ml-auto h-4 w-16" />
-						</Table.Cell>
-						<Table.Cell className="w-17 text-center">
-							<Skeleton className="mx-auto h-10 w-10 rounded-lg" />
-						</Table.Cell>
-					</Table.Row>
-				)}
-			</Table.Body>
-		</Table>
-	);
 }
 
 export async function loader() {

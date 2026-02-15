@@ -60,53 +60,6 @@ import {
 
 type DashboardTab = "http" | "dns" | "tcp" | "cron-jobs";
 
-export async function clientLoader({ serverLoader }: Route.ClientLoaderArgs) {
-	return await serverLoader();
-}
-
-clientLoader.hydrate = true as const;
-
-export function HydrateFallback() {
-	return (
-		<>
-			<header className="sticky top-0 z-10 flex h-16 shrink-0 items-center gap-2 border-b border-neutral-200 bg-neutral-50/80 px-4 dark:border-neutral-800 dark:bg-neutral-950/80">
-				<Skeleton className="h-6 w-24" />
-				<aside className="ml-auto flex items-center gap-2">
-					<Skeleton className="h-10 w-10 rounded-lg max-sm:w-10 sm:w-20" />
-					<Skeleton className="h-10 w-10 rounded-lg max-sm:w-10 sm:w-32" />
-				</aside>
-			</header>
-
-			<div className="flex flex-col gap-6 p-5 lg:gap-12 lg:p-12">
-				{/* Row 1 - Overview (3 cards) */}
-				<div className="grid gap-4 lg:grid-cols-3 lg:gap-8">
-					<StatCardSkeleton />
-					<StatCardSkeleton />
-					<StatCardSkeleton />
-				</div>
-
-				{/* Row 2 - Monitor Breakdown (4 cards) */}
-				<div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 lg:gap-8">
-					<StatCardSkeleton />
-					<StatCardSkeleton />
-					<StatCardSkeleton />
-					<StatCardSkeleton />
-				</div>
-
-				{/* Tabs skeleton */}
-				<div className="flex gap-2 border-b border-neutral-200 pb-2 dark:border-neutral-800">
-					<Skeleton className="h-8 w-20 rounded-lg" />
-					<Skeleton className="h-8 w-20 rounded-lg" />
-					<Skeleton className="h-8 w-20 rounded-lg" />
-					<Skeleton className="h-8 w-24 rounded-lg" />
-				</div>
-
-				<MonitorsTableSkeleton />
-			</div>
-		</>
-	);
-}
-
 function StatCardSkeleton() {
 	return (
 		<Card>
