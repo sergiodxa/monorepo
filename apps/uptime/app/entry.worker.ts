@@ -89,11 +89,7 @@ export default {
 					z.object({ type: z.literal("checkTcp") }),
 					z.object({ type: z.literal("checkCronJobs") }),
 					z.object({ type: z.literal("aggregateDailyStats") }),
-					z.object({
-						type: z.literal("backfillDailyStats"),
-						startDate: z.string().optional(),
-						endDate: z.string().optional(),
-					}),
+					z.object({ type: z.literal("backfillDailyStats") }),
 				])
 				.safeParse(message.body);
 
@@ -170,12 +166,7 @@ export default {
 				let BackfillDailyStatsJob = await import("./jobs/backfill-daily-stats").then(
 					(m) => m.default,
 				);
-				waitUntil(
-					new BackfillDailyStatsJob().run({
-						...message,
-						body: result.data,
-					}),
-				);
+				waitUntil(new BackfillDailyStatsJob().run(message));
 			}
 		}
 	},

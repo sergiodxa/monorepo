@@ -7,14 +7,6 @@ import { monitorDailyStats } from "~/db/schema";
 
 import type { Job } from "./base";
 
-type BackfillMessage = Message & {
-	body: {
-		type: "backfillDailyStats";
-		startDate?: string | null;
-		endDate?: string | null;
-	};
-};
-
 type AggregatedRow = {
 	monitorId: string;
 	date: string;
@@ -45,15 +37,15 @@ export default class BackfillDailyStatsJob implements Job {
 	private db = database(env.DB);
 	private logger = new BatchedLogger("job:backfill-daily-stats");
 
-	async run(message: BackfillMessage): Promise<void> {
+	async run(message: Message): Promise<void> {
 		try {
 			this.logger.info("job.backfill-daily-stats.started", {
 				messageId: message.id,
 				body: message.body,
 			});
 
-			let startDate = message.body.startDate ?? null;
-			let endDate = message.body.endDate ?? null;
+			let startDate = null;
+			let endDate = null;
 
 			let httpRows = await this.aggregateHttp(startDate, endDate);
 			let tcpRows = await this.aggregateTcp(startDate, endDate);
@@ -111,8 +103,8 @@ export default class BackfillDailyStatsJob implements Job {
 			await this.sendNotification({
 				rowsWritten: 0,
 				error: error instanceof Error ? error.message : String(error),
-				startDate: message.body.startDate ?? null,
-				endDate: message.body.endDate ?? null,
+				startDate: null,
+				endDate: null,
 			});
 			return message.retry();
 		} finally {
