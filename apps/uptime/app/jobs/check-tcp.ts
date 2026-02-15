@@ -72,8 +72,6 @@ export default class CheckTcpJob implements Job {
 		lastStatus: "up" | "down" | "timeout" | null;
 		team: { ownerId: string };
 	}): Promise<void> {
-		let disableD1Results = env.DISABLE_D1_RESULTS !== "false";
-
 		this.logger.info("tcp.check", {
 			tcpMonitorId: monitor.id,
 			host: monitor.host,
@@ -128,14 +126,7 @@ export default class CheckTcpJob implements Job {
 			((previousStatus === "up" && storableStatus !== "up") ||
 				(previousStatus !== "up" && storableStatus === "up"));
 
-		if (!disableD1Results) {
-			this.logger.info("database.update", {
-				table: "tcpMonitors",
-				tcpMonitorId: monitor.id,
-				status: storableStatus,
-			});
-			await TcpMonitor.updateStatus(this.db, monitor.id, storableStatus, result.responseTimeMs);
-		}
+		// D1 writes removed (dual-write stopped)
 
 		this.logger.info("job.check-tcp.monitor-checked", {
 			tcpMonitorId: monitor.id,

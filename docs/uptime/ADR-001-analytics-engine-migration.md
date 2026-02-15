@@ -1038,16 +1038,15 @@ The API token needs the `Account Analytics: Read` permission.
 - [x] **Dual-write verified** - 440+ events recorded in Analytics Engine, healthcheck confirms connectivity
 - [x] **Phase 4: Dashboard uses Analytics Engine** - Dashboard queries read from AE with KV cache; AE failure banner and SSL stat card added
 - [x] **Phase 5: Alert Event Updates** - Alert events recorded with snapshots across HTTP, Cron, DNS, TCP, SSL
+- [x] **Phase 8 (partial): Stop dual-write for HTTP/TCP** - HTTP workflow and TCP job now write only to AE (no new D1 results)
 
 ### Next Step
 
-**Phase 8: Stop Dual-Write (after AE read stability)**
+**Phase 9: Backfill `monitor_daily_stats` from D1 historical data (no AE backfill)**
 
-1. Remove D1 writes from `ping.ts` and `check-tcp.ts`
-2. Keep AE as sole real-time source for HTTP/TCP
-3. Retain D1 tables temporarily for backfill reference
-
-Then Phase 9: Backfill `monitor_daily_stats` from existing D1 data (idempotent batches, no AE backfill).
+1. Run backfill job in batches (idempotent) to populate `monitor_daily_stats`
+2. Keep D1 ping/tcp tables for reference until backfill completes
+3. After verification, continue with Phase 10 cleanup (drop old result tables)
 
 ## Notes
 

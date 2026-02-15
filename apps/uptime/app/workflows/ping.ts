@@ -233,46 +233,17 @@ export default class Ping extends WorkflowEntrypoint<Cloudflare.Env> {
 			};
 		});
 
-		let disableD1Results = env.DISABLE_D1_RESULTS !== "false";
-
 		let updatedMonitorResult = await step.do("save monitor results", async () => {
-			if (disableD1Results) {
-				logger.info("workflow.ping.step.save-results.skipped-d1", {
-					monitorResultId,
-					monitorId: monitorResult.monitor.id,
-				});
-				return {
-					...monitorResult,
-					responseStatus: result.responseStatus,
-					responseTimeMs: result.responseTimeMs,
-					completedAt: result.completedAt,
-				};
-			}
-
-			let { eq: eqOp } = await import("drizzle-orm");
-			let schema = await import("~/db/schema");
-			let db = await this.getDb();
-
-			let [updatedMonitorResult] = await db
-				.update(schema.monitorResults)
-				.set({
-					responseStatus: result.responseStatus,
-					responseTimeMs: result.responseTimeMs,
-					completedAt: result.completedAt,
-				})
-				.where(eqOp(schema.monitorResults.id, monitorResult.id))
-				.returning();
-
-			if (updatedMonitorResult) {
-				logger.info("workflow.ping.step.save-results.complete", {
-					monitorResultId,
-					monitorId: monitorResult.monitor.id,
-					responseStatus: updatedMonitorResult.responseStatus,
-					responseTimeMs: updatedMonitorResult.responseTimeMs,
-				});
-				return updatedMonitorResult;
-			}
-			throw new Error("Failed to update monitor result");
+			logger.info("workflow.ping.step.save-results.skipped-d1", {
+				monitorResultId,
+				monitorId: monitorResult.monitor.id,
+			});
+			return {
+				...monitorResult,
+				responseStatus: result.responseStatus,
+				responseTimeMs: result.responseTimeMs,
+				completedAt: result.completedAt,
+			};
 		});
 
 		await step.do("write to analytics engine", async () => {
