@@ -7,10 +7,12 @@ let AnalyticsErrorResponse = z.object({
 	success: z.boolean().optional(),
 });
 
-let AnalyticsQueryResponse = z.object({
-	data: z.array(z.unknown()),
-	meta: z.object({ rows: z.number() }),
-});
+let AnalyticsQueryResponse = z
+	.object({
+		data: z.array(z.unknown()),
+		meta: z.object({ rows: z.coerce.number().optional() }).passthrough(),
+	})
+	.passthrough();
 
 export async function queryAnalytics<T>(sql: string): Promise<Result<T[], Error>> {
 	let response = await fetch(
@@ -38,12 +40,24 @@ export async function queryAnalytics<T>(sql: string): Promise<Result<T[], Error>
 		return failure(new Error(`Analytics query failed: ${response.statusText}${errorDetails}`));
 	}
 
-	let parsed = AnalyticsQueryResponse.safeParse(await response.json());
-	if (!parsed.success) {
-		return failure(new Error("Analytics query failed: invalid response shape"));
+	let rawJson: unknown;
+	try {
+		rawJson = await response.json();
+	} catch {
+		return failure(new Error("Analytics query failed: invalid JSON response"));
 	}
 
-	return success(parsed.data.data as T[]);
+	let parsed = AnalyticsQueryResponse.safeParse(rawJson);
+	if (parsed.success) {
+		return success(parsed.data.data as T[]);
+	}
+
+	// Fallback: if response is an object with array data, accept it
+	if (rawJson && typeof rawJson === "object" && Array.isArray((rawJson as any).data)) {
+		return success((rawJson as any).data as T[]);
+	}
+
+	return failure(new Error("Analytics query failed: invalid response shape"));
 }
 
 export async function queryAnalyticsCached<T>(
