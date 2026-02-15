@@ -249,7 +249,6 @@ export default function Component({ loaderData, params }: Route.ComponentProps) 
 			<AppHeader heading={t("header.title")}>
 				<Button
 					color="neutral"
-					type="button"
 					onPress={() => revalidator.revalidate()}
 					className="shrink-0 px-2"
 					isPending={isRevalidating}

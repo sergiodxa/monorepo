@@ -462,7 +462,8 @@
 @utility ui-button-pending-content {
 	:where(&) {
 		/* Keep content in flow for width but make it invisible */
-		@apply invisible;
+		/* Must match button's flex layout to preserve dimensions */
+		@apply invisible inline-flex items-center gap-2;
 	}
 }
 
