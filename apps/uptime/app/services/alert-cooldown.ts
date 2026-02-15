@@ -69,6 +69,10 @@ export interface RecordAlertEventParams {
 	status: "sent" | "skipped_cooldown" | "failed";
 	sentAt: Date;
 	errorMessage?: string | null;
+	// Enhanced context (nullable for backward compatibility)
+	monitorType?: "http" | "dns" | "tcp" | "cron" | "ssl";
+	monitorName?: string;
+	snapshot?: schema.AlertEventSnapshot;
 }
 
 /**
@@ -87,6 +91,10 @@ export async function recordAlertEvent(
 			status: params.status,
 			sentAt: params.sentAt,
 			errorMessage: params.errorMessage ?? null,
+			// Enhanced context (nullable for backward compatibility)
+			monitorType: params.monitorType ?? null,
+			monitorName: params.monitorName ?? null,
+			snapshot: params.snapshot ?? null,
 		})
 		.returning();
 

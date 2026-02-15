@@ -305,6 +305,16 @@ export default class CheckCronJobsJob implements Job {
 						eventType: eventType as "degraded" | "down",
 						status: "sent",
 						sentAt: now,
+						monitorType: "cron",
+						monitorName: monitor.name,
+						snapshot: {
+							type: "cron",
+							status: newStatus,
+							lastPingAt: monitor.lastPingAt?.toISOString() ?? null,
+							nextExpectedAt: monitor.nextExpectedAt?.toISOString() ?? null,
+							cronExpression: monitor.cronExpression,
+							timezone: monitor.timezone,
+						},
 					});
 				} catch (error) {
 					// Record failed alert event
@@ -315,6 +325,16 @@ export default class CheckCronJobsJob implements Job {
 						status: "failed",
 						sentAt: now,
 						errorMessage: error instanceof Error ? error.message : String(error),
+						monitorType: "cron",
+						monitorName: monitor.name,
+						snapshot: {
+							type: "cron",
+							status: newStatus,
+							lastPingAt: monitor.lastPingAt?.toISOString() ?? null,
+							nextExpectedAt: monitor.nextExpectedAt?.toISOString() ?? null,
+							cronExpression: monitor.cronExpression,
+							timezone: monitor.timezone,
+						},
 					});
 
 					throw error;
@@ -369,12 +389,14 @@ export default class CheckCronJobsJob implements Job {
 			});
 
 			// Record that we skipped due to cooldown
+			// Note: We don't have full monitor context here, so snapshot is omitted
 			await this.db.insert(schema.alertEvents).values({
 				alertId: alert.id,
 				monitorId,
 				eventType: "down",
 				status: "skipped_cooldown",
 				sentAt: now,
+				monitorType: "cron",
 			});
 
 			return false;

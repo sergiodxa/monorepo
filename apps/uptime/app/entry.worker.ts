@@ -59,6 +59,11 @@ export default {
 		if (controller.cron === "*/5 * * * *") {
 			waitUntil(env.QUEUE.send({ type: "checkTcp" }));
 		}
+
+		// Every day at 1 AM UTC - Aggregate daily stats
+		if (controller.cron === "0 1 * * *") {
+			waitUntil(env.QUEUE.send({ type: "aggregateDailyStats" }));
+		}
 	},
 
 	async queue(batch) {
@@ -83,6 +88,7 @@ export default {
 					z.object({ type: z.literal("checkDns") }),
 					z.object({ type: z.literal("checkTcp") }),
 					z.object({ type: z.literal("checkCronJobs") }),
+					z.object({ type: z.literal("aggregateDailyStats") }),
 				])
 				.safeParse(message.body);
 
@@ -146,6 +152,13 @@ export default {
 			if (result.data.type === "checkCronJobs") {
 				let CheckCronJobsJob = await import("./jobs/check-cron-jobs").then((m) => m.default);
 				waitUntil(new CheckCronJobsJob().run(message));
+			}
+
+			if (result.data.type === "aggregateDailyStats") {
+				let AggregateDailyStatsJob = await import("./jobs/aggregate-daily-stats").then(
+					(m) => m.default,
+				);
+				waitUntil(new AggregateDailyStatsJob().run(message));
 			}
 		}
 	},

@@ -275,6 +275,36 @@ export default class Ping extends WorkflowEntrypoint<Cloudflare.Env> {
 			throw new Error("Failed to update monitor result");
 		});
 
+		await step.do("write to analytics engine", async () => {
+			logger.info("workflow.ping.step.write-analytics.start", {
+				monitorResultId,
+				monitorId: monitorResult.monitor.id,
+			});
+
+			let { writePingResult } = await import("~/services/analytics.server");
+
+			// Determine status: up if matches expected AND content checks pass, otherwise down
+			let statusMatches = result.responseStatus === monitorResult.monitor.expectedStatus;
+			let contentChecksPassed = contentCheckResult.allPassed;
+			let status: "up" | "down" = statusMatches && contentChecksPassed ? "up" : "down";
+
+			writePingResult({
+				monitorId: monitorResult.monitor.id,
+				monitorType: "http",
+				status,
+				responseTimeMs: result.responseTimeMs,
+				teamId: monitorResult.monitor.team.id,
+				responseStatus: result.responseStatus,
+				expectedStatus: monitorResult.monitor.expectedStatus,
+			});
+
+			logger.info("workflow.ping.step.write-analytics.complete", {
+				monitorResultId,
+				monitorId: monitorResult.monitor.id,
+				status,
+			});
+		});
+
 		await step.do("send alerts", async () => {
 			logger.info("workflow.ping.step.send-alerts.start", { monitorId: monitorResult.monitor.id });
 
@@ -374,6 +404,15 @@ export default class Ping extends WorkflowEntrypoint<Cloudflare.Env> {
 							eventType,
 							status: "skipped_cooldown",
 							sentAt: now,
+							monitorType: "http",
+							monitorName: monitorResult.monitor.name,
+							snapshot: {
+								type: "http",
+								responseStatus: result.responseStatus,
+								responseTimeMs: result.responseTimeMs,
+								expectedStatus: monitorResult.monitor.expectedStatus,
+								url: monitorResult.monitor.url,
+							},
 						});
 						return;
 					}
@@ -431,6 +470,15 @@ export default class Ping extends WorkflowEntrypoint<Cloudflare.Env> {
 						status: sendError ? "failed" : "sent",
 						sentAt: now,
 						errorMessage: sendError,
+						monitorType: "http",
+						monitorName: monitorResult.monitor.name,
+						snapshot: {
+							type: "http",
+							responseStatus: result.responseStatus,
+							responseTimeMs: result.responseTimeMs,
+							expectedStatus: monitorResult.monitor.expectedStatus,
+							url: monitorResult.monitor.url,
+						},
 					});
 
 					// Re-throw error after recording to maintain original behavior

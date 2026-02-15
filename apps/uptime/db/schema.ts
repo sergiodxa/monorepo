@@ -168,6 +168,46 @@ export const alerts = sqliteTable("alerts", {
 		.notNull(),
 });
 
+// Alert Event Snapshot Types (for capturing full context at alert time)
+
+export type AlertEventSnapshot =
+	| {
+			type: "http";
+			responseStatus: number;
+			responseTimeMs: number;
+			expectedStatus: number;
+			url: string;
+	  }
+	| {
+			type: "dns";
+			status: string;
+			resolvedValue: string | null;
+			domain: string;
+			recordType: string;
+	  }
+	| {
+			type: "tcp";
+			status: string;
+			responseTimeMs: number | null;
+			host: string;
+			port: number;
+	  }
+	| {
+			type: "cron";
+			status: string;
+			lastPingAt: string | null;
+			nextExpectedAt: string | null;
+			cronExpression: string;
+			timezone: string;
+	  }
+	| {
+			type: "ssl";
+			status: string;
+			expiresAt: string | null;
+			daysUntilExpiry: number | null;
+			hostname: string;
+	  };
+
 export const alertEvents = sqliteTable(
 	"alert_events",
 	{
@@ -182,6 +222,12 @@ export const alertEvents = sqliteTable(
 		eventType: text("event_type", { enum: ["down", "up", "degraded"] }).notNull(),
 		status: text("status", { enum: ["sent", "skipped_cooldown", "failed"] }).notNull(),
 		errorMessage: text("error_message"),
+		// New columns for enhanced context (nullable for backward compatibility)
+		monitorType: text("monitor_type", {
+			enum: ["http", "dns", "tcp", "cron", "ssl"],
+		}),
+		monitorName: text("monitor_name"),
+		snapshot: text("snapshot", { mode: "json" }).$type<AlertEventSnapshot>(),
 	},
 	(table) => [
 		index("alert_events_alert_id_idx").on(table.alertId),
@@ -211,6 +257,7 @@ export const teamsRelations = relations(teams, ({ many }) => {
 		tcpMonitors: many(tcpMonitors),
 		apiKeys: many(apiKeys),
 		cronJobMonitors: many(cronJobMonitors),
+		sslMonitors: many(sslMonitors),
 	};
 });
 
@@ -339,6 +386,9 @@ export const statusPagesRelations = relations(statusPages, ({ one, many }) => {
 		}),
 		monitors: many(statusPageMonitors),
 		cronJobs: many(statusPageCronJobs),
+		dnsMonitors: many(statusPageDnsMonitors),
+		tcpMonitors: many(statusPageTcpMonitors),
+		sslMonitors: many(statusPageSslMonitors),
 	};
 });
 
@@ -790,3 +840,180 @@ export const userPreferences = sqliteTable(
 
 export type SelectUserPreferences = typeof userPreferences.$inferSelect;
 export type InsertUserPreferences = typeof userPreferences.$inferInsert;
+
+// SSL Monitors (standalone, separate from HTTP monitors)
+
+export const sslMonitors = sqliteTable(
+	"ssl_monitors",
+	{
+		id: pk("id"),
+		createdAt,
+		updatedAt,
+		enabledAt: timestamp("enabled_at"), // null = disabled
+		// Relations
+		teamId: uuid("team_id").notNull(),
+		httpMonitorId: uuid("http_monitor_id"), // Optional link to HTTP monitor
+		// Attributes
+		name: text("name").notNull(),
+		hostname: text("hostname").notNull(),
+		port: integer("port").default(443).notNull(),
+		expiryWarningDays: integer("expiry_warning_days").default(30).notNull(),
+		// Status (manually entered - Workers can't read TLS certs from fetch)
+		expiresAt: timestamp("expires_at"),
+		issuer: text("issuer"),
+		lastCheckedAt: timestamp("last_checked_at"),
+		status: text("status", {
+			enum: ["unknown", "valid", "expiring", "expired", "error"],
+		}).default("unknown"),
+	},
+	(table) => [
+		index("ssl_monitors_team_idx").on(table.teamId),
+		index("ssl_monitors_enabled_idx").on(table.enabledAt),
+	],
+);
+
+export const sslMonitorsRelations = relations(sslMonitors, ({ one }) => {
+	return {
+		team: one(teams, {
+			fields: [sslMonitors.teamId],
+			references: [teams.id],
+		}),
+		httpMonitor: one(monitors, {
+			fields: [sslMonitors.httpMonitorId],
+			references: [monitors.id],
+		}),
+	};
+});
+
+export type SelectSslMonitor = typeof sslMonitors.$inferSelect;
+export type InsertSslMonitor = typeof sslMonitors.$inferInsert;
+
+// Monitor Daily Stats (aggregated data for 365-day retention)
+
+export const monitorDailyStats = sqliteTable(
+	"monitor_daily_stats",
+	{
+		id: pk("id"),
+		createdAt,
+		// Identity
+		monitorId: uuid("monitor_id").notNull(),
+		monitorType: text("monitor_type", {
+			enum: ["http", "dns", "tcp", "cron"],
+		}).notNull(),
+		date: text("date").notNull(), // "2026-02-14" format
+		// Stats
+		totalChecks: integer("total_checks").notNull(),
+		successfulChecks: integer("successful_checks").notNull(),
+		failedChecks: integer("failed_checks").notNull(),
+		// Response time (null for cron jobs)
+		avgResponseTimeMs: integer("avg_response_time_ms"),
+		maxResponseTimeMs: integer("max_response_time_ms"),
+		p95ResponseTimeMs: integer("p95_response_time_ms"),
+		// Daily status
+		status: text("status", { enum: ["up", "degraded", "down"] }).notNull(),
+	},
+	(table) => [
+		index("monitor_daily_stats_monitor_type_date_idx").on(
+			table.monitorId,
+			table.monitorType,
+			table.date,
+		),
+		index("monitor_daily_stats_date_idx").on(table.date),
+	],
+);
+
+export type SelectMonitorDailyStats = typeof monitorDailyStats.$inferSelect;
+export type InsertMonitorDailyStats = typeof monitorDailyStats.$inferInsert;
+
+// Status Page DNS Monitors
+
+export const statusPageDnsMonitors = sqliteTable(
+	"status_page_dns_monitors",
+	{
+		id: pk("id"),
+		createdAt,
+		statusPageId: uuid("status_page_id").notNull(),
+		dnsMonitorId: uuid("dns_monitor_id").notNull(),
+		displayName: text("display_name"),
+		order: integer("order").notNull().default(0),
+	},
+	(table) => [index("status_page_dns_monitors_page_idx").on(table.statusPageId)],
+);
+
+export const statusPageDnsMonitorsRelations = relations(statusPageDnsMonitors, ({ one }) => {
+	return {
+		statusPage: one(statusPages, {
+			fields: [statusPageDnsMonitors.statusPageId],
+			references: [statusPages.id],
+		}),
+		dnsMonitor: one(dnsMonitors, {
+			fields: [statusPageDnsMonitors.dnsMonitorId],
+			references: [dnsMonitors.id],
+		}),
+	};
+});
+
+export type SelectStatusPageDnsMonitor = typeof statusPageDnsMonitors.$inferSelect;
+export type InsertStatusPageDnsMonitor = typeof statusPageDnsMonitors.$inferInsert;
+
+// Status Page TCP Monitors
+
+export const statusPageTcpMonitors = sqliteTable(
+	"status_page_tcp_monitors",
+	{
+		id: pk("id"),
+		createdAt,
+		statusPageId: uuid("status_page_id").notNull(),
+		tcpMonitorId: uuid("tcp_monitor_id").notNull(),
+		displayName: text("display_name"),
+		order: integer("order").notNull().default(0),
+	},
+	(table) => [index("status_page_tcp_monitors_page_idx").on(table.statusPageId)],
+);
+
+export const statusPageTcpMonitorsRelations = relations(statusPageTcpMonitors, ({ one }) => {
+	return {
+		statusPage: one(statusPages, {
+			fields: [statusPageTcpMonitors.statusPageId],
+			references: [statusPages.id],
+		}),
+		tcpMonitor: one(tcpMonitors, {
+			fields: [statusPageTcpMonitors.tcpMonitorId],
+			references: [tcpMonitors.id],
+		}),
+	};
+});
+
+export type SelectStatusPageTcpMonitor = typeof statusPageTcpMonitors.$inferSelect;
+export type InsertStatusPageTcpMonitor = typeof statusPageTcpMonitors.$inferInsert;
+
+// Status Page SSL Monitors
+
+export const statusPageSslMonitors = sqliteTable(
+	"status_page_ssl_monitors",
+	{
+		id: pk("id"),
+		createdAt,
+		statusPageId: uuid("status_page_id").notNull(),
+		sslMonitorId: uuid("ssl_monitor_id").notNull(),
+		displayName: text("display_name"),
+		order: integer("order").notNull().default(0),
+	},
+	(table) => [index("status_page_ssl_monitors_page_idx").on(table.statusPageId)],
+);
+
+export const statusPageSslMonitorsRelations = relations(statusPageSslMonitors, ({ one }) => {
+	return {
+		statusPage: one(statusPages, {
+			fields: [statusPageSslMonitors.statusPageId],
+			references: [statusPages.id],
+		}),
+		sslMonitor: one(sslMonitors, {
+			fields: [statusPageSslMonitors.sslMonitorId],
+			references: [sslMonitors.id],
+		}),
+	};
+});
+
+export type SelectStatusPageSslMonitor = typeof statusPageSslMonitors.$inferSelect;
+export type InsertStatusPageSslMonitor = typeof statusPageSslMonitors.$inferInsert;

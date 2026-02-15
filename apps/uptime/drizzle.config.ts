@@ -1,14 +1,16 @@
 import * as FS from "node:fs";
 import * as Path from "node:path";
+import { fileURLToPath } from "node:url";
 
 import { configDotenv } from "dotenv";
 import { defineConfig } from "drizzle-kit";
 
-let path = Path.resolve(import.meta.dirname, ".dev.vars");
+const __dirname = Path.dirname(fileURLToPath(import.meta.url));
+let path = Path.resolve(__dirname, ".dev.vars");
 
 if (FS.existsSync(path)) {
 	configDotenv({
-		path: Path.join(import.meta.dirname, ".dev.vars"),
+		path: Path.join(__dirname, ".dev.vars"),
 		override: false,
 	});
 }

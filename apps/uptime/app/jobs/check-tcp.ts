@@ -91,6 +91,23 @@ export default class CheckTcpJob implements Job {
 			errorMessage: result.errorMessage,
 		});
 
+		// Write to Analytics Engine (dual-write phase)
+		let { writePingResult } = await import("~/services/analytics.server");
+		writePingResult({
+			monitorId: monitor.id,
+			monitorType: "tcp",
+			status: storableStatus === "up" ? "up" : storableStatus === "timeout" ? "timeout" : "down",
+			responseTimeMs: result.responseTimeMs ?? 0,
+			teamId: monitor.teamId,
+			responseStatus: 0, // TCP doesn't have HTTP status
+			expectedStatus: 0,
+		});
+
+		this.logger.info("job.check-tcp.analytics-write", {
+			tcpMonitorId: monitor.id,
+			status: storableStatus,
+		});
+
 		// Check for status change before updating
 		let previousStatus = monitor.lastStatus;
 		let statusChanged =

@@ -17,6 +17,7 @@
 			"*/10 * * * *", // Every 10 minutes - domain verification
 			"0 * * * *", // Every hour - DNS monitors
 			"0 0 * * *", // Every day at midnight - cleanup
+			"0 1 * * *", // Every day at 1 AM UTC - aggregate daily stats
 			"0 6 * * *", // Every day at 6 AM UTC - SSL checks
 		],
 	},
