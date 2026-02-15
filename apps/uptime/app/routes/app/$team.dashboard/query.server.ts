@@ -4,6 +4,7 @@ import { isBefore, subDays } from "date-fns";
 
 import type { Database } from "~/db/index";
 
+import { measure } from "~/middleware/server-timing";
 import CronJobMonitor from "~/models/cron-job-monitor";
 
 interface BaseArgs {
@@ -17,7 +18,7 @@ interface HttpMonitorsArgs extends BaseArgs {
 	t: TFunction<"translation", "page.dashboard.table">;
 }
 
-export async function getHttpMonitorsData(args: HttpMonitorsArgs) {
+export const getHttpMonitorsData = query(async (args: HttpMonitorsArgs) => {
 	let monitors = await args.db.query.monitors.findMany({
 		columns: {
 			id: true,
@@ -144,9 +145,9 @@ export async function getHttpMonitorsData(args: HttpMonitorsArgs) {
 		uptime,
 		slowestEndpoint,
 	};
-}
+}, "getHttpMonitorsData");
 
-export async function getDnsMonitorsData(args: BaseArgs) {
+export const getDnsMonitorsData = query(async (args: BaseArgs) => {
 	let dnsMonitorsList = await args.db.query.dnsMonitors.findMany({
 		columns: {
 			id: true,
@@ -190,9 +191,9 @@ export async function getDnsMonitorsData(args: BaseArgs) {
 		dnsMonitorsChanged,
 		dnsMonitorsError,
 	};
-}
+}, "getDnsMonitorsData");
 
-export async function getTcpMonitorsData(args: BaseArgs) {
+export const getTcpMonitorsData = query(async (args: BaseArgs) => {
 	let tcpMonitorsList = await args.db.query.tcpMonitors.findMany({
 		columns: {
 			id: true,
@@ -236,9 +237,9 @@ export async function getTcpMonitorsData(args: BaseArgs) {
 		tcpMonitorsUp,
 		tcpMonitorsDown,
 	};
-}
+}, "getTcpMonitorsData");
 
-export async function getCronJobsData(args: BaseArgs) {
+export const getCronJobsData = query(async (args: BaseArgs) => {
 	let cronJobsList = await args.db.query.cronJobMonitors.findMany({
 		columns: {
 			id: true,
@@ -288,7 +289,7 @@ export async function getCronJobsData(args: BaseArgs) {
 		cronJobsMissed,
 		cronJobsNew,
 	};
-}
+}, "getCronJobsData");
 
 function downsample(sample: number[], maxPoints = 20) {
 	if (sample.length === 0) {
@@ -313,4 +314,10 @@ function downsample(sample: number[], maxPoints = 20) {
 	}
 
 	return result;
+}
+
+type QueryFunction<Args extends any[], Output> = (...args: Args) => Promise<Output>;
+
+function query<Args extends any[], Output>(fn: QueryFunction<Args, Output>, name?: string) {
+	return (...args: Args): Promise<Output> => measure(name || fn.name, () => fn(...args));
 }
