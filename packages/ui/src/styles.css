@@ -1055,12 +1055,12 @@
 
 		&[data-placement="left"],
 		&[data-placement="right"] {
-			@apply h-full w-[22rem] max-w-[90vw];
+			@apply h-full w-88 max-w-[90vw];
 		}
 
 		&[data-placement="top"],
 		&[data-placement="bottom"] {
-			@apply h-[24rem] max-h-[90vh] w-full;
+			@apply h-96 max-h-[90vh] w-full;
 		}
 
 		&[data-placement="right"][data-entering],
@@ -2058,7 +2058,7 @@
 
 @utility ui-navigation-menu-content-wide {
 	:where(&) {
-		@apply w-[28rem] max-w-[calc(100vw-2rem)];
+		@apply w-md max-w-[calc(100vw-2rem)];
 	}
 }
 
@@ -2096,7 +2096,7 @@
 
 @utility ui-sidebar {
 	:where(&) {
-		@apply relative flex h-full w-[var(--sidebar-width)] flex-col border-r;
+		@apply relative flex h-full w-(--sidebar-width) flex-col border-r;
 		@apply transition-[width,transform] duration-200 ease-in-out;
 		border-color: var(--ui-neutral-border);
 		background-color: var(--ui-neutral-bg-tint);
@@ -2123,7 +2123,7 @@
 
 		/* Icon collapsible mode - narrow sidebar showing only icons */
 		&[data-collapsible="icon"][data-collapsed] {
-			@apply w-[var(--sidebar-width-icon)];
+			@apply w-(--sidebar-width-icon);
 
 			/* Hide text content when collapsed */
 			& [data-sidebar-collapsed-hide] {
@@ -2168,7 +2168,7 @@
 
 @utility ui-sidebar-mobile {
 	:where(&) {
-		@apply w-[var(--sidebar-width-mobile)];
+		@apply w-(--sidebar-width-mobile);
 
 		/* Override sheet-content padding for sidebar mobile */
 		& .ui-sheet-content {
