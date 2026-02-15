@@ -124,7 +124,7 @@ export default class BackfillDailyStatsJob implements Job {
 		let sql = `
 			SELECT
 				mr.monitor_id as monitorId,
-				date(mr.completed_at) as date,
+				strftime('%Y-%m-%d', mr.completed_at) as date,
 				COUNT(*) as totalChecks,
 				SUM(CASE WHEN mr.response_status = m.expected_status THEN 1 ELSE 0 END) as successfulChecks,
 				AVG(mr.response_time_ms) as avgResponseTimeMs,
@@ -132,46 +132,52 @@ export default class BackfillDailyStatsJob implements Job {
 			FROM monitor_results mr
 			JOIN monitors m ON m.id = mr.monitor_id
 			WHERE mr.completed_at IS NOT NULL AND mr.response_status IS NOT NULL
-			GROUP BY mr.monitor_id, date(mr.completed_at)
+			GROUP BY mr.monitor_id, date
+			HAVING date IS NOT NULL
 		`;
 
 		let result = await this.db.$client.prepare(sql).all();
 		let rows = (result?.results ?? []) as Array<Record<string, unknown>>;
-		return rows.map((row) => ({
-			monitorId: String(row.monitorId),
-			monitorType: "http" as const,
-			date: String(row.date),
-			totalChecks: Number(row.totalChecks) || 0,
-			successfulChecks: Number(row.successfulChecks) || 0,
-			avgResponseTimeMs: toNumber(row.avgResponseTimeMs),
-			maxResponseTimeMs: toNumber(row.maxResponseTimeMs),
-		})) satisfies Array<AggregatedRow & { monitorType: "http" }>;
+		return rows
+			.filter((row) => row.date)
+			.map((row) => ({
+				monitorId: String(row.monitorId),
+				monitorType: "http" as const,
+				date: String(row.date),
+				totalChecks: Number(row.totalChecks) || 0,
+				successfulChecks: Number(row.successfulChecks) || 0,
+				avgResponseTimeMs: toNumber(row.avgResponseTimeMs),
+				maxResponseTimeMs: toNumber(row.maxResponseTimeMs),
+			})) satisfies Array<AggregatedRow & { monitorType: "http" }>;
 	}
 
 	private async aggregateTcp() {
 		let sql = `
 			SELECT
 				tmr.tcp_monitor_id as monitorId,
-				date(tmr.checked_at) as date,
+				strftime('%Y-%m-%d', tmr.checked_at) as date,
 				COUNT(*) as totalChecks,
 				SUM(CASE WHEN tmr.status = 'up' THEN 1 ELSE 0 END) as successfulChecks,
 				AVG(tmr.response_time_ms) as avgResponseTimeMs,
 				MAX(tmr.response_time_ms) as maxResponseTimeMs
 			FROM tcp_monitor_results tmr
-			WHERE 1=1
-			GROUP BY tmr.tcp_monitor_id, date(tmr.checked_at)
+			WHERE tmr.checked_at IS NOT NULL
+			GROUP BY tmr.tcp_monitor_id, date
+			HAVING date IS NOT NULL
 		`;
 
 		let result = await this.db.$client.prepare(sql).all();
 		let rows = (result?.results ?? []) as Array<Record<string, unknown>>;
-		return rows.map((row) => ({
-			monitorId: String(row.monitorId),
-			monitorType: "tcp" as const,
-			date: String(row.date),
-			totalChecks: Number(row.totalChecks) || 0,
-			successfulChecks: Number(row.successfulChecks) || 0,
-			avgResponseTimeMs: toNumber(row.avgResponseTimeMs),
-			maxResponseTimeMs: toNumber(row.maxResponseTimeMs),
-		})) satisfies Array<AggregatedRow & { monitorType: "tcp" }>;
+		return rows
+			.filter((row) => row.date)
+			.map((row) => ({
+				monitorId: String(row.monitorId),
+				monitorType: "tcp" as const,
+				date: String(row.date),
+				totalChecks: Number(row.totalChecks) || 0,
+				successfulChecks: Number(row.successfulChecks) || 0,
+				avgResponseTimeMs: toNumber(row.avgResponseTimeMs),
+				maxResponseTimeMs: toNumber(row.maxResponseTimeMs),
+			})) satisfies Array<AggregatedRow & { monitorType: "tcp" }>;
 	}
 }
