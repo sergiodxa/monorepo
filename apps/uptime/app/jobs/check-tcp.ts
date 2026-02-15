@@ -4,6 +4,7 @@ import { env } from "cloudflare:workers";
 import database from "~/db/index";
 import { pingUptime } from "~/lib/ping-uptime";
 import TcpMonitor from "~/models/tcp-monitor";
+import { recordAlertEvent } from "~/services/alert-cooldown";
 import { checkTcpConnection } from "~/services/check-tcp";
 
 import type { Job } from "./base";
@@ -133,7 +134,12 @@ export default class CheckTcpJob implements Job {
 
 		// Send alerts on status changes
 		if (statusChanged) {
-			await this.sendTcpAlerts(monitor, storableStatus, result.errorMessage ?? null);
+			await this.sendTcpAlerts(
+				monitor,
+				storableStatus,
+				result.responseTimeMs ?? null,
+				result.errorMessage ?? null,
+			);
 		}
 	}
 
@@ -148,6 +154,7 @@ export default class CheckTcpJob implements Job {
 			team: { ownerId: string };
 		},
 		newStatus: "up" | "down" | "timeout",
+		responseTimeMs: number | null,
 		errorMessage: string | null,
 	): Promise<void> {
 		let isRecovery = newStatus === "up";
@@ -182,110 +189,147 @@ export default class CheckTcpJob implements Job {
 
 		let results = await Promise.allSettled(
 			alertsToSend.map(async (alert) => {
-				if (alert.config.strategy === "email") {
-					let subject = this.getEmailSubject(
-						newStatus,
-						monitor.name,
-						isRecovery,
-						alert.config.config.subjectPrefix,
-					);
+				let sentAt = new Date();
+				let eventType: "up" | "down" = newStatus === "up" ? "up" : "down";
+				let snapshot = {
+					type: "tcp" as const,
+					status: newStatus,
+					responseTimeMs,
+					host: monitor.host,
+					port: monitor.port,
+				};
 
-					await resend.emails.send({
-						to: alert.config.config.to,
-						from: "Uptime <no-reply@uptime.sergiodxa.com>",
-						replyTo: "hello@sergiodxa.com",
-						subject,
-						text: this.getEmailBody(monitor, newStatus, errorMessage, isRecovery),
-					});
+				try {
+					if (alert.config.strategy === "email") {
+						let subject = this.getEmailSubject(
+							newStatus,
+							monitor.name,
+							isRecovery,
+							alert.config.config.subjectPrefix,
+						);
 
-					this.logger.info("job.check-tcp.alert-sent", {
-						tcpMonitorId: monitor.id,
-						alertId: alert.id,
-						alertType: "email",
-						isRecovery,
-					});
-				}
+						await resend.emails.send({
+							to: alert.config.config.to,
+							from: "Uptime <no-reply@uptime.sergiodxa.com>",
+							replyTo: "hello@sergiodxa.com",
+							subject,
+							text: this.getEmailBody(monitor, newStatus, errorMessage, isRecovery),
+						});
 
-				if (alert.config.strategy === "webhook") {
-					let payload = {
-						type: isRecovery ? "tcp_recovery" : "tcp_failure",
-						monitor: {
-							id: monitor.id,
-							name: monitor.name,
-							host: monitor.host,
-							port: monitor.port,
-						},
-						status: newStatus,
-						errorMessage,
-						timestamp: new Date().toISOString(),
-					};
-
-					let response = await fetch(alert.config.config.url, {
-						method: "POST",
-						headers: {
-							"Content-Type": "application/json",
-							...(alert.config.config.secret
-								? { "X-Webhook-Secret": alert.config.config.secret }
-								: {}),
-						},
-						body: JSON.stringify(payload),
-					});
-
-					if (!response.ok) {
-						throw new Error(`Webhook failed with status ${response.status}`);
+						this.logger.info("job.check-tcp.alert-sent", {
+							tcpMonitorId: monitor.id,
+							alertId: alert.id,
+							alertType: "email",
+							isRecovery,
+						});
 					}
 
-					this.logger.info("job.check-tcp.alert-sent", {
-						tcpMonitorId: monitor.id,
-						alertId: alert.id,
-						alertType: "webhook",
-						isRecovery,
-					});
-				}
+					if (alert.config.strategy === "webhook") {
+						let payload = {
+							type: isRecovery ? "tcp_recovery" : "tcp_failure",
+							monitor: {
+								id: monitor.id,
+								name: monitor.name,
+								host: monitor.host,
+								port: monitor.port,
+							},
+							status: newStatus,
+							errorMessage,
+							timestamp: new Date().toISOString(),
+						};
 
-				if (alert.config.strategy === "slack") {
-					let message = this.getSlackMessage(monitor, newStatus, errorMessage, isRecovery);
+						let response = await fetch(alert.config.config.url, {
+							method: "POST",
+							headers: {
+								"Content-Type": "application/json",
+								...(alert.config.config.secret
+									? { "X-Webhook-Secret": alert.config.config.secret }
+									: {}),
+							},
+							body: JSON.stringify(payload),
+						});
 
-					let response = await fetch(alert.config.config.webhookUrl, {
-						method: "POST",
-						headers: { "Content-Type": "application/json" },
-						body: JSON.stringify({
-							text: message,
-							...(alert.config.config.channel ? { channel: alert.config.config.channel } : {}),
-						}),
-					});
+						if (!response.ok) {
+							throw new Error(`Webhook failed with status ${response.status}`);
+						}
 
-					if (!response.ok) {
-						throw new Error(`Slack webhook failed with status ${response.status}`);
+						this.logger.info("job.check-tcp.alert-sent", {
+							tcpMonitorId: monitor.id,
+							alertId: alert.id,
+							alertType: "webhook",
+							isRecovery,
+						});
 					}
 
-					this.logger.info("job.check-tcp.alert-sent", {
-						tcpMonitorId: monitor.id,
-						alertId: alert.id,
-						alertType: "slack",
-						isRecovery,
-					});
-				}
+					if (alert.config.strategy === "slack") {
+						let message = this.getSlackMessage(monitor, newStatus, errorMessage, isRecovery);
 
-				if (alert.config.strategy === "discord") {
-					let message = this.getDiscordMessage(monitor, newStatus, errorMessage, isRecovery);
+						let response = await fetch(alert.config.config.webhookUrl, {
+							method: "POST",
+							headers: { "Content-Type": "application/json" },
+							body: JSON.stringify({
+								text: message,
+								...(alert.config.config.channel ? { channel: alert.config.config.channel } : {}),
+							}),
+						});
 
-					let response = await fetch(alert.config.config.webhookUrl, {
-						method: "POST",
-						headers: { "Content-Type": "application/json" },
-						body: JSON.stringify({ content: message }),
-					});
+						if (!response.ok) {
+							throw new Error(`Slack webhook failed with status ${response.status}`);
+						}
 
-					if (!response.ok) {
-						throw new Error(`Discord webhook failed with status ${response.status}`);
+						this.logger.info("job.check-tcp.alert-sent", {
+							tcpMonitorId: monitor.id,
+							alertId: alert.id,
+							alertType: "slack",
+							isRecovery,
+						});
 					}
 
-					this.logger.info("job.check-tcp.alert-sent", {
-						tcpMonitorId: monitor.id,
+					if (alert.config.strategy === "discord") {
+						let message = this.getDiscordMessage(monitor, newStatus, errorMessage, isRecovery);
+
+						let response = await fetch(alert.config.config.webhookUrl, {
+							method: "POST",
+							headers: { "Content-Type": "application/json" },
+							body: JSON.stringify({ content: message }),
+						});
+
+						if (!response.ok) {
+							throw new Error(`Discord webhook failed with status ${response.status}`);
+						}
+
+						this.logger.info("job.check-tcp.alert-sent", {
+							tcpMonitorId: monitor.id,
+							alertId: alert.id,
+							alertType: "discord",
+							isRecovery,
+						});
+					}
+
+					await recordAlertEvent(this.db, {
 						alertId: alert.id,
-						alertType: "discord",
-						isRecovery,
+						monitorId: monitor.id,
+						eventType,
+						status: "sent",
+						sentAt,
+						monitorType: "tcp",
+						monitorName: monitor.name,
+						snapshot,
 					});
+				} catch (error) {
+					let errorMessageLogged = error instanceof Error ? error.message : String(error);
+					await recordAlertEvent(this.db, {
+						alertId: alert.id,
+						monitorId: monitor.id,
+						eventType,
+						status: "failed",
+						sentAt,
+						errorMessage: errorMessageLogged,
+						monitorType: "tcp",
+						monitorName: monitor.name,
+						snapshot,
+					});
+					throw error;
 				}
 			}),
 		);

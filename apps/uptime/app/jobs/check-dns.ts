@@ -5,6 +5,7 @@ import { eq } from "drizzle-orm";
 import database from "~/db/index";
 import * as schema from "~/db/schema";
 import { pingUptime } from "~/lib/ping-uptime";
+import { recordAlertEvent } from "~/services/alert-cooldown";
 import { checkDns, type DnsRecordType } from "~/services/check-dns";
 
 import type { Job } from "./base";
@@ -159,108 +160,145 @@ export default class CheckDnsJob implements Job {
 
 		let results = await Promise.allSettled(
 			alerts.map(async (alert) => {
-				if (alert.config.strategy === "email") {
-					let subject = this.getEmailSubject(
-						result.status,
-						monitor.name,
-						alert.config.config.subjectPrefix,
-					);
+				let sentAt = new Date();
+				let eventType: "down" | "degraded" = result.status === "error" ? "down" : "degraded";
+				let snapshot = {
+					type: "dns" as const,
+					status: result.status,
+					resolvedValue: result.resolvedValue,
+					domain: monitor.domain,
+					recordType: monitor.recordType,
+				};
 
-					await resend.emails.send({
-						to: alert.config.config.to,
-						from: "Uptime <no-reply@uptime.sergiodxa.com>",
-						replyTo: "hello@sergiodxa.com",
-						subject,
-						text: this.getEmailBody(monitor, result),
-					});
+				try {
+					if (alert.config.strategy === "email") {
+						let subject = this.getEmailSubject(
+							result.status,
+							monitor.name,
+							alert.config.config.subjectPrefix,
+						);
 
-					this.logger.info("job.check-dns.alert-sent", {
-						monitorId: monitor.id,
-						alertId: alert.id,
-						alertType: "email",
-					});
-				}
+						await resend.emails.send({
+							to: alert.config.config.to,
+							from: "Uptime <no-reply@uptime.sergiodxa.com>",
+							replyTo: "hello@sergiodxa.com",
+							subject,
+							text: this.getEmailBody(monitor, result),
+						});
 
-				if (alert.config.strategy === "webhook") {
-					let payload = {
-						type: "dns_change",
-						monitor: {
-							id: monitor.id,
-							name: monitor.name,
-							domain: monitor.domain,
-							recordType: monitor.recordType,
-						},
-						result: {
-							status: result.status,
-							resolvedValue: result.resolvedValue,
-							errorMessage: result.errorMessage,
-						},
-						timestamp: new Date().toISOString(),
-					};
-
-					let response = await fetch(alert.config.config.url, {
-						method: "POST",
-						headers: {
-							"Content-Type": "application/json",
-							...(alert.config.config.secret
-								? { "X-Webhook-Secret": alert.config.config.secret }
-								: {}),
-						},
-						body: JSON.stringify(payload),
-					});
-
-					if (!response.ok) {
-						throw new Error(`Webhook failed with status ${response.status}`);
+						this.logger.info("job.check-dns.alert-sent", {
+							monitorId: monitor.id,
+							alertId: alert.id,
+							alertType: "email",
+						});
 					}
 
-					this.logger.info("job.check-dns.alert-sent", {
-						monitorId: monitor.id,
-						alertId: alert.id,
-						alertType: "webhook",
-					});
-				}
+					if (alert.config.strategy === "webhook") {
+						let payload = {
+							type: "dns_change",
+							monitor: {
+								id: monitor.id,
+								name: monitor.name,
+								domain: monitor.domain,
+								recordType: monitor.recordType,
+							},
+							result: {
+								status: result.status,
+								resolvedValue: result.resolvedValue,
+								errorMessage: result.errorMessage,
+							},
+							timestamp: new Date().toISOString(),
+						};
 
-				if (alert.config.strategy === "slack") {
-					let message = this.getSlackMessage(monitor, result);
+						let response = await fetch(alert.config.config.url, {
+							method: "POST",
+							headers: {
+								"Content-Type": "application/json",
+								...(alert.config.config.secret
+									? { "X-Webhook-Secret": alert.config.config.secret }
+									: {}),
+							},
+							body: JSON.stringify(payload),
+						});
 
-					let response = await fetch(alert.config.config.webhookUrl, {
-						method: "POST",
-						headers: { "Content-Type": "application/json" },
-						body: JSON.stringify({
-							text: message,
-							...(alert.config.config.channel ? { channel: alert.config.config.channel } : {}),
-						}),
-					});
+						if (!response.ok) {
+							throw new Error(`Webhook failed with status ${response.status}`);
+						}
 
-					if (!response.ok) {
-						throw new Error(`Slack webhook failed with status ${response.status}`);
+						this.logger.info("job.check-dns.alert-sent", {
+							monitorId: monitor.id,
+							alertId: alert.id,
+							alertType: "webhook",
+						});
 					}
 
-					this.logger.info("job.check-dns.alert-sent", {
-						monitorId: monitor.id,
-						alertId: alert.id,
-						alertType: "slack",
-					});
-				}
+					if (alert.config.strategy === "slack") {
+						let message = this.getSlackMessage(monitor, result);
 
-				if (alert.config.strategy === "discord") {
-					let message = this.getDiscordMessage(monitor, result);
+						let response = await fetch(alert.config.config.webhookUrl, {
+							method: "POST",
+							headers: { "Content-Type": "application/json" },
+							body: JSON.stringify({
+								text: message,
+								...(alert.config.config.channel ? { channel: alert.config.config.channel } : {}),
+							}),
+						});
 
-					let response = await fetch(alert.config.config.webhookUrl, {
-						method: "POST",
-						headers: { "Content-Type": "application/json" },
-						body: JSON.stringify({ content: message }),
-					});
+						if (!response.ok) {
+							throw new Error(`Slack webhook failed with status ${response.status}`);
+						}
 
-					if (!response.ok) {
-						throw new Error(`Discord webhook failed with status ${response.status}`);
+						this.logger.info("job.check-dns.alert-sent", {
+							monitorId: monitor.id,
+							alertId: alert.id,
+							alertType: "slack",
+						});
 					}
 
-					this.logger.info("job.check-dns.alert-sent", {
-						monitorId: monitor.id,
+					if (alert.config.strategy === "discord") {
+						let message = this.getDiscordMessage(monitor, result);
+
+						let response = await fetch(alert.config.config.webhookUrl, {
+							method: "POST",
+							headers: { "Content-Type": "application/json" },
+							body: JSON.stringify({ content: message }),
+						});
+
+						if (!response.ok) {
+							throw new Error(`Discord webhook failed with status ${response.status}`);
+						}
+
+						this.logger.info("job.check-dns.alert-sent", {
+							monitorId: monitor.id,
+							alertId: alert.id,
+							alertType: "discord",
+						});
+					}
+
+					await recordAlertEvent(this.db, {
 						alertId: alert.id,
-						alertType: "discord",
+						monitorId: monitor.id,
+						eventType,
+						status: "sent",
+						sentAt,
+						monitorType: "dns",
+						monitorName: monitor.name,
+						snapshot,
 					});
+				} catch (error) {
+					let errorMessage = error instanceof Error ? error.message : String(error);
+					await recordAlertEvent(this.db, {
+						alertId: alert.id,
+						monitorId: monitor.id,
+						eventType,
+						status: "failed",
+						sentAt,
+						errorMessage,
+						monitorType: "dns",
+						monitorName: monitor.name,
+						snapshot,
+					});
+					throw error;
 				}
 			}),
 		);

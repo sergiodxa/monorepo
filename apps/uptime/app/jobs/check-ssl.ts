@@ -5,6 +5,7 @@ import { eq } from "drizzle-orm";
 import database from "~/db/index";
 import * as schema from "~/db/schema";
 import { pingUptime } from "~/lib/ping-uptime";
+import { recordAlertEvent } from "~/services/alert-cooldown";
 import { calculateSslStatus, shouldSendSslAlert } from "~/services/check-ssl";
 
 import type { Job } from "./base";
@@ -21,15 +22,8 @@ export default class CheckSslJob implements Job {
 		try {
 			this.logger.info("job.check-ssl.started", { messageId: message.id });
 
-			// Ping uptime monitor
 			await pingUptime("2140cbc2-e18e-441c-9ef9-3d516a9e3a19", env.UPTIME_CRON_API_KEY);
 
-			// Get all monitors with SSL monitoring enabled
-			this.logger.info("database.query", {
-				table: "monitors",
-				operation: "select",
-				filter: "sslMonitoringEnabled=true",
-			});
 			let monitors = await this.db.query.monitors.findMany({
 				columns: {
 					id: true,
@@ -97,7 +91,6 @@ export default class CheckSslJob implements Job {
 			monitor.sslExpiryWarningDays,
 		);
 
-		// Update the SSL status in the database
 		await this.db
 			.update(schema.monitors)
 			.set({
@@ -112,9 +105,8 @@ export default class CheckSslJob implements Job {
 			daysUntilExpiry,
 		});
 
-		// Check if we should send an alert
 		if (shouldSendSslAlert(status, daysUntilExpiry)) {
-			await this.sendSslAlerts(monitor, status, daysUntilExpiry);
+			await this.sendSslAlerts(monitor, status, daysUntilExpiry, monitor.sslExpiresAt);
 		}
 	}
 
@@ -128,17 +120,15 @@ export default class CheckSslJob implements Job {
 		},
 		status: string,
 		daysUntilExpiry: number | null,
+		expiresAt: Date | null,
 	): Promise<void> {
-		// Get alerts configured for this team/monitor
 		let alerts = await this.db.query.alerts.findMany({
 			where(fields, operators) {
 				return operators.or(
-					// Team-level alerts (no specific monitor)
 					operators.and(
 						operators.eq(fields.teamId, monitor.teamId),
 						operators.isNull(fields.monitorId),
 					),
-					// Monitor-specific alerts
 					operators.and(
 						operators.eq(fields.teamId, monitor.teamId),
 						operators.eq(fields.monitorId, monitor.id),
@@ -148,9 +138,7 @@ export default class CheckSslJob implements Job {
 		});
 
 		if (alerts.length === 0) {
-			this.logger.info("job.check-ssl.no-alerts-configured", {
-				monitorId: monitor.id,
-			});
+			this.logger.info("job.check-ssl.no-alerts-configured", { monitorId: monitor.id });
 			return;
 		}
 
@@ -158,64 +146,108 @@ export default class CheckSslJob implements Job {
 
 		let results = await Promise.allSettled(
 			alerts.map(async (alert) => {
-				if (alert.config.strategy === "email") {
-					let subject = this.getEmailSubject(
-						status,
-						monitor.name,
-						daysUntilExpiry,
-						alert.config.config.subjectPrefix,
-					);
+				let sentAt = new Date();
+				let eventType: "down" | "degraded" = status === "expired" ? "down" : "degraded";
+				let hostname = (() => {
+					try {
+						return new URL(monitor.url).hostname;
+					} catch {
+						return monitor.url;
+					}
+				})();
+				let snapshot = {
+					type: "ssl" as const,
+					status,
+					expiresAt: expiresAt ? expiresAt.toISOString() : null,
+					daysUntilExpiry,
+					hostname,
+				};
 
-					await resend.emails.send({
-						to: alert.config.config.to,
-						from: "Uptime <no-reply@uptime.sergiodxa.com>",
-						replyTo: "hello@sergiodxa.com",
-						subject,
-						text: this.getEmailBody(monitor, status, daysUntilExpiry),
-					});
-
-					this.logger.info("job.check-ssl.alert-sent", {
-						monitorId: monitor.id,
-						alertId: alert.id,
-						alertType: "email",
-					});
-				}
-
-				if (alert.config.strategy === "webhook") {
-					let payload = {
-						type: "ssl_expiry",
-						monitor: {
-							id: monitor.id,
-							name: monitor.name,
-							url: monitor.url,
-						},
-						ssl: {
+				try {
+					if (alert.config.strategy === "email") {
+						let subject = this.getEmailSubject(
 							status,
+							monitor.name,
 							daysUntilExpiry,
-						},
-						timestamp: new Date().toISOString(),
-					};
+							alert.config.config.subjectPrefix,
+						);
 
-					let response = await fetch(alert.config.config.url, {
-						method: "POST",
-						headers: {
-							"Content-Type": "application/json",
-							...(alert.config.config.secret
-								? { "X-Webhook-Secret": alert.config.config.secret }
-								: {}),
-						},
-						body: JSON.stringify(payload),
-					});
+						await resend.emails.send({
+							to: alert.config.config.to,
+							from: "Uptime <no-reply@uptime.sergiodxa.com>",
+							replyTo: "hello@uptime.sergiodxa.com",
+							subject,
+							text: this.getEmailBody(monitor, status, daysUntilExpiry),
+						});
 
-					if (!response.ok) {
-						throw new Error(`Webhook failed with status ${response.status}`);
+						this.logger.info("job.check-ssl.alert-sent", {
+							monitorId: monitor.id,
+							alertId: alert.id,
+							alertType: "email",
+						});
 					}
 
-					this.logger.info("job.check-ssl.alert-sent", {
-						monitorId: monitor.id,
+					if (alert.config.strategy === "webhook") {
+						let payload = {
+							type: "ssl_expiry",
+							monitor: {
+								id: monitor.id,
+								name: monitor.name,
+								url: monitor.url,
+							},
+							ssl: {
+								status,
+								daysUntilExpiry,
+							},
+							timestamp: new Date().toISOString(),
+						};
+
+						let response = await fetch(alert.config.config.url, {
+							method: "POST",
+							headers: {
+								"Content-Type": "application/json",
+								...(alert.config.config.secret
+									? { "X-Webhook-Secret": alert.config.config.secret }
+									: {}),
+							},
+							body: JSON.stringify(payload),
+						});
+
+						if (!response.ok) {
+							throw new Error(`Webhook failed with status ${response.status}`);
+						}
+
+						this.logger.info("job.check-ssl.alert-sent", {
+							monitorId: monitor.id,
+							alertId: alert.id,
+							alertType: "webhook",
+						});
+					}
+
+					await recordAlertEvent(this.db, {
 						alertId: alert.id,
-						alertType: "webhook",
+						monitorId: monitor.id,
+						eventType,
+						status: "sent",
+						sentAt,
+						monitorType: "ssl",
+						monitorName: monitor.name,
+						snapshot,
 					});
+				} catch (error) {
+					let errorMessage = error instanceof Error ? error.message : String(error);
+					await recordAlertEvent(this.db, {
+						alertId: alert.id,
+						monitorId: monitor.id,
+						eventType,
+						status: "failed",
+						sentAt,
+						errorMessage,
+						monitorType: "ssl",
+						monitorName: monitor.name,
+						snapshot,
+					});
+					throw error;
 				}
 			}),
 		);

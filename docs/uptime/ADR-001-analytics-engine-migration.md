@@ -1037,15 +1037,17 @@ The API token needs the `Account Analytics: Read` permission.
 - [x] **Phase 3: Daily Aggregation Job** - Cron job created to run at 1 AM UTC
 - [x] **Dual-write verified** - 440+ events recorded in Analytics Engine, healthcheck confirms connectivity
 - [x] **Phase 4: Dashboard uses Analytics Engine** - Dashboard queries read from AE with KV cache; AE failure banner and SSL stat card added
+- [x] **Phase 5: Alert Event Updates** - Alert events recorded with snapshots across HTTP, Cron, DNS, TCP, SSL
 
 ### Next Step
 
-**Phase 5: Alert Event Updates (Remaining)**
+**Phase 8: Stop Dual-Write (after AE read stability)**
 
-1. Add alert recording (with snapshot) for DNS, TCP, and SSL jobs into `alertEvents`
-2. Keep existing partial work: HTTP and Cron alert snapshots already implemented
+1. Remove D1 writes from `ping.ts` and `check-tcp.ts`
+2. Keep AE as sole real-time source for HTTP/TCP
+3. Retain D1 tables temporarily for backfill reference
 
-**Reminder:** DNS, TCP, and SSL jobs currently send alerts directly and do not write alert events; adding these writes is new functionality beyond the initial scope and should be done carefully.
+Then Phase 9: Backfill `monitor_daily_stats` from existing D1 data (idempotent batches, no AE backfill).
 
 ## Notes
 
