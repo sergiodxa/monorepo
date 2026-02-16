@@ -11,7 +11,18 @@ This pattern is also known as "railway-oriented programming" - your data flows t
 ## Usage
 
 ```typescript
-import { success, failure, isSuccess, isFailure, type Result } from "@pkg/result";
+import {
+	success,
+	failure,
+	isSuccess,
+	isFailure,
+	unwrap,
+	match,
+	wrap,
+	retry,
+	partition,
+	type Result,
+} from "@pkg/result";
 
 function divide(a: number, b: number): Result<number, Error> {
 	if (b === 0) {
@@ -194,6 +205,166 @@ let result = divide(10, 0);
 failed(result); // Doesn't throw
 // After this line, TypeScript knows result is Failure<Error>
 console.error(result.error.message); // "Division by zero"
+```
+
+#### `unwrap<T, E extends Error>(result: Result<T, E> | Promise<Result<T, E>>, fallback?: (error: E) => T): T | Promise<T>`
+
+Extract the success value from a Result, or throw/compute a fallback on failure. Accepts both sync and async Results.
+
+**Parameters:**
+
+- `result`: The Result (or Promise of Result) to unwrap
+- `fallback`: Optional function to compute a fallback value from the error
+
+**Returns:**
+
+- The success data, or the fallback value if provided and Result is a Failure
+
+**Throws:**
+
+- The error from the Failure if no fallback is provided
+
+**Example:**
+
+```typescript
+let data = unwrap(success(42)); // 42
+let data = unwrap(failure(new Error("oops"))); // throws Error("oops")
+
+// With fallback
+let count = unwrap(failure(new Error("not found")), () => 0); // 0
+
+// With async Results
+let user = await unwrap(fetchUser(id));
+let user = await unwrap(fetchUser(id), () => defaultUser);
+```
+
+#### `match<T, E extends Error, R>(result: Result<T, E> | Promise<Result<T, E>>, handlers: { success: (data: T) => R; failure: (error: E) => R }): R | Promise<R>`
+
+Pattern match on a Result, calling the appropriate handler based on its status. Accepts both sync and async Results.
+
+**Parameters:**
+
+- `result`: The Result (or Promise of Result) to match on
+- `handlers`: Object with `success` and `failure` handler functions
+
+**Returns:**
+
+- The return value of the matched handler
+
+**Example:**
+
+```typescript
+let message = match(result, {
+	success: (user) => `Hello, ${user.name}!`,
+	failure: (error) => `Error: ${error.message}`,
+});
+
+// Transform Result to HTTP status
+let status = match(result, {
+	success: () => 200,
+	failure: (e) => (e instanceof NotFoundError ? 404 : 500),
+});
+
+// With async Results
+let response = await match(fetchUser(id), {
+	success: (user) => json(user),
+	failure: (error) => json({ error: error.message }, { status: 404 }),
+});
+```
+
+#### `wrap<T>(fn: () => T): Result<T, Error> | Promise<Result<T, Error>>`
+
+Convert a throwing function into a Result-returning function. Catches exceptions and returns them as Failure instead of throwing. Handles both sync and async functions.
+
+**Parameters:**
+
+- `fn`: Function to wrap (can be sync or async)
+
+**Returns:**
+
+- Success with the value if fn succeeds, Failure with Error if fn throws
+
+**Example:**
+
+```typescript
+// Sync function
+let result = wrap(() => JSON.parse('{"valid": true}'));
+if (isSuccess(result)) console.log(result.data); // { valid: true }
+
+// Async function
+let result = await wrap(() => fetch("/api/data").then((r) => r.json()));
+if (isFailure(result)) console.error(result.error.message);
+```
+
+#### `retry<T, E extends Error>(fn: () => Promise<Result<T, E>>, options: retry.Options<E>): Promise<Result<T, E | RetryError>>`
+
+Retry a Result-returning async function with configurable backoff. Retries until success, max attempts exceeded, or `when` predicate returns false.
+
+**Parameters:**
+
+- `fn`: Async function that returns a Result
+- `options.times`: Maximum number of retry attempts
+- `options.delay`: Base delay between retries (number in ms or string like "100ms", "1s")
+- `options.backoff`: Backoff strategy: "constant", "linear", or "exponential" (default)
+- `options.when`: Optional predicate to decide if error should be retried
+
+**Returns:**
+
+- The successful Result, or a Failure with RetryError after all attempts exhausted
+
+**Example:**
+
+```typescript
+let result = await retry(() => fetchData(url), { times: 3, delay: "100ms" });
+
+// Only retry on network errors with exponential backoff
+let result = await retry(() => fetchData(url), {
+	times: 5,
+	delay: "1s",
+	backoff: "exponential",
+	when: (error) => error instanceof NetworkError,
+});
+```
+
+#### `partition<T, E extends Error>(results: Result<T, E>[]): [T[], E[]]`
+
+Split an array of Results into separate success values and failure errors. Processes the array in a single pass for efficiency.
+
+**Parameters:**
+
+- `results`: Array of Result objects to partition
+
+**Returns:**
+
+- Tuple of `[successValues, failureErrors]`
+
+**Example:**
+
+```typescript
+let results = [success(1), failure(new Error("a")), success(2)];
+let [values, errors] = partition(results);
+// values = [1, 2]
+// errors = [Error("a")]
+
+// Process multiple async operations and separate successes from failures
+let results = await Promise.all(urls.map((url) => wrap(() => fetch(url))));
+let [responses, errors] = partition(results);
+console.log(`${responses.length} succeeded, ${errors.length} failed`);
+```
+
+### Classes
+
+#### `RetryError`
+
+Error thrown when all retry attempts have been exhausted.
+
+**Example:**
+
+```typescript
+let result = await retry(() => fetchData(), { times: 3, delay: "100ms" });
+if (isFailure(result) && result.error instanceof RetryError) {
+	console.log(result.error.message); // "Failed after 3 attempts"
+}
 ```
 
 ## Type Safety
