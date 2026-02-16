@@ -8,17 +8,18 @@ const UPTIME_URL = new URL("https://uptime.sergiodxa.com");
 
 export namespace Job {
 	export interface UptimeOptions {
-		token: string;
+		token?: string;
+		monitorId?: string;
 	}
 
 	export interface ConstructorOptions {
-		uptime?: UptimeOptions & { monitorId: string };
+		uptime?: UptimeOptions;
 		logger: BatchedLogger;
 	}
 
 	export interface RunOptions extends Omit<ConstructorOptions, "logger" | "uptime"> {
 		message: Message<unknown>;
-		uptime?: UptimeOptions;
+		uptime?: Omit<UptimeOptions, "monitorId">;
 	}
 }
 
@@ -30,17 +31,13 @@ export abstract class Job {
 		options: Job.RunOptions,
 	): Promise<void> {
 		let id = `job:${dasherize(underscore(this.name))}:${options.message.id}`;
-		let uptime =
-			options.uptime && this.monitorId
-				? { token: options.uptime.token, monitorId: this.monitorId }
-				: undefined;
-		let job = new this(
-			{ uptime, logger: new BatchedLogger(id) },
-			options.message.body as JSONValue,
-		);
+		let uptime = { token: options.uptime?.token, monitorId: this.monitorId };
+		let logger = new BatchedLogger(id);
+
+		let job = new this({ uptime, logger }, options.message.body as JSONValue);
 
 		try {
-			job.logger.info("job.started", {
+			logger.info("job.started", {
 				id: options.message.id,
 				attempts: options.message.attempts,
 			});
@@ -50,13 +47,13 @@ export abstract class Job {
 
 			options.message.ack();
 
-			job.logger.info("job.completed", {
+			logger.info("job.completed", {
 				id: options.message.id,
 				attempts: options.message.attempts,
 			});
 		} catch (error) {
 			if (error instanceof Job.RetryError) {
-				job.logger.error("job.retrying", {
+				logger.error("job.retrying", {
 					id: options.message.id,
 					attempts: options.message.attempts,
 					error: {
@@ -69,7 +66,7 @@ export abstract class Job {
 			}
 
 			if (error instanceof Job.NonRetriableError) {
-				job.logger.error("job.non-retriable", {
+				logger.error("job.non-retriable", {
 					id: options.message.id,
 					attempts: options.message.attempts,
 					error: {
@@ -83,7 +80,7 @@ export abstract class Job {
 
 			if (error instanceof Job.FetchError || error instanceof Job.NetworkError) {
 				// use info level as this can be transient, we only want to know about it
-				job.logger.info("job.uptime-failed", {
+				logger.info("job.uptime-failed", {
 					error: {
 						name: error instanceof Error ? error.name : "UnknownError",
 						message: error instanceof Error ? error.message : String(error),
@@ -96,7 +93,7 @@ export abstract class Job {
 				return options.message.ack();
 			}
 
-			job.logger.error("job.failed", {
+			logger.error("job.failed", {
 				id: options.message.id,
 				attempts: options.message.attempts,
 				error: {
@@ -107,7 +104,7 @@ export abstract class Job {
 
 			throw error; // Let Cloudflare handle retries for unexpected errors
 		} finally {
-			job.logger.flush();
+			logger.flush();
 		}
 	}
 
@@ -141,9 +138,7 @@ export abstract class Job {
 
 		try {
 			let response = await fetch(url, { method: "POST", headers: headers });
-
 			if (response.ok) return;
-
 			throw new Job.FetchError(response.status, await response.text());
 		} catch (error) {
 			if (error instanceof Job.FetchError) throw error;
