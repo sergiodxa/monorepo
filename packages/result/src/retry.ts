@@ -5,8 +5,25 @@ import type { Result } from "./types.js";
 import { failure } from "./failure.js";
 import { isSuccess } from "./is-success.js";
 
+/**
+ * Error thrown when all retry attempts have been exhausted.
+ * Contains information about how many attempts were made before giving up.
+ *
+ * @example
+ * ```ts
+ * let result = await retry(() => fetchData(), { times: 3, delay: "100ms" });
+ * if (isFailure(result) && result.error instanceof RetryError) {
+ *   console.log(result.error.message); // "Failed after 3 attempts"
+ * }
+ * ```
+ */
 export class RetryError extends Error {
 	override name = "RetryError";
+
+	/**
+	 * Create a new RetryError.
+	 * @param attempts - The number of attempts made before failing
+	 */
 	constructor(attempts: number) {
 		super(`Failed after ${attempts} attempts`);
 	}
@@ -27,12 +44,37 @@ export namespace retry {
 
 /**
  * Retry a Result-returning async function with configurable backoff.
+ * Retries until success, max attempts exceeded, or `when` predicate returns false.
  *
- * - Retries until success, `times` is exceeded, or `when` returns false.
- * - Delay calculation:
- *   - constant: delay
- *   - linear: delay * attempt
- *   - exponential: delay * 2^(attempt-1)
+ * @param fn - Async function that returns a Result
+ * @param options - Retry configuration
+ * @param options.times - Maximum number of retry attempts
+ * @param options.delay - Base delay between retries (number in ms or string like "100ms", "1s")
+ * @param options.backoff - Backoff strategy: "constant", "linear", or "exponential" (default)
+ * @param options.when - Optional predicate to decide if error should be retried
+ * @returns The successful Result, or a Failure with RetryError after all attempts exhausted
+ *
+ * @example
+ * ```ts
+ * let result = await retry(
+ *   () => fetchData(url),
+ *   { times: 3, delay: "100ms" }
+ * );
+ * ```
+ *
+ * @example
+ * ```ts
+ * // Only retry on network errors
+ * let result = await retry(
+ *   () => fetchData(url),
+ *   {
+ *     times: 5,
+ *     delay: "1s",
+ *     backoff: "exponential",
+ *     when: (error) => error instanceof NetworkError,
+ *   }
+ * );
+ * ```
  */
 export async function retry<T, E extends Error>(
 	fn: () => Promise<Result<T, E>>,

@@ -4,8 +4,19 @@ import { failure } from "./failure.js";
 import { success } from "./success.js";
 
 export namespace wrap {
+	/**
+	 * Type helper that detects if T is the `any` type.
+	 * Used to handle functions like `JSON.parse` that return `any`.
+	 */
 	export type IsAny<T> = 0 extends 1 & T ? true : false;
 
+	/**
+	 * Computes the return type for `wrap` based on the wrapped function's return type.
+	 * - For `any` return types: `Result<any, Error>`
+	 * - For `never` return types (always throws): `Result<never, Error>`
+	 * - For `Promise<T>` return types: `Promise<Result<T, Error>>`
+	 * - For sync return types: `Result<T, Error>`
+	 */
 	export type ReturnType<T> =
 		IsAny<T> extends true
 			? Result<any, Error>
@@ -17,11 +28,25 @@ export namespace wrap {
 }
 
 /**
- * Wrap a throwing function into a Result-returning function.
- * - If the function succeeds, returns success(value).
- * - If the function throws, returns failure(error).
+ * Convert a throwing function into a Result-returning function.
+ * Catches exceptions and returns them as Failure instead of throwing.
  *
- * Handles both sync and async functions.
+ * @param fn - Function to wrap (can be sync or async)
+ * @returns Success with the value if fn succeeds, Failure with Error if fn throws
+ *
+ * @example
+ * ```ts
+ * // Sync function
+ * let result = wrap(() => JSON.parse('{"valid": true}'));
+ * if (isSuccess(result)) console.log(result.data); // { valid: true }
+ * ```
+ *
+ * @example
+ * ```ts
+ * // Async function
+ * let result = await wrap(() => fetch("/api/data").then((r) => r.json()));
+ * if (isFailure(result)) console.error(result.error.message);
+ * ```
  */
 export function wrap<T>(fn: () => T): wrap.ReturnType<T>;
 export function wrap(fn: () => unknown): Result<unknown, Error> | Promise<Result<unknown, Error>> {
