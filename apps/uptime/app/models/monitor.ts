@@ -129,7 +129,8 @@ export default class Monitor {
 
 		let messages: MessageSendRequest<{
 			type: "ping";
-			payload: { monitorId: string; ownerId: string };
+			monitorId: string;
+			ownerId: string;
 		}>[] = monitors
 			.filter((monitor) => {
 				let lastResult = monitor.results[0];
@@ -148,7 +149,8 @@ export default class Monitor {
 				return {
 					body: {
 						type: "ping",
-						payload: { monitorId: monitor.id, ownerId: monitor.team.ownerId },
+						monitorId: monitor.id,
+						ownerId: monitor.team.ownerId,
 					},
 					contentType: "json",
 				};
