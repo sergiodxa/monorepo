@@ -5,7 +5,7 @@ import database from "~/db/index";
 import Monitor from "~/models/monitor";
 
 export class CleanJob extends Job {
-	static monitorId = "80294988-476e-4e99-9f5c-abfeb369316a";
+	static override monitorId = "80294988-476e-4e99-9f5c-abfeb369316a";
 
 	async perform(): Promise<void> {
 		let db = database(env.DB);

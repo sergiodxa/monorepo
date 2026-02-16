@@ -20,7 +20,7 @@ export namespace AggregateDailyStatsJob {
 }
 
 export class AggregateDailyStatsJob extends Job {
-	static monitorId = "3f5a0689-1ced-4fcc-826d-3c1dc3c2795e";
+	static override monitorId = "3f5a0689-1ced-4fcc-826d-3c1dc3c2795e";
 
 	async perform(): Promise<void> {
 		let db = database(env.DB);

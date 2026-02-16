@@ -5,7 +5,7 @@ import database from "~/db/index";
 import CronJobMonitor from "~/models/cron-job-monitor";
 
 export class CleanCronJobPingsJob extends Job {
-	static monitorId = "31db20cb-8736-44fa-9ac7-448d2200befd";
+	static override monitorId = "31db20cb-8736-44fa-9ac7-448d2200befd";
 
 	async perform(): Promise<void> {
 		let db = database(env.DB);

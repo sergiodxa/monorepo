@@ -16,7 +16,7 @@ import { checkTcpConnection } from "~/services/check-tcp";
  * See services/check-tcp.ts for details.
  */
 export class CheckTcpJob extends Job {
-	static monitorId = "94276ec1-18f9-4dde-8a09-c5a00df29454";
+	static override monitorId = "94276ec1-18f9-4dde-8a09-c5a00df29454";
 
 	async perform(): Promise<void> {
 		let db = database(env.DB);

@@ -12,7 +12,7 @@ import { checkDns, type DnsRecordType } from "~/services/check-dns";
  * Runs hourly to verify DNS records and detect changes.
  */
 export class CheckDnsJob extends Job {
-	static monitorId = "3a620acd-43f9-4f48-9a32-b9a87698e44e";
+	static override monitorId = "3a620acd-43f9-4f48-9a32-b9a87698e44e";
 
 	async perform(): Promise<void> {
 		let db = database(env.DB);

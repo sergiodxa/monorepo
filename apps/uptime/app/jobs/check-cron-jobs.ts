@@ -28,7 +28,7 @@ export namespace CheckCronJobsJob {
  * Runs on a schedule to detect late or missed cron executions.
  */
 export class CheckCronJobsJob extends Job {
-	static monitorId = "70a5dba9-8447-4cc0-a5f6-d0e41dc6b9e5";
+	static override monitorId = "70a5dba9-8447-4cc0-a5f6-d0e41dc6b9e5";
 
 	async perform(): Promise<void> {
 		let db = database(env.DB);
