@@ -2,6 +2,7 @@ import type { Message } from "@cloudflare/workers-types";
 import type { JSONValue } from "@pkg/types";
 
 import { BatchedLogger } from "@pkg/logger";
+import { ValidationError } from "@pkg/validate";
 import { dasherize, underscore } from "inflected";
 
 const UPTIME_URL = new URL("https://uptime.sergiodxa.com");
@@ -72,6 +73,15 @@ export abstract class Job {
 					error: {
 						name: error instanceof Error ? error.name : "UnknownError",
 						message: error instanceof Error ? error.message : String(error),
+						cause:
+							error instanceof Error && error.cause
+								? {
+										name: error.cause instanceof Error ? error.cause.name : "UnknownError",
+										message:
+											error.cause instanceof Error ? error.cause.message : String(error.cause),
+										issues: error.cause instanceof ValidationError ? error.cause.issues : undefined,
+									}
+								: undefined,
 					},
 				});
 
