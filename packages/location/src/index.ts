@@ -51,7 +51,10 @@ export class Location implements Omit<
 
 	toString() {
 		let search = this.#search.toString();
-		return this.#pathname + (search ? `?${search}` : "") + (this.#hash ? `#${this.#hash}` : "");
+		let parts = [this.#pathname];
+		if (search) parts.push(`?${search}`);
+		if (this.#hash) parts.push(`#${this.#hash}`);
+		return parts.join("");
 	}
 
 	toJSON() {
@@ -63,13 +66,8 @@ export class Location implements Omit<
 			return Location.from(new URL(input, "https://example.com"));
 		}
 
-		if (input instanceof Location) {
-			return new Location(input);
-		}
-
-		if (input instanceof URL) {
-			return new Location(input);
-		}
+		if (input instanceof Location) return new Location(input);
+		if (input instanceof URL) return new Location(input);
 
 		throw new TypeError("Location.from expects a string, URL, or Location");
 	}
