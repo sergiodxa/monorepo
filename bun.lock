@@ -375,8 +375,12 @@
     "packages/result": {
       "name": "@pkg/result",
       "version": "0.0.1",
+      "dependencies": {
+        "ms": "^2.1.3",
+      },
       "devDependencies": {
         "@types/bun": "^1.3.9",
+        "@types/ms": "^2.1.0",
       },
     },
     "packages/types": {
