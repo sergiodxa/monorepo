@@ -23,7 +23,7 @@ export async function loader({ request }: Route.LoaderArgs) {
 
 	let params = await validate(url.searchParams, LogoutSchema);
 	if (isFailure(params)) {
-		logger.warn("logout_invalid_params");
+		logger.info("logout_invalid_params");
 		return null;
 	}
 

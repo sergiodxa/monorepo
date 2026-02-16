@@ -1,8 +1,20 @@
+import { pk, timestamp } from "@pkg/db-helpers";
 import { relations } from "drizzle-orm";
 import { sqliteTable, text } from "drizzle-orm/sqlite-core";
 
-import id, { UUID_LENGTH } from "~/db/helpers/id";
-import { createdAt, updatedAt } from "~/db/helpers/timestamps";
+import type { UUID } from "~/utils/uuid";
+
+import { generateUUID } from "~/utils/uuid";
+
+const UUID_LENGTH = 36;
+
+let id = pk("id").$type<UUID>().$defaultFn(generateUUID);
+let createdAt = timestamp("created_at")
+	.notNull()
+	.$defaultFn(() => new Date());
+let updatedAt = timestamp("updated_at")
+	.notNull()
+	.$defaultFn(() => new Date());
 
 export let users = sqliteTable("users", {
 	id,

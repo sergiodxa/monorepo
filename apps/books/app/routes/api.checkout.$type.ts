@@ -1,3 +1,4 @@
+import { isFailure, isSuccess } from "@pkg/result";
 import { redirectDocument } from "react-router";
 
 import { Product } from "~/data/product";
@@ -28,10 +29,10 @@ export async function loader({ request, params }: Route.LoaderArgs) {
 	}
 
 	let discountResult = await findApplicableDiscount();
-	let discount = discountResult.status === "success" ? discountResult.data : undefined;
+	let discount = isSuccess(discountResult) ? discountResult.data : undefined;
 
-	if (discountResult.status === "failure") {
-		logger.warn("discount_lookup_failed", { error: discountResult.error.message });
+	if (isFailure(discountResult)) {
+		logger.info("discount_lookup_failed", { error: discountResult.error.message });
 	}
 
 	let checkout = await polar.checkouts.create({

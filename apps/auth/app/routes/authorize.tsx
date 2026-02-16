@@ -1,11 +1,11 @@
 import { getClientIP } from "@pkg/get-client-ip";
+import { badRequest, notFound, ok } from "@pkg/response";
 import { isFailure } from "@pkg/result";
 import { validate } from "@pkg/validate";
 import { useTranslation } from "react-i18next";
 import { Form, href, redirectDocument } from "react-router";
 import { z } from "zod";
 
-import { badRequest, notFound, ok, StatusCode } from "~/helpers/response";
 import { logger } from "~/middleware/logger";
 import { session } from "~/middleware/session";
 import generateCode from "~/services/login/generate-code";
@@ -27,7 +27,7 @@ export async function loader({ request }: Route.LoaderArgs) {
 
 	let result = await validate(url.searchParams, LoaderSchema);
 	if (isFailure(result)) {
-		logger.warn("authz_request_invalid");
+		logger.info("authz_request_invalid");
 		return badRequest({ message: "Invalid request" });
 	}
 
@@ -40,11 +40,11 @@ export async function loader({ request }: Route.LoaderArgs) {
 
 	if (flowResult.status === "failure") {
 		if (flowResult.error.code === "invalid_client") {
-			logger.warn("authz_invalid_client", { clientId: searchParams.client_id });
+			logger.info("authz_invalid_client", { clientId: searchParams.client_id });
 			return notFound({ message: flowResult.error.description });
 		}
 
-		logger.warn("authz_flow_error", { code: flowResult.error.code });
+		logger.info("authz_flow_error", { code: flowResult.error.code });
 		return badRequest({ message: flowResult.error.description });
 	}
 
@@ -98,13 +98,13 @@ let ActionSchema = z.object({
 export async function action({ request }: Route.ActionArgs) {
 	let authz = session().get("authz");
 	if (!authz) {
-		logger.warn("authz_action_missing_session");
+		logger.info("authz_action_missing_session");
 		return badRequest({ message: "Invalid request" });
 	}
 
 	let result = await validate(request, ActionSchema);
 	if (isFailure(result)) {
-		logger.warn("authz_action_validation_failed");
+		logger.info("authz_action_validation_failed");
 		return badRequest({ message: "Invalid request" });
 	}
 
@@ -121,7 +121,7 @@ export async function action({ request }: Route.ActionArgs) {
 	});
 
 	if (loginResult.status === "failure") {
-		logger.warn("authz_credential_login_failed", {
+		logger.info("authz_credential_login_failed", {
 			email: result.data.email,
 			error: loginResult.error.code,
 		});
@@ -137,18 +137,7 @@ export async function action({ request }: Route.ActionArgs) {
 export default function Component({ loaderData }: Route.ComponentProps) {
 	let { t } = useTranslation();
 
-	if (loaderData.status === StatusCode.NotFound) {
-		return (
-			<main className="w-full max-w-md rounded-xl bg-white p-8 shadow-lg dark:bg-gray-800">
-				<h1 className="mb-8 text-center text-3xl font-bold text-gray-900 dark:text-white">
-					{t("authorize.errors.unauthorizedClient.title")}
-				</h1>
-				<p>{t("authorize.errors.unauthorizedClient.description")}</p>
-			</main>
-		);
-	}
-
-	if (loaderData.status === StatusCode.BadRequest) {
+	if (!loaderData.ok) {
 		return (
 			<main className="w-full max-w-md rounded-xl bg-white p-8 shadow-lg dark:bg-gray-800">
 				<h1 className="mb-8 text-center text-3xl font-bold text-gray-900 dark:text-white">

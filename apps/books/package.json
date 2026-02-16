@@ -14,6 +14,7 @@
 	"dependencies": {
 		"@edgefirst-dev/api-client": "^0.3.0",
 		"@markdoc/markdoc": "^0.5.4",
+		"@pkg/cn": "workspace:*",
 		"@pkg/get-client-ip": "workspace:*",
 		"@pkg/location": "workspace:*",
 		"@pkg/logger": "workspace:*",

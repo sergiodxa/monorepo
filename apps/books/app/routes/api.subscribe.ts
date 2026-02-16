@@ -18,10 +18,10 @@ export async function action({ request }: Route.ActionArgs) {
 	if (isFailure(validationResult)) {
 		let error = validationResult.error;
 		if (error instanceof ValidationError && error.issues[0]) {
-			logger.warn("subscribe_validation_failed", { issue: error.issues[0].message });
+			logger.info("subscribe_validation_failed", { issue: error.issues[0].message });
 			return badRequest({ error: error.issues[0].message });
 		}
-		logger.warn("subscribe_validation_failed", { error: "Invalid form data" });
+		logger.info("subscribe_validation_failed", { error: "Invalid form data" });
 		return badRequest({ error: "Invalid form data" });
 	}
 
@@ -35,7 +35,7 @@ export async function action({ request }: Route.ActionArgs) {
 
 		if (error instanceof ButtondownError) {
 			if (error.code === "subscriber_blocked") {
-				logger.warn("subscriber_blocked", { email: payload.email });
+				logger.info("subscriber_blocked", { email: payload.email });
 				return badRequest({
 					error:
 						"My upstream provider is blocking you for some reason.\nPlease try with another email address and sorry for the inconvenience.",
@@ -43,7 +43,7 @@ export async function action({ request }: Route.ActionArgs) {
 			}
 
 			if (error.code === "email_invalid") {
-				logger.warn("subscribe_email_invalid", { email: payload.email });
+				logger.info("subscribe_email_invalid", { email: payload.email });
 				return badRequest({
 					error: "Invalid email address. \nPlease try with another email address.",
 				});

@@ -36,7 +36,7 @@ export class GitHub {
 			return success({ content: atob(response.data.content), createdAt });
 		} catch (error) {
 			if (error instanceof Error && error.name === "HttpError" && error.message === "Not Found") {
-				logger.warn("github_file_not_found", { path });
+				logger.info("github_file_not_found", { path });
 				return failure(new GitHubError(path));
 			}
 

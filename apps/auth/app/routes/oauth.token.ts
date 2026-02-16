@@ -43,7 +43,7 @@ export async function action({ request }: Route.ActionArgs) {
 	let result = await validate(request, Schema);
 
 	if (isFailure(result)) {
-		logger.warn("token_request_invalid");
+		logger.info("token_request_invalid");
 		return Response.json(
 			{ error: "invalid_request", error_description: "Invalid request body" },
 			{ status: 400 },
@@ -78,7 +78,7 @@ export async function action({ request }: Route.ActionArgs) {
 			let clientCredentials = getClientCredentialsFromHeader(request.headers);
 
 			if (!clientCredentials) {
-				logger.warn("token_missing_credentials");
+				logger.info("token_missing_credentials");
 				return Response.json(
 					{
 						error: "invalid_request",
@@ -102,7 +102,7 @@ export async function action({ request }: Route.ActionArgs) {
 		}
 	} catch (error) {
 		if (error instanceof OAuth2Error) {
-			logger.warn("token_oauth2_error", { code: error.code, message: error.message });
+			logger.info("token_oauth2_error", { code: error.code, message: error.message });
 			return Response.json(
 				{ error: error.code, error_description: error.message },
 				{ status: 400 },
@@ -130,7 +130,7 @@ export async function action({ request }: Route.ActionArgs) {
 		);
 	}
 
-	logger.warn("token_unsupported_grant");
+	logger.info("token_unsupported_grant");
 	return Response.json(
 		{
 			error: "unsupported_grant_type",

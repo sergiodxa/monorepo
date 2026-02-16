@@ -1,7 +1,7 @@
 import { getClientIP } from "@pkg/get-client-ip";
+import { badRequest } from "@pkg/response";
 import { redirectDocument } from "react-router";
 
-import { badRequest } from "~/helpers/response";
 import { db } from "~/middleware/drizzle";
 import { logger } from "~/middleware/logger";
 import { session } from "~/middleware/session";
@@ -18,13 +18,13 @@ export async function loader({ request, params }: Route.LoaderArgs) {
 	if (params.provider === "github") {
 		sub = await github(db(), request);
 	} else {
-		logger.warn("oauth_invalid_provider", { provider: params.provider });
+		logger.info("oauth_invalid_provider", { provider: params.provider });
 		return badRequest({ message: "Invalid provider" });
 	}
 
 	let authz = session().get("authz");
 	if (!authz) {
-		logger.warn("oauth_missing_authz_session");
+		logger.info("oauth_missing_authz_session");
 		return badRequest({ message: "Invalid request" });
 	}
 
