@@ -1,4 +1,3 @@
-import type { JSONValue } from "@pkg/types";
 import type { RequestHandler } from "react-router";
 
 import { logger } from "@pkg/logger";
@@ -99,14 +98,14 @@ export default {
 
 			if (result.data === "ping") {
 				let { PingJob } = await import("./jobs/ping");
-				waitUntil(PingJob.run({ message: message as Message<JSONValue> }));
+				waitUntil(PingJob.run({ message }));
 			}
 
 			if (result.data === "clean") {
 				let { CleanJob } = await import("./jobs/clean");
 				waitUntil(
 					CleanJob.run({
-						message: message as Message<JSONValue>,
+						message,
 						uptime: { monitorId: CleanJob.monitorId, token: env.UPTIME_CRON_API_KEY },
 					}),
 				);
@@ -116,7 +115,7 @@ export default {
 				let { CleanCronJobPingsJob } = await import("./jobs/clean-cron-job-pings");
 				waitUntil(
 					CleanCronJobPingsJob.run({
-						message: message as Message<JSONValue>,
+						message,
 						uptime: { monitorId: CleanCronJobPingsJob.monitorId, token: env.UPTIME_CRON_API_KEY },
 					}),
 				);
@@ -126,7 +125,7 @@ export default {
 				let { EnqueuePendingDomainsJob } = await import("./jobs/enqueue-pending-domains");
 				waitUntil(
 					EnqueuePendingDomainsJob.run({
-						message: message as Message<JSONValue>,
+						message,
 						uptime: {
 							monitorId: EnqueuePendingDomainsJob.monitorId,
 							token: env.UPTIME_CRON_API_KEY,
@@ -137,14 +136,14 @@ export default {
 
 			if (result.data === "verifyDomainOwnership") {
 				let { VerifyDomainOwnershipJob } = await import("./jobs/verify-domain-ownership");
-				waitUntil(VerifyDomainOwnershipJob.run({ message: message as Message<JSONValue> }));
+				waitUntil(VerifyDomainOwnershipJob.run({ message }));
 			}
 
 			if (result.data === "checkSsl") {
 				let { CheckSslJob } = await import("./jobs/check-ssl");
 				waitUntil(
 					CheckSslJob.run({
-						message: message as Message<JSONValue>,
+						message,
 						uptime: { monitorId: CheckSslJob.monitorId, token: env.UPTIME_CRON_API_KEY },
 					}),
 				);
@@ -154,7 +153,7 @@ export default {
 				let { CheckDnsJob } = await import("./jobs/check-dns");
 				waitUntil(
 					CheckDnsJob.run({
-						message: message as Message<JSONValue>,
+						message,
 						uptime: { monitorId: CheckDnsJob.monitorId, token: env.UPTIME_CRON_API_KEY },
 					}),
 				);
@@ -164,7 +163,7 @@ export default {
 				let { CheckTcpJob } = await import("./jobs/check-tcp");
 				waitUntil(
 					CheckTcpJob.run({
-						message: message as Message<JSONValue>,
+						message,
 						uptime: { monitorId: CheckTcpJob.monitorId, token: env.UPTIME_CRON_API_KEY },
 					}),
 				);
@@ -174,7 +173,7 @@ export default {
 				let { CheckCronJobsJob } = await import("./jobs/check-cron-jobs");
 				waitUntil(
 					CheckCronJobsJob.run({
-						message: message as Message<JSONValue>,
+						message,
 						uptime: { monitorId: CheckCronJobsJob.monitorId, token: env.UPTIME_CRON_API_KEY },
 					}),
 				);
@@ -184,7 +183,7 @@ export default {
 				let { AggregateDailyStatsJob } = await import("./jobs/aggregate-daily-stats");
 				waitUntil(
 					AggregateDailyStatsJob.run({
-						message: message as Message<JSONValue>,
+						message,
 						uptime: { monitorId: AggregateDailyStatsJob.monitorId, token: env.UPTIME_CRON_API_KEY },
 					}),
 				);

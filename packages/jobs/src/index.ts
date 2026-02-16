@@ -17,18 +17,21 @@ export namespace Job {
 		logger: BatchedLogger;
 	}
 
-	export interface RunOptions<Body> extends Omit<ConstructorOptions, "logger"> {
-		message: Message<Body>;
+	export interface RunOptions extends Omit<ConstructorOptions, "logger"> {
+		message: Message<unknown>;
 	}
 }
 
 export abstract class Job {
 	static async run<T extends Job>(
 		this: new (options: Job.ConstructorOptions, body: JSONValue) => T,
-		options: Job.RunOptions<JSONValue>,
+		options: Job.RunOptions,
 	): Promise<void> {
 		let id = `job:${dasherize(underscore(this.name))}:${options.message.id}`;
-		let job = new this({ ...options, logger: new BatchedLogger(id) }, options.message.body);
+		let job = new this(
+			{ ...options, logger: new BatchedLogger(id) },
+			options.message.body as JSONValue,
+		);
 
 		try {
 			job.logger.info("job.started", {
