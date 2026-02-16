@@ -8,8 +8,6 @@ import { recordAlertEvent } from "~/services/alert-cooldown";
 import { getLatestStatusFromAnalytics, writePingResult } from "~/services/analytics.server";
 import { checkTcpConnection } from "~/services/check-tcp";
 
-export let uptimeMonitorId = "94276ec1-18f9-4dde-8a09-c5a00df29454";
-
 /**
  * Job that checks all enabled TCP monitors.
  * Runs on a schedule to verify TCP port connectivity.
@@ -18,6 +16,8 @@ export let uptimeMonitorId = "94276ec1-18f9-4dde-8a09-c5a00df29454";
  * See services/check-tcp.ts for details.
  */
 export default class CheckTcpJob extends Job {
+	static monitorId = "94276ec1-18f9-4dde-8a09-c5a00df29454";
+
 	async perform(): Promise<void> {
 		let db = database(env.DB);
 		let monitors = await TcpMonitor.getEnabledMonitors(db);

@@ -5,29 +5,31 @@ import { eq } from "drizzle-orm";
 import database from "~/db/index";
 import * as schema from "~/db/schema";
 
-export let uptimeMonitorId = "70a5dba9-8447-4cc0-a5f6-d0e41dc6b9e5";
+export namespace CheckCronJobsJob {
+	export type Monitor = {
+		id: string;
+		name: string;
+		cronExpression: string;
+		gracePeriodSeconds: number;
+		timezone: string;
+		status: "healthy" | "late" | "missed" | "new";
+		alertOnLate: boolean;
+		lastPingAt: Date | null;
+		nextExpectedAt: Date | null;
+		teamId: string;
+		team: { id: string; ownerId: string };
+	};
 
-type CronJobMonitor = {
-	id: string;
-	name: string;
-	cronExpression: string;
-	gracePeriodSeconds: number;
-	timezone: string;
-	status: "healthy" | "late" | "missed" | "new";
-	alertOnLate: boolean;
-	lastPingAt: Date | null;
-	nextExpectedAt: Date | null;
-	teamId: string;
-	team: { id: string; ownerId: string };
-};
-
-type AlertConfig = schema.SelectAlert;
+	export type Alert = schema.SelectAlert;
+}
 
 /**
  * Job that checks all enabled cron job monitors.
  * Runs on a schedule to detect late or missed cron executions.
  */
 export default class CheckCronJobsJob extends Job {
+	static monitorId = "70a5dba9-8447-4cc0-a5f6-d0e41dc6b9e5";
+
 	async perform(): Promise<void> {
 		let db = database(env.DB);
 		let now = new Date();
@@ -111,7 +113,12 @@ export default class CheckCronJobsJob extends Job {
 				}
 
 				if (shouldAlert) {
-					let alertsSent = await this.sendAlerts(db, monitor as CronJobMonitor, newStatus, now);
+					let alertsSent = await this.sendAlerts(
+						db,
+						monitor as CheckCronJobsJob.Monitor,
+						newStatus,
+						now,
+					);
 					alertsSentCount += alertsSent;
 				}
 			}
@@ -127,7 +134,7 @@ export default class CheckCronJobsJob extends Job {
 
 	private async sendAlerts(
 		db: ReturnType<typeof database>,
-		monitor: CronJobMonitor,
+		monitor: CheckCronJobsJob.Monitor,
 		newStatus: "late" | "missed",
 		now: Date,
 	): Promise<number> {
@@ -149,7 +156,7 @@ export default class CheckCronJobsJob extends Job {
 		}
 
 		// Check cooldowns and filter alerts
-		let alertsToSend: AlertConfig[] = [];
+		let alertsToSend: CheckCronJobsJob.Alert[] = [];
 		for (let alert of alerts) {
 			let shouldSend = await this.checkCooldown(db, alert, monitor.id, now);
 			if (shouldSend) {
@@ -337,7 +344,7 @@ export default class CheckCronJobsJob extends Job {
 
 	private async checkCooldown(
 		db: ReturnType<typeof database>,
-		alert: AlertConfig,
+		alert: CheckCronJobsJob.Alert,
 		monitorId: string,
 		now: Date,
 	): Promise<boolean> {
@@ -402,7 +409,7 @@ export default class CheckCronJobsJob extends Job {
 		return `${prefix} Cron job MISSED: ${monitorName}`;
 	}
 
-	private getEmailBody(monitor: CronJobMonitor, status: "late" | "missed"): string {
+	private getEmailBody(monitor: CheckCronJobsJob.Monitor, status: "late" | "missed"): string {
 		let statusMessage =
 			status === "late"
 				? `Cron job ${monitor.name} is running late.`
@@ -431,7 +438,7 @@ Status: ${status.toUpperCase()}
 		return body;
 	}
 
-	private getSlackMessage(monitor: CronJobMonitor, status: "late" | "missed"): string {
+	private getSlackMessage(monitor: CheckCronJobsJob.Monitor, status: "late" | "missed"): string {
 		let emoji = status === "late" ? ":warning:" : ":x:";
 		let statusText = status.toUpperCase();
 
@@ -445,7 +452,7 @@ Status: ${status.toUpperCase()}
 		return message;
 	}
 
-	private getDiscordMessage(monitor: CronJobMonitor, status: "late" | "missed"): string {
+	private getDiscordMessage(monitor: CheckCronJobsJob.Monitor, status: "late" | "missed"): string {
 		let statusText = status.toUpperCase();
 
 		let message = `**Cron Job ${statusText}**: ${monitor.name}\n`;

@@ -1,3 +1,4 @@
+import type { JSONValue } from "@pkg/types";
 import type { RequestHandler } from "react-router";
 
 import { env, waitUntil } from "cloudflare:workers";
@@ -70,7 +71,6 @@ export default {
 		let { z } = await import("zod/v4");
 
 		for (let message of batch.messages) {
-			console.debug("Processing message:", message.body);
 			let result = z
 				.discriminatedUnion("type", [
 					z.object({
@@ -93,8 +93,6 @@ export default {
 				])
 				.safeParse(message.body);
 
-			console.debug("Parsed message result:", result);
-
 			if (result.success === false) {
 				console.error(result.error);
 				message.retry();
@@ -103,70 +101,110 @@ export default {
 
 			if (result.data.type === "ping") {
 				let PingJob = await import("./jobs/ping").then((m) => m.default);
-				waitUntil(new PingJob(result.data.payload).run(message));
+				waitUntil(PingJob.run({ message: message as Message<JSONValue> }));
 			}
 
 			if (result.data.type === "clean") {
 				let CleanJob = await import("./jobs/clean").then((m) => m.default);
-				waitUntil(new CleanJob().run(message));
+				waitUntil(
+					CleanJob.run({
+						message: message as Message<JSONValue>,
+						uptime: { monitorId: CleanJob.monitorId, token: env.UPTIME_CRON_API_KEY },
+					}),
+				);
 			}
 
 			if (result.data.type === "cleanCronJobPings") {
 				let CleanCronJobPingsJob = await import("./jobs/clean-cron-job-pings").then(
 					(m) => m.default,
 				);
-				waitUntil(new CleanCronJobPingsJob().run(message));
+				waitUntil(
+					CleanCronJobPingsJob.run({
+						message: message as Message<JSONValue>,
+						uptime: { monitorId: CleanCronJobPingsJob.monitorId, token: env.UPTIME_CRON_API_KEY },
+					}),
+				);
 			}
 
 			if (result.data.type === "enqueuePendingDomains") {
 				let EnqueuePendingDomainsJob = await import("./jobs/enqueue-pending-domains").then(
 					(m) => m.default,
 				);
-				waitUntil(new EnqueuePendingDomainsJob().run(message));
+				waitUntil(
+					EnqueuePendingDomainsJob.run({
+						message: message as Message<JSONValue>,
+						uptime: {
+							monitorId: EnqueuePendingDomainsJob.monitorId,
+							token: env.UPTIME_CRON_API_KEY,
+						},
+					}),
+				);
 			}
 
 			if (result.data.type === "verifyDomainOwnership") {
-				console.log("Enqueuing domain verification for teamDomainId:", result.data.teamDomainId);
-
 				let VerifyDomainOwnershipJob = await import("./jobs/verify-domain-ownership").then(
 					(m) => m.default,
 				);
-
-				waitUntil(new VerifyDomainOwnershipJob(result.data.teamDomainId).run(message));
+				waitUntil(VerifyDomainOwnershipJob.run({ message: message as Message<JSONValue> }));
 			}
 
 			if (result.data.type === "checkSsl") {
 				let CheckSslJob = await import("./jobs/check-ssl").then((m) => m.default);
-				waitUntil(new CheckSslJob().run(message));
+				waitUntil(
+					CheckSslJob.run({
+						message: message as Message<JSONValue>,
+						uptime: { monitorId: CheckSslJob.monitorId, token: env.UPTIME_CRON_API_KEY },
+					}),
+				);
 			}
 
 			if (result.data.type === "checkDns") {
 				let CheckDnsJob = await import("./jobs/check-dns").then((m) => m.default);
-				waitUntil(new CheckDnsJob().run(message));
+				waitUntil(
+					CheckDnsJob.run({
+						message: message as Message<JSONValue>,
+						uptime: { monitorId: CheckDnsJob.monitorId, token: env.UPTIME_CRON_API_KEY },
+					}),
+				);
 			}
 
 			if (result.data.type === "checkTcp") {
 				let CheckTcpJob = await import("./jobs/check-tcp").then((m) => m.default);
-				waitUntil(new CheckTcpJob().run(message));
+				waitUntil(
+					CheckTcpJob.run({
+						message: message as Message<JSONValue>,
+						uptime: { monitorId: CheckTcpJob.monitorId, token: env.UPTIME_CRON_API_KEY },
+					}),
+				);
 			}
 
 			if (result.data.type === "checkCronJobs") {
 				let CheckCronJobsJob = await import("./jobs/check-cron-jobs").then((m) => m.default);
-				waitUntil(new CheckCronJobsJob().run(message));
+				waitUntil(
+					CheckCronJobsJob.run({
+						message: message as Message<JSONValue>,
+						uptime: { monitorId: CheckCronJobsJob.monitorId, token: env.UPTIME_CRON_API_KEY },
+					}),
+				);
 			}
 
 			if (result.data.type === "aggregateDailyStats") {
 				let AggregateDailyStatsJob = await import("./jobs/aggregate-daily-stats").then(
 					(m) => m.default,
 				);
-				waitUntil(new AggregateDailyStatsJob().run(message));
+				waitUntil(
+					AggregateDailyStatsJob.run({
+						message: message as Message<JSONValue>,
+						uptime: { monitorId: AggregateDailyStatsJob.monitorId, token: env.UPTIME_CRON_API_KEY },
+					}),
+				);
 			}
 
 			if (result.data.type === "backfillDailyStats") {
 				let BackfillDailyStatsJob = await import("./jobs/backfill-daily-stats").then(
 					(m) => m.default,
 				);
-				waitUntil(new BackfillDailyStatsJob().run(message));
+				waitUntil(BackfillDailyStatsJob.run({ message: message as Message<JSONValue> }));
 			}
 		}
 	},

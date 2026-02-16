@@ -7,43 +7,24 @@ import database from "~/db/index";
 import { monitorDailyStats } from "~/db/schema";
 import { queryAnalytics } from "~/services/analytics.server";
 
-export let uptimeMonitorId = "3f5a0689-1ced-4fcc-826d-3c1dc3c2795e";
-
-interface AggregatedStats {
-	monitorId: string;
-	monitorType: "http" | "tcp";
-	totalChecks: number;
-	successfulChecks: number;
-	failedChecks: number;
-	avgResponseTimeMs: number;
-	maxResponseTimeMs: number;
-}
-
-function getYesterdayDate(): string {
-	let now = new Date();
-	let yesterday = new Date(now);
-	yesterday.setUTCDate(yesterday.getUTCDate() - 1);
-	let year = yesterday.getUTCFullYear();
-	let month = String(yesterday.getUTCMonth() + 1).padStart(2, "0");
-	let day = String(yesterday.getUTCDate()).padStart(2, "0");
-	return `${year}-${month}-${day}`;
-}
-
-function calculateStatus(
-	successfulChecks: number,
-	totalChecks: number,
-): "up" | "degraded" | "down" {
-	if (totalChecks === 0) return "down";
-	let successRate = successfulChecks / totalChecks;
-	if (successRate >= 1) return "up";
-	if (successRate >= 0.5) return "degraded";
-	return "down";
+export namespace AggregateDailyStatsJob {
+	export interface Stats {
+		monitorId: string;
+		monitorType: "http" | "tcp";
+		totalChecks: number;
+		successfulChecks: number;
+		failedChecks: number;
+		avgResponseTimeMs: number;
+		maxResponseTimeMs: number;
+	}
 }
 
 export default class AggregateDailyStatsJob extends Job {
+	static monitorId = "3f5a0689-1ced-4fcc-826d-3c1dc3c2795e";
+
 	async perform(): Promise<void> {
 		let db = database(env.DB);
-		let date = getYesterdayDate();
+		let date = this.getYesterdayDate();
 
 		this.logger.info("job.aggregate_daily_stats.date", { date });
 
@@ -64,7 +45,7 @@ export default class AggregateDailyStatsJob extends Job {
 			GROUP BY blob1, blob2
 		`;
 
-		let result = await queryAnalytics<AggregatedStats>(sql);
+		let result = await queryAnalytics<AggregateDailyStatsJob.Stats>(sql);
 
 		if (isFailure(result)) {
 			this.logger.error("job.aggregate_daily_stats.query_failed", {
@@ -86,7 +67,7 @@ export default class AggregateDailyStatsJob extends Job {
 
 		// Upsert each monitor's stats into D1
 		for (let stats of results) {
-			let status = calculateStatus(stats.successfulChecks, stats.totalChecks);
+			let status = this.calculateStatus(stats.successfulChecks, stats.totalChecks);
 
 			await db
 				.delete(monitorDailyStats)
@@ -124,5 +105,26 @@ export default class AggregateDailyStatsJob extends Job {
 			date,
 			monitorsProcessed: results.length,
 		});
+	}
+
+	private calculateStatus(
+		successfulChecks: number,
+		totalChecks: number,
+	): "up" | "degraded" | "down" {
+		if (totalChecks === 0) return "down";
+		let successRate = successfulChecks / totalChecks;
+		if (successRate >= 1) return "up";
+		if (successRate >= 0.5) return "degraded";
+		return "down";
+	}
+
+	private getYesterdayDate(): string {
+		let now = new Date();
+		let yesterday = new Date(now);
+		yesterday.setUTCDate(yesterday.getUTCDate() - 1);
+		let year = yesterday.getUTCFullYear();
+		let month = String(yesterday.getUTCMonth() + 1).padStart(2, "0");
+		let day = String(yesterday.getUTCDate()).padStart(2, "0");
+		return `${year}-${month}-${day}`;
 	}
 }
