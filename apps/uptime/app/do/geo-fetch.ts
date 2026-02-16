@@ -1,6 +1,6 @@
 import { DurableObject } from "cloudflare:workers";
 
-export default class GeoFetchDO extends DurableObject<Cloudflare.Env> {
+export class GeoFetchDO extends DurableObject<Cloudflare.Env> {
 	override async fetch(request: Request): Promise<Response> {
 		let start = performance.now();
 		let response = await fetch(request);

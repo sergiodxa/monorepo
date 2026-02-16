@@ -64,7 +64,7 @@ export default class Customer {
 		externalId: string,
 		metadata: {
 			monitorId: string;
-			resultId: string;
+			instanceId: string;
 			teamId: string;
 		},
 	) {

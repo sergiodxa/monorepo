@@ -95,14 +95,13 @@ export default class Monitor {
 
 		if (!monitor) throw new Error("Monitor not found");
 
-		let [monitorResult] = await db.insert(schema.monitorResults).values({ monitorId }).returning();
-
-		if (!monitorResult) {
-			throw new Error("Failed to create monitor result");
-		}
-
-		let workflow = await env.PING.create({ id: monitorResult.id });
-		return { monitor, monitorResult, workflow };
+		// Generate unique workflow instance ID: monitorId:timestamp
+		let instanceId = `${monitorId}:${Date.now()}`;
+		let workflow = await env.PING.create({
+			id: instanceId,
+			params: { monitorId },
+		});
+		return { monitor, workflow };
 	}
 
 	static async pingLater(db: Database, scheduledDate: Date) {

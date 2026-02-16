@@ -3,8 +3,8 @@ import type { RequestHandler } from "react-router";
 import { logger } from "@pkg/logger";
 import { env, waitUntil } from "cloudflare:workers";
 
-import GeoFetchDO from "./do/geo-fetch";
-import Ping from "./workflows/ping";
+import { GeoFetchDO } from "./do/geo-fetch";
+import { Ping } from "./workflows/ping";
 
 let handler: RequestHandler;
 
