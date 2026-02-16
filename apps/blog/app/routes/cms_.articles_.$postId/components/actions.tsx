@@ -1,8 +1,5 @@
+import { Button, Link, Toolbar } from "@pkg/ui";
 import { ArrowLeft } from "lucide-react";
-
-import { Button } from "~/ui/Button";
-import { Link } from "~/ui/Link";
-import { Toolbar } from "~/ui/Toolbar";
 
 interface ActionsProps {
 	mode: string;
@@ -16,7 +13,7 @@ export function Actions({ mode }: ActionsProps) {
 				<span>Go back</span>
 			</Link>
 			<div className="grow" />
-			<Button type="submit" variant="primary" name="intent" value={mode}>
+			<Button type="submit" color="primary" name="intent" value={mode}>
 				Save
 			</Button>
 		</Toolbar>

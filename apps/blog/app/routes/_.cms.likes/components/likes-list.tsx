@@ -1,6 +1,6 @@
-import { Button } from "react-aria-components";
+import { Button, Link } from "@pkg/ui";
 import { Trans, useTranslation } from "react-i18next";
-import { Link, useFetcher } from "react-router";
+import { useFetcher } from "react-router";
 
 import type { UUID } from "~/utils/uuid";
 
@@ -35,7 +35,7 @@ function Item(props: Like) {
 	return (
 		<li className="flex items-center justify-between gap-3 gap-x-6 py-5">
 			<div className="flex flex-col gap-1">
-				<Link to={props.url.toString()}>
+				<Link href={props.url.toString()}>
 					<h3 className="text-sm leading-6 font-semibold text-gray-900 underline">{props.title}</h3>
 				</Link>
 
@@ -51,12 +51,7 @@ function Item(props: Like) {
 			</div>
 
 			<div className="flex shrink-0 items-center gap-1">
-				<Link
-					to={props.id}
-					className="block rounded-md bg-white px-2.5 py-1.5 text-sm font-semibold text-gray-900 no-underline shadow-sm ring-1 ring-gray-300 ring-inset visited:text-gray-900 hover:bg-gray-50"
-				>
-					{t("edit")}
-				</Link>
+				<Link href={props.id}>{t("edit")}</Link>
 
 				<DeleteButton id={props.id} />
 			</div>
@@ -76,10 +71,7 @@ function DeleteButton({ id }: { id: UUID }) {
 		<fetcher.Form method="POST">
 			<input type="hidden" name="intent" value={INTENT.delete} />
 			<input type="hidden" name="id" value={id} />
-			<Button
-				type="submit"
-				className="block rounded-md bg-white px-2.5 py-1.5 text-sm font-semibold text-gray-900 no-underline shadow-sm ring-1 ring-gray-300 ring-inset visited:text-gray-900 hover:bg-gray-50"
-			>
+			<Button type="submit" color="danger" isPending={isDeleting}>
 				{isDeleting ? t("pending") : t("cta")}
 			</Button>
 		</fetcher.Form>

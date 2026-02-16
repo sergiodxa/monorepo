@@ -1,5 +1,6 @@
 import { ok } from "@pkg/response";
 import { succeeded } from "@pkg/result";
+import { Button, FieldError, Form, Input, Label, TextField } from "@pkg/ui";
 import { validate } from "@pkg/validate";
 import { href, redirect } from "react-router";
 import { z } from "zod";
@@ -7,9 +8,6 @@ import { z } from "zod";
 import { getDB } from "~/middleware/drizzle";
 import { requireUser } from "~/middleware/session";
 import { Like } from "~/models/like.server";
-import { Button } from "~/ui/Button";
-import { Form } from "~/ui/Form";
-import { TextField } from "~/ui/TextField";
 import { assertUUID } from "~/utils/uuid";
 
 import type { Route } from "./+types/route";
@@ -47,11 +45,19 @@ export async function action({ request, params }: Route.ActionArgs) {
 export default function Component({ loaderData }: Route.ComponentProps) {
 	return (
 		<Form method="post">
-			<TextField label="Title" name="title" type="text" defaultValue={loaderData.like.title} />
+			<TextField name="title" type="text" defaultValue={loaderData.like.title}>
+				<Label>Title</Label>
+				<Input />
+				<FieldError />
+			</TextField>
 
-			<TextField label="URL" name="url" type="url" defaultValue={loaderData.like.url.toString()} />
+			<TextField name="url" type="url" defaultValue={loaderData.like.url.toString()}>
+				<Label>URL</Label>
+				<Input />
+				<FieldError />
+			</TextField>
 
-			<Button type="submit" variant="primary">
+			<Button type="submit" color="primary">
 				Save
 			</Button>
 		</Form>

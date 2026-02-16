@@ -1,9 +1,10 @@
 import { getClientIP } from "@pkg/get-client-ip";
 import { badRequest, notFound, ok } from "@pkg/response";
 import { isFailure } from "@pkg/result";
+import { Button, Form, Input, TextField } from "@pkg/ui";
 import { validate } from "@pkg/validate";
 import { useTranslation } from "react-i18next";
-import { Form, href, redirectDocument } from "react-router";
+import { href, redirectDocument } from "react-router";
 import { z } from "zod";
 
 import { logger } from "~/middleware/logger";
@@ -155,43 +156,37 @@ export default function Component({ loaderData }: Route.ComponentProps) {
 			</h1>
 
 			<Form method="POST" className="mb-6 hidden space-y-6">
-				<input
-					type="text"
-					name="name"
-					placeholder={t("authorize.forms.credentials.fields.name.placeholder")}
-					required
-					className="w-full rounded-lg border border-gray-300 px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:outline-none dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400"
-				/>
+				<TextField name="name" isRequired>
+					<Input
+						placeholder={t("authorize.forms.credentials.fields.name.placeholder")}
+						className="w-full"
+					/>
+				</TextField>
 
-				<input
-					type="text"
-					name="username"
-					placeholder={t("authorize.forms.credentials.fields.username.placeholder")}
-					required
-					className="w-full rounded-lg border border-gray-300 px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:outline-none dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400"
-				/>
+				<TextField name="username" isRequired>
+					<Input
+						placeholder={t("authorize.forms.credentials.fields.username.placeholder")}
+						className="w-full"
+					/>
+				</TextField>
 
-				<input
-					type="email"
-					name="email"
-					placeholder={t("authorize.forms.credentials.fields.email.placeholder")}
-					required
-					className="w-full rounded-lg border border-gray-300 px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:outline-none dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400"
-				/>
+				<TextField name="email" type="email" isRequired>
+					<Input
+						placeholder={t("authorize.forms.credentials.fields.email.placeholder")}
+						className="w-full"
+					/>
+				</TextField>
 
-				<input
-					type="password"
-					name="password"
-					placeholder={t("authorize.forms.credentials.fields.password.placeholder")}
-					required
-					className="w-full rounded-lg border border-gray-300 px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:outline-none dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400"
-				/>
-				<button
-					type="submit"
-					className="w-full rounded-lg bg-blue-600 py-3 font-medium text-white shadow-sm transition-colors duration-200 hover:bg-blue-700"
-				>
+				<TextField name="password" type="password" isRequired>
+					<Input
+						placeholder={t("authorize.forms.credentials.fields.password.placeholder")}
+						className="w-full"
+					/>
+				</TextField>
+
+				<Button type="submit" color="primary" className="w-full">
 					{t("authorize.forms.credentials.cta")}
-				</button>
+				</Button>
 			</Form>
 
 			<div className="relative my-6 hidden">
@@ -202,9 +197,10 @@ export default function Component({ loaderData }: Route.ComponentProps) {
 			</div>
 
 			<Form action={href("/auth/:provider", { provider: "github" })} method="POST">
-				<button
+				<Button
 					type="submit"
-					className="flex w-full items-center justify-center gap-2 rounded-lg bg-gray-800 py-3 font-medium text-white shadow-sm transition-colors duration-200 hover:bg-gray-900 dark:bg-gray-700 dark:hover:bg-gray-600"
+					color="neutral"
+					className="flex w-full items-center justify-center gap-2"
 				>
 					<svg className="h-5 w-5" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
 						<path
@@ -214,7 +210,7 @@ export default function Component({ loaderData }: Route.ComponentProps) {
 						/>
 					</svg>
 					<span>{t("authorize.forms.github.cta")}</span>
-				</button>
+				</Button>
 			</Form>
 		</main>
 	);

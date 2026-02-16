@@ -1,11 +1,8 @@
+import { Button, Form, Link } from "@pkg/ui";
 import { Trans, useTranslation } from "react-i18next";
 import { useFetcher } from "react-router";
 
 import type { UUID } from "~/utils/uuid";
-
-import { Button } from "~/ui/Button";
-import { Form } from "~/ui/Form";
-import { Link } from "~/ui/Link";
 
 import type { action } from "../route";
 
@@ -56,14 +53,14 @@ function Item(props: Article) {
 
 			<div className="flex shrink-0 items-center gap-2">
 				<Form method="get" action={`/cms/articles/${props.id}`}>
-					<Button type="submit" variant="primary">
+					<Button type="submit" color="primary">
 						{t("edit")}
 					</Button>
 				</Form>
 
 				<fetcher.Form method="post">
 					<input type="hidden" name="id" value={props.id} />
-					<Button type="submit" name="intent" value={INTENT.moveToTutorial} variant="secondary">
+					<Button type="submit" name="intent" value={INTENT.moveToTutorial} color="neutral">
 						{t("moveToTutorial")}
 					</Button>
 				</fetcher.Form>
@@ -81,7 +78,7 @@ function DeleteButton({ id }: { id: UUID }) {
 		<fetcher.Form method="POST">
 			<input type="hidden" name="intent" value={INTENT.delete} />
 			<input type="hidden" name="id" value={id} />
-			<Button type="submit" variant="destructive">
+			<Button type="submit" color="danger">
 				Delete
 			</Button>
 		</fetcher.Form>

@@ -1,18 +1,8 @@
+import type { FocusEvent, FormEvent } from "react";
+
 import { ok } from "@pkg/response";
+import { Button, Form, Label, SearchField, Table } from "@pkg/ui";
 import { eq } from "drizzle-orm";
-import {
-	Button,
-	Cell,
-	Column,
-	Form,
-	Input,
-	Label,
-	Row,
-	SearchField,
-	Table,
-	TableBody,
-	TableHeader,
-} from "react-aria-components";
 import { useTranslation } from "react-i18next";
 import { useSearchParams, useSubmit } from "react-router";
 import { z } from "zod";
@@ -61,35 +51,34 @@ function SearchForm() {
 	let submit = useSubmit();
 	let { t } = useTranslation("translation", { keyPrefix: "cms.users.search" });
 
+	function handleSubmit(event: FormEvent<HTMLFormElement>) {
+		submit(event.currentTarget);
+	}
+
+	function handleBlur(event: FocusEvent<HTMLInputElement>) {
+		let target = event.currentTarget;
+		if (target instanceof HTMLInputElement) submit(target.form);
+	}
+
+	function handleInput(event: FormEvent<HTMLInputElement>) {
+		let target = event.currentTarget;
+		if (target instanceof HTMLInputElement) submit(target.form);
+	}
+
 	return (
-		<Form
-			method="get"
-			action="/cms/users"
-			onSubmit={(event) => submit(event.currentTarget)}
-			className="flex gap-4"
-		>
+		<Form method="get" action="/cms/users" onSubmit={handleSubmit} className="flex gap-4">
 			<SearchField
 				name="q"
-				type="text"
 				defaultValue={searchParams.get("q") ?? undefined}
-				onBlur={(event) => {
-					let target = event.currentTarget;
-					if (target instanceof HTMLInputElement) submit(target.form);
-				}}
-				onInput={(event) => {
-					let target = event.currentTarget;
-					if (target instanceof HTMLInputElement) submit(target.form);
-				}}
+				onBlur={handleBlur}
+				onInput={handleInput}
 				className="contents"
 			>
 				<Label className="sr-only">{t("label")}</Label>
-				<Input className="rounded-md border-2 border-blue-600 px-3 py-1" />
+				<SearchField.Input className="rounded-md border-2 border-blue-600 px-3 py-1" />
 			</SearchField>
 
-			<Button
-				type="submit"
-				className="block shrink-0 rounded-md border-2 border-blue-600 bg-blue-100 px-4 py-2 text-center text-base font-medium text-blue-900"
-			>
+			<Button type="submit" color="primary">
 				{t("cta")}
 			</Button>
 		</Form>
@@ -101,29 +90,29 @@ function UsersTable({ users }: Pick<Route.ComponentProps["loaderData"], "users">
 
 	return (
 		<Table aria-label="Users" className="w-full">
-			<TableHeader>
-				<Column className="text-left" isRowHeader>
+			<Table.Header>
+				<Table.Column align="left" isRowHeader>
 					{t("header.name")}
-				</Column>
-				<Column className="text-left">{t("header.role")}</Column>
-				<Column className="text-left">{t("header.email")}</Column>
-				<Column className="text-right">{t("header.createdAt")}</Column>
-				<Column className="text-right">{t("header.updatedAt")}</Column>
-			</TableHeader>
+				</Table.Column>
+				<Table.Column align="left">{t("header.role")}</Table.Column>
+				<Table.Column align="left">{t("header.email")}</Table.Column>
+				<Table.Column align="right">{t("header.createdAt")}</Table.Column>
+				<Table.Column align="right">{t("header.updatedAt")}</Table.Column>
+			</Table.Header>
 
-			<TableBody>
+			<Table.Body>
 				{users.map((user) => {
 					return (
-						<Row key={user.id}>
-							<Cell>{user.displayName}</Cell>
-							<Cell>{user.role}</Cell>
-							<Cell>{user.email}</Cell>
-							<Cell className="text-right">{user.createdAt}</Cell>
-							<Cell className="text-right">{user.updatedAt}</Cell>
-						</Row>
+						<Table.Row key={user.id}>
+							<Table.Cell>{user.displayName}</Table.Cell>
+							<Table.Cell>{user.role}</Table.Cell>
+							<Table.Cell>{user.email}</Table.Cell>
+							<Table.Cell className="text-right">{user.createdAt}</Table.Cell>
+							<Table.Cell className="text-right">{user.updatedAt}</Table.Cell>
+						</Table.Row>
 					);
 				})}
-			</TableBody>
+			</Table.Body>
 		</Table>
 	);
 }

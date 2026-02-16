@@ -32,6 +32,7 @@
 		"@pkg/result": "workspace:*",
 		"@pkg/rss": "workspace:*",
 		"@pkg/sitemap": "workspace:*",
+		"@pkg/ui": "workspace:*",
 		"@pkg/validate": "workspace:*",
 		"@react-router/cloudflare": "^7.6.2",
 		"@react-router/fs-routes": "^7.6.2",

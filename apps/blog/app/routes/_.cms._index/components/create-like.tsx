@@ -1,9 +1,5 @@
-import { Heading } from "react-aria-components";
+import { Button, FieldError, Form, Heading, Input, Label, TextField } from "@pkg/ui";
 import { useTranslation } from "react-i18next";
-
-import { Button } from "~/ui/Button";
-import { Form } from "~/ui/Form";
-import { TextField } from "~/ui/TextField";
 
 import type { Route } from "../+types/route";
 
@@ -18,6 +14,9 @@ export function CreateLike({ actionData }: CreateLikeProps) {
 		keyPrefix: "cms._index.quickAction.like",
 	});
 
+	let errors =
+		actionData?.ok === false && "url" in actionData.errors ? actionData.errors : undefined;
+
 	return (
 		<div className="flex flex-col gap-5">
 			<Heading className="text-base leading-6 font-semibold text-zinc-900 dark:text-zinc-50">
@@ -28,13 +27,16 @@ export function CreateLike({ actionData }: CreateLikeProps) {
 				method="post"
 				className="gap-2 rounded-lg bg-white px-4 py-5 shadow sm:p-6 dark:bg-zinc-600"
 				reloadDocument
-				errors={actionData?.ok === false ? actionData.errors : undefined}
 			>
 				<input type="hidden" name="intent" value={INTENT.createLike} />
 
-				<TextField type="url" name="url" label={t("label")} isRequired />
+				<TextField name="url" type="url" isRequired>
+					<Label>{t("label")}</Label>
+					<Input />
+					{errors?.url && <FieldError>{errors.url}</FieldError>}
+				</TextField>
 
-				<Button type="submit" variant="primary">
+				<Button type="submit" color="primary">
 					{t("cta")}
 				</Button>
 			</Form>

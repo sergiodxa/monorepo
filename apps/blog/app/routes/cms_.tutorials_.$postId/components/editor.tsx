@@ -1,6 +1,5 @@
+import { Group, TextArea } from "@pkg/ui";
 import { useRef } from "react";
-
-import { FieldGroup, TextArea } from "~/ui/Field";
 
 type EditorProps = {
 	value: string;
@@ -11,7 +10,7 @@ export function Editor({ value, onChange }: EditorProps) {
 	let $textarea = useRef<HTMLTextAreaElement>(null);
 
 	return (
-		<FieldGroup className="w-prose h-auto grow flex-col items-stretch">
+		<Group className="w-prose h-auto grow flex-col items-stretch">
 			<TextArea
 				ref={$textarea}
 				name="content"
@@ -21,6 +20,6 @@ export function Editor({ value, onChange }: EditorProps) {
 				}}
 				className="h-auto grow resize-none font-mono"
 			/>
-		</FieldGroup>
+		</Group>
 	);
 }

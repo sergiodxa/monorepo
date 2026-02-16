@@ -1,4 +1,5 @@
 import { ok } from "@pkg/response";
+import { Button, Form } from "@pkg/ui";
 import { href, redirect } from "react-router";
 import { z } from "zod";
 
@@ -6,8 +7,6 @@ import { getDB } from "~/middleware/drizzle";
 import { getLocale } from "~/middleware/i18next";
 import { logger } from "~/middleware/logger";
 import { Article } from "~/models/article.server";
-import { Button } from "~/ui/Button";
-import { Form } from "~/ui/Form";
 import { assertUUID } from "~/utils/uuid";
 
 import type { Route } from "./+types/route";
@@ -71,7 +70,7 @@ export default function Component({ loaderData }: Route.ComponentProps) {
 
 				<div className="flex items-center gap-4">
 					<Form method="get" action="/cms/articles/new">
-						<Button type="submit" variant="primary">
+						<Button type="submit" color="primary">
 							Write Article
 						</Button>
 					</Form>

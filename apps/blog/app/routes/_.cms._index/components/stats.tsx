@@ -1,7 +1,5 @@
-import { Heading } from "react-aria-components";
+import { Heading, Link } from "@pkg/ui";
 import { useTranslation } from "react-i18next";
-
-import { Link } from "~/ui/Link";
 
 interface Stats {
 	articles?: number;

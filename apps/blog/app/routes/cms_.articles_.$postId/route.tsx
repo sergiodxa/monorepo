@@ -1,5 +1,6 @@
 import { badRequest, ok } from "@pkg/response";
 import { isFailure } from "@pkg/result";
+import { Form } from "@pkg/ui";
 import { validate } from "@pkg/validate";
 import dark from "prism-theme-github/themes/prism-theme-github-copilot.css?url";
 import light from "prism-theme-github/themes/prism-theme-github-light.css?url";
@@ -11,7 +12,6 @@ import { useValue } from "~/hooks/use-value";
 import { getDB } from "~/middleware/drizzle";
 import { requireUser } from "~/middleware/session";
 import { Article } from "~/models/article.server";
-import { Form } from "~/ui/Form";
 import { assertUUID } from "~/utils/uuid";
 
 import type { action as editorAction } from "../components.editor/route";

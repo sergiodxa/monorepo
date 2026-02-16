@@ -1,4 +1,4 @@
-import { GridList, GridListItem } from "~/ui/GridList";
+import { Checkbox, GridList } from "@pkg/ui";
 
 interface CacheKeyListProps {
 	keys: string[];
@@ -14,9 +14,10 @@ export function CacheKeyList({ keys }: CacheKeyListProps) {
 		>
 			{(item) => {
 				return (
-					<GridListItem key={item.value} id={item.value} textValue={item.value} name="key">
+					<GridList.Item key={item.value} id={item.value} textValue={item.value}>
+						<Checkbox slot="selection" name="key" value={item.value} />
 						{item.value}
-					</GridListItem>
+					</GridList.Item>
 				);
 			}}
 		</GridList>

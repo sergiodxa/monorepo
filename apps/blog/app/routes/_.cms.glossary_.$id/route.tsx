@@ -1,18 +1,15 @@
 import { ok } from "@pkg/response";
 import { succeeded } from "@pkg/result";
+import { Button, FieldError, Form, Input, Label, TextArea, TextField } from "@pkg/ui";
 import { validate } from "@pkg/validate";
 import { parameterize } from "inflected";
-import { redirect, redirectDocument } from "react-router";
-import { href } from "react-router";
+import { href, redirect, redirectDocument } from "react-router";
 import { z } from "zod";
 
 import { getCache } from "~/middleware/cache";
 import { getDB } from "~/middleware/drizzle";
 import { requireUser } from "~/middleware/session";
 import { Glossary } from "~/models/glossary.server";
-import { Button } from "~/ui/Button";
-import { Form } from "~/ui/Form";
-import { TextField } from "~/ui/TextField";
 import { assertUUID } from "~/utils/uuid";
 
 import type { Route } from "./+types/route";
@@ -137,22 +134,34 @@ export default function Component({ loaderData }: Route.ComponentProps) {
 
 			<Form method="post" className="max-w-xs">
 				<input type="hidden" name="intent" value={loaderData.mode} />
-				<TextField label="Term" name="term" isRequired defaultValue={loaderData.glossary.term} />
+
+				<TextField name="term" isRequired defaultValue={loaderData.glossary.term}>
+					<Label>Term</Label>
+					<Input />
+					<FieldError />
+				</TextField>
 
 				{loaderData.mode === INTENT.update && (
-					<TextField label="Slug" name="slug" defaultValue={loaderData.glossary.slug} />
+					<TextField name="slug" defaultValue={loaderData.glossary.slug}>
+						<Label>Slug</Label>
+						<Input />
+						<FieldError />
+					</TextField>
 				)}
 
-				<TextField label="Title" name="title" defaultValue={loaderData.glossary.title} />
-				<TextField
-					type="textarea"
-					label="Definition"
-					name="definition"
-					isRequired
-					defaultValue={loaderData.glossary.definition}
-				/>
+				<TextField name="title" defaultValue={loaderData.glossary.title}>
+					<Label>Title</Label>
+					<Input />
+					<FieldError />
+				</TextField>
 
-				<Button type="submit" variant="primary">
+				<TextField name="definition" isRequired defaultValue={loaderData.glossary.definition}>
+					<Label>Definition</Label>
+					<TextArea rows={5} />
+					<FieldError />
+				</TextField>
+
+				<Button type="submit" color="primary">
 					Create
 				</Button>
 			</Form>

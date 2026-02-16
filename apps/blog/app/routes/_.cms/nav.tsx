@@ -1,5 +1,5 @@
+import { NavLink } from "@pkg/ui";
 import { useTranslation } from "react-i18next";
-import { NavLink } from "react-router";
 
 export function Navigation() {
 	let { t } = useTranslation("translation", { keyPrefix: "cms.layout.nav" });
@@ -22,6 +22,7 @@ export function Navigation() {
 						<NavLink
 							key={link.name}
 							to={link.to}
+							hasBackground
 							className="text-base font-medium text-white no-underline visited:text-white hover:text-blue-50"
 						>
 							{link.name}

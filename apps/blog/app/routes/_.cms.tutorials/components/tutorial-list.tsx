@@ -1,12 +1,8 @@
+import { Button, Form, Link, TagGroup } from "@pkg/ui";
 import { useId } from "react";
 import { Trans, useTranslation } from "react-i18next";
 
 import type { UUID } from "~/utils/uuid";
-
-import { Button } from "~/ui/Button";
-import { Form } from "~/ui/Form";
-import { Link } from "~/ui/Link";
-import { Tag, TagGroup } from "~/ui/TagGroup";
 
 import { INTENT } from "../types";
 
@@ -57,17 +53,20 @@ function Item(props: Tutorial) {
 
 					<span id={id}>Tags:</span>
 
-					<TagGroup aria-labelledby={id} className="flex-row" color="blue">
-						{props.tags.map((tag) => {
-							return <Tag key={tag}>{tag}</Tag>;
-						})}
+					<TagGroup aria-labelledby={id}>
+						<TagGroup.List
+							className="flex-row"
+							items={props.tags.map((tag) => ({ id: tag, name: tag }))}
+						>
+							{(item) => <TagGroup.Tag color="primary">{item.name}</TagGroup.Tag>}
+						</TagGroup.List>
 					</TagGroup>
 				</div>
 			</div>
 
 			<div className="flex shrink-0 items-center gap-2">
 				<Form method="get" action={`/cms/tutorials/${props.id}`}>
-					<Button type="submit" variant="primary">
+					<Button type="submit" color="primary">
 						{t("edit")}
 					</Button>
 				</Form>
@@ -83,7 +82,7 @@ function DeleteButton({ id }: { id: UUID }) {
 		<Form navigate={false} method="POST">
 			<input type="hidden" name="intent" value={INTENT.delete} />
 			<input type="hidden" name="id" value={id} />
-			<Button type="submit" variant="destructive">
+			<Button type="submit" color="danger">
 				Delete
 			</Button>
 		</Form>

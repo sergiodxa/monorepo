@@ -1,7 +1,8 @@
 import { isFailure } from "@pkg/result";
+import { Button, Form } from "@pkg/ui";
 import { validate } from "@pkg/validate";
 import { useTranslation } from "react-i18next";
-import { Form, redirect, redirectDocument } from "react-router";
+import { redirect, redirectDocument } from "react-router";
 import { z } from "zod";
 
 import { db } from "~/middleware/drizzle";
@@ -75,12 +76,9 @@ export default function Component() {
 				<h2 className="text-center text-3xl font-bold tracking-tight">{t("logout.title")}</h2>
 			</header>
 
-			<button
-				type="submit"
-				className="flex w-full items-center justify-center gap-2 rounded-lg bg-rose-800 py-3 font-medium text-white shadow-sm transition-colors duration-200 hover:bg-rose-900 dark:bg-rose-700 dark:hover:bg-rose-600"
-			>
+			<Button type="submit" color="danger" className="w-full">
 				{t("logout.cta")}
-			</button>
+			</Button>
 		</Form>
 	);
 }

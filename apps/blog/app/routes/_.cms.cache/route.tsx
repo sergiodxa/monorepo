@@ -1,11 +1,10 @@
 import { ok } from "@pkg/response";
+import { Button, Form } from "@pkg/ui";
 import { useId } from "react";
 import { href, redirect } from "react-router";
 import { z } from "zod";
 
 import { getCache } from "~/middleware/cache";
-import { Button } from "~/ui/Button";
-import { Form } from "~/ui/Form";
 
 import type { Route } from "./+types/route";
 
@@ -45,7 +44,7 @@ export default function Component({ loaderData }: Route.ComponentProps) {
 
 				<div className="flex items-center gap-4">
 					<Form method="post">
-						<Button type="submit" name="intent" value={INTENT.clear} variant="primary">
+						<Button type="submit" name="intent" value={INTENT.clear} color="primary">
 							Clear Cache
 						</Button>
 					</Form>
@@ -55,7 +54,7 @@ export default function Component({ loaderData }: Route.ComponentProps) {
 						name="intent"
 						value={INTENT.deleteSelected}
 						form={id}
-						variant="secondary"
+						color="neutral"
 					>
 						Delete Selected
 					</Button>

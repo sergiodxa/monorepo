@@ -1,4 +1,4 @@
-import { Heading } from "react-aria-components";
+import { Heading } from "@pkg/ui";
 import { useTranslation } from "react-i18next";
 
 interface LastDaySearchProps {
