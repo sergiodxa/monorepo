@@ -86,13 +86,18 @@
         "@octokit/auth-app": "^8.0.1",
         "@octokit/core": "^7.0.2",
         "@paralleldrive/cuid2": "^3.3.0",
+        "@pkg/arrays": "workspace:*",
+        "@pkg/cache": "workspace:*",
         "@pkg/cn": "workspace:*",
         "@pkg/db-helpers": "workspace:*",
         "@pkg/get-client-ip": "workspace:*",
+        "@pkg/hooks": "workspace:*",
         "@pkg/location": "workspace:*",
         "@pkg/logger": "workspace:*",
         "@pkg/response": "workspace:*",
         "@pkg/result": "workspace:*",
+        "@pkg/rss": "workspace:*",
+        "@pkg/sitemap": "workspace:*",
         "@pkg/validate": "workspace:*",
         "@react-router/cloudflare": "^7.6.2",
         "@react-router/fs-routes": "^7.6.2",
@@ -261,6 +266,13 @@
         "wrangler": "^4.65.0",
       },
     },
+    "packages/arrays": {
+      "name": "@pkg/arrays",
+      "version": "0.0.0",
+      "devDependencies": {
+        "@types/bun": "^1.3.9",
+      },
+    },
     "packages/auth-sdk": {
       "name": "@pkg/auth-sdk",
       "version": "0.0.0",
@@ -277,6 +289,13 @@
         "@edgefirst-dev/api-client": "^0.3.0",
         "jose": "^6.0.0",
         "zod": "^4.0.0",
+      },
+    },
+    "packages/cache": {
+      "name": "@pkg/cache",
+      "version": "0.0.0",
+      "devDependencies": {
+        "@cloudflare/workers-types": "^4.20260214.0",
       },
     },
     "packages/cn": {
@@ -307,6 +326,18 @@
       "version": "0.0.1",
       "devDependencies": {
         "@types/bun": "^1.3.9",
+      },
+    },
+    "packages/hooks": {
+      "name": "@pkg/hooks",
+      "version": "0.0.0",
+      "devDependencies": {
+        "@types/bun": "^1.3.9",
+        "@types/react": "^19.2.14",
+      },
+      "peerDependencies": {
+        "react": "^19.0.0",
+        "react-router": "^7.0.0",
       },
     },
     "packages/jobs": {
@@ -388,6 +419,23 @@
       "devDependencies": {
         "@types/bun": "^1.3.9",
         "@types/ms": "^2.1.0",
+      },
+    },
+    "packages/rss": {
+      "name": "@pkg/rss",
+      "version": "0.0.0",
+      "dependencies": {
+        "htmlparser2": "^10.0.0",
+      },
+      "devDependencies": {
+        "@types/bun": "^1.3.9",
+      },
+    },
+    "packages/sitemap": {
+      "name": "@pkg/sitemap",
+      "version": "0.0.0",
+      "devDependencies": {
+        "@types/bun": "^1.3.9",
       },
     },
     "packages/types": {
@@ -832,13 +880,19 @@
 
     "@paralleldrive/cuid2": ["@paralleldrive/cuid2@3.3.0", "", { "dependencies": { "@noble/hashes": "^2.0.1", "bignumber.js": "^9.3.1", "error-causes": "^3.0.2" }, "bin": { "cuid2": "bin/cuid2.js" } }, "sha512-OqiFvSOF0dBSesELYY2CAMa4YINvlLpvKOz/rv6NeZEqiyttlHgv98Juwv4Ch+GrEV7IZ8jfI2VcEoYUjXXCjw=="],
 
+    "@pkg/arrays": ["@pkg/arrays@workspace:packages/arrays"],
+
     "@pkg/auth-sdk": ["@pkg/auth-sdk@workspace:packages/auth-sdk"],
+
+    "@pkg/cache": ["@pkg/cache@workspace:packages/cache"],
 
     "@pkg/cn": ["@pkg/cn@workspace:packages/cn"],
 
     "@pkg/db-helpers": ["@pkg/db-helpers@workspace:packages/db-helpers"],
 
     "@pkg/get-client-ip": ["@pkg/get-client-ip@workspace:packages/get-client-ip"],
+
+    "@pkg/hooks": ["@pkg/hooks@workspace:packages/hooks"],
 
     "@pkg/jobs": ["@pkg/jobs@workspace:packages/jobs"],
 
@@ -851,6 +905,10 @@
     "@pkg/response": ["@pkg/response@workspace:packages/response"],
 
     "@pkg/result": ["@pkg/result@workspace:packages/result"],
+
+    "@pkg/rss": ["@pkg/rss@workspace:packages/rss"],
+
+    "@pkg/sitemap": ["@pkg/sitemap@workspace:packages/sitemap"],
 
     "@pkg/types": ["@pkg/types@workspace:packages/types"],
 
