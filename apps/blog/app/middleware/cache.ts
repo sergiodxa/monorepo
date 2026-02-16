@@ -1,6 +1,5 @@
+import { Cache } from "@pkg/cache";
 import { createSingletonMiddleware } from "remix-utils/middleware/singleton";
-
-import { Cache } from "~/modules/cache";
 
 import { getBindings } from "./bindings";
 import { getContext } from "./context-storage";

@@ -174,7 +174,17 @@ let feed = await RSS.fetch(new URL("https://example.com/feed.xml"));
 
 ### Types
 
-#### `Channel`
+Types are exported via the `RSS` namespace:
+
+```typescript
+import { RSS } from "@pkg/rss";
+
+// Access types via namespace
+type Channel = RSS.Channel;
+type Item = RSS.Item;
+```
+
+#### `RSS.Channel`
 
 ```typescript
 interface Channel {
@@ -184,7 +194,7 @@ interface Channel {
 }
 ```
 
-#### `Item`
+#### `RSS.Item`
 
 ```typescript
 interface Item {

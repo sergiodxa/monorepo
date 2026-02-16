@@ -39,20 +39,30 @@ Creates a new empty sitemap.
 let sitemap = new Sitemap();
 ```
 
-#### `sitemap.append(loc: URL, lastmod?: Date): void`
+#### `sitemap.append(loc: URL, options?: Date | AppendOptions): void`
 
 Add a URL to the sitemap.
 
 **Parameters:**
 
 - `loc`: The URL to add (must be a `URL` object)
-- `lastmod`: Optional last modification date
+- `options`: Either a `Date` for lastmod (legacy signature) or an `AppendOptions` object
 
 **Example:**
 
 ```typescript
+// Simple - just URL
 sitemap.append(new URL("https://example.com/page"));
+
+// With lastmod date (legacy signature)
 sitemap.append(new URL("https://example.com/updated"), new Date());
+
+// With full options
+sitemap.append(new URL("https://example.com/important"), {
+	lastmod: new Date(),
+	changefreq: "weekly",
+	priority: 0.8,
+});
 ```
 
 #### `sitemap.size: number`
@@ -84,12 +94,42 @@ let xml = sitemap.toString();
 
 ### Types
 
-#### `SiteURL`
+Types are exported via the `Sitemap` namespace:
 
 ```typescript
-interface SiteURL {
-	loc: URL;
+import { Sitemap } from "@pkg/sitemap";
+
+// Access types via namespace
+type URL = Sitemap.URL;
+type ChangeFreq = Sitemap.ChangeFreq;
+type AppendOptions = Sitemap.AppendOptions;
+```
+
+#### `Sitemap.URL`
+
+```typescript
+interface URL {
+	loc: globalThis.URL;
 	lastmod?: Date;
+	changefreq?: ChangeFreq;
+	priority?: number;
+}
+```
+
+#### `Sitemap.ChangeFreq`
+
+```typescript
+type ChangeFreq = "always" | "hourly" | "daily" | "weekly" | "monthly" | "yearly" | "never";
+```
+
+#### `Sitemap.AppendOptions`
+
+```typescript
+interface AppendOptions {
+	lastmod?: Date;
+	changefreq?: ChangeFreq;
+	/** Priority value between 0.0 and 1.0, default is 0.5 */
+	priority?: number;
 }
 ```
 

@@ -33,6 +33,7 @@
 		"@pkg/markdown": "workspace:*",
 		"@pkg/response": "workspace:*",
 		"@pkg/result": "workspace:*",
+		"@pkg/sitemap": "workspace:*",
 		"@pkg/types": "workspace:*",
 		"@pkg/ui": "workspace:*",
 		"@pkg/validate": "workspace:*",

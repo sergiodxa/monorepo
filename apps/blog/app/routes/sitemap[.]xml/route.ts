@@ -1,3 +1,4 @@
+import { Sitemap } from "@pkg/sitemap";
 import { href } from "react-router";
 import { xml } from "remix-utils/responses";
 
@@ -5,7 +6,6 @@ import { getDB } from "~/middleware/drizzle";
 import { Article } from "~/models/article.server";
 import { Like } from "~/models/like.server";
 import { Tutorial } from "~/models/tutorial.server";
-import { Sitemap } from "~/modules/sitemap.server";
 
 import type { Route } from "./+types/route";
 

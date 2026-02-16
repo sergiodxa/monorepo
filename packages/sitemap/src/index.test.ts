@@ -93,5 +93,33 @@ describe("Sitemap", () => {
 			);
 			expect(xml).toContain("<url><loc>https://example.com/no-date</loc></url>");
 		});
+
+		test("generates valid XML with changefreq", () => {
+			let sitemap = new Sitemap();
+			sitemap.append(new URL("https://example.com/page"), { changefreq: "weekly" });
+			let xml = sitemap.toString();
+			expect(xml).toContain("<changefreq>weekly</changefreq>");
+		});
+
+		test("generates valid XML with priority", () => {
+			let sitemap = new Sitemap();
+			sitemap.append(new URL("https://example.com/page"), { priority: 0.8 });
+			let xml = sitemap.toString();
+			expect(xml).toContain("<priority>0.8</priority>");
+		});
+
+		test("generates valid XML with all options", () => {
+			let sitemap = new Sitemap();
+			let date = new Date("2024-01-15T12:30:00.000Z");
+			sitemap.append(new URL("https://example.com/page"), {
+				lastmod: date,
+				changefreq: "monthly",
+				priority: 1.0,
+			});
+			let xml = sitemap.toString();
+			expect(xml).toContain("<lastmod>2024-01-15T12:30:00.000Z</lastmod>");
+			expect(xml).toContain("<changefreq>monthly</changefreq>");
+			expect(xml).toContain("<priority>1</priority>");
+		});
 	});
 });

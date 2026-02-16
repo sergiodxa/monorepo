@@ -1,9 +1,9 @@
+import { RSS } from "@pkg/rss";
 import { href } from "react-router";
 import { xml } from "remix-utils/responses";
 
 import { getRequest } from "~/middleware/context-storage";
 import { getI18nextInstance, getLocale } from "~/middleware/i18next";
-import { RSS } from "~/modules/rss.server";
 
 import type { Route } from "./+types/route";
 

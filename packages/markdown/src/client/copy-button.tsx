@@ -1,8 +1,7 @@
+import { useClipboard } from "@pkg/hooks";
 import { Button } from "@pkg/ui";
 import { CheckIcon, CopyIcon } from "lucide-react";
 import { useEffect } from "react";
-
-import { useClipboard } from "./use-clipboard.js";
 
 export namespace CopyButton {
 	export interface Props {

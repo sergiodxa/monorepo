@@ -1,3 +1,5 @@
+import { Sitemap } from "@pkg/sitemap";
+
 import { listDocs } from "~/modules/docs";
 
 import type { Route } from "./+types/sitemap[.]xml";
@@ -56,7 +58,7 @@ const LANDING_PAGES = [
 ] as const;
 
 export async function loader({ request }: Route.LoaderArgs) {
-	let lastmod = new Date().toISOString().split("T")[0]; // YYYY-MM-DD format
+	let lastmod = new Date();
 
 	// Get all documentation pages
 	let docSections = await listDocs();
@@ -70,24 +72,17 @@ export async function loader({ request }: Route.LoaderArgs) {
 
 	let allPages = [...LANDING_PAGES, ...docPages];
 
-	let urls = allPages
-		.map(
-			(page) => `
-  <url>
-    <loc>${new URL(page.path, request.url).toString()}</loc>
-    <lastmod>${lastmod}</lastmod>
-    <changefreq>${page.changefreq}</changefreq>
-    <priority>${page.priority}</priority>
-  </url>`,
-		)
-		.join("");
+	let sitemap = new Sitemap();
 
-	let sitemap = `<?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-${urls}
-</urlset>`;
+	for (let page of allPages) {
+		sitemap.append(new URL(page.path, request.url), {
+			lastmod,
+			changefreq: page.changefreq,
+			priority: page.priority,
+		});
+	}
 
-	return new Response(sitemap, {
+	return new Response(sitemap.toString(), {
 		headers: {
 			"Content-Type": "application/xml",
 			"Cache-Control": "public, max-age=3600, s-maxage=86400",

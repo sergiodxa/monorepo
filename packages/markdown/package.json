@@ -12,6 +12,7 @@
 	"dependencies": {
 		"@markdoc/markdoc": "^0.5.2",
 		"@pkg/cn": "workspace:*",
+		"@pkg/hooks": "workspace:*",
 		"@pkg/result": "workspace:*",
 		"@pkg/ui": "workspace:*",
 		"@standard-schema/spec": "^1.1.0",

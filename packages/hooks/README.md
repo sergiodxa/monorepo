@@ -11,7 +11,7 @@ Requires React 19+ and React Router 7+ as peer dependencies.
 ## Usage
 
 ```typescript
-import { useToggle, useFetcherStatus } from "@pkg/hooks";
+import { useToggle, useFetcherStatus, useClipboard } from "@pkg/hooks";
 
 function MyComponent() {
   let [isOpen, toggle] = useToggle(false);
@@ -56,7 +56,46 @@ function Disclosure() {
 }
 ```
 
-### `useFetcherStatus<T extends { ok?: boolean }>(fetcher: Fetcher<T>): FetcherStatus`
+### `useClipboard(): useClipboard.Return`
+
+A hook for reading from and writing to the system clipboard with status tracking.
+
+**Returns:**
+
+- Object with `status`, `data`, `read`, `write`, and `reset` functions
+
+**Example:**
+
+```typescript
+import { useClipboard } from "@pkg/hooks";
+
+function CopyButton({ text }: { text: string }) {
+	let { status, write, reset } = useClipboard();
+
+	useEffect(() => {
+		if (status === "success") {
+			let timeout = setTimeout(reset, 2000);
+			return () => clearTimeout(timeout);
+		}
+	}, [status, reset]);
+
+	return (
+		<button
+			onClick={async () => {
+				let item = new ClipboardItem({
+					"text/plain": new Blob([text], { type: "text/plain" }),
+				});
+				await write([item]);
+			}}
+			disabled={status === "loading"}
+		>
+			{status === "success" ? "Copied!" : "Copy"}
+		</button>
+	);
+}
+```
+
+### `useFetcherStatus<T extends { ok?: boolean }>(fetcher: Fetcher<T>): useFetcherStatus.FetcherStatus`
 
 A hook that derives a simple status from a React Router fetcher's state and data.
 
@@ -100,10 +139,47 @@ function SubscribeForm() {
 
 ### Types
 
-#### `FetcherStatus`
+Types are exported via namespaces on each hook:
+
+```typescript
+import { useFetcherStatus, useClipboard } from "@pkg/hooks";
+
+// Access types via namespace
+type FetcherStatus = useFetcherStatus.FetcherStatus;
+type ClipboardStatus = useClipboard.Status;
+```
+
+#### `useFetcherStatus.FetcherStatus`
 
 ```typescript
 type FetcherStatus = "idle" | "loading" | "success" | "failure";
+```
+
+#### `useClipboard.Status`
+
+```typescript
+type Status = "idle" | "loading" | "success" | "failure";
+```
+
+#### `useClipboard.State`
+
+```typescript
+interface State {
+	status: Status;
+	data: ClipboardItems | ClipboardError | null;
+}
+```
+
+#### `useClipboard.Return`
+
+```typescript
+interface Return {
+	status: Status;
+	data: ClipboardItems | ClipboardError | null;
+	read(): Promise<Result<ClipboardItems, ClipboardError>>;
+	write(data: ClipboardItems): Promise<Result<null, ClipboardError>>;
+	reset(): void;
+}
 ```
 
 ## Pattern: Form with Status Feedback
@@ -215,7 +291,7 @@ function Settings() {
 ## Related Packages
 
 - [`@pkg/response`](/packages/response) - HTTP response helpers with `ok` boolean
-- [`@pkg/result`](/packages/result) - Result pattern for error handling
+- [`@pkg/result`](/packages/result) - Result pattern for error handling (used by `useClipboard`)
 - [`@pkg/validate`](/packages/validate) - Form validation
 
 ## Tips

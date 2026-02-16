@@ -216,6 +216,7 @@
         "@pkg/markdown": "workspace:*",
         "@pkg/response": "workspace:*",
         "@pkg/result": "workspace:*",
+        "@pkg/sitemap": "workspace:*",
         "@pkg/types": "workspace:*",
         "@pkg/ui": "workspace:*",
         "@pkg/validate": "workspace:*",
@@ -333,6 +334,9 @@
     "packages/hooks": {
       "name": "@pkg/hooks",
       "version": "0.0.0",
+      "dependencies": {
+        "@pkg/result": "workspace:*",
+      },
       "devDependencies": {
         "@types/bun": "^1.3.9",
         "@types/react": "^19.2.14",
@@ -384,6 +388,7 @@
       "dependencies": {
         "@markdoc/markdoc": "^0.5.2",
         "@pkg/cn": "workspace:*",
+        "@pkg/hooks": "workspace:*",
         "@pkg/result": "workspace:*",
         "@pkg/ui": "workspace:*",
         "@standard-schema/spec": "^1.1.0",
