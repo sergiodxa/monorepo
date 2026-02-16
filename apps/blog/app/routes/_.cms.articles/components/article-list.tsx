@@ -17,7 +17,7 @@ interface Article {
 
 export function ArticlesList({ articles }: { articles: Article[] }) {
 	return (
-		<ol className="rouned-lg divide-y divide-zinc-100 bg-white px-5 dark:divide-zinc-700 dark:bg-zinc-800">
+		<ol className="rouned-lg divide-zinc-100 dark:divide-zinc-700 dark:bg-zinc-800 divide-y bg-white px-5">
 			{articles.map((article) => (
 				<Item key={article.id} {...article} />
 			))}
@@ -35,12 +35,12 @@ function Item(props: Article) {
 		<li className="flex items-center justify-between gap-3 gap-x-6 py-5">
 			<div className="flex flex-col gap-1">
 				<Link href={props.path}>
-					<h3 className="text-sm leading-6 font-semibold text-zinc-900 underline dark:text-zinc-50">
+					<h3 className="text-zinc-900 dark:text-zinc-50 text-sm leading-6 font-semibold underline">
 						{props.title}
 					</h3>
 				</Link>
 
-				<div className="flex items-baseline gap-x-2 text-xs leading-5 text-zinc-500 dark:text-zinc-300">
+				<div className="text-zinc-500 dark:text-zinc-300 flex items-baseline gap-x-2 text-xs leading-5">
 					<Trans
 						t={t}
 						className="whitespace-nowrap"

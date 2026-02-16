@@ -110,7 +110,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
 				<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 				<Links />
 			</head>
-			<body className="min-h-full bg-white font-sans text-black dark:bg-zinc-900 dark:text-zinc-50">
+			<body className="dark:bg-zinc-900 dark:text-zinc-50 min-h-full bg-white font-sans text-black">
 				{children}
 				<ScrollRestoration />
 				<Scripts />

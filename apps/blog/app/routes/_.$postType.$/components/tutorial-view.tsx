@@ -64,7 +64,7 @@ export function TutorialView({ post }: { post: Post }) {
 				<div>
 					<header className="gap-4 md:flex md:items-start md:justify-between">
 						<h1>
-							<small className="block text-xl text-blue-500">{t("header.eyebrown")}</small>
+							<small className="text-blue-500 block text-xl">{t("header.eyebrown")}</small>
 							{post.tutorial.title}
 						</h1>
 					</header>
@@ -117,8 +117,8 @@ function Recommendations() {
 
 	return (
 		<section className="not-prose mt-4 space-y-4">
-			<header className="border-b border-zinc-200 pb-5">
-				<h2 className="text-lg leading-6 font-medium text-zinc-900 dark:text-zinc-100">
+			<header className="border-zinc-200 border-b pb-5">
+				<h2 className="text-zinc-900 dark:text-zinc-100 text-lg leading-6 font-medium">
 					{t("title")}
 				</h2>
 			</header>

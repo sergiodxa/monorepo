@@ -17,7 +17,7 @@ export function Breadcrumb(props: BreadcrumbProps & LinkProps) {
 	return (
 		<AriaBreadcrumb {...props} className={twMerge("flex items-center gap-1")}>
 			<Link variant="secondary" {...props} />
-			{props.href && <ChevronRight className="h-3 w-3 text-gray-600 dark:text-zinc-400" />}
+			{props.href && <ChevronRight className="text-gray-600 dark:text-zinc-400 h-3 w-3" />}
 		</AriaBreadcrumb>
 	);
 }

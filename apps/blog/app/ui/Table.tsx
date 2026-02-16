@@ -29,7 +29,7 @@ import { composeTailwindRenderProps, focusRing } from "./utils";
 
 export function Table(props: TableProps) {
 	return (
-		<ResizableTableContainer className="relative max-h-[280px] w-[550px] scroll-pt-[2.281rem] overflow-auto rounded-lg border dark:border-zinc-600">
+		<ResizableTableContainer className="dark:border-zinc-600 relative max-h-[280px] w-[550px] scroll-pt-[2.281rem] overflow-auto rounded-lg border">
 			<AriaTable {...props} className="border-separate border-spacing-0" />
 		</ResizableTableContainer>
 	);
@@ -67,7 +67,7 @@ export function Column(props: ColumnProps) {
 								{sortDirection && (
 									<ArrowUp
 										aria-hidden
-										className="h-4 w-4 text-gray-500 dark:text-zinc-400 forced-colors:text-[ButtonText]"
+										className="text-gray-500 dark:text-zinc-400 h-4 w-4 forced-colors:text-[ButtonText]"
 									/>
 								)}
 							</span>

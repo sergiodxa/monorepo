@@ -36,7 +36,7 @@ export function Meter({ label, ...props }: MeterProps) {
 							{` ${valueText}`}
 						</span>
 					</div>
-					<div className="relative h-2 w-64 rounded-full bg-gray-300 outline-1 -outline-offset-1 outline-transparent dark:bg-zinc-700">
+					<div className="bg-gray-300 dark:bg-zinc-700 relative h-2 w-64 rounded-full outline-1 -outline-offset-1 outline-transparent">
 						<div
 							className={`absolute top-0 left-0 h-full rounded-full ${getColor(
 								percentage,

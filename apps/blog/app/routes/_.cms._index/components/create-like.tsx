@@ -19,13 +19,13 @@ export function CreateLike({ actionData }: CreateLikeProps) {
 
 	return (
 		<div className="flex flex-col gap-5">
-			<Heading className="text-base leading-6 font-semibold text-zinc-900 dark:text-zinc-50">
+			<Heading className="text-zinc-900 dark:text-zinc-50 text-base leading-6 font-semibold">
 				{t("title")}
 			</Heading>
 
 			<Form
 				method="post"
-				className="gap-2 rounded-lg bg-white px-4 py-5 shadow sm:p-6 dark:bg-zinc-600"
+				className="dark:bg-zinc-600 gap-2 rounded-lg bg-white px-4 py-5 shadow sm:p-6"
 				reloadDocument
 			>
 				<input type="hidden" name="intent" value={INTENT.createLike} />

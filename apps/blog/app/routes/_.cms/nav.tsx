@@ -15,15 +15,15 @@ export function Navigation() {
 	] as const;
 
 	return (
-		<nav className="rounded-lg bg-blue-600" aria-label={t("label")}>
-			<div className="flex w-full flex-col justify-between gap-4 border-b border-blue-500 py-6 md:flex-row md:items-center md:gap-10 lg:border-none">
+		<nav className="bg-blue-600 rounded-lg" aria-label={t("label")}>
+			<div className="border-blue-500 flex w-full flex-col justify-between gap-4 border-b py-6 md:flex-row md:items-center md:gap-10 lg:border-none">
 				<div className="flex flex-wrap items-center gap-x-6 gap-y-4 px-6">
 					{navigation.map((link) => (
 						<NavLink
 							key={link.name}
 							to={link.to}
 							hasBackground
-							className="text-base font-medium text-white no-underline visited:text-white hover:text-blue-50"
+							className="hover:text-blue-50 text-base font-medium text-white no-underline visited:text-white"
 						>
 							{link.name}
 						</NavLink>

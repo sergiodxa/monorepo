@@ -84,6 +84,7 @@
 		"@types/react-dom": "^19.1.6",
 		"@types/semver": "^7.7.0",
 		"tailwindcss": "^4.1.10",
+		"tailwindcss-animate": "^1.0.7",
 		"type-fest": "^5.4.4",
 		"typescript": "^5.8.3",
 		"vite": "^7.3.1",

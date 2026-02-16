@@ -140,8 +140,8 @@ export default function Component({ loaderData }: Route.ComponentProps) {
 
 	if (!loaderData.ok) {
 		return (
-			<main className="w-full max-w-md rounded-xl bg-white p-8 shadow-lg dark:bg-gray-800">
-				<h1 className="mb-8 text-center text-3xl font-bold text-gray-900 dark:text-white">
+			<main className="dark:bg-gray-800 w-full max-w-md rounded-xl bg-white p-8 shadow-lg">
+				<h1 className="text-gray-900 mb-8 text-center text-3xl font-bold dark:text-white">
 					{t("authorize.errors.invalidRequest.title")}
 				</h1>
 				<p>{t("authorize.errors.invalidRequest.description")}</p>
@@ -150,8 +150,8 @@ export default function Component({ loaderData }: Route.ComponentProps) {
 	}
 
 	return (
-		<main className="w-full max-w-md rounded-xl bg-white p-8 shadow-lg dark:bg-gray-800">
-			<h1 className="mb-8 text-center text-3xl font-bold text-gray-900 dark:text-white">
+		<main className="dark:bg-gray-800 w-full max-w-md rounded-xl bg-white p-8 shadow-lg">
+			<h1 className="text-gray-900 mb-8 text-center text-3xl font-bold dark:text-white">
 				{t("authorize.header.title", { client: loaderData.client.name })}
 			</h1>
 
@@ -190,8 +190,8 @@ export default function Component({ loaderData }: Route.ComponentProps) {
 			</Form>
 
 			<div className="relative my-6 hidden">
-				<hr className="border-t border-gray-300 dark:border-gray-600" />
-				<span className="absolute left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white px-4 text-sm text-gray-500 dark:bg-gray-800 dark:text-gray-400">
+				<hr className="border-gray-300 dark:border-gray-600 border-t" />
+				<span className="text-gray-500 dark:bg-gray-800 dark:text-gray-400 absolute left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white px-4 text-sm">
 					{t("authorize.forms.separator")}
 				</span>
 			</div>

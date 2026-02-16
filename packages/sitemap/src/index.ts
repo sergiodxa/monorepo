@@ -1,23 +1,16 @@
 export namespace Sitemap {
-	export type ChangeFreq =
-		| "always"
-		| "hourly"
-		| "daily"
-		| "weekly"
-		| "monthly"
-		| "yearly"
-		| "never";
+	export type Frequency = "always" | "hourly" | "daily" | "weekly" | "monthly" | "yearly" | "never";
 
 	export interface URL {
 		loc: globalThis.URL;
-		lastmod?: Date;
-		changefreq?: ChangeFreq;
+		updatedAt?: Date;
+		frequency?: Frequency;
 		priority?: number;
 	}
 
 	export interface AppendOptions {
-		lastmod?: Date;
-		changefreq?: ChangeFreq;
+		updatedAt?: Date;
+		frequency?: Frequency;
 		/** Priority value between 0.0 and 1.0, default is 0.5 */
 		priority?: number;
 	}
@@ -26,13 +19,8 @@ export namespace Sitemap {
 export class Sitemap {
 	urls = new Set<Sitemap.URL>();
 
-	append(loc: globalThis.URL, options?: Sitemap.AppendOptions) {
-		this.urls.add({
-			loc,
-			lastmod: options?.lastmod,
-			changefreq: options?.changefreq,
-			priority: options?.priority,
-		});
+	append(loc: globalThis.URL, options: Sitemap.AppendOptions = {}) {
+		this.urls.add({ loc, ...options });
 	}
 
 	get size() {
@@ -44,8 +32,8 @@ export class Sitemap {
 			...this.urls,
 		].map((url) => {
 			let parts = [`<loc>${url.loc.toString()}</loc>`];
-			if (url.lastmod) parts.push(`<lastmod>${url.lastmod.toISOString()}</lastmod>`);
-			if (url.changefreq) parts.push(`<changefreq>${url.changefreq}</changefreq>`);
+			if (url.updatedAt) parts.push(`<lastmod>${url.updatedAt.toISOString()}</lastmod>`);
+			if (url.frequency) parts.push(`<changefreq>${url.frequency}</changefreq>`);
 			if (url.priority !== undefined) parts.push(`<priority>${url.priority}</priority>`);
 			return `<url>${parts.join("")}</url>`;
 		})}</urlset>`;

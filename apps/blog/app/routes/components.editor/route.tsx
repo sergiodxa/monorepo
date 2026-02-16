@@ -32,7 +32,7 @@ type TextboxProps = {
 
 export function Textbox(props: TextboxProps) {
 	return (
-		<div className="flex h-full flex-col rounded-md border border-neutral-300 bg-white dark:bg-zinc-800">
+		<div className="dark:bg-zinc-800 flex h-full flex-col rounded-md border border-neutral-300 bg-white">
 			<div role="menubar" className="flex items-center justify-between p-2">
 				<Toolbar aria-label="Text Formatting" orientation="horizontal">
 					<Button.Bold />
@@ -53,7 +53,7 @@ export function Textbox(props: TextboxProps) {
 					let value = event.currentTarget.value;
 					props.dispatch({ type: "write", payload: { value } });
 				}}
-				className="mx-2 mb-2 grow resize-none rounded-md border-none font-mono ring-blue-600 focus:ring-2 focus:outline-none"
+				className="ring-blue-600 mx-2 mb-2 grow resize-none rounded-md border-none font-mono focus:ring-2 focus:outline-none"
 			/>
 		</div>
 	);

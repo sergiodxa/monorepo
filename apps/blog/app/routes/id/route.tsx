@@ -39,7 +39,7 @@ function Identifier({ label, value }: { label: string; value: string }) {
 			<label htmlFor={id} className="text-xl font-bold tracking-wide">
 				{label}
 			</label>
-			<output id={id} className="bg-zinc-200 p-4 select-all dark:bg-zinc-800">
+			<output id={id} className="bg-zinc-200 dark:bg-zinc-800 p-4 select-all">
 				{value}
 			</output>
 		</div>

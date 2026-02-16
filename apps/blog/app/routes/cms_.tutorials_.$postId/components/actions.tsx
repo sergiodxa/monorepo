@@ -7,7 +7,7 @@ interface ActionsProps {
 
 export function Actions({ mode }: ActionsProps) {
 	return (
-		<Toolbar className="rounded-lg bg-zinc-100 p-1 dark:bg-zinc-800">
+		<Toolbar className="bg-zinc-100 dark:bg-zinc-800 rounded-lg p-1">
 			<Link href="/cms/tutorials" className="flex items-center gap-1">
 				<ArrowLeft className="size-5" />
 				<span>Go back</span>

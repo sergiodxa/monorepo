@@ -55,7 +55,7 @@ export async function loader({ request, params }: Route.LoaderArgs) {
 
 export default function Component({ loaderData }: Route.ComponentProps) {
 	return (
-		<main className="w-full max-w-md rounded-xl bg-white p-8 shadow-lg dark:bg-gray-800">
+		<main className="dark:bg-gray-800 w-full max-w-md rounded-xl bg-white p-8 shadow-lg">
 			<p>{loaderData.message}</p>
 		</main>
 	);

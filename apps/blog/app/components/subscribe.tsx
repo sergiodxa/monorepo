@@ -13,7 +13,7 @@ export function Subscribe({ t }: SubscribeProps) {
 		<Trans
 			t={t}
 			parent="p"
-			className="text-zing-600 text-sm dark:text-zinc-400"
+			className="text-zing-600 dark:text-zinc-400 text-sm"
 			i18nKey="subscribe.cta"
 			components={{
 				rss: <Link href="/rss" className="text-blue-600 underline" />,

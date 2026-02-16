@@ -47,7 +47,7 @@ export function Stats(props: { stats: Stats }) {
 
 	return (
 		<div className="flex flex-col gap-5">
-			<Heading className="text-base leading-6 font-semibold text-zinc-900 dark:text-zinc-50">
+			<Heading className="text-zinc-900 dark:text-zinc-50 text-base leading-6 font-semibold">
 				{t("title")}
 			</Heading>
 
@@ -55,16 +55,16 @@ export function Stats(props: { stats: Stats }) {
 				{stats.map((item) => (
 					<div
 						key={item.name}
-						className="relative overflow-hidden rounded-lg bg-white px-4 pt-5 pb-12 shadow sm:px-6 sm:pt-6 dark:bg-zinc-600"
+						className="dark:bg-zinc-600 relative overflow-hidden rounded-lg bg-white px-4 pt-5 pb-12 shadow sm:px-6 sm:pt-6"
 					>
 						<dt>
-							<p className="truncate text-sm font-medium text-zinc-500 dark:text-zinc-300">
+							<p className="text-zinc-500 dark:text-zinc-300 truncate text-sm font-medium">
 								{item.name}
 							</p>
 						</dt>
 						<dd className="flex items-baseline pb-6 sm:pb-7">
-							<p className="text-2xl font-semibold text-zinc-900 dark:text-zinc-50">{item.stat}</p>
-							<div className="absolute inset-x-0 bottom-0 bg-zinc-50 px-4 py-4 sm:px-6 dark:bg-zinc-700">
+							<p className="text-zinc-900 dark:text-zinc-50 text-2xl font-semibold">{item.stat}</p>
+							<div className="bg-zinc-50 dark:bg-zinc-700 absolute inset-x-0 bottom-0 px-4 py-4 sm:px-6">
 								<Link href={item.path} prefetch="intent">
 									{t("viewAll")}
 								</Link>

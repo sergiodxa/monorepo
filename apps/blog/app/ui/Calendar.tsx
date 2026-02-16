@@ -50,7 +50,7 @@ export function Calendar<T extends DateValue>({ errorMessage, ...props }: Calend
 				</CalendarGridBody>
 			</CalendarGrid>
 			{errorMessage && (
-				<Text slot="errorMessage" className="text-sm text-red-600">
+				<Text slot="errorMessage" className="text-red-600 text-sm">
 					{errorMessage}
 				</Text>
 			)}
@@ -66,7 +66,7 @@ export function CalendarHeader() {
 			<Button variant="icon" slot="previous">
 				{direction === "rtl" ? <ChevronRight aria-hidden /> : <ChevronLeft aria-hidden />}
 			</Button>
-			<Heading className="mx-2 flex-1 text-center text-xl font-semibold text-zinc-900 dark:text-zinc-200" />
+			<Heading className="text-zinc-900 dark:text-zinc-200 mx-2 flex-1 text-center text-xl font-semibold" />
 			<Button variant="icon" slot="next">
 				{direction === "rtl" ? <ChevronLeft aria-hidden /> : <ChevronRight aria-hidden />}
 			</Button>
@@ -78,7 +78,7 @@ export function CalendarGridHeader() {
 	return (
 		<AriaCalendarGridHeader>
 			{(day) => (
-				<CalendarHeaderCell className="text-xs font-semibold text-gray-500">
+				<CalendarHeaderCell className="text-gray-500 text-xs font-semibold">
 					{day}
 				</CalendarHeaderCell>
 			)}

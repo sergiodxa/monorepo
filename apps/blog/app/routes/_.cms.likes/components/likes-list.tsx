@@ -19,7 +19,7 @@ interface LikesListProps {
 
 export function LikesList({ likes }: LikesListProps) {
 	return (
-		<ol className="rouned-lg divide-y divide-gray-100 bg-white px-5">
+		<ol className="rouned-lg divide-gray-100 divide-y bg-white px-5">
 			{likes.map((like) => (
 				<Item key={like.id} {...like} />
 			))}
@@ -36,10 +36,10 @@ function Item(props: Like) {
 		<li className="flex items-center justify-between gap-3 gap-x-6 py-5">
 			<div className="flex flex-col gap-1">
 				<Link href={props.url.toString()}>
-					<h3 className="text-sm leading-6 font-semibold text-gray-900 underline">{props.title}</h3>
+					<h3 className="text-gray-900 text-sm leading-6 font-semibold underline">{props.title}</h3>
 				</Link>
 
-				<div className="flex items-center gap-x-2 text-xs leading-5 text-gray-500">
+				<div className="text-gray-500 flex items-center gap-x-2 text-xs leading-5">
 					<Trans
 						t={t}
 						className="whitespace-nowrap"

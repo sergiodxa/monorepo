@@ -39,7 +39,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
 				<Meta />
 				<Links />
 			</head>
-			<body className="flex min-h-screen items-center justify-center bg-gray-50 p-4 dark:bg-gray-900">
+			<body className="bg-gray-50 dark:bg-gray-900 flex min-h-screen items-center justify-center p-4">
 				{children}
 				<ScrollRestoration />
 				<Scripts />

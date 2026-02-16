@@ -21,16 +21,16 @@ export function DumpDatabase({ actionData }: DumpDatabaseProps) {
 
 	return (
 		<Form method="post">
-			{errors && <p className="text-sm text-red-600 forced-colors:text-[Mark]">{errors?.intent}</p>}
+			{errors && <p className="text-red-600 text-sm forced-colors:text-[Mark]">{errors?.intent}</p>}
 			{success && (
-				<p className="text-sm text-green-600 forced-colors:text-[Mark]">
+				<p className="text-green-600 text-sm forced-colors:text-[Mark]">
 					Database dumped successfully
 				</p>
 			)}
 			<Button type="submit" name="intent" value={INTENT.dump} isPending={isPending}>
 				Dump copy of the database
 			</Button>
-			{isPending && <p className="text-sm text-gray-600">Dumping database...</p>}
+			{isPending && <p className="text-gray-600 text-sm">Dumping database...</p>}
 		</Form>
 	);
 }

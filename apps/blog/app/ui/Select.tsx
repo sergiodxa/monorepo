@@ -53,7 +53,7 @@ export function Select<T extends object>({
 				<SelectValue className="flex-1 text-sm placeholder-shown:italic" />
 				<ChevronDown
 					aria-hidden
-					className="h-4 w-4 text-gray-600 group-disabled:text-gray-200 dark:text-zinc-400 dark:group-disabled:text-zinc-600 forced-colors:text-[ButtonText] forced-colors:group-disabled:text-[GrayText]"
+					className="text-gray-600 group-disabled:text-gray-200 dark:text-zinc-400 dark:group-disabled:text-zinc-600 h-4 w-4 forced-colors:text-[ButtonText] forced-colors:group-disabled:text-[GrayText]"
 				/>
 			</Button>
 			{description && <Description>{description}</Description>}

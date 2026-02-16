@@ -27,7 +27,7 @@ export function FeedList({ t, items }: Props) {
 							body={
 								<Trans
 									parent="p"
-									className="text-sm text-zinc-800 dark:text-zinc-200"
+									className="text-zinc-800 dark:text-zinc-200 text-sm"
 									i18nKey="feed.article"
 									t={t}
 									values={{ title: item.payload.title }}
@@ -52,7 +52,7 @@ export function FeedList({ t, items }: Props) {
 							body={
 								<Trans
 									parent="p"
-									className="text-sm text-zinc-800 dark:text-zinc-200"
+									className="text-zinc-800 dark:text-zinc-200 text-sm"
 									i18nKey="feed.tutorial"
 									t={t}
 									values={{ title: item.payload.title }}
@@ -77,7 +77,7 @@ export function FeedList({ t, items }: Props) {
 							body={
 								<Trans
 									parent="p"
-									className="text-sm text-zinc-800 dark:text-zinc-200"
+									className="text-zinc-800 dark:text-zinc-200 text-sm"
 									i18nKey="feed.bookmark"
 									t={t}
 									values={{ title: item.payload.title }}
@@ -102,7 +102,7 @@ export function FeedList({ t, items }: Props) {
 							body={
 								<Trans
 									parent="p"
-									className="text-sm text-zinc-800 dark:text-zinc-200"
+									className="text-zinc-800 dark:text-zinc-200 text-sm"
 									i18nKey="feed.glossary"
 									t={t}
 									values={{ title: item.payload.title }}
@@ -141,7 +141,7 @@ function Item({ body, index, size, iconColor, icon, createdAt }: FeedItemProps) 
 			<div className="relative pb-8">
 				{index !== size ? (
 					<span
-						className="absolute top-4 left-4 -ml-px h-full w-0.5 bg-white dark:bg-zinc-900"
+						className="dark:bg-zinc-900 absolute top-4 left-4 -ml-px h-full w-0.5 bg-white"
 						aria-hidden
 					/>
 				) : null}
@@ -150,7 +150,7 @@ function Item({ body, index, size, iconColor, icon, createdAt }: FeedItemProps) 
 						<span
 							className={cn(
 								iconColor,
-								"flex h-8 w-8 items-center justify-center rounded-full ring-8 ring-white dark:ring-zinc-900",
+								"dark:ring-zinc-900 flex h-8 w-8 items-center justify-center rounded-full ring-8 ring-white",
 							)}
 						>
 							{icon}
@@ -159,7 +159,7 @@ function Item({ body, index, size, iconColor, icon, createdAt }: FeedItemProps) 
 					<div className="flex min-w-0 flex-1 justify-between space-x-4 pt-1.5">
 						{body}
 
-						<div className="text-right text-sm whitespace-nowrap text-zinc-500 tabular-nums">
+						<div className="text-zinc-500 text-right text-sm whitespace-nowrap tabular-nums">
 							<time dateTime={createdAt.toISOString()}>
 								{createdAt.toLocaleDateString(i18n.language, {
 									month: "short",

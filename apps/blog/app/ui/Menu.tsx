@@ -54,7 +54,7 @@ export function MenuItem(props: MenuItemProps) {
 
 export function MenuSeparator(props: SeparatorProps) {
 	return (
-		<Separator {...props} className="mx-3 my-1 border-b border-gray-300 dark:border-zinc-700" />
+		<Separator {...props} className="border-gray-300 dark:border-zinc-700 mx-3 my-1 border-b" />
 	);
 }
 

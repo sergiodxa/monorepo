@@ -1,11 +1,12 @@
 @import "tailwindcss";
 @plugin "@tailwindcss/typography";
+@plugin "tailwindcss-animate";
 
 /* Import @pkg/ui styles */
-@import "../../../../packages/ui/src/styles.css";
+@import "../../../packages/ui/src/styles.css";
 
 /* Tell Tailwind to scan @pkg/ui components for class usage */
-@source "../../../../packages/ui/src/components";
+@source "../../../packages/ui/src/components";
 
 @theme {
 	--font-sans:

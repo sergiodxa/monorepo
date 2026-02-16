@@ -24,7 +24,7 @@ export function QuickActions({ dispatch }: QuickActionsProps) {
 	}, [dispatch, value]);
 
 	return (
-		<Toolbar orientation="vertical" className="rounded-lg bg-zinc-100 p-1 dark:bg-zinc-800">
+		<Toolbar orientation="vertical" className="bg-zinc-100 dark:bg-zinc-800 rounded-lg p-1">
 			<TooltipTrigger>
 				<Button type="button" variant="icon" aria-label="Upload image" className="size-10">
 					<ImagePlus className="size-4" />
