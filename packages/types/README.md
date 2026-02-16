@@ -39,6 +39,23 @@ export function HttpMonitorsCard(props: Props) {
 
 ## API
 
+### `JSONValue`
+
+Represents any JSON-serializable value. This includes primitives (`string`, `number`, `boolean`, `null`), arrays of JSON values, and plain objects with string keys and JSON values.
+
+**Example:**
+
+```typescript
+import type { JSONValue } from "@pkg/types";
+
+let obj: JSONValue = { name: "John", age: 30 };
+let arr: JSONValue = [1, "two", { three: 3 }];
+let str: JSONValue = "hello";
+let num: JSONValue = 42;
+let bool: JSONValue = true;
+let nil: JSONValue = null;
+```
+
 ### `ResolvedType<T>`
 
 Extracts the resolved type from an async function's return type. Combines `Awaited` and `ReturnType` utilities to unwrap both the function return type and the Promise.
@@ -109,6 +126,7 @@ interface MonitorRowProps {
 
 ## Tips
 
-1. **Use `import type`** - Always import `ResolvedType` as a type-only import since it's purely a type utility with no runtime code
+1. **Use `import type`** - Always import types as type-only imports since they are purely type utilities with no runtime code
 2. **Prefer over manual typing** - Using `ResolvedType` keeps types in sync with the actual function return type, avoiding drift when the function changes
 3. **Combine with indexed access** - Use `ResolvedType<typeof fn>["property"]` to extract nested types from complex return objects
+4. **Use `JSONValue` for dynamic data** - When accepting arbitrary JSON data (e.g., API responses, queue messages), use `JSONValue` instead of `unknown` for better type safety

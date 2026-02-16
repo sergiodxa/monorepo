@@ -1,6 +1,8 @@
+import type { Result } from "@pkg/result";
+import type { JSONValue } from "@pkg/types";
 import type { StandardSchemaV1 } from "@standard-schema/spec";
 
-import { type Result, success, failure } from "@pkg/result";
+import { success, failure } from "@pkg/result";
 
 import { ValidationError } from "./validation-error";
 
@@ -37,7 +39,7 @@ function urlSearchParamsToObject(params: URLSearchParams): Record<string, unknow
 }
 
 export async function validate<Schema extends StandardSchemaV1>(
-	input: FormData | URLSearchParams | Request | Record<string, unknown>,
+	input: FormData | URLSearchParams | Request | Record<string, unknown> | JSONValue,
 	schema: Schema,
 ): Promise<Result<StandardSchemaV1.InferOutput<Schema>, ValidationError>> {
 	if (input instanceof Request) {
