@@ -1,10 +1,14 @@
 import { BatchedLogger } from "@pkg/logger";
+import { isFailure } from "@pkg/result";
 import { env } from "cloudflare:workers";
 import { and, eq } from "drizzle-orm";
 
 import database from "~/db/index";
 import { monitorDailyStats } from "~/db/schema";
+import { pingUptime } from "~/lib/ping-uptime";
 import { queryAnalytics } from "~/services/analytics.server";
+
+let CRON_JOB_MONITOR_ID = "3f5a0689-1ced-4fcc-826d-3c1dc3c2795e";
 
 import type { Job } from "./base";
 
@@ -72,7 +76,16 @@ export default class AggregateDailyStatsJob implements Job {
 				GROUP BY blob1, blob2
 			`;
 
-			let results = await queryAnalytics<AggregatedStats>(sql);
+			let result = await queryAnalytics<AggregatedStats>(sql);
+
+			if (isFailure(result)) {
+				this.logger.error("job.aggregate_daily_stats.query_failed", {
+					error: result.error.message,
+				});
+				return message.retry();
+			}
+
+			let results = result.data;
 
 			this.logger.info("job.aggregate_daily_stats.queried", {
 				monitorCount: results.length,
@@ -80,6 +93,7 @@ export default class AggregateDailyStatsJob implements Job {
 
 			if (results.length === 0) {
 				this.logger.info("job.aggregate_daily_stats.no_data", { date });
+				await pingUptime(CRON_JOB_MONITOR_ID, env.UPTIME_CRON_API_KEY);
 				return message.ack();
 			}
 
@@ -129,6 +143,8 @@ export default class AggregateDailyStatsJob implements Job {
 				date,
 				monitorsProcessed: results.length,
 			});
+
+			await pingUptime(CRON_JOB_MONITOR_ID, env.UPTIME_CRON_API_KEY);
 
 			return message.ack();
 		} catch (error) {
