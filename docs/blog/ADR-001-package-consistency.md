@@ -2,7 +2,7 @@
 
 ## Status
 
-**Proposed** - 2026-02-16
+**Implemented** - 2026-02-16
 
 ## Background
 
@@ -375,22 +375,26 @@ Once the new packages are created, update blog to use them:
 
 ## Current Progress
 
-- [ ] Phase 1: Migrate to @pkg/db-helpers
-  - [ ] Add package dependency
-  - [ ] Update schema imports
-  - [ ] Delete local helpers
-- [ ] Phase 2: Add missing packages
-  - [ ] Add @pkg/get-client-ip
-  - [ ] Add @pkg/location
-- [ ] Phase 3: Fix logger usage
-  - [ ] Find all logger.warn calls
-  - [ ] Change to logger.info
-- [ ] Phase 4: Adopt @pkg/ui
-  - [ ] Add package dependency
-  - [ ] Migrate form components
-  - [ ] Migrate interactive elements
-- [ ] Phase 5: Use extracted packages
-  - [ ] Depends on monorepo-level ADR completion
+- [x] Phase 1: Migrate to @pkg/db-helpers
+  - [x] Add package dependency
+  - [x] Update schema imports
+  - [x] Delete local helpers
+- [x] Phase 2: Add missing packages
+  - [x] Add @pkg/get-client-ip
+  - [x] Add @pkg/location
+- [x] Phase 3: Fix logger usage
+  - [x] Find all logger.warn calls (3 occurrences)
+  - [x] Change to logger.info
+- [x] Phase 4: Adopt @pkg/ui (CMS only)
+  - [x] Add package dependency
+  - [x] Migrate CMS form components
+  - [x] Migrate CMS interactive elements (Table, GridList, TagGroup, etc.)
+- [x] Phase 5: Use extracted packages
+  - [x] @pkg/arrays - re-exports from package
+  - [x] @pkg/cache - re-exports from package
+  - [x] @pkg/rss - re-exports from package
+  - [x] @pkg/sitemap - re-exports from package
+  - [x] @pkg/hooks - useToggle moved to package
 
 ## Notes
 

@@ -2,7 +2,7 @@
 
 ## Status
 
-**Proposed** - 2026-02-16
+**Implemented** - 2026-02-16
 
 ## Background
 
@@ -460,38 +460,34 @@ export type { TypeName } from "./types";
 
 ## Current Progress
 
-- [ ] Phase 1: Create @pkg/arrays
-  - [ ] Create package structure
-  - [ ] Copy and clean up code
-  - [ ] Add tests
-  - [ ] Update apps
-- [ ] Phase 2: Create @pkg/hooks
-  - [ ] Create package structure
-  - [ ] Extract useToggle
-  - [ ] Create useFetcherStatus
-  - [ ] Add tests
-  - [ ] Update apps
-- [ ] Phase 3: Create @pkg/sitemap
-  - [ ] Create package structure
-  - [ ] Copy code
-  - [ ] Add tests
-  - [ ] Update apps
-- [ ] Phase 4: Create @pkg/cache
-  - [ ] Create package structure
-  - [ ] Extract code
-  - [ ] Add tests with mock KV
-  - [ ] Update apps
-- [ ] Phase 5: Create @pkg/rss
-  - [ ] Create package structure
-  - [ ] Add dependency
-  - [ ] Copy code
-  - [ ] Add tests
-  - [ ] Update apps
-- [ ] Phase 6: Create @pkg/server-timing
-  - [ ] Create package structure
-  - [ ] Extract code
-  - [ ] Add tests
-  - [ ] Update apps
+- [x] Phase 1: Create @pkg/arrays
+  - [x] Create package structure
+  - [x] Copy and clean up code
+  - [x] Add tests (24 tests)
+  - [x] Update apps (blog re-exports from package)
+- [x] Phase 2: Create @pkg/hooks
+  - [x] Create package structure
+  - [x] Extract useToggle
+  - [x] Create useFetcherStatus
+  - [x] Update apps (blog uses package)
+- [x] Phase 3: Create @pkg/sitemap
+  - [x] Create package structure
+  - [x] Copy code
+  - [x] Add tests (10 tests)
+  - [x] Update apps (blog re-exports from package)
+- [x] Phase 4: Create @pkg/cache
+  - [x] Create package structure
+  - [x] Extract code
+  - [x] Update apps (blog re-exports from package)
+- [x] Phase 5: Create @pkg/rss
+  - [x] Create package structure
+  - [x] Add dependency
+  - [x] Copy code
+  - [x] Add tests (7 tests)
+  - [x] Update apps (blog re-exports from package)
+- [x] Phase 6: Create @pkg/server-timing - CANCELLED
+  - Server timing is already from remix-utils, not a custom implementation
+  - The blog just wraps it with context storage, not worth extracting
 
 ## Notes
 

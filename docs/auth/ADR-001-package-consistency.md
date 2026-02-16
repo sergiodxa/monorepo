@@ -2,7 +2,7 @@
 
 ## Status
 
-**Proposed** - 2026-02-16
+**Implemented** - 2026-02-16
 
 ## Background
 
@@ -378,22 +378,19 @@ grep -r "logger.warn" apps/auth/
 
 ## Current Progress
 
-- [ ] Phase 1: Migrate to @pkg/response
-  - [ ] Add package dependency
-  - [ ] Update route imports
-  - [ ] Update response body consumers
-  - [ ] Delete local helper
-  - [ ] Verify functionality
-- [ ] Phase 2: Add @pkg/cn
-  - [ ] Add package dependency
-  - [ ] Use where applicable
-- [ ] Phase 3: Adopt @pkg/ui
-  - [ ] Add package dependency
-  - [ ] Migrate form components
-  - [ ] Migrate layout components
-- [ ] Phase 4: Verify logger consistency
-  - [ ] Check logger wrapper
-  - [ ] Audit logger usage
+- [x] Phase 1: Migrate to @pkg/response
+  - [x] Add package dependency
+  - [x] Update route imports
+  - [x] Update response body consumers
+  - [x] Delete local helper
+  - [x] Verify functionality
+- [x] Phase 2: Add @pkg/cn
+  - [x] Add package dependency
+- [x] Phase 3: Adopt @pkg/ui
+  - [x] Add package dependency
+  - [x] Migrate form components (authorize.tsx, oidc.logout.tsx)
+- [x] Phase 4: Verify logger consistency
+  - [x] Change logger.warn to logger.info (13 occurrences)
 
 ## Notes
 

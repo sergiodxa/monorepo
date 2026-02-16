@@ -2,7 +2,7 @@
 
 ## Status
 
-**Proposed** - 2026-02-16
+**Partially Implemented** - 2026-02-16
 
 ## Background
 
@@ -421,20 +421,20 @@ export function useFetcherStatus<T extends { ok?: boolean }>(
 
 ## Current Progress
 
-- [ ] Phase 1: Fix logger runtime bug (Critical)
-  - [ ] Fix api.subscribe.ts (4 changes)
-  - [ ] Fix api.checkout.$type.ts (1 change)
-- [ ] Phase 2: Fix Result pattern usage
-  - [ ] Update api.checkout.$type.ts
-- [ ] Phase 3: Add @pkg/cn
-  - [ ] Add package dependency
-- [ ] Phase 4: Adopt @pkg/ui
+- [x] Phase 1: Fix logger runtime bug (Critical)
+  - [x] Fix api.subscribe.ts (4 changes)
+  - [x] Fix api.checkout.$type.ts (1 change)
+- [x] Phase 2: Fix Result pattern usage
+  - [x] Update api.checkout.$type.ts (use isSuccess/isFailure guards)
+- [x] Phase 3: Add @pkg/cn
+  - [x] Add package dependency
+- [ ] Phase 4: Adopt @pkg/ui (Deferred)
   - [ ] Add package dependency
   - [ ] Replace loading spinner (3 files)
   - [ ] Migrate form components
-- [ ] Phase 5: Consolidate duplicate code
-  - [ ] Consolidate schemas
-  - [ ] Extract form status hook (candidate for @pkg/hooks)
+- [x] Phase 5: Consolidate duplicate code
+  - [ ] Consolidate schemas (deferred)
+  - [x] Extract form status hook - now available in @pkg/hooks as useFetcherStatus
 
 ## Notes
 
