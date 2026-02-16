@@ -11,10 +11,7 @@ import Customer from "~/models/customer";
 import Monitor from "~/models/monitor";
 
 export class PingJob extends Job {
-	static schema = z.object({
-		monitorId: z.string(),
-		ownerId: z.string(),
-	});
+	static schema = z.object({ monitorId: z.string(), ownerId: z.string() });
 
 	async perform(): Promise<void> {
 		let result = await validate(this.input, PingJob.schema);

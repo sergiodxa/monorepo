@@ -24,10 +24,9 @@ export class EnqueuePendingDomainsJob extends Job {
 		this.logger.info("database.query.complete", { count: teamDomains.length });
 
 		if (teamDomains.length === 0) {
-			this.logger.info("job.enqueue-pending-domains.skipped", {
+			return this.logger.info("job.enqueue-pending-domains.skipped", {
 				reason: "no_pending_domains",
 			});
-			return;
 		}
 
 		this.logger.info("queue.send-batch", {
@@ -40,10 +39,7 @@ export class EnqueuePendingDomainsJob extends Job {
 			env.QUEUE.sendBatch(
 				teamDomains.map((teamDomain) => {
 					return {
-						body: {
-							type: "verifyDomainOwnership",
-							teamDomainId: teamDomain.id,
-						},
+						body: { type: "verifyDomainOwnership", teamDomainId: teamDomain.id },
 						contentType: "json",
 					};
 				}),

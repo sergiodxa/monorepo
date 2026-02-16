@@ -35,11 +35,10 @@ export class VerifyDomainOwnershipJob extends Job {
 		});
 
 		if (!teamDomain) {
-			this.logger.info("job.verify-domain-ownership.skipped", {
+			return this.logger.info("job.verify-domain-ownership.skipped", {
 				teamDomainId,
 				reason: "not_found",
 			});
-			return;
 		}
 
 		this.logger.info("dns.lookup", {
