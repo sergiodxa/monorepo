@@ -1,6 +1,7 @@
 import type { JSONValue } from "@pkg/types";
 import type { RequestHandler } from "react-router";
 
+import { logger } from "@pkg/logger";
 import { env, waitUntil } from "cloudflare:workers";
 
 import GeoFetchDO from "./do/geo-fetch";
@@ -73,37 +74,35 @@ export default {
 		for (let message of batch.messages) {
 			let result = z
 				.discriminatedUnion("type", [
-					z.object({
-						type: z.literal("ping"),
-						payload: z.object({ monitorId: z.uuid(), ownerId: z.uuid() }),
-					}),
+					z.object({ type: z.literal("ping") }),
 					z.object({ type: z.literal("clean") }),
 					z.object({ type: z.literal("cleanCronJobPings") }),
 					z.object({ type: z.literal("enqueuePendingDomains") }),
-					z.object({
-						type: z.literal("verifyDomainOwnership"),
-						teamDomainId: z.uuid(),
-					}),
+					z.object({ type: z.literal("verifyDomainOwnership") }),
 					z.object({ type: z.literal("checkSsl") }),
 					z.object({ type: z.literal("checkDns") }),
 					z.object({ type: z.literal("checkTcp") }),
 					z.object({ type: z.literal("checkCronJobs") }),
 					z.object({ type: z.literal("aggregateDailyStats") }),
 				])
+				.transform((data) => data.type)
 				.safeParse(message.body);
 
 			if (result.success === false) {
-				console.error(result.error);
-				message.retry();
+				logger.error("Invalid message received in queue", {
+					error: result.error,
+					message: message.body,
+				});
+				message.ack();
 				continue;
 			}
 
-			if (result.data.type === "ping") {
+			if (result.data === "ping") {
 				let { PingJob } = await import("./jobs/ping");
 				waitUntil(PingJob.run({ message: message as Message<JSONValue> }));
 			}
 
-			if (result.data.type === "clean") {
+			if (result.data === "clean") {
 				let { CleanJob } = await import("./jobs/clean");
 				waitUntil(
 					CleanJob.run({
@@ -113,7 +112,7 @@ export default {
 				);
 			}
 
-			if (result.data.type === "cleanCronJobPings") {
+			if (result.data === "cleanCronJobPings") {
 				let { CleanCronJobPingsJob } = await import("./jobs/clean-cron-job-pings");
 				waitUntil(
 					CleanCronJobPingsJob.run({
@@ -123,7 +122,7 @@ export default {
 				);
 			}
 
-			if (result.data.type === "enqueuePendingDomains") {
+			if (result.data === "enqueuePendingDomains") {
 				let { EnqueuePendingDomainsJob } = await import("./jobs/enqueue-pending-domains");
 				waitUntil(
 					EnqueuePendingDomainsJob.run({
@@ -136,12 +135,12 @@ export default {
 				);
 			}
 
-			if (result.data.type === "verifyDomainOwnership") {
+			if (result.data === "verifyDomainOwnership") {
 				let { VerifyDomainOwnershipJob } = await import("./jobs/verify-domain-ownership");
 				waitUntil(VerifyDomainOwnershipJob.run({ message: message as Message<JSONValue> }));
 			}
 
-			if (result.data.type === "checkSsl") {
+			if (result.data === "checkSsl") {
 				let { CheckSslJob } = await import("./jobs/check-ssl");
 				waitUntil(
 					CheckSslJob.run({
@@ -151,7 +150,7 @@ export default {
 				);
 			}
 
-			if (result.data.type === "checkDns") {
+			if (result.data === "checkDns") {
 				let { CheckDnsJob } = await import("./jobs/check-dns");
 				waitUntil(
 					CheckDnsJob.run({
@@ -161,7 +160,7 @@ export default {
 				);
 			}
 
-			if (result.data.type === "checkTcp") {
+			if (result.data === "checkTcp") {
 				let { CheckTcpJob } = await import("./jobs/check-tcp");
 				waitUntil(
 					CheckTcpJob.run({
@@ -171,7 +170,7 @@ export default {
 				);
 			}
 
-			if (result.data.type === "checkCronJobs") {
+			if (result.data === "checkCronJobs") {
 				let { CheckCronJobsJob } = await import("./jobs/check-cron-jobs");
 				waitUntil(
 					CheckCronJobsJob.run({
@@ -181,7 +180,7 @@ export default {
 				);
 			}
 
-			if (result.data.type === "aggregateDailyStats") {
+			if (result.data === "aggregateDailyStats") {
 				let { AggregateDailyStatsJob } = await import("./jobs/aggregate-daily-stats");
 				waitUntil(
 					AggregateDailyStatsJob.run({
