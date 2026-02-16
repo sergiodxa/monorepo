@@ -120,7 +120,7 @@ export abstract class Job {
 
 	readonly #opts: Job.ConstructorOptions;
 
-	constructor(
+	private constructor(
 		options: Job.ConstructorOptions,
 		protected readonly input: JSONValue,
 	) {
