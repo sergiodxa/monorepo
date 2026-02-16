@@ -1,5 +1,6 @@
 import { BatchedLogger } from "@pkg/logger";
 import { env } from "cloudflare:workers";
+import { z } from "zod/v4";
 
 import database from "~/db/index";
 import { monitorDailyStats } from "~/db/schema";
@@ -7,6 +8,7 @@ import { monitorDailyStats } from "~/db/schema";
 import type { Job } from "./base";
 
 interface ResultAggregate {
+	date: string;
 	checks: { total: number; successful: number };
 	responseTime: number[];
 }
@@ -14,7 +16,7 @@ interface ResultAggregate {
 interface MonitorAggregate {
 	monitorId: string;
 	type: "http";
-	results: Record<string, ResultAggregate>;
+	results: Set<ResultAggregate>;
 }
 
 export default class BackfillDailyStatsJob implements Job {
@@ -27,48 +29,40 @@ export default class BackfillDailyStatsJob implements Job {
 
 			let monitors = await this.aggregateHttpMonitors();
 
-			if (monitors.length === 0) {
+			if (monitors.size === 0) {
 				this.logger.info("job.backfill-daily-stats.no-data");
 				return message.ack();
 			}
 
-			this.logger.info("job.backfill-daily-stats.aggregated", { monitors: monitors.length });
+			this.logger.info("job.backfill-daily-stats.aggregated", { monitors: monitors.size });
 
-			let result = await Promise.all(
-				monitors.map(async (monitor) => {
-					return await Promise.all(
-						Object.entries(monitor.results).map(async ([date, result]) => {
-							let status = calculateStatus(result.checks.successful, result.checks.total);
-
-							try {
-								await this.db.insert(monitorDailyStats).values({
-									monitorId: monitor.monitorId,
-									monitorType: monitor.type,
-									date,
-									status,
-									totalChecks: result.checks.total,
-									successfulChecks: result.checks.successful,
-									failedChecks: result.checks.total - result.checks.successful,
-									avgResponseTimeMs: avg(result.responseTime),
-									maxResponseTimeMs: Math.max(...result.responseTime),
-									p95ResponseTimeMs: p95(result.responseTime),
-								});
-
-								return true;
-							} catch (error) {
-								this.logger.error("job.backfill-daily-stats.insert-error", {
-									error: error instanceof Error ? error.message : String(error),
-									monitorId: monitor.monitorId,
-									date,
-								});
-								return false;
-							}
-						}),
-					);
-				}),
-			);
-
-			let rowsWritten = result.flat(2).filter((r) => r).length;
+			let rowsWritten = 0;
+			for (let monitor of monitors.values()) {
+				for (let result of monitor.results) {
+					let status = calculateStatus(result.checks.successful, result.checks.total);
+					try {
+						await this.db.insert(monitorDailyStats).values({
+							monitorId: monitor.monitorId,
+							monitorType: monitor.type,
+							date: result.date,
+							status,
+							totalChecks: result.checks.total,
+							successfulChecks: result.checks.successful,
+							failedChecks: result.checks.total - result.checks.successful,
+							avgResponseTimeMs: avg(result.responseTime),
+							maxResponseTimeMs: Math.max(...result.responseTime),
+							p95ResponseTimeMs: p95(result.responseTime),
+						});
+						rowsWritten++;
+					} catch (error) {
+						this.logger.error("job.backfill-daily-stats.insert-error", {
+							error: error instanceof Error ? error.message : String(error),
+							monitorId: monitor.monitorId,
+							date: result.date,
+						});
+					}
+				}
+			}
 
 			this.logger.info("job.backfill-daily-stats.completed", { rowsWritten });
 
@@ -85,7 +79,7 @@ export default class BackfillDailyStatsJob implements Job {
 				error: error instanceof Error ? error.message : String(error),
 			});
 
-			return message.retry();
+			return message.ack();
 		} finally {
 			this.logger.flush();
 		}
@@ -137,45 +131,65 @@ export default class BackfillDailyStatsJob implements Job {
 		}
 	}
 
-	private async aggregateHttpMonitors() {
-		let monitors = await this.db.query.monitors.findMany({
-			with: {
-				results: {
-					where(fields, operators) {
-						return operators.and(
-							operators.isNotNull(fields.responseStatus),
-							operators.isNotNull(fields.completedAt),
-						);
-					},
-				},
-			},
+	private async aggregateHttpMonitors(): Promise<Map<string, MonitorAggregate>> {
+		let rowSchema = z.object({
+			monitorId: z.string(),
+			date: z.string(),
+			totalChecks: z.coerce.number(),
+			successfulChecks: z.coerce.number(),
+			responseTimesJson: z.string().transform((val) => {
+				try {
+					let parsed = JSON.parse(val);
+					if (!Array.isArray(parsed)) return [];
+					return parsed.filter((v): v is number => typeof v === "number" && v !== null);
+				} catch {
+					return [];
+				}
+			}),
 		});
 
-		return monitors.map((monitor) => {
-			let results = monitor.results.reduce(
-				(group, result) => {
-					let date = result.completedAt?.toISOString().split("T")[0];
-					if (!date) return group;
+		let sql = `
+			SELECT
+				mr.monitor_id as monitorId,
+				strftime('%Y-%m-%d', mr.completed_at) as date,
+				COUNT(*) as totalChecks,
+				SUM(CASE WHEN mr.response_status = m.expected_status THEN 1 ELSE 0 END) as successfulChecks,
+				json_group_array(mr.response_time_ms) as responseTimesJson
+			FROM monitor_results mr
+			JOIN monitors m ON m.id = mr.monitor_id
+			WHERE mr.completed_at IS NOT NULL AND mr.response_status IS NOT NULL
+			GROUP BY mr.monitor_id, strftime('%Y-%m-%d', mr.completed_at)
+			HAVING date IS NOT NULL
+		`;
 
-					let current = group[date] ?? { checks: { total: 0, successful: 0 }, responseTime: [] };
+		let result = await this.db.$client.prepare(sql).all();
 
-					current.checks.total += 1;
-					if (result.responseStatus === monitor.expectedStatus) {
-						current.checks.successful += 1;
-					}
+		let map = new Map<string, MonitorAggregate>();
 
-					if (result.responseTimeMs !== null) {
-						current.responseTime.push(result.responseTimeMs);
-					}
+		for (let rawRow of result?.results ?? []) {
+			let parsed = rowSchema.safeParse(rawRow);
+			if (!parsed.success) continue;
 
-					group[date] = current;
-					return group;
+			let row = parsed.data;
+
+			let monitor = map.get(row.monitorId);
+
+			if (!monitor) {
+				monitor = { monitorId: row.monitorId, type: "http", results: new Set<ResultAggregate>() };
+				map.set(row.monitorId, monitor);
+			}
+
+			monitor.results.add({
+				date: row.date,
+				checks: {
+					total: row.totalChecks,
+					successful: row.successfulChecks,
 				},
-				{} as MonitorAggregate["results"],
-			);
+				responseTime: row.responseTimesJson,
+			});
+		}
 
-			return { monitorId: monitor.id, type: "http" as const, results } satisfies MonitorAggregate;
-		});
+		return map;
 	}
 }
 
