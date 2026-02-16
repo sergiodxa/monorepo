@@ -7,10 +7,22 @@ import { z } from "zod";
 
 import database from "~/db/index";
 import * as schema from "~/db/schema";
-import { dnsLookup } from "~/utils/dns-lookup";
 
 export class VerifyDomainOwnershipJob extends Job {
 	static schema = z.object({ teamDomainId: z.string() });
+
+	private static DNS_BASE_URL = new URL("https://cloudflare-dns.com/dns-query");
+	private static DNSResponseSchema = z.object({
+		Answer: z
+			.object({
+				name: z.string(),
+				type: z.number(),
+				TTL: z.number(),
+				data: z.string(),
+			})
+			.array()
+			.optional(),
+	});
 
 	async perform(): Promise<void> {
 		let result = await validate(this.input, VerifyDomainOwnershipJob.schema);
@@ -46,7 +58,7 @@ export class VerifyDomainOwnershipJob extends Job {
 			teamDomainId,
 		});
 
-		let verified = await dnsLookup(teamDomain.hostname, teamDomain.id);
+		let verified = await this.lookup(teamDomain.hostname, teamDomain.id);
 
 		if (verified) {
 			this.logger.info("database.update", {
@@ -71,6 +83,34 @@ export class VerifyDomainOwnershipJob extends Job {
 				reason: "dns_lookup_failed",
 			});
 		}
+	}
+
+	private async lookup(domain: string, expectedValue: string) {
+		let url = new URL(VerifyDomainOwnershipJob.DNS_BASE_URL);
+		url.searchParams.set("name", `_ping-verification.${domain}`);
+		url.searchParams.set("type", "TXT");
+
+		let headers = new Headers();
+		headers.set("Accept", "application/dns-json");
+
+		let response = await fetch(url, { headers });
+
+		if (!response.ok) throw new Error(`Error fetching DNS: ${response.status}`);
+
+		let unparsedBody = await response.json();
+
+		this.logger.info("dns.lookup.response", { url: url.toString(), response: unparsedBody });
+
+		let body = VerifyDomainOwnershipJob.DNSResponseSchema.parse(unparsedBody);
+
+		this.logger.info("dns.lookup.parsedResponse", { url: url.toString(), response: body });
+
+		if (!body.Answer) {
+			this.logger.info("dns.lookup.noAnswer", { url: url.toString() });
+			return false;
+		}
+
+		return body.Answer.some((r) => r.data === JSON.stringify(`ping_${expectedValue}`));
 	}
 }
 
