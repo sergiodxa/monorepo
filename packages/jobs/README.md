@@ -24,6 +24,7 @@ import { isFailure } from "@pkg/result";
 import { z } from "zod";
 
 export class SyncTeamJob extends Job {
+	static override monitorId = "your-monitor-id"; // Optional: for uptime monitoring
 	static schema = z.object({ teamId: z.string() });
 
 	async perform() {
@@ -59,7 +60,7 @@ export default {
 			ctx.waitUntil(
 				SyncTeamJob.run({
 					message,
-					uptime: { token: env.UPTIME_TOKEN, monitorId: env.SYNC_TEAM_MONITOR_ID },
+					uptime: { token: env.UPTIME_TOKEN }, // monitorId is read from static property
 				}),
 			);
 		}
@@ -67,22 +68,33 @@ export default {
 };
 ```
 
+If the job class doesn't have a `static monitorId` property, the uptime ping is skipped even if a token is provided.
+
 ## API
 
 ### `Job`
 
 Abstract base class for defining jobs.
 
-#### `static async run(options: Job.RunOptions<Body>): Promise<void>`
+#### `static monitorId?: string`
+
+Optional uptime monitor ID. When defined and a token is provided to `run()`, the job will ping the uptime service on successful completion. Use `override` when defining this property in subclasses.
+
+```typescript
+class MyJob extends Job {
+	static override monitorId = "abc-123";
+}
+```
+
+#### `static async run(options: Job.RunOptions): Promise<void>`
 
 Executes the job with full lifecycle management.
 
 **Parameters:**
 
-- `options.message`: Cloudflare Queue `Message<Body>` object containing the job input and ack/retry control
+- `options.message`: Cloudflare Queue `Message<unknown>` object containing the job input and ack/retry control
 - `options.uptime`: Optional uptime monitoring configuration
-- `options.uptime.token`: Bearer token for the uptime service
-- `options.uptime.monitorId`: Monitor ID to ping on success
+- `options.uptime.token`: Bearer token for the uptime service (monitorId is read from the static property)
 
 **Behavior:**
 
@@ -135,14 +147,13 @@ Logs `job.non-retriable` at error level, then calls `message.ack()`.
 
 ### Types
 
-#### `Job.RunOptions<Body>`
+#### `Job.RunOptions`
 
 ```typescript
-interface RunOptions<Body> {
-	message: Message<Body>;
+interface RunOptions {
+	message: Message<unknown>;
 	uptime?: {
 		token: string;
-		monitorId: string;
 	};
 }
 ```
@@ -151,7 +162,10 @@ interface RunOptions<Body> {
 
 ```typescript
 interface ConstructorOptions {
-	uptime?: UptimeOptions;
+	uptime?: {
+		token?: string;
+		monitorId?: string;
+	};
 	logger: BatchedLogger;
 }
 ```
@@ -265,3 +279,4 @@ class CleanupJob extends Job {
 5. **Log context in `perform()`** - The logger automatically includes message ID and attempts; add job-specific context like entity IDs.
 6. **Uptime pings only on success** - Failed jobs don't ping, so your uptime monitor will alert if jobs consistently fail.
 7. **Unexpected errors re-throw** - Errors that aren't `RetryError` or `NonRetriableError` propagate to Cloudflare for default retry handling.
+8. **Use `static override monitorId`** - When defining monitorId on a job class, use `override` to indicate you're overriding the base class property.
