@@ -14,9 +14,6 @@ export default class EnqueuePendingDomainsJob implements Job {
 		try {
 			this.logger.info("job.enqueue-pending-domains.started", { messageId: message.id });
 
-			// Ping uptime monitor
-			await pingUptime("9a2e4fe3-f5fe-4365-8b8f-2f2d90d6101c", env.UPTIME_CRON_API_KEY);
-
 			this.logger.info("database.query", {
 				table: "teamDomains",
 				operation: "select",
@@ -34,6 +31,7 @@ export default class EnqueuePendingDomainsJob implements Job {
 				this.logger.info("job.enqueue-pending-domains.skipped", {
 					reason: "no_pending_domains",
 				});
+				await pingUptime("9a2e4fe3-f5fe-4365-8b8f-2f2d90d6101c", env.UPTIME_CRON_API_KEY);
 				return message.ack();
 			}
 
@@ -60,6 +58,7 @@ export default class EnqueuePendingDomainsJob implements Job {
 				domainsEnqueued: teamDomains.length,
 			});
 
+			await pingUptime("9a2e4fe3-f5fe-4365-8b8f-2f2d90d6101c", env.UPTIME_CRON_API_KEY);
 			return message.ack();
 		} catch (error) {
 			this.logger.error("job.enqueue-pending-domains.failed", {

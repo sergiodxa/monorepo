@@ -22,9 +22,6 @@ export default class CheckDnsJob implements Job {
 		try {
 			this.logger.info("job.check-dns.started", { messageId: message.id });
 
-			// Ping uptime monitor
-			await pingUptime("3a620acd-43f9-4f48-9a32-b9a87698e44e", env.UPTIME_CRON_API_KEY);
-
 			// Get all enabled DNS monitors
 			let monitors = await this.db.query.dnsMonitors.findMany({
 				columns: {
@@ -65,6 +62,8 @@ export default class CheckDnsJob implements Job {
 				successCount,
 				errorCount,
 			});
+
+			await pingUptime("3a620acd-43f9-4f48-9a32-b9a87698e44e", env.UPTIME_CRON_API_KEY);
 			return message.ack();
 		} catch (error) {
 			this.logger.error("job.check-dns.failed", {

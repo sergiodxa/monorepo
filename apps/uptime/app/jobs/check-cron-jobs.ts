@@ -36,9 +36,6 @@ export default class CheckCronJobsJob implements Job {
 		try {
 			this.logger.info("job.check-cron-jobs.started", { messageId: message.id });
 
-			// Ping uptime monitor
-			await pingUptime("70a5dba9-8447-4cc0-a5f6-d0e41dc6b9e5", env.UPTIME_CRON_API_KEY);
-
 			let now = new Date();
 
 			// Get all enabled cron job monitors that have a nextExpectedAt set
@@ -136,6 +133,7 @@ export default class CheckCronJobsJob implements Job {
 				alertsSentCount,
 			});
 
+			await pingUptime("70a5dba9-8447-4cc0-a5f6-d0e41dc6b9e5", env.UPTIME_CRON_API_KEY);
 			return message.ack();
 		} catch (error) {
 			this.logger.error("job.check-cron-jobs.failed", {

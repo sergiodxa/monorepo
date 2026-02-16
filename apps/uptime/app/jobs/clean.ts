@@ -15,9 +15,6 @@ export default class CleanJob implements Job {
 		try {
 			this.logger.info("job.clean.started", { messageId: message.id });
 
-			// Ping uptime monitor
-			await pingUptime("80294988-476e-4e99-9f5c-abfeb369316a", env.UPTIME_CRON_API_KEY);
-
 			this.logger.info("database.delete", {
 				table: "monitorResults",
 				operation: "clean_old_results",
@@ -25,6 +22,8 @@ export default class CleanJob implements Job {
 			let result = await Monitor.cleanResults(this.db);
 
 			this.logger.info("job.clean.completed", { rowsDeleted: result.meta.changes });
+
+			await pingUptime("80294988-476e-4e99-9f5c-abfeb369316a", env.UPTIME_CRON_API_KEY);
 			return message.ack();
 		} catch (error) {
 			this.logger.error("job.clean.failed", {

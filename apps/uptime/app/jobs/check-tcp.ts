@@ -24,9 +24,6 @@ export default class CheckTcpJob implements Job {
 
 	async run(message: Message): Promise<void> {
 		try {
-			// Ping uptime monitor
-			await pingUptime("94276ec1-18f9-4dde-8a09-c5a00df29454", env.UPTIME_CRON_API_KEY);
-
 			let monitors = await TcpMonitor.getEnabledMonitors(this.db);
 
 			this.logger.info("job.check-tcp.started", {
@@ -51,6 +48,8 @@ export default class CheckTcpJob implements Job {
 				successCount,
 				errorCount,
 			});
+
+			await pingUptime("94276ec1-18f9-4dde-8a09-c5a00df29454", env.UPTIME_CRON_API_KEY);
 			return message.ack();
 		} catch (error) {
 			this.logger.error("job.check-tcp.failed", {

@@ -22,8 +22,6 @@ export default class CheckSslJob implements Job {
 		try {
 			this.logger.info("job.check-ssl.started", { messageId: message.id });
 
-			await pingUptime("2140cbc2-e18e-441c-9ef9-3d516a9e3a19", env.UPTIME_CRON_API_KEY);
-
 			let monitors = await this.db.query.monitors.findMany({
 				columns: {
 					id: true,
@@ -64,6 +62,8 @@ export default class CheckSslJob implements Job {
 				successCount,
 				errorCount,
 			});
+
+			await pingUptime("2140cbc2-e18e-441c-9ef9-3d516a9e3a19", env.UPTIME_CRON_API_KEY);
 			return message.ack();
 		} catch (error) {
 			this.logger.error("job.check-ssl.failed", {

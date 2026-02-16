@@ -15,9 +15,6 @@ export default class CleanCronJobPingsJob implements Job {
 		try {
 			this.logger.info("job.clean-cron-job-pings.started", { messageId: message.id });
 
-			// Ping uptime monitor
-			await pingUptime("31db20cb-8736-44fa-9ac7-448d2200befd", env.UPTIME_CRON_API_KEY);
-
 			this.logger.info("database.delete", {
 				table: "cronJobPings",
 				operation: "clean_old_pings",
@@ -25,6 +22,8 @@ export default class CleanCronJobPingsJob implements Job {
 			let deleted = await CronJobMonitor.cleanPings(this.db, 365);
 
 			this.logger.info("job.clean-cron-job-pings.completed", { rowsDeleted: deleted });
+
+			await pingUptime("31db20cb-8736-44fa-9ac7-448d2200befd", env.UPTIME_CRON_API_KEY);
 			return message.ack();
 		} catch (error) {
 			this.logger.error("job.clean-cron-job-pings.failed", {
