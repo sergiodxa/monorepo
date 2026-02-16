@@ -10,7 +10,7 @@ import database from "~/db/index";
 import Customer from "~/models/customer";
 import Monitor from "~/models/monitor";
 
-export default class PingJob extends Job {
+export class PingJob extends Job {
 	static schema = z.object({
 		monitorId: z.string(),
 		ownerId: z.string(),

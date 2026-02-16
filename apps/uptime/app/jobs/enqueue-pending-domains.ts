@@ -3,7 +3,7 @@ import { env, waitUntil } from "cloudflare:workers";
 
 import database from "~/db/index";
 
-export default class EnqueuePendingDomainsJob extends Job {
+export class EnqueuePendingDomainsJob extends Job {
 	static monitorId = "9a2e4fe3-f5fe-4365-8b8f-2f2d90d6101c";
 
 	async perform(): Promise<void> {

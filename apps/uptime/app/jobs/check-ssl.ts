@@ -11,7 +11,7 @@ import { calculateSslStatus, shouldSendSslAlert } from "~/services/check-ssl";
  * Job that checks SSL certificate expiry for all monitors with SSL monitoring enabled.
  * Runs daily to update SSL status and send alerts for expiring certificates.
  */
-export default class CheckSslJob extends Job {
+export class CheckSslJob extends Job {
 	static monitorId = "2140cbc2-e18e-441c-9ef9-3d516a9e3a19";
 
 	async perform(): Promise<void> {

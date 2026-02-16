@@ -11,7 +11,7 @@ import { checkDns, type DnsRecordType } from "~/services/check-dns";
  * Job that checks all enabled DNS monitors.
  * Runs hourly to verify DNS records and detect changes.
  */
-export default class CheckDnsJob extends Job {
+export class CheckDnsJob extends Job {
 	static monitorId = "3a620acd-43f9-4f48-9a32-b9a87698e44e";
 
 	async perform(): Promise<void> {

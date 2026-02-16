@@ -15,7 +15,7 @@ import { checkTcpConnection } from "~/services/check-tcp";
  * Note: TCP monitoring has limitations on Cloudflare Workers free plan.
  * See services/check-tcp.ts for details.
  */
-export default class CheckTcpJob extends Job {
+export class CheckTcpJob extends Job {
 	static monitorId = "94276ec1-18f9-4dde-8a09-c5a00df29454";
 
 	async perform(): Promise<void> {

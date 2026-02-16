@@ -17,7 +17,7 @@ interface MonitorAggregate {
 	results: Set<ResultAggregate>;
 }
 
-export default class BackfillDailyStatsJob extends Job {
+export class BackfillDailyStatsJob extends Job {
 	async perform(): Promise<void> {
 		let db = database(env.DB);
 

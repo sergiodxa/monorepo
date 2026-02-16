@@ -27,7 +27,7 @@ export namespace CheckCronJobsJob {
  * Job that checks all enabled cron job monitors.
  * Runs on a schedule to detect late or missed cron executions.
  */
-export default class CheckCronJobsJob extends Job {
+export class CheckCronJobsJob extends Job {
 	static monitorId = "70a5dba9-8447-4cc0-a5f6-d0e41dc6b9e5";
 
 	async perform(): Promise<void> {

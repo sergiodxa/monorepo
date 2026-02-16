@@ -4,7 +4,7 @@ import { env } from "cloudflare:workers";
 import database from "~/db/index";
 import CronJobMonitor from "~/models/cron-job-monitor";
 
-export default class CleanCronJobPingsJob extends Job {
+export class CleanCronJobPingsJob extends Job {
 	static monitorId = "31db20cb-8736-44fa-9ac7-448d2200befd";
 
 	async perform(): Promise<void> {

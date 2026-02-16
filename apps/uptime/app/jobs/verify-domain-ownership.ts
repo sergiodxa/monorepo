@@ -9,7 +9,7 @@ import database from "~/db/index";
 import * as schema from "~/db/schema";
 import { dnsLookup } from "~/utils/dns-lookup";
 
-export default class VerifyDomainOwnershipJob extends Job {
+export class VerifyDomainOwnershipJob extends Job {
 	static schema = z.object({ teamDomainId: z.string() });
 
 	async perform(): Promise<void> {

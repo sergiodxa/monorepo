@@ -100,12 +100,12 @@ export default {
 			}
 
 			if (result.data.type === "ping") {
-				let PingJob = await import("./jobs/ping").then((m) => m.default);
+				let { PingJob } = await import("./jobs/ping");
 				waitUntil(PingJob.run({ message: message as Message<JSONValue> }));
 			}
 
 			if (result.data.type === "clean") {
-				let CleanJob = await import("./jobs/clean").then((m) => m.default);
+				let { CleanJob } = await import("./jobs/clean");
 				waitUntil(
 					CleanJob.run({
 						message: message as Message<JSONValue>,
@@ -115,9 +115,7 @@ export default {
 			}
 
 			if (result.data.type === "cleanCronJobPings") {
-				let CleanCronJobPingsJob = await import("./jobs/clean-cron-job-pings").then(
-					(m) => m.default,
-				);
+				let { CleanCronJobPingsJob } = await import("./jobs/clean-cron-job-pings");
 				waitUntil(
 					CleanCronJobPingsJob.run({
 						message: message as Message<JSONValue>,
@@ -127,9 +125,7 @@ export default {
 			}
 
 			if (result.data.type === "enqueuePendingDomains") {
-				let EnqueuePendingDomainsJob = await import("./jobs/enqueue-pending-domains").then(
-					(m) => m.default,
-				);
+				let { EnqueuePendingDomainsJob } = await import("./jobs/enqueue-pending-domains");
 				waitUntil(
 					EnqueuePendingDomainsJob.run({
 						message: message as Message<JSONValue>,
@@ -142,14 +138,12 @@ export default {
 			}
 
 			if (result.data.type === "verifyDomainOwnership") {
-				let VerifyDomainOwnershipJob = await import("./jobs/verify-domain-ownership").then(
-					(m) => m.default,
-				);
+				let { VerifyDomainOwnershipJob } = await import("./jobs/verify-domain-ownership");
 				waitUntil(VerifyDomainOwnershipJob.run({ message: message as Message<JSONValue> }));
 			}
 
 			if (result.data.type === "checkSsl") {
-				let CheckSslJob = await import("./jobs/check-ssl").then((m) => m.default);
+				let { CheckSslJob } = await import("./jobs/check-ssl");
 				waitUntil(
 					CheckSslJob.run({
 						message: message as Message<JSONValue>,
@@ -159,7 +153,7 @@ export default {
 			}
 
 			if (result.data.type === "checkDns") {
-				let CheckDnsJob = await import("./jobs/check-dns").then((m) => m.default);
+				let { CheckDnsJob } = await import("./jobs/check-dns");
 				waitUntil(
 					CheckDnsJob.run({
 						message: message as Message<JSONValue>,
@@ -169,7 +163,7 @@ export default {
 			}
 
 			if (result.data.type === "checkTcp") {
-				let CheckTcpJob = await import("./jobs/check-tcp").then((m) => m.default);
+				let { CheckTcpJob } = await import("./jobs/check-tcp");
 				waitUntil(
 					CheckTcpJob.run({
 						message: message as Message<JSONValue>,
@@ -179,7 +173,7 @@ export default {
 			}
 
 			if (result.data.type === "checkCronJobs") {
-				let CheckCronJobsJob = await import("./jobs/check-cron-jobs").then((m) => m.default);
+				let { CheckCronJobsJob } = await import("./jobs/check-cron-jobs");
 				waitUntil(
 					CheckCronJobsJob.run({
 						message: message as Message<JSONValue>,
@@ -189,9 +183,7 @@ export default {
 			}
 
 			if (result.data.type === "aggregateDailyStats") {
-				let AggregateDailyStatsJob = await import("./jobs/aggregate-daily-stats").then(
-					(m) => m.default,
-				);
+				let { AggregateDailyStatsJob } = await import("./jobs/aggregate-daily-stats");
 				waitUntil(
 					AggregateDailyStatsJob.run({
 						message: message as Message<JSONValue>,
@@ -201,9 +193,7 @@ export default {
 			}
 
 			if (result.data.type === "backfillDailyStats") {
-				let BackfillDailyStatsJob = await import("./jobs/backfill-daily-stats").then(
-					(m) => m.default,
-				);
+				let { BackfillDailyStatsJob } = await import("./jobs/backfill-daily-stats");
 				waitUntil(BackfillDailyStatsJob.run({ message: message as Message<JSONValue> }));
 			}
 		}
