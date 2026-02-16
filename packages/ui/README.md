@@ -380,7 +380,7 @@ let schema = object({
 
 export async function action({ request }: Route.ActionProps) {
 	let result = await validate(request, schema);
-	if (isFailure(result)) return badRequet({ issues: result.issues });
+	if (isFailure(result)) return badRequest({ issues: result.issues });
 	// Handle success...
 }
 
@@ -615,6 +615,59 @@ import { Dialog, DialogTrigger, Modal, Popover, Tooltip, TooltipTrigger, Menu } 
     </Menu.Item>
   </Popover>
 </Menu>
+```
+
+### AlertDialog
+
+AlertDialog is similar to Dialog but designed for confirmations and important decisions that require user acknowledgment.
+
+```tsx
+import { AlertDialog, AlertDialogTrigger } from "@pkg/ui";
+
+<AlertDialogTrigger>
+	<Button color="danger">Delete</Button>
+	<AlertDialog>
+		<AlertDialog.Heading>Delete Item?</AlertDialog.Heading>
+		<AlertDialog.Description>This action cannot be undone.</AlertDialog.Description>
+		<AlertDialog.Footer>
+			<Button slot="close" variant="ghost">
+				Cancel
+			</Button>
+			<Button color="danger">Delete</Button>
+		</AlertDialog.Footer>
+	</AlertDialog>
+</AlertDialogTrigger>;
+```
+
+### ConfirmDialog
+
+ConfirmDialog provides a programmatic way to show confirmation dialogs from anywhere in your app.
+
+```tsx
+import { ConfirmDialog, confirm } from "@pkg/ui";
+
+// Add ConfirmDialog to your app root
+function App() {
+	return (
+		<>
+			{/* Your app */}
+			<ConfirmDialog />
+		</>
+	);
+}
+
+// Use confirm() anywhere
+async function handleDelete() {
+	let confirmed = await confirm({
+		title: "Delete item?",
+		description: "This cannot be undone.",
+		confirmLabel: "Delete",
+		cancelLabel: "Cancel",
+	});
+	if (confirmed) {
+		// Perform delete
+	}
+}
 ```
 
 ### Progress & Meters
@@ -856,6 +909,56 @@ import { Separator, Toolbar, Disclosure } from "@pkg/ui";
 </Disclosure.Group>
 ```
 
+### Accordion
+
+Accordion is a specialized component for displaying multiple collapsible sections.
+
+```tsx
+import { Accordion } from "@pkg/ui";
+
+<Accordion>
+	<Accordion.Item id="item-1">
+		<Accordion.Trigger>Section 1</Accordion.Trigger>
+		<Accordion.Panel>Content for section 1</Accordion.Panel>
+	</Accordion.Item>
+	<Accordion.Item id="item-2">
+		<Accordion.Trigger>Section 2</Accordion.Trigger>
+		<Accordion.Panel>Content for section 2</Accordion.Panel>
+	</Accordion.Item>
+</Accordion>;
+```
+
+### Card
+
+Card is a container component for grouping related content with optional header, content, and footer sections.
+
+```tsx
+import { Card } from "@pkg/ui";
+
+<Card color="neutral">
+	<Card.Header>
+		<Card.Title>Card Title</Card.Title>
+		<Card.Description>Optional description</Card.Description>
+	</Card.Header>
+	<Card.Content>Main card content goes here.</Card.Content>
+	<Card.Footer>
+		<Button>Action</Button>
+	</Card.Footer>
+</Card>;
+```
+
+### AspectRatio
+
+AspectRatio maintains a consistent aspect ratio for its content, useful for images and videos.
+
+```tsx
+import { AspectRatio } from "@pkg/ui";
+
+<AspectRatio ratio={16 / 9}>
+	<img src="/image.jpg" alt="..." className="object-cover w-full h-full" />
+</AspectRatio>;
+```
+
 ### Alerts
 
 ```tsx
@@ -879,6 +982,20 @@ import { Alert } from "@pkg/ui";
     <Button size="sm" color="danger" variant="outline">Retry</Button>
   </Alert.Action>
 </Alert>
+```
+
+### Badge
+
+Badge is a small label component for displaying status, counts, or categories.
+
+```tsx
+import { Badge } from "@pkg/ui";
+
+<Badge color="primary">New</Badge>
+<Badge color="success">Active</Badge>
+<Badge color="warning">Pending</Badge>
+<Badge color="danger">Error</Badge>
+<Badge color="neutral">Default</Badge>
 ```
 
 ### File Handling
@@ -1545,7 +1662,7 @@ import { ScrollArea } from "@pkg/ui";
 // Both directions
 <ScrollArea className="h-72 w-96">
   <ScrollArea.Viewport orientation="both">
-    <div className="w-[800px] h-[600px]">
+    <div className="w-200 h-150">
       {/* Large content */}
     </div>
   </ScrollArea.Viewport>
@@ -1716,3 +1833,15 @@ import {
   <img src="/hero.jpg" />
 </SharedElement>
 ```
+
+## Related Packages
+
+- `@pkg/cn` - Used for className merging in all components
+- [React Aria Components](https://react-spectrum.adobe.com/react-aria/components.html) - The accessibility foundation
+
+## Tips
+
+1. Import styles with `@import "@pkg/ui/styles.css"` in your CSS
+2. Use the color system consistently - all components support the same 5 colors
+3. Components use data attributes for styling - override with CSS selectors like `.ui-button[data-color="primary"]`
+4. Wrap your app with `RouterProvider` for Link components to work with React Router

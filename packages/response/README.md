@@ -2,6 +2,14 @@
 
 Type-safe response helpers for React Router loaders and actions.
 
+## Overview
+
+This package provides type-safe response helpers for React Router applications:
+
+- All responses automatically add `ok: true` or `ok: false` for discriminated unions
+- Built on top of React Router's `data()` function
+- Supports all common HTTP status codes with semantic function names
+
 ## Usage
 
 ```typescript
@@ -9,7 +17,7 @@ import { ok, badRequest, notFound, redirect } from "@pkg/response";
 import { Location } from "@pkg/location";
 
 export async function loader({ request }: Route.LoaderArgs) {
-	const data = await fetchData();
+	let data = await fetchData();
 
 	if (!data) {
 		return notFound({ message: "Data not found" });
@@ -19,7 +27,7 @@ export async function loader({ request }: Route.LoaderArgs) {
 }
 
 export async function action({ request }: Route.ActionArgs) {
-	const result = await validateForm(request);
+	let result = await validateForm(request);
 
 	if (!result.success) {
 		return badRequest({ errors: result.errors });
@@ -28,7 +36,7 @@ export async function action({ request }: Route.ActionArgs) {
 	await processData(result.data);
 
 	// Redirect using Location for programmatic URL building
-	const location = new Location({
+	let location = new Location({
 		pathname: "/success",
 		search: { id: result.data.id },
 	});
@@ -103,7 +111,7 @@ return noContent();
 
 #### `redirect(target: URL | Location | string, init?: RedirectInit)`
 
-Returns a redirect response with status 302 by default (or custom 3xx status).
+Returns a redirect response with status 307 by default (or custom 3xx status).
 
 **Parameters:**
 
@@ -115,24 +123,16 @@ Returns a redirect response with status 302 by default (or custom 3xx status).
 Use the `redirect.Status` enum for better readability:
 
 ```typescript
-redirect.Status.MultipleChoices; // 300
-redirect.Status.MovedPermanently; // 301
-redirect.Status.Found; // 302 (default)
-redirect.Status.SeeOther; // 303
-redirect.Status.NotModified; // 304
-redirect.Status.TemporaryRedirect; // 307
-redirect.Status.PermanentRedirect; // 308
+redirect.Status.SeeOther; // 303 - POST → GET redirect
+redirect.Status.Temporary; // 307 - preserves method (default)
+redirect.Status.Permanent; // 308 - preserves method, permanent
 ```
 
-Or use numeric literals directly (saves ~230 bytes in bundle):
+Or use numeric literals directly:
 
 ```typescript
-300; // Multiple Choices
-301; // Moved Permanently
-302; // Found (default)
-303; // See Other
-304; // Not Modified
-307; // Temporary Redirect
+303; // See Other - POST → GET redirect
+307; // Temporary Redirect (default)
 308; // Permanent Redirect
 ```
 
@@ -143,19 +143,17 @@ Or use numeric literals directly (saves ~230 bytes in bundle):
 **Examples:**
 
 ```typescript
-import { redirect, Location } from "@pkg/response";
+import { redirect } from "@pkg/response";
+import { Location } from "@pkg/location";
 
-// Simple string redirect (defaults to 302)
+// Simple string redirect (defaults to 307)
 return redirect("/login");
 
-// Using enum (more readable, +230 bytes)
-return redirect("/new-path", { status: redirect.Status.MovedPermanently });
+// Using enum (more readable)
+return redirect("/new-path", { status: redirect.Status.Permanent });
 
-// Using number literal (smaller bundle)
-return redirect("/new-path", { status: 301 });
-
-// Temporary redirect preserving method (307)
-return redirect("/temporary", { status: redirect.Status.TemporaryRedirect });
+// Using number literal
+return redirect("/new-path", { status: 308 });
 
 // See Other - POST → GET redirect (303)
 return redirect("/success", { status: redirect.Status.SeeOther });
@@ -181,9 +179,7 @@ return redirect("/logout", {
 
 **When to use which redirect status:**
 
-- `301` - Permanent redirect (SEO transfer, old URLs)
-- `302` - Temporary redirect (default, general purpose)
-- `303` - See Other (after POST to prevent resubmission)
+- `303` - See Other (after POST to prevent form resubmission)
 - `307` - Temporary redirect preserving request method
 - `308` - Permanent redirect preserving request method
 
@@ -509,13 +505,13 @@ try {
 All response helpers preserve the type of the input and add the `ok` property:
 
 ```typescript
-const response = ok({ message: "Success", data: [1, 2, 3] });
+let response = ok({ message: "Success", data: [1, 2, 3] });
 // Type: { message: string, data: number[], ok: true }
 
-const error = badRequest({ error: "Invalid input", fields: ["email"] });
+let error = badRequest({ error: "Invalid input", fields: ["email"] });
 // Type: { error: string, fields: string[], ok: false }
 
-const notFoundResponse = notFound({ message: "Not found" });
+let notFoundResponse = notFound({ message: "Not found" });
 // Type: { message: string, ok: false }
 ```
 
@@ -540,13 +536,15 @@ return redirect("/login", {
 });
 ```
 
-## Pattern: Discriminated Unions
+## Patterns
+
+### Discriminated Unions
 
 The `ok` property makes responses work great with discriminated unions:
 
 ```typescript
 export async function action({ request }: Route.ActionArgs) {
-	const result = await processForm(request);
+	let result = await processForm(request);
 
 	if (!result.success) {
 		return badRequest({ errors: result.errors });
@@ -571,6 +569,39 @@ export default function Component({ actionData }: Route.ComponentProps) {
 }
 ```
 
+### Client Action with Toast Notifications
+
+A common pattern is using client actions to show toast notifications based on server action results:
+
+```typescript
+import { redirect } from "@pkg/response";
+import { href } from "react-router";
+import { toast } from "sonner";
+
+export async function clientAction({ serverAction, params }: Route.ClientActionArgs) {
+	let result = await serverAction();
+	if (result.ok) {
+		toast.success(result.message);
+		return redirect(href("/dashboard", params));
+	}
+	toast.error(result.message);
+	return result;
+}
+```
+
+## Related Packages
+
+- `@pkg/result` - Commonly used with response for error handling
+- `@pkg/validate` - Validation results often returned as badRequest
+- `@pkg/location` - Used for building redirect URLs
+
+## Tips
+
+1. Use 303 (SeeOther) after POST to prevent form resubmission
+2. Use 307/308 when you need to preserve the HTTP method
+3. All responses add `ok` property automatically for type discrimination
+4. Combine with @pkg/validate for consistent error responses
+
 ## Status Code Reference
 
 ### Success (2xx)
@@ -582,7 +613,7 @@ export default function Component({ actionData }: Route.ComponentProps) {
 
 ### Redirects (3xx)
 
-- `303` - See Other (POST → GET redirect)
+- `303` - See Other (POST -> GET redirect)
 - `307` - Temporary Redirect (preserves method)
 - `308` - Permanent Redirect (preserves method)
 

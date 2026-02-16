@@ -56,9 +56,7 @@ import { MarkdownView } from "@pkg/markdown/client";
 import prismStyles from "@pkg/markdown/styles/light.css?url";
 import type { Route } from "./+types/article";
 
-export function links(): Route.LinksFunction {
-	return [{ rel: "stylesheet", href: prismStyles }];
-}
+export let links: Route.LinksFunction = () => [{ rel: "stylesheet", href: prismStyles }];
 
 export default function Article({ loaderData }: Route.ComponentProps) {
 	return <MarkdownView content={loaderData.content} className="my-8" />;
@@ -70,9 +68,7 @@ export default function Article({ loaderData }: Route.ComponentProps) {
 ```tsx
 import prismStyles from "@pkg/markdown/styles/dark.css?url";
 
-export function links(): Route.LinksFunction {
-	return [{ rel: "stylesheet", href: prismStyles }];
-}
+export let links: Route.LinksFunction = () => [{ rel: "stylesheet", href: prismStyles }];
 ```
 
 ## API

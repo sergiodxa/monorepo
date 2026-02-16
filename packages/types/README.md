@@ -124,6 +124,11 @@ interface MonitorRowProps {
 }
 ```
 
+## Related Packages
+
+- [`@pkg/jobs`](../jobs/README.md) - Uses JSONValue for job message payloads
+- [`@pkg/validate`](../validate/README.md) - Works with JSONValue for validation input
+
 ## Tips
 
 1. **Use `import type`** - Always import types as type-only imports since they are purely type utilities with no runtime code

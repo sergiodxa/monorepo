@@ -230,6 +230,10 @@ export let comments = sqliteTable("comments", {
 });
 ```
 
+## Related Packages
+
+- [Drizzle ORM](https://orm.drizzle.team/) - The ORM these helpers are designed for
+
 ## Tips
 
 1. **Use `pk` for primary keys** - Provides auto-generated UUIDs with proper constraints
