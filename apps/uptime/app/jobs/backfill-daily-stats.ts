@@ -151,14 +151,14 @@ export default class BackfillDailyStatsJob implements Job {
 		let sql = `
 			SELECT
 				mr.monitor_id as monitorId,
-				strftime('%Y-%m-%d', mr.completed_at) as date,
+				strftime('%Y-%m-%d', mr.completed_at / 1000, 'unixepoch') as date,
 				COUNT(*) as totalChecks,
 				SUM(CASE WHEN mr.response_status = m.expected_status THEN 1 ELSE 0 END) as successfulChecks,
 				json_group_array(mr.response_time_ms) as responseTimesJson
 			FROM monitor_results mr
 			JOIN monitors m ON m.id = mr.monitor_id
 			WHERE mr.completed_at IS NOT NULL AND mr.response_status IS NOT NULL
-			GROUP BY mr.monitor_id, strftime('%Y-%m-%d', mr.completed_at)
+			GROUP BY mr.monitor_id, strftime('%Y-%m-%d', mr.completed_at / 1000, 'unixepoch')
 			HAVING date IS NOT NULL
 		`;
 
