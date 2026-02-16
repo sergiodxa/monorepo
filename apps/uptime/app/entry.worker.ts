@@ -69,6 +69,7 @@ export default {
 
 	async queue(batch) {
 		let { z } = await import("zod/v4");
+		let uptime = { token: env.UPTIME_CRON_API_KEY };
 
 		for (let message of batch.messages) {
 			let result = z
@@ -103,35 +104,17 @@ export default {
 
 			if (result.data === "clean") {
 				let { CleanJob } = await import("./jobs/clean");
-				waitUntil(
-					CleanJob.run({
-						message,
-						uptime: { monitorId: CleanJob.monitorId, token: env.UPTIME_CRON_API_KEY },
-					}),
-				);
+				waitUntil(CleanJob.run({ message, uptime }));
 			}
 
 			if (result.data === "cleanCronJobPings") {
 				let { CleanCronJobPingsJob } = await import("./jobs/clean-cron-job-pings");
-				waitUntil(
-					CleanCronJobPingsJob.run({
-						message,
-						uptime: { monitorId: CleanCronJobPingsJob.monitorId, token: env.UPTIME_CRON_API_KEY },
-					}),
-				);
+				waitUntil(CleanCronJobPingsJob.run({ message, uptime }));
 			}
 
 			if (result.data === "enqueuePendingDomains") {
 				let { EnqueuePendingDomainsJob } = await import("./jobs/enqueue-pending-domains");
-				waitUntil(
-					EnqueuePendingDomainsJob.run({
-						message,
-						uptime: {
-							monitorId: EnqueuePendingDomainsJob.monitorId,
-							token: env.UPTIME_CRON_API_KEY,
-						},
-					}),
-				);
+				waitUntil(EnqueuePendingDomainsJob.run({ message, uptime }));
 			}
 
 			if (result.data === "verifyDomainOwnership") {
@@ -141,52 +124,27 @@ export default {
 
 			if (result.data === "checkSsl") {
 				let { CheckSslJob } = await import("./jobs/check-ssl");
-				waitUntil(
-					CheckSslJob.run({
-						message,
-						uptime: { monitorId: CheckSslJob.monitorId, token: env.UPTIME_CRON_API_KEY },
-					}),
-				);
+				waitUntil(CheckSslJob.run({ message, uptime }));
 			}
 
 			if (result.data === "checkDns") {
 				let { CheckDnsJob } = await import("./jobs/check-dns");
-				waitUntil(
-					CheckDnsJob.run({
-						message,
-						uptime: { monitorId: CheckDnsJob.monitorId, token: env.UPTIME_CRON_API_KEY },
-					}),
-				);
+				waitUntil(CheckDnsJob.run({ message, uptime }));
 			}
 
 			if (result.data === "checkTcp") {
 				let { CheckTcpJob } = await import("./jobs/check-tcp");
-				waitUntil(
-					CheckTcpJob.run({
-						message,
-						uptime: { monitorId: CheckTcpJob.monitorId, token: env.UPTIME_CRON_API_KEY },
-					}),
-				);
+				waitUntil(CheckTcpJob.run({ message, uptime }));
 			}
 
 			if (result.data === "checkCronJobs") {
 				let { CheckCronJobsJob } = await import("./jobs/check-cron-jobs");
-				waitUntil(
-					CheckCronJobsJob.run({
-						message,
-						uptime: { monitorId: CheckCronJobsJob.monitorId, token: env.UPTIME_CRON_API_KEY },
-					}),
-				);
+				waitUntil(CheckCronJobsJob.run({ message, uptime }));
 			}
 
 			if (result.data === "aggregateDailyStats") {
 				let { AggregateDailyStatsJob } = await import("./jobs/aggregate-daily-stats");
-				waitUntil(
-					AggregateDailyStatsJob.run({
-						message,
-						uptime: { monitorId: AggregateDailyStatsJob.monitorId, token: env.UPTIME_CRON_API_KEY },
-					}),
-				);
+				waitUntil(AggregateDailyStatsJob.run({ message, uptime }));
 			}
 		}
 	},

@@ -9,27 +9,33 @@ const UPTIME_URL = new URL("https://uptime.sergiodxa.com");
 export namespace Job {
 	export interface UptimeOptions {
 		token: string;
-		monitorId: string;
 	}
 
 	export interface ConstructorOptions {
-		uptime?: UptimeOptions;
+		uptime?: UptimeOptions & { monitorId: string };
 		logger: BatchedLogger;
 	}
 
-	export interface RunOptions extends Omit<ConstructorOptions, "logger"> {
+	export interface RunOptions extends Omit<ConstructorOptions, "logger" | "uptime"> {
 		message: Message<unknown>;
+		uptime?: UptimeOptions;
 	}
 }
 
 export abstract class Job {
+	static monitorId?: string;
+
 	static async run<T extends Job>(
-		this: new (options: Job.ConstructorOptions, body: JSONValue) => T,
+		this: (new (options: Job.ConstructorOptions, body: JSONValue) => T) & { monitorId?: string },
 		options: Job.RunOptions,
 	): Promise<void> {
 		let id = `job:${dasherize(underscore(this.name))}:${options.message.id}`;
+		let uptime =
+			options.uptime && this.monitorId
+				? { token: options.uptime.token, monitorId: this.monitorId }
+				: undefined;
 		let job = new this(
-			{ ...options, logger: new BatchedLogger(id) },
+			{ uptime, logger: new BatchedLogger(id) },
 			options.message.body as JSONValue,
 		);
 

@@ -76,6 +76,17 @@ class SuccessfulJob extends Job {
 	}
 }
 
+class SuccessfulJobWithMonitor extends Job {
+	static monitorId = MONITOR_ID;
+	static schema = z.object({ teamId: z.string() });
+
+	async perform(): Promise<void> {
+		let result = await validate(this.input, SuccessfulJobWithMonitor.schema);
+		if (isFailure(result)) throw new Job.NonRetriableError("Invalid input");
+		this.logger.info("job.doing-work", { teamId: result.data.teamId });
+	}
+}
+
 class RetryableJob extends Job {
 	async perform(): Promise<void> {
 		throw new Job.RetryError("Transient failure");
@@ -144,9 +155,9 @@ describe(Job.name, () => {
 
 			let message = createMessage({ teamId: "team-123" });
 
-			await SuccessfulJob.run({
+			await SuccessfulJobWithMonitor.run({
 				message,
-				uptime: { token: UPTIME_TOKEN, monitorId: MONITOR_ID },
+				uptime: { token: UPTIME_TOKEN },
 			});
 
 			expect(uptimePinged).toBe(true);
@@ -165,9 +176,9 @@ describe(Job.name, () => {
 
 			let message = createMessage({ teamId: "team-123" });
 
-			await SuccessfulJob.run({
+			await SuccessfulJobWithMonitor.run({
 				message,
-				uptime: { token: UPTIME_TOKEN, monitorId: MONITOR_ID },
+				uptime: { token: UPTIME_TOKEN },
 			});
 
 			// Job should still ack (uptime failure doesn't fail the job)
@@ -178,7 +189,7 @@ describe(Job.name, () => {
 			expect(consoleInfoSpy).toHaveBeenCalledTimes(1);
 
 			let [identifier, logData] = consoleInfoSpy.mock.calls[0];
-			expect(identifier).toMatch(/^job:successful-job:/);
+			expect(identifier).toMatch(/^job:successful-job-with-monitor:/);
 
 			// Should have job.started, job.doing-work, job.uptime-failed
 			expect(logData.events).toHaveLength(3);
@@ -199,9 +210,9 @@ describe(Job.name, () => {
 
 			let message = createMessage({ teamId: "team-123" });
 
-			await SuccessfulJob.run({
+			await SuccessfulJobWithMonitor.run({
 				message,
-				uptime: { token: UPTIME_TOKEN, monitorId: MONITOR_ID },
+				uptime: { token: UPTIME_TOKEN },
 			});
 
 			// Job should still ack (uptime failure doesn't fail the job)
@@ -212,7 +223,7 @@ describe(Job.name, () => {
 			expect(consoleInfoSpy).toHaveBeenCalledTimes(1);
 
 			let [identifier, logData] = consoleInfoSpy.mock.calls[0];
-			expect(identifier).toMatch(/^job:successful-job:/);
+			expect(identifier).toMatch(/^job:successful-job-with-monitor:/);
 
 			expect(logData.events).toHaveLength(3);
 			expect(logData.events[2].event).toBe("job.uptime-failed");
@@ -377,7 +388,7 @@ describe(Job.name, () => {
 			expect(uptimePinged).toBe(false);
 		});
 
-		test("skips uptime ping when monitorId is missing", async () => {
+		test("skips uptime ping when job has no static monitorId", async () => {
 			let uptimePinged = false;
 
 			server.use(
@@ -389,9 +400,9 @@ describe(Job.name, () => {
 
 			let message = createMessage({ teamId: "team-123" });
 
+			// SuccessfulJob doesn't have static monitorId, so uptime ping should be skipped
 			await SuccessfulJob.run({
 				message,
-				// @ts-expect-error - testing partial config
 				uptime: { token: UPTIME_TOKEN },
 			});
 
