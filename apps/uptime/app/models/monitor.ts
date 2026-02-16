@@ -95,8 +95,8 @@ export default class Monitor {
 
 		if (!monitor) throw new Error("Monitor not found");
 
-		// Generate unique workflow instance ID: monitorId:timestamp
-		let instanceId = `${monitorId}:${Date.now()}`;
+		// Generate unique workflow instance ID: monitorId-timestamp
+		let instanceId = `${monitorId}-${Date.now()}`;
 		let workflow = await env.PING.create({
 			id: instanceId,
 			params: { monitorId },
