@@ -1,15 +1,11 @@
+import type { IsAny } from "@pkg/types";
+
 import type { Result } from "./types.js";
 
 import { failure } from "./failure.js";
 import { success } from "./success.js";
 
 export namespace wrap {
-	/**
-	 * Type helper that detects if T is the `any` type.
-	 * Used to handle functions like `JSON.parse` that return `any`.
-	 */
-	export type IsAny<T> = 0 extends 1 & T ? true : false;
-
 	/**
 	 * Computes the return type for `wrap` based on the wrapped function's return type.
 	 * - For `any` return types: `Result<any, Error>`

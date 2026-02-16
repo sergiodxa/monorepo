@@ -39,6 +39,33 @@ export function HttpMonitorsCard(props: Props) {
 
 ## API
 
+### `IsAny<T>`
+
+Detects if a type is `any`. Returns `true` if T is `any`, `false` otherwise.
+
+Useful for handling functions like `JSON.parse` that return `any`, allowing conditional type logic based on whether a type is `any`.
+
+**Type Parameters:**
+
+- `T`: The type to check
+
+**Returns:**
+
+- `true` if T is `any`, `false` otherwise
+
+**Example:**
+
+```typescript
+import type { IsAny } from "@pkg/types";
+
+type A = IsAny<any>; // true
+type B = IsAny<unknown>; // false
+type C = IsAny<string>; // false
+
+// Used in conditional types
+type HandleAny<T> = IsAny<T> extends true ? "is any" : "not any";
+```
+
 ### `JSONValue`
 
 Represents any JSON-serializable value. This includes primitives (`string`, `number`, `boolean`, `null`), arrays of JSON values, and plain objects with string keys and JSON values.

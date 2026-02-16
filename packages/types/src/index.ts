@@ -25,3 +25,19 @@ export type JSONValue =
 	| null
 	| JSONValue[]
 	| { [key: string]: JSONValue };
+
+/**
+ * Detects if a type is `any`.
+ * Returns `true` if T is `any`, `false` otherwise.
+ *
+ * Useful for handling functions like `JSON.parse` that return `any`,
+ * allowing conditional type logic based on whether a type is `any`.
+ *
+ * @template T - The type to check
+ *
+ * @example
+ * type A = IsAny<any>;     // true
+ * type B = IsAny<unknown>; // false
+ * type C = IsAny<string>;  // false
+ */
+export type IsAny<T> = 0 extends 1 & T ? true : false;

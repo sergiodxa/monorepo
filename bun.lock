@@ -376,6 +376,7 @@
       "name": "@pkg/result",
       "version": "0.0.1",
       "dependencies": {
+        "@pkg/types": "workspace:*",
         "ms": "^2.1.3",
       },
       "devDependencies": {
