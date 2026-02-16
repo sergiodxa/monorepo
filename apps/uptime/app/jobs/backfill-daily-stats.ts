@@ -1,36 +1,20 @@
 import { BatchedLogger } from "@pkg/logger";
 import { env } from "cloudflare:workers";
-import { and, eq } from "drizzle-orm";
 
 import database from "~/db/index";
 import { monitorDailyStats } from "~/db/schema";
 
 import type { Job } from "./base";
 
-type AggregatedRow = {
-	monitorId: string;
-	date: string;
-	totalChecks: number;
-	successfulChecks: number;
-	avgResponseTimeMs: number | null;
-	maxResponseTimeMs: number | null;
-};
-
-function calculateStatus(
-	successfulChecks: number,
-	totalChecks: number,
-): "up" | "degraded" | "down" {
-	if (totalChecks === 0) return "down";
-	let successRate = successfulChecks / totalChecks;
-	if (successRate >= 1) return "up";
-	if (successRate >= 0.5) return "degraded";
-	return "down";
+interface ResultAggregate {
+	checks: { total: number; successful: number };
+	responseTime: number[];
 }
 
-function toNumber(value: unknown): number | null {
-	if (value === null || value === undefined) return null;
-	let n = Number(value);
-	return Number.isFinite(n) ? n : null;
+interface MonitorAggregate {
+	monitorId: string;
+	type: "http";
+	results: Record<string, ResultAggregate>;
 }
 
 export default class BackfillDailyStatsJob implements Job {
@@ -41,57 +25,66 @@ export default class BackfillDailyStatsJob implements Job {
 		try {
 			this.logger.info("job.backfill-daily-stats.started", { messageId: message.id });
 
-			let httpRows = await this.aggregateHttp();
-			let tcpRows = await this.aggregateTcp();
+			let monitors = await this.aggregateHttpMonitors();
 
-			let rows = [...httpRows, ...tcpRows];
-
-			if (rows.length === 0) {
+			if (monitors.length === 0) {
 				this.logger.info("job.backfill-daily-stats.no-data");
 				return message.ack();
 			}
 
-			this.logger.info("job.backfill-daily-stats.aggregated", { rowCount: rows.length });
+			this.logger.info("job.backfill-daily-stats.aggregated", { monitors: monitors.length });
 
-			for (let row of rows) {
-				let status = calculateStatus(row.successfulChecks, row.totalChecks);
-				await this.db
-					.delete(monitorDailyStats)
-					.where(
-						and(
-							eq(monitorDailyStats.monitorId, row.monitorId),
-							eq(monitorDailyStats.monitorType, row.monitorType),
-							eq(monitorDailyStats.date, row.date),
-						),
+			let result = await Promise.all(
+				monitors.map(async (monitor) => {
+					return await Promise.all(
+						Object.entries(monitor.results).map(async ([date, result]) => {
+							let status = calculateStatus(result.checks.successful, result.checks.total);
+
+							try {
+								await this.db.insert(monitorDailyStats).values({
+									monitorId: monitor.monitorId,
+									monitorType: monitor.type,
+									date,
+									status,
+									totalChecks: result.checks.total,
+									successfulChecks: result.checks.successful,
+									failedChecks: result.checks.total - result.checks.successful,
+									avgResponseTimeMs: avg(result.responseTime),
+									maxResponseTimeMs: Math.max(...result.responseTime),
+									p95ResponseTimeMs: p95(result.responseTime),
+								});
+
+								return true;
+							} catch (error) {
+								this.logger.error("job.backfill-daily-stats.insert-error", {
+									error: error instanceof Error ? error.message : String(error),
+									monitorId: monitor.monitorId,
+									date,
+								});
+								return false;
+							}
+						}),
 					);
+				}),
+			);
 
-				await this.db.insert(monitorDailyStats).values({
-					monitorId: row.monitorId,
-					monitorType: row.monitorType,
-					date: row.date,
-					totalChecks: row.totalChecks,
-					successfulChecks: row.successfulChecks,
-					failedChecks: row.totalChecks - row.successfulChecks,
-					avgResponseTimeMs: row.avgResponseTimeMs,
-					maxResponseTimeMs: row.maxResponseTimeMs,
-					p95ResponseTimeMs: null,
-					status,
-				});
-			}
+			let rowsWritten = result.flat(2).filter((r) => r).length;
 
-			this.logger.info("job.backfill-daily-stats.completed", { rowsWritten: rows.length });
+			this.logger.info("job.backfill-daily-stats.completed", { rowsWritten });
 
-			await this.sendNotification({ rowsWritten: rows.length });
+			await this.sendNotification({ rowsWritten });
 
 			return message.ack();
 		} catch (error) {
 			this.logger.error("job.backfill-daily-stats.failed", {
 				error: error instanceof Error ? error.message : String(error),
 			});
+
 			await this.sendNotification({
 				rowsWritten: 0,
 				error: error instanceof Error ? error.message : String(error),
 			});
+
 			return message.retry();
 		} finally {
 			this.logger.flush();
@@ -106,6 +99,7 @@ export default class BackfillDailyStatsJob implements Job {
 					rowsWritten: params.rowsWritten,
 					error: params.error,
 				});
+
 				return;
 			}
 
@@ -123,15 +117,17 @@ export default class BackfillDailyStatsJob implements Job {
 				text: [statusLine, rowsLine].join("\n"),
 			});
 
-			if ((result as any)?.error) {
+			if (result.error) {
 				this.logger.error("job.backfill-daily-stats.notify-error", {
-					error: (result as any).error,
+					error: result.error,
 					rowsWritten: params.rowsWritten,
 				});
-			} else {
+			}
+
+			if (result.data) {
 				this.logger.info("job.backfill-daily-stats.notify-sent", {
 					rowsWritten: params.rowsWritten,
-					id: (result as any)?.data?.id ?? null,
+					id: result.data.id ?? null,
 				});
 			}
 		} catch (error) {
@@ -141,64 +137,68 @@ export default class BackfillDailyStatsJob implements Job {
 		}
 	}
 
-	private async aggregateHttp() {
-		let sql = `
-			SELECT
-				mr.monitor_id as monitorId,
-				strftime('%Y-%m-%d', mr.completed_at) as date,
-				COUNT(*) as totalChecks,
-				SUM(CASE WHEN mr.response_status = m.expected_status THEN 1 ELSE 0 END) as successfulChecks,
-				AVG(mr.response_time_ms) as avgResponseTimeMs,
-				MAX(mr.response_time_ms) as maxResponseTimeMs
-			FROM monitor_results mr
-			JOIN monitors m ON m.id = mr.monitor_id
-			WHERE mr.completed_at IS NOT NULL AND mr.response_status IS NOT NULL
-			GROUP BY mr.monitor_id, date
-			HAVING date IS NOT NULL
-		`;
+	private async aggregateHttpMonitors() {
+		let monitors = await this.db.query.monitors.findMany({
+			with: {
+				results: {
+					where(fields, operators) {
+						return operators.and(
+							operators.isNotNull(fields.responseStatus),
+							operators.isNotNull(fields.completedAt),
+						);
+					},
+				},
+			},
+		});
 
-		let result = await this.db.$client.prepare(sql).all();
-		let rows = (result?.results ?? []) as Array<Record<string, unknown>>;
-		return rows
-			.filter((row) => row.date)
-			.map((row) => ({
-				monitorId: String(row.monitorId),
-				monitorType: "http" as const,
-				date: String(row.date),
-				totalChecks: Number(row.totalChecks) || 0,
-				successfulChecks: Number(row.successfulChecks) || 0,
-				avgResponseTimeMs: toNumber(row.avgResponseTimeMs),
-				maxResponseTimeMs: toNumber(row.maxResponseTimeMs),
-			})) satisfies Array<AggregatedRow & { monitorType: "http" }>;
+		return monitors.map((monitor) => {
+			let results = monitor.results.reduce(
+				(group, result) => {
+					let date = result.completedAt?.toISOString().split("T")[0];
+					if (!date) return group;
+
+					let current = group[date] ?? { checks: { total: 0, successful: 0 }, responseTime: [] };
+
+					current.checks.total += 1;
+					if (result.responseStatus === monitor.expectedStatus) {
+						current.checks.successful += 1;
+					}
+
+					if (result.responseTimeMs !== null) {
+						current.responseTime.push(result.responseTimeMs);
+					}
+
+					group[date] = current;
+					return group;
+				},
+				{} as MonitorAggregate["results"],
+			);
+
+			return { monitorId: monitor.id, type: "http" as const, results } satisfies MonitorAggregate;
+		});
 	}
+}
 
-	private async aggregateTcp() {
-		let sql = `
-			SELECT
-				tmr.tcp_monitor_id as monitorId,
-				strftime('%Y-%m-%d', tmr.checked_at) as date,
-				COUNT(*) as totalChecks,
-				SUM(CASE WHEN tmr.status = 'up' THEN 1 ELSE 0 END) as successfulChecks,
-				AVG(tmr.response_time_ms) as avgResponseTimeMs,
-				MAX(tmr.response_time_ms) as maxResponseTimeMs
-			FROM tcp_monitor_results tmr
-			WHERE tmr.checked_at IS NOT NULL
-			GROUP BY tmr.tcp_monitor_id, date
-			HAVING date IS NOT NULL
-		`;
+function avg(values: number[]): number | null {
+	if (values.length === 0) return null;
+	let sum = values.reduce((a, b) => a + b, 0);
+	return sum / values.length;
+}
 
-		let result = await this.db.$client.prepare(sql).all();
-		let rows = (result?.results ?? []) as Array<Record<string, unknown>>;
-		return rows
-			.filter((row) => row.date)
-			.map((row) => ({
-				monitorId: String(row.monitorId),
-				monitorType: "tcp" as const,
-				date: String(row.date),
-				totalChecks: Number(row.totalChecks) || 0,
-				successfulChecks: Number(row.successfulChecks) || 0,
-				avgResponseTimeMs: toNumber(row.avgResponseTimeMs),
-				maxResponseTimeMs: toNumber(row.maxResponseTimeMs),
-			})) satisfies Array<AggregatedRow & { monitorType: "tcp" }>;
-	}
+function p95(values: number[]): number | null {
+	if (values.length === 0) return null;
+	let sorted = [...values].sort((a, b) => a - b);
+	let index = Math.ceil(0.95 * sorted.length) - 1;
+	return sorted[index] ?? null;
+}
+
+function calculateStatus(
+	successfulChecks: number,
+	totalChecks: number,
+): "up" | "degraded" | "down" {
+	if (totalChecks === 0) return "down";
+	let successRate = successfulChecks / totalChecks;
+	if (successRate >= 1) return "up";
+	if (successRate >= 0.5) return "degraded";
+	return "down";
 }
