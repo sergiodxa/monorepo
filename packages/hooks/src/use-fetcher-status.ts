@@ -2,11 +2,13 @@ import type { useFetcher } from "react-router";
 
 import { useMemo } from "react";
 
-type FetcherStatus = "idle" | "loading" | "success" | "failure";
+export namespace useFetcherStatus {
+	export type FetcherStatus = "idle" | "loading" | "success" | "failure";
+}
 
 export function useFetcherStatus<T extends { ok?: boolean }>(
 	fetcher: ReturnType<typeof useFetcher<T>>,
-): FetcherStatus {
+): useFetcherStatus.FetcherStatus {
 	return useMemo(() => {
 		if (fetcher.state === "submitting") return "loading";
 		if (fetcher.state === "loading") return "loading";

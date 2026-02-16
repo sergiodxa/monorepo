@@ -1,12 +1,14 @@
-interface SiteURL {
-	loc: URL;
-	lastmod?: Date;
+export namespace Sitemap {
+	export interface URL {
+		loc: globalThis.URL;
+		lastmod?: Date;
+	}
 }
 
 export class Sitemap {
-	urls = new Set<SiteURL>();
+	urls = new Set<Sitemap.URL>();
 
-	append(loc: URL, lastmod?: Date) {
+	append(loc: globalThis.URL, lastmod?: Date) {
 		this.urls.add({ loc, lastmod });
 	}
 

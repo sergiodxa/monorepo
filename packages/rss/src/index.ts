@@ -1,24 +1,26 @@
 import { parseFeed } from "htmlparser2";
 
-interface Item {
-	guid: string;
-	title: string;
-	description: string;
-	link: string;
-	pubDate: string;
-}
+export namespace RSS {
+	export interface Item {
+		guid: string;
+		title: string;
+		description: string;
+		link: string;
+		pubDate: string;
+	}
 
-interface Channel {
-	title: string;
-	description: string;
-	link: string;
+	export interface Channel {
+		title: string;
+		description: string;
+		link: string;
+	}
 }
 
 export class RSS {
-	private itemSet = new Set<Item>();
+	private itemSet = new Set<RSS.Item>();
 
-	readonly channel: Channel;
-	constructor(channel: Channel) {
+	readonly channel: RSS.Channel;
+	constructor(channel: RSS.Channel) {
 		this.channel = channel;
 	}
 
@@ -26,7 +28,7 @@ export class RSS {
 		return Array.from(this.itemSet);
 	}
 
-	addItem(item: Item) {
+	addItem(item: RSS.Item) {
 		this.itemSet.add(item);
 	}
 
@@ -108,5 +110,3 @@ export class RSS {
 		return rss;
 	}
 }
-
-export type { Channel, Item };
