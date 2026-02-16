@@ -17,6 +17,7 @@ export class PingJob extends Job {
 		let result = await validate(this.input, PingJob.schema);
 
 		if (isFailure(result)) {
+			this.logger.error("job.ping.invalid_input", { input: this.input });
 			throw new Job.NonRetriableError("Invalid input", { cause: result.error });
 		}
 
