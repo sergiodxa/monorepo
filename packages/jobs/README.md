@@ -57,12 +57,7 @@ import type { MessageBatch, ExecutionContext } from "@cloudflare/workers-types";
 export default {
 	async queue(batch: MessageBatch<SyncTeamJob.Input>, env: Env, ctx: ExecutionContext) {
 		for (let message of batch.messages) {
-			ctx.waitUntil(
-				SyncTeamJob.run({
-					message,
-					uptime: { token: env.UPTIME_TOKEN }, // monitorId is read from static property
-				}),
-			);
+			ctx.waitUntil(SyncTeamJob.run({ message, uptime: env.UPTIME_TOKEN }));
 		}
 	},
 };
@@ -93,8 +88,7 @@ Executes the job with full lifecycle management.
 **Parameters:**
 
 - `options.message`: Cloudflare Queue `Message<unknown>` object containing the job input and ack/retry control
-- `options.uptime`: Optional uptime monitoring configuration
-- `options.uptime.token`: Bearer token for the uptime service (monitorId is read from the static property)
+- `options.uptime`: Optional bearer token for the uptime service (monitorId is read from the static property)
 
 **Behavior:**
 
@@ -152,9 +146,7 @@ Logs `job.non-retriable` at error level, then calls `message.ack()`.
 ```typescript
 interface RunOptions {
 	message: Message<unknown>;
-	uptime?: {
-		token: string;
-	};
+	uptime?: string; // Bearer token for uptime service
 }
 ```
 

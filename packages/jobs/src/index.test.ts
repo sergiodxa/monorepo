@@ -155,10 +155,7 @@ describe(Job.name, () => {
 
 			let message = createMessage({ teamId: "team-123" });
 
-			await SuccessfulJobWithMonitor.run({
-				message,
-				uptime: { token: UPTIME_TOKEN },
-			});
+			await SuccessfulJobWithMonitor.run({ message, uptime: UPTIME_TOKEN });
 
 			expect(uptimePinged).toBe(true);
 			expect(ackMock).toHaveBeenCalledTimes(1);
@@ -176,10 +173,7 @@ describe(Job.name, () => {
 
 			let message = createMessage({ teamId: "team-123" });
 
-			await SuccessfulJobWithMonitor.run({
-				message,
-				uptime: { token: UPTIME_TOKEN },
-			});
+			await SuccessfulJobWithMonitor.run({ message, uptime: UPTIME_TOKEN });
 
 			// Job should still ack (uptime failure doesn't fail the job)
 			expect(ackMock).toHaveBeenCalledTimes(1);
@@ -210,10 +204,7 @@ describe(Job.name, () => {
 
 			let message = createMessage({ teamId: "team-123" });
 
-			await SuccessfulJobWithMonitor.run({
-				message,
-				uptime: { token: UPTIME_TOKEN },
-			});
+			await SuccessfulJobWithMonitor.run({ message, uptime: UPTIME_TOKEN });
 
 			// Job should still ack (uptime failure doesn't fail the job)
 			expect(ackMock).toHaveBeenCalledTimes(1);
@@ -401,10 +392,7 @@ describe(Job.name, () => {
 			let message = createMessage({ teamId: "team-123" });
 
 			// SuccessfulJob doesn't have static monitorId, so uptime ping should be skipped
-			await SuccessfulJob.run({
-				message,
-				uptime: { token: UPTIME_TOKEN },
-			});
+			await SuccessfulJob.run({ message, uptime: UPTIME_TOKEN });
 
 			expect(uptimePinged).toBe(false);
 		});

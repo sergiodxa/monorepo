@@ -69,7 +69,7 @@ export default {
 
 	async queue(batch) {
 		let { z } = await import("zod/v4");
-		let uptime = { token: env.UPTIME_CRON_API_KEY };
+		let uptime = env.UPTIME_CRON_API_KEY;
 
 		for (let message of batch.messages) {
 			let result = z

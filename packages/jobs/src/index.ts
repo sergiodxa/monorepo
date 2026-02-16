@@ -19,7 +19,7 @@ export namespace Job {
 
 	export interface RunOptions extends Omit<ConstructorOptions, "logger" | "uptime"> {
 		message: Message<unknown>;
-		uptime?: Omit<UptimeOptions, "monitorId">;
+		uptime?: string;
 	}
 }
 
@@ -31,7 +31,7 @@ export abstract class Job {
 		options: Job.RunOptions,
 	): Promise<void> {
 		let id = `job:${dasherize(underscore(this.name))}:${options.message.id}`;
-		let uptime = { token: options.uptime?.token, monitorId: this.monitorId };
+		let uptime = { token: options.uptime, monitorId: this.monitorId };
 		let logger = new BatchedLogger(id);
 
 		let job = new this({ uptime, logger }, options.message.body as JSONValue);
