@@ -4,8 +4,10 @@
 	"type": "module",
 	"scripts": {
 		"dev": "vite dev",
+		"prebuild": "bun run cf:typegen && bun run rr:typegen",
 		"build": "vite build",
 		"start": "vite preview",
+		"precf:deploy": "bun run build",
 		"cf:deploy": "wrangler deploy",
 		"cf:typegen": "wrangler types",
 		"rr:routes": "react-router routes",
