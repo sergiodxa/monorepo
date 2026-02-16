@@ -35,7 +35,10 @@ export namespace retry {
 		times: number;
 		/** Delay between retries. Can be a number (ms) or a string parsed by ms (e.g. "100ms", "1s") */
 		delay: number | ms.StringValue;
-		/** Backoff strategy. Default: "exponential" */
+		/**
+		 * Backoff strategy.
+		 * @default "exponential"
+		 */
 		backoff?: "constant" | "linear" | "exponential";
 		/** Optional predicate to determine if a retry should be attempted. Receives the error and attempt number. */
 		when?: (error: E, attempts: number) => boolean;
@@ -50,7 +53,7 @@ export namespace retry {
  * @param options - Retry configuration
  * @param options.times - Maximum number of retry attempts
  * @param options.delay - Base delay between retries (number in ms or string like "100ms", "1s")
- * @param options.backoff - Backoff strategy: "constant", "linear", or "exponential" (default)
+ * @param options.backoff - Backoff strategy: "constant", "linear", or "exponential" (default: "exponential")
  * @param options.when - Optional predicate to decide if error should be retried
  * @returns The successful Result, or a Failure with RetryError after all attempts exhausted
  *
