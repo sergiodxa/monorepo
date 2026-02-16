@@ -1,90 +1,77 @@
-import { BatchedLogger } from "@pkg/logger";
+import { Job } from "@pkg/jobs";
 import { env } from "cloudflare:workers";
 import { eq } from "drizzle-orm";
 
 import database from "~/db/index";
 import * as schema from "~/db/schema";
-import { pingUptime } from "~/lib/ping-uptime";
 import { recordAlertEvent } from "~/services/alert-cooldown";
 import { checkDns, type DnsRecordType } from "~/services/check-dns";
 
-import type { Job } from "./base";
+export let uptimeMonitorId = "3a620acd-43f9-4f48-9a32-b9a87698e44e";
 
 /**
  * Job that checks all enabled DNS monitors.
  * Runs hourly to verify DNS records and detect changes.
  */
-export default class CheckDnsJob implements Job {
-	private db = database(env.DB);
-	private logger = new BatchedLogger("job:check-dns");
+export default class CheckDnsJob extends Job {
+	async perform(): Promise<void> {
+		let db = database(env.DB);
 
-	async run(message: Message): Promise<void> {
-		try {
-			this.logger.info("job.check-dns.started", { messageId: message.id });
-
-			// Get all enabled DNS monitors
-			let monitors = await this.db.query.dnsMonitors.findMany({
-				columns: {
-					id: true,
-					name: true,
-					domain: true,
-					recordType: true,
-					expectedValue: true,
-					lastValue: true,
-					teamId: true,
+		// Get all enabled DNS monitors
+		let monitors = await db.query.dnsMonitors.findMany({
+			columns: {
+				id: true,
+				name: true,
+				domain: true,
+				recordType: true,
+				expectedValue: true,
+				lastValue: true,
+				teamId: true,
+			},
+			where(fields, operators) {
+				return operators.eq(fields.isEnabled, true);
+			},
+			with: {
+				team: {
+					columns: { id: true, ownerId: true },
 				},
-				where(fields, operators) {
-					return operators.eq(fields.isEnabled, true);
-				},
-				with: {
-					team: {
-						columns: { id: true, ownerId: true },
-					},
-				},
-			});
+			},
+		});
 
-			this.logger.info("job.check-dns.monitors-loaded", { monitorCount: monitors.length });
+		this.logger.info("job.check-dns.monitors-loaded", { monitorCount: monitors.length });
 
-			let successCount = 0;
-			let errorCount = 0;
+		let successCount = 0;
+		let errorCount = 0;
 
-			for (let monitor of monitors) {
-				try {
-					await this.checkMonitorDns(monitor);
-					successCount++;
-				} catch {
-					errorCount++;
-				}
+		for (let monitor of monitors) {
+			try {
+				await this.checkMonitorDns(db, monitor);
+				successCount++;
+			} catch {
+				errorCount++;
 			}
-
-			this.logger.info("job.check-dns.completed", {
-				monitorCount: monitors.length,
-				successCount,
-				errorCount,
-			});
-
-			await pingUptime("3a620acd-43f9-4f48-9a32-b9a87698e44e", env.UPTIME_CRON_API_KEY);
-			return message.ack();
-		} catch (error) {
-			this.logger.error("job.check-dns.failed", {
-				error: error instanceof Error ? error.message : String(error),
-			});
-			return message.retry();
-		} finally {
-			this.logger.flush();
 		}
+
+		this.logger.info("job.check-dns.completed", {
+			monitorCount: monitors.length,
+			successCount,
+			errorCount,
+		});
 	}
 
-	private async checkMonitorDns(monitor: {
-		id: string;
-		name: string;
-		domain: string;
-		recordType: string;
-		expectedValue: string | null;
-		lastValue: string | null;
-		teamId: string;
-		team: { id: string; ownerId: string };
-	}): Promise<void> {
+	private async checkMonitorDns(
+		db: ReturnType<typeof database>,
+		monitor: {
+			id: string;
+			name: string;
+			domain: string;
+			recordType: string;
+			expectedValue: string | null;
+			lastValue: string | null;
+			teamId: string;
+			team: { id: string; ownerId: string };
+		},
+	): Promise<void> {
 		let result = await checkDns(
 			monitor.domain,
 			monitor.recordType as DnsRecordType,
@@ -93,7 +80,7 @@ export default class CheckDnsJob implements Job {
 		);
 
 		// Store the result
-		await this.db.insert(schema.dnsMonitorResults).values({
+		await db.insert(schema.dnsMonitorResults).values({
 			dnsMonitorId: monitor.id,
 			status: result.status,
 			resolvedValue: result.resolvedValue,
@@ -103,7 +90,7 @@ export default class CheckDnsJob implements Job {
 		});
 
 		// Update the monitor with the latest status
-		await this.db
+		await db
 			.update(schema.dnsMonitors)
 			.set({
 				lastCheckedAt: new Date(),
@@ -119,11 +106,12 @@ export default class CheckDnsJob implements Job {
 
 		// Send alerts if status is changed or error
 		if (result.status !== "ok") {
-			await this.sendDnsAlerts(monitor, result);
+			await this.sendDnsAlerts(db, monitor, result);
 		}
 	}
 
 	private async sendDnsAlerts(
+		db: ReturnType<typeof database>,
 		monitor: {
 			id: string;
 			name: string;
@@ -139,7 +127,7 @@ export default class CheckDnsJob implements Job {
 		},
 	): Promise<void> {
 		// Get alerts configured for this team
-		let alerts = await this.db.query.alerts.findMany({
+		let alerts = await db.query.alerts.findMany({
 			where(fields, operators) {
 				return operators.and(
 					operators.eq(fields.teamId, monitor.teamId),
@@ -274,7 +262,7 @@ export default class CheckDnsJob implements Job {
 						});
 					}
 
-					await recordAlertEvent(this.db, {
+					await recordAlertEvent(db, {
 						alertId: alert.id,
 						monitorId: monitor.id,
 						eventType,
@@ -286,7 +274,7 @@ export default class CheckDnsJob implements Job {
 					});
 				} catch (error) {
 					let errorMessage = error instanceof Error ? error.message : String(error);
-					await recordAlertEvent(this.db, {
+					await recordAlertEvent(db, {
 						alertId: alert.id,
 						monitorId: monitor.id,
 						eventType,

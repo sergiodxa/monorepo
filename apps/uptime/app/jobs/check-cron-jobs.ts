@@ -1,12 +1,11 @@
-import { BatchedLogger } from "@pkg/logger";
+import { Job } from "@pkg/jobs";
 import { env } from "cloudflare:workers";
 import { eq } from "drizzle-orm";
 
 import database from "~/db/index";
 import * as schema from "~/db/schema";
-import { pingUptime } from "~/lib/ping-uptime";
 
-import type { Job } from "./base";
+export let uptimeMonitorId = "70a5dba9-8447-4cc0-a5f6-d0e41dc6b9e5";
 
 type CronJobMonitor = {
 	id: string;
@@ -28,130 +27,112 @@ type AlertConfig = schema.SelectAlert;
  * Job that checks all enabled cron job monitors.
  * Runs on a schedule to detect late or missed cron executions.
  */
-export default class CheckCronJobsJob implements Job {
-	private db = database(env.DB);
-	private logger = new BatchedLogger("job:check-cron-jobs");
+export default class CheckCronJobsJob extends Job {
+	async perform(): Promise<void> {
+		let db = database(env.DB);
+		let now = new Date();
 
-	async run(message: Message): Promise<void> {
-		try {
-			this.logger.info("job.check-cron-jobs.started", { messageId: message.id });
-
-			let now = new Date();
-
-			// Get all enabled cron job monitors that have a nextExpectedAt set
-			let monitors = await this.db.query.cronJobMonitors.findMany({
-				columns: {
-					id: true,
-					name: true,
-					cronExpression: true,
-					gracePeriodSeconds: true,
-					timezone: true,
-					status: true,
-					alertOnLate: true,
-					lastPingAt: true,
-					nextExpectedAt: true,
-					teamId: true,
+		// Get all enabled cron job monitors that have a nextExpectedAt set
+		let monitors = await db.query.cronJobMonitors.findMany({
+			columns: {
+				id: true,
+				name: true,
+				cronExpression: true,
+				gracePeriodSeconds: true,
+				timezone: true,
+				status: true,
+				alertOnLate: true,
+				lastPingAt: true,
+				nextExpectedAt: true,
+				teamId: true,
+			},
+			where(fields, operators) {
+				return operators.and(
+					operators.isNotNull(fields.enabledAt),
+					operators.isNotNull(fields.nextExpectedAt),
+					// Only check monitors that are healthy or late (not new or already missed)
+					operators.or(operators.eq(fields.status, "healthy"), operators.eq(fields.status, "late")),
+				);
+			},
+			with: {
+				team: {
+					columns: { id: true, ownerId: true },
 				},
-				where(fields, operators) {
-					return operators.and(
-						operators.isNotNull(fields.enabledAt),
-						operators.isNotNull(fields.nextExpectedAt),
-						// Only check monitors that are healthy or late (not new or already missed)
-						operators.or(
-							operators.eq(fields.status, "healthy"),
-							operators.eq(fields.status, "late"),
-						),
-					);
-				},
-				with: {
-					team: {
-						columns: { id: true, ownerId: true },
-					},
-				},
-			});
+			},
+		});
 
-			this.logger.info("job.check-cron-jobs.monitors-loaded", { monitorCount: monitors.length });
+		this.logger.info("job.check-cron-jobs.monitors-loaded", { monitorCount: monitors.length });
 
-			let lateCount = 0;
-			let missedCount = 0;
-			let alertsSentCount = 0;
+		let lateCount = 0;
+		let missedCount = 0;
+		let alertsSentCount = 0;
 
-			for (let monitor of monitors) {
-				if (!monitor.nextExpectedAt) continue;
+		for (let monitor of monitors) {
+			if (!monitor.nextExpectedAt) continue;
 
-				let nextExpectedAt = new Date(monitor.nextExpectedAt);
-				let gracePeriodMs = monitor.gracePeriodSeconds * 1000;
-				let missedThreshold = new Date(nextExpectedAt.getTime() + gracePeriodMs);
+			let nextExpectedAt = new Date(monitor.nextExpectedAt);
+			let gracePeriodMs = monitor.gracePeriodSeconds * 1000;
+			let missedThreshold = new Date(nextExpectedAt.getTime() + gracePeriodMs);
 
-				// Determine the new status
-				let newStatus: "late" | "missed" | null = null;
+			// Determine the new status
+			let newStatus: "late" | "missed" | null = null;
 
-				if (monitor.status === "healthy" && now > nextExpectedAt && now <= missedThreshold) {
-					// Healthy -> Late: past expected time but within grace period
-					newStatus = "late";
-					lateCount++;
-				} else if (now > missedThreshold) {
-					// Either healthy or late -> Missed: past grace period
-					newStatus = "missed";
-					missedCount++;
-				}
-
-				if (newStatus) {
-					// Update the monitor status
-					await this.db
-						.update(schema.cronJobMonitors)
-						.set({ status: newStatus })
-						.where(eq(schema.cronJobMonitors.id, monitor.id));
-
-					this.logger.info("job.check-cron-jobs.status-changed", {
-						cronJobMonitorId: monitor.id,
-						previousStatus: monitor.status,
-						newStatus,
-					});
-
-					// Determine if we should send alerts
-					let shouldAlert = false;
-					if (newStatus === "missed") {
-						// Always alert on missed
-						shouldAlert = true;
-					} else if (newStatus === "late" && monitor.alertOnLate) {
-						// Only alert on late if configured
-						shouldAlert = true;
-					}
-
-					if (shouldAlert) {
-						let alertsSent = await this.sendAlerts(monitor as CronJobMonitor, newStatus, now);
-						alertsSentCount += alertsSent;
-					}
-				}
+			if (monitor.status === "healthy" && now > nextExpectedAt && now <= missedThreshold) {
+				// Healthy -> Late: past expected time but within grace period
+				newStatus = "late";
+				lateCount++;
+			} else if (now > missedThreshold) {
+				// Either healthy or late -> Missed: past grace period
+				newStatus = "missed";
+				missedCount++;
 			}
 
-			this.logger.info("job.check-cron-jobs.completed", {
-				monitorCount: monitors.length,
-				lateCount,
-				missedCount,
-				alertsSentCount,
-			});
+			if (newStatus) {
+				// Update the monitor status
+				await db
+					.update(schema.cronJobMonitors)
+					.set({ status: newStatus })
+					.where(eq(schema.cronJobMonitors.id, monitor.id));
 
-			await pingUptime("70a5dba9-8447-4cc0-a5f6-d0e41dc6b9e5", env.UPTIME_CRON_API_KEY);
-			return message.ack();
-		} catch (error) {
-			this.logger.error("job.check-cron-jobs.failed", {
-				error: error instanceof Error ? error.message : String(error),
-			});
-			return message.retry();
-		} finally {
-			this.logger.flush();
+				this.logger.info("job.check-cron-jobs.status-changed", {
+					cronJobMonitorId: monitor.id,
+					previousStatus: monitor.status,
+					newStatus,
+				});
+
+				// Determine if we should send alerts
+				let shouldAlert = false;
+				if (newStatus === "missed") {
+					// Always alert on missed
+					shouldAlert = true;
+				} else if (newStatus === "late" && monitor.alertOnLate) {
+					// Only alert on late if configured
+					shouldAlert = true;
+				}
+
+				if (shouldAlert) {
+					let alertsSent = await this.sendAlerts(db, monitor as CronJobMonitor, newStatus, now);
+					alertsSentCount += alertsSent;
+				}
+			}
 		}
+
+		this.logger.info("job.check-cron-jobs.completed", {
+			monitorCount: monitors.length,
+			lateCount,
+			missedCount,
+			alertsSentCount,
+		});
 	}
 
 	private async sendAlerts(
+		db: ReturnType<typeof database>,
 		monitor: CronJobMonitor,
 		newStatus: "late" | "missed",
 		now: Date,
 	): Promise<number> {
 		// Get team-level alerts (where monitorId is NULL)
-		let alerts = await this.db.query.alerts.findMany({
+		let alerts = await db.query.alerts.findMany({
 			where(fields, operators) {
 				return operators.and(
 					operators.eq(fields.teamId, monitor.teamId),
@@ -170,7 +151,7 @@ export default class CheckCronJobsJob implements Job {
 		// Check cooldowns and filter alerts
 		let alertsToSend: AlertConfig[] = [];
 		for (let alert of alerts) {
-			let shouldSend = await this.checkCooldown(alert, monitor.id, now);
+			let shouldSend = await this.checkCooldown(db, alert, monitor.id, now);
 			if (shouldSend) {
 				alertsToSend.push(alert);
 			}
@@ -297,7 +278,7 @@ export default class CheckCronJobsJob implements Job {
 					}
 
 					// Record successful alert event
-					await this.db.insert(schema.alertEvents).values({
+					await db.insert(schema.alertEvents).values({
 						alertId: alert.id,
 						monitorId: monitor.id, // Using cronJobMonitorId as monitorId for tracking
 						eventType: eventType as "degraded" | "down",
@@ -316,7 +297,7 @@ export default class CheckCronJobsJob implements Job {
 					});
 				} catch (error) {
 					// Record failed alert event
-					await this.db.insert(schema.alertEvents).values({
+					await db.insert(schema.alertEvents).values({
 						alertId: alert.id,
 						monitorId: monitor.id,
 						eventType: eventType as "degraded" | "down",
@@ -354,7 +335,12 @@ export default class CheckCronJobsJob implements Job {
 		return successCount;
 	}
 
-	private async checkCooldown(alert: AlertConfig, monitorId: string, now: Date): Promise<boolean> {
+	private async checkCooldown(
+		db: ReturnType<typeof database>,
+		alert: AlertConfig,
+		monitorId: string,
+		now: Date,
+	): Promise<boolean> {
 		// If no cooldown configured, always send
 		if (alert.cooldownMinutes === 0) {
 			return true;
@@ -364,7 +350,7 @@ export default class CheckCronJobsJob implements Job {
 		let cooldownMs = alert.cooldownMinutes * 60 * 1000;
 		let cooldownThreshold = new Date(now.getTime() - cooldownMs);
 
-		let recentEvent = await this.db.query.alertEvents.findFirst({
+		let recentEvent = await db.query.alertEvents.findFirst({
 			where(fields, operators) {
 				return operators.and(
 					operators.eq(fields.alertId, alert.id),
@@ -387,8 +373,7 @@ export default class CheckCronJobsJob implements Job {
 			});
 
 			// Record that we skipped due to cooldown
-			// Note: We don't have full monitor context here, so snapshot is omitted
-			await this.db.insert(schema.alertEvents).values({
+			await db.insert(schema.alertEvents).values({
 				alertId: alert.id,
 				monitorId,
 				eventType: "down",

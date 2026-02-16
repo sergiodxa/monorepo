@@ -1,15 +1,14 @@
-import { BatchedLogger } from "@pkg/logger";
+import { Job } from "@pkg/jobs";
 import { isFailure } from "@pkg/result";
 import { env } from "cloudflare:workers";
 
 import database from "~/db/index";
-import { pingUptime } from "~/lib/ping-uptime";
 import TcpMonitor from "~/models/tcp-monitor";
 import { recordAlertEvent } from "~/services/alert-cooldown";
 import { getLatestStatusFromAnalytics, writePingResult } from "~/services/analytics.server";
 import { checkTcpConnection } from "~/services/check-tcp";
 
-import type { Job } from "./base";
+export let uptimeMonitorId = "94276ec1-18f9-4dde-8a09-c5a00df29454";
 
 /**
  * Job that checks all enabled TCP monitors.
@@ -18,59 +17,45 @@ import type { Job } from "./base";
  * Note: TCP monitoring has limitations on Cloudflare Workers free plan.
  * See services/check-tcp.ts for details.
  */
-export default class CheckTcpJob implements Job {
-	private db = database(env.DB);
-	private logger = new BatchedLogger("job:check-tcp");
+export default class CheckTcpJob extends Job {
+	async perform(): Promise<void> {
+		let db = database(env.DB);
+		let monitors = await TcpMonitor.getEnabledMonitors(db);
 
-	async run(message: Message): Promise<void> {
-		try {
-			let monitors = await TcpMonitor.getEnabledMonitors(this.db);
+		this.logger.info("job.check-tcp.monitors-loaded", { monitorCount: monitors.length });
 
-			this.logger.info("job.check-tcp.started", {
-				messageId: message.id,
-				monitorCount: monitors.length,
-			});
+		let successCount = 0;
+		let errorCount = 0;
 
-			let successCount = 0;
-			let errorCount = 0;
-
-			for (let monitor of monitors) {
-				try {
-					await this.checkMonitor(monitor);
-					successCount++;
-				} catch {
-					errorCount++;
-				}
+		for (let monitor of monitors) {
+			try {
+				await this.checkMonitor(db, monitor);
+				successCount++;
+			} catch {
+				errorCount++;
 			}
-
-			this.logger.info("job.check-tcp.completed", {
-				monitorCount: monitors.length,
-				successCount,
-				errorCount,
-			});
-
-			await pingUptime("94276ec1-18f9-4dde-8a09-c5a00df29454", env.UPTIME_CRON_API_KEY);
-			return message.ack();
-		} catch (error) {
-			this.logger.error("job.check-tcp.failed", {
-				error: error instanceof Error ? error.message : String(error),
-			});
-			return message.retry();
-		} finally {
-			this.logger.flush();
 		}
+
+		this.logger.info("job.check-tcp.completed", {
+			monitorCount: monitors.length,
+			successCount,
+			errorCount,
+		});
 	}
 
-	private async checkMonitor(monitor: {
-		id: string;
-		name: string;
-		host: string;
-		port: number;
-		timeoutMs: number;
-		teamId: string;
-		lastStatus: "up" | "down" | "timeout" | null;
-		team: { ownerId: string };
-	}): Promise<void> {
+	private async checkMonitor(
+		db: ReturnType<typeof database>,
+		monitor: {
+			id: string;
+			name: string;
+			host: string;
+			port: number;
+			timeoutMs: number;
+			teamId: string;
+			lastStatus: "up" | "down" | "timeout" | null;
+			team: { ownerId: string };
+		},
+	): Promise<void> {
 		this.logger.info("tcp.check", {
 			tcpMonitorId: monitor.id,
 			host: monitor.host,
@@ -125,8 +110,6 @@ export default class CheckTcpJob implements Job {
 			((previousStatus === "up" && storableStatus !== "up") ||
 				(previousStatus !== "up" && storableStatus === "up"));
 
-		// D1 writes removed (dual-write stopped)
-
 		this.logger.info("job.check-tcp.monitor-checked", {
 			tcpMonitorId: monitor.id,
 			status: result.status,
@@ -138,6 +121,7 @@ export default class CheckTcpJob implements Job {
 		// Send alerts on status changes
 		if (statusChanged) {
 			await this.sendTcpAlerts(
+				db,
 				monitor,
 				storableStatus,
 				result.responseTimeMs ?? null,
@@ -147,6 +131,7 @@ export default class CheckTcpJob implements Job {
 	}
 
 	private async sendTcpAlerts(
+		db: ReturnType<typeof database>,
 		monitor: {
 			id: string;
 			name: string;
@@ -163,7 +148,7 @@ export default class CheckTcpJob implements Job {
 		let isRecovery = newStatus === "up";
 
 		// Get alerts configured for this team
-		let alerts = await this.db.query.alerts.findMany({
+		let alerts = await db.query.alerts.findMany({
 			where(fields, operators) {
 				return operators.and(
 					operators.eq(fields.teamId, monitor.teamId),
@@ -309,7 +294,7 @@ export default class CheckTcpJob implements Job {
 						});
 					}
 
-					await recordAlertEvent(this.db, {
+					await recordAlertEvent(db, {
 						alertId: alert.id,
 						monitorId: monitor.id,
 						eventType,
@@ -321,7 +306,7 @@ export default class CheckTcpJob implements Job {
 					});
 				} catch (error) {
 					let errorMessageLogged = error instanceof Error ? error.message : String(error);
-					await recordAlertEvent(this.db, {
+					await recordAlertEvent(db, {
 						alertId: alert.id,
 						monitorId: monitor.id,
 						eventType,

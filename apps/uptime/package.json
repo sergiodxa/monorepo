@@ -25,6 +25,7 @@
 		"@pkg/auth-sdk": "workspace:*",
 		"@pkg/cn": "workspace:*",
 		"@pkg/db-helpers": "workspace:*",
+		"@pkg/jobs": "workspace:*",
 		"@pkg/location": "workspace:*",
 		"@pkg/logger": "workspace:*",
 		"@pkg/markdown": "workspace:*",

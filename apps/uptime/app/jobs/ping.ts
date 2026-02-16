@@ -1,5 +1,8 @@
-import { BatchedLogger } from "@pkg/logger";
+import { Job } from "@pkg/jobs";
+import { isFailure } from "@pkg/result";
+import { validate } from "@pkg/validate";
 import { env } from "cloudflare:workers";
+import { z } from "zod";
 
 import type { SelectMonitor, SelectTeam } from "~/db/schema";
 
@@ -7,52 +10,41 @@ import database from "~/db/index";
 import Customer from "~/models/customer";
 import Monitor from "~/models/monitor";
 
-import type { Job } from "./base";
+export default class PingJob extends Job {
+	static schema = z.object({
+		monitorId: z.string(),
+		ownerId: z.string(),
+	});
 
-export default class PingJob implements Job {
-	private db = database(env.DB);
+	async perform(): Promise<void> {
+		let result = await validate(this.input, PingJob.schema);
 
-	constructor(
-		private input: {
-			monitorId: SelectMonitor["id"];
-			ownerId: SelectTeam["ownerId"];
-		},
-	) {}
-
-	async run(message: Message): Promise<void> {
-		let logger = new BatchedLogger(`job:ping:${this.input.monitorId}`);
-
-		try {
-			logger.info("job.ping.started", {
-				monitorId: this.input.monitorId,
-				ownerId: this.input.ownerId,
-				messageId: message.id,
-			});
-
-			logger.info("subscription.check", { ownerId: this.input.ownerId });
-			let hasActiveSubscription = await Customer.hasActiveSubscription(this.input.ownerId);
-
-			if (!hasActiveSubscription) {
-				logger.info("job.ping.skipped", {
-					reason: "no_subscription",
-				});
-				return message.ack();
-			}
-
-			logger.info("subscription.verified", { ownerId: this.input.ownerId });
-
-			logger.info("monitor.ping", { monitorId: this.input.monitorId });
-			await Monitor.ping(this.db, this.input.monitorId);
-
-			logger.info("job.ping.completed", { status: "success" });
-			return message.ack();
-		} catch (error) {
-			logger.error("job.ping.failed", {
-				error: error instanceof Error ? error.message : String(error),
-			});
-			return message.retry();
-		} finally {
-			logger.flush();
+		if (isFailure(result)) {
+			throw new Job.NonRetriableError("Invalid input", { cause: result.error });
 		}
+
+		let { monitorId, ownerId } = result.data;
+
+		this.logger.info("subscription.check", { ownerId });
+		let hasActiveSubscription = await Customer.hasActiveSubscription(ownerId);
+
+		if (!hasActiveSubscription) {
+			this.logger.info("job.ping.skipped", { reason: "no_subscription" });
+			return;
+		}
+
+		this.logger.info("subscription.verified", { ownerId });
+
+		let db = database(env.DB);
+
+		this.logger.info("monitor.ping", { monitorId });
+		await Monitor.ping(db, monitorId);
 	}
+}
+
+export namespace PingJob {
+	export type Input = {
+		monitorId: SelectMonitor["id"];
+		ownerId: SelectTeam["ownerId"];
+	};
 }

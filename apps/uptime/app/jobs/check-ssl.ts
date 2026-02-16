@@ -1,97 +1,84 @@
-import { BatchedLogger } from "@pkg/logger";
+import { Job } from "@pkg/jobs";
 import { env } from "cloudflare:workers";
 import { eq } from "drizzle-orm";
 
 import database from "~/db/index";
 import * as schema from "~/db/schema";
-import { pingUptime } from "~/lib/ping-uptime";
 import { recordAlertEvent } from "~/services/alert-cooldown";
 import { calculateSslStatus, shouldSendSslAlert } from "~/services/check-ssl";
 
-import type { Job } from "./base";
+export let uptimeMonitorId = "2140cbc2-e18e-441c-9ef9-3d516a9e3a19";
 
 /**
  * Job that checks SSL certificate expiry for all monitors with SSL monitoring enabled.
  * Runs daily to update SSL status and send alerts for expiring certificates.
  */
-export default class CheckSslJob implements Job {
-	private db = database(env.DB);
-	private logger = new BatchedLogger("job:check-ssl");
+export default class CheckSslJob extends Job {
+	async perform(): Promise<void> {
+		let db = database(env.DB);
 
-	async run(message: Message): Promise<void> {
-		try {
-			this.logger.info("job.check-ssl.started", { messageId: message.id });
-
-			let monitors = await this.db.query.monitors.findMany({
-				columns: {
-					id: true,
-					name: true,
-					url: true,
-					sslMonitoringEnabled: true,
-					sslExpiryWarningDays: true,
-					sslExpiresAt: true,
-					sslIssuer: true,
-					teamId: true,
+		let monitors = await db.query.monitors.findMany({
+			columns: {
+				id: true,
+				name: true,
+				url: true,
+				sslMonitoringEnabled: true,
+				sslExpiryWarningDays: true,
+				sslExpiresAt: true,
+				sslIssuer: true,
+				teamId: true,
+			},
+			where(fields, operators) {
+				return operators.eq(fields.sslMonitoringEnabled, true);
+			},
+			with: {
+				team: {
+					columns: { id: true, ownerId: true },
 				},
-				where(fields, operators) {
-					return operators.eq(fields.sslMonitoringEnabled, true);
-				},
-				with: {
-					team: {
-						columns: { id: true, ownerId: true },
-					},
-				},
-			});
+			},
+		});
 
-			this.logger.info("database.query.complete", { monitorCount: monitors.length });
+		this.logger.info("database.query.complete", { monitorCount: monitors.length });
 
-			let successCount = 0;
-			let errorCount = 0;
+		let successCount = 0;
+		let errorCount = 0;
 
-			for (let monitor of monitors) {
-				try {
-					await this.checkMonitorSsl(monitor);
-					successCount++;
-				} catch {
-					errorCount++;
-				}
+		for (let monitor of monitors) {
+			try {
+				await this.checkMonitorSsl(db, monitor);
+				successCount++;
+			} catch {
+				errorCount++;
 			}
-
-			this.logger.info("job.check-ssl.completed", {
-				monitorCount: monitors.length,
-				successCount,
-				errorCount,
-			});
-
-			await pingUptime("2140cbc2-e18e-441c-9ef9-3d516a9e3a19", env.UPTIME_CRON_API_KEY);
-			return message.ack();
-		} catch (error) {
-			this.logger.error("job.check-ssl.failed", {
-				error: error instanceof Error ? error.message : String(error),
-			});
-			return message.retry();
-		} finally {
-			this.logger.flush();
 		}
+
+		this.logger.info("job.check-ssl.completed", {
+			monitorCount: monitors.length,
+			successCount,
+			errorCount,
+		});
 	}
 
-	private async checkMonitorSsl(monitor: {
-		id: string;
-		name: string;
-		url: string;
-		sslMonitoringEnabled: boolean;
-		sslExpiryWarningDays: number;
-		sslExpiresAt: Date | null;
-		sslIssuer: string | null;
-		teamId: string;
-		team: { id: string; ownerId: string };
-	}): Promise<void> {
+	private async checkMonitorSsl(
+		db: ReturnType<typeof database>,
+		monitor: {
+			id: string;
+			name: string;
+			url: string;
+			sslMonitoringEnabled: boolean;
+			sslExpiryWarningDays: number;
+			sslExpiresAt: Date | null;
+			sslIssuer: string | null;
+			teamId: string;
+			team: { id: string; ownerId: string };
+		},
+	): Promise<void> {
 		let { status, daysUntilExpiry } = calculateSslStatus(
 			monitor.sslExpiresAt,
 			monitor.sslExpiryWarningDays,
 		);
 
-		await this.db
+		await db
 			.update(schema.monitors)
 			.set({
 				sslStatus: status,
@@ -106,11 +93,12 @@ export default class CheckSslJob implements Job {
 		});
 
 		if (shouldSendSslAlert(status, daysUntilExpiry)) {
-			await this.sendSslAlerts(monitor, status, daysUntilExpiry, monitor.sslExpiresAt);
+			await this.sendSslAlerts(db, monitor, status, daysUntilExpiry, monitor.sslExpiresAt);
 		}
 	}
 
 	private async sendSslAlerts(
+		db: ReturnType<typeof database>,
 		monitor: {
 			id: string;
 			name: string;
@@ -122,7 +110,7 @@ export default class CheckSslJob implements Job {
 		daysUntilExpiry: number | null,
 		expiresAt: Date | null,
 	): Promise<void> {
-		let alerts = await this.db.query.alerts.findMany({
+		let alerts = await db.query.alerts.findMany({
 			where(fields, operators) {
 				return operators.or(
 					operators.and(
@@ -224,7 +212,7 @@ export default class CheckSslJob implements Job {
 						});
 					}
 
-					await recordAlertEvent(this.db, {
+					await recordAlertEvent(db, {
 						alertId: alert.id,
 						monitorId: monitor.id,
 						eventType,
@@ -236,7 +224,7 @@ export default class CheckSslJob implements Job {
 					});
 				} catch (error) {
 					let errorMessage = error instanceof Error ? error.message : String(error);
-					await recordAlertEvent(this.db, {
+					await recordAlertEvent(db, {
 						alertId: alert.id,
 						monitorId: monitor.id,
 						eventType,

@@ -1,87 +1,80 @@
-import { BatchedLogger } from "@pkg/logger";
+import { Job } from "@pkg/jobs";
+import { isFailure } from "@pkg/result";
+import { validate } from "@pkg/validate";
 import { env } from "cloudflare:workers";
 import { eq } from "drizzle-orm";
+import { z } from "zod";
 
 import database from "~/db/index";
 import * as schema from "~/db/schema";
 import { dnsLookup } from "~/utils/dns-lookup";
 
-import type { Job } from "./base";
+export default class VerifyDomainOwnershipJob extends Job {
+	static schema = z.object({ teamDomainId: z.string() });
 
-export default class VerifyDomainOwnershipJob implements Job {
-	private db = database(env.DB);
-	private logger: BatchedLogger;
+	async perform(): Promise<void> {
+		let result = await validate(this.input, VerifyDomainOwnershipJob.schema);
 
-	constructor(private teamDomainId: string) {
-		this.logger = new BatchedLogger(`job:verify-domain-ownership:${teamDomainId}`);
-	}
+		if (isFailure(result)) {
+			throw new Job.NonRetriableError("Invalid input", { cause: result.error });
+		}
 
-	async run(message: Message): Promise<void> {
-		let teamDomainId = this.teamDomainId;
+		let { teamDomainId } = result.data;
+		let db = database(env.DB);
 
-		try {
-			this.logger.info("job.verify-domain-ownership.started", {
-				messageId: message.id,
+		this.logger.info("database.query", {
+			table: "teamDomains",
+			operation: "findFirst",
+			teamDomainId,
+		});
+
+		let teamDomain = await db.query.teamDomains.findFirst({
+			where(fields, operators) {
+				return operators.eq(fields.id, teamDomainId);
+			},
+		});
+
+		if (!teamDomain) {
+			this.logger.info("job.verify-domain-ownership.skipped", {
 				teamDomainId,
+				reason: "not_found",
 			});
+			return;
+		}
 
-			this.logger.info("database.query", {
+		this.logger.info("dns.lookup", {
+			hostname: teamDomain.hostname,
+			teamDomainId,
+		});
+
+		let verified = await dnsLookup(teamDomain.hostname, teamDomain.id);
+
+		if (verified) {
+			this.logger.info("database.update", {
 				table: "teamDomains",
-				operation: "findFirst",
 				teamDomainId,
-			});
-			let teamDomain = await this.db.query.teamDomains.findFirst({
-				where(fields, operators) {
-					return operators.eq(fields.id, teamDomainId);
-				},
+				field: "verifiedAt",
 			});
 
-			if (!teamDomain) {
-				this.logger.info("job.verify-domain-ownership.skipped", {
-					teamDomainId,
-					reason: "not_found",
-				});
-				return message.ack();
-			}
+			await db
+				.update(schema.teamDomains)
+				.set({ verifiedAt: new Date() })
+				.where(eq(schema.teamDomains.id, teamDomain.id));
 
-			this.logger.info("dns.lookup", {
+			this.logger.info("job.verify-domain-ownership.verified", {
+				teamDomainId,
 				hostname: teamDomain.hostname,
-				teamDomainId,
 			});
-			let verified = await dnsLookup(teamDomain.hostname, teamDomain.id);
-
-			if (verified) {
-				this.logger.info("database.update", {
-					table: "teamDomains",
-					teamDomainId,
-					field: "verifiedAt",
-				});
-				await this.db
-					.update(schema.teamDomains)
-					.set({ verifiedAt: new Date() })
-					.where(eq(schema.teamDomains.id, teamDomain.id));
-
-				this.logger.info("job.verify-domain-ownership.verified", {
-					teamDomainId,
-					hostname: teamDomain.hostname,
-				});
-			} else {
-				this.logger.info("job.verify-domain-ownership.failed", {
-					teamDomainId,
-					hostname: teamDomain.hostname,
-					reason: "dns_lookup_failed",
-				});
-			}
-
-			return message.ack();
-		} catch (error) {
-			this.logger.error("job.verify-domain-ownership.error", {
+		} else {
+			this.logger.info("job.verify-domain-ownership.failed", {
 				teamDomainId,
-				error: error instanceof Error ? error.message : String(error),
+				hostname: teamDomain.hostname,
+				reason: "dns_lookup_failed",
 			});
-			return message.retry();
-		} finally {
-			this.logger.flush();
 		}
 	}
+}
+
+export namespace VerifyDomainOwnershipJob {
+	export type Input = z.infer<typeof VerifyDomainOwnershipJob.schema>;
 }

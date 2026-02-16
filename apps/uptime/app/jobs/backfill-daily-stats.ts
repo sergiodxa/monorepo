@@ -1,11 +1,9 @@
-import { BatchedLogger } from "@pkg/logger";
+import { Job } from "@pkg/jobs";
 import { env } from "cloudflare:workers";
 import { z } from "zod/v4";
 
 import database from "~/db/index";
 import { monitorDailyStats } from "~/db/schema";
-
-import type { Job } from "./base";
 
 interface ResultAggregate {
 	date: string;
@@ -19,70 +17,50 @@ interface MonitorAggregate {
 	results: Set<ResultAggregate>;
 }
 
-export default class BackfillDailyStatsJob implements Job {
-	private db = database(env.DB);
-	private logger = new BatchedLogger("job:backfill-daily-stats");
+export default class BackfillDailyStatsJob extends Job {
+	async perform(): Promise<void> {
+		let db = database(env.DB);
 
-	async run(message: Message): Promise<void> {
-		try {
-			this.logger.info("job.backfill-daily-stats.started", { messageId: message.id });
+		let monitors = await this.aggregateHttpMonitors(db);
 
-			let monitors = await this.aggregateHttpMonitors();
+		if (monitors.size === 0) {
+			this.logger.info("job.backfill-daily-stats.no-data");
+			return;
+		}
 
-			if (monitors.size === 0) {
-				this.logger.info("job.backfill-daily-stats.no-data");
-				return message.ack();
-			}
+		this.logger.info("job.backfill-daily-stats.aggregated", { monitors: monitors.size });
 
-			this.logger.info("job.backfill-daily-stats.aggregated", { monitors: monitors.size });
-
-			let rowsWritten = 0;
-			for (let monitor of monitors.values()) {
-				for (let result of monitor.results) {
-					let status = calculateStatus(result.checks.successful, result.checks.total);
-					try {
-						await this.db.insert(monitorDailyStats).values({
-							monitorId: monitor.monitorId,
-							monitorType: monitor.type,
-							date: result.date,
-							status,
-							totalChecks: result.checks.total,
-							successfulChecks: result.checks.successful,
-							failedChecks: result.checks.total - result.checks.successful,
-							avgResponseTimeMs: avg(result.responseTime),
-							maxResponseTimeMs: Math.max(...result.responseTime),
-							p95ResponseTimeMs: p95(result.responseTime),
-						});
-						rowsWritten++;
-					} catch (error) {
-						this.logger.error("job.backfill-daily-stats.insert-error", {
-							error: error instanceof Error ? error.message : String(error),
-							monitorId: monitor.monitorId,
-							date: result.date,
-						});
-					}
+		let rowsWritten = 0;
+		for (let monitor of monitors.values()) {
+			for (let result of monitor.results) {
+				let status = calculateStatus(result.checks.successful, result.checks.total);
+				try {
+					await db.insert(monitorDailyStats).values({
+						monitorId: monitor.monitorId,
+						monitorType: monitor.type,
+						date: result.date,
+						status,
+						totalChecks: result.checks.total,
+						successfulChecks: result.checks.successful,
+						failedChecks: result.checks.total - result.checks.successful,
+						avgResponseTimeMs: avg(result.responseTime),
+						maxResponseTimeMs: Math.max(...result.responseTime),
+						p95ResponseTimeMs: p95(result.responseTime),
+					});
+					rowsWritten++;
+				} catch (error) {
+					this.logger.error("job.backfill-daily-stats.insert-error", {
+						error: error instanceof Error ? error.message : String(error),
+						monitorId: monitor.monitorId,
+						date: result.date,
+					});
 				}
 			}
-
-			this.logger.info("job.backfill-daily-stats.completed", { rowsWritten });
-
-			await this.sendNotification({ rowsWritten });
-
-			return message.ack();
-		} catch (error) {
-			this.logger.error("job.backfill-daily-stats.failed", {
-				error: error instanceof Error ? error.message : String(error),
-			});
-
-			await this.sendNotification({
-				rowsWritten: 0,
-				error: error instanceof Error ? error.message : String(error),
-			});
-
-			return message.ack();
-		} finally {
-			this.logger.flush();
 		}
+
+		this.logger.info("job.backfill-daily-stats.completed", { rowsWritten });
+
+		await this.sendNotification({ rowsWritten });
 	}
 
 	private async sendNotification(params: { rowsWritten: number; error?: string }) {
@@ -93,7 +71,6 @@ export default class BackfillDailyStatsJob implements Job {
 					rowsWritten: params.rowsWritten,
 					error: params.error,
 				});
-
 				return;
 			}
 
@@ -131,7 +108,9 @@ export default class BackfillDailyStatsJob implements Job {
 		}
 	}
 
-	private async aggregateHttpMonitors(): Promise<Map<string, MonitorAggregate>> {
+	private async aggregateHttpMonitors(
+		db: ReturnType<typeof database>,
+	): Promise<Map<string, MonitorAggregate>> {
 		let rowSchema = z.object({
 			monitorId: z.string(),
 			date: z.string(),
@@ -162,7 +141,7 @@ export default class BackfillDailyStatsJob implements Job {
 			HAVING date IS NOT NULL
 		`;
 
-		let result = await this.db.$client.prepare(sql).all();
+		let result = await db.$client.prepare(sql).all();
 
 		let map = new Map<string, MonitorAggregate>();
 

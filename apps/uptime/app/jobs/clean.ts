@@ -1,37 +1,22 @@
-import { BatchedLogger } from "@pkg/logger";
+import { Job } from "@pkg/jobs";
 import { env } from "cloudflare:workers";
 
 import database from "~/db/index";
-import { pingUptime } from "~/lib/ping-uptime";
 import Monitor from "~/models/monitor";
 
-import type { Job } from "./base";
+export let uptimeMonitorId = "80294988-476e-4e99-9f5c-abfeb369316a";
 
-export default class CleanJob implements Job {
-	private db = database(env.DB);
-	private logger = new BatchedLogger("job:clean");
+export default class CleanJob extends Job {
+	async perform(): Promise<void> {
+		let db = database(env.DB);
 
-	async run(message: Message): Promise<void> {
-		try {
-			this.logger.info("job.clean.started", { messageId: message.id });
+		this.logger.info("database.delete", {
+			table: "monitorResults",
+			operation: "clean_old_results",
+		});
 
-			this.logger.info("database.delete", {
-				table: "monitorResults",
-				operation: "clean_old_results",
-			});
-			let result = await Monitor.cleanResults(this.db);
+		let result = await Monitor.cleanResults(db);
 
-			this.logger.info("job.clean.completed", { rowsDeleted: result.meta.changes });
-
-			await pingUptime("80294988-476e-4e99-9f5c-abfeb369316a", env.UPTIME_CRON_API_KEY);
-			return message.ack();
-		} catch (error) {
-			this.logger.error("job.clean.failed", {
-				error: error instanceof Error ? error.message : String(error),
-			});
-			return message.retry();
-		} finally {
-			this.logger.flush();
-		}
+		this.logger.info("job.clean.completed", { rowsDeleted: result.meta.changes });
 	}
 }
