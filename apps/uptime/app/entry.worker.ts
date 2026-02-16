@@ -89,7 +89,6 @@ export default {
 					z.object({ type: z.literal("checkTcp") }),
 					z.object({ type: z.literal("checkCronJobs") }),
 					z.object({ type: z.literal("aggregateDailyStats") }),
-					z.object({ type: z.literal("backfillDailyStats") }),
 				])
 				.safeParse(message.body);
 
@@ -190,11 +189,6 @@ export default {
 						uptime: { monitorId: AggregateDailyStatsJob.monitorId, token: env.UPTIME_CRON_API_KEY },
 					}),
 				);
-			}
-
-			if (result.data.type === "backfillDailyStats") {
-				let { BackfillDailyStatsJob } = await import("./jobs/backfill-daily-stats");
-				waitUntil(BackfillDailyStatsJob.run({ message: message as Message<JSONValue> }));
 			}
 		}
 	},
