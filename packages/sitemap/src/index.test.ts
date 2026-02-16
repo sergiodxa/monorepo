@@ -21,7 +21,7 @@ describe("Sitemap", () => {
 		test("adds URL with lastmod date", () => {
 			let sitemap = new Sitemap();
 			let date = new Date("2024-01-15T00:00:00.000Z");
-			sitemap.append(new URL("https://example.com/page"), date);
+			sitemap.append(new URL("https://example.com/page"), { lastmod: date });
 			expect(sitemap.size).toBe(1);
 		});
 	});
@@ -63,7 +63,7 @@ describe("Sitemap", () => {
 		test("generates valid XML with URL and lastmod", () => {
 			let sitemap = new Sitemap();
 			let date = new Date("2024-01-15T12:30:00.000Z");
-			sitemap.append(new URL("https://example.com/page"), date);
+			sitemap.append(new URL("https://example.com/page"), { lastmod: date });
 			let xml = sitemap.toString();
 			expect(xml).toBe(
 				'<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"><url><loc>https://example.com/page</loc><lastmod>2024-01-15T12:30:00.000Z</lastmod></url></urlset>',
@@ -85,7 +85,7 @@ describe("Sitemap", () => {
 		test("generates valid XML with mixed URLs (with and without lastmod)", () => {
 			let sitemap = new Sitemap();
 			let date = new Date("2024-06-01T00:00:00.000Z");
-			sitemap.append(new URL("https://example.com/with-date"), date);
+			sitemap.append(new URL("https://example.com/with-date"), { lastmod: date });
 			sitemap.append(new URL("https://example.com/no-date"));
 			let xml = sitemap.toString();
 			expect(xml).toContain(

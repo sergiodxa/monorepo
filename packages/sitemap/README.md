@@ -39,14 +39,14 @@ Creates a new empty sitemap.
 let sitemap = new Sitemap();
 ```
 
-#### `sitemap.append(loc: URL, options?: Date | AppendOptions): void`
+#### `sitemap.append(loc: URL, options?: AppendOptions): void`
 
 Add a URL to the sitemap.
 
 **Parameters:**
 
 - `loc`: The URL to add (must be a `URL` object)
-- `options`: Either a `Date` for lastmod (legacy signature) or an `AppendOptions` object
+- `options`: Optional `AppendOptions` object with `lastmod`, `changefreq`, and `priority`
 
 **Example:**
 
@@ -54,10 +54,10 @@ Add a URL to the sitemap.
 // Simple - just URL
 sitemap.append(new URL("https://example.com/page"));
 
-// With lastmod date (legacy signature)
-sitemap.append(new URL("https://example.com/updated"), new Date());
+// With lastmod only
+sitemap.append(new URL("https://example.com/updated"), { lastmod: new Date() });
 
-// With full options
+// With all options
 sitemap.append(new URL("https://example.com/important"), {
 	lastmod: new Date(),
 	changefreq: "weekly",

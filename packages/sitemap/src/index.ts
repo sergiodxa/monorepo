@@ -26,13 +26,7 @@ export namespace Sitemap {
 export class Sitemap {
 	urls = new Set<Sitemap.URL>();
 
-	append(loc: globalThis.URL, options?: Date | Sitemap.AppendOptions) {
-		// Support legacy signature: append(url, date)
-		if (options instanceof Date) {
-			this.urls.add({ loc, lastmod: options });
-			return;
-		}
-
+	append(loc: globalThis.URL, options?: Sitemap.AppendOptions) {
 		this.urls.add({
 			loc,
 			lastmod: options?.lastmod,
