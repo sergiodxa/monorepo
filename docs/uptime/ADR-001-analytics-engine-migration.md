@@ -2,7 +2,7 @@
 
 ## Status
 
-**Proposed** - 2026-02-15
+**Implemented** - 2026-02-16 (Phases 1-9 complete; Phase 10 cleanup pending)
 
 ## Background
 
@@ -877,34 +877,40 @@ Add DNS, TCP, SSL to status pages.
 - `apps/uptime/app/routes/app/$team.status-pages.$statusPageId/*`
 - `apps/uptime/app/routes/status.$slug.tsx`
 
-### Phase 8: Stop Dual-Write
+### Phase 8: Stop Dual-Write ✅
 
 After verifying AE reads are working correctly:
 
-- Remove D1 writes from `ping.ts` and `check-tcp.ts`
-- AE becomes sole source for HTTP/TCP real-time data
-- D1 tables (`monitor_results`, `tcp_monitor_results`) remain for backfill reference
+- ✅ Remove D1 writes from `ping.ts` and `check-tcp.ts`
+- ✅ AE becomes sole source for HTTP/TCP real-time data
+- ✅ D1 tables (`monitor_results`, `tcp_monitor_results`) remain for backfill reference
 
 **Files:**
 
-- `apps/uptime/app/workflows/ping.ts` - Remove D1 write
-- `apps/uptime/app/jobs/check-tcp.ts` - Remove D1 write
+- ✅ `apps/uptime/app/workflows/ping.ts` - Removed D1 write
+- ✅ `apps/uptime/app/jobs/check-tcp.ts` - Removed D1 write
 
-### Phase 9: Backfill Daily Aggregates
+### Phase 9: Backfill Daily Aggregates ✅
 
 Populate `monitor_daily_stats` from existing D1 data:
 
-- Add API endpoint to trigger backfill job (public, no auth - temporary endpoint)
-- Queue processes historical data in batches
-- Uses same aggregation logic as daily cron (idempotent upserts)
-- No AE backfill - only daily aggregates
-- **Sends completion email to `hello@sergiodxa.com` when backfill finishes**
-- Endpoint will be removed after production backfill completes
+- ✅ Add API endpoint to trigger backfill job (public, no auth - temporary endpoint)
+- ✅ Queue processes historical data in batches
+- ✅ Uses raw SQL aggregation with Zod validation for efficiency
+- ✅ No AE backfill - only daily aggregates
+- ✅ **Sends completion email to `hello@sergiodxa.com` when backfill finishes**
+- Endpoint can be removed after production backfill completes
+
+**Backfill Results (2026-02-16):**
+
+- 1657 rows inserted into `monitor_daily_stats`
+- 7 monitors across 260 days (2025-06-01 to 2026-02-15)
+- All HTTP monitor data successfully aggregated
 
 **Files:**
 
-- `apps/uptime/app/routes/api/v1.backfill-daily-stats.ts` - Trigger endpoint
-- `apps/uptime/app/jobs/backfill-daily-stats.ts` - Backfill worker
+- ✅ `apps/uptime/app/routes/api/v1.backfill-daily-stats.ts` - Trigger endpoint
+- ✅ `apps/uptime/app/jobs/backfill-daily-stats.ts` - Backfill worker (raw SQL + Zod)
 
 ### Phase 10: Cleanup (Deferred)
 
@@ -1038,15 +1044,18 @@ The API token needs the `Account Analytics: Read` permission.
 - [x] **Dual-write verified** - 440+ events recorded in Analytics Engine, healthcheck confirms connectivity
 - [x] **Phase 4: Dashboard uses Analytics Engine** - Dashboard queries read from AE with KV cache; AE failure banner and SSL stat card added
 - [x] **Phase 5: Alert Event Updates** - Alert events recorded with snapshots across HTTP, Cron, DNS, TCP, SSL
-- [x] **Phase 8 (partial): Stop dual-write for HTTP/TCP** - HTTP workflow and TCP job now write only to AE (no new D1 results)
+- [x] **Phase 8: Stop dual-write for HTTP/TCP** - HTTP workflow and TCP job now write only to AE (no new D1 results)
+- [x] **Phase 9: Backfill daily aggregates** - 1657 rows inserted from 7 monitors (2025-06-01 to 2026-02-15)
 
 ### Next Step
 
-**Phase 9: Backfill `monitor_daily_stats` from D1 historical data (no AE backfill)**
+**Phase 10: Cleanup (when ready)**
 
-1. Run backfill job in batches (idempotent) to populate `monitor_daily_stats`
-2. Keep D1 ping/tcp tables for reference until backfill completes
-3. After verification, continue with Phase 10 cleanup (drop old result tables)
+Drop legacy tables when confident in the new flow:
+
+- `monitor_results` - 1.19M rows of historical HTTP ping results
+- `tcp_monitor_results` - Historical TCP results
+- Remove `/api/v1/backfill-daily-stats` endpoint
 
 ## Notes
 
