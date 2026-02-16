@@ -107,7 +107,7 @@ export namespace Resizable {
 		maxSize?: number;
 	}
 
-	export interface HandleProps extends Omit<ComponentProps<"div">, "className"> {
+	export interface HandleProps extends Omit<ComponentProps<"div">, "className" | "role"> {
 		className?: cn.ClassName;
 		isDisabled?: boolean;
 	}
@@ -396,7 +396,6 @@ Resizable.Handle = function ResizableHandle({
 	className,
 	isDisabled,
 	handleIndex,
-	role,
 	style,
 	onPointerDown,
 	onKeyDown,
@@ -409,9 +408,9 @@ Resizable.Handle = function ResizableHandle({
 	if (!context) {
 		return (
 			<div
+				role="separator"
 				{...props}
 				className={cn("ui-resizable-handle", className)}
-				role={role ?? "separator"}
 				style={style}
 			/>
 		);
@@ -440,8 +439,8 @@ Resizable.Handle = function ResizableHandle({
 
 	return (
 		<div
+			role="separator"
 			{...props}
-			role={role ?? "separator"}
 			aria-orientation={orientation}
 			aria-controls={controls}
 			aria-valuenow={valueNow}

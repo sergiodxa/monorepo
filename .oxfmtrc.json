@@ -5,18 +5,18 @@
 	"experimentalSortPackageJson": true,
 	"experimentalSortImports": {
 		"groups": [
-			["builtin"],
+			["value-builtin"],
 			["type-external"],
-			["external"],
+			["value-external"],
 			["type-internal"],
-			["internal"],
+			["value-internal"],
 			["type-parent"],
-			["parent"],
+			["value-parent"],
 			["type-sibling"],
-			["sibling"],
+			["value-sibling"],
 			["type-index"],
-			["index"],
-			["side-effect"]
+			["value-index"],
+			["side_effect"]
 		]
 	},
 	"overrides": [

@@ -161,6 +161,7 @@ Carousel.Viewport = function CarouselViewport({
 	return (
 		<div
 			{...props}
+			role="group"
 			id={viewportId}
 			ref={viewportRef}
 			data-slot="viewport"
