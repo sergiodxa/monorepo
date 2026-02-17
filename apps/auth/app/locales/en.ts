@@ -16,6 +16,12 @@ export default {
 	authorize: {
 		header: {
 			title: "Access to {{client}}",
+			description: "Sign in to continue to {{client}}",
+		},
+
+		standalone: {
+			title: "Sign in",
+			description: "Sign in to your account for faster access to connected apps",
 		},
 
 		errors: {
@@ -46,6 +52,30 @@ export default {
 				cta: "Login with GitHub",
 				reminder: "Last time you logged in with GitHub",
 			},
+		},
+	},
+
+	sessions: {
+		title: "Sessions",
+		description:
+			"This is a list of devices that have logged into your account. Revoke any sessions you do not recognize.",
+		current: "Your current session",
+		lastAccessed: "Last accessed on {{date}}",
+		status: {
+			active: "active",
+			stale: "stale",
+		},
+		actions: {
+			revoke: "Revoke",
+			revokeAll: "Revoke all other sessions",
+			logout: "Logout",
+		},
+		empty: "No active sessions found.",
+		device: {
+			desktop: "Desktop",
+			mobile: "Mobile",
+			tablet: "Tablet",
+			unknown: "Unknown device",
 		},
 	},
 

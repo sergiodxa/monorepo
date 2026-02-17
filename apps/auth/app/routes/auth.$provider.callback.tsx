@@ -1,10 +1,13 @@
 import { getClientIP } from "@pkg/get-client-ip";
 import { badRequest } from "@pkg/response";
-import { redirectDocument } from "react-router";
+import { href, redirect, redirectDocument } from "react-router";
 
+import { AUTH_SERVER_CLIENT_ID } from "~/config";
 import { db } from "~/middleware/drizzle";
 import { logger } from "~/middleware/logger";
 import { session } from "~/middleware/session";
+import Client from "~/models/client";
+import Session from "~/models/session";
 import { github } from "~/providers/github";
 import loginWithProvider from "~/services/login/with-provider";
 
@@ -23,9 +26,25 @@ export async function loader({ request, params }: Route.LoaderArgs) {
 	}
 
 	let authz = session().get("authz");
+
+	// Standalone login: create a session for the auth server itself
 	if (!authz) {
-		logger.info("oauth_missing_authz_session");
-		return badRequest({ message: "Invalid request" });
+		// Ensure the auth server client exists
+		await Client.ensureAuthServerClient(db());
+
+		// Create a session for tracking
+		let dbSession = await Session.create(
+			db(),
+			sub,
+			AUTH_SERVER_CLIENT_ID,
+			getClientIP(request),
+			request.headers.get("user-agent"),
+		);
+
+		logger.info("oauth_standalone_login_success", { provider: params.provider, subjectId: sub });
+		session().set("sub", sub);
+		session().set("sessionId", dbSession.id);
+		return redirect(href("/sessions"));
 	}
 
 	let result = await loginWithProvider({

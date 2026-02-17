@@ -49,6 +49,7 @@ export namespace OAuth2Provider {
 
 		deleteSessionBySubjectId(subjectId: string): Promise<void>;
 		deleteSessionById(sessionId: string): Promise<void>;
+		touchSession(sessionId: string): Promise<void>;
 	}
 }
 
@@ -227,6 +228,9 @@ class OAuth2Provider<Repository extends OAuth2Provider.Repository> {
 		let client = await this.repository.findClientById(session.clientId);
 
 		if (!client) throw new InvalidClientError("Client is not registered");
+
+		// Update session's last activity timestamp
+		await this.repository.touchSession(session.id);
 
 		let accessToken = await this.signJWT(AccessToken.generate(session.clientId, session.subjectId));
 

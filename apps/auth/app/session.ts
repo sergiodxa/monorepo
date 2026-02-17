@@ -4,6 +4,7 @@ import { createCookie } from "react-router";
 
 interface SessionData {
 	sub: string;
+	sessionId: string; // The current database session ID
 	authz: { clientId: string; state: string; redirectUri: string };
 }
 

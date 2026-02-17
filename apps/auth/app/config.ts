@@ -1,6 +1,9 @@
 import { JWK } from "@edgefirst-dev/jwt";
 import ms from "ms";
 
+export const AUTH_SERVER_NAME = "Auth by Sergio Xalambrí";
+// This is the client ID for the auth server itself (used for standalone logins)
+export const AUTH_SERVER_CLIENT_ID = "00000000-0000-0000-0000-000000000000";
 export const ISSUER = "auth.sergiodxa.com";
 const ISSUER_HOST = "https://auth.sergiodxa.com";
 export const ID_TOKEN_TTL = ms("1 hour");

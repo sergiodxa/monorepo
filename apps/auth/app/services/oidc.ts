@@ -54,5 +54,12 @@ export default new OIDCProvider(
 		async deleteSessionBySubjectId(subjectId) {
 			await db().delete(schema.sessions).where(eq(schema.sessions.subjectId, subjectId));
 		},
+
+		async touchSession(sessionId) {
+			await db()
+				.update(schema.sessions)
+				.set({ updatedAt: new Date() })
+				.where(eq(schema.sessions.id, sessionId));
+		},
 	},
 );

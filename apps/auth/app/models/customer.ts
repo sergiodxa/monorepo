@@ -32,7 +32,14 @@ export default class Customer {
 		subject: Pick<SelectSubject, "id" | "emailAddress" | "displayName" | "username">,
 	) {
 		let customer = await Customer.findByEmail(email);
-		if (customer) return Customer.assignExternalId(customer.id, subject.id);
+		if (customer) {
+			// Only assign external_id if the customer doesn't already have one
+			// Polar doesn't allow updating external_id once set
+			if (!customer.externalId) {
+				return Customer.assignExternalId(customer.id, subject.id);
+			}
+			return customer;
+		}
 		return await Customer.create(subject);
 	}
 }

@@ -29,8 +29,27 @@ export default class Session {
 		});
 	}
 
+	static async findBySubjectId(db: Database, subjectId: string) {
+		return db.query.sessions.findMany({
+			where(fields, operators) {
+				return operators.eq(fields.subjectId, subjectId);
+			},
+			with: { client: true },
+			orderBy(fields, operators) {
+				return operators.desc(fields.updatedAt);
+			},
+		});
+	}
+
 	static async deleteById(db: Database, id: string) {
 		return db.delete(schema.sessions).where(eq(schema.sessions.id, id));
+	}
+
+	static async touch(db: Database, id: string) {
+		return db
+			.update(schema.sessions)
+			.set({ updatedAt: new Date() })
+			.where(eq(schema.sessions.id, id));
 	}
 
 	static async deleteBySubjectId(db: Database, subjectId: string) {
