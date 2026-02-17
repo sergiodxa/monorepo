@@ -3,8 +3,8 @@ import { env } from "cloudflare:workers";
 import { createCookie } from "react-router";
 
 interface SessionData {
-	sub: string;
-	sessionId: string; // The current database session ID
+	accessToken: string;
+	refreshToken: string;
 	authz: { clientId: string; state: string; redirectUri: string };
 }
 

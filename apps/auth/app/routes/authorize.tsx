@@ -7,12 +7,15 @@ import { useTranslation } from "react-i18next";
 import { href, redirect, redirectDocument } from "react-router";
 import { z } from "zod";
 
-import { AUTH_SERVER_NAME } from "~/config";
+import { AUTH_SERVER_CLIENT_ID } from "~/config";
+import { db } from "~/middleware/drizzle";
 import { logger } from "~/middleware/logger";
 import { session } from "~/middleware/session";
+import Client from "~/models/client";
 import generateCode from "~/services/login/generate-code";
 import loginWithCredential from "~/services/login/with-credential";
 import startAuthorizationFlow from "~/services/start-authz-flow";
+import { getSubjectFromAccessToken } from "~/utils/decode-access-token";
 
 import type { Route } from "./+types/authorize";
 
@@ -26,11 +29,23 @@ let LoaderSchema = z.object({
 
 export async function loader({ request }: Route.LoaderArgs) {
 	let url = new URL(request.url);
-	let subjectId = session().get("sub");
+
+	// Check if user is already logged in (has valid access token)
+	let accessToken = session().get("accessToken");
+	let subjectId: string | null = null;
+	if (accessToken) {
+		try {
+			subjectId = getSubjectFromAccessToken(accessToken);
+		} catch {
+			// Invalid token, clear it
+			session().unset("accessToken");
+			session().unset("refreshToken");
+		}
+	}
 
 	let result = await validate(url.searchParams, LoaderSchema);
 
-	// No OAuth params - show generic login to auth server
+	// No OAuth params - redirect to self with auth server's own OAuth params
 	if (isFailure(result)) {
 		// Already logged in, redirect to sessions page
 		if (subjectId) {
@@ -38,8 +53,28 @@ export async function loader({ request }: Route.LoaderArgs) {
 			return redirect(href("/sessions"));
 		}
 
-		logger.info("authz_standalone_login");
-		return ok({ client: null });
+		// Get or create the auth server client
+		let client = await Client.ensureAuthServerClient(db(), url);
+
+		// Generate state for CSRF protection
+		let state = crypto.randomUUID();
+
+		// Store authz in session for the OAuth flow
+		session().set("authz", {
+			clientId: client.id,
+			state,
+			redirectUri: client.redirectUri,
+		});
+
+		// Redirect to self with proper OAuth params
+		let authUrl = new URL("/authorize", url.origin);
+		authUrl.searchParams.set("response_type", "code");
+		authUrl.searchParams.set("client_id", AUTH_SERVER_CLIENT_ID);
+		authUrl.searchParams.set("redirect_uri", client.redirectUri);
+		authUrl.searchParams.set("state", state);
+
+		logger.info("authz_self_redirect", { clientId: AUTH_SERVER_CLIENT_ID });
+		return redirect(authUrl.toString());
 	}
 
 	let searchParams = result.data;
@@ -69,19 +104,19 @@ export async function loader({ request }: Route.LoaderArgs) {
 			ua: request.headers.get("user-agent"),
 		});
 
-		let url = new URL(searchParams.redirect_uri);
-		url.searchParams.set("state", searchParams.state);
+		let redirectUrl = new URL(searchParams.redirect_uri);
+		redirectUrl.searchParams.set("state", searchParams.state);
 
 		if (codeResult.status === "failure") {
 			logger.error("authz_sso_code_failed", { subjectId, error: codeResult.error.code });
-			url.searchParams.set("error", codeResult.error.code);
-			url.searchParams.set("error_description", codeResult.error.description);
-			return redirectDocument(url.toString());
+			redirectUrl.searchParams.set("error", codeResult.error.code);
+			redirectUrl.searchParams.set("error_description", codeResult.error.description);
+			return redirectDocument(redirectUrl.toString());
 		}
 
 		logger.info("authz_sso_code_generated", { subjectId, clientId: flowResult.data.client.id });
-		url.searchParams.set("code", codeResult.data.code);
-		return redirectDocument(url.toString());
+		redirectUrl.searchParams.set("code", codeResult.data.code);
+		return redirectDocument(redirectUrl.toString());
 	}
 
 	logger.info("authz_session_started", { clientId: searchParams.client_id });
@@ -139,8 +174,7 @@ export async function action({ request }: Route.ActionArgs) {
 	}
 
 	logger.info("authz_credential_login_success", { subjectId: loginResult.data.subjectId });
-	session().unset("authz"); // Remove the authz object from the session
-	session().set("sub", loginResult.data.subjectId); // Keep the subject for SSO
+	session().unset("authz");
 	return redirectDocument(loginResult.data.url.toString());
 }
 
@@ -162,9 +196,7 @@ export default function Component({ loaderData }: Route.ComponentProps) {
 		);
 	}
 
-	// Standalone login (no client app, just login to auth server)
-	let clientName = loaderData.client?.name ?? AUTH_SERVER_NAME;
-	let isStandalone = loaderData.client === null;
+	let clientName = loaderData.client.name;
 
 	return (
 		<main className="grid min-h-dvh w-full lg:grid-cols-2">
@@ -172,15 +204,10 @@ export default function Component({ loaderData }: Route.ComponentProps) {
 			<LoginPanel>
 				<Card.Header className="text-center">
 					<Card.Title>
-						{isStandalone
-							? t("authorize.standalone.title")
-							: t("authorize.header.title", { client: clientName })}
+						<span className="lg:hidden">{t("authorize.header.title", { client: clientName })}</span>
+						<span className="hidden lg:inline">{t("authorize.header.titleShort")}</span>
 					</Card.Title>
-					<Card.Description>
-						{isStandalone
-							? t("authorize.standalone.description")
-							: t("authorize.header.description", { client: clientName })}
-					</Card.Description>
+					<Card.Description>{t("authorize.header.description")}</Card.Description>
 				</Card.Header>
 
 				<Card.Content className="flex flex-col gap-4">
@@ -250,9 +277,11 @@ export default function Component({ loaderData }: Route.ComponentProps) {
 
 function ClientPanel({ name }: { name: string }) {
 	return (
-		<aside className="hidden flex-col items-center justify-center gap-6 bg-neutral-100 p-12 lg:flex dark:bg-neutral-800">
+		<aside className="hidden flex-col items-center justify-center gap-6 bg-neutral-100 p-12 text-neutral-900 lg:flex dark:bg-neutral-800 dark:text-neutral-100">
 			<Logo size="lg">
-				<Logo.Fallback>{name.charAt(0).toUpperCase()}</Logo.Fallback>
+				<Logo.Fallback className="bg-neutral-200 dark:bg-neutral-700">
+					{name.charAt(0).toUpperCase()}
+				</Logo.Fallback>
 			</Logo>
 			<Heading level={2} className="text-3xl font-semibold">
 				{name}
@@ -263,7 +292,7 @@ function ClientPanel({ name }: { name: string }) {
 
 function LoginPanel({ children }: { children: React.ReactNode }) {
 	return (
-		<section className="flex flex-col items-center justify-center p-6 pt-[15vh] md:p-10 md:pt-[20vh] lg:pt-0">
+		<section className="flex flex-col items-center justify-center bg-neutral-50 p-6 pt-[15vh] md:p-10 md:pt-[20vh] lg:pt-0 dark:bg-neutral-900">
 			<Card className="w-full max-w-90">{children}</Card>
 		</section>
 	);

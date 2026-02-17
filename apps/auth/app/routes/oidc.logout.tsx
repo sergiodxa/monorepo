@@ -2,7 +2,7 @@ import { isFailure } from "@pkg/result";
 import { Button, Form } from "@pkg/ui";
 import { validate } from "@pkg/validate";
 import { useTranslation } from "react-i18next";
-import { redirect, redirectDocument } from "react-router";
+import { href, redirect, redirectDocument } from "react-router";
 import { z } from "zod";
 
 import { db } from "~/middleware/drizzle";
@@ -11,6 +11,7 @@ import { session } from "~/middleware/session";
 import Session from "~/models/session";
 import oidc from "~/services/oidc";
 import { sessionStorage } from "~/session";
+import { getSubjectFromAccessToken } from "~/utils/decode-access-token";
 
 import type { Route } from "./+types/oidc.logout";
 
@@ -28,17 +29,26 @@ export async function loader({ request }: Route.LoaderArgs) {
 		return null;
 	}
 
+	let accessToken = session().get("accessToken");
+	let refreshToken = session().get("refreshToken");
+	let sessionSubject = accessToken ? getSubjectFromAccessToken(accessToken) : undefined;
+
 	let result = await oidc.logout({
 		idTokenHint: params.data.id_token_hint,
 		postLogoutRedirectUri: params.data.post_logout_redirect_uri,
-		sessionSubject: session().get("sub"),
+		sessionSubject,
 	});
 
-	await Session.deleteBySubjectId(db(), result.subjectId);
-	logger.info("logout_success", { subjectId: result.subjectId });
-	session().unset("sub");
+	if (refreshToken) {
+		await Session.deleteById(db(), refreshToken);
+	}
+	logger.info("logout_success", { subjectId: result.subjectId, sessionId: refreshToken });
+	session().unset("accessToken");
+	session().unset("refreshToken");
 
-	return redirectDocument(result.redirectUri, {
+	let redirectUri = result.redirectUri || new URL(href("/authorize"), url.origin).toString();
+
+	return redirectDocument(redirectUri, {
 		headers: {
 			"Set-Cookie": await sessionStorage.destroySession(session()),
 			"Clear-Site-Data": '"*"',
@@ -47,15 +57,18 @@ export async function loader({ request }: Route.LoaderArgs) {
 }
 
 export async function action(_: Route.ActionArgs) {
-	let subjectId = session().get("sub");
+	let accessToken = session().get("accessToken");
+	let refreshToken = session().get("refreshToken");
 
-	if (subjectId) {
-		await Session.deleteBySubjectId(db(), subjectId);
-		logger.info("logout_success", { subjectId });
-		session().unset("sub");
+	if (accessToken && refreshToken) {
+		let subjectId = getSubjectFromAccessToken(accessToken);
+		await Session.deleteById(db(), refreshToken);
+		logger.info("logout_success", { subjectId, sessionId: refreshToken });
+		session().unset("accessToken");
+		session().unset("refreshToken");
 	}
 
-	return redirect("https://sergiodxa.com", {
+	return redirect(href("/authorize"), {
 		headers: {
 			"Set-Cookie": await sessionStorage.destroySession(session()),
 			"Clear-Site-Data": '"*"',

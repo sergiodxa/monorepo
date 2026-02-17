@@ -1394,7 +1394,12 @@
 	:where(&) {
 		@apply rounded-lg border shadow-sm;
 
-		/* Neutral (default) */
+		/* Default (no color specified) - uses neutral colors */
+		border-color: var(--ui-neutral-border);
+		background-color: var(--ui-neutral-bg-tint);
+		color: var(--ui-neutral-fg-emphasis);
+
+		/* Neutral (explicit) */
 		&[data-color="neutral"] {
 			border-color: var(--ui-neutral-border);
 			background-color: var(--ui-neutral-bg-tint);
@@ -4403,9 +4408,20 @@
 
 @utility ui-logo-fallback {
 	:where(&) {
-		@apply absolute inset-0 flex size-full items-center justify-center rounded-lg text-xs font-medium uppercase;
+		@apply absolute inset-0 flex size-full items-center justify-center rounded-lg font-medium uppercase;
 		background-color: var(--ui-neutral-bg-tint-pressed);
 		color: var(--ui-neutral-fg);
+
+		/* Inherit text size from parent Logo based on its size */
+		[data-size="sm"] > & {
+			@apply text-xs;
+		}
+		[data-size="md"] > & {
+			@apply text-sm;
+		}
+		[data-size="lg"] > & {
+			@apply text-base;
+		}
 	}
 }
 

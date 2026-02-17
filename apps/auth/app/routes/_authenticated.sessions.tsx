@@ -9,22 +9,32 @@ import { db } from "~/middleware/drizzle";
 import { session } from "~/middleware/session";
 import Session from "~/models/session";
 import Subject from "~/models/subject";
+import { getSubjectFromAccessToken } from "~/utils/decode-access-token";
 import { parseUserAgent } from "~/utils/user-agent";
 
-import type { Route } from "./+types/sessions";
+import type { Route } from "./+types/_authenticated.sessions";
 
-export async function loader({ request }: Route.LoaderArgs) {
-	let subjectId = session().get("sub");
-	if (!subjectId) return redirect(href("/authorize"));
+export async function loader(_: Route.LoaderArgs) {
+	let accessToken = session().get("accessToken");
+	let refreshToken = session().get("refreshToken");
+
+	// Auth check is handled by _authenticated layout middleware, but double-check
+	if (!accessToken || !refreshToken) {
+		return redirect(href("/authorize"), { headers: { "Clear-Site-Data": '"cookies"' } });
+	}
+
+	let subjectId = getSubjectFromAccessToken(accessToken);
 
 	let [subject, sessions] = await Promise.all([
 		Subject.findById(db(), subjectId),
 		Session.findBySubjectId(db(), subjectId),
 	]);
 
-	if (!subject) return redirect(href("/authorize"));
+	if (!subject)
+		return redirect(href("/authorize"), { headers: { "Clear-Site-Data": '"cookies"' } });
 
-	let currentSessionId = session().get("sessionId") ?? null;
+	// The refresh token doubles as the session ID
+	let currentSessionId = refreshToken;
 
 	return ok({
 		subject: {
@@ -47,10 +57,16 @@ export async function loader({ request }: Route.LoaderArgs) {
 }
 
 export async function action({ request }: Route.ActionArgs) {
-	let subjectId = session().get("sub");
-	if (!subjectId) return redirect(href("/authorize"));
+	let accessToken = session().get("accessToken");
+	let refreshToken = session().get("refreshToken");
 
-	let currentSessionId = session().get("sessionId");
+	// Auth check is handled by _authenticated layout middleware, but double-check
+	if (!accessToken || !refreshToken) return redirect(href("/authorize"));
+
+	let subjectId = getSubjectFromAccessToken(accessToken);
+
+	// The refresh token doubles as the session ID
+	let currentSessionId = refreshToken;
 	let formData = await request.formData();
 	let intent = formData.get("intent");
 	let sessionId = formData.get("sessionId");
@@ -60,27 +76,26 @@ export async function action({ request }: Route.ActionArgs) {
 
 		// If revoking the current session, log out
 		if (sessionId === currentSessionId) {
-			session().unset("sub");
-			session().unset("sessionId");
-			return redirect(href("/authorize"));
+			session().unset("accessToken");
+			session().unset("refreshToken");
+			return redirect(href("/authorize"), { headers: { "Clear-Site-Data": '"cookies"' } });
 		}
 
 		// Check if user has any remaining sessions, if not log them out
 		let remainingSessions = await Session.findBySubjectId(db(), subjectId);
 		if (remainingSessions.length === 0) {
-			session().unset("sub");
-			session().unset("sessionId");
-			return redirect(href("/authorize"));
+			session().unset("accessToken");
+			session().unset("refreshToken");
+			return redirect(href("/authorize"), { headers: { "Clear-Site-Data": '"cookies"' } });
 		}
 	}
 
 	if (intent === "revoke-all") {
 		let sessions = await Session.findBySubjectId(db(), subjectId);
 		await Promise.all(sessions.map((s) => Session.deleteById(db(), s.id)));
-		// Log out since all sessions are revoked
-		session().unset("sub");
-		session().unset("sessionId");
-		return redirect(href("/authorize"));
+		session().unset("accessToken");
+		session().unset("refreshToken");
+		return redirect(href("/authorize"), { headers: { "Clear-Site-Data": '"cookies"' } });
 	}
 
 	return ok({ success: true });
@@ -88,12 +103,7 @@ export async function action({ request }: Route.ActionArgs) {
 
 export default function Component({ loaderData }: Route.ComponentProps) {
 	let { t } = useTranslation();
-
-	if (!loaderData.ok) {
-		return redirect(href("/authorize"));
-	}
-
-	let { subject, sessions, currentSessionId } = loaderData;
+	let { subject: _subject, sessions, currentSessionId } = loaderData;
 
 	return (
 		<main className="mx-auto max-w-3xl p-6 md:p-10">
@@ -222,7 +232,6 @@ function DeviceIcon({ deviceType, className }: { deviceType: string; className?:
 		);
 	}
 
-	// Desktop/default
 	return (
 		<svg
 			className={className}

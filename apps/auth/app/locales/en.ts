@@ -15,13 +15,9 @@ export default {
 
 	authorize: {
 		header: {
-			title: "Access to {{client}}",
-			description: "Sign in to continue to {{client}}",
-		},
-
-		standalone: {
-			title: "Sign in",
-			description: "Sign in to your account for faster access to connected apps",
+			title: "{{client}}",
+			titleShort: "Sign in",
+			description: "Sign in to continue",
 		},
 
 		errors: {
