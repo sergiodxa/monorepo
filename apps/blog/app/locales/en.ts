@@ -8,6 +8,7 @@ export default {
 		tutorials: "Tutorials",
 		glossary: "Glossary",
 		cms: "Dashboard",
+		sponsor: "Sponsor me on GitHub",
 		login: "Access",
 		logout: "Sign Out",
 	},

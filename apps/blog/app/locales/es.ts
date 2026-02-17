@@ -10,6 +10,7 @@ export default {
 		tutorials: "Tutoriales",
 		glossary: "Glosario",
 		cms: "Dashboard",
+		sponsor: "Apoyame en GitHub",
 		login: "Acceso",
 		logout: "Cerrar sesión",
 	},
