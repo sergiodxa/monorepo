@@ -1,7 +1,7 @@
 import { getClientIP } from "@pkg/get-client-ip";
 import { badRequest, notFound, ok } from "@pkg/response";
 import { isFailure } from "@pkg/result";
-import { Button, Card, Form, Input, TextField } from "@pkg/ui";
+import { Button, Card, Form, Input, Separator, Text, TextField } from "@pkg/ui";
 import { validate } from "@pkg/validate";
 import { useTranslation } from "react-i18next";
 import { href, redirectDocument } from "react-router";
@@ -145,10 +145,8 @@ export default function Component({ loaderData }: Route.ComponentProps) {
 					<Card.Title className="text-center text-3xl">
 						{t("authorize.errors.invalidRequest.title")}
 					</Card.Title>
+					<Card.Description>{t("authorize.errors.invalidRequest.description")}</Card.Description>
 				</Card.Header>
-				<Card.Content>
-					<p>{t("authorize.errors.invalidRequest.description")}</p>
-				</Card.Content>
 			</Card>
 		);
 	}
@@ -196,11 +194,12 @@ export default function Component({ loaderData }: Route.ComponentProps) {
 					</Button>
 				</Form>
 
-				<div className="relative my-6 hidden">
-					<hr className="border-gray-300 dark:border-gray-600 border-t" />
-					<span className="text-gray-500 dark:bg-gray-800 dark:text-gray-400 absolute left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white px-4 text-sm">
+				<div className="relative my-6 hidden items-center">
+					<Separator className="flex-1" />
+					<Text slot="description" className="px-4">
 						{t("authorize.forms.separator")}
-					</span>
+					</Text>
+					<Separator className="flex-1" />
 				</div>
 
 				<Form action={href("/auth/:provider", { provider: "github" })} method="POST">
