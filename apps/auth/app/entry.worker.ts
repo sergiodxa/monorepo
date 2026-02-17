@@ -1,3 +1,5 @@
+import { logger } from "@pkg/logger";
+import { env, waitUntil } from "cloudflare:workers";
 import { type RequestHandler, RouterContextProvider } from "react-router";
 
 let handler: RequestHandler;
@@ -15,11 +17,32 @@ export default {
 		return await handler(request, context);
 	},
 
-	async scheduled(controller, env, ctx) {
+	async scheduled(controller) {
 		if (controller.cron === "0 0 * * *") {
-			let db = await import("../db").then((m) => m.default(env.DB));
-			let Session = await import("./models/session").then((m) => m.default);
-			ctx.waitUntil(Session.deleteExpiredSessions(db));
+			waitUntil(env.QUEUE.send({ type: "cleanExpiredSessions" }));
+		}
+	},
+
+	async queue(batch) {
+		let { z } = await import("zod");
+		let uptime = env.UPTIME_CRON_API_KEY;
+
+		for (let message of batch.messages) {
+			let result = z
+				.discriminatedUnion("type", [z.object({ type: z.literal("cleanExpiredSessions") })])
+				.transform((data) => data.type)
+				.safeParse(message.body);
+
+			if (result.success === false) {
+				logger.error("queue.invalid_message", { error: result.error, message: message.body });
+				message.ack();
+				continue;
+			}
+
+			if (result.data === "cleanExpiredSessions") {
+				let { CleanExpiredSessionsJob } = await import("./jobs/clean-expired-sessions");
+				waitUntil(CleanExpiredSessionsJob.run({ message, uptime }));
+			}
 		}
 	},
 } satisfies ExportedHandler<Cloudflare.Env>;

@@ -10,6 +10,10 @@
 	"observability": { "enabled": true },
 	"assets": { "directory": "./build/client" },
 	"triggers": { "crons": ["0 0 * * *"] },
+	"queues": {
+		"consumers": [{ "queue": "auth" }],
+		"producers": [{ "binding": "QUEUE", "queue": "auth" }],
+	},
 	"d1_databases": [
 		{
 			"binding": "DB",
