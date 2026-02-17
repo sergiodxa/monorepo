@@ -33,12 +33,11 @@ export const Default: Story = {
 	),
 };
 
-export const WithClearButton: Story = {
+export const WithDefaultValue: Story = {
 	render: () => (
 		<SearchField defaultValue="React">
 			<Label>Search</Label>
 			<SearchField.Input />
-			<SearchField.ClearButton />
 		</SearchField>
 	),
 };
@@ -71,21 +70,10 @@ export const ReadOnly: Story = {
 	),
 };
 
-export const WithDefaultValue: Story = {
-	render: () => (
-		<SearchField defaultValue="Initial search term">
-			<Label>Search</Label>
-			<SearchField.Input />
-			<SearchField.ClearButton />
-		</SearchField>
-	),
-};
-
 export const WithoutLabel: Story = {
 	render: () => (
 		<SearchField aria-label="Search">
 			<SearchField.Input placeholder="Search..." />
-			<SearchField.ClearButton />
 		</SearchField>
 	),
 };

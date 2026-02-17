@@ -1,8 +1,7 @@
+import { Button, Form } from "@pkg/ui";
 import { useTranslation } from "react-i18next";
 
 import { logout, requireUser } from "~/middleware/session";
-import { Button } from "~/ui/Button";
-import { Form } from "~/ui/Form";
 
 import type { Route } from "./+types/route";
 
@@ -27,7 +26,7 @@ export default function Component() {
 				<h2 className="text-center text-3xl font-bold tracking-tight">{t("title")}</h2>
 			</header>
 
-			<Button type="submit" variant="destructive">
+			<Button type="submit" color="danger">
 				{t("cta")}
 			</Button>
 		</Form>

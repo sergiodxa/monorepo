@@ -135,7 +135,7 @@
 	--ui-neutral-bg-solid: var(--color-neutral-100);
 	--ui-neutral-bg-solid-hover: var(--color-neutral-200);
 	--ui-neutral-bg-solid-pressed: var(--color-neutral-300);
-	--ui-neutral-border: var(--color-neutral-800);
+	--ui-neutral-border: var(--color-neutral-700);
 	--ui-neutral-border-strong: var(--color-neutral-400);
 	--ui-neutral-ring: var(--color-neutral-500);
 	--ui-neutral-fg: var(--color-neutral-400);
@@ -1305,8 +1305,7 @@
 @utility ui-table-body {
 	:where(&) {
 		@apply divide-y;
-		--tw-divide-opacity: 1;
-		border-color: var(--ui-neutral-border);
+		divide-color: var(--ui-neutral-border);
 	}
 }
 
@@ -2880,6 +2879,10 @@
 			@apply outline-2;
 			outline-color: var(--ui-primary-ring);
 		}
+
+		:where([data-empty]) & {
+			@apply hidden;
+		}
 	}
 }
 
@@ -3226,6 +3229,10 @@
 @utility ui-tag {
 	:where(&) {
 		@apply inline-flex cursor-default items-center gap-1 rounded-full px-3 py-1 text-sm transition;
+
+		&[data-size="sm"] {
+			@apply px-2 py-0.5 text-xs;
+		}
 
 		&[data-color="neutral"] {
 			background-color: var(--ui-neutral-bg-tint-hover);

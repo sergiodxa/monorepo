@@ -2,10 +2,9 @@ import type { TFunction } from "i18next";
 import type { ReactNode } from "react";
 
 import { cn } from "@pkg/cn";
+import { Link } from "@pkg/ui";
 import { BookIcon, BookmarkIcon, PencilIcon } from "lucide-react";
 import { Trans, useTranslation } from "react-i18next";
-
-import { Link } from "~/ui/Link";
 
 import type { FeedItem } from "./types";
 
@@ -27,7 +26,7 @@ export function FeedList({ t, items }: Props) {
 							body={
 								<Trans
 									parent="p"
-									className="text-zinc-800 dark:text-zinc-200 text-sm"
+									className="text-sm text-neutral-800 dark:text-neutral-200"
 									i18nKey="feed.article"
 									t={t}
 									values={{ title: item.payload.title }}
@@ -36,8 +35,8 @@ export function FeedList({ t, items }: Props) {
 									}}
 								/>
 							}
-							icon={<PencilIcon className="size-5 text-white" aria-hidden />}
-							iconColor="bg-amber-500"
+							icon={<PencilIcon className="size-5" aria-hidden />}
+							iconColor="warning"
 							createdAt={new Date(item.payload.createdAt)}
 						/>
 					);
@@ -52,7 +51,7 @@ export function FeedList({ t, items }: Props) {
 							body={
 								<Trans
 									parent="p"
-									className="text-zinc-800 dark:text-zinc-200 text-sm"
+									className="text-sm text-neutral-800 dark:text-neutral-200"
 									i18nKey="feed.tutorial"
 									t={t}
 									values={{ title: item.payload.title }}
@@ -61,8 +60,8 @@ export function FeedList({ t, items }: Props) {
 									}}
 								/>
 							}
-							icon={<PencilIcon className="size-5 text-white" aria-hidden />}
-							iconColor="bg-amber-500"
+							icon={<PencilIcon className="size-5" aria-hidden />}
+							iconColor="warning"
 							createdAt={new Date(item.payload.createdAt)}
 						/>
 					);
@@ -77,7 +76,7 @@ export function FeedList({ t, items }: Props) {
 							body={
 								<Trans
 									parent="p"
-									className="text-zinc-800 dark:text-zinc-200 text-sm"
+									className="text-sm text-neutral-800 dark:text-neutral-200"
 									i18nKey="feed.bookmark"
 									t={t}
 									values={{ title: item.payload.title }}
@@ -86,8 +85,8 @@ export function FeedList({ t, items }: Props) {
 									}}
 								/>
 							}
-							icon={<BookmarkIcon className="size-5 text-white" aria-hidden />}
-							iconColor="bg-blue-400"
+							icon={<BookmarkIcon className="size-5" aria-hidden />}
+							iconColor="primary"
 							createdAt={new Date(item.payload.createdAt)}
 						/>
 					);
@@ -102,7 +101,7 @@ export function FeedList({ t, items }: Props) {
 							body={
 								<Trans
 									parent="p"
-									className="text-zinc-800 dark:text-zinc-200 text-sm"
+									className="text-sm text-neutral-800 dark:text-neutral-200"
 									i18nKey="feed.glossary"
 									t={t}
 									values={{ title: item.payload.title }}
@@ -111,8 +110,8 @@ export function FeedList({ t, items }: Props) {
 									}}
 								/>
 							}
-							icon={<BookIcon className="size-5 text-white" aria-hidden />}
-							iconColor="bg-blue-400"
+							icon={<BookIcon className="size-5" aria-hidden />}
+							iconColor="primary"
 							createdAt={new Date(item.payload.createdAt)}
 						/>
 					);
@@ -129,7 +128,7 @@ type FeedItemProps = {
 	index: number;
 	size: number;
 	icon: ReactNode;
-	iconColor: string;
+	iconColor: "primary" | "warning";
 	createdAt: Date;
 };
 
@@ -141,7 +140,7 @@ function Item({ body, index, size, iconColor, icon, createdAt }: FeedItemProps) 
 			<div className="relative pb-8">
 				{index !== size ? (
 					<span
-						className="dark:bg-zinc-900 absolute top-4 left-4 -ml-px h-full w-0.5 bg-white"
+						className="absolute top-4 left-4 -ml-px h-full w-0.5 bg-white dark:bg-neutral-900"
 						aria-hidden
 					/>
 				) : null}
@@ -149,8 +148,13 @@ function Item({ body, index, size, iconColor, icon, createdAt }: FeedItemProps) 
 					<div>
 						<span
 							className={cn(
-								iconColor,
-								"dark:ring-zinc-900 flex h-8 w-8 items-center justify-center rounded-full ring-8 ring-white",
+								"flex h-8 w-8 items-center justify-center rounded-full ring-8 ring-white dark:ring-neutral-900",
+								{
+									"bg-primary-100 text-primary-600 dark:bg-primary-900 dark:text-primary-400":
+										iconColor === "primary",
+									"bg-warning-100 text-warning-600 dark:bg-warning-900 dark:text-warning-400":
+										iconColor === "warning",
+								},
 							)}
 						>
 							{icon}
@@ -159,7 +163,7 @@ function Item({ body, index, size, iconColor, icon, createdAt }: FeedItemProps) 
 					<div className="flex min-w-0 flex-1 justify-between space-x-4 pt-1.5">
 						{body}
 
-						<div className="text-zinc-500 text-right text-sm whitespace-nowrap tabular-nums">
+						<div className="text-right text-sm whitespace-nowrap text-neutral-500 tabular-nums">
 							<time dateTime={createdAt.toISOString()}>
 								{createdAt.toLocaleDateString(i18n.language, {
 									month: "short",

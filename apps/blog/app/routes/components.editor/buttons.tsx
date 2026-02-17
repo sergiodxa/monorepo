@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 
+import { Button as UIButton } from "@pkg/ui";
 import {
 	BoldIcon,
 	CodeIcon,
@@ -10,8 +11,6 @@ import {
 	QuoteIcon,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
-
-import { Button as UIButton } from "~/ui/Button";
 
 import type { Handler, Updater } from "./use-editor";
 
@@ -31,7 +30,7 @@ export namespace Button {
 		return (
 			<UIButton
 				type="button"
-				variant="secondary"
+				variant="outline"
 				onPress={() => {
 					if (!element.current) return;
 					let selection = getSelection(element.current);

@@ -3,13 +3,13 @@ import type { Dispatch, RefObject } from "react";
 
 import { ok } from "@pkg/response";
 import { isFailure } from "@pkg/result";
+import { Card, Toolbar } from "@pkg/ui";
 import { validate } from "@pkg/validate";
 import { useEffect, useMemo, useRef } from "react";
 import { useFetcher } from "react-router";
 import { z } from "zod";
 
 import { MarkdownView } from "~/components/markdown";
-import { Toolbar } from "~/ui/Toolbar";
 import { Markdown } from "~/utils/markdown";
 
 import type { Route } from "./+types/route";
@@ -32,7 +32,7 @@ type TextboxProps = {
 
 export function Textbox(props: TextboxProps) {
 	return (
-		<div className="dark:bg-zinc-800 flex h-full flex-col rounded-md border border-neutral-300 bg-white">
+		<Card className="flex h-full flex-col">
 			<div role="menubar" className="flex items-center justify-between p-2">
 				<Toolbar aria-label="Text Formatting" orientation="horizontal">
 					<Button.Bold />
@@ -55,7 +55,7 @@ export function Textbox(props: TextboxProps) {
 				}}
 				className="ring-blue-600 mx-2 mb-2 grow resize-none rounded-md border-none font-mono focus:ring-2 focus:outline-none"
 			/>
-		</div>
+		</Card>
 	);
 }
 

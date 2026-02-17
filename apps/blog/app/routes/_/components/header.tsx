@@ -1,10 +1,8 @@
+import { Form, Label, Link, SearchField } from "@pkg/ui";
 import { useTranslation } from "react-i18next";
 import { useSearchParams, useSubmit } from "react-router";
 
 import { useUser } from "~/hooks/use-user";
-import { Form } from "~/ui/Form";
-import { Link } from "~/ui/Link";
-import { SearchField } from "~/ui/SearchField";
 
 export function Header() {
 	let submit = useSubmit();
@@ -48,14 +46,10 @@ export function Header() {
 				)}
 
 				<Form>
-					<SearchField
-						label="Search"
-						name="q"
-						className="[&_label]:sr-only"
-						placeholder="Remix, SWR, Next, Rails…"
-						defaultValue={query}
-						onSubmit={(q) => submit({ q })}
-					/>
+					<SearchField name="q" defaultValue={query} onSubmit={(q) => submit({ q })}>
+						<Label className="sr-only">Search</Label>
+						<SearchField.Input placeholder="Remix, SWR, Next, Rails…" />
+					</SearchField>
 
 					<button type="submit" className="sr-only">
 						Submit

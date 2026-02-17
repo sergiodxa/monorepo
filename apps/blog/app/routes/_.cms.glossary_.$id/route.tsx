@@ -1,6 +1,17 @@
 import { ok } from "@pkg/response";
 import { succeeded } from "@pkg/result";
-import { Button, FieldError, Form, Input, Label, TextArea, TextField } from "@pkg/ui";
+import {
+	Button,
+	Card,
+	FieldError,
+	Form,
+	Heading,
+	Input,
+	Label,
+	TextArea,
+	TextField,
+	Toolbar,
+} from "@pkg/ui";
 import { validate } from "@pkg/validate";
 import { parameterize } from "inflected";
 import { href, redirect, redirectDocument } from "react-router";
@@ -127,44 +138,49 @@ export async function action({ request, params }: Route.ActionArgs) {
 
 export default function Component({ loaderData }: Route.ComponentProps) {
 	return (
-		<>
-			<header className="flex justify-between">
-				<h2 className="text-3xl font-bold">Glossary</h2>
-			</header>
+		<div className="flex flex-col gap-8 pb-10">
+			<Toolbar className="items-center">
+				<Heading level={2}>Glossary</Heading>
+				<div className="grow" />
+			</Toolbar>
 
-			<Form method="post" className="max-w-xs">
-				<input type="hidden" name="intent" value={loaderData.mode} />
+			<Card className="w-fit">
+				<Card.Content>
+					<Form method="post" className="min-w-xs">
+						<input type="hidden" name="intent" value={loaderData.mode} />
 
-				<TextField name="term" isRequired defaultValue={loaderData.glossary.term}>
-					<Label>Term</Label>
-					<Input />
-					<FieldError />
-				</TextField>
+						<TextField name="term" isRequired defaultValue={loaderData.glossary.term}>
+							<Label>Term</Label>
+							<Input />
+							<FieldError />
+						</TextField>
 
-				{loaderData.mode === INTENT.update && (
-					<TextField name="slug" defaultValue={loaderData.glossary.slug}>
-						<Label>Slug</Label>
-						<Input />
-						<FieldError />
-					</TextField>
-				)}
+						{loaderData.mode === INTENT.update && (
+							<TextField name="slug" defaultValue={loaderData.glossary.slug}>
+								<Label>Slug</Label>
+								<Input />
+								<FieldError />
+							</TextField>
+						)}
 
-				<TextField name="title" defaultValue={loaderData.glossary.title}>
-					<Label>Title</Label>
-					<Input />
-					<FieldError />
-				</TextField>
+						<TextField name="title" defaultValue={loaderData.glossary.title}>
+							<Label>Title</Label>
+							<Input />
+							<FieldError />
+						</TextField>
 
-				<TextField name="definition" isRequired defaultValue={loaderData.glossary.definition}>
-					<Label>Definition</Label>
-					<TextArea rows={5} />
-					<FieldError />
-				</TextField>
+						<TextField name="definition" isRequired defaultValue={loaderData.glossary.definition}>
+							<Label>Definition</Label>
+							<TextArea rows={5} />
+							<FieldError />
+						</TextField>
 
-				<Button type="submit" color="primary">
-					Create
-				</Button>
-			</Form>
-		</>
+						<Button type="submit" color="primary">
+							{loaderData.mode === INTENT.create ? "Create" : "Update"}
+						</Button>
+					</Form>
+				</Card.Content>
+			</Card>
+		</div>
 	);
 }

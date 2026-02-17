@@ -180,6 +180,8 @@ export default {
 
 	support: {
 		title: "Do you like my content?",
+		description:
+			"Your sponsorship helps me create more tutorials, articles, and open-source tools.",
 		cta: "Sponsor me on GitHub",
 	},
 

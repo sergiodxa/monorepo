@@ -1,11 +1,10 @@
 import { ok } from "@pkg/response";
+import { Button, Form } from "@pkg/ui";
 import { useTranslation } from "react-i18next";
 import { href, redirect } from "react-router";
 
 import { getUser } from "~/middleware/session";
 import { authenticate } from "~/modules/auth.server";
-import { Button } from "~/ui/Button";
-import { Form } from "~/ui/Form";
 
 import type { Route } from "./+types/route";
 
@@ -32,7 +31,7 @@ export default function Component() {
 				<h2 className="text-center text-3xl font-bold tracking-tight">{t("title")}</h2>
 			</header>
 
-			<Button type="submit" variant="primary">
+			<Button type="submit" color="primary">
 				{t("github")}
 			</Button>
 		</Form>

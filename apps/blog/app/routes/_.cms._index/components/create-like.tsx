@@ -1,4 +1,4 @@
-import { Button, FieldError, Form, Heading, Input, Label, TextField } from "@pkg/ui";
+import { Button, Card, FieldError, Form, Input, Label, TextField } from "@pkg/ui";
 import { useTranslation } from "react-i18next";
 
 import type { Route } from "../+types/route";
@@ -18,28 +18,25 @@ export function CreateLike({ actionData }: CreateLikeProps) {
 		actionData?.ok === false && "url" in actionData.errors ? actionData.errors : undefined;
 
 	return (
-		<div className="flex flex-col gap-5">
-			<Heading className="text-zinc-900 dark:text-zinc-50 text-base leading-6 font-semibold">
-				{t("title")}
-			</Heading>
+		<Card>
+			<Card.Header>
+				<Card.Title>{t("title")}</Card.Title>
+			</Card.Header>
+			<Card.Content>
+				<Form method="post" className="flex flex-col gap-4" reloadDocument>
+					<input type="hidden" name="intent" value={INTENT.createLike} />
 
-			<Form
-				method="post"
-				className="dark:bg-zinc-600 gap-2 rounded-lg bg-white px-4 py-5 shadow sm:p-6"
-				reloadDocument
-			>
-				<input type="hidden" name="intent" value={INTENT.createLike} />
+					<TextField name="url" type="url" isRequired>
+						<Label>{t("label")}</Label>
+						<Input />
+						{errors?.url && <FieldError>{errors.url}</FieldError>}
+					</TextField>
 
-				<TextField name="url" type="url" isRequired>
-					<Label>{t("label")}</Label>
-					<Input />
-					{errors?.url && <FieldError>{errors.url}</FieldError>}
-				</TextField>
-
-				<Button type="submit" color="primary">
-					{t("cta")}
-				</Button>
-			</Form>
-		</div>
+					<Button type="submit" color="primary">
+						{t("cta")}
+					</Button>
+				</Form>
+			</Card.Content>
+		</Card>
 	);
 }

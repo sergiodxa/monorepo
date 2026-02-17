@@ -1,5 +1,5 @@
 import { ok } from "@pkg/response";
-import { Button, Form } from "@pkg/ui";
+import { Button, Form, Heading, Toolbar } from "@pkg/ui";
 import { href, redirect } from "react-router";
 import { z } from "zod";
 
@@ -65,17 +65,15 @@ export async function action({ request }: Route.ActionArgs) {
 export default function Component({ loaderData }: Route.ComponentProps) {
 	return (
 		<div className="flex flex-col gap-8 pb-10">
-			<header className="flex justify-between gap-4 px-5">
-				<h2 className="text-3xl font-bold">Articles</h2>
-
-				<div className="flex items-center gap-4">
-					<Form method="get" action="/cms/articles/new">
-						<Button type="submit" color="primary">
-							Write Article
-						</Button>
-					</Form>
-				</div>
-			</header>
+			<Toolbar className="items-center">
+				<Heading level={2}>Articles</Heading>
+				<div className="grow" />
+				<Form method="get" action="/cms/articles/new">
+					<Button type="submit" color="primary">
+						Write Article
+					</Button>
+				</Form>
+			</Toolbar>
 
 			<ArticlesList articles={loaderData.articles} />
 		</div>

@@ -1,4 +1,5 @@
 import { ok } from "@pkg/response";
+import { Button, Form, Link } from "@pkg/ui";
 import { cacheHeader } from "pretty-cache-header";
 import { useTranslation } from "react-i18next";
 import { z } from "zod";
@@ -6,9 +7,6 @@ import { z } from "zod";
 import { PageHeader } from "~/components/page-header";
 import { Subscribe } from "~/components/subscribe";
 import { useUser } from "~/hooks/use-user";
-import { Button } from "~/ui/Button";
-import { Form } from "~/ui/Form";
-import { Link } from "~/ui/Link";
 
 import type { Route } from "./+types/route";
 
@@ -55,7 +53,7 @@ export default function Component({ loaderData }: Route.ComponentProps) {
 				<PageHeader t={t} />
 				{user?.role === "admin" && (
 					<Form method="get" action="/cms/tutorials/new">
-						<Button type="submit" variant="primary">
+						<Button type="submit" color="primary">
 							Write
 						</Button>
 					</Form>

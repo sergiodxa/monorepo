@@ -30,6 +30,7 @@ SearchField.Input = function SearchFieldInput({ className, ...props }: SearchFie
 		<div className="ui-search-field-input-wrapper">
 			<SearchIcon className="ui-search-field-icon" aria-hidden />
 			<Input {...props} className={cn("ui-search-field-input", className)} />
+			<SearchField.ClearButton />
 		</div>
 	);
 };

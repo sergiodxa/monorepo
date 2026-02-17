@@ -75,7 +75,7 @@ function SearchForm() {
 				className="contents"
 			>
 				<Label className="sr-only">{t("label")}</Label>
-				<SearchField.Input className="border-blue-600 rounded-md border-2 px-3 py-1" />
+				<SearchField.Input className="rounded-md border-2 border-primary-600 px-3 py-1" />
 			</SearchField>
 
 			<Button type="submit" color="primary">

@@ -1,5 +1,5 @@
 import { ok } from "@pkg/response";
-import { Button, Form } from "@pkg/ui";
+import { Button, Form, Heading, Toolbar } from "@pkg/ui";
 import { useId } from "react";
 import { href, redirect } from "react-router";
 import { z } from "zod";
@@ -39,27 +39,18 @@ export default function Component({ loaderData }: Route.ComponentProps) {
 
 	return (
 		<div className="flex flex-col gap-8 pb-10">
-			<header className="flex justify-between gap-4 px-5">
-				<h2 className="text-3xl font-bold">Cache Keys</h2>
-
-				<div className="flex items-center gap-4">
-					<Form method="post">
-						<Button type="submit" name="intent" value={INTENT.clear} color="primary">
-							Clear Cache
-						</Button>
-					</Form>
-
-					<Button
-						type="submit"
-						name="intent"
-						value={INTENT.deleteSelected}
-						form={id}
-						color="neutral"
-					>
-						Delete Selected
+			<Toolbar className="items-center">
+				<Heading level={2}>Cache Keys</Heading>
+				<div className="grow" />
+				<Form method="post">
+					<Button type="submit" name="intent" value={INTENT.clear} color="primary">
+						Clear Cache
 					</Button>
-				</div>
-			</header>
+				</Form>
+				<Button type="submit" name="intent" value={INTENT.deleteSelected} form={id} color="neutral">
+					Delete Selected
+				</Button>
+			</Toolbar>
 
 			<Form method="post" id={id}>
 				<CacheKeyList keys={loaderData.keys} />

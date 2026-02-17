@@ -1,11 +1,10 @@
 import { createId } from "@paralleldrive/cuid2";
 import { ok } from "@pkg/response";
+import { Button } from "@pkg/ui";
 import { useId } from "react";
 import { useRevalidator } from "react-router";
 import { monotonicFactory } from "ulidx";
 import { v7 } from "uuid";
-
-import { Button } from "~/ui/Button";
 
 import type { Route } from "./+types/route";
 
@@ -39,7 +38,7 @@ function Identifier({ label, value }: { label: string; value: string }) {
 			<label htmlFor={id} className="text-xl font-bold tracking-wide">
 				{label}
 			</label>
-			<output id={id} className="bg-zinc-200 dark:bg-zinc-800 p-4 select-all">
+			<output id={id} className="bg-neutral-200 p-4 select-all dark:bg-neutral-800">
 				{value}
 			</output>
 		</div>

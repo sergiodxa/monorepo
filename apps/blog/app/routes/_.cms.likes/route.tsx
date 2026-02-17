@@ -1,6 +1,7 @@
 import type { ValidationErrors } from "@react-types/shared";
 
 import { badRequest, ok } from "@pkg/response";
+import { Button, Form, Heading, Toolbar } from "@pkg/ui";
 
 import { getDB } from "~/middleware/drizzle";
 import { getLocale } from "~/middleware/i18next";
@@ -56,12 +57,18 @@ export async function action({ request }: Route.ActionArgs) {
 
 export default function Component({ loaderData }: Route.ComponentProps) {
 	return (
-		<>
-			<header className="flex justify-between">
-				<h2 className="text-3xl font-bold">Likes</h2>
-			</header>
+		<div className="flex flex-col gap-8 pb-10">
+			<Toolbar className="items-center">
+				<Heading level={2}>Likes</Heading>
+				<div className="grow" />
+				<Form method="get" action="/cms/likes/new">
+					<Button type="submit" color="primary">
+						Create Like
+					</Button>
+				</Form>
+			</Toolbar>
 
 			<LikesList likes={loaderData.likes} />
-		</>
+		</div>
 	);
 }

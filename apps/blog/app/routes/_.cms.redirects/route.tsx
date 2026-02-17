@@ -1,6 +1,5 @@
 import { ok } from "@pkg/response";
-import { useId } from "react";
-import { Form } from "react-router";
+import { Button, Form, Heading, Toolbar } from "@pkg/ui";
 import { z } from "zod";
 
 import { getBindings } from "~/middleware/bindings";
@@ -21,20 +20,19 @@ export async function loader(_: Route.LoaderArgs) {
 }
 
 export default function Component({ loaderData }: Route.ComponentProps) {
-	let id = useId();
-
 	return (
 		<div className="flex flex-col gap-8 pb-10">
-			<header className="flex justify-between gap-4 px-5">
-				<h2 className="text-3xl font-bold">Redirects</h2>
+			<Toolbar className="items-center">
+				<Heading level={2}>Redirects</Heading>
+				<div className="grow" />
+				<Form method="get" action="/cms/redirects/new">
+					<Button type="submit" color="primary">
+						Create Redirect
+					</Button>
+				</Form>
+			</Toolbar>
 
-				{/* <div className="flex items-center gap-4">
-				</div> */}
-			</header>
-
-			<Form method="post" id={id}>
-				<RedirectsList list={loaderData.list} />
-			</Form>
+			<RedirectsList list={loaderData.list} />
 		</div>
 	);
 }

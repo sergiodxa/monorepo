@@ -1,5 +1,4 @@
-import { Button, Form, Link } from "@pkg/ui";
-import { Trans, useTranslation } from "react-i18next";
+import { Button, Card, confirm, Form, Link, Table } from "@pkg/ui";
 import { useFetcher } from "react-router";
 
 import type { UUID } from "~/utils/uuid";
@@ -17,70 +16,85 @@ interface Article {
 
 export function ArticlesList({ articles }: { articles: Article[] }) {
 	return (
-		<ol className="rouned-lg divide-zinc-100 dark:divide-zinc-700 dark:bg-zinc-800 divide-y bg-white px-5">
-			{articles.map((article) => (
-				<Item key={article.id} {...article} />
-			))}
-		</ol>
+		<Card>
+			<Table aria-label="Articles">
+				<Table.Header>
+					<Table.Column isRowHeader>Title</Table.Column>
+					<Table.Column>Date</Table.Column>
+					<Table.Column align="right">Actions</Table.Column>
+				</Table.Header>
+				<Table.Body items={articles}>
+					{(article) => (
+						<Table.Row key={article.id}>
+							<Table.Cell>
+								<Link href={article.path}>{article.title}</Link>
+							</Table.Cell>
+							<Table.Cell>
+								<time>{article.date}</time>
+							</Table.Cell>
+							<Table.Cell>
+								<Actions article={article} />
+							</Table.Cell>
+						</Table.Row>
+					)}
+				</Table.Body>
+			</Table>
+		</Card>
 	);
 }
 
-function Item(props: Article) {
-	let { t } = useTranslation("translation", {
-		keyPrefix: "cms.articles.list.item",
-	});
+function Actions({ article }: { article: Article }) {
 	let fetcher = useFetcher<typeof action>();
 
 	return (
-		<li className="flex items-center justify-between gap-3 gap-x-6 py-5">
-			<div className="flex flex-col gap-1">
-				<Link href={props.path}>
-					<h3 className="text-zinc-900 dark:text-zinc-50 text-sm leading-6 font-semibold underline">
-						{props.title}
-					</h3>
-				</Link>
+		<div className="flex justify-end gap-2">
+			<Form method="get" action={`/cms/articles/${article.id}`}>
+				<Button type="submit" variant="outline" size="sm">
+					Edit
+				</Button>
+			</Form>
 
-				<div className="text-zinc-500 dark:text-zinc-300 flex items-baseline gap-x-2 text-xs leading-5">
-					<Trans
-						t={t}
-						className="whitespace-nowrap"
-						parent="time"
-						i18nKey="publishedOn"
-						values={{ date: props.date }}
-					/>
-				</div>
-			</div>
+			<fetcher.Form method="post">
+				<input type="hidden" name="id" value={article.id} />
+				<Button
+					type="submit"
+					name="intent"
+					value={INTENT.moveToTutorial}
+					variant="outline"
+					size="sm"
+				>
+					Move to Tutorial
+				</Button>
+			</fetcher.Form>
 
-			<div className="flex shrink-0 items-center gap-2">
-				<Form method="get" action={`/cms/articles/${props.id}`}>
-					<Button type="submit" color="primary">
-						{t("edit")}
-					</Button>
-				</Form>
-
-				<fetcher.Form method="post">
-					<input type="hidden" name="id" value={props.id} />
-					<Button type="submit" name="intent" value={INTENT.moveToTutorial} color="neutral">
-						{t("moveToTutorial")}
-					</Button>
-				</fetcher.Form>
-
-				<DeleteButton id={props.id} />
-			</div>
-		</li>
+			<DeleteButton id={article.id} />
+		</div>
 	);
 }
 
 function DeleteButton({ id }: { id: UUID }) {
 	let fetcher = useFetcher();
 
+	async function handleDelete() {
+		let confirmed = await confirm("Delete article?", {
+			description: "This action cannot be undone.",
+			confirmLabel: "Delete",
+			cancelLabel: "Cancel",
+		});
+		if (confirmed) {
+			fetcher.submit({ intent: INTENT.delete, id }, { method: "POST" });
+		}
+	}
+
 	return (
-		<fetcher.Form method="POST">
-			<input type="hidden" name="intent" value={INTENT.delete} />
-			<input type="hidden" name="id" value={id} />
-			<Button type="submit" color="danger">
-				Delete
-			</Button>
-		</fetcher.Form>
+		<Button
+			type="button"
+			color="danger"
+			size="sm"
+			onPress={handleDelete}
+			isPending={fetcher.state !== "idle"}
+		>
+			{fetcher.state !== "idle" ? "Deleting..." : "Delete"}
+		</Button>
 	);
 }

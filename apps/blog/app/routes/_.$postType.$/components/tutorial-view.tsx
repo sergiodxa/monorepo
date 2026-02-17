@@ -1,4 +1,5 @@
 import { cn } from "@pkg/cn";
+import { Badge, Button, Card, Form, Link, TagGroup } from "@pkg/ui";
 import { Suspense } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import { Await, Link as RemixLink, href, useAsyncValue } from "react-router";
@@ -6,10 +7,6 @@ import { Await, Link as RemixLink, href, useAsyncValue } from "react-router";
 import { MarkdownView } from "~/components/markdown";
 import { Support } from "~/components/support";
 import { useUser } from "~/hooks/use-user";
-import { Button } from "~/ui/Button";
-import { Form } from "~/ui/Form";
-import { Link } from "~/ui/Link";
-import { Tag, TagGroup } from "~/ui/TagGroup";
 
 type Post = Awaited<ReturnType<typeof import("../queries").queryTutorial>>;
 type RecommendationsList = Post["recommendations"];
@@ -23,7 +20,7 @@ export function TutorialView({ post }: { post: Post }) {
 	return (
 		<article className="mx-auto flex max-w-screen-md flex-col gap-8 pb-14">
 			<div className="mx-auto prose w-full max-w-prose space-y-8 prose-blue sm:prose-lg dark:prose-invert">
-				<div className="flex flex-col gap-2 sm:flex-row sm:items-baseline sm:justify-between">
+				<div className="not-prose flex flex-wrap items-center justify-between gap-2">
 					<Tags
 						tags={
 							post.tutorial.tags
@@ -34,37 +31,39 @@ export function TutorialView({ post }: { post: Post }) {
 						}
 					/>
 
-					{user?.role === "admin" && (
+					<div className="flex shrink-0 gap-2">
+						{user?.role === "admin" && (
+							<Form
+								method="get"
+								action={href("/cms/tutorials/:postId", {
+									postId: post.tutorial.id,
+								})}
+							>
+								<Button type="submit" color="primary" size="sm">
+									{t("header.edit")}
+								</Button>
+							</Form>
+						)}
+
 						<Form
 							method="get"
-							action={href("/cms/tutorials/:postId", {
-								postId: post.tutorial.id,
+							reloadDocument
+							action={href("/md/:postType/*", {
+								postType: "tutorials",
+								"*": post.tutorial.slug,
 							})}
 						>
-							<Button type="submit" variant="primary">
-								{t("header.edit")}
+							<Button type="submit" color="primary" size="sm">
+								{t("header.markdown")}
 							</Button>
 						</Form>
-					)}
-
-					<Form
-						method="get"
-						reloadDocument
-						action={href("/md/:postType/*", {
-							postType: "tutorials",
-							"*": post.tutorial.slug,
-						})}
-					>
-						<Button type="submit" variant="primary">
-							{t("header.markdown")}
-						</Button>
-					</Form>
+					</div>
 				</div>
 
 				<div>
 					<header className="gap-4 md:flex md:items-start md:justify-between">
 						<h1>
-							<small className="text-blue-500 block text-xl">{t("header.eyebrown")}</small>
+							<small className="block text-xl text-primary-500">{t("header.eyebrown")}</small>
 							{post.tutorial.title}
 						</h1>
 					</header>
@@ -92,19 +91,21 @@ function Tags({ tags }: { tags: string[] }) {
 	if (tags.length === 0) return null;
 
 	return (
-		<TagGroup label={t("tags")} color="blue" className="not-prose flex-row">
-			{tags.map((tag) => {
-				let searchParams = new URLSearchParams();
-				searchParams.set("q", `tech:${tag}`);
+		<TagGroup aria-label={t("tags")} className="flex-row">
+			<TagGroup.List>
+				{tags.map((tag) => {
+					let searchParams = new URLSearchParams();
+					searchParams.set("q", `tech:${tag}`);
 
-				let to = `/?${searchParams.toString()}`;
+					let to = `/?${searchParams.toString()}`;
 
-				return (
-					<Tag key={tag}>
-						<RemixLink to={to}>{tag}</RemixLink>
-					</Tag>
-				);
-			})}
+					return (
+						<TagGroup.Tag key={tag} color="primary" size="sm">
+							<RemixLink to={to}>{tag}</RemixLink>
+						</TagGroup.Tag>
+					);
+				})}
+			</TagGroup.List>
 		</TagGroup>
 	);
 }
@@ -117,8 +118,8 @@ function Recommendations() {
 
 	return (
 		<section className="not-prose mt-4 space-y-4">
-			<header className="border-zinc-200 border-b pb-5">
-				<h2 className="text-zinc-900 dark:text-zinc-100 text-lg leading-6 font-medium">
+			<header className="border-b border-neutral-200 pb-5 dark:border-neutral-700">
+				<h2 className="text-lg leading-6 font-medium text-neutral-900 dark:text-neutral-100">
 					{t("title")}
 				</h2>
 			</header>
@@ -134,31 +135,37 @@ function Recommendations() {
 					let searchParams = new URLSearchParams();
 					searchParams.set("q", `tech:${matchedTag}`);
 
-					let to = `${href("/tutorials")}?${searchParams.toString()}`;
-
 					return (
-						<div key={slug} className="flex flex-col gap-2">
-							<Link
-								href={href("/:postType/*", {
-									postType: "tutorials",
-									"*": slug,
-								})}
-								className="line-clamp-2 block"
-							>
-								<p className="text-xl font-semibold">{title}</p>
-							</Link>
-
-							<Trans
-								t={t}
-								parent="p"
-								className="py-0.5 text-sm font-medium"
-								i18nKey="reason"
-								values={{ tag: matchedTag }}
-								components={{
-									anchor: <Link href={to} />,
-								}}
-							/>
-						</div>
+						<Card key={slug}>
+							<Card.Header>
+								<Card.Title className="text-base font-medium">
+									<Link
+										href={href("/:postType/*", {
+											postType: "tutorials",
+											"*": slug,
+										})}
+									>
+										{title}
+									</Link>
+								</Card.Title>
+							</Card.Header>
+							<Card.Content>
+								<Trans
+									t={t}
+									parent="p"
+									className="text-sm"
+									i18nKey="reason"
+									values={{ tag: matchedTag }}
+									components={{
+										anchor: (
+											<Badge color="primary">
+												<Badge.Text>{matchedTag}</Badge.Text>
+											</Badge>
+										),
+									}}
+								/>
+							</Card.Content>
+						</Card>
 					);
 				})}
 			</div>

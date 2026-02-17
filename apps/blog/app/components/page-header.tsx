@@ -13,7 +13,7 @@ export function PageHeader({ t }: Props) {
 
 			<Trans
 				parent="p"
-				className="text-zing-800 dark:text-zinc-200 text-xl"
+				className="text-xl text-neutral-800 dark:text-neutral-200"
 				t={t}
 				i18nKey="header.description"
 			/>

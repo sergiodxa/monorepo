@@ -203,6 +203,7 @@ export default {
 
 	support: {
 		title: "¿Te gusta mi contenido?",
+		description: "Tu apoyo me ayuda a crear más tutoriales, artículos y herramientas open-source.",
 		cta: "Patrocíname en GitHub",
 	},
 

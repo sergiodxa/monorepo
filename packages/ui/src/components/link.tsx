@@ -31,7 +31,7 @@ export namespace Link {
  * <Link href="/settings" prefetch="intent">Settings</Link>
  * ```
  */
-export function Link({ className, color: colorProp, prefetch, ...props }: Link.Props) {
+export function Link({ className, color: colorProp = "primary", prefetch, ...props }: Link.Props) {
 	let color = useColor(colorProp);
 	let [shouldPrefetch, setShouldPrefetch] = useState(false);
 

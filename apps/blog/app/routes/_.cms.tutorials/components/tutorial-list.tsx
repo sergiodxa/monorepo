@@ -1,6 +1,6 @@
-import { Button, Form, Link, TagGroup } from "@pkg/ui";
+import { Button, Card, confirm, Form, Link, Table, TagGroup } from "@pkg/ui";
 import { useId } from "react";
-import { Trans, useTranslation } from "react-i18next";
+import { useFetcher } from "react-router";
 
 import type { UUID } from "~/utils/uuid";
 
@@ -16,75 +16,95 @@ interface Tutorial {
 
 export function TutorialList({ tutorials }: { tutorials: Tutorial[] }) {
 	return (
-		<ol className="rouned-lg divide-zinc-100 dark:divide-zinc-700 dark:bg-zinc-800 divide-y bg-white px-5">
-			{tutorials.map((tutorial) => (
-				<Item key={tutorial.id} {...tutorial} />
-			))}
-		</ol>
+		<Card>
+			<Table aria-label="Tutorials">
+				<Table.Header>
+					<Table.Column isRowHeader>Title</Table.Column>
+					<Table.Column>Tags</Table.Column>
+					<Table.Column className="w-28">Date</Table.Column>
+					<Table.Column align="right">Actions</Table.Column>
+				</Table.Header>
+				<Table.Body items={tutorials}>
+					{(tutorial) => (
+						<Table.Row key={tutorial.id}>
+							<Table.Cell>
+								<Link href={tutorial.path}>{tutorial.title}</Link>
+							</Table.Cell>
+							<Table.Cell>
+								<Tags tags={tutorial.tags} />
+							</Table.Cell>
+							<Table.Cell>
+								<time>{tutorial.date}</time>
+							</Table.Cell>
+							<Table.Cell>
+								<Actions tutorial={tutorial} />
+							</Table.Cell>
+						</Table.Row>
+					)}
+				</Table.Body>
+			</Table>
+		</Card>
 	);
 }
 
-function Item(props: Tutorial) {
-	let { t } = useTranslation("translation", {
-		keyPrefix: "cms.tutorials.list.item",
-	});
+function Tags({ tags }: { tags: string[] }) {
 	let id = useId();
 
 	return (
-		<li className="flex items-center justify-between gap-3 gap-x-6 py-5">
-			<div className="flex flex-col gap-1">
-				<Link href={props.path}>
-					<h3 className="text-zinc-900 dark:text-zinc-50 text-sm leading-6 font-semibold underline">
-						{props.title}
-					</h3>
-				</Link>
+		<>
+			<span id={id} className="sr-only">
+				Tags
+			</span>
+			<TagGroup aria-labelledby={id}>
+				<TagGroup.List className="flex-row" items={tags.map((tag) => ({ id: tag, name: tag }))}>
+					{(item) => (
+						<TagGroup.Tag color="primary" size="sm">
+							{item.name}
+						</TagGroup.Tag>
+					)}
+				</TagGroup.List>
+			</TagGroup>
+		</>
+	);
+}
 
-				<div className="text-zinc-500 dark:text-zinc-300 flex items-baseline gap-x-2 text-xs leading-5">
-					<Trans
-						t={t}
-						className="whitespace-nowrap"
-						parent="time"
-						i18nKey="publishedOn"
-						values={{ date: props.date }}
-					/>
-					<svg viewBox="0 0 2 2" className="h-0.5 w-0.5 fill-current" aria-hidden="true">
-						<circle cx="1" cy="1" r="1" />
-					</svg>
+function Actions({ tutorial }: { tutorial: Tutorial }) {
+	return (
+		<div className="flex justify-end gap-2">
+			<Form method="get" action={`/cms/tutorials/${tutorial.id}`}>
+				<Button type="submit" variant="outline" size="sm">
+					Edit
+				</Button>
+			</Form>
 
-					<span id={id}>Tags:</span>
-
-					<TagGroup aria-labelledby={id}>
-						<TagGroup.List
-							className="flex-row"
-							items={props.tags.map((tag) => ({ id: tag, name: tag }))}
-						>
-							{(item) => <TagGroup.Tag color="primary">{item.name}</TagGroup.Tag>}
-						</TagGroup.List>
-					</TagGroup>
-				</div>
-			</div>
-
-			<div className="flex shrink-0 items-center gap-2">
-				<Form method="get" action={`/cms/tutorials/${props.id}`}>
-					<Button type="submit" color="primary">
-						{t("edit")}
-					</Button>
-				</Form>
-
-				<DeleteButton id={props.id} />
-			</div>
-		</li>
+			<DeleteButton id={tutorial.id} />
+		</div>
 	);
 }
 
 function DeleteButton({ id }: { id: UUID }) {
+	let fetcher = useFetcher();
+
+	async function handleDelete() {
+		let confirmed = await confirm("Delete tutorial?", {
+			description: "This action cannot be undone.",
+			confirmLabel: "Delete",
+			cancelLabel: "Cancel",
+		});
+		if (confirmed) {
+			fetcher.submit({ intent: INTENT.delete, id }, { method: "POST" });
+		}
+	}
+
 	return (
-		<Form navigate={false} method="POST">
-			<input type="hidden" name="intent" value={INTENT.delete} />
-			<input type="hidden" name="id" value={id} />
-			<Button type="submit" color="danger">
-				Delete
-			</Button>
-		</Form>
+		<Button
+			type="button"
+			color="danger"
+			size="sm"
+			onPress={handleDelete}
+			isPending={fetcher.state !== "idle"}
+		>
+			{fetcher.state !== "idle" ? "Deleting..." : "Delete"}
+		</Button>
 	);
 }

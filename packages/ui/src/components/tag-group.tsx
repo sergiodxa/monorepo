@@ -23,9 +23,12 @@ export namespace TagGroup {
 		className?: cn.ClassName;
 	}
 
+	export type TagSize = "sm" | "md";
+
 	export interface TagProps extends Omit<ComponentProps<typeof AriaTag>, "className"> {
 		className?: cn.ClassName;
 		color?: Color;
+		size?: TagSize;
 	}
 }
 
@@ -43,6 +46,7 @@ TagGroup.List = function TagGroupList<T extends object>({
 TagGroup.Tag = function TagGroupTag({
 	className,
 	color: colorProp,
+	size = "md",
 	children,
 	...props
 }: TagGroup.TagProps) {
@@ -55,6 +59,7 @@ TagGroup.Tag = function TagGroupTag({
 				{...props}
 				textValue={textValue}
 				data-color={color}
+				data-size={size}
 				className={cn("ui-tag", className)}
 			>
 				{(renderProps) => (

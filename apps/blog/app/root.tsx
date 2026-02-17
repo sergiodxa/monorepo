@@ -1,4 +1,5 @@
 import { ok } from "@pkg/response";
+import { ConfirmDialog } from "@pkg/ui";
 import { RouterProvider } from "react-aria-components";
 import { useTranslation } from "react-i18next";
 import {
@@ -83,7 +84,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
 	let { i18n } = useTranslation();
 
 	return (
-		<html lang={i18n.language} dir={i18n.dir(i18n.language)} className="h-full">
+		<html lang={i18n.language} dir={i18n.dir(i18n.language)} className="system h-full">
 			<head>
 				<meta charSet="utf-8" />
 				<meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -110,8 +111,9 @@ export function Layout({ children }: { children: React.ReactNode }) {
 				<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 				<Links />
 			</head>
-			<body className="dark:bg-zinc-900 dark:text-zinc-50 min-h-full bg-white font-sans text-black">
+			<body className="min-h-full bg-white font-sans text-black dark:bg-neutral-900 dark:text-neutral-50">
 				{children}
+				<ConfirmDialog />
 				<ScrollRestoration />
 				<Scripts />
 				{process.env.NODE_ENV === "production" ? (

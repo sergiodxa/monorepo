@@ -1,4 +1,4 @@
-import { Button, Form } from "@pkg/ui";
+import { Alert, Button, Card, Form } from "@pkg/ui";
 import { useNavigation } from "react-router";
 
 import type { Route } from "../+types/route";
@@ -20,17 +20,22 @@ export function DumpDatabase({ actionData }: DumpDatabaseProps) {
 	let isPending = navigation.formData?.get("intent") === INTENT.dump;
 
 	return (
-		<Form method="post">
-			{errors && <p className="text-red-600 text-sm forced-colors:text-[Mark]">{errors?.intent}</p>}
-			{success && (
-				<p className="text-green-600 text-sm forced-colors:text-[Mark]">
-					Database dumped successfully
-				</p>
-			)}
-			<Button type="submit" name="intent" value={INTENT.dump} isPending={isPending}>
-				Dump copy of the database
-			</Button>
-			{isPending && <p className="text-gray-600 text-sm">Dumping database...</p>}
-		</Form>
+		<Card>
+			<Card.Header>
+				<Card.Title>Database Backup</Card.Title>
+			</Card.Header>
+			<Card.Content>
+				<Form method="post" className="flex flex-col gap-4">
+					{errors && <Alert color="danger">{errors?.intent}</Alert>}
+					{success && <Alert color="success">Database dumped successfully</Alert>}
+
+					<Button type="submit" name="intent" value={INTENT.dump} isPending={isPending}>
+						Dump copy of the database
+					</Button>
+
+					{isPending && <p className="text-sm text-neutral-500">Dumping database...</p>}
+				</Form>
+			</Card.Content>
+		</Card>
 	);
 }

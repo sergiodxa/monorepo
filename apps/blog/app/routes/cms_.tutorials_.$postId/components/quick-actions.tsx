@@ -1,11 +1,7 @@
+import { Button, Toolbar, Tooltip, TooltipTrigger } from "@pkg/ui";
 import { Brush, ImagePlus } from "lucide-react";
 import { type Dispatch, useEffect } from "react";
-import { TooltipTrigger } from "react-aria-components";
 import { useFetcher } from "react-router";
-
-import { Button } from "~/ui/Button";
-import { Toolbar } from "~/ui/Toolbar";
-import { Tooltip } from "~/ui/Tooltip";
 
 import type { Actions } from "../../components.editor/use-editor";
 import type { action } from "../route";
@@ -24,10 +20,13 @@ export function QuickActions({ dispatch }: QuickActionsProps) {
 	}, [dispatch, value]);
 
 	return (
-		<Toolbar orientation="vertical" className="bg-zinc-100 dark:bg-zinc-800 rounded-lg p-1">
+		<Toolbar
+			orientation="vertical"
+			className="rounded-lg border border-neutral-200 p-1 dark:border-neutral-700"
+		>
 			<TooltipTrigger>
-				<Button type="button" variant="icon" aria-label="Upload image" className="size-10">
-					<ImagePlus className="size-4" />
+				<Button type="button" variant="ghost" aria-label="Upload image" className="size-10">
+					<ImagePlus className="size-7 shrink-0" />
 				</Button>
 				<Tooltip placement="left">Upload image</Tooltip>
 			</TooltipTrigger>
@@ -35,7 +34,7 @@ export function QuickActions({ dispatch }: QuickActionsProps) {
 			<TooltipTrigger>
 				<Button
 					type="button"
-					variant="icon"
+					variant="ghost"
 					aria-label="Prettify"
 					className="size-10"
 					onPress={(event) => {
@@ -46,7 +45,7 @@ export function QuickActions({ dispatch }: QuickActionsProps) {
 						}
 					}}
 				>
-					<Brush className="size-4" />
+					<Brush className="size-7 shrink-0" />
 				</Button>
 				<Tooltip placement="left">Prettify</Tooltip>
 			</TooltipTrigger>
