@@ -1,3 +1,5 @@
+import { count, eq } from "drizzle-orm";
+
 import type { Database } from "~/db/index";
 
 import { AUTH_SERVER_CLIENT_ID, AUTH_SERVER_NAME } from "~/config";
@@ -10,6 +12,61 @@ export default class Client {
 				return operators.eq(fields.id, id);
 			},
 		});
+	}
+
+	static async findAll(db: Database, options: { limit: number; offset: number }) {
+		return db.query.clients.findMany({
+			limit: options.limit,
+			offset: options.offset,
+			orderBy(fields, operators) {
+				return operators.desc(fields.createdAt);
+			},
+		});
+	}
+
+	static async count(db: Database) {
+		let [result] = await db.select({ count: count() }).from(schema.clients);
+		return result?.count ?? 0;
+	}
+
+	static async create(
+		db: Database,
+		input: { name: string; redirectUri: string; logoutUri: string },
+	) {
+		let secret = crypto.randomUUID();
+		let [client] = await db
+			.insert(schema.clients)
+			.values({ ...input, secret })
+			.returning();
+
+		if (client) return { ...client, secret };
+		throw new Error("Failed to create client");
+	}
+
+	static async update(
+		db: Database,
+		id: string,
+		input: { name?: string; redirectUri?: string; logoutUri?: string; regenerateSecret?: boolean },
+	) {
+		let { regenerateSecret, ...data } = input;
+		let newSecret: string | undefined;
+
+		if (regenerateSecret) {
+			newSecret = crypto.randomUUID();
+		}
+
+		let [client] = await db
+			.update(schema.clients)
+			.set({ ...data, ...(newSecret ? { secret: newSecret } : {}) })
+			.where(eq(schema.clients.id, id))
+			.returning();
+
+		if (client) return { ...client, newSecret };
+		throw new Error(`Failed to update client with id ${id}`);
+	}
+
+	static async delete(db: Database, id: string) {
+		return db.delete(schema.clients).where(eq(schema.clients.id, id));
 	}
 
 	/**

@@ -211,7 +211,7 @@ export default function Component({ loaderData }: Route.ComponentProps) {
 				</Card.Header>
 
 				<Card.Content className="flex flex-col gap-4">
-					<Form method="POST" className="hidden space-y-6">
+					<Form method="POST" className="flex hidden flex-col gap-6">
 						<TextField name="name" isRequired>
 							<Input
 								placeholder={t("authorize.forms.credentials.fields.name.placeholder")}

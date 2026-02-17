@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { count, eq, gt } from "drizzle-orm";
 
 import type { Database } from "~/db/index";
 
@@ -73,5 +73,13 @@ export default class Session {
 				db.delete(schema.sessions).where(eq(schema.sessions.id, session.id)),
 			),
 		);
+	}
+
+	static async countActive(db: Database) {
+		let [result] = await db
+			.select({ count: count() })
+			.from(schema.sessions)
+			.where(gt(schema.sessions.expiresAt, new Date()));
+		return result?.count ?? 0;
 	}
 }

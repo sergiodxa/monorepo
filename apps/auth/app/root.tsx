@@ -1,3 +1,4 @@
+import { ConfirmDialog } from "@pkg/ui";
 import {
 	isRouteErrorResponse,
 	Links,
@@ -49,7 +50,12 @@ export function Layout({ children }: { children: React.ReactNode }) {
 }
 
 export default function App() {
-	return <Outlet />;
+	return (
+		<>
+			<Outlet />
+			<ConfirmDialog />
+		</>
+	);
 }
 
 export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {

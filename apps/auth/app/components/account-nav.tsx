@@ -1,0 +1,38 @@
+import { Button, Form, NavLink, Toolbar } from "@pkg/ui";
+import { useTranslation } from "react-i18next";
+import { href } from "react-router";
+
+interface AccountNavProps {
+	isAdmin: boolean;
+}
+
+export function AccountNav({ isAdmin }: AccountNavProps) {
+	let { t } = useTranslation("translation", { keyPrefix: "account.nav" });
+
+	return (
+		<Toolbar
+			aria-label={t("label")}
+			className="mb-6 flex-wrap items-center gap-4 border-b border-neutral-200 dark:border-neutral-700"
+		>
+			<NavLink to="/profile" end hasBackground>
+				{t("items.profile")}
+			</NavLink>
+			<NavLink to="/sessions" hasBackground>
+				{t("items.sessions")}
+			</NavLink>
+			{isAdmin && (
+				<NavLink to="/admin" hasBackground>
+					{t("items.admin")}
+				</NavLink>
+			)}
+
+			<div className="flex-1" />
+
+			<Form method="POST" action={href("/oidc/logout")}>
+				<Button type="submit" color="neutral" variant="outline" size="sm">
+					{t("items.logout")}
+				</Button>
+			</Form>
+		</Toolbar>
+	);
+}

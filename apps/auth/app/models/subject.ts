@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { count, eq } from "drizzle-orm";
 
 import type { Database } from "~/db/index";
 
@@ -11,6 +11,21 @@ export default class Subject {
 				return operators.eq(fields.emailAddress, emailAddress);
 			},
 		});
+	}
+
+	static findAll(db: Database, options: { limit: number; offset: number }) {
+		return db.query.subjects.findMany({
+			limit: options.limit,
+			offset: options.offset,
+			orderBy(fields, operators) {
+				return operators.desc(fields.createdAt);
+			},
+		});
+	}
+
+	static async count(db: Database) {
+		let [result] = await db.select({ count: count() }).from(schema.subjects);
+		return result?.count ?? 0;
 	}
 
 	static findById(db: Database, id: string) {
@@ -47,5 +62,9 @@ export default class Subject {
 
 		if (subject) return subject;
 		throw new Error(`Failed to update subject with id ${id}`);
+	}
+
+	static async delete(db: Database, id: string) {
+		return db.delete(schema.subjects).where(eq(schema.subjects.id, id));
 	}
 }
