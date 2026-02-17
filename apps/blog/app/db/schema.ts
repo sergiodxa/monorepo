@@ -21,31 +21,17 @@ export let users = sqliteTable("users", {
 	// Timestamps
 	createdAt,
 	updatedAt,
-	// Attributes
+	// Link to auth.sergiodxa.com subject
+	subjectId: text("subject_id", { mode: "text", length: UUID_LENGTH }).unique(),
+	// Blog-specific authorization (NOT the same as auth app's role)
 	role: text("role", { enum: ["guest", "admin"] })
 		.notNull()
 		.default("guest"),
+	// Cached from ID token for display purposes
 	email: text("email", { mode: "text", length: 320 }).notNull(),
 	avatar: text("avatar", { mode: "text", length: 2048 }).notNull(),
 	username: text("username", { mode: "text", length: 39 }).notNull(),
 	displayName: text("display_name", { mode: "text", length: 255 }).notNull(),
-});
-
-export let connections = sqliteTable("connections", {
-	id,
-	// Timestamps
-	createdAt,
-	updatedAt,
-	// Relations
-	userId: text("user_id", { mode: "text", length: UUID_LENGTH })
-		.notNull()
-		.references(() => users.id, { onDelete: "cascade" }),
-	// Attributes
-	providerId: text("provider_id", { mode: "text", length: 255 }).notNull(),
-	providerName: text("provider_name", {
-		mode: "text",
-		length: 255,
-	}).notNull(),
 });
 
 export let posts = sqliteTable("posts", {
@@ -80,17 +66,7 @@ export let postMeta = sqliteTable("post_meta", {
 
 export let usersRelation = relations(users, ({ many }) => {
 	return {
-		connections: many(connections),
 		posts: many(posts),
-	};
-});
-
-export let connectionsRelation = relations(connections, ({ one }) => {
-	return {
-		user: one(users, {
-			fields: [connections.userId],
-			references: [users.id],
-		}),
 	};
 });
 
@@ -109,9 +85,6 @@ export let postMetaRelation = relations(postMeta, ({ one }) => {
 
 export type SelectUser = typeof users.$inferSelect;
 export type InsertUser = typeof users.$inferInsert;
-
-export type SelectConnection = typeof connections.$inferSelect;
-export type InsertConnection = typeof connections.$inferInsert;
 
 export type SelectPost = typeof posts.$inferSelect;
 export type InsertPost = typeof posts.$inferInsert;

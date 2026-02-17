@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next";
 import { href, redirect } from "react-router";
 
 import { getUser } from "~/middleware/session";
-import { authenticate } from "~/modules/auth.server";
+import { authenticate } from "~/modules/auth";
 
 import type { Route } from "./+types/route";
 

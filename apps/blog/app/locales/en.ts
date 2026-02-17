@@ -8,7 +8,6 @@ export default {
 		tutorials: "Tutorials",
 		glossary: "Glossary",
 		cms: "Dashboard",
-		sponsor: "Sponsor me on GitHub",
 		login: "Access",
 		logout: "Sign Out",
 	},
@@ -107,10 +106,10 @@ export default {
 
 	login: {
 		title: "Access to your account",
-		github: "Continue with GitHub",
+		github: "Continue",
 		error: {
 			title: "There is a problem",
-			description: "There was an error trying to login with GitHub",
+			description: "There was an error trying to login (code: {{code}})",
 		},
 	},
 

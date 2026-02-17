@@ -39,11 +39,9 @@ export function Header() {
 			</nav>
 
 			<div className="flex grow flex-col items-center justify-between gap-3 md:justify-end lg:flex-row">
-				{user?.isSponsor ? null : (
-					<Link href="https://github.com/sponsors/sergiodxa" className="hidden lg:block">
-						{t("sponsor")}
-					</Link>
-				)}
+				<Link href="https://github.com/sponsors/sergiodxa" className="hidden lg:block">
+					{t("sponsor")}
+				</Link>
 
 				<Form>
 					<SearchField name="q" defaultValue={query} onSubmit={(q) => submit({ q })}>

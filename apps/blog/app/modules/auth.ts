@@ -11,12 +11,12 @@ export function authenticate(request: Request) {
 	authenticator.use(
 		new OAuth2Strategy(
 			{
-				clientId: env.GITHUB_CLIENT_ID,
-				clientSecret: env.GITHUB_CLIENT_SECRET,
-				redirectURI: new URL("/auth/github/callback", url),
-				authorizationEndpoint: new URL("https://github.com/login/oauth/authorize"),
-				tokenEndpoint: new URL("https://github.com/login/oauth/access_token"),
-				scopes: ["read:user", "user:email"],
+				clientId: env.CLIENT_ID,
+				clientSecret: env.CLIENT_SECRET,
+				redirectURI: new URL("/auth/callback", url),
+				authorizationEndpoint: new URL("https://auth.sergiodxa.com/authorize"),
+				tokenEndpoint: new URL("https://auth.sergiodxa.com/oauth/token"),
+				scopes: ["openid", "profile", "email"],
 			},
 			async ({ tokens }) => tokens,
 		),

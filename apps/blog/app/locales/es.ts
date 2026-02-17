@@ -10,7 +10,6 @@ export default {
 		tutorials: "Tutoriales",
 		glossary: "Glosario",
 		cms: "Dashboard",
-		sponsor: "Apoyame en GitHub",
 		login: "Acceso",
 		logout: "Cerrar sesión",
 	},
@@ -109,10 +108,10 @@ export default {
 
 	login: {
 		title: "Accedé a tu cuenta",
-		github: "Continuar con GitHub",
+		github: "Continuar",
 		error: {
 			title: "Hubo un problema",
-			description: "Ocurrió un error al intentar acceder a tu cuenta con GitHub.",
+			description: "Ocurrió un error al intentar acceder (código: {{code}})",
 		},
 	},
 
