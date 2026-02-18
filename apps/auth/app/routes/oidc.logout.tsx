@@ -15,6 +15,10 @@ import { getSubjectFromAccessToken } from "~/utils/decode-access-token";
 
 import type { Route } from "./+types/oidc.logout";
 
+export function meta(): Route.MetaDescriptors {
+	return [{ title: "Logout | Auth" }];
+}
+
 let LogoutSchema = z.object({
 	id_token_hint: z.string(),
 	post_logout_redirect_uri: z.string().optional(),

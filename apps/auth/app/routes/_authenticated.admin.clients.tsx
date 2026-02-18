@@ -21,6 +21,10 @@ import Client from "~/models/client";
 
 import type { Route } from "./+types/_authenticated.admin.clients";
 
+export function meta(): Route.MetaDescriptors {
+	return [{ title: "Clients | Auth" }];
+}
+
 const PAGE_SIZE = 10;
 
 export async function action({ request }: Route.ActionArgs) {

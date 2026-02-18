@@ -155,6 +155,7 @@ export default {
 				secretHidden: "Hidden for security",
 				redirectUri: "Redirect URI",
 				logoutUri: "Logout URI",
+				authorizedUsers: "Authorized Users",
 				createdAt: "Created",
 			},
 			create: {

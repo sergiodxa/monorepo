@@ -1,5 +1,11 @@
 import { useTranslation } from "react-i18next";
 
+import type { Route } from "./+types/$";
+
+export function meta(): Route.MetaDescriptors {
+	return [{ title: "Not Found | Auth" }];
+}
+
 export default function Component() {
 	let { t } = useTranslation("translation", { keyPrefix: "splat" });
 

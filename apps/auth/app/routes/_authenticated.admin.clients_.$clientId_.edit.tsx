@@ -11,6 +11,11 @@ import Client from "~/models/client";
 
 import type { Route } from "./+types/_authenticated.admin.clients_.$clientId_.edit";
 
+export function meta({ data }: Route.MetaArgs) {
+	let title = data?.client?.name ?? "Client";
+	return [{ title: `Edit ${title} | Auth` }];
+}
+
 let UpdateClientSchema = z.object({
 	name: z.string().min(1),
 	redirectUri: z.string().url(),

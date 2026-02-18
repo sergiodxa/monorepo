@@ -11,6 +11,10 @@ import { getSubjectFromAccessToken } from "~/utils/decode-access-token";
 
 import type { Route } from "./+types/_authenticated.profile";
 
+export function meta(): Route.MetaDescriptors {
+	return [{ title: "Profile | Auth" }];
+}
+
 export async function loader(_: Route.LoaderArgs) {
 	let accessToken = session().get("accessToken");
 

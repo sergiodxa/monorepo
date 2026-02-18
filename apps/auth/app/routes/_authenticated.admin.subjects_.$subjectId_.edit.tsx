@@ -24,6 +24,11 @@ import Subject from "~/models/subject";
 
 import type { Route } from "./+types/_authenticated.admin.subjects_.$subjectId_.edit";
 
+export function meta({ data }: Route.MetaArgs) {
+	let title = data?.subject?.displayName ?? "User";
+	return [{ title: `Edit ${title} | Auth` }];
+}
+
 let UpdateSubjectSchema = z.object({
 	displayName: z.string().min(1),
 	username: z.string().min(1),

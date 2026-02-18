@@ -10,6 +10,10 @@ import type { Route } from "./+types/route";
 
 import { getDashboardStats } from "./query.server";
 
+export function meta(): Route.MetaDescriptors {
+	return [{ title: "Admin Dashboard | Auth" }];
+}
+
 export async function loader(_: Route.LoaderArgs) {
 	let stats = await getDashboardStats(db());
 	return ok({ stats });

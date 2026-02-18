@@ -14,6 +14,10 @@ import { getSubjectFromAccessToken } from "~/utils/decode-access-token";
 
 import type { Route } from "./+types/_authenticated.profile_.edit";
 
+export function meta(): Route.MetaDescriptors {
+	return [{ title: "Edit Profile | Auth" }];
+}
+
 let UpdateProfileSchema = z.object({
 	displayName: z.string().min(1),
 	username: z.string().min(1),

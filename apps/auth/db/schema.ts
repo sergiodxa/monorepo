@@ -117,11 +117,32 @@ export const clients = sqliteTable("clients", {
 export type SelectClient = typeof clients.$inferSelect;
 export type InsertClient = typeof clients.$inferInsert;
 
+export const grants = sqliteTable(
+	"grants",
+	{
+		id: pk("id"),
+		// Timestamps
+		createdAt,
+		updatedAt,
+		// Relations
+		subjectId: fk("subject_id", () => subjects.id).notNull(),
+		clientId: fk("client_id", () => clients.id).notNull(),
+	},
+	(table) => [
+		uniqueIndex("grants_subject_client_idx").on(table.subjectId, table.clientId),
+		index("grants_client_id_idx").on(table.clientId),
+	],
+);
+
+export type SelectGrant = typeof grants.$inferSelect;
+export type InsertGrant = typeof grants.$inferInsert;
+
 export const subjectRelations = relations(subjects, ({ many, one }) => {
 	return {
 		connections: many(connections),
 		credential: one(credentials),
 		sessions: many(sessions),
+		grants: many(grants),
 	};
 });
 
@@ -159,5 +180,19 @@ export const sessionsRelations = relations(sessions, ({ one }) => {
 export const clientsRelations = relations(clients, ({ many }) => {
 	return {
 		sessions: many(sessions),
+		grants: many(grants),
+	};
+});
+
+export const grantsRelations = relations(grants, ({ one }) => {
+	return {
+		subject: one(subjects, {
+			fields: [grants.subjectId],
+			references: [subjects.id],
+		}),
+		client: one(clients, {
+			fields: [grants.clientId],
+			references: [clients.id],
+		}),
 	};
 });

@@ -20,6 +20,10 @@ import Subject from "~/models/subject";
 
 import type { Route } from "./+types/_authenticated.admin.subjects";
 
+export function meta(): Route.MetaDescriptors {
+	return [{ title: "Users | Auth" }];
+}
+
 const PAGE_SIZE = 10;
 
 export async function loader({ request }: Route.LoaderArgs) {

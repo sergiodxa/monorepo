@@ -10,6 +10,10 @@ import Client from "~/models/client";
 
 import type { Route } from "./+types/_authenticated.admin.clients_.new";
 
+export function meta(): Route.MetaDescriptors {
+	return [{ title: "New Client | Auth" }];
+}
+
 let CreateClientSchema = z.object({
 	name: z.string().min(1),
 	redirectUri: z.string().url(),

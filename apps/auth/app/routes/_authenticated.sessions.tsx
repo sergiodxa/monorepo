@@ -16,6 +16,10 @@ import { parseUserAgent } from "~/utils/user-agent";
 
 import type { Route } from "./+types/_authenticated.sessions";
 
+export function meta(): Route.MetaDescriptors {
+	return [{ title: "Sessions | Auth" }];
+}
+
 export async function loader(_: Route.LoaderArgs) {
 	let accessToken = session().get("accessToken");
 	let refreshToken = session().get("refreshToken");

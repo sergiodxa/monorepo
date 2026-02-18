@@ -5,11 +5,20 @@ import { data, href, redirect, useNavigation } from "react-router";
 
 import { db } from "~/middleware/drizzle";
 import Client from "~/models/client";
+import Grant from "~/models/grant";
 
 import type { Route } from "./+types/_authenticated.admin.clients_.$clientId";
 
+export function meta({ data }: Route.MetaArgs) {
+	let title = data?.client?.name ?? "Client";
+	return [{ title: `${title} | Auth` }];
+}
+
 export async function loader({ params }: Route.LoaderArgs) {
-	let client = await Client.findById(db(), params.clientId);
+	let [client, authorizedUsersCount] = await Promise.all([
+		Client.findById(db(), params.clientId),
+		Grant.countByClientId(db(), params.clientId),
+	]);
 
 	if (!client) {
 		throw new Response("Client not found", { status: 404 });
@@ -23,6 +32,7 @@ export async function loader({ params }: Route.LoaderArgs) {
 			logoutUri: client.logoutUri,
 			createdAt: client.createdAt.toISOString(),
 		},
+		authorizedUsersCount,
 	});
 }
 
@@ -31,6 +41,8 @@ export async function action({ params, request }: Route.ActionArgs) {
 	let intent = formData.get("intent");
 
 	if (intent === "delete") {
+		// Delete grants before deleting client
+		await Grant.deleteByClientId(db(), params.clientId);
 		await Client.delete(db(), params.clientId);
 		return redirect(href("/admin/clients"));
 	}
@@ -40,7 +52,7 @@ export async function action({ params, request }: Route.ActionArgs) {
 
 export default function ClientDetailPage({ loaderData }: Route.ComponentProps) {
 	let { t } = useTranslation("translation", { keyPrefix: "admin.clients" });
-	let { client } = loaderData;
+	let { client, authorizedUsersCount } = loaderData;
 	let navigation = useNavigation();
 	let isDeleting = navigation.state === "submitting";
 
@@ -75,6 +87,10 @@ export default function ClientDetailPage({ loaderData }: Route.ComponentProps) {
 				<div>
 					<Label className="text-sm font-medium">{t("detail.secret")}</Label>
 					<p className="mt-1 text-sm text-neutral-500">{t("detail.secretHidden")}</p>
+				</div>
+				<div>
+					<Label className="text-sm font-medium">{t("detail.authorizedUsers")}</Label>
+					<p className="mt-1 text-sm">{authorizedUsersCount}</p>
 				</div>
 				<div>
 					<Label className="text-sm font-medium">{t("detail.createdAt")}</Label>

@@ -8,11 +8,17 @@ import type { SelectClient } from "~/db/schema";
 
 import { db } from "~/middleware/drizzle";
 import { logger } from "~/middleware/logger";
+import Grant from "~/models/grant";
 import Session from "~/models/session";
 import Subject from "~/models/subject";
 import { parseUserAgent } from "~/utils/user-agent";
 
 import type { Route } from "./+types/_authenticated.admin.subjects_.$subjectId";
+
+export function meta({ data }: Route.MetaArgs) {
+	let title = data?.subject?.displayName ?? "User";
+	return [{ title: `${title} | Auth` }];
+}
 
 export async function loader({ params }: Route.LoaderArgs) {
 	let subject = await Subject.findById(db(), params.subjectId);
@@ -57,8 +63,11 @@ export async function action({ params, request }: Route.ActionArgs) {
 	let intent = formData.get("intent");
 
 	if (intent === "delete") {
-		// Delete all sessions first
-		await Session.deleteBySubjectId(db(), params.subjectId);
+		// Delete all related data first
+		await Promise.all([
+			Session.deleteBySubjectId(db(), params.subjectId),
+			Grant.deleteBySubjectId(db(), params.subjectId),
+		]);
 		// Then delete the subject
 		await Subject.delete(db(), params.subjectId);
 		logger.info("admin.subject.deleted", { subjectId: params.subjectId });

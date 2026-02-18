@@ -4,6 +4,7 @@ import AuthzCode from "~/entities/authz-code";
 import { InternalServerError } from "~/errors";
 import { db } from "~/middleware/drizzle";
 import { logger } from "~/middleware/logger";
+import Grant from "~/models/grant";
 import Session from "~/models/session";
 
 interface Input {
@@ -15,8 +16,15 @@ interface Input {
 
 export default async function generateCode(input: Input) {
 	try {
-		let { id } = await Session.create(db(), input.subjectId, input.clientId, input.ip, input.ua);
-		logger.info("session_created", { sessionId: id, subjectId: input.subjectId });
+		let [{ id }, grant] = await Promise.all([
+			Session.create(db(), input.subjectId, input.clientId, input.ip, input.ua),
+			Grant.findOrCreate(db(), input.subjectId, input.clientId),
+		]);
+		logger.info("session_created", {
+			sessionId: id,
+			subjectId: input.subjectId,
+			grantId: grant.id,
+		});
 
 		let code = await AuthzCode.generate(input.clientId, input.subjectId, id, null);
 		logger.info("authz_code_generated", { subjectId: input.subjectId, clientId: input.clientId });

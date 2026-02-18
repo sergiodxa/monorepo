@@ -22,6 +22,13 @@
 			"when": 1770195676258,
 			"tag": "20260204090116_add-email-verified-at",
 			"breakpoints": true
+		},
+		{
+			"idx": 3,
+			"version": "6",
+			"when": 1771372741049,
+			"tag": "20260217235901_whole_ender_wiggin",
+			"breakpoints": true
 		}
 	]
 }

@@ -19,6 +19,10 @@ import { getSubjectFromAccessToken } from "~/utils/decode-access-token";
 
 import type { Route } from "./+types/authorize";
 
+export function meta(): Route.MetaDescriptors {
+	return [{ title: "Sign In | Auth" }];
+}
+
 let LoaderSchema = z.object({
 	response_type: z.literal("code"),
 	client_id: z.string().uuid(),
