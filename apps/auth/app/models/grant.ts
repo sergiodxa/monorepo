@@ -1,4 +1,4 @@
-import { count, eq } from "drizzle-orm";
+import { and, count, eq } from "drizzle-orm";
 
 import type { Database } from "~/db/index";
 
@@ -23,6 +23,18 @@ export default class Grant {
 		throw new Error(`Failed to create grant for ${subjectId} on ${clientId}`);
 	}
 
+	static async findBySubjectId(db: Database, subjectId: string) {
+		return db.query.grants.findMany({
+			where(fields, operators) {
+				return operators.eq(fields.subjectId, subjectId);
+			},
+			with: { client: true },
+			orderBy(fields, operators) {
+				return operators.asc(fields.createdAt);
+			},
+		});
+	}
+
 	static async countByClientId(db: Database, clientId: string) {
 		let [result] = await db
 			.select({ count: count() })
@@ -37,5 +49,11 @@ export default class Grant {
 
 	static async deleteByClientId(db: Database, clientId: string) {
 		return db.delete(schema.grants).where(eq(schema.grants.clientId, clientId));
+	}
+
+	static async deleteBySubjectAndClient(db: Database, subjectId: string, clientId: string) {
+		return db
+			.delete(schema.grants)
+			.where(and(eq(schema.grants.subjectId, subjectId), eq(schema.grants.clientId, clientId)));
 	}
 }

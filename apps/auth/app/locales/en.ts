@@ -282,6 +282,7 @@ export default {
 			items: {
 				profile: "Profile",
 				sessions: "Sessions",
+				grants: "Apps",
 				admin: "Admin Panel",
 				logout: "Logout",
 			},
@@ -312,6 +313,27 @@ export default {
 				avatar: { label: "Avatar URL", placeholder: "https://example.com/avatar.png" },
 				submit: "Save Changes",
 				cancel: "Cancel",
+			},
+		},
+	},
+
+	grants: {
+		title: "Authorized Apps",
+		description:
+			"Apps you have authorized to access your account. You can revoke access at any time.",
+		empty: "No authorized apps found.",
+		authorizedOn: "Authorized on {{date}}",
+		cannotRevoke: "Required",
+		actions: {
+			revoke: "Revoke Access",
+		},
+		confirm: {
+			cancel: "Cancel",
+			revoke: {
+				title: "Revoke access?",
+				description:
+					"This will revoke {{client}}'s access to your account and log you out of that app.",
+				confirm: "Revoke Access",
 			},
 		},
 	},

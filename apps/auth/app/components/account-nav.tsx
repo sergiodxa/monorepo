@@ -1,5 +1,11 @@
 import { Button, Form, LinkButton, NavLink, Toolbar } from "@pkg/ui";
-import { LogOutIcon, MonitorSmartphoneIcon, ShieldIcon, UserIcon } from "lucide-react";
+import {
+	AppWindowIcon,
+	LogOutIcon,
+	MonitorSmartphoneIcon,
+	ShieldIcon,
+	UserIcon,
+} from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { href } from "react-router";
 
@@ -25,6 +31,12 @@ export function AccountNav({ isAdmin }: AccountNavProps) {
 				<span className="flex items-center gap-1.5">
 					<MonitorSmartphoneIcon className="size-4" />
 					{t("items.sessions")}
+				</span>
+			</NavLink>
+			<NavLink to="/grants" hasBackground>
+				<span className="flex items-center gap-1.5">
+					<AppWindowIcon className="size-4" />
+					{t("items.grants")}
 				</span>
 			</NavLink>
 

@@ -1,4 +1,4 @@
-import { count, eq, gt } from "drizzle-orm";
+import { and, count, eq, gt } from "drizzle-orm";
 
 import type { Database } from "~/db/index";
 
@@ -54,6 +54,12 @@ export default class Session {
 
 	static async deleteBySubjectId(db: Database, subjectId: string) {
 		return db.delete(schema.sessions).where(eq(schema.sessions.subjectId, subjectId));
+	}
+
+	static async deleteBySubjectAndClient(db: Database, subjectId: string, clientId: string) {
+		return db
+			.delete(schema.sessions)
+			.where(and(eq(schema.sessions.subjectId, subjectId), eq(schema.sessions.clientId, clientId)));
 	}
 
 	static async findExpiredSessions(db: Database) {
