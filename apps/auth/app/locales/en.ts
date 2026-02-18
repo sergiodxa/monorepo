@@ -111,6 +111,7 @@ export default {
 				clients: "Clients",
 				subjects: "Users",
 				profile: "Profile",
+				logout: "Logout",
 			},
 		},
 		dashboard: {

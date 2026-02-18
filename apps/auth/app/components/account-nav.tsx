@@ -16,17 +16,23 @@ export function AccountNav({ isAdmin }: AccountNavProps) {
 			className="mb-6 flex-wrap items-center gap-4 border-b border-neutral-200 dark:border-neutral-700"
 		>
 			<NavLink to="/profile" end hasBackground>
-				<UserIcon className="size-4" />
-				{t("items.profile")}
+				<span className="flex items-center gap-1.5">
+					<UserIcon className="size-4" />
+					{t("items.profile")}
+				</span>
 			</NavLink>
 			<NavLink to="/sessions" hasBackground>
-				<MonitorSmartphoneIcon className="size-4" />
-				{t("items.sessions")}
+				<span className="flex items-center gap-1.5">
+					<MonitorSmartphoneIcon className="size-4" />
+					{t("items.sessions")}
+				</span>
 			</NavLink>
 			{isAdmin && (
 				<NavLink to="/admin" hasBackground>
-					<ShieldIcon className="size-4" />
-					{t("items.admin")}
+					<span className="flex items-center gap-1.5">
+						<ShieldIcon className="size-4" />
+						{t("items.admin")}
+					</span>
 				</NavLink>
 			)}
 
