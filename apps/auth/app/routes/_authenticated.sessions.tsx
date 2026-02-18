@@ -127,7 +127,7 @@ export default function Component({ loaderData }: Route.ComponentProps) {
 	}
 
 	return (
-		<main className="mx-auto max-w-3xl p-6 md:p-10">
+		<main className="mx-auto max-w-5xl p-6 md:p-10">
 			<AccountNav isAdmin={subject.role === "admin"} />
 
 			<Card>

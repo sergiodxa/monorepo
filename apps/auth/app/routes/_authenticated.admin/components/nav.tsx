@@ -1,4 +1,4 @@
-import { Link, NavLink, Toolbar } from "@pkg/ui";
+import { LinkButton, NavLink, Toolbar } from "@pkg/ui";
 import { UserIcon } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { href } from "react-router";
@@ -23,10 +23,12 @@ export function Navigation() {
 				</NavLink>
 			))}
 
-			<Link href={href("/profile")} className="ml-auto flex items-center gap-1.5 text-sm">
+			<div className="flex-1" />
+
+			<LinkButton href={href("/profile")} color="neutral" variant="outline" size="sm">
 				<UserIcon className="size-4" />
 				{t("items.profile")}
-			</Link>
+			</LinkButton>
 		</Toolbar>
 	);
 }

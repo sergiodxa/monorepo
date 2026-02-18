@@ -27,7 +27,7 @@ export const middleware: Route.MiddlewareFunction[] = [
 
 export default function AdminLayout() {
 	return (
-		<main className="mx-auto max-w-7xl p-6 md:p-10">
+		<main className="mx-auto max-w-5xl p-6 md:p-10">
 			<Navigation />
 			<div className="mt-6">
 				<Outlet />

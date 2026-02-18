@@ -76,7 +76,7 @@ export default function EditProfilePage({ loaderData }: Route.ComponentProps) {
 	let isSubmitting = navigation.state === "submitting";
 
 	return (
-		<main className="mx-auto max-w-3xl p-6 md:p-10">
+		<main className="mx-auto max-w-5xl p-6 md:p-10">
 			<AccountNav isAdmin={subject.role === "admin"} />
 
 			<Card>
