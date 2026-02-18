@@ -19,7 +19,10 @@ export const UserSchema = z.object({
 
 export type User = z.infer<typeof UserSchema>;
 
-export const SessionDataSchema = z.object({ user: UserSchema.optional() });
+export const SessionDataSchema = z.object({
+	user: UserSchema.optional(),
+	idToken: z.string().optional(),
+});
 
 export type SessionData = z.output<typeof SessionDataSchema>;
 
@@ -70,8 +73,16 @@ export function requireUser() {
 
 export async function logout() {
 	let session = getSession();
+	let idToken = session.get("idToken");
+
 	session.unset("user"); // unset just in case
-	return redirect(href("/"), {
+	session.unset("idToken");
+
+	let logoutUrl = new URL("https://auth.sergiodxa.com/oidc/logout");
+	if (idToken) logoutUrl.searchParams.set("id_token_hint", idToken);
+	logoutUrl.searchParams.set("post_logout_redirect_uri", "https://sergiodxa.com/");
+
+	return redirect(logoutUrl.toString(), {
 		headers: {
 			"Set-Cookie": await measure("session.destroy", () => {
 				return sessionStorage.destroySession(session);

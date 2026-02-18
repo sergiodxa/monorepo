@@ -13,7 +13,7 @@ import type { Route } from "./+types/auth";
 
 export async function loader({ request }: Route.LoaderArgs) {
 	try {
-		let { id, teams } = await measure("authenticate", () => {
+		let { id, idTokenRaw, teams } = await measure("authenticate", () => {
 			return authenticate(request);
 		});
 
@@ -22,6 +22,7 @@ export async function loader({ request }: Route.LoaderArgs) {
 		session.set("name", id.name);
 		session.set("email", id.email);
 		session.set("avatar", id.picture);
+		session.set("idToken", idTokenRaw);
 
 		let firstTeam = teams[0];
 		if (!firstTeam) {

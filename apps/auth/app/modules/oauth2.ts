@@ -300,7 +300,7 @@ export class OIDCProvider extends OAuth2Provider<OIDCProvider.Repository> {
 		if (!subject) throw new InvalidRequestError("Invalid subject");
 		if (!client) throw new InvalidRequestError("Invalid audience");
 
-		if (client.redirectUri !== args.postLogoutRedirectUri) {
+		if (args.postLogoutRedirectUri && client.logoutUri !== args.postLogoutRedirectUri) {
 			throw new InvalidRequestError("Invalid redirect uri");
 		}
 

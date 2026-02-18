@@ -1,5 +1,5 @@
 import { env } from "cloudflare:workers";
-import { href, redirect } from "react-router";
+import { redirect } from "react-router";
 import { OAuth2Strategy } from "remix-auth-oauth2";
 
 import { verifyIdToken } from "~/entities/id-token";
@@ -38,15 +38,15 @@ export function authenticate(request: Request) {
 			}
 
 			if (teams.length > 0) {
-				return { id: idToken, teams: teams.map((it) => it.id) };
+				return { id: idToken, idTokenRaw: tokens.id, teams: teams.map((it) => it.id) };
 			}
 
 			let team = await Team.joinByDomain(db(), idToken);
-			if (team) return { id: idToken, teams: [team.id] };
+			if (team) return { id: idToken, idTokenRaw: tokens.id, teams: [team.id] };
 
 			team = await Team.createTeam(db(), idToken);
 
-			return { id: idToken, teams: [team.id] };
+			return { id: idToken, idTokenRaw: tokens.id, teams: [team.id] };
 		},
 	);
 
@@ -54,20 +54,28 @@ export function authenticate(request: Request) {
 }
 
 export async function logout() {
-	let subjectId = getSession().get("id");
+	let session = getSession();
+	let subjectId = session.get("id");
+	let idToken = session.get("idToken");
 
 	// unset just in case
-	getSession().unset("id");
-	getSession().unset("name");
-	getSession().unset("email");
-	getSession().unset("avatar");
+	session.unset("id");
+	session.unset("name");
+	session.unset("email");
+	session.unset("avatar");
+	session.unset("idToken");
 
 	logger().info("action.logout.success", { subjectId });
 
-	return redirect(href("/"), {
+	// Build the auth server logout URL for SSO logout
+	let logoutUrl = new URL("https://auth.sergiodxa.com/oidc/logout");
+	if (idToken) logoutUrl.searchParams.set("id_token_hint", idToken);
+	logoutUrl.searchParams.set("post_logout_redirect_uri", "https://uptime.sergiodxa.com/");
+
+	return redirect(logoutUrl.toString(), {
 		headers: {
 			"Set-Cookie": await measure("session.destroy", () => {
-				return sessionStorage.destroySession(getSession());
+				return sessionStorage.destroySession(session);
 			}),
 			"Clear-Site-Data": '"*"',
 		},

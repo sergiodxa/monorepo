@@ -9,6 +9,7 @@ export interface SessionData {
 	name: string;
 	email: string;
 	avatar: string;
+	idToken: string;
 }
 
 export const sessionStorage = createWorkersKVSessionStorage<SessionData>({

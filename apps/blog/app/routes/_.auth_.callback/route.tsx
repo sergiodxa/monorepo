@@ -84,6 +84,9 @@ export async function loader({ request }: Route.LoaderArgs) {
 			displayName: user.displayName,
 		});
 
+		// Store ID token for SSO logout
+		session.set("idToken", tokens.idToken());
+
 		logger.info("auth.success", { userId: user.id, subjectId: idToken.subject });
 
 		return redirect(href("/"));
