@@ -30,6 +30,7 @@ export function meta({ data }: Route.MetaArgs) {
 let UpdateClientSchema = z.object({
 	name: z.string().min(1),
 	description: z.string().max(280).optional(),
+	logoUrl: z.string().url().optional().or(z.literal("")),
 	redirectUri: z.string().url(),
 	logoutUri: z.string().url(),
 	regenerateSecret: z
@@ -50,6 +51,7 @@ export async function loader({ params }: Route.LoaderArgs) {
 			id: client.id,
 			name: client.name,
 			description: client.description,
+			logoUrl: client.logoUrl,
 			redirectUri: client.redirectUri,
 			logoutUri: client.logoutUri,
 		},
@@ -127,6 +129,11 @@ export default function EditClientPage({ loaderData }: Route.ComponentProps) {
 					<TextField name="description" defaultValue={client.description ?? ""}>
 						<Label>{t("form.description.label")}</Label>
 						<TextArea rows={3} maxLength={280} placeholder={t("form.description.placeholder")} />
+					</TextField>
+
+					<TextField name="logoUrl" defaultValue={client.logoUrl ?? ""}>
+						<Label>{t("form.logoUrl.label")}</Label>
+						<Input type="url" placeholder={t("form.logoUrl.placeholder")} />
 					</TextField>
 
 					<TextField name="redirectUri" isRequired defaultValue={client.redirectUri}>

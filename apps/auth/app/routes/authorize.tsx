@@ -135,7 +135,11 @@ export async function loader({ request }: Route.LoaderArgs) {
 	}
 
 	return ok({
-		client: { name: flowResult.data.client.name, description: flowResult.data.client.description },
+		client: {
+			name: flowResult.data.client.name,
+			description: flowResult.data.client.description,
+			logoUrl: flowResult.data.client.logoUrl,
+		},
 	});
 }
 
@@ -191,7 +195,7 @@ export default function Component({ loaderData }: Route.ComponentProps) {
 	if (!loaderData.ok) {
 		return (
 			<main className="grid min-h-dvh w-full lg:grid-cols-2">
-				<ClientPanel name={t("authorize.errors.invalidRequest.title")} />
+				<ClientPanel client={{ name: t("authorize.errors.invalidRequest.title") }} />
 				<LoginPanel>
 					<Card.Header>
 						<Card.Title>{t("authorize.errors.invalidRequest.title")}</Card.Title>
@@ -202,16 +206,15 @@ export default function Component({ loaderData }: Route.ComponentProps) {
 		);
 	}
 
-	let clientName = loaderData.client.name;
-	let clientDescription = loaderData.client.description;
-
 	return (
 		<main className="grid min-h-dvh w-full lg:grid-cols-2">
-			<ClientPanel name={clientName} description={clientDescription} />
+			<ClientPanel client={loaderData.client} />
 			<LoginPanel>
 				<Card.Header className="text-center">
 					<Card.Title>
-						<span className="lg:hidden">{t("authorize.header.title", { client: clientName })}</span>
+						<span className="lg:hidden">
+							{t("authorize.header.title", { client: loaderData.client.name })}
+						</span>
 						<span className="hidden lg:inline">{t("authorize.header.titleShort")}</span>
 					</Card.Title>
 					<Card.Description>{t("authorize.header.description")}</Card.Description>
@@ -282,22 +285,29 @@ export default function Component({ loaderData }: Route.ComponentProps) {
 	);
 }
 
-function ClientPanel({ name, description }: { name: string; description?: string | null }) {
+function ClientPanel({
+	client,
+}: {
+	client: { name: string; description?: string | null; logoUrl?: string | null };
+}) {
 	return (
 		<aside className="relative hidden flex-col justify-between overflow-hidden bg-neutral-100 p-12 text-neutral-900 lg:flex dark:bg-neutral-800 dark:text-neutral-100">
 			<div className="flex flex-col gap-4">
 				<div className="flex items-center gap-3">
 					<Logo size="md">
+						{client.logoUrl && <Logo.Image src={client.logoUrl} alt={client.name} />}
 						<Logo.Fallback className="bg-neutral-200 dark:bg-neutral-700">
-							{name.charAt(0).toUpperCase()}
+							{client.name.charAt(0).toUpperCase()}
 						</Logo.Fallback>
 					</Logo>
 					<Heading level={2} className="text-xl font-semibold">
-						{name}
+						{client.name}
 					</Heading>
 				</div>
-				{description && (
-					<Text className="max-w-sm text-neutral-600 dark:text-neutral-400">{description}</Text>
+				{client.description && (
+					<Text className="max-w-sm text-neutral-600 dark:text-neutral-400">
+						{client.description}
+					</Text>
 				)}
 			</div>
 

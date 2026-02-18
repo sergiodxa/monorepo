@@ -31,7 +31,13 @@ export default class Client {
 
 	static async create(
 		db: Database,
-		input: { name: string; description?: string | null; redirectUri: string; logoutUri: string },
+		input: {
+			name: string;
+			description?: string | null;
+			logoUrl?: string | null;
+			redirectUri: string;
+			logoutUri: string;
+		},
 	) {
 		let secret = crypto.randomUUID();
 		let [client] = await db
@@ -49,6 +55,7 @@ export default class Client {
 		input: {
 			name?: string;
 			description?: string | null;
+			logoUrl?: string | null;
 			redirectUri?: string;
 			logoutUri?: string;
 			regenerateSecret?: boolean;

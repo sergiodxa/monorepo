@@ -110,6 +110,7 @@ export const clients = sqliteTable("clients", {
 	// Attributes
 	name: text("name", { mode: "text", length: 255 }).notNull(),
 	description: text("description", { mode: "text", length: 280 }),
+	logoUrl: url("logo_url"),
 	secret: text("secret", { mode: "text" }).notNull(),
 	redirectUri: text("redirect_uri", { mode: "text" }).notNull().unique(),
 	logoutUri: text("logout_uri", { mode: "text" }).notNull(),

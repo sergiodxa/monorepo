@@ -184,6 +184,7 @@ export default {
 					label: "Description",
 					placeholder: "A brief description of your application (max 280 characters)",
 				},
+				logoUrl: { label: "Logo URL", placeholder: "https://example.com/logo.png" },
 				redirectUri: { label: "Redirect URI", placeholder: "https://example.com/callback" },
 				logoutUri: { label: "Logout URI", placeholder: "https://example.com/logout" },
 				submit: "Save",

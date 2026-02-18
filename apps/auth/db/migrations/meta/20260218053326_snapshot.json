@@ -1,0 +1,529 @@
+{
+	"version": "6",
+	"dialect": "sqlite",
+	"id": "671eb727-f7aa-4979-a7e7-d2aa7faba3e8",
+	"prevId": "8b015a20-52b2-426e-8c46-df4368b1f892",
+	"tables": {
+		"clients": {
+			"name": "clients",
+			"columns": {
+				"id": {
+					"name": "id",
+					"type": "text(36)",
+					"primaryKey": true,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"created_at": {
+					"name": "created_at",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"updated_at": {
+					"name": "updated_at",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"name": {
+					"name": "name",
+					"type": "text(255)",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"description": {
+					"name": "description",
+					"type": "text(280)",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"logo_url": {
+					"name": "logo_url",
+					"type": "text(2048)",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"secret": {
+					"name": "secret",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"redirect_uri": {
+					"name": "redirect_uri",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"logout_uri": {
+					"name": "logout_uri",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				}
+			},
+			"indexes": {
+				"clients_id_unique": {
+					"name": "clients_id_unique",
+					"columns": ["id"],
+					"isUnique": true
+				},
+				"clients_redirect_uri_unique": {
+					"name": "clients_redirect_uri_unique",
+					"columns": ["redirect_uri"],
+					"isUnique": true
+				}
+			},
+			"foreignKeys": {},
+			"compositePrimaryKeys": {},
+			"uniqueConstraints": {},
+			"checkConstraints": {}
+		},
+		"connections": {
+			"name": "connections",
+			"columns": {
+				"id": {
+					"name": "id",
+					"type": "text(36)",
+					"primaryKey": true,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"created_at": {
+					"name": "created_at",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"updated_at": {
+					"name": "updated_at",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"subject_id": {
+					"name": "subject_id",
+					"type": "text(36)",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"external_id": {
+					"name": "external_id",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"provider": {
+					"name": "provider",
+					"type": "text(255)",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				}
+			},
+			"indexes": {
+				"connections_id_unique": {
+					"name": "connections_id_unique",
+					"columns": ["id"],
+					"isUnique": true
+				},
+				"idx_connections_subject_id": {
+					"name": "idx_connections_subject_id",
+					"columns": ["provider", "external_id"],
+					"isUnique": true
+				}
+			},
+			"foreignKeys": {
+				"connections_subject_id_subjects_id_fk": {
+					"name": "connections_subject_id_subjects_id_fk",
+					"tableFrom": "connections",
+					"tableTo": "subjects",
+					"columnsFrom": ["subject_id"],
+					"columnsTo": ["id"],
+					"onDelete": "cascade",
+					"onUpdate": "cascade"
+				}
+			},
+			"compositePrimaryKeys": {},
+			"uniqueConstraints": {},
+			"checkConstraints": {}
+		},
+		"credentials": {
+			"name": "credentials",
+			"columns": {
+				"id": {
+					"name": "id",
+					"type": "text(36)",
+					"primaryKey": true,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"created_at": {
+					"name": "created_at",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"updated_at": {
+					"name": "updated_at",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"verified_at": {
+					"name": "verified_at",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"subject_id": {
+					"name": "subject_id",
+					"type": "text(36)",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"password_hash": {
+					"name": "password_hash",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				}
+			},
+			"indexes": {
+				"credentials_id_unique": {
+					"name": "credentials_id_unique",
+					"columns": ["id"],
+					"isUnique": true
+				},
+				"credentials_subject_id_unique": {
+					"name": "credentials_subject_id_unique",
+					"columns": ["subject_id"],
+					"isUnique": true
+				},
+				"credentials_subject_verified_idx": {
+					"name": "credentials_subject_verified_idx",
+					"columns": ["subject_id", "verified_at"],
+					"isUnique": false
+				}
+			},
+			"foreignKeys": {
+				"credentials_subject_id_subjects_id_fk": {
+					"name": "credentials_subject_id_subjects_id_fk",
+					"tableFrom": "credentials",
+					"tableTo": "subjects",
+					"columnsFrom": ["subject_id"],
+					"columnsTo": ["id"],
+					"onDelete": "cascade",
+					"onUpdate": "cascade"
+				}
+			},
+			"compositePrimaryKeys": {},
+			"uniqueConstraints": {},
+			"checkConstraints": {}
+		},
+		"grants": {
+			"name": "grants",
+			"columns": {
+				"id": {
+					"name": "id",
+					"type": "text(36)",
+					"primaryKey": true,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"created_at": {
+					"name": "created_at",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"updated_at": {
+					"name": "updated_at",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"subject_id": {
+					"name": "subject_id",
+					"type": "text(36)",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"client_id": {
+					"name": "client_id",
+					"type": "text(36)",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				}
+			},
+			"indexes": {
+				"grants_id_unique": {
+					"name": "grants_id_unique",
+					"columns": ["id"],
+					"isUnique": true
+				},
+				"grants_subject_client_idx": {
+					"name": "grants_subject_client_idx",
+					"columns": ["subject_id", "client_id"],
+					"isUnique": true
+				},
+				"grants_client_id_idx": {
+					"name": "grants_client_id_idx",
+					"columns": ["client_id"],
+					"isUnique": false
+				}
+			},
+			"foreignKeys": {
+				"grants_subject_id_subjects_id_fk": {
+					"name": "grants_subject_id_subjects_id_fk",
+					"tableFrom": "grants",
+					"tableTo": "subjects",
+					"columnsFrom": ["subject_id"],
+					"columnsTo": ["id"],
+					"onDelete": "cascade",
+					"onUpdate": "cascade"
+				},
+				"grants_client_id_clients_id_fk": {
+					"name": "grants_client_id_clients_id_fk",
+					"tableFrom": "grants",
+					"tableTo": "clients",
+					"columnsFrom": ["client_id"],
+					"columnsTo": ["id"],
+					"onDelete": "cascade",
+					"onUpdate": "cascade"
+				}
+			},
+			"compositePrimaryKeys": {},
+			"uniqueConstraints": {},
+			"checkConstraints": {}
+		},
+		"sessions": {
+			"name": "sessions",
+			"columns": {
+				"id": {
+					"name": "id",
+					"type": "text(36)",
+					"primaryKey": true,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"created_at": {
+					"name": "created_at",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"updated_at": {
+					"name": "updated_at",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"expires_at": {
+					"name": "expires_at",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"subject_id": {
+					"name": "subject_id",
+					"type": "text(36)",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"client_id": {
+					"name": "client_id",
+					"type": "text(36)",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"user_agent": {
+					"name": "user_agent",
+					"type": "text(512)",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"ip_address": {
+					"name": "ip_address",
+					"type": "text(64)",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				}
+			},
+			"indexes": {
+				"sessions_id_unique": {
+					"name": "sessions_id_unique",
+					"columns": ["id"],
+					"isUnique": true
+				},
+				"sessions_expires_at_idx": {
+					"name": "sessions_expires_at_idx",
+					"columns": ["expires_at"],
+					"isUnique": false
+				},
+				"sessions_subject_id_idx": {
+					"name": "sessions_subject_id_idx",
+					"columns": ["subject_id"],
+					"isUnique": false
+				},
+				"sessions_client_id_idx": {
+					"name": "sessions_client_id_idx",
+					"columns": ["client_id"],
+					"isUnique": false
+				}
+			},
+			"foreignKeys": {
+				"sessions_subject_id_subjects_id_fk": {
+					"name": "sessions_subject_id_subjects_id_fk",
+					"tableFrom": "sessions",
+					"tableTo": "subjects",
+					"columnsFrom": ["subject_id"],
+					"columnsTo": ["id"],
+					"onDelete": "cascade",
+					"onUpdate": "cascade"
+				},
+				"sessions_client_id_clients_id_fk": {
+					"name": "sessions_client_id_clients_id_fk",
+					"tableFrom": "sessions",
+					"tableTo": "clients",
+					"columnsFrom": ["client_id"],
+					"columnsTo": ["id"],
+					"onDelete": "cascade",
+					"onUpdate": "cascade"
+				}
+			},
+			"compositePrimaryKeys": {},
+			"uniqueConstraints": {},
+			"checkConstraints": {}
+		},
+		"subjects": {
+			"name": "subjects",
+			"columns": {
+				"id": {
+					"name": "id",
+					"type": "text(36)",
+					"primaryKey": true,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"created_at": {
+					"name": "created_at",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"updated_at": {
+					"name": "updated_at",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"email_verified_at": {
+					"name": "email_verified_at",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"display_name": {
+					"name": "display_name",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"avatar": {
+					"name": "avatar",
+					"type": "text(2048)",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"role": {
+					"name": "role",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false,
+					"default": "'user'"
+				},
+				"username": {
+					"name": "username",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"email_address": {
+					"name": "email_address",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				}
+			},
+			"indexes": {
+				"subjects_id_unique": {
+					"name": "subjects_id_unique",
+					"columns": ["id"],
+					"isUnique": true
+				},
+				"subjects_username_unique": {
+					"name": "subjects_username_unique",
+					"columns": ["username"],
+					"isUnique": true
+				},
+				"subjects_email_address_unique": {
+					"name": "subjects_email_address_unique",
+					"columns": ["email_address"],
+					"isUnique": true
+				}
+			},
+			"foreignKeys": {},
+			"compositePrimaryKeys": {},
+			"uniqueConstraints": {},
+			"checkConstraints": {}
+		}
+	},
+	"views": {},
+	"enums": {},
+	"_meta": {
+		"schemas": {},
+		"tables": {},
+		"columns": {}
+	},
+	"internal": {
+		"indexes": {}
+	}
+}
