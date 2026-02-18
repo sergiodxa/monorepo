@@ -295,10 +295,13 @@ function ClientPanel({
 			<div className="flex flex-col gap-4">
 				<div className="flex items-center gap-3">
 					<Logo size="md">
-						{client.logoUrl && <Logo.Image src={client.logoUrl} alt={client.name} />}
-						<Logo.Fallback className="bg-neutral-200 dark:bg-neutral-700">
-							{client.name.charAt(0).toUpperCase()}
-						</Logo.Fallback>
+						{client.logoUrl ? (
+							<Logo.Image src={client.logoUrl} alt={client.name} />
+						) : (
+							<Logo.Fallback className="bg-neutral-200 dark:bg-neutral-700">
+								{client.name.charAt(0).toUpperCase()}
+							</Logo.Fallback>
+						)}
 					</Logo>
 					<Heading level={2} className="text-xl font-semibold">
 						{client.name}
