@@ -1,5 +1,7 @@
-import { NavLink, Toolbar } from "@pkg/ui";
+import { Button, Form, NavLink, Toolbar } from "@pkg/ui";
+import { LogOutIcon } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { href } from "react-router";
 
 export function Navigation() {
 	let { t } = useTranslation("translation", { keyPrefix: "cms.layout.nav" });
@@ -24,6 +26,15 @@ export function Navigation() {
 					{link.name}
 				</NavLink>
 			))}
+
+			<div className="flex-1" />
+
+			<Form method="POST" action={href("/auth/logout")}>
+				<Button type="submit" color="neutral" variant="outline" size="sm">
+					<LogOutIcon className="size-4" />
+					{t("items.logout")}
+				</Button>
+			</Form>
 		</Toolbar>
 	);
 }

@@ -223,6 +223,7 @@ export default {
 					glossary: "Glosario",
 					cache: "Claves de caché",
 					redirects: "Redirecciones",
+					logout: "Cerrar sesión",
 				},
 			},
 		},

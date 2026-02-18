@@ -222,6 +222,7 @@ export default {
 					glossary: "Glossary",
 					cache: "Cache Keys",
 					redirects: "Redirects",
+					logout: "Logout",
 				},
 			},
 		},
