@@ -304,7 +304,8 @@ export class OIDCProvider extends OAuth2Provider<OIDCProvider.Repository> {
 			throw new InvalidRequestError("Invalid redirect uri");
 		}
 
-		if (args.sessionSubject !== subject.id) {
+		// Only validate session subject if provided (user may not have auth server session)
+		if (args.sessionSubject && args.sessionSubject !== subject.id) {
 			throw new InvalidRequestError("Invalid session subject");
 		}
 

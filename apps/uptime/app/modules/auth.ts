@@ -70,7 +70,7 @@ export async function logout() {
 	// Build the auth server logout URL for SSO logout
 	let logoutUrl = new URL("https://auth.sergiodxa.com/oidc/logout");
 	if (idToken) logoutUrl.searchParams.set("id_token_hint", idToken);
-	logoutUrl.searchParams.set("post_logout_redirect_uri", "https://uptime.sergiodxa.com/");
+	logoutUrl.searchParams.set("post_logout_redirect_uri", "https://uptime.sergiodxa.com");
 
 	return redirect(logoutUrl.toString(), {
 		headers: {
