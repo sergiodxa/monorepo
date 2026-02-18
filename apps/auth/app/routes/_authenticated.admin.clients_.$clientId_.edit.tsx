@@ -1,6 +1,17 @@
 import { ok } from "@pkg/response";
 import { isFailure } from "@pkg/result";
-import { Alert, Button, Card, Checkbox, Form, Input, Label, LinkButton, TextField } from "@pkg/ui";
+import {
+	Alert,
+	Button,
+	Card,
+	Checkbox,
+	Form,
+	Input,
+	Label,
+	LinkButton,
+	TextArea,
+	TextField,
+} from "@pkg/ui";
 import { validate } from "@pkg/validate";
 import { useTranslation } from "react-i18next";
 import { data, href, redirect, useActionData, useNavigation } from "react-router";
@@ -18,6 +29,7 @@ export function meta({ data }: Route.MetaArgs) {
 
 let UpdateClientSchema = z.object({
 	name: z.string().min(1),
+	description: z.string().max(280).optional(),
 	redirectUri: z.string().url(),
 	logoutUri: z.string().url(),
 	regenerateSecret: z
@@ -37,6 +49,7 @@ export async function loader({ params }: Route.LoaderArgs) {
 		client: {
 			id: client.id,
 			name: client.name,
+			description: client.description,
 			redirectUri: client.redirectUri,
 			logoutUri: client.logoutUri,
 		},
@@ -109,6 +122,11 @@ export default function EditClientPage({ loaderData }: Route.ComponentProps) {
 					<TextField name="name" isRequired defaultValue={client.name}>
 						<Label>{t("form.name.label")}</Label>
 						<Input placeholder={t("form.name.placeholder")} />
+					</TextField>
+
+					<TextField name="description" defaultValue={client.description ?? ""}>
+						<Label>{t("form.description.label")}</Label>
+						<TextArea rows={3} maxLength={280} placeholder={t("form.description.placeholder")} />
 					</TextField>
 
 					<TextField name="redirectUri" isRequired defaultValue={client.redirectUri}>

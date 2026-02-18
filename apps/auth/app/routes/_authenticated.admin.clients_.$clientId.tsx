@@ -28,6 +28,7 @@ export async function loader({ params }: Route.LoaderArgs) {
 		client: {
 			id: client.id,
 			name: client.name,
+			description: client.description,
 			redirectUri: client.redirectUri,
 			logoutUri: client.logoutUri,
 			createdAt: client.createdAt.toISOString(),
@@ -83,6 +84,14 @@ export default function ClientDetailPage({ loaderData }: Route.ComponentProps) {
 				<div>
 					<Label className="text-sm font-medium">{t("detail.name")}</Label>
 					<p className="mt-1">{client.name}</p>
+				</div>
+				<div className="sm:col-span-2">
+					<Label className="text-sm font-medium">{t("detail.description")}</Label>
+					<p className="mt-1 text-sm">
+						{client.description || (
+							<span className="text-neutral-500">{t("detail.noDescription")}</span>
+						)}
+					</p>
 				</div>
 				<div>
 					<Label className="text-sm font-medium">{t("detail.secret")}</Label>

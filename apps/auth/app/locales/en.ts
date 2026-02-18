@@ -151,6 +151,8 @@ export default {
 				title: "Client Details",
 				id: "Client ID",
 				name: "Name",
+				description: "Description",
+				noDescription: "No description provided",
 				secret: "Client Secret",
 				secretHidden: "Hidden for security",
 				redirectUri: "Redirect URI",
@@ -177,6 +179,10 @@ export default {
 			},
 			form: {
 				name: { label: "Name", placeholder: "My Application" },
+				description: {
+					label: "Description",
+					placeholder: "A brief description of your application (max 280 characters)",
+				},
 				redirectUri: { label: "Redirect URI", placeholder: "https://example.com/callback" },
 				logoutUri: { label: "Logout URI", placeholder: "https://example.com/logout" },
 				submit: "Save",

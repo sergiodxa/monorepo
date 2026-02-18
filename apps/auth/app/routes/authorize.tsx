@@ -134,7 +134,9 @@ export async function loader({ request }: Route.LoaderArgs) {
 		return redirectDocument(href("/auth/:provider", { provider: searchParams.provider }));
 	}
 
-	return ok({ client: { name: flowResult.data.client.name } });
+	return ok({
+		client: { name: flowResult.data.client.name, description: flowResult.data.client.description },
+	});
 }
 
 let ActionSchema = z.object({
@@ -201,10 +203,11 @@ export default function Component({ loaderData }: Route.ComponentProps) {
 	}
 
 	let clientName = loaderData.client.name;
+	let clientDescription = loaderData.client.description;
 
 	return (
 		<main className="grid min-h-dvh w-full lg:grid-cols-2">
-			<ClientPanel name={clientName} />
+			<ClientPanel name={clientName} description={clientDescription} />
 			<LoginPanel>
 				<Card.Header className="text-center">
 					<Card.Title>
@@ -215,7 +218,7 @@ export default function Component({ loaderData }: Route.ComponentProps) {
 				</Card.Header>
 
 				<Card.Content className="flex flex-col gap-4">
-					<Form method="POST" className="flex hidden flex-col gap-6">
+					<Form method="POST" className="hidden flex-col gap-6">
 						<TextField name="name" isRequired>
 							<Input
 								placeholder={t("authorize.forms.credentials.fields.name.placeholder")}
@@ -279,18 +282,43 @@ export default function Component({ loaderData }: Route.ComponentProps) {
 	);
 }
 
-function ClientPanel({ name }: { name: string }) {
+function ClientPanel({ name, description }: { name: string; description?: string | null }) {
 	return (
-		<aside className="hidden flex-col items-center justify-center gap-6 bg-neutral-100 p-12 text-neutral-900 lg:flex dark:bg-neutral-800 dark:text-neutral-100">
-			<Logo size="lg">
-				<Logo.Fallback className="bg-neutral-200 dark:bg-neutral-700">
-					{name.charAt(0).toUpperCase()}
-				</Logo.Fallback>
-			</Logo>
-			<Heading level={2} className="text-3xl font-semibold">
-				{name}
-			</Heading>
+		<aside className="relative hidden flex-col justify-between overflow-hidden bg-neutral-100 p-12 text-neutral-900 lg:flex dark:bg-neutral-800 dark:text-neutral-100">
+			<div className="flex flex-col gap-4">
+				<div className="flex items-center gap-3">
+					<Logo size="md">
+						<Logo.Fallback className="bg-neutral-200 dark:bg-neutral-700">
+							{name.charAt(0).toUpperCase()}
+						</Logo.Fallback>
+					</Logo>
+					<Heading level={2} className="text-xl font-semibold">
+						{name}
+					</Heading>
+				</div>
+				{description && (
+					<Text className="max-w-sm text-neutral-600 dark:text-neutral-400">{description}</Text>
+				)}
+			</div>
+
+			<ConcentricRings />
 		</aside>
+	);
+}
+
+function ConcentricRings() {
+	return (
+		<svg className="absolute bottom-0 left-0 h-150 w-150" viewBox="0 0 600 600" aria-hidden="true">
+			{/* Same color/opacity for all - the overlapping creates the gradient effect */}
+			<circle cx="0" cy="600" r="560" className="fill-primary-500/5 dark:fill-primary-400/5" />
+			<circle cx="0" cy="600" r="490" className="fill-primary-500/5 dark:fill-primary-400/5" />
+			<circle cx="0" cy="600" r="420" className="fill-primary-500/5 dark:fill-primary-400/5" />
+			<circle cx="0" cy="600" r="350" className="fill-primary-500/5 dark:fill-primary-400/5" />
+			<circle cx="0" cy="600" r="280" className="fill-primary-500/5 dark:fill-primary-400/5" />
+			<circle cx="0" cy="600" r="210" className="fill-primary-500/5 dark:fill-primary-400/5" />
+			<circle cx="0" cy="600" r="140" className="fill-primary-500/5 dark:fill-primary-400/5" />
+			<circle cx="0" cy="600" r="70" className="fill-primary-500/5 dark:fill-primary-400/5" />
+		</svg>
 	);
 }
 

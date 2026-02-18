@@ -1,5 +1,5 @@
 import { isFailure } from "@pkg/result";
-import { Alert, Button, Card, Form, Input, Label, LinkButton, TextField } from "@pkg/ui";
+import { Alert, Button, Card, Form, Input, Label, LinkButton, TextArea, TextField } from "@pkg/ui";
 import { validate } from "@pkg/validate";
 import { useTranslation } from "react-i18next";
 import { data, href, useActionData, useNavigation } from "react-router";
@@ -16,6 +16,7 @@ export function meta(): Route.MetaDescriptors {
 
 let CreateClientSchema = z.object({
 	name: z.string().min(1),
+	description: z.string().max(280).optional(),
 	redirectUri: z.string().url(),
 	logoutUri: z.string().url(),
 });
@@ -103,6 +104,11 @@ export default function NewClientPage() {
 					<TextField name="name" isRequired>
 						<Label>{t("form.name.label")}</Label>
 						<Input placeholder={t("form.name.placeholder")} />
+					</TextField>
+
+					<TextField name="description">
+						<Label>{t("form.description.label")}</Label>
+						<TextArea rows={3} maxLength={280} placeholder={t("form.description.placeholder")} />
 					</TextField>
 
 					<TextField name="redirectUri" isRequired>
