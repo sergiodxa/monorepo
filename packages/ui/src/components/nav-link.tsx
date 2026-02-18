@@ -1,7 +1,7 @@
 import type { NavLinkProps as ReactRouterNavLinkProps } from "react-router";
 
 import { cn } from "@pkg/cn";
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { NavLink as ReactRouterNavLink, PrefetchPageLinks } from "react-router";
 
 import { type Color, ColorProvider, useColor } from "./color-context";
@@ -38,13 +38,11 @@ export function NavLink({
 }: NavLink.Props) {
 	let color = useColor(colorProp);
 	let [shouldPrefetch, setShouldPrefetch] = useState(false);
-	let ref = useRef<HTMLAnchorElement>(null);
 
 	return (
 		<ColorProvider color={color}>
 			<ReactRouterNavLink
 				{...props}
-				ref={ref}
 				data-color={color}
 				data-has-background={hasBackground || undefined}
 				prefetch={prefetch}
@@ -57,21 +55,9 @@ export function NavLink({
 					props.onMouseLeave?.(e);
 				}}
 				className={({ isActive, isPending }) => {
-					// Update data attributes synchronously during render
-					if (ref.current) {
-						if (isActive) {
-							ref.current.dataset.active = "";
-						} else {
-							delete ref.current.dataset.active;
-						}
-						if (isPending) {
-							ref.current.dataset.pending = "";
-						} else {
-							delete ref.current.dataset.pending;
-						}
-					}
 					return cn(
 						"ui-nav-link",
+						{ active: isActive, pending: isPending },
 						typeof className === "function" ? className({ isActive, isPending }) : className,
 					);
 				}}

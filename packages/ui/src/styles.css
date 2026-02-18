@@ -1890,51 +1890,51 @@
 
 		&[data-color="primary"] {
 			color: var(--ui-primary-fg);
-			&[data-active] {
+			&.active {
 				@apply font-medium;
 				color: var(--ui-primary-fg-emphasis);
 			}
 		}
 		&[data-color="neutral"] {
 			color: var(--ui-neutral-fg);
-			&[data-active] {
+			&.active {
 				@apply font-medium;
 				color: var(--ui-neutral-fg-emphasis);
 			}
 		}
 		&[data-color="success"] {
 			color: var(--ui-success-fg);
-			&[data-active] {
+			&.active {
 				@apply font-medium;
 				color: var(--ui-success-fg-emphasis);
 			}
 		}
 		&[data-color="danger"] {
 			color: var(--ui-danger-fg);
-			&[data-active] {
+			&.active {
 				@apply font-medium;
 				color: var(--ui-danger-fg-emphasis);
 			}
 		}
 		&[data-color="warning"] {
 			color: var(--ui-warning-fg);
-			&[data-active] {
+			&.active {
 				@apply font-medium;
 				color: var(--ui-warning-fg-emphasis);
 			}
 		}
 
-		&[data-active] {
+		&.active {
 			@apply font-medium decoration-2 decoration-current;
 		}
 		&[data-has-background] {
 			@apply no-underline;
 		}
 		&[data-has-background]:hover,
-		&[data-has-background][data-active] {
+		&[data-has-background].active {
 			@apply no-underline;
 		}
-		&[data-pending] {
+		&.pending {
 			@apply opacity-70;
 		}
 		&:focus-visible {
