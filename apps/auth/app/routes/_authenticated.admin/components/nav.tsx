@@ -1,27 +1,28 @@
 import { LinkButton, NavLink, Toolbar } from "@pkg/ui";
-import { UserIcon } from "lucide-react";
+import { AppWindowIcon, LayoutDashboardIcon, UserIcon, UsersIcon } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { href } from "react-router";
 
 export function Navigation() {
 	let { t } = useTranslation("translation", { keyPrefix: "admin.nav" });
 
-	let navigation = [
-		{ name: t("items.dashboard"), to: "" },
-		{ name: t("items.clients"), to: "clients" },
-		{ name: t("items.subjects"), to: "subjects" },
-	] as const;
-
 	return (
 		<Toolbar
 			aria-label={t("label")}
 			className="flex-wrap items-center gap-4 border-b border-neutral-200 dark:border-neutral-700"
 		>
-			{navigation.map((link) => (
-				<NavLink key={link.name} to={link.to} end={link.to === ""} hasBackground>
-					{link.name}
-				</NavLink>
-			))}
+			<NavLink to="" end hasBackground>
+				<LayoutDashboardIcon className="size-4" />
+				{t("items.dashboard")}
+			</NavLink>
+			<NavLink to="clients" hasBackground>
+				<AppWindowIcon className="size-4" />
+				{t("items.clients")}
+			</NavLink>
+			<NavLink to="subjects" hasBackground>
+				<UsersIcon className="size-4" />
+				{t("items.subjects")}
+			</NavLink>
 
 			<div className="flex-1" />
 
