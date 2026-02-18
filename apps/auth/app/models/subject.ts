@@ -18,7 +18,7 @@ export default class Subject {
 			limit: options.limit,
 			offset: options.offset,
 			orderBy(fields, operators) {
-				return operators.desc(fields.createdAt);
+				return operators.asc(fields.createdAt);
 			},
 		});
 	}
