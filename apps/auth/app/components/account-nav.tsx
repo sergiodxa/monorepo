@@ -1,4 +1,4 @@
-import { Button, Form, NavLink, Toolbar } from "@pkg/ui";
+import { Button, Form, LinkButton, NavLink, Toolbar } from "@pkg/ui";
 import { LogOutIcon, MonitorSmartphoneIcon, ShieldIcon, UserIcon } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { href } from "react-router";
@@ -27,16 +27,15 @@ export function AccountNav({ isAdmin }: AccountNavProps) {
 					{t("items.sessions")}
 				</span>
 			</NavLink>
-			{isAdmin && (
-				<NavLink to="/admin" hasBackground>
-					<span className="flex items-center gap-1.5">
-						<ShieldIcon className="size-4" />
-						{t("items.admin")}
-					</span>
-				</NavLink>
-			)}
 
 			<div className="flex-1" />
+
+			{isAdmin && (
+				<LinkButton href={href("/admin")} color="neutral" variant="outline" size="sm">
+					<ShieldIcon className="size-4" />
+					{t("items.admin")}
+				</LinkButton>
+			)}
 
 			<Form method="POST" action={href("/oidc/logout")}>
 				<Button type="submit" color="neutral" variant="outline" size="sm">
