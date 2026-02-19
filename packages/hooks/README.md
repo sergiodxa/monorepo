@@ -11,7 +11,7 @@ Requires React 19+ and React Router 7+ as peer dependencies.
 ## Usage
 
 ```typescript
-import { useToggle, useFetcherStatus, useClipboard } from "@pkg/hooks";
+import { useToggle, useFetcherStatus, useClipboard, useValue } from "@pkg/hooks";
 
 function MyComponent() {
   let [isOpen, toggle] = useToggle(false);
@@ -121,6 +121,57 @@ function PasswordInput() {
   );
 }
 ```
+
+### `useValue<T>(key: symbol, initialValue: T): [T, (newValue: T) => void]`
+
+Share state between components without prop drilling or context.
+
+Creates a global store keyed by a symbol that any component can subscribe to. When multiple components use the same key, they share the same state. The store is automatically cleaned up when no components are subscribed.
+
+**Type Parameters:**
+
+- `T`: The type of the shared state value
+
+**Parameters:**
+
+- `key`: A symbol to identify the shared state. Use `Symbol.for("name")` to create a consistent key across modules.
+- `initialValue`: The initial value used when the store is first created. Ignored if a store for this key already exists.
+
+**Returns:**
+
+- Tuple of `[state, setState]` similar to `useState`
+
+**Example:**
+
+```typescript
+import { useValue } from "@pkg/hooks";
+
+// Define keys in a shared constants file for type safety
+const KEYS = {
+  counter: Symbol.for("app:counter"),
+  theme: Symbol.for("app:theme"),
+} as const;
+
+// In ComponentA (e.g., in /dashboard route)
+function Dashboard() {
+  let [count, setCount] = useValue(KEYS.counter, 0);
+  return <button onClick={() => setCount(count + 1)}>Count: {count}</button>;
+}
+
+// In ComponentB (e.g., in /settings route)
+function Settings() {
+  let [count, setCount] = useValue(KEYS.counter, 0);
+  // Both components share the same count state
+  return <div>Current count: {count}</div>;
+}
+```
+
+**Notes:**
+
+- Use `Symbol.for("name")` instead of `Symbol("name")` to ensure the same symbol is used across modules
+- The first component to render with a key determines the initial value; subsequent components receive the existing value
+- Stores are automatically cleaned up when all subscribed components unmount
+- SSR-safe: returns `initialValue` on the server to prevent hydration mismatches
 
 ### `useIsomorphicLayoutEffect`
 
@@ -235,6 +286,56 @@ interface Return {
 	read(): Promise<Result<ClipboardItems, ClipboardError>>;
 	write(data: ClipboardItems): Promise<Result<null, ClipboardError>>;
 	reset(): void;
+}
+```
+
+## Pattern: Shared State Across Routes
+
+Use `useValue` to share state between components in different routes without context:
+
+```typescript
+import { useValue } from "@pkg/hooks";
+
+// keys.ts - Define keys in a shared file
+export const KEYS = {
+  selectedItems: Symbol.for("app:selectedItems"),
+  sidebarOpen: Symbol.for("app:sidebarOpen"),
+} as const;
+
+// routes/products.tsx
+function ProductList() {
+  let [selectedIds, setSelectedIds] = useValue<Set<string>>(
+    KEYS.selectedItems,
+    new Set()
+  );
+
+  function toggleSelection(id: string) {
+    let next = new Set(selectedIds);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
+    setSelectedIds(next);
+  }
+
+  return (
+    <ul>
+      {products.map((p) => (
+        <li key={p.id}>
+          <input
+            type="checkbox"
+            checked={selectedIds.has(p.id)}
+            onChange={() => toggleSelection(p.id)}
+          />
+          {p.name}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+// routes/cart.tsx - Different route, same state
+function CartSummary() {
+  let [selectedIds] = useValue<Set<string>>(KEYS.selectedItems, new Set());
+  return <div>Selected items: {selectedIds.size}</div>;
 }
 ```
 
