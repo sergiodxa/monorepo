@@ -95,6 +95,62 @@ function CopyButton({ text }: { text: string }) {
 }
 ```
 
+### `useCapsLockDetection(): boolean`
+
+Detects whether the CapsLock key is currently enabled.
+
+Uses keyboard events to track CapsLock state changes, and a one-time mousemove listener to detect the initial state before any key is pressed.
+
+**Returns:**
+
+- `true` if CapsLock is enabled, `false` otherwise
+
+**Example:**
+
+```typescript
+import { useCapsLockDetection } from "@pkg/hooks";
+
+function PasswordInput() {
+  let capsLockOn = useCapsLockDetection();
+
+  return (
+    <div>
+      <input type="password" />
+      {capsLockOn && <span>CapsLock is on</span>}
+    </div>
+  );
+}
+```
+
+### `useIsomorphicLayoutEffect`
+
+A hook that uses `useLayoutEffect` on the client and `useEffect` on the server to avoid SSR warnings.
+
+Use this when you need synchronous DOM measurements or mutations that must happen before the browser paints, but also need to support server-side rendering.
+
+**Signature:**
+
+```typescript
+const useIsomorphicLayoutEffect: typeof useLayoutEffect;
+```
+
+**Example:**
+
+```typescript
+import { useIsomorphicLayoutEffect } from "@pkg/hooks";
+
+function Tooltip({ targetRef }: { targetRef: RefObject<HTMLElement> }) {
+  let [position, setPosition] = useState({ top: 0, left: 0 });
+
+  useIsomorphicLayoutEffect(() => {
+    let rect = targetRef.current.getBoundingClientRect();
+    setPosition({ top: rect.bottom, left: rect.left });
+  }, [targetRef]);
+
+  return <div style={position}>Tooltip</div>;
+}
+```
+
 ### `useFetcherStatus<T extends { ok?: boolean }>(fetcher: Fetcher<T>): useFetcherStatus.FetcherStatus`
 
 A hook that derives a simple status from a React Router fetcher's state and data.
