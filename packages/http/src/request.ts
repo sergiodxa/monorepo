@@ -18,7 +18,7 @@ type Init = Omit<RequestInit, "body" | "headers"> & {
  */
 export function json<T>(url: string | URL, body: T, init?: Init): Request {
 	let headers = new Headers(init?.headers);
-	headers.set("Content-Type", ContentType.JSON);
+	headers.set("Content-Type", ContentType.Json);
 	return new Request(url, {
 		...init,
 		method: init?.method ?? "POST",

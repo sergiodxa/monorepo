@@ -6,7 +6,7 @@ import { formData, formURLEncoded, json, text, xml } from "./request";
 describe(json, () => {
 	test("creates request with JSON content-type", () => {
 		let req = json("https://example.com/api", { name: "John" });
-		expect(req.headers.get("Content-Type")).toBe(ContentType.JSON);
+		expect(req.headers.get("Content-Type")).toBe(ContentType.Json);
 	});
 
 	test("stringifies body correctly", async () => {
@@ -48,7 +48,7 @@ describe(json, () => {
 			{ headers: { Authorization: "Bearer token" } },
 		);
 		expect(req.headers.get("Authorization")).toBe("Bearer token");
-		expect(req.headers.get("Content-Type")).toBe(ContentType.JSON);
+		expect(req.headers.get("Content-Type")).toBe(ContentType.Json);
 	});
 });
 

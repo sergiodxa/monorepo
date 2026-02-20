@@ -43,8 +43,8 @@ describe("text types", () => {
 });
 
 describe("application types", () => {
-	test("JSON has correct value", () => {
-		expect(ContentType.JSON).toBe("application/json; charset=utf-8");
+	test("Json has correct value", () => {
+		expect(ContentType.Json).toBe("application/json; charset=utf-8");
 	});
 
 	test("JSONLines has correct value", () => {
@@ -96,7 +96,7 @@ describe("application types", () => {
 	});
 
 	test("text-based application types include charset=utf-8", () => {
-		expect(ContentType.JSON).toContain("charset=utf-8");
+		expect(ContentType.Json).toContain("charset=utf-8");
 		expect(ContentType.JSONLines).toContain("charset=utf-8");
 		expect(ContentType.ApplicationXML).toContain("charset=utf-8");
 	});

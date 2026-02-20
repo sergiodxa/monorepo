@@ -71,12 +71,13 @@ export const Markdown = "text/markdown; charset=utf-8" as const;
 /**
  * JSON content type with UTF-8 charset.
  * Used for API responses and requests with structured data.
+ * Named `Json` (not `JSON`) to avoid shadowing the global `JSON` object.
  * @example
- * headers.set("Content-Type", JSON);
+ * headers.set("Content-Type", Json);
  * @example
- * if (contentType === JSON) { parseJSON(body); }
+ * if (contentType === Json) { parseJson(body); }
  */
-export const JSON = "application/json; charset=utf-8" as const;
+export const Json = "application/json; charset=utf-8" as const;
 
 /**
  * JSON Lines content type with UTF-8 charset.

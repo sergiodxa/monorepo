@@ -125,10 +125,10 @@ Content-Type string constants for common MIME types.
 **Example:**
 
 ```typescript
-import { JSON, HTML } from "@pkg/http/content-type";
+import { Json, HTML } from "@pkg/http/content-type";
 
 let headers = new Headers();
-headers.set("Content-Type", JSON);
+headers.set("Content-Type", Json);
 ```
 
 ### `@pkg/http/status-code`
