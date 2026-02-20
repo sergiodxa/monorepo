@@ -1,8 +1,7 @@
+import { useValue } from "@pkg/hooks";
 import { Card, Description, Input, Label, TextArea, TextField } from "@pkg/ui";
 import { parameterize } from "inflected";
 import { useHydrated } from "remix-utils/use-hydrated";
-
-import { useValue } from "~/hooks/use-value";
 
 interface ControlsProps {
 	tutorial: {
