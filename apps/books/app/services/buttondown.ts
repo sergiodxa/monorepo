@@ -1,4 +1,5 @@
 import { APIClient } from "@edgefirst-dev/api-client";
+import { Json } from "@pkg/http/content-type";
 import { env } from "cloudflare:workers";
 import { z } from "zod";
 
@@ -11,7 +12,7 @@ class Buttondown extends APIClient {
 
 	protected override before(request: Request): Promise<Request> {
 		request.headers.set("Authorization", `Token ${this.options.apiKey}`);
-		request.headers.set("Content-Type", "application/json");
+		request.headers.set("Content-Type", Json);
 		return Promise.resolve(request);
 	}
 

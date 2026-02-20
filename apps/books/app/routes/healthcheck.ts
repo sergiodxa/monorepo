@@ -1,3 +1,6 @@
+import { text } from "@pkg/http/response";
+import { Ok } from "@pkg/http/status-code";
+
 export function loader() {
-	return new Response("OK", { status: 200 });
+	return text("OK", Ok);
 }

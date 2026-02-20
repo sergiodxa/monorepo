@@ -16,6 +16,7 @@
 		"@markdoc/markdoc": "^0.5.4",
 		"@pkg/cn": "workspace:*",
 		"@pkg/get-client-ip": "workspace:*",
+		"@pkg/http": "workspace:*",
 		"@pkg/location": "workspace:*",
 		"@pkg/logger": "workspace:*",
 		"@pkg/response": "workspace:*",
