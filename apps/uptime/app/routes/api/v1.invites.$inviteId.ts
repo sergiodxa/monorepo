@@ -6,7 +6,11 @@ import {
 	ApiAuthContext,
 	apiError,
 	apiSuccess,
+	Forbidden,
 	hasScope,
+	MethodNotAllowed,
+	NotFound,
+	Unauthorized,
 	verifyApiKey,
 } from "~/middleware/api-auth";
 import { db } from "~/middleware/drizzle";
@@ -18,7 +22,7 @@ export const middleware: Route.MiddlewareFunction[] = [
 	async ({ request, context }, next) => {
 		let auth = await verifyApiKey(request);
 		if (!auth) {
-			throw apiError("UNAUTHORIZED", "Invalid or missing API key", 401);
+			throw apiError("UNAUTHORIZED", "Invalid or missing API key", Unauthorized);
 		}
 		context.set(ApiAuthContext, auth);
 		return await next();
@@ -43,7 +47,7 @@ export async function action({ request, params }: Route.ActionArgs) {
 			inviteId: params.inviteId,
 			method: request.method,
 		});
-		throw apiError("METHOD_NOT_ALLOWED", "Only DELETE method is allowed", 405);
+		throw apiError("METHOD_NOT_ALLOWED", "Only DELETE method is allowed", MethodNotAllowed);
 	}
 
 	if (!hasScope(apiKey, "invites:write")) {
@@ -52,7 +56,7 @@ export async function action({ request, params }: Route.ActionArgs) {
 			apiKeyId: apiKey.id,
 			inviteId: params.inviteId,
 		});
-		throw apiError("FORBIDDEN", "API key does not have invites:write scope", 403);
+		throw apiError("FORBIDDEN", "API key does not have invites:write scope", Forbidden);
 	}
 
 	let invite = await db().query.invites.findFirst({
@@ -70,7 +74,7 @@ export async function action({ request, params }: Route.ActionArgs) {
 			apiKeyId: apiKey.id,
 			inviteId: params.inviteId,
 		});
-		throw apiError("NOT_FOUND", "Invite not found", 404);
+		throw apiError("NOT_FOUND", "Invite not found", NotFound);
 	}
 
 	await db().delete(schema.invites).where(eq(schema.invites.id, params.inviteId));

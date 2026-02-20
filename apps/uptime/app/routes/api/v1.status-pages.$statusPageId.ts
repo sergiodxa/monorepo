@@ -9,7 +9,13 @@ import {
 	ApiAuthContext,
 	apiError,
 	apiSuccess,
+	BadRequest,
+	Forbidden,
 	hasScope,
+	InternalServerError,
+	MethodNotAllowed,
+	NotFound,
+	Unauthorized,
 	verifyApiKey,
 } from "~/middleware/api-auth";
 import { db } from "~/middleware/drizzle";
@@ -21,7 +27,7 @@ export const middleware: Route.MiddlewareFunction[] = [
 	async ({ request, context }, next) => {
 		let auth = await verifyApiKey(request);
 		if (!auth) {
-			throw apiError("UNAUTHORIZED", "Invalid or missing API key", 401);
+			throw apiError("UNAUTHORIZED", "Invalid or missing API key", Unauthorized);
 		}
 		context.set(ApiAuthContext, auth);
 		return await next();
@@ -78,7 +84,7 @@ export async function loader({ params }: Route.LoaderArgs) {
 			apiKeyId: apiKey.id,
 			statusPageId: params.statusPageId,
 		});
-		throw apiError("FORBIDDEN", "API key does not have status-pages:read scope", 403);
+		throw apiError("FORBIDDEN", "API key does not have status-pages:read scope", Forbidden);
 	}
 
 	let statusPage = await fetchStatusPageWithRelations(team.id, params.statusPageId);
@@ -89,7 +95,7 @@ export async function loader({ params }: Route.LoaderArgs) {
 			apiKeyId: apiKey.id,
 			statusPageId: params.statusPageId,
 		});
-		throw apiError("NOT_FOUND", "Status page not found", 404);
+		throw apiError("NOT_FOUND", "Status page not found", NotFound);
 	}
 
 	let monitorIds = statusPage.monitors.map((monitor) => monitor.monitorId);
@@ -146,7 +152,7 @@ export async function action({ request, params }: Route.ActionArgs) {
 			statusPageId: params.statusPageId,
 			method: request.method,
 		});
-		throw apiError("FORBIDDEN", "API key does not have status-pages:write scope", 403);
+		throw apiError("FORBIDDEN", "API key does not have status-pages:write scope", Forbidden);
 	}
 
 	let existingStatusPage = await db().query.statusPages.findFirst({
@@ -166,7 +172,7 @@ export async function action({ request, params }: Route.ActionArgs) {
 			statusPageId: params.statusPageId,
 			method: request.method,
 		});
-		throw apiError("NOT_FOUND", "Status page not found", 404);
+		throw apiError("NOT_FOUND", "Status page not found", NotFound);
 	}
 
 	if (request.method === "DELETE") {
@@ -201,7 +207,7 @@ export async function action({ request, params }: Route.ActionArgs) {
 			throw apiError(
 				"VALIDATION_ERROR",
 				result.error.issues.map((issue) => issue.message).join(", "),
-				400,
+				BadRequest,
 			);
 		}
 
@@ -231,7 +237,7 @@ export async function action({ request, params }: Route.ActionArgs) {
 					apiKeyId: apiKey.id,
 					statusPageId: params.statusPageId,
 				});
-				throw apiError("INTERNAL_ERROR", "Failed to update status page", 500);
+				throw apiError("INTERNAL_ERROR", "Failed to update status page", InternalServerError);
 			}
 		}
 
@@ -243,7 +249,7 @@ export async function action({ request, params }: Route.ActionArgs) {
 				apiKeyId: apiKey.id,
 				statusPageId: params.statusPageId,
 			});
-			throw apiError("INTERNAL_ERROR", "Failed to load updated status page", 500);
+			throw apiError("INTERNAL_ERROR", "Failed to load updated status page", InternalServerError);
 		}
 
 		let monitorIds = statusPageWithRelations.monitors.map((monitor) => monitor.monitorId);
@@ -272,5 +278,9 @@ export async function action({ request, params }: Route.ActionArgs) {
 		statusPageId: params.statusPageId,
 		method: request.method,
 	});
-	throw apiError("METHOD_NOT_ALLOWED", "Only GET, PUT, and DELETE methods are allowed", 405);
+	throw apiError(
+		"METHOD_NOT_ALLOWED",
+		"Only GET, PUT, and DELETE methods are allowed",
+		MethodNotAllowed,
+	);
 }

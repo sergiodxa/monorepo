@@ -1,6 +1,5 @@
-import type { Result } from "@pkg/result";
-
-import { failure, success } from "@pkg/result";
+import { Json } from "@pkg/http/content-type";
+import { type Result, failure, success } from "@pkg/result";
 
 export interface SlackAlertParams {
 	webhookUrl: string;
@@ -158,7 +157,7 @@ export async function sendSlackAlert(
 
 	let response = await fetch(params.webhookUrl, {
 		method: "POST",
-		headers: { "Content-Type": "application/json" },
+		headers: { "Content-Type": Json },
 		body: JSON.stringify(message),
 	});
 

@@ -9,7 +9,14 @@ import {
 	ApiAuthContext,
 	apiError,
 	apiSuccess,
+	BadRequest,
+	Created,
+	Forbidden,
 	hasScope,
+	InternalServerError,
+	MethodNotAllowed,
+	NotFound,
+	Unauthorized,
 	verifyApiKey,
 } from "~/middleware/api-auth";
 import { db } from "~/middleware/drizzle";
@@ -21,7 +28,7 @@ export const middleware: Route.MiddlewareFunction[] = [
 	async ({ request, context }, next) => {
 		let auth = await verifyApiKey(request);
 		if (!auth) {
-			throw apiError("UNAUTHORIZED", "Invalid or missing API key", 401);
+			throw apiError("UNAUTHORIZED", "Invalid or missing API key", Unauthorized);
 		}
 		context.set(ApiAuthContext, auth);
 		return await next();
@@ -42,7 +49,7 @@ export async function loader() {
 			teamId: team.id,
 			apiKeyId: apiKey.id,
 		});
-		throw apiError("FORBIDDEN", "API key does not have team-domains:read scope", 403);
+		throw apiError("FORBIDDEN", "API key does not have team-domains:read scope", Forbidden);
 	}
 
 	let teamDomains = await db().query.teamDomains.findMany({
@@ -96,7 +103,7 @@ export async function action({ request }: Route.ActionArgs) {
 			apiKeyId: apiKey.id,
 			method: request.method,
 		});
-		throw apiError("FORBIDDEN", "API key does not have team-domains:write scope", 403);
+		throw apiError("FORBIDDEN", "API key does not have team-domains:write scope", Forbidden);
 	}
 
 	if (request.method === "POST") {
@@ -110,7 +117,7 @@ export async function action({ request }: Route.ActionArgs) {
 			throw apiError(
 				"VALIDATION_ERROR",
 				result.error.issues.map((issue) => issue.message).join(", "),
-				400,
+				BadRequest,
 			);
 		}
 
@@ -134,7 +141,7 @@ export async function action({ request }: Route.ActionArgs) {
 				teamId: team.id,
 				apiKeyId: apiKey.id,
 			});
-			throw apiError("INTERNAL_ERROR", "Failed to add team domain", 500);
+			throw apiError("INTERNAL_ERROR", "Failed to add team domain", InternalServerError);
 		}
 
 		logger().info("api.v1.team-domains.create.success", {
@@ -143,7 +150,7 @@ export async function action({ request }: Route.ActionArgs) {
 			teamDomainId: teamDomain.id,
 		});
 
-		return apiSuccess({ teamDomain }, 201);
+		return apiSuccess({ teamDomain }, Created);
 	}
 
 	if (request.method === "DELETE") {
@@ -157,7 +164,7 @@ export async function action({ request }: Route.ActionArgs) {
 			throw apiError(
 				"VALIDATION_ERROR",
 				result.error.issues.map((issue) => issue.message).join(", "),
-				400,
+				BadRequest,
 			);
 		}
 
@@ -176,7 +183,7 @@ export async function action({ request }: Route.ActionArgs) {
 				apiKeyId: apiKey.id,
 				teamDomainId: result.data.id,
 			});
-			throw apiError("NOT_FOUND", "Team domain not found", 404);
+			throw apiError("NOT_FOUND", "Team domain not found", NotFound);
 		}
 
 		await db().delete(schema.teamDomains).where(eq(schema.teamDomains.id, result.data.id));
@@ -198,6 +205,6 @@ export async function action({ request }: Route.ActionArgs) {
 	throw apiError(
 		"METHOD_NOT_ALLOWED",
 		"Only POST and DELETE methods are allowed for this endpoint",
-		405,
+		MethodNotAllowed,
 	);
 }

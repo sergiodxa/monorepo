@@ -1,3 +1,4 @@
+import { Json } from "@pkg/http/content-type";
 import { Job } from "@pkg/jobs";
 import { env } from "cloudflare:workers";
 import { eq } from "drizzle-orm";
@@ -193,7 +194,7 @@ export class CheckSslJob extends Job {
 						let response = await fetch(alert.config.config.url, {
 							method: "POST",
 							headers: {
-								"Content-Type": "application/json",
+								"Content-Type": Json,
 								...(alert.config.config.secret
 									? { "X-Webhook-Secret": alert.config.config.secret }
 									: {}),

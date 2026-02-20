@@ -1,3 +1,4 @@
+import { Text } from "@pkg/http/content-type";
 import { failure, isFailure, success, type Result } from "@pkg/result";
 import { env } from "cloudflare:workers";
 import { z } from "zod";
@@ -21,7 +22,7 @@ export async function queryAnalytics<T>(sql: string): Promise<Result<T[], Error>
 			method: "POST",
 			headers: {
 				Authorization: `Bearer ${env.CLOUDFLARE_ANALYTICS_TOKEN}`,
-				"Content-Type": "text/plain",
+				"Content-Type": Text,
 			},
 			body: sql,
 		},

@@ -5,7 +5,10 @@ import {
 	ApiAuthContext,
 	apiError,
 	apiSuccess,
+	Forbidden,
 	hasScope,
+	NotFound,
+	Unauthorized,
 	verifyApiKey,
 } from "~/middleware/api-auth";
 import { db } from "~/middleware/drizzle";
@@ -17,7 +20,7 @@ export const middleware: Route.MiddlewareFunction[] = [
 	async ({ request, context }, next) => {
 		let auth = await verifyApiKey(request);
 		if (!auth) {
-			throw apiError("UNAUTHORIZED", "Invalid or missing API key", 401);
+			throw apiError("UNAUTHORIZED", "Invalid or missing API key", Unauthorized);
 		}
 		context.set(ApiAuthContext, auth);
 		return await next();
@@ -40,7 +43,7 @@ export async function loader({ request, params }: Route.LoaderArgs) {
 			apiKeyId: apiKey.id,
 			dnsMonitorId: params.dnsMonitorId,
 		});
-		throw apiError("FORBIDDEN", "API key does not have dns-monitors:read scope", 403);
+		throw apiError("FORBIDDEN", "API key does not have dns-monitors:read scope", Forbidden);
 	}
 
 	let dnsMonitor = await db().query.dnsMonitors.findFirst({
@@ -59,7 +62,7 @@ export async function loader({ request, params }: Route.LoaderArgs) {
 			apiKeyId: apiKey.id,
 			dnsMonitorId: params.dnsMonitorId,
 		});
-		throw apiError("NOT_FOUND", "DNS monitor not found", 404);
+		throw apiError("NOT_FOUND", "DNS monitor not found", NotFound);
 	}
 
 	let url = new URL(request.url);

@@ -9,7 +9,13 @@ import {
 	ApiAuthContext,
 	apiError,
 	apiSuccess,
+	BadRequest,
+	Forbidden,
 	hasScope,
+	InternalServerError,
+	MethodNotAllowed,
+	NotFound,
+	Unauthorized,
 	verifyApiKey,
 } from "~/middleware/api-auth";
 import { db } from "~/middleware/drizzle";
@@ -21,7 +27,7 @@ export const middleware: Route.MiddlewareFunction[] = [
 	async ({ request, context }, next) => {
 		let auth = await verifyApiKey(request);
 		if (!auth) {
-			throw apiError("UNAUTHORIZED", "Invalid or missing API key", 401);
+			throw apiError("UNAUTHORIZED", "Invalid or missing API key", Unauthorized);
 		}
 		context.set(ApiAuthContext, auth);
 		return await next();
@@ -44,7 +50,7 @@ export async function loader({ params }: Route.LoaderArgs) {
 			apiKeyId: apiKey.id,
 			cronJobId: params.cronJobId,
 		});
-		throw apiError("FORBIDDEN", "API key does not have cron-jobs:read scope", 403);
+		throw apiError("FORBIDDEN", "API key does not have cron-jobs:read scope", Forbidden);
 	}
 
 	let cronJob = await db().query.cronJobMonitors.findFirst({
@@ -77,7 +83,7 @@ export async function loader({ params }: Route.LoaderArgs) {
 			apiKeyId: apiKey.id,
 			cronJobId: params.cronJobId,
 		});
-		throw apiError("NOT_FOUND", "Cron job not found", 404);
+		throw apiError("NOT_FOUND", "Cron job not found", NotFound);
 	}
 
 	logger().info("api.v1.cron-jobs.get", {
@@ -118,7 +124,7 @@ export async function action({ request, params }: Route.ActionArgs) {
 			cronJobId: params.cronJobId,
 			method: request.method,
 		});
-		throw apiError("FORBIDDEN", "API key does not have cron-jobs:write scope", 403);
+		throw apiError("FORBIDDEN", "API key does not have cron-jobs:write scope", Forbidden);
 	}
 
 	// First verify the cron job belongs to this team
@@ -138,7 +144,7 @@ export async function action({ request, params }: Route.ActionArgs) {
 			cronJobId: params.cronJobId,
 			method: request.method,
 		});
-		throw apiError("NOT_FOUND", "Cron job not found", 404);
+		throw apiError("NOT_FOUND", "Cron job not found", NotFound);
 	}
 
 	if (request.method === "DELETE") {
@@ -164,7 +170,11 @@ export async function action({ request, params }: Route.ActionArgs) {
 				cronJobId: params.cronJobId,
 				issues: result.error.issues,
 			});
-			throw apiError("VALIDATION_ERROR", result.error.issues.map((i) => i.message).join(", "), 400);
+			throw apiError(
+				"VALIDATION_ERROR",
+				result.error.issues.map((i) => i.message).join(", "),
+				BadRequest,
+			);
 		}
 
 		let updateData: Partial<schema.InsertCronJobMonitor> = {};
@@ -196,7 +206,7 @@ export async function action({ request, params }: Route.ActionArgs) {
 					cronJobId: params.cronJobId,
 					cronExpression: result.data.cronExpression,
 				});
-				throw apiError("VALIDATION_ERROR", "Invalid cron expression", 400);
+				throw apiError("VALIDATION_ERROR", "Invalid cron expression", BadRequest);
 			}
 		} else if (
 			result.data.timezone !== undefined &&
@@ -226,7 +236,7 @@ export async function action({ request, params }: Route.ActionArgs) {
 				apiKeyId: apiKey.id,
 				cronJobId: params.cronJobId,
 			});
-			throw apiError("INTERNAL_ERROR", "Failed to update cron job", 500);
+			throw apiError("INTERNAL_ERROR", "Failed to update cron job", InternalServerError);
 		}
 
 		logger().info("api.v1.cron-jobs.update.success", {
@@ -244,5 +254,9 @@ export async function action({ request, params }: Route.ActionArgs) {
 		cronJobId: params.cronJobId,
 		method: request.method,
 	});
-	throw apiError("METHOD_NOT_ALLOWED", "Only GET, PUT, and DELETE methods are allowed", 405);
+	throw apiError(
+		"METHOD_NOT_ALLOWED",
+		"Only GET, PUT, and DELETE methods are allowed",
+		MethodNotAllowed,
+	);
 }

@@ -6,7 +6,14 @@ import {
 	ApiAuthContext,
 	apiError,
 	apiSuccess,
+	Conflict,
+	Created,
+	Forbidden,
 	hasScope,
+	MethodNotAllowed,
+	NotFound,
+	TooManyRequests,
+	Unauthorized,
 	verifyApiKey,
 } from "~/middleware/api-auth";
 import { db } from "~/middleware/drizzle";
@@ -29,7 +36,7 @@ export const middleware: Route.MiddlewareFunction[] = [
 		let auth = await verifyApiKey(request);
 		if (!auth) {
 			logger().info("api.middleware.auth.failed", { hasAuthHeader });
-			throw apiError("UNAUTHORIZED", "Invalid or missing API key", 401);
+			throw apiError("UNAUTHORIZED", "Invalid or missing API key", Unauthorized);
 		}
 
 		logger().info("api.middleware.auth.success", {
@@ -60,7 +67,7 @@ export async function loader({ request, params }: Route.LoaderArgs) {
 			apiKeyId: apiKey.id,
 			cronJobId: params.cronJobId,
 		});
-		throw apiError("FORBIDDEN", "API key does not have cron-jobs:read scope", 403);
+		throw apiError("FORBIDDEN", "API key does not have cron-jobs:read scope", Forbidden);
 	}
 
 	// Verify the cron job belongs to this team
@@ -75,7 +82,7 @@ export async function loader({ request, params }: Route.LoaderArgs) {
 	});
 
 	if (!cronJob) {
-		throw apiError("NOT_FOUND", "Cron job not found", 404);
+		throw apiError("NOT_FOUND", "Cron job not found", NotFound);
 	}
 
 	// Parse query parameters for pagination
@@ -149,7 +156,7 @@ export async function action({ request, params }: Route.ActionArgs) {
 			cronJobId: params.cronJobId,
 			method: request.method,
 		});
-		throw apiError("METHOD_NOT_ALLOWED", "Only POST method is allowed", 405);
+		throw apiError("METHOD_NOT_ALLOWED", "Only POST method is allowed", MethodNotAllowed);
 	}
 
 	if (!hasScope(apiKey, "cron-jobs:ping")) {
@@ -158,7 +165,7 @@ export async function action({ request, params }: Route.ActionArgs) {
 			apiKeyId: apiKey.id,
 			cronJobId: params.cronJobId,
 		});
-		throw apiError("FORBIDDEN", "API key does not have cron-jobs:ping scope", 403);
+		throw apiError("FORBIDDEN", "API key does not have cron-jobs:ping scope", Forbidden);
 	}
 
 	// Find the cron job and verify it belongs to this team
@@ -182,7 +189,7 @@ export async function action({ request, params }: Route.ActionArgs) {
 			apiKeyId: apiKey.id,
 			cronJobId: params.cronJobId,
 		});
-		throw apiError("NOT_FOUND", "Cron job not found", 404);
+		throw apiError("NOT_FOUND", "Cron job not found", NotFound);
 	}
 
 	// Check if cron job is enabled
@@ -192,7 +199,7 @@ export async function action({ request, params }: Route.ActionArgs) {
 			apiKeyId: apiKey.id,
 			cronJobId: cronJob.id,
 		});
-		throw apiError("CONFLICT", "Cron job is disabled", 409);
+		throw apiError("CONFLICT", "Cron job is disabled", Conflict);
 	}
 
 	// Check rate limiting (1 ping per minute)
@@ -206,7 +213,11 @@ export async function action({ request, params }: Route.ActionArgs) {
 				cronJobId: cronJob.id,
 				timeSinceLastPing,
 			});
-			throw apiError("RATE_LIMITED", "Rate limit exceeded. Max 1 ping per minute.", 429);
+			throw apiError(
+				"RATE_LIMITED",
+				"Rate limit exceeded. Max 1 ping per minute.",
+				TooManyRequests,
+			);
 		}
 	}
 
@@ -291,6 +302,6 @@ export async function action({ request, params }: Route.ActionArgs) {
 				createdAt: ping?.createdAt,
 			},
 		},
-		201,
+		Created,
 	);
 }

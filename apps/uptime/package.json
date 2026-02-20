@@ -28,6 +28,7 @@
 		"@pkg/cn": "workspace:*",
 		"@pkg/db-helpers": "workspace:*",
 		"@pkg/hooks": "workspace:*",
+		"@pkg/http": "workspace:*",
 		"@pkg/jobs": "workspace:*",
 		"@pkg/location": "workspace:*",
 		"@pkg/logger": "workspace:*",

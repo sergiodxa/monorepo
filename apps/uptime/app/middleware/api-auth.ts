@@ -1,3 +1,31 @@
+import type { StatusCode } from "@pkg/http/status-code";
+
+import { json } from "@pkg/http/response";
+import {
+	BadRequest,
+	Conflict,
+	Created,
+	Forbidden,
+	InternalServerError,
+	MethodNotAllowed,
+	NotFound,
+	Ok,
+	TooManyRequests,
+	Unauthorized,
+} from "@pkg/http/status-code";
+
+export {
+	BadRequest,
+	Conflict,
+	Created,
+	Forbidden,
+	InternalServerError,
+	MethodNotAllowed,
+	NotFound,
+	Ok,
+	TooManyRequests,
+	Unauthorized,
+};
 import { eq } from "drizzle-orm";
 import { createContext } from "react-router";
 
@@ -133,23 +161,15 @@ export async function generateApiKey(): Promise<{
 /**
  * Create standard API error response
  */
-export function apiError(code: string, message: string, status: number): Response {
-	return Response.json(
-		{
-			error: {
-				code,
-				message,
-			},
-		},
-		{ status },
-	);
+export function apiError(code: string, message: string, statusCode: StatusCode): Response {
+	return json({ error: { code, message } }, statusCode);
 }
 
 /**
  * Create standard API success response
  */
-export function apiSuccess<T>(data: T, status = 200): Response {
-	return Response.json(
+export function apiSuccess<T>(data: T, statusCode: StatusCode = Ok): Response {
+	return json(
 		{
 			data,
 			meta: {
@@ -157,6 +177,6 @@ export function apiSuccess<T>(data: T, status = 200): Response {
 				timestamp: new Date().toISOString(),
 			},
 		},
-		{ status },
+		statusCode,
 	);
 }

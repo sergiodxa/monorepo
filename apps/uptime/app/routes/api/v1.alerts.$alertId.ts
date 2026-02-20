@@ -9,7 +9,13 @@ import {
 	ApiAuthContext,
 	apiError,
 	apiSuccess,
+	BadRequest,
+	Forbidden,
 	hasScope,
+	InternalServerError,
+	MethodNotAllowed,
+	NotFound,
+	Unauthorized,
 	verifyApiKey,
 } from "~/middleware/api-auth";
 import { db } from "~/middleware/drizzle";
@@ -21,7 +27,7 @@ export const middleware: Route.MiddlewareFunction[] = [
 	async ({ request, context }, next) => {
 		let auth = await verifyApiKey(request);
 		if (!auth) {
-			throw apiError("UNAUTHORIZED", "Invalid or missing API key", 401);
+			throw apiError("UNAUTHORIZED", "Invalid or missing API key", Unauthorized);
 		}
 		context.set(ApiAuthContext, auth);
 		return await next();
@@ -44,7 +50,7 @@ export async function loader({ params }: Route.LoaderArgs) {
 			apiKeyId: apiKey.id,
 			alertId: params.alertId,
 		});
-		throw apiError("FORBIDDEN", "API key does not have alerts:read scope", 403);
+		throw apiError("FORBIDDEN", "API key does not have alerts:read scope", Forbidden);
 	}
 
 	let alert = await db().query.alerts.findFirst({
@@ -72,7 +78,7 @@ export async function loader({ params }: Route.LoaderArgs) {
 			apiKeyId: apiKey.id,
 			alertId: params.alertId,
 		});
-		throw apiError("NOT_FOUND", "Alert not found", 404);
+		throw apiError("NOT_FOUND", "Alert not found", NotFound);
 	}
 
 	// Transform config to not expose sensitive data
@@ -125,7 +131,7 @@ export async function action({ request, params }: Route.ActionArgs) {
 			alertId: params.alertId,
 			method: request.method,
 		});
-		throw apiError("FORBIDDEN", "API key does not have alerts:write scope", 403);
+		throw apiError("FORBIDDEN", "API key does not have alerts:write scope", Forbidden);
 	}
 
 	// First verify the alert belongs to this team
@@ -145,7 +151,7 @@ export async function action({ request, params }: Route.ActionArgs) {
 			alertId: params.alertId,
 			method: request.method,
 		});
-		throw apiError("NOT_FOUND", "Alert not found", 404);
+		throw apiError("NOT_FOUND", "Alert not found", NotFound);
 	}
 
 	if (request.method === "DELETE") {
@@ -169,7 +175,11 @@ export async function action({ request, params }: Route.ActionArgs) {
 				alertId: params.alertId,
 				issues: result.error.issues,
 			});
-			throw apiError("VALIDATION_ERROR", result.error.issues.map((i) => i.message).join(", "), 400);
+			throw apiError(
+				"VALIDATION_ERROR",
+				result.error.issues.map((i) => i.message).join(", "),
+				BadRequest,
+			);
 		}
 
 		// If monitorId is provided and not null, verify it belongs to this team
@@ -191,7 +201,7 @@ export async function action({ request, params }: Route.ActionArgs) {
 					alertId: params.alertId,
 					monitorId: result.data.monitorId,
 				});
-				throw apiError("NOT_FOUND", "Monitor not found", 404);
+				throw apiError("NOT_FOUND", "Monitor not found", NotFound);
 			}
 		}
 
@@ -215,7 +225,7 @@ export async function action({ request, params }: Route.ActionArgs) {
 				apiKeyId: apiKey.id,
 				alertId: params.alertId,
 			});
-			throw apiError("INTERNAL_ERROR", "Failed to update alert", 500);
+			throw apiError("INTERNAL_ERROR", "Failed to update alert", InternalServerError);
 		}
 
 		logger().info("api.v1.alerts.update.success", {
@@ -244,5 +254,9 @@ export async function action({ request, params }: Route.ActionArgs) {
 		alertId: params.alertId,
 		method: request.method,
 	});
-	throw apiError("METHOD_NOT_ALLOWED", "Only GET, PUT, and DELETE methods are allowed", 405);
+	throw apiError(
+		"METHOD_NOT_ALLOWED",
+		"Only GET, PUT, and DELETE methods are allowed",
+		MethodNotAllowed,
+	);
 }

@@ -8,7 +8,12 @@ import {
 	ApiAuthContext,
 	apiError,
 	apiSuccess,
+	Forbidden,
 	hasScope,
+	InternalServerError,
+	MethodNotAllowed,
+	NotFound,
+	Unauthorized,
 	verifyApiKey,
 } from "~/middleware/api-auth";
 import { db } from "~/middleware/drizzle";
@@ -20,7 +25,7 @@ export const middleware: Route.MiddlewareFunction[] = [
 	async ({ request, context }, next) => {
 		let auth = await verifyApiKey(request);
 		if (!auth) {
-			throw apiError("UNAUTHORIZED", "Invalid or missing API key", 401);
+			throw apiError("UNAUTHORIZED", "Invalid or missing API key", Unauthorized);
 		}
 		context.set(ApiAuthContext, auth);
 		return await next();
@@ -61,7 +66,7 @@ export async function action({ request, params }: Route.ActionArgs) {
 			maintenanceWindowId: params.maintenanceId,
 			method: request.method,
 		});
-		throw apiError("METHOD_NOT_ALLOWED", "Only POST method is allowed", 405);
+		throw apiError("METHOD_NOT_ALLOWED", "Only POST method is allowed", MethodNotAllowed);
 	}
 
 	if (!hasScope(apiKey, "maintenance:write")) {
@@ -70,7 +75,7 @@ export async function action({ request, params }: Route.ActionArgs) {
 			apiKeyId: apiKey.id,
 			maintenanceWindowId: params.maintenanceId,
 		});
-		throw apiError("FORBIDDEN", "API key does not have maintenance:write scope", 403);
+		throw apiError("FORBIDDEN", "API key does not have maintenance:write scope", Forbidden);
 	}
 
 	let existingMaintenanceWindow = await db().query.maintenanceWindows.findFirst({
@@ -88,7 +93,7 @@ export async function action({ request, params }: Route.ActionArgs) {
 			apiKeyId: apiKey.id,
 			maintenanceWindowId: params.maintenanceId,
 		});
-		throw apiError("NOT_FOUND", "Maintenance window not found", 404);
+		throw apiError("NOT_FOUND", "Maintenance window not found", NotFound);
 	}
 
 	let now = new Date();
@@ -105,7 +110,7 @@ export async function action({ request, params }: Route.ActionArgs) {
 			apiKeyId: apiKey.id,
 			maintenanceWindowId: params.maintenanceId,
 		});
-		throw apiError("INTERNAL_ERROR", "Failed to end maintenance window", 500);
+		throw apiError("INTERNAL_ERROR", "Failed to end maintenance window", InternalServerError);
 	}
 
 	logger().info("api.v1.maintenance.end.success", {

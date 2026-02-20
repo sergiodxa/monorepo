@@ -8,7 +8,13 @@ import {
 	ApiAuthContext,
 	apiError,
 	apiSuccess,
+	BadRequest,
+	Created,
+	Forbidden,
 	hasScope,
+	InternalServerError,
+	MethodNotAllowed,
+	Unauthorized,
 	verifyApiKey,
 } from "~/middleware/api-auth";
 import { db } from "~/middleware/drizzle";
@@ -20,7 +26,7 @@ export const middleware: Route.MiddlewareFunction[] = [
 	async ({ request, context }, next) => {
 		let auth = await verifyApiKey(request);
 		if (!auth) {
-			throw apiError("UNAUTHORIZED", "Invalid or missing API key", 401);
+			throw apiError("UNAUTHORIZED", "Invalid or missing API key", Unauthorized);
 		}
 		context.set(ApiAuthContext, auth);
 		return await next();
@@ -41,7 +47,7 @@ export async function loader() {
 			teamId: team.id,
 			apiKeyId: apiKey.id,
 		});
-		throw apiError("FORBIDDEN", "API key does not have status-pages:read scope", 403);
+		throw apiError("FORBIDDEN", "API key does not have status-pages:read scope", Forbidden);
 	}
 
 	let statusPages = await db().query.statusPages.findMany({
@@ -105,7 +111,7 @@ export async function action({ request }: Route.ActionArgs) {
 			apiKeyId: apiKey.id,
 			method: request.method,
 		});
-		throw apiError("METHOD_NOT_ALLOWED", "Only POST method is allowed", 405);
+		throw apiError("METHOD_NOT_ALLOWED", "Only POST method is allowed", MethodNotAllowed);
 	}
 
 	if (!hasScope(apiKey, "status-pages:write")) {
@@ -113,7 +119,7 @@ export async function action({ request }: Route.ActionArgs) {
 			teamId: team.id,
 			apiKeyId: apiKey.id,
 		});
-		throw apiError("FORBIDDEN", "API key does not have status-pages:write scope", 403);
+		throw apiError("FORBIDDEN", "API key does not have status-pages:write scope", Forbidden);
 	}
 
 	let result = await validate(request, createStatusPageSchema);
@@ -126,7 +132,7 @@ export async function action({ request }: Route.ActionArgs) {
 		throw apiError(
 			"VALIDATION_ERROR",
 			result.error.issues.map((issue) => issue.message).join(", "),
-			400,
+			BadRequest,
 		);
 	}
 
@@ -150,7 +156,7 @@ export async function action({ request }: Route.ActionArgs) {
 			teamId: team.id,
 			apiKeyId: apiKey.id,
 		});
-		throw apiError("INTERNAL_ERROR", "Failed to create status page", 500);
+		throw apiError("INTERNAL_ERROR", "Failed to create status page", InternalServerError);
 	}
 
 	logger().info("api.v1.status-pages.create.success", {
@@ -159,5 +165,5 @@ export async function action({ request }: Route.ActionArgs) {
 		statusPageId: statusPage.id,
 	});
 
-	return apiSuccess({ statusPage }, 201);
+	return apiSuccess({ statusPage }, Created);
 }

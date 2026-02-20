@@ -10,7 +10,14 @@ import {
 	ApiAuthContext,
 	apiError,
 	apiSuccess,
+	BadRequest,
+	Created,
+	Forbidden,
 	hasScope,
+	InternalServerError,
+	MethodNotAllowed,
+	NotFound,
+	Unauthorized,
 	verifyApiKey,
 } from "~/middleware/api-auth";
 import { db } from "~/middleware/drizzle";
@@ -22,7 +29,7 @@ export const middleware: Route.MiddlewareFunction[] = [
 	async ({ request, context }, next) => {
 		let auth = await verifyApiKey(request);
 		if (!auth) {
-			throw apiError("UNAUTHORIZED", "Invalid or missing API key", 401);
+			throw apiError("UNAUTHORIZED", "Invalid or missing API key", Unauthorized);
 		}
 		context.set(ApiAuthContext, auth);
 		return await next();
@@ -80,7 +87,7 @@ export async function loader() {
 			teamId: team.id,
 			apiKeyId: apiKey.id,
 		});
-		throw apiError("FORBIDDEN", "API key does not have maintenance:read scope", 403);
+		throw apiError("FORBIDDEN", "API key does not have maintenance:read scope", Forbidden);
 	}
 
 	let maintenanceWindows = await db().query.maintenanceWindows.findMany({
@@ -130,7 +137,7 @@ export async function action({ request }: Route.ActionArgs) {
 			apiKeyId: apiKey.id,
 			method: request.method,
 		});
-		throw apiError("METHOD_NOT_ALLOWED", "Only POST method is allowed", 405);
+		throw apiError("METHOD_NOT_ALLOWED", "Only POST method is allowed", MethodNotAllowed);
 	}
 
 	if (!hasScope(apiKey, "maintenance:write")) {
@@ -138,7 +145,7 @@ export async function action({ request }: Route.ActionArgs) {
 			teamId: team.id,
 			apiKeyId: apiKey.id,
 		});
-		throw apiError("FORBIDDEN", "API key does not have maintenance:write scope", 403);
+		throw apiError("FORBIDDEN", "API key does not have maintenance:write scope", Forbidden);
 	}
 
 	let result = await validate(request, createMaintenanceSchema);
@@ -151,7 +158,7 @@ export async function action({ request }: Route.ActionArgs) {
 		throw apiError(
 			"VALIDATION_ERROR",
 			result.error.issues.map((issue) => issue.message).join(", "),
-			400,
+			BadRequest,
 		);
 	}
 
@@ -172,7 +179,7 @@ export async function action({ request }: Route.ActionArgs) {
 				apiKeyId: apiKey.id,
 				monitorId: result.data.monitorId,
 			});
-			throw apiError("NOT_FOUND", "Monitor not found", 404);
+			throw apiError("NOT_FOUND", "Monitor not found", NotFound);
 		}
 	}
 
@@ -194,7 +201,7 @@ export async function action({ request }: Route.ActionArgs) {
 			teamId: team.id,
 			apiKeyId: apiKey.id,
 		});
-		throw apiError("INTERNAL_ERROR", "Failed to create maintenance window", 500);
+		throw apiError("INTERNAL_ERROR", "Failed to create maintenance window", InternalServerError);
 	}
 
 	logger().info("api.v1.maintenance.create.success", {
@@ -203,5 +210,5 @@ export async function action({ request }: Route.ActionArgs) {
 		maintenanceWindowId: maintenanceWindow.id,
 	});
 
-	return apiSuccess({ maintenanceWindow: serializeMaintenanceWindow(maintenanceWindow) }, 201);
+	return apiSuccess({ maintenanceWindow: serializeMaintenanceWindow(maintenanceWindow) }, Created);
 }

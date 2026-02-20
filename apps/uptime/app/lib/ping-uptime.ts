@@ -1,3 +1,5 @@
+import { Json } from "@pkg/http/content-type";
+
 /**
  * Ping a cron job monitor to indicate the job is running
  * @param cronJobMonitorId - The UUID of the cron job monitor
@@ -14,7 +16,7 @@ export async function pingUptime(cronJobMonitorId: string, apiKey?: string): Pro
 			method: "POST",
 			headers: {
 				Authorization: `Bearer ${apiKey}`,
-				"Content-Type": "application/json",
+				"Content-Type": Json,
 			},
 		});
 	} catch (error) {

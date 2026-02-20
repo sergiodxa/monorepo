@@ -1,3 +1,4 @@
+import { Json } from "@pkg/http/content-type";
 import { Job } from "@pkg/jobs";
 import { isFailure } from "@pkg/result";
 import { env } from "cloudflare:workers";
@@ -229,7 +230,7 @@ export class CheckTcpJob extends Job {
 						let response = await fetch(alert.config.config.url, {
 							method: "POST",
 							headers: {
-								"Content-Type": "application/json",
+								"Content-Type": Json,
 								...(alert.config.config.secret
 									? { "X-Webhook-Secret": alert.config.config.secret }
 									: {}),
@@ -254,7 +255,7 @@ export class CheckTcpJob extends Job {
 
 						let response = await fetch(alert.config.config.webhookUrl, {
 							method: "POST",
-							headers: { "Content-Type": "application/json" },
+							headers: { "Content-Type": Json },
 							body: JSON.stringify({
 								text: message,
 								...(alert.config.config.channel ? { channel: alert.config.config.channel } : {}),
@@ -278,7 +279,7 @@ export class CheckTcpJob extends Job {
 
 						let response = await fetch(alert.config.config.webhookUrl, {
 							method: "POST",
-							headers: { "Content-Type": "application/json" },
+							headers: { "Content-Type": Json },
 							body: JSON.stringify({ content: message }),
 						});
 

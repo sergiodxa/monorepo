@@ -1,3 +1,4 @@
+import { Json } from "@pkg/http/content-type";
 import { type Result, failure, success } from "@pkg/result";
 
 // Discord embed colors
@@ -122,9 +123,7 @@ export async function sendDiscordAlert(params: DiscordAlertParams): Promise<Resu
 	try {
 		let response = await fetch(webhookUrl, {
 			method: "POST",
-			headers: {
-				"Content-Type": "application/json",
-			},
+			headers: { "Content-Type": Json },
 			body: JSON.stringify(payload),
 		});
 

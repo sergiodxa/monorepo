@@ -3,7 +3,9 @@ import {
 	ApiAuthContext,
 	apiError,
 	apiSuccess,
+	Forbidden,
 	hasScope,
+	Unauthorized,
 	verifyApiKey,
 } from "~/middleware/api-auth";
 import { db } from "~/middleware/drizzle";
@@ -16,7 +18,7 @@ export const middleware: Route.MiddlewareFunction[] = [
 	async ({ request, context }, next) => {
 		let auth = await verifyApiKey(request);
 		if (!auth) {
-			throw apiError("UNAUTHORIZED", "Invalid or missing API key", 401);
+			throw apiError("UNAUTHORIZED", "Invalid or missing API key", Unauthorized);
 		}
 		context.set(ApiAuthContext, auth);
 		return await next();
@@ -37,7 +39,7 @@ export async function loader() {
 			teamId: team.id,
 			apiKeyId: apiKey.id,
 		});
-		throw apiError("FORBIDDEN", "API key does not have monitors:read scope", 403);
+		throw apiError("FORBIDDEN", "API key does not have monitors:read scope", Forbidden);
 	}
 
 	let stats = await Monitor.getStatsByTeamId(db(), team.id);

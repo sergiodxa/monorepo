@@ -1,3 +1,4 @@
+import { ok, serviceUnavailable } from "@pkg/http/response/json";
 import { isFailure } from "@pkg/result";
 import { env } from "cloudflare:workers";
 
@@ -10,13 +11,10 @@ interface CountResult {
 export async function loader() {
 	let hasBinding = typeof env.PING_RESULTS?.writeDataPoint === "function";
 	if (!hasBinding) {
-		return Response.json(
-			{
-				status: "error",
-				message: "Analytics Engine binding (PING_RESULTS) not configured",
-			},
-			{ status: 503 },
-		);
+		return serviceUnavailable({
+			status: "error",
+			message: "Analytics Engine binding (PING_RESULTS) not configured",
+		});
 	}
 
 	let result = await queryAnalytics<CountResult>(
@@ -24,28 +22,22 @@ export async function loader() {
 	);
 
 	if (isFailure(result)) {
-		return Response.json(
-			{
-				status: "degraded",
-				binding: true,
-				apiConnected: false,
-				eventCount: null,
-				message: `Write binding available, but read API failed: ${result.error.message}`,
-			},
-			{ status: 200 },
-		);
+		return ok({
+			status: "degraded",
+			binding: true,
+			apiConnected: false,
+			eventCount: null,
+			message: `Write binding available, but read API failed: ${result.error.message}`,
+		});
 	}
 
 	let eventCount = result.data[0]?.count ?? 0;
 
-	return Response.json(
-		{
-			status: "ok",
-			binding: true,
-			apiConnected: true,
-			eventCount,
-			message: `Analytics Engine connected, ${eventCount} events recorded`,
-		},
-		{ status: 200 },
-	);
+	return ok({
+		status: "ok",
+		binding: true,
+		apiConnected: true,
+		eventCount,
+		message: `Analytics Engine connected, ${eventCount} events recorded`,
+	});
 }

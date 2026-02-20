@@ -9,7 +9,12 @@ import {
 	ApiAuthContext,
 	apiError,
 	apiSuccess,
+	BadRequest,
+	Forbidden,
 	hasScope,
+	MethodNotAllowed,
+	NotFound,
+	Unauthorized,
 	verifyApiKey,
 } from "~/middleware/api-auth";
 import { db } from "~/middleware/drizzle";
@@ -21,7 +26,7 @@ export const middleware: Route.MiddlewareFunction[] = [
 	async ({ request, context }, next) => {
 		let auth = await verifyApiKey(request);
 		if (!auth) {
-			throw apiError("UNAUTHORIZED", "Invalid or missing API key", 401);
+			throw apiError("UNAUTHORIZED", "Invalid or missing API key", Unauthorized);
 		}
 		context.set(ApiAuthContext, auth);
 		return await next();
@@ -65,7 +70,7 @@ export async function action({ request, params }: Route.ActionArgs) {
 			statusPageId: params.statusPageId,
 			method: request.method,
 		});
-		throw apiError("METHOD_NOT_ALLOWED", "Only PUT method is allowed", 405);
+		throw apiError("METHOD_NOT_ALLOWED", "Only PUT method is allowed", MethodNotAllowed);
 	}
 
 	if (!hasScope(apiKey, "status-pages:write")) {
@@ -74,7 +79,7 @@ export async function action({ request, params }: Route.ActionArgs) {
 			apiKeyId: apiKey.id,
 			statusPageId: params.statusPageId,
 		});
-		throw apiError("FORBIDDEN", "API key does not have status-pages:write scope", 403);
+		throw apiError("FORBIDDEN", "API key does not have status-pages:write scope", Forbidden);
 	}
 
 	let statusPage = await db().query.statusPages.findFirst({
@@ -93,7 +98,7 @@ export async function action({ request, params }: Route.ActionArgs) {
 			apiKeyId: apiKey.id,
 			statusPageId: params.statusPageId,
 		});
-		throw apiError("NOT_FOUND", "Status page not found", 404);
+		throw apiError("NOT_FOUND", "Status page not found", NotFound);
 	}
 
 	let result = await validate(request, updateAssociationsSchema);
@@ -107,7 +112,7 @@ export async function action({ request, params }: Route.ActionArgs) {
 		throw apiError(
 			"VALIDATION_ERROR",
 			result.error.issues.map((issue) => issue.message).join(", "),
-			400,
+			BadRequest,
 		);
 	}
 
@@ -133,7 +138,7 @@ export async function action({ request, params }: Route.ActionArgs) {
 				requested: monitorIds.length,
 				found: monitors.length,
 			});
-			throw apiError("NOT_FOUND", "One or more monitors not found", 404);
+			throw apiError("NOT_FOUND", "One or more monitors not found", NotFound);
 		}
 	}
 
@@ -156,7 +161,7 @@ export async function action({ request, params }: Route.ActionArgs) {
 				requested: cronJobIds.length,
 				found: cronJobs.length,
 			});
-			throw apiError("NOT_FOUND", "One or more cron jobs not found", 404);
+			throw apiError("NOT_FOUND", "One or more cron jobs not found", NotFound);
 		}
 	}
 

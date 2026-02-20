@@ -9,7 +9,13 @@ import {
 	ApiAuthContext,
 	apiError,
 	apiSuccess,
+	BadRequest,
+	Forbidden,
 	hasScope,
+	InternalServerError,
+	MethodNotAllowed,
+	NotFound,
+	Unauthorized,
 	verifyApiKey,
 } from "~/middleware/api-auth";
 import { db } from "~/middleware/drizzle";
@@ -21,7 +27,7 @@ export const middleware: Route.MiddlewareFunction[] = [
 	async ({ request, context }, next) => {
 		let auth = await verifyApiKey(request);
 		if (!auth) {
-			throw apiError("UNAUTHORIZED", "Invalid or missing API key", 401);
+			throw apiError("UNAUTHORIZED", "Invalid or missing API key", Unauthorized);
 		}
 		context.set(ApiAuthContext, auth);
 		return await next();
@@ -42,7 +48,7 @@ export async function loader() {
 			teamId: team.id,
 			apiKeyId: apiKey.id,
 		});
-		throw apiError("FORBIDDEN", "API key does not have teams:read scope", 403);
+		throw apiError("FORBIDDEN", "API key does not have teams:read scope", Forbidden);
 	}
 
 	let dbTeam = await db().query.teams.findFirst({
@@ -65,7 +71,7 @@ export async function loader() {
 			teamId: team.id,
 			apiKeyId: apiKey.id,
 		});
-		throw apiError("NOT_FOUND", "Team not found", 404);
+		throw apiError("NOT_FOUND", "Team not found", NotFound);
 	}
 
 	logger().info("api.v1.team.get.success", {
@@ -101,7 +107,7 @@ export async function action({ request }: Route.ActionArgs) {
 			apiKeyId: apiKey.id,
 			method: request.method,
 		});
-		throw apiError("METHOD_NOT_ALLOWED", "Only PUT method is allowed", 405);
+		throw apiError("METHOD_NOT_ALLOWED", "Only PUT method is allowed", MethodNotAllowed);
 	}
 
 	if (!hasScope(apiKey, "teams:write")) {
@@ -109,7 +115,7 @@ export async function action({ request }: Route.ActionArgs) {
 			teamId: team.id,
 			apiKeyId: apiKey.id,
 		});
-		throw apiError("FORBIDDEN", "API key does not have teams:write scope", 403);
+		throw apiError("FORBIDDEN", "API key does not have teams:write scope", Forbidden);
 	}
 
 	let result = await validate(request, updateTeamSchema);
@@ -122,7 +128,7 @@ export async function action({ request }: Route.ActionArgs) {
 		throw apiError(
 			"VALIDATION_ERROR",
 			result.error.issues.map((issue) => issue.message).join(", "),
-			400,
+			BadRequest,
 		);
 	}
 
@@ -149,7 +155,7 @@ export async function action({ request }: Route.ActionArgs) {
 			teamId: team.id,
 			apiKeyId: apiKey.id,
 		});
-		throw apiError("INTERNAL_ERROR", "Failed to update team", 500);
+		throw apiError("INTERNAL_ERROR", "Failed to update team", InternalServerError);
 	}
 
 	logger().info("api.v1.team.update.success", {

@@ -1,13 +1,14 @@
 import type { ActionFunctionArgs } from "react-router";
 
+import { accepted, methodNotAllowed } from "@pkg/http/response/json";
 import { env } from "cloudflare:workers";
 
 export async function action({ request }: ActionFunctionArgs) {
 	if (request.method !== "POST") {
-		return Response.json({ error: "Method Not Allowed" }, { status: 405 });
+		return methodNotAllowed({ error: "Method Not Allowed" });
 	}
 
 	await env.QUEUE.send({ type: "backfillDailyStats" });
 
-	return Response.json({ status: "queued" }, { status: 202 });
+	return accepted({ status: "queued" });
 }

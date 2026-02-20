@@ -11,7 +11,13 @@ import {
 	ApiAuthContext,
 	apiError,
 	apiSuccess,
+	BadRequest,
+	Forbidden,
 	hasScope,
+	InternalServerError,
+	MethodNotAllowed,
+	NotFound,
+	Unauthorized,
 	verifyApiKey,
 } from "~/middleware/api-auth";
 import { db } from "~/middleware/drizzle";
@@ -26,7 +32,7 @@ export const middleware: Route.MiddlewareFunction[] = [
 	async ({ request, context }, next) => {
 		let auth = await verifyApiKey(request);
 		if (!auth) {
-			throw apiError("UNAUTHORIZED", "Invalid or missing API key", 401);
+			throw apiError("UNAUTHORIZED", "Invalid or missing API key", Unauthorized);
 		}
 		context.set(ApiAuthContext, auth);
 		return await next();
@@ -49,7 +55,7 @@ export async function loader({ params }: Route.LoaderArgs) {
 			apiKeyId: apiKey.id,
 			tcpMonitorId: params.tcpMonitorId,
 		});
-		throw apiError("FORBIDDEN", "API key does not have tcp-monitors:read scope", 403);
+		throw apiError("FORBIDDEN", "API key does not have tcp-monitors:read scope", Forbidden);
 	}
 
 	let monitor = await db().query.tcpMonitors.findFirst({
@@ -81,7 +87,7 @@ export async function loader({ params }: Route.LoaderArgs) {
 			apiKeyId: apiKey.id,
 			tcpMonitorId: params.tcpMonitorId,
 		});
-		throw apiError("NOT_FOUND", "TCP monitor not found", 404);
+		throw apiError("NOT_FOUND", "TCP monitor not found", NotFound);
 	}
 
 	logger().info("api.v1.tcp-monitors.get", {
@@ -121,7 +127,7 @@ export async function action({ request, params }: Route.ActionArgs) {
 			tcpMonitorId: params.tcpMonitorId,
 			method: request.method,
 		});
-		throw apiError("FORBIDDEN", "API key does not have tcp-monitors:write scope", 403);
+		throw apiError("FORBIDDEN", "API key does not have tcp-monitors:write scope", Forbidden);
 	}
 
 	let existingMonitor = await db().query.tcpMonitors.findFirst({
@@ -140,7 +146,7 @@ export async function action({ request, params }: Route.ActionArgs) {
 			tcpMonitorId: params.tcpMonitorId,
 			method: request.method,
 		});
-		throw apiError("NOT_FOUND", "TCP monitor not found", 404);
+		throw apiError("NOT_FOUND", "TCP monitor not found", NotFound);
 	}
 
 	if (request.method === "DELETE") {
@@ -164,7 +170,11 @@ export async function action({ request, params }: Route.ActionArgs) {
 				tcpMonitorId: params.tcpMonitorId,
 				issues: result.error.issues,
 			});
-			throw apiError("VALIDATION_ERROR", result.error.issues.map((i) => i.message).join(", "), 400);
+			throw apiError(
+				"VALIDATION_ERROR",
+				result.error.issues.map((i) => i.message).join(", "),
+				BadRequest,
+			);
 		}
 
 		let updateData: Partial<schema.InsertTcpMonitor> = {};
@@ -188,7 +198,7 @@ export async function action({ request, params }: Route.ActionArgs) {
 				apiKeyId: apiKey.id,
 				tcpMonitorId: params.tcpMonitorId,
 			});
-			throw apiError("INTERNAL_ERROR", "Failed to update TCP monitor", 500);
+			throw apiError("INTERNAL_ERROR", "Failed to update TCP monitor", InternalServerError);
 		}
 
 		logger().info("api.v1.tcp-monitors.update.success", {
@@ -206,5 +216,9 @@ export async function action({ request, params }: Route.ActionArgs) {
 		tcpMonitorId: params.tcpMonitorId,
 		method: request.method,
 	});
-	throw apiError("METHOD_NOT_ALLOWED", "Only GET, PUT, and DELETE methods are allowed", 405);
+	throw apiError(
+		"METHOD_NOT_ALLOWED",
+		"Only GET, PUT, and DELETE methods are allowed",
+		MethodNotAllowed,
+	);
 }

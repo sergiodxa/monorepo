@@ -6,7 +6,11 @@ import {
 	ApiAuthContext,
 	apiError,
 	apiSuccess,
+	Forbidden,
 	hasScope,
+	MethodNotAllowed,
+	NotFound,
+	Unauthorized,
 	verifyApiKey,
 } from "~/middleware/api-auth";
 import { db } from "~/middleware/drizzle";
@@ -18,7 +22,7 @@ export const middleware: Route.MiddlewareFunction[] = [
 	async ({ request, context }, next) => {
 		let auth = await verifyApiKey(request);
 		if (!auth) {
-			throw apiError("UNAUTHORIZED", "Invalid or missing API key", 401);
+			throw apiError("UNAUTHORIZED", "Invalid or missing API key", Unauthorized);
 		}
 		context.set(ApiAuthContext, auth);
 		return await next();
@@ -45,7 +49,7 @@ export async function action({ request, params }: Route.ActionArgs) {
 			contentCheckId: params.contentCheckId,
 			method: request.method,
 		});
-		throw apiError("METHOD_NOT_ALLOWED", "Only DELETE method is allowed", 405);
+		throw apiError("METHOD_NOT_ALLOWED", "Only DELETE method is allowed", MethodNotAllowed);
 	}
 
 	if (!hasScope(apiKey, "monitors:write")) {
@@ -55,7 +59,7 @@ export async function action({ request, params }: Route.ActionArgs) {
 			monitorId: params.monitorId,
 			contentCheckId: params.contentCheckId,
 		});
-		throw apiError("FORBIDDEN", "API key does not have monitors:write scope", 403);
+		throw apiError("FORBIDDEN", "API key does not have monitors:write scope", Forbidden);
 	}
 
 	let contentCheck = await db().query.monitorContentChecks.findFirst({
@@ -79,7 +83,7 @@ export async function action({ request, params }: Route.ActionArgs) {
 			monitorId: params.monitorId,
 			contentCheckId: params.contentCheckId,
 		});
-		throw apiError("NOT_FOUND", "Content check not found", 404);
+		throw apiError("NOT_FOUND", "Content check not found", NotFound);
 	}
 
 	await db()

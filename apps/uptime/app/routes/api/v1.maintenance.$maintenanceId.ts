@@ -11,7 +11,13 @@ import {
 	ApiAuthContext,
 	apiError,
 	apiSuccess,
+	BadRequest,
+	Forbidden,
 	hasScope,
+	InternalServerError,
+	MethodNotAllowed,
+	NotFound,
+	Unauthorized,
 	verifyApiKey,
 } from "~/middleware/api-auth";
 import { db } from "~/middleware/drizzle";
@@ -23,7 +29,7 @@ export const middleware: Route.MiddlewareFunction[] = [
 	async ({ request, context }, next) => {
 		let auth = await verifyApiKey(request);
 		if (!auth) {
-			throw apiError("UNAUTHORIZED", "Invalid or missing API key", 401);
+			throw apiError("UNAUTHORIZED", "Invalid or missing API key", Unauthorized);
 		}
 		context.set(ApiAuthContext, auth);
 		return await next();
@@ -83,7 +89,7 @@ export async function loader({ params }: Route.LoaderArgs) {
 			apiKeyId: apiKey.id,
 			maintenanceWindowId: params.maintenanceId,
 		});
-		throw apiError("FORBIDDEN", "API key does not have maintenance:read scope", 403);
+		throw apiError("FORBIDDEN", "API key does not have maintenance:read scope", Forbidden);
 	}
 
 	let maintenanceWindow = await db().query.maintenanceWindows.findFirst({
@@ -114,7 +120,7 @@ export async function loader({ params }: Route.LoaderArgs) {
 			apiKeyId: apiKey.id,
 			maintenanceWindowId: params.maintenanceId,
 		});
-		throw apiError("NOT_FOUND", "Maintenance window not found", 404);
+		throw apiError("NOT_FOUND", "Maintenance window not found", NotFound);
 	}
 
 	logger().info("api.v1.maintenance.get", {
@@ -145,7 +151,7 @@ export async function action({ request, params }: Route.ActionArgs) {
 			maintenanceWindowId: params.maintenanceId,
 			method: request.method,
 		});
-		throw apiError("FORBIDDEN", "API key does not have maintenance:write scope", 403);
+		throw apiError("FORBIDDEN", "API key does not have maintenance:write scope", Forbidden);
 	}
 
 	let existingMaintenanceWindow = await db().query.maintenanceWindows.findFirst({
@@ -164,7 +170,7 @@ export async function action({ request, params }: Route.ActionArgs) {
 			maintenanceWindowId: params.maintenanceId,
 			method: request.method,
 		});
-		throw apiError("NOT_FOUND", "Maintenance window not found", 404);
+		throw apiError("NOT_FOUND", "Maintenance window not found", NotFound);
 	}
 
 	if (request.method === "DELETE") {
@@ -193,7 +199,7 @@ export async function action({ request, params }: Route.ActionArgs) {
 			throw apiError(
 				"VALIDATION_ERROR",
 				result.error.issues.map((issue) => issue.message).join(", "),
-				400,
+				BadRequest,
 			);
 		}
 
@@ -215,7 +221,7 @@ export async function action({ request, params }: Route.ActionArgs) {
 					maintenanceWindowId: params.maintenanceId,
 					monitorId: result.data.monitorId,
 				});
-				throw apiError("NOT_FOUND", "Monitor not found", 404);
+				throw apiError("NOT_FOUND", "Monitor not found", NotFound);
 			}
 		}
 
@@ -230,7 +236,7 @@ export async function action({ request, params }: Route.ActionArgs) {
 				startsAt: newStartsAt,
 				endsAt: newEndsAt,
 			});
-			throw apiError("VALIDATION_ERROR", "endsAt must be after startsAt", 400);
+			throw apiError("VALIDATION_ERROR", "endsAt must be after startsAt", BadRequest);
 		}
 
 		let updateData: Partial<schema.InsertMaintenanceWindow> = {};
@@ -255,7 +261,7 @@ export async function action({ request, params }: Route.ActionArgs) {
 				apiKeyId: apiKey.id,
 				maintenanceWindowId: params.maintenanceId,
 			});
-			throw apiError("INTERNAL_ERROR", "Failed to update maintenance window", 500);
+			throw apiError("INTERNAL_ERROR", "Failed to update maintenance window", InternalServerError);
 		}
 
 		logger().info("api.v1.maintenance.update.success", {
@@ -273,5 +279,9 @@ export async function action({ request, params }: Route.ActionArgs) {
 		maintenanceWindowId: params.maintenanceId,
 		method: request.method,
 	});
-	throw apiError("METHOD_NOT_ALLOWED", "Only GET, PUT, and DELETE methods are allowed", 405);
+	throw apiError(
+		"METHOD_NOT_ALLOWED",
+		"Only GET, PUT, and DELETE methods are allowed",
+		MethodNotAllowed,
+	);
 }

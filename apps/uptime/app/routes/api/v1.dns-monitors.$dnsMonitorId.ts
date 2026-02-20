@@ -9,7 +9,13 @@ import {
 	ApiAuthContext,
 	apiError,
 	apiSuccess,
+	BadRequest,
+	Forbidden,
 	hasScope,
+	InternalServerError,
+	MethodNotAllowed,
+	NotFound,
+	Unauthorized,
 	verifyApiKey,
 } from "~/middleware/api-auth";
 import { db } from "~/middleware/drizzle";
@@ -21,7 +27,7 @@ export const middleware: Route.MiddlewareFunction[] = [
 	async ({ request, context }, next) => {
 		let auth = await verifyApiKey(request);
 		if (!auth) {
-			throw apiError("UNAUTHORIZED", "Invalid or missing API key", 401);
+			throw apiError("UNAUTHORIZED", "Invalid or missing API key", Unauthorized);
 		}
 		context.set(ApiAuthContext, auth);
 		return await next();
@@ -44,7 +50,7 @@ export async function loader({ params }: Route.LoaderArgs) {
 			apiKeyId: apiKey.id,
 			dnsMonitorId: params.dnsMonitorId,
 		});
-		throw apiError("FORBIDDEN", "API key does not have dns-monitors:read scope", 403);
+		throw apiError("FORBIDDEN", "API key does not have dns-monitors:read scope", Forbidden);
 	}
 
 	let dnsMonitor = await db().query.dnsMonitors.findFirst({
@@ -76,7 +82,7 @@ export async function loader({ params }: Route.LoaderArgs) {
 			apiKeyId: apiKey.id,
 			dnsMonitorId: params.dnsMonitorId,
 		});
-		throw apiError("NOT_FOUND", "DNS monitor not found", 404);
+		throw apiError("NOT_FOUND", "DNS monitor not found", NotFound);
 	}
 
 	logger().info("api.v1.dns-monitors.get", {
@@ -116,7 +122,7 @@ export async function action({ request, params }: Route.ActionArgs) {
 			dnsMonitorId: params.dnsMonitorId,
 			method: request.method,
 		});
-		throw apiError("FORBIDDEN", "API key does not have dns-monitors:write scope", 403);
+		throw apiError("FORBIDDEN", "API key does not have dns-monitors:write scope", Forbidden);
 	}
 
 	let existingMonitor = await db().query.dnsMonitors.findFirst({
@@ -135,7 +141,7 @@ export async function action({ request, params }: Route.ActionArgs) {
 			dnsMonitorId: params.dnsMonitorId,
 			method: request.method,
 		});
-		throw apiError("NOT_FOUND", "DNS monitor not found", 404);
+		throw apiError("NOT_FOUND", "DNS monitor not found", NotFound);
 	}
 
 	if (request.method === "DELETE") {
@@ -159,7 +165,11 @@ export async function action({ request, params }: Route.ActionArgs) {
 				dnsMonitorId: params.dnsMonitorId,
 				issues: result.error.issues,
 			});
-			throw apiError("VALIDATION_ERROR", result.error.issues.map((i) => i.message).join(", "), 400);
+			throw apiError(
+				"VALIDATION_ERROR",
+				result.error.issues.map((i) => i.message).join(", "),
+				BadRequest,
+			);
 		}
 
 		let updateData: Partial<schema.InsertDnsMonitor> = {};
@@ -184,7 +194,7 @@ export async function action({ request, params }: Route.ActionArgs) {
 				apiKeyId: apiKey.id,
 				dnsMonitorId: params.dnsMonitorId,
 			});
-			throw apiError("INTERNAL_ERROR", "Failed to update DNS monitor", 500);
+			throw apiError("INTERNAL_ERROR", "Failed to update DNS monitor", InternalServerError);
 		}
 
 		logger().info("api.v1.dns-monitors.update.success", {
@@ -202,5 +212,5 @@ export async function action({ request, params }: Route.ActionArgs) {
 		dnsMonitorId: params.dnsMonitorId,
 		method: request.method,
 	});
-	throw apiError("METHOD_NOT_ALLOWED", "Only PUT and DELETE methods are allowed", 405);
+	throw apiError("METHOD_NOT_ALLOWED", "Only PUT and DELETE methods are allowed", MethodNotAllowed);
 }
