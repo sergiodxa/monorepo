@@ -1,4 +1,5 @@
 import { TimingCollector } from "@edgefirst-dev/server-timing";
+import { notFound, ok, unauthorized } from "@pkg/http/response/json";
 import { env, waitUntil } from "cloudflare:workers";
 
 import type { SelectSubject } from "~/db/schema";
@@ -19,7 +20,7 @@ export async function loader({ request, params }: Route.LoaderArgs) {
 
 	if (!client) {
 		collector.toHeaders(headers);
-		return Response.json({ error: "Unauthorized" }, { status: 401, headers });
+		return unauthorized({ error: "Unauthorized" }, { headers });
 	}
 
 	let cacheKey = `clients:${client.id}:subjects:${params.subjectId}`;
@@ -30,7 +31,7 @@ export async function loader({ request, params }: Route.LoaderArgs) {
 
 	if (cached) {
 		collector.toHeaders(headers);
-		return Response.json({ subject: cached }, { headers });
+		return ok({ subject: cached }, { headers });
 	}
 
 	let subject = await collector.measure("db", "findSubjectById", () => {
@@ -39,7 +40,7 @@ export async function loader({ request, params }: Route.LoaderArgs) {
 
 	if (!subject) {
 		collector.toHeaders(headers);
-		return Response.json({ error: "Subject not found" }, { status: 404, headers });
+		return notFound({ error: "Subject not found" }, { headers });
 	}
 
 	waitUntil(
@@ -51,5 +52,5 @@ export async function loader({ request, params }: Route.LoaderArgs) {
 	);
 
 	collector.toHeaders(headers);
-	return Response.json({ subject }, { headers });
+	return ok({ subject }, { headers });
 }

@@ -1,3 +1,5 @@
+import { text } from "@pkg/http/response";
+import { InternalServerError, Ok } from "@pkg/http/status-code";
 import { env } from "cloudflare:workers";
 import { count } from "drizzle-orm";
 
@@ -19,11 +21,8 @@ export async function loader() {
 
 	for (let result of results) {
 		if (result.status === "fulfilled") continue;
-		return new Response(result.reason as string, {
-			status: 500,
-			statusText: "Internal Server Error",
-		});
+		return text(result.reason as string, InternalServerError);
 	}
 
-	return new Response("OK", { status: 200, statusText: "OK" });
+	return text("OK", Ok);
 }

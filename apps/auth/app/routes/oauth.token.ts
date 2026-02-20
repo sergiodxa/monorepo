@@ -1,3 +1,4 @@
+import { badRequest, internalServerError, ok } from "@pkg/http/response/json";
 import { isFailure } from "@pkg/result";
 import { validate } from "@pkg/validate";
 import { base64url } from "jose";
@@ -44,10 +45,10 @@ export async function action({ request }: Route.ActionArgs) {
 
 	if (isFailure(result)) {
 		logger.info("token_request_invalid");
-		return Response.json(
-			{ error: "invalid_request", error_description: "Invalid request body" },
-			{ status: 400 },
-		);
+		return badRequest({
+			error: "invalid_request",
+			error_description: "Invalid request body",
+		});
 	}
 
 	let body = result.data;
@@ -61,7 +62,7 @@ export async function action({ request }: Route.ActionArgs) {
 				redirectUri: body.redirect_uri,
 			});
 			logger.info("token_issued", { grant_type: "authorization_code" });
-			return Response.json(tokenResult, { status: 200 });
+			return ok(tokenResult);
 		}
 
 		if (body.grant_type === "refresh_token") {
@@ -71,7 +72,7 @@ export async function action({ request }: Route.ActionArgs) {
 			});
 
 			logger.info("token_issued", { grant_type: "refresh_token" });
-			return Response.json(tokenResult, { status: 200 });
+			return ok(tokenResult);
 		}
 
 		if (body.grant_type === "client_credentials") {
@@ -79,13 +80,10 @@ export async function action({ request }: Route.ActionArgs) {
 
 			if (!clientCredentials) {
 				logger.info("token_missing_credentials");
-				return Response.json(
-					{
-						error: "invalid_request",
-						description: "Missing or invalid client credentials",
-					},
-					{ status: 400 },
-				);
+				return badRequest({
+					error: "invalid_request",
+					description: "Missing or invalid client credentials",
+				});
 			}
 
 			let tokenResult = await oidc.token({
@@ -98,46 +96,34 @@ export async function action({ request }: Route.ActionArgs) {
 				grant_type: "client_credentials",
 				clientId: clientCredentials.clientId,
 			});
-			return Response.json(tokenResult, { status: 200 });
+			return ok(tokenResult);
 		}
 	} catch (error) {
 		if (error instanceof OAuth2Error) {
 			logger.info("token_oauth2_error", { code: error.code, message: error.message });
-			return Response.json(
-				{ error: error.code, error_description: error.message },
-				{ status: 400 },
-			);
+			return badRequest({ error: error.code, error_description: error.message });
 		}
 
 		if (error instanceof Error) {
 			logger.error("token_exchange_error", { error: error.message });
-			return Response.json(
-				{
-					error: "server_error",
-					error_description: error.message,
-				},
-				{ status: 500 },
-			);
+			return internalServerError({
+				error: "server_error",
+				error_description: error.message,
+			});
 		}
 
 		logger.error("token_exchange_error", { error: "Unknown error" });
-		return Response.json(
-			{
-				error: "server_error",
-				error_description: "An unexpected error occurred.",
-			},
-			{ status: 500 },
-		);
+		return internalServerError({
+			error: "server_error",
+			error_description: "An unexpected error occurred.",
+		});
 	}
 
 	logger.info("token_unsupported_grant");
-	return Response.json(
-		{
-			error: "unsupported_grant_type",
-			error_description: "The grant type is not supported.",
-		},
-		{ status: 400 },
-	);
+	return badRequest({
+		error: "unsupported_grant_type",
+		error_description: "The grant type is not supported.",
+	});
 }
 
 function getClientCredentialsFromHeader(headers: Headers) {

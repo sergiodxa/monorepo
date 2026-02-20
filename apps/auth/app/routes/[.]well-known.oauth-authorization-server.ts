@@ -1,5 +1,7 @@
+import { ok } from "@pkg/http/response/json";
+
 import { WELL_KNOWN } from "~/config";
 
 export function loader() {
-	return Response.json(WELL_KNOWN);
+	return ok(WELL_KNOWN);
 }
