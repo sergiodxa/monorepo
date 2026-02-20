@@ -1,3 +1,4 @@
+import { useValue } from "@pkg/hooks";
 import prismDark from "@pkg/markdown/styles/dark.css?url";
 import prismLight from "@pkg/markdown/styles/light.css?url";
 import { Breadcrumb, BreadcrumbLink, Breadcrumbs, Button, Sheet, SheetTrigger } from "@pkg/ui";
@@ -48,7 +49,7 @@ export default function DocsLayout({ loaderData }: Route.ComponentProps) {
 	let { t } = useTranslation();
 	let location = useLocation();
 	let { sections, isSignedIn } = loaderData;
-	let [search, setSearch] = useState("");
+	let [search, setSearch] = useValue(Symbol.for("docs:search"), "");
 	let [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
 	let fuse = useMemo(() => {
