@@ -1,0 +1,21 @@
+{
+	"name": "@pkg/http",
+	"version": "0.0.1",
+	"private": true,
+	"type": "module",
+	"exports": {
+		"./content-type": "./src/content-type.ts",
+		"./status-code": "./src/status-code.ts",
+		"./request": "./src/request.ts",
+		"./response": "./src/response.ts",
+		"./response/json": "./src/response/json.ts",
+		"./response/html": "./src/response/html.ts",
+		"./negotiate": "./src/negotiate.ts"
+	},
+	"dependencies": {
+		"@pkg/location": "workspace:*"
+	},
+	"devDependencies": {
+		"@types/bun": "^1.3.9"
+	}
+}
