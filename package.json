@@ -16,9 +16,9 @@
 	"dependencies": {
 		"@total-typescript/ts-reset": "^0.6.1",
 		"@total-typescript/tsconfig": "^1.0.4",
-		"@typescript/native-preview": "^7.0.0-dev.20260216.1",
-		"oxfmt": "^0.33.0",
-		"oxlint": "^1.48.0",
+		"@typescript/native-preview": "^7.0.0-dev.20260219.1",
+		"oxfmt": "^0.34.0",
+		"oxlint": "^1.49.0",
 		"typescript": "5.9.3"
 	},
 	"devDependencies": {
