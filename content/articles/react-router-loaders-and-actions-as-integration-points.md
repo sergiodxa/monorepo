@@ -4,7 +4,7 @@ excerpt: Test your business logic, not your loaders and actions. Treat them as i
 technologies: react-router@7.0.0
 ---
 
-Often times, I get people asking how to test React Router loaders and actions. And while testing them in isolation is possible and not too difficult, it’s not how they are meant to be used. They are designed to be used as integration points for your application, and that’s how you should treat them.
+Oftentimes, I get people asking how to test React Router loaders and actions. And while testing them in isolation is possible and not too difficult, it’s not how they are meant to be used. They are designed to be used as integration points for your application, and that’s how you should treat them.
 
 First let me give you a simple example of how to test a loader and an action.
 
@@ -52,9 +52,11 @@ describe(action, () => {
 
 The main issue with this approach is that it works great for simple functions, but what happens when your functions requires authentication? Or authorization? Or need to query a database? Or call an external API? In those cases, you would need to mock all of those dependencies, which can quickly become a nightmare.
 
-This is why I recommend to consider loaders and actions as integration points, they're the place where you integrate the HTTP layer with the rest of your application. So instead of testing them in isolation, you should test your application business logic. Let me give you an example of what I mean, let's say we have this action from the example above, as you could have infered from the test, it updates a user with the name provided in the request body
+This is why I recommend to consider loaders and actions as integration points, they're the place where you integrate the HTTP layer with the rest of your application. So instead of testing them in isolation, you should test your application business logic. Let me give you an example of what I mean, let's say we have this action from the example above, as you could have inferred from the test, it updates a user with the name provided in the request body
 
-```ts {% path="app/routes/users.$userId/route.test.ts" %}
+```ts {% path="app/routes/users.$userId/route.ts" %}
+import { z } from "zod";
+
 import { authorize } from "~/lib/auth";
 import { isFailure } from "~/lib/result";
 import { badRequest, ok, notFound, unauthorized } from "~/lib/response";
@@ -173,4 +175,22 @@ describe(authorize, () => {
 
 By testing the business logic in isolation, we can ensure that our loaders and actions are working correctly without having to worry about the complexities of mocking the HTTP layer. This also makes our tests more focused and easier to maintain.
 
-Finally, if you want to test the integration of your loaders and actions with the HTTP layer, you can write end-to-end tests using a tool like Playwright. This way, you can test the entire flow of your application, from the HTTP request to the response, without having to worry about mocking anything.
+Finally, if you want to test the integration of your loaders and actions with the HTTP layer, you can write end-to-end tests using a tool like Playwright.
+
+```ts {% path="e2e/users.test.ts" %}
+import { test, expect } from "@playwright/test";
+
+test("updates user name", async ({ page }) => {
+	// Login and navigate to user profile
+	await page.goto("/users/123");
+
+	// Fill out the form and submit
+	await page.getByLabel("Name").fill("Jane Doe");
+	await page.getByRole("button", { name: "Save" }).click();
+
+	// Verify the update was successful
+	await expect(page.getByText("Jane Doe")).toBeVisible();
+});
+```
+
+This way, you can test the entire flow of your application, from the HTTP request to the response, without having to worry about mocking anything.
