@@ -1,5 +1,6 @@
 import type { EntryContext } from "react-router";
 
+import { HTML } from "@pkg/http/content-type";
 import { logger } from "@pkg/logger";
 import { isbot } from "isbot";
 import { renderToReadableStream } from "react-dom/server";
@@ -36,7 +37,7 @@ export default async function handleRequest(
 		await measure("entry.server#stream.allReady", () => stream.allReady);
 	} else headers.set("Transfer-Encoding", "chunked");
 
-	headers.set("Content-Type", "text/html; charset=utf-8");
+	headers.set("Content-Type", HTML);
 
 	return new Response(stream, { status, headers });
 }

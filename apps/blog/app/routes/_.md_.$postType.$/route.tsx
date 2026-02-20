@@ -1,3 +1,4 @@
+import { markdown } from "@pkg/http/response";
 import { notFound } from "@pkg/response";
 import { z } from "zod";
 
@@ -15,15 +16,11 @@ export async function loader({ params }: Route.LoaderArgs) {
 	let { postType, slug } = result.data;
 
 	if (postType === "articles") {
-		return new Response(await queryArticle(slug), {
-			headers: { "Content-Type": "text/markdown; charset=utf-8" },
-		});
+		return markdown(await queryArticle(slug));
 	}
 
 	if (postType === "tutorials") {
-		return new Response(await queryTutorial(slug), {
-			headers: { "Content-Type": "text/markdown; charset=utf-8" },
-		});
+		return markdown(await queryTutorial(slug));
 	}
 
 	throw new Error("Invalid post type");
