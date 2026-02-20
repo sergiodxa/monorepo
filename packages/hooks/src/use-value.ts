@@ -16,6 +16,9 @@ class Store<T> {
 	/** Set of callback functions to notify when state changes */
 	#subscribers = new Set<() => void>();
 
+	/** Pending cleanup timeout ID, used to handle React Strict Mode */
+	#cleanupTimeout: ReturnType<typeof setTimeout> | null = null;
+
 	/**
 	 * Creates a new store with an initial value.
 	 * @param initialState - The initial value for the store
@@ -50,10 +53,24 @@ class Store<T> {
 	 *   triggers the onEmpty callback if no subscribers remain.
 	 */
 	subscribe(callback: () => void, onEmpty?: () => void) {
+		// Cancel any pending cleanup from a previous unsubscribe
+		if (this.#cleanupTimeout) {
+			clearTimeout(this.#cleanupTimeout);
+			this.#cleanupTimeout = null;
+		}
+
 		this.#subscribers.add(callback);
 		return () => {
 			this.#subscribers.delete(callback);
-			if (this.#subscribers.size === 0) onEmpty?.();
+			if (this.#subscribers.size === 0 && onEmpty) {
+				// Delay cleanup to handle React Strict Mode's mount/unmount/remount cycle.
+				// If the store is re-subscribed before the timeout, the cleanup is cancelled.
+				this.#cleanupTimeout = setTimeout(() => {
+					this.#cleanupTimeout = null;
+					// Double-check that we still have no subscribers
+					if (this.#subscribers.size === 0) onEmpty();
+				}, 0);
+			}
 		};
 	}
 }
