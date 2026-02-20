@@ -34,13 +34,14 @@ export class AggregateDailyStatsJob extends Job {
 				blob1 AS monitorId,
 				blob2 AS monitorType,
 				SUM(_sample_interval * double2) AS totalChecks,
-				SUM(IF(blob3 = 'up', _sample_interval * double2, 0)) AS successfulChecks,
-				SUM(IF(blob3 != 'up', _sample_interval * double2, 0)) AS failedChecks,
+				SUMIf(_sample_interval * double2, blob3 = 'up') AS successfulChecks,
+				SUMIf(_sample_interval * double2, blob3 != 'up') AS failedChecks,
 				AVG(double1) AS avgResponseTimeMs,
 				MAX(double1) AS maxResponseTimeMs
 			FROM uptime_monitor_results
 			WHERE
-				toDate(timestamp) = toDate('${date}')
+				timestamp >= toDateTime('${date} 00:00:00')
+				AND timestamp < toDateTime('${date} 00:00:00') + INTERVAL '1' DAY
 				AND blob2 IN ('http', 'tcp')
 			GROUP BY blob1, blob2
 		`;
