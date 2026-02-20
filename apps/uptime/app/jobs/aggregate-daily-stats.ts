@@ -38,7 +38,7 @@ export class AggregateDailyStatsJob extends Job {
 				SUM(IF(blob3 != 'up', _sample_interval * double2, 0)) AS failedChecks,
 				AVG(double1) AS avgResponseTimeMs,
 				MAX(double1) AS maxResponseTimeMs
-			FROM PING_RESULTS
+			FROM uptime_monitor_results
 			WHERE
 				toDate(timestamp) = toDate('${date}')
 				AND blob2 IN ('http', 'tcp')
