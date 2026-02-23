@@ -1,5 +1,5 @@
 import { ok } from "@pkg/response";
-import { Button, Form, Link } from "@pkg/ui";
+import { Badge, Button, Form, Link } from "@pkg/ui";
 import { cacheHeader } from "pretty-cache-header";
 import { useTranslation } from "react-i18next";
 import { z } from "zod";
@@ -17,12 +17,11 @@ export const meta: Route.MetaFunction = ({ data }) => data?.meta ?? [];
 export async function loader({ request }: Route.LoaderArgs) {
 	let url = new URL(request.url);
 
-	let query =
-		z
-			.string()
-			.transform((v) => v.toLowerCase().trim())
-			.nullable()
-			.parse(url.searchParams.get("q")) ?? "";
+	let query = z
+		.string()
+		.transform((v) => v.toLowerCase().trim())
+		.nullable()
+		.parse(url.searchParams.get("q"));
 
 	let tutorials = await queryTutorials(query);
 	let headers = new Headers({
@@ -35,9 +34,10 @@ export async function loader({ request }: Route.LoaderArgs) {
 				return {
 					path: tutorial.path,
 					title: tutorial.title,
+					isPublished: tutorial.isPublished,
 				};
 			}),
-			meta: getMeta(url, query),
+			meta: getMeta(url, query ?? ""),
 		},
 		{ headers },
 	);
@@ -69,6 +69,11 @@ export default function Component({ loaderData }: Route.ComponentProps) {
 							<Link href={tutorial.path} prefetch="intent" className="u-url">
 								{tutorial.title}
 							</Link>
+							{!tutorial.isPublished && (
+								<Badge color="warning" className="ml-2">
+									<Badge.Text>{t("list.preview")}</Badge.Text>
+								</Badge>
+							)}
 						</li>
 					))}
 				</ul>

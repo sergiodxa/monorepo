@@ -17,7 +17,7 @@ import { INTENT } from "./types";
 
 export async function loader(_: Route.LoaderArgs) {
 	let db = getDB();
-	let tutorials = await Tutorial.list({ db });
+	let tutorials = await Tutorial.list({ db }, { onlyPublished: false });
 	let locale = getLocale();
 
 	return ok({
@@ -32,6 +32,8 @@ export async function loader(_: Route.LoaderArgs) {
 					month: "short",
 					day: "numeric",
 				}),
+				isPublished: tutorial.isPublished,
+				publishedAt: tutorial.publishedAt,
 			};
 		}),
 	});

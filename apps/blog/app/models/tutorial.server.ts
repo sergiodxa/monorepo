@@ -76,6 +76,8 @@ export class Tutorial extends Post<TutorialMeta> {
 			excerpt: this.excerpt,
 			content: this.content,
 			tags: this.tags,
+			publishedAt: this.publishedAt,
+			isPublished: this.isPublished,
 		};
 	}
 
@@ -104,6 +106,7 @@ export class Tutorial extends Post<TutorialMeta> {
         WHERE
           p.type = (SELECT type FROM current)
           AND p.id != (SELECT post_id FROM current)
+          AND (p.published_at IS NULL OR p.published_at <= strftime('%s', 'now') * 1000)
           AND EXISTS (
             SELECT 1
             FROM current c
@@ -131,13 +134,13 @@ export class Tutorial extends Post<TutorialMeta> {
 		return Tutorial.recommendations(services, this.slug);
 	}
 
-	static override async list(services: Services) {
-		let posts = await Post.list<TutorialMeta>(services, "tutorial");
+	static override async list(services: Services, options?: { onlyPublished?: boolean }) {
+		let posts = await Post.list<TutorialMeta>(services, "tutorial", options);
 		return posts.map((post) => new Tutorial(services, post));
 	}
 
-	static async search(services: Services, searchQuery = "") {
-		let tutorials = await Tutorial.list(services);
+	static async search(services: Services, searchQuery = "", options?: { onlyPublished?: boolean }) {
+		let tutorials = await Tutorial.list(services, options);
 
 		let query = searchQuery?.toLowerCase().trim(); // Normalize the query
 
@@ -207,6 +210,7 @@ export class Tutorial extends Post<TutorialMeta> {
 			type: result.post.type,
 			createdAt: result.post.createdAt,
 			updatedAt: result.post.updatedAt,
+			publishedAt: result.post.publishedAt,
 			meta: result.post.meta.reduce((acc, item) => {
 				acc[item.key] = item.value;
 				return acc;

@@ -17,7 +17,7 @@ import { INTENT } from "./types";
 
 export async function loader(_: Route.LoaderArgs) {
 	let db = getDB();
-	let articles = await Article.list({ db });
+	let articles = await Article.list({ db }, { onlyPublished: false });
 	let locale = getLocale();
 
 	return ok({
@@ -31,6 +31,8 @@ export async function loader(_: Route.LoaderArgs) {
 					month: "short",
 					day: "numeric",
 				}),
+				isPublished: article.isPublished,
+				publishedAt: article.publishedAt?.toISOString() ?? null,
 			};
 		}),
 	});

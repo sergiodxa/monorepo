@@ -538,7 +538,9 @@
 			outline-color: var(--ui-warning-ring);
 		}
 		&[data-invalid] {
-			border-color: var(--ui-danger-ring);
+			@apply outline-2 outline-solid outline-offset-0;
+			border-color: var(--ui-danger-border-strong);
+			outline-color: var(--ui-danger-ring);
 		}
 		&[data-disabled] {
 			@apply cursor-not-allowed opacity-50;

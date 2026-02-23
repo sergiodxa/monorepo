@@ -2,7 +2,7 @@ import type { TFunction } from "i18next";
 import type { ReactNode } from "react";
 
 import { cn } from "@pkg/cn";
-import { Link } from "@pkg/ui";
+import { Badge, Link } from "@pkg/ui";
 import { BookIcon, BookmarkIcon, PencilIcon } from "lucide-react";
 import { Trans, useTranslation } from "react-i18next";
 
@@ -38,6 +38,7 @@ export function FeedList({ t, items }: Props) {
 							icon={<PencilIcon className="size-5" aria-hidden />}
 							iconColor="warning"
 							createdAt={new Date(item.payload.createdAt)}
+							isPublished={item.payload.isPublished}
 						/>
 					);
 				}
@@ -63,6 +64,7 @@ export function FeedList({ t, items }: Props) {
 							icon={<PencilIcon className="size-5" aria-hidden />}
 							iconColor="warning"
 							createdAt={new Date(item.payload.createdAt)}
+							isPublished={item.payload.isPublished}
 						/>
 					);
 				}
@@ -88,6 +90,7 @@ export function FeedList({ t, items }: Props) {
 							icon={<BookmarkIcon className="size-5" aria-hidden />}
 							iconColor="primary"
 							createdAt={new Date(item.payload.createdAt)}
+							isPublished={item.payload.isPublished}
 						/>
 					);
 				}
@@ -113,6 +116,7 @@ export function FeedList({ t, items }: Props) {
 							icon={<BookIcon className="size-5" aria-hidden />}
 							iconColor="primary"
 							createdAt={new Date(item.payload.createdAt)}
+							isPublished={item.payload.isPublished}
 						/>
 					);
 				}
@@ -130,10 +134,11 @@ type FeedItemProps = {
 	icon: ReactNode;
 	iconColor: "primary" | "warning";
 	createdAt: Date;
+	isPublished: boolean;
 };
 
-function Item({ body, index, size, iconColor, icon, createdAt }: FeedItemProps) {
-	let { i18n } = useTranslation("translation");
+function Item({ body, index, size, iconColor, icon, createdAt, isPublished }: FeedItemProps) {
+	let { t, i18n } = useTranslation("translation", { keyPrefix: "home.feed" });
 
 	return (
 		<li className="h-entry">
@@ -161,7 +166,14 @@ function Item({ body, index, size, iconColor, icon, createdAt }: FeedItemProps) 
 						</span>
 					</div>
 					<div className="flex min-w-0 flex-1 justify-between space-x-4 pt-1.5">
-						{body}
+						<div className="flex items-center gap-2">
+							{body}
+							{!isPublished && (
+								<Badge color="warning">
+									<Badge.Text>{t("preview")}</Badge.Text>
+								</Badge>
+							)}
+						</div>
 
 						<div className="text-right text-sm whitespace-nowrap text-neutral-500 tabular-nums">
 							<time dateTime={createdAt.toISOString()}>

@@ -2,6 +2,7 @@ import type { UUID } from "~/utils/uuid";
 
 import { getDB } from "~/middleware/drizzle";
 import { measure } from "~/middleware/server-timing";
+import { getUser } from "~/middleware/session";
 import { Markdown } from "~/utils/markdown";
 
 import type { FeedItem } from "./types";
@@ -15,24 +16,30 @@ export async function queryFeed(query = ""): Promise<FeedItem[]> {
 
 function findAllPosts(query = "") {
 	let db = getDB();
+	let isAdmin = getUser()?.role === "admin";
+
 	return measure("_._index.tsx#findAllPosts", () => {
 		return db.query.posts.findMany({
 			with: { meta: true },
 			where(fields, operators) {
-				const { sql, and } = operators;
+				let { sql, and } = operators;
 
-				if (!query) return undefined;
+				let publishedFilter = isAdmin
+					? undefined
+					: sql`(${fields.publishedAt} IS NULL OR ${fields.publishedAt} <= strftime('%s', 'now') * 100)`;
 
-				const exactMatch = query.match(/^"(.*)"$/)?.[1];
-				const terms = exactMatch ? [exactMatch] : query.trim().split(/\s+/);
+				if (!query) return publishedFilter;
 
-				const makeLike = (key: string) =>
+				let exactMatch = query.match(/^"(.*)"$/)?.[1];
+				let terms = exactMatch ? [exactMatch] : query.trim().split(/\s+/);
+
+				let makeLike = (key: string) =>
 					and(
 						sql`post_meta.key = ${key}`,
 						...terms.map((term) => sql`post_meta.value LIKE ${`%${term}%`}`),
 					);
 
-				return sql`
+				let searchFilter = sql`
       EXISTS (
         SELECT 1 FROM post_meta
         WHERE post_meta.post_id = ${fields.id}
@@ -51,6 +58,9 @@ function findAllPosts(query = "") {
         )
       )
     `;
+
+				if (publishedFilter) return and(publishedFilter, searchFilter);
+				return searchFilter;
 			},
 			orderBy(fields, operators) {
 				const { sql } = operators;
@@ -134,6 +144,7 @@ function toFuseItem(post: Post) {
 		title: getTitle(post),
 		content: getContent(post),
 		createdAt: post.createdAt,
+		publishedAt: post.publishedAt,
 	};
 }
 
@@ -147,8 +158,10 @@ function toFeedItem({
 		title: string;
 		content: string;
 		createdAt: Date;
+		publishedAt: Date | null;
 	};
 }): FeedItem {
+	let isPublished = item.publishedAt === null || item.publishedAt <= new Date();
 	return {
 		id: item.id,
 		type: item.type,
@@ -156,6 +169,7 @@ function toFeedItem({
 			title: item.title,
 			link: item.link,
 			createdAt: item.createdAt,
+			isPublished,
 		},
 	};
 }

@@ -30,17 +30,17 @@ export async function loader({ request }: Route.LoaderArgs) {
 		Math.max(lastArticleDate.getTime(), lastTutorialDate.getTime(), lastBookmarkDate.getTime()),
 	);
 
-	sitemap.append(new URL(href("/"), url), { lastmod: lastPostDate });
-	sitemap.append(new URL(href("/articles"), url), { lastmod: lastArticleDate });
-	sitemap.append(new URL(href("/tutorials"), url), { lastmod: lastTutorialDate });
-	sitemap.append(new URL(href("/bookmarks"), url), { lastmod: lastBookmarkDate });
+	sitemap.append(new URL(href("/"), url), { updatedAt: lastPostDate });
+	sitemap.append(new URL(href("/articles"), url), { updatedAt: lastArticleDate });
+	sitemap.append(new URL(href("/tutorials"), url), { updatedAt: lastTutorialDate });
+	sitemap.append(new URL(href("/bookmarks"), url), { updatedAt: lastBookmarkDate });
 
 	for (let article of articles) {
-		sitemap.append(new URL(article.pathname, url), { lastmod: article.createdAt });
+		sitemap.append(new URL(article.pathname, url), { updatedAt: article.createdAt });
 	}
 
 	for (let tutorial of tutorials) {
-		sitemap.append(new URL(tutorial.pathname, url), { lastmod: tutorial.createdAt });
+		sitemap.append(new URL(tutorial.pathname, url), { updatedAt: tutorial.createdAt });
 	}
 
 	return xml(sitemap.toString());

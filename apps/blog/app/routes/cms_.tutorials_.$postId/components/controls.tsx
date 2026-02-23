@@ -1,6 +1,20 @@
+import { parseDate, today } from "@internationalized/date";
 import { useValue } from "@pkg/hooks";
-import { Card, Description, Input, Label, TextArea, TextField } from "@pkg/ui";
+import {
+	Calendar,
+	Card,
+	DateField,
+	DatePicker,
+	Description,
+	FieldError,
+	Input,
+	Label,
+	Popover,
+	TextArea,
+	TextField,
+} from "@pkg/ui";
 import { parameterize } from "inflected";
+import { Dialog } from "react-aria-components";
 import { useHydrated } from "remix-utils/use-hydrated";
 
 interface ControlsProps {
@@ -10,6 +24,8 @@ interface ControlsProps {
 		slug: string | null;
 		excerpt?: string;
 		tags: string[];
+		publishedAt: string | null;
+		isPublished: boolean;
 	};
 }
 
@@ -61,6 +77,44 @@ export function Controls({ tutorial }: ControlsProps) {
 					<Label>Excerpt</Label>
 					<TextArea className="resize-none" />
 				</TextField>
+
+				<DatePicker
+					name="publishedAt"
+					defaultValue={tutorial.publishedAt ? parseDate(tutorial.publishedAt) : undefined}
+					minValue={today("UTC")}
+					isReadOnly={tutorial.isPublished}
+				>
+					<Label>Publish Date</Label>
+					<DatePicker.Group>
+						<DateField.Input>
+							{(segment) => <DateField.Segment segment={segment} />}
+						</DateField.Input>
+						<DatePicker.Button />
+					</DatePicker.Group>
+					<FieldError />
+					<Description>
+						{tutorial.isPublished
+							? "This tutorial is already published."
+							: "Leave empty to publish immediately. Publishes at 5pm UTC / 10am PT on the selected date."}
+					</Description>
+					<Popover>
+						<Dialog>
+							<Calendar>
+								<Calendar.Header>
+									<Calendar.PreviousButton />
+									<Calendar.Heading />
+									<Calendar.NextButton />
+								</Calendar.Header>
+								<Calendar.Grid>
+									<Calendar.GridHeader>
+										{(day) => <Calendar.HeaderCell>{day}</Calendar.HeaderCell>}
+									</Calendar.GridHeader>
+									<Calendar.GridBody>{(date) => <Calendar.Cell date={date} />}</Calendar.GridBody>
+								</Calendar.Grid>
+							</Calendar>
+						</Dialog>
+					</Popover>
+				</DatePicker>
 			</Card.Content>
 		</Card>
 	);

@@ -1,5 +1,5 @@
 import { internalServerError, ok } from "@pkg/response";
-import { Link } from "@pkg/ui";
+import { Badge, Link } from "@pkg/ui";
 import { cacheHeader } from "pretty-cache-header";
 import { useTranslation } from "react-i18next";
 
@@ -69,6 +69,11 @@ export default function Articles({ loaderData }: Route.ComponentProps) {
 							<Link href={article.path} prefetch="intent">
 								{article.title}
 							</Link>
+							{!article.isPublished && (
+								<Badge color="warning" className="ml-2">
+									<Badge.Text>{t("list.preview")}</Badge.Text>
+								</Badge>
+							)}
 						</li>
 					))}
 				</ul>

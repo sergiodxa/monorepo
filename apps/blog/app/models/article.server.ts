@@ -77,18 +77,24 @@ export class Article extends Post<ArticleMeta> {
 			content: this.content,
 			excerpt: this.excerpt,
 			canonicalUrl: this.canonicalUrl,
+			publishedAt: this.publishedAt,
+			isPublished: this.isPublished,
 		};
 	}
 
-	static override async list(services: Services) {
+	static override async list(services: Services, options?: { onlyPublished?: boolean }) {
 		let posts = await measure("Article.list", () => {
-			return Post.list<ArticleMeta>(services, "article");
+			return Post.list<ArticleMeta>(services, "article", options);
 		});
 		return posts.map((post) => new Article(services, post));
 	}
 
-	static async search(services: Services, initialQuery: string) {
-		let articles = await measure("Article.search#list", () => Article.list(services));
+	static async search(
+		services: Services,
+		initialQuery: string,
+		options?: { onlyPublished?: boolean },
+	) {
+		let articles = await measure("Article.search#list", () => Article.list(services, options));
 
 		let query = initialQuery.trim().toLowerCase();
 
@@ -131,6 +137,7 @@ export class Article extends Post<ArticleMeta> {
 			type: result.post.type,
 			createdAt: result.post.createdAt,
 			updatedAt: result.post.updatedAt,
+			publishedAt: result.post.publishedAt,
 			meta: result.post.meta.reduce((acc, item) => {
 				acc[item.key] = item.value;
 				return acc;

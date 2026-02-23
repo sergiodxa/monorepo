@@ -1,10 +1,14 @@
 import { notFound, ok } from "@pkg/response";
+import { Alert, Link } from "@pkg/ui";
 import dark from "prism-theme-github/themes/prism-theme-github-copilot.css?url";
 import light from "prism-theme-github/themes/prism-theme-github-light.css?url";
-import { isRouteErrorResponse, redirect } from "react-router";
+import { useTranslation } from "react-i18next";
+import { href, isRouteErrorResponse, redirect } from "react-router";
 import { z } from "zod";
 
 import { getBindings } from "~/middleware/bindings";
+import { useHints } from "~/utils/client-hints";
+import { formatPublishDate } from "~/utils/format-publish-date";
 
 import type { Route } from "./+types/route";
 
@@ -12,7 +16,15 @@ import { ArticleView } from "./components/article-view";
 import { TutorialView } from "./components/tutorial-view";
 import { queryArticle, queryTutorial } from "./queries";
 
-export const meta: Route.MetaFunction = ({ data }) => data?.meta ?? [];
+type LoaderData = Route.ComponentProps["loaderData"];
+type SuccessData = Extract<LoaderData, { ok: true }>;
+export type ArticleLoaderData = Extract<SuccessData, { postType: "articles" }>;
+export type TutorialLoaderData = Extract<SuccessData, { postType: "tutorials" }>;
+
+export const meta: Route.MetaFunction = ({ loaderData }) => {
+	if (!loaderData?.ok) return [];
+	return loaderData?.meta ?? [];
+};
 
 export const links: Route.LinksFunction = () => [
 	{ rel: "stylesheet", href: light, media: "(prefers-color-scheme: light)" },
@@ -41,13 +53,29 @@ export async function loader({ request, params }: Route.LoaderArgs) {
 
 	let { postType, slug } = result.data;
 
-	if (postType === "articles") return ok(await queryArticle(request, slug));
-	if (postType === "tutorials") return ok(await queryTutorial(request, slug));
+	try {
+		if (postType === "articles") return ok(await queryArticle(request, slug));
+		if (postType === "tutorials") return ok(await queryTutorial(request, slug));
+	} catch (error) {
+		if (error instanceof Error && error.message === "Article not published yet") {
+			return notFound({ postType, publishedAt: error instanceof Error ? new Date() : null });
+		}
+
+		if (error instanceof Error && error.message === "Tutorial not published yet") {
+			return notFound({ postType, publishedAt: error instanceof Error ? new Date() : null });
+		}
+
+		throw error;
+	}
 
 	throw new Error("Invalid post type");
 }
 
 export default function Component({ loaderData }: Route.ComponentProps) {
+	if (!loaderData.ok) {
+		return <ForbiddenView publishedAt={loaderData.publishedAt} />;
+	}
+
 	if (loaderData.postType === "articles") {
 		return <ArticleView post={loaderData} />;
 	}
@@ -58,6 +86,38 @@ export default function Component({ loaderData }: Route.ComponentProps) {
 
 	// @ts-expect-error - postType should be never, but you never know
 	throw new Error(`Invalid post type: ${loaderData.postType ?? "Missing"}`);
+}
+
+function ForbiddenView({ publishedAt }: { publishedAt: Date | null }) {
+	let { t, i18n } = useTranslation("translation", { keyPrefix: "forbidden" });
+	let hints = useHints();
+
+	let description: string;
+	if (publishedAt) {
+		let { formatted, isRelative } = formatPublishDate(publishedAt, {
+			locale: i18n.language,
+			timeZone: hints?.timeZone,
+		});
+		description = isRelative
+			? t("descriptionRelative", { relativeTime: formatted })
+			: t("description", { date: formatted });
+	} else {
+		description = t("descriptionNoDate");
+	}
+
+	return (
+		<main className="mx-auto max-w-3xl p-4 pt-16">
+			<Alert color="warning">
+				<Alert.Content>
+					<Alert.Title>{t("title")}</Alert.Title>
+					<Alert.Description>{description}</Alert.Description>
+				</Alert.Content>
+				<Alert.Action>
+					<Link href={href("/")}>{t("backHome")}</Link>
+				</Alert.Action>
+			</Alert>
+		</main>
+	);
 }
 
 export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {

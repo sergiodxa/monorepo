@@ -1,6 +1,7 @@
 import { ok } from "@pkg/response";
 import { ConfirmDialog } from "@pkg/ui";
-import { RouterProvider } from "react-aria-components";
+import { useEffect } from "react";
+import { I18nProvider, RouterProvider } from "react-aria-components";
 import { useTranslation } from "react-i18next";
 import {
 	Links,
@@ -11,7 +12,6 @@ import {
 	isRouteErrorResponse,
 	useNavigate,
 } from "react-router";
-import { useChangeLanguage } from "remix-i18next/react";
 
 import sansFont from "~/fonts/sans.woff2";
 import {
@@ -22,6 +22,7 @@ import {
 } from "~/middleware/i18next";
 import { noWWWMiddleware } from "~/middleware/no-www";
 import styles from "~/styles.css?url";
+import { ClientHintCheck, getHints } from "~/utils/client-hints";
 
 import type { Route } from "./+types/root";
 
@@ -63,13 +64,15 @@ export const links: Route.LinksFunction = () => [
 	{ rel: "me authn", href: "https://github.com/sergiodxa" },
 ];
 
-export async function loader(_: Route.LoaderArgs) {
+export async function loader({ request }: Route.LoaderArgs) {
 	let { t } = getI18nextInstance();
 	let locale = getLocale();
+	let hints = getHints(request);
 
 	return ok(
 		{
 			locale,
+			hints,
 			user: getUser(),
 			meta: [
 				{ title: t("home.meta.title.default") },
@@ -86,6 +89,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
 	return (
 		<html lang={i18n.language} dir={i18n.dir(i18n.language)} className="system h-full">
 			<head>
+				<ClientHintCheck />
 				<meta charSet="utf-8" />
 				<meta name="viewport" content="width=device-width, initial-scale=1" />
 				<Meta />
@@ -131,9 +135,11 @@ export function Layout({ children }: { children: React.ReactNode }) {
 export default function Component({ loaderData }: Route.ComponentProps) {
 	useChangeLanguage(loaderData.locale);
 	return (
-		<RouterProvider navigate={useNavigate()}>
-			<Outlet />
-		</RouterProvider>
+		<I18nProvider locale={loaderData.locale}>
+			<RouterProvider navigate={useNavigate()}>
+				<Outlet />
+			</RouterProvider>
+		</I18nProvider>
 	);
 }
 
@@ -162,4 +168,11 @@ export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
 			)}
 		</main>
 	);
+}
+
+function useChangeLanguage(locale: string) {
+	let { i18n } = useTranslation();
+	useEffect(() => {
+		i18n.changeLanguage(locale);
+	}, [locale, i18n]);
 }

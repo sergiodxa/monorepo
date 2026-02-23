@@ -43,6 +43,8 @@ export async function loader({ params }: Route.LoaderArgs) {
 				slug: "",
 				title: "",
 				tags: [],
+				publishedAt: null,
+				isPublished: false,
 			},
 		});
 	}
@@ -61,6 +63,8 @@ export async function loader({ params }: Route.LoaderArgs) {
 			slug: tutorial.slug,
 			title: tutorial.title,
 			tags: tutorial.tags,
+			publishedAt: tutorial.publishedAt?.toISOString().split("T")[0] ?? null,
+			isPublished: tutorial.isPublished,
 		},
 	});
 }
@@ -86,6 +90,10 @@ export async function action({ request, params }: Route.ActionArgs) {
 				.string()
 				.optional()
 				.transform((value) => value?.split(" ")),
+			publishedAt: z
+				.string()
+				.optional()
+				.transform((val) => (val ? new Date(`${val}T17:00:00Z`) : null)),
 		}),
 	);
 

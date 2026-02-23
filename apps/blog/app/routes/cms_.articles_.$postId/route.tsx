@@ -43,6 +43,8 @@ export async function loader({ params }: Route.LoaderArgs) {
 				slug: "",
 				title: "",
 				tags: [],
+				publishedAt: null,
+				isPublished: false,
 			},
 		});
 	}
@@ -60,6 +62,8 @@ export async function loader({ params }: Route.LoaderArgs) {
 			excerpt: article.excerpt,
 			slug: article.slug,
 			title: article.title,
+			publishedAt: article.publishedAt?.toISOString().split("T")[0] ?? null,
+			isPublished: article.isPublished,
 		},
 	});
 }
@@ -78,6 +82,10 @@ export async function action({ request, params }: Route.ActionArgs) {
 				.nullish()
 				.default("")
 				.transform((v) => v ?? ""),
+			publishedAt: z
+				.string()
+				.optional()
+				.transform((val) => (val ? new Date(`${val}T17:00:00Z`) : null)),
 		}),
 	);
 
@@ -107,7 +115,7 @@ export async function action({ request, params }: Route.ActionArgs) {
 	}
 
 	if (intent === "update") {
-		let postId = z.string().uuid().parse(params.postId);
+		let postId = z.uuid().parse(params.postId);
 		assertUUID(postId);
 
 		await Article.update({ db }, postId, { ...body, authorId, locale: "en" });

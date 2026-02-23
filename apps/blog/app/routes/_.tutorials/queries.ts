@@ -1,25 +1,32 @@
 import { getDB } from "~/middleware/drizzle";
 import { getI18nextInstance } from "~/middleware/i18next";
+import { getUser } from "~/middleware/session";
 import { Tutorial } from "~/models/tutorial.server";
 
 import type { Route } from "./+types/route";
 
 export async function queryTutorials(query: string | null) {
 	let db = getDB();
+	let user = getUser();
+	let isAdmin = user?.role === "admin";
 
-	let tutorials = query ? await Tutorial.search({ db }, query) : await Tutorial.list({ db });
+	let tutorials = query
+		? await Tutorial.search({ db }, query, { onlyPublished: !isAdmin })
+		: await Tutorial.list({ db }, { onlyPublished: !isAdmin });
 
 	return tutorials.map((tutorial) => {
 		if (tutorial instanceof Tutorial) {
 			return {
 				path: tutorial.pathname,
 				title: tutorial.title,
+				isPublished: tutorial.isPublished,
 			};
 		}
 
 		return {
 			path: tutorial.item.pathname,
 			title: tutorial.item.title,
+			isPublished: tutorial.item.isPublished,
 		};
 	});
 }

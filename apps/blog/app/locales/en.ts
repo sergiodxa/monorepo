@@ -51,6 +51,8 @@ export default {
 			bookmark: "I saved <bookmarkLink>{{title}}</bookmarkLink>",
 
 			glossary: "I added the definition of <glossaryLink>{{title}}</glossaryLink> to the glossary",
+
+			preview: "Preview",
 		},
 	},
 
@@ -88,9 +90,19 @@ export default {
 			prev: "Previous articles",
 			next: "Next articles",
 		},
+
+		list: {
+			preview: "Preview",
+		},
 	},
 
-	article: { meta: { title: "{{note}} by sergiodxa" } },
+	article: {
+		meta: { title: "{{note}} by sergiodxa" },
+		preview: {
+			badge: "Preview until {{date}}",
+			badgeRelative: "Publishes {{relativeTime}}",
+		},
+	},
 
 	bookmarks: {
 		meta: { title: "Bookmarks of sergiodxa" },
@@ -151,6 +163,10 @@ export default {
 			next: "Older",
 			last: "Oldest",
 		},
+
+		list: {
+			preview: "Preview",
+		},
 	},
 
 	glossary: {
@@ -172,6 +188,10 @@ export default {
 			markdown: "View Markdown",
 		},
 		tags: "Used",
+		preview: {
+			badge: "Preview until {{date}}",
+			badgeRelative: "Publishes {{relativeTime}}",
+		},
 		related: {
 			title: "Related tutorials",
 			reason: "Because both uses <anchor>{{tag}}</anchor>",
@@ -187,6 +207,15 @@ export default {
 
 	notFound: {
 		title: "404 Not Found",
+	},
+
+	forbidden: {
+		title: "Content Not Available",
+		description: "This content is not yet published, come back on {{date}}.",
+		descriptionRelative:
+			"This content is not yet published, it will be available {{relativeTime}}.",
+		descriptionNoDate: "This content is not yet published.",
+		backHome: "Back to Home",
 	},
 
 	error: {
@@ -282,6 +311,7 @@ export default {
 			import: { cta: "Import Articles" },
 			reset: { cta: "Reset Articles" },
 			list: {
+				scheduled: "Scheduled",
 				item: {
 					publishedOn: "Published on {{date}}",
 					edit: "Edit Article",
@@ -295,6 +325,7 @@ export default {
 			import: { cta: "Import Tutorials" },
 			reset: { cta: "Reset Tutorials" },
 			list: {
+				scheduled: "Scheduled",
 				item: {
 					publishedOn: "Published on {{date}}",
 					edit: "Edit Tutorial",

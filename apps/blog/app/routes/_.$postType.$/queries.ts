@@ -1,8 +1,10 @@
+import { forbidden, ok } from "@pkg/response";
 import { isFailure } from "@pkg/result";
 import { type MetaDescriptor, href } from "react-router";
 
 import { getI18nextInstance, getLocale } from "~/middleware/i18next";
 import { logger } from "~/middleware/logger";
+import { getUser } from "~/middleware/session";
 import findArticleBySlug from "~/services/find-article-by-slug";
 import findTutorialBySlug from "~/services/find-tutorial-by-slug";
 import findTutorialRecommendationsBySlug from "~/services/find-tutorial-recommendations-by-slug";
@@ -17,10 +19,21 @@ export async function queryArticle(request: Request, slug: string) {
 	}
 
 	let article = result.data;
+	let user = getUser();
+	let isAdmin = user?.role === "admin";
+	let isPreview = !article.isPublished;
+
+	if (isPreview && !isAdmin) {
+		logger.info("article-forbidden-for-non-admin", { slug, userId: user?.id });
+		throw new Error("Article not published yet");
+	}
+
 	let i18n = getI18nextInstance();
 
 	return {
 		postType: "articles" as const,
+		isPreview,
+		publishedAt: article.publishedAt,
 		article: {
 			title: article.title,
 			body: Markdown.parse(`# ${article.title}\n${article.content}`),
@@ -87,6 +100,15 @@ export async function queryTutorial(request: Request, slug: string) {
 	}
 
 	let tutorial = tutorialResult.data;
+	let user = getUser();
+	let isAdmin = user?.role === "admin";
+	let isPreview = !tutorial.isPublished;
+
+	if (isPreview && !isAdmin) {
+		logger.info("tutorial-forbidden-for-non-admin", { slug, userId: user?.id });
+		throw new Error("Tutorial not published yet");
+	}
+
 	let locale = getLocale();
 	let i18n = getI18nextInstance();
 
@@ -97,6 +119,8 @@ export async function queryTutorial(request: Request, slug: string) {
 
 	return {
 		postType: "tutorials" as const,
+		isPreview,
+		publishedAt: tutorial.publishedAt,
 		tutorial: {
 			id: tutorial.id,
 			slug: tutorial.slug,

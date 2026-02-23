@@ -1,4 +1,4 @@
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, sql } from "drizzle-orm";
 
 import type { Database } from "~/db";
 import type { UUID } from "~/utils/uuid";
@@ -32,6 +32,7 @@ export class Post<Meta extends BaseMeta> {
 	// Timestamps
 	readonly createdAt: Date;
 	readonly updatedAt: Date;
+	readonly publishedAt: Date | null;
 	// Meta
 	public meta: Meta;
 
@@ -46,7 +47,23 @@ export class Post<Meta extends BaseMeta> {
 		this.type = input.type;
 		this.createdAt = input.createdAt;
 		this.updatedAt = input.updatedAt;
+		this.publishedAt = input.publishedAt;
 		this.meta = input.meta;
+	}
+
+	/**
+	 * Check if the post is published (NULL or past/current date)
+	 */
+	get isPublished(): boolean {
+		if (this.publishedAt === null) return true;
+		return this.publishedAt <= new Date();
+	}
+
+	/**
+	 * Get the effective publish date for display (publishedAt or createdAt)
+	 */
+	get effectivePublishDate(): Date {
+		return this.publishedAt ?? this.createdAt;
 	}
 
 	get author() {
@@ -76,6 +93,7 @@ export class Post<Meta extends BaseMeta> {
 			// Timestamps
 			createdAt: this.createdAt,
 			updatedAt: this.updatedAt,
+			publishedAt: this.publishedAt,
 			// Meta
 			meta: this.meta,
 		};
@@ -85,12 +103,30 @@ export class Post<Meta extends BaseMeta> {
 		return JSON.stringify(this.toJSON());
 	}
 
-	static async list<Meta extends BaseMeta>({ db }: Services, type?: schema.SelectPost["type"]) {
+	static async list<Meta extends BaseMeta>(
+		{ db }: Services,
+		type?: schema.SelectPost["type"],
+		options?: { onlyPublished?: boolean },
+	) {
 		let posts = await measure("Post.list", () =>
 			db.query.posts.findMany({
 				with: { meta: true },
 				orderBy: desc(schema.posts.createdAt),
-				where: type ? eq(schema.posts.type, type) : undefined,
+				where(fields, operators) {
+					let conditions = [];
+					if (type) conditions.push(eq(fields.type, type));
+
+					if (options?.onlyPublished) {
+						conditions.push(
+							operators.or(
+								operators.isNull(fields.publishedAt),
+								operators.lte(fields.publishedAt, sql`strftime('%s', 'now') * 1000`),
+							),
+						);
+					}
+
+					return conditions.length > 0 ? and(...conditions) : undefined;
+				},
 			}),
 		);
 
@@ -109,6 +145,7 @@ export class Post<Meta extends BaseMeta> {
 					// Timestamps
 					createdAt: post.createdAt,
 					updatedAt: post.updatedAt,
+					publishedAt: post.publishedAt,
 					// Meta
 					meta: reduceMeta<Meta>(post.meta),
 				},
@@ -143,6 +180,7 @@ export class Post<Meta extends BaseMeta> {
 				// Timestamps
 				createdAt: post.createdAt,
 				updatedAt: post.updatedAt,
+				publishedAt: post.publishedAt,
 				// Meta
 				meta: reduceMeta<Meta>(post.meta),
 			},
@@ -159,12 +197,22 @@ export class Post<Meta extends BaseMeta> {
 
 	static async create<Meta extends BaseMeta>(
 		{ db }: Services,
-		{ authorId, type, createdAt, updatedAt, ...meta }: Omit<schema.InsertPost, "id"> & Meta,
+		{
+			authorId,
+			type,
+			createdAt,
+			updatedAt,
+			publishedAt,
+			...meta
+		}: Omit<schema.InsertPost, "id"> & Meta,
 	) {
 		let id = generateUUID();
 
 		let result = await measure("Post.create", () =>
-			db.insert(schema.posts).values({ id, type, authorId, createdAt, updatedAt }).execute(),
+			db
+				.insert(schema.posts)
+				.values({ id, type, authorId, createdAt, updatedAt, publishedAt })
+				.execute(),
 		);
 
 		if (!result.success && result.error) throw new Error(result.error);
@@ -183,12 +231,19 @@ export class Post<Meta extends BaseMeta> {
 	static async update<Meta extends BaseMeta>(
 		{ db }: Services,
 		id: UUID,
-		{ authorId, type, createdAt, updatedAt, ...meta }: Omit<schema.InsertPost, "id"> & Meta,
+		{
+			authorId,
+			type,
+			createdAt,
+			updatedAt,
+			publishedAt,
+			...meta
+		}: Omit<schema.InsertPost, "id"> & Meta,
 	) {
 		let result = await measure("Post.update", () =>
 			db
 				.update(schema.posts)
-				.set({ type, authorId, createdAt, updatedAt })
+				.set({ type, authorId, createdAt, updatedAt, publishedAt })
 				.where(eq(schema.posts.id, id))
 				.execute(),
 		);

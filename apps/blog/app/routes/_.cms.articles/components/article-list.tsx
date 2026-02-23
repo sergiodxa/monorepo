@@ -1,4 +1,5 @@
-import { Button, Card, confirm, Form, Link, Table } from "@pkg/ui";
+import { Badge, Button, Card, confirm, Form, Link, Table } from "@pkg/ui";
+import { useTranslation } from "react-i18next";
 import { useFetcher } from "react-router";
 
 import type { UUID } from "~/utils/uuid";
@@ -12,9 +13,13 @@ interface Article {
 	title: string;
 	path: string;
 	date: string;
+	isPublished: boolean;
+	publishedAt: string | null;
 }
 
 export function ArticlesList({ articles }: { articles: Article[] }) {
+	let { t } = useTranslation("translation", { keyPrefix: "cms.articles.list" });
+
 	return (
 		<Card>
 			<Table aria-label="Articles">
@@ -28,6 +33,11 @@ export function ArticlesList({ articles }: { articles: Article[] }) {
 						<Table.Row key={article.id}>
 							<Table.Cell>
 								<Link href={article.path}>{article.title}</Link>
+								{!article.isPublished && (
+									<Badge color="warning" className="ml-2">
+										{t("scheduled")}
+									</Badge>
+								)}
 							</Table.Cell>
 							<Table.Cell>
 								<time>{article.date}</time>

@@ -7,18 +7,22 @@ import { Await, Link as RemixLink, href, useAsyncValue } from "react-router";
 import { MarkdownView } from "~/components/markdown";
 import { Support } from "~/components/support";
 import { useUser } from "~/hooks/use-user";
+import { useHints } from "~/utils/client-hints";
+import { formatPublishDate } from "~/utils/format-publish-date";
 
-type Post = Awaited<ReturnType<typeof import("../queries").queryTutorial>>;
-type RecommendationsList = Post["recommendations"];
+import type { TutorialLoaderData } from "../route";
 
-export function TutorialView({ post }: { post: Post }) {
+export type TutorialData = TutorialLoaderData;
+type RecommendationsList = TutorialData["recommendations"];
+
+export function TutorialView({ post }: { post: TutorialData }) {
 	let { t } = useTranslation("translation", { keyPrefix: "tutorial" });
 	let user = useUser();
 
 	if (post.postType !== "tutorials") return null;
 
 	return (
-		<article className="mx-auto flex max-w-screen-md flex-col gap-8 pb-14">
+		<article className="mx-auto flex max-w-3xl flex-col gap-8 pb-14">
 			<div className="mx-auto prose w-full max-w-prose space-y-8 prose-blue sm:prose-lg dark:prose-invert">
 				<div className="not-prose flex flex-wrap items-center justify-between gap-2">
 					<Tags
@@ -62,10 +66,19 @@ export function TutorialView({ post }: { post: Post }) {
 
 				<div>
 					<header className="gap-4 md:flex md:items-start md:justify-between">
-						<h1>
-							<small className="block text-xl text-primary-500">{t("header.eyebrown")}</small>
-							{post.tutorial.title}
-						</h1>
+						<div>
+							{post.isPreview && post.publishedAt && (
+								<Badge color="warning" className="mb-2">
+									<Badge.Text>
+										<PublishDateBadge publishedAt={post.publishedAt} />
+									</Badge.Text>
+								</Badge>
+							)}
+							<h1>
+								<small className="block text-xl text-primary-500">{t("header.eyebrown")}</small>
+								{post.tutorial.title}
+							</h1>
+						</div>
 					</header>
 
 					<MarkdownView content={post.tutorial?.content} />
@@ -171,4 +184,20 @@ function Recommendations() {
 			</div>
 		</section>
 	);
+}
+
+function PublishDateBadge({ publishedAt }: { publishedAt: Date }) {
+	let { t, i18n } = useTranslation("translation", { keyPrefix: "tutorial.preview" });
+	let hints = useHints();
+
+	let { formatted, isRelative } = formatPublishDate(publishedAt, {
+		locale: i18n.language,
+		timeZone: hints?.timeZone,
+	});
+
+	if (isRelative) {
+		return t("badgeRelative", { relativeTime: formatted });
+	}
+
+	return t("badge", { date: formatted });
 }

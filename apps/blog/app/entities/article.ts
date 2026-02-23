@@ -11,6 +11,9 @@ export const ArticleSchema = PostSchema.extend({
 	content: z.string(),
 	tags: z.union([z.string(), z.array(z.string())]).optional(),
 	canonicalUrl: z.string().optional(),
-});
+}).transform((article) => ({
+	...article,
+	isPublished: article.publishedAt !== null && article.publishedAt <= new Date(),
+}));
 
 export type Article = z.output<typeof ArticleSchema>;

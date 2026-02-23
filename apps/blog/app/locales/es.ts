@@ -53,6 +53,8 @@ export default {
 			bookmark: "Leí <bookmarkLink>{{title}}</bookmarkLink> y lo guardé como bookmark",
 
 			glossary: "Agregué la definición de <glossaryLink>{{title}}</glossaryLink> al glosario",
+
+			preview: "Vista previa",
 		},
 	},
 
@@ -90,9 +92,19 @@ export default {
 			prev: "Artículos anteriores",
 			next: "Siguientes artículos",
 		},
+
+		list: {
+			preview: "Vista previa",
+		},
 	},
 
-	article: { meta: { title: "{{note}} por sergiodxa" } },
+	article: {
+		meta: { title: "{{note}} por sergiodxa" },
+		preview: {
+			badge: "Vista previa hasta {{date}}",
+			badgeRelative: "Se publica {{relativeTime}}",
+		},
+	},
 
 	bookmarks: {
 		meta: { title: "Bookmarks of sergiodxa" },
@@ -153,6 +165,10 @@ export default {
 			next: "Anteriores",
 			last: "Más viejos",
 		},
+
+		list: {
+			preview: "Vista previa",
+		},
 	},
 
 	tutorial: {
@@ -165,6 +181,10 @@ export default {
 			markdown: "Ver Markdown",
 		},
 		tags: "Usé",
+		preview: {
+			badge: "Vista previa hasta {{date}}",
+			badgeRelative: "Se publica {{relativeTime}}",
+		},
 		related: {
 			title: "Relacionados",
 			reason: "Porque ambos usan {{tag}}",
@@ -209,6 +229,15 @@ export default {
 
 	notFound: {
 		title: "404 No Encontrado",
+	},
+
+	forbidden: {
+		title: "Contenido No Disponible",
+		description: "Este contenido aún no está publicado, vuelve el {{date}}.",
+		descriptionRelative:
+			"Este contenido aún no está publicado, estará disponible {{relativeTime}}.",
+		descriptionNoDate: "Este contenido aún no está publicado.",
+		backHome: "Volver al Inicio",
 	},
 
 	cms: {
@@ -283,6 +312,7 @@ export default {
 			import: { cta: "Importar Artículos" },
 			reset: { cta: "Restablecer Artículos" },
 			list: {
+				scheduled: "Programado",
 				item: {
 					publishedOn: "Publicado el {{date}}",
 					edit: "Editar Artículo",
@@ -296,6 +326,7 @@ export default {
 			import: { cta: "Importar Tutoriales" },
 			reset: { cta: "Restablecer Tutoriales" },
 			list: {
+				scheduled: "Programado",
 				item: {
 					publishedOn: "Publicado el {{date}}",
 					edit: "Editar Tutorial",

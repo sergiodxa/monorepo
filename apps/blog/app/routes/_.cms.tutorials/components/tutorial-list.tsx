@@ -1,5 +1,6 @@
 import { Button, Card, confirm, Form, Link, Table, TagGroup } from "@pkg/ui";
 import { useId } from "react";
+import { useTranslation } from "react-i18next";
 import { useFetcher } from "react-router";
 
 import type { UUID } from "~/utils/uuid";
@@ -12,6 +13,7 @@ interface Tutorial {
 	path: string;
 	date: string;
 	tags: string[];
+	isPublished: boolean;
 }
 
 export function TutorialList({ tutorials }: { tutorials: Tutorial[] }) {
@@ -19,9 +21,11 @@ export function TutorialList({ tutorials }: { tutorials: Tutorial[] }) {
 		<Card>
 			<Table aria-label="Tutorials">
 				<Table.Header>
-					<Table.Column isRowHeader>Title</Table.Column>
+					<Table.Column isRowHeader width={440}>
+						Title
+					</Table.Column>
 					<Table.Column>Tags</Table.Column>
-					<Table.Column className="w-28">Date</Table.Column>
+					<Table.Column className="w-32">Date</Table.Column>
 					<Table.Column align="right">Actions</Table.Column>
 				</Table.Header>
 				<Table.Body items={tutorials}>
@@ -31,7 +35,7 @@ export function TutorialList({ tutorials }: { tutorials: Tutorial[] }) {
 								<Link href={tutorial.path}>{tutorial.title}</Link>
 							</Table.Cell>
 							<Table.Cell>
-								<Tags tags={tutorial.tags} />
+								<Tags tags={tutorial.tags} isScheduled={!tutorial.isPublished} />
 							</Table.Cell>
 							<Table.Cell>
 								<time>{tutorial.date}</time>
@@ -47,7 +51,8 @@ export function TutorialList({ tutorials }: { tutorials: Tutorial[] }) {
 	);
 }
 
-function Tags({ tags }: { tags: string[] }) {
+function Tags({ tags, isScheduled }: { tags: string[]; isScheduled: boolean }) {
+	let { t } = useTranslation("translation", { keyPrefix: "cms.tutorials.list" });
 	let id = useId();
 
 	return (
@@ -56,12 +61,17 @@ function Tags({ tags }: { tags: string[] }) {
 				Tags
 			</span>
 			<TagGroup aria-labelledby={id}>
-				<TagGroup.List className="flex-row" items={tags.map((tag) => ({ id: tag, name: tag }))}>
-					{(item) => (
-						<TagGroup.Tag color="primary" size="sm">
-							{item.name}
+				<TagGroup.List className="flex-row">
+					{isScheduled && (
+						<TagGroup.Tag color="warning" size="sm">
+							{t("scheduled")}
 						</TagGroup.Tag>
 					)}
+					{tags.map((tag) => (
+						<TagGroup.Tag key={tag} color="primary" size="sm">
+							{tag}
+						</TagGroup.Tag>
+					))}
 				</TagGroup.List>
 			</TagGroup>
 		</>

@@ -39,6 +39,7 @@ export let posts = sqliteTable("posts", {
 	// Timestamps
 	createdAt,
 	updatedAt,
+	publishedAt: timestamp("published_at"),
 	// Relations
 	authorId: text("author_id", { mode: "text", length: UUID_LENGTH })
 		.notNull()

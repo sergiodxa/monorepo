@@ -36,6 +36,7 @@ export default async function findArticleBySlug(
 			type: result.post.type,
 			createdAt: result.post.createdAt,
 			updatedAt: result.post.updatedAt,
+			publishedAt: result.post.publishedAt,
 			author: {
 				id: result.post.author.id,
 				role: result.post.author.role,
