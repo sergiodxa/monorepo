@@ -11,7 +11,7 @@ export const TutorialSchema = PostSchema.extend({
 	tags: z.union([z.string(), z.array(z.string())]).optional(),
 }).transform((tutorial) => ({
 	...tutorial,
-	isPublished: tutorial.publishedAt !== null && tutorial.publishedAt <= new Date(),
+	isPublished: tutorial.publishedAt === null || tutorial.publishedAt <= new Date(),
 }));
 
 export type Tutorial = z.output<typeof TutorialSchema>;
