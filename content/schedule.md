@@ -19,9 +19,11 @@ These URLs are already live and can be linked to freely:
 - /articles/working-with-refresh-tokens-in-remix
 - /articles/dark-mode-and-dark-context
 - /articles/building-a-command-palette-with-remix-and-tailwind-ui
+- /articles/react-router-loaders-and-actions-as-integration-points (Feb 20, 2026)
 
 **Tutorials:**
 
+- /tutorials/use-sec-fetch-headers-for-csrf (Feb 22, 2026)
 - /tutorials/use-middleware-in-react-router
 - /tutorials/create-a-per-request-singleton-with-react-router-middleware
 - /tutorials/test-middleware-in-react-router
