@@ -1,7 +1,7 @@
 ---
 title: How to Access Request Context Anywhere with AsyncLocalStorage
 excerpt: Use AsyncLocalStorage to access the request and context from anywhere in your app.
-technologies: react-router@7.6.0 remix-utils@9.0.0
+technologies: react-router@7.9.0 remix-utils@9.0.0
 ---
 
 Imagine calling `getUser()` from anywhere in your application without passing `context` as a parameter. No prop drilling through five layers of functions, no verbose signatures cluttered with context arguments. Just call the function and get the current user.

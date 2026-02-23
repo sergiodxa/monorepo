@@ -1,7 +1,7 @@
 ---
 title: How to Add URL Normalization Middleware in React Router
 excerpt: Normalize URLs by removing trailing slashes and www prefixes using React Router middleware.
-technologies: react-router@7.0.0
+technologies: react-router@7.9.0
 ---
 
 Inconsistent URLs hurt your SEO. Search engines treat `/about` and `/about/` as different pages, splitting your page authority and creating duplicate content issues. The same applies to `www.example.com` versus `example.com`: two URLs pointing to the same content.

@@ -1,7 +1,7 @@
 ---
 title: How to Create a Per-Request Database Instance with Middleware
 excerpt: Create a database instance when the request starts and close it when it ends.
-tech: react-router@7.3.0
+tech: react-router@7.9.0 @react-router/fs-routes@7.0.0
 ---
 
 Some database clients need explicit lifecycle management. You might need to open a connection at the start of a request and close it at the end, or you want to wrap all database operations in a transaction that commits on success and rolls back on error.
@@ -11,22 +11,22 @@ React Router middleware runs code both before and after your loaders and actions
 ## Create the Database Context
 
 ```ts {% path="app/context/database.ts" %}
-import { unstable_createContext } from "react-router";
+import { createContext } from "react-router";
 import type { Database } from "~/lib/database";
 
-export let databaseContext = unstable_createContext<Database>();
+export let databaseContext = createContext<Database>();
 ```
 
-The context holds a typed reference to your database instance. Using `unstable_createContext` ensures type safety when getting and setting the value.
+The context holds a typed reference to your database instance. Using `createContext` ensures type safety when getting and setting the value.
 
 ## Build the Middleware with Cleanup
 
 ```ts {% path="app/middleware/database.ts" %}
-import type { unstable_MiddlewareFunction } from "react-router";
+import type { MiddlewareFunction } from "react-router";
 import { databaseContext } from "~/context/database";
 import { createDatabase } from "~/lib/database";
 
-export let databaseMiddleware: unstable_MiddlewareFunction = async ({ context }, next) => {
+export let databaseMiddleware: MiddlewareFunction = async ({ context }, next) => {
 	let db = createDatabase();
 
 	try {
@@ -47,7 +47,7 @@ This pattern guarantees cleanup even when a loader throws, a validation fails, o
 ```tsx {% path="app/routes/users.tsx" %}
 import { databaseMiddleware } from "~/middleware/database";
 
-export let unstable_middleware = [databaseMiddleware];
+export let middleware = [databaseMiddleware];
 
 export async function loader({ context }: Route.LoaderArgs) {
 	let db = context.get(databaseContext);
@@ -74,7 +74,7 @@ export default [layout("./middleware/with-database.tsx", await flatRoutes())] sa
 import { Outlet } from "react-router";
 import { databaseMiddleware } from "~/middleware/database";
 
-export let unstable_middleware = [databaseMiddleware];
+export let middleware = [databaseMiddleware];
 
 export default function WithDatabase() {
 	return <Outlet />;
@@ -86,11 +86,11 @@ Wrapping all routes in a layout with the middleware means every loader and actio
 ## Wrap Requests in a Transaction
 
 ```ts {% path="app/middleware/transaction.ts" %}
-import type { unstable_MiddlewareFunction } from "react-router";
+import type { MiddlewareFunction } from "react-router";
 import { databaseContext } from "~/context/database";
 import { createDatabase } from "~/lib/database";
 
-export let transactionMiddleware: unstable_MiddlewareFunction = async ({ context }, next) => {
+export let transactionMiddleware: MiddlewareFunction = async ({ context }, next) => {
 	let db = createDatabase();
 	await db.beginTransaction();
 
@@ -119,7 +119,7 @@ import { redirect } from "react-router";
 import { databaseContext } from "~/context/database";
 import { transactionMiddleware } from "~/middleware/transaction";
 
-export let unstable_middleware = [transactionMiddleware];
+export let middleware = [transactionMiddleware];
 
 export async function action({ request, context }: Route.ActionArgs) {
 	let db = context.get(databaseContext);
