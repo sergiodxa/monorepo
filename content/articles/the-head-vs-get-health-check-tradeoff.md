@@ -1,5 +1,5 @@
 ---
-title: "HEAD vs GET: The Health Check Tradeoff"
+title: The HEAD vs GET Health Check Tradeoff
 excerpt: Choosing between speed and thoroughness in health check requests.
 ---
 
@@ -50,7 +50,7 @@ If you're checking this endpoint every 30 seconds from multiple monitoring locat
 
 HEAD can't validate content. You know the server returned 200, but you don't know what it returned.
 
-The [status codes lie](/articles/status-codes-lie) problem applies here. A 200 response might be:
+The [status codes lie](/articles/why-status-codes-lie-in-health-checks) problem applies here. A 200 response might be:
 
 - An error page that happens to return 200
 - Cached stale content from a CDN
@@ -69,7 +69,7 @@ Use HEAD when:
 
 **Bandwidth is constrained**: You're monitoring from locations with limited connectivity, or the response is large enough that transferring it frequently is expensive.
 
-**You're checking availability, not correctness**: You just want to know if the server responds, not whether the response is right. This is common for TCP-level monitoring wrapped in HTTP, as part of a [multi-protocol monitoring](/articles/multi-protocol-monitoring) strategy.
+**You're checking availability, not correctness**: You just want to know if the server responds, not whether the response is right. This is common for TCP-level monitoring wrapped in HTTP, as part of a [multi-protocol monitoring](/articles/why-multi-protocol-monitoring-matters) strategy.
 
 ## When GET Makes Sense
 

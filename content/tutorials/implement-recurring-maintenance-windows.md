@@ -6,7 +6,7 @@ technologies: date-fns@3.0.0
 
 Imagine you're building an uptime monitoring service where users need to schedule recurring maintenance windows. During these windows, the system should suppress alerts because downtime is expected. Treating [maintenance windows as a first-class concept](/articles/maintenance-windows-as-a-first-class-concept) prevents false positives and reduces alert fatigue. Users might want maintenance every night at 2 AM, every Sunday morning, or on the 15th of each month.
 
-The challenge is parsing a human-readable pattern string like `"weekly:monday:02:00-04:00"` and determining if the current time falls within that window. [Automating recurring maintenance](/articles/recurring-maintenance-automating-operational-overhead) reduces operational overhead significantly. You need to handle daily, weekly, and monthly patterns, each with different matching logic.
+The challenge is parsing a human-readable pattern string like `"weekly:monday:02:00-04:00"` and determining if the current time falls within that window. You need to handle daily, weekly, and monthly patterns, each with different matching logic.
 
 ## Define the Pattern Types
 

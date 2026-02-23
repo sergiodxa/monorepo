@@ -42,7 +42,7 @@ A **late** state means the heartbeat arrived, but after the expected window. You
 
 A **missed** state means no heartbeat arrived at all. The job either never started, crashed mid-execution, or completed but failed to send its ping.
 
-These states require different responses, similar to how [the three states of service health](/articles/the-three-states-of-service-health) (healthy, degraded, down) enable proportional incident response. Late jobs might indicate resource contention, growing data volumes, or infrastructure issues worth investigating. Missed jobs are immediate emergencies requiring intervention. Designing appropriate [grace periods](/articles/grace-periods-designing-for-variance) helps distinguish between acceptable variance and actual failures.
+These states require different responses, similar to how [the three states of service health](/articles/the-three-states-of-service-health) (healthy, degraded, down) enable proportional incident response. Late jobs might indicate resource contention, growing data volumes, or infrastructure issues worth investigating. Missed jobs are immediate emergencies requiring intervention. Designing appropriate [grace periods](/articles/designing-grace-periods-for-variance) helps distinguish between acceptable variance and actual failures.
 
 ## Beyond Cron Jobs
 

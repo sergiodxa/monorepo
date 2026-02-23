@@ -1,5 +1,5 @@
 ---
-title: "Redundant Notification Channels: What Happens When Slack Is Down?"
+title: What Happens When Your Notification Channel Is Down
 excerpt: If your alerting depends on a single channel, you have a single point of failure.
 ---
 
@@ -79,7 +79,7 @@ Here's the uncomfortable truth: your monitoring system is itself a system that c
 
 This creates a meta-problem: how do you monitor your monitoring?
 
-**Heartbeat checks**: Your monitoring system should send regular "I'm alive" signals to an external service. If the heartbeat stops, the external service alerts through independent channels. This is the [dead man's switch pattern](/articles/the-dead-mans-switch-pattern) applied to your monitoring infrastructure itself.
+**Heartbeat checks**: Your monitoring system should send regular "I'm alive" signals to an external service. If the heartbeat stops, the external service alerts through independent channels. This is the [dead man's switch pattern](/articles/the-dead-man-s-switch-pattern) applied to your monitoring infrastructure itself.
 
 **Synthetic alerts**: Periodically trigger test alerts that must be acknowledged. If a test alert isn't acknowledged within the expected timeframe, escalate through backup channels.
 
@@ -117,7 +117,7 @@ This approach balances redundancy against notification fatigue. Critical alerts 
 
 Redundant notification channels have costs:
 
-**Duplicate notifications**: Engineers might receive the same alert through multiple channels. This can be annoying but is generally preferable to missing alerts. If duplicate fatigue becomes a problem, revisit your [alert design](/articles/designing-alerts-that-dont-cause-fatigue) to ensure you're only sending critical alerts through multiple channels.
+**Duplicate notifications**: Engineers might receive the same alert through multiple channels. This can be annoying but is generally preferable to missing alerts. If duplicate fatigue becomes a problem, revisit your [alert design](/articles/designing-alerts-that-do-not-cause-fatigue) to ensure you're only sending critical alerts through multiple channels.
 
 **Configuration complexity**: More channels mean more configuration to maintain, more integrations to keep working, more credentials to manage.
 

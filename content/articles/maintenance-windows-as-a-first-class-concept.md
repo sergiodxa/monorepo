@@ -37,7 +37,7 @@ Either approach is better than pretending the maintenance didn't happen.
 
 ## Status Page Accuracy
 
-A status page that shows "Operational" during maintenance is worse than useless. Users learn they can't trust it, so they stop checking it and go straight to support tickets. [Transparency on your status page](/articles/status-pages-transparency-as-a-feature) is how you build trust.
+A status page that shows "Operational" during maintenance is worse than useless. Users learn they can't trust it, so they stop checking it and go straight to support tickets. [Transparency on your status page](/articles/status-pages-as-a-transparency-feature) is how you build trust.
 
 Maintenance windows should appear on your status page with their own visual treatment. Users should see that the service is in maintenance, when it started, and when it's expected to end. This is transparency that builds trust.
 
@@ -53,7 +53,7 @@ Ending maintenance early also creates valuable data. If you consistently finish 
 
 ## Maintenance Duration as a Data Point
 
-How long does your weekly deployment actually take? How much time do you spend on monthly patching? Most teams can't answer these questions accurately because they don't track maintenance as structured data. [Recurring maintenance](/articles/recurring-maintenance-automating-operational-overhead) helps automate this tracking for scheduled operations.
+How long does your weekly deployment actually take? How much time do you spend on monthly patching? Most teams can't answer these questions accurately because they don't track maintenance as structured data. Tracking recurring maintenance helps automate this for scheduled operations.
 
 When maintenance windows are first-class concepts, you accumulate data about your operational overhead. You can see trends: is deployment time increasing as the codebase grows? Is patching taking longer as you add more servers?
 

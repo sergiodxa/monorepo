@@ -47,11 +47,11 @@ For manually managed certificates (often 1 year validity), adjust accordingly:
 - **30 days before expiry**: Escalate if not renewed
 - **14 days before expiry**: Emergency procedures
 
-The key insight is that your alert threshold should exceed your worst case response time. If it takes your team 48 hours to respond to a non-critical alert during a holiday weekend, your warning threshold needs to account for that. [Well-designed alerts](/articles/designing-alerts-that-dont-cause-fatigue) give you time to act before problems become outages.
+The key insight is that your alert threshold should exceed your worst case response time. If it takes your team 48 hours to respond to a non-critical alert during a holiday weekend, your warning threshold needs to account for that. [Well-designed alerts](/articles/designing-alerts-that-do-not-cause-fatigue) give you time to act before problems become outages.
 
 ## Defense in Depth
 
-The most reliable approach combines automated renewal with active monitoring. Neither alone is sufficient. This [layered monitoring approach](/articles/multi-protocol-monitoring) ensures you catch problems that any single check might miss.
+The most reliable approach combines automated renewal with active monitoring. Neither alone is sufficient. This [layered monitoring approach](/articles/why-multi-protocol-monitoring-matters) ensures you catch problems that any single check might miss.
 
 Automated renewal handles the happy path: certificates get renewed on schedule without human intervention. Monitoring handles the unhappy path: when automation fails, humans are alerted with enough time to intervene.
 

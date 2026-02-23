@@ -1,5 +1,5 @@
 ---
-title: "Regional Monitoring: Latency Is Not Universal"
+title: Why Latency Is Not Universal in Regional Monitoring
 excerpt: Your service might be fast in Virginia and slow in Sydney.
 ---
 
@@ -71,7 +71,7 @@ Regional monitoring has practical constraints that affect implementation:
 
 **Baseline establishment**: Each region has a different expected latency. You need region-specific baselines and thresholds, not a single global threshold. An [alert cooldown system](/tutorials/build-an-alert-cooldown-system) can help prevent notification storms when regional issues occur.
 
-**Alert fatigue**: More monitoring locations means more potential alerts. Configure alerting to distinguish between regional issues and global outages. [Designing alerts that don't cause fatigue](/articles/designing-alerts-that-dont-cause-fatigue) becomes even more important with regional monitoring.
+**Alert fatigue**: More monitoring locations means more potential alerts. Configure alerting to distinguish between regional issues and global outages. [Designing alerts that don't cause fatigue](/articles/designing-alerts-that-do-not-cause-fatigue) becomes even more important with regional monitoring.
 
 **Synthetic vs. real user monitoring**: Synthetic checks from monitoring locations complement real user monitoring (RUM). Synthetic catches issues proactively; RUM shows actual user experience.
 

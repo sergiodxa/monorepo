@@ -22,7 +22,7 @@ async function hashKey(key: string): Promise<string> {
 }
 ```
 
-This function encodes the key as bytes, computes the SHA-256 hash, and converts the result to a hexadecimal string. The output is always 64 characters long, regardless of input length. This same hashing approach is used for [HMAC signing in webhook verification](/articles/webhook-signing-hmac-for-notification-security).
+This function encodes the key as bytes, computes the SHA-256 hash, and converts the result to a hexadecimal string. The output is always 64 characters long, regardless of input length. This same hashing approach is used for [HMAC signing in webhook verification](/articles/signing-webhooks-with-hmac-for-notification-security).
 
 ## Generate a Secure API Key
 

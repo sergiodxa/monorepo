@@ -170,4 +170,4 @@ The client handles authentication and error handling automatically, keeping your
 
 ## Final Thoughts
 
-This pattern works well for any HTTP API integration. The before hook handles authentication, custom headers, or request logging. The after hook handles error responses, rate limiting, or response transformation—you could even check for [misleading status codes](/articles/status-codes-lie) here. By centralizing this logic in a base class, you ensure consistent behavior across all API calls and make it easier to update the integration in one place.
+This pattern works well for any HTTP API integration. The before hook handles authentication, custom headers, or request logging. The after hook handles error responses, rate limiting, or response transformation—you could even check for [misleading status codes](/articles/why-status-codes-lie-in-health-checks) here. By centralizing this logic in a base class, you ensure consistent behavior across all API calls and make it easier to update the integration in one place.

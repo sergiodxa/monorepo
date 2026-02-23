@@ -1,5 +1,5 @@
 ---
-title: "The Location Class: URLs Without Origins"
+title: The Location Class for URLs Without Origins
 excerpt: A lightweight alternative to the URL class for working with paths, search params, and hashes.
 technologies: typescript@5.0.0
 ---
@@ -208,7 +208,7 @@ test("adds pagination to path", () => {
 You could always use `URL` with a dummy base, but the `Location` class offers several advantages:
 
 1. **Intent clarity**: The code communicates that you're working with paths, not full URLs.
-2. **Type safety**: The TypeScript types exclude origin-related properties, preventing accidental usage. For more on leveraging TypeScript's type system, see [detecting the any type](/articles/advanced-typescript-detecting-the-any-type).
+2. **Type safety**: The TypeScript types exclude origin-related properties, preventing accidental usage. For more on leveraging TypeScript's type system, see [detecting the any type](/articles/detecting-the-any-type-in-typescript).
 3. **Encapsulation**: The dummy base URL is an implementation detail, hidden from consumers.
 4. **Consistency**: The API matches `URL` where it makes sense, reducing cognitive load.
 

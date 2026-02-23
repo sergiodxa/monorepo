@@ -1,5 +1,5 @@
 ---
-title: Two Logger Strategies: Immediate vs Batched
+title: Immediate vs Batched Logger Strategies
 excerpt: Immediate logging gives real time visibility while batched logging produces cleaner output.
 technologies: @cloudflare/workers-types@4.0.0
 ---
@@ -36,7 +36,7 @@ The downside is that your logs become scattered. A single request might produce 
 
 ## Batched Logging
 
-The batched logger takes a different approach: it accumulates log entries throughout an execution context and outputs them all at once when flushed. For a detailed implementation, see [the BatchedLogger pattern for Workers](/articles/the-batched-logger-pattern-for-workers).
+The batched logger takes a different approach: it accumulates log entries throughout an execution context and outputs them all at once when flushed. For a detailed implementation, see [the BatchedLogger pattern for Workers](/articles/the-batchedlogger-pattern-for-workers).
 
 ```ts
 export class BatchedLogger {

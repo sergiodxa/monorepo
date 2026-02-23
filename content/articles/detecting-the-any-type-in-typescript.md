@@ -1,5 +1,5 @@
 ---
-title: "Advanced TypeScript: Detecting the any Type"
+title: Detecting the any Type in TypeScript
 excerpt: Learn how to detect the any type in TypeScript using a clever conditional type trick.
 technologies: typescript@5.0.0
 ---

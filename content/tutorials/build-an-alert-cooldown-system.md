@@ -214,6 +214,6 @@ The pattern is straightforward: check, act, record. Even failed attempts are rec
 
 ## Final Thoughts
 
-This cooldown system prevents notification fatigue while maintaining a complete audit trail. The per alert, per monitor, per event type granularity ensures that unrelated alerts don't interfere with each other. Setting `cooldownMinutes` to zero disables the feature entirely for alerts that should always fire. You might also consider adding [grace periods](/articles/grace-periods-designing-for-variance) to avoid alerting on brief transient failures.
+This cooldown system prevents notification fatigue while maintaining a complete audit trail. The per alert, per monitor, per event type granularity ensures that unrelated alerts don't interfere with each other. Setting `cooldownMinutes` to zero disables the feature entirely for alerts that should always fire. You might also consider adding [grace periods](/articles/designing-grace-periods-for-variance) to avoid alerting on brief transient failures.
 
 For production use, consider adding a cleanup job to delete old alert events and prevent unbounded table growth.

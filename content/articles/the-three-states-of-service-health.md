@@ -66,7 +66,7 @@ These thresholds should reflect user experience, not arbitrary numbers. If your 
 
 ## Error Rate Thresholds
 
-Response time thresholds work well with [grace periods](/articles/grace-periods-designing-for-variance) to handle natural variance in system performance. Response time isn't the only signal. Error rates matter too:
+Response time thresholds work well with [grace periods](/articles/designing-grace-periods-for-variance) to handle natural variance in system performance. Response time isn't the only signal. Error rates matter too:
 
 ```yaml
 health_check:
@@ -79,7 +79,7 @@ A service returning errors for 2% of requests is degraded. It's not down, but so
 
 ## Combining Signals
 
-Real health checks combine multiple signals. This is the foundation of [multi-protocol monitoring](/articles/multi-protocol-monitoring), where TCP, HTTP, and content checks work together to pinpoint issues:
+Real health checks combine multiple signals. This is the foundation of [multi-protocol monitoring](/articles/why-multi-protocol-monitoring-matters), where TCP, HTTP, and content checks work together to pinpoint issues:
 
 ```yaml
 health_check:
@@ -132,7 +132,7 @@ Catching these transitions gives you time to respond before users notice. Scale 
 
 ## Implementation Patterns
 
-Health check endpoints should return structured data, not just status codes. As explored in [status codes lie](/articles/status-codes-lie), a 200 response doesn't guarantee your service is actually healthy:
+Health check endpoints should return structured data, not just status codes. As explored in [status codes lie](/articles/why-status-codes-lie-in-health-checks), a 200 response doesn't guarantee your service is actually healthy:
 
 ```json
 {

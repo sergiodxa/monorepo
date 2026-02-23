@@ -40,7 +40,7 @@ Each alert has its own rules, channels, and audience. The monitor doesn't know o
 
 The relationship works in the other direction too. A single alert can aggregate signals from multiple monitors.
 
-This is particularly useful when monitors need different detection strategies—for example, active health checks versus [passive heartbeat monitoring using the dead man's switch pattern](/articles/the-dead-mans-switch-pattern).
+This is particularly useful when monitors need different detection strategies—for example, active health checks versus [passive heartbeat monitoring using the dead man's switch pattern](/articles/the-dead-man-s-switch-pattern).
 
 Consider an "API Health" alert that should fire when any of these conditions are true:
 
@@ -73,7 +73,7 @@ There are several ways to implement this separation:
 
 **Alert routing rules**: A central alert manager receives all monitor outputs and applies routing rules to determine which notifications to send. This is simpler to operate but can become a bottleneck.
 
-**Webhook fan-out**: Monitors send webhooks to a distribution service that forwards to multiple destinations based on configuration. This works well when you need to integrate with external systems. When implementing webhook-based notification, ensure you're [signing webhooks with HMAC](/articles/webhook-signing-hmac-for-notification-security) to prevent spoofed alerts.
+**Webhook fan-out**: Monitors send webhooks to a distribution service that forwards to multiple destinations based on configuration. This works well when you need to integrate with external systems. When implementing webhook-based notification, ensure you're [signing webhooks with HMAC](/articles/signing-webhooks-with-hmac-for-notification-security) to prevent spoofed alerts.
 
 The right choice depends on your scale and existing infrastructure. The important thing is maintaining the conceptual separation, even if the implementation is simple.
 

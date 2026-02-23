@@ -1,5 +1,5 @@
 ---
-title: "Webhook Signing: HMAC for Notification Security"
+title: Signing Webhooks with HMAC for Notification Security
 excerpt: Shared secrets and HMAC signatures prevent alert spoofing on webhook endpoints.
 ---
 
@@ -13,7 +13,7 @@ A webhook endpoint is just a URL that accepts POST requests. Anyone who knows th
 
 Without verification, an attacker can:
 
-**Spoof alerts**: Send fake critical alerts that trigger incident response, wasting engineering time and [creating alert fatigue](/articles/designing-alerts-that-dont-cause-fatigue).
+**Spoof alerts**: Send fake critical alerts that trigger incident response, wasting engineering time and [creating alert fatigue](/articles/designing-alerts-that-do-not-cause-fatigue).
 
 **Inject malicious data**: If your webhook processing has vulnerabilities, crafted payloads could exploit them.
 

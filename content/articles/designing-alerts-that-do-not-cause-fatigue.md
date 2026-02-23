@@ -1,5 +1,5 @@
 ---
-title: Designing Alerts That Don't Cause Fatigue
+title: Designing Alerts That Do Not Cause Fatigue
 excerpt: Alert fatigue is a design failure that reveals gaps in your system architecture.
 ---
 
@@ -23,7 +23,7 @@ Flapping usually indicates one of several problems:
 
 1. **Thresholds set too close to normal operating parameters.** If your service normally uses 75% CPU and you alert at 80%, minor fluctuations will trigger constant alerts.
 
-2. **Missing health check grace periods.** Services that take time to warm up will fail health checks during startup, triggering alerts that resolve seconds later. Implementing [grace periods](/articles/grace-periods-designing-for-variance) can eliminate this noise.
+2. **Missing health check grace periods.** Services that take time to warm up will fail health checks during startup, triggering alerts that resolve seconds later. Implementing [grace periods](/articles/designing-grace-periods-for-variance) can eliminate this noise.
 
 3. **Cascading failures.** When Service A depends on Service B, and B has intermittent issues, A will flap in response. The alert on A is noise: the real problem is B.
 

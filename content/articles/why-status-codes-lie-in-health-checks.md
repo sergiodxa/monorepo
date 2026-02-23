@@ -1,5 +1,5 @@
 ---
-title: "Status Codes Lie: Content Validation in Health Checks"
+title: Why Status Codes Lie in Health Checks
 excerpt: A 200 response doesn't mean your service is healthy.
 ---
 
@@ -159,4 +159,4 @@ Combine multiple validation strategies:
 4. **Body validation**: Confirms the content is correct
 5. **Semantic checks**: Validates the meaning of the response
 
-Each layer catches problems the others might miss. Status codes catch crashes. Response time catches slowdowns. Content validation catches application-level failures. This defense-in-depth approach is the foundation of [multi-protocol monitoring](/articles/multi-protocol-monitoring), where TCP, HTTP, and content checks work together to pinpoint root causes faster.
+Each layer catches problems the others might miss. Status codes catch crashes. Response time catches slowdowns. Content validation catches application-level failures. This defense-in-depth approach is the foundation of [multi-protocol monitoring](/articles/why-multi-protocol-monitoring-matters), where TCP, HTTP, and content checks work together to pinpoint root causes faster.

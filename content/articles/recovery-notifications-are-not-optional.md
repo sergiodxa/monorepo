@@ -61,11 +61,11 @@ Not all recovery notifications are equally useful. A good recovery notification 
 
 Recovery notifications become complicated when services flap between healthy and unhealthy states. You don't want to receive alert-recovery-alert-recovery sequences every few minutes.
 
-The solution is hysteresis: require the healthy state to persist for some duration before sending a recovery notification. If your alert has a 5-minute cooldown, your recovery notification might require 5 minutes of sustained healthy state. This is another form of [designing for variance](/articles/grace-periods-designing-for-variance)—giving the system time to stabilize before declaring victory.
+The solution is hysteresis: require the healthy state to persist for some duration before sending a recovery notification. If your alert has a 5-minute cooldown, your recovery notification might require 5 minutes of sustained healthy state. This is another form of [designing for variance](/articles/designing-grace-periods-for-variance)—giving the system time to stabilize before declaring victory.
 
 This prevents premature recovery notifications while still providing the definitive closure signal when the system truly stabilizes.
 
-For more on handling flapping and alert design, see [Designing Alerts That Don't Cause Fatigue](/articles/designing-alerts-that-dont-cause-fatigue).
+For more on handling flapping and alert design, see [Designing Alerts That Don't Cause Fatigue](/articles/designing-alerts-that-do-not-cause-fatigue).
 
 ## Recovery Notifications in Incident Management
 
@@ -73,7 +73,7 @@ Recovery notifications also play a role in formal incident management processes.
 
 A recovery notification provides:
 
-- **Timestamp for recovery**: Essential for calculating incident duration and meeting SLA requirements. This data is also valuable for [status pages](/articles/status-pages-transparency-as-a-feature) that show incident timelines to customers
+- **Timestamp for recovery**: Essential for calculating incident duration and meeting SLA requirements. This data is also valuable for [status pages](/articles/status-pages-as-a-transparency-feature) that show incident timelines to customers
 - **Confirmation of resolution**: Evidence that the fix worked, not just that someone said it did
 - **Audit trail**: Documentation that the system returned to normal operation
 
@@ -87,7 +87,7 @@ When implementing recovery notifications, consider:
 
 **Notification deduplication**: If an alert fires multiple times before recovery, you typically want one recovery notification, not one per alert.
 
-**Channel reliability**: Recovery notifications are only useful if they're delivered. Consider [redundant notification channels](/articles/redundant-notification-channels) to ensure delivery.
+**Channel reliability**: Recovery notifications are only useful if they're delivered. Consider [redundant notification channels](/articles/what-happens-when-your-notification-channel-is-down) to ensure delivery.
 
 **Graceful degradation**: If your notification system has issues, you should still be able to verify recovery through dashboards or direct metric queries.
 

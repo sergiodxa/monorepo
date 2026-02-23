@@ -1,5 +1,5 @@
 ---
-title: "Grace Periods: Designing for Variance"
+title: Designing Grace Periods for Variance
 excerpt: Why hardcoded timeouts fail and how grace periods handle variable execution times.
 ---
 
@@ -20,7 +20,7 @@ A job that "takes 5 minutes" actually takes somewhere between 3 and 47 minutes d
 
 ## Hardcoded Timeouts Fail Both Ways
 
-A timeout that's too tight creates alert fatigue. Your on-call engineer gets paged at 3 AM because the backup took 12 minutes instead of 10. They check the logs, see everything completed successfully, and go back to sleep. After the third false alarm this week, they start ignoring the alerts entirely. This is exactly the kind of problem discussed in [designing alerts that don't cause fatigue](/articles/designing-alerts-that-dont-cause-fatigue).
+A timeout that's too tight creates alert fatigue. Your on-call engineer gets paged at 3 AM because the backup took 12 minutes instead of 10. They check the logs, see everything completed successfully, and go back to sleep. After the third false alarm this week, they start ignoring the alerts entirely. This is exactly the kind of problem discussed in [designing alerts that don't cause fatigue](/articles/designing-alerts-that-do-not-cause-fatigue).
 
 A timeout that's too loose delays incident response. Your job actually failed 45 minutes ago, but the alert won't fire for another 15 minutes because you padded the timeout to avoid false positives. That's an hour of data not being processed.
 

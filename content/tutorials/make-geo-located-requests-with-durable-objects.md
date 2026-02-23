@@ -4,7 +4,7 @@ excerpt: Use Durable Objects location hints to make HTTP requests from specific 
 tech: @cloudflare/workers-types@4.0.0
 ---
 
-A website might be up in North America but down in Europe. Regional outages, CDN issues, or DNS propagation delays can make a site accessible from one location and unreachable from another. This is why [regional monitoring matters](/articles/regional-monitoring-latency-is-not-universal): latency and availability are not universal. To build reliable uptime monitoring, you need to make requests that actually originate from specific geographic regions.
+A website might be up in North America but down in Europe. Regional outages, CDN issues, or DNS propagation delays can make a site accessible from one location and unreachable from another. This is why [regional monitoring matters](/articles/why-latency-is-not-universal-in-regional-monitoring): latency and availability are not universal. To build reliable uptime monitoring, you need to make requests that actually originate from specific geographic regions.
 
 Cloudflare Durable Objects provide **location hints**: a way to suggest where a Durable Object instance should be created. By routing HTTP requests through a Durable Object with a specific location hint, you can make requests that originate from that region and measure real-world latency from different parts of the world.
 

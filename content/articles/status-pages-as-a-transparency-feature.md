@@ -1,5 +1,5 @@
 ---
-title: "Status Pages: Transparency as a Feature"
+title: Status Pages as a Transparency Feature
 excerpt: Publishing your failures builds more trust than hiding them ever could.
 ---
 

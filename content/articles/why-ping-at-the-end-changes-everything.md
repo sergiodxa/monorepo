@@ -3,7 +3,7 @@ title: Why "Ping at the End" Changes Everything
 excerpt: The position of your health check ping determines what you're actually monitoring.
 ---
 
-Most cron monitoring tutorials show you how to add a ping to your scheduled job. Few explain where that ping should go. This seemingly minor detail fundamentally changes what your monitoring actually measures. When implementing [the dead man's switch pattern](/articles/the-dead-mans-switch-pattern), ping placement determines whether you're monitoring job starts or job completions.
+Most cron monitoring tutorials show you how to add a ping to your scheduled job. Few explain where that ping should go. This seemingly minor detail fundamentally changes what your monitoring actually measures. When implementing [the dead man's switch pattern](/articles/the-dead-man-s-switch-pattern), ping placement determines whether you're monitoring job starts or job completions.
 
 ## The Two Positions
 
@@ -114,7 +114,7 @@ This gives you:
 - **Neither**: Job never started (scheduler issue, environment unavailable)
 - **Both**: Job completed successfully
 
-The duration between start and end also becomes a useful metric. A backup that usually takes 5 minutes but suddenly takes 45 minutes is worth investigating, even if it eventually succeeds. This is where [grace periods](/articles/grace-periods-designing-for-variance) become essential for handling the natural variance in execution times without triggering false alerts.
+The duration between start and end also becomes a useful metric. A backup that usually takes 5 minutes but suddenly takes 45 minutes is worth investigating, even if it eventually succeeds. This is where [grace periods](/articles/designing-grace-periods-for-variance) become essential for handling the natural variance in execution times without triggering false alerts.
 
 ## Error Reporting
 

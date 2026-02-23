@@ -30,7 +30,7 @@ Different DNS record types present different security concerns. Your monitoring 
 
 **MX Records**: Changes can redirect email to attacker-controlled servers. This enables business email compromise, password reset interception, and data exfiltration. Organizations handling sensitive communications should monitor MX records closely.
 
-**A and AAAA Records**: Changes redirect web traffic. While this could indicate compromise, it's also commonly changed during legitimate deployments. Monitor for unexpected changes, particularly to critical services. Consider [monitoring from multiple regions](/articles/regional-monitoring-latency-is-not-universal) to detect targeted attacks.
+**A and AAAA Records**: Changes redirect web traffic. While this could indicate compromise, it's also commonly changed during legitimate deployments. Monitor for unexpected changes, particularly to critical services. Consider [monitoring from multiple regions](/articles/why-latency-is-not-universal-in-regional-monitoring) to detect targeted attacks.
 
 **TXT Records**: Often used for domain verification (SPF, DKIM, domain ownership). Changes can affect email deliverability and may indicate attempts to verify domain ownership for malicious purposes.
 
@@ -64,7 +64,7 @@ Security-focused DNS monitoring should:
 - Compare current records against known-good baselines
 - Monitor from multiple geographic locations to detect targeted attacks
 
-The baseline comparison is particularly important. You should know what your DNS records should be, not just whether they resolve. A record that resolves correctly but to the wrong IP is a security incident, not an availability incident. This is similar to how [status codes can lie](/articles/status-codes-lie) when the response content isn't what you expect.
+The baseline comparison is particularly important. You should know what your DNS records should be, not just whether they resolve. A record that resolves correctly but to the wrong IP is a security incident, not an availability incident. This is similar to how [status codes can lie](/articles/why-status-codes-lie-in-health-checks) when the response content isn't what you expect.
 
 ## Response Planning
 

@@ -180,7 +180,7 @@ export class Ping extends WorkflowEntrypoint<Cloudflare.Env> {
 }
 ```
 
-By separating the execution logic into a private method, you keep error handling clean and ensure resources like loggers are always flushed, even when the workflow fails. The [batched logger pattern](/articles/the-batched-logger-pattern-for-workers) works well here for collecting logs throughout the workflow and sending them in one batch.
+By separating the execution logic into a private method, you keep error handling clean and ensure resources like loggers are always flushed, even when the workflow fails. The [batched logger pattern](/articles/the-batchedlogger-pattern-for-workers) works well here for collecting logs throughout the workflow and sending them in one batch.
 
 ## Register the Workflow in wrangler.toml
 

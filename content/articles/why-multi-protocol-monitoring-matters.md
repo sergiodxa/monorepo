@@ -1,5 +1,5 @@
 ---
-title: "Multi-Protocol Monitoring: Why One Check Isn't Enough"
+title: Why Multi-Protocol Monitoring Matters
 excerpt: Combining TCP, HTTP, and content checks to pinpoint root causes faster.
 ---
 
@@ -104,7 +104,7 @@ If HTTP succeeds but content validation fails, the problem is in application log
 - Business logic is throwing errors
 - Cached or stale data is being served
 
-The application is running and responding. It's just not responding correctly. This is why [status codes lie](/articles/status-codes-lie)—a 200 response doesn't guarantee your service is actually healthy.
+The application is running and responding. It's just not responding correctly. This is why [status codes lie](/articles/why-status-codes-lie-in-health-checks)—a 200 response doesn't guarantee your service is actually healthy.
 
 ## Combining Monitors for Diagnosis
 
@@ -145,7 +145,7 @@ monitors:
     interval: 60s
 ```
 
-The TCP check runs most frequently because it's cheapest. HTTP and content checks run less often because they generate actual load. When choosing between HEAD and GET for HTTP checks, consider [the HEAD vs GET health check tradeoff](/articles/head-vs-get-health-check-tradeoff)—HEAD is faster but can't validate content.
+The TCP check runs most frequently because it's cheapest. HTTP and content checks run less often because they generate actual load. When choosing between HEAD and GET for HTTP checks, consider [the HEAD vs GET health check tradeoff](/articles/the-head-vs-get-health-check-tradeoff)—HEAD is faster but can't validate content.
 
 ## Alert Routing
 

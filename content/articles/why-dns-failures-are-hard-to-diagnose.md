@@ -42,7 +42,7 @@ This creates several diagnostic challenges:
 
 **Slow recovery**: Even after you fix the DNS issue, users with cached bad records continue experiencing failures until their cache expires. This makes it seem like your fix didn't work.
 
-**Geographic variation**: Different DNS resolvers have different cache states. Users in one region might be affected while users in another are fine, making the problem appear to be network-related. This is why [regional monitoring](/articles/regional-monitoring-latency-is-not-universal) matters for DNS as much as for latency.
+**Geographic variation**: Different DNS resolvers have different cache states. Users in one region might be affected while users in another are fine, making the problem appear to be network-related. This is why [regional monitoring](/articles/why-latency-is-not-universal-in-regional-monitoring) matters for DNS as much as for latency.
 
 ## Why Reactive Debugging Fails
 

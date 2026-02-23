@@ -6,7 +6,7 @@ technologies: @cloudflare/workers-types@4.0.0
 
 Serverless platforms like Cloudflare Workers have a unique constraint: each request runs in an isolated execution context with limited CPU time. Every `console.log` call during that execution becomes a separate log entry in your observability platform. This creates noise, makes debugging harder, and can increase costs if you're paying per log line.
 
-The BatchedLogger pattern solves this by accumulating log entries throughout the request lifecycle and flushing them all at once as a single structured log entry. For a comparison with traditional immediate logging, see [two logger strategies: immediate vs batched](/articles/two-logger-strategies-immediate-vs-batched).
+The BatchedLogger pattern solves this by accumulating log entries throughout the request lifecycle and flushing them all at once as a single structured log entry. For a comparison with traditional immediate logging, see [two logger strategies: immediate vs batched](/articles/immediate-vs-batched-logger-strategies).
 
 ## The Problem with Traditional Logging
 

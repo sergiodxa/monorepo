@@ -6,7 +6,7 @@ technologies: @cloudflare/workers-types@4.0.0
 
 When building applications on Cloudflare Workers, every millisecond counts. If you're [caching data to KV](/tutorials/build-a-cache-abstraction-for-cloudflare-kv), waiting for the write to complete before sending a response adds unnecessary latency. The user doesn't need to wait for the cache to be updated: they just need their data.
 
-The `waitUntil` API lets you schedule work to run after the response is sent. This is perfect for cache writes, analytics, [batched logging](/articles/the-batched-logger-pattern-for-workers), or any operation that doesn't affect the response. By deferring these writes, you can return responses faster while still ensuring the work completes.
+The `waitUntil` API lets you schedule work to run after the response is sent. This is perfect for cache writes, analytics, [batched logging](/articles/the-batchedlogger-pattern-for-workers), or any operation that doesn't affect the response. By deferring these writes, you can return responses faster while still ensuring the work completes.
 
 ## Create a Cache Store with waitUntil
 

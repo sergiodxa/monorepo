@@ -4,7 +4,7 @@ excerpt: Build a content matching system that validates response bodies using co
 technologies: typescript@5.0.0
 ---
 
-When building an uptime monitoring system, checking if a URL returns a 200 status code is often not enough—[status codes can lie](/articles/status-codes-lie). You need to verify that the response body contains the expected content. Maybe you want to ensure your API returns a specific JSON field, or that your homepage includes a particular text, or that an error message does not appear in the response.
+When building an uptime monitoring system, checking if a URL returns a 200 status code is often not enough—[status codes can lie](/articles/why-status-codes-lie-in-health-checks). You need to verify that the response body contains the expected content. Maybe you want to ensure your API returns a specific JSON field, or that your homepage includes a particular text, or that an error message does not appear in the response.
 
 This tutorial shows you how to implement a content matching system that supports three types of rules: contains, not contains, and regex patterns. Each rule can be case sensitive or case insensitive, and you can run multiple rules against a single response.
 
