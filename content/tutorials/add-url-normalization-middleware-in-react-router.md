@@ -78,7 +78,7 @@ export const middleware = [
 // ... rest of your root route
 ```
 
-The order of middleware matters. By placing `noWWWMiddleware` before `noTrailingSlashMiddleware`, you ensure that the hostname is normalized first, then the path. This avoids potential double redirects if a request comes in with both `www.` and a trailing slash.
+The order of middleware matters. By placing `noWWWMiddleware` before `noTrailingSlashMiddleware`, you ensure that the hostname is normalized first, then the path. This way, if a user visits `https://www.example.com/about/`, the middleware will first redirect to `https://example.com/about/` and then to `https://example.com/about` in the next step.
 
 #### Understanding the Factory Pattern
 

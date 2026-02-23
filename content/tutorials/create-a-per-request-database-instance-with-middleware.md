@@ -26,16 +26,20 @@ import type { MiddlewareFunction } from "react-router";
 import { databaseContext } from "~/context/database";
 import { createDatabase } from "~/lib/database";
 
-export let databaseMiddleware: MiddlewareFunction = async ({ context }, next) => {
-	let db = createDatabase();
+function createDatabaseMiddleware(): MiddlewareFunction<Response> {
+	return async function databaseMiddleware({ context }, next) {
+		let db = createDatabase();
 
-	try {
-		context.set(databaseContext, db);
-		return await next();
-	} finally {
-		await db.close();
-	}
-};
+		try {
+			context.set(databaseContext, db);
+			return await next();
+		} finally {
+			await db.close();
+		}
+	};
+}
+
+export const databaseMiddleware = createDatabaseMiddleware();
 ```
 
 The middleware creates a fresh database instance, stores it in context, then calls `next()` to run the rest of the request. The `finally` block ensures `db.close()` runs whether the request succeeds or throws an error.
@@ -44,7 +48,7 @@ This pattern guarantees cleanup even when a loader throws, a validation fails, o
 
 ## Add the Middleware to Routes
 
-```tsx {% path="app/routes/users.tsx" %}
+```tsx {% path="app/root.tsx" %}
 import { databaseMiddleware } from "~/middleware/database";
 
 export let middleware = [databaseMiddleware];
@@ -60,28 +64,19 @@ Export the middleware array from any route that needs database access. The middl
 
 For a related pattern that creates instances without cleanup logic, see [how to create a per-request singleton with middleware](/tutorials/create-a-per-request-singleton-with-react-router-middleware).
 
-## Apply to All Routes with a Layout
+## Apply to All Routes
 
-```ts {% path="app/routes.ts" %}
-import type { RouteConfig } from "@react-router/dev/routes";
-import { layout } from "@react-router/dev/routes";
-import { flatRoutes } from "@react-router/fs-routes";
+Most likely you want every route to have database access. Instead of adding the middleware to each route, add it to the root layout route so it applies to all routes:
 
-export default [layout("./middleware/with-database.tsx", await flatRoutes())] satisfies RouteConfig;
-```
-
-```tsx {% path="app/middleware/with-database.tsx" %}
-import { Outlet } from "react-router";
+```tsx {% path="app/root.tsx" %}
 import { databaseMiddleware } from "~/middleware/database";
 
 export let middleware = [databaseMiddleware];
 
-export default function WithDatabase() {
-	return <Outlet />;
-}
+// ... rest of the root route code
 ```
 
-Wrapping all routes in a layout with the middleware means every loader and action gets database access automatically. The layout component just renders an `Outlet` since it only exists to attach the middleware.
+Wrapping the middleware at the root means every request gets a database instance automatically. You can still add additional middleware to specific routes if needed, and they will run in the correct order.
 
 ## Wrap Requests in a Transaction
 
@@ -90,22 +85,26 @@ import type { MiddlewareFunction } from "react-router";
 import { databaseContext } from "~/context/database";
 import { createDatabase } from "~/lib/database";
 
-export let transactionMiddleware: MiddlewareFunction = async ({ context }, next) => {
-	let db = createDatabase();
-	await db.beginTransaction();
+function createTransactionMiddleware(): MiddlewareFunction<Response> {
+	return async function transactionMiddleware({ context }, next) {
+		let db = createDatabase();
+		await db.beginTransaction();
 
-	try {
-		context.set(databaseContext, db);
-		let response = await next();
-		await db.commit();
-		return response;
-	} catch (error) {
-		await db.rollback();
-		throw error;
-	} finally {
-		await db.close();
-	}
-};
+		try {
+			context.set(databaseContext, db);
+			let response = await next();
+			await db.commit();
+			return response;
+		} catch (error) {
+			await db.rollback();
+			throw error;
+		} finally {
+			await db.close();
+		}
+	};
+}
+
+export const transactionMiddleware = createTransactionMiddleware();
 ```
 
 This variant starts a transaction before the request and commits it after. If anything throws, the transaction rolls back and the error propagates. The `finally` block still closes the connection regardless of the outcome.
