@@ -6,7 +6,7 @@ tech: react-router@7.3.0 @react-router/fs-routes@7.3.0
 
 As your application grows, a single `routes/` folder can become overwhelming. You might have public marketing pages, authenticated app routes, API endpoints, and [action routes](/tutorials/use-action-routes-in-react-router) all mixed together. Splitting routes into logical directories helps teams work independently and makes the codebase easier to navigate, while the flat routes convention remains desirable for its simplicity and predictability within each directory.
 
-The key insight is that you can call `flatRoutes()` multiple times, once per directory, and combine the results. Each directory maintains flat route conventions internally while the overall structure stays organized by feature or team. For even more control over route organization, see [how to split your routes config](/tutorials/split-routes-config-in-react-router).
+You can call `flatRoutes()` multiple times, once per directory, and combine the results. Each directory maintains the flat routes convention internally for simplicity and predictability, while the overall structure stays organized by feature or team. For even more control over route organization, see [how to split your routes config](/tutorials/split-routes-config-in-react-router).
 
 ## Set Up the Directory Structure
 
@@ -18,9 +18,9 @@ app/
 │   │   ├── about.tsx
 │   │   └── pricing.tsx
 │   ├── app/
-│   │   ├── _layout.tsx
-│   │   ├── dashboard.tsx
-│   │   └── settings.tsx
+│   │   ├── _.tsx
+│   │   ├── _.dashboard.tsx
+│   │   └── _.settings.tsx
 │   ├── api/
 │   │   ├── users.ts
 │   │   └── posts.ts
@@ -30,7 +30,7 @@ app/
 └── routes.ts
 ```
 
-Each sub-folder contains routes using the flat routes convention. The `public/` folder handles marketing pages, `app/` contains authenticated routes, `api/` exposes REST endpoints, and `actions/` centralizes form handlers.
+Each sub-folder contains routes using the flat routes convention. The `public/` folder handles marketing pages, `app/` contains authenticated routes with a shared layout, `api/` exposes REST endpoints, and `actions/` centralizes form handlers.
 
 ## Configure Multiple Route Sources
 
@@ -54,7 +54,7 @@ export default [
 ] satisfies RouteConfig;
 ```
 
-The `flatRoutes()` function scans each directory independently, so `app/dashboard.tsx` becomes `/app/dashboard` after the prefix is applied. Public routes have no prefix since they live at the root.
+The `flatRoutes()` function scans each directory independently, so `_.dashboard.tsx` in the `app/` folder becomes `/app/dashboard` after the prefix is applied. Public routes have no prefix since they live at the root.
 
 Using `Promise.all()` loads all directories in parallel, keeping build time fast even with many route folders.
 
@@ -77,9 +77,9 @@ export default function AppLayout() {
 }
 ```
 
-The `_.tsx` file creates a pathless layout route that can wrap all routes in that directory by prefixing them with `_.`. For example, `app/_.dashboard.tsx` becomes `/app/dashboard` and is rendered inside the `AppLayout`. This allows you to share navigation, styles, or any other UI across all routes in that section without repeating code.
+The `_.tsx` file creates a layout route with no path segment. Routes prefixed with `_.` become children of this layout, so `_.dashboard.tsx` renders at `/app/dashboard` inside the `AppLayout`. Using `_.` as the prefix keeps filenames short while making the nesting relationship clear. This allows you to share navigation, styles, or any other UI across all routes in that section without repeating code.
 
-This also works to apply a group of middleware to a section. For example, you export the auth middleware from this file and every app route nested inside it will require authentication. If you're new to middleware, start with [the middleware basics](/tutorials/use-middleware-in-react-router).
+This also works to apply middleware to a section. Export the auth middleware from `_.tsx` and every route nested inside it will require authentication. If you're new to middleware, start with [the middleware basics](/tutorials/use-middleware-in-react-router).
 
 ## Add Shared Layout between Sections
 
@@ -124,7 +124,8 @@ export default [
 
 ## Handle Cross-Directory Dependencies
 
-```tsx {% path="app/routes/app/posts.tsx" %}
+```tsx {% path="app/routes/app/_.posts.tsx" %}
+import type { Route } from "./+types/_.posts";
 import { useFetcher } from "react-router";
 
 export default function Posts({ loaderData }: Route.ComponentProps) {
