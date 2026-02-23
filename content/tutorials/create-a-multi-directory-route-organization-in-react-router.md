@@ -4,11 +4,9 @@ excerpt: Organize routes into sub-folders while keeping flat routes inside each 
 tech: react-router@7.3.0 @react-router/fs-routes@7.3.0
 ---
 
-As your application grows, a single `routes/` folder can become overwhelming. You might have public marketing pages, authenticated app routes, API endpoints, and [action routes](/tutorials/use-action-routes-in-react-router) all mixed together. Splitting routes into logical directories helps teams work independently and makes the codebase easier to navigate.
+As your application grows, a single `routes/` folder can become overwhelming. You might have public marketing pages, authenticated app routes, API endpoints, and [action routes](/tutorials/use-action-routes-in-react-router) all mixed together. Splitting routes into logical directories helps teams work independently and makes the codebase easier to navigate, while the flat routes convention remains desirable for its simplicity and predictability within each directory.
 
-However, using flat routes convention is still desirable for its simplicity and predictability. The key is to combine both approaches: maintain flat routes within each directory while using multiple directories to organize by feature or team.
-
-The key insight is that you can call `flatRoutes()` multiple times, once per directory, and combine the results. Each directory maintains flat route conventions internally while the overall structure stays organized. For even more control over route organization, see [how to split your routes config](/tutorials/split-routes-config-in-react-router).
+The key insight is that you can call `flatRoutes()` multiple times, once per directory, and combine the results. Each directory maintains flat route conventions internally while the overall structure stays organized by feature or team. For even more control over route organization, see [how to split your routes config](/tutorials/split-routes-config-in-react-router).
 
 ## Set Up the Directory Structure
 
@@ -58,11 +56,11 @@ export default [
 
 The `flatRoutes()` function scans each directory independently, so `app/dashboard.tsx` becomes `/app/dashboard` after the prefix is applied. Public routes have no prefix since they live at the root.
 
-Using `Promise.all()` loads all directories in parallel, keeping startup time fast even with many route folders.
+Using `Promise.all()` loads all directories in parallel, keeping build time fast even with many route folders.
 
 ## Add Shared Layouts per Section
 
-```tsx {% path="app/routes/app/_layout.tsx" %}
+```tsx {% path="app/routes/app/_.tsx" %}
 import { Outlet } from "react-router";
 
 export default function AppLayout() {
@@ -79,9 +77,31 @@ export default function AppLayout() {
 }
 ```
 
-The `_layout.tsx` file creates a pathless layout route that wraps all routes in that directory. Routes in `app/` share this sidebar layout, while `public/` routes can have their own marketing layout.
+The `_.tsx` file creates a pathless layout route that can wrap all routes in that directory by prefixing them with `_.`. For example, `app/_.dashboard.tsx` becomes `/app/dashboard` and is rendered inside the `AppLayout`. This allows you to share navigation, styles, or any other UI across all routes in that section without repeating code.
 
-## Apply Middleware to Route Groups
+This also works to apply a group of middleware to a section. For example, you export the auth middleware from this file and every app route nested inside it will require authentication. If you're new to middleware, start with [the middleware basics](/tutorials/use-middleware-in-react-router).
+
+## Add Shared Layout between Sections
+
+If you want to share a layout, or middleware, between multiple sections (e.g. both app and public routes), you can create a separate file for that:
+
+```tsx {% path="app/layouts/shared.tsx" %}
+import { Outlet } from "react-router";
+
+export default function SharedLayout() {
+	return (
+		<div>
+			<header>{/* Site header */}</header>
+			<main>
+				<Outlet />
+			</main>
+			<footer>{/* Site footer */}</footer>
+		</div>
+	);
+}
+```
+
+Then wrap the relevant route groups in `routes.ts`:
 
 ```ts {% path="app/routes.ts" %}
 import type { RouteConfig } from "@react-router/dev/routes";
@@ -96,14 +116,11 @@ let [publicRoutes, appRoutes, apiRoutes, actionRoutes] = await Promise.all([
 ]);
 
 export default [
-	...publicRoutes,
-	layout("./middleware/auth.tsx", prefix("/app", appRoutes)),
-	layout("./middleware/api.tsx", prefix("/api", apiRoutes)),
+	layout("./layouts/shared.tsx", [...publicRoutes, ...prefix("/app", appRoutes)]),
+	...prefix("/api", apiRoutes),
 	...prefix("/actions", actionRoutes),
 ] satisfies RouteConfig;
 ```
-
-The `layout()` function wraps route groups with a parent route. The `auth.tsx` middleware can check authentication for all `/app/*` routes, while `api.tsx` might handle API-specific concerns like rate limiting or JSON responses. If you're new to middleware, start with [the middleware basics](/tutorials/use-middleware-in-react-router).
 
 ## Handle Cross-Directory Dependencies
 
