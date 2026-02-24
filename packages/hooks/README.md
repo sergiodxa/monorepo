@@ -11,7 +11,14 @@ Requires React 19+ and React Router 7+ as peer dependencies.
 ## Usage
 
 ```typescript
-import { useToggle, useFetcherStatus, useClipboard, useValue } from "@pkg/hooks";
+import {
+  useToggle,
+  useFetcherStatus,
+  useClipboard,
+  useValue,
+  useTimeout,
+  useStableReference,
+} from "@pkg/hooks";
 
 function MyComponent() {
   let [isOpen, toggle] = useToggle(false);
@@ -67,17 +74,16 @@ A hook for reading from and writing to the system clipboard with status tracking
 **Example:**
 
 ```typescript
-import { useClipboard } from "@pkg/hooks";
+import { useClipboard, useTimeout } from "@pkg/hooks";
 
 function CopyButton({ text }: { text: string }) {
-	let { status, write, reset } = useClipboard();
+	let clipboard = useClipboard();
 
-	useEffect(() => {
-		if (status === "success") {
-			let timeout = setTimeout(reset, 2000);
-			return () => clearTimeout(timeout);
-		}
-	}, [status, reset]);
+	// Auto-reset after 2 seconds when copy succeeds
+	useTimeout(() => clipboard.reset(), {
+		delay: 2000,
+		when: clipboard.status === "success",
+	});
 
 	return (
 		<button
@@ -85,11 +91,11 @@ function CopyButton({ text }: { text: string }) {
 				let item = new ClipboardItem({
 					"text/plain": new Blob([text], { type: "text/plain" }),
 				});
-				await write([item]);
+				await clipboard.write([item]);
 			}}
-			disabled={status === "loading"}
+			disabled={clipboard.status === "loading"}
 		>
-			{status === "success" ? "Copied!" : "Copy"}
+			{clipboard.status === "success" ? "Copied!" : "Copy"}
 		</button>
 	);
 }
@@ -202,6 +208,127 @@ function Tooltip({ targetRef }: { targetRef: RefObject<HTMLElement> }) {
 }
 ```
 
+### `useTimeout(callback: () => void, options: useTimeout.Options): () => void`
+
+A hook that manages a timeout with conditional triggering.
+
+**Parameters:**
+
+- `callback`: The function to call when the timeout fires
+- `options`: Configuration options
+  - `delay`: The delay in milliseconds before the callback is invoked
+  - `when`: Condition that controls when the timeout starts (default: `false`)
+
+**Returns:**
+
+- A function to manually clear the timeout
+
+**Behavior:**
+
+- When `when` is `false` → no timeout running
+- When `when` becomes `true` → starts the timeout
+- When `when` becomes `false` again (or component unmounts) → clears the timeout
+- If `when` stays `true` and `delay` changes → restarts with new delay
+
+**Example:**
+
+```typescript
+import { useClipboard, useTimeout } from "@pkg/hooks";
+
+function CopyButton({ text }: { text: string }) {
+  let clipboard = useClipboard();
+
+  // Auto-reset after 2 seconds when copy succeeds
+  useTimeout(() => clipboard.reset(), {
+    delay: 2000,
+    when: clipboard.status === "success",
+  });
+
+  return (
+    <button
+      onClick={async () => {
+        let item = new ClipboardItem({
+          "text/plain": new Blob([text], { type: "text/plain" }),
+        });
+        await clipboard.write([item]);
+      }}
+      disabled={clipboard.status === "loading"}
+    >
+      {clipboard.status === "success" ? "Copied!" : "Copy"}
+    </button>
+  );
+}
+```
+
+**Example with manual clear:**
+
+```typescript
+import { useTimeout } from "@pkg/hooks";
+
+function AutoSave({ isDirty }: { isDirty: boolean }) {
+  let clear = useTimeout(() => save(), {
+    delay: 5000,
+    when: isDirty,
+  });
+
+  return (
+    <div>
+      {isDirty && <span>Unsaved changes</span>}
+      <button onClick={clear}>Cancel auto-save</button>
+    </div>
+  );
+}
+```
+
+### `useStableReference<T>(value: T): { readonly current: T }`
+
+Returns a ref that always contains the latest value.
+
+Useful for accessing the latest value inside callbacks or effects without adding the value to the dependency array, avoiding stale closures.
+
+**Type Parameters:**
+
+- `T`: The type of the value
+
+**Parameters:**
+
+- `value`: The value to keep a reference to
+
+**Returns:**
+
+- A ref object with the `current` property always set to the latest value
+
+**Example:**
+
+```typescript
+import { useStableReference } from "@pkg/hooks";
+
+function useEventListener(event: string, handler: () => void) {
+	let handlerRef = useStableReference(handler);
+
+	useEffect(() => {
+		let listener = () => handlerRef.current();
+		window.addEventListener(event, listener);
+		return () => window.removeEventListener(event, listener);
+	}, [event]); // handler not in deps, but always up-to-date via ref
+}
+```
+
+**Example in custom hooks:**
+
+```typescript
+import { useStableReference } from "@pkg/hooks";
+
+function useInterval(callback: () => void, delay: number) {
+	let callbackRef = useStableReference(callback);
+
+	useEffect(() => {
+		let id = setInterval(() => callbackRef.current(), delay);
+		return () => clearInterval(id);
+	}, [delay]); // No need to restart interval when callback changes
+}
+```
+
 ### `useFetcherStatus<T extends { ok?: boolean }>(fetcher: Fetcher<T>): useFetcherStatus.FetcherStatus`
 
 A hook that derives a simple status from a React Router fetcher's state and data.
@@ -249,11 +376,12 @@ function SubscribeForm() {
 Types are exported via namespaces on each hook:
 
 ```typescript
-import { useFetcherStatus, useClipboard } from "@pkg/hooks";
+import { useFetcherStatus, useClipboard, useTimeout } from "@pkg/hooks";
 
 // Access types via namespace
 type FetcherStatus = useFetcherStatus.FetcherStatus;
 type ClipboardStatus = useClipboard.Status;
+type TimeoutOptions = useTimeout.Options;
 ```
 
 #### `useFetcherStatus.FetcherStatus`
@@ -286,6 +414,22 @@ interface Return {
 	read(): Promise<Result<ClipboardItems, ClipboardError>>;
 	write(data: ClipboardItems): Promise<Result<null, ClipboardError>>;
 	reset(): void;
+}
+```
+
+#### `useTimeout.Options`
+
+```typescript
+interface Options {
+	/** The delay in milliseconds before the callback is invoked. */
+	delay: number;
+	/**
+	 * Condition that controls when the timeout starts.
+	 * - When `true`, the timeout starts (or restarts if already running).
+	 * - When `false`, the timeout is cleared.
+	 * @default false
+	 */
+	when?: boolean;
 }
 ```
 

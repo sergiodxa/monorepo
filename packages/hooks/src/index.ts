@@ -4,3 +4,5 @@ export { useToggle } from "./use-toggle.js";
 export { useCapsLockDetection } from "./use-caps-lock-detection.js";
 export { useIsomorphicLayoutEffect } from "./use-isomorphic-layout-effect.js";
 export { useValue } from "./use-value.js";
+export { useStableReference } from "./use-stable-reference.js";
+export { useTimeout } from "./use-timeout.js";
