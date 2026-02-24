@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef } from "react";
 
-import { useStableReference } from "./use-stable-reference.js";
+import { useLatest } from "./use-latest.js";
 
 /**
  * A hook that manages a timeout with conditional triggering.
@@ -30,7 +30,7 @@ export function useTimeout(
 	{ delay, when = false }: useTimeout.Options,
 ): useTimeout.ClearFunction {
 	let timerId = useRef<useTimeout.TimerID>(null);
-	let callbackRef = useStableReference(callback);
+	let callbackRef = useLatest(callback);
 
 	useEffect(() => {
 		if (!when) return;

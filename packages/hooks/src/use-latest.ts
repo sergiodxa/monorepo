@@ -12,7 +12,7 @@ import { useEffect, useRef } from "react";
  * @example
  * // Access latest callback without re-creating the timeout
  * function useTimeout(callback: () => void, delay: number) {
- *   let callbackRef = useStableReference(callback);
+ *   let callbackRef = useLatest(callback);
  *
  *   useEffect(() => {
  *     let id = setTimeout(() => callbackRef.current(), delay);
@@ -23,7 +23,7 @@ import { useEffect, useRef } from "react";
  * @example
  * // Access latest props in an event listener
  * function Component({ onClick }: { onClick: () => void }) {
- *   let onClickRef = useStableReference(onClick);
+ *   let onClickRef = useLatest(onClick);
  *
  *   useEffect(() => {
  *     let controller = new AbortController();
@@ -32,7 +32,7 @@ import { useEffect, useRef } from "react";
  *   }, []); // No need to re-subscribe when onClick changes
  * }
  */
-export function useStableReference<T>(value: T) {
+export function useLatest<T>(value: T) {
 	let ref = useRef(value);
 
 	useEffect(() => {

@@ -17,7 +17,7 @@ import {
   useClipboard,
   useValue,
   useTimeout,
-  useStableReference,
+  useLatest,
 } from "@pkg/hooks";
 
 function MyComponent() {
@@ -280,7 +280,7 @@ function AutoSave({ isDirty }: { isDirty: boolean }) {
 }
 ```
 
-### `useStableReference<T>(value: T): { readonly current: T }`
+### `useLatest<T>(value: T): { readonly current: T }`
 
 Returns a ref that always contains the latest value.
 
@@ -301,10 +301,10 @@ Useful for accessing the latest value inside callbacks or effects without adding
 **Example:**
 
 ```typescript
-import { useStableReference } from "@pkg/hooks";
+import { useLatest } from "@pkg/hooks";
 
 function useEventListener(event: string, handler: () => void) {
-	let handlerRef = useStableReference(handler);
+	let handlerRef = useLatest(handler);
 
 	useEffect(() => {
 		let listener = () => handlerRef.current();
@@ -317,10 +317,10 @@ function useEventListener(event: string, handler: () => void) {
 **Example in custom hooks:**
 
 ```typescript
-import { useStableReference } from "@pkg/hooks";
+import { useLatest } from "@pkg/hooks";
 
 function useInterval(callback: () => void, delay: number) {
-	let callbackRef = useStableReference(callback);
+	let callbackRef = useLatest(callback);
 
 	useEffect(() => {
 		let id = setInterval(() => callbackRef.current(), delay);
