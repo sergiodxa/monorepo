@@ -1,11 +1,16 @@
 import type { Log } from "./types";
 
-export namespace BatchedLogger {
-	export type Event = {
+export namespace Logger {
+	export interface Event {
 		level: Log.Level;
 		event: string;
 		[key: string]: unknown;
-	};
+	}
+
+	export interface Output {
+		timestamp: number;
+		events: Event[];
+	}
 }
 
 /**
@@ -13,36 +18,60 @@ export namespace BatchedLogger {
  * Designed for Cloudflare Workers to consolidate all logs from a single execution context
  * (request, workflow, cron job, etc.) into one log entry.
  */
-export class BatchedLogger {
+export class Logger {
 	/**
-	 * Creates a BatchedLogger from a Request object.
+	 * Creates a Logger from a Request object.
 	 * Convenience factory for HTTP request contexts.
 	 */
-	static fromRequest(request: Request): BatchedLogger {
-		return new BatchedLogger(`${request.method} ${request.url}`);
+	static fromRequest(request: Request): Logger {
+		return new Logger(`${request.method} ${request.url}`);
 	}
 
-	private entries = new Set<Log.Entry>();
+	#entries = new Set<Log.Entry>();
+	#identifier: string;
 
 	/**
 	 * @param identifier - A string identifying the context (e.g., "POST /api/foo", "workflow:ping:abc123", "cron:daily-cleanup")
 	 */
-	constructor(private readonly identifier: string) {}
+	constructor(identifier: string) {
+		this.#identifier = identifier;
+	}
 
 	info(event: string, payload?: Log.Payload) {
-		this.entries.add({
-			level: "info",
-			event,
-			payload,
-		});
+		this.#entries.add({ level: "info", event, payload });
 	}
 
 	error(event: string, payload?: Log.Payload) {
-		this.entries.add({
-			level: "error",
-			event,
-			payload,
-		});
+		this.#entries.add({ level: "error", event, payload });
+	}
+
+	get events(): Logger.Event[] {
+		let events: Logger.Event[] = [];
+
+		for (let entry of this.#entries) {
+			events.push({ level: entry.level, event: entry.event, ...entry.payload });
+		}
+
+		return events;
+	}
+
+	get hasEvents(): boolean {
+		return this.#entries.size > 0;
+	}
+
+	get hasError(): boolean {
+		for (let entry of this.#entries) {
+			if (entry.level === "error") return true;
+		}
+
+		return false;
+	}
+
+	toJSON(): Logger.Output {
+		return {
+			timestamp: performance.now(),
+			events: this.events,
+		};
 	}
 
 	/**
@@ -51,31 +80,11 @@ export class BatchedLogger {
 	 * Clears the internal buffer after flushing.
 	 */
 	flush() {
-		if (this.entries.size === 0) return;
+		if (!this.hasEvents) return;
 
-		let output = { timestamp: Date.now(), events: this.events };
+		if (this.hasError) console.error(this.#identifier, this.toJSON());
+		else console.info(this.#identifier, this.toJSON());
 
-		if (this.hasError) console.error(this.identifier, output);
-		else console.info(this.identifier, output);
-
-		this.entries.clear();
-	}
-
-	private get hasError() {
-		for (let entry of this.entries) {
-			if (entry.level === "error") return true;
-		}
-
-		return false;
-	}
-
-	private get events() {
-		let events: BatchedLogger.Event[] = [];
-
-		for (let entry of this.entries) {
-			events.push({ level: entry.level, event: entry.event, ...entry.payload });
-		}
-
-		return events;
+		this.#entries.clear();
 	}
 }

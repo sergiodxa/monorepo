@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, spyOn, test } from "bun:test";
 
 import { RouterContextProvider } from "react-router";
 
-import { BatchedLogger } from "./batched-logger";
+import { Logger } from "./batched-logger";
 import { createBatchedLoggerMiddleware } from "./middleware";
 
 describe(createBatchedLoggerMiddleware.name, () => {
@@ -24,10 +24,10 @@ describe(createBatchedLoggerMiddleware.name, () => {
 		dateNowSpy.mockRestore();
 	});
 
-	test("creates a BatchedLogger and stores it in context", async () => {
+	test("creates a Logger and stores it in context", async () => {
 		let [middleware, getLogger] = createBatchedLoggerMiddleware();
 		let context = new RouterContextProvider();
-		let capturedLogger: BatchedLogger | undefined;
+		let capturedLogger: Logger | undefined;
 
 		await middleware(
 			{ context, request: testRequest, params: {}, unstable_pattern: "/test" },
@@ -37,7 +37,7 @@ describe(createBatchedLoggerMiddleware.name, () => {
 			},
 		);
 
-		expect(capturedLogger).toBeInstanceOf(BatchedLogger);
+		expect(capturedLogger).toBeInstanceOf(Logger);
 	});
 
 	test("flushes logger after handler completes", async () => {
@@ -92,7 +92,7 @@ describe(createBatchedLoggerMiddleware.name, () => {
 		expect(await (response as Response).text()).toBe("Test body");
 	});
 
-	test("getter retrieves the BatchedLogger from context", async () => {
+	test("getter retrieves the Logger from context", async () => {
 		let [middleware, getLogger] = createBatchedLoggerMiddleware();
 		let context = new RouterContextProvider();
 
@@ -100,7 +100,7 @@ describe(createBatchedLoggerMiddleware.name, () => {
 			{ context, request: testRequest, params: {}, unstable_pattern: "/test" },
 			async () => {
 				let logger = getLogger(context);
-				expect(logger).toBeInstanceOf(BatchedLogger);
+				expect(logger).toBeInstanceOf(Logger);
 				return new Response("OK");
 			},
 		);

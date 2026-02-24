@@ -1,20 +1,20 @@
 import { createContext, type MiddlewareFunction, type RouterContextProvider } from "react-router";
 
-import { BatchedLogger } from "./batched-logger";
+import { Logger } from "./batched-logger";
 
-type Getter = (context: RouterContextProvider | Readonly<RouterContextProvider>) => BatchedLogger;
+type Getter = (context: RouterContextProvider | Readonly<RouterContextProvider>) => Logger;
 
 /**
- * Creates a middleware that provides a BatchedLogger instance for each request.
+ * Creates a middleware that provides a Logger instance for each request.
  * The logger is stored in the React Router context and automatically flushed after the handler completes.
  */
 export function createBatchedLoggerMiddleware(): [MiddlewareFunction<Response>, Getter] {
-	let batchedLoggerContext = createContext<BatchedLogger>();
+	let loggerContext = createContext<Logger>();
 
 	return [
 		async ({ request, context }, next) => {
-			let logger = BatchedLogger.fromRequest(request);
-			context.set(batchedLoggerContext, logger);
+			let logger = Logger.fromRequest(request);
+			context.set(loggerContext, logger);
 
 			try {
 				return await next();
@@ -23,14 +23,14 @@ export function createBatchedLoggerMiddleware(): [MiddlewareFunction<Response>, 
 			}
 		},
 		/**
-		 * Retrieves the BatchedLogger instance from the React Router context.
+		 * Retrieves the Logger instance from the React Router context.
 		 * Must be called within a request that has the logger middleware active.
 		 */
 		(context) => {
-			let logger = context.get(batchedLoggerContext);
+			let logger = context.get(loggerContext);
 			if (logger) return logger;
 			throw new Error(
-				"Failed to find BatchedLogger in context. Did you forget to add batchedLoggerMiddleware?",
+				"Failed to find Logger in context. Did you forget to add batchedLoggerMiddleware?",
 			);
 		},
 	];

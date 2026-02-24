@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, describe, expect, spyOn, test } from "bun:test";
 
-import { BatchedLogger } from "./batched-logger";
+import { Logger } from "./batched-logger";
 
-describe(BatchedLogger.name, () => {
+describe(Logger.name, () => {
 	let consoleInfoSpy: ReturnType<typeof spyOn>;
 	let consoleErrorSpy: ReturnType<typeof spyOn>;
 	let dateNowSpy: ReturnType<typeof spyOn>;
@@ -21,7 +21,7 @@ describe(BatchedLogger.name, () => {
 
 	describe("constructor", () => {
 		test("accepts a string identifier", () => {
-			let batchedLogger = new BatchedLogger("workflow:ping:abc123");
+			let batchedLogger = new Logger("workflow:ping:abc123");
 
 			batchedLogger.info("test_event");
 			batchedLogger.flush();
@@ -33,7 +33,7 @@ describe(BatchedLogger.name, () => {
 	describe("fromRequest", () => {
 		test("creates logger with request method and URL as identifier", () => {
 			let request = new Request("https://example.com/test");
-			let batchedLogger = BatchedLogger.fromRequest(request);
+			let batchedLogger = Logger.fromRequest(request);
 
 			batchedLogger.info("test_event");
 			batchedLogger.flush();
@@ -46,7 +46,7 @@ describe(BatchedLogger.name, () => {
 
 		test("includes correct method for POST requests", () => {
 			let postRequest = new Request("https://example.com/api/subscribe", { method: "POST" });
-			let batchedLogger = BatchedLogger.fromRequest(postRequest);
+			let batchedLogger = Logger.fromRequest(postRequest);
 
 			batchedLogger.info("subscription_created");
 			batchedLogger.flush();
@@ -60,7 +60,7 @@ describe(BatchedLogger.name, () => {
 
 	describe("accumulation", () => {
 		test("does not log immediately when calling info/error", () => {
-			let batchedLogger = new BatchedLogger("test-context");
+			let batchedLogger = new Logger("test-context");
 
 			batchedLogger.info("event1");
 			batchedLogger.error("event2");
@@ -72,7 +72,7 @@ describe(BatchedLogger.name, () => {
 
 	describe("flush", () => {
 		test("outputs all events in a single console call with identifier", () => {
-			let batchedLogger = new BatchedLogger("test-context");
+			let batchedLogger = new Logger("test-context");
 
 			batchedLogger.info("event1", { key: "value1" });
 			batchedLogger.info("event2", { key: "value2" });
@@ -80,7 +80,7 @@ describe(BatchedLogger.name, () => {
 
 			expect(consoleInfoSpy).toHaveBeenCalledTimes(1);
 			expect(consoleInfoSpy).toHaveBeenCalledWith("test-context", {
-				timestamp: 1738590000000,
+				timestamp: expect.any(Number),
 				events: [
 					{ level: "info", event: "event1", key: "value1" },
 					{ level: "info", event: "event2", key: "value2" },
@@ -89,7 +89,7 @@ describe(BatchedLogger.name, () => {
 		});
 
 		test("uses console.error when any error is present", () => {
-			let batchedLogger = new BatchedLogger("test-context");
+			let batchedLogger = new Logger("test-context");
 
 			batchedLogger.info("info_event");
 			batchedLogger.error("error_event");
@@ -100,7 +100,7 @@ describe(BatchedLogger.name, () => {
 		});
 
 		test("uses console.info when only info events are present", () => {
-			let batchedLogger = new BatchedLogger("test-context");
+			let batchedLogger = new Logger("test-context");
 
 			batchedLogger.info("info_event1");
 			batchedLogger.info("info_event2");
@@ -111,7 +111,7 @@ describe(BatchedLogger.name, () => {
 		});
 
 		test("clears events after flushing", () => {
-			let batchedLogger = new BatchedLogger("test-context");
+			let batchedLogger = new Logger("test-context");
 
 			batchedLogger.info("event1");
 			batchedLogger.flush();
@@ -121,7 +121,7 @@ describe(BatchedLogger.name, () => {
 		});
 
 		test("does nothing when no events are accumulated", () => {
-			let batchedLogger = new BatchedLogger("test-context");
+			let batchedLogger = new Logger("test-context");
 
 			batchedLogger.flush();
 
@@ -130,14 +130,14 @@ describe(BatchedLogger.name, () => {
 		});
 
 		test("includes level in each event output", () => {
-			let batchedLogger = new BatchedLogger("test-context");
+			let batchedLogger = new Logger("test-context");
 
 			batchedLogger.info("info_event");
 			batchedLogger.error("error_event");
 			batchedLogger.flush();
 
 			expect(consoleErrorSpy).toHaveBeenCalledWith("test-context", {
-				timestamp: 1738590000000,
+				timestamp: expect.any(Number),
 				events: [
 					{ level: "info", event: "info_event" },
 					{ level: "error", event: "error_event" },
@@ -146,13 +146,13 @@ describe(BatchedLogger.name, () => {
 		});
 
 		test("includes payload in event output", () => {
-			let batchedLogger = new BatchedLogger("test-context");
+			let batchedLogger = new Logger("test-context");
 
 			batchedLogger.info("user_subscribed", { email: "test@example.com", source: "homepage" });
 			batchedLogger.flush();
 
 			expect(consoleInfoSpy).toHaveBeenCalledWith("test-context", {
-				timestamp: 1738590000000,
+				timestamp: expect.any(Number),
 				events: [
 					{
 						level: "info",

@@ -398,6 +398,7 @@
       "name": "@pkg/logger",
       "version": "0.0.1",
       "devDependencies": {
+        "@cloudflare/workers-types": "^4.20260214.0",
         "@types/bun": "^1.3.9",
         "react-router": "^7.6.1",
       },
