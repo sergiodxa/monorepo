@@ -13,7 +13,7 @@ export async function findApplicableDiscount(): Promise<Result<DiscountItem | un
 		let discounts = await polar.discounts.list({ limit: 12 });
 		let now = new Date();
 
-		logger.info("discount_list_fetched", { count: discounts.result.items.length });
+		logger().info("discount_list_fetched", { count: discounts.result.items.length });
 
 		let discount = discounts.result.items
 			.filter(
@@ -40,14 +40,14 @@ export async function findApplicableDiscount(): Promise<Result<DiscountItem | un
 			});
 
 		if (discount) {
-			logger.info("discount_applied", { discountId: discount.id, name: discount.name });
+			logger().info("discount_applied", { discountId: discount.id, name: discount.name });
 		} else {
-			logger.info("discount_not_applicable");
+			logger().info("discount_not_applicable");
 		}
 
 		return success(discount);
 	} catch (error) {
-		logger.error("discount_fetch_error", {
+		logger().error("discount_fetch_error", {
 			error: error instanceof Error ? error.message : "Unknown error",
 		});
 		if (error instanceof Error) {

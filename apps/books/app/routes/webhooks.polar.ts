@@ -1,3 +1,5 @@
+import type { Logger } from "@pkg/logger/batched";
+
 import { ok, badRequest } from "@pkg/response";
 import { success, failure } from "@pkg/result";
 import { validateEvent } from "@polar-sh/sdk/webhooks";
@@ -9,10 +11,8 @@ import buttondown from "~/services/buttondown";
 
 import type { Route } from "./+types/webhooks.polar";
 
-async function processWebhook(request: Request) {
-	if (!env.POLAR_WEBHOOK_SECRET) {
-		return failure(new Error("POLAR_WEBHOOK_SECRET is not set"));
-	}
+async function processWebhook(request: Request, log: Logger) {
+	if (!env.POLAR_WEBHOOK_SECRET) return failure(new Error("POLAR_WEBHOOK_SECRET is not set"));
 
 	try {
 		let event = validateEvent(
@@ -40,7 +40,7 @@ async function processWebhook(request: Request) {
 				}
 			}
 
-			logger.info("order_paid", {
+			log.info("order_paid", {
 				channel: "payments",
 				email: customerEmail,
 				product: productName,
@@ -58,11 +58,10 @@ async function processWebhook(request: Request) {
 }
 
 export async function action({ request }: Route.ActionArgs) {
-	let result = await processWebhook(request);
+	let log = logger().action("routes/webhooks.polar");
+	let result = await processWebhook(request, log);
 
-	if (result.status === "success") {
-		return ok(null);
-	}
+	if (result.status === "success") return ok(null);
 
 	return badRequest({ error: result.error.message });
 }

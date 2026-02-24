@@ -12,16 +12,18 @@ import { subscribe } from "~/use-case/subscribe";
 import type { Route } from "./+types/api.subscribe";
 
 export async function action({ request }: Route.ActionArgs) {
+	let log = logger().action("routes/api.subscribe");
+
 	let formData = await request.formData();
 	let validationResult = await validate(formData, subscribeSchema);
 
 	if (isFailure(validationResult)) {
 		let error = validationResult.error;
 		if (error instanceof ValidationError && error.issues[0]) {
-			logger.info("subscribe_validation_failed", { issue: error.issues[0].message });
+			log.info("subscribe_validation_failed", { issue: error.issues[0].message });
 			return badRequest({ error: error.issues[0].message });
 		}
-		logger.info("subscribe_validation_failed", { error: "Invalid form data" });
+		log.info("subscribe_validation_failed", { error: "Invalid form data" });
 		return badRequest({ error: "Invalid form data" });
 	}
 
@@ -35,7 +37,7 @@ export async function action({ request }: Route.ActionArgs) {
 
 		if (error instanceof ButtondownError) {
 			if (error.code === "subscriber_blocked") {
-				logger.info("subscriber_blocked", { email: payload.email });
+				log.info("subscriber_blocked", { email: payload.email });
 				return badRequest({
 					error:
 						"My upstream provider is blocking you for some reason.\nPlease try with another email address and sorry for the inconvenience.",
@@ -43,19 +45,19 @@ export async function action({ request }: Route.ActionArgs) {
 			}
 
 			if (error.code === "email_invalid") {
-				logger.info("subscribe_email_invalid", { email: payload.email });
+				log.info("subscribe_email_invalid", { email: payload.email });
 				return badRequest({
 					error: "Invalid email address. \nPlease try with another email address.",
 				});
 			}
 
 			if (error.code === "email_already_exists") {
-				logger.info("subscribe_already_exists", { email: payload.email });
+				log.info("subscribe_already_exists", { email: payload.email });
 				return redirect(href("/release"));
 			}
 		}
 
-		logger.error("subscribe_error", { email: payload.email, error: error.message });
+		log.error("subscribe_error", { email: payload.email, error: error.message });
 		return badRequest({ error: error.message });
 	}
 

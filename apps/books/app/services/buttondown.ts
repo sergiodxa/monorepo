@@ -18,7 +18,7 @@ class Buttondown extends APIClient {
 
 	protected override async after(_: Request, response: Response): Promise<Response> {
 		if (response.status === 403) {
-			logger.error("buttondown_forbidden", { status: response.status });
+			logger().error("buttondown_forbidden", { status: response.status });
 			throw new Error("Forbidden");
 		}
 		return response;
@@ -27,7 +27,7 @@ class Buttondown extends APIClient {
 	async isSubscribed(email: string) {
 		const response = await this.get(`/v1/subscribers/${email}`);
 		let subscribed = response.ok;
-		logger.info("buttondown_subscriber_check", { email, subscribed });
+		logger().info("buttondown_subscriber_check", { email, subscribed });
 		return subscribed;
 	}
 
@@ -47,7 +47,7 @@ class Buttondown extends APIClient {
 		});
 
 		if (response.ok) {
-			logger.info("buttondown_subscribe_success", { email });
+			logger().info("buttondown_subscribe_success", { email });
 			return await response.json();
 		}
 
@@ -55,7 +55,7 @@ class Buttondown extends APIClient {
 			.object({ code: z.string(), detail: z.string() })
 			.parseAsync(await response.json());
 
-		logger.error("buttondown_subscribe_error", { email, code: error.code });
+		logger().error("buttondown_subscribe_error", { email, code: error.code });
 		throw new ButtondownError(error.detail, error.code);
 	}
 
@@ -65,11 +65,11 @@ class Buttondown extends APIClient {
 		});
 
 		if (response.ok) {
-			logger.info("buttondown_metadata_updated", { email, metadata });
+			logger().info("buttondown_metadata_updated", { email, metadata });
 			return await response.json();
 		}
 
-		logger.error("buttondown_metadata_failed", { email });
+		logger().error("buttondown_metadata_failed", { email });
 		throw new Error("Failed to add metadata");
 	}
 }

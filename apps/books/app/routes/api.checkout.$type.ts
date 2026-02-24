@@ -9,6 +9,7 @@ import { findApplicableDiscount } from "~/use-case/find-applicable-discount";
 import type { Route } from "./+types/api.checkout.$type";
 
 export async function loader({ request, params }: Route.LoaderArgs) {
+	let log = logger().loader("routes/api.checkout.$type");
 	let url = new URL(request.url);
 	let customerEmail = url.searchParams.get("email");
 
@@ -19,7 +20,7 @@ export async function loader({ request, params }: Route.LoaderArgs) {
 			customerEmail,
 		});
 
-		logger.info("checkout_started", {
+		log.info("checkout_started", {
 			product: "essentials",
 			email: customerEmail,
 			checkoutId: checkout.id,
@@ -32,7 +33,7 @@ export async function loader({ request, params }: Route.LoaderArgs) {
 	let discount = isSuccess(discountResult) ? discountResult.data : undefined;
 
 	if (isFailure(discountResult)) {
-		logger.info("discount_lookup_failed", { error: discountResult.error.message });
+		log.info("discount_lookup_failed", { error: discountResult.error.message });
 	}
 
 	let checkout = await polar.checkouts.create({
@@ -42,7 +43,7 @@ export async function loader({ request, params }: Route.LoaderArgs) {
 		customerEmail,
 	});
 
-	logger.info("checkout_started", {
+	log.info("checkout_started", {
 		product: "complete",
 		email: customerEmail,
 		checkoutId: checkout.id,

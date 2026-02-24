@@ -1,5 +1,6 @@
 import type { RequestHandler } from "react-router";
 
+import { Logger } from "@pkg/logger/request";
 import { RouterContextProvider, createRequestHandler } from "react-router";
 
 let handler: RequestHandler | null = null;
@@ -15,7 +16,25 @@ export default {
 		// Create a new router context for each request
 		let context = new RouterContextProvider();
 
-		// Call the handler with the request and context and return the response
-		return await handler(request, context);
+		// Create a request logger and set it in the context
+		let logger = new Logger(request);
+		context.set(Logger.context, logger);
+
+		try {
+			// Call the handler with the request and context
+			let response = await handler(request, context);
+			// Set the response metadata in the logger
+			logger.response = response;
+			return response;
+		} catch (error) {
+			// Log unhandled errors
+			logger.error("request.unhandled_error", {
+				error: error instanceof Error ? error.message : String(error),
+			});
+			throw error;
+		} finally {
+			// Flush logs to console
+			logger.flush();
+		}
 	},
 } satisfies ExportedHandler<Cloudflare.Env>;

@@ -1,15 +1,11 @@
-import { createBatchedLoggerMiddleware, type BatchedLogger } from "@pkg/logger";
+import { RequestLogger } from "@pkg/logger";
 
 import { getContext } from "./context-storage";
 
-let [loggerMiddleware, getLoggerFromContext] = createBatchedLoggerMiddleware();
-export { loggerMiddleware };
-
-export function getLogger(): BatchedLogger {
-	return getLoggerFromContext(getContext());
+/**
+ * Get the RequestLogger for the current request.
+ * Must be called within a request context.
+ */
+export function logger(): RequestLogger {
+	return RequestLogger.getFromContext(getContext());
 }
-
-export const logger = {
-	info: (event: string, payload?: Record<string, unknown>) => getLogger().info(event, payload),
-	error: (event: string, payload?: Record<string, unknown>) => getLogger().error(event, payload),
-};

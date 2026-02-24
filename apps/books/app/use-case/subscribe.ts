@@ -30,7 +30,7 @@ export async function subscribe(
 			ipAddress,
 		);
 
-		logger.info("user_subscribed", {
+		logger().info("user_subscribed", {
 			channel: "newsletter",
 			email: payload.email,
 			source: payload.source,
