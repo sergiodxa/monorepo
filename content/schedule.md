@@ -57,7 +57,7 @@ These URLs are already live and can be linked to freely:
 
 1. [x] [React Router Loaders and Actions as Integration Points](./articles/react-router-loaders-and-actions-as-integration-points.md)
 2. [x] [How to Use Sec-Fetch Headers for CSRF Protection](./tutorials/use-sec-fetch-headers-for-csrf.md)
-3. [ ] [How to Create a Multi-Directory Route Organization in React Router](./tutorials/create-a-multi-directory-route-organization-in-react-router.md)
+3. [x] [How to Create a Multi-Directory Route Organization in React Router](./tutorials/create-a-multi-directory-route-organization-in-react-router.md)
 4. [ ] [How to Create a Per-Request Database Instance with Middleware](./tutorials/create-a-per-request-database-instance-with-middleware.md)
 5. [ ] [How to Add URL Normalization Middleware in React Router](./tutorials/add-url-normalization-middleware-in-react-router.md)
 6. [ ] [How to Access Request Context Anywhere with AsyncLocalStorage](./tutorials/access-request-context-anywhere-with-asynclocalstorage.md)
