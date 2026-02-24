@@ -601,3 +601,6 @@ function Settings() {
 2. **`useFetcherStatus` requires `ok` property** - Your action responses should use `@pkg/response` which adds `ok: boolean` automatically
 3. **Status is memoized** - `useFetcherStatus` only recalculates when fetcher state or data changes
 4. **Use with `@pkg/response`** - The `ok` property discrimination works perfectly with `@pkg/response` helpers
+5. **`useTimeout` is declarative** - Use the `when` option to control timeouts based on state instead of imperative `setTimeout` calls in effects
+6. **`useLatest` avoids stale closures** - Use it when you need the latest value in event listeners or timers without adding it to dependency arrays
+7. **`useTimeout` returns a stable `clear` function** - Safe to use in dependency arrays or pass to child components
