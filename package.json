@@ -9,7 +9,7 @@
 	"scripts": {
 		"format": "oxfmt --check",
 		"format:fix": "oxfmt",
-		"lint": "oxlint",
+		"lint": "oxlint --deny-warnings",
 		"lint:fix": "oxlint --fix",
 		"typecheck": "tsc --noEmit"
 	},
@@ -17,8 +17,8 @@
 		"@total-typescript/ts-reset": "^0.6.1",
 		"@total-typescript/tsconfig": "^1.0.4",
 		"@typescript/native-preview": "^7.0.0-dev.20260219.1",
-		"oxfmt": "^0.34.0",
-		"oxlint": "^1.49.0",
+		"oxfmt": "^0.35.0",
+		"oxlint": "^1.50.0",
 		"typescript": "5.9.3"
 	},
 	"devDependencies": {
