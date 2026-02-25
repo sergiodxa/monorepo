@@ -21,19 +21,19 @@ export function AccountNav({ isAdmin }: AccountNavProps) {
 			aria-label={t("label")}
 			className="mb-6 flex-wrap items-center gap-4 border-b border-neutral-200 dark:border-neutral-700"
 		>
-			<NavLink to="/profile" end hasBackground>
+			<NavLink to="/account/profile" end hasBackground>
 				<span className="flex items-center gap-1.5">
 					<UserIcon className="size-4" />
 					{t("items.profile")}
 				</span>
 			</NavLink>
-			<NavLink to="/sessions" hasBackground>
+			<NavLink to="/account/sessions" hasBackground>
 				<span className="flex items-center gap-1.5">
 					<MonitorSmartphoneIcon className="size-4" />
 					{t("items.sessions")}
 				</span>
 			</NavLink>
-			<NavLink to="/grants" hasBackground>
+			<NavLink to="/account/grants" hasBackground>
 				<span className="flex items-center gap-1.5">
 					<AppWindowIcon className="size-4" />
 					{t("items.grants")}
