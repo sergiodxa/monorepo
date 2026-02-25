@@ -348,33 +348,60 @@ export class OIDCProvider extends OAuth2Provider<OIDCProvider.Repository> {
 	}
 
 	async logout(args: {
-		idTokenHint: string;
+		idTokenHint?: string;
 		postLogoutRedirectUri?: string;
 		sessionSubject?: string;
+		clientId?: string; // OIDC RP-Initiated Logout 1.0
+		state?: string;
 	}) {
-		let idToken = await IdToken.verify(args.idTokenHint, await this.repository.getSigningKey(), {
-			issuer: this.issuer,
-			algorithms: [JWK.Algoritm.ES256],
-		});
+		let subjectId: string;
+		let clientId: string | undefined;
+		let client: Awaited<ReturnType<typeof this.repository.findClientById>> | null = null;
 
-		if (!idToken.subject) throw new InvalidRequestError("Invalid subject");
-		if (!idToken.audience) {
-			throw new InvalidRequestError("Invalid audience");
+		// If id_token_hint is provided, verify and extract subject/client
+		if (args.idTokenHint) {
+			let idToken = await IdToken.verify(args.idTokenHint, await this.repository.getSigningKey(), {
+				issuer: this.issuer,
+				algorithms: [JWK.Algoritm.ES256],
+			});
+
+			if (!idToken.subject) throw new InvalidRequestError("Invalid subject");
+			if (!idToken.audience) {
+				throw new InvalidRequestError("Invalid audience");
+			}
+			if (Array.isArray(idToken.audience)) {
+				throw new InvalidRequestError("Invalid audience");
+			}
+
+			subjectId = idToken.subject;
+			clientId = idToken.audience;
+
+			// When client_id is provided with id_token_hint, verify they match
+			if (args.clientId && args.clientId !== idToken.audience) {
+				throw new InvalidRequestError("client_id does not match id_token_hint audience");
+			}
+
+			client = await this.repository.findClientById(idToken.audience);
+		} else if (args.sessionSubject) {
+			// No id_token_hint, but we have a session subject
+			subjectId = args.sessionSubject;
+			clientId = args.clientId;
+
+			if (args.clientId) {
+				client = await this.repository.findClientById(args.clientId);
+			}
+		} else {
+			throw new InvalidRequestError("id_token_hint or session subject required");
 		}
-		if (Array.isArray(idToken.audience)) {
-			throw new InvalidRequestError("Invalid audience");
-		}
 
-		let [client, subject] = await Promise.all([
-			this.repository.findClientById(idToken.audience),
-			this.repository.findSubjectById(idToken.subject),
-		]);
-
+		let subject = await this.repository.findSubjectById(subjectId);
 		if (!subject) throw new InvalidRequestError("Invalid subject");
-		if (!client) throw new InvalidRequestError("Invalid audience");
 
-		if (args.postLogoutRedirectUri && client.logoutUri !== args.postLogoutRedirectUri) {
-			throw new InvalidRequestError("Invalid redirect uri");
+		// Validate redirect URI if provided and client is known
+		if (args.postLogoutRedirectUri && client) {
+			if (client.logoutUri !== args.postLogoutRedirectUri) {
+				throw new InvalidRequestError("Invalid redirect uri");
+			}
 		}
 
 		// Only validate session subject if provided (user may not have auth server session)
@@ -386,7 +413,7 @@ export class OIDCProvider extends OAuth2Provider<OIDCProvider.Repository> {
 
 		return {
 			subjectId: subject.id,
-			clientId: client.id,
+			clientId,
 			redirectUri: args.postLogoutRedirectUri,
 		};
 	}

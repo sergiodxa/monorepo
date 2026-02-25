@@ -21,8 +21,13 @@ export function meta(): Route.MetaDescriptors {
 }
 
 let LogoutSchema = z.object({
-	id_token_hint: z.string(),
+	id_token_hint: z.string().optional(),
 	post_logout_redirect_uri: z.string().optional(),
+	// OIDC RP-Initiated Logout 1.0 additional params
+	client_id: z.string().uuid().optional(),
+	logout_hint: z.string().optional(), // Hint about which user to log out
+	ui_locales: z.string().optional(), // Preferred locale for logout page
+	state: z.string().optional(), // For correlation
 });
 
 export async function loader({ request }: Route.LoaderArgs) {
@@ -38,10 +43,18 @@ export async function loader({ request }: Route.LoaderArgs) {
 	let refreshToken = session().get("refreshToken");
 	let sessionSubject = accessToken ? getSubjectFromAccessToken(accessToken) : undefined;
 
+	// id_token_hint is required unless we can identify the subject from session
+	if (!params.data.id_token_hint && !sessionSubject) {
+		logger.info("logout_missing_id_token_hint");
+		return null;
+	}
+
 	let result = await oidc.logout({
 		idTokenHint: params.data.id_token_hint,
 		postLogoutRedirectUri: params.data.post_logout_redirect_uri,
 		sessionSubject,
+		clientId: params.data.client_id,
+		state: params.data.state,
 	});
 
 	// Send back-channel logout tokens to all RPs before deleting sessions
@@ -55,9 +68,16 @@ export async function loader({ request }: Route.LoaderArgs) {
 	session().unset("accessToken");
 	session().unset("refreshToken");
 
-	let redirectUri = result.redirectUri || new URL(href("/authorize"), url.origin).toString();
+	// Build redirect URI with optional state parameter
+	let redirectUri = new URL(
+		result.redirectUri || new URL(href("/authorize"), url.origin).toString(),
+	);
+	if (params.data.state) {
+		redirectUri.searchParams.set("state", params.data.state);
+	}
+	let redirectUriString = redirectUri.toString();
 
-	return redirectDocument(redirectUri, {
+	return redirectDocument(redirectUriString, {
 		headers: {
 			"Set-Cookie": await sessionStorage.destroySession(session()),
 			"Clear-Site-Data": '"*"',
