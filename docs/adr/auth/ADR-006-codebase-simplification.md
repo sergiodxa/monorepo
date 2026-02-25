@@ -377,10 +377,15 @@ Put errors and helper functions in the OIDC namespace.
 
 ## Current Progress
 
-- [ ] Phase 1: Consolidate Errors
-- [ ] Phase 2: Consolidate Entities
-- [ ] Phase 3: Move Utils
-- [ ] Phase 4: Consolidate Services
-- [ ] Phase 5: Rename Providers
-- [ ] Phase 6: Reorganize Routes
-- [ ] Phase 7: Cleanup and Verify
+- [x] Phase 1: Consolidate Errors - All 11 error classes moved to static properties on OIDCProvider class
+- [x] Phase 2: Consolidate Entities (partial) - AccessToken and IdToken exported as OIDCProvider.AccessToken and OIDCProvider.IdToken
+- [x] Phase 3: Move Utils - HTTP helpers moved from utils/ to helpers/ (decode-token.ts, form-post.ts, user-agent.ts)
+- [ ] Phase 4: Consolidate Services - Deferred (complex, needs repository expansion)
+- [x] Phase 5: Rename Providers - providers/ renamed to strategies/
+- [x] Phase 6: Reorganize Routes - Multi-directory structure with flatRoutes() and prefix()
+- [x] Phase 7: Cleanup and Verify - All tests pass, typecheck clean, linting clean
+
+### Notes
+
+- Phase 4 (Consolidate Services) was deferred because it requires significant expansion of the Repository interface to support login flows, logout notifications, and session management. The services currently make direct DB queries that would need to be abstracted.
+- URL changes in Phase 6: /profile -> /account/profile, /sessions -> /account/sessions, /grants -> /account/grants
