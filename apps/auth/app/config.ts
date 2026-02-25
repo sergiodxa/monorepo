@@ -53,4 +53,6 @@ export const WELL_KNOWN = {
 	// OIDC Front-Channel Logout 1.0
 	frontchannel_logout_supported: true,
 	frontchannel_logout_session_supported: true,
+	// OIDC Session Management 1.0
+	check_session_iframe: new URL("/oidc/check-session", ISSUER_HOST),
 };

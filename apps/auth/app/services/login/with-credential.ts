@@ -9,6 +9,7 @@ import { db } from "~/middleware/drizzle";
 import { logger } from "~/middleware/logger";
 import Credential from "~/models/credential";
 import Subject from "~/models/subject";
+import { generateSessionState } from "~/utils/session-state";
 
 import generateCode from "./generate-code";
 
@@ -24,6 +25,7 @@ interface Input {
 	state: string;
 	nonce?: string;
 	scope?: string[];
+	opBrowserState?: string; // For OIDC Session Management
 }
 
 export default async function loginWithCredential(input: Input) {
@@ -75,6 +77,16 @@ export default async function loginWithCredential(input: Input) {
 	url.searchParams.set("state", input.state);
 	url.searchParams.set("iss", ISSUER); // RFC 9207
 	url.searchParams.set("code", result.data.code);
+
+	// Add session_state for OIDC Session Management if opBrowserState is provided
+	if (input.opBrowserState) {
+		let sessionState = await generateSessionState(
+			input.clientId,
+			input.redirectUri,
+			input.opBrowserState,
+		);
+		url.searchParams.set("session_state", sessionState);
+	}
 
 	return success({ url, subjectId: subject.id });
 }

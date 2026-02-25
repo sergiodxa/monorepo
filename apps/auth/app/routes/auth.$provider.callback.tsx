@@ -9,6 +9,7 @@ import { session } from "~/middleware/session";
 import { checkRateLimit, rateLimitResponse } from "~/modules/rate-limit";
 import { github } from "~/providers/github";
 import loginWithProvider from "~/services/login/with-provider";
+import { generateOpBrowserState, OP_BROWSER_STATE_COOKIE } from "~/utils/session-state";
 
 import type { Route } from "./+types/auth.$provider.callback";
 
@@ -36,6 +37,9 @@ export async function loader({ request, params }: Route.LoaderArgs) {
 		return badRequest({ message: "Invalid request" });
 	}
 
+	// Generate or get OP browser state for session management
+	let opBrowserState = generateOpBrowserState();
+
 	let result = await loginWithProvider({
 		subjectId: sub,
 		clientId: authz.clientId,
@@ -45,11 +49,18 @@ export async function loader({ request, params }: Route.LoaderArgs) {
 		state: authz.state,
 		nonce: authz.nonce,
 		scope: authz.scope,
+		opBrowserState,
 	});
 
 	if (result.status === "success") {
 		logger.info("oauth_login_success", { provider: params.provider, subjectId: sub });
-		return redirectDocument(result.data.url.toString());
+
+		// Set the OP browser state cookie for session management
+		let cookieValue = `${OP_BROWSER_STATE_COOKIE}=${opBrowserState}; Path=/; HttpOnly; SameSite=None; Secure; Max-Age=${60 * 60 * 24 * 30}`;
+
+		return redirectDocument(result.data.url.toString(), {
+			headers: { "Set-Cookie": cookieValue },
+		});
 	}
 
 	logger.error("oauth_login_failed", { provider: params.provider, error: result.error.code });
