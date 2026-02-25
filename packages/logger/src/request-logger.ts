@@ -327,7 +327,7 @@ export class Logger {
 	}
 
 	toJSON() {
-		let duration = Date.now() - this.#startTime;
+		let duration = performance.now() - this.#startTime;
 
 		let output: Logger.Output = {
 			id: this.#id,

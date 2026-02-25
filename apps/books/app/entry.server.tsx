@@ -15,7 +15,6 @@ export default async function handleRequest(
 	_routerContext: RouterContextProvider,
 ) {
 	let log = logger().render;
-	let userAgent = request.headers.get("user-agent");
 
 	log.info("render.start");
 
@@ -32,7 +31,7 @@ export default async function handleRequest(
 		},
 	);
 
-	if (userAgent && isbot(userAgent)) await stream.allReady;
+	if (isbot(request.headers.get("user-agent"))) await stream.allReady;
 	else headers.set("Transfer-Encoding", "chunked");
 
 	headers.set("Content-Type", HTML);
