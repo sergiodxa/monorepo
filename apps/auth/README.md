@@ -85,6 +85,20 @@ bun run orm:generate       # Generate Drizzle migrations
 bun run cf:deploy
 ```
 
+## Rate Limiting
+
+Rate limiting is implemented using [Cloudflare Workers Rate Limiting bindings](https://developers.cloudflare.com/workers/runtime-apis/bindings/rate-limit/). Each endpoint has its own rate limiter configured in `wrangler.jsonc`.
+
+| Endpoint            | Limit       | Key             | Rationale                           |
+| ------------------- | ----------- | --------------- | ----------------------------------- |
+| `/oauth/token`      | 20 req/min  | client_id or IP | Prevents credential brute force     |
+| `/oauth/introspect` | 100 req/min | client_id       | Higher limit for resource servers   |
+| `/oauth/revoke`     | 50 req/min  | client_id       | Moderate limit for token revocation |
+| `/authorize`        | 30 req/min  | IP              | Prevents client enumeration         |
+| `/auth/*`           | 10 req/min  | IP              | Strict limit for login attempts     |
+
+Rate limits are per Cloudflare location (edge-local) for optimal performance.
+
 ## Environment Variables
 
 See `.env.example` for required environment variables.

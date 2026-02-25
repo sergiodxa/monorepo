@@ -999,9 +999,9 @@ Comprehensive security recommendations for OAuth 2.0 implementations, supersedin
 | Implicit grant deprecated         | ⚠️     | Advertised but not implemented - remove from discovery |
 | Exact redirect URI matching       | ✅     | Implemented                                            |
 | Authorization code one-time use   | ✅     | Code deleted after exchange                            |
-| Short authorization code lifetime | ❌     | Currently 1 hour, should be 10 min max                 |
+| Short authorization code lifetime | ✅     | Reduced to 10 minutes                                  |
 | Refresh token rotation            | ❌     | Not implemented                                        |
-| Rate limiting                     | ❌     | Not implemented                                        |
+| Rate limiting                     | ✅     | Via Workers Rate Limiting bindings                     |
 | Client secret hashing             | ❌     | Stored as plain UUID                                   |
 
 **Relevant Files:**
@@ -1045,13 +1045,11 @@ async function refreshTokenGrant(refreshToken: string) {
 }
 ```
 
-3. **Add rate limiting middleware:**
+3. **Rate limiting via Cloudflare Workers Rate Limiting bindings:**
 
-```typescript
-// Use Cloudflare Rate Limiting or KV-based counter
-// Limit by client_id and IP
-// Return 429 Too Many Requests with Retry-After header
-```
+Rate limiting uses [Workers Rate Limiting bindings](https://developers.cloudflare.com/workers/runtime-apis/bindings/rate-limit/)
+configured in `wrangler.jsonc`. Each endpoint has its own rate limiter with appropriate limits.
+See `apps/auth/README.md` for the rate limiting configuration.
 
 4. **Hash client secrets with bcrypt** (see client secrets refactoring in Migration Notes)
 
@@ -1880,34 +1878,35 @@ OAuth 2.0 patterns for first-party (same-organization) applications. May provide
 
 ## Implementation Plan
 
-| Status | Priority | Item                                                                             | Effort | Impact | Spec               |
-| :----: | :------: | -------------------------------------------------------------------------------- | ------ | ------ | ------------------ |
-|   ✅   |    P0    | Fix discovery document (remove false endpoints)                                  | Low    | High   | RFC 8414           |
-|   ✅   |    P0    | Implement `/userinfo`                                                            | Medium | High   | OIDC Core          |
-|   ✅   |    P0    | Reduce auth code TTL to 10 minutes                                               | Low    | Medium | RFC 6749           |
-|   ✅   |    P0    | Add `Cache-Control: no-store` to token responses                                 | Low    | Medium | RFC 6750           |
-|   ✅   |    P1    | Implement `/oauth/revoke`                                                        | Medium | Medium | RFC 7009           |
-|   ✅   |    P1    | Implement `/oauth/introspect`                                                    | Medium | Medium | RFC 7662           |
-|   ✅   |    P1    | Add nonce support                                                                | Medium | Medium | OIDC Core          |
-|   ✅   |    P1    | Add `WWW-Authenticate` header to protected resources                             | Low    | Medium | RFC 6750           |
-|   ✅   |    P1    | Add `grant_types_supported` to discovery                                         | Low    | Low    | RFC 8414           |
-|   ✅   |    P1    | Back-channel logout support                                                      | High   | High   | OIDC Back-Channel  |
-|   ✅   |    P1    | Add `iss` to authorization response                                              | Low    | Medium | RFC 9207           |
-|   ✅   |    P1    | Implement scope validation (openid, email, profile)                              | Medium | Medium | RFC 6749           |
-|   ⬜   |    P2    | Client secrets/redirect URIs refactoring (multi-secret, hashing, usage tracking) | High   | High   | RFC 9700           |
-|   ⬜   |    P2    | Add rate limiting                                                                | Medium | High   | RFC 9700           |
-|   ✅   |    P2    | Add `logout_hint`, `client_id`, `ui_locales` to logout                           | Low    | Low    | OIDC RP-Logout     |
-|   ⬜   |    P2    | Front-channel logout support                                                     | Medium | Medium | OIDC Front-Channel |
-|   ⬜   |    P2    | Session management (check_session_iframe)                                        | Medium | Medium | OIDC Session       |
-|   ⬜   |    P2    | Form post response mode                                                          | Low    | Medium | OAuth Form Post    |
-|   ⬜   |    P2    | Prompt=create support                                                            | Low    | Low    | OIDC Prompt Create |
-|   ⬜   |    P3    | Add `auth_time` claim                                                            | Low    | Low    | OIDC Core          |
-|   ⬜   |    P3    | Refresh token rotation                                                           | Medium | Medium | RFC 9700           |
-|   ⬜   |    P3    | OIDC discovery endpoint (`/.well-known/openid-configuration`)                    | Low    | Low    | OIDC Discovery     |
-|   ⬜   |    P3    | Dynamic client registration (or remove from discovery)                           | High   | Low    | OIDC Registration  |
-|   ⬜   |    P3    | JWT client authentication (private_key_jwt)                                      | Medium | Medium | RFC 7523           |
-|   ⬜   |    P3    | Pushed Authorization Requests (PAR)                                              | Medium | High   | RFC 9126           |
-|   ⬜   |    P3    | Device Authorization Grant                                                       | High   | Medium | RFC 8628           |
+| Status | Priority | Item                                                                             | Effort | Impact | Spec              |
+| :----: | :------: | -------------------------------------------------------------------------------- | ------ | ------ | ----------------- |
+|   ✅   |    P0    | Fix discovery document (remove false endpoints)                                  | Low    | High   | RFC 8414          |
+|   ✅   |    P0    | Implement `/userinfo`                                                            | Medium | High   | OIDC Core         |
+|   ✅   |    P0    | Reduce auth code TTL to 10 minutes                                               | Low    | Medium | RFC 6749          |
+|   ✅   |    P0    | Add `Cache-Control: no-store` to token responses                                 | Low    | Medium | RFC 6750          |
+|   ✅   |    P1    | Implement `/oauth/revoke`                                                        | Medium | Medium | RFC 7009          |
+|   ✅   |    P1    | Implement `/oauth/introspect`                                                    | Medium | Medium | RFC 7662          |
+|   ✅   |    P1    | Add nonce support                                                                | Medium | Medium | OIDC Core         |
+|   ✅   |    P1    | Add `WWW-Authenticate` header to protected resources                             | Low    | Medium | RFC 6750          |
+|   ✅   |    P1    | Add `grant_types_supported` to discovery                                         | Low    | Low    | RFC 8414          |
+|   ✅   |    P1    | Back-channel logout support                                                      | High   | High   | OIDC Back-Channel |
+|   ✅   |    P1    | Add `iss` to authorization response                                              | Low    | Medium | RFC 9207          |
+|   ✅   |    P1    | Implement scope validation (openid, email, profile)                              | Medium | Medium | RFC 6749          |
+|   ⬜   |    P2    | Client secrets/redirect URIs refactoring (multi-secret, hashing, usage tracking) | High   | High   | RFC 9700          |
+
+| ✅ | P2 | Add `logout_hint`, `client_id`, `ui_locales` to logout | Low | Low | OIDC RP-Logout |
+| ✅ | P2 | Add rate limiting (via Workers Rate Limiting bindings) | Low | High | RFC 9700 |
+| ⬜ | P2 | Front-channel logout support | Medium | Medium | OIDC Front-Channel |
+| ⬜ | P2 | Session management (check_session_iframe) | Medium | Medium | OIDC Session |
+| ⬜ | P2 | Form post response mode | Low | Medium | OAuth Form Post |
+| ⬜ | P2 | Prompt=create support | Low | Low | OIDC Prompt Create |
+| ⬜ | P3 | Add `auth_time` claim | Low | Low | OIDC Core |
+| ⬜ | P3 | Refresh token rotation | Medium | Medium | RFC 9700 |
+| ⬜ | P3 | OIDC discovery endpoint (`/.well-known/openid-configuration`) | Low | Low | OIDC Discovery |
+| ⬜ | P3 | Dynamic client registration (or remove from discovery) | High | Low | OIDC Registration |
+| ⬜ | P3 | JWT client authentication (private_key_jwt) | Medium | Medium | RFC 7523 |
+| ⬜ | P3 | Pushed Authorization Requests (PAR) | Medium | High | RFC 9126 |
+| ⬜ | P3 | Device Authorization Grant | High | Medium | RFC 8628 |
 
 **Legend:** ⬜ Not Started | 🟡 In Progress | ✅ Done
 

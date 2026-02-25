@@ -6,6 +6,7 @@ import { z } from "zod/v4";
 
 import { logger } from "~/middleware/logger";
 import { OAuth2Error } from "~/modules/oauth2";
+import { checkRateLimit, rateLimitResponse } from "~/modules/rate-limit";
 import oidc from "~/services/oidc";
 
 import type { Route } from "./+types/oauth.token";
@@ -58,6 +59,20 @@ export async function action({ request }: Route.ActionArgs) {
 	}
 
 	let body = result.data;
+
+	// Rate limit by client_id for client_credentials, or by IP for other grants
+	let rateLimitKey: string;
+	if (body.grant_type === "client_credentials") {
+		let clientCredentials = getClientCredentialsFromHeader(request.headers);
+		rateLimitKey =
+			clientCredentials?.clientId ?? request.headers.get("cf-connecting-ip") ?? "unknown";
+	} else {
+		rateLimitKey = request.headers.get("cf-connecting-ip") ?? "unknown";
+	}
+
+	if (!(await checkRateLimit("TOKEN_RATE_LIMITER", rateLimitKey))) {
+		return rateLimitResponse();
+	}
 
 	try {
 		if (body.grant_type === "authorization_code") {

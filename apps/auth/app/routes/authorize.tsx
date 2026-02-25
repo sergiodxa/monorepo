@@ -12,6 +12,7 @@ import { db } from "~/middleware/drizzle";
 import { logger } from "~/middleware/logger";
 import { session } from "~/middleware/session";
 import Client from "~/models/client";
+import { checkRateLimit, rateLimitResponse } from "~/modules/rate-limit";
 import generateCode from "~/services/login/generate-code";
 import loginWithCredential from "~/services/login/with-credential";
 import startAuthorizationFlow from "~/services/start-authz-flow";
@@ -45,6 +46,12 @@ let LoaderSchema = z.object({
 
 export async function loader({ request }: Route.LoaderArgs) {
 	let url = new URL(request.url);
+
+	// Rate limit by IP address to prevent enumeration attacks
+	let ip = getClientIP(request) ?? "unknown";
+	if (!(await checkRateLimit("AUTHORIZE_RATE_LIMITER", ip))) {
+		return rateLimitResponse();
+	}
 
 	// Check if user is already logged in (has valid access token)
 	let accessToken = session().get("accessToken");

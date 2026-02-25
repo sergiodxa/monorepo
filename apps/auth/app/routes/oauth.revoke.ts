@@ -6,6 +6,7 @@ import { z } from "zod/v4";
 
 import { logger } from "~/middleware/logger";
 import { OAuth2Error } from "~/modules/oauth2";
+import { checkRateLimit, rateLimitResponse } from "~/modules/rate-limit";
 import oidc from "~/services/oidc";
 
 import type { Route } from "./+types/oauth.revoke";
@@ -34,6 +35,11 @@ export async function action({ request }: Route.ActionArgs) {
 			{ error: "invalid_client", error_description: "Missing or invalid client credentials" },
 			{ headers: { "WWW-Authenticate": "Basic" } },
 		);
+	}
+
+	// Rate limit by client_id
+	if (!(await checkRateLimit("REVOKE_RATE_LIMITER", clientCredentials.clientId))) {
+		return rateLimitResponse();
 	}
 
 	let result = await validate(request, Schema);

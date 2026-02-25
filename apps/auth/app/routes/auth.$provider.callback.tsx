@@ -6,6 +6,7 @@ import { ISSUER } from "~/config";
 import { db } from "~/middleware/drizzle";
 import { logger } from "~/middleware/logger";
 import { session } from "~/middleware/session";
+import { checkRateLimit, rateLimitResponse } from "~/modules/rate-limit";
 import { github } from "~/providers/github";
 import loginWithProvider from "~/services/login/with-provider";
 
@@ -13,6 +14,12 @@ import type { Route } from "./+types/auth.$provider.callback";
 
 export async function loader({ request, params }: Route.LoaderArgs) {
 	logger.info("oauth_callback_received", { provider: params.provider });
+
+	// Rate limit login callbacks by IP
+	let ip = getClientIP(request) ?? "unknown";
+	if (!(await checkRateLimit("LOGIN_RATE_LIMITER", ip))) {
+		return rateLimitResponse();
+	}
 
 	let sub: string;
 
