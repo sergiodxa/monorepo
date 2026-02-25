@@ -13,9 +13,8 @@ import { logger } from "~/middleware/logger";
 import { session } from "~/middleware/session";
 import Client from "~/models/client";
 import { checkRateLimit, rateLimitResponse } from "~/modules/rate-limit";
-import generateCode from "~/services/login/generate-code";
+import generateAuthzCode from "~/services/login/generate-code";
 import loginWithCredential from "~/services/login/with-credential";
-import startAuthorizationFlow from "~/services/start-authz-flow";
 import { getSubjectFromAccessToken } from "~/utils/decode-access-token";
 import { formPostResponse } from "~/utils/form-post-response";
 
@@ -120,19 +119,16 @@ export async function loader({ request }: Route.LoaderArgs) {
 	let searchParams = result.data;
 	let prompt = searchParams.prompt;
 
-	let flowResult = await startAuthorizationFlow({
-		clientId: searchParams.client_id,
-		redirectUri: searchParams.redirect_uri,
-	});
+	// Validate client and redirect URI
+	let client = await Client.findById(db(), searchParams.client_id);
+	if (!client) {
+		logger.info("authz_invalid_client", { clientId: searchParams.client_id });
+		return notFound({ message: "Client not found" });
+	}
 
-	if (flowResult.status === "failure") {
-		if (flowResult.error.code === "invalid_client") {
-			logger.info("authz_invalid_client", { clientId: searchParams.client_id });
-			return notFound({ message: flowResult.error.description });
-		}
-
-		logger.info("authz_flow_error", { code: flowResult.error.code });
-		return notFound({ message: flowResult.error.description });
+	if (client.redirectUri !== searchParams.redirect_uri) {
+		logger.info("authz_redirect_uri_mismatch", { clientId: searchParams.client_id });
+		return notFound({ message: "Invalid redirect URI" });
 	}
 
 	// Helper to build error redirect response
@@ -169,38 +165,32 @@ export async function loader({ request }: Route.LoaderArgs) {
 	// SSO: If the user is already logged-in and not forcing login, generate the code
 	// and redirect to the redirect_uri with the code, state, and error parameters if any.
 	if (subjectId && !forceLogin) {
-		let codeResult = await generateCode({
+		let codeResult = await generateAuthzCode({
 			subjectId,
-			clientId: flowResult.data.client.id,
+			clientId: client.id,
 			ip: getClientIP(request),
 			ua: request.headers.get("user-agent"),
+			redirectUri: searchParams.redirect_uri,
+			state: searchParams.state,
 			nonce: searchParams.nonce,
 			scope: searchParams.scope,
+			responseMode: searchParams.response_mode,
 		});
-
-		// Build response parameters
-		let params: Record<string, string> = {
-			state: searchParams.state,
-			iss: ISSUER, // RFC 9207
-		};
 
 		if (codeResult.status === "failure") {
 			logger.error("authz_sso_code_failed", { subjectId, error: codeResult.error.code });
-			params.error = codeResult.error.code;
-			params.error_description = codeResult.error.description;
-		} else {
-			logger.info("authz_sso_code_generated", { subjectId, clientId: flowResult.data.client.id });
-			params.code = codeResult.data.code;
+			return errorRedirect(codeResult.error.code, codeResult.error.description);
 		}
+
+		logger.info("authz_sso_code_generated", { subjectId, clientId: client.id });
 
 		// Return response based on response_mode
-		if (searchParams.response_mode === "form_post") {
-			return formPostResponse(searchParams.redirect_uri, params);
+		if (codeResult.data.responseMode === "form_post") {
+			return formPostResponse(codeResult.data.redirectUri, codeResult.data.params);
 		}
 
-		// Default: query response mode
-		let redirectUrl = new URL(searchParams.redirect_uri);
-		for (let [key, value] of Object.entries(params)) {
+		let redirectUrl = new URL(codeResult.data.redirectUri);
+		for (let [key, value] of Object.entries(codeResult.data.params)) {
 			redirectUrl.searchParams.set(key, value);
 		}
 		return redirectDocument(redirectUrl.toString());
@@ -226,9 +216,9 @@ export async function loader({ request }: Route.LoaderArgs) {
 
 	return ok({
 		client: {
-			name: flowResult.data.client.name,
-			description: flowResult.data.client.description,
-			logoUrl: flowResult.data.client.logoUrl,
+			name: client.name,
+			description: client.description,
+			logoUrl: client.logoUrl,
 		},
 		showRegistration,
 	});
