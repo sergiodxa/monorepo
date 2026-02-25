@@ -9,6 +9,7 @@ import { db } from "~/middleware/drizzle";
 import { logger } from "~/middleware/logger";
 import { session } from "~/middleware/session";
 import Session from "~/models/session";
+import { sendBackchannelLogoutTokens } from "~/services/backchannel-logout";
 import oidc from "~/services/oidc";
 import { sessionStorage } from "~/session";
 import { getSubjectFromAccessToken } from "~/utils/decode-access-token";
@@ -43,6 +44,10 @@ export async function loader({ request }: Route.LoaderArgs) {
 		sessionSubject,
 	});
 
+	// Send back-channel logout tokens to all RPs before deleting sessions
+	// Exclude the client that initiated the logout (they already know)
+	await sendBackchannelLogoutTokens(result.subjectId, result.clientId);
+
 	if (refreshToken) {
 		await Session.deleteById(db(), refreshToken);
 	}
@@ -66,6 +71,10 @@ export async function action(_: Route.ActionArgs) {
 
 	if (accessToken && refreshToken) {
 		let subjectId = getSubjectFromAccessToken(accessToken);
+
+		// Send back-channel logout tokens before deleting sessions
+		await sendBackchannelLogoutTokens(subjectId);
+
 		await Session.deleteById(db(), refreshToken);
 		logger.info("logout_success", { subjectId, sessionId: refreshToken });
 		session().unset("accessToken");

@@ -114,6 +114,12 @@ export const clients = sqliteTable("clients", {
 	secret: text("secret", { mode: "text" }).notNull(),
 	redirectUri: text("redirect_uri", { mode: "text" }).notNull().unique(),
 	logoutUri: text("logout_uri", { mode: "text" }).notNull(),
+	// OIDC Back-Channel Logout
+	backchannelLogoutUri: text("backchannel_logout_uri"),
+	backchannelLogoutSessionRequired: text("backchannel_logout_session_required", {
+		mode: "text",
+		enum: ["true", "false"],
+	}).default("false"),
 });
 
 export type SelectClient = typeof clients.$inferSelect;

@@ -38,4 +38,7 @@ export const WELL_KNOWN = {
 	token_endpoint: new URL("/oauth/token", ISSUER_HOST),
 	userinfo_endpoint: new URL("/userinfo", ISSUER_HOST),
 	end_session_endpoint: new URL("/oidc/logout", ISSUER_HOST),
+	// OIDC Back-Channel Logout 1.0
+	backchannel_logout_supported: true,
+	backchannel_logout_session_supported: true,
 };

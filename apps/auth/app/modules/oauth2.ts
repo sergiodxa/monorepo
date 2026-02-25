@@ -382,7 +382,11 @@ export class OIDCProvider extends OAuth2Provider<OIDCProvider.Repository> {
 
 		await this.repository.deleteSessionBySubjectId(subject.id);
 
-		return { subjectId: subject.id, redirectUri: args.postLogoutRedirectUri };
+		return {
+			subjectId: subject.id,
+			clientId: client.id,
+			redirectUri: args.postLogoutRedirectUri,
+		};
 	}
 
 	registerClient(_args: {
