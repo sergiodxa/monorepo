@@ -18,6 +18,9 @@ interface Input {
 
 export default async function generateCode(input: Input) {
 	try {
+		// auth_time is the time of authentication (now, as we're creating a new session)
+		let authTime = Math.floor(Date.now() / 1000);
+
 		let [{ id }, grant] = await Promise.all([
 			Session.create(db(), input.subjectId, input.clientId, input.ip, input.ua),
 			Grant.findOrCreate(db(), input.subjectId, input.clientId),
@@ -35,6 +38,7 @@ export default async function generateCode(input: Input) {
 			null,
 			input.nonce,
 			input.scope,
+			authTime,
 		);
 		logger.info("authz_code_generated", { subjectId: input.subjectId, clientId: input.clientId });
 

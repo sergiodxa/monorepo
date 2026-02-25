@@ -10,6 +10,7 @@ const Schema = z.object({
 	pkce: z.object({ challenge: z.string(), method: z.enum(["S256", "plain"]) }).nullable(),
 	nonce: z.string().nullable(),
 	scope: z.string().array().default(["openid"]),
+	authTime: z.number().optional(), // Unix timestamp in seconds when user authenticated
 });
 
 export default class AuthzCode {
@@ -26,12 +27,13 @@ export default class AuthzCode {
 		pkce: { challenge: string; method: "S256" | "plain" } | null,
 		nonce: string | null = null,
 		scope: string[] = ["openid"],
+		authTime?: number, // Unix timestamp in seconds
 	) {
 		let code = AuthzCode.generateCode();
 
 		await env.KV.put(
 			`authz-code:${code}`,
-			JSON.stringify({ clientId, subjectId, sessionId, pkce, nonce, scope }),
+			JSON.stringify({ clientId, subjectId, sessionId, pkce, nonce, scope, authTime }),
 			{ expirationTtl: AUTHZ_CODE_TTL / 1000 }, // KV expects seconds
 		);
 

@@ -1070,14 +1070,15 @@ Core OpenID Connect specification defining authentication on top of OAuth 2.0. A
 - ID Token issuance with required claims (`iss`, `sub`, `aud`, `exp`, `iat`)
 - Authorization code flow with OIDC
 - `openid` scope handling
+- UserInfo endpoint (`/userinfo`)
+- `nonce` parameter support
+- `auth_time` claim (stored in authorization code, included in ID tokens)
+- Standard scopes (`email`, `profile`) claim mapping
 
 **What's Missing:**
 
-- UserInfo endpoint (advertised but not implemented)
-- `nonce` parameter support
-- `auth_time` claim
 - `acr` claim
-- Standard scopes (`profile`, `email`, `address`, `phone`) claim mapping
+- `address` and `phone` scopes (not planned)
 
 **Relevant Files:**
 
@@ -1858,7 +1859,7 @@ OAuth 2.0 patterns for first-party (same-organization) applications. May provide
 | ✅ | P2 | Session management (check_session_iframe) | Medium | Medium | OIDC Session |
 | ✅ | P2 | Form post response mode | Low | Medium | OAuth Form Post |
 | ✅ | P2 | Prompt=create support | Low | Low | OIDC Prompt Create |
-| ⬜ | P3 | Add `auth_time` claim | Low | Low | OIDC Core |
+| ✅ | P3 | Add `auth_time` claim | Low | Low | OIDC Core |
 | ⬜ | P3 | Refresh token rotation | Medium | Medium | RFC 9700 |
 | ⬜ | P3 | OIDC discovery endpoint (`/.well-known/openid-configuration`) | Low | Low | OIDC Discovery |
 | ⬜ | P3 | Dynamic client registration (or remove from discovery) | High | Low | OIDC Registration |

@@ -37,6 +37,7 @@ export namespace OAuth2Provider {
 				clientId: string;
 				subjectId: string;
 				expiresAt: Date;
+				createdAt: Date; // For auth_time claim
 			}>
 		>;
 
@@ -47,6 +48,7 @@ export namespace OAuth2Provider {
 			pkce: { challenge: string; method: "S256" | "plain" } | null;
 			nonce: string | null;
 			scope: string[];
+			authTime?: number; // Unix timestamp in seconds when user authenticated
 		}>;
 
 		deleteSessionBySubjectId(subjectId: string): Promise<void>;
@@ -460,7 +462,7 @@ export class OIDCProvider extends OAuth2Provider<OIDCProvider.Repository> {
 					emailVerified: subject.emailVerifiedAt !== null,
 				},
 				{ id: authz.clientId },
-				{ nonce: authz.nonce, scope: authz.scope },
+				{ nonce: authz.nonce, scope: authz.scope, authTime: authz.authTime },
 			),
 		);
 
@@ -480,6 +482,9 @@ export class OIDCProvider extends OAuth2Provider<OIDCProvider.Repository> {
 			throw new InvalidGrantError("Invalid or expired refresh token");
 		}
 
+		// auth_time is the session creation time
+		let authTime = Math.floor(session.createdAt.getTime() / 1000);
+
 		let idToken = await this.signJWT(
 			IdToken.generate(
 				{
@@ -491,6 +496,7 @@ export class OIDCProvider extends OAuth2Provider<OIDCProvider.Repository> {
 					emailVerified: subject.emailVerifiedAt !== null,
 				},
 				{ id: session.clientId },
+				{ authTime },
 			),
 		);
 

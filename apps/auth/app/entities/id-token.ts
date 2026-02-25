@@ -35,6 +35,10 @@ export default class IdToken extends JWT {
 		return this.parser.string("nonce");
 	}
 
+	get authTime() {
+		return this.parser.number("auth_time");
+	}
+
 	static generate(
 		subject: {
 			id: string;
@@ -45,7 +49,7 @@ export default class IdToken extends JWT {
 			emailVerified: boolean;
 		},
 		client: { id: string },
-		options?: { nonce?: string | null; scope?: string[] },
+		options?: { nonce?: string | null; scope?: string[]; authTime?: number },
 	) {
 		let scope = options?.scope ?? ["openid"];
 
@@ -56,6 +60,8 @@ export default class IdToken extends JWT {
 			jti: crypto.randomUUID(),
 			exp: Date.now() + ID_TOKEN_TTL,
 			iat: Date.now(),
+			// OIDC auth_time - when user last authenticated (in seconds)
+			...(options?.authTime && { auth_time: options.authTime }),
 			// OIDC nonce - echo back from authorization request
 			...(options?.nonce && { nonce: options.nonce }),
 			// Scope-based claims per OIDC Core 1.0

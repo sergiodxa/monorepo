@@ -27,7 +27,24 @@ export type SupportedScope = (typeof SCOPES_SUPPORTED)[number];
 export const WELL_KNOWN = {
 	issuer: ISSUER,
 	authorization_endpoint: new URL("/authorize", ISSUER_HOST),
-	claims_supported: ["aud", "exp", "iat", "iss", "sub", "email"],
+	claims_supported: [
+		// Standard JWT claims
+		"aud",
+		"exp",
+		"iat",
+		"iss",
+		"sub",
+		// OIDC Core claims
+		"auth_time",
+		"nonce",
+		// email scope
+		"email",
+		"email_verified",
+		// profile scope
+		"name",
+		"preferred_username",
+		"picture",
+	],
 	code_challenge_methods_supported: ["S256", "plain"],
 	grant_types_supported: ["authorization_code", "refresh_token", "client_credentials"],
 	id_token_signing_alg_values_supported: [JWK.Algoritm.ES256],
