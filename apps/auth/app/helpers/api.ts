@@ -5,9 +5,9 @@ import { env, waitUntil } from "cloudflare:workers";
 import type { Database } from "~/db/index";
 import type { SelectClient } from "~/db/schema";
 
-import AccessToken from "~/entities/access-token";
 import Client from "~/models/client";
 import { getSigningKey } from "~/modules/jwks";
+import { OIDCProvider } from "~/modules/oauth2";
 
 export async function authorize(db: Database, collector: TimingCollector, request: Request) {
 	let authorization = request.headers.get("Authorization");
@@ -20,7 +20,7 @@ export async function authorize(db: Database, collector: TimingCollector, reques
 		return await getSigningKey();
 	});
 
-	let jwt = await AccessToken.verify(token, jwks, {
+	let jwt = await OIDCProvider.AccessToken.verify(token, jwks, {
 		issuer: "auth.sergiodxa.com",
 		audience: "auth.sergiodxa.com",
 	});

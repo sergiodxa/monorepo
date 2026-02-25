@@ -3,10 +3,12 @@ import { afterEach, beforeAll, describe, expect, mock, test } from "bun:test";
 import { JWK } from "@edgefirst-dev/jwt";
 
 import { ISSUER } from "../config";
-import AccessToken from "../entities/access-token";
-import IdToken from "../entities/id-token";
 
 import { OIDCProvider } from "./oauth2";
+
+// Use token classes from OIDCProvider
+let AccessToken = OIDCProvider.AccessToken;
+let IdToken = OIDCProvider.IdToken;
 
 // Type helpers for test assertions
 interface OIDCTokenResponse {

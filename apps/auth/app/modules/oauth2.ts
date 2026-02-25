@@ -470,6 +470,10 @@ export class OIDCProvider extends OAuth2Provider<OIDCProvider.Repository> {
 	static InternalServerError = InternalServerError;
 	static MissingValidationError = MissingValidationError;
 
+	// Token classes (re-exported for external use)
+	static AccessToken = AccessToken;
+	static IdToken = IdToken;
+
 	async userinfo(args: { accessToken: string; clientId?: string }) {
 		let accessToken = await AccessToken.verify(
 			args.accessToken,
