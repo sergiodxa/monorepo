@@ -7,24 +7,25 @@ This monorepo contains multiple applications in `apps/` and shared packages in `
 Global commands to run from the repository root using Bun.
 
 ```bash
-bun format              # Check formatting (oxfmt)
-bun format:fix          # Fix formatting
-bun lint                # Check linting (oxlint)
-bun lint:fix            # Fix linting issues
-bun typecheck           # TypeScript type checking
-bun test                # Run all tests
-bun test file-path      # Run a single test file
-bun test --watch        # Watch mode
+bun format                      # Check formatting (oxfmt)
+bun format:fix                  # Fix formatting
+bun lint                        # Check linting (oxlint)
+bun lint:fix                    # Fix linting issues
+bun typecheck                   # TypeScript type checking
+bun test                        # Run all tests
+bun test file-path              # Run a single test file
+bun test --watch                # Watch mode
 ```
 
 Local commands to run from the app directory (e.g. `apps/blog`):
 
 ```bash
-bun dev                 # Run dev server
-bun build               # Build for production
-bun db:local:migrate    # Apply migrations locally
-bun db:remote:migrate   # Apply migrations to production
-bun orm:generate        # Generate Drizzle migrations
+bun dev                         # Run dev server
+bun build                       # Build for production
+bun db:local:migrate            # Apply migrations locally
+bun db:remote:migrate           # Apply migrations to production
+bun orm:generate                # Generate Drizzle migrations
+bunx react-router routes --json # Extract React Router routes as JSON for AI agents
 ```
 
 ## Rules
