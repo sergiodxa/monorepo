@@ -6,12 +6,12 @@ import { data, href, redirect, useNavigation, useSubmit } from "react-router";
 
 import type { SelectClient } from "~/db/schema";
 
+import { parseUserAgent } from "~/helpers/user-agent";
 import { db } from "~/middleware/drizzle";
 import { logger } from "~/middleware/logger";
 import Grant from "~/models/grant";
 import Session from "~/models/session";
 import Subject from "~/models/subject";
-import { parseUserAgent } from "~/utils/user-agent";
 
 import type { Route } from "./+types/_authenticated.admin.subjects_.$subjectId";
 

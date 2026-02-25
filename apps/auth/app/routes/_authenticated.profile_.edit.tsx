@@ -7,10 +7,10 @@ import { data, href, redirect, useActionData, useNavigation } from "react-router
 import { z } from "zod";
 
 import { AccountNav } from "~/components/account-nav";
+import { getSubjectFromAccessToken } from "~/helpers/decode-token";
 import { db } from "~/middleware/drizzle";
 import { session } from "~/middleware/session";
 import Subject from "~/models/subject";
-import { getSubjectFromAccessToken } from "~/utils/decode-access-token";
 
 import type { Route } from "./+types/_authenticated.profile_.edit";
 

@@ -1,9 +1,9 @@
 import { href, Outlet, redirect } from "react-router";
 
+import { getSubjectFromAccessToken } from "~/helpers/decode-token";
 import { db } from "~/middleware/drizzle";
 import { session } from "~/middleware/session";
 import Subject from "~/models/subject";
-import { getSubjectFromAccessToken } from "~/utils/decode-access-token";
 
 import type { Route } from "./+types/route";
 

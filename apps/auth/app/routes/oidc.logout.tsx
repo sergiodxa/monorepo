@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next";
 import { href, redirect, redirectDocument } from "react-router";
 import { z } from "zod";
 
+import { getSubjectFromAccessToken } from "~/helpers/decode-token";
 import { db } from "~/middleware/drizzle";
 import { logger } from "~/middleware/logger";
 import { session } from "~/middleware/session";
@@ -13,7 +14,6 @@ import { sendBackchannelLogoutTokens } from "~/services/backchannel-logout";
 import { getFrontchannelLogoutUrls } from "~/services/frontchannel-logout";
 import oidc from "~/services/oidc";
 import { sessionStorage } from "~/session";
-import { getSubjectFromAccessToken } from "~/utils/decode-access-token";
 
 import type { Route } from "./+types/oidc.logout";
 

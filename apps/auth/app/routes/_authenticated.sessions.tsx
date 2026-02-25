@@ -7,12 +7,12 @@ import { href, redirect, useSubmit } from "react-router";
 import type { SelectClient } from "~/db/schema";
 
 import { AccountNav } from "~/components/account-nav";
+import { getSubjectFromAccessToken } from "~/helpers/decode-token";
+import { parseUserAgent } from "~/helpers/user-agent";
 import { db } from "~/middleware/drizzle";
 import { session } from "~/middleware/session";
 import Session from "~/models/session";
 import Subject from "~/models/subject";
-import { getSubjectFromAccessToken } from "~/utils/decode-access-token";
-import { parseUserAgent } from "~/utils/user-agent";
 
 import type { Route } from "./+types/_authenticated.sessions";
 

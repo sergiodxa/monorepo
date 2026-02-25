@@ -7,12 +7,12 @@ import type { SelectClient } from "~/db/schema";
 
 import { AccountNav } from "~/components/account-nav";
 import { AUTH_SERVER_CLIENT_ID } from "~/config";
+import { getSubjectFromAccessToken } from "~/helpers/decode-token";
 import { db } from "~/middleware/drizzle";
 import { session } from "~/middleware/session";
 import Grant from "~/models/grant";
 import Session from "~/models/session";
 import Subject from "~/models/subject";
-import { getSubjectFromAccessToken } from "~/utils/decode-access-token";
 
 import type { Route } from "./+types/_authenticated.grants";
 

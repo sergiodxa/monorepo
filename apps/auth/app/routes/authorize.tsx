@@ -8,6 +8,8 @@ import { href, redirect, redirectDocument } from "react-router";
 import { z } from "zod";
 
 import { AUTH_SERVER_CLIENT_ID, ISSUER, SCOPES_SUPPORTED, type SupportedScope } from "~/config";
+import { getSubjectFromAccessToken } from "~/helpers/decode-token";
+import { formPostResponse } from "~/helpers/form-post";
 import { db } from "~/middleware/drizzle";
 import { logger } from "~/middleware/logger";
 import { session } from "~/middleware/session";
@@ -15,8 +17,6 @@ import Client from "~/models/client";
 import { checkRateLimit, rateLimitResponse } from "~/modules/rate-limit";
 import generateAuthzCode from "~/services/login/generate-code";
 import loginWithCredential from "~/services/login/with-credential";
-import { getSubjectFromAccessToken } from "~/utils/decode-access-token";
-import { formPostResponse } from "~/utils/form-post-response";
 
 import type { Route } from "./+types/authorize";
 

@@ -1,9 +1,9 @@
 import { href, Outlet, redirect } from "react-router";
 
+import { isAccessTokenExpiringSoon } from "~/helpers/decode-token";
 import { logger } from "~/middleware/logger";
 import { session } from "~/middleware/session";
 import oidc from "~/services/oidc";
-import { isAccessTokenExpiringSoon } from "~/utils/decode-access-token";
 
 import type { Route } from "./+types/_authenticated";
 
