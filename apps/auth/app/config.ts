@@ -10,6 +10,15 @@ export const ACCESS_TOKEN_TTL = ms("1 hour");
 export const AUTHZ_CODE_TTL = ms("10 minutes"); // RFC 6749 recommends max 10 minutes
 
 /**
+ * Supported OAuth 2.0 / OIDC scopes
+ * - openid: Required for OIDC, includes sub claim
+ * - email: email, email_verified claims
+ * - profile: name, preferred_username, picture claims
+ */
+export const SCOPES_SUPPORTED = ["openid", "email", "profile"] as const;
+export type SupportedScope = (typeof SCOPES_SUPPORTED)[number];
+
+/**
  * This is the public information about how to connect and use the Authorization
  * Server, while most of these configurations are only for the clients to know
  * how to connect to the server, some of them are also used by the server
@@ -31,7 +40,7 @@ export const WELL_KNOWN = {
 	revocation_endpoint_auth_methods_supported: ["client_secret_basic"],
 	introspection_endpoint: new URL("/oauth/introspect", ISSUER_HOST),
 	introspection_endpoint_auth_methods_supported: ["client_secret_basic"],
-	scopes_supported: ["openid", "email"],
+	scopes_supported: SCOPES_SUPPORTED,
 	subject_types_supported: ["public"],
 	authorization_response_iss_parameter_supported: true,
 	token_endpoint_auth_methods_supported: ["client_secret_basic"],

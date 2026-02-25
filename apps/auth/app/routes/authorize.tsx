@@ -7,7 +7,7 @@ import { useTranslation } from "react-i18next";
 import { href, redirect, redirectDocument } from "react-router";
 import { z } from "zod";
 
-import { AUTH_SERVER_CLIENT_ID, ISSUER } from "~/config";
+import { AUTH_SERVER_CLIENT_ID, ISSUER, SCOPES_SUPPORTED, type SupportedScope } from "~/config";
 import { db } from "~/middleware/drizzle";
 import { logger } from "~/middleware/logger";
 import { session } from "~/middleware/session";
@@ -28,6 +28,17 @@ let LoaderSchema = z.object({
 	client_id: z.string().uuid(),
 	redirect_uri: z.string().url(),
 	state: z.string(),
+	scope: z
+		.string()
+		.optional()
+		.transform((s) => {
+			if (!s) return ["openid"] as SupportedScope[];
+			// Parse space-separated scopes and filter to supported ones
+			let requested = s.split(" ");
+			return requested.filter((scope): scope is SupportedScope =>
+				SCOPES_SUPPORTED.includes(scope as SupportedScope),
+			);
+		}),
 	nonce: z.string().optional(), // OIDC nonce for replay protection
 	provider: z.string().optional(),
 });
@@ -108,6 +119,7 @@ export async function loader({ request }: Route.LoaderArgs) {
 			ip: getClientIP(request),
 			ua: request.headers.get("user-agent"),
 			nonce: searchParams.nonce,
+			scope: searchParams.scope,
 		});
 
 		let redirectUrl = new URL(searchParams.redirect_uri);
@@ -132,6 +144,7 @@ export async function loader({ request }: Route.LoaderArgs) {
 		state: searchParams.state,
 		redirectUri: searchParams.redirect_uri,
 		nonce: searchParams.nonce,
+		scope: searchParams.scope,
 	});
 
 	if (searchParams.provider) {
@@ -178,6 +191,7 @@ export async function action({ request }: Route.ActionArgs) {
 		redirectUri: authz.redirectUri,
 		state: authz.state,
 		nonce: authz.nonce,
+		scope: authz.scope,
 	});
 
 	if (loginResult.status === "failure") {

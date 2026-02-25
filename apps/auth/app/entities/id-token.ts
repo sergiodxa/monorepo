@@ -45,8 +45,10 @@ export default class IdToken extends JWT {
 			emailVerified: boolean;
 		},
 		client: { id: string },
-		options?: { nonce?: string | null },
+		options?: { nonce?: string | null; scope?: string[] },
 	) {
+		let scope = options?.scope ?? ["openid"];
+
 		return new IdToken({
 			sub: subject.id,
 			iss: ISSUER,
@@ -54,14 +56,20 @@ export default class IdToken extends JWT {
 			jti: crypto.randomUUID(),
 			exp: Date.now() + ID_TOKEN_TTL,
 			iat: Date.now(),
-			// Extra claims
-			email: subject.email,
-			picture: subject.avatar,
-			preferred_username: subject.username,
-			name: subject.displayName,
-			email_verified: subject.emailVerified,
 			// OIDC nonce - echo back from authorization request
 			...(options?.nonce && { nonce: options.nonce }),
+			// Scope-based claims per OIDC Core 1.0
+			// email scope: email, email_verified
+			...(scope.includes("email") && {
+				email: subject.email,
+				email_verified: subject.emailVerified,
+			}),
+			// profile scope: name, preferred_username, picture
+			...(scope.includes("profile") && {
+				name: subject.displayName,
+				preferred_username: subject.username,
+				picture: subject.avatar,
+			}),
 		});
 	}
 }

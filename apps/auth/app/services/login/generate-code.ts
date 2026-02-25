@@ -13,6 +13,7 @@ interface Input {
 	ip: string | null;
 	ua: string | null;
 	nonce?: string | null;
+	scope?: string[];
 }
 
 export default async function generateCode(input: Input) {
@@ -27,7 +28,14 @@ export default async function generateCode(input: Input) {
 			grantId: grant.id,
 		});
 
-		let code = await AuthzCode.generate(input.clientId, input.subjectId, id, null, input.nonce);
+		let code = await AuthzCode.generate(
+			input.clientId,
+			input.subjectId,
+			id,
+			null,
+			input.nonce,
+			input.scope,
+		);
 		logger.info("authz_code_generated", { subjectId: input.subjectId, clientId: input.clientId });
 
 		return success({ code });

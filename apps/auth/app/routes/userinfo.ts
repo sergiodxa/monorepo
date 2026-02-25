@@ -28,7 +28,7 @@ export async function loader({ request }: Route.LoaderArgs) {
 	let accessToken = authHeader.slice(7);
 
 	try {
-		let subject = await oidc.userinfo({ accessToken });
+		let { subject, scope } = await oidc.userinfo({ accessToken });
 
 		if (!subject) {
 			logger.info("userinfo_subject_not_found");
@@ -46,15 +46,25 @@ export async function loader({ request }: Route.LoaderArgs) {
 		logger.info("userinfo_success", { subjectId: subject.id });
 
 		// Return OIDC standard claims based on granted scopes
-		// Currently we support openid and email scopes
-		return ok({
-			sub: subject.id,
-			name: subject.displayName,
-			preferred_username: subject.username,
-			picture: subject.avatar,
-			email: subject.emailAddress,
-			email_verified: subject.emailVerifiedAt !== null,
-		});
+		// Per OIDC Core 1.0 Section 5.4
+		let response: Record<string, unknown> = {
+			sub: subject.id, // Always included per OIDC
+		};
+
+		// email scope: email, email_verified
+		if (scope.includes("email")) {
+			response.email = subject.emailAddress;
+			response.email_verified = subject.emailVerifiedAt !== null;
+		}
+
+		// profile scope: name, preferred_username, picture
+		if (scope.includes("profile")) {
+			response.name = subject.displayName;
+			response.preferred_username = subject.username;
+			response.picture = subject.avatar;
+		}
+
+		return ok(response);
 	} catch (error) {
 		logger.info("userinfo_invalid_token", {
 			error: error instanceof Error ? error.message : "Unknown error",

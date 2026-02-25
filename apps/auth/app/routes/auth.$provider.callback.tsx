@@ -37,6 +37,7 @@ export async function loader({ request, params }: Route.LoaderArgs) {
 		redirectUri: authz.redirectUri,
 		state: authz.state,
 		nonce: authz.nonce,
+		scope: authz.scope,
 	});
 
 	if (result.status === "success") {

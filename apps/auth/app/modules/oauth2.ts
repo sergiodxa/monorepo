@@ -46,6 +46,7 @@ export namespace OAuth2Provider {
 			sessionId: string;
 			pkce: { challenge: string; method: "S256" | "plain" } | null;
 			nonce: string | null;
+			scope: string[];
 		}>;
 
 		deleteSessionBySubjectId(subjectId: string): Promise<void>;
@@ -262,7 +263,7 @@ class OAuth2Provider<Repository extends OAuth2Provider.Repository> {
 			}
 		}
 
-		let accessToken = await this.signJWT(AccessToken.generate(clientId, subjectId));
+		let accessToken = await this.signJWT(AccessToken.generate(clientId, subjectId, authz.scope));
 
 		return {
 			access_token: accessToken,
@@ -341,8 +342,9 @@ export class OIDCProvider extends OAuth2Provider<OIDCProvider.Repository> {
 		);
 
 		let subject = await this.repository.findSubjectById(accessToken.subject);
+		let scope = accessToken.scope?.split(" ") ?? ["openid"];
 
-		return subject;
+		return { subject, scope };
 	}
 
 	async logout(args: {
@@ -431,7 +433,7 @@ export class OIDCProvider extends OAuth2Provider<OIDCProvider.Repository> {
 					emailVerified: subject.emailVerifiedAt !== null,
 				},
 				{ id: authz.clientId },
-				{ nonce: authz.nonce }, // Echo back nonce from authorization request
+				{ nonce: authz.nonce, scope: authz.scope },
 			),
 		);
 

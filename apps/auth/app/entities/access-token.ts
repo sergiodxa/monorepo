@@ -27,7 +27,11 @@ export default class AccessToken extends JWT {
 		return this.parser.string("sub");
 	}
 
-	static generate(audience: string | string[], subjectId: string) {
+	get scope() {
+		return this.parser.string("scope");
+	}
+
+	static generate(audience: string | string[], subjectId: string, scope?: string[]) {
 		return new AccessToken({
 			aud: audience,
 			exp: Date.now() + ACCESS_TOKEN_TTL,
@@ -35,6 +39,8 @@ export default class AccessToken extends JWT {
 			iss: ISSUER,
 			jti: crypto.randomUUID(),
 			sub: subjectId,
+			// Scope as space-separated string per RFC 9068
+			...(scope && { scope: scope.join(" ") }),
 		});
 	}
 
