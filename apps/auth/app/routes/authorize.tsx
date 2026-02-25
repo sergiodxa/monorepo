@@ -25,6 +25,10 @@ export function meta(): Route.MetaDescriptors {
 	return [{ title: "Sign In | Auth" }];
 }
 
+// Supported prompt values per OIDC specs
+const PROMPT_VALUES = ["none", "login", "consent", "select_account", "create"] as const;
+type PromptValue = (typeof PROMPT_VALUES)[number];
+
 let LoaderSchema = z.object({
 	response_type: z.literal("code"),
 	client_id: z.string().uuid(),
@@ -43,6 +47,17 @@ let LoaderSchema = z.object({
 		}),
 	nonce: z.string().optional(), // OIDC nonce for replay protection
 	response_mode: z.enum(["query", "fragment", "form_post"]).optional().default("query"),
+	prompt: z
+		.string()
+		.optional()
+		.transform((p) => {
+			if (!p) return undefined;
+			// prompt can have multiple space-separated values
+			let values = p
+				.split(" ")
+				.filter((v): v is PromptValue => PROMPT_VALUES.includes(v as PromptValue));
+			return values.length > 0 ? values : undefined;
+		}),
 	provider: z.string().optional(),
 });
 
@@ -103,6 +118,7 @@ export async function loader({ request }: Route.LoaderArgs) {
 	}
 
 	let searchParams = result.data;
+	let prompt = searchParams.prompt;
 
 	let flowResult = await startAuthorizationFlow({
 		clientId: searchParams.client_id,
@@ -119,9 +135,40 @@ export async function loader({ request }: Route.LoaderArgs) {
 		return notFound({ message: flowResult.error.description });
 	}
 
-	// SSO: If the user is already logged-in, generate the code and redirect
-	// to the redirect_uri with the code, state, and error parameters if any.
-	if (subjectId) {
+	// Helper to build error redirect response
+	let errorRedirect = (error: string, description: string) => {
+		let params: Record<string, string> = {
+			state: searchParams.state,
+			iss: ISSUER,
+			error,
+			error_description: description,
+		};
+
+		if (searchParams.response_mode === "form_post") {
+			return formPostResponse(searchParams.redirect_uri, params);
+		}
+
+		let redirectUrl = new URL(searchParams.redirect_uri);
+		for (let [key, value] of Object.entries(params)) {
+			redirectUrl.searchParams.set(key, value);
+		}
+		return redirectDocument(redirectUrl.toString());
+	};
+
+	// Handle prompt=none: user must be logged in, no UI interaction
+	if (prompt?.includes("none")) {
+		if (!subjectId) {
+			logger.info("authz_prompt_none_login_required");
+			return errorRedirect("login_required", "User is not authenticated");
+		}
+	}
+
+	// Handle prompt=login: force re-authentication, skip SSO even if logged in
+	let forceLogin = prompt?.includes("login");
+
+	// SSO: If the user is already logged-in and not forcing login, generate the code
+	// and redirect to the redirect_uri with the code, state, and error parameters if any.
+	if (subjectId && !forceLogin) {
 		let codeResult = await generateCode({
 			subjectId,
 			clientId: flowResult.data.client.id,
@@ -167,11 +214,15 @@ export async function loader({ request }: Route.LoaderArgs) {
 		nonce: searchParams.nonce,
 		scope: searchParams.scope,
 		responseMode: searchParams.response_mode,
+		prompt,
 	});
 
 	if (searchParams.provider) {
 		return redirectDocument(href("/auth/:provider", { provider: searchParams.provider }));
 	}
+
+	// prompt=create shows registration form prominently
+	let showRegistration = prompt?.includes("create") ?? false;
 
 	return ok({
 		client: {
@@ -179,6 +230,7 @@ export async function loader({ request }: Route.LoaderArgs) {
 			description: flowResult.data.client.description,
 			logoUrl: flowResult.data.client.logoUrl,
 		},
+		showRegistration,
 	});
 }
 
@@ -274,7 +326,13 @@ export default function Component({ loaderData }: Route.ComponentProps) {
 				</Card.Header>
 
 				<Card.Content className="flex flex-col gap-4">
-					<Form method="POST" className="hidden flex-col gap-6">
+					{/* Registration form - shown when prompt=create, hidden otherwise */}
+					<Form
+						method="POST"
+						className={
+							loaderData.showRegistration ? "flex flex-col gap-6" : "hidden flex-col gap-6"
+						}
+					>
 						<TextField name="name" isRequired>
 							<Input
 								placeholder={t("authorize.forms.credentials.fields.name.placeholder")}
@@ -308,7 +366,14 @@ export default function Component({ loaderData }: Route.ComponentProps) {
 						</Button>
 					</Form>
 
-					<div className="relative hidden items-center">
+					{/* Separator - shown when registration form is visible */}
+					<div
+						className={
+							loaderData.showRegistration
+								? "relative flex items-center"
+								: "relative hidden items-center"
+						}
+					>
 						<Separator className="flex-1" />
 						<Text slot="description" className="px-4">
 							{t("authorize.forms.separator")}

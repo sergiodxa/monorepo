@@ -1503,40 +1503,22 @@ Allows RPs to request user registration via `prompt=create`. Enables direct link
 
 **Reference:** https://openid.net/specs/openid-connect-prompt-create-1_0.html
 
-**Status:** ❌ Not Implemented
+**Status:** ✅ Implemented
 
-**What's Missing:**
+**What's Implemented:**
 
-- Accept `prompt=create` in authorization requests
-- Redirect to registration page when `prompt=create`
-- Add `create` to `prompt_values_supported`
+- Accept `prompt` parameter with multiple space-separated values
+- `prompt=create` shows the registration form prominently
+- `prompt=none` returns `login_required` error if user not authenticated
+- `prompt=login` forces re-authentication even if logged in
+- Prompt values stored in session for use after OAuth provider login
+- `prompt_values_supported` added to discovery metadata
 
 **Relevant Files:**
 
-- `app/routes/authorize.tsx`
-- `app/config.ts`
-
-**Required Changes:**
-
-1. Handle `prompt=create` in authorization endpoint:
-
-```typescript
-// In app/routes/authorize.tsx
-if (prompt === "create") {
-	const preserveParams = new URLSearchParams({
-		client_id: clientId,
-		redirect_uri: redirectUri,
-		// ... other params to preserve
-	});
-	return redirect(`/register?${preserveParams}`);
-}
-```
-
-2. Update discovery metadata:
-
-```typescript
-prompt_values_supported: ["none", "login", "consent", "select_account", "create"],
-```
+- `app/routes/authorize.tsx` - Handles prompt parameter logic
+- `app/session.ts` - Stores prompt in session
+- `app/config.ts` - Discovery metadata with prompt_values_supported
 
 ---
 
@@ -1875,7 +1857,7 @@ OAuth 2.0 patterns for first-party (same-organization) applications. May provide
 | ✅ | P2 | Front-channel logout support | Medium | Medium | OIDC Front-Channel |
 | ✅ | P2 | Session management (check_session_iframe) | Medium | Medium | OIDC Session |
 | ✅ | P2 | Form post response mode | Low | Medium | OAuth Form Post |
-| ⬜ | P2 | Prompt=create support | Low | Low | OIDC Prompt Create |
+| ✅ | P2 | Prompt=create support | Low | Low | OIDC Prompt Create |
 | ⬜ | P3 | Add `auth_time` claim | Low | Low | OIDC Core |
 | ⬜ | P3 | Refresh token rotation | Medium | Medium | RFC 9700 |
 | ⬜ | P3 | OIDC discovery endpoint (`/.well-known/openid-configuration`) | Low | Low | OIDC Discovery |

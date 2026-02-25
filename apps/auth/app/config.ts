@@ -36,6 +36,8 @@ export const WELL_KNOWN = {
 	request_uri_parameter_supported: false,
 	response_modes_supported: ["query", "fragment", "form_post"],
 	response_types_supported: ["code"],
+	// OIDC Prompt Values (including create from OIDC Prompt Create 1.0)
+	prompt_values_supported: ["none", "login", "consent", "select_account", "create"],
 	revocation_endpoint: new URL("/oauth/revoke", ISSUER_HOST),
 	revocation_endpoint_auth_methods_supported: ["client_secret_basic"],
 	introspection_endpoint: new URL("/oauth/introspect", ISSUER_HOST),

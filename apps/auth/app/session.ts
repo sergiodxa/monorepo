@@ -12,6 +12,7 @@ interface SessionData {
 		nonce?: string;
 		scope?: string[];
 		responseMode?: "query" | "fragment" | "form_post";
+		prompt?: ("none" | "login" | "consent" | "select_account" | "create")[];
 	};
 }
 
