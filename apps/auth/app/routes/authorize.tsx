@@ -17,6 +17,7 @@ import generateCode from "~/services/login/generate-code";
 import loginWithCredential from "~/services/login/with-credential";
 import startAuthorizationFlow from "~/services/start-authz-flow";
 import { getSubjectFromAccessToken } from "~/utils/decode-access-token";
+import { formPostResponse } from "~/utils/form-post-response";
 
 import type { Route } from "./+types/authorize";
 
@@ -41,6 +42,7 @@ let LoaderSchema = z.object({
 			);
 		}),
 	nonce: z.string().optional(), // OIDC nonce for replay protection
+	response_mode: z.enum(["query", "fragment", "form_post"]).optional().default("query"),
 	provider: z.string().optional(),
 });
 
@@ -129,19 +131,31 @@ export async function loader({ request }: Route.LoaderArgs) {
 			scope: searchParams.scope,
 		});
 
-		let redirectUrl = new URL(searchParams.redirect_uri);
-		redirectUrl.searchParams.set("state", searchParams.state);
-		redirectUrl.searchParams.set("iss", ISSUER); // RFC 9207
+		// Build response parameters
+		let params: Record<string, string> = {
+			state: searchParams.state,
+			iss: ISSUER, // RFC 9207
+		};
 
 		if (codeResult.status === "failure") {
 			logger.error("authz_sso_code_failed", { subjectId, error: codeResult.error.code });
-			redirectUrl.searchParams.set("error", codeResult.error.code);
-			redirectUrl.searchParams.set("error_description", codeResult.error.description);
-			return redirectDocument(redirectUrl.toString());
+			params.error = codeResult.error.code;
+			params.error_description = codeResult.error.description;
+		} else {
+			logger.info("authz_sso_code_generated", { subjectId, clientId: flowResult.data.client.id });
+			params.code = codeResult.data.code;
 		}
 
-		logger.info("authz_sso_code_generated", { subjectId, clientId: flowResult.data.client.id });
-		redirectUrl.searchParams.set("code", codeResult.data.code);
+		// Return response based on response_mode
+		if (searchParams.response_mode === "form_post") {
+			return formPostResponse(searchParams.redirect_uri, params);
+		}
+
+		// Default: query response mode
+		let redirectUrl = new URL(searchParams.redirect_uri);
+		for (let [key, value] of Object.entries(params)) {
+			redirectUrl.searchParams.set(key, value);
+		}
 		return redirectDocument(redirectUrl.toString());
 	}
 
@@ -152,6 +166,7 @@ export async function loader({ request }: Route.LoaderArgs) {
 		redirectUri: searchParams.redirect_uri,
 		nonce: searchParams.nonce,
 		scope: searchParams.scope,
+		responseMode: searchParams.response_mode,
 	});
 
 	if (searchParams.provider) {
@@ -199,6 +214,7 @@ export async function action({ request }: Route.ActionArgs) {
 		state: authz.state,
 		nonce: authz.nonce,
 		scope: authz.scope,
+		responseMode: authz.responseMode,
 	});
 
 	if (loginResult.status === "failure") {
@@ -211,7 +227,18 @@ export async function action({ request }: Route.ActionArgs) {
 
 	logger.info("authz_credential_login_success", { subjectId: loginResult.data.subjectId });
 	session().unset("authz");
-	return redirectDocument(loginResult.data.url.toString());
+
+	// Handle form_post response mode
+	if (loginResult.data.responseMode === "form_post") {
+		return formPostResponse(loginResult.data.redirectUri, loginResult.data.params);
+	}
+
+	// Default: query response mode
+	let url = new URL(loginResult.data.redirectUri);
+	for (let [key, value] of Object.entries(loginResult.data.params)) {
+		url.searchParams.set(key, value);
+	}
+	return redirectDocument(url.toString());
 }
 
 export default function Component({ loaderData }: Route.ComponentProps) {

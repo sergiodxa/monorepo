@@ -9,6 +9,7 @@ import { session } from "~/middleware/session";
 import { checkRateLimit, rateLimitResponse } from "~/modules/rate-limit";
 import { github } from "~/providers/github";
 import loginWithProvider from "~/services/login/with-provider";
+import { formPostResponse } from "~/utils/form-post-response";
 import { generateOpBrowserState, OP_BROWSER_STATE_COOKIE } from "~/utils/session-state";
 
 import type { Route } from "./+types/auth.$provider.callback";
@@ -50,26 +51,51 @@ export async function loader({ request, params }: Route.LoaderArgs) {
 		nonce: authz.nonce,
 		scope: authz.scope,
 		opBrowserState,
+		responseMode: authz.responseMode,
 	});
+
+	// Set the OP browser state cookie for session management
+	let cookieValue = `${OP_BROWSER_STATE_COOKIE}=${opBrowserState}; Path=/; HttpOnly; SameSite=None; Secure; Max-Age=${60 * 60 * 24 * 30}`;
 
 	if (result.status === "success") {
 		logger.info("oauth_login_success", { provider: params.provider, subjectId: sub });
 
-		// Set the OP browser state cookie for session management
-		let cookieValue = `${OP_BROWSER_STATE_COOKIE}=${opBrowserState}; Path=/; HttpOnly; SameSite=None; Secure; Max-Age=${60 * 60 * 24 * 30}`;
+		// Handle form_post response mode
+		if (result.data.responseMode === "form_post") {
+			let response = formPostResponse(result.data.redirectUri, result.data.params);
+			response.headers.set("Set-Cookie", cookieValue);
+			return response;
+		}
 
-		return redirectDocument(result.data.url.toString(), {
+		// Default: query response mode
+		let url = new URL(result.data.redirectUri);
+		for (let [key, value] of Object.entries(result.data.params)) {
+			url.searchParams.set(key, value);
+		}
+		return redirectDocument(url.toString(), {
 			headers: { "Set-Cookie": cookieValue },
 		});
 	}
 
+	// Handle error response
 	logger.error("oauth_login_failed", { provider: params.provider, error: result.error.code });
-	let url = new URL(authz.redirectUri);
-	url.searchParams.set("state", authz.state);
-	url.searchParams.set("iss", ISSUER); // RFC 9207
-	url.searchParams.set("error", result.error.code);
-	url.searchParams.set("error_description", result.error.description);
+	let errorParams: Record<string, string> = {
+		state: authz.state,
+		iss: ISSUER, // RFC 9207
+		error: result.error.code,
+		error_description: result.error.description,
+	};
 
+	if (authz.responseMode === "form_post") {
+		let response = formPostResponse(authz.redirectUri, errorParams);
+		response.headers.set("Set-Cookie", cookieValue);
+		return response;
+	}
+
+	let url = new URL(authz.redirectUri);
+	for (let [key, value] of Object.entries(errorParams)) {
+		url.searchParams.set(key, value);
+	}
 	return redirectDocument(url.toString());
 }
 

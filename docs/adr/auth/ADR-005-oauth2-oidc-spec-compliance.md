@@ -1235,50 +1235,26 @@ Returns authorization response via HTTP POST using auto-submitting form. Useful 
 
 **Reference:** https://openid.net/specs/oauth-v2-form-post-response-mode-1_0.html
 
-**Status:** ❌ Not Implemented
+**Status:** ✅ Implemented
 
-**What's Missing:**
+**What's Implemented:**
 
-- Accept `response_mode=form_post` parameter
-- Return HTML page with auto-submitting form instead of redirect
-- Add `form_post` to `response_modes_supported`
+- Accept `response_mode=form_post` parameter in authorization endpoint
+- Store `responseMode` in session for use after login
+- Return HTML page with auto-submitting form via `formPostResponse()` utility
+- Proper HTML escaping to prevent XSS
+- Support in SSO flow, credential login, and OAuth provider callbacks
+- `form_post` added to `response_modes_supported` in discovery metadata
 
 **Relevant Files:**
 
-- `app/routes/authorize.tsx`
-- `app/config.ts`
-
-**Required Changes:**
-
-1. Implement form post response mode in authorization endpoint:
-
-```typescript
-// In app/routes/authorize.tsx
-if (responseMode === "form_post") {
-	const html = `
-    <!DOCTYPE html>
-    <html>
-    <head><title>Submitting...</title></head>
-    <body onload="document.forms[0].submit()">
-      <form method="post" action="${redirectUri}">
-        <input type="hidden" name="code" value="${code}" />
-        <input type="hidden" name="state" value="${state}" />
-        <input type="hidden" name="iss" value="${issuer}" />
-      </form>
-    </body>
-    </html>
-  `;
-	return new Response(html, {
-		headers: { "Content-Type": "text/html" },
-	});
-}
-```
-
-2. Update discovery metadata:
-
-```typescript
-response_modes_supported: ["query", "fragment", "form_post"],
-```
+- `app/utils/form-post-response.ts` - Form post response utility
+- `app/routes/authorize.tsx` - Stores responseMode and handles form_post for SSO
+- `app/routes/auth.$provider.callback.tsx` - Handles form_post for OAuth login
+- `app/services/login/with-credential.ts` - Returns params for form_post
+- `app/services/login/with-provider.ts` - Returns params for form_post
+- `app/session.ts` - responseMode in session data
+- `app/config.ts` - Discovery metadata
 
 ---
 
@@ -1896,9 +1872,9 @@ OAuth 2.0 patterns for first-party (same-organization) applications. May provide
 
 | ✅ | P2 | Add `logout_hint`, `client_id`, `ui_locales` to logout | Low | Low | OIDC RP-Logout |
 | ✅ | P2 | Add rate limiting (via Workers Rate Limiting bindings) | Low | High | RFC 9700 |
-| ⬜ | P2 | Front-channel logout support | Medium | Medium | OIDC Front-Channel |
-| ⬜ | P2 | Session management (check_session_iframe) | Medium | Medium | OIDC Session |
-| ⬜ | P2 | Form post response mode | Low | Medium | OAuth Form Post |
+| ✅ | P2 | Front-channel logout support | Medium | Medium | OIDC Front-Channel |
+| ✅ | P2 | Session management (check_session_iframe) | Medium | Medium | OIDC Session |
+| ✅ | P2 | Form post response mode | Low | Medium | OAuth Form Post |
 | ⬜ | P2 | Prompt=create support | Low | Low | OIDC Prompt Create |
 | ⬜ | P3 | Add `auth_time` claim | Low | Low | OIDC Core |
 | ⬜ | P3 | Refresh token rotation | Medium | Medium | RFC 9700 |

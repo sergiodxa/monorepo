@@ -26,6 +26,7 @@ interface Input {
 	nonce?: string;
 	scope?: string[];
 	opBrowserState?: string; // For OIDC Session Management
+	responseMode?: "query" | "fragment" | "form_post";
 }
 
 export default async function loginWithCredential(input: Input) {
@@ -73,10 +74,13 @@ export default async function loginWithCredential(input: Input) {
 	if (isFailure(result)) return result;
 
 	logger.info("login_code_generated", { subjectId: subject.id });
-	let url = new URL(input.redirectUri);
-	url.searchParams.set("state", input.state);
-	url.searchParams.set("iss", ISSUER); // RFC 9207
-	url.searchParams.set("code", result.data.code);
+
+	// Build response params
+	let params: Record<string, string> = {
+		state: input.state,
+		iss: ISSUER, // RFC 9207
+		code: result.data.code,
+	};
 
 	// Add session_state for OIDC Session Management if opBrowserState is provided
 	if (input.opBrowserState) {
@@ -85,8 +89,13 @@ export default async function loginWithCredential(input: Input) {
 			input.redirectUri,
 			input.opBrowserState,
 		);
-		url.searchParams.set("session_state", sessionState);
+		params.session_state = sessionState;
 	}
 
-	return success({ url, subjectId: subject.id });
+	return success({
+		redirectUri: input.redirectUri,
+		params,
+		responseMode: input.responseMode ?? "query",
+		subjectId: subject.id,
+	});
 }

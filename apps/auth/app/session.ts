@@ -11,6 +11,7 @@ interface SessionData {
 		redirectUri: string;
 		nonce?: string;
 		scope?: string[];
+		responseMode?: "query" | "fragment" | "form_post";
 	};
 }
 
