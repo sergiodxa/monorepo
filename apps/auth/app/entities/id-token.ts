@@ -31,6 +31,10 @@ export default class IdToken extends JWT {
 		return this.parser.boolean("email_verified");
 	}
 
+	get nonce() {
+		return this.parser.string("nonce");
+	}
+
 	static generate(
 		subject: {
 			id: string;
@@ -41,6 +45,7 @@ export default class IdToken extends JWT {
 			emailVerified: boolean;
 		},
 		client: { id: string },
+		options?: { nonce?: string | null },
 	) {
 		return new IdToken({
 			sub: subject.id,
@@ -55,6 +60,8 @@ export default class IdToken extends JWT {
 			preferred_username: subject.username,
 			name: subject.displayName,
 			email_verified: subject.emailVerified,
+			// OIDC nonce - echo back from authorization request
+			...(options?.nonce && { nonce: options.nonce }),
 		});
 	}
 }

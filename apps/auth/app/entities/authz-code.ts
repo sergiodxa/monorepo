@@ -8,6 +8,7 @@ const Schema = z.object({
 	subjectId: z.string(),
 	sessionId: z.string(),
 	pkce: z.object({ challenge: z.string(), method: z.enum(["S256", "plain"]) }).nullable(),
+	nonce: z.string().nullable(),
 });
 
 export default class AuthzCode {
@@ -22,12 +23,13 @@ export default class AuthzCode {
 		subjectId: string,
 		sessionId: string,
 		pkce: { challenge: string; method: "S256" | "plain" } | null,
+		nonce: string | null = null,
 	) {
 		let code = AuthzCode.generateCode();
 
 		await env.KV.put(
 			`authz-code:${code}`,
-			JSON.stringify({ clientId, subjectId, sessionId, pkce }),
+			JSON.stringify({ clientId, subjectId, sessionId, pkce, nonce }),
 			{ expirationTtl: AUTHZ_CODE_TTL / 1000 }, // KV expects seconds
 		);
 

@@ -28,6 +28,7 @@ let LoaderSchema = z.object({
 	client_id: z.string().uuid(),
 	redirect_uri: z.string().url(),
 	state: z.string(),
+	nonce: z.string().optional(), // OIDC nonce for replay protection
 	provider: z.string().optional(),
 });
 
@@ -106,6 +107,7 @@ export async function loader({ request }: Route.LoaderArgs) {
 			clientId: flowResult.data.client.id,
 			ip: getClientIP(request),
 			ua: request.headers.get("user-agent"),
+			nonce: searchParams.nonce,
 		});
 
 		let redirectUrl = new URL(searchParams.redirect_uri);
@@ -129,6 +131,7 @@ export async function loader({ request }: Route.LoaderArgs) {
 		clientId: searchParams.client_id,
 		state: searchParams.state,
 		redirectUri: searchParams.redirect_uri,
+		nonce: searchParams.nonce,
 	});
 
 	if (searchParams.provider) {
@@ -174,6 +177,7 @@ export async function action({ request }: Route.ActionArgs) {
 		ua: request.headers.get("user-agent"),
 		redirectUri: authz.redirectUri,
 		state: authz.state,
+		nonce: authz.nonce,
 	});
 
 	if (loginResult.status === "failure") {

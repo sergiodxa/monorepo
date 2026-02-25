@@ -45,6 +45,7 @@ export namespace OAuth2Provider {
 			subjectId: string;
 			sessionId: string;
 			pkce: { challenge: string; method: "S256" | "plain" } | null;
+			nonce: string | null;
 		}>;
 
 		deleteSessionBySubjectId(subjectId: string): Promise<void>;
@@ -426,6 +427,7 @@ export class OIDCProvider extends OAuth2Provider<OIDCProvider.Repository> {
 					emailVerified: subject.emailVerifiedAt !== null,
 				},
 				{ id: authz.clientId },
+				{ nonce: authz.nonce }, // Echo back nonce from authorization request
 			),
 		);
 

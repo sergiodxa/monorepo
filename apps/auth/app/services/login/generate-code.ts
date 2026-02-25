@@ -12,6 +12,7 @@ interface Input {
 	clientId: string;
 	ip: string | null;
 	ua: string | null;
+	nonce?: string | null;
 }
 
 export default async function generateCode(input: Input) {
@@ -26,7 +27,7 @@ export default async function generateCode(input: Input) {
 			grantId: grant.id,
 		});
 
-		let code = await AuthzCode.generate(input.clientId, input.subjectId, id, null);
+		let code = await AuthzCode.generate(input.clientId, input.subjectId, id, null, input.nonce);
 		logger.info("authz_code_generated", { subjectId: input.subjectId, clientId: input.clientId });
 
 		return success({ code });

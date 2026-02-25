@@ -5,7 +5,7 @@ import { createCookie } from "react-router";
 interface SessionData {
 	accessToken: string;
 	refreshToken: string;
-	authz: { clientId: string; state: string; redirectUri: string };
+	authz: { clientId: string; state: string; redirectUri: string; nonce?: string };
 }
 
 const cookie = createCookie("sid", {

@@ -36,6 +36,7 @@ export async function loader({ request, params }: Route.LoaderArgs) {
 		ua: request.headers.get("user-agent"),
 		redirectUri: authz.redirectUri,
 		state: authz.state,
+		nonce: authz.nonce,
 	});
 
 	if (result.status === "success") {

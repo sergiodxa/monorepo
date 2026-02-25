@@ -13,6 +13,7 @@ interface Input {
 	ua: string | null;
 	redirectUri: string;
 	state: string;
+	nonce?: string;
 }
 
 export default async function loginWithProvider(input: Input) {
@@ -22,6 +23,7 @@ export default async function loginWithProvider(input: Input) {
 			clientId: input.clientId,
 			ip: input.ip,
 			ua: input.ua,
+			nonce: input.nonce,
 		});
 
 		if (isFailure(result)) return result;

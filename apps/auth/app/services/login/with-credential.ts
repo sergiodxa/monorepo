@@ -22,6 +22,7 @@ interface Input {
 	ua: string | null;
 	redirectUri: string;
 	state: string;
+	nonce?: string;
 }
 
 export default async function loginWithCredential(input: Input) {
@@ -62,6 +63,7 @@ export default async function loginWithCredential(input: Input) {
 		clientId: input.clientId,
 		ip: input.ip,
 		ua: input.ua,
+		nonce: input.nonce,
 	});
 
 	if (isFailure(result)) return result;
