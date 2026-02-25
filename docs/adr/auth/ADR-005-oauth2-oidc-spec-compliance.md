@@ -1888,15 +1888,15 @@ OAuth 2.0 patterns for first-party (same-organization) applications. May provide
 |   ✅   |    P0    | Add `Cache-Control: no-store` to token responses                                 | Low    | Medium | RFC 6750           |
 |   ✅   |    P1    | Implement `/oauth/revoke`                                                        | Medium | Medium | RFC 7009           |
 |   ✅   |    P1    | Implement `/oauth/introspect`                                                    | Medium | Medium | RFC 7662           |
-|   ⬜   |    P1    | Add nonce support                                                                | Medium | Medium | OIDC Core          |
+|   ✅   |    P1    | Add nonce support                                                                | Medium | Medium | OIDC Core          |
 |   ✅   |    P1    | Add `WWW-Authenticate` header to protected resources                             | Low    | Medium | RFC 6750           |
 |   ✅   |    P1    | Add `grant_types_supported` to discovery                                         | Low    | Low    | RFC 8414           |
-|   ⬜   |    P1    | Back-channel logout support                                                      | High   | High   | OIDC Back-Channel  |
+|   ✅   |    P1    | Back-channel logout support                                                      | High   | High   | OIDC Back-Channel  |
 |   ✅   |    P1    | Add `iss` to authorization response                                              | Low    | Medium | RFC 9207           |
+|   ✅   |    P1    | Implement scope validation (openid, email, profile)                              | Medium | Medium | RFC 6749           |
 |   ⬜   |    P2    | Client secrets/redirect URIs refactoring (multi-secret, hashing, usage tracking) | High   | High   | RFC 9700           |
-|   ⬜   |    P2    | Implement scope validation                                                       | Medium | Medium | RFC 6749           |
 |   ⬜   |    P2    | Add rate limiting                                                                | Medium | High   | RFC 9700           |
-|   ⬜   |    P2    | Add `logout_hint`, `client_id`, `ui_locales` to logout                           | Low    | Low    | OIDC RP-Logout     |
+|   ✅   |    P2    | Add `logout_hint`, `client_id`, `ui_locales` to logout                           | Low    | Low    | OIDC RP-Logout     |
 |   ⬜   |    P2    | Front-channel logout support                                                     | Medium | Medium | OIDC Front-Channel |
 |   ⬜   |    P2    | Session management (check_session_iframe)                                        | Medium | Medium | OIDC Session       |
 |   ⬜   |    P2    | Form post response mode                                                          | Low    | Medium | OAuth Form Post    |
