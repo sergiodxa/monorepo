@@ -10,6 +10,12 @@ import oidc from "~/services/oidc";
 
 import type { Route } from "./+types/oauth.token";
 
+// RFC 6750 requires these headers on token responses
+const TOKEN_RESPONSE_HEADERS = {
+	"Cache-Control": "no-store",
+	Pragma: "no-cache",
+};
+
 const AuthorizationCodeSchema = z.object({
 	grant_type: z.literal("authorization_code"),
 	code: z.string(),
@@ -62,7 +68,7 @@ export async function action({ request }: Route.ActionArgs) {
 				redirectUri: body.redirect_uri,
 			});
 			logger.info("token_issued", { grant_type: "authorization_code" });
-			return ok(tokenResult);
+			return ok(tokenResult, { headers: TOKEN_RESPONSE_HEADERS });
 		}
 
 		if (body.grant_type === "refresh_token") {
@@ -72,7 +78,7 @@ export async function action({ request }: Route.ActionArgs) {
 			});
 
 			logger.info("token_issued", { grant_type: "refresh_token" });
-			return ok(tokenResult);
+			return ok(tokenResult, { headers: TOKEN_RESPONSE_HEADERS });
 		}
 
 		if (body.grant_type === "client_credentials") {
@@ -96,7 +102,7 @@ export async function action({ request }: Route.ActionArgs) {
 				grant_type: "client_credentials",
 				clientId: clientCredentials.clientId,
 			});
-			return ok(tokenResult);
+			return ok(tokenResult, { headers: TOKEN_RESPONSE_HEADERS });
 		}
 	} catch (error) {
 		if (error instanceof OAuth2Error) {

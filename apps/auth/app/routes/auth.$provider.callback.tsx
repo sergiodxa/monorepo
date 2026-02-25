@@ -2,6 +2,7 @@ import { getClientIP } from "@pkg/get-client-ip";
 import { badRequest } from "@pkg/response";
 import { redirectDocument } from "react-router";
 
+import { ISSUER } from "~/config";
 import { db } from "~/middleware/drizzle";
 import { logger } from "~/middleware/logger";
 import { session } from "~/middleware/session";
@@ -45,6 +46,7 @@ export async function loader({ request, params }: Route.LoaderArgs) {
 	logger.error("oauth_login_failed", { provider: params.provider, error: result.error.code });
 	let url = new URL(authz.redirectUri);
 	url.searchParams.set("state", authz.state);
+	url.searchParams.set("iss", ISSUER); // RFC 9207
 	url.searchParams.set("error", result.error.code);
 	url.searchParams.set("error_description", result.error.description);
 

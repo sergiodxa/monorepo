@@ -3,6 +3,7 @@ import { encodeHexLowerCase } from "@oslojs/encoding";
 import { failure, isFailure, success } from "@pkg/result";
 import bcrypt from "bcryptjs";
 
+import { ISSUER } from "~/config";
 import { MissingValidationError } from "~/errors";
 import { db } from "~/middleware/drizzle";
 import { logger } from "~/middleware/logger";
@@ -68,6 +69,7 @@ export default async function loginWithCredential(input: Input) {
 	logger.info("login_code_generated", { subjectId: subject.id });
 	let url = new URL(input.redirectUri);
 	url.searchParams.set("state", input.state);
+	url.searchParams.set("iss", ISSUER); // RFC 9207
 	url.searchParams.set("code", result.data.code);
 
 	return success({ url, subjectId: subject.id });

@@ -1,5 +1,6 @@
 import { failure, isFailure, success } from "@pkg/result";
 
+import { ISSUER } from "~/config";
 import { InternalServerError } from "~/errors";
 import { logger } from "~/middleware/logger";
 
@@ -27,6 +28,7 @@ export default async function loginWithProvider(input: Input) {
 
 		let url = new URL(input.redirectUri);
 		url.searchParams.set("state", input.state);
+		url.searchParams.set("iss", ISSUER); // RFC 9207
 		url.searchParams.set("code", result.data.code);
 
 		logger.info("provider_login_code_generated", { subjectId: input.subjectId });

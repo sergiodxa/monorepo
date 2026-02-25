@@ -105,18 +105,29 @@ class OAuth2Provider<Repository extends OAuth2Provider.Repository> {
 
 	async revoke(args: {
 		clientId: string;
+		clientSecret: string;
 		token: string;
 		tokenTypeHint?: "access_token" | "refresh_token";
 	}) {
-		if (args.tokenTypeHint !== "refresh_token") {
-			throw new InvalidRequestError("Unsupported token type hint");
+		// Validate client credentials
+		let client = await this.repository.findClientById(args.clientId);
+		if (!client || client.secret !== args.clientSecret) {
+			throw new InvalidClientError("Invalid client credentials");
 		}
 
+		// For access tokens (JWTs), we can't truly revoke them - just return success
+		if (args.tokenTypeHint === "access_token") {
+			return;
+		}
+
+		// For refresh tokens (session IDs), delete the session
 		let session = await this.repository.findSessionById(args.token);
 		if (!session) {
-			throw new InvalidRequestError("Invalid or expired refresh token");
+			// Per RFC 7009, return success even for invalid tokens
+			return;
 		}
 
+		// Verify the token belongs to this client
 		if (session.clientId !== args.clientId) {
 			throw new UnauthorizedClientError();
 		}
@@ -124,12 +135,71 @@ class OAuth2Provider<Repository extends OAuth2Provider.Repository> {
 		await this.repository.deleteSessionById(session.id);
 	}
 
-	introspect(_args: {
+	async introspect(args: {
 		clientId: string;
+		clientSecret: string;
 		token: string;
 		tokenTypeHint?: "access_token" | "refresh_token";
-	}) {
-		throw new Error("Introspection is not implemented yet");
+	}): Promise<
+		| { active: false }
+		| {
+				active: true;
+				sub: string;
+				client_id: string;
+				exp: number;
+				iat: number;
+				iss: string;
+				aud: string | string[];
+				token_type: "Bearer";
+		  }
+	> {
+		// Validate client credentials
+		let client = await this.repository.findClientById(args.clientId);
+		if (!client || client.secret !== args.clientSecret) {
+			throw new InvalidClientError("Invalid client credentials");
+		}
+
+		// Try to introspect as refresh token (session ID)
+		if (args.tokenTypeHint !== "access_token") {
+			let session = await this.repository.findSessionById(args.token);
+			if (session && session.expiresAt > new Date()) {
+				return {
+					active: true,
+					sub: session.subjectId,
+					client_id: session.clientId,
+					exp: Math.floor(session.expiresAt.getTime() / 1000),
+					iat: Math.floor(session.expiresAt.getTime() / 1000) - 30 * 24 * 60 * 60, // 30 days before expiry
+					iss: this.issuer,
+					aud: session.clientId,
+					token_type: "Bearer",
+				};
+			}
+		}
+
+		// Try to introspect as access token (JWT)
+		try {
+			let accessToken = await AccessToken.verify(
+				args.token,
+				await this.repository.getSigningKey(),
+				{
+					issuer: this.issuer,
+				},
+			);
+
+			return {
+				active: true,
+				sub: accessToken.subject,
+				client_id: accessToken.audience as string,
+				exp: Math.floor(accessToken.expiresIn / 1000),
+				iat: Math.floor(accessToken.issuedAt.getTime() / 1000),
+				iss: accessToken.issuer,
+				aud: accessToken.audience,
+				token_type: "Bearer",
+			};
+		} catch {
+			// Token is invalid or expired
+			return { active: false };
+		}
 	}
 
 	get wellKnown() {

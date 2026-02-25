@@ -7,7 +7,7 @@ import { useTranslation } from "react-i18next";
 import { href, redirect, redirectDocument } from "react-router";
 import { z } from "zod";
 
-import { AUTH_SERVER_CLIENT_ID } from "~/config";
+import { AUTH_SERVER_CLIENT_ID, ISSUER } from "~/config";
 import { db } from "~/middleware/drizzle";
 import { logger } from "~/middleware/logger";
 import { session } from "~/middleware/session";
@@ -110,6 +110,7 @@ export async function loader({ request }: Route.LoaderArgs) {
 
 		let redirectUrl = new URL(searchParams.redirect_uri);
 		redirectUrl.searchParams.set("state", searchParams.state);
+		redirectUrl.searchParams.set("iss", ISSUER); // RFC 9207
 
 		if (codeResult.status === "failure") {
 			logger.error("authz_sso_code_failed", { subjectId, error: codeResult.error.code });

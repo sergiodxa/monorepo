@@ -7,6 +7,7 @@ export const ISSUER = "auth.sergiodxa.com";
 const ISSUER_HOST = "https://auth.sergiodxa.com";
 export const ID_TOKEN_TTL = ms("1 hour");
 export const ACCESS_TOKEN_TTL = ms("1 hour");
+export const AUTHZ_CODE_TTL = ms("10 minutes"); // RFC 6749 recommends max 10 minutes
 
 /**
  * This is the public information about how to connect and use the Authorization
@@ -19,19 +20,22 @@ export const WELL_KNOWN = {
 	authorization_endpoint: new URL("/authorize", ISSUER_HOST),
 	claims_supported: ["aud", "exp", "iat", "iss", "sub", "email"],
 	code_challenge_methods_supported: ["S256", "plain"],
+	grant_types_supported: ["authorization_code", "refresh_token", "client_credentials"],
 	id_token_signing_alg_values_supported: [JWK.Algoritm.ES256],
 	jwks_uri: new URL("/.well-known/jwks.json", ISSUER_HOST),
-	registration_endpoint: new URL("/oidc/register", ISSUER_HOST),
 	request_parameter_supported: false,
 	request_uri_parameter_supported: false,
 	response_modes_supported: ["query"],
-	response_types_supported: ["code", "token"],
+	response_types_supported: ["code"],
 	revocation_endpoint: new URL("/oauth/revoke", ISSUER_HOST),
+	revocation_endpoint_auth_methods_supported: ["client_secret_basic"],
+	introspection_endpoint: new URL("/oauth/introspect", ISSUER_HOST),
+	introspection_endpoint_auth_methods_supported: ["client_secret_basic"],
 	scopes_supported: ["openid", "email"],
 	subject_types_supported: ["public"],
+	authorization_response_iss_parameter_supported: true,
 	token_endpoint_auth_methods_supported: ["client_secret_basic"],
 	token_endpoint: new URL("/oauth/token", ISSUER_HOST),
-	token_introspection_endpoint: new URL("/oauth/introspect", ISSUER_HOST),
 	userinfo_endpoint: new URL("/userinfo", ISSUER_HOST),
 	end_session_endpoint: new URL("/oidc/logout", ISSUER_HOST),
 };

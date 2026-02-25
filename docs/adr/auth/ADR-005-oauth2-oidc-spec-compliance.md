@@ -1882,17 +1882,17 @@ OAuth 2.0 patterns for first-party (same-organization) applications. May provide
 
 | Status | Priority | Item                                                                             | Effort | Impact | Spec               |
 | :----: | :------: | -------------------------------------------------------------------------------- | ------ | ------ | ------------------ |
-|   ⬜   |    P0    | Fix discovery document (remove false endpoints)                                  | Low    | High   | RFC 8414           |
-|   ⬜   |    P0    | Implement `/userinfo`                                                            | Medium | High   | OIDC Core          |
-|   ⬜   |    P0    | Reduce auth code TTL to 10 minutes                                               | Low    | Medium | RFC 6749           |
-|   ⬜   |    P0    | Add `Cache-Control: no-store` to token responses                                 | Low    | Medium | RFC 6750           |
-|   ⬜   |    P1    | Implement `/oauth/revoke`                                                        | Medium | Medium | RFC 7009           |
-|   ⬜   |    P1    | Implement `/oauth/introspect`                                                    | Medium | Medium | RFC 7662           |
+|   ✅   |    P0    | Fix discovery document (remove false endpoints)                                  | Low    | High   | RFC 8414           |
+|   ✅   |    P0    | Implement `/userinfo`                                                            | Medium | High   | OIDC Core          |
+|   ✅   |    P0    | Reduce auth code TTL to 10 minutes                                               | Low    | Medium | RFC 6749           |
+|   ✅   |    P0    | Add `Cache-Control: no-store` to token responses                                 | Low    | Medium | RFC 6750           |
+|   ✅   |    P1    | Implement `/oauth/revoke`                                                        | Medium | Medium | RFC 7009           |
+|   ✅   |    P1    | Implement `/oauth/introspect`                                                    | Medium | Medium | RFC 7662           |
 |   ⬜   |    P1    | Add nonce support                                                                | Medium | Medium | OIDC Core          |
-|   ⬜   |    P1    | Add `WWW-Authenticate` header to protected resources                             | Low    | Medium | RFC 6750           |
-|   ⬜   |    P1    | Add `grant_types_supported` to discovery                                         | Low    | Low    | RFC 8414           |
+|   ✅   |    P1    | Add `WWW-Authenticate` header to protected resources                             | Low    | Medium | RFC 6750           |
+|   ✅   |    P1    | Add `grant_types_supported` to discovery                                         | Low    | Low    | RFC 8414           |
 |   ⬜   |    P1    | Back-channel logout support                                                      | High   | High   | OIDC Back-Channel  |
-|   ⬜   |    P1    | Add `iss` to authorization response                                              | Low    | Medium | RFC 9207           |
+|   ✅   |    P1    | Add `iss` to authorization response                                              | Low    | Medium | RFC 9207           |
 |   ⬜   |    P2    | Client secrets/redirect URIs refactoring (multi-secret, hashing, usage tracking) | High   | High   | RFC 9700           |
 |   ⬜   |    P2    | Implement scope validation                                                       | Medium | Medium | RFC 6749           |
 |   ⬜   |    P2    | Add rate limiting                                                                | Medium | High   | RFC 9700           |

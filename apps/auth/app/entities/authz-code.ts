@@ -1,7 +1,7 @@
 import { env } from "cloudflare:workers";
 import { z } from "zod";
 
-import { ACCESS_TOKEN_TTL } from "~/config";
+import { AUTHZ_CODE_TTL } from "~/config";
 
 const Schema = z.object({
 	clientId: z.string(),
@@ -28,7 +28,7 @@ export default class AuthzCode {
 		await env.KV.put(
 			`authz-code:${code}`,
 			JSON.stringify({ clientId, subjectId, sessionId, pkce }),
-			{ expirationTtl: ACCESS_TOKEN_TTL },
+			{ expirationTtl: AUTHZ_CODE_TTL / 1000 }, // KV expects seconds
 		);
 
 		return code;
