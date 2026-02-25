@@ -2,11 +2,11 @@ import { failure, success } from "@pkg/result";
 
 import { ISSUER } from "~/config";
 import AuthzCode from "~/entities/authz-code";
-import { InternalServerError } from "~/errors";
 import { db } from "~/middleware/drizzle";
 import { logger } from "~/middleware/logger";
 import Grant from "~/models/grant";
 import Session from "~/models/session";
+import { OIDCProvider } from "~/modules/oauth2";
 import { generateSessionState } from "~/utils/session-state";
 
 interface Input {
@@ -84,9 +84,9 @@ export default async function generateAuthzCode(input: Input) {
 			error: error instanceof Error ? error.message : "Unknown error",
 		});
 		if (error instanceof Error) {
-			return failure(new InternalServerError(error.message));
+			return failure(new OIDCProvider.InternalServerError(error.message));
 		}
 
-		return failure(new InternalServerError());
+		return failure(new OIDCProvider.InternalServerError());
 	}
 }

@@ -5,7 +5,7 @@ import { base64url } from "jose";
 import { z } from "zod/v4";
 
 import { logger } from "~/middleware/logger";
-import { OAuth2Error } from "~/modules/oauth2";
+import { OIDCProvider } from "~/modules/oauth2";
 import { checkRateLimit, rateLimitResponse } from "~/modules/rate-limit";
 import oidc from "~/services/oidc";
 
@@ -71,7 +71,7 @@ export async function action({ request }: Route.ActionArgs) {
 	} catch (error) {
 		// Per RFC 7662, return { active: false } for invalid tokens
 		// Never reveal why the token is invalid
-		if (error instanceof OAuth2Error) {
+		if (error instanceof OIDCProvider.Error) {
 			logger.info("introspect_error", {
 				clientId: clientCredentials.clientId,
 				code: error.code,

@@ -5,7 +5,7 @@ import { base64url } from "jose";
 import { z } from "zod/v4";
 
 import { logger } from "~/middleware/logger";
-import { OAuth2Error } from "~/modules/oauth2";
+import { OIDCProvider } from "~/modules/oauth2";
 import { checkRateLimit, rateLimitResponse } from "~/modules/rate-limit";
 import oidc from "~/services/oidc";
 
@@ -125,7 +125,7 @@ export async function action({ request }: Route.ActionArgs) {
 			return ok(tokenResult, { headers: TOKEN_RESPONSE_HEADERS });
 		}
 	} catch (error) {
-		if (error instanceof OAuth2Error) {
+		if (error instanceof OIDCProvider.Error) {
 			logger.info("token_oauth2_error", { code: error.code, message: error.message });
 			return badRequest({ error: error.code, error_description: error.message });
 		}

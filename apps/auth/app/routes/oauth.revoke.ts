@@ -5,7 +5,7 @@ import { base64url } from "jose";
 import { z } from "zod/v4";
 
 import { logger } from "~/middleware/logger";
-import { OAuth2Error } from "~/modules/oauth2";
+import { OIDCProvider } from "~/modules/oauth2";
 import { checkRateLimit, rateLimitResponse } from "~/modules/rate-limit";
 import oidc from "~/services/oidc";
 
@@ -74,7 +74,7 @@ export async function action({ request }: Route.ActionArgs) {
 	} catch (error) {
 		// Per RFC 7009, always return 200 OK even for invalid tokens
 		// This prevents token probing attacks
-		if (error instanceof OAuth2Error) {
+		if (error instanceof OIDCProvider.Error) {
 			logger.info("revoke_error", {
 				clientId: clientCredentials.clientId,
 				code: error.code,

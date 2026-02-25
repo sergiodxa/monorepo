@@ -6,16 +6,105 @@ import { base64url } from "jose";
 
 import AccessToken from "../entities/access-token";
 import IdToken from "../entities/id-token";
-import {
-	InvalidClientError,
-	InvalidGrantError,
-	InvalidRequestError,
-	OAuth2Error,
-	UnauthorizedClientError,
-	UnsupportedGrantTypeError,
-} from "../errors";
 
-export { OAuth2Error };
+// =============================================================================
+// Errors
+// =============================================================================
+
+class OAuth2Error extends globalThis.Error {
+	override readonly name: string = "OAuth2Error";
+
+	constructor(
+		readonly code: string,
+		readonly description: string,
+	) {
+		super(`OAuth2 error: ${code}`);
+	}
+}
+
+class InvalidClientError extends OAuth2Error {
+	override readonly name = "InvalidClientError";
+
+	constructor(override readonly description: string) {
+		super("invalid_client", description);
+	}
+}
+
+class InvalidGrantError extends OAuth2Error {
+	override readonly name = "InvalidGrantError";
+
+	constructor(override readonly description: string) {
+		super("invalid_grant", description);
+	}
+}
+
+class InvalidRequestError extends OAuth2Error {
+	override readonly name = "InvalidRequestError";
+
+	constructor(override readonly description: string) {
+		super("invalid_request", description);
+	}
+}
+
+class InvalidScopeError extends OAuth2Error {
+	override readonly name = "InvalidScopeError";
+
+	constructor(override readonly description: string) {
+		super("invalid_scope", description);
+	}
+}
+
+class UnauthorizedClientError extends OAuth2Error {
+	override readonly name = "UnauthorizedClientError";
+
+	constructor(override readonly description: string = "Unauthorized client") {
+		super("unauthorized_client", description);
+	}
+}
+
+class UnsupportedGrantTypeError extends OAuth2Error {
+	override readonly name = "UnsupportedGrantTypeError";
+
+	constructor(override readonly description: string) {
+		super("unsupported_grant_type", description);
+	}
+}
+
+class UnsupportedResponseTypeError extends OAuth2Error {
+	override readonly name = "UnsupportedResponseTypeError";
+
+	constructor(override readonly description: string) {
+		super("unsupported_response_type", description);
+	}
+}
+
+class AccessDeniedError extends OAuth2Error {
+	override readonly name = "AccessDeniedError";
+
+	constructor(override readonly description: string) {
+		super("access_denied", description);
+	}
+}
+
+class InternalServerError extends OAuth2Error {
+	override readonly name = "InternalServerError";
+
+	constructor(override readonly description: string = "Internal server error") {
+		super("internal_server_error", description);
+	}
+}
+
+class MissingValidationError extends OAuth2Error {
+	override readonly name = "MissingValidationError";
+
+	constructor(override readonly description: string = "Verification required") {
+		super("missing_validation", description);
+	}
+}
+
+// =============================================================================
+// OIDC Provider
+// =============================================================================
 
 type Nullable<T> = T | null;
 
@@ -368,6 +457,19 @@ export namespace OIDCProvider {
 }
 
 export class OIDCProvider extends OAuth2Provider<OIDCProvider.Repository> {
+	// Static error classes
+	static Error = OAuth2Error;
+	static InvalidClientError = InvalidClientError;
+	static InvalidGrantError = InvalidGrantError;
+	static InvalidRequestError = InvalidRequestError;
+	static InvalidScopeError = InvalidScopeError;
+	static UnauthorizedClientError = UnauthorizedClientError;
+	static UnsupportedGrantTypeError = UnsupportedGrantTypeError;
+	static UnsupportedResponseTypeError = UnsupportedResponseTypeError;
+	static AccessDeniedError = AccessDeniedError;
+	static InternalServerError = InternalServerError;
+	static MissingValidationError = MissingValidationError;
+
 	async userinfo(args: { accessToken: string; clientId?: string }) {
 		let accessToken = await AccessToken.verify(
 			args.accessToken,

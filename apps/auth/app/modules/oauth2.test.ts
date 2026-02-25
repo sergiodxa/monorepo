@@ -5,12 +5,6 @@ import { JWK } from "@edgefirst-dev/jwt";
 import { ISSUER } from "../config";
 import AccessToken from "../entities/access-token";
 import IdToken from "../entities/id-token";
-import {
-	InvalidClientError,
-	InvalidGrantError,
-	InvalidRequestError,
-	UnauthorizedClientError,
-} from "../errors";
 
 import { OIDCProvider } from "./oauth2";
 
@@ -137,7 +131,7 @@ describe("OAuth2Provider", () => {
 					clientId: testClient.id,
 					clientSecret: testClient.secret,
 				}),
-			).rejects.toThrow(InvalidGrantError);
+			).rejects.toThrow(OIDCProvider.InvalidGrantError);
 		});
 
 		test("validates PKCE S256 challenge", async () => {
@@ -182,7 +176,7 @@ describe("OAuth2Provider", () => {
 					clientId: testClient.id,
 					clientSecret: testClient.secret,
 				}),
-			).rejects.toThrow(InvalidRequestError);
+			).rejects.toThrow(OIDCProvider.InvalidRequestError);
 		});
 
 		test("rejects expired session", async () => {
@@ -199,7 +193,7 @@ describe("OAuth2Provider", () => {
 					clientId: testClient.id,
 					clientSecret: testClient.secret,
 				}),
-			).rejects.toThrow(InvalidGrantError);
+			).rejects.toThrow(OIDCProvider.InvalidGrantError);
 		});
 
 		test("rejects missing client credentials for confidential client", async () => {
@@ -212,7 +206,7 @@ describe("OAuth2Provider", () => {
 					code: "valid-code",
 					redirectUri: testClient.redirectUri,
 				}),
-			).rejects.toThrow(InvalidClientError);
+			).rejects.toThrow(OIDCProvider.InvalidClientError);
 		});
 
 		test("rejects wrong client credentials", async () => {
@@ -227,7 +221,7 @@ describe("OAuth2Provider", () => {
 					clientId: testClient.id,
 					clientSecret: "wrong-secret",
 				}),
-			).rejects.toThrow(InvalidClientError);
+			).rejects.toThrow(OIDCProvider.InvalidClientError);
 		});
 
 		test("rejects mismatched client ID", async () => {
@@ -242,7 +236,7 @@ describe("OAuth2Provider", () => {
 					clientId: "different-client",
 					clientSecret: testClient.secret,
 				}),
-			).rejects.toThrow(InvalidClientError);
+			).rejects.toThrow(OIDCProvider.InvalidClientError);
 		});
 	});
 
@@ -272,7 +266,7 @@ describe("OAuth2Provider", () => {
 					type: "refresh_token",
 					refreshToken: "invalid-token",
 				}),
-			).rejects.toThrow(InvalidGrantError);
+			).rejects.toThrow(OIDCProvider.InvalidGrantError);
 		});
 	});
 
@@ -303,7 +297,7 @@ describe("OAuth2Provider", () => {
 					clientSecret: "wrong-secret",
 					resource: [],
 				}),
-			).rejects.toThrow(InvalidClientError);
+			).rejects.toThrow(OIDCProvider.InvalidClientError);
 		});
 
 		test("rejects unknown client", async () => {
@@ -318,7 +312,7 @@ describe("OAuth2Provider", () => {
 					clientSecret: "any-secret",
 					resource: [],
 				}),
-			).rejects.toThrow(InvalidClientError);
+			).rejects.toThrow(OIDCProvider.InvalidClientError);
 		});
 	});
 
@@ -364,7 +358,7 @@ describe("OAuth2Provider", () => {
 					clientSecret: testClient.secret,
 					token: testSession.id,
 				}),
-			).rejects.toThrow(UnauthorizedClientError);
+			).rejects.toThrow(OIDCProvider.UnauthorizedClientError);
 		});
 
 		test("rejects invalid client credentials", async () => {
@@ -377,7 +371,7 @@ describe("OAuth2Provider", () => {
 					clientSecret: "wrong-secret",
 					token: testSession.id,
 				}),
-			).rejects.toThrow(InvalidClientError);
+			).rejects.toThrow(OIDCProvider.InvalidClientError);
 		});
 	});
 
@@ -452,7 +446,7 @@ describe("OAuth2Provider", () => {
 					clientSecret: "wrong-secret",
 					token: testSession.id,
 				}),
-			).rejects.toThrow(InvalidClientError);
+			).rejects.toThrow(OIDCProvider.InvalidClientError);
 		});
 	});
 });
@@ -545,7 +539,7 @@ describe("OIDCProvider", () => {
 					idTokenHint: signedIdToken,
 					clientId: "different-client",
 				}),
-			).rejects.toThrow(InvalidRequestError);
+			).rejects.toThrow(OIDCProvider.InvalidRequestError);
 		});
 
 		test("rejects invalid post_logout_redirect_uri", async () => {
@@ -570,14 +564,14 @@ describe("OIDCProvider", () => {
 					idTokenHint: signedIdToken,
 					postLogoutRedirectUri: "https://malicious.com/logout",
 				}),
-			).rejects.toThrow(InvalidRequestError);
+			).rejects.toThrow(OIDCProvider.InvalidRequestError);
 		});
 
 		test("requires id_token_hint or session subject", async () => {
 			let repo = createMockRepository();
 			let provider = new OIDCProvider(ISSUER, repo);
 
-			await expect(provider.logout({})).rejects.toThrow(InvalidRequestError);
+			await expect(provider.logout({})).rejects.toThrow(OIDCProvider.InvalidRequestError);
 		});
 	});
 

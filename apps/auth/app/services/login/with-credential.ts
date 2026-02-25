@@ -3,11 +3,11 @@ import { encodeHexLowerCase } from "@oslojs/encoding";
 import { failure } from "@pkg/result";
 import bcrypt from "bcryptjs";
 
-import { AccessDeniedError, MissingValidationError } from "~/errors";
 import { db } from "~/middleware/drizzle";
 import { logger } from "~/middleware/logger";
 import Credential from "~/models/credential";
 import Subject from "~/models/subject";
+import { OIDCProvider } from "~/modules/oauth2";
 
 import generateAuthzCode from "./generate-code";
 
@@ -41,20 +41,20 @@ export default async function loginWithCredential(input: Input) {
 		if (!credential) {
 			await Credential.create(db(), subject.id, await bcrypt.hash(input.password, 10));
 			logger.info("credential_created", { subjectId: subject.id });
-			return failure(new MissingValidationError("Verify your email address."));
+			return failure(new OIDCProvider.MissingValidationError("Verify your email address."));
 		}
 
 		// Email not verified yet
 		if (credential.verifiedAt === null) {
 			logger.info("login_email_verification_required", { subjectId: subject.id });
-			return failure(new MissingValidationError("Verify your email address."));
+			return failure(new OIDCProvider.MissingValidationError("Verify your email address."));
 		}
 
 		// CRITICAL: Verify password matches stored hash
 		let passwordValid = await bcrypt.compare(input.password, credential.passwordHash);
 		if (!passwordValid) {
 			logger.info("login_invalid_password", { subjectId: subject.id });
-			return failure(new AccessDeniedError("Invalid email or password."));
+			return failure(new OIDCProvider.AccessDeniedError("Invalid email or password."));
 		}
 	} else {
 		// New user - create subject and credential
@@ -71,7 +71,7 @@ export default async function loginWithCredential(input: Input) {
 		logger.info("subject_created", { subjectId: subject.id, email: input.email });
 
 		// New users need to verify email before login
-		return failure(new MissingValidationError("Verify your email address."));
+		return failure(new OIDCProvider.MissingValidationError("Verify your email address."));
 	}
 
 	let result = await generateAuthzCode({
