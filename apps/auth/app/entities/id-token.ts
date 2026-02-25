@@ -52,14 +52,16 @@ export default class IdToken extends JWT {
 		options?: { nonce?: string | null; scope?: string[]; authTime?: number },
 	) {
 		let scope = options?.scope ?? ["openid"];
+		let now = Math.floor(Date.now() / 1000); // RFC 7519 NumericDate is in seconds
+		let expiresAt = now + Math.floor(ID_TOKEN_TTL / 1000);
 
 		return new IdToken({
 			sub: subject.id,
 			iss: ISSUER,
 			aud: client.id,
 			jti: crypto.randomUUID(),
-			exp: Date.now() + ID_TOKEN_TTL,
-			iat: Date.now(),
+			exp: expiresAt,
+			iat: now,
 			// OIDC auth_time - when user last authenticated (in seconds)
 			...(options?.authTime && { auth_time: options.authTime }),
 			// OIDC nonce - echo back from authorization request

@@ -16,7 +16,8 @@ export default class AccessToken extends JWT {
 	}
 
 	override get issuedAt() {
-		return new Date(this.parser.number("iat"));
+		// iat is in seconds per RFC 7519
+		return new Date(this.parser.number("iat") * 1000);
 	}
 
 	override get issuer() {
@@ -32,10 +33,13 @@ export default class AccessToken extends JWT {
 	}
 
 	static generate(audience: string | string[], subjectId: string, scope?: string[]) {
+		let now = Math.floor(Date.now() / 1000); // RFC 7519 NumericDate is in seconds
+		let expiresAt = now + Math.floor(ACCESS_TOKEN_TTL / 1000);
+
 		return new AccessToken({
 			aud: audience,
-			exp: Date.now() + ACCESS_TOKEN_TTL,
-			iat: Date.now(),
+			exp: expiresAt,
+			iat: now,
 			iss: ISSUER,
 			jti: crypto.randomUUID(),
 			sub: subjectId,
@@ -44,7 +48,8 @@ export default class AccessToken extends JWT {
 		});
 	}
 
+	/** TTL in seconds for use in token responses */
 	static get ttl() {
-		return ACCESS_TOKEN_TTL;
+		return Math.floor(ACCESS_TOKEN_TTL / 1000);
 	}
 }

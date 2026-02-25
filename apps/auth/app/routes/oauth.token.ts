@@ -76,11 +76,16 @@ export async function action({ request }: Route.ActionArgs) {
 
 	try {
 		if (body.grant_type === "authorization_code") {
+			// Get client credentials from Authorization header for confidential clients
+			let clientCredentials = getClientCredentialsFromHeader(request.headers);
+
 			let tokenResult = await oidc.token({
 				type: "authorization_code",
 				code: body.code,
 				codeVerifier: body.code_verifier,
 				redirectUri: body.redirect_uri,
+				clientId: clientCredentials?.clientId,
+				clientSecret: clientCredentials?.clientSecret,
 			});
 			logger.info("token_issued", { grant_type: "authorization_code" });
 			return ok(tokenResult, { headers: TOKEN_RESPONSE_HEADERS });

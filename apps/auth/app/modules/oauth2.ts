@@ -1,3 +1,5 @@
+import { timingSafeEqual } from "node:crypto";
+
 import { JWK, JWT } from "@edgefirst-dev/jwt";
 import { isBefore } from "date-fns";
 import { base64url } from "jose";
@@ -80,6 +82,8 @@ class OAuth2Provider<Repository extends OAuth2Provider.Repository> {
 					code: string;
 					redirectUri: string;
 					codeVerifier?: string;
+					clientId?: string;
+					clientSecret?: string;
 			  }
 			| {
 					type: "refresh_token";
@@ -113,9 +117,9 @@ class OAuth2Provider<Repository extends OAuth2Provider.Repository> {
 		token: string;
 		tokenTypeHint?: "access_token" | "refresh_token";
 	}) {
-		// Validate client credentials
+		// Validate client credentials using constant-time comparison
 		let client = await this.repository.findClientById(args.clientId);
-		if (!client || client.secret !== args.clientSecret) {
+		if (!client || !secureCompare(client.secret, args.clientSecret)) {
 			throw new InvalidClientError("Invalid client credentials");
 		}
 
@@ -157,9 +161,9 @@ class OAuth2Provider<Repository extends OAuth2Provider.Repository> {
 				token_type: "Bearer";
 		  }
 	> {
-		// Validate client credentials
+		// Validate client credentials using constant-time comparison
 		let client = await this.repository.findClientById(args.clientId);
-		if (!client || client.secret !== args.clientSecret) {
+		if (!client || !secureCompare(client.secret, args.clientSecret)) {
 			throw new InvalidClientError("Invalid client credentials");
 		}
 
@@ -226,6 +230,8 @@ class OAuth2Provider<Repository extends OAuth2Provider.Repository> {
 		code: string;
 		redirectUri: string;
 		codeVerifier?: string;
+		clientId?: string;
+		clientSecret?: string;
 	}) {
 		let authz = await this.repository.findAuthorizationCodeData(args.code);
 		if (!authz) throw new InvalidGrantError("Code has expired or is invalid");
@@ -241,6 +247,20 @@ class OAuth2Provider<Repository extends OAuth2Provider.Repository> {
 		if (!session) throw new InvalidGrantError("Session not found");
 		if (isBefore(session.expiresAt, new Date())) {
 			throw new InvalidGrantError("Session has expired");
+		}
+
+		// Validate client authentication for confidential clients
+		// Per RFC 6749, confidential clients MUST authenticate when exchanging codes
+		if (client.secret) {
+			if (!args.clientId || !args.clientSecret) {
+				throw new InvalidClientError("Client authentication required");
+			}
+			if (args.clientId !== clientId) {
+				throw new InvalidClientError("Client ID mismatch");
+			}
+			if (!secureCompare(client.secret, args.clientSecret)) {
+				throw new InvalidClientError("Invalid client credentials");
+			}
 		}
 
 		if (client.redirectUri !== args.redirectUri) {
@@ -269,6 +289,7 @@ class OAuth2Provider<Repository extends OAuth2Provider.Repository> {
 
 		return {
 			access_token: accessToken,
+			token_type: "Bearer" as const,
 			refresh_token: sessionId,
 			expires_in: AccessToken.ttl,
 		};
@@ -282,7 +303,8 @@ class OAuth2Provider<Repository extends OAuth2Provider.Repository> {
 		let client = await this.repository.findClientById(args.clientId);
 		if (!client) throw new InvalidClientError("Client is not registered");
 
-		if (client.secret !== args.clientSecret) {
+		// Use constant-time comparison to prevent timing attacks
+		if (!secureCompare(client.secret, args.clientSecret)) {
 			throw new InvalidClientError("Client is not registered");
 		}
 
@@ -290,13 +312,22 @@ class OAuth2Provider<Repository extends OAuth2Provider.Repository> {
 			AccessToken.generate([this.issuer, ...args.resource], args.clientId),
 		);
 
-		return { expires_in: AccessToken.ttl, access_token: accessToken };
+		return {
+			access_token: accessToken,
+			token_type: "Bearer" as const,
+			expires_in: AccessToken.ttl,
+		};
 	}
 
 	protected async refreshTokenGrant(args: { refreshToken: string }) {
 		let session = await this.repository.findSessionById(args.refreshToken);
 		if (!session) {
 			throw new InvalidGrantError("Invalid or expired refresh token");
+		}
+
+		// Check if session has expired
+		if (isBefore(session.expiresAt, new Date())) {
+			throw new InvalidGrantError("Session has expired");
 		}
 
 		let client = await this.repository.findClientById(session.clientId);
@@ -309,8 +340,9 @@ class OAuth2Provider<Repository extends OAuth2Provider.Repository> {
 		let accessToken = await this.signJWT(AccessToken.generate(session.clientId, session.subjectId));
 
 		return {
-			expires_in: AccessToken.ttl,
 			access_token: accessToken,
+			token_type: "Bearer" as const,
+			expires_in: AccessToken.ttl,
 			refresh_token: session.id,
 		};
 	}
@@ -440,6 +472,8 @@ export class OIDCProvider extends OAuth2Provider<OIDCProvider.Repository> {
 		code: string;
 		redirectUri: string;
 		codeVerifier?: string;
+		clientId?: string;
+		clientSecret?: string;
 	}) {
 		let result = await super.authorizationCodeGrant(args);
 
@@ -517,4 +551,23 @@ class CodeChallenge {
 		let generatedChallenge = await CodeChallenge.generate(verifier, method);
 		return generatedChallenge === challenge;
 	}
+}
+
+/**
+ * Constant-time string comparison to prevent timing attacks.
+ * Uses Node.js crypto.timingSafeEqual which is available in Cloudflare Workers.
+ */
+function secureCompare(a: string, b: string): boolean {
+	let encoder = new TextEncoder();
+	let aBuffer = encoder.encode(a);
+	let bBuffer = encoder.encode(b);
+
+	// If lengths differ, compare a with itself to maintain constant time
+	// but still return false
+	if (aBuffer.length !== bBuffer.length) {
+		timingSafeEqual(aBuffer, aBuffer);
+		return false;
+	}
+
+	return timingSafeEqual(aBuffer, bBuffer);
 }

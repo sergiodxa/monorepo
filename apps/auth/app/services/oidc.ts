@@ -22,7 +22,8 @@ export default new OIDCProvider(
 		},
 
 		async findAuthorizationCodeData(code) {
-			let authz = await AuthzCode.find(code);
+			// Use consume to atomically find and delete the code (RFC 6749 single-use)
+			let authz = await AuthzCode.consume(code);
 			if (authz) return authz;
 			throw new Error("Authorization code not found.");
 		},

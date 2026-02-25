@@ -17,6 +17,7 @@ import { OIDCProvider } from "./oauth2";
 // Type helpers for test assertions
 interface OIDCTokenResponse {
 	access_token: string;
+	token_type: "Bearer";
 	refresh_token: string;
 	expires_in: number;
 	id_token: string;
@@ -96,6 +97,8 @@ describe("OAuth2Provider", () => {
 				type: "authorization_code",
 				code: "valid-code",
 				redirectUri: testClient.redirectUri,
+				clientId: testClient.id,
+				clientSecret: testClient.secret,
 			})) as OIDCTokenResponse;
 
 			expect(result.access_token).toBeDefined();
@@ -116,6 +119,8 @@ describe("OAuth2Provider", () => {
 					type: "authorization_code",
 					code: "invalid-code",
 					redirectUri: testClient.redirectUri,
+					clientId: testClient.id,
+					clientSecret: testClient.secret,
 				}),
 			).rejects.toThrow();
 		});
@@ -129,6 +134,8 @@ describe("OAuth2Provider", () => {
 					type: "authorization_code",
 					code: "valid-code",
 					redirectUri: "https://wrong.com/callback",
+					clientId: testClient.id,
+					clientSecret: testClient.secret,
 				}),
 			).rejects.toThrow(InvalidGrantError);
 		});
@@ -154,6 +161,8 @@ describe("OAuth2Provider", () => {
 				code: "valid-code",
 				redirectUri: testClient.redirectUri,
 				codeVerifier,
+				clientId: testClient.id,
+				clientSecret: testClient.secret,
 			});
 
 			expect(result.access_token).toBeDefined();
@@ -170,6 +179,8 @@ describe("OAuth2Provider", () => {
 					type: "authorization_code",
 					code: "valid-code",
 					redirectUri: testClient.redirectUri,
+					clientId: testClient.id,
+					clientSecret: testClient.secret,
 				}),
 			).rejects.toThrow(InvalidRequestError);
 		});
@@ -185,8 +196,53 @@ describe("OAuth2Provider", () => {
 					type: "authorization_code",
 					code: "valid-code",
 					redirectUri: testClient.redirectUri,
+					clientId: testClient.id,
+					clientSecret: testClient.secret,
 				}),
 			).rejects.toThrow(InvalidGrantError);
+		});
+
+		test("rejects missing client credentials for confidential client", async () => {
+			let repo = createMockRepository();
+			let provider = new OIDCProvider(ISSUER, repo);
+
+			await expect(
+				provider.token({
+					type: "authorization_code",
+					code: "valid-code",
+					redirectUri: testClient.redirectUri,
+				}),
+			).rejects.toThrow(InvalidClientError);
+		});
+
+		test("rejects wrong client credentials", async () => {
+			let repo = createMockRepository();
+			let provider = new OIDCProvider(ISSUER, repo);
+
+			await expect(
+				provider.token({
+					type: "authorization_code",
+					code: "valid-code",
+					redirectUri: testClient.redirectUri,
+					clientId: testClient.id,
+					clientSecret: "wrong-secret",
+				}),
+			).rejects.toThrow(InvalidClientError);
+		});
+
+		test("rejects mismatched client ID", async () => {
+			let repo = createMockRepository();
+			let provider = new OIDCProvider(ISSUER, repo);
+
+			await expect(
+				provider.token({
+					type: "authorization_code",
+					code: "valid-code",
+					redirectUri: testClient.redirectUri,
+					clientId: "different-client",
+					clientSecret: testClient.secret,
+				}),
+			).rejects.toThrow(InvalidClientError);
 		});
 	});
 
@@ -353,6 +409,8 @@ describe("OAuth2Provider", () => {
 				type: "authorization_code",
 				code: "valid-code",
 				redirectUri: testClient.redirectUri,
+				clientId: testClient.id,
+				clientSecret: testClient.secret,
 			});
 
 			// Now introspect it
@@ -410,6 +468,8 @@ describe("OIDCProvider", () => {
 				type: "authorization_code",
 				code: "valid-code",
 				redirectUri: testClient.redirectUri,
+				clientId: testClient.id,
+				clientSecret: testClient.secret,
 			});
 
 			let result = await provider.userinfo({
@@ -532,6 +592,8 @@ describe("OIDCProvider", () => {
 				type: "authorization_code",
 				code: "valid-code",
 				redirectUri: testClient.redirectUri,
+				clientId: testClient.id,
+				clientSecret: testClient.secret,
 			})) as OIDCTokenResponse;
 
 			let decoded = IdToken.decode(result.id_token);
@@ -546,6 +608,8 @@ describe("OIDCProvider", () => {
 				type: "authorization_code",
 				code: "valid-code",
 				redirectUri: testClient.redirectUri,
+				clientId: testClient.id,
+				clientSecret: testClient.secret,
 			})) as OIDCTokenResponse;
 
 			let decoded = IdToken.decode(result.id_token);
@@ -563,6 +627,8 @@ describe("OIDCProvider", () => {
 				type: "authorization_code",
 				code: "valid-code",
 				redirectUri: testClient.redirectUri,
+				clientId: testClient.id,
+				clientSecret: testClient.secret,
 			})) as OIDCTokenResponse;
 
 			let decoded = IdToken.decode(result.id_token);
@@ -580,6 +646,8 @@ describe("OIDCProvider", () => {
 				type: "authorization_code",
 				code: "valid-code",
 				redirectUri: testClient.redirectUri,
+				clientId: testClient.id,
+				clientSecret: testClient.secret,
 			})) as OIDCTokenResponse;
 
 			let decoded = IdToken.decode(result.id_token);

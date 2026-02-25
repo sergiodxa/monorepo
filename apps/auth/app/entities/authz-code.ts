@@ -20,6 +20,19 @@ export default class AuthzCode {
 		return Schema.parse(JSON.parse(result));
 	}
 
+	/**
+	 * Find and delete the authorization code atomically.
+	 * Per RFC 6749 Section 4.1.2, authorization codes MUST be single-use.
+	 */
+	static async consume(code: string) {
+		let data = await AuthzCode.find(code);
+		if (data) {
+			// Delete immediately to prevent reuse
+			await env.KV.delete(`authz-code:${code}`);
+		}
+		return data;
+	}
+
 	static async generate(
 		clientId: string,
 		subjectId: string,
