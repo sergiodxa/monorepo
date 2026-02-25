@@ -143,17 +143,21 @@ describe(retry, () => {
 				}
 				return success("done");
 			},
-			{ times: 5, delay: 20, backoff: "linear" },
+			{ times: 5, delay: 50, backoff: "linear" },
 		);
 
-		// Delays should be: 20, 40, 60 (delay * attempt)
+		// Delays should be: 50, 100, 150 (delay * attempt)
 		let delays: number[] = [];
 		for (let i = 1; i < timestamps.length; i++) {
 			delays.push(timestamps[i] - timestamps[i - 1]);
 		}
-		// First delay ~20ms, second ~40ms, third ~60ms
-		expect(delays[0]).toBeLessThan(delays[1]);
-		expect(delays[1]).toBeLessThan(delays[2]);
+		// Check delays are in expected ranges with tolerance for timing jitter
+		expect(delays[0]).toBeGreaterThanOrEqual(40);
+		expect(delays[0]).toBeLessThan(80);
+		expect(delays[1]).toBeGreaterThanOrEqual(90);
+		expect(delays[1]).toBeLessThan(130);
+		expect(delays[2]).toBeGreaterThanOrEqual(140);
+		expect(delays[2]).toBeLessThan(180);
 	});
 
 	test("uses exponential backoff strategy (default)", async () => {
@@ -166,16 +170,21 @@ describe(retry, () => {
 				}
 				return success("done");
 			},
-			{ times: 5, delay: 20 },
+			{ times: 5, delay: 50 },
 		);
 
-		// Delays should be: 20, 40, 80 (delay * 2^(attempt-1))
+		// Delays should be: 50, 100, 200 (delay * 2^(attempt-1))
 		let delays: number[] = [];
 		for (let i = 1; i < timestamps.length; i++) {
 			delays.push(timestamps[i] - timestamps[i - 1]);
 		}
-		expect(delays[0]).toBeLessThan(delays[1]);
-		expect(delays[1]).toBeLessThan(delays[2]);
+		// Check delays are in expected ranges with tolerance for timing jitter
+		expect(delays[0]).toBeGreaterThanOrEqual(40);
+		expect(delays[0]).toBeLessThan(80);
+		expect(delays[1]).toBeGreaterThanOrEqual(90);
+		expect(delays[1]).toBeLessThan(130);
+		expect(delays[2]).toBeGreaterThanOrEqual(190);
+		expect(delays[2]).toBeLessThan(230);
 	});
 
 	test("accepts string delay parsed by ms", async () => {
