@@ -8,8 +8,8 @@ import { db } from "~/middleware/drizzle";
 import { logger } from "~/middleware/logger";
 import { session } from "~/middleware/session";
 import { checkRateLimit, rateLimitResponse } from "~/modules/rate-limit";
-import { github } from "~/providers/github";
 import loginWithProvider from "~/services/login/with-provider";
+import { github } from "~/strategies/github";
 import { generateOpBrowserState, OP_BROWSER_STATE_COOKIE } from "~/utils/session-state";
 
 import type { Route } from "./+types/auth.$provider.callback";

@@ -3,7 +3,7 @@ import { href, redirect } from "react-router";
 
 import { db } from "~/middleware/drizzle";
 import { checkRateLimit, rateLimitResponse } from "~/modules/rate-limit";
-import { github } from "~/providers/github";
+import { github } from "~/strategies/github";
 
 import type { Route } from "./+types/auth.$provider";
 
