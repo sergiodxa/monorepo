@@ -10,6 +10,7 @@ import { logger } from "~/middleware/logger";
 import { session } from "~/middleware/session";
 import Session from "~/models/session";
 import { sendBackchannelLogoutTokens } from "~/services/backchannel-logout";
+import { getFrontchannelLogoutUrls } from "~/services/frontchannel-logout";
 import oidc from "~/services/oidc";
 import { sessionStorage } from "~/session";
 import { getSubjectFromAccessToken } from "~/utils/decode-access-token";
@@ -61,6 +62,9 @@ export async function loader({ request }: Route.LoaderArgs) {
 	// Exclude the client that initiated the logout (they already know)
 	await sendBackchannelLogoutTokens(result.subjectId, result.clientId);
 
+	// Get front-channel logout URLs for iframes
+	let frontchannelUrls = await getFrontchannelLogoutUrls(result.subjectId, result.clientId);
+
 	if (refreshToken) {
 		await Session.deleteById(db(), refreshToken);
 	}
@@ -76,6 +80,16 @@ export async function loader({ request }: Route.LoaderArgs) {
 		redirectUri.searchParams.set("state", params.data.state);
 	}
 	let redirectUriString = redirectUri.toString();
+
+	// If there are front-channel logout URLs, render a page with iframes
+	// Otherwise, redirect immediately
+	if (frontchannelUrls.length > 0) {
+		return {
+			type: "frontchannel" as const,
+			frontchannelUrls,
+			redirectUri: redirectUriString,
+		};
+	}
 
 	return redirectDocument(redirectUriString, {
 		headers: {
@@ -109,8 +123,15 @@ export async function action(_: Route.ActionArgs) {
 	});
 }
 
-export default function Component() {
+export default function Component({ loaderData }: Route.ComponentProps) {
 	let { t } = useTranslation();
+
+	// If loader returned frontchannel logout data, render iframes
+	if (loaderData && typeof loaderData === "object" && "type" in loaderData) {
+		if (loaderData.type === "frontchannel") {
+			return <FrontchannelLogoutPage data={loaderData} />;
+		}
+	}
 
 	return (
 		<Form
@@ -126,5 +147,85 @@ export default function Component() {
 				{t("logout.cta")}
 			</Button>
 		</Form>
+	);
+}
+
+/**
+ * Page that renders hidden iframes for front-channel logout
+ * Per OIDC Front-Channel Logout 1.0, iframes load each RP's logout URI
+ * then redirect to the post_logout_redirect_uri after a timeout
+ */
+function FrontchannelLogoutPage({
+	data,
+}: {
+	data: {
+		frontchannelUrls: Array<{ clientId: string; url: string }>;
+		redirectUri: string;
+	};
+}) {
+	let { t } = useTranslation();
+
+	return (
+		<div className="mx-auto flex max-w-screen-sm flex-col items-center gap-6 pt-10">
+			<header className="sm:mx-auto sm:w-full sm:max-w-lg">
+				<h2 className="text-center text-3xl font-bold tracking-tight">{t("logout.title")}</h2>
+				<p className="text-gray-600 dark:text-gray-400 mt-2 text-center">
+					{t("logout.signing_out")}
+				</p>
+			</header>
+
+			{/* Hidden iframes for front-channel logout */}
+			<div className="hidden">
+				{data.frontchannelUrls.map((item) => (
+					<iframe
+						key={item.clientId}
+						src={item.url}
+						title={`Logout ${item.clientId}`}
+						sandbox="allow-scripts allow-same-origin"
+					/>
+				))}
+			</div>
+
+			{/* Auto-redirect after iframes have had time to load */}
+			<script
+				dangerouslySetInnerHTML={{
+					__html: `
+						// Wait for iframes to load (2 seconds should be enough)
+						// Then redirect to the post_logout_redirect_uri
+						setTimeout(function() {
+							window.location.href = ${JSON.stringify(data.redirectUri)};
+						}, 2000);
+					`,
+				}}
+			/>
+
+			{/* Fallback link in case JavaScript is disabled */}
+			<noscript>
+				<a href={data.redirectUri} className="text-blue-600 hover:text-blue-800 underline">
+					Click here to continue
+				</a>
+			</noscript>
+
+			{/* Loading indicator */}
+			<div className="text-gray-600 dark:text-gray-400 flex items-center gap-2">
+				<svg className="h-5 w-5 animate-spin" viewBox="0 0 24 24">
+					<circle
+						className="opacity-25"
+						cx="12"
+						cy="12"
+						r="10"
+						stroke="currentColor"
+						strokeWidth="4"
+						fill="none"
+					/>
+					<path
+						className="opacity-75"
+						fill="currentColor"
+						d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+					/>
+				</svg>
+				<span>{t("logout.redirecting")}</span>
+			</div>
+		</div>
 	);
 }

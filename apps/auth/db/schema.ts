@@ -120,6 +120,12 @@ export const clients = sqliteTable("clients", {
 		mode: "text",
 		enum: ["true", "false"],
 	}).default("false"),
+	// OIDC Front-Channel Logout
+	frontchannelLogoutUri: text("frontchannel_logout_uri"),
+	frontchannelLogoutSessionRequired: text("frontchannel_logout_session_required", {
+		mode: "text",
+		enum: ["true", "false"],
+	}).default("false"),
 });
 
 export type SelectClient = typeof clients.$inferSelect;

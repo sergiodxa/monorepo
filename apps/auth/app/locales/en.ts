@@ -94,6 +94,8 @@ export default {
 	logout: {
 		title: "Are you sure you want to logout?",
 		cta: "Logout",
+		signing_out: "Signing you out from all applications...",
+		redirecting: "Redirecting...",
 	},
 
 	splat: {

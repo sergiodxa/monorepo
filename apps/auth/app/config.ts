@@ -50,4 +50,7 @@ export const WELL_KNOWN = {
 	// OIDC Back-Channel Logout 1.0
 	backchannel_logout_supported: true,
 	backchannel_logout_session_supported: true,
+	// OIDC Front-Channel Logout 1.0
+	frontchannel_logout_supported: true,
+	frontchannel_logout_session_supported: true,
 };
