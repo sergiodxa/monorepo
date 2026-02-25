@@ -1861,7 +1861,7 @@ OAuth 2.0 patterns for first-party (same-organization) applications. May provide
 | ✅ | P2 | Prompt=create support | Low | Low | OIDC Prompt Create |
 | ✅ | P3 | Add `auth_time` claim | Low | Low | OIDC Core |
 | ⬜ | P3 | Refresh token rotation | Medium | Medium | RFC 9700 |
-| ⬜ | P3 | OIDC discovery endpoint (`/.well-known/openid-configuration`) | Low | Low | OIDC Discovery |
+| ✅ | P3 | OIDC discovery endpoint (`/.well-known/openid-configuration`) | Low | Low | OIDC Discovery |
 | ⬜ | P3 | Dynamic client registration (or remove from discovery) | High | Low | OIDC Registration |
 | ⬜ | P3 | JWT client authentication (private_key_jwt) | Medium | Medium | RFC 7523 |
 | ⬜ | P3 | Pushed Authorization Requests (PAR) | Medium | High | RFC 9126 |
