@@ -377,19 +377,40 @@ Put errors and helper functions in the OIDC namespace.
 
 ## Current Progress
 
+All phases complete.
+
 - [x] Phase 1: Consolidate Errors - All 11 error classes moved to static properties on OIDC class
-- [x] Phase 2: Consolidate Entities (partial) - AccessToken and IdToken exported as OIDC.AccessToken and OIDC.IdToken
+- [x] Phase 2: Consolidate Entities - AuthzCode deleted (logic inlined in repository), JWT token classes kept in entities/
 - [x] Phase 3: Move Utils - HTTP helpers moved from utils/ to helpers/ (decode-token.ts, form-post.ts, user-agent.ts)
 - [x] Phase 4: Consolidate Services - All services consolidated into single OIDC class
 - [x] Phase 5: Rename Providers - providers/ renamed to strategies/
 - [x] Phase 6: Reorganize Routes - Multi-directory structure with flatRoutes() and prefix()
 - [x] Phase 7: Cleanup and Verify - All tests pass, typecheck clean, linting clean
 
+### Final Directory Structure
+
+```
+app/
+├── clients/            # External API wrappers (GitHub, Polar)
+├── components/         # View partials
+├── entities/           # JWT token classes (AccessToken, IdToken, LogoutToken)
+├── helpers/            # HTTP helpers (api-auth, decode-token, form-post, user-agent)
+├── jobs/               # Background jobs
+├── locales/            # i18n translations
+├── middleware/         # React Router middleware
+├── models/             # Database queries (1 per table)
+├── modules/            # OIDC class with all OAuth/OIDC logic
+├── routes/             # Multi-directory route organization
+├── services/           # Repository implementation (oidc.ts only)
+└── strategies/         # OAuth strategies for external auth (GitHub)
+```
+
 ### Notes
 
 - Class renamed from OIDCProvider to OIDC (OIDCProvider kept as alias for backward compatibility)
 - OAuth2Provider base class removed - OIDC is now a single class without inheritance
 - URL changes in Phase 6: /profile -> /account/profile, /sessions -> /account/sessions, /grants -> /account/grants
-- Deleted directories: services/login/, utils/
-- Deleted files: services/backchannel-logout.ts, services/frontchannel-logout.ts, utils/session-state.ts
+- Deleted directories: services/login/, utils/, errors/
+- Deleted files: services/backchannel-logout.ts, services/frontchannel-logout.ts, utils/session-state.ts, entities/authz-code.ts
 - services/oidc.ts remains as the repository implementation instantiating the OIDC class
+- entities/ kept for JWT token classes that extend @edgefirst-dev/jwt
