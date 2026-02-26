@@ -1,12 +1,22 @@
 import { env } from "cloudflare:workers";
 import { and, eq, ne } from "drizzle-orm";
+import { z } from "zod";
 
 import { AUTHZ_CODE_TTL } from "~/config";
 import * as schema from "~/db/schema";
-import AuthzCode from "~/entities/authz-code";
 import { db } from "~/middleware/drizzle";
 import { getSigningKey } from "~/modules/jwks";
 import { OIDC } from "~/modules/oauth2";
+
+let AuthzCodeSchema = z.object({
+	clientId: z.string(),
+	subjectId: z.string(),
+	sessionId: z.string(),
+	pkce: z.object({ challenge: z.string(), method: z.enum(["S256", "plain"]) }).nullable(),
+	nonce: z.string().nullable(),
+	scope: z.string().array().default(["openid"]),
+	authTime: z.number().optional(),
+});
 
 export default new OIDC("auth.sergiodxa.com", {
 	getSigningKey,
@@ -22,10 +32,14 @@ export default new OIDC("auth.sergiodxa.com", {
 	},
 
 	async findAuthorizationCodeData(code) {
-		// Use consume to atomically find and delete the code (RFC 6749 single-use)
-		let authz = await AuthzCode.consume(code);
-		if (authz) return authz;
-		throw new Error("Authorization code not found.");
+		// Consume authorization code atomically (RFC 6749 single-use)
+		let result = await env.KV.get(`authz-code:${code}`);
+		if (!result) throw new Error("Authorization code not found.");
+
+		// Delete immediately to prevent reuse
+		await env.KV.delete(`authz-code:${code}`);
+
+		return AuthzCodeSchema.parse(JSON.parse(result));
 	},
 
 	async findSessionById(sessionId) {
