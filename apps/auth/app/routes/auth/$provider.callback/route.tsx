@@ -8,9 +8,10 @@ import { db } from "~/middleware/drizzle";
 import { logger } from "~/middleware/logger";
 import { session } from "~/middleware/session";
 import { checkRateLimit, rateLimitResponse } from "~/modules/rate-limit";
-import loginWithProvider from "~/services/login/with-provider";
+import oidc from "~/services/oidc";
 import { github } from "~/strategies/github";
-import { generateOpBrowserState, OP_BROWSER_STATE_COOKIE } from "~/utils/session-state";
+
+const OP_BROWSER_STATE_COOKIE = "op_browser_state";
 
 import type { Route } from "./+types/route";
 
@@ -39,9 +40,9 @@ export async function loader({ request, params }: Route.LoaderArgs) {
 	}
 
 	// Generate or get OP browser state for session management
-	let opBrowserState = generateOpBrowserState();
+	let opBrowserState = oidc.generateOpBrowserState();
 
-	let result = await loginWithProvider({
+	let result = await oidc.loginWithProvider({
 		subjectId: sub,
 		clientId: authz.clientId,
 		ip: getClientIP(request),

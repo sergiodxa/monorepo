@@ -15,8 +15,7 @@ import { logger } from "~/middleware/logger";
 import { session } from "~/middleware/session";
 import Client from "~/models/client";
 import { checkRateLimit, rateLimitResponse } from "~/modules/rate-limit";
-import generateAuthzCode from "~/services/login/generate-code";
-import loginWithCredential from "~/services/login/with-credential";
+import oidc from "~/services/oidc";
 
 import type { Route } from "./+types/route";
 
@@ -165,7 +164,7 @@ export async function loader({ request }: Route.LoaderArgs) {
 	// SSO: If the user is already logged-in and not forcing login, generate the code
 	// and redirect to the redirect_uri with the code, state, and error parameters if any.
 	if (subjectId && !forceLogin) {
-		let codeResult = await generateAuthzCode({
+		let codeResult = await oidc.generateAuthzCode({
 			subjectId,
 			clientId: client.id,
 			ip: getClientIP(request),
@@ -244,7 +243,7 @@ export async function action({ request }: Route.ActionArgs) {
 		return badRequest({ message: "Invalid request" });
 	}
 
-	let loginResult = await loginWithCredential({
+	let loginResult = await oidc.loginWithCredential({
 		email: result.data.email,
 		password: result.data.password,
 		name: result.data.name,

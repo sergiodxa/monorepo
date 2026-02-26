@@ -25,6 +25,8 @@ bun build                       # Build for production
 bun db:local:migrate            # Apply migrations locally
 bun db:remote:migrate           # Apply migrations to production
 bun orm:generate                # Generate Drizzle migrations
+bun rr:typegen                  # Generate TypeScript types for React Router routes
+bun cf:typegen                  # Generate TypeScript types for Cloudflare Workers bindings
 bunx react-router routes --json # Extract React Router routes as JSON for AI agents
 ```
 

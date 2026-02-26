@@ -10,8 +10,6 @@ import { db } from "~/middleware/drizzle";
 import { logger } from "~/middleware/logger";
 import { session } from "~/middleware/session";
 import Session from "~/models/session";
-import { sendBackchannelLogoutTokens } from "~/services/backchannel-logout";
-import { getFrontchannelLogoutUrls } from "~/services/frontchannel-logout";
 import oidc from "~/services/oidc";
 import { sessionStorage } from "~/session";
 
@@ -60,10 +58,10 @@ export async function loader({ request }: Route.LoaderArgs) {
 
 	// Send back-channel logout tokens to all RPs before deleting sessions
 	// Exclude the client that initiated the logout (they already know)
-	await sendBackchannelLogoutTokens(result.subjectId, result.clientId);
+	await oidc.sendBackchannelLogoutTokens(result.subjectId, result.clientId);
 
 	// Get front-channel logout URLs for iframes
-	let frontchannelUrls = await getFrontchannelLogoutUrls(result.subjectId, result.clientId);
+	let frontchannelUrls = await oidc.getFrontchannelLogoutUrls(result.subjectId, result.clientId);
 
 	if (refreshToken) {
 		await Session.deleteById(db(), refreshToken);
@@ -107,7 +105,7 @@ export async function action(_: Route.ActionArgs) {
 		let subjectId = getSubjectFromAccessToken(accessToken);
 
 		// Send back-channel logout tokens before deleting sessions
-		await sendBackchannelLogoutTokens(subjectId);
+		await oidc.sendBackchannelLogoutTokens(subjectId);
 
 		await Session.deleteById(db(), refreshToken);
 		logger.info("logout_success", { subjectId, sessionId: refreshToken });
