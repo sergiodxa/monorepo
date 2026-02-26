@@ -377,15 +377,19 @@ Put errors and helper functions in the OIDC namespace.
 
 ## Current Progress
 
-- [x] Phase 1: Consolidate Errors - All 11 error classes moved to static properties on OIDCProvider class
-- [x] Phase 2: Consolidate Entities (partial) - AccessToken and IdToken exported as OIDCProvider.AccessToken and OIDCProvider.IdToken
+- [x] Phase 1: Consolidate Errors - All 11 error classes moved to static properties on OIDC class
+- [x] Phase 2: Consolidate Entities (partial) - AccessToken and IdToken exported as OIDC.AccessToken and OIDC.IdToken
 - [x] Phase 3: Move Utils - HTTP helpers moved from utils/ to helpers/ (decode-token.ts, form-post.ts, user-agent.ts)
-- [ ] Phase 4: Consolidate Services - Deferred (complex, needs repository expansion)
+- [x] Phase 4: Consolidate Services - All services consolidated into single OIDC class
 - [x] Phase 5: Rename Providers - providers/ renamed to strategies/
 - [x] Phase 6: Reorganize Routes - Multi-directory structure with flatRoutes() and prefix()
 - [x] Phase 7: Cleanup and Verify - All tests pass, typecheck clean, linting clean
 
 ### Notes
 
-- Phase 4 (Consolidate Services) was deferred because it requires significant expansion of the Repository interface to support login flows, logout notifications, and session management. The services currently make direct DB queries that would need to be abstracted.
+- Class renamed from OIDCProvider to OIDC (OIDCProvider kept as alias for backward compatibility)
+- OAuth2Provider base class removed - OIDC is now a single class without inheritance
 - URL changes in Phase 6: /profile -> /account/profile, /sessions -> /account/sessions, /grants -> /account/grants
+- Deleted directories: services/login/, utils/
+- Deleted files: services/backchannel-logout.ts, services/frontchannel-logout.ts, utils/session-state.ts
+- services/oidc.ts remains as the repository implementation instantiating the OIDC class
