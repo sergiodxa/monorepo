@@ -71,6 +71,13 @@ export default class Passkey {
 		);
 	}
 
+	static async rename(db: Database, id: string, name: string) {
+		let passkey = await db.findOne(Passkey.table, { where: { id } });
+		if (!passkey) throw new RecordNotFoundError(Passkey.table, { id });
+
+		return await db.update(Passkey.table, { id }, { name });
+	}
+
 	static async destroy(db: Database, id: string) {
 		let passkey = await db.findOne(Passkey.table, { where: { id } });
 		if (!passkey) throw new RecordNotFoundError(Passkey.table, { id });

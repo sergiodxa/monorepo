@@ -30,6 +30,10 @@ export default class Session {
 		return db.findOne(Session.table, { where: { id } });
 	}
 
+	static listBySubject(db: Database, subjectId: string) {
+		return db.findMany(Session.table, { where: { subjectId } });
+	}
+
 	static async create(
 		db: Database,
 		data: {

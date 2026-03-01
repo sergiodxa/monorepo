@@ -24,6 +24,14 @@ export default class Grant {
 		return db.findMany(Grant.table);
 	}
 
+	static listBySubject(db: Database, subjectId: string) {
+		return db.findMany(Grant.table, { where: { subjectId } });
+	}
+
+	static show(db: Database, id: string) {
+		return db.findOne(Grant.table, { where: { id } });
+	}
+
 	static async findOrCreate(db: Database, subjectId: string, clientId: string) {
 		let existing = await db.findOne(Grant.table, {
 			where: { subjectId, clientId },

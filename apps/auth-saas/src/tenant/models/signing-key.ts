@@ -4,6 +4,8 @@ import { JWK } from "@edgefirst-dev/jwt";
 import * as s from "remix/data-schema";
 import { createTable } from "remix/data-table";
 
+import { RecordNotFoundError } from "~/lib/db-errors";
+
 export default class SigningKey {
 	static table = createTable({
 		name: "signing_keys",
@@ -18,6 +20,14 @@ export default class SigningKey {
 			expiresAt: s.nullable(s.string()),
 		},
 	});
+
+	static list(db: Database) {
+		return db.findMany(SigningKey.table);
+	}
+
+	static show(db: Database, id: string) {
+		return db.findOne(SigningKey.table, { where: { id } });
+	}
 
 	static async getCurrent(db: Database): Promise<JWK.KeyPair | null> {
 		let record = await db.findOne(SigningKey.table, { where: { isCurrent: true } });
@@ -106,4 +116,23 @@ export default class SigningKey {
 
 		return keyPair;
 	}
+
+	static async destroy(db: Database, id: string) {
+		let signingKey = await db.findOne(SigningKey.table, { where: { id } });
+		if (!signingKey) throw new RecordNotFoundError(SigningKey.table, { id });
+
+		// Don't allow deleting the current signing key
+		if (signingKey.isCurrent) {
+			throw new SigningKey.CannotDeleteCurrentKeyError();
+		}
+
+		return await db.delete(SigningKey.table, { id });
+	}
+
+	static CannotDeleteCurrentKeyError = class extends Error {
+		override name = "CannotDeleteCurrentKeyError";
+		constructor() {
+			super("Cannot delete the current signing key. Rotate first.");
+		}
+	};
 }

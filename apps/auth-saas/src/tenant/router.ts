@@ -10,6 +10,12 @@ import * as clientRedirectUris from "./controllers/api/client/redirect-uris";
 import * as clientSecrets from "./controllers/api/client/secrets";
 import * as clients from "./controllers/api/clients";
 import * as resources from "./controllers/api/resources";
+import * as signingKeys from "./controllers/api/signing-keys";
+import * as stats from "./controllers/api/stats";
+import * as subjectConnections from "./controllers/api/subject/connections";
+import * as subjectGrants from "./controllers/api/subject/grants";
+import * as subjectPasskeys from "./controllers/api/subject/passkeys";
+import * as subjectSessions from "./controllers/api/subject/sessions";
 import * as subjects from "./controllers/api/subjects";
 import jwks from "./controllers/discover/jwks";
 import oauth from "./controllers/discover/oauth";
@@ -76,6 +82,8 @@ export default (db: Database, requestLogger: Logger) => {
 				middleware: [managementAuth()],
 
 				actions: {
+					stats: stats.show,
+
 					clients: {
 						middleware: [],
 
@@ -87,9 +95,19 @@ export default (db: Database, requestLogger: Logger) => {
 						},
 					},
 
-					subjects: { middleware: [], actions: subjects },
+					subjects: {
+						middleware: [],
+						actions: {
+							...subjects,
+							sessions: { middleware: [], actions: subjectSessions },
+							grants: { middleware: [], actions: subjectGrants },
+							passkeys: { middleware: [], actions: subjectPasskeys },
+							connections: { middleware: [], actions: subjectConnections },
+						},
+					},
 					resources: { middleware: [], actions: resources },
 					brand: { middleware: [], actions: brand },
+					"signing-keys": { middleware: [], actions: signingKeys },
 				},
 			},
 		},

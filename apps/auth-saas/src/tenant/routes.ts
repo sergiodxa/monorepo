@@ -1,4 +1,4 @@
-import { form, get, post, resource, resources, route } from "remix/fetch-router/routes";
+import { del, form, get, post, put, resource, resources, route } from "remix/fetch-router/routes";
 
 export default route({
 	verifyEmail: get("verify-email"),
@@ -33,6 +33,8 @@ export default route({
 	},
 
 	api: {
+		stats: get("api/stats"),
+
 		clients: {
 			...resources("api/clients", {
 				only: ["index", "show", "create", "update", "destroy"],
@@ -57,6 +59,27 @@ export default route({
 			}),
 
 			verifyEmail: post("api/subjects/:id/verify-email"),
+
+			sessions: {
+				index: get("api/subjects/:id/sessions"),
+				destroy: del("api/subjects/:id/sessions/:sessionId"),
+			},
+
+			grants: {
+				index: get("api/subjects/:id/grants"),
+				destroy: del("api/subjects/:id/grants/:grantId"),
+			},
+
+			passkeys: {
+				index: get("api/subjects/:id/passkeys"),
+				update: put("api/subjects/:id/passkeys/:passkeyId"),
+				destroy: del("api/subjects/:id/passkeys/:passkeyId"),
+			},
+
+			connections: {
+				index: get("api/subjects/:id/connections"),
+				destroy: del("api/subjects/:id/connections/:connectionId"),
+			},
 		},
 
 		resources: resources("api/resources", {
@@ -64,5 +87,12 @@ export default route({
 		}),
 
 		brand: resource("api/brand", { only: ["show", "update"] }),
+
+		"signing-keys": {
+			index: get("api/signing-keys"),
+			create: post("api/signing-keys"),
+			rotate: post("api/signing-keys/rotate"),
+			destroy: del("api/signing-keys/:id"),
+		},
 	},
 });

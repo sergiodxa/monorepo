@@ -30,5 +30,5 @@
 		"bindings": [{ "name": "TENANT", "class_name": "Tenant" }],
 	},
 
-	"migrations": [{ "tag": "add-tenant-do", "new_classes": ["Tenant"] }],
+	"migrations": [{ "tag": "add-tenant-do", "new_sqlite_classes": ["Tenant"] }],
 }
