@@ -63,21 +63,21 @@ export default action<"POST", "/webauthn/auth/verify">(async ({ db, request, log
 		return badRequest({ error: "Invalid challenge type" });
 	}
 
-	if (!challenge.subjectId) {
+	if (!challenge.subject_id) {
 		log.info("Challenge missing subject", { challengeId });
 		return badRequest({ error: "Invalid challenge: missing subject" });
 	}
 
 	// Get subject
-	let subject = await Subject.show(db, { id: challenge.subjectId });
+	let subject = await Subject.show(db, { id: challenge.subject_id });
 	if (!subject) {
-		log.info("Subject not found", { subjectId: challenge.subjectId, challengeId });
+		log.info("Subject not found", { subjectId: challenge.subject_id, challengeId });
 		return badRequest({ error: "User not found" });
 	}
 
 	// Find the passkey being used
 	let passkey = await Passkey.show(db, response.id);
-	if (!passkey || passkey.subjectId !== subject.id) {
+	if (!passkey || passkey.subject_id !== subject.id) {
 		log.info("Passkey not found or mismatch", { subjectId: subject.id, challengeId });
 		return badRequest({ error: "Passkey not found" });
 	}
@@ -88,7 +88,7 @@ export default action<"POST", "/webauthn/auth/verify">(async ({ db, request, log
 	let origin = new URL(request.url).origin;
 
 	// Decode the stored public key
-	let publicKeyBytes = Uint8Array.from(atob(passkey.publicKey), (c) => c.charCodeAt(0));
+	let publicKeyBytes = Uint8Array.from(atob(passkey.public_key), (c) => c.charCodeAt(0));
 
 	// Verify the authentication response
 	let verification;
@@ -129,25 +129,25 @@ export default action<"POST", "/webauthn/auth/verify">(async ({ db, request, log
 	await Passkey.updateCounter(db, passkey.id, verification.authenticationInfo.newCounter);
 
 	// If this is part of an OAuth flow, create session and authorization code
-	if (challenge.clientId && challenge.redirectUri) {
+	if (challenge.client_id && challenge.redirect_uri) {
 		let sessionId = await Session.create(db, {
 			subjectId: subject.id,
-			clientId: challenge.clientId,
+			clientId: challenge.client_id,
 			ip: request.headers.get("cf-connecting-ip"),
 			userAgent: request.headers.get("user-agent"),
 		});
 
 		let code = await AuthorizationCode.create(db, {
-			clientId: challenge.clientId,
+			clientId: challenge.client_id,
 			subjectId: subject.id,
 			sessionId,
-			redirectUri: challenge.redirectUri,
+			redirectUri: challenge.redirect_uri,
 			scope: challenge.scope?.split(" "),
 			nonce: challenge.nonce ?? undefined,
 		});
 
 		// Build redirect URL with authorization code
-		let redirectUrl = new URL(challenge.redirectUri);
+		let redirectUrl = new URL(challenge.redirect_uri);
 		redirectUrl.searchParams.set("code", code);
 		if (challenge.state) {
 			redirectUrl.searchParams.set("state", challenge.state);
@@ -155,7 +155,7 @@ export default action<"POST", "/webauthn/auth/verify">(async ({ db, request, log
 
 		log.info("Authentication completed with OAuth flow", {
 			subjectId: subject.id,
-			clientId: challenge.clientId,
+			clientId: challenge.client_id,
 			sessionId,
 		});
 

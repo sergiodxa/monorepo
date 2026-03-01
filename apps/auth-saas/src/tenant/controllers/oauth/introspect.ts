@@ -75,21 +75,21 @@ export default action<"POST", "/oauth/introspect">(async ({ db, formData, reques
 	// Try refresh token (session) first if hinted or not specified
 	if (token_type_hint !== "access_token") {
 		let session = await Session.show(db, token);
-		if (session && new Date(session.expiresAt) > new Date()) {
+		if (session && new Date(session.expires_at) > new Date()) {
 			log.info("Refresh token introspected successfully", {
 				clientId: client_id,
 				sessionId: session.id,
-				subjectId: session.subjectId,
+				subjectId: session.subject_id,
 			});
 			return ok(
 				{
 					active: true,
-					sub: session.subjectId,
-					client_id: session.clientId,
-					exp: Math.floor(new Date(session.expiresAt).getTime() / 1000),
-					iat: Math.floor(new Date(session.createdAt).getTime() / 1000),
+					sub: session.subject_id,
+					client_id: session.client_id,
+					exp: Math.floor(new Date(session.expires_at).getTime() / 1000),
+					iat: Math.floor(new Date(session.created_at).getTime() / 1000),
 					iss: `https://${issuer}`,
-					aud: session.clientId,
+					aud: session.client_id,
 					token_type: "Bearer",
 				},
 				{ headers },

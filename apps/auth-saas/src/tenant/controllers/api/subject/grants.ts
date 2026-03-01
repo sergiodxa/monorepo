@@ -20,13 +20,13 @@ export const index = action<"GET", "/api/subjects/:id/grants">(async ({ db, para
 
 	let enrichedGrants = await Promise.all(
 		grants.map(async (grant) => {
-			let client = await Client.show(db, { id: grant.clientId });
+			let client = await Client.show(db, { id: grant.client_id });
 			return {
 				id: grant.id,
 				client: client ? { id: client.id, name: client.name } : null,
 				scopes: grant.scopes ? grant.scopes.split(" ") : [],
-				createdAt: grant.createdAt,
-				updatedAt: grant.updatedAt,
+				createdAt: grant.created_at,
+				updatedAt: grant.updated_at,
 			};
 		}),
 	);
@@ -52,7 +52,7 @@ export const destroy = action<"DELETE", "/api/subjects/:id/grants/:grantId">(
 			return notFound({ error: "Grant not found" });
 		}
 
-		if (grant.subjectId !== params.id) {
+		if (grant.subject_id !== params.id) {
 			log.info("Grant does not belong to subject", {
 				subjectId: params.id,
 				grantId: params.grantId,
@@ -65,7 +65,7 @@ export const destroy = action<"DELETE", "/api/subjects/:id/grants/:grantId">(
 			log.info("Grant revoked", {
 				subjectId: params.id,
 				grantId: params.grantId,
-				clientId: grant.clientId,
+				clientId: grant.client_id,
 			});
 			return noContent();
 		} catch (error) {

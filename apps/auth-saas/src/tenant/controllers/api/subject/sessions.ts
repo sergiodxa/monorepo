@@ -22,12 +22,12 @@ export const index = action<"GET", "/api/subjects/:id/sessions">(async ({ db, pa
 	return ok(
 		sessions.map((session) => ({
 			id: session.id,
-			clientId: session.clientId,
+			clientId: session.client_id,
 			ip: session.ip,
-			userAgent: session.userAgent,
-			expiresAt: session.expiresAt,
-			createdAt: session.createdAt,
-			updatedAt: session.updatedAt,
+			userAgent: session.user_agent,
+			expiresAt: session.expires_at,
+			createdAt: session.created_at,
+			updatedAt: session.updated_at,
 		})),
 	);
 });
@@ -48,7 +48,7 @@ export const destroy = action<"DELETE", "/api/subjects/:id/sessions/:sessionId">
 			return notFound({ error: "Session not found" });
 		}
 
-		if (session.subjectId !== params.id) {
+		if (session.subject_id !== params.id) {
 			log.info("Session does not belong to subject", {
 				subjectId: params.id,
 				sessionId: params.sessionId,

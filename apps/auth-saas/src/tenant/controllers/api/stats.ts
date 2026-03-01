@@ -17,9 +17,9 @@ export const show = action<"GET", "/api/stats">(async ({ db, logger }) => {
 	let now = new Date();
 	let thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
 
-	let activeSessions = sessions.filter((s) => new Date(s.expiresAt) > now);
+	let activeSessions = sessions.filter((s) => new Date(s.expires_at) > now);
 	let activeSubjectIds = new Set(
-		activeSessions.filter((s) => new Date(s.updatedAt) > thirtyDaysAgo).map((s) => s.subjectId),
+		activeSessions.filter((s) => new Date(s.updated_at) > thirtyDaysAgo).map((s) => s.subject_id),
 	);
 
 	let stats = {

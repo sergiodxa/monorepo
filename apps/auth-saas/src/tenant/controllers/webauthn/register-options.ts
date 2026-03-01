@@ -76,7 +76,7 @@ export default action<"POST", "/webauthn/register/options">(
 			rpName,
 			rpID: rpId,
 			userName: email,
-			userDisplayName: subject!.displayName ?? email,
+			userDisplayName: subject!.display_name ?? email,
 			userID: new TextEncoder().encode(subject!.id),
 			attestationType: "none",
 			authenticatorSelection: {

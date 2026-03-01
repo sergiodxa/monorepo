@@ -12,7 +12,7 @@
 
 	"observability": { "enabled": true },
 
-	"assets": { "directory": "./assets" },
+	"assets": { "directory": "./assets", "binding": "ASSETS" },
 
 	"triggers": { "crons": [] },
 

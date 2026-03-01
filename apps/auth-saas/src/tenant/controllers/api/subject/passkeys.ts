@@ -30,11 +30,11 @@ export const index = action<"GET", "/api/subjects/:id/passkeys">(async ({ db, pa
 		passkeys.map((passkey) => ({
 			id: passkey.id,
 			name: passkey.name,
-			deviceType: passkey.deviceType,
-			backedUp: passkey.backedUp,
+			deviceType: passkey.device_type,
+			backedUp: passkey.backed_up,
 			transports: passkey.transports ? passkey.transports.split(",") : [],
-			createdAt: passkey.createdAt,
-			lastUsedAt: passkey.lastUsedAt,
+			createdAt: passkey.created_at,
+			lastUsedAt: passkey.last_used_at,
 		})),
 	);
 });
@@ -55,7 +55,7 @@ export const update = action<"PUT", "/api/subjects/:id/passkeys/:passkeyId">(
 			return notFound({ error: "Passkey not found" });
 		}
 
-		if (passkey.subjectId !== params.id) {
+		if (passkey.subject_id !== params.id) {
 			log.info("Passkey does not belong to subject", {
 				subjectId: params.id,
 				passkeyId: params.passkeyId,
@@ -77,11 +77,11 @@ export const update = action<"PUT", "/api/subjects/:id/passkeys/:passkeyId">(
 			return ok({
 				id: updated!.id,
 				name: updated!.name,
-				deviceType: updated!.deviceType,
-				backedUp: updated!.backedUp,
+				deviceType: updated!.device_type,
+				backedUp: updated!.backed_up,
 				transports: updated!.transports ? updated!.transports.split(",") : [],
-				createdAt: updated!.createdAt,
-				lastUsedAt: updated!.lastUsedAt,
+				createdAt: updated!.created_at,
+				lastUsedAt: updated!.last_used_at,
 			});
 		} catch (error) {
 			if (error instanceof RecordNotFoundError) {
@@ -108,7 +108,7 @@ export const destroy = action<"DELETE", "/api/subjects/:id/passkeys/:passkeyId">
 			return notFound({ error: "Passkey not found" });
 		}
 
-		if (passkey.subjectId !== params.id) {
+		if (passkey.subject_id !== params.id) {
 			log.info("Passkey does not belong to subject", {
 				subjectId: params.id,
 				passkeyId: params.passkeyId,

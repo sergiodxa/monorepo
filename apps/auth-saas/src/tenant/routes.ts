@@ -1,6 +1,7 @@
 import { del, form, get, post, put, resource, resources, route } from "remix/fetch-router/routes";
 
 export default route({
+	index: get("/"),
 	verifyEmail: get("verify-email"),
 
 	webauthn: {

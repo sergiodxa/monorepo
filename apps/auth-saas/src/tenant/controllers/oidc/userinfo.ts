@@ -73,14 +73,14 @@ export default action<"GET", "/userinfo">(async ({ db, request, logger }) => {
 
 	if (scope.includes("email")) {
 		userinfo.email = subject.email;
-		userinfo.email_verified = subject.emailVerifiedAt !== null;
+		userinfo.email_verified = subject.email_verified_at !== null;
 	}
 
 	if (scope.includes("profile")) {
-		userinfo.name = subject.displayName ?? subject.username;
+		userinfo.name = subject.display_name ?? subject.username;
 		userinfo.preferred_username = subject.username;
-		if (subject.avatarUrl) {
-			userinfo.picture = subject.avatarUrl;
+		if (subject.avatar_url) {
+			userinfo.picture = subject.avatar_url;
 		}
 	}
 

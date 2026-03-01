@@ -74,12 +74,12 @@ export default action<"POST", "/oauth/revoke">(async ({ db, formData, request, l
 	let session = await Session.show(db, token);
 	if (session) {
 		// Ensure the client owns this session
-		if (session.clientId !== client.id) {
+		if (session.client_id !== client.id) {
 			// Per RFC 7009, we should still return 200 even if the token doesn't belong to the client
 			// This prevents token enumeration attacks
 			log.info("Session belongs to different client", {
 				clientId: client.id,
-				sessionClientId: session.clientId,
+				sessionClientId: session.client_id,
 				sessionId: session.id,
 			});
 			return new Response(null, { status: 200 });
@@ -89,7 +89,7 @@ export default action<"POST", "/oauth/revoke">(async ({ db, formData, request, l
 		log.info("Session revoked", {
 			clientId: client.id,
 			sessionId: session.id,
-			subjectId: session.subjectId,
+			subjectId: session.subject_id,
 		});
 	} else {
 		log.info("Session not found for revocation", { clientId: client.id });

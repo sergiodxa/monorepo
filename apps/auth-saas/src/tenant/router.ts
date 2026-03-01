@@ -20,6 +20,7 @@ import * as subjects from "./controllers/api/subjects";
 import jwks from "./controllers/discover/jwks";
 import oauth from "./controllers/discover/oauth";
 import oidc from "./controllers/discover/oidc";
+import index from "./controllers/index";
 import notFound from "./controllers/not-found";
 import authorize from "./controllers/oauth/authorize";
 import introspect from "./controllers/oauth/introspect";
@@ -47,6 +48,7 @@ export default (db: Database, requestLogger: Logger) => {
 		middleware: [],
 
 		actions: {
+			index,
 			verifyEmail,
 
 			webauthn: {

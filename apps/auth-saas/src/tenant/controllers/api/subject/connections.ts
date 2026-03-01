@@ -24,9 +24,9 @@ export const index = action<"GET", "/api/subjects/:id/connections">(
 			connections.map((connection) => ({
 				id: connection.id,
 				provider: connection.provider,
-				providerUserId: connection.providerUserId,
-				createdAt: connection.createdAt,
-				updatedAt: connection.updatedAt,
+				providerUserId: connection.provider_user_id,
+				createdAt: connection.created_at,
+				updatedAt: connection.updated_at,
 			})),
 		);
 	},

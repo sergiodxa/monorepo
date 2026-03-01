@@ -16,9 +16,9 @@ export const index = action<"GET", "/api/signing-keys">(async ({ db, logger }) =
 		signingKeys.map((key) => ({
 			id: key.id,
 			algorithm: key.algorithm,
-			isCurrent: key.isCurrent,
-			createdAt: key.createdAt,
-			expiresAt: key.expiresAt,
+			isCurrent: key.is_current,
+			createdAt: key.created_at,
+			expiresAt: key.expires_at,
 		})),
 	);
 });

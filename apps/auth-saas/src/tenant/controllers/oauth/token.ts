@@ -173,7 +173,7 @@ async function handleAuthorizationCode(db: Database, body: Record<string, unknow
 
 	// Validate session
 	let session = await Session.show(db, authzData.sessionId);
-	if (!session || new Date(session.expiresAt) < new Date()) {
+	if (!session || new Date(session.expires_at) < new Date()) {
 		log.info("Session expired", {
 			clientId: client.id,
 			sessionId: authzData.sessionId,
@@ -226,10 +226,10 @@ async function handleAuthorizationCode(db: Database, body: Record<string, unknow
 		{
 			id: subject.id,
 			email: subject.email,
-			avatar: subject.avatarUrl ?? "",
+			avatar: subject.avatar_url ?? "",
 			username: subject.username,
-			displayName: subject.displayName ?? subject.username,
-			emailVerified: subject.emailVerifiedAt !== null,
+			displayName: subject.display_name ?? subject.username,
+			emailVerified: subject.email_verified_at !== null,
 		},
 		{ id: client.id },
 		{ nonce: authzData.nonce, scope: authzData.scope, authTime: authzData.authTime },
@@ -277,19 +277,19 @@ async function handleRefreshToken(db: Database, body: Record<string, unknown>, l
 		return reject("invalid_grant", "Invalid or expired refresh token");
 	}
 
-	if (new Date(session.expiresAt) < new Date()) {
+	if (new Date(session.expires_at) < new Date()) {
 		log.info("Refresh token expired", {
 			sessionId: session.id,
-			clientId: session.clientId,
+			clientId: session.client_id,
 			grantType: "refresh_token",
 		});
 		return reject("invalid_grant", "Refresh token has expired");
 	}
 
 	// Validate client
-	let client = await Client.show(db, { id: session.clientId });
+	let client = await Client.show(db, { id: session.client_id });
 	if (!client) {
-		log.info("Client not found", { clientId: session.clientId, grantType: "refresh_token" });
+		log.info("Client not found", { clientId: session.client_id, grantType: "refresh_token" });
 		return reject("invalid_client", "Client not found", 401);
 	}
 
@@ -325,11 +325,11 @@ async function handleRefreshToken(db: Database, body: Record<string, unknown>, l
 	await Session.touch(db, session.id);
 
 	// Get subject
-	let subject = await Subject.show(db, { id: session.subjectId });
+	let subject = await Subject.show(db, { id: session.subject_id });
 	if (!subject) {
 		log.info("Subject not found", {
 			clientId: client.id,
-			subjectId: session.subjectId,
+			subjectId: session.subject_id,
 			grantType: "refresh_token",
 		});
 		return reject("invalid_grant", "Subject not found");
@@ -358,16 +358,16 @@ async function handleRefreshToken(db: Database, body: Record<string, unknown>, l
 	let accessToken = AccessToken.generate(`https://${issuer}`, client.id, subject.id);
 	let signedAccessToken = await accessToken.sign(JWK.Algoritm.ES256, signingKeys);
 
-	let authTime = Math.floor(new Date(session.createdAt).getTime() / 1000);
+	let authTime = Math.floor(new Date(session.created_at).getTime() / 1000);
 	let idToken = IdToken.generate(
 		`https://${issuer}`,
 		{
 			id: subject.id,
 			email: subject.email,
-			avatar: subject.avatarUrl ?? "",
+			avatar: subject.avatar_url ?? "",
 			username: subject.username,
-			displayName: subject.displayName ?? subject.username,
-			emailVerified: subject.emailVerifiedAt !== null,
+			displayName: subject.display_name ?? subject.username,
+			emailVerified: subject.email_verified_at !== null,
 		},
 		{ id: client.id },
 		{ authTime },

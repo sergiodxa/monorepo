@@ -129,31 +129,31 @@ export default action<"POST", "/webauthn/register/verify">(async ({ db, request,
 	});
 
 	// Mark email as verified (passkey registration proves email ownership)
-	if (!subject.emailVerifiedAt) {
+	if (!subject.email_verified_at) {
 		await Subject.verifyEmail(db, { id: subject.id });
 		log.info("Email verified via passkey registration", { subjectId: subject.id });
 	}
 
 	// If this is part of an OAuth flow, create session and authorization code
-	if (challenge.clientId && challenge.redirectUri) {
+	if (challenge.client_id && challenge.redirect_uri) {
 		let sessionId = await Session.create(db, {
 			subjectId: subject.id,
-			clientId: challenge.clientId,
+			clientId: challenge.client_id,
 			ip: request.headers.get("cf-connecting-ip"),
 			userAgent: request.headers.get("user-agent"),
 		});
 
 		let code = await AuthorizationCode.create(db, {
-			clientId: challenge.clientId,
+			clientId: challenge.client_id,
 			subjectId: subject.id,
 			sessionId,
-			redirectUri: challenge.redirectUri,
+			redirectUri: challenge.redirect_uri,
 			scope: challenge.scope?.split(" "),
 			nonce: challenge.nonce ?? undefined,
 		});
 
 		// Build redirect URL with authorization code
-		let redirectUrl = new URL(challenge.redirectUri);
+		let redirectUrl = new URL(challenge.redirect_uri);
 		redirectUrl.searchParams.set("code", code);
 		if (challenge.state) {
 			redirectUrl.searchParams.set("state", challenge.state);
@@ -161,7 +161,7 @@ export default action<"POST", "/webauthn/register/verify">(async ({ db, request,
 
 		log.info("Registration completed with OAuth flow", {
 			subjectId: subject.id,
-			clientId: challenge.clientId,
+			clientId: challenge.client_id,
 			sessionId,
 		});
 

@@ -87,7 +87,7 @@ export default () => {
 			});
 		}
 
-		if (!client.isManagementClient) {
+		if (!client.is_management_client) {
 			log.info("Client does not have management API access", { clientId });
 			return unauthorized({
 				error: "insufficient_scope",

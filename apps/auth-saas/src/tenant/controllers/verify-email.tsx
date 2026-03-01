@@ -64,7 +64,7 @@ interface VerifyEmailPageProps {
 
 function VerifyEmailPage() {
 	return ({ brand, status, message }: VerifyEmailPageProps) => {
-		let backgroundColor = brand.backgroundColor;
+		let backgroundColor = brand.background_color;
 		return (
 			<Layout title={status === "success" ? "Email Verified" : "Verification Failed"}>
 				<div
@@ -88,9 +88,9 @@ function VerifyEmailPage() {
 							textAlign: "center",
 						}}
 					>
-						{brand.logoUrl && (
+						{brand.logo_url && (
 							<img
-								src={brand.logoUrl}
+								src={brand.logo_url}
 								alt="Logo"
 								css={{
 									maxWidth: "150px",
@@ -193,7 +193,7 @@ function VerifyEmailPage() {
 							</p>
 						)}
 
-						{brand.customCss && <style>{brand.customCss}</style>}
+						{brand.custom_css && <style>{brand.custom_css}</style>}
 					</div>
 				</div>
 			</Layout>

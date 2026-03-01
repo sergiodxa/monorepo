@@ -1,4 +1,4 @@
-import type { Database, PrimaryKeyInput } from "remix/data-table";
+import type { Database } from "remix/data-table";
 
 import { unwrap } from "@pkg/result";
 import { validate } from "@pkg/validate";
@@ -33,7 +33,7 @@ export default class Subject {
 		return db.findMany(Subject.table);
 	}
 
-	static show(db: Database, id: PrimaryKeyInput<typeof Subject.table>) {
+	static show(db: Database, id: string) {
 		return db.findOne(Subject.table, { where: { id } });
 	}
 
@@ -62,35 +62,43 @@ export default class Subject {
 		return subject;
 	}
 
-	static async verifyEmail(db: Database, id: PrimaryKeyInput<typeof Subject.table>) {
+	static async verifyEmail(db: Database, id: string) {
 		let subject = await db.findOne(Subject.table, { where: { id } });
-		if (!subject) throw new RecordNotFoundError(Subject.table, id);
+		if (!subject) throw new RecordNotFoundError(Subject.table, { id });
 
-		return await db.update(Subject.table, id, {
-			email_verified_at: new Date().toISOString(),
-			updated_at: new Date().toISOString(),
-		});
+		return await db.update(
+			Subject.table,
+			{ id },
+			{
+				email_verified_at: new Date().toISOString(),
+				updated_at: new Date().toISOString(),
+			},
+		);
 	}
 
 	static async update(
 		db: Database,
-		id: PrimaryKeyInput<typeof Subject.table>,
+		id: string,
 		data: { displayName?: string; avatarUrl?: string },
 	) {
 		let subject = await db.findOne(Subject.table, { where: { id } });
-		if (!subject) throw new RecordNotFoundError(Subject.table, id);
+		if (!subject) throw new RecordNotFoundError(Subject.table, { id });
 
-		return await db.update(Subject.table, id, {
-			display_name: data.displayName ?? subject.display_name,
-			avatar_url: data.avatarUrl ?? subject.avatar_url,
-			updated_at: new Date().toISOString(),
-		});
+		return await db.update(
+			Subject.table,
+			{ id },
+			{
+				display_name: data.displayName ?? subject.display_name,
+				avatar_url: data.avatarUrl ?? subject.avatar_url,
+				updated_at: new Date().toISOString(),
+			},
+		);
 	}
 
-	static async destroy(db: Database, id: PrimaryKeyInput<typeof Subject.table>) {
+	static async destroy(db: Database, id: string) {
 		let subject = await db.findOne(Subject.table, { where: { id } });
-		if (!subject) throw new RecordNotFoundError(Subject.table, id);
-		return await db.delete(Subject.table, id);
+		if (!subject) throw new RecordNotFoundError(Subject.table, { id });
+		return await db.delete(Subject.table, { id });
 	}
 
 	static async cleanupUnverified(db: Database, olderThan: number) {

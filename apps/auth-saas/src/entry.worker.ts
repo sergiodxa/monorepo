@@ -19,7 +19,10 @@ const HostMetadataSchema = s.object({
 });
 
 export default {
-	async fetch(request: Request) {
+	async fetch(request) {
+		let response = await env.ASSETS.fetch(request);
+		if (response.ok) return response;
+
 		let hostMetadata = request.cf?.hostMetadata;
 		if (import.meta.env.DEV) hostMetadata = { tenantId: "platform", region: "wnam" };
 		if (!hostMetadata) return await router.fetch(request);

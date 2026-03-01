@@ -91,7 +91,7 @@ export default form<"/authorize">({
 			let body = await renderToString(
 				<LoginForm
 					clientName={client.name}
-					clientLogo={client.logoUrl}
+					clientLogo={client.logo_url}
 					clientId={client_id}
 					redirectUri={redirect_uri}
 					scope={scope}
@@ -212,7 +212,7 @@ export default form<"/authorize">({
 			let html = await renderToString(
 				<LoginForm
 					clientName={client.name}
-					clientLogo={client.logoUrl}
+					clientLogo={client.logo_url}
 					clientId={client_id}
 					redirectUri={redirect_uri}
 					scope={scope}
