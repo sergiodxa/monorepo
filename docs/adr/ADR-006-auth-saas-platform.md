@@ -2,7 +2,41 @@
 
 ## Status
 
-**Proposed** - 2026-02-26
+**In Progress** - 2026-02-26 (Updated: 2026-03-01)
+
+### Implementation Progress
+
+#### Completed
+
+- [x] Tenant Durable Object with embedded SQLite
+  - [x] All models (Subject, Client, Session, Passkey, Resource, Grant, etc.)
+  - [x] All controllers for OIDC endpoints
+  - [x] Management API for tenant administration
+  - [x] 68 tests passing for model layer
+- [x] Platform D1 schema and models (tenants, hostnames, subscriptions, mau_tracking)
+- [x] D1 database adapter for platform
+- [x] Dashboard controllers
+  - [x] Onboarding page with WebAuthn authentication flow
+  - [x] Tenant list/create/edit/delete
+  - [x] Client management (CRUD + secrets, redirect URIs, logout URIs)
+  - [x] User management (list, view, edit, delete with sessions/passkeys/grants)
+  - [x] Resource management (CRUD + scopes)
+  - [x] Branding configuration
+  - [x] Hostname configuration for custom domains
+- [x] TenantApiService for dashboard-to-DO communication
+- [x] Session middleware for platform authentication
+- [x] Tenant-owner middleware for access control
+- [x] Auto-generated management client on tenant creation
+
+#### Pending
+
+- [ ] Email verification flow (Resend integration)
+- [ ] Billing integration (Polar)
+- [ ] MAU tracking and reporting
+- [ ] Cloudflare for SaaS custom hostname provisioning
+- [ ] WebAuthn server implementation (simplewebauthn integration)
+- [ ] Actual OIDC flows (authorize, token, userinfo, etc.)
+- [ ] DO alarm for cleanup tasks
 
 ## Background
 
