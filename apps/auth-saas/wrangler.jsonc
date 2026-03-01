@@ -18,7 +18,14 @@
 
 	"queues": { "consumers": [], "producers": [] },
 
-	"d1_databases": [],
+	"d1_databases": [
+		{
+			"binding": "PLATFORM_DB",
+			"database_name": "auth-saas-platform",
+			"database_id": "placeholder-dev-db-id",
+			"migrations_dir": "./src/app/migrations",
+		},
+	],
 
 	"kv_namespaces": [],
 
