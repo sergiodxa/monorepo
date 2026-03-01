@@ -29,14 +29,18 @@ let RequestSchema = s.object({
 	}),
 });
 
-export default action<"POST", "/webauthn/auth/verify">(async ({ db, request }) => {
+export default action<"POST", "/webauthn/auth/verify">(async ({ db, request, logger }) => {
+	let log = logger.action("/webauthn/auth/verify");
+
 	let body = (await request.json()) as Record<string, unknown>;
 	let result = await validate(body, RequestSchema);
 	if (isFailure(result)) {
+		log.info("Invalid request body");
 		return badRequest({ error: "Invalid request", issues: result.error.issues });
 	}
 
 	let { challengeId, response } = result.data;
+	log.info("Verifying authentication", { challengeId });
 
 	// Consume the challenge (single-use)
 	let challenge;
@@ -44,31 +48,37 @@ export default action<"POST", "/webauthn/auth/verify">(async ({ db, request }) =
 		challenge = await WebAuthnChallenge.consume(db, challengeId);
 	} catch (error) {
 		if (error instanceof WebAuthnChallenge.InvalidChallengeError) {
+			log.info("Invalid challenge", { challengeId });
 			return badRequest({ error: "Invalid challenge" });
 		}
 		if (error instanceof WebAuthnChallenge.ExpiredChallengeError) {
+			log.info("Challenge expired", { challengeId });
 			return badRequest({ error: "Challenge expired. Please try again." });
 		}
 		throw error;
 	}
 
 	if (challenge.type !== "authentication") {
+		log.info("Invalid challenge type", { challengeId, type: challenge.type });
 		return badRequest({ error: "Invalid challenge type" });
 	}
 
 	if (!challenge.subjectId) {
+		log.info("Challenge missing subject", { challengeId });
 		return badRequest({ error: "Invalid challenge: missing subject" });
 	}
 
 	// Get subject
 	let subject = await Subject.show(db, { id: challenge.subjectId });
 	if (!subject) {
+		log.info("Subject not found", { subjectId: challenge.subjectId, challengeId });
 		return badRequest({ error: "User not found" });
 	}
 
 	// Find the passkey being used
 	let passkey = await Passkey.show(db, response.id);
 	if (!passkey || passkey.subjectId !== subject.id) {
+		log.info("Passkey not found or mismatch", { subjectId: subject.id, challengeId });
 		return badRequest({ error: "Passkey not found" });
 	}
 
@@ -99,6 +109,11 @@ export default action<"POST", "/webauthn/auth/verify">(async ({ db, request }) =
 			requireUserVerification: true,
 		});
 	} catch (error) {
+		log.info("Authentication verification failed", {
+			subjectId: subject.id,
+			challengeId,
+			error: error instanceof Error ? error.message : "Unknown error",
+		});
 		return badRequest({
 			error: "Authentication failed",
 			details: error instanceof Error ? error.message : "Unknown error",
@@ -106,6 +121,7 @@ export default action<"POST", "/webauthn/auth/verify">(async ({ db, request }) =
 	}
 
 	if (!verification.verified || !verification.authenticationInfo) {
+		log.info("Authentication not verified", { subjectId: subject.id, challengeId });
 		return badRequest({ error: "Authentication failed" });
 	}
 
@@ -137,6 +153,12 @@ export default action<"POST", "/webauthn/auth/verify">(async ({ db, request }) =
 			redirectUrl.searchParams.set("state", challenge.state);
 		}
 
+		log.info("Authentication completed with OAuth flow", {
+			subjectId: subject.id,
+			clientId: challenge.clientId,
+			sessionId,
+		});
+
 		return ok({
 			success: true,
 			redirect: redirectUrl.toString(),
@@ -144,6 +166,8 @@ export default action<"POST", "/webauthn/auth/verify">(async ({ db, request }) =
 	}
 
 	// Direct authentication without OAuth flow
+	log.info("Authentication completed", { subjectId: subject.id });
+
 	return ok({
 		success: true,
 		subjectId: subject.id,

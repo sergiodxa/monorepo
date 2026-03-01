@@ -20,12 +20,15 @@ let LogoutSchema = s.object({
 	state: s.optional(s.string()),
 });
 
-export default action<"GET", "/oidc/logout">(async ({ db, request }) => {
+export default action<"GET", "/oidc/logout">(async ({ db, request, logger }) => {
+	let log = logger.loader("/oidc/logout");
+
 	let url = new URL(request.url);
 	let params = Object.fromEntries(url.searchParams);
 
 	let result = await validate(params, LogoutSchema);
 	if (isFailure(result)) {
+		log.info("Invalid logout parameters");
 		return reject("invalid_request", "Invalid parameters");
 	}
 
@@ -37,13 +40,17 @@ export default action<"GET", "/oidc/logout">(async ({ db, request }) => {
 	// Get issuer
 	let issuer = await TenantMeta.getIssuer(db);
 	if (!issuer) {
+		log.error("Issuer not configured");
 		return reject("server_error", "Issuer not configured");
 	}
 
 	// If id_token_hint is provided, extract subject and validate
 	if (id_token_hint) {
+		log.info("Processing logout with id_token_hint");
+
 		let signingKeys = await SigningKey.getAll(db);
 		if (signingKeys.length === 0) {
+			log.error("No signing keys available");
 			return reject("server_error", "No signing keys available");
 		}
 
@@ -56,25 +63,32 @@ export default action<"GET", "/oidc/logout">(async ({ db, request }) => {
 			subjectId = idToken.subject;
 			let tokenAudience = idToken.audience;
 
+			log.info("ID token verified", { subjectId, clientId: tokenAudience });
+
 			// Validate client_id matches if provided
 			if (client_id && client_id !== tokenAudience) {
+				log.info("Client ID mismatch", { providedClientId: client_id, tokenAudience });
 				return reject("invalid_request", "client_id does not match id_token_hint audience");
 			}
 
 			clientId = typeof tokenAudience === "string" ? tokenAudience : tokenAudience?.[0];
 		} catch {
+			log.info("ID token verification failed");
 			return reject("invalid_request", "Invalid id_token_hint");
 		}
 	} else if (client_id) {
 		// Without id_token_hint, client_id must be provided
+		log.info("Processing logout with client_id only", { clientId: client_id });
 		clientId = client_id;
 	} else {
+		log.info("Missing required parameters for logout");
 		return reject("invalid_request", "Either id_token_hint or client_id is required");
 	}
 
 	// Validate client exists
 	let client = clientId ? await Client.show(db, { id: clientId }) : null;
 	if (clientId && !client) {
+		log.info("Client not found", { clientId });
 		return reject("invalid_client", "Client not found");
 	}
 
@@ -83,6 +97,7 @@ export default action<"GET", "/oidc/logout">(async ({ db, request }) => {
 		let logoutUris = await LogoutUri.list(db, clientId);
 		let isValidUri = logoutUris.some((uri) => uri.uri === post_logout_redirect_uri);
 		if (!isValidUri) {
+			log.info("Invalid post_logout_redirect_uri", { clientId });
 			return reject("invalid_request", "Invalid post_logout_redirect_uri");
 		}
 	}
@@ -92,6 +107,9 @@ export default action<"GET", "/oidc/logout">(async ({ db, request }) => {
 		let subject = await Subject.show(db, { id: subjectId });
 		if (subject) {
 			await Session.destroyBySubject(db, subject.id);
+			log.info("Sessions destroyed for subject", { subjectId: subject.id });
+		} else {
+			log.info("Subject not found for session destruction", { subjectId });
 		}
 	}
 
@@ -101,8 +119,11 @@ export default action<"GET", "/oidc/logout">(async ({ db, request }) => {
 		if (state) {
 			redirectUrl.searchParams.set("state", state);
 		}
+		log.info("Logout successful, redirecting", { subjectId, clientId });
 		return Response.redirect(redirectUrl.toString(), 302);
 	}
+
+	log.info("Logout successful, showing success page", { subjectId, clientId });
 
 	// No redirect URI - return success response
 	return new Response(

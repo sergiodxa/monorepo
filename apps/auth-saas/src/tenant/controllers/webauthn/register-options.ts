@@ -22,66 +22,81 @@ let RequestSchema = s.object({
 	scope: s.optional(s.string()),
 });
 
-export default action<"POST", "/webauthn/register/options">(async ({ db, formData, request }) => {
-	let result = await validate(Object.fromEntries(formData), RequestSchema);
-	if (isFailure(result)) {
-		return badRequest({ error: "Invalid request", issues: result.error.issues });
-	}
+export default action<"POST", "/webauthn/register/options">(
+	async ({ db, formData, request, logger }) => {
+		let log = logger.action("/webauthn/register/options");
 
-	let { email, clientId, redirectUri, state, nonce, scope } = result.data;
-
-	// Check if subject already exists with passkeys
-	let existingSubject = await Subject.findByEmail(db, email);
-	if (existingSubject) {
-		let existingPasskeys = await Passkey.listBySubject(db, existingSubject.id);
-		if (existingPasskeys.length > 0) {
-			return badRequest({ error: "User already has a passkey. Please sign in instead." });
+		let result = await validate(Object.fromEntries(formData), RequestSchema);
+		if (isFailure(result)) {
+			log.info("Invalid request body");
+			return badRequest({ error: "Invalid request", issues: result.error.issues });
 		}
-	}
 
-	// Create or get subject
-	let subject: Awaited<ReturnType<typeof Subject.findByEmail>>;
-	if (existingSubject) {
-		subject = existingSubject;
-	} else {
-		// Create new unverified subject
-		let username = email.split("@")[0] ?? email;
-		subject = await Subject.register(db, { email, username });
-	}
+		let { email, clientId, redirectUri, state, nonce, scope } = result.data;
 
-	// Get tenant info for RP
-	let issuer = await TenantMeta.getIssuer(db);
-	let rpId = issuer ? new URL(`https://${issuer}`).hostname : new URL(request.url).hostname;
-	let rpName = rpId; // Could be fetched from brand settings
+		// Check if subject already exists with passkeys
+		let existingSubject = await Subject.findByEmail(db, email);
+		if (existingSubject) {
+			let existingPasskeys = await Passkey.listBySubject(db, existingSubject.id);
+			if (existingPasskeys.length > 0) {
+				log.info("Subject already has passkey", { subjectId: existingSubject.id });
+				return badRequest({ error: "User already has a passkey. Please sign in instead." });
+			}
+		}
 
-	// Create WebAuthn challenge
-	let { id: challengeId, challenge } = await WebAuthnChallenge.createForRegistration(db, {
-		email,
-		clientId,
-		redirectUri,
-		state,
-		nonce,
-		scope,
-	});
+		// Create or get subject
+		let subject: Awaited<ReturnType<typeof Subject.findByEmail>>;
+		if (existingSubject) {
+			subject = existingSubject;
+			log.info("Using existing subject", { subjectId: existingSubject.id });
+		} else {
+			// Create new unverified subject
+			let username = email.split("@")[0] ?? email;
+			subject = await Subject.register(db, { email, username });
+			log.info("Created new subject", { subjectId: subject!.id });
+		}
 
-	// Generate registration options using @simplewebauthn/server
-	let registrationOptions = await generateRegistrationOptions({
-		rpName,
-		rpID: rpId,
-		userName: email,
-		userDisplayName: subject!.displayName ?? email,
-		userID: new TextEncoder().encode(subject!.id),
-		attestationType: "none",
-		authenticatorSelection: {
-			authenticatorAttachment: "platform",
-			residentKey: "preferred",
-			userVerification: "preferred",
-		},
-		challenge: new TextEncoder().encode(challenge),
-	} satisfies GenerateRegistrationOptionsOpts);
+		// Get tenant info for RP
+		let issuer = await TenantMeta.getIssuer(db);
+		let rpId = issuer ? new URL(`https://${issuer}`).hostname : new URL(request.url).hostname;
+		let rpName = rpId; // Could be fetched from brand settings
 
-	return ok({
-		challengeId,
-		options: registrationOptions,
-	});
-});
+		// Create WebAuthn challenge
+		let { id: challengeId, challenge } = await WebAuthnChallenge.createForRegistration(db, {
+			email,
+			clientId,
+			redirectUri,
+			state,
+			nonce,
+			scope,
+		});
+
+		// Generate registration options using @simplewebauthn/server
+		let registrationOptions = await generateRegistrationOptions({
+			rpName,
+			rpID: rpId,
+			userName: email,
+			userDisplayName: subject!.displayName ?? email,
+			userID: new TextEncoder().encode(subject!.id),
+			attestationType: "none",
+			authenticatorSelection: {
+				authenticatorAttachment: "platform",
+				residentKey: "preferred",
+				userVerification: "preferred",
+			},
+			challenge: new TextEncoder().encode(challenge),
+		} satisfies GenerateRegistrationOptionsOpts);
+
+		log.info("Registration challenge created", {
+			subjectId: subject!.id,
+			challengeId,
+			clientId: clientId ?? null,
+			hasRedirectUri: !!redirectUri,
+		});
+
+		return ok({
+			challengeId,
+			options: registrationOptions,
+		});
+	},
+);

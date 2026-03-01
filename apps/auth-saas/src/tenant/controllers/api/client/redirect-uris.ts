@@ -15,28 +15,39 @@ let CreateRedirectUriSchema = s.object({
 });
 
 export const index = action<"GET", "/api/clients/:clientId/redirect-uris">(
-	async ({ params, db }) => {
+	async ({ params, db, logger }) => {
+		let log = logger.loader("/api/clients/:clientId/redirect-uris");
+
 		// Verify client exists
 		let client = await Client.show(db, { id: params.clientId });
 		if (!client) {
+			log.info("Client not found", { clientId: params.clientId });
 			return notFound({ error: "Client not found" });
 		}
 
 		let redirectUris = await RedirectUri.list(db, params.clientId);
+		log.info("Redirect URIs listed", {
+			clientId: params.clientId,
+			count: redirectUris.length,
+		});
 		return ok(redirectUris);
 	},
 );
 
 export const create = action<"POST", "/api/clients/:clientId/redirect-uris">(
-	async ({ params, db, formData }) => {
+	async ({ params, db, formData, logger }) => {
+		let log = logger.action("/api/clients/:clientId/redirect-uris");
+
 		// Verify client exists
 		let client = await Client.show(db, { id: params.clientId });
 		if (!client) {
+			log.info("Client not found", { clientId: params.clientId });
 			return notFound({ error: "Client not found" });
 		}
 
 		let result = await validate(Object.fromEntries(formData), CreateRedirectUriSchema);
 		if (isFailure(result)) {
+			log.info("Invalid request body", { clientId: params.clientId });
 			return badRequest({ error: "Invalid request", issues: result.error.issues });
 		}
 
@@ -47,23 +58,38 @@ export const create = action<"POST", "/api/clients/:clientId/redirect-uris">(
 			result.data.environment,
 		);
 
+		log.info("Redirect URI created", {
+			clientId: params.clientId,
+			redirectUriId: writeResult.insertId,
+		});
 		return created({ id: writeResult.insertId });
 	},
 );
 
 export const destroy = action<"DELETE", "/api/clients/:clientId/redirect-uris/:id">(
-	async ({ params, db }) => {
+	async ({ params, db, logger }) => {
+		let log = logger.action("/api/clients/:clientId/redirect-uris/:id");
+
 		// Verify client exists
 		let client = await Client.show(db, { id: params.clientId });
 		if (!client) {
+			log.info("Client not found", { clientId: params.clientId });
 			return notFound({ error: "Client not found" });
 		}
 
 		try {
 			await RedirectUri.destroy(db, { id: params.id });
+			log.info("Redirect URI deleted", {
+				clientId: params.clientId,
+				redirectUriId: params.id,
+			});
 			return noContent();
 		} catch (error) {
 			if (error instanceof RecordNotFoundError) {
+				log.info("Redirect URI not found", {
+					clientId: params.clientId,
+					redirectUriId: params.id,
+				});
 				return notFound({ error: "Redirect URI not found" });
 			}
 			throw error;

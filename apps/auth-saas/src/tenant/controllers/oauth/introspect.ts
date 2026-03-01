@@ -20,7 +20,9 @@ let IntrospectSchema = s.object({
 	client_secret: s.optional(s.string()),
 });
 
-export default action<"POST", "/oauth/introspect">(async ({ db, formData, request }) => {
+export default action<"POST", "/oauth/introspect">(async ({ db, formData, request, logger }) => {
+	let log = logger.action("/oauth/introspect");
+
 	// Parse Basic auth if present
 	let basicAuth = parseBasicAuth(request.headers.get("authorization"));
 	let body = Object.fromEntries(formData) as Record<string, unknown>;
@@ -33,24 +35,30 @@ export default action<"POST", "/oauth/introspect">(async ({ db, formData, reques
 
 	let result = await validate(body, IntrospectSchema);
 	if (isFailure(result)) {
+		log.info("Invalid request parameters");
 		return reject("invalid_request", "Missing or invalid parameters");
 	}
 
 	let { token, token_type_hint, client_id, client_secret } = result.data;
 
+	log.info("Token introspection request", { clientId: client_id, tokenTypeHint: token_type_hint });
+
 	// Client authentication is required
 	if (!client_id || !client_secret) {
+		log.info("Client authentication missing");
 		return reject("invalid_client", "Client authentication required", 401);
 	}
 
 	// Validate client
 	let client = await Client.show(db, { id: client_id });
 	if (!client) {
+		log.info("Client not found", { clientId: client_id });
 		return reject("invalid_client", "Client not found", 401);
 	}
 
 	let secretValid = await Secret.verify(db, client.id, client_secret);
 	if (!secretValid) {
+		log.info("Invalid client credentials", { clientId: client_id });
 		return reject("invalid_client", "Invalid client credentials", 401);
 	}
 
@@ -60,6 +68,7 @@ export default action<"POST", "/oauth/introspect">(async ({ db, formData, reques
 	// Get issuer
 	let issuer = await TenantMeta.getIssuer(db);
 	if (!issuer) {
+		log.info("Issuer not configured, token inactive", { clientId: client_id });
 		return ok({ active: false }, { headers });
 	}
 
@@ -67,6 +76,11 @@ export default action<"POST", "/oauth/introspect">(async ({ db, formData, reques
 	if (token_type_hint !== "access_token") {
 		let session = await Session.show(db, token);
 		if (session && new Date(session.expiresAt) > new Date()) {
+			log.info("Refresh token introspected successfully", {
+				clientId: client_id,
+				sessionId: session.id,
+				subjectId: session.subjectId,
+			});
 			return ok(
 				{
 					active: true,
@@ -87,10 +101,17 @@ export default action<"POST", "/oauth/introspect">(async ({ db, formData, reques
 	try {
 		let signingKeys = await SigningKey.getAll(db);
 		if (signingKeys.length === 0) {
+			log.info("No signing keys configured, token inactive", { clientId: client_id });
 			return ok({ active: false }, { headers });
 		}
 
 		let accessToken = await AccessToken.verify(token, signingKeys, { issuer: `https://${issuer}` });
+
+		log.info("Access token introspected successfully", {
+			clientId: client_id,
+			subjectId: accessToken.subject,
+			scope: accessToken.scope,
+		});
 
 		return ok(
 			{
@@ -108,6 +129,7 @@ export default action<"POST", "/oauth/introspect">(async ({ db, formData, reques
 		);
 	} catch {
 		// Token is invalid or expired
+		log.info("Token invalid or expired", { clientId: client_id });
 		return ok({ active: false }, { headers });
 	}
 });

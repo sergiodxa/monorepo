@@ -31,14 +31,18 @@ let RequestSchema = s.object({
 	}),
 });
 
-export default action<"POST", "/webauthn/register/verify">(async ({ db, request }) => {
+export default action<"POST", "/webauthn/register/verify">(async ({ db, request, logger }) => {
+	let log = logger.action("/webauthn/register/verify");
+
 	let body = (await request.json()) as Record<string, unknown>;
 	let result = await validate(body, RequestSchema);
 	if (isFailure(result)) {
+		log.info("Invalid request body");
 		return badRequest({ error: "Invalid request", issues: result.error.issues });
 	}
 
 	let { challengeId, response } = result.data;
+	log.info("Verifying registration", { challengeId });
 
 	// Consume the challenge (single-use)
 	let challenge;
@@ -46,19 +50,23 @@ export default action<"POST", "/webauthn/register/verify">(async ({ db, request 
 		challenge = await WebAuthnChallenge.consume(db, challengeId);
 	} catch (error) {
 		if (error instanceof WebAuthnChallenge.InvalidChallengeError) {
+			log.info("Invalid challenge", { challengeId });
 			return badRequest({ error: "Invalid challenge" });
 		}
 		if (error instanceof WebAuthnChallenge.ExpiredChallengeError) {
+			log.info("Challenge expired", { challengeId });
 			return badRequest({ error: "Challenge expired. Please try again." });
 		}
 		throw error;
 	}
 
 	if (challenge.type !== "registration") {
+		log.info("Invalid challenge type", { challengeId, type: challenge.type });
 		return badRequest({ error: "Invalid challenge type" });
 	}
 
 	if (!challenge.email) {
+		log.info("Challenge missing email", { challengeId });
 		return badRequest({ error: "Invalid challenge: missing email" });
 	}
 
@@ -78,6 +86,10 @@ export default action<"POST", "/webauthn/register/verify">(async ({ db, request 
 			requireUserVerification: true,
 		});
 	} catch (error) {
+		log.info("Passkey verification failed", {
+			challengeId,
+			error: error instanceof Error ? error.message : "Unknown error",
+		});
 		return badRequest({
 			error: "Passkey verification failed",
 			details: error instanceof Error ? error.message : "Unknown error",
@@ -85,6 +97,7 @@ export default action<"POST", "/webauthn/register/verify">(async ({ db, request 
 	}
 
 	if (!verification.verified || !verification.registrationInfo) {
+		log.info("Passkey verification not verified", { challengeId });
 		return badRequest({ error: "Passkey verification failed" });
 	}
 
@@ -95,6 +108,7 @@ export default action<"POST", "/webauthn/register/verify">(async ({ db, request 
 	if (!subject) {
 		let username = challenge.email.split("@")[0] ?? challenge.email;
 		subject = await Subject.register(db, { email: challenge.email, username });
+		log.info("Created new subject during registration", { subjectId: subject.id });
 	}
 
 	// Store the passkey - registrationInfo uses flat structure in simplewebauthn v11+
@@ -108,9 +122,16 @@ export default action<"POST", "/webauthn/register/verify">(async ({ db, request 
 		name: null,
 	});
 
+	log.info("Passkey created", {
+		subjectId: subject.id,
+		deviceType: registrationInfo.credentialDeviceType,
+		backedUp: registrationInfo.credentialBackedUp,
+	});
+
 	// Mark email as verified (passkey registration proves email ownership)
 	if (!subject.emailVerifiedAt) {
 		await Subject.verifyEmail(db, { id: subject.id });
+		log.info("Email verified via passkey registration", { subjectId: subject.id });
 	}
 
 	// If this is part of an OAuth flow, create session and authorization code
@@ -138,6 +159,12 @@ export default action<"POST", "/webauthn/register/verify">(async ({ db, request 
 			redirectUrl.searchParams.set("state", challenge.state);
 		}
 
+		log.info("Registration completed with OAuth flow", {
+			subjectId: subject.id,
+			clientId: challenge.clientId,
+			sessionId,
+		});
+
 		return ok({
 			success: true,
 			redirect: redirectUrl.toString(),
@@ -145,6 +172,8 @@ export default action<"POST", "/webauthn/register/verify">(async ({ db, request 
 	}
 
 	// Direct registration without OAuth flow
+	log.info("Registration completed", { subjectId: subject.id });
+
 	return ok({
 		success: true,
 		subjectId: subject.id,

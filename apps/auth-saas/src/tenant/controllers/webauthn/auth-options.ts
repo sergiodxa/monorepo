@@ -22,60 +22,75 @@ let RequestSchema = s.object({
 	scope: s.optional(s.string()),
 });
 
-export default action<"POST", "/webauthn/auth/options">(async ({ db, formData, request }) => {
-	let result = await validate(Object.fromEntries(formData), RequestSchema);
-	if (isFailure(result)) {
-		return badRequest({ error: "Invalid request", issues: result.error.issues });
-	}
+export default action<"POST", "/webauthn/auth/options">(
+	async ({ db, formData, request, logger }) => {
+		let log = logger.action("/webauthn/auth/options");
 
-	let { email, clientId, redirectUri, state, nonce, scope } = result.data;
+		let result = await validate(Object.fromEntries(formData), RequestSchema);
+		if (isFailure(result)) {
+			log.info("Invalid request body");
+			return badRequest({ error: "Invalid request", issues: result.error.issues });
+		}
 
-	// Find subject by email
-	let subject = await Subject.findByEmail(db, email);
-	if (!subject) {
-		// Don't reveal whether user exists - return generic error
-		return badRequest({ error: "No passkey found. Please register first." });
-	}
+		let { email, clientId, redirectUri, state, nonce, scope } = result.data;
 
-	// Get user's passkeys
-	let passkeys = await Passkey.listBySubject(db, subject.id);
-	if (passkeys.length === 0) {
-		return badRequest({ error: "No passkey found. Please register first." });
-	}
+		// Find subject by email
+		let subject = await Subject.findByEmail(db, email);
+		if (!subject) {
+			// Don't reveal whether user exists - return generic error
+			log.info("Subject not found for authentication");
+			return badRequest({ error: "No passkey found. Please register first." });
+		}
 
-	// Get tenant info for RP
-	let issuer = await TenantMeta.getIssuer(db);
-	let rpId = issuer ? new URL(`https://${issuer}`).hostname : new URL(request.url).hostname;
+		// Get user's passkeys
+		let passkeys = await Passkey.listBySubject(db, subject.id);
+		if (passkeys.length === 0) {
+			log.info("No passkeys found for subject", { subjectId: subject.id });
+			return badRequest({ error: "No passkey found. Please register first." });
+		}
 
-	// Create WebAuthn challenge
-	let { id: challengeId, challenge } = await WebAuthnChallenge.createForAuthentication(db, {
-		subjectId: subject.id,
-		clientId,
-		redirectUri,
-		state,
-		nonce,
-		scope,
-	});
+		// Get tenant info for RP
+		let issuer = await TenantMeta.getIssuer(db);
+		let rpId = issuer ? new URL(`https://${issuer}`).hostname : new URL(request.url).hostname;
 
-	// Build allowCredentials from user's passkeys
-	let allowCredentials = passkeys.map((passkey) => ({
-		id: passkey.id,
-		type: "public-key" as const,
-		transports: passkey.transports
-			? (passkey.transports.split(",") as AuthenticatorTransport[])
-			: undefined,
-	}));
+		// Create WebAuthn challenge
+		let { id: challengeId, challenge } = await WebAuthnChallenge.createForAuthentication(db, {
+			subjectId: subject.id,
+			clientId,
+			redirectUri,
+			state,
+			nonce,
+			scope,
+		});
 
-	// Generate authentication options using @simplewebauthn/server
-	let authenticationOptions = await generateAuthenticationOptions({
-		rpID: rpId,
-		allowCredentials,
-		userVerification: "preferred",
-		challenge: new TextEncoder().encode(challenge),
-	} satisfies GenerateAuthenticationOptionsOpts);
+		// Build allowCredentials from user's passkeys
+		let allowCredentials = passkeys.map((passkey) => ({
+			id: passkey.id,
+			type: "public-key" as const,
+			transports: passkey.transports
+				? (passkey.transports.split(",") as AuthenticatorTransport[])
+				: undefined,
+		}));
 
-	return ok({
-		challengeId,
-		options: authenticationOptions,
-	});
-});
+		// Generate authentication options using @simplewebauthn/server
+		let authenticationOptions = await generateAuthenticationOptions({
+			rpID: rpId,
+			allowCredentials,
+			userVerification: "preferred",
+			challenge: new TextEncoder().encode(challenge),
+		} satisfies GenerateAuthenticationOptionsOpts);
+
+		log.info("Authentication challenge created", {
+			subjectId: subject.id,
+			challengeId,
+			clientId: clientId ?? null,
+			passkeyCount: passkeys.length,
+			hasRedirectUri: !!redirectUri,
+		});
+
+		return ok({
+			challengeId,
+			options: authenticationOptions,
+		});
+	},
+);

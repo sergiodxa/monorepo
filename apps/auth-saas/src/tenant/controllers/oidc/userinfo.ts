@@ -20,10 +20,13 @@ function reject(error: string, description: string, status: number = 401) {
 	);
 }
 
-export default action<"GET", "/userinfo">(async ({ db, request }) => {
+export default action<"GET", "/userinfo">(async ({ db, request, logger }) => {
+	let log = logger.loader("/userinfo");
+
 	// Extract Bearer token from Authorization header
 	let authHeader = request.headers.get("authorization");
 	if (!authHeader || !authHeader.startsWith("Bearer ")) {
+		log.info("Missing access token in Authorization header");
 		return reject("invalid_request", "Missing access token");
 	}
 
@@ -32,11 +35,13 @@ export default action<"GET", "/userinfo">(async ({ db, request }) => {
 	// Get issuer and signing keys
 	let issuer = await TenantMeta.getIssuer(db);
 	if (!issuer) {
+		log.error("Issuer not configured");
 		return reject("server_error", "Issuer not configured");
 	}
 
 	let signingKeys = await SigningKey.getAll(db);
 	if (signingKeys.length === 0) {
+		log.error("No signing keys available");
 		return reject("server_error", "No signing keys available");
 	}
 
@@ -45,12 +50,16 @@ export default action<"GET", "/userinfo">(async ({ db, request }) => {
 	try {
 		accessToken = await AccessToken.verify(token, signingKeys, { issuer: `https://${issuer}` });
 	} catch {
+		log.info("Access token verification failed");
 		return reject("invalid_token", "Access token is invalid or expired");
 	}
+
+	log.info("Access token verified", { subjectId: accessToken.subject });
 
 	// Get subject
 	let subject = await Subject.show(db, { id: accessToken.subject });
 	if (!subject) {
+		log.info("Subject not found", { subjectId: accessToken.subject });
 		return reject("invalid_token", "Subject not found");
 	}
 
@@ -74,6 +83,8 @@ export default action<"GET", "/userinfo">(async ({ db, request }) => {
 			userinfo.picture = subject.avatarUrl;
 		}
 	}
+
+	log.info("Userinfo returned", { subjectId: subject.id, scopes: scope });
 
 	return new Response(JSON.stringify(userinfo), {
 		status: 200,

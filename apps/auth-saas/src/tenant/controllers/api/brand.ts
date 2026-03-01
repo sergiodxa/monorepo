@@ -13,19 +13,30 @@ let UpdateBrandSchema = s.object({
 	customCss: s.optional(s.nullable(s.string())),
 });
 
-export const show = action<"GET", "/api/brand">(async ({ db }) => {
+export const show = action<"GET", "/api/brand">(async ({ db, logger }) => {
+	let log = logger.loader("/api/brand");
+
 	let brand = await Brand.show(db);
+
+	log.info("Brand settings retrieved", { brandId: brand?.id ?? null });
+
 	return ok(brand);
 });
 
-export const update = action<"PUT", "/api/brand">(async ({ db, request }) => {
+export const update = action<"PUT", "/api/brand">(async ({ db, request, logger }) => {
+	let log = logger.action("/api/brand");
+
 	let body = (await request.json()) as Record<string, unknown>;
 	let result = await validate(body, UpdateBrandSchema);
 	if (isFailure(result)) {
+		log.info("Brand update validation failed", { issues: result.error.issues.length });
 		return badRequest({ error: "Invalid request", issues: result.error.issues });
 	}
 
 	await Brand.update(db, result.data);
 	let brand = await Brand.show(db);
+
+	log.info("Brand settings updated", { brandId: brand?.id ?? null });
+
 	return ok(brand);
 });

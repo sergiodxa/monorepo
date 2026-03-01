@@ -16,49 +16,69 @@ let CreateLogoutUriSchema = s.object({
 	environment: s.optional(s.string()),
 });
 
-export const index = action<"GET", "/api/clients/:clientId/logout-uris">(async ({ params, db }) => {
-	// Verify client exists
-	let client = await Client.show(db, { id: params.clientId });
-	if (!client) {
-		return notFound({ error: "Client not found" });
-	}
+export const index = action<"GET", "/api/clients/:clientId/logout-uris">(
+	async ({ params, db, logger }) => {
+		let log = logger.loader("/api/clients/:clientId/logout-uris");
 
-	let logoutUris = await LogoutUri.list(db, params.clientId);
-	return ok(logoutUris);
-});
-
-export const create = action<"POST", "/api/clients/:clientId/logout-uris">(
-	async ({ params, db, formData }) => {
 		// Verify client exists
 		let client = await Client.show(db, { id: params.clientId });
 		if (!client) {
+			log.info("Client not found", { clientId: params.clientId });
+			return notFound({ error: "Client not found" });
+		}
+
+		let logoutUris = await LogoutUri.list(db, params.clientId);
+		log.info("Logout URIs listed", { clientId: params.clientId, count: logoutUris.length });
+		return ok(logoutUris);
+	},
+);
+
+export const create = action<"POST", "/api/clients/:clientId/logout-uris">(
+	async ({ params, db, formData, logger }) => {
+		let log = logger.action("/api/clients/:clientId/logout-uris");
+
+		// Verify client exists
+		let client = await Client.show(db, { id: params.clientId });
+		if (!client) {
+			log.info("Client not found", { clientId: params.clientId });
 			return notFound({ error: "Client not found" });
 		}
 
 		let result = await validate(Object.fromEntries(formData), CreateLogoutUriSchema);
 		if (isFailure(result)) {
+			log.info("Invalid request body", { clientId: params.clientId });
 			return badRequest({ error: "Invalid request", issues: result.error.issues });
 		}
 
 		let writeResult = await LogoutUri.create(db, params.clientId, result.data);
 
+		log.info("Logout URI created", {
+			clientId: params.clientId,
+			logoutUriId: writeResult.insertId,
+			type: result.data.type,
+		});
 		return created({ id: writeResult.insertId });
 	},
 );
 
 export const destroy = action<"DELETE", "/api/clients/:clientId/logout-uris/:id">(
-	async ({ params, db }) => {
+	async ({ params, db, logger }) => {
+		let log = logger.action("/api/clients/:clientId/logout-uris/:id");
+
 		// Verify client exists
 		let client = await Client.show(db, { id: params.clientId });
 		if (!client) {
+			log.info("Client not found", { clientId: params.clientId });
 			return notFound({ error: "Client not found" });
 		}
 
 		try {
 			await LogoutUri.destroy(db, { id: params.id });
+			log.info("Logout URI deleted", { clientId: params.clientId, logoutUriId: params.id });
 			return noContent();
 		} catch (error) {
 			if (error instanceof RecordNotFoundError) {
+				log.info("Logout URI not found", { clientId: params.clientId, logoutUriId: params.id });
 				return notFound({ error: "Logout URI not found" });
 			}
 			throw error;

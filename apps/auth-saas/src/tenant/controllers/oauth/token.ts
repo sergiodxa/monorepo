@@ -1,3 +1,4 @@
+import type { Logger } from "@pkg/logger/batched";
 import type { Database } from "remix/data-table";
 
 import { JWK } from "@edgefirst-dev/jwt";
@@ -42,7 +43,8 @@ let ClientCredentialsSchema = s.object({
 	resource: s.optional(s.union([s.string(), s.array(s.string())])),
 });
 
-export default action<"POST", "/oauth/token">(async ({ db, formData, request }) => {
+export default action<"POST", "/oauth/token">(async ({ db, formData, request, logger }) => {
+	let log = logger.action("/oauth/token");
 	let grantType = formData.get("grant_type");
 
 	// Parse Basic auth if present
@@ -57,23 +59,27 @@ export default action<"POST", "/oauth/token">(async ({ db, formData, request }) 
 
 	// Route to appropriate grant type handler
 	if (grantType === "authorization_code") {
-		return await handleAuthorizationCode(db, body);
+		return await handleAuthorizationCode(db, body, log);
 	}
 
 	if (grantType === "refresh_token") {
-		return await handleRefreshToken(db, body);
+		return await handleRefreshToken(db, body, log);
 	}
 
 	if (grantType === "client_credentials") {
-		return await handleClientCredentials(db, body);
+		return await handleClientCredentials(db, body, log);
 	}
 
+	log.info("Unsupported grant type requested", { grantType: String(grantType) });
 	return reject("unsupported_grant_type", "The authorization grant type is not supported");
 });
 
-async function handleAuthorizationCode(db: Database, body: Record<string, unknown>) {
+async function handleAuthorizationCode(db: Database, body: Record<string, unknown>, log: Logger) {
+	log.info("Authorization code grant started");
+
 	let result = await validate(body, AuthorizationCodeSchema);
 	if (isFailure(result)) {
+		log.info("Invalid request parameters", { grantType: "authorization_code" });
 		return reject("invalid_request", "Missing or invalid parameters");
 	}
 
@@ -85,9 +91,11 @@ async function handleAuthorizationCode(db: Database, body: Record<string, unknow
 		authzData = await AuthorizationCode.consume(db, code);
 	} catch (error) {
 		if (error instanceof AuthorizationCode.AlreadyConsumedError) {
+			log.info("Authorization code already consumed", { grantType: "authorization_code" });
 			return reject("invalid_grant", "Authorization code has already been used or is invalid");
 		}
 		if (error instanceof AuthorizationCode.ExpiredCodeError) {
+			log.info("Authorization code expired", { grantType: "authorization_code" });
 			return reject("invalid_grant", "Authorization code has expired");
 		}
 		throw error;
@@ -96,19 +104,34 @@ async function handleAuthorizationCode(db: Database, body: Record<string, unknow
 	// Validate client
 	let client = await Client.show(db, { id: authzData.clientId });
 	if (!client) {
+		log.info("Client not found", { clientId: authzData.clientId, grantType: "authorization_code" });
 		return reject("invalid_client", "Client not found", 401);
 	}
 
 	// Confidential clients require authentication
 	if (client.type === "confidential" || client.type === "m2m") {
 		if (!client_id || !client_secret) {
+			log.info("Client authentication required", {
+				clientId: client.id,
+				clientType: client.type,
+				grantType: "authorization_code",
+			});
 			return reject("invalid_client", "Client authentication required", 401);
 		}
 		if (client_id !== client.id) {
+			log.info("Client ID mismatch", {
+				expectedClientId: client.id,
+				providedClientId: client_id,
+				grantType: "authorization_code",
+			});
 			return reject("invalid_client", "Client ID mismatch", 401);
 		}
 		let secretValid = await Secret.verify(db, client.id, client_secret);
 		if (!secretValid) {
+			log.info("Invalid client credentials", {
+				clientId: client.id,
+				grantType: "authorization_code",
+			});
 			return reject("invalid_client", "Invalid client credentials", 401);
 		}
 	}
@@ -116,12 +139,20 @@ async function handleAuthorizationCode(db: Database, body: Record<string, unknow
 	// Validate redirect URI
 	// TODO: Check against registered redirect URIs from client/redirect-uris table
 	if (redirect_uri !== authzData.redirectUri) {
+		log.info("Redirect URI mismatch", {
+			clientId: client.id,
+			grantType: "authorization_code",
+		});
 		return reject("invalid_grant", "Redirect URI mismatch");
 	}
 
 	// Validate PKCE if present
 	if (authzData.pkce) {
 		if (!code_verifier) {
+			log.info("Missing code_verifier for PKCE", {
+				clientId: client.id,
+				grantType: "authorization_code",
+			});
 			return reject("invalid_request", "Missing code_verifier");
 		}
 
@@ -131,6 +162,11 @@ async function handleAuthorizationCode(db: Database, body: Record<string, unknow
 			authzData.pkce.method,
 		);
 		if (!isValid) {
+			log.info("PKCE validation failed", {
+				clientId: client.id,
+				pkceMethod: authzData.pkce.method,
+				grantType: "authorization_code",
+			});
 			return reject("invalid_grant", "PKCE validation failed");
 		}
 	}
@@ -138,23 +174,41 @@ async function handleAuthorizationCode(db: Database, body: Record<string, unknow
 	// Validate session
 	let session = await Session.show(db, authzData.sessionId);
 	if (!session || new Date(session.expiresAt) < new Date()) {
+		log.info("Session expired", {
+			clientId: client.id,
+			sessionId: authzData.sessionId,
+			grantType: "authorization_code",
+		});
 		return reject("invalid_grant", "Session has expired");
 	}
 
 	// Get subject
 	let subject = await Subject.show(db, { id: authzData.subjectId });
 	if (!subject) {
+		log.info("Subject not found", {
+			clientId: client.id,
+			subjectId: authzData.subjectId,
+			grantType: "authorization_code",
+		});
 		return reject("invalid_grant", "Subject not found");
 	}
 
 	// Get issuer and signing keys
 	let issuer = await TenantMeta.getIssuer(db);
 	if (!issuer) {
+		log.info("Issuer not configured", {
+			clientId: client.id,
+			grantType: "authorization_code",
+		});
 		return reject("server_error", "Issuer not configured");
 	}
 
 	let signingKeys = await SigningKey.getAll(db);
 	if (signingKeys.length === 0) {
+		log.info("No signing keys available", {
+			clientId: client.id,
+			grantType: "authorization_code",
+		});
 		return reject("server_error", "No signing keys available");
 	}
 
@@ -182,6 +236,14 @@ async function handleAuthorizationCode(db: Database, body: Record<string, unknow
 	);
 	let signedIdToken = await idToken.sign(JWK.Algoritm.ES256, signingKeys);
 
+	log.info("Token issued successfully", {
+		clientId: client.id,
+		subjectId: subject.id,
+		sessionId: session.id,
+		grantType: "authorization_code",
+		scope: authzData.scope,
+	});
+
 	return new Response(
 		JSON.stringify({
 			access_token: signedAccessToken,
@@ -197,9 +259,12 @@ async function handleAuthorizationCode(db: Database, body: Record<string, unknow
 	);
 }
 
-async function handleRefreshToken(db: Database, body: Record<string, unknown>) {
+async function handleRefreshToken(db: Database, body: Record<string, unknown>, log: Logger) {
+	log.info("Refresh token grant started");
+
 	let result = await validate(body, RefreshTokenSchema);
 	if (isFailure(result)) {
+		log.info("Invalid request parameters", { grantType: "refresh_token" });
 		return reject("invalid_request", "Missing or invalid parameters");
 	}
 
@@ -208,29 +273,50 @@ async function handleRefreshToken(db: Database, body: Record<string, unknown>) {
 	// Find session by refresh token (session ID)
 	let session = await Session.show(db, refresh_token);
 	if (!session) {
+		log.info("Invalid or expired refresh token", { grantType: "refresh_token" });
 		return reject("invalid_grant", "Invalid or expired refresh token");
 	}
 
 	if (new Date(session.expiresAt) < new Date()) {
+		log.info("Refresh token expired", {
+			sessionId: session.id,
+			clientId: session.clientId,
+			grantType: "refresh_token",
+		});
 		return reject("invalid_grant", "Refresh token has expired");
 	}
 
 	// Validate client
 	let client = await Client.show(db, { id: session.clientId });
 	if (!client) {
+		log.info("Client not found", { clientId: session.clientId, grantType: "refresh_token" });
 		return reject("invalid_client", "Client not found", 401);
 	}
 
 	// Confidential clients require authentication
 	if (client.type === "confidential" || client.type === "m2m") {
 		if (!client_id || !client_secret) {
+			log.info("Client authentication required", {
+				clientId: client.id,
+				clientType: client.type,
+				grantType: "refresh_token",
+			});
 			return reject("invalid_client", "Client authentication required", 401);
 		}
 		if (client_id !== client.id) {
+			log.info("Client ID mismatch", {
+				expectedClientId: client.id,
+				providedClientId: client_id,
+				grantType: "refresh_token",
+			});
 			return reject("invalid_client", "Client ID mismatch", 401);
 		}
 		let secretValid = await Secret.verify(db, client.id, client_secret);
 		if (!secretValid) {
+			log.info("Invalid client credentials", {
+				clientId: client.id,
+				grantType: "refresh_token",
+			});
 			return reject("invalid_client", "Invalid client credentials", 401);
 		}
 	}
@@ -241,17 +327,30 @@ async function handleRefreshToken(db: Database, body: Record<string, unknown>) {
 	// Get subject
 	let subject = await Subject.show(db, { id: session.subjectId });
 	if (!subject) {
+		log.info("Subject not found", {
+			clientId: client.id,
+			subjectId: session.subjectId,
+			grantType: "refresh_token",
+		});
 		return reject("invalid_grant", "Subject not found");
 	}
 
 	// Get issuer and signing keys
 	let issuer = await TenantMeta.getIssuer(db);
 	if (!issuer) {
+		log.info("Issuer not configured", {
+			clientId: client.id,
+			grantType: "refresh_token",
+		});
 		return reject("server_error", "Issuer not configured");
 	}
 
 	let signingKeys = await SigningKey.getAll(db);
 	if (signingKeys.length === 0) {
+		log.info("No signing keys available", {
+			clientId: client.id,
+			grantType: "refresh_token",
+		});
 		return reject("server_error", "No signing keys available");
 	}
 
@@ -275,6 +374,13 @@ async function handleRefreshToken(db: Database, body: Record<string, unknown>) {
 	);
 	let signedIdToken = await idToken.sign(JWK.Algoritm.ES256, signingKeys);
 
+	log.info("Token refreshed successfully", {
+		clientId: client.id,
+		subjectId: subject.id,
+		sessionId: session.id,
+		grantType: "refresh_token",
+	});
+
 	return new Response(
 		JSON.stringify({
 			access_token: signedAccessToken,
@@ -290,9 +396,12 @@ async function handleRefreshToken(db: Database, body: Record<string, unknown>) {
 	);
 }
 
-async function handleClientCredentials(db: Database, body: Record<string, unknown>) {
+async function handleClientCredentials(db: Database, body: Record<string, unknown>, log: Logger) {
+	log.info("Client credentials grant started");
+
 	let result = await validate(body, ClientCredentialsSchema);
 	if (isFailure(result)) {
+		log.info("Invalid request parameters", { grantType: "client_credentials" });
 		return reject("invalid_request", "Missing or invalid parameters");
 	}
 
@@ -301,28 +410,46 @@ async function handleClientCredentials(db: Database, body: Record<string, unknow
 	// Validate client
 	let client = await Client.show(db, { id: client_id });
 	if (!client) {
+		log.info("Client not found", { clientId: client_id, grantType: "client_credentials" });
 		return reject("invalid_client", "Client not found", 401);
 	}
 
 	// Only m2m clients can use client credentials
 	if (client.type !== "m2m") {
+		log.info("Unauthorized client type for grant", {
+			clientId: client.id,
+			clientType: client.type,
+			grantType: "client_credentials",
+		});
 		return reject("unauthorized_client", "Client is not authorized for this grant type");
 	}
 
 	// Verify client secret
 	let secretValid = await Secret.verify(db, client.id, client_secret);
 	if (!secretValid) {
+		log.info("Invalid client credentials", {
+			clientId: client.id,
+			grantType: "client_credentials",
+		});
 		return reject("invalid_client", "Invalid client credentials", 401);
 	}
 
 	// Get issuer and signing keys
 	let issuer = await TenantMeta.getIssuer(db);
 	if (!issuer) {
+		log.info("Issuer not configured", {
+			clientId: client.id,
+			grantType: "client_credentials",
+		});
 		return reject("server_error", "Issuer not configured");
 	}
 
 	let signingKeys = await SigningKey.getAll(db);
 	if (signingKeys.length === 0) {
+		log.info("No signing keys available", {
+			clientId: client.id,
+			grantType: "client_credentials",
+		});
 		return reject("server_error", "No signing keys available");
 	}
 
@@ -334,6 +461,13 @@ async function handleClientCredentials(db: Database, body: Record<string, unknow
 	let parsedScope = scope?.split(" ");
 	let accessToken = AccessToken.generate(`https://${issuer}`, audience, client.id, parsedScope);
 	let signedAccessToken = await accessToken.sign(JWK.Algoritm.ES256, signingKeys);
+
+	log.info("Token issued successfully", {
+		clientId: client.id,
+		grantType: "client_credentials",
+		scope: parsedScope,
+		resourceCount: resources.length,
+	});
 
 	return new Response(
 		JSON.stringify({
