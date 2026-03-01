@@ -12,6 +12,8 @@
 
 	"observability": { "enabled": true },
 
+	"assets": { "directory": "./assets" },
+
 	"triggers": { "crons": [] },
 
 	"queues": { "consumers": [], "producers": [] },

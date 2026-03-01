@@ -3,10 +3,9 @@ import type { Database } from "remix/data-table";
 import * as s from "remix/data-schema";
 import { createTable } from "remix/data-table";
 
-// TTL: 10 minutes
-const AUTHORIZATION_CODE_TTL = 10 * 60 * 1000;
-
 export default class AuthorizationCode {
+	static TTL = 10 * 60 * 1000; // 10 minutes
+
 	static ExpiredCodeError = class extends Error {
 		override name = "ExpiredCodeError";
 	};
@@ -61,7 +60,7 @@ export default class AuthorizationCode {
 			pkceChallenge: data.pkce?.challenge ?? null,
 			pkceMethod: data.pkce?.method ?? null,
 			authTime,
-			expiresAt: now + AUTHORIZATION_CODE_TTL,
+			expiresAt: now + AuthorizationCode.TTL,
 			createdAt: now,
 		});
 

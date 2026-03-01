@@ -5,6 +5,7 @@
 /.wrangler
 /coverage
 /build
+/assets
 
 # Files
 .DS_Store
