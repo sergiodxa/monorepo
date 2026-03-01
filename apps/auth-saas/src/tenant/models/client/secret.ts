@@ -93,5 +93,3 @@ export default class Secret {
 		return await db.delete(Secret.table, id);
 	}
 }
-
-namespace Secret {}

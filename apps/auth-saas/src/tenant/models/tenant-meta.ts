@@ -48,5 +48,3 @@ export default class TenantMeta {
 		return TenantMeta.set(db, TenantMeta.KEYS.ISSUER, issuer);
 	}
 }
-
-namespace TenantMeta {}

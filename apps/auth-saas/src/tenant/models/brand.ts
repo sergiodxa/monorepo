@@ -88,5 +88,3 @@ export default class Brand {
 		return this.DEFAULTS;
 	}
 }
-
-namespace Brand {}

@@ -62,5 +62,3 @@ export default class Credential {
 		);
 	}
 }
-
-namespace Credential {}

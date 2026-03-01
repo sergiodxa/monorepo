@@ -109,5 +109,3 @@ export default class AuthorizationCode {
 		return expiredRecords.length;
 	}
 }
-
-namespace AuthorizationCode {}

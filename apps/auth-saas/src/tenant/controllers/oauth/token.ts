@@ -6,6 +6,7 @@ import { validate } from "@pkg/validate";
 import * as s from "remix/data-schema";
 
 import action from "~/lib/action";
+import parseBasicAuth from "~/lib/parse-basic-auth";
 import { reject } from "~/lib/reject";
 import AuthorizationCode from "~/tenant/models/authorization-code";
 import Client from "~/tenant/models/client";
@@ -348,23 +349,6 @@ async function handleClientCredentials(db: Database, body: Record<string, unknow
 }
 
 // Helper functions
-
-function parseBasicAuth(header: string | null): { clientId: string; clientSecret: string } | null {
-	if (!header || !header.startsWith("Basic ")) return null;
-
-	try {
-		let encoded = header.slice(6);
-		let decoded = atob(encoded);
-		let [clientId, clientSecret] = decoded.split(":");
-		if (!clientId || !clientSecret) return null;
-		return {
-			clientId: decodeURIComponent(clientId),
-			clientSecret: decodeURIComponent(clientSecret),
-		};
-	} catch {
-		return null;
-	}
-}
 
 async function validatePKCE(
 	verifier: string,

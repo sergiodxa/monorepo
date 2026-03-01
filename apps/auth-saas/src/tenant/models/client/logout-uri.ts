@@ -62,5 +62,3 @@ export default class LogoutUri {
 		return logoutUris.filter((logoutUri) => logoutUri.type === type);
 	}
 }
-
-namespace LogoutUri {}

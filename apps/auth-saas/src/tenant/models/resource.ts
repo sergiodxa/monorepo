@@ -87,5 +87,3 @@ export default class Resource {
 		return JSON.parse(resource.scopes) as Array<{ name: string; description?: string }>;
 	}
 }
-
-namespace Resource {}

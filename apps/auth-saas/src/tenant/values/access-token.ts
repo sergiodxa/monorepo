@@ -7,8 +7,11 @@ export default class AccessToken extends JWT {
 		return this.parser.string("jti");
 	}
 
-	override get audience() {
-		return this.parser.string("aud");
+	override get audience(): string | string[] | null {
+		let aud = this.payload.aud;
+		if (Array.isArray(aud)) return aud;
+		if (typeof aud === "string") return aud;
+		return null;
 	}
 
 	override get expiresIn() {

@@ -104,5 +104,3 @@ export default class Client {
 		return await db.delete(Client.table, id);
 	}
 }
-
-namespace Client {}

@@ -28,6 +28,7 @@ import registerOptions from "./controllers/webauthn/register-options";
 import registerVerify from "./controllers/webauthn/register-verify";
 import database from "./middleware/db";
 import logger from "./middleware/logger";
+import managementAuth from "./middleware/management-auth";
 import routes from "./routes";
 
 export default (db: Database, requestLogger: Logger) => {
@@ -72,7 +73,7 @@ export default (db: Database, requestLogger: Logger) => {
 			},
 
 			api: {
-				middleware: [],
+				middleware: [managementAuth()],
 
 				actions: {
 					clients: {

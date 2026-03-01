@@ -135,5 +135,3 @@ export default class WebAuthnChallenge {
 		return expiredRecords.length;
 	}
 }
-
-namespace WebAuthnChallenge {}

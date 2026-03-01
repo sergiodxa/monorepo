@@ -107,5 +107,3 @@ export default class SigningKey {
 		return keyPair;
 	}
 }
-
-namespace SigningKey {}

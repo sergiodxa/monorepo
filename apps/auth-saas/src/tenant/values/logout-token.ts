@@ -20,13 +20,13 @@ export default class LogoutToken extends JWT {
 	}
 
 	static generate(issuer: string, subjectId: string, clientId: string, sessionId?: string) {
-		let now = Date.now();
+		let now = Math.floor(Date.now() / 1000);
 		return new LogoutToken({
 			iss: issuer,
 			sub: subjectId,
 			aud: clientId,
 			iat: now,
-			exp: now + 2 * 60 * 1000, // 2 minutes max per spec
+			exp: now + 2 * 60, // 2 minutes max per spec
 			jti: crypto.randomUUID(),
 			...(sessionId && { sid: sessionId }),
 			events: {

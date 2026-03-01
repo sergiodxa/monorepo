@@ -19,7 +19,6 @@ export default action<"GET", "/.well-known/openid-configuration">(async ({ db, r
 
 		// Recommended fields
 		userinfo_endpoint: `${baseUrl}/userinfo`,
-		registration_endpoint: `${baseUrl}/oauth/register`, // TODO: implement if needed
 
 		// Supported features
 		response_types_supported: ["code"],

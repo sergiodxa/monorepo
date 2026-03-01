@@ -13,8 +13,8 @@ let CreateClientSchema = s.object({
 	type: s.enum_(["public", "confidential", "m2m"]),
 	description: s.optional(s.string()),
 	logoUrl: s.optional(s.string()),
-	allowedScopes: s.optional(s.string()), // JSON array as string
-	allowedResources: s.optional(s.string()), // JSON array as string
+	allowedScopes: s.optional(s.array(s.string())),
+	allowedResources: s.optional(s.array(s.string())),
 	isManagementClient: s.optional(s.boolean()),
 });
 
@@ -23,8 +23,8 @@ let UpdateClientSchema = s.object({
 	type: s.optional(s.enum_(["public", "confidential", "m2m"])),
 	description: s.optional(s.nullable(s.string())),
 	logoUrl: s.optional(s.nullable(s.string())),
-	allowedScopes: s.optional(s.nullable(s.string())),
-	allowedResources: s.optional(s.nullable(s.string())),
+	allowedScopes: s.optional(s.nullable(s.array(s.string()))),
+	allowedResources: s.optional(s.nullable(s.array(s.string()))),
 	isManagementClient: s.optional(s.boolean()),
 });
 
@@ -39,8 +39,9 @@ export const show = action<"GET", "/api/clients/:id">(async ({ params, db }) => 
 	return notFound({ error: "Client not found" });
 });
 
-export const create = action<"POST", "/api/clients">(async ({ db, formData }) => {
-	let result = await validate(Object.fromEntries(formData), CreateClientSchema);
+export const create = action<"POST", "/api/clients">(async ({ db, request }) => {
+	let body = (await request.json()) as Record<string, unknown>;
+	let result = await validate(body, CreateClientSchema);
 	if (isFailure(result)) {
 		return badRequest({ error: "Invalid request", issues: result.error.issues });
 	}
@@ -52,18 +53,17 @@ export const create = action<"POST", "/api/clients">(async ({ db, formData }) =>
 		type: data.type,
 		description: data.description,
 		logoUrl: data.logoUrl,
-		allowedScopes: data.allowedScopes ? (JSON.parse(data.allowedScopes) as string[]) : undefined,
-		allowedResources: data.allowedResources
-			? (JSON.parse(data.allowedResources) as string[])
-			: undefined,
+		allowedScopes: data.allowedScopes,
+		allowedResources: data.allowedResources,
 		isManagementClient: data.isManagementClient,
 	});
 
 	return created({ id: writeResult.insertId });
 });
 
-export const update = action<"PUT", "/api/clients/:id">(async ({ params, db, formData }) => {
-	let result = await validate(Object.fromEntries(formData), UpdateClientSchema);
+export const update = action<"PUT", "/api/clients/:id">(async ({ params, db, request }) => {
+	let body = (await request.json()) as Record<string, unknown>;
+	let result = await validate(body, UpdateClientSchema);
 	if (isFailure(result)) {
 		return badRequest({ error: "Invalid request", issues: result.error.issues });
 	}
@@ -79,18 +79,8 @@ export const update = action<"PUT", "/api/clients/:id">(async ({ params, db, for
 				type: data.type,
 				description: data.description,
 				logoUrl: data.logoUrl,
-				allowedScopes:
-					data.allowedScopes === null
-						? null
-						: data.allowedScopes
-							? (JSON.parse(data.allowedScopes) as string[])
-							: undefined,
-				allowedResources:
-					data.allowedResources === null
-						? null
-						: data.allowedResources
-							? (JSON.parse(data.allowedResources) as string[])
-							: undefined,
+				allowedScopes: data.allowedScopes,
+				allowedResources: data.allowedResources,
 				isManagementClient: data.isManagementClient,
 			},
 		);

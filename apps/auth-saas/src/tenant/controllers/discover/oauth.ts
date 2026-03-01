@@ -19,7 +19,6 @@ export default action<"GET", "/.well-known/oauth-authorization-server">(async ({
 
 		// Recommended fields
 		jwks_uri: `${baseUrl}/.well-known/jwks.json`,
-		registration_endpoint: `${baseUrl}/oauth/register`, // TODO: implement if needed
 
 		// Supported features
 		response_types_supported: ["code"],

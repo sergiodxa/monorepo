@@ -3,6 +3,7 @@ import { validate } from "@pkg/validate";
 import * as s from "remix/data-schema";
 
 import action from "~/lib/action";
+import parseBasicAuth from "~/lib/parse-basic-auth";
 import { reject } from "~/lib/reject";
 import Client from "~/tenant/models/client";
 import Secret from "~/tenant/models/client/secret";
@@ -72,20 +73,3 @@ export default action<"POST", "/oauth/revoke">(async ({ db, formData, request })
 	// RFC 7009 requires returning 200 even if the token is invalid/not found
 	return new Response(null, { status: 200 });
 });
-
-function parseBasicAuth(header: string | null): { clientId: string; clientSecret: string } | null {
-	if (!header || !header.startsWith("Basic ")) return null;
-
-	try {
-		let encoded = header.slice(6);
-		let decoded = atob(encoded);
-		let [clientId, clientSecret] = decoded.split(":");
-		if (!clientId || !clientSecret) return null;
-		return {
-			clientId: decodeURIComponent(clientId),
-			clientSecret: decodeURIComponent(clientSecret),
-		};
-	} catch {
-		return null;
-	}
-}

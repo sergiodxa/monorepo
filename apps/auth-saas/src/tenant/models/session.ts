@@ -97,5 +97,3 @@ export default class Session {
 		return expiredSessions.length;
 	}
 }
-
-namespace Session {}

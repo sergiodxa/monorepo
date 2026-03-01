@@ -49,5 +49,3 @@ export default class RedirectUri {
 		return redirectUris.some((redirectUri) => redirectUri.uri === uri);
 	}
 }
-
-namespace RedirectUri {}

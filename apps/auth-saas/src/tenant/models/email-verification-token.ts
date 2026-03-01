@@ -80,5 +80,3 @@ export default class EmailVerificationToken {
 		return expiredRecords.length;
 	}
 }
-
-namespace EmailVerificationToken {}

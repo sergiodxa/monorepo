@@ -106,5 +106,3 @@ export default class Subject {
 		return toDelete.length;
 	}
 }
-
-namespace Subject {}

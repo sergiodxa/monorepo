@@ -77,5 +77,3 @@ export default class Passkey {
 		return await db.delete(Passkey.table, { id });
 	}
 }
-
-namespace Passkey {}

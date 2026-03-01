@@ -80,5 +80,3 @@ export default class Connection {
 		return await db.delete(Connection.table, { id });
 	}
 }
-
-namespace Connection {}

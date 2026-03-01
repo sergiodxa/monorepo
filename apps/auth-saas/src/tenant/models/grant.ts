@@ -47,5 +47,3 @@ export default class Grant {
 		return await db.delete(Grant.table, { id });
 	}
 }
-
-namespace Grant {}
