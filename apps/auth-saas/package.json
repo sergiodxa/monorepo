@@ -1,0 +1,42 @@
+{
+	"name": "@apps/auth-saas",
+	"private": true,
+	"type": "module",
+	"scripts": {
+		"dev": "vite dev",
+		"build": "vite build",
+		"start": "vite preview",
+		"cf:deploy": "wrangler deploy",
+		"cf:typegen": "wrangler types",
+		"db:local:drop": "rm -rf ./.wrangler",
+		"db:local:migrate": "wrangler d1 migrations apply --local",
+		"db:remote:migrate": "wrangler d1 migrations apply --remote"
+	},
+	"dependencies": {
+		"@pkg/cn": "workspace:*",
+		"@pkg/db-helpers": "workspace:*",
+		"@pkg/get-client-ip": "workspace:*",
+		"@pkg/http": "workspace:*",
+		"@pkg/jobs": "workspace:*",
+		"@pkg/logger": "workspace:*",
+		"@pkg/response": "workspace:*",
+		"@pkg/result": "workspace:*",
+		"@pkg/types": "workspace:*",
+		"@pkg/ui": "workspace:*",
+		"@pkg/validate": "workspace:*",
+		"@remix-run/component": "^0.5.0",
+		"remix": "^3.0.0-alpha.3",
+		"zod": "^4.3.6"
+	},
+	"devDependencies": {
+		"@cloudflare/vite-plugin": "^1.25.6",
+		"@tailwindcss/vite": "^4.2.1",
+		"@types/node": "^25.2.3",
+		"tailwindcss": "^4.1.10",
+		"tailwindcss-animate": "^1.0.7",
+		"typescript": "^5.8.3",
+		"vite": "^7.3.1",
+		"vite-tsconfig-paths": "^6.1.1",
+		"wrangler": "^4.65.0"
+	}
+}

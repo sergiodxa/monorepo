@@ -1,0 +1,79 @@
+import { createRouter } from "remix/fetch-router";
+
+import dashboardIndex from "./controllers/dashboard/index";
+import tenants from "./controllers/dashboard/tenants";
+import branding from "./controllers/dashboard/tenants/branding";
+import clients from "./controllers/dashboard/tenants/clients";
+import logoutUris from "./controllers/dashboard/tenants/clients/logout-uris";
+import redirectUris from "./controllers/dashboard/tenants/clients/redirect-uris";
+import secrets from "./controllers/dashboard/tenants/clients/secrets";
+import hostname from "./controllers/dashboard/tenants/hostname";
+import resources from "./controllers/dashboard/tenants/resources";
+import scopes from "./controllers/dashboard/tenants/resources/scopes";
+import users from "./controllers/dashboard/tenants/users";
+import notFound from "./controllers/not-found";
+import onboardingFinish from "./controllers/onboarding/finish";
+import onboardingIndex from "./controllers/onboarding/index";
+import onboardingRegion from "./controllers/onboarding/region";
+import routes from "./routes";
+
+export const router = createRouter({
+	middleware: [],
+	defaultHandler: notFound,
+});
+
+router.map(routes, {
+	middleware: [],
+
+	actions: {
+		onboarding: {
+			middleware: [],
+			actions: {
+				index: onboardingIndex,
+				region: onboardingRegion,
+				finish: onboardingFinish,
+			},
+		},
+
+		dashboard: {
+			middleware: [],
+
+			actions: {
+				index: dashboardIndex,
+
+				tenants: {
+					middleware: [],
+
+					actions: {
+						...tenants,
+
+						clients: {
+							middleware: [],
+
+							actions: {
+								...clients,
+								...redirectUris,
+								...logoutUris,
+								...secrets,
+							},
+						},
+
+						users: { middleware: [], actions: users },
+
+						resources: {
+							middleware: [],
+
+							actions: {
+								...resources,
+								scopes: { middleware: [], actions: scopes },
+							},
+						},
+
+						branding,
+						hostname,
+					},
+				},
+			},
+		},
+	},
+});

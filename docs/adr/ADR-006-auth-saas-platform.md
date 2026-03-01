@@ -108,6 +108,28 @@ Build a new application `apps/auth-saas` that provides multi-tenant authenticati
 
 ```
 apps/auth-saas/
+|-- app/dashboard/
+|   |-- index.ts
+|   |-- components/
+|   |-- routes/
+|-- app/jobs/
+|   +-- report-mau.ts
+|-- app/tenant/
+|   |-- index.ts
+|   |-- router.ts
+|   |-- components/
+|   |-- controllers/
+|   |-- db/
+|   |-- entities/
+|   |-- migrations/
+|   |-- models/
+|   +-- modules/
+|-- app/entry.client.tsx
++-- app/entry.worker.ts
+```
+
+```
+apps/auth-saas/
 |-- app/                              # Remix v3 app (Control Plane Dashboard)
 |   |-- components/
 |   |   |-- ui/                       # Shared UI components

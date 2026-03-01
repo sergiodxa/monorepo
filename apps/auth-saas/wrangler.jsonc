@@ -1,0 +1,32 @@
+{
+	"$schema": "https://unpkg.com/wrangler@latest/config-schema.json",
+	"name": "auth-saas",
+	"main": "./src/entry.worker.ts",
+	"compatibility_date": "2026-01-01",
+	"compatibility_flags": ["nodejs_compat"],
+	"workers_dev": true,
+
+	"dev": { "port": 3004 },
+
+	"placement": { "mode": "off" },
+
+	"observability": { "enabled": true },
+
+	"triggers": { "crons": [] },
+
+	"queues": { "consumers": [], "producers": [] },
+
+	"d1_databases": [],
+
+	"kv_namespaces": [],
+
+	"r2_buckets": [],
+
+	"ratelimits": [],
+
+	"durable_objects": {
+		"bindings": [{ "name": "TENANT", "class_name": "Tenant" }],
+	},
+
+	"migrations": [{ "tag": "add-tenant-do", "new_classes": ["Tenant"] }],
+}
