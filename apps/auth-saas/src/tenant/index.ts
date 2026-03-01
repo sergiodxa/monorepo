@@ -42,17 +42,13 @@ export default class Tenant extends DurableObject {
 	}
 
 	private async migrate() {
-		let migration = await import("./migrations/0001-init.sql?raw").then(
-			({ default: m }) => m as string,
-		);
+		let { default: migration } = await import("./migrations/0001-init.sql?raw");
 		this.ctx.storage.sql.exec(migration);
 	}
 
 	private async generateSigningKeys() {
 		let currentKey = await SigningKey.getCurrent(this.db);
-		if (!currentKey) {
-			await SigningKey.generate(this.db);
-		}
+		if (!currentKey) await SigningKey.generate(this.db);
 	}
 
 	private async scheduleCleanupAlarm() {

@@ -89,9 +89,7 @@ export default class Session {
 
 		let expiredSessions = sessions.filter((session) => session.expiresAt < cutoffDate);
 
-		for (let session of expiredSessions) {
-			await db.delete(Session.table, { id: session.id });
-		}
+		for (let session of expiredSessions) await db.delete(Session.table, { id: session.id });
 
 		return expiredSessions.length;
 	}
