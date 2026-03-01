@@ -16,3 +16,37 @@ export class RecordNotFoundError<
 		super(`${table.name} record with id ${JSON.stringify(id)} not found`);
 	}
 }
+
+export class DuplicateRecordError<
+	name extends string,
+	columns extends ColumnSchemas,
+	primaryKey extends readonly ColumnNameFromColumns<columns>[],
+> extends Error {
+	override name = "DuplicateRecordError";
+
+	constructor(
+		public readonly table: Table<name, columns, primaryKey>,
+		public readonly column: ColumnNameFromColumns<columns>,
+		public readonly value: unknown,
+	) {
+		super(`${table.name} record with ${column} ${JSON.stringify(value)} already exists`);
+	}
+}
+
+export class ForeignKeyError<
+	name extends string,
+	columns extends ColumnSchemas,
+	primaryKey extends readonly ColumnNameFromColumns<columns>[],
+> extends Error {
+	override name = "ForeignKeyError";
+
+	constructor(
+		public readonly table: Table<name, columns, primaryKey>,
+		public readonly column: ColumnNameFromColumns<columns>,
+		public readonly value: unknown,
+	) {
+		super(
+			`${table.name} foreign key constraint failed for ${column} with value ${JSON.stringify(value)}`,
+		);
+	}
+}

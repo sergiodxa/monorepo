@@ -8,6 +8,10 @@ import { createTable } from "remix/data-table";
 import { RecordNotFoundError } from "~/lib/db-errors";
 
 export default class Subject {
+	static UnverifiedEmailError = class extends Error {
+		override name = "UnverifiedEmailError";
+	};
+
 	static table = createTable({
 		name: "subjects",
 		primaryKey: ["id"],
@@ -31,6 +35,10 @@ export default class Subject {
 
 	static show(db: Database, id: PrimaryKeyInput<typeof Subject.table>) {
 		return db.findOne(Subject.table, { where: { id } });
+	}
+
+	static findByEmail(db: Database, email: string) {
+		return db.findOne(Subject.table, { where: { email } });
 	}
 
 	static async register(db: Database, data: { email: string; username: string }) {
@@ -78,6 +86,21 @@ export default class Subject {
 		let subject = await db.findOne(Subject.table, { where: { id } });
 		if (!subject) throw new RecordNotFoundError(Subject.table, id);
 		return await db.delete(Subject.table, id);
+	}
+
+	static async cleanupUnverified(db: Database, olderThan: number) {
+		let cutoffDate = new Date(Date.now() - olderThan).toISOString();
+		let unverifiedSubjects = await db.findMany(Subject.table, {
+			where: { emailVerifiedAt: null },
+		});
+
+		let toDelete = unverifiedSubjects.filter((subject) => subject.createdAt < cutoffDate);
+
+		for (let subject of toDelete) {
+			await db.delete(Subject.table, { id: subject.id });
+		}
+
+		return toDelete.length;
 	}
 }
 
