@@ -217,11 +217,26 @@ export default {
 		// Create default hostname
 		await Hostname.createDefault(db, tenant.id, slug, PLATFORM_DOMAIN);
 
-		// Initialize the tenant DO by calling it
-		let stub = env.TENANT.getByName(tenant.id);
+		// Initialize the tenant DO by calling it (with location hint for region)
+		let stub = env.TENANT.get(env.TENANT.idFromName(tenant.id), {
+			locationHint: result.data.region,
+		});
 		await stub.fetch("https://tenant.internal/", { method: "HEAD" });
 
-		log.info("Tenant created", { tenantId: tenant.id, slug });
+		// Create default management client via the tenant API
+		let tenantApi = new TenantApiService(tenant.id);
+		let managementClient = await tenantApi.createClient({
+			name: "Management Client",
+			type: "m2m",
+			description: "Auto-generated management client for API access",
+			isManagementClient: true,
+		});
+
+		log.info("Tenant created with management client", {
+			tenantId: tenant.id,
+			slug,
+			managementClientId: managementClient.id,
+		});
 
 		return new Response(null, {
 			status: 302,
