@@ -12,13 +12,13 @@ export default class Session {
 		timestamps: true,
 		columns: {
 			id: s.string(),
-			subjectId: s.string(),
-			clientId: s.string(),
+			subject_id: s.string(),
+			client_id: s.string(),
 			ip: s.nullable(s.string()),
-			userAgent: s.nullable(s.string()),
-			expiresAt: s.string(),
-			createdAt: s.string(),
-			updatedAt: s.string(),
+			user_agent: s.nullable(s.string()),
+			expires_at: s.string(),
+			created_at: s.string(),
+			updated_at: s.string(),
 		},
 	});
 
@@ -31,7 +31,7 @@ export default class Session {
 	}
 
 	static listBySubject(db: Database, subjectId: string) {
-		return db.findMany(Session.table, { where: { subjectId } });
+		return db.findMany(Session.table, { where: { subject_id: subjectId } });
 	}
 
 	static async create(
@@ -49,13 +49,13 @@ export default class Session {
 
 		await db.create(Session.table, {
 			id,
-			subjectId: data.subjectId,
-			clientId: data.clientId,
+			subject_id: data.subjectId,
+			client_id: data.clientId,
 			ip: data.ip ?? null,
-			userAgent: data.userAgent ?? null,
-			expiresAt: expiresAt.toISOString(),
-			createdAt: now.toISOString(),
-			updatedAt: now.toISOString(),
+			user_agent: data.userAgent ?? null,
+			expires_at: expiresAt.toISOString(),
+			created_at: now.toISOString(),
+			updated_at: now.toISOString(),
 		});
 
 		return id;
@@ -69,7 +69,7 @@ export default class Session {
 			Session.table,
 			{ id },
 			{
-				updatedAt: new Date().toISOString(),
+				updated_at: new Date().toISOString(),
 			},
 		);
 	}
@@ -81,7 +81,7 @@ export default class Session {
 	}
 
 	static async destroyBySubject(db: Database, subjectId: string) {
-		let sessions = await db.findMany(Session.table, { where: { subjectId } });
+		let sessions = await db.findMany(Session.table, { where: { subject_id: subjectId } });
 
 		for (let session of sessions) {
 			await db.delete(Session.table, { id: session.id });
@@ -94,7 +94,7 @@ export default class Session {
 		let cutoffDate = new Date(now).toISOString();
 		let sessions = await db.findMany(Session.table);
 
-		let expiredSessions = sessions.filter((session) => session.expiresAt < cutoffDate);
+		let expiredSessions = sessions.filter((session) => session.expires_at < cutoffDate);
 
 		for (let session of expiredSessions) await db.delete(Session.table, { id: session.id });
 

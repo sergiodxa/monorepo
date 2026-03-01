@@ -16,12 +16,12 @@ export default class Secret {
 		primaryKey: ["id"],
 		columns: {
 			id: s.string(),
-			clientId: s.string(),
-			secretHash: s.string(),
+			client_id: s.string(),
+			secret_hash: s.string(),
 			name: s.nullable(s.string()),
-			lastUsedAt: s.nullable(s.string()),
-			expiresAt: s.nullable(s.string()),
-			createdAt: s.string(),
+			last_used_at: s.nullable(s.string()),
+			expires_at: s.nullable(s.string()),
+			created_at: s.string(),
 		},
 	});
 
@@ -35,13 +35,13 @@ export default class Secret {
 	}
 
 	static async list(db: Database, clientId: string) {
-		let secrets = await db.findMany(Secret.table, { where: { clientId } });
+		let secrets = await db.findMany(Secret.table, { where: { client_id: clientId } });
 		return secrets.map((secret) => ({
 			id: secret.id,
 			name: secret.name,
-			createdAt: secret.createdAt,
-			lastUsedAt: secret.lastUsedAt,
-			expiresAt: secret.expiresAt,
+			createdAt: secret.created_at,
+			lastUsedAt: secret.last_used_at,
+			expiresAt: secret.expires_at,
 		}));
 	}
 
@@ -52,32 +52,32 @@ export default class Secret {
 
 		await db.create(Secret.table, {
 			id,
-			clientId,
-			secretHash,
+			client_id: clientId,
+			secret_hash: secretHash,
 			name: name ?? null,
-			lastUsedAt: null,
-			expiresAt: expiresAt ?? null,
-			createdAt: new Date().toISOString(),
+			last_used_at: null,
+			expires_at: expiresAt ?? null,
+			created_at: new Date().toISOString(),
 		});
 
 		return { id, plainSecret };
 	}
 
 	static async verify(db: Database, clientId: string, plainSecret: string): Promise<boolean> {
-		let secrets = await db.findMany(Secret.table, { where: { clientId } });
+		let secrets = await db.findMany(Secret.table, { where: { client_id: clientId } });
 
 		for (let secret of secrets) {
-			if (secret.expiresAt && new Date(secret.expiresAt) < new Date()) {
+			if (secret.expires_at && new Date(secret.expires_at) < new Date()) {
 				continue;
 			}
 
-			let isMatch = await bcrypt.compare(plainSecret, secret.secretHash);
+			let isMatch = await bcrypt.compare(plainSecret, secret.secret_hash);
 			if (isMatch) {
 				await db.update(
 					Secret.table,
 					{ id: secret.id },
 					{
-						lastUsedAt: new Date().toISOString(),
+						last_used_at: new Date().toISOString(),
 					},
 				);
 				return true;

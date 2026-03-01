@@ -19,13 +19,13 @@ export default class Subject {
 		columns: {
 			id: s.string(),
 			email: s.string(),
-			emailVerifiedAt: s.nullable(s.string()),
-			displayName: s.nullable(s.string()),
+			email_verified_at: s.nullable(s.string()),
+			display_name: s.nullable(s.string()),
 			username: s.string(),
-			avatarUrl: s.nullable(s.string()),
+			avatar_url: s.nullable(s.string()),
 			role: s.defaulted(s.enum_(["admin", "user"]), "user"),
-			createdAt: s.string(),
-			updatedAt: s.string(),
+			created_at: s.string(),
+			updated_at: s.string(),
 		},
 	});
 
@@ -48,13 +48,13 @@ export default class Subject {
 		await db.create(Subject.table, {
 			id,
 			email: result.email,
-			emailVerifiedAt: null,
-			displayName: null,
+			email_verified_at: null,
+			display_name: null,
 			username: result.username,
-			avatarUrl: null,
+			avatar_url: null,
 			role: "user",
-			createdAt: new Date().toISOString(),
-			updatedAt: new Date().toISOString(),
+			created_at: new Date().toISOString(),
+			updated_at: new Date().toISOString(),
 		});
 
 		let subject = await db.findOne(Subject.table, { where: { id } });
@@ -67,8 +67,8 @@ export default class Subject {
 		if (!subject) throw new RecordNotFoundError(Subject.table, id);
 
 		return await db.update(Subject.table, id, {
-			emailVerifiedAt: new Date().toISOString(),
-			updatedAt: new Date().toISOString(),
+			email_verified_at: new Date().toISOString(),
+			updated_at: new Date().toISOString(),
 		});
 	}
 
@@ -81,9 +81,9 @@ export default class Subject {
 		if (!subject) throw new RecordNotFoundError(Subject.table, id);
 
 		return await db.update(Subject.table, id, {
-			displayName: data.displayName ?? subject.displayName,
-			avatarUrl: data.avatarUrl ?? subject.avatarUrl,
-			updatedAt: new Date().toISOString(),
+			display_name: data.displayName ?? subject.display_name,
+			avatar_url: data.avatarUrl ?? subject.avatar_url,
+			updated_at: new Date().toISOString(),
 		});
 	}
 
@@ -96,10 +96,10 @@ export default class Subject {
 	static async cleanupUnverified(db: Database, olderThan: number) {
 		let cutoffDate = new Date(Date.now() - olderThan).toISOString();
 		let unverifiedSubjects = await db.findMany(Subject.table, {
-			where: { emailVerifiedAt: null },
+			where: { email_verified_at: null },
 		});
 
-		let toDelete = unverifiedSubjects.filter((subject) => subject.createdAt < cutoffDate);
+		let toDelete = unverifiedSubjects.filter((subject) => subject.created_at < cutoffDate);
 
 		for (let subject of toDelete) await db.delete(Subject.table, { id: subject.id });
 

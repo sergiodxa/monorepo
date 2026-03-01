@@ -12,11 +12,11 @@ export default class Grant {
 		timestamps: true,
 		columns: {
 			id: s.string(),
-			subjectId: s.string(),
-			clientId: s.string(),
+			subject_id: s.string(),
+			client_id: s.string(),
 			scopes: s.nullable(s.string()),
-			createdAt: s.string(),
-			updatedAt: s.string(),
+			created_at: s.string(),
+			updated_at: s.string(),
 		},
 	});
 
@@ -25,7 +25,7 @@ export default class Grant {
 	}
 
 	static listBySubject(db: Database, subjectId: string) {
-		return db.findMany(Grant.table, { where: { subjectId } });
+		return db.findMany(Grant.table, { where: { subject_id: subjectId } });
 	}
 
 	static show(db: Database, id: string) {
@@ -34,18 +34,18 @@ export default class Grant {
 
 	static async findOrCreate(db: Database, subjectId: string, clientId: string) {
 		let existing = await db.findOne(Grant.table, {
-			where: { subjectId, clientId },
+			where: { subject_id: subjectId, client_id: clientId },
 		});
 
 		if (existing) return existing;
 
 		return await db.create(Grant.table, {
 			id: crypto.randomUUID(),
-			subjectId,
-			clientId,
+			subject_id: subjectId,
+			client_id: clientId,
 			scopes: null,
-			createdAt: new Date().toISOString(),
-			updatedAt: new Date().toISOString(),
+			created_at: new Date().toISOString(),
+			updated_at: new Date().toISOString(),
 		});
 	}
 

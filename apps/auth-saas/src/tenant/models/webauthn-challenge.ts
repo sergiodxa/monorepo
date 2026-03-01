@@ -22,15 +22,15 @@ export default class WebAuthnChallenge {
 			id: s.string(),
 			challenge: s.string(), // Base64URL encoded challenge
 			type: s.enum_(["registration", "authentication"]),
-			subjectId: s.nullable(s.string()), // For authentication
+			subject_id: s.nullable(s.string()), // For authentication
 			email: s.nullable(s.string()), // For registration
-			clientId: s.nullable(s.string()),
-			redirectUri: s.nullable(s.string()),
+			client_id: s.nullable(s.string()),
+			redirect_uri: s.nullable(s.string()),
 			state: s.nullable(s.string()),
 			nonce: s.nullable(s.string()),
 			scope: s.nullable(s.string()),
-			expiresAt: s.number(),
-			createdAt: s.number(),
+			expires_at: s.number(),
+			created_at: s.number(),
 		},
 	});
 
@@ -53,15 +53,15 @@ export default class WebAuthnChallenge {
 			id,
 			challenge,
 			type: "registration",
-			subjectId: null,
+			subject_id: null,
 			email: data.email,
-			clientId: data.clientId ?? null,
-			redirectUri: data.redirectUri ?? null,
+			client_id: data.clientId ?? null,
+			redirect_uri: data.redirectUri ?? null,
 			state: data.state ?? null,
 			nonce: data.nonce ?? null,
 			scope: data.scope ?? null,
-			expiresAt: now + CHALLENGE_TTL,
-			createdAt: now,
+			expires_at: now + CHALLENGE_TTL,
+			created_at: now,
 		});
 
 		return { id, challenge };
@@ -86,15 +86,15 @@ export default class WebAuthnChallenge {
 			id,
 			challenge,
 			type: "authentication",
-			subjectId: data.subjectId,
+			subject_id: data.subjectId,
 			email: null,
-			clientId: data.clientId ?? null,
-			redirectUri: data.redirectUri ?? null,
+			client_id: data.clientId ?? null,
+			redirect_uri: data.redirectUri ?? null,
 			state: data.state ?? null,
 			nonce: data.nonce ?? null,
 			scope: data.scope ?? null,
-			expiresAt: now + CHALLENGE_TTL,
-			createdAt: now,
+			expires_at: now + CHALLENGE_TTL,
+			created_at: now,
 		});
 
 		return { id, challenge };
@@ -107,7 +107,7 @@ export default class WebAuthnChallenge {
 		// Delete immediately (single-use)
 		await db.delete(WebAuthnChallenge.table, { id });
 
-		if (record.expiresAt < Date.now()) {
+		if (record.expires_at < Date.now()) {
 			throw new WebAuthnChallenge.ExpiredChallengeError();
 		}
 
@@ -126,7 +126,7 @@ export default class WebAuthnChallenge {
 	static async cleanupExpired(db: Database, now: number) {
 		let records = await db.findMany(WebAuthnChallenge.table);
 
-		let expiredRecords = records.filter((record) => record.expiresAt < now);
+		let expiredRecords = records.filter((record) => record.expires_at < now);
 
 		for (let record of expiredRecords) {
 			await db.delete(WebAuthnChallenge.table, { id: record.id });

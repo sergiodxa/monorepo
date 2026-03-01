@@ -11,20 +11,20 @@ export default class Passkey {
 		primaryKey: ["id"],
 		columns: {
 			id: s.string(),
-			subjectId: s.string(),
-			publicKey: s.string(),
+			subject_id: s.string(),
+			public_key: s.string(),
 			counter: s.number(),
-			deviceType: s.nullable(s.string()),
-			backedUp: s.defaulted(s.boolean(), false),
+			device_type: s.nullable(s.string()),
+			backed_up: s.defaulted(s.boolean(), false),
 			transports: s.nullable(s.string()),
 			name: s.nullable(s.string()),
-			createdAt: s.string(),
-			lastUsedAt: s.nullable(s.string()),
+			created_at: s.string(),
+			last_used_at: s.nullable(s.string()),
 		},
 	});
 
 	static listBySubject(db: Database, subjectId: string) {
-		return db.findMany(Passkey.table, { where: { subjectId } });
+		return db.findMany(Passkey.table, { where: { subject_id: subjectId } });
 	}
 
 	static show(db: Database, id: string) {
@@ -45,15 +45,15 @@ export default class Passkey {
 	) {
 		return await db.create(Passkey.table, {
 			id: crypto.randomUUID(),
-			subjectId: data.subjectId,
-			publicKey: data.publicKey,
+			subject_id: data.subjectId,
+			public_key: data.publicKey,
 			counter: data.counter,
-			deviceType: data.deviceType ?? null,
-			backedUp: data.backedUp ?? false,
+			device_type: data.deviceType ?? null,
+			backed_up: data.backedUp ?? false,
 			transports: data.transports ?? null,
 			name: data.name ?? null,
-			createdAt: new Date().toISOString(),
-			lastUsedAt: null,
+			created_at: new Date().toISOString(),
+			last_used_at: null,
 		});
 	}
 
@@ -66,7 +66,7 @@ export default class Passkey {
 			{ id },
 			{
 				counter,
-				lastUsedAt: new Date().toISOString(),
+				last_used_at: new Date().toISOString(),
 			},
 		);
 	}

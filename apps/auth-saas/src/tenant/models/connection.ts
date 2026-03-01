@@ -12,22 +12,22 @@ export default class Connection {
 		timestamps: true,
 		columns: {
 			id: s.string(),
-			subjectId: s.string(),
+			subject_id: s.string(),
 			provider: s.string(),
-			providerUserId: s.string(),
-			accessToken: s.nullable(s.string()),
-			refreshToken: s.nullable(s.string()),
-			createdAt: s.string(),
-			updatedAt: s.string(),
+			provider_user_id: s.string(),
+			access_token: s.nullable(s.string()),
+			refresh_token: s.nullable(s.string()),
+			created_at: s.string(),
+			updated_at: s.string(),
 		},
 	});
 
 	static listBySubject(db: Database, subjectId: string) {
-		return db.findMany(Connection.table, { where: { subjectId } });
+		return db.findMany(Connection.table, { where: { subject_id: subjectId } });
 	}
 
 	static findByProvider(db: Database, provider: string, providerUserId: string) {
-		return db.findOne(Connection.table, { where: { provider, providerUserId } });
+		return db.findOne(Connection.table, { where: { provider, provider_user_id: providerUserId } });
 	}
 
 	static async create(
@@ -42,13 +42,13 @@ export default class Connection {
 	) {
 		return await db.create(Connection.table, {
 			id: crypto.randomUUID(),
-			subjectId: data.subjectId,
+			subject_id: data.subjectId,
 			provider: data.provider,
-			providerUserId: data.providerUserId,
-			accessToken: data.accessToken ?? null,
-			refreshToken: data.refreshToken ?? null,
-			createdAt: new Date().toISOString(),
-			updatedAt: new Date().toISOString(),
+			provider_user_id: data.providerUserId,
+			access_token: data.accessToken ?? null,
+			refresh_token: data.refreshToken ?? null,
+			created_at: new Date().toISOString(),
+			updated_at: new Date().toISOString(),
 		});
 	}
 
@@ -67,9 +67,9 @@ export default class Connection {
 			Connection.table,
 			{ id },
 			{
-				accessToken: data.accessToken ?? connection.accessToken,
-				refreshToken: data.refreshToken ?? connection.refreshToken,
-				updatedAt: new Date().toISOString(),
+				access_token: data.accessToken ?? connection.access_token,
+				refresh_token: data.refreshToken ?? connection.refresh_token,
+				updated_at: new Date().toISOString(),
 			},
 		);
 	}

@@ -19,17 +19,17 @@ export default class AuthorizationCode {
 		primaryKey: ["code"],
 		columns: {
 			code: s.string(),
-			clientId: s.string(),
-			subjectId: s.string(),
-			sessionId: s.string(),
-			redirectUri: s.string(),
+			client_id: s.string(),
+			subject_id: s.string(),
+			session_id: s.string(),
+			redirect_uri: s.string(),
 			scope: s.nullable(s.string()), // space-separated
 			nonce: s.nullable(s.string()),
-			pkceChallenge: s.nullable(s.string()),
-			pkceMethod: s.nullable(s.enum_(["S256", "plain"])),
-			authTime: s.number(), // Unix timestamp in seconds
-			expiresAt: s.number(), // Unix timestamp in ms
-			createdAt: s.number(), // Unix timestamp in ms
+			pkce_challenge: s.nullable(s.string()),
+			pkce_method: s.nullable(s.enum_(["S256", "plain"])),
+			auth_time: s.number(), // Unix timestamp in seconds
+			expires_at: s.number(), // Unix timestamp in ms
+			created_at: s.number(), // Unix timestamp in ms
 		},
 	});
 
@@ -51,17 +51,17 @@ export default class AuthorizationCode {
 
 		await db.create(AuthorizationCode.table, {
 			code,
-			clientId: data.clientId,
-			subjectId: data.subjectId,
-			sessionId: data.sessionId,
-			redirectUri: data.redirectUri,
+			client_id: data.clientId,
+			subject_id: data.subjectId,
+			session_id: data.sessionId,
+			redirect_uri: data.redirectUri,
 			scope: data.scope?.join(" ") ?? null,
 			nonce: data.nonce ?? null,
-			pkceChallenge: data.pkce?.challenge ?? null,
-			pkceMethod: data.pkce?.method ?? null,
-			authTime,
-			expiresAt: now + AuthorizationCode.TTL,
-			createdAt: now,
+			pkce_challenge: data.pkce?.challenge ?? null,
+			pkce_method: data.pkce?.method ?? null,
+			auth_time: authTime,
+			expires_at: now + AuthorizationCode.TTL,
+			created_at: now,
 		});
 
 		return code;
@@ -76,31 +76,31 @@ export default class AuthorizationCode {
 		await db.delete(AuthorizationCode.table, { code });
 
 		// Check expiration
-		if (record.expiresAt < Date.now()) {
+		if (record.expires_at < Date.now()) {
 			throw new AuthorizationCode.ExpiredCodeError();
 		}
 
 		return {
-			clientId: record.clientId,
-			subjectId: record.subjectId,
-			sessionId: record.sessionId,
-			redirectUri: record.redirectUri,
+			clientId: record.client_id,
+			subjectId: record.subject_id,
+			sessionId: record.session_id,
+			redirectUri: record.redirect_uri,
 			scope: record.scope?.split(" ") ?? [],
 			nonce: record.nonce,
-			pkce: record.pkceChallenge
+			pkce: record.pkce_challenge
 				? {
-						challenge: record.pkceChallenge,
-						method: record.pkceMethod as "S256" | "plain",
+						challenge: record.pkce_challenge,
+						method: record.pkce_method as "S256" | "plain",
 					}
 				: null,
-			authTime: record.authTime,
+			authTime: record.auth_time,
 		};
 	}
 
 	static async cleanupExpired(db: Database, now: number) {
 		let records = await db.findMany(AuthorizationCode.table);
 
-		let expiredRecords = records.filter((record) => record.expiresAt < now);
+		let expiredRecords = records.filter((record) => record.expires_at < now);
 
 		for (let record of expiredRecords) {
 			await db.delete(AuthorizationCode.table, { code: record.code });

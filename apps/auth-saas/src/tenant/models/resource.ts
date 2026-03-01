@@ -16,8 +16,8 @@ export default class Resource {
 			name: s.string(),
 			description: s.nullable(s.string()),
 			scopes: s.string(),
-			createdAt: s.string(),
-			updatedAt: s.string(),
+			created_at: s.string(),
+			updated_at: s.string(),
 		},
 	});
 
@@ -50,8 +50,8 @@ export default class Resource {
 			name: data.name,
 			description: data.description ?? null,
 			scopes: JSON.stringify(data.scopes),
-			createdAt: now,
-			updatedAt: now,
+			created_at: now,
+			updated_at: now,
 		});
 	}
 
@@ -73,7 +73,7 @@ export default class Resource {
 			name: data.name ?? resource.name,
 			description: data.description !== undefined ? data.description : resource.description,
 			scopes: data.scopes ? JSON.stringify(data.scopes) : resource.scopes,
-			updatedAt: new Date().toISOString(),
+			updated_at: new Date().toISOString(),
 		});
 	}
 

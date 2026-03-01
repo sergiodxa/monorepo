@@ -15,12 +15,12 @@ export default class Brand {
 		timestamps: true,
 		columns: {
 			id: s.defaulted(s.string(), "default"),
-			logoUrl: s.nullable(s.string()),
-			primaryColor: s.nullable(s.string()),
-			backgroundColor: s.nullable(s.string()),
-			customCss: s.nullable(s.string()),
-			createdAt: s.string(),
-			updatedAt: s.string(),
+			logo_url: s.nullable(s.string()),
+			primary_color: s.nullable(s.string()),
+			background_color: s.nullable(s.string()),
+			custom_css: s.nullable(s.string()),
+			created_at: s.string(),
+			updated_at: s.string(),
 		},
 	});
 
@@ -30,19 +30,19 @@ export default class Brand {
 		if (!record) {
 			return {
 				id: "default",
-				logoUrl: null,
-				primaryColor: Brand.DEFAULTS.primaryColor,
-				backgroundColor: Brand.DEFAULTS.backgroundColor,
-				customCss: null,
-				createdAt: new Date().toISOString(),
-				updatedAt: new Date().toISOString(),
+				logo_url: null,
+				primary_color: Brand.DEFAULTS.primaryColor,
+				background_color: Brand.DEFAULTS.backgroundColor,
+				custom_css: null,
+				created_at: new Date().toISOString(),
+				updated_at: new Date().toISOString(),
 			};
 		}
 
 		return {
 			...record,
-			primaryColor: record.primaryColor ?? Brand.DEFAULTS.primaryColor,
-			backgroundColor: record.backgroundColor ?? Brand.DEFAULTS.backgroundColor,
+			primary_color: record.primary_color ?? Brand.DEFAULTS.primaryColor,
+			background_color: record.background_color ?? Brand.DEFAULTS.backgroundColor,
 		};
 	}
 
@@ -63,24 +63,25 @@ export default class Brand {
 				Brand.table,
 				{ id: "default" },
 				{
-					logoUrl: data.logoUrl !== undefined ? data.logoUrl : existing.logoUrl,
-					primaryColor: data.primaryColor !== undefined ? data.primaryColor : existing.primaryColor,
-					backgroundColor:
-						data.backgroundColor !== undefined ? data.backgroundColor : existing.backgroundColor,
-					customCss: data.customCss !== undefined ? data.customCss : existing.customCss,
-					updatedAt: now,
+					logo_url: data.logoUrl !== undefined ? data.logoUrl : existing.logo_url,
+					primary_color:
+						data.primaryColor !== undefined ? data.primaryColor : existing.primary_color,
+					background_color:
+						data.backgroundColor !== undefined ? data.backgroundColor : existing.background_color,
+					custom_css: data.customCss !== undefined ? data.customCss : existing.custom_css,
+					updated_at: now,
 				},
 			);
 		}
 
 		return await db.create(Brand.table, {
 			id: "default",
-			logoUrl: data.logoUrl ?? null,
-			primaryColor: data.primaryColor ?? null,
-			backgroundColor: data.backgroundColor ?? null,
-			customCss: data.customCss ?? null,
-			createdAt: now,
-			updatedAt: now,
+			logo_url: data.logoUrl ?? null,
+			primary_color: data.primaryColor ?? null,
+			background_color: data.backgroundColor ?? null,
+			custom_css: data.customCss ?? null,
+			created_at: now,
+			updated_at: now,
 		});
 	}
 

@@ -12,12 +12,12 @@ export default class SigningKey {
 		primaryKey: ["id"],
 		columns: {
 			id: s.string(),
-			privateKey: s.string(),
-			publicKey: s.string(),
+			private_key: s.string(),
+			public_key: s.string(),
 			algorithm: s.defaulted(s.string(), "ES256"),
-			isCurrent: s.defaulted(s.boolean(), true),
-			createdAt: s.string(),
-			expiresAt: s.nullable(s.string()),
+			is_current: s.defaulted(s.boolean(), true),
+			created_at: s.string(),
+			expires_at: s.nullable(s.string()),
 		},
 	});
 
@@ -30,16 +30,16 @@ export default class SigningKey {
 	}
 
 	static async getCurrent(db: Database): Promise<JWK.KeyPair | null> {
-		let record = await db.findOne(SigningKey.table, { where: { isCurrent: true } });
+		let record = await db.findOne(SigningKey.table, { where: { is_current: true } });
 		if (!record) return null;
 
 		// Keys are stored as PEM strings, which JWK.importKeyPair expects
 		return await JWK.importKeyPair({
 			id: record.id as `${string}-${string}-${string}-${string}-${string}`,
 			alg: JWK.Algoritm.ES256,
-			privateKey: record.privateKey,
-			publicKey: record.publicKey,
-			created: new Date(record.createdAt).getTime(),
+			privateKey: record.private_key,
+			publicKey: record.public_key,
+			created: new Date(record.created_at).getTime(),
 		});
 	}
 
@@ -51,9 +51,9 @@ export default class SigningKey {
 			let keyPair = await JWK.importKeyPair({
 				id: record.id as `${string}-${string}-${string}-${string}-${string}`,
 				alg: JWK.Algoritm.ES256,
-				privateKey: record.privateKey,
-				publicKey: record.publicKey,
-				created: new Date(record.createdAt).getTime(),
+				privateKey: record.private_key,
+				publicKey: record.public_key,
+				created: new Date(record.created_at).getTime(),
 			});
 			keyPairs.push(keyPair);
 		}
@@ -66,11 +66,11 @@ export default class SigningKey {
 		let keyPair = await JWK.importKeyPair(rawKeyPair);
 
 		let existingCurrent = await db.findMany(SigningKey.table, {
-			where: { isCurrent: true },
+			where: { is_current: true },
 		});
 
 		for (let existing of existingCurrent) {
-			await db.update(SigningKey.table, { id: existing.id }, { isCurrent: false });
+			await db.update(SigningKey.table, { id: existing.id }, { is_current: false });
 		}
 
 		let now = new Date().toISOString();
@@ -78,12 +78,12 @@ export default class SigningKey {
 		// rawKeyPair.privateKey and publicKey are already PEM strings
 		await db.create(SigningKey.table, {
 			id: rawKeyPair.id,
-			privateKey: rawKeyPair.privateKey,
-			publicKey: rawKeyPair.publicKey,
+			private_key: rawKeyPair.privateKey,
+			public_key: rawKeyPair.publicKey,
 			algorithm: "ES256",
-			isCurrent: true,
-			createdAt: now,
-			expiresAt: null,
+			is_current: true,
+			created_at: now,
+			expires_at: null,
 		});
 
 		return keyPair;
@@ -91,11 +91,11 @@ export default class SigningKey {
 
 	static async rotate(db: Database): Promise<JWK.KeyPair> {
 		let existingCurrent = await db.findMany(SigningKey.table, {
-			where: { isCurrent: true },
+			where: { is_current: true },
 		});
 
 		for (let existing of existingCurrent) {
-			await db.update(SigningKey.table, { id: existing.id }, { isCurrent: false });
+			await db.update(SigningKey.table, { id: existing.id }, { is_current: false });
 		}
 
 		let rawKeyPair = await JWK.generateKeyPair(JWK.Algoritm.ES256);
@@ -106,12 +106,12 @@ export default class SigningKey {
 		// rawKeyPair.privateKey and publicKey are already PEM strings
 		await db.create(SigningKey.table, {
 			id: rawKeyPair.id,
-			privateKey: rawKeyPair.privateKey,
-			publicKey: rawKeyPair.publicKey,
+			private_key: rawKeyPair.privateKey,
+			public_key: rawKeyPair.publicKey,
 			algorithm: "ES256",
-			isCurrent: true,
-			createdAt: now,
-			expiresAt: null,
+			is_current: true,
+			created_at: now,
+			expires_at: null,
 		});
 
 		return keyPair;
@@ -122,7 +122,7 @@ export default class SigningKey {
 		if (!signingKey) throw new RecordNotFoundError(SigningKey.table, { id });
 
 		// Don't allow deleting the current signing key
-		if (signingKey.isCurrent) {
+		if (signingKey.is_current) {
 			throw new SigningKey.CannotDeleteCurrentKeyError();
 		}
 

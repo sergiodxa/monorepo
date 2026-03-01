@@ -11,17 +11,17 @@ export default class LogoutUri {
 		primaryKey: ["id"],
 		columns: {
 			id: s.string(),
-			clientId: s.string(),
+			client_id: s.string(),
 			uri: s.string(),
 			type: s.enum_(["post_logout", "backchannel", "frontchannel"]),
-			sessionRequired: s.defaulted(s.boolean(), false),
+			session_required: s.defaulted(s.boolean(), false),
 			environment: s.nullable(s.string()),
-			createdAt: s.string(),
+			created_at: s.string(),
 		},
 	});
 
 	static async list(db: Database, clientId: string) {
-		return await db.findMany(LogoutUri.table, { where: { clientId } });
+		return await db.findMany(LogoutUri.table, { where: { client_id: clientId } });
 	}
 
 	static async create(
@@ -36,12 +36,12 @@ export default class LogoutUri {
 	) {
 		return await db.create(LogoutUri.table, {
 			id: crypto.randomUUID(),
-			clientId,
+			client_id: clientId,
 			uri: data.uri,
 			type: data.type,
-			sessionRequired: data.sessionRequired ?? false,
+			session_required: data.sessionRequired ?? false,
 			environment: data.environment ?? null,
-			createdAt: new Date().toISOString(),
+			created_at: new Date().toISOString(),
 		});
 	}
 
@@ -57,7 +57,7 @@ export default class LogoutUri {
 		type: "post_logout" | "backchannel" | "frontchannel",
 	) {
 		let logoutUris = await db.findMany(LogoutUri.table, {
-			where: { clientId },
+			where: { client_id: clientId },
 		});
 		return logoutUris.filter((logoutUri) => logoutUri.type === type);
 	}

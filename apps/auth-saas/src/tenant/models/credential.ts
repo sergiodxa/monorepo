@@ -15,16 +15,16 @@ export default class Credential {
 		timestamps: true,
 		columns: {
 			id: s.string(),
-			subjectId: s.string(),
-			passwordHash: s.string(),
-			verifiedAt: s.nullable(s.string()),
-			createdAt: s.string(),
-			updatedAt: s.string(),
+			subject_id: s.string(),
+			password_hash: s.string(),
+			verified_at: s.nullable(s.string()),
+			created_at: s.string(),
+			updated_at: s.string(),
 		},
 	});
 
 	static findBySubject(db: Database, subjectId: string) {
-		return db.findOne(Credential.table, { where: { subjectId } });
+		return db.findOne(Credential.table, { where: { subject_id: subjectId } });
 	}
 
 	static async create(db: Database, subjectId: string, password: string) {
@@ -32,18 +32,18 @@ export default class Credential {
 
 		return await db.create(Credential.table, {
 			id: crypto.randomUUID(),
-			subjectId,
-			passwordHash,
-			verifiedAt: null,
-			createdAt: new Date().toISOString(),
-			updatedAt: new Date().toISOString(),
+			subject_id: subjectId,
+			password_hash: passwordHash,
+			verified_at: null,
+			created_at: new Date().toISOString(),
+			updated_at: new Date().toISOString(),
 		});
 	}
 
 	static async verify(db: Database, subjectId: string, password: string): Promise<boolean> {
 		let credential = await this.findBySubject(db, subjectId);
 		if (!credential) throw new this.InvalidCredentialError();
-		return await bcrypt.compare(password, credential.passwordHash);
+		return await bcrypt.compare(password, credential.password_hash);
 	}
 
 	static async updatePassword(db: Database, subjectId: string, password: string) {
@@ -56,8 +56,8 @@ export default class Credential {
 			Credential.table,
 			{ id: credential.id },
 			{
-				passwordHash,
-				updatedAt: new Date().toISOString(),
+				password_hash: passwordHash,
+				updated_at: new Date().toISOString(),
 			},
 		);
 	}

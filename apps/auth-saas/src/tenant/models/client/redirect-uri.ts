@@ -15,24 +15,24 @@ export default class RedirectUri {
 		primaryKey: ["id"],
 		columns: {
 			id: s.string(),
-			clientId: s.string(),
+			client_id: s.string(),
 			uri: s.string(),
 			environment: s.nullable(s.string()),
-			createdAt: s.string(),
+			created_at: s.string(),
 		},
 	});
 
 	static async list(db: Database, clientId: string) {
-		return await db.findMany(RedirectUri.table, { where: { clientId } });
+		return await db.findMany(RedirectUri.table, { where: { client_id: clientId } });
 	}
 
 	static async create(db: Database, clientId: string, uri: string, environment?: string) {
 		return await db.create(RedirectUri.table, {
 			id: crypto.randomUUID(),
-			clientId,
+			client_id: clientId,
 			uri,
 			environment: environment ?? null,
-			createdAt: new Date().toISOString(),
+			created_at: new Date().toISOString(),
 		});
 	}
 
@@ -44,7 +44,7 @@ export default class RedirectUri {
 
 	static async validate(db: Database, clientId: string, uri: string): Promise<boolean> {
 		let redirectUris = await db.findMany(RedirectUri.table, {
-			where: { clientId },
+			where: { client_id: clientId },
 		});
 		return redirectUris.some((redirectUri) => redirectUri.uri === uri);
 	}

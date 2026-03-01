@@ -14,13 +14,13 @@ export default class Client {
 			id: s.string(),
 			name: s.string(),
 			description: s.nullable(s.string()),
-			logoUrl: s.nullable(s.string()),
+			logo_url: s.nullable(s.string()),
 			type: s.enum_(["public", "confidential", "m2m"]),
-			allowedScopes: s.nullable(s.string()),
-			allowedResources: s.nullable(s.string()),
-			isManagementClient: s.defaulted(s.boolean(), false),
-			createdAt: s.string(),
-			updatedAt: s.string(),
+			allowed_scopes: s.nullable(s.string()),
+			allowed_resources: s.nullable(s.string()),
+			is_management_client: s.defaulted(s.boolean(), false),
+			created_at: s.string(),
+			updated_at: s.string(),
 		},
 	});
 
@@ -50,13 +50,13 @@ export default class Client {
 			id: crypto.randomUUID(),
 			name: data.name,
 			description: data.description ?? null,
-			logoUrl: data.logoUrl ?? null,
+			logo_url: data.logoUrl ?? null,
 			type: data.type,
-			allowedScopes: data.allowedScopes ? JSON.stringify(data.allowedScopes) : null,
-			allowedResources: data.allowedResources ? JSON.stringify(data.allowedResources) : null,
-			isManagementClient: data.isManagementClient ?? false,
-			createdAt: now,
-			updatedAt: now,
+			allowed_scopes: data.allowedScopes ? JSON.stringify(data.allowedScopes) : null,
+			allowed_resources: data.allowedResources ? JSON.stringify(data.allowedResources) : null,
+			is_management_client: data.isManagementClient ?? false,
+			created_at: now,
+			updated_at: now,
 		});
 	}
 
@@ -79,22 +79,22 @@ export default class Client {
 		return await db.update(Client.table, id, {
 			name: data.name ?? client.name,
 			description: data.description !== undefined ? data.description : client.description,
-			logoUrl: data.logoUrl !== undefined ? data.logoUrl : client.logoUrl,
+			logo_url: data.logoUrl !== undefined ? data.logoUrl : client.logo_url,
 			type: data.type ?? client.type,
-			allowedScopes:
+			allowed_scopes:
 				data.allowedScopes !== undefined
 					? data.allowedScopes
 						? JSON.stringify(data.allowedScopes)
 						: null
-					: client.allowedScopes,
-			allowedResources:
+					: client.allowed_scopes,
+			allowed_resources:
 				data.allowedResources !== undefined
 					? data.allowedResources
 						? JSON.stringify(data.allowedResources)
 						: null
-					: client.allowedResources,
-			isManagementClient: data.isManagementClient ?? client.isManagementClient,
-			updatedAt: new Date().toISOString(),
+					: client.allowed_resources,
+			is_management_client: data.isManagementClient ?? client.is_management_client,
+			updated_at: new Date().toISOString(),
 		});
 	}
 

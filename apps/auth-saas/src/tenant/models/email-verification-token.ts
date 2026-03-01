@@ -20,10 +20,10 @@ export default class EmailVerificationToken {
 		primaryKey: ["id"],
 		columns: {
 			id: s.string(),
-			subjectId: s.string(),
+			subject_id: s.string(),
 			token: s.string(),
-			expiresAt: s.number(),
-			createdAt: s.number(),
+			expires_at: s.number(),
+			created_at: s.number(),
 		},
 	});
 
@@ -34,10 +34,10 @@ export default class EmailVerificationToken {
 
 		await db.create(EmailVerificationToken.table, {
 			id,
-			subjectId,
+			subject_id: subjectId,
 			token,
-			expiresAt: now + TOKEN_TTL,
-			createdAt: now,
+			expires_at: now + TOKEN_TTL,
+			created_at: now,
 		});
 
 		return token;
@@ -52,11 +52,11 @@ export default class EmailVerificationToken {
 		// Delete immediately (single-use)
 		await db.delete(EmailVerificationToken.table, { id: record.id });
 
-		if (record.expiresAt < Date.now()) {
+		if (record.expires_at < Date.now()) {
 			throw new EmailVerificationToken.ExpiredTokenError();
 		}
 
-		return { subjectId: record.subjectId };
+		return { subjectId: record.subject_id };
 	}
 
 	private static generateToken(): string {
@@ -71,7 +71,7 @@ export default class EmailVerificationToken {
 	static async cleanupExpired(db: Database, now: number) {
 		let records = await db.findMany(EmailVerificationToken.table);
 
-		let expiredRecords = records.filter((record) => record.expiresAt < now);
+		let expiredRecords = records.filter((record) => record.expires_at < now);
 
 		for (let record of expiredRecords) {
 			await db.delete(EmailVerificationToken.table, { id: record.id });
