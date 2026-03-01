@@ -17,6 +17,7 @@ import onboardingIndex from "./controllers/onboarding/index";
 import onboardingRegion from "./controllers/onboarding/region";
 import database from "./middleware/db";
 import session from "./middleware/session";
+import tenantOwner from "./middleware/tenant-owner";
 import routes from "./routes";
 
 export const router = createRouter({
@@ -50,7 +51,7 @@ router.map(routes, {
 						...tenants,
 
 						clients: {
-							middleware: [],
+							middleware: [tenantOwner],
 
 							actions: {
 								...clients,
@@ -60,10 +61,10 @@ router.map(routes, {
 							},
 						},
 
-						users: { middleware: [], actions: users },
+						users: { middleware: [tenantOwner], actions: users },
 
 						resources: {
-							middleware: [],
+							middleware: [tenantOwner],
 
 							actions: {
 								...resources,
