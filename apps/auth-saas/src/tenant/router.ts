@@ -22,6 +22,10 @@ import token from "./controllers/oauth/token";
 import logout from "./controllers/oidc/logout";
 import userinfo from "./controllers/oidc/userinfo";
 import verifyEmail from "./controllers/verify-email";
+import authOptions from "./controllers/webauthn/auth-options";
+import authVerify from "./controllers/webauthn/auth-verify";
+import registerOptions from "./controllers/webauthn/register-options";
+import registerVerify from "./controllers/webauthn/register-verify";
 import database from "./middleware/db";
 import logger from "./middleware/logger";
 import routes from "./routes";
@@ -37,6 +41,20 @@ export default (db: Database, requestLogger: Logger) => {
 
 		actions: {
 			verifyEmail,
+
+			webauthn: {
+				middleware: [],
+				actions: {
+					register: {
+						middleware: [],
+						actions: { options: registerOptions, verify: registerVerify },
+					},
+					auth: {
+						middleware: [],
+						actions: { options: authOptions, verify: authVerify },
+					},
+				},
+			},
 
 			oauth: {
 				middleware: [],

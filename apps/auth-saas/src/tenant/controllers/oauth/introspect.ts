@@ -1,5 +1,126 @@
-import action from "~/lib/action";
+import { isFailure } from "@pkg/result";
+import { validate } from "@pkg/validate";
+import * as s from "remix/data-schema";
 
-export default action<"POST", "/oauth/introspect">(() => {
-	return new Response("OAuth Introspect");
+import action from "~/lib/action";
+import { reject } from "~/lib/reject";
+import Client from "~/tenant/models/client";
+import Secret from "~/tenant/models/client/secret";
+import Session from "~/tenant/models/session";
+import SigningKey from "~/tenant/models/signing-key";
+import TenantMeta from "~/tenant/models/tenant-meta";
+import AccessToken from "~/tenant/values/access-token";
+
+let IntrospectSchema = s.object({
+	token: s.string(),
+	token_type_hint: s.optional(s.enum_(["access_token", "refresh_token"])),
+	client_id: s.optional(s.string()),
+	client_secret: s.optional(s.string()),
 });
+
+export default action<"POST", "/oauth/introspect">(async ({ db, formData, request }) => {
+	// Parse Basic auth if present
+	let basicAuth = parseBasicAuth(request.headers.get("authorization"));
+	let body = Object.fromEntries(formData) as Record<string, unknown>;
+
+	// Merge Basic auth credentials into body
+	if (basicAuth) {
+		body.client_id = basicAuth.clientId;
+		body.client_secret = basicAuth.clientSecret;
+	}
+
+	let result = await validate(body, IntrospectSchema);
+	if (isFailure(result)) {
+		return reject("invalid_request", "Missing or invalid parameters");
+	}
+
+	let { token, token_type_hint, client_id, client_secret } = result.data;
+
+	// Client authentication is required
+	if (!client_id || !client_secret) {
+		return reject("invalid_client", "Client authentication required", 401);
+	}
+
+	// Validate client
+	let client = await Client.show(db, { id: client_id });
+	if (!client) {
+		return reject("invalid_client", "Client not found", 401);
+	}
+
+	let secretValid = await Secret.verify(db, client.id, client_secret);
+	if (!secretValid) {
+		return reject("invalid_client", "Invalid client credentials", 401);
+	}
+
+	// Get issuer
+	let issuer = await TenantMeta.getIssuer(db);
+	if (!issuer) {
+		return jsonResponse({ active: false });
+	}
+
+	// Try refresh token (session) first if hinted or not specified
+	if (token_type_hint !== "access_token") {
+		let session = await Session.show(db, token);
+		if (session && new Date(session.expiresAt) > new Date()) {
+			return jsonResponse({
+				active: true,
+				sub: session.subjectId,
+				client_id: session.clientId,
+				exp: Math.floor(new Date(session.expiresAt).getTime() / 1000),
+				iat: Math.floor(new Date(session.createdAt).getTime() / 1000),
+				iss: `https://${issuer}`,
+				aud: session.clientId,
+				token_type: "Bearer",
+			});
+		}
+	}
+
+	// Try access token
+	try {
+		let signingKeys = await SigningKey.getAll(db);
+		if (signingKeys.length === 0) {
+			return jsonResponse({ active: false });
+		}
+
+		let accessToken = await AccessToken.verify(token, signingKeys, { issuer: `https://${issuer}` });
+
+		return jsonResponse({
+			active: true,
+			sub: accessToken.subject,
+			client_id: accessToken.audience as string,
+			exp: Math.floor(accessToken.expiresIn / 1000),
+			iat: Math.floor(accessToken.issuedAt.getTime() / 1000),
+			iss: accessToken.issuer,
+			aud: accessToken.audience,
+			token_type: "Bearer",
+			scope: accessToken.scope,
+		});
+	} catch {
+		// Token is invalid or expired
+		return jsonResponse({ active: false });
+	}
+});
+
+function jsonResponse(data: Record<string, unknown>) {
+	return new Response(JSON.stringify(data), {
+		status: 200,
+		headers: { "Content-Type": "application/json", "Cache-Control": "no-store" },
+	});
+}
+
+function parseBasicAuth(header: string | null): { clientId: string; clientSecret: string } | null {
+	if (!header || !header.startsWith("Basic ")) return null;
+
+	try {
+		let encoded = header.slice(6);
+		let decoded = atob(encoded);
+		let [clientId, clientSecret] = decoded.split(":");
+		if (!clientId || !clientSecret) return null;
+		return {
+			clientId: decodeURIComponent(clientId),
+			clientSecret: decodeURIComponent(clientSecret),
+		};
+	} catch {
+		return null;
+	}
+}

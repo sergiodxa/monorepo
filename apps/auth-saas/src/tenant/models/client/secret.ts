@@ -73,9 +73,13 @@ export default class Secret {
 
 			let isMatch = await bcrypt.compare(plainSecret, secret.secretHash);
 			if (isMatch) {
-				await db.update(Secret.table, secret.id, {
-					lastUsedAt: new Date().toISOString(),
-				});
+				await db.update(
+					Secret.table,
+					{ id: secret.id },
+					{
+						lastUsedAt: new Date().toISOString(),
+					},
+				);
 				return true;
 			}
 		}

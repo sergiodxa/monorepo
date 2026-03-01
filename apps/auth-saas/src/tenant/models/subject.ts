@@ -44,8 +44,9 @@ export default class Subject {
 	static async register(db: Database, data: { email: string; username: string }) {
 		let result = await unwrap(validate(data, Subject.table));
 
-		return await db.create(Subject.table, {
-			id: crypto.randomUUID(),
+		let id = crypto.randomUUID();
+		await db.create(Subject.table, {
+			id,
 			email: result.email,
 			emailVerifiedAt: null,
 			displayName: null,
@@ -55,6 +56,10 @@ export default class Subject {
 			createdAt: new Date().toISOString(),
 			updatedAt: new Date().toISOString(),
 		});
+
+		let subject = await db.findOne(Subject.table, { where: { id } });
+		if (!subject) throw new Error("Failed to create subject");
+		return subject;
 	}
 
 	static async verifyEmail(db: Database, id: PrimaryKeyInput<typeof Subject.table>) {

@@ -23,9 +23,13 @@ export default class SigningKey {
 		let record = await db.findOne(SigningKey.table, { where: { isCurrent: true } });
 		if (!record) return null;
 
+		// Keys are stored as PEM strings, which JWK.importKeyPair expects
 		return await JWK.importKeyPair({
-			privateKey: JSON.parse(record.privateKey) as JsonWebKey,
-			publicKey: JSON.parse(record.publicKey) as JsonWebKey,
+			id: record.id as `${string}-${string}-${string}-${string}-${string}`,
+			alg: JWK.Algoritm.ES256,
+			privateKey: record.privateKey,
+			publicKey: record.publicKey,
+			created: new Date(record.createdAt).getTime(),
 		});
 	}
 
@@ -35,8 +39,11 @@ export default class SigningKey {
 		let keyPairs: JWK.KeyPair[] = [];
 		for (let record of records) {
 			let keyPair = await JWK.importKeyPair({
-				privateKey: JSON.parse(record.privateKey) as JsonWebKey,
-				publicKey: JSON.parse(record.publicKey) as JsonWebKey,
+				id: record.id as `${string}-${string}-${string}-${string}-${string}`,
+				alg: JWK.Algoritm.ES256,
+				privateKey: record.privateKey,
+				publicKey: record.publicKey,
+				created: new Date(record.createdAt).getTime(),
 			});
 			keyPairs.push(keyPair);
 		}
@@ -58,10 +65,11 @@ export default class SigningKey {
 
 		let now = new Date().toISOString();
 
+		// rawKeyPair.privateKey and publicKey are already PEM strings
 		await db.create(SigningKey.table, {
-			id: crypto.randomUUID(),
-			privateKey: JSON.stringify(rawKeyPair.privateKey),
-			publicKey: JSON.stringify(rawKeyPair.publicKey),
+			id: rawKeyPair.id,
+			privateKey: rawKeyPair.privateKey,
+			publicKey: rawKeyPair.publicKey,
 			algorithm: "ES256",
 			isCurrent: true,
 			createdAt: now,
@@ -85,10 +93,11 @@ export default class SigningKey {
 
 		let now = new Date().toISOString();
 
+		// rawKeyPair.privateKey and publicKey are already PEM strings
 		await db.create(SigningKey.table, {
-			id: crypto.randomUUID(),
-			privateKey: JSON.stringify(rawKeyPair.privateKey),
-			publicKey: JSON.stringify(rawKeyPair.publicKey),
+			id: rawKeyPair.id,
+			privateKey: rawKeyPair.privateKey,
+			publicKey: rawKeyPair.publicKey,
 			algorithm: "ES256",
 			isCurrent: true,
 			createdAt: now,

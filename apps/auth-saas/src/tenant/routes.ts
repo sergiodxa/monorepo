@@ -3,6 +3,17 @@ import { form, get, post, resource, resources, route } from "remix/fetch-router/
 export default route({
 	verifyEmail: get("verify-email"),
 
+	webauthn: {
+		register: {
+			options: post("webauthn/register/options"),
+			verify: post("webauthn/register/verify"),
+		},
+		auth: {
+			options: post("webauthn/auth/options"),
+			verify: post("webauthn/auth/verify"),
+		},
+	},
+
 	oauth: {
 		authorize: form("authorize"),
 		token: post("oauth/token"),

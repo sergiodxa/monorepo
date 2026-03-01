@@ -39,11 +39,12 @@ export default class Session {
 			userAgent?: string | null;
 		},
 	) {
+		let id = crypto.randomUUID();
 		let now = new Date();
 		let expiresAt = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
 
-		return await db.create(Session.table, {
-			id: crypto.randomUUID(),
+		await db.create(Session.table, {
+			id,
 			subjectId: data.subjectId,
 			clientId: data.clientId,
 			ip: data.ip ?? null,
@@ -52,6 +53,8 @@ export default class Session {
 			createdAt: now.toISOString(),
 			updatedAt: now.toISOString(),
 		});
+
+		return id;
 	}
 
 	static async touch(db: Database, id: string) {
