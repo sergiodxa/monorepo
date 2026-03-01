@@ -15,10 +15,12 @@ import notFound from "./controllers/not-found";
 import onboardingFinish from "./controllers/onboarding/finish";
 import onboardingIndex from "./controllers/onboarding/index";
 import onboardingRegion from "./controllers/onboarding/region";
+import database from "./middleware/db";
+import session from "./middleware/session";
 import routes from "./routes";
 
 export const router = createRouter({
-	middleware: [],
+	middleware: [database],
 	defaultHandler: notFound,
 });
 
@@ -36,7 +38,7 @@ router.map(routes, {
 		},
 
 		dashboard: {
-			middleware: [],
+			middleware: [session],
 
 			actions: {
 				index: dashboardIndex,
