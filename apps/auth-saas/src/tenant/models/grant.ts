@@ -39,14 +39,17 @@ export default class Grant {
 
 		if (existing) return existing;
 
-		return await db.create(Grant.table, {
-			id: crypto.randomUUID(),
+		let id = crypto.randomUUID();
+		await db.create(Grant.table, {
+			id,
 			subject_id: subjectId,
 			client_id: clientId,
 			scopes: null,
 			created_at: new Date().toISOString(),
 			updated_at: new Date().toISOString(),
 		});
+
+		return (await db.findOne(Grant.table, { where: { id } }))!;
 	}
 
 	static async destroy(db: Database, id: string) {
