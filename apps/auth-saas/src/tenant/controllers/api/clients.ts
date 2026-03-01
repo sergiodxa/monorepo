@@ -2,37 +2,117 @@ import { noContent } from "@pkg/http/response";
 import { badRequest, created, notFound, ok } from "@pkg/http/response/json";
 import { isFailure } from "@pkg/result";
 import { validate } from "@pkg/validate";
+import * as s from "remix/data-schema";
 
 import action from "~/lib/action";
+import { RecordNotFoundError } from "~/lib/db-errors";
 import Client from "~/tenant/models/client";
 
-export const index = action<"GET", "/api/clients">(async (ctx) => {
-	let list = await Client.list(ctx.db);
+let CreateClientSchema = s.object({
+	name: s.string(),
+	type: s.enum_(["public", "confidential", "m2m"]),
+	description: s.optional(s.string()),
+	logoUrl: s.optional(s.string()),
+	allowedScopes: s.optional(s.string()), // JSON array as string
+	allowedResources: s.optional(s.string()), // JSON array as string
+	isManagementClient: s.optional(s.boolean()),
+});
+
+let UpdateClientSchema = s.object({
+	name: s.optional(s.string()),
+	type: s.optional(s.enum_(["public", "confidential", "m2m"])),
+	description: s.optional(s.nullable(s.string())),
+	logoUrl: s.optional(s.nullable(s.string())),
+	allowedScopes: s.optional(s.nullable(s.string())),
+	allowedResources: s.optional(s.nullable(s.string())),
+	isManagementClient: s.optional(s.boolean()),
+});
+
+export const index = action<"GET", "/api/clients">(async ({ db }) => {
+	let list = await Client.list(db);
 	return ok(list);
 });
 
 export const show = action<"GET", "/api/clients/:id">(async ({ params, db }) => {
-	let client = await Client.show(db, params.id);
+	let client = await Client.show(db, { id: params.id });
 	if (client) return ok(client);
-	return notFound({ message: "Client not found" });
+	return notFound({ error: "Client not found" });
 });
 
 export const create = action<"POST", "/api/clients">(async ({ db, formData }) => {
-	let result = await validate(formData, Client.table);
-	if (isFailure(result)) return badRequest(result.error.issues);
-	let writeResult = await Client.create(db, result.data);
+	let result = await validate(Object.fromEntries(formData), CreateClientSchema);
+	if (isFailure(result)) {
+		return badRequest({ error: "Invalid request", issues: result.error.issues });
+	}
+
+	let data = result.data;
+
+	let writeResult = await Client.create(db, {
+		name: data.name,
+		type: data.type,
+		description: data.description,
+		logoUrl: data.logoUrl,
+		allowedScopes: data.allowedScopes ? (JSON.parse(data.allowedScopes) as string[]) : undefined,
+		allowedResources: data.allowedResources
+			? (JSON.parse(data.allowedResources) as string[])
+			: undefined,
+		isManagementClient: data.isManagementClient,
+	});
+
 	return created({ id: writeResult.insertId });
 });
 
 export const update = action<"PUT", "/api/clients/:id">(async ({ params, db, formData }) => {
-	let result = await validate(formData, Client.table);
-	if (isFailure(result)) return badRequest(result.error.issues);
-	let client = await Client.update(db, params.id, result.data);
-	return ok(client);
+	let result = await validate(Object.fromEntries(formData), UpdateClientSchema);
+	if (isFailure(result)) {
+		return badRequest({ error: "Invalid request", issues: result.error.issues });
+	}
+
+	let data = result.data;
+
+	try {
+		await Client.update(
+			db,
+			{ id: params.id },
+			{
+				name: data.name,
+				type: data.type,
+				description: data.description,
+				logoUrl: data.logoUrl,
+				allowedScopes:
+					data.allowedScopes === null
+						? null
+						: data.allowedScopes
+							? (JSON.parse(data.allowedScopes) as string[])
+							: undefined,
+				allowedResources:
+					data.allowedResources === null
+						? null
+						: data.allowedResources
+							? (JSON.parse(data.allowedResources) as string[])
+							: undefined,
+				isManagementClient: data.isManagementClient,
+			},
+		);
+
+		let client = await Client.show(db, { id: params.id });
+		return ok(client);
+	} catch (error) {
+		if (error instanceof RecordNotFoundError) {
+			return notFound({ error: "Client not found" });
+		}
+		throw error;
+	}
 });
 
 export const destroy = action<"DELETE", "/api/clients/:id">(async ({ params, db }) => {
-	let deleted = await Client.destroy(db, params.id);
-	if (deleted) return noContent();
-	return badRequest({ message: "Failed to delete client" });
+	try {
+		await Client.destroy(db, { id: params.id });
+		return noContent();
+	} catch (error) {
+		if (error instanceof RecordNotFoundError) {
+			return notFound({ error: "Client not found" });
+		}
+		throw error;
+	}
 });

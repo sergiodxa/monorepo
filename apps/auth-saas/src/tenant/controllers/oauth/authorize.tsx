@@ -313,7 +313,10 @@ function LoginForm() {
 					</div>
 				)}
 
-				<form method="POST" action={routes.oauth.authorize.action.href()}>
+				<form
+					method={routes.oauth.authorize.action.method}
+					action={routes.oauth.authorize.action.href()}
+				>
 					<input type="hidden" name="client_id" value={props.clientId} />
 					<input type="hidden" name="redirect_uri" value={props.redirectUri} />
 					{props.scope && <input type="hidden" name="scope" value={props.scope} />}

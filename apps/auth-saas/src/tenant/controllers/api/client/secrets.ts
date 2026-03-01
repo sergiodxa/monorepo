@@ -1,13 +1,75 @@
+import { noContent } from "@pkg/http/response";
+import { badRequest, created, notFound, ok } from "@pkg/http/response/json";
+import { isFailure } from "@pkg/result";
+import { validate } from "@pkg/validate";
+import * as s from "remix/data-schema";
+
 import action from "~/lib/action";
+import { RecordNotFoundError } from "~/lib/db-errors";
+import Client from "~/tenant/models/client";
+import Secret from "~/tenant/models/client/secret";
 
-export const index = action<"GET", "/api/clients/:clientId/secrets">(({ params }) => {
-	return new Response(`List secrets for client ${params.clientId}`);
+let CreateSecretSchema = s.object({
+	name: s.optional(s.string()),
+	expiresAt: s.optional(s.string()), // ISO date string
 });
 
-export const create = action<"POST", "/api/clients/:clientId/secrets">(({ params }) => {
-	return new Response(`Create secret for client ${params.clientId}`);
+export const index = action<"GET", "/api/clients/:clientId/secrets">(async ({ params, db }) => {
+	// Verify client exists
+	let client = await Client.show(db, { id: params.clientId });
+	if (!client) {
+		return notFound({ error: "Client not found" });
+	}
+
+	let secrets = await Secret.list(db, params.clientId);
+	return ok(secrets);
 });
 
-export const destroy = action<"DELETE", "/api/clients/:clientId/secrets/:id">(({ params }) => {
-	return new Response(`Delete secret ${params.id} for client ${params.clientId}`);
-});
+export const create = action<"POST", "/api/clients/:clientId/secrets">(
+	async ({ params, db, formData }) => {
+		// Verify client exists
+		let client = await Client.show(db, { id: params.clientId });
+		if (!client) {
+			return notFound({ error: "Client not found" });
+		}
+
+		let result = await validate(Object.fromEntries(formData), CreateSecretSchema);
+		if (isFailure(result)) {
+			return badRequest({ error: "Invalid request", issues: result.error.issues });
+		}
+
+		let { id, plainSecret } = await Secret.create(
+			db,
+			params.clientId,
+			result.data.name,
+			result.data.expiresAt,
+		);
+
+		// Return the plain secret only once - it cannot be retrieved later
+		return created({
+			id,
+			secret: plainSecret,
+			message: "Store this secret securely. It cannot be retrieved again.",
+		});
+	},
+);
+
+export const destroy = action<"DELETE", "/api/clients/:clientId/secrets/:id">(
+	async ({ params, db }) => {
+		// Verify client exists
+		let client = await Client.show(db, { id: params.clientId });
+		if (!client) {
+			return notFound({ error: "Client not found" });
+		}
+
+		try {
+			await Secret.destroy(db, { id: params.id });
+			return noContent();
+		} catch (error) {
+			if (error instanceof RecordNotFoundError) {
+				return notFound({ error: "Secret not found" });
+			}
+			throw error;
+		}
+	},
+);
