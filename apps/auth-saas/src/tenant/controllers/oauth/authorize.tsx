@@ -73,7 +73,7 @@ export default form<"/authorize">({
 			} = result.data;
 
 			// Validate client exists
-			let client = await Client.show(db, { id: client_id });
+			let client = await Client.show(db, client_id);
 			if (!client) {
 				log.error("Client not found", { client_id });
 				return renderError("Invalid client_id");
@@ -129,7 +129,7 @@ export default form<"/authorize">({
 			} = result.data;
 
 			// Validate client
-			let client = await Client.show(db, { id: client_id });
+			let client = await Client.show(db, client_id);
 			if (!client) {
 				return renderError("Invalid client");
 			}

@@ -22,7 +22,7 @@ export const index = action<"GET", "/api/subjects">(async ({ db, logger }) => {
 
 export const show = action<"GET", "/api/subjects/:id">(async ({ db, params, logger }) => {
 	let log = logger.loader("/api/subjects/:id");
-	let subject = await Subject.show(db, { id: params.id });
+	let subject = await Subject.show(db, params.id);
 	if (!subject) {
 		log.info("Subject not found", { subjectId: params.id });
 		return notFound({ error: "Subject not found" });
@@ -42,8 +42,8 @@ export const update = action<"PUT", "/api/subjects/:id">(
 		}
 
 		try {
-			await Subject.update(db, { id: params.id }, result.data);
-			let subject = await Subject.show(db, { id: params.id });
+			await Subject.update(db, params.id, result.data);
+			let subject = await Subject.show(db, params.id);
 			log.info("Subject updated", { subjectId: params.id });
 			return ok(subject);
 		} catch (error) {
@@ -59,7 +59,7 @@ export const update = action<"PUT", "/api/subjects/:id">(
 export const destroy = action<"DELETE", "/api/subjects/:id">(async ({ db, params, logger }) => {
 	let log = logger.action("/api/subjects/:id");
 	try {
-		await Subject.destroy(db, { id: params.id });
+		await Subject.destroy(db, params.id);
 		log.info("Subject deleted", { subjectId: params.id });
 		return noContent();
 	} catch (error) {
@@ -75,7 +75,7 @@ export const verifyEmail = action<"POST", "/api/subjects/:id/verify-email">(
 	async ({ params, db, logger }) => {
 		let log = logger.action("/api/subjects/:id/verify-email");
 		try {
-			await Subject.verifyEmail(db, { id: params.id });
+			await Subject.verifyEmail(db, params.id);
 			log.info("Email verified", { subjectId: params.id });
 			return ok({ message: "Email verified" });
 		} catch (error) {

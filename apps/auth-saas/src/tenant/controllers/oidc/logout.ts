@@ -86,7 +86,7 @@ export default action<"GET", "/oidc/logout">(async ({ db, request, logger }) => 
 	}
 
 	// Validate client exists
-	let client = clientId ? await Client.show(db, { id: clientId }) : null;
+	let client = clientId ? await Client.show(db, clientId) : null;
 	if (clientId && !client) {
 		log.info("Client not found", { clientId });
 		return reject("invalid_client", "Client not found");
@@ -104,7 +104,7 @@ export default action<"GET", "/oidc/logout">(async ({ db, request, logger }) => 
 
 	// Delete sessions for the subject
 	if (subjectId) {
-		let subject = await Subject.show(db, { id: subjectId });
+		let subject = await Subject.show(db, subjectId);
 		if (subject) {
 			await Session.destroyBySubject(db, subject.id);
 			log.info("Sessions destroyed for subject", { subjectId: subject.id });

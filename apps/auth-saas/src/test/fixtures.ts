@@ -22,8 +22,8 @@ export async function createSubject(
 	let subject = await Subject.register(db, { email, username });
 
 	if (overrides.verified) {
-		await Subject.verifyEmail(db, { id: subject.id });
-		subject = (await Subject.show(db, { id: subject.id }))!;
+		await Subject.verifyEmail(db, subject.id);
+		subject = (await Subject.show(db, subject.id))!;
 	}
 
 	return subject;

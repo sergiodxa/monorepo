@@ -1,4 +1,4 @@
-import type { Database, PrimaryKeyInput } from "remix/data-table";
+import type { Database } from "remix/data-table";
 
 import * as s from "remix/data-schema";
 import { createTable } from "remix/data-table";
@@ -36,10 +36,10 @@ export default class RedirectUri {
 		});
 	}
 
-	static async destroy(db: Database, id: PrimaryKeyInput<typeof RedirectUri.table>) {
+	static async destroy(db: Database, id: string) {
 		let redirectUri = await db.findOne(RedirectUri.table, { where: { id } });
-		if (!redirectUri) throw new RecordNotFoundError(RedirectUri.table, id);
-		return await db.delete(RedirectUri.table, id);
+		if (!redirectUri) throw new RecordNotFoundError(RedirectUri.table, { id });
+		return await db.delete(RedirectUri.table, { id });
 	}
 
 	static async validate(db: Database, clientId: string, uri: string): Promise<boolean> {

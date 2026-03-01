@@ -130,7 +130,7 @@ export default action<"POST", "/webauthn/register/verify">(async ({ db, request,
 
 	// Mark email as verified (passkey registration proves email ownership)
 	if (!subject.email_verified_at) {
-		await Subject.verifyEmail(db, { id: subject.id });
+		await Subject.verifyEmail(db, subject.id);
 		log.info("Email verified via passkey registration", { subjectId: subject.id });
 	}
 

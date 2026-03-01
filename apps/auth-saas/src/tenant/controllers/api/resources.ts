@@ -41,7 +41,7 @@ export const index = action<"GET", "/api/resources">(async ({ db, logger }) => {
 
 export const show = action<"GET", "/api/resources/:id">(async ({ params, db, logger }) => {
 	let log = logger.loader("/api/resources/:id");
-	let resource = await Resource.show(db, { id: params.id });
+	let resource = await Resource.show(db, params.id);
 	if (!resource) {
 		log.info("Resource not found", { resourceId: params.id });
 		return notFound({ error: "Resource not found" });
@@ -81,8 +81,8 @@ export const update = action<"PUT", "/api/resources/:id">(
 		}
 
 		try {
-			await Resource.update(db, { id: params.id }, result.data);
-			let resource = await Resource.show(db, { id: params.id });
+			await Resource.update(db, params.id, result.data);
+			let resource = await Resource.show(db, params.id);
 			log.info("Resource updated", { resourceId: params.id });
 			return ok({
 				...resource,
@@ -101,7 +101,7 @@ export const update = action<"PUT", "/api/resources/:id">(
 export const destroy = action<"DELETE", "/api/resources/:id">(async ({ params, db, logger }) => {
 	let log = logger.action("/api/resources/:id");
 	try {
-		await Resource.destroy(db, { id: params.id });
+		await Resource.destroy(db, params.id);
 		log.info("Resource deleted", { resourceId: params.id });
 		return noContent();
 	} catch (error) {

@@ -10,7 +10,7 @@ import Subject from "~/tenant/models/subject";
 export const index = action<"GET", "/api/subjects/:id/grants">(async ({ db, params, logger }) => {
 	let log = logger.loader("/api/subjects/:id/grants");
 
-	let subject = await Subject.show(db, { id: params.id });
+	let subject = await Subject.show(db, params.id);
 	if (!subject) {
 		log.info("Subject not found", { subjectId: params.id });
 		return notFound({ error: "Subject not found" });
@@ -20,7 +20,7 @@ export const index = action<"GET", "/api/subjects/:id/grants">(async ({ db, para
 
 	let enrichedGrants = await Promise.all(
 		grants.map(async (grant) => {
-			let client = await Client.show(db, { id: grant.client_id });
+			let client = await Client.show(db, grant.client_id);
 			return {
 				id: grant.id,
 				client: client ? { id: client.id, name: client.name } : null,
@@ -40,7 +40,7 @@ export const destroy = action<"DELETE", "/api/subjects/:id/grants/:grantId">(
 	async ({ db, params, logger }) => {
 		let log = logger.action("/api/subjects/:id/grants/:grantId");
 
-		let subject = await Subject.show(db, { id: params.id });
+		let subject = await Subject.show(db, params.id);
 		if (!subject) {
 			log.info("Subject not found", { subjectId: params.id });
 			return notFound({ error: "Subject not found" });

@@ -19,7 +19,7 @@ export const index = action<"GET", "/api/clients/:clientId/secrets">(
 		let log = logger.loader("/api/clients/:clientId/secrets");
 
 		// Verify client exists
-		let client = await Client.show(db, { id: params.clientId });
+		let client = await Client.show(db, params.clientId);
 		if (!client) {
 			log.info("Client not found", { clientId: params.clientId });
 			return notFound({ error: "Client not found" });
@@ -36,7 +36,7 @@ export const create = action<"POST", "/api/clients/:clientId/secrets">(
 		let log = logger.action("/api/clients/:clientId/secrets");
 
 		// Verify client exists
-		let client = await Client.show(db, { id: params.clientId });
+		let client = await Client.show(db, params.clientId);
 		if (!client) {
 			log.info("Client not found", { clientId: params.clientId });
 			return notFound({ error: "Client not found" });
@@ -71,14 +71,14 @@ export const destroy = action<"DELETE", "/api/clients/:clientId/secrets/:id">(
 		let log = logger.action("/api/clients/:clientId/secrets/:id");
 
 		// Verify client exists
-		let client = await Client.show(db, { id: params.clientId });
+		let client = await Client.show(db, params.clientId);
 		if (!client) {
 			log.info("Client not found", { clientId: params.clientId });
 			return notFound({ error: "Client not found" });
 		}
 
 		try {
-			await Secret.destroy(db, { id: params.id });
+			await Secret.destroy(db, params.id);
 			log.info("Secret deleted", { clientId: params.clientId, secretId: params.id });
 			return noContent();
 		} catch (error) {

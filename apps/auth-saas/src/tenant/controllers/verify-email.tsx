@@ -24,7 +24,7 @@ export default action<"GET", "/verify-email">(async ({ db, request, logger }) =>
 
 	try {
 		let { subjectId } = await EmailVerificationToken.consume(db, token);
-		await Subject.verifyEmail(db, { id: subjectId });
+		await Subject.verifyEmail(db, subjectId);
 
 		log.info("Email verified", { subjectId });
 

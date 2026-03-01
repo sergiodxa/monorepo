@@ -50,7 +50,7 @@ export default action<"POST", "/oauth/introspect">(async ({ db, formData, reques
 	}
 
 	// Validate client
-	let client = await Client.show(db, { id: client_id });
+	let client = await Client.show(db, client_id);
 	if (!client) {
 		log.info("Client not found", { clientId: client_id });
 		return reject("invalid_client", "Client not found", 401);

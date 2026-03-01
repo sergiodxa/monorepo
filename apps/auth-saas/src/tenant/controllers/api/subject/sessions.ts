@@ -9,7 +9,7 @@ import Subject from "~/tenant/models/subject";
 export const index = action<"GET", "/api/subjects/:id/sessions">(async ({ db, params, logger }) => {
 	let log = logger.loader("/api/subjects/:id/sessions");
 
-	let subject = await Subject.show(db, { id: params.id });
+	let subject = await Subject.show(db, params.id);
 	if (!subject) {
 		log.info("Subject not found", { subjectId: params.id });
 		return notFound({ error: "Subject not found" });
@@ -36,7 +36,7 @@ export const destroy = action<"DELETE", "/api/subjects/:id/sessions/:sessionId">
 	async ({ db, params, logger }) => {
 		let log = logger.action("/api/subjects/:id/sessions/:sessionId");
 
-		let subject = await Subject.show(db, { id: params.id });
+		let subject = await Subject.show(db, params.id);
 		if (!subject) {
 			log.info("Subject not found", { subjectId: params.id });
 			return notFound({ error: "Subject not found" });

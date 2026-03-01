@@ -69,7 +69,7 @@ export default action<"POST", "/webauthn/auth/verify">(async ({ db, request, log
 	}
 
 	// Get subject
-	let subject = await Subject.show(db, { id: challenge.subject_id });
+	let subject = await Subject.show(db, challenge.subject_id);
 	if (!subject) {
 		log.info("Subject not found", { subjectId: challenge.subject_id, challengeId });
 		return badRequest({ error: "User not found" });

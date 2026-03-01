@@ -37,7 +37,7 @@ export const index = action<"GET", "/api/clients">(async ({ db, logger }) => {
 
 export const show = action<"GET", "/api/clients/:id">(async ({ params, db, logger }) => {
 	let log = logger.loader("/api/clients/:id");
-	let client = await Client.show(db, { id: params.id });
+	let client = await Client.show(db, params.id);
 	if (client) {
 		log.info("Client retrieved", { clientId: params.id });
 		return ok(client);
@@ -83,21 +83,17 @@ export const update = action<"PUT", "/api/clients/:id">(async ({ params, db, req
 	let data = result.data;
 
 	try {
-		await Client.update(
-			db,
-			{ id: params.id },
-			{
-				name: data.name,
-				type: data.type,
-				description: data.description,
-				logoUrl: data.logoUrl,
-				allowedScopes: data.allowedScopes,
-				allowedResources: data.allowedResources,
-				isManagementClient: data.isManagementClient,
-			},
-		);
+		await Client.update(db, params.id, {
+			name: data.name,
+			type: data.type,
+			description: data.description,
+			logoUrl: data.logoUrl,
+			allowedScopes: data.allowedScopes,
+			allowedResources: data.allowedResources,
+			isManagementClient: data.isManagementClient,
+		});
 
-		let client = await Client.show(db, { id: params.id });
+		let client = await Client.show(db, params.id);
 		log.info("Client updated", { clientId: params.id });
 		return ok(client);
 	} catch (error) {
@@ -112,7 +108,7 @@ export const update = action<"PUT", "/api/clients/:id">(async ({ params, db, req
 export const destroy = action<"DELETE", "/api/clients/:id">(async ({ params, db, logger }) => {
 	let log = logger.action("/api/clients/:id");
 	try {
-		await Client.destroy(db, { id: params.id });
+		await Client.destroy(db, params.id);
 		log.info("Client deleted", { clientId: params.id });
 		return noContent();
 	} catch (error) {

@@ -57,7 +57,7 @@ export default action<"GET", "/userinfo">(async ({ db, request, logger }) => {
 	log.info("Access token verified", { subjectId: accessToken.subject });
 
 	// Get subject
-	let subject = await Subject.show(db, { id: accessToken.subject });
+	let subject = await Subject.show(db, accessToken.subject);
 	if (!subject) {
 		log.info("Subject not found", { subjectId: accessToken.subject });
 		return reject("invalid_token", "Subject not found");

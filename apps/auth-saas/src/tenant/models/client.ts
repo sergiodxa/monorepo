@@ -1,4 +1,4 @@
-import type { Database, PrimaryKeyInput } from "remix/data-table";
+import type { Database } from "remix/data-table";
 
 import * as s from "remix/data-schema";
 import { createTable } from "remix/data-table";
@@ -28,7 +28,7 @@ export default class Client {
 		return await db.findMany(Client.table);
 	}
 
-	static async show(db: Database, id: PrimaryKeyInput<typeof Client.table>) {
+	static async show(db: Database, id: string) {
 		return await db.findOne(Client.table, { where: { id } });
 	}
 
@@ -62,7 +62,7 @@ export default class Client {
 
 	static async update(
 		db: Database,
-		id: PrimaryKeyInput<typeof Client.table>,
+		id: string,
 		data: {
 			name?: string;
 			description?: string | null;
@@ -74,33 +74,37 @@ export default class Client {
 		},
 	) {
 		let client = await db.findOne(Client.table, { where: { id } });
-		if (!client) throw new RecordNotFoundError(Client.table, id);
+		if (!client) throw new RecordNotFoundError(Client.table, { id });
 
-		return await db.update(Client.table, id, {
-			name: data.name ?? client.name,
-			description: data.description !== undefined ? data.description : client.description,
-			logo_url: data.logoUrl !== undefined ? data.logoUrl : client.logo_url,
-			type: data.type ?? client.type,
-			allowed_scopes:
-				data.allowedScopes !== undefined
-					? data.allowedScopes
-						? JSON.stringify(data.allowedScopes)
-						: null
-					: client.allowed_scopes,
-			allowed_resources:
-				data.allowedResources !== undefined
-					? data.allowedResources
-						? JSON.stringify(data.allowedResources)
-						: null
-					: client.allowed_resources,
-			is_management_client: data.isManagementClient ?? client.is_management_client,
-			updated_at: new Date().toISOString(),
-		});
+		return await db.update(
+			Client.table,
+			{ id },
+			{
+				name: data.name ?? client.name,
+				description: data.description !== undefined ? data.description : client.description,
+				logo_url: data.logoUrl !== undefined ? data.logoUrl : client.logo_url,
+				type: data.type ?? client.type,
+				allowed_scopes:
+					data.allowedScopes !== undefined
+						? data.allowedScopes
+							? JSON.stringify(data.allowedScopes)
+							: null
+						: client.allowed_scopes,
+				allowed_resources:
+					data.allowedResources !== undefined
+						? data.allowedResources
+							? JSON.stringify(data.allowedResources)
+							: null
+						: client.allowed_resources,
+				is_management_client: data.isManagementClient ?? Boolean(client.is_management_client),
+				updated_at: new Date().toISOString(),
+			},
+		);
 	}
 
-	static async destroy(db: Database, id: PrimaryKeyInput<typeof Client.table>) {
+	static async destroy(db: Database, id: string) {
 		let client = await db.findOne(Client.table, { where: { id } });
-		if (!client) throw new RecordNotFoundError(Client.table, id);
-		return await db.delete(Client.table, id);
+		if (!client) throw new RecordNotFoundError(Client.table, { id });
+		return await db.delete(Client.table, { id });
 	}
 }

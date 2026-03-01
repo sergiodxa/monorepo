@@ -78,7 +78,7 @@ export default () => {
 		}
 
 		// Verify the client has management API access
-		let client = await Client.show(context.db, { id: clientId });
+		let client = await Client.show(context.db, clientId);
 		if (!client) {
 			log.info("Client not found", { clientId });
 			return unauthorized({

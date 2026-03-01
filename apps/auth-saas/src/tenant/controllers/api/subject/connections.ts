@@ -10,7 +10,7 @@ export const index = action<"GET", "/api/subjects/:id/connections">(
 	async ({ db, params, logger }) => {
 		let log = logger.loader("/api/subjects/:id/connections");
 
-		let subject = await Subject.show(db, { id: params.id });
+		let subject = await Subject.show(db, params.id);
 		if (!subject) {
 			log.info("Subject not found", { subjectId: params.id });
 			return notFound({ error: "Subject not found" });
@@ -36,7 +36,7 @@ export const destroy = action<"DELETE", "/api/subjects/:id/connections/:connecti
 	async ({ db, params, logger }) => {
 		let log = logger.action("/api/subjects/:id/connections/:connectionId");
 
-		let subject = await Subject.show(db, { id: params.id });
+		let subject = await Subject.show(db, params.id);
 		if (!subject) {
 			log.info("Subject not found", { subjectId: params.id });
 			return notFound({ error: "Subject not found" });

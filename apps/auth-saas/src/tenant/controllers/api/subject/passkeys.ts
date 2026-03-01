@@ -16,7 +16,7 @@ let UpdatePasskeySchema = s.object({
 export const index = action<"GET", "/api/subjects/:id/passkeys">(async ({ db, params, logger }) => {
 	let log = logger.loader("/api/subjects/:id/passkeys");
 
-	let subject = await Subject.show(db, { id: params.id });
+	let subject = await Subject.show(db, params.id);
 	if (!subject) {
 		log.info("Subject not found", { subjectId: params.id });
 		return notFound({ error: "Subject not found" });
@@ -43,7 +43,7 @@ export const update = action<"PUT", "/api/subjects/:id/passkeys/:passkeyId">(
 	async ({ db, params, request, logger }) => {
 		let log = logger.action("/api/subjects/:id/passkeys/:passkeyId");
 
-		let subject = await Subject.show(db, { id: params.id });
+		let subject = await Subject.show(db, params.id);
 		if (!subject) {
 			log.info("Subject not found", { subjectId: params.id });
 			return notFound({ error: "Subject not found" });
@@ -96,7 +96,7 @@ export const destroy = action<"DELETE", "/api/subjects/:id/passkeys/:passkeyId">
 	async ({ db, params, logger }) => {
 		let log = logger.action("/api/subjects/:id/passkeys/:passkeyId");
 
-		let subject = await Subject.show(db, { id: params.id });
+		let subject = await Subject.show(db, params.id);
 		if (!subject) {
 			log.info("Subject not found", { subjectId: params.id });
 			return notFound({ error: "Subject not found" });

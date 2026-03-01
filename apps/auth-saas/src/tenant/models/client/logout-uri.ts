@@ -1,4 +1,4 @@
-import type { Database, PrimaryKeyInput } from "remix/data-table";
+import type { Database } from "remix/data-table";
 
 import * as s from "remix/data-schema";
 import { createTable } from "remix/data-table";
@@ -45,10 +45,10 @@ export default class LogoutUri {
 		});
 	}
 
-	static async destroy(db: Database, id: PrimaryKeyInput<typeof LogoutUri.table>) {
+	static async destroy(db: Database, id: string) {
 		let logoutUri = await db.findOne(LogoutUri.table, { where: { id } });
-		if (!logoutUri) throw new RecordNotFoundError(LogoutUri.table, id);
-		return await db.delete(LogoutUri.table, id);
+		if (!logoutUri) throw new RecordNotFoundError(LogoutUri.table, { id });
+		return await db.delete(LogoutUri.table, { id });
 	}
 
 	static async findByType(

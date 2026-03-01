@@ -19,7 +19,7 @@ export const index = action<"GET", "/api/clients/:clientId/redirect-uris">(
 		let log = logger.loader("/api/clients/:clientId/redirect-uris");
 
 		// Verify client exists
-		let client = await Client.show(db, { id: params.clientId });
+		let client = await Client.show(db, params.clientId);
 		if (!client) {
 			log.info("Client not found", { clientId: params.clientId });
 			return notFound({ error: "Client not found" });
@@ -39,7 +39,7 @@ export const create = action<"POST", "/api/clients/:clientId/redirect-uris">(
 		let log = logger.action("/api/clients/:clientId/redirect-uris");
 
 		// Verify client exists
-		let client = await Client.show(db, { id: params.clientId });
+		let client = await Client.show(db, params.clientId);
 		if (!client) {
 			log.info("Client not found", { clientId: params.clientId });
 			return notFound({ error: "Client not found" });
@@ -71,14 +71,14 @@ export const destroy = action<"DELETE", "/api/clients/:clientId/redirect-uris/:i
 		let log = logger.action("/api/clients/:clientId/redirect-uris/:id");
 
 		// Verify client exists
-		let client = await Client.show(db, { id: params.clientId });
+		let client = await Client.show(db, params.clientId);
 		if (!client) {
 			log.info("Client not found", { clientId: params.clientId });
 			return notFound({ error: "Client not found" });
 		}
 
 		try {
-			await RedirectUri.destroy(db, { id: params.id });
+			await RedirectUri.destroy(db, params.id);
 			log.info("Redirect URI deleted", {
 				clientId: params.clientId,
 				redirectUriId: params.id,

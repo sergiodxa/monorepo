@@ -1,4 +1,4 @@
-import type { Database, PrimaryKeyInput } from "remix/data-table";
+import type { Database } from "remix/data-table";
 
 import bcrypt from "bcryptjs";
 import * as s from "remix/data-schema";
@@ -87,9 +87,9 @@ export default class Secret {
 		return false;
 	}
 
-	static async destroy(db: Database, id: PrimaryKeyInput<typeof Secret.table>) {
+	static async destroy(db: Database, id: string) {
 		let secret = await db.findOne(Secret.table, { where: { id } });
-		if (!secret) throw new RecordNotFoundError(Secret.table, id);
-		return await db.delete(Secret.table, id);
+		if (!secret) throw new RecordNotFoundError(Secret.table, { id });
+		return await db.delete(Secret.table, { id });
 	}
 }

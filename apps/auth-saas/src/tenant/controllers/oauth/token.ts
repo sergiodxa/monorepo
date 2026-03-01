@@ -102,7 +102,7 @@ async function handleAuthorizationCode(db: Database, body: Record<string, unknow
 	}
 
 	// Validate client
-	let client = await Client.show(db, { id: authzData.clientId });
+	let client = await Client.show(db, authzData.clientId);
 	if (!client) {
 		log.info("Client not found", { clientId: authzData.clientId, grantType: "authorization_code" });
 		return reject("invalid_client", "Client not found", 401);
@@ -183,7 +183,7 @@ async function handleAuthorizationCode(db: Database, body: Record<string, unknow
 	}
 
 	// Get subject
-	let subject = await Subject.show(db, { id: authzData.subjectId });
+	let subject = await Subject.show(db, authzData.subjectId);
 	if (!subject) {
 		log.info("Subject not found", {
 			clientId: client.id,
@@ -287,7 +287,7 @@ async function handleRefreshToken(db: Database, body: Record<string, unknown>, l
 	}
 
 	// Validate client
-	let client = await Client.show(db, { id: session.client_id });
+	let client = await Client.show(db, session.client_id);
 	if (!client) {
 		log.info("Client not found", { clientId: session.client_id, grantType: "refresh_token" });
 		return reject("invalid_client", "Client not found", 401);
@@ -325,7 +325,7 @@ async function handleRefreshToken(db: Database, body: Record<string, unknown>, l
 	await Session.touch(db, session.id);
 
 	// Get subject
-	let subject = await Subject.show(db, { id: session.subject_id });
+	let subject = await Subject.show(db, session.subject_id);
 	if (!subject) {
 		log.info("Subject not found", {
 			clientId: client.id,
@@ -408,7 +408,7 @@ async function handleClientCredentials(db: Database, body: Record<string, unknow
 	let { client_id, client_secret, scope, resource } = result.data;
 
 	// Validate client
-	let client = await Client.show(db, { id: client_id });
+	let client = await Client.show(db, client_id);
 	if (!client) {
 		log.info("Client not found", { clientId: client_id, grantType: "client_credentials" });
 		return reject("invalid_client", "Client not found", 401);

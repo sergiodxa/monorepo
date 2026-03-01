@@ -1,4 +1,4 @@
-import type { Database, PrimaryKeyInput } from "remix/data-table";
+import type { Database } from "remix/data-table";
 
 import * as s from "remix/data-schema";
 import { createTable } from "remix/data-table";
@@ -25,7 +25,7 @@ export default class Resource {
 		return db.findMany(Resource.table);
 	}
 
-	static show(db: Database, id: PrimaryKeyInput<typeof Resource.table>) {
+	static show(db: Database, id: string) {
 		return db.findOne(Resource.table, { where: { id } });
 	}
 
@@ -57,7 +57,7 @@ export default class Resource {
 
 	static async update(
 		db: Database,
-		id: PrimaryKeyInput<typeof Resource.table>,
+		id: string,
 		data: {
 			identifier?: string;
 			name?: string;
@@ -66,21 +66,25 @@ export default class Resource {
 		},
 	) {
 		let resource = await db.findOne(Resource.table, { where: { id } });
-		if (!resource) throw new RecordNotFoundError(Resource.table, id);
+		if (!resource) throw new RecordNotFoundError(Resource.table, { id });
 
-		return await db.update(Resource.table, id, {
-			identifier: data.identifier ?? resource.identifier,
-			name: data.name ?? resource.name,
-			description: data.description !== undefined ? data.description : resource.description,
-			scopes: data.scopes ? JSON.stringify(data.scopes) : resource.scopes,
-			updated_at: new Date().toISOString(),
-		});
+		return await db.update(
+			Resource.table,
+			{ id },
+			{
+				identifier: data.identifier ?? resource.identifier,
+				name: data.name ?? resource.name,
+				description: data.description !== undefined ? data.description : resource.description,
+				scopes: data.scopes ? JSON.stringify(data.scopes) : resource.scopes,
+				updated_at: new Date().toISOString(),
+			},
+		);
 	}
 
-	static async destroy(db: Database, id: PrimaryKeyInput<typeof Resource.table>) {
+	static async destroy(db: Database, id: string) {
 		let resource = await db.findOne(Resource.table, { where: { id } });
-		if (!resource) throw new RecordNotFoundError(Resource.table, id);
-		return await db.delete(Resource.table, id);
+		if (!resource) throw new RecordNotFoundError(Resource.table, { id });
+		return await db.delete(Resource.table, { id });
 	}
 
 	static parseScopes(resource: { scopes: string }): Array<{ name: string; description?: string }> {
