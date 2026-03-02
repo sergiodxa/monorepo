@@ -136,8 +136,8 @@ async function handleAuthorizationCode(db: Database, body: Record<string, unknow
 		}
 	}
 
-	// Validate redirect URI
-	// TODO: Check against registered redirect URIs from client/redirect-uris table
+	// Validate redirect URI matches what was stored in the authorization code
+	// (The authorize endpoint already validated it against registered URIs)
 	if (redirect_uri !== authzData.redirectUri) {
 		log.info("Redirect URI mismatch", {
 			clientId: client.id,
