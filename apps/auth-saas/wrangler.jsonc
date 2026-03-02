@@ -14,7 +14,10 @@
 
 	"assets": { "directory": "./assets", "binding": "ASSETS" },
 
-	"triggers": { "crons": [] },
+	"triggers": {
+		// Run MAU reporting job daily at 1:00 AM UTC
+		"crons": ["0 1 * * *"],
+	},
 
 	"queues": { "consumers": [], "producers": [] },
 
@@ -33,9 +36,21 @@
 
 	"ratelimits": [],
 
+	"analytics_engine_datasets": [
+		{
+			"binding": "ANALYTICS",
+			"dataset": "auth-saas-analytics",
+		},
+	],
+
 	"durable_objects": {
 		"bindings": [{ "name": "TENANT", "class_name": "Tenant" }],
 	},
 
 	"migrations": [{ "tag": "add-tenant-do", "new_sqlite_classes": ["Tenant"] }],
+
+	"vars": {
+		"PLATFORM_DOMAIN": "auth.sergiodxa.com",
+		"EMAIL_FROM": "Auth SaaS <noreply@auth.sergiodxa.com>",
+	},
 }

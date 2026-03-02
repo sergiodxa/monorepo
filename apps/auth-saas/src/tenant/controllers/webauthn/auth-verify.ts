@@ -4,6 +4,7 @@ import { validate } from "@pkg/validate";
 import { verifyAuthenticationResponse } from "@simplewebauthn/server";
 import * as s from "remix/data-schema";
 
+import AnalyticsService from "~/app/services/analytics";
 import action from "~/lib/action";
 import AuthorizationCode from "~/tenant/models/authorization-code";
 import Passkey from "~/tenant/models/passkey";
@@ -127,6 +128,12 @@ export default action<"POST", "/webauthn/auth/verify">(async ({ db, request, log
 
 	// Update passkey counter to prevent replay attacks
 	await Passkey.updateCounter(db, passkey.id, verification.authenticationInfo.newCounter);
+
+	// Track MAU for billing
+	let tenantId = await TenantMeta.getTenantId(db);
+	if (tenantId) {
+		AnalyticsService.trackAuthentication(tenantId, subject.id);
+	}
 
 	// If this is part of an OAuth flow, create session and authorization code
 	if (challenge.client_id && challenge.redirect_uri) {

@@ -5,6 +5,7 @@ import { validate } from "@pkg/validate";
 import { env } from "cloudflare:workers";
 import * as s from "remix/data-schema";
 
+import { reportMAU } from "./app/jobs/report-mau";
 import { router } from "./app/router";
 import Tenant from "./tenant";
 
@@ -57,5 +58,12 @@ export default {
 		}
 
 		return await router.fetch(request);
+	},
+
+	async scheduled(controller) {
+		// Daily MAU reporting job (runs at 1:00 AM UTC)
+		if (controller.cron === "0 1 * * *") {
+			await reportMAU(controller);
+		}
 	},
 } satisfies ExportedHandler<Cloudflare.Env>;

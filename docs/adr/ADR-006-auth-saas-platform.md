@@ -34,13 +34,24 @@
 - [x] WebAuthn server implementation (simplewebauthn integration)
 - [x] DO alarm for cleanup tasks (expired sessions, codes, challenges, tokens, unverified users)
 - [x] Email verification controller
+- [x] Email sending integration (Resend)
+  - [x] EmailService with send, sendVerificationEmail, sendPasswordResetEmail methods
+- [x] Billing integration (Polar)
+  - [x] PolarService with customer, subscription, meter, checkout, and portal methods
+- [x] MAU tracking and reporting
+  - [x] AnalyticsService for tracking events via Analytics Engine
+  - [x] trackAuthentication, trackRegistration, trackVerification, trackLogout methods
+  - [x] queryMAU, queryAllTenantsMAU for querying Analytics Engine
+  - [x] Daily MAU reporting job (scheduled handler)
+  - [x] MAU tracking in auth-verify and register-verify controllers
+- [x] Cloudflare for SaaS custom hostname provisioning
+  - [x] HostnameService with create, get, list, delete, refresh methods
+  - [x] SSL validation helpers (getValidationRecord, isActive, isPendingValidation)
 
 #### Pending
 
-- [ ] Email sending integration (Resend)
-- [ ] Billing integration (Polar)
-- [ ] MAU tracking and reporting
-- [ ] Cloudflare for SaaS custom hostname provisioning
+- [ ] Connect services to dashboard UI (billing portal, hostname validation UI)
+- [ ] Test end-to-end flows in production
 
 ## Background
 

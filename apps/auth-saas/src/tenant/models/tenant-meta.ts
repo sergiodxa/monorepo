@@ -47,4 +47,12 @@ export default class TenantMeta {
 	static async setIssuer(db: Database, issuer: string): Promise<void> {
 		return TenantMeta.set(db, TenantMeta.KEYS.ISSUER, issuer);
 	}
+
+	static async getTenantId(db: Database): Promise<string | null> {
+		return TenantMeta.get(db, TenantMeta.KEYS.TENANT_ID);
+	}
+
+	static async setTenantId(db: Database, tenantId: string): Promise<void> {
+		return TenantMeta.set(db, TenantMeta.KEYS.TENANT_ID, tenantId);
+	}
 }

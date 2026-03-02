@@ -4,6 +4,7 @@ import { validate } from "@pkg/validate";
 import { verifyRegistrationResponse } from "@simplewebauthn/server";
 import * as s from "remix/data-schema";
 
+import AnalyticsService from "~/app/services/analytics";
 import action from "~/lib/action";
 import AuthorizationCode from "~/tenant/models/authorization-code";
 import Passkey from "~/tenant/models/passkey";
@@ -132,6 +133,13 @@ export default action<"POST", "/webauthn/register/verify">(async ({ db, request,
 	if (!subject.email_verified_at) {
 		await Subject.verifyEmail(db, subject.id);
 		log.info("Email verified via passkey registration", { subjectId: subject.id });
+	}
+
+	// Track registration and first MAU for billing
+	let tenantId = await TenantMeta.getTenantId(db);
+	if (tenantId) {
+		AnalyticsService.trackRegistration(tenantId, subject.id);
+		AnalyticsService.trackAuthentication(tenantId, subject.id);
 	}
 
 	// If this is part of an OAuth flow, create session and authorization code
