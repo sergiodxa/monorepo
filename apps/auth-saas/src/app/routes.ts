@@ -3,6 +3,12 @@ import { form, get, post, resources, route } from "remix/fetch-router/routes";
 export default route({
 	index: get("/"),
 
+	api: {
+		webhooks: {
+			polar: post("/api/webhooks/polar"),
+		},
+	},
+
 	onboarding: {
 		index: form("/onboarding"),
 		region: form("/onboarding/region"),

@@ -4,20 +4,37 @@ import { env } from "cloudflare:workers";
 import { escapeHtml, layout } from "~/app/lib/html";
 import tenantOwner from "~/app/middleware/tenant-owner";
 import Subscription from "~/app/models/subscription";
+import AnalyticsService from "~/app/services/analytics";
 import form from "~/lib/form";
 
 export default form<"/dashboard/tenants/:tenantId/billing">({
 	middleware: [tenantOwner],
 
 	actions: {
-		async index({ db, tenant, logger }) {
+		async index({ db, request, tenant, logger }) {
 			let log = logger.loader(`/dashboard/tenants/${tenant.id}/billing`);
 
+			let url = new URL(request.url);
+			let showSuccess = url.searchParams.get("success") === "true";
+
 			let subscription = await Subscription.findByTenant(db, tenant.id);
+
+			// Get current month's MAU
+			let month = AnalyticsService.getCurrentMonth();
+			let mau = 0;
+			try {
+				mau = await AnalyticsService.queryMAU(tenant.id, month);
+			} catch (error) {
+				log.error("Failed to query MAU", {
+					tenantId: tenant.id,
+					error: error instanceof Error ? error.message : String(error),
+				});
+			}
 
 			log.info("Billing page loaded", {
 				tenantId: tenant.id,
 				hasSubscription: !!subscription,
+				mau,
 			});
 
 			// Format period dates
@@ -28,6 +45,11 @@ export default form<"/dashboard/tenants/:tenantId/billing">({
 				? new Date(subscription.current_period_end).toLocaleDateString()
 				: null;
 
+			// Calculate estimated cost
+			let includedMau = 1000;
+			let additionalMau = Math.max(0, mau - includedMau);
+			let estimatedCost = 5 + additionalMau * 0.01;
+
 			return html(
 				layout({
 					title: `Billing - ${tenant.name}`,
@@ -35,6 +57,17 @@ export default form<"/dashboard/tenants/:tenantId/billing">({
 					content: `
 						<h2 class="text-2xl font-bold mb-6">Billing</h2>
 						<p class="text-gray-500 mb-6">Manage your subscription and billing settings.</p>
+
+						${
+							showSuccess
+								? `
+							<div class="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
+								<p class="text-green-800 font-medium">Subscription activated successfully!</p>
+								<p class="text-green-700 text-sm mt-1">Thank you for subscribing. Your subscription is now active.</p>
+							</div>
+						`
+								: ""
+						}
 
 						<section class="bg-white rounded-lg border p-6 mb-6">
 							<h3 class="font-semibold mb-4">Current Plan</h3>
@@ -81,9 +114,33 @@ export default form<"/dashboard/tenants/:tenantId/billing">({
 
 						<section class="bg-white rounded-lg border p-6 mb-6">
 							<h3 class="font-semibold mb-4">Usage This Month</h3>
-							<div class="text-3xl font-bold mb-2">-</div>
+							<div class="text-3xl font-bold mb-2">${mau.toLocaleString()}</div>
 							<p class="text-gray-500 text-sm">Monthly Active Users</p>
-							<p class="text-gray-400 text-xs mt-2">Usage data will be available after your first billing period.</p>
+							${
+								mau > 0
+									? `
+								<div class="mt-4 pt-4 border-t">
+									<p class="text-sm text-gray-600">
+										<span class="font-medium">Included:</span> ${Math.min(mau, includedMau).toLocaleString()} MAU
+									</p>
+									${
+										additionalMau > 0
+											? `
+										<p class="text-sm text-gray-600">
+											<span class="font-medium">Additional:</span> ${additionalMau.toLocaleString()} MAU @ $0.01/each = $${(additionalMau * 0.01).toFixed(2)}
+										</p>
+									`
+											: ""
+									}
+									<p class="text-sm font-medium text-gray-900 mt-2">
+										Estimated cost: $${estimatedCost.toFixed(2)}
+									</p>
+								</div>
+							`
+									: `
+								<p class="text-gray-400 text-xs mt-2">Usage tracking will begin when users start authenticating.</p>
+							`
+							}
 						</section>
 
 						${

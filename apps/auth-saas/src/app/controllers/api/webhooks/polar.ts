@@ -1,0 +1,200 @@
+import type { JSONValue } from "@pkg/types";
+
+import { json } from "@pkg/http/response";
+import { isFailure } from "@pkg/result";
+import { validate } from "@pkg/validate";
+import { env } from "cloudflare:workers";
+import * as s from "remix/data-schema";
+
+import Subscription from "~/app/models/subscription";
+import action from "~/lib/action";
+
+/**
+ * Polar webhook event types we handle.
+ */
+type PolarEventType =
+	| "checkout.completed"
+	| "subscription.active"
+	| "subscription.canceled"
+	| "subscription.updated";
+
+/**
+ * Base webhook payload schema.
+ */
+let WebhookPayloadSchema = s.object({
+	type: s.string(),
+	data: s.object({
+		id: s.string(),
+		customer_id: s.optional(s.string()),
+		subscription_id: s.optional(s.string()),
+		status: s.optional(s.string()),
+		current_period_start: s.optional(s.string()),
+		current_period_end: s.optional(s.string()),
+		metadata: s.optional(s.record(s.string(), s.string())),
+	}),
+});
+
+/**
+ * Verify Polar webhook signature.
+ * Polar uses HMAC-SHA256 with the webhook secret.
+ */
+async function verifyWebhookSignature(
+	body: string,
+	signature: string | null,
+	secret: string,
+): Promise<boolean> {
+	if (!signature) return false;
+
+	let encoder = new TextEncoder();
+	let key = await crypto.subtle.importKey(
+		"raw",
+		encoder.encode(secret),
+		{ name: "HMAC", hash: "SHA-256" },
+		false,
+		["sign"],
+	);
+
+	let signatureBuffer = await crypto.subtle.sign("HMAC", key, encoder.encode(body));
+	let expectedSignature = Array.from(new Uint8Array(signatureBuffer))
+		.map((b) => b.toString(16).padStart(2, "0"))
+		.join("");
+
+	// Constant-time comparison
+	if (signature.length !== expectedSignature.length) return false;
+
+	let result = 0;
+	for (let i = 0; i < signature.length; i++) {
+		result |= signature.charCodeAt(i) ^ expectedSignature.charCodeAt(i);
+	}
+	return result === 0;
+}
+
+/**
+ * Polar webhook handler.
+ * Receives events from Polar for subscription lifecycle management.
+ *
+ * Events handled:
+ * - checkout.completed: Link subscription to tenant after checkout
+ * - subscription.active: Handle subscription activation
+ * - subscription.canceled: Handle subscription cancellation
+ * - subscription.updated: Sync subscription status changes
+ */
+export default action<"POST", "/api/webhooks/polar">(async ({ db, request, logger }) => {
+	let log = logger.action("/api/webhooks/polar");
+
+	// Read body as text for signature verification
+	let body = await request.text();
+
+	// Verify webhook signature (if secret is configured)
+	let signature = request.headers.get("X-Polar-Signature");
+	let webhookSecret = env.POLAR_WEBHOOK_SECRET;
+
+	if (webhookSecret) {
+		let isValid = await verifyWebhookSignature(body, signature, webhookSecret);
+		if (!isValid) {
+			log.info("Invalid webhook signature");
+			return json({ error: "Invalid signature" }, { status: 401 });
+		}
+	}
+
+	// Parse and validate payload
+	let payload: unknown;
+	try {
+		payload = JSON.parse(body);
+	} catch {
+		log.info("Invalid JSON payload");
+		return json({ error: "Invalid JSON" }, { status: 400 });
+	}
+
+	let result = await validate(payload as JSONValue, WebhookPayloadSchema);
+	if (isFailure(result)) {
+		log.info("Invalid webhook payload", { issues: result.error.issues.length });
+		return json({ error: "Invalid payload" }, { status: 400 });
+	}
+
+	let { type, data } = result.data;
+	let eventType = type as PolarEventType;
+
+	log.info("Webhook received", { type: eventType, dataId: data.id });
+
+	try {
+		switch (eventType) {
+			case "checkout.completed": {
+				// After checkout, link the subscription to the tenant
+				let tenantId = data.metadata?.tenant_id;
+				let subscriptionId = data.subscription_id;
+
+				if (tenantId && subscriptionId) {
+					await Subscription.linkPolarSubscription(db, tenantId, subscriptionId);
+					log.info("Subscription linked after checkout", { tenantId, subscriptionId });
+				} else {
+					log.info("Checkout completed but missing tenant_id or subscription_id", {
+						tenantId,
+						subscriptionId,
+					});
+				}
+				break;
+			}
+
+			case "subscription.active":
+			case "subscription.updated": {
+				// Find subscription by Polar subscription ID and sync status
+				let subscriptions = await db.findMany(Subscription.table, {
+					where: { polar_subscription_id: data.id },
+				});
+
+				if (subscriptions.length > 0) {
+					let subscription = subscriptions[0]!;
+					await db.update(
+						Subscription.table,
+						{ id: subscription.id },
+						{
+							status: (data.status as "active" | "canceled" | "past_due") ?? subscription.status,
+							current_period_start: data.current_period_start ?? subscription.current_period_start,
+							current_period_end: data.current_period_end ?? subscription.current_period_end,
+							updated_at: new Date().toISOString(),
+						},
+					);
+					log.info("Subscription status synced", {
+						subscriptionId: subscription.id,
+						status: data.status,
+					});
+				}
+				break;
+			}
+
+			case "subscription.canceled": {
+				// Find and mark subscription as canceled
+				let subscriptions = await db.findMany(Subscription.table, {
+					where: { polar_subscription_id: data.id },
+				});
+
+				if (subscriptions.length > 0) {
+					let subscription = subscriptions[0]!;
+					await db.update(
+						Subscription.table,
+						{ id: subscription.id },
+						{
+							status: "canceled",
+							updated_at: new Date().toISOString(),
+						},
+					);
+					log.info("Subscription canceled", { subscriptionId: subscription.id });
+				}
+				break;
+			}
+
+			default:
+				log.info("Unhandled webhook event type", { type: eventType });
+		}
+	} catch (error) {
+		log.error("Webhook processing failed", {
+			type: eventType,
+			error: error instanceof Error ? error.message : String(error),
+		});
+		// Return 200 to prevent retries for processing errors
+		// Polar will retry on 5xx errors
+	}
+
+	return json({ received: true });
+});

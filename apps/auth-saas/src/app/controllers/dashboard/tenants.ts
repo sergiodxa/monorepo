@@ -5,6 +5,7 @@ import { env } from "cloudflare:workers";
 import * as s from "remix/data-schema";
 
 import Hostname from "~/app/models/hostname";
+import Subscription from "~/app/models/subscription";
 import Tenant from "~/app/models/tenant";
 import { TenantApiService } from "~/app/services/tenant-api";
 import action from "~/lib/action";
@@ -235,6 +236,18 @@ export default {
 			description: "Auto-generated management client for API access",
 			isManagementClient: true,
 		});
+
+		// Create subscription with Polar customer
+		try {
+			await Subscription.create(db, tenant.id, platformSession.email, result.data.name);
+			log.info("Subscription created", { tenantId: tenant.id });
+		} catch (error) {
+			// Log but don't fail tenant creation if Polar is unavailable
+			log.error("Failed to create subscription", {
+				tenantId: tenant.id,
+				error: error instanceof Error ? error.message : String(error),
+			});
+		}
 
 		log.info("Tenant created with management client", {
 			tenantId: tenant.id,

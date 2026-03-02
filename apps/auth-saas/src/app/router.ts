@@ -1,6 +1,7 @@
 import { createRouter } from "remix/fetch-router";
 import { formData } from "remix/form-data-middleware";
 
+import polarWebhook from "./controllers/api/webhooks/polar";
 import dashboardIndex from "./controllers/dashboard/index";
 import tenants from "./controllers/dashboard/tenants";
 import billing from "./controllers/dashboard/tenants/billing";
@@ -38,6 +39,18 @@ router.map(routes, {
 
 	actions: {
 		index,
+
+		api: {
+			middleware: [],
+			actions: {
+				webhooks: {
+					middleware: [],
+					actions: {
+						polar: polarWebhook,
+					},
+				},
+			},
+		},
 
 		onboarding: {
 			middleware: [],
