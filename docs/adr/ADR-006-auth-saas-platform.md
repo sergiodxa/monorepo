@@ -2,7 +2,7 @@
 
 ## Status
 
-**In Progress** - 2026-02-26 (Updated: 2026-03-01)
+**In Progress** - 2026-02-26 (Updated: 2026-03-02)
 
 ### Implementation Progress
 
@@ -16,6 +16,7 @@
 - [x] Platform D1 schema and models (tenants, hostnames, subscriptions, mau_tracking)
 - [x] D1 database adapter for platform
 - [x] Dashboard controllers
+  - [x] Landing page with marketing content
   - [x] Onboarding page with WebAuthn authentication flow
   - [x] Tenant list/create/edit/delete
   - [x] Client management (CRUD + secrets, redirect URIs, logout URIs)
@@ -27,16 +28,19 @@
 - [x] Session middleware for platform authentication
 - [x] Tenant-owner middleware for access control
 - [x] Auto-generated management client on tenant creation
+- [x] Logger middleware for platform routes
+- [x] WebAuthn proxy endpoints for platform onboarding
+- [x] OIDC flows (authorize, token, userinfo, logout, discovery)
+- [x] WebAuthn server implementation (simplewebauthn integration)
+- [x] DO alarm for cleanup tasks (expired sessions, codes, challenges, tokens, unverified users)
+- [x] Email verification controller
 
 #### Pending
 
-- [ ] Email verification flow (Resend integration)
+- [ ] Email sending integration (Resend)
 - [ ] Billing integration (Polar)
 - [ ] MAU tracking and reporting
 - [ ] Cloudflare for SaaS custom hostname provisioning
-- [ ] WebAuthn server implementation (simplewebauthn integration)
-- [ ] Actual OIDC flows (authorize, token, userinfo, etc.)
-- [ ] DO alarm for cleanup tasks
 
 ## Background
 
