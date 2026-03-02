@@ -63,6 +63,7 @@ export default route({
 
 			branding: form("/dashboard/tenants/:tenantId/branding"),
 			hostname: form("/dashboard/tenants/:tenantId/hostname"),
+			billing: form("/dashboard/tenants/:tenantId/billing"),
 		},
 	},
 });

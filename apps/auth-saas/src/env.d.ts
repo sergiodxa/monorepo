@@ -7,6 +7,7 @@ declare namespace Cloudflare {
 		// Secrets (set via wrangler secret)
 		RESEND_API_KEY: string;
 		POLAR_ACCESS_TOKEN: string;
+		POLAR_PRODUCT_ID: string;
 		CF_API_TOKEN: string;
 		CF_ZONE_ID: string;
 		CF_ACCOUNT_ID: string;

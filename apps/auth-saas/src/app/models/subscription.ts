@@ -1,0 +1,243 @@
+import type { Database } from "remix/data-table";
+
+import * as s from "remix/data-schema";
+import { createTable } from "remix/data-table";
+
+import PolarService from "~/app/services/polar";
+
+export default class Subscription {
+	static PolarApiError = PolarService.ApiError;
+
+	static NotFoundError = class extends Error {
+		override name = "SubscriptionNotFoundError";
+		constructor(public tenantId: string) {
+			super(`Subscription for tenant ${tenantId} not found`);
+		}
+	};
+
+	static table = createTable({
+		name: "subscriptions",
+		primaryKey: ["id"],
+		timestamps: true,
+		columns: {
+			id: s.string(),
+			tenant_id: s.string(),
+			polar_customer_id: s.nullable(s.string()),
+			polar_subscription_id: s.nullable(s.string()),
+			status: s.enum_(["active", "canceled", "past_due", "unpaid", "incomplete", "trialing"]),
+			current_period_start: s.nullable(s.string()),
+			current_period_end: s.nullable(s.string()),
+			created_at: s.string(),
+			updated_at: s.string(),
+		},
+	});
+
+	/**
+	 * Get subscription by tenant ID.
+	 */
+	static findByTenant(db: Database, tenantId: string) {
+		return db.findOne(Subscription.table, { where: { tenant_id: tenantId } });
+	}
+
+	/**
+	 * Get subscription by ID.
+	 */
+	static show(db: Database, id: string) {
+		return db.findOne(Subscription.table, { where: { id } });
+	}
+
+	/**
+	 * Create a subscription record for a tenant.
+	 * Also creates a customer in Polar if not already existing.
+	 */
+	static async create(db: Database, tenantId: string, ownerEmail: string, tenantName: string) {
+		let id = crypto.randomUUID();
+		let now = new Date().toISOString();
+
+		// Create customer in Polar
+		let customer = await PolarService.createCustomer(ownerEmail, tenantName, {
+			tenant_id: tenantId,
+		});
+
+		await db.create(Subscription.table, {
+			id,
+			tenant_id: tenantId,
+			polar_customer_id: customer.id,
+			polar_subscription_id: null,
+			status: "trialing", // Start with trial
+			current_period_start: now,
+			current_period_end: null,
+			created_at: now,
+			updated_at: now,
+		});
+
+		return (await db.findOne(Subscription.table, { where: { id } }))!;
+	}
+
+	/**
+	 * Update subscription with Polar subscription details.
+	 * Called after checkout completion or webhook.
+	 */
+	static async linkPolarSubscription(db: Database, tenantId: string, polarSubscriptionId: string) {
+		let subscription = await db.findOne(Subscription.table, {
+			where: { tenant_id: tenantId },
+		});
+		if (!subscription) throw new Subscription.NotFoundError(tenantId);
+
+		// Fetch subscription details from Polar
+		let polarSub = await PolarService.getSubscription(polarSubscriptionId);
+
+		await db.update(
+			Subscription.table,
+			{ id: subscription.id },
+			{
+				polar_subscription_id: polarSubscriptionId,
+				status: polarSub.status,
+				current_period_start: polarSub.current_period_start,
+				current_period_end: polarSub.current_period_end,
+				updated_at: new Date().toISOString(),
+			},
+		);
+
+		return (await db.findOne(Subscription.table, { where: { id: subscription.id } }))!;
+	}
+
+	/**
+	 * Sync subscription status from Polar.
+	 */
+	static async syncFromPolar(db: Database, tenantId: string) {
+		let subscription = await db.findOne(Subscription.table, {
+			where: { tenant_id: tenantId },
+		});
+		if (!subscription) throw new Subscription.NotFoundError(tenantId);
+
+		if (!subscription.polar_subscription_id) {
+			// No subscription linked yet, nothing to sync
+			return subscription;
+		}
+
+		let polarSub = await PolarService.getSubscription(subscription.polar_subscription_id);
+
+		await db.update(
+			Subscription.table,
+			{ id: subscription.id },
+			{
+				status: polarSub.status,
+				current_period_start: polarSub.current_period_start,
+				current_period_end: polarSub.current_period_end,
+				updated_at: new Date().toISOString(),
+			},
+		);
+
+		return (await db.findOne(Subscription.table, { where: { id: subscription.id } }))!;
+	}
+
+	/**
+	 * Cancel subscription at period end.
+	 */
+	static async cancel(db: Database, tenantId: string) {
+		let subscription = await db.findOne(Subscription.table, {
+			where: { tenant_id: tenantId },
+		});
+		if (!subscription) throw new Subscription.NotFoundError(tenantId);
+
+		if (subscription.polar_subscription_id) {
+			await PolarService.cancelSubscription(subscription.polar_subscription_id);
+		}
+
+		await db.update(
+			Subscription.table,
+			{ id: subscription.id },
+			{
+				status: "canceled",
+				updated_at: new Date().toISOString(),
+			},
+		);
+
+		return (await db.findOne(Subscription.table, { where: { id: subscription.id } }))!;
+	}
+
+	/**
+	 * Create a checkout session URL for upgrading to a paid plan.
+	 */
+	static async createCheckoutUrl(
+		db: Database,
+		tenantId: string,
+		productId: string,
+		successUrl: string,
+	): Promise<string> {
+		let subscription = await db.findOne(Subscription.table, {
+			where: { tenant_id: tenantId },
+		});
+		if (!subscription) throw new Subscription.NotFoundError(tenantId);
+		if (!subscription.polar_customer_id) {
+			throw new Error("No Polar customer linked to this subscription");
+		}
+
+		let checkout = await PolarService.createCheckoutSession(
+			productId,
+			subscription.polar_customer_id,
+			successUrl,
+			{ tenant_id: tenantId },
+		);
+
+		return checkout.url;
+	}
+
+	/**
+	 * Create a customer portal session URL for managing subscription.
+	 */
+	static async createPortalUrl(db: Database, tenantId: string): Promise<string> {
+		let subscription = await db.findOne(Subscription.table, {
+			where: { tenant_id: tenantId },
+		});
+		if (!subscription) throw new Subscription.NotFoundError(tenantId);
+		if (!subscription.polar_customer_id) {
+			throw new Error("No Polar customer linked to this subscription");
+		}
+
+		let portal = await PolarService.createPortalSession(subscription.polar_customer_id);
+		return portal.url;
+	}
+
+	/**
+	 * Get human-readable status label.
+	 */
+	static getStatusLabel(status: string): string {
+		switch (status) {
+			case "active":
+				return "Active";
+			case "trialing":
+				return "Trial";
+			case "canceled":
+				return "Canceled";
+			case "past_due":
+				return "Past Due";
+			case "unpaid":
+				return "Unpaid";
+			case "incomplete":
+				return "Incomplete";
+			default:
+				return status;
+		}
+	}
+
+	/**
+	 * Get status badge color class.
+	 */
+	static getStatusColor(status: string): string {
+		switch (status) {
+			case "active":
+				return "bg-green-100 text-green-800";
+			case "trialing":
+				return "bg-blue-100 text-blue-800";
+			case "canceled":
+				return "bg-gray-100 text-gray-800";
+			case "past_due":
+			case "unpaid":
+				return "bg-red-100 text-red-800";
+			default:
+				return "bg-gray-100 text-gray-800";
+		}
+	}
+}

@@ -1,0 +1,191 @@
+import { html } from "@pkg/http/response";
+import { env } from "cloudflare:workers";
+
+import { escapeHtml, layout } from "~/app/lib/html";
+import tenantOwner from "~/app/middleware/tenant-owner";
+import Subscription from "~/app/models/subscription";
+import form from "~/lib/form";
+
+export default form<"/dashboard/tenants/:tenantId/billing">({
+	middleware: [tenantOwner],
+
+	actions: {
+		async index({ db, tenant, logger }) {
+			let log = logger.loader(`/dashboard/tenants/${tenant.id}/billing`);
+
+			let subscription = await Subscription.findByTenant(db, tenant.id);
+
+			log.info("Billing page loaded", {
+				tenantId: tenant.id,
+				hasSubscription: !!subscription,
+			});
+
+			// Format period dates
+			let periodStart = subscription?.current_period_start
+				? new Date(subscription.current_period_start).toLocaleDateString()
+				: null;
+			let periodEnd = subscription?.current_period_end
+				? new Date(subscription.current_period_end).toLocaleDateString()
+				: null;
+
+			return html(
+				layout({
+					title: `Billing - ${tenant.name}`,
+					tenant,
+					content: `
+						<h2 class="text-2xl font-bold mb-6">Billing</h2>
+						<p class="text-gray-500 mb-6">Manage your subscription and billing settings.</p>
+
+						<section class="bg-white rounded-lg border p-6 mb-6">
+							<h3 class="font-semibold mb-4">Current Plan</h3>
+							${
+								subscription
+									? `
+								<div class="flex items-center gap-3 mb-4">
+									<span class="text-2xl font-bold">Auth SaaS</span>
+									<span class="px-2 py-1 text-sm rounded ${Subscription.getStatusColor(subscription.status)}">
+										${Subscription.getStatusLabel(subscription.status)}
+									</span>
+								</div>
+								${
+									periodStart && periodEnd
+										? `<p class="text-gray-500 text-sm">Current period: ${escapeHtml(periodStart)} - ${escapeHtml(periodEnd)}</p>`
+										: ""
+								}
+							`
+									: `
+								<p class="text-gray-500">No subscription found. Please contact support.</p>
+							`
+							}
+						</section>
+
+						<section class="bg-white rounded-lg border p-6 mb-6">
+							<h3 class="font-semibold mb-4">Pricing</h3>
+							<div class="grid gap-4">
+								<div class="border rounded-lg p-4">
+									<div class="flex justify-between items-center mb-2">
+										<span class="font-medium">Base Plan</span>
+										<span class="text-lg font-bold">$5/month</span>
+									</div>
+									<p class="text-gray-500 text-sm">Includes 1,000 MAU</p>
+								</div>
+								<div class="border rounded-lg p-4">
+									<div class="flex justify-between items-center mb-2">
+										<span class="font-medium">Additional MAU</span>
+										<span class="text-lg font-bold">$0.01/MAU</span>
+									</div>
+									<p class="text-gray-500 text-sm">Charged based on usage above 1,000 MAU</p>
+								</div>
+							</div>
+						</section>
+
+						<section class="bg-white rounded-lg border p-6 mb-6">
+							<h3 class="font-semibold mb-4">Usage This Month</h3>
+							<div class="text-3xl font-bold mb-2">-</div>
+							<p class="text-gray-500 text-sm">Monthly Active Users</p>
+							<p class="text-gray-400 text-xs mt-2">Usage data will be available after your first billing period.</p>
+						</section>
+
+						${
+							subscription?.polar_customer_id
+								? `
+							<section class="bg-white rounded-lg border p-6">
+								<h3 class="font-semibold mb-4">Manage Subscription</h3>
+								<p class="text-gray-500 mb-4">
+									Access your billing portal to update payment methods, view invoices, or manage your subscription.
+								</p>
+								<form method="POST" action="/dashboard/tenants/${tenant.id}/billing?action=portal">
+									<button type="submit" class="bg-gray-900 text-white px-4 py-2 rounded-lg hover:bg-gray-800">
+										Open Billing Portal
+									</button>
+								</form>
+							</section>
+						`
+								: `
+							<section class="bg-blue-50 rounded-lg border border-blue-200 p-6">
+								<h3 class="font-semibold text-blue-900 mb-2">Start Your Subscription</h3>
+								<p class="text-blue-800 mb-4">
+									Subscribe to Auth SaaS to unlock all features and continue using the service.
+								</p>
+								<form method="POST" action="/dashboard/tenants/${tenant.id}/billing?action=checkout">
+									<button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">
+										Subscribe Now
+									</button>
+								</form>
+							</section>
+						`
+						}
+					`,
+				}),
+			);
+		},
+
+		async action({ request, db, tenant, logger }) {
+			let log = logger.action(`/dashboard/tenants/${tenant.id}/billing`);
+
+			let url = new URL(request.url);
+			let actionType = url.searchParams.get("action");
+
+			if (actionType === "portal") {
+				try {
+					let portalUrl = await Subscription.createPortalUrl(db, tenant.id);
+					log.info("Redirecting to billing portal", { tenantId: tenant.id });
+					return new Response(null, {
+						status: 302,
+						headers: { Location: portalUrl },
+					});
+				} catch (error) {
+					log.error("Failed to create portal session", {
+						tenantId: tenant.id,
+						error: error instanceof Error ? error.message : String(error),
+					});
+					return new Response("Failed to open billing portal", { status: 500 });
+				}
+			}
+
+			if (actionType === "checkout") {
+				try {
+					// Use env variable for product ID or fall back to placeholder
+					let productId = env.POLAR_PRODUCT_ID ?? "placeholder-product-id";
+					let successUrl = `${url.origin}/dashboard/tenants/${tenant.id}/billing?success=true`;
+
+					let checkoutUrl = await Subscription.createCheckoutUrl(
+						db,
+						tenant.id,
+						productId,
+						successUrl,
+					);
+					log.info("Redirecting to checkout", { tenantId: tenant.id });
+					return new Response(null, {
+						status: 302,
+						headers: { Location: checkoutUrl },
+					});
+				} catch (error) {
+					log.error("Failed to create checkout session", {
+						tenantId: tenant.id,
+						error: error instanceof Error ? error.message : String(error),
+					});
+					return new Response("Failed to start checkout", { status: 500 });
+				}
+			}
+
+			if (actionType === "cancel") {
+				try {
+					await Subscription.cancel(db, tenant.id);
+					log.info("Subscription canceled", { tenantId: tenant.id });
+				} catch (error) {
+					log.error("Failed to cancel subscription", {
+						tenantId: tenant.id,
+						error: error instanceof Error ? error.message : String(error),
+					});
+					return new Response("Failed to cancel subscription", { status: 500 });
+				}
+			}
+
+			return new Response(null, {
+				status: 302,
+				headers: { Location: `/dashboard/tenants/${tenant.id}/billing` },
+			});
+		},
+	},
+});

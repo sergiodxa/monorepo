@@ -74,9 +74,18 @@ export default form<"/dashboard/tenants/:tenantId/hostname">({
 														: ""
 												}
 											</div>
-											<form method="POST" action="/dashboard/tenants/${tenant.id}/hostname?action=delete&hostnameId=${h.id}" class="inline">
-												<button type="submit" class="text-red-600 hover:text-red-800 text-sm" onclick="return confirm('Remove this hostname?')">Remove</button>
-											</form>
+											<div class="flex gap-2">
+												${
+													h.status !== "active"
+														? `<form method="POST" action="/dashboard/tenants/${tenant.id}/hostname?action=refresh&hostnameId=${h.id}" class="inline">
+															<button type="submit" class="text-blue-600 hover:text-blue-800 text-sm">Check Status</button>
+														</form>`
+														: ""
+												}
+												<form method="POST" action="/dashboard/tenants/${tenant.id}/hostname?action=delete&hostnameId=${h.id}" class="inline">
+													<button type="submit" class="text-red-600 hover:text-red-800 text-sm" onclick="return confirm('Remove this hostname?')">Remove</button>
+												</form>
+											</div>
 										</li>
 									`,
 											)
@@ -121,6 +130,15 @@ export default form<"/dashboard/tenants/:tenantId/hostname">({
 						log.info("Hostname deleted", { tenantId: tenant.id, hostnameId });
 					}
 				}
+			} else if (actionType === "refresh") {
+				let hostnameId = url.searchParams.get("hostnameId");
+				if (hostnameId) {
+					let hostname = await Hostname.show(db, hostnameId);
+					if (hostname && hostname.tenant_id === tenant.id) {
+						await Hostname.refresh(db, hostnameId);
+						log.info("Hostname refreshed", { tenantId: tenant.id, hostnameId });
+					}
+				}
 			} else {
 				let formData = await request.formData();
 				let body = Object.fromEntries(formData);
@@ -131,21 +149,31 @@ export default form<"/dashboard/tenants/:tenantId/hostname">({
 					return new Response("Validation error", { status: 400 });
 				}
 
-				// Check if hostname already exists
+				// Check if hostname already exists in our database
 				let existing = await Hostname.findByHostname(db, result.data.hostname);
 				if (existing) {
 					log.info("Hostname already exists", { hostname: result.data.hostname });
 					return new Response("Hostname already in use", { status: 400 });
 				}
 
-				// Generate validation token
-				let validation = {
-					txtName: `_auth-verify.${result.data.hostname}`,
-					txtValue: `auth-saas-verify=${crypto.randomUUID()}`,
-				};
-
-				await Hostname.createCustom(db, tenant.id, result.data.hostname, validation);
-				log.info("Hostname added", { tenantId: tenant.id, hostname: result.data.hostname });
+				try {
+					// Create hostname via Cloudflare API
+					await Hostname.createCustom(db, tenant.id, result.data.hostname, tenant.region);
+					log.info("Hostname added via Cloudflare", {
+						tenantId: tenant.id,
+						hostname: result.data.hostname,
+					});
+				} catch (error) {
+					if (error instanceof Hostname.CloudflareApiError) {
+						log.error("Cloudflare API error", {
+							tenantId: tenant.id,
+							hostname: result.data.hostname,
+							error: error.message,
+						});
+						return new Response(`Cloudflare error: ${error.message}`, { status: 400 });
+					}
+					throw error;
+				}
 			}
 
 			return new Response(null, {

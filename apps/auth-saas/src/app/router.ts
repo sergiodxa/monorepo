@@ -3,6 +3,7 @@ import { formData } from "remix/form-data-middleware";
 
 import dashboardIndex from "./controllers/dashboard/index";
 import tenants from "./controllers/dashboard/tenants";
+import billing from "./controllers/dashboard/tenants/billing";
 import branding from "./controllers/dashboard/tenants/branding";
 import clients from "./controllers/dashboard/tenants/clients";
 import logoutUris from "./controllers/dashboard/tenants/clients/logout-uris";
@@ -103,6 +104,7 @@ router.map(routes, {
 
 						branding,
 						hostname,
+						billing,
 					},
 				},
 			},

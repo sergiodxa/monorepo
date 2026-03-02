@@ -122,6 +122,10 @@ export default {
 							<h3 class="font-semibold">Hostname</h3>
 							<p class="text-gray-500 text-sm">Configure custom domain</p>
 						</a>
+						<a href="/dashboard/tenants/${params.id}/billing" class="bg-white rounded-lg border p-4 hover:border-blue-500">
+							<h3 class="font-semibold">Billing</h3>
+							<p class="text-gray-500 text-sm">Manage subscription</p>
+						</a>
 					</div>
 				</main>
 			</body>
