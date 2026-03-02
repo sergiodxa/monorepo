@@ -64,8 +64,6 @@ export default form<"/onboarding">({
 					</div>
 
 					<script>
-						const PLATFORM_TENANT_URL = '';
-
 						document.getElementById('continue-btn').addEventListener('click', async () => {
 							const email = document.getElementById('email').value;
 							if (!email) {
@@ -82,57 +80,61 @@ export default form<"/onboarding">({
 
 							try {
 								// First try to authenticate (existing user)
-								let response = await fetch(PLATFORM_TENANT_URL + '/webauthn/auth/options', {
+								let response = await fetch('/onboarding/webauthn/auth/options', {
 									method: 'POST',
-									headers: { 'Content-Type': 'application/json' },
-									body: JSON.stringify({ email }),
+									headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+									body: new URLSearchParams({ email }),
 								});
 
 								if (response.ok) {
-									const options = await response.json();
-									const authResponse = await SimpleWebAuthnBrowser.startAuthentication(options);
+									const data = await response.json();
+									const authResponse = await SimpleWebAuthnBrowser.startAuthentication(data.options);
 
-									const verifyResponse = await fetch(PLATFORM_TENANT_URL + '/webauthn/auth/verify', {
+									const verifyResponse = await fetch('/onboarding/webauthn/auth/verify', {
 										method: 'POST',
 										headers: { 'Content-Type': 'application/json' },
-										body: JSON.stringify({ email, response: authResponse }),
+										body: JSON.stringify({ challengeId: data.challengeId, response: authResponse }),
 									});
 
 									if (verifyResponse.ok) {
 										const result = await verifyResponse.json();
 										// Set session cookie and redirect
-										document.cookie = '__auth_session=' + result.sessionId + '; Path=/; SameSite=Lax';
+										document.cookie = '__platform_session=' + result.subjectId + '; Path=/; SameSite=Lax';
 										window.location.href = '/dashboard';
 										return;
 									}
 								}
 
 								// User doesn't exist, try to register
-								response = await fetch(PLATFORM_TENANT_URL + '/webauthn/register/options', {
+								response = await fetch('/onboarding/webauthn/register/options', {
 									method: 'POST',
-									headers: { 'Content-Type': 'application/json' },
-									body: JSON.stringify({ email }),
+									headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+									body: new URLSearchParams({ email }),
 								});
 
 								if (response.ok) {
-									const options = await response.json();
-									const regResponse = await SimpleWebAuthnBrowser.startRegistration(options);
+									const data = await response.json();
+									const regResponse = await SimpleWebAuthnBrowser.startRegistration(data.options);
 
-									const verifyResponse = await fetch(PLATFORM_TENANT_URL + '/webauthn/register/verify', {
+									const verifyResponse = await fetch('/onboarding/webauthn/register/verify', {
 										method: 'POST',
 										headers: { 'Content-Type': 'application/json' },
-										body: JSON.stringify({ email, response: regResponse }),
+										body: JSON.stringify({ challengeId: data.challengeId, response: regResponse }),
 									});
 
 									if (verifyResponse.ok) {
 										const result = await verifyResponse.json();
-										document.cookie = '__auth_session=' + result.sessionId + '; Path=/; SameSite=Lax';
+										document.cookie = '__platform_session=' + result.subjectId + '; Path=/; SameSite=Lax';
 										window.location.href = '/dashboard';
 										return;
+									} else {
+										const errorData = await verifyResponse.json();
+										throw new Error(errorData.error || 'Registration failed');
 									}
+								} else {
+									const errorData = await response.json();
+									throw new Error(errorData.error || 'Could not start registration');
 								}
-
-								throw new Error('Authentication failed');
 							} catch (err) {
 								loading.classList.add('hidden');
 								error.classList.remove('hidden');

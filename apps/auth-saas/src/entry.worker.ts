@@ -20,7 +20,13 @@ const HostMetadataSchema = s.object({
 
 export default {
 	async fetch(request) {
-		let response = await env.ASSETS.fetch(request);
+		// Clone the request before trying static assets, since body can only be read once
+		let assetRequest = new Request(request.url, {
+			method: request.method,
+			headers: request.headers,
+		});
+
+		let response = await env.ASSETS.fetch(assetRequest);
 		if (response.ok) return response;
 
 		let url = new URL(request.url);

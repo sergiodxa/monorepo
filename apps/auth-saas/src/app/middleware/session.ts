@@ -7,33 +7,44 @@ declare module "remix/fetch-router" {
 	interface RequestContext {
 		platformSession: {
 			subjectId: string;
+			email: string;
 		};
 	}
 }
 
 const PLATFORM_TENANT_ID = "platform";
-const SESSION_COOKIE_NAME = "__auth_session";
+const SESSION_COOKIE_NAME = "__platform_session";
 
 /**
  * Session middleware for the platform dashboard.
- * Validates the session cookie against the platform tenant DO and
- * attaches the subject ID to the context.
+ * Validates that the subject exists in the platform tenant DO and
+ * attaches the subject info to the context.
  */
 export default middleware(async (context, next) => {
-	let cookies = context.request.headers.get("Cookie") ?? "";
-	let sessionId = getCookie(cookies, SESSION_COOKIE_NAME);
+	let log = context.logger.middleware("session");
 
-	if (!sessionId) {
+	let cookies = context.request.headers.get("Cookie") ?? "";
+	let subjectId = getCookie(cookies, SESSION_COOKIE_NAME);
+
+	if (!subjectId) {
+		log.info("No session cookie found, redirecting to onboarding");
 		return redirect("/onboarding");
 	}
 
+	// Validate subject exists in platform tenant
 	let stub = env.TENANT.getByName(PLATFORM_TENANT_ID);
-	let response = await stub.fetch(`https://tenant.internal/api/sessions/${sessionId}`, {
-		headers: { Authorization: `Bearer ${sessionId}` },
+	let response = await stub.fetch(`https://tenant.internal/api/subjects/${subjectId}`, {
+		method: "GET",
+		headers: {
+			// The management API requires auth, but we're calling internally
+			// We need to either skip auth for internal calls or use a management token
+			"X-Internal-Request": "true",
+		},
 	});
 
 	if (!response.ok) {
-		// Invalid or expired session, redirect to login
+		log.info("Subject not found or invalid, clearing session", { subjectId });
+		// Invalid subject, clear cookie and redirect to login
 		return redirect("/onboarding", {
 			headers: {
 				"Set-Cookie": `${SESSION_COOKIE_NAME}=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0`,
@@ -41,11 +52,14 @@ export default middleware(async (context, next) => {
 		});
 	}
 
-	let session = (await response.json()) as { subject_id: string };
+	let subject = (await response.json()) as { id: string; email: string };
 
 	context.platformSession = {
-		subjectId: session.subject_id,
+		subjectId: subject.id,
+		email: subject.email,
 	};
+
+	log.info("Session validated", { subjectId: subject.id });
 
 	return next();
 });

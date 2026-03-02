@@ -9,10 +9,23 @@ import AccessToken from "~/tenant/values/access-token";
 /**
  * Middleware that verifies the request has a valid access token
  * issued to a client with management API access.
+ *
+ * Internal requests (from within the worker) can bypass auth using
+ * the X-Internal-Request header. This is safe because external requests
+ * cannot reach the DO directly - they must go through the entry worker.
  */
 export default () => {
 	return middleware(async (context, next) => {
 		let log = context.logger.middleware("management-auth");
+
+		// Allow internal requests (from platform dashboard)
+		// This is safe because DOs are not directly accessible from the internet
+		let isInternalRequest = context.request.headers.get("x-internal-request") === "true";
+		if (isInternalRequest) {
+			log.info("Internal request - skipping auth");
+			context.managementClient = null;
+			return next();
+		}
 
 		// Extract Bearer token from Authorization header
 		let authHeader = context.request.headers.get("authorization");

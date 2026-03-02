@@ -1,4 +1,5 @@
 import { createRouter } from "remix/fetch-router";
+import { formData } from "remix/form-data-middleware";
 
 import dashboardIndex from "./controllers/dashboard/index";
 import tenants from "./controllers/dashboard/tenants";
@@ -16,6 +17,10 @@ import notFound from "./controllers/not-found";
 import onboardingFinish from "./controllers/onboarding/finish";
 import onboardingIndex from "./controllers/onboarding/index";
 import onboardingRegion from "./controllers/onboarding/region";
+import webauthnAuthOptions from "./controllers/onboarding/webauthn/auth-options";
+import webauthnAuthVerify from "./controllers/onboarding/webauthn/auth-verify";
+import webauthnRegisterOptions from "./controllers/onboarding/webauthn/register-options";
+import webauthnRegisterVerify from "./controllers/onboarding/webauthn/register-verify";
 import database from "./middleware/db";
 import logger from "./middleware/logger";
 import session from "./middleware/session";
@@ -23,7 +28,7 @@ import tenantOwner from "./middleware/tenant-owner";
 import routes from "./routes";
 
 export const router = createRouter({
-	middleware: [logger, database],
+	middleware: [logger, database, formData()],
 	defaultHandler: notFound,
 });
 
@@ -39,6 +44,26 @@ router.map(routes, {
 				index: onboardingIndex,
 				region: onboardingRegion,
 				finish: onboardingFinish,
+
+				webauthn: {
+					middleware: [],
+					actions: {
+						register: {
+							middleware: [],
+							actions: {
+								options: webauthnRegisterOptions,
+								verify: webauthnRegisterVerify,
+							},
+						},
+						auth: {
+							middleware: [],
+							actions: {
+								options: webauthnAuthOptions,
+								verify: webauthnAuthVerify,
+							},
+						},
+					},
+				},
 			},
 		},
 

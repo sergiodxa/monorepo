@@ -1,4 +1,4 @@
-import { form, get, resources, route } from "remix/fetch-router/routes";
+import { form, get, post, resources, route } from "remix/fetch-router/routes";
 
 export default route({
 	index: get("/"),
@@ -7,6 +7,17 @@ export default route({
 		index: form("/onboarding"),
 		region: form("/onboarding/region"),
 		finish: form("/onboarding/finish"),
+
+		webauthn: {
+			register: {
+				options: post("/onboarding/webauthn/register/options"),
+				verify: post("/onboarding/webauthn/register/verify"),
+			},
+			auth: {
+				options: post("/onboarding/webauthn/auth/options"),
+				verify: post("/onboarding/webauthn/auth/verify"),
+			},
+		},
 	},
 
 	dashboard: {
