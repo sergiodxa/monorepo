@@ -48,10 +48,20 @@
   - [x] HostnameService with create, get, list, delete, refresh methods
   - [x] SSL validation helpers (getValidationRecord, isActive, isPendingValidation)
 
+- [x] Dashboard service integrations
+  - [x] Hostname model uses HostnameService (real Cloudflare for SaaS API)
+  - [x] Subscription model uses PolarService (billing integration)
+  - [x] Billing page shows actual MAU from Analytics Engine
+  - [x] Subscription created on tenant creation
+- [x] Polar webhook handler
+  - [x] checkout.completed - links subscription after checkout
+  - [x] subscription.active/updated/canceled - syncs status
+  - [x] Optional webhook signature verification
+
 #### Pending
 
-- [ ] Connect services to dashboard UI (billing portal, hostname validation UI)
 - [ ] Test end-to-end flows in production
+- [ ] Subscription status enforcement (block access for unpaid)
 
 ## Background
 
