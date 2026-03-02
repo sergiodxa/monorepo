@@ -1,6 +1,8 @@
 import { form, get, resources, route } from "remix/fetch-router/routes";
 
 export default route({
+	index: get("/"),
+
 	onboarding: {
 		index: form("/onboarding"),
 		region: form("/onboarding/region"),

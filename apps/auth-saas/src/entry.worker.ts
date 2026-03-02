@@ -23,6 +23,17 @@ export default {
 		let response = await env.ASSETS.fetch(request);
 		if (response.ok) return response;
 
+		let url = new URL(request.url);
+
+		// Dashboard and onboarding routes go to the platform router
+		if (
+			url.pathname === "/" ||
+			url.pathname.startsWith("/dashboard") ||
+			url.pathname.startsWith("/onboarding")
+		) {
+			return await router.fetch(request);
+		}
+
 		let hostMetadata = request.cf?.hostMetadata;
 		if (import.meta.env.DEV) hostMetadata = { tenantId: "platform", region: "wnam" };
 		if (!hostMetadata) return await router.fetch(request);
