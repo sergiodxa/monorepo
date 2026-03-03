@@ -1,5 +1,7 @@
 import { unauthorized } from "@pkg/http/response/json";
+import { env } from "cloudflare:workers";
 
+import { verifyInternalToken } from "~/lib/internal-auth";
 import middleware from "~/lib/middleware";
 import Client from "~/tenant/models/client";
 import SigningKey from "~/tenant/models/signing-key";
@@ -10,21 +12,25 @@ import AccessToken from "~/tenant/values/access-token";
  * Middleware that verifies the request has a valid access token
  * issued to a client with management API access.
  *
- * Internal requests (from within the worker) can bypass auth using
- * the X-Internal-Request header. This is safe because external requests
- * cannot reach the DO directly - they must go through the entry worker.
+ * Internal requests (from the platform dashboard) use signed tokens
+ * for secure authentication, verified using a shared secret.
  */
 export default () => {
 	return middleware(async (context, next) => {
 		let log = context.logger.middleware("management-auth");
 
-		// Allow internal requests (from platform dashboard)
-		// This is safe because DOs are not directly accessible from the internet
-		let isInternalRequest = context.request.headers.get("x-internal-request") === "true";
-		if (isInternalRequest) {
-			log.info("Internal request - skipping auth");
-			context.managementClient = null;
-			return next();
+		// Check for internal token (from platform dashboard)
+		// Uses HMAC-signed JWT for secure internal authentication
+		let internalToken = context.request.headers.get("x-internal-token");
+		if (internalToken) {
+			let isValid = await verifyInternalToken(internalToken, env.INTERNAL_SECRET);
+			if (isValid) {
+				log.info("Internal request authenticated via signed token");
+				context.managementClient = null;
+				return next();
+			}
+			log.info("Invalid internal token provided");
+			// Fall through to check for regular auth token
 		}
 
 		// Extract Bearer token from Authorization header

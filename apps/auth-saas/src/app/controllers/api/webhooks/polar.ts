@@ -85,9 +85,14 @@ export default action<"POST", "/api/webhooks/polar">(async ({ db, request, logge
 	// Read body as text for signature verification
 	let body = await request.text();
 
-	// Verify webhook signature (if secret is configured)
+	// Verify webhook signature (required in production)
 	let signature = request.headers.get("X-Polar-Signature");
 	let webhookSecret = env.POLAR_WEBHOOK_SECRET;
+
+	if (!webhookSecret && !import.meta.env.DEV) {
+		log.error("POLAR_WEBHOOK_SECRET not configured in production");
+		return json({ error: "Webhook secret not configured" }, { status: 500 });
+	}
 
 	if (webhookSecret) {
 		let isValid = await verifyWebhookSignature(body, signature, webhookSecret);

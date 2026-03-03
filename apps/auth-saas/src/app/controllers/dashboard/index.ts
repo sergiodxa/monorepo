@@ -1,5 +1,6 @@
 import { html } from "@pkg/http/response";
 
+import { escapeHtml } from "~/app/lib/html";
 import Tenant from "~/app/models/tenant";
 import action from "~/lib/action";
 
@@ -70,12 +71,3 @@ export default action<"GET", "/dashboard">(async ({ db, platformSession, logger 
 		</html>
 	`);
 });
-
-function escapeHtml(str: string): string {
-	return str
-		.replace(/&/g, "&amp;")
-		.replace(/</g, "&lt;")
-		.replace(/>/g, "&gt;")
-		.replace(/"/g, "&quot;")
-		.replace(/'/g, "&#039;");
-}

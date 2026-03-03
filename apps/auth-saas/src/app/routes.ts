@@ -2,6 +2,7 @@ import { form, get, post, resources, route } from "remix/fetch-router/routes";
 
 export default route({
 	index: get("/"),
+	health: get("/health"),
 
 	api: {
 		webhooks: {

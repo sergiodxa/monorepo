@@ -7,6 +7,7 @@ import * as s from "remix/data-schema";
 
 import { reportMAU } from "./app/jobs/report-mau";
 import { router } from "./app/router";
+import { checkRateLimit } from "./lib/rate-limit";
 import Tenant from "./tenant";
 
 export { Tenant };
@@ -40,6 +41,14 @@ export default {
 		) {
 			return await router.fetch(request);
 		}
+
+		// Apply rate limiting to auth endpoints before routing to tenant DO
+		let rateLimitResponse = await checkRateLimit(
+			request,
+			env.AUTH_RATE_LIMITER,
+			env.STRICT_RATE_LIMITER,
+		);
+		if (rateLimitResponse) return rateLimitResponse;
 
 		let hostMetadata = request.cf?.hostMetadata;
 		if (import.meta.env.DEV) hostMetadata = { tenantId: "platform", region: "wnam" };

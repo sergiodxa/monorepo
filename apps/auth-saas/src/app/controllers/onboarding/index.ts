@@ -96,13 +96,11 @@ export default form<"/onboarding">({
 										body: JSON.stringify({ challengeId: data.challengeId, response: authResponse }),
 									});
 
-									if (verifyResponse.ok) {
-										const result = await verifyResponse.json();
-										// Set session cookie and redirect
-										document.cookie = '__platform_session=' + result.subjectId + '; Path=/; SameSite=Lax';
-										window.location.href = '/dashboard';
-										return;
-									}
+								if (verifyResponse.ok) {
+									// Session cookie is set by server via Set-Cookie header
+									window.location.href = '/dashboard';
+									return;
+								}
 								}
 
 								// User doesn't exist, try to register
@@ -123,8 +121,7 @@ export default form<"/onboarding">({
 									});
 
 									if (verifyResponse.ok) {
-										const result = await verifyResponse.json();
-										document.cookie = '__platform_session=' + result.subjectId + '; Path=/; SameSite=Lax';
+										// Session cookie is set by server via Set-Cookie header
 										window.location.href = '/dashboard';
 										return;
 									} else {

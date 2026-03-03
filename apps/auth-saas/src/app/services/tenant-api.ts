@@ -1,8 +1,11 @@
 import { env } from "cloudflare:workers";
 
+import { createInternalToken } from "~/lib/internal-auth";
+
 /**
  * Service for communicating with tenant Durable Objects via their Management API.
  * This is used by the dashboard to manage tenant data.
+ * Uses signed internal tokens for secure authentication.
  */
 export class TenantApiService {
 	constructor(private tenantId: string) {}
@@ -14,10 +17,15 @@ export class TenantApiService {
 	private async request<T>(path: string, options: RequestInit = {}): Promise<T> {
 		let stub = this.getTenantStub();
 		let url = `https://tenant.internal${path}`;
+
+		// Generate signed internal token for secure authentication
+		let internalToken = await createInternalToken(env.INTERNAL_SECRET);
+
 		let response = await stub.fetch(url, {
 			...options,
 			headers: {
 				"Content-Type": "application/json",
+				"X-Internal-Token": internalToken,
 				...options.headers,
 			},
 		});

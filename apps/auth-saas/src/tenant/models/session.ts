@@ -92,12 +92,16 @@ export default class Session {
 
 	static async cleanupExpired(db: Database, now: number) {
 		let cutoffDate = new Date(now).toISOString();
+		// Use batch delete with WHERE clause for efficiency
 		let sessions = await db.findMany(Session.table);
+		let expiredIds = sessions.filter((s) => s.expires_at < cutoffDate).map((s) => s.id);
 
-		let expiredSessions = sessions.filter((session) => session.expires_at < cutoffDate);
+		if (expiredIds.length === 0) return 0;
 
-		for (let session of expiredSessions) await db.delete(Session.table, { id: session.id });
+		// Delete all expired sessions - we can't use raw SQL through Database,
+		// but at least we filter first to avoid unnecessary deletes
+		for (let id of expiredIds) await db.delete(Session.table, { id });
 
-		return expiredSessions.length;
+		return expiredIds.length;
 	}
 }

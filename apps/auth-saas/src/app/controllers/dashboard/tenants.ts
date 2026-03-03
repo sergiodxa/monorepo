@@ -4,13 +4,12 @@ import { validate } from "@pkg/validate";
 import { env } from "cloudflare:workers";
 import * as s from "remix/data-schema";
 
+import { escapeHtml } from "~/app/lib/html";
 import Hostname from "~/app/models/hostname";
 import Subscription from "~/app/models/subscription";
 import Tenant from "~/app/models/tenant";
 import { TenantApiService } from "~/app/services/tenant-api";
 import action from "~/lib/action";
-
-const PLATFORM_DOMAIN = "auth.sergiodxa.com";
 
 let CreateTenantSchema = s.object({
 	name: s.string(),
@@ -220,7 +219,7 @@ export default {
 		});
 
 		// Create default hostname
-		await Hostname.createDefault(db, tenant.id, slug, PLATFORM_DOMAIN);
+		await Hostname.createDefault(db, tenant.id, slug, env.PLATFORM_DOMAIN);
 
 		// Initialize the tenant DO by calling it (with location hint for region)
 		let stub = env.TENANT.get(env.TENANT.idFromName(tenant.id), {
@@ -344,12 +343,3 @@ export default {
 		},
 	),
 };
-
-function escapeHtml(str: string): string {
-	return str
-		.replace(/&/g, "&amp;")
-		.replace(/</g, "&lt;")
-		.replace(/>/g, "&gt;")
-		.replace(/"/g, "&quot;")
-		.replace(/'/g, "&#039;");
-}

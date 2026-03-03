@@ -14,6 +14,7 @@ import hostname from "./controllers/dashboard/tenants/hostname";
 import resources from "./controllers/dashboard/tenants/resources";
 import scopes from "./controllers/dashboard/tenants/resources/scopes";
 import users from "./controllers/dashboard/tenants/users";
+import health from "./controllers/health";
 import index from "./controllers/index";
 import notFound from "./controllers/not-found";
 import onboardingFinish from "./controllers/onboarding/finish";
@@ -40,6 +41,7 @@ router.map(routes, {
 
 	actions: {
 		index,
+		health,
 
 		api: {
 			middleware: [],

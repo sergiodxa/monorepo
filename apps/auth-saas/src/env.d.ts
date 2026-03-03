@@ -12,6 +12,7 @@ declare namespace Cloudflare {
 		CF_API_TOKEN: string;
 		CF_ZONE_ID: string;
 		CF_ACCOUNT_ID: string;
+		INTERNAL_SECRET: string; // Secret for signing internal API tokens
 
 		// Vars (set in wrangler.jsonc)
 		PLATFORM_DOMAIN: string;
@@ -19,5 +20,9 @@ declare namespace Cloudflare {
 
 		// Analytics Engine
 		ANALYTICS: AnalyticsEngineDataset;
+
+		// Rate Limiters
+		AUTH_RATE_LIMITER: RateLimit;
+		STRICT_RATE_LIMITER: RateLimit;
 	}
 }
