@@ -125,4 +125,79 @@ describe("Client", () => {
 			expect(remaining).toHaveLength(0);
 		});
 	});
+
+	describe("validateLogoUrl", () => {
+		test("returns null for null input", () => {
+			expect(Client.validateLogoUrl(null)).toBeNull();
+		});
+
+		test("returns null for undefined input", () => {
+			expect(Client.validateLogoUrl(undefined)).toBeNull();
+		});
+
+		test("accepts valid HTTPS URL", () => {
+			let url = "https://example.com/logo.png";
+			expect(Client.validateLogoUrl(url)).toBe(url);
+		});
+
+		test("accepts HTTP URL for localhost", () => {
+			expect(Client.validateLogoUrl("http://localhost/logo.png")).toBe("http://localhost/logo.png");
+			expect(Client.validateLogoUrl("http://localhost:3000/logo.png")).toBe(
+				"http://localhost:3000/logo.png",
+			);
+			expect(Client.validateLogoUrl("http://127.0.0.1/logo.png")).toBe("http://127.0.0.1/logo.png");
+		});
+
+		test("accepts HTTPS URL for localhost", () => {
+			expect(Client.validateLogoUrl("https://localhost/logo.png")).toBe(
+				"https://localhost/logo.png",
+			);
+		});
+
+		test("rejects HTTP URL for non-localhost", () => {
+			expect(() => Client.validateLogoUrl("http://example.com/logo.png")).toThrow(
+				Client.InvalidLogoUrlError,
+			);
+		});
+
+		test("rejects javascript: scheme", () => {
+			expect(() => Client.validateLogoUrl("javascript:alert(1)")).toThrow(
+				Client.InvalidLogoUrlError,
+			);
+		});
+
+		test("rejects data: scheme", () => {
+			expect(() => Client.validateLogoUrl("data:image/png;base64,abc")).toThrow(
+				Client.InvalidLogoUrlError,
+			);
+		});
+
+		test("rejects vbscript: scheme", () => {
+			expect(() => Client.validateLogoUrl("vbscript:msgbox(1)")).toThrow(
+				Client.InvalidLogoUrlError,
+			);
+		});
+
+		test("rejects file: scheme", () => {
+			expect(() => Client.validateLogoUrl("file:///etc/passwd")).toThrow(
+				Client.InvalidLogoUrlError,
+			);
+		});
+
+		test("rejects invalid URL format", () => {
+			expect(() => Client.validateLogoUrl("not-a-url")).toThrow(Client.InvalidLogoUrlError);
+		});
+
+		test("rejects FTP scheme", () => {
+			expect(() => Client.validateLogoUrl("ftp://example.com/logo.png")).toThrow(
+				Client.InvalidLogoUrlError,
+			);
+		});
+
+		test("accepts localhost subdomains", () => {
+			expect(Client.validateLogoUrl("http://app.localhost/logo.png")).toBe(
+				"http://app.localhost/logo.png",
+			);
+		});
+	});
 });

@@ -3,6 +3,13 @@
  * Uses HMAC-signed tokens to securely store session data without database lookups.
  */
 
+import {
+	base64UrlDecode,
+	base64UrlEncode,
+	constantTimeCompare,
+	hmacSign,
+} from "~/lib/crypto-utils";
+
 export const PLATFORM_SESSION_COOKIE = "__platform_session";
 export const PLATFORM_SESSION_MAX_AGE = 30 * 24 * 60 * 60; // 30 days in seconds
 
@@ -35,7 +42,7 @@ export async function createSessionToken(
 	};
 
 	let encodedPayload = base64UrlEncode(JSON.stringify(payload));
-	let signature = await sign(encodedPayload, secret);
+	let signature = await hmacSign(encodedPayload, secret);
 
 	return `${encodedPayload}.${signature}`;
 }
@@ -55,7 +62,7 @@ export async function verifySessionToken(
 	if (!encodedPayload || !signature) return null;
 
 	// Verify signature using constant-time comparison
-	let expectedSignature = await sign(encodedPayload, secret);
+	let expectedSignature = await hmacSign(encodedPayload, secret);
 	if (!constantTimeCompare(signature, expectedSignature)) {
 		return null;
 	}
@@ -116,53 +123,4 @@ export function clearSessionCookie(): string {
 export function getCookie(cookies: string, name: string): string | null {
 	let match = cookies.match(new RegExp(`(?:^|; )${name}=([^;]*)`));
 	return match?.[1] ?? null;
-}
-
-// Crypto utilities
-
-async function sign(input: string, secret: string): Promise<string> {
-	let encoder = new TextEncoder();
-	let key = await crypto.subtle.importKey(
-		"raw",
-		encoder.encode(secret),
-		{ name: "HMAC", hash: "SHA-256" },
-		false,
-		["sign"],
-	);
-
-	let signature = await crypto.subtle.sign("HMAC", key, encoder.encode(input));
-
-	return base64UrlEncode(new Uint8Array(signature));
-}
-
-function base64UrlEncode(input: string | Uint8Array): string {
-	let str: string;
-	if (typeof input === "string") {
-		str = btoa(unescape(encodeURIComponent(input)));
-	} else {
-		str = btoa(String.fromCharCode(...input));
-	}
-	return str.replace(/\+/g, "-").replace(/\//g, "_").replace(/=/g, "");
-}
-
-function base64UrlDecode(input: string): string {
-	let str = input.replace(/-/g, "+").replace(/_/g, "/");
-	while (str.length % 4) str += "=";
-	return decodeURIComponent(escape(atob(str)));
-}
-
-/**
- * Constant-time string comparison to prevent timing attacks.
- */
-function constantTimeCompare(a: string, b: string): boolean {
-	if (a.length !== b.length) {
-		return false;
-	}
-
-	let result = 0;
-	for (let i = 0; i < a.length; i++) {
-		result |= a.charCodeAt(i) ^ b.charCodeAt(i);
-	}
-
-	return result === 0;
 }

@@ -33,6 +33,16 @@ export default class Subject {
 		return db.findMany(Subject.table);
 	}
 
+	/**
+	 * Returns the count of all subjects.
+	 * Note: Currently loads all records due to ORM limitations.
+	 * TODO: Use raw COUNT query when ORM supports it.
+	 */
+	static async count(db: Database): Promise<number> {
+		let subjects = await db.findMany(Subject.table);
+		return subjects.length;
+	}
+
 	static show(db: Database, id: string) {
 		return db.findOne(Subject.table, { where: { id } });
 	}

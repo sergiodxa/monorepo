@@ -8,26 +8,22 @@ import Subject from "~/tenant/models/subject";
 export const show = action<"GET", "/api/stats">(async ({ db, logger }) => {
 	let log = logger.loader("/api/stats");
 
-	let [subjects, clients, sessions] = await Promise.all([
-		Subject.list(db),
-		Client.list(db),
-		Session.list(db),
-	]);
-
-	let now = new Date();
-	let thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-
-	let activeSessions = sessions.filter((s) => new Date(s.expires_at) > now);
-	let activeSubjectIds = new Set(
-		activeSessions.filter((s) => new Date(s.updated_at) > thirtyDaysAgo).map((s) => s.subject_id),
-	);
+	// Fetch all counts in parallel for better performance
+	let [totalUsers, totalClients, totalSessions, activeSessions, monthlyActiveUsers] =
+		await Promise.all([
+			Subject.count(db),
+			Client.count(db),
+			Session.count(db),
+			Session.countActive(db),
+			Session.countMonthlyActiveUsers(db),
+		]);
 
 	let stats = {
-		total_users: subjects.length,
-		total_clients: clients.length,
-		total_sessions: sessions.length,
-		active_sessions: activeSessions.length,
-		monthly_active_users: activeSubjectIds.size,
+		total_users: totalUsers,
+		total_clients: totalClients,
+		total_sessions: totalSessions,
+		active_sessions: activeSessions,
+		monthly_active_users: monthlyActiveUsers,
 	};
 
 	log.info("Stats retrieved", stats);

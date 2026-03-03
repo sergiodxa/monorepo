@@ -3,7 +3,17 @@ import type { Database } from "remix/data-table";
 import * as s from "remix/data-schema";
 import { createTable } from "remix/data-table";
 
+// Cache TTL for tenant meta values (1 minute)
+const TENANT_META_CACHE_TTL_MS = 60_000;
+
+interface MetaCache {
+	value: string | null;
+	expiresAt: number;
+}
+
 export default class TenantMeta {
+	// In-memory cache for frequently accessed values
+	static #issuerCache: MetaCache | null = null;
 	static table = createTable({
 		name: "tenant_meta",
 		primaryKey: ["key"],
@@ -41,11 +51,23 @@ export default class TenantMeta {
 	}
 
 	static async getIssuer(db: Database): Promise<string | null> {
-		return TenantMeta.get(db, TenantMeta.KEYS.ISSUER);
+		// Return cached value if still valid
+		if (TenantMeta.#issuerCache && Date.now() < TenantMeta.#issuerCache.expiresAt) {
+			return TenantMeta.#issuerCache.value;
+		}
+
+		let value = await TenantMeta.get(db, TenantMeta.KEYS.ISSUER);
+
+		// Cache the value
+		TenantMeta.#issuerCache = { value, expiresAt: Date.now() + TENANT_META_CACHE_TTL_MS };
+
+		return value;
 	}
 
 	static async setIssuer(db: Database, issuer: string): Promise<void> {
-		return TenantMeta.set(db, TenantMeta.KEYS.ISSUER, issuer);
+		await TenantMeta.set(db, TenantMeta.KEYS.ISSUER, issuer);
+		// Invalidate cache after setting
+		TenantMeta.#issuerCache = null;
 	}
 
 	static async getTenantId(db: Database): Promise<string | null> {

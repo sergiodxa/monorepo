@@ -3,6 +3,13 @@
  * Uses HMAC-signed JWTs to securely identify internal requests.
  */
 
+import {
+	base64UrlDecode,
+	base64UrlEncode,
+	constantTimeCompare,
+	hmacSign,
+} from "~/lib/crypto-utils";
+
 /**
  * Creates a signed internal auth token for platform-to-DO communication.
  * Token is short-lived (5 minutes) to minimize exposure.
@@ -20,7 +27,7 @@ export async function createInternalToken(secret: string): Promise<string> {
 	let encodedPayload = base64UrlEncode(JSON.stringify(payload));
 	let signingInput = `${encodedHeader}.${encodedPayload}`;
 
-	let signature = await sign(signingInput, secret);
+	let signature = await hmacSign(signingInput, secret);
 
 	return `${signingInput}.${signature}`;
 }
@@ -48,7 +55,7 @@ export async function verifyInternalToken(token: string, secret: string): Promis
 
 	// Verify signature using constant-time comparison to prevent timing attacks
 	let signingInput = `${encodedHeader}.${encodedPayload}`;
-	let expectedSignature = await sign(signingInput, secret);
+	let expectedSignature = await hmacSign(signingInput, secret);
 
 	if (!constantTimeCompare(signature, expectedSignature)) return false;
 
@@ -70,48 +77,4 @@ export async function verifyInternalToken(token: string, secret: string): Promis
 	} catch {
 		return false;
 	}
-}
-
-async function sign(input: string, secret: string): Promise<string> {
-	let encoder = new TextEncoder();
-	let key = await crypto.subtle.importKey(
-		"raw",
-		encoder.encode(secret),
-		{ name: "HMAC", hash: "SHA-256" },
-		false,
-		["sign"],
-	);
-
-	let signature = await crypto.subtle.sign("HMAC", key, encoder.encode(input));
-
-	return base64UrlEncode(new Uint8Array(signature));
-}
-
-function base64UrlEncode(input: string | Uint8Array): string {
-	let str: string;
-	if (typeof input === "string") {
-		str = btoa(input);
-	} else {
-		str = btoa(String.fromCharCode(...input));
-	}
-	return str.replace(/\+/g, "-").replace(/\//g, "_").replace(/=/g, "");
-}
-
-function base64UrlDecode(input: string): string {
-	let str = input.replace(/-/g, "+").replace(/_/g, "/");
-	while (str.length % 4) str += "=";
-	return atob(str);
-}
-
-/**
- * Compares two strings in constant time to prevent timing attacks.
- * Returns true if the strings are equal.
- */
-function constantTimeCompare(a: string, b: string): boolean {
-	if (a.length !== b.length) return false;
-	let result = 0;
-	for (let i = 0; i < a.length; i++) {
-		result |= a.charCodeAt(i) ^ b.charCodeAt(i);
-	}
-	return result === 0;
 }

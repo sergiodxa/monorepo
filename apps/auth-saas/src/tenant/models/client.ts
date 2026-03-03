@@ -81,6 +81,28 @@ export default class Client {
 		return await db.findMany(Client.table);
 	}
 
+	/**
+	 * Returns the count of all clients.
+	 * Note: Currently loads all records due to ORM limitations.
+	 * TODO: Use raw COUNT query when ORM supports it.
+	 */
+	static async count(db: Database): Promise<number> {
+		let clients = await db.findMany(Client.table);
+		return clients.length;
+	}
+
+	/**
+	 * Fetch multiple clients by their IDs in a single query.
+	 * Useful for avoiding N+1 queries when enriching grants or sessions.
+	 */
+	static async listByIds(db: Database, ids: string[]) {
+		if (ids.length === 0) return [];
+		// Use findMany with ID filter - the ORM should translate this to an IN clause
+		let clients = await db.findMany(Client.table);
+		let idSet = new Set(ids);
+		return clients.filter((client) => idSet.has(client.id));
+	}
+
 	static async show(db: Database, id: string) {
 		return await db.findOne(Client.table, { where: { id } });
 	}

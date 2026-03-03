@@ -63,18 +63,26 @@ export const create = action<"POST", "/api/clients">(async ({ db, request, logge
 
 	let data = result.data;
 
-	let writeResult = await Client.create(db, {
-		name: data.name,
-		type: data.type,
-		description: data.description,
-		logoUrl: data.logoUrl,
-		allowedScopes: data.allowedScopes,
-		allowedResources: data.allowedResources,
-		isManagementClient: data.isManagementClient,
-	});
+	try {
+		let writeResult = await Client.create(db, {
+			name: data.name,
+			type: data.type,
+			description: data.description,
+			logoUrl: data.logoUrl,
+			allowedScopes: data.allowedScopes,
+			allowedResources: data.allowedResources,
+			isManagementClient: data.isManagementClient,
+		});
 
-	log.info("Client created", { clientId: writeResult.insertId, type: data.type });
-	return created({ id: writeResult.insertId });
+		log.info("Client created", { clientId: writeResult.insertId, type: data.type });
+		return created({ id: writeResult.insertId });
+	} catch (error) {
+		if (error instanceof Client.InvalidLogoUrlError) {
+			log.info("Invalid logo URL", { error: error.message });
+			return badRequest({ error: error.message });
+		}
+		throw error;
+	}
 });
 
 export const update = action<"PUT", "/api/clients/:id">(async ({ params, db, request, logger }) => {
@@ -111,6 +119,10 @@ export const update = action<"PUT", "/api/clients/:id">(async ({ params, db, req
 		if (error instanceof RecordNotFoundError) {
 			log.info("Client not found", { clientId: params.id });
 			return notFound({ error: "Client not found" });
+		}
+		if (error instanceof Client.InvalidLogoUrlError) {
+			log.info("Invalid logo URL", { clientId: params.id, error: error.message });
+			return badRequest({ error: error.message });
 		}
 		throw error;
 	}

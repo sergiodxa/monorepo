@@ -6,7 +6,19 @@ import { createTable } from "remix/data-table";
 
 import { RecordNotFoundError } from "~/lib/db-errors";
 
+// Cache TTL for signing keys (1 minute)
+// Keys rarely change, but we keep TTL short for safety
+const SIGNING_KEY_CACHE_TTL_MS = 60_000;
+
+interface SigningKeyCache {
+	keys: JWK.KeyPair[];
+	expiresAt: number;
+}
+
 export default class SigningKey {
+	// In-memory cache for imported key pairs
+	// This avoids expensive key imports on every token operation
+	static #cache: SigningKeyCache | null = null;
 	static table = createTable({
 		name: "signing_keys",
 		primaryKey: ["id"],
@@ -44,12 +56,20 @@ export default class SigningKey {
 	}
 
 	static async getAll(db: Database): Promise<JWK.KeyPair[]> {
+		// Return cached keys if still valid
+		if (SigningKey.#cache && Date.now() < SigningKey.#cache.expiresAt) {
+			return SigningKey.#cache.keys;
+		}
+
 		let records = await db.findMany(SigningKey.table);
 
-		if (records.length === 0) return [];
+		if (records.length === 0) {
+			SigningKey.#cache = { keys: [], expiresAt: Date.now() + SIGNING_KEY_CACHE_TTL_MS };
+			return [];
+		}
 
 		// Import all key pairs in parallel for better performance
-		return await Promise.all(
+		let keys = await Promise.all(
 			records.map((record) =>
 				JWK.importKeyPair({
 					id: record.id as `${string}-${string}-${string}-${string}-${string}`,
@@ -60,6 +80,19 @@ export default class SigningKey {
 				}),
 			),
 		);
+
+		// Cache the imported keys
+		SigningKey.#cache = { keys, expiresAt: Date.now() + SIGNING_KEY_CACHE_TTL_MS };
+
+		return keys;
+	}
+
+	/**
+	 * Invalidates the signing key cache.
+	 * Call this after generating or rotating keys.
+	 */
+	static invalidateCache(): void {
+		SigningKey.#cache = null;
 	}
 
 	static async generate(db: Database): Promise<JWK.KeyPair> {
@@ -91,6 +124,9 @@ export default class SigningKey {
 			created_at: now,
 			expires_at: null,
 		});
+
+		// Invalidate cache after generating new key
+		SigningKey.invalidateCache();
 
 		return keyPair;
 	}
@@ -125,6 +161,9 @@ export default class SigningKey {
 			expires_at: null,
 		});
 
+		// Invalidate cache after rotating keys
+		SigningKey.invalidateCache();
+
 		return keyPair;
 	}
 
@@ -137,7 +176,12 @@ export default class SigningKey {
 			throw new SigningKey.CannotDeleteCurrentKeyError();
 		}
 
-		return await db.delete(SigningKey.table, { id });
+		let result = await db.delete(SigningKey.table, { id });
+
+		// Invalidate cache after deleting key
+		SigningKey.invalidateCache();
+
+		return result;
 	}
 
 	static CannotDeleteCurrentKeyError = class extends Error {

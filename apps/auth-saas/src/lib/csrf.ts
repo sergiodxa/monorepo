@@ -3,6 +3,8 @@
  * Uses double-submit cookie pattern with signed tokens.
  */
 
+import { constantTimeCompare, hmacSign } from "~/lib/crypto-utils";
+
 export const CSRF_COOKIE_NAME = "__csrf_token";
 export const CSRF_HEADER_NAME = "x-csrf-token";
 export const CSRF_FORM_FIELD = "_csrf";
@@ -17,7 +19,7 @@ export async function generateCsrfToken(secret: string): Promise<string> {
 	let random = crypto.randomUUID().replace(/-/g, "");
 	let payload = `${timestamp}.${random}`;
 
-	let signature = await sign(payload, secret);
+	let signature = await hmacSign(payload, secret);
 
 	return `${payload}.${signature}`;
 }
@@ -41,7 +43,7 @@ export async function verifyCsrfToken(
 
 	// Verify signature
 	let payload = `${timestamp}.${random}`;
-	let expectedSignature = await sign(payload, secret);
+	let expectedSignature = await hmacSign(payload, secret);
 
 	if (!constantTimeCompare(signature, expectedSignature)) {
 		return false;
@@ -103,37 +105,4 @@ export function extractCsrfToken(request: Request, formData?: FormData): string 
 export function getCsrfCookie(cookies: string): string | null {
 	let match = cookies.match(new RegExp(`(?:^|; )${CSRF_COOKIE_NAME}=([^;]*)`));
 	return match?.[1] ?? null;
-}
-
-// Crypto utilities
-
-async function sign(input: string, secret: string): Promise<string> {
-	let encoder = new TextEncoder();
-	let key = await crypto.subtle.importKey(
-		"raw",
-		encoder.encode(secret),
-		{ name: "HMAC", hash: "SHA-256" },
-		false,
-		["sign"],
-	);
-
-	let signature = await crypto.subtle.sign("HMAC", key, encoder.encode(input));
-
-	return base64UrlEncode(new Uint8Array(signature));
-}
-
-function base64UrlEncode(input: Uint8Array): string {
-	let str = btoa(String.fromCharCode(...input));
-	return str.replace(/\+/g, "-").replace(/\//g, "_").replace(/=/g, "");
-}
-
-function constantTimeCompare(a: string, b: string): boolean {
-	if (a.length !== b.length) return false;
-
-	let result = 0;
-	for (let i = 0; i < a.length; i++) {
-		result |= a.charCodeAt(i) ^ b.charCodeAt(i);
-	}
-
-	return result === 0;
 }

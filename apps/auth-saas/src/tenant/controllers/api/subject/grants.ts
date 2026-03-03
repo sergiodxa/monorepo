@@ -18,18 +18,21 @@ export const index = action<"GET", "/api/subjects/:id/grants">(async ({ db, para
 
 	let grants = await Grant.listBySubject(db, params.id);
 
-	let enrichedGrants = await Promise.all(
-		grants.map(async (grant) => {
-			let client = await Client.show(db, grant.client_id);
-			return {
-				id: grant.id,
-				client: client ? { id: client.id, name: client.name } : null,
-				scopes: grant.scopes ? grant.scopes.split(" ") : [],
-				createdAt: grant.created_at,
-				updatedAt: grant.updated_at,
-			};
-		}),
-	);
+	// Fetch all unique client IDs in a single query to avoid N+1
+	let clientIds = [...new Set(grants.map((g) => g.client_id))];
+	let clients = await Client.listByIds(db, clientIds);
+	let clientMap = new Map(clients.map((c) => [c.id, c]));
+
+	let enrichedGrants = grants.map((grant) => {
+		let client = clientMap.get(grant.client_id);
+		return {
+			id: grant.id,
+			client: client ? { id: client.id, name: client.name } : null,
+			scopes: grant.scopes ? grant.scopes.split(" ") : [],
+			createdAt: grant.created_at,
+			updatedAt: grant.updated_at,
+		};
+	});
 
 	log.info("Grants listed", { subjectId: params.id, count: grants.length });
 

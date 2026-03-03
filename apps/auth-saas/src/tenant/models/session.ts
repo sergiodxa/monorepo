@@ -26,6 +26,43 @@ export default class Session {
 		return db.findMany(Session.table);
 	}
 
+	/**
+	 * Returns the count of all sessions.
+	 * Note: Currently loads all records due to ORM limitations.
+	 * TODO: Use raw COUNT query when ORM supports it.
+	 */
+	static async count(db: Database): Promise<number> {
+		let sessions = await db.findMany(Session.table);
+		return sessions.length;
+	}
+
+	/**
+	 * Returns the count of active (non-expired) sessions.
+	 */
+	static async countActive(db: Database): Promise<number> {
+		let sessions = await db.findMany(Session.table);
+		let now = new Date().toISOString();
+		return sessions.filter((s) => s.expires_at > now).length;
+	}
+
+	/**
+	 * Returns the count of unique subjects with active sessions
+	 * updated within the last 30 days (monthly active users).
+	 */
+	static async countMonthlyActiveUsers(db: Database): Promise<number> {
+		let sessions = await db.findMany(Session.table);
+		let now = new Date();
+		let thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString();
+		let nowStr = now.toISOString();
+
+		let activeSubjectIds = new Set(
+			sessions
+				.filter((s) => s.expires_at > nowStr && s.updated_at > thirtyDaysAgo)
+				.map((s) => s.subject_id),
+		);
+		return activeSubjectIds.size;
+	}
+
 	static show(db: Database, id: string) {
 		return db.findOne(Session.table, { where: { id } });
 	}
