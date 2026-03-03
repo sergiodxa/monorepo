@@ -3,10 +3,10 @@ import type { Database } from "remix/data-table";
 import * as s from "remix/data-schema";
 import { createTable } from "remix/data-table";
 
-import PolarService from "~/app/services/polar";
+import PolarService, { PolarError } from "~/app/services/polar";
 
 export default class Subscription {
-	static PolarApiError = PolarService.ApiError;
+	static PolarApiError = PolarError;
 
 	static NotFoundError = class extends Error {
 		override name = "SubscriptionNotFoundError";
@@ -31,6 +31,32 @@ export default class Subscription {
 			updated_at: s.string(),
 		},
 	});
+
+	/**
+	 * Map Polar subscription status to our status enum.
+	 */
+	private static mapPolarStatus(
+		polarStatus: string,
+	): "active" | "canceled" | "past_due" | "unpaid" | "incomplete" | "trialing" {
+		switch (polarStatus) {
+			case "active":
+				return "active";
+			case "canceled":
+			case "revoked":
+				return "canceled";
+			case "past_due":
+				return "past_due";
+			case "unpaid":
+				return "unpaid";
+			case "incomplete":
+			case "incomplete_expired":
+				return "incomplete";
+			case "trialing":
+				return "trialing";
+			default:
+				return "incomplete";
+		}
+	}
 
 	/**
 	 * Get subscription by tenant ID.
@@ -87,14 +113,17 @@ export default class Subscription {
 		// Fetch subscription details from Polar
 		let polarSub = await PolarService.getSubscription(polarSubscriptionId);
 
+		// Map Polar status to our status enum
+		let status = Subscription.mapPolarStatus(polarSub.status);
+
 		await db.update(
 			Subscription.table,
 			{ id: subscription.id },
 			{
 				polar_subscription_id: polarSubscriptionId,
-				status: polarSub.status,
-				current_period_start: polarSub.current_period_start,
-				current_period_end: polarSub.current_period_end,
+				status,
+				current_period_start: polarSub.currentPeriodStart?.toISOString() ?? null,
+				current_period_end: polarSub.currentPeriodEnd?.toISOString() ?? null,
 				updated_at: new Date().toISOString(),
 			},
 		);
@@ -118,13 +147,16 @@ export default class Subscription {
 
 		let polarSub = await PolarService.getSubscription(subscription.polar_subscription_id);
 
+		// Map Polar status to our status enum
+		let status = Subscription.mapPolarStatus(polarSub.status);
+
 		await db.update(
 			Subscription.table,
 			{ id: subscription.id },
 			{
-				status: polarSub.status,
-				current_period_start: polarSub.current_period_start,
-				current_period_end: polarSub.current_period_end,
+				status,
+				current_period_start: polarSub.currentPeriodStart?.toISOString() ?? null,
+				current_period_end: polarSub.currentPeriodEnd?.toISOString() ?? null,
 				updated_at: new Date().toISOString(),
 			},
 		);

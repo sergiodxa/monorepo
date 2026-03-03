@@ -1,95 +1,24 @@
+import { Polar } from "@polar-sh/sdk";
+import { PolarError } from "@polar-sh/sdk/models/errors/polarerror.js";
 import { env } from "cloudflare:workers";
 
-/**
- * Customer object from Polar API.
- */
-interface PolarCustomer {
-	id: string;
-	email: string;
-	name: string | null;
-	metadata: Record<string, string>;
-	created_at: string;
-}
+export { PolarError };
 
 /**
- * Subscription object from Polar API.
+ * Get a configured Polar SDK client.
+ * Creates a new instance each time since env may not be available at module load.
  */
-interface PolarSubscription {
-	id: string;
-	customer_id: string;
-	product_id: string;
-	status: "active" | "canceled" | "past_due" | "unpaid" | "incomplete";
-	current_period_start: string;
-	current_period_end: string;
-	cancel_at_period_end: boolean;
-	created_at: string;
-}
-
-/**
- * Meter event for usage-based billing.
- */
-interface MeterEvent {
-	customer_id: string;
-	name: string;
-	value: number;
-	timestamp?: string;
-	metadata?: Record<string, string>;
-}
-
-/**
- * Polar API error response.
- */
-interface PolarError {
-	type: string;
-	detail: string;
+function getClient() {
+	return new Polar({ accessToken: env.POLAR_ACCESS_TOKEN });
 }
 
 /**
  * Polar billing service for subscription and usage management.
- * Requires POLAR_ACCESS_TOKEN environment variable.
+ * Uses the official @polar-sh/sdk for type-safe API access.
  *
  * @see https://docs.polar.sh/api
  */
 export default class PolarService {
-	private static BASE_URL = "https://api.polar.sh/v1";
-
-	static ApiError = class extends Error {
-		override name = "PolarApiError";
-		constructor(
-			message: string,
-			public statusCode: number,
-			public type?: string,
-		) {
-			super(message);
-		}
-	};
-
-	/**
-	 * Make an authenticated request to Polar API.
-	 */
-	private static async request<T>(method: string, path: string, body?: unknown): Promise<T> {
-		let response = await fetch(new URL(path, PolarService.BASE_URL), {
-			method,
-			headers: {
-				Authorization: `Bearer ${env.POLAR_ACCESS_TOKEN}`,
-				"Content-Type": "application/json",
-			},
-			body: body ? JSON.stringify(body) : undefined,
-		});
-
-		if (!response.ok) {
-			let error: PolarError;
-			try {
-				error = (await response.json()) as PolarError;
-			} catch {
-				error = { type: "unknown", detail: response.statusText };
-			}
-			throw new PolarService.ApiError(error.detail, response.status, error.type);
-		}
-
-		return (await response.json()) as T;
-	}
-
 	// ============================================================================
 	// CUSTOMERS
 	// ============================================================================
@@ -101,10 +30,11 @@ export default class PolarService {
 		email: string,
 		name: string | null,
 		metadata: Record<string, string> = {},
-	): Promise<PolarCustomer> {
-		return await PolarService.request<PolarCustomer>("POST", "/customers", {
+	) {
+		let client = getClient();
+		return await client.customers.create({
 			email,
-			name,
+			name: name ?? undefined,
 			metadata,
 		});
 	}
@@ -112,8 +42,9 @@ export default class PolarService {
 	/**
 	 * Get a customer by ID.
 	 */
-	static async getCustomer(customerId: string): Promise<PolarCustomer> {
-		return await PolarService.request<PolarCustomer>("GET", `/customers/${customerId}`);
+	static async getCustomer(customerId: string) {
+		let client = getClient();
+		return await client.customers.get({ id: customerId });
 	}
 
 	/**
@@ -122,8 +53,15 @@ export default class PolarService {
 	static async updateCustomer(
 		customerId: string,
 		updates: { name?: string; metadata?: Record<string, string> },
-	): Promise<PolarCustomer> {
-		return await PolarService.request<PolarCustomer>("PATCH", `/customers/${customerId}`, updates);
+	) {
+		let client = getClient();
+		return await client.customers.update({
+			id: customerId,
+			customerUpdate: {
+				name: updates.name,
+				metadata: updates.metadata,
+			},
+		});
 	}
 
 	// ============================================================================
@@ -133,45 +71,64 @@ export default class PolarService {
 	/**
 	 * Get a subscription by ID.
 	 */
-	static async getSubscription(subscriptionId: string): Promise<PolarSubscription> {
-		return await PolarService.request<PolarSubscription>("GET", `/subscriptions/${subscriptionId}`);
+	static async getSubscription(subscriptionId: string) {
+		let client = getClient();
+		return await client.subscriptions.get({ id: subscriptionId });
 	}
 
 	/**
 	 * List subscriptions for a customer.
 	 */
-	static async listSubscriptions(customerId: string): Promise<{ items: PolarSubscription[] }> {
-		return await PolarService.request<{ items: PolarSubscription[] }>(
-			"GET",
-			`/subscriptions?customer_id=${customerId}`,
-		);
+	static async listSubscriptions(customerId: string) {
+		let client = getClient();
+		let result = await client.subscriptions.list({ customerId });
+		let subscriptions = [];
+		for await (let page of result) {
+			subscriptions.push(...page.result.items);
+		}
+		return subscriptions;
 	}
 
 	/**
-	 * Cancel a subscription at period end.
+	 * Revoke a subscription (immediate cancellation).
 	 */
-	static async cancelSubscription(subscriptionId: string): Promise<PolarSubscription> {
-		return await PolarService.request<PolarSubscription>(
-			"POST",
-			`/subscriptions/${subscriptionId}/cancel`,
-		);
+	static async revokeSubscription(subscriptionId: string) {
+		let client = getClient();
+		return await client.subscriptions.revoke({ id: subscriptionId });
+	}
+
+	/**
+	 * Cancel a subscription.
+	 * @deprecated Use revokeSubscription instead
+	 */
+	static async cancelSubscription(subscriptionId: string) {
+		return await PolarService.revokeSubscription(subscriptionId);
 	}
 
 	// ============================================================================
-	// METERS (Usage-Based Billing)
+	// EVENTS (Usage-Based Billing)
 	// ============================================================================
 
 	/**
-	 * Report a meter event for usage-based billing.
+	 * Ingest events for usage-based billing.
 	 * Used for reporting MAU counts.
 	 */
-	static async reportMeterEvent(event: MeterEvent): Promise<void> {
-		await PolarService.request("POST", "/meters/events", {
-			customer_id: event.customer_id,
-			name: event.name,
-			value: event.value,
-			timestamp: event.timestamp ?? new Date().toISOString(),
-			metadata: event.metadata,
+	static async ingestEvents(
+		events: Array<{
+			customerId: string;
+			name: string;
+			metadata?: Record<string, string | number | boolean>;
+			timestamp?: Date;
+		}>,
+	): Promise<void> {
+		let client = getClient();
+		await client.events.ingest({
+			events: events.map((event) => ({
+				customerId: event.customerId,
+				name: event.name,
+				metadata: event.metadata,
+				timestamp: event.timestamp,
+			})),
 		});
 	}
 
@@ -185,15 +142,17 @@ export default class PolarService {
 		tenantId: string,
 		month: string,
 	): Promise<void> {
-		await PolarService.reportMeterEvent({
-			customer_id: polarCustomerId,
-			name: "mau",
-			value: mauCount,
-			metadata: {
-				tenant_id: tenantId,
-				month,
+		await PolarService.ingestEvents([
+			{
+				customerId: polarCustomerId,
+				name: "mau",
+				metadata: {
+					tenant_id: tenantId,
+					month,
+					count: mauCount,
+				},
 			},
-		});
+		]);
 	}
 
 	// ============================================================================
@@ -210,12 +169,14 @@ export default class PolarService {
 		successUrl: string,
 		metadata: Record<string, string> = {},
 	): Promise<{ url: string }> {
-		return await PolarService.request<{ url: string }>("POST", "/checkouts/custom", {
-			product_id: productId,
-			customer_id: customerId,
-			success_url: successUrl,
+		let client = getClient();
+		let checkout = await client.checkouts.create({
+			products: [productId],
+			customerId,
+			successUrl,
 			metadata,
 		});
+		return { url: checkout.url };
 	}
 
 	// ============================================================================
@@ -227,8 +188,8 @@ export default class PolarService {
 	 * Returns the portal URL for the customer to manage their subscription.
 	 */
 	static async createPortalSession(customerId: string): Promise<{ url: string }> {
-		return await PolarService.request<{ url: string }>("POST", "/customer-portal/sessions", {
-			customer_id: customerId,
-		});
+		let client = getClient();
+		let session = await client.customerSessions.create({ customerId });
+		return { url: session.customerPortalUrl };
 	}
 }
