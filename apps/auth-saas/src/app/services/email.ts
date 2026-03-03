@@ -1,24 +1,16 @@
 import { env } from "cloudflare:workers";
+import { Resend } from "resend";
 
-interface SendEmailOptions {
-	to: string;
-	subject: string;
-	html: string;
-	text?: string;
-}
-
-interface ResendResponse {
-	id: string;
-}
-
-interface ResendError {
-	statusCode: number;
-	message: string;
-	name: string;
+/**
+ * Get a configured Resend SDK client.
+ * Creates a new instance each time since env may not be available at module load.
+ */
+function getClient() {
+	return new Resend(env.RESEND_API_KEY);
 }
 
 /**
- * Email service using Resend API.
+ * Email service using Resend SDK.
  * Requires RESEND_API_KEY environment variable.
  */
 export default class EmailService {
@@ -33,31 +25,30 @@ export default class EmailService {
 	};
 
 	/**
-	 * Send an email using Resend API.
+	 * Send an email using Resend SDK.
 	 */
-	static async send(options: SendEmailOptions): Promise<string> {
-		let response = await fetch("https://api.resend.com/emails", {
-			method: "POST",
-			headers: {
-				Authorization: `Bearer ${env.RESEND_API_KEY}`,
-				"Content-Type": "application/json",
-			},
-			body: JSON.stringify({
-				from: env.EMAIL_FROM ?? "Auth SaaS <noreply@auth.sergiodxa.com>",
-				to: options.to,
-				subject: options.subject,
-				html: options.html,
-				text: options.text,
-			}),
+	static async send(options: {
+		to: string;
+		subject: string;
+		html: string;
+		text?: string;
+	}): Promise<string> {
+		let client = getClient();
+		let from = env.EMAIL_FROM ?? "Auth SaaS <noreply@auth.sergiodxa.com>";
+
+		let { data, error } = await client.emails.send({
+			from,
+			to: options.to,
+			subject: options.subject,
+			html: options.html,
+			text: options.text,
 		});
 
-		if (!response.ok) {
-			let error = (await response.json()) as ResendError;
-			throw new EmailService.SendError(error.message, response.status);
+		if (error) {
+			throw new EmailService.SendError(error.message, 400);
 		}
 
-		let result = (await response.json()) as ResendResponse;
-		return result.id;
+		return data!.id;
 	}
 
 	/**
