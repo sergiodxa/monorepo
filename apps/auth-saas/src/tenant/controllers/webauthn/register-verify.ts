@@ -164,6 +164,10 @@ export default action<"POST", "/webauthn/register/verify">(async ({ db, request,
 			redirectUri: challenge.redirect_uri,
 			scope: challenge.scope?.split(" "),
 			nonce: challenge.nonce ?? undefined,
+			pkce:
+				challenge.pkce_challenge && challenge.pkce_method
+					? { challenge: challenge.pkce_challenge, method: challenge.pkce_method }
+					: undefined,
 		});
 
 		// Build redirect URL with authorization code

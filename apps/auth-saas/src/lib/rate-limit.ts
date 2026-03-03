@@ -9,6 +9,8 @@
 const AUTH_RATE_LIMITED_PATHS = [
 	"/oauth/authorize",
 	"/oauth/token",
+	"/oidc/logout",
+	"/oidc/userinfo",
 	"/webauthn/register/options",
 	"/webauthn/register/verify",
 	"/webauthn/auth/options",

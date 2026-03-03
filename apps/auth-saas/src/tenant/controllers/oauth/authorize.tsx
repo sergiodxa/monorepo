@@ -164,6 +164,10 @@ export default form<"/authorize">({
 						state,
 						nonce,
 						scope,
+						pkce:
+							code_challenge && code_challenge_method
+								? { challenge: code_challenge, method: code_challenge_method as "S256" | "plain" }
+								: undefined,
 					});
 
 					let passkeys = await Passkey.listBySubject(db, subject.id);
@@ -193,6 +197,10 @@ export default form<"/authorize">({
 						state,
 						nonce,
 						scope,
+						pkce:
+							code_challenge && code_challenge_method
+								? { challenge: code_challenge, method: code_challenge_method as "S256" | "plain" }
+								: undefined,
 					});
 
 					let html = await renderToString(

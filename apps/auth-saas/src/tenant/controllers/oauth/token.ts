@@ -98,6 +98,10 @@ async function handleAuthorizationCode(db: Database, body: Record<string, unknow
 			log.info("Authorization code expired", { grantType: "authorization_code" });
 			return reject("invalid_grant", "Authorization code has expired");
 		}
+		log.error("Unexpected error consuming authorization code", {
+			grantType: "authorization_code",
+			error: error instanceof Error ? error.message : String(error),
+		});
 		throw error;
 	}
 
@@ -106,6 +110,29 @@ async function handleAuthorizationCode(db: Database, body: Record<string, unknow
 	if (!client) {
 		log.info("Client not found", { clientId: authzData.clientId, grantType: "authorization_code" });
 		return reject("invalid_client", "Client not found", 401);
+	}
+
+	// Validate scopes against client's allowed_scopes
+	if (authzData.scope.length > 0 && client.allowed_scopes) {
+		let allowedScopes: string[] = [];
+		try {
+			let parsed: unknown = JSON.parse(client.allowed_scopes);
+			if (Array.isArray(parsed) && parsed.every((s) => typeof s === "string")) {
+				allowedScopes = parsed as string[];
+			}
+		} catch {
+			log.error("Invalid allowed_scopes format", { clientId: client.id });
+		}
+
+		let invalidScopes = authzData.scope.filter((scope) => !allowedScopes.includes(scope));
+		if (invalidScopes.length > 0) {
+			log.info("Invalid scopes requested", {
+				clientId: client.id,
+				invalidScopes,
+				grantType: "authorization_code",
+			});
+			return reject("invalid_scope", `Scopes not allowed: ${invalidScopes.join(", ")}`);
+		}
 	}
 
 	// Confidential clients require authentication
@@ -451,6 +478,30 @@ async function handleClientCredentials(db: Database, body: Record<string, unknow
 		return reject("invalid_client", "Invalid client credentials", 401);
 	}
 
+	// Validate scopes against client's allowed_scopes
+	let parsedScope = scope?.split(" ");
+	if (parsedScope && parsedScope.length > 0 && client.allowed_scopes) {
+		let allowedScopes: string[] = [];
+		try {
+			let parsed: unknown = JSON.parse(client.allowed_scopes);
+			if (Array.isArray(parsed) && parsed.every((s) => typeof s === "string")) {
+				allowedScopes = parsed as string[];
+			}
+		} catch {
+			log.error("Invalid allowed_scopes format", { clientId: client.id });
+		}
+
+		let invalidScopes = parsedScope.filter((s) => !allowedScopes.includes(s));
+		if (invalidScopes.length > 0) {
+			log.info("Invalid scopes requested", {
+				clientId: client.id,
+				invalidScopes,
+				grantType: "client_credentials",
+			});
+			return reject("invalid_scope", `Scopes not allowed: ${invalidScopes.join(", ")}`);
+		}
+	}
+
 	// Get issuer and signing keys in parallel
 	let [issuer, signingKeys] = await Promise.all([TenantMeta.getIssuer(db), SigningKey.getAll(db)]);
 
@@ -476,8 +527,7 @@ async function handleClientCredentials(db: Database, body: Record<string, unknow
 	let resources = Array.isArray(resource) ? resource : resource ? [resource] : [];
 	let audience = [`https://${issuer}`, ...resources];
 
-	// Generate access token
-	let parsedScope = scope?.split(" ");
+	// Generate access token (parsedScope already defined above during scope validation)
 	let accessToken = AccessToken.generate(`https://${issuer}`, audience, client.id, parsedScope);
 	let signedAccessToken = await accessToken.sign(JWK.Algoritm.ES256, signingKeys);
 

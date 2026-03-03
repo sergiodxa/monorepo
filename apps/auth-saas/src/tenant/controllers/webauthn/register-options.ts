@@ -22,6 +22,21 @@ let RequestSchema = s.object({
 	scope: s.optional(s.string()),
 });
 
+// Basic email format validation (RFC 5322 simplified)
+function isValidEmail(email: string): boolean {
+	// Basic check: must contain exactly one @, something before and after
+	let parts = email.split("@");
+	if (parts.length !== 2) return false;
+	let [local, domain] = parts;
+	if (!local || !domain) return false;
+	if (local.length === 0 || domain.length === 0) return false;
+	// Domain must have at least one dot
+	if (!domain.includes(".")) return false;
+	// No spaces allowed
+	if (email.includes(" ")) return false;
+	return true;
+}
+
 export default action<"POST", "/webauthn/register/options">(
 	async ({ db, formData, request, logger }) => {
 		let log = logger.action("/webauthn/register/options");
@@ -33,6 +48,12 @@ export default action<"POST", "/webauthn/register/options">(
 		}
 
 		let { email, clientId, redirectUri, state, nonce, scope } = result.data;
+
+		// Validate email format
+		if (!isValidEmail(email)) {
+			log.info("Invalid email format", { email });
+			return badRequest({ error: "Invalid email format" });
+		}
 
 		// Check if subject already exists with passkeys
 		let existingSubject = await Subject.findByEmail(db, email);

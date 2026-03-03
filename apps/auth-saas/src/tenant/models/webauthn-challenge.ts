@@ -29,6 +29,8 @@ export default class WebAuthnChallenge {
 			state: s.nullable(s.string()),
 			nonce: s.nullable(s.string()),
 			scope: s.nullable(s.string()),
+			pkce_challenge: s.nullable(s.string()), // PKCE code_challenge for OAuth 2.1 compliance
+			pkce_method: s.nullable(s.enum_(["S256", "plain"])), // PKCE code_challenge_method
 			expires_at: s.number(),
 			created_at: s.number(),
 		},
@@ -43,6 +45,7 @@ export default class WebAuthnChallenge {
 			state?: string;
 			nonce?: string;
 			scope?: string;
+			pkce?: { challenge: string; method: "S256" | "plain" };
 		},
 	) {
 		let id = crypto.randomUUID();
@@ -60,6 +63,8 @@ export default class WebAuthnChallenge {
 			state: data.state ?? null,
 			nonce: data.nonce ?? null,
 			scope: data.scope ?? null,
+			pkce_challenge: data.pkce?.challenge ?? null,
+			pkce_method: data.pkce?.method ?? null,
 			expires_at: now + CHALLENGE_TTL,
 			created_at: now,
 		});
@@ -76,6 +81,7 @@ export default class WebAuthnChallenge {
 			state?: string;
 			nonce?: string;
 			scope?: string;
+			pkce?: { challenge: string; method: "S256" | "plain" };
 		},
 	) {
 		let id = crypto.randomUUID();
@@ -93,6 +99,8 @@ export default class WebAuthnChallenge {
 			state: data.state ?? null,
 			nonce: data.nonce ?? null,
 			scope: data.scope ?? null,
+			pkce_challenge: data.pkce?.challenge ?? null,
+			pkce_method: data.pkce?.method ?? null,
 			expires_at: now + CHALLENGE_TTL,
 			created_at: now,
 		});

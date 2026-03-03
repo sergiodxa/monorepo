@@ -100,9 +100,10 @@ export default class RedirectUri {
 	}
 
 	static async validate(db: Database, clientId: string, uri: string): Promise<boolean> {
-		let redirectUris = await db.findMany(RedirectUri.table, {
-			where: { client_id: clientId },
+		// Use direct query with both client_id and uri for better performance
+		let result = await db.findOne(RedirectUri.table, {
+			where: { client_id: clientId, uri },
 		});
-		return redirectUris.some((redirectUri) => redirectUri.uri === uri);
+		return result !== null;
 	}
 }

@@ -49,8 +49,9 @@ export default action<"POST", "/oauth/introspect">(async ({ db, formData, reques
 		return reject("invalid_client", "Client authentication required", 401);
 	}
 
-	// Validate client
-	let client = await Client.show(db, client_id);
+	// Validate client and get issuer in parallel for better performance
+	let [client, issuer] = await Promise.all([Client.show(db, client_id), TenantMeta.getIssuer(db)]);
+
 	if (!client) {
 		log.info("Client not found", { clientId: client_id });
 		return reject("invalid_client", "Client not found", 401);
@@ -65,8 +66,6 @@ export default action<"POST", "/oauth/introspect">(async ({ db, formData, reques
 	let headers = new Headers();
 	headers.set("Cache-Control", "no-store");
 
-	// Get issuer
-	let issuer = await TenantMeta.getIssuer(db);
 	if (!issuer) {
 		log.info("Issuer not configured, token inactive", { clientId: client_id });
 		return ok({ active: false }, { headers });

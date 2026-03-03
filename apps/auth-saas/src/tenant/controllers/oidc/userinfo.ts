@@ -32,14 +32,14 @@ export default action<"GET", "/userinfo">(async ({ db, request, logger }) => {
 
 	let token = authHeader.slice(7);
 
-	// Get issuer and signing keys
-	let issuer = await TenantMeta.getIssuer(db);
+	// Get issuer and signing keys in parallel for better performance
+	let [issuer, signingKeys] = await Promise.all([TenantMeta.getIssuer(db), SigningKey.getAll(db)]);
+
 	if (!issuer) {
 		log.error("Issuer not configured");
 		return reject("server_error", "Issuer not configured");
 	}
 
-	let signingKeys = await SigningKey.getAll(db);
 	if (signingKeys.length === 0) {
 		log.error("No signing keys available");
 		return reject("server_error", "No signing keys available");

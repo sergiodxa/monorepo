@@ -37,18 +37,21 @@ export default action<"GET", "/oidc/logout">(async ({ db, request, logger }) => 
 	let subjectId: string | undefined;
 	let clientId: string | undefined;
 
-	// Get issuer
-	let issuer = await TenantMeta.getIssuer(db);
-	if (!issuer) {
-		log.error("Issuer not configured");
-		return reject("server_error", "Issuer not configured");
-	}
-
-	// If id_token_hint is provided, extract subject and validate
+	// If id_token_hint is provided, fetch issuer and signing keys in parallel, then extract subject
 	if (id_token_hint) {
 		log.info("Processing logout with id_token_hint");
 
-		let signingKeys = await SigningKey.getAll(db);
+		// Fetch issuer and signing keys in parallel for better performance
+		let [issuer, signingKeys] = await Promise.all([
+			TenantMeta.getIssuer(db),
+			SigningKey.getAll(db),
+		]);
+
+		if (!issuer) {
+			log.error("Issuer not configured");
+			return reject("server_error", "Issuer not configured");
+		}
+
 		if (signingKeys.length === 0) {
 			log.error("No signing keys available");
 			return reject("server_error", "No signing keys available");
@@ -85,8 +88,19 @@ export default action<"GET", "/oidc/logout">(async ({ db, request, logger }) => 
 		return reject("invalid_request", "Either id_token_hint or client_id is required");
 	}
 
+	// Fetch client, logout URIs (if needed), and subject (if needed) in parallel
+	let clientPromise = clientId ? Client.show(db, clientId) : Promise.resolve(null);
+	let logoutUrisPromise =
+		post_logout_redirect_uri && clientId ? LogoutUri.list(db, clientId) : Promise.resolve([]);
+	let subjectPromise = subjectId ? Subject.show(db, subjectId) : Promise.resolve(null);
+
+	let [client, logoutUris, subject] = await Promise.all([
+		clientPromise,
+		logoutUrisPromise,
+		subjectPromise,
+	]);
+
 	// Validate client exists
-	let client = clientId ? await Client.show(db, clientId) : null;
 	if (clientId && !client) {
 		log.info("Client not found", { clientId });
 		return reject("invalid_client", "Client not found");
@@ -94,7 +108,6 @@ export default action<"GET", "/oidc/logout">(async ({ db, request, logger }) => 
 
 	// Validate post_logout_redirect_uri if provided
 	if (post_logout_redirect_uri && clientId) {
-		let logoutUris = await LogoutUri.list(db, clientId);
 		let isValidUri = logoutUris.some((uri) => uri.uri === post_logout_redirect_uri);
 		if (!isValidUri) {
 			log.info("Invalid post_logout_redirect_uri", { clientId });
@@ -103,14 +116,11 @@ export default action<"GET", "/oidc/logout">(async ({ db, request, logger }) => 
 	}
 
 	// Delete sessions for the subject
-	if (subjectId) {
-		let subject = await Subject.show(db, subjectId);
-		if (subject) {
-			await Session.destroyBySubject(db, subject.id);
-			log.info("Sessions destroyed for subject", { subjectId: subject.id });
-		} else {
-			log.info("Subject not found for session destruction", { subjectId });
-		}
+	if (subjectId && subject) {
+		await Session.destroyBySubject(db, subject.id);
+		log.info("Sessions destroyed for subject", { subjectId: subject.id });
+	} else if (subjectId) {
+		log.info("Subject not found for session destruction", { subjectId });
 	}
 
 	// Redirect to post_logout_redirect_uri if provided, otherwise show success message
