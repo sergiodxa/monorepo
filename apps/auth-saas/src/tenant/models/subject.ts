@@ -109,7 +109,10 @@ export default class Subject {
 
 		let toDelete = unverifiedSubjects.filter((subject) => subject.created_at < cutoffDate);
 
-		for (let subject of toDelete) await db.delete(Subject.table, { id: subject.id });
+		if (toDelete.length === 0) return 0;
+
+		// Delete in parallel for better performance
+		await Promise.all(toDelete.map((subject) => db.delete(Subject.table, { id: subject.id })));
 
 		return toDelete.length;
 	}

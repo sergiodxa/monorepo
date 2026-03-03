@@ -178,5 +178,6 @@ export default action<"POST", "/webauthn/auth/verify">(async ({ db, request, log
 	return ok({
 		success: true,
 		subjectId: subject.id,
+		email: subject.email,
 	});
 });

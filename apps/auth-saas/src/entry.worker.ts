@@ -43,11 +43,11 @@ export default {
 		}
 
 		// Apply rate limiting to auth endpoints before routing to tenant DO
-		let rateLimitResponse = await checkRateLimit(
-			request,
-			env.AUTH_RATE_LIMITER,
-			env.STRICT_RATE_LIMITER,
-		);
+		let rateLimitResponse = await checkRateLimit(request, {
+			authLimiter: env.AUTH_RATE_LIMITER,
+			strictLimiter: env.STRICT_RATE_LIMITER,
+			managementLimiter: env.MANAGEMENT_RATE_LIMITER,
+		});
 		if (rateLimitResponse) return rateLimitResponse;
 
 		let hostMetadata = request.cf?.hostMetadata;

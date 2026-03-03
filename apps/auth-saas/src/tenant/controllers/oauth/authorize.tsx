@@ -17,12 +17,13 @@ import WebAuthnChallenge from "~/tenant/models/webauthn-challenge";
 import routes from "~/tenant/routes";
 
 // OAuth 2.0 Authorization Request parameters
+// Note: `state` is required for CSRF protection per RFC 6749 Section 10.12
 let AuthorizeRequestSchema = s.object({
 	response_type: s.enum_(["code"]),
 	client_id: s.string(),
 	redirect_uri: s.string(),
 	scope: s.optional(s.string()),
-	state: s.optional(s.string()),
+	state: s.string(), // Required for CSRF protection
 	nonce: s.optional(s.string()),
 	code_challenge: s.optional(s.string()),
 	code_challenge_method: s.optional(s.enum_(["S256", "plain"])),

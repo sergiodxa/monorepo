@@ -125,12 +125,14 @@ export default class WebAuthnChallenge {
 
 	static async cleanupExpired(db: Database, now: number) {
 		let records = await db.findMany(WebAuthnChallenge.table);
-
 		let expiredRecords = records.filter((record) => record.expires_at < now);
 
-		for (let record of expiredRecords) {
-			await db.delete(WebAuthnChallenge.table, { id: record.id });
-		}
+		if (expiredRecords.length === 0) return 0;
+
+		// Delete in parallel for better performance
+		await Promise.all(
+			expiredRecords.map((record) => db.delete(WebAuthnChallenge.table, { id: record.id })),
+		);
 
 		return expiredRecords.length;
 	}

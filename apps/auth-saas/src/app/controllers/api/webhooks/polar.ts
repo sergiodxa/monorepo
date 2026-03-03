@@ -193,13 +193,55 @@ export default action<"POST", "/api/webhooks/polar">(async ({ db, request, logge
 				log.info("Unhandled webhook event type", { type: eventType });
 		}
 	} catch (error) {
+		// Determine if this is a retryable error
+		// Database errors and network issues should be retried
+		// Validation errors should not be retried
+		let isRetryable = isRetryableError(error);
+
 		log.error("Webhook processing failed", {
 			type: eventType,
 			error: error instanceof Error ? error.message : String(error),
+			retryable: isRetryable,
 		});
-		// Return 200 to prevent retries for processing errors
-		// Polar will retry on 5xx errors
+
+		if (isRetryable) {
+			// Return 500 to allow Polar to retry
+			return json({ error: "Processing failed, please retry" }, { status: 500 });
+		}
+
+		// Non-retryable errors return 200 to prevent infinite retries
 	}
 
 	return json({ received: true });
 });
+
+/**
+ * Determines if an error is retryable (transient) vs permanent.
+ * Network errors, database timeouts, etc. should be retried.
+ * Validation errors, not found errors should not be retried.
+ */
+function isRetryableError(error: unknown): boolean {
+	if (!(error instanceof Error)) return false;
+
+	let message = error.message.toLowerCase();
+
+	// Database/network errors are retryable
+	if (
+		message.includes("timeout") ||
+		message.includes("connection") ||
+		message.includes("network") ||
+		message.includes("unavailable") ||
+		message.includes("econnrefused") ||
+		message.includes("econnreset")
+	) {
+		return true;
+	}
+
+	// D1 specific errors
+	if (message.includes("d1_error") || message.includes("database")) {
+		return true;
+	}
+
+	// Everything else is non-retryable (validation errors, etc.)
+	return false;
+}

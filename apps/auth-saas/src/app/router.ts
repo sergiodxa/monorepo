@@ -24,6 +24,7 @@ import webauthnAuthOptions from "./controllers/onboarding/webauthn/auth-options"
 import webauthnAuthVerify from "./controllers/onboarding/webauthn/auth-verify";
 import webauthnRegisterOptions from "./controllers/onboarding/webauthn/register-options";
 import webauthnRegisterVerify from "./controllers/onboarding/webauthn/register-verify";
+import csrf from "./middleware/csrf";
 import database from "./middleware/db";
 import logger from "./middleware/logger";
 import session from "./middleware/session";
@@ -85,7 +86,7 @@ router.map(routes, {
 		},
 
 		dashboard: {
-			middleware: [session],
+			middleware: [session, csrf],
 
 			actions: {
 				index: dashboardIndex,

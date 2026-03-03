@@ -65,23 +65,44 @@ export default class Secret {
 
 	static async verify(db: Database, clientId: string, plainSecret: string): Promise<boolean> {
 		let secrets = await db.findMany(Secret.table, { where: { client_id: clientId } });
+		let now = new Date();
 
-		for (let secret of secrets) {
-			if (secret.expires_at && new Date(secret.expires_at) < new Date()) {
-				continue;
+		// Filter out expired secrets first
+		let validSecrets = secrets.filter((secret) => {
+			if (secret.expires_at && new Date(secret.expires_at) < now) {
+				return false;
 			}
+			return true;
+		});
 
-			let isMatch = await bcrypt.compare(plainSecret, secret.secret_hash);
-			if (isMatch) {
-				await db.update(
-					Secret.table,
-					{ id: secret.id },
-					{
-						last_used_at: new Date().toISOString(),
-					},
-				);
-				return true;
-			}
+		if (validSecrets.length === 0) {
+			// Do a dummy bcrypt compare to prevent timing attacks that detect no secrets
+			await bcrypt.compare(plainSecret, "$2a$10$dummy.hash.for.timing.attack.prevention");
+			return false;
+		}
+
+		// Compare against all valid secrets in parallel to prevent timing attacks
+		// that could reveal which position the valid secret is in
+		let comparisons = await Promise.all(
+			validSecrets.map(async (secret) => ({
+				id: secret.id,
+				isMatch: await bcrypt.compare(plainSecret, secret.secret_hash),
+			})),
+		);
+
+		// Find the matching secret (if any)
+		let match = comparisons.find((c) => c.isMatch);
+
+		if (match) {
+			// Update last_used_at for the matched secret
+			await db.update(
+				Secret.table,
+				{ id: match.id },
+				{
+					last_used_at: now.toISOString(),
+				},
+			);
+			return true;
 		}
 
 		return false;

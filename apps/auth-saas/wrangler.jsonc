@@ -49,6 +49,13 @@
 			"namespace_id": "1002",
 			"simple": { "limit": 5, "period": 60 },
 		},
+		{
+			// Management API rate limit: 100 requests per 60 seconds per client
+			// Applies to /api/* endpoints (authenticated by client access token)
+			"binding": "MANAGEMENT_RATE_LIMITER",
+			"namespace_id": "1003",
+			"simple": { "limit": 100, "period": 60 },
+		},
 	],
 
 	"analytics_engine_datasets": [

@@ -99,12 +99,14 @@ export default class AuthorizationCode {
 
 	static async cleanupExpired(db: Database, now: number) {
 		let records = await db.findMany(AuthorizationCode.table);
-
 		let expiredRecords = records.filter((record) => record.expires_at < now);
 
-		for (let record of expiredRecords) {
-			await db.delete(AuthorizationCode.table, { code: record.code });
-		}
+		if (expiredRecords.length === 0) return 0;
+
+		// Delete in parallel for better performance
+		await Promise.all(
+			expiredRecords.map((record) => db.delete(AuthorizationCode.table, { code: record.code })),
+		);
 
 		return expiredRecords.length;
 	}
