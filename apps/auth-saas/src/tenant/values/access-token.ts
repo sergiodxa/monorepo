@@ -26,6 +26,10 @@ export default class AccessToken extends JWT {
 		return this.parser.string("iss");
 	}
 
+	override get notBefore() {
+		return new Date(this.parser.number("nbf") * 1000);
+	}
+
 	override get subject() {
 		return this.parser.string("sub");
 	}
@@ -49,6 +53,7 @@ export default class AccessToken extends JWT {
 			iat: now,
 			iss: issuer,
 			jti: crypto.randomUUID(),
+			nbf: now, // Token is valid immediately
 			sub: subjectId,
 			...(scope && { scope: scope.join(" ") }),
 		});

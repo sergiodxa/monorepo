@@ -39,6 +39,10 @@ export default class IdToken extends JWT {
 		return this.parser.number("auth_time");
 	}
 
+	override get notBefore() {
+		return new Date(this.parser.number("nbf") * 1000);
+	}
+
 	static generate(
 		issuer: string,
 		subject: {
@@ -63,6 +67,7 @@ export default class IdToken extends JWT {
 			jti: crypto.randomUUID(),
 			exp: expiresAt,
 			iat: now,
+			nbf: now, // Token is valid immediately
 			...(options?.authTime && { auth_time: options.authTime }),
 			...(options?.nonce && { nonce: options.nonce }),
 			...(scope.includes("email") && {

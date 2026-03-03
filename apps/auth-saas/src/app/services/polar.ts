@@ -68,7 +68,7 @@ export default class PolarService {
 	 * Make an authenticated request to Polar API.
 	 */
 	private static async request<T>(method: string, path: string, body?: unknown): Promise<T> {
-		let response = await fetch(`${PolarService.BASE_URL}${path}`, {
+		let response = await fetch(new URL(path, PolarService.BASE_URL), {
 			method,
 			headers: {
 				Authorization: `Bearer ${env.POLAR_ACCESS_TOKEN}`,

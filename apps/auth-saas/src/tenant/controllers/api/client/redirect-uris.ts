@@ -6,12 +6,13 @@ import * as s from "remix/data-schema";
 
 import action from "~/lib/action";
 import { RecordNotFoundError } from "~/lib/db-errors";
+import { LIMITS, maxLength, minLength, url } from "~/lib/schema-checks";
 import Client from "~/tenant/models/client";
 import RedirectUri from "~/tenant/models/client/redirect-uri";
 
 let CreateRedirectUriSchema = s.object({
-	uri: s.string(),
-	environment: s.optional(s.string()),
+	uri: s.string().pipe(minLength(LIMITS.url.min), maxLength(LIMITS.url.max), url()),
+	environment: s.optional(s.string().pipe(maxLength(50))),
 });
 
 export const index = action<"GET", "/api/clients/:clientId/redirect-uris">(

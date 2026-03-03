@@ -108,14 +108,12 @@ export default action<"POST", "/webauthn/register/verify">(async ({ db, request,
 			requireUserVerification: true,
 		});
 	} catch (error) {
+		// Log the full error for debugging, but don't expose details to client
 		log.info("Passkey verification failed", {
 			challengeId,
 			error: error instanceof Error ? error.message : "Unknown error",
 		});
-		return badRequest({
-			error: "Passkey verification failed",
-			details: error instanceof Error ? error.message : "Unknown error",
-		});
+		return badRequest({ error: "Passkey verification failed" });
 	}
 
 	if (!verification.verified || !verification.registrationInfo) {

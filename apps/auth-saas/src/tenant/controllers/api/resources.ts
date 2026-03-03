@@ -7,24 +7,29 @@ import * as s from "remix/data-schema";
 import action from "~/lib/action";
 import { RecordNotFoundError } from "~/lib/db-errors";
 import { isResponse, safeJsonParse } from "~/lib/safe-json";
+import { LIMITS, maxLength, minLength } from "~/lib/schema-checks";
 import Resource from "~/tenant/models/resource";
 
+let nameSchema = s.string().pipe(minLength(LIMITS.name.min), maxLength(LIMITS.name.max));
+let descriptionSchema = s.string().pipe(maxLength(LIMITS.description.max));
+let identifierSchema = s.string().pipe(minLength(LIMITS.url.min), maxLength(LIMITS.url.max));
+
 let ScopeSchema = s.object({
-	name: s.string(),
-	description: s.optional(s.string()),
+	name: s.string().pipe(minLength(LIMITS.scope.min), maxLength(LIMITS.scope.max)),
+	description: s.optional(descriptionSchema),
 });
 
 let CreateResourceSchema = s.object({
-	identifier: s.string(),
-	name: s.string(),
-	description: s.optional(s.string()),
+	identifier: identifierSchema,
+	name: nameSchema,
+	description: s.optional(descriptionSchema),
 	scopes: s.array(ScopeSchema),
 });
 
 let UpdateResourceSchema = s.object({
-	identifier: s.optional(s.string()),
-	name: s.optional(s.string()),
-	description: s.optional(s.nullable(s.string())),
+	identifier: s.optional(identifierSchema),
+	name: s.optional(nameSchema),
+	description: s.optional(s.nullable(descriptionSchema)),
 	scopes: s.optional(s.array(ScopeSchema)),
 });
 

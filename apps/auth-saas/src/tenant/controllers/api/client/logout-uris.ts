@@ -6,14 +6,15 @@ import * as s from "remix/data-schema";
 
 import action from "~/lib/action";
 import { RecordNotFoundError } from "~/lib/db-errors";
+import { httpsUrl, LIMITS, maxLength, minLength } from "~/lib/schema-checks";
 import Client from "~/tenant/models/client";
 import LogoutUri from "~/tenant/models/client/logout-uri";
 
 let CreateLogoutUriSchema = s.object({
-	uri: s.string(),
+	uri: s.string().pipe(minLength(LIMITS.url.min), maxLength(LIMITS.url.max), httpsUrl()),
 	type: s.enum_(["post_logout", "backchannel", "frontchannel"]),
 	sessionRequired: s.optional(s.boolean()),
-	environment: s.optional(s.string()),
+	environment: s.optional(s.string().pipe(maxLength(50))),
 });
 
 export const index = action<"GET", "/api/clients/:clientId/logout-uris">(

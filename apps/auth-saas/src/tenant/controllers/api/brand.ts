@@ -5,13 +5,17 @@ import * as s from "remix/data-schema";
 
 import action from "~/lib/action";
 import { isResponse, safeJsonParse } from "~/lib/safe-json";
+import { hexColor, httpsUrl, LIMITS, maxLength } from "~/lib/schema-checks";
 import Brand from "~/tenant/models/brand";
 
+// Custom CSS max length: 50KB should be plenty
+let CSS_MAX_LENGTH = 50_000;
+
 let UpdateBrandSchema = s.object({
-	logoUrl: s.optional(s.nullable(s.string())),
-	primaryColor: s.optional(s.nullable(s.string())),
-	backgroundColor: s.optional(s.nullable(s.string())),
-	customCss: s.optional(s.nullable(s.string())),
+	logoUrl: s.optional(s.nullable(s.string().pipe(maxLength(LIMITS.url.max), httpsUrl()))),
+	primaryColor: s.optional(s.nullable(s.string().pipe(hexColor()))),
+	backgroundColor: s.optional(s.nullable(s.string().pipe(hexColor()))),
+	customCss: s.optional(s.nullable(s.string().pipe(maxLength(CSS_MAX_LENGTH)))),
 });
 
 export const show = action<"GET", "/api/brand">(async ({ db, logger }) => {

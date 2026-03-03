@@ -7,25 +7,31 @@ import * as s from "remix/data-schema";
 import action from "~/lib/action";
 import { RecordNotFoundError } from "~/lib/db-errors";
 import { isResponse, safeJsonParse } from "~/lib/safe-json";
+import { httpsUrl, LIMITS, maxLength, minLength } from "~/lib/schema-checks";
 import Client from "~/tenant/models/client";
 
+let nameSchema = s.string().pipe(minLength(LIMITS.name.min), maxLength(LIMITS.name.max));
+let descriptionSchema = s.string().pipe(maxLength(LIMITS.description.max));
+let logoUrlSchema = s.string().pipe(maxLength(LIMITS.url.max), httpsUrl());
+let scopeSchema = s.string().pipe(minLength(LIMITS.scope.min), maxLength(LIMITS.scope.max));
+
 let CreateClientSchema = s.object({
-	name: s.string(),
+	name: nameSchema,
 	type: s.enum_(["public", "confidential", "m2m"]),
-	description: s.optional(s.string()),
-	logoUrl: s.optional(s.string()),
-	allowedScopes: s.optional(s.array(s.string())),
-	allowedResources: s.optional(s.array(s.string())),
+	description: s.optional(descriptionSchema),
+	logoUrl: s.optional(logoUrlSchema),
+	allowedScopes: s.optional(s.array(scopeSchema)),
+	allowedResources: s.optional(s.array(s.string().pipe(maxLength(LIMITS.url.max)))),
 	isManagementClient: s.optional(s.boolean()),
 });
 
 let UpdateClientSchema = s.object({
-	name: s.optional(s.string()),
+	name: s.optional(nameSchema),
 	type: s.optional(s.enum_(["public", "confidential", "m2m"])),
-	description: s.optional(s.nullable(s.string())),
-	logoUrl: s.optional(s.nullable(s.string())),
-	allowedScopes: s.optional(s.nullable(s.array(s.string()))),
-	allowedResources: s.optional(s.nullable(s.array(s.string()))),
+	description: s.optional(s.nullable(descriptionSchema)),
+	logoUrl: s.optional(s.nullable(logoUrlSchema)),
+	allowedScopes: s.optional(s.nullable(s.array(scopeSchema))),
+	allowedResources: s.optional(s.nullable(s.array(s.string().pipe(maxLength(LIMITS.url.max))))),
 	isManagementClient: s.optional(s.boolean()),
 });
 

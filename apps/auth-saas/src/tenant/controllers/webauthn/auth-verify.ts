@@ -127,15 +127,13 @@ export default action<"POST", "/webauthn/auth/verify">(async ({ db, request, log
 			requireUserVerification: true,
 		});
 	} catch (error) {
+		// Log the full error for debugging, but don't expose details to client
 		log.info("Authentication verification failed", {
 			subjectId: subject.id,
 			challengeId,
 			error: error instanceof Error ? error.message : "Unknown error",
 		});
-		return badRequest({
-			error: "Authentication failed",
-			details: error instanceof Error ? error.message : "Unknown error",
-		});
+		return badRequest({ error: "Authentication failed" });
 	}
 
 	if (!verification.verified || !verification.authenticationInfo) {

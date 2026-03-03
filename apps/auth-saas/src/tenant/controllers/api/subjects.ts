@@ -7,11 +7,12 @@ import * as s from "remix/data-schema";
 import action from "~/lib/action";
 import { RecordNotFoundError } from "~/lib/db-errors";
 import { isResponse, safeJsonParse } from "~/lib/safe-json";
+import { httpsUrl, LIMITS, maxLength } from "~/lib/schema-checks";
 import Subject from "~/tenant/models/subject";
 
 let UpdateSubjectSchema = s.object({
-	displayName: s.optional(s.string()),
-	avatarUrl: s.optional(s.string()),
+	displayName: s.optional(s.string().pipe(maxLength(LIMITS.name.max))),
+	avatarUrl: s.optional(s.string().pipe(maxLength(LIMITS.url.max), httpsUrl())),
 });
 
 export const index = action<"GET", "/api/subjects">(async ({ db, logger }) => {

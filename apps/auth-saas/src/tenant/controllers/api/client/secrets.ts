@@ -6,12 +6,13 @@ import * as s from "remix/data-schema";
 
 import action from "~/lib/action";
 import { RecordNotFoundError } from "~/lib/db-errors";
+import { LIMITS, maxLength } from "~/lib/schema-checks";
 import Client from "~/tenant/models/client";
 import Secret from "~/tenant/models/client/secret";
 
 let CreateSecretSchema = s.object({
-	name: s.optional(s.string()),
-	expiresAt: s.optional(s.string()), // ISO date string
+	name: s.optional(s.string().pipe(maxLength(LIMITS.name.max))),
+	expiresAt: s.optional(s.string().pipe(maxLength(30))), // ISO date string
 });
 
 export const index = action<"GET", "/api/clients/:clientId/secrets">(
