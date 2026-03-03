@@ -26,6 +26,7 @@ import webauthnRegisterVerify from "./controllers/onboarding/webauthn/register-v
 import database from "./middleware/db";
 import logger from "./middleware/logger";
 import session from "./middleware/session";
+import subscription from "./middleware/subscription";
 import tenantOwner from "./middleware/tenant-owner";
 import routes from "./routes";
 
@@ -94,7 +95,7 @@ router.map(routes, {
 						...tenants,
 
 						clients: {
-							middleware: [tenantOwner],
+							middleware: [tenantOwner, subscription],
 
 							actions: {
 								...clients,
@@ -104,10 +105,10 @@ router.map(routes, {
 							},
 						},
 
-						users: { middleware: [tenantOwner], actions: users },
+						users: { middleware: [tenantOwner, subscription], actions: users },
 
 						resources: {
-							middleware: [tenantOwner],
+							middleware: [tenantOwner, subscription],
 
 							actions: {
 								...resources,

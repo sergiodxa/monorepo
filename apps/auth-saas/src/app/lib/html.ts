@@ -17,10 +17,17 @@ interface LayoutOptions {
 	backLink?: string;
 	backText?: string;
 	content: string;
+	/**
+	 * Show a warning banner for subscription issues.
+	 */
+	subscriptionWarning?: {
+		type: "past_due";
+		billingUrl: string;
+	};
 }
 
 export function layout(options: LayoutOptions): string {
-	let { title, tenant, backLink, backText, content } = options;
+	let { title, tenant, backLink, backText, content, subscriptionWarning } = options;
 
 	let breadcrumb = "";
 	if (backLink && backText) {
@@ -30,6 +37,22 @@ export function layout(options: LayoutOptions): string {
 	} else {
 		breadcrumb =
 			'<a href="/dashboard" class="text-gray-600 hover:text-gray-900">&larr; Dashboard</a>';
+	}
+
+	let warningBanner = "";
+	if (subscriptionWarning?.type === "past_due") {
+		warningBanner = `
+			<div class="bg-yellow-50 border-b border-yellow-200">
+				<div class="max-w-6xl mx-auto px-4 py-3 flex justify-between items-center">
+					<p class="text-yellow-800 text-sm">
+						<strong>Payment past due:</strong> Your subscription payment has failed. Please update your payment method to avoid service interruption.
+					</p>
+					<a href="${subscriptionWarning.billingUrl}" class="text-yellow-800 hover:text-yellow-900 text-sm font-medium underline">
+						Update Payment
+					</a>
+				</div>
+			</div>
+		`;
 	}
 
 	return `
@@ -42,6 +65,7 @@ export function layout(options: LayoutOptions): string {
 			<script src="https://cdn.tailwindcss.com"></script>
 		</head>
 		<body class="bg-gray-50 min-h-screen">
+			${warningBanner}
 			<nav class="bg-white shadow-sm border-b">
 				<div class="max-w-6xl mx-auto px-4 py-4 flex justify-between items-center">
 					<div class="flex items-center gap-4">

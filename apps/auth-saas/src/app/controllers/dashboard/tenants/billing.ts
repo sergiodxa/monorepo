@@ -16,6 +16,7 @@ export default form<"/dashboard/tenants/:tenantId/billing">({
 
 			let url = new URL(request.url);
 			let showSuccess = url.searchParams.get("success") === "true";
+			let blockedReason = url.searchParams.get("blocked");
 
 			let subscription = await Subscription.findByTenant(db, tenant.id);
 
@@ -57,6 +58,19 @@ export default form<"/dashboard/tenants/:tenantId/billing">({
 					content: `
 						<h2 class="text-2xl font-bold mb-6">Billing</h2>
 						<p class="text-gray-500 mb-6">Manage your subscription and billing settings.</p>
+
+						${
+							blockedReason
+								? `
+							<div class="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+								<p class="text-red-800 font-medium">Access Restricted</p>
+								<p class="text-red-700 text-sm mt-1">
+									${getBlockedMessage(blockedReason)}
+								</p>
+							</div>
+						`
+								: ""
+						}
 
 						${
 							showSuccess
@@ -246,3 +260,21 @@ export default form<"/dashboard/tenants/:tenantId/billing">({
 		},
 	},
 });
+
+/**
+ * Get a human-readable message for the blocked reason.
+ */
+function getBlockedMessage(reason: string): string {
+	switch (reason) {
+		case "canceled":
+			return "Your subscription has been canceled. Please subscribe to regain access to tenant management features.";
+		case "unpaid":
+			return "Your subscription payment has failed. Please update your payment method to restore access.";
+		case "incomplete":
+			return "Your subscription setup is incomplete. Please complete the checkout process to access tenant management features.";
+		case "no_subscription":
+			return "No subscription found for this tenant. Please subscribe to access tenant management features.";
+		default:
+			return "Your subscription status prevents access to tenant management features. Please review your billing settings.";
+	}
+}

@@ -4,6 +4,7 @@ import { validate } from "@pkg/validate";
 import * as s from "remix/data-schema";
 
 import { escapeHtml, layout } from "~/app/lib/html";
+import subscription from "~/app/middleware/subscription";
 import tenantOwner from "~/app/middleware/tenant-owner";
 import form from "~/lib/form";
 
@@ -15,10 +16,10 @@ let UpdateBrandingSchema = s.object({
 });
 
 export default form<"/dashboard/tenants/:tenantId/branding">({
-	middleware: [tenantOwner],
+	middleware: [tenantOwner, subscription],
 
 	actions: {
-		async index({ tenant, tenantApi, logger }) {
+		async index({ tenant, tenantApi, subscription, logger }) {
 			let log = logger.loader(`/dashboard/tenants/${tenant.id}/branding`);
 
 			let branding = await tenantApi.getBranding();
@@ -29,6 +30,9 @@ export default form<"/dashboard/tenants/:tenantId/branding">({
 				layout({
 					title: `Branding - ${tenant.name}`,
 					tenant,
+					subscriptionWarning: subscription.isPastDue
+						? { type: "past_due", billingUrl: `/dashboard/tenants/${tenant.id}/billing` }
+						: undefined,
 					content: `
 						<h2 class="text-2xl font-bold mb-6">Branding</h2>
 						<p class="text-gray-500 mb-6">Customize the appearance of your login pages.</p>

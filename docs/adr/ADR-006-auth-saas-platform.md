@@ -57,11 +57,16 @@
   - [x] checkout.completed - links subscription after checkout
   - [x] subscription.active/updated/canceled - syncs status
   - [x] Optional webhook signature verification
+- [x] Subscription status enforcement
+  - [x] Middleware checks subscription status before tenant management routes
+  - [x] active/trialing: Full access
+  - [x] past_due: Access with warning banner
+  - [x] canceled/unpaid/incomplete: Blocked with redirect to billing
+  - [x] Billing and hostname pages always accessible (to fix issues)
 
 #### Pending
 
 - [ ] Test end-to-end flows in production
-- [ ] Subscription status enforcement (block access for unpaid)
 
 ## Background
 
