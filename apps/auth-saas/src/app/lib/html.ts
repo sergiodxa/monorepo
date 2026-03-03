@@ -2,21 +2,14 @@
  * HTML utilities for platform dashboard
  */
 
-export function escapeHtml(str: string): string {
-	return str
-		.replace(/&/g, "&amp;")
-		.replace(/</g, "&lt;")
-		.replace(/>/g, "&gt;")
-		.replace(/"/g, "&quot;")
-		.replace(/'/g, "&#039;");
-}
+import { html, type SafeHtml } from "remix/html-template";
 
 interface LayoutOptions {
 	title: string;
 	tenant?: { id: string; name: string };
 	backLink?: string;
 	backText?: string;
-	content: string;
+	content: SafeHtml;
 	/**
 	 * Show a warning banner for subscription issues.
 	 */
@@ -26,22 +19,23 @@ interface LayoutOptions {
 	};
 }
 
-export function layout(options: LayoutOptions): string {
+export function layout(options: LayoutOptions): SafeHtml {
 	let { title, tenant, backLink, backText, content, subscriptionWarning } = options;
 
-	let breadcrumb = "";
+	let breadcrumb: SafeHtml;
 	if (backLink && backText) {
-		breadcrumb = `<a href="${backLink}" class="text-gray-600 hover:text-gray-900">&larr; ${escapeHtml(backText)}</a>`;
+		breadcrumb = html`<a href="${backLink}" class="text-gray-600 hover:text-gray-900">&larr; ${backText}</a>`;
 	} else if (tenant) {
-		breadcrumb = `<a href="/dashboard/tenants/${tenant.id}" class="text-gray-600 hover:text-gray-900">&larr; ${escapeHtml(tenant.name)}</a>`;
+		breadcrumb = html`<a href="/dashboard/tenants/${tenant.id}" class="text-gray-600 hover:text-gray-900">&larr; ${tenant.name}</a>`;
 	} else {
-		breadcrumb =
-			'<a href="/dashboard" class="text-gray-600 hover:text-gray-900">&larr; Dashboard</a>';
+		breadcrumb = html`
+			<a href="/dashboard" class="text-gray-600 hover:text-gray-900">&larr; Dashboard</a>
+		`;
 	}
 
-	let warningBanner = "";
+	let warningBanner: SafeHtml | null = null;
 	if (subscriptionWarning?.type === "past_due") {
-		warningBanner = `
+		warningBanner = html`
 			<div class="bg-yellow-50 border-b border-yellow-200">
 				<div class="max-w-6xl mx-auto px-4 py-3 flex justify-between items-center">
 					<p class="text-yellow-800 text-sm">
@@ -55,13 +49,18 @@ export function layout(options: LayoutOptions): string {
 		`;
 	}
 
-	return `
+	let tenantBreadcrumb: SafeHtml | null = null;
+	if (tenant) {
+		tenantBreadcrumb = html`<span class="text-gray-400">/</span><span class="font-semibold">${tenant.name}</span>`;
+	}
+
+	return html`
 		<!DOCTYPE html>
 		<html lang="en">
 		<head>
 			<meta charset="UTF-8">
 			<meta name="viewport" content="width=device-width, initial-scale=1.0">
-			<title>${escapeHtml(title)} - Auth SaaS</title>
+			<title>${title} - Auth SaaS</title>
 			<script src="https://cdn.tailwindcss.com"></script>
 		</head>
 		<body class="bg-gray-50 min-h-screen">
@@ -70,7 +69,7 @@ export function layout(options: LayoutOptions): string {
 				<div class="max-w-6xl mx-auto px-4 py-4 flex justify-between items-center">
 					<div class="flex items-center gap-4">
 						${breadcrumb}
-						${tenant ? `<span class="text-gray-400">/</span><span class="font-semibold">${escapeHtml(tenant.name)}</span>` : ""}
+						${tenantBreadcrumb}
 					</div>
 					<a href="/onboarding" class="text-gray-600 hover:text-gray-900">Sign out</a>
 				</div>

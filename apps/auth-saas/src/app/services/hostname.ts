@@ -1,92 +1,77 @@
+import type { Schema } from "remix/data-schema";
+
 import { env } from "cloudflare:workers";
+import * as s from "remix/data-schema";
 
-/**
- * SSL status for a custom hostname.
- */
-type SSLStatus =
-	| "initializing"
-	| "pending_validation"
-	| "pending_issuance"
-	| "pending_deployment"
-	| "active"
-	| "pending_deletion"
-	| "deleted";
+// ============================================================================
+// SCHEMAS
+// ============================================================================
 
-/**
- * Hostname status.
- */
-type HostnameStatus =
-	| "active"
-	| "pending"
-	| "active_redeploying"
-	| "moved"
-	| "pending_deletion"
-	| "deleted"
-	| "pending_blocked"
-	| "pending_migration"
-	| "pending_provisioned"
-	| "test_pending"
-	| "test_active"
-	| "test_active_apex"
-	| "test_blocked"
-	| "test_failed"
-	| "provisioned"
-	| "blocked";
+const SSLValidationRecordSchema = s.object({
+	txt_name: s.string(),
+	txt_value: s.string(),
+});
 
-/**
- * SSL validation record for DNS TXT validation.
- */
-interface SSLValidationRecord {
-	txt_name: string;
-	txt_value: string;
-}
+const SSLSchema = s.object({
+	status: s.string(), // SSL status values are dynamic, validated loosely
+	method: s.string(),
+	type: s.string(),
+	validation_records: s.optional(s.array(SSLValidationRecordSchema)),
+	validation_errors: s.optional(s.array(s.object({ message: s.string() }))),
+});
 
-/**
- * Custom hostname object from Cloudflare API.
- */
-interface CustomHostname {
-	id: string;
-	hostname: string;
-	status: HostnameStatus;
-	ssl: {
-		status: SSLStatus;
-		method: "http" | "txt" | "email";
-		type: "dv";
-		validation_records?: SSLValidationRecord[];
-		validation_errors?: Array<{ message: string }>;
-	};
-	custom_metadata?: {
-		tenant_id?: string;
-		region?: string;
-	};
-	created_at: string;
-}
+const CustomHostnameSchema = s.object({
+	id: s.string(),
+	hostname: s.string(),
+	status: s.string(), // Hostname status values are dynamic, validated loosely
+	ssl: SSLSchema,
+	custom_metadata: s.optional(
+		s.object({
+			tenant_id: s.optional(s.string()),
+			region: s.optional(s.string()),
+		}),
+	),
+	created_at: s.string(),
+});
 
-/**
- * Response from Cloudflare API list endpoint.
- */
-interface ListResponse {
-	result: CustomHostname[];
-	success: boolean;
-	errors: Array<{ code: number; message: string }>;
-	messages: string[];
-	result_info: {
-		page: number;
-		per_page: number;
-		total_count: number;
-		total_pages: number;
-	};
-}
+const ErrorSchema = s.object({
+	code: s.number(),
+	message: s.string(),
+});
 
-/**
- * Response from Cloudflare API single hostname endpoint.
- */
-interface SingleResponse {
-	result: CustomHostname;
-	success: boolean;
-	errors: Array<{ code: number; message: string }>;
-	messages: string[];
-}
+const ResultInfoSchema = s.object({
+	page: s.number(),
+	per_page: s.number(),
+	total_count: s.number(),
+	total_pages: s.number(),
+});
+
+const SingleResponseSchema = s.object({
+	result: CustomHostnameSchema,
+	success: s.literal(true),
+	errors: s.array(ErrorSchema),
+	messages: s.array(s.string()),
+});
+
+const ListResponseSchema = s.object({
+	result: s.array(CustomHostnameSchema),
+	success: s.literal(true),
+	errors: s.array(ErrorSchema),
+	messages: s.array(s.string()),
+	result_info: ResultInfoSchema,
+});
+
+const ErrorResponseSchema = s.object({
+	success: s.literal(false),
+	errors: s.array(ErrorSchema),
+});
+
+// ============================================================================
+// TYPE DEFINITIONS (derived from schemas)
+// ============================================================================
+
+type SSLValidationRecord = s.InferOutput<typeof SSLValidationRecordSchema>;
+type CustomHostname = s.InferOutput<typeof CustomHostnameSchema>;
 
 /**
  * Hostname service for Cloudflare for SaaS custom domain management.
@@ -111,9 +96,14 @@ export default class HostnameService {
 	};
 
 	/**
-	 * Make an authenticated request to Cloudflare API.
+	 * Make an authenticated request to Cloudflare API with schema validation.
 	 */
-	private static async request<T>(method: string, path: string, body?: unknown): Promise<T> {
+	private static async request<Input, Output>(
+		method: string,
+		path: string,
+		schema: Schema<Input, Output>,
+		body?: unknown,
+	): Promise<Output> {
 		let url = path.startsWith("http") ? path : `${HostnameService.BASE_URL}${path}`;
 
 		let response = await fetch(url, {
@@ -125,17 +115,49 @@ export default class HostnameService {
 			body: body ? JSON.stringify(body) : undefined,
 		});
 
-		let data = (await response.json()) as
-			| SingleResponse
-			| ListResponse
-			| { success: boolean; errors: Array<{ code: number; message: string }> };
+		let data: unknown = await response.json();
 
-		if (!data.success) {
-			let errorMessage = data.errors?.[0]?.message ?? "Unknown error";
-			throw new HostnameService.ApiError(errorMessage, response.status, data.errors);
+		// Check for error response first
+		let errorResult = s.parseSafe(ErrorResponseSchema, data);
+		if (errorResult.success) {
+			let errorMessage = errorResult.value.errors[0]?.message ?? "Unknown error";
+			throw new HostnameService.ApiError(errorMessage, response.status, errorResult.value.errors);
 		}
 
-		return data as T;
+		// Validate against expected schema
+		let result = s.parseSafe(schema, data);
+		if (!result.success) {
+			throw new HostnameService.ApiError(
+				`Invalid Cloudflare API response: ${result.issues?.[0]?.message ?? "validation failed"}`,
+				response.status,
+			);
+		}
+
+		return result.value;
+	}
+
+	/**
+	 * Make an authenticated DELETE request (no response body validation needed).
+	 */
+	private static async requestVoid(method: string, path: string): Promise<void> {
+		let url = path.startsWith("http") ? path : `${HostnameService.BASE_URL}${path}`;
+
+		let response = await fetch(url, {
+			method,
+			headers: {
+				Authorization: `Bearer ${env.CF_API_TOKEN}`,
+				"Content-Type": "application/json",
+			},
+		});
+
+		let data: unknown = await response.json();
+
+		// Check for error response
+		let errorResult = s.parseSafe(ErrorResponseSchema, data);
+		if (errorResult.success) {
+			let errorMessage = errorResult.value.errors[0]?.message ?? "Unknown error";
+			throw new HostnameService.ApiError(errorMessage, response.status, errorResult.value.errors);
+		}
 	}
 
 	// ============================================================================
@@ -151,7 +173,7 @@ export default class HostnameService {
 		tenantId: string,
 		region?: string,
 	): Promise<CustomHostname> {
-		let response = await HostnameService.request<SingleResponse>("POST", "", {
+		let response = await HostnameService.request("POST", "", SingleResponseSchema, {
 			hostname,
 			ssl: {
 				method: "txt",
@@ -173,7 +195,7 @@ export default class HostnameService {
 	 * Get a custom hostname by ID.
 	 */
 	static async getHostname(hostnameId: string): Promise<CustomHostname> {
-		let response = await HostnameService.request<SingleResponse>("GET", `/${hostnameId}`);
+		let response = await HostnameService.request("GET", `/${hostnameId}`, SingleResponseSchema);
 		return response.result;
 	}
 
@@ -181,9 +203,10 @@ export default class HostnameService {
 	 * Get a custom hostname by hostname string.
 	 */
 	static async getHostnameByName(hostname: string): Promise<CustomHostname | null> {
-		let response = await HostnameService.request<ListResponse>(
+		let response = await HostnameService.request(
 			"GET",
 			`?hostname=${encodeURIComponent(hostname)}`,
+			ListResponseSchema,
 		);
 		return response.result[0] ?? null;
 	}
@@ -199,9 +222,10 @@ export default class HostnameService {
 		let hasMore = true;
 
 		while (hasMore) {
-			let response = await HostnameService.request<ListResponse>(
+			let response = await HostnameService.request(
 				"GET",
 				`?page=${page}&per_page=50`,
+				ListResponseSchema,
 			);
 
 			allHostnames.push(...response.result);
@@ -223,7 +247,7 @@ export default class HostnameService {
 	 * Delete a custom hostname.
 	 */
 	static async deleteHostname(hostnameId: string): Promise<void> {
-		await HostnameService.request("DELETE", `/${hostnameId}`);
+		await HostnameService.requestVoid("DELETE", `/${hostnameId}`);
 	}
 
 	/**
@@ -231,7 +255,7 @@ export default class HostnameService {
 	 * Call this to get updated validation records.
 	 */
 	static async refreshHostname(hostnameId: string): Promise<CustomHostname> {
-		let response = await HostnameService.request<SingleResponse>("PATCH", `/${hostnameId}`, {
+		let response = await HostnameService.request("PATCH", `/${hostnameId}`, SingleResponseSchema, {
 			ssl: {
 				method: "txt",
 				type: "dv",

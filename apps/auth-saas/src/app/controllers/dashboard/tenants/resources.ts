@@ -1,9 +1,10 @@
-import { html } from "@pkg/http/response";
+import { html as htmlResponse } from "@pkg/http/response";
 import { isFailure } from "@pkg/result";
 import { validate } from "@pkg/validate";
 import * as s from "remix/data-schema";
+import { html } from "remix/html-template";
 
-import { escapeHtml, layout } from "~/app/lib/html";
+import { layout } from "~/app/lib/html";
 import action from "~/lib/action";
 
 let CreateResourceSchema = s.object({
@@ -29,31 +30,32 @@ export default {
 
 			let resourcesHtml =
 				resources.length === 0
-					? '<p class="text-gray-500">No resources yet. Create your first API resource to get started.</p>'
-					: `<ul class="space-y-4">${resources
-							.map(
-								(r) => `
+					? html`
+							<p class="text-gray-500">No resources yet. Create your first API resource to get started.</p>
+						`
+					: html`<ul class="space-y-4">${resources.map(
+							(r) => html`
 					<li class="border rounded-lg p-4 hover:bg-gray-50">
 						<a href="/dashboard/tenants/${tenant.id}/resources/${r.id}" class="block">
 							<div class="flex justify-between items-start">
 								<div>
-									<h3 class="font-semibold">${escapeHtml(r.name)}</h3>
-									<code class="text-sm text-gray-500">${escapeHtml(r.identifier)}</code>
-									<p class="text-gray-500 text-sm mt-1">${r.description ? escapeHtml(r.description) : "No description"}</p>
+									<h3 class="font-semibold">${r.name}</h3>
+									<code class="text-sm text-gray-500">${r.identifier}</code>
+									<p class="text-gray-500 text-sm mt-1">${r.description ?? "No description"}</p>
 								</div>
 								<span class="text-sm text-gray-500">${r.scopes.length} scopes</span>
 							</div>
 						</a>
 					</li>
 				`,
-							)
-							.join("")}</ul>`;
+						)}</ul>`;
 
-			return html(
-				layout({
-					title: `Resources - ${tenant.name}`,
-					tenant,
-					content: `
+			return htmlResponse(
+				String(
+					layout({
+						title: `Resources - ${tenant.name}`,
+						tenant,
+						content: html`
 						<div class="flex justify-between items-center mb-6">
 							<h2 class="text-2xl font-bold">API Resources</h2>
 							<a href="/dashboard/tenants/${tenant.id}/resources/new" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">
@@ -62,7 +64,8 @@ export default {
 						</div>
 						${resourcesHtml}
 					`,
-				}),
+					}),
+				),
 			);
 		},
 	),
@@ -78,18 +81,38 @@ export default {
 
 			log.info("Resource retrieved", { tenantId: tenant.id, resourceId: params.id });
 
-			return html(
-				layout({
-					title: `${resource.name} - ${tenant.name}`,
-					tenant,
-					backLink: `/dashboard/tenants/${tenant.id}/resources`,
-					backText: "Resources",
-					content: `
+			let scopesList =
+				resource.scopes.length === 0
+					? html`
+							<p class="text-gray-500 text-sm">No scopes defined</p>
+						`
+					: html`<ul class="space-y-2">${resource.scopes.map(
+							(s, i) => html`
+											<li class="flex justify-between items-center border-b pb-2 last:border-0 last:pb-0">
+												<div>
+													<code class="font-medium">${s.name}</code>
+													<p class="text-gray-500 text-sm">${s.description ?? "No description"}</p>
+												</div>
+												<form method="POST" action="/dashboard/tenants/${tenant.id}/resources/${params.id}/scopes/${i}?_method=DELETE" class="inline">
+													<button type="submit" class="text-red-600 hover:text-red-800 text-sm" onclick="return confirm('Remove this scope?')">Remove</button>
+												</form>
+											</li>
+										`,
+						)}</ul>`;
+
+			return htmlResponse(
+				String(
+					layout({
+						title: `${resource.name} - ${tenant.name}`,
+						tenant,
+						backLink: `/dashboard/tenants/${tenant.id}/resources`,
+						backText: "Resources",
+						content: html`
 						<div class="flex justify-between items-start mb-6">
 							<div>
-								<h2 class="text-2xl font-bold">${escapeHtml(resource.name)}</h2>
-								<code class="text-gray-500">${escapeHtml(resource.identifier)}</code>
-								<p class="text-gray-500 mt-1">${resource.description ? escapeHtml(resource.description) : "No description"}</p>
+								<h2 class="text-2xl font-bold">${resource.name}</h2>
+								<code class="text-gray-500">${resource.identifier}</code>
+								<p class="text-gray-500 mt-1">${resource.description ?? "No description"}</p>
 							</div>
 							<div class="flex gap-2">
 								<a href="/dashboard/tenants/${tenant.id}/resources/${params.id}/edit" class="text-blue-600 hover:text-blue-800">Edit</a>
@@ -104,28 +127,11 @@ export default {
 								<h3 class="font-semibold">Scopes</h3>
 								<a href="/dashboard/tenants/${tenant.id}/resources/${params.id}/scopes/new" class="text-blue-600 hover:text-blue-800 text-sm">Add Scope</a>
 							</div>
-							${
-								resource.scopes.length === 0
-									? '<p class="text-gray-500 text-sm">No scopes defined</p>'
-									: `<ul class="space-y-2">${resource.scopes
-											.map(
-												(s, i) => `
-											<li class="flex justify-between items-center border-b pb-2 last:border-0 last:pb-0">
-												<div>
-													<code class="font-medium">${escapeHtml(s.name)}</code>
-													<p class="text-gray-500 text-sm">${s.description ? escapeHtml(s.description) : "No description"}</p>
-												</div>
-												<form method="POST" action="/dashboard/tenants/${tenant.id}/resources/${params.id}/scopes/${i}?_method=DELETE" class="inline">
-													<button type="submit" class="text-red-600 hover:text-red-800 text-sm" onclick="return confirm('Remove this scope?')">Remove</button>
-												</form>
-											</li>
-										`,
-											)
-											.join("")}</ul>`
-							}
+							${scopesList}
 						</section>
 					`,
-				}),
+					}),
+				),
 			);
 		},
 	),
@@ -134,13 +140,14 @@ export default {
 		let log = logger.loader(`/dashboard/tenants/${tenant.id}/resources/new`);
 		log.info("New resource form loaded", { tenantId: tenant.id });
 
-		return html(
-			layout({
-				title: `New Resource - ${tenant.name}`,
-				tenant,
-				backLink: `/dashboard/tenants/${tenant.id}/resources`,
-				backText: "Resources",
-				content: `
+		return htmlResponse(
+			String(
+				layout({
+					title: `New Resource - ${tenant.name}`,
+					tenant,
+					backLink: `/dashboard/tenants/${tenant.id}/resources`,
+					backText: "Resources",
+					content: html`
 					<h2 class="text-2xl font-bold mb-6">New API Resource</h2>
 
 					<form method="POST" action="/dashboard/tenants/${tenant.id}/resources" class="bg-white rounded-lg border p-6 space-y-4 max-w-lg">
@@ -165,7 +172,8 @@ export default {
 						</button>
 					</form>
 				`,
-			}),
+				}),
+			),
 		);
 	}),
 
@@ -209,29 +217,30 @@ export default {
 
 			log.info("Resource edit form loaded", { tenantId: tenant.id, resourceId: params.id });
 
-			return html(
-				layout({
-					title: `Edit ${resource.name} - ${tenant.name}`,
-					tenant,
-					backLink: `/dashboard/tenants/${tenant.id}/resources/${params.id}`,
-					backText: resource.name,
-					content: `
+			return htmlResponse(
+				String(
+					layout({
+						title: `Edit ${resource.name} - ${tenant.name}`,
+						tenant,
+						backLink: `/dashboard/tenants/${tenant.id}/resources/${params.id}`,
+						backText: resource.name,
+						content: html`
 						<h2 class="text-2xl font-bold mb-6">Edit Resource</h2>
 
 						<form method="POST" action="/dashboard/tenants/${tenant.id}/resources/${params.id}?_method=PUT" class="bg-white rounded-lg border p-6 space-y-4 max-w-lg">
 							<div>
 								<label class="block text-sm font-medium text-gray-700 mb-1" for="identifier">Identifier (Audience)</label>
-								<input type="text" id="identifier" name="identifier" value="${escapeHtml(resource.identifier)}" required class="w-full border rounded-lg px-3 py-2">
+								<input type="text" id="identifier" name="identifier" value="${resource.identifier}" required class="w-full border rounded-lg px-3 py-2">
 							</div>
 
 							<div>
 								<label class="block text-sm font-medium text-gray-700 mb-1" for="name">Name</label>
-								<input type="text" id="name" name="name" value="${escapeHtml(resource.name)}" required class="w-full border rounded-lg px-3 py-2">
+								<input type="text" id="name" name="name" value="${resource.name}" required class="w-full border rounded-lg px-3 py-2">
 							</div>
 
 							<div>
 								<label class="block text-sm font-medium text-gray-700 mb-1" for="description">Description</label>
-								<textarea id="description" name="description" rows="2" class="w-full border rounded-lg px-3 py-2">${resource.description ? escapeHtml(resource.description) : ""}</textarea>
+								<textarea id="description" name="description" rows="2" class="w-full border rounded-lg px-3 py-2">${resource.description ?? ""}</textarea>
 							</div>
 
 							<button type="submit" class="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700">
@@ -239,7 +248,8 @@ export default {
 							</button>
 						</form>
 					`,
-				}),
+					}),
+				),
 			);
 		},
 	),

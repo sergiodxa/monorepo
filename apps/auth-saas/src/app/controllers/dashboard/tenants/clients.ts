@@ -1,9 +1,10 @@
-import { html } from "@pkg/http/response";
+import { html as htmlResponse } from "@pkg/http/response";
 import { isFailure } from "@pkg/result";
 import { validate } from "@pkg/validate";
 import * as s from "remix/data-schema";
+import { html } from "remix/html-template";
 
-import { escapeHtml, layout } from "~/app/lib/html";
+import { layout } from "~/app/lib/html";
 import action from "~/lib/action";
 
 let CreateClientSchema = s.object({
@@ -29,16 +30,17 @@ export default {
 
 			let clientsHtml =
 				clients.length === 0
-					? '<p class="text-gray-500">No clients yet. Create your first client to get started.</p>'
-					: `<ul class="space-y-4">${clients
-							.map(
-								(c) => `
+					? html`
+							<p class="text-gray-500">No clients yet. Create your first client to get started.</p>
+						`
+					: html`<ul class="space-y-4">${clients.map(
+							(c) => html`
 					<li class="border rounded-lg p-4 hover:bg-gray-50">
 						<a href="/dashboard/tenants/${tenant.id}/clients/${c.id}" class="block">
 							<div class="flex justify-between items-start">
 								<div>
-									<h3 class="font-semibold">${escapeHtml(c.name)}</h3>
-									<p class="text-gray-500 text-sm">${c.description ? escapeHtml(c.description) : "No description"}</p>
+									<h3 class="font-semibold">${c.name}</h3>
+									<p class="text-gray-500 text-sm">${c.description ?? "No description"}</p>
 								</div>
 								<span class="px-2 py-1 text-xs rounded ${c.type === "public" ? "bg-blue-100 text-blue-800" : c.type === "confidential" ? "bg-purple-100 text-purple-800" : "bg-orange-100 text-orange-800"}">
 									${c.type}
@@ -47,14 +49,14 @@ export default {
 						</a>
 					</li>
 				`,
-							)
-							.join("")}</ul>`;
+						)}</ul>`;
 
-			return html(
-				layout({
-					title: `Clients - ${tenant.name}`,
-					tenant,
-					content: `
+			return htmlResponse(
+				String(
+					layout({
+						title: `Clients - ${tenant.name}`,
+						tenant,
+						content: html`
 						<div class="flex justify-between items-center mb-6">
 							<h2 class="text-2xl font-bold">Clients</h2>
 							<a href="/dashboard/tenants/${tenant.id}/clients/new" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">
@@ -63,7 +65,8 @@ export default {
 						</div>
 						${clientsHtml}
 					`,
-				}),
+					}),
+				),
 			);
 		},
 	),
@@ -85,17 +88,69 @@ export default {
 
 			log.info("Client retrieved", { tenantId: tenant.id, clientId: params.id });
 
-			return html(
-				layout({
-					title: `${client.name} - ${tenant.name}`,
-					tenant,
-					backLink: `/dashboard/tenants/${tenant.id}/clients`,
-					backText: "Clients",
-					content: `
+			let secretsList =
+				secrets.length === 0
+					? html`
+							<p class="text-gray-500 text-sm">No secrets configured</p>
+						`
+					: html`<ul class="space-y-2">${secrets.map(
+							(s) => html`
+												<li class="flex justify-between items-center text-sm">
+													<span>${s.name || "Unnamed secret"}</span>
+													<form method="POST" action="/dashboard/tenants/${tenant.id}/clients/${params.id}/secrets/${s.id}?_method=DELETE" class="inline">
+														<button type="submit" class="text-red-600 hover:text-red-800" onclick="return confirm('Revoke this secret?')">Revoke</button>
+													</form>
+												</li>
+											`,
+						)}</ul>`;
+
+			let redirectUrisList =
+				redirectUris.length === 0
+					? html`
+							<p class="text-gray-500 text-sm">No redirect URIs configured</p>
+						`
+					: html`<ul class="space-y-2">${redirectUris.map(
+							(u) => html`
+												<li class="flex justify-between items-center text-sm">
+													<code class="bg-gray-100 px-2 py-1 rounded">${u.uri}</code>
+													<form method="POST" action="/dashboard/tenants/${tenant.id}/clients/${params.id}/redirect-uris/${u.id}?_method=DELETE" class="inline">
+														<button type="submit" class="text-red-600 hover:text-red-800" onclick="return confirm('Remove this URI?')">Remove</button>
+													</form>
+												</li>
+											`,
+						)}</ul>`;
+
+			let logoutUrisList =
+				logoutUris.length === 0
+					? html`
+							<p class="text-gray-500 text-sm">No logout URIs configured</p>
+						`
+					: html`<ul class="space-y-2">${logoutUris.map(
+							(u) => html`
+												<li class="flex justify-between items-center text-sm">
+													<div>
+														<code class="bg-gray-100 px-2 py-1 rounded">${u.uri}</code>
+														<span class="ml-2 text-gray-500">(${u.type})</span>
+													</div>
+													<form method="POST" action="/dashboard/tenants/${tenant.id}/clients/${params.id}/logout-uris/${u.id}?_method=DELETE" class="inline">
+														<button type="submit" class="text-red-600 hover:text-red-800" onclick="return confirm('Remove this URI?')">Remove</button>
+													</form>
+												</li>
+											`,
+						)}</ul>`;
+
+			return htmlResponse(
+				String(
+					layout({
+						title: `${client.name} - ${tenant.name}`,
+						tenant,
+						backLink: `/dashboard/tenants/${tenant.id}/clients`,
+						backText: "Clients",
+						content: html`
 						<div class="flex justify-between items-start mb-6">
 							<div>
-								<h2 class="text-2xl font-bold">${escapeHtml(client.name)}</h2>
-								<p class="text-gray-500">${client.description ? escapeHtml(client.description) : "No description"}</p>
+								<h2 class="text-2xl font-bold">${client.name}</h2>
+								<p class="text-gray-500">${client.description ?? "No description"}</p>
 							</div>
 							<div class="flex gap-2">
 								<a href="/dashboard/tenants/${tenant.id}/clients/${params.id}/edit" class="text-blue-600 hover:text-blue-800">Edit</a>
@@ -108,7 +163,7 @@ export default {
 						<div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
 							<div class="bg-white rounded-lg border p-4">
 								<h3 class="font-semibold mb-2">Client ID</h3>
-								<code class="text-sm bg-gray-100 px-2 py-1 rounded block break-all">${escapeHtml(client.id)}</code>
+								<code class="text-sm bg-gray-100 px-2 py-1 rounded block break-all">${client.id}</code>
 							</div>
 							<div class="bg-white rounded-lg border p-4">
 								<h3 class="font-semibold mb-2">Type</h3>
@@ -124,22 +179,7 @@ export default {
 									<h3 class="font-semibold">Client Secrets</h3>
 									<a href="/dashboard/tenants/${tenant.id}/clients/${params.id}/secrets/new" class="text-blue-600 hover:text-blue-800 text-sm">Add Secret</a>
 								</div>
-								${
-									secrets.length === 0
-										? '<p class="text-gray-500 text-sm">No secrets configured</p>'
-										: `<ul class="space-y-2">${secrets
-												.map(
-													(s) => `
-												<li class="flex justify-between items-center text-sm">
-													<span>${s.name || "Unnamed secret"}</span>
-													<form method="POST" action="/dashboard/tenants/${tenant.id}/clients/${params.id}/secrets/${s.id}?_method=DELETE" class="inline">
-														<button type="submit" class="text-red-600 hover:text-red-800" onclick="return confirm('Revoke this secret?')">Revoke</button>
-													</form>
-												</li>
-											`,
-												)
-												.join("")}</ul>`
-								}
+								${secretsList}
 							</section>
 
 							<section class="bg-white rounded-lg border p-4">
@@ -147,22 +187,7 @@ export default {
 									<h3 class="font-semibold">Redirect URIs</h3>
 									<a href="/dashboard/tenants/${tenant.id}/clients/${params.id}/redirect-uris/new" class="text-blue-600 hover:text-blue-800 text-sm">Add URI</a>
 								</div>
-								${
-									redirectUris.length === 0
-										? '<p class="text-gray-500 text-sm">No redirect URIs configured</p>'
-										: `<ul class="space-y-2">${redirectUris
-												.map(
-													(u) => `
-												<li class="flex justify-between items-center text-sm">
-													<code class="bg-gray-100 px-2 py-1 rounded">${escapeHtml(u.uri)}</code>
-													<form method="POST" action="/dashboard/tenants/${tenant.id}/clients/${params.id}/redirect-uris/${u.id}?_method=DELETE" class="inline">
-														<button type="submit" class="text-red-600 hover:text-red-800" onclick="return confirm('Remove this URI?')">Remove</button>
-													</form>
-												</li>
-											`,
-												)
-												.join("")}</ul>`
-								}
+								${redirectUrisList}
 							</section>
 
 							<section class="bg-white rounded-lg border p-4">
@@ -170,29 +195,12 @@ export default {
 									<h3 class="font-semibold">Logout URIs</h3>
 									<a href="/dashboard/tenants/${tenant.id}/clients/${params.id}/logout-uris/new" class="text-blue-600 hover:text-blue-800 text-sm">Add URI</a>
 								</div>
-								${
-									logoutUris.length === 0
-										? '<p class="text-gray-500 text-sm">No logout URIs configured</p>'
-										: `<ul class="space-y-2">${logoutUris
-												.map(
-													(u) => `
-												<li class="flex justify-between items-center text-sm">
-													<div>
-														<code class="bg-gray-100 px-2 py-1 rounded">${escapeHtml(u.uri)}</code>
-														<span class="ml-2 text-gray-500">(${u.type})</span>
-													</div>
-													<form method="POST" action="/dashboard/tenants/${tenant.id}/clients/${params.id}/logout-uris/${u.id}?_method=DELETE" class="inline">
-														<button type="submit" class="text-red-600 hover:text-red-800" onclick="return confirm('Remove this URI?')">Remove</button>
-													</form>
-												</li>
-											`,
-												)
-												.join("")}</ul>`
-								}
+								${logoutUrisList}
 							</section>
 						</div>
 					`,
-				}),
+					}),
+				),
 			);
 		},
 	),
@@ -201,13 +209,14 @@ export default {
 		let log = logger.loader(`/dashboard/tenants/${tenant.id}/clients/new`);
 		log.info("New client form loaded", { tenantId: tenant.id });
 
-		return html(
-			layout({
-				title: `New Client - ${tenant.name}`,
-				tenant,
-				backLink: `/dashboard/tenants/${tenant.id}/clients`,
-				backText: "Clients",
-				content: `
+		return htmlResponse(
+			String(
+				layout({
+					title: `New Client - ${tenant.name}`,
+					tenant,
+					backLink: `/dashboard/tenants/${tenant.id}/clients`,
+					backText: "Clients",
+					content: html`
 					<h2 class="text-2xl font-bold mb-6">New Client</h2>
 
 					<form method="POST" action="/dashboard/tenants/${tenant.id}/clients" class="bg-white rounded-lg border p-6 space-y-4 max-w-lg">
@@ -236,7 +245,8 @@ export default {
 						</button>
 					</form>
 				`,
-			}),
+				}),
+			),
 		);
 	}),
 
@@ -279,19 +289,20 @@ export default {
 
 			log.info("Client edit form loaded", { tenantId: tenant.id, clientId: params.id });
 
-			return html(
-				layout({
-					title: `Edit ${client.name} - ${tenant.name}`,
-					tenant,
-					backLink: `/dashboard/tenants/${tenant.id}/clients/${params.id}`,
-					backText: client.name,
-					content: `
+			return htmlResponse(
+				String(
+					layout({
+						title: `Edit ${client.name} - ${tenant.name}`,
+						tenant,
+						backLink: `/dashboard/tenants/${tenant.id}/clients/${params.id}`,
+						backText: client.name,
+						content: html`
 						<h2 class="text-2xl font-bold mb-6">Edit Client</h2>
 
 						<form method="POST" action="/dashboard/tenants/${tenant.id}/clients/${params.id}?_method=PUT" class="bg-white rounded-lg border p-6 space-y-4 max-w-lg">
 							<div>
 								<label class="block text-sm font-medium text-gray-700 mb-1" for="name">Name</label>
-								<input type="text" id="name" name="name" value="${escapeHtml(client.name)}" required class="w-full border rounded-lg px-3 py-2">
+								<input type="text" id="name" name="name" value="${client.name}" required class="w-full border rounded-lg px-3 py-2">
 							</div>
 
 							<div>
@@ -305,7 +316,7 @@ export default {
 
 							<div>
 								<label class="block text-sm font-medium text-gray-700 mb-1" for="description">Description</label>
-								<textarea id="description" name="description" rows="2" class="w-full border rounded-lg px-3 py-2">${client.description ? escapeHtml(client.description) : ""}</textarea>
+								<textarea id="description" name="description" rows="2" class="w-full border rounded-lg px-3 py-2">${client.description ?? ""}</textarea>
 							</div>
 
 							<button type="submit" class="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700">
@@ -313,7 +324,8 @@ export default {
 							</button>
 						</form>
 					`,
-				}),
+					}),
+				),
 			);
 		},
 	),

@@ -1,9 +1,10 @@
-import { html } from "@pkg/http/response";
+import { html as htmlResponse } from "@pkg/http/response";
 import { isFailure } from "@pkg/result";
 import { validate } from "@pkg/validate";
 import * as s from "remix/data-schema";
+import { html, type SafeHtml } from "remix/html-template";
 
-import { escapeHtml, layout } from "~/app/lib/html";
+import { layout } from "~/app/lib/html";
 import tenantOwner from "~/app/middleware/tenant-owner";
 import Hostname from "~/app/models/hostname";
 import form from "~/lib/form";
@@ -26,61 +27,44 @@ export default form<"/dashboard/tenants/:tenantId/hostname">({
 			let defaultHostname = hostnames.find((h) => Boolean(h.is_default));
 			let customHostnames = hostnames.filter((h) => !h.is_default);
 
-			return html(
-				layout({
-					title: `Hostname - ${tenant.name}`,
-					tenant,
-					content: `
-						<h2 class="text-2xl font-bold mb-6">Hostname Configuration</h2>
-						<p class="text-gray-500 mb-6">Configure custom domains for your authentication endpoints.</p>
-
-						<section class="bg-white rounded-lg border p-6 mb-6">
-							<h3 class="font-semibold mb-4">Default Hostname</h3>
-							<div class="bg-gray-50 rounded-lg p-4">
-								<code class="text-lg">${defaultHostname ? escapeHtml(defaultHostname.hostname) : "Not configured"}</code>
-								<p class="text-gray-500 text-sm mt-1">This is automatically assigned and cannot be changed.</p>
-							</div>
-						</section>
-
-						<section class="bg-white rounded-lg border p-6 mb-6">
-							<h3 class="font-semibold mb-4">Custom Hostnames</h3>
-							${
-								customHostnames.length === 0
-									? '<p class="text-gray-500">No custom hostnames configured.</p>'
-									: `<ul class="space-y-4 mb-4">${customHostnames
-											.map(
-												(h) => `
+			let customHostnamesList: SafeHtml | null =
+				customHostnames.length === 0
+					? html`
+							<p class="text-gray-500">No custom hostnames configured.</p>
+						`
+					: html`<ul class="space-y-4 mb-4">${customHostnames.map(
+							(h) => html`
 										<li class="flex justify-between items-center border-b pb-4 last:border-0 last:pb-0">
 											<div>
-												<code class="font-medium">${escapeHtml(h.hostname)}</code>
+												<code class="font-medium">${h.hostname}</code>
 												<div class="flex items-center gap-2 mt-1">
 													<span class="px-2 py-0.5 text-xs rounded ${h.status === "active" ? "bg-green-100 text-green-800" : "bg-yellow-100 text-yellow-800"}">
 														${h.status}
 													</span>
-													${h.ssl_status ? `<span class="text-gray-500 text-xs">SSL: ${h.ssl_status}</span>` : ""}
+													${h.ssl_status ? html`<span class="text-gray-500 text-xs">SSL: ${h.ssl_status}</span>` : null}
 												</div>
 												${
 													h.status === "pending_validation" && h.validation_txt_name
-														? `
+														? html`
 													<div class="mt-2 p-3 bg-yellow-50 rounded text-sm">
 														<p class="font-medium text-yellow-800">DNS Validation Required</p>
 														<p class="text-yellow-700 mt-1">Add this TXT record to your DNS:</p>
 														<div class="mt-2 font-mono text-xs bg-white p-2 rounded border">
-															<p><strong>Name:</strong> ${escapeHtml(h.validation_txt_name)}</p>
-															<p><strong>Value:</strong> ${escapeHtml(h.validation_txt_value || "")}</p>
+															<p><strong>Name:</strong> ${h.validation_txt_name}</p>
+															<p><strong>Value:</strong> ${h.validation_txt_value ?? ""}</p>
 														</div>
 													</div>
 												`
-														: ""
+														: null
 												}
 											</div>
 											<div class="flex gap-2">
 												${
 													h.status !== "active"
-														? `<form method="POST" action="/dashboard/tenants/${tenant.id}/hostname?action=refresh&hostnameId=${h.id}" class="inline">
+														? html`<form method="POST" action="/dashboard/tenants/${tenant.id}/hostname?action=refresh&hostnameId=${h.id}" class="inline">
 															<button type="submit" class="text-blue-600 hover:text-blue-800 text-sm">Check Status</button>
 														</form>`
-														: ""
+														: null
 												}
 												<form method="POST" action="/dashboard/tenants/${tenant.id}/hostname?action=delete&hostnameId=${h.id}" class="inline">
 													<button type="submit" class="text-red-600 hover:text-red-800 text-sm" onclick="return confirm('Remove this hostname?')">Remove</button>
@@ -88,9 +72,28 @@ export default form<"/dashboard/tenants/:tenantId/hostname">({
 											</div>
 										</li>
 									`,
-											)
-											.join("")}</ul>`
-							}
+						)}</ul>`;
+
+			return htmlResponse(
+				String(
+					layout({
+						title: `Hostname - ${tenant.name}`,
+						tenant,
+						content: html`
+						<h2 class="text-2xl font-bold mb-6">Hostname Configuration</h2>
+						<p class="text-gray-500 mb-6">Configure custom domains for your authentication endpoints.</p>
+
+						<section class="bg-white rounded-lg border p-6 mb-6">
+							<h3 class="font-semibold mb-4">Default Hostname</h3>
+							<div class="bg-gray-50 rounded-lg p-4">
+								<code class="text-lg">${defaultHostname ? defaultHostname.hostname : "Not configured"}</code>
+								<p class="text-gray-500 text-sm mt-1">This is automatically assigned and cannot be changed.</p>
+							</div>
+						</section>
+
+						<section class="bg-white rounded-lg border p-6 mb-6">
+							<h3 class="font-semibold mb-4">Custom Hostnames</h3>
+							${customHostnamesList}
 
 							<form method="POST" action="/dashboard/tenants/${tenant.id}/hostname" class="flex gap-2 mt-4">
 								<input type="text" name="hostname" placeholder="auth.yourdomain.com" required class="flex-1 border rounded-lg px-3 py-2">
@@ -105,13 +108,14 @@ export default form<"/dashboard/tenants/:tenantId/hostname">({
 							<ol class="list-decimal list-inside text-blue-800 space-y-1 text-sm">
 								<li>Add your hostname using the form above</li>
 								<li>Add the TXT record shown to your DNS provider</li>
-								<li>Add a CNAME record pointing to <code class="bg-blue-100 px-1 rounded">${defaultHostname?.hostname || "your-tenant.auth.sergiodxa.com"}</code></li>
+								<li>Add a CNAME record pointing to <code class="bg-blue-100 px-1 rounded">${defaultHostname?.hostname ?? "your-tenant.auth.sergiodxa.com"}</code></li>
 								<li>Wait for DNS propagation (may take up to 24 hours)</li>
 								<li>The hostname will automatically activate once validated</li>
 							</ol>
 						</section>
 					`,
-				}),
+					}),
+				),
 			);
 		},
 

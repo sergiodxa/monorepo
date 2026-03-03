@@ -1,10 +1,10 @@
-import { html } from "@pkg/http/response";
+import { html as htmlResponse } from "@pkg/http/response";
 import { isFailure } from "@pkg/result";
 import { validate } from "@pkg/validate";
 import { env } from "cloudflare:workers";
 import * as s from "remix/data-schema";
+import { html } from "remix/html-template";
 
-import { escapeHtml } from "~/app/lib/html";
 import Hostname from "~/app/models/hostname";
 import Subscription from "~/app/models/subscription";
 import Tenant from "~/app/models/tenant";
@@ -39,13 +39,14 @@ export default {
 
 		let defaultHostname = hostnames.find((h) => Boolean(h.is_default));
 
-		return html(`
+		return htmlResponse(
+			String(html`
 			<!DOCTYPE html>
 			<html lang="en">
 			<head>
 				<meta charset="UTF-8">
 				<meta name="viewport" content="width=device-width, initial-scale=1.0">
-				<title>${escapeHtml(tenant.name)} - Auth SaaS</title>
+				<title>${tenant.name} - Auth SaaS</title>
 				<script src="https://cdn.tailwindcss.com"></script>
 			</head>
 			<body class="bg-gray-50 min-h-screen">
@@ -53,7 +54,7 @@ export default {
 					<div class="max-w-6xl mx-auto px-4 py-4 flex justify-between items-center">
 						<div class="flex items-center gap-4">
 							<a href="/dashboard" class="text-gray-600 hover:text-gray-900">&larr; Dashboard</a>
-							<h1 class="text-xl font-bold">${escapeHtml(tenant.name)}</h1>
+							<h1 class="text-xl font-bold">${tenant.name}</h1>
 						</div>
 						<a href="/dashboard/tenants/${params.id}/edit" class="text-blue-600 hover:text-blue-800">Edit</a>
 					</div>
@@ -84,11 +85,11 @@ export default {
 						<dl class="grid grid-cols-2 gap-4">
 							<div>
 								<dt class="text-gray-500 text-sm">Slug</dt>
-								<dd class="font-mono">${escapeHtml(tenant.slug)}</dd>
+								<dd class="font-mono">${tenant.slug}</dd>
 							</div>
 							<div>
 								<dt class="text-gray-500 text-sm">Region</dt>
-								<dd>${escapeHtml(tenant.region)}</dd>
+								<dd>${tenant.region}</dd>
 							</div>
 							<div>
 								<dt class="text-gray-500 text-sm">Status</dt>
@@ -96,7 +97,7 @@ export default {
 							</div>
 							<div>
 								<dt class="text-gray-500 text-sm">Hostname</dt>
-								<dd class="font-mono text-sm">${defaultHostname ? escapeHtml(defaultHostname.hostname) : "Not configured"}</dd>
+								<dd class="font-mono text-sm">${defaultHostname ? defaultHostname.hostname : "Not configured"}</dd>
 							</div>
 						</dl>
 					</div>
@@ -130,62 +131,79 @@ export default {
 				</main>
 			</body>
 			</html>
-		`);
+		`),
+		);
 	}),
 
 	new: action<"GET", "/dashboard/tenants/new">(({ logger }) => {
 		let log = logger.loader("/dashboard/tenants/new");
 		log.info("New tenant form loaded");
 
-		return html(`
-			<!DOCTYPE html>
-			<html lang="en">
-			<head>
-				<meta charset="UTF-8">
-				<meta name="viewport" content="width=device-width, initial-scale=1.0">
-				<title>New Tenant - Auth SaaS</title>
-				<script src="https://cdn.tailwindcss.com"></script>
-			</head>
-			<body class="bg-gray-50 min-h-screen">
-				<nav class="bg-white shadow-sm border-b">
-					<div class="max-w-6xl mx-auto px-4 py-4">
-						<a href="/dashboard" class="text-gray-600 hover:text-gray-900">&larr; Back to Dashboard</a>
-					</div>
-				</nav>
+		return htmlResponse(
+			String(html`
+				<!DOCTYPE html>
+				<html lang="en">
+					<head>
+						<meta charset="UTF-8" />
+						<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+						<title>New Tenant - Auth SaaS</title>
+						<script src="https://cdn.tailwindcss.com"></script>
+					</head>
+					<body class="bg-gray-50 min-h-screen">
+						<nav class="bg-white shadow-sm border-b">
+							<div class="max-w-6xl mx-auto px-4 py-4">
+								<a href="/dashboard" class="text-gray-600 hover:text-gray-900">&larr; Back to Dashboard</a>
+							</div>
+						</nav>
 
-				<main class="max-w-lg mx-auto px-4 py-8">
-					<h1 class="text-2xl font-bold mb-6">Create New Tenant</h1>
+						<main class="max-w-lg mx-auto px-4 py-8">
+							<h1 class="text-2xl font-bold mb-6">Create New Tenant</h1>
 
-					<form method="POST" action="/dashboard/tenants" class="bg-white rounded-lg border p-6 space-y-4">
-						<div>
-							<label class="block text-sm font-medium text-gray-700 mb-1" for="name">Tenant Name</label>
-							<input type="text" id="name" name="name" required class="w-full border rounded-lg px-3 py-2" placeholder="My App">
-						</div>
+							<form
+								method="POST"
+								action="/dashboard/tenants"
+								class="bg-white rounded-lg border p-6 space-y-4"
+							>
+								<div>
+									<label class="block text-sm font-medium text-gray-700 mb-1" for="name">Tenant Name</label>
+									<input
+										type="text"
+										id="name"
+										name="name"
+										required
+										class="w-full border rounded-lg px-3 py-2"
+										placeholder="My App"
+									/>
+								</div>
 
-						<div>
-							<label class="block text-sm font-medium text-gray-700 mb-1" for="region">Region</label>
-							<select id="region" name="region" required class="w-full border rounded-lg px-3 py-2">
-								<option value="wnam">Western North America</option>
-								<option value="enam">Eastern North America</option>
-								<option value="sam">South America</option>
-								<option value="weur">Western Europe</option>
-								<option value="eeur">Eastern Europe</option>
-								<option value="apac">Asia Pacific</option>
-								<option value="oc">Oceania</option>
-								<option value="afr">Africa</option>
-								<option value="me">Middle East</option>
-							</select>
-							<p class="text-gray-500 text-xs mt-1">Choose the region closest to your users</p>
-						</div>
+								<div>
+									<label class="block text-sm font-medium text-gray-700 mb-1" for="region">Region</label>
+									<select id="region" name="region" required class="w-full border rounded-lg px-3 py-2">
+										<option value="wnam">Western North America</option>
+										<option value="enam">Eastern North America</option>
+										<option value="sam">South America</option>
+										<option value="weur">Western Europe</option>
+										<option value="eeur">Eastern Europe</option>
+										<option value="apac">Asia Pacific</option>
+										<option value="oc">Oceania</option>
+										<option value="afr">Africa</option>
+										<option value="me">Middle East</option>
+									</select>
+									<p class="text-gray-500 text-xs mt-1">Choose the region closest to your users</p>
+								</div>
 
-						<button type="submit" class="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700">
-							Create Tenant
-						</button>
-					</form>
-				</main>
-			</body>
-			</html>
-		`);
+								<button
+									type="submit"
+									class="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700"
+								>
+									Create Tenant
+								</button>
+							</form>
+						</main>
+					</body>
+				</html>
+			`),
+		);
 	}),
 
 	create: action<"POST", "/dashboard/tenants">(async ({ db, request, platformSession, logger }) => {
@@ -197,13 +215,15 @@ export default {
 		let result = await validate(body, CreateTenantSchema);
 		if (isFailure(result)) {
 			log.info("Tenant creation validation failed", { issues: result.error.issues.length });
-			return html(
-				`
-				<!DOCTYPE html>
-				<html><body>
-					<p>Validation error. <a href="/dashboard/tenants/new">Try again</a></p>
-				</body></html>
-			`,
+			return htmlResponse(
+				String(html`
+					<!DOCTYPE html>
+					<html>
+						<body>
+							<p>Validation error. <a href="/dashboard/tenants/new">Try again</a></p>
+						</body>
+					</html>
+				`),
 				{ status: 400 },
 			);
 		}
@@ -271,13 +291,14 @@ export default {
 
 			log.info("Tenant edit form loaded", { tenantId: params.id });
 
-			return html(`
+			return htmlResponse(
+				String(html`
 			<!DOCTYPE html>
 			<html lang="en">
 			<head>
 				<meta charset="UTF-8">
 				<meta name="viewport" content="width=device-width, initial-scale=1.0">
-				<title>Edit ${escapeHtml(tenant.name)} - Auth SaaS</title>
+				<title>Edit ${tenant.name} - Auth SaaS</title>
 				<script src="https://cdn.tailwindcss.com"></script>
 			</head>
 			<body class="bg-gray-50 min-h-screen">
@@ -295,12 +316,12 @@ export default {
 
 						<div>
 							<label class="block text-sm font-medium text-gray-700 mb-1" for="name">Tenant Name</label>
-							<input type="text" id="name" name="name" value="${escapeHtml(tenant.name)}" required class="w-full border rounded-lg px-3 py-2">
+							<input type="text" id="name" name="name" value="${tenant.name}" required class="w-full border rounded-lg px-3 py-2">
 						</div>
 
 						<div class="text-gray-500 text-sm">
-							<p><strong>Slug:</strong> ${escapeHtml(tenant.slug)} (cannot be changed)</p>
-							<p><strong>Region:</strong> ${escapeHtml(tenant.region)} (cannot be changed)</p>
+							<p><strong>Slug:</strong> ${tenant.slug} (cannot be changed)</p>
+							<p><strong>Region:</strong> ${tenant.region} (cannot be changed)</p>
 						</div>
 
 						<button type="submit" class="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700">
@@ -310,7 +331,8 @@ export default {
 				</main>
 			</body>
 			</html>
-		`);
+		`),
+			);
 		},
 	),
 

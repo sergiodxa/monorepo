@@ -1,7 +1,8 @@
-import { html } from "@pkg/http/response";
+import { html as htmlResponse } from "@pkg/http/response";
 import { isFailure } from "@pkg/result";
 import { validate } from "@pkg/validate";
 import * as s from "remix/data-schema";
+import { html } from "remix/html-template";
 
 import { layout } from "~/app/lib/html";
 import action from "~/lib/action";
@@ -25,13 +26,14 @@ export default {
 
 			log.info("New scope form loaded", { tenantId: tenant.id, resourceId: params.resourceId });
 
-			return html(
-				layout({
-					title: `New Scope - ${resource.name}`,
-					tenant,
-					backLink: `/dashboard/tenants/${tenant.id}/resources/${params.resourceId}`,
-					backText: resource.name,
-					content: `
+			return htmlResponse(
+				String(
+					layout({
+						title: `New Scope - ${resource.name}`,
+						tenant,
+						backLink: `/dashboard/tenants/${tenant.id}/resources/${params.resourceId}`,
+						backText: resource.name,
+						content: html`
 						<h2 class="text-2xl font-bold mb-6">Add Scope</h2>
 
 						<form method="POST" action="/dashboard/tenants/${tenant.id}/resources/${params.resourceId}/scopes" class="bg-white rounded-lg border p-6 space-y-4 max-w-lg">
@@ -52,7 +54,8 @@ export default {
 							</button>
 						</form>
 					`,
-				}),
+					}),
+				),
 			);
 		},
 	),

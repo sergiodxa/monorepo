@@ -1,9 +1,10 @@
-import { html } from "@pkg/http/response";
+import { html as htmlResponse } from "@pkg/http/response";
 import { isFailure } from "@pkg/result";
 import { validate } from "@pkg/validate";
 import * as s from "remix/data-schema";
+import { html } from "remix/html-template";
 
-import { escapeHtml, layout } from "~/app/lib/html";
+import { layout } from "~/app/lib/html";
 import action from "~/lib/action";
 
 let UpdateUserSchema = s.object({
@@ -22,8 +23,10 @@ export default {
 
 			let usersHtml =
 				users.length === 0
-					? '<p class="text-gray-500">No users yet.</p>'
-					: `<div class="bg-white rounded-lg border overflow-hidden">
+					? html`
+							<p class="text-gray-500">No users yet.</p>
+						`
+					: html`<div class="bg-white rounded-lg border overflow-hidden">
 						<table class="w-full">
 							<thead class="bg-gray-50">
 								<tr>
@@ -34,18 +37,23 @@ export default {
 								</tr>
 							</thead>
 							<tbody class="divide-y">
-								${users
-									.map(
-										(u) => `
+								${users.map(
+									(u) => html`
 									<tr class="hover:bg-gray-50">
 										<td class="px-4 py-3">
 											<a href="/dashboard/tenants/${tenant.id}/users/${u.id}" class="font-medium text-blue-600 hover:text-blue-800">
-												${u.display_name ? escapeHtml(u.display_name) : escapeHtml(u.username)}
+												${u.display_name ?? u.username}
 											</a>
 										</td>
 										<td class="px-4 py-3 text-sm text-gray-600">
-											${escapeHtml(u.email)}
-											${u.email_verified_at ? '<span class="ml-1 text-green-600" title="Verified">✓</span>' : ""}
+											${u.email}
+											${
+												u.email_verified_at
+													? html`
+															<span class="ml-1 text-green-600" title="Verified">✓</span>
+														`
+													: null
+											}
 										</td>
 										<td class="px-4 py-3">
 											<span class="px-2 py-1 text-xs rounded ${u.role === "admin" ? "bg-purple-100 text-purple-800" : "bg-gray-100 text-gray-800"}">
@@ -57,21 +65,22 @@ export default {
 										</td>
 									</tr>
 								`,
-									)
-									.join("")}
+								)}
 							</tbody>
 						</table>
 					</div>`;
 
-			return html(
-				layout({
-					title: `Users - ${tenant.name}`,
-					tenant,
-					content: `
+			return htmlResponse(
+				String(
+					layout({
+						title: `Users - ${tenant.name}`,
+						tenant,
+						content: html`
 						<h2 class="text-2xl font-bold mb-6">Users</h2>
 						${usersHtml}
 					`,
-				}),
+					}),
+				),
 			);
 		},
 	),
@@ -93,17 +102,75 @@ export default {
 
 			log.info("User retrieved", { tenantId: tenant.id, userId: params.id });
 
-			return html(
-				layout({
-					title: `${user.display_name || user.username} - ${tenant.name}`,
-					tenant,
-					backLink: `/dashboard/tenants/${tenant.id}/users`,
-					backText: "Users",
-					content: `
+			let sessionsList =
+				sessions.length === 0
+					? html`
+							<p class="text-gray-500 text-sm">No active sessions</p>
+						`
+					: html`<ul class="space-y-2">${sessions.map(
+							(s) => html`
+												<li class="flex justify-between items-center text-sm border-b pb-2 last:border-0 last:pb-0">
+													<div>
+														<p class="text-gray-600">${s.user_agent ? s.user_agent.slice(0, 50) : "Unknown device"}</p>
+														<p class="text-gray-400 text-xs">Expires: ${new Date(s.expires_at).toLocaleString()}</p>
+													</div>
+													<form method="POST" action="/dashboard/tenants/${tenant.id}/users/${params.id}/sessions/${s.id}?_method=DELETE" class="inline">
+														<button type="submit" class="text-red-600 hover:text-red-800">Revoke</button>
+													</form>
+												</li>
+											`,
+						)}</ul>`;
+
+			let passkeysList =
+				passkeys.length === 0
+					? html`
+							<p class="text-gray-500 text-sm">No passkeys registered</p>
+						`
+					: html`<ul class="space-y-2">${passkeys.map(
+							(p) => html`
+												<li class="flex justify-between items-center text-sm border-b pb-2 last:border-0 last:pb-0">
+													<div>
+														<p class="font-medium">${p.name ?? "Unnamed passkey"}</p>
+														<p class="text-gray-400 text-xs">${p.device_type || "Unknown device"} • Last used: ${p.last_used_at ? new Date(p.last_used_at).toLocaleDateString() : "Never"}</p>
+													</div>
+													<form method="POST" action="/dashboard/tenants/${tenant.id}/users/${params.id}/passkeys/${p.id}?_method=DELETE" class="inline">
+														<button type="submit" class="text-red-600 hover:text-red-800" onclick="return confirm('Delete this passkey?')">Delete</button>
+													</form>
+												</li>
+											`,
+						)}</ul>`;
+
+			let grantsList =
+				grants.length === 0
+					? html`
+							<p class="text-gray-500 text-sm">No authorized applications</p>
+						`
+					: html`<ul class="space-y-2">${grants.map(
+							(g) => html`
+												<li class="flex justify-between items-center text-sm border-b pb-2 last:border-0 last:pb-0">
+													<div>
+														<p class="font-medium">Client: ${g.client_id}</p>
+														<p class="text-gray-400 text-xs">Scopes: ${g.scopes}</p>
+													</div>
+													<form method="POST" action="/dashboard/tenants/${tenant.id}/users/${params.id}/grants/${g.id}?_method=DELETE" class="inline">
+														<button type="submit" class="text-red-600 hover:text-red-800" onclick="return confirm('Revoke access?')">Revoke</button>
+													</form>
+												</li>
+											`,
+						)}</ul>`;
+
+			return htmlResponse(
+				String(
+					layout({
+						title: `${user.display_name || user.username} - ${tenant.name}`,
+						tenant,
+						backLink: `/dashboard/tenants/${tenant.id}/users`,
+						backText: "Users",
+						content: html`
 						<div class="flex justify-between items-start mb-6">
 							<div>
-								<h2 class="text-2xl font-bold">${user.display_name ? escapeHtml(user.display_name) : escapeHtml(user.username)}</h2>
-								<p class="text-gray-500">${escapeHtml(user.email)}</p>
+								<h2 class="text-2xl font-bold">${user.display_name ?? user.username}</h2>
+								<p class="text-gray-500">${user.email}</p>
 							</div>
 							<div class="flex gap-2">
 								<a href="/dashboard/tenants/${tenant.id}/users/${params.id}/edit" class="text-blue-600 hover:text-blue-800">Edit</a>
@@ -133,75 +200,22 @@ export default {
 						<div class="space-y-6">
 							<section class="bg-white rounded-lg border p-4">
 								<h3 class="font-semibold mb-4">Active Sessions (${sessions.length})</h3>
-								${
-									sessions.length === 0
-										? '<p class="text-gray-500 text-sm">No active sessions</p>'
-										: `<ul class="space-y-2">${sessions
-												.map(
-													(s) => `
-												<li class="flex justify-between items-center text-sm border-b pb-2 last:border-0 last:pb-0">
-													<div>
-														<p class="text-gray-600">${s.user_agent ? escapeHtml(s.user_agent.slice(0, 50)) : "Unknown device"}</p>
-														<p class="text-gray-400 text-xs">Expires: ${new Date(s.expires_at).toLocaleString()}</p>
-													</div>
-													<form method="POST" action="/dashboard/tenants/${tenant.id}/users/${params.id}/sessions/${s.id}?_method=DELETE" class="inline">
-														<button type="submit" class="text-red-600 hover:text-red-800">Revoke</button>
-													</form>
-												</li>
-											`,
-												)
-												.join("")}</ul>`
-								}
+								${sessionsList}
 							</section>
 
 							<section class="bg-white rounded-lg border p-4">
 								<h3 class="font-semibold mb-4">Passkeys (${passkeys.length})</h3>
-								${
-									passkeys.length === 0
-										? '<p class="text-gray-500 text-sm">No passkeys registered</p>'
-										: `<ul class="space-y-2">${passkeys
-												.map(
-													(p) => `
-												<li class="flex justify-between items-center text-sm border-b pb-2 last:border-0 last:pb-0">
-													<div>
-														<p class="font-medium">${p.name ? escapeHtml(p.name) : "Unnamed passkey"}</p>
-														<p class="text-gray-400 text-xs">${p.device_type || "Unknown device"} • Last used: ${p.last_used_at ? new Date(p.last_used_at).toLocaleDateString() : "Never"}</p>
-													</div>
-													<form method="POST" action="/dashboard/tenants/${tenant.id}/users/${params.id}/passkeys/${p.id}?_method=DELETE" class="inline">
-														<button type="submit" class="text-red-600 hover:text-red-800" onclick="return confirm('Delete this passkey?')">Delete</button>
-													</form>
-												</li>
-											`,
-												)
-												.join("")}</ul>`
-								}
+								${passkeysList}
 							</section>
 
 							<section class="bg-white rounded-lg border p-4">
 								<h3 class="font-semibold mb-4">Authorized Applications (${grants.length})</h3>
-								${
-									grants.length === 0
-										? '<p class="text-gray-500 text-sm">No authorized applications</p>'
-										: `<ul class="space-y-2">${grants
-												.map(
-													(g) => `
-												<li class="flex justify-between items-center text-sm border-b pb-2 last:border-0 last:pb-0">
-													<div>
-														<p class="font-medium">Client: ${escapeHtml(g.client_id)}</p>
-														<p class="text-gray-400 text-xs">Scopes: ${escapeHtml(g.scopes)}</p>
-													</div>
-													<form method="POST" action="/dashboard/tenants/${tenant.id}/users/${params.id}/grants/${g.id}?_method=DELETE" class="inline">
-														<button type="submit" class="text-red-600 hover:text-red-800" onclick="return confirm('Revoke access?')">Revoke</button>
-													</form>
-												</li>
-											`,
-												)
-												.join("")}</ul>`
-								}
+								${grantsList}
 							</section>
 						</div>
 					`,
-				}),
+					}),
+				),
 			);
 		},
 	),
@@ -217,19 +231,20 @@ export default {
 
 			log.info("User edit form loaded", { tenantId: tenant.id, userId: params.id });
 
-			return html(
-				layout({
-					title: `Edit ${user.display_name || user.username} - ${tenant.name}`,
-					tenant,
-					backLink: `/dashboard/tenants/${tenant.id}/users/${params.id}`,
-					backText: user.display_name || user.username,
-					content: `
+			return htmlResponse(
+				String(
+					layout({
+						title: `Edit ${user.display_name || user.username} - ${tenant.name}`,
+						tenant,
+						backLink: `/dashboard/tenants/${tenant.id}/users/${params.id}`,
+						backText: user.display_name || user.username,
+						content: html`
 						<h2 class="text-2xl font-bold mb-6">Edit User</h2>
 
 						<form method="POST" action="/dashboard/tenants/${tenant.id}/users/${params.id}?_method=PUT" class="bg-white rounded-lg border p-6 space-y-4 max-w-lg">
 							<div>
 								<label class="block text-sm font-medium text-gray-700 mb-1" for="displayName">Display Name</label>
-								<input type="text" id="displayName" name="displayName" value="${user.display_name ? escapeHtml(user.display_name) : ""}" class="w-full border rounded-lg px-3 py-2">
+								<input type="text" id="displayName" name="displayName" value="${user.display_name ?? ""}" class="w-full border rounded-lg px-3 py-2">
 							</div>
 
 							<div>
@@ -241,8 +256,8 @@ export default {
 							</div>
 
 							<div class="text-gray-500 text-sm">
-								<p><strong>Email:</strong> ${escapeHtml(user.email)} (cannot be changed)</p>
-								<p><strong>Username:</strong> ${escapeHtml(user.username)} (cannot be changed)</p>
+								<p><strong>Email:</strong> ${user.email} (cannot be changed)</p>
+								<p><strong>Username:</strong> ${user.username} (cannot be changed)</p>
 							</div>
 
 							<button type="submit" class="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700">
@@ -250,7 +265,8 @@ export default {
 							</button>
 						</form>
 					`,
-				}),
+					}),
+				),
 			);
 		},
 	),

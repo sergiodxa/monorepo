@@ -5,6 +5,13 @@ import { createTable } from "remix/data-table";
 
 import { RecordNotFoundError } from "~/lib/db-errors";
 
+const ScopesSchema = s.array(
+	s.object({
+		name: s.string(),
+		description: s.optional(s.string()),
+	}),
+);
+
 export default class Resource {
 	static table = createTable({
 		name: "resources",
@@ -88,6 +95,15 @@ export default class Resource {
 	}
 
 	static parseScopes(resource: { scopes: string }): Array<{ name: string; description?: string }> {
-		return JSON.parse(resource.scopes) as Array<{ name: string; description?: string }>;
+		let parsed: unknown;
+		try {
+			parsed = JSON.parse(resource.scopes);
+		} catch {
+			return [];
+		}
+
+		let result = s.parseSafe(ScopesSchema, parsed);
+		if (!result.success) return [];
+		return result.value;
 	}
 }

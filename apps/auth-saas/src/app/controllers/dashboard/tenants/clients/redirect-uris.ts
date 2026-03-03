@@ -1,7 +1,8 @@
-import { html } from "@pkg/http/response";
+import { html as htmlResponse } from "@pkg/http/response";
 import { isFailure } from "@pkg/result";
 import { validate } from "@pkg/validate";
 import * as s from "remix/data-schema";
+import { html } from "remix/html-template";
 
 import { layout } from "~/app/lib/html";
 import action from "~/lib/action";
@@ -25,13 +26,14 @@ export default {
 
 			log.info("New redirect URI form loaded", { tenantId: tenant.id, clientId: params.clientId });
 
-			return html(
-				layout({
-					title: `New Redirect URI - ${client.name}`,
-					tenant,
-					backLink: `/dashboard/tenants/${tenant.id}/clients/${params.clientId}`,
-					backText: client.name,
-					content: `
+			return htmlResponse(
+				String(
+					layout({
+						title: `New Redirect URI - ${client.name}`,
+						tenant,
+						backLink: `/dashboard/tenants/${tenant.id}/clients/${params.clientId}`,
+						backText: client.name,
+						content: html`
 						<h2 class="text-2xl font-bold mb-6">Add Redirect URI</h2>
 
 						<form method="POST" action="/dashboard/tenants/${tenant.id}/clients/${params.clientId}/redirect-uris" class="bg-white rounded-lg border p-6 space-y-4 max-w-lg">
@@ -57,7 +59,8 @@ export default {
 							</button>
 						</form>
 					`,
-				}),
+					}),
+				),
 			);
 		},
 	),

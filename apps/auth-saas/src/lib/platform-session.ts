@@ -3,6 +3,12 @@
  * Uses HMAC-signed tokens to securely store session data without database lookups.
  */
 
+import type { JSONValue } from "@pkg/types";
+
+import { isFailure } from "@pkg/result";
+import { validate } from "@pkg/validate";
+import * as s from "remix/data-schema";
+
 import {
 	base64UrlDecode,
 	base64UrlEncode,
@@ -13,16 +19,18 @@ import {
 export const PLATFORM_SESSION_COOKIE = "__platform_session";
 export const PLATFORM_SESSION_MAX_AGE = 30 * 24 * 60 * 60; // 30 days in seconds
 
-interface SessionPayload {
+const SessionPayloadSchema = s.object({
 	/** Subject ID (user UUID) */
-	sub: string;
+	sub: s.string(),
 	/** Email address */
-	email: string;
+	email: s.string(),
 	/** Issued at timestamp (seconds) */
-	iat: number;
+	iat: s.number(),
 	/** Expiration timestamp (seconds) */
-	exp: number;
-}
+	exp: s.number(),
+});
+
+type SessionPayload = s.InferOutput<typeof SessionPayloadSchema>;
 
 /**
  * Creates a signed session token containing user information.
@@ -69,16 +77,23 @@ export async function verifySessionToken(
 
 	// Decode and validate payload
 	try {
-		let payload = JSON.parse(base64UrlDecode(encodedPayload)) as SessionPayload;
+		let parsed: unknown;
+		try {
+			parsed = JSON.parse(base64UrlDecode(encodedPayload));
+		} catch {
+			return null;
+		}
+
+		let result = await validate(parsed as JSONValue, SessionPayloadSchema);
+		if (isFailure(result)) {
+			return null;
+		}
+
+		let payload = result.data;
 
 		// Check expiration
 		let now = Math.floor(Date.now() / 1000);
 		if (payload.exp < now) {
-			return null;
-		}
-
-		// Validate required fields
-		if (!payload.sub || !payload.email) {
 			return null;
 		}
 

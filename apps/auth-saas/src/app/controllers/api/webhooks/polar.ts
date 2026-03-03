@@ -12,11 +12,33 @@ import action from "~/lib/action";
 /**
  * Polar webhook event types we handle.
  */
-type PolarEventType =
-	| "checkout.completed"
-	| "subscription.active"
-	| "subscription.canceled"
-	| "subscription.updated";
+let HANDLED_EVENT_TYPES = [
+	"checkout.completed",
+	"subscription.active",
+	"subscription.canceled",
+	"subscription.updated",
+] as const;
+type HandledEventType = (typeof HANDLED_EVENT_TYPES)[number];
+
+/**
+ * Subscription status values from Polar.
+ */
+let SUBSCRIPTION_STATUSES = ["active", "canceled", "past_due"] as const;
+type SubscriptionStatus = (typeof SUBSCRIPTION_STATUSES)[number];
+
+/**
+ * Type guard to check if event type is one we handle.
+ */
+function isHandledEventType(type: string): type is HandledEventType {
+	return HANDLED_EVENT_TYPES.includes(type as HandledEventType);
+}
+
+/**
+ * Type guard to check if status is a valid subscription status.
+ */
+function isValidSubscriptionStatus(status: string | undefined): status is SubscriptionStatus {
+	return status !== undefined && SUBSCRIPTION_STATUSES.includes(status as SubscriptionStatus);
+}
 
 /**
  * Base webhook payload schema.
@@ -118,12 +140,17 @@ export default action<"POST", "/api/webhooks/polar">(async ({ db, request, logge
 	}
 
 	let { type, data } = result.data;
-	let eventType = type as PolarEventType;
 
-	log.info("Webhook received", { type: eventType, dataId: data.id });
+	log.info("Webhook received", { type, dataId: data.id });
+
+	// Check if this is an event type we handle
+	if (!isHandledEventType(type)) {
+		log.info("Unhandled webhook event type", { type });
+		return json({ received: true });
+	}
 
 	try {
-		switch (eventType) {
+		switch (type) {
 			case "checkout.completed": {
 				// After checkout, link the subscription to the tenant
 				let tenantId = data.metadata?.tenant_id;
@@ -150,11 +177,15 @@ export default action<"POST", "/api/webhooks/polar">(async ({ db, request, logge
 
 				if (subscriptions.length > 0) {
 					let subscription = subscriptions[0]!;
+					// Only update status if it's a valid status value
+					let newStatus = isValidSubscriptionStatus(data.status)
+						? data.status
+						: subscription.status;
 					await db.update(
 						Subscription.table,
 						{ id: subscription.id },
 						{
-							status: (data.status as "active" | "canceled" | "past_due") ?? subscription.status,
+							status: newStatus,
 							current_period_start: data.current_period_start ?? subscription.current_period_start,
 							current_period_end: data.current_period_end ?? subscription.current_period_end,
 							updated_at: new Date().toISOString(),
@@ -162,7 +193,7 @@ export default action<"POST", "/api/webhooks/polar">(async ({ db, request, logge
 					);
 					log.info("Subscription status synced", {
 						subscriptionId: subscription.id,
-						status: data.status,
+						status: newStatus,
 					});
 				}
 				break;
@@ -188,9 +219,6 @@ export default action<"POST", "/api/webhooks/polar">(async ({ db, request, logge
 				}
 				break;
 			}
-
-			default:
-				log.info("Unhandled webhook event type", { type: eventType });
 		}
 	} catch (error) {
 		// Determine if this is a retryable error
@@ -199,7 +227,7 @@ export default action<"POST", "/api/webhooks/polar">(async ({ db, request, logge
 		let isRetryable = isRetryableError(error);
 
 		log.error("Webhook processing failed", {
-			type: eventType,
+			type,
 			error: error instanceof Error ? error.message : String(error),
 			retryable: isRetryable,
 		});

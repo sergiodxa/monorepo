@@ -3,12 +3,25 @@
  * Uses HMAC-signed JWTs to securely identify internal requests.
  */
 
+import type { JSONValue } from "@pkg/types";
+
+import { isFailure } from "@pkg/result";
+import { validate } from "@pkg/validate";
+import * as s from "remix/data-schema";
+
 import {
 	base64UrlDecode,
 	base64UrlEncode,
 	constantTimeCompare,
 	hmacSign,
 } from "~/lib/crypto-utils";
+
+const InternalTokenPayloadSchema = s.object({
+	iss: s.string(),
+	iat: s.number(),
+	exp: s.number(),
+	purpose: s.string(),
+});
 
 /**
  * Creates a signed internal auth token for platform-to-DO communication.
@@ -30,13 +43,6 @@ export async function createInternalToken(secret: string): Promise<string> {
 	let signature = await hmacSign(signingInput, secret);
 
 	return `${signingInput}.${signature}`;
-}
-
-interface InternalTokenPayload {
-	iss: string;
-	iat: number;
-	exp: number;
-	purpose: string;
 }
 
 /**
@@ -61,7 +67,17 @@ export async function verifyInternalToken(token: string, secret: string): Promis
 
 	// Verify payload
 	try {
-		let payload = JSON.parse(base64UrlDecode(encodedPayload)) as InternalTokenPayload;
+		let parsed: unknown;
+		try {
+			parsed = JSON.parse(base64UrlDecode(encodedPayload));
+		} catch {
+			return false;
+		}
+
+		let result = await validate(parsed as JSONValue, InternalTokenPayloadSchema);
+		if (isFailure(result)) return false;
+
+		let payload = result.data;
 
 		// Check issuer
 		if (payload.iss !== "auth-saas-platform") return false;

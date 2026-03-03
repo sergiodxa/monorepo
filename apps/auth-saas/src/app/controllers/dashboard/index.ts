@@ -1,6 +1,6 @@
-import { html } from "@pkg/http/response";
+import { html as htmlResponse } from "@pkg/http/response";
+import { html } from "remix/html-template";
 
-import { escapeHtml } from "~/app/lib/html";
 import Tenant from "~/app/models/tenant";
 import action from "~/lib/action";
 
@@ -22,23 +22,22 @@ export default action<"GET", "/dashboard">(async ({ db, platformSession, logger 
 		});
 	}
 
-	let tenantsHtml = tenants
-		.map(
-			(t) => `
+	let tenantsHtml = tenants.map(
+		(t) => html`
 			<li class="border rounded-lg p-4 hover:bg-gray-50">
 				<a href="/dashboard/tenants/${t.id}" class="block">
-					<h3 class="font-semibold text-lg">${escapeHtml(t.name)}</h3>
-					<p class="text-gray-500 text-sm">${escapeHtml(t.slug)}</p>
+					<h3 class="font-semibold text-lg">${t.name}</h3>
+					<p class="text-gray-500 text-sm">${t.slug}</p>
 					<span class="inline-block mt-2 px-2 py-1 text-xs rounded ${t.status === "active" ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-800"}">
 						${t.status}
 					</span>
 				</a>
 			</li>
 		`,
-		)
-		.join("");
+	);
 
-	return html(`
+	return htmlResponse(
+		String(html`
 		<!DOCTYPE html>
 		<html lang="en">
 		<head>
@@ -69,5 +68,6 @@ export default action<"GET", "/dashboard">(async ({ db, platformSession, logger 
 			</main>
 		</body>
 		</html>
-	`);
+	`),
+	);
 });
