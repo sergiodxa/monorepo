@@ -1,4 +1,4 @@
-import { badRequest, ok } from "@pkg/http/response/json";
+import { badRequest, ok, tooManyRequests } from "@pkg/http/response/json";
 import { isFailure } from "@pkg/result";
 import { validate } from "@pkg/validate";
 import {
@@ -8,6 +8,7 @@ import {
 import * as s from "remix/data-schema";
 
 import action from "~/lib/action";
+import { checkUserRateLimit, USER_RATE_LIMITS } from "~/lib/user-rate-limit";
 import Passkey from "~/tenant/models/passkey";
 import Subject from "~/tenant/models/subject";
 import TenantMeta from "~/tenant/models/tenant-meta";
@@ -53,6 +54,16 @@ export default action<"POST", "/webauthn/register/options">(
 		if (!isValidEmail(email)) {
 			log.info("Invalid email format", { email });
 			return badRequest({ error: "Invalid email format" });
+		}
+
+		// Per-email rate limiting to prevent registration abuse
+		let rateLimit = checkUserRateLimit(email, "registerOptions", USER_RATE_LIMITS.registerOptions);
+		if (!rateLimit.success) {
+			log.info("Rate limit exceeded for email", { email });
+			return tooManyRequests({
+				error: "Too many registration attempts. Please try again later.",
+				retryAfter: Math.ceil((rateLimit.resetAt - Date.now()) / 1000),
+			});
 		}
 
 		// Check if subject already exists with passkeys

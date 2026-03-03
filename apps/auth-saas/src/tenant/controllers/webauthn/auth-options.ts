@@ -1,4 +1,4 @@
-import { badRequest, ok } from "@pkg/http/response/json";
+import { badRequest, ok, tooManyRequests } from "@pkg/http/response/json";
 import { isFailure } from "@pkg/result";
 import { validate } from "@pkg/validate";
 import {
@@ -8,6 +8,7 @@ import {
 import * as s from "remix/data-schema";
 
 import action from "~/lib/action";
+import { checkUserRateLimit, USER_RATE_LIMITS } from "~/lib/user-rate-limit";
 import Passkey from "~/tenant/models/passkey";
 import Subject from "~/tenant/models/subject";
 import TenantMeta from "~/tenant/models/tenant-meta";
@@ -33,6 +34,16 @@ export default action<"POST", "/webauthn/auth/options">(
 		}
 
 		let { email, clientId, redirectUri, state, nonce, scope } = result.data;
+
+		// Per-email rate limiting to prevent brute force attacks
+		let rateLimit = checkUserRateLimit(email, "authOptions", USER_RATE_LIMITS.authOptions);
+		if (!rateLimit.success) {
+			log.info("Rate limit exceeded for email", { email });
+			return tooManyRequests({
+				error: "Too many authentication attempts. Please try again later.",
+				retryAfter: Math.ceil((rateLimit.resetAt - Date.now()) / 1000),
+			});
+		}
 
 		// Find subject by email
 		let subject = await Subject.findByEmail(db, email);

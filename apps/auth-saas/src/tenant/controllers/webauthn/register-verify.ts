@@ -1,4 +1,4 @@
-import { badRequest, ok } from "@pkg/http/response/json";
+import { badRequest, ok, tooManyRequests } from "@pkg/http/response/json";
 import { isFailure } from "@pkg/result";
 import { validate } from "@pkg/validate";
 import { verifyRegistrationResponse } from "@simplewebauthn/server";
@@ -7,6 +7,7 @@ import * as s from "remix/data-schema";
 import AnalyticsService from "~/app/services/analytics";
 import action from "~/lib/action";
 import { isResponse, safeJsonParse } from "~/lib/safe-json";
+import { checkUserRateLimit, USER_RATE_LIMITS } from "~/lib/user-rate-limit";
 import AuthorizationCode from "~/tenant/models/authorization-code";
 import Passkey from "~/tenant/models/passkey";
 import Session from "~/tenant/models/session";
@@ -75,6 +76,20 @@ export default action<"POST", "/webauthn/register/verify">(async ({ db, request,
 	if (!challenge.email) {
 		log.info("Challenge missing email", { challengeId });
 		return badRequest({ error: "Invalid challenge: missing email" });
+	}
+
+	// Per-email rate limiting to prevent registration abuse
+	let rateLimit = checkUserRateLimit(
+		challenge.email,
+		"registerVerify",
+		USER_RATE_LIMITS.registerVerify,
+	);
+	if (!rateLimit.success) {
+		log.info("Rate limit exceeded for email", { email: challenge.email });
+		return tooManyRequests({
+			error: "Too many registration attempts. Please try again later.",
+			retryAfter: Math.ceil((rateLimit.resetAt - Date.now()) / 1000),
+		});
 	}
 
 	// Get RP info
