@@ -7,6 +7,7 @@
  * Paths that require auth rate limiting (10 req/10s)
  */
 const AUTH_RATE_LIMITED_PATHS = [
+	"/oauth/authorize",
 	"/oauth/token",
 	"/webauthn/register/options",
 	"/webauthn/register/verify",

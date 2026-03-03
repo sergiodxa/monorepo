@@ -6,6 +6,7 @@ import * as s from "remix/data-schema";
 
 import action from "~/lib/action";
 import { RecordNotFoundError } from "~/lib/db-errors";
+import { isResponse, safeJsonParse } from "~/lib/safe-json";
 import Subject from "~/tenant/models/subject";
 
 let UpdateSubjectSchema = s.object({
@@ -34,7 +35,12 @@ export const show = action<"GET", "/api/subjects/:id">(async ({ db, params, logg
 export const update = action<"PUT", "/api/subjects/:id">(
 	async ({ db, params, request, logger }) => {
 		let log = logger.action("/api/subjects/:id");
-		let body = (await request.json()) as Record<string, unknown>;
+		let body = await safeJsonParse(request);
+		if (isResponse(body)) {
+			log.info("Invalid JSON body", { subjectId: params.id });
+			return body;
+		}
+
 		let result = await validate(body, UpdateSubjectSchema);
 		if (isFailure(result)) {
 			log.info("Invalid request body", { subjectId: params.id });

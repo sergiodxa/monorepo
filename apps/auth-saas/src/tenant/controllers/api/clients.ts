@@ -6,6 +6,7 @@ import * as s from "remix/data-schema";
 
 import action from "~/lib/action";
 import { RecordNotFoundError } from "~/lib/db-errors";
+import { isResponse, safeJsonParse } from "~/lib/safe-json";
 import Client from "~/tenant/models/client";
 
 let CreateClientSchema = s.object({
@@ -48,7 +49,12 @@ export const show = action<"GET", "/api/clients/:id">(async ({ params, db, logge
 
 export const create = action<"POST", "/api/clients">(async ({ db, request, logger }) => {
 	let log = logger.action("/api/clients");
-	let body = (await request.json()) as Record<string, unknown>;
+	let body = await safeJsonParse(request);
+	if (isResponse(body)) {
+		log.info("Invalid JSON body");
+		return body;
+	}
+
 	let result = await validate(body, CreateClientSchema);
 	if (isFailure(result)) {
 		log.info("Invalid request body");
@@ -73,7 +79,12 @@ export const create = action<"POST", "/api/clients">(async ({ db, request, logge
 
 export const update = action<"PUT", "/api/clients/:id">(async ({ params, db, request, logger }) => {
 	let log = logger.action("/api/clients/:id");
-	let body = (await request.json()) as Record<string, unknown>;
+	let body = await safeJsonParse(request);
+	if (isResponse(body)) {
+		log.info("Invalid JSON body", { clientId: params.id });
+		return body;
+	}
+
 	let result = await validate(body, UpdateClientSchema);
 	if (isFailure(result)) {
 		log.info("Invalid request body", { clientId: params.id });

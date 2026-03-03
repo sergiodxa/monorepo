@@ -6,6 +6,7 @@ import * as s from "remix/data-schema";
 
 import AnalyticsService from "~/app/services/analytics";
 import action from "~/lib/action";
+import { isResponse, safeJsonParse } from "~/lib/safe-json";
 import AuthorizationCode from "~/tenant/models/authorization-code";
 import Passkey from "~/tenant/models/passkey";
 import Session from "~/tenant/models/session";
@@ -35,7 +36,12 @@ let RequestSchema = s.object({
 export default action<"POST", "/webauthn/register/verify">(async ({ db, request, logger }) => {
 	let log = logger.action("/webauthn/register/verify");
 
-	let body = (await request.json()) as Record<string, unknown>;
+	let body = await safeJsonParse(request);
+	if (isResponse(body)) {
+		log.info("Invalid JSON body");
+		return body;
+	}
+
 	let result = await validate(body, RequestSchema);
 	if (isFailure(result)) {
 		log.info("Invalid request body");

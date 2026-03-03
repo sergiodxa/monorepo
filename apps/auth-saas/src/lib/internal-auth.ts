@@ -46,11 +46,11 @@ export async function verifyInternalToken(token: string, secret: string): Promis
 
 	if (!encodedHeader || !encodedPayload || !signature) return false;
 
-	// Verify signature
+	// Verify signature using constant-time comparison to prevent timing attacks
 	let signingInput = `${encodedHeader}.${encodedPayload}`;
 	let expectedSignature = await sign(signingInput, secret);
 
-	if (signature !== expectedSignature) return false;
+	if (!constantTimeCompare(signature, expectedSignature)) return false;
 
 	// Verify payload
 	try {
@@ -101,4 +101,17 @@ function base64UrlDecode(input: string): string {
 	let str = input.replace(/-/g, "+").replace(/_/g, "/");
 	while (str.length % 4) str += "=";
 	return atob(str);
+}
+
+/**
+ * Compares two strings in constant time to prevent timing attacks.
+ * Returns true if the strings are equal.
+ */
+function constantTimeCompare(a: string, b: string): boolean {
+	if (a.length !== b.length) return false;
+	let result = 0;
+	for (let i = 0; i < a.length; i++) {
+		result |= a.charCodeAt(i) ^ b.charCodeAt(i);
+	}
+	return result === 0;
 }

@@ -146,6 +146,15 @@ async function handleAuthorizationCode(db: Database, body: Record<string, unknow
 		return reject("invalid_grant", "Redirect URI mismatch");
 	}
 
+	// Require PKCE for public clients (OAuth 2.1 requirement)
+	if (client.type === "public" && !authzData.pkce) {
+		log.info("PKCE required for public clients", {
+			clientId: client.id,
+			grantType: "authorization_code",
+		});
+		return reject("invalid_request", "PKCE is required for public clients");
+	}
+
 	// Validate PKCE if present
 	if (authzData.pkce) {
 		if (!code_verifier) {
@@ -171,8 +180,15 @@ async function handleAuthorizationCode(db: Database, body: Record<string, unknow
 		}
 	}
 
+	// Fetch session, subject, issuer, and signing keys in parallel for performance
+	let [session, subject, issuer, signingKeys] = await Promise.all([
+		Session.show(db, authzData.sessionId),
+		Subject.show(db, authzData.subjectId),
+		TenantMeta.getIssuer(db),
+		SigningKey.getAll(db),
+	]);
+
 	// Validate session
-	let session = await Session.show(db, authzData.sessionId);
 	if (!session || new Date(session.expires_at) < new Date()) {
 		log.info("Session expired", {
 			clientId: client.id,
@@ -182,8 +198,7 @@ async function handleAuthorizationCode(db: Database, body: Record<string, unknow
 		return reject("invalid_grant", "Session has expired");
 	}
 
-	// Get subject
-	let subject = await Subject.show(db, authzData.subjectId);
+	// Validate subject
 	if (!subject) {
 		log.info("Subject not found", {
 			clientId: client.id,
@@ -193,8 +208,7 @@ async function handleAuthorizationCode(db: Database, body: Record<string, unknow
 		return reject("invalid_grant", "Subject not found");
 	}
 
-	// Get issuer and signing keys
-	let issuer = await TenantMeta.getIssuer(db);
+	// Validate issuer
 	if (!issuer) {
 		log.info("Issuer not configured", {
 			clientId: client.id,
@@ -203,7 +217,7 @@ async function handleAuthorizationCode(db: Database, body: Record<string, unknow
 		return reject("server_error", "Issuer not configured");
 	}
 
-	let signingKeys = await SigningKey.getAll(db);
+	// Validate signing keys
 	if (signingKeys.length === 0) {
 		log.info("No signing keys available", {
 			clientId: client.id,
@@ -321,11 +335,15 @@ async function handleRefreshToken(db: Database, body: Record<string, unknown>, l
 		}
 	}
 
-	// Touch session (update last access time)
-	await Session.touch(db, session.id);
+	// Touch session and fetch subject, issuer, signing keys in parallel
+	let [, subject, issuer, signingKeys] = await Promise.all([
+		Session.touch(db, session.id),
+		Subject.show(db, session.subject_id),
+		TenantMeta.getIssuer(db),
+		SigningKey.getAll(db),
+	]);
 
-	// Get subject
-	let subject = await Subject.show(db, session.subject_id);
+	// Validate subject
 	if (!subject) {
 		log.info("Subject not found", {
 			clientId: client.id,
@@ -335,8 +353,7 @@ async function handleRefreshToken(db: Database, body: Record<string, unknown>, l
 		return reject("invalid_grant", "Subject not found");
 	}
 
-	// Get issuer and signing keys
-	let issuer = await TenantMeta.getIssuer(db);
+	// Validate issuer
 	if (!issuer) {
 		log.info("Issuer not configured", {
 			clientId: client.id,
@@ -345,7 +362,7 @@ async function handleRefreshToken(db: Database, body: Record<string, unknown>, l
 		return reject("server_error", "Issuer not configured");
 	}
 
-	let signingKeys = await SigningKey.getAll(db);
+	// Validate signing keys
 	if (signingKeys.length === 0) {
 		log.info("No signing keys available", {
 			clientId: client.id,
@@ -434,8 +451,10 @@ async function handleClientCredentials(db: Database, body: Record<string, unknow
 		return reject("invalid_client", "Invalid client credentials", 401);
 	}
 
-	// Get issuer and signing keys
-	let issuer = await TenantMeta.getIssuer(db);
+	// Get issuer and signing keys in parallel
+	let [issuer, signingKeys] = await Promise.all([TenantMeta.getIssuer(db), SigningKey.getAll(db)]);
+
+	// Validate issuer
 	if (!issuer) {
 		log.info("Issuer not configured", {
 			clientId: client.id,
@@ -444,7 +463,7 @@ async function handleClientCredentials(db: Database, body: Record<string, unknow
 		return reject("server_error", "Issuer not configured");
 	}
 
-	let signingKeys = await SigningKey.getAll(db);
+	// Validate signing keys
 	if (signingKeys.length === 0) {
 		log.info("No signing keys available", {
 			clientId: client.id,

@@ -6,6 +6,7 @@ import * as s from "remix/data-schema";
 
 import action from "~/lib/action";
 import { RecordNotFoundError } from "~/lib/db-errors";
+import { isResponse, safeJsonParse } from "~/lib/safe-json";
 import Passkey from "~/tenant/models/passkey";
 import Subject from "~/tenant/models/subject";
 
@@ -63,7 +64,12 @@ export const update = action<"PUT", "/api/subjects/:id/passkeys/:passkeyId">(
 			return notFound({ error: "Passkey not found" });
 		}
 
-		let body = (await request.json()) as Record<string, unknown>;
+		let body = await safeJsonParse(request);
+		if (isResponse(body)) {
+			log.info("Invalid JSON body", { subjectId: params.id, passkeyId: params.passkeyId });
+			return body;
+		}
+
 		let result = await validate(body, UpdatePasskeySchema);
 		if (isFailure(result)) {
 			log.info("Invalid request body", { subjectId: params.id, passkeyId: params.passkeyId });
@@ -73,15 +79,22 @@ export const update = action<"PUT", "/api/subjects/:id/passkeys/:passkeyId">(
 		try {
 			await Passkey.rename(db, params.passkeyId, result.data.name);
 			let updated = await Passkey.show(db, params.passkeyId);
+			if (!updated) {
+				log.info("Passkey not found after rename", {
+					subjectId: params.id,
+					passkeyId: params.passkeyId,
+				});
+				return notFound({ error: "Passkey not found" });
+			}
 			log.info("Passkey renamed", { subjectId: params.id, passkeyId: params.passkeyId });
 			return ok({
-				id: updated!.id,
-				name: updated!.name,
-				deviceType: updated!.device_type,
-				backedUp: updated!.backed_up,
-				transports: updated!.transports ? updated!.transports.split(",") : [],
-				createdAt: updated!.created_at,
-				lastUsedAt: updated!.last_used_at,
+				id: updated.id,
+				name: updated.name,
+				deviceType: updated.device_type,
+				backedUp: updated.backed_up,
+				transports: updated.transports ? updated.transports.split(",") : [],
+				createdAt: updated.created_at,
+				lastUsedAt: updated.last_used_at,
 			});
 		} catch (error) {
 			if (error instanceof RecordNotFoundError) {

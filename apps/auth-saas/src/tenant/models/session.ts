@@ -83,9 +83,10 @@ export default class Session {
 	static async destroyBySubject(db: Database, subjectId: string) {
 		let sessions = await db.findMany(Session.table, { where: { subject_id: subjectId } });
 
-		for (let session of sessions) {
-			await db.delete(Session.table, { id: session.id });
-		}
+		if (sessions.length === 0) return 0;
+
+		// Delete in parallel for better performance
+		await Promise.all(sessions.map((session) => db.delete(Session.table, { id: session.id })));
 
 		return sessions.length;
 	}

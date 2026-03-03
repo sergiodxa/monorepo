@@ -3,6 +3,8 @@ import type { Database } from "remix/data-table";
 import * as s from "remix/data-schema";
 import { createTable } from "remix/data-table";
 
+import { sanitizeCss } from "~/lib/css-sanitizer";
+
 export default class Brand {
 	static DEFAULTS = {
 		primaryColor: "#3B82F6",
@@ -58,6 +60,10 @@ export default class Brand {
 		let existing = await db.findOne(Brand.table, { where: { id: "default" } });
 		let now = new Date().toISOString();
 
+		// Sanitize custom CSS to prevent injection attacks
+		let sanitizedCss =
+			data.customCss !== undefined ? sanitizeCss(data.customCss) : (existing?.custom_css ?? null);
+
 		if (existing) {
 			return await db.update(
 				Brand.table,
@@ -68,7 +74,7 @@ export default class Brand {
 						data.primaryColor !== undefined ? data.primaryColor : existing.primary_color,
 					background_color:
 						data.backgroundColor !== undefined ? data.backgroundColor : existing.background_color,
-					custom_css: data.customCss !== undefined ? data.customCss : existing.custom_css,
+					custom_css: sanitizedCss,
 					updated_at: now,
 				},
 			);
@@ -79,7 +85,7 @@ export default class Brand {
 			logo_url: data.logoUrl ?? null,
 			primary_color: data.primaryColor ?? null,
 			background_color: data.backgroundColor ?? null,
-			custom_css: data.customCss ?? null,
+			custom_css: sanitizedCss,
 			created_at: now,
 			updated_at: now,
 		});

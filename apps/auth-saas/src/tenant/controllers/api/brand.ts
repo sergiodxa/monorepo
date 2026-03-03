@@ -4,6 +4,7 @@ import { validate } from "@pkg/validate";
 import * as s from "remix/data-schema";
 
 import action from "~/lib/action";
+import { isResponse, safeJsonParse } from "~/lib/safe-json";
 import Brand from "~/tenant/models/brand";
 
 let UpdateBrandSchema = s.object({
@@ -26,7 +27,12 @@ export const show = action<"GET", "/api/brand">(async ({ db, logger }) => {
 export const update = action<"PUT", "/api/brand">(async ({ db, request, logger }) => {
 	let log = logger.action("/api/brand");
 
-	let body = (await request.json()) as Record<string, unknown>;
+	let body = await safeJsonParse(request);
+	if (isResponse(body)) {
+		log.info("Invalid JSON body");
+		return body;
+	}
+
 	let result = await validate(body, UpdateBrandSchema);
 	if (isFailure(result)) {
 		log.info("Brand update validation failed", { issues: result.error.issues.length });

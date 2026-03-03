@@ -46,19 +46,20 @@ export default class SigningKey {
 	static async getAll(db: Database): Promise<JWK.KeyPair[]> {
 		let records = await db.findMany(SigningKey.table);
 
-		let keyPairs: JWK.KeyPair[] = [];
-		for (let record of records) {
-			let keyPair = await JWK.importKeyPair({
-				id: record.id as `${string}-${string}-${string}-${string}-${string}`,
-				alg: JWK.Algoritm.ES256,
-				privateKey: record.private_key,
-				publicKey: record.public_key,
-				created: new Date(record.created_at).getTime(),
-			});
-			keyPairs.push(keyPair);
-		}
+		if (records.length === 0) return [];
 
-		return keyPairs;
+		// Import all key pairs in parallel for better performance
+		return await Promise.all(
+			records.map((record) =>
+				JWK.importKeyPair({
+					id: record.id as `${string}-${string}-${string}-${string}-${string}`,
+					alg: JWK.Algoritm.ES256,
+					privateKey: record.private_key,
+					publicKey: record.public_key,
+					created: new Date(record.created_at).getTime(),
+				}),
+			),
+		);
 	}
 
 	static async generate(db: Database): Promise<JWK.KeyPair> {
@@ -69,8 +70,13 @@ export default class SigningKey {
 			where: { is_current: true },
 		});
 
-		for (let existing of existingCurrent) {
-			await db.update(SigningKey.table, { id: existing.id }, { is_current: false });
+		// Mark all existing current keys as not current in parallel
+		if (existingCurrent.length > 0) {
+			await Promise.all(
+				existingCurrent.map((existing) =>
+					db.update(SigningKey.table, { id: existing.id }, { is_current: false }),
+				),
+			);
 		}
 
 		let now = new Date().toISOString();
@@ -94,8 +100,13 @@ export default class SigningKey {
 			where: { is_current: true },
 		});
 
-		for (let existing of existingCurrent) {
-			await db.update(SigningKey.table, { id: existing.id }, { is_current: false });
+		// Mark all existing current keys as not current in parallel
+		if (existingCurrent.length > 0) {
+			await Promise.all(
+				existingCurrent.map((existing) =>
+					db.update(SigningKey.table, { id: existing.id }, { is_current: false }),
+				),
+			);
 		}
 
 		let rawKeyPair = await JWK.generateKeyPair(JWK.Algoritm.ES256);

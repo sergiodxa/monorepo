@@ -6,6 +6,7 @@ import * as s from "remix/data-schema";
 
 import action from "~/lib/action";
 import { RecordNotFoundError } from "~/lib/db-errors";
+import { isResponse, safeJsonParse } from "~/lib/safe-json";
 import Resource from "~/tenant/models/resource";
 
 let ScopeSchema = s.object({
@@ -55,7 +56,12 @@ export const show = action<"GET", "/api/resources/:id">(async ({ params, db, log
 
 export const create = action<"POST", "/api/resources">(async ({ db, request, logger }) => {
 	let log = logger.action("/api/resources");
-	let body = (await request.json()) as Record<string, unknown>;
+	let body = await safeJsonParse(request);
+	if (isResponse(body)) {
+		log.info("Invalid JSON body");
+		return body;
+	}
+
 	let result = await validate(body, CreateResourceSchema);
 	if (isFailure(result)) {
 		log.info("Invalid request body");
@@ -73,7 +79,12 @@ export const create = action<"POST", "/api/resources">(async ({ db, request, log
 export const update = action<"PUT", "/api/resources/:id">(
 	async ({ params, db, request, logger }) => {
 		let log = logger.action("/api/resources/:id");
-		let body = (await request.json()) as Record<string, unknown>;
+		let body = await safeJsonParse(request);
+		if (isResponse(body)) {
+			log.info("Invalid JSON body", { resourceId: params.id });
+			return body;
+		}
+
 		let result = await validate(body, UpdateResourceSchema);
 		if (isFailure(result)) {
 			log.info("Invalid request body", { resourceId: params.id });
