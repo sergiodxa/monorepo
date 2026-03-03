@@ -1,5 +1,3 @@
-import { CSRF_FORM_FIELD } from "~/lib/csrf";
-
 /**
  * HTML utilities for platform dashboard
  */
@@ -11,13 +9,6 @@ export function escapeHtml(str: string): string {
 		.replace(/>/g, "&gt;")
 		.replace(/"/g, "&quot;")
 		.replace(/'/g, "&#039;");
-}
-
-/**
- * Generates a hidden CSRF input field for forms.
- */
-export function csrfInput(token: string): string {
-	return `<input type="hidden" name="${CSRF_FORM_FIELD}" value="${escapeHtml(token)}">`;
 }
 
 interface LayoutOptions {

@@ -1,103 +1,122 @@
 import { forbidden } from "@pkg/http/response/json";
-import { env } from "cloudflare:workers";
 
-import {
-	createCsrfCookie,
-	extractCsrfToken,
-	generateCsrfToken,
-	getCsrfCookie,
-	verifyCsrfToken,
-} from "~/lib/csrf";
 import middleware from "~/lib/middleware";
 
-declare module "remix/fetch-router" {
-	interface RequestContext {
-		/** CSRF token for use in forms/headers */
-		csrfToken: string;
+/**
+ * Valid values for the Sec-Fetch-Site header.
+ */
+type FetchSite = "cross-site" | "same-origin" | "same-site" | "none";
+
+/**
+ * Returns the value of the Sec-Fetch-Site header.
+ * @see https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Sec-Fetch-Site
+ */
+function fetchSite(request: Request): FetchSite | null {
+	let header = request.headers.get("Sec-Fetch-Site");
+	if (!header) return null;
+
+	let validValues: FetchSite[] = ["cross-site", "same-origin", "same-site", "none"];
+	if (validValues.includes(header as FetchSite)) {
+		return header as FetchSite;
 	}
+
+	return null;
+}
+
+/**
+ * Extracts the origin from a request by checking multiple sources in order:
+ * 1. The Origin header
+ * 2. The Referer header
+ * 3. The request.referrer property
+ */
+function getRequestOrigin(request: Request): string | null {
+	let origin = request.headers.get("Origin");
+	if (origin) {
+		try {
+			return new URL(origin.toLowerCase().trim()).origin;
+		} catch {
+			// Invalid URL
+		}
+	}
+
+	let referer = request.headers.get("Referer");
+	if (referer) {
+		try {
+			return new URL(referer.toLowerCase().trim()).origin;
+		} catch {
+			// Invalid URL
+		}
+	}
+
+	if (request.referrer) {
+		try {
+			return new URL(request.referrer.toLowerCase().trim()).origin;
+		} catch {
+			// Invalid URL
+		}
+	}
+
+	return null;
 }
 
 /**
  * CSRF protection middleware for the platform dashboard.
- * Uses double-submit cookie pattern:
- * 1. Sets a CSRF cookie with a signed token
- * 2. Requires the token to be submitted in a header or form field for POST/PUT/DELETE
+ *
+ * Uses the Sec-Fetch-Site header to determine request origin.
+ * Requests from same-origin or same-site are automatically allowed.
+ * Cross-site requests are rejected.
  *
  * GET/HEAD/OPTIONS requests are safe methods and don't require CSRF validation.
+ *
+ * @see https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Sec-Fetch-Site
  */
 export default middleware(async (context, next) => {
 	let log = context.logger.middleware("csrf");
-	let isProduction = !import.meta.env.DEV;
-
-	// Get or generate CSRF token
-	let cookies = context.request.headers.get("Cookie") ?? "";
-	let csrfCookie = getCsrfCookie(cookies);
-
-	// Validate existing cookie token or generate new one
-	let csrfToken: string;
-	if (csrfCookie && (await verifyCsrfToken(csrfCookie, env.SESSION_SECRET))) {
-		csrfToken = csrfCookie;
-	} else {
-		csrfToken = await generateCsrfToken(env.SESSION_SECRET);
-	}
-
-	context.csrfToken = csrfToken;
 
 	// Safe methods don't need CSRF validation
 	let method = context.request.method.toUpperCase();
 	if (method === "GET" || method === "HEAD" || method === "OPTIONS") {
-		let response = await next();
+		return await next();
+	}
 
-		// Set CSRF cookie on safe requests
-		if (!csrfCookie || csrfCookie !== csrfToken) {
-			let newCookie = createCsrfCookie(csrfToken, isProduction);
-			let existingCookies = response.headers.get("Set-Cookie") ?? "";
-			let allCookies = existingCookies ? `${existingCookies}, ${newCookie}` : newCookie;
-			response = new Response(response.body, {
-				status: response.status,
-				statusText: response.statusText,
-				headers: response.headers,
-			});
-			response.headers.set("Set-Cookie", allCookies);
+	let site = fetchSite(context.request);
+
+	// Allow same-origin and same-site requests
+	if (site === "same-origin" || site === "same-site") {
+		return await next();
+	}
+
+	// If Sec-Fetch-Site header is missing (old browser), fall back to Origin/Referer check
+	if (site === null) {
+		let requestOrigin = getRequestOrigin(context.request);
+		let expectedOrigin = new URL(context.request.url).origin;
+
+		if (requestOrigin && requestOrigin === expectedOrigin) {
+			log.info("CSRF validation passed via Origin header fallback");
+			return await next();
 		}
 
-		return response;
-	}
-
-	// For state-changing methods, validate CSRF token
-	let formData: FormData | undefined;
-
-	// Only parse form data if content type is form
-	let contentType = context.request.headers.get("Content-Type") ?? "";
-	if (
-		contentType.includes("application/x-www-form-urlencoded") ||
-		contentType.includes("multipart/form-data")
-	) {
-		// Clone request to avoid consuming body
-		let clonedRequest = context.request.clone();
-		try {
-			formData = await clonedRequest.formData();
-		} catch {
-			// Ignore parsing errors
+		// Allow requests without origin headers in dev mode
+		if (import.meta.env.DEV && !requestOrigin) {
+			log.info("CSRF validation skipped in dev mode (no origin)");
+			return await next();
 		}
+
+		log.info("CSRF validation failed - missing origin headers");
+		return forbidden({ error: "Request origin could not be verified" });
 	}
 
-	let submittedToken = extractCsrfToken(context.request, formData);
-
-	if (!submittedToken) {
-		log.info("CSRF token missing");
-		return forbidden({ error: "CSRF token required" });
+	// site === "none" means the request was initiated by the user directly (e.g., typing URL)
+	// This shouldn't happen for POST requests, but allow it for safety
+	if (site === "none") {
+		return await next();
 	}
 
-	// Validate submitted token matches cookie
-	let isValid = await verifyCsrfToken(submittedToken, env.SESSION_SECRET);
+	// site === "cross-site" - reject cross-site requests
+	log.info("CSRF validation failed - cross-site request", {
+		site,
+		origin: getRequestOrigin(context.request),
+	});
 
-	if (!isValid || submittedToken !== csrfCookie) {
-		log.info("CSRF token invalid");
-		return forbidden({ error: "Invalid CSRF token" });
-	}
-
-	log.info("CSRF validation passed");
-
-	return next();
+	return forbidden({ error: "Cross-site requests are not allowed" });
 });
