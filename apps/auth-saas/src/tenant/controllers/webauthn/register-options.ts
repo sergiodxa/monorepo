@@ -109,7 +109,6 @@ export default action<"POST", "/webauthn/register/options">(
 			userID: new TextEncoder().encode(subject!.id),
 			attestationType: "none",
 			authenticatorSelection: {
-				authenticatorAttachment: "platform",
 				residentKey: "preferred",
 				userVerification: "preferred",
 			},
