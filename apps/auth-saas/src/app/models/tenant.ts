@@ -5,6 +5,22 @@ import { createTable } from "remix/data-table";
 
 import { RecordNotFoundError } from "~/lib/db-errors";
 
+import type { TenantMemberRole } from "./tenant-member";
+
+/** Represents the user's role/access level for a tenant. */
+export interface TenantWithRole {
+	id: string;
+	name: string;
+	slug: string;
+	owner_subject_id: string;
+	region: "wnam" | "enam" | "sam" | "weur" | "eeur" | "apac" | "oc" | "afr" | "me";
+	status: "active" | "suspended" | "deleted";
+	created_at: string;
+	updated_at: string;
+	/** The user's role: owner, admin, or viewer. */
+	role: "owner" | TenantMemberRole;
+}
+
 export default class Tenant {
 	static table = createTable({
 		name: "tenants",
@@ -28,6 +44,68 @@ export default class Tenant {
 
 	static listByOwner(db: Database, ownerSubjectId: string) {
 		return db.findMany(Tenant.table, { where: { owner_subject_id: ownerSubjectId } });
+	}
+
+	/**
+	 * Lists all tenants accessible to a subject (as owner or member).
+	 * Returns tenants with the user's role attached.
+	 * @param db - Database connection.
+	 * @param subjectId - The subject ID.
+	 * @param email - The subject's email (for pending owner resolution).
+	 */
+	static async listAccessibleBySubject(
+		db: Database,
+		subjectId: string,
+		email: string,
+	): Promise<TenantWithRole[]> {
+		// Import here to avoid circular dependency
+		let TenantMember = (await import("./tenant-member")).default;
+
+		// Get tenants owned by this subject
+		let ownedTenants = await db.findMany(Tenant.table, {
+			where: { owner_subject_id: subjectId },
+		});
+
+		// Also check for pending ownership (platform tenant before first login)
+		let pendingOwnedTenants = await db.findMany(Tenant.table, {
+			where: { owner_subject_id: `pending:${email}` },
+		});
+
+		// Get memberships for this subject
+		let memberships = await TenantMember.listBySubject(db, subjectId);
+
+		// Fetch member tenants
+		let memberTenantIds = memberships.map((m) => m.tenant_id);
+		let memberTenants: Array<Awaited<ReturnType<typeof Tenant.show>>> = [];
+		for (let tenantId of memberTenantIds) {
+			let tenant = await Tenant.show(db, tenantId);
+			if (tenant) memberTenants.push(tenant);
+		}
+
+		// Combine results with roles
+		let results: TenantWithRole[] = [];
+
+		for (let tenant of ownedTenants) {
+			results.push({ ...tenant, role: "owner" });
+		}
+
+		for (let tenant of pendingOwnedTenants) {
+			results.push({ ...tenant, role: "owner" });
+		}
+
+		for (let tenant of memberTenants) {
+			if (!tenant) continue;
+			// Skip if already included as owner
+			if (results.some((t) => t.id === tenant.id)) continue;
+			let membership = memberships.find((m) => m.tenant_id === tenant.id);
+			if (!membership) continue;
+			results.push({
+				...tenant,
+				role: membership.role,
+			});
+		}
+
+		return results;
 	}
 
 	static show(db: Database, id: string) {
@@ -92,6 +170,29 @@ export default class Tenant {
 		let tenant = await db.findOne(Tenant.table, { where: { id } });
 		if (!tenant) throw new RecordNotFoundError(Tenant.table, { id });
 		return await db.delete(Tenant.table, { id });
+	}
+
+	/**
+	 * Resolves pending ownership for a tenant.
+	 * Called when a user with pending ownership logs in for the first time.
+	 * @param db - Database connection.
+	 * @param email - The email to resolve pending ownership for.
+	 * @param subjectId - The actual subject ID to assign.
+	 */
+	static async resolvePendingOwnership(db: Database, email: string, subjectId: string) {
+		let pendingOwnerValue = `pending:${email}`;
+		let pendingTenants = await db.findMany(Tenant.table, {
+			where: { owner_subject_id: pendingOwnerValue },
+		});
+
+		for (let tenant of pendingTenants) {
+			await db.update(Tenant.table, { id: tenant.id }, {
+				owner_subject_id: subjectId,
+				updated_at: new Date().toISOString(),
+			});
+		}
+
+		return pendingTenants.length;
 	}
 
 	static generateSlug(name: string): string {

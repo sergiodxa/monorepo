@@ -7,7 +7,7 @@ import action from "~/lib/action";
 export default action<"GET", "/dashboard">(async ({ db, platformSession, logger }) => {
 	let log = logger.loader("/dashboard");
 
-	let tenants = await Tenant.listByOwner(db, platformSession.subjectId);
+	let tenants = await Tenant.listAccessibleBySubject(db, platformSession.subjectId, platformSession.email);
 
 	log.info("Dashboard loaded", {
 		subjectId: platformSession.subjectId,
