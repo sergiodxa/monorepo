@@ -12,7 +12,9 @@
  */
 export async function hmacSign(input: string, secret: string): Promise<string> {
 	if (!secret || secret.length === 0) {
-		throw new Error("HMAC secret is required. Ensure SESSION_SECRET is set in .dev.vars or as a secret.");
+		throw new Error(
+			"HMAC secret is required. Ensure SESSION_SECRET and INTERNAL_SECRET are set in .dev.vars or as secrets.",
+		);
 	}
 
 	let encoder = new TextEncoder();
