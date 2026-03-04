@@ -1,7 +1,5 @@
 import type { Database } from "remix/data-table";
 
-import { unwrap } from "@pkg/result";
-import { validate } from "@pkg/validate";
 import * as s from "remix/data-schema";
 import { createTable } from "remix/data-table";
 
@@ -82,15 +80,13 @@ export default class Subject {
 	 * @returns Created subject record
 	 */
 	static async register(db: Database, data: { email: string; username: string }) {
-		let result = await unwrap(validate(data, Subject.table));
-
 		let id = crypto.randomUUID();
 		await db.create(Subject.table, {
 			id,
-			email: result.email,
+			email: data.email,
 			email_verified_at: null,
 			display_name: null,
-			username: result.username,
+			username: data.username,
 			avatar_url: null,
 			role: "user",
 			created_at: new Date().toISOString(),

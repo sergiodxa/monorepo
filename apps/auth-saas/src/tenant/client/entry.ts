@@ -1,6 +1,6 @@
 import { run } from "remix/component";
 
-let app = run(document, {
+await run(document, {
 	async loadModule(moduleUrl, exportName) {
 		let mod = await import(moduleUrl);
 		return mod[exportName];
@@ -9,6 +9,4 @@ let app = run(document, {
 		let res = await fetch(src, { headers: { accept: "text/html" } });
 		return await res.text();
 	},
-});
-
-await app.ready();
+}).ready();
