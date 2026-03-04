@@ -18,6 +18,7 @@ import Subject from "~/tenant/models/subject";
 import TenantMeta from "~/tenant/models/tenant-meta";
 import AccessToken from "~/tenant/values/access-token";
 import IdToken from "~/tenant/values/id-token";
+import ScopeSet from "~/tenant/values/scope-set";
 
 let AuthorizationCodeSchema = s.object({
 	grant_type: s.literal("authorization_code"),
@@ -116,17 +117,9 @@ async function handleAuthorizationCode(db: Database, body: Record<string, unknow
 	}
 
 	if (authzData.scope.length > 0 && client.allowed_scopes) {
-		let allowedScopes: string[] = [];
-		try {
-			let parsed: unknown = JSON.parse(client.allowed_scopes);
-			if (Array.isArray(parsed) && parsed.every((s) => typeof s === "string")) {
-				allowedScopes = parsed as string[];
-			}
-		} catch {
-			log.error("Invalid allowed_scopes format", { clientId: client.id });
-		}
-
-		let invalidScopes = authzData.scope.filter((scope) => !allowedScopes.includes(scope));
+		let requestedScopes = new ScopeSet(authzData.scope);
+		let allowedScopes = ScopeSet.fromJson(client.allowed_scopes);
+		let invalidScopes = requestedScopes.getInvalidScopes(allowedScopes);
 		if (invalidScopes.length > 0) {
 			log.info("Invalid scopes requested", {
 				clientId: client.id,
@@ -470,19 +463,10 @@ async function handleClientCredentials(db: Database, body: Record<string, unknow
 		return reject("invalid_client", "Invalid client credentials", 401);
 	}
 
-	let parsedScope = scope?.split(" ");
-	if (parsedScope && parsedScope.length > 0 && client.allowed_scopes) {
-		let allowedScopes: string[] = [];
-		try {
-			let parsed: unknown = JSON.parse(client.allowed_scopes);
-			if (Array.isArray(parsed) && parsed.every((s) => typeof s === "string")) {
-				allowedScopes = parsed as string[];
-			}
-		} catch {
-			log.error("Invalid allowed_scopes format", { clientId: client.id });
-		}
-
-		let invalidScopes = parsedScope.filter((s) => !allowedScopes.includes(s));
+	let requestedScopes = ScopeSet.fromString(scope);
+	if (!requestedScopes.isEmpty() && client.allowed_scopes) {
+		let allowedScopes = ScopeSet.fromJson(client.allowed_scopes);
+		let invalidScopes = requestedScopes.getInvalidScopes(allowedScopes);
 		if (invalidScopes.length > 0) {
 			log.info("Invalid scopes requested", {
 				clientId: client.id,
@@ -513,14 +497,15 @@ async function handleClientCredentials(db: Database, body: Record<string, unknow
 
 	let resources = Array.isArray(resource) ? resource : resource ? [resource] : [];
 	let audience = [`https://${issuer}`, ...resources];
+	let scopeArray = requestedScopes.isEmpty() ? undefined : requestedScopes.toArray();
 
-	let accessToken = AccessToken.generate(`https://${issuer}`, audience, client.id, parsedScope);
+	let accessToken = AccessToken.generate(`https://${issuer}`, audience, client.id, scopeArray);
 	let signedAccessToken = await accessToken.sign(JWK.Algoritm.ES256, signingKeys);
 
 	log.info("Token issued successfully", {
 		clientId: client.id,
 		grantType: "client_credentials",
-		scope: parsedScope,
+		scope: scopeArray,
 		resourceCount: resources.length,
 	});
 
