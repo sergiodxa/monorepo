@@ -9,14 +9,14 @@ VALUES (
   'Internal OAuth client for dashboard authentication',
   NULL,
   'public',
-  'openid email profile',
+  '["openid","email","profile"]',
   NULL,
   0,
   strftime('%s', 'now') * 1000,
   strftime('%s', 'now') * 1000
 )
 ON CONFLICT (id) DO UPDATE SET
-  allowed_scopes = 'openid email profile',
+  allowed_scopes = '["openid","email","profile"]',
   updated_at = strftime('%s', 'now') * 1000;
 
 -- Add localhost redirect URI for development
