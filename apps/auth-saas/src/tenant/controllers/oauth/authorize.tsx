@@ -152,9 +152,16 @@ export default form<"/authorize">({
 			if (action === "check_email") {
 				let subject = await Subject.findByEmail(db, email);
 				// Only consider passkeys with credential_id (legacy passkeys without it are unusable)
-				let validPasskeys = subject
-					? (await Passkey.listBySubject(db, subject.id)).filter((p) => p.credential_id)
-					: [];
+				let allPasskeys = subject ? await Passkey.listBySubject(db, subject.id) : [];
+				let validPasskeys = allPasskeys.filter((p) => p.credential_id);
+
+				log.info("Checking passkeys for email", {
+					email,
+					subjectId: subject?.id,
+					totalPasskeys: allPasskeys.length,
+					validPasskeys: validPasskeys.length,
+					hasCredentialIds: allPasskeys.map((p) => !!p.credential_id),
+				});
 
 				if (validPasskeys.length > 0 && subject) {
 					let { id: challengeId, challenge } = await WebAuthnChallenge.createForAuthentication(db, {
