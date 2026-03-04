@@ -7,6 +7,9 @@ import type { Check } from "remix/data-schema";
 
 /**
  * Check that a string has a minimum length.
+ * @param min - The minimum length
+ * @param message - Optional custom error message
+ * @returns A Check function for use with pipe()
  */
 export function minLength(min: number, message?: string): Check<string> {
 	return {
@@ -19,6 +22,9 @@ export function minLength(min: number, message?: string): Check<string> {
 
 /**
  * Check that a string has a maximum length.
+ * @param max - The maximum length
+ * @param message - Optional custom error message
+ * @returns A Check function for use with pipe()
  */
 export function maxLength(max: number, message?: string): Check<string> {
 	return {
@@ -31,6 +37,8 @@ export function maxLength(max: number, message?: string): Check<string> {
 
 /**
  * Check that a string matches a URL format.
+ * @param message - Optional custom error message
+ * @returns A Check function for use with pipe()
  */
 export function url(message?: string): Check<string> {
 	return {
@@ -49,6 +57,8 @@ export function url(message?: string): Check<string> {
 
 /**
  * Check that a string matches a URL format with HTTPS only.
+ * @param message - Optional custom error message
+ * @returns A Check function for use with pipe()
  */
 export function httpsUrl(message?: string): Check<string> {
 	return {
@@ -67,6 +77,8 @@ export function httpsUrl(message?: string): Check<string> {
 
 /**
  * Check that a string is a valid email format.
+ * @param message - Optional custom error message
+ * @returns A Check function for use with pipe()
  */
 export function email(message?: string): Check<string> {
 	return {
@@ -87,11 +99,13 @@ export function email(message?: string): Check<string> {
 
 /**
  * Check that a string is a valid hex color.
+ * Matches #RGB, #RRGGBB, or #RRGGBBAA formats.
+ * @param message - Optional custom error message
+ * @returns A Check function for use with pipe()
  */
 export function hexColor(message?: string): Check<string> {
 	return {
 		check: (value) => {
-			// Match #RGB, #RRGGBB, or #RRGGBBAA
 			return /^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$/.test(value);
 		},
 		message: message ?? "Must be a valid hex color (e.g. #FF0000)",
@@ -100,7 +114,7 @@ export function hexColor(message?: string): Check<string> {
 }
 
 /**
- * Common field length limits.
+ * Common field length limits for validation.
  */
 export let LIMITS = {
 	/** Short names: client name, resource name, etc. */

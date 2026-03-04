@@ -5,7 +5,12 @@ import { createTable } from "remix/data-table";
 
 import { RecordNotFoundError } from "~/lib/db-errors";
 
+/**
+ * Model for user sessions.
+ * Manages session lifecycle including creation, refresh, and revocation.
+ */
 export default class Session {
+	/** Database table schema for sessions. */
 	static table = createTable({
 		name: "sessions",
 		primaryKey: ["id"],
@@ -22,14 +27,20 @@ export default class Session {
 		},
 	});
 
+	/**
+	 * Lists all sessions.
+	 * @param db - Database instance
+	 * @returns Array of all session records
+	 */
 	static list(db: Database) {
 		return db.findMany(Session.table);
 	}
 
 	/**
 	 * Returns the count of all sessions.
-	 * Note: Currently loads all records due to ORM limitations.
-	 * TODO: Use raw COUNT query when ORM supports it.
+	 * Currently loads all records due to ORM limitations.
+	 * @param db - Database instance
+	 * @returns Total number of sessions
 	 */
 	static async count(db: Database): Promise<number> {
 		let sessions = await db.findMany(Session.table);
@@ -38,6 +49,8 @@ export default class Session {
 
 	/**
 	 * Returns the count of active (non-expired) sessions.
+	 * @param db - Database instance
+	 * @returns Number of active sessions
 	 */
 	static async countActive(db: Database): Promise<number> {
 		let sessions = await db.findMany(Session.table);
@@ -48,6 +61,8 @@ export default class Session {
 	/**
 	 * Returns the count of unique subjects with active sessions
 	 * updated within the last 30 days (monthly active users).
+	 * @param db - Database instance
+	 * @returns Number of monthly active users
 	 */
 	static async countMonthlyActiveUsers(db: Database): Promise<number> {
 		let sessions = await db.findMany(Session.table);
@@ -63,14 +78,32 @@ export default class Session {
 		return activeSubjectIds.size;
 	}
 
+	/**
+	 * Retrieves a single session by ID.
+	 * @param db - Database instance
+	 * @param id - Session ID
+	 * @returns Session record or null if not found
+	 */
 	static show(db: Database, id: string) {
 		return db.findOne(Session.table, { where: { id } });
 	}
 
+	/**
+	 * Lists all sessions for a specific subject.
+	 * @param db - Database instance
+	 * @param subjectId - Subject ID
+	 * @returns Array of session records
+	 */
 	static listBySubject(db: Database, subjectId: string) {
 		return db.findMany(Session.table, { where: { subject_id: subjectId } });
 	}
 
+	/**
+	 * Creates a new session with a 30-day expiration.
+	 * @param db - Database instance
+	 * @param data - Session data including subject, client, and optional metadata
+	 * @returns The generated session ID
+	 */
 	static async create(
 		db: Database,
 		data: {
@@ -98,6 +131,13 @@ export default class Session {
 		return id;
 	}
 
+	/**
+	 * Updates the session's last activity timestamp.
+	 * @param db - Database instance
+	 * @param id - Session ID
+	 * @returns Updated session record
+	 * @throws {RecordNotFoundError} If session does not exist
+	 */
 	static async touch(db: Database, id: string) {
 		let session = await db.findOne(Session.table, { where: { id } });
 		if (!session) throw new RecordNotFoundError(Session.table, { id });
@@ -111,23 +151,41 @@ export default class Session {
 		);
 	}
 
+	/**
+	 * Deletes a session.
+	 * @param db - Database instance
+	 * @param id - Session ID
+	 * @returns Deletion result
+	 * @throws {RecordNotFoundError} If session does not exist
+	 */
 	static async destroy(db: Database, id: string) {
 		let session = await db.findOne(Session.table, { where: { id } });
 		if (!session) throw new RecordNotFoundError(Session.table, { id });
 		return await db.delete(Session.table, { id });
 	}
 
+	/**
+	 * Deletes all sessions for a specific subject.
+	 * @param db - Database instance
+	 * @param subjectId - Subject ID
+	 * @returns Number of sessions deleted
+	 */
 	static async destroyBySubject(db: Database, subjectId: string) {
 		let sessions = await db.findMany(Session.table, { where: { subject_id: subjectId } });
 
 		if (sessions.length === 0) return 0;
 
-		// Delete in parallel for better performance
 		await Promise.all(sessions.map((session) => db.delete(Session.table, { id: session.id })));
 
 		return sessions.length;
 	}
 
+	/**
+	 * Removes all expired sessions from the database.
+	 * @param db - Database instance
+	 * @param now - Current timestamp in milliseconds
+	 * @returns Number of expired sessions deleted
+	 */
 	static async cleanupExpired(db: Database, now: number) {
 		let cutoffDate = new Date(now).toISOString();
 		let sessions = await db.findMany(Session.table);
@@ -135,7 +193,6 @@ export default class Session {
 
 		if (expiredIds.length === 0) return 0;
 
-		// Delete in parallel for better performance
 		await Promise.all(expiredIds.map((id) => db.delete(Session.table, { id })));
 
 		return expiredIds.length;

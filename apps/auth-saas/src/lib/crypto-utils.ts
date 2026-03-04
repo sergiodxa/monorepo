@@ -5,6 +5,9 @@
 
 /**
  * Signs input data using HMAC-SHA256 and returns base64url-encoded signature.
+ * @param input - The string to sign
+ * @param secret - The secret key for HMAC signing
+ * @returns Base64url-encoded HMAC-SHA256 signature
  */
 export async function hmacSign(input: string, secret: string): Promise<string> {
 	let encoder = new TextEncoder();
@@ -22,12 +25,13 @@ export async function hmacSign(input: string, secret: string): Promise<string> {
 }
 
 /**
- * Encodes a string to base64url format (URL-safe base64 without padding).
+ * Encodes a string or byte array to base64url format (URL-safe base64 without padding).
+ * @param input - The string or Uint8Array to encode
+ * @returns Base64url-encoded string
  */
 export function base64UrlEncode(input: string | Uint8Array): string {
 	let str: string;
 	if (typeof input === "string") {
-		// For strings, properly encode UTF-8 characters
 		str = btoa(unescape(encodeURIComponent(input)));
 	} else {
 		str = btoa(String.fromCharCode(...input));
@@ -37,6 +41,8 @@ export function base64UrlEncode(input: string | Uint8Array): string {
 
 /**
  * Decodes a base64url-encoded string.
+ * @param input - The base64url-encoded string to decode
+ * @returns The decoded string
  */
 export function base64UrlDecode(input: string): string {
 	let str = input.replace(/-/g, "+").replace(/_/g, "/");
@@ -46,7 +52,13 @@ export function base64UrlDecode(input: string): string {
 
 /**
  * Compares two strings in constant time to prevent timing attacks.
- * Returns true if the strings are equal.
+ *
+ * Uses XOR comparison across all characters to ensure the comparison
+ * takes the same amount of time regardless of where strings differ.
+ *
+ * @param a - First string to compare
+ * @param b - Second string to compare
+ * @returns True if the strings are equal
  */
 export function constantTimeCompare(a: string, b: string): boolean {
 	if (a.length !== b.length) return false;

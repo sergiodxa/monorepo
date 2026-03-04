@@ -5,12 +5,19 @@ import { createTable } from "remix/data-table";
 
 import { RecordNotFoundError } from "~/lib/db-errors";
 
-// Allowed schemes for logo URLs to prevent XSS attacks
+/**
+ * Allowed schemes for logo URLs to prevent XSS attacks.
+ * HTTP is allowed for localhost addresses in development.
+ */
 const ALLOWED_LOGO_SCHEMES = ["https"];
-// Allow HTTP for localhost in development
 const LOCALHOST_HOSTS = ["localhost", "127.0.0.1", "[::1]"];
 
+/**
+ * Model for OAuth 2.0 clients.
+ * Manages client registration, configuration, and lifecycle.
+ */
 export default class Client {
+	/** Error thrown when a logo URL is invalid or uses an unsafe scheme. */
 	static InvalidLogoUrlError = class extends Error {
 		override name = "InvalidLogoUrlError";
 		constructor(message: string = "Invalid logo URL") {
@@ -19,10 +26,12 @@ export default class Client {
 	};
 
 	/**
-	 * Validates that a logo URL is safe (HTTPS only, no dangerous schemes).
-	 * HTTP is allowed for localhost addresses in development.
-	 * Returns null if the URL is null/undefined.
-	 * Throws InvalidLogoUrlError for invalid or unsafe URLs.
+	 * Validates that a logo URL is safe.
+	 * HTTPS is required for production URLs; HTTP is allowed for localhost.
+	 * Dangerous schemes (javascript:, data:, vbscript:, file:) are rejected to prevent XSS.
+	 * @param url - URL to validate
+	 * @returns The validated URL or null
+	 * @throws {InvalidLogoUrlError} If URL is invalid or uses an unsafe scheme
 	 */
 	static validateLogoUrl(url: string | null | undefined): string | null {
 		if (url === null || url === undefined) return null;
@@ -38,13 +47,11 @@ export default class Client {
 		let hostname = parsed.hostname.toLowerCase();
 		let isLocalhost = LOCALHOST_HOSTS.includes(hostname) || hostname.endsWith(".localhost");
 
-		// Check for dangerous schemes (javascript:, data:, vbscript:, etc.)
 		let dangerousSchemes = ["javascript", "data", "vbscript", "file"];
 		if (dangerousSchemes.includes(scheme)) {
 			throw new Client.InvalidLogoUrlError(`Dangerous scheme not allowed: ${scheme}`);
 		}
 
-		// Allow HTTP for localhost, require HTTPS for everything else
 		if (isLocalhost) {
 			if (!["http", "https"].includes(scheme)) {
 				throw new Client.InvalidLogoUrlError(
@@ -59,6 +66,8 @@ export default class Client {
 
 		return url;
 	}
+
+	/** Database table schema for clients. */
 	static table = createTable({
 		name: "clients",
 		primaryKey: ["id"],
@@ -77,14 +86,20 @@ export default class Client {
 		},
 	});
 
+	/**
+	 * Lists all clients.
+	 * @param db - Database instance
+	 * @returns Array of all client records
+	 */
 	static async list(db: Database) {
 		return await db.findMany(Client.table);
 	}
 
 	/**
 	 * Returns the count of all clients.
-	 * Note: Currently loads all records due to ORM limitations.
-	 * TODO: Use raw COUNT query when ORM supports it.
+	 * Currently loads all records due to ORM limitations.
+	 * @param db - Database instance
+	 * @returns Total number of clients
 	 */
 	static async count(db: Database): Promise<number> {
 		let clients = await db.findMany(Client.table);
@@ -92,21 +107,37 @@ export default class Client {
 	}
 
 	/**
-	 * Fetch multiple clients by their IDs in a single query.
+	 * Fetches multiple clients by their IDs.
 	 * Useful for avoiding N+1 queries when enriching grants or sessions.
+	 * @param db - Database instance
+	 * @param ids - Array of client IDs to fetch
+	 * @returns Array of matching client records
 	 */
 	static async listByIds(db: Database, ids: string[]) {
 		if (ids.length === 0) return [];
-		// Use findMany with ID filter - the ORM should translate this to an IN clause
 		let clients = await db.findMany(Client.table);
 		let idSet = new Set(ids);
 		return clients.filter((client) => idSet.has(client.id));
 	}
 
+	/**
+	 * Retrieves a single client by ID.
+	 * @param db - Database instance
+	 * @param id - Client ID
+	 * @returns Client record or null if not found
+	 */
 	static async show(db: Database, id: string) {
 		return await db.findOne(Client.table, { where: { id } });
 	}
 
+	/**
+	 * Creates a new client.
+	 * Logo URL is validated to prevent XSS attacks.
+	 * @param db - Database instance
+	 * @param data - Client configuration
+	 * @returns Created client record
+	 * @throws {InvalidLogoUrlError} If logo URL uses an unsafe scheme
+	 */
 	static async create(
 		db: Database,
 		data: {
@@ -121,7 +152,6 @@ export default class Client {
 	) {
 		let now = new Date().toISOString();
 
-		// Validate logo URL to prevent XSS
 		let validatedLogoUrl = Client.validateLogoUrl(data.logoUrl);
 
 		return await db.create(Client.table, {
@@ -138,6 +168,16 @@ export default class Client {
 		});
 	}
 
+	/**
+	 * Updates an existing client.
+	 * Logo URL is validated to prevent XSS attacks.
+	 * @param db - Database instance
+	 * @param id - Client ID
+	 * @param data - Properties to update
+	 * @returns Updated client record
+	 * @throws {RecordNotFoundError} If client does not exist
+	 * @throws {InvalidLogoUrlError} If logo URL uses an unsafe scheme
+	 */
 	static async update(
 		db: Database,
 		id: string,
@@ -154,7 +194,6 @@ export default class Client {
 		let client = await db.findOne(Client.table, { where: { id } });
 		if (!client) throw new RecordNotFoundError(Client.table, { id });
 
-		// Validate logo URL if provided to prevent XSS
 		let validatedLogoUrl =
 			data.logoUrl !== undefined ? Client.validateLogoUrl(data.logoUrl) : client.logo_url;
 
@@ -184,6 +223,13 @@ export default class Client {
 		);
 	}
 
+	/**
+	 * Deletes a client.
+	 * @param db - Database instance
+	 * @param id - Client ID
+	 * @returns Deletion result
+	 * @throws {RecordNotFoundError} If client does not exist
+	 */
 	static async destroy(db: Database, id: string) {
 		let client = await db.findOne(Client.table, { where: { id } });
 		if (!client) throw new RecordNotFoundError(Client.table, { id });

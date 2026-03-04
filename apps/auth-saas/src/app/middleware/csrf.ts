@@ -4,11 +4,14 @@ import middleware from "~/lib/middleware";
 
 /**
  * Valid values for the Sec-Fetch-Site header.
+ * @see https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Sec-Fetch-Site
  */
 type FetchSite = "cross-site" | "same-origin" | "same-site" | "none";
 
 /**
- * Returns the value of the Sec-Fetch-Site header.
+ * Extracts and validates the Sec-Fetch-Site header from a request.
+ * @param request - The incoming HTTP request
+ * @returns The validated FetchSite value, or null if missing or invalid
  * @see https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Sec-Fetch-Site
  */
 function fetchSite(request: Request): FetchSite | null {
@@ -28,6 +31,12 @@ function fetchSite(request: Request): FetchSite | null {
  * 1. The Origin header
  * 2. The Referer header
  * 3. The request.referrer property
+ *
+ * This fallback chain ensures compatibility with older browsers that may not
+ * send the Origin header consistently.
+ *
+ * @param request - The incoming HTTP request
+ * @returns The normalized origin string, or null if no valid origin found
  */
 function getRequestOrigin(request: Request): string | null {
 	let origin = request.headers.get("Origin");
@@ -35,7 +44,7 @@ function getRequestOrigin(request: Request): string | null {
 		try {
 			return new URL(origin.toLowerCase().trim()).origin;
 		} catch {
-			// Invalid URL
+			// Invalid URL, try next source
 		}
 	}
 
@@ -44,7 +53,7 @@ function getRequestOrigin(request: Request): string | null {
 		try {
 			return new URL(referer.toLowerCase().trim()).origin;
 		} catch {
-			// Invalid URL
+			// Invalid URL, try next source
 		}
 	}
 
@@ -52,7 +61,7 @@ function getRequestOrigin(request: Request): string | null {
 		try {
 			return new URL(request.referrer.toLowerCase().trim()).origin;
 		} catch {
-			// Invalid URL
+			// Invalid URL, no more sources
 		}
 	}
 
@@ -68,12 +77,14 @@ function getRequestOrigin(request: Request): string | null {
  *
  * GET/HEAD/OPTIONS requests are safe methods and don't require CSRF validation.
  *
+ * For browsers that don't send Sec-Fetch-Site, falls back to Origin/Referer
+ * header validation.
+ *
  * @see https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Sec-Fetch-Site
  */
 export default middleware(async (context, next) => {
 	let log = context.logger.middleware("csrf");
 
-	// Safe methods don't need CSRF validation
 	let method = context.request.method.toUpperCase();
 	if (method === "GET" || method === "HEAD" || method === "OPTIONS") {
 		return await next();
@@ -81,12 +92,15 @@ export default middleware(async (context, next) => {
 
 	let site = fetchSite(context.request);
 
-	// Allow same-origin and same-site requests
 	if (site === "same-origin" || site === "same-site") {
 		return await next();
 	}
 
-	// If Sec-Fetch-Site header is missing (old browser), fall back to Origin/Referer check
+	/**
+	 * Fallback for older browsers that don't send Sec-Fetch-Site header.
+	 * Validates the request origin against the expected origin using
+	 * Origin or Referer headers.
+	 */
 	if (site === null) {
 		let requestOrigin = getRequestOrigin(context.request);
 		let expectedOrigin = new URL(context.request.url).origin;
@@ -96,7 +110,6 @@ export default middleware(async (context, next) => {
 			return await next();
 		}
 
-		// Allow requests without origin headers in dev mode
 		if (import.meta.env.DEV && !requestOrigin) {
 			log.info("CSRF validation skipped in dev mode (no origin)");
 			return await next();
@@ -106,13 +119,15 @@ export default middleware(async (context, next) => {
 		return forbidden({ error: "Request origin could not be verified" });
 	}
 
-	// site === "none" means the request was initiated by the user directly (e.g., typing URL)
-	// This shouldn't happen for POST requests, but allow it for safety
+	/**
+	 * site === "none" means the request was initiated by the user directly
+	 * (e.g., typing URL in address bar). This shouldn't normally happen for
+	 * POST requests, but we allow it as a safety measure.
+	 */
 	if (site === "none") {
 		return await next();
 	}
 
-	// site === "cross-site" - reject cross-site requests
 	log.info("CSRF validation failed - cross-site request", {
 		site,
 		origin: getRequestOrigin(context.request),

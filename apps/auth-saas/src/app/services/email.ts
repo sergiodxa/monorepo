@@ -6,8 +6,14 @@ import { Resend } from "resend";
  * Requires RESEND_API_KEY environment variable.
  */
 export default class EmailService {
+	/** Error thrown when email sending fails. */
 	static SendError = class extends Error {
 		override name = "EmailSendError";
+		/**
+		 * Creates an email send error.
+		 * @param message - Error message describing the failure.
+		 * @param statusCode - Optional HTTP status code from the email provider.
+		 */
 		constructor(
 			message: string,
 			public statusCode?: number,
@@ -26,6 +32,12 @@ export default class EmailService {
 
 	/**
 	 * Send an email using Resend SDK.
+	 * @param options - Email options.
+	 * @param options.to - Recipient email address.
+	 * @param options.subject - Email subject line.
+	 * @param options.html - HTML content of the email.
+	 * @param options.text - Optional plain text fallback.
+	 * @returns The email ID from Resend.
 	 */
 	static async send(options: {
 		to: string;
@@ -50,6 +62,10 @@ export default class EmailService {
 
 	/**
 	 * Send email verification email.
+	 * @param to - Recipient email address.
+	 * @param verificationUrl - URL for the user to verify their email.
+	 * @param tenantName - Optional tenant name for branding.
+	 * @returns The email ID from Resend.
 	 */
 	static async sendVerificationEmail(
 		to: string,
@@ -115,7 +131,11 @@ This link will expire in 24 hours.
 	}
 
 	/**
-	 * Send password reset email (for future use if password auth is added).
+	 * Send password reset email.
+	 * @param to - Recipient email address.
+	 * @param resetUrl - URL for the user to reset their password.
+	 * @param tenantName - Optional tenant name for branding.
+	 * @returns The email ID from Resend.
 	 */
 	static async sendPasswordResetEmail(
 		to: string,

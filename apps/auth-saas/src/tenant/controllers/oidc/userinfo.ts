@@ -6,7 +6,11 @@ import Subject from "~/tenant/models/subject";
 import TenantMeta from "~/tenant/models/tenant-meta";
 import AccessToken from "~/tenant/values/access-token";
 
-// Bearer token errors require WWW-Authenticate header per RFC 6750
+/**
+ * Returns an OAuth error response with WWW-Authenticate header per RFC 6750.
+ * Bearer token errors must include the WWW-Authenticate header to inform
+ * the client how to properly authenticate.
+ */
 function reject(error: string, description: string, status: number = 401) {
 	return json(
 		{ error, error_description: description },
@@ -20,10 +24,13 @@ function reject(error: string, description: string, status: number = 401) {
 	);
 }
 
+/**
+ * OpenID Connect UserInfo endpoint (OIDC Core Section 5.3).
+ * Returns claims about the authenticated end-user based on the access token scope.
+ */
 export default action<"GET", "/userinfo">(async ({ db, request, logger }) => {
 	let log = logger.loader("/userinfo");
 
-	// Extract Bearer token from Authorization header
 	let authHeader = request.headers.get("authorization");
 	if (!authHeader || !authHeader.startsWith("Bearer ")) {
 		log.info("Missing access token in Authorization header");
@@ -32,7 +39,6 @@ export default action<"GET", "/userinfo">(async ({ db, request, logger }) => {
 
 	let token = authHeader.slice(7);
 
-	// Get issuer and signing keys in parallel for better performance
 	let [issuer, signingKeys] = await Promise.all([TenantMeta.getIssuer(db), SigningKey.getAll(db)]);
 
 	if (!issuer) {
@@ -45,7 +51,6 @@ export default action<"GET", "/userinfo">(async ({ db, request, logger }) => {
 		return reject("server_error", "No signing keys available");
 	}
 
-	// Verify access token
 	let accessToken;
 	try {
 		accessToken = await AccessToken.verify(token, signingKeys, { issuer: `https://${issuer}` });
@@ -56,17 +61,14 @@ export default action<"GET", "/userinfo">(async ({ db, request, logger }) => {
 
 	log.info("Access token verified", { subjectId: accessToken.subject });
 
-	// Get subject
 	let subject = await Subject.show(db, accessToken.subject);
 	if (!subject) {
 		log.info("Subject not found", { subjectId: accessToken.subject });
 		return reject("invalid_token", "Subject not found");
 	}
 
-	// Parse scope
 	let scope = accessToken.scope?.split(" ") ?? ["openid"];
 
-	// Build userinfo response based on scope
 	let userinfo: Record<string, unknown> = {
 		sub: subject.id,
 	};

@@ -4,7 +4,7 @@
  */
 
 /**
- * Paths that require auth rate limiting (10 req/10s)
+ * Paths that require auth rate limiting (10 req/10s).
  */
 const AUTH_RATE_LIMITED_PATHS = [
 	"/oauth/authorize",
@@ -18,19 +18,27 @@ const AUTH_RATE_LIMITED_PATHS = [
 ];
 
 /**
- * Paths that require strict rate limiting (5 req/60s)
+ * Paths that require strict rate limiting (5 req/60s).
  */
 const STRICT_RATE_LIMITED_PATHS = ["/verify-email"];
 
+/**
+ * Rate limiter bindings for different endpoint categories.
+ */
 interface RateLimiters {
+	/** Auth endpoints: 10 req/10s */
 	authLimiter: RateLimit;
+	/** Strict endpoints: 5 req/60s */
 	strictLimiter: RateLimit;
+	/** Management API: 100 req/60s */
 	managementLimiter: RateLimit;
 }
 
 /**
- * Check if a request should be rate limited.
- * Returns a 429 response if rate limited, null otherwise.
+ * Checks if a request should be rate limited based on the endpoint and client IP.
+ * @param request - The incoming request
+ * @param limiters - The rate limiter bindings
+ * @returns A 429 response if rate limited, null otherwise
  */
 export async function checkRateLimit(
 	request: Request,
@@ -39,11 +47,8 @@ export async function checkRateLimit(
 	let url = new URL(request.url);
 	let pathname = url.pathname;
 
-	// Get client IP for rate limit key
 	let ip = request.headers.get("cf-connecting-ip") || "unknown";
 
-	// Check Management API paths (100 req/60s per IP)
-	// Note: Additional per-client rate limiting could be added in the management-auth middleware
 	if (pathname.startsWith("/api/")) {
 		let key = `${ip}:/api`;
 		let { success } = await limiters.managementLimiter.limit({ key });
@@ -61,7 +66,6 @@ export async function checkRateLimit(
 		return null;
 	}
 
-	// Check strict rate limited paths first
 	for (let path of STRICT_RATE_LIMITED_PATHS) {
 		if (pathname === path || pathname.startsWith(path + "/")) {
 			let key = `${ip}:${path}`;
@@ -81,7 +85,6 @@ export async function checkRateLimit(
 		}
 	}
 
-	// Check auth rate limited paths
 	for (let path of AUTH_RATE_LIMITED_PATHS) {
 		if (pathname === path || pathname.startsWith(path + "/")) {
 			let key = `${ip}:${path}`;

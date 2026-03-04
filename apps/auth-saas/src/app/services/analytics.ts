@@ -3,11 +3,7 @@ import { env } from "cloudflare:workers";
 /**
  * Event types for analytics tracking.
  */
-type EventType =
-	| "authentication" // User authenticated
-	| "registration" // New user registered
-	| "verification" // Email verified
-	| "logout"; // User logged out
+type EventType = "authentication" | "registration" | "verification" | "logout";
 
 /**
  * MAU count result from Analytics Engine query.
@@ -17,15 +13,18 @@ interface MAUResult {
 	mau: number;
 }
 
-// UUID v4 regex pattern for tenant/subject ID validation
+/** UUID v4 regex pattern for tenant/subject ID validation. */
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
-// YYYY-MM pattern for month validation
+/** YYYY-MM pattern for month validation. */
 const MONTH_PATTERN = /^\d{4}-(0[1-9]|1[0-2])$/;
 
 /**
  * Validates that a string is a valid UUID v4.
  * Prevents SQL injection by ensuring only safe characters.
+ * @param value - The string to validate.
+ * @param field - The field name for error messages.
+ * @throws AnalyticsValidationError if validation fails.
  */
 function validateUUID(value: string, field: string): void {
 	if (!UUID_PATTERN.test(value)) {
@@ -36,6 +35,8 @@ function validateUUID(value: string, field: string): void {
 /**
  * Validates that a string is a valid YYYY-MM month format.
  * Prevents SQL injection by ensuring only safe characters.
+ * @param value - The string to validate.
+ * @throws AnalyticsValidationError if validation fails.
  */
 function validateMonth(value: string): void {
 	if (!MONTH_PATTERN.test(value)) {
@@ -46,6 +47,8 @@ function validateMonth(value: string): void {
 /**
  * Escapes single quotes in SQL string literals.
  * Used as defense-in-depth after validation.
+ * @param value - The string to escape.
+ * @returns The escaped string with single quotes doubled.
  */
 function escapeSqlString(value: string): string {
 	return value.replace(/'/g, "''");
@@ -55,6 +58,10 @@ function escapeSqlString(value: string): string {
  * Error thrown when analytics input validation fails.
  */
 class AnalyticsValidationError extends Error {
+	/**
+	 * Creates a new AnalyticsValidationError.
+	 * @param message - The error message.
+	 */
 	constructor(message: string) {
 		super(message);
 		this.name = "AnalyticsValidationError";
@@ -77,9 +84,11 @@ export default class AnalyticsService {
 	/**
 	 * Track an authentication event for MAU counting.
 	 * Should be called on successful authentication.
+	 * @param tenantId - The tenant identifier.
+	 * @param subjectId - The user identifier.
 	 */
 	static trackAuthentication(tenantId: string, subjectId: string): void {
-		let month = new Date().toISOString().slice(0, 7); // YYYY-MM
+		let month = new Date().toISOString().slice(0, 7);
 
 		env.ANALYTICS.writeDataPoint({
 			blobs: [tenantId, "mau", subjectId, month],
@@ -87,7 +96,6 @@ export default class AnalyticsService {
 			indexes: [tenantId],
 		});
 
-		// Also track as authentication event for metrics
 		env.ANALYTICS.writeDataPoint({
 			blobs: [tenantId, "authentication", subjectId, month],
 			doubles: [1],
@@ -97,6 +105,8 @@ export default class AnalyticsService {
 
 	/**
 	 * Track a user registration event.
+	 * @param tenantId - The tenant identifier.
+	 * @param subjectId - The user identifier.
 	 */
 	static trackRegistration(tenantId: string, subjectId: string): void {
 		let month = new Date().toISOString().slice(0, 7);
@@ -110,6 +120,8 @@ export default class AnalyticsService {
 
 	/**
 	 * Track an email verification event.
+	 * @param tenantId - The tenant identifier.
+	 * @param subjectId - The user identifier.
 	 */
 	static trackVerification(tenantId: string, subjectId: string): void {
 		let month = new Date().toISOString().slice(0, 7);
@@ -123,6 +135,8 @@ export default class AnalyticsService {
 
 	/**
 	 * Track a logout event.
+	 * @param tenantId - The tenant identifier.
+	 * @param subjectId - The user identifier.
 	 */
 	static trackLogout(tenantId: string, subjectId: string): void {
 		let month = new Date().toISOString().slice(0, 7);
@@ -136,6 +150,9 @@ export default class AnalyticsService {
 
 	/**
 	 * Track a generic event.
+	 * @param tenantId - The tenant identifier.
+	 * @param eventType - The type of event to track.
+	 * @param subjectId - The user identifier.
 	 */
 	static trackEvent(tenantId: string, eventType: EventType, subjectId: string): void {
 		let month = new Date().toISOString().slice(0, 7);
@@ -149,18 +166,16 @@ export default class AnalyticsService {
 
 	/**
 	 * Query MAU for a specific tenant and month.
-	 * Uses Analytics Engine SQL API.
-	 *
-	 * Note: This requires using the Cloudflare API to query Analytics Engine.
-	 * The ANALYTICS binding only supports writing, not reading.
+	 * Uses Analytics Engine SQL API via Cloudflare API (the ANALYTICS binding only supports writing).
+	 * @param tenantId - The tenant identifier.
+	 * @param month - The month in YYYY-MM format.
+	 * @returns The number of unique active users for the month.
+	 * @throws Error if the Analytics Engine query fails.
 	 */
 	static async queryMAU(tenantId: string, month: string): Promise<number> {
-		// Validate inputs to prevent SQL injection
 		validateUUID(tenantId, "tenantId");
 		validateMonth(month);
 
-		// Analytics Engine queries require the Cloudflare API
-		// Format: https://api.cloudflare.com/client/v4/accounts/{account_id}/analytics_engine/sql
 		let query = `
 			SELECT COUNT(DISTINCT blob3) AS mau
 			FROM auth-saas-analytics
@@ -197,9 +212,11 @@ export default class AnalyticsService {
 	/**
 	 * Query MAU for all tenants for a specific month.
 	 * Used by the daily MAU reporting job.
+	 * @param month - The month in YYYY-MM format.
+	 * @returns Array of tenant IDs with their MAU counts.
+	 * @throws Error if the Analytics Engine query fails.
 	 */
 	static async queryAllTenantsMAU(month: string): Promise<MAUResult[]> {
-		// Validate inputs to prevent SQL injection
 		validateMonth(month);
 
 		let query = `
@@ -239,9 +256,12 @@ export default class AnalyticsService {
 
 	/**
 	 * Query total authentications for a tenant in a given month.
+	 * @param tenantId - The tenant identifier.
+	 * @param month - The month in YYYY-MM format.
+	 * @returns The total number of authentication events.
+	 * @throws Error if the Analytics Engine query fails.
 	 */
 	static async queryAuthenticationCount(tenantId: string, month: string): Promise<number> {
-		// Validate inputs to prevent SQL injection
 		validateUUID(tenantId, "tenantId");
 		validateMonth(month);
 
@@ -280,6 +300,7 @@ export default class AnalyticsService {
 
 	/**
 	 * Get the current month in YYYY-MM format.
+	 * @returns The current month string.
 	 */
 	static getCurrentMonth(): string {
 		return new Date().toISOString().slice(0, 7);

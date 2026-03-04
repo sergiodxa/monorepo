@@ -23,6 +23,11 @@ let RequestSchema = s.object({
 	scope: s.optional(s.string()),
 });
 
+/**
+ * WebAuthn authentication options endpoint.
+ * Generates a challenge for passkey authentication.
+ * Rate-limited per email to prevent brute force attacks.
+ */
 export default action<"POST", "/webauthn/auth/options">(
 	async ({ db, formData, request, logger }) => {
 		let log = logger.action("/webauthn/auth/options");
@@ -35,7 +40,6 @@ export default action<"POST", "/webauthn/auth/options">(
 
 		let { email, clientId, redirectUri, state, nonce, scope } = result.data;
 
-		// Per-email rate limiting to prevent brute force attacks
 		let rateLimit = checkUserRateLimit(email, "authOptions", USER_RATE_LIMITS.authOptions);
 		if (!rateLimit.success) {
 			log.info("Rate limit exceeded for email", { email });
@@ -45,26 +49,21 @@ export default action<"POST", "/webauthn/auth/options">(
 			});
 		}
 
-		// Find subject by email
 		let subject = await Subject.findByEmail(db, email);
 		if (!subject) {
-			// Don't reveal whether user exists - return generic error
 			log.info("Subject not found for authentication");
 			return badRequest({ error: "No passkey found. Please register first." });
 		}
 
-		// Get user's passkeys
 		let passkeys = await Passkey.listBySubject(db, subject.id);
 		if (passkeys.length === 0) {
 			log.info("No passkeys found for subject", { subjectId: subject.id });
 			return badRequest({ error: "No passkey found. Please register first." });
 		}
 
-		// Get tenant info for RP
 		let issuer = await TenantMeta.getIssuer(db);
 		let rpId = issuer ? new URL(`https://${issuer}`).hostname : new URL(request.url).hostname;
 
-		// Create WebAuthn challenge
 		let { id: challengeId, challenge } = await WebAuthnChallenge.createForAuthentication(db, {
 			subjectId: subject.id,
 			clientId,
@@ -74,7 +73,6 @@ export default action<"POST", "/webauthn/auth/options">(
 			scope,
 		});
 
-		// Build allowCredentials from user's passkeys
 		let allowCredentials = passkeys.map((passkey) => ({
 			id: passkey.id,
 			type: "public-key" as const,
@@ -83,7 +81,6 @@ export default action<"POST", "/webauthn/auth/options">(
 				: undefined,
 		}));
 
-		// Generate authentication options using @simplewebauthn/server
 		let authenticationOptions = await generateAuthenticationOptions({
 			rpID: rpId,
 			allowCredentials,

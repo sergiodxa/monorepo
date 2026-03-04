@@ -4,6 +4,10 @@ import { ok } from "@pkg/http/response/json";
 import action from "~/lib/action";
 import SigningKey from "~/tenant/models/signing-key";
 
+/**
+ * JSON Web Key Set (JWKS) endpoint (RFC 7517).
+ * Provides the public keys used to verify JWTs issued by this authorization server.
+ */
 export default action<"GET", "/.well-known/jwks.json">(async ({ db, logger }) => {
 	let log = logger.loader("/.well-known/jwks.json");
 
@@ -16,13 +20,12 @@ export default action<"GET", "/.well-known/jwks.json">(async ({ db, logger }) =>
 			{
 				headers: {
 					"Content-Type": "application/json",
-					"Cache-Control": "public, max-age=3600", // Cache for 1 hour
+					"Cache-Control": "public, max-age=3600",
 				},
 			},
 		);
 	}
 
-	// Convert to JWK Set format
 	let jwks = JWK.toJSON(signingKeys);
 
 	log.info("JWKS served", { keyCount: signingKeys.length });
@@ -30,7 +33,7 @@ export default action<"GET", "/.well-known/jwks.json">(async ({ db, logger }) =>
 	return ok(jwks, {
 		headers: {
 			"Content-Type": "application/json",
-			"Cache-Control": "public, max-age=3600", // Cache for 1 hour
+			"Cache-Control": "public, max-age=3600",
 		},
 	});
 });

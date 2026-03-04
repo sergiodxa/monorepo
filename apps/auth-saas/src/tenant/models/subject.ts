@@ -7,11 +7,17 @@ import { createTable } from "remix/data-table";
 
 import { RecordNotFoundError } from "~/lib/db-errors";
 
+/**
+ * Model for subjects (users).
+ * Manages user registration, profile updates, and email verification.
+ */
 export default class Subject {
+	/** Error thrown when an operation requires a verified email. */
 	static UnverifiedEmailError = class extends Error {
 		override name = "UnverifiedEmailError";
 	};
 
+	/** Database table schema for subjects. */
 	static table = createTable({
 		name: "subjects",
 		primaryKey: ["id"],
@@ -29,28 +35,52 @@ export default class Subject {
 		},
 	});
 
+	/**
+	 * Lists all subjects.
+	 * @param db - Database instance
+	 * @returns Array of all subject records
+	 */
 	static list(db: Database) {
 		return db.findMany(Subject.table);
 	}
 
 	/**
 	 * Returns the count of all subjects.
-	 * Note: Currently loads all records due to ORM limitations.
-	 * TODO: Use raw COUNT query when ORM supports it.
+	 * Currently loads all records due to ORM limitations.
+	 * @param db - Database instance
+	 * @returns Total number of subjects
 	 */
 	static async count(db: Database): Promise<number> {
 		let subjects = await db.findMany(Subject.table);
 		return subjects.length;
 	}
 
+	/**
+	 * Retrieves a single subject by ID.
+	 * @param db - Database instance
+	 * @param id - Subject ID
+	 * @returns Subject record or null if not found
+	 */
 	static show(db: Database, id: string) {
 		return db.findOne(Subject.table, { where: { id } });
 	}
 
+	/**
+	 * Finds a subject by email address.
+	 * @param db - Database instance
+	 * @param email - Email address
+	 * @returns Subject record or null if not found
+	 */
 	static findByEmail(db: Database, email: string) {
 		return db.findOne(Subject.table, { where: { email } });
 	}
 
+	/**
+	 * Registers a new subject with unverified email.
+	 * @param db - Database instance
+	 * @param data - Registration data including email and username
+	 * @returns Created subject record
+	 */
 	static async register(db: Database, data: { email: string; username: string }) {
 		let result = await unwrap(validate(data, Subject.table));
 
@@ -72,6 +102,13 @@ export default class Subject {
 		return subject;
 	}
 
+	/**
+	 * Marks a subject's email as verified.
+	 * @param db - Database instance
+	 * @param id - Subject ID
+	 * @returns Updated subject record
+	 * @throws {RecordNotFoundError} If subject does not exist
+	 */
 	static async verifyEmail(db: Database, id: string) {
 		let subject = await db.findOne(Subject.table, { where: { id } });
 		if (!subject) throw new RecordNotFoundError(Subject.table, { id });
@@ -86,6 +123,14 @@ export default class Subject {
 		);
 	}
 
+	/**
+	 * Updates a subject's profile.
+	 * @param db - Database instance
+	 * @param id - Subject ID
+	 * @param data - Profile properties to update
+	 * @returns Updated subject record
+	 * @throws {RecordNotFoundError} If subject does not exist
+	 */
 	static async update(
 		db: Database,
 		id: string,
@@ -105,12 +150,25 @@ export default class Subject {
 		);
 	}
 
+	/**
+	 * Deletes a subject.
+	 * @param db - Database instance
+	 * @param id - Subject ID
+	 * @returns Deletion result
+	 * @throws {RecordNotFoundError} If subject does not exist
+	 */
 	static async destroy(db: Database, id: string) {
 		let subject = await db.findOne(Subject.table, { where: { id } });
 		if (!subject) throw new RecordNotFoundError(Subject.table, { id });
 		return await db.delete(Subject.table, { id });
 	}
 
+	/**
+	 * Removes subjects with unverified emails older than the specified duration.
+	 * @param db - Database instance
+	 * @param olderThan - Age threshold in milliseconds
+	 * @returns Number of subjects deleted
+	 */
 	static async cleanupUnverified(db: Database, olderThan: number) {
 		let cutoffDate = new Date(Date.now() - olderThan).toISOString();
 		let unverifiedSubjects = await db.findMany(Subject.table, {
@@ -121,7 +179,6 @@ export default class Subject {
 
 		if (toDelete.length === 0) return 0;
 
-		// Delete in parallel for better performance
 		await Promise.all(toDelete.map((subject) => db.delete(Subject.table, { id: subject.id })));
 
 		return toDelete.length;

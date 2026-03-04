@@ -16,14 +16,16 @@ import TenantMeta from "~/tenant/models/tenant-meta";
 import WebAuthnChallenge from "~/tenant/models/webauthn-challenge";
 import routes from "~/tenant/routes";
 
-// OAuth 2.0 Authorization Request parameters
-// Note: `state` is required for CSRF protection per RFC 6749 Section 10.12
+/**
+ * OAuth 2.0 Authorization Request parameters per RFC 6749.
+ * The `state` parameter is required per RFC 6749 Section 10.12 to prevent CSRF attacks.
+ */
 let AuthorizeRequestSchema = s.object({
 	response_type: s.enum_(["code"]),
 	client_id: s.string(),
 	redirect_uri: s.string(),
 	scope: s.optional(s.string()),
-	state: s.string(), // Required for CSRF protection
+	state: s.string(),
 	nonce: s.optional(s.string()),
 	code_challenge: s.optional(s.string()),
 	code_challenge_method: s.optional(s.enum_(["S256", "plain"])),
@@ -33,7 +35,6 @@ let AuthorizeRequestSchema = s.object({
 
 let LoginFormSchema = s.object({
 	email: s.string(),
-	// OAuth params passed through
 	client_id: s.string(),
 	redirect_uri: s.string(),
 	scope: s.optional(s.string()),
@@ -41,21 +42,22 @@ let LoginFormSchema = s.object({
 	nonce: s.optional(s.string()),
 	code_challenge: s.optional(s.string()),
 	code_challenge_method: s.optional(s.string()),
-	// Action type
 	action: s.enum_(["check_email", "register", "authenticate"]),
 });
 
+/**
+ * OAuth 2.0 Authorization Endpoint (RFC 6749 Section 3.1).
+ * Handles the authorization code flow with PKCE support.
+ */
 export default form<"/authorize">({
 	middleware: [],
 
 	actions: {
-		// GET /authorize - Show login form or validate OAuth params
 		async index({ db, request, logger }) {
 			let log = logger.loader("/authorize");
 			let url = new URL(request.url);
 			let params = Object.fromEntries(url.searchParams);
 
-			// Validate OAuth parameters
 			let result = await validate(params, AuthorizeRequestSchema);
 			if (isFailure(result)) {
 				log.error("Invalid authorization request", { issues: result.error.issues });
@@ -73,21 +75,18 @@ export default form<"/authorize">({
 				login_hint,
 			} = result.data;
 
-			// Validate client exists
 			let client = await Client.show(db, client_id);
 			if (!client) {
 				log.error("Client not found", { client_id });
 				return renderError("Invalid client_id");
 			}
 
-			// Validate redirect URI
 			let isValidRedirect = await RedirectUri.validate(db, client_id, redirect_uri);
 			if (!isValidRedirect) {
 				log.error("Invalid redirect_uri", { client_id, redirect_uri });
 				return renderError("Invalid redirect_uri");
 			}
 
-			// Render login form
 			log.info("Rendering authorization form", { client_id });
 			let body = await renderToString(
 				<LoginForm
@@ -106,7 +105,6 @@ export default form<"/authorize">({
 			return ok(body);
 		},
 
-		// POST /authorize - Handle login form submission
 		async action({ db, formData, request, logger }) {
 			let log = logger.action("/authorize");
 			let body = Object.fromEntries(formData);
@@ -129,24 +127,20 @@ export default form<"/authorize">({
 				action,
 			} = result.data;
 
-			// Validate client
 			let client = await Client.show(db, client_id);
 			if (!client) {
 				return renderError("Invalid client");
 			}
 
-			// Validate redirect URI
 			let isValidRedirect = await RedirectUri.validate(db, client_id, redirect_uri);
 			if (!isValidRedirect) {
 				return renderError("Invalid redirect_uri");
 			}
 
-			// Get tenant issuer for RP ID
 			let issuer = await TenantMeta.getIssuer(db);
 			let rpId = issuer ? new URL(`https://${issuer}`).hostname : new URL(request.url).hostname;
 
 			if (action === "check_email") {
-				// Check if user exists and has passkeys
 				let subject = await Subject.findByEmail(db, email);
 				let hasPasskeys = false;
 
@@ -156,7 +150,6 @@ export default form<"/authorize">({
 				}
 
 				if (hasPasskeys && subject) {
-					// User has passkeys - show authentication UI
 					let { id: challengeId, challenge } = await WebAuthnChallenge.createForAuthentication(db, {
 						subjectId: subject.id,
 						clientId: client_id,
@@ -189,7 +182,6 @@ export default form<"/authorize">({
 					);
 					return ok(html);
 				} else {
-					// User doesn't exist or has no passkeys - show registration UI
 					let { id: challengeId, challenge } = await WebAuthnChallenge.createForRegistration(db, {
 						email,
 						clientId: client_id,
@@ -217,7 +209,6 @@ export default form<"/authorize">({
 				}
 			}
 
-			// Fallback - show initial form again
 			let html = await renderToString(
 				<LoginForm
 					clientName={client.name}
@@ -263,6 +254,7 @@ function ErrorPage() {
 	);
 }
 
+/** Props for the login form component. */
 interface LoginFormProps {
 	clientName: string;
 	clientLogo: string | null;
@@ -398,6 +390,7 @@ function LoginForm() {
 	);
 }
 
+/** Props for the WebAuthn authentication form. */
 interface AuthenticateFormProps {
 	email: string;
 	challengeId: string;
@@ -450,6 +443,7 @@ function AuthenticateForm() {
 	);
 }
 
+/** Props for the WebAuthn registration form. */
 interface RegisterFormProps {
 	email: string;
 	challengeId: string;
@@ -499,6 +493,7 @@ function RegisterForm() {
 	);
 }
 
+/** Props for the WebAuthn client-side script injection. */
 interface WebAuthnScriptProps {
 	type: "authenticate" | "register";
 	challengeId: string;
@@ -515,10 +510,8 @@ interface WebAuthnScriptProps {
 
 function WebAuthnScript() {
 	return (props: WebAuthnScriptProps): RemixNode => {
-		// Script data is passed via data attributes and executed by the client entry script
 		return (
 			<div id="webauthn-script-container">
-				{/* Script will be injected client-side via the entry script */}
 				<script
 					id="webauthn-data"
 					type="application/json"

@@ -3,17 +3,28 @@ import type { Database } from "remix/data-table";
 import * as s from "remix/data-schema";
 import { createTable } from "remix/data-table";
 
+/**
+ * Model for OAuth 2.0 authorization codes.
+ * Handles creation, consumption, and cleanup of single-use authorization codes.
+ */
 export default class AuthorizationCode {
-	static TTL = 10 * 60 * 1000; // 10 minutes
+	/**
+	 * Time-to-live for authorization codes (10 minutes in milliseconds).
+	 * Per RFC 6749, authorization codes should be short-lived.
+	 */
+	static TTL = 10 * 60 * 1000;
 
+	/** Error thrown when attempting to consume an expired authorization code. */
 	static ExpiredCodeError = class extends Error {
 		override name = "ExpiredCodeError";
 	};
 
+	/** Error thrown when attempting to consume an already-consumed code. */
 	static AlreadyConsumedError = class extends Error {
 		override name = "AlreadyConsumedError";
 	};
 
+	/** Database table schema for authorization codes. */
 	static table = createTable({
 		name: "authorization_codes",
 		primaryKey: ["code"],
@@ -23,16 +34,26 @@ export default class AuthorizationCode {
 			subject_id: s.string(),
 			session_id: s.string(),
 			redirect_uri: s.string(),
-			scope: s.nullable(s.string()), // space-separated
+			/** Space-separated list of scopes. */
+			scope: s.nullable(s.string()),
 			nonce: s.nullable(s.string()),
 			pkce_challenge: s.nullable(s.string()),
 			pkce_method: s.nullable(s.enum_(["S256", "plain"])),
-			auth_time: s.number(), // Unix timestamp in seconds
-			expires_at: s.number(), // Unix timestamp in ms
-			created_at: s.number(), // Unix timestamp in ms
+			/** Unix timestamp in seconds. */
+			auth_time: s.number(),
+			/** Unix timestamp in milliseconds. */
+			expires_at: s.number(),
+			/** Unix timestamp in milliseconds. */
+			created_at: s.number(),
 		},
 	});
 
+	/**
+	 * Creates a new authorization code.
+	 * @param db - Database instance
+	 * @param data - Authorization code data including client, subject, session, and PKCE info
+	 * @returns The generated authorization code string
+	 */
 	static async create(
 		db: Database,
 		data: {
@@ -67,15 +88,21 @@ export default class AuthorizationCode {
 		return code;
 	}
 
+	/**
+	 * Consumes an authorization code, returning its data.
+	 * Codes are deleted immediately per RFC 6749 (single-use requirement).
+	 * @param db - Database instance
+	 * @param code - The authorization code to consume
+	 * @returns The code's associated data
+	 * @throws {AlreadyConsumedError} If the code has already been consumed
+	 * @throws {ExpiredCodeError} If the code has expired
+	 */
 	static async consume(db: Database, code: string) {
-		// Find the code
 		let record = await db.findOne(AuthorizationCode.table, { where: { code } });
 		if (!record) throw new AuthorizationCode.AlreadyConsumedError();
 
-		// Delete immediately (single-use per RFC 6749)
 		await db.delete(AuthorizationCode.table, { code });
 
-		// Check expiration
 		if (record.expires_at < Date.now()) {
 			throw new AuthorizationCode.ExpiredCodeError();
 		}
@@ -97,13 +124,18 @@ export default class AuthorizationCode {
 		};
 	}
 
+	/**
+	 * Removes all expired authorization codes from the database.
+	 * @param db - Database instance
+	 * @param now - Current timestamp in milliseconds
+	 * @returns Number of expired codes deleted
+	 */
 	static async cleanupExpired(db: Database, now: number) {
 		let records = await db.findMany(AuthorizationCode.table);
 		let expiredRecords = records.filter((record) => record.expires_at < now);
 
 		if (expiredRecords.length === 0) return 0;
 
-		// Delete in parallel for better performance
 		await Promise.all(
 			expiredRecords.map((record) => db.delete(AuthorizationCode.table, { code: record.code })),
 		);

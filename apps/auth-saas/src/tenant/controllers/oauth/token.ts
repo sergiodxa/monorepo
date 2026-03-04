@@ -43,21 +43,22 @@ let ClientCredentialsSchema = s.object({
 	resource: s.optional(s.union([s.string(), s.array(s.string())])),
 });
 
+/**
+ * OAuth 2.0 Token endpoint (RFC 6749 Section 3.2).
+ * Supports authorization_code, refresh_token, and client_credentials grant types.
+ */
 export default action<"POST", "/oauth/token">(async ({ db, formData, request, logger }) => {
 	let log = logger.action("/oauth/token");
 	let grantType = formData.get("grant_type");
 
-	// Parse Basic auth if present
 	let basicAuth = parseBasicAuth(request.headers.get("authorization"));
 	let body = Object.fromEntries(formData);
 
-	// Merge Basic auth credentials into body
 	if (basicAuth) {
 		body.client_id = basicAuth.clientId;
 		body.client_secret = basicAuth.clientSecret;
 	}
 
-	// Route to appropriate grant type handler
 	if (grantType === "authorization_code") {
 		return await handleAuthorizationCode(db, body, log);
 	}
@@ -74,6 +75,10 @@ export default action<"POST", "/oauth/token">(async ({ db, formData, request, lo
 	return reject("unsupported_grant_type", "The authorization grant type is not supported");
 });
 
+/**
+ * Handles the authorization_code grant type (RFC 6749 Section 4.1.3).
+ * Authorization codes are single-use per RFC 6749.
+ */
 async function handleAuthorizationCode(db: Database, body: Record<string, unknown>, log: Logger) {
 	log.info("Authorization code grant started");
 
@@ -85,7 +90,6 @@ async function handleAuthorizationCode(db: Database, body: Record<string, unknow
 
 	let { code, redirect_uri, client_id, client_secret, code_verifier } = result.data;
 
-	// Consume the authorization code (single-use per RFC 6749)
 	let authzData;
 	try {
 		authzData = await AuthorizationCode.consume(db, code);
@@ -105,14 +109,12 @@ async function handleAuthorizationCode(db: Database, body: Record<string, unknow
 		throw error;
 	}
 
-	// Validate client
 	let client = await Client.show(db, authzData.clientId);
 	if (!client) {
 		log.info("Client not found", { clientId: authzData.clientId, grantType: "authorization_code" });
 		return reject("invalid_client", "Client not found", 401);
 	}
 
-	// Validate scopes against client's allowed_scopes
 	if (authzData.scope.length > 0 && client.allowed_scopes) {
 		let allowedScopes: string[] = [];
 		try {
@@ -135,7 +137,6 @@ async function handleAuthorizationCode(db: Database, body: Record<string, unknow
 		}
 	}
 
-	// Confidential clients require authentication
 	if (client.type === "confidential" || client.type === "m2m") {
 		if (!client_id || !client_secret) {
 			log.info("Client authentication required", {
@@ -163,8 +164,6 @@ async function handleAuthorizationCode(db: Database, body: Record<string, unknow
 		}
 	}
 
-	// Validate redirect URI matches what was stored in the authorization code
-	// (The authorize endpoint already validated it against registered URIs)
 	if (redirect_uri !== authzData.redirectUri) {
 		log.info("Redirect URI mismatch", {
 			clientId: client.id,
@@ -173,7 +172,10 @@ async function handleAuthorizationCode(db: Database, body: Record<string, unknow
 		return reject("invalid_grant", "Redirect URI mismatch");
 	}
 
-	// Require PKCE for public clients (OAuth 2.1 requirement)
+	/**
+	 * PKCE is required for public clients per OAuth 2.1 specification.
+	 * This prevents authorization code interception attacks.
+	 */
 	if (client.type === "public" && !authzData.pkce) {
 		log.info("PKCE required for public clients", {
 			clientId: client.id,
@@ -182,7 +184,6 @@ async function handleAuthorizationCode(db: Database, body: Record<string, unknow
 		return reject("invalid_request", "PKCE is required for public clients");
 	}
 
-	// Validate PKCE if present
 	if (authzData.pkce) {
 		if (!code_verifier) {
 			log.info("Missing code_verifier for PKCE", {
@@ -207,7 +208,6 @@ async function handleAuthorizationCode(db: Database, body: Record<string, unknow
 		}
 	}
 
-	// Fetch session, subject, issuer, and signing keys in parallel for performance
 	let [session, subject, issuer, signingKeys] = await Promise.all([
 		Session.show(db, authzData.sessionId),
 		Subject.show(db, authzData.subjectId),
@@ -215,7 +215,6 @@ async function handleAuthorizationCode(db: Database, body: Record<string, unknow
 		SigningKey.getAll(db),
 	]);
 
-	// Validate session
 	if (!session || new Date(session.expires_at) < new Date()) {
 		log.info("Session expired", {
 			clientId: client.id,
@@ -225,7 +224,6 @@ async function handleAuthorizationCode(db: Database, body: Record<string, unknow
 		return reject("invalid_grant", "Session has expired");
 	}
 
-	// Validate subject
 	if (!subject) {
 		log.info("Subject not found", {
 			clientId: client.id,
@@ -235,7 +233,6 @@ async function handleAuthorizationCode(db: Database, body: Record<string, unknow
 		return reject("invalid_grant", "Subject not found");
 	}
 
-	// Validate issuer
 	if (!issuer) {
 		log.info("Issuer not configured", {
 			clientId: client.id,
@@ -244,7 +241,6 @@ async function handleAuthorizationCode(db: Database, body: Record<string, unknow
 		return reject("server_error", "Issuer not configured");
 	}
 
-	// Validate signing keys
 	if (signingKeys.length === 0) {
 		log.info("No signing keys available", {
 			clientId: client.id,
@@ -253,7 +249,6 @@ async function handleAuthorizationCode(db: Database, body: Record<string, unknow
 		return reject("server_error", "No signing keys available");
 	}
 
-	// Generate tokens
 	let accessToken = AccessToken.generate(
 		`https://${issuer}`,
 		client.id,
@@ -300,6 +295,10 @@ async function handleAuthorizationCode(db: Database, body: Record<string, unknow
 	);
 }
 
+/**
+ * Handles the refresh_token grant type (RFC 6749 Section 6).
+ * Issues new access and ID tokens using a valid refresh token (session ID).
+ */
 async function handleRefreshToken(db: Database, body: Record<string, unknown>, log: Logger) {
 	log.info("Refresh token grant started");
 
@@ -311,7 +310,6 @@ async function handleRefreshToken(db: Database, body: Record<string, unknown>, l
 
 	let { refresh_token, client_id, client_secret } = result.data;
 
-	// Find session by refresh token (session ID)
 	let session = await Session.show(db, refresh_token);
 	if (!session) {
 		log.info("Invalid or expired refresh token", { grantType: "refresh_token" });
@@ -327,14 +325,12 @@ async function handleRefreshToken(db: Database, body: Record<string, unknown>, l
 		return reject("invalid_grant", "Refresh token has expired");
 	}
 
-	// Validate client
 	let client = await Client.show(db, session.client_id);
 	if (!client) {
 		log.info("Client not found", { clientId: session.client_id, grantType: "refresh_token" });
 		return reject("invalid_client", "Client not found", 401);
 	}
 
-	// Confidential clients require authentication
 	if (client.type === "confidential" || client.type === "m2m") {
 		if (!client_id || !client_secret) {
 			log.info("Client authentication required", {
@@ -362,7 +358,6 @@ async function handleRefreshToken(db: Database, body: Record<string, unknown>, l
 		}
 	}
 
-	// Touch session and fetch subject, issuer, signing keys in parallel
 	let [, subject, issuer, signingKeys] = await Promise.all([
 		Session.touch(db, session.id),
 		Subject.show(db, session.subject_id),
@@ -370,7 +365,6 @@ async function handleRefreshToken(db: Database, body: Record<string, unknown>, l
 		SigningKey.getAll(db),
 	]);
 
-	// Validate subject
 	if (!subject) {
 		log.info("Subject not found", {
 			clientId: client.id,
@@ -380,7 +374,6 @@ async function handleRefreshToken(db: Database, body: Record<string, unknown>, l
 		return reject("invalid_grant", "Subject not found");
 	}
 
-	// Validate issuer
 	if (!issuer) {
 		log.info("Issuer not configured", {
 			clientId: client.id,
@@ -389,7 +382,6 @@ async function handleRefreshToken(db: Database, body: Record<string, unknown>, l
 		return reject("server_error", "Issuer not configured");
 	}
 
-	// Validate signing keys
 	if (signingKeys.length === 0) {
 		log.info("No signing keys available", {
 			clientId: client.id,
@@ -398,7 +390,6 @@ async function handleRefreshToken(db: Database, body: Record<string, unknown>, l
 		return reject("server_error", "No signing keys available");
 	}
 
-	// Generate new tokens
 	let accessToken = AccessToken.generate(`https://${issuer}`, client.id, subject.id);
 	let signedAccessToken = await accessToken.sign(JWK.Algoritm.ES256, signingKeys);
 
@@ -440,6 +431,10 @@ async function handleRefreshToken(db: Database, body: Record<string, unknown>, l
 	);
 }
 
+/**
+ * Handles the client_credentials grant type (RFC 6749 Section 4.4).
+ * Only available to machine-to-machine (m2m) clients.
+ */
 async function handleClientCredentials(db: Database, body: Record<string, unknown>, log: Logger) {
 	log.info("Client credentials grant started");
 
@@ -451,14 +446,12 @@ async function handleClientCredentials(db: Database, body: Record<string, unknow
 
 	let { client_id, client_secret, scope, resource } = result.data;
 
-	// Validate client
 	let client = await Client.show(db, client_id);
 	if (!client) {
 		log.info("Client not found", { clientId: client_id, grantType: "client_credentials" });
 		return reject("invalid_client", "Client not found", 401);
 	}
 
-	// Only m2m clients can use client credentials
 	if (client.type !== "m2m") {
 		log.info("Unauthorized client type for grant", {
 			clientId: client.id,
@@ -468,7 +461,6 @@ async function handleClientCredentials(db: Database, body: Record<string, unknow
 		return reject("unauthorized_client", "Client is not authorized for this grant type");
 	}
 
-	// Verify client secret
 	let secretValid = await Secret.verify(db, client.id, client_secret);
 	if (!secretValid) {
 		log.info("Invalid client credentials", {
@@ -478,7 +470,6 @@ async function handleClientCredentials(db: Database, body: Record<string, unknow
 		return reject("invalid_client", "Invalid client credentials", 401);
 	}
 
-	// Validate scopes against client's allowed_scopes
 	let parsedScope = scope?.split(" ");
 	if (parsedScope && parsedScope.length > 0 && client.allowed_scopes) {
 		let allowedScopes: string[] = [];
@@ -502,10 +493,8 @@ async function handleClientCredentials(db: Database, body: Record<string, unknow
 		}
 	}
 
-	// Get issuer and signing keys in parallel
 	let [issuer, signingKeys] = await Promise.all([TenantMeta.getIssuer(db), SigningKey.getAll(db)]);
 
-	// Validate issuer
 	if (!issuer) {
 		log.info("Issuer not configured", {
 			clientId: client.id,
@@ -514,7 +503,6 @@ async function handleClientCredentials(db: Database, body: Record<string, unknow
 		return reject("server_error", "Issuer not configured");
 	}
 
-	// Validate signing keys
 	if (signingKeys.length === 0) {
 		log.info("No signing keys available", {
 			clientId: client.id,
@@ -523,11 +511,9 @@ async function handleClientCredentials(db: Database, body: Record<string, unknow
 		return reject("server_error", "No signing keys available");
 	}
 
-	// Build audience
 	let resources = Array.isArray(resource) ? resource : resource ? [resource] : [];
 	let audience = [`https://${issuer}`, ...resources];
 
-	// Generate access token (parsedScope already defined above during scope validation)
 	let accessToken = AccessToken.generate(`https://${issuer}`, audience, client.id, parsedScope);
 	let signedAccessToken = await accessToken.sign(JWK.Algoritm.ES256, signingKeys);
 
@@ -551,8 +537,10 @@ async function handleClientCredentials(db: Database, body: Record<string, unknow
 	);
 }
 
-// Helper functions
-
+/**
+ * Validates PKCE code_verifier against the stored challenge.
+ * Supports both S256 (SHA-256 hash) and plain methods per RFC 7636.
+ */
 async function validatePKCE(
 	verifier: string,
 	challenge: string,
@@ -562,11 +550,9 @@ async function validatePKCE(
 		return verifier === challenge;
 	}
 
-	// S256: challenge = BASE64URL(SHA256(verifier))
 	let encoder = new TextEncoder();
 	let data = encoder.encode(verifier);
 	let hash = await crypto.subtle.digest("SHA-256", data);
-	// Base64URL encode without padding
 	let generatedChallenge = btoa(String.fromCharCode(...new Uint8Array(hash)))
 		.replace(/\+/g, "-")
 		.replace(/\//g, "_")

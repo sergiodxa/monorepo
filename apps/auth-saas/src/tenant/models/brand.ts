@@ -5,12 +5,18 @@ import { createTable } from "remix/data-table";
 
 import { sanitizeCss } from "~/lib/css-sanitizer";
 
+/**
+ * Model for tenant branding configuration.
+ * Manages logo, colors, and custom CSS for the authentication UI.
+ */
 export default class Brand {
+	/** Default branding values. */
 	static DEFAULTS = {
 		primaryColor: "#3B82F6",
 		backgroundColor: "#FFFFFF",
 	};
 
+	/** Database table schema for branding. */
 	static table = createTable({
 		name: "branding",
 		primaryKey: ["id"],
@@ -26,6 +32,12 @@ export default class Brand {
 		},
 	});
 
+	/**
+	 * Retrieves the current branding configuration.
+	 * Returns default values if no branding has been configured.
+	 * @param db - Database instance
+	 * @returns Branding configuration with defaults applied
+	 */
 	static async show(db: Database) {
 		let record = await db.findOne(Brand.table, { where: { id: "default" } });
 
@@ -48,6 +60,13 @@ export default class Brand {
 		};
 	}
 
+	/**
+	 * Updates the branding configuration.
+	 * Custom CSS is sanitized to prevent injection attacks.
+	 * @param db - Database instance
+	 * @param data - Branding properties to update
+	 * @returns Updated branding record
+	 */
 	static async update(
 		db: Database,
 		data: {
@@ -60,7 +79,6 @@ export default class Brand {
 		let existing = await db.findOne(Brand.table, { where: { id: "default" } });
 		let now = new Date().toISOString();
 
-		// Sanitize custom CSS to prevent injection attacks
 		let sanitizedCss =
 			data.customCss !== undefined ? sanitizeCss(data.customCss) : (existing?.custom_css ?? null);
 
@@ -91,6 +109,10 @@ export default class Brand {
 		});
 	}
 
+	/**
+	 * Returns the default branding values.
+	 * @returns Default primary and background colors
+	 */
 	static getDefaults() {
 		return this.DEFAULTS;
 	}

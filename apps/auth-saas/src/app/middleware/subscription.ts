@@ -1,29 +1,32 @@
 import Subscription from "~/app/models/subscription";
 import middleware from "~/lib/middleware";
 
-/**
- * Subscription status that allows full access.
- */
+/** Subscription statuses that allow full access. */
 const ACTIVE_STATUSES = new Set(["active", "trialing"]);
 
-/**
- * Subscription status that shows a warning but allows access.
- */
+/** Subscription statuses that show a warning but allow access. */
 const WARNING_STATUSES = new Set(["past_due"]);
 
-/**
- * Subscription status that blocks access.
- */
+/** Subscription statuses that block access and redirect to billing. */
 const BLOCKED_STATUSES = new Set(["canceled", "unpaid", "incomplete"]);
 
+/**
+ * Extends the request context with the tenant's subscription information.
+ */
 declare module "remix/fetch-router" {
 	interface RequestContext {
 		subscription: {
+			/** The unique subscription identifier */
 			id: string;
+			/** The current subscription status */
 			status: string;
+			/** Whether the subscription has full access (active or trialing) */
 			isActive: boolean;
+			/** Whether the subscription is past due (access with warning) */
 			isPastDue: boolean;
+			/** Whether access is blocked due to subscription status */
 			isBlocked: boolean;
+			/** The Polar customer ID for billing operations */
 			polarCustomerId: string | null;
 		};
 	}
@@ -31,16 +34,17 @@ declare module "remix/fetch-router" {
 
 /**
  * Middleware that checks subscription status for the current tenant.
- * Must be used after the tenant-owner middleware.
  *
+ * Must be used after the tenant-owner middleware to ensure tenant context exists.
+ *
+ * Access levels by status:
  * - active/trialing: Full access
- * - past_due: Access with warning (set in context)
- * - canceled/unpaid/incomplete: Blocked with redirect to billing
+ * - past_due: Access with warning (isPastDue flag set in context)
+ * - canceled/unpaid/incomplete: Blocked with redirect to billing page
  */
 export default middleware(async (context, next) => {
 	let log = context.logger.middleware("subscription");
 
-	// Skip if no tenant in context (middleware order issue)
 	if (!context.tenant) {
 		log.error("Subscription middleware used without tenant context");
 		return new Response("Internal error", { status: 500 });
@@ -48,7 +52,6 @@ export default middleware(async (context, next) => {
 
 	let subscription = await Subscription.findByTenant(context.db, context.tenant.id);
 
-	// If no subscription exists, treat as blocked (shouldn't happen normally)
 	if (!subscription) {
 		log.info("No subscription found for tenant", { tenantId: context.tenant.id });
 		return redirectToBlocked(context.tenant.id, "no_subscription");
@@ -68,7 +71,6 @@ export default middleware(async (context, next) => {
 		polarCustomerId: subscription.polar_customer_id,
 	};
 
-	// Block access for unpaid subscriptions
 	if (isBlocked) {
 		log.info("Access blocked due to subscription status", {
 			tenantId: context.tenant.id,
@@ -77,7 +79,6 @@ export default middleware(async (context, next) => {
 		return redirectToBlocked(context.tenant.id, status);
 	}
 
-	// Log warning for past_due but allow access
 	if (isPastDue) {
 		log.info("Subscription past due, access allowed with warning", {
 			tenantId: context.tenant.id,
@@ -88,7 +89,10 @@ export default middleware(async (context, next) => {
 });
 
 /**
- * Redirect to a blocked page with reason.
+ * Redirects the user to the billing page with a blocked reason.
+ * @param tenantId - The tenant identifier for the redirect URL
+ * @param reason - The reason for blocking access (shown in query param)
+ * @returns A redirect response to the tenant's billing page
  */
 function redirectToBlocked(tenantId: string, reason: string): Response {
 	return new Response(null, {

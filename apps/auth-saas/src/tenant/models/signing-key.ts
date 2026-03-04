@@ -6,19 +6,28 @@ import { createTable } from "remix/data-table";
 
 import { RecordNotFoundError } from "~/lib/db-errors";
 
-// Cache TTL for signing keys (1 minute)
-// Keys rarely change, but we keep TTL short for safety
+/**
+ * Cache TTL for signing keys (1 minute in milliseconds).
+ * Keys rarely change, but we keep TTL short for safety during key rotation.
+ */
 const SIGNING_KEY_CACHE_TTL_MS = 60_000;
 
+/** Cache structure for imported key pairs. */
 interface SigningKeyCache {
 	keys: JWK.KeyPair[];
 	expiresAt: number;
 }
 
+/**
+ * Model for JWT signing keys.
+ * Manages cryptographic key pairs for signing and verifying tokens.
+ * Keys are cached in-memory to avoid expensive imports on every token operation.
+ */
 export default class SigningKey {
-	// In-memory cache for imported key pairs
-	// This avoids expensive key imports on every token operation
+	/** In-memory cache for imported key pairs. */
 	static #cache: SigningKeyCache | null = null;
+
+	/** Database table schema for signing keys. */
 	static table = createTable({
 		name: "signing_keys",
 		primaryKey: ["id"],
@@ -33,19 +42,34 @@ export default class SigningKey {
 		},
 	});
 
+	/**
+	 * Lists all signing keys.
+	 * @param db - Database instance
+	 * @returns Array of all signing key records
+	 */
 	static list(db: Database) {
 		return db.findMany(SigningKey.table);
 	}
 
+	/**
+	 * Retrieves a single signing key by ID.
+	 * @param db - Database instance
+	 * @param id - Signing key ID
+	 * @returns Signing key record or null if not found
+	 */
 	static show(db: Database, id: string) {
 		return db.findOne(SigningKey.table, { where: { id } });
 	}
 
+	/**
+	 * Retrieves the current active signing key.
+	 * @param db - Database instance
+	 * @returns Imported key pair or null if no current key exists
+	 */
 	static async getCurrent(db: Database): Promise<JWK.KeyPair | null> {
 		let record = await db.findOne(SigningKey.table, { where: { is_current: true } });
 		if (!record) return null;
 
-		// Keys are stored as PEM strings, which JWK.importKeyPair expects
 		return await JWK.importKeyPair({
 			id: record.id as `${string}-${string}-${string}-${string}-${string}`,
 			alg: JWK.Algoritm.ES256,
@@ -55,8 +79,13 @@ export default class SigningKey {
 		});
 	}
 
+	/**
+	 * Retrieves all signing keys as imported key pairs.
+	 * Results are cached for 1 minute to improve performance.
+	 * @param db - Database instance
+	 * @returns Array of imported key pairs
+	 */
 	static async getAll(db: Database): Promise<JWK.KeyPair[]> {
-		// Return cached keys if still valid
 		if (SigningKey.#cache && Date.now() < SigningKey.#cache.expiresAt) {
 			return SigningKey.#cache.keys;
 		}
@@ -68,7 +97,6 @@ export default class SigningKey {
 			return [];
 		}
 
-		// Import all key pairs in parallel for better performance
 		let keys = await Promise.all(
 			records.map((record) =>
 				JWK.importKeyPair({
@@ -81,7 +109,6 @@ export default class SigningKey {
 			),
 		);
 
-		// Cache the imported keys
 		SigningKey.#cache = { keys, expiresAt: Date.now() + SIGNING_KEY_CACHE_TTL_MS };
 
 		return keys;
@@ -95,6 +122,12 @@ export default class SigningKey {
 		SigningKey.#cache = null;
 	}
 
+	/**
+	 * Generates a new signing key and sets it as current.
+	 * Any existing current keys are marked as not current.
+	 * @param db - Database instance
+	 * @returns The newly generated key pair
+	 */
 	static async generate(db: Database): Promise<JWK.KeyPair> {
 		let rawKeyPair = await JWK.generateKeyPair(JWK.Algoritm.ES256);
 		let keyPair = await JWK.importKeyPair(rawKeyPair);
@@ -103,7 +136,6 @@ export default class SigningKey {
 			where: { is_current: true },
 		});
 
-		// Mark all existing current keys as not current in parallel
 		if (existingCurrent.length > 0) {
 			await Promise.all(
 				existingCurrent.map((existing) =>
@@ -114,7 +146,6 @@ export default class SigningKey {
 
 		let now = new Date().toISOString();
 
-		// rawKeyPair.privateKey and publicKey are already PEM strings
 		await db.create(SigningKey.table, {
 			id: rawKeyPair.id,
 			private_key: rawKeyPair.privateKey,
@@ -125,18 +156,22 @@ export default class SigningKey {
 			expires_at: null,
 		});
 
-		// Invalidate cache after generating new key
 		SigningKey.invalidateCache();
 
 		return keyPair;
 	}
 
+	/**
+	 * Rotates the signing key by generating a new one and marking old keys as not current.
+	 * Old keys are preserved for token verification during the transition period.
+	 * @param db - Database instance
+	 * @returns The newly generated key pair
+	 */
 	static async rotate(db: Database): Promise<JWK.KeyPair> {
 		let existingCurrent = await db.findMany(SigningKey.table, {
 			where: { is_current: true },
 		});
 
-		// Mark all existing current keys as not current in parallel
 		if (existingCurrent.length > 0) {
 			await Promise.all(
 				existingCurrent.map((existing) =>
@@ -150,7 +185,6 @@ export default class SigningKey {
 
 		let now = new Date().toISOString();
 
-		// rawKeyPair.privateKey and publicKey are already PEM strings
 		await db.create(SigningKey.table, {
 			id: rawKeyPair.id,
 			private_key: rawKeyPair.privateKey,
@@ -161,29 +195,36 @@ export default class SigningKey {
 			expires_at: null,
 		});
 
-		// Invalidate cache after rotating keys
 		SigningKey.invalidateCache();
 
 		return keyPair;
 	}
 
+	/**
+	 * Deletes a signing key.
+	 * The current signing key cannot be deleted; rotate first.
+	 * @param db - Database instance
+	 * @param id - Signing key ID
+	 * @returns Deletion result
+	 * @throws {RecordNotFoundError} If signing key does not exist
+	 * @throws {CannotDeleteCurrentKeyError} If attempting to delete the current key
+	 */
 	static async destroy(db: Database, id: string) {
 		let signingKey = await db.findOne(SigningKey.table, { where: { id } });
 		if (!signingKey) throw new RecordNotFoundError(SigningKey.table, { id });
 
-		// Don't allow deleting the current signing key
 		if (signingKey.is_current) {
 			throw new SigningKey.CannotDeleteCurrentKeyError();
 		}
 
 		let result = await db.delete(SigningKey.table, { id });
 
-		// Invalidate cache after deleting key
 		SigningKey.invalidateCache();
 
 		return result;
 	}
 
+	/** Error thrown when attempting to delete the current signing key. */
 	static CannotDeleteCurrentKeyError = class extends Error {
 		override name = "CannotDeleteCurrentKeyError";
 		constructor() {

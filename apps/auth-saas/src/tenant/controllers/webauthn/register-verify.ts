@@ -34,6 +34,12 @@ let RequestSchema = s.object({
 	}),
 });
 
+/**
+ * WebAuthn registration verification endpoint.
+ * Verifies a passkey registration response and stores the credential.
+ * Rate-limited per email to prevent registration abuse.
+ * Passkey registration implicitly verifies email ownership.
+ */
 export default action<"POST", "/webauthn/register/verify">(async ({ db, request, logger }) => {
 	let log = logger.action("/webauthn/register/verify");
 
@@ -52,7 +58,6 @@ export default action<"POST", "/webauthn/register/verify">(async ({ db, request,
 	let { challengeId, response } = result.data;
 	log.info("Verifying registration", { challengeId });
 
-	// Consume the challenge (single-use)
 	let challenge;
 	try {
 		challenge = await WebAuthnChallenge.consume(db, challengeId);
@@ -78,7 +83,6 @@ export default action<"POST", "/webauthn/register/verify">(async ({ db, request,
 		return badRequest({ error: "Invalid challenge: missing email" });
 	}
 
-	// Per-email rate limiting to prevent registration abuse
 	let rateLimit = checkUserRateLimit(
 		challenge.email,
 		"registerVerify",
@@ -92,12 +96,10 @@ export default action<"POST", "/webauthn/register/verify">(async ({ db, request,
 		});
 	}
 
-	// Get RP info
 	let issuer = await TenantMeta.getIssuer(db);
 	let rpId = issuer ? new URL(`https://${issuer}`).hostname : new URL(request.url).hostname;
 	let origin = new URL(request.url).origin;
 
-	// Verify the registration response
 	let verification;
 	try {
 		verification = await verifyRegistrationResponse({
@@ -108,7 +110,6 @@ export default action<"POST", "/webauthn/register/verify">(async ({ db, request,
 			requireUserVerification: true,
 		});
 	} catch (error) {
-		// Log the full error for debugging, but don't expose details to client
 		log.info("Passkey verification failed", {
 			challengeId,
 			error: error instanceof Error ? error.message : "Unknown error",
@@ -123,7 +124,6 @@ export default action<"POST", "/webauthn/register/verify">(async ({ db, request,
 
 	let { registrationInfo } = verification;
 
-	// Find or create the subject
 	let subject = await Subject.findByEmail(db, challenge.email);
 	if (!subject) {
 		let username = challenge.email.split("@")[0] ?? challenge.email;
@@ -131,7 +131,6 @@ export default action<"POST", "/webauthn/register/verify">(async ({ db, request,
 		log.info("Created new subject during registration", { subjectId: subject.id });
 	}
 
-	// Store the passkey - registrationInfo uses flat structure in simplewebauthn v11+
 	await Passkey.create(db, {
 		subjectId: subject.id,
 		publicKey: Buffer.from(registrationInfo.credentialPublicKey).toString("base64"),
@@ -148,20 +147,17 @@ export default action<"POST", "/webauthn/register/verify">(async ({ db, request,
 		backedUp: registrationInfo.credentialBackedUp,
 	});
 
-	// Mark email as verified (passkey registration proves email ownership)
 	if (!subject.email_verified_at) {
 		await Subject.verifyEmail(db, subject.id);
 		log.info("Email verified via passkey registration", { subjectId: subject.id });
 	}
 
-	// Track registration and first MAU for billing
 	let tenantId = await TenantMeta.getTenantId(db);
 	if (tenantId) {
 		AnalyticsService.trackRegistration(tenantId, subject.id);
 		AnalyticsService.trackAuthentication(tenantId, subject.id);
 	}
 
-	// If this is part of an OAuth flow, create session and authorization code
 	if (challenge.client_id && challenge.redirect_uri) {
 		let sessionId = await Session.create(db, {
 			subjectId: subject.id,
@@ -183,7 +179,6 @@ export default action<"POST", "/webauthn/register/verify">(async ({ db, request,
 					: undefined,
 		});
 
-		// Build redirect URL with authorization code
 		let redirectUrl = new URL(challenge.redirect_uri);
 		redirectUrl.searchParams.set("code", code);
 		if (challenge.state) {
@@ -202,7 +197,6 @@ export default action<"POST", "/webauthn/register/verify">(async ({ db, request,
 		});
 	}
 
-	// Direct registration without OAuth flow
 	log.info("Registration completed", { subjectId: subject.id });
 
 	return ok({

@@ -16,14 +16,22 @@ let RevokeSchema = s.object({
 	client_secret: s.optional(s.string()),
 });
 
+/**
+ * OAuth 2.0 Token Revocation endpoint (RFC 7009).
+ * Allows clients to notify the authorization server that a token is no longer needed.
+ *
+ * Per RFC 7009, this endpoint always returns 200 OK regardless of token validity
+ * to prevent token enumeration attacks.
+ *
+ * Note: Access tokens are stateless JWTs and cannot be revoked server-side.
+ * Only refresh tokens (sessions) can be truly revoked.
+ */
 export default action<"POST", "/oauth/revoke">(async ({ db, formData, request, logger }) => {
 	let log = logger.action("/oauth/revoke");
 
-	// Parse Basic auth if present
 	let basicAuth = parseBasicAuth(request.headers.get("authorization"));
 	let body = Object.fromEntries(formData) as Record<string, unknown>;
 
-	// Merge Basic auth credentials into body
 	if (basicAuth) {
 		body.client_id = basicAuth.clientId;
 		body.client_secret = basicAuth.clientSecret;
@@ -43,13 +51,11 @@ export default action<"POST", "/oauth/revoke">(async ({ db, formData, request, l
 		authMethod: basicAuth ? "basic" : "body",
 	});
 
-	// Client authentication is required for confidential clients
 	if (!client_id || !client_secret) {
 		log.info("Client authentication missing");
 		return reject("invalid_client", "Client authentication required", 401);
 	}
 
-	// Validate client
 	let client = await Client.show(db, client_id);
 	if (!client) {
 		log.info("Client not found", { clientId: client_id });
@@ -62,21 +68,18 @@ export default action<"POST", "/oauth/revoke">(async ({ db, formData, request, l
 		return reject("invalid_client", "Invalid client credentials", 401);
 	}
 
-	// Access tokens are stateless JWTs - we can't truly revoke them
-	// They will expire naturally. For refresh tokens (session IDs), we can revoke.
 	if (token_type_hint === "access_token") {
-		// Nothing to do for access tokens - they're stateless JWTs
 		log.info("Access token revocation skipped (stateless JWT)", { clientId: client.id });
 		return new Response(null, { status: 200 });
 	}
 
-	// Try to find and delete the session (refresh token)
 	let session = await Session.show(db, token);
 	if (session) {
-		// Ensure the client owns this session
+		/**
+		 * Per RFC 7009, return 200 even if the token belongs to a different client.
+		 * This prevents token enumeration attacks.
+		 */
 		if (session.client_id !== client.id) {
-			// Per RFC 7009, we should still return 200 even if the token doesn't belong to the client
-			// This prevents token enumeration attacks
 			log.info("Session belongs to different client", {
 				clientId: client.id,
 				sessionClientId: session.client_id,
@@ -95,6 +98,5 @@ export default action<"POST", "/oauth/revoke">(async ({ db, formData, request, l
 		log.info("Session not found for revocation", { clientId: client.id });
 	}
 
-	// RFC 7009 requires returning 200 even if the token is invalid/not found
 	return new Response(null, { status: 200 });
 });

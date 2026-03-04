@@ -16,6 +16,9 @@ import {
 	hmacSign,
 } from "~/lib/crypto-utils";
 
+/**
+ * Schema for validating internal token payloads.
+ */
 const InternalTokenPayloadSchema = s.object({
 	iss: s.string(),
 	iat: s.number(),
@@ -25,14 +28,16 @@ const InternalTokenPayloadSchema = s.object({
 
 /**
  * Creates a signed internal auth token for platform-to-DO communication.
- * Token is short-lived (5 minutes) to minimize exposure.
+ * Token is short-lived (5 minutes) to minimize exposure window if compromised.
+ * @param secret - The secret key for signing the token
+ * @returns A signed JWT token string
  */
 export async function createInternalToken(secret: string): Promise<string> {
 	let header = { alg: "HS256", typ: "JWT" };
 	let payload = {
 		iss: "auth-saas-platform",
 		iat: Math.floor(Date.now() / 1000),
-		exp: Math.floor(Date.now() / 1000) + 300, // 5 minutes
+		exp: Math.floor(Date.now() / 1000) + 300,
 		purpose: "internal-api",
 	};
 
@@ -47,7 +52,12 @@ export async function createInternalToken(secret: string): Promise<string> {
 
 /**
  * Verifies an internal auth token.
- * Returns true if the token is valid and not expired.
+ *
+ * Uses constant-time comparison for signature verification to prevent timing attacks.
+ *
+ * @param token - The JWT token to verify
+ * @param secret - The secret key used for signing
+ * @returns True if the token is valid and not expired
  */
 export async function verifyInternalToken(token: string, secret: string): Promise<boolean> {
 	let parts = token.split(".");
@@ -59,13 +69,11 @@ export async function verifyInternalToken(token: string, secret: string): Promis
 
 	if (!encodedHeader || !encodedPayload || !signature) return false;
 
-	// Verify signature using constant-time comparison to prevent timing attacks
 	let signingInput = `${encodedHeader}.${encodedPayload}`;
 	let expectedSignature = await hmacSign(signingInput, secret);
 
 	if (!constantTimeCompare(signature, expectedSignature)) return false;
 
-	// Verify payload
 	try {
 		let parsed: unknown;
 		try {
@@ -79,13 +87,9 @@ export async function verifyInternalToken(token: string, secret: string): Promis
 
 		let payload = result.data;
 
-		// Check issuer
 		if (payload.iss !== "auth-saas-platform") return false;
-
-		// Check purpose
 		if (payload.purpose !== "internal-api") return false;
 
-		// Check expiration
 		let now = Math.floor(Date.now() / 1000);
 		if (payload.exp < now) return false;
 

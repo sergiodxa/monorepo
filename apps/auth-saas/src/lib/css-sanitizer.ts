@@ -15,57 +15,43 @@
  * These can be used for data exfiltration, XSS, or other attacks.
  */
 const DANGEROUS_PATTERNS = [
-	// JavaScript execution
 	/javascript\s*:/gi,
 	/expression\s*\(/gi,
 	/-moz-binding\s*:/gi,
 	/behavior\s*:/gi,
-
-	// External resource loading (data exfiltration)
 	/@import\s/gi,
-
-	// Data URIs can contain scripts
 	/data\s*:/gi,
-
-	// VBScript (IE)
 	/vbscript\s*:/gi,
 ];
 
 /**
  * URL patterns that could be used for data exfiltration.
- * We allow relative URLs and same-origin, but block external URLs.
+ * Allows relative URLs and same-origin, but blocks external URLs.
  */
 const EXTERNAL_URL_PATTERN = /url\s*\(\s*['"]?\s*(https?:\/\/|\/\/)/gi;
 
 /**
  * Sanitizes custom CSS by removing dangerous patterns.
- *
  * @param css - The CSS string to sanitize
  * @returns The sanitized CSS, or null if the CSS is entirely unsafe
- * @throws Error if the CSS contains dangerous patterns that can't be safely removed
  */
 export function sanitizeCss(css: string | null | undefined): string | null {
 	if (!css) return null;
 
 	let sanitized = css;
 
-	// Check for and remove dangerous patterns
 	for (let pattern of DANGEROUS_PATTERNS) {
 		if (pattern.test(sanitized)) {
-			// Reset lastIndex for global regex
 			pattern.lastIndex = 0;
-			// Remove the dangerous pattern
 			sanitized = sanitized.replace(pattern, "/* removed */");
 		}
 	}
 
-	// Check for external URLs in url() functions
 	if (EXTERNAL_URL_PATTERN.test(sanitized)) {
 		EXTERNAL_URL_PATTERN.lastIndex = 0;
 		sanitized = sanitized.replace(EXTERNAL_URL_PATTERN, "url(/* external url removed */");
 	}
 
-	// If the sanitized CSS is just comments/whitespace, return null
 	let trimmed = sanitized
 		.replace(/\/\*.*?\*\//g, "")
 		.replace(/\s+/g, "")
@@ -77,7 +63,8 @@ export function sanitizeCss(css: string | null | undefined): string | null {
 
 /**
  * Validates that CSS doesn't contain dangerous patterns.
- * Returns true if the CSS is safe, false otherwise.
+ * @param css - The CSS string to validate
+ * @returns True if the CSS is safe, false otherwise
  */
 export function isValidCss(css: string | null | undefined): boolean {
 	if (!css) return true;

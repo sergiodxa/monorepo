@@ -23,21 +23,25 @@ let RequestSchema = s.object({
 	scope: s.optional(s.string()),
 });
 
-// Basic email format validation (RFC 5322 simplified)
+/**
+ * Basic email format validation (RFC 5322 simplified).
+ */
 function isValidEmail(email: string): boolean {
-	// Basic check: must contain exactly one @, something before and after
 	let parts = email.split("@");
 	if (parts.length !== 2) return false;
 	let [local, domain] = parts;
 	if (!local || !domain) return false;
 	if (local.length === 0 || domain.length === 0) return false;
-	// Domain must have at least one dot
 	if (!domain.includes(".")) return false;
-	// No spaces allowed
 	if (email.includes(" ")) return false;
 	return true;
 }
 
+/**
+ * WebAuthn registration options endpoint.
+ * Generates a challenge for passkey registration.
+ * Rate-limited per email to prevent registration abuse.
+ */
 export default action<"POST", "/webauthn/register/options">(
 	async ({ db, formData, request, logger }) => {
 		let log = logger.action("/webauthn/register/options");
@@ -50,13 +54,11 @@ export default action<"POST", "/webauthn/register/options">(
 
 		let { email, clientId, redirectUri, state, nonce, scope } = result.data;
 
-		// Validate email format
 		if (!isValidEmail(email)) {
 			log.info("Invalid email format", { email });
 			return badRequest({ error: "Invalid email format" });
 		}
 
-		// Per-email rate limiting to prevent registration abuse
 		let rateLimit = checkUserRateLimit(email, "registerOptions", USER_RATE_LIMITS.registerOptions);
 		if (!rateLimit.success) {
 			log.info("Rate limit exceeded for email", { email });
@@ -66,7 +68,6 @@ export default action<"POST", "/webauthn/register/options">(
 			});
 		}
 
-		// Check if subject already exists with passkeys
 		let existingSubject = await Subject.findByEmail(db, email);
 		if (existingSubject) {
 			let existingPasskeys = await Passkey.listBySubject(db, existingSubject.id);
@@ -76,24 +77,20 @@ export default action<"POST", "/webauthn/register/options">(
 			}
 		}
 
-		// Create or get subject
 		let subject: Awaited<ReturnType<typeof Subject.findByEmail>>;
 		if (existingSubject) {
 			subject = existingSubject;
 			log.info("Using existing subject", { subjectId: existingSubject.id });
 		} else {
-			// Create new unverified subject
 			let username = email.split("@")[0] ?? email;
 			subject = await Subject.register(db, { email, username });
 			log.info("Created new subject", { subjectId: subject!.id });
 		}
 
-		// Get tenant info for RP
 		let issuer = await TenantMeta.getIssuer(db);
 		let rpId = issuer ? new URL(`https://${issuer}`).hostname : new URL(request.url).hostname;
-		let rpName = rpId; // Could be fetched from brand settings
+		let rpName = rpId;
 
-		// Create WebAuthn challenge
 		let { id: challengeId, challenge } = await WebAuthnChallenge.createForRegistration(db, {
 			email,
 			clientId,
@@ -103,7 +100,6 @@ export default action<"POST", "/webauthn/register/options">(
 			scope,
 		});
 
-		// Generate registration options using @simplewebauthn/server
 		let registrationOptions = await generateRegistrationOptions({
 			rpName,
 			rpID: rpId,

@@ -32,6 +32,12 @@ let RequestSchema = s.object({
 	}),
 });
 
+/**
+ * WebAuthn authentication verification endpoint.
+ * Verifies a passkey authentication response and creates a session.
+ * Rate-limited per email to prevent brute force attacks.
+ * Updates passkey counter after successful authentication to prevent replay attacks.
+ */
 export default action<"POST", "/webauthn/auth/verify">(async ({ db, request, logger }) => {
 	let log = logger.action("/webauthn/auth/verify");
 
@@ -50,7 +56,6 @@ export default action<"POST", "/webauthn/auth/verify">(async ({ db, request, log
 	let { challengeId, response } = result.data;
 	log.info("Verifying authentication", { challengeId });
 
-	// Consume the challenge (single-use)
 	let challenge;
 	try {
 		challenge = await WebAuthnChallenge.consume(db, challengeId);
@@ -76,14 +81,12 @@ export default action<"POST", "/webauthn/auth/verify">(async ({ db, request, log
 		return badRequest({ error: "Invalid challenge: missing subject" });
 	}
 
-	// Get subject
 	let subject = await Subject.show(db, challenge.subject_id);
 	if (!subject) {
 		log.info("Subject not found", { subjectId: challenge.subject_id, challengeId });
 		return badRequest({ error: "User not found" });
 	}
 
-	// Per-email rate limiting to prevent brute force attacks
 	let rateLimit = checkUserRateLimit(subject.email, "authVerify", USER_RATE_LIMITS.authVerify);
 	if (!rateLimit.success) {
 		log.info("Rate limit exceeded for subject", { subjectId: subject.id });
@@ -93,22 +96,18 @@ export default action<"POST", "/webauthn/auth/verify">(async ({ db, request, log
 		});
 	}
 
-	// Find the passkey being used
 	let passkey = await Passkey.show(db, response.id);
 	if (!passkey || passkey.subject_id !== subject.id) {
 		log.info("Passkey not found or mismatch", { subjectId: subject.id, challengeId });
 		return badRequest({ error: "Passkey not found" });
 	}
 
-	// Get RP info
 	let issuer = await TenantMeta.getIssuer(db);
 	let rpId = issuer ? new URL(`https://${issuer}`).hostname : new URL(request.url).hostname;
 	let origin = new URL(request.url).origin;
 
-	// Decode the stored public key
 	let publicKeyBytes = Uint8Array.from(atob(passkey.public_key), (c) => c.charCodeAt(0));
 
-	// Verify the authentication response
 	let verification;
 	try {
 		verification = await verifyAuthenticationResponse({
@@ -127,7 +126,6 @@ export default action<"POST", "/webauthn/auth/verify">(async ({ db, request, log
 			requireUserVerification: true,
 		});
 	} catch (error) {
-		// Log the full error for debugging, but don't expose details to client
 		log.info("Authentication verification failed", {
 			subjectId: subject.id,
 			challengeId,
@@ -141,16 +139,13 @@ export default action<"POST", "/webauthn/auth/verify">(async ({ db, request, log
 		return badRequest({ error: "Authentication failed" });
 	}
 
-	// Update passkey counter to prevent replay attacks
 	await Passkey.updateCounter(db, passkey.id, verification.authenticationInfo.newCounter);
 
-	// Track MAU for billing
 	let tenantId = await TenantMeta.getTenantId(db);
 	if (tenantId) {
 		AnalyticsService.trackAuthentication(tenantId, subject.id);
 	}
 
-	// If this is part of an OAuth flow, create session and authorization code
 	if (challenge.client_id && challenge.redirect_uri) {
 		let sessionId = await Session.create(db, {
 			subjectId: subject.id,
@@ -172,7 +167,6 @@ export default action<"POST", "/webauthn/auth/verify">(async ({ db, request, log
 					: undefined,
 		});
 
-		// Build redirect URL with authorization code
 		let redirectUrl = new URL(challenge.redirect_uri);
 		redirectUrl.searchParams.set("code", code);
 		if (challenge.state) {
@@ -191,7 +185,6 @@ export default action<"POST", "/webauthn/auth/verify">(async ({ db, request, log
 		});
 	}
 
-	// Direct authentication without OAuth flow
 	log.info("Authentication completed", { subjectId: subject.id });
 
 	return ok({

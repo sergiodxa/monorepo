@@ -9,10 +9,15 @@ import {
 	verifySessionToken,
 } from "~/lib/platform-session";
 
+/**
+ * Extends the request context with the authenticated platform session.
+ */
 declare module "remix/fetch-router" {
 	interface RequestContext {
 		platformSession: {
+			/** The unique identifier for the authenticated subject */
 			subjectId: string;
+			/** The email address of the authenticated user */
 			email: string;
 		};
 	}
@@ -20,10 +25,12 @@ declare module "remix/fetch-router" {
 
 /**
  * Session middleware for the platform dashboard.
- * Validates the signed session token and attaches user info to context.
  *
+ * Validates the signed session token and attaches user info to context.
  * The session token is self-contained and cryptographically signed,
  * so no database lookup is needed for validation.
+ *
+ * Redirects to onboarding if no valid session exists.
  */
 export default middleware(async (context, next) => {
 	let log = context.logger.middleware("session");
@@ -36,7 +43,6 @@ export default middleware(async (context, next) => {
 		return redirect("/onboarding");
 	}
 
-	// Verify the signed session token (no network request needed)
 	let session = await verifySessionToken(token, env.SESSION_SECRET);
 
 	if (!session) {

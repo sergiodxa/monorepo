@@ -6,11 +6,17 @@ import { createTable } from "remix/data-table";
 
 import { RecordNotFoundError } from "~/lib/db-errors";
 
+/**
+ * Model for client secrets.
+ * Manages creation, verification, and lifecycle of OAuth 2.0 client secrets.
+ */
 export default class Secret {
+	/** Error thrown when a secret is invalid. */
 	static InvalidSecretError = class extends Error {
 		override name = "InvalidSecretError";
 	};
 
+	/** Database table schema for client secrets. */
 	static table = createTable({
 		name: "client_secrets",
 		primaryKey: ["id"],
@@ -25,6 +31,10 @@ export default class Secret {
 		},
 	});
 
+	/**
+	 * Generates a cryptographically secure secret value.
+	 * @returns Secret string prefixed with `sdx_auth_`
+	 */
 	static generateSecretValue(): string {
 		let randomBytes = crypto.getRandomValues(new Uint8Array(32));
 		let base64 = btoa(String.fromCharCode(...randomBytes))
@@ -34,6 +44,13 @@ export default class Secret {
 		return `sdx_auth_${base64}`;
 	}
 
+	/**
+	 * Lists all secrets for a client.
+	 * Secret hashes are not included in the response.
+	 * @param db - Database instance
+	 * @param clientId - Client ID
+	 * @returns Array of secret metadata (without hashes)
+	 */
 	static async list(db: Database, clientId: string) {
 		let secrets = await db.findMany(Secret.table, { where: { client_id: clientId } });
 		return secrets.map((secret) => ({
@@ -45,6 +62,15 @@ export default class Secret {
 		}));
 	}
 
+	/**
+	 * Creates a new secret for a client.
+	 * The plain secret is returned only once and should be stored securely by the client.
+	 * @param db - Database instance
+	 * @param clientId - Client ID
+	 * @param name - Optional descriptive name
+	 * @param expiresAt - Optional expiration date (ISO string)
+	 * @returns Object containing the secret ID and plain secret value
+	 */
 	static async create(db: Database, clientId: string, name?: string, expiresAt?: string) {
 		let plainSecret = this.generateSecretValue();
 		let secretHash = await bcrypt.hash(plainSecret, 10);
@@ -63,11 +89,21 @@ export default class Secret {
 		return { id, plainSecret };
 	}
 
+	/**
+	 * Verifies a client secret.
+	 * All valid secrets are compared in parallel to prevent timing attacks
+	 * that could reveal which position the valid secret is in.
+	 * A dummy comparison is performed when no secrets exist to prevent
+	 * timing attacks that could detect the absence of secrets.
+	 * @param db - Database instance
+	 * @param clientId - Client ID
+	 * @param plainSecret - Plain secret to verify
+	 * @returns True if the secret is valid
+	 */
 	static async verify(db: Database, clientId: string, plainSecret: string): Promise<boolean> {
 		let secrets = await db.findMany(Secret.table, { where: { client_id: clientId } });
 		let now = new Date();
 
-		// Filter out expired secrets first
 		let validSecrets = secrets.filter((secret) => {
 			if (secret.expires_at && new Date(secret.expires_at) < now) {
 				return false;
@@ -76,13 +112,10 @@ export default class Secret {
 		});
 
 		if (validSecrets.length === 0) {
-			// Do a dummy bcrypt compare to prevent timing attacks that detect no secrets
 			await bcrypt.compare(plainSecret, "$2a$10$dummy.hash.for.timing.attack.prevention");
 			return false;
 		}
 
-		// Compare against all valid secrets in parallel to prevent timing attacks
-		// that could reveal which position the valid secret is in
 		let comparisons = await Promise.all(
 			validSecrets.map(async (secret) => ({
 				id: secret.id,
@@ -90,11 +123,9 @@ export default class Secret {
 			})),
 		);
 
-		// Find the matching secret (if any)
 		let match = comparisons.find((c) => c.isMatch);
 
 		if (match) {
-			// Update last_used_at for the matched secret
 			await db.update(
 				Secret.table,
 				{ id: match.id },
@@ -108,6 +139,13 @@ export default class Secret {
 		return false;
 	}
 
+	/**
+	 * Deletes a secret.
+	 * @param db - Database instance
+	 * @param id - Secret ID
+	 * @returns Deletion result
+	 * @throws {RecordNotFoundError} If secret does not exist
+	 */
 	static async destroy(db: Database, id: string) {
 		let secret = await db.findOne(Secret.table, { where: { id } });
 		if (!secret) throw new RecordNotFoundError(Secret.table, { id });

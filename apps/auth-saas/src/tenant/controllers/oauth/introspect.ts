@@ -20,14 +20,17 @@ let IntrospectSchema = s.object({
 	client_secret: s.optional(s.string()),
 });
 
+/**
+ * OAuth 2.0 Token Introspection endpoint (RFC 7662).
+ * Allows resource servers to query the authorization server about the active state of a token.
+ * Returns token metadata including subject, client, expiration, and scope.
+ */
 export default action<"POST", "/oauth/introspect">(async ({ db, formData, request, logger }) => {
 	let log = logger.action("/oauth/introspect");
 
-	// Parse Basic auth if present
 	let basicAuth = parseBasicAuth(request.headers.get("authorization"));
 	let body = Object.fromEntries(formData) as Record<string, unknown>;
 
-	// Merge Basic auth credentials into body
 	if (basicAuth) {
 		body.client_id = basicAuth.clientId;
 		body.client_secret = basicAuth.clientSecret;
@@ -43,13 +46,11 @@ export default action<"POST", "/oauth/introspect">(async ({ db, formData, reques
 
 	log.info("Token introspection request", { clientId: client_id, tokenTypeHint: token_type_hint });
 
-	// Client authentication is required
 	if (!client_id || !client_secret) {
 		log.info("Client authentication missing");
 		return reject("invalid_client", "Client authentication required", 401);
 	}
 
-	// Validate client and get issuer in parallel for better performance
 	let [client, issuer] = await Promise.all([Client.show(db, client_id), TenantMeta.getIssuer(db)]);
 
 	if (!client) {
@@ -71,7 +72,6 @@ export default action<"POST", "/oauth/introspect">(async ({ db, formData, reques
 		return ok({ active: false }, { headers });
 	}
 
-	// Try refresh token (session) first if hinted or not specified
 	if (token_type_hint !== "access_token") {
 		let session = await Session.show(db, token);
 		if (session && new Date(session.expires_at) > new Date()) {
@@ -96,7 +96,6 @@ export default action<"POST", "/oauth/introspect">(async ({ db, formData, reques
 		}
 	}
 
-	// Try access token
 	try {
 		let signingKeys = await SigningKey.getAll(db);
 		if (signingKeys.length === 0) {
@@ -127,7 +126,6 @@ export default action<"POST", "/oauth/introspect">(async ({ db, formData, reques
 			{ headers },
 		);
 	} catch {
-		// Token is invalid or expired
 		log.info("Token invalid or expired", { clientId: client_id });
 		return ok({ active: false }, { headers });
 	}

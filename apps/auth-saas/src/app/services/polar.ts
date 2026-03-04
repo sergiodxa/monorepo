@@ -13,18 +13,18 @@ export { PolarError };
 export default class PolarService {
 	/**
 	 * Get a configured Polar SDK client.
-	 * Creates a new instance each time since env may not be available at module load.
+	 * @returns A new Polar client instance configured with the access token.
 	 */
 	static get client() {
 		return new Polar({ accessToken: env.POLAR_ACCESS_TOKEN });
 	}
 
-	// ============================================================================
-	// CUSTOMERS
-	// ============================================================================
-
 	/**
 	 * Create a new customer in Polar.
+	 * @param email - The customer's email address.
+	 * @param name - The customer's display name.
+	 * @param metadata - Additional key-value pairs to store with the customer.
+	 * @returns The created customer object.
 	 */
 	static async createCustomer(
 		email: string,
@@ -40,13 +40,18 @@ export default class PolarService {
 
 	/**
 	 * Get a customer by ID.
+	 * @param customerId - The Polar customer ID.
+	 * @returns The customer object.
 	 */
 	static async getCustomer(customerId: string) {
 		return await PolarService.client.customers.get({ id: customerId });
 	}
 
 	/**
-	 * Update customer metadata.
+	 * Update customer information.
+	 * @param customerId - The Polar customer ID.
+	 * @param updates - The fields to update.
+	 * @returns The updated customer object.
 	 */
 	static async updateCustomer(
 		customerId: string,
@@ -61,19 +66,19 @@ export default class PolarService {
 		});
 	}
 
-	// ============================================================================
-	// SUBSCRIPTIONS
-	// ============================================================================
-
 	/**
 	 * Get a subscription by ID.
+	 * @param subscriptionId - The Polar subscription ID.
+	 * @returns The subscription object.
 	 */
 	static async getSubscription(subscriptionId: string) {
 		return await PolarService.client.subscriptions.get({ id: subscriptionId });
 	}
 
 	/**
-	 * List subscriptions for a customer.
+	 * List all subscriptions for a customer.
+	 * @param customerId - The Polar customer ID.
+	 * @returns An array of subscription objects.
 	 */
 	static async listSubscriptions(customerId: string) {
 		let result = await PolarService.client.subscriptions.list({ customerId });
@@ -85,7 +90,9 @@ export default class PolarService {
 	}
 
 	/**
-	 * Revoke a subscription (immediate cancellation).
+	 * Revoke a subscription immediately.
+	 * @param subscriptionId - The Polar subscription ID.
+	 * @returns The revoked subscription object.
 	 */
 	static async revokeSubscription(subscriptionId: string) {
 		return await PolarService.client.subscriptions.revoke({ id: subscriptionId });
@@ -93,19 +100,17 @@ export default class PolarService {
 
 	/**
 	 * Cancel a subscription.
-	 * @deprecated Use revokeSubscription instead
+	 * @param subscriptionId - The Polar subscription ID.
+	 * @returns The cancelled subscription object.
+	 * @deprecated Use revokeSubscription instead.
 	 */
 	static async cancelSubscription(subscriptionId: string) {
 		return await PolarService.revokeSubscription(subscriptionId);
 	}
 
-	// ============================================================================
-	// EVENTS (Usage-Based Billing)
-	// ============================================================================
-
 	/**
-	 * Ingest events for usage-based billing.
-	 * Used for reporting MAU counts.
+	 * Ingest usage events for billing.
+	 * @param events - Array of events to ingest.
 	 */
 	static async ingestEvents(
 		events: Array<{
@@ -126,8 +131,11 @@ export default class PolarService {
 	}
 
 	/**
-	 * Report MAU count for a tenant.
-	 * This is called daily by the scheduled job.
+	 * Report MAU count for a tenant. Called daily by the scheduled job.
+	 * @param polarCustomerId - The Polar customer ID.
+	 * @param mauCount - The monthly active user count.
+	 * @param tenantId - The tenant identifier.
+	 * @param month - The month being reported (YYYY-MM format).
 	 */
 	static async reportMAU(
 		polarCustomerId: string,
@@ -148,13 +156,13 @@ export default class PolarService {
 		]);
 	}
 
-	// ============================================================================
-	// CHECKOUT
-	// ============================================================================
-
 	/**
 	 * Create a checkout session for a new subscription.
-	 * Returns the checkout URL to redirect the user to.
+	 * @param productId - The Polar product ID.
+	 * @param customerId - The Polar customer ID.
+	 * @param successUrl - URL to redirect to after successful checkout.
+	 * @param metadata - Additional key-value pairs for the checkout.
+	 * @returns Object containing the checkout URL.
 	 */
 	static async createCheckoutSession(
 		productId: string,
@@ -171,13 +179,10 @@ export default class PolarService {
 		return { url: checkout.url };
 	}
 
-	// ============================================================================
-	// CUSTOMER PORTAL
-	// ============================================================================
-
 	/**
-	 * Create a customer portal session.
-	 * Returns the portal URL for the customer to manage their subscription.
+	 * Create a customer portal session for subscription management.
+	 * @param customerId - The Polar customer ID.
+	 * @returns Object containing the portal URL.
 	 */
 	static async createPortalSession(customerId: string): Promise<{ url: string }> {
 		let session = await PolarService.client.customerSessions.create({ customerId });
