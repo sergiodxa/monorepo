@@ -12,29 +12,29 @@ VALUES (
   'openid email profile',
   NULL,
   0,
-  datetime('now'),
-  datetime('now')
+  strftime('%s', 'now') * 1000,
+  strftime('%s', 'now') * 1000
 )
 ON CONFLICT (id) DO NOTHING;
 
 -- Add localhost redirect URI for development
-INSERT INTO redirect_uris (id, client_id, uri, environment, created_at)
+INSERT INTO client_redirect_uris (id, client_id, uri, environment, created_at)
 VALUES (
   'dashboard-redirect-localhost',
   'dashboard',
   'http://localhost:3004/onboarding/callback',
   'development',
-  datetime('now')
+  strftime('%s', 'now') * 1000
 )
 ON CONFLICT (id) DO NOTHING;
 
 -- Add production redirect URI
-INSERT INTO redirect_uris (id, client_id, uri, environment, created_at)
+INSERT INTO client_redirect_uris (id, client_id, uri, environment, created_at)
 VALUES (
   'dashboard-redirect-prod',
   'dashboard',
   'https://auth.sergiodxa.com/onboarding/callback',
   'production',
-  datetime('now')
+  strftime('%s', 'now') * 1000
 )
 ON CONFLICT (id) DO NOTHING;
