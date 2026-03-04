@@ -15,7 +15,9 @@ VALUES (
   strftime('%s', 'now') * 1000,
   strftime('%s', 'now') * 1000
 )
-ON CONFLICT (id) DO NOTHING;
+ON CONFLICT (id) DO UPDATE SET
+  allowed_scopes = 'openid email profile',
+  updated_at = strftime('%s', 'now') * 1000;
 
 -- Add localhost redirect URI for development
 INSERT INTO client_redirect_uris (id, client_id, uri, environment, created_at)
