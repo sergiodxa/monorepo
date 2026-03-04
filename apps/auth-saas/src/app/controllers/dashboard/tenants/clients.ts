@@ -97,7 +97,8 @@ export default {
 							(s) => html`
 												<li class="flex justify-between items-center text-sm">
 													<span>${s.name || "Unnamed secret"}</span>
-													<form method="POST" action="/dashboard/tenants/${tenant.id}/clients/${params.id}/secrets/${s.id}?_method=DELETE" class="inline">
+													<form method="POST" action="/dashboard/tenants/${tenant.id}/clients/${params.id}/secrets/${s.id}" class="inline">
+														<input type="hidden" name="_method" value="DELETE">
 														<button type="submit" class="text-red-600 hover:text-red-800" onclick="return confirm('Revoke this secret?')">Revoke</button>
 													</form>
 												</li>
@@ -113,7 +114,8 @@ export default {
 							(u) => html`
 												<li class="flex justify-between items-center text-sm">
 													<code class="bg-gray-100 px-2 py-1 rounded">${u.uri}</code>
-													<form method="POST" action="/dashboard/tenants/${tenant.id}/clients/${params.id}/redirect-uris/${u.id}?_method=DELETE" class="inline">
+													<form method="POST" action="/dashboard/tenants/${tenant.id}/clients/${params.id}/redirect-uris/${u.id}" class="inline">
+														<input type="hidden" name="_method" value="DELETE">
 														<button type="submit" class="text-red-600 hover:text-red-800" onclick="return confirm('Remove this URI?')">Remove</button>
 													</form>
 												</li>
@@ -132,7 +134,8 @@ export default {
 														<code class="bg-gray-100 px-2 py-1 rounded">${u.uri}</code>
 														<span class="ml-2 text-gray-500">(${u.type})</span>
 													</div>
-													<form method="POST" action="/dashboard/tenants/${tenant.id}/clients/${params.id}/logout-uris/${u.id}?_method=DELETE" class="inline">
+													<form method="POST" action="/dashboard/tenants/${tenant.id}/clients/${params.id}/logout-uris/${u.id}" class="inline">
+														<input type="hidden" name="_method" value="DELETE">
 														<button type="submit" class="text-red-600 hover:text-red-800" onclick="return confirm('Remove this URI?')">Remove</button>
 													</form>
 												</li>
@@ -154,7 +157,8 @@ export default {
 							</div>
 							<div class="flex gap-2">
 								<a href="/dashboard/tenants/${tenant.id}/clients/${params.id}/edit" class="text-blue-600 hover:text-blue-800">Edit</a>
-								<form method="POST" action="/dashboard/tenants/${tenant.id}/clients/${params.id}?_method=DELETE" class="inline">
+								<form method="POST" action="/dashboard/tenants/${tenant.id}/clients/${params.id}" class="inline">
+									<input type="hidden" name="_method" value="DELETE">
 									<button type="submit" class="text-red-600 hover:text-red-800" onclick="return confirm('Delete this client?')">Delete</button>
 								</form>
 							</div>
@@ -298,7 +302,8 @@ export default {
 						content: html`
 						<h2 class="text-2xl font-bold mb-6">Edit Client</h2>
 
-						<form method="POST" action="/dashboard/tenants/${tenant.id}/clients/${params.id}?_method=PUT" class="bg-white rounded-lg border p-6 space-y-4 max-w-lg">
+						<form method="POST" action="/dashboard/tenants/${tenant.id}/clients/${params.id}" class="bg-white rounded-lg border p-6 space-y-4 max-w-lg">
+							<input type="hidden" name="_method" value="PUT">
 							<div>
 								<label class="block text-sm font-medium text-gray-700 mb-1" for="name">Name</label>
 								<input type="text" id="name" name="name" value="${client.name}" required class="w-full border rounded-lg px-3 py-2">

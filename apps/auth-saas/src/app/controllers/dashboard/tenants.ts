@@ -328,7 +328,7 @@ export default {
 				<main class="max-w-lg mx-auto px-4 py-8">
 					<h1 class="text-2xl font-bold mb-6">Edit Tenant</h1>
 
-					<form method="POST" action="/dashboard/tenants/${params.id}?_method=PUT" class="bg-white rounded-lg border p-6 space-y-4">
+					<form method="POST" action="/dashboard/tenants/${params.id}" class="bg-white rounded-lg border p-6 space-y-4">
 						<input type="hidden" name="_method" value="PUT">
 
 						<div>

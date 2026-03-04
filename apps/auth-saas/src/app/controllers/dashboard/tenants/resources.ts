@@ -93,7 +93,8 @@ export default {
 													<code class="font-medium">${s.name}</code>
 													<p class="text-gray-500 text-sm">${s.description ?? "No description"}</p>
 												</div>
-												<form method="POST" action="/dashboard/tenants/${tenant.id}/resources/${params.id}/scopes/${i}?_method=DELETE" class="inline">
+												<form method="POST" action="/dashboard/tenants/${tenant.id}/resources/${params.id}/scopes/${i}" class="inline">
+													<input type="hidden" name="_method" value="DELETE">
 													<button type="submit" class="text-red-600 hover:text-red-800 text-sm" onclick="return confirm('Remove this scope?')">Remove</button>
 												</form>
 											</li>
@@ -116,7 +117,8 @@ export default {
 							</div>
 							<div class="flex gap-2">
 								<a href="/dashboard/tenants/${tenant.id}/resources/${params.id}/edit" class="text-blue-600 hover:text-blue-800">Edit</a>
-								<form method="POST" action="/dashboard/tenants/${tenant.id}/resources/${params.id}?_method=DELETE" class="inline">
+								<form method="POST" action="/dashboard/tenants/${tenant.id}/resources/${params.id}" class="inline">
+									<input type="hidden" name="_method" value="DELETE">
 									<button type="submit" class="text-red-600 hover:text-red-800" onclick="return confirm('Delete this resource?')">Delete</button>
 								</form>
 							</div>
@@ -226,7 +228,8 @@ export default {
 						content: html`
 						<h2 class="text-2xl font-bold mb-6">Edit Resource</h2>
 
-						<form method="POST" action="/dashboard/tenants/${tenant.id}/resources/${params.id}?_method=PUT" class="bg-white rounded-lg border p-6 space-y-4 max-w-lg">
+						<form method="POST" action="/dashboard/tenants/${tenant.id}/resources/${params.id}" class="bg-white rounded-lg border p-6 space-y-4 max-w-lg">
+							<input type="hidden" name="_method" value="PUT">
 							<div>
 								<label class="block text-sm font-medium text-gray-700 mb-1" for="identifier">Identifier (Audience)</label>
 								<input type="text" id="identifier" name="identifier" value="${resource.identifier}" required class="w-full border rounded-lg px-3 py-2">

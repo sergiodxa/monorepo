@@ -1,7 +1,6 @@
 import { createRouter } from "remix/fetch-router";
 import { formData } from "remix/form-data-middleware";
-
-import methodOverride from "./middleware/method-override";
+import { methodOverride } from "remix/method-override-middleware";
 
 import polarWebhook from "./controllers/api/webhooks/polar";
 import dashboardIndex from "./controllers/dashboard/index";
@@ -31,7 +30,7 @@ import trailingSlash from "./middleware/trailing-slash";
 import routes from "./routes";
 
 export const router = createRouter({
-	middleware: [trailingSlash, logger, database, formData(), methodOverride],
+	middleware: [trailingSlash, logger, database, formData(), methodOverride()],
 	defaultHandler: notFound,
 });
 

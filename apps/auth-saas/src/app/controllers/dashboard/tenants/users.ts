@@ -114,7 +114,8 @@ export default {
 														<p class="text-gray-600">${s.user_agent ? s.user_agent.slice(0, 50) : "Unknown device"}</p>
 														<p class="text-gray-400 text-xs">Expires: ${new Date(s.expires_at).toLocaleString()}</p>
 													</div>
-													<form method="POST" action="/dashboard/tenants/${tenant.id}/users/${params.id}/sessions/${s.id}?_method=DELETE" class="inline">
+													<form method="POST" action="/dashboard/tenants/${tenant.id}/users/${params.id}/sessions/${s.id}" class="inline">
+														<input type="hidden" name="_method" value="DELETE">
 														<button type="submit" class="text-red-600 hover:text-red-800">Revoke</button>
 													</form>
 												</li>
@@ -133,7 +134,8 @@ export default {
 														<p class="font-medium">${p.name ?? "Unnamed passkey"}</p>
 														<p class="text-gray-400 text-xs">${p.deviceType || "Unknown device"} • Last used: ${p.lastUsedAt ? new Date(p.lastUsedAt).toLocaleDateString() : "Never"}</p>
 													</div>
-													<form method="POST" action="/dashboard/tenants/${tenant.id}/users/${params.id}/passkeys/${p.id}?_method=DELETE" class="inline">
+													<form method="POST" action="/dashboard/tenants/${tenant.id}/users/${params.id}/passkeys/${p.id}" class="inline">
+														<input type="hidden" name="_method" value="DELETE">
 														<button type="submit" class="text-red-600 hover:text-red-800" onclick="return confirm('Delete this passkey?')">Delete</button>
 													</form>
 												</li>
@@ -152,7 +154,8 @@ export default {
 														<p class="font-medium">Client: ${g.client_id}</p>
 														<p class="text-gray-400 text-xs">Scopes: ${g.scopes}</p>
 													</div>
-													<form method="POST" action="/dashboard/tenants/${tenant.id}/users/${params.id}/grants/${g.id}?_method=DELETE" class="inline">
+													<form method="POST" action="/dashboard/tenants/${tenant.id}/users/${params.id}/grants/${g.id}" class="inline">
+														<input type="hidden" name="_method" value="DELETE">
 														<button type="submit" class="text-red-600 hover:text-red-800" onclick="return confirm('Revoke access?')">Revoke</button>
 													</form>
 												</li>
@@ -174,7 +177,8 @@ export default {
 							</div>
 							<div class="flex gap-2">
 								<a href="/dashboard/tenants/${tenant.id}/users/${params.id}/edit" class="text-blue-600 hover:text-blue-800">Edit</a>
-								<form method="POST" action="/dashboard/tenants/${tenant.id}/users/${params.id}?_method=DELETE" class="inline">
+								<form method="POST" action="/dashboard/tenants/${tenant.id}/users/${params.id}" class="inline">
+									<input type="hidden" name="_method" value="DELETE">
 									<button type="submit" class="text-red-600 hover:text-red-800" onclick="return confirm('Delete this user? This cannot be undone.')">Delete</button>
 								</form>
 							</div>
@@ -241,7 +245,8 @@ export default {
 						content: html`
 						<h2 class="text-2xl font-bold mb-6">Edit User</h2>
 
-						<form method="POST" action="/dashboard/tenants/${tenant.id}/users/${params.id}?_method=PUT" class="bg-white rounded-lg border p-6 space-y-4 max-w-lg">
+						<form method="POST" action="/dashboard/tenants/${tenant.id}/users/${params.id}" class="bg-white rounded-lg border p-6 space-y-4 max-w-lg">
+							<input type="hidden" name="_method" value="PUT">
 							<div>
 								<label class="block text-sm font-medium text-gray-700 mb-1" for="displayName">Display Name</label>
 								<input type="text" id="displayName" name="displayName" value="${user.display_name ?? ""}" class="w-full border rounded-lg px-3 py-2">
