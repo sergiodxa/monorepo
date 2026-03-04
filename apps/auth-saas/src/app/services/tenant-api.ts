@@ -70,16 +70,15 @@ const UserSchema = s.object({
 	updated_at: s.string(),
 });
 
-/** Schema for user session. */
+/** Schema for user session (from API response). */
 const SessionSchema = s.object({
 	id: s.string(),
-	subject_id: s.string(),
-	client_id: s.string(),
+	clientId: s.string(),
 	ip: s.nullable(s.string()),
-	user_agent: s.nullable(s.string()),
-	expires_at: s.string(),
-	created_at: s.string(),
-	updated_at: s.string(),
+	userAgent: s.nullable(s.string()),
+	expiresAt: s.string(),
+	createdAt: s.string(),
+	updatedAt: s.string(),
 });
 
 /** Schema for resource scope. */
@@ -121,42 +120,36 @@ const PasskeySchema = s.object({
 	createdAt: s.string(),
 });
 
-/** Schema for OAuth grant. */
+/** Schema for OAuth grant (from API response). */
 const GrantSchema = s.object({
 	id: s.string(),
-	subject_id: s.string(),
-	client_id: s.string(),
-	scopes: s.string(),
-	resources: s.nullable(s.string()),
-	created_at: s.string(),
-	updated_at: s.string(),
+	client: s.nullable(
+		s.object({
+			id: s.string(),
+			name: s.string(),
+		}),
+	),
+	scopes: s.array(s.string()),
+	createdAt: s.string(),
+	updatedAt: s.string(),
 });
 
-/** Schema for social connection. */
+/** Schema for social connection (from API response). */
 const ConnectionSchema = s.object({
 	id: s.string(),
-	subject_id: s.string(),
 	provider: s.string(),
-	provider_user_id: s.string(),
-	email: s.nullable(s.string()),
-	display_name: s.nullable(s.string()),
-	avatar_url: s.nullable(s.string()),
-	access_token: s.nullable(s.string()),
-	refresh_token: s.nullable(s.string()),
-	token_expires_at: s.nullable(s.string()),
-	created_at: s.string(),
-	updated_at: s.string(),
+	providerUserId: s.string(),
+	createdAt: s.string(),
+	updatedAt: s.string(),
 });
 
-/** Schema for JWT signing key. */
+/** Schema for JWT signing key (from API response - keys not exposed). */
 const SigningKeySchema = s.object({
 	id: s.string(),
 	algorithm: s.string(),
-	public_key: s.string(),
-	private_key: s.string(),
-	is_active: s.union([s.boolean(), s.number()]),
-	created_at: s.string(),
-	rotated_at: s.nullable(s.string()),
+	isCurrent: s.union([s.boolean(), s.number()]),
+	createdAt: s.string(),
+	expiresAt: s.nullable(s.string()),
 });
 
 /** Schema for ID response. */

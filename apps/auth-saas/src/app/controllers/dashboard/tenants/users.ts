@@ -111,8 +111,8 @@ export default {
 							(s) => html`
 												<li class="flex justify-between items-center text-sm border-b pb-2 last:border-0 last:pb-0">
 													<div>
-														<p class="text-gray-600">${s.user_agent ? s.user_agent.slice(0, 50) : "Unknown device"}</p>
-														<p class="text-gray-400 text-xs">Expires: ${new Date(s.expires_at).toLocaleString()}</p>
+														<p class="text-gray-600">${s.userAgent ? s.userAgent.slice(0, 50) : "Unknown device"}</p>
+														<p class="text-gray-400 text-xs">Expires: ${new Date(s.expiresAt).toLocaleString()}</p>
 													</div>
 													<form method="POST" action="/dashboard/tenants/${tenant.id}/users/${params.id}/sessions/${s.id}" class="inline">
 														<input type="hidden" name="_method" value="DELETE">
@@ -151,8 +151,8 @@ export default {
 							(g) => html`
 												<li class="flex justify-between items-center text-sm border-b pb-2 last:border-0 last:pb-0">
 													<div>
-														<p class="font-medium">Client: ${g.client_id}</p>
-														<p class="text-gray-400 text-xs">Scopes: ${g.scopes}</p>
+														<p class="font-medium">Client: ${g.client?.name ?? "Unknown"}</p>
+														<p class="text-gray-400 text-xs">Scopes: ${g.scopes.join(", ")}</p>
 													</div>
 													<form method="POST" action="/dashboard/tenants/${tenant.id}/users/${params.id}/grants/${g.id}" class="inline">
 														<input type="hidden" name="_method" value="DELETE">
