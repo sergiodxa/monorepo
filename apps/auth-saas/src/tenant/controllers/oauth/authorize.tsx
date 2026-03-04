@@ -177,14 +177,20 @@ export default form<"/authorize">({
 								: undefined,
 					});
 
-					let allowCredentials = validPasskeys.map((p) => ({
-						id: p.credential_id!, // Already filtered for non-null credential_id
-						type: "public-key" as const,
-						// Use stored transports, or default to "internal" for platform authenticators
-						transports: p.transports
+					let allowCredentials = validPasskeys.map((p) => {
+						let transports = p.transports
 							? (p.transports.split(",") as AuthenticatorTransport[])
-							: (["internal"] as AuthenticatorTransport[]),
-					}));
+							: (["internal"] as AuthenticatorTransport[]);
+						// If "internal" is present, only use that to avoid Safari showing QR code
+						if (transports.includes("internal")) {
+							transports = ["internal"];
+						}
+						return {
+							id: p.credential_id!, // Already filtered for non-null credential_id
+							type: "public-key" as const,
+							transports,
+						};
+					});
 
 					log.info("Rendering authentication form", {
 						email,
