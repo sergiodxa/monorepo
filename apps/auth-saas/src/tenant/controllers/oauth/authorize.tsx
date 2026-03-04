@@ -142,14 +142,12 @@ export default form<"/authorize">({
 
 			if (action === "check_email") {
 				let subject = await Subject.findByEmail(db, email);
-				let hasPasskeys = false;
+				// Only consider passkeys with credential_id (legacy passkeys without it are unusable)
+				let validPasskeys = subject
+					? (await Passkey.listBySubject(db, subject.id)).filter((p) => p.credential_id)
+					: [];
 
-				if (subject) {
-					let passkeys = await Passkey.listBySubject(db, subject.id);
-					hasPasskeys = passkeys.length > 0;
-				}
-
-				if (hasPasskeys && subject) {
+				if (validPasskeys.length > 0 && subject) {
 					let { id: challengeId, challenge } = await WebAuthnChallenge.createForAuthentication(db, {
 						subjectId: subject.id,
 						clientId: client_id,
@@ -163,15 +161,11 @@ export default form<"/authorize">({
 								: undefined,
 					});
 
-					let passkeys = await Passkey.listBySubject(db, subject.id);
-					// Filter out passkeys without credential_id (legacy data before migration 0006)
-					let allowCredentials = passkeys
-						.filter((p) => p.credential_id)
-						.map((p) => ({
-							id: p.credential_id,
-							type: "public-key" as const,
-							transports: p.transports?.split(",") as AuthenticatorTransport[] | undefined,
-						}));
+					let allowCredentials = validPasskeys.map((p) => ({
+						id: p.credential_id,
+						type: "public-key" as const,
+						transports: p.transports?.split(",") as AuthenticatorTransport[] | undefined,
+					}));
 
 					let html = await renderToString(
 						<AuthenticateForm
