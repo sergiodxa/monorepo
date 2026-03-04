@@ -87,14 +87,14 @@ export let WebAuthnAuth = clientEntry(
 					throw new Error(errData.error ?? "Authentication failed");
 				}
 
-				// Success - the server will redirect
+				// Success - follow the redirect from server
+				let successData = (await res.json()) as { redirect?: string };
+				
 				status = "success";
 				handle.update();
 
-				// Follow redirect
-				let successData = (await res.json()) as { redirectUrl?: string };
-				if (successData.redirectUrl) {
-					window.location.href = successData.redirectUrl;
+				if (successData.redirect) {
+					window.location.href = successData.redirect;
 				}
 			} catch (error) {
 				status = "error";
