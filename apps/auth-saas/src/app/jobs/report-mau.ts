@@ -4,23 +4,26 @@ import { env } from "cloudflare:workers";
 import AnalyticsService from "../services/analytics";
 import PolarService from "../services/polar";
 
-/**
- * Subscription row from D1.
- */
+/** Database row for subscription data with Polar customer ID. */
 interface SubscriptionRow {
+	/** Tenant identifier. */
 	tenant_id: string;
+	/** Polar customer ID for billing, null if not subscribed. */
 	polar_customer_id: string | null;
 }
 
 /**
- * Daily job to report MAU counts to Polar for usage-based billing.
+ * Daily scheduled job to report Monthly Active Users (MAU) to Polar for usage-based billing.
  *
- * This job:
+ * This job runs daily at 1:00 AM UTC via cron trigger and:
  * 1. Queries Analytics Engine for MAU counts per tenant
  * 2. Fetches subscription data from D1 to get Polar customer IDs
- * 3. Reports MAU to Polar meters API for each tenant
+ * 3. Reports MAU to Polar meters API for each tenant with an active subscription
  *
- * Runs daily at 1:00 AM UTC via cron trigger.
+ * Tenants without Polar subscriptions are skipped. Failed reports are logged but
+ * do not prevent other tenants from being processed.
+ *
+ * @param controller - Cloudflare scheduled controller with cron metadata
  */
 export async function reportMAU(controller: ScheduledController): Promise<void> {
 	let logger = new Logger();
@@ -32,7 +35,6 @@ export async function reportMAU(controller: ScheduledController): Promise<void> 
 	});
 
 	try {
-		// Get MAU counts from Analytics Engine
 		let mauResults = await AnalyticsService.queryAllTenantsMAU(month);
 
 		if (mauResults.length === 0) {
@@ -45,7 +47,6 @@ export async function reportMAU(controller: ScheduledController): Promise<void> 
 			tenant_count: mauResults.length,
 		});
 
-		// Get subscription data from D1 to map tenant_id -> polar_customer_id
 		let tenantIds = mauResults.map((r) => r.tenant_id);
 		let placeholders = tenantIds.map(() => "?").join(", ");
 
@@ -62,7 +63,6 @@ export async function reportMAU(controller: ScheduledController): Promise<void> 
 			}
 		}
 
-		// Report MAU to Polar for each tenant with a subscription
 		let reported = 0;
 		let skipped = 0;
 		let failed = 0;
@@ -71,7 +71,6 @@ export async function reportMAU(controller: ScheduledController): Promise<void> 
 			let polarCustomerId = customerMap.get(tenant_id);
 
 			if (!polarCustomerId) {
-				// Tenant doesn't have a Polar subscription yet, skip
 				skipped++;
 				continue;
 			}

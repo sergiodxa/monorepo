@@ -1,48 +1,94 @@
 import { JWT } from "@edgefirst-dev/jwt";
 
-const ID_TOKEN_TTL = 60 * 60 * 1000; // 1 hour in ms
+/** ID token time-to-live in milliseconds (1 hour). */
+const ID_TOKEN_TTL = 60 * 60 * 1000;
 
+/**
+ * Value Object for OpenID Connect ID Tokens.
+ * Extends JWT with identity claims for authentication.
+ */
 export default class IdToken extends JWT {
+	/**
+	 * Subject identifier (sub claim).
+	 */
 	override get subject() {
 		return this.parser.string("sub");
 	}
 
+	/**
+	 * Client ID that requested this token (aud claim).
+	 */
 	override get audience() {
 		return this.parser.string("aud");
 	}
 
+	/**
+	 * User's full name (name claim).
+	 */
 	get name() {
 		return this.parser.string("name");
 	}
 
+	/**
+	 * User's email address (email claim).
+	 */
 	get email() {
 		return this.parser.string("email");
 	}
 
+	/**
+	 * URL to user's profile picture (picture claim).
+	 */
 	get picture() {
 		return this.parser.string("picture");
 	}
 
+	/**
+	 * User's preferred username (preferred_username claim).
+	 */
 	get username() {
 		return this.parser.string("preferred_username");
 	}
 
+	/**
+	 * Whether the user's email has been verified (email_verified claim).
+	 */
 	get emailVerified() {
 		return this.parser.boolean("email_verified");
 	}
 
+	/**
+	 * Client-provided nonce for replay protection (nonce claim).
+	 */
 	get nonce() {
 		return this.parser.string("nonce");
 	}
 
+	/**
+	 * Time of original authentication (auth_time claim).
+	 */
 	get authTime() {
 		return this.parser.number("auth_time");
 	}
 
+	/**
+	 * Token not-before time as Date (nbf claim).
+	 */
 	override get notBefore() {
 		return new Date(this.parser.number("nbf") * 1000);
 	}
 
+	/**
+	 * Generates a new ID token with the given parameters.
+	 * Claims included depend on requested scopes:
+	 * - email scope: email, email_verified
+	 * - profile scope: name, preferred_username, picture
+	 * @param issuer - Token issuer URL
+	 * @param subject - User identity data
+	 * @param client - Client requesting the token
+	 * @param options - Optional nonce, scope, and authTime
+	 * @returns New IdToken instance
+	 */
 	static generate(
 		issuer: string,
 		subject: {
@@ -67,7 +113,7 @@ export default class IdToken extends JWT {
 			jti: crypto.randomUUID(),
 			exp: expiresAt,
 			iat: now,
-			nbf: now, // Token is valid immediately
+			nbf: now,
 			...(options?.authTime && { auth_time: options.authTime }),
 			...(options?.nonce && { nonce: options.nonce }),
 			...(scope.includes("email") && {
