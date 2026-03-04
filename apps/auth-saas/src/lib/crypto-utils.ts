@@ -8,8 +8,13 @@
  * @param input - The string to sign
  * @param secret - The secret key for HMAC signing
  * @returns Base64url-encoded HMAC-SHA256 signature
+ * @throws {Error} If the secret is empty or not provided
  */
 export async function hmacSign(input: string, secret: string): Promise<string> {
+	if (!secret || secret.length === 0) {
+		throw new Error("HMAC secret is required. Ensure SESSION_SECRET is set in .dev.vars or as a secret.");
+	}
+
 	let encoder = new TextEncoder();
 	let key = await crypto.subtle.importKey(
 		"raw",
