@@ -79,8 +79,8 @@ export default form<"/onboarding">({
 							loading.classList.remove('hidden');
 
 							try {
-								// First try to authenticate (existing user)
-								let response = await fetch('/onboarding/webauthn/auth/options', {
+								// First try to register (new user)
+								let response = await fetch('/onboarding/webauthn/register/options', {
 									method: 'POST',
 									headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
 									body: new URLSearchParams({ email }),
@@ -88,30 +88,7 @@ export default form<"/onboarding">({
 
 								if (response.ok) {
 									const data = await response.json();
-									const authResponse = await SimpleWebAuthnBrowser.startAuthentication(data.options);
-
-									const verifyResponse = await fetch('/onboarding/webauthn/auth/verify', {
-										method: 'POST',
-										headers: { 'Content-Type': 'application/json' },
-										body: JSON.stringify({ challengeId: data.challengeId, response: authResponse }),
-									});
-
-								if (verifyResponse.ok) {
-									// Session cookie is set by server via Set-Cookie header
-									window.location.href = '/dashboard';
-									return;
-								}
-								}
-
-								// User doesn't exist, try to register
-								response = await fetch('/onboarding/webauthn/register/options', {
-									method: 'POST',
-									headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-									body: new URLSearchParams({ email }),
-								});
-
-								if (response.ok) {
-									const data = await response.json();
+									console.log('Registration options:', data);
 									const regResponse = await SimpleWebAuthnBrowser.startRegistration(data.options);
 
 									const verifyResponse = await fetch('/onboarding/webauthn/register/verify', {
@@ -121,18 +98,47 @@ export default form<"/onboarding">({
 									});
 
 									if (verifyResponse.ok) {
-										// Session cookie is set by server via Set-Cookie header
 										window.location.href = '/dashboard';
 										return;
 									} else {
 										const errorData = await verifyResponse.json();
 										throw new Error(errorData.error || 'Registration failed');
 									}
-								} else {
-									const errorData = await response.json();
-									throw new Error(errorData.error || 'Could not start registration');
 								}
+
+								// Registration failed (user exists with passkey), try to authenticate
+								const regError = await response.json();
+								if (regError.error && regError.error.includes('passkey')) {
+									response = await fetch('/onboarding/webauthn/auth/options', {
+										method: 'POST',
+										headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+										body: new URLSearchParams({ email }),
+									});
+
+									if (response.ok) {
+										const data = await response.json();
+										console.log('Authentication options:', data);
+										const authResponse = await SimpleWebAuthnBrowser.startAuthentication(data.options);
+
+										const verifyResponse = await fetch('/onboarding/webauthn/auth/verify', {
+											method: 'POST',
+											headers: { 'Content-Type': 'application/json' },
+											body: JSON.stringify({ challengeId: data.challengeId, response: authResponse }),
+										});
+
+										if (verifyResponse.ok) {
+											window.location.href = '/dashboard';
+											return;
+										} else {
+											const errorData = await verifyResponse.json();
+											throw new Error(errorData.error || 'Authentication failed');
+										}
+									}
+								}
+
+								throw new Error(regError.error || 'Could not continue');
 							} catch (err) {
+								console.error('WebAuthn error:', err);
 								loading.classList.add('hidden');
 								error.classList.remove('hidden');
 								document.getElementById('error-message').textContent = err.message || 'Authentication failed';
