@@ -31,7 +31,7 @@ import trailingSlash from "./middleware/trailing-slash";
 import routes from "./routes";
 
 export const router = createRouter({
-	middleware: [trailingSlash, methodOverride, logger, database, formData()],
+	middleware: [trailingSlash, logger, database, formData(), methodOverride],
 	defaultHandler: notFound,
 });
 

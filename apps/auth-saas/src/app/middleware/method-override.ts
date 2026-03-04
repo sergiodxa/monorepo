@@ -1,48 +1,37 @@
+import { RequestMethods } from "remix/fetch-router";
+
 import middleware from "~/lib/middleware";
 
 /**
- * Method override middleware that converts POST requests with _method query parameter
- * to the specified HTTP method (PUT, PATCH, DELETE).
+ * Method override middleware that reads _method from query string OR form body.
  * 
  * This enables HTML forms (which only support GET/POST) to submit PUT/DELETE requests.
- * The _method parameter can be in the query string: ?_method=PUT
+ * The _method parameter can be in:
+ * - Query string: ?_method=PUT
+ * - Form body: <input type="hidden" name="_method" value="PUT">
+ * 
+ * Note: Must be placed AFTER formData middleware to read from form body.
  */
 export default middleware(async (context, next) => {
-	let request = context.request;
+	// Check query string first
+	let url = new URL(context.request.url);
+	let methodFromQuery = url.searchParams.get("_method");
 	
-	// Only override POST requests
-	if (request.method !== "POST") {
-		return next();
-	}
-
-	let url = new URL(request.url);
-	let methodOverride = url.searchParams.get("_method");
-
-	if (!methodOverride) {
+	// Then check form body (if formData middleware has run)
+	let methodFromBody = context.formData?.get("_method");
+	
+	let methodOverride = methodFromQuery ?? methodFromBody;
+	
+	if (typeof methodOverride !== "string") {
 		return next();
 	}
 
 	let method = methodOverride.toUpperCase();
 	
-	// Only allow safe method overrides
-	if (!["PUT", "PATCH", "DELETE"].includes(method)) {
-		return next();
+	// Only allow valid HTTP methods
+	if (RequestMethods.includes(method as (typeof RequestMethods)[number])) {
+		context.method = method as (typeof RequestMethods)[number];
 	}
-
-	// Remove _method from query string
-	url.searchParams.delete("_method");
-
-	// Create new request with overridden method
-	let newRequest = new Request(url.toString(), {
-		method,
-		headers: request.headers,
-		body: request.body,
-		// @ts-expect-error duplex is required for streaming bodies
-		duplex: "half",
-	});
-
-	// Replace request in context
-	context.request = newRequest;
 
 	return next();
 });
