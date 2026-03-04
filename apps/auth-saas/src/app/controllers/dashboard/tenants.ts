@@ -16,6 +16,19 @@ let CreateTenantSchema = s.object({
 	region: s.enum_(["wnam", "enam", "sam", "weur", "eeur", "apac", "oc", "afr", "me"]),
 });
 
+/** Maps region codes to user-friendly display names. */
+let REGION_NAMES: Record<string, string> = {
+	wnam: "Western North America",
+	enam: "Eastern North America",
+	sam: "South America",
+	weur: "Western Europe",
+	eeur: "Eastern Europe",
+	apac: "Asia Pacific",
+	oc: "Oceania",
+	afr: "Africa",
+	me: "Middle East",
+};
+
 let UpdateTenantSchema = s.object({
 	name: s.optional(s.string()),
 });
@@ -89,7 +102,7 @@ export default {
 							</div>
 							<div>
 								<dt class="text-gray-500 text-sm">Region</dt>
-								<dd>${tenant.region}</dd>
+								<dd>${REGION_NAMES[tenant.region] ?? tenant.region}</dd>
 							</div>
 							<div>
 								<dt class="text-gray-500 text-sm">Status</dt>
@@ -320,7 +333,7 @@ export default {
 
 						<div class="text-gray-500 text-sm">
 							<p><strong>Slug:</strong> ${tenant.slug} (cannot be changed)</p>
-							<p><strong>Region:</strong> ${tenant.region} (cannot be changed)</p>
+							<p><strong>Region:</strong> ${REGION_NAMES[tenant.region] ?? tenant.region} (cannot be changed)</p>
 						</div>
 
 						<button type="submit" class="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700">
