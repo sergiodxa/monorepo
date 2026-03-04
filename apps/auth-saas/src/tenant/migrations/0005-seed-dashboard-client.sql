@@ -40,3 +40,8 @@ VALUES (
   strftime('%s', 'now') * 1000
 )
 ON CONFLICT (id) DO NOTHING;
+
+-- Set the issuer for the platform tenant (required for token endpoint)
+INSERT INTO tenant_meta (key, value)
+VALUES ('issuer', 'localhost:3004')
+ON CONFLICT (key) DO UPDATE SET value = 'localhost:3004';
