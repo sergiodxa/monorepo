@@ -61,28 +61,25 @@ export let WebAuthnAuth = clientEntry(
 
 				let response = credential.response as AuthenticatorAssertionResponse;
 
-				// Submit credential to server
-				let formData = new FormData();
-				formData.append("challengeId", challengeId);
-				formData.append(
-					"credential",
-					JSON.stringify({
-						id: credential.id,
-						rawId: bufferToBase64url(credential.rawId),
-						response: {
-							clientDataJSON: bufferToBase64url(response.clientDataJSON),
-							authenticatorData: bufferToBase64url(response.authenticatorData),
-							signature: bufferToBase64url(response.signature),
-							userHandle: response.userHandle ? bufferToBase64url(response.userHandle) : null,
-						},
-						type: credential.type,
-						authenticatorAttachment: credential.authenticatorAttachment,
-					}),
-				);
-
+				// Submit credential to server as JSON
 				let res = await fetch(verifyUrl, {
 					method: "POST",
-					body: formData,
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify({
+						challengeId,
+						response: {
+							id: credential.id,
+							rawId: bufferToBase64url(credential.rawId),
+							response: {
+								clientDataJSON: bufferToBase64url(response.clientDataJSON),
+								authenticatorData: bufferToBase64url(response.authenticatorData),
+								signature: bufferToBase64url(response.signature),
+								userHandle: response.userHandle ? bufferToBase64url(response.userHandle) : null,
+							},
+							type: credential.type,
+							authenticatorAttachment: credential.authenticatorAttachment,
+						},
+					}),
 				});
 
 				if (!res.ok) {

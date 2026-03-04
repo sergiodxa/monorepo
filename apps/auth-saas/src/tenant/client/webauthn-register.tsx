@@ -71,27 +71,24 @@ export let WebAuthnRegister = clientEntry(
 
 				let response = credential.response as AuthenticatorAttestationResponse;
 
-				// Submit credential to server
-				let formData = new FormData();
-				formData.append("challengeId", challengeId);
-				formData.append(
-					"credential",
-					JSON.stringify({
-						id: credential.id,
-						rawId: bufferToBase64url(credential.rawId),
-						response: {
-							clientDataJSON: bufferToBase64url(response.clientDataJSON),
-							attestationObject: bufferToBase64url(response.attestationObject),
-							transports: response.getTransports?.() ?? [],
-						},
-						type: credential.type,
-						authenticatorAttachment: credential.authenticatorAttachment,
-					}),
-				);
-
+				// Submit credential to server as JSON
 				let res = await fetch(verifyUrl, {
 					method: "POST",
-					body: formData,
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify({
+						challengeId,
+						response: {
+							id: credential.id,
+							rawId: bufferToBase64url(credential.rawId),
+							response: {
+								clientDataJSON: bufferToBase64url(response.clientDataJSON),
+								attestationObject: bufferToBase64url(response.attestationObject),
+								transports: response.getTransports?.() ?? [],
+							},
+							type: credential.type,
+							authenticatorAttachment: credential.authenticatorAttachment,
+						},
+					}),
 				});
 
 				if (!res.ok) {
