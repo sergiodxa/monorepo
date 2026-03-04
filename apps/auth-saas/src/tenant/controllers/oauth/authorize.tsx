@@ -1,5 +1,3 @@
-import type { RemixNode } from "remix/component";
-
 import { ok } from "@pkg/http/response/html";
 import { isFailure } from "@pkg/result";
 import { validate } from "@pkg/validate";
@@ -7,6 +5,8 @@ import { renderToString } from "remix/component/server";
 import * as s from "remix/data-schema";
 
 import form from "~/lib/form";
+import { WebAuthnAuth } from "~/tenant/client/webauthn-auth";
+import { WebAuthnRegister } from "~/tenant/client/webauthn-register";
 import { Layout } from "~/tenant/components/layout";
 import Client from "~/tenant/models/client";
 import RedirectUri from "~/tenant/models/client/redirect-uri";
@@ -182,22 +182,24 @@ export default form<"/authorize">({
 					);
 					return ok(html);
 				} else {
-					let { id: challengeId, challenge } = await WebAuthnChallenge.createForRegistration(db, {
-						email,
-						clientId: client_id,
-						redirectUri: redirect_uri,
-						state,
-						nonce,
-						scope,
-						pkce:
-							code_challenge && code_challenge_method
-								? { challenge: code_challenge, method: code_challenge_method as "S256" | "plain" }
-								: undefined,
-					});
+					let { id: challengeId, challenge, userId } =
+						await WebAuthnChallenge.createForRegistration(db, {
+							email,
+							clientId: client_id,
+							redirectUri: redirect_uri,
+							state,
+							nonce,
+							scope,
+							pkce:
+								code_challenge && code_challenge_method
+									? { challenge: code_challenge, method: code_challenge_method as "S256" | "plain" }
+									: undefined,
+						});
 
 					let html = await renderToString(
 						<RegisterForm
 							email={email}
+							userId={userId}
 							challengeId={challengeId}
 							challenge={challenge}
 							rpId={rpId}
@@ -421,23 +423,23 @@ function AuthenticateForm() {
 				<h1 css={{ fontSize: "1.5rem", fontWeight: "600", marginBottom: "1rem" }}>
 					Sign in to {props.clientName}
 				</h1>
-				<p css={{ color: "#6B7280", marginBottom: "2rem" }}>
-					Use your passkey to sign in as <strong>{props.email}</strong>
-				</p>
 
-				<div id="webauthn-auth">
-					<noscript>
-						<p css={{ color: "#DC2626" }}>JavaScript is required for passkey authentication.</p>
-					</noscript>
-				</div>
-
-				<WebAuthnScript
-					type="authenticate"
-					challengeId={props.challengeId}
-					challenge={props.challenge}
-					rpId={props.rpId}
-					allowCredentials={props.allowCredentials}
+				<WebAuthnAuth
+					email={props.email}
+					setup={{
+						challengeId: props.challengeId,
+						options: {
+							challenge: props.challenge,
+							rpId: props.rpId,
+							allowCredentials: props.allowCredentials,
+						},
+						verifyUrl: routes.webauthn.auth.verify.href(),
+					}}
 				/>
+
+				<noscript>
+					<p css={{ color: "#DC2626" }}>JavaScript is required for passkey authentication.</p>
+				</noscript>
 			</div>
 		</Layout>
 	);
@@ -446,6 +448,7 @@ function AuthenticateForm() {
 /** Props for the WebAuthn registration form. */
 interface RegisterFormProps {
 	email: string;
+	userId: string;
 	challengeId: string;
 	challenge: string;
 	rpId: string;
@@ -470,62 +473,37 @@ function RegisterForm() {
 				<h1 css={{ fontSize: "1.5rem", fontWeight: "600", marginBottom: "1rem" }}>
 					Create your account
 				</h1>
-				<p css={{ color: "#6B7280", marginBottom: "2rem" }}>
-					Create a passkey for <strong>{props.email}</strong>
-				</p>
 
-				<div id="webauthn-register">
-					<noscript>
-						<p css={{ color: "#DC2626" }}>JavaScript is required for passkey registration.</p>
-					</noscript>
-				</div>
-
-				<WebAuthnScript
-					type="register"
-					challengeId={props.challengeId}
-					challenge={props.challenge}
-					rpId={props.rpId}
-					rpName={props.rpName}
+				<WebAuthnRegister
 					email={props.email}
+					setup={{
+						challengeId: props.challengeId,
+						options: {
+							challenge: props.challenge,
+							rp: {
+								id: props.rpId,
+								name: props.rpName,
+							},
+							user: {
+								id: props.userId,
+								name: props.email,
+								displayName: props.email,
+							},
+							pubKeyCredParams: [
+								{ alg: -7, type: "public-key" }, // ES256
+								{ alg: -257, type: "public-key" }, // RS256
+							],
+						},
+						verifyUrl: routes.webauthn.register.verify.href(),
+					}}
 				/>
+
+				<noscript>
+					<p css={{ color: "#DC2626" }}>JavaScript is required for passkey registration.</p>
+				</noscript>
 			</div>
 		</Layout>
 	);
 }
 
-/** Props for the WebAuthn client-side script injection. */
-interface WebAuthnScriptProps {
-	type: "authenticate" | "register";
-	challengeId: string;
-	challenge: string;
-	rpId: string;
-	allowCredentials?: Array<{
-		id: string;
-		type: "public-key";
-		transports?: AuthenticatorTransport[];
-	}>;
-	rpName?: string;
-	email?: string;
-}
 
-function WebAuthnScript() {
-	return (props: WebAuthnScriptProps): RemixNode => {
-		return (
-			<div id="webauthn-script-container">
-				<script
-					id="webauthn-data"
-					type="application/json"
-					data-type={props.type}
-					data-challenge-id={props.challengeId}
-					data-challenge={props.challenge}
-					data-rp-id={props.rpId}
-					data-rp-name={props.rpName}
-					data-email={props.email}
-					data-allow-credentials={
-						props.allowCredentials ? JSON.stringify(props.allowCredentials) : undefined
-					}
-				/>
-			</div>
-		);
-	};
-}
