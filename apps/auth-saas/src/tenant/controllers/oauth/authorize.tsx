@@ -180,7 +180,10 @@ export default form<"/authorize">({
 					let allowCredentials = validPasskeys.map((p) => ({
 						id: p.credential_id!, // Already filtered for non-null credential_id
 						type: "public-key" as const,
-						transports: p.transports?.split(",") as AuthenticatorTransport[] | undefined,
+						// Use stored transports, or default to "internal" for platform authenticators
+						transports: p.transports
+							? (p.transports.split(",") as AuthenticatorTransport[])
+							: (["internal"] as AuthenticatorTransport[]),
 					}));
 
 					log.info("Rendering authentication form", {
@@ -188,6 +191,7 @@ export default form<"/authorize">({
 						rpId,
 						credentialCount: allowCredentials.length,
 						credentialIds: allowCredentials.map((c) => c.id.substring(0, 20) + "..."),
+						transports: allowCredentials.map((c) => c.transports),
 					});
 
 					let html = await renderToString(
