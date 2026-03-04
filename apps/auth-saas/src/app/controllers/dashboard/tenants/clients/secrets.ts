@@ -68,7 +68,7 @@ export default {
 	),
 
 	create: action<"POST", "/dashboard/tenants/:tenantId/clients/:clientId/secrets">(
-		async ({ request, params, tenant, tenantApi, logger }) => {
+		async ({ formData, params, tenant, tenantApi, logger }) => {
 			let log = logger.action(`/dashboard/tenants/${tenant.id}/clients/${params.clientId}/secrets`);
 
 			let client = await tenantApi.getClient(params.clientId);
@@ -76,7 +76,6 @@ export default {
 				return new Response("Client not found", { status: 404 });
 			}
 
-			let formData = await request.formData();
 			let body = Object.fromEntries(formData);
 
 			let result = await validate(body, CreateSecretSchema);

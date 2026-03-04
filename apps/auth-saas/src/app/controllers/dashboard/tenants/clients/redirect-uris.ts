@@ -66,12 +66,11 @@ export default {
 	),
 
 	create: action<"POST", "/dashboard/tenants/:tenantId/clients/:clientId/redirect-uris">(
-		async ({ request, params, tenant, tenantApi, logger }) => {
+		async ({ formData, params, tenant, tenantApi, logger }) => {
 			let log = logger.action(
 				`/dashboard/tenants/${tenant.id}/clients/${params.clientId}/redirect-uris`,
 			);
 
-			let formData = await request.formData();
 			let body = Object.fromEntries(formData);
 
 			let result = await validate(body, CreateRedirectUriSchema);

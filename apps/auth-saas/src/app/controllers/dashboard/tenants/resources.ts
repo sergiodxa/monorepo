@@ -178,10 +178,9 @@ export default {
 	}),
 
 	create: action<"POST", "/dashboard/tenants/:tenantId/resources">(
-		async ({ request, tenant, tenantApi, logger }) => {
+		async ({ formData, tenant, tenantApi, logger }) => {
 			let log = logger.action(`/dashboard/tenants/${tenant.id}/resources`);
 
-			let formData = await request.formData();
 			let body = Object.fromEntries(formData);
 
 			let result = await validate(body, CreateResourceSchema);
@@ -255,10 +254,9 @@ export default {
 	),
 
 	update: action<"PUT", "/dashboard/tenants/:tenantId/resources/:id">(
-		async ({ request, params, tenant, tenantApi, logger }) => {
+		async ({ formData, params, tenant, tenantApi, logger }) => {
 			let log = logger.action(`/dashboard/tenants/${tenant.id}/resources/${params.id}`);
 
-			let formData = await request.formData();
 			let body = Object.fromEntries(formData);
 
 			let result = await validate(body, UpdateResourceSchema);

@@ -251,10 +251,9 @@ export default {
 	}),
 
 	create: action<"POST", "/dashboard/tenants/:tenantId/clients">(
-		async ({ request, tenant, tenantApi, logger }) => {
+		async ({ formData, tenant, tenantApi, logger }) => {
 			let log = logger.action(`/dashboard/tenants/${tenant.id}/clients`);
 
-			let formData = await request.formData();
 			let body = Object.fromEntries(formData);
 
 			let result = await validate(body, CreateClientSchema);
@@ -331,10 +330,9 @@ export default {
 	),
 
 	update: action<"PUT", "/dashboard/tenants/:tenantId/clients/:id">(
-		async ({ request, params, tenant, tenantApi, logger }) => {
+		async ({ formData, params, tenant, tenantApi, logger }) => {
 			let log = logger.action(`/dashboard/tenants/${tenant.id}/clients/${params.id}`);
 
-			let formData = await request.formData();
 			let body = Object.fromEntries(formData);
 
 			let result = await validate(body, UpdateClientSchema);

@@ -206,10 +206,9 @@ export default {
 		);
 	}),
 
-	create: action<"POST", "/dashboard/tenants">(async ({ db, request, platformSession, logger }) => {
+	create: action<"POST", "/dashboard/tenants">(async ({ db, formData, platformSession, logger }) => {
 		let log = logger.action("/dashboard/tenants");
 
-		let formData = await request.formData();
 		let body = Object.fromEntries(formData);
 
 		let result = await validate(body, CreateTenantSchema);
@@ -337,7 +336,7 @@ export default {
 	),
 
 	update: action<"PUT", "/dashboard/tenants/:id">(
-		async ({ db, request, params, platformSession, logger }) => {
+		async ({ db, formData, params, platformSession, logger }) => {
 			let log = logger.action(`/dashboard/tenants/${params.id}`);
 
 			let tenant = await Tenant.show(db, params.id);
@@ -345,7 +344,6 @@ export default {
 				return new Response("Not found", { status: 404 });
 			}
 
-			let formData = await request.formData();
 			let body = Object.fromEntries(formData);
 
 			let result = await validate(body, UpdateTenantSchema);

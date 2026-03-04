@@ -119,7 +119,7 @@ export default form<"/dashboard/tenants/:tenantId/hostname">({
 			);
 		},
 
-		async action({ request, db, tenant, logger }) {
+		async action({ request, formData, db, tenant, logger }) {
 			let log = logger.action(`/dashboard/tenants/${tenant.id}/hostname`);
 
 			let url = new URL(request.url);
@@ -144,7 +144,6 @@ export default form<"/dashboard/tenants/:tenantId/hostname">({
 					}
 				}
 			} else {
-				let formData = await request.formData();
 				let body = Object.fromEntries(formData);
 
 				let result = await validate(body, AddHostnameSchema);

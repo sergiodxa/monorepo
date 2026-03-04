@@ -87,10 +87,9 @@ export default form<"/dashboard/tenants/:tenantId/branding">({
 			);
 		},
 
-		async action({ request, tenant, tenantApi, logger }) {
+		async action({ formData, tenant, tenantApi, logger }) {
 			let log = logger.action(`/dashboard/tenants/${tenant.id}/branding`);
 
-			let formData = await request.formData();
 			let body = Object.fromEntries(formData);
 
 			let result = await validate(body, UpdateBrandingSchema);

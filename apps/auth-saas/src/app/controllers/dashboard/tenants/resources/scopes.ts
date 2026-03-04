@@ -61,7 +61,7 @@ export default {
 	),
 
 	create: action<"POST", "/dashboard/tenants/:tenantId/resources/:resourceId/scopes">(
-		async ({ request, params, tenant, tenantApi, logger }) => {
+		async ({ formData, params, tenant, tenantApi, logger }) => {
 			let log = logger.action(
 				`/dashboard/tenants/${tenant.id}/resources/${params.resourceId}/scopes`,
 			);
@@ -71,7 +71,6 @@ export default {
 				return new Response("Resource not found", { status: 404 });
 			}
 
-			let formData = await request.formData();
 			let body = Object.fromEntries(formData);
 
 			let result = await validate(body, CreateScopeSchema);

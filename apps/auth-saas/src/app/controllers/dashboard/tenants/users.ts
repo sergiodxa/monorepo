@@ -272,10 +272,9 @@ export default {
 	),
 
 	update: action<"PUT", "/dashboard/tenants/:tenantId/users/:id">(
-		async ({ request, params, tenant, tenantApi, logger }) => {
+		async ({ formData, params, tenant, tenantApi, logger }) => {
 			let log = logger.action(`/dashboard/tenants/${tenant.id}/users/${params.id}`);
 
-			let formData = await request.formData();
 			let body = Object.fromEntries(formData);
 
 			let result = await validate(body, UpdateUserSchema);
