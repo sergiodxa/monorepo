@@ -152,17 +152,16 @@ export default action<"GET", "/onboarding/callback">(async ({ request, db, logge
 	log.info("Login successful", { subjectId });
 
 	// Redirect to dashboard with session cookie
-	return new Response(null, {
-		status: 302,
-		headers: {
-			Location: "/dashboard",
-			"Set-Cookie": [
-				`__platform_session=${sessionToken}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${30 * 24 * 60 * 60}`,
-				// Clear the OAuth state cookie
-				`__oauth_state=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0`,
-			].join(", "),
-		},
-	});
+	let headers = new Headers();
+	headers.set("Location", "/dashboard");
+	headers.append(
+		"Set-Cookie",
+		`__platform_session=${sessionToken}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${30 * 24 * 60 * 60}`,
+	);
+	// Clear the OAuth state cookie
+	headers.append("Set-Cookie", `__oauth_state=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0`);
+
+	return new Response(null, { status: 302, headers });
 });
 
 /**
