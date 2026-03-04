@@ -1,6 +1,6 @@
 ---
 title: How to Create a Per-Request Database Instance with Middleware
-excerpt: Create a database instance when the request starts and close it when it ends.
+excerpt: Manage database lifecycle with React Router middleware, ensuring connections close even when errors occur.
 tech: react-router@7.9.0 @react-router/fs-routes@7.0.0
 ---
 
@@ -34,7 +34,7 @@ function createDatabaseMiddleware(): MiddlewareFunction<Response> {
 			context.set(databaseContext, db);
 			return await next();
 		} finally {
-			await db.close();
+			await db.close(); // or waitUntil(db.close()) if supported by your runtime
 		}
 	};
 }
@@ -88,16 +88,11 @@ import { createDatabase } from "~/lib/database";
 function createTransactionMiddleware(): MiddlewareFunction<Response> {
 	return async function transactionMiddleware({ context }, next) {
 		let db = createDatabase();
-		await db.beginTransaction();
-
 		try {
-			context.set(databaseContext, db);
-			let response = await next();
-			await db.commit();
-			return response;
-		} catch (error) {
-			await db.rollback();
-			throw error;
+			return await db.transaction((tx) => {
+				context.set(databaseContext, tx);
+				return next();
+			});
 		} finally {
 			await db.close();
 		}
@@ -107,7 +102,7 @@ function createTransactionMiddleware(): MiddlewareFunction<Response> {
 export const transactionMiddleware = createTransactionMiddleware();
 ```
 
-This variant starts a transaction before the request and commits it after. If anything throws, the transaction rolls back and the error propagates. The `finally` block still closes the connection regardless of the outcome.
+This variants wraps `next` in a transaction and stores the `tx` object in the database context. If anything throws, the transaction rolls back automatically. The `finally` block still closes the connection regardless of the outcome.
 
 Use this when you need atomic operations across multiple database calls within a single request.
 

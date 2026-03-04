@@ -15,7 +15,6 @@
 	"oxc.fmt.configPath": "./.oxfmtrc.json",
 	"oxc.path.oxfmt": "./node_modules/.bin/oxfmt",
 	"oxc.path.oxlint": "./node_modules/.bin/oxlint",
-	"typescript.experimental.useTsgo": true,
 	"typescript.preferences.autoImportFileExcludePatterns": ["lucide-react"],
 	"editor.wordWrapColumn": 100,
 	"editor.wordWrap": "on",

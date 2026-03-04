@@ -168,7 +168,7 @@ const MessageResponseSchema = s.object({ message: s.string() });
 export class TenantApiService {
 	constructor(private tenantId: string) {}
 
-	private getTenantStub() {
+	private get stub() {
 		return env.TENANT.getByName(this.tenantId);
 	}
 
@@ -177,13 +177,12 @@ export class TenantApiService {
 		schema: Schema<Input, Output>,
 		options: RequestInit = {},
 	): Promise<Output> {
-		let stub = this.getTenantStub();
 		let url = `https://tenant.internal${path}`;
 
 		// Generate signed internal token for secure authentication
 		let internalToken = await createInternalToken(env.INTERNAL_SECRET);
 
-		let response = await stub.fetch(url, {
+		let response = await this.stub.fetch(url, {
 			...options,
 			headers: {
 				"Content-Type": "application/json",
@@ -213,13 +212,12 @@ export class TenantApiService {
 	}
 
 	private async requestVoid(path: string, options: RequestInit = {}): Promise<void> {
-		let stub = this.getTenantStub();
 		let url = `https://tenant.internal${path}`;
 
 		// Generate signed internal token for secure authentication
 		let internalToken = await createInternalToken(env.INTERNAL_SECRET);
 
-		let response = await stub.fetch(url, {
+		let response = await this.stub.fetch(url, {
 			...options,
 			headers: {
 				"Content-Type": "application/json",
