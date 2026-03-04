@@ -20,14 +20,20 @@ export default defineConfig({
 	plugins: [tailwindcss(), tsconfigPaths()],
 	build: {
 		emptyOutDir: true,
+		lib: {
+			// Build as library to preserve exports
+			entry: clientInput,
+			formats: ["es"],
+		},
 		rollupOptions: {
-			input: clientInput,
 			output: {
 				dir: "assets/tenant",
 				entryFileNames: "[name].js",
 				chunkFileNames: "[name]-[hash].js",
 				assetFileNames: "[name]-[hash][extname]",
 			},
+			// Preserve exports from client entry modules
+			preserveEntrySignatures: "exports-only",
 		},
 	},
 });
