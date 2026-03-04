@@ -8,6 +8,7 @@ import {
 import * as s from "remix/data-schema";
 
 import action from "~/lib/action";
+import { base64UrlDecode } from "~/lib/base64url";
 import { checkUserRateLimit, USER_RATE_LIMITS } from "~/lib/user-rate-limit";
 import Passkey from "~/tenant/models/passkey";
 import Subject from "~/tenant/models/subject";
@@ -85,7 +86,7 @@ export default action<"POST", "/webauthn/auth/options">(
 			rpID: rpId,
 			allowCredentials,
 			userVerification: "preferred",
-			challenge: new TextEncoder().encode(challenge),
+			challenge: base64UrlDecode(challenge),
 		} satisfies GenerateAuthenticationOptionsOpts);
 
 		log.info("Authentication challenge created", {

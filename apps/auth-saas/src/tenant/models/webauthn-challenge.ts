@@ -3,6 +3,8 @@ import type { Database } from "remix/data-table";
 import * as s from "remix/data-schema";
 import { createTable } from "remix/data-table";
 
+import { base64UrlEncode } from "~/lib/base64url";
+
 /** Time-to-live for WebAuthn challenges (5 minutes in milliseconds). */
 const CHALLENGE_TTL = 5 * 60 * 1000;
 
@@ -159,10 +161,7 @@ export default class WebAuthnChallenge {
 	 */
 	private static generateChallenge(): string {
 		let bytes = crypto.getRandomValues(new Uint8Array(32));
-		return btoa(String.fromCharCode(...bytes))
-			.replace(/\+/g, "-")
-			.replace(/\//g, "_")
-			.replace(/=/g, "");
+		return base64UrlEncode(bytes);
 	}
 
 	/**
