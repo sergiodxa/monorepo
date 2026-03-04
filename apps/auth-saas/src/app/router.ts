@@ -17,13 +17,8 @@ import users from "./controllers/dashboard/tenants/users";
 import health from "./controllers/health";
 import index from "./controllers/index";
 import notFound from "./controllers/not-found";
-import onboardingFinish from "./controllers/onboarding/finish";
+import onboardingCallback from "./controllers/onboarding/callback";
 import onboardingIndex from "./controllers/onboarding/index";
-import onboardingRegion from "./controllers/onboarding/region";
-import webauthnAuthOptions from "./controllers/onboarding/webauthn/auth-options";
-import webauthnAuthVerify from "./controllers/onboarding/webauthn/auth-verify";
-import webauthnRegisterOptions from "./controllers/onboarding/webauthn/register-options";
-import webauthnRegisterVerify from "./controllers/onboarding/webauthn/register-verify";
 import csrf from "./middleware/csrf";
 import database from "./middleware/db";
 import logger from "./middleware/logger";
@@ -61,28 +56,7 @@ router.map(routes, {
 			middleware: [],
 			actions: {
 				index: onboardingIndex,
-				region: onboardingRegion,
-				finish: onboardingFinish,
-
-				webauthn: {
-					middleware: [],
-					actions: {
-						register: {
-							middleware: [],
-							actions: {
-								options: webauthnRegisterOptions,
-								verify: webauthnRegisterVerify,
-							},
-						},
-						auth: {
-							middleware: [],
-							actions: {
-								options: webauthnAuthOptions,
-								verify: webauthnAuthVerify,
-							},
-						},
-					},
-				},
+				callback: onboardingCallback,
 			},
 		},
 

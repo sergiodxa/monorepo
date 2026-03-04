@@ -1,166 +1,72 @@
-import { html } from "@pkg/http/response";
+import { env } from "cloudflare:workers";
 
-import form from "~/lib/form";
+import action from "~/lib/action";
+import { base64UrlEncode } from "~/lib/crypto-utils";
+
+/** Well-known client ID for the dashboard OAuth client. */
+const DASHBOARD_CLIENT_ID = "dashboard";
 
 /**
- * Onboarding landing page - users can sign up or log in here.
- * This uses the platform tenant for authentication.
+ * Onboarding entry point - redirects to platform tenant OAuth flow.
+ * This dogfoods the authentication by using the platform tenant's OAuth endpoint.
  */
-export default form<"/onboarding">({
-	middleware: [],
+export default action<"GET", "/onboarding">(async ({ request, logger }) => {
+	let log = logger.loader("/onboarding");
 
-	actions: {
-		index({ logger }) {
-			let log = logger.loader("/onboarding");
-			log.info("Onboarding page loaded");
+	// Generate PKCE code verifier and challenge
+	let codeVerifier = generateCodeVerifier();
+	let codeChallenge = await generateCodeChallenge(codeVerifier);
 
-			return html(`
-				<!DOCTYPE html>
-				<html lang="en">
-				<head>
-					<meta charset="UTF-8">
-					<meta name="viewport" content="width=device-width, initial-scale=1.0">
-					<title>Auth SaaS - Get Started</title>
-					<script src="https://cdn.tailwindcss.com"></script>
-					<script src="https://unpkg.com/@simplewebauthn/browser/dist/bundle/index.umd.min.js"></script>
-				</head>
-				<body class="bg-gray-50 min-h-screen flex items-center justify-center">
-					<div class="max-w-md w-full px-4">
-						<div class="text-center mb-8">
-							<h1 class="text-3xl font-bold">Auth SaaS</h1>
-							<p class="text-gray-600 mt-2">Authentication as a service for your applications</p>
-						</div>
+	// Generate state for CSRF protection
+	let state = crypto.randomUUID();
 
-						<div class="bg-white rounded-lg border shadow-sm p-6">
-							<div id="auth-form">
-								<div class="mb-4">
-									<label class="block text-sm font-medium text-gray-700 mb-1" for="email">Email</label>
-									<input type="email" id="email" name="email" required
-										class="w-full border rounded-lg px-3 py-2"
-										placeholder="you@example.com">
-								</div>
+	// Build the OAuth authorization URL
+	let url = new URL(request.url);
+	let baseUrl = `${url.protocol}//${url.host}`;
 
-								<button type="button" id="continue-btn"
-									class="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 mb-3">
-									Continue with Passkey
-								</button>
+	// In dev, we use the same host. In prod, we'd use the platform domain.
+	let authorizeUrl = new URL("/authorize", baseUrl);
+	authorizeUrl.searchParams.set("response_type", "code");
+	authorizeUrl.searchParams.set("client_id", DASHBOARD_CLIENT_ID);
+	authorizeUrl.searchParams.set("redirect_uri", `${baseUrl}/onboarding/callback`);
+	authorizeUrl.searchParams.set("scope", "openid email profile");
+	authorizeUrl.searchParams.set("state", state);
+	authorizeUrl.searchParams.set("code_challenge", codeChallenge);
+	authorizeUrl.searchParams.set("code_challenge_method", "S256");
 
-								<p class="text-center text-gray-500 text-sm">
-									We use passkeys for passwordless authentication
-								</p>
-							</div>
+	log.info("Redirecting to OAuth authorization", { clientId: DASHBOARD_CLIENT_ID });
 
-							<div id="loading" class="hidden text-center py-4">
-								<p class="text-gray-600">Authenticating...</p>
-							</div>
+	// Store PKCE verifier and state in a short-lived cookie
+	let oauthStateCookie = JSON.stringify({ codeVerifier, state });
+	let cookieValue = base64UrlEncode(oauthStateCookie);
 
-							<div id="error" class="hidden text-center py-4">
-								<p class="text-red-600" id="error-message"></p>
-								<button type="button" id="retry-btn" class="mt-2 text-blue-600 hover:underline">
-									Try again
-								</button>
-							</div>
-						</div>
-					</div>
-
-					<script>
-						document.getElementById('continue-btn').addEventListener('click', async () => {
-							const email = document.getElementById('email').value;
-							if (!email) {
-								alert('Please enter your email');
-								return;
-							}
-
-							const authForm = document.getElementById('auth-form');
-							const loading = document.getElementById('loading');
-							const error = document.getElementById('error');
-
-							authForm.classList.add('hidden');
-							loading.classList.remove('hidden');
-
-							try {
-								// First try to register (new user)
-								let response = await fetch('/onboarding/webauthn/register/options', {
-									method: 'POST',
-									headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-									body: new URLSearchParams({ email }),
-								});
-
-								if (response.ok) {
-									const data = await response.json();
-									console.log('Registration options:', data);
-									const regResponse = await SimpleWebAuthnBrowser.startRegistration(data.options);
-
-									const verifyResponse = await fetch('/onboarding/webauthn/register/verify', {
-										method: 'POST',
-										headers: { 'Content-Type': 'application/json' },
-										body: JSON.stringify({ challengeId: data.challengeId, response: regResponse }),
-									});
-
-									if (verifyResponse.ok) {
-										window.location.href = '/dashboard';
-										return;
-									} else {
-										const errorData = await verifyResponse.json();
-										throw new Error(errorData.error || 'Registration failed');
-									}
-								}
-
-								// Registration failed (user exists with passkey), try to authenticate
-								const regError = await response.json();
-								if (regError.error && regError.error.includes('passkey')) {
-									response = await fetch('/onboarding/webauthn/auth/options', {
-										method: 'POST',
-										headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-										body: new URLSearchParams({ email }),
-									});
-
-									if (response.ok) {
-										const data = await response.json();
-										console.log('Authentication options:', data);
-										const authResponse = await SimpleWebAuthnBrowser.startAuthentication(data.options);
-
-										const verifyResponse = await fetch('/onboarding/webauthn/auth/verify', {
-											method: 'POST',
-											headers: { 'Content-Type': 'application/json' },
-											body: JSON.stringify({ challengeId: data.challengeId, response: authResponse }),
-										});
-
-										if (verifyResponse.ok) {
-											window.location.href = '/dashboard';
-											return;
-										} else {
-											const errorData = await verifyResponse.json();
-											throw new Error(errorData.error || 'Authentication failed');
-										}
-									}
-								}
-
-								throw new Error(regError.error || 'Could not continue');
-							} catch (err) {
-								console.error('WebAuthn error:', err);
-								loading.classList.add('hidden');
-								error.classList.remove('hidden');
-								document.getElementById('error-message').textContent = err.message || 'Authentication failed';
-							}
-						});
-
-						document.getElementById('retry-btn').addEventListener('click', () => {
-							document.getElementById('error').classList.add('hidden');
-							document.getElementById('auth-form').classList.remove('hidden');
-						});
-					</script>
-				</body>
-				</html>
-			`);
+	return new Response(null, {
+		status: 302,
+		headers: {
+			Location: authorizeUrl.toString(),
+			"Set-Cookie": `__oauth_state=${cookieValue}; Path=/; HttpOnly; SameSite=Lax; Max-Age=600`,
 		},
-
-		action() {
-			// Form submissions are handled client-side via WebAuthn
-			return new Response(null, {
-				status: 302,
-				headers: { Location: "/onboarding" },
-			});
-		},
-	},
+	});
 });
+
+/**
+ * Generates a cryptographically random code verifier for PKCE.
+ * @returns A 43-character base64url-encoded random string.
+ */
+function generateCodeVerifier(): string {
+	let bytes = new Uint8Array(32);
+	crypto.getRandomValues(bytes);
+	return base64UrlEncode(bytes);
+}
+
+/**
+ * Generates the code challenge from a code verifier using S256 method.
+ * @param verifier - The code verifier.
+ * @returns The base64url-encoded SHA-256 hash of the verifier.
+ */
+async function generateCodeChallenge(verifier: string): Promise<string> {
+	let encoder = new TextEncoder();
+	let data = encoder.encode(verifier);
+	let hash = await crypto.subtle.digest("SHA-256", data);
+	return base64UrlEncode(new Uint8Array(hash));
+}

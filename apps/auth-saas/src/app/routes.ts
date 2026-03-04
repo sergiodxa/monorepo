@@ -11,20 +11,8 @@ export default route({
 	},
 
 	onboarding: {
-		index: form("/onboarding"),
-		region: form("/onboarding/region"),
-		finish: form("/onboarding/finish"),
-
-		webauthn: {
-			register: {
-				options: post("/onboarding/webauthn/register/options"),
-				verify: post("/onboarding/webauthn/register/verify"),
-			},
-			auth: {
-				options: post("/onboarding/webauthn/auth/options"),
-				verify: post("/onboarding/webauthn/auth/verify"),
-			},
-		},
+		index: get("/onboarding"),
+		callback: get("/onboarding/callback"),
 	},
 
 	dashboard: {

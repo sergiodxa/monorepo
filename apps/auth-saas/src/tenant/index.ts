@@ -56,6 +56,10 @@ export default class Tenant extends DurableObject {
 		let { default: addSigningKeysIndex } =
 			await import("./migrations/0004-add-signing-keys-current-index.sql?raw");
 		this.ctx.storage.sql.exec(addSigningKeysIndex);
+
+		let { default: seedDashboardClient } =
+			await import("./migrations/0005-seed-dashboard-client.sql?raw");
+		this.tryExec(seedDashboardClient);
 	}
 
 	/**
