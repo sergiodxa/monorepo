@@ -107,7 +107,7 @@ export default action<"POST", "/webauthn/register/verify">(async ({ db, request,
 			expectedChallenge: challenge.challenge,
 			expectedOrigin: origin,
 			expectedRPID: rpId,
-			requireUserVerification: true,
+			requireUserVerification: false,
 		});
 	} catch (error) {
 		log.info("Passkey verification failed", {

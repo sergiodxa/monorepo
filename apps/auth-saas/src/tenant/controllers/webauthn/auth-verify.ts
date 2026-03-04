@@ -123,7 +123,7 @@ export default action<"POST", "/webauthn/auth/verify">(async ({ db, request, log
 					? (passkey.transports.split(",") as AuthenticatorTransport[])
 					: undefined,
 			},
-			requireUserVerification: true,
+			requireUserVerification: false,
 		});
 	} catch (error) {
 		log.info("Authentication verification failed", {
