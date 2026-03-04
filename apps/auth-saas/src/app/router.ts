@@ -30,10 +30,11 @@ import logger from "./middleware/logger";
 import session from "./middleware/session";
 import subscription from "./middleware/subscription";
 import tenantOwner from "./middleware/tenant-owner";
+import trailingSlash from "./middleware/trailing-slash";
 import routes from "./routes";
 
 export const router = createRouter({
-	middleware: [logger, database, formData()],
+	middleware: [trailingSlash, logger, database, formData()],
 	defaultHandler: notFound,
 });
 
