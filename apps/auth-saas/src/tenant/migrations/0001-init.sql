@@ -200,6 +200,8 @@ CREATE TABLE IF NOT EXISTS webauthn_challenges (
   state TEXT,
   nonce TEXT,
   scope TEXT,
+  pkce_challenge TEXT,
+  pkce_method TEXT,
   expires_at INTEGER NOT NULL,
   created_at INTEGER NOT NULL
 );

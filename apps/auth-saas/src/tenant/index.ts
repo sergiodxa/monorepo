@@ -42,8 +42,31 @@ export default class Tenant extends DurableObject {
 	}
 
 	private async migrate() {
-		let { default: migration } = await import("./migrations/0001-init.sql?raw");
-		this.ctx.storage.sql.exec(migration);
+		let { default: init } = await import("./migrations/0001-init.sql?raw");
+		this.ctx.storage.sql.exec(init);
+
+		let { default: addAuthzCodesIndex } =
+			await import("./migrations/0002-add-authz-codes-client-index.sql?raw");
+		this.ctx.storage.sql.exec(addAuthzCodesIndex);
+
+		let { default: addPkceToWebauthn } =
+			await import("./migrations/0003-add-pkce-to-webauthn-challenges.sql?raw");
+		this.tryExec(addPkceToWebauthn);
+
+		let { default: addSigningKeysIndex } =
+			await import("./migrations/0004-add-signing-keys-current-index.sql?raw");
+		this.ctx.storage.sql.exec(addSigningKeysIndex);
+	}
+
+	/**
+	 * Executes SQL, ignoring errors (for idempotent ALTER TABLE statements).
+	 */
+	private tryExec(sql: string) {
+		try {
+			this.ctx.storage.sql.exec(sql);
+		} catch {
+			// Ignore errors (e.g., column already exists)
+		}
 	}
 
 	private async generateSigningKeys() {
