@@ -5,6 +5,7 @@ import * as s from "remix/data-schema";
 import { createTable } from "remix/data-table";
 
 import { RecordNotFoundError } from "~/lib/db-errors";
+import { toIsoString, toIsoStringOptional } from "~/lib/timestamp";
 
 /**
  * Model for client secrets.
@@ -56,9 +57,9 @@ export default class Secret {
 		return secrets.map((secret) => ({
 			id: secret.id,
 			name: secret.name,
-			createdAt: secret.created_at,
-			lastUsedAt: secret.last_used_at,
-			expiresAt: secret.expires_at,
+			createdAt: toIsoString(secret.created_at),
+			lastUsedAt: toIsoStringOptional(secret.last_used_at),
+			expiresAt: toIsoStringOptional(secret.expires_at),
 		}));
 	}
 

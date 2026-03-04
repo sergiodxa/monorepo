@@ -7,19 +7,9 @@ import * as s from "remix/data-schema";
 import action from "~/lib/action";
 import { RecordNotFoundError } from "~/lib/db-errors";
 import { isResponse, safeJsonParse } from "~/lib/safe-json";
+import { toIsoString, toIsoStringOptional } from "~/lib/timestamp";
 import Passkey from "~/tenant/models/passkey";
 import Subject from "~/tenant/models/subject";
-
-/**
- * Converts a timestamp value to an ISO string.
- * Handles both integer timestamps (from old records) and ISO strings (from new records).
- */
-function toIsoString(value: string | number): string {
-	if (typeof value === "number") {
-		return new Date(value).toISOString();
-	}
-	return value;
-}
 
 let UpdatePasskeySchema = s.object({
 	name: s.string(),
@@ -46,7 +36,7 @@ export const index = action<"GET", "/api/subjects/:id/passkeys">(async ({ db, pa
 			backedUp: passkey.backed_up,
 			transports: passkey.transports ? passkey.transports.split(",") : [],
 			createdAt: toIsoString(passkey.created_at),
-			lastUsedAt: passkey.last_used_at ? toIsoString(passkey.last_used_at) : null,
+			lastUsedAt: toIsoStringOptional(passkey.last_used_at),
 		})),
 	);
 });
@@ -105,7 +95,7 @@ export const update = action<"PUT", "/api/subjects/:id/passkeys/:passkeyId">(
 				backedUp: updated.backed_up,
 				transports: updated.transports ? updated.transports.split(",") : [],
 				createdAt: toIsoString(updated.created_at),
-				lastUsedAt: updated.last_used_at ? toIsoString(updated.last_used_at) : null,
+				lastUsedAt: toIsoStringOptional(updated.last_used_at),
 			});
 		} catch (error) {
 			if (error instanceof RecordNotFoundError) {

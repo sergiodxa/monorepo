@@ -3,6 +3,7 @@ import { notFound, ok } from "@pkg/http/response/json";
 
 import action from "~/lib/action";
 import { RecordNotFoundError } from "~/lib/db-errors";
+import { toIsoString } from "~/lib/timestamp";
 import Client from "~/tenant/models/client";
 import Grant from "~/tenant/models/grant";
 import Subject from "~/tenant/models/subject";
@@ -29,8 +30,8 @@ export const index = action<"GET", "/api/subjects/:id/grants">(async ({ db, para
 			id: grant.id,
 			client: client ? { id: client.id, name: client.name } : null,
 			scopes: grant.scopes ? grant.scopes.split(" ") : [],
-			createdAt: grant.created_at,
-			updatedAt: grant.updated_at,
+			createdAt: toIsoString(grant.created_at),
+			updatedAt: toIsoString(grant.updated_at),
 		};
 	});
 

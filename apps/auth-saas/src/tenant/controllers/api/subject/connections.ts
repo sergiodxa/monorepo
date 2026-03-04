@@ -3,6 +3,7 @@ import { notFound, ok } from "@pkg/http/response/json";
 
 import action from "~/lib/action";
 import { RecordNotFoundError } from "~/lib/db-errors";
+import { toIsoString } from "~/lib/timestamp";
 import Connection from "~/tenant/models/connection";
 import Subject from "~/tenant/models/subject";
 
@@ -25,8 +26,8 @@ export const index = action<"GET", "/api/subjects/:id/connections">(
 				id: connection.id,
 				provider: connection.provider,
 				providerUserId: connection.provider_user_id,
-				createdAt: connection.created_at,
-				updatedAt: connection.updated_at,
+				createdAt: toIsoString(connection.created_at),
+				updatedAt: toIsoString(connection.updated_at),
 			})),
 		);
 	},

@@ -3,6 +3,7 @@ import { badRequest, created, notFound, ok } from "@pkg/http/response/json";
 
 import action from "~/lib/action";
 import { RecordNotFoundError } from "~/lib/db-errors";
+import { toIsoString, toIsoStringOptional } from "~/lib/timestamp";
 import SigningKey from "~/tenant/models/signing-key";
 
 export const index = action<"GET", "/api/signing-keys">(async ({ db, logger }) => {
@@ -17,8 +18,8 @@ export const index = action<"GET", "/api/signing-keys">(async ({ db, logger }) =
 			id: key.id,
 			algorithm: key.algorithm,
 			isCurrent: key.is_current,
-			createdAt: key.created_at,
-			expiresAt: key.expires_at,
+			createdAt: toIsoString(key.created_at),
+			expiresAt: toIsoStringOptional(key.expires_at),
 		})),
 	);
 });

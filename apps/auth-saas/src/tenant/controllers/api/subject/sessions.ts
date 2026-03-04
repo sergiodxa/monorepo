@@ -3,6 +3,7 @@ import { notFound, ok } from "@pkg/http/response/json";
 
 import action from "~/lib/action";
 import { RecordNotFoundError } from "~/lib/db-errors";
+import { toIsoString } from "~/lib/timestamp";
 import Session from "~/tenant/models/session";
 import Subject from "~/tenant/models/subject";
 
@@ -25,9 +26,9 @@ export const index = action<"GET", "/api/subjects/:id/sessions">(async ({ db, pa
 			clientId: session.client_id,
 			ip: session.ip,
 			userAgent: session.user_agent,
-			expiresAt: session.expires_at,
-			createdAt: session.created_at,
-			updatedAt: session.updated_at,
+			expiresAt: toIsoString(session.expires_at),
+			createdAt: toIsoString(session.created_at),
+			updatedAt: toIsoString(session.updated_at),
 		})),
 	);
 });
