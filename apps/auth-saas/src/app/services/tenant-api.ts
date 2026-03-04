@@ -110,18 +110,15 @@ const BrandingSchema = s.object({
 	updated_at: s.string(),
 });
 
-/** Schema for passkey credential. */
+/** Schema for passkey credential (from API response). */
 const PasskeySchema = s.object({
 	id: s.string(),
-	subject_id: s.string(),
-	credential_id: s.string(),
 	name: s.nullable(s.string()),
-	device_type: s.nullable(s.string()),
-	backed_up: s.union([s.boolean(), s.number()]),
-	transports: s.nullable(s.string()),
-	last_used_at: s.nullable(s.string()),
-	created_at: s.string(),
-	updated_at: s.string(),
+	deviceType: s.nullable(s.string()),
+	backedUp: s.union([s.boolean(), s.number()]),
+	transports: s.array(s.string()),
+	lastUsedAt: s.nullable(s.string()),
+	createdAt: s.string(),
 });
 
 /** Schema for OAuth grant. */

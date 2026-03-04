@@ -131,7 +131,7 @@ export default {
 												<li class="flex justify-between items-center text-sm border-b pb-2 last:border-0 last:pb-0">
 													<div>
 														<p class="font-medium">${p.name ?? "Unnamed passkey"}</p>
-														<p class="text-gray-400 text-xs">${p.device_type || "Unknown device"} • Last used: ${p.last_used_at ? new Date(p.last_used_at).toLocaleDateString() : "Never"}</p>
+														<p class="text-gray-400 text-xs">${p.deviceType || "Unknown device"} • Last used: ${p.lastUsedAt ? new Date(p.lastUsedAt).toLocaleDateString() : "Never"}</p>
 													</div>
 													<form method="POST" action="/dashboard/tenants/${tenant.id}/users/${params.id}/passkeys/${p.id}?_method=DELETE" class="inline">
 														<button type="submit" class="text-red-600 hover:text-red-800" onclick="return confirm('Delete this passkey?')">Delete</button>
