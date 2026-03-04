@@ -112,6 +112,43 @@ export default class Tenant {
 		return db.findOne(Tenant.table, { where: { id } });
 	}
 
+	/**
+	 * Gets a tenant with the user's role if they have access.
+	 * Returns null if tenant doesn't exist or user doesn't have access.
+	 * @param db - Database connection.
+	 * @param id - The tenant ID.
+	 * @param subjectId - The subject ID.
+	 * @param email - The subject's email (for pending owner resolution).
+	 */
+	static async showWithAccess(
+		db: Database,
+		id: string,
+		subjectId: string,
+		email: string,
+	): Promise<TenantWithRole | null> {
+		let tenant = await db.findOne(Tenant.table, { where: { id } });
+		if (!tenant) return null;
+
+		// Check if owner
+		if (tenant.owner_subject_id === subjectId) {
+			return { ...tenant, role: "owner" };
+		}
+
+		// Check if pending owner
+		if (tenant.owner_subject_id === `pending:${email}`) {
+			return { ...tenant, role: "owner" };
+		}
+
+		// Check if member
+		let TenantMember = (await import("./tenant-member")).default;
+		let membership = await TenantMember.findByTenantAndSubject(db, id, subjectId);
+		if (membership) {
+			return { ...tenant, role: membership.role };
+		}
+
+		return null;
+	}
+
 	static findBySlug(db: Database, slug: string) {
 		return db.findOne(Tenant.table, { where: { slug } });
 	}

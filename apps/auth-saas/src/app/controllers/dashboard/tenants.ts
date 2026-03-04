@@ -37,8 +37,8 @@ export default {
 	show: action<"GET", "/dashboard/tenants/:id">(async ({ db, params, platformSession, logger }) => {
 		let log = logger.loader(`/dashboard/tenants/${params.id}`);
 
-		let tenant = await Tenant.show(db, params.id);
-		if (!tenant || tenant.owner_subject_id !== platformSession.subjectId) {
+		let tenant = await Tenant.showWithAccess(db, params.id, platformSession.subjectId, platformSession.email);
+		if (!tenant) {
 			return new Response("Not found", { status: 404 });
 		}
 
@@ -296,9 +296,14 @@ export default {
 		async ({ db, params, platformSession, logger }) => {
 			let log = logger.loader(`/dashboard/tenants/${params.id}/edit`);
 
-			let tenant = await Tenant.show(db, params.id);
-			if (!tenant || tenant.owner_subject_id !== platformSession.subjectId) {
+			let tenant = await Tenant.showWithAccess(db, params.id, platformSession.subjectId, platformSession.email);
+			if (!tenant) {
 				return new Response("Not found", { status: 404 });
+			}
+
+			// Only owners and admins can edit
+			if (tenant.role === "viewer") {
+				return new Response("Forbidden", { status: 403 });
 			}
 
 			log.info("Tenant edit form loaded", { tenantId: params.id });
@@ -352,9 +357,14 @@ export default {
 		async ({ db, formData, params, platformSession, logger }) => {
 			let log = logger.action(`/dashboard/tenants/${params.id}`);
 
-			let tenant = await Tenant.show(db, params.id);
-			if (!tenant || tenant.owner_subject_id !== platformSession.subjectId) {
+			let tenant = await Tenant.showWithAccess(db, params.id, platformSession.subjectId, platformSession.email);
+			if (!tenant) {
 				return new Response("Not found", { status: 404 });
+			}
+
+			// Only owners and admins can update
+			if (tenant.role === "viewer") {
+				return new Response("Forbidden", { status: 403 });
 			}
 
 			let body = Object.fromEntries(formData);
