@@ -2,29 +2,9 @@ import type { Handle } from "remix/component";
 
 import { clientEntry } from "remix/component";
 
-interface RegistrationOptions {
-	challenge: string;
-	rp: {
-		id: string;
-		name: string;
-	};
-	user: {
-		id: string;
-		name: string;
-		displayName: string;
-	};
-	pubKeyCredParams: Array<{
-		alg: number;
-		type: "public-key";
-	}>;
-	timeout?: number;
-	attestation?: AttestationConveyancePreference;
-	authenticatorSelection?: AuthenticatorSelectionCriteria;
-}
-
 interface WebAuthnRegisterSetup {
 	challengeId: string;
-	options: RegistrationOptions;
+	options: PublicKeyCredentialCreationOptionsJSON;
 	verifyUrl: string;
 }
 
@@ -41,53 +21,22 @@ export let WebAuthnRegister = clientEntry(
 			handle.update();
 
 			try {
-				// Convert base64url values to ArrayBuffer
-				let challenge = base64urlToBuffer(options.challenge);
-				let userId = base64urlToBuffer(options.user.id);
-
-				let credential = (await navigator.credentials.create({
-					publicKey: {
-						challenge,
-						rp: options.rp,
-						user: {
-							id: userId,
-							name: options.user.name,
-							displayName: options.user.displayName,
-						},
-						pubKeyCredParams: options.pubKeyCredParams,
-						timeout: options.timeout ?? 60000,
-						attestation: options.attestation ?? "none",
-						authenticatorSelection: options.authenticatorSelection ?? {
-							authenticatorAttachment: "platform",
-							residentKey: "preferred",
-							userVerification: "preferred",
-						},
-					},
-				})) as PublicKeyCredential | null;
+				// Use the modern API that handles base64url encoding automatically
+				let credential = await navigator.credentials.create({
+					publicKey: PublicKeyCredential.parseCreationOptionsFromJSON(options),
+				});
 
 				if (!credential) {
 					throw new Error("Registration was cancelled");
 				}
 
-				let response = credential.response as AuthenticatorAttestationResponse;
-
-				// Submit credential to server as JSON
+				// Use toJSON() for automatic serialization
 				let res = await fetch(verifyUrl, {
 					method: "POST",
 					headers: { "Content-Type": "application/json" },
 					body: JSON.stringify({
 						challengeId,
-						response: {
-							id: credential.id,
-							rawId: bufferToBase64url(credential.rawId),
-							response: {
-								clientDataJSON: bufferToBase64url(response.clientDataJSON),
-								attestationObject: bufferToBase64url(response.attestationObject),
-								transports: response.getTransports?.() ?? [],
-							},
-							type: credential.type,
-							authenticatorAttachment: credential.authenticatorAttachment,
-						},
+						response: (credential as PublicKeyCredential).toJSON(),
 					}),
 				});
 
@@ -180,22 +129,3 @@ export let WebAuthnRegister = clientEntry(
 		);
 	},
 );
-
-// Helper functions for base64url encoding/decoding
-function base64urlToBuffer(base64url: string): ArrayBuffer {
-	let base64 = base64url.replace(/-/g, "+").replace(/_/g, "/");
-	let padding = "=".repeat((4 - (base64.length % 4)) % 4);
-	let binary = atob(base64 + padding);
-	let bytes = new Uint8Array(binary.length);
-	for (let i = 0; i < binary.length; i++) {
-		bytes[i] = binary.charCodeAt(i);
-	}
-	return bytes.buffer;
-}
-
-function bufferToBase64url(buffer: ArrayBuffer): string {
-	let bytes = new Uint8Array(buffer);
-	let binary = String.fromCharCode(...bytes);
-	let base64 = btoa(binary);
-	return base64.replace(/\+/g, "-").replace(/\//g, "_").replace(/=/g, "");
-}

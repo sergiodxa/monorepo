@@ -462,6 +462,8 @@ function AuthenticateForm() {
 							challenge: props.challenge,
 							rpId: props.rpId,
 							allowCredentials: props.allowCredentials,
+							timeout: 60000,
+							userVerification: "preferred",
 						},
 						verifyUrl: routes.webauthn.auth.verify.href(),
 					}}
@@ -523,6 +525,13 @@ function RegisterForm() {
 								{ alg: -7, type: "public-key" }, // ES256
 								{ alg: -257, type: "public-key" }, // RS256
 							],
+							timeout: 60000,
+							attestation: "none",
+							authenticatorSelection: {
+								authenticatorAttachment: "platform",
+								residentKey: "preferred",
+								userVerification: "preferred",
+							},
 						},
 						verifyUrl: routes.webauthn.register.verify.href(),
 					}}

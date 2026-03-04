@@ -2,21 +2,9 @@ import type { Handle } from "remix/component";
 
 import { clientEntry } from "remix/component";
 
-interface AuthOptions {
-	challenge: string;
-	rpId: string;
-	allowCredentials: Array<{
-		id: string;
-		type: "public-key";
-		transports?: AuthenticatorTransport[];
-	}>;
-	userVerification?: UserVerificationRequirement;
-	timeout?: number;
-}
-
 interface WebAuthnAuthSetup {
 	challengeId: string;
-	options: AuthOptions;
+	options: PublicKeyCredentialRequestOptionsJSON;
 	verifyUrl: string;
 }
 
@@ -33,52 +21,22 @@ export let WebAuthnAuth = clientEntry(
 			handle.update();
 
 			try {
-				// Convert base64url challenge to ArrayBuffer
-				let challenge = base64urlToBuffer(options.challenge);
-
-				// Convert credential IDs from base64url to ArrayBuffer
-				let allowCreds = options.allowCredentials.map(
-					(cred: { id: string; type: "public-key"; transports?: AuthenticatorTransport[] }) => ({
-						id: base64urlToBuffer(cred.id),
-						type: cred.type as PublicKeyCredentialType,
-						transports: cred.transports,
-					}),
-				);
-
-				let credential = (await navigator.credentials.get({
-					publicKey: {
-						challenge,
-						rpId: options.rpId,
-						allowCredentials: allowCreds,
-						userVerification: options.userVerification ?? "preferred",
-						timeout: options.timeout ?? 60000,
-					},
-				})) as PublicKeyCredential | null;
+				// Use the modern API that handles base64url encoding automatically
+				let credential = await navigator.credentials.get({
+					publicKey: PublicKeyCredential.parseRequestOptionsFromJSON(options),
+				});
 
 				if (!credential) {
 					throw new Error("Authentication was cancelled");
 				}
 
-				let response = credential.response as AuthenticatorAssertionResponse;
-
-				// Submit credential to server as JSON
+				// Use toJSON() for automatic serialization
 				let res = await fetch(verifyUrl, {
 					method: "POST",
 					headers: { "Content-Type": "application/json" },
 					body: JSON.stringify({
 						challengeId,
-						response: {
-							id: credential.id,
-							rawId: bufferToBase64url(credential.rawId),
-							response: {
-								clientDataJSON: bufferToBase64url(response.clientDataJSON),
-								authenticatorData: bufferToBase64url(response.authenticatorData),
-								signature: bufferToBase64url(response.signature),
-								userHandle: response.userHandle ? bufferToBase64url(response.userHandle) : null,
-							},
-							type: credential.type,
-							authenticatorAttachment: credential.authenticatorAttachment,
-						},
+						response: (credential as PublicKeyCredential).toJSON(),
 					}),
 				});
 
@@ -89,7 +47,7 @@ export let WebAuthnAuth = clientEntry(
 
 				// Success - follow the redirect from server
 				let successData = (await res.json()) as { redirect?: string };
-				
+
 				status = "success";
 				handle.update();
 
@@ -171,22 +129,3 @@ export let WebAuthnAuth = clientEntry(
 		);
 	},
 );
-
-// Helper functions for base64url encoding/decoding
-function base64urlToBuffer(base64url: string): ArrayBuffer {
-	let base64 = base64url.replace(/-/g, "+").replace(/_/g, "/");
-	let padding = "=".repeat((4 - (base64.length % 4)) % 4);
-	let binary = atob(base64 + padding);
-	let bytes = new Uint8Array(binary.length);
-	for (let i = 0; i < binary.length; i++) {
-		bytes[i] = binary.charCodeAt(i);
-	}
-	return bytes.buffer;
-}
-
-function bufferToBase64url(buffer: ArrayBuffer): string {
-	let bytes = new Uint8Array(buffer);
-	let binary = String.fromCharCode(...bytes);
-	let base64 = btoa(binary);
-	return base64.replace(/\+/g, "-").replace(/\//g, "_").replace(/=/g, "");
-}
