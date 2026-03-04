@@ -58,6 +58,15 @@ export default form<"/authorize">({
 			let url = new URL(request.url);
 			let params = Object.fromEntries(url.searchParams);
 
+			// If no params provided, redirect to onboarding to start the OAuth flow
+			if (url.searchParams.size === 0) {
+				log.info("No params provided, redirecting to onboarding");
+				return new Response(null, {
+					status: 302,
+					headers: { Location: "/onboarding" },
+				});
+			}
+
 			let result = await validate(params, AuthorizeRequestSchema);
 			if (isFailure(result)) {
 				log.error("Invalid authorization request", { issues: result.error.issues });
