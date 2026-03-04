@@ -14,7 +14,7 @@ export default class Passkey {
 			id: s.string(),
 			subject_id: s.string(),
 			/** WebAuthn credential ID (base64url encoded). Used for allowCredentials in authentication. */
-			credential_id: s.string(),
+			credential_id: s.nullable(s.string()),
 			public_key: s.string(),
 			counter: s.number(),
 			device_type: s.nullable(s.string()),

@@ -162,10 +162,17 @@ export default form<"/authorize">({
 					});
 
 					let allowCredentials = validPasskeys.map((p) => ({
-						id: p.credential_id,
+						id: p.credential_id!, // Already filtered for non-null credential_id
 						type: "public-key" as const,
 						transports: p.transports?.split(",") as AuthenticatorTransport[] | undefined,
 					}));
+
+					log.info("Rendering authentication form", {
+						email,
+						rpId,
+						credentialCount: allowCredentials.length,
+						credentialIds: allowCredentials.map((c) => c.id.substring(0, 20) + "..."),
+					});
 
 					let html = await renderToString(
 						<AuthenticateForm
