@@ -164,11 +164,14 @@ export default form<"/authorize">({
 					});
 
 					let passkeys = await Passkey.listBySubject(db, subject.id);
-					let allowCredentials = passkeys.map((p) => ({
-						id: p.id,
-						type: "public-key" as const,
-						transports: p.transports?.split(",") as AuthenticatorTransport[] | undefined,
-					}));
+					// Filter out passkeys without credential_id (legacy data before migration 0006)
+					let allowCredentials = passkeys
+						.filter((p) => p.credential_id)
+						.map((p) => ({
+							id: p.credential_id,
+							type: "public-key" as const,
+							transports: p.transports?.split(",") as AuthenticatorTransport[] | undefined,
+						}));
 
 					let html = await renderToString(
 						<AuthenticateForm

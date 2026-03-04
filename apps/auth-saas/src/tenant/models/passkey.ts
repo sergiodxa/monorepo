@@ -10,8 +10,11 @@ export default class Passkey {
 		name: "passkeys",
 		primaryKey: ["id"],
 		columns: {
+			/** Database primary key (UUID). */
 			id: s.string(),
 			subject_id: s.string(),
+			/** WebAuthn credential ID (base64url encoded). Used for allowCredentials in authentication. */
+			credential_id: s.string(),
 			public_key: s.string(),
 			counter: s.number(),
 			device_type: s.nullable(s.string()),
@@ -31,10 +34,22 @@ export default class Passkey {
 		return db.findOne(Passkey.table, { where: { id } });
 	}
 
+	/**
+	 * Finds a passkey by its WebAuthn credential ID.
+	 * @param db - Database instance
+	 * @param credentialId - WebAuthn credential ID (base64url encoded)
+	 * @returns Passkey record or null if not found
+	 */
+	static findByCredentialId(db: Database, credentialId: string) {
+		return db.findOne(Passkey.table, { where: { credential_id: credentialId } });
+	}
+
 	static async create(
 		db: Database,
 		data: {
 			subjectId: string;
+			/** WebAuthn credential ID (base64url encoded from authenticator). */
+			credentialId: string;
 			publicKey: string;
 			counter: number;
 			deviceType?: string | null;
@@ -46,6 +61,7 @@ export default class Passkey {
 		return await db.create(Passkey.table, {
 			id: crypto.randomUUID(),
 			subject_id: data.subjectId,
+			credential_id: data.credentialId,
 			public_key: data.publicKey,
 			counter: data.counter,
 			device_type: data.deviceType ?? null,

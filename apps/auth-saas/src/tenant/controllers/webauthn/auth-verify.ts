@@ -96,7 +96,8 @@ export default action<"POST", "/webauthn/auth/verify">(async ({ db, request, log
 		});
 	}
 
-	let passkey = await Passkey.show(db, response.id);
+	// response.id is the credential ID from the authenticator (base64url encoded)
+	let passkey = await Passkey.findByCredentialId(db, response.id);
 	if (!passkey || passkey.subject_id !== subject.id) {
 		log.info("Passkey not found or mismatch", { subjectId: subject.id, challengeId });
 		return badRequest({ error: "Passkey not found" });
@@ -116,7 +117,7 @@ export default action<"POST", "/webauthn/auth/verify">(async ({ db, request, log
 			expectedOrigin: origin,
 			expectedRPID: rpId,
 			authenticator: {
-				credentialID: passkey.id,
+				credentialID: passkey.credential_id,
 				credentialPublicKey: publicKeyBytes,
 				counter: passkey.counter,
 				transports: passkey.transports

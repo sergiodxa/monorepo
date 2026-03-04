@@ -133,6 +133,7 @@ export default action<"POST", "/webauthn/register/verify">(async ({ db, request,
 
 	await Passkey.create(db, {
 		subjectId: subject.id,
+		credentialId: Buffer.from(registrationInfo.credentialID).toString("base64url"),
 		publicKey: Buffer.from(registrationInfo.credentialPublicKey).toString("base64"),
 		counter: registrationInfo.counter,
 		deviceType: registrationInfo.credentialDeviceType,

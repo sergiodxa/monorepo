@@ -60,6 +60,10 @@ export default class Tenant extends DurableObject {
 		let { default: seedDashboardClient } =
 			await import("./migrations/0005-seed-dashboard-client.sql?raw");
 		this.tryExec(seedDashboardClient);
+
+		let { default: addPasskeyCredentialId } =
+			await import("./migrations/0006-add-passkey-credential-id.sql?raw");
+		this.tryExec(addPasskeyCredentialId);
 	}
 
 	/**
