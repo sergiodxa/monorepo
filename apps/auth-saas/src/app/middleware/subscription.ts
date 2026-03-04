@@ -32,6 +32,9 @@ declare module "remix/fetch-router" {
 	}
 }
 
+/** The platform tenant ID - exempt from subscription checks. */
+const PLATFORM_TENANT_ID = "platform";
+
 /**
  * Middleware that checks subscription status for the current tenant.
  *
@@ -41,6 +44,8 @@ declare module "remix/fetch-router" {
  * - active/trialing: Full access
  * - past_due: Access with warning (isPastDue flag set in context)
  * - canceled/unpaid/incomplete: Blocked with redirect to billing page
+ *
+ * Note: The platform tenant is exempt from subscription checks.
  */
 export default middleware(async (context, next) => {
 	let log = context.logger.middleware("subscription");
@@ -48,6 +53,19 @@ export default middleware(async (context, next) => {
 	if (!context.tenant) {
 		log.error("Subscription middleware used without tenant context");
 		return new Response("Internal error", { status: 500 });
+	}
+
+	// Platform tenant is exempt from subscription checks
+	if (context.tenant.id === PLATFORM_TENANT_ID) {
+		context.subscription = {
+			id: "platform",
+			status: "active",
+			isActive: true,
+			isPastDue: false,
+			isBlocked: false,
+			polarCustomerId: null,
+		};
+		return next();
 	}
 
 	let subscription = await Subscription.findByTenant(context.db, context.tenant.id);
