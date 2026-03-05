@@ -50,9 +50,10 @@ export default class Resource {
 		},
 	) {
 		let now = new Date().toISOString();
+		let id = crypto.randomUUID();
 
-		return await db.create(Resource.table, {
-			id: crypto.randomUUID(),
+		await db.create(Resource.table, {
+			id,
 			identifier: data.identifier,
 			name: data.name,
 			description: data.description ?? null,
@@ -60,6 +61,8 @@ export default class Resource {
 			created_at: now,
 			updated_at: now,
 		});
+
+		return { id };
 	}
 
 	static async update(

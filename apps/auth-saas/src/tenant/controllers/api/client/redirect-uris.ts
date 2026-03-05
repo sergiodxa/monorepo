@@ -52,7 +52,7 @@ export const create = action<"POST", "/api/clients/:clientId/redirect-uris">(
 			return badRequest({ error: "Invalid request", issues: result.error.issues });
 		}
 
-		let writeResult = await RedirectUri.create(
+		let { id } = await RedirectUri.create(
 			db,
 			params.clientId,
 			result.data.uri,
@@ -61,9 +61,9 @@ export const create = action<"POST", "/api/clients/:clientId/redirect-uris">(
 
 		log.info("Redirect URI created", {
 			clientId: params.clientId,
-			redirectUriId: writeResult.insertId,
+			redirectUriId: id,
 		});
-		return created({ id: writeResult.insertId });
+		return created({ id });
 	},
 );
 

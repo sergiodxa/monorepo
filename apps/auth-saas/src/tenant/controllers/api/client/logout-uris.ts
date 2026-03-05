@@ -51,14 +51,14 @@ export const create = action<"POST", "/api/clients/:clientId/logout-uris">(
 			return badRequest({ error: "Invalid request", issues: result.error.issues });
 		}
 
-		let writeResult = await LogoutUri.create(db, params.clientId, result.data);
+		let { id } = await LogoutUri.create(db, params.clientId, result.data);
 
 		log.info("Logout URI created", {
 			clientId: params.clientId,
-			logoutUriId: writeResult.insertId,
+			logoutUriId: id,
 			type: result.data.type,
 		});
-		return created({ id: writeResult.insertId });
+		return created({ id });
 	},
 );
 

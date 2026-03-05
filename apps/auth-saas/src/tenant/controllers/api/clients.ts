@@ -70,7 +70,7 @@ export const create = action<"POST", "/api/clients">(async ({ db, request, logge
 	let data = result.data;
 
 	try {
-		let writeResult = await Client.create(db, {
+		let { id } = await Client.create(db, {
 			name: data.name,
 			type: data.type,
 			description: data.description,
@@ -80,8 +80,8 @@ export const create = action<"POST", "/api/clients">(async ({ db, request, logge
 			isManagementClient: data.isManagementClient,
 		});
 
-		log.info("Client created", { clientId: writeResult.insertId, type: data.type });
-		return created({ id: writeResult.insertId });
+		log.info("Client created", { clientId: id, type: data.type });
+		return created({ id });
 	} catch (error) {
 		if (error instanceof Client.InvalidLogoUrlError) {
 			log.info("Invalid logo URL", { error: error.message });

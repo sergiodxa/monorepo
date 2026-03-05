@@ -150,11 +150,12 @@ export default class Client {
 		},
 	) {
 		let now = new Date().toISOString();
+		let id = crypto.randomUUID();
 
 		let validatedLogoUrl = Client.validateLogoUrl(data.logoUrl);
 
-		return await db.create(Client.table, {
-			id: crypto.randomUUID(),
+		await db.create(Client.table, {
+			id,
 			name: data.name,
 			description: data.description ?? null,
 			logo_url: validatedLogoUrl,
@@ -165,6 +166,8 @@ export default class Client {
 			created_at: now,
 			updated_at: now,
 		});
+
+		return { id };
 	}
 
 	/**

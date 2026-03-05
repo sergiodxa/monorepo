@@ -114,8 +114,10 @@ export default class LogoutUri {
 	) {
 		LogoutUri.validateScheme(data.uri);
 
-		return await db.create(LogoutUri.table, {
-			id: crypto.randomUUID(),
+		let id = crypto.randomUUID();
+
+		await db.create(LogoutUri.table, {
+			id,
 			client_id: clientId,
 			uri: data.uri,
 			type: data.type,
@@ -123,6 +125,8 @@ export default class LogoutUri {
 			environment: data.environment ?? null,
 			created_at: new Date().toISOString(),
 		});
+
+		return { id };
 	}
 
 	/**

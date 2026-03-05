@@ -104,13 +104,17 @@ export default class RedirectUri {
 	static async create(db: Database, clientId: string, uri: string, environment?: string) {
 		RedirectUri.validateScheme(uri);
 
-		return await db.create(RedirectUri.table, {
-			id: crypto.randomUUID(),
+		let id = crypto.randomUUID();
+
+		await db.create(RedirectUri.table, {
+			id,
 			client_id: clientId,
 			uri,
 			environment: environment ?? null,
 			created_at: new Date().toISOString(),
 		});
+
+		return { id };
 	}
 
 	/**

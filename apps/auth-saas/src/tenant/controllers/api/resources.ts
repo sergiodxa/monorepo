@@ -73,12 +73,12 @@ export const create = action<"POST", "/api/resources">(async ({ db, request, log
 		return badRequest({ error: "Invalid request", issues: result.error.issues });
 	}
 
-	let writeResult = await Resource.create(db, result.data);
+	let { id } = await Resource.create(db, result.data);
 	log.info("Resource created", {
-		resourceId: writeResult.insertId,
+		resourceId: id,
 		identifier: result.data.identifier,
 	});
-	return created({ id: writeResult.insertId });
+	return created({ id });
 });
 
 export const update = action<"PUT", "/api/resources/:id">(
