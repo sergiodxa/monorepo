@@ -5,6 +5,7 @@ import * as s from "remix/data-schema";
 import { html } from "remix/html-template";
 
 import { layout } from "~/app/lib/html";
+import routes from "~/app/routes";
 import { TenantApiError } from "~/app/services/tenant-api";
 import action from "~/lib/action";
 import { formatUserAgent, getDeviceIcon, parseUserAgent } from "~/lib/user-agent";
@@ -142,8 +143,8 @@ export default {
 									</div>
 									<div class="flex-shrink-0">
 										${isCurrentSession ? "" : html`
-											<form method="POST" action="/dashboard/tenants/${tenant.id}/users/${params.id}/sessions/${s.id}" class="inline">
-												<input type="hidden" name="_method" value="DELETE">
+											<form method="POST" action="${routes.dashboard.tenants.users.sessions.destroy.href({ tenantId: tenant.id, userId: params.id, id: s.id })}" class="inline">
+												<input type="hidden" name="_method" value="${routes.dashboard.tenants.users.sessions.destroy.method}">
 												<button type="submit" class="text-red-600 hover:text-red-800 text-sm">Revoke</button>
 											</form>
 										`}
@@ -164,8 +165,8 @@ export default {
 														<p class="font-medium">${p.name ?? "Unnamed passkey"}</p>
 														<p class="text-gray-400 text-xs">${p.deviceType || "Unknown device"} • Last used: ${p.lastUsedAt ? new Date(p.lastUsedAt).toLocaleDateString() : "Never"}</p>
 													</div>
-													<form method="POST" action="/dashboard/tenants/${tenant.id}/users/${params.id}/passkeys/${p.id}" class="inline">
-														<input type="hidden" name="_method" value="DELETE">
+													<form method="POST" action="${routes.dashboard.tenants.users.passkeys.destroy.href({ tenantId: tenant.id, userId: params.id, id: p.id })}" class="inline">
+														<input type="hidden" name="_method" value="${routes.dashboard.tenants.users.passkeys.destroy.method}">
 														<button type="submit" class="text-red-600 hover:text-red-800" onclick="return confirm('Delete this passkey?')">Delete</button>
 													</form>
 												</li>
@@ -184,8 +185,8 @@ export default {
 														<p class="font-medium">Client: ${g.client?.name ?? "Unknown"}</p>
 														<p class="text-gray-400 text-xs">Scopes: ${g.scopes.join(", ")}</p>
 													</div>
-													<form method="POST" action="/dashboard/tenants/${tenant.id}/users/${params.id}/grants/${g.id}" class="inline">
-														<input type="hidden" name="_method" value="DELETE">
+													<form method="POST" action="${routes.dashboard.tenants.users.grants.destroy.href({ tenantId: tenant.id, userId: params.id, id: g.id })}" class="inline">
+														<input type="hidden" name="_method" value="${routes.dashboard.tenants.users.grants.destroy.method}">
 														<button type="submit" class="text-red-600 hover:text-red-800" onclick="return confirm('Revoke access?')">Revoke</button>
 													</form>
 												</li>
