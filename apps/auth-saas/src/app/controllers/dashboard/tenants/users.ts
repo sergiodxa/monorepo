@@ -7,6 +7,7 @@ import { html } from "remix/html-template";
 import { layout } from "~/app/lib/html";
 import { TenantApiError } from "~/app/services/tenant-api";
 import action from "~/lib/action";
+import { formatUserAgent, getDeviceIcon, parseUserAgent } from "~/lib/user-agent";
 
 let UpdateUserSchema = s.object({
 	displayName: s.optional(s.string()),
@@ -109,20 +110,40 @@ export default {
 					? html`
 							<p class="text-gray-500 text-sm">No active sessions</p>
 						`
-					: html`<ul class="space-y-2">${sessions.map(
-							(s) => html`
-												<li class="flex justify-between items-center text-sm border-b pb-2 last:border-0 last:pb-0">
-													<div>
-														<p class="text-gray-600">${s.userAgent ? s.userAgent.slice(0, 50) : "Unknown device"}</p>
-														<p class="text-gray-400 text-xs">Expires: ${new Date(s.expiresAt).toLocaleString()}</p>
-													</div>
-													<form method="POST" action="/dashboard/tenants/${tenant.id}/users/${params.id}/sessions/${s.id}" class="inline">
-														<input type="hidden" name="_method" value="DELETE">
-														<button type="submit" class="text-red-600 hover:text-red-800">Revoke</button>
-													</form>
-												</li>
-											`,
-						)}</ul>`;
+					: html`<ul class="divide-y">${sessions.map((s) => {
+							let parsed = parseUserAgent(s.userAgent);
+							let deviceLabel = formatUserAgent(parsed);
+							let isActive = new Date(s.expiresAt) > new Date();
+							let lastAccessed = new Date(s.updatedAt).toLocaleDateString("en-US", {
+								day: "2-digit",
+								month: "short",
+								year: "numeric",
+							});
+							return html`
+								<li class="flex items-start gap-4 py-4 first:pt-0 last:pb-0">
+									<div class="flex-shrink-0 pt-1">
+										${getDeviceIcon(parsed.device)}
+									</div>
+									<div class="flex-1 min-w-0">
+										<div class="flex items-center gap-2 flex-wrap">
+											<span class="font-medium text-gray-900">${deviceLabel}</span>
+											${s.ip ? html`<span class="text-gray-500 text-sm">${s.ip}</span>` : ""}
+										</div>
+										<div class="flex items-center gap-2 mt-1">
+											${isActive ? html`<span class="px-2 py-0.5 text-xs font-medium bg-green-100 text-green-800 rounded-full">active</span>` : html`<span class="px-2 py-0.5 text-xs font-medium bg-gray-100 text-gray-600 rounded-full">expired</span>`}
+										</div>
+										<p class="text-gray-500 text-sm mt-1">Last accessed on ${lastAccessed}</p>
+										${s.client ? html`<p class="text-gray-600 text-sm">${s.client.name}</p>` : ""}
+									</div>
+									<div class="flex-shrink-0">
+										<form method="POST" action="/dashboard/tenants/${tenant.id}/users/${params.id}/sessions/${s.id}" class="inline">
+											<input type="hidden" name="_method" value="DELETE">
+											<button type="submit" class="text-red-600 hover:text-red-800 text-sm">Revoke</button>
+										</form>
+									</div>
+								</li>
+							`;
+						})}</ul>`;
 
 			let passkeysList =
 				passkeys.length === 0

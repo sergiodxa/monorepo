@@ -73,7 +73,12 @@ const UserSchema = s.object({
 /** Schema for user session (from API response). */
 const SessionSchema = s.object({
 	id: s.string(),
-	clientId: s.string(),
+	client: s.nullable(
+		s.object({
+			id: s.string(),
+			name: s.string(),
+		}),
+	),
 	ip: s.nullable(s.string()),
 	userAgent: s.nullable(s.string()),
 	expiresAt: s.string(),

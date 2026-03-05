@@ -4,6 +4,7 @@ import { notFound, ok } from "@pkg/http/response/json";
 import action from "~/lib/action";
 import { RecordNotFoundError } from "~/lib/db-errors";
 import { toIsoString } from "~/lib/timestamp";
+import Client from "~/tenant/models/client";
 import Session from "~/tenant/models/session";
 import Subject from "~/tenant/models/subject";
 
@@ -18,18 +19,26 @@ export const index = action<"GET", "/api/subjects/:id/sessions">(async ({ db, pa
 
 	let sessions = await Session.listBySubject(db, params.id);
 
+	// Fetch all unique client IDs to avoid N+1
+	let clientIds = [...new Set(sessions.map((s) => s.client_id))];
+	let clients = await Client.listByIds(db, clientIds);
+	let clientMap = new Map(clients.map((c) => [c.id, c]));
+
 	log.info("Sessions listed", { subjectId: params.id, count: sessions.length });
 
 	return ok(
-		sessions.map((session) => ({
-			id: session.id,
-			clientId: session.client_id,
-			ip: session.ip,
-			userAgent: session.user_agent,
-			expiresAt: toIsoString(session.expires_at),
-			createdAt: toIsoString(session.created_at),
-			updatedAt: toIsoString(session.updated_at),
-		})),
+		sessions.map((session) => {
+			let client = clientMap.get(session.client_id);
+			return {
+				id: session.id,
+				client: client ? { id: client.id, name: client.name } : null,
+				ip: session.ip,
+				userAgent: session.user_agent,
+				expiresAt: toIsoString(session.expires_at),
+				createdAt: toIsoString(session.created_at),
+				updatedAt: toIsoString(session.updated_at),
+			};
+		}),
 	);
 });
 
