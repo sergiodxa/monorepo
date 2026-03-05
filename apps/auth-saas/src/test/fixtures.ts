@@ -131,11 +131,12 @@ export async function createPasskey(
 ) {
 	return await Passkey.create(db, {
 		subjectId: options.subjectId,
+		credentialId: "test-credential-id-" + crypto.randomUUID(),
 		publicKey: "test-public-key-" + crypto.randomUUID(),
 		counter: 0,
 		deviceType: "singleDevice",
 		backedUp: false,
-		transports: JSON.stringify(["internal"]),
+		transports: "internal",
 		name: options.name ?? "Test Passkey",
 	});
 }

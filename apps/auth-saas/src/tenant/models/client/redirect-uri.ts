@@ -4,14 +4,7 @@ import * as s from "remix/data-schema";
 import { createTable } from "remix/data-table";
 
 import { RecordNotFoundError } from "~/lib/db-errors";
-
-/** Allowed URI schemes for redirect URIs. HTTP is only allowed for localhost in development. */
-const ALLOWED_SCHEMES = ["https"];
-const LOCALHOST_SCHEMES = ["http", "https"];
-const LOCALHOST_HOSTS = ["localhost", "127.0.0.1", "[::1]"];
-
-/** Dangerous schemes that should never be allowed to prevent XSS attacks. */
-const FORBIDDEN_SCHEMES = ["javascript", "data", "vbscript", "file"];
+import { InvalidUriError, UnsafeSchemeError, validateScheme } from "~/lib/uri-validation";
 
 /**
  * Model for client redirect URIs.
@@ -19,15 +12,18 @@ const FORBIDDEN_SCHEMES = ["javascript", "data", "vbscript", "file"];
  */
 export default class RedirectUri {
 	/** Error thrown when a redirect URI is malformed. */
-	static InvalidRedirectUriError = class extends Error {
+	static InvalidRedirectUriError = class extends InvalidUriError {
 		override name = "InvalidRedirectUriError";
+		constructor() {
+			super("Invalid redirect URI");
+		}
 	};
 
 	/** Error thrown when a redirect URI uses a forbidden or unsafe scheme. */
-	static UnsafeSchemeError = class extends Error {
+	static UnsafeSchemeError = class extends UnsafeSchemeError {
 		override name = "UnsafeSchemeError";
 		constructor(scheme: string) {
-			super(`Unsafe redirect URI scheme: ${scheme}. Only HTTPS is allowed (HTTP for localhost).`);
+			super(scheme, "redirect URI");
 		}
 	};
 
@@ -63,30 +59,17 @@ export default class RedirectUri {
 	 * @throws {UnsafeSchemeError} If URI uses a forbidden scheme
 	 */
 	static validateScheme(uri: string): void {
-		let parsed: URL;
 		try {
-			parsed = new URL(uri);
-		} catch {
-			throw new RedirectUri.InvalidRedirectUriError();
-		}
-
-		let scheme = parsed.protocol.replace(":", "").toLowerCase();
-
-		if (FORBIDDEN_SCHEMES.includes(scheme)) {
-			throw new RedirectUri.UnsafeSchemeError(scheme);
-		}
-
-		let hostname = parsed.hostname.toLowerCase();
-		let isLocalhost = LOCALHOST_HOSTS.includes(hostname) || hostname.endsWith(".localhost");
-
-		if (isLocalhost) {
-			if (!LOCALHOST_SCHEMES.includes(scheme)) {
+			validateScheme(uri, { context: "redirect URI" });
+		} catch (error) {
+			if (error instanceof InvalidUriError) {
+				throw new RedirectUri.InvalidRedirectUriError();
+			}
+			if (error instanceof UnsafeSchemeError) {
+				let scheme = error.message.match(/scheme: (\w+)/)?.[1] ?? "unknown";
 				throw new RedirectUri.UnsafeSchemeError(scheme);
 			}
-		} else {
-			if (!ALLOWED_SCHEMES.includes(scheme)) {
-				throw new RedirectUri.UnsafeSchemeError(scheme);
-			}
+			throw error;
 		}
 	}
 

@@ -112,10 +112,14 @@ export default class TenantInvite {
 		if (!invite) throw new RecordNotFoundError(TenantInvite.table, { id });
 
 		let now = new Date().toISOString();
-		await db.update(TenantInvite.table, { id }, {
-			accepted_at: now,
-			updated_at: now,
-		});
+		await db.update(
+			TenantInvite.table,
+			{ id },
+			{
+				accepted_at: now,
+				updated_at: now,
+			},
+		);
 
 		return (await db.findOne(TenantInvite.table, { where: { id } }))!;
 	}

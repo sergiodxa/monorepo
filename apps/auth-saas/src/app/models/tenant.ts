@@ -223,10 +223,14 @@ export default class Tenant {
 		});
 
 		for (let tenant of pendingTenants) {
-			await db.update(Tenant.table, { id: tenant.id }, {
-				owner_subject_id: subjectId,
-				updated_at: new Date().toISOString(),
-			});
+			await db.update(
+				Tenant.table,
+				{ id: tenant.id },
+				{
+					owner_subject_id: subjectId,
+					updated_at: new Date().toISOString(),
+				},
+			);
 		}
 
 		return pendingTenants.length;

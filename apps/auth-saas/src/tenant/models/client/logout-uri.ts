@@ -4,14 +4,11 @@ import * as s from "remix/data-schema";
 import { createTable } from "remix/data-table";
 
 import { RecordNotFoundError } from "~/lib/db-errors";
-
-/** Allowed URI schemes for logout URIs. HTTP is only allowed for localhost in development. */
-const ALLOWED_SCHEMES = ["https"];
-const LOCALHOST_SCHEMES = ["http", "https"];
-const LOCALHOST_HOSTS = ["localhost", "127.0.0.1", "[::1]"];
-
-/** Dangerous schemes that should never be allowed to prevent XSS attacks. */
-const FORBIDDEN_SCHEMES = ["javascript", "data", "vbscript", "file"];
+import {
+	InvalidUriError,
+	UnsafeSchemeError,
+	validateScheme as baseValidateScheme,
+} from "~/lib/uri-validation";
 
 /**
  * Model for client logout URIs.
@@ -19,15 +16,18 @@ const FORBIDDEN_SCHEMES = ["javascript", "data", "vbscript", "file"];
  */
 export default class LogoutUri {
 	/** Error thrown when a logout URI is malformed. */
-	static InvalidLogoutUriError = class extends Error {
+	static InvalidLogoutUriError = class extends InvalidUriError {
 		override name = "InvalidLogoutUriError";
+		constructor() {
+			super("Invalid logout URI");
+		}
 	};
 
 	/** Error thrown when a logout URI uses a forbidden or unsafe scheme. */
-	static UnsafeSchemeError = class extends Error {
+	static UnsafeSchemeError = class extends UnsafeSchemeError {
 		override name = "UnsafeSchemeError";
 		constructor(scheme: string) {
-			super(`Unsafe logout URI scheme: ${scheme}. Only HTTPS is allowed (HTTP for localhost).`);
+			super(scheme, "logout URI");
 		}
 	};
 
@@ -40,30 +40,17 @@ export default class LogoutUri {
 	 * @throws {UnsafeSchemeError} If URI uses a forbidden scheme
 	 */
 	static validateScheme(uri: string): void {
-		let parsed: URL;
 		try {
-			parsed = new URL(uri);
-		} catch {
-			throw new LogoutUri.InvalidLogoutUriError();
-		}
-
-		let scheme = parsed.protocol.replace(":", "").toLowerCase();
-
-		if (FORBIDDEN_SCHEMES.includes(scheme)) {
-			throw new LogoutUri.UnsafeSchemeError(scheme);
-		}
-
-		let hostname = parsed.hostname.toLowerCase();
-		let isLocalhost = LOCALHOST_HOSTS.includes(hostname) || hostname.endsWith(".localhost");
-
-		if (isLocalhost) {
-			if (!LOCALHOST_SCHEMES.includes(scheme)) {
+			baseValidateScheme(uri, { context: "logout URI" });
+		} catch (error) {
+			if (error instanceof InvalidUriError) {
+				throw new LogoutUri.InvalidLogoutUriError();
+			}
+			if (error instanceof UnsafeSchemeError) {
+				let scheme = error.message.match(/scheme: (\w+)/)?.[1] ?? "unknown";
 				throw new LogoutUri.UnsafeSchemeError(scheme);
 			}
-		} else {
-			if (!ALLOWED_SCHEMES.includes(scheme)) {
-				throw new LogoutUri.UnsafeSchemeError(scheme);
-			}
+			throw error;
 		}
 	}
 

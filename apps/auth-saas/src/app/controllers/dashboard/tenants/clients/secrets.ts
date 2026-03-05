@@ -32,7 +32,10 @@ export default {
 					layout({
 						title: `New Secret - ${client.name}`,
 						tenant,
-						backLink: routes.dashboard.tenants.clients.show.href({ tenantId: tenant.id, id: params.clientId }),
+						backLink: routes.dashboard.tenants.clients.show.href({
+							tenantId: tenant.id,
+							id: params.clientId,
+						}),
 						backText: client.name,
 						content: html`
 						<h2 class="text-2xl font-bold mb-6">Generate New Secret</h2>
@@ -128,30 +131,40 @@ export default {
 			);
 			log.info("Secret edit not supported - secrets cannot be edited");
 
-		// Secrets cannot be edited, only revoked
-		return new Response(null, {
-			status: 302,
-			headers: { Location: routes.dashboard.tenants.clients.show.href({ tenantId: tenant.id, id: params.clientId }) },
-		});
-	},
-),
+			// Secrets cannot be edited, only revoked
+			return new Response(null, {
+				status: 302,
+				headers: {
+					Location: routes.dashboard.tenants.clients.show.href({
+						tenantId: tenant.id,
+						id: params.clientId,
+					}),
+				},
+			});
+		},
+	),
 
-update: action<"PUT", "/dashboard/tenants/:tenantId/clients/:clientId/secrets/:id">(
+	update: action<"PUT", "/dashboard/tenants/:tenantId/clients/:clientId/secrets/:id">(
 		async ({ params, tenant, logger }) => {
 			let log = logger.action(
 				`/dashboard/tenants/${tenant.id}/clients/${params.clientId}/secrets/${params.id}`,
 			);
 			log.info("Secret update not supported - secrets cannot be edited");
 
-		// Secrets cannot be updated
-		return new Response(null, {
-			status: 302,
-			headers: { Location: routes.dashboard.tenants.clients.show.href({ tenantId: tenant.id, id: params.clientId }) },
-		});
-	},
-),
+			// Secrets cannot be updated
+			return new Response(null, {
+				status: 302,
+				headers: {
+					Location: routes.dashboard.tenants.clients.show.href({
+						tenantId: tenant.id,
+						id: params.clientId,
+					}),
+				},
+			});
+		},
+	),
 
-destroy: action<"DELETE", "/dashboard/tenants/:tenantId/clients/:clientId/secrets/:id">(
+	destroy: action<"DELETE", "/dashboard/tenants/:tenantId/clients/:clientId/secrets/:id">(
 		async ({ params, tenant, tenantApi, logger }) => {
 			let log = logger.action(
 				`/dashboard/tenants/${tenant.id}/clients/${params.clientId}/secrets/${params.id}`,
@@ -165,10 +178,15 @@ destroy: action<"DELETE", "/dashboard/tenants/:tenantId/clients/:clientId/secret
 				secretId: params.id,
 			});
 
-		return new Response(null, {
-			status: 302,
-			headers: { Location: routes.dashboard.tenants.clients.show.href({ tenantId: tenant.id, id: params.clientId }) },
-		});
-	},
-),
+			return new Response(null, {
+				status: 302,
+				headers: {
+					Location: routes.dashboard.tenants.clients.show.href({
+						tenantId: tenant.id,
+						id: params.clientId,
+					}),
+				},
+			});
+		},
+	),
 };

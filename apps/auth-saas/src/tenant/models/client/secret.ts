@@ -8,6 +8,13 @@ import { RecordNotFoundError } from "~/lib/db-errors";
 import { toIsoString, toIsoStringOptional } from "~/lib/timestamp";
 
 /**
+ * Pre-computed valid bcrypt hash used for timing attack prevention.
+ * When no secrets exist for a client, we still perform a bcrypt comparison
+ * against this dummy hash to ensure consistent response times.
+ */
+const TIMING_SAFE_DUMMY_HASH = "$2a$10$N9qo8uLOickgx2ZMRZoMye.OmWJc0.vv.rMIFZQMWLQihlT4YLu8W";
+
+/**
  * Model for client secrets.
  * Manages creation, verification, and lifecycle of OAuth 2.0 client secrets.
  */
@@ -113,7 +120,7 @@ export default class Secret {
 		});
 
 		if (validSecrets.length === 0) {
-			await bcrypt.compare(plainSecret, "$2a$10$dummy.hash.for.timing.attack.prevention");
+			await bcrypt.compare(plainSecret, TIMING_SAFE_DUMMY_HASH);
 			return false;
 		}
 

@@ -7,12 +7,13 @@ import * as s from "remix/data-schema";
 import action from "~/lib/action";
 import { RecordNotFoundError } from "~/lib/db-errors";
 import { isResponse, safeJsonParse } from "~/lib/safe-json";
+import { LIMITS, maxLength } from "~/lib/schema-checks";
 import { toIsoString, toIsoStringOptional } from "~/lib/timestamp";
 import Passkey from "~/tenant/models/passkey";
 import Subject from "~/tenant/models/subject";
 
 let UpdatePasskeySchema = s.object({
-	name: s.string(),
+	name: s.string().pipe(maxLength(LIMITS.name.max)),
 });
 
 export const index = action<"GET", "/api/subjects/:id/passkeys">(async ({ db, params, logger }) => {

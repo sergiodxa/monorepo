@@ -47,7 +47,7 @@ export let WebAuthnRegister = clientEntry(
 
 				// Success - follow the redirect from server
 				let successData = (await res.json()) as { redirect?: string };
-				
+
 				status = "success";
 				handle.update();
 

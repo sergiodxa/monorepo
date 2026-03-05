@@ -6,8 +6,8 @@ import { validate } from "@pkg/validate";
 import { env } from "cloudflare:workers";
 import * as s from "remix/data-schema";
 
-import routes from "~/app/routes";
 import Tenant from "~/app/models/tenant";
+import routes from "~/app/routes";
 import action from "~/lib/action";
 import { base64UrlDecode } from "~/lib/crypto-utils";
 import { createSessionToken } from "~/lib/platform-session";

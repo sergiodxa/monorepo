@@ -1,5 +1,3 @@
-import { env } from "cloudflare:workers";
-
 import action from "~/lib/action";
 import { base64UrlEncode } from "~/lib/crypto-utils";
 

@@ -14,8 +14,11 @@ describe("Passkey", () => {
 
 	beforeEach(async () => {
 		sqliteDb = new Database(":memory:");
-		let { default: migration } = await import("../migrations/0001-init.sql?raw");
-		sqliteDb.run(migration);
+		let { default: migration0001 } = await import("../migrations/0001-init.sql?raw");
+		let { default: migration0006 } =
+			await import("../migrations/0006-add-passkey-credential-id.sql?raw");
+		sqliteDb.run(migration0001);
+		sqliteDb.run(migration0006);
 		let adapter = createBunSqliteDatabaseAdapter(sqliteDb);
 		db = createDatabase(adapter);
 	});
@@ -30,6 +33,7 @@ describe("Passkey", () => {
 
 			await Passkey.create(db, {
 				subjectId: subject.id,
+				credentialId: "test-credential-id-123",
 				publicKey: "test-public-key-123",
 				counter: 0,
 			});
@@ -50,6 +54,7 @@ describe("Passkey", () => {
 
 			await Passkey.create(db, {
 				subjectId: subject.id,
+				credentialId: "test-credential-id-456",
 				publicKey: "test-public-key-456",
 				counter: 5,
 				deviceType: "singleDevice",
@@ -71,6 +76,7 @@ describe("Passkey", () => {
 			let subject = await createSubject(db, { verified: true });
 			await Passkey.create(db, {
 				subjectId: subject.id,
+				credentialId: "test-cred-show",
 				publicKey: "test-key",
 				counter: 0,
 			});
@@ -94,18 +100,21 @@ describe("Passkey", () => {
 
 			await Passkey.create(db, {
 				subjectId: subject1.id,
+				credentialId: "cred-1",
 				publicKey: "key-1",
 				counter: 0,
 				name: "Passkey 1",
 			});
 			await Passkey.create(db, {
 				subjectId: subject1.id,
+				credentialId: "cred-2",
 				publicKey: "key-2",
 				counter: 0,
 				name: "Passkey 2",
 			});
 			await Passkey.create(db, {
 				subjectId: subject2.id,
+				credentialId: "cred-3",
 				publicKey: "key-3",
 				counter: 0,
 			});
@@ -130,6 +139,7 @@ describe("Passkey", () => {
 			let subject = await createSubject(db, { verified: true });
 			await Passkey.create(db, {
 				subjectId: subject.id,
+				credentialId: "test-cred-counter",
 				publicKey: "test-key",
 				counter: 5,
 			});
@@ -154,6 +164,7 @@ describe("Passkey", () => {
 			let subject = await createSubject(db, { verified: true });
 			await Passkey.create(db, {
 				subjectId: subject.id,
+				credentialId: "test-cred-rename",
 				publicKey: "test-key",
 				counter: 0,
 				name: "Old Name",
@@ -178,6 +189,7 @@ describe("Passkey", () => {
 			let subject = await createSubject(db, { verified: true });
 			await Passkey.create(db, {
 				subjectId: subject.id,
+				credentialId: "test-cred-destroy",
 				publicKey: "test-key",
 				counter: 0,
 			});

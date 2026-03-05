@@ -96,10 +96,14 @@ export default class TenantMember {
 		let member = await db.findOne(TenantMember.table, { where: { id } });
 		if (!member) throw new RecordNotFoundError(TenantMember.table, { id });
 
-		await db.update(TenantMember.table, { id }, {
-			role,
-			updated_at: new Date().toISOString(),
-		});
+		await db.update(
+			TenantMember.table,
+			{ id },
+			{
+				role,
+				updated_at: new Date().toISOString(),
+			},
+		);
 
 		return (await db.findOne(TenantMember.table, { where: { id } }))!;
 	}

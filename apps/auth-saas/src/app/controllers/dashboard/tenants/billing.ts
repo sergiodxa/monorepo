@@ -4,9 +4,9 @@ import { env } from "cloudflare:workers";
 import { html } from "remix/html-template";
 
 import { layout } from "~/app/lib/html";
-import routes from "~/app/routes";
 import tenantOwner from "~/app/middleware/tenant-owner";
 import Subscription from "~/app/models/subscription";
+import routes from "~/app/routes";
 import AnalyticsService from "~/app/services/analytics";
 import form from "~/lib/form";
 

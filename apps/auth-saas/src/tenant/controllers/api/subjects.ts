@@ -60,7 +60,10 @@ export const update = action<"PUT", "/api/subjects/:id">(
 				return notFound({ error: "Subject not found" });
 			}
 			if (error instanceof Subject.UsernameAlreadyTakenError) {
-				log.info("Username already taken", { subjectId: params.id, username: result.data.username });
+				log.info("Username already taken", {
+					subjectId: params.id,
+					username: result.data.username,
+				});
 				return badRequest({ error: error.message });
 			}
 			throw error;

@@ -136,19 +136,39 @@ export default {
 											${s.ip ? html`<span class="text-gray-500 text-sm">${s.ip}</span>` : ""}
 										</div>
 										<div class="flex items-center gap-2 mt-1">
-											${isActive ? html`<span class="px-2 py-0.5 text-xs font-medium bg-green-100 text-green-800 rounded-full">active</span>` : html`<span class="px-2 py-0.5 text-xs font-medium bg-gray-100 text-gray-600 rounded-full">expired</span>`}
-											${isCurrentSession ? html`<span class="px-2 py-0.5 text-xs font-medium bg-blue-100 text-blue-800 rounded-full">Your current session</span>` : ""}
+											${
+												isActive
+													? html`
+															<span class="px-2 py-0.5 text-xs font-medium bg-green-100 text-green-800 rounded-full">active</span>
+														`
+													: html`
+															<span class="px-2 py-0.5 text-xs font-medium bg-gray-100 text-gray-600 rounded-full">expired</span>
+														`
+											}
+											${
+												isCurrentSession
+													? html`
+															<span class="px-2 py-0.5 text-xs font-medium bg-blue-100 text-blue-800 rounded-full"
+																>Your current session</span
+															>
+														`
+													: ""
+											}
 										</div>
 										<p class="text-gray-500 text-sm mt-1">Last accessed on ${lastAccessed}</p>
 										${s.client ? html`<p class="text-gray-600 text-sm">${s.client.name}</p>` : ""}
 									</div>
 									<div class="flex-shrink-0">
-										${isCurrentSession ? "" : html`
+										${
+											isCurrentSession
+												? ""
+												: html`
 											<form method="POST" action="${routes.dashboard.tenants.users.sessions.destroy.href({ tenantId: tenant.id, userId: params.id, id: s.id })}" class="inline">
 												<input type="hidden" name="_method" value="${routes.dashboard.tenants.users.sessions.destroy.method}">
 												<button type="submit" class="text-red-600 hover:text-red-800 text-sm">Revoke</button>
 											</form>
-										`}
+										`
+										}
 									</div>
 								</li>
 							`;
@@ -276,7 +296,10 @@ export default {
 					layout({
 						title: `Edit ${user.display_name || user.username} - ${tenant.name}`,
 						tenant,
-						backLink: routes.dashboard.tenants.users.show.href({ tenantId: tenant.id, id: params.id }),
+						backLink: routes.dashboard.tenants.users.show.href({
+							tenantId: tenant.id,
+							id: params.id,
+						}),
 						backText: user.display_name || user.username,
 						content: html`
 						<h2 class="text-2xl font-bold mb-6">Edit User</h2>
@@ -342,16 +365,33 @@ export default {
 
 				return new Response(null, {
 					status: 302,
-					headers: { Location: routes.dashboard.tenants.users.show.href({ tenantId: tenant.id, id: params.id }) },
+					headers: {
+						Location: routes.dashboard.tenants.users.show.href({
+							tenantId: tenant.id,
+							id: params.id,
+						}),
+					},
 				});
 			} catch (error) {
 				if (error instanceof TenantApiError && error.status === 400) {
-					log.info("User update failed", { tenantId: tenant.id, userId: params.id, error: error.message });
+					log.info("User update failed", {
+						tenantId: tenant.id,
+						userId: params.id,
+						error: error.message,
+					});
 					// Redirect back to edit page with error message
 					let errorMessage = encodeURIComponent(error.message);
 					return new Response(null, {
 						status: 302,
-						headers: { Location: new Location({ pathname: routes.dashboard.tenants.users.edit.href({ tenantId: tenant.id, id: params.id }), search: new URLSearchParams({ error: errorMessage }) }).toString() },
+						headers: {
+							Location: new Location({
+								pathname: routes.dashboard.tenants.users.edit.href({
+									tenantId: tenant.id,
+									id: params.id,
+								}),
+								search: new URLSearchParams({ error: errorMessage }),
+							}).toString(),
+						},
 					});
 				}
 				throw error;

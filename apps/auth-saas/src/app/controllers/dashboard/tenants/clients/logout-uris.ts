@@ -33,7 +33,10 @@ export default {
 					layout({
 						title: `New Logout URI - ${client.name}`,
 						tenant,
-						backLink: routes.dashboard.tenants.clients.show.href({ tenantId: tenant.id, id: params.clientId }),
+						backLink: routes.dashboard.tenants.clients.show.href({
+							tenantId: tenant.id,
+							id: params.clientId,
+						}),
 						backText: client.name,
 						content: html`
 						<h2 class="text-2xl font-bold mb-6">Add Logout URI</h2>
@@ -102,42 +105,57 @@ export default {
 
 			log.info("Logout URI created", { tenantId: tenant.id, clientId: params.clientId });
 
-		return new Response(null, {
-			status: 302,
-			headers: { Location: routes.dashboard.tenants.clients.show.href({ tenantId: tenant.id, id: params.clientId }) },
-		});
-	},
-),
+			return new Response(null, {
+				status: 302,
+				headers: {
+					Location: routes.dashboard.tenants.clients.show.href({
+						tenantId: tenant.id,
+						id: params.clientId,
+					}),
+				},
+			});
+		},
+	),
 
-edit: action<"GET", "/dashboard/tenants/:tenantId/clients/:clientId/logout-uris/:id/edit">(
+	edit: action<"GET", "/dashboard/tenants/:tenantId/clients/:clientId/logout-uris/:id/edit">(
 		async ({ params, tenant, logger }) => {
 			let log = logger.loader(
 				`/dashboard/tenants/${tenant.id}/clients/${params.clientId}/logout-uris/${params.id}/edit`,
 			);
 			log.info("Logout URI edit not supported - delete and recreate");
 
-		return new Response(null, {
-			status: 302,
-			headers: { Location: routes.dashboard.tenants.clients.show.href({ tenantId: tenant.id, id: params.clientId }) },
-		});
-	},
-),
+			return new Response(null, {
+				status: 302,
+				headers: {
+					Location: routes.dashboard.tenants.clients.show.href({
+						tenantId: tenant.id,
+						id: params.clientId,
+					}),
+				},
+			});
+		},
+	),
 
-update: action<"PUT", "/dashboard/tenants/:tenantId/clients/:clientId/logout-uris/:id">(
+	update: action<"PUT", "/dashboard/tenants/:tenantId/clients/:clientId/logout-uris/:id">(
 		async ({ params, tenant, logger }) => {
 			let log = logger.action(
 				`/dashboard/tenants/${tenant.id}/clients/${params.clientId}/logout-uris/${params.id}`,
 			);
 			log.info("Logout URI update not supported");
 
-		return new Response(null, {
-			status: 302,
-			headers: { Location: routes.dashboard.tenants.clients.show.href({ tenantId: tenant.id, id: params.clientId }) },
-		});
-	},
-),
+			return new Response(null, {
+				status: 302,
+				headers: {
+					Location: routes.dashboard.tenants.clients.show.href({
+						tenantId: tenant.id,
+						id: params.clientId,
+					}),
+				},
+			});
+		},
+	),
 
-destroy: action<"DELETE", "/dashboard/tenants/:tenantId/clients/:clientId/logout-uris/:id">(
+	destroy: action<"DELETE", "/dashboard/tenants/:tenantId/clients/:clientId/logout-uris/:id">(
 		async ({ params, tenant, tenantApi, logger }) => {
 			let log = logger.action(
 				`/dashboard/tenants/${tenant.id}/clients/${params.clientId}/logout-uris/${params.id}`,
@@ -151,10 +169,15 @@ destroy: action<"DELETE", "/dashboard/tenants/:tenantId/clients/:clientId/logout
 				uriId: params.id,
 			});
 
-		return new Response(null, {
-			status: 302,
-			headers: { Location: routes.dashboard.tenants.clients.show.href({ tenantId: tenant.id, id: params.clientId }) },
-		});
-	},
-),
+			return new Response(null, {
+				status: 302,
+				headers: {
+					Location: routes.dashboard.tenants.clients.show.href({
+						tenantId: tenant.id,
+						id: params.clientId,
+					}),
+				},
+			});
+		},
+	),
 };

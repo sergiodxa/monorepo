@@ -212,19 +212,22 @@ export default form<"/authorize">({
 					);
 					return ok(html);
 				} else {
-					let { id: challengeId, challenge, userId } =
-						await WebAuthnChallenge.createForRegistration(db, {
-							email,
-							clientId: client_id,
-							redirectUri: redirect_uri,
-							state,
-							nonce,
-							scope,
-							pkce:
-								code_challenge && code_challenge_method
-									? { challenge: code_challenge, method: code_challenge_method as "S256" | "plain" }
-									: undefined,
-						});
+					let {
+						id: challengeId,
+						challenge,
+						userId,
+					} = await WebAuthnChallenge.createForRegistration(db, {
+						email,
+						clientId: client_id,
+						redirectUri: redirect_uri,
+						state,
+						nonce,
+						scope,
+						pkce:
+							code_challenge && code_challenge_method
+								? { challenge: code_challenge, method: code_challenge_method as "S256" | "plain" }
+								: undefined,
+					});
 
 					let html = await renderToString(
 						<RegisterForm
@@ -544,5 +547,3 @@ function RegisterForm() {
 		</Layout>
 	);
 }
-
-

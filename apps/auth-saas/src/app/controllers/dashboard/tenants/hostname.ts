@@ -6,9 +6,9 @@ import * as s from "remix/data-schema";
 import { html, type SafeHtml } from "remix/html-template";
 
 import { layout } from "~/app/lib/html";
-import routes from "~/app/routes";
 import tenantOwner from "~/app/middleware/tenant-owner";
 import Hostname from "~/app/models/hostname";
+import routes from "~/app/routes";
 import form from "~/lib/form";
 
 let AddHostnameSchema = s.object({
@@ -183,7 +183,9 @@ export default form<"/dashboard/tenants/:tenantId/hostname">({
 
 			return new Response(null, {
 				status: 302,
-				headers: { Location: routes.dashboard.tenants.hostname.index.href({ tenantId: tenant.id }) },
+				headers: {
+					Location: routes.dashboard.tenants.hostname.index.href({ tenantId: tenant.id }),
+				},
 			});
 		},
 	},

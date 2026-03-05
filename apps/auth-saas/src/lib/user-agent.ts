@@ -47,7 +47,8 @@ function parseOS(ua: string): string {
 	// Desktop OS
 	if (ua.includes("Mac OS X") || ua.includes("macOS")) return "macOS";
 	if (ua.includes("Windows NT 10")) return "Windows 10";
-	if (ua.includes("Windows NT 11") || (ua.includes("Windows NT 10") && ua.includes("Win64"))) return "Windows";
+	if (ua.includes("Windows NT 11") || (ua.includes("Windows NT 10") && ua.includes("Win64")))
+		return "Windows";
 	if (ua.includes("Windows")) return "Windows";
 	if (ua.includes("Linux") && !ua.includes("Android")) return "Linux";
 	if (ua.includes("CrOS")) return "ChromeOS";
@@ -80,6 +81,16 @@ export function formatUserAgent(parsed: ParsedUserAgent): string {
 }
 
 /**
+ * Generates a passkey name from user agent, like "Chrome on macOS" or "Safari on iPhone".
+ * @param userAgent - Raw user agent string
+ * @returns Passkey name string
+ */
+export function generatePasskeyName(userAgent: string | null): string {
+	let parsed = parseUserAgent(userAgent);
+	return formatUserAgent(parsed);
+}
+
+/**
  * Returns an SVG icon for the device type.
  * @param device - Device type
  * @returns SafeHtml SVG element
@@ -87,20 +98,48 @@ export function formatUserAgent(parsed: ParsedUserAgent): string {
 export function getDeviceIcon(device: "desktop" | "mobile" | "tablet" | "unknown"): SafeHtml {
 	switch (device) {
 		case "desktop":
-			return html`<svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-				<path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
-			</svg>`;
+			return html`
+				<svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+					<path
+						stroke-linecap="round"
+						stroke-linejoin="round"
+						stroke-width="1.5"
+						d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+					/>
+				</svg>
+			`;
 		case "mobile":
-			return html`<svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-				<path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"/>
-			</svg>`;
+			return html`
+				<svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+					<path
+						stroke-linecap="round"
+						stroke-linejoin="round"
+						stroke-width="1.5"
+						d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"
+					/>
+				</svg>
+			`;
 		case "tablet":
-			return html`<svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-				<path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 18h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
-			</svg>`;
+			return html`
+				<svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+					<path
+						stroke-linecap="round"
+						stroke-linejoin="round"
+						stroke-width="1.5"
+						d="M12 18h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"
+					/>
+				</svg>
+			`;
 		default:
-			return html`<svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-				<path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
-			</svg>`;
+			return html`
+				<svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+					<path
+						stroke-linecap="round"
+						stroke-linejoin="round"
+						stroke-width="1.5"
+						d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+					/>
+				</svg>
+			`;
 	}
 }

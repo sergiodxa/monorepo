@@ -57,8 +57,7 @@ export default class Subject {
 	 * @returns Total number of subjects
 	 */
 	static async count(db: Database): Promise<number> {
-		let subjects = await db.findMany(Subject.table);
-		return subjects.length;
+		return await db.count(Subject.table);
 	}
 
 	/**

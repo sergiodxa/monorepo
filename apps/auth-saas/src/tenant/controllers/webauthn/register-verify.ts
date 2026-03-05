@@ -7,6 +7,7 @@ import * as s from "remix/data-schema";
 import AnalyticsService from "~/app/services/analytics";
 import action from "~/lib/action";
 import { isResponse, safeJsonParse } from "~/lib/safe-json";
+import { generatePasskeyName } from "~/lib/user-agent";
 import { checkUserRateLimit, USER_RATE_LIMITS } from "~/lib/user-rate-limit";
 import AuthorizationCode from "~/tenant/models/authorization-code";
 import Passkey from "~/tenant/models/passkey";
@@ -131,6 +132,9 @@ export default action<"POST", "/webauthn/register/verify">(async ({ db, request,
 		log.info("Created new subject during registration", { subjectId: subject.id });
 	}
 
+	let userAgent = request.headers.get("user-agent");
+	let passkeyName = generatePasskeyName(userAgent);
+
 	await Passkey.create(db, {
 		subjectId: subject.id,
 		// credentialID is already a Base64URLString from @simplewebauthn
@@ -140,7 +144,7 @@ export default action<"POST", "/webauthn/register/verify">(async ({ db, request,
 		deviceType: registrationInfo.credentialDeviceType,
 		backedUp: registrationInfo.credentialBackedUp,
 		transports: response.response.transports?.join(",") ?? null,
-		name: null,
+		name: passkeyName,
 	});
 
 	log.info("Passkey created", {

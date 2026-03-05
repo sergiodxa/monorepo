@@ -203,7 +203,9 @@ export default {
 
 			return new Response(null, {
 				status: 302,
-				headers: { Location: routes.dashboard.tenants.resources.show.href({ tenantId: tenant.id, id }) },
+				headers: {
+					Location: routes.dashboard.tenants.resources.show.href({ tenantId: tenant.id, id }),
+				},
 			});
 		},
 	),
@@ -224,7 +226,10 @@ export default {
 					layout({
 						title: `Edit ${resource.name} - ${tenant.name}`,
 						tenant,
-						backLink: routes.dashboard.tenants.resources.show.href({ tenantId: tenant.id, id: params.id }),
+						backLink: routes.dashboard.tenants.resources.show.href({
+							tenantId: tenant.id,
+							id: params.id,
+						}),
 						backText: resource.name,
 						content: html`
 						<h2 class="text-2xl font-bold mb-6">Edit Resource</h2>
@@ -279,7 +284,12 @@ export default {
 
 			return new Response(null, {
 				status: 302,
-				headers: { Location: routes.dashboard.tenants.resources.show.href({ tenantId: tenant.id, id: params.id }) },
+				headers: {
+					Location: routes.dashboard.tenants.resources.show.href({
+						tenantId: tenant.id,
+						id: params.id,
+					}),
+				},
 			});
 		},
 	),
@@ -294,7 +304,9 @@ export default {
 
 			return new Response(null, {
 				status: 302,
-				headers: { Location: routes.dashboard.tenants.resources.index.href({ tenantId: tenant.id }) },
+				headers: {
+					Location: routes.dashboard.tenants.resources.index.href({ tenantId: tenant.id }),
+				},
 			});
 		},
 	),

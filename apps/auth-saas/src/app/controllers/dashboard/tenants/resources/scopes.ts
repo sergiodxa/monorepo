@@ -32,7 +32,10 @@ export default {
 					layout({
 						title: `New Scope - ${resource.name}`,
 						tenant,
-						backLink: routes.dashboard.tenants.resources.show.href({ tenantId: tenant.id, id: params.resourceId }),
+						backLink: routes.dashboard.tenants.resources.show.href({
+							tenantId: tenant.id,
+							id: params.resourceId,
+						}),
 						backText: resource.name,
 						content: html`
 						<h2 class="text-2xl font-bold mb-6">Add Scope</h2>
@@ -98,7 +101,12 @@ export default {
 
 			return new Response(null, {
 				status: 302,
-				headers: { Location: routes.dashboard.tenants.resources.show.href({ tenantId: tenant.id, id: params.resourceId }) },
+				headers: {
+					Location: routes.dashboard.tenants.resources.show.href({
+						tenantId: tenant.id,
+						id: params.resourceId,
+					}),
+				},
 			});
 		},
 	),
@@ -112,7 +120,12 @@ export default {
 
 			return new Response(null, {
 				status: 302,
-				headers: { Location: routes.dashboard.tenants.resources.show.href({ tenantId: tenant.id, id: params.resourceId }) },
+				headers: {
+					Location: routes.dashboard.tenants.resources.show.href({
+						tenantId: tenant.id,
+						id: params.resourceId,
+					}),
+				},
 			});
 		},
 	),
@@ -126,7 +139,12 @@ export default {
 
 			return new Response(null, {
 				status: 302,
-				headers: { Location: routes.dashboard.tenants.resources.show.href({ tenantId: tenant.id, id: params.resourceId }) },
+				headers: {
+					Location: routes.dashboard.tenants.resources.show.href({
+						tenantId: tenant.id,
+						id: params.resourceId,
+					}),
+				},
 			});
 		},
 	),
@@ -156,10 +174,15 @@ export default {
 				scopeIndex: params.id,
 			});
 
-		return new Response(null, {
-			status: 302,
-			headers: { Location: routes.dashboard.tenants.resources.show.href({ tenantId: tenant.id, id: params.resourceId }) },
-		});
-	},
-),
+			return new Response(null, {
+				status: 302,
+				headers: {
+					Location: routes.dashboard.tenants.resources.show.href({
+						tenantId: tenant.id,
+						id: params.resourceId,
+					}),
+				},
+			});
+		},
+	),
 };

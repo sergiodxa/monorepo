@@ -277,7 +277,9 @@ export default {
 
 			return new Response(null, {
 				status: 302,
-				headers: { Location: routes.dashboard.tenants.clients.show.href({ tenantId: tenant.id, id }) },
+				headers: {
+					Location: routes.dashboard.tenants.clients.show.href({ tenantId: tenant.id, id }),
+				},
 			});
 		},
 	),
@@ -298,7 +300,10 @@ export default {
 					layout({
 						title: `Edit ${client.name} - ${tenant.name}`,
 						tenant,
-						backLink: routes.dashboard.tenants.clients.show.href({ tenantId: tenant.id, id: params.id }),
+						backLink: routes.dashboard.tenants.clients.show.href({
+							tenantId: tenant.id,
+							id: params.id,
+						}),
 						backText: client.name,
 						content: html`
 						<h2 class="text-2xl font-bold mb-6">Edit Client</h2>
@@ -357,7 +362,12 @@ export default {
 
 			return new Response(null, {
 				status: 302,
-				headers: { Location: routes.dashboard.tenants.clients.show.href({ tenantId: tenant.id, id: params.id }) },
+				headers: {
+					Location: routes.dashboard.tenants.clients.show.href({
+						tenantId: tenant.id,
+						id: params.id,
+					}),
+				},
 			});
 		},
 	),

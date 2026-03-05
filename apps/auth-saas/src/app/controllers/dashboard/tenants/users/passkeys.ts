@@ -18,7 +18,12 @@ export default {
 
 			return new Response(null, {
 				status: 302,
-				headers: { Location: routes.dashboard.tenants.users.show.href({ tenantId: tenant.id, id: params.userId }) },
+				headers: {
+					Location: routes.dashboard.tenants.users.show.href({
+						tenantId: tenant.id,
+						id: params.userId,
+					}),
+				},
 			});
 		},
 	),

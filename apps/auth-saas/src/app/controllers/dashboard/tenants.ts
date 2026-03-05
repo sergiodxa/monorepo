@@ -8,9 +8,9 @@ import { html } from "remix/html-template";
 import Hostname from "~/app/models/hostname";
 import Subscription from "~/app/models/subscription";
 import Tenant from "~/app/models/tenant";
+import routes from "~/app/routes";
 import { TenantApiService } from "~/app/services/tenant-api";
 import action from "~/lib/action";
-import routes from "~/app/routes";
 
 let CreateTenantSchema = s.object({
 	name: s.string(),
@@ -38,7 +38,12 @@ export default {
 	show: action<"GET", "/dashboard/tenants/:id">(async ({ db, params, platformSession, logger }) => {
 		let log = logger.loader(`/dashboard/tenants/${params.id}`);
 
-		let tenant = await Tenant.showWithAccess(db, params.id, platformSession.subjectId, platformSession.email);
+		let tenant = await Tenant.showWithAccess(
+			db,
+			params.id,
+			platformSession.subjectId,
+			platformSession.email,
+		);
 		if (!tenant) {
 			return new Response("Not found", { status: 404 });
 		}
@@ -220,16 +225,17 @@ export default {
 		);
 	}),
 
-	create: action<"POST", "/dashboard/tenants">(async ({ db, formData, platformSession, logger }) => {
-		let log = logger.action("/dashboard/tenants");
+	create: action<"POST", "/dashboard/tenants">(
+		async ({ db, formData, platformSession, logger }) => {
+			let log = logger.action("/dashboard/tenants");
 
-		let body = Object.fromEntries(formData);
+			let body = Object.fromEntries(formData);
 
-		let result = await validate(body, CreateTenantSchema);
-		if (isFailure(result)) {
-			log.info("Tenant creation validation failed", { issues: result.error.issues.length });
-			return htmlResponse(
-				String(html`
+			let result = await validate(body, CreateTenantSchema);
+			if (isFailure(result)) {
+				log.info("Tenant creation validation failed", { issues: result.error.issues.length });
+				return htmlResponse(
+					String(html`
 					<!DOCTYPE html>
 					<html>
 						<body>
@@ -237,67 +243,73 @@ export default {
 						</body>
 					</html>
 				`),
-				{ status: 400 },
-			);
-		}
+					{ status: 400 },
+				);
+			}
 
-		let slug = Tenant.generateSlug(result.data.name);
+			let slug = Tenant.generateSlug(result.data.name);
 
-		// Create the tenant record in platform DB
-		let tenant = await Tenant.create(db, {
-			name: result.data.name,
-			slug,
-			ownerSubjectId: platformSession.subjectId,
-			region: result.data.region,
-		});
-
-		// Create default hostname
-		await Hostname.createDefault(db, tenant.id, slug, env.PLATFORM_DOMAIN);
-
-		// Initialize the tenant DO by calling it (with location hint for region)
-		let stub = env.TENANT.get(env.TENANT.idFromName(tenant.id), {
-			locationHint: result.data.region,
-		});
-		await stub.fetch("https://tenant.internal/", { method: "HEAD" });
-
-		// Create default management client via the tenant API
-		let tenantApi = new TenantApiService(tenant.id);
-		let managementClient = await tenantApi.createClient({
-			name: "Management Client",
-			type: "m2m",
-			description: "Auto-generated management client for API access",
-			isManagementClient: true,
-		});
-
-		// Create subscription with Polar customer
-		try {
-			await Subscription.create(db, tenant.id, platformSession.email, result.data.name);
-			log.info("Subscription created", { tenantId: tenant.id });
-		} catch (error) {
-			// Log but don't fail tenant creation if Polar is unavailable
-			log.error("Failed to create subscription", {
-				tenantId: tenant.id,
-				error: error instanceof Error ? error.message : String(error),
+			// Create the tenant record in platform DB
+			let tenant = await Tenant.create(db, {
+				name: result.data.name,
+				slug,
+				ownerSubjectId: platformSession.subjectId,
+				region: result.data.region,
 			});
-		}
 
-		log.info("Tenant created with management client", {
-			tenantId: tenant.id,
-			slug,
-			managementClientId: managementClient.id,
-		});
+			// Create default hostname
+			await Hostname.createDefault(db, tenant.id, slug, env.PLATFORM_DOMAIN);
 
-		return new Response(null, {
-			status: 302,
-			headers: { Location: routes.dashboard.tenants.show.href({ id: tenant.id }) },
-		});
-	}),
+			// Initialize the tenant DO by calling it (with location hint for region)
+			let stub = env.TENANT.get(env.TENANT.idFromName(tenant.id), {
+				locationHint: result.data.region,
+			});
+			await stub.fetch("https://tenant.internal/", { method: "HEAD" });
+
+			// Create default management client via the tenant API
+			let tenantApi = new TenantApiService(tenant.id);
+			let managementClient = await tenantApi.createClient({
+				name: "Management Client",
+				type: "m2m",
+				description: "Auto-generated management client for API access",
+				isManagementClient: true,
+			});
+
+			// Create subscription with Polar customer
+			try {
+				await Subscription.create(db, tenant.id, platformSession.email, result.data.name);
+				log.info("Subscription created", { tenantId: tenant.id });
+			} catch (error) {
+				// Log but don't fail tenant creation if Polar is unavailable
+				log.error("Failed to create subscription", {
+					tenantId: tenant.id,
+					error: error instanceof Error ? error.message : String(error),
+				});
+			}
+
+			log.info("Tenant created with management client", {
+				tenantId: tenant.id,
+				slug,
+				managementClientId: managementClient.id,
+			});
+
+			return new Response(null, {
+				status: 302,
+				headers: { Location: routes.dashboard.tenants.show.href({ id: tenant.id }) },
+			});
+		},
+	),
 
 	edit: action<"GET", "/dashboard/tenants/:id/edit">(
 		async ({ db, params, platformSession, logger }) => {
 			let log = logger.loader(`/dashboard/tenants/${params.id}/edit`);
 
-			let tenant = await Tenant.showWithAccess(db, params.id, platformSession.subjectId, platformSession.email);
+			let tenant = await Tenant.showWithAccess(
+				db,
+				params.id,
+				platformSession.subjectId,
+				platformSession.email,
+			);
 			if (!tenant) {
 				return new Response("Not found", { status: 404 });
 			}
@@ -358,7 +370,12 @@ export default {
 		async ({ db, formData, params, platformSession, logger }) => {
 			let log = logger.action(`/dashboard/tenants/${params.id}`);
 
-			let tenant = await Tenant.showWithAccess(db, params.id, platformSession.subjectId, platformSession.email);
+			let tenant = await Tenant.showWithAccess(
+				db,
+				params.id,
+				platformSession.subjectId,
+				platformSession.email,
+			);
 			if (!tenant) {
 				return new Response("Not found", { status: 404 });
 			}

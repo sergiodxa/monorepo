@@ -4,13 +4,7 @@ import * as s from "remix/data-schema";
 import { createTable } from "remix/data-table";
 
 import { RecordNotFoundError } from "~/lib/db-errors";
-
-/**
- * Allowed schemes for logo URLs to prevent XSS attacks.
- * HTTP is allowed for localhost addresses in development.
- */
-const ALLOWED_LOGO_SCHEMES = ["https"];
-const LOCALHOST_HOSTS = ["localhost", "127.0.0.1", "[::1]"];
+import { InvalidUriError, UnsafeSchemeError, validateScheme } from "~/lib/uri-validation";
 
 /**
  * Model for OAuth 2.0 clients.
@@ -18,7 +12,7 @@ const LOCALHOST_HOSTS = ["localhost", "127.0.0.1", "[::1]"];
  */
 export default class Client {
 	/** Error thrown when a logo URL is invalid or uses an unsafe scheme. */
-	static InvalidLogoUrlError = class extends Error {
+	static InvalidLogoUrlError = class extends InvalidUriError {
 		override name = "InvalidLogoUrlError";
 		constructor(message: string = "Invalid logo URL") {
 			super(message);
@@ -36,32 +30,13 @@ export default class Client {
 	static validateLogoUrl(url: string | null | undefined): string | null {
 		if (url === null || url === undefined) return null;
 
-		let parsed: URL;
 		try {
-			parsed = new URL(url);
-		} catch {
-			throw new Client.InvalidLogoUrlError("Invalid URL format");
-		}
-
-		let scheme = parsed.protocol.replace(":", "").toLowerCase();
-		let hostname = parsed.hostname.toLowerCase();
-		let isLocalhost = LOCALHOST_HOSTS.includes(hostname) || hostname.endsWith(".localhost");
-
-		let dangerousSchemes = ["javascript", "data", "vbscript", "file"];
-		if (dangerousSchemes.includes(scheme)) {
-			throw new Client.InvalidLogoUrlError(`Dangerous scheme not allowed: ${scheme}`);
-		}
-
-		if (isLocalhost) {
-			if (!["http", "https"].includes(scheme)) {
-				throw new Client.InvalidLogoUrlError(
-					`Only HTTP/HTTPS allowed for localhost, got: ${scheme}`,
-				);
+			validateScheme(url, { context: "logo URL" });
+		} catch (error) {
+			if (error instanceof InvalidUriError || error instanceof UnsafeSchemeError) {
+				throw new Client.InvalidLogoUrlError(error.message);
 			}
-		} else {
-			if (!ALLOWED_LOGO_SCHEMES.includes(scheme)) {
-				throw new Client.InvalidLogoUrlError(`Only HTTPS allowed for logo URLs, got: ${scheme}`);
-			}
+			throw error;
 		}
 
 		return url;

@@ -5,9 +5,9 @@ import * as s from "remix/data-schema";
 import { html } from "remix/html-template";
 
 import { layout } from "~/app/lib/html";
-import routes from "~/app/routes";
 import subscription from "~/app/middleware/subscription";
 import tenantOwner from "~/app/middleware/tenant-owner";
+import routes from "~/app/routes";
 import form from "~/lib/form";
 
 let UpdateBrandingSchema = s.object({
@@ -110,7 +110,9 @@ export default form<"/dashboard/tenants/:tenantId/branding">({
 
 			return new Response(null, {
 				status: 302,
-				headers: { Location: routes.dashboard.tenants.branding.index.href({ tenantId: tenant.id }) },
+				headers: {
+					Location: routes.dashboard.tenants.branding.index.href({ tenantId: tenant.id }),
+				},
 			});
 		},
 	},

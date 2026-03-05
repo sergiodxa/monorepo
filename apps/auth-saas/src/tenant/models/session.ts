@@ -43,8 +43,7 @@ export default class Session {
 	 * @returns Total number of sessions
 	 */
 	static async count(db: Database): Promise<number> {
-		let sessions = await db.findMany(Session.table);
-		return sessions.length;
+		return await db.count(Session.table);
 	}
 
 	/**

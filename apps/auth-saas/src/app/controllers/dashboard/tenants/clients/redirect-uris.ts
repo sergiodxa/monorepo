@@ -32,7 +32,10 @@ export default {
 					layout({
 						title: `New Redirect URI - ${client.name}`,
 						tenant,
-						backLink: routes.dashboard.tenants.clients.show.href({ tenantId: tenant.id, id: params.clientId }),
+						backLink: routes.dashboard.tenants.clients.show.href({
+							tenantId: tenant.id,
+							id: params.clientId,
+						}),
 						backText: client.name,
 						content: html`
 						<h2 class="text-2xl font-bold mb-6">Add Redirect URI</h2>
@@ -87,43 +90,58 @@ export default {
 
 			log.info("Redirect URI created", { tenantId: tenant.id, clientId: params.clientId });
 
-		return new Response(null, {
-			status: 302,
-			headers: { Location: routes.dashboard.tenants.clients.show.href({ tenantId: tenant.id, id: params.clientId }) },
-		});
-	},
-),
+			return new Response(null, {
+				status: 302,
+				headers: {
+					Location: routes.dashboard.tenants.clients.show.href({
+						tenantId: tenant.id,
+						id: params.clientId,
+					}),
+				},
+			});
+		},
+	),
 
-edit: action<"GET", "/dashboard/tenants/:tenantId/clients/:clientId/redirect-uris/:id/edit">(
+	edit: action<"GET", "/dashboard/tenants/:tenantId/clients/:clientId/redirect-uris/:id/edit">(
 		async ({ params, tenant, logger }) => {
 			let log = logger.loader(
 				`/dashboard/tenants/${tenant.id}/clients/${params.clientId}/redirect-uris/${params.id}/edit`,
 			);
 			log.info("Redirect URI edit not supported - delete and recreate");
 
-		// Redirect URIs cannot be edited, only deleted and recreated
-		return new Response(null, {
-			status: 302,
-			headers: { Location: routes.dashboard.tenants.clients.show.href({ tenantId: tenant.id, id: params.clientId }) },
-		});
-	},
-),
+			// Redirect URIs cannot be edited, only deleted and recreated
+			return new Response(null, {
+				status: 302,
+				headers: {
+					Location: routes.dashboard.tenants.clients.show.href({
+						tenantId: tenant.id,
+						id: params.clientId,
+					}),
+				},
+			});
+		},
+	),
 
-update: action<"PUT", "/dashboard/tenants/:tenantId/clients/:clientId/redirect-uris/:id">(
+	update: action<"PUT", "/dashboard/tenants/:tenantId/clients/:clientId/redirect-uris/:id">(
 		async ({ params, tenant, logger }) => {
 			let log = logger.action(
 				`/dashboard/tenants/${tenant.id}/clients/${params.clientId}/redirect-uris/${params.id}`,
 			);
 			log.info("Redirect URI update not supported");
 
-		return new Response(null, {
-			status: 302,
-			headers: { Location: routes.dashboard.tenants.clients.show.href({ tenantId: tenant.id, id: params.clientId }) },
-		});
-	},
-),
+			return new Response(null, {
+				status: 302,
+				headers: {
+					Location: routes.dashboard.tenants.clients.show.href({
+						tenantId: tenant.id,
+						id: params.clientId,
+					}),
+				},
+			});
+		},
+	),
 
-destroy: action<"DELETE", "/dashboard/tenants/:tenantId/clients/:clientId/redirect-uris/:id">(
+	destroy: action<"DELETE", "/dashboard/tenants/:tenantId/clients/:clientId/redirect-uris/:id">(
 		async ({ params, tenant, tenantApi, logger }) => {
 			let log = logger.action(
 				`/dashboard/tenants/${tenant.id}/clients/${params.clientId}/redirect-uris/${params.id}`,
@@ -137,10 +155,15 @@ destroy: action<"DELETE", "/dashboard/tenants/:tenantId/clients/:clientId/redire
 				uriId: params.id,
 			});
 
-		return new Response(null, {
-			status: 302,
-			headers: { Location: routes.dashboard.tenants.clients.show.href({ tenantId: tenant.id, id: params.clientId }) },
-		});
-	},
-),
+			return new Response(null, {
+				status: 302,
+				headers: {
+					Location: routes.dashboard.tenants.clients.show.href({
+						tenantId: tenant.id,
+						id: params.clientId,
+					}),
+				},
+			});
+		},
+	),
 };
