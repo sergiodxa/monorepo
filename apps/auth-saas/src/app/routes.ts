@@ -42,6 +42,18 @@ export default route({
 				...resources("/dashboard/tenants/:tenantId/users", {
 					only: ["index", "show", "edit", "update", "destroy"],
 				}),
+
+				...resources("/dashboard/tenants/:tenantId/users/:userId/sessions", {
+					only: ["destroy"],
+				}),
+
+				...resources("/dashboard/tenants/:tenantId/users/:userId/passkeys", {
+					only: ["destroy"],
+				}),
+
+				...resources("/dashboard/tenants/:tenantId/users/:userId/grants", {
+					only: ["destroy"],
+				}),
 			},
 
 			resources: {

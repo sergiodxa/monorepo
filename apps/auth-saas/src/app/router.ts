@@ -15,6 +15,9 @@ import hostname from "./controllers/dashboard/tenants/hostname";
 import resources from "./controllers/dashboard/tenants/resources";
 import scopes from "./controllers/dashboard/tenants/resources/scopes";
 import users from "./controllers/dashboard/tenants/users";
+import userGrants from "./controllers/dashboard/tenants/users/grants";
+import userPasskeys from "./controllers/dashboard/tenants/users/passkeys";
+import userSessions from "./controllers/dashboard/tenants/users/sessions";
 import health from "./controllers/health";
 import index from "./controllers/index";
 import notFound from "./controllers/not-found";
@@ -84,7 +87,15 @@ router.map(routes, {
 							},
 						},
 
-						users: { middleware: [tenantOwner, subscription], actions: users },
+						users: {
+							middleware: [tenantOwner, subscription],
+							actions: {
+								...users,
+								...userSessions,
+								...userPasskeys,
+								...userGrants,
+							},
+						},
 
 						resources: {
 							middleware: [tenantOwner, subscription],
