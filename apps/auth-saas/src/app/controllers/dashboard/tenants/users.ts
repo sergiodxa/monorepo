@@ -89,7 +89,7 @@ export default {
 	),
 
 	show: action<"GET", "/dashboard/tenants/:tenantId/users/:id">(
-		async ({ params, tenant, tenantApi, logger }) => {
+		async ({ params, tenant, tenantApi, logger, platformSession }) => {
 			let log = logger.loader(`/dashboard/tenants/${tenant.id}/users/${params.id}`);
 
 			let user = await tenantApi.getUser(params.id);
@@ -105,6 +105,9 @@ export default {
 
 			log.info("User retrieved", { tenantId: tenant.id, userId: params.id });
 
+			// Check if we're viewing the platform tenant and the current user
+			let currentSessionId = tenant.id === "platform" ? platformSession.sessionId : undefined;
+
 			let sessionsList =
 				sessions.length === 0
 					? html`
@@ -114,6 +117,7 @@ export default {
 							let parsed = parseUserAgent(s.userAgent);
 							let deviceLabel = formatUserAgent(parsed);
 							let isActive = new Date(s.expiresAt) > new Date();
+							let isCurrentSession = currentSessionId === s.id;
 							let lastAccessed = new Date(s.updatedAt).toLocaleDateString("en-US", {
 								day: "2-digit",
 								month: "short",
@@ -131,15 +135,18 @@ export default {
 										</div>
 										<div class="flex items-center gap-2 mt-1">
 											${isActive ? html`<span class="px-2 py-0.5 text-xs font-medium bg-green-100 text-green-800 rounded-full">active</span>` : html`<span class="px-2 py-0.5 text-xs font-medium bg-gray-100 text-gray-600 rounded-full">expired</span>`}
+											${isCurrentSession ? html`<span class="px-2 py-0.5 text-xs font-medium bg-blue-100 text-blue-800 rounded-full">Your current session</span>` : ""}
 										</div>
 										<p class="text-gray-500 text-sm mt-1">Last accessed on ${lastAccessed}</p>
 										${s.client ? html`<p class="text-gray-600 text-sm">${s.client.name}</p>` : ""}
 									</div>
 									<div class="flex-shrink-0">
-										<form method="POST" action="/dashboard/tenants/${tenant.id}/users/${params.id}/sessions/${s.id}" class="inline">
-											<input type="hidden" name="_method" value="DELETE">
-											<button type="submit" class="text-red-600 hover:text-red-800 text-sm">Revoke</button>
-										</form>
+										${isCurrentSession ? "" : html`
+											<form method="POST" action="/dashboard/tenants/${tenant.id}/users/${params.id}/sessions/${s.id}" class="inline">
+												<input type="hidden" name="_method" value="DELETE">
+												<button type="submit" class="text-red-600 hover:text-red-800 text-sm">Revoke</button>
+											</form>
+										`}
 									</div>
 								</li>
 							`;

@@ -34,6 +34,8 @@ const SessionPayloadSchema = s.object({
 	sub: s.string(),
 	/** Email address */
 	email: s.string(),
+	/** Tenant session ID (from ID token sid claim) */
+	sid: s.optional(s.string()),
 	/** Issued at timestamp (seconds) */
 	iat: s.number(),
 	/** Expiration timestamp (seconds) */
@@ -51,17 +53,20 @@ type SessionPayload = s.InferOutput<typeof SessionPayloadSchema>;
  * @param subjectId - The user's UUID
  * @param email - The user's email address
  * @param secret - The secret key for signing
+ * @param sessionId - Optional tenant session ID (from ID token sid claim)
  * @returns A signed session token string
  */
 export async function createSessionToken(
 	subjectId: string,
 	email: string,
 	secret: string,
+	sessionId?: string,
 ): Promise<string> {
 	let now = Math.floor(Date.now() / 1000);
 	let payload: SessionPayload = {
 		sub: subjectId,
 		email: email,
+		sid: sessionId,
 		iat: now,
 		exp: now + PLATFORM_SESSION_MAX_AGE,
 	};
@@ -84,7 +89,7 @@ export async function createSessionToken(
 export async function verifySessionToken(
 	token: string,
 	secret: string,
-): Promise<{ subjectId: string; email: string } | null> {
+): Promise<{ subjectId: string; email: string; sessionId?: string } | null> {
 	let parts = token.split(".");
 	if (parts.length !== 2) return null;
 
@@ -119,6 +124,7 @@ export async function verifySessionToken(
 		return {
 			subjectId: payload.sub,
 			email: payload.email,
+			sessionId: payload.sid,
 		};
 	} catch {
 		return null;

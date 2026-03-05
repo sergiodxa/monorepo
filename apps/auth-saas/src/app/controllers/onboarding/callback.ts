@@ -37,6 +37,8 @@ let IdTokenClaimsSchema = s.object({
 	sub: s.string(),
 	email: s.optional(s.string()),
 	email_verified: s.optional(s.boolean()),
+	/** Session ID from the tenant (sid claim) */
+	sid: s.optional(s.string()),
 });
 
 /** Well-known client ID for the dashboard OAuth client. */
@@ -130,7 +132,7 @@ export default action<"GET", "/onboarding/callback">(async ({ request, db, logge
 		return renderError("Authentication failed. Please try again.");
 	}
 
-	let { sub: subjectId, email } = claimsResult.data;
+	let { sub: subjectId, email, sid: tenantSessionId } = claimsResult.data;
 	if (!email) {
 		log.error("No email in ID token");
 		return renderError("Email is required for authentication.");
@@ -142,14 +144,15 @@ export default action<"GET", "/onboarding/callback">(async ({ request, db, logge
 		log.info("Resolved pending ownership", { email, count: resolvedCount });
 	}
 
-	// Create platform session
+	// Create platform session with the tenant session ID from the ID token
 	let sessionToken = await createSessionToken(
 		subjectId,
 		email,
 		env.SESSION_SECRET,
+		tenantSessionId,
 	);
 
-	log.info("Login successful", { subjectId });
+	log.info("Login successful", { subjectId, tenantSessionId });
 
 	// Redirect to dashboard with session cookie
 	let headers = new Headers();

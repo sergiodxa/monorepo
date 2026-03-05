@@ -72,6 +72,13 @@ export default class IdToken extends JWT {
 	}
 
 	/**
+	 * Session identifier (sid claim).
+	 */
+	get sessionId() {
+		return this.parser.string("sid");
+	}
+
+	/**
 	 * Token not-before time as Date (nbf claim).
 	 */
 	override get notBefore() {
@@ -86,7 +93,7 @@ export default class IdToken extends JWT {
 	 * @param issuer - Token issuer URL
 	 * @param subject - User identity data
 	 * @param client - Client requesting the token
-	 * @param options - Optional nonce, scope, and authTime
+	 * @param options - Optional nonce, scope, authTime, and sessionId
 	 * @returns New IdToken instance
 	 */
 	static generate(
@@ -100,7 +107,7 @@ export default class IdToken extends JWT {
 			emailVerified: boolean;
 		},
 		client: { id: string },
-		options?: { nonce?: string | null; scope?: string[]; authTime?: number },
+		options?: { nonce?: string | null; scope?: string[]; authTime?: number; sessionId?: string },
 	) {
 		let scope = options?.scope ?? ["openid"];
 		let now = Math.floor(Date.now() / 1000);
@@ -114,6 +121,7 @@ export default class IdToken extends JWT {
 			exp: expiresAt,
 			iat: now,
 			nbf: now,
+			...(options?.sessionId && { sid: options.sessionId }),
 			...(options?.authTime && { auth_time: options.authTime }),
 			...(options?.nonce && { nonce: options.nonce }),
 			...(scope.includes("email") && {

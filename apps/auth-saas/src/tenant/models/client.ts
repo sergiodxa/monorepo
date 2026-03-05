@@ -102,8 +102,7 @@ export default class Client {
 	 * @returns Total number of clients
 	 */
 	static async count(db: Database): Promise<number> {
-		let clients = await db.findMany(Client.table);
-		return clients.length;
+		return await db.count(Client.table);
 	}
 
 	/**

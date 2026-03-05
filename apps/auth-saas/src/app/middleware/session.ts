@@ -19,6 +19,8 @@ declare module "remix/fetch-router" {
 			subjectId: string;
 			/** The email address of the authenticated user */
 			email: string;
+			/** The tenant session ID (for identifying current session in platform tenant) */
+			sessionId?: string;
 		};
 	}
 }
@@ -57,6 +59,7 @@ export default middleware(async (context, next) => {
 	context.platformSession = {
 		subjectId: session.subjectId,
 		email: session.email,
+		sessionId: session.sessionId,
 	};
 
 	log.info("Session validated", { subjectId: session.subjectId });

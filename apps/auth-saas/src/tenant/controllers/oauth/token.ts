@@ -261,7 +261,7 @@ async function handleAuthorizationCode(db: Database, body: Record<string, unknow
 			emailVerified: subject.email_verified_at !== null,
 		},
 		{ id: client.id },
-		{ nonce: authzData.nonce, scope: authzData.scope, authTime: authzData.authTime },
+		{ nonce: authzData.nonce, scope: authzData.scope, authTime: authzData.authTime, sessionId: session.id },
 	);
 	let signedIdToken = await idToken.sign(JWK.Algoritm.ES256, signingKeys);
 
@@ -398,7 +398,7 @@ async function handleRefreshToken(db: Database, body: Record<string, unknown>, l
 			emailVerified: subject.email_verified_at !== null,
 		},
 		{ id: client.id },
-		{ authTime },
+		{ authTime, sessionId: session.id },
 	);
 	let signedIdToken = await idToken.sign(JWK.Algoritm.ES256, signingKeys);
 
