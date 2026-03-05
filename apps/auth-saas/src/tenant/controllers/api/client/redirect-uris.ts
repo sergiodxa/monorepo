@@ -7,8 +7,18 @@ import * as s from "remix/data-schema";
 import action from "~/lib/action";
 import { RecordNotFoundError } from "~/lib/db-errors";
 import { LIMITS, maxLength, minLength, url } from "~/lib/schema-checks";
+import { toIsoString } from "~/lib/timestamp";
 import Client from "~/tenant/models/client";
 import RedirectUri from "~/tenant/models/client/redirect-uri";
+
+type RedirectUriRow = Awaited<ReturnType<typeof RedirectUri.list>>[number];
+
+function normalizeRedirectUri(redirectUri: RedirectUriRow) {
+	return {
+		...redirectUri,
+		created_at: toIsoString(redirectUri.created_at),
+	};
+}
 
 let CreateRedirectUriSchema = s.object({
 	uri: s.string().pipe(minLength(LIMITS.url.min), maxLength(LIMITS.url.max), url()),
@@ -31,7 +41,7 @@ export const index = action<"GET", "/api/clients/:clientId/redirect-uris">(
 			clientId: params.clientId,
 			count: redirectUris.length,
 		});
-		return ok(redirectUris);
+		return ok(redirectUris.map(normalizeRedirectUri));
 	},
 );
 

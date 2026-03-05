@@ -7,8 +7,18 @@ import * as s from "remix/data-schema";
 import action from "~/lib/action";
 import { RecordNotFoundError } from "~/lib/db-errors";
 import { httpsUrl, LIMITS, maxLength, minLength } from "~/lib/schema-checks";
+import { toIsoString } from "~/lib/timestamp";
 import Client from "~/tenant/models/client";
 import LogoutUri from "~/tenant/models/client/logout-uri";
+
+type LogoutUriRow = Awaited<ReturnType<typeof LogoutUri.list>>[number];
+
+function normalizeLogoutUri(logoutUri: LogoutUriRow) {
+	return {
+		...logoutUri,
+		created_at: toIsoString(logoutUri.created_at),
+	};
+}
 
 let CreateLogoutUriSchema = s.object({
 	uri: s.string().pipe(minLength(LIMITS.url.min), maxLength(LIMITS.url.max), httpsUrl()),
@@ -30,7 +40,7 @@ export const index = action<"GET", "/api/clients/:clientId/logout-uris">(
 
 		let logoutUris = await LogoutUri.list(db, params.clientId);
 		log.info("Logout URIs listed", { clientId: params.clientId, count: logoutUris.length });
-		return ok(logoutUris);
+		return ok(logoutUris.map(normalizeLogoutUri));
 	},
 );
 
