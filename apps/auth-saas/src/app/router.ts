@@ -81,9 +81,21 @@ router.map(routes, {
 
 							actions: {
 								...clients,
-								...redirectUris,
-								...logoutUris,
-								...secrets,
+
+								"redirect-uris": {
+									middleware: [],
+									actions: redirectUris,
+								},
+
+								"logout-uris": {
+									middleware: [],
+									actions: logoutUris,
+								},
+
+								secrets: {
+									middleware: [],
+									actions: secrets,
+								},
 							},
 						},
 
