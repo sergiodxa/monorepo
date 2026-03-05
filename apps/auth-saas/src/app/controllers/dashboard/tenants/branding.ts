@@ -5,6 +5,7 @@ import * as s from "remix/data-schema";
 import { html } from "remix/html-template";
 
 import { layout } from "~/app/lib/html";
+import routes from "~/app/routes";
 import subscription from "~/app/middleware/subscription";
 import tenantOwner from "~/app/middleware/tenant-owner";
 import form from "~/lib/form";
@@ -39,7 +40,7 @@ export default form<"/dashboard/tenants/:tenantId/branding">({
 						<h2 class="text-2xl font-bold mb-6">Branding</h2>
 						<p class="text-gray-500 mb-6">Customize the appearance of your login pages.</p>
 
-						<form method="POST" action="/dashboard/tenants/${tenant.id}/branding" class="bg-white rounded-lg border p-6 space-y-4 max-w-lg">
+						<form method="POST" action="${routes.dashboard.tenants.branding.action.href({ tenantId: tenant.id })}" class="bg-white rounded-lg border p-6 space-y-4 max-w-lg">
 							<div>
 								<label class="block text-sm font-medium text-gray-700 mb-1" for="logoUrl">Logo URL</label>
 								<input type="url" id="logoUrl" name="logoUrl" value="${branding?.logo_url ?? ""}" class="w-full border rounded-lg px-3 py-2" placeholder="https://example.com/logo.png">
@@ -109,7 +110,7 @@ export default form<"/dashboard/tenants/:tenantId/branding">({
 
 			return new Response(null, {
 				status: 302,
-				headers: { Location: `/dashboard/tenants/${tenant.id}/branding` },
+				headers: { Location: routes.dashboard.tenants.branding.index.href({ tenantId: tenant.id }) },
 			});
 		},
 	},

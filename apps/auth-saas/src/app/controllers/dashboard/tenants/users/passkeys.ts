@@ -1,3 +1,4 @@
+import routes from "~/app/routes";
 import action from "~/lib/action";
 
 export default {
@@ -17,7 +18,7 @@ export default {
 
 			return new Response(null, {
 				status: 302,
-				headers: { Location: `/dashboard/tenants/${tenant.id}/users/${params.userId}` },
+				headers: { Location: routes.dashboard.tenants.users.show.href({ tenantId: tenant.id, id: params.userId }) },
 			});
 		},
 	),

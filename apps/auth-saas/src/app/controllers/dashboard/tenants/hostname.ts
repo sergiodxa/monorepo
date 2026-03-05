@@ -1,10 +1,12 @@
 import { html as htmlResponse } from "@pkg/http/response";
+import { Location } from "@pkg/location";
 import { isFailure } from "@pkg/result";
 import { validate } from "@pkg/validate";
 import * as s from "remix/data-schema";
 import { html, type SafeHtml } from "remix/html-template";
 
 import { layout } from "~/app/lib/html";
+import routes from "~/app/routes";
 import tenantOwner from "~/app/middleware/tenant-owner";
 import Hostname from "~/app/models/hostname";
 import form from "~/lib/form";
@@ -61,12 +63,12 @@ export default form<"/dashboard/tenants/:tenantId/hostname">({
 											<div class="flex gap-2">
 												${
 													h.status !== "active"
-														? html`<form method="POST" action="/dashboard/tenants/${tenant.id}/hostname?action=refresh&hostnameId=${h.id}" class="inline">
+														? html`<form method="POST" action="${String(new Location({ pathname: routes.dashboard.tenants.hostname.action.href({ tenantId: tenant.id }), search: new URLSearchParams({ action: "refresh", hostnameId: h.id }) }))}" class="inline">
 															<button type="submit" class="text-blue-600 hover:text-blue-800 text-sm">Check Status</button>
 														</form>`
 														: null
 												}
-												<form method="POST" action="/dashboard/tenants/${tenant.id}/hostname?action=delete&hostnameId=${h.id}" class="inline">
+												<form method="POST" action="${String(new Location({ pathname: routes.dashboard.tenants.hostname.action.href({ tenantId: tenant.id }), search: new URLSearchParams({ action: "delete", hostnameId: h.id }) }))}" class="inline">
 													<button type="submit" class="text-red-600 hover:text-red-800 text-sm" onclick="return confirm('Remove this hostname?')">Remove</button>
 												</form>
 											</div>
@@ -95,7 +97,7 @@ export default form<"/dashboard/tenants/:tenantId/hostname">({
 							<h3 class="font-semibold mb-4">Custom Hostnames</h3>
 							${customHostnamesList}
 
-							<form method="POST" action="/dashboard/tenants/${tenant.id}/hostname" class="flex gap-2 mt-4">
+							<form method="POST" action="${routes.dashboard.tenants.hostname.action.href({ tenantId: tenant.id })}" class="flex gap-2 mt-4">
 								<input type="text" name="hostname" placeholder="auth.yourdomain.com" required class="flex-1 border rounded-lg px-3 py-2">
 								<button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">
 									Add Hostname
@@ -181,7 +183,7 @@ export default form<"/dashboard/tenants/:tenantId/hostname">({
 
 			return new Response(null, {
 				status: 302,
-				headers: { Location: `/dashboard/tenants/${tenant.id}/hostname` },
+				headers: { Location: routes.dashboard.tenants.hostname.index.href({ tenantId: tenant.id }) },
 			});
 		},
 	},

@@ -5,6 +5,7 @@ import * as s from "remix/data-schema";
 import { html } from "remix/html-template";
 
 import { layout } from "~/app/lib/html";
+import routes from "~/app/routes";
 import action from "~/lib/action";
 
 let CreateClientSchema = s.object({
@@ -36,7 +37,7 @@ export default {
 					: html`<ul class="space-y-4">${clients.map(
 							(c) => html`
 					<li class="border rounded-lg p-4 hover:bg-gray-50">
-						<a href="/dashboard/tenants/${tenant.id}/clients/${c.id}" class="block">
+						<a href="${routes.dashboard.tenants.clients.show.href({ tenantId: tenant.id, id: c.id })}" class="block">
 							<div class="flex justify-between items-start">
 								<div>
 									<h3 class="font-semibold">${c.name}</h3>
@@ -59,7 +60,7 @@ export default {
 						content: html`
 						<div class="flex justify-between items-center mb-6">
 							<h2 class="text-2xl font-bold">Clients</h2>
-							<a href="/dashboard/tenants/${tenant.id}/clients/new" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">
+							<a href="${routes.dashboard.tenants.clients.new.href({ tenantId: tenant.id })}" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">
 								New Client
 							</a>
 						</div>
@@ -97,8 +98,8 @@ export default {
 							(s) => html`
 												<li class="flex justify-between items-center text-sm">
 													<span>${s.name || "Unnamed secret"}</span>
-													<form method="POST" action="/dashboard/tenants/${tenant.id}/clients/${params.id}/secrets/${s.id}" class="inline">
-														<input type="hidden" name="_method" value="DELETE">
+													<form method="POST" action="${routes.dashboard.tenants.clients.secrets.destroy.href({ tenantId: tenant.id, clientId: params.id, id: s.id })}" class="inline">
+														<input type="hidden" name="_method" value="${routes.dashboard.tenants.clients.secrets.destroy.method}">
 														<button type="submit" class="text-red-600 hover:text-red-800" onclick="return confirm('Revoke this secret?')">Revoke</button>
 													</form>
 												</li>
@@ -114,8 +115,8 @@ export default {
 							(u) => html`
 												<li class="flex justify-between items-center text-sm">
 													<code class="bg-gray-100 px-2 py-1 rounded">${u.uri}</code>
-													<form method="POST" action="/dashboard/tenants/${tenant.id}/clients/${params.id}/redirect-uris/${u.id}" class="inline">
-														<input type="hidden" name="_method" value="DELETE">
+													<form method="POST" action="${routes.dashboard.tenants.clients["redirect-uris"].destroy.href({ tenantId: tenant.id, clientId: params.id, id: u.id })}" class="inline">
+														<input type="hidden" name="_method" value="${routes.dashboard.tenants.clients["redirect-uris"].destroy.method}">
 														<button type="submit" class="text-red-600 hover:text-red-800" onclick="return confirm('Remove this URI?')">Remove</button>
 													</form>
 												</li>
@@ -134,8 +135,8 @@ export default {
 														<code class="bg-gray-100 px-2 py-1 rounded">${u.uri}</code>
 														<span class="ml-2 text-gray-500">(${u.type})</span>
 													</div>
-													<form method="POST" action="/dashboard/tenants/${tenant.id}/clients/${params.id}/logout-uris/${u.id}" class="inline">
-														<input type="hidden" name="_method" value="DELETE">
+													<form method="POST" action="${routes.dashboard.tenants.clients["logout-uris"].destroy.href({ tenantId: tenant.id, clientId: params.id, id: u.id })}" class="inline">
+														<input type="hidden" name="_method" value="${routes.dashboard.tenants.clients["logout-uris"].destroy.method}">
 														<button type="submit" class="text-red-600 hover:text-red-800" onclick="return confirm('Remove this URI?')">Remove</button>
 													</form>
 												</li>
@@ -147,7 +148,7 @@ export default {
 					layout({
 						title: `${client.name} - ${tenant.name}`,
 						tenant,
-						backLink: `/dashboard/tenants/${tenant.id}/clients`,
+						backLink: routes.dashboard.tenants.clients.index.href({ tenantId: tenant.id }),
 						backText: "Clients",
 						content: html`
 						<div class="flex justify-between items-start mb-6">
@@ -156,9 +157,9 @@ export default {
 								<p class="text-gray-500">${client.description ?? "No description"}</p>
 							</div>
 							<div class="flex gap-2">
-								<a href="/dashboard/tenants/${tenant.id}/clients/${params.id}/edit" class="text-blue-600 hover:text-blue-800">Edit</a>
-								<form method="POST" action="/dashboard/tenants/${tenant.id}/clients/${params.id}" class="inline">
-									<input type="hidden" name="_method" value="DELETE">
+								<a href="${routes.dashboard.tenants.clients.edit.href({ tenantId: tenant.id, id: params.id })}" class="text-blue-600 hover:text-blue-800">Edit</a>
+								<form method="POST" action="${routes.dashboard.tenants.clients.destroy.href({ tenantId: tenant.id, id: params.id })}" class="inline">
+									<input type="hidden" name="_method" value="${routes.dashboard.tenants.clients.destroy.method}">
 									<button type="submit" class="text-red-600 hover:text-red-800" onclick="return confirm('Delete this client?')">Delete</button>
 								</form>
 							</div>
@@ -181,7 +182,7 @@ export default {
 							<section class="bg-white rounded-lg border p-4">
 								<div class="flex justify-between items-center mb-4">
 									<h3 class="font-semibold">Client Secrets</h3>
-									<a href="/dashboard/tenants/${tenant.id}/clients/${params.id}/secrets/new" class="text-blue-600 hover:text-blue-800 text-sm">Add Secret</a>
+									<a href="${routes.dashboard.tenants.clients.secrets.new.href({ tenantId: tenant.id, clientId: params.id })}" class="text-blue-600 hover:text-blue-800 text-sm">Add Secret</a>
 								</div>
 								${secretsList}
 							</section>
@@ -189,7 +190,7 @@ export default {
 							<section class="bg-white rounded-lg border p-4">
 								<div class="flex justify-between items-center mb-4">
 									<h3 class="font-semibold">Redirect URIs</h3>
-									<a href="/dashboard/tenants/${tenant.id}/clients/${params.id}/redirect-uris/new" class="text-blue-600 hover:text-blue-800 text-sm">Add URI</a>
+									<a href="${routes.dashboard.tenants.clients["redirect-uris"].new.href({ tenantId: tenant.id, clientId: params.id })}" class="text-blue-600 hover:text-blue-800 text-sm">Add URI</a>
 								</div>
 								${redirectUrisList}
 							</section>
@@ -197,7 +198,7 @@ export default {
 							<section class="bg-white rounded-lg border p-4">
 								<div class="flex justify-between items-center mb-4">
 									<h3 class="font-semibold">Logout URIs</h3>
-									<a href="/dashboard/tenants/${tenant.id}/clients/${params.id}/logout-uris/new" class="text-blue-600 hover:text-blue-800 text-sm">Add URI</a>
+									<a href="${routes.dashboard.tenants.clients["logout-uris"].new.href({ tenantId: tenant.id, clientId: params.id })}" class="text-blue-600 hover:text-blue-800 text-sm">Add URI</a>
 								</div>
 								${logoutUrisList}
 							</section>
@@ -218,12 +219,12 @@ export default {
 				layout({
 					title: `New Client - ${tenant.name}`,
 					tenant,
-					backLink: `/dashboard/tenants/${tenant.id}/clients`,
+					backLink: routes.dashboard.tenants.clients.index.href({ tenantId: tenant.id }),
 					backText: "Clients",
 					content: html`
 					<h2 class="text-2xl font-bold mb-6">New Client</h2>
 
-					<form method="POST" action="/dashboard/tenants/${tenant.id}/clients" class="bg-white rounded-lg border p-6 space-y-4 max-w-lg">
+					<form method="POST" action="${routes.dashboard.tenants.clients.create.href({ tenantId: tenant.id })}" class="bg-white rounded-lg border p-6 space-y-4 max-w-lg">
 						<div>
 							<label class="block text-sm font-medium text-gray-700 mb-1" for="name">Name</label>
 							<input type="text" id="name" name="name" required class="w-full border rounded-lg px-3 py-2" placeholder="My App">
@@ -276,7 +277,7 @@ export default {
 
 			return new Response(null, {
 				status: 302,
-				headers: { Location: `/dashboard/tenants/${tenant.id}/clients/${id}` },
+				headers: { Location: routes.dashboard.tenants.clients.show.href({ tenantId: tenant.id, id }) },
 			});
 		},
 	),
@@ -297,13 +298,13 @@ export default {
 					layout({
 						title: `Edit ${client.name} - ${tenant.name}`,
 						tenant,
-						backLink: `/dashboard/tenants/${tenant.id}/clients/${params.id}`,
+						backLink: routes.dashboard.tenants.clients.show.href({ tenantId: tenant.id, id: params.id }),
 						backText: client.name,
 						content: html`
 						<h2 class="text-2xl font-bold mb-6">Edit Client</h2>
 
-						<form method="POST" action="/dashboard/tenants/${tenant.id}/clients/${params.id}" class="bg-white rounded-lg border p-6 space-y-4 max-w-lg">
-							<input type="hidden" name="_method" value="PUT">
+						<form method="POST" action="${routes.dashboard.tenants.clients.update.href({ tenantId: tenant.id, id: params.id })}" class="bg-white rounded-lg border p-6 space-y-4 max-w-lg">
+							<input type="hidden" name="_method" value="${routes.dashboard.tenants.clients.update.method}">
 							<div>
 								<label class="block text-sm font-medium text-gray-700 mb-1" for="name">Name</label>
 								<input type="text" id="name" name="name" value="${client.name}" required class="w-full border rounded-lg px-3 py-2">
@@ -356,7 +357,7 @@ export default {
 
 			return new Response(null, {
 				status: 302,
-				headers: { Location: `/dashboard/tenants/${tenant.id}/clients/${params.id}` },
+				headers: { Location: routes.dashboard.tenants.clients.show.href({ tenantId: tenant.id, id: params.id }) },
 			});
 		},
 	),
@@ -371,7 +372,7 @@ export default {
 
 			return new Response(null, {
 				status: 302,
-				headers: { Location: `/dashboard/tenants/${tenant.id}/clients` },
+				headers: { Location: routes.dashboard.tenants.clients.index.href({ tenantId: tenant.id }) },
 			});
 		},
 	),

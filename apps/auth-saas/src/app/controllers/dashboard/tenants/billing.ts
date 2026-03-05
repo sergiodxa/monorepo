@@ -1,8 +1,10 @@
 import { html as htmlResponse } from "@pkg/http/response";
+import { Location } from "@pkg/location";
 import { env } from "cloudflare:workers";
 import { html } from "remix/html-template";
 
 import { layout } from "~/app/lib/html";
+import routes from "~/app/routes";
 import tenantOwner from "~/app/middleware/tenant-owner";
 import Subscription from "~/app/models/subscription";
 import AnalyticsService from "~/app/services/analytics";
@@ -124,7 +126,7 @@ export default form<"/dashboard/tenants/:tenantId/billing">({
 								<p class="text-gray-500 mb-4">
 									Access your billing portal to update payment methods, view invoices, or manage your subscription.
 								</p>
-								<form method="POST" action="/dashboard/tenants/${tenant.id}/billing?action=portal">
+								<form method="POST" action="${String(new Location({ pathname: routes.dashboard.tenants.billing.action.href({ tenantId: tenant.id }), search: new URLSearchParams({ action: "portal" }) }))}">
 									<button type="submit" class="bg-gray-900 text-white px-4 py-2 rounded-lg hover:bg-gray-800">
 										Open Billing Portal
 									</button>
@@ -137,7 +139,7 @@ export default form<"/dashboard/tenants/:tenantId/billing">({
 								<p class="text-blue-800 mb-4">
 									Subscribe to Auth SaaS to unlock all features and continue using the service.
 								</p>
-								<form method="POST" action="/dashboard/tenants/${tenant.id}/billing?action=checkout">
+								<form method="POST" action="${String(new Location({ pathname: routes.dashboard.tenants.billing.action.href({ tenantId: tenant.id }), search: new URLSearchParams({ action: "checkout" }) }))}">
 									<button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">
 										Subscribe Now
 									</button>
@@ -223,7 +225,7 @@ export default form<"/dashboard/tenants/:tenantId/billing">({
 				try {
 					// Use env variable for product ID or fall back to placeholder
 					let productId = env.POLAR_PRODUCT_ID ?? "placeholder-product-id";
-					let successUrl = `${url.origin}/dashboard/tenants/${tenant.id}/billing?success=true`;
+					let successUrl = `${url.origin}${new Location({ pathname: routes.dashboard.tenants.billing.index.href({ tenantId: tenant.id }), search: new URLSearchParams({ success: "true" }) })}`;
 
 					let checkoutUrl = await Subscription.createCheckoutUrl(
 						db,
@@ -260,7 +262,7 @@ export default form<"/dashboard/tenants/:tenantId/billing">({
 
 			return new Response(null, {
 				status: 302,
-				headers: { Location: `/dashboard/tenants/${tenant.id}/billing` },
+				headers: { Location: routes.dashboard.tenants.billing.index.href({ tenantId: tenant.id }) },
 			});
 		},
 	},

@@ -25,17 +25,23 @@ export default route({
 					only: ["index", "show", "new", "create", "edit", "update", "destroy"],
 				}),
 
-				...resources("/dashboard/tenants/:tenantId/clients/:clientId/redirect-uris", {
-					only: ["new", "create", "edit", "update", "destroy"],
-				}),
+				"redirect-uris": {
+					...resources("/dashboard/tenants/:tenantId/clients/:clientId/redirect-uris", {
+						only: ["new", "create", "edit", "update", "destroy"],
+					}),
+				},
 
-				...resources("/dashboard/tenants/:tenantId/clients/:clientId/logout-uris", {
-					only: ["new", "create", "edit", "update", "destroy"],
-				}),
+				"logout-uris": {
+					...resources("/dashboard/tenants/:tenantId/clients/:clientId/logout-uris", {
+						only: ["new", "create", "edit", "update", "destroy"],
+					}),
+				},
 
-				...resources("/dashboard/tenants/:tenantId/clients/:clientId/secrets", {
-					only: ["new", "create", "edit", "update", "destroy"],
-				}),
+				secrets: {
+					...resources("/dashboard/tenants/:tenantId/clients/:clientId/secrets", {
+						only: ["new", "create", "edit", "update", "destroy"],
+					}),
+				},
 			},
 
 			users: {

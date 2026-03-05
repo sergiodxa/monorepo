@@ -1,6 +1,7 @@
 import { redirect } from "@pkg/http/response";
 import { env } from "cloudflare:workers";
 
+import routes from "~/app/routes";
 import middleware from "~/lib/middleware";
 import {
 	clearSessionCookie,
@@ -42,14 +43,14 @@ export default middleware(async (context, next) => {
 
 	if (!token) {
 		log.info("No session cookie found, redirecting to onboarding");
-		return redirect("/onboarding");
+		return redirect(routes.onboarding.index.href());
 	}
 
 	let session = await verifySessionToken(token, env.SESSION_SECRET);
 
 	if (!session) {
 		log.info("Invalid or expired session token, clearing session");
-		return redirect("/onboarding", {
+		return redirect(routes.onboarding.index.href(), {
 			headers: {
 				"Set-Cookie": clearSessionCookie(),
 			},

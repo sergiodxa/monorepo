@@ -6,6 +6,7 @@ import { validate } from "@pkg/validate";
 import { env } from "cloudflare:workers";
 import * as s from "remix/data-schema";
 
+import routes from "~/app/routes";
 import Tenant from "~/app/models/tenant";
 import action from "~/lib/action";
 import { base64UrlDecode } from "~/lib/crypto-utils";
@@ -156,7 +157,7 @@ export default action<"GET", "/onboarding/callback">(async ({ request, db, logge
 
 	// Redirect to dashboard with session cookie
 	let headers = new Headers();
-	headers.set("Location", "/dashboard");
+	headers.set("Location", routes.dashboard.index.href());
 	headers.append(
 		"Set-Cookie",
 		`__platform_session=${sessionToken}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${30 * 24 * 60 * 60}`,
@@ -201,7 +202,7 @@ function renderError(message: string) {
 		<div class="bg-white rounded-lg border shadow-sm p-6 text-center">
 			<h1 class="text-xl font-bold text-red-600 mb-4">Authentication Error</h1>
 			<p class="text-gray-600 mb-4">${message}</p>
-			<a href="/onboarding" class="text-blue-600 hover:underline">Try again</a>
+			<a href="${routes.onboarding.index.href()}" class="text-blue-600 hover:underline">Try again</a>
 		</div>
 	</div>
 </body>

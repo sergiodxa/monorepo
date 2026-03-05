@@ -10,6 +10,7 @@ import Subscription from "~/app/models/subscription";
 import Tenant from "~/app/models/tenant";
 import { TenantApiService } from "~/app/services/tenant-api";
 import action from "~/lib/action";
+import routes from "~/app/routes";
 
 let CreateTenantSchema = s.object({
 	name: s.string(),
@@ -66,10 +67,10 @@ export default {
 				<nav class="bg-white shadow-sm border-b">
 					<div class="max-w-6xl mx-auto px-4 py-4 flex justify-between items-center">
 						<div class="flex items-center gap-4">
-							<a href="/dashboard" class="text-gray-600 hover:text-gray-900">&larr; Dashboard</a>
+							<a href="${routes.dashboard.index.href()}" class="text-gray-600 hover:text-gray-900">&larr; Dashboard</a>
 							<h1 class="text-xl font-bold">${tenant.name}</h1>
 						</div>
-						<a href="/dashboard/tenants/${params.id}/edit" class="text-blue-600 hover:text-blue-800">Edit</a>
+						<a href="${routes.dashboard.tenants.edit.href({ id: params.id })}" class="text-blue-600 hover:text-blue-800">Edit</a>
 					</div>
 				</nav>
 
@@ -116,27 +117,27 @@ export default {
 					</div>
 
 					<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-						<a href="/dashboard/tenants/${params.id}/clients" class="bg-white rounded-lg border p-4 hover:border-blue-500">
+						<a href="${routes.dashboard.tenants.clients.index.href({ tenantId: params.id })}" class="bg-white rounded-lg border p-4 hover:border-blue-500">
 							<h3 class="font-semibold">Clients</h3>
 							<p class="text-gray-500 text-sm">Manage OAuth clients</p>
 						</a>
-						<a href="/dashboard/tenants/${params.id}/users" class="bg-white rounded-lg border p-4 hover:border-blue-500">
+						<a href="${routes.dashboard.tenants.users.index.href({ tenantId: params.id })}" class="bg-white rounded-lg border p-4 hover:border-blue-500">
 							<h3 class="font-semibold">Users</h3>
 							<p class="text-gray-500 text-sm">Manage users and sessions</p>
 						</a>
-						<a href="/dashboard/tenants/${params.id}/resources" class="bg-white rounded-lg border p-4 hover:border-blue-500">
+						<a href="${routes.dashboard.tenants.resources.index.href({ tenantId: params.id })}" class="bg-white rounded-lg border p-4 hover:border-blue-500">
 							<h3 class="font-semibold">Resources</h3>
 							<p class="text-gray-500 text-sm">Manage API resources and scopes</p>
 						</a>
-						<a href="/dashboard/tenants/${params.id}/branding" class="bg-white rounded-lg border p-4 hover:border-blue-500">
+						<a href="${routes.dashboard.tenants.branding.index.href({ tenantId: params.id })}" class="bg-white rounded-lg border p-4 hover:border-blue-500">
 							<h3 class="font-semibold">Branding</h3>
 							<p class="text-gray-500 text-sm">Customize login appearance</p>
 						</a>
-						<a href="/dashboard/tenants/${params.id}/hostname" class="bg-white rounded-lg border p-4 hover:border-blue-500">
+						<a href="${routes.dashboard.tenants.hostname.index.href({ tenantId: params.id })}" class="bg-white rounded-lg border p-4 hover:border-blue-500">
 							<h3 class="font-semibold">Hostname</h3>
 							<p class="text-gray-500 text-sm">Configure custom domain</p>
 						</a>
-						<a href="/dashboard/tenants/${params.id}/billing" class="bg-white rounded-lg border p-4 hover:border-blue-500">
+						<a href="${routes.dashboard.tenants.billing.index.href({ tenantId: params.id })}" class="bg-white rounded-lg border p-4 hover:border-blue-500">
 							<h3 class="font-semibold">Billing</h3>
 							<p class="text-gray-500 text-sm">Manage subscription</p>
 						</a>
@@ -165,7 +166,7 @@ export default {
 					<body class="bg-gray-50 min-h-screen">
 						<nav class="bg-white shadow-sm border-b">
 							<div class="max-w-6xl mx-auto px-4 py-4">
-								<a href="/dashboard" class="text-gray-600 hover:text-gray-900">&larr; Back to Dashboard</a>
+								<a href="${routes.dashboard.index.href()}" class="text-gray-600 hover:text-gray-900">&larr; Back to Dashboard</a>
 							</div>
 						</nav>
 
@@ -174,7 +175,7 @@ export default {
 
 							<form
 								method="POST"
-								action="/dashboard/tenants"
+								action="${routes.dashboard.tenants.create.href()}"
 								class="bg-white rounded-lg border p-6 space-y-4"
 							>
 								<div>
@@ -232,7 +233,7 @@ export default {
 					<!DOCTYPE html>
 					<html>
 						<body>
-							<p>Validation error. <a href="/dashboard/tenants/new">Try again</a></p>
+							<p>Validation error. <a href="${routes.dashboard.tenants.new.href()}">Try again</a></p>
 						</body>
 					</html>
 				`),
@@ -288,7 +289,7 @@ export default {
 
 		return new Response(null, {
 			status: 302,
-			headers: { Location: `/dashboard/tenants/${tenant.id}` },
+			headers: { Location: routes.dashboard.tenants.show.href({ id: tenant.id }) },
 		});
 	}),
 
@@ -321,14 +322,14 @@ export default {
 			<body class="bg-gray-50 min-h-screen">
 				<nav class="bg-white shadow-sm border-b">
 					<div class="max-w-6xl mx-auto px-4 py-4">
-						<a href="/dashboard/tenants/${params.id}" class="text-gray-600 hover:text-gray-900">&larr; Back to Tenant</a>
+						<a href="${routes.dashboard.tenants.show.href({ id: params.id })}" class="text-gray-600 hover:text-gray-900">&larr; Back to Tenant</a>
 					</div>
 				</nav>
 
 				<main class="max-w-lg mx-auto px-4 py-8">
 					<h1 class="text-2xl font-bold mb-6">Edit Tenant</h1>
 
-					<form method="POST" action="/dashboard/tenants/${params.id}" class="bg-white rounded-lg border p-6 space-y-4">
+					<form method="POST" action="${routes.dashboard.tenants.update.href({ id: params.id })}" class="bg-white rounded-lg border p-6 space-y-4">
 						<input type="hidden" name="_method" value="PUT">
 
 						<div>
@@ -381,7 +382,7 @@ export default {
 
 			return new Response(null, {
 				status: 302,
-				headers: { Location: `/dashboard/tenants/${params.id}` },
+				headers: { Location: routes.dashboard.tenants.show.href({ id: params.id }) },
 			});
 		},
 	),

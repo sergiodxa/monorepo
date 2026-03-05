@@ -5,6 +5,7 @@ import * as s from "remix/data-schema";
 import { html } from "remix/html-template";
 
 import { layout } from "~/app/lib/html";
+import routes from "~/app/routes";
 import action from "~/lib/action";
 
 let CreateRedirectUriSchema = s.object({
@@ -31,12 +32,12 @@ export default {
 					layout({
 						title: `New Redirect URI - ${client.name}`,
 						tenant,
-						backLink: `/dashboard/tenants/${tenant.id}/clients/${params.clientId}`,
+						backLink: routes.dashboard.tenants.clients.show.href({ tenantId: tenant.id, id: params.clientId }),
 						backText: client.name,
 						content: html`
 						<h2 class="text-2xl font-bold mb-6">Add Redirect URI</h2>
 
-						<form method="POST" action="/dashboard/tenants/${tenant.id}/clients/${params.clientId}/redirect-uris" class="bg-white rounded-lg border p-6 space-y-4 max-w-lg">
+						<form method="POST" action="${routes.dashboard.tenants.clients["redirect-uris"].create.href({ tenantId: tenant.id, clientId: params.clientId })}" class="bg-white rounded-lg border p-6 space-y-4 max-w-lg">
 							<div>
 								<label class="block text-sm font-medium text-gray-700 mb-1" for="uri">Redirect URI</label>
 								<input type="url" id="uri" name="uri" required class="w-full border rounded-lg px-3 py-2" placeholder="https://myapp.com/callback">
@@ -86,43 +87,43 @@ export default {
 
 			log.info("Redirect URI created", { tenantId: tenant.id, clientId: params.clientId });
 
-			return new Response(null, {
-				status: 302,
-				headers: { Location: `/dashboard/tenants/${tenant.id}/clients/${params.clientId}` },
-			});
-		},
-	),
+		return new Response(null, {
+			status: 302,
+			headers: { Location: routes.dashboard.tenants.clients.show.href({ tenantId: tenant.id, id: params.clientId }) },
+		});
+	},
+),
 
-	edit: action<"GET", "/dashboard/tenants/:tenantId/clients/:clientId/redirect-uris/:id/edit">(
+edit: action<"GET", "/dashboard/tenants/:tenantId/clients/:clientId/redirect-uris/:id/edit">(
 		async ({ params, tenant, logger }) => {
 			let log = logger.loader(
 				`/dashboard/tenants/${tenant.id}/clients/${params.clientId}/redirect-uris/${params.id}/edit`,
 			);
 			log.info("Redirect URI edit not supported - delete and recreate");
 
-			// Redirect URIs cannot be edited, only deleted and recreated
-			return new Response(null, {
-				status: 302,
-				headers: { Location: `/dashboard/tenants/${tenant.id}/clients/${params.clientId}` },
-			});
-		},
-	),
+		// Redirect URIs cannot be edited, only deleted and recreated
+		return new Response(null, {
+			status: 302,
+			headers: { Location: routes.dashboard.tenants.clients.show.href({ tenantId: tenant.id, id: params.clientId }) },
+		});
+	},
+),
 
-	update: action<"PUT", "/dashboard/tenants/:tenantId/clients/:clientId/redirect-uris/:id">(
+update: action<"PUT", "/dashboard/tenants/:tenantId/clients/:clientId/redirect-uris/:id">(
 		async ({ params, tenant, logger }) => {
 			let log = logger.action(
 				`/dashboard/tenants/${tenant.id}/clients/${params.clientId}/redirect-uris/${params.id}`,
 			);
 			log.info("Redirect URI update not supported");
 
-			return new Response(null, {
-				status: 302,
-				headers: { Location: `/dashboard/tenants/${tenant.id}/clients/${params.clientId}` },
-			});
-		},
-	),
+		return new Response(null, {
+			status: 302,
+			headers: { Location: routes.dashboard.tenants.clients.show.href({ tenantId: tenant.id, id: params.clientId }) },
+		});
+	},
+),
 
-	destroy: action<"DELETE", "/dashboard/tenants/:tenantId/clients/:clientId/redirect-uris/:id">(
+destroy: action<"DELETE", "/dashboard/tenants/:tenantId/clients/:clientId/redirect-uris/:id">(
 		async ({ params, tenant, tenantApi, logger }) => {
 			let log = logger.action(
 				`/dashboard/tenants/${tenant.id}/clients/${params.clientId}/redirect-uris/${params.id}`,
@@ -136,10 +137,10 @@ export default {
 				uriId: params.id,
 			});
 
-			return new Response(null, {
-				status: 302,
-				headers: { Location: `/dashboard/tenants/${tenant.id}/clients/${params.clientId}` },
-			});
-		},
-	),
+		return new Response(null, {
+			status: 302,
+			headers: { Location: routes.dashboard.tenants.clients.show.href({ tenantId: tenant.id, id: params.clientId }) },
+		});
+	},
+),
 };

@@ -5,6 +5,7 @@ import * as s from "remix/data-schema";
 import { html } from "remix/html-template";
 
 import { layout } from "~/app/lib/html";
+import routes from "~/app/routes";
 import action from "~/lib/action";
 
 let CreateResourceSchema = s.object({
@@ -36,7 +37,7 @@ export default {
 					: html`<ul class="space-y-4">${resources.map(
 							(r) => html`
 					<li class="border rounded-lg p-4 hover:bg-gray-50">
-						<a href="/dashboard/tenants/${tenant.id}/resources/${r.id}" class="block">
+						<a href="${routes.dashboard.tenants.resources.show.href({ tenantId: tenant.id, id: r.id })}" class="block">
 							<div class="flex justify-between items-start">
 								<div>
 									<h3 class="font-semibold">${r.name}</h3>
@@ -58,7 +59,7 @@ export default {
 						content: html`
 						<div class="flex justify-between items-center mb-6">
 							<h2 class="text-2xl font-bold">API Resources</h2>
-							<a href="/dashboard/tenants/${tenant.id}/resources/new" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">
+							<a href="${routes.dashboard.tenants.resources.new.href({ tenantId: tenant.id })}" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">
 								New Resource
 							</a>
 						</div>
@@ -93,8 +94,8 @@ export default {
 													<code class="font-medium">${s.name}</code>
 													<p class="text-gray-500 text-sm">${s.description ?? "No description"}</p>
 												</div>
-												<form method="POST" action="/dashboard/tenants/${tenant.id}/resources/${params.id}/scopes/${i}" class="inline">
-													<input type="hidden" name="_method" value="DELETE">
+												<form method="POST" action="${routes.dashboard.tenants.resources.scopes.destroy.href({ tenantId: tenant.id, resourceId: params.id, id: i })}" class="inline">
+													<input type="hidden" name="_method" value="${routes.dashboard.tenants.resources.scopes.destroy.method}">
 													<button type="submit" class="text-red-600 hover:text-red-800 text-sm" onclick="return confirm('Remove this scope?')">Remove</button>
 												</form>
 											</li>
@@ -106,7 +107,7 @@ export default {
 					layout({
 						title: `${resource.name} - ${tenant.name}`,
 						tenant,
-						backLink: `/dashboard/tenants/${tenant.id}/resources`,
+						backLink: routes.dashboard.tenants.resources.index.href({ tenantId: tenant.id }),
 						backText: "Resources",
 						content: html`
 						<div class="flex justify-between items-start mb-6">
@@ -116,9 +117,9 @@ export default {
 								<p class="text-gray-500 mt-1">${resource.description ?? "No description"}</p>
 							</div>
 							<div class="flex gap-2">
-								<a href="/dashboard/tenants/${tenant.id}/resources/${params.id}/edit" class="text-blue-600 hover:text-blue-800">Edit</a>
-								<form method="POST" action="/dashboard/tenants/${tenant.id}/resources/${params.id}" class="inline">
-									<input type="hidden" name="_method" value="DELETE">
+								<a href="${routes.dashboard.tenants.resources.edit.href({ tenantId: tenant.id, id: params.id })}" class="text-blue-600 hover:text-blue-800">Edit</a>
+								<form method="POST" action="${routes.dashboard.tenants.resources.destroy.href({ tenantId: tenant.id, id: params.id })}" class="inline">
+									<input type="hidden" name="_method" value="${routes.dashboard.tenants.resources.destroy.method}">
 									<button type="submit" class="text-red-600 hover:text-red-800" onclick="return confirm('Delete this resource?')">Delete</button>
 								</form>
 							</div>
@@ -127,7 +128,7 @@ export default {
 						<section class="bg-white rounded-lg border p-4">
 							<div class="flex justify-between items-center mb-4">
 								<h3 class="font-semibold">Scopes</h3>
-								<a href="/dashboard/tenants/${tenant.id}/resources/${params.id}/scopes/new" class="text-blue-600 hover:text-blue-800 text-sm">Add Scope</a>
+								<a href="${routes.dashboard.tenants.resources.scopes.new.href({ tenantId: tenant.id, resourceId: params.id })}" class="text-blue-600 hover:text-blue-800 text-sm">Add Scope</a>
 							</div>
 							${scopesList}
 						</section>
@@ -147,12 +148,12 @@ export default {
 				layout({
 					title: `New Resource - ${tenant.name}`,
 					tenant,
-					backLink: `/dashboard/tenants/${tenant.id}/resources`,
+					backLink: routes.dashboard.tenants.resources.index.href({ tenantId: tenant.id }),
 					backText: "Resources",
 					content: html`
 					<h2 class="text-2xl font-bold mb-6">New API Resource</h2>
 
-					<form method="POST" action="/dashboard/tenants/${tenant.id}/resources" class="bg-white rounded-lg border p-6 space-y-4 max-w-lg">
+					<form method="POST" action="${routes.dashboard.tenants.resources.create.href({ tenantId: tenant.id })}" class="bg-white rounded-lg border p-6 space-y-4 max-w-lg">
 						<div>
 							<label class="block text-sm font-medium text-gray-700 mb-1" for="identifier">Identifier (Audience)</label>
 							<input type="text" id="identifier" name="identifier" required class="w-full border rounded-lg px-3 py-2" placeholder="https://api.example.com">
@@ -202,7 +203,7 @@ export default {
 
 			return new Response(null, {
 				status: 302,
-				headers: { Location: `/dashboard/tenants/${tenant.id}/resources/${id}` },
+				headers: { Location: routes.dashboard.tenants.resources.show.href({ tenantId: tenant.id, id }) },
 			});
 		},
 	),
@@ -223,13 +224,13 @@ export default {
 					layout({
 						title: `Edit ${resource.name} - ${tenant.name}`,
 						tenant,
-						backLink: `/dashboard/tenants/${tenant.id}/resources/${params.id}`,
+						backLink: routes.dashboard.tenants.resources.show.href({ tenantId: tenant.id, id: params.id }),
 						backText: resource.name,
 						content: html`
 						<h2 class="text-2xl font-bold mb-6">Edit Resource</h2>
 
-						<form method="POST" action="/dashboard/tenants/${tenant.id}/resources/${params.id}" class="bg-white rounded-lg border p-6 space-y-4 max-w-lg">
-							<input type="hidden" name="_method" value="PUT">
+						<form method="POST" action="${routes.dashboard.tenants.resources.update.href({ tenantId: tenant.id, id: params.id })}" class="bg-white rounded-lg border p-6 space-y-4 max-w-lg">
+							<input type="hidden" name="_method" value="${routes.dashboard.tenants.resources.update.method}">
 							<div>
 								<label class="block text-sm font-medium text-gray-700 mb-1" for="identifier">Identifier (Audience)</label>
 								<input type="text" id="identifier" name="identifier" value="${resource.identifier}" required class="w-full border rounded-lg px-3 py-2">
@@ -278,7 +279,7 @@ export default {
 
 			return new Response(null, {
 				status: 302,
-				headers: { Location: `/dashboard/tenants/${tenant.id}/resources/${params.id}` },
+				headers: { Location: routes.dashboard.tenants.resources.show.href({ tenantId: tenant.id, id: params.id }) },
 			});
 		},
 	),
@@ -293,7 +294,7 @@ export default {
 
 			return new Response(null, {
 				status: 302,
-				headers: { Location: `/dashboard/tenants/${tenant.id}/resources` },
+				headers: { Location: routes.dashboard.tenants.resources.index.href({ tenantId: tenant.id }) },
 			});
 		},
 	),

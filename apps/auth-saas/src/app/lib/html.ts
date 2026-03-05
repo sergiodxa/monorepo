@@ -4,6 +4,8 @@
 
 import { html, type SafeHtml } from "remix/html-template";
 
+import routes from "~/app/routes";
+
 interface LayoutOptions {
 	title: string;
 	tenant?: { id: string; name: string };
@@ -26,10 +28,10 @@ export function layout(options: LayoutOptions): SafeHtml {
 	if (backLink && backText) {
 		breadcrumb = html`<a href="${backLink}" class="text-gray-600 hover:text-gray-900">&larr; ${backText}</a>`;
 	} else if (tenant) {
-		breadcrumb = html`<a href="/dashboard/tenants/${tenant.id}" class="text-gray-600 hover:text-gray-900">&larr; ${tenant.name}</a>`;
+		breadcrumb = html`<a href="${routes.dashboard.tenants.show.href({ id: tenant.id })}" class="text-gray-600 hover:text-gray-900">&larr; ${tenant.name}</a>`;
 	} else {
 		breadcrumb = html`
-			<a href="/dashboard" class="text-gray-600 hover:text-gray-900">&larr; Dashboard</a>
+			<a href="${routes.dashboard.index.href()}" class="text-gray-600 hover:text-gray-900">&larr; Dashboard</a>
 		`;
 	}
 
@@ -71,7 +73,7 @@ export function layout(options: LayoutOptions): SafeHtml {
 						${breadcrumb}
 						${tenantBreadcrumb}
 					</div>
-					<a href="/onboarding" class="text-gray-600 hover:text-gray-900">Sign out</a>
+					<a href="${routes.onboarding.index.href()}" class="text-gray-600 hover:text-gray-900">Sign out</a>
 				</div>
 			</nav>
 

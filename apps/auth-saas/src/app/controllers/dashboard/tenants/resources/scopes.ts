@@ -5,6 +5,7 @@ import * as s from "remix/data-schema";
 import { html } from "remix/html-template";
 
 import { layout } from "~/app/lib/html";
+import routes from "~/app/routes";
 import action from "~/lib/action";
 
 let CreateScopeSchema = s.object({
@@ -31,12 +32,12 @@ export default {
 					layout({
 						title: `New Scope - ${resource.name}`,
 						tenant,
-						backLink: `/dashboard/tenants/${tenant.id}/resources/${params.resourceId}`,
+						backLink: routes.dashboard.tenants.resources.show.href({ tenantId: tenant.id, id: params.resourceId }),
 						backText: resource.name,
 						content: html`
 						<h2 class="text-2xl font-bold mb-6">Add Scope</h2>
 
-						<form method="POST" action="/dashboard/tenants/${tenant.id}/resources/${params.resourceId}/scopes" class="bg-white rounded-lg border p-6 space-y-4 max-w-lg">
+						<form method="POST" action="${routes.dashboard.tenants.resources.scopes.create.href({ tenantId: tenant.id, resourceId: params.resourceId })}" class="bg-white rounded-lg border p-6 space-y-4 max-w-lg">
 							<div>
 								<label class="block text-sm font-medium text-gray-700 mb-1" for="name">Scope Name</label>
 								<input type="text" id="name" name="name" required class="w-full border rounded-lg px-3 py-2" placeholder="read:users">
@@ -97,7 +98,7 @@ export default {
 
 			return new Response(null, {
 				status: 302,
-				headers: { Location: `/dashboard/tenants/${tenant.id}/resources/${params.resourceId}` },
+				headers: { Location: routes.dashboard.tenants.resources.show.href({ tenantId: tenant.id, id: params.resourceId }) },
 			});
 		},
 	),
@@ -111,7 +112,7 @@ export default {
 
 			return new Response(null, {
 				status: 302,
-				headers: { Location: `/dashboard/tenants/${tenant.id}/resources/${params.resourceId}` },
+				headers: { Location: routes.dashboard.tenants.resources.show.href({ tenantId: tenant.id, id: params.resourceId }) },
 			});
 		},
 	),
@@ -125,7 +126,7 @@ export default {
 
 			return new Response(null, {
 				status: 302,
-				headers: { Location: `/dashboard/tenants/${tenant.id}/resources/${params.resourceId}` },
+				headers: { Location: routes.dashboard.tenants.resources.show.href({ tenantId: tenant.id, id: params.resourceId }) },
 			});
 		},
 	),
@@ -155,10 +156,10 @@ export default {
 				scopeIndex: params.id,
 			});
 
-			return new Response(null, {
-				status: 302,
-				headers: { Location: `/dashboard/tenants/${tenant.id}/resources/${params.resourceId}` },
-			});
-		},
-	),
+		return new Response(null, {
+			status: 302,
+			headers: { Location: routes.dashboard.tenants.resources.show.href({ tenantId: tenant.id, id: params.resourceId }) },
+		});
+	},
+),
 };

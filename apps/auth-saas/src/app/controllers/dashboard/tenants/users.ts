@@ -1,4 +1,5 @@
 import { html as htmlResponse } from "@pkg/http/response";
+import { Location } from "@pkg/location";
 import { isFailure } from "@pkg/result";
 import { validate } from "@pkg/validate";
 import * as s from "remix/data-schema";
@@ -45,7 +46,7 @@ export default {
 									(u) => html`
 									<tr class="hover:bg-gray-50">
 										<td class="px-4 py-3">
-											<a href="/dashboard/tenants/${tenant.id}/users/${u.id}" class="font-medium text-blue-600 hover:text-blue-800">
+											<a href="${routes.dashboard.tenants.users.show.href({ tenantId: tenant.id, id: u.id })}" class="font-medium text-blue-600 hover:text-blue-800">
 												${u.display_name ?? u.username}
 											</a>
 										</td>
@@ -198,7 +199,7 @@ export default {
 					layout({
 						title: `${user.display_name || user.username} - ${tenant.name}`,
 						tenant,
-						backLink: `/dashboard/tenants/${tenant.id}/users`,
+						backLink: routes.dashboard.tenants.users.index.href({ tenantId: tenant.id }),
 						backText: "Users",
 						content: html`
 						<div class="flex justify-between items-start mb-6">
@@ -207,9 +208,9 @@ export default {
 								<p class="text-gray-500">${user.email}</p>
 							</div>
 							<div class="flex gap-2">
-								<a href="/dashboard/tenants/${tenant.id}/users/${params.id}/edit" class="text-blue-600 hover:text-blue-800">Edit</a>
-								<form method="POST" action="/dashboard/tenants/${tenant.id}/users/${params.id}" class="inline">
-									<input type="hidden" name="_method" value="DELETE">
+								<a href="${routes.dashboard.tenants.users.edit.href({ tenantId: tenant.id, id: params.id })}" class="text-blue-600 hover:text-blue-800">Edit</a>
+								<form method="POST" action="${routes.dashboard.tenants.users.destroy.href({ tenantId: tenant.id, id: params.id })}" class="inline">
+									<input type="hidden" name="_method" value="${routes.dashboard.tenants.users.destroy.method}">
 									<button type="submit" class="text-red-600 hover:text-red-800" onclick="return confirm('Delete this user? This cannot be undone.')">Delete</button>
 								</form>
 							</div>
@@ -275,15 +276,15 @@ export default {
 					layout({
 						title: `Edit ${user.display_name || user.username} - ${tenant.name}`,
 						tenant,
-						backLink: `/dashboard/tenants/${tenant.id}/users/${params.id}`,
+						backLink: routes.dashboard.tenants.users.show.href({ tenantId: tenant.id, id: params.id }),
 						backText: user.display_name || user.username,
 						content: html`
 						<h2 class="text-2xl font-bold mb-6">Edit User</h2>
 
 						${errorMessage ? html`<div class="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-4">${errorMessage}</div>` : ""}
 
-						<form method="POST" action="/dashboard/tenants/${tenant.id}/users/${params.id}" class="bg-white rounded-lg border p-6 space-y-4 max-w-lg">
-							<input type="hidden" name="_method" value="PUT">
+						<form method="POST" action="${routes.dashboard.tenants.users.update.href({ tenantId: tenant.id, id: params.id })}" class="bg-white rounded-lg border p-6 space-y-4 max-w-lg">
+							<input type="hidden" name="_method" value="${routes.dashboard.tenants.users.update.method}">
 							<div>
 								<label class="block text-sm font-medium text-gray-700 mb-1" for="displayName">Display Name</label>
 								<input type="text" id="displayName" name="displayName" value="${user.display_name ?? ""}" class="w-full border rounded-lg px-3 py-2">
@@ -341,7 +342,7 @@ export default {
 
 				return new Response(null, {
 					status: 302,
-					headers: { Location: `/dashboard/tenants/${tenant.id}/users/${params.id}` },
+					headers: { Location: routes.dashboard.tenants.users.show.href({ tenantId: tenant.id, id: params.id }) },
 				});
 			} catch (error) {
 				if (error instanceof TenantApiError && error.status === 400) {
@@ -350,7 +351,7 @@ export default {
 					let errorMessage = encodeURIComponent(error.message);
 					return new Response(null, {
 						status: 302,
-						headers: { Location: `/dashboard/tenants/${tenant.id}/users/${params.id}/edit?error=${errorMessage}` },
+						headers: { Location: new Location({ pathname: routes.dashboard.tenants.users.edit.href({ tenantId: tenant.id, id: params.id }), search: new URLSearchParams({ error: errorMessage }) }).toString() },
 					});
 				}
 				throw error;
@@ -368,7 +369,7 @@ export default {
 
 			return new Response(null, {
 				status: 302,
-				headers: { Location: `/dashboard/tenants/${tenant.id}/users` },
+				headers: { Location: routes.dashboard.tenants.users.index.href({ tenantId: tenant.id }) },
 			});
 		},
 	),

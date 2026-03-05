@@ -1,5 +1,6 @@
 import { html } from "@pkg/http/response";
 
+import routes from "~/app/routes";
 import action from "~/lib/action";
 
 /**
@@ -21,7 +22,7 @@ export default action<"GET", "/">(({ logger }) => {
 			<nav class="py-6">
 				<div class="max-w-6xl mx-auto px-4 flex justify-between items-center">
 					<h1 class="text-2xl font-bold text-gray-900">Auth SaaS</h1>
-					<a href="/onboarding" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors">
+					<a href="${routes.onboarding.index.href()}" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors">
 						Get Started
 					</a>
 				</div>
@@ -37,7 +38,7 @@ export default action<"GET", "/">(({ logger }) => {
 						Passkey-first authentication, custom domains, and instant deployment.
 					</p>
 					<div class="flex gap-4 justify-center">
-						<a href="/onboarding" class="bg-blue-600 text-white px-8 py-3 rounded-lg text-lg font-medium hover:bg-blue-700 transition-colors">
+						<a href="${routes.onboarding.index.href()}" class="bg-blue-600 text-white px-8 py-3 rounded-lg text-lg font-medium hover:bg-blue-700 transition-colors">
 							Start Free
 						</a>
 						<a href="#features" class="bg-white text-gray-700 px-8 py-3 rounded-lg text-lg font-medium hover:bg-gray-50 border transition-colors">

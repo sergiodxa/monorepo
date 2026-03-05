@@ -1,4 +1,7 @@
+import { Location } from "@pkg/location";
+
 import Subscription from "~/app/models/subscription";
+import routes from "~/app/routes";
 import middleware from "~/lib/middleware";
 
 /** Subscription statuses that allow full access. */
@@ -116,7 +119,10 @@ function redirectToBlocked(tenantId: string, reason: string): Response {
 	return new Response(null, {
 		status: 302,
 		headers: {
-			Location: `/dashboard/tenants/${tenantId}/billing?blocked=${encodeURIComponent(reason)}`,
+			Location: new Location({
+				pathname: routes.dashboard.tenants.billing.index.href({ tenantId }),
+				search: new URLSearchParams({ blocked: reason }),
+			}).toString(),
 		},
 	});
 }

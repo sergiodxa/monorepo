@@ -92,6 +92,7 @@
         "@pkg/get-client-ip": "workspace:*",
         "@pkg/http": "workspace:*",
         "@pkg/jobs": "workspace:*",
+        "@pkg/location": "workspace:*",
         "@pkg/logger": "workspace:*",
         "@pkg/response": "workspace:*",
         "@pkg/result": "workspace:*",
