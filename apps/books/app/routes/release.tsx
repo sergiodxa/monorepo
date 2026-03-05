@@ -1,4 +1,3 @@
-import { differenceInCalendarDays } from "date-fns/differenceInCalendarDays";
 import { href, Link } from "react-router";
 import { z } from "zod";
 
@@ -259,7 +258,7 @@ function Pricing({
 					<div className="flex max-w-prose flex-col gap-2">{pkg.description}</div>
 
 					<div className="flex flex-col items-start gap-1">
-						{pkg.discount && (
+						{/* {pkg.discount && (
 							<mark className="mt-2 animate-bounce rounded-xs px-2 py-1 text-center text-sm font-light">
 								Limited time offer – only{" "}
 								<time dateTime={pkg.discount.endsAt.toISOString()} className="font-bold">
@@ -267,7 +266,7 @@ function Pricing({
 								</time>{" "}
 								days left
 							</mark>
-						)}
+						)} */}
 
 						<a
 							href={pkg.link}
