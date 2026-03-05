@@ -382,7 +382,7 @@ export class Logger {
 	 * Flush all accumulated logs to console as a single log entry.
 	 */
 	flush(): void {
-		let output = JSON.stringify(this.toJSON(), null, 2);
+		let output = this.toJSON();
 		if (this.#hasError()) console.error(this.identifier, output);
 		else console.info(this.identifier, output);
 	}
