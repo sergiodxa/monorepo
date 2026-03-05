@@ -91,9 +91,9 @@ router.map(routes, {
 							middleware: [tenantOwner, subscription],
 							actions: {
 								...users,
-								...userSessions,
-								...userPasskeys,
-								...userGrants,
+								sessions: userSessions,
+								passkeys: userPasskeys,
+								grants: userGrants,
 							},
 						},
 

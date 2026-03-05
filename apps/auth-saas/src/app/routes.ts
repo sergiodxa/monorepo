@@ -1,4 +1,4 @@
-import { form, get, post, resources, route } from "remix/fetch-router/routes";
+import { del, form, get, post, resources, route } from "remix/fetch-router/routes";
 
 export default route({
 	index: get("/"),
@@ -43,17 +43,17 @@ export default route({
 					only: ["index", "show", "edit", "update", "destroy"],
 				}),
 
-				...resources("/dashboard/tenants/:tenantId/users/:userId/sessions", {
-					only: ["destroy"],
-				}),
+				sessions: {
+					destroy: del("/dashboard/tenants/:tenantId/users/:userId/sessions/:id"),
+				},
 
-				...resources("/dashboard/tenants/:tenantId/users/:userId/passkeys", {
-					only: ["destroy"],
-				}),
+				passkeys: {
+					destroy: del("/dashboard/tenants/:tenantId/users/:userId/passkeys/:id"),
+				},
 
-				...resources("/dashboard/tenants/:tenantId/users/:userId/grants", {
-					only: ["destroy"],
-				}),
+				grants: {
+					destroy: del("/dashboard/tenants/:tenantId/users/:userId/grants/:id"),
+				},
 			},
 
 			resources: {
