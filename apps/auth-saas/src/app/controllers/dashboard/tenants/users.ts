@@ -5,10 +5,12 @@ import * as s from "remix/data-schema";
 import { html } from "remix/html-template";
 
 import { layout } from "~/app/lib/html";
+import { TenantApiError } from "~/app/services/tenant-api";
 import action from "~/lib/action";
 
 let UpdateUserSchema = s.object({
 	displayName: s.optional(s.string()),
+	username: s.optional(s.string()),
 	role: s.optional(s.enum_(["admin", "user"])),
 });
 
@@ -225,13 +227,17 @@ export default {
 	),
 
 	edit: action<"GET", "/dashboard/tenants/:tenantId/users/:id/edit">(
-		async ({ params, tenant, tenantApi, logger }) => {
+		async ({ params, tenant, tenantApi, logger, request }) => {
 			let log = logger.loader(`/dashboard/tenants/${tenant.id}/users/${params.id}/edit`);
 
 			let user = await tenantApi.getUser(params.id);
 			if (!user) {
 				return new Response("User not found", { status: 404 });
 			}
+
+			// Check for error message from redirect
+			let url = new URL(request.url);
+			let errorMessage = url.searchParams.get("error");
 
 			log.info("User edit form loaded", { tenantId: tenant.id, userId: params.id });
 
@@ -245,11 +251,19 @@ export default {
 						content: html`
 						<h2 class="text-2xl font-bold mb-6">Edit User</h2>
 
+						${errorMessage ? html`<div class="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-4">${errorMessage}</div>` : ""}
+
 						<form method="POST" action="/dashboard/tenants/${tenant.id}/users/${params.id}" class="bg-white rounded-lg border p-6 space-y-4 max-w-lg">
 							<input type="hidden" name="_method" value="PUT">
 							<div>
 								<label class="block text-sm font-medium text-gray-700 mb-1" for="displayName">Display Name</label>
 								<input type="text" id="displayName" name="displayName" value="${user.display_name ?? ""}" class="w-full border rounded-lg px-3 py-2">
+							</div>
+
+							<div>
+								<label class="block text-sm font-medium text-gray-700 mb-1" for="username">Username</label>
+								<input type="text" id="username" name="username" value="${user.username}" class="w-full border rounded-lg px-3 py-2" required>
+								<p class="text-xs text-gray-500 mt-1">Must be unique across all users in this tenant</p>
 							</div>
 
 							<div>
@@ -262,7 +276,6 @@ export default {
 
 							<div class="text-gray-500 text-sm">
 								<p><strong>Email:</strong> ${user.email} (cannot be changed)</p>
-								<p><strong>Username:</strong> ${user.username} (cannot be changed)</p>
 							</div>
 
 							<button type="submit" class="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700">
@@ -288,17 +301,31 @@ export default {
 				return new Response("Validation error", { status: 400 });
 			}
 
-			await tenantApi.updateUser(params.id, {
-				displayName: result.data.displayName,
-				role: result.data.role,
-			});
+			try {
+				await tenantApi.updateUser(params.id, {
+					displayName: result.data.displayName,
+					username: result.data.username,
+					role: result.data.role,
+				});
 
-			log.info("User updated", { tenantId: tenant.id, userId: params.id });
+				log.info("User updated", { tenantId: tenant.id, userId: params.id });
 
-			return new Response(null, {
-				status: 302,
-				headers: { Location: `/dashboard/tenants/${tenant.id}/users/${params.id}` },
-			});
+				return new Response(null, {
+					status: 302,
+					headers: { Location: `/dashboard/tenants/${tenant.id}/users/${params.id}` },
+				});
+			} catch (error) {
+				if (error instanceof TenantApiError && error.status === 400) {
+					log.info("User update failed", { tenantId: tenant.id, userId: params.id, error: error.message });
+					// Redirect back to edit page with error message
+					let errorMessage = encodeURIComponent(error.message);
+					return new Response(null, {
+						status: 302,
+						headers: { Location: `/dashboard/tenants/${tenant.id}/users/${params.id}/edit?error=${errorMessage}` },
+					});
+				}
+				throw error;
+			}
 		},
 	),
 

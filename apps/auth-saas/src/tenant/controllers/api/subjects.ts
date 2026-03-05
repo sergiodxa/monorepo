@@ -13,6 +13,7 @@ import Subject from "~/tenant/models/subject";
 let UpdateSubjectSchema = s.object({
 	displayName: s.optional(s.string().pipe(maxLength(LIMITS.name.max))),
 	avatarUrl: s.optional(s.string().pipe(maxLength(LIMITS.url.max), httpsUrl())),
+	username: s.optional(s.string().pipe(maxLength(LIMITS.name.max))),
 });
 
 export const index = action<"GET", "/api/subjects">(async ({ db, logger }) => {
@@ -57,6 +58,10 @@ export const update = action<"PUT", "/api/subjects/:id">(
 			if (error instanceof RecordNotFoundError) {
 				log.info("Subject not found", { subjectId: params.id });
 				return notFound({ error: "Subject not found" });
+			}
+			if (error instanceof Subject.UsernameAlreadyTakenError) {
+				log.info("Username already taken", { subjectId: params.id, username: result.data.username });
+				return badRequest({ error: error.message });
 			}
 			throw error;
 		}

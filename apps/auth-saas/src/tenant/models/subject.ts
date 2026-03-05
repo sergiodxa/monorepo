@@ -15,6 +15,14 @@ export default class Subject {
 		override name = "UnverifiedEmailError";
 	};
 
+	/** Error thrown when a username is already taken by another subject. */
+	static UsernameAlreadyTakenError = class extends Error {
+		override name = "UsernameAlreadyTakenError";
+		constructor(username: string) {
+			super(`Username "${username}" is already taken`);
+		}
+	};
+
 	/** Database table schema for subjects. */
 	static table = createTable({
 		name: "subjects",
@@ -74,6 +82,16 @@ export default class Subject {
 	}
 
 	/**
+	 * Finds a subject by username.
+	 * @param db - Database instance
+	 * @param username - Username
+	 * @returns Subject record or null if not found
+	 */
+	static findByUsername(db: Database, username: string) {
+		return db.findOne(Subject.table, { where: { username } });
+	}
+
+	/**
 	 * Registers a new subject with unverified email.
 	 * @param db - Database instance
 	 * @param data - Registration data including email and username
@@ -126,14 +144,23 @@ export default class Subject {
 	 * @param data - Profile properties to update
 	 * @returns Updated subject record
 	 * @throws {RecordNotFoundError} If subject does not exist
+	 * @throws {UsernameAlreadyTakenError} If username is taken by another subject
 	 */
 	static async update(
 		db: Database,
 		id: string,
-		data: { displayName?: string; avatarUrl?: string },
+		data: { displayName?: string; avatarUrl?: string; username?: string },
 	) {
 		let subject = await db.findOne(Subject.table, { where: { id } });
 		if (!subject) throw new RecordNotFoundError(Subject.table, { id });
+
+		// Check username uniqueness if being changed
+		if (data.username && data.username !== subject.username) {
+			let existing = await Subject.findByUsername(db, data.username);
+			if (existing && existing.id !== id) {
+				throw new Subject.UsernameAlreadyTakenError(data.username);
+			}
+		}
 
 		return await db.update(
 			Subject.table,
@@ -141,6 +168,7 @@ export default class Subject {
 			{
 				display_name: data.displayName ?? subject.display_name,
 				avatar_url: data.avatarUrl ?? subject.avatar_url,
+				username: data.username ?? subject.username,
 				updated_at: new Date().toISOString(),
 			},
 		);
