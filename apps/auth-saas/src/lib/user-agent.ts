@@ -2,6 +2,8 @@
  * Utilities for parsing user agent strings into human-readable device information.
  */
 
+import { html, type SafeHtml } from "remix/html-template";
+
 interface ParsedUserAgent {
 	browser: string;
 	os: string;
@@ -80,24 +82,24 @@ export function formatUserAgent(parsed: ParsedUserAgent): string {
 /**
  * Returns an SVG icon for the device type.
  * @param device - Device type
- * @returns SVG string
+ * @returns SafeHtml SVG element
  */
-export function getDeviceIcon(device: "desktop" | "mobile" | "tablet" | "unknown"): string {
+export function getDeviceIcon(device: "desktop" | "mobile" | "tablet" | "unknown"): SafeHtml {
 	switch (device) {
 		case "desktop":
-			return `<svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+			return html`<svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 				<path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
 			</svg>`;
 		case "mobile":
-			return `<svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+			return html`<svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 				<path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"/>
 			</svg>`;
 		case "tablet":
-			return `<svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+			return html`<svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 				<path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 18h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
 			</svg>`;
 		default:
-			return `<svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+			return html`<svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 				<path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
 			</svg>`;
 	}
