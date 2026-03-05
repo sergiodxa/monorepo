@@ -8,7 +8,19 @@ import action from "~/lib/action";
 import { RecordNotFoundError } from "~/lib/db-errors";
 import { isResponse, safeJsonParse } from "~/lib/safe-json";
 import { LIMITS, maxLength, minLength } from "~/lib/schema-checks";
+import { toIsoString } from "~/lib/timestamp";
 import Resource from "~/tenant/models/resource";
+
+type ResourceRow = Awaited<ReturnType<typeof Resource.list>>[number];
+
+function normalizeResource(resource: ResourceRow) {
+	return {
+		...resource,
+		scopes: Resource.parseScopes(resource),
+		created_at: toIsoString(resource.created_at),
+		updated_at: toIsoString(resource.updated_at),
+	};
+}
 
 let nameSchema = s.string().pipe(minLength(LIMITS.name.min), maxLength(LIMITS.name.max));
 let descriptionSchema = s.string().pipe(maxLength(LIMITS.description.max));
@@ -36,11 +48,7 @@ let UpdateResourceSchema = s.object({
 export const index = action<"GET", "/api/resources">(async ({ db, logger }) => {
 	let log = logger.loader("/api/resources");
 	let resources = await Resource.list(db);
-	// Parse scopes JSON for each resource
-	let result = resources.map((r) => ({
-		...r,
-		scopes: Resource.parseScopes(r),
-	}));
+	let result = resources.map(normalizeResource);
 	log.info("Resources listed", { count: result.length });
 	return ok(result);
 });
@@ -53,10 +61,7 @@ export const show = action<"GET", "/api/resources/:id">(async ({ params, db, log
 		return notFound({ error: "Resource not found" });
 	}
 	log.info("Resource retrieved", { resourceId: params.id });
-	return ok({
-		...resource,
-		scopes: Resource.parseScopes(resource),
-	});
+	return ok(normalizeResource(resource));
 });
 
 export const create = action<"POST", "/api/resources">(async ({ db, request, logger }) => {
@@ -99,11 +104,12 @@ export const update = action<"PUT", "/api/resources/:id">(
 		try {
 			await Resource.update(db, params.id, result.data);
 			let resource = await Resource.show(db, params.id);
+			if (!resource) {
+				log.info("Resource not found after update", { resourceId: params.id });
+				return notFound({ error: "Resource not found" });
+			}
 			log.info("Resource updated", { resourceId: params.id });
-			return ok({
-				...resource,
-				scopes: resource ? Resource.parseScopes(resource) : [],
-			});
+			return ok(normalizeResource(resource));
 		} catch (error) {
 			if (error instanceof RecordNotFoundError) {
 				log.info("Resource not found", { resourceId: params.id });

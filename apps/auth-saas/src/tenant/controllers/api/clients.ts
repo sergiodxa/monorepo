@@ -8,7 +8,18 @@ import action from "~/lib/action";
 import { RecordNotFoundError } from "~/lib/db-errors";
 import { isResponse, safeJsonParse } from "~/lib/safe-json";
 import { httpsUrl, LIMITS, maxLength, minLength } from "~/lib/schema-checks";
+import { toIsoString } from "~/lib/timestamp";
 import Client from "~/tenant/models/client";
+
+type ClientRow = Awaited<ReturnType<typeof Client.list>>[number];
+
+function normalizeClient(client: ClientRow) {
+	return {
+		...client,
+		created_at: toIsoString(client.created_at),
+		updated_at: toIsoString(client.updated_at),
+	};
+}
 
 let nameSchema = s.string().pipe(minLength(LIMITS.name.min), maxLength(LIMITS.name.max));
 let descriptionSchema = s.string().pipe(maxLength(LIMITS.description.max));
@@ -39,7 +50,7 @@ export const index = action<"GET", "/api/clients">(async ({ db, logger }) => {
 	let log = logger.loader("/api/clients");
 	let list = await Client.list(db);
 	log.info("Clients listed", { count: list.length });
-	return ok(list);
+	return ok(list.map(normalizeClient));
 });
 
 export const show = action<"GET", "/api/clients/:id">(async ({ params, db, logger }) => {
@@ -47,7 +58,7 @@ export const show = action<"GET", "/api/clients/:id">(async ({ params, db, logge
 	let client = await Client.show(db, params.id);
 	if (client) {
 		log.info("Client retrieved", { clientId: params.id });
-		return ok(client);
+		return ok(normalizeClient(client));
 	}
 	log.info("Client not found", { clientId: params.id });
 	return notFound({ error: "Client not found" });
@@ -120,7 +131,7 @@ export const update = action<"PUT", "/api/clients/:id">(async ({ params, db, req
 
 		let client = await Client.show(db, params.id);
 		log.info("Client updated", { clientId: params.id });
-		return ok(client);
+		return ok(client ? normalizeClient(client) : null);
 	} catch (error) {
 		if (error instanceof RecordNotFoundError) {
 			log.info("Client not found", { clientId: params.id });
