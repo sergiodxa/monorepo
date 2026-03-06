@@ -60,7 +60,7 @@ These URLs are already live and can be linked to freely:
 3. [x] [How to Create a Multi-Directory Route Organization in React Router](./tutorials/create-a-multi-directory-route-organization-in-react-router.md)
 4. [x] [How to Create a Per-Request Database Instance with Middleware](./tutorials/create-a-per-request-database-instance-with-middleware.md)
 5. [ ] [How to Add URL Normalization Middleware in React Router](./tutorials/add-url-normalization-middleware-in-react-router.md)
-6. [ ] [How to Access Request Context Anywhere with AsyncLocalStorage](./tutorials/access-request-context-anywhere-with-asynclocalstorage.md)
+6. [x] [How to Access React Router Context with AsyncLocalStorage](./tutorials/access-react-router-context-with-asynclocalstorage.md)
 7. [ ] [How to Build Type-Safe Response Helpers for React Router](./tutorials/build-type-safe-response-helpers-for-react-router.md)
 8. [ ] [How to Use Client Hints for Server-Side Timezone Rendering](./tutorials/use-client-hints-for-server-side-timezone-rendering.md)
 9. [ ] [How to Create a Color System with React Context](./tutorials/create-a-color-system-with-react-context.md)
