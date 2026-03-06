@@ -13,22 +13,17 @@ import WebAuthnChallenge from "./models/webauthn-challenge";
 import createRouter from "./router";
 
 export default class Tenant extends DurableObject {
-	private readonly db = createDatabase(createSQLStorageDatabaseAdapter(this.ctx.storage.sql));
+	#db = createDatabase(createSQLStorageDatabaseAdapter(this.ctx.storage.sql));
 
 	constructor(state: DurableObjectState, env: Cloudflare.Env) {
 		super(state, env);
-
-		state.blockConcurrencyWhile(async () => {
-			await this.migrate();
-			await this.generateSigningKeys();
-			await this.scheduleCleanupAlarm();
-		});
+		state.blockConcurrencyWhile(() => this.setup());
 	}
 
-	override async fetch(request: Request): Promise<Response> {
+	override async fetch(request: Request) {
 		let logger = new Logger(request);
 		try {
-			let response = await createRouter(this.db, logger).fetch(request);
+			let response = await createRouter(this.#db, logger).fetch(request);
 			logger.response = response;
 			return response;
 		} finally {
@@ -36,50 +31,20 @@ export default class Tenant extends DurableObject {
 		}
 	}
 
-	override async alarm(): Promise<void> {
+	override async alarm() {
 		await this.cleanup();
 		await this.scheduleCleanupAlarm();
 	}
 
-	private async migrate() {
-		let { default: init } = await import("./migrations/0001-init.sql?raw");
-		this.ctx.storage.sql.exec(init);
-
-		let { default: addAuthzCodesIndex } =
-			await import("./migrations/0002-add-authz-codes-client-index.sql?raw");
-		this.ctx.storage.sql.exec(addAuthzCodesIndex);
-
-		let { default: addPkceToWebauthn } =
-			await import("./migrations/0003-add-pkce-to-webauthn-challenges.sql?raw");
-		this.tryExec(addPkceToWebauthn);
-
-		let { default: addSigningKeysIndex } =
-			await import("./migrations/0004-add-signing-keys-current-index.sql?raw");
-		this.ctx.storage.sql.exec(addSigningKeysIndex);
-
-		let { default: seedDashboardClient } =
-			await import("./migrations/0005-seed-dashboard-client.sql?raw");
-		this.tryExec(seedDashboardClient);
-
-		let { default: addPasskeyCredentialId } =
-			await import("./migrations/0006-add-passkey-credential-id.sql?raw");
-		this.tryExec(addPasskeyCredentialId);
-	}
-
-	/**
-	 * Executes SQL, ignoring errors (for idempotent ALTER TABLE statements).
-	 */
-	private tryExec(sql: string) {
-		try {
-			this.ctx.storage.sql.exec(sql);
-		} catch {
-			// Ignore errors (e.g., column already exists)
-		}
+	private async setup() {
+		await this.migrate();
+		await this.generateSigningKeys();
+		await this.scheduleCleanupAlarm();
 	}
 
 	private async generateSigningKeys() {
-		let currentKey = await SigningKey.getCurrent(this.db);
-		if (!currentKey) await SigningKey.generate(this.db);
+		let currentKey = await SigningKey.getCurrent(this.#db);
+		if (!currentKey) await SigningKey.generate(this.#db);
 	}
 
 	private async scheduleCleanupAlarm() {
@@ -98,11 +63,33 @@ export default class Tenant extends DurableObject {
 		let oneWeekAgo = now - 7 * 24 * 60 * 60 * 1000;
 
 		await Promise.all([
-			Subject.cleanupUnverified(this.db, oneWeekAgo),
-			Session.cleanupExpired(this.db, now),
-			AuthorizationCode.cleanupExpired(this.db, now),
-			WebAuthnChallenge.cleanupExpired(this.db, now),
-			EmailVerificationToken.cleanupExpired(this.db, now),
+			Subject.cleanupUnverified(this.#db, oneWeekAgo),
+			Session.cleanupExpired(this.#db, now),
+			AuthorizationCode.cleanupExpired(this.#db, now),
+			WebAuthnChallenge.cleanupExpired(this.#db, now),
+			EmailVerificationToken.cleanupExpired(this.#db, now),
 		]);
+	}
+
+	private async migrate() {
+		let migrations = await Promise.all([
+			import("./migrations/0001-init.sql?raw"),
+			import("./migrations/0002-add-authz-codes-client-index.sql?raw"),
+			import("./migrations/0003-add-pkce-to-webauthn-challenges.sql?raw"),
+			import("./migrations/0004-add-signing-keys-current-index.sql?raw"),
+			import("./migrations/0005-seed-dashboard-client.sql?raw"),
+			import("./migrations/0006-add-passkey-credential-id.sql?raw"),
+		]);
+
+		for (let migration of migrations) this.tryExec(migration.default);
+	}
+
+	/**
+	 * Executes SQL, ignoring errors (for idempotent ALTER TABLE statements).
+	 */
+	private tryExec(sql: string) {
+		try {
+			return this.ctx.storage.sql.exec(sql);
+		} catch {}
 	}
 }
