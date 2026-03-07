@@ -97,6 +97,53 @@ Tech versions MUST be actual released versions. When uncertain, confirm with the
 - Code MUST use `let` for local variables (project convention)
 - Code MUST use `interface` over `type` when possible (project convention)
 
+### Code Evolution in Tutorials
+
+When showing the same file multiple times as it evolves:
+
+- Code MUST use comments to indicate unchanged portions: `// ... previous code`
+- Code MUST show enough context for the reader to locate where new code goes
+- Code SHOULD show the full file on first introduction
+- Code MAY show only the changed sections in subsequent appearances
+
+Example:
+
+```ts {% path="app/service.ts" %}
+import { db } from "./db";
+
+// ... previous code
+
+export function newFunction() {
+	// new code here
+}
+```
+
+### Error Handling in Code
+
+- Code MUST include error handling only when the section is specifically about error handling
+- Code MAY omit error handling for clarity when demonstrating other concepts
+- Code MUST NOT show try/catch blocks unless errors are the topic
+
+### Diagrams
+
+- Diagrams MUST use ASCII art inside code blocks
+- Diagrams MUST use `txt` as the language annotation
+- Diagrams SHOULD be used sparingly to clarify complex flows or architectures
+- Diagrams MUST NOT use external images or Mermaid syntax
+
+Example:
+
+```txt
+┌─────────┐     ┌─────────┐     ┌─────────┐
+│ Client  │────▶│ Worker  │────▶│   DO    │
+└─────────┘     └─────────┘     └─────────┘
+                     │
+                     ▼
+               ┌─────────┐
+               │   KV    │
+               └─────────┘
+```
+
 ## Language
 
 ### Spelling and Grammar
@@ -161,6 +208,32 @@ Tech versions MUST be actual released versions. When uncertain, confirm with the
 - Content MUST NOT include non-functional code examples
 - Content MUST NOT include marketing-style language or hyperbole
 - Content MUST NOT use explicit transition words ("Furthermore", "Additionally")
+- Content MUST NOT include external links (only internal links to other sergiodxa.com content)
+- Content MUST NOT include dates or "as of" statements
+
+## Linking
+
+- Links MUST only point to other content on sergiodxa.com
+- Links SHOULD be natural parts of the content, not separate "See also" sections
+- Links MAY reference related tutorials or articles when contextually relevant
+- Links MUST NOT point to external documentation, GitHub repos, or other sites
+
+## Version References
+
+- Tech field versions MUST be the minimum version required for the features used
+- Content MUST note when an API is experimental or unstable
+- Content MUST NOT include dates or "current version" language
+- Content SHOULD specify the version when a feature was introduced if relevant
+
+Example: "The `unstable_middleware` export (available in React Router 7.0) enables..."
+
+## Audience
+
+- Content MUST assume intermediate to senior developer knowledge
+- Content MUST NOT explain basic programming concepts (loops, functions, async/await)
+- Content MUST NOT explain basic web concepts (HTTP, cookies, forms)
+- Content MAY briefly explain domain-specific concepts (OAuth flows, WebAuthn ceremonies)
+- Content SHOULD link to other articles for prerequisite knowledge when helpful
 
 ## Workflow
 
