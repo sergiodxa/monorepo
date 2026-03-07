@@ -234,7 +234,7 @@ Example: "The `unstable_middleware` export (available in React Router 7.0) enabl
 
 - Content MUST assume intermediate to senior developer knowledge
 - Content MUST NOT explain basic programming concepts (loops, functions, async/await)
-- Content MUST NOT explain basic web concepts (HTTP, cookies, forms)
+- Content MUST NOT explain basic web concepts (HTTP, cookies, forms) unless that is the topic of the content
 - Content MAY briefly explain domain-specific concepts (OAuth flows, WebAuthn ceremonies)
 - Content SHOULD link to other articles for prerequisite knowledge when helpful
 
