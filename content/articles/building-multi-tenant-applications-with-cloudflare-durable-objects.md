@@ -15,7 +15,7 @@ Understanding tenant isolation requires examining the trade-offs at each level.
 
 **Shared database with tenant columns** is the simplest approach. Every query includes a `WHERE tenant_id = ?` clause. This works well for small deployments but introduces risk: a missing filter in one query can leak data across tenants. You also create "noisy neighbor" problems where one tenant's heavy queries affect everyone else.
 
-**Schema-per-tenant** improves isolation by giving each tenant their own database schema. Queries no longer need tenant filters because the schema boundary enforces separation. However, migrations become complex. You must run DDL across potentially thousands of schemas, handle partial failures, and manage connection pooling across schema boundaries.
+**Schema-per-tenant** improves isolation by giving each tenant their own database schema. Queries no longer need tenant filters because the schema boundary enforces separation. However, migrations become complex. You must run schema changes across potentially thousands of schemas, handle partial failures, and manage connection pooling across schema boundaries.
 
 **Database-per-tenant** provides the strongest traditional isolation. Each tenant has a completely separate database instance. This eliminates cross-tenant query risks entirely and allows per-tenant scaling. The cost is operational complexity: thousands of database instances require sophisticated infrastructure management.
 
