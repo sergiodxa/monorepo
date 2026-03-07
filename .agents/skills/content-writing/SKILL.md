@@ -214,9 +214,12 @@ Example:
 ## Linking
 
 - Links MUST only point to other content on sergiodxa.com
+- Links MUST NOT be repeated: if a term was linked once, subsequent mentions MUST NOT link again
 - Links SHOULD be natural parts of the content, not separate "See also" sections
 - Links MAY reference related tutorials or articles when contextually relevant
 - Links MUST NOT point to external documentation, GitHub repos, or other sites
+
+This follows the Wikipedia convention: link on first mention only.
 
 ## Version References
 
