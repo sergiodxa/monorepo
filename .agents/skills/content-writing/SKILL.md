@@ -78,6 +78,8 @@ Tech versions MUST be actual released versions. When uncertain, confirm with the
 - Articles SHOULD use "Conclusion" as the closing heading
 - Closing sections MUST be brief (2-4 sentences)
 - Closing sections MUST NOT introduce new concepts
+- Closing sections MAY suggest extensions the reader could explore: "You can extend this further by adding..."
+- Extension suggestions MUST NOT include implementation details, only ideas
 
 ## Code Blocks
 
@@ -112,6 +114,7 @@ Tech versions MUST be actual released versions. When uncertain, confirm with the
 - Code MUST use `interface` over `type` when possible (project convention)
 - Code MAY include brief inline comments to clarify intent: `// You assume the user is already authenticated`
 - Code comments MUST NOT be used for lengthy explanations (put those in prose)
+- Constants SHOULD be defined at the top of code files, after imports
 
 ### Code Evolution in Tutorials
 
@@ -139,6 +142,14 @@ export function newFunction() {
 - Code MUST include error handling only when the section is specifically about error handling
 - Code MAY omit error handling for clarity when demonstrating other concepts
 - Code MUST NOT show try/catch blocks unless errors are the topic
+
+### Component Patterns in Code
+
+When demonstrating React component patterns:
+
+- Compound components SHOULD use the `Component.SubComponent = function...` export style
+- Component examples SHOULD include both the component definition and usage
+- State management SHOULD be shown in context, not abstracted away
 
 ### Diagrams
 
@@ -182,6 +193,8 @@ Example:
 - Content MUST be consistent with terminology throughout
 - Content MUST NOT use unexplained acronyms
 - Content MAY define acronyms inline when first used
+- HTTP status codes MUST include the code number and name: "HTTP 429 (Too Many Requests)"
+- HTTP status codes MUST NOT use just the number or just the name
 
 ### Formatting
 
@@ -249,6 +262,12 @@ Example:
 - Links MUST NOT point to external documentation, GitHub repos, or other sites
 
 This follows the Wikipedia convention: link on first mention only.
+
+### Cross-Linking Patterns
+
+- Links MUST be fully integrated into the prose, not separate callouts
+- Links SHOULD read naturally as if the link were not there: "when using [React Router middleware](/tutorials/...) you can..."
+- Links MUST NOT use patterns like "Click here", "Read more about this", or "See [article] for more"
 
 ## Version References
 
