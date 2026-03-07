@@ -69,6 +69,15 @@ Tech versions MUST be actual released versions. When uncertain, confirm with the
 4. Articles MUST present trade-offs explicitly
 5. Articles SHOULD compare alternatives when relevant
 6. Articles MUST end with a brief conclusion summarizing key insights
+7. Articles MAY use rhetorical questions to introduce sections or provoke thought
+8. Articles MAY include an appendix section for related tangents
+
+### Closing Sections
+
+- Tutorials SHOULD use "Final Thoughts" as the closing heading
+- Articles SHOULD use "Conclusion" as the closing heading
+- Closing sections MUST be brief (2-4 sentences)
+- Closing sections MUST NOT introduce new concepts
 
 ## Code Blocks
 
@@ -79,6 +88,11 @@ Tech versions MUST be actual released versions. When uncertain, confirm with the
 - TypeScript with JSX MUST use `tsx`
 - SQL MUST use `sql`
 - Plain text SHOULD use `txt`
+- ERB templates MUST use `erb`
+- JSON MUST use `json`
+- CSS MUST use `css`
+- HTML MUST use `html`
+- Shell commands MUST use `bash` or `sh`
 
 ### File Path Annotations
 
@@ -96,6 +110,8 @@ Tech versions MUST be actual released versions. When uncertain, confirm with the
 - Code SHOULD show complete file contents when demonstrating a feature
 - Code MUST use `let` for local variables (project convention)
 - Code MUST use `interface` over `type` when possible (project convention)
+- Code MAY include brief inline comments to clarify intent: `// You assume the user is already authenticated`
+- Code comments MUST NOT be used for lengthy explanations (put those in prose)
 
 ### Code Evolution in Tutorials
 
@@ -171,7 +187,20 @@ Example:
 
 - Content MAY use **bold** for emphasis on key concepts (sparingly)
 - Content MUST use `backticks` for code terms, filenames, and identifiers
-- Content SHOULD NOT use italics for emphasis
+- Content MAY use _italics_ to introduce or define a term on first use
+- Content MUST NOT use italics for general emphasis
+
+### Blockquotes
+
+- Blockquotes MAY be used for notes and asides: `> Note:` or `> TL;DR:`
+- Blockquotes MUST NOT be used for emphasis or pull quotes
+- Blockquotes SHOULD be brief (1-3 sentences)
+
+### Emojis
+
+- Content MUST NOT use emojis in prose or headings
+- Content MAY use checkmark emojis (✅) only in summary checklists at the end of articles
+- Content MUST NOT use emojis for decoration or emphasis
 
 ## Tone and Style
 
@@ -237,6 +266,14 @@ Example: "The `unstable_middleware` export (available in React Router 7.0) enabl
 - Content MUST NOT explain basic web concepts (HTTP, cookies, forms) unless that is the topic of the content
 - Content MAY briefly explain domain-specific concepts (OAuth flows, WebAuthn ceremonies)
 - Content SHOULD link to other articles for prerequisite knowledge when helpful
+
+## Naming Conventions in Examples
+
+When introducing file naming conventions or patterns in tutorials:
+
+- Content SHOULD explain the convention inline: "I use `noun-verb.ts` where the noun is the resource and the verb is the action"
+- Content MAY acknowledge alternative conventions exist
+- Content MUST use consistent naming throughout the tutorial
 
 ## Workflow
 
