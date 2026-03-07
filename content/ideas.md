@@ -2,82 +2,259 @@
 
 This document contains potential articles and tutorials based on patterns and code found in this monorepo.
 
-## TUTORIALS (How To)
-
-### React Router / Middleware Patterns
-
-#### How to Use Client Actions with Toast Notifications in React Router
-
-Combine `clientAction` with server actions for immediate UI feedback.
-
-_Relevant Files_:
-
-- `apps/uptime/app/routes/actions/$team.create-monitor/route.ts`
-
-**Overlaps with**:
-
-- Show toast after a Remix action (https://sergiodxa.com/tutorials/show-toast-after-a-remix-action)
-- Validate Form in Remix with clientAction (https://sergiodxa.com/tutorials/validate-form-in-remix-with-clientaction)
-
-#### How to Add Rolling Cookie Sessions to React Router
-
-Automatically extend session expiration on every request.
-
-_Relevant Files_:
-
-- `apps/blog/app/middleware/rolling-cookie.ts`
-
-**Overlaps with**:
-
-- Add rolling sessions to Remix (https://sergiodxa.com/tutorials/add-rolling-sessions-to-remix)
-
-### Utilities
-
-#### How to Convert Throwing Functions to Result Types
-
-The `wrap()` function for error handling.
-
-_Relevant Files_:
-
-- `packages/result/src/wrap.ts`
-
-**Overlaps with**:
-
-- Result Objects in TS (https://sergiodxa.com/articles/result-objects-in-ts)
-
 ## ARTICLES (Explanations/Opinions)
 
-#### TypeScript Assertion Functions for Result Types
+### Building Multi-Tenant Applications with Cloudflare Durable Objects
 
-Using `asserts` keyword for cleaner code.
+Each tenant runs as a Durable Object with its own SQLite database (`SqlStorage`), providing strong data isolation. A generic example can be a project-management platform where each workspace maps to one Durable Object, with host-based routing via `cf.hostMetadata` and region-aware location hints.
+
+**Mentions:** Durable Objects, `SqlStorage`, `blockConcurrencyWhile()`, tenant isolation patterns, `cf.hostMetadata` routing, location hints.
 
 _Relevant Files_:
 
-- `packages/result/src/succeeded.ts`
-- `packages/result/src/failed.ts`
+- `apps/auth-saas/src/entry.worker.ts`
+- `apps/auth-saas/src/tenant/index.ts`
 
-**Overlaps with**:
+### Passwordless Authentication with WebAuthn/Passkeys
 
-- Result Objects in TS (https://sergiodxa.com/articles/result-objects-in-ts)
+The auth-saas implements full WebAuthn support using `@simplewebauthn/server` with registration and authentication flows, platform authenticator preference, and implicit email verification when using passkeys.
 
----
+**Mentions:** WebAuthn API, `@simplewebauthn/server`, passkey registration/authentication, platform vs roaming authenticators, implicit email verification pattern.
 
-## Summary
+_Relevant Files_:
 
-| Category                  | Total | Written | Remaining |
-| ------------------------- | ----- | ------- | --------- |
-| Tutorials (from codebase) | 3     | 0       | 3         |
-| Articles (from codebase)  | 1     | 0       | 1         |
-| **Total**                 | **4** | **0**   | **4**     |
+- `apps/auth-saas/src/tenant/controllers/webauthn/register-verify.ts`
+- `apps/auth-saas/src/tenant/client/webauthn-auth.client.tsx`
 
-### Remaining to Write
+### Per-Tenant Rate Limiting: Cloudflare API + In-Memory Strategies
 
-**Tutorials:**
+Two-layer rate limiting: Cloudflare Rate Limiting API bindings for global protection, plus in-memory per-user rate limiting inside Durable Objects for granular control.
 
-1. How to Use Client Actions with Toast Notifications in React Router (overlaps with existing)
-2. How to Add Rolling Cookie Sessions to React Router (overlaps with existing)
-3. How to Convert Throwing Functions to Result Types (overlaps with existing)
+**Mentions:** Cloudflare `RATE_LIMITER` binding, in-memory rate limit map, per-user vs per-IP, defense in depth.
 
-**Articles (from codebase):**
+_Relevant Files_:
 
-1. TypeScript Assertion Functions for Result Types (overlaps with existing)
+- `apps/auth-saas/wrangler.jsonc`
+- `apps/auth-saas/src/lib/user-rate-limit.ts`
+
+### Preventing Timing Attacks in Authentication Systems
+
+The auth-saas uses constant-time comparison for secrets, timing-safe bcrypt comparison (even when no secrets exist to prevent user enumeration), and HMAC signatures for session tokens.
+
+**Mentions:** Constant-time comparison, timing attacks, user enumeration prevention, dummy bcrypt comparison, `crypto.subtle.timingSafeEqual`.
+
+_Relevant Files_:
+
+- `apps/auth-saas/src/lib/crypto-utils.ts`
+- `apps/auth-saas/src/tenant/models/client/secret.ts`
+
+### CSS Sanitization for User-Generated Branding
+
+When allowing tenants to customize their login page appearance, the app sanitizes CSS to prevent injection attacks while still allowing safe styling properties.
+
+**Mentions:** CSS injection attacks, property allowlists, regex sanitization, user-generated content security.
+
+_Relevant Files_:
+
+- `apps/auth-saas/src/lib/css-sanitizer.ts`
+
+### Value Objects for OAuth Tokens in TypeScript
+
+Using classes like `AccessToken`, `IdToken`, and `ScopeSet` to encapsulate token validation, claims extraction, and scope operations rather than working with raw strings.
+
+**Mentions:** Value Object pattern, token encapsulation, `ScopeSet` for scope operations, immutability, type safety.
+
+_Relevant Files_:
+
+- `apps/auth-saas/src/tenant/values/access-token.ts`
+- `apps/auth-saas/src/tenant/values/id-token.ts`
+- `apps/auth-saas/src/tenant/values/scope-set.ts`
+
+### URI Scheme Validation for OAuth Redirect URIs
+
+The app validates redirect URIs to block `javascript:`, `data:`, and `vbscript:` schemes, enforcing HTTPS in production while allowing localhost for development.
+
+**Mentions:** Open redirect prevention, URI scheme validation, OAuth 2.0 security, `localhost` exception for development.
+
+_Relevant Files_:
+
+- `apps/auth-saas/src/lib/uri-validation.ts`
+
+### Understanding Remix v3's Fetch Router Architecture
+
+Remix v3 introduces a fetch-router based approach for building full-stack web applications. The framework provides a clean separation between route definitions, middleware configuration, and controller logic with built-in support for custom database adapters.
+
+**Mentions:** Remix v3, fetch-router, route definitions, middleware configuration, controller pattern, database adapters.
+
+_Relevant Files_:
+
+- `apps/auth-saas/src/app/routes.ts`
+- `apps/auth-saas/src/app/router.ts`
+
+### Stateless Session Tokens with HMAC Signatures
+
+Using HMAC-signed JWT payloads stored in cookies for session management without database lookups on every request, while maintaining security through signature verification.
+
+**Mentions:** HMAC-SHA256, stateless sessions, cookie security, signature verification, no database round-trip.
+
+_Relevant Files_:
+
+- `apps/auth-saas/src/lib/internal-auth.ts`
+
+### Single-Use Authorization Codes Per RFC 6749
+
+Implementing proper OAuth 2.0 authorization code behavior where codes are consumed on first use and cannot be reused, with proper error handling for replay attempts.
+
+**Mentions:** Authorization code single-use, RFC 6749 compliance, replay attack prevention, `AlreadyConsumedError`.
+
+_Relevant Files_:
+
+- `apps/auth-saas/src/tenant/models/authorization-code.ts`
+
+## TUTORIALS (How-To Guides)
+
+### How to Build Custom SQLite Database Adapters for Remix
+
+Creating adapters that compile a custom query AST to SQLite for both Cloudflare D1 (async) and Durable Object SqlStorage (sync), supporting transactions, savepoints, RETURNING clauses, and upserts.
+
+**Mentions:** Remix data-table, query AST compilation, D1 adapter, SqlStorage adapter, transaction support, unified interface.
+
+_Relevant Files_:
+
+- `apps/auth-saas/src/lib/sql-storage-adapter.ts`
+- `apps/auth-saas/src/lib/d1-adapter.ts`
+
+### How to Implement WebAuthn Registration with @simplewebauthn/server
+
+Step-by-step implementation of passkey registration including generating registration options, handling client-side WebAuthn API calls, and verifying attestation on the server.
+
+**Mentions:** `generateRegistrationOptions`, `verifyRegistrationResponse`, attestation verification, credential storage, relying party configuration.
+
+_Relevant Files_:
+
+- `apps/auth-saas/src/tenant/controllers/webauthn/register-options.ts`
+- `apps/auth-saas/src/tenant/controllers/webauthn/register-verify.ts`
+
+### How to Implement WebAuthn Authentication with @simplewebauthn/server
+
+Completing the passkey authentication flow from generating authentication options to verifying assertions and updating credential counters.
+
+**Mentions:** `generateAuthenticationOptions`, `verifyAuthenticationResponse`, signature counter, credential lookup, allowCredentials.
+
+_Relevant Files_:
+
+- `apps/auth-saas/src/tenant/controllers/webauthn/auth-options.ts`
+- `apps/auth-saas/src/tenant/controllers/webauthn/auth-verify.ts`
+
+### How to Use Durable Object Alarms for Background Cleanup
+
+Scheduling alarms at midnight UTC to clean up expired tokens, authorization codes, and other temporary data within each tenant's Durable Object.
+
+**Mentions:** `state.storage.setAlarm()`, `alarm()` handler, cleanup scheduling, token expiration, single-flight execution.
+
+_Relevant Files_:
+
+- `apps/auth-saas/src/tenant/index.ts`
+
+### How to Implement In-Memory Rate Limiting Within Durable Objects
+
+Building per-user rate limits using a Map inside a Durable Object, with configurable limits per action type and automatic cleanup of expired entries.
+
+**Mentions:** Per-user limits, action-specific thresholds, memory management, rate limit response headers, exponential backoff.
+
+_Relevant Files_:
+
+- `apps/auth-saas/src/lib/user-rate-limit.ts`
+
+### How to Build Internal Service Authentication with HMAC-Signed JWTs
+
+Creating secure communication between platform and tenant services using HMAC-signed JWTs with short expiration times for internal API calls.
+
+**Mentions:** Internal auth tokens, HMAC signing, short-lived tokens, service-to-service authentication, Durable Object RPC.
+
+_Relevant Files_:
+
+- `apps/auth-saas/src/lib/internal-auth.ts`
+- `apps/auth-saas/src/tenant/middleware/management-auth.ts`
+
+### How to Implement OAuth 2.0 Token Introspection
+
+Building the `/oauth/introspect` endpoint per RFC 7662 to allow resource servers to validate access tokens and retrieve metadata.
+
+**Mentions:** RFC 7662, introspection request/response, token metadata, client authentication for introspection, active/inactive tokens.
+
+_Relevant Files_:
+
+- `apps/auth-saas/src/tenant/controllers/oauth/introspect.ts`
+
+### How to Implement OIDC Discovery Endpoints
+
+Creating `/.well-known/openid-configuration` and `/.well-known/jwks.json` endpoints for OpenID Connect discovery, enabling dynamic client configuration.
+
+**Mentions:** OIDC Discovery, JWKS endpoint, metadata document, supported scopes/grants, issuer identification.
+
+_Relevant Files_:
+
+- `apps/auth-saas/src/tenant/controllers/well-known/openid-configuration.ts`
+- `apps/auth-saas/src/tenant/controllers/well-known/jwks.ts`
+
+### How to Implement OAuth 2.0 Client Credentials Grant
+
+Building machine-to-machine authentication flow where clients exchange credentials directly for access tokens without user interaction.
+
+**Mentions:** Client credentials flow, service accounts, scoped access, no refresh tokens, short-lived access tokens.
+
+_Relevant Files_:
+
+- `apps/auth-saas/src/tenant/controllers/oauth/token.ts`
+
+### How to Build a Signing Key Rotation System with Caching
+
+Managing multiple signing keys for JWT issuance with automatic rotation, caching to avoid repeated key imports, and proper `kid` header handling.
+
+**Mentions:** Key rotation, `kid` header, key caching, async key import, multiple active keys, JWKS compatibility.
+
+_Relevant Files_:
+
+- `apps/auth-saas/src/tenant/models/signing-key.ts`
+
+### How to Implement RP-Initiated Logout in OIDC
+
+Building the `/oidc/logout` endpoint per OIDC RP-Initiated Logout spec, handling `id_token_hint`, `post_logout_redirect_uri`, and `state` parameters.
+
+**Mentions:** RP-Initiated Logout, `id_token_hint` validation, post-logout redirect, session termination, logout confirmation.
+
+_Relevant Files_:
+
+- `apps/auth-saas/src/tenant/controllers/oidc/logout.ts`
+
+### How to Build Island Architecture with Client Entries in Remix
+
+Using Remix's `clientEntry` feature to create interactive islands of components that hydrate on the client while the rest of the page is server-rendered for performance and SEO benefits.
+
+**Mentions:** Island architecture, `clientEntry`, progressive enhancement, hydration, server-rendered forms.
+
+_Relevant Files_:
+
+- `apps/auth-saas/src/tenant/client/webauthn-auth.client.tsx`
+
+### How to Implement PKCE Code Challenge Verification
+
+Server-side verification of PKCE code challenges using `S256` method, comparing the challenge stored during authorization with the verifier provided during token exchange.
+
+**Mentions:** PKCE verification, `code_challenge_method`, SHA-256 hashing, base64url encoding, authorization code binding.
+
+_Relevant Files_:
+
+- `apps/auth-saas/src/tenant/controllers/oauth/token.ts`
+- `apps/auth-saas/src/tenant/models/authorization-code.ts`
+
+### How to Report Usage-Based Metrics with Polar and Analytics Engine
+
+Implementing MAU tracking using Cloudflare Analytics Engine and reporting to Polar for usage-based billing via scheduled workers.
+
+**Mentions:** Analytics Engine, MAU tracking, Polar SDK, usage-based billing, cron triggers, metric reporting.
+
+_Relevant Files_:
+
+- `apps/auth-saas/src/jobs/report-mau.ts`
