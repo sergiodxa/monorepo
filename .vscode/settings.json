@@ -18,5 +18,6 @@
 	"typescript.preferences.autoImportFileExcludePatterns": ["lucide-react"],
 	"editor.wordWrapColumn": 100,
 	"editor.wordWrap": "on",
-	"editor.rulers": [100]
+	"editor.rulers": [100],
+	"workbench.colorTheme": "GitHub Light Default"
 }
