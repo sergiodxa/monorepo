@@ -1,0 +1,238 @@
+# @pkg/typeid
+
+Type-safe TypeID helpers for working with prefixed UUID strings.
+
+## Overview
+
+`@pkg/typeid` wraps UUIDs in a small `TypeID` class so application code can keep the resource type close to the identifier itself. A `user` UUID becomes a string like `user_01h455vb4pex5vsknk084sn02q`, which is easier to route, log, and validate than a bare UUID.
+
+The package follows the [TypeID specification](https://github.com/jetify-com/typeid/tree/main/spec) for prefix validation and Base32 suffix encoding. It supports parsing existing TypeID strings, generating new values from UUIDs, and converting a TypeID back to its UUID form.
+
+## Usage
+
+### Basic Example
+
+```typescript
+import { TypeID, typeid } from "@pkg/typeid";
+
+let uuid = crypto.randomUUID();
+
+let userId = TypeID.fromUUID("user", uuid);
+
+userId.prefix;
+// "user"
+
+userId.toUUID();
+// "550e8400-e29b-41d4-a716-446655440000"
+
+userId.toString();
+// "user_..."
+
+let createPostId = typeid("post");
+let postId = createPostId(crypto.randomUUID());
+```
+
+### Parse an Existing TypeID
+
+```typescript
+import { TypeID } from "@pkg/typeid";
+
+let value = TypeID.fromString("user_01h455vb4pex5vsknk084sn02q", "user");
+
+let prefix = value.prefix;
+let uuid = value.toUUID();
+```
+
+## API
+
+### `TypeID<prefix>`
+
+Represents a parsed or generated TypeID.
+
+#### `new TypeID(prefix: prefix, suffix: Base32)`
+
+Creates a TypeID from a validated prefix and Base32 suffix.
+
+**Parameters:**
+
+- `prefix`: The TypeID prefix, such as `user` or `post`
+- `suffix`: The 26-character Base32 UUID suffix
+
+#### `typeId.prefix`
+
+The prefix stored in the TypeID.
+
+**Returns:**
+
+- The typed prefix string
+
+#### `typeId.suffix`
+
+The encoded Base32 suffix.
+
+**Returns:**
+
+- The 26-character TypeID suffix
+
+#### `typeId.toUUID(): UUID`
+
+Decodes the suffix back to a UUID string.
+
+**Returns:**
+
+- A UUID string
+
+**Example:**
+
+```typescript
+import { TypeID } from "@pkg/typeid";
+
+let value = TypeID.fromString("user_01h455vb4pex5vsknk084sn02q");
+let uuid = value.toUUID();
+```
+
+#### `typeId.toString(): string`
+
+Serializes the TypeID back into its string form.
+
+**Returns:**
+
+- A TypeID string, with the prefix omitted only when the prefix is empty
+
+**Example:**
+
+```typescript
+import { TypeID } from "@pkg/typeid";
+
+let value = TypeID.fromUUID("user", crypto.randomUUID());
+let stringValue = value.toString();
+```
+
+### `TypeID.fromString<const prefix extends string>(value: string, prefix?: prefix): TypeID<prefix>`
+
+Parses a TypeID string and optionally enforces the expected prefix.
+
+**Parameters:**
+
+- `value`: The incoming TypeID string
+- `prefix`: Optional expected prefix to enforce during parsing
+
+**Returns:**
+
+- A `TypeID<prefix>` instance
+
+**Example:**
+
+```typescript
+import { TypeID } from "@pkg/typeid";
+
+let value = TypeID.fromString("user_01h455vb4pex5vsknk084sn02q", "user");
+```
+
+### `TypeID.fromUUID<const prefix extends string>(prefix: prefix, uuid: UUID): TypeID<prefix>`
+
+Builds a TypeID from an existing UUID.
+
+**Parameters:**
+
+- `prefix`: The prefix to apply to the TypeID
+- `uuid`: The UUID to encode
+
+**Returns:**
+
+- A `TypeID<prefix>` instance
+
+**Example:**
+
+```typescript
+import { TypeID } from "@pkg/typeid";
+
+let value = TypeID.fromUUID("org", crypto.randomUUID());
+```
+
+### `typeid<prefix extends string>(prefix: prefix): (uuid: UUID) => TypeID<prefix>`
+
+Creates a small factory for a single prefix.
+
+**Parameters:**
+
+- `prefix`: The prefix to lock into the returned factory
+
+**Returns:**
+
+- A function that accepts a UUID and returns a `TypeID<prefix>`
+
+**Example:**
+
+```typescript
+import { typeid } from "@pkg/typeid";
+
+let createInvoiceId = typeid("invoice");
+let invoiceId = createInvoiceId(crypto.randomUUID());
+```
+
+## Patterns
+
+## Pattern: Parse Route Params Early
+
+Use `TypeID.fromString` near the edge of the application so the rest of the code receives a validated identifier.
+
+```typescript
+import { TypeID } from "@pkg/typeid";
+import type { Route } from "./+types/users.$userId";
+
+export async function loader({ params }: Route.LoaderArgs) {
+	let userId = TypeID.fromString(params.userId ?? "", "user");
+
+	return {
+		userId: userId.toUUID(),
+	};
+}
+```
+
+## Pattern: Create Prefix-Specific Factories
+
+Use `typeid()` when one module creates many identifiers of the same type.
+
+```typescript
+import { typeid } from "@pkg/typeid";
+
+let createUserId = typeid("user");
+let createSessionId = typeid("session");
+
+let userId = createUserId(crypto.randomUUID());
+let sessionId = createSessionId(crypto.randomUUID());
+```
+
+## Pattern: Store UUIDs, Expose TypeIDs
+
+Use TypeIDs at the boundaries of the system and plain UUIDs internally when your database already stores UUID columns.
+
+```typescript
+import { TypeID } from "@pkg/typeid";
+
+interface UserRecord {
+	id: string;
+	email: string;
+}
+
+function serializeUser(user: UserRecord) {
+	return {
+		id: TypeID.fromUUID("user", user.id).toString(),
+		email: user.email,
+	};
+}
+```
+
+## Related Packages
+
+- [`@pkg/result`](/packages/result) - Wrap TypeID parsing in explicit success and failure values
+- [`@pkg/validate`](/packages/validate) - Validate request payloads before converting IDs into domain values
+- [`@pkg/response`](/packages/response) - Return parsed IDs from loaders and actions with typed response helpers
+
+## Tips
+
+1. **Parse at the boundary** - Convert incoming strings to `TypeID` values in loaders, actions, or request handlers instead of passing raw strings deeper into the app.
+2. **Use factories for repeated prefixes** - `typeid("user")` keeps call sites short and avoids repeating prefix strings.
+3. **Keep prefixes stable** - Changing a prefix changes the serialized identifier shape, which can break routes, APIs, and logs.
+4. **Store UUIDs when possible** - TypeIDs are useful at the application boundary, but many databases and integrations still work best with plain UUIDs.
