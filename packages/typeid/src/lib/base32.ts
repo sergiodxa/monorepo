@@ -3,15 +3,31 @@ import { assertUUID } from "./uuid";
 
 export type Base32 = string & { __base32: never };
 
+/** Crockford's Base32 alphabet used by the TypeID specification. */
 const ALPHABET = "0123456789abcdefghjkmnpqrstvwxyz";
+
+/** Character to index lookup table for fast decoding. */
 const LOOKUP = new Map(ALPHABET.split("").map((character, index) => [character, index]));
 
+/** Base radix used for encoding and decoding. */
 const BASE = 32n;
+
+/** Maximum allowed value for the first character (prevents 128-bit overflow). */
 const MAX_FIRST_CHARACTER = 7;
+
+/** Number of Base32 characters used to encode UUID values. */
 const SUFFIX_LENGTH = 26;
 
 /**
  * Encodes a UUID string into a 26-character TypeID Base32 suffix.
+ * @param string UUID string to encode.
+ * @returns Encoded TypeID Base32 suffix.
+ * @throws {InvalidUUIDFormatError} If the UUID is not in canonical lowercase format.
+ * @throws {InvalidUUIDLengthError} If the UUID does not have 36 characters.
+ * @throws {InvalidUUIDTypeError} If the UUID is not a string.
+ * @example
+ * let suffix = encode("550e8400-e29b-41d4-a716-446655440000");
+ * // "01arz3ndektsv4rrffq69g5fav"
  */
 export function encode(string: string): Base32 {
 	assertUUID(string);
@@ -31,16 +47,27 @@ export function encode(string: string): Base32 {
 
 /**
  * Decodes a 26-character TypeID Base32 suffix into a UUID string.
+ * @param base32 Base32 suffix to decode.
+ * @returns Decoded UUID string.
+ * @throws {InvalidBase32CharacterError} If the suffix contains invalid Base32 characters.
+ * @throws {InvalidBase32StringError} If the suffix overflows 128 bits or has an invalid shape.
+ * @throws {InvalidUUIDFormatError} If decoded content cannot be represented as a canonical UUID.
+ * @throws {InvalidUUIDLengthError} If decoded content has an invalid UUID length.
+ * @throws {InvalidUUIDTypeError} If decoded content is not a string UUID value.
+ * @example
+ * let uuid = decode("01arz3ndektsv4rrffq69g5fav" as Base32);
+ * // "550e8400-e29b-41d4-a716-446655440000"
  */
 export function decode(base32: Base32): string {
 	let value = 0n;
 
 	if (base32.length !== SUFFIX_LENGTH) throw new InvalidBase32StringError();
 
-	for (let character of base32) {
+	for (let position = 0; position < base32.length; position += 1) {
+		let character = base32[position] ?? "";
 		let index = LOOKUP.get(character);
 		if (index === undefined) throw new InvalidBase32CharacterError(character);
-		if (value === 0n && index > MAX_FIRST_CHARACTER) throw new InvalidBase32StringError();
+		if (position === 0 && index > MAX_FIRST_CHARACTER) throw new InvalidBase32StringError();
 
 		value = value * BASE + BigInt(index);
 	}
@@ -54,6 +81,11 @@ export function decode(base32: Base32): string {
 
 /**
  * Checks whether a value is a valid TypeID Base32 suffix.
+ * @param value Value to validate.
+ * @returns Whether the value is a valid Base32 suffix.
+ * @example
+ * isBase32("01arz3ndektsv4rrffq69g5fav");
+ * // true
  */
 export function isBase32(value: unknown): value is Base32 {
 	if (typeof value !== "string") return false;

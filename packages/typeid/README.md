@@ -150,6 +150,31 @@ import { TypeID } from "@pkg/typeid";
 let value = TypeID.fromUUID("org", crypto.randomUUID());
 ```
 
+### `TypeID.isValid<const prefix extends string>(value: string, prefix?: prefix): boolean`
+
+Checks whether a string is a valid TypeID and optionally enforces a specific prefix.
+
+**Parameters:**
+
+- `value`: The incoming TypeID string
+- `prefix`: Optional expected prefix to enforce during validation
+
+**Returns:**
+
+- `true` when the value is valid (and the prefix matches when provided), otherwise `false`
+
+**Example:**
+
+```typescript
+import { TypeID } from "@pkg/typeid";
+
+TypeID.isValid("user_01h455vb4pex5vsknk084sn02q", "user");
+// true
+
+TypeID.isValid("user_01h455vb4pex5vsknk084sn02q", "org");
+// false
+```
+
 ### `typeid<prefix extends string>(prefix: prefix): (uuid: UUID) => TypeID<prefix>`
 
 Creates a small factory for a single prefix.
@@ -169,6 +194,28 @@ import { typeid } from "@pkg/typeid";
 
 let createInvoiceId = typeid("invoice");
 let invoiceId = createInvoiceId(crypto.randomUUID());
+```
+
+### `@pkg/typeid/errors`
+
+The package also exports its error classes from a dedicated entrypoint.
+
+**Example:**
+
+```typescript
+import { InvalidPrefixError, TypeIdError } from "@pkg/typeid/errors";
+
+try {
+	// ...parse or create TypeIDs
+} catch (error) {
+	if (error instanceof InvalidPrefixError) {
+		// handle invalid prefix
+	}
+
+	if (error instanceof TypeIdError) {
+		// handle any TypeID-related error
+	}
+}
 ```
 
 ## Patterns

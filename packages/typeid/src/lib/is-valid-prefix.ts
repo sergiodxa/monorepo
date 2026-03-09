@@ -1,8 +1,26 @@
+/** Maximum TypeID prefix length defined by the specification. */
 const MAX_PREFIX_LENGTH = 63;
+
+/** ASCII code for "a". */
 const LOWER_CASE_A = 97;
+
+/** ASCII code for "z". */
 const LOWER_CASE_Z = 122;
+
+/** ASCII code for "_". */
 const UNDERSCORE = 95;
 
+/**
+ * Checks whether a string is a valid TypeID prefix.
+ *
+ * Valid prefixes are up to 63 characters, use only lowercase ASCII letters and
+ * underscores, and cannot start or end with an underscore.
+ * @param string Prefix candidate.
+ * @returns Whether the prefix is valid.
+ * @example
+ * isValidPrefix("user_profile");
+ * // true
+ */
 export function isValidPrefix(string: string): boolean {
 	if (string.length > MAX_PREFIX_LENGTH) return false;
 
