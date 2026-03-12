@@ -19,7 +19,7 @@
 	"editor.wordWrapColumn": 100,
 	"editor.wordWrap": "on",
 	"editor.rulers": [100],
-	"editor.fontSize": 14,
+	"editor.fontSize": 13,
 	"workbench.colorTheme": "GitHub Light Default",
 	"workbench.preferredLightColorTheme": "GitHub Light Default",
 	"workbench.preferredDarkColorTheme": "GitHub Dark Default",
