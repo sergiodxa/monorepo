@@ -1,0 +1,13 @@
+{
+	"name": "@pkg/uuid",
+	"version": "0.0.1",
+	"private": true,
+	"type": "module",
+	"exports": {
+		".": "./src/index.ts"
+	},
+	"devDependencies": {
+		"@types/bun": "^1.3.9",
+		"@types/node": "^24.5.2"
+	}
+}
