@@ -17,19 +17,19 @@ export namespace Sitemap {
 }
 
 export class Sitemap {
-	urls = new Set<Sitemap.URL>();
+	#urls = new Set<Sitemap.URL>();
 
 	append(loc: globalThis.URL, options: Sitemap.AppendOptions = {}) {
-		this.urls.add({ loc, ...options });
+		this.#urls.add({ loc, ...options });
 	}
 
 	get size() {
-		return this.urls.size;
+		return this.#urls.size;
 	}
 
 	toString() {
 		return `<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${[
-			...this.urls,
+			...this.#urls,
 		].map((url) => {
 			let parts = [`<loc>${url.loc.toString()}</loc>`];
 			if (url.updatedAt) parts.push(`<lastmod>${url.updatedAt.toISOString()}</lastmod>`);
