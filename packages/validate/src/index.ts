@@ -12,30 +12,30 @@ export { ValidationError };
  * Convert FormData to object, properly handling arrays (multiple values with same key)
  */
 function formDataToObject(formData: FormData): Record<string, unknown> {
-	let data: Record<string, unknown> = {};
+	let data = new Map<string, FormDataEntryValue | FormDataEntryValue[] | undefined>();
 	let keys = new Set(formData.keys());
 
 	for (let key of keys) {
 		let values = formData.getAll(key);
-		data[key] = values.length === 1 ? values[0] : values;
+		data.set(key, values.length === 1 ? values.at(0) : values);
 	}
 
-	return data;
+	return Object.fromEntries(data.entries());
 }
 
 /**
  * Convert URLSearchParams to object, properly handling arrays (multiple values with same key)
  */
 function urlSearchParamsToObject(params: URLSearchParams): Record<string, unknown> {
-	let data: Record<string, unknown> = {};
+	let data = new Map<string, string | string[] | undefined>();
 	let keys = new Set(params.keys());
 
 	for (let key of keys) {
 		let values = params.getAll(key);
-		data[key] = values.length === 1 ? values[0] : values;
+		data.set(key, values.length === 1 ? values.at(0) : values);
 	}
 
-	return data;
+	return Object.fromEntries(data.entries());
 }
 
 export async function validate<Schema extends StandardSchemaV1>(
