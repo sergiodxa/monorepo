@@ -19,7 +19,7 @@ the correct HTTP method and route params.
 ### Basic Example
 
 ```typescript
-import type routes from "~/blog/routes";
+import type routes from "~/routes";
 
 import action from "@pkg/remix-helpers/action";
 import controller from "@pkg/remix-helpers/controller";
@@ -73,7 +73,7 @@ Defines a single route action handler with route-aware typing.
 **Example:**
 
 ```typescript
-import type routes from "~/blog/routes";
+import type routes from "~/routes";
 
 import action from "@pkg/remix-helpers/action";
 
