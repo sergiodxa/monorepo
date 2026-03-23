@@ -101,7 +101,7 @@ export class Feed {
 					publishedAt === null || (Number.isFinite(publishedAtTime) && publishedAtTime <= now);
 
 				return {
-					href: this.normalizeBookmarkUrl(bookmark.meta.url),
+					href: LikePost.normalizeUrl(bookmark.meta.url),
 					label: `I saved ${title}`,
 					date: Number.isFinite(publishedAtTime) ? publishedAtTime : createdAtTime,
 					icon: "🔖",
@@ -142,13 +142,5 @@ export class Feed {
 		}));
 
 		return activity;
-	}
-
-	private static normalizeBookmarkUrl(url: string): string {
-		if (url.startsWith("http://") || url.startsWith("https://") || url.startsWith("/")) {
-			return url;
-		}
-
-		return `https://${url}`;
 	}
 }

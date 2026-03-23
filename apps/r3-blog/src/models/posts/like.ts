@@ -50,6 +50,28 @@ export namespace LikePost {
 export class LikePost {
 	static postType = "like" as const;
 
+	static normalizeUrl(url: string) {
+		if (url.startsWith("http://") || url.startsWith("https://") || url.startsWith("/")) {
+			return url;
+		}
+
+		return `https://${url}`;
+	}
+
+	static waybackSnapshotUrl(url: string, created_at: string) {
+		let created = new Date(created_at);
+		if (Number.isNaN(created.getTime())) return null;
+
+		let date = created
+			.toISOString()
+			.replaceAll("-", "")
+			.replaceAll(":", "")
+			.replaceAll(".", "")
+			.replace("T", "");
+
+		return `https://web.archive.org/web/${date}/${url}`;
+	}
+
 	/**
 	 * Returns all like posts.
 	 * It delegates retrieval to the shared typed post query helper.
