@@ -1,5 +1,8 @@
 {
 	"extends": "../../tsconfig.json",
 	"include": ["src/**/*"],
-	"exclude": ["src/**/*.test.ts", "src/**/*.test.tsx"]
+	"exclude": ["src/**/*.test.ts", "src/**/*.test.tsx"],
+	"compilerOptions": {
+		"jsxImportSource": "remix/component"
+	}
 }
