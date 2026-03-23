@@ -140,6 +140,10 @@ export namespace Post {
 export class Post {
 	static table = schema.posts;
 
+	static isPublishedAt(published_at: string | null) {
+		return published_at === null || Date.parse(published_at) <= Date.now();
+	}
+
 	/**
 	 * Fetches all posts and attaches their metadata rows.
 	 * Useful when listing every post regardless of type.

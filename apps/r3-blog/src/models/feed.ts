@@ -1,6 +1,5 @@
 import type { Database } from "remix/data-table";
 
-import { metaExternalUrl, metaTitle } from "~/lib/post-meta-view";
 import { ArticlePost } from "~/models/posts/article";
 import { GlossaryPost } from "~/models/posts/glossary";
 import { LikePost } from "~/models/posts/like";
@@ -94,7 +93,7 @@ export class Feed {
 				};
 			}),
 			...bookmarks.map((bookmark) => {
-				let title = metaTitle(bookmark.meta, `Bookmark ${bookmark.post.id}`);
+				let title = bookmark.meta.title;
 				let publishedAt = bookmark.post.published_at;
 				let publishedAtTime = this.toTimestamp(publishedAt);
 				let createdAtTime = this.toTimestamp(bookmark.post.created_at);
@@ -102,7 +101,7 @@ export class Feed {
 					publishedAt === null || (Number.isFinite(publishedAtTime) && publishedAtTime <= now);
 
 				return {
-					href: metaExternalUrl(bookmark.meta) ?? "/bookmarks",
+					href: this.normalizeBookmarkUrl(bookmark.meta.url),
 					label: `I saved ${title}`,
 					date: Number.isFinite(publishedAtTime) ? publishedAtTime : createdAtTime,
 					icon: "🔖",
@@ -112,7 +111,7 @@ export class Feed {
 			}),
 			...glossary.map((entry) => {
 				let href = `/glossary#${entry.meta.slug}`;
-				let title = metaTitle(entry.meta, `Glossary ${entry.post.id}`);
+				let title = entry.meta.term;
 				let publishedAt = entry.post.published_at;
 				let publishedAtTime = this.toTimestamp(publishedAt);
 				let createdAtTime = this.toTimestamp(entry.post.created_at);
@@ -143,5 +142,13 @@ export class Feed {
 		}));
 
 		return activity;
+	}
+
+	private static normalizeBookmarkUrl(url: string): string {
+		if (url.startsWith("http://") || url.startsWith("https://") || url.startsWith("/")) {
+			return url;
+		}
+
+		return `https://${url}`;
 	}
 }
