@@ -12,15 +12,10 @@ import { db } from "~/middleware/db";
 import { ArticlePost } from "~/models/posts/article";
 import { TutorialPost } from "~/models/posts/tutorial";
 import prismStyles from "~/styles/prism.css?url";
+import { NotFoundView } from "~/views/not-found";
 import { PostView } from "~/views/post";
 
 const markdown = new Markdown({ frontmatter: s.object({}) });
-
-interface RelatedPost {
-	href: string;
-	label: string;
-	reason: string;
-}
 
 function parseContent(content: string) {
 	let result = markdown.parse(content);
@@ -28,24 +23,48 @@ function parseContent(content: string) {
 	return result.data.content;
 }
 
-function parseTags(tags: unknown): Array<string> {
-	if (Array.isArray(tags)) return tags.filter((tag): tag is string => typeof tag === "string");
-	if (typeof tags === "string") return [tags];
-	return [];
-}
-
 export default action<typeof routes.post>(async (ctx) => {
 	let postType = ctx.params.postType;
 	let postSlug = ctx.params.postSlug;
-	if (!postType || !postSlug) return notFound("<h1>404 Not Found</h1>");
-	if (postType !== "articles" && postType !== "tutorials")
-		return notFound("<h1>404 Not Found</h1>");
+	if (!postType || !postSlug) {
+		let title = "Invalid Post URL";
+		let description = "The requested post URL is invalid.";
+		let body = await renderToString(
+			<BlogLayout title={title} description={description}>
+				<NotFoundView title={title} description={description} emoji="🧭" />
+			</BlogLayout>,
+		);
+
+		return notFound(body);
+	}
+
+	if (postType !== "articles" && postType !== "tutorials") {
+		let title = "Unknown Content Type";
+		let description = "Only articles and tutorials are available in this section.";
+		let body = await renderToString(
+			<BlogLayout title={title} description={description}>
+				<NotFoundView title={title} description={description} emoji="🧩" />
+			</BlogLayout>,
+		);
+
+		return notFound(body);
+	}
 
 	let database = db(ctx);
 
 	if (postType === "articles") {
 		let post = await ArticlePost.findBySlug(database, postSlug);
-		if (!post) return notFound("<h1>404 Not Found</h1>");
+		if (!post) {
+			let title = "Article Not Found";
+			let description = "This article does not exist or is no longer available.";
+			let body = await renderToString(
+				<BlogLayout title={title} description={description}>
+					<NotFoundView title={title} description={description} emoji="📝" />
+				</BlogLayout>,
+			);
+
+			return notFound(body);
+		}
 
 		let title = post.meta.title;
 		let content = post.meta.content || "";
@@ -76,36 +95,23 @@ export default action<typeof routes.post>(async (ctx) => {
 
 	if (postType === "tutorials") {
 		let post = await TutorialPost.findBySlug(database, postSlug);
-		if (!post) return notFound("<h1>404 Not Found</h1>");
+		if (!post) {
+			let title = "Tutorial Not Found";
+			let description = "This tutorial does not exist or is no longer available.";
+			let body = await renderToString(
+				<BlogLayout title={title} description={description}>
+					<NotFoundView title={title} description={description} emoji="🛠️" />
+				</BlogLayout>,
+			);
+
+			return notFound(body);
+		}
 
 		let title = post.meta.title;
 		let content = post.meta.content || "";
 		let slug = post.meta.slug;
-		let tags = parseTags(post.meta.tags);
-		let related: Array<RelatedPost> = [];
-
-		if (tags.length > 0) {
-			let tutorials = await TutorialPost.findAll(database);
-			let currentId = post.post.id;
-			let ranked = tutorials
-				.filter((item) => item.post.id !== currentId)
-				.map((item) => {
-					let tutorialTags = parseTags(item.meta.tags);
-
-					let match = tutorialTags.find((tag) => tags.includes(tag));
-					return {
-						href: `/tutorials/${item.meta.slug}`,
-						label: item.meta.title,
-						reason: match ? `Because both uses ${match}` : "",
-						hasMatch: Boolean(match),
-					};
-				})
-				.filter((item) => item.hasMatch)
-				.slice(0, 3)
-				.map((item) => ({ href: item.href, label: item.label, reason: item.reason }));
-
-			related = ranked;
-		}
+		let tags = TutorialPost.tags(post.meta.tags);
+		let related = await TutorialPost.findRelatedByTags(database, post.post.id, tags, 3);
 
 		let body = await renderToString(
 			<BlogLayout
@@ -131,5 +137,13 @@ export default action<typeof routes.post>(async (ctx) => {
 		return ok(body);
 	}
 
-	return notFound("<h1>404 Not Found</h1>");
+	let title = "Page Not Found";
+	let description = "The content you requested could not be found.";
+	let body = await renderToString(
+		<BlogLayout title={title} description={description}>
+			<NotFoundView title={title} description={description} emoji="🔎" />
+		</BlogLayout>,
+	);
+
+	return notFound(body);
 });

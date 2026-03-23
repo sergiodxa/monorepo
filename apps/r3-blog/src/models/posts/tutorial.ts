@@ -64,10 +64,56 @@ export namespace TutorialPost {
 		created_at: string;
 		published_at: string | null;
 	}
+
+	export interface RelatedItem {
+		href: string;
+		label: string;
+		reason: string;
+	}
 }
 
 export class TutorialPost {
 	static postType = "tutorial" as const;
+
+	static tags(metaTags: string | string[] | undefined): Array<string> {
+		if (Array.isArray(metaTags)) {
+			return metaTags.filter((tag): tag is string => typeof tag === "string");
+		}
+
+		if (typeof metaTags === "string") return [metaTags];
+
+		return [];
+	}
+
+	static async findRelatedByTags(
+		db: Database,
+		currentPostId: string,
+		tags: Array<string>,
+		limit = 3,
+	): Promise<Array<TutorialPost.RelatedItem>> {
+		if (tags.length === 0) return [];
+
+		let tutorials = await this.findAll(db);
+		let related: Array<TutorialPost.RelatedItem> = [];
+
+		for (let tutorial of tutorials) {
+			if (tutorial.post.id === currentPostId) continue;
+
+			let tutorialTags = this.tags(tutorial.meta.tags);
+			let match = tutorialTags.find((tag) => tags.includes(tag));
+			if (!match) continue;
+
+			related.push({
+				href: `/tutorials/${tutorial.meta.slug}`,
+				label: tutorial.meta.title,
+				reason: `Because both uses ${match}`,
+			});
+
+			if (related.length >= limit) break;
+		}
+
+		return related;
+	}
 
 	/**
 	 * Returns all tutorial posts.
