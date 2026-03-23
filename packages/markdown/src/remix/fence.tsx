@@ -1,3 +1,4 @@
+/* @jsxImportSource remix/component */
 export namespace Fence {
 	export interface Props {
 		content: string;

@@ -1,3 +1,4 @@
+/* @jsxImportSource remix/component */
 import type { RenderableTreeNode, RenderableTreeNodes, Tag } from "@markdoc/markdoc";
 import type { RemixNode } from "remix/component";
 
