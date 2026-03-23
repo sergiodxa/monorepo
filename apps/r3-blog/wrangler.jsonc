@@ -1,0 +1,24 @@
+{
+	"$schema": "https://unpkg.com/wrangler@latest/config-schema.json",
+	"name": "r3-blog",
+	"main": "./src/index.ts",
+	"compatibility_date": "2025-04-07",
+	"compatibility_flags": ["nodejs_compat"],
+	"workers_dev": true,
+	"dev": { "port": 3000 },
+	"placement": { "mode": "smart" },
+	"observability": { "enabled": true },
+	"assets": { "directory": "./build/client" },
+	"kv_namespaces": [],
+
+	"d1_databases": [
+		{
+			"binding": "DB",
+			"database_name": "db",
+			"database_id": "f6bb2533-9284-4427-83e6-ea12c6630026",
+			"migrations_dir": "./db/migrations",
+		},
+	],
+
+	"r2_buckets": [],
+}

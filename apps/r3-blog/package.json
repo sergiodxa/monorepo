@@ -1,0 +1,44 @@
+{
+	"name": "@apps/r3-blog",
+	"private": true,
+	"type": "module",
+	"scripts": {
+		"dev": "vite dev",
+		"build": "vite build",
+		"start": "vite preview",
+		"cf:deploy": "wrangler deploy",
+		"cf:typegen": "wrangler types",
+		"db:local:migrate": "wrangler d1 migrations apply --local",
+		"db:remote:migrate": "wrangler d1 migrations apply --remote"
+	},
+	"dependencies": {
+		"@pkg/arrays": "workspace:*",
+		"@pkg/cache": "workspace:*",
+		"@pkg/cn": "workspace:*",
+		"@pkg/db-helpers": "workspace:*",
+		"@pkg/get-client-ip": "workspace:*",
+		"@pkg/hooks": "workspace:*",
+		"@pkg/http": "workspace:*",
+		"@pkg/location": "workspace:*",
+		"@pkg/logger": "workspace:*",
+		"@pkg/markdown": "workspace:*",
+		"@pkg/remix-helpers": "workspace:*",
+		"@pkg/response": "workspace:*",
+		"@pkg/result": "workspace:*",
+		"@pkg/rss": "workspace:*",
+		"@pkg/sitemap": "workspace:*",
+		"@pkg/types": "workspace:*",
+		"@pkg/ui": "workspace:*",
+		"@pkg/validate": "workspace:*",
+		"remix": "^3.0.0-alpha.3"
+	},
+	"devDependencies": {
+		"@cloudflare/vite-plugin": "^1.25.0",
+		"@total-typescript/ts-reset": "^0.6.1",
+		"@types/node": "^25.5.0",
+		"typescript": "^5.8.3",
+		"vite": "^7.3.1",
+		"vite-tsconfig-paths": "^6.1.1",
+		"wrangler": "^4.65.0"
+	}
+}
