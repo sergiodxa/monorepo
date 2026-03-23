@@ -1,0 +1,53 @@
+:root {
+	--color-accent-50: oklch(0.925 0.019 240);
+	--color-accent-100: oklch(0.875 0.021 240);
+	--color-accent-200: oklch(0.81 0.025 240);
+	--color-accent-300: oklch(0.74 0.029 240);
+	--color-accent-400: oklch(0.66 0.035 240);
+	--color-accent-500: oklch(0.58 0.041 240);
+	--color-accent-600: oklch(0.49 0.047 240);
+	--color-accent-700: oklch(0.43 0.051 240);
+	--color-accent-800: oklch(0.38 0.049 240);
+	--color-accent-900: oklch(0.33 0.046 240);
+	--color-accent-950: oklch(0.27 0.043 240);
+
+	--color-neutral-50: oklch(0.992 0.021 88);
+	--color-neutral-100: oklch(0.975 0.021 88);
+	--color-neutral-200: oklch(0.88 0.028 84);
+	--color-neutral-300: oklch(0.83 0.028 84);
+	--color-neutral-400: oklch(0.71 0.028 84);
+	--color-neutral-500: oklch(0.53 0.028 76);
+	--color-neutral-600: oklch(0.51 0.028 76);
+	--color-neutral-700: oklch(0.43 0.028 76);
+	--color-neutral-800: oklch(0.34 0.028 76);
+	--color-neutral-900: oklch(0.27 0.028 76);
+	--color-neutral-950: oklch(0.21 0.028 76);
+
+	--ui-neutral-bg-tint: var(--color-neutral-50);
+	--ui-neutral-bg-tint-hover: var(--color-neutral-100);
+	--ui-neutral-bg-tint-pressed: var(--color-neutral-200);
+	--ui-neutral-bg-solid: var(--color-neutral-600);
+	--ui-neutral-bg-solid-hover: var(--color-neutral-700);
+	--ui-neutral-bg-solid-pressed: var(--color-neutral-800);
+	--ui-neutral-border: var(--color-neutral-300);
+	--ui-neutral-border-strong: var(--color-neutral-600);
+	--ui-neutral-ring: var(--color-neutral-500);
+	--ui-neutral-fg: var(--color-neutral-600);
+	--ui-neutral-fg-muted: var(--color-neutral-500);
+	--ui-neutral-fg-emphasis: var(--color-neutral-900);
+	--ui-neutral-fg-on-solid: var(--color-neutral-50);
+
+	--ui-accent-bg-tint: var(--color-accent-50);
+	--ui-accent-bg-tint-hover: var(--color-accent-100);
+	--ui-accent-bg-tint-pressed: var(--color-accent-200);
+	--ui-accent-bg-solid: var(--color-accent-600);
+	--ui-accent-bg-solid-hover: var(--color-accent-700);
+	--ui-accent-bg-solid-pressed: var(--color-accent-800);
+	--ui-accent-border: var(--color-accent-500);
+	--ui-accent-border-strong: var(--color-accent-700);
+	--ui-accent-ring: var(--color-accent-600);
+	--ui-accent-fg: var(--color-accent-700);
+	--ui-accent-fg-muted: var(--color-accent-600);
+	--ui-accent-fg-emphasis: var(--color-accent-900);
+	--ui-accent-fg-on-solid: var(--color-neutral-50);
+}

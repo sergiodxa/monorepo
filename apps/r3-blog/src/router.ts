@@ -8,6 +8,7 @@ import cmsDashboard from "~/controller/cms/dashboard";
 import cmsGlossary from "~/controller/cms/glossary";
 import cmsRedirects from "~/controller/cms/redirects";
 import cmsTutorials from "~/controller/cms/tutorials";
+import colors from "~/controller/colors";
 import feed from "~/controller/feed";
 import glossary from "~/controller/glossary";
 import post from "~/controller/post";
@@ -24,6 +25,7 @@ router.map(routes, {
 	middleware: [],
 	actions: {
 		feed,
+		colors,
 		articles,
 		tutorials,
 		bookmarks,

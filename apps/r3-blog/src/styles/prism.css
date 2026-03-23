@@ -1,25 +1,25 @@
 /* R3 Blog Prism theme */
 :root {
-	--color-highlight-text: #2f2a24;
-	--color-highlight-selection: #dcecf2;
-	--color-highlight-surface: #f9f3e7;
-	--color-highlight-surface-inline: #efe7d9;
-	--color-highlight-border: #d8c9b1;
-	--color-highlight-line: #f3e9d6;
-	--color-highlight-line-accent: #bea98a;
-	--color-highlight-comment: #85765f;
-	--color-highlight-punctuation: #5b5246;
-	--color-highlight-literal: #145a9a;
-	--color-highlight-string: #1f6b58;
-	--color-highlight-operator: #7b2f5c;
-	--color-highlight-keyword: #8a2e0f;
-	--color-highlight-function: #4f2ca0;
-	--color-highlight-variable: #005f73;
-	--color-highlight-class: #7f4b15;
-	--color-highlight-namespace: #6b5e4d;
-	--color-highlight-jsx-tag: #0b5a8f;
-	--color-highlight-jsx-attr-name: #a03a15;
-	--color-highlight-jsx-attr-value: #11634f;
+	--color-highlight-text: oklch(0.3 0.02 78);
+	--color-highlight-selection: oklch(0.89 0.022 240);
+	--color-highlight-surface: oklch(0.95 0.018 86);
+	--color-highlight-surface-inline: oklch(0.92 0.02 86);
+	--color-highlight-border: oklch(0.79 0.024 84);
+	--color-highlight-line: oklch(0.93 0.018 86);
+	--color-highlight-line-accent: oklch(0.71 0.03 84);
+	--color-highlight-comment: oklch(0.58 0.028 76);
+	--color-highlight-punctuation: oklch(0.43 0.02 78);
+	--color-highlight-literal: oklch(0.43 0.09 246);
+	--color-highlight-string: oklch(0.46 0.085 165);
+	--color-highlight-operator: oklch(0.48 0.1 334);
+	--color-highlight-keyword: oklch(0.5 0.11 32);
+	--color-highlight-function: oklch(0.45 0.11 286);
+	--color-highlight-variable: oklch(0.43 0.1 226);
+	--color-highlight-class: oklch(0.53 0.085 72);
+	--color-highlight-namespace: oklch(0.58 0.028 76);
+	--color-highlight-jsx-tag: oklch(0.41 0.095 244);
+	--color-highlight-jsx-attr-name: oklch(0.5 0.11 32);
+	--color-highlight-jsx-attr-value: oklch(0.46 0.085 165);
 }
 
 pre[class*="language-"],
@@ -103,7 +103,7 @@ pre[class*="language-"] > code[class*="language-"] {
 	color: var(--color-highlight-comment);
 	font-family: "Bradley Hand", "Segoe Print", "Comic Sans MS", "Apple Chancery", cursive;
 	font-weight: 500;
-	font-size: 1.1em;
+	font-size: 1.05em;
 	letter-spacing: 0.01em;
 }
 

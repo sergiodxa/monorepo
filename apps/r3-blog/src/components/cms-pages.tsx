@@ -53,8 +53,8 @@ export function CMSLayout() {
 				css={{
 					margin: 0,
 					fontFamily: "'IBM Plex Sans', 'Avenir Next', 'Segoe UI', sans-serif",
-					backgroundColor: "#f6f7fb",
-					color: "#131722",
+					backgroundColor: "var(--ui-neutral-bg-tint)",
+					color: "var(--ui-neutral-fg-emphasis)",
 				}}
 			>
 				<div css={{ maxWidth: "64rem", margin: "0 auto", padding: "1.4rem 1rem 2.5rem" }}>
@@ -70,9 +70,15 @@ export function CMSLayout() {
 										borderRadius: "0.5rem",
 										fontSize: "0.88rem",
 										textDecoration: "none",
-										border: "1px solid #d8dbe7",
-										color: activePath === item.href ? "#0b4db9" : "#2f3b55",
-										backgroundColor: activePath === item.href ? "#eaf0ff" : "#ffffff",
+										border: "1px solid var(--ui-neutral-border)",
+										color:
+											activePath === item.href
+												? "var(--ui-accent-fg-emphasis)"
+												: "var(--ui-accent-fg)",
+										backgroundColor:
+											activePath === item.href
+												? "var(--ui-accent-bg-tint)"
+												: "var(--ui-neutral-bg-tint)",
 									}}
 								>
 									{item.label}
@@ -93,8 +99,8 @@ export function CMSDashboardPage() {
 			<main css={{ display: "grid", gap: "0.9rem" }}>
 				<section
 					css={{
-						backgroundColor: "#fff",
-						border: "1px solid #dfe3f1",
+						backgroundColor: "var(--ui-neutral-bg-tint)",
+						border: "1px solid var(--ui-neutral-border)",
 						borderRadius: "0.7rem",
 						padding: "1rem",
 					}}
@@ -109,8 +115,8 @@ export function CMSDashboardPage() {
 				</section>
 				<section
 					css={{
-						backgroundColor: "#fff",
-						border: "1px solid #dfe3f1",
+						backgroundColor: "var(--ui-neutral-bg-tint)",
+						border: "1px solid var(--ui-neutral-border)",
 						borderRadius: "0.7rem",
 						padding: "1rem",
 					}}
@@ -131,8 +137,8 @@ export function CMSDashboardPage() {
 				</section>
 				<section
 					css={{
-						backgroundColor: "#fff",
-						border: "1px solid #dfe3f1",
+						backgroundColor: "var(--ui-neutral-bg-tint)",
+						border: "1px solid var(--ui-neutral-border)",
 						borderRadius: "0.7rem",
 						padding: "1rem",
 					}}
@@ -165,8 +171,8 @@ export function CMSResourcePage() {
 			<main css={{ display: "grid", gap: "0.9rem" }}>
 				<section
 					css={{
-						backgroundColor: "#fff",
-						border: "1px solid #dfe3f1",
+						backgroundColor: "var(--ui-neutral-bg-tint)",
+						border: "1px solid var(--ui-neutral-border)",
 						borderRadius: "0.7rem",
 						padding: "1rem",
 					}}
@@ -192,8 +198,8 @@ export function CMSResourcePage() {
 				</section>
 				<section
 					css={{
-						backgroundColor: "#fff",
-						border: "1px solid #dfe3f1",
+						backgroundColor: "var(--ui-neutral-bg-tint)",
+						border: "1px solid var(--ui-neutral-border)",
 						borderRadius: "0.7rem",
 						padding: "1rem",
 					}}
@@ -221,8 +227,8 @@ export function CMSActionPage() {
 			<main>
 				<section
 					css={{
-						backgroundColor: "#fff",
-						border: "1px solid #dfe3f1",
+						backgroundColor: "var(--ui-neutral-bg-tint)",
+						border: "1px solid var(--ui-neutral-border)",
 						borderRadius: "0.7rem",
 						padding: "1rem",
 						display: "grid",
