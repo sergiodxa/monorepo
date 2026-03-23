@@ -18,6 +18,9 @@ export function Fence() {
 					className={`language-${language}`}
 					css={{
 						overflowX: "auto",
+						overflowY: "hidden",
+						overscrollBehaviorX: "contain",
+						overscrollBehaviorInline: "contain",
 						borderRadius: "0.5rem",
 						border: "1px solid #e5e5e5",
 						backgroundColor: "#fafafa",
@@ -43,7 +46,19 @@ export function Fence() {
 								}}
 							>
 								{title && <span css={{ fontWeight: 500 }}>{title}</span>}
-								{path && <span>{path}</span>}
+								{path && (
+									<span
+										css={{
+											color: "var(--color-highlight-comment)",
+											fontFamily:
+												'"Bradley Hand", "Segoe Print", "Comic Sans MS", "Apple Chancery", cursive',
+											fontWeight: 500,
+											fontSize: "1.1em",
+										}}
+									>
+										// {path}
+									</span>
+								)}
 							</div>
 						</header>
 					)}

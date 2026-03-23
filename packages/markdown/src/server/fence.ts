@@ -14,6 +14,7 @@ import "prismjs/components/prism-markdown.js";
 import "prismjs/components/prism-python.js";
 import "prismjs/components/prism-ruby.js";
 import "prismjs/components/prism-sql.js";
+import "prismjs/components/prism-tsx.js";
 import "prismjs/components/prism-typescript.js";
 import "prismjs/components/prism-yaml.js";
 
@@ -30,7 +31,7 @@ const LanguageAliasesSchema = z.object({
 	erb: z.literal("html"),
 	gql: z.literal("graphql"),
 	js: z.literal("javascript"),
-	jsx: z.literal("javascript"),
+	jsx: z.literal("jsx"),
 	md: z.literal("markdown"),
 	mdx: z.literal("markdown"),
 	py: z.literal("python"),
@@ -41,7 +42,7 @@ const LanguageAliasesSchema = z.object({
 	sql: z.literal("sql"),
 	text: z.literal("plain"),
 	ts: z.literal("typescript"),
-	tsx: z.literal("typescript"),
+	tsx: z.literal("tsx"),
 	yml: z.literal("yaml"),
 });
 
