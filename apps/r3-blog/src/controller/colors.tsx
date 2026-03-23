@@ -13,5 +13,6 @@ export default action<typeof routes.colors>(async () => {
 			<ColorsView />
 		</BlogLayout>,
 	);
+
 	return ok(body);
 });
