@@ -6,42 +6,22 @@ import type routes from "~/routes";
 
 import { BlogLayout } from "~/components/layout/blog";
 import { db } from "~/middleware/db";
+import { Post } from "~/models/post";
 import { LikePost } from "~/models/posts/like";
 import { BookmarksView } from "~/views/bookmarks";
 
 export default action<typeof routes.bookmarks>(async (ctx) => {
 	let bookmarks = await LikePost.findAll(db(ctx));
-	let buildWayback = (url: string, createdAt: string) => {
-		let created = new Date(createdAt);
-		if (Number.isNaN(created.getTime())) return null;
-
-		let date = created
-			.toISOString()
-			.replaceAll("-", "")
-			.replaceAll(":", "")
-			.replaceAll(".", "")
-			.replace("T", "");
-
-		return `https://web.archive.org/web/${date}/${url}`;
-	};
 
 	let items = [...bookmarks]
-		.sort((a, b) => {
-			let aDate = Date.parse(a.post.published_at ?? a.post.created_at);
-			let bDate = Date.parse(b.post.published_at ?? b.post.created_at);
-			return bDate - aDate;
-		})
+		.sort((a, b) => Post.compareByPublishedOrCreatedDesc(a.post, b.post))
 		.map((bookmark) => {
 			let href = bookmark.meta.url;
 			let label = bookmark.meta.title;
-			let normalizedHref =
-				href.startsWith("http://") || href.startsWith("https://") || href.startsWith("/")
-					? href
-					: `https://${href}`;
-			let publishedAt = bookmark.post.published_at;
-			let isPublished = publishedAt === null || Date.parse(publishedAt) <= Date.now();
+			let normalizedHref = LikePost.normalizeUrl(href);
+			let isPublished = Post.isPublishedAt(bookmark.post.published_at);
 			let suffixHref = normalizedHref.startsWith("http")
-				? buildWayback(normalizedHref, bookmark.post.created_at)
+				? LikePost.waybackSnapshotUrl(normalizedHref, bookmark.post.created_at)
 				: null;
 
 			return {

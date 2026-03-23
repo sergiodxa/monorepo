@@ -6,17 +6,16 @@ import type routes from "~/routes";
 
 import { BlogLayout } from "~/components/layout/blog";
 import { db } from "~/middleware/db";
+import { Post } from "~/models/post";
 import { TutorialPost } from "~/models/posts/tutorial";
 import { TutorialsView } from "~/views/tutorials";
 
 export default action<typeof routes.tutorials>(async (ctx) => {
 	let tutorials = await TutorialPost.listItems(db(ctx));
-	let now = Date.now();
 	let items = tutorials.map((tutorial) => {
 		let slug = tutorial.slug;
 		let href = `/tutorials/${slug}`;
-		let publishedAt = tutorial.published_at;
-		let isPublished = publishedAt === null || Date.parse(publishedAt) <= now;
+		let isPublished = Post.isPublishedAt(tutorial.published_at);
 
 		return {
 			href,

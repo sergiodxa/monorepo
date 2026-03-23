@@ -6,17 +6,16 @@ import type routes from "~/routes";
 
 import { BlogLayout } from "~/components/layout/blog";
 import { db } from "~/middleware/db";
+import { Post } from "~/models/post";
 import { ArticlePost } from "~/models/posts/article";
 import { ArticlesView } from "~/views/articles";
 
 export default action<typeof routes.articles>(async (ctx) => {
 	let articles = await ArticlePost.listItems(db(ctx));
-	let now = Date.now();
 	let items = articles.map((article) => {
 		let slug = article.slug;
 		let href = `/articles/${slug}`;
-		let publishedAt = article.published_at;
-		let isPublished = publishedAt === null || Date.parse(publishedAt) <= now;
+		let isPublished = Post.isPublishedAt(article.published_at);
 
 		return {
 			href,

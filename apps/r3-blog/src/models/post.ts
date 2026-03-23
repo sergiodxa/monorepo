@@ -144,6 +144,20 @@ export class Post {
 		return published_at === null || Date.parse(published_at) <= Date.now();
 	}
 
+	static timestampFromPublishedOrCreated(input: {
+		published_at: string | null;
+		created_at: string;
+	}) {
+		return Date.parse(input.published_at ?? input.created_at);
+	}
+
+	static compareByPublishedOrCreatedDesc(
+		a: { published_at: string | null; created_at: string },
+		b: { published_at: string | null; created_at: string },
+	) {
+		return this.timestampFromPublishedOrCreated(b) - this.timestampFromPublishedOrCreated(a);
+	}
+
 	/**
 	 * Fetches all posts and attaches their metadata rows.
 	 * Useful when listing every post regardless of type.
