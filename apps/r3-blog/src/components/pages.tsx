@@ -1,4 +1,4 @@
-import { MarkdownView } from "@pkg/markdown/remix";
+import { MarkdownView } from "@pkg/markdown/client/remix";
 
 import { BlogLayout } from "~/components/layout";
 import prismStyles from "~/styles/prism.css?url";

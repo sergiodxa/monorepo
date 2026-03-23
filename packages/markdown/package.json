@@ -5,8 +5,8 @@
 	"type": "module",
 	"exports": {
 		"./server": "./src/server/index.ts",
-		"./client": "./src/client/index.tsx",
-		"./remix": "./src/remix/index.tsx",
+		"./client/react": "./src/client/react/index.tsx",
+		"./client/remix": "./src/client/remix/index.tsx",
 		"./styles/light.css": "./styles/prism-light.css",
 		"./styles/dark.css": "./styles/prism-dark.css"
 	},

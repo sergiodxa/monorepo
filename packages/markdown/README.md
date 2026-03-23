@@ -52,7 +52,7 @@ if (isFailure(result)) {
 ### Client: Render Markdown
 
 ```tsx
-import { MarkdownView } from "@pkg/markdown/client";
+import { MarkdownView } from "@pkg/markdown/client/react";
 import prismStyles from "@pkg/markdown/styles/light.css?url";
 import type { Route } from "./+types/article";
 
@@ -185,7 +185,7 @@ React component that renders parsed Markdoc content with syntax-highlighted code
 **Example:**
 
 ```tsx
-import { MarkdownView } from "@pkg/markdown/client";
+import { MarkdownView } from "@pkg/markdown/client/react";
 
 function Callout({ type, children }) {
 	return <div className={`callout callout-${type}`}>{children}</div>;
@@ -209,7 +209,7 @@ Note: The `Fence` component for code blocks cannot be overridden.
 Type alias for the parsed markdown content. Use this instead of importing `RenderableTreeNodes` from `@markdoc/markdoc`.
 
 ```typescript
-import { MarkdownView } from "@pkg/markdown/client";
+import { MarkdownView } from "@pkg/markdown/client/react";
 
 interface ArticleProps {
 	content: MarkdownView.Content;
@@ -310,7 +310,7 @@ let md = new Markdown({
 Then pass the component to `MarkdownView`:
 
 ```tsx
-import { MarkdownView } from "@pkg/markdown/client";
+import { MarkdownView } from "@pkg/markdown/client/react";
 
 function Callout({ type, children }: { type: string; children: React.ReactNode }) {
 	return <div className={`callout callout-${type}`}>{children}</div>;

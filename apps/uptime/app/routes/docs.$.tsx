@@ -1,4 +1,4 @@
-import { MarkdownView } from "@pkg/markdown/client";
+import { MarkdownView } from "@pkg/markdown/client/react";
 import { notFound } from "@pkg/response";
 import { isFailure } from "@pkg/result";
 import { Heading, Text } from "@pkg/ui";
