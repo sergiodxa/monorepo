@@ -4,12 +4,20 @@ import { renderToString } from "remix/component/server";
 
 import type routes from "~/routes";
 
-import { CMSDashboardPage } from "~/components/cms-pages";
+import { CMSLayout } from "~/components/layout/cms";
 import { db } from "~/middleware/db";
 import { ArticlePost } from "~/models/posts/article";
 import { GlossaryPost } from "~/models/posts/glossary";
 import { LikePost } from "~/models/posts/like";
 import { TutorialPost } from "~/models/posts/tutorial";
+import { CMSDashboardView } from "~/views/cms/dashboard";
+
+namespace CMSDashboardController {
+	export interface ViewData {
+		stats: CMSDashboardView.Stats;
+		recentSearches: Array<string>;
+	}
+}
 
 export default action<typeof routes.cms.dashboard>(async (ctx) => {
 	let database = db(ctx);
@@ -19,17 +27,20 @@ export default action<typeof routes.cms.dashboard>(async (ctx) => {
 		LikePost.count(database),
 		GlossaryPost.count(database),
 	]);
+	let viewData: CMSDashboardController.ViewData = {
+		stats: {
+			articles,
+			likes,
+			tutorials,
+			glossary,
+		},
+		recentSearches: [],
+	};
 
 	let body = await renderToString(
-		<CMSDashboardPage
-			stats={{
-				articles,
-				likes,
-				tutorials,
-				glossary,
-			}}
-			recentSearches={[]}
-		/>,
+		<CMSLayout title="Dashboard" activePath="/cms">
+			<CMSDashboardView stats={viewData.stats} recentSearches={viewData.recentSearches} />
+		</CMSLayout>,
 	);
 
 	return ok(body);

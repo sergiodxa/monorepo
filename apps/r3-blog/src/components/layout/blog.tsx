@@ -2,20 +2,22 @@ import type { RemixNode } from "remix/component";
 
 import appColorsStyles from "~/styles/colors.css?url";
 
-interface BlogLayoutProps {
-	title: string;
-	description: string;
-	activePath?: string;
-	stylesheets?: Array<{ href: string; media?: string }>;
-	children: RemixNode;
+export namespace BlogLayout {
+	export interface Props {
+		title: string;
+		description: string;
+		activePath?: string;
+		stylesheets?: Array<{ href: string; media?: string }>;
+		children: RemixNode;
+	}
+
+	export interface NavigationItem {
+		href: string;
+		label: string;
+	}
 }
 
-interface NavigationItem {
-	href: string;
-	label: string;
-}
-
-let navigationItems: Array<NavigationItem> = [
+let navigationItems: Array<BlogLayout.NavigationItem> = [
 	{ href: "/", label: "Home" },
 	{ href: "/articles", label: "Articles" },
 	{ href: "/tutorials", label: "Tutorials" },
@@ -25,7 +27,7 @@ let navigationItems: Array<NavigationItem> = [
 ];
 
 export function BlogLayout() {
-	return ({ activePath, children, description, stylesheets = [], title }: BlogLayoutProps) => (
+	return ({ activePath, children, description, stylesheets = [], title }: BlogLayout.Props) => (
 		<html lang="en">
 			<head>
 				<meta charSet="utf-8" />
@@ -46,8 +48,12 @@ export function BlogLayout() {
 				css={{
 					margin: 0,
 					fontFamily: "'Source Serif 4', 'Iowan Old Style', 'Palatino Linotype', serif",
-					background:
+					backgroundColor: "var(--color-neutral-200)",
+					backgroundImage:
 						"radial-gradient(circle at 10% 10%, var(--ui-neutral-bg-tint-hover) 0, var(--ui-neutral-bg-tint-hover) 18%, var(--ui-neutral-bg-tint-pressed) 52%, var(--color-neutral-200) 100%)",
+					backgroundRepeat: "no-repeat",
+					backgroundSize: "150vmax 150vmax",
+					backgroundAttachment: "fixed",
 					color: "var(--ui-neutral-fg-emphasis)",
 					minHeight: "100vh",
 				}}

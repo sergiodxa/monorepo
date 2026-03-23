@@ -4,10 +4,10 @@ import { renderToString } from "remix/component/server";
 
 import type routes from "~/routes";
 
-import { PostListPage } from "~/components/pages";
-import { metaExternalUrl, metaTitle } from "~/lib/post-meta-view";
+import { BlogLayout } from "~/components/layout/blog";
 import { db } from "~/middleware/db";
 import { LikePost } from "~/models/posts/like";
+import { BookmarksView } from "~/views/bookmarks";
 
 export default action<typeof routes.bookmarks>(async (ctx) => {
 	let bookmarks = await LikePost.findAll(db(ctx));
@@ -32,12 +32,16 @@ export default action<typeof routes.bookmarks>(async (ctx) => {
 			return bDate - aDate;
 		})
 		.map((bookmark) => {
-			let href = metaExternalUrl(bookmark.meta) ?? "/bookmarks";
-			let label = metaTitle(bookmark.meta, `Bookmark ${bookmark.post.id}`);
+			let href = bookmark.meta.url;
+			let label = bookmark.meta.title;
+			let normalizedHref =
+				href.startsWith("http://") || href.startsWith("https://") || href.startsWith("/")
+					? href
+					: `https://${href}`;
 			let publishedAt = bookmark.post.published_at;
-			let isPublished = publishedAt ? Date.parse(publishedAt) <= Date.now() : false;
-			let suffixHref = href.startsWith("http")
-				? buildWayback(href, bookmark.post.created_at)
+			let isPublished = publishedAt === null || Date.parse(publishedAt) <= Date.now();
+			let suffixHref = normalizedHref.startsWith("http")
+				? buildWayback(normalizedHref, bookmark.post.created_at)
 				: null;
 
 			return {
@@ -45,19 +49,20 @@ export default action<typeof routes.bookmarks>(async (ctx) => {
 				label,
 				preview: !isPublished,
 				suffixHref: suffixHref ?? undefined,
-				suffixLabel: suffixHref ? "Wayback Machine" : undefined,
+				suffixLabel: suffixHref ? "🏛️" : undefined,
+				suffixAriaLabel: suffixHref ? "View on Wayback Machine" : undefined,
+				suffixTitle: suffixHref ? "Wayback Machine" : undefined,
 			};
 		});
 
 	let body = await renderToString(
-		<PostListPage
+		<BlogLayout
 			title="Bookmarks"
 			description="Links that I read and liked."
 			activePath="/bookmarks"
-			rssPath="/bookmarks.rss"
-			items={items}
-			emptyLabel="No bookmarks yet."
-		/>,
+		>
+			<BookmarksView items={items} />
+		</BlogLayout>,
 	);
 
 	return ok(body);

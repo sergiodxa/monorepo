@@ -4,9 +4,10 @@ import { renderToString } from "remix/component/server";
 
 import type routes from "~/routes";
 
-import { PostListPage } from "~/components/pages";
+import { BlogLayout } from "~/components/layout/blog";
 import { db } from "~/middleware/db";
 import { ArticlePost } from "~/models/posts/article";
+import { ArticlesView } from "~/views/articles";
 
 export default action<typeof routes.articles>(async (ctx) => {
 	let articles = await ArticlePost.listItems(db(ctx));
@@ -25,14 +26,9 @@ export default action<typeof routes.articles>(async (ctx) => {
 	});
 
 	let body = await renderToString(
-		<PostListPage
-			title="Articles"
-			description="These are my articles."
-			activePath="/articles"
-			rssPath="/articles.rss"
-			items={items}
-			emptyLabel="No articles yet."
-		/>,
+		<BlogLayout title="Articles" description="These are my articles." activePath="/articles">
+			<ArticlesView items={items} />
+		</BlogLayout>,
 	);
 
 	return ok(body);

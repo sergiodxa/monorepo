@@ -4,15 +4,14 @@ import { renderToString } from "remix/component/server";
 
 import type routes from "~/routes";
 
-import { CMSActionPage, CMSResourcePage } from "~/components/cms-pages";
-import { metaPath, metaTitle } from "~/lib/post-meta-view";
+import { CMSLayout } from "~/components/layout/cms";
 import { db } from "~/middleware/db";
 import { ArticlePost } from "~/models/posts/article";
+import { CMSArticlesActionView, CMSArticlesIndexView } from "~/views/cms/articles";
 
-function render(title: string, activePath: string, description: string) {
-	return renderToString(
-		<CMSActionPage title={title} activePath={activePath} description={description} />,
-	);
+namespace CMSArticlesController {
+	export interface IndexProps extends CMSArticlesIndexView.Props {}
+	export interface ActionProps extends CMSArticlesActionView.Props {}
 }
 
 export default controller<typeof routes.cms.articles>({
@@ -21,35 +20,30 @@ export default controller<typeof routes.cms.articles>({
 	actions: {
 		async index(ctx) {
 			let articles = await ArticlePost.findAll(db(ctx));
-			let items = articles.map((article) => {
-				let title = metaTitle(article.meta, `Article ${article.post.id}`);
-				let path = metaPath(article.meta, "/articles");
-				return {
-					label: `${title} (${path})`,
-					href: `/cms/articles/${article.post.id}`,
-				};
-			});
+			let items: CMSArticlesController.IndexProps["items"] = articles.map((article) => ({
+				id: article.post.id,
+				title: article.meta.title,
+				slug: article.meta.slug,
+			}));
 
 			let body = await renderToString(
-				<CMSResourcePage
-					title="Articles"
-					activePath="/cms/articles"
-					searchLabel="What're you looking for?"
-					searchCta="Search"
-					primaryCta={{ href: "/cms/articles/new", label: "New Article" }}
-					items={items}
-					emptyLabel="No articles found in the database yet."
-				/>,
+				<CMSLayout title="Articles" activePath="/cms/articles">
+					<CMSArticlesIndexView items={items} />
+				</CMSLayout>,
 			);
 			return ok(body);
 		},
 
 		async create(ctx) {
 			let total = (await ArticlePost.findAll(db(ctx))).length;
-			let body = await render(
-				"Create Article",
-				"/cms/articles",
-				`Create Article. There are currently ${total} articles in the database.`,
+			let viewProps: CMSArticlesController.ActionProps = {
+				title: "Create Article",
+				description: `Create Article. There are currently ${total} articles in the database.`,
+			};
+			let body = await renderToString(
+				<CMSLayout title={viewProps.title} activePath="/cms/articles">
+					<CMSArticlesActionView {...viewProps} />
+				</CMSLayout>,
 			);
 			return ok(body);
 		},
@@ -57,19 +51,27 @@ export default controller<typeof routes.cms.articles>({
 		async destroy(ctx) {
 			let article = await ArticlePost.findById(db(ctx), ctx.params.id);
 			if (!article) {
-				let body = await render(
-					"Article Not Found",
-					"/cms/articles",
-					`Article ${ctx.params.id} was not found.`,
+				let viewProps: CMSArticlesController.ActionProps = {
+					title: "Article Not Found",
+					description: `Article ${ctx.params.id} was not found.`,
+				};
+				let body = await renderToString(
+					<CMSLayout title={viewProps.title} activePath="/cms/articles">
+						<CMSArticlesActionView {...viewProps} />
+					</CMSLayout>,
 				);
 				return notFound(body);
 			}
 
-			let title = metaTitle(article.meta, article.post.id);
-			let body = await render(
-				`Delete Article ${title}`,
-				"/cms/articles",
-				`Ready to delete article "${title}" (${article.post.id}).`,
+			let title = article.meta.title;
+			let viewProps: CMSArticlesController.ActionProps = {
+				title: `Delete Article ${title}`,
+				description: `Ready to delete article "${title}" (${article.post.id}).`,
+			};
+			let body = await renderToString(
+				<CMSLayout title={viewProps.title} activePath="/cms/articles">
+					<CMSArticlesActionView {...viewProps} />
+				</CMSLayout>,
 			);
 			return ok(body);
 		},
@@ -77,29 +79,41 @@ export default controller<typeof routes.cms.articles>({
 		async edit(ctx) {
 			let article = await ArticlePost.findById(db(ctx), ctx.params.id);
 			if (!article) {
-				let body = await render(
-					"Article Not Found",
-					"/cms/articles",
-					`Article ${ctx.params.id} was not found.`,
+				let viewProps: CMSArticlesController.ActionProps = {
+					title: "Article Not Found",
+					description: `Article ${ctx.params.id} was not found.`,
+				};
+				let body = await renderToString(
+					<CMSLayout title={viewProps.title} activePath="/cms/articles">
+						<CMSArticlesActionView {...viewProps} />
+					</CMSLayout>,
 				);
 				return notFound(body);
 			}
 
-			let title = metaTitle(article.meta, article.post.id);
-			let body = await render(
-				`Edit Article ${title}`,
-				"/cms/articles",
-				`Editing article "${title}" at ${metaPath(article.meta, "/articles")}.`,
+			let title = article.meta.title;
+			let viewProps: CMSArticlesController.ActionProps = {
+				title: `Edit Article ${title}`,
+				description: `Editing article "${title}" at /articles/${article.meta.slug}.`,
+			};
+			let body = await renderToString(
+				<CMSLayout title={viewProps.title} activePath="/cms/articles">
+					<CMSArticlesActionView {...viewProps} />
+				</CMSLayout>,
 			);
 			return ok(body);
 		},
 
 		async new(ctx) {
 			let total = (await ArticlePost.findAll(db(ctx))).length;
-			let body = await render(
-				"New Article",
-				"/cms/articles",
-				`New Article form loaded. Current articles count: ${total}.`,
+			let viewProps: CMSArticlesController.ActionProps = {
+				title: "New Article",
+				description: `New Article form loaded. Current articles count: ${total}.`,
+			};
+			let body = await renderToString(
+				<CMSLayout title={viewProps.title} activePath="/cms/articles">
+					<CMSArticlesActionView {...viewProps} />
+				</CMSLayout>,
 			);
 			return ok(body);
 		},
@@ -107,18 +121,26 @@ export default controller<typeof routes.cms.articles>({
 		async show(ctx) {
 			let article = await ArticlePost.findById(db(ctx), ctx.params.id);
 			if (!article) {
-				let body = await render(
-					"Article Not Found",
-					"/cms/articles",
-					`Article ${ctx.params.id} was not found.`,
+				let viewProps: CMSArticlesController.ActionProps = {
+					title: "Article Not Found",
+					description: `Article ${ctx.params.id} was not found.`,
+				};
+				let body = await renderToString(
+					<CMSLayout title={viewProps.title} activePath="/cms/articles">
+						<CMSArticlesActionView {...viewProps} />
+					</CMSLayout>,
 				);
 				return notFound(body);
 			}
 
-			let body = await render(
-				metaTitle(article.meta, `Article ${article.post.id}`),
-				"/cms/articles",
-				`Article ${article.post.id} lives at ${metaPath(article.meta, "/articles")}.`,
+			let viewProps: CMSArticlesController.ActionProps = {
+				title: article.meta.title,
+				description: `Article ${article.post.id} lives at /articles/${article.meta.slug}.`,
+			};
+			let body = await renderToString(
+				<CMSLayout title={viewProps.title} activePath="/cms/articles">
+					<CMSArticlesActionView {...viewProps} />
+				</CMSLayout>,
 			);
 			return ok(body);
 		},
@@ -126,19 +148,27 @@ export default controller<typeof routes.cms.articles>({
 		async update(ctx) {
 			let article = await ArticlePost.findById(db(ctx), ctx.params.id);
 			if (!article) {
-				let body = await render(
-					"Article Not Found",
-					"/cms/articles",
-					`Article ${ctx.params.id} was not found.`,
+				let viewProps: CMSArticlesController.ActionProps = {
+					title: "Article Not Found",
+					description: `Article ${ctx.params.id} was not found.`,
+				};
+				let body = await renderToString(
+					<CMSLayout title={viewProps.title} activePath="/cms/articles">
+						<CMSArticlesActionView {...viewProps} />
+					</CMSLayout>,
 				);
 				return notFound(body);
 			}
 
-			let title = metaTitle(article.meta, article.post.id);
-			let body = await render(
-				`Update Article ${title}`,
-				"/cms/articles",
-				`Update flow loaded for article "${title}" (${article.post.id}).`,
+			let title = article.meta.title;
+			let viewProps: CMSArticlesController.ActionProps = {
+				title: `Update Article ${title}`,
+				description: `Update flow loaded for article "${title}" (${article.post.id}).`,
+			};
+			let body = await renderToString(
+				<CMSLayout title={viewProps.title} activePath="/cms/articles">
+					<CMSArticlesActionView {...viewProps} />
+				</CMSLayout>,
 			);
 			return ok(body);
 		},

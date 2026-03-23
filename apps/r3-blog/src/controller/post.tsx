@@ -7,50 +7,82 @@ import * as s from "remix/data-schema";
 
 import type routes from "~/routes";
 
-import { PostPage } from "~/components/pages";
-import { metaPath, metaTitle } from "~/lib/post-meta-view";
+import { BlogLayout } from "~/components/layout/blog";
 import { db } from "~/middleware/db";
 import { ArticlePost } from "~/models/posts/article";
-import { GlossaryPost } from "~/models/posts/glossary";
 import { TutorialPost } from "~/models/posts/tutorial";
+import prismStyles from "~/styles/prism.css?url";
+import { PostView } from "~/views/post";
 
-let markdown = new Markdown({ frontmatter: s.object({}) });
+const markdown = new Markdown({ frontmatter: s.object({}) });
+
+interface RelatedPost {
+	href: string;
+	label: string;
+	reason: string;
+}
+
+function parseContent(content: string) {
+	let result = markdown.parse(content);
+	if (isFailure(result)) return null;
+	return result.data.content;
+}
+
+function parseTags(tags: unknown): Array<string> {
+	if (Array.isArray(tags)) return tags.filter((tag): tag is string => typeof tag === "string");
+	if (typeof tags === "string") return [tags];
+	return [];
+}
 
 export default action<typeof routes.post>(async (ctx) => {
 	let postType = ctx.params.postType;
 	let postSlug = ctx.params.postSlug;
 	if (!postType || !postSlug) return notFound("<h1>404 Not Found</h1>");
-	let database = db(ctx);
+	if (postType !== "articles" && postType !== "tutorials")
+		return notFound("<h1>404 Not Found</h1>");
 
-	let title = "";
-	let content = "";
-	let typePath = postType;
-	let eyebrow = "";
-	let slug = postSlug;
-	let publishedAt: string | null | undefined;
-	let tags: Array<string> = [];
-	let related: Array<{ href: string; label: string; reason: string }> = [];
+	let database = db(ctx);
 
 	if (postType === "articles") {
 		let post = await ArticlePost.findBySlug(database, postSlug);
 		if (!post) return notFound("<h1>404 Not Found</h1>");
 
-		title = metaTitle(post.meta, `Article ${post.post.id}`);
-		content = post.meta.content || "";
-		eyebrow = "Article";
-		slug = post.meta.slug || postSlug;
-		publishedAt = post.post.published_at;
-	} else if (postType === "tutorials") {
+		let title = post.meta.title;
+		let content = post.meta.content || "";
+		let slug = post.meta.slug;
+		let body = await renderToString(
+			<BlogLayout
+				title={title}
+				description={`${postType} / ${slug}`}
+				activePath={`/${postType}`}
+				stylesheets={[{ href: prismStyles }]}
+			>
+				<PostView
+					title={title}
+					content={parseContent(content)}
+					slug={slug}
+					typePath={postType}
+					eyebrow="Article"
+					publishedAt={post.post.published_at}
+					format={ctx.params.ext}
+					tags={[]}
+					related={[]}
+				/>
+			</BlogLayout>,
+		);
+
+		return ok(body);
+	}
+
+	if (postType === "tutorials") {
 		let post = await TutorialPost.findBySlug(database, postSlug);
 		if (!post) return notFound("<h1>404 Not Found</h1>");
 
-		title = metaTitle(post.meta, `Tutorial ${post.post.id}`);
-		content = post.meta.content || "";
-		eyebrow = "Tutorial";
-		slug = post.meta.slug || postSlug;
-		publishedAt = post.post.published_at;
-		if (Array.isArray(post.meta.tags)) tags = post.meta.tags;
-		if (typeof post.meta.tags === "string") tags = [post.meta.tags];
+		let title = post.meta.title;
+		let content = post.meta.content || "";
+		let slug = post.meta.slug;
+		let tags = parseTags(post.meta.tags);
+		let related: Array<RelatedPost> = [];
 
 		if (tags.length > 0) {
 			let tutorials = await TutorialPost.findAll(database);
@@ -58,14 +90,12 @@ export default action<typeof routes.post>(async (ctx) => {
 			let ranked = tutorials
 				.filter((item) => item.post.id !== currentId)
 				.map((item) => {
-					let tutorialTags: Array<string> = [];
-					if (Array.isArray(item.meta.tags)) tutorialTags = item.meta.tags;
-					if (typeof item.meta.tags === "string") tutorialTags = [item.meta.tags];
+					let tutorialTags = parseTags(item.meta.tags);
 
 					let match = tutorialTags.find((tag) => tags.includes(tag));
 					return {
-						href: metaPath(item.meta, "/tutorials"),
-						label: metaTitle(item.meta, `Tutorial ${item.post.id}`),
+						href: `/tutorials/${item.meta.slug}`,
+						label: item.meta.title,
 						reason: match ? `Because both uses ${match}` : "",
 						hasMatch: Boolean(match),
 					};
@@ -76,36 +106,30 @@ export default action<typeof routes.post>(async (ctx) => {
 
 			related = ranked;
 		}
-	} else if (postType === "glossary") {
-		let post = await GlossaryPost.findBySlug(database, postSlug);
-		if (!post) return notFound("<h1>404 Not Found</h1>");
 
-		title = post.meta.title ?? post.meta.term;
-		content = post.meta.definition || "";
-		eyebrow = "Glossary";
-		slug = post.meta.slug || postSlug;
-		publishedAt = post.post.published_at;
-	} else {
-		return notFound("<h1>404 Not Found</h1>");
+		let body = await renderToString(
+			<BlogLayout
+				title={title}
+				description={`${postType} / ${slug}`}
+				activePath={`/${postType}`}
+				stylesheets={[{ href: prismStyles }]}
+			>
+				<PostView
+					title={title}
+					content={parseContent(content)}
+					slug={slug}
+					typePath={postType}
+					eyebrow="Tutorial"
+					publishedAt={post.post.published_at}
+					format={ctx.params.ext}
+					tags={tags}
+					related={related}
+				/>
+			</BlogLayout>,
+		);
+
+		return ok(body);
 	}
 
-	let body = await renderToString(
-		<PostPage
-			title={title}
-			content={(() => {
-				let result = markdown.parse(content);
-				if (isFailure(result)) return null;
-				return result.data.content;
-			})()}
-			slug={slug}
-			typePath={typePath}
-			eyebrow={eyebrow}
-			publishedAt={publishedAt}
-			format={ctx.params.ext}
-			tags={tags}
-			related={related}
-		/>,
-	);
-
-	return ok(body);
+	return notFound("<h1>404 Not Found</h1>");
 });

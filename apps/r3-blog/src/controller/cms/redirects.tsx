@@ -4,14 +4,16 @@ import { renderToString } from "remix/component/server";
 
 import type routes from "~/routes";
 
-import { CMSActionPage, CMSResourcePage } from "~/components/cms-pages";
+import { CMSLayout } from "~/components/layout/cms";
 import { db } from "~/middleware/db";
 import { PostMeta } from "~/models/post-meta";
+import { CMSRedirectsActionView, CMSRedirectsIndexView } from "~/views/cms/redirects";
 
-function render(title: string, activePath: string, description: string) {
-	return renderToString(
-		<CMSActionPage title={title} activePath={activePath} description={description} />,
-	);
+namespace CMSRedirectsController {
+	export interface RedirectItem {
+		label: string;
+		href: string;
+	}
 }
 
 export default controller<typeof routes.cms.redirects>({
@@ -21,21 +23,15 @@ export default controller<typeof routes.cms.redirects>({
 		async index(ctx) {
 			let rows = await PostMeta.findAll(db(ctx));
 			let redirects = rows.filter((row) => row.key.toLowerCase().includes("redirect"));
-			let items = redirects.map((row) => ({
+			let items: Array<CMSRedirectsController.RedirectItem> = redirects.map((row) => ({
 				label: `${row.key}: ${row.value}`,
 				href: `/cms/redirects/${row.id}`,
 			}));
 
 			let body = await renderToString(
-				<CMSResourcePage
-					title="Redirects"
-					activePath="/cms/redirects"
-					searchLabel="What're you looking for?"
-					searchCta="Search"
-					primaryCta={{ href: "/cms/redirects/new", label: "New Redirect" }}
-					items={items}
-					emptyLabel="No redirect metadata entries found in the database yet."
-				/>,
+				<CMSLayout title="Redirects" activePath="/cms/redirects">
+					<CMSRedirectsIndexView items={items} />
+				</CMSLayout>,
 			);
 			return ok(body);
 		},
@@ -43,10 +39,13 @@ export default controller<typeof routes.cms.redirects>({
 		async create(ctx) {
 			let rows = await PostMeta.findAll(db(ctx));
 			let redirects = rows.filter((row) => row.key.toLowerCase().includes("redirect"));
-			let body = await render(
-				"Create Redirect",
-				"/cms/redirects",
-				`Create Redirect. There are currently ${redirects.length} redirect-like metadata rows.`,
+			let body = await renderToString(
+				<CMSLayout title="Create Redirect" activePath="/cms/redirects">
+					<CMSRedirectsActionView
+						title="Create Redirect"
+						description={`Create Redirect. There are currently ${redirects.length} redirect-like metadata rows.`}
+					/>
+				</CMSLayout>,
 			);
 			return ok(body);
 		},
@@ -54,18 +53,24 @@ export default controller<typeof routes.cms.redirects>({
 		async destroy(ctx) {
 			let redirect = await PostMeta.findById(db(ctx), ctx.params.id);
 			if (!redirect || !redirect.key.toLowerCase().includes("redirect")) {
-				let body = await render(
-					"Redirect Not Found",
-					"/cms/redirects",
-					`Redirect ${ctx.params.id} was not found.`,
+				let body = await renderToString(
+					<CMSLayout title="Redirect Not Found" activePath="/cms/redirects">
+						<CMSRedirectsActionView
+							title="Redirect Not Found"
+							description={`Redirect ${ctx.params.id} was not found.`}
+						/>
+					</CMSLayout>,
 				);
 				return notFound(body);
 			}
 
-			let body = await render(
-				`Delete Redirect ${redirect.id}`,
-				"/cms/redirects",
-				`Ready to delete redirect mapping ${redirect.key} -> ${redirect.value}.`,
+			let body = await renderToString(
+				<CMSLayout title={`Delete Redirect ${redirect.id}`} activePath="/cms/redirects">
+					<CMSRedirectsActionView
+						title={`Delete Redirect ${redirect.id}`}
+						description={`Ready to delete redirect mapping ${redirect.key} -> ${redirect.value}.`}
+					/>
+				</CMSLayout>,
 			);
 			return ok(body);
 		},
@@ -73,18 +78,24 @@ export default controller<typeof routes.cms.redirects>({
 		async edit(ctx) {
 			let redirect = await PostMeta.findById(db(ctx), ctx.params.id);
 			if (!redirect || !redirect.key.toLowerCase().includes("redirect")) {
-				let body = await render(
-					"Redirect Not Found",
-					"/cms/redirects",
-					`Redirect ${ctx.params.id} was not found.`,
+				let body = await renderToString(
+					<CMSLayout title="Redirect Not Found" activePath="/cms/redirects">
+						<CMSRedirectsActionView
+							title="Redirect Not Found"
+							description={`Redirect ${ctx.params.id} was not found.`}
+						/>
+					</CMSLayout>,
 				);
 				return notFound(body);
 			}
 
-			let body = await render(
-				`Edit Redirect ${redirect.id}`,
-				"/cms/redirects",
-				`Editing redirect metadata ${redirect.key} -> ${redirect.value}.`,
+			let body = await renderToString(
+				<CMSLayout title={`Edit Redirect ${redirect.id}`} activePath="/cms/redirects">
+					<CMSRedirectsActionView
+						title={`Edit Redirect ${redirect.id}`}
+						description={`Editing redirect metadata ${redirect.key} -> ${redirect.value}.`}
+					/>
+				</CMSLayout>,
 			);
 			return ok(body);
 		},
@@ -92,10 +103,13 @@ export default controller<typeof routes.cms.redirects>({
 		async new(ctx) {
 			let rows = await PostMeta.findAll(db(ctx));
 			let redirects = rows.filter((row) => row.key.toLowerCase().includes("redirect"));
-			let body = await render(
-				"New Redirect",
-				"/cms/redirects",
-				`New Redirect form loaded. Current redirect-like metadata count: ${redirects.length}.`,
+			let body = await renderToString(
+				<CMSLayout title="New Redirect" activePath="/cms/redirects">
+					<CMSRedirectsActionView
+						title="New Redirect"
+						description={`New Redirect form loaded. Current redirect-like metadata count: ${redirects.length}.`}
+					/>
+				</CMSLayout>,
 			);
 			return ok(body);
 		},
@@ -103,18 +117,24 @@ export default controller<typeof routes.cms.redirects>({
 		async show(ctx) {
 			let redirect = await PostMeta.findById(db(ctx), ctx.params.id);
 			if (!redirect || !redirect.key.toLowerCase().includes("redirect")) {
-				let body = await render(
-					"Redirect Not Found",
-					"/cms/redirects",
-					`Redirect ${ctx.params.id} was not found.`,
+				let body = await renderToString(
+					<CMSLayout title="Redirect Not Found" activePath="/cms/redirects">
+						<CMSRedirectsActionView
+							title="Redirect Not Found"
+							description={`Redirect ${ctx.params.id} was not found.`}
+						/>
+					</CMSLayout>,
 				);
 				return notFound(body);
 			}
 
-			let body = await render(
-				`Redirect ${redirect.id}`,
-				"/cms/redirects",
-				`Redirect metadata ${redirect.key} currently points to ${redirect.value}.`,
+			let body = await renderToString(
+				<CMSLayout title={`Redirect ${redirect.id}`} activePath="/cms/redirects">
+					<CMSRedirectsActionView
+						title={`Redirect ${redirect.id}`}
+						description={`Redirect metadata ${redirect.key} currently points to ${redirect.value}.`}
+					/>
+				</CMSLayout>,
 			);
 			return ok(body);
 		},
@@ -122,18 +142,24 @@ export default controller<typeof routes.cms.redirects>({
 		async update(ctx) {
 			let redirect = await PostMeta.findById(db(ctx), ctx.params.id);
 			if (!redirect || !redirect.key.toLowerCase().includes("redirect")) {
-				let body = await render(
-					"Redirect Not Found",
-					"/cms/redirects",
-					`Redirect ${ctx.params.id} was not found.`,
+				let body = await renderToString(
+					<CMSLayout title="Redirect Not Found" activePath="/cms/redirects">
+						<CMSRedirectsActionView
+							title="Redirect Not Found"
+							description={`Redirect ${ctx.params.id} was not found.`}
+						/>
+					</CMSLayout>,
 				);
 				return notFound(body);
 			}
 
-			let body = await render(
-				`Update Redirect ${redirect.id}`,
-				"/cms/redirects",
-				`Update flow loaded for redirect ${redirect.key} -> ${redirect.value}.`,
+			let body = await renderToString(
+				<CMSLayout title={`Update Redirect ${redirect.id}`} activePath="/cms/redirects">
+					<CMSRedirectsActionView
+						title={`Update Redirect ${redirect.id}`}
+						description={`Update flow loaded for redirect ${redirect.key} -> ${redirect.value}.`}
+					/>
+				</CMSLayout>,
 			);
 			return ok(body);
 		},

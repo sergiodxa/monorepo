@@ -4,15 +4,16 @@ import { renderToString } from "remix/component/server";
 
 import type routes from "~/routes";
 
-import { CMSActionPage, CMSResourcePage } from "~/components/cms-pages";
-import { metaPath, metaTitle } from "~/lib/post-meta-view";
+import { CMSLayout } from "~/components/layout/cms";
 import { db } from "~/middleware/db";
 import { TutorialPost } from "~/models/posts/tutorial";
+import { CMSTutorialsActionView, CMSTutorialsIndexView } from "~/views/cms/tutorials";
 
-function render(title: string, activePath: string, description: string) {
-	return renderToString(
-		<CMSActionPage title={title} activePath={activePath} description={description} />,
-	);
+namespace CMSTutorialsController {
+	export interface ActionView {
+		title: string;
+		description: string;
+	}
 }
 
 export default controller<typeof routes.cms.tutorials>({
@@ -21,35 +22,30 @@ export default controller<typeof routes.cms.tutorials>({
 	actions: {
 		async index(ctx) {
 			let tutorials = await TutorialPost.findAll(db(ctx));
-			let items = tutorials.map((tutorial) => {
-				let title = metaTitle(tutorial.meta, `Tutorial ${tutorial.post.id}`);
-				let path = metaPath(tutorial.meta, "/tutorials");
-				return {
-					label: `${title} (${path})`,
-					href: `/cms/tutorials/${tutorial.post.id}`,
-				};
-			});
+			let items: Array<CMSTutorialsIndexView.Item> = tutorials.map((tutorial) => ({
+				id: tutorial.post.id,
+				title: tutorial.meta.title,
+				slug: tutorial.meta.slug,
+			}));
 
 			let body = await renderToString(
-				<CMSResourcePage
-					title="Tutorials"
-					activePath="/cms/tutorials"
-					searchLabel="What're you looking for?"
-					searchCta="Search"
-					primaryCta={{ href: "/cms/tutorials/new", label: "New Tutorial" }}
-					items={items}
-					emptyLabel="No tutorials found in the database yet."
-				/>,
+				<CMSLayout title="Tutorials" activePath="/cms/tutorials">
+					<CMSTutorialsIndexView items={items} />
+				</CMSLayout>,
 			);
 			return ok(body);
 		},
 
 		async create(ctx) {
 			let total = (await TutorialPost.findAll(db(ctx))).length;
-			let body = await render(
-				"Create Tutorial",
-				"/cms/tutorials",
-				`Create Tutorial. There are currently ${total} tutorials in the database.`,
+			let view: CMSTutorialsController.ActionView = {
+				title: "Create Tutorial",
+				description: `Create Tutorial. There are currently ${total} tutorials in the database.`,
+			};
+			let body = await renderToString(
+				<CMSLayout title={view.title} activePath="/cms/tutorials">
+					<CMSTutorialsActionView title={view.title} description={view.description} />
+				</CMSLayout>,
 			);
 			return ok(body);
 		},
@@ -57,19 +53,27 @@ export default controller<typeof routes.cms.tutorials>({
 		async destroy(ctx) {
 			let tutorial = await TutorialPost.findById(db(ctx), ctx.params.id);
 			if (!tutorial) {
-				let body = await render(
-					"Tutorial Not Found",
-					"/cms/tutorials",
-					`Tutorial ${ctx.params.id} was not found.`,
+				let view: CMSTutorialsController.ActionView = {
+					title: "Tutorial Not Found",
+					description: `Tutorial ${ctx.params.id} was not found.`,
+				};
+				let body = await renderToString(
+					<CMSLayout title={view.title} activePath="/cms/tutorials">
+						<CMSTutorialsActionView title={view.title} description={view.description} />
+					</CMSLayout>,
 				);
 				return notFound(body);
 			}
 
-			let title = metaTitle(tutorial.meta, tutorial.post.id);
-			let body = await render(
-				`Delete Tutorial ${title}`,
-				"/cms/tutorials",
-				`Ready to delete tutorial "${title}" (${tutorial.post.id}).`,
+			let title = tutorial.meta.title;
+			let view: CMSTutorialsController.ActionView = {
+				title: `Delete Tutorial ${title}`,
+				description: `Ready to delete tutorial "${title}" (${tutorial.post.id}).`,
+			};
+			let body = await renderToString(
+				<CMSLayout title={view.title} activePath="/cms/tutorials">
+					<CMSTutorialsActionView title={view.title} description={view.description} />
+				</CMSLayout>,
 			);
 			return ok(body);
 		},
@@ -77,29 +81,41 @@ export default controller<typeof routes.cms.tutorials>({
 		async edit(ctx) {
 			let tutorial = await TutorialPost.findById(db(ctx), ctx.params.id);
 			if (!tutorial) {
-				let body = await render(
-					"Tutorial Not Found",
-					"/cms/tutorials",
-					`Tutorial ${ctx.params.id} was not found.`,
+				let view: CMSTutorialsController.ActionView = {
+					title: "Tutorial Not Found",
+					description: `Tutorial ${ctx.params.id} was not found.`,
+				};
+				let body = await renderToString(
+					<CMSLayout title={view.title} activePath="/cms/tutorials">
+						<CMSTutorialsActionView title={view.title} description={view.description} />
+					</CMSLayout>,
 				);
 				return notFound(body);
 			}
 
-			let title = metaTitle(tutorial.meta, tutorial.post.id);
-			let body = await render(
-				`Edit Tutorial ${title}`,
-				"/cms/tutorials",
-				`Editing tutorial "${title}" at ${metaPath(tutorial.meta, "/tutorials")}.`,
+			let title = tutorial.meta.title;
+			let view: CMSTutorialsController.ActionView = {
+				title: `Edit Tutorial ${title}`,
+				description: `Editing tutorial "${title}" at /tutorials/${tutorial.meta.slug}.`,
+			};
+			let body = await renderToString(
+				<CMSLayout title={view.title} activePath="/cms/tutorials">
+					<CMSTutorialsActionView title={view.title} description={view.description} />
+				</CMSLayout>,
 			);
 			return ok(body);
 		},
 
 		async new(ctx) {
 			let total = (await TutorialPost.findAll(db(ctx))).length;
-			let body = await render(
-				"New Tutorial",
-				"/cms/tutorials",
-				`New Tutorial form loaded. Current tutorials count: ${total}.`,
+			let view: CMSTutorialsController.ActionView = {
+				title: "New Tutorial",
+				description: `New Tutorial form loaded. Current tutorials count: ${total}.`,
+			};
+			let body = await renderToString(
+				<CMSLayout title={view.title} activePath="/cms/tutorials">
+					<CMSTutorialsActionView title={view.title} description={view.description} />
+				</CMSLayout>,
 			);
 			return ok(body);
 		},
@@ -107,18 +123,26 @@ export default controller<typeof routes.cms.tutorials>({
 		async show(ctx) {
 			let tutorial = await TutorialPost.findById(db(ctx), ctx.params.id);
 			if (!tutorial) {
-				let body = await render(
-					"Tutorial Not Found",
-					"/cms/tutorials",
-					`Tutorial ${ctx.params.id} was not found.`,
+				let view: CMSTutorialsController.ActionView = {
+					title: "Tutorial Not Found",
+					description: `Tutorial ${ctx.params.id} was not found.`,
+				};
+				let body = await renderToString(
+					<CMSLayout title={view.title} activePath="/cms/tutorials">
+						<CMSTutorialsActionView title={view.title} description={view.description} />
+					</CMSLayout>,
 				);
 				return notFound(body);
 			}
 
-			let body = await render(
-				metaTitle(tutorial.meta, `Tutorial ${tutorial.post.id}`),
-				"/cms/tutorials",
-				`Tutorial ${tutorial.post.id} lives at ${metaPath(tutorial.meta, "/tutorials")}.`,
+			let view: CMSTutorialsController.ActionView = {
+				title: tutorial.meta.title,
+				description: `Tutorial ${tutorial.post.id} lives at /tutorials/${tutorial.meta.slug}.`,
+			};
+			let body = await renderToString(
+				<CMSLayout title={view.title} activePath="/cms/tutorials">
+					<CMSTutorialsActionView title={view.title} description={view.description} />
+				</CMSLayout>,
 			);
 			return ok(body);
 		},
@@ -126,19 +150,27 @@ export default controller<typeof routes.cms.tutorials>({
 		async update(ctx) {
 			let tutorial = await TutorialPost.findById(db(ctx), ctx.params.id);
 			if (!tutorial) {
-				let body = await render(
-					"Tutorial Not Found",
-					"/cms/tutorials",
-					`Tutorial ${ctx.params.id} was not found.`,
+				let view: CMSTutorialsController.ActionView = {
+					title: "Tutorial Not Found",
+					description: `Tutorial ${ctx.params.id} was not found.`,
+				};
+				let body = await renderToString(
+					<CMSLayout title={view.title} activePath="/cms/tutorials">
+						<CMSTutorialsActionView title={view.title} description={view.description} />
+					</CMSLayout>,
 				);
 				return notFound(body);
 			}
 
-			let title = metaTitle(tutorial.meta, tutorial.post.id);
-			let body = await render(
-				`Update Tutorial ${title}`,
-				"/cms/tutorials",
-				`Update flow loaded for tutorial "${title}" (${tutorial.post.id}).`,
+			let title = tutorial.meta.title;
+			let view: CMSTutorialsController.ActionView = {
+				title: `Update Tutorial ${title}`,
+				description: `Update flow loaded for tutorial "${title}" (${tutorial.post.id}).`,
+			};
+			let body = await renderToString(
+				<CMSLayout title={view.title} activePath="/cms/tutorials">
+					<CMSTutorialsActionView title={view.title} description={view.description} />
+				</CMSLayout>,
 			);
 			return ok(body);
 		},

@@ -4,15 +4,16 @@ import { renderToString } from "remix/component/server";
 
 import type routes from "~/routes";
 
-import { CMSActionPage, CMSResourcePage } from "~/components/cms-pages";
-import { metaExternalUrl, metaTitle } from "~/lib/post-meta-view";
+import { CMSLayout } from "~/components/layout/cms";
 import { db } from "~/middleware/db";
 import { LikePost } from "~/models/posts/like";
+import { CMSBookmarksActionView, CMSBookmarksIndexView } from "~/views/cms/bookmarks";
 
-function render(title: string, activePath: string, description: string) {
-	return renderToString(
-		<CMSActionPage title={title} activePath={activePath} description={description} />,
-	);
+namespace CMSBookmarksController {
+	export interface ActionViewProps {
+		title: string;
+		description: string;
+	}
 }
 
 export default controller<typeof routes.cms.bookmarks>({
@@ -21,35 +22,32 @@ export default controller<typeof routes.cms.bookmarks>({
 	actions: {
 		async index(ctx) {
 			let bookmarks = await LikePost.findAll(db(ctx));
-			let items = bookmarks.map((bookmark) => {
-				let title = metaTitle(bookmark.meta, `Bookmark ${bookmark.post.id}`);
-				let url = metaExternalUrl(bookmark.meta) ?? "/bookmarks";
+			let items: Array<CMSBookmarksIndexView.Item> = bookmarks.map((bookmark) => {
 				return {
-					label: `${title} -> ${url}`,
-					href: `/cms/bookmarks/${bookmark.post.id}`,
+					id: bookmark.post.id,
+					title: bookmark.meta.title,
+					url: bookmark.meta.url,
 				};
 			});
 
 			let body = await renderToString(
-				<CMSResourcePage
-					title="Bookmarks"
-					activePath="/cms/bookmarks"
-					searchLabel="What're you looking for?"
-					searchCta="Search"
-					primaryCta={{ href: "/cms/bookmarks/new", label: "New Bookmark" }}
-					items={items}
-					emptyLabel="No bookmarks found in the database yet."
-				/>,
+				<CMSLayout title="Bookmarks" activePath="/cms/bookmarks">
+					<CMSBookmarksIndexView items={items} />
+				</CMSLayout>,
 			);
 			return ok(body);
 		},
 
 		async create(ctx) {
 			let total = (await LikePost.findAll(db(ctx))).length;
-			let body = await render(
-				"Create Bookmark",
-				"/cms/bookmarks",
-				`Create Bookmark. There are currently ${total} bookmarks in the database.`,
+			let view: CMSBookmarksController.ActionViewProps = {
+				title: "Create Bookmark",
+				description: `Create Bookmark. There are currently ${total} bookmarks in the database.`,
+			};
+			let body = await renderToString(
+				<CMSLayout title={view.title} activePath="/cms/bookmarks">
+					<CMSBookmarksActionView title={view.title} description={view.description} />
+				</CMSLayout>,
 			);
 			return ok(body);
 		},
@@ -57,19 +55,27 @@ export default controller<typeof routes.cms.bookmarks>({
 		async destroy(ctx) {
 			let bookmark = await LikePost.findById(db(ctx), ctx.params.id);
 			if (!bookmark) {
-				let body = await render(
-					"Bookmark Not Found",
-					"/cms/bookmarks",
-					`Bookmark ${ctx.params.id} was not found.`,
+				let view: CMSBookmarksController.ActionViewProps = {
+					title: "Bookmark Not Found",
+					description: `Bookmark ${ctx.params.id} was not found.`,
+				};
+				let body = await renderToString(
+					<CMSLayout title={view.title} activePath="/cms/bookmarks">
+						<CMSBookmarksActionView title={view.title} description={view.description} />
+					</CMSLayout>,
 				);
 				return notFound(body);
 			}
 
-			let title = metaTitle(bookmark.meta, bookmark.post.id);
-			let body = await render(
-				`Delete Bookmark ${title}`,
-				"/cms/bookmarks",
-				`Ready to delete bookmark "${title}" (${bookmark.post.id}).`,
+			let title = bookmark.meta.title;
+			let view: CMSBookmarksController.ActionViewProps = {
+				title: `Delete Bookmark ${title}`,
+				description: `Ready to delete bookmark "${title}" (${bookmark.post.id}).`,
+			};
+			let body = await renderToString(
+				<CMSLayout title={view.title} activePath="/cms/bookmarks">
+					<CMSBookmarksActionView title={view.title} description={view.description} />
+				</CMSLayout>,
 			);
 			return ok(body);
 		},
@@ -77,30 +83,42 @@ export default controller<typeof routes.cms.bookmarks>({
 		async edit(ctx) {
 			let bookmark = await LikePost.findById(db(ctx), ctx.params.id);
 			if (!bookmark) {
-				let body = await render(
-					"Bookmark Not Found",
-					"/cms/bookmarks",
-					`Bookmark ${ctx.params.id} was not found.`,
+				let view: CMSBookmarksController.ActionViewProps = {
+					title: "Bookmark Not Found",
+					description: `Bookmark ${ctx.params.id} was not found.`,
+				};
+				let body = await renderToString(
+					<CMSLayout title={view.title} activePath="/cms/bookmarks">
+						<CMSBookmarksActionView title={view.title} description={view.description} />
+					</CMSLayout>,
 				);
 				return notFound(body);
 			}
 
-			let title = metaTitle(bookmark.meta, bookmark.post.id);
-			let url = metaExternalUrl(bookmark.meta) ?? "no-url";
-			let body = await render(
-				`Edit Bookmark ${title}`,
-				"/cms/bookmarks",
-				`Editing bookmark "${title}" pointing to ${url}.`,
+			let title = bookmark.meta.title;
+			let url = bookmark.meta.url;
+			let view: CMSBookmarksController.ActionViewProps = {
+				title: `Edit Bookmark ${title}`,
+				description: `Editing bookmark "${title}" pointing to ${url}.`,
+			};
+			let body = await renderToString(
+				<CMSLayout title={view.title} activePath="/cms/bookmarks">
+					<CMSBookmarksActionView title={view.title} description={view.description} />
+				</CMSLayout>,
 			);
 			return ok(body);
 		},
 
 		async new(ctx) {
 			let total = (await LikePost.findAll(db(ctx))).length;
-			let body = await render(
-				"New Bookmark",
-				"/cms/bookmarks",
-				`New Bookmark form loaded. Current bookmarks count: ${total}.`,
+			let view: CMSBookmarksController.ActionViewProps = {
+				title: "New Bookmark",
+				description: `New Bookmark form loaded. Current bookmarks count: ${total}.`,
+			};
+			let body = await renderToString(
+				<CMSLayout title={view.title} activePath="/cms/bookmarks">
+					<CMSBookmarksActionView title={view.title} description={view.description} />
+				</CMSLayout>,
 			);
 			return ok(body);
 		},
@@ -108,18 +126,26 @@ export default controller<typeof routes.cms.bookmarks>({
 		async show(ctx) {
 			let bookmark = await LikePost.findById(db(ctx), ctx.params.id);
 			if (!bookmark) {
-				let body = await render(
-					"Bookmark Not Found",
-					"/cms/bookmarks",
-					`Bookmark ${ctx.params.id} was not found.`,
+				let view: CMSBookmarksController.ActionViewProps = {
+					title: "Bookmark Not Found",
+					description: `Bookmark ${ctx.params.id} was not found.`,
+				};
+				let body = await renderToString(
+					<CMSLayout title={view.title} activePath="/cms/bookmarks">
+						<CMSBookmarksActionView title={view.title} description={view.description} />
+					</CMSLayout>,
 				);
 				return notFound(body);
 			}
 
-			let body = await render(
-				metaTitle(bookmark.meta, `Bookmark ${bookmark.post.id}`),
-				"/cms/bookmarks",
-				`Bookmark ${bookmark.post.id} links to ${metaExternalUrl(bookmark.meta) ?? "no-url"}.`,
+			let view: CMSBookmarksController.ActionViewProps = {
+				title: bookmark.meta.title,
+				description: `Bookmark ${bookmark.post.id} links to ${bookmark.meta.url}.`,
+			};
+			let body = await renderToString(
+				<CMSLayout title={view.title} activePath="/cms/bookmarks">
+					<CMSBookmarksActionView title={view.title} description={view.description} />
+				</CMSLayout>,
 			);
 			return ok(body);
 		},
@@ -127,19 +153,27 @@ export default controller<typeof routes.cms.bookmarks>({
 		async update(ctx) {
 			let bookmark = await LikePost.findById(db(ctx), ctx.params.id);
 			if (!bookmark) {
-				let body = await render(
-					"Bookmark Not Found",
-					"/cms/bookmarks",
-					`Bookmark ${ctx.params.id} was not found.`,
+				let view: CMSBookmarksController.ActionViewProps = {
+					title: "Bookmark Not Found",
+					description: `Bookmark ${ctx.params.id} was not found.`,
+				};
+				let body = await renderToString(
+					<CMSLayout title={view.title} activePath="/cms/bookmarks">
+						<CMSBookmarksActionView title={view.title} description={view.description} />
+					</CMSLayout>,
 				);
 				return notFound(body);
 			}
 
-			let title = metaTitle(bookmark.meta, bookmark.post.id);
-			let body = await render(
-				`Update Bookmark ${title}`,
-				"/cms/bookmarks",
-				`Update flow loaded for bookmark "${title}" (${bookmark.post.id}).`,
+			let title = bookmark.meta.title;
+			let view: CMSBookmarksController.ActionViewProps = {
+				title: `Update Bookmark ${title}`,
+				description: `Update flow loaded for bookmark "${title}" (${bookmark.post.id}).`,
+			};
+			let body = await renderToString(
+				<CMSLayout title={view.title} activePath="/cms/bookmarks">
+					<CMSBookmarksActionView title={view.title} description={view.description} />
+				</CMSLayout>,
 			);
 			return ok(body);
 		},
