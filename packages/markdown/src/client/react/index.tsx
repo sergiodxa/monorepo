@@ -1,16 +1,14 @@
-import type { RenderableTreeNodes } from "@markdoc/markdoc";
-
 import { renderers } from "@markdoc/markdoc";
 import { cn } from "@pkg/cn";
 import * as React from "react";
 
+import type { Markdown } from "../../server/index.js";
+
 import { Fence } from "./fence.js";
 
 export namespace MarkdownView {
-	export type Content = RenderableTreeNodes;
-
 	export interface Props {
-		content: Content;
+		content: Markdown.AST;
 		className?: cn.ClassName;
 		components?: Record<string, React.ComponentType>;
 	}

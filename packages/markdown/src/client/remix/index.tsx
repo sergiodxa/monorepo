@@ -1,20 +1,20 @@
 /* @jsxImportSource remix/component */
-import type { RenderableTreeNode, RenderableTreeNodes, Tag } from "@markdoc/markdoc";
+import type { RenderableTreeNode, Tag } from "@markdoc/markdoc";
 import type { RemixNode } from "remix/component";
 
 import { cn } from "@pkg/cn";
 
+import type { Markdown } from "../../server/index.js";
+
 import { Fence } from "./fence.js";
 
 export namespace MarkdownView {
-	export type Content = RenderableTreeNodes;
-
 	export type Component = () => (
 		props: Record<string, unknown> & { children?: RemixNode },
 	) => RemixNode;
 
 	export interface Props {
-		content: Content;
+		content: Markdown.AST;
 		className?: cn.ClassName;
 		components?: Record<string, Component>;
 	}
@@ -227,7 +227,7 @@ function renderChild(
 }
 
 export function renderToRemix(
-	content: MarkdownView.Content,
+	content: Markdown.AST,
 	components?: MarkdownView.Props["components"],
 ): RemixNode {
 	return renderChild(content as RenderableTreeNode, components);

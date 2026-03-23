@@ -1,3 +1,5 @@
+import type { Markdown } from "@pkg/markdown/server";
+
 import { MarkdownView } from "@pkg/markdown/client/remix";
 
 import { BlogLayout } from "~/components/layout";
@@ -52,7 +54,7 @@ interface PostPageProps {
 	title: string;
 	eyebrow: string;
 	slug: string;
-	content: MarkdownView.Content | null;
+	content: Markdown.AST | null;
 	format?: string;
 	publishedAt?: string | null;
 	tags?: Array<string>;

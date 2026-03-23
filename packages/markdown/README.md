@@ -1,16 +1,22 @@
 # @pkg/markdown
 
-Markdown processing with Markdoc and Prism.js syntax highlighting.
+Type-safe Markdown parsing on the server with React and Remix renderers on the client.
 
 ## Overview
 
-This package provides server-side markdown parsing using [Markdoc](https://markdoc.dev) with automatic syntax highlighting via [Prism.js](https://prismjs.com), and a React component for rendering the parsed content. It uses [Standard Schema](https://standardschema.dev) for type-safe frontmatter validation, working with Zod, Valibot, ArkType, or any compliant library.
+`@pkg/markdown` parses markdown with [Markdoc](https://markdoc.dev), validates frontmatter with [Standard Schema](https://standardschema.dev), and highlights code blocks with [Prism.js](https://prismjs.com). The server entry point returns a Markdoc render tree (`RenderableTreeNodes`) so rendering can happen in different UI runtimes.
 
-The package is split into server and client entry points to keep client bundles small - only the rendering component is included on the client side.
+The package is split by responsibility:
+
+- `@pkg/markdown/server` parses markdown and frontmatter only
+- `@pkg/markdown/client/react` renders content in React apps
+- `@pkg/markdown/client/remix` renders content in Remix apps
+
+This split keeps parsing and syntax highlighting logic centralized while allowing different rendering targets.
 
 ## Usage
 
-### Server: Parse Markdown
+### Server: parse markdown
 
 ```typescript
 import { Markdown } from "@pkg/markdown/server";
@@ -23,9 +29,9 @@ let schema = z.object({
 	publishedAt: z.coerce.date(),
 });
 
-let md = new Markdown({ frontmatter: schema });
+let markdown = new Markdown({ frontmatter: schema });
 
-let result = md.parse(`---
+let result = markdown.parse(`---
 title: Hello World
 description: A simple example
 publishedAt: 2024-01-15
@@ -33,271 +39,231 @@ publishedAt: 2024-01-15
 
 # Hello
 
-This is **markdown** content with \`inline code\`.
+This is **markdown** content.
 
-\`\`\`typescript
-let greeting = "Hello, World!";
-console.log(greeting);
+\`\`\`tsx
+let greeting = <h1>Hello</h1>;
 \`\`\`
 `);
 
 if (isFailure(result)) {
-	console.error(result.error.message, result.error.issues);
-} else {
-	// result.data.frontmatter is typed as { title: string; description?: string; publishedAt: Date }
-	// result.data.content is MarkdownView.Content for use with MarkdownView
+	throw result.error;
 }
+
+let content = result.data.content;
+let frontmatter = result.data.frontmatter;
 ```
 
-### Client: Render Markdown
+### Client (React): render markdown
 
 ```tsx
 import { MarkdownView } from "@pkg/markdown/client/react";
-import prismStyles from "@pkg/markdown/styles/light.css?url";
+import prismLight from "@pkg/markdown/styles/light.css?url";
 import type { Route } from "./+types/article";
 
-export let links: Route.LinksFunction = () => [{ rel: "stylesheet", href: prismStyles }];
+export let links: Route.LinksFunction = () => [{ rel: "stylesheet", href: prismLight }];
 
 export default function Article({ loaderData }: Route.ComponentProps) {
 	return <MarkdownView content={loaderData.content} className="my-8" />;
 }
 ```
 
-### Dark Theme
+### Client (Remix): render markdown
 
 ```tsx
-import prismStyles from "@pkg/markdown/styles/dark.css?url";
+import { MarkdownView } from "@pkg/markdown/client/remix";
+import type { Markdown } from "@pkg/markdown/server";
 
-export let links: Route.LinksFunction = () => [{ rel: "stylesheet", href: prismStyles }];
+export function PostPage() {
+	return ({ content }: { content: Markdown.AST }) => {
+		return <MarkdownView content={content} />;
+	};
+}
+```
+
+### Dark code theme
+
+```tsx
+import prismDark from "@pkg/markdown/styles/dark.css?url";
+
+export let links = () => [{ rel: "stylesheet", href: prismDark }];
 ```
 
 ## API
 
-### Server
+### `Markdown<Schema>`
 
-#### `Markdown` Class
+Server parser class.
 
-Creates a markdown parser instance with configured frontmatter schema.
+#### `new Markdown(options: Markdown.Options<Schema>)`
 
-```typescript
-import { Markdown } from "@pkg/markdown/server";
-
-let md = new Markdown({
-	frontmatter: schema, // Required: Standard Schema for frontmatter
-	markdoc: {
-		// Optional: Markdoc configuration
-		nodes: {}, // Custom Markdoc node overrides
-		tags: {}, // Custom Markdoc tags
-	},
-});
-```
-
-#### `Markdown.parse(raw: string)`
-
-Parses raw markdown content and returns a Result with typed frontmatter and renderable content.
+Creates a parser instance.
 
 **Parameters:**
 
-- `raw`: The raw markdown string to parse
+- `options.frontmatter`: Standard Schema validator for frontmatter
+- `options.markdoc?`: Optional Markdoc config (`nodes`, `tags`, etc.)
+
+#### `markdown.parse(raw: string): Result<Markdown.Parsed<FM>, MarkdownParseError>`
+
+Parses frontmatter + markdown body and transforms it to Markdoc renderable content.
+
+**Parameters:**
+
+- `raw`: Markdown source
 
 **Returns:**
 
-- `Result<Markdown.Parsed<FM>, MarkdownParseError>` containing on success:
-  - `content`: `MarkdownView.Content` - Markdoc AST for rendering
-  - `frontmatter`: Validated and typed frontmatter object
+- `success`: `{ content, frontmatter }`
+- `failure`: `MarkdownParseError`
 
 **Example:**
 
 ```typescript
 import { isFailure } from "@pkg/result";
 
-let result = md.parse(rawMarkdown);
+let result = markdown.parse(raw);
 if (isFailure(result)) {
-	console.error(result.error.issues);
 	return;
 }
-let { content, frontmatter } = result.data;
+
+let content = result.data.content;
 ```
 
-#### `Markdown.frontmatter(raw: string, schema: Schema)`
+#### `Markdown.frontmatter(raw: string, schema: Schema): Result<{ frontmatter: FM; content: string }, MarkdownParseError>`
 
-Static method to extract and validate frontmatter without full parsing. Useful when you only need metadata.
+Extracts and validates frontmatter without full Markdoc transform.
 
 **Parameters:**
 
-- `raw`: The raw markdown string
-- `schema`: Standard Schema for validation
+- `raw`: Markdown source
+- `schema`: Standard Schema validator
 
 **Returns:**
 
-- `Result<{ frontmatter: FM; content: string }, MarkdownParseError>` - Validated frontmatter and remaining content
+- `success`: `{ frontmatter, content }`
+- `failure`: `MarkdownParseError`
 
 **Example:**
 
 ```typescript
 import { Markdown } from "@pkg/markdown/server";
 import { isFailure } from "@pkg/result";
-import { z } from "zod";
 
-let schema = z.object({ title: z.string() });
-let result = Markdown.frontmatter(rawMarkdown, schema);
-if (isFailure(result)) return;
-// result.data.frontmatter.title is typed as string
-// result.data.content is the markdown without frontmatter block
+let result = Markdown.frontmatter(raw, schema);
+if (isFailure(result)) {
+	return;
+}
+
+let frontmatter = result.data.frontmatter;
 ```
 
-#### `MarkdownParseError`
+### `MarkdownParseError`
 
-Error class returned in failure results when frontmatter validation fails.
+Error returned on validation failures.
 
 **Properties:**
 
-- `message`: Error description
-- `issues`: `ReadonlyArray<StandardSchemaV1.Issue>` - Validation issues with paths
+- `name`: `"MarkdownParseError"`
+- `issues`: Standard Schema issues list
 
-**Example:**
+### `MarkdownView` (React)
 
-```typescript
-import { Markdown, MarkdownParseError } from "@pkg/markdown/server";
-import { isFailure } from "@pkg/result";
+Import from `@pkg/markdown/client/react`.
 
-let result = md.parse(rawMarkdown);
-if (isFailure(result)) {
-	console.error(result.error.message);
-	for (let issue of result.error.issues) {
-		console.error(`${issue.path?.join(".")}: ${issue.message}`);
-	}
-}
-```
-
-### Client
-
-#### `MarkdownView` Component
-
-React component that renders parsed Markdoc content with syntax-highlighted code blocks.
+Renders parsed markdown content in React.
 
 **Props:**
 
-- `content`: `MarkdownView.Content` - The parsed content from `Markdown.parse()`
-- `className?`: `cn.ClassName` - Additional CSS classes for the container (supports strings, arrays, objects)
-- `components?`: `Record<string, React.ComponentType>` - Custom components for Markdoc tags
+- `content`: `Markdown.AST`
+- `className?`: `cn.ClassName`
+- `components?`: `Record<string, React.ComponentType>`
 
 **Example:**
 
 ```tsx
 import { MarkdownView } from "@pkg/markdown/client/react";
+import type { Markdown } from "@pkg/markdown/server";
 
-function Callout({ type, children }) {
-	return <div className={`callout callout-${type}`}>{children}</div>;
-}
-
-function DocPage({ content }: { content: MarkdownView.Content }) {
-	return (
-		<article>
-			<MarkdownView content={content} components={{ Callout }} />
-		</article>
-	);
+function Doc({ content }: { content: Markdown.AST }) {
+	return <MarkdownView content={content} className="prose" />;
 }
 ```
 
-The component wraps content in a `div` with Tailwind Typography classes (`prose prose-neutral dark:prose-invert max-w-none`) and uses `cn()` from `@pkg/cn` to merge classes. Code blocks include copy-to-clipboard functionality.
+### `MarkdownView` (Remix)
 
-Note: The `Fence` component for code blocks cannot be overridden.
+Import from `@pkg/markdown/client/remix`.
 
-#### `MarkdownView.Content` Type
+Renders parsed markdown content in Remix Component runtime.
 
-Type alias for the parsed markdown content. Use this instead of importing `RenderableTreeNodes` from `@markdoc/markdoc`.
+**Props:**
+
+- `content`: `Markdown.AST`
+- `className?`: `cn.ClassName`
+- `components?`: `Record<string, MarkdownView.Component>`
+
+**Example:**
+
+```tsx
+import { MarkdownView } from "@pkg/markdown/client/remix";
+import type { Markdown } from "@pkg/markdown/server";
+
+export function DocPage() {
+	return ({ content }: { content: Markdown.AST }) => {
+		return <MarkdownView content={content} />;
+	};
+}
+```
+
+### `Markdown.AST`
+
+Type alias for parsed renderable content in both client entry points.
 
 ```typescript
-import { MarkdownView } from "@pkg/markdown/client/react";
+import type { Markdown } from "@pkg/markdown/server";
 
-interface ArticleProps {
-	content: MarkdownView.Content;
+interface ArticleData {
+	content: Markdown.AST;
 }
 ```
 
-## Syntax Highlighting
+## Patterns
 
-Code blocks are automatically syntax-highlighted using Prism.js. Supported languages:
-
-- `typescript` / `ts` / `tsx`
-- `javascript` / `js` / `jsx`
-- `bash` / `sh` / `shell`
-- `json`
-- `yaml` / `yml`
-- `css`
-- `html` / `erb`
-- `markdown` / `md` / `mdx`
-- `sql`
-- `python` / `py`
-- `ruby` / `rb`
-- `graphql` / `gql`
-- `http` / `rest`
-- `diff`
-- `plain` / `text` / `env` / `dotenv`
-
-Language aliases are normalized automatically (e.g., `ts` becomes `typescript`).
-
-## Integration with React Router
-
-### Loader Pattern
+### Pattern: React Router loader + React renderer
 
 ```tsx
 import { Markdown } from "@pkg/markdown/server";
+import { MarkdownView } from "@pkg/markdown/client/react";
 import { isFailure } from "@pkg/result";
-import { z } from "zod";
 import type { Route } from "./+types/docs.$slug";
+import { z } from "zod";
 
-let md = new Markdown({
-	frontmatter: z.object({ title: z.string(), description: z.string() }),
-});
+let parser = new Markdown({ frontmatter: z.object({ title: z.string() }) });
 
 export async function loader({ params }: Route.LoaderArgs) {
-	let file = await readFile(`./docs/${params.slug}.md`, "utf-8");
-	let result = md.parse(file);
-	if (isFailure(result)) throw new Response("Invalid document", { status: 500 });
-
+	let raw = await Bun.file(`./content/${params.slug}.md`).text();
+	let result = parser.parse(raw);
+	if (isFailure(result)) throw new Response("Invalid markdown", { status: 500 });
 	return result.data;
 }
 
-export default function DocsPage({ loaderData }: Route.ComponentProps) {
-	return (
-		<article>
-			<h1>{loaderData.frontmatter.title}</h1>
-			<p>{loaderData.frontmatter.description}</p>
-			<MarkdownView content={loaderData.content} />
-		</article>
-	);
+export default function Docs({ loaderData }: Route.ComponentProps) {
+	return <MarkdownView content={loaderData.content} />;
 }
 ```
 
-### Meta Function
+### Pattern: Custom Markdoc tag + custom component
 
 ```typescript
-export function meta({ data }: Route.MetaArgs) {
-	return [
-		{ title: data.frontmatter.title },
-		{ name: "description", content: data.frontmatter.description },
-	];
-}
-```
-
-## Pattern: Custom Markdoc Tags
-
-Extend markdown with custom components:
-
-```typescript
-import { Markdown } from "@pkg/markdown/server";
 import { Tag } from "@markdoc/markdoc";
+import { Markdown } from "@pkg/markdown/server";
 
-let md = new Markdown({
+let parser = new Markdown({
 	frontmatter: schema,
 	markdoc: {
 		tags: {
 			callout: {
-				attributes: {
-					type: { type: String, default: "info" },
-				},
+				attributes: { type: { type: String, default: "info" } },
 				transform(node, config) {
 					return new Tag("Callout", { type: node.attributes.type }, node.transformChildren(config));
 				},
@@ -307,56 +273,45 @@ let md = new Markdown({
 });
 ```
 
-Then pass the component to `MarkdownView`:
+Then render with client components:
 
 ```tsx
 import { MarkdownView } from "@pkg/markdown/client/react";
+import type { Markdown } from "@pkg/markdown/server";
 
 function Callout({ type, children }: { type: string; children: React.ReactNode }) {
-	return <div className={`callout callout-${type}`}>{children}</div>;
+	return <div className={`callout-${type}`}>{children}</div>;
 }
 
-export default function DocsPage({ loaderData }: Route.ComponentProps) {
-	return <MarkdownView content={loaderData.content} components={{ Callout }} />;
+function Page({ content }: { content: Markdown.AST }) {
+	return <MarkdownView content={content} components={{ Callout }} />;
 }
 ```
 
-## Pattern: Reusable Schema
-
-Define schemas in a central location:
+### Pattern: Frontmatter-only reads for list pages
 
 ```typescript
-// lib/markdown.ts
 import { Markdown } from "@pkg/markdown/server";
-import { z } from "zod";
+import { isFailure } from "@pkg/result";
 
-export let docsSchema = z.object({
-	title: z.string(),
-	description: z.string(),
-	sidebar: z.string().optional(),
-});
+let result = Markdown.frontmatter(rawMarkdown, schema);
+if (isFailure(result)) {
+	return null;
+}
 
-export let blogSchema = z.object({
-	title: z.string(),
-	description: z.string(),
-	publishedAt: z.coerce.date(),
-	author: z.string(),
-	tags: z.string().transform((s) => s.split(",").map((t) => t.trim())),
-});
-
-export let docsMd = new Markdown({ frontmatter: docsSchema });
-export let blogMd = new Markdown({ frontmatter: blogSchema });
+let metadata = result.data.frontmatter;
 ```
 
 ## Related Packages
 
-- [`@pkg/result`](/packages/result) - Result type for explicit error handling
-- [`@pkg/validate`](/packages/validate) - Form validation with Standard Schema
+- [`@pkg/result`](/packages/result) - Explicit success/failure handling
+- [`@pkg/validate`](/packages/validate) - Validation helpers with Standard Schema
+- [`@pkg/cn`](/packages/cn) - Class name composition used by renderers
 
 ## Tips
 
-1. **Split imports** - Import from `/server` in loaders and `/client` in components to optimize bundles
-2. **Validate early** - Use `Markdown.frontmatter()` to validate metadata without full parsing when listing content
-3. **Reuse instances** - Create `Markdown` instances once and reuse them across requests
-4. **Custom errors** - Catch `MarkdownParseError` to provide user-friendly validation messages
-5. **Theme matching** - Import the CSS theme that matches your app's color scheme
+1. **Choose the right client entry** - Use `@pkg/markdown/client/react` for React apps and `@pkg/markdown/client/remix` for Remix apps.
+2. **Import only server code in loaders/actions** - Keep rendering code out of server-only modules to avoid unnecessary bundle weight.
+3. **Always load a Prism stylesheet** - Import `@pkg/markdown/styles/light.css` or `@pkg/markdown/styles/dark.css` in routes that render markdown.
+4. **Reuse parser instances** - Create `Markdown` instances at module scope and reuse them across requests.
+5. **Prefer `Markdown.frontmatter` for index pages** - It is faster when you only need metadata and not full rendered content.

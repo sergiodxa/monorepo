@@ -23,8 +23,10 @@ export class MarkdownParseError extends Error {
 }
 
 export namespace Markdown {
+	export type AST = RenderableTreeNodes;
+
 	export interface Parsed<FM> {
-		content: RenderableTreeNodes;
+		content: AST;
 		frontmatter: FM;
 	}
 
