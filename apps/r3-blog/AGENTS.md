@@ -16,6 +16,7 @@ This document defines app-specific rules for `apps/r3-blog`.
 - MUST keep color tokens centralized in `src/styles/colors.css`.
 - MUST keep code-block syntax colors in `src/styles/prism.css` as a dedicated theme (not a flat reuse of generic UI text colors).
 - MUST ensure changes pass `bunx tsc -p apps/r3-blog/tsconfig.json`.
+- MUST use namespaces for types only; no runtime values, functions, or classes inside namespaces.
 
 - SHOULD keep controller logic small and move reusable data transforms to models or helpers.
 - SHOULD keep color and typography changes consistent with the current warm visual style.
@@ -51,9 +52,8 @@ This document defines app-specific rules for `apps/r3-blog`.
   - `src/controller/post.tsx`
   - `src/controller/colors.tsx`
 - UI components
-  - `src/components/layout.tsx`
-  - `src/components/pages.tsx`
-  - `src/components/cms-pages.tsx`
+  - `src/components/layout/blog.tsx`
+  - `src/components/layout/cms.tsx`
 - Styling system
   - `src/styles/colors.css`
   - `src/styles/prism.css`
