@@ -6,6 +6,9 @@ import { methodOverride } from "remix/method-override-middleware";
 
 import { BlogLayout } from "~/components/layout/blog";
 import articles from "~/controller/articles";
+import callback from "~/controller/auth/callback";
+import login from "~/controller/auth/login";
+import logout from "~/controller/auth/logout";
 import bookmarks from "~/controller/bookmarks";
 import cmsArticles from "~/controller/cms/articles";
 import cmsBookmarks from "~/controller/cms/bookmarks";
@@ -16,8 +19,6 @@ import cmsTutorials from "~/controller/cms/tutorials";
 import colors from "~/controller/colors";
 import feed from "~/controller/feed";
 import glossary from "~/controller/glossary";
-import login from "~/controller/login";
-import logout from "~/controller/logout";
 import post from "~/controller/post";
 import tutorials from "~/controller/tutorials";
 import auth from "~/middleware/auth";
@@ -50,13 +51,19 @@ router.map(routes, {
 	actions: {
 		feed,
 		colors,
-		login,
-		logout,
+
 		articles,
 		tutorials,
 		bookmarks,
 		glossary,
+
 		post,
+
+		auth: {
+			login,
+			callback,
+			logout,
+		},
 
 		cms: {
 			middleware: [auth],

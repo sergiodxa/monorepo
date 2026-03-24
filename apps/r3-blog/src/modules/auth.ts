@@ -27,7 +27,7 @@ export function startAuthentication(request: Request) {
 	let authorizeUrl = new URL("https://auth.sergiodxa.com/authorize");
 	authorizeUrl.searchParams.set("response_type", "code");
 	authorizeUrl.searchParams.set("client_id", env.CLIENT_ID);
-	authorizeUrl.searchParams.set("redirect_uri", new URL("/login", url).toString());
+	authorizeUrl.searchParams.set("redirect_uri", callbackUrl(request));
 	authorizeUrl.searchParams.set("scope", "openid profile email");
 	authorizeUrl.searchParams.set("state", state);
 
@@ -54,7 +54,7 @@ export async function exchangeCode(
 	code: string,
 ): Promise<AuthModule.OAuthTokens> {
 	let tokenUrl = "https://auth.sergiodxa.com/oauth/token";
-	let redirectUri = new URL("/login", request.url).toString();
+	let redirectUri = callbackUrl(request);
 	let body = new URLSearchParams({
 		grant_type: "authorization_code",
 		code,
@@ -89,7 +89,7 @@ export async function exchangeCode(
 }
 
 export async function fetchUserProfile(accessToken: string): Promise<AuthModule.UserProfile> {
-	let response = await fetch("https://auth.sergiodxa.com/oidc/userinfo", {
+	let response = await fetch("https://auth.sergiodxa.com/userinfo", {
 		headers: {
 			Authorization: `Bearer ${accessToken}`,
 		},
@@ -153,4 +153,8 @@ function normalizeNextPath(value: string | null) {
 	if (!value || !value.startsWith("/") || value.startsWith("//")) return "/cms";
 	if (value === "/login") return "/cms";
 	return value;
+}
+
+function callbackUrl(request: Request) {
+	return new URL("/auth/callback", request.url).toString();
 }

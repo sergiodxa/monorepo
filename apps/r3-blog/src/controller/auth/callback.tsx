@@ -14,31 +14,20 @@ import {
 	fetchUserProfile,
 	readAuthNext,
 	readAuthState,
-	startAuthentication,
 } from "~/modules/auth";
 import { LoginView } from "~/views/login";
 
-export default action<typeof routes.login>(async (ctx) => {
+export default action<typeof routes.auth.callback>(async (ctx) => {
 	if (ctx.auth.isAuthenticated) {
 		return redirect("/cms", { status: redirect.Status.SeeOther });
 	}
 
 	let url = new URL(ctx.request.url);
-	let isStartingFlow = url.searchParams.get("start") === "1";
-	if (isStartingFlow) return startAuthentication(ctx.request);
-
 	let code = url.searchParams.get("code");
 	let state = url.searchParams.get("state");
 
 	if (!code || !state) {
-		let next = normalizeNextPath(url.searchParams.get("next"));
-		let body = await renderToString(
-			<BlogLayout title="Login" description="Authenticate to access CMS tools" activePath="/login">
-				<LoginView next={next} />
-			</BlogLayout>,
-		);
-
-		return ok(body);
+		return redirect("/login", { status: redirect.Status.SeeOther });
 	}
 
 	let expectedState = readAuthState(ctx.request);
@@ -71,7 +60,7 @@ export default action<typeof routes.login>(async (ctx) => {
 	ctx.auth.login(user);
 	ctx.auth.setIdToken(tokens.idToken);
 
-	let nextPath = normalizeNextPath(readAuthNext(ctx.request));
+	let nextPath = readAuthNext(ctx.request);
 	let response = redirect(nextPath, { status: redirect.Status.SeeOther });
 
 	for (let cookie of clearAuthFlowCookies()) {
@@ -80,9 +69,3 @@ export default action<typeof routes.login>(async (ctx) => {
 
 	return response;
 });
-
-function normalizeNextPath(value: string | null) {
-	if (!value || !value.startsWith("/") || value.startsWith("//")) return "/cms";
-	if (value === "/login") return "/cms";
-	return value;
-}

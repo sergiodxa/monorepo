@@ -3,8 +3,6 @@ import { route, get, resources } from "remix/fetch-router/routes";
 export default route({
 	feed: get("/"),
 	colors: get("/colors"),
-	login: get("/login"),
-	logout: get("/logout"),
 
 	articles: get("/articles"),
 	tutorials: get("/tutorials"),
@@ -12,6 +10,12 @@ export default route({
 	glossary: get("/glossary"),
 
 	post: get("/:postType/:postSlug(.:ext)"),
+
+	auth: {
+		login: get("/login"),
+		logout: get("/logout"),
+		callback: get("/auth/callback"),
+	},
 
 	cms: route("/cms", {
 		dashboard: get("/"),

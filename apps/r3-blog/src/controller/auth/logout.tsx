@@ -9,7 +9,7 @@ import { BlogLayout } from "~/components/layout/blog";
 import { buildLogoutUrl, clearAuthFlowCookies } from "~/modules/auth";
 import { LogoutView } from "~/views/logout";
 
-export default action<typeof routes.logout>(async (ctx) => {
+export default action<typeof routes.auth.logout>(async (ctx) => {
 	if (!ctx.auth.isAuthenticated) {
 		return redirect("/", { status: redirect.Status.SeeOther });
 	}
