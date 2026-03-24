@@ -15,7 +15,15 @@
 	],
 	"categories": {},
 	"rules": {},
-	"settings": {},
+	"settings": {
+		"jsx-a11y": {
+			"components": {
+				"Input": "input",
+				"Select": "select",
+				"Button": "button"
+			}
+		}
+	},
 	"env": {
 		"builtin": true
 	},
