@@ -21,6 +21,7 @@ import feed from "~/controller/feed";
 import glossary from "~/controller/glossary";
 import post from "~/controller/post";
 import tutorials from "~/controller/tutorials";
+import asyncContext from "~/middleware/async-context";
 import auth from "~/middleware/auth";
 import authState from "~/middleware/auth-state";
 import db from "~/middleware/db";
@@ -30,7 +31,15 @@ import routes from "~/routes";
 import { NotFoundView } from "~/views/not-found";
 
 export const router = createRouter({
-	middleware: [session, formData(), methodOverride(), redirectsMiddleware, db(), authState],
+	middleware: [
+		asyncContext,
+		session,
+		formData(),
+		methodOverride(),
+		redirectsMiddleware,
+		db(),
+		authState,
+	],
 	async defaultHandler() {
 		let body = await renderToString(
 			<BlogLayout title="Not Found" description="The requested page was not found.">

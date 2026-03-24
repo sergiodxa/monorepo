@@ -6,6 +6,7 @@ import { renderToString } from "remix/component/server";
 import type routes from "~/routes";
 
 import { CMSLayout } from "~/components/layout/cms";
+import { authState } from "~/middleware/auth-state";
 import { db } from "~/middleware/db";
 import { GlossaryPost } from "~/models/posts/glossary";
 import { CMSGlossaryActionView, CMSGlossaryIndexView } from "~/views/cms/glossary";
@@ -16,14 +17,17 @@ export default controller<typeof routes.cms.glossary>({
 	actions: {
 		async index(ctx) {
 			let glossary = await GlossaryPost.findAll(db(ctx));
-			let items = glossary.map(
-				(item): CMSGlossaryIndexView.Item => ({
-					id: item.post.id,
-					term: item.meta.term,
-					slug: item.meta.slug,
-					href: `/cms/glossary/${item.post.id}/edit`,
-				}),
-			);
+			let items = glossary.map((item) => ({
+				id: item.post.id,
+				term: item.meta.term,
+				slug: item.meta.slug,
+				date: formatListDate(item.post.created_at),
+				href: `/cms/glossary/${item.post.id}/edit`,
+				editHref: `/cms/glossary/${item.post.id}/edit`,
+				showHref: `/cms/glossary/${item.post.id}`,
+				deleteAction: `/cms/glossary/${item.post.id}`,
+				publicHref: `/glossary#${item.meta.slug}`,
+			}));
 
 			let body = await renderToString(
 				<CMSLayout title="Glossary" activePath="/cms/glossary">
@@ -34,13 +38,12 @@ export default controller<typeof routes.cms.glossary>({
 		},
 
 		async create(ctx) {
-			let user = ctx.auth.user;
+			let user = authState().user;
 			if (!user) return redirect("/login", { status: redirect.Status.SeeOther });
 
 			let formData = await ctx.request.formData();
 			let created = await GlossaryPost.create(db(ctx), {
 				author_id: user.id,
-				published_at: parsePublishedAt(formData),
 				meta: {
 					term: readString(formData, "term") || "Untitled term",
 					title: readString(formData, "title") || undefined,
@@ -67,10 +70,10 @@ export default controller<typeof routes.cms.glossary>({
 		async edit(ctx) {
 			let glossary = await GlossaryPost.findById(db(ctx), ctx.params.id);
 			if (!glossary) {
-				let viewProps: CMSGlossaryActionView.Props = {
+				let viewProps = {
 					title: "Glossary Term Not Found",
 					description: `Glossary term ${ctx.params.id} was not found.`,
-					mode: "new",
+					mode: "new" as const,
 					action: "/cms/glossary",
 					submitLabel: "Create Glossary Term",
 					values: {
@@ -78,36 +81,34 @@ export default controller<typeof routes.cms.glossary>({
 						title: "",
 						slug: "",
 						definition: "",
-						published_at: "",
 					},
 				};
 				let body = await renderToString(
 					<CMSLayout title="Glossary Term Not Found" activePath="/cms/glossary">
-						<CMSGlossaryActionView {...viewProps} />
+						<CMSGlossaryActionView {...(viewProps as CMSGlossaryActionView.Props)} />
 					</CMSLayout>,
 				);
 				return notFound(body);
 			}
 
-			let viewProps: CMSGlossaryActionView.Props = {
+			let viewProps = {
 				title: `Edit Glossary ${glossary.meta.term}`,
 				description: `Editing glossary term at /glossary#${glossary.meta.slug}.`,
-				mode: "edit",
+				mode: "edit" as const,
 				action: `/cms/glossary/${glossary.post.id}`,
 				submitLabel: "Save Glossary Term",
 				deleteAction: `/cms/glossary/${glossary.post.id}`,
 				values: {
-					term: glossary.meta.term,
+					term: glossary.meta.term ?? "",
 					title: glossary.meta.title ?? "",
-					slug: glossary.meta.slug,
-					definition: glossary.meta.definition,
-					published_at: glossary.post.published_at ?? "",
+					slug: glossary.meta.slug ?? "",
+					definition: glossary.meta.definition ?? "",
 				},
 			};
 
 			let body = await renderToString(
 				<CMSLayout title={viewProps.title} activePath="/cms/glossary">
-					<CMSGlossaryActionView {...viewProps} />
+					<CMSGlossaryActionView {...(viewProps as CMSGlossaryActionView.Props)} />
 				</CMSLayout>,
 			);
 			return ok(body);
@@ -115,10 +116,10 @@ export default controller<typeof routes.cms.glossary>({
 
 		async new(ctx) {
 			let total = (await GlossaryPost.findAll(db(ctx))).length;
-			let viewProps: CMSGlossaryActionView.Props = {
+			let viewProps = {
 				title: "New Glossary",
 				description: `New Glossary form loaded. Current glossary count: ${total}.`,
-				mode: "new",
+				mode: "new" as const,
 				action: "/cms/glossary",
 				submitLabel: "Create Glossary Term",
 				values: {
@@ -126,12 +127,11 @@ export default controller<typeof routes.cms.glossary>({
 					title: "",
 					slug: "",
 					definition: "",
-					published_at: "",
 				},
 			};
 			let body = await renderToString(
 				<CMSLayout title={viewProps.title} activePath="/cms/glossary">
-					<CMSGlossaryActionView {...viewProps} />
+					<CMSGlossaryActionView {...(viewProps as CMSGlossaryActionView.Props)} />
 				</CMSLayout>,
 			);
 			return ok(body);
@@ -145,7 +145,7 @@ export default controller<typeof routes.cms.glossary>({
 		},
 
 		async update(ctx) {
-			let user = ctx.auth.user;
+			let user = authState().user;
 			let glossaryId = ctx.params.id;
 			if (!user || !glossaryId) {
 				return redirect("/cms/glossary", { status: redirect.Status.SeeOther });
@@ -154,7 +154,6 @@ export default controller<typeof routes.cms.glossary>({
 			let formData = await ctx.request.formData();
 			let updated = await GlossaryPost.update(db(ctx), glossaryId, {
 				author_id: user.id,
-				published_at: parsePublishedAt(formData),
 				meta: {
 					term: readString(formData, "term") || "Untitled term",
 					title: readString(formData, "title") || undefined,
@@ -176,9 +175,8 @@ function readString(formData: FormData, key: string) {
 	return value.trim();
 }
 
-function parsePublishedAt(formData: FormData) {
-	let value = readString(formData, "published_at");
-	if (!value) return null;
-	if (Number.isNaN(Date.parse(value))) return null;
-	return value;
+function formatListDate(value: string) {
+	let parsed = new Date(value);
+	if (Number.isNaN(parsed.getTime())) return "";
+	return parsed.toISOString().slice(0, 10);
 }

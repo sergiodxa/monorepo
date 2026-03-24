@@ -3,26 +3,21 @@ import { createStorageKey, type RequestContext } from "remix/fetch-router";
 
 import type * as schema from "~/schema";
 
+import { getContext } from "~/middleware/async-context";
 import { db } from "~/middleware/db";
 import { User } from "~/models/user";
-
-declare module "remix/fetch-router" {
-	interface RequestContext {
-		auth: AuthState;
-	}
-}
 
 let key = createStorageKey<AuthState>();
 
 export default middleware(async (ctx, next) => {
 	let state = await AuthState.create(ctx);
 	ctx.storage.set(key, state);
-	ctx.auth = state;
 
 	return next();
 });
 
-export function authState(ctx: RequestContext) {
+export function authState() {
+	let ctx = getContext();
 	let state = ctx.storage.get(key);
 	if (state) return state;
 	throw new Error("Auth state not found in context. Make sure to use the auth-state middleware.");

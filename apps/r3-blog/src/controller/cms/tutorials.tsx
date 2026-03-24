@@ -6,6 +6,7 @@ import { renderToString } from "remix/component/server";
 import type routes from "~/routes";
 
 import { CMSLayout } from "~/components/layout/cms";
+import { authState } from "~/middleware/auth-state";
 import { db } from "~/middleware/db";
 import { TutorialPost } from "~/models/posts/tutorial";
 import { CMSTutorialsActionView, CMSTutorialsIndexView } from "~/views/cms/tutorials";
@@ -20,11 +21,16 @@ export default controller<typeof routes.cms.tutorials>({
 	actions: {
 		async index(ctx) {
 			let tutorials = await TutorialPost.findAll(db(ctx));
-			let items: Array<CMSTutorialsIndexView.Item> = tutorials.map((tutorial) => ({
+			let items = tutorials.map((tutorial) => ({
 				id: tutorial.post.id,
 				title: tutorial.meta.title,
 				slug: tutorial.meta.slug,
+				date: formatListDate(tutorial.post.published_at ?? tutorial.post.created_at),
 				href: `/cms/tutorials/${tutorial.post.id}/edit`,
+				editHref: `/cms/tutorials/${tutorial.post.id}/edit`,
+				showHref: `/cms/tutorials/${tutorial.post.id}`,
+				deleteAction: `/cms/tutorials/${tutorial.post.id}`,
+				publicHref: `/tutorials/${tutorial.meta.slug}`,
 			}));
 
 			let body = await renderToString(
@@ -36,7 +42,7 @@ export default controller<typeof routes.cms.tutorials>({
 		},
 
 		async create(ctx) {
-			let user = ctx.auth.user;
+			let user = authState().user;
 			if (!user) return redirect("/login", { status: redirect.Status.SeeOther });
 
 			let formData = await ctx.request.formData();
@@ -100,12 +106,12 @@ export default controller<typeof routes.cms.tutorials>({
 				submitLabel: "Save Tutorial",
 				deleteAction: `/cms/tutorials/${tutorial.post.id}`,
 				values: {
-					title: tutorial.meta.title,
-					slug: tutorial.meta.slug,
-					excerpt: tutorial.meta.excerpt,
+					title: tutorial.meta.title ?? "",
+					slug: tutorial.meta.slug ?? "",
+					excerpt: tutorial.meta.excerpt ?? "",
 					tags: TutorialPost.tags(tutorial.meta.tags).join(", "),
-					content: tutorial.meta.content,
-					published_at: tutorial.post.published_at ?? "",
+					content: tutorial.meta.content ?? "",
+					published_at: toDateInputValue(tutorial.post.published_at),
 				},
 			};
 			let body = await renderToString(
@@ -149,7 +155,7 @@ export default controller<typeof routes.cms.tutorials>({
 		},
 
 		async update(ctx) {
-			let user = ctx.auth.user;
+			let user = authState().user;
 			let tutorialId = ctx.params.id;
 			if (!user || !tutorialId) {
 				return redirect("/cms/tutorials", { status: redirect.Status.SeeOther });
@@ -196,6 +202,27 @@ function parseTags(formData: FormData) {
 function parsePublishedAt(formData: FormData) {
 	let value = readString(formData, "published_at");
 	if (!value) return null;
-	if (Number.isNaN(Date.parse(value))) return null;
-	return value;
+
+	if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+		let parsed = new Date(`${value}T00:00:00.000Z`);
+		if (Number.isNaN(parsed.getTime())) return null;
+		return parsed.toISOString();
+	}
+
+	let parsed = new Date(value);
+	if (Number.isNaN(parsed.getTime())) return null;
+	return parsed.toISOString();
+}
+
+function toDateInputValue(value: string | null) {
+	if (!value) return "";
+	let parsed = new Date(value);
+	if (Number.isNaN(parsed.getTime())) return "";
+	return parsed.toISOString().slice(0, 10);
+}
+
+function formatListDate(value: string) {
+	let parsed = new Date(value);
+	if (Number.isNaN(parsed.getTime())) return "";
+	return parsed.toISOString().slice(0, 10);
 }

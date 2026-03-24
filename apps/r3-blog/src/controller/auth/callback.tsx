@@ -6,66 +6,42 @@ import { renderToString } from "remix/component/server";
 import type routes from "~/routes";
 
 import { BlogLayout } from "~/components/layout/blog";
+import { verifyIdToken } from "~/entities/id-token";
+import { authState } from "~/middleware/auth-state";
 import { db } from "~/middleware/db";
 import { User } from "~/models/user";
-import {
-	clearAuthFlowCookies,
-	exchangeCode,
-	fetchUserProfile,
-	readAuthNext,
-	readAuthState,
-} from "~/modules/auth";
-import { LoginView } from "~/views/login";
+import { authenticate } from "~/modules/oauth";
+import { LoginView } from "~/views/auth/login";
 
 export default action<typeof routes.auth.callback>(async (ctx) => {
-	if (ctx.auth.isAuthenticated) {
+	let auth = authState();
+
+	if (auth.isAuthenticated) {
 		return redirect("/cms", { status: redirect.Status.SeeOther });
 	}
 
-	let url = new URL(ctx.request.url);
-	let code = url.searchParams.get("code");
-	let state = url.searchParams.get("state");
-
-	if (!code || !state) {
-		return redirect("/login", { status: redirect.Status.SeeOther });
-	}
-
-	let expectedState = readAuthState(ctx.request);
-	if (!expectedState || expectedState !== state) {
+	let tokens = await authenticate(ctx.request);
+	if (tokens instanceof Response) {
 		let body = await renderToString(
 			<BlogLayout title="Login" description="Authenticate to access CMS tools" activePath="/login">
-				<LoginView next="/cms" error="Authentication state mismatch. Please try again." />
+				<LoginView error="Authentication failed. Please try again." />
 			</BlogLayout>,
 		);
 
-		let response = ok(body);
-
-		for (let cookie of clearAuthFlowCookies()) {
-			response.headers.append("Set-Cookie", cookie);
-		}
-
-		return response;
+		return ok(body);
 	}
 
-	let tokens = await exchangeCode(ctx.request, code);
-	let profile = await fetchUserProfile(tokens.accessToken);
+	let idToken = await verifyIdToken(tokens.idToken());
 	let user = await User.findOrCreateFromAuthProfile(db(ctx), {
-		subjectId: profile.subjectId,
-		email: profile.email,
-		avatar: profile.avatar,
-		username: profile.username,
-		displayName: profile.name,
+		subjectId: idToken.subject,
+		email: idToken.email,
+		avatar: idToken.picture,
+		username: idToken.username,
+		displayName: idToken.name,
 	});
 
-	ctx.auth.login(user);
-	ctx.auth.setIdToken(tokens.idToken);
+	auth.login(user);
+	auth.setIdToken(tokens.idToken());
 
-	let nextPath = readAuthNext(ctx.request);
-	let response = redirect(nextPath, { status: redirect.Status.SeeOther });
-
-	for (let cookie of clearAuthFlowCookies()) {
-		response.headers.append("Set-Cookie", cookie);
-	}
-
-	return response;
+	return redirect("/cms", { status: redirect.Status.SeeOther });
 });

@@ -6,13 +6,10 @@ import { renderToString } from "remix/component/server";
 import type routes from "~/routes";
 
 import { CMSLayout } from "~/components/layout/cms";
+import { authState } from "~/middleware/auth-state";
 import { db } from "~/middleware/db";
 import { LikePost } from "~/models/posts/like";
 import { CMSBookmarksActionView, CMSBookmarksIndexView } from "~/views/cms/bookmarks";
-
-namespace CMSBookmarksController {
-	export interface ActionViewProps extends CMSBookmarksActionView.Props {}
-}
 
 export default controller<typeof routes.cms.bookmarks>({
 	middleware: [],
@@ -20,12 +17,16 @@ export default controller<typeof routes.cms.bookmarks>({
 	actions: {
 		async index(ctx) {
 			let bookmarks = await LikePost.findAll(db(ctx));
-			let items: Array<CMSBookmarksIndexView.Item> = bookmarks.map((bookmark) => {
+			let items = bookmarks.map((bookmark) => {
 				return {
 					id: bookmark.post.id,
 					title: bookmark.meta.title,
 					url: bookmark.meta.url,
+					date: formatListDate(bookmark.post.created_at),
 					href: `/cms/bookmarks/${bookmark.post.id}/edit`,
+					editHref: `/cms/bookmarks/${bookmark.post.id}/edit`,
+					showHref: `/cms/bookmarks/${bookmark.post.id}`,
+					deleteAction: `/cms/bookmarks/${bookmark.post.id}`,
 				};
 			});
 
@@ -38,13 +39,12 @@ export default controller<typeof routes.cms.bookmarks>({
 		},
 
 		async create(ctx) {
-			let user = ctx.auth.user;
+			let user = authState().user;
 			if (!user) return redirect("/login", { status: redirect.Status.SeeOther });
 
 			let formData = await ctx.request.formData();
 			let created = await LikePost.create(db(ctx), {
 				author_id: user.id,
-				published_at: parsePublishedAt(formData),
 				meta: {
 					title: readString(formData, "title") || "Untitled bookmark",
 					url: readString(formData, "url") || "/",
@@ -68,42 +68,40 @@ export default controller<typeof routes.cms.bookmarks>({
 		async edit(ctx) {
 			let bookmark = await LikePost.findById(db(ctx), ctx.params.id);
 			if (!bookmark) {
-				let view: CMSBookmarksController.ActionViewProps = {
+				let view = {
 					title: "Bookmark Not Found",
 					description: `Bookmark ${ctx.params.id} was not found.`,
-					mode: "new",
+					mode: "new" as const,
 					action: "/cms/bookmarks",
 					submitLabel: "Create Bookmark",
 					values: {
 						title: "",
 						url: "",
-						published_at: "",
 					},
 				};
 				let body = await renderToString(
 					<CMSLayout title={view.title} activePath="/cms/bookmarks">
-						<CMSBookmarksActionView {...view} />
+						<CMSBookmarksActionView {...(view as CMSBookmarksActionView.Props)} />
 					</CMSLayout>,
 				);
 				return notFound(body);
 			}
 
-			let view: CMSBookmarksController.ActionViewProps = {
+			let view = {
 				title: `Edit Bookmark ${bookmark.meta.title}`,
 				description: `Editing bookmark pointing to ${bookmark.meta.url}.`,
-				mode: "edit",
+				mode: "edit" as const,
 				action: `/cms/bookmarks/${bookmark.post.id}`,
 				submitLabel: "Save Bookmark",
 				deleteAction: `/cms/bookmarks/${bookmark.post.id}`,
 				values: {
-					title: bookmark.meta.title,
-					url: bookmark.meta.url,
-					published_at: bookmark.post.published_at ?? "",
+					title: bookmark.meta.title ?? "",
+					url: bookmark.meta.url ?? "",
 				},
 			};
 			let body = await renderToString(
 				<CMSLayout title={view.title} activePath="/cms/bookmarks">
-					<CMSBookmarksActionView {...view} />
+					<CMSBookmarksActionView {...(view as CMSBookmarksActionView.Props)} />
 				</CMSLayout>,
 			);
 			return ok(body);
@@ -111,21 +109,20 @@ export default controller<typeof routes.cms.bookmarks>({
 
 		async new(ctx) {
 			let total = (await LikePost.findAll(db(ctx))).length;
-			let view: CMSBookmarksController.ActionViewProps = {
+			let view = {
 				title: "New Bookmark",
 				description: `New Bookmark form loaded. Current bookmarks count: ${total}.`,
-				mode: "new",
+				mode: "new" as const,
 				action: "/cms/bookmarks",
 				submitLabel: "Create Bookmark",
 				values: {
 					title: "",
 					url: "",
-					published_at: "",
 				},
 			};
 			let body = await renderToString(
 				<CMSLayout title={view.title} activePath="/cms/bookmarks">
-					<CMSBookmarksActionView {...view} />
+					<CMSBookmarksActionView {...(view as CMSBookmarksActionView.Props)} />
 				</CMSLayout>,
 			);
 			return ok(body);
@@ -141,7 +138,7 @@ export default controller<typeof routes.cms.bookmarks>({
 		},
 
 		async update(ctx) {
-			let user = ctx.auth.user;
+			let user = authState().user;
 			let bookmarkId = ctx.params.id;
 			if (!user || !bookmarkId) {
 				return redirect("/cms/bookmarks", { status: redirect.Status.SeeOther });
@@ -150,7 +147,6 @@ export default controller<typeof routes.cms.bookmarks>({
 			let formData = await ctx.request.formData();
 			let updated = await LikePost.update(db(ctx), bookmarkId, {
 				author_id: user.id,
-				published_at: parsePublishedAt(formData),
 				meta: {
 					title: readString(formData, "title") || "Untitled bookmark",
 					url: readString(formData, "url") || "/",
@@ -170,9 +166,8 @@ function readString(formData: FormData, key: string) {
 	return value.trim();
 }
 
-function parsePublishedAt(formData: FormData) {
-	let value = readString(formData, "published_at");
-	if (!value) return null;
-	if (Number.isNaN(Date.parse(value))) return null;
-	return value;
+function formatListDate(value: string) {
+	let parsed = new Date(value);
+	if (Number.isNaN(parsed.getTime())) return "";
+	return parsed.toISOString().slice(0, 10);
 }

@@ -10,22 +10,24 @@ import { CMSLayout } from "~/components/layout/cms";
 import { Redirect } from "~/models/redirect";
 import { CMSRedirectsActionView, CMSRedirectsIndexView } from "~/views/cms/redirects";
 
-namespace CMSRedirectsController {
-	export interface RedirectItem extends CMSRedirectsIndexView.Item {}
-}
-
 export default controller<typeof routes.cms.redirects>({
 	middleware: [],
 
 	actions: {
 		async index(_ctx) {
 			let redirects = await Redirect.findAll(env.REDIRECTS);
-			let items: Array<CMSRedirectsController.RedirectItem> = redirects.map((item) => ({
-				from: item.from,
-				to: item.to,
-				status: item.status,
-				href: `/cms/redirects/${encodeURIComponent(item.from)}`,
-			}));
+			let items: Array<CMSRedirectsIndexView.Item> = redirects.map((item) => {
+				let showHref = `/cms/redirects/${encodeURIComponent(item.from)}`;
+				return {
+					from: item.from,
+					to: item.to,
+					status: item.status,
+					href: showHref,
+					showHref,
+					deleteAction: showHref,
+					publicHref: item.from,
+				};
+			});
 
 			let body = await renderToString(
 				<CMSLayout title="Redirects" activePath="/cms/redirects">

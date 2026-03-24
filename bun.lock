@@ -251,6 +251,7 @@
     "apps/r3-blog": {
       "name": "@apps/r3-blog",
       "dependencies": {
+        "@edgefirst-dev/jwt": "^1.3.0",
         "@pkg/arrays": "workspace:*",
         "@pkg/cache": "workspace:*",
         "@pkg/cn": "workspace:*",
@@ -270,6 +271,8 @@
         "@pkg/ui": "workspace:*",
         "@pkg/validate": "workspace:*",
         "remix": "^3.0.0-alpha.3",
+        "remix-auth": "^4.2.0",
+        "remix-auth-oauth2": "^3.4.1",
       },
       "devDependencies": {
         "@cloudflare/vite-plugin": "^1.25.0",

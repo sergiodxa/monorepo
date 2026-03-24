@@ -6,6 +6,7 @@ import { renderToString } from "remix/component/server";
 import type routes from "~/routes";
 
 import { CMSLayout } from "~/components/layout/cms";
+import { authState } from "~/middleware/auth-state";
 import { db } from "~/middleware/db";
 import { ArticlePost } from "~/models/posts/article";
 import { CMSArticlesActionView, CMSArticlesIndexView } from "~/views/cms/articles";
@@ -21,11 +22,16 @@ export default controller<typeof routes.cms.articles>({
 	actions: {
 		async index(ctx) {
 			let articles = await ArticlePost.findAll(db(ctx));
-			let items: CMSArticlesController.IndexProps["items"] = articles.map((article) => ({
+			let items = articles.map((article) => ({
 				id: article.post.id,
 				title: article.meta.title,
 				slug: article.meta.slug,
+				date: formatListDate(article.post.published_at ?? article.post.created_at),
 				href: `/cms/articles/${article.post.id}/edit`,
+				editHref: `/cms/articles/${article.post.id}/edit`,
+				showHref: `/cms/articles/${article.post.id}`,
+				deleteAction: `/cms/articles/${article.post.id}`,
+				publicHref: `/articles/${article.meta.slug}`,
 			}));
 
 			let body = await renderToString(
@@ -37,7 +43,7 @@ export default controller<typeof routes.cms.articles>({
 		},
 
 		async create(ctx) {
-			let user = ctx.auth.user;
+			let user = authState().user;
 			if (!user) return redirect("/login", { status: redirect.Status.SeeOther });
 
 			let formData = await ctx.request.formData();
@@ -105,13 +111,13 @@ export default controller<typeof routes.cms.articles>({
 				submitLabel: "Save Article",
 				deleteAction: `/cms/articles/${article.post.id}`,
 				values: {
-					title: article.meta.title,
-					slug: article.meta.slug,
-					locale: article.meta.locale,
+					title: article.meta.title ?? "",
+					slug: article.meta.slug ?? "",
+					locale: article.meta.locale ?? "en",
 					excerpt: article.meta.excerpt ?? "",
 					canonical_url: article.meta.canonical_url ?? "",
-					content: article.meta.content,
-					published_at: article.post.published_at ?? "",
+					content: article.meta.content ?? "",
+					published_at: toDateInputValue(article.post.published_at),
 				},
 			};
 			let body = await renderToString(
@@ -156,7 +162,7 @@ export default controller<typeof routes.cms.articles>({
 		},
 
 		async update(ctx) {
-			let user = ctx.auth.user;
+			let user = authState().user;
 			let articleId = ctx.params.id;
 			if (!user || !articleId) {
 				return redirect("/cms/articles", { status: redirect.Status.SeeOther });
@@ -192,6 +198,27 @@ function readString(formData: FormData, key: string) {
 function parsePublishedAt(formData: FormData) {
 	let value = readString(formData, "published_at");
 	if (!value) return null;
-	if (Number.isNaN(Date.parse(value))) return null;
-	return value;
+
+	if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+		let parsed = new Date(`${value}T00:00:00.000Z`);
+		if (Number.isNaN(parsed.getTime())) return null;
+		return parsed.toISOString();
+	}
+
+	let parsed = new Date(value);
+	if (Number.isNaN(parsed.getTime())) return null;
+	return parsed.toISOString();
+}
+
+function toDateInputValue(value: string | null) {
+	if (!value) return "";
+	let parsed = new Date(value);
+	if (Number.isNaN(parsed.getTime())) return "";
+	return parsed.toISOString().slice(0, 10);
+}
+
+function formatListDate(value: string) {
+	let parsed = new Date(value);
+	if (Number.isNaN(parsed.getTime())) return "";
+	return parsed.toISOString().slice(0, 10);
 }

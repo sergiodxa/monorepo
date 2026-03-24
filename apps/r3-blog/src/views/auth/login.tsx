@@ -1,12 +1,11 @@
 export namespace LoginView {
 	export interface Props {
-		next: string;
 		error?: string;
 	}
 }
 
 export function LoginView() {
-	return ({ error, next }: LoginView.Props) => (
+	return ({ error }: LoginView.Props) => (
 		<main css={{ display: "grid", gap: "1rem", justifyItems: "center", textAlign: "center" }}>
 			<h1 css={{ margin: 0, fontSize: "2.4rem", color: "var(--ui-neutral-fg-emphasis)" }}>Login</h1>
 			<p css={{ margin: 0, maxWidth: "55ch", color: "var(--ui-neutral-fg)", lineHeight: 1.4 }}>
@@ -27,7 +26,7 @@ export function LoginView() {
 				</p>
 			)}
 			<a
-				href={`/login?start=1&next=${encodeURIComponent(next)}`}
+				href="/login?start=1"
 				css={{
 					textDecoration: "none",
 					backgroundColor: "var(--ui-accent-bg-solid)",

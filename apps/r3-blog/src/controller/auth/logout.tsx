@@ -6,11 +6,13 @@ import { renderToString } from "remix/component/server";
 import type routes from "~/routes";
 
 import { BlogLayout } from "~/components/layout/blog";
-import { buildLogoutUrl, clearAuthFlowCookies } from "~/modules/auth";
-import { LogoutView } from "~/views/logout";
+import { authState } from "~/middleware/auth-state";
+import { LogoutView } from "~/views/auth/logout";
 
 export default action<typeof routes.auth.logout>(async (ctx) => {
-	if (!ctx.auth.isAuthenticated) {
+	let auth = authState();
+
+	if (!auth.isAuthenticated) {
 		return redirect("/", { status: redirect.Status.SeeOther });
 	}
 
@@ -26,8 +28,11 @@ export default action<typeof routes.auth.logout>(async (ctx) => {
 		return ok(body);
 	}
 
-	let idToken = ctx.auth.getIdToken();
-	let logoutUrl = buildLogoutUrl(ctx.request, idToken);
+	let idToken = auth.getIdToken();
+	let logoutUrl = new URL("https://auth.sergiodxa.com/oidc/logout");
+	if (idToken) logoutUrl.searchParams.set("id_token_hint", idToken);
+	logoutUrl.searchParams.set("post_logout_redirect_uri", new URL("/", ctx.request.url).toString());
+
 	let response = redirect(logoutUrl, {
 		status: redirect.Status.SeeOther,
 		headers: {
@@ -35,11 +40,7 @@ export default action<typeof routes.auth.logout>(async (ctx) => {
 		},
 	});
 
-	ctx.auth.logout();
-
-	for (let cookie of clearAuthFlowCookies()) {
-		response.headers.append("Set-Cookie", cookie);
-	}
+	auth.logout();
 
 	return response;
 });

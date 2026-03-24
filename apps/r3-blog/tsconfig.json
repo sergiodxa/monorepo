@@ -5,7 +5,7 @@
 		"noEmit": true,
 		"jsx": "react-jsx",
 		"jsxImportSource": "remix/component",
-		"types": ["@total-typescript/ts-reset", "vite/client"],
+		"types": ["@total-typescript/ts-reset", "vite/client", "@types/bun"],
 		"baseUrl": ".",
 		"rootDirs": ["."],
 		"paths": {
