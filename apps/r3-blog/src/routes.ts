@@ -24,6 +24,6 @@ export default route({
 		tutorials: resources("/tutorials"),
 		bookmarks: resources("/bookmarks"),
 		glossary: resources("/glossary"),
-		redirects: resources("/redirects"),
+		redirects: resources("/redirects", { only: ["index", "new", "create", "destroy"] }),
 	}),
 });

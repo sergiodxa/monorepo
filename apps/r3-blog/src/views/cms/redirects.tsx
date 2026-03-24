@@ -1,9 +1,14 @@
+import { Button } from "~/components/button";
+import { Input } from "~/components/input";
+import { Modal } from "~/components/modal";
+import { Select } from "~/components/select";
+
 export namespace CMSRedirectsIndexView {
 	export interface Item {
 		from: string;
 		to: string;
 		status: number;
-		href: string;
+		deleteAction: string;
 	}
 
 	export interface Props {
@@ -11,21 +16,11 @@ export namespace CMSRedirectsIndexView {
 	}
 }
 
-export namespace CMSRedirectsActionView {
-	export interface FormValues {
-		from: string;
-		to: string;
-		status: string;
-	}
-
+export namespace CMSRedirectsNewView {
 	export interface Props {
 		title: string;
 		description: string;
-		mode: "new" | "show";
 		action: string;
-		submitLabel: string;
-		deleteAction?: string;
-		values: FormValues;
 	}
 }
 
@@ -40,22 +35,29 @@ export function CMSRedirectsIndexView() {
 					padding: "1rem",
 				}}
 			>
-				<h2 css={{ margin: 0, fontSize: "1.1rem" }}>Redirects</h2>
-				<form
-					method="get"
-					css={{ marginTop: "0.8rem", display: "flex", gap: "0.55rem", flexWrap: "wrap" }}
-				>
-					<label>
-						<span css={{ display: "block", marginBottom: "0.3rem", fontSize: "0.9rem" }}>
-							What're you looking for?
-						</span>
-						<input name="q" css={{ minWidth: "18rem", padding: "0.4rem 0.5rem" }} />
-					</label>
-					<button type="submit">Search</button>
-					<a href="/cms/redirects/new" css={{ alignSelf: "end" }}>
+				<div css={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+					<h2 css={{ margin: 0, fontSize: "1.1rem", color: "var(--ui-neutral-fg-emphasis)" }}>
+						Redirects
+					</h2>
+					<a
+						href="/cms/redirects/new"
+						css={{
+							boxSizing: "border-box",
+							display: "inline-flex",
+							alignItems: "center",
+							height: "2.25rem",
+							padding: "0 0.7rem",
+							fontSize: "0.9rem",
+							borderRadius: "0.4rem",
+							border: "1px solid var(--ui-accent-border)",
+							backgroundColor: "var(--ui-accent-bg-tint)",
+							color: "var(--ui-accent-fg-emphasis)",
+							textDecoration: "none",
+						}}
+					>
 						New Redirect
 					</a>
-				</form>
+				</div>
 			</section>
 			<section
 				css={{
@@ -66,31 +68,181 @@ export function CMSRedirectsIndexView() {
 				}}
 			>
 				{items.length === 0 ? (
-					<p css={{ margin: 0 }}>No redirects found in KV yet.</p>
+					<p css={{ margin: 0, color: "var(--ui-neutral-fg)" }}>No redirects found in KV yet.</p>
 				) : (
-					<ul css={{ margin: 0, paddingLeft: "1rem", display: "grid", gap: "0.4rem" }}>
-						{items.map((item) => (
-							<li key={item.href}>
-								<a href={item.href}>{`${item.from} -> ${item.to} (${String(item.status)})`}</a>
-							</li>
-						))}
-					</ul>
+					<div css={{ overflowX: "auto" }}>
+						<table css={{ width: "100%", borderCollapse: "collapse" }}>
+							<thead>
+								<tr>
+									<th
+										css={{
+											textAlign: "left",
+											padding: "0.6rem 0.75rem",
+											borderBottom: "1px solid var(--ui-neutral-border)",
+											verticalAlign: "middle",
+											color: "var(--ui-neutral-fg)",
+											fontSize: "0.9rem",
+											fontWeight: 600,
+										}}
+									>
+										From
+									</th>
+									<th
+										css={{
+											textAlign: "left",
+											padding: "0.6rem 0.75rem",
+											borderBottom: "1px solid var(--ui-neutral-border)",
+											verticalAlign: "middle",
+											color: "var(--ui-neutral-fg)",
+											fontSize: "0.9rem",
+											fontWeight: 600,
+										}}
+									>
+										To
+									</th>
+									<th
+										css={{
+											textAlign: "center",
+											padding: "0.6rem 0.75rem",
+											borderBottom: "1px solid var(--ui-neutral-border)",
+											verticalAlign: "middle",
+											color: "var(--ui-neutral-fg)",
+											fontSize: "0.9rem",
+											fontWeight: 600,
+										}}
+									>
+										Status
+									</th>
+									<th
+										css={{
+											textAlign: "right",
+											padding: "0.6rem 0.75rem",
+											borderBottom: "1px solid var(--ui-neutral-border)",
+											verticalAlign: "middle",
+											color: "var(--ui-neutral-fg)",
+											fontSize: "0.9rem",
+											fontWeight: 600,
+										}}
+									>
+										Actions
+									</th>
+								</tr>
+							</thead>
+							<tbody>
+								{items.map((item, index) => {
+									let dialogId = `delete-redirect-${String(index)}`;
+									return (
+										<tr key={item.from}>
+											<td
+												css={{
+													padding: "0.6rem 0.75rem",
+													borderBottom: "1px solid var(--ui-neutral-border)",
+													verticalAlign: "middle",
+													color: "var(--ui-neutral-fg-emphasis)",
+												}}
+											>
+												{item.from}
+											</td>
+											<td
+												css={{
+													padding: "0.6rem 0.75rem",
+													borderBottom: "1px solid var(--ui-neutral-border)",
+													verticalAlign: "middle",
+													color: "var(--ui-neutral-fg)",
+												}}
+											>
+												{item.to}
+											</td>
+											<td
+												css={{
+													padding: "0.6rem 0.75rem",
+													borderBottom: "1px solid var(--ui-neutral-border)",
+													verticalAlign: "middle",
+													textAlign: "center",
+													color: "var(--ui-neutral-fg)",
+												}}
+											>
+												{String(item.status)}
+											</td>
+											<td
+												css={{
+													padding: "0.6rem 0.75rem",
+													borderBottom: "1px solid var(--ui-neutral-border)",
+													verticalAlign: "middle",
+													textAlign: "right",
+												}}
+											>
+												<button
+													type="button"
+													commandfor={dialogId}
+													command="show-modal"
+													css={{
+														boxSizing: "border-box",
+														display: "inline-flex",
+														alignItems: "center",
+														justifyContent: "center",
+														height: "1.8rem",
+														padding: "0 0.55rem",
+														fontSize: "0.82rem",
+														fontFamily: "inherit",
+														borderRadius: "0.35rem",
+														border: "1px solid var(--ui-neutral-border)",
+														backgroundColor: "transparent",
+														color: "var(--ui-neutral-fg)",
+														cursor: "pointer",
+													}}
+												>
+													Delete
+												</button>
+
+												<Modal id={dialogId}>
+													<form
+														method="post"
+														action={item.deleteAction}
+														css={{ display: "grid", gap: "0.75rem" }}
+													>
+														<input type="hidden" name="_method" value="DELETE" />
+														<p css={{ margin: 0, color: "var(--ui-neutral-fg)" }}>
+															Delete redirect <strong>{item.from}</strong>? This action cannot be
+															undone.
+														</p>
+														<div css={{ display: "flex", gap: "0.5rem" }}>
+															<Button type="submit">Confirm delete</Button>
+															<button
+																type="button"
+																commandfor={dialogId}
+																command="close"
+																css={{
+																	padding: "0.45rem 0.7rem",
+																	fontSize: "0.9rem",
+																	borderRadius: "0.4rem",
+																	border: "1px solid var(--ui-neutral-border)",
+																	backgroundColor: "transparent",
+																	color: "var(--ui-neutral-fg)",
+																	cursor: "pointer",
+																	fontFamily: "inherit",
+																}}
+															>
+																Cancel
+															</button>
+														</div>
+													</form>
+												</Modal>
+											</td>
+										</tr>
+									);
+								})}
+							</tbody>
+						</table>
+					</div>
 				)}
 			</section>
 		</main>
 	);
 }
 
-export function CMSRedirectsActionView() {
-	return ({
-		action,
-		deleteAction,
-		description,
-		mode,
-		submitLabel,
-		title,
-		values,
-	}: CMSRedirectsActionView.Props) => (
+export function CMSRedirectsNewView() {
+	return ({ title, description, action }: CMSRedirectsNewView.Props) => (
 		<main>
 			<section
 				css={{
@@ -102,63 +254,51 @@ export function CMSRedirectsActionView() {
 					gap: "0.8rem",
 				}}
 			>
-				<h2 css={{ margin: 0, fontSize: "1.1rem" }}>{title}</h2>
-				<p css={{ margin: 0 }}>{description}</p>
+				<h2 css={{ margin: 0, fontSize: "1.1rem", color: "var(--ui-neutral-fg-emphasis)" }}>
+					{title}
+				</h2>
+				<p css={{ margin: 0, color: "var(--ui-neutral-fg)" }}>{description}</p>
 
 				<form method="post" action={action} css={{ display: "grid", gap: "0.65rem" }}>
 					<label css={{ display: "grid", gap: "0.25rem" }}>
-						<span>From</span>
-						<input name="from" defaultValue={values.from} required readOnly={mode === "show"} />
+						<span css={{ color: "var(--ui-neutral-fg)" }}>From</span>
+						<Input name="from" required />
 					</label>
 
 					<label css={{ display: "grid", gap: "0.25rem" }}>
-						<span>To</span>
-						<input name="to" defaultValue={values.to} required readOnly={mode === "show"} />
+						<span css={{ color: "var(--ui-neutral-fg)" }}>To</span>
+						<Input name="to" required />
 					</label>
 
 					<label css={{ display: "grid", gap: "0.25rem" }}>
-						<span>Status</span>
-						<select name="status" defaultValue={values.status} disabled={mode === "show"}>
-							<option value="301">301</option>
-							<option value="302">302</option>
-							<option value="307">307</option>
-							<option value="308">308</option>
-						</select>
+						<span css={{ color: "var(--ui-neutral-fg)" }}>Status</span>
+						<Select name="status">
+							<option value="301">301 Permanent</option>
+							<option value="302" selected>
+								302 Temporary
+							</option>
+							<option value="307">307 Temporary (Method Preserved)</option>
+							<option value="308">308 Permanent (Method Preserved)</option>
+						</Select>
 					</label>
 
-					{mode === "new" ? (
-						<div css={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
-							<button type="submit">{submitLabel}</button>
-							<a href="/cms/redirects">Back to list</a>
-						</div>
-					) : null}
+					<div css={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
+						<Button type="submit">Create Redirect</Button>
+						<a
+							href="/cms/redirects"
+							css={{
+								padding: "0.45rem 0.7rem",
+								fontSize: "0.9rem",
+								borderRadius: "0.4rem",
+								border: "1px solid var(--ui-accent-border)",
+								color: "var(--ui-accent-fg-emphasis)",
+								textDecoration: "none",
+							}}
+						>
+							Back to list
+						</a>
+					</div>
 				</form>
-
-				{mode === "show" && deleteAction ? (
-					<section css={{ display: "grid", gap: "0.45rem" }}>
-						<div css={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
-							<a href={values.from}>Visit source path</a>
-							<a href="/cms/redirects">Back to list</a>
-						</div>
-
-						<button type="button" commandfor="delete-redirect" command="show-modal">
-							Delete Redirect
-						</button>
-
-						<dialog id="delete-redirect">
-							<form method="post" action={deleteAction} css={{ display: "grid", gap: "0.5rem" }}>
-								<input type="hidden" name="_method" value="DELETE" />
-								<p css={{ margin: 0 }}>This action cannot be undone.</p>
-								<div css={{ display: "flex", gap: "0.5rem" }}>
-									<button type="submit">Confirm delete</button>
-									<button type="button" commandfor="delete-redirect" command="close">
-										Cancel
-									</button>
-								</div>
-							</form>
-						</dialog>
-					</section>
-				) : null}
 			</section>
 		</main>
 	);

@@ -1,5 +1,5 @@
 import { redirect } from "@pkg/http/response";
-import { notFound, ok } from "@pkg/http/response/html";
+import { ok } from "@pkg/http/response/html";
 import controller from "@pkg/remix-helpers/controller";
 import { env } from "cloudflare:workers";
 import { renderToString } from "remix/component/server";
@@ -8,26 +8,20 @@ import type routes from "~/routes";
 
 import { CMSLayout } from "~/components/layout/cms";
 import { Redirect } from "~/models/redirect";
-import { CMSRedirectsActionView, CMSRedirectsIndexView } from "~/views/cms/redirects";
+import { CMSRedirectsIndexView, CMSRedirectsNewView } from "~/views/cms/redirects";
 
 export default controller<typeof routes.cms.redirects>({
 	middleware: [],
 
 	actions: {
-		async index(_ctx) {
+		async index() {
 			let redirects = await Redirect.findAll(env.REDIRECTS);
-			let items: Array<CMSRedirectsIndexView.Item> = redirects.map((item) => {
-				let showHref = `/cms/redirects/${encodeURIComponent(item.from)}`;
-				return {
-					from: item.from,
-					to: item.to,
-					status: item.status,
-					href: showHref,
-					showHref,
-					deleteAction: showHref,
-					publicHref: item.from,
-				};
-			});
+			let items: Array<CMSRedirectsIndexView.Item> = redirects.map((item) => ({
+				from: item.from,
+				to: item.to,
+				status: item.status,
+				deleteAction: `/cms/redirects/${encodeURIComponent(item.from)}`,
+			}));
 
 			let body = await renderToString(
 				<CMSLayout title="Redirects" activePath="/cms/redirects">
@@ -37,8 +31,8 @@ export default controller<typeof routes.cms.redirects>({
 			return ok(body);
 		},
 
-		async create(_ctx) {
-			let formData = await _ctx.request.formData();
+		async create(ctx) {
+			let formData = ctx.formData;
 			let from = Redirect.normalizePath(readString(formData, "from"));
 			let to = readString(formData, "to");
 			let status = parseStatus(readString(formData, "status"));
@@ -48,10 +42,7 @@ export default controller<typeof routes.cms.redirects>({
 			}
 
 			await Redirect.upsert(env.REDIRECTS, { from, to, status });
-
-			return redirect(`/cms/redirects/${encodeURIComponent(from)}`, {
-				status: redirect.Status.SeeOther,
-			});
+			return redirect("/cms/redirects", { status: redirect.Status.SeeOther });
 		},
 
 		async destroy(ctx) {
@@ -62,84 +53,18 @@ export default controller<typeof routes.cms.redirects>({
 			return redirect("/cms/redirects", { status: redirect.Status.SeeOther });
 		},
 
-		async edit(ctx) {
-			let from = getRedirectFromParam(ctx.params.id);
-			if (!from) return redirect("/cms/redirects", { status: redirect.Status.SeeOther });
-			return redirect(`/cms/redirects/${encodeURIComponent(from)}`, {
-				status: redirect.Status.SeeOther,
-			});
-		},
-
-		async new(_ctx) {
+		async new() {
 			let redirects = await Redirect.findAll(env.REDIRECTS);
-			let viewProps: CMSRedirectsActionView.Props = {
-				title: "New Redirect",
-				description: `New Redirect form loaded. Current redirect count in KV: ${redirects.length}.`,
-				mode: "new",
-				action: "/cms/redirects",
-				submitLabel: "Create Redirect",
-				values: {
-					from: "",
-					to: "",
-					status: "302",
-				},
-			};
 			let body = await renderToString(
-				<CMSLayout title={viewProps.title} activePath="/cms/redirects">
-					<CMSRedirectsActionView {...viewProps} />
+				<CMSLayout title="New Redirect" activePath="/cms/redirects">
+					<CMSRedirectsNewView
+						title="New Redirect"
+						description={`Current redirect count in KV: ${redirects.length}.`}
+						action="/cms/redirects"
+					/>
 				</CMSLayout>,
 			);
 			return ok(body);
-		},
-
-		async show(ctx) {
-			let from = getRedirectFromParam(ctx.params.id);
-			let redirect = from ? await Redirect.findByPath(env.REDIRECTS, from) : null;
-			if (!from || !redirect) {
-				let viewProps: CMSRedirectsActionView.Props = {
-					title: "Redirect Not Found",
-					description: `Redirect ${ctx.params.id} was not found in KV.`,
-					mode: "new",
-					action: "/cms/redirects",
-					submitLabel: "Create Redirect",
-					values: {
-						from: "",
-						to: "",
-						status: "302",
-					},
-				};
-				let body = await renderToString(
-					<CMSLayout title="Redirect Not Found" activePath="/cms/redirects">
-						<CMSRedirectsActionView {...viewProps} />
-					</CMSLayout>,
-				);
-				return notFound(body);
-			}
-
-			let viewProps: CMSRedirectsActionView.Props = {
-				title: `Redirect ${from}`,
-				description: `Redirect ${from} currently points to ${redirect.to} with status ${String(redirect.status)}.`,
-				mode: "show",
-				action: `/cms/redirects/${encodeURIComponent(from)}`,
-				submitLabel: "Create Redirect",
-				deleteAction: `/cms/redirects/${encodeURIComponent(from)}`,
-				values: {
-					from,
-					to: redirect.to,
-					status: String(redirect.status),
-				},
-			};
-
-			let body = await renderToString(
-				<CMSLayout title={viewProps.title} activePath="/cms/redirects">
-					<CMSRedirectsActionView {...viewProps} />
-				</CMSLayout>,
-			);
-			return ok(body);
-		},
-
-		async update(_ctx) {
-			return redirect("/cms/redirects", { status: redirect.Status.SeeOther });
 		},
 	},
 });
