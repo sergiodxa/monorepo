@@ -1,5 +1,7 @@
 import type { RemixNode } from "remix/component";
 
+import appColorsStyles from "~/styles/colors.css?url";
+
 export namespace CMSLayout {
 	export type Props = {
 		title: string;
@@ -30,6 +32,7 @@ export function CMSLayout() {
 				<meta charSet="utf-8" />
 				<meta name="viewport" content="width=device-width, initial-scale=1" />
 				<title>{title}</title>
+				<link rel="stylesheet" href={appColorsStyles} />
 			</head>
 			<body
 				css={{
