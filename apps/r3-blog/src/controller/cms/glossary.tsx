@@ -1,3 +1,4 @@
+import { redirect } from "@pkg/http/response";
 import { notFound, ok } from "@pkg/http/response/html";
 import controller from "@pkg/remix-helpers/controller";
 import { renderToString } from "remix/component/server";
@@ -20,6 +21,7 @@ export default controller<typeof routes.cms.glossary>({
 					id: item.post.id,
 					term: item.meta.term,
 					slug: item.meta.slug,
+					href: `/cms/glossary/${item.post.id}/edit`,
 				}),
 			);
 
@@ -32,65 +34,80 @@ export default controller<typeof routes.cms.glossary>({
 		},
 
 		async create(ctx) {
-			let total = (await GlossaryPost.findAll(db(ctx))).length;
-			let body = await renderToString(
-				<CMSLayout title="Create Glossary" activePath="/cms/glossary">
-					<CMSGlossaryActionView
-						title="Create Glossary"
-						description={`Create Glossary. There are currently ${total} terms in the database.`}
-					/>
-				</CMSLayout>,
-			);
-			return ok(body);
+			let user = ctx.auth.user;
+			if (!user) return redirect("/login", { status: redirect.Status.SeeOther });
+
+			let formData = await ctx.request.formData();
+			let created = await GlossaryPost.create(db(ctx), {
+				author_id: user.id,
+				published_at: parsePublishedAt(formData),
+				meta: {
+					term: readString(formData, "term") || "Untitled term",
+					title: readString(formData, "title") || undefined,
+					slug: readString(formData, "slug") || crypto.randomUUID(),
+					definition: readString(formData, "definition") || "",
+				},
+			});
+
+			if (!created) return redirect("/cms/glossary", { status: redirect.Status.SeeOther });
+
+			return redirect(`/cms/glossary/${created.post.id}/edit`, {
+				status: redirect.Status.SeeOther,
+			});
 		},
 
 		async destroy(ctx) {
-			let glossary = await GlossaryPost.findById(db(ctx), ctx.params.id);
-			if (!glossary) {
-				let body = await renderToString(
-					<CMSLayout title="Glossary Term Not Found" activePath="/cms/glossary">
-						<CMSGlossaryActionView
-							title="Glossary Term Not Found"
-							description={`Glossary term ${ctx.params.id} was not found.`}
-						/>
-					</CMSLayout>,
-				);
-				return notFound(body);
-			}
+			let glossaryId = ctx.params.id;
+			if (!glossaryId) return redirect("/cms/glossary", { status: redirect.Status.SeeOther });
 
-			let title = glossary.meta.term;
-			let body = await renderToString(
-				<CMSLayout title={`Delete Glossary ${title}`} activePath="/cms/glossary">
-					<CMSGlossaryActionView
-						title={`Delete Glossary ${title}`}
-						description={`Ready to delete glossary term "${title}" (${glossary.post.id}).`}
-					/>
-				</CMSLayout>,
-			);
-			return ok(body);
+			await GlossaryPost.destroy(db(ctx), glossaryId);
+			return redirect("/cms/glossary", { status: redirect.Status.SeeOther });
 		},
 
 		async edit(ctx) {
 			let glossary = await GlossaryPost.findById(db(ctx), ctx.params.id);
 			if (!glossary) {
+				let viewProps: CMSGlossaryActionView.Props = {
+					title: "Glossary Term Not Found",
+					description: `Glossary term ${ctx.params.id} was not found.`,
+					mode: "new",
+					action: "/cms/glossary",
+					submitLabel: "Create Glossary Term",
+					values: {
+						term: "",
+						title: "",
+						slug: "",
+						definition: "",
+						published_at: "",
+					},
+				};
 				let body = await renderToString(
 					<CMSLayout title="Glossary Term Not Found" activePath="/cms/glossary">
-						<CMSGlossaryActionView
-							title="Glossary Term Not Found"
-							description={`Glossary term ${ctx.params.id} was not found.`}
-						/>
+						<CMSGlossaryActionView {...viewProps} />
 					</CMSLayout>,
 				);
 				return notFound(body);
 			}
 
-			let title = glossary.meta.term;
+			let viewProps: CMSGlossaryActionView.Props = {
+				title: `Edit Glossary ${glossary.meta.term}`,
+				description: `Editing glossary term at /glossary#${glossary.meta.slug}.`,
+				mode: "edit",
+				action: `/cms/glossary/${glossary.post.id}`,
+				submitLabel: "Save Glossary Term",
+				deleteAction: `/cms/glossary/${glossary.post.id}`,
+				values: {
+					term: glossary.meta.term,
+					title: glossary.meta.title ?? "",
+					slug: glossary.meta.slug,
+					definition: glossary.meta.definition,
+					published_at: glossary.post.published_at ?? "",
+				},
+			};
+
 			let body = await renderToString(
-				<CMSLayout title={`Edit Glossary ${title}`} activePath="/cms/glossary">
-					<CMSGlossaryActionView
-						title={`Edit Glossary ${title}`}
-						description={`Editing glossary term "${title}" at /glossary/${glossary.meta.slug}.`}
-					/>
+				<CMSLayout title={viewProps.title} activePath="/cms/glossary">
+					<CMSGlossaryActionView {...viewProps} />
 				</CMSLayout>,
 			);
 			return ok(body);
@@ -98,12 +115,23 @@ export default controller<typeof routes.cms.glossary>({
 
 		async new(ctx) {
 			let total = (await GlossaryPost.findAll(db(ctx))).length;
+			let viewProps: CMSGlossaryActionView.Props = {
+				title: "New Glossary",
+				description: `New Glossary form loaded. Current glossary count: ${total}.`,
+				mode: "new",
+				action: "/cms/glossary",
+				submitLabel: "Create Glossary Term",
+				values: {
+					term: "",
+					title: "",
+					slug: "",
+					definition: "",
+					published_at: "",
+				},
+			};
 			let body = await renderToString(
-				<CMSLayout title="New Glossary" activePath="/cms/glossary">
-					<CMSGlossaryActionView
-						title="New Glossary"
-						description={`New Glossary form loaded. Current glossary count: ${total}.`}
-					/>
+				<CMSLayout title={viewProps.title} activePath="/cms/glossary">
+					<CMSGlossaryActionView {...viewProps} />
 				</CMSLayout>,
 			);
 			return ok(body);
@@ -111,54 +139,46 @@ export default controller<typeof routes.cms.glossary>({
 
 		async show(ctx) {
 			let glossary = await GlossaryPost.findById(db(ctx), ctx.params.id);
-			if (!glossary) {
-				let body = await renderToString(
-					<CMSLayout title="Glossary Term Not Found" activePath="/cms/glossary">
-						<CMSGlossaryActionView
-							title="Glossary Term Not Found"
-							description={`Glossary term ${ctx.params.id} was not found.`}
-						/>
-					</CMSLayout>,
-				);
-				return notFound(body);
-			}
+			if (!glossary) return notFound("<h1>404 Not Found</h1>");
 
-			let title = glossary.meta.term;
-			let body = await renderToString(
-				<CMSLayout title={title} activePath="/cms/glossary">
-					<CMSGlossaryActionView
-						title={title}
-						description={`Glossary term ${glossary.post.id} lives at /glossary/${glossary.meta.slug}.`}
-					/>
-				</CMSLayout>,
-			);
-			return ok(body);
+			return redirect(`/glossary#${glossary.meta.slug}`, { status: redirect.Status.SeeOther });
 		},
 
 		async update(ctx) {
-			let glossary = await GlossaryPost.findById(db(ctx), ctx.params.id);
-			if (!glossary) {
-				let body = await renderToString(
-					<CMSLayout title="Glossary Term Not Found" activePath="/cms/glossary">
-						<CMSGlossaryActionView
-							title="Glossary Term Not Found"
-							description={`Glossary term ${ctx.params.id} was not found.`}
-						/>
-					</CMSLayout>,
-				);
-				return notFound(body);
+			let user = ctx.auth.user;
+			let glossaryId = ctx.params.id;
+			if (!user || !glossaryId) {
+				return redirect("/cms/glossary", { status: redirect.Status.SeeOther });
 			}
 
-			let title = glossary.meta.term;
-			let body = await renderToString(
-				<CMSLayout title={`Update Glossary ${title}`} activePath="/cms/glossary">
-					<CMSGlossaryActionView
-						title={`Update Glossary ${title}`}
-						description={`Update flow loaded for glossary term "${title}" (${glossary.post.id}).`}
-					/>
-				</CMSLayout>,
-			);
-			return ok(body);
+			let formData = await ctx.request.formData();
+			let updated = await GlossaryPost.update(db(ctx), glossaryId, {
+				author_id: user.id,
+				published_at: parsePublishedAt(formData),
+				meta: {
+					term: readString(formData, "term") || "Untitled term",
+					title: readString(formData, "title") || undefined,
+					slug: readString(formData, "slug") || glossaryId,
+					definition: readString(formData, "definition") || "",
+				},
+			});
+
+			if (!updated) return notFound("<h1>404 Not Found</h1>");
+
+			return redirect(`/cms/glossary/${glossaryId}/edit`, { status: redirect.Status.SeeOther });
 		},
 	},
 });
+
+function readString(formData: FormData, key: string) {
+	let value = formData.get(key);
+	if (typeof value !== "string") return "";
+	return value.trim();
+}
+
+function parsePublishedAt(formData: FormData) {
+	let value = readString(formData, "published_at");
+	if (!value) return null;
+	if (Number.isNaN(Date.parse(value))) return null;
+	return value;
+}
