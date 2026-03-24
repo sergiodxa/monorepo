@@ -1,3 +1,6 @@
+import { Button } from "~/components/button";
+import { Input } from "~/components/input";
+
 export namespace CMSDashboardView {
 	export interface Stats {
 		articles: number;
@@ -8,13 +11,141 @@ export namespace CMSDashboardView {
 
 	export interface Props {
 		stats: Stats;
-		recentSearches: Array<string>;
 	}
 }
 
 export function CMSDashboardView() {
-	return ({ recentSearches, stats }: CMSDashboardView.Props) => (
+	return ({ stats }: CMSDashboardView.Props) => (
 		<main css={{ display: "grid", gap: "0.9rem" }}>
+			<h2
+				css={{
+					position: "absolute",
+					width: "1px",
+					height: "1px",
+					padding: 0,
+					margin: "-1px",
+					overflow: "hidden",
+					clip: "rect(0,0,0,0)",
+					whiteSpace: "nowrap",
+					borderWidth: 0,
+				}}
+			>
+				Post Stats
+			</h2>
+			<div
+				css={{
+					display: "grid",
+					gap: "0.65rem",
+					gridTemplateColumns: "repeat(auto-fit, minmax(10rem, 1fr))",
+				}}
+			>
+				<article
+					css={{
+						backgroundColor: "var(--ui-neutral-bg-tint)",
+						border: "1px solid var(--ui-neutral-border)",
+						borderRadius: "0.6rem",
+						padding: "0.8rem",
+						display: "grid",
+						gap: "0.25rem",
+					}}
+				>
+					<p css={{ margin: 0, fontSize: "0.85rem", color: "var(--ui-neutral-fg)" }}>
+						Total Articles
+					</p>
+					<p
+						css={{
+							margin: 0,
+							fontSize: "1.8rem",
+							fontWeight: 700,
+							color: "var(--ui-neutral-fg-emphasis)",
+						}}
+					>
+						{stats.articles}
+					</p>
+					<a href="/cms/articles" css={{ fontSize: "0.85rem", color: "var(--ui-accent-fg)" }}>
+						View all
+					</a>
+				</article>
+				<article
+					css={{
+						backgroundColor: "var(--ui-neutral-bg-tint)",
+						border: "1px solid var(--ui-neutral-border)",
+						borderRadius: "0.6rem",
+						padding: "0.8rem",
+						display: "grid",
+						gap: "0.25rem",
+					}}
+				>
+					<p css={{ margin: 0, fontSize: "0.85rem", color: "var(--ui-neutral-fg)" }}>Total Likes</p>
+					<p
+						css={{
+							margin: 0,
+							fontSize: "1.8rem",
+							fontWeight: 700,
+							color: "var(--ui-neutral-fg-emphasis)",
+						}}
+					>
+						{stats.likes}
+					</p>
+					<a href="/cms/bookmarks" css={{ fontSize: "0.85rem", color: "var(--ui-accent-fg)" }}>
+						View all
+					</a>
+				</article>
+				<article
+					css={{
+						backgroundColor: "var(--ui-neutral-bg-tint)",
+						border: "1px solid var(--ui-neutral-border)",
+						borderRadius: "0.6rem",
+						padding: "0.8rem",
+						display: "grid",
+						gap: "0.25rem",
+					}}
+				>
+					<p css={{ margin: 0, fontSize: "0.85rem", color: "var(--ui-neutral-fg)" }}>
+						Total Tutorials
+					</p>
+					<p
+						css={{
+							margin: 0,
+							fontSize: "1.8rem",
+							fontWeight: 700,
+							color: "var(--ui-neutral-fg-emphasis)",
+						}}
+					>
+						{stats.tutorials}
+					</p>
+					<a href="/cms/tutorials" css={{ fontSize: "0.85rem", color: "var(--ui-accent-fg)" }}>
+						View all
+					</a>
+				</article>
+				<article
+					css={{
+						backgroundColor: "var(--ui-neutral-bg-tint)",
+						border: "1px solid var(--ui-neutral-border)",
+						borderRadius: "0.6rem",
+						padding: "0.8rem",
+						display: "grid",
+						gap: "0.25rem",
+					}}
+				>
+					<p css={{ margin: 0, fontSize: "0.85rem", color: "var(--ui-neutral-fg)" }}>
+						Total Glossary Terms
+					</p>
+					<p
+						css={{
+							margin: 0,
+							fontSize: "1.8rem",
+							fontWeight: 700,
+							color: "var(--ui-neutral-fg-emphasis)",
+						}}
+					>
+						{stats.glossary}
+					</p>
+					<a href="/cms/glossary" css={{ fontSize: "0.85rem", color: "var(--ui-accent-fg)" }}>
+						View all
+					</a>
+				</article>
+			</div>
 			<section
 				css={{
 					backgroundColor: "var(--ui-neutral-bg-tint)",
@@ -23,50 +154,25 @@ export function CMSDashboardView() {
 					padding: "1rem",
 				}}
 			>
-				<h2 css={{ margin: 0, fontSize: "1.1rem" }}>Post Stats</h2>
-				<ul css={{ margin: "0.7rem 0 0", paddingLeft: "1rem", display: "grid", gap: "0.35rem" }}>
-					<li>Total Articles: {stats.articles}</li>
-					<li>Total Likes: {stats.likes}</li>
-					<li>Total Tutorials: {stats.tutorials}</li>
-					<li>Total Glossary Terms: {stats.glossary}</li>
-				</ul>
-			</section>
-			<section
-				css={{
-					backgroundColor: "var(--ui-neutral-bg-tint)",
-					border: "1px solid var(--ui-neutral-border)",
-					borderRadius: "0.7rem",
-					padding: "1rem",
-				}}
-			>
-				<h2 css={{ margin: 0, fontSize: "1.1rem" }}>Quick Action: Like a URL</h2>
+				<h2 css={{ margin: 0, fontSize: "1.1rem", color: "var(--ui-neutral-fg-emphasis)" }}>
+					Quick Action: Like a URL
+				</h2>
 				<form
 					method="post"
-					css={{ marginTop: "0.8rem", display: "flex", gap: "0.5rem", flexWrap: "wrap" }}
+					css={{
+						marginTop: "0.8rem",
+						display: "flex",
+						gap: "0.55rem",
+						flexWrap: "wrap",
+						alignItems: "end",
+					}}
 				>
-					<label>
-						<span css={{ display: "block", marginBottom: "0.3rem", fontSize: "0.9rem" }}>URL</span>
-						<input name="url" css={{ minWidth: "18rem", padding: "0.4rem 0.5rem" }} />
+					<label css={{ display: "grid", gap: "0.25rem" }}>
+						<span css={{ fontSize: "0.9rem", color: "var(--ui-neutral-fg)" }}>URL</span>
+						<Input name="url" css={{ minWidth: "18rem" }} />
 					</label>
-					<button type="submit">Create Like</button>
+					<Button type="submit">Create Like</Button>
 				</form>
-			</section>
-			<section
-				css={{
-					backgroundColor: "var(--ui-neutral-bg-tint)",
-					border: "1px solid var(--ui-neutral-border)",
-					borderRadius: "0.7rem",
-					padding: "1rem",
-				}}
-			>
-				<h2 css={{ margin: 0, fontSize: "1.1rem" }}>Search Terms: Last 24hs</h2>
-				<ul css={{ margin: "0.7rem 0 0", paddingLeft: "1rem", display: "grid", gap: "0.35rem" }}>
-					{recentSearches.length === 0 ? (
-						<li>No search terms yet.</li>
-					) : (
-						recentSearches.map((item, index) => <li key={item + String(index)}>{item}</li>)
-					)}
-				</ul>
 			</section>
 		</main>
 	);

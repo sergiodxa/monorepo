@@ -1,9 +1,16 @@
+import { Button } from "~/components/button";
+import { Input } from "~/components/input";
+import { Modal } from "~/components/modal";
+
 export namespace CMSTutorialsIndexView {
 	export interface Item {
 		id: string;
 		title: string;
-		slug: string;
+		publicHref: string;
+		preview: boolean;
+		tags: string;
 		href: string;
+		deleteAction: string;
 	}
 
 	export interface Props {
@@ -43,22 +50,29 @@ export function CMSTutorialsIndexView() {
 					padding: "1rem",
 				}}
 			>
-				<h2 css={{ margin: 0, fontSize: "1.1rem" }}>Tutorials</h2>
-				<form
-					method="get"
-					css={{ marginTop: "0.8rem", display: "flex", gap: "0.55rem", flexWrap: "wrap" }}
-				>
-					<label>
-						<span css={{ display: "block", marginBottom: "0.3rem", fontSize: "0.9rem" }}>
-							What're you looking for?
-						</span>
-						<input name="q" css={{ minWidth: "18rem", padding: "0.4rem 0.5rem" }} />
-					</label>
-					<button type="submit">Search</button>
-					<a href="/cms/tutorials/new" css={{ alignSelf: "end" }}>
+				<div css={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+					<h2 css={{ margin: 0, fontSize: "1.1rem", color: "var(--ui-neutral-fg-emphasis)" }}>
+						Tutorials
+					</h2>
+					<a
+						href="/cms/tutorials/new"
+						css={{
+							boxSizing: "border-box",
+							display: "inline-flex",
+							alignItems: "center",
+							height: "2.25rem",
+							padding: "0 0.7rem",
+							fontSize: "0.9rem",
+							borderRadius: "0.4rem",
+							border: "1px solid var(--ui-accent-border)",
+							backgroundColor: "var(--ui-accent-bg-tint)",
+							color: "var(--ui-accent-fg-emphasis)",
+							textDecoration: "none",
+						}}
+					>
 						New Tutorial
 					</a>
-				</form>
+				</div>
 			</section>
 			<section
 				css={{
@@ -69,15 +83,222 @@ export function CMSTutorialsIndexView() {
 				}}
 			>
 				{items.length === 0 ? (
-					<p css={{ margin: 0 }}>No tutorials found in the database yet.</p>
+					<p css={{ margin: 0, color: "var(--ui-neutral-fg)" }}>
+						No tutorials found in the database yet.
+					</p>
 				) : (
-					<ul css={{ margin: 0, paddingLeft: "1rem", display: "grid", gap: "0.4rem" }}>
-						{items.map((item) => (
-							<li key={item.id}>
-								<a href={item.href}>{`${item.title} (/tutorials/${item.slug})`}</a>
-							</li>
-						))}
-					</ul>
+					<div css={{ overflowX: "auto" }}>
+						<table css={{ width: "100%", borderCollapse: "collapse" }}>
+							<thead>
+								<tr>
+									<th
+										css={{
+											textAlign: "left",
+											padding: "0.6rem 0.75rem",
+											borderBottom: "1px solid var(--ui-neutral-border)",
+											color: "var(--ui-neutral-fg)",
+											fontSize: "0.9rem",
+											fontWeight: 600,
+										}}
+									>
+										Title
+									</th>
+									<th
+										css={{
+											textAlign: "left",
+											padding: "0.6rem 0.75rem",
+											borderBottom: "1px solid var(--ui-neutral-border)",
+											color: "var(--ui-neutral-fg)",
+											fontSize: "0.9rem",
+											fontWeight: 600,
+										}}
+									>
+										Tags
+									</th>
+									<th
+										css={{
+											textAlign: "center",
+											padding: "0.6rem 0.75rem",
+											borderBottom: "1px solid var(--ui-neutral-border)",
+											color: "var(--ui-neutral-fg)",
+											fontSize: "0.9rem",
+											fontWeight: 600,
+										}}
+									>
+										Status
+									</th>
+									<th
+										css={{
+											textAlign: "right",
+											padding: "0.6rem 0.75rem",
+											borderBottom: "1px solid var(--ui-neutral-border)",
+											color: "var(--ui-neutral-fg)",
+											fontSize: "0.9rem",
+											fontWeight: 600,
+										}}
+									>
+										Actions
+									</th>
+								</tr>
+							</thead>
+							<tbody>
+								{items.map((item, index) => {
+									let dialogId = `delete-tutorial-${String(index)}`;
+									return (
+										<tr key={item.id}>
+											<td
+												css={{
+													padding: "0.6rem 0.75rem",
+													borderBottom: "1px solid var(--ui-neutral-border)",
+													verticalAlign: "middle",
+													color: "var(--ui-neutral-fg-emphasis)",
+												}}
+											>
+												<a
+													href={item.publicHref}
+													css={{ color: "var(--ui-accent-fg)", textDecoration: "none" }}
+												>
+													{item.title}
+												</a>
+											</td>
+											<td
+												css={{
+													padding: "0.6rem 0.75rem",
+													borderBottom: "1px solid var(--ui-neutral-border)",
+													verticalAlign: "middle",
+												}}
+											>
+												{item.tags ? (
+													<div css={{ display: "flex", gap: "0.3rem", flexWrap: "wrap" }}>
+														{item.tags
+															.split(", ")
+															.filter(Boolean)
+															.map((tag) => (
+																<span
+																	key={tag}
+																	css={{
+																		padding: "0.15rem 0.5rem",
+																		borderRadius: "999px",
+																		backgroundColor: "var(--ui-accent-bg-tint)",
+																		color: "var(--ui-accent-fg-emphasis)",
+																		fontSize: "0.78rem",
+																	}}
+																>
+																	{tag}
+																</span>
+															))}
+													</div>
+												) : null}
+											</td>
+											<td
+												css={{
+													padding: "0.6rem 0.75rem",
+													borderBottom: "1px solid var(--ui-neutral-border)",
+													verticalAlign: "middle",
+													textAlign: "center",
+												}}
+											>
+												{item.preview ? "📝" : "✅"}
+											</td>
+											<td
+												css={{
+													padding: "0.6rem 0.75rem",
+													borderBottom: "1px solid var(--ui-neutral-border)",
+													verticalAlign: "middle",
+													textAlign: "right",
+												}}
+											>
+												<div
+													css={{
+														display: "flex",
+														gap: "0.35rem",
+														justifyContent: "end",
+														alignItems: "center",
+													}}
+												>
+													<a
+														href={item.href}
+														css={{
+															boxSizing: "border-box",
+															display: "inline-flex",
+															alignItems: "center",
+															justifyContent: "center",
+															height: "1.8rem",
+															padding: "0 0.55rem",
+															fontSize: "0.82rem",
+															fontFamily: "inherit",
+															borderRadius: "0.35rem",
+															border: "1px solid var(--ui-accent-border)",
+															color: "var(--ui-accent-fg-emphasis)",
+															textDecoration: "none",
+														}}
+													>
+														Edit
+													</a>
+													<button
+														type="button"
+														commandfor={dialogId}
+														command="show-modal"
+														css={{
+															boxSizing: "border-box",
+															display: "inline-flex",
+															alignItems: "center",
+															justifyContent: "center",
+															height: "1.8rem",
+															padding: "0 0.55rem",
+															fontSize: "0.82rem",
+															fontFamily: "inherit",
+															borderRadius: "0.35rem",
+															border: "1px solid var(--ui-neutral-border)",
+															backgroundColor: "transparent",
+															color: "var(--ui-neutral-fg)",
+															cursor: "pointer",
+														}}
+													>
+														Delete
+													</button>
+												</div>
+
+												<Modal id={dialogId}>
+													<form
+														method="post"
+														action={item.deleteAction}
+														css={{ display: "grid", gap: "0.75rem" }}
+													>
+														<input type="hidden" name="_method" value="DELETE" />
+														<p css={{ margin: 0, color: "var(--ui-neutral-fg)" }}>
+															Delete tutorial <strong>{item.title}</strong>? This action cannot be
+															undone.
+														</p>
+														<div css={{ display: "flex", gap: "0.5rem" }}>
+															<Button type="submit">Confirm delete</Button>
+															<button
+																type="button"
+																commandfor={dialogId}
+																command="close"
+																css={{
+																	padding: "0.45rem 0.7rem",
+																	fontSize: "0.9rem",
+																	borderRadius: "0.4rem",
+																	border: "1px solid var(--ui-neutral-border)",
+																	backgroundColor: "transparent",
+																	color: "var(--ui-neutral-fg)",
+																	cursor: "pointer",
+																	fontFamily: "inherit",
+																}}
+															>
+																Cancel
+															</button>
+														</div>
+													</form>
+												</Modal>
+											</td>
+										</tr>
+									);
+								})}
+							</tbody>
+						</table>
+					</div>
 				)}
 			</section>
 		</main>
@@ -87,7 +308,6 @@ export function CMSTutorialsIndexView() {
 export function CMSTutorialsActionView() {
 	return ({
 		action,
-		deleteAction,
 		description,
 		mode,
 		submitLabel,
@@ -105,68 +325,91 @@ export function CMSTutorialsActionView() {
 					gap: "0.8rem",
 				}}
 			>
-				<h2 css={{ margin: 0, fontSize: "1.1rem" }}>{title}</h2>
-				<p css={{ margin: 0 }}>{description}</p>
+				<h2 css={{ margin: 0, fontSize: "1.1rem", color: "var(--ui-neutral-fg-emphasis)" }}>
+					{title}
+				</h2>
+				<p css={{ margin: 0, color: "var(--ui-neutral-fg)" }}>{description}</p>
 
 				<form method="post" action={action} css={{ display: "grid", gap: "0.65rem" }}>
 					{mode === "edit" ? <input type="hidden" name="_method" value="PUT" /> : null}
 
 					<label css={{ display: "grid", gap: "0.25rem" }}>
-						<span>Title</span>
-						<input name="title" defaultValue={values.title} required />
+						<span css={{ color: "var(--ui-neutral-fg)" }}>Title</span>
+						<Input name="title" value={values.title} required />
 					</label>
 
 					<label css={{ display: "grid", gap: "0.25rem" }}>
-						<span>Slug</span>
-						<input name="slug" defaultValue={values.slug} required />
+						<span css={{ color: "var(--ui-neutral-fg)" }}>Slug</span>
+						<Input name="slug" value={values.slug} required readOnly={mode === "edit"} />
 					</label>
 
 					<label css={{ display: "grid", gap: "0.25rem" }}>
-						<span>Excerpt</span>
-						<textarea name="excerpt" rows={3} defaultValue={values.excerpt} required />
+						<span css={{ color: "var(--ui-neutral-fg)" }}>Excerpt</span>
+						<textarea
+							name="excerpt"
+							rows={3}
+							required
+							css={{
+								padding: "0.45rem 0.55rem",
+								fontSize: "0.9rem",
+								borderRadius: "0.4rem",
+								border: "1px solid var(--ui-neutral-border)",
+								backgroundColor: "var(--ui-neutral-bg-tint)",
+								color: "var(--ui-neutral-fg-emphasis)",
+								fontFamily: "inherit",
+							}}
+						>
+							{values.excerpt}
+						</textarea>
 					</label>
 
 					<label css={{ display: "grid", gap: "0.25rem" }}>
-						<span>Tags (comma separated)</span>
-						<input name="tags" defaultValue={values.tags} />
+						<span css={{ color: "var(--ui-neutral-fg)" }}>Tags (comma separated)</span>
+						<Input name="tags" value={values.tags} />
 					</label>
 
 					<label css={{ display: "grid", gap: "0.25rem" }}>
-						<span>Published At (ISO)</span>
-						<input name="published_at" defaultValue={values.published_at} />
+						<span css={{ color: "var(--ui-neutral-fg)" }}>Published At</span>
+						<Input type="date" name="published_at" value={values.published_at} />
 					</label>
 
 					<label css={{ display: "grid", gap: "0.25rem" }}>
-						<span>Content</span>
-						<textarea name="content" rows={16} defaultValue={values.content} required />
+						<span css={{ color: "var(--ui-neutral-fg)" }}>Content</span>
+						<textarea
+							name="content"
+							rows={16}
+							required
+							css={{
+								padding: "0.45rem 0.55rem",
+								fontSize: "0.9rem",
+								borderRadius: "0.4rem",
+								border: "1px solid var(--ui-neutral-border)",
+								backgroundColor: "var(--ui-neutral-bg-tint)",
+								color: "var(--ui-neutral-fg-emphasis)",
+								fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace",
+							}}
+						>
+							{values.content}
+						</textarea>
 					</label>
 
 					<div css={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
-						<button type="submit">{submitLabel}</button>
-						<a href="/cms/tutorials">Back to list</a>
+						<Button type="submit">{submitLabel}</Button>
+						<a
+							href="/cms/tutorials"
+							css={{
+								padding: "0.45rem 0.7rem",
+								fontSize: "0.9rem",
+								borderRadius: "0.4rem",
+								border: "1px solid var(--ui-accent-border)",
+								color: "var(--ui-accent-fg-emphasis)",
+								textDecoration: "none",
+							}}
+						>
+							Back to list
+						</a>
 					</div>
 				</form>
-
-				{mode === "edit" && deleteAction ? (
-					<section css={{ display: "grid", gap: "0.45rem" }}>
-						<button type="button" commandfor="delete-tutorial" command="show-modal">
-							Delete Tutorial
-						</button>
-
-						<dialog id="delete-tutorial">
-							<form method="post" action={deleteAction} css={{ display: "grid", gap: "0.5rem" }}>
-								<input type="hidden" name="_method" value="DELETE" />
-								<p css={{ margin: 0 }}>This action cannot be undone.</p>
-								<div css={{ display: "flex", gap: "0.5rem" }}>
-									<button type="submit">Confirm delete</button>
-									<button type="button" commandfor="delete-tutorial" command="close">
-										Cancel
-									</button>
-								</div>
-							</form>
-						</dialog>
-					</section>
-				) : null}
 			</section>
 		</main>
 	);
