@@ -8,6 +8,7 @@ import type routes from "~/routes";
 import { CMSLayout } from "~/components/layout/cms";
 import { authState } from "~/middleware/auth-state";
 import { db } from "~/middleware/db";
+import { Post } from "~/models/post";
 import { ArticlePost } from "~/models/posts/article";
 import { CMSArticlesActionView, CMSArticlesIndexView } from "~/views/cms/articles";
 
@@ -25,13 +26,10 @@ export default controller<typeof routes.cms.articles>({
 			let items = articles.map((article) => ({
 				id: article.post.id,
 				title: article.meta.title,
-				slug: article.meta.slug,
-				date: formatListDate(article.post.published_at ?? article.post.created_at),
-				href: `/cms/articles/${article.post.id}/edit`,
-				editHref: `/cms/articles/${article.post.id}/edit`,
-				showHref: `/cms/articles/${article.post.id}`,
-				deleteAction: `/cms/articles/${article.post.id}`,
 				publicHref: `/articles/${article.meta.slug}`,
+				preview: !Post.isPublishedAt(article.post.published_at),
+				href: `/cms/articles/${article.post.id}/edit`,
+				deleteAction: `/cms/articles/${article.post.id}`,
 			}));
 
 			let body = await renderToString(
@@ -212,12 +210,6 @@ function parsePublishedAt(formData: FormData) {
 
 function toDateInputValue(value: string | null) {
 	if (!value) return "";
-	let parsed = new Date(value);
-	if (Number.isNaN(parsed.getTime())) return "";
-	return parsed.toISOString().slice(0, 10);
-}
-
-function formatListDate(value: string) {
 	let parsed = new Date(value);
 	if (Number.isNaN(parsed.getTime())) return "";
 	return parsed.toISOString().slice(0, 10);
