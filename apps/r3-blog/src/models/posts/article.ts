@@ -7,6 +7,9 @@ import { postMeta, posts } from "~/schema";
 
 export namespace ArticlePost {
 	/**
+	 * Shared article model DTOs and metadata contracts.
+	 */
+	/**
 	 * Metadata stored in an article post.
 	 * It includes content and optional SEO fields used to render article pages.
 	 *
@@ -58,6 +61,9 @@ export namespace ArticlePost {
 	 */
 	export interface UpdateInput extends Post.TypedUpdateInput<Meta> {}
 
+	/**
+	 * Lightweight article row used for listing screens.
+	 */
 	export interface ListItem {
 		id: string;
 		title: string;
@@ -67,7 +73,13 @@ export namespace ArticlePost {
 	}
 }
 
+/**
+ * Typed article post model.
+ */
 export class ArticlePost {
+	/**
+	 * Discriminator used for article posts in the posts table.
+	 */
 	static postType = "article" as const;
 
 	/**
@@ -83,6 +95,9 @@ export class ArticlePost {
 		return Post.findAllForType<typeof this.postType, ArticlePost.Meta>(db, this.postType);
 	}
 
+	/**
+	 * Returns lightweight article list items sorted by publication date.
+	 */
 	static async listItems(db: Database): Promise<Array<ArticlePost.ListItem>> {
 		let rows = await db
 			.query(posts)
@@ -128,6 +143,9 @@ export class ArticlePost {
 		return items;
 	}
 
+	/**
+	 * Counts total article posts.
+	 */
 	static count(db: Database) {
 		return Post.countForType(db, this.postType);
 	}

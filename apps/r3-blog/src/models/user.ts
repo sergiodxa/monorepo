@@ -4,6 +4,17 @@ import * as schema from "~/schema";
 
 export namespace User {
 	/**
+	 * User profile data received from the identity provider.
+	 */
+	export interface AuthProfile {
+		subjectId: string;
+		email: string;
+		avatar: string;
+		username: string;
+		displayName: string;
+	}
+
+	/**
 	 * Input used to create a new user record.
 	 * Includes required profile fields and optional persisted values.
 	 *
@@ -87,6 +98,17 @@ export class User {
 	 */
 	static findByEmail(db: Database, email: string) {
 		return db.findOne(this.table, { where: { email } });
+	}
+
+	/**
+	 * Finds a user by identity-provider subject id.
+	 *
+	 * @param db Database client used to run operations.
+	 * @param subjectId Subject id to look up.
+	 * @returns The matching user or null.
+	 */
+	static findBySubjectId(db: Database, subjectId: string) {
+		return db.findOne(this.table, { where: { subject_id: subjectId } });
 	}
 
 	/**
@@ -182,6 +204,50 @@ export class User {
 	static async destroy(db: Database, id: string) {
 		await db.delete(this.table, { id });
 		return true;
+	}
+
+	/**
+	 * Finds or creates a user from an auth-provider profile.
+	 * Existing users are matched by subject id first, then by email.
+	 *
+	 * @param db Database client used to run operations.
+	 * @param profile Auth-provider profile payload.
+	 * @returns The linked or created user.
+	 */
+	static async findOrCreateFromAuthProfile(db: Database, profile: User.AuthProfile) {
+		let existing = await this.findBySubjectId(db, profile.subjectId);
+		if (!existing) existing = await this.findByEmail(db, profile.email);
+
+		if (!existing) {
+			let created = await this.create(db, {
+				subjectId: profile.subjectId,
+				role: "guest",
+				email: profile.email,
+				avatar: profile.avatar,
+				username: profile.username,
+				displayName: profile.displayName,
+			});
+
+			if (!created) {
+				throw new Error("Failed to create user from auth profile");
+			}
+
+			return created;
+		}
+
+		let updated = await this.update(db, existing.id, {
+			subjectId: profile.subjectId,
+			email: profile.email,
+			avatar: profile.avatar,
+			username: profile.username,
+			displayName: profile.displayName,
+		});
+
+		if (!updated) {
+			throw new Error("Failed to update user from auth profile");
+		}
+
+		return updated;
 	}
 
 	private static get timestamp() {

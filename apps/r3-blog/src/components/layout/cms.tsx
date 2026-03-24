@@ -20,6 +20,7 @@ let cmsNavigationItems: Array<CMSLayout.NavigationItem> = [
 	{ href: "/cms/bookmarks", label: "Bookmarks" },
 	{ href: "/cms/glossary", label: "Glossary" },
 	{ href: "/cms/redirects", label: "Redirects" },
+	{ href: "/logout", label: "Logout" },
 ];
 
 export function CMSLayout() {

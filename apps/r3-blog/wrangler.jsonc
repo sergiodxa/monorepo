@@ -9,7 +9,24 @@
 	"placement": { "mode": "smart" },
 	"observability": { "enabled": true },
 	"assets": { "directory": "./build/client" },
-	"kv_namespaces": [],
+
+	"kv_namespaces": [
+		{
+			"binding": "CACHE",
+			"id": "597a3ce0108c42798aeac0044a566e31",
+			"preview_id": "cache",
+		},
+		{
+			"binding": "AUTH",
+			"id": "fda5fdfe90e74e2b82dd0ccd49346c27",
+			"preview_id": "auth@sergiodxa.com",
+		},
+		{
+			"binding": "REDIRECTS",
+			"id": "2bcc558cadce40dcb9c73f047c26be6c",
+			"preview_id": "redirects",
+		},
+	],
 
 	"d1_databases": [
 		{
@@ -20,5 +37,11 @@
 		},
 	],
 
-	"r2_buckets": [],
+	"r2_buckets": [
+		{
+			"binding": "BACKUPS",
+			"bucket_name": "backups",
+			"preview_bucket_name": "backups",
+		},
+	],
 }

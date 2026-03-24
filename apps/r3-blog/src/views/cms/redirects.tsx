@@ -53,7 +53,7 @@ export function CMSRedirectsIndexView() {
 				}}
 			>
 				{items.length === 0 ? (
-					<p css={{ margin: 0 }}>No redirect metadata entries found in the database yet.</p>
+					<p css={{ margin: 0 }}>No redirects found in KV yet.</p>
 				) : (
 					<ul css={{ margin: 0, paddingLeft: "1rem", display: "grid", gap: "0.4rem" }}>
 						{items.map((item) => (

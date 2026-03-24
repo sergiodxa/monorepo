@@ -7,6 +7,9 @@ import { postMeta, posts } from "~/schema";
 
 export namespace TutorialPost {
 	/**
+	 * Shared tutorial model DTOs and metadata contracts.
+	 */
+	/**
 	 * Metadata stored in a tutorial post.
 	 * It includes the route slug and content fields used to render tutorials.
 	 *
@@ -57,6 +60,9 @@ export namespace TutorialPost {
 	 */
 	export interface UpdateInput extends Post.TypedUpdateInput<Meta> {}
 
+	/**
+	 * Lightweight tutorial row used for listing screens.
+	 */
 	export interface ListItem {
 		id: string;
 		title: string;
@@ -72,9 +78,18 @@ export namespace TutorialPost {
 	}
 }
 
+/**
+ * Typed tutorial post model.
+ */
 export class TutorialPost {
+	/**
+	 * Discriminator used for tutorial posts in the posts table.
+	 */
 	static postType = "tutorial" as const;
 
+	/**
+	 * Normalizes tags metadata into a string array.
+	 */
 	static tags(metaTags: string | string[] | undefined): Array<string> {
 		if (Array.isArray(metaTags)) {
 			return metaTags.filter((tag): tag is string => typeof tag === "string");
@@ -85,6 +100,9 @@ export class TutorialPost {
 		return [];
 	}
 
+	/**
+	 * Finds related tutorials by matching at least one tag.
+	 */
 	static async findRelatedByTags(
 		db: Database,
 		currentPostId: string,
@@ -128,6 +146,9 @@ export class TutorialPost {
 		return Post.findAllForType<typeof this.postType, TutorialPost.Meta>(db, this.postType);
 	}
 
+	/**
+	 * Returns lightweight tutorial list items sorted by publication date.
+	 */
 	static async listItems(db: Database): Promise<Array<TutorialPost.ListItem>> {
 		let rows = await db
 			.query(posts)
@@ -173,6 +194,9 @@ export class TutorialPost {
 		return items;
 	}
 
+	/**
+	 * Counts total tutorial posts.
+	 */
 	static count(db: Database) {
 		return Post.countForType(db, this.postType);
 	}

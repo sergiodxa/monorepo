@@ -6,6 +6,9 @@ import { LikePost } from "~/models/posts/like";
 import { TutorialPost } from "~/models/posts/tutorial";
 
 export namespace Feed {
+	/**
+	 * A single activity entry displayed in the combined public feed.
+	 */
 	export interface ActivityItem {
 		href: string;
 		label: string;
@@ -16,7 +19,14 @@ export namespace Feed {
 	}
 }
 
+/**
+ * Feed model that aggregates activity from multiple post types.
+ */
 export class Feed {
+	/**
+	 * Parses mixed date inputs into a timestamp.
+	 * Returns `NaN` when the input cannot be parsed as a valid date.
+	 */
 	static toTimestamp(value: unknown): number {
 		if (value === null || value === undefined) return Number.NaN;
 
@@ -41,6 +51,10 @@ export class Feed {
 		return Number.NaN;
 	}
 
+	/**
+	 * Lists merged activity entries ordered by date descending.
+	 * Combines articles, tutorials, bookmarks, and glossary entries.
+	 */
 	static async listActivity(db: Database, limit?: number): Promise<Array<Feed.ActivityItem>> {
 		let now = Date.now();
 		let [articles, tutorials, bookmarks, glossary] = await Promise.all([

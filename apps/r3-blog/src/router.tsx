@@ -14,14 +14,19 @@ import cmsTutorials from "~/controller/cms/tutorials";
 import colors from "~/controller/colors";
 import feed from "~/controller/feed";
 import glossary from "~/controller/glossary";
+import login from "~/controller/login";
+import logout from "~/controller/logout";
 import post from "~/controller/post";
 import tutorials from "~/controller/tutorials";
+import { authMiddleware } from "~/middleware/auth";
 import db from "~/middleware/db";
+import { redirectsMiddleware } from "~/middleware/redirects";
+import { authStateMiddleware, sessionMiddleware } from "~/middleware/session";
 import routes from "~/routes";
 import { NotFoundView } from "~/views/not-found";
 
 export const router = createRouter({
-	middleware: [db()],
+	middleware: [sessionMiddleware, authStateMiddleware, redirectsMiddleware, authMiddleware, db()],
 	async defaultHandler() {
 		let body = await renderToString(
 			<BlogLayout title="Not Found" description="The requested page was not found.">
@@ -42,6 +47,8 @@ router.map(routes, {
 	actions: {
 		feed,
 		colors,
+		login,
+		logout,
 		articles,
 		tutorials,
 		bookmarks,

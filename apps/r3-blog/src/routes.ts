@@ -3,6 +3,8 @@ import { route, get, resources } from "remix/fetch-router/routes";
 export default route({
 	feed: get("/"),
 	colors: get("/colors"),
+	login: get("/login"),
+	logout: get("/logout"),
 
 	articles: get("/articles"),
 	tutorials: get("/tutorials"),

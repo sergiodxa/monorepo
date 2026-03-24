@@ -5,6 +5,9 @@ import * as schema from "~/schema";
 
 export namespace Post {
 	/**
+	 * Shared types and DTOs used by the Post model.
+	 */
+	/**
 	 * Post type discriminator stored on each post row.
 	 * @example
 	 * let postType: Post.Type = "article";
@@ -137,13 +140,25 @@ export namespace Post {
 	}
 }
 
+/**
+ * Base post model with shared persistence and metadata helpers.
+ */
 export class Post {
+	/**
+	 * Backing posts table used for all post operations.
+	 */
 	static table = schema.posts;
 
+	/**
+	 * Returns whether a post should be considered publicly published.
+	 */
 	static isPublishedAt(published_at: string | null) {
 		return published_at === null || Date.parse(published_at) <= Date.now();
 	}
 
+	/**
+	 * Picks the date used for ordering, preferring `published_at` over `created_at`.
+	 */
 	static timestampFromPublishedOrCreated(input: {
 		published_at: string | null;
 		created_at: string;
@@ -151,6 +166,9 @@ export class Post {
 		return Date.parse(input.published_at ?? input.created_at);
 	}
 
+	/**
+	 * Descending comparator using `published_at ?? created_at`.
+	 */
 	static compareByPublishedOrCreatedDesc(
 		a: { published_at: string | null; created_at: string },
 		b: { published_at: string | null; created_at: string },
@@ -555,6 +573,9 @@ export class Post {
 		};
 	}
 
+	/**
+	 * Serializes a metadata object into key/value metadata rows.
+	 */
 	private static metaObjectToRows(meta: object) {
 		let rows: Array<{ key: string; value: string }> = [];
 
@@ -572,6 +593,9 @@ export class Post {
 		return rows;
 	}
 
+	/**
+	 * Hydrates typed metadata object values from metadata rows.
+	 */
 	private static metaRowsToObject<meta extends object>(rows: Array<schema.SelectPostMeta>): meta {
 		let output: Record<string, unknown> = {};
 
@@ -594,6 +618,9 @@ export class Post {
 		return output as meta;
 	}
 
+	/**
+	 * Generates the current ISO timestamp used for persistence updates.
+	 */
 	private static get timestamp() {
 		return new Date().toISOString();
 	}

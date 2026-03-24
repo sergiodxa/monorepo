@@ -4,6 +4,9 @@ import { Post } from "~/models/post";
 
 export namespace LikePost {
 	/**
+	 * Shared like model DTOs and metadata contracts.
+	 */
+	/**
 	 * Metadata stored in a like post.
 	 * It captures the title and URL of the linked resource.
 	 *
@@ -47,9 +50,18 @@ export namespace LikePost {
 	export interface UpdateInput extends Post.TypedUpdateInput<Meta> {}
 }
 
+/**
+ * Typed bookmark/like post model.
+ */
 export class LikePost {
+	/**
+	 * Discriminator used for like posts in the posts table.
+	 */
 	static postType = "like" as const;
 
+	/**
+	 * Ensures urls are absolute (or root-relative) before rendering links.
+	 */
 	static normalizeUrl(url: string) {
 		if (url.startsWith("http://") || url.startsWith("https://") || url.startsWith("/")) {
 			return url;
@@ -58,6 +70,9 @@ export class LikePost {
 		return `https://${url}`;
 	}
 
+	/**
+	 * Builds a Wayback Machine snapshot URL using a post creation timestamp.
+	 */
 	static waybackSnapshotUrl(url: string, created_at: string) {
 		let created = new Date(created_at);
 		if (Number.isNaN(created.getTime())) return null;
@@ -85,6 +100,9 @@ export class LikePost {
 		return Post.findAllForType<typeof this.postType, LikePost.Meta>(db, this.postType);
 	}
 
+	/**
+	 * Counts total like posts.
+	 */
 	static count(db: Database) {
 		return Post.countForType(db, this.postType);
 	}

@@ -4,6 +4,9 @@ import { Post } from "~/models/post";
 
 export namespace GlossaryPost {
 	/**
+	 * Shared glossary model DTOs and metadata contracts.
+	 */
+	/**
 	 * Metadata stored in a glossary post.
 	 * It defines the term and definition shown on glossary entries.
 	 *
@@ -51,7 +54,13 @@ export namespace GlossaryPost {
 	export interface UpdateInput extends Post.TypedUpdateInput<Meta> {}
 }
 
+/**
+ * Typed glossary post model.
+ */
 export class GlossaryPost {
+	/**
+	 * Discriminator used for glossary posts in the posts table.
+	 */
 	static postType = "glossary" as const;
 
 	/**
@@ -67,6 +76,9 @@ export class GlossaryPost {
 		return Post.findAllForType<typeof this.postType, GlossaryPost.Meta>(db, this.postType);
 	}
 
+	/**
+	 * Counts total glossary posts.
+	 */
 	static count(db: Database) {
 		return Post.countForType(db, this.postType);
 	}
