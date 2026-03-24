@@ -1,11 +1,9 @@
 import { redirect } from "@pkg/http/response";
 import middleware from "@pkg/remix-helpers/middleware";
 
-export const authMiddleware = middleware((ctx, next) => {
+export default middleware((ctx, next) => {
 	let url = new URL(ctx.request.url);
 	let pathname = url.pathname;
-
-	if (!pathname.startsWith("/cms")) return next();
 
 	if (!ctx.auth.isAuthenticated) {
 		let loginUrl = new URL("/login", url);

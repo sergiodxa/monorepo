@@ -6,7 +6,6 @@ import { renderToString } from "remix/component/server";
 import type routes from "~/routes";
 
 import { BlogLayout } from "~/components/layout/blog";
-import { destroySession, getIdToken } from "~/middleware/session";
 import { buildLogoutUrl, clearAuthFlowCookies } from "~/modules/auth";
 import { LogoutView } from "~/views/logout";
 
@@ -27,7 +26,7 @@ export default action<typeof routes.logout>(async (ctx) => {
 		return ok(body);
 	}
 
-	let idToken = getIdToken(ctx);
+	let idToken = ctx.auth.getIdToken();
 	let logoutUrl = buildLogoutUrl(ctx.request, idToken);
 	let response = redirect(logoutUrl, {
 		status: redirect.Status.SeeOther,
@@ -36,7 +35,7 @@ export default action<typeof routes.logout>(async (ctx) => {
 		},
 	});
 
-	destroySession(ctx);
+	ctx.auth.logout();
 
 	for (let cookie of clearAuthFlowCookies()) {
 		response.headers.append("Set-Cookie", cookie);

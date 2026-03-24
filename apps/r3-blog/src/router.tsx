@@ -1,6 +1,8 @@
 import { notFound } from "@pkg/http/response/html";
 import { renderToString } from "remix/component/server";
 import { createRouter } from "remix/fetch-router";
+import { formData } from "remix/form-data-middleware";
+import { methodOverride } from "remix/method-override-middleware";
 
 import { BlogLayout } from "~/components/layout/blog";
 import articles from "~/controller/articles";
@@ -18,15 +20,16 @@ import login from "~/controller/login";
 import logout from "~/controller/logout";
 import post from "~/controller/post";
 import tutorials from "~/controller/tutorials";
-import { authMiddleware } from "~/middleware/auth";
+import auth from "~/middleware/auth";
+import authState from "~/middleware/auth-state";
 import db from "~/middleware/db";
 import { redirectsMiddleware } from "~/middleware/redirects";
-import { authStateMiddleware, sessionMiddleware } from "~/middleware/session";
+import session from "~/middleware/session";
 import routes from "~/routes";
 import { NotFoundView } from "~/views/not-found";
 
 export const router = createRouter({
-	middleware: [sessionMiddleware, authStateMiddleware, redirectsMiddleware, authMiddleware, db()],
+	middleware: [session, formData(), methodOverride(), redirectsMiddleware, db(), authState],
 	async defaultHandler() {
 		let body = await renderToString(
 			<BlogLayout title="Not Found" description="The requested page was not found.">
@@ -56,12 +59,16 @@ router.map(routes, {
 		post,
 
 		cms: {
-			dashboard: cmsDashboard,
-			articles: cmsArticles,
-			tutorials: cmsTutorials,
-			bookmarks: cmsBookmarks,
-			glossary: cmsGlossary,
-			redirects: cmsRedirects,
+			middleware: [auth],
+
+			actions: {
+				dashboard: cmsDashboard,
+				articles: cmsArticles,
+				tutorials: cmsTutorials,
+				bookmarks: cmsBookmarks,
+				glossary: cmsGlossary,
+				redirects: cmsRedirects,
+			},
 		},
 	},
 });

@@ -7,7 +7,6 @@ import type routes from "~/routes";
 
 import { BlogLayout } from "~/components/layout/blog";
 import { db } from "~/middleware/db";
-import { setIdToken, setUser } from "~/middleware/session";
 import { User } from "~/models/user";
 import {
 	clearAuthFlowCookies,
@@ -69,8 +68,8 @@ export default action<typeof routes.login>(async (ctx) => {
 		displayName: profile.name,
 	});
 
-	setUser(ctx, user);
-	setIdToken(ctx, tokens.idToken);
+	ctx.auth.login(user);
+	ctx.auth.setIdToken(tokens.idToken);
 
 	let nextPath = normalizeNextPath(readAuthNext(ctx.request));
 	let response = redirect(nextPath, { status: redirect.Status.SeeOther });
