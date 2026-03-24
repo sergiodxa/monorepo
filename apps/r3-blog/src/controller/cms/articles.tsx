@@ -1,3 +1,4 @@
+import { redirect } from "@pkg/http/response";
 import { notFound, ok } from "@pkg/http/response/html";
 import controller from "@pkg/remix-helpers/controller";
 import { renderToString } from "remix/component/server";
@@ -24,6 +25,7 @@ export default controller<typeof routes.cms.articles>({
 				id: article.post.id,
 				title: article.meta.title,
 				slug: article.meta.slug,
+				href: `/cms/articles/${article.post.id}/edit`,
 			}));
 
 			let body = await renderToString(
@@ -35,45 +37,37 @@ export default controller<typeof routes.cms.articles>({
 		},
 
 		async create(ctx) {
-			let total = (await ArticlePost.findAll(db(ctx))).length;
-			let viewProps: CMSArticlesController.ActionProps = {
-				title: "Create Article",
-				description: `Create Article. There are currently ${total} articles in the database.`,
-			};
-			let body = await renderToString(
-				<CMSLayout title={viewProps.title} activePath="/cms/articles">
-					<CMSArticlesActionView {...viewProps} />
-				</CMSLayout>,
-			);
-			return ok(body);
+			let user = ctx.auth.user;
+			if (!user) return redirect("/login", { status: redirect.Status.SeeOther });
+
+			let formData = await ctx.request.formData();
+			let created = await ArticlePost.create(db(ctx), {
+				author_id: user.id,
+				published_at: parsePublishedAt(formData),
+				meta: {
+					title: readString(formData, "title") || "Untitled article",
+					slug: readString(formData, "slug") || crypto.randomUUID(),
+					locale: readString(formData, "locale") || "en",
+					excerpt: readString(formData, "excerpt") || undefined,
+					canonical_url: readString(formData, "canonical_url") || undefined,
+					content: readString(formData, "content") || "",
+				},
+			});
+			if (!created) return redirect("/cms/articles", { status: redirect.Status.SeeOther });
+
+			return redirect(`/cms/articles/${created.post.id}/edit`, {
+				status: redirect.Status.SeeOther,
+			});
 		},
 
 		async destroy(ctx) {
-			let article = await ArticlePost.findById(db(ctx), ctx.params.id);
-			if (!article) {
-				let viewProps: CMSArticlesController.ActionProps = {
-					title: "Article Not Found",
-					description: `Article ${ctx.params.id} was not found.`,
-				};
-				let body = await renderToString(
-					<CMSLayout title={viewProps.title} activePath="/cms/articles">
-						<CMSArticlesActionView {...viewProps} />
-					</CMSLayout>,
-				);
-				return notFound(body);
+			let articleId = ctx.params.id;
+			if (!articleId) {
+				return redirect("/cms/articles", { status: redirect.Status.SeeOther });
 			}
 
-			let title = article.meta.title;
-			let viewProps: CMSArticlesController.ActionProps = {
-				title: `Delete Article ${title}`,
-				description: `Ready to delete article "${title}" (${article.post.id}).`,
-			};
-			let body = await renderToString(
-				<CMSLayout title={viewProps.title} activePath="/cms/articles">
-					<CMSArticlesActionView {...viewProps} />
-				</CMSLayout>,
-			);
-			return ok(body);
+			await ArticlePost.destroy(db(ctx), articleId);
+			return redirect("/cms/articles", { status: redirect.Status.SeeOther });
 		},
 
 		async edit(ctx) {
@@ -82,6 +76,18 @@ export default controller<typeof routes.cms.articles>({
 				let viewProps: CMSArticlesController.ActionProps = {
 					title: "Article Not Found",
 					description: `Article ${ctx.params.id} was not found.`,
+					mode: "new",
+					action: "/cms/articles",
+					submitLabel: "Create Article",
+					values: {
+						title: "",
+						slug: "",
+						locale: "en",
+						excerpt: "",
+						canonical_url: "",
+						content: "",
+						published_at: "",
+					},
 				};
 				let body = await renderToString(
 					<CMSLayout title={viewProps.title} activePath="/cms/articles">
@@ -91,10 +97,22 @@ export default controller<typeof routes.cms.articles>({
 				return notFound(body);
 			}
 
-			let title = article.meta.title;
 			let viewProps: CMSArticlesController.ActionProps = {
-				title: `Edit Article ${title}`,
-				description: `Editing article "${title}" at /articles/${article.meta.slug}.`,
+				title: `Edit Article ${article.meta.title}`,
+				description: `Editing article at /articles/${article.meta.slug}.`,
+				mode: "edit",
+				action: `/cms/articles/${article.post.id}`,
+				submitLabel: "Save Article",
+				deleteAction: `/cms/articles/${article.post.id}`,
+				values: {
+					title: article.meta.title,
+					slug: article.meta.slug,
+					locale: article.meta.locale,
+					excerpt: article.meta.excerpt ?? "",
+					canonical_url: article.meta.canonical_url ?? "",
+					content: article.meta.content,
+					published_at: article.post.published_at ?? "",
+				},
 			};
 			let body = await renderToString(
 				<CMSLayout title={viewProps.title} activePath="/cms/articles">
@@ -109,6 +127,18 @@ export default controller<typeof routes.cms.articles>({
 			let viewProps: CMSArticlesController.ActionProps = {
 				title: "New Article",
 				description: `New Article form loaded. Current articles count: ${total}.`,
+				mode: "new",
+				action: "/cms/articles",
+				submitLabel: "Create Article",
+				values: {
+					title: "",
+					slug: "",
+					locale: "en",
+					excerpt: "",
+					canonical_url: "",
+					content: "",
+					published_at: "",
+				},
 			};
 			let body = await renderToString(
 				<CMSLayout title={viewProps.title} activePath="/cms/articles">
@@ -120,57 +150,48 @@ export default controller<typeof routes.cms.articles>({
 
 		async show(ctx) {
 			let article = await ArticlePost.findById(db(ctx), ctx.params.id);
-			if (!article) {
-				let viewProps: CMSArticlesController.ActionProps = {
-					title: "Article Not Found",
-					description: `Article ${ctx.params.id} was not found.`,
-				};
-				let body = await renderToString(
-					<CMSLayout title={viewProps.title} activePath="/cms/articles">
-						<CMSArticlesActionView {...viewProps} />
-					</CMSLayout>,
-				);
-				return notFound(body);
-			}
+			if (!article) return notFound("<h1>404 Not Found</h1>");
 
-			let viewProps: CMSArticlesController.ActionProps = {
-				title: article.meta.title,
-				description: `Article ${article.post.id} lives at /articles/${article.meta.slug}.`,
-			};
-			let body = await renderToString(
-				<CMSLayout title={viewProps.title} activePath="/cms/articles">
-					<CMSArticlesActionView {...viewProps} />
-				</CMSLayout>,
-			);
-			return ok(body);
+			return redirect(`/articles/${article.meta.slug}`, { status: redirect.Status.SeeOther });
 		},
 
 		async update(ctx) {
-			let article = await ArticlePost.findById(db(ctx), ctx.params.id);
-			if (!article) {
-				let viewProps: CMSArticlesController.ActionProps = {
-					title: "Article Not Found",
-					description: `Article ${ctx.params.id} was not found.`,
-				};
-				let body = await renderToString(
-					<CMSLayout title={viewProps.title} activePath="/cms/articles">
-						<CMSArticlesActionView {...viewProps} />
-					</CMSLayout>,
-				);
-				return notFound(body);
+			let user = ctx.auth.user;
+			let articleId = ctx.params.id;
+			if (!user || !articleId) {
+				return redirect("/cms/articles", { status: redirect.Status.SeeOther });
 			}
 
-			let title = article.meta.title;
-			let viewProps: CMSArticlesController.ActionProps = {
-				title: `Update Article ${title}`,
-				description: `Update flow loaded for article "${title}" (${article.post.id}).`,
-			};
-			let body = await renderToString(
-				<CMSLayout title={viewProps.title} activePath="/cms/articles">
-					<CMSArticlesActionView {...viewProps} />
-				</CMSLayout>,
-			);
-			return ok(body);
+			let formData = await ctx.request.formData();
+			let updated = await ArticlePost.update(db(ctx), articleId, {
+				author_id: user.id,
+				published_at: parsePublishedAt(formData),
+				meta: {
+					title: readString(formData, "title") || "Untitled article",
+					slug: readString(formData, "slug") || articleId,
+					locale: readString(formData, "locale") || "en",
+					excerpt: readString(formData, "excerpt") || undefined,
+					canonical_url: readString(formData, "canonical_url") || undefined,
+					content: readString(formData, "content") || "",
+				},
+			});
+
+			if (!updated) return notFound("<h1>404 Not Found</h1>");
+
+			return redirect(`/cms/articles/${articleId}/edit`, { status: redirect.Status.SeeOther });
 		},
 	},
 });
+
+function readString(formData: FormData, key: string) {
+	let value = formData.get(key);
+	if (typeof value !== "string") return "";
+	return value.trim();
+}
+
+function parsePublishedAt(formData: FormData) {
+	let value = readString(formData, "published_at");
+	if (!value) return null;
+	if (Number.isNaN(Date.parse(value))) return null;
+	return value;
+}
