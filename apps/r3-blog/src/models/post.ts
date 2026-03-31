@@ -187,11 +187,14 @@ export class Post {
 	 * let posts = await Post.findAll(db);
 	 */
 	static async findAll(db: Database): Promise<Array<Post.FoundPost>> {
-		let posts = await db.findMany(this.table, {
-			with: { meta: schema.postRelations.meta },
-		});
+		let posts = await db.query(this.table).orderBy("created_at", "desc").all();
 
-		return posts;
+		return await Promise.all(
+			posts.map(async (post) => {
+				let meta = await PostMeta.findByPostId(db, post.id);
+				return { ...post, meta };
+			}),
+		);
 	}
 
 	/**
@@ -204,13 +207,12 @@ export class Post {
 	 * let found = await Post.findById(db, "post_123");
 	 */
 	static async findById(db: Database, id: string): Promise<Post.FoundPost | null> {
-		let post = await db.findOne(this.table, {
-			where: { id },
-			with: { meta: schema.postRelations.meta },
-		});
+		let post = await db.findOne(this.table, { where: { id } });
 
 		if (!post) return null;
-		return post;
+
+		let meta = await PostMeta.findByPostId(db, post.id);
+		return { ...post, meta };
 	}
 
 	/**
@@ -244,10 +246,14 @@ export class Post {
 	static async findByAuthorId(db: Database, authorId: string): Promise<Array<Post.FoundPost>> {
 		let posts = await db.findMany(this.table, {
 			where: { author_id: authorId } as Record<string, unknown>,
-			with: { meta: schema.postRelations.meta },
 		});
 
-		return posts;
+		return await Promise.all(
+			posts.map(async (post) => {
+				let meta = await PostMeta.findByPostId(db, post.id);
+				return { ...post, meta };
+			}),
+		);
 	}
 
 	/**
@@ -370,7 +376,11 @@ export class Post {
 		db: Database,
 		postType: type,
 	) {
-		let posts = await db.findMany(this.table, { where: { type: postType } });
+		let posts = await db
+			.query(this.table)
+			.orderBy("created_at", "desc")
+			.where({ type: postType })
+			.all();
 
 		return await Promise.all(
 			posts.map(async (post) => {
@@ -430,14 +440,17 @@ export class Post {
 		postType: type,
 		slug: string,
 	) {
-		let match = await db.findOne(schema.postMeta, {
-			where: { key: "slug", value: slug },
-			with: { post: schema.postMetaRelations.post.with({ meta: schema.postRelations.meta }) },
-		});
-		if (!match?.post) return null;
-		if (match.post.type !== postType) return null;
+		let matches = await PostMeta.findByKeyValue(db, "slug", slug);
 
-		return this.toTypedResult<type, meta>(postType, match.post);
+		for (let match of matches) {
+			let post = await this.findById(db, match.post_id);
+			if (!post) continue;
+			if (post.type !== postType) continue;
+
+			return this.toTypedResult<type, meta>(postType, post);
+		}
+
+		return null;
 	}
 
 	/**
