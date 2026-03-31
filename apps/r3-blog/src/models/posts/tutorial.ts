@@ -116,7 +116,7 @@ export class TutorialPost {
 		let related: Array<TutorialPost.RelatedItem> = [];
 
 		for (let tutorial of tutorials) {
-			if (tutorial.post.id === currentPostId) continue;
+			if (tutorial.id === currentPostId) continue;
 
 			let tutorialTags = this.tags(tutorial.meta.tags);
 			let match = tutorialTags.find((tag) => tags.includes(tag));

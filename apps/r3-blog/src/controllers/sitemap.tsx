@@ -22,9 +22,9 @@ export default action<typeof routes.sitemap>(async (ctx) => {
 
 	let sitemap = new Sitemap();
 
-	let lastArticleDate = articles.at(0)?.post.created_at;
-	let lastTutorialDate = tutorials.at(0)?.post.created_at;
-	let lastBookmarkDate = likes.at(0)?.post.created_at;
+	let lastArticleDate = articles.at(0)?.created_at;
+	let lastTutorialDate = tutorials.at(0)?.created_at;
+	let lastBookmarkDate = likes.at(0)?.created_at;
 
 	let dates = [lastArticleDate, lastTutorialDate, lastBookmarkDate]
 		.filter(Boolean)
@@ -49,16 +49,16 @@ export default action<typeof routes.sitemap>(async (ctx) => {
 	sitemap.append(new URL("/glossary", url));
 
 	for (let article of articles) {
-		if (!Post.isPublishedAt(article.post.published_at)) continue;
+		if (!Post.isPublishedAt(article.published_at)) continue;
 		sitemap.append(new URL(`/articles/${article.meta.slug}`, url), {
-			updatedAt: new Date(article.post.created_at),
+			updatedAt: new Date(article.created_at),
 		});
 	}
 
 	for (let tutorial of tutorials) {
-		if (!Post.isPublishedAt(tutorial.post.published_at)) continue;
+		if (!Post.isPublishedAt(tutorial.published_at)) continue;
 		sitemap.append(new URL(`/tutorials/${tutorial.meta.slug}`, url), {
-			updatedAt: new Date(tutorial.post.created_at),
+			updatedAt: new Date(tutorial.created_at),
 		});
 	}
 

@@ -14,14 +14,14 @@ export default action<typeof routes.bookmarks>(async () => {
 	let bookmarks = await LikePost.findAll(db());
 
 	let items = [...bookmarks]
-		.sort((a, b) => Post.compareByPublishedOrCreatedDesc(a.post, b.post))
+		.sort((a, b) => Post.compareByPublishedOrCreatedDesc(a, b))
 		.map((bookmark) => {
 			let href = bookmark.meta.url;
 			let label = bookmark.meta.title;
 			let normalizedHref = LikePost.normalizeUrl(href);
-			let isPublished = Post.isPublishedAt(bookmark.post.published_at);
+			let isPublished = Post.isPublishedAt(bookmark.published_at);
 			let suffixHref = normalizedHref.startsWith("http")
-				? LikePost.waybackSnapshotUrl(normalizedHref, bookmark.post.created_at)
+				? LikePost.waybackSnapshotUrl(normalizedHref, bookmark.created_at)
 				: null;
 
 			return {

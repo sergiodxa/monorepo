@@ -33,9 +33,7 @@ export class Feed {
 	static toTimestamp(value: unknown): number {
 		if (value === null || value === undefined) return Number.NaN;
 
-		if (typeof value === "number") {
-			return Number.isFinite(value) ? value : Number.NaN;
-		}
+		if (typeof value === "number") return Number.isFinite(value) ? value : Number.NaN;
 
 		if (value instanceof Date) {
 			let time = value.getTime();
@@ -111,9 +109,9 @@ export class Feed {
 			}),
 			...bookmarks.map((bookmark) => {
 				let title = bookmark.meta.title;
-				let publishedAt = bookmark.post.published_at;
+				let publishedAt = bookmark.published_at;
 				let publishedAtTime = this.toTimestamp(publishedAt);
-				let createdAtTime = this.toTimestamp(bookmark.post.created_at);
+				let createdAtTime = this.toTimestamp(bookmark.created_at);
 				let isPublished =
 					publishedAt === null || (Number.isFinite(publishedAtTime) && publishedAtTime <= now);
 
@@ -133,9 +131,9 @@ export class Feed {
 				}).toString();
 
 				let title = entry.meta.term;
-				let publishedAt = entry.post.published_at;
+				let publishedAt = entry.published_at;
 				let publishedAtTime = this.toTimestamp(publishedAt);
-				let createdAtTime = this.toTimestamp(entry.post.created_at);
+				let createdAtTime = this.toTimestamp(entry.created_at);
 				let isPublished =
 					publishedAt === null || (Number.isFinite(publishedAtTime) && publishedAtTime <= now);
 

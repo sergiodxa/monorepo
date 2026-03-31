@@ -98,10 +98,13 @@ export namespace Post {
 	 * 	meta: { slug: "hello-world" },
 	 * };
 	 */
-	export interface TypedResult<type extends Type, meta extends object> {
-		post: Omit<schema.SelectPost, "type"> & { type: type };
+	export type TypedResult<type extends Type, meta extends object> = Omit<
+		schema.SelectPost,
+		"type"
+	> & {
+		type: type;
 		meta: meta;
-	}
+	};
 
 	/**
 	 * Full post lookup result with all metadata rows.
@@ -111,8 +114,7 @@ export namespace Post {
 	 * 	meta: [{ id: "m1", postId: "1", key: "slug", value: "hello-world", createdAt: "", updatedAt: "" }],
 	 * };
 	 */
-	export interface FoundPost {
-		post: schema.SelectPost;
+	export interface FoundPost extends schema.SelectPost {
 		meta: Array<schema.SelectPostMeta>;
 	}
 
@@ -185,14 +187,11 @@ export class Post {
 	 * let posts = await Post.findAll(db);
 	 */
 	static async findAll(db: Database): Promise<Array<Post.FoundPost>> {
-		let posts = await db.findMany(this.table);
+		let posts = await db.findMany(this.table, {
+			with: { meta: schema.postRelations.meta },
+		});
 
-		return await Promise.all(
-			posts.map(async (post) => {
-				let meta = await PostMeta.findByPostId(db, post.id);
-				return { post: post as schema.SelectPost, meta };
-			}),
-		);
+		return posts;
 	}
 
 	/**
@@ -205,11 +204,13 @@ export class Post {
 	 * let found = await Post.findById(db, "post_123");
 	 */
 	static async findById(db: Database, id: string): Promise<Post.FoundPost | null> {
-		let post = await db.findOne(this.table, { where: { id } });
-		if (!post) return null;
+		let post = await db.findOne(this.table, {
+			where: { id },
+			with: { meta: schema.postRelations.meta },
+		});
 
-		let meta = await PostMeta.findByPostId(db, post.id);
-		return { post: post as schema.SelectPost, meta };
+		if (!post) return null;
+		return post;
 	}
 
 	/**
@@ -243,14 +244,10 @@ export class Post {
 	static async findByAuthorId(db: Database, authorId: string): Promise<Array<Post.FoundPost>> {
 		let posts = await db.findMany(this.table, {
 			where: { author_id: authorId } as Record<string, unknown>,
+			with: { meta: schema.postRelations.meta },
 		});
 
-		return await Promise.all(
-			posts.map(async (post) => {
-				let meta = await PostMeta.findByPostId(db, post.id);
-				return { post: post as schema.SelectPost, meta };
-			}),
-		);
+		return posts;
 	}
 
 	/**
@@ -356,15 +353,7 @@ export class Post {
 	 * let ok = await Post.destroy(db, "post_123");
 	 */
 	static async destroy(db: Database, id: string) {
-		let meta = await PostMeta.findByPostId(db, id);
-
-		await db.transaction(async (tx) => {
-			for (let item of meta) {
-				await tx.delete(PostMeta.table, item.id);
-			}
-			await tx.delete(this.table, id);
-		});
-
+		await db.delete(this.table, id);
 		return true;
 	}
 
@@ -381,17 +370,12 @@ export class Post {
 		db: Database,
 		postType: type,
 	) {
-		let posts = await db.findMany(this.table, { where: { type: postType } });
+		let posts = await db.findMany(this.table, {
+			where: { type: postType },
+			with: { meta: schema.postRelations.meta },
+		});
 
-		return await Promise.all(
-			posts.map(async (post) => {
-				let rows = await PostMeta.findByPostId(db, post.id);
-				return {
-					post: post as Omit<schema.SelectPost, "type"> & { type: type },
-					meta: this.metaRowsToObject<meta>(rows),
-				};
-			}),
-		);
+		return posts.map((post) => this.toTypedResult<type, meta>(postType, post));
 	}
 
 	/**
@@ -421,12 +405,9 @@ export class Post {
 	) {
 		let found = await this.findById(db, id);
 		if (!found) return null;
-		if (found.post.type !== postType) return null;
+		if (found.type !== postType) return null;
 
-		return {
-			post: found.post as Omit<schema.SelectPost, "type"> & { type: type },
-			meta: this.metaRowsToObject<meta>(found.meta),
-		};
+		return this.toTypedResult<type, meta>(postType, found);
 	}
 
 	/**
@@ -444,20 +425,14 @@ export class Post {
 		postType: type,
 		slug: string,
 	) {
-		let matches = await PostMeta.findByKeyValue(db, "slug", slug);
+		let match = await db.findOne(schema.postMeta, {
+			where: { key: "slug", value: slug },
+			with: { post: schema.postMetaRelations.post.with({ meta: schema.postRelations.meta }) },
+		});
+		if (!match?.post) return null;
+		if (match.post.type !== postType) return null;
 
-		for (let match of matches) {
-			let post = await db.findOne(this.table, { where: { id: match.post_id, type: postType } });
-			if (!post) continue;
-
-			let rows = await PostMeta.findByPostId(db, post.id);
-			return {
-				post: post as Omit<schema.SelectPost, "type"> & { type: type },
-				meta: this.metaRowsToObject<meta>(rows),
-			};
-		}
-
-		return null;
+		return this.toTypedResult<type, meta>(postType, match.post);
 	}
 
 	/**
@@ -477,17 +452,10 @@ export class Post {
 	) {
 		let posts = await db.findMany(this.table, {
 			where: { author_id: authorId, type: postType } as Record<string, unknown>,
+			with: { meta: schema.postRelations.meta },
 		});
 
-		return await Promise.all(
-			posts.map(async (post) => {
-				let rows = await PostMeta.findByPostId(db, post.id);
-				return {
-					post: post as Omit<schema.SelectPost, "type"> & { type: type },
-					meta: this.metaRowsToObject<meta>(rows),
-				};
-			}),
-		);
+		return posts.map((post) => this.toTypedResult<type, meta>(postType, post));
 	}
 
 	/**
@@ -520,10 +488,7 @@ export class Post {
 
 		if (!created) return null;
 
-		return {
-			post: created.post as Omit<schema.SelectPost, "type"> & { type: type },
-			meta: this.metaRowsToObject<meta>(created.meta),
-		};
+		return this.toTypedResult<type, meta>(postType, created);
 	}
 
 	/**
@@ -559,10 +524,15 @@ export class Post {
 
 		if (!updated) return null;
 
-		return {
-			post: updated.post as Omit<schema.SelectPost, "type"> & { type: type },
-			meta: this.metaRowsToObject<meta>(updated.meta),
-		};
+		return this.toTypedResult<type, meta>(postType, updated);
+	}
+
+	private static toTypedResult<type extends Post.Type, meta extends object>(
+		postType: type,
+		post: Post.FoundPost,
+	): Post.TypedResult<type, meta> {
+		let { meta: metaRows, ...postRow } = post;
+		return { ...postRow, type: postType, meta: this.metaRowsToObject<meta>(metaRows) };
 	}
 
 	/**

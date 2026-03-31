@@ -29,11 +29,11 @@ export default controller<typeof routes.cms.glossary>({
 		async index() {
 			let glossary = await GlossaryPost.findAll(db());
 			let items = glossary.map((item) => ({
-				id: item.post.id,
+				id: item.id,
 				term: item.meta.term,
 				slug: item.meta.slug,
-				href: `/cms/glossary/${item.post.id}/edit`,
-				deleteAction: `/cms/glossary/${item.post.id}`,
+				href: `/cms/glossary/${item.id}/edit`,
+				deleteAction: `/cms/glossary/${item.id}`,
 			}));
 
 			let body = await renderToString(
@@ -63,7 +63,7 @@ export default controller<typeof routes.cms.glossary>({
 
 			if (!created) return redirect("/cms/glossary", { status: redirect.Status.SeeOther });
 
-			return redirect(`/cms/glossary/${created.post.id}/edit`, {
+			return redirect(`/cms/glossary/${created.id}/edit`, {
 				status: redirect.Status.SeeOther,
 			});
 		},
@@ -99,9 +99,9 @@ export default controller<typeof routes.cms.glossary>({
 				title: `Edit Glossary ${glossary.meta.term}`,
 				description: `Editing glossary term at /glossary#${glossary.meta.slug}.`,
 				mode: "edit",
-				action: `/cms/glossary/${glossary.post.id}`,
+				action: `/cms/glossary/${glossary.id}`,
 				submitLabel: "Save Glossary Term",
-				deleteAction: `/cms/glossary/${glossary.post.id}`,
+				deleteAction: `/cms/glossary/${glossary.id}`,
 				values: {
 					term: glossary.meta.term ?? "",
 					title: glossary.meta.title ?? "",

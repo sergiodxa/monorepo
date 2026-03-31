@@ -18,14 +18,14 @@ export default action<typeof routes.rss.articles>(async (ctx) => {
 	});
 
 	for (let article of articles) {
-		if (!Post.isPublishedAt(article.post.published_at)) continue;
+		if (!Post.isPublishedAt(article.published_at)) continue;
 		let link = new URL(`/articles/${article.meta.slug}`, ctx.url).toString();
 		rss.addItem({
-			guid: article.post.id,
+			guid: article.id,
 			title: article.meta.title,
 			description: article.meta.excerpt ?? link,
 			link,
-			pubDate: new Date(article.post.published_at ?? article.post.created_at).toUTCString(),
+			pubDate: new Date(article.published_at ?? article.created_at).toUTCString(),
 		});
 	}
 

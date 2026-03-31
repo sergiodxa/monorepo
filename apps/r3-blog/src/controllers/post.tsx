@@ -137,7 +137,7 @@ export default action<typeof routes.post>(async (ctx) => {
 					slug={slug}
 					typePath={postType}
 					eyebrow="Article"
-					publishedAt={post.post.published_at}
+					publishedAt={post.published_at}
 					format={ctx.params.ext}
 					tags={[]}
 					related={[]}
@@ -178,7 +178,7 @@ export default action<typeof routes.post>(async (ctx) => {
 		let slug = post.meta.slug;
 		let excerpt = post.meta.excerpt ?? "";
 		let tags = TutorialPost.tags(post.meta.tags);
-		let related = await TutorialPost.findRelatedByTags(database, post.post.id, tags, 3);
+		let related = await TutorialPost.findRelatedByTags(database, post.id, tags, 3);
 		let postUrl = new URL(`/tutorials/${slug}`, ctx.request.url).toString();
 
 		if (contentType === "md" || prefers === ct.Markdown) {
@@ -212,7 +212,7 @@ export default action<typeof routes.post>(async (ctx) => {
 					slug={slug}
 					typePath={postType}
 					eyebrow="Tutorial"
-					publishedAt={post.post.published_at}
+					publishedAt={post.published_at}
 					format={ctx.params.ext}
 					tags={tags}
 					related={related}

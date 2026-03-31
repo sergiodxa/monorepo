@@ -31,36 +31,36 @@ export default action<typeof routes.rss.feed>(async (ctx) => {
 	let items: Array<RSS.Item> = [];
 
 	for (let article of articles) {
-		if (!Post.isPublishedAt(article.post.published_at)) continue;
+		if (!Post.isPublishedAt(article.published_at)) continue;
 		let link = new URL(`/articles/${article.meta.slug}`, url).toString();
 		items.push({
-			guid: article.post.id,
+			guid: article.id,
 			title: article.meta.title,
 			description: article.meta.excerpt ?? link,
 			link,
-			pubDate: new Date(article.post.published_at ?? article.post.created_at).toUTCString(),
+			pubDate: new Date(article.published_at ?? article.created_at).toUTCString(),
 		});
 	}
 
 	for (let tutorial of tutorials) {
-		if (!Post.isPublishedAt(tutorial.post.published_at)) continue;
+		if (!Post.isPublishedAt(tutorial.published_at)) continue;
 		let link = new URL(`/tutorials/${tutorial.meta.slug}`, url).toString();
 		items.push({
-			guid: tutorial.post.id,
+			guid: tutorial.id,
 			title: tutorial.meta.title,
 			description: tutorial.meta.excerpt ?? link,
 			link,
-			pubDate: new Date(tutorial.post.published_at ?? tutorial.post.created_at).toUTCString(),
+			pubDate: new Date(tutorial.published_at ?? tutorial.created_at).toUTCString(),
 		});
 	}
 
 	for (let like of likes) {
 		items.push({
-			guid: like.post.id,
+			guid: like.id,
 			title: like.meta.title,
 			description: like.meta.url,
 			link: like.meta.url,
-			pubDate: new Date(like.post.created_at).toUTCString(),
+			pubDate: new Date(like.created_at).toUTCString(),
 		});
 	}
 
@@ -68,11 +68,11 @@ export default action<typeof routes.rss.feed>(async (ctx) => {
 		let link = new URL(`/glossary#${term.meta.slug}`, url).toString();
 		let title = term.meta.title ? `${term.meta.term} (aka ${term.meta.title})` : term.meta.term;
 		items.push({
-			guid: term.post.id,
+			guid: term.id,
 			title,
 			description: term.meta.definition,
 			link,
-			pubDate: new Date(term.post.created_at).toUTCString(),
+			pubDate: new Date(term.created_at).toUTCString(),
 		});
 	}
 

@@ -26,11 +26,11 @@ export default controller<typeof routes.cms.bookmarks>({
 		async index() {
 			let bookmarks = await LikePost.findAll(db());
 			let items = bookmarks.map((bookmark) => ({
-				id: bookmark.post.id,
+				id: bookmark.id,
 				title: bookmark.meta.title,
 				url: bookmark.meta.url,
-				href: `/cms/bookmarks/${bookmark.post.id}/edit`,
-				deleteAction: `/cms/bookmarks/${bookmark.post.id}`,
+				href: `/cms/bookmarks/${bookmark.id}/edit`,
+				deleteAction: `/cms/bookmarks/${bookmark.id}`,
 			}));
 
 			let body = await renderToString(
@@ -57,7 +57,7 @@ export default controller<typeof routes.cms.bookmarks>({
 			});
 			if (!created) return redirect("/cms/bookmarks", { status: redirect.Status.SeeOther });
 
-			return redirect(`/cms/bookmarks/${created.post.id}/edit`, {
+			return redirect(`/cms/bookmarks/${created.id}/edit`, {
 				status: redirect.Status.SeeOther,
 			});
 		},
@@ -93,9 +93,9 @@ export default controller<typeof routes.cms.bookmarks>({
 				title: `Edit Bookmark ${bookmark.meta.title}`,
 				description: `Editing bookmark pointing to ${bookmark.meta.url}.`,
 				mode: "edit",
-				action: `/cms/bookmarks/${bookmark.post.id}`,
+				action: `/cms/bookmarks/${bookmark.id}`,
 				submitLabel: "Save Bookmark",
-				deleteAction: `/cms/bookmarks/${bookmark.post.id}`,
+				deleteAction: `/cms/bookmarks/${bookmark.id}`,
 				values: {
 					title: bookmark.meta.title ?? "",
 					url: bookmark.meta.url ?? "",

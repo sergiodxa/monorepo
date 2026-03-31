@@ -38,12 +38,12 @@ export default controller<typeof routes.cms.articles>({
 		async index() {
 			let articles = await ArticlePost.findAll(db());
 			let items = articles.map((article) => ({
-				id: article.post.id,
+				id: article.id,
 				title: article.meta.title,
 				publicHref: `/articles/${article.meta.slug}`,
-				preview: !Post.isPublishedAt(article.post.published_at),
-				href: `/cms/articles/${article.post.id}/edit`,
-				deleteAction: `/cms/articles/${article.post.id}`,
+				preview: !Post.isPublishedAt(article.published_at),
+				href: `/cms/articles/${article.id}/edit`,
+				deleteAction: `/cms/articles/${article.id}`,
 			}));
 
 			let body = await renderToString(
@@ -75,7 +75,7 @@ export default controller<typeof routes.cms.articles>({
 			});
 			if (!created) return redirect("/cms/articles", { status: redirect.Status.SeeOther });
 
-			return redirect(`/cms/articles/${created.post.id}/edit`, {
+			return redirect(`/cms/articles/${created.id}/edit`, {
 				status: redirect.Status.SeeOther,
 			});
 		},
@@ -121,9 +121,9 @@ export default controller<typeof routes.cms.articles>({
 				title: `Edit Article ${article.meta.title}`,
 				description: `Editing article at /articles/${article.meta.slug}.`,
 				mode: "edit",
-				action: `/cms/articles/${article.post.id}`,
+				action: `/cms/articles/${article.id}`,
 				submitLabel: "Save Article",
-				deleteAction: `/cms/articles/${article.post.id}`,
+				deleteAction: `/cms/articles/${article.id}`,
 				values: {
 					title: article.meta.title ?? "",
 					slug: article.meta.slug ?? "",
@@ -131,7 +131,7 @@ export default controller<typeof routes.cms.articles>({
 					excerpt: article.meta.excerpt ?? "",
 					canonical_url: article.meta.canonical_url ?? "",
 					content: article.meta.content ?? "",
-					published_at: toDateInputValue(article.post.published_at),
+					published_at: toDateInputValue(article.published_at),
 				},
 			};
 			let body = await renderToString(

@@ -15,7 +15,7 @@ export default action<typeof routes.glossary>(async () => {
 		.sort((a, b) => a.meta.term.localeCompare(b.meta.term))
 		.map((entry) => {
 			return {
-				id: entry.post.id,
+				id: entry.id,
 				slug: entry.meta.slug,
 				term: entry.meta.term,
 				title: entry.meta.title,

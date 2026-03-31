@@ -36,13 +36,13 @@ export default controller<typeof routes.cms.tutorials>({
 		async index() {
 			let tutorials = await TutorialPost.findAll(db());
 			let items = tutorials.map((tutorial) => ({
-				id: tutorial.post.id,
+				id: tutorial.id,
 				title: tutorial.meta.title,
 				publicHref: `/tutorials/${tutorial.meta.slug}`,
-				preview: !Post.isPublishedAt(tutorial.post.published_at),
+				preview: !Post.isPublishedAt(tutorial.published_at),
 				tags: TutorialPost.tags(tutorial.meta.tags).join(", "),
-				href: `/cms/tutorials/${tutorial.post.id}/edit`,
-				deleteAction: `/cms/tutorials/${tutorial.post.id}`,
+				href: `/cms/tutorials/${tutorial.id}/edit`,
+				deleteAction: `/cms/tutorials/${tutorial.id}`,
 			}));
 
 			let body = await renderToString(
@@ -73,7 +73,7 @@ export default controller<typeof routes.cms.tutorials>({
 			});
 			if (!created) return redirect("/cms/tutorials", { status: redirect.Status.SeeOther });
 
-			return redirect(`/cms/tutorials/${created.post.id}/edit`, {
+			return redirect(`/cms/tutorials/${created.id}/edit`, {
 				status: redirect.Status.SeeOther,
 			});
 		},
@@ -111,16 +111,16 @@ export default controller<typeof routes.cms.tutorials>({
 				title: `Edit Tutorial ${tutorial.meta.title}`,
 				description: `Editing tutorial at /tutorials/${tutorial.meta.slug}.`,
 				mode: "edit",
-				action: `/cms/tutorials/${tutorial.post.id}`,
+				action: `/cms/tutorials/${tutorial.id}`,
 				submitLabel: "Save Tutorial",
-				deleteAction: `/cms/tutorials/${tutorial.post.id}`,
+				deleteAction: `/cms/tutorials/${tutorial.id}`,
 				values: {
 					title: tutorial.meta.title ?? "",
 					slug: tutorial.meta.slug ?? "",
 					excerpt: tutorial.meta.excerpt ?? "",
 					tags: TutorialPost.tags(tutorial.meta.tags).join(", "),
 					content: tutorial.meta.content ?? "",
-					published_at: toDateInputValue(tutorial.post.published_at),
+					published_at: toDateInputValue(tutorial.published_at),
 				},
 			};
 

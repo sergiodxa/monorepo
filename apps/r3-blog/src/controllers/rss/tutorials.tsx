@@ -21,14 +21,14 @@ export default action<typeof routes.rss.tutorials>(async (ctx) => {
 	});
 
 	for (let tutorial of tutorials) {
-		if (!Post.isPublishedAt(tutorial.post.published_at)) continue;
+		if (!Post.isPublishedAt(tutorial.published_at)) continue;
 		let link = new URL(`/tutorials/${tutorial.meta.slug}`, url).toString();
 		rss.addItem({
-			guid: tutorial.post.id,
+			guid: tutorial.id,
 			title: tutorial.meta.title,
 			description: tutorial.meta.excerpt ?? link,
 			link,
-			pubDate: new Date(tutorial.post.published_at ?? tutorial.post.created_at).toUTCString(),
+			pubDate: new Date(tutorial.published_at ?? tutorial.created_at).toUTCString(),
 		});
 	}
 

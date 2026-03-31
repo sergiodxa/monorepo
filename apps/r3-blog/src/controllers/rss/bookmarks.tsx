@@ -20,11 +20,11 @@ export default action<typeof routes.rss.bookmarks>(async (ctx) => {
 
 	for (let like of likes) {
 		rss.addItem({
-			guid: like.post.id,
+			guid: like.id,
 			title: like.meta.title,
 			description: like.meta.url,
 			link: like.meta.url,
-			pubDate: new Date(like.post.created_at).toUTCString(),
+			pubDate: new Date(like.created_at).toUTCString(),
 		});
 	}
 
