@@ -162,6 +162,7 @@ export class TutorialPost {
 				meta_key: postMeta.key,
 				meta_value: postMeta.value,
 			})
+			.orderBy("posts.created_at", "desc")
 			.all();
 
 		let byId = new Map<string, TutorialPost.ListItem>();
