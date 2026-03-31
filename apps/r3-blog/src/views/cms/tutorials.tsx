@@ -1,3 +1,5 @@
+import { css } from "remix/component";
+
 import { Button } from "~/components/button";
 import { Input } from "~/components/input";
 import { Modal } from "~/components/modal";
@@ -41,101 +43,119 @@ export namespace CMSTutorialsActionView {
 
 export function CMSTutorialsIndexView() {
 	return ({ items }: CMSTutorialsIndexView.Props) => (
-		<main css={{ display: "grid", gap: "0.9rem" }}>
+		<main mix={[css({ display: "grid", gap: "0.9rem" })]}>
 			<section
-				css={{
-					backgroundColor: "var(--ui-neutral-bg-tint)",
-					border: "1px solid var(--ui-neutral-border)",
-					borderRadius: "0.7rem",
-					padding: "1rem",
-				}}
+				mix={[
+					css({
+						backgroundColor: "var(--ui-neutral-bg-tint)",
+						border: "1px solid var(--ui-neutral-border)",
+						borderRadius: "0.7rem",
+						padding: "1rem",
+					}),
+				]}
 			>
-				<div css={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-					<h2 css={{ margin: 0, fontSize: "1.1rem", color: "var(--ui-neutral-fg-emphasis)" }}>
+				<div
+					mix={[css({ display: "flex", justifyContent: "space-between", alignItems: "center" })]}
+				>
+					<h2
+						mix={[css({ margin: 0, fontSize: "1.1rem", color: "var(--ui-neutral-fg-emphasis)" })]}
+					>
 						Tutorials
 					</h2>
 					<a
 						href="/cms/tutorials/new"
-						css={{
-							boxSizing: "border-box",
-							display: "inline-flex",
-							alignItems: "center",
-							height: "2.25rem",
-							padding: "0 0.7rem",
-							fontSize: "0.9rem",
-							borderRadius: "0.4rem",
-							border: "1px solid var(--ui-accent-border)",
-							backgroundColor: "var(--ui-accent-bg-tint)",
-							color: "var(--ui-accent-fg-emphasis)",
-							textDecoration: "none",
-						}}
+						mix={[
+							css({
+								boxSizing: "border-box",
+								display: "inline-flex",
+								alignItems: "center",
+								height: "2.25rem",
+								padding: "0 0.7rem",
+								fontSize: "0.9rem",
+								borderRadius: "0.4rem",
+								border: "1px solid var(--ui-accent-border)",
+								backgroundColor: "var(--ui-accent-bg-tint)",
+								color: "var(--ui-accent-fg-emphasis)",
+								textDecoration: "none",
+							}),
+						]}
 					>
 						New Tutorial
 					</a>
 				</div>
 			</section>
 			<section
-				css={{
-					backgroundColor: "var(--ui-neutral-bg-tint)",
-					border: "1px solid var(--ui-neutral-border)",
-					borderRadius: "0.7rem",
-					padding: "1rem",
-				}}
+				mix={[
+					css({
+						backgroundColor: "var(--ui-neutral-bg-tint)",
+						border: "1px solid var(--ui-neutral-border)",
+						borderRadius: "0.7rem",
+						padding: "1rem",
+					}),
+				]}
 			>
 				{items.length === 0 ? (
-					<p css={{ margin: 0, color: "var(--ui-neutral-fg)" }}>
+					<p mix={[css({ margin: 0, color: "var(--ui-neutral-fg)" })]}>
 						No tutorials found in the database yet.
 					</p>
 				) : (
-					<div css={{ overflowX: "auto" }}>
-						<table css={{ width: "100%", borderCollapse: "collapse" }}>
+					<div mix={[css({ overflowX: "auto" })]}>
+						<table mix={[css({ width: "100%", borderCollapse: "collapse" })]}>
 							<thead>
 								<tr>
 									<th
-										css={{
-											textAlign: "left",
-											padding: "0.6rem 0.75rem",
-											borderBottom: "1px solid var(--ui-neutral-border)",
-											color: "var(--ui-neutral-fg)",
-											fontSize: "0.9rem",
-											fontWeight: 600,
-										}}
+										mix={[
+											css({
+												textAlign: "left",
+												padding: "0.6rem 0.75rem",
+												borderBottom: "1px solid var(--ui-neutral-border)",
+												color: "var(--ui-neutral-fg)",
+												fontSize: "0.9rem",
+												fontWeight: 600,
+											}),
+										]}
 									>
 										Title
 									</th>
 									<th
-										css={{
-											textAlign: "left",
-											padding: "0.6rem 0.75rem",
-											borderBottom: "1px solid var(--ui-neutral-border)",
-											color: "var(--ui-neutral-fg)",
-											fontSize: "0.9rem",
-											fontWeight: 600,
-										}}
+										mix={[
+											css({
+												textAlign: "left",
+												padding: "0.6rem 0.75rem",
+												borderBottom: "1px solid var(--ui-neutral-border)",
+												color: "var(--ui-neutral-fg)",
+												fontSize: "0.9rem",
+												fontWeight: 600,
+											}),
+										]}
 									>
 										Tags
 									</th>
 									<th
-										css={{
-											textAlign: "center",
-											padding: "0.6rem 0.75rem",
-											borderBottom: "1px solid var(--ui-neutral-border)",
-											color: "var(--ui-neutral-fg)",
-											fontSize: "0.9rem",
-											fontWeight: 600,
-										}}
+										mix={[
+											css({
+												textAlign: "center",
+												padding: "0.6rem 0.75rem",
+												borderBottom: "1px solid var(--ui-neutral-border)",
+												color: "var(--ui-neutral-fg)",
+												fontSize: "0.9rem",
+												fontWeight: 600,
+											}),
+										]}
 									>
 										Status
 									</th>
 									<th
-										css={{
-											textAlign: "right",
-											padding: "0.6rem 0.75rem",
-											borderBottom: "1px solid var(--ui-neutral-border)",
-											color: "var(--ui-neutral-fg)",
-											fontSize: "0.9rem",
-											fontWeight: 600,
-										}}
+										mix={[
+											css({
+												textAlign: "right",
+												padding: "0.6rem 0.75rem",
+												borderBottom: "1px solid var(--ui-neutral-border)",
+												color: "var(--ui-neutral-fg)",
+												fontSize: "0.9rem",
+												fontWeight: 600,
+											}),
+										]}
 									>
 										Actions
 									</th>
@@ -147,42 +167,48 @@ export function CMSTutorialsIndexView() {
 									return (
 										<tr key={item.id}>
 											<td
-												css={{
-													padding: "0.6rem 0.75rem",
-													borderBottom: "1px solid var(--ui-neutral-border)",
-													verticalAlign: "middle",
-													color: "var(--ui-neutral-fg-emphasis)",
-												}}
+												mix={[
+													css({
+														padding: "0.6rem 0.75rem",
+														borderBottom: "1px solid var(--ui-neutral-border)",
+														verticalAlign: "middle",
+														color: "var(--ui-neutral-fg-emphasis)",
+													}),
+												]}
 											>
 												<a
 													href={item.publicHref}
-													css={{ color: "var(--ui-accent-fg)", textDecoration: "none" }}
+													mix={[css({ color: "var(--ui-accent-fg)", textDecoration: "none" })]}
 												>
 													{item.title}
 												</a>
 											</td>
 											<td
-												css={{
-													padding: "0.6rem 0.75rem",
-													borderBottom: "1px solid var(--ui-neutral-border)",
-													verticalAlign: "middle",
-												}}
+												mix={[
+													css({
+														padding: "0.6rem 0.75rem",
+														borderBottom: "1px solid var(--ui-neutral-border)",
+														verticalAlign: "middle",
+													}),
+												]}
 											>
 												{item.tags ? (
-													<div css={{ display: "flex", gap: "0.3rem", flexWrap: "wrap" }}>
+													<div mix={[css({ display: "flex", gap: "0.3rem", flexWrap: "wrap" })]}>
 														{item.tags
 															.split(", ")
 															.filter(Boolean)
 															.map((tag) => (
 																<span
 																	key={tag}
-																	css={{
-																		padding: "0.15rem 0.5rem",
-																		borderRadius: "999px",
-																		backgroundColor: "var(--ui-accent-bg-tint)",
-																		color: "var(--ui-accent-fg-emphasis)",
-																		fontSize: "0.78rem",
-																	}}
+																	mix={[
+																		css({
+																			padding: "0.15rem 0.5rem",
+																			borderRadius: "999px",
+																			backgroundColor: "var(--ui-accent-bg-tint)",
+																			color: "var(--ui-accent-fg-emphasis)",
+																			fontSize: "0.78rem",
+																		}),
+																	]}
 																>
 																	{tag}
 																</span>
@@ -191,47 +217,55 @@ export function CMSTutorialsIndexView() {
 												) : null}
 											</td>
 											<td
-												css={{
-													padding: "0.6rem 0.75rem",
-													borderBottom: "1px solid var(--ui-neutral-border)",
-													verticalAlign: "middle",
-													textAlign: "center",
-												}}
+												mix={[
+													css({
+														padding: "0.6rem 0.75rem",
+														borderBottom: "1px solid var(--ui-neutral-border)",
+														verticalAlign: "middle",
+														textAlign: "center",
+													}),
+												]}
 											>
 												{item.preview ? "📝" : "✅"}
 											</td>
 											<td
-												css={{
-													padding: "0.6rem 0.75rem",
-													borderBottom: "1px solid var(--ui-neutral-border)",
-													verticalAlign: "middle",
-													textAlign: "right",
-												}}
+												mix={[
+													css({
+														padding: "0.6rem 0.75rem",
+														borderBottom: "1px solid var(--ui-neutral-border)",
+														verticalAlign: "middle",
+														textAlign: "right",
+													}),
+												]}
 											>
 												<div
-													css={{
-														display: "flex",
-														gap: "0.35rem",
-														justifyContent: "end",
-														alignItems: "center",
-													}}
+													mix={[
+														css({
+															display: "flex",
+															gap: "0.35rem",
+															justifyContent: "end",
+															alignItems: "center",
+														}),
+													]}
 												>
 													<a
 														href={item.href}
-														css={{
-															boxSizing: "border-box",
-															display: "inline-flex",
-															alignItems: "center",
-															justifyContent: "center",
-															height: "1.8rem",
-															padding: "0 0.55rem",
-															fontSize: "0.82rem",
-															fontFamily: "inherit",
-															borderRadius: "0.35rem",
-															border: "1px solid var(--ui-accent-border)",
-															color: "var(--ui-accent-fg-emphasis)",
-															textDecoration: "none",
-														}}
+														mix={[
+															css({
+																boxSizing: "border-box",
+																display: "inline-flex",
+																alignItems: "center",
+																justifyContent: "center",
+																height: "1.8rem",
+																padding: "0 0.55rem",
+																fontSize: "0.82rem",
+																fontFamily: "inherit",
+																borderRadius: "0.35rem",
+																border: "1px solid var(--ui-accent-border)",
+																color: "var(--ui-accent-fg-emphasis)",
+																textDecoration: "none",
+															}),
+														]}
 													>
 														Edit
 													</a>
@@ -239,21 +273,23 @@ export function CMSTutorialsIndexView() {
 														type="button"
 														commandfor={dialogId}
 														command="show-modal"
-														css={{
-															boxSizing: "border-box",
-															display: "inline-flex",
-															alignItems: "center",
-															justifyContent: "center",
-															height: "1.8rem",
-															padding: "0 0.55rem",
-															fontSize: "0.82rem",
-															fontFamily: "inherit",
-															borderRadius: "0.35rem",
-															border: "1px solid var(--ui-neutral-border)",
-															backgroundColor: "transparent",
-															color: "var(--ui-neutral-fg)",
-															cursor: "pointer",
-														}}
+														mix={[
+															css({
+																boxSizing: "border-box",
+																display: "inline-flex",
+																alignItems: "center",
+																justifyContent: "center",
+																height: "1.8rem",
+																padding: "0 0.55rem",
+																fontSize: "0.82rem",
+																fontFamily: "inherit",
+																borderRadius: "0.35rem",
+																border: "1px solid var(--ui-neutral-border)",
+																backgroundColor: "transparent",
+																color: "var(--ui-neutral-fg)",
+																cursor: "pointer",
+															}),
+														]}
 													>
 														Delete
 													</button>
@@ -263,29 +299,31 @@ export function CMSTutorialsIndexView() {
 													<form
 														method="post"
 														action={item.deleteAction}
-														css={{ display: "grid", gap: "0.75rem" }}
+														mix={[css({ display: "grid", gap: "0.75rem" })]}
 													>
 														<input type="hidden" name="_method" value="DELETE" />
-														<p css={{ margin: 0, color: "var(--ui-neutral-fg)" }}>
+														<p mix={[css({ margin: 0, color: "var(--ui-neutral-fg)" })]}>
 															Delete tutorial <strong>{item.title}</strong>? This action cannot be
 															undone.
 														</p>
-														<div css={{ display: "flex", gap: "0.5rem" }}>
+														<div mix={[css({ display: "flex", gap: "0.5rem" })]}>
 															<Button type="submit">Confirm delete</Button>
 															<button
 																type="button"
 																commandfor={dialogId}
 																command="close"
-																css={{
-																	padding: "0.45rem 0.7rem",
-																	fontSize: "0.9rem",
-																	borderRadius: "0.4rem",
-																	border: "1px solid var(--ui-neutral-border)",
-																	backgroundColor: "transparent",
-																	color: "var(--ui-neutral-fg)",
-																	cursor: "pointer",
-																	fontFamily: "inherit",
-																}}
+																mix={[
+																	css({
+																		padding: "0.45rem 0.7rem",
+																		fontSize: "0.9rem",
+																		borderRadius: "0.4rem",
+																		border: "1px solid var(--ui-neutral-border)",
+																		backgroundColor: "transparent",
+																		color: "var(--ui-neutral-fg)",
+																		cursor: "pointer",
+																		fontFamily: "inherit",
+																	}),
+																]}
 															>
 																Cancel
 															</button>
@@ -316,95 +354,103 @@ export function CMSTutorialsActionView() {
 	}: CMSTutorialsActionView.Props) => (
 		<main>
 			<section
-				css={{
-					backgroundColor: "var(--ui-neutral-bg-tint)",
-					border: "1px solid var(--ui-neutral-border)",
-					borderRadius: "0.7rem",
-					padding: "1rem",
-					display: "grid",
-					gap: "0.8rem",
-				}}
+				mix={[
+					css({
+						backgroundColor: "var(--ui-neutral-bg-tint)",
+						border: "1px solid var(--ui-neutral-border)",
+						borderRadius: "0.7rem",
+						padding: "1rem",
+						display: "grid",
+						gap: "0.8rem",
+					}),
+				]}
 			>
-				<h2 css={{ margin: 0, fontSize: "1.1rem", color: "var(--ui-neutral-fg-emphasis)" }}>
+				<h2 mix={[css({ margin: 0, fontSize: "1.1rem", color: "var(--ui-neutral-fg-emphasis)" })]}>
 					{title}
 				</h2>
-				<p css={{ margin: 0, color: "var(--ui-neutral-fg)" }}>{description}</p>
+				<p mix={[css({ margin: 0, color: "var(--ui-neutral-fg)" })]}>{description}</p>
 
-				<form method="post" action={action} css={{ display: "grid", gap: "0.65rem" }}>
+				<form method="post" action={action} mix={[css({ display: "grid", gap: "0.65rem" })]}>
 					{mode === "edit" ? <input type="hidden" name="_method" value="PUT" /> : null}
 
-					<label css={{ display: "grid", gap: "0.25rem" }}>
-						<span css={{ color: "var(--ui-neutral-fg)" }}>Title</span>
+					<label mix={[css({ display: "grid", gap: "0.25rem" })]}>
+						<span mix={[css({ color: "var(--ui-neutral-fg)" })]}>Title</span>
 						<Input name="title" value={values.title} required />
 					</label>
 
-					<label css={{ display: "grid", gap: "0.25rem" }}>
-						<span css={{ color: "var(--ui-neutral-fg)" }}>Slug</span>
+					<label mix={[css({ display: "grid", gap: "0.25rem" })]}>
+						<span mix={[css({ color: "var(--ui-neutral-fg)" })]}>Slug</span>
 						<Input name="slug" value={values.slug} required readOnly={mode === "edit"} />
 					</label>
 
-					<label css={{ display: "grid", gap: "0.25rem" }}>
-						<span css={{ color: "var(--ui-neutral-fg)" }}>Excerpt</span>
+					<label mix={[css({ display: "grid", gap: "0.25rem" })]}>
+						<span mix={[css({ color: "var(--ui-neutral-fg)" })]}>Excerpt</span>
 						<textarea
 							name="excerpt"
 							rows={3}
 							required
-							css={{
-								padding: "0.45rem 0.55rem",
-								fontSize: "0.9rem",
-								borderRadius: "0.4rem",
-								border: "1px solid var(--ui-neutral-border)",
-								backgroundColor: "var(--ui-neutral-bg-tint)",
-								color: "var(--ui-neutral-fg-emphasis)",
-								fontFamily: "inherit",
-							}}
+							mix={[
+								css({
+									padding: "0.45rem 0.55rem",
+									fontSize: "0.9rem",
+									borderRadius: "0.4rem",
+									border: "1px solid var(--ui-neutral-border)",
+									backgroundColor: "var(--ui-neutral-bg-tint)",
+									color: "var(--ui-neutral-fg-emphasis)",
+									fontFamily: "inherit",
+								}),
+							]}
 						>
 							{values.excerpt}
 						</textarea>
 					</label>
 
-					<label css={{ display: "grid", gap: "0.25rem" }}>
-						<span css={{ color: "var(--ui-neutral-fg)" }}>Tags (comma separated)</span>
+					<label mix={[css({ display: "grid", gap: "0.25rem" })]}>
+						<span mix={[css({ color: "var(--ui-neutral-fg)" })]}>Tags (comma separated)</span>
 						<Input name="tags" value={values.tags} />
 					</label>
 
-					<label css={{ display: "grid", gap: "0.25rem" }}>
-						<span css={{ color: "var(--ui-neutral-fg)" }}>Published At</span>
+					<label mix={[css({ display: "grid", gap: "0.25rem" })]}>
+						<span mix={[css({ color: "var(--ui-neutral-fg)" })]}>Published At</span>
 						<Input type="date" name="published_at" value={values.published_at} />
 					</label>
 
-					<label css={{ display: "grid", gap: "0.25rem" }}>
-						<span css={{ color: "var(--ui-neutral-fg)" }}>Content</span>
+					<label mix={[css({ display: "grid", gap: "0.25rem" })]}>
+						<span mix={[css({ color: "var(--ui-neutral-fg)" })]}>Content</span>
 						<textarea
 							name="content"
 							rows={16}
 							required
-							css={{
-								padding: "0.45rem 0.55rem",
-								fontSize: "0.9rem",
-								borderRadius: "0.4rem",
-								border: "1px solid var(--ui-neutral-border)",
-								backgroundColor: "var(--ui-neutral-bg-tint)",
-								color: "var(--ui-neutral-fg-emphasis)",
-								fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace",
-							}}
+							mix={[
+								css({
+									padding: "0.45rem 0.55rem",
+									fontSize: "0.9rem",
+									borderRadius: "0.4rem",
+									border: "1px solid var(--ui-neutral-border)",
+									backgroundColor: "var(--ui-neutral-bg-tint)",
+									color: "var(--ui-neutral-fg-emphasis)",
+									fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace",
+								}),
+							]}
 						>
 							{values.content}
 						</textarea>
 					</label>
 
-					<div css={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
+					<div mix={[css({ display: "flex", gap: "0.5rem", flexWrap: "wrap" })]}>
 						<Button type="submit">{submitLabel}</Button>
 						<a
 							href="/cms/tutorials"
-							css={{
-								padding: "0.45rem 0.7rem",
-								fontSize: "0.9rem",
-								borderRadius: "0.4rem",
-								border: "1px solid var(--ui-accent-border)",
-								color: "var(--ui-accent-fg-emphasis)",
-								textDecoration: "none",
-							}}
+							mix={[
+								css({
+									padding: "0.45rem 0.7rem",
+									fontSize: "0.9rem",
+									borderRadius: "0.4rem",
+									border: "1px solid var(--ui-accent-border)",
+									color: "var(--ui-accent-fg-emphasis)",
+									textDecoration: "none",
+								}),
+							]}
 						>
 							Back to list
 						</a>

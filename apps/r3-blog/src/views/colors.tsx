@@ -1,3 +1,5 @@
+import { css } from "remix/component";
+
 export namespace ColorsView {
 	export interface Token {
 		name: string;
@@ -79,123 +81,145 @@ export function ColorsView() {
 		];
 
 		return (
-			<main css={{ display: "grid", gap: "1.2rem" }}>
-				<h1 css={{ margin: 0, fontSize: "2rem", color: "var(--ui-neutral-fg-emphasis)" }}>
+			<main mix={[css({ display: "grid", gap: "1.2rem" })]}>
+				<h1 mix={[css({ margin: 0, fontSize: "2rem", color: "var(--ui-neutral-fg-emphasis)" })]}>
 					R3 Blog Palette
 				</h1>
-				<p css={{ margin: 0, color: "var(--ui-neutral-fg)" }}>
+				<p mix={[css({ margin: 0, color: "var(--ui-neutral-fg)" })]}>
 					Color tokens from <code>colors.css</code> shown as 50x50 swatches.
 				</p>
 
 				<section
-					css={{
-						display: "grid",
-						gap: "0.9rem",
-						gridTemplateColumns: "repeat(auto-fit, minmax(20rem, 1fr))",
-					}}
+					mix={[
+						css({
+							display: "grid",
+							gap: "0.9rem",
+							gridTemplateColumns: "repeat(auto-fit, minmax(20rem, 1fr))",
+						}),
+					]}
 				>
 					<article
-						css={{
-							padding: "1rem",
-							borderRadius: "0.8rem",
-							backgroundColor: "var(--ui-neutral-bg-tint)",
-							border: "1px solid var(--ui-neutral-border)",
-							color: "var(--ui-neutral-fg)",
-							display: "grid",
-							gap: "0.65rem",
-						}}
+						mix={[
+							css({
+								padding: "1rem",
+								borderRadius: "0.8rem",
+								backgroundColor: "var(--ui-neutral-bg-tint)",
+								border: "1px solid var(--ui-neutral-border)",
+								color: "var(--ui-neutral-fg)",
+								display: "grid",
+								gap: "0.65rem",
+							}),
+						]}
 					>
-						<h3 css={{ margin: 0, color: "var(--ui-neutral-fg-emphasis)", fontSize: "1.1rem" }}>
+						<h3
+							mix={[css({ margin: 0, color: "var(--ui-neutral-fg-emphasis)", fontSize: "1.1rem" })]}
+						>
 							Neutral UI Card
 						</h3>
-						<p css={{ margin: 0, color: "var(--ui-neutral-fg-muted)" }}>
+						<p mix={[css({ margin: 0, color: "var(--ui-neutral-fg-muted)" })]}>
 							Uses tint, border, foreground, muted and emphasis variables.
 						</p>
-						<div css={{ display: "flex", gap: "0.45rem", flexWrap: "wrap" }}>
+						<div mix={[css({ display: "flex", gap: "0.45rem", flexWrap: "wrap" })]}>
 							<span
-								css={{
-									padding: "0.3rem 0.5rem",
-									backgroundColor: "var(--ui-neutral-bg-tint)",
-									border: "1px solid var(--ui-neutral-border)",
-									borderRadius: "0.45rem",
-								}}
+								mix={[
+									css({
+										padding: "0.3rem 0.5rem",
+										backgroundColor: "var(--ui-neutral-bg-tint)",
+										border: "1px solid var(--ui-neutral-border)",
+										borderRadius: "0.45rem",
+									}),
+								]}
 							>
 								Tint
 							</span>
 							<span
-								css={{
-									padding: "0.3rem 0.5rem",
-									backgroundColor: "var(--ui-neutral-bg-tint-hover)",
-									border: "1px solid var(--ui-neutral-border)",
-									borderRadius: "0.45rem",
-								}}
+								mix={[
+									css({
+										padding: "0.3rem 0.5rem",
+										backgroundColor: "var(--ui-neutral-bg-tint-hover)",
+										border: "1px solid var(--ui-neutral-border)",
+										borderRadius: "0.45rem",
+									}),
+								]}
 							>
 								Hover
 							</span>
 							<span
-								css={{
-									padding: "0.3rem 0.5rem",
-									backgroundColor: "var(--ui-neutral-bg-tint-pressed)",
-									border: "1px solid var(--ui-neutral-border-strong)",
-									borderRadius: "0.45rem",
-								}}
+								mix={[
+									css({
+										padding: "0.3rem 0.5rem",
+										backgroundColor: "var(--ui-neutral-bg-tint-pressed)",
+										border: "1px solid var(--ui-neutral-border-strong)",
+										borderRadius: "0.45rem",
+									}),
+								]}
 							>
 								Pressed
 							</span>
 						</div>
 						<div
-							css={{
-								borderTop: "1px solid var(--ui-neutral-border-strong)",
-								paddingTop: "0.6rem",
-								display: "flex",
-								gap: "0.45rem",
-								flexWrap: "wrap",
-							}}
+							mix={[
+								css({
+									borderTop: "1px solid var(--ui-neutral-border-strong)",
+									paddingTop: "0.6rem",
+									display: "flex",
+									gap: "0.45rem",
+									flexWrap: "wrap",
+								}),
+							]}
 						>
 							<button
 								type="button"
-								css={{
-									padding: "0.45rem 0.7rem",
-									borderRadius: "0.5rem",
-									border: "none",
-									backgroundColor: "var(--ui-neutral-bg-solid)",
-									color: "var(--ui-neutral-fg-on-solid)",
-								}}
+								mix={[
+									css({
+										padding: "0.45rem 0.7rem",
+										borderRadius: "0.5rem",
+										border: "none",
+										backgroundColor: "var(--ui-neutral-bg-solid)",
+										color: "var(--ui-neutral-fg-on-solid)",
+									}),
+								]}
 							>
 								Solid
 							</button>
 							<button
 								type="button"
-								css={{
-									padding: "0.45rem 0.7rem",
-									borderRadius: "0.5rem",
-									border: "none",
-									backgroundColor: "var(--ui-neutral-bg-solid-hover)",
-									color: "var(--ui-neutral-fg-on-solid)",
-								}}
+								mix={[
+									css({
+										padding: "0.45rem 0.7rem",
+										borderRadius: "0.5rem",
+										border: "none",
+										backgroundColor: "var(--ui-neutral-bg-solid-hover)",
+										color: "var(--ui-neutral-fg-on-solid)",
+									}),
+								]}
 							>
 								Hover
 							</button>
 							<button
 								type="button"
-								css={{
-									padding: "0.45rem 0.7rem",
-									borderRadius: "0.5rem",
-									border: "none",
-									backgroundColor: "var(--ui-neutral-bg-solid-pressed)",
-									color: "var(--ui-neutral-fg-on-solid)",
-								}}
+								mix={[
+									css({
+										padding: "0.45rem 0.7rem",
+										borderRadius: "0.5rem",
+										border: "none",
+										backgroundColor: "var(--ui-neutral-bg-solid-pressed)",
+										color: "var(--ui-neutral-fg-on-solid)",
+									}),
+								]}
 							>
 								Pressed
 							</button>
 							<span
-								css={{
-									marginLeft: "auto",
-									padding: "0.45rem 0.7rem",
-									borderRadius: "0.5rem",
-									border: "1px solid var(--ui-neutral-border)",
-									boxShadow: "0 0 0 3px var(--ui-neutral-ring)",
-								}}
+								mix={[
+									css({
+										marginLeft: "auto",
+										padding: "0.45rem 0.7rem",
+										borderRadius: "0.5rem",
+										border: "1px solid var(--ui-neutral-border)",
+										boxShadow: "0 0 0 3px var(--ui-neutral-ring)",
+									}),
+								]}
 							>
 								Ring
 							</span>
@@ -203,107 +227,127 @@ export function ColorsView() {
 					</article>
 
 					<article
-						css={{
-							padding: "1rem",
-							borderRadius: "0.8rem",
-							backgroundColor: "var(--ui-accent-bg-tint)",
-							border: "1px solid var(--ui-accent-border)",
-							color: "var(--ui-accent-fg)",
-							display: "grid",
-							gap: "0.65rem",
-						}}
+						mix={[
+							css({
+								padding: "1rem",
+								borderRadius: "0.8rem",
+								backgroundColor: "var(--ui-accent-bg-tint)",
+								border: "1px solid var(--ui-accent-border)",
+								color: "var(--ui-accent-fg)",
+								display: "grid",
+								gap: "0.65rem",
+							}),
+						]}
 					>
-						<h3 css={{ margin: 0, color: "var(--ui-accent-fg-emphasis)", fontSize: "1.1rem" }}>
+						<h3
+							mix={[css({ margin: 0, color: "var(--ui-accent-fg-emphasis)", fontSize: "1.1rem" })]}
+						>
 							Accent UI Card
 						</h3>
-						<p css={{ margin: 0, color: "var(--ui-accent-fg-muted)" }}>
+						<p mix={[css({ margin: 0, color: "var(--ui-accent-fg-muted)" })]}>
 							Uses tint, border, foreground, muted and emphasis variables.
 						</p>
-						<div css={{ display: "flex", gap: "0.45rem", flexWrap: "wrap" }}>
+						<div mix={[css({ display: "flex", gap: "0.45rem", flexWrap: "wrap" })]}>
 							<span
-								css={{
-									padding: "0.3rem 0.5rem",
-									backgroundColor: "var(--ui-accent-bg-tint)",
-									border: "1px solid var(--ui-accent-border)",
-									borderRadius: "0.45rem",
-								}}
+								mix={[
+									css({
+										padding: "0.3rem 0.5rem",
+										backgroundColor: "var(--ui-accent-bg-tint)",
+										border: "1px solid var(--ui-accent-border)",
+										borderRadius: "0.45rem",
+									}),
+								]}
 							>
 								Tint
 							</span>
 							<span
-								css={{
-									padding: "0.3rem 0.5rem",
-									backgroundColor: "var(--ui-accent-bg-tint-hover)",
-									border: "1px solid var(--ui-accent-border)",
-									borderRadius: "0.45rem",
-								}}
+								mix={[
+									css({
+										padding: "0.3rem 0.5rem",
+										backgroundColor: "var(--ui-accent-bg-tint-hover)",
+										border: "1px solid var(--ui-accent-border)",
+										borderRadius: "0.45rem",
+									}),
+								]}
 							>
 								Hover
 							</span>
 							<span
-								css={{
-									padding: "0.3rem 0.5rem",
-									backgroundColor: "var(--ui-accent-bg-tint-pressed)",
-									border: "1px solid var(--ui-accent-border-strong)",
-									borderRadius: "0.45rem",
-								}}
+								mix={[
+									css({
+										padding: "0.3rem 0.5rem",
+										backgroundColor: "var(--ui-accent-bg-tint-pressed)",
+										border: "1px solid var(--ui-accent-border-strong)",
+										borderRadius: "0.45rem",
+									}),
+								]}
 							>
 								Pressed
 							</span>
 						</div>
 						<div
-							css={{
-								borderTop: "1px solid var(--ui-accent-border-strong)",
-								paddingTop: "0.6rem",
-								display: "flex",
-								gap: "0.45rem",
-								flexWrap: "wrap",
-							}}
+							mix={[
+								css({
+									borderTop: "1px solid var(--ui-accent-border-strong)",
+									paddingTop: "0.6rem",
+									display: "flex",
+									gap: "0.45rem",
+									flexWrap: "wrap",
+								}),
+							]}
 						>
 							<button
 								type="button"
-								css={{
-									padding: "0.45rem 0.7rem",
-									borderRadius: "0.5rem",
-									border: "none",
-									backgroundColor: "var(--ui-accent-bg-solid)",
-									color: "var(--ui-accent-fg-on-solid)",
-								}}
+								mix={[
+									css({
+										padding: "0.45rem 0.7rem",
+										borderRadius: "0.5rem",
+										border: "none",
+										backgroundColor: "var(--ui-accent-bg-solid)",
+										color: "var(--ui-accent-fg-on-solid)",
+									}),
+								]}
 							>
 								Solid
 							</button>
 							<button
 								type="button"
-								css={{
-									padding: "0.45rem 0.7rem",
-									borderRadius: "0.5rem",
-									border: "none",
-									backgroundColor: "var(--ui-accent-bg-solid-hover)",
-									color: "var(--ui-accent-fg-on-solid)",
-								}}
+								mix={[
+									css({
+										padding: "0.45rem 0.7rem",
+										borderRadius: "0.5rem",
+										border: "none",
+										backgroundColor: "var(--ui-accent-bg-solid-hover)",
+										color: "var(--ui-accent-fg-on-solid)",
+									}),
+								]}
 							>
 								Hover
 							</button>
 							<button
 								type="button"
-								css={{
-									padding: "0.45rem 0.7rem",
-									borderRadius: "0.5rem",
-									border: "none",
-									backgroundColor: "var(--ui-accent-bg-solid-pressed)",
-									color: "var(--ui-accent-fg-on-solid)",
-								}}
+								mix={[
+									css({
+										padding: "0.45rem 0.7rem",
+										borderRadius: "0.5rem",
+										border: "none",
+										backgroundColor: "var(--ui-accent-bg-solid-pressed)",
+										color: "var(--ui-accent-fg-on-solid)",
+									}),
+								]}
 							>
 								Pressed
 							</button>
 							<span
-								css={{
-									marginLeft: "auto",
-									padding: "0.45rem 0.7rem",
-									borderRadius: "0.5rem",
-									border: "1px solid var(--ui-accent-border)",
-									boxShadow: "0 0 0 3px var(--ui-accent-ring)",
-								}}
+								mix={[
+									css({
+										marginLeft: "auto",
+										padding: "0.45rem 0.7rem",
+										borderRadius: "0.5rem",
+										border: "1px solid var(--ui-accent-border)",
+										boxShadow: "0 0 0 3px var(--ui-accent-ring)",
+									}),
+								]}
 							>
 								Ring
 							</span>
@@ -312,38 +356,46 @@ export function ColorsView() {
 				</section>
 
 				{groups.map((group) => (
-					<section key={group.title} css={{ display: "grid", gap: "0.8rem" }}>
-						<h2 css={{ margin: 0, fontSize: "1.35rem", color: "var(--ui-neutral-fg-emphasis)" }}>
+					<section key={group.title} mix={[css({ display: "grid", gap: "0.8rem" })]}>
+						<h2
+							mix={[
+								css({ margin: 0, fontSize: "1.35rem", color: "var(--ui-neutral-fg-emphasis)" }),
+							]}
+						>
 							{group.title}
 						</h2>
 						<ul
-							css={{
-								margin: 0,
-								padding: 0,
-								listStyle: "none",
-								display: "grid",
-								gap: "0.7rem",
-								gridTemplateColumns: "repeat(auto-fit, minmax(13rem, 1fr))",
-							}}
+							mix={[
+								css({
+									margin: 0,
+									padding: 0,
+									listStyle: "none",
+									display: "grid",
+									gap: "0.7rem",
+									gridTemplateColumns: "repeat(auto-fit, minmax(13rem, 1fr))",
+								}),
+							]}
 						>
 							{group.tokens.map((token) => (
 								<li
 									key={token.name}
-									css={{ display: "flex", alignItems: "center", gap: "0.65rem" }}
+									mix={[css({ display: "flex", alignItems: "center", gap: "0.65rem" })]}
 								>
 									<span
 										aria-hidden
-										css={{
-											display: "inline-block",
-											width: "50px",
-											height: "50px",
-											backgroundColor: `var(${token.name})`,
-											border: "1px solid var(--ui-neutral-border)",
-											borderRadius: "0.35rem",
-											flexShrink: 0,
-										}}
+										mix={[
+											css({
+												display: "inline-block",
+												width: "50px",
+												height: "50px",
+												backgroundColor: `var(${token.name})`,
+												border: "1px solid var(--ui-neutral-border)",
+												borderRadius: "0.35rem",
+												flexShrink: 0,
+											}),
+										]}
 									/>
-									<code css={{ color: "var(--ui-neutral-fg)" }}>{token.name}</code>
+									<code mix={[css({ color: "var(--ui-neutral-fg)" })]}>{token.name}</code>
 								</li>
 							))}
 						</ul>

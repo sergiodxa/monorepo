@@ -1,4 +1,5 @@
 /* @jsxImportSource remix/component */
+import { css } from "remix/component";
 export namespace Fence {
 	export interface Props {
 		content: string;
@@ -16,45 +17,53 @@ export function Fence() {
 			<div>
 				<pre
 					className={`language-${language}`}
-					css={{
-						overflowX: "auto",
-						overflowY: "hidden",
-						overscrollBehaviorX: "contain",
-						overscrollBehaviorInline: "contain",
-						borderRadius: "0.5rem",
-						border: "1px solid #e5e5e5",
-						backgroundColor: "#fafafa",
-						padding: "1rem",
-						fontSize: "0.875rem",
-					}}
+					mix={[
+						css({
+							overflowX: "auto",
+							overflowY: "hidden",
+							overscrollBehaviorX: "contain",
+							overscrollBehaviorInline: "contain",
+							borderRadius: "0.5rem",
+							border: "1px solid #e5e5e5",
+							backgroundColor: "#fafafa",
+							padding: "1rem",
+							fontSize: "0.875rem",
+						}),
+					]}
 				>
 					{hasHeader && (
 						<header
-							css={{
-								marginBottom: "0.75rem",
-								borderBottom: "1px solid #e5e5e5",
-								paddingBottom: "0.5rem",
-							}}
+							mix={[
+								css({
+									marginBottom: "0.75rem",
+									borderBottom: "1px solid #e5e5e5",
+									paddingBottom: "0.5rem",
+								}),
+							]}
 						>
 							<div
-								css={{
-									display: "flex",
-									alignItems: "center",
-									gap: "0.5rem",
-									fontSize: "0.75rem",
-									color: "#525252",
-								}}
+								mix={[
+									css({
+										display: "flex",
+										alignItems: "center",
+										gap: "0.5rem",
+										fontSize: "0.75rem",
+										color: "#525252",
+									}),
+								]}
 							>
-								{title && <span css={{ fontWeight: 500 }}>{title}</span>}
+								{title && <span mix={[css({ fontWeight: 500 })]}>{title}</span>}
 								{path && (
 									<span
-										css={{
-											color: "var(--color-highlight-comment)",
-											fontFamily:
-												'"Bradley Hand", "Segoe Print", "Comic Sans MS", "Apple Chancery", cursive',
-											fontWeight: 500,
-											fontSize: "1.1em",
-										}}
+										mix={[
+											css({
+												color: "var(--color-highlight-comment)",
+												fontFamily:
+													'"Bradley Hand", "Segoe Print", "Comic Sans MS", "Apple Chancery", cursive',
+												fontWeight: 500,
+												fontSize: "1.1em",
+											}),
+										]}
 									>
 										// {path}
 									</span>

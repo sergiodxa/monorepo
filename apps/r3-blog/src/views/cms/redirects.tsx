@@ -1,3 +1,5 @@
+import { css } from "remix/component";
+
 import { Button } from "~/components/button";
 import { Input } from "~/components/input";
 import { Modal } from "~/components/modal";
@@ -26,103 +28,123 @@ export namespace CMSRedirectsNewView {
 
 export function CMSRedirectsIndexView() {
 	return ({ items }: CMSRedirectsIndexView.Props) => (
-		<main css={{ display: "grid", gap: "0.9rem" }}>
+		<main mix={[css({ display: "grid", gap: "0.9rem" })]}>
 			<section
-				css={{
-					backgroundColor: "var(--ui-neutral-bg-tint)",
-					border: "1px solid var(--ui-neutral-border)",
-					borderRadius: "0.7rem",
-					padding: "1rem",
-				}}
+				mix={[
+					css({
+						backgroundColor: "var(--ui-neutral-bg-tint)",
+						border: "1px solid var(--ui-neutral-border)",
+						borderRadius: "0.7rem",
+						padding: "1rem",
+					}),
+				]}
 			>
-				<div css={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-					<h2 css={{ margin: 0, fontSize: "1.1rem", color: "var(--ui-neutral-fg-emphasis)" }}>
+				<div
+					mix={[css({ display: "flex", justifyContent: "space-between", alignItems: "center" })]}
+				>
+					<h2
+						mix={[css({ margin: 0, fontSize: "1.1rem", color: "var(--ui-neutral-fg-emphasis)" })]}
+					>
 						Redirects
 					</h2>
 					<a
 						href="/cms/redirects/new"
-						css={{
-							boxSizing: "border-box",
-							display: "inline-flex",
-							alignItems: "center",
-							height: "2.25rem",
-							padding: "0 0.7rem",
-							fontSize: "0.9rem",
-							borderRadius: "0.4rem",
-							border: "1px solid var(--ui-accent-border)",
-							backgroundColor: "var(--ui-accent-bg-tint)",
-							color: "var(--ui-accent-fg-emphasis)",
-							textDecoration: "none",
-						}}
+						mix={[
+							css({
+								boxSizing: "border-box",
+								display: "inline-flex",
+								alignItems: "center",
+								height: "2.25rem",
+								padding: "0 0.7rem",
+								fontSize: "0.9rem",
+								borderRadius: "0.4rem",
+								border: "1px solid var(--ui-accent-border)",
+								backgroundColor: "var(--ui-accent-bg-tint)",
+								color: "var(--ui-accent-fg-emphasis)",
+								textDecoration: "none",
+							}),
+						]}
 					>
 						New Redirect
 					</a>
 				</div>
 			</section>
 			<section
-				css={{
-					backgroundColor: "var(--ui-neutral-bg-tint)",
-					border: "1px solid var(--ui-neutral-border)",
-					borderRadius: "0.7rem",
-					padding: "1rem",
-				}}
+				mix={[
+					css({
+						backgroundColor: "var(--ui-neutral-bg-tint)",
+						border: "1px solid var(--ui-neutral-border)",
+						borderRadius: "0.7rem",
+						padding: "1rem",
+					}),
+				]}
 			>
 				{items.length === 0 ? (
-					<p css={{ margin: 0, color: "var(--ui-neutral-fg)" }}>No redirects found in KV yet.</p>
+					<p mix={[css({ margin: 0, color: "var(--ui-neutral-fg)" })]}>
+						No redirects found in KV yet.
+					</p>
 				) : (
-					<div css={{ overflowX: "auto" }}>
-						<table css={{ width: "100%", borderCollapse: "collapse" }}>
+					<div mix={[css({ overflowX: "auto" })]}>
+						<table mix={[css({ width: "100%", borderCollapse: "collapse" })]}>
 							<thead>
 								<tr>
 									<th
-										css={{
-											textAlign: "left",
-											padding: "0.6rem 0.75rem",
-											borderBottom: "1px solid var(--ui-neutral-border)",
-											verticalAlign: "middle",
-											color: "var(--ui-neutral-fg)",
-											fontSize: "0.9rem",
-											fontWeight: 600,
-										}}
+										mix={[
+											css({
+												textAlign: "left",
+												padding: "0.6rem 0.75rem",
+												borderBottom: "1px solid var(--ui-neutral-border)",
+												verticalAlign: "middle",
+												color: "var(--ui-neutral-fg)",
+												fontSize: "0.9rem",
+												fontWeight: 600,
+											}),
+										]}
 									>
 										From
 									</th>
 									<th
-										css={{
-											textAlign: "left",
-											padding: "0.6rem 0.75rem",
-											borderBottom: "1px solid var(--ui-neutral-border)",
-											verticalAlign: "middle",
-											color: "var(--ui-neutral-fg)",
-											fontSize: "0.9rem",
-											fontWeight: 600,
-										}}
+										mix={[
+											css({
+												textAlign: "left",
+												padding: "0.6rem 0.75rem",
+												borderBottom: "1px solid var(--ui-neutral-border)",
+												verticalAlign: "middle",
+												color: "var(--ui-neutral-fg)",
+												fontSize: "0.9rem",
+												fontWeight: 600,
+											}),
+										]}
 									>
 										To
 									</th>
 									<th
-										css={{
-											textAlign: "center",
-											padding: "0.6rem 0.75rem",
-											borderBottom: "1px solid var(--ui-neutral-border)",
-											verticalAlign: "middle",
-											color: "var(--ui-neutral-fg)",
-											fontSize: "0.9rem",
-											fontWeight: 600,
-										}}
+										mix={[
+											css({
+												textAlign: "center",
+												padding: "0.6rem 0.75rem",
+												borderBottom: "1px solid var(--ui-neutral-border)",
+												verticalAlign: "middle",
+												color: "var(--ui-neutral-fg)",
+												fontSize: "0.9rem",
+												fontWeight: 600,
+											}),
+										]}
 									>
 										Status
 									</th>
 									<th
-										css={{
-											textAlign: "right",
-											padding: "0.6rem 0.75rem",
-											borderBottom: "1px solid var(--ui-neutral-border)",
-											verticalAlign: "middle",
-											color: "var(--ui-neutral-fg)",
-											fontSize: "0.9rem",
-											fontWeight: 600,
-										}}
+										mix={[
+											css({
+												textAlign: "right",
+												padding: "0.6rem 0.75rem",
+												borderBottom: "1px solid var(--ui-neutral-border)",
+												verticalAlign: "middle",
+												color: "var(--ui-neutral-fg)",
+												fontSize: "0.9rem",
+												fontWeight: 600,
+											}),
+										]}
 									>
 										Actions
 									</th>
@@ -134,63 +156,73 @@ export function CMSRedirectsIndexView() {
 									return (
 										<tr key={item.from}>
 											<td
-												css={{
-													padding: "0.6rem 0.75rem",
-													borderBottom: "1px solid var(--ui-neutral-border)",
-													verticalAlign: "middle",
-													color: "var(--ui-neutral-fg-emphasis)",
-												}}
+												mix={[
+													css({
+														padding: "0.6rem 0.75rem",
+														borderBottom: "1px solid var(--ui-neutral-border)",
+														verticalAlign: "middle",
+														color: "var(--ui-neutral-fg-emphasis)",
+													}),
+												]}
 											>
 												{item.from}
 											</td>
 											<td
-												css={{
-													padding: "0.6rem 0.75rem",
-													borderBottom: "1px solid var(--ui-neutral-border)",
-													verticalAlign: "middle",
-													color: "var(--ui-neutral-fg)",
-												}}
+												mix={[
+													css({
+														padding: "0.6rem 0.75rem",
+														borderBottom: "1px solid var(--ui-neutral-border)",
+														verticalAlign: "middle",
+														color: "var(--ui-neutral-fg)",
+													}),
+												]}
 											>
 												{item.to}
 											</td>
 											<td
-												css={{
-													padding: "0.6rem 0.75rem",
-													borderBottom: "1px solid var(--ui-neutral-border)",
-													verticalAlign: "middle",
-													textAlign: "center",
-													color: "var(--ui-neutral-fg)",
-												}}
+												mix={[
+													css({
+														padding: "0.6rem 0.75rem",
+														borderBottom: "1px solid var(--ui-neutral-border)",
+														verticalAlign: "middle",
+														textAlign: "center",
+														color: "var(--ui-neutral-fg)",
+													}),
+												]}
 											>
 												{String(item.status)}
 											</td>
 											<td
-												css={{
-													padding: "0.6rem 0.75rem",
-													borderBottom: "1px solid var(--ui-neutral-border)",
-													verticalAlign: "middle",
-													textAlign: "right",
-												}}
+												mix={[
+													css({
+														padding: "0.6rem 0.75rem",
+														borderBottom: "1px solid var(--ui-neutral-border)",
+														verticalAlign: "middle",
+														textAlign: "right",
+													}),
+												]}
 											>
 												<button
 													type="button"
 													commandfor={dialogId}
 													command="show-modal"
-													css={{
-														boxSizing: "border-box",
-														display: "inline-flex",
-														alignItems: "center",
-														justifyContent: "center",
-														height: "1.8rem",
-														padding: "0 0.55rem",
-														fontSize: "0.82rem",
-														fontFamily: "inherit",
-														borderRadius: "0.35rem",
-														border: "1px solid var(--ui-neutral-border)",
-														backgroundColor: "transparent",
-														color: "var(--ui-neutral-fg)",
-														cursor: "pointer",
-													}}
+													mix={[
+														css({
+															boxSizing: "border-box",
+															display: "inline-flex",
+															alignItems: "center",
+															justifyContent: "center",
+															height: "1.8rem",
+															padding: "0 0.55rem",
+															fontSize: "0.82rem",
+															fontFamily: "inherit",
+															borderRadius: "0.35rem",
+															border: "1px solid var(--ui-neutral-border)",
+															backgroundColor: "transparent",
+															color: "var(--ui-neutral-fg)",
+															cursor: "pointer",
+														}),
+													]}
 												>
 													Delete
 												</button>
@@ -199,29 +231,31 @@ export function CMSRedirectsIndexView() {
 													<form
 														method="post"
 														action={item.deleteAction}
-														css={{ display: "grid", gap: "0.75rem" }}
+														mix={[css({ display: "grid", gap: "0.75rem" })]}
 													>
 														<input type="hidden" name="_method" value="DELETE" />
-														<p css={{ margin: 0, color: "var(--ui-neutral-fg)" }}>
+														<p mix={[css({ margin: 0, color: "var(--ui-neutral-fg)" })]}>
 															Delete redirect <strong>{item.from}</strong>? This action cannot be
 															undone.
 														</p>
-														<div css={{ display: "flex", gap: "0.5rem" }}>
+														<div mix={[css({ display: "flex", gap: "0.5rem" })]}>
 															<Button type="submit">Confirm delete</Button>
 															<button
 																type="button"
 																commandfor={dialogId}
 																command="close"
-																css={{
-																	padding: "0.45rem 0.7rem",
-																	fontSize: "0.9rem",
-																	borderRadius: "0.4rem",
-																	border: "1px solid var(--ui-neutral-border)",
-																	backgroundColor: "transparent",
-																	color: "var(--ui-neutral-fg)",
-																	cursor: "pointer",
-																	fontFamily: "inherit",
-																}}
+																mix={[
+																	css({
+																		padding: "0.45rem 0.7rem",
+																		fontSize: "0.9rem",
+																		borderRadius: "0.4rem",
+																		border: "1px solid var(--ui-neutral-border)",
+																		backgroundColor: "transparent",
+																		color: "var(--ui-neutral-fg)",
+																		cursor: "pointer",
+																		fontFamily: "inherit",
+																	}),
+																]}
 															>
 																Cancel
 															</button>
@@ -245,33 +279,35 @@ export function CMSRedirectsNewView() {
 	return ({ title, description, action }: CMSRedirectsNewView.Props) => (
 		<main>
 			<section
-				css={{
-					backgroundColor: "var(--ui-neutral-bg-tint)",
-					border: "1px solid var(--ui-neutral-border)",
-					borderRadius: "0.7rem",
-					padding: "1rem",
-					display: "grid",
-					gap: "0.8rem",
-				}}
+				mix={[
+					css({
+						backgroundColor: "var(--ui-neutral-bg-tint)",
+						border: "1px solid var(--ui-neutral-border)",
+						borderRadius: "0.7rem",
+						padding: "1rem",
+						display: "grid",
+						gap: "0.8rem",
+					}),
+				]}
 			>
-				<h2 css={{ margin: 0, fontSize: "1.1rem", color: "var(--ui-neutral-fg-emphasis)" }}>
+				<h2 mix={[css({ margin: 0, fontSize: "1.1rem", color: "var(--ui-neutral-fg-emphasis)" })]}>
 					{title}
 				</h2>
-				<p css={{ margin: 0, color: "var(--ui-neutral-fg)" }}>{description}</p>
+				<p mix={[css({ margin: 0, color: "var(--ui-neutral-fg)" })]}>{description}</p>
 
-				<form method="post" action={action} css={{ display: "grid", gap: "0.65rem" }}>
-					<label css={{ display: "grid", gap: "0.25rem" }}>
-						<span css={{ color: "var(--ui-neutral-fg)" }}>From</span>
+				<form method="post" action={action} mix={[css({ display: "grid", gap: "0.65rem" })]}>
+					<label mix={[css({ display: "grid", gap: "0.25rem" })]}>
+						<span mix={[css({ color: "var(--ui-neutral-fg)" })]}>From</span>
 						<Input name="from" required />
 					</label>
 
-					<label css={{ display: "grid", gap: "0.25rem" }}>
-						<span css={{ color: "var(--ui-neutral-fg)" }}>To</span>
+					<label mix={[css({ display: "grid", gap: "0.25rem" })]}>
+						<span mix={[css({ color: "var(--ui-neutral-fg)" })]}>To</span>
 						<Input name="to" required />
 					</label>
 
-					<label css={{ display: "grid", gap: "0.25rem" }}>
-						<span css={{ color: "var(--ui-neutral-fg)" }}>Status</span>
+					<label mix={[css({ display: "grid", gap: "0.25rem" })]}>
+						<span mix={[css({ color: "var(--ui-neutral-fg)" })]}>Status</span>
 						<Select name="status">
 							<option value="301">301 Permanent</option>
 							<option value="302" selected>
@@ -282,18 +318,20 @@ export function CMSRedirectsNewView() {
 						</Select>
 					</label>
 
-					<div css={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
+					<div mix={[css({ display: "flex", gap: "0.5rem", flexWrap: "wrap" })]}>
 						<Button type="submit">Create Redirect</Button>
 						<a
 							href="/cms/redirects"
-							css={{
-								padding: "0.45rem 0.7rem",
-								fontSize: "0.9rem",
-								borderRadius: "0.4rem",
-								border: "1px solid var(--ui-accent-border)",
-								color: "var(--ui-accent-fg-emphasis)",
-								textDecoration: "none",
-							}}
+							mix={[
+								css({
+									padding: "0.45rem 0.7rem",
+									fontSize: "0.9rem",
+									borderRadius: "0.4rem",
+									border: "1px solid var(--ui-accent-border)",
+									color: "var(--ui-accent-fg-emphasis)",
+									textDecoration: "none",
+								}),
+							]}
 						>
 							Back to list
 						</a>

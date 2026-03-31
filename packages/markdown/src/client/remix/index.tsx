@@ -3,6 +3,7 @@ import type { RenderableTreeNode, Tag } from "@markdoc/markdoc";
 import type { RemixNode } from "remix/component";
 
 import { cn } from "@pkg/cn";
+import { css } from "remix/component";
 
 import type { Markdown } from "../../server/index.js";
 
@@ -99,18 +100,22 @@ function renderChild(
 	}
 
 	if (tagName === "h1") {
-		return <h1 css={{ ...headingStyles, margin: "0 0 1rem", fontSize: "2.25rem" }}>{children}</h1>;
+		return (
+			<h1 mix={[css({ ...headingStyles, margin: "0 0 1rem", fontSize: "2.25rem" })]}>{children}</h1>
+		);
 	}
 
 	if (tagName === "h2") {
 		return (
-			<h2 css={{ ...headingStyles, margin: "2rem 0 1rem", fontSize: "1.875rem" }}>{children}</h2>
+			<h2 mix={[css({ ...headingStyles, margin: "2rem 0 1rem", fontSize: "1.875rem" })]}>
+				{children}
+			</h2>
 		);
 	}
 
 	if (tagName === "h3") {
 		return (
-			<h3 css={{ ...headingStyles, margin: "1.75rem 0 0.75rem", fontSize: "1.5rem" }}>
+			<h3 mix={[css({ ...headingStyles, margin: "1.75rem 0 0.75rem", fontSize: "1.5rem" })]}>
 				{children}
 			</h3>
 		);
@@ -118,7 +123,7 @@ function renderChild(
 
 	if (tagName === "h4") {
 		return (
-			<h4 css={{ ...headingStyles, margin: "1.5rem 0 0.75rem", fontSize: "1.25rem" }}>
+			<h4 mix={[css({ ...headingStyles, margin: "1.5rem 0 0.75rem", fontSize: "1.25rem" })]}>
 				{children}
 			</h4>
 		);
@@ -126,7 +131,7 @@ function renderChild(
 
 	if (tagName === "h5") {
 		return (
-			<h5 css={{ ...headingStyles, margin: "1.25rem 0 0.5rem", fontSize: "1.125rem" }}>
+			<h5 mix={[css({ ...headingStyles, margin: "1.25rem 0 0.5rem", fontSize: "1.125rem" })]}>
 				{children}
 			</h5>
 		);
@@ -134,11 +139,13 @@ function renderChild(
 
 	if (tagName === "h6") {
 		return (
-			<h6 css={{ ...headingStyles, margin: "1.25rem 0 0.5rem", fontSize: "1rem" }}>{children}</h6>
+			<h6 mix={[css({ ...headingStyles, margin: "1.25rem 0 0.5rem", fontSize: "1rem" })]}>
+				{children}
+			</h6>
 		);
 	}
 
-	if (tagName === "p") return <p css={paragraphStyles}>{children}</p>;
+	if (tagName === "p") return <p mix={[css(paragraphStyles)]}>{children}</p>;
 
 	if (tagName === "a") {
 		return (
@@ -146,7 +153,9 @@ function renderChild(
 				href={String(attrs.href ?? "")}
 				target={typeof attrs.target === "string" ? attrs.target : undefined}
 				rel={typeof attrs.rel === "string" ? attrs.rel : undefined}
-				css={{ color: "#0c4a6e", textDecoration: "underline", textUnderlineOffset: "0.15em" }}
+				mix={[
+					css({ color: "#0c4a6e", textDecoration: "underline", textUnderlineOffset: "0.15em" }),
+				]}
 			>
 				{children}
 			</a>
@@ -160,68 +169,76 @@ function renderChild(
 	if (tagName === "blockquote") {
 		return (
 			<blockquote
-				css={{
-					margin: "0 0 1rem",
-					padding: "0 0 0 1rem",
-					borderLeft: "3px solid #d4d4d4",
-					color: "#404040",
-				}}
+				mix={[
+					css({
+						margin: "0 0 1rem",
+						padding: "0 0 0 1rem",
+						borderLeft: "3px solid #d4d4d4",
+						color: "#404040",
+					}),
+				]}
 			>
 				{children}
 			</blockquote>
 		);
 	}
 
-	if (tagName === "code") return <code css={inlineCodeStyles}>{children}</code>;
+	if (tagName === "code") return <code mix={[css(inlineCodeStyles)]}>{children}</code>;
 
 	if (tagName === "pre") {
 		return (
 			<pre
-				css={{
-					margin: "0 0 1rem",
-					overflowX: "auto",
-					borderRadius: "0.5rem",
-					border: "1px solid #e5e5e5",
-				}}
+				mix={[
+					css({
+						margin: "0 0 1rem",
+						overflowX: "auto",
+						borderRadius: "0.5rem",
+						border: "1px solid #e5e5e5",
+					}),
+				]}
 			>
 				{children}
 			</pre>
 		);
 	}
 
-	if (tagName === "ul") return <ul css={listStyles}>{children}</ul>;
+	if (tagName === "ul") return <ul mix={[css(listStyles)]}>{children}</ul>;
 
-	if (tagName === "ol") return <ol css={listStyles}>{children}</ol>;
+	if (tagName === "ol") return <ol mix={[css(listStyles)]}>{children}</ol>;
 
-	if (tagName === "li") return <li css={{ marginBottom: "0.4rem" }}>{children}</li>;
+	if (tagName === "li") return <li mix={[css({ marginBottom: "0.4rem" })]}>{children}</li>;
 
 	if (tagName === "hr") {
-		return <hr css={{ margin: "2rem 0", border: 0, borderTop: "1px solid #e5e5e5" }} />;
+		return <hr mix={[css({ margin: "2rem 0", border: 0, borderTop: "1px solid #e5e5e5" })]} />;
 	}
 
 	if (tagName === "br") return <br />;
 
 	if (tagName === "table") {
 		return (
-			<div css={{ overflowX: "auto", marginBottom: "1rem" }}>
-				<table css={{ width: "100%", borderCollapse: "collapse", fontSize: "0.95rem" }}>
+			<div mix={[css({ overflowX: "auto", marginBottom: "1rem" })]}>
+				<table mix={[css({ width: "100%", borderCollapse: "collapse", fontSize: "0.95rem" })]}>
 					{children}
 				</table>
 			</div>
 		);
 	}
 
-	if (tagName === "thead") return <thead css={{ backgroundColor: "#f5f5f5" }}>{children}</thead>;
+	if (tagName === "thead")
+		return <thead mix={[css({ backgroundColor: "#f5f5f5" })]}>{children}</thead>;
 
 	if (tagName === "tbody") return <tbody>{children}</tbody>;
 
-	if (tagName === "tr") return <tr css={{ borderBottom: "1px solid #e5e5e5" }}>{children}</tr>;
+	if (tagName === "tr")
+		return <tr mix={[css({ borderBottom: "1px solid #e5e5e5" })]}>{children}</tr>;
 
 	if (tagName === "th") {
-		return <th css={{ textAlign: "left", padding: "0.6rem", fontWeight: 600 }}>{children}</th>;
+		return (
+			<th mix={[css({ textAlign: "left", padding: "0.6rem", fontWeight: 600 })]}>{children}</th>
+		);
 	}
 
-	if (tagName === "td") return <td css={{ padding: "0.6rem" }}>{children}</td>;
+	if (tagName === "td") return <td mix={[css({ padding: "0.6rem" })]}>{children}</td>;
 
 	return <div>{children}</div>;
 }
@@ -238,12 +255,14 @@ export function MarkdownView() {
 		return (
 			<div
 				className={cn(className)}
-				css={{
-					color: "#262626",
-					fontSize: "1rem",
-					lineHeight: 1.7,
-					maxWidth: "85ch",
-				}}
+				mix={[
+					css({
+						color: "#262626",
+						fontSize: "1rem",
+						lineHeight: 1.7,
+						maxWidth: "85ch",
+					}),
+				]}
 			>
 				{renderToRemix(content, components)}
 			</div>
