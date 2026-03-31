@@ -4,51 +4,51 @@ import * as ContentType from "./content-type";
 
 describe("text types", () => {
 	test("Text has correct value", () => {
-		expect(ContentType.Text).toBe("text/plain; charset=utf-8");
+		expect(ContentType.Text).toBe("text/plain");
 	});
 
 	test("HTML has correct value", () => {
-		expect(ContentType.HTML).toBe("text/html; charset=utf-8");
+		expect(ContentType.HTML).toBe("text/html");
 	});
 
 	test("CSS has correct value", () => {
-		expect(ContentType.CSS).toBe("text/css; charset=utf-8");
+		expect(ContentType.CSS).toBe("text/css");
 	});
 
 	test("JavaScript has correct value", () => {
-		expect(ContentType.JavaScript).toBe("text/javascript; charset=utf-8");
+		expect(ContentType.JavaScript).toBe("text/javascript");
 	});
 
 	test("CSV has correct value", () => {
-		expect(ContentType.CSV).toBe("text/csv; charset=utf-8");
+		expect(ContentType.CSV).toBe("text/csv");
 	});
 
 	test("XML has correct value", () => {
-		expect(ContentType.XML).toBe("text/xml; charset=utf-8");
+		expect(ContentType.XML).toBe("text/xml");
 	});
 
 	test("Markdown has correct value", () => {
-		expect(ContentType.Markdown).toBe("text/markdown; charset=utf-8");
+		expect(ContentType.Markdown).toBe("text/markdown");
 	});
 
-	test("all text types include charset=utf-8", () => {
-		expect(ContentType.Text).toContain("charset=utf-8");
-		expect(ContentType.HTML).toContain("charset=utf-8");
-		expect(ContentType.CSS).toContain("charset=utf-8");
-		expect(ContentType.JavaScript).toContain("charset=utf-8");
-		expect(ContentType.CSV).toContain("charset=utf-8");
-		expect(ContentType.XML).toContain("charset=utf-8");
-		expect(ContentType.Markdown).toContain("charset=utf-8");
+	test("all text types have no charset", () => {
+		expect(ContentType.Text).not.toContain("charset=utf-8");
+		expect(ContentType.HTML).not.toContain("charset=utf-8");
+		expect(ContentType.CSS).not.toContain("charset=utf-8");
+		expect(ContentType.JavaScript).not.toContain("charset=utf-8");
+		expect(ContentType.CSV).not.toContain("charset=utf-8");
+		expect(ContentType.XML).not.toContain("charset=utf-8");
+		expect(ContentType.Markdown).not.toContain("charset=utf-8");
 	});
 });
 
 describe("application types", () => {
 	test("Json has correct value", () => {
-		expect(ContentType.Json).toBe("application/json; charset=utf-8");
+		expect(ContentType.Json).toBe("application/json");
 	});
 
 	test("JSONLines has correct value", () => {
-		expect(ContentType.JSONLines).toBe("application/jsonl; charset=utf-8");
+		expect(ContentType.JSONLines).toBe("application/jsonl");
 	});
 
 	test("PDF has correct value", () => {
@@ -76,7 +76,7 @@ describe("application types", () => {
 	});
 
 	test("ApplicationXML has correct value", () => {
-		expect(ContentType.ApplicationXML).toBe("application/xml; charset=utf-8");
+		expect(ContentType.ApplicationXML).toBe("application/xml");
 	});
 
 	test("PDF has no charset", () => {
@@ -95,10 +95,10 @@ describe("application types", () => {
 		expect(ContentType.OctetStream).not.toContain("charset");
 	});
 
-	test("text-based application types include charset=utf-8", () => {
-		expect(ContentType.Json).toContain("charset=utf-8");
-		expect(ContentType.JSONLines).toContain("charset=utf-8");
-		expect(ContentType.ApplicationXML).toContain("charset=utf-8");
+	test("text-based application types have no charset", () => {
+		expect(ContentType.Json).not.toContain("charset=utf-8");
+		expect(ContentType.JSONLines).not.toContain("charset=utf-8");
+		expect(ContentType.ApplicationXML).not.toContain("charset=utf-8");
 	});
 });
 

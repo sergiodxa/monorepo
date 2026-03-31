@@ -6,7 +6,7 @@
  * @example
  * return new Response("Hello", { headers: { "Content-Type": Text } });
  */
-export const Text = "text/plain; charset=utf-8" as const;
+export const Text = "text/plain" as const;
 
 /**
  * HTML content type with UTF-8 charset.
@@ -16,7 +16,7 @@ export const Text = "text/plain; charset=utf-8" as const;
  * @example
  * return new Response("<h1>Hello</h1>", { headers: { "Content-Type": HTML } });
  */
-export const HTML = "text/html; charset=utf-8" as const;
+export const HTML = "text/html" as const;
 
 /**
  * CSS content type with UTF-8 charset.
@@ -26,7 +26,7 @@ export const HTML = "text/html; charset=utf-8" as const;
  * @example
  * return new Response("body { color: red; }", { headers: { "Content-Type": CSS } });
  */
-export const CSS = "text/css; charset=utf-8" as const;
+export const CSS = "text/css" as const;
 
 /**
  * JavaScript content type with UTF-8 charset.
@@ -36,7 +36,7 @@ export const CSS = "text/css; charset=utf-8" as const;
  * @example
  * return new Response("console.log('hi')", { headers: { "Content-Type": JavaScript } });
  */
-export const JavaScript = "text/javascript; charset=utf-8" as const;
+export const JavaScript = "text/javascript" as const;
 
 /**
  * CSV content type with UTF-8 charset.
@@ -46,7 +46,7 @@ export const JavaScript = "text/javascript; charset=utf-8" as const;
  * @example
  * return new Response("name,age\nJohn,30", { headers: { "Content-Type": CSV } });
  */
-export const CSV = "text/csv; charset=utf-8" as const;
+export const CSV = "text/csv" as const;
 
 /**
  * XML content type with UTF-8 charset (text variant).
@@ -56,7 +56,7 @@ export const CSV = "text/csv; charset=utf-8" as const;
  * @example
  * return new Response("<root><item/></root>", { headers: { "Content-Type": XML } });
  */
-export const XML = "text/xml; charset=utf-8" as const;
+export const XML = "text/xml" as const;
 
 /**
  * Markdown content type with UTF-8 charset.
@@ -66,7 +66,7 @@ export const XML = "text/xml; charset=utf-8" as const;
  * @example
  * return new Response("# Hello", { headers: { "Content-Type": Markdown } });
  */
-export const Markdown = "text/markdown; charset=utf-8" as const;
+export const Markdown = "text/markdown" as const;
 
 /**
  * JSON content type with UTF-8 charset.
@@ -77,7 +77,7 @@ export const Markdown = "text/markdown; charset=utf-8" as const;
  * @example
  * if (contentType === Json) { parseJson(body); }
  */
-export const Json = "application/json; charset=utf-8" as const;
+export const Json = "application/json" as const;
 
 /**
  * JSON Lines content type with UTF-8 charset.
@@ -87,7 +87,7 @@ export const Json = "application/json; charset=utf-8" as const;
  * @example
  * return new Response('{"a":1}\n{"b":2}', { headers: { "Content-Type": JSONLines } });
  */
-export const JSONLines = "application/jsonl; charset=utf-8" as const;
+export const JSONLines = "application/jsonl" as const;
 
 /**
  * PDF content type.
@@ -157,7 +157,7 @@ export const OctetStream = "application/octet-stream" as const;
  * @example
  * return new Response(xmlData, { headers: { "Content-Type": ApplicationXML } });
  */
-export const ApplicationXML = "application/xml; charset=utf-8" as const;
+export const ApplicationXML = "application/xml" as const;
 
 /**
  * PNG image content type.
