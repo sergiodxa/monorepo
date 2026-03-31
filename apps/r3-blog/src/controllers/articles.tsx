@@ -10,8 +10,8 @@ import { Post } from "~/models/post";
 import { ArticlePost } from "~/models/posts/article";
 import { ArticlesView } from "~/views/articles";
 
-export default action<typeof routes.articles>(async (ctx) => {
-	let articles = await ArticlePost.listItems(db(ctx));
+export default action<typeof routes.articles>(async () => {
+	let articles = await ArticlePost.listItems(db());
 	let items = articles.map((article) => {
 		let slug = article.slug;
 		let href = `/articles/${slug}`;

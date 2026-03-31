@@ -1,9 +1,12 @@
 import type { Database } from "remix/data-table";
 
+import { Location } from "@pkg/location";
+
 import { ArticlePost } from "~/models/posts/article";
 import { GlossaryPost } from "~/models/posts/glossary";
 import { LikePost } from "~/models/posts/like";
 import { TutorialPost } from "~/models/posts/tutorial";
+import routes from "~/routes";
 
 export namespace Feed {
 	/**
@@ -73,7 +76,7 @@ export class Feed {
 			preview: boolean;
 		}> = [
 			...articles.map((article) => {
-				let href = `/articles/${article.slug}`;
+				let href = routes.post.href({ postType: "articles", postSlug: article.slug });
 				let publishedAt = article.published_at;
 				let publishedAtTime = this.toTimestamp(publishedAt);
 				let createdAtTime = this.toTimestamp(article.created_at);
@@ -90,7 +93,7 @@ export class Feed {
 				};
 			}),
 			...tutorials.map((tutorial) => {
-				let href = `/tutorials/${tutorial.slug}`;
+				let href = routes.post.href({ postType: "tutorials", postSlug: tutorial.slug });
 				let publishedAt = tutorial.published_at;
 				let publishedAtTime = this.toTimestamp(publishedAt);
 				let createdAtTime = this.toTimestamp(tutorial.created_at);
@@ -124,7 +127,11 @@ export class Feed {
 				};
 			}),
 			...glossary.map((entry) => {
-				let href = `/glossary#${entry.meta.slug}`;
+				let href = new Location({
+					pathname: routes.glossary.href(),
+					hash: entry.meta.slug,
+				}).toString();
+
 				let title = entry.meta.term;
 				let publishedAt = entry.post.published_at;
 				let publishedAtTime = this.toTimestamp(publishedAt);

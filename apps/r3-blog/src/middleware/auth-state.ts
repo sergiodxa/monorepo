@@ -75,7 +75,7 @@ async function resolveCurrentUser(ctx: RequestContext) {
 	let userId = ctx.session.get("userId");
 	if (typeof userId !== "string" || !userId) return null;
 
-	let user = await User.findById(db(ctx), userId);
+	let user = await User.findById(db(), userId);
 	if (user) return user;
 
 	ctx.session.unset("userId");

@@ -10,8 +10,8 @@ import { Post } from "~/models/post";
 import { TutorialPost } from "~/models/posts/tutorial";
 import { TutorialsView } from "~/views/tutorials";
 
-export default action<typeof routes.tutorials>(async (ctx) => {
-	let tutorials = await TutorialPost.listItems(db(ctx));
+export default action<typeof routes.tutorials>(async () => {
+	let tutorials = await TutorialPost.listItems(db());
 	let items = tutorials.map((tutorial) => {
 		let slug = tutorial.slug;
 		let href = `/tutorials/${slug}`;

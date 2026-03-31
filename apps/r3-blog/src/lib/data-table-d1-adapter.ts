@@ -1,197 +1,299 @@
-import type {
-	AdapterCapabilityOverrides,
-	AdapterExecuteRequest,
-	AdapterResult,
-	AdapterStatement,
-	DatabaseAdapter,
-	Predicate,
-	TransactionOptions,
-	TransactionToken,
+import {
+	getTableName,
+	getTablePrimaryKey,
+	type AdapterCapabilityOverrides,
+	type AdapterExecuteRequest,
+	type AdapterResult,
+	type AdapterStatement,
+	type DatabaseAdapter,
+	type TransactionOptions,
+	type TransactionToken,
 } from "remix/data-table";
 
-import { getTableName, getTablePrimaryKey } from "remix/data-table";
+type SqliteCompileContext = {
+	values: Array<unknown>;
+};
 
-interface D1AdapterOptions {
-	capabilities?: AdapterCapabilityOverrides;
-}
+type CompiledSqlStatement = {
+	text: string;
+	values: Array<unknown>;
+};
 
-interface PendingTransaction {
-	statements: D1PreparedStatement[];
-	savepoints: Map<string, number>;
-}
+type D1Meta = {
+	changes?: number;
+	last_row_id?: number;
+};
 
-export function createD1DatabaseAdapter(
-	db: D1Database,
-	options?: D1AdapterOptions,
-): DatabaseAdapter {
-	let transactions = new Set<string>();
-	let pendingTransactions = new Map<string, PendingTransaction>();
-	let transactionStack: string[] = [];
-	let transactionCounter = 0;
+type D1StatementResult = {
+	results?: Array<Record<string, unknown>>;
+	meta?: D1Meta;
+};
 
-	function assertTransaction(token: TransactionToken): void {
-		if (!transactions.has(token.id)) {
+type D1PreparedQuery = {
+	all<T = Record<string, unknown>>(): Promise<{
+		results?: Array<T>;
+		meta?: D1Meta;
+	}>;
+	run<T = Record<string, unknown>>(): Promise<{
+		results?: Array<T>;
+		meta?: D1Meta;
+	}>;
+};
+
+/**
+ * `DatabaseAdapter` implementation for Cloudflare D1.
+ *
+ * This adapter intentionally mirrors SQLite SQL generation because D1 uses
+ * SQLite semantics.
+ */
+export class D1DataTableAdapter implements DatabaseAdapter {
+	dialect = "sqlite";
+	capabilities: {
+		returning: boolean;
+		savepoints: boolean;
+		upsert: boolean;
+	};
+
+	#database: D1Database;
+	#transactions = new Set<string>();
+	#transactionCounter = 0;
+
+	constructor(
+		database: D1Database,
+		options?: {
+			capabilities?: AdapterCapabilityOverrides;
+		},
+	) {
+		this.#database = database;
+		this.capabilities = {
+			returning: options?.capabilities?.returning ?? true,
+			savepoints: options?.capabilities?.savepoints ?? false,
+			upsert: options?.capabilities?.upsert ?? true,
+		};
+	}
+
+	async execute(request: AdapterExecuteRequest): Promise<AdapterResult> {
+		if (request.statement.kind === "insertMany" && request.statement.values.length === 0) {
+			return {
+				affectedRows: 0,
+				insertId: undefined,
+				rows: request.statement.returning ? [] : undefined,
+			};
+		}
+
+		const statement = compileSqliteStatement(request.statement);
+		const prepared = this.#database
+			.prepare(statement.text)
+			.bind(...statement.values) as unknown as D1PreparedQuery;
+
+		const shouldReadRows =
+			request.statement.kind === "select" ||
+			request.statement.kind === "count" ||
+			request.statement.kind === "exists" ||
+			hasReturningClause(request.statement);
+
+		if (shouldReadRows) {
+			const result = (await prepared.all()) as D1StatementResult;
+			let rows = normalizeRows(result.results ?? []);
+			if (request.statement.kind === "count" || request.statement.kind === "exists") {
+				rows = normalizeCountRows(rows);
+			}
+			return {
+				rows,
+				affectedRows: normalizeAffectedRowsForReader(request.statement.kind, rows, result.meta),
+				insertId: normalizeInsertIdForReader(
+					request.statement.kind,
+					request.statement,
+					rows,
+					result.meta,
+				),
+			};
+		}
+
+		const result = (await prepared.run()) as D1StatementResult;
+		return {
+			affectedRows: normalizeAffectedRowsForRun(request.statement.kind, result),
+			insertId: normalizeInsertIdForRun(request.statement.kind, request.statement, result),
+		};
+	}
+
+	async beginTransaction(options?: TransactionOptions): Promise<TransactionToken> {
+		if (options?.isolationLevel === "read uncommitted") {
+			await this.#database.exec("PRAGMA read_uncommitted = true");
+		}
+
+		await this.#database.exec("BEGIN");
+		this.#transactionCounter += 1;
+		const token = { id: "tx_" + String(this.#transactionCounter) };
+		this.#transactions.add(token.id);
+		return token;
+	}
+
+	async commitTransaction(token: TransactionToken): Promise<void> {
+		this.#assertTransaction(token);
+		await this.#database.exec("COMMIT");
+		this.#transactions.delete(token.id);
+	}
+
+	async rollbackTransaction(token: TransactionToken): Promise<void> {
+		this.#assertTransaction(token);
+		await this.#database.exec("ROLLBACK");
+		this.#transactions.delete(token.id);
+	}
+
+	async createSavepoint(_token: TransactionToken, _name: string): Promise<void> {
+		throw new Error("D1DataTableAdapter savepoints are not supported");
+	}
+
+	async rollbackToSavepoint(_token: TransactionToken, _name: string): Promise<void> {
+		throw new Error("D1DataTableAdapter savepoints are not supported");
+	}
+
+	async releaseSavepoint(_token: TransactionToken, _name: string): Promise<void> {
+		throw new Error("D1DataTableAdapter savepoints are not supported");
+	}
+
+	#assertTransaction(token: TransactionToken) {
+		if (!this.#transactions.has(token.id)) {
 			throw new Error("Unknown transaction token: " + token.id);
 		}
 	}
+}
 
-	return {
-		dialect: "sqlite",
+export function createD1DataTableAdapter(
+	database: D1Database,
+	options?: {
+		capabilities?: AdapterCapabilityOverrides;
+	},
+) {
+	return new D1DataTableAdapter(database, options);
+}
 
-		capabilities: {
-			returning: options?.capabilities?.returning ?? true,
-			savepoints: options?.capabilities?.savepoints ?? true,
-			upsert: options?.capabilities?.upsert ?? true,
-		},
+function hasReturningClause(statement: AdapterStatement) {
+	return (
+		(statement.kind === "insert" ||
+			statement.kind === "insertMany" ||
+			statement.kind === "update" ||
+			statement.kind === "delete" ||
+			statement.kind === "upsert") &&
+		Boolean(statement.returning)
+	);
+}
 
-		async execute(request: AdapterExecuteRequest): Promise<AdapterResult> {
-			if (request.statement.kind === "insertMany" && request.statement.values.length === 0) {
+function normalizeRows(rows: Array<Record<string, unknown>>) {
+	return rows.map((row) => {
+		if (typeof row !== "object" || row === null) {
+			return {};
+		}
+		return { ...row };
+	});
+}
+
+function normalizeCountRows(rows: Array<Record<string, unknown>>) {
+	return rows.map((row) => {
+		const count = row.count;
+		if (typeof count === "string") {
+			const numeric = Number(count);
+			if (!Number.isNaN(numeric)) {
 				return {
-					affectedRows: 0,
-					insertId: undefined,
-					rows: request.statement.returning ? [] : undefined,
+					...row,
+					count: numeric,
 				};
 			}
-
-			let transactionId =
-				getRequestTransactionId(request) ?? getCurrentTransactionId(transactionStack);
-			let pendingTransaction = transactionId ? pendingTransactions.get(transactionId) : undefined;
-
-			if (pendingTransaction) {
-				if (isReadStatement(request.statement)) {
-					throw new Error("D1 batch transactions do not support reads inside transaction");
-				}
-
-				let statement = compileSqliteStatement(request.statement);
-				pendingTransaction.statements.push(db.prepare(statement.text).bind(...statement.values));
-
-				return buildDeferredWriteResult(request.statement);
-			}
-
-			let statement = compileSqliteStatement(request.statement);
-			let d1Statement = db.prepare(statement.text).bind(...statement.values);
-			let result = await d1Statement.all();
-
-			if (isReadStatement(request.statement)) {
-				let rows = normalizeRows(result.results);
-
-				if (request.statement.kind === "count" || request.statement.kind === "exists") {
-					rows = normalizeCountRows(rows);
-				}
-
-				return {
-					rows,
-					affectedRows: undefined,
-					insertId: undefined,
-				};
-			}
-
-			if ("returning" in request.statement && request.statement.returning !== undefined) {
-				let rows = normalizeRows(result.results);
-
-				return {
-					rows,
-					affectedRows: result.meta.changes,
-					insertId: normalizeInsertId(request.statement, rows),
-				};
-			}
-
+		}
+		if (typeof count === "bigint") {
 			return {
-				affectedRows: result.meta.changes,
-				insertId: result.meta.last_row_id,
+				...row,
+				count: Number(count),
 			};
-		},
-
-		async beginTransaction(_options?: TransactionOptions): Promise<TransactionToken> {
-			transactionCounter += 1;
-			let token = { id: "tx_" + String(transactionCounter) };
-			transactions.add(token.id);
-			pendingTransactions.set(token.id, { statements: [], savepoints: new Map<string, number>() });
-			transactionStack.push(token.id);
-			return token;
-		},
-
-		async commitTransaction(token: TransactionToken): Promise<void> {
-			assertTransaction(token);
-			let pendingTransaction = pendingTransactions.get(token.id);
-
-			if (!pendingTransaction) {
-				throw new Error("Unknown transaction token: " + token.id);
-			}
-
-			try {
-				if (pendingTransaction.statements.length > 0) {
-					await db.batch(pendingTransaction.statements);
-				}
-			} finally {
-				pendingTransactions.delete(token.id);
-				transactions.delete(token.id);
-				removeTransactionFromStack(transactionStack, token.id);
-			}
-		},
-
-		async rollbackTransaction(token: TransactionToken): Promise<void> {
-			assertTransaction(token);
-			pendingTransactions.delete(token.id);
-			transactions.delete(token.id);
-			removeTransactionFromStack(transactionStack, token.id);
-		},
-
-		async createSavepoint(token: TransactionToken, name: string): Promise<void> {
-			assertTransaction(token);
-			let pendingTransaction = pendingTransactions.get(token.id);
-
-			if (!pendingTransaction) {
-				throw new Error("Unknown transaction token: " + token.id);
-			}
-
-			pendingTransaction.savepoints.set(name, pendingTransaction.statements.length);
-		},
-
-		async rollbackToSavepoint(token: TransactionToken, name: string): Promise<void> {
-			assertTransaction(token);
-			let pendingTransaction = pendingTransactions.get(token.id);
-
-			if (!pendingTransaction) {
-				throw new Error("Unknown transaction token: " + token.id);
-			}
-
-			let index = pendingTransaction.savepoints.get(name);
-
-			if (typeof index !== "number") {
-				throw new Error("Unknown savepoint: " + name);
-			}
-
-			pendingTransaction.statements.length = index;
-		},
-
-		async releaseSavepoint(token: TransactionToken, name: string): Promise<void> {
-			assertTransaction(token);
-			let pendingTransaction = pendingTransactions.get(token.id);
-
-			if (!pendingTransaction) {
-				throw new Error("Unknown transaction token: " + token.id);
-			}
-
-			pendingTransaction.savepoints.delete(name);
-		},
-	};
+		}
+		return row;
+	});
 }
 
-type JoinClause = Extract<AdapterStatement, { kind: "select" }>["joins"][number];
-type UpsertStatement = Extract<AdapterStatement, { kind: "upsert" }>;
-type StatementTable = Extract<AdapterStatement, { kind: "select" }>["table"];
-
-interface CompiledSql {
-	text: string;
-	values: unknown[];
+function normalizeAffectedRowsForReader(
+	kind: AdapterStatement["kind"],
+	rows: Array<Record<string, unknown>>,
+	meta?: D1Meta,
+) {
+	if (isWriteStatementKind(kind)) {
+		if (typeof meta?.changes === "number") {
+			return meta.changes;
+		}
+		return rows.length;
+	}
+	return undefined;
 }
 
-interface CompileContext {
-	values: unknown[];
+function normalizeInsertIdForReader(
+	kind: AdapterStatement["kind"],
+	statement: AdapterStatement,
+	rows: Array<Record<string, unknown>>,
+	meta?: D1Meta,
+) {
+	if (!isInsertStatementKind(kind) || !isInsertStatement(statement)) {
+		return undefined;
+	}
+	const primaryKey = getTablePrimaryKey(statement.table);
+	if (primaryKey.length !== 1) {
+		return undefined;
+	}
+	const key = primaryKey[0];
+	if (!key) {
+		return meta?.last_row_id;
+	}
+	const row = rows[rows.length - 1];
+	return row?.[key] ?? meta?.last_row_id;
 }
 
-function compileSqliteStatement(statement: AdapterStatement): CompiledSql {
+function normalizeAffectedRowsForRun(kind: AdapterStatement["kind"], result: D1StatementResult) {
+	if (kind === "select" || kind === "count" || kind === "exists") {
+		return undefined;
+	}
+	return result.meta?.changes;
+}
+
+function normalizeInsertIdForRun(
+	kind: AdapterStatement["kind"],
+	statement: AdapterStatement,
+	result: D1StatementResult,
+) {
+	if (!isInsertStatementKind(kind) || !isInsertStatement(statement)) {
+		return undefined;
+	}
+	if (getTablePrimaryKey(statement.table).length !== 1) {
+		return undefined;
+	}
+	return result.meta?.last_row_id;
+}
+
+function isWriteStatementKind(kind: AdapterStatement["kind"]) {
+	return (
+		kind === "insert" ||
+		kind === "insertMany" ||
+		kind === "update" ||
+		kind === "delete" ||
+		kind === "upsert"
+	);
+}
+
+function isInsertStatementKind(kind: AdapterStatement["kind"]) {
+	return kind === "insert" || kind === "insertMany" || kind === "upsert";
+}
+
+function isInsertStatement(
+	statement: AdapterStatement,
+): statement is Extract<AdapterStatement, { kind: "insert" | "insertMany" | "upsert" }> {
+	return (
+		statement.kind === "insert" || statement.kind === "insertMany" || statement.kind === "upsert"
+	);
+}
+
+/**
+ * Adapted from `@remix-run/data-table-sqlite` SQL compiler to keep this D1
+ * adapter self-contained without depending on internal package paths.
+ */
+function compileSqliteStatement(statement: AdapterStatement): CompiledSqlStatement {
 	if (statement.kind === "raw") {
 		return {
 			text: statement.sql.text,
@@ -199,27 +301,25 @@ function compileSqliteStatement(statement: AdapterStatement): CompiledSql {
 		};
 	}
 
-	let context: CompileContext = { values: [] };
+	const context: SqliteCompileContext = { values: [] };
 
 	if (statement.kind === "select") {
 		let selection = "*";
-
 		if (statement.select !== "*") {
 			selection = statement.select
 				.map((field) => quotePath(field.column) + " as " + quoteIdentifier(field.alias))
 				.join(", ");
 		}
-
 		return {
 			text:
 				"select " +
 				(statement.distinct ? "distinct " : "") +
 				selection +
-				compileFromClause(statement.table, statement.joins, context) +
-				compileWhereClause(statement.where, context) +
+				compileFromClause(statement.table, statement.joins as Array<unknown>, context) +
+				compileWhereClause(statement.where as Array<unknown>, context) +
 				compileGroupByClause(statement.groupBy) +
-				compileHavingClause(statement.having, context) +
-				compileOrderByClause(statement.orderBy) +
+				compileHavingClause(statement.having as Array<unknown>, context) +
+				compileOrderByClause(statement.orderBy as Array<unknown>) +
 				compileLimitClause(statement.limit) +
 				compileOffsetClause(statement.offset),
 			values: context.values,
@@ -227,13 +327,12 @@ function compileSqliteStatement(statement: AdapterStatement): CompiledSql {
 	}
 
 	if (statement.kind === "count" || statement.kind === "exists") {
-		let inner =
+		const inner =
 			"select 1" +
-			compileFromClause(statement.table, statement.joins, context) +
-			compileWhereClause(statement.where, context) +
+			compileFromClause(statement.table, statement.joins as Array<unknown>, context) +
+			compileWhereClause(statement.where as Array<unknown>, context) +
 			compileGroupByClause(statement.groupBy) +
-			compileHavingClause(statement.having, context);
-
+			compileHavingClause(statement.having as Array<unknown>, context);
 		return {
 			text:
 				"select count(*) as " +
@@ -247,21 +346,25 @@ function compileSqliteStatement(statement: AdapterStatement): CompiledSql {
 	}
 
 	if (statement.kind === "insert") {
-		return compileInsertStatement(statement.table, statement.values, statement.returning, context);
+		return compileInsertStatement(
+			statement.table,
+			statement.values as Record<string, unknown>,
+			statement.returning,
+			context,
+		);
 	}
 
 	if (statement.kind === "insertMany") {
 		return compileInsertManyStatement(
 			statement.table,
-			statement.values,
+			statement.values as Array<Record<string, unknown>>,
 			statement.returning,
 			context,
 		);
 	}
 
 	if (statement.kind === "update") {
-		let columns = Object.keys(statement.changes);
-
+		const columns = Object.keys(statement.changes);
 		return {
 			text:
 				"update " +
@@ -269,10 +372,13 @@ function compileSqliteStatement(statement: AdapterStatement): CompiledSql {
 				" set " +
 				columns
 					.map(
-						(column) => quotePath(column) + " = " + pushValue(context, statement.changes[column]),
+						(column) =>
+							quotePath(column) +
+							" = " +
+							pushValue(context, (statement.changes as Record<string, unknown>)[column]),
 					)
 					.join(", ") +
-				compileWhereClause(statement.where, context) +
+				compileWhereClause(statement.where as Array<unknown>, context) +
 				compileReturningClause(statement.returning),
 			values: context.values,
 		};
@@ -283,7 +389,7 @@ function compileSqliteStatement(statement: AdapterStatement): CompiledSql {
 			text:
 				"delete from " +
 				quotePath(getTableName(statement.table)) +
-				compileWhereClause(statement.where, context) +
+				compileWhereClause(statement.where as Array<unknown>, context) +
 				compileReturningClause(statement.returning),
 			values: context.values,
 		};
@@ -297,13 +403,12 @@ function compileSqliteStatement(statement: AdapterStatement): CompiledSql {
 }
 
 function compileInsertStatement(
-	table: StatementTable,
+	table: Extract<AdapterStatement, { kind: "insert" }>["table"],
 	values: Record<string, unknown>,
-	returning: "*" | string[] | undefined,
-	context: CompileContext,
-): CompiledSql {
-	let columns = Object.keys(values);
-
+	returning: Extract<AdapterStatement, { kind: "insert" }>["returning"],
+	context: SqliteCompileContext,
+): CompiledSqlStatement {
+	const columns = Object.keys(values);
 	if (columns.length === 0) {
 		return {
 			text:
@@ -330,11 +435,11 @@ function compileInsertStatement(
 }
 
 function compileInsertManyStatement(
-	table: StatementTable,
-	rows: Record<string, unknown>[],
-	returning: "*" | string[] | undefined,
-	context: CompileContext,
-): CompiledSql {
+	table: Extract<AdapterStatement, { kind: "insertMany" }>["table"],
+	rows: Array<Record<string, unknown>>,
+	returning: Extract<AdapterStatement, { kind: "insertMany" }>["returning"],
+	context: SqliteCompileContext,
+): CompiledSqlStatement {
 	if (rows.length === 0) {
 		return {
 			text: "select 0 where 1 = 0",
@@ -342,8 +447,7 @@ function compileInsertManyStatement(
 		};
 	}
 
-	let columns = collectColumns(rows);
-
+	const columns = collectColumns(rows);
 	if (columns.length === 0) {
 		return {
 			text:
@@ -368,7 +472,9 @@ function compileInsertManyStatement(
 						"(" +
 						columns
 							.map((column) => {
-								let value = Object.prototype.hasOwnProperty.call(row, column) ? row[column] : null;
+								const value = Object.prototype.hasOwnProperty.call(row, column)
+									? row[column]
+									: null;
 								return pushValue(context, value);
 							})
 							.join(", ") +
@@ -380,31 +486,37 @@ function compileInsertManyStatement(
 	};
 }
 
-function compileUpsertStatement(statement: UpsertStatement, context: CompileContext): CompiledSql {
-	let insertColumns = Object.keys(statement.values);
-	let conflictTarget = statement.conflictTarget ?? [...getTablePrimaryKey(statement.table)];
-
+function compileUpsertStatement(
+	statement: Extract<AdapterStatement, { kind: "upsert" }>,
+	context: SqliteCompileContext,
+): CompiledSqlStatement {
+	const insertColumns = Object.keys(statement.values);
+	const conflictTarget = statement.conflictTarget ?? [...getTablePrimaryKey(statement.table)];
 	if (insertColumns.length === 0) {
 		throw new Error("upsert requires at least one value");
 	}
 
-	let updateValues = statement.update ?? statement.values;
-	let updateColumns = Object.keys(updateValues);
-
+	const updateValues = statement.update ?? statement.values;
+	const updateColumns = Object.keys(updateValues);
 	let conflictClause = "";
 
 	if (updateColumns.length === 0) {
 		conflictClause =
 			" on conflict (" +
-			conflictTarget.map((column: string) => quotePath(column)).join(", ") +
+			conflictTarget.map((column) => quotePath(column)).join(", ") +
 			") do nothing";
 	} else {
 		conflictClause =
 			" on conflict (" +
-			conflictTarget.map((column: string) => quotePath(column)).join(", ") +
+			conflictTarget.map((column) => quotePath(column)).join(", ") +
 			") do update set " +
 			updateColumns
-				.map((column) => quotePath(column) + " = " + pushValue(context, updateValues[column]))
+				.map(
+					(column) =>
+						quotePath(column) +
+						" = " +
+						pushValue(context, (updateValues as Record<string, unknown>)[column]),
+				)
 				.join(", ");
 	}
 
@@ -415,7 +527,9 @@ function compileUpsertStatement(statement: UpsertStatement, context: CompileCont
 			" (" +
 			insertColumns.map((column) => quotePath(column)).join(", ") +
 			") values (" +
-			insertColumns.map((column) => pushValue(context, statement.values[column])).join(", ") +
+			insertColumns
+				.map((column) => pushValue(context, (statement.values as Record<string, unknown>)[column]))
+				.join(", ") +
 			")" +
 			conflictClause +
 			compileReturningClause(statement.returning),
@@ -424,149 +538,159 @@ function compileUpsertStatement(statement: UpsertStatement, context: CompileCont
 }
 
 function compileFromClause(
-	table: StatementTable,
-	joins: JoinClause[],
-	context: CompileContext,
-): string {
+	table: AdapterStatement extends infer T
+		? T extends { table: infer tableType }
+			? tableType
+			: never
+		: never,
+	joins: Array<unknown>,
+	context: SqliteCompileContext,
+) {
 	let output = " from " + quotePath(getTableName(table));
-
-	for (let join of joins) {
+	for (const join of joins) {
+		const typedJoin = join as {
+			type: "inner" | "left" | "right";
+			table: Parameters<typeof getTableName>[0];
+			on: unknown;
+		};
 		output +=
 			" " +
-			normalizeJoinType(join.type) +
+			normalizeJoinType(typedJoin.type) +
 			" join " +
-			quotePath(getTableName(join.table)) +
+			quotePath(getTableName(typedJoin.table)) +
 			" on " +
-			compilePredicate(join.on, context);
+			compilePredicate(typedJoin.on, context);
 	}
-
 	return output;
 }
 
-function compileWhereClause(predicates: Predicate[], context: CompileContext): string {
+function compileWhereClause(predicates: Array<unknown>, context: SqliteCompileContext) {
 	if (predicates.length === 0) {
 		return "";
 	}
-
 	return (
 		" where " +
 		predicates.map((predicate) => "(" + compilePredicate(predicate, context) + ")").join(" and ")
 	);
 }
 
-function compileGroupByClause(columns: string[]): string {
+function compileGroupByClause(columns: Array<string>) {
 	if (columns.length === 0) {
 		return "";
 	}
-
 	return " group by " + columns.map((column) => quotePath(column)).join(", ");
 }
 
-function compileHavingClause(predicates: Predicate[], context: CompileContext): string {
+function compileHavingClause(predicates: Array<unknown>, context: SqliteCompileContext) {
 	if (predicates.length === 0) {
 		return "";
 	}
-
 	return (
 		" having " +
 		predicates.map((predicate) => "(" + compilePredicate(predicate, context) + ")").join(" and ")
 	);
 }
 
-function compileOrderByClause(orderBy: { column: string; direction: "asc" | "desc" }[]): string {
+function compileOrderByClause(orderBy: Array<unknown>) {
 	if (orderBy.length === 0) {
 		return "";
 	}
-
 	return (
 		" order by " +
 		orderBy
-			.map((clause) => quotePath(clause.column) + " " + clause.direction.toUpperCase())
+			.map((clause) => {
+				const typedClause = clause as {
+					column: string;
+					direction: "asc" | "desc";
+				};
+				return quotePath(typedClause.column) + " " + typedClause.direction.toUpperCase();
+			})
 			.join(", ")
 	);
 }
 
-function compileLimitClause(limit: number | undefined): string {
+function compileLimitClause(limit?: number) {
 	if (limit === undefined) {
 		return "";
 	}
-
 	return " limit " + String(limit);
 }
 
-function compileOffsetClause(offset: number | undefined): string {
+function compileOffsetClause(offset?: number) {
 	if (offset === undefined) {
 		return "";
 	}
-
 	return " offset " + String(offset);
 }
 
-function compileReturningClause(returning: "*" | string[] | undefined): string {
+function compileReturningClause(returning?: "*" | Array<string>) {
 	if (!returning) {
 		return "";
 	}
-
 	if (returning === "*") {
 		return " returning *";
 	}
-
 	return " returning " + returning.map((column) => quotePath(column)).join(", ");
 }
 
-function compilePredicate(predicate: Predicate, context: CompileContext): string {
-	if (predicate.type === "comparison") {
-		let column = quotePath(predicate.column);
+function compilePredicate(predicate: unknown, context: SqliteCompileContext): string {
+	const typedPredicate = predicate as {
+		type: string;
+		[column: string]: unknown;
+	};
 
-		if (predicate.operator === "eq") {
+	if (typedPredicate.type === "comparison") {
+		const column = quotePath(String(typedPredicate.column));
+
+		if (typedPredicate.operator === "eq") {
 			if (
-				predicate.valueType === "value" &&
-				(predicate.value === null || predicate.value === undefined)
+				typedPredicate.valueType === "value" &&
+				(typedPredicate.value === null || typedPredicate.value === undefined)
 			) {
 				return column + " is null";
 			}
-
-			let comparisonValue = compileComparisonValue(predicate, context);
+			const comparisonValue = compileComparisonValue(typedPredicate, context);
 			return column + " = " + comparisonValue;
 		}
 
-		if (predicate.operator === "ne") {
+		if (typedPredicate.operator === "ne") {
 			if (
-				predicate.valueType === "value" &&
-				(predicate.value === null || predicate.value === undefined)
+				typedPredicate.valueType === "value" &&
+				(typedPredicate.value === null || typedPredicate.value === undefined)
 			) {
 				return column + " is not null";
 			}
-
-			let comparisonValue = compileComparisonValue(predicate, context);
+			const comparisonValue = compileComparisonValue(typedPredicate, context);
 			return column + " <> " + comparisonValue;
 		}
 
-		if (predicate.operator === "gt") {
-			return column + " > " + compileComparisonValue(predicate, context);
+		if (typedPredicate.operator === "gt") {
+			const comparisonValue = compileComparisonValue(typedPredicate, context);
+			return column + " > " + comparisonValue;
 		}
 
-		if (predicate.operator === "gte") {
-			return column + " >= " + compileComparisonValue(predicate, context);
+		if (typedPredicate.operator === "gte") {
+			const comparisonValue = compileComparisonValue(typedPredicate, context);
+			return column + " >= " + comparisonValue;
 		}
 
-		if (predicate.operator === "lt") {
-			return column + " < " + compileComparisonValue(predicate, context);
+		if (typedPredicate.operator === "lt") {
+			const comparisonValue = compileComparisonValue(typedPredicate, context);
+			return column + " < " + comparisonValue;
 		}
 
-		if (predicate.operator === "lte") {
-			return column + " <= " + compileComparisonValue(predicate, context);
+		if (typedPredicate.operator === "lte") {
+			const comparisonValue = compileComparisonValue(typedPredicate, context);
+			return column + " <= " + comparisonValue;
 		}
 
-		if (predicate.operator === "in" || predicate.operator === "notIn") {
-			let values = Array.isArray(predicate.value) ? predicate.value : [];
-
+		if (typedPredicate.operator === "in" || typedPredicate.operator === "notIn") {
+			const values = Array.isArray(typedPredicate.value) ? typedPredicate.value : [];
 			if (values.length === 0) {
-				return predicate.operator === "in" ? "1 = 0" : "1 = 1";
+				return typedPredicate.operator === "in" ? "1 = 0" : "1 = 1";
 			}
 
-			let keyword = predicate.operator === "in" ? "in" : "not in";
-
+			const keyword = typedPredicate.operator === "in" ? "in" : "not in";
 			return (
 				column +
 				" " +
@@ -577,303 +701,108 @@ function compilePredicate(predicate: Predicate, context: CompileContext): string
 			);
 		}
 
-		if (predicate.operator === "like") {
-			return column + " like " + compileComparisonValue(predicate, context);
+		if (typedPredicate.operator === "like") {
+			const comparisonValue = compileComparisonValue(typedPredicate, context);
+			return column + " like " + comparisonValue;
 		}
 
-		if (predicate.operator === "ilike") {
-			let comparisonValue = compileComparisonValue(predicate, context);
+		if (typedPredicate.operator === "ilike") {
+			const comparisonValue = compileComparisonValue(typedPredicate, context);
 			return "lower(" + column + ") like lower(" + comparisonValue + ")";
 		}
 	}
 
-	if (predicate.type === "between") {
+	if (typedPredicate.type === "between") {
 		return (
-			quotePath(predicate.column) +
+			quotePath(String(typedPredicate.column)) +
 			" between " +
-			pushValue(context, predicate.lower) +
+			pushValue(context, typedPredicate.lower) +
 			" and " +
-			pushValue(context, predicate.upper)
+			pushValue(context, typedPredicate.upper)
 		);
 	}
 
-	if (predicate.type === "null") {
+	if (typedPredicate.type === "null") {
 		return (
-			quotePath(predicate.column) + (predicate.operator === "isNull" ? " is null" : " is not null")
+			quotePath(String(typedPredicate.column)) +
+			(typedPredicate.operator === "isNull" ? " is null" : " is not null")
 		);
 	}
 
-	if (predicate.type === "logical") {
-		if (predicate.predicates.length === 0) {
-			return predicate.operator === "and" ? "1 = 1" : "1 = 0";
+	if (typedPredicate.type === "logical") {
+		const predicates = Array.isArray(typedPredicate.predicates) ? typedPredicate.predicates : [];
+		if (predicates.length === 0) {
+			return typedPredicate.operator === "and" ? "1 = 1" : "1 = 0";
 		}
-
-		let joiner = predicate.operator === "and" ? " and " : " or ";
-
-		return predicate.predicates
-			.map((child) => "(" + compilePredicate(child, context) + ")")
-			.join(joiner);
+		const joiner = typedPredicate.operator === "and" ? " and " : " or ";
+		return predicates.map((child) => "(" + compilePredicate(child, context) + ")").join(joiner);
 	}
 
 	throw new Error("Unsupported predicate");
 }
 
-function compileComparisonValue(
-	predicate: Extract<Predicate, { type: "comparison" }>,
-	context: CompileContext,
-): string {
+function compileComparisonValue(predicate: any, context: SqliteCompileContext) {
 	if (predicate.valueType === "column") {
-		return quotePath(predicate.value);
+		return quotePath(String(predicate.value));
 	}
-
 	return pushValue(context, predicate.value);
 }
 
-function normalizeJoinType(type: string): string {
-	if (type === "left") return "left";
-	if (type === "right") return "right";
+function normalizeJoinType(type: "inner" | "left" | "right") {
+	if (type === "left") {
+		return "left";
+	}
+	if (type === "right") {
+		return "right";
+	}
 	return "inner";
 }
 
-function quoteIdentifier(value: string): string {
+function quoteIdentifier(value: string) {
 	return '"' + value.replace(/"/g, '""') + '"';
 }
 
-function quotePath(path: string): string {
-	if (path === "*") return "*";
-
+function quotePath(path: string) {
+	if (path === "*") {
+		return "*";
+	}
 	return path
 		.split(".")
-		.map((segment) => (segment === "*" ? "*" : quoteIdentifier(segment)))
+		.map((segment) => {
+			if (segment === "*") {
+				return "*";
+			}
+			return quoteIdentifier(segment);
+		})
 		.join(".");
 }
 
-function pushValue(context: CompileContext, value: unknown): string {
+function pushValue(context: SqliteCompileContext, value: unknown) {
 	context.values.push(normalizeBoundValue(value));
 	return "?";
 }
 
-function normalizeBoundValue(value: unknown): unknown {
+function normalizeBoundValue(value: unknown) {
 	if (typeof value === "boolean") {
 		return value ? 1 : 0;
 	}
 	return value;
 }
 
-function collectColumns(rows: Record<string, unknown>[]): string[] {
-	let columns: string[] = [];
-	let seen = new Set<string>();
-
-	for (let row of rows) {
-		for (let key in row) {
-			if (!Object.prototype.hasOwnProperty.call(row, key)) continue;
-			if (seen.has(key)) continue;
+function collectColumns(rows: Array<Record<string, unknown>>) {
+	const columns: Array<string> = [];
+	const seen = new Set<string>();
+	for (const row of rows) {
+		for (const key in row) {
+			if (!Object.prototype.hasOwnProperty.call(row, key)) {
+				continue;
+			}
+			if (seen.has(key)) {
+				continue;
+			}
 			seen.add(key);
 			columns.push(key);
 		}
 	}
-
 	return columns;
-}
-
-function normalizeRows(rows: Record<string, unknown>[]): Record<string, unknown>[] {
-	return rows.map((row) => {
-		if (typeof row !== "object" || row === null) {
-			return {};
-		}
-		return { ...row };
-	});
-}
-
-function normalizeCountRows(rows: Record<string, unknown>[]): Record<string, unknown>[] {
-	return rows.map((row) => {
-		let count = row.count;
-
-		if (typeof count === "string") {
-			let numeric = Number(count);
-			if (!Number.isNaN(numeric)) {
-				return { ...row, count: numeric };
-			}
-		}
-
-		if (typeof count === "bigint") {
-			return { ...row, count: Number(count) };
-		}
-
-		return row;
-	});
-}
-
-function normalizeInsertId(
-	statement: AdapterExecuteRequest["statement"],
-	rows: Record<string, unknown>[],
-): unknown {
-	if (!isInsertStatementKind(statement.kind) || !isInsertStatement(statement)) {
-		return undefined;
-	}
-
-	let primaryKey = getTablePrimaryKey(statement.table);
-
-	if (primaryKey.length !== 1) {
-		return undefined;
-	}
-
-	let key = primaryKey[0] as string;
-	let row = rows[rows.length - 1];
-
-	return row ? row[key] : undefined;
-}
-
-function isInsertStatementKind(kind: AdapterExecuteRequest["statement"]["kind"]): boolean {
-	return kind === "insert" || kind === "insertMany" || kind === "upsert";
-}
-
-function isInsertStatement(
-	statement: AdapterExecuteRequest["statement"],
-): statement is Extract<
-	AdapterExecuteRequest["statement"],
-	{ kind: "insert" | "insertMany" | "upsert" }
-> {
-	return (
-		statement.kind === "insert" || statement.kind === "insertMany" || statement.kind === "upsert"
-	);
-}
-
-function isReadStatement(statement: AdapterStatement): boolean {
-	return statement.kind === "select" || statement.kind === "count" || statement.kind === "exists";
-}
-
-function buildDeferredWriteResult(statement: AdapterStatement): AdapterResult {
-	if (statement.kind === "insert") {
-		return buildDeferredInsertResult(statement.table, statement.values, statement.returning);
-	}
-
-	if (statement.kind === "insertMany") {
-		return buildDeferredInsertManyResult(statement.table, statement.values, statement.returning);
-	}
-
-	if (statement.kind === "upsert") {
-		return buildDeferredInsertResult(statement.table, statement.values, statement.returning);
-	}
-
-	if (
-		(statement.kind === "update" || statement.kind === "delete") &&
-		statement.returning !== undefined
-	) {
-		return { rows: [], affectedRows: undefined, insertId: undefined };
-	}
-
-	return { affectedRows: undefined, insertId: undefined };
-}
-
-function buildDeferredInsertResult(
-	table: StatementTable,
-	values: Record<string, unknown>,
-	returning: "*" | string[] | undefined,
-): AdapterResult {
-	let rows = returning ? [buildReturningRow(values, returning)] : undefined;
-
-	return {
-		rows,
-		affectedRows: undefined,
-		insertId: inferInsertIdFromValues(table, values, rows),
-	};
-}
-
-function buildDeferredInsertManyResult(
-	table: StatementTable,
-	values: Record<string, unknown>[],
-	returning: "*" | string[] | undefined,
-): AdapterResult {
-	let rows = returning ? values.map((row) => buildReturningRow(row, returning)) : undefined;
-	let last = values[values.length - 1];
-
-	return {
-		rows,
-		affectedRows: undefined,
-		insertId: inferInsertIdFromValues(table, last ?? {}, rows),
-	};
-}
-
-function buildReturningRow(
-	values: Record<string, unknown>,
-	returning: "*" | string[],
-): Record<string, unknown> {
-	if (returning === "*") {
-		return { ...values };
-	}
-
-	let row: Record<string, unknown> = {};
-
-	for (let column of returning) {
-		row[column] = values[column];
-	}
-
-	return row;
-}
-
-function inferInsertIdFromValues(
-	table: StatementTable,
-	values: Record<string, unknown>,
-	rows: Record<string, unknown>[] | undefined,
-): unknown {
-	let primaryKey = getTablePrimaryKey(table);
-
-	if (primaryKey.length !== 1) {
-		return undefined;
-	}
-
-	let key = primaryKey[0] as string;
-	let fromValues = values[key];
-
-	if (fromValues !== undefined) {
-		return fromValues;
-	}
-
-	if (!rows || rows.length === 0) {
-		return undefined;
-	}
-
-	let row = rows[rows.length - 1];
-	return row ? row[key] : undefined;
-}
-
-function getCurrentTransactionId(transactionStack: string[]): string | undefined {
-	if (transactionStack.length === 0) {
-		return undefined;
-	}
-
-	return transactionStack[transactionStack.length - 1];
-}
-
-function removeTransactionFromStack(transactionStack: string[], id: string): void {
-	let index = transactionStack.lastIndexOf(id);
-
-	if (index === -1) {
-		return;
-	}
-
-	transactionStack.splice(index, 1);
-}
-
-function getRequestTransactionId(request: AdapterExecuteRequest): string | undefined {
-	let transactionRequest = request as AdapterExecuteRequest & {
-		transaction?: TransactionToken | string;
-		transactionToken?: TransactionToken | string;
-	};
-	let token = transactionRequest.transactionToken ?? transactionRequest.transaction;
-
-	if (!token) {
-		return undefined;
-	}
-
-	if (typeof token === "string") {
-		return token;
-	}
-
-	if (typeof token.id === "string") {
-		return token.id;
-	}
-
-	return undefined;
 }

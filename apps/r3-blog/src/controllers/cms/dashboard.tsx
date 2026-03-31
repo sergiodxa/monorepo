@@ -12,8 +12,8 @@ import { LikePost } from "~/models/posts/like";
 import { TutorialPost } from "~/models/posts/tutorial";
 import { CMSDashboardView } from "~/views/cms/dashboard";
 
-export default action<typeof routes.cms.dashboard>(async (ctx) => {
-	let database = db(ctx);
+export default action<typeof routes.cms.dashboard>(async () => {
+	let database = db();
 	let [articles, tutorials, likes, glossary] = await Promise.all([
 		ArticlePost.count(database),
 		TutorialPost.count(database),

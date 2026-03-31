@@ -1,14 +1,23 @@
 import { redirect } from "@pkg/http/response";
 import { ok } from "@pkg/http/response/html";
 import controller from "@pkg/remix-helpers/controller";
+import { succeeded } from "@pkg/result";
+import { validate } from "@pkg/validate";
 import { env } from "cloudflare:workers";
 import { renderToString } from "remix/component/server";
+import { defaulted, enum_, object, string } from "remix/data-schema";
 
 import type routes from "~/routes";
 
 import { CMSLayout } from "~/components/layout/cms";
 import { Redirect } from "~/models/redirect";
 import { CMSRedirectsIndexView, CMSRedirectsNewView } from "~/views/cms/redirects";
+
+let RedirectSchema = object({
+	from: string(),
+	to: string(),
+	status: defaulted(enum_(["301", "302", "307", "308"]), "302"),
+});
 
 export default controller<typeof routes.cms.redirects>({
 	middleware: [],
@@ -32,10 +41,12 @@ export default controller<typeof routes.cms.redirects>({
 		},
 
 		async create(ctx) {
-			let formData = ctx.formData;
-			let from = Redirect.normalizePath(readString(formData, "from"));
-			let to = readString(formData, "to");
-			let status = parseStatus(readString(formData, "status"));
+			let result = await validate(ctx.formData, RedirectSchema);
+			succeeded(result, "Invalid redirect form data");
+
+			let from = Redirect.normalizePath(result.data.from);
+			let to = result.data.to;
+			let status = Number(result.data.status) as Redirect.Status;
 
 			if (!from || !to) {
 				return redirect("/cms/redirects/new", { status: redirect.Status.SeeOther });
@@ -72,18 +83,4 @@ export default controller<typeof routes.cms.redirects>({
 function getRedirectFromParam(id: string | undefined) {
 	if (!id) return null;
 	return Redirect.normalizePath(decodeURIComponent(id));
-}
-
-function readString(formData: FormData, key: string) {
-	let value = formData.get(key);
-	if (typeof value !== "string") return "";
-	return value.trim();
-}
-
-function parseStatus(value: string): Redirect.Status {
-	if (value === "301") return 301;
-	if (value === "302") return 302;
-	if (value === "307") return 307;
-	if (value === "308") return 308;
-	return 302;
 }

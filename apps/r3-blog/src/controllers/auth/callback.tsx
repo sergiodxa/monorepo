@@ -32,7 +32,7 @@ export default action<typeof routes.auth.callback>(async (ctx) => {
 	}
 
 	let idToken = await verifyIdToken(tokens.idToken());
-	let user = await User.findOrCreateFromAuthProfile(db(ctx), {
+	let user = await User.findOrCreateFromAuthProfile(db(), {
 		subjectId: idToken.subject,
 		email: idToken.email,
 		avatar: idToken.picture,

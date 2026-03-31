@@ -1,0 +1,84 @@
+import { xml } from "@pkg/http/response";
+import action from "@pkg/remix-helpers/action";
+import { RSS } from "@pkg/rss";
+
+import type routes from "~/routes";
+
+import { db } from "~/middleware/db";
+import { Post } from "~/models/post";
+import { ArticlePost } from "~/models/posts/article";
+import { GlossaryPost } from "~/models/posts/glossary";
+import { LikePost } from "~/models/posts/like";
+import { TutorialPost } from "~/models/posts/tutorial";
+
+export default action<typeof routes.rss.feed>(async (ctx) => {
+	let database = db();
+	let url = new URL(ctx.request.url);
+
+	let [articles, tutorials, likes, glossary] = await Promise.all([
+		ArticlePost.findAll(database),
+		TutorialPost.findAll(database),
+		LikePost.findAll(database),
+		GlossaryPost.findAll(database),
+	]);
+
+	let rss = new RSS({
+		title: "Sergio Xalambrí",
+		description: "Articles, tutorials, bookmarks, and glossary terms by Sergio Xalambrí.",
+		link: url.origin,
+	});
+
+	let items: Array<RSS.Item> = [];
+
+	for (let article of articles) {
+		if (!Post.isPublishedAt(article.post.published_at)) continue;
+		let link = new URL(`/articles/${article.meta.slug}`, url).toString();
+		items.push({
+			guid: article.post.id,
+			title: article.meta.title,
+			description: article.meta.excerpt ?? link,
+			link,
+			pubDate: new Date(article.post.published_at ?? article.post.created_at).toUTCString(),
+		});
+	}
+
+	for (let tutorial of tutorials) {
+		if (!Post.isPublishedAt(tutorial.post.published_at)) continue;
+		let link = new URL(`/tutorials/${tutorial.meta.slug}`, url).toString();
+		items.push({
+			guid: tutorial.post.id,
+			title: tutorial.meta.title,
+			description: tutorial.meta.excerpt ?? link,
+			link,
+			pubDate: new Date(tutorial.post.published_at ?? tutorial.post.created_at).toUTCString(),
+		});
+	}
+
+	for (let like of likes) {
+		items.push({
+			guid: like.post.id,
+			title: like.meta.title,
+			description: like.meta.url,
+			link: like.meta.url,
+			pubDate: new Date(like.post.created_at).toUTCString(),
+		});
+	}
+
+	for (let term of glossary) {
+		let link = new URL(`/glossary#${term.meta.slug}`, url).toString();
+		let title = term.meta.title ? `${term.meta.term} (aka ${term.meta.title})` : term.meta.term;
+		items.push({
+			guid: term.post.id,
+			title,
+			description: term.meta.definition,
+			link,
+			pubDate: new Date(term.post.created_at).toUTCString(),
+		});
+	}
+
+	items.sort((a, b) => Date.parse(b.pubDate) - Date.parse(a.pubDate));
+
+	for (let item of items) rss.addItem(item);
+
+	return xml(rss.toString());
+});

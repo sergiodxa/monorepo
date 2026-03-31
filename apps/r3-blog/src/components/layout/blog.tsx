@@ -3,11 +3,19 @@ import type { RemixNode } from "remix/component";
 import appColorsStyles from "~/styles/colors.css?url";
 
 export namespace BlogLayout {
+	export interface MetaTag {
+		property?: string;
+		name?: string;
+		content: string;
+	}
+
 	export interface Props {
 		title: string;
 		description: string;
 		activePath?: string;
 		stylesheets?: Array<{ href: string; media?: string }>;
+		canonical?: string;
+		meta?: Array<MetaTag>;
 		children: RemixNode;
 	}
 
@@ -27,13 +35,30 @@ let navigationItems: Array<BlogLayout.NavigationItem> = [
 ];
 
 export function BlogLayout() {
-	return ({ activePath, children, description, stylesheets = [], title }: BlogLayout.Props) => (
+	return ({
+		activePath,
+		canonical,
+		children,
+		description,
+		meta = [],
+		stylesheets = [],
+		title,
+	}: BlogLayout.Props) => (
 		<html lang="en">
 			<head>
 				<meta charSet="utf-8" />
 				<meta name="viewport" content="width=device-width, initial-scale=1" />
 				<title>{title}</title>
 				<meta name="description" content={description} />
+				{canonical ? <link rel="canonical" href={canonical} /> : null}
+				{meta.map((tag) => (
+					<meta
+						key={tag.property ?? tag.name ?? tag.content}
+						property={tag.property}
+						name={tag.name}
+						content={tag.content}
+					/>
+				))}
 				<link rel="stylesheet" href={appColorsStyles} />
 				{stylesheets.map((item) => (
 					<link

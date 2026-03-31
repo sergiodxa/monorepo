@@ -1,4 +1,3 @@
-import { asyncContext, getContext } from "remix/async-context-middleware";
+import { asyncContext } from "remix/async-context-middleware";
 
 export default asyncContext();
-export { getContext };

@@ -3,6 +3,7 @@ import type { Database } from "remix/data-table";
 import { and, eq, inList } from "remix/data-table";
 
 import { Post } from "~/models/post";
+import routes from "~/routes";
 import { postMeta, posts } from "~/schema";
 
 export namespace TutorialPost {
@@ -122,7 +123,7 @@ export class TutorialPost {
 			if (!match) continue;
 
 			related.push({
-				href: `/tutorials/${tutorial.meta.slug}`,
+				href: routes.post.href({ postType: "tutorials", postSlug: tutorial.meta.slug }),
 				label: tutorial.meta.title,
 				reason: `Because both uses ${match}`,
 			});

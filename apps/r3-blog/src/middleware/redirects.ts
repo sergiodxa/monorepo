@@ -3,19 +3,20 @@ import { env } from "cloudflare:workers";
 
 import { Redirect } from "~/models/redirect";
 
-export const redirectsMiddleware = middleware(async (ctx, next) => {
-	if (ctx.request.method !== "GET" && ctx.request.method !== "HEAD") return next();
+const METHODS_TO_CHECK = new Set(["GET", "HEAD"]);
 
-	let url = new URL(ctx.request.url);
-	let redirectRule = await Redirect.findByPath(env.REDIRECTS, url.pathname);
+export default middleware(async (ctx, next) => {
+	if (!METHODS_TO_CHECK.has(ctx.method)) return next();
+
+	let redirectRule = await Redirect.findByPath(env.REDIRECTS, ctx.url.pathname);
 	if (!redirectRule) return next();
 
 	let location = redirectRule.to;
 	if (!location) return next();
 
 	if (location.startsWith("/")) {
-		let target = new URL(location, url);
-		if (target.pathname === url.pathname && target.search === url.search) return next();
+		let target = new URL(location, ctx.url);
+		if (target.pathname === ctx.url.pathname && target.search === ctx.url.search) return next();
 	}
 
 	return new Response(null, {

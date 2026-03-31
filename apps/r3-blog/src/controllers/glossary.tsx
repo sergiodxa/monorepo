@@ -9,8 +9,8 @@ import { db } from "~/middleware/db";
 import { GlossaryPost } from "~/models/posts/glossary";
 import { GlossaryView } from "~/views/glossary";
 
-export default action<typeof routes.glossary>(async (ctx) => {
-	let glossary = await GlossaryPost.findAll(db(ctx));
+export default action<typeof routes.glossary>(async () => {
+	let glossary = await GlossaryPost.findAll(db());
 	let entries = [...glossary]
 		.sort((a, b) => a.meta.term.localeCompare(b.meta.term))
 		.map((entry) => {

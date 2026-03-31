@@ -1,3 +1,5 @@
+import routes from "~/routes";
+
 export namespace LoginView {
 	export interface Props {
 		error?: string;
@@ -8,9 +10,11 @@ export function LoginView() {
 	return ({ error }: LoginView.Props) => (
 		<main css={{ display: "grid", gap: "1rem", justifyItems: "center", textAlign: "center" }}>
 			<h1 css={{ margin: 0, fontSize: "2.4rem", color: "var(--ui-neutral-fg-emphasis)" }}>Login</h1>
+
 			<p css={{ margin: 0, maxWidth: "55ch", color: "var(--ui-neutral-fg)", lineHeight: 1.4 }}>
 				Authenticate with your account to access CMS routes.
 			</p>
+
 			{error && (
 				<p
 					css={{
@@ -25,19 +29,26 @@ export function LoginView() {
 					{error}
 				</p>
 			)}
-			<a
-				href="/login?start=1"
-				css={{
-					textDecoration: "none",
-					backgroundColor: "var(--ui-accent-bg-solid)",
-					color: "var(--ui-accent-fg-on-solid)",
-					padding: "0.65rem 1rem",
-					borderRadius: "0.6rem",
-					fontWeight: 700,
-				}}
+
+			<form
+				action={routes.auth.login.action.href()}
+				method={routes.auth.login.action.method}
+				css={{ display: "contents" }}
 			>
-				Continue with Auth
-			</a>
+				<button
+					type="submit"
+					css={{
+						textDecoration: "none",
+						backgroundColor: "var(--ui-accent-bg-solid)",
+						color: "var(--ui-accent-fg-on-solid)",
+						padding: "0.65rem 1rem",
+						borderRadius: "0.6rem",
+						fontWeight: 700,
+					}}
+				>
+					Continue with Auth
+				</button>
+			</form>
 		</main>
 	);
 }

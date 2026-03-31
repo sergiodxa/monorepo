@@ -2,6 +2,8 @@ import type { Markdown } from "@pkg/markdown/server";
 
 import { MarkdownView } from "@pkg/markdown/client/remix";
 
+import routes from "~/routes";
+
 export namespace PostView {
 	export interface Related {
 		href: string;
@@ -44,47 +46,76 @@ export function PostView() {
 
 		return (
 			<main css={{ display: "grid", gap: "0.9rem", margin: "0 auto" }}>
-				{tags.length > 0 && (
-					<div css={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
-						{tags.map((tag) => (
-							<span
-								key={tag}
-								css={{
-									padding: "0.2rem 0.6rem",
-									borderRadius: "999px",
-									backgroundColor: "var(--ui-accent-bg-tint)",
-									color: "var(--ui-accent-fg-emphasis)",
-									fontSize: "0.9rem",
-								}}
-							>
-								{tag}
-							</span>
-						))}
-					</div>
-				)}
+				<header css={{ display: "contents" }}>
+					<div
+						css={{
+							display: "flex",
+							flexDirection: "row",
+							alignItems: "flex-start",
+							width: "100%",
+							gap: "0.5rem",
+						}}
+					>
+						{tags.length > 0 && (
+							<div css={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
+								{tags.map((tag) => (
+									<span
+										key={tag}
+										css={{
+											padding: "0.2rem 0.6rem",
+											borderRadius: "999px",
+											backgroundColor: "var(--ui-accent-bg-tint)",
+											color: "var(--ui-accent-fg-emphasis)",
+											fontSize: "0.9rem",
+										}}
+									>
+										{tag}
+									</span>
+								))}
+							</div>
+						)}
 
-				<p
-					css={{
-						margin: 0,
-						textTransform: "uppercase",
-						letterSpacing: "0.12em",
-						fontSize: "0.8rem",
-						color: "var(--ui-neutral-fg-muted)",
-						fontWeight: 700,
-					}}
-				>
-					{eyebrow}
-				</p>
-				<h1
-					css={{
-						margin: 0,
-						fontSize: "2.1rem",
-						lineHeight: 1.05,
-						color: "var(--ui-neutral-fg-emphasis)",
-					}}
-				>
-					{title}
-				</h1>
+						<a
+							href={routes.post.href({ postType: typePath, postSlug: slug, ext: "md" })}
+							css={{
+								fontSize: "0.9rem",
+								lineHeight: "1.4",
+								fontFamily: "inherit",
+								color: "var(--ui-accent-fg-emphasis)",
+								flexShrink: 0,
+								marginLeft: "auto",
+							}}
+						>
+							View as Markdown
+						</a>
+					</div>
+
+					<hgroup css={{ display: "contents" }}>
+						<p
+							css={{
+								margin: 0,
+								textTransform: "uppercase",
+								letterSpacing: "0.12em",
+								fontSize: "0.8rem",
+								color: "var(--ui-neutral-fg-muted)",
+								fontWeight: 700,
+							}}
+						>
+							{eyebrow}
+						</p>
+
+						<h1
+							css={{
+								margin: 0,
+								fontSize: "2.1rem",
+								lineHeight: 1.05,
+								color: "var(--ui-neutral-fg-emphasis)",
+							}}
+						>
+							{title}
+						</h1>
+					</hgroup>
+				</header>
 
 				<article
 					css={{

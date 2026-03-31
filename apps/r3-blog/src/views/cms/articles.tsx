@@ -1,6 +1,7 @@
 import { Button } from "~/components/button";
 import { Input } from "~/components/input";
 import { Modal } from "~/components/modal";
+import routes from "~/routes";
 
 export namespace CMSArticlesIndexView {
 	export interface Item {
@@ -55,7 +56,7 @@ export function CMSArticlesIndexView() {
 						Articles
 					</h2>
 					<a
-						href="/cms/articles/new"
+						href={routes.cms.articles.new.href()}
 						css={{
 							boxSizing: "border-box",
 							display: "inline-flex",
@@ -220,11 +221,10 @@ export function CMSArticlesIndexView() {
 
 												<Modal id={dialogId}>
 													<form
-														method="post"
+														method={routes.cms.articles.destroy.method}
 														action={item.deleteAction}
 														css={{ display: "grid", gap: "0.75rem" }}
 													>
-														<input type="hidden" name="_method" value="DELETE" />
 														<p css={{ margin: 0, color: "var(--ui-neutral-fg)" }}>
 															Delete article <strong>{item.title}</strong>? This action cannot be
 															undone.
@@ -359,7 +359,7 @@ export function CMSArticlesActionView() {
 					<div css={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
 						<Button type="submit">{submitLabel}</Button>
 						<a
-							href="/cms/articles"
+							href={routes.cms.articles.index.href()}
 							css={{
 								padding: "0.45rem 0.7rem",
 								fontSize: "0.9rem",

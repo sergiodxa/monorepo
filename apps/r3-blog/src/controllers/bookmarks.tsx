@@ -10,8 +10,8 @@ import { Post } from "~/models/post";
 import { LikePost } from "~/models/posts/like";
 import { BookmarksView } from "~/views/bookmarks";
 
-export default action<typeof routes.bookmarks>(async (ctx) => {
-	let bookmarks = await LikePost.findAll(db(ctx));
+export default action<typeof routes.bookmarks>(async () => {
+	let bookmarks = await LikePost.findAll(db());
 
 	let items = [...bookmarks]
 		.sort((a, b) => Post.compareByPublishedOrCreatedDesc(a.post, b.post))

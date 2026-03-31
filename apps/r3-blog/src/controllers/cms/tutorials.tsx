@@ -1,16 +1,29 @@
 import { redirect } from "@pkg/http/response";
 import { notFound, ok } from "@pkg/http/response/html";
 import controller from "@pkg/remix-helpers/controller";
+import { succeeded } from "@pkg/result";
+import { validate } from "@pkg/validate";
+import { parameterize } from "inflected";
 import { renderToString } from "remix/component/server";
-
-import type routes from "~/routes";
+import { defaulted, object, optional, string } from "remix/data-schema";
 
 import { CMSLayout } from "~/components/layout/cms";
 import { authState } from "~/middleware/auth-state";
 import { db } from "~/middleware/db";
 import { Post } from "~/models/post";
 import { TutorialPost } from "~/models/posts/tutorial";
+import routes from "~/routes";
 import { CMSTutorialsActionView, CMSTutorialsIndexView } from "~/views/cms/tutorials";
+import { NotFoundView } from "~/views/not-found";
+
+let TutorialSchema = object({
+	title: defaulted(string(), "Untitled tutorial"),
+	slug: optional(string()),
+	excerpt: defaulted(string(), ""),
+	tags: optional(string()),
+	content: defaulted(string(), ""),
+	published_at: optional(string()),
+});
 
 namespace CMSTutorialsController {
 	export interface ActionView extends CMSTutorialsActionView.Props {}
@@ -20,8 +33,8 @@ export default controller<typeof routes.cms.tutorials>({
 	middleware: [],
 
 	actions: {
-		async index(ctx) {
-			let tutorials = await TutorialPost.findAll(db(ctx));
+		async index() {
+			let tutorials = await TutorialPost.findAll(db());
 			let items = tutorials.map((tutorial) => ({
 				id: tutorial.post.id,
 				title: tutorial.meta.title,
@@ -44,16 +57,18 @@ export default controller<typeof routes.cms.tutorials>({
 			let user = authState().user;
 			if (!user) return redirect("/login", { status: redirect.Status.SeeOther });
 
-			let formData = await ctx.request.formData();
-			let created = await TutorialPost.create(db(ctx), {
+			let result = await validate(ctx.formData, TutorialSchema);
+			succeeded(result, "Invalid tutorial form data");
+
+			let created = await TutorialPost.create(db(), {
 				author_id: user.id,
-				published_at: parsePublishedAt(formData),
+				published_at: parsePublishedAt(result.data.published_at),
 				meta: {
-					title: readString(formData, "title") || "Untitled tutorial",
-					slug: readString(formData, "slug") || crypto.randomUUID(),
-					excerpt: readString(formData, "excerpt") || "",
-					tags: parseTags(formData),
-					content: readString(formData, "content") || "",
+					title: result.data.title,
+					slug: result.data.slug || parameterize(result.data.title),
+					excerpt: result.data.excerpt,
+					tags: parseTags(result.data.tags),
+					content: result.data.content,
 				},
 			});
 			if (!created) return redirect("/cms/tutorials", { status: redirect.Status.SeeOther });
@@ -67,33 +82,28 @@ export default controller<typeof routes.cms.tutorials>({
 			let tutorialId = ctx.params.id;
 			if (!tutorialId) return redirect("/cms/tutorials", { status: redirect.Status.SeeOther });
 
-			await TutorialPost.destroy(db(ctx), tutorialId);
+			await TutorialPost.destroy(db(), tutorialId);
 			return redirect("/cms/tutorials", { status: redirect.Status.SeeOther });
 		},
 
 		async edit(ctx) {
-			let tutorial = await TutorialPost.findById(db(ctx), ctx.params.id);
+			let tutorial = await TutorialPost.findById(db(), ctx.params.id);
 			if (!tutorial) {
 				let view: CMSTutorialsController.ActionView = {
 					title: "Tutorial Not Found",
 					description: `Tutorial ${ctx.params.id} was not found.`,
 					mode: "new",
-					action: "/cms/tutorials",
+					action: routes.cms.tutorials.index.href(),
 					submitLabel: "Create Tutorial",
-					values: {
-						title: "",
-						slug: "",
-						excerpt: "",
-						tags: "",
-						content: "",
-						published_at: "",
-					},
+					values: { title: "", slug: "", excerpt: "", tags: "", content: "", published_at: "" },
 				};
+
 				let body = await renderToString(
 					<CMSLayout title={view.title} activePath="/cms/tutorials">
 						<CMSTutorialsActionView {...view} />
 					</CMSLayout>,
 				);
+
 				return notFound(body);
 			}
 
@@ -113,6 +123,7 @@ export default controller<typeof routes.cms.tutorials>({
 					published_at: toDateInputValue(tutorial.post.published_at),
 				},
 			};
+
 			let body = await renderToString(
 				<CMSLayout title={view.title} activePath="/cms/tutorials">
 					<CMSTutorialsActionView {...view} />
@@ -121,11 +132,10 @@ export default controller<typeof routes.cms.tutorials>({
 			return ok(body);
 		},
 
-		async new(ctx) {
-			let total = (await TutorialPost.findAll(db(ctx))).length;
+		async new() {
 			let view: CMSTutorialsController.ActionView = {
 				title: "New Tutorial",
-				description: `New Tutorial form loaded. Current tutorials count: ${total}.`,
+				description: "Write a new tutorial to share your knowledge with the world.",
 				mode: "new",
 				action: "/cms/tutorials",
 				submitLabel: "Create Tutorial",
@@ -138,76 +148,74 @@ export default controller<typeof routes.cms.tutorials>({
 					published_at: "",
 				},
 			};
+
 			let body = await renderToString(
 				<CMSLayout title={view.title} activePath="/cms/tutorials">
 					<CMSTutorialsActionView {...view} />
 				</CMSLayout>,
 			);
+
 			return ok(body);
-		},
-
-		async show(ctx) {
-			let tutorial = await TutorialPost.findById(db(ctx), ctx.params.id);
-			if (!tutorial) return notFound("<h1>404 Not Found</h1>");
-
-			return redirect(`/tutorials/${tutorial.meta.slug}`, { status: redirect.Status.SeeOther });
 		},
 
 		async update(ctx) {
 			let user = authState().user;
 			let tutorialId = ctx.params.id;
 			if (!user || !tutorialId) {
-				return redirect("/cms/tutorials", { status: redirect.Status.SeeOther });
+				return redirect(routes.cms.tutorials.index.href(), { status: redirect.Status.SeeOther });
 			}
 
-			let formData = await ctx.request.formData();
-			let updated = await TutorialPost.update(db(ctx), tutorialId, {
+			let result = await validate(ctx.formData, TutorialSchema);
+			succeeded(result, "Invalid tutorial form data");
+
+			let updated = await TutorialPost.update(db(), tutorialId, {
 				author_id: user.id,
-				published_at: parsePublishedAt(formData),
+				published_at: parsePublishedAt(result.data.published_at),
 				meta: {
-					title: readString(formData, "title") || "Untitled tutorial",
-					slug: readString(formData, "slug") || tutorialId,
-					excerpt: readString(formData, "excerpt") || "",
-					tags: parseTags(formData),
-					content: readString(formData, "content") || "",
+					title: result.data.title,
+					slug: result.data.slug || parameterize(result.data.title),
+					excerpt: result.data.excerpt,
+					tags: parseTags(result.data.tags),
+					content: result.data.content,
 				},
 			});
 
-			if (!updated) return notFound("<h1>404 Not Found</h1>");
+			if (!updated) {
+				let body = await renderToString(
+					<CMSLayout title="Tutorial Not Found" activePath="/cms/tutorials">
+						<NotFoundView
+							title="Tutorial Not Found"
+							description={`Tutorial ${tutorialId} was not found.`}
+							emoji="🛠️"
+						/>
+					</CMSLayout>,
+				);
 
-			return redirect(`/cms/tutorials/${tutorialId}/edit`, { status: redirect.Status.SeeOther });
+				return notFound(body);
+			}
+
+			return redirect(routes.cms.tutorials.edit.href({ id: tutorialId }), {
+				status: redirect.Status.SeeOther,
+			});
 		},
 	},
 });
 
-function readString(formData: FormData, key: string) {
-	let value = formData.get(key);
-	if (typeof value !== "string") return "";
-	return value.trim();
-}
-
-function parseTags(formData: FormData) {
-	let value = readString(formData, "tags");
+function parseTags(value: string | undefined) {
 	if (!value) return [];
-
-	let tags = value
+	return value
 		.split(",")
 		.map((tag) => tag.trim())
 		.filter(Boolean);
-
-	return tags;
 }
 
-function parsePublishedAt(formData: FormData) {
-	let value = readString(formData, "published_at");
+function parsePublishedAt(value: string | undefined) {
 	if (!value) return null;
-
 	if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
 		let parsed = new Date(`${value}T00:00:00.000Z`);
 		if (Number.isNaN(parsed.getTime())) return null;
 		return parsed.toISOString();
 	}
-
 	let parsed = new Date(value);
 	if (Number.isNaN(parsed.getTime())) return null;
 	return parsed.toISOString();

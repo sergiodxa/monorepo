@@ -9,8 +9,8 @@ import { db } from "~/middleware/db";
 import { Feed } from "~/models/feed";
 import { FeedView } from "~/views/feed";
 
-export default action<typeof routes.feed>(async (ctx) => {
-	let activity = await Feed.listActivity(db(ctx));
+export default action<typeof routes.feed>(async () => {
+	let activity = await Feed.listActivity(db());
 
 	let body = await renderToString(
 		<BlogLayout title="Sergio Xalambrí" description="Sergio Xalambrí" activePath="/">
