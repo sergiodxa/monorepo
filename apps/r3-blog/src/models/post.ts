@@ -370,12 +370,17 @@ export class Post {
 		db: Database,
 		postType: type,
 	) {
-		let posts = await db.findMany(this.table, {
-			where: { type: postType },
-			with: { meta: schema.postRelations.meta },
-		});
+		let posts = await db.findMany(this.table, { where: { type: postType } });
 
-		return posts.map((post) => this.toTypedResult<type, meta>(postType, post));
+		return await Promise.all(
+			posts.map(async (post) => {
+				let metaRows = await PostMeta.findByPostId(db, post.id);
+				return this.toTypedResult<type, meta>(postType, {
+					...post,
+					meta: metaRows,
+				});
+			}),
+		);
 	}
 
 	/**
@@ -452,10 +457,17 @@ export class Post {
 	) {
 		let posts = await db.findMany(this.table, {
 			where: { author_id: authorId, type: postType } as Record<string, unknown>,
-			with: { meta: schema.postRelations.meta },
 		});
 
-		return posts.map((post) => this.toTypedResult<type, meta>(postType, post));
+		return await Promise.all(
+			posts.map(async (post) => {
+				let metaRows = await PostMeta.findByPostId(db, post.id);
+				return this.toTypedResult<type, meta>(postType, {
+					...post,
+					meta: metaRows,
+				});
+			}),
+		);
 	}
 
 	/**
