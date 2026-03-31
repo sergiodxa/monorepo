@@ -179,7 +179,9 @@ export class D1DataTableAdapter implements DatabaseAdapter {
 			await this.#database.exec("PRAGMA read_uncommitted = true");
 		}
 
-		await this.#database.exec("BEGIN");
+		// Cloudflare D1 does not allow SQL BEGIN/COMMIT/ROLLBACK statements.
+		// DataTable still requires transaction tokens for scoped operations,
+		// so we create logical tokens and rely on per-statement execution.
 		this.#transactionCounter += 1;
 		const token = { id: "tx_" + String(this.#transactionCounter) };
 		this.#transactions.add(token.id);
@@ -188,13 +190,11 @@ export class D1DataTableAdapter implements DatabaseAdapter {
 
 	async commitTransaction(token: TransactionToken): Promise<void> {
 		this.#assertTransaction(token);
-		await this.#database.exec("COMMIT");
 		this.#transactions.delete(token.id);
 	}
 
 	async rollbackTransaction(token: TransactionToken): Promise<void> {
 		this.#assertTransaction(token);
-		await this.#database.exec("ROLLBACK");
 		this.#transactions.delete(token.id);
 	}
 
