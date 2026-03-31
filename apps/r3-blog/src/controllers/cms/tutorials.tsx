@@ -57,7 +57,7 @@ export default controller<typeof routes.cms.tutorials>({
 			let user = authState().user;
 			if (!user) return redirect("/login", { status: redirect.Status.SeeOther });
 
-			let result = await validate(ctx.formData, TutorialSchema);
+			let result = await validate(ctx.get(FormData), TutorialSchema);
 			succeeded(result, "Invalid tutorial form data");
 
 			let created = await TutorialPost.create(db(), {
@@ -165,7 +165,7 @@ export default controller<typeof routes.cms.tutorials>({
 				return redirect(routes.cms.tutorials.index.href(), { status: redirect.Status.SeeOther });
 			}
 
-			let result = await validate(ctx.formData, TutorialSchema);
+			let result = await validate(ctx.get(FormData), TutorialSchema);
 			succeeded(result, "Invalid tutorial form data");
 
 			let updated = await TutorialPost.update(db(), tutorialId, {

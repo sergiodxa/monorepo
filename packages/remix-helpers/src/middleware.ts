@@ -1,4 +1,4 @@
-import type { Middleware, RequestMethod } from "@remix-run/fetch-router";
+import type { Middleware, RequestMethod } from "remix/fetch-router";
 
 /**
  * Preserves method and params inference for fetch-router middleware functions.

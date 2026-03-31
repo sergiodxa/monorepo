@@ -71,13 +71,6 @@ router.map(routes, {
 		feed,
 		colors,
 
-		rss: {
-			feed: feedRSS,
-			articles: articlesRSS,
-			tutorials: tutorialsRSS,
-			bookmarks: bookmarksRSS,
-		},
-
 		sitemap,
 
 		articles,
@@ -87,10 +80,21 @@ router.map(routes, {
 
 		post,
 
+		rss: {
+			actions: {
+				feed: feedRSS,
+				articles: articlesRSS,
+				tutorials: tutorialsRSS,
+				bookmarks: bookmarksRSS,
+			},
+		},
+
 		auth: {
-			login,
-			callback,
-			logout,
+			actions: {
+				login,
+				callback,
+				logout,
+			},
 		},
 
 		cms: {

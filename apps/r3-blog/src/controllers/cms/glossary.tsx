@@ -48,7 +48,7 @@ export default controller<typeof routes.cms.glossary>({
 			let user = authState().user;
 			if (!user) return redirect("/login", { status: redirect.Status.SeeOther });
 
-			let result = await validate(ctx.formData, GlossarySchema);
+			let result = await validate(ctx.get(FormData), GlossarySchema);
 			succeeded(result, "Invalid glossary form data");
 
 			let created = await GlossaryPost.create(db(), {
@@ -143,7 +143,7 @@ export default controller<typeof routes.cms.glossary>({
 				return redirect("/cms/glossary", { status: redirect.Status.SeeOther });
 			}
 
-			let result = await validate(ctx.formData, GlossarySchema);
+			let result = await validate(ctx.get(FormData), GlossarySchema);
 			succeeded(result, "Invalid glossary form data");
 
 			let updated = await GlossaryPost.update(db(), glossaryId, {

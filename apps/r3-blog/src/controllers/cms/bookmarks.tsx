@@ -45,7 +45,7 @@ export default controller<typeof routes.cms.bookmarks>({
 			let user = authState().user;
 			if (!user) return redirect("/login", { status: redirect.Status.SeeOther });
 
-			let result = await validate(ctx.formData, BookmarkSchema);
+			let result = await validate(ctx.get(FormData), BookmarkSchema);
 			succeeded(result, "Invalid bookmark form data");
 
 			let created = await LikePost.create(db(), {
@@ -134,7 +134,7 @@ export default controller<typeof routes.cms.bookmarks>({
 				return redirect("/cms/bookmarks", { status: redirect.Status.SeeOther });
 			}
 
-			let result = await validate(ctx.formData, BookmarkSchema);
+			let result = await validate(ctx.get(FormData), BookmarkSchema);
 			succeeded(result, "Invalid bookmark form data");
 
 			let updated = await LikePost.update(db(), bookmarkId, {

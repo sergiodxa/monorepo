@@ -58,7 +58,7 @@ export default controller<typeof routes.cms.articles>({
 			let user = authState().user;
 			if (!user) return redirect("/login", { status: redirect.Status.SeeOther });
 
-			let result = await validate(ctx.formData, ArticleSchema);
+			let result = await validate(ctx.get(FormData), ArticleSchema);
 			succeeded(result, "Invalid article form data");
 
 			let created = await ArticlePost.create(db(), {
@@ -174,7 +174,7 @@ export default controller<typeof routes.cms.articles>({
 				return redirect("/cms/articles", { status: redirect.Status.SeeOther });
 			}
 
-			let result = await validate(ctx.formData, ArticleSchema);
+			let result = await validate(ctx.get(FormData), ArticleSchema);
 			succeeded(result, "Invalid article form data");
 
 			let updated = await ArticlePost.update(db(), articleId, {

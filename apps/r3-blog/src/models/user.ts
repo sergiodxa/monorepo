@@ -175,19 +175,15 @@ export class User {
 		let existing = await this.findById(db, id);
 		if (!existing) return null;
 
-		await db.update(
-			this.table,
-			{ id },
-			{
-				subject_id: input.subjectId ?? existing.subject_id,
-				role: input.role ?? existing.role,
-				email: input.email ?? existing.email,
-				avatar: input.avatar ?? existing.avatar,
-				username: input.username ?? existing.username,
-				display_name: input.displayName ?? existing.display_name,
-				updated_at: input.updatedAt ?? this.timestamp,
-			},
-		);
+		await db.update(this.table, id, {
+			subject_id: input.subjectId ?? existing.subject_id,
+			role: input.role ?? existing.role,
+			email: input.email ?? existing.email,
+			avatar: input.avatar ?? existing.avatar,
+			username: input.username ?? existing.username,
+			display_name: input.displayName ?? existing.display_name,
+			updated_at: input.updatedAt ?? this.timestamp,
+		});
 
 		return this.findById(db, id);
 	}
@@ -202,7 +198,7 @@ export class User {
 	 * let deleted = await User.destroy(db, "user_123");
 	 */
 	static async destroy(db: Database, id: string) {
-		await db.delete(this.table, { id });
+		await db.delete(this.table, id);
 		return true;
 	}
 

@@ -320,16 +320,12 @@ export class Post {
 		}
 
 		await db.transaction(async (tx) => {
-			await tx.update(
-				this.table,
-				{ id },
-				{
-					author_id: input.author_id ?? existing.author_id,
-					type: input.type ?? existing.type,
-					published_at: input.published_at ?? existing.published_at,
-					updated_at: input.updated_at ?? this.timestamp,
-				},
-			);
+			await tx.update(this.table, id, {
+				author_id: input.author_id ?? existing.author_id,
+				type: input.type ?? existing.type,
+				published_at: input.published_at ?? existing.published_at,
+				updated_at: input.updated_at ?? this.timestamp,
+			});
 
 			for (let item of metaUpdates) {
 				let meta = existingMetaByKey.get(item.key);
@@ -343,11 +339,7 @@ export class Post {
 					continue;
 				}
 
-				await tx.update(
-					PostMeta.table,
-					{ id: meta.id },
-					{ value: item.value, updated_at: this.timestamp },
-				);
+				await tx.update(PostMeta.table, meta.id, { value: item.value, updated_at: this.timestamp });
 			}
 		});
 
@@ -368,9 +360,9 @@ export class Post {
 
 		await db.transaction(async (tx) => {
 			for (let item of meta) {
-				await tx.delete(PostMeta.table, { id: item.id });
+				await tx.delete(PostMeta.table, item.id);
 			}
-			await tx.delete(this.table, { id });
+			await tx.delete(this.table, id);
 		});
 
 		return true;

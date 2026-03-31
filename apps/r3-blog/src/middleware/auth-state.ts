@@ -1,24 +1,25 @@
 import middleware from "@pkg/remix-helpers/middleware";
-import { createStorageKey, type RequestContext } from "remix/fetch-router";
+import { getContext } from "remix/async-context-middleware";
+import { createContextKey, type RequestContext } from "remix/fetch-router";
+import { Session } from "remix/session";
 
 import type * as schema from "~/schema";
 
-import { getContext } from "~/middleware/async-context";
 import { db } from "~/middleware/db";
 import { User } from "~/models/user";
 
-let key = createStorageKey<AuthState>();
+let key = createContextKey<AuthState>();
 
 export default middleware(async (ctx, next) => {
 	let state = await AuthState.create(ctx);
-	ctx.storage.set(key, state);
+	ctx.set(key, state);
 
 	return next();
 });
 
 export function authState() {
 	let ctx = getContext();
-	let state = ctx.storage.get(key);
+	let state = ctx.get(key);
 	if (state) return state;
 	throw new Error("Auth state not found in context. Make sure to use the auth-state middleware.");
 }
@@ -50,35 +51,40 @@ export class AuthState {
 	}
 
 	login(user: schema.SelectUser) {
-		this.#ctx.session.regenerateId();
-		this.#ctx.session.set("userId", user.id);
+		let session = this.#ctx.get(Session);
+		session.regenerateId();
+		session.set("userId", user.id);
 		this.#user = user;
 	}
 
 	logout() {
-		this.#ctx.session.destroy();
+		let session = this.#ctx.get(Session);
+		session.destroy();
 		this.#user = null;
 	}
 
 	setIdToken(idToken: string) {
-		this.#ctx.session.set("idToken", idToken);
+		let session = this.#ctx.get(Session);
+		session.set("idToken", idToken);
 	}
 
 	getIdToken() {
-		let idToken = this.#ctx.session.get("idToken");
+		let session = this.#ctx.get(Session);
+		let idToken = session.get("idToken");
 		if (typeof idToken !== "string") return null;
 		return idToken;
 	}
 }
 
 async function resolveCurrentUser(ctx: RequestContext) {
-	let userId = ctx.session.get("userId");
+	let session = ctx.get(Session);
+	let userId = session.get("userId");
 	if (typeof userId !== "string" || !userId) return null;
 
 	let user = await User.findById(db(), userId);
 	if (user) return user;
 
-	ctx.session.unset("userId");
-	ctx.session.unset("idToken");
+	session.unset("userId");
+	session.unset("idToken");
 	return null;
 }

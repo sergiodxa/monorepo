@@ -157,7 +157,7 @@ export class PostMeta {
 
 		if (!existing) return this.create(db, { post_id, key, value });
 
-		await db.update(this.table, { id: existing.id }, { value, updated_at: this.timestamp });
+		await db.update(this.table, existing.id, { value, updated_at: this.timestamp });
 
 		return this.findById(db, existing.id);
 	}
@@ -177,15 +177,11 @@ export class PostMeta {
 		let record = await this.findById(db, id);
 		if (!record) return null;
 
-		await db.update(
-			this.table,
-			{ id },
-			{
-				key: input.key ?? record.key,
-				value: input.value ?? record.value,
-				updated_at: input.updated_at ?? this.timestamp,
-			},
-		);
+		await db.update(this.table, id, {
+			key: input.key ?? record.key,
+			value: input.value ?? record.value,
+			updated_at: input.updated_at ?? this.timestamp,
+		});
 
 		return this.findById(db, id);
 	}
@@ -200,7 +196,7 @@ export class PostMeta {
 	 * await PostMeta.destroy(db, "meta_1");
 	 */
 	static destroy(db: Database, id: string) {
-		return db.delete(this.table, { id });
+		return db.delete(this.table, id);
 	}
 
 	/**

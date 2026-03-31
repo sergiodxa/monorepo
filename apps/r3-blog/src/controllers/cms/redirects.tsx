@@ -41,7 +41,7 @@ export default controller<typeof routes.cms.redirects>({
 		},
 
 		async create(ctx) {
-			let result = await validate(ctx.formData, RedirectSchema);
+			let result = await validate(ctx.get(FormData), RedirectSchema);
 			succeeded(result, "Invalid redirect form data");
 
 			let from = Redirect.normalizePath(result.data.from);

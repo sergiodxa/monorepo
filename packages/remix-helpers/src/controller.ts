@@ -1,5 +1,5 @@
-import type { Controller } from "@remix-run/fetch-router";
-import type { RouteMap } from "@remix-run/fetch-router/routes";
+import type { Controller } from "remix/fetch-router";
+import type { RouteMap } from "remix/fetch-router/routes";
 
 /**
  * Preserves the full route map type for a fetch-router controller.

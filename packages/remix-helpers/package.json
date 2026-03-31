@@ -10,7 +10,7 @@
 		"./middleware": "./src/middleware.ts"
 	},
 	"dependencies": {
-		"@remix-run/fetch-router": "^0.17.0"
+		"remix": "^3.0.0-alpha.4"
 	},
 	"devDependencies": {
 		"@types/bun": "^1.3.9"
