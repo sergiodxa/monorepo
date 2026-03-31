@@ -1,31 +1,101 @@
+import type { OIDCAuthProfile } from "remix/auth";
+import type { RequestContext } from "remix/fetch-router";
+
 import { env } from "cloudflare:workers";
-import { Authenticator } from "remix-auth";
-import { OAuth2Strategy } from "remix-auth-oauth2";
+import { createOIDCAuthProvider, startExternalAuth } from "remix/auth";
+import { Session } from "remix/session";
 
-export type OAuth2Tokens = OAuth2Strategy.VerifyOptions["tokens"];
+interface OAuthTransaction {
+	provider: string;
+	state: string;
+	codeVerifier: string;
+	returnTo?: string;
+}
 
-export async function authenticate(request: Request) {
-	let authenticator = new Authenticator<OAuth2Tokens>();
-	let url = new URL(request.url);
+export interface FinishedAuth {
+	idToken: string;
+	returnTo?: string;
+}
 
-	authenticator.use(
-		new OAuth2Strategy(
-			{
-				clientId: env.CLIENT_ID,
-				clientSecret: env.CLIENT_SECRET,
-				redirectURI: new URL("/auth/callback", url),
-				authorizationEndpoint: new URL("https://auth.sergiodxa.com/authorize"),
-				tokenEndpoint: new URL("https://auth.sergiodxa.com/oauth/token"),
-				scopes: ["openid", "profile", "email"],
-			},
-			async ({ tokens }) => tokens,
-		),
-	);
+function provider(context: RequestContext) {
+	return createOIDCAuthProvider<OIDCAuthProfile, "sergiodxa">({
+		name: "sergiodxa",
+		issuer: "auth.sergiodxa.com",
+		clientId: env.CLIENT_ID,
+		clientSecret: env.CLIENT_SECRET,
+		redirectUri: new URL("/auth/callback", context.request.url),
+		metadata: {
+			issuer: "auth.sergiodxa.com",
+			authorization_endpoint: "https://auth.sergiodxa.com/authorize",
+			token_endpoint: "https://auth.sergiodxa.com/oauth/token",
+			userinfo_endpoint: "https://auth.sergiodxa.com/userinfo",
+			jwks_uri: "https://auth.sergiodxa.com/.well-known/jwks.json",
+			end_session_endpoint: "https://auth.sergiodxa.com/oidc/logout",
+		},
+		scopes: ["openid", "profile", "email"],
+	});
+}
 
-	try {
-		return await authenticator.authenticate("oauth2", request);
-	} catch (error) {
-		if (error instanceof Response) return error;
-		throw error;
+export function startAuth(context: RequestContext) {
+	let returnTo = context.url.searchParams.get("next");
+	return startExternalAuth(provider(context), context, { returnTo });
+}
+
+export async function finishAuth(context: RequestContext): Promise<FinishedAuth> {
+	if (!context.has(Session)) {
+		throw new Error("Session not found in auth callback");
 	}
+
+	let session = context.get(Session);
+	let transaction = session.get("__auth") as OAuthTransaction | null;
+	let callbackError = context.url.searchParams.get("error");
+	if (callbackError) {
+		throw new Error(context.url.searchParams.get("error_description") ?? callbackError);
+	}
+
+	if (!transaction || transaction.provider !== "sergiodxa") {
+		throw new Error("Missing OAuth transaction");
+	}
+
+	let state = context.url.searchParams.get("state");
+	let code = context.url.searchParams.get("code");
+	if (!state || !code) {
+		session.unset("__auth");
+		throw new Error("Missing OAuth state/code");
+	}
+
+	if (state !== transaction.state) {
+		session.unset("__auth");
+		throw new Error("Invalid OAuth state");
+	}
+
+	let callbackUrl = new URL("/auth/callback", context.request.url);
+	let payload = new URLSearchParams({
+		grant_type: "authorization_code",
+		code,
+		redirect_uri: callbackUrl.toString(),
+		code_verifier: transaction.codeVerifier,
+	});
+
+	let response = await fetch("https://auth.sergiodxa.com/oauth/token", {
+		method: "POST",
+		headers: {
+			Accept: "application/json",
+			"Content-Type": "application/x-www-form-urlencoded",
+			Authorization: `Basic ${btoa(`${env.CLIENT_ID}:${env.CLIENT_SECRET}`)}`,
+		},
+		body: payload,
+	});
+
+	let data = (await response.json()) as { id_token?: string; error?: string };
+	session.unset("__auth");
+
+	if (!response.ok || !data.id_token) {
+		throw new Error(data.error ?? "OAuth token exchange failed");
+	}
+
+	return {
+		idToken: data.id_token,
+		returnTo: transaction.returnTo,
+	};
 }

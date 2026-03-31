@@ -1,4 +1,10 @@
+import { redirect } from "@pkg/http/response";
 import { notFound } from "@pkg/http/response/html";
+import {
+	auth as authMiddleware,
+	createSessionAuthScheme,
+	requireAuth,
+} from "remix/auth-middleware";
 import { renderToString } from "remix/component/server";
 import { createRouter } from "remix/fetch-router";
 import { formData } from "remix/form-data-middleware";
@@ -6,9 +12,7 @@ import { methodOverride } from "remix/method-override-middleware";
 
 import { BlogLayout } from "~/components/layout/blog";
 import articles from "~/controllers/articles";
-import callback from "~/controllers/auth/callback";
-import login from "~/controllers/auth/login";
-import logout from "~/controllers/auth/logout";
+import auth from "~/controllers/auth";
 import bookmarks from "~/controllers/bookmarks";
 import articlesCMS from "~/controllers/cms/articles";
 import bookmarksCMS from "~/controllers/cms/bookmarks";
@@ -27,13 +31,14 @@ import tutorialsRSS from "~/controllers/rss/tutorials";
 import sitemap from "~/controllers/sitemap";
 import tutorials from "~/controllers/tutorials";
 import asyncContext from "~/middleware/async-context";
-import auth from "~/middleware/auth";
 import authState from "~/middleware/auth-state";
-import db from "~/middleware/db";
+import db, { db as database } from "~/middleware/db";
 import noTrailingSlash from "~/middleware/no-trailing-slash";
 import noWWW from "~/middleware/no-www";
 import redirects from "~/middleware/redirects";
+import requireAdmin from "~/middleware/require-admin";
 import session from "~/middleware/session";
+import { User } from "~/models/user";
 import routes from "~/routes";
 import { NotFoundView } from "~/views/not-found";
 
@@ -47,6 +52,23 @@ export const router = createRouter({
 		methodOverride(),
 		redirects,
 		db(),
+		authMiddleware({
+			schemes: [
+				createSessionAuthScheme({
+					read(session) {
+						let userId = session.get("userId");
+						return typeof userId === "string" ? userId : null;
+					},
+					verify(userId) {
+						return User.findById(database(), userId);
+					},
+					invalidate(session) {
+						session.unset("userId");
+						session.unset("idToken");
+					},
+				}),
+			],
+		}),
 		authState,
 	],
 
@@ -89,16 +111,17 @@ router.map(routes, {
 			},
 		},
 
-		auth: {
-			actions: {
-				login,
-				callback,
-				logout,
-			},
-		},
+		auth,
 
 		cms: {
-			middleware: [auth],
+			middleware: [
+				requireAuth({
+					onFailure() {
+						return redirect("/login", { status: redirect.Status.SeeOther });
+					},
+				}),
+				requireAdmin,
+			],
 
 			actions: {
 				dashboard: dashboardCMS,

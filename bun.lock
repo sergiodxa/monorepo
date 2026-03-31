@@ -262,8 +262,6 @@
         "@pkg/validate": "workspace:*",
         "inflected": "^2.1.0",
         "remix": "^3.0.0-alpha.4",
-        "remix-auth": "^4.2.0",
-        "remix-auth-oauth2": "^3.4.1",
       },
       "devDependencies": {
         "@cloudflare/vite-plugin": "^1.25.0",
