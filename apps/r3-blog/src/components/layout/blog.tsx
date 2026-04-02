@@ -2,6 +2,7 @@ import type { RemixNode } from "remix/component";
 
 import { css } from "remix/component";
 
+import routes from "~/routes";
 import appColorsStyles from "~/styles/colors.css?url";
 
 export namespace BlogLayout {
@@ -28,12 +29,12 @@ export namespace BlogLayout {
 }
 
 let navigationItems: Array<BlogLayout.NavigationItem> = [
-	{ href: "/", label: "Home" },
-	{ href: "/articles", label: "Articles" },
-	{ href: "/tutorials", label: "Tutorials" },
-	{ href: "/bookmarks", label: "Bookmarks" },
-	{ href: "/glossary", label: "Glossary" },
-	{ href: "/cms", label: "Dashboard" },
+	{ href: routes.feed.href(), label: "Home" },
+	{ href: routes.articles.href(), label: "Articles" },
+	{ href: routes.tutorials.href(), label: "Tutorials" },
+	{ href: routes.bookmarks.href(), label: "Bookmarks" },
+	{ href: routes.glossary.href(), label: "Glossary" },
+	{ href: routes.cms.dashboard.href(), label: "Dashboard" },
 ];
 
 export function BlogLayout() {

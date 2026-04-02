@@ -5,6 +5,8 @@ import { env } from "cloudflare:workers";
 import { createOIDCAuthProvider, startExternalAuth } from "remix/auth";
 import { Session } from "remix/session";
 
+import routes from "~/routes";
+
 interface OAuthTransaction {
 	provider: string;
 	state: string;
@@ -23,7 +25,7 @@ function provider(context: RequestContext) {
 		issuer: "auth.sergiodxa.com",
 		clientId: env.CLIENT_ID,
 		clientSecret: env.CLIENT_SECRET,
-		redirectUri: new URL("/auth/callback", context.request.url),
+		redirectUri: new URL(routes.auth.callback.href(), context.request.url),
 		metadata: {
 			issuer: "auth.sergiodxa.com",
 			authorization_endpoint: "https://auth.sergiodxa.com/authorize",
@@ -69,7 +71,7 @@ export async function finishAuth(context: RequestContext): Promise<FinishedAuth>
 		throw new Error("Invalid OAuth state");
 	}
 
-	let callbackUrl = new URL("/auth/callback", context.request.url);
+	let callbackUrl = new URL(routes.auth.callback.href(), context.request.url);
 	let payload = new URLSearchParams({
 		grant_type: "authorization_code",
 		code,

@@ -2,14 +2,13 @@ import { ok } from "@pkg/http/response/html";
 import action from "@pkg/remix-helpers/action";
 import { renderToString } from "remix/component/server";
 
-import type routes from "~/routes";
-
 import { CMSLayout } from "~/components/layout/cms";
 import { db } from "~/middleware/db";
 import { ArticlePost } from "~/models/posts/article";
 import { GlossaryPost } from "~/models/posts/glossary";
 import { LikePost } from "~/models/posts/like";
 import { TutorialPost } from "~/models/posts/tutorial";
+import routes from "~/routes";
 import { CMSDashboardView } from "~/views/cms/dashboard";
 
 export default action<typeof routes.cms.dashboard>(async () => {
@@ -22,7 +21,7 @@ export default action<typeof routes.cms.dashboard>(async () => {
 	]);
 
 	let body = await renderToString(
-		<CMSLayout title="Dashboard" activePath="/cms">
+		<CMSLayout title="Dashboard" activePath={routes.cms.dashboard.href()}>
 			<CMSDashboardView stats={{ articles, likes, tutorials, glossary }} />
 		</CMSLayout>,
 	);

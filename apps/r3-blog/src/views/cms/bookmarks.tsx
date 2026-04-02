@@ -3,6 +3,7 @@ import { css } from "remix/component";
 import { Button } from "~/components/button";
 import { Input } from "~/components/input";
 import { Modal } from "~/components/modal";
+import routes from "~/routes";
 
 export namespace CMSBookmarksIndexView {
 	export interface Item {
@@ -69,7 +70,7 @@ export function CMSBookmarksIndexView() {
 						Bookmarks
 					</h2>
 					<a
-						href="/cms/bookmarks/new"
+						href={routes.cms.bookmarks.new.href()}
 						mix={[
 							css({
 								boxSizing: "border-box",
@@ -350,7 +351,7 @@ export function CMSBookmarksActionView() {
 					<div mix={[css({ display: "flex", gap: "0.5rem", flexWrap: "wrap" })]}>
 						<Button type="submit">{submitLabel}</Button>
 						<a
-							href="/cms/bookmarks"
+							href={routes.cms.bookmarks.index.href()}
 							mix={[
 								css({
 									padding: "0.45rem 0.7rem",

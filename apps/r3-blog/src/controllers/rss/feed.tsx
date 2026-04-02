@@ -2,18 +2,16 @@ import { xml } from "@pkg/http/response";
 import action from "@pkg/remix-helpers/action";
 import { RSS } from "@pkg/rss";
 
-import type routes from "~/routes";
-
 import { db } from "~/middleware/db";
 import { Post } from "~/models/post";
 import { ArticlePost } from "~/models/posts/article";
 import { GlossaryPost } from "~/models/posts/glossary";
 import { LikePost } from "~/models/posts/like";
 import { TutorialPost } from "~/models/posts/tutorial";
+import routes from "~/routes";
 
 export default action<typeof routes.rss.feed>(async (ctx) => {
 	let database = db();
-	let url = new URL(ctx.request.url);
 
 	let [articles, tutorials, likes, glossary] = await Promise.all([
 		ArticlePost.findAll(database),
@@ -25,14 +23,17 @@ export default action<typeof routes.rss.feed>(async (ctx) => {
 	let rss = new RSS({
 		title: "Sergio Xalambrí",
 		description: "Articles, tutorials, bookmarks, and glossary terms by Sergio Xalambrí.",
-		link: url.origin,
+		link: ctx.url.origin,
 	});
 
 	let items: Array<RSS.Item> = [];
 
 	for (let article of articles) {
 		if (!Post.isPublishedAt(article.published_at)) continue;
-		let link = new URL(`/articles/${article.meta.slug}`, url).toString();
+		let link = new URL(
+			routes.post.href({ postType: "articles", postSlug: article.meta.slug }),
+			ctx.url,
+		).toString();
 		items.push({
 			guid: article.id,
 			title: article.meta.title,
@@ -44,7 +45,10 @@ export default action<typeof routes.rss.feed>(async (ctx) => {
 
 	for (let tutorial of tutorials) {
 		if (!Post.isPublishedAt(tutorial.published_at)) continue;
-		let link = new URL(`/tutorials/${tutorial.meta.slug}`, url).toString();
+		let link = new URL(
+			routes.post.href({ postType: "tutorials", postSlug: tutorial.meta.slug }),
+			ctx.url,
+		).toString();
 		items.push({
 			guid: tutorial.id,
 			title: tutorial.meta.title,
@@ -65,7 +69,7 @@ export default action<typeof routes.rss.feed>(async (ctx) => {
 	}
 
 	for (let term of glossary) {
-		let link = new URL(`/glossary#${term.meta.slug}`, url).toString();
+		let link = new URL(`${routes.glossary.href()}#${term.meta.slug}`, ctx.url).toString();
 		let title = term.meta.title ? `${term.meta.term} (aka ${term.meta.title})` : term.meta.term;
 		items.push({
 			guid: term.id,

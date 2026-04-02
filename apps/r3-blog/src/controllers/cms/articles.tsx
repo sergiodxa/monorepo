@@ -7,13 +7,13 @@ import { parameterize } from "inflected";
 import { renderToString } from "remix/component/server";
 import { defaulted, object, optional, string } from "remix/data-schema";
 
-import type routes from "~/routes";
-
 import { CMSLayout } from "~/components/layout/cms";
+import { parsePublishedAt, toDateInputValue } from "~/lib/dates";
 import { authState } from "~/middleware/auth-state";
 import { db } from "~/middleware/db";
 import { Post } from "~/models/post";
 import { ArticlePost } from "~/models/posts/article";
+import routes from "~/routes";
 import { CMSArticlesActionView, CMSArticlesIndexView } from "~/views/cms/articles";
 
 const ArticleSchema = object({
@@ -40,14 +40,14 @@ export default controller<typeof routes.cms.articles>({
 			let items = articles.map((article) => ({
 				id: article.id,
 				title: article.meta.title,
-				publicHref: `/articles/${article.meta.slug}`,
+				publicHref: routes.post.href({ postType: "articles", postSlug: article.meta.slug }),
 				preview: !Post.isPublishedAt(article.published_at),
-				href: `/cms/articles/${article.id}/edit`,
-				deleteAction: `/cms/articles/${article.id}`,
+				href: routes.cms.articles.edit.href({ id: article.id }),
+				deleteAction: routes.cms.articles.destroy.href({ id: article.id }),
 			}));
 
 			let body = await renderToString(
-				<CMSLayout title="Articles" activePath="/cms/articles">
+				<CMSLayout title="Articles" activePath={routes.cms.articles.index.href()}>
 					<CMSArticlesIndexView items={items} />
 				</CMSLayout>,
 			);
@@ -56,7 +56,8 @@ export default controller<typeof routes.cms.articles>({
 
 		async create(ctx) {
 			let user = authState().user;
-			if (!user) return redirect("/login", { status: redirect.Status.SeeOther });
+			if (!user)
+				return redirect(routes.auth.login.index.href(), { status: redirect.Status.SeeOther });
 
 			let result = await validate(ctx.get(FormData), ArticleSchema);
 			succeeded(result, "Invalid article form data");
@@ -73,9 +74,10 @@ export default controller<typeof routes.cms.articles>({
 					content: result.data.content,
 				},
 			});
-			if (!created) return redirect("/cms/articles", { status: redirect.Status.SeeOther });
+			if (!created)
+				return redirect(routes.cms.articles.index.href(), { status: redirect.Status.SeeOther });
 
-			return redirect(`/cms/articles/${created.id}/edit`, {
+			return redirect(routes.cms.articles.edit.href({ id: created.id }), {
 				status: redirect.Status.SeeOther,
 			});
 		},
@@ -83,11 +85,11 @@ export default controller<typeof routes.cms.articles>({
 		async destroy(ctx) {
 			let articleId = ctx.params.id;
 			if (!articleId) {
-				return redirect("/cms/articles", { status: redirect.Status.SeeOther });
+				return redirect(routes.cms.articles.index.href(), { status: redirect.Status.SeeOther });
 			}
 
 			await ArticlePost.destroy(db(), articleId);
-			return redirect("/cms/articles", { status: redirect.Status.SeeOther });
+			return redirect(routes.cms.articles.index.href(), { status: redirect.Status.SeeOther });
 		},
 
 		async edit(ctx) {
@@ -97,7 +99,7 @@ export default controller<typeof routes.cms.articles>({
 					title: "Article Not Found",
 					description: `Article ${ctx.params.id} was not found.`,
 					mode: "new",
-					action: "/cms/articles",
+					action: routes.cms.articles.index.href(),
 					submitLabel: "Create Article",
 					values: {
 						title: "",
@@ -110,7 +112,7 @@ export default controller<typeof routes.cms.articles>({
 					},
 				};
 				let body = await renderToString(
-					<CMSLayout title={viewProps.title} activePath="/cms/articles">
+					<CMSLayout title={viewProps.title} activePath={routes.cms.articles.index.href()}>
 						<CMSArticlesActionView {...viewProps} />
 					</CMSLayout>,
 				);
@@ -119,11 +121,11 @@ export default controller<typeof routes.cms.articles>({
 
 			let viewProps: CMSArticlesController.ActionProps = {
 				title: `Edit Article ${article.meta.title}`,
-				description: `Editing article at /articles/${article.meta.slug}.`,
+				description: `Editing article at ${routes.post.href({ postType: "articles", postSlug: article.meta.slug })}.`,
 				mode: "edit",
-				action: `/cms/articles/${article.id}`,
+				action: routes.cms.articles.update.href({ id: article.id }),
 				submitLabel: "Save Article",
-				deleteAction: `/cms/articles/${article.id}`,
+				deleteAction: routes.cms.articles.destroy.href({ id: article.id }),
 				values: {
 					title: article.meta.title ?? "",
 					slug: article.meta.slug ?? "",
@@ -135,7 +137,7 @@ export default controller<typeof routes.cms.articles>({
 				},
 			};
 			let body = await renderToString(
-				<CMSLayout title={viewProps.title} activePath="/cms/articles">
+				<CMSLayout title={viewProps.title} activePath={routes.cms.articles.index.href()}>
 					<CMSArticlesActionView {...viewProps} />
 				</CMSLayout>,
 			);
@@ -147,7 +149,7 @@ export default controller<typeof routes.cms.articles>({
 				title: "New Article",
 				description: "Write a new article to share your knowledge with the world.",
 				mode: "new",
-				action: "/cms/articles",
+				action: routes.cms.articles.index.href(),
 				submitLabel: "Create Article",
 				values: {
 					title: "",
@@ -160,7 +162,7 @@ export default controller<typeof routes.cms.articles>({
 				},
 			};
 			let body = await renderToString(
-				<CMSLayout title={viewProps.title} activePath="/cms/articles">
+				<CMSLayout title={viewProps.title} activePath={routes.cms.articles.index.href()}>
 					<CMSArticlesActionView {...viewProps} />
 				</CMSLayout>,
 			);
@@ -171,7 +173,7 @@ export default controller<typeof routes.cms.articles>({
 			let user = authState().user;
 			let articleId = ctx.params.id;
 			if (!user || !articleId) {
-				return redirect("/cms/articles", { status: redirect.Status.SeeOther });
+				return redirect(routes.cms.articles.index.href(), { status: redirect.Status.SeeOther });
 			}
 
 			let result = await validate(ctx.get(FormData), ArticleSchema);
@@ -192,26 +194,9 @@ export default controller<typeof routes.cms.articles>({
 
 			if (!updated) return notFound("<h1>404 Not Found</h1>");
 
-			return redirect(`/cms/articles/${articleId}/edit`, { status: redirect.Status.SeeOther });
+			return redirect(routes.cms.articles.edit.href({ id: articleId }), {
+				status: redirect.Status.SeeOther,
+			});
 		},
 	},
 });
-
-function parsePublishedAt(value: string | undefined) {
-	if (!value) return null;
-	if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
-		let parsed = new Date(`${value}T00:00:00.000Z`);
-		if (Number.isNaN(parsed.getTime())) return null;
-		return parsed.toISOString();
-	}
-	let parsed = new Date(value);
-	if (Number.isNaN(parsed.getTime())) return null;
-	return parsed.toISOString();
-}
-
-function toDateInputValue(value: string | null) {
-	if (!value) return "";
-	let parsed = new Date(value);
-	if (Number.isNaN(parsed.getTime())) return "";
-	return parsed.toISOString().slice(0, 10);
-}

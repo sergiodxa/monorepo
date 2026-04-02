@@ -4,6 +4,7 @@ import { Button } from "~/components/button";
 import { Input } from "~/components/input";
 import { Modal } from "~/components/modal";
 import { Select } from "~/components/select";
+import routes from "~/routes";
 
 export namespace CMSRedirectsIndexView {
 	export interface Item {
@@ -48,7 +49,7 @@ export function CMSRedirectsIndexView() {
 						Redirects
 					</h2>
 					<a
-						href="/cms/redirects/new"
+						href={routes.cms.redirects.new.href()}
 						mix={[
 							css({
 								boxSizing: "border-box",
@@ -321,7 +322,7 @@ export function CMSRedirectsNewView() {
 					<div mix={[css({ display: "flex", gap: "0.5rem", flexWrap: "wrap" })]}>
 						<Button type="submit">Create Redirect</Button>
 						<a
-							href="/cms/redirects"
+							href={routes.cms.redirects.index.href()}
 							mix={[
 								css({
 									padding: "0.45rem 0.7rem",

@@ -3,6 +3,7 @@ import { css } from "remix/component";
 import { Button } from "~/components/button";
 import { Input } from "~/components/input";
 import { Modal } from "~/components/modal";
+import routes from "~/routes";
 
 export namespace CMSTutorialsIndexView {
 	export interface Item {
@@ -63,7 +64,7 @@ export function CMSTutorialsIndexView() {
 						Tutorials
 					</h2>
 					<a
-						href="/cms/tutorials/new"
+						href={routes.cms.tutorials.new.href()}
 						mix={[
 							css({
 								boxSizing: "border-box",
@@ -440,7 +441,7 @@ export function CMSTutorialsActionView() {
 					<div mix={[css({ display: "flex", gap: "0.5rem", flexWrap: "wrap" })]}>
 						<Button type="submit">{submitLabel}</Button>
 						<a
-							href="/cms/tutorials"
+							href={routes.cms.tutorials.index.href()}
 							mix={[
 								css({
 									padding: "0.45rem 0.7rem",

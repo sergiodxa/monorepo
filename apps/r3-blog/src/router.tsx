@@ -117,7 +117,7 @@ router.map(routes, {
 			middleware: [
 				requireAuth({
 					onFailure() {
-						return redirect("/login", { status: redirect.Status.SeeOther });
+						return redirect(routes.auth.login.index.href(), { status: redirect.Status.SeeOther });
 					},
 				}),
 				requireAdmin,

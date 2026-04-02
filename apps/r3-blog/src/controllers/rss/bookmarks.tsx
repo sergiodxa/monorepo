@@ -2,10 +2,9 @@ import { xml } from "@pkg/http/response";
 import action from "@pkg/remix-helpers/action";
 import { RSS } from "@pkg/rss";
 
-import type routes from "~/routes";
-
 import { db } from "~/middleware/db";
 import { LikePost } from "~/models/posts/like";
+import routes from "~/routes";
 
 export default action<typeof routes.rss.bookmarks>(async (ctx) => {
 	let database = db();
@@ -15,7 +14,7 @@ export default action<typeof routes.rss.bookmarks>(async (ctx) => {
 	let rss = new RSS({
 		title: "Bookmarks — Sergio Xalambrí",
 		description: "Bookmarks by Sergio Xalambrí.",
-		link: new URL("/bookmarks", new URL(ctx.request.url)).toString(),
+		link: new URL(routes.bookmarks.href(), ctx.url).toString(),
 	});
 
 	for (let like of likes) {

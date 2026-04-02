@@ -4,14 +4,13 @@ import controller from "@pkg/remix-helpers/controller";
 import { Auth } from "remix/auth-middleware";
 import { renderToString } from "remix/component/server";
 
-import type routes from "~/routes";
-
 import { BlogLayout } from "~/components/layout/blog";
 import { verifyIdToken } from "~/entities/id-token";
 import { authState } from "~/middleware/auth-state";
 import { db } from "~/middleware/db";
 import { User } from "~/models/user";
 import { finishAuth, startAuth } from "~/modules/oauth";
+import routes from "~/routes";
 import { LoginView } from "~/views/auth/login";
 import { LogoutView } from "~/views/auth/logout";
 
@@ -19,7 +18,9 @@ export default controller<typeof routes.auth>({
 	middleware: [
 		async (ctx) => {
 			let auth = ctx.get(Auth);
-			if (auth.ok) return redirect("/cms", { status: redirect.Status.SeeOther });
+			if (auth.ok) {
+				return redirect(routes.cms.dashboard.href(), { status: redirect.Status.SeeOther });
+			}
 		},
 	],
 	actions: {
@@ -31,7 +32,7 @@ export default controller<typeof routes.auth>({
 						<BlogLayout
 							title="Login"
 							description="Authenticate to access CMS tools"
-							activePath="/login"
+							activePath={routes.auth.login.index.href()}
 						>
 							<LoginView />
 						</BlogLayout>,
@@ -51,7 +52,11 @@ export default controller<typeof routes.auth>({
 			actions: {
 				async index() {
 					let body = await renderToString(
-						<BlogLayout title="Logout" description="Sign out from CMS" activePath="/logout">
+						<BlogLayout
+							title="Logout"
+							description="Sign out from CMS"
+							activePath={routes.auth.logout.index.href()}
+						>
 							<LogoutView />
 						</BlogLayout>,
 					);
@@ -67,7 +72,7 @@ export default controller<typeof routes.auth>({
 					if (idToken) logoutUrl.searchParams.set("id_token_hint", idToken);
 					logoutUrl.searchParams.set(
 						"post_logout_redirect_uri",
-						new URL("/", ctx.request.url).toString(),
+						new URL(routes.feed.href(), ctx.request.url).toString(),
 					);
 
 					let response = redirect(logoutUrl, {
@@ -96,7 +101,7 @@ export default controller<typeof routes.auth>({
 						<BlogLayout
 							title="Login"
 							description="Authenticate to access CMS tools"
-							activePath="/login"
+							activePath={routes.auth.login.index.href()}
 						>
 							<LoginView error="Authentication failed. Please try again." />
 						</BlogLayout>,
@@ -111,7 +116,7 @@ export default controller<typeof routes.auth>({
 						<BlogLayout
 							title="Login"
 							description="Authenticate to access CMS tools"
-							activePath="/login"
+							activePath={routes.auth.login.index.href()}
 						>
 							<LoginView error="Authentication failed. Missing token response." />
 						</BlogLayout>,
@@ -133,7 +138,9 @@ export default controller<typeof routes.auth>({
 				authState().setIdToken(idTokenRaw);
 
 				let returnTo =
-					result.returnTo && result.returnTo.startsWith("/") ? result.returnTo : "/cms";
+					result.returnTo && result.returnTo.startsWith("/")
+						? result.returnTo
+						: routes.cms.dashboard.href();
 				return redirect(returnTo, { status: redirect.Status.SeeOther });
 			},
 		},

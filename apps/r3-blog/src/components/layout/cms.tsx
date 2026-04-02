@@ -2,6 +2,7 @@ import type { RemixNode } from "remix/component";
 
 import { css } from "remix/component";
 
+import routes from "~/routes";
 import appColorsStyles from "~/styles/colors.css?url";
 
 export namespace CMSLayout {
@@ -18,13 +19,13 @@ export namespace CMSLayout {
 }
 
 let cmsNavigationItems: Array<CMSLayout.NavigationItem> = [
-	{ href: "/cms", label: "Dashboard" },
-	{ href: "/cms/articles", label: "Articles" },
-	{ href: "/cms/tutorials", label: "Tutorials" },
-	{ href: "/cms/bookmarks", label: "Bookmarks" },
-	{ href: "/cms/glossary", label: "Glossary" },
-	{ href: "/cms/redirects", label: "Redirects" },
-	{ href: "/logout", label: "Logout" },
+	{ href: routes.cms.dashboard.href(), label: "Dashboard" },
+	{ href: routes.cms.articles.index.href(), label: "Articles" },
+	{ href: routes.cms.tutorials.index.href(), label: "Tutorials" },
+	{ href: routes.cms.bookmarks.index.href(), label: "Bookmarks" },
+	{ href: routes.cms.glossary.index.href(), label: "Glossary" },
+	{ href: routes.cms.redirects.index.href(), label: "Redirects" },
+	{ href: routes.auth.logout.index.href(), label: "Logout" },
 ];
 
 export function CMSLayout() {

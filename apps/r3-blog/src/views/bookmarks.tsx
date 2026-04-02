@@ -1,5 +1,7 @@
 import { css } from "remix/component";
 
+import routes from "~/routes";
+
 export namespace BookmarksView {
 	export interface Item {
 		href: string;
@@ -48,7 +50,7 @@ export function BookmarksView() {
 				Links that I read and liked.
 			</p>
 			<p mix={[css({ margin: 0, color: "var(--ui-neutral-fg)", fontSize: "1.05rem" })]}>
-				Subscribe to my bookmarks using <a href="/bookmarks.rss">RSS</a>.
+				Subscribe to my bookmarks using <a href={routes.rss.bookmarks.href()}>RSS</a>.
 			</p>
 			{items.length === 0 ? (
 				<p mix={[css({ margin: 0, color: "var(--ui-neutral-fg)" })]}>No bookmarks yet.</p>

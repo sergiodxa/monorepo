@@ -8,6 +8,7 @@ import { renderToString } from "remix/component/server";
 import { defaulted, object, optional, string } from "remix/data-schema";
 
 import { CMSLayout } from "~/components/layout/cms";
+import { parsePublishedAt, toDateInputValue } from "~/lib/dates";
 import { authState } from "~/middleware/auth-state";
 import { db } from "~/middleware/db";
 import { Post } from "~/models/post";
@@ -38,15 +39,15 @@ export default controller<typeof routes.cms.tutorials>({
 			let items = tutorials.map((tutorial) => ({
 				id: tutorial.id,
 				title: tutorial.meta.title,
-				publicHref: `/tutorials/${tutorial.meta.slug}`,
+				publicHref: routes.post.href({ postType: "tutorials", postSlug: tutorial.meta.slug }),
 				preview: !Post.isPublishedAt(tutorial.published_at),
 				tags: TutorialPost.tags(tutorial.meta.tags).join(", "),
-				href: `/cms/tutorials/${tutorial.id}/edit`,
-				deleteAction: `/cms/tutorials/${tutorial.id}`,
+				href: routes.cms.tutorials.edit.href({ id: tutorial.id }),
+				deleteAction: routes.cms.tutorials.destroy.href({ id: tutorial.id }),
 			}));
 
 			let body = await renderToString(
-				<CMSLayout title="Tutorials" activePath="/cms/tutorials">
+				<CMSLayout title="Tutorials" activePath={routes.cms.tutorials.index.href()}>
 					<CMSTutorialsIndexView items={items} />
 				</CMSLayout>,
 			);
@@ -55,7 +56,8 @@ export default controller<typeof routes.cms.tutorials>({
 
 		async create(ctx) {
 			let user = authState().user;
-			if (!user) return redirect("/login", { status: redirect.Status.SeeOther });
+			if (!user)
+				return redirect(routes.auth.login.index.href(), { status: redirect.Status.SeeOther });
 
 			let result = await validate(ctx.get(FormData), TutorialSchema);
 			succeeded(result, "Invalid tutorial form data");
@@ -71,19 +73,22 @@ export default controller<typeof routes.cms.tutorials>({
 					content: result.data.content,
 				},
 			});
-			if (!created) return redirect("/cms/tutorials", { status: redirect.Status.SeeOther });
+			if (!created)
+				return redirect(routes.cms.tutorials.index.href(), { status: redirect.Status.SeeOther });
 
-			return redirect(`/cms/tutorials/${created.id}/edit`, {
+			return redirect(routes.cms.tutorials.edit.href({ id: created.id }), {
 				status: redirect.Status.SeeOther,
 			});
 		},
 
 		async destroy(ctx) {
 			let tutorialId = ctx.params.id;
-			if (!tutorialId) return redirect("/cms/tutorials", { status: redirect.Status.SeeOther });
+			if (!tutorialId) {
+				return redirect(routes.cms.tutorials.index.href(), { status: redirect.Status.SeeOther });
+			}
 
 			await TutorialPost.destroy(db(), tutorialId);
-			return redirect("/cms/tutorials", { status: redirect.Status.SeeOther });
+			return redirect(routes.cms.tutorials.index.href(), { status: redirect.Status.SeeOther });
 		},
 
 		async edit(ctx) {
@@ -99,7 +104,7 @@ export default controller<typeof routes.cms.tutorials>({
 				};
 
 				let body = await renderToString(
-					<CMSLayout title={view.title} activePath="/cms/tutorials">
+					<CMSLayout title={view.title} activePath={routes.cms.tutorials.index.href()}>
 						<CMSTutorialsActionView {...view} />
 					</CMSLayout>,
 				);
@@ -109,11 +114,11 @@ export default controller<typeof routes.cms.tutorials>({
 
 			let view: CMSTutorialsController.ActionView = {
 				title: `Edit Tutorial ${tutorial.meta.title}`,
-				description: `Editing tutorial at /tutorials/${tutorial.meta.slug}.`,
+				description: `Editing tutorial at ${routes.post.href({ postType: "tutorials", postSlug: tutorial.meta.slug })}.`,
 				mode: "edit",
-				action: `/cms/tutorials/${tutorial.id}`,
+				action: routes.cms.tutorials.update.href({ id: tutorial.id }),
 				submitLabel: "Save Tutorial",
-				deleteAction: `/cms/tutorials/${tutorial.id}`,
+				deleteAction: routes.cms.tutorials.destroy.href({ id: tutorial.id }),
 				values: {
 					title: tutorial.meta.title ?? "",
 					slug: tutorial.meta.slug ?? "",
@@ -125,7 +130,7 @@ export default controller<typeof routes.cms.tutorials>({
 			};
 
 			let body = await renderToString(
-				<CMSLayout title={view.title} activePath="/cms/tutorials">
+				<CMSLayout title={view.title} activePath={routes.cms.tutorials.index.href()}>
 					<CMSTutorialsActionView {...view} />
 				</CMSLayout>,
 			);
@@ -137,7 +142,7 @@ export default controller<typeof routes.cms.tutorials>({
 				title: "New Tutorial",
 				description: "Write a new tutorial to share your knowledge with the world.",
 				mode: "new",
-				action: "/cms/tutorials",
+				action: routes.cms.tutorials.index.href(),
 				submitLabel: "Create Tutorial",
 				values: {
 					title: "",
@@ -150,7 +155,7 @@ export default controller<typeof routes.cms.tutorials>({
 			};
 
 			let body = await renderToString(
-				<CMSLayout title={view.title} activePath="/cms/tutorials">
+				<CMSLayout title={view.title} activePath={routes.cms.tutorials.index.href()}>
 					<CMSTutorialsActionView {...view} />
 				</CMSLayout>,
 			);
@@ -182,7 +187,7 @@ export default controller<typeof routes.cms.tutorials>({
 
 			if (!updated) {
 				let body = await renderToString(
-					<CMSLayout title="Tutorial Not Found" activePath="/cms/tutorials">
+					<CMSLayout title="Tutorial Not Found" activePath={routes.cms.tutorials.index.href()}>
 						<NotFoundView
 							title="Tutorial Not Found"
 							description={`Tutorial ${tutorialId} was not found.`}
@@ -207,23 +212,4 @@ function parseTags(value: string | undefined) {
 		.split(",")
 		.map((tag) => tag.trim())
 		.filter(Boolean);
-}
-
-function parsePublishedAt(value: string | undefined) {
-	if (!value) return null;
-	if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
-		let parsed = new Date(`${value}T00:00:00.000Z`);
-		if (Number.isNaN(parsed.getTime())) return null;
-		return parsed.toISOString();
-	}
-	let parsed = new Date(value);
-	if (Number.isNaN(parsed.getTime())) return null;
-	return parsed.toISOString();
-}
-
-function toDateInputValue(value: string | null) {
-	if (!value) return "";
-	let parsed = new Date(value);
-	if (Number.isNaN(parsed.getTime())) return "";
-	return parsed.toISOString().slice(0, 10);
 }

@@ -1,5 +1,7 @@
 import { css } from "remix/component";
 
+import routes from "~/routes";
+
 export namespace FeedView {
 	export interface ActivityItem {
 		href: string;
@@ -51,7 +53,7 @@ export function FeedView() {
 				OAuth2.
 			</p>
 			<p mix={[css({ margin: "0.2rem 0 0", color: "var(--ui-neutral-fg)", fontSize: "1.05rem" })]}>
-				Subscribe to my content using <a href="/atom.xml">RSS</a>.
+				Subscribe to my content using <a href={routes.rss.feed.href()}>RSS</a>.
 			</p>
 
 			<h2

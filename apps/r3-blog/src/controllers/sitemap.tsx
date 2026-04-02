@@ -2,17 +2,15 @@ import { xml } from "@pkg/http/response";
 import action from "@pkg/remix-helpers/action";
 import { Sitemap } from "@pkg/sitemap";
 
-import type routes from "~/routes";
-
 import { db } from "~/middleware/db";
 import { Post } from "~/models/post";
 import { ArticlePost } from "~/models/posts/article";
 import { LikePost } from "~/models/posts/like";
 import { TutorialPost } from "~/models/posts/tutorial";
+import routes from "~/routes";
 
 export default action<typeof routes.sitemap>(async (ctx) => {
 	let database = db();
-	let url = new URL(ctx.request.url);
 
 	let [articles, tutorials, likes] = await Promise.all([
 		ArticlePost.findAll(database),
@@ -32,34 +30,40 @@ export default action<typeof routes.sitemap>(async (ctx) => {
 
 	let lastPostDate = dates.length > 0 ? new Date(Math.max(...dates)) : undefined;
 
-	sitemap.append(new URL("/", url), { updatedAt: lastPostDate });
+	sitemap.append(new URL(routes.feed.href(), ctx.url), { updatedAt: lastPostDate });
 
-	sitemap.append(new URL("/articles", url), {
+	sitemap.append(new URL(routes.articles.href(), ctx.url), {
 		updatedAt: lastArticleDate ? new Date(lastArticleDate) : undefined,
 	});
 
-	sitemap.append(new URL("/tutorials", url), {
+	sitemap.append(new URL(routes.tutorials.href(), ctx.url), {
 		updatedAt: lastTutorialDate ? new Date(lastTutorialDate) : undefined,
 	});
 
-	sitemap.append(new URL("/bookmarks", url), {
+	sitemap.append(new URL(routes.bookmarks.href(), ctx.url), {
 		updatedAt: lastBookmarkDate ? new Date(lastBookmarkDate) : undefined,
 	});
 
-	sitemap.append(new URL("/glossary", url));
+	sitemap.append(new URL(routes.glossary.href(), ctx.url));
 
 	for (let article of articles) {
 		if (!Post.isPublishedAt(article.published_at)) continue;
-		sitemap.append(new URL(`/articles/${article.meta.slug}`, url), {
-			updatedAt: new Date(article.created_at),
-		});
+		sitemap.append(
+			new URL(routes.post.href({ postType: "articles", postSlug: article.meta.slug }), ctx.url),
+			{
+				updatedAt: new Date(article.created_at),
+			},
+		);
 	}
 
 	for (let tutorial of tutorials) {
 		if (!Post.isPublishedAt(tutorial.published_at)) continue;
-		sitemap.append(new URL(`/tutorials/${tutorial.meta.slug}`, url), {
-			updatedAt: new Date(tutorial.created_at),
-		});
+		sitemap.append(
+			new URL(routes.post.href({ postType: "tutorials", postSlug: tutorial.meta.slug }), ctx.url),
+			{
+				updatedAt: new Date(tutorial.created_at),
+			},
+		);
 	}
 
 	return xml(sitemap.toString());

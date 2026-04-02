@@ -1,7 +1,6 @@
 import { css } from "remix/component";
 
-import { Button } from "~/components/button";
-import { Input } from "~/components/input";
+import routes from "~/routes";
 
 export namespace CMSDashboardView {
 	export interface Stats {
@@ -73,7 +72,7 @@ export function CMSDashboardView() {
 						{stats.articles}
 					</p>
 					<a
-						href="/cms/articles"
+						href={routes.cms.articles.index.href()}
 						mix={[css({ fontSize: "0.85rem", color: "var(--ui-accent-fg)" })]}
 					>
 						View all
@@ -107,7 +106,7 @@ export function CMSDashboardView() {
 						{stats.likes}
 					</p>
 					<a
-						href="/cms/bookmarks"
+						href={routes.cms.bookmarks.index.href()}
 						mix={[css({ fontSize: "0.85rem", color: "var(--ui-accent-fg)" })]}
 					>
 						View all
@@ -141,7 +140,7 @@ export function CMSDashboardView() {
 						{stats.tutorials}
 					</p>
 					<a
-						href="/cms/tutorials"
+						href={routes.cms.tutorials.index.href()}
 						mix={[css({ fontSize: "0.85rem", color: "var(--ui-accent-fg)" })]}
 					>
 						View all
@@ -175,45 +174,13 @@ export function CMSDashboardView() {
 						{stats.glossary}
 					</p>
 					<a
-						href="/cms/glossary"
+						href={routes.cms.glossary.index.href()}
 						mix={[css({ fontSize: "0.85rem", color: "var(--ui-accent-fg)" })]}
 					>
 						View all
 					</a>
 				</article>
 			</div>
-			<section
-				mix={[
-					css({
-						backgroundColor: "var(--ui-neutral-bg-tint)",
-						border: "1px solid var(--ui-neutral-border)",
-						borderRadius: "0.7rem",
-						padding: "1rem",
-					}),
-				]}
-			>
-				<h2 mix={[css({ margin: 0, fontSize: "1.1rem", color: "var(--ui-neutral-fg-emphasis)" })]}>
-					Quick Action: Like a URL
-				</h2>
-				<form
-					method="post"
-					mix={[
-						css({
-							marginTop: "0.8rem",
-							display: "flex",
-							gap: "0.55rem",
-							flexWrap: "wrap",
-							alignItems: "end",
-						}),
-					]}
-				>
-					<label mix={[css({ display: "grid", gap: "0.25rem" })]}>
-						<span mix={[css({ fontSize: "0.9rem", color: "var(--ui-neutral-fg)" })]}>URL</span>
-						<Input name="url" mix={[css({ minWidth: "18rem" })]} />
-					</label>
-					<Button type="submit">Create Like</Button>
-				</form>
-			</section>
 		</main>
 	);
 }

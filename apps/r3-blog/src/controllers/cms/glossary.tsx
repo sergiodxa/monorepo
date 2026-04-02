@@ -7,12 +7,11 @@ import { parameterize } from "inflected";
 import { renderToString } from "remix/component/server";
 import { defaulted, object, optional, string } from "remix/data-schema";
 
-import type routes from "~/routes";
-
 import { CMSLayout } from "~/components/layout/cms";
 import { authState } from "~/middleware/auth-state";
 import { db } from "~/middleware/db";
 import { GlossaryPost } from "~/models/posts/glossary";
+import routes from "~/routes";
 import { CMSGlossaryActionView, CMSGlossaryIndexView } from "~/views/cms/glossary";
 
 let GlossarySchema = object({
@@ -32,12 +31,12 @@ export default controller<typeof routes.cms.glossary>({
 				id: item.id,
 				term: item.meta.term,
 				slug: item.meta.slug,
-				href: `/cms/glossary/${item.id}/edit`,
-				deleteAction: `/cms/glossary/${item.id}`,
+				href: routes.cms.glossary.edit.href({ id: item.id }),
+				deleteAction: routes.cms.glossary.destroy.href({ id: item.id }),
 			}));
 
 			let body = await renderToString(
-				<CMSLayout title="Glossary" activePath="/cms/glossary">
+				<CMSLayout title="Glossary" activePath={routes.cms.glossary.index.href()}>
 					<CMSGlossaryIndexView items={items} />
 				</CMSLayout>,
 			);
@@ -46,7 +45,8 @@ export default controller<typeof routes.cms.glossary>({
 
 		async create(ctx) {
 			let user = authState().user;
-			if (!user) return redirect("/login", { status: redirect.Status.SeeOther });
+			if (!user)
+				return redirect(routes.auth.login.index.href(), { status: redirect.Status.SeeOther });
 
 			let result = await validate(ctx.get(FormData), GlossarySchema);
 			succeeded(result, "Invalid glossary form data");
@@ -61,19 +61,22 @@ export default controller<typeof routes.cms.glossary>({
 				},
 			});
 
-			if (!created) return redirect("/cms/glossary", { status: redirect.Status.SeeOther });
+			if (!created)
+				return redirect(routes.cms.glossary.index.href(), { status: redirect.Status.SeeOther });
 
-			return redirect(`/cms/glossary/${created.id}/edit`, {
+			return redirect(routes.cms.glossary.edit.href({ id: created.id }), {
 				status: redirect.Status.SeeOther,
 			});
 		},
 
 		async destroy(ctx) {
 			let glossaryId = ctx.params.id;
-			if (!glossaryId) return redirect("/cms/glossary", { status: redirect.Status.SeeOther });
+			if (!glossaryId) {
+				return redirect(routes.cms.glossary.index.href(), { status: redirect.Status.SeeOther });
+			}
 
 			await GlossaryPost.destroy(db(), glossaryId);
-			return redirect("/cms/glossary", { status: redirect.Status.SeeOther });
+			return redirect(routes.cms.glossary.index.href(), { status: redirect.Status.SeeOther });
 		},
 
 		async edit(ctx) {
@@ -83,12 +86,12 @@ export default controller<typeof routes.cms.glossary>({
 					title: "Glossary Term Not Found",
 					description: `Glossary term ${ctx.params.id} was not found.`,
 					mode: "new",
-					action: "/cms/glossary",
+					action: routes.cms.glossary.index.href(),
 					submitLabel: "Create Glossary Term",
 					values: { term: "", title: "", slug: "", definition: "" },
 				};
 				let body = await renderToString(
-					<CMSLayout title="Glossary Term Not Found" activePath="/cms/glossary">
+					<CMSLayout title="Glossary Term Not Found" activePath={routes.cms.glossary.index.href()}>
 						<CMSGlossaryActionView {...viewProps} />
 					</CMSLayout>,
 				);
@@ -97,11 +100,11 @@ export default controller<typeof routes.cms.glossary>({
 
 			let viewProps: CMSGlossaryActionView.Props = {
 				title: `Edit Glossary ${glossary.meta.term}`,
-				description: `Editing glossary term at /glossary#${glossary.meta.slug}.`,
+				description: `Editing glossary term at ${routes.glossary.href()}#${glossary.meta.slug}.`,
 				mode: "edit",
-				action: `/cms/glossary/${glossary.id}`,
+				action: routes.cms.glossary.update.href({ id: glossary.id }),
 				submitLabel: "Save Glossary Term",
-				deleteAction: `/cms/glossary/${glossary.id}`,
+				deleteAction: routes.cms.glossary.destroy.href({ id: glossary.id }),
 				values: {
 					term: glossary.meta.term ?? "",
 					title: glossary.meta.title ?? "",
@@ -111,7 +114,7 @@ export default controller<typeof routes.cms.glossary>({
 			};
 
 			let body = await renderToString(
-				<CMSLayout title={viewProps.title} activePath="/cms/glossary">
+				<CMSLayout title={viewProps.title} activePath={routes.cms.glossary.index.href()}>
 					<CMSGlossaryActionView {...viewProps} />
 				</CMSLayout>,
 			);
@@ -124,12 +127,12 @@ export default controller<typeof routes.cms.glossary>({
 				title: "New Glossary",
 				description: `New Glossary form loaded. Current glossary count: ${total}.`,
 				mode: "new",
-				action: "/cms/glossary",
+				action: routes.cms.glossary.index.href(),
 				submitLabel: "Create Glossary Term",
 				values: { term: "", title: "", slug: "", definition: "" },
 			};
 			let body = await renderToString(
-				<CMSLayout title={viewProps.title} activePath="/cms/glossary">
+				<CMSLayout title={viewProps.title} activePath={routes.cms.glossary.index.href()}>
 					<CMSGlossaryActionView {...viewProps} />
 				</CMSLayout>,
 			);
@@ -140,7 +143,7 @@ export default controller<typeof routes.cms.glossary>({
 			let user = authState().user;
 			let glossaryId = ctx.params.id;
 			if (!user || !glossaryId) {
-				return redirect("/cms/glossary", { status: redirect.Status.SeeOther });
+				return redirect(routes.cms.glossary.index.href(), { status: redirect.Status.SeeOther });
 			}
 
 			let result = await validate(ctx.get(FormData), GlossarySchema);
@@ -158,7 +161,9 @@ export default controller<typeof routes.cms.glossary>({
 
 			if (!updated) return notFound("<h1>404 Not Found</h1>");
 
-			return redirect(`/cms/glossary/${glossaryId}/edit`, { status: redirect.Status.SeeOther });
+			return redirect(routes.cms.glossary.edit.href({ id: glossaryId }), {
+				status: redirect.Status.SeeOther,
+			});
 		},
 	},
 });

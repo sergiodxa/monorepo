@@ -1,5 +1,7 @@
 import { css } from "remix/component";
 
+import routes from "~/routes";
+
 export namespace TutorialsView {
 	export interface Item {
 		href: string;
@@ -13,7 +15,7 @@ export namespace TutorialsView {
 }
 
 export function tutorialPathFromSlug(slug: string) {
-	return `/tutorials/${slug}`;
+	return routes.post.href({ postType: "tutorials", postSlug: slug });
 }
 
 export function TutorialsView() {
@@ -36,7 +38,7 @@ export function TutorialsView() {
 				Learn about Remix, React, and more.
 			</p>
 			<p mix={[css({ margin: 0, color: "var(--ui-neutral-fg)", fontSize: "1.05rem" })]}>
-				Subscribe to my tutorials using <a href="/tutorials.rss">RSS</a>.
+				Subscribe to my tutorials using <a href={routes.rss.tutorials.href()}>RSS</a>.
 			</p>
 			{items.length === 0 ? (
 				<p mix={[css({ margin: 0, color: "var(--ui-neutral-fg)" })]}>No tutorials yet.</p>

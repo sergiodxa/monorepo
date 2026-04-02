@@ -2,12 +2,11 @@ import { ok } from "@pkg/http/response/html";
 import action from "@pkg/remix-helpers/action";
 import { renderToString } from "remix/component/server";
 
-import type routes from "~/routes";
-
 import { BlogLayout } from "~/components/layout/blog";
 import { db } from "~/middleware/db";
 import { Post } from "~/models/post";
 import { LikePost } from "~/models/posts/like";
+import routes from "~/routes";
 import { BookmarksView } from "~/views/bookmarks";
 
 export default action<typeof routes.bookmarks>(async () => {
@@ -39,7 +38,7 @@ export default action<typeof routes.bookmarks>(async () => {
 		<BlogLayout
 			title="Bookmarks"
 			description="Links that I read and liked."
-			activePath="/bookmarks"
+			activePath={routes.bookmarks.href()}
 		>
 			<BookmarksView items={items} />
 		</BlogLayout>,

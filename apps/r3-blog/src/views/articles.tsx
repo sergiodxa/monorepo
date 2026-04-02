@@ -1,5 +1,7 @@
 import { css } from "remix/component";
 
+import routes from "~/routes";
+
 export namespace ArticlesView {
 	export interface Item {
 		href: string;
@@ -13,7 +15,7 @@ export namespace ArticlesView {
 }
 
 export function articlePath(slug: string) {
-	return `/articles/${slug}`;
+	return routes.post.href({ postType: "articles", postSlug: slug });
 }
 
 export function ArticlesView() {
@@ -36,7 +38,7 @@ export function ArticlesView() {
 				These are my articles.
 			</p>
 			<p mix={[css({ margin: 0, color: "var(--ui-neutral-fg)", fontSize: "1.05rem" })]}>
-				Subscribe to my articles using <a href="/articles.rss">RSS</a>.
+				Subscribe to my articles using <a href={routes.rss.articles.href()}>RSS</a>.
 			</p>
 			{items.length === 0 ? (
 				<p mix={[css({ margin: 0, color: "var(--ui-neutral-fg)" })]}>No articles yet.</p>

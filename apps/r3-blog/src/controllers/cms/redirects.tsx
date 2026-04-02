@@ -7,10 +7,9 @@ import { env } from "cloudflare:workers";
 import { renderToString } from "remix/component/server";
 import { defaulted, enum_, object, string } from "remix/data-schema";
 
-import type routes from "~/routes";
-
 import { CMSLayout } from "~/components/layout/cms";
 import { Redirect } from "~/models/redirect";
+import routes from "~/routes";
 import { CMSRedirectsIndexView, CMSRedirectsNewView } from "~/views/cms/redirects";
 
 let RedirectSchema = object({
@@ -29,11 +28,11 @@ export default controller<typeof routes.cms.redirects>({
 				from: item.from,
 				to: item.to,
 				status: item.status,
-				deleteAction: `/cms/redirects/${encodeURIComponent(item.from)}`,
+				deleteAction: routes.cms.redirects.destroy.href({ id: encodeURIComponent(item.from) }),
 			}));
 
 			let body = await renderToString(
-				<CMSLayout title="Redirects" activePath="/cms/redirects">
+				<CMSLayout title="Redirects" activePath={routes.cms.redirects.index.href()}>
 					<CMSRedirectsIndexView items={items} />
 				</CMSLayout>,
 			);
@@ -49,29 +48,30 @@ export default controller<typeof routes.cms.redirects>({
 			let status = Number(result.data.status) as Redirect.Status;
 
 			if (!from || !to) {
-				return redirect("/cms/redirects/new", { status: redirect.Status.SeeOther });
+				return redirect(routes.cms.redirects.new.href(), { status: redirect.Status.SeeOther });
 			}
 
 			await Redirect.upsert(env.REDIRECTS, { from, to, status });
-			return redirect("/cms/redirects", { status: redirect.Status.SeeOther });
+			return redirect(routes.cms.redirects.index.href(), { status: redirect.Status.SeeOther });
 		},
 
 		async destroy(ctx) {
 			let from = getRedirectFromParam(ctx.params.id);
-			if (!from) return redirect("/cms/redirects", { status: redirect.Status.SeeOther });
+			if (!from)
+				return redirect(routes.cms.redirects.index.href(), { status: redirect.Status.SeeOther });
 
 			await Redirect.destroy(env.REDIRECTS, from);
-			return redirect("/cms/redirects", { status: redirect.Status.SeeOther });
+			return redirect(routes.cms.redirects.index.href(), { status: redirect.Status.SeeOther });
 		},
 
 		async new() {
 			let redirects = await Redirect.findAll(env.REDIRECTS);
 			let body = await renderToString(
-				<CMSLayout title="New Redirect" activePath="/cms/redirects">
+				<CMSLayout title="New Redirect" activePath={routes.cms.redirects.index.href()}>
 					<CMSRedirectsNewView
 						title="New Redirect"
 						description={`Current redirect count in KV: ${redirects.length}.`}
-						action="/cms/redirects"
+						action={routes.cms.redirects.index.href()}
 					/>
 				</CMSLayout>,
 			);
