@@ -2,6 +2,7 @@ import type { Database } from "remix/data-table";
 
 import { Location } from "@pkg/location";
 
+import { Post } from "~/models/post";
 import { ArticlePost } from "~/models/posts/article";
 import { GlossaryPost } from "~/models/posts/glossary";
 import { LikePost } from "~/models/posts/like";
@@ -27,29 +28,17 @@ export namespace Feed {
  */
 export class Feed {
 	/**
-	 * Parses mixed date inputs into a timestamp.
-	 * Returns `NaN` when the input cannot be parsed as a valid date.
+	 * Shared date ordering helper for feed activities.
 	 */
-	static toTimestamp(value: unknown): number {
-		if (value === null || value === undefined) return Number.NaN;
+	static activityTimestamp(input: { published_at: string | null; created_at: string }) {
+		return Post.timestampFromPublishedOrCreated(input);
+	}
 
-		if (typeof value === "number") return Number.isFinite(value) ? value : Number.NaN;
-
-		if (value instanceof Date) {
-			let time = value.getTime();
-			return Number.isFinite(time) ? time : Number.NaN;
-		}
-
-		if (typeof value !== "string") return Number.NaN;
-
-		let direct = Date.parse(value);
-		if (Number.isFinite(direct)) return direct;
-
-		let sqliteLike = value.replace(" ", "T");
-		let asUtc = Date.parse(`${sqliteLike}Z`);
-		if (Number.isFinite(asUtc)) return asUtc;
-
-		return Number.NaN;
+	/**
+	 * Shared preview-state helper for feed activities.
+	 */
+	static isPreview(published_at: string | null) {
+		return !Post.isPublishedAt(published_at);
 	}
 
 	/**
@@ -57,10 +46,11 @@ export class Feed {
 	 * Combines articles, tutorials, bookmarks, and glossary entries.
 	 */
 	static async listActivity(db: Database, limit?: number): Promise<Array<Feed.ActivityItem>> {
-		let now = Date.now();
+		if (typeof limit === "number" && limit <= 0) return [];
+
 		let [articles, tutorials, bookmarks, glossary] = await Promise.all([
-			ArticlePost.listItems(db),
-			TutorialPost.listItems(db),
+			ArticlePost.findAll(db),
+			TutorialPost.findAll(db),
 			LikePost.findAll(db),
 			GlossaryPost.findAll(db),
 		]);
@@ -74,76 +64,57 @@ export class Feed {
 			preview: boolean;
 		}> = [
 			...articles.map((article) => {
-				let href = routes.post.href({ postType: "articles", postSlug: article.slug });
-				let publishedAt = article.published_at;
-				let publishedAtTime = this.toTimestamp(publishedAt);
-				let createdAtTime = this.toTimestamp(article.created_at);
-				let isPublished =
-					publishedAt === null || (Number.isFinite(publishedAtTime) && publishedAtTime <= now);
+				let href = routes.post.href({ postType: "articles", postSlug: article.meta.slug });
+				let activityDate = this.activityTimestamp(article);
 
 				return {
 					href,
-					label: `I wrote about ${article.title}`,
-					date: Number.isFinite(publishedAtTime) ? publishedAtTime : createdAtTime,
+					label: `I wrote about ${article.meta.title}`,
+					date: activityDate,
 					icon: "📝",
 					icon_tint: "article" as const,
-					preview: !isPublished,
+					preview: this.isPreview(article.published_at),
 				};
 			}),
 			...tutorials.map((tutorial) => {
-				let href = routes.post.href({ postType: "tutorials", postSlug: tutorial.slug });
-				let publishedAt = tutorial.published_at;
-				let publishedAtTime = this.toTimestamp(publishedAt);
-				let createdAtTime = this.toTimestamp(tutorial.created_at);
-				let isPublished =
-					publishedAt === null || (Number.isFinite(publishedAtTime) && publishedAtTime <= now);
+				let href = routes.post.href({ postType: "tutorials", postSlug: tutorial.meta.slug });
+				let activityDate = this.activityTimestamp(tutorial);
 
 				return {
 					href,
-					label: `I published how to ${tutorial.title}`,
-					date: Number.isFinite(publishedAtTime) ? publishedAtTime : createdAtTime,
+					label: `I published how to ${tutorial.meta.title}`,
+					date: activityDate,
 					icon: "🛠️",
 					icon_tint: "tutorial" as const,
-					preview: !isPublished,
+					preview: this.isPreview(tutorial.published_at),
 				};
 			}),
 			...bookmarks.map((bookmark) => {
-				let title = bookmark.meta.title;
-				let publishedAt = bookmark.published_at;
-				let publishedAtTime = this.toTimestamp(publishedAt);
-				let createdAtTime = this.toTimestamp(bookmark.created_at);
-				let isPublished =
-					publishedAt === null || (Number.isFinite(publishedAtTime) && publishedAtTime <= now);
+				let activityDate = this.activityTimestamp(bookmark);
 
 				return {
 					href: LikePost.normalizeUrl(bookmark.meta.url),
-					label: `I saved ${title}`,
-					date: Number.isFinite(publishedAtTime) ? publishedAtTime : createdAtTime,
+					label: `I saved ${bookmark.meta.title}`,
+					date: activityDate,
 					icon: "🔖",
 					icon_tint: "bookmark" as const,
-					preview: !isPublished,
+					preview: this.isPreview(bookmark.published_at),
 				};
 			}),
 			...glossary.map((entry) => {
+				let activityDate = this.activityTimestamp(entry);
 				let href = new Location({
 					pathname: routes.glossary.href(),
 					hash: entry.meta.slug,
 				}).toString();
 
-				let title = entry.meta.term;
-				let publishedAt = entry.published_at;
-				let publishedAtTime = this.toTimestamp(publishedAt);
-				let createdAtTime = this.toTimestamp(entry.created_at);
-				let isPublished =
-					publishedAt === null || (Number.isFinite(publishedAtTime) && publishedAtTime <= now);
-
 				return {
 					href,
-					label: `I added the definition of ${title}`,
-					date: Number.isFinite(publishedAtTime) ? publishedAtTime : createdAtTime,
+					label: `I added the definition of ${entry.meta.term}`,
+					date: activityDate,
 					icon: "📘",
 					icon_tint: "glossary" as const,
-					preview: !isPublished,
+					preview: this.isPreview(entry.published_at),
 				};
 			}),
 		]

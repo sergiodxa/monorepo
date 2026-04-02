@@ -1,40 +1,56 @@
+import type { WithAuth } from "remix/auth-middleware";
+
 import middleware from "@pkg/remix-helpers/middleware";
 import { getContext } from "remix/async-context-middleware";
-import { createContextKey, type RequestContext } from "remix/fetch-router";
+import { Auth } from "remix/auth-middleware";
+import { createContextKey, type MergeContext, type RequestContext } from "remix/fetch-router";
 import { Session } from "remix/session";
 
 import type * as schema from "~/schema";
 
-import { db } from "~/middleware/db";
-import { User } from "~/models/user";
+export let AUTH_SESSION_USER_ID_KEY = "userId";
+export let AUTH_SESSION_ID_TOKEN_KEY = "idToken";
 
-let key = createContextKey<AuthState>();
+export const authStateKey = createContextKey<AuthState>();
 
-export default middleware(async (ctx, next) => {
-	let state = await AuthState.create(ctx);
-	ctx.set(key, state);
+export type AuthStateContextTransform = readonly [readonly [typeof authStateKey, AuthState]];
+
+export type WithAuthState<context extends RequestContext<any, any>> = MergeContext<
+	context,
+	AuthStateContextTransform
+>;
+
+export default middleware<"ANY", Record<string, any>, AuthStateContextTransform>((ctx, next) => {
+	let state = AuthState.create(ctx);
+	ctx.set(authStateKey, state);
 
 	return next();
 });
 
 export function authState() {
 	let ctx = getContext();
-	let state = ctx.get(key);
+	let state = ctx.get(authStateKey);
 	if (state) return state;
 	throw new Error("Auth state not found in context. Make sure to use the auth-state middleware.");
 }
 
+export function readAuthState<context extends RequestContext<any, any>>(
+	context: WithAuthState<context>,
+) {
+	return context.get(authStateKey);
+}
+
 export class AuthState {
-	#ctx: RequestContext;
+	#ctx: RequestContext<any, any>;
 	#user: schema.SelectUser | null;
 
-	private constructor(ctx: RequestContext, user: schema.SelectUser | null) {
+	private constructor(ctx: RequestContext<any, any>, user: schema.SelectUser | null) {
 		this.#ctx = ctx;
 		this.#user = user;
 	}
 
-	static async create(ctx: RequestContext) {
-		let user = await resolveCurrentUser(ctx);
+	static create(ctx: RequestContext<any, any>) {
+		let user = resolveCurrentUser(ctx as WithAuth<RequestContext<any, any>, schema.SelectUser>);
 		return new AuthState(ctx, user);
 	}
 
@@ -53,7 +69,7 @@ export class AuthState {
 	login(user: schema.SelectUser) {
 		let session = this.#ctx.get(Session);
 		session.regenerateId();
-		session.set("userId", user.id);
+		session.set(AUTH_SESSION_USER_ID_KEY, user.id);
 		this.#user = user;
 	}
 
@@ -65,26 +81,19 @@ export class AuthState {
 
 	setIdToken(idToken: string) {
 		let session = this.#ctx.get(Session);
-		session.set("idToken", idToken);
+		session.set(AUTH_SESSION_ID_TOKEN_KEY, idToken);
 	}
 
 	getIdToken() {
 		let session = this.#ctx.get(Session);
-		let idToken = session.get("idToken");
+		let idToken = session.get(AUTH_SESSION_ID_TOKEN_KEY);
 		if (typeof idToken !== "string") return null;
 		return idToken;
 	}
 }
 
-async function resolveCurrentUser(ctx: RequestContext) {
-	let session = ctx.get(Session);
-	let userId = session.get("userId");
-	if (typeof userId !== "string" || !userId) return null;
-
-	let user = await User.findById(db(), userId);
-	if (user) return user;
-
-	session.unset("userId");
-	session.unset("idToken");
-	return null;
+function resolveCurrentUser(ctx: WithAuth<RequestContext<any, any>, schema.SelectUser>) {
+	let auth = ctx.get(Auth);
+	if (!auth.ok) return null;
+	return auth.identity;
 }

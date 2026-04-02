@@ -1,35 +1,20 @@
 import type { Database } from "remix/data-table";
 
+import { inList } from "remix/data-table";
+
 import { PostMeta } from "~/models/post-meta";
 import * as schema from "~/schema";
 
 export namespace Post {
-	/**
-	 * Shared types and DTOs used by the Post model.
-	 */
-	/**
-	 * Post type discriminator stored on each post row.
-	 * @example
-	 * let postType: Post.Type = "article";
-	 */
 	export type Type = schema.SelectPost["type"];
 
-	/**
-	 * Generic metadata object shape used by typed helpers.
-	 * @example
-	 * let meta: Post.MetaObject = { slug: "hello-world", tags: ["intro"] };
-	 */
 	export type MetaObject = object;
 
-	/**
-	 * Input payload used to create a post and optional metadata rows.
-	 * @example
-	 * let input: Post.CreateInput = {
-	 * 	authorId: "author_123",
-	 * 	type: "article",
-	 * 	meta: [{ key: "slug", value: "hello-world" }],
-	 * };
-	 */
+	export interface MetaCodec<meta extends object> {
+		serialize(meta: Partial<meta>): Array<{ key: string; value: string }>;
+		deserialize(rows: Array<schema.SelectPostMeta>): meta;
+	}
+
 	export interface CreateInput {
 		id?: string;
 		author_id: string;
@@ -40,14 +25,6 @@ export namespace Post {
 		updated_at?: string;
 	}
 
-	/**
-	 * Input payload used to update a post and metadata values.
-	 * @example
-	 * let input: Post.UpdateInput = {
-	 * 	publishedAt: new Date().toISOString(),
-	 * 	meta: [{ key: "slug", value: "updated-slug" }],
-	 * };
-	 */
 	export interface UpdateInput {
 		author_id?: string;
 		type?: Type;
@@ -56,15 +33,6 @@ export namespace Post {
 		updated_at?: string;
 	}
 
-	/**
-	 * Type-safe input payload for creating a post of a specific type.
-	 * @example
-	 * interface ArticleMeta { slug: string; summary: string; }
-	 * let input: Post.TypedCreateInput<ArticleMeta> = {
-	 * 	authorId: "author_123",
-	 * 	meta: { slug: "hello-world", summary: "Intro post" },
-	 * };
-	 */
 	export interface TypedCreateInput<meta extends object> {
 		id?: string;
 		author_id: string;
@@ -74,14 +42,6 @@ export namespace Post {
 		updated_at?: string;
 	}
 
-	/**
-	 * Type-safe input payload for updating a typed post.
-	 * @example
-	 * interface ArticleMeta { slug: string; summary: string; }
-	 * let input: Post.TypedUpdateInput<ArticleMeta> = {
-	 * 	meta: { summary: "Updated summary" },
-	 * };
-	 */
 	export interface TypedUpdateInput<meta extends object> {
 		author_id?: string;
 		published_at?: string | null;
@@ -89,15 +49,6 @@ export namespace Post {
 		updated_at?: string;
 	}
 
-	/**
-	 * Typed post result including post row data and parsed metadata object.
-	 * @example
-	 * interface ArticleMeta { slug: string; }
-	 * let result: Post.TypedResult<"article", ArticleMeta> = {
-	 * 	post: { id: "1", authorId: "a1", type: "article", publishedAt: null, createdAt: "", updatedAt: "" },
-	 * 	meta: { slug: "hello-world" },
-	 * };
-	 */
 	export type TypedResult<type extends Type, meta extends object> = Omit<
 		schema.SelectPost,
 		"type"
@@ -106,71 +57,66 @@ export namespace Post {
 		meta: meta;
 	};
 
-	/**
-	 * Full post lookup result with all metadata rows.
-	 * @example
-	 * let found: Post.FoundPost = {
-	 * 	post: { id: "1", authorId: "a1", type: "article", publishedAt: null, createdAt: "", updatedAt: "" },
-	 * 	meta: [{ id: "m1", postId: "1", key: "slug", value: "hello-world", createdAt: "", updatedAt: "" }],
-	 * };
-	 */
 	export interface FoundPost extends schema.SelectPost {
 		meta: Array<schema.SelectPostMeta>;
 	}
 
-	/**
-	 * Post lookup result narrowed to a specific post type.
-	 * @example
-	 * let found: Post.FoundPostForType<"article"> = {
-	 * 	post: { id: "1", authorId: "a1", type: "article", publishedAt: null, createdAt: "", updatedAt: "" },
-	 * };
-	 */
 	export interface FoundPostForType<type extends Type> {
 		post: Omit<schema.SelectPost, "type"> & { type: type };
 	}
 
-	/**
-	 * Typed post lookup result with metadata rows for that post.
-	 * @example
-	 * let found: Post.FoundPostWithMetaForType<"article"> = {
-	 * 	post: { id: "1", authorId: "a1", type: "article", publishedAt: null, createdAt: "", updatedAt: "" },
-	 * 	meta: [{ id: "m1", postId: "1", key: "slug", value: "hello-world", createdAt: "", updatedAt: "" }],
-	 * };
-	 */
 	export interface FoundPostWithMetaForType<type extends Type> extends FoundPostForType<type> {
 		meta: Array<schema.SelectPostMeta>;
 	}
 }
 
-/**
- * Base post model with shared persistence and metadata helpers.
- */
 export class Post {
-	/**
-	 * Backing posts table used for all post operations.
-	 */
 	static table = schema.posts;
 
-	/**
-	 * Returns whether a post should be considered publicly published.
-	 */
+	/** `null` is treated as published; future dates are previews. */
 	static isPublishedAt(published_at: string | null) {
 		return published_at === null || Date.parse(published_at) <= Date.now();
 	}
 
-	/**
-	 * Picks the date used for ordering, preferring `published_at` over `created_at`.
-	 */
 	static timestampFromPublishedOrCreated(input: {
 		published_at: string | null;
 		created_at: string;
 	}) {
-		return Date.parse(input.published_at ?? input.created_at);
+		let value = input.published_at ?? input.created_at;
+		return this.parseTimestamp(value);
 	}
 
-	/**
-	 * Descending comparator using `published_at ?? created_at`.
-	 */
+	private static parseTimestamp(value: unknown) {
+		if (value === null || value === undefined) return Number.NaN;
+
+		if (typeof value === "number") {
+			if (!Number.isFinite(value)) return Number.NaN;
+			if (value > 1_000_000_000_000) return value;
+			return value * 1000;
+		}
+
+		let text = typeof value === "string" ? value : String(value);
+		let parsed = Date.parse(text);
+		if (Number.isFinite(parsed)) return parsed;
+
+		let sqlDateTime = /^(\d{4}-\d{2}-\d{2}) (\d{2}:\d{2}:\d{2}(?:\.\d{1,3})?)$/;
+		let match = text.match(sqlDateTime);
+		if (match) {
+			let isoLike = `${match[1]}T${match[2]}Z`;
+			let fallback = Date.parse(isoLike);
+			if (Number.isFinite(fallback)) return fallback;
+		}
+
+		if (/^\d+$/.test(text)) {
+			let numeric = Number(text);
+			if (!Number.isFinite(numeric)) return Number.NaN;
+			if (numeric > 1_000_000_000_000) return numeric;
+			return numeric * 1000;
+		}
+
+		return Number.NaN;
+	}
+
 	static compareByPublishedOrCreatedDesc(
 		a: { published_at: string | null; created_at: string },
 		b: { published_at: string | null; created_at: string },
@@ -178,52 +124,17 @@ export class Post {
 		return this.timestampFromPublishedOrCreated(b) - this.timestampFromPublishedOrCreated(a);
 	}
 
-	/**
-	 * Fetches all posts and attaches their metadata rows.
-	 * Useful when listing every post regardless of type.
-	 * @param db Database client used to run operations.
-	 * @returns List of posts with their metadata rows.
-	 * @example
-	 * let posts = await Post.findAll(db);
-	 */
 	static async findAll(db: Database): Promise<Array<Post.FoundPost>> {
 		let posts = await db.query(this.table).orderBy("created_at", "desc").all();
 
-		return await Promise.all(
-			posts.map(async (post) => {
-				let meta = await PostMeta.findByPostId(db, post.id);
-				return { ...post, meta };
-			}),
-		);
+		return this.attachMetaToPosts(db, posts);
 	}
 
-	/**
-	 * Finds one post by id and includes its metadata rows.
-	 * Returns null when the post does not exist.
-	 * @param db Database client used to run operations.
-	 * @param id Post id to look up.
-	 * @returns Matching post with metadata, or null when missing.
-	 * @example
-	 * let found = await Post.findById(db, "post_123");
-	 */
 	static async findById(db: Database, id: string): Promise<Post.FoundPost | null> {
-		let post = await db.findOne(this.table, { where: { id } });
-
-		if (!post) return null;
-
-		let meta = await PostMeta.findByPostId(db, post.id);
-		return { ...post, meta };
+		let posts = await this.findManyByIds(db, [id]);
+		return posts[0] ?? null;
 	}
 
-	/**
-	 * Finds a post by its slug metadata value.
-	 * Resolves the post id from metadata, then loads the full post.
-	 * @param db Database client used to run operations.
-	 * @param slug Slug value to match.
-	 * @returns Matching post with metadata, or null when missing.
-	 * @example
-	 * let found = await Post.findBySlug(db, "hello-world");
-	 */
 	static async findBySlug(db: Database, slug: string): Promise<Post.FoundPost | null> {
 		let meta = await PostMeta.findByKeyValue(db, "slug", slug);
 		if (meta.length === 0) return null;
@@ -234,37 +145,14 @@ export class Post {
 		return this.findById(db, post_id);
 	}
 
-	/**
-	 * Fetches all posts written by a specific author.
-	 * Each result includes the post metadata rows.
-	 * @param db Database client used to run operations.
-	 * @param authorId Author id used to filter posts.
-	 * @returns List of author posts with metadata.
-	 * @example
-	 * let posts = await Post.findByAuthorId(db, "author_123");
-	 */
 	static async findByAuthorId(db: Database, authorId: string): Promise<Array<Post.FoundPost>> {
 		let posts = await db.findMany(this.table, {
 			where: { author_id: authorId } as Record<string, unknown>,
 		});
 
-		return await Promise.all(
-			posts.map(async (post) => {
-				let meta = await PostMeta.findByPostId(db, post.id);
-				return { ...post, meta };
-			}),
-		);
+		return this.attachMetaToPosts(db, posts);
 	}
 
-	/**
-	 * Creates a new post and persists provided metadata entries.
-	 * Runs post and metadata writes in a single transaction.
-	 * @param db Database client used to run operations.
-	 * @param input Post creation payload.
-	 * @returns Created post with metadata, or null when not found after creation.
-	 * @example
-	 * let created = await Post.create(db, { authorId: "author_123", type: "article" });
-	 */
 	static async create(db: Database, input: Post.CreateInput) {
 		let now = this.timestamp;
 		let id = input.id ?? crypto.randomUUID();
@@ -297,16 +185,7 @@ export class Post {
 		return this.findById(db, id);
 	}
 
-	/**
-	 * Updates a post and upserts metadata values by key.
-	 * Creates missing metadata keys and updates existing ones.
-	 * @param db Database client used to run operations.
-	 * @param id Post id to update.
-	 * @param input Post update payload.
-	 * @returns Updated post with metadata, or null when the post is missing.
-	 * @example
-	 * let updated = await Post.update(db, "post_123", { meta: [{ key: "slug", value: "new-slug" }] });
-	 */
+	/** Updates post fields and upserts metadata by key. */
 	static async update(db: Database, id: string, input: Post.UpdateInput) {
 		let existing = await db.findOne(this.table, { where: { id } });
 		if (!existing) return null;
@@ -349,32 +228,16 @@ export class Post {
 		return this.findById(db, id);
 	}
 
-	/**
-	 * Deletes a post and all of its metadata rows.
-	 * Performs all deletes inside a transaction.
-	 * @param db Database client used to run operations.
-	 * @param id Post id to remove.
-	 * @returns True when the delete flow completes.
-	 * @example
-	 * let ok = await Post.destroy(db, "post_123");
-	 */
 	static async destroy(db: Database, id: string) {
 		await db.delete(this.table, id);
 		return true;
 	}
 
-	/**
-	 * Lists posts for a specific type with parsed metadata objects.
-	 * Converts metadata rows into an object keyed by metadata key.
-	 * @param db Database client used to run operations.
-	 * @param postType Post type used to filter records.
-	 * @returns Typed posts with metadata objects.
-	 * @example
-	 * let posts = await Post.findAllForType<"article", { slug: string }>(db, "article");
-	 */
+	/** Fetches typed posts and hydrates metadata rows into objects. */
 	static async findAllForType<type extends Post.Type, meta extends object>(
 		db: Database,
 		postType: type,
+		codec: Post.MetaCodec<meta>,
 	) {
 		let posts = await db
 			.query(this.table)
@@ -382,163 +245,135 @@ export class Post {
 			.where({ type: postType })
 			.all();
 
-		return await Promise.all(
-			posts.map(async (post) => {
-				let metaRows = await PostMeta.findByPostId(db, post.id);
-				return this.toTypedResult<type, meta>(postType, {
-					...post,
-					meta: metaRows,
-				});
-			}),
-		);
+		let withMeta = await this.attachMetaToPosts(db, posts);
+
+		return withMeta.map((post) => this.toTypedResult<type, meta>(postType, post, codec));
 	}
 
-	/**
-	 * Counts posts for a specific post type using a count query.
-	 * @param db Database client used to run operations.
-	 * @param postType Post type used to filter records.
-	 * @returns Total number of posts matching the requested type.
-	 */
 	static countForType<type extends Post.Type>(db: Database, postType: type) {
 		return db.count(this.table, { where: { type: postType } });
 	}
 
-	/**
-	 * Finds a typed post by id and parses its metadata object.
-	 * Returns null when the id exists but has a different type.
-	 * @param db Database client used to run operations.
-	 * @param postType Required post type.
-	 * @param id Post id to look up.
-	 * @returns Typed post with metadata object, or null when not found.
-	 * @example
-	 * let post = await Post.findByIdForType<"article", { slug: string }>(db, "article", "post_123");
-	 */
 	static async findByIdForType<type extends Post.Type, meta extends object>(
 		db: Database,
 		postType: type,
 		id: string,
+		codec: Post.MetaCodec<meta>,
 	) {
 		let found = await this.findById(db, id);
 		if (!found) return null;
 		if (found.type !== postType) return null;
 
-		return this.toTypedResult<type, meta>(postType, found);
+		return this.toTypedResult<type, meta>(postType, found, codec);
 	}
 
-	/**
-	 * Finds a typed post by slug and parses its metadata object.
-	 * Returns null when slug is missing or the type does not match.
-	 * @param db Database client used to run operations.
-	 * @param postType Required post type.
-	 * @param slug Slug value to match.
-	 * @returns Typed post with metadata object, or null when not found.
-	 * @example
-	 * let post = await Post.findBySlugForType<"article", { slug: string }>(db, "article", "hello-world");
-	 */
+	/** Handles slug collisions by returning the first matching post of `postType`. */
 	static async findBySlugForType<type extends Post.Type, meta extends object>(
 		db: Database,
 		postType: type,
 		slug: string,
+		codec: Post.MetaCodec<meta>,
 	) {
 		let matches = await PostMeta.findByKeyValue(db, "slug", slug);
+		if (matches.length === 0) return null;
+
+		let postIds = [...new Set(matches.map((match) => match.post_id))];
+		let foundPosts = await this.findManyByIds(db, postIds);
+		let foundById = new Map(foundPosts.map((post) => [post.id, post]));
 
 		for (let match of matches) {
-			let post = await this.findById(db, match.post_id);
+			let post = foundById.get(match.post_id);
 			if (!post) continue;
 			if (post.type !== postType) continue;
 
-			return this.toTypedResult<type, meta>(postType, post);
+			return this.toTypedResult<type, meta>(postType, post, codec);
 		}
 
 		return null;
 	}
 
-	/**
-	 * Lists typed posts for one author with parsed metadata objects.
-	 * Filters by author id and post type in one query.
-	 * @param db Database client used to run operations.
-	 * @param postType Required post type.
-	 * @param authorId Author id used to filter posts.
-	 * @returns Typed author posts with metadata objects.
-	 * @example
-	 * let posts = await Post.findByAuthorIdForType<"article", { slug: string }>(db, "article", "author_123");
-	 */
 	static async findByAuthorIdForType<type extends Post.Type, meta extends object>(
 		db: Database,
 		postType: type,
 		authorId: string,
+		codec: Post.MetaCodec<meta>,
 	) {
 		let posts = await db.findMany(this.table, {
 			where: { author_id: authorId, type: postType } as Record<string, unknown>,
 		});
 
-		return await Promise.all(
-			posts.map(async (post) => {
-				let metaRows = await PostMeta.findByPostId(db, post.id);
-				return this.toTypedResult<type, meta>(postType, {
-					...post,
-					meta: metaRows,
-				});
-			}),
-		);
+		let withMeta = await this.attachMetaToPosts(db, posts);
+
+		return withMeta.map((post) => this.toTypedResult<type, meta>(postType, post, codec));
 	}
 
-	/**
-	 * Creates a post for a specific type using typed metadata input.
-	 * Serializes metadata object fields into metadata rows.
-	 * @param db Database client used to run operations.
-	 * @param postType Type assigned to the new post.
-	 * @param input Typed creation payload.
-	 * @returns Created typed post with parsed metadata, or null when creation fails.
-	 * @example
-	 * let created = await Post.createForType<"article", { slug: string }>(db, "article", {
-	 * 	authorId: "author_123",
-	 * 	meta: { slug: "hello-world" },
-	 * });
-	 */
+	private static async findManyByIds(
+		db: Database,
+		ids: Array<string>,
+	): Promise<Array<Post.FoundPost>> {
+		if (ids.length === 0) return [];
+
+		let posts = await db.query(this.table).where(inList(this.table.id, ids)).all();
+
+		return this.attachMetaToPosts(db, posts);
+	}
+
+	private static async attachMetaToPosts(
+		db: Database,
+		posts: Array<schema.SelectPost>,
+	): Promise<Array<Post.FoundPost>> {
+		if (posts.length === 0) return [];
+
+		let postIds = posts.map((post) => post.id);
+		let metaRows = await PostMeta.findByPostIds(db, postIds);
+		let metaByPostId = new Map<string, Array<schema.SelectPostMeta>>();
+
+		for (let post of posts) {
+			metaByPostId.set(post.id, []);
+		}
+
+		for (let row of metaRows) {
+			let rows = metaByPostId.get(row.post_id);
+			if (!rows) continue;
+
+			rows.push(row);
+		}
+
+		return posts.map((post) => ({ ...post, meta: metaByPostId.get(post.id) ?? [] }));
+	}
+
 	static async createForType<type extends Post.Type, meta extends object>(
 		db: Database,
 		postType: type,
 		input: Post.TypedCreateInput<meta>,
+		codec: Post.MetaCodec<meta>,
 	): Promise<Post.TypedResult<type, meta> | null> {
 		let created = await this.create(db, {
 			id: input.id,
 			author_id: input.author_id,
 			type: postType,
 			published_at: input.published_at,
-			meta: this.metaObjectToRows(input.meta),
+			meta: codec.serialize(input.meta),
 			created_at: input.created_at,
 			updated_at: input.updated_at,
 		});
 
 		if (!created) return null;
 
-		return this.toTypedResult<type, meta>(postType, created);
+		return this.toTypedResult<type, meta>(postType, created, codec);
 	}
 
-	/**
-	 * Updates a typed post and optionally updates typed metadata fields.
-	 * Validates the post type before performing updates.
-	 * @param db Database client used to run operations.
-	 * @param postType Type required for the target post.
-	 * @param id Post id to update.
-	 * @param input Typed update payload.
-	 * @returns Updated typed post with parsed metadata, or null when not found.
-	 * @example
-	 * let updated = await Post.updateForType<"article", { summary: string }>(db, "article", "post_123", {
-	 * 	meta: { summary: "Updated summary" },
-	 * });
-	 */
 	static async updateForType<type extends Post.Type, meta extends object>(
 		db: Database,
 		postType: type,
 		id: string,
 		input: Post.TypedUpdateInput<meta>,
+		codec: Post.MetaCodec<meta>,
 	): Promise<Post.TypedResult<type, meta> | null> {
 		let existing = await db.findOne(this.table, { where: { id, type: postType } });
 		if (!existing) return null;
 
-		let metaRows = input.meta ? this.metaObjectToRows(input.meta) : undefined;
+		let metaRows = input.meta ? codec.serialize(input.meta) : undefined;
 		let updated = await this.update(db, id, {
 			author_id: input.author_id,
 			type: postType,
@@ -549,65 +384,18 @@ export class Post {
 
 		if (!updated) return null;
 
-		return this.toTypedResult<type, meta>(postType, updated);
+		return this.toTypedResult<type, meta>(postType, updated, codec);
 	}
 
 	private static toTypedResult<type extends Post.Type, meta extends object>(
 		postType: type,
 		post: Post.FoundPost,
+		codec: Post.MetaCodec<meta>,
 	): Post.TypedResult<type, meta> {
 		let { meta: metaRows, ...postRow } = post;
-		return { ...postRow, type: postType, meta: this.metaRowsToObject<meta>(metaRows) };
+		return { ...postRow, type: postType, meta: codec.deserialize(metaRows) };
 	}
 
-	/**
-	 * Serializes a metadata object into key/value metadata rows.
-	 */
-	private static metaObjectToRows(meta: object) {
-		let rows: Array<{ key: string; value: string }> = [];
-
-		for (let [key, value] of Object.entries(meta)) {
-			if (typeof value === "undefined") continue;
-
-			if (Array.isArray(value)) {
-				rows.push({ key, value: JSON.stringify(value) });
-				continue;
-			}
-
-			rows.push({ key, value: String(value) });
-		}
-
-		return rows;
-	}
-
-	/**
-	 * Hydrates typed metadata object values from metadata rows.
-	 */
-	private static metaRowsToObject<meta extends object>(rows: Array<schema.SelectPostMeta>): meta {
-		let output: Record<string, unknown> = {};
-
-		for (let row of rows) {
-			let value = row.value;
-
-			if (value.startsWith("[") && value.endsWith("]")) {
-				try {
-					let parsed = JSON.parse(value);
-					if (Array.isArray(parsed)) {
-						output[row.key] = parsed;
-						continue;
-					}
-				} catch {}
-			}
-
-			output[row.key] = value;
-		}
-
-		return output as meta;
-	}
-
-	/**
-	 * Generates the current ISO timestamp used for persistence updates.
-	 */
 	private static get timestamp() {
 		return new Date().toISOString();
 	}

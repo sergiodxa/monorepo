@@ -31,7 +31,10 @@ import tutorialsRSS from "~/controllers/rss/tutorials";
 import sitemap from "~/controllers/sitemap";
 import tutorials from "~/controllers/tutorials";
 import asyncContext from "~/middleware/async-context";
-import authState from "~/middleware/auth-state";
+import authState, {
+	AUTH_SESSION_ID_TOKEN_KEY,
+	AUTH_SESSION_USER_ID_KEY,
+} from "~/middleware/auth-state";
 import db, { db as database } from "~/middleware/db";
 import noTrailingSlash from "~/middleware/no-trailing-slash";
 import noWWW from "~/middleware/no-www";
@@ -56,15 +59,15 @@ export const router = createRouter({
 			schemes: [
 				createSessionAuthScheme({
 					read(session) {
-						let userId = session.get("userId");
+						let userId = session.get(AUTH_SESSION_USER_ID_KEY);
 						return typeof userId === "string" ? userId : null;
 					},
 					verify(userId) {
 						return User.findById(database(), userId);
 					},
 					invalidate(session) {
-						session.unset("userId");
-						session.unset("idToken");
+						session.unset(AUTH_SESSION_USER_ID_KEY);
+						session.unset(AUTH_SESSION_ID_TOKEN_KEY);
 					},
 				}),
 			],

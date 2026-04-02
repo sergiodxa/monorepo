@@ -5,6 +5,9 @@ import { env } from "cloudflare:workers";
 import { createOIDCAuthProvider, startExternalAuth } from "remix/auth";
 import { Session } from "remix/session";
 
+import type { WithDB } from "~/middleware/db";
+import type { WithSession } from "~/middleware/session";
+
 import routes from "~/routes";
 
 interface OAuthTransaction {
@@ -19,7 +22,9 @@ export interface FinishedAuth {
 	returnTo?: string;
 }
 
-function provider(context: RequestContext) {
+type OAuthContext = WithSession<WithDB<RequestContext>>;
+
+function provider(context: RequestContext<any, any>) {
 	return createOIDCAuthProvider<OIDCAuthProfile, "sergiodxa">({
 		name: "sergiodxa",
 		issuer: "auth.sergiodxa.com",
@@ -38,29 +43,30 @@ function provider(context: RequestContext) {
 	});
 }
 
-export function startAuth(context: RequestContext) {
+export function startAuth(context: RequestContext<any, any>) {
 	let returnTo = context.url.searchParams.get("next");
 	return startExternalAuth(provider(context), context, { returnTo });
 }
 
-export async function finishAuth(context: RequestContext): Promise<FinishedAuth> {
-	if (!context.has(Session)) {
+export async function finishAuth(context: RequestContext<any, any>): Promise<FinishedAuth> {
+	let ctx = context as OAuthContext;
+	if (!ctx.has(Session)) {
 		throw new Error("Session not found in auth callback");
 	}
 
-	let session = context.get(Session);
+	let session = ctx.get(Session);
 	let transaction = session.get("__auth") as OAuthTransaction | null;
-	let callbackError = context.url.searchParams.get("error");
+	let callbackError = ctx.url.searchParams.get("error");
 	if (callbackError) {
-		throw new Error(context.url.searchParams.get("error_description") ?? callbackError);
+		throw new Error(ctx.url.searchParams.get("error_description") ?? callbackError);
 	}
 
 	if (!transaction || transaction.provider !== "sergiodxa") {
 		throw new Error("Missing OAuth transaction");
 	}
 
-	let state = context.url.searchParams.get("state");
-	let code = context.url.searchParams.get("code");
+	let state = ctx.url.searchParams.get("state");
+	let code = ctx.url.searchParams.get("code");
 	if (!state || !code) {
 		session.unset("__auth");
 		throw new Error("Missing OAuth state/code");
@@ -71,7 +77,7 @@ export async function finishAuth(context: RequestContext): Promise<FinishedAuth>
 		throw new Error("Invalid OAuth state");
 	}
 
-	let callbackUrl = new URL(routes.auth.callback.href(), context.request.url);
+	let callbackUrl = new URL(routes.auth.callback.href(), ctx.request.url);
 	let payload = new URLSearchParams({
 		grant_type: "authorization_code",
 		code,

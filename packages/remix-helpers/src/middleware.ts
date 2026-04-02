@@ -1,4 +1,4 @@
-import type { Middleware, RequestMethod } from "remix/fetch-router";
+import type { Middleware, MiddlewareContextTransform, RequestMethod } from "remix/fetch-router";
 
 /**
  * Preserves method and params inference for fetch-router middleware functions.
@@ -7,9 +7,10 @@ import type { Middleware, RequestMethod } from "remix/fetch-router";
  * and params typing.
  */
 export default function middleware<
-	method extends RequestMethod,
+	method extends RequestMethod | "ANY",
 	params extends Record<string, any>,
-	T extends Middleware<method, params> = Middleware<method, params>,
+	transform extends MiddlewareContextTransform,
+	T extends Middleware<method, params, transform> = Middleware<method, params, transform>,
 >(middleware: T): T {
 	return middleware;
 }

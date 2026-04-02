@@ -1,7 +1,6 @@
 import { redirect } from "@pkg/http/response";
 import { ok } from "@pkg/http/response/html";
 import controller from "@pkg/remix-helpers/controller";
-import { Auth } from "remix/auth-middleware";
 import { renderToString } from "remix/component/server";
 
 import { BlogLayout } from "~/components/layout/blog";
@@ -16,9 +15,8 @@ import { LogoutView } from "~/views/auth/logout";
 
 export default controller<typeof routes.auth>({
 	middleware: [
-		async (ctx) => {
-			let auth = ctx.get(Auth);
-			if (auth.ok) {
+		async () => {
+			if (authState().isAuthenticated) {
 				return redirect(routes.cms.dashboard.href(), { status: redirect.Status.SeeOther });
 			}
 		},
@@ -134,8 +132,9 @@ export default controller<typeof routes.auth>({
 					displayName: idToken.name,
 				});
 
-				authState().login(user);
-				authState().setIdToken(idTokenRaw);
+				let auth = authState();
+				auth.login(user);
+				auth.setIdToken(idTokenRaw);
 
 				let returnTo =
 					result.returnTo && result.returnTo.startsWith("/")

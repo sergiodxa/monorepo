@@ -1,5 +1,4 @@
-import { redirect } from "@pkg/http/response";
-import { notFound, ok } from "@pkg/http/response/html";
+import { notFound } from "@pkg/http/response/html";
 import controller from "@pkg/remix-helpers/controller";
 import { succeeded } from "@pkg/result";
 import { validate } from "@pkg/validate";
@@ -7,7 +6,7 @@ import { renderToString } from "remix/component/server";
 import { defaulted, object, string } from "remix/data-schema";
 
 import { CMSLayout } from "~/components/layout/cms";
-import { authState } from "~/middleware/auth-state";
+import { createCMSCrudActions } from "~/http/cms/crud";
 import { db } from "~/middleware/db";
 import { LikePost } from "~/models/posts/like";
 import routes from "~/routes";
@@ -21,138 +20,104 @@ let BookmarkSchema = object({
 export default controller<typeof routes.cms.bookmarks>({
 	middleware: [],
 
-	actions: {
-		async index() {
-			let bookmarks = await LikePost.findAll(db());
-			let items = bookmarks.map((bookmark) => ({
-				id: bookmark.id,
-				title: bookmark.meta.title,
-				url: bookmark.meta.url,
-				href: routes.cms.bookmarks.edit.href({ id: bookmark.id }),
-				deleteAction: routes.cms.bookmarks.destroy.href({ id: bookmark.id }),
-			}));
-
-			let body = await renderToString(
-				<CMSLayout title="Bookmarks" activePath={routes.cms.bookmarks.index.href()}>
-					<CMSBookmarksIndexView items={items} />
-				</CMSLayout>,
-			);
-			return ok(body);
+	actions: createCMSCrudActions({
+		model: LikePost,
+		paths: {
+			indexHref: routes.cms.bookmarks.index.href(),
+			loginHref: routes.auth.login.index.href(),
+			editHref(id) {
+				return routes.cms.bookmarks.edit.href({ id });
+			},
 		},
-
-		async create(ctx) {
-			let user = authState().user;
-			if (!user)
-				return redirect(routes.auth.login.index.href(), { status: redirect.Status.SeeOther });
-
-			let result = await validate(ctx.get(FormData), BookmarkSchema);
-			succeeded(result, "Invalid bookmark form data");
-
-			let created = await LikePost.create(db(), {
-				author_id: user.id,
-				meta: {
-					title: result.data.title,
-					url: result.data.url,
-				},
-			});
-			if (!created)
-				return redirect(routes.cms.bookmarks.index.href(), { status: redirect.Status.SeeOther });
-
-			return redirect(routes.cms.bookmarks.edit.href({ id: created.id }), {
-				status: redirect.Status.SeeOther,
-			});
+		index: {
+			mapItems(bookmarks) {
+				return bookmarks.map((bookmark) => ({
+					id: bookmark.id,
+					title: bookmark.meta.title,
+					url: bookmark.meta.url,
+					href: routes.cms.bookmarks.edit.href({ id: bookmark.id }),
+					deleteAction: routes.cms.bookmarks.destroy.href({ id: bookmark.id }),
+				}));
+			},
+			async render(items) {
+				return renderToString(
+					<CMSLayout title="Bookmarks" activePath={routes.cms.bookmarks.index.href()}>
+						<CMSBookmarksIndexView items={items} />
+					</CMSLayout>,
+				);
+			},
 		},
-
-		async destroy(ctx) {
-			let bookmarkId = ctx.params.id;
-			if (!bookmarkId) {
-				return redirect(routes.cms.bookmarks.index.href(), { status: redirect.Status.SeeOther });
-			}
-
-			await LikePost.destroy(db(), bookmarkId);
-			return redirect(routes.cms.bookmarks.index.href(), { status: redirect.Status.SeeOther });
-		},
-
-		async edit(ctx) {
-			let bookmark = await LikePost.findById(db(), ctx.params.id);
-			if (!bookmark) {
-				let view: CMSBookmarksActionView.Props = {
+		action: {
+			buildEditProps(bookmark): CMSBookmarksActionView.Props {
+				return {
+					title: `Edit Bookmark ${bookmark.meta.title}`,
+					description: `Editing bookmark pointing to ${bookmark.meta.url}.`,
+					mode: "edit",
+					action: routes.cms.bookmarks.update.href({ id: bookmark.id }),
+					submitLabel: "Save Bookmark",
+					deleteAction: routes.cms.bookmarks.destroy.href({ id: bookmark.id }),
+					values: {
+						title: bookmark.meta.title ?? "",
+						url: bookmark.meta.url ?? "",
+					},
+				};
+			},
+			buildNotFoundProps(id): CMSBookmarksActionView.Props {
+				return {
 					title: "Bookmark Not Found",
-					description: `Bookmark ${ctx.params.id} was not found.`,
+					description: `Bookmark ${id} was not found.`,
 					mode: "new",
 					action: routes.cms.bookmarks.index.href(),
 					submitLabel: "Create Bookmark",
 					values: { title: "", url: "" },
 				};
-				let body = await renderToString(
+			},
+			async buildNewProps(): Promise<CMSBookmarksActionView.Props> {
+				let total = (await LikePost.findAll(db())).length;
+				return {
+					title: "New Bookmark",
+					description: `New Bookmark form loaded. Current bookmarks count: ${total}.`,
+					mode: "new",
+					action: routes.cms.bookmarks.index.href(),
+					submitLabel: "Create Bookmark",
+					values: { title: "", url: "" },
+				};
+			},
+			async render(view) {
+				return renderToString(
 					<CMSLayout title={view.title} activePath={routes.cms.bookmarks.index.href()}>
 						<CMSBookmarksActionView {...view} />
 					</CMSLayout>,
 				);
-				return notFound(body);
-			}
-
-			let view: CMSBookmarksActionView.Props = {
-				title: `Edit Bookmark ${bookmark.meta.title}`,
-				description: `Editing bookmark pointing to ${bookmark.meta.url}.`,
-				mode: "edit",
-				action: routes.cms.bookmarks.update.href({ id: bookmark.id }),
-				submitLabel: "Save Bookmark",
-				deleteAction: routes.cms.bookmarks.destroy.href({ id: bookmark.id }),
-				values: {
-					title: bookmark.meta.title ?? "",
-					url: bookmark.meta.url ?? "",
-				},
-			};
-			let body = await renderToString(
-				<CMSLayout title={view.title} activePath={routes.cms.bookmarks.index.href()}>
-					<CMSBookmarksActionView {...view} />
-				</CMSLayout>,
-			);
-			return ok(body);
+			},
 		},
-
-		async new() {
-			let total = (await LikePost.findAll(db())).length;
-			let view: CMSBookmarksActionView.Props = {
-				title: "New Bookmark",
-				description: `New Bookmark form loaded. Current bookmarks count: ${total}.`,
-				mode: "new",
-				action: routes.cms.bookmarks.index.href(),
-				submitLabel: "Create Bookmark",
-				values: { title: "", url: "" },
-			};
-			let body = await renderToString(
-				<CMSLayout title={view.title} activePath={routes.cms.bookmarks.index.href()}>
-					<CMSBookmarksActionView {...view} />
-				</CMSLayout>,
-			);
-			return ok(body);
+		form: {
+			async parse(formData) {
+				let result = await validate(formData, BookmarkSchema);
+				succeeded(result, "Invalid bookmark form data");
+				return result.data;
+			},
+			toCreateInput(data, user) {
+				return {
+					author_id: user.id,
+					meta: {
+						title: data.title,
+						url: data.url,
+					},
+				};
+			},
+			toUpdateInput(data, user) {
+				return {
+					author_id: user.id,
+					meta: {
+						title: data.title,
+						url: data.url,
+					},
+				};
+			},
 		},
-
-		async update(ctx) {
-			let user = authState().user;
-			let bookmarkId = ctx.params.id;
-			if (!user || !bookmarkId) {
-				return redirect(routes.cms.bookmarks.index.href(), { status: redirect.Status.SeeOther });
-			}
-
-			let result = await validate(ctx.get(FormData), BookmarkSchema);
-			succeeded(result, "Invalid bookmark form data");
-
-			let updated = await LikePost.update(db(), bookmarkId, {
-				author_id: user.id,
-				meta: {
-					title: result.data.title,
-					url: result.data.url,
-				},
-			});
-
-			if (!updated) return notFound("<h1>404 Not Found</h1>");
-
-			return redirect(routes.cms.bookmarks.edit.href({ id: bookmarkId }), {
-				status: redirect.Status.SeeOther,
-			});
+		onUpdateMissing() {
+			return notFound("<h1>404 Not Found</h1>");
 		},
-	},
+	}),
 });
