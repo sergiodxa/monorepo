@@ -5,8 +5,8 @@ import { env } from "cloudflare:workers";
 import { createOIDCAuthProvider, startExternalAuth } from "remix/auth";
 import { Session } from "remix/session";
 
-import type { WithDB } from "~/middleware/db";
-import type { WithSession } from "~/middleware/session";
+import type { WithDB } from "~/app/http/middleware/db";
+import type { WithSession } from "~/app/http/middleware/session";
 
 import routes from "~/routes";
 
