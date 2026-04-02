@@ -60,97 +60,132 @@ export default {
 
 		return htmlResponse(
 			String(html`
-			<!DOCTYPE html>
-			<html lang="en">
-			<head>
-				<meta charset="UTF-8">
-				<meta name="viewport" content="width=device-width, initial-scale=1.0">
-				<title>${tenant.name} - Auth SaaS</title>
-				<script src="https://cdn.tailwindcss.com"></script>
-			</head>
-			<body class="bg-gray-50 min-h-screen">
-				<nav class="bg-white shadow-sm border-b">
-					<div class="max-w-6xl mx-auto px-4 py-4 flex justify-between items-center">
-						<div class="flex items-center gap-4">
-							<a href="${routes.dashboard.index.href()}" class="text-gray-600 hover:text-gray-900">&larr; Dashboard</a>
-							<h1 class="text-xl font-bold">${tenant.name}</h1>
-						</div>
-						<a href="${routes.dashboard.tenants.edit.href({ id: params.id })}" class="text-blue-600 hover:text-blue-800">Edit</a>
-					</div>
-				</nav>
+				<!DOCTYPE html>
+				<html lang="en">
+					<head>
+						<meta charset="UTF-8" />
+						<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+						<title>${tenant.name} - Auth SaaS</title>
+						<script src="https://cdn.tailwindcss.com"></script>
+					</head>
+					<body class="bg-gray-50 min-h-screen">
+						<nav class="bg-white shadow-sm border-b">
+							<div class="max-w-6xl mx-auto px-4 py-4 flex justify-between items-center">
+								<div class="flex items-center gap-4">
+									<a
+										href="${routes.dashboard.index.href()}"
+										class="text-gray-600 hover:text-gray-900"
+										>&larr; Dashboard</a
+									>
+									<h1 class="text-xl font-bold">${tenant.name}</h1>
+								</div>
+								<a
+									href="${routes.dashboard.tenants.edit.href({ id: params.id })}"
+									class="text-blue-600 hover:text-blue-800"
+									>Edit</a
+								>
+							</div>
+						</nav>
 
-				<main class="max-w-6xl mx-auto px-4 py-8">
-					<div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-						<div class="bg-white rounded-lg border p-4">
-							<p class="text-gray-500 text-sm">Users</p>
-							<p class="text-2xl font-bold">${stats.total_users}</p>
-						</div>
-						<div class="bg-white rounded-lg border p-4">
-							<p class="text-gray-500 text-sm">Clients</p>
-							<p class="text-2xl font-bold">${stats.total_clients}</p>
-						</div>
-						<div class="bg-white rounded-lg border p-4">
-							<p class="text-gray-500 text-sm">Active Sessions</p>
-							<p class="text-2xl font-bold">${stats.active_sessions}</p>
-						</div>
-						<div class="bg-white rounded-lg border p-4">
-							<p class="text-gray-500 text-sm">Monthly Active Users</p>
-							<p class="text-2xl font-bold">${stats.monthly_active_users}</p>
-						</div>
-					</div>
+						<main class="max-w-6xl mx-auto px-4 py-8">
+							<div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+								<div class="bg-white rounded-lg border p-4">
+									<p class="text-gray-500 text-sm">Users</p>
+									<p class="text-2xl font-bold">${stats.total_users}</p>
+								</div>
+								<div class="bg-white rounded-lg border p-4">
+									<p class="text-gray-500 text-sm">Clients</p>
+									<p class="text-2xl font-bold">${stats.total_clients}</p>
+								</div>
+								<div class="bg-white rounded-lg border p-4">
+									<p class="text-gray-500 text-sm">Active Sessions</p>
+									<p class="text-2xl font-bold">${stats.active_sessions}</p>
+								</div>
+								<div class="bg-white rounded-lg border p-4">
+									<p class="text-gray-500 text-sm">Monthly Active Users</p>
+									<p class="text-2xl font-bold">${stats.monthly_active_users}</p>
+								</div>
+							</div>
 
-					<div class="bg-white rounded-lg border p-6 mb-8">
-						<h2 class="text-lg font-semibold mb-4">Tenant Info</h2>
-						<dl class="grid grid-cols-2 gap-4">
-							<div>
-								<dt class="text-gray-500 text-sm">Slug</dt>
-								<dd class="font-mono">${tenant.slug}</dd>
+							<div class="bg-white rounded-lg border p-6 mb-8">
+								<h2 class="text-lg font-semibold mb-4">Tenant Info</h2>
+								<dl class="grid grid-cols-2 gap-4">
+									<div>
+										<dt class="text-gray-500 text-sm">Slug</dt>
+										<dd class="font-mono">${tenant.slug}</dd>
+									</div>
+									<div>
+										<dt class="text-gray-500 text-sm">Region</dt>
+										<dd>${REGION_NAMES[tenant.region] ?? tenant.region}</dd>
+									</div>
+									<div>
+										<dt class="text-gray-500 text-sm">Status</dt>
+										<dd>
+											<span
+												class="px-2 py-1 text-xs rounded ${tenant.status === "active"
+													? "bg-green-100 text-green-800"
+													: "bg-gray-100 text-gray-800"}"
+												>${tenant.status}</span
+											>
+										</dd>
+									</div>
+									<div>
+										<dt class="text-gray-500 text-sm">Hostname</dt>
+										<dd class="font-mono text-sm">
+											${defaultHostname ? defaultHostname.hostname : "Not configured"}
+										</dd>
+									</div>
+								</dl>
 							</div>
-							<div>
-								<dt class="text-gray-500 text-sm">Region</dt>
-								<dd>${REGION_NAMES[tenant.region] ?? tenant.region}</dd>
-							</div>
-							<div>
-								<dt class="text-gray-500 text-sm">Status</dt>
-								<dd><span class="px-2 py-1 text-xs rounded ${tenant.status === "active" ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-800"}">${tenant.status}</span></dd>
-							</div>
-							<div>
-								<dt class="text-gray-500 text-sm">Hostname</dt>
-								<dd class="font-mono text-sm">${defaultHostname ? defaultHostname.hostname : "Not configured"}</dd>
-							</div>
-						</dl>
-					</div>
 
-					<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-						<a href="${routes.dashboard.tenants.clients.index.href({ tenantId: params.id })}" class="bg-white rounded-lg border p-4 hover:border-blue-500">
-							<h3 class="font-semibold">Clients</h3>
-							<p class="text-gray-500 text-sm">Manage OAuth clients</p>
-						</a>
-						<a href="${routes.dashboard.tenants.users.index.href({ tenantId: params.id })}" class="bg-white rounded-lg border p-4 hover:border-blue-500">
-							<h3 class="font-semibold">Users</h3>
-							<p class="text-gray-500 text-sm">Manage users and sessions</p>
-						</a>
-						<a href="${routes.dashboard.tenants.resources.index.href({ tenantId: params.id })}" class="bg-white rounded-lg border p-4 hover:border-blue-500">
-							<h3 class="font-semibold">Resources</h3>
-							<p class="text-gray-500 text-sm">Manage API resources and scopes</p>
-						</a>
-						<a href="${routes.dashboard.tenants.branding.index.href({ tenantId: params.id })}" class="bg-white rounded-lg border p-4 hover:border-blue-500">
-							<h3 class="font-semibold">Branding</h3>
-							<p class="text-gray-500 text-sm">Customize login appearance</p>
-						</a>
-						<a href="${routes.dashboard.tenants.hostname.index.href({ tenantId: params.id })}" class="bg-white rounded-lg border p-4 hover:border-blue-500">
-							<h3 class="font-semibold">Hostname</h3>
-							<p class="text-gray-500 text-sm">Configure custom domain</p>
-						</a>
-						<a href="${routes.dashboard.tenants.billing.index.href({ tenantId: params.id })}" class="bg-white rounded-lg border p-4 hover:border-blue-500">
-							<h3 class="font-semibold">Billing</h3>
-							<p class="text-gray-500 text-sm">Manage subscription</p>
-						</a>
-					</div>
-				</main>
-			</body>
-			</html>
-		`),
+							<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+								<a
+									href="${routes.dashboard.tenants.clients.index.href({ tenantId: params.id })}"
+									class="bg-white rounded-lg border p-4 hover:border-blue-500"
+								>
+									<h3 class="font-semibold">Clients</h3>
+									<p class="text-gray-500 text-sm">Manage OAuth clients</p>
+								</a>
+								<a
+									href="${routes.dashboard.tenants.users.index.href({ tenantId: params.id })}"
+									class="bg-white rounded-lg border p-4 hover:border-blue-500"
+								>
+									<h3 class="font-semibold">Users</h3>
+									<p class="text-gray-500 text-sm">Manage users and sessions</p>
+								</a>
+								<a
+									href="${routes.dashboard.tenants.resources.index.href({ tenantId: params.id })}"
+									class="bg-white rounded-lg border p-4 hover:border-blue-500"
+								>
+									<h3 class="font-semibold">Resources</h3>
+									<p class="text-gray-500 text-sm">Manage API resources and scopes</p>
+								</a>
+								<a
+									href="${routes.dashboard.tenants.branding.index.href({ tenantId: params.id })}"
+									class="bg-white rounded-lg border p-4 hover:border-blue-500"
+								>
+									<h3 class="font-semibold">Branding</h3>
+									<p class="text-gray-500 text-sm">Customize login appearance</p>
+								</a>
+								<a
+									href="${routes.dashboard.tenants.hostname.index.href({ tenantId: params.id })}"
+									class="bg-white rounded-lg border p-4 hover:border-blue-500"
+								>
+									<h3 class="font-semibold">Hostname</h3>
+									<p class="text-gray-500 text-sm">Configure custom domain</p>
+								</a>
+								<a
+									href="${routes.dashboard.tenants.billing.index.href({ tenantId: params.id })}"
+									class="bg-white rounded-lg border p-4 hover:border-blue-500"
+								>
+									<h3 class="font-semibold">Billing</h3>
+									<p class="text-gray-500 text-sm">Manage subscription</p>
+								</a>
+							</div>
+						</main>
+					</body>
+				</html>
+			`),
 		);
 	}),
 
@@ -171,7 +206,9 @@ export default {
 					<body class="bg-gray-50 min-h-screen">
 						<nav class="bg-white shadow-sm border-b">
 							<div class="max-w-6xl mx-auto px-4 py-4">
-								<a href="${routes.dashboard.index.href()}" class="text-gray-600 hover:text-gray-900">&larr; Back to Dashboard</a>
+								<a href="${routes.dashboard.index.href()}" class="text-gray-600 hover:text-gray-900"
+									>&larr; Back to Dashboard</a
+								>
 							</div>
 						</nav>
 
@@ -184,7 +221,9 @@ export default {
 								class="bg-white rounded-lg border p-6 space-y-4"
 							>
 								<div>
-									<label class="block text-sm font-medium text-gray-700 mb-1" for="name">Tenant Name</label>
+									<label class="block text-sm font-medium text-gray-700 mb-1" for="name"
+										>Tenant Name</label
+									>
 									<input
 										type="text"
 										id="name"
@@ -196,8 +235,15 @@ export default {
 								</div>
 
 								<div>
-									<label class="block text-sm font-medium text-gray-700 mb-1" for="region">Region</label>
-									<select id="region" name="region" required class="w-full border rounded-lg px-3 py-2">
+									<label class="block text-sm font-medium text-gray-700 mb-1" for="region"
+										>Region</label
+									>
+									<select
+										id="region"
+										name="region"
+										required
+										class="w-full border rounded-lg px-3 py-2"
+									>
 										<option value="wnam">Western North America</option>
 										<option value="enam">Eastern North America</option>
 										<option value="sam">South America</option>
@@ -236,13 +282,15 @@ export default {
 				log.info("Tenant creation validation failed", { issues: result.error.issues.length });
 				return htmlResponse(
 					String(html`
-					<!DOCTYPE html>
-					<html>
-						<body>
-							<p>Validation error. <a href="${routes.dashboard.tenants.new.href()}">Try again</a></p>
-						</body>
-					</html>
-				`),
+						<!DOCTYPE html>
+						<html>
+							<body>
+								<p>
+									Validation error. <a href="${routes.dashboard.tenants.new.href()}">Try again</a>
+								</p>
+							</body>
+						</html>
+					`),
 					{ status: 400 },
 				);
 			}
@@ -323,45 +371,68 @@ export default {
 
 			return htmlResponse(
 				String(html`
-			<!DOCTYPE html>
-			<html lang="en">
-			<head>
-				<meta charset="UTF-8">
-				<meta name="viewport" content="width=device-width, initial-scale=1.0">
-				<title>Edit ${tenant.name} - Auth SaaS</title>
-				<script src="https://cdn.tailwindcss.com"></script>
-			</head>
-			<body class="bg-gray-50 min-h-screen">
-				<nav class="bg-white shadow-sm border-b">
-					<div class="max-w-6xl mx-auto px-4 py-4">
-						<a href="${routes.dashboard.tenants.show.href({ id: params.id })}" class="text-gray-600 hover:text-gray-900">&larr; Back to Tenant</a>
-					</div>
-				</nav>
+					<!DOCTYPE html>
+					<html lang="en">
+						<head>
+							<meta charset="UTF-8" />
+							<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+							<title>Edit ${tenant.name} - Auth SaaS</title>
+							<script src="https://cdn.tailwindcss.com"></script>
+						</head>
+						<body class="bg-gray-50 min-h-screen">
+							<nav class="bg-white shadow-sm border-b">
+								<div class="max-w-6xl mx-auto px-4 py-4">
+									<a
+										href="${routes.dashboard.tenants.show.href({ id: params.id })}"
+										class="text-gray-600 hover:text-gray-900"
+										>&larr; Back to Tenant</a
+									>
+								</div>
+							</nav>
 
-				<main class="max-w-lg mx-auto px-4 py-8">
-					<h1 class="text-2xl font-bold mb-6">Edit Tenant</h1>
+							<main class="max-w-lg mx-auto px-4 py-8">
+								<h1 class="text-2xl font-bold mb-6">Edit Tenant</h1>
 
-					<form method="POST" action="${routes.dashboard.tenants.update.href({ id: params.id })}" class="bg-white rounded-lg border p-6 space-y-4">
-						<input type="hidden" name="_method" value="PUT">
+								<form
+									method="POST"
+									action="${routes.dashboard.tenants.update.href({ id: params.id })}"
+									class="bg-white rounded-lg border p-6 space-y-4"
+								>
+									<input type="hidden" name="_method" value="PUT" />
 
-						<div>
-							<label class="block text-sm font-medium text-gray-700 mb-1" for="name">Tenant Name</label>
-							<input type="text" id="name" name="name" value="${tenant.name}" required class="w-full border rounded-lg px-3 py-2">
-						</div>
+									<div>
+										<label class="block text-sm font-medium text-gray-700 mb-1" for="name"
+											>Tenant Name</label
+										>
+										<input
+											type="text"
+											id="name"
+											name="name"
+											value="${tenant.name}"
+											required
+											class="w-full border rounded-lg px-3 py-2"
+										/>
+									</div>
 
-						<div class="text-gray-500 text-sm">
-							<p><strong>Slug:</strong> ${tenant.slug} (cannot be changed)</p>
-							<p><strong>Region:</strong> ${REGION_NAMES[tenant.region] ?? tenant.region} (cannot be changed)</p>
-						</div>
+									<div class="text-gray-500 text-sm">
+										<p><strong>Slug:</strong> ${tenant.slug} (cannot be changed)</p>
+										<p>
+											<strong>Region:</strong> ${REGION_NAMES[tenant.region] ?? tenant.region}
+											(cannot be changed)
+										</p>
+									</div>
 
-						<button type="submit" class="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700">
-							Save Changes
-						</button>
-					</form>
-				</main>
-			</body>
-			</html>
-		`),
+									<button
+										type="submit"
+										class="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700"
+									>
+										Save Changes
+									</button>
+								</form>
+							</main>
+						</body>
+					</html>
+				`),
 			);
 		},
 	),

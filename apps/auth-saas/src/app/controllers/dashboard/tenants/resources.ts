@@ -32,24 +32,36 @@ export default {
 			let resourcesHtml =
 				resources.length === 0
 					? html`
-							<p class="text-gray-500">No resources yet. Create your first API resource to get started.</p>
+							<p class="text-gray-500">
+								No resources yet. Create your first API resource to get started.
+							</p>
 						`
-					: html`<ul class="space-y-4">${resources.map(
-							(r) => html`
-					<li class="border rounded-lg p-4 hover:bg-gray-50">
-						<a href="${routes.dashboard.tenants.resources.show.href({ tenantId: tenant.id, id: r.id })}" class="block">
-							<div class="flex justify-between items-start">
-								<div>
-									<h3 class="font-semibold">${r.name}</h3>
-									<code class="text-sm text-gray-500">${r.identifier}</code>
-									<p class="text-gray-500 text-sm mt-1">${r.description ?? "No description"}</p>
-								</div>
-								<span class="text-sm text-gray-500">${r.scopes.length} scopes</span>
-							</div>
-						</a>
-					</li>
-				`,
-						)}</ul>`;
+					: html`<ul class="space-y-4">
+							${resources.map(
+								(r) => html`
+									<li class="border rounded-lg p-4 hover:bg-gray-50">
+										<a
+											href="${routes.dashboard.tenants.resources.show.href({
+												tenantId: tenant.id,
+												id: r.id,
+											})}"
+											class="block"
+										>
+											<div class="flex justify-between items-start">
+												<div>
+													<h3 class="font-semibold">${r.name}</h3>
+													<code class="text-sm text-gray-500">${r.identifier}</code>
+													<p class="text-gray-500 text-sm mt-1">
+														${r.description ?? "No description"}
+													</p>
+												</div>
+												<span class="text-sm text-gray-500">${r.scopes.length} scopes</span>
+											</div>
+										</a>
+									</li>
+								`,
+							)}
+						</ul>`;
 
 			return htmlResponse(
 				String(
@@ -57,14 +69,17 @@ export default {
 						title: `Resources - ${tenant.name}`,
 						tenant,
 						content: html`
-						<div class="flex justify-between items-center mb-6">
-							<h2 class="text-2xl font-bold">API Resources</h2>
-							<a href="${routes.dashboard.tenants.resources.new.href({ tenantId: tenant.id })}" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">
-								New Resource
-							</a>
-						</div>
-						${resourcesHtml}
-					`,
+							<div class="flex justify-between items-center mb-6">
+								<h2 class="text-2xl font-bold">API Resources</h2>
+								<a
+									href="${routes.dashboard.tenants.resources.new.href({ tenantId: tenant.id })}"
+									class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
+								>
+									New Resource
+								</a>
+							</div>
+							${resourcesHtml}
+						`,
 					}),
 				),
 			);
@@ -84,23 +99,43 @@ export default {
 
 			let scopesList =
 				resource.scopes.length === 0
-					? html`
-							<p class="text-gray-500 text-sm">No scopes defined</p>
-						`
-					: html`<ul class="space-y-2">${resource.scopes.map(
-							(s, i) => html`
-											<li class="flex justify-between items-center border-b pb-2 last:border-0 last:pb-0">
-												<div>
-													<code class="font-medium">${s.name}</code>
-													<p class="text-gray-500 text-sm">${s.description ?? "No description"}</p>
-												</div>
-												<form method="POST" action="${routes.dashboard.tenants.resources.scopes.destroy.href({ tenantId: tenant.id, resourceId: params.id, id: i })}" class="inline">
-													<input type="hidden" name="_method" value="${routes.dashboard.tenants.resources.scopes.destroy.method}">
-													<button type="submit" class="text-red-600 hover:text-red-800 text-sm" onclick="return confirm('Remove this scope?')">Remove</button>
-												</form>
-											</li>
-										`,
-						)}</ul>`;
+					? html` <p class="text-gray-500 text-sm">No scopes defined</p> `
+					: html`<ul class="space-y-2">
+							${resource.scopes.map(
+								(s, i) => html`
+									<li
+										class="flex justify-between items-center border-b pb-2 last:border-0 last:pb-0"
+									>
+										<div>
+											<code class="font-medium">${s.name}</code>
+											<p class="text-gray-500 text-sm">${s.description ?? "No description"}</p>
+										</div>
+										<form
+											method="POST"
+											action="${routes.dashboard.tenants.resources.scopes.destroy.href({
+												tenantId: tenant.id,
+												resourceId: params.id,
+												id: i,
+											})}"
+											class="inline"
+										>
+											<input
+												type="hidden"
+												name="_method"
+												value="${routes.dashboard.tenants.resources.scopes.destroy.method}"
+											/>
+											<button
+												type="submit"
+												class="text-red-600 hover:text-red-800 text-sm"
+												onclick="return confirm('Remove this scope?')"
+											>
+												Remove
+											</button>
+										</form>
+									</li>
+								`,
+							)}
+						</ul>`;
 
 			return htmlResponse(
 				String(
@@ -110,29 +145,60 @@ export default {
 						backLink: routes.dashboard.tenants.resources.index.href({ tenantId: tenant.id }),
 						backText: "Resources",
 						content: html`
-						<div class="flex justify-between items-start mb-6">
-							<div>
-								<h2 class="text-2xl font-bold">${resource.name}</h2>
-								<code class="text-gray-500">${resource.identifier}</code>
-								<p class="text-gray-500 mt-1">${resource.description ?? "No description"}</p>
+							<div class="flex justify-between items-start mb-6">
+								<div>
+									<h2 class="text-2xl font-bold">${resource.name}</h2>
+									<code class="text-gray-500">${resource.identifier}</code>
+									<p class="text-gray-500 mt-1">${resource.description ?? "No description"}</p>
+								</div>
+								<div class="flex gap-2">
+									<a
+										href="${routes.dashboard.tenants.resources.edit.href({
+											tenantId: tenant.id,
+											id: params.id,
+										})}"
+										class="text-blue-600 hover:text-blue-800"
+										>Edit</a
+									>
+									<form
+										method="POST"
+										action="${routes.dashboard.tenants.resources.destroy.href({
+											tenantId: tenant.id,
+											id: params.id,
+										})}"
+										class="inline"
+									>
+										<input
+											type="hidden"
+											name="_method"
+											value="${routes.dashboard.tenants.resources.destroy.method}"
+										/>
+										<button
+											type="submit"
+											class="text-red-600 hover:text-red-800"
+											onclick="return confirm('Delete this resource?')"
+										>
+											Delete
+										</button>
+									</form>
+								</div>
 							</div>
-							<div class="flex gap-2">
-								<a href="${routes.dashboard.tenants.resources.edit.href({ tenantId: tenant.id, id: params.id })}" class="text-blue-600 hover:text-blue-800">Edit</a>
-								<form method="POST" action="${routes.dashboard.tenants.resources.destroy.href({ tenantId: tenant.id, id: params.id })}" class="inline">
-									<input type="hidden" name="_method" value="${routes.dashboard.tenants.resources.destroy.method}">
-									<button type="submit" class="text-red-600 hover:text-red-800" onclick="return confirm('Delete this resource?')">Delete</button>
-								</form>
-							</div>
-						</div>
 
-						<section class="bg-white rounded-lg border p-4">
-							<div class="flex justify-between items-center mb-4">
-								<h3 class="font-semibold">Scopes</h3>
-								<a href="${routes.dashboard.tenants.resources.scopes.new.href({ tenantId: tenant.id, resourceId: params.id })}" class="text-blue-600 hover:text-blue-800 text-sm">Add Scope</a>
-							</div>
-							${scopesList}
-						</section>
-					`,
+							<section class="bg-white rounded-lg border p-4">
+								<div class="flex justify-between items-center mb-4">
+									<h3 class="font-semibold">Scopes</h3>
+									<a
+										href="${routes.dashboard.tenants.resources.scopes.new.href({
+											tenantId: tenant.id,
+											resourceId: params.id,
+										})}"
+										class="text-blue-600 hover:text-blue-800 text-sm"
+										>Add Scope</a
+									>
+								</div>
+								${scopesList}
+							</section>
+						`,
 					}),
 				),
 			);
@@ -151,30 +217,61 @@ export default {
 					backLink: routes.dashboard.tenants.resources.index.href({ tenantId: tenant.id }),
 					backText: "Resources",
 					content: html`
-					<h2 class="text-2xl font-bold mb-6">New API Resource</h2>
+						<h2 class="text-2xl font-bold mb-6">New API Resource</h2>
 
-					<form method="POST" action="${routes.dashboard.tenants.resources.create.href({ tenantId: tenant.id })}" class="bg-white rounded-lg border p-6 space-y-4 max-w-lg">
-						<div>
-							<label class="block text-sm font-medium text-gray-700 mb-1" for="identifier">Identifier (Audience)</label>
-							<input type="text" id="identifier" name="identifier" required class="w-full border rounded-lg px-3 py-2" placeholder="https://api.example.com">
-							<p class="text-gray-500 text-xs mt-1">Usually a URL that identifies your API</p>
-						</div>
+						<form
+							method="POST"
+							action="${routes.dashboard.tenants.resources.create.href({ tenantId: tenant.id })}"
+							class="bg-white rounded-lg border p-6 space-y-4 max-w-lg"
+						>
+							<div>
+								<label class="block text-sm font-medium text-gray-700 mb-1" for="identifier"
+									>Identifier (Audience)</label
+								>
+								<input
+									type="text"
+									id="identifier"
+									name="identifier"
+									required
+									class="w-full border rounded-lg px-3 py-2"
+									placeholder="https://api.example.com"
+								/>
+								<p class="text-gray-500 text-xs mt-1">Usually a URL that identifies your API</p>
+							</div>
 
-						<div>
-							<label class="block text-sm font-medium text-gray-700 mb-1" for="name">Name</label>
-							<input type="text" id="name" name="name" required class="w-full border rounded-lg px-3 py-2" placeholder="My API">
-						</div>
+							<div>
+								<label class="block text-sm font-medium text-gray-700 mb-1" for="name">Name</label>
+								<input
+									type="text"
+									id="name"
+									name="name"
+									required
+									class="w-full border rounded-lg px-3 py-2"
+									placeholder="My API"
+								/>
+							</div>
 
-						<div>
-							<label class="block text-sm font-medium text-gray-700 mb-1" for="description">Description</label>
-							<textarea id="description" name="description" rows="2" class="w-full border rounded-lg px-3 py-2" placeholder="Optional description"></textarea>
-						</div>
+							<div>
+								<label class="block text-sm font-medium text-gray-700 mb-1" for="description"
+									>Description</label
+								>
+								<textarea
+									id="description"
+									name="description"
+									rows="2"
+									class="w-full border rounded-lg px-3 py-2"
+									placeholder="Optional description"
+								></textarea>
+							</div>
 
-						<button type="submit" class="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700">
-							Create Resource
-						</button>
-					</form>
-				`,
+							<button
+								type="submit"
+								class="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700"
+							>
+								Create Resource
+							</button>
+						</form>
+					`,
 				}),
 			),
 		);
@@ -232,30 +329,71 @@ export default {
 						}),
 						backText: resource.name,
 						content: html`
-						<h2 class="text-2xl font-bold mb-6">Edit Resource</h2>
+							<h2 class="text-2xl font-bold mb-6">Edit Resource</h2>
 
-						<form method="POST" action="${routes.dashboard.tenants.resources.update.href({ tenantId: tenant.id, id: params.id })}" class="bg-white rounded-lg border p-6 space-y-4 max-w-lg">
-							<input type="hidden" name="_method" value="${routes.dashboard.tenants.resources.update.method}">
-							<div>
-								<label class="block text-sm font-medium text-gray-700 mb-1" for="identifier">Identifier (Audience)</label>
-								<input type="text" id="identifier" name="identifier" value="${resource.identifier}" required class="w-full border rounded-lg px-3 py-2">
-							</div>
+							<form
+								method="POST"
+								action="${routes.dashboard.tenants.resources.update.href({
+									tenantId: tenant.id,
+									id: params.id,
+								})}"
+								class="bg-white rounded-lg border p-6 space-y-4 max-w-lg"
+							>
+								<input
+									type="hidden"
+									name="_method"
+									value="${routes.dashboard.tenants.resources.update.method}"
+								/>
+								<div>
+									<label class="block text-sm font-medium text-gray-700 mb-1" for="identifier"
+										>Identifier (Audience)</label
+									>
+									<input
+										type="text"
+										id="identifier"
+										name="identifier"
+										value="${resource.identifier}"
+										required
+										class="w-full border rounded-lg px-3 py-2"
+									/>
+								</div>
 
-							<div>
-								<label class="block text-sm font-medium text-gray-700 mb-1" for="name">Name</label>
-								<input type="text" id="name" name="name" value="${resource.name}" required class="w-full border rounded-lg px-3 py-2">
-							</div>
+								<div>
+									<label class="block text-sm font-medium text-gray-700 mb-1" for="name"
+										>Name</label
+									>
+									<input
+										type="text"
+										id="name"
+										name="name"
+										value="${resource.name}"
+										required
+										class="w-full border rounded-lg px-3 py-2"
+									/>
+								</div>
 
-							<div>
-								<label class="block text-sm font-medium text-gray-700 mb-1" for="description">Description</label>
-								<textarea id="description" name="description" rows="2" class="w-full border rounded-lg px-3 py-2">${resource.description ?? ""}</textarea>
-							</div>
+								<div>
+									<label class="block text-sm font-medium text-gray-700 mb-1" for="description"
+										>Description</label
+									>
+									<textarea
+										id="description"
+										name="description"
+										rows="2"
+										class="w-full border rounded-lg px-3 py-2"
+									>
+${resource.description ?? ""}</textarea
+									>
+								</div>
 
-							<button type="submit" class="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700">
-								Save Changes
-							</button>
-						</form>
-					`,
+								<button
+									type="submit"
+									class="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700"
+								>
+									Save Changes
+								</button>
+							</form>
+						`,
 					}),
 				),
 			);

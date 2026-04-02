@@ -258,3 +258,16 @@ Implementing MAU tracking using Cloudflare Analytics Engine and reporting to Pol
 _Relevant Files_:
 
 - `apps/auth-saas/src/jobs/report-mau.ts`
+
+### Refactoring Remix Apps to a Laravel-Inspired Folder Structure
+
+A practical migration guide for moving a Remix + Cloudflare Worker app from `src/*`-centric layout into `app/`, `bootstrap/`, `routes/`, `resources/`, and `database/` while keeping type-safe route helpers and middleware wiring intact.
+
+**Mentions:** incremental folder migration, route module splitting, Worker bootstrap separation, path alias compatibility, migration directory alignment.
+
+_Relevant Files_:
+
+- `apps/r3-blog/bootstrap/worker.ts`
+- `apps/r3-blog/bootstrap/app.tsx`
+- `apps/r3-blog/routes/web.ts`
+- `apps/r3-blog/tsconfig.json`

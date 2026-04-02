@@ -56,13 +56,11 @@ export default form<"/dashboard/tenants/:tenantId/billing">({
 
 			let blockedBanner = blockedReason
 				? html`
-							<div class="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
-								<p class="text-red-800 font-medium">Access Restricted</p>
-								<p class="text-red-700 text-sm mt-1">
-									${getBlockedMessage(blockedReason)}
-								</p>
-							</div>
-						`
+						<div class="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+							<p class="text-red-800 font-medium">Access Restricted</p>
+							<p class="text-red-700 text-sm mt-1">${getBlockedMessage(blockedReason)}</p>
+						</div>
+					`
 				: null;
 
 			let successBanner = showSuccess
@@ -78,74 +76,105 @@ export default form<"/dashboard/tenants/:tenantId/billing">({
 
 			let subscriptionSection = subscription
 				? html`
-								<div class="flex items-center gap-3 mb-4">
-									<span class="text-2xl font-bold">Auth SaaS</span>
-									<span class="px-2 py-1 text-sm rounded ${Subscription.getStatusColor(subscription.status)}">
-										${Subscription.getStatusLabel(subscription.status)}
-									</span>
-								</div>
-								${
-									periodStart && periodEnd
-										? html`<p class="text-gray-500 text-sm">Current period: ${periodStart} - ${periodEnd}</p>`
-										: null
-								}
-							`
-				: html`
-						<p class="text-gray-500">No subscription found. Please contact support.</p>
-					`;
+						<div class="flex items-center gap-3 mb-4">
+							<span class="text-2xl font-bold">Auth SaaS</span>
+							<span
+								class="px-2 py-1 text-sm rounded ${Subscription.getStatusColor(
+									subscription.status,
+								)}"
+							>
+								${Subscription.getStatusLabel(subscription.status)}
+							</span>
+						</div>
+						${periodStart && periodEnd
+							? html`<p class="text-gray-500 text-sm">
+									Current period: ${periodStart} - ${periodEnd}
+								</p>`
+							: null}
+					`
+				: html` <p class="text-gray-500">No subscription found. Please contact support.</p> `;
 
 			let usageSection =
 				mau > 0
 					? html`
-								<div class="mt-4 pt-4 border-t">
-									<p class="text-sm text-gray-600">
-										<span class="font-medium">Included:</span> ${Math.min(mau, includedMau).toLocaleString()} MAU
-									</p>
-									${
-										additionalMau > 0
-											? html`
-										<p class="text-sm text-gray-600">
-											<span class="font-medium">Additional:</span> ${additionalMau.toLocaleString()} MAU @ $0.01/each = $${(additionalMau * 0.01).toFixed(2)}
-										</p>
-									`
-											: null
-									}
-									<p class="text-sm font-medium text-gray-900 mt-2">
-										Estimated cost: $${estimatedCost.toFixed(2)}
-									</p>
-								</div>
-							`
+							<div class="mt-4 pt-4 border-t">
+								<p class="text-sm text-gray-600">
+									<span class="font-medium">Included:</span> ${Math.min(
+										mau,
+										includedMau,
+									).toLocaleString()}
+									MAU
+								</p>
+								${additionalMau > 0
+									? html`
+											<p class="text-sm text-gray-600">
+												<span class="font-medium">Additional:</span>
+												${additionalMau.toLocaleString()} MAU @ $0.01/each =
+												$${(additionalMau * 0.01).toFixed(2)}
+											</p>
+										`
+									: null}
+								<p class="text-sm font-medium text-gray-900 mt-2">
+									Estimated cost: $${estimatedCost.toFixed(2)}
+								</p>
+							</div>
+						`
 					: html`
-							<p class="text-gray-400 text-xs mt-2">Usage tracking will begin when users start authenticating.</p>
+							<p class="text-gray-400 text-xs mt-2">
+								Usage tracking will begin when users start authenticating.
+							</p>
 						`;
 
 			let manageSection = subscription?.polar_customer_id
 				? html`
-							<section class="bg-white rounded-lg border p-6">
-								<h3 class="font-semibold mb-4">Manage Subscription</h3>
-								<p class="text-gray-500 mb-4">
-									Access your billing portal to update payment methods, view invoices, or manage your subscription.
-								</p>
-								<form method="POST" action="${String(new Location({ pathname: routes.dashboard.tenants.billing.action.href({ tenantId: tenant.id }), search: new URLSearchParams({ action: "portal" }) }))}">
-									<button type="submit" class="bg-gray-900 text-white px-4 py-2 rounded-lg hover:bg-gray-800">
-										Open Billing Portal
-									</button>
-								</form>
-							</section>
-						`
+						<section class="bg-white rounded-lg border p-6">
+							<h3 class="font-semibold mb-4">Manage Subscription</h3>
+							<p class="text-gray-500 mb-4">
+								Access your billing portal to update payment methods, view invoices, or manage your
+								subscription.
+							</p>
+							<form
+								method="POST"
+								action="${String(
+									new Location({
+										pathname: routes.dashboard.tenants.billing.action.href({ tenantId: tenant.id }),
+										search: new URLSearchParams({ action: "portal" }),
+									}),
+								)}"
+							>
+								<button
+									type="submit"
+									class="bg-gray-900 text-white px-4 py-2 rounded-lg hover:bg-gray-800"
+								>
+									Open Billing Portal
+								</button>
+							</form>
+						</section>
+					`
 				: html`
-							<section class="bg-blue-50 rounded-lg border border-blue-200 p-6">
-								<h3 class="font-semibold text-blue-900 mb-2">Start Your Subscription</h3>
-								<p class="text-blue-800 mb-4">
-									Subscribe to Auth SaaS to unlock all features and continue using the service.
-								</p>
-								<form method="POST" action="${String(new Location({ pathname: routes.dashboard.tenants.billing.action.href({ tenantId: tenant.id }), search: new URLSearchParams({ action: "checkout" }) }))}">
-									<button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">
-										Subscribe Now
-									</button>
-								</form>
-							</section>
-						`;
+						<section class="bg-blue-50 rounded-lg border border-blue-200 p-6">
+							<h3 class="font-semibold text-blue-900 mb-2">Start Your Subscription</h3>
+							<p class="text-blue-800 mb-4">
+								Subscribe to Auth SaaS to unlock all features and continue using the service.
+							</p>
+							<form
+								method="POST"
+								action="${String(
+									new Location({
+										pathname: routes.dashboard.tenants.billing.action.href({ tenantId: tenant.id }),
+										search: new URLSearchParams({ action: "checkout" }),
+									}),
+								)}"
+							>
+								<button
+									type="submit"
+									class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
+								>
+									Subscribe Now
+								</button>
+							</form>
+						</section>
+					`;
 
 			return htmlResponse(
 				String(
@@ -153,46 +182,45 @@ export default form<"/dashboard/tenants/:tenantId/billing">({
 						title: `Billing - ${tenant.name}`,
 						tenant,
 						content: html`
-						<h2 class="text-2xl font-bold mb-6">Billing</h2>
-						<p class="text-gray-500 mb-6">Manage your subscription and billing settings.</p>
+							<h2 class="text-2xl font-bold mb-6">Billing</h2>
+							<p class="text-gray-500 mb-6">Manage your subscription and billing settings.</p>
 
-						${blockedBanner}
-						${successBanner}
+							${blockedBanner} ${successBanner}
 
-						<section class="bg-white rounded-lg border p-6 mb-6">
-							<h3 class="font-semibold mb-4">Current Plan</h3>
-							${subscriptionSection}
-						</section>
+							<section class="bg-white rounded-lg border p-6 mb-6">
+								<h3 class="font-semibold mb-4">Current Plan</h3>
+								${subscriptionSection}
+							</section>
 
-						<section class="bg-white rounded-lg border p-6 mb-6">
-							<h3 class="font-semibold mb-4">Pricing</h3>
-							<div class="grid gap-4">
-								<div class="border rounded-lg p-4">
-									<div class="flex justify-between items-center mb-2">
-										<span class="font-medium">Base Plan</span>
-										<span class="text-lg font-bold">$5/month</span>
+							<section class="bg-white rounded-lg border p-6 mb-6">
+								<h3 class="font-semibold mb-4">Pricing</h3>
+								<div class="grid gap-4">
+									<div class="border rounded-lg p-4">
+										<div class="flex justify-between items-center mb-2">
+											<span class="font-medium">Base Plan</span>
+											<span class="text-lg font-bold">$5/month</span>
+										</div>
+										<p class="text-gray-500 text-sm">Includes 1,000 MAU</p>
 									</div>
-									<p class="text-gray-500 text-sm">Includes 1,000 MAU</p>
-								</div>
-								<div class="border rounded-lg p-4">
-									<div class="flex justify-between items-center mb-2">
-										<span class="font-medium">Additional MAU</span>
-										<span class="text-lg font-bold">$0.01/MAU</span>
+									<div class="border rounded-lg p-4">
+										<div class="flex justify-between items-center mb-2">
+											<span class="font-medium">Additional MAU</span>
+											<span class="text-lg font-bold">$0.01/MAU</span>
+										</div>
+										<p class="text-gray-500 text-sm">Charged based on usage above 1,000 MAU</p>
 									</div>
-									<p class="text-gray-500 text-sm">Charged based on usage above 1,000 MAU</p>
 								</div>
-							</div>
-						</section>
+							</section>
 
-						<section class="bg-white rounded-lg border p-6 mb-6">
-							<h3 class="font-semibold mb-4">Usage This Month</h3>
-							<div class="text-3xl font-bold mb-2">${mau.toLocaleString()}</div>
-							<p class="text-gray-500 text-sm">Monthly Active Users</p>
-							${usageSection}
-						</section>
+							<section class="bg-white rounded-lg border p-6 mb-6">
+								<h3 class="font-semibold mb-4">Usage This Month</h3>
+								<div class="text-3xl font-bold mb-2">${mau.toLocaleString()}</div>
+								<p class="text-gray-500 text-sm">Monthly Active Users</p>
+								${usageSection}
+							</section>
 
-						${manageSection}
-					`,
+							${manageSection}
+						`,
 					}),
 				),
 			);

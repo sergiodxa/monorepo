@@ -38,26 +38,55 @@ export default {
 						}),
 						backText: resource.name,
 						content: html`
-						<h2 class="text-2xl font-bold mb-6">Add Scope</h2>
+							<h2 class="text-2xl font-bold mb-6">Add Scope</h2>
 
-						<form method="POST" action="${routes.dashboard.tenants.resources.scopes.create.href({ tenantId: tenant.id, resourceId: params.resourceId })}" class="bg-white rounded-lg border p-6 space-y-4 max-w-lg">
-							<div>
-								<label class="block text-sm font-medium text-gray-700 mb-1" for="name">Scope Name</label>
-								<input type="text" id="name" name="name" required class="w-full border rounded-lg px-3 py-2" placeholder="read:users">
-								<p class="text-gray-500 text-xs mt-1">Use lowercase with colons for namespacing (e.g., read:users, write:posts)</p>
-							</div>
+							<form
+								method="POST"
+								action="${routes.dashboard.tenants.resources.scopes.create.href({
+									tenantId: tenant.id,
+									resourceId: params.resourceId,
+								})}"
+								class="bg-white rounded-lg border p-6 space-y-4 max-w-lg"
+							>
+								<div>
+									<label class="block text-sm font-medium text-gray-700 mb-1" for="name"
+										>Scope Name</label
+									>
+									<input
+										type="text"
+										id="name"
+										name="name"
+										required
+										class="w-full border rounded-lg px-3 py-2"
+										placeholder="read:users"
+									/>
+									<p class="text-gray-500 text-xs mt-1">
+										Use lowercase with colons for namespacing (e.g., read:users, write:posts)
+									</p>
+								</div>
 
-							<div>
-								<label class="block text-sm font-medium text-gray-700 mb-1" for="description">Description</label>
-								<textarea id="description" name="description" rows="2" class="w-full border rounded-lg px-3 py-2" placeholder="Read user profile information"></textarea>
-								<p class="text-gray-500 text-xs mt-1">Shown to users during consent</p>
-							</div>
+								<div>
+									<label class="block text-sm font-medium text-gray-700 mb-1" for="description"
+										>Description</label
+									>
+									<textarea
+										id="description"
+										name="description"
+										rows="2"
+										class="w-full border rounded-lg px-3 py-2"
+										placeholder="Read user profile information"
+									></textarea>
+									<p class="text-gray-500 text-xs mt-1">Shown to users during consent</p>
+								</div>
 
-							<button type="submit" class="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700">
-								Add Scope
-							</button>
-						</form>
-					`,
+								<button
+									type="submit"
+									class="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700"
+								>
+									Add Scope
+								</button>
+							</form>
+						`,
 					}),
 				),
 			);

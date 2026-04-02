@@ -37,52 +37,99 @@ export default form<"/dashboard/tenants/:tenantId/branding">({
 							? { type: "past_due", billingUrl: `/dashboard/tenants/${tenant.id}/billing` }
 							: undefined,
 						content: html`
-						<h2 class="text-2xl font-bold mb-6">Branding</h2>
-						<p class="text-gray-500 mb-6">Customize the appearance of your login pages.</p>
+							<h2 class="text-2xl font-bold mb-6">Branding</h2>
+							<p class="text-gray-500 mb-6">Customize the appearance of your login pages.</p>
 
-						<form method="POST" action="${routes.dashboard.tenants.branding.action.href({ tenantId: tenant.id })}" class="bg-white rounded-lg border p-6 space-y-4 max-w-lg">
-							<div>
-								<label class="block text-sm font-medium text-gray-700 mb-1" for="logoUrl">Logo URL</label>
-								<input type="url" id="logoUrl" name="logoUrl" value="${branding?.logo_url ?? ""}" class="w-full border rounded-lg px-3 py-2" placeholder="https://example.com/logo.png">
-								<p class="text-gray-500 text-xs mt-1">URL to your company logo (recommended: 200x50px)</p>
-							</div>
-
-							<div>
-								<label class="block text-sm font-medium text-gray-700 mb-1" for="primaryColor">Primary Color</label>
-								<div class="flex gap-2">
-									<input type="color" id="primaryColorPicker" value="${branding?.primary_color || "#3b82f6"}" class="w-12 h-10 rounded border cursor-pointer">
-									<input type="text" id="primaryColor" name="primaryColor" value="${branding?.primary_color ?? ""}" class="flex-1 border rounded-lg px-3 py-2" placeholder="#3b82f6">
+							<form
+								method="POST"
+								action="${routes.dashboard.tenants.branding.action.href({ tenantId: tenant.id })}"
+								class="bg-white rounded-lg border p-6 space-y-4 max-w-lg"
+							>
+								<div>
+									<label class="block text-sm font-medium text-gray-700 mb-1" for="logoUrl">Logo URL</label>
+									<input
+										type="url"
+										id="logoUrl"
+										name="logoUrl"
+										value="${branding?.logo_url ?? ""}"
+										class="w-full border rounded-lg px-3 py-2"
+										placeholder="https://example.com/logo.png"
+									/>
+									<p class="text-gray-500 text-xs mt-1">URL to your company logo (recommended: 200x50px)</p>
 								</div>
-							</div>
 
-							<div>
-								<label class="block text-sm font-medium text-gray-700 mb-1" for="backgroundColor">Background Color</label>
-								<div class="flex gap-2">
-									<input type="color" id="backgroundColorPicker" value="${branding?.background_color || "#f9fafb"}" class="w-12 h-10 rounded border cursor-pointer">
-									<input type="text" id="backgroundColor" name="backgroundColor" value="${branding?.background_color ?? ""}" class="flex-1 border rounded-lg px-3 py-2" placeholder="#f9fafb">
+								<div>
+									<label class="block text-sm font-medium text-gray-700 mb-1" for="primaryColor"
+										>Primary Color</label
+									>
+									<div class="flex gap-2">
+										<input
+											type="color"
+											id="primaryColorPicker"
+											value="${branding?.primary_color || "#3b82f6"}"
+											class="w-12 h-10 rounded border cursor-pointer"
+										/>
+										<input
+											type="text"
+											id="primaryColor"
+											name="primaryColor"
+											value="${branding?.primary_color ?? ""}"
+											class="flex-1 border rounded-lg px-3 py-2"
+											placeholder="#3b82f6"
+										/>
+									</div>
 								</div>
-							</div>
 
-							<div>
-								<label class="block text-sm font-medium text-gray-700 mb-1" for="customCss">Custom CSS</label>
-								<textarea id="customCss" name="customCss" rows="4" class="w-full border rounded-lg px-3 py-2 font-mono text-sm" placeholder=".login-button { ... }">${branding?.custom_css ?? ""}</textarea>
-								<p class="text-gray-500 text-xs mt-1">Advanced: Add custom CSS to style login pages</p>
-							</div>
+								<div>
+									<label class="block text-sm font-medium text-gray-700 mb-1" for="backgroundColor"
+										>Background Color</label
+									>
+									<div class="flex gap-2">
+										<input
+											type="color"
+											id="backgroundColorPicker"
+											value="${branding?.background_color || "#f9fafb"}"
+											class="w-12 h-10 rounded border cursor-pointer"
+										/>
+										<input
+											type="text"
+											id="backgroundColor"
+											name="backgroundColor"
+											value="${branding?.background_color ?? ""}"
+											class="flex-1 border rounded-lg px-3 py-2"
+											placeholder="#f9fafb"
+										/>
+									</div>
+								</div>
 
-							<button type="submit" class="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700">
-								Save Branding
-							</button>
-						</form>
+								<div>
+									<label class="block text-sm font-medium text-gray-700 mb-1" for="customCss">Custom CSS</label>
+									<textarea
+										id="customCss"
+										name="customCss"
+										rows="4"
+										class="w-full border rounded-lg px-3 py-2 font-mono text-sm"
+										placeholder=".login-button { ... }"
+									>
+							${branding?.custom_css ?? ""}</textarea
+									>
+									<p class="text-gray-500 text-xs mt-1">Advanced: Add custom CSS to style login pages</p>
+								</div>
 
-						<script>
-							document.getElementById('primaryColorPicker').addEventListener('input', (e) => {
-								document.getElementById('primaryColor').value = e.target.value;
-							});
-							document.getElementById('backgroundColorPicker').addEventListener('input', (e) => {
-								document.getElementById('backgroundColor').value = e.target.value;
-							});
-						</script>
-					`,
+								<button type="submit" class="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700">
+									Save Branding
+								</button>
+							</form>
+
+							<script>
+								document.getElementById("primaryColorPicker").addEventListener("input", (e) => {
+									document.getElementById("primaryColor").value = e.target.value;
+								});
+								document.getElementById("backgroundColorPicker").addEventListener("input", (e) => {
+									document.getElementById("backgroundColor").value = e.target.value;
+								});
+							</script>
+						`,
 					}),
 				),
 			);

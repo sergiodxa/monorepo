@@ -7,8 +7,8 @@
 	],
 	"type": "module",
 	"scripts": {
-		"format": "oxfmt --check",
-		"format:fix": "oxfmt",
+		"format": "bun ./node_modules/oxfmt/dist/cli.js --check",
+		"format:fix": "bun ./node_modules/oxfmt/dist/cli.js",
 		"lint": "oxlint --deny-warnings",
 		"lint:fix": "oxlint --deny-warnings --fix",
 		"typecheck": "tsc --noEmit"
@@ -16,12 +16,12 @@
 	"dependencies": {
 		"@total-typescript/ts-reset": "^0.6.1",
 		"@total-typescript/tsconfig": "^1.0.4",
-		"oxfmt": "^0.36.0",
-		"oxlint": "^1.51.0",
-		"typescript": "5.9.3"
+		"oxfmt": "^0.43.0",
+		"oxlint": "^1.58.0",
+		"typescript": "^6.0.2"
 	},
 	"devDependencies": {
 		"@types/bcryptjs": "^3.0.0",
-		"@types/bun": "^1.3.10"
+		"@types/bun": "^1.3.11"
 	}
 }
