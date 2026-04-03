@@ -1,5 +1,4 @@
 import { JWK, JWT } from "@edgefirst-dev/jwt";
-import { env } from "cloudflare:workers";
 
 export default class IdToken extends JWT {
 	override get subject() {
@@ -31,12 +30,13 @@ export default class IdToken extends JWT {
 	}
 }
 
-export async function verifyIdToken(token: string) {
-	return await IdToken.verify(
-		token,
-		await JWK.importRemote(new URL("https://auth.sergiodxa.com/.well-known/jwks.json"), {
-			alg: JWK.Algoritm.ES256,
-		}),
-		{ audience: env.CLIENT_ID, issuer: "auth.sergiodxa.com" },
-	);
+export async function verifyIdToken(
+	token: string,
+	verificationKey: Awaited<ReturnType<typeof JWK.importRemote>>,
+	clientId: string,
+) {
+	return await IdToken.verify(token, verificationKey, {
+		audience: clientId,
+		issuer: "auth.sergiodxa.com",
+	});
 }

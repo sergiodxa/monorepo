@@ -1,4 +1,7 @@
+import type { Database } from "remix/data-table";
+
 import { redirect } from "@pkg/http/response";
+import { asyncContext } from "remix/async-context-middleware";
 import { requireAuth } from "remix/auth-middleware";
 import { createRouter } from "remix/fetch-router";
 import { formData } from "remix/form-data-middleware";
@@ -24,11 +27,11 @@ import feedRSS from "~/app/http/controllers/rss/feed";
 import tutorialsRSS from "~/app/http/controllers/rss/tutorials";
 import sitemap from "~/app/http/controllers/sitemap";
 import tutorials from "~/app/http/controllers/tutorials";
-import asyncContext from "~/app/http/middleware/async-context";
 import auth from "~/app/http/middleware/auth";
-import db from "~/app/http/middleware/db";
-import noTrailingSlash from "~/app/http/middleware/no-trailing-slash";
-import noWWW from "~/app/http/middleware/no-www";
+import createDatabaseMiddleware from "~/app/http/middleware/db";
+import createEnvMiddleware from "~/app/http/middleware/env";
+import createNoTrailingSlashMiddleware from "~/app/http/middleware/no-trailing-slash";
+import createNoWWWMiddleware from "~/app/http/middleware/no-www";
 import redirects from "~/app/http/middleware/redirects";
 import requireAdmin from "~/app/http/middleware/require-admin";
 import session from "~/app/http/middleware/session";
@@ -36,77 +39,84 @@ import { view } from "~/app/infrastructure/view";
 import { NotFoundView } from "~/resources/views/not-found";
 import routes from "~/routes/web";
 
-export const router = createRouter({
-	middleware: [
-		noWWW,
-		noTrailingSlash,
-		asyncContext,
-		session,
-		formData(),
-		methodOverride(),
-		redirects,
-		db(),
-		auth,
-	],
+export default function createApplication(database: Database, env: App.Env) {
+	let router = createRouter({
+		middleware: [
+			createEnvMiddleware(env),
+			createNoWWWMiddleware(),
+			createNoTrailingSlashMiddleware(),
+			asyncContext(),
+			session,
+			formData(),
+			methodOverride(),
+			redirects,
+			createDatabaseMiddleware(database),
+			auth,
+		],
 
-	async defaultHandler() {
-		return view(
-			NotFoundView,
-			{
-				title: "Page Not Found",
-				description: "The page you are looking for does not exist.",
-				emoji: "❓",
+		async defaultHandler() {
+			return view(
+				NotFoundView,
+				{
+					title: "Page Not Found",
+					description: "The page you are looking for does not exist.",
+					emoji: "❓",
+				},
+				{ status: 404 },
+			);
+		},
+	});
+
+	router.map(routes, {
+		middleware: [],
+		actions: {
+			feed,
+			colors,
+
+			sitemap,
+
+			articles,
+			tutorials,
+			bookmarks,
+			glossary,
+
+			post,
+			postRelated,
+
+			rss: {
+				actions: {
+					feed: feedRSS,
+					articles: articlesRSS,
+					tutorials: tutorialsRSS,
+					bookmarks: bookmarksRSS,
+				},
 			},
-			{ status: 404 },
-		);
-	},
-});
 
-router.map(routes, {
-	middleware: [],
-	actions: {
-		feed,
-		colors,
+			auth: authController,
 
-		sitemap,
+			cms: {
+				middleware: [
+					requireAuth({
+						onFailure() {
+							return redirect(routes.auth.login.index.href(), {
+								status: redirect.Status.SeeOther,
+							});
+						},
+					}),
+					requireAdmin,
+				],
 
-		articles,
-		tutorials,
-		bookmarks,
-		glossary,
-
-		post,
-		postRelated,
-
-		rss: {
-			actions: {
-				feed: feedRSS,
-				articles: articlesRSS,
-				tutorials: tutorialsRSS,
-				bookmarks: bookmarksRSS,
+				actions: {
+					dashboard: dashboardCMS,
+					articles: articlesCMS,
+					tutorials: tutorialsCMS,
+					bookmarks: bookmarksCMS,
+					glossary: glossaryCMS,
+					redirects: redirectsCMS,
+				},
 			},
 		},
+	});
 
-		auth: authController,
-
-		cms: {
-			middleware: [
-				requireAuth({
-					onFailure() {
-						return redirect(routes.auth.login.index.href(), { status: redirect.Status.SeeOther });
-					},
-				}),
-				requireAdmin,
-			],
-
-			actions: {
-				dashboard: dashboardCMS,
-				articles: articlesCMS,
-				tutorials: tutorialsCMS,
-				bookmarks: bookmarksCMS,
-				glossary: glossaryCMS,
-				redirects: redirectsCMS,
-			},
-		},
-	},
-});
+	return router;
+}

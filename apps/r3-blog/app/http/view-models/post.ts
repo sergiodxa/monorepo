@@ -28,33 +28,35 @@ export namespace PostViewModel {
 		markdownBody: string;
 	}
 
-	export type LoadedPost =
-		| {
-				postType: "articles";
-				post: {
-					meta: {
-						title: string;
-						slug: string;
-						excerpt?: string;
-						canonical_url?: string;
-						content: string;
-					};
-					published_at: string | null;
-				};
-		  }
-		| {
-				postType: "tutorials";
-				post: {
-					meta: {
-						title: string;
-						slug: string;
-						excerpt?: string;
-						content: string;
-					};
-					published_at: string | null;
-				};
-				tags: Array<string>;
-		  };
+	export interface ArticlePost {
+		postType: "articles";
+		post: {
+			meta: {
+				title: string;
+				slug: string;
+				excerpt?: string;
+				canonical_url?: string;
+				content: string;
+			};
+			published_at: string | null;
+		};
+	}
+
+	export interface TutorialPost {
+		postType: "tutorials";
+		post: {
+			meta: {
+				title: string;
+				slug: string;
+				excerpt?: string;
+				content: string;
+			};
+			published_at: string | null;
+		};
+		tags: Array<string>;
+	}
+
+	export type LoadedPost = ArticlePost | TutorialPost;
 }
 
 export class PostViewModel {

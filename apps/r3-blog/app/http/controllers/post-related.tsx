@@ -1,4 +1,5 @@
 import action from "@pkg/remix-helpers/action";
+import { getContext } from "remix/async-context-middleware";
 
 import type routes from "~/routes/web";
 
@@ -8,7 +9,8 @@ import { view } from "~/app/infrastructure/view";
 import { Post } from "~/app/repositories/post";
 import { PostRelatedView } from "~/resources/views/post-related";
 
-export default action<typeof routes.postRelated>(async (ctx) => {
+export default action<typeof routes.postRelated>(async () => {
+	let ctx = getContext() as any;
 	let postType = ctx.params.postType;
 	let postSlug = ctx.params.postSlug;
 

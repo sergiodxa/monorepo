@@ -1,30 +1,15 @@
 import middleware from "@pkg/remix-helpers/middleware";
-import { env } from "cloudflare:workers";
 import { getContext } from "remix/async-context-middleware";
-import { createDatabase, type Database } from "remix/data-table";
-import { createContextKey, type MergeContext, type RequestContext } from "remix/fetch-router";
+import { Database } from "remix/data-table";
 
-import { createD1DataTableAdapter } from "~/app/infrastructure/database/d1-data-table-adapter";
-
-export const dbKey = createContextKey<Database>();
-
-export type DBContextTransform = readonly [readonly [typeof dbKey, Database]];
-
-export type WithDB<context extends RequestContext<any, any>> = MergeContext<
-	context,
-	DBContextTransform
->;
-
-export default () => {
-	let db = createDatabase(createD1DataTableAdapter(env.DB));
-
-	return middleware<"ANY", Record<string, any>, DBContextTransform>((ctx) => {
-		ctx.set(dbKey, db);
+export default function createDatabaseMiddleware(database: Database) {
+	return middleware((ctx) => {
+		ctx.set(Database, database);
 	});
-};
+}
 
 export function db() {
-	let db = getContext().get(dbKey);
+	let db = getContext().get(Database);
 	if (db) return db;
 	throw new Error("Database not found in context. Make sure to use the database middleware.");
 }

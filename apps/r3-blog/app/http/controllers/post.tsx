@@ -1,5 +1,6 @@
 import * as ct from "@pkg/http/content-type";
 import action from "@pkg/remix-helpers/action";
+import { getContext } from "remix/async-context-middleware";
 
 import type routeMap from "~/routes/web";
 
@@ -29,7 +30,8 @@ type ValidatePostRequestParamsResult =
 let SUPPORTED_POST_TYPES = new Set<string>(["articles", "tutorials"]);
 let SUPPORTED_CONTENT_TYPES = new Set<string>(["html", "md"]);
 
-export default action<typeof routeMap.post>(async (ctx) => {
+export default action<typeof routeMap.post>(async () => {
+	let ctx = getContext() as any;
 	let validation = validatePostRequestParams({
 		postType: ctx.params.postType,
 		postSlug: ctx.params.postSlug,

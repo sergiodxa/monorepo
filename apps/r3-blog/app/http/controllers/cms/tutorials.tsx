@@ -2,6 +2,7 @@ import { redirect } from "@pkg/http/response";
 import controller from "@pkg/remix-helpers/controller";
 import { succeeded } from "@pkg/result";
 import { validate } from "@pkg/validate";
+import { getContext } from "remix/async-context-middleware";
 
 import { getAuthUser } from "~/app/http/middleware/auth";
 import { db } from "~/app/http/middleware/db";
@@ -31,7 +32,8 @@ export default controller<typeof routes.cms.tutorials>({
 			return view(CMSTutorialsIndexView, { items });
 		},
 
-		async create(ctx) {
+		async create() {
+			let ctx = getContext() as any;
 			let user = getAuthUser();
 			if (!user)
 				return redirect(routes.auth.login.index.href(), { status: redirect.Status.SeeOther });
@@ -56,7 +58,8 @@ export default controller<typeof routes.cms.tutorials>({
 			});
 		},
 
-		async destroy(ctx) {
+		async destroy() {
+			let ctx = getContext() as any;
 			let id = ctx.params.id;
 			if (!id)
 				return redirect(routes.cms.tutorials.index.href(), { status: redirect.Status.SeeOther });
@@ -65,7 +68,8 @@ export default controller<typeof routes.cms.tutorials>({
 			return redirect(routes.cms.tutorials.index.href(), { status: redirect.Status.SeeOther });
 		},
 
-		async edit(ctx) {
+		async edit() {
+			let ctx = getContext() as any;
 			let id = ctx.params.id;
 			let tutorial = id ? await TutorialPost.findById(db(), id) : null;
 
@@ -94,7 +98,8 @@ export default controller<typeof routes.cms.tutorials>({
 			return view(CMSTutorialsActionView, model);
 		},
 
-		async update(ctx) {
+		async update() {
+			let ctx = getContext() as any;
 			let user = getAuthUser();
 			let id = ctx.params.id;
 			if (!user || !id)

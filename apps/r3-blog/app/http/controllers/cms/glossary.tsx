@@ -3,6 +3,7 @@ import controller from "@pkg/remix-helpers/controller";
 import { succeeded } from "@pkg/result";
 import { validate } from "@pkg/validate";
 import { parameterize } from "inflected";
+import { getContext } from "remix/async-context-middleware";
 
 import { getAuthUser } from "~/app/http/middleware/auth";
 import { db } from "~/app/http/middleware/db";
@@ -29,7 +30,8 @@ export default controller<typeof routes.cms.glossary>({
 			return view(CMSGlossaryIndexView, { items });
 		},
 
-		async create(ctx) {
+		async create() {
+			let ctx = getContext() as any;
 			let user = getAuthUser();
 			if (!user)
 				return redirect(routes.auth.login.index.href(), { status: redirect.Status.SeeOther });
@@ -55,7 +57,8 @@ export default controller<typeof routes.cms.glossary>({
 			});
 		},
 
-		async destroy(ctx) {
+		async destroy() {
+			let ctx = getContext() as any;
 			let id = ctx.params.id;
 			if (!id)
 				return redirect(routes.cms.glossary.index.href(), { status: redirect.Status.SeeOther });
@@ -64,7 +67,8 @@ export default controller<typeof routes.cms.glossary>({
 			return redirect(routes.cms.glossary.index.href(), { status: redirect.Status.SeeOther });
 		},
 
-		async edit(ctx) {
+		async edit() {
+			let ctx = getContext() as any;
 			let id = ctx.params.id;
 			let glossary = id ? await GlossaryPost.findById(db(), id) : null;
 
@@ -113,7 +117,8 @@ export default controller<typeof routes.cms.glossary>({
 			return view(CMSGlossaryActionView, viewProps);
 		},
 
-		async update(ctx) {
+		async update() {
+			let ctx = getContext() as any;
 			let user = getAuthUser();
 			let id = ctx.params.id;
 			if (!user || !id)

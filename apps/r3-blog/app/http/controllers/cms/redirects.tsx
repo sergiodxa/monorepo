@@ -2,8 +2,9 @@ import { redirect } from "@pkg/http/response";
 import controller from "@pkg/remix-helpers/controller";
 import { succeeded } from "@pkg/result";
 import { validate } from "@pkg/validate";
-import { env } from "cloudflare:workers";
+import { getContext } from "remix/async-context-middleware";
 
+import { getEnv } from "~/app/http/middleware/env";
 import { view } from "~/app/infrastructure/view";
 import { Redirect } from "~/app/repositories/redirect";
 import { RedirectSchema } from "~/app/schemas/cms/redirect";
@@ -15,7 +16,7 @@ export default controller<typeof routes.cms.redirects>({
 
 	actions: {
 		async index() {
-			let redirects = await Redirect.findAll(env.REDIRECTS);
+			let redirects = await Redirect.findAll(getEnv("REDIRECTS"));
 			let items: Array<CMSRedirectsIndexView.Item> = redirects.map((item) => ({
 				from: item.from,
 				to: item.to,
@@ -26,7 +27,8 @@ export default controller<typeof routes.cms.redirects>({
 			return view(CMSRedirectsIndexView, { items });
 		},
 
-		async create(ctx) {
+		async create() {
+			let ctx = getContext() as any;
 			let result = await validate(ctx.get(FormData), RedirectSchema);
 			succeeded(result, "Invalid redirect form data");
 
@@ -38,21 +40,22 @@ export default controller<typeof routes.cms.redirects>({
 				return redirect(routes.cms.redirects.new.href(), { status: redirect.Status.SeeOther });
 			}
 
-			await Redirect.upsert(env.REDIRECTS, { from, to, status });
+			await Redirect.upsert(getEnv("REDIRECTS"), { from, to, status });
 			return redirect(routes.cms.redirects.index.href(), { status: redirect.Status.SeeOther });
 		},
 
-		async destroy(ctx) {
+		async destroy() {
+			let ctx = getContext() as any;
 			let from = getRedirectFromParam(ctx.params.id);
 			if (!from)
 				return redirect(routes.cms.redirects.index.href(), { status: redirect.Status.SeeOther });
 
-			await Redirect.destroy(env.REDIRECTS, from);
+			await Redirect.destroy(getEnv("REDIRECTS"), from);
 			return redirect(routes.cms.redirects.index.href(), { status: redirect.Status.SeeOther });
 		},
 
 		async new() {
-			let redirects = await Redirect.findAll(env.REDIRECTS);
+			let redirects = await Redirect.findAll(getEnv("REDIRECTS"));
 			return view(CMSRedirectsNewView, {
 				title: "New Redirect",
 				description: `Current redirect count in KV: ${redirects.length}.`,

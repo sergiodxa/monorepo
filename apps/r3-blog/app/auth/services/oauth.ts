@@ -1,36 +1,38 @@
 import type { OIDCAuthProfile } from "remix/auth";
-import type { RequestContext } from "remix/fetch-router";
 
-import { env } from "cloudflare:workers";
-import { createOIDCAuthProvider, startExternalAuth } from "remix/auth";
-import { Session } from "remix/session";
-
-import type { WithDB } from "~/app/http/middleware/db";
-import type { WithSession } from "~/app/http/middleware/session";
-
-import routes from "~/routes/web";
-
-interface OAuthTransaction {
-	provider: string;
-	state: string;
-	codeVerifier: string;
-	returnTo?: string;
-}
+import { createOIDCAuthProvider } from "remix/auth";
 
 export interface FinishedAuth {
 	idToken: string;
 	returnTo?: string;
 }
 
-type OAuthContext = WithSession<WithDB<RequestContext>>;
+export namespace OAuthService {
+	export interface AuthConfig {
+		clientId: string;
+		clientSecret: string;
+	}
 
-function provider(context: RequestContext<any, any>) {
+	export interface ProviderInput {
+		auth: AuthConfig;
+		redirectUri: string;
+	}
+
+	export interface TokenExchangeInput {
+		auth: AuthConfig;
+		code: string;
+		codeVerifier: string;
+		redirectUri: string;
+	}
+}
+
+export function createProvider(input: OAuthService.ProviderInput) {
 	return createOIDCAuthProvider<OIDCAuthProfile, "sergiodxa">({
 		name: "sergiodxa",
 		issuer: "auth.sergiodxa.com",
-		clientId: env.CLIENT_ID,
-		clientSecret: env.CLIENT_SECRET,
-		redirectUri: new URL(routes.auth.callback.href(), context.request.url),
+		clientId: input.auth.clientId,
+		clientSecret: input.auth.clientSecret,
+		redirectUri: input.redirectUri,
 		metadata: {
 			issuer: "auth.sergiodxa.com",
 			authorization_endpoint: "https://auth.sergiodxa.com/authorize",
@@ -43,46 +45,14 @@ function provider(context: RequestContext<any, any>) {
 	});
 }
 
-export function startAuth(context: RequestContext<any, any>) {
-	let returnTo = context.url.searchParams.get("next");
-	return startExternalAuth(provider(context), context, { returnTo });
-}
-
-export async function finishAuth(context: RequestContext<any, any>): Promise<FinishedAuth> {
-	let ctx = context as OAuthContext;
-	if (!ctx.has(Session)) {
-		throw new Error("Session not found in auth callback");
-	}
-
-	let session = ctx.get(Session);
-	let transaction = session.get("__auth") as OAuthTransaction | null;
-	let callbackError = ctx.url.searchParams.get("error");
-	if (callbackError) {
-		throw new Error(ctx.url.searchParams.get("error_description") ?? callbackError);
-	}
-
-	if (!transaction || transaction.provider !== "sergiodxa") {
-		throw new Error("Missing OAuth transaction");
-	}
-
-	let state = ctx.url.searchParams.get("state");
-	let code = ctx.url.searchParams.get("code");
-	if (!state || !code) {
-		session.unset("__auth");
-		throw new Error("Missing OAuth state/code");
-	}
-
-	if (state !== transaction.state) {
-		session.unset("__auth");
-		throw new Error("Invalid OAuth state");
-	}
-
-	let callbackUrl = new URL(routes.auth.callback.href(), ctx.request.url);
+export async function exchangeCodeForIdToken(
+	input: OAuthService.TokenExchangeInput,
+): Promise<FinishedAuth> {
 	let payload = new URLSearchParams({
 		grant_type: "authorization_code",
-		code,
-		redirect_uri: callbackUrl.toString(),
-		code_verifier: transaction.codeVerifier,
+		code: input.code,
+		redirect_uri: input.redirectUri,
+		code_verifier: input.codeVerifier,
 	});
 
 	let response = await fetch("https://auth.sergiodxa.com/oauth/token", {
@@ -90,13 +60,12 @@ export async function finishAuth(context: RequestContext<any, any>): Promise<Fin
 		headers: {
 			Accept: "application/json",
 			"Content-Type": "application/x-www-form-urlencoded",
-			Authorization: `Basic ${btoa(`${env.CLIENT_ID}:${env.CLIENT_SECRET}`)}`,
+			Authorization: `Basic ${btoa(`${input.auth.clientId}:${input.auth.clientSecret}`)}`,
 		},
 		body: payload,
 	});
 
 	let data = (await response.json()) as { id_token?: string; error?: string };
-	session.unset("__auth");
 
 	if (!response.ok || !data.id_token) {
 		throw new Error(data.error ?? "OAuth token exchange failed");
@@ -104,6 +73,5 @@ export async function finishAuth(context: RequestContext<any, any>): Promise<Fin
 
 	return {
 		idToken: data.id_token,
-		returnTo: transaction.returnTo,
 	};
 }

@@ -1,6 +1,6 @@
 import middleware from "@pkg/remix-helpers/middleware";
-import { env } from "cloudflare:workers";
 
+import { getEnv } from "~/app/http/middleware/env";
 import { Redirect } from "~/app/repositories/redirect";
 
 const METHODS_TO_CHECK = new Set(["GET", "HEAD"]);
@@ -8,7 +8,7 @@ const METHODS_TO_CHECK = new Set(["GET", "HEAD"]);
 export default middleware(async (ctx, next) => {
 	if (!METHODS_TO_CHECK.has(ctx.method)) return next();
 
-	let redirectRule = await Redirect.findByPath(env.REDIRECTS, ctx.url.pathname);
+	let redirectRule = await Redirect.findByPath(getEnv("REDIRECTS"), ctx.url.pathname);
 	if (!redirectRule) return next();
 
 	let location = redirectRule.to;
@@ -21,8 +21,6 @@ export default middleware(async (ctx, next) => {
 
 	return new Response(null, {
 		status: redirectRule.status,
-		headers: {
-			Location: location,
-		},
+		headers: { Location: location },
 	});
 });

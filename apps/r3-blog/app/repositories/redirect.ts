@@ -1,3 +1,5 @@
+import type { KVStore } from "~/app/contracts/kv-store";
+
 /**
  * Helpers for URL redirects stored in the REDIRECTS KV namespace.
  *
@@ -45,7 +47,7 @@ export class Redirect {
 	/**
 	 * Looks up a redirect by request pathname.
 	 */
-	static async findByPath(kv: KVNamespace, pathname: string): Promise<Redirect.Value | null> {
+	static async findByPath(kv: KVStore, pathname: string): Promise<Redirect.Value | null> {
 		let key = this.normalizePath(pathname);
 		let value = await kv.get(key);
 		if (!value) return null;
@@ -56,7 +58,7 @@ export class Redirect {
 	/**
 	 * Lists all redirect entries from KV.
 	 */
-	static async findAll(kv: KVNamespace): Promise<Array<Redirect.Record>> {
+	static async findAll(kv: KVStore): Promise<Array<Redirect.Record>> {
 		let list = await kv.list();
 		if (list.keys.length === 0) return [];
 
@@ -82,7 +84,7 @@ export class Redirect {
 	/**
 	 * Creates or updates a redirect entry.
 	 */
-	static async upsert(kv: KVNamespace, input: Redirect.UpsertInput) {
+	static async upsert(kv: KVStore, input: Redirect.UpsertInput) {
 		let from = this.normalizePath(input.from);
 		let value = JSON.stringify({ to: input.to, status: input.status ?? 302 });
 		await kv.put(from, value);
@@ -97,7 +99,7 @@ export class Redirect {
 	/**
 	 * Deletes a redirect entry by source path.
 	 */
-	static async destroy(kv: KVNamespace, from: string) {
+	static async destroy(kv: KVStore, from: string) {
 		let key = this.normalizePath(from);
 		await kv.delete(key);
 		return true;

@@ -1,15 +1,32 @@
+import { JWK } from "@edgefirst-dev/jwt";
 import { redirect } from "@pkg/http/response";
 import controller from "@pkg/remix-helpers/controller";
+import { getContext } from "remix/async-context-middleware";
+import { startExternalAuth } from "remix/auth";
+import { Session } from "remix/session";
 
-import { finishAuth, startAuth } from "~/app/auth/services/oauth";
+import { createProvider, exchangeCodeForIdToken } from "~/app/auth/services/oauth";
 import { verifyIdToken } from "~/app/auth/value-objects/id-token";
 import { getIdToken, isAuthenticated, login, logout, setIdToken } from "~/app/http/middleware/auth";
 import { db } from "~/app/http/middleware/db";
+import { getEnv } from "~/app/http/middleware/env";
 import { view } from "~/app/infrastructure/view";
 import { User } from "~/app/repositories/user";
 import { LoginView } from "~/resources/views/auth/login";
 import { LogoutView } from "~/resources/views/auth/logout";
 import routes from "~/routes/web";
+
+interface OAuthTransaction {
+	provider: string;
+	state: string;
+	codeVerifier: string;
+	returnTo?: string;
+}
+
+let idTokenVerificationKey = JWK.importRemote(
+	new URL("https://auth.sergiodxa.com/.well-known/jwks.json"),
+	{ alg: JWK.Algoritm.ES256 },
+);
 
 export default controller<typeof routes.auth>({
 	middleware: [
@@ -27,8 +44,17 @@ export default controller<typeof routes.auth>({
 					return view(LoginView, {});
 				},
 
-				action(ctx) {
-					return startAuth(ctx);
+				action() {
+					let ctx = getContext() as any;
+					let provider = createProvider({
+						auth: {
+							clientId: getEnv("CLIENT_ID"),
+							clientSecret: getEnv("CLIENT_SECRET"),
+						},
+						redirectUri: new URL(routes.auth.callback.href(), ctx.request.url).toString(),
+					});
+					let returnTo = ctx.url.searchParams.get("next");
+					return startExternalAuth(provider, ctx, { returnTo });
 				},
 			},
 		},
@@ -40,7 +66,8 @@ export default controller<typeof routes.auth>({
 					return view(LogoutView, {});
 				},
 
-				action(ctx) {
+				action() {
+					let ctx = getContext() as any;
 					let idToken = getIdToken();
 					let logoutUrl = new URL("https://auth.sergiodxa.com/oidc/logout");
 					if (idToken) logoutUrl.searchParams.set("id_token_hint", idToken);
@@ -65,12 +92,44 @@ export default controller<typeof routes.auth>({
 
 		callback: {
 			middleware: [],
-			async handler(ctx) {
-				let result: Awaited<ReturnType<typeof finishAuth>>;
+			async handler() {
+				let ctx = getContext() as any;
+				let result: Awaited<ReturnType<typeof exchangeCodeForIdToken>>;
+				let session = ctx.get(Session);
+				let transaction = session.get("__auth") as OAuthTransaction | null;
+				let callbackError = ctx.url.searchParams.get("error");
+				if (callbackError) {
+					return view(LoginView, {
+						error: ctx.url.searchParams.get("error_description") ?? callbackError,
+					});
+				}
+				if (!transaction || transaction.provider !== "sergiodxa") {
+					return view(LoginView, { error: "Authentication failed. Missing transaction." });
+				}
+				let state = ctx.url.searchParams.get("state");
+				let code = ctx.url.searchParams.get("code");
+				if (!state || !code) {
+					session.unset("__auth");
+					return view(LoginView, { error: "Authentication failed. Missing callback params." });
+				}
+				if (state !== transaction.state) {
+					session.unset("__auth");
+					return view(LoginView, { error: "Authentication failed. Invalid state." });
+				}
 
 				try {
-					result = await finishAuth(ctx);
+					result = await exchangeCodeForIdToken({
+						auth: {
+							clientId: getEnv("CLIENT_ID"),
+							clientSecret: getEnv("CLIENT_SECRET"),
+						},
+						code,
+						codeVerifier: transaction.codeVerifier,
+						redirectUri: new URL(routes.auth.callback.href(), ctx.request.url).toString(),
+					});
+					session.unset("__auth");
 				} catch {
+					session.unset("__auth");
 					return view(LoginView, { error: "Authentication failed. Please try again." });
 				}
 
@@ -79,7 +138,11 @@ export default controller<typeof routes.auth>({
 					return view(LoginView, { error: "Authentication failed. Missing token response." });
 				}
 
-				let idToken = await verifyIdToken(idTokenRaw);
+				let idToken = await verifyIdToken(
+					idTokenRaw,
+					await idTokenVerificationKey,
+					getEnv("CLIENT_ID"),
+				);
 				let user = await User.findOrCreateFromAuthProfile(db(), {
 					subjectId: idToken.subject,
 					email: idToken.email,
@@ -92,8 +155,8 @@ export default controller<typeof routes.auth>({
 				setIdToken(idTokenRaw);
 
 				let returnTo =
-					result.returnTo && result.returnTo.startsWith("/")
-						? result.returnTo
+					transaction.returnTo && transaction.returnTo.startsWith("/")
+						? transaction.returnTo
 						: routes.cms.dashboard.href();
 				return redirect(returnTo, { status: redirect.Status.SeeOther });
 			},

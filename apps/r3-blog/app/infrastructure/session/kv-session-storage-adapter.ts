@@ -2,6 +2,8 @@ import type { Session, SessionStorage } from "remix/session";
 
 import { createSession } from "remix/session";
 
+import type { KVStore } from "~/app/contracts/kv-store";
+
 const SESSION_TTL_SECONDS = 60 * 60 * 24 * 365;
 const SESSION_PREFIX = "session:";
 
@@ -18,10 +20,10 @@ export class KVSessionStorage<
 	valueData extends KVSessionStorage.Data = KVSessionStorage.Data,
 	flashData extends KVSessionStorage.Data = KVSessionStorage.Data,
 > implements SessionStorage {
-	#kv: KVNamespace;
+	#kv: KVStore;
 	#options: KVSessionStorage.Options;
 
-	constructor(kv: KVNamespace, options: KVSessionStorage.Options = {}) {
+	constructor(kv: KVStore, options: KVSessionStorage.Options = {}) {
 		this.#kv = kv;
 		this.#options = options;
 	}

@@ -1,8 +1,6 @@
-import type { WithAuth } from "remix/auth-middleware";
-
 import { getContext } from "remix/async-context-middleware";
 import { auth as createAuthMiddleware, Auth, createSessionAuthScheme } from "remix/auth-middleware";
-import { createContextKey, type RequestContext } from "remix/fetch-router";
+import { createContextKey } from "remix/fetch-router";
 import { Session } from "remix/session";
 
 import type * as schema from "~/database/schema";
@@ -47,7 +45,7 @@ export function getAuthUser() {
 		throw new Error("Auth not found in context. Make sure to use the auth middleware.");
 	}
 
-	let user = resolveCurrentUser(ctx as RequestContext<any, any>);
+	let user = resolveCurrentUser();
 	ctx.set(authUserKey, user);
 	return user;
 }
@@ -95,8 +93,8 @@ function readSession() {
 	return ctx.get(Session);
 }
 
-function resolveCurrentUser(ctx: RequestContext<any, any>) {
-	let auth = (ctx as WithAuth<RequestContext<any, any>, schema.SelectUser>).get(Auth);
+function resolveCurrentUser() {
+	let auth = getContext().get(Auth) as { ok: boolean; identity: schema.SelectUser };
 	if (!auth.ok) return null;
 	return auth.identity;
 }

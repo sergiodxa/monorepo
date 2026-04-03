@@ -1,13 +1,15 @@
 import { xml } from "@pkg/http/response";
 import action from "@pkg/remix-helpers/action";
 import { RSS } from "@pkg/rss";
+import { getContext } from "remix/async-context-middleware";
 
 import { db } from "~/app/http/middleware/db";
 import { Post } from "~/app/repositories/post";
 import { TutorialPost } from "~/app/repositories/posts/tutorial";
 import routes from "~/routes/web";
 
-export default action<typeof routes.rss.tutorials>(async (ctx) => {
+export default action<typeof routes.rss.tutorials>(async () => {
+	let ctx = getContext() as any;
 	let database = db();
 
 	let tutorials = await TutorialPost.findAll(database);

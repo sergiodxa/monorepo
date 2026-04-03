@@ -1,6 +1,7 @@
 import { xml } from "@pkg/http/response";
 import action from "@pkg/remix-helpers/action";
 import { Sitemap } from "@pkg/sitemap";
+import { getContext } from "remix/async-context-middleware";
 
 import { db } from "~/app/http/middleware/db";
 import { Post } from "~/app/repositories/post";
@@ -9,7 +10,8 @@ import { LikePost } from "~/app/repositories/posts/like";
 import { TutorialPost } from "~/app/repositories/posts/tutorial";
 import routes from "~/routes/web";
 
-export default action<typeof routes.sitemap>(async (ctx) => {
+export default action<typeof routes.sitemap>(async () => {
+	let ctx = getContext() as any;
 	let database = db();
 
 	let [articles, tutorials, likes] = await Promise.all([
