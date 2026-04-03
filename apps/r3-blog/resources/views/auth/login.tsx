@@ -1,0 +1,75 @@
+import { css } from "remix/component";
+
+import { BlogLayout } from "~/resources/components/layout/blog";
+import routes from "~/routes/web";
+
+export namespace LoginView {
+	export interface Model {
+		error?: string;
+	}
+}
+
+export function LoginView() {
+	return ({ model }: { model: LoginView.Model }) => (
+		<BlogLayout
+			title="Login"
+			description="Authenticate to access CMS tools"
+			activePath={routes.auth.login.index.href()}
+		>
+			<main
+				mix={[css({ display: "grid", gap: "1rem", justifyItems: "center", textAlign: "center" })]}
+			>
+				<h1 mix={[css({ margin: 0, fontSize: "2.4rem", color: "var(--ui-neutral-fg-emphasis)" })]}>
+					Login
+				</h1>
+
+				<p
+					mix={[
+						css({ margin: 0, maxWidth: "55ch", color: "var(--ui-neutral-fg)", lineHeight: 1.4 }),
+					]}
+				>
+					Authenticate with your account to access CMS routes.
+				</p>
+
+				{model.error && (
+					<p
+						mix={[
+							css({
+								margin: 0,
+								padding: "0.55rem 0.8rem",
+								borderRadius: "0.55rem",
+								backgroundColor: "var(--ui-accent-bg-tint)",
+								border: "1px solid var(--ui-accent-border)",
+								color: "var(--ui-accent-fg-emphasis)",
+							}),
+						]}
+					>
+						{model.error}
+					</p>
+				)}
+
+				<form
+					action={routes.auth.login.action.href()}
+					method={routes.auth.login.action.method}
+					mix={[css({ display: "contents" })]}
+				>
+					<button
+						type="submit"
+						mix={[
+							css({
+								textDecoration: "none",
+								backgroundColor: "var(--ui-accent-bg-solid)",
+								color: "var(--ui-accent-fg-on-solid)",
+								padding: "0.65rem 1rem",
+								borderRadius: "0.6rem",
+								fontWeight: 700,
+							}),
+						]}
+					>
+						Continue with Auth
+					</button>
+				</form>
+			</main>
+		</BlogLayout>
+	);
+}

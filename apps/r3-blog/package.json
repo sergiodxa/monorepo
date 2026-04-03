@@ -6,10 +6,10 @@
 		"dev": "vite dev",
 		"build": "vite build",
 		"start": "vite preview",
-		"cf:deploy": "wrangler deploy",
-		"cf:typegen": "wrangler types",
-		"db:local:migrate": "wrangler d1 migrations apply --local",
-		"db:remote:migrate": "wrangler d1 migrations apply --remote"
+		"cf:deploy": "bunx wrangler deploy",
+		"cf:typegen": "bunx wrangler types",
+		"db:local:migrate": "bunx wrangler d1 migrations apply --local",
+		"db:remote:migrate": "bunx wrangler d1 migrations apply --remote"
 	},
 	"dependencies": {
 		"@edgefirst-dev/jwt": "^1.3.0",

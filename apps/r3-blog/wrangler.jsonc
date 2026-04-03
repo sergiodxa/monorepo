@@ -1,7 +1,7 @@
 {
 	"$schema": "https://unpkg.com/wrangler@latest/config-schema.json",
 	"name": "r3-blog",
-	"main": "./src/index.ts",
+	"main": "./bootstrap/worker.ts",
 	"compatibility_date": "2025-04-07",
 	"compatibility_flags": ["nodejs_compat"],
 	"workers_dev": true,
@@ -33,7 +33,7 @@
 			"binding": "DB",
 			"database_name": "db",
 			"database_id": "f6bb2533-9284-4427-83e6-ea12c6630026",
-			"migrations_dir": "./db/migrations",
+			"migrations_dir": "./database/migrations",
 		},
 	],
 
