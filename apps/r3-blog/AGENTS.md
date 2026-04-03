@@ -18,12 +18,19 @@ This document defines app-specific rules for `apps/r3-blog`.
 - MUST keep code-block syntax colors in `resources/css/prism.css` as a dedicated theme (not a flat reuse of generic UI text colors).
 - MUST ensure changes pass `bunx tsc -p apps/r3-blog/tsconfig.json`.
 - MUST use namespaces for types only; no runtime values, functions, or classes inside namespaces.
+- MUST receive `ctx` as a handler argument in `app/http/controllers/**/*` (actions, handlers, and inline middleware callbacks) and use that value directly.
+- MUST read database access from request context with `ctx.get(Database)` in HTTP handlers.
+- MUST keep Cloudflare/environment typing declarations in `config/*.d.ts` (outside `app/`) and include them in app TS config.
+- MUST derive production mode in `bootstrap/worker.ts` from runtime request/environment signals, not `import.meta.env.PROD`.
 
 - SHOULD keep controller logic small and move reusable data transforms to models or helpers.
 - SHOULD keep color and typography changes consistent with the current warm visual style.
 - SHOULD validate route params early and return `notFound("<h1>404 Not Found</h1>")` on invalid routes.
 - SHOULD prefer semantic tokens (`ui-neutral-*`, `ui-accent-*`) over raw palette tokens (`color-neutral-*`, `color-accent-*`) in UI component styles.
 - SHOULD keep `/colors` route updated when tokens are added/removed.
+- SHOULD narrow unknown values with type guards, schema validation, or explicit interfaces instead of unsafe assertions.
+- SHOULD construct expensive middleware dependencies once (module-level cache/factory), not per request, unless request-scoped behavior is required.
+- SHOULD prefer batched DB queries over per-id fanout (`Promise.all` N+1 patterns), especially in feed/rss/sitemap paths.
 
 - MAY add new semantic UI tokens if needed for accessibility or interaction states.
 - MAY add small helper utilities for repeated publish/preview logic.
@@ -33,6 +40,8 @@ This document defines app-specific rules for `apps/r3-blog`.
 - MUST NOT mark items with `published_at === null` as preview.
 - MUST NOT use direct `#hex` colors in `resources/components/**/*.tsx`.
 - MUST NOT bypass `@pkg/markdown/server` for markdown parsing.
+- MUST NOT use `as any` anywhere in this app (`apps/r3-blog/**/*`), including tests, scripts, controllers, middleware, repositories, views, and config files.
+- MUST NOT call `getContext()` inside controllers when `ctx` is available.
 
 - SHOULD NOT add component-specific color tokens when an existing semantic token can represent the same purpose.
 - SHOULD NOT introduce client hydration requirements for public pages.
