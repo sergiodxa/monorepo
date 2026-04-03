@@ -7,9 +7,22 @@ import { LikePost } from "~/app/repositories/posts/like";
 import { BookmarksView } from "~/resources/views/bookmarks";
 import routes from "~/routes/web";
 
-export default action<typeof routes.bookmarks>(async (ctx) => {
-	let bookmarks = await LikePost.findAll(ctx.get(Database));
-	let model = BookmarksViewModel.index(bookmarks);
+/**
+ * Serves the bookmarks page by orchestrating liked-post retrieval and view-model shaping.
+ * The route contract is an HTML response backed by repository data, not direct SQL in the controller.
+ * @returns Server-rendered bookmarks page response.
+ */
+export default action<typeof routes.bookmarks>(
+	/**
+	 * Resolves the database dependency from the request context and fetches liked posts.
+	 * Transforms repository records into the view model expected by `BookmarksView`.
+	 * @param ctx Action context that provides dependency resolution for the current request.
+	 * @returns Server-rendered bookmarks page response.
+	 */
+	async (ctx) => {
+		let bookmarks = await LikePost.findAll(ctx.get(Database));
+		let model = BookmarksViewModel.index(bookmarks);
 
-	return view(BookmarksView, model);
-});
+		return view(BookmarksView, model);
+	},
+);

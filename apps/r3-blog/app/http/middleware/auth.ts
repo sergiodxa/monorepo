@@ -1,18 +1,27 @@
 import { getContext } from "remix/async-context-middleware";
 import { auth as createAuthMiddleware, Auth, createSessionAuthScheme } from "remix/auth-middleware";
-import { createContextKey } from "remix/fetch-router";
 import { Database } from "remix/data-table";
+import { createContextKey } from "remix/fetch-router";
 import { Session } from "remix/session";
 
 import type * as schema from "~/database/schema";
 
 import { User } from "~/app/repositories/user";
 
+/**
+ * Session key used to store the authenticated user id.
+ */
 export let AUTH_SESSION_USER_ID_KEY = "userId";
+/**
+ * Session key used to store the upstream identity token.
+ */
 export let AUTH_SESSION_ID_TOKEN_KEY = "idToken";
 
 let authUserKey = createContextKey<schema.SelectUser | null>();
 
+/**
+ * Auth middleware that reads, verifies, and invalidates the session identity.
+ */
 export let auth = createAuthMiddleware({
 	schemes: [
 		createSessionAuthScheme({
@@ -31,8 +40,14 @@ export let auth = createAuthMiddleware({
 	],
 });
 
+/**
+ * Default auth middleware export for route middleware registration.
+ */
 export default auth;
 
+/**
+ * Returns the current authenticated user from request context.
+ */
 export function getAuthUser() {
 	let ctx = getContext();
 
@@ -50,15 +65,24 @@ export function getAuthUser() {
 	return user;
 }
 
+/**
+ * Indicates whether the current request has an authenticated user.
+ */
 export function isAuthenticated() {
 	return Boolean(getAuthUser());
 }
 
+/**
+ * Indicates whether the current authenticated user has admin role.
+ */
 export function isAdmin() {
 	let user = getAuthUser();
 	return user?.role === "admin";
 }
 
+/**
+ * Regenerates the session and signs in the provided user.
+ */
 export function login(user: schema.SelectUser) {
 	let session = readSession();
 	session.regenerateId();
@@ -66,12 +90,18 @@ export function login(user: schema.SelectUser) {
 	getContext().set(authUserKey, user);
 }
 
+/**
+ * Destroys the current session and clears cached auth user context.
+ */
 export function logout() {
 	let session = readSession();
 	session.destroy();
 	getContext().set(authUserKey, null);
 }
 
+/**
+ * Returns the stored identity token from the current session.
+ */
 export function getIdToken() {
 	let session = readSession();
 	let idToken = session.get(AUTH_SESSION_ID_TOKEN_KEY);
@@ -79,6 +109,9 @@ export function getIdToken() {
 	return idToken;
 }
 
+/**
+ * Stores an identity token in the current session.
+ */
 export function setIdToken(token: string) {
 	let session = readSession();
 	session.set(AUTH_SESSION_ID_TOKEN_KEY, token);

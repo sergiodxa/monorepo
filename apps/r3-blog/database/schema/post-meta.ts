@@ -6,6 +6,12 @@ import type { InsertRow } from "./types/insert-row";
 
 import { validateTimestamps } from "./validations/timestamps";
 
+/**
+ * Stores extensible key-value metadata for posts.
+ *
+ * Child rows are removed when their parent post is deleted, and timestamp
+ * fields are validated as required audit columns.
+ */
 export const postMeta = table({
 	name: "post_meta",
 	timestamps: {
@@ -28,6 +34,12 @@ export const postMeta = table({
 	},
 });
 
+/**
+ * Database row shape returned when reading post metadata.
+ */
 export type SelectPostMeta = TableRow<typeof postMeta>;
 
+/**
+ * Insert payload shape for creating post metadata records.
+ */
 export type InsertPostMeta = InsertRow<typeof postMeta>;

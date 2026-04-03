@@ -1,6 +1,9 @@
 import { redirect } from "@pkg/http/response";
 import middleware from "@pkg/remix-helpers/middleware";
 
+/**
+ * Redirects any non-root path ending with `/` to its canonical no-trailing-slash URL.
+ */
 export default function createNoTrailingSlashMiddleware() {
 	return middleware(async (ctx, next) => {
 		let url = new URL(ctx.request.url);

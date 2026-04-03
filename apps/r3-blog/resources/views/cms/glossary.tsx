@@ -6,7 +6,13 @@ import { CMSLayout } from "~/resources/components/layout/cms";
 import { Modal } from "~/resources/components/modal";
 import routes from "~/routes/web";
 
+/**
+ * Type contracts for the glossary index screen.
+ */
 export namespace CMSGlossaryIndexView {
+	/**
+	 * One glossary entry shown in the index table.
+	 */
 	export interface Item {
 		id: string;
 		term: string;
@@ -15,12 +21,21 @@ export namespace CMSGlossaryIndexView {
 		deleteAction: string;
 	}
 
+	/**
+	 * Data required to render the glossary index screen.
+	 */
 	export interface Props {
 		items: Array<Item>;
 	}
 }
 
+/**
+ * Type contracts for the glossary create and edit screen.
+ */
 export namespace CMSGlossaryActionView {
+	/**
+	 * Editable glossary field values bound to the form inputs.
+	 */
 	export interface FormValues {
 		term: string;
 		title: string;
@@ -28,6 +43,9 @@ export namespace CMSGlossaryActionView {
 		definition: string;
 	}
 
+	/**
+	 * Data required to render the glossary create or edit form.
+	 */
 	export interface Props {
 		title: string;
 		description: string;
@@ -39,6 +57,9 @@ export namespace CMSGlossaryActionView {
 	}
 }
 
+/**
+ * Renders the CMS glossary index with table actions.
+ */
 export function CMSGlossaryIndexView() {
 	return ({ model }: { model: CMSGlossaryIndexView.Props }) => {
 		let { items } = model;
@@ -299,6 +320,9 @@ export function CMSGlossaryIndexView() {
 	};
 }
 
+/**
+ * Renders the CMS glossary form for creating or editing a term.
+ */
 export function CMSGlossaryActionView() {
 	return ({ model }: { model: CMSGlossaryActionView.Props }) => {
 		let { action, description, mode, submitLabel, title, values } = model;

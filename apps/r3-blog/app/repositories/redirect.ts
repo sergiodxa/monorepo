@@ -1,20 +1,21 @@
 import type { KVStore } from "~/app/contracts/kv-store";
 
 /**
- * Helpers for URL redirects stored in the REDIRECTS KV namespace.
+ * Redirect domain types persisted in the REDIRECTS KV namespace.
  *
- * Keys are request pathnames (e.g. `/old-path`) and values are either:
- * - plain destination strings (e.g. `/new-path`)
- * - JSON objects with `{ to, status }`
+ * KV values can be legacy plain strings or structured JSON payloads, so callers
+ * should rely on `Redirect.parseValue` output instead of assuming one storage format.
  */
 export namespace Redirect {
 	/**
-	 * Redirect status codes supported by this model.
+	 * HTTP redirect status codes accepted and emitted by this repository.
 	 */
 	export type Status = 301 | 302 | 307 | 308;
 
 	/**
-	 * Redirect target payload.
+	 * Parsed redirect payload used by runtime lookups.
+	 *
+	 * `to` is returned as stored and may be absolute, relative, or external.
 	 */
 	export interface Value {
 		to: string;
@@ -22,7 +23,9 @@ export namespace Redirect {
 	}
 
 	/**
-	 * Redirect record as returned by list operations.
+	 * Normalized redirect entry returned by read and write operations.
+	 *
+	 * `from` is always normalized to start with `/`.
 	 */
 	export interface Record {
 		from: string;
@@ -31,7 +34,9 @@ export namespace Redirect {
 	}
 
 	/**
-	 * Input used to create or update a redirect entry.
+	 * Input payload for creating or updating one redirect entry.
+	 *
+	 * When `status` is omitted, the repository defaults it to `302`.
 	 */
 	export interface UpsertInput {
 		from: string;
@@ -41,11 +46,17 @@ export namespace Redirect {
 }
 
 /**
- * Redirect model backed by a KV namespace.
+	 * Redirect repository backed by a KV namespace.
+	 *
+	 * It centralizes key normalization and payload parsing so controllers can consume
+	 * a single contract regardless of how redirects were historically stored.
  */
 export class Redirect {
 	/**
-	 * Looks up a redirect by request pathname.
+	 * Resolves one redirect for a request pathname.
+	 * @param kv KV namespace containing redirect definitions.
+	 * @param pathname Incoming request pathname to resolve.
+	 * @returns Parsed redirect payload, or `null` when no valid redirect exists.
 	 */
 	static async findByPath(kv: KVStore, pathname: string): Promise<Redirect.Value | null> {
 		let key = this.normalizePath(pathname);
@@ -56,7 +67,12 @@ export class Redirect {
 	}
 
 	/**
-	 * Lists all redirect entries from KV.
+	 * Lists every valid redirect currently stored in KV.
+	 * @param kv KV namespace containing redirect definitions.
+	 * @returns Redirect records with normalized `from` paths.
+	 *
+	 * Entries that cannot be read or parsed are skipped to keep admin listings resilient
+	 * to stale keys and malformed legacy values.
 	 */
 	static async findAll(kv: KVStore): Promise<Array<Redirect.Record>> {
 		let list = await kv.list();
@@ -82,7 +98,10 @@ export class Redirect {
 	}
 
 	/**
-	 * Creates or updates a redirect entry.
+	 * Creates or updates a redirect entry in KV.
+	 * @param kv KV namespace containing redirect definitions.
+	 * @param input Redirect source, target, and optional status.
+	 * @returns Persisted redirect record with normalized `from` and resolved status.
 	 */
 	static async upsert(kv: KVStore, input: Redirect.UpsertInput) {
 		let from = this.normalizePath(input.from);
@@ -97,7 +116,10 @@ export class Redirect {
 	}
 
 	/**
-	 * Deletes a redirect entry by source path.
+	 * Deletes one redirect by source path.
+	 * @param kv KV namespace containing redirect definitions.
+	 * @param from Source path to remove.
+	 * @returns `true` once KV deletion has completed.
 	 */
 	static async destroy(kv: KVStore, from: string) {
 		let key = this.normalizePath(from);
@@ -106,7 +128,12 @@ export class Redirect {
 	}
 
 	/**
-	 * Parses redirect value from KV, handling JSON and plain string values.
+	 * Parses a raw KV value into a redirect payload.
+	 * @param value Raw value read from KV.
+	 * @returns Parsed redirect payload, or `null` for empty/invalid values.
+	 *
+	 * Plain strings are treated as legacy shorthand and default to `302`. JSON payloads
+	 * with unsupported statuses are accepted but coerced to `302`.
 	 */
 	static parseValue(value: string): Redirect.Value | null {
 		let trimmed = value.trim();
@@ -135,7 +162,9 @@ export class Redirect {
 	}
 
 	/**
-	 * Normalizes redirect source paths to start with `/`.
+	 * Normalizes redirect keys to path-like values.
+	 * @param pathname Source pathname provided by callers or KV key names.
+	 * @returns The same pathname when it already starts with `/`, otherwise prefixed.
 	 */
 	static normalizePath(pathname: string) {
 		if (pathname.startsWith("/")) return pathname;

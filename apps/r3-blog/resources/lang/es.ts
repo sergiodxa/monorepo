@@ -1,5 +1,8 @@
 import type en from "./en";
 
+/**
+ * Spanish translation strings for the blog UI and CMS interface.
+ */
 export default {
 	header: { title: "Sergio Xalambrí" },
 

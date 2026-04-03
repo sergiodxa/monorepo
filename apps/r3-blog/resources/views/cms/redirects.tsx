@@ -7,7 +7,13 @@ import { Modal } from "~/resources/components/modal";
 import { Select } from "~/resources/components/select";
 import routes from "~/routes/web";
 
+/**
+ * Types used by the redirects index view.
+ */
 export namespace CMSRedirectsIndexView {
+	/**
+	 * Redirect row displayed in the redirects table.
+	 */
 	export interface Item {
 		from: string;
 		to: string;
@@ -15,12 +21,21 @@ export namespace CMSRedirectsIndexView {
 		deleteAction: string;
 	}
 
+	/**
+	 * Data required to render the redirects index state.
+	 */
 	export interface Props {
 		items: Array<Item>;
 	}
 }
 
+/**
+ * Types used by the create-redirect view.
+ */
 export namespace CMSRedirectsNewView {
+	/**
+	 * Heading and form target for the new redirect page.
+	 */
 	export interface Props {
 		title: string;
 		description: string;
@@ -28,6 +43,9 @@ export namespace CMSRedirectsNewView {
 	}
 }
 
+/**
+ * Builds the redirects listing page with delete actions.
+ */
 export function CMSRedirectsIndexView() {
 	return ({ model }: { model: CMSRedirectsIndexView.Props }) => {
 		let { items } = model;
@@ -287,6 +305,9 @@ export function CMSRedirectsIndexView() {
 	};
 }
 
+/**
+ * Builds the form page for creating a redirect.
+ */
 export function CMSRedirectsNewView() {
 	return ({ model }: { model: CMSRedirectsNewView.Props }) => {
 		let { title, description, action } = model;

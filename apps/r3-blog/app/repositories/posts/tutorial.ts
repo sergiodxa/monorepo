@@ -5,7 +5,18 @@ import { and, eq, inList } from "remix/data-table";
 import { Post } from "~/app/repositories/post";
 import { postMeta, posts } from "~/database/schema";
 
+/**
+ * Type contracts used by tutorial persistence and query helpers.
+ *
+ * The namespace stays type-only so repository runtime logic remains in `TutorialPost`.
+ */
 export namespace TutorialPost {
+	/**
+	 * Canonical metadata payload for tutorials.
+	 *
+	 * `tags` accepts either a single tag or an array so write paths can accept CMS forms
+	 * and API payloads uniformly before normalization.
+	 */
 	export interface Meta {
 		title: string;
 		slug: string;
@@ -14,10 +25,22 @@ export namespace TutorialPost {
 		tags?: string | Array<string>;
 	}
 
+	/**
+	 * Input contract for tutorial creation, including top-level post fields and `Meta`.
+	 */
 	export interface CreateInput extends Post.TypedCreateInput<Meta> {}
 
+	/**
+	 * Input contract for tutorial updates with partial typed metadata support.
+	 */
 	export interface UpdateInput extends Post.TypedUpdateInput<Meta> {}
 
+	/**
+	 * Lightweight tutorial projection used for index pages.
+	 *
+	 * `published_at` is preserved so callers can apply publish/preview semantics at render
+	 * time (`null` means published in this app).
+	 */
 	export interface ListItem {
 		id: string;
 		title: string;
@@ -26,6 +49,9 @@ export namespace TutorialPost {
 		published_at: string | null;
 	}
 
+	/**
+	 * Related tutorial candidate with the first tag match that triggered the relation.
+	 */
 	export interface RelatedItem {
 		slug: string;
 		title: string;
@@ -33,8 +59,19 @@ export namespace TutorialPost {
 	}
 }
 
+/**
+ * Ordered whitelist of tutorial metadata keys persisted in `post_meta`.
+ *
+ * The order is reused when serializing to keep metadata writes deterministic.
+ */
 let TUTORIAL_META_KEYS = ["title", "slug", "excerpt", "content", "tags"];
 
+/**
+ * Resolves the latest value for a metadata key from append-style rows.
+ *
+ * Rows are sorted by key and recency (`updated_at`, then `created_at`) so repeated
+ * writes collapse to one logical value during decode.
+ */
 function tutorialMetaValue(
 	rows: Array<{ key: string; value: string; created_at: string; updated_at: string }>,
 	key: string,
@@ -56,6 +93,12 @@ function tutorialMetaValue(
 	return undefined;
 }
 
+/**
+ * Normalizes stored tag metadata into trimmed, unique tags.
+ *
+ * Accepts JSON arrays for current writes and gracefully falls back to a legacy/raw
+ * string as a single tag.
+ */
 function parseTags(raw: string | undefined): Array<string> {
 	if (!raw) return [];
 
@@ -80,6 +123,11 @@ function parseTags(raw: string | undefined): Array<string> {
 	}
 }
 
+/**
+ * Canonicalizes tag input and serializes it for metadata storage.
+ *
+ * Empty or fully-invalid input returns `undefined` so no `tags` meta row is written.
+ */
 function serializeTags(input: TutorialPost.Meta["tags"]): string | undefined {
 	if (typeof input === "undefined") return undefined;
 
@@ -99,6 +147,12 @@ function serializeTags(input: TutorialPost.Meta["tags"]): string | undefined {
 	return JSON.stringify(tags);
 }
 
+/**
+ * Bidirectional codec between typed tutorial metadata and `post_meta` rows.
+ *
+ * Decode intentionally supplies empty strings for required text fields so callers can
+ * render safely even when historical metadata is incomplete.
+ */
 let tutorialMetaCodec: Post.MetaCodec<TutorialPost.Meta> = {
 	serialize(meta) {
 		let values = {
@@ -130,17 +184,38 @@ let tutorialMetaCodec: Post.MetaCodec<TutorialPost.Meta> = {
 	},
 };
 
+/**
+ * Tutorial repository facade over shared `Post` primitives.
+ *
+ * It centralizes tutorial-specific metadata shaping and helper queries so controllers
+ * can stay focused on HTTP concerns.
+ */
 export class TutorialPost {
+	/**
+	 * Post type discriminator used by all tutorial persistence operations.
+	 */
 	static postType = "tutorial" as const;
 
+	/**
+	 * Returns all tutorial records for this type with decoded metadata.
+	 *
+	 * This method does not filter by publish state; callers decide whether preview content
+	 * is visible.
+	 */
 	static findAll(db: Database) {
 		return Post.findAllForType<"tutorial", TutorialPost.Meta>(db, this.postType, tutorialMetaCodec);
 	}
 
+	/**
+	 * Counts all tutorial rows regardless of publish timing.
+	 */
 	static count(db: Database) {
 		return Post.countForType(db, this.postType);
 	}
 
+	/**
+	 * Finds a tutorial by primary id with typed metadata decode.
+	 */
 	static findById(db: Database, id: string) {
 		return Post.findByIdForType<"tutorial", TutorialPost.Meta>(
 			db,
@@ -150,6 +225,9 @@ export class TutorialPost {
 		);
 	}
 
+	/**
+	 * Finds a tutorial by slug within tutorial-type posts.
+	 */
 	static findBySlug(db: Database, slug: string) {
 		return Post.findBySlugForType<"tutorial", TutorialPost.Meta>(
 			db,
@@ -159,6 +237,9 @@ export class TutorialPost {
 		);
 	}
 
+	/**
+	 * Creates a tutorial post and persists normalized metadata rows.
+	 */
 	static create(db: Database, input: TutorialPost.CreateInput) {
 		return Post.createForType<"tutorial", TutorialPost.Meta>(
 			db,
@@ -168,6 +249,9 @@ export class TutorialPost {
 		);
 	}
 
+	/**
+	 * Updates post fields and tutorial metadata using the same codec as creation.
+	 */
 	static update(db: Database, id: string, input: TutorialPost.UpdateInput) {
 		return Post.updateForType<"tutorial", TutorialPost.Meta>(
 			db,
@@ -178,10 +262,21 @@ export class TutorialPost {
 		);
 	}
 
+	/**
+	 * Deletes a tutorial post by id.
+	 *
+	 * Deletion is delegated to the shared post repository, including related metadata.
+	 */
 	static destroy(db: Database, id: string) {
 		return Post.destroy(db, id);
 	}
 
+	/**
+	 * Produces a string-array view of metadata tags for matching helpers.
+	 *
+	 * Unlike persistence normalization, this keeps values as-is (no trimming/dedupe)
+	 * because it is only used against already-decoded metadata.
+	 */
 	static tags(metaTags: string | string[] | undefined): Array<string> {
 		if (Array.isArray(metaTags)) {
 			return metaTags.filter((tag): tag is string => typeof tag === "string");
@@ -192,6 +287,12 @@ export class TutorialPost {
 		return [];
 	}
 
+	/**
+	 * Finds related tutorials by first shared tag match.
+	 *
+	 * Results preserve repository ordering from `findAll`, skip the current post id, and
+	 * stop once `limit` matches are collected.
+	 */
 	static async findRelatedByTags(
 		db: Database,
 		currentPostId: string,
@@ -222,6 +323,12 @@ export class TutorialPost {
 		return related;
 	}
 
+	/**
+	 * Builds list projections with title/slug metadata hydrated per post id.
+	 *
+	 * Missing metadata falls back to deterministic placeholders, then items are sorted by
+	 * effective publish date (`published_at` when present, otherwise `created_at`).
+	 */
 	static async listItems(db: Database): Promise<Array<TutorialPost.ListItem>> {
 		let rows = await db
 			.query(posts)

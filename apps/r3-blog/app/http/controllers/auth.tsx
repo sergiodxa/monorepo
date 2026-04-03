@@ -27,8 +27,25 @@ let idTokenVerificationKey = JWK.importRemote(
 	{ alg: JWK.Algoritm.ES256 },
 );
 
+/**
+ * Orchestrates the authentication flow for login, logout, and OAuth callback routes.
+ * Keeps login/logout pages guest-only and completes a full PKCE transaction on callback.
+ *
+ * @example
+ * GET /auth/login
+ * @example
+ * GET /auth/callback?code=...&state=...
+ */
 export default controller<typeof routes.auth>({
 	middleware: [
+		/**
+		 * Guards guest-only auth pages by short-circuiting authenticated requests.
+		 *
+		 * Non-obvious behavior: this middleware only applies to login/logout routes;
+		 * the callback route has its own middleware list and can complete sign-in.
+		 *
+		 * @returns A redirect response when a session already exists.
+		 */
 		async () => {
 			if (isAuthenticated()) {
 				return redirect(routes.cms.dashboard.href(), { status: redirect.Status.SeeOther });
@@ -39,10 +56,24 @@ export default controller<typeof routes.auth>({
 		login: {
 			middleware: [],
 			actions: {
+				/**
+				 * Renders the login screen where users can start external authentication.
+				 *
+				 * @returns The login HTML view without mutating session state.
+				 */
 				async index() {
 					return view(LoginView, {});
 				},
 
+				/**
+				 * Starts an OAuth authorization transaction with PKCE and optional post-login redirect.
+				 *
+				 * Contract: `next` is treated as optional user intent and is persisted by the auth
+				 * transaction for callback-time validation and safe redirecting.
+				 *
+				 * @param ctx The current request context used to derive origin and query params.
+				 * @returns A redirect to the external identity provider authorization endpoint.
+				 */
 				action(ctx) {
 					let provider = createProvider({
 						auth: {
@@ -60,10 +91,24 @@ export default controller<typeof routes.auth>({
 		logout: {
 			middleware: [],
 			actions: {
+				/**
+				 * Renders the logout confirmation screen before session termination.
+				 *
+				 * @returns The logout HTML view for user confirmation.
+				 */
 				async index() {
 					return view(LogoutView, {});
 				},
 
+				/**
+				 * Ends local authentication and redirects through the provider logout endpoint.
+				 *
+				 * Non-obvious behavior: `id_token_hint` is sent only when available, while
+				 * `Clear-Site-Data` is always included to remove browser-side residual state.
+				 *
+				 * @param ctx The current request context used to build absolute return URLs.
+				 * @returns A 303 redirect response to the provider logout endpoint.
+				 */
 				action(ctx) {
 					let idToken = getIdToken();
 					let logoutUrl = new URL("https://auth.sergiodxa.com/oidc/logout");
@@ -89,6 +134,18 @@ export default controller<typeof routes.auth>({
 
 		callback: {
 			middleware: [],
+			/**
+			 * Completes the OAuth callback handshake and establishes the local user session.
+			 *
+			 * Contract: validates provider transaction, callback params, and PKCE state before
+			 * exchanging tokens; always clears `__auth` when transaction validation reaches exchange.
+			 *
+			 * Non-obvious behavior: `transaction.returnTo` is honored only for absolute-path values
+			 * to prevent open redirects; all other values fall back to the dashboard.
+			 *
+			 * @param ctx The callback request context containing URL params and scoped services.
+			 * @returns The login view with error details or a 303 redirect after successful sign-in.
+			 */
 			async handler(ctx) {
 				let result: Awaited<ReturnType<typeof exchangeCodeForIdToken>>;
 				let session = ctx.get(Session);

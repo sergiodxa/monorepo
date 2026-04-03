@@ -6,7 +6,13 @@ import { CMSLayout } from "~/resources/components/layout/cms";
 import { Modal } from "~/resources/components/modal";
 import routes from "~/routes/web";
 
+/**
+ * Types used to render the CMS bookmarks list page.
+ */
 export namespace CMSBookmarksIndexView {
+	/**
+	 * Single bookmark row displayed in the index table.
+	 */
 	export interface Item {
 		id: string;
 		title: string;
@@ -15,11 +21,20 @@ export namespace CMSBookmarksIndexView {
 		deleteAction: string;
 	}
 
+	/**
+	 * Data required by the bookmarks index view.
+	 */
 	export interface Props {
 		items: Array<Item>;
 	}
 }
 
+/**
+ * Normalizes a bookmark URL to a link-safe href.
+ *
+ * @param rawHref User-provided URL text.
+ * @returns Absolute or root-relative href for rendering.
+ */
 function normalizeBookmarkHref(rawHref: string) {
 	if (rawHref.startsWith("http://") || rawHref.startsWith("https://")) {
 		return rawHref;
@@ -32,12 +47,21 @@ function normalizeBookmarkHref(rawHref: string) {
 	return `https://${rawHref}`;
 }
 
+/**
+ * Types used by the bookmark create/edit form view.
+ */
 export namespace CMSBookmarksActionView {
+	/**
+	 * Form field values used to prefill bookmark inputs.
+	 */
 	export interface FormValues {
 		title: string;
 		url: string;
 	}
 
+	/**
+	 * Content and actions required by the bookmark form page.
+	 */
 	export interface Props {
 		title: string;
 		description: string;
@@ -49,6 +73,9 @@ export namespace CMSBookmarksActionView {
 	}
 }
 
+/**
+ * Builds the CMS page that lists bookmarks and row actions.
+ */
 export function CMSBookmarksIndexView() {
 	return ({ model }: { model: CMSBookmarksIndexView.Props }) => {
 		let { items } = model;
@@ -321,6 +348,9 @@ export function CMSBookmarksIndexView() {
 	};
 }
 
+/**
+ * Builds the CMS page used to create or edit a bookmark.
+ */
 export function CMSBookmarksActionView() {
 	return ({ model }: { model: CMSBookmarksActionView.Props }) => {
 		let { action, description, mode, submitLabel, title, values } = model;

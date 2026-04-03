@@ -1,3 +1,6 @@
+/**
+ * English translation strings used across the blog UI and CMS.
+ */
 export default {
 	header: { title: "Sergio Xalambrí" },
 

@@ -3,22 +3,40 @@ import { css } from "remix/component";
 import { BlogLayout } from "~/resources/components/layout/blog";
 import routes from "~/routes/web";
 
+/**
+ * Types used by the tutorials page view.
+ */
 export namespace TutorialsView {
+	/**
+	 * A tutorial link shown in the list.
+	 */
 	export interface Item {
 		href: string;
 		label: string;
 		preview?: boolean;
 	}
 
+	/**
+	 * Data required to render the tutorials page.
+	 */
 	export interface Model {
 		items: Array<Item>;
 	}
 }
 
+/**
+ * Builds the tutorial URL for a given slug.
+ * @param slug Tutorial slug used in the route.
+ * @returns Absolute path to the tutorial page.
+ */
 export function tutorialPathFromSlug(slug: string) {
 	return routes.post.href({ postType: "tutorials", postSlug: slug });
 }
 
+/**
+ * Creates the tutorials page renderer using blog layout styles.
+ * @returns A view function that renders the tutorials model.
+ */
 export function TutorialsView() {
 	return ({ model }: { model: TutorialsView.Model }) => (
 		<BlogLayout

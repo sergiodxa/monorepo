@@ -2,6 +2,9 @@ import type { Props } from "remix/component";
 
 import { css } from "remix/component";
 
+/**
+ * Creates a dialog component with the blog modal shell styles and merges caller `mix` overrides.
+ */
 export function Modal() {
 	return ({ children, mix, ...rest }: Props<"dialog">) => {
 		return (

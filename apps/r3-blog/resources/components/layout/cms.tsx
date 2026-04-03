@@ -5,19 +5,31 @@ import { css } from "remix/component";
 import appColorsStyles from "~/resources/css/colors.css?url";
 import routes from "~/routes/web";
 
+/**
+ * Shared types used by the CMS page layout.
+ */
 export namespace CMSLayout {
+	/**
+	 * Inputs for rendering a CMS page shell.
+	 */
 	export type Props = {
 		title: string;
 		activePath?: string;
 		children: RemixNode;
 	};
 
+	/**
+	 * One item displayed in the CMS top navigation.
+	 */
 	export type NavigationItem = {
 		href: string;
 		label: string;
 	};
 }
 
+/**
+ * Ordered links shown in the CMS navigation bar.
+ */
 let cmsNavigationItems: Array<CMSLayout.NavigationItem> = [
 	{ href: routes.cms.dashboard.href(), label: "Dashboard" },
 	{ href: routes.cms.articles.index.href(), label: "Articles" },
@@ -28,6 +40,11 @@ let cmsNavigationItems: Array<CMSLayout.NavigationItem> = [
 	{ href: routes.auth.logout.index.href(), label: "Logout" },
 ];
 
+/**
+ * Builds the CMS document layout with shared navigation and styles.
+ *
+ * @returns A renderer that wraps page content in the CMS shell.
+ */
 export function CMSLayout() {
 	return ({ activePath, children, title }: CMSLayout.Props) => (
 		<html lang="en">

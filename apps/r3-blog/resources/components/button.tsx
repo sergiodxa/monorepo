@@ -2,6 +2,10 @@ import type { Props } from "remix/component";
 
 import { css } from "remix/component";
 
+/**
+ * Creates a styled button component that applies the default accent UI tokens
+ * and appends any caller-provided `mix` styles.
+ */
 export function Button() {
 	return ({ children, mix, ...rest }: Props<"button">) => {
 		return (

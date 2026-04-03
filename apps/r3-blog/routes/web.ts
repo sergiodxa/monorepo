@@ -4,6 +4,9 @@ import auth from "~/routes/auth";
 import cms from "~/routes/cms";
 import rss from "~/routes/rss";
 
+/**
+ * Registers the public site routes and mounts auth, RSS, and CMS sub-routers.
+ */
 export default route({
 	feed: get("/"),
 	colors: get("/colors"),

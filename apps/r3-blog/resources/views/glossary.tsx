@@ -3,7 +3,13 @@ import { css } from "remix/component";
 import { BlogLayout } from "~/resources/components/layout/blog";
 import routes from "~/routes/web";
 
+/**
+ * Shared types for the glossary page view model.
+ */
 export namespace GlossaryView {
+	/**
+	 * Single glossary term rendered in the definition list.
+	 */
 	export interface Entry {
 		id: string;
 		slug: string;
@@ -12,15 +18,29 @@ export namespace GlossaryView {
 		definition: string;
 	}
 
+	/**
+	 * Data required to render the glossary page.
+	 */
 	export interface Model {
 		entries: Array<Entry>;
 	}
 }
 
+/**
+ * Builds the in-page URL path for a glossary term slug.
+ *
+ * @param slug Term identifier used in glossary links.
+ * @returns Absolute glossary route for the provided slug.
+ */
 export function glossaryPathFromSlug(slug: string): string {
 	return `/glossary/${slug}`;
 }
 
+/**
+ * Creates a renderer for the glossary page.
+ *
+ * @returns View function that renders glossary entries from the model.
+ */
 export function GlossaryView() {
 	return ({ model }: { model: GlossaryView.Model }) => (
 		<BlogLayout

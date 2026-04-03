@@ -7,16 +7,29 @@ import { BlogLayout } from "~/resources/components/layout/blog";
 import prismStyles from "~/resources/css/prism.css?url";
 import routes from "~/routes/web";
 
+/**
+ * Groups PostView types used by the post page renderer.
+ */
 export namespace PostView {
+	/**
+	 * Shape of the data required to render a post page.
+	 */
 	export interface Model extends PostViewModel.Page {}
 }
 
+/**
+ * Formats an ISO-like date string for the post metadata section.
+ * Returns an empty string when the input cannot be parsed.
+ */
 function formatDate(value: string) {
 	let date = new Date(value);
 	if (Number.isNaN(date.getTime())) return "";
 	return date.toLocaleDateString("en", { month: "short", day: "2-digit", year: "2-digit" });
 }
 
+/**
+ * Builds a page renderer for a blog post detail view.
+ */
 export function PostView() {
 	return ({ model }: { model: PostView.Model }) => {
 		let fileFormat = model.post.format ?? "html";

@@ -3,10 +3,19 @@ import { css } from "remix/component";
 import { BlogLayout } from "~/resources/components/layout/blog";
 import routes from "~/routes/web";
 
+/**
+ * Groups type contracts used by the logout view.
+ */
 export namespace LogoutView {
+	/**
+	 * Data available to the logout page renderer.
+	 */
 	export interface Model {}
 }
 
+/**
+ * Creates the logout page renderer with confirmation UI and sign-out form.
+ */
 export function LogoutView() {
 	return ({ model: _model }: { model: LogoutView.Model }) => (
 		<BlogLayout

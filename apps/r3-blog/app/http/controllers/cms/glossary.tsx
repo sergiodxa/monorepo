@@ -12,10 +12,26 @@ import { GlossarySchema } from "~/app/schemas/cms/glossary";
 import { CMSGlossaryActionView, CMSGlossaryIndexView } from "~/resources/views/cms/glossary";
 import routes from "~/routes/web";
 
+/**
+ * Coordinates CMS glossary CRUD flows and maps route actions to view or redirect responses.
+ *
+ * Contract: actions use `GlossaryPost` as the data boundary and return HTML views or 303 redirects.
+ */
 export default controller<typeof routes.cms.glossary>({
+	/**
+	 * Controller-level middleware chain.
+	 *
+	 * Kept empty here so each action can enforce its own auth/redirect contract where needed.
+	 */
 	middleware: [],
 
 	actions: {
+		/**
+		 * Loads all glossary terms and adapts repository records into index-table row props.
+		 *
+		 * @param ctx Request context with dependency container access.
+		 * @returns CMS glossary index view response.
+		 */
 		async index(ctx) {
 			let glossary = await GlossaryPost.findAll(ctx.get(Database));
 			let items = glossary.map((item) => ({
@@ -29,6 +45,13 @@ export default controller<typeof routes.cms.glossary>({
 			return view(CMSGlossaryIndexView, { items });
 		},
 
+		/**
+		 * Validates form input, creates a glossary term, then sends a 303 redirect.
+		 *
+		 * Non-obvious behavior: when `slug` is omitted, it is derived from `term` via `parameterize`.
+		 * @param ctx Request context containing `FormData` and database bindings.
+		 * @returns Redirect to login, index fallback, or the created term edit route.
+		 */
 		async create(ctx) {
 			let user = getAuthUser();
 			if (!user)
@@ -55,6 +78,12 @@ export default controller<typeof routes.cms.glossary>({
 			});
 		},
 
+		/**
+		 * Deletes a glossary term by route `id` and always returns to the index route.
+		 *
+		 * @param ctx Request context with route params and database bindings.
+		 * @returns 303 redirect to glossary index, even when `id` is missing.
+		 */
 		async destroy(ctx) {
 			let id = ctx.params.id;
 			if (!id)
@@ -64,6 +93,13 @@ export default controller<typeof routes.cms.glossary>({
 			return redirect(routes.cms.glossary.index.href(), { status: redirect.Status.SeeOther });
 		},
 
+		/**
+		 * Loads a glossary term for editing and hydrates the CMS form state.
+		 *
+		 * Contract: when `id` is absent or unknown, returns a 404 form view in "new" mode.
+		 * @param ctx Request context with route params and database bindings.
+		 * @returns Edit form view for an existing term, or a 404 fallback form response.
+		 */
 		async edit(ctx) {
 			let id = ctx.params.id;
 			let glossary = id ? await GlossaryPost.findById(ctx.get(Database), id) : null;
@@ -99,6 +135,12 @@ export default controller<typeof routes.cms.glossary>({
 			return view(CMSGlossaryActionView, viewProps);
 		},
 
+		/**
+		 * Renders the new-term form and includes current glossary size for CMS operator context.
+		 *
+		 * @param ctx Request context with database bindings.
+		 * @returns CMS glossary creation form view.
+		 */
 		async new(ctx) {
 			let total = (await GlossaryPost.findAll(ctx.get(Database))).length;
 			let viewProps = {
@@ -113,6 +155,13 @@ export default controller<typeof routes.cms.glossary>({
 			return view(CMSGlossaryActionView, viewProps);
 		},
 
+		/**
+		 * Validates form payload and updates an existing glossary term by route `id`.
+		 *
+		 * Non-obvious behavior: missing auth or `id` short-circuits to index redirect instead of 404.
+		 * @param ctx Request context containing auth state, params, form data, and database.
+		 * @returns Redirect back to edit page, index fallback, or 404 form view when update target is missing.
+		 */
 		async update(ctx) {
 			let user = getAuthUser();
 			let id = ctx.params.id;

@@ -3,12 +3,22 @@ import { css } from "remix/component";
 import { BlogLayout } from "~/resources/components/layout/blog";
 import routes from "~/routes/web";
 
+/**
+ * Groups type contracts used by the login view renderer.
+ */
 export namespace LoginView {
+	/**
+	 * Carries server-provided state for rendering the login page.
+	 */
 	export interface Model {
 		error?: string;
 	}
 }
 
+/**
+ * Builds the login page renderer used by the auth route.
+ * @returns A view function that renders the login screen from the route model.
+ */
 export function LoginView() {
 	return ({ model }: { model: LoginView.Model }) => (
 		<BlogLayout

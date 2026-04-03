@@ -2,7 +2,13 @@ import { css } from "remix/component";
 
 import { BlogLayout } from "~/resources/components/layout/blog";
 
+/**
+ * Type contracts used by the not-found page renderer.
+ */
 export namespace NotFoundView {
+	/**
+	 * Content used to render the not-found page.
+	 */
 	export interface Model {
 		title: string;
 		description: string;
@@ -10,6 +16,11 @@ export namespace NotFoundView {
 	}
 }
 
+/**
+ * Creates the not-found page renderer with blog layout styling.
+ *
+ * @returns A view function that renders the page from a `model` payload.
+ */
 export function NotFoundView() {
 	return ({ model }: { model: NotFoundView.Model }) => (
 		<BlogLayout title={model.title} description={model.description}>

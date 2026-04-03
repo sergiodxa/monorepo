@@ -1,5 +1,8 @@
 import { defaulted, object, optional, string } from "remix/data-schema";
 
+/**
+ * Validates CMS article form payloads and applies defaults for optional fields.
+ */
 export const ArticleSchema = object({
 	title: defaulted(string(), "Untitled article"),
 	slug: optional(string()),

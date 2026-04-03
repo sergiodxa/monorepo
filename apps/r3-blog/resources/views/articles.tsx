@@ -3,22 +3,40 @@ import { css } from "remix/component";
 import { BlogLayout } from "~/resources/components/layout/blog";
 import routes from "~/routes/web";
 
+/**
+ * Groups type contracts for the articles list page.
+ */
 export namespace ArticlesView {
+	/**
+	 * Represents one article link rendered in the list.
+	 */
 	export interface Item {
 		href: string;
 		label: string;
 		preview?: boolean;
 	}
 
+	/**
+	 * Supplies all data needed to render the articles page.
+	 */
 	export interface Model {
 		items: Array<Item>;
 	}
 }
 
+/**
+ * Builds the canonical URL path for an article slug.
+ * @param slug Article slug used in the route.
+ * @returns Resolved href for the article page.
+ */
 export function articlePath(slug: string) {
 	return routes.post.href({ postType: "articles", postSlug: slug });
 }
 
+/**
+ * Creates the articles page renderer with title, feed link, and item list.
+ * @returns A view function that renders from an articles model.
+ */
 export function ArticlesView() {
 	return ({ model }: { model: ArticlesView.Model }) => (
 		<BlogLayout

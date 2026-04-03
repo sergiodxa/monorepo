@@ -6,7 +6,13 @@ import { CMSLayout } from "~/resources/components/layout/cms";
 import { Modal } from "~/resources/components/modal";
 import routes from "~/routes/web";
 
+/**
+ * Type contracts for the CMS articles list page.
+ */
 export namespace CMSArticlesIndexView {
+	/**
+	 * One article row rendered in the CMS list table.
+	 */
 	export interface Item {
 		id: string;
 		title: string;
@@ -16,12 +22,21 @@ export namespace CMSArticlesIndexView {
 		deleteAction: string;
 	}
 
+	/**
+	 * Data required to render the CMS articles list view.
+	 */
 	export interface Props {
 		items: Array<Item>;
 	}
 }
 
+/**
+ * Type contracts for the CMS article create/edit form.
+ */
 export namespace CMSArticlesActionView {
+	/**
+	 * Form field values used by the article action screen.
+	 */
 	export interface FormValues {
 		title: string;
 		slug: string;
@@ -32,6 +47,9 @@ export namespace CMSArticlesActionView {
 		published_at: string;
 	}
 
+	/**
+	 * Data required to render the article action form.
+	 */
 	export interface Props {
 		title: string;
 		description: string;
@@ -43,6 +61,9 @@ export namespace CMSArticlesActionView {
 	}
 }
 
+/**
+ * Renders the CMS page that lists articles and provides row actions.
+ */
 export function CMSArticlesIndexView() {
 	return ({ model }: { model: CMSArticlesIndexView.Props }) => {
 		let { items } = model;
@@ -307,6 +328,9 @@ export function CMSArticlesIndexView() {
 	};
 }
 
+/**
+ * Renders the CMS form used to create or edit an article.
+ */
 export function CMSArticlesActionView() {
 	return ({ model }: { model: CMSArticlesActionView.Props }) => {
 		let { action, description, mode, submitLabel, title, values } = model;

@@ -5,16 +5,36 @@ import { inList } from "remix/data-table";
 import { PostMeta } from "~/app/repositories/post-meta";
 import * as schema from "~/database/schema";
 
+/**
+ * Shared type contracts for post persistence and typed metadata mapping.
+ *
+ * The namespace only contains types so callers can compose typed wrappers
+ * around generic post rows without introducing runtime dependencies.
+ */
 export namespace Post {
+	/** Allowed discriminator values persisted in `posts.type`. */
 	export type Type = schema.SelectPost["type"];
 
+	/** Generic object constraint used by typed metadata helpers. */
 	export type MetaObject = object;
 
+	/**
+	 * Bidirectional adapter between domain metadata objects and DB key/value rows.
+	 *
+	 * `serialize` is used before writes; `deserialize` is used after reads.
+	 */
 	export interface MetaCodec<meta extends object> {
+		/** Converts partial domain metadata into rows accepted by `post_meta`. */
 		serialize(meta: Partial<meta>): Array<{ key: string; value: string }>;
+		/** Rebuilds full domain metadata from all rows belonging to one post. */
 		deserialize(rows: Array<schema.SelectPostMeta>): meta;
 	}
 
+	/**
+	 * Canonical create payload for raw post rows.
+	 *
+	 * Omitted timestamps default to repository-generated ISO values.
+	 */
 	export interface CreateInput {
 		id?: string;
 		author_id: string;
@@ -25,6 +45,12 @@ export namespace Post {
 		updated_at?: string;
 	}
 
+	/**
+	 * Mutable fields for post updates.
+	 *
+	 * Metadata updates are keyed by `key`; existing keys are updated and missing
+	 * keys are inserted.
+	 */
 	export interface UpdateInput {
 		author_id?: string;
 		type?: Type;
@@ -33,6 +59,7 @@ export namespace Post {
 		updated_at?: string;
 	}
 
+	/** Typed create payload for one concrete post type. */
 	export interface TypedCreateInput<meta extends object> {
 		id?: string;
 		author_id: string;
@@ -42,6 +69,7 @@ export namespace Post {
 		updated_at?: string;
 	}
 
+	/** Typed update payload for one concrete post type. */
 	export interface TypedUpdateInput<meta extends object> {
 		author_id?: string;
 		published_at?: string | null;
@@ -49,6 +77,7 @@ export namespace Post {
 		updated_at?: string;
 	}
 
+	/** Post row narrowed to a concrete type with decoded metadata. */
 	export type TypedResult<type extends Type, meta extends object> = Omit<
 		schema.SelectPost,
 		"type"
@@ -57,20 +86,30 @@ export namespace Post {
 		meta: meta;
 	};
 
+	/** Raw post row with all related metadata rows attached. */
 	export interface FoundPost extends schema.SelectPost {
 		meta: Array<schema.SelectPostMeta>;
 	}
 
+	/** Raw post row narrowed to a specific `type` discriminator. */
 	export interface FoundPostForType<type extends Type> {
 		post: Omit<schema.SelectPost, "type"> & { type: type };
 	}
 
+	/** Type-narrowed post row plus unresolved metadata rows. */
 	export interface FoundPostWithMetaForType<type extends Type> extends FoundPostForType<type> {
 		meta: Array<schema.SelectPostMeta>;
 	}
 
+	/** Public route segments supported by the post details page. */
 	export type PublicTypePath = "articles" | "tutorials";
 
+	/**
+	 * Public controller payload returned when resolving a route type + slug.
+	 *
+	 * Article and tutorial shapes intentionally differ so controllers can render
+	 * route-specific UI without extra narrowing logic.
+	 */
 	export type PublicFoundByTypeAndSlug =
 		| {
 				postType: "articles";
@@ -99,6 +138,7 @@ export namespace Post {
 				tags: Array<string>;
 		  };
 
+	/** Tutorial related-post summary matched through one shared tag. */
 	export interface RelatedByTypeItem {
 		slug: string;
 		title: string;
@@ -106,14 +146,34 @@ export namespace Post {
 	}
 }
 
+/**
+ * Data access and typed mapping helpers for posts and their metadata rows.
+ *
+ * This class owns generic CRUD primitives, while per-type repositories provide
+ * codecs and type-specific behavior.
+ */
 export class Post {
+	/** Table reference used by all post read/write operations. */
 	static table = schema.posts;
 
-	/** `null` is treated as published; future dates are previews. */
+	/**
+	 * Returns whether a `published_at` value is currently considered public.
+	 *
+	 * Contract: `null` means immediately published.
+	 *
+	 * @param published_at Persisted publish timestamp (or `null` for immediate publish).
+	 * @returns `true` when the post should be treated as published right now.
+	 */
 	static isPublishedAt(published_at: string | null) {
 		return published_at === null || Date.parse(published_at) <= Date.now();
 	}
 
+	/**
+	 * Resolves a sortable timestamp, preferring `published_at` over `created_at`.
+	 *
+	 * @param input Post timestamps in storage format.
+	 * @returns Epoch milliseconds or `NaN` when neither value can be parsed.
+	 */
 	static timestampFromPublishedOrCreated(input: {
 		published_at: string | null;
 		created_at: string;
@@ -122,6 +182,12 @@ export class Post {
 		return this.parseTimestamp(value);
 	}
 
+	/**
+	 * Normalizes mixed timestamp inputs to epoch milliseconds.
+	 *
+	 * Accepts ISO-like strings, SQL datetime strings, second-based numbers/strings,
+	 * and millisecond numbers/strings.
+	 */
 	private static parseTimestamp(value: unknown) {
 		if (value === null || value === undefined) return Number.NaN;
 
@@ -153,6 +219,15 @@ export class Post {
 		return Number.NaN;
 	}
 
+	/**
+	 * Sort comparator that orders posts from newest to oldest.
+	 *
+	 * Uses `published_at` when present and falls back to `created_at`.
+	 *
+	 * @param a First post-like object to compare.
+	 * @param b Second post-like object to compare.
+	 * @returns Negative when `a` is newer than `b`, positive when older.
+	 */
 	static compareByPublishedOrCreatedDesc(
 		a: { published_at: string | null; created_at: string },
 		b: { published_at: string | null; created_at: string },
@@ -160,6 +235,13 @@ export class Post {
 		return this.timestampFromPublishedOrCreated(b) - this.timestampFromPublishedOrCreated(a);
 	}
 
+	/**
+	 * Resolves the public post payload for `/articles/:slug` or `/tutorials/:slug`.
+	 *
+	 * @param db Database handle used for lookups.
+	 * @param input Route-like lookup input.
+	 * @returns Public payload for the route type, or `null` when no post matches.
+	 */
 	static async findByTypeAndSlug(
 		db: Database,
 		input: { postType: Post.PublicTypePath; postSlug: string },
@@ -203,6 +285,15 @@ export class Post {
 		};
 	}
 
+	/**
+	 * Finds related posts for a public route.
+	 *
+	 * Contract: only tutorials return related items; articles always return `[]`.
+	 *
+	 * @param db Database handle used for lookups.
+	 * @param input Route-like lookup input and optional result limit.
+	 * @returns Related tutorial items ordered by repository-specific relevance.
+	 */
 	static async findRelatedByTypeAndSlug(
 		db: Database,
 		input: { postType: Post.PublicTypePath; postSlug: string; limit?: number },
@@ -217,17 +308,37 @@ export class Post {
 		return TutorialPost.findRelatedByTags(db, post.id, tags, input.limit ?? 3);
 	}
 
+	/**
+	 * Lists every post with attached metadata rows.
+	 *
+	 * @param db Database handle used for lookups.
+	 * @returns Posts sorted by `created_at` descending.
+	 */
 	static async findAll(db: Database): Promise<Array<Post.FoundPost>> {
 		let posts = await db.query(this.table).orderBy("created_at", "desc").all();
 
 		return this.attachMetaToPosts(db, posts);
 	}
 
+	/**
+	 * Finds one post by id with metadata rows attached.
+	 *
+	 * @param db Database handle used for lookups.
+	 * @param id Post identifier.
+	 * @returns Matching post with metadata, or `null` when not found.
+	 */
 	static async findById(db: Database, id: string): Promise<Post.FoundPost | null> {
 		let posts = await this.findManyByIds(db, [id]);
 		return posts[0] ?? null;
 	}
 
+	/**
+	 * Creates a post row and optional metadata rows in one transaction.
+	 *
+	 * @param db Database handle used for writes.
+	 * @param input Raw create payload.
+	 * @returns Newly created post with metadata rows, or `null` when not retrievable.
+	 */
 	static async create(db: Database, input: Post.CreateInput) {
 		let now = this.timestamp;
 		let id = input.id ?? crypto.randomUUID();
@@ -260,7 +371,16 @@ export class Post {
 		return this.findById(db, id);
 	}
 
-	/** Updates post fields and upserts metadata by key. */
+	/**
+	 * Updates a post row and upserts metadata entries by key.
+	 *
+	 * Existing metadata keys are updated in place; unseen keys are inserted.
+	 *
+	 * @param db Database handle used for writes.
+	 * @param id Post identifier.
+	 * @param input Mutable field set and optional metadata updates.
+	 * @returns Updated post with metadata, or `null` when the post does not exist.
+	 */
 	static async update(db: Database, id: string, input: Post.UpdateInput) {
 		let existing = await db.findOne(this.table, { where: { id } });
 		if (!existing) return null;
@@ -303,12 +423,26 @@ export class Post {
 		return this.findById(db, id);
 	}
 
+	/**
+	 * Deletes a post by id.
+	 *
+	 * @param db Database handle used for writes.
+	 * @param id Post identifier.
+	 * @returns Always `true` when the delete command is issued.
+	 */
 	static async destroy(db: Database, id: string) {
 		await db.delete(this.table, id);
 		return true;
 	}
 
-	/** Fetches typed posts and hydrates metadata rows into objects. */
+	/**
+	 * Lists posts for one type and decodes metadata through a codec.
+	 *
+	 * @param db Database handle used for lookups.
+	 * @param postType Concrete post type discriminator.
+	 * @param codec Metadata adapter for that post type.
+	 * @returns Type-narrowed posts with decoded metadata objects.
+	 */
 	static async findAllForType<type extends Post.Type, meta extends object>(
 		db: Database,
 		postType: type,
@@ -325,10 +459,26 @@ export class Post {
 		return withMeta.map((post) => this.toTypedResult<type, meta>(postType, post, codec));
 	}
 
+	/**
+	 * Counts persisted rows for one post type.
+	 *
+	 * @param db Database handle used for counting.
+	 * @param postType Concrete post type discriminator.
+	 * @returns Number of posts for the requested type.
+	 */
 	static countForType<type extends Post.Type>(db: Database, postType: type) {
 		return db.count(this.table, { where: { type: postType } });
 	}
 
+	/**
+	 * Finds one typed post by id.
+	 *
+	 * @param db Database handle used for lookups.
+	 * @param postType Concrete post type discriminator.
+	 * @param id Post identifier.
+	 * @param codec Metadata adapter for that post type.
+	 * @returns Decoded typed post, or `null` when missing or type-mismatched.
+	 */
 	static async findByIdForType<type extends Post.Type, meta extends object>(
 		db: Database,
 		postType: type,
@@ -342,7 +492,18 @@ export class Post {
 		return this.toTypedResult<type, meta>(postType, found, codec);
 	}
 
-	/** Handles slug collisions by returning the first matching post of `postType`. */
+	/**
+	 * Finds one typed post by slug, resolving collisions deterministically.
+	 *
+	 * Slugs are searched through metadata rows, then the first row whose owning
+	 * post matches `postType` is returned.
+	 *
+	 * @param db Database handle used for lookups.
+	 * @param postType Concrete post type discriminator.
+	 * @param slug Slug value stored in post metadata.
+	 * @param codec Metadata adapter for that post type.
+	 * @returns Decoded typed post, or `null` when none matches.
+	 */
 	static async findBySlugForType<type extends Post.Type, meta extends object>(
 		db: Database,
 		postType: type,
@@ -367,6 +528,11 @@ export class Post {
 		return null;
 	}
 
+	/**
+	 * Fetches many posts by id and attaches metadata rows.
+	 *
+	 * Empty `ids` short-circuits to avoid unnecessary queries.
+	 */
 	private static async findManyByIds(
 		db: Database,
 		ids: Array<string>,
@@ -378,6 +544,12 @@ export class Post {
 		return this.attachMetaToPosts(db, posts);
 	}
 
+	/**
+	 * Attaches `post_meta` rows to each post row.
+	 *
+	 * The method pre-seeds all post ids to preserve input order and always emit a
+	 * `meta` array, even when a post has no metadata rows.
+	 */
 	private static async attachMetaToPosts(
 		db: Database,
 		posts: Array<schema.SelectPost>,
@@ -402,6 +574,15 @@ export class Post {
 		return posts.map((post) => ({ ...post, meta: metaByPostId.get(post.id) ?? [] }));
 	}
 
+	/**
+	 * Creates a typed post and returns its decoded metadata payload.
+	 *
+	 * @param db Database handle used for writes.
+	 * @param postType Concrete post type discriminator.
+	 * @param input Typed create payload.
+	 * @param codec Metadata adapter for that post type.
+	 * @returns Typed post with decoded metadata, or `null` when retrieval fails.
+	 */
 	static async createForType<type extends Post.Type, meta extends object>(
 		db: Database,
 		postType: type,
@@ -423,6 +604,16 @@ export class Post {
 		return this.toTypedResult<type, meta>(postType, created, codec);
 	}
 
+	/**
+	 * Updates a typed post and returns decoded metadata.
+	 *
+	 * @param db Database handle used for writes.
+	 * @param postType Concrete post type discriminator.
+	 * @param id Post identifier.
+	 * @param input Typed update payload.
+	 * @param codec Metadata adapter for that post type.
+	 * @returns Updated typed post with decoded metadata, or `null` when missing.
+	 */
 	static async updateForType<type extends Post.Type, meta extends object>(
 		db: Database,
 		postType: type,
@@ -447,6 +638,11 @@ export class Post {
 		return this.toTypedResult<type, meta>(postType, updated, codec);
 	}
 
+	/**
+	 * Converts a raw post + metadata rows into a typed repository result.
+	 *
+	 * This is the final narrowing step shared by all typed read/write helpers.
+	 */
 	private static toTypedResult<type extends Post.Type, meta extends object>(
 		postType: type,
 		post: Post.FoundPost,
@@ -456,6 +652,7 @@ export class Post {
 		return { ...postRow, type: postType, meta: codec.deserialize(metaRows) };
 	}
 
+	/** Returns the current wall-clock time in ISO-8601 UTC format. */
 	private static get timestamp() {
 		return new Date().toISOString();
 	}

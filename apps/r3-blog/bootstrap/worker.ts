@@ -4,6 +4,10 @@ import { createD1DataTableAdapter } from "~/app/infrastructure/database/d1-data-
 
 import createApplication from "./app";
 
+/**
+ * Handles incoming Worker requests by creating the app router with
+ * environment-backed dependencies and forwarding the request to it.
+ */
 export default {
 	async fetch(request: Request, env: Cloudflare.Env) {
 		let database = createDatabase(createD1DataTableAdapter(env.DB));

@@ -13,10 +13,29 @@ import { ArticleSchema } from "~/app/schemas/cms/article";
 import { CMSArticlesActionView, CMSArticlesIndexView } from "~/resources/views/cms/articles";
 import routes from "~/routes/web";
 
+/**
+ * Handles CMS article CRUD flows for backoffice pages.
+ *
+ * The controller returns rendered HTML views for read/edit screens and See Other redirects
+ * for mutating actions to preserve PRG behavior in the CMS.
+ */
 export default controller<typeof routes.cms.articles>({
+	/**
+	 * Leaves route-level middleware empty because authentication is enforced by the CMS route group,
+	 * while action-level guards still protect direct access or misconfigured mounts.
+	 */
 	middleware: [],
 
 	actions: {
+		/**
+		 * Loads all articles and renders the CMS index table.
+		 *
+		 * The `preview` flag mirrors publish-state semantics via `Post.isPublishedAt`, where
+		 * `null` and past timestamps are treated as published and future timestamps as preview.
+		 *
+		 * @param ctx Request-scoped services used to resolve the database client.
+		 * @returns SSR view response for the article listing page.
+		 */
 		async index(ctx) {
 			let articles = await ArticlePost.findAll(ctx.get(Database));
 			let sources: Array<ArticleViewModel.SourceIndexItem> = articles.map((article) => ({
@@ -30,6 +49,15 @@ export default controller<typeof routes.cms.articles>({
 			return view(CMSArticlesIndexView, { items });
 		},
 
+		/**
+		 * Creates a new article from validated form data.
+		 *
+		 * Redirects unauthenticated users to login and uses See Other redirects for both failure
+		 * and success paths so form submissions never remain on a mutating endpoint.
+		 *
+		 * @param ctx Request-scoped access to form data and database services.
+		 * @returns Redirect response to login, index, or the edit page for the created article.
+		 */
 		async create(ctx) {
 			let user = getAuthUser();
 			if (!user)
@@ -53,6 +81,15 @@ export default controller<typeof routes.cms.articles>({
 			});
 		},
 
+		/**
+		 * Deletes an article by route id and returns to the CMS index.
+		 *
+		 * Missing ids are treated as a non-action and redirected to index instead of surfacing
+		 * an error page to keep the CMS flow resilient to malformed action URLs.
+		 *
+		 * @param ctx Request context containing route params and database service.
+		 * @returns Redirect response to the CMS article index.
+		 */
 		async destroy(ctx) {
 			let id = ctx.params.id;
 			if (!id)
@@ -62,6 +99,15 @@ export default controller<typeof routes.cms.articles>({
 			return redirect(routes.cms.articles.index.href(), { status: redirect.Status.SeeOther });
 		},
 
+		/**
+		 * Loads an article for editing and renders a not-found CMS state when absent.
+		 *
+		 * This action returns an HTML 404 view within the CMS shell instead of redirecting so
+		 * editors get immediate feedback that the requested record no longer exists.
+		 *
+		 * @param ctx Request context with route params and database service.
+		 * @returns SSR view response for edit form or not-found state.
+		 */
 		async edit(ctx) {
 			let id = ctx.params.id;
 			let article = id ? await ArticlePost.findById(ctx.get(Database), id) : null;
@@ -86,12 +132,26 @@ export default controller<typeof routes.cms.articles>({
 			return view(CMSArticlesActionView, viewProps);
 		},
 
+		/**
+		 * Renders the empty article form for creating a new entry.
+		 *
+		 * @returns SSR view response for the new article form.
+		 */
 		async new() {
 			let viewProps = ArticleViewModel.new({});
 
 			return view(CMSArticlesActionView, viewProps);
 		},
 
+		/**
+		 * Updates an existing article using validated form input.
+		 *
+		 * Requires both an authenticated user and route id; missing prerequisites short-circuit to
+		 * index, while unknown ids render a 404 CMS state to keep editor context visible.
+		 *
+		 * @param ctx Request-scoped access to params, form data, and database services.
+		 * @returns Redirect response for success/guard paths or a 404 edit-state view.
+		 */
 		async update(ctx) {
 			let user = getAuthUser();
 			let id = ctx.params.id;

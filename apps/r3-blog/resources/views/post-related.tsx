@@ -1,17 +1,31 @@
 import { css } from "remix/component";
 
+/**
+ * Groups the data shapes used to render related post cards.
+ */
 export namespace PostRelatedView {
+	/**
+	 * Represents one related tutorial entry shown in the section.
+	 */
 	export interface Item {
 		href: string;
 		label: string;
 		reason: string;
 	}
 
+	/**
+	 * Supplies the list of related entries rendered by the view.
+	 */
 	export interface Model {
 		items: Array<Item>;
 	}
 }
 
+/**
+ * Builds a renderer for the related tutorials section.
+ *
+ * It returns an empty fragment when there are no related items.
+ */
 export function PostRelatedView() {
 	return ({ model }: { model: PostRelatedView.Model }) => {
 		if (model.items.length === 0) return <></>;

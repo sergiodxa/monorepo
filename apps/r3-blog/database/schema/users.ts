@@ -6,6 +6,12 @@ import type { InsertRow } from "./types/insert-row";
 
 import { validateTimestamps } from "./validations/timestamps";
 
+/**
+ * Stores local account profile data and authorization role.
+ *
+ * `subject_id` is optional to support accounts that are not yet linked
+ * to an external auth subject, and timestamps are always required.
+ */
 export const users = table({
 	name: "users",
 	timestamps: {
@@ -31,6 +37,12 @@ export const users = table({
 	},
 });
 
+/**
+ * User record shape after persistence and table-level validation.
+ */
 export type SelectUser = TableRow<typeof users>;
 
+/**
+ * Payload shape accepted when creating a new user record.
+ */
 export type InsertUser = InsertRow<typeof users>;

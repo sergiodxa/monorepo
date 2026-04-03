@@ -2,30 +2,61 @@ import type { OIDCAuthProfile } from "remix/auth";
 
 import { createOIDCAuthProvider } from "remix/auth";
 
+/**
+ * Result returned after a successful OAuth authorization code exchange.
+ */
 export interface FinishedAuth {
+	/** ID token issued by the auth server. */
 	idToken: string;
+	/** Optional URL to redirect the user after auth finishes. */
 	returnTo?: string;
 }
 
+/**
+ * OAuth-related input contracts shared by this service.
+ */
 export namespace OAuthService {
+	/**
+	 * Client credentials used to authenticate OAuth requests.
+	 */
 	export interface AuthConfig {
+		/** OAuth client identifier. */
 		clientId: string;
+		/** OAuth client secret. */
 		clientSecret: string;
 	}
 
+	/**
+	 * Input required to create the OIDC provider instance.
+	 */
 	export interface ProviderInput {
+		/** OAuth client credentials. */
 		auth: AuthConfig;
+		/** Callback URL registered for this provider. */
 		redirectUri: string;
 	}
 
+	/**
+	 * Input required to exchange an authorization code for an ID token.
+	 */
 	export interface TokenExchangeInput {
+		/** OAuth client credentials. */
 		auth: AuthConfig;
+		/** Authorization code received from the authorize step. */
 		code: string;
+		/** PKCE verifier that matches the original code challenge. */
 		codeVerifier: string;
+		/** Callback URL used during the authorize step. */
 		redirectUri: string;
 	}
 }
 
+/**
+ * Builds the OIDC provider configuration for sergiodxa auth.
+ *
+ * @param input Provider settings for client credentials and callback URL.
+ * @returns Configured OIDC auth provider instance.
+ */
 export function createProvider(input: OAuthService.ProviderInput) {
 	return createOIDCAuthProvider<OIDCAuthProfile, "sergiodxa">({
 		name: "sergiodxa",
@@ -45,6 +76,12 @@ export function createProvider(input: OAuthService.ProviderInput) {
 	});
 }
 
+/**
+ * Exchanges an OAuth authorization code for an ID token.
+ *
+ * @param input Authorization code, PKCE verifier, and client credentials.
+ * @returns ID token payload used to finalize the session.
+ */
 export async function exchangeCodeForIdToken(
 	input: OAuthService.TokenExchangeInput,
 ): Promise<FinishedAuth> {

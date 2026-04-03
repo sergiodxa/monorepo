@@ -6,26 +6,43 @@ import { GlossaryPost } from "~/app/repositories/posts/glossary";
 import { LikePost } from "~/app/repositories/posts/like";
 import { TutorialPost } from "~/app/repositories/posts/tutorial";
 
+/**
+ * Feed-specific type contracts shared by repository consumers.
+ */
 export namespace Feed {
 	/**
-	 * A single activity entry displayed in the combined public feed.
+	 * One normalized entry in the combined public activity feed.
+	 *
+	 * `slug` is present for internal post routes, while `url` is present for external bookmarks.
 	 */
 	export interface ActivityItem {
+		/** Logical content source used for rendering and routing decisions. */
 		kind: "article" | "tutorial" | "bookmark" | "glossary";
+		/** Human-readable title shown in feed UIs. */
 		title: string;
+		/** Internal slug used to build routes for article/tutorial/glossary entries. */
 		slug?: string;
+		/** External destination URL for bookmark entries. */
 		url?: string;
+		/** Canonical ISO-8601 activity date used by feed clients. */
 		date: string;
+		/** True when content is scheduled for the future and should be presented as preview. */
 		preview: boolean;
 	}
 }
 
 /**
- * Feed model that aggregates activity from multiple post types.
+ * Composes a single, time-ordered feed across public content repositories.
  */
 export class Feed {
 	/**
-	 * Shared date ordering helper for feed activities.
+	 * Resolves the sort timestamp for activity records from mixed model shapes.
+	 *
+	 * Accepts both `snake_case` and `camelCase` date keys so the feed can normalize
+	 * data from repositories with different serialization conventions.
+	 *
+	 * @param input Source object that may include published and created date fields.
+	 * @returns Unix timestamp in milliseconds, derived from publish date when available.
 	 */
 	static activityTimestamp(input: unknown) {
 		let record = input as {
@@ -42,7 +59,13 @@ export class Feed {
 	}
 
 	/**
-	 * Shared preview-state helper for feed activities.
+	 * Determines whether a feed item should be flagged as preview content.
+	 *
+	 * This delegates publish-state semantics to `Post.isPublishedAt`, including the
+	 * app rule that `published_at === null` is considered published (not preview).
+	 *
+	 * @param input Source object that may include a publish date field.
+	 * @returns True only when the publish date exists and is in the future.
 	 */
 	static isPreview(input: unknown) {
 		let record = input as { published_at?: string | null; publishedAt?: string | null };
@@ -50,8 +73,14 @@ export class Feed {
 	}
 
 	/**
-	 * Lists merged activity entries ordered by date descending.
-	 * Combines articles, tutorials, bookmarks, and glossary entries.
+	 * Builds the public activity feed from articles, tutorials, bookmarks, and glossary terms.
+	 *
+	 * Data is loaded in parallel, normalized to a shared shape, filtered to valid dates,
+	 * sorted newest-first, and finally converted to ISO date strings for API/UI stability.
+	 *
+	 * @param db Database connection used to read post sources.
+	 * @param limit Optional maximum number of items; non-positive values return an empty list.
+	 * @returns Normalized feed items ordered from newest to oldest.
 	 */
 	static async listActivity(db: Database, limit?: number): Promise<Array<Feed.ActivityItem>> {
 		if (typeof limit === "number" && limit <= 0) return [];

@@ -7,9 +7,22 @@ import { GlossaryPost } from "~/app/repositories/posts/glossary";
 import { GlossaryView } from "~/resources/views/glossary";
 import routes from "~/routes/web";
 
-export default action<typeof routes.glossary>(async (ctx) => {
-	let glossary = await GlossaryPost.findAll(ctx.get(Database));
-	let model = GlossaryViewModel.index(glossary);
+/**
+ * Serves the public glossary index page.
+ *
+ * Contract: resolves all glossary entries from the app database and returns an SSR HTML response.
+ * @returns HTML response for the glossary route.
+ */
+export default action<typeof routes.glossary>(
+	/**
+	 * Handles glossary route requests using route-scoped dependencies.
+	 * @param ctx Request context that provides dependency resolution for data access.
+	 * @returns HTML response built from glossary records projected into the glossary view model.
+	 */
+	async (ctx) => {
+		let glossary = await GlossaryPost.findAll(ctx.get(Database));
+		let model = GlossaryViewModel.index(glossary);
 
-	return view(GlossaryView, model);
-});
+		return view(GlossaryView, model);
+	},
+);

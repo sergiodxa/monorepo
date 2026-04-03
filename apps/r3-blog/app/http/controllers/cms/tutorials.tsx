@@ -13,10 +13,31 @@ import { TutorialSchema } from "~/app/schemas/cms/tutorial";
 import { CMSTutorialsActionView, CMSTutorialsIndexView } from "~/resources/views/cms/tutorials";
 import routes from "~/routes/web";
 
+/**
+ * Coordinates CMS tutorial management routes.
+ *
+ * Keeps controller responsibilities focused on auth/flow decisions and delegates parsing,
+ * shaping, and persistence to schema, view-model, and repository layers.
+ */
 export default controller<typeof routes.cms.tutorials>({
+	/**
+	 * Leaves middleware empty because CMS auth is enforced per mutating action.
+	 *
+	 * This keeps read-only views reachable for existing route wiring while still guarding
+	 * create/update paths with explicit redirects.
+	 */
 	middleware: [],
 
 	actions: {
+		/**
+		 * Builds the CMS tutorials index model from persisted tutorial rows.
+		 *
+		 * Uses `Post.isPublishedAt` so preview badges match the shared publish contract
+		 * (`null` or past date is published, future date is preview).
+		 *
+		 * @param ctx Request-scoped container used to resolve the database connection.
+		 * @returns HTML response with the tutorials list view-model.
+		 */
 		async index(ctx) {
 			let tutorials = await TutorialPost.findAll(ctx.get(Database));
 			let sources: Array<TutorialViewModel.SourceIndexItem> = tutorials.map((tutorial) => ({
@@ -31,6 +52,15 @@ export default controller<typeof routes.cms.tutorials>({
 			return view(CMSTutorialsIndexView, { items });
 		},
 
+		/**
+		 * Creates a tutorial from validated form payload and redirects to the edit screen.
+		 *
+		 * Redirects unauthenticated users to login instead of rendering errors, preserving the
+		 * CMS post/redirect/get flow and avoiding accidental form resubmission.
+		 *
+		 * @param ctx Request-scoped container that provides submitted form data and database access.
+		 * @returns Redirect response to login, tutorials index fallback, or newly created edit page.
+		 */
 		async create(ctx) {
 			let user = getAuthUser();
 			if (!user)
@@ -56,6 +86,15 @@ export default controller<typeof routes.cms.tutorials>({
 			});
 		},
 
+		/**
+		 * Deletes a tutorial when an id is provided and always returns to the list page.
+		 *
+		 * Missing ids are treated as no-op redirects so malformed requests cannot leak details
+		 * about internal identifiers or controller state.
+		 *
+		 * @param ctx Request context carrying optional route params and database access.
+		 * @returns Redirect response to the CMS tutorials index.
+		 */
 		async destroy(ctx) {
 			let id = ctx.params.id;
 			if (!id)
@@ -65,6 +104,15 @@ export default controller<typeof routes.cms.tutorials>({
 			return redirect(routes.cms.tutorials.index.href(), { status: redirect.Status.SeeOther });
 		},
 
+		/**
+		 * Loads tutorial data for the edit form or returns a CMS-scoped 404 state.
+		 *
+		 * Returning the action view with a 404 status keeps the CMS layout and messaging
+		 * consistent with other missing-resource flows.
+		 *
+		 * @param ctx Request context containing route params and database access.
+		 * @returns HTML response for either the populated edit form or not-found model.
+		 */
 		async edit(ctx) {
 			let id = ctx.params.id;
 			let tutorial = id ? await TutorialPost.findById(ctx.get(Database), id) : null;
@@ -88,12 +136,29 @@ export default controller<typeof routes.cms.tutorials>({
 			return view(CMSTutorialsActionView, model);
 		},
 
+		/**
+		 * Renders the blank tutorial form used by CMS create flows.
+		 *
+		 * Uses a dedicated `new` view-model state so the template can reuse the same action view
+		 * as edit while keeping default field semantics explicit.
+		 *
+		 * @returns HTML response with an empty tutorial form model.
+		 */
 		async new() {
 			let model = TutorialViewModel.new({});
 
 			return view(CMSTutorialsActionView, model);
 		},
 
+		/**
+		 * Updates an existing tutorial from validated form input.
+		 *
+		 * Treats missing auth or id as redirect-only failures, and only renders 404 when the
+		 * referenced record no longer exists after validation.
+		 *
+		 * @param ctx Request context with route params, form data, and database access.
+		 * @returns Redirect response on success/guard failures, or 404 CMS action view when missing.
+		 */
 		async update(ctx) {
 			let user = getAuthUser();
 			let id = ctx.params.id;

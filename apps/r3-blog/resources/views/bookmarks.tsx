@@ -3,7 +3,13 @@ import { css } from "remix/component";
 import { BlogLayout } from "~/resources/components/layout/blog";
 import routes from "~/routes/web";
 
+/**
+ * Types for the bookmarks page data consumed by the view renderer.
+ */
 export namespace BookmarksView {
+	/**
+	 * A single bookmark entry rendered in the list.
+	 */
 	export interface Item {
 		href: string;
 		label: string;
@@ -14,11 +20,17 @@ export namespace BookmarksView {
 		suffixTitle?: string;
 	}
 
+	/**
+	 * Data model required to render the bookmarks page.
+	 */
 	export interface Model {
 		items: Array<Item>;
 	}
 }
 
+/**
+ * Normalizes bookmark URLs so links always resolve correctly.
+ */
 function normalizeBookmarkHref(rawHref: string) {
 	if (rawHref.startsWith("http://") || rawHref.startsWith("https://")) {
 		return rawHref;
@@ -31,6 +43,9 @@ function normalizeBookmarkHref(rawHref: string) {
 	return `https://${rawHref}`;
 }
 
+/**
+ * Creates the bookmarks page renderer using the provided view model.
+ */
 export function BookmarksView() {
 	return ({ model }: { model: BookmarksView.Model }) => (
 		<BlogLayout

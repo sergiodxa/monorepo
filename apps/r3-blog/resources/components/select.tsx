@@ -2,6 +2,10 @@ import type { Props } from "remix/component";
 
 import { css } from "remix/component";
 
+/**
+ * Creates a styled `<select>` component that applies the app's neutral form-control
+ * tokens while preserving caller-provided props and additional `mix` styles.
+ */
 export function Select() {
 	return ({ children, mix, ...rest }: Props<"select">) => {
 		let baseMix = css({

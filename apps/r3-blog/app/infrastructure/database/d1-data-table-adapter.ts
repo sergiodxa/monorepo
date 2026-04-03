@@ -15,25 +15,30 @@ import {
 	type TransactionToken,
 } from "remix/data-table";
 
+/** Tracks positional values collected while compiling SQLite SQL text. */
 type SqliteCompileContext = {
 	values: Array<unknown>;
 };
 
+/** Represents SQL text plus bound values ready for execution. */
 type CompiledSqlStatement = {
 	text: string;
 	values: Array<unknown>;
 };
 
+/** Minimal D1 metadata used to normalize adapter results. */
 type D1Meta = {
 	changes?: number;
 	last_row_id?: number;
 };
 
+/** Shape returned by D1 `.all()` and `.run()` calls. */
 type D1StatementResult = {
 	results?: Array<Record<string, unknown>>;
 	meta?: D1Meta;
 };
 
+/** Query interface used after preparing and binding a D1 statement. */
 type D1PreparedQuery = {
 	all<T = Record<string, unknown>>(): Promise<{
 		results?: Array<T>;
@@ -46,13 +51,14 @@ type D1PreparedQuery = {
 };
 
 /**
- * `DatabaseAdapter` implementation for Cloudflare D1.
+ * Bridges `remix/data-table` operations to Cloudflare D1 SQL execution.
  *
- * This adapter intentionally mirrors SQLite SQL generation because D1 uses
- * SQLite semantics.
+ * SQL generation follows SQLite semantics to match D1 behavior.
  */
 export class D1DataTableAdapter implements DatabaseAdapter {
+	/** SQL dialect reported to `remix/data-table`. */
 	dialect = "sqlite";
+	/** Feature flags that describe which adapter behaviors are supported. */
 	capabilities: {
 		returning: boolean;
 		savepoints: boolean;
@@ -65,6 +71,11 @@ export class D1DataTableAdapter implements DatabaseAdapter {
 	#transactions = new Set<string>();
 	#transactionCounter = 0;
 
+	/**
+	 * Creates an adapter bound to a D1 database instance.
+	 * @param database D1 binding used to prepare and execute SQL.
+	 * @param options Optional capability overrides for adapter feature flags.
+	 */
 	constructor(
 		database: D1Database,
 		options?: {
@@ -81,6 +92,11 @@ export class D1DataTableAdapter implements DatabaseAdapter {
 		};
 	}
 
+	/**
+	 * Compiles a data-table operation into executable SQL statements.
+	 * @param operation Operation to compile.
+	 * @returns Compiled SQL statements with positional bind values.
+	 */
 	compileSql(operation: DataManipulationOperation | DataMigrationOperation): Array<SqlStatement> {
 		if (isDataManipulationOperation(operation)) {
 			let statement = compileSqliteStatement(operation);
@@ -90,6 +106,11 @@ export class D1DataTableAdapter implements DatabaseAdapter {
 		throw new Error("D1DataTableAdapter migration operation not supported: " + operation.kind);
 	}
 
+	/**
+	 * Executes a data manipulation request against D1.
+	 * @param request Operation request to execute.
+	 * @returns Normalized rows, affected row count, and insert id metadata.
+	 */
 	async execute(request: DataManipulationRequest): Promise<DataManipulationResult> {
 		if (request.operation.kind === "insertMany" && request.operation.values.length === 0) {
 			return {
@@ -135,6 +156,11 @@ export class D1DataTableAdapter implements DatabaseAdapter {
 		};
 	}
 
+	/**
+	 * Executes migration operations as compiled SQL statements.
+	 * @param request Migration request to run.
+	 * @returns Number of applied migration operations.
+	 */
 	async migrate(request: DataMigrationRequest): Promise<DataMigrationResult> {
 		let statements = this.compileSql(request.operation);
 
@@ -150,6 +176,11 @@ export class D1DataTableAdapter implements DatabaseAdapter {
 		};
 	}
 
+	/**
+	 * Checks whether a table exists in the current SQLite schema.
+	 * @param table Target table reference.
+	 * @returns `true` when the table exists.
+	 */
 	async hasTable(table: TableRef, _transaction?: TransactionToken): Promise<boolean> {
 		let schema = table.schema ? quoteIdentifier(table.schema) + "." : "";
 		let sql =
@@ -162,6 +193,12 @@ export class D1DataTableAdapter implements DatabaseAdapter {
 		return Boolean(result.results?.[0]);
 	}
 
+	/**
+	 * Checks whether a table defines a given column.
+	 * @param table Target table reference.
+	 * @param column Column name to look up.
+	 * @returns `true` when the column exists.
+	 */
 	async hasColumn(
 		table: TableRef,
 		column: string,
@@ -174,6 +211,11 @@ export class D1DataTableAdapter implements DatabaseAdapter {
 		return (result.results ?? []).some((entry) => entry.name === column);
 	}
 
+	/**
+	 * Opens a logical transaction token for scoped data-table operations.
+	 * @param options Optional transaction settings.
+	 * @returns Transaction token tracked by the adapter.
+	 */
 	async beginTransaction(options?: TransactionOptions): Promise<TransactionToken> {
 		if (options?.isolationLevel === "read uncommitted") {
 			await this.#database.exec("PRAGMA read_uncommitted = true");
@@ -188,24 +230,47 @@ export class D1DataTableAdapter implements DatabaseAdapter {
 		return token;
 	}
 
+	/**
+	 * Marks a logical transaction token as committed.
+	 * @param token Transaction token returned by `beginTransaction`.
+	 */
 	async commitTransaction(token: TransactionToken): Promise<void> {
 		this.#assertTransaction(token);
 		this.#transactions.delete(token.id);
 	}
 
+	/**
+	 * Marks a logical transaction token as rolled back.
+	 * @param token Transaction token returned by `beginTransaction`.
+	 */
 	async rollbackTransaction(token: TransactionToken): Promise<void> {
 		this.#assertTransaction(token);
 		this.#transactions.delete(token.id);
 	}
 
+	/**
+	 * Throws because Cloudflare D1 does not support savepoints.
+	 * @param _token Active transaction token.
+	 * @param _name Savepoint name.
+	 */
 	async createSavepoint(_token: TransactionToken, _name: string): Promise<void> {
 		throw new Error("D1DataTableAdapter savepoints are not supported");
 	}
 
+	/**
+	 * Throws because Cloudflare D1 does not support savepoints.
+	 * @param _token Active transaction token.
+	 * @param _name Savepoint name.
+	 */
 	async rollbackToSavepoint(_token: TransactionToken, _name: string): Promise<void> {
 		throw new Error("D1DataTableAdapter savepoints are not supported");
 	}
 
+	/**
+	 * Throws because Cloudflare D1 does not support savepoints.
+	 * @param _token Active transaction token.
+	 * @param _name Savepoint name.
+	 */
 	async releaseSavepoint(_token: TransactionToken, _name: string): Promise<void> {
 		throw new Error("D1DataTableAdapter savepoints are not supported");
 	}
@@ -217,6 +282,12 @@ export class D1DataTableAdapter implements DatabaseAdapter {
 	}
 }
 
+/**
+ * Creates a D1-backed `DatabaseAdapter` instance.
+ * @param database D1 binding used by the adapter.
+ * @param options Optional capability overrides.
+ * @returns Configured `D1DataTableAdapter`.
+ */
 export function createD1DataTableAdapter(
 	database: D1Database,
 	options?: {
@@ -226,6 +297,7 @@ export function createD1DataTableAdapter(
 	return new D1DataTableAdapter(database, options);
 }
 
+/** Narrows supported operations to data-manipulation variants. */
 function isDataManipulationOperation(
 	operation: DataManipulationOperation | DataMigrationOperation,
 ): operation is DataManipulationOperation {
@@ -242,6 +314,7 @@ function isDataManipulationOperation(
 	);
 }
 
+/** Returns `true` when an operation asks for a `returning` clause. */
 function hasReturningClause(statement: DataManipulationOperation) {
 	return (
 		(statement.kind === "insert" ||
@@ -253,6 +326,7 @@ function hasReturningClause(statement: DataManipulationOperation) {
 	);
 }
 
+/** Clones result rows and guarantees plain object outputs. */
 function normalizeRows(rows: Array<Record<string, unknown>>) {
 	return rows.map((row) => {
 		if (typeof row !== "object" || row === null) {
@@ -262,6 +336,7 @@ function normalizeRows(rows: Array<Record<string, unknown>>) {
 	});
 }
 
+/** Coerces `count` values from D1 to numeric values when possible. */
 function normalizeCountRows(rows: Array<Record<string, unknown>>) {
 	return rows.map((row) => {
 		const count = row.count;
@@ -284,6 +359,7 @@ function normalizeCountRows(rows: Array<Record<string, unknown>>) {
 	});
 }
 
+/** Infers affected row count for statements executed through `.all()`. */
 function normalizeAffectedRowsForReader(
 	kind: DataManipulationOperation["kind"],
 	rows: Array<Record<string, unknown>>,
@@ -298,6 +374,7 @@ function normalizeAffectedRowsForReader(
 	return undefined;
 }
 
+/** Resolves insert id for reader-style executions with `returning`. */
 function normalizeInsertIdForReader(
 	kind: DataManipulationOperation["kind"],
 	statement: DataManipulationOperation,
@@ -319,6 +396,7 @@ function normalizeInsertIdForReader(
 	return row?.[key] ?? meta?.last_row_id;
 }
 
+/** Returns affected row count for statements executed through `.run()`. */
 function normalizeAffectedRowsForRun(
 	kind: DataManipulationOperation["kind"],
 	result: D1StatementResult,
@@ -329,6 +407,7 @@ function normalizeAffectedRowsForRun(
 	return result.meta?.changes;
 }
 
+/** Resolves insert id for write statements executed through `.run()`. */
 function normalizeInsertIdForRun(
 	kind: DataManipulationOperation["kind"],
 	statement: DataManipulationOperation,
@@ -343,6 +422,7 @@ function normalizeInsertIdForRun(
 	return result.meta?.last_row_id;
 }
 
+/** Indicates whether an operation kind performs writes. */
 function isWriteStatementKind(kind: DataManipulationOperation["kind"]) {
 	return (
 		kind === "insert" ||
@@ -353,10 +433,12 @@ function isWriteStatementKind(kind: DataManipulationOperation["kind"]) {
 	);
 }
 
+/** Indicates whether an operation kind can produce an insert id. */
 function isInsertStatementKind(kind: DataManipulationOperation["kind"]) {
 	return kind === "insert" || kind === "insertMany" || kind === "upsert";
 }
 
+/** Narrows operations to insert-capable statement variants. */
 function isInsertStatement(
 	statement: DataManipulationOperation,
 ): statement is Extract<DataManipulationOperation, { kind: "insert" | "insertMany" | "upsert" }> {
@@ -366,8 +448,9 @@ function isInsertStatement(
 }
 
 /**
- * Adapted from `@remix-run/data-table-sqlite` SQL compiler to keep this D1
- * adapter self-contained without depending on internal package paths.
+ * Compiles a data-manipulation operation into SQLite-compatible SQL.
+ *
+ * Logic is adapted from `@remix-run/data-table-sqlite` to keep this adapter self-contained.
  */
 function compileSqliteStatement(statement: DataManipulationOperation): CompiledSqlStatement {
 	if (statement.kind === "raw") {
@@ -478,6 +561,7 @@ function compileSqliteStatement(statement: DataManipulationOperation): CompiledS
 	throw new Error("Unsupported statement kind");
 }
 
+/** Compiles a single-row insert statement. */
 function compileInsertStatement(
 	table: Extract<DataManipulationOperation, { kind: "insert" }>["table"],
 	values: Record<string, unknown>,
@@ -510,6 +594,7 @@ function compileInsertStatement(
 	};
 }
 
+/** Compiles a multi-row insert statement with normalized columns. */
 function compileInsertManyStatement(
 	table: Extract<DataManipulationOperation, { kind: "insertMany" }>["table"],
 	rows: Array<Record<string, unknown>>,
@@ -562,6 +647,7 @@ function compileInsertManyStatement(
 	};
 }
 
+/** Compiles an upsert statement with conflict handling. */
 function compileUpsertStatement(
 	statement: Extract<DataManipulationOperation, { kind: "upsert" }>,
 	context: SqliteCompileContext,
@@ -613,6 +699,7 @@ function compileUpsertStatement(
 	};
 }
 
+/** Compiles the `from ... join ...` portion of a select-like query. */
 function compileFromClause(
 	table: DataManipulationOperation extends infer T
 		? T extends { table: infer tableType }
@@ -640,6 +727,7 @@ function compileFromClause(
 	return output;
 }
 
+/** Compiles the `where` clause from predicate nodes. */
 function compileWhereClause(predicates: Array<unknown>, context: SqliteCompileContext) {
 	if (predicates.length === 0) {
 		return "";
@@ -650,6 +738,7 @@ function compileWhereClause(predicates: Array<unknown>, context: SqliteCompileCo
 	);
 }
 
+/** Compiles the `group by` clause for grouped queries. */
 function compileGroupByClause(columns: Array<string>) {
 	if (columns.length === 0) {
 		return "";
@@ -657,6 +746,7 @@ function compileGroupByClause(columns: Array<string>) {
 	return " group by " + columns.map((column) => quotePath(column)).join(", ");
 }
 
+/** Compiles the `having` clause from predicate nodes. */
 function compileHavingClause(predicates: Array<unknown>, context: SqliteCompileContext) {
 	if (predicates.length === 0) {
 		return "";
@@ -667,6 +757,7 @@ function compileHavingClause(predicates: Array<unknown>, context: SqliteCompileC
 	);
 }
 
+/** Compiles the `order by` clause for sorted results. */
 function compileOrderByClause(orderBy: Array<unknown>) {
 	if (orderBy.length === 0) {
 		return "";
@@ -685,6 +776,7 @@ function compileOrderByClause(orderBy: Array<unknown>) {
 	);
 }
 
+/** Compiles a `limit` clause when one is configured. */
 function compileLimitClause(limit?: number) {
 	if (limit === undefined) {
 		return "";
@@ -692,6 +784,7 @@ function compileLimitClause(limit?: number) {
 	return " limit " + String(limit);
 }
 
+/** Compiles an `offset` clause when one is configured. */
 function compileOffsetClause(offset?: number) {
 	if (offset === undefined) {
 		return "";
@@ -699,6 +792,7 @@ function compileOffsetClause(offset?: number) {
 	return " offset " + String(offset);
 }
 
+/** Compiles a `returning` clause for write statements. */
 function compileReturningClause(returning?: "*" | Array<string>) {
 	if (!returning) {
 		return "";
@@ -709,6 +803,7 @@ function compileReturningClause(returning?: "*" | Array<string>) {
 	return " returning " + returning.map((column) => quotePath(column)).join(", ");
 }
 
+/** Compiles a predicate node into SQL with bound placeholders. */
 function compilePredicate(predicate: unknown, context: SqliteCompileContext): string {
 	const typedPredicate = predicate as {
 		type: string;
@@ -817,6 +912,7 @@ function compilePredicate(predicate: unknown, context: SqliteCompileContext): st
 	throw new Error("Unsupported predicate");
 }
 
+/** Compiles a predicate value as either a column reference or bound value. */
 function compileComparisonValue(predicate: any, context: SqliteCompileContext) {
 	if (predicate.valueType === "column") {
 		return quotePath(String(predicate.value));
@@ -824,6 +920,7 @@ function compileComparisonValue(predicate: any, context: SqliteCompileContext) {
 	return pushValue(context, predicate.value);
 }
 
+/** Normalizes join type tokens to explicit SQLite keywords. */
 function normalizeJoinType(type: "inner" | "left" | "right") {
 	if (type === "left") {
 		return "left";
@@ -834,10 +931,12 @@ function normalizeJoinType(type: "inner" | "left" | "right") {
 	return "inner";
 }
 
+/** Quotes an SQL identifier and escapes embedded quotes. */
 function quoteIdentifier(value: string) {
 	return '"' + value.replace(/"/g, '""') + '"';
 }
 
+/** Quotes dot-separated identifiers while preserving `*` segments. */
 function quotePath(path: string) {
 	if (path === "*") {
 		return "*";
@@ -853,11 +952,13 @@ function quotePath(path: string) {
 		.join(".");
 }
 
+/** Appends a bound value to context and returns a placeholder token. */
 function pushValue(context: SqliteCompileContext, value: unknown) {
 	context.values.push(normalizeBoundValue(value));
 	return "?";
 }
 
+/** Normalizes JavaScript values to D1-compatible bound values. */
 function normalizeBoundValue(value: unknown) {
 	if (typeof value === "boolean") {
 		return value ? 1 : 0;
@@ -865,6 +966,7 @@ function normalizeBoundValue(value: unknown) {
 	return value;
 }
 
+/** Collects unique column names from a list of row objects. */
 function collectColumns(rows: Array<Record<string, unknown>>) {
 	const columns: Array<string> = [];
 	const seen = new Set<string>();

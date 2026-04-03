@@ -2,9 +2,16 @@ import type { Database } from "remix/data-table";
 
 import * as schema from "~/database/schema";
 
+/**
+ * Type-only contracts used by user repository operations.
+ *
+ * Keeps auth-provider payloads and write-input shapes separate from persisted rows.
+ */
 export namespace User {
 	/**
-	 * User profile data received from the identity provider.
+	 * Normalized profile fields required from the auth provider.
+	 *
+	 * `subjectId` is the stable external identifier used to link future logins.
 	 */
 	export interface AuthProfile {
 		subjectId: string;
@@ -15,8 +22,10 @@ export namespace User {
 	}
 
 	/**
-	 * Input used to create a new user record.
-	 * Includes required profile fields and optional persisted values.
+	 * Input accepted by `User.create`.
+	 *
+	 * Optional persistence fields allow imports/backfills to preserve upstream identifiers
+	 * and timestamps instead of generating defaults.
 	 *
 	 * @example
 	 * let input: User.CreateInput = {
@@ -39,8 +48,9 @@ export namespace User {
 	}
 
 	/**
-	 * Input used to update an existing user record.
-	 * All fields are optional and only provided values are applied.
+	 * Input accepted by `User.update`.
+	 *
+	 * Every field is optional; omitted fields keep their current stored value.
 	 *
 	 * @example
 	 * let input: User.UpdateInput = {
@@ -59,11 +69,23 @@ export namespace User {
 	}
 }
 
+/**
+ * Repository for reads/writes against the `users` table.
+ *
+ * Exposes lookup helpers plus auth-profile reconciliation used at login time.
+ */
 export class User {
+	/**
+	 * Table descriptor consumed by the `Database` client.
+	 *
+	 * Centralizing this reference keeps query calls consistent across methods.
+	 */
 	static table = schema.users;
 
 	/**
-	 * Finds all users from the users table.
+	 * Fetches all user rows without additional filtering.
+	 *
+	 * Intended for administrative or internal listing flows.
 	 *
 	 * @param db Database client used to run operations.
 	 * @returns All user records.
@@ -75,7 +97,9 @@ export class User {
 	}
 
 	/**
-	 * Finds a user by its unique id.
+	 * Finds a user by primary key.
+	 *
+	 * Returns `null` when no row exists for the provided id.
 	 *
 	 * @param db Database client used to run operations.
 	 * @param id User id to look up.
@@ -88,7 +112,9 @@ export class User {
 	}
 
 	/**
-	 * Finds a user by email address.
+	 * Finds a user by unique email address.
+	 *
+	 * Returns `null` when the email is not present.
 	 *
 	 * @param db Database client used to run operations.
 	 * @param email Email address to look up.
@@ -101,7 +127,9 @@ export class User {
 	}
 
 	/**
-	 * Finds a user by identity-provider subject id.
+	 * Finds a user by external auth subject id.
+	 *
+	 * This is the preferred lookup for returning users after authentication.
 	 *
 	 * @param db Database client used to run operations.
 	 * @param subjectId Subject id to look up.
@@ -114,6 +142,8 @@ export class User {
 	/**
 	 * Finds a user by username.
 	 *
+	 * Returns `null` when the username does not exist.
+	 *
 	 * @param db Database client used to run operations.
 	 * @param username Username to look up.
 	 * @returns The matching user or null.
@@ -125,8 +155,10 @@ export class User {
 	}
 
 	/**
-	 * Creates a new user with defaults for missing persisted values.
-	 * Returns the stored user after creation.
+	 * Creates a user row from application-level input.
+	 *
+	 * Generates `id` and timestamps when missing, then re-reads the inserted row so
+	 * callers receive the persisted record shape.
 	 *
 	 * @param db Database client used to run operations.
 	 * @param input User fields used to create the record.
@@ -159,8 +191,10 @@ export class User {
 	}
 
 	/**
-	 * Updates an existing user, keeping current values for omitted fields.
-	 * Returns null when the user does not exist.
+	 * Updates a user by id using partial input.
+	 *
+	 * Performs a read-before-write to preserve existing values for omitted fields and
+	 * returns `null` when the target user does not exist.
 	 *
 	 * @param db Database client used to run operations.
 	 * @param id User id to update.
@@ -191,6 +225,8 @@ export class User {
 	/**
 	 * Deletes a user by id.
 	 *
+	 * Returns `true` after `db.delete` resolves; existence is not checked first.
+	 *
 	 * @param db Database client used to run operations.
 	 * @param id User id to delete.
 	 * @returns True when deletion completes.
@@ -203,12 +239,15 @@ export class User {
 	}
 
 	/**
-	 * Finds or creates a user from an auth-provider profile.
-	 * Existing users are matched by subject id first, then by email.
+	 * Reconciles an auth profile with a local user record.
+	 *
+	 * Lookup order is subject-id first, then email fallback for first-time linking.
+	 * Creates when no match exists, otherwise updates profile-driven fields.
 	 *
 	 * @param db Database client used to run operations.
 	 * @param profile Auth-provider profile payload.
 	 * @returns The linked or created user.
+	 * @throws {Error} When the follow-up read after create/update returns null.
 	 */
 	static async findOrCreateFromAuthProfile(db: Database, profile: User.AuthProfile) {
 		let existing = await this.findBySubjectId(db, profile.subjectId);
@@ -246,6 +285,9 @@ export class User {
 		return updated;
 	}
 
+	/**
+	 * Generates an ISO-8601 UTC timestamp for persistence fields.
+	 */
 	private static get timestamp() {
 		return new Date().toISOString();
 	}

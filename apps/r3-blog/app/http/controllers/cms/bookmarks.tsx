@@ -11,10 +11,27 @@ import { BookmarkSchema } from "~/app/schemas/cms/bookmark";
 import { CMSBookmarksActionView, CMSBookmarksIndexView } from "~/resources/views/cms/bookmarks";
 import routes from "~/routes/web";
 
+/**
+ * Handles CMS bookmark CRUD flows used by the admin dashboard.
+ *
+ * The controller keeps route behavior explicit: redirects for missing auth/ids,
+ * and 404 HTML views when an edit/update target no longer exists.
+ */
 export default controller<typeof routes.cms.bookmarks>({
+	/**
+	 * Reserved for route-level guards.
+	 *
+	 * Bookmark actions currently perform auth checks inline so each action can
+	 * choose its own redirect fallback.
+	 */
 	middleware: [],
 
 	actions: {
+		/**
+		 * Renders the bookmarks index with edit and delete affordances.
+		 * @param ctx Controller context that provides DB bindings.
+		 * @returns HTML view model for the CMS bookmarks listing page.
+		 */
 		async index(ctx) {
 			let bookmarks = await LikePost.findAll(ctx.get(Database));
 			let items = bookmarks.map((bookmark) => ({
@@ -28,6 +45,13 @@ export default controller<typeof routes.cms.bookmarks>({
 			return view(CMSBookmarksIndexView, { items });
 		},
 
+		/**
+		 * Creates a bookmark from submitted form values.
+		 * @param ctx Controller context with form data and DB access.
+		 * @returns See Other redirect to login, edit page for the created record, or index fallback.
+		 *
+		 * @remarks Validation failures are surfaced by `succeeded(...)` and abort the action.
+		 */
 		async create(ctx) {
 			let user = getAuthUser();
 			if (!user)
@@ -52,6 +76,13 @@ export default controller<typeof routes.cms.bookmarks>({
 			});
 		},
 
+		/**
+		 * Deletes the bookmark identified by route params.
+		 * @param ctx Controller context with route params and DB access.
+		 * @returns See Other redirect to the bookmarks index in all cases.
+		 *
+		 * @remarks Missing ids are treated as a no-op to keep delete flows idempotent.
+		 */
 		async destroy(ctx) {
 			let id = ctx.params.id;
 			if (!id)
@@ -61,6 +92,13 @@ export default controller<typeof routes.cms.bookmarks>({
 			return redirect(routes.cms.bookmarks.index.href(), { status: redirect.Status.SeeOther });
 		},
 
+		/**
+		 * Renders the edit form for an existing bookmark id.
+		 * @param ctx Controller context with route params and DB access.
+		 * @returns Bookmark edit view, or a 404 form view when the record is missing.
+		 *
+		 * @remarks The 404 branch intentionally reuses the action view so CMS users stay in-context.
+		 */
 		async edit(ctx) {
 			let id = ctx.params.id;
 			let bookmark = id ? await LikePost.findById(ctx.get(Database), id) : null;
@@ -94,6 +132,13 @@ export default controller<typeof routes.cms.bookmarks>({
 			return view(CMSBookmarksActionView, model);
 		},
 
+		/**
+		 * Renders the blank bookmark creation form.
+		 * @param ctx Controller context with DB bindings.
+		 * @returns New-mode action view prefilled with empty bookmark values.
+		 *
+		 * @remarks The total count is included in description text for lightweight CMS context.
+		 */
 		async new(ctx) {
 			let total = (await LikePost.findAll(ctx.get(Database))).length;
 			let model = {
@@ -108,6 +153,13 @@ export default controller<typeof routes.cms.bookmarks>({
 			return view(CMSBookmarksActionView, model);
 		},
 
+		/**
+		 * Updates an existing bookmark with validated form data.
+		 * @param ctx Controller context with params, form data, and DB access.
+		 * @returns See Other redirect to index/edit, or a 404 form view when target is missing.
+		 *
+		 * @remarks Authentication and id presence are required; missing prerequisites short-circuit to index.
+		 */
 		async update(ctx) {
 			let user = getAuthUser();
 			let id = ctx.params.id;

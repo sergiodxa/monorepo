@@ -39,6 +39,13 @@ import { view } from "~/app/infrastructure/view";
 import { NotFoundView } from "~/resources/views/not-found";
 import routes from "~/routes/web";
 
+/**
+ * Builds the r3-blog HTTP router with global middleware, route mappings,
+ * CMS auth guards, and the HTML 404 fallback handler.
+ * @param database Database connection used by request handlers.
+ * @param env Worker environment bindings injected into request context.
+ * @returns Configured router instance for the worker fetch entrypoint.
+ */
 export default function createApplication(database: Database, env: App.Env) {
 	let router = createRouter({
 		middleware: [

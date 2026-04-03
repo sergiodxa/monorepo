@@ -5,13 +5,22 @@ import { css } from "remix/component";
 import appColorsStyles from "~/resources/css/colors.css?url";
 import routes from "~/routes/web";
 
+/**
+ * Groups the layout props and related metadata types.
+ */
 export namespace BlogLayout {
+	/**
+	 * Describes a meta tag rendered in the document head.
+	 */
 	export interface MetaTag {
 		property?: string;
 		name?: string;
 		content: string;
 	}
 
+	/**
+	 * Supplies document metadata and content needed to render the public blog shell.
+	 */
 	export interface Props {
 		title: string;
 		description: string;
@@ -22,12 +31,18 @@ export namespace BlogLayout {
 		children: RemixNode;
 	}
 
+	/**
+	 * Represents a single link in the main navigation.
+	 */
 	export interface NavigationItem {
 		href: string;
 		label: string;
 	}
 }
 
+/**
+ * Lists the primary navigation links shown in the blog header.
+ */
 let navigationItems: Array<BlogLayout.NavigationItem> = [
 	{ href: routes.feed.href(), label: "Home" },
 	{ href: routes.articles.href(), label: "Articles" },
@@ -37,6 +52,11 @@ let navigationItems: Array<BlogLayout.NavigationItem> = [
 	{ href: routes.cms.dashboard.href(), label: "Dashboard" },
 ];
 
+/**
+ * Creates the shared HTML layout used by public blog pages.
+ *
+ * @returns A renderer that wraps page content with head metadata and navigation.
+ */
 export function BlogLayout() {
 	return ({
 		activePath,

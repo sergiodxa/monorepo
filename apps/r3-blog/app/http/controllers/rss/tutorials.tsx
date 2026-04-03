@@ -7,7 +7,23 @@ import { Post } from "~/app/repositories/post";
 import { TutorialPost } from "~/app/repositories/posts/tutorial";
 import routes from "~/routes/web";
 
-export default action<typeof routes.rss.tutorials>(async (ctx) => {
+/**
+ * Serves the public tutorials feed as RSS XML.
+ *
+ * The feed is tenant-aware because links are resolved against the incoming request URL.
+ */
+export default action<typeof routes.rss.tutorials>(
+	/**
+	 * Builds the RSS payload for tutorials visible to the public.
+	 *
+	 * Contract:
+	 * - include only records considered published by `Post.isPublishedAt`
+	 * - emit absolute item and channel links using the current request origin
+	 * - provide stable fallback values when optional metadata is missing
+	 * @param ctx Request context exposing container bindings and canonical request URL.
+	 * @returns XML response for feed readers polling the tutorials channel.
+	 */
+	async (ctx) => {
 	let database = ctx.get(Database);
 
 	let tutorials = await TutorialPost.findAll(database);
@@ -34,4 +50,5 @@ export default action<typeof routes.rss.tutorials>(async (ctx) => {
 	}
 
 	return xml(rss.toString());
-});
+	},
+);

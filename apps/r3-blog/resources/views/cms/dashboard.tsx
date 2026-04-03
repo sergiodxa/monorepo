@@ -3,7 +3,13 @@ import { css } from "remix/component";
 import { CMSLayout } from "~/resources/components/layout/cms";
 import routes from "~/routes/web";
 
+/**
+ * Groups dashboard view data contracts.
+ */
 export namespace CMSDashboardView {
+	/**
+	 * Aggregate counts displayed in the dashboard stat cards.
+	 */
 	export interface Stats {
 		articles: number;
 		likes: number;
@@ -11,11 +17,17 @@ export namespace CMSDashboardView {
 		glossary: number;
 	}
 
+	/**
+	 * Model consumed by the dashboard view renderer.
+	 */
 	export interface Props {
 		stats: Stats;
 	}
 }
 
+/**
+ * Builds the CMS dashboard renderer with stat summary cards.
+ */
 export function CMSDashboardView() {
 	return ({ model }: { model: CMSDashboardView.Props }) => {
 		let { stats } = model;

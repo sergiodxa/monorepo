@@ -2,6 +2,10 @@ import type { Props } from "remix/component";
 
 import { css } from "remix/component";
 
+/**
+ * Creates a styled input component that applies the blog UI baseline input styles,
+ * then preserves and appends any caller-provided `mix` styles.
+ */
 export function Input() {
 	return ({ mix, ...rest }: Props<"input">) => {
 		return (

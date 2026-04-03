@@ -40,6 +40,29 @@ This document defines app-specific rules for `apps/r3-blog`.
 
 - MAY NOT change established URL structures (`/articles/:slug`, `/tutorials/:slug`, `/bookmarks`, `/colors`) without explicit request.
 
+### Documentation
+
+- MUST write JSDoc comments for every exported class, function, method, variable, type, interface, and constant in this app.
+- MUST write JSDoc comments for non-exported, non-private module symbols when they are part of a file's behavior contract (helpers, mappers, normalizers, comparators, etc.).
+- MUST write JSDoc comments for every non-private member of exported classes (including static members, instance methods, getters/setters, and constructor when present).
+- MUST write JSDoc comments for inline controller callbacks (middleware callbacks, action handlers, and route handlers) inside controller definitions.
+- MUST make JSDoc describe the exported symbol behavior/purpose, never the export mechanics (for example, avoid comments like "Exports the module default value.").
+- MUST make JSDoc explain intent and contract (the why/guarantee), not only restate syntax or obvious code behavior.
+- MUST document non-obvious behavior and invariants when relevant (fallbacks, ordering assumptions, publish/preview semantics, normalization rules, nullability contracts, redirect/404 behavior).
+- MUST keep JSDoc descriptions short and focused (1 to 3 lines when a description is needed).
+- MUST keep JSDoc examples hyper-focused and inline (no fenced Markdown code blocks inside `@example`).
+
+- MAY include JSDoc `@param` tags with concise descriptions for each parameter when there are parameters.
+- MAY include JSDoc `@returns` tags with concise descriptions when there's a return value.
+- MAY include JSDoc `@template` tags with concise descriptions when there are generic type parameters.
+- MAY include up to 3 JSDoc `@example` tags for practical usage snippets.
+
+- SHOULD use `@param` and `@returns` on handlers/repository methods where request context, side effects, or response contracts are not obvious.
+- SHOULD document edge-case behavior (empty inputs, invalid params, missing records, legacy data shapes) when a symbol intentionally handles those cases.
+
+- MUST NOT use placeholder or template wording in JSDoc (for example: "Defines ...", "Represents ...", or "Handles ..." without meaningful contract detail).
+- MUST NOT duplicate type names or signatures in prose when that adds no new information.
+
 ## Reference Files
 
 - Routing and mapping

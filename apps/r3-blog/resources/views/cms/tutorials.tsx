@@ -6,7 +6,13 @@ import { CMSLayout } from "~/resources/components/layout/cms";
 import { Modal } from "~/resources/components/modal";
 import routes from "~/routes/web";
 
+/**
+ * Groups types used by the CMS tutorials list view.
+ */
 export namespace CMSTutorialsIndexView {
+	/**
+	 * Describes one tutorial row shown in the list table.
+	 */
 	export interface Item {
 		id: string;
 		title: string;
@@ -17,12 +23,21 @@ export namespace CMSTutorialsIndexView {
 		deleteAction: string;
 	}
 
+	/**
+	 * Provides the tutorials rendered by the list view.
+	 */
 	export interface Props {
 		items: Array<Item>;
 	}
 }
 
+/**
+ * Groups types used by the CMS tutorial create/edit form.
+ */
 export namespace CMSTutorialsActionView {
+	/**
+	 * Holds editable tutorial fields used to prefill the form.
+	 */
 	export interface FormValues {
 		title: string;
 		slug: string;
@@ -32,6 +47,9 @@ export namespace CMSTutorialsActionView {
 		published_at: string;
 	}
 
+	/**
+	 * Configures the tutorial form heading, behavior, and values.
+	 */
 	export interface Props {
 		title: string;
 		description: string;
@@ -43,6 +61,9 @@ export namespace CMSTutorialsActionView {
 	}
 }
 
+/**
+ * Builds the CMS tutorials list page with edit and delete actions.
+ */
 export function CMSTutorialsIndexView() {
 	return ({ model }: { model: CMSTutorialsIndexView.Props }) => {
 		let { items } = model;
@@ -357,6 +378,9 @@ export function CMSTutorialsIndexView() {
 	};
 }
 
+/**
+ * Builds the CMS tutorial form page for create and edit flows.
+ */
 export function CMSTutorialsActionView() {
 	return ({ model }: { model: CMSTutorialsActionView.Props }) => {
 		let { action, description, mode, submitLabel, title, values } = model;

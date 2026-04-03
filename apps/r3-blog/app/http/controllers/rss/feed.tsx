@@ -10,7 +10,20 @@ import { LikePost } from "~/app/repositories/posts/like";
 import { TutorialPost } from "~/app/repositories/posts/tutorial";
 import routes from "~/routes/web";
 
-export default action<typeof routes.rss.feed>(async (ctx) => {
+/**
+ * Serves the public RSS XML feed for the blog domain.
+ *
+ * The feed merges multiple content streams into one timeline and omits preview-only posts.
+ */
+export default action<typeof routes.rss.feed>(
+	/**
+	 * Fetches all RSS-eligible entities, normalizes them into `RSS.Item` records, and serializes XML.
+	 *
+	 * Articles and tutorials respect `Post.isPublishedAt` so future-dated items stay out of the feed.
+	 * @param ctx Request-scoped action context with dependency injection and canonical request URL.
+	 * @returns XML response containing one reverse-chronological RSS feed across all content types.
+	 */
+	async (ctx) => {
 	let database = ctx.get(Database);
 
 	let [articles, tutorials, likes, glossary] = await Promise.all([
@@ -26,6 +39,9 @@ export default action<typeof routes.rss.feed>(async (ctx) => {
 		link: ctx.url.origin,
 	});
 
+	/**
+	 * Collects normalized feed entries before global sorting and RSS serialization.
+	 */
 	let items: Array<RSS.Item> = [];
 
 	for (let article of articles) {
@@ -80,9 +96,20 @@ export default action<typeof routes.rss.feed>(async (ctx) => {
 		});
 	}
 
-	items.sort((a, b) => Date.parse(b.pubDate) - Date.parse(a.pubDate));
+	items.sort(
+		/**
+		 * Orders items by publication date descending (newest first).
+		 *
+		 * `pubDate` values are generated with `toUTCString()`, so `Date.parse` can compare them safely.
+		 * @param a Left item in the comparison.
+		 * @param b Right item in the comparison.
+		 * @returns Negative when `b` is newer than `a`; positive when `a` is newer than `b`.
+		 */
+		(a, b) => Date.parse(b.pubDate) - Date.parse(a.pubDate),
+	);
 
 	for (let item of items) rss.addItem(item);
 
 	return xml(rss.toString());
-});
+	},
+);

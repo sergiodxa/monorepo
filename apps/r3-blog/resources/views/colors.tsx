@@ -3,19 +3,34 @@ import { css } from "remix/component";
 import { BlogLayout } from "~/resources/components/layout/blog";
 import routes from "~/routes/web";
 
+/**
+ * Types used by the colors page view model.
+ */
 export namespace ColorsView {
+	/**
+	 * Represents a single CSS custom property token.
+	 */
 	export interface Token {
 		name: string;
 	}
 
+	/**
+	 * Groups related tokens under a section heading.
+	 */
 	export interface Group {
 		title: string;
 		tokens: Array<Token>;
 	}
 
+	/**
+	 * Placeholder view model for the colors page.
+	 */
 	export interface Model {}
 }
 
+/**
+ * Accent palette tokens shown in the raw color section.
+ */
 const accentColorTokens: Array<ColorsView.Token> = [
 	{ name: "--color-accent-50" },
 	{ name: "--color-accent-100" },
@@ -30,6 +45,9 @@ const accentColorTokens: Array<ColorsView.Token> = [
 	{ name: "--color-accent-950" },
 ];
 
+/**
+ * Neutral palette tokens shown in the raw color section.
+ */
 const neutralColorTokens: Array<ColorsView.Token> = [
 	{ name: "--color-neutral-50" },
 	{ name: "--color-neutral-100" },
@@ -44,6 +62,9 @@ const neutralColorTokens: Array<ColorsView.Token> = [
 	{ name: "--color-neutral-950" },
 ];
 
+/**
+ * Semantic neutral UI tokens previewed as component states.
+ */
 const uiNeutralTokens: Array<ColorsView.Token> = [
 	{ name: "--ui-neutral-bg-tint" },
 	{ name: "--ui-neutral-bg-tint-hover" },
@@ -60,6 +81,9 @@ const uiNeutralTokens: Array<ColorsView.Token> = [
 	{ name: "--ui-neutral-fg-on-solid" },
 ];
 
+/**
+ * Semantic accent UI tokens previewed as component states.
+ */
 const uiAccentTokens: Array<ColorsView.Token> = [
 	{ name: "--ui-accent-bg-tint" },
 	{ name: "--ui-accent-bg-tint-hover" },
@@ -76,6 +100,9 @@ const uiAccentTokens: Array<ColorsView.Token> = [
 	{ name: "--ui-accent-fg-on-solid" },
 ];
 
+/**
+ * Builds the colors page renderer with token previews and swatches.
+ */
 export function ColorsView() {
 	return ({ model: _model }: { model: ColorsView.Model }) => {
 		let groups: Array<ColorsView.Group> = [
