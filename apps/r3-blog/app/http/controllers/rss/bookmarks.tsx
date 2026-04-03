@@ -1,15 +1,13 @@
 import { xml } from "@pkg/http/response";
 import action from "@pkg/remix-helpers/action";
 import { RSS } from "@pkg/rss";
-import { getContext } from "remix/async-context-middleware";
+import { Database } from "remix/data-table";
 
-import { db } from "~/app/http/middleware/db";
 import { LikePost } from "~/app/repositories/posts/like";
 import routes from "~/routes/web";
 
-export default action<typeof routes.rss.bookmarks>(async () => {
-	let ctx = getContext() as any;
-	let database = db();
+export default action<typeof routes.rss.bookmarks>(async (ctx) => {
+	let database = ctx.get(Database);
 
 	let likes = await LikePost.findAll(database);
 

@@ -1,14 +1,13 @@
 import { JWK } from "@edgefirst-dev/jwt";
 import { redirect } from "@pkg/http/response";
 import controller from "@pkg/remix-helpers/controller";
-import { getContext } from "remix/async-context-middleware";
 import { startExternalAuth } from "remix/auth";
+import { Database } from "remix/data-table";
 import { Session } from "remix/session";
 
 import { createProvider, exchangeCodeForIdToken } from "~/app/auth/services/oauth";
 import { verifyIdToken } from "~/app/auth/value-objects/id-token";
 import { getIdToken, isAuthenticated, login, logout, setIdToken } from "~/app/http/middleware/auth";
-import { db } from "~/app/http/middleware/db";
 import { getEnv } from "~/app/http/middleware/env";
 import { view } from "~/app/infrastructure/view";
 import { User } from "~/app/repositories/user";
@@ -44,8 +43,7 @@ export default controller<typeof routes.auth>({
 					return view(LoginView, {});
 				},
 
-				action() {
-					let ctx = getContext() as any;
+				action(ctx) {
 					let provider = createProvider({
 						auth: {
 							clientId: getEnv("CLIENT_ID"),
@@ -66,8 +64,7 @@ export default controller<typeof routes.auth>({
 					return view(LogoutView, {});
 				},
 
-				action() {
-					let ctx = getContext() as any;
+				action(ctx) {
 					let idToken = getIdToken();
 					let logoutUrl = new URL("https://auth.sergiodxa.com/oidc/logout");
 					if (idToken) logoutUrl.searchParams.set("id_token_hint", idToken);
@@ -92,8 +89,7 @@ export default controller<typeof routes.auth>({
 
 		callback: {
 			middleware: [],
-			async handler() {
-				let ctx = getContext() as any;
+			async handler(ctx) {
 				let result: Awaited<ReturnType<typeof exchangeCodeForIdToken>>;
 				let session = ctx.get(Session);
 				let transaction = session.get("__auth") as OAuthTransaction | null;
@@ -143,7 +139,7 @@ export default controller<typeof routes.auth>({
 					await idTokenVerificationKey,
 					getEnv("CLIENT_ID"),
 				);
-				let user = await User.findOrCreateFromAuthProfile(db(), {
+				let user = await User.findOrCreateFromAuthProfile(ctx.get(Database), {
 					subjectId: idToken.subject,
 					email: idToken.email,
 					avatar: idToken.picture,

@@ -1,11 +1,11 @@
 import { getContext } from "remix/async-context-middleware";
 import { auth as createAuthMiddleware, Auth, createSessionAuthScheme } from "remix/auth-middleware";
 import { createContextKey } from "remix/fetch-router";
+import { Database } from "remix/data-table";
 import { Session } from "remix/session";
 
 import type * as schema from "~/database/schema";
 
-import { db } from "~/app/http/middleware/db";
 import { User } from "~/app/repositories/user";
 
 export let AUTH_SESSION_USER_ID_KEY = "userId";
@@ -21,7 +21,7 @@ export let auth = createAuthMiddleware({
 				return typeof userId === "string" ? userId : null;
 			},
 			verify(userId) {
-				return User.findById(db(), userId);
+				return User.findById(getContext().get(Database), userId);
 			},
 			invalidate(session) {
 				session.unset(AUTH_SESSION_USER_ID_KEY);

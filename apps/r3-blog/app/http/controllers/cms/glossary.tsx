@@ -3,10 +3,9 @@ import controller from "@pkg/remix-helpers/controller";
 import { succeeded } from "@pkg/result";
 import { validate } from "@pkg/validate";
 import { parameterize } from "inflected";
-import { getContext } from "remix/async-context-middleware";
+import { Database } from "remix/data-table";
 
 import { getAuthUser } from "~/app/http/middleware/auth";
-import { db } from "~/app/http/middleware/db";
 import { view } from "~/app/infrastructure/view";
 import { GlossaryPost } from "~/app/repositories/posts/glossary";
 import { GlossarySchema } from "~/app/schemas/cms/glossary";
@@ -17,8 +16,8 @@ export default controller<typeof routes.cms.glossary>({
 	middleware: [],
 
 	actions: {
-		async index() {
-			let glossary = await GlossaryPost.findAll(db());
+		async index(ctx) {
+			let glossary = await GlossaryPost.findAll(ctx.get(Database));
 			let items = glossary.map((item) => ({
 				id: item.id,
 				term: item.meta.term,
@@ -30,8 +29,7 @@ export default controller<typeof routes.cms.glossary>({
 			return view(CMSGlossaryIndexView, { items });
 		},
 
-		async create() {
-			let ctx = getContext() as any;
+		async create(ctx) {
 			let user = getAuthUser();
 			if (!user)
 				return redirect(routes.auth.login.index.href(), { status: redirect.Status.SeeOther });
@@ -39,7 +37,7 @@ export default controller<typeof routes.cms.glossary>({
 			let result = await validate(ctx.get(FormData), GlossarySchema);
 			succeeded(result, "Invalid glossary form data");
 
-			let created = await GlossaryPost.create(db(), {
+			let created = await GlossaryPost.create(ctx.get(Database), {
 				author_id: user.id,
 				meta: {
 					term: result.data.term,
@@ -57,20 +55,18 @@ export default controller<typeof routes.cms.glossary>({
 			});
 		},
 
-		async destroy() {
-			let ctx = getContext() as any;
+		async destroy(ctx) {
 			let id = ctx.params.id;
 			if (!id)
 				return redirect(routes.cms.glossary.index.href(), { status: redirect.Status.SeeOther });
 
-			await GlossaryPost.destroy(db(), id);
+			await GlossaryPost.destroy(ctx.get(Database), id);
 			return redirect(routes.cms.glossary.index.href(), { status: redirect.Status.SeeOther });
 		},
 
-		async edit() {
-			let ctx = getContext() as any;
+		async edit(ctx) {
 			let id = ctx.params.id;
-			let glossary = id ? await GlossaryPost.findById(db(), id) : null;
+			let glossary = id ? await GlossaryPost.findById(ctx.get(Database), id) : null;
 
 			if (!glossary) {
 				let viewProps = {
@@ -103,8 +99,8 @@ export default controller<typeof routes.cms.glossary>({
 			return view(CMSGlossaryActionView, viewProps);
 		},
 
-		async new() {
-			let total = (await GlossaryPost.findAll(db())).length;
+		async new(ctx) {
+			let total = (await GlossaryPost.findAll(ctx.get(Database))).length;
 			let viewProps = {
 				title: "New Glossary",
 				description: `New Glossary form loaded. Current glossary count: ${total}.`,
@@ -117,8 +113,7 @@ export default controller<typeof routes.cms.glossary>({
 			return view(CMSGlossaryActionView, viewProps);
 		},
 
-		async update() {
-			let ctx = getContext() as any;
+		async update(ctx) {
 			let user = getAuthUser();
 			let id = ctx.params.id;
 			if (!user || !id)
@@ -127,7 +122,7 @@ export default controller<typeof routes.cms.glossary>({
 			let result = await validate(ctx.get(FormData), GlossarySchema);
 			succeeded(result, "Invalid glossary form data");
 
-			let updated = await GlossaryPost.update(db(), id, {
+			let updated = await GlossaryPost.update(ctx.get(Database), id, {
 				author_id: user.id,
 				meta: {
 					term: result.data.term,

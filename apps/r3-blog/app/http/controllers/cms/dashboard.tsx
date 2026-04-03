@@ -1,6 +1,6 @@
 import action from "@pkg/remix-helpers/action";
+import { Database } from "remix/data-table";
 
-import { db } from "~/app/http/middleware/db";
 import { view } from "~/app/infrastructure/view";
 import { ArticlePost } from "~/app/repositories/posts/article";
 import { GlossaryPost } from "~/app/repositories/posts/glossary";
@@ -9,8 +9,8 @@ import { TutorialPost } from "~/app/repositories/posts/tutorial";
 import { CMSDashboardView } from "~/resources/views/cms/dashboard";
 import routes from "~/routes/web";
 
-export default action<typeof routes.cms.dashboard>(async () => {
-	let database = db();
+export default action<typeof routes.cms.dashboard>(async (ctx) => {
+	let database = ctx.get(Database);
 	let [articles, tutorials, likes, glossary] = await Promise.all([
 		ArticlePost.count(database),
 		TutorialPost.count(database),

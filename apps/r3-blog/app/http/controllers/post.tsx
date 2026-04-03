@@ -1,11 +1,11 @@
 import * as ct from "@pkg/http/content-type";
 import action from "@pkg/remix-helpers/action";
-import { getContext } from "remix/async-context-middleware";
+import { Database } from "remix/data-table";
 
+import type { ContentTypeParam } from "~/app/http/responses/format";
 import type routeMap from "~/routes/web";
 
-import { db } from "~/app/http/middleware/db";
-import { type ContentTypeParam, resolveResponseFormat } from "~/app/http/responses/format";
+import { resolveResponseFormat } from "~/app/http/responses/format";
 import { NotFoundViewModel } from "~/app/http/view-models/not-found";
 import { PostViewModel } from "~/app/http/view-models/post";
 import { view } from "~/app/infrastructure/view";
@@ -30,8 +30,7 @@ type ValidatePostRequestParamsResult =
 let SUPPORTED_POST_TYPES = new Set<string>(["articles", "tutorials"]);
 let SUPPORTED_CONTENT_TYPES = new Set<string>(["html", "md"]);
 
-export default action<typeof routeMap.post>(async () => {
-	let ctx = getContext() as any;
+export default action<typeof routeMap.post>(async (ctx) => {
 	let validation = validatePostRequestParams({
 		postType: ctx.params.postType,
 		postSlug: ctx.params.postSlug,
@@ -63,7 +62,7 @@ export default action<typeof routeMap.post>(async () => {
 	}
 
 	let responseFormat = resolveResponseFormat(ctx.request, validation.params.contentType);
-	let post = await Post.findByTypeAndSlug(db(), {
+	let post = await Post.findByTypeAndSlug(ctx.get(Database), {
 		postType: validation.params.postType,
 		postSlug: validation.params.postSlug,
 	});

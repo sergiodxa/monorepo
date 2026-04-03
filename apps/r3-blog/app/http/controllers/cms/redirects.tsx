@@ -2,7 +2,6 @@ import { redirect } from "@pkg/http/response";
 import controller from "@pkg/remix-helpers/controller";
 import { succeeded } from "@pkg/result";
 import { validate } from "@pkg/validate";
-import { getContext } from "remix/async-context-middleware";
 
 import { getEnv } from "~/app/http/middleware/env";
 import { view } from "~/app/infrastructure/view";
@@ -27,8 +26,7 @@ export default controller<typeof routes.cms.redirects>({
 			return view(CMSRedirectsIndexView, { items });
 		},
 
-		async create() {
-			let ctx = getContext() as any;
+		async create(ctx) {
 			let result = await validate(ctx.get(FormData), RedirectSchema);
 			succeeded(result, "Invalid redirect form data");
 
@@ -44,8 +42,7 @@ export default controller<typeof routes.cms.redirects>({
 			return redirect(routes.cms.redirects.index.href(), { status: redirect.Status.SeeOther });
 		},
 
-		async destroy() {
-			let ctx = getContext() as any;
+		async destroy(ctx) {
 			let from = getRedirectFromParam(ctx.params.id);
 			if (!from)
 				return redirect(routes.cms.redirects.index.href(), { status: redirect.Status.SeeOther });

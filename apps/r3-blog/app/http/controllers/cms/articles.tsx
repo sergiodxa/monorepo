@@ -2,10 +2,9 @@ import { redirect } from "@pkg/http/response";
 import controller from "@pkg/remix-helpers/controller";
 import { succeeded } from "@pkg/result";
 import { validate } from "@pkg/validate";
-import { getContext } from "remix/async-context-middleware";
+import { Database } from "remix/data-table";
 
 import { getAuthUser } from "~/app/http/middleware/auth";
-import { db } from "~/app/http/middleware/db";
 import { ArticleViewModel } from "~/app/http/view-models/cms/articles";
 import { view } from "~/app/infrastructure/view";
 import { Post } from "~/app/repositories/post";
@@ -18,8 +17,8 @@ export default controller<typeof routes.cms.articles>({
 	middleware: [],
 
 	actions: {
-		async index() {
-			let articles = await ArticlePost.findAll(db());
+		async index(ctx) {
+			let articles = await ArticlePost.findAll(ctx.get(Database));
 			let sources: Array<ArticleViewModel.SourceIndexItem> = articles.map((article) => ({
 				id: article.id,
 				title: article.meta.title,
@@ -31,8 +30,7 @@ export default controller<typeof routes.cms.articles>({
 			return view(CMSArticlesIndexView, { items });
 		},
 
-		async create() {
-			let ctx = getContext() as any;
+		async create(ctx) {
 			let user = getAuthUser();
 			if (!user)
 				return redirect(routes.auth.login.index.href(), { status: redirect.Status.SeeOther });
@@ -41,7 +39,7 @@ export default controller<typeof routes.cms.articles>({
 			succeeded(result, "Invalid article form data");
 			let input = ArticleViewModel.input({ data: result.data });
 
-			let created = await ArticlePost.create(db(), {
+			let created = await ArticlePost.create(ctx.get(Database), {
 				author_id: user.id,
 				published_at: input.published_at,
 				meta: input.meta,
@@ -55,20 +53,18 @@ export default controller<typeof routes.cms.articles>({
 			});
 		},
 
-		async destroy() {
-			let ctx = getContext() as any;
+		async destroy(ctx) {
 			let id = ctx.params.id;
 			if (!id)
 				return redirect(routes.cms.articles.index.href(), { status: redirect.Status.SeeOther });
 
-			await ArticlePost.destroy(db(), id);
+			await ArticlePost.destroy(ctx.get(Database), id);
 			return redirect(routes.cms.articles.index.href(), { status: redirect.Status.SeeOther });
 		},
 
-		async edit() {
-			let ctx = getContext() as any;
+		async edit(ctx) {
 			let id = ctx.params.id;
-			let article = id ? await ArticlePost.findById(db(), id) : null;
+			let article = id ? await ArticlePost.findById(ctx.get(Database), id) : null;
 
 			if (!article) {
 				let viewProps = ArticleViewModel.notFound({ id });
@@ -96,8 +92,7 @@ export default controller<typeof routes.cms.articles>({
 			return view(CMSArticlesActionView, viewProps);
 		},
 
-		async update() {
-			let ctx = getContext() as any;
+		async update(ctx) {
 			let user = getAuthUser();
 			let id = ctx.params.id;
 			if (!user || !id)
@@ -107,7 +102,7 @@ export default controller<typeof routes.cms.articles>({
 			succeeded(result, "Invalid article form data");
 			let input = ArticleViewModel.input({ data: result.data });
 
-			let updated = await ArticlePost.update(db(), id, {
+			let updated = await ArticlePost.update(ctx.get(Database), id, {
 				author_id: user.id,
 				published_at: input.published_at,
 				meta: input.meta,

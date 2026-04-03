@@ -2,10 +2,9 @@ import { redirect } from "@pkg/http/response";
 import controller from "@pkg/remix-helpers/controller";
 import { succeeded } from "@pkg/result";
 import { validate } from "@pkg/validate";
-import { getContext } from "remix/async-context-middleware";
+import { Database } from "remix/data-table";
 
 import { getAuthUser } from "~/app/http/middleware/auth";
-import { db } from "~/app/http/middleware/db";
 import { view } from "~/app/infrastructure/view";
 import { LikePost } from "~/app/repositories/posts/like";
 import { BookmarkSchema } from "~/app/schemas/cms/bookmark";
@@ -16,8 +15,8 @@ export default controller<typeof routes.cms.bookmarks>({
 	middleware: [],
 
 	actions: {
-		async index() {
-			let bookmarks = await LikePost.findAll(db());
+		async index(ctx) {
+			let bookmarks = await LikePost.findAll(ctx.get(Database));
 			let items = bookmarks.map((bookmark) => ({
 				id: bookmark.id,
 				title: bookmark.meta.title,
@@ -29,8 +28,7 @@ export default controller<typeof routes.cms.bookmarks>({
 			return view(CMSBookmarksIndexView, { items });
 		},
 
-		async create() {
-			let ctx = getContext() as any;
+		async create(ctx) {
 			let user = getAuthUser();
 			if (!user)
 				return redirect(routes.auth.login.index.href(), { status: redirect.Status.SeeOther });
@@ -38,7 +36,7 @@ export default controller<typeof routes.cms.bookmarks>({
 			let result = await validate(ctx.get(FormData), BookmarkSchema);
 			succeeded(result, "Invalid bookmark form data");
 
-			let created = await LikePost.create(db(), {
+			let created = await LikePost.create(ctx.get(Database), {
 				author_id: user.id,
 				meta: {
 					title: result.data.title,
@@ -54,20 +52,18 @@ export default controller<typeof routes.cms.bookmarks>({
 			});
 		},
 
-		async destroy() {
-			let ctx = getContext() as any;
+		async destroy(ctx) {
 			let id = ctx.params.id;
 			if (!id)
 				return redirect(routes.cms.bookmarks.index.href(), { status: redirect.Status.SeeOther });
 
-			await LikePost.destroy(db(), id);
+			await LikePost.destroy(ctx.get(Database), id);
 			return redirect(routes.cms.bookmarks.index.href(), { status: redirect.Status.SeeOther });
 		},
 
-		async edit() {
-			let ctx = getContext() as any;
+		async edit(ctx) {
 			let id = ctx.params.id;
-			let bookmark = id ? await LikePost.findById(db(), id) : null;
+			let bookmark = id ? await LikePost.findById(ctx.get(Database), id) : null;
 
 			if (!bookmark) {
 				let model = {
@@ -98,8 +94,8 @@ export default controller<typeof routes.cms.bookmarks>({
 			return view(CMSBookmarksActionView, model);
 		},
 
-		async new() {
-			let total = (await LikePost.findAll(db())).length;
+		async new(ctx) {
+			let total = (await LikePost.findAll(ctx.get(Database))).length;
 			let model = {
 				title: "New Bookmark",
 				description: `New Bookmark form loaded. Current bookmarks count: ${total}.`,
@@ -112,8 +108,7 @@ export default controller<typeof routes.cms.bookmarks>({
 			return view(CMSBookmarksActionView, model);
 		},
 
-		async update() {
-			let ctx = getContext() as any;
+		async update(ctx) {
 			let user = getAuthUser();
 			let id = ctx.params.id;
 			if (!user || !id)
@@ -122,7 +117,7 @@ export default controller<typeof routes.cms.bookmarks>({
 			let result = await validate(ctx.get(FormData), BookmarkSchema);
 			succeeded(result, "Invalid bookmark form data");
 
-			let updated = await LikePost.update(db(), id, {
+			let updated = await LikePost.update(ctx.get(Database), id, {
 				author_id: user.id,
 				meta: {
 					title: result.data.title,

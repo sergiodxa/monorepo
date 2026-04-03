@@ -2,10 +2,9 @@ import { redirect } from "@pkg/http/response";
 import controller from "@pkg/remix-helpers/controller";
 import { succeeded } from "@pkg/result";
 import { validate } from "@pkg/validate";
-import { getContext } from "remix/async-context-middleware";
+import { Database } from "remix/data-table";
 
 import { getAuthUser } from "~/app/http/middleware/auth";
-import { db } from "~/app/http/middleware/db";
 import { TutorialViewModel } from "~/app/http/view-models/cms/tutorials";
 import { view } from "~/app/infrastructure/view";
 import { Post } from "~/app/repositories/post";
@@ -18,8 +17,8 @@ export default controller<typeof routes.cms.tutorials>({
 	middleware: [],
 
 	actions: {
-		async index() {
-			let tutorials = await TutorialPost.findAll(db());
+		async index(ctx) {
+			let tutorials = await TutorialPost.findAll(ctx.get(Database));
 			let sources: Array<TutorialViewModel.SourceIndexItem> = tutorials.map((tutorial) => ({
 				id: tutorial.id,
 				title: tutorial.meta.title,
@@ -32,8 +31,7 @@ export default controller<typeof routes.cms.tutorials>({
 			return view(CMSTutorialsIndexView, { items });
 		},
 
-		async create() {
-			let ctx = getContext() as any;
+		async create(ctx) {
 			let user = getAuthUser();
 			if (!user)
 				return redirect(routes.auth.login.index.href(), { status: redirect.Status.SeeOther });
@@ -42,7 +40,7 @@ export default controller<typeof routes.cms.tutorials>({
 			succeeded(result, "Invalid tutorial form data");
 			let input = TutorialViewModel.input({ data: result.data });
 
-			let created = await TutorialPost.create(db(), {
+			let created = await TutorialPost.create(ctx.get(Database), {
 				author_id: user.id,
 				published_at: input.published_at,
 				meta: input.meta,
@@ -58,20 +56,18 @@ export default controller<typeof routes.cms.tutorials>({
 			});
 		},
 
-		async destroy() {
-			let ctx = getContext() as any;
+		async destroy(ctx) {
 			let id = ctx.params.id;
 			if (!id)
 				return redirect(routes.cms.tutorials.index.href(), { status: redirect.Status.SeeOther });
 
-			await TutorialPost.destroy(db(), id);
+			await TutorialPost.destroy(ctx.get(Database), id);
 			return redirect(routes.cms.tutorials.index.href(), { status: redirect.Status.SeeOther });
 		},
 
-		async edit() {
-			let ctx = getContext() as any;
+		async edit(ctx) {
 			let id = ctx.params.id;
-			let tutorial = id ? await TutorialPost.findById(db(), id) : null;
+			let tutorial = id ? await TutorialPost.findById(ctx.get(Database), id) : null;
 
 			if (!tutorial) {
 				let model = TutorialViewModel.notFound({ id });
@@ -98,8 +94,7 @@ export default controller<typeof routes.cms.tutorials>({
 			return view(CMSTutorialsActionView, model);
 		},
 
-		async update() {
-			let ctx = getContext() as any;
+		async update(ctx) {
 			let user = getAuthUser();
 			let id = ctx.params.id;
 			if (!user || !id)
@@ -109,7 +104,7 @@ export default controller<typeof routes.cms.tutorials>({
 			succeeded(result, "Invalid tutorial form data");
 			let input = TutorialViewModel.input({ data: result.data });
 
-			let updated = await TutorialPost.update(db(), id, {
+			let updated = await TutorialPost.update(ctx.get(Database), id, {
 				author_id: user.id,
 				published_at: input.published_at,
 				meta: input.meta,

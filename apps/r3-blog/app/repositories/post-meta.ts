@@ -1,5 +1,7 @@
 import type { Database } from "remix/data-table";
 
+import { inList } from "remix/data-table";
+
 import * as schema from "~/database/schema";
 
 export namespace PostMeta {
@@ -27,8 +29,25 @@ export class PostMeta {
 	/** Batch lookup to avoid N+1 metadata queries. */
 	static async findByPostIds(db: Database, post_ids: Array<string>) {
 		if (post_ids.length === 0) return Promise.resolve([] as Array<schema.SelectPostMeta>);
-		let results = await Promise.all(post_ids.map((post_id) => this.findByPostId(db, post_id)));
-		return results.flat();
+
+		let seenPostIds = new Set<string>();
+		let uniquePostIds: Array<string> = [];
+
+		for (let postId of post_ids) {
+			if (seenPostIds.has(postId)) continue;
+			seenPostIds.add(postId);
+			uniquePostIds.push(postId);
+		}
+		let chunkSize = 250;
+		let rows: Array<schema.SelectPostMeta> = [];
+
+		for (let index = 0; index < uniquePostIds.length; index += chunkSize) {
+			let chunk = uniquePostIds.slice(index, index + chunkSize);
+			let chunkRows = await db.query(this.table).where(inList(this.table.post_id, chunk)).all();
+			rows.push(...chunkRows);
+		}
+
+		return rows;
 	}
 
 	static findByKeyValue(db: Database, key: string, value: string) {

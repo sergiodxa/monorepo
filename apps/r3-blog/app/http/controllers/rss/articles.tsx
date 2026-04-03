@@ -1,16 +1,14 @@
 import { xml } from "@pkg/http/response";
 import action from "@pkg/remix-helpers/action";
 import { RSS } from "@pkg/rss";
-import { getContext } from "remix/async-context-middleware";
+import { Database } from "remix/data-table";
 
-import { db } from "~/app/http/middleware/db";
 import { Post } from "~/app/repositories/post";
 import { ArticlePost } from "~/app/repositories/posts/article";
 import routes from "~/routes/web";
 
-export default action<typeof routes.rss.articles>(async () => {
-	let ctx = getContext() as any;
-	let articles = await ArticlePost.findAll(db());
+export default action<typeof routes.rss.articles>(async (ctx) => {
+	let articles = await ArticlePost.findAll(ctx.get(Database));
 
 	let rss = new RSS({
 		title: "Articles — Sergio Xalambrí",
