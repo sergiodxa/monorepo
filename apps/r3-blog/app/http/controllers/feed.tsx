@@ -32,9 +32,9 @@ export default action<typeof routes.feed>(
 	 * @returns HTML response produced by `view(FeedView, model)`.
 	 */
 	async function feedController(ctx) {
-	let activity = await Feed.listActivity(ctx.get(Database));
-	let model = FeedViewModel.index(activity);
+		let activity = await Feed.listActivity(ctx.get(Database));
+		let model = FeedViewModel.index(activity);
 
-	return view(FeedView, model);
+		return view(FeedView, model);
 	},
 );

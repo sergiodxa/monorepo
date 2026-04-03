@@ -55,13 +55,13 @@ export default class IdToken extends JWT {
 }
 
 /**
-	 * Verifies an ID token signature and expected audience/issuer.
-	 * @param token Raw JWT string from the auth callback.
-	 * @param verificationKey Imported remote JWK used to validate the signature.
-	 * @param clientId OAuth client id expected in the `aud` claim.
-	 * @returns A verified `IdToken` instance when the token is valid.
-	 * @example
-	 * let idToken = await verifyIdToken(rawToken, jwk, env.CLIENT_ID)
+ * Verifies an ID token signature and expected audience/issuer.
+ * @param token Raw JWT string from the auth callback.
+ * @param verificationKey Imported remote JWK used to validate the signature.
+ * @param clientId OAuth client id expected in the `aud` claim.
+ * @returns A verified `IdToken` instance when the token is valid.
+ * @example
+ * let idToken = await verifyIdToken(rawToken, jwk, env.CLIENT_ID)
  */
 export async function verifyIdToken(
 	token: string,

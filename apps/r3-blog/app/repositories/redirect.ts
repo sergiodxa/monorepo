@@ -46,10 +46,10 @@ export namespace Redirect {
 }
 
 /**
-	 * Redirect repository backed by a KV namespace.
-	 *
-	 * It centralizes key normalization and payload parsing so controllers can consume
-	 * a single contract regardless of how redirects were historically stored.
+ * Redirect repository backed by a KV namespace.
+ *
+ * It centralizes key normalization and payload parsing so controllers can consume
+ * a single contract regardless of how redirects were historically stored.
  */
 export class Redirect {
 	/**

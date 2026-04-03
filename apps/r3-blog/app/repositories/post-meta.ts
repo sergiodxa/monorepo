@@ -29,8 +29,8 @@ export namespace PostMeta {
 }
 
 /**
-	 * Repository for querying and creating rows in the post metadata table.
-	 * Methods keep DB field names in snake_case to match schema columns.
+ * Repository for querying and creating rows in the post metadata table.
+ * Methods keep DB field names in snake_case to match schema columns.
  */
 export class PostMeta {
 	/**

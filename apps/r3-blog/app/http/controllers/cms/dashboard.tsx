@@ -28,14 +28,14 @@ export default action<typeof routes.cms.dashboard>(
 	 * `stats.likes`, and `stats.glossary` numeric counters.
 	 */
 	async (ctx) => {
-	let database = ctx.get(Database);
-	let [articles, tutorials, likes, glossary] = await Promise.all([
-		ArticlePost.count(database),
-		TutorialPost.count(database),
-		LikePost.count(database),
-		GlossaryPost.count(database),
-	]);
+		let database = ctx.get(Database);
+		let [articles, tutorials, likes, glossary] = await Promise.all([
+			ArticlePost.count(database),
+			TutorialPost.count(database),
+			LikePost.count(database),
+			GlossaryPost.count(database),
+		]);
 
-	return view(CMSDashboardView, { stats: { articles, likes, tutorials, glossary } });
+		return view(CMSDashboardView, { stats: { articles, likes, tutorials, glossary } });
 	},
 );

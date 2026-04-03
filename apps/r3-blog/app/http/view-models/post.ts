@@ -125,10 +125,10 @@ export namespace PostViewModel {
 }
 
 /**
-	 * Maps repository post payloads into the post page view contract.
-	 *
-	 * This mapper centralizes post-type branching, canonical URL selection, and
-	 * markdown parsing so controllers can stay focused on request handling.
+ * Maps repository post payloads into the post page view contract.
+ *
+ * This mapper centralizes post-type branching, canonical URL selection, and
+ * markdown parsing so controllers can stay focused on request handling.
  */
 export class PostViewModel {
 	/**

@@ -21,9 +21,9 @@ export default action<typeof routes.tutorials>(
 	 * @returns SSR response for the tutorials index route.
 	 */
 	async (ctx) => {
-	let tutorials = await TutorialPost.listItems(ctx.get(Database));
-	let model = TutorialsViewModel.index(tutorials);
+		let tutorials = await TutorialPost.listItems(ctx.get(Database));
+		let model = TutorialsViewModel.index(tutorials);
 
-	return view(TutorialsView, model);
+		return view(TutorialsView, model);
 	},
 );

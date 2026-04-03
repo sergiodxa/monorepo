@@ -58,9 +58,9 @@ export class MissingEnvError extends ReferenceError {
 	override name = "MissingEnvError";
 
 	/**
- 	 * Creates an error for a missing environment key.
- 	 *
- 	 * @param key Environment key that could not be resolved.
+	 * Creates an error for a missing environment key.
+	 *
+	 * @param key Environment key that could not be resolved.
 	 */
 	constructor(public key: keyof App.Env) {
 		super(`Failed to retrieve environment variable: ${key}`);
