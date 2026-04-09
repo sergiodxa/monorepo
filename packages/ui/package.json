@@ -14,25 +14,25 @@
 	"dependencies": {
 		"@pkg/cn": "workspace:*",
 		"@standard-schema/spec": "^1.1.0",
-		"lucide-react": "^0.564.0",
-		"react-aria-components": "^1.15.1",
+		"lucide-react": "^1.8.0",
+		"react-aria-components": "^1.16.0",
 		"sonner": "^2.0.7"
 	},
 	"devDependencies": {
-		"@internationalized/date": "^3.8.0",
-		"@storybook/addon-a11y": "^10.2.8",
-		"@storybook/react": "^10.2.8",
-		"@storybook/react-vite": "^10.2.8",
-		"@tailwindcss/vite": "^4.1.18",
+		"@internationalized/date": "^3.12.0",
+		"@storybook/addon-a11y": "^10.3.5",
+		"@storybook/react": "^10.3.5",
+		"@storybook/react-vite": "^10.3.5",
+		"@tailwindcss/vite": "^4.2.2",
 		"@types/react": "^19.2.14",
-		"storybook": "^10.2.8",
-		"tailwindcss": "^4.1.18",
+		"storybook": "^10.3.5",
+		"tailwindcss": "^4.2.2",
 		"tailwindcss-animate": "^1.0.7",
-		"vite": "^7.3.1"
+		"vite": "^8.0.8"
 	},
 	"peerDependencies": {
-		"react": "^19.0.0",
-		"react-dom": "^19.0.0",
-		"react-router": "^7.0.0"
+		"react": "^19.2.5",
+		"react-dom": "^19.2.5",
+		"react-router": "^7.14.0"
 	}
 }
