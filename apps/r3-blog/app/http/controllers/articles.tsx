@@ -1,6 +1,7 @@
 import action from "@pkg/remix-helpers/action";
 import { Database } from "remix/data-table";
 
+import { isAdmin } from "~/app/http/middleware/auth";
 import { ArticlesViewModel } from "~/app/http/view-models/articles";
 import { view } from "~/app/infrastructure/view";
 import { ArticlePost } from "~/app/repositories/posts/article";
@@ -19,9 +20,8 @@ export default action<typeof routes.articles>(
 	 * @example GET /articles
 	 */
 	async (ctx) => {
-		let articles = await ArticlePost.listItems(ctx.get(Database));
+		let articles = await ArticlePost.listItems(ctx.get(Database), { includePreview: isAdmin() });
 		let model = ArticlesViewModel.index(articles);
-
 		return view(ArticlesView, model);
 	},
 );

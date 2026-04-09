@@ -3,7 +3,6 @@ import action from "@pkg/remix-helpers/action";
 import { RSS } from "@pkg/rss";
 import { Database } from "remix/data-table";
 
-import { Post } from "~/app/repositories/post";
 import { ArticlePost } from "~/app/repositories/posts/article";
 import routes from "~/routes/web";
 
@@ -22,7 +21,7 @@ export default action<typeof routes.rss.articles>(
 	 * @returns XML response with channel metadata and one item per published article.
 	 */
 	async (ctx) => {
-		let articles = await ArticlePost.findAll(ctx.get(Database));
+		let articles = await ArticlePost.findAll(ctx.get(Database), { includePreview: false });
 
 		/**
 		 * Channel metadata used by clients to identify this feed.
@@ -42,8 +41,6 @@ export default action<typeof routes.rss.articles>(
 		 * fall back to `created_at` to keep `pubDate` always populated.
 		 */
 		for (let article of articles) {
-			if (!Post.isPublishedAt(article.published_at)) continue;
-
 			/**
 			 * Feed items use canonical public post URLs.
 			 *

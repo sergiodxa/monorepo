@@ -3,7 +3,6 @@ import action from "@pkg/remix-helpers/action";
 import { Sitemap } from "@pkg/sitemap";
 import { Database } from "remix/data-table";
 
-import { Post } from "~/app/repositories/post";
 import { ArticlePost } from "~/app/repositories/posts/article";
 import { LikePost } from "~/app/repositories/posts/like";
 import { TutorialPost } from "~/app/repositories/posts/tutorial";
@@ -29,8 +28,8 @@ export default action<typeof routes.sitemap>(
 		let database = ctx.get(Database);
 
 		let [articles, tutorials, likes] = await Promise.all([
-			ArticlePost.findAll(database),
-			TutorialPost.findAll(database),
+			ArticlePost.findAll(database, { includePreview: false }),
+			TutorialPost.findAll(database, { includePreview: false }),
 			LikePost.findAll(database),
 		]);
 
@@ -72,7 +71,6 @@ export default action<typeof routes.sitemap>(
 		sitemap.append(new URL(routes.glossary.href(), ctx.url));
 
 		for (let article of articles) {
-			if (!Post.isPublishedAt(article.published_at)) continue;
 			sitemap.append(
 				new URL(routes.post.href({ postType: "articles", postSlug: article.meta.slug }), ctx.url),
 				{
@@ -82,7 +80,6 @@ export default action<typeof routes.sitemap>(
 		}
 
 		for (let tutorial of tutorials) {
-			if (!Post.isPublishedAt(tutorial.published_at)) continue;
 			sitemap.append(
 				new URL(routes.post.href({ postType: "tutorials", postSlug: tutorial.meta.slug }), ctx.url),
 				{

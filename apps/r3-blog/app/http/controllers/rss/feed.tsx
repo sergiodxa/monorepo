@@ -3,7 +3,6 @@ import action from "@pkg/remix-helpers/action";
 import { RSS } from "@pkg/rss";
 import { Database } from "remix/data-table";
 
-import { Post } from "~/app/repositories/post";
 import { ArticlePost } from "~/app/repositories/posts/article";
 import { GlossaryPost } from "~/app/repositories/posts/glossary";
 import { LikePost } from "~/app/repositories/posts/like";
@@ -27,8 +26,8 @@ export default action<typeof routes.rss.feed>(
 		let database = ctx.get(Database);
 
 		let [articles, tutorials, likes, glossary] = await Promise.all([
-			ArticlePost.findAll(database),
-			TutorialPost.findAll(database),
+			ArticlePost.findAll(database, { includePreview: false }),
+			TutorialPost.findAll(database, { includePreview: false }),
 			LikePost.findAll(database),
 			GlossaryPost.findAll(database),
 		]);
@@ -45,7 +44,6 @@ export default action<typeof routes.rss.feed>(
 		let items: Array<RSS.Item> = [];
 
 		for (let article of articles) {
-			if (!Post.isPublishedAt(article.published_at)) continue;
 			let link = new URL(
 				routes.post.href({ postType: "articles", postSlug: article.meta.slug }),
 				ctx.url,
@@ -60,7 +58,6 @@ export default action<typeof routes.rss.feed>(
 		}
 
 		for (let tutorial of tutorials) {
-			if (!Post.isPublishedAt(tutorial.published_at)) continue;
 			let link = new URL(
 				routes.post.href({ postType: "tutorials", postSlug: tutorial.meta.slug }),
 				ctx.url,

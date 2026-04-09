@@ -3,7 +3,6 @@ import action from "@pkg/remix-helpers/action";
 import { RSS } from "@pkg/rss";
 import { Database } from "remix/data-table";
 
-import { Post } from "~/app/repositories/post";
 import { TutorialPost } from "~/app/repositories/posts/tutorial";
 import routes from "~/routes/web";
 
@@ -26,7 +25,7 @@ export default action<typeof routes.rss.tutorials>(
 	async (ctx) => {
 		let database = ctx.get(Database);
 
-		let tutorials = await TutorialPost.findAll(database);
+		let tutorials = await TutorialPost.findAll(database, { includePreview: false });
 
 		let rss = new RSS({
 			title: "Tutorials — Sergio Xalambrí",
@@ -35,7 +34,6 @@ export default action<typeof routes.rss.tutorials>(
 		});
 
 		for (let tutorial of tutorials) {
-			if (!Post.isPublishedAt(tutorial.published_at)) continue;
 			let link = new URL(
 				routes.post.href({ postType: "tutorials", postSlug: tutorial.meta.slug }),
 				ctx.url,

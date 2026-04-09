@@ -12,6 +12,13 @@ import { postMeta, posts } from "~/database/schema";
  */
 export namespace TutorialPost {
 	/**
+	 * Controls whether query helpers should keep future-dated preview posts.
+	 */
+	export interface QueryOptions {
+		includePreview?: boolean;
+	}
+
+	/**
 	 * Canonical metadata payload for tutorials.
 	 *
 	 * `tags` accepts either a single tag or an array so write paths can accept CMS forms
@@ -197,13 +204,22 @@ export class TutorialPost {
 	static postType = "tutorial" as const;
 
 	/**
-	 * Returns all tutorial records for this type with decoded metadata.
+	 * Returns tutorial records with decoded metadata, optionally including previews.
 	 *
-	 * This method does not filter by publish state; callers decide whether preview content
-	 * is visible.
+	 * Public callers get published tutorials only unless `includePreview` is enabled.
+	 * @param db Database connection used for querying.
+	 * @param options Query options controlling preview visibility.
 	 */
-	static findAll(db: Database) {
-		return Post.findAllForType<"tutorial", TutorialPost.Meta>(db, this.postType, tutorialMetaCodec);
+	static async findAll(db: Database, options?: TutorialPost.QueryOptions) {
+		let tutorials = await Post.findAllForType<"tutorial", TutorialPost.Meta>(
+			db,
+			this.postType,
+			tutorialMetaCodec,
+		);
+
+		if (options?.includePreview) return tutorials;
+
+		return tutorials.filter((tutorial) => Post.isPublishedAt(tutorial.published_at));
 	}
 
 	/**
@@ -328,8 +344,14 @@ export class TutorialPost {
 	 *
 	 * Missing metadata falls back to deterministic placeholders, then items are sorted by
 	 * effective publish date (`published_at` when present, otherwise `created_at`).
+	 * @param db Database connection used for querying.
+	 * @param options Query options controlling preview visibility.
+	 * @returns List items for public or CMS tutorial listings, depending on `includePreview`.
 	 */
-	static async listItems(db: Database): Promise<Array<TutorialPost.ListItem>> {
+	static async listItems(
+		db: Database,
+		options?: TutorialPost.QueryOptions,
+	): Promise<Array<TutorialPost.ListItem>> {
 		let rows = await db
 			.query(posts)
 			.join(postMeta, and(eq(postMeta.post_id, posts.id), inList(postMeta.key, ["title", "slug"])))
@@ -364,14 +386,12 @@ export class TutorialPost {
 			if (row.meta_key === "slug" && row.meta_value.trim()) item.slug = row.meta_value;
 		}
 
-		let items = [...byId.values()];
-
-		items.sort((a, b) => {
-			let aDate = Date.parse(a.published_at ?? a.created_at);
-			let bDate = Date.parse(b.published_at ?? b.created_at);
-			return bDate - aDate;
+		let items = [...byId.values()].sort((a, b) => {
+			return Post.compareByPublishedOrCreatedDesc(a, b);
 		});
 
-		return items;
+		if (options?.includePreview) return items;
+
+		return items.filter((tutorial) => Post.isPublishedAt(tutorial.published_at));
 	}
 }

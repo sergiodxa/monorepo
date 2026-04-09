@@ -12,6 +12,13 @@ import { postMeta, posts } from "~/database/schema";
  */
 export namespace ArticlePost {
 	/**
+	 * Controls whether query helpers should keep future-dated preview posts.
+	 */
+	export interface QueryOptions {
+		includePreview?: boolean;
+	}
+
+	/**
 	 * Metadata fields persisted for article posts.
 	 *
 	 * `slug`, `title`, `locale`, and `content` are always materialized by the codec,
@@ -153,12 +160,21 @@ export class ArticlePost {
 	static postType = "article" as const;
 
 	/**
-	 * Lists all article posts with decoded metadata.
+	 * Lists article posts with decoded metadata, optionally including previews.
 	 * @param db Database connection used for querying.
+	 * @param options Query options controlling preview visibility.
 	 * @returns All article posts with typed metadata.
 	 */
-	static findAll(db: Database) {
-		return Post.findAllForType<"article", ArticlePost.Meta>(db, this.postType, articleMetaCodec);
+	static async findAll(db: Database, options?: ArticlePost.QueryOptions) {
+		let articles = await Post.findAllForType<"article", ArticlePost.Meta>(
+			db,
+			this.postType,
+			articleMetaCodec,
+		);
+
+		if (options?.includePreview) return articles;
+
+		return articles.filter((article) => Post.isPublishedAt(article.published_at));
 	}
 
 	/**
@@ -248,9 +264,13 @@ export class ArticlePost {
 	 * Items default to `Article {id}` and `id` when metadata is missing or blank, then
 	 * are sorted descending by published date, falling back to created date.
 	 * @param db Database connection used for querying.
+	 * @param options Query options controlling preview visibility.
 	 * @returns List items suitable for admin-style article listings.
 	 */
-	static async listItems(db: Database): Promise<Array<ArticlePost.ListItem>> {
+	static async listItems(
+		db: Database,
+		options?: ArticlePost.QueryOptions,
+	): Promise<Array<ArticlePost.ListItem>> {
 		let rows = await db
 			.query(posts)
 			.join(postMeta, and(eq(postMeta.post_id, posts.id), inList(postMeta.key, ["title", "slug"])))
@@ -284,14 +304,12 @@ export class ArticlePost {
 			if (row.meta_key === "slug" && row.meta_value.trim()) item.slug = row.meta_value;
 		}
 
-		let items = [...byId.values()];
-
-		items.sort((a, b) => {
-			let aDate = Date.parse(a.published_at ?? a.created_at);
-			let bDate = Date.parse(b.published_at ?? b.created_at);
-			return bDate - aDate;
+		let items = [...byId.values()].sort((a, b) => {
+			return Post.compareByPublishedOrCreatedDesc(a, b);
 		});
 
-		return items;
+		if (options?.includePreview) return items;
+
+		return items.filter((article) => Post.isPublishedAt(article.published_at));
 	}
 }

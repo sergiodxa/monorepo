@@ -39,7 +39,7 @@ export default controller<typeof routes.cms.tutorials>({
 		 * @returns HTML response with the tutorials list view-model.
 		 */
 		async index(ctx) {
-			let tutorials = await TutorialPost.findAll(ctx.get(Database));
+			let tutorials = await TutorialPost.findAll(ctx.get(Database), { includePreview: true });
 			let sources: Array<TutorialViewModel.SourceIndexItem> = tutorials.map((tutorial) => ({
 				id: tutorial.id,
 				title: tutorial.meta.title,

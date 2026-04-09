@@ -1,6 +1,7 @@
 import action from "@pkg/remix-helpers/action";
 import { Database } from "remix/data-table";
 
+import { isAdmin } from "~/app/http/middleware/auth";
 import { TutorialsViewModel } from "~/app/http/view-models/tutorials";
 import { view } from "~/app/infrastructure/view";
 import { TutorialPost } from "~/app/repositories/posts/tutorial";
@@ -21,7 +22,9 @@ export default action<typeof routes.tutorials>(
 	 * @returns SSR response for the tutorials index route.
 	 */
 	async (ctx) => {
-		let tutorials = await TutorialPost.listItems(ctx.get(Database));
+		let tutorials = await TutorialPost.listItems(ctx.get(Database), {
+			includePreview: isAdmin(),
+		});
 		let model = TutorialsViewModel.index(tutorials);
 
 		return view(TutorialsView, model);

@@ -86,8 +86,8 @@ export class Feed {
 		if (typeof limit === "number" && limit <= 0) return [];
 
 		let [articles, tutorials, bookmarks, glossary] = await Promise.all([
-			ArticlePost.findAll(db),
-			TutorialPost.findAll(db),
+			ArticlePost.findAll(db, { includePreview: false }),
+			TutorialPost.findAll(db, { includePreview: false }),
 			LikePost.findAll(db),
 			GlossaryPost.findAll(db),
 		]);

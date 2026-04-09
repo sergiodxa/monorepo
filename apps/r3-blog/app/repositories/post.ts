@@ -1,9 +1,12 @@
 import type { Database } from "remix/data-table";
 
-import { inList } from "remix/data-table";
+import { eq } from "remix/data-table";
 
 import { PostMeta } from "~/app/repositories/post-meta";
+import { TutorialPost } from "~/app/repositories/posts/tutorial";
 import * as schema from "~/database/schema";
+
+import { ArticlePost } from "./posts/article";
 
 /**
  * Shared type contracts for post persistence and typed metadata mapping.
@@ -165,7 +168,12 @@ export class Post {
 	 * @returns `true` when the post should be treated as published right now.
 	 */
 	static isPublishedAt(published_at: string | null) {
-		return published_at === null || Date.parse(published_at) <= Date.now();
+		if (published_at === null) return true;
+
+		let timestamp = this.parseTimestamp(published_at);
+		if (Number.isNaN(timestamp)) return false;
+
+		return timestamp <= Date.now();
 	}
 
 	/**
@@ -247,7 +255,6 @@ export class Post {
 		input: { postType: Post.PublicTypePath; postSlug: string },
 	): Promise<Post.PublicFoundByTypeAndSlug | null> {
 		if (input.postType === "articles") {
-			let { ArticlePost } = await import("~/app/repositories/posts/article");
 			let post = await ArticlePost.findBySlug(db, input.postSlug);
 			if (!post) return null;
 
@@ -266,7 +273,6 @@ export class Post {
 			};
 		}
 
-		let { TutorialPost } = await import("~/app/repositories/posts/tutorial");
 		let post = await TutorialPost.findBySlug(db, input.postSlug);
 		if (!post) return null;
 
@@ -300,7 +306,6 @@ export class Post {
 	): Promise<Array<Post.RelatedByTypeItem>> {
 		if (input.postType !== "tutorials") return [];
 
-		let { TutorialPost } = await import("~/app/repositories/posts/tutorial");
 		let post = await TutorialPost.findBySlug(db, input.postSlug);
 		if (!post) return [];
 
@@ -315,9 +320,8 @@ export class Post {
 	 * @returns Posts sorted by `created_at` descending.
 	 */
 	static async findAll(db: Database): Promise<Array<Post.FoundPost>> {
-		let posts = await db.query(this.table).orderBy("created_at", "desc").all();
-
-		return this.attachMetaToPosts(db, posts);
+		let rows = await this.findJoinedRows(db);
+		return this.groupJoinedRows(rows);
 	}
 
 	/**
@@ -448,15 +452,10 @@ export class Post {
 		postType: type,
 		codec: Post.MetaCodec<meta>,
 	) {
-		let posts = await db
-			.query(this.table)
-			.orderBy("created_at", "desc")
-			.where({ type: postType })
-			.all();
+		let rows = await this.findJoinedRows(db, { type: postType });
+		let posts = this.groupJoinedRows(rows);
 
-		let withMeta = await this.attachMetaToPosts(db, posts);
-
-		return withMeta.map((post) => this.toTypedResult<type, meta>(postType, post, codec));
+		return posts.map((post) => this.toTypedResult<type, meta>(postType, post, codec));
 	}
 
 	/**
@@ -539,39 +538,100 @@ export class Post {
 	): Promise<Array<Post.FoundPost>> {
 		if (ids.length === 0) return [];
 
-		let posts = await db.query(this.table).where(inList(this.table.id, ids)).all();
-
-		return this.attachMetaToPosts(db, posts);
+		let posts = await Promise.all(ids.map((id) => this.findOneJoinedById(db, id)));
+		return posts.filter((post): post is Post.FoundPost => post !== null);
 	}
 
 	/**
-	 * Attaches `post_meta` rows to each post row.
+	 * Loads post rows joined to metadata rows using adapter-safe predicates only.
 	 *
-	 * The method pre-seeds all post ids to preserve input order and always emit a
-	 * `meta` array, even when a post has no metadata rows.
+	 * This avoids `data-table` relation and direct `IN` execution paths that currently
+	 * fail under the app's adapter while still keeping feed/list reads batched.
 	 */
-	private static async attachMetaToPosts(
-		db: Database,
-		posts: Array<schema.SelectPost>,
-	): Promise<Array<Post.FoundPost>> {
-		if (posts.length === 0) return [];
+	private static findJoinedRows(db: Database, where?: { type?: Post.Type }) {
+		let query = db
+			.query(this.table)
+			.join(schema.postMeta, eq(schema.postMeta.post_id, this.table.id))
+			.select({
+				id: this.table.id,
+				created_at: this.table.created_at,
+				updated_at: this.table.updated_at,
+				author_id: this.table.author_id,
+				type: this.table.type,
+				published_at: this.table.published_at,
+				meta_id: schema.postMeta.id,
+				meta_created_at: schema.postMeta.created_at,
+				meta_updated_at: schema.postMeta.updated_at,
+				meta_post_id: schema.postMeta.post_id,
+				meta_key: schema.postMeta.key,
+				meta_value: schema.postMeta.value,
+			})
+			.orderBy("posts.created_at", "desc");
 
-		let postIds = posts.map((post) => post.id);
-		let metaRows = await PostMeta.findByPostIds(db, postIds);
-		let metaByPostId = new Map<string, Array<schema.SelectPostMeta>>();
+		if (where?.type) return query.where({ type: where.type }).all();
 
-		for (let post of posts) {
-			metaByPostId.set(post.id, []);
+		return query.all();
+	}
+
+	/**
+	 * Loads one post and its metadata without the failing relation loader.
+	 */
+	private static async findOneJoinedById(db: Database, id: string): Promise<Post.FoundPost | null> {
+		let post = await db.findOne(this.table, { where: { id } });
+		if (!post) return null;
+
+		let meta = await PostMeta.findByPostId(db, id);
+		return { ...post, meta };
+	}
+
+	/**
+	 * Reassembles `posts` joined with `post_meta` back into repository row shapes.
+	 */
+	private static groupJoinedRows(
+		rows: Array<{
+			id: string;
+			created_at: string;
+			updated_at: string;
+			author_id: string;
+			type: Post.Type;
+			published_at: string | null;
+			meta_id: string;
+			meta_created_at: string;
+			meta_updated_at: string;
+			meta_post_id: string;
+			meta_key: string;
+			meta_value: string;
+		}>,
+	): Array<Post.FoundPost> {
+		let posts = new Map<string, Post.FoundPost>();
+
+		for (let row of rows) {
+			let post = posts.get(row.id);
+
+			if (!post) {
+				post = {
+					id: row.id,
+					created_at: row.created_at,
+					updated_at: row.updated_at,
+					author_id: row.author_id,
+					type: row.type,
+					published_at: row.published_at,
+					meta: [],
+				};
+				posts.set(row.id, post);
+			}
+
+			post.meta.push({
+				id: row.meta_id,
+				created_at: row.meta_created_at,
+				updated_at: row.meta_updated_at,
+				post_id: row.meta_post_id,
+				key: row.meta_key,
+				value: row.meta_value,
+			});
 		}
 
-		for (let row of metaRows) {
-			let rows = metaByPostId.get(row.post_id);
-			if (!rows) continue;
-
-			rows.push(row);
-		}
-
-		return posts.map((post) => ({ ...post, meta: metaByPostId.get(post.id) ?? [] }));
+		return [...posts.values()];
 	}
 
 	/**

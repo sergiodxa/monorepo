@@ -37,7 +37,7 @@ export default controller<typeof routes.cms.articles>({
 		 * @returns SSR view response for the article listing page.
 		 */
 		async index(ctx) {
-			let articles = await ArticlePost.findAll(ctx.get(Database));
+			let articles = await ArticlePost.findAll(ctx.get(Database), { includePreview: true });
 			let sources: Array<ArticleViewModel.SourceIndexItem> = articles.map((article) => ({
 				id: article.id,
 				title: article.meta.title,

@@ -4,8 +4,6 @@ import { Markdown } from "@pkg/markdown/server";
 import { succeeded } from "@pkg/result";
 import * as s from "remix/data-schema";
 
-import type { ContentTypeParam } from "~/app/http/responses/format";
-
 /**
  * Shared markdown parser configured to accept body-only content.
  *
@@ -53,7 +51,7 @@ export namespace PostViewModel {
 			/** Raw DB publish timestamp where `null` means already published. */
 			publishedAt: string | null;
 			/** Optional content type override requested by the response format. */
-			format: ContentTypeParam | undefined;
+			format: "html" | "md" | undefined;
 			/** Tutorial tags, or an empty list for article posts. */
 			tags: Array<string>;
 		};
@@ -145,7 +143,7 @@ export class PostViewModel {
 	static page(
 		loadedPost: PostViewModel.LoadedPost,
 		requestUrl: string,
-		format: ContentTypeParam | undefined,
+		format: "html" | "md" | undefined,
 	): PostViewModel.Page {
 		if (loadedPost.postType === "articles") {
 			let post = loadedPost.post;

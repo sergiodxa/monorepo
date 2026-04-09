@@ -1,11 +1,12 @@
 import * as ct from "@pkg/http/content-type";
+import { accepts } from "@pkg/http/negotiate";
 import action from "@pkg/remix-helpers/action";
+import { enum_, optional, parse } from "remix/data-schema";
 import { Database } from "remix/data-table";
 
-import type { ContentTypeParam } from "~/app/http/responses/format";
 import type routeMap from "~/routes/web";
 
-import { resolveResponseFormat } from "~/app/http/responses/format";
+import { isAdmin } from "~/app/http/middleware/auth";
 import { NotFoundViewModel } from "~/app/http/view-models/not-found";
 import { PostViewModel } from "~/app/http/view-models/post";
 import { view } from "~/app/infrastructure/view";
@@ -24,7 +25,7 @@ type PostType = Post.PublicTypePath;
 interface ValidPostRequestParams {
 	postType: PostType;
 	postSlug: string;
-	contentType: ContentTypeParam | undefined;
+	contentType: "html" | "md" | undefined;
 }
 
 /**
@@ -90,14 +91,17 @@ export default action<typeof routeMap.post>(
 			});
 		}
 
-		let responseFormat = resolveResponseFormat(ctx.request, validation.params.contentType);
+		let prefersMarkdown =
+			accepts(ctx.request).preferred(ct.HTML, ct.Markdown) === ct.Markdown ||
+			validation.params.contentType === "md";
+
 		let post = await Post.findByTypeAndSlug(ctx.get(Database), {
 			postType: validation.params.postType,
 			postSlug: validation.params.postSlug,
 		});
 
 		if (!post) {
-			if (responseFormat === "md") {
+			if (prefersMarkdown) {
 				if (validation.params.postType === "articles") {
 					return markdown(
 						404,
@@ -126,9 +130,33 @@ export default action<typeof routeMap.post>(
 			});
 		}
 
+		if (!Post.isPublishedAt(post.post.published_at) && !isAdmin()) {
+			if (prefersMarkdown) {
+				if (validation.params.postType === "articles") {
+					return markdown(403, "# Forbidden\n\nThis article is not published yet.\n\n");
+				}
+
+				return markdown(403, "# Forbidden\n\nThis tutorial is not published yet.\n\n");
+			}
+
+			if (validation.params.postType === "articles") {
+				return renderForbiddenPage({
+					title: "Article Not Published",
+					description: "This article is not available yet.",
+					emoji: "🔒",
+				});
+			}
+
+			return renderForbiddenPage({
+				title: "Tutorial Not Published",
+				description: "This tutorial is not available yet.",
+				emoji: "🔒",
+			});
+		}
+
 		let viewModel = PostViewModel.page(post, ctx.request.url, validation.params.contentType);
 
-		if (responseFormat === "md") {
+		if (prefersMarkdown) {
 			return markdown(200, viewModel.markdownBody);
 		}
 
@@ -164,7 +192,7 @@ function validatePostRequestParams(params: {
 		params: {
 			postType: postType as PostType,
 			postSlug,
-			contentType: contentType as ContentTypeParam | undefined,
+			contentType: parse(optional(enum_(["html", "md"])), contentType),
 		},
 	};
 }
@@ -179,7 +207,10 @@ function validatePostRequestParams(params: {
  * @returns Markdown response with the Markdown content type header.
  */
 function markdown(status: number, body: string): Response {
-	return new Response(body, { status, headers: { "Content-Type": ct.Markdown } });
+	return new Response(body, {
+		status,
+		headers: { "Content-Type": `${ct.Markdown}; charset=utf-8` },
+	});
 }
 
 /**
@@ -193,4 +224,17 @@ function markdown(status: number, body: string): Response {
 async function renderNotFoundPage(input: NotFoundViewModel.Input): Promise<Response> {
 	let model = NotFoundViewModel.page(input);
 	return view(NotFoundView, model, { status: 404 });
+}
+
+/**
+ * Renders the shared error page with HTTP 403 status for preview-only posts.
+ *
+ * This keeps the public post route explicit about access denial instead of
+ * pretending the resource does not exist.
+ * @param input View model input used to build the forbidden UI.
+ * @returns HTML 403 response for unpublished content.
+ */
+async function renderForbiddenPage(input: NotFoundViewModel.Input): Promise<Response> {
+	let model = NotFoundViewModel.page(input);
+	return view(NotFoundView, model, { status: 403 });
 }
