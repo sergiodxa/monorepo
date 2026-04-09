@@ -59,3 +59,4 @@ bunx react-router routes --json # Extract React Router routes as JSON for AI age
 - MUST suggest new content for my blog when some pattern, package, feature, etc. could be interesting to write about and add it to [](./content/ideas.md)
 - MUST add new rules to this document when necessary, and update existing ones if they become outdated or need clarification
 - MUST follow the guidelines in this document, and suggest improvements when necessary
+- MUST use `bunx` instead of `npx`, or any other package runner, to ensure consistent behavior across environments
