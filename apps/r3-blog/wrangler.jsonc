@@ -5,29 +5,53 @@
 	"compatibility_date": "2025-04-07",
 	"compatibility_flags": ["nodejs_compat"],
 	"workers_dev": true,
-	"dev": { "port": 3000 },
-	"placement": { "mode": "smart" },
-	"observability": { "enabled": true },
-	"assets": { "directory": "./build/client" },
-
+	"dev": {
+		"port": 3000,
+	},
+	"placement": {
+		"mode": "smart",
+	},
+	"observability": {
+		"enabled": true,
+	},
+	"assets": {
+		"directory": "./build/client",
+	},
+	"routes": [{ "pattern": "r3.sergiodxa.com", "custom_domain": true }],
+	"secrets_store_secrets": [
+		{
+			"binding": "CLIENT_ID",
+			"store_id": "e8d9e39c4db6485bbd65a9658e8f9a71",
+			"secret_name": "BLOG_CLIENT_ID",
+		},
+		{
+			"binding": "CLIENT_SECRET",
+			"store_id": "e8d9e39c4db6485bbd65a9658e8f9a71",
+			"secret_name": "BLOG_CLIENT_SECRET",
+		},
+		{
+			"binding": "COOKIE_SESSION_SECRET",
+			"store_id": "e8d9e39c4db6485bbd65a9658e8f9a71",
+			"secret_name": "COOKIE_SESSION_SECRET",
+		},
+	],
 	"kv_namespaces": [
 		{
 			"binding": "CACHE",
 			"id": "597a3ce0108c42798aeac0044a566e31",
-			"preview_id": "cache",
+			"preview_id": "597a3ce0108c42798aeac0044a566e31",
 		},
 		{
 			"binding": "AUTH",
 			"id": "fda5fdfe90e74e2b82dd0ccd49346c27",
-			"preview_id": "auth@sergiodxa.com",
+			"preview_id": "fda5fdfe90e74e2b82dd0ccd49346c27",
 		},
 		{
 			"binding": "REDIRECTS",
 			"id": "2bcc558cadce40dcb9c73f047c26be6c",
-			"preview_id": "redirects",
+			"preview_id": "2bcc558cadce40dcb9c73f047c26be6c",
 		},
 	],
-
 	"d1_databases": [
 		{
 			"binding": "DB",
@@ -36,7 +60,6 @@
 			"migrations_dir": "./database/migrations",
 		},
 	],
-
 	"r2_buckets": [
 		{
 			"binding": "BACKUPS",

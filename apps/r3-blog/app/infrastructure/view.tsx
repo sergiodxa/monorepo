@@ -1,7 +1,7 @@
 import type { RemixNode } from "remix/component";
 
-import { html } from "@pkg/http/response";
-import { renderToString } from "remix/component/server";
+import { getContext } from "remix/async-context-middleware";
+import { renderToStream } from "remix/component/server";
 
 /**
  * Optional HTTP metadata for the rendered HTML response.
@@ -9,6 +9,29 @@ import { renderToString } from "remix/component/server";
 export interface ViewOptions {
 	status?: number;
 	headers?: HeadersInit;
+}
+
+/**
+ * Resolves one server-side frame by fetching its HTML from the current app.
+ *
+ * Relative frame URLs are resolved against the current frame URL, while nested
+ * requests forward the original top-level document URL so `handle.frames.top`
+ * remains stable across recursive frame rendering.
+ */
+async function resolveSsrFrame(
+	request: Request,
+	src: string,
+	context?: { currentFrameSrc: string; topFrameSrc: string },
+) {
+	let frameUrl = new URL(src, context?.currentFrameSrc ?? request.url);
+
+	let headers = new Headers(request.headers);
+	headers.set("accept", "text/html");
+
+	let response = await fetch(frameUrl, { headers });
+
+	if (response.ok) return response.body ?? (await response.text());
+	return "";
 }
 
 /**
@@ -25,6 +48,18 @@ export async function view<ViewModel>(
 	viewModel: ViewModel,
 	options?: ViewOptions,
 ): Promise<Response> {
-	let body = await renderToString(<ViewComponent model={viewModel} />);
-	return html(body, { status: options?.status ?? 200, headers: options?.headers });
+	let request = getContext().request;
+	let stream = renderToStream(<ViewComponent model={viewModel} />, {
+		frameSrc: request.url,
+		resolveFrame(src, _, context) {
+			return resolveSsrFrame(request, src, context);
+		},
+	});
+	let headers = new Headers(options?.headers);
+	headers.set("content-type", "text/html; charset=utf-8");
+
+	return new Response(stream, {
+		status: options?.status ?? 200,
+		headers,
+	});
 }

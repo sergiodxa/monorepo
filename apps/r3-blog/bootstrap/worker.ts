@@ -11,13 +11,19 @@ import createApplication from "./app";
 export default {
 	async fetch(request: Request, env: Cloudflare.Env) {
 		let database = createDatabase(createD1DataTableAdapter(env.DB));
-		let isProd = resolveIsProd(request);
+		let IS_PROD = resolveIsProd(request);
+
+		let [CLIENT_ID, CLIENT_SECRET, COOKIE_SESSION_SECRET] = await Promise.all([
+			env.CLIENT_ID.get(),
+			env.CLIENT_SECRET.get(),
+			env.COOKIE_SESSION_SECRET.get(),
+		]);
 
 		let router = createApplication(database, {
-			IS_PROD: isProd,
-			CLIENT_ID: env.CLIENT_ID,
-			CLIENT_SECRET: env.CLIENT_SECRET,
-			COOKIE_SESSION_SECRET: env.COOKIE_SESSION_SECRET ?? "s3cr3t",
+			IS_PROD,
+			CLIENT_ID,
+			CLIENT_SECRET,
+			COOKIE_SESSION_SECRET,
 			AUTH: env.AUTH,
 			REDIRECTS: env.REDIRECTS,
 		});
