@@ -18,6 +18,13 @@ export namespace TutorialsViewModel {
 		/** Human-readable tutorial title displayed as the list label. */
 		label: string;
 		/**
+		 * Effective display date for this tutorial row.
+		 *
+		 * Prefers `published_at` and falls back to `created_at` so the listing always
+		 * has a date to render.
+		 */
+		date: string;
+		/**
 		 * Whether this tutorial should be marked as preview content.
 		 *
 		 * `false` includes both explicitly published posts and `published_at === null`.
@@ -58,6 +65,7 @@ export class TutorialsViewModel {
 			return {
 				href,
 				label: tutorial.title,
+				date: tutorial.published_at ?? tutorial.created_at,
 				preview: !isPublished,
 			};
 		});

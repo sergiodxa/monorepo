@@ -29,6 +29,13 @@ export namespace ArticlesViewModel {
 		 */
 		label: string;
 		/**
+		 * Effective display date for the row.
+		 *
+		 * Prefers `published_at` and falls back to `created_at` so list pages can
+		 * render a stable date even for immediately published content.
+		 */
+		date: string;
+		/**
 		 * Indicates whether the row should be visually marked as preview.
 		 *
 		 * `false` means publicly published, including `published_at === null`.
@@ -72,6 +79,7 @@ export class ArticlesViewModel {
 			return {
 				href,
 				label: article.title,
+				date: article.published_at ?? article.created_at,
 				preview: !isPublished,
 			};
 		});

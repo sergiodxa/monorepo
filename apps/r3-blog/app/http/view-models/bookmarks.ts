@@ -20,6 +20,13 @@ export namespace BookmarksViewModel {
 		 */
 		label: string;
 		/**
+		 * Effective display date for the bookmark row.
+		 *
+		 * Uses publish time when present so scheduled items sort and display by their
+		 * intended publish date, otherwise falls back to creation time.
+		 */
+		date: string;
+		/**
 		 * Whether the item should be marked as preview.
 		 *
 		 * `false` includes explicitly published records and records with no publish date.
@@ -85,6 +92,7 @@ export class BookmarksViewModel {
 				return {
 					href,
 					label,
+					date: publishedAt ?? createdAt,
 					preview: !isPublished,
 					suffixHref: suffixHref ?? undefined,
 					suffixLabel: suffixHref ? "🏛️" : undefined,
