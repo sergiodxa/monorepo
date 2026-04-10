@@ -109,9 +109,8 @@ export default form<"/dashboard/tenants/:tenantId/branding">({
 										name="customCss"
 										rows="4"
 										class="w-full border rounded-lg px-3 py-2 font-mono text-sm"
-										placeholder=".login-button { ... }"
 									>
-																																																															${branding?.custom_css ?? ""}</textarea
+${branding?.custom_css ?? ""}</textarea
 									>
 									<p class="text-gray-500 text-xs mt-1">Advanced: Add custom CSS to style login pages</p>
 								</div>
