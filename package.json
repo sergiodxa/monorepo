@@ -7,8 +7,8 @@
 	],
 	"type": "module",
 	"scripts": {
-		"format": "bun ./node_modules/oxfmt/dist/cli.js --check",
-		"format:fix": "bun ./node_modules/oxfmt/dist/cli.js",
+		"format": "bunx oxfmt --check",
+		"format:fix": "bunx oxfmt",
 		"lint": "oxlint --deny-warnings",
 		"lint:fix": "oxlint --deny-warnings --fix",
 		"typecheck": "tsc --noEmit"
