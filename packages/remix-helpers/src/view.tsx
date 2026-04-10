@@ -1,0 +1,77 @@
+import type { RemixNode } from "remix/component";
+import type { ResolveFrameContext } from "remix/component/server";
+import type { Router } from "remix/fetch-router";
+
+import { getContext } from "remix/async-context-middleware";
+import { renderToStream } from "remix/component/server";
+
+/**
+ * Renders a Remix component tree to an HTML `Response` using the active request context.
+ *
+ * Use this helper inside route handlers that return server-rendered views and
+ * need frame resolution to reuse the current fetch-router request and router.
+ */
+export default async function view(node: RemixNode, init?: ResponseInit): Promise<Response> {
+	let context = getContext();
+	let request = context.request;
+	let router = context.router;
+
+	let stream = renderToStream(node, {
+		frameSrc: request.url,
+		resolveFrame(src, target, context) {
+			return resolveFrame(router, request, src, target, context);
+		},
+		onError(error) {
+			console.error(error);
+		},
+	});
+
+	let headers = new Headers(init?.headers);
+	headers.set("content-type", "text/html; charset=utf-8");
+
+	return new Response(stream, { ...init, headers });
+}
+
+async function resolveFrame(
+	router: Router,
+	request: Request,
+	src: string,
+	target?: string,
+	context?: ResolveFrameContext,
+) {
+	let frameSrc = context?.currentFrameSrc ?? request.url;
+	let url = new URL(src, frameSrc);
+
+	let headers = new Headers();
+	headers.set("accept", "text/html");
+	headers.set("accept-encoding", "identity");
+	headers.set("x-remix-frame", "true");
+
+	if (target) headers.set("x-remix-target", target);
+
+	let cookie = request.headers.get("cookie");
+	if (cookie) headers.set("cookie", cookie);
+
+	let res = await followFrameRedirects(router, request, url, headers);
+	if (res.body) return res.body;
+
+	if (res.ok) return res.text();
+	return `<pre>Frame error: ${res.status} ${res.statusText}</pre>`;
+}
+
+async function followFrameRedirects(router: Router, request: Request, url: URL, headers: Headers) {
+	let currentUrl = url;
+	let redirectsRemaining = 10;
+
+	while (true) {
+		let res = await router.fetch(
+			new Request(currentUrl, { method: "GET", headers, signal: request.signal }),
+		);
+
+		let location = res.headers.get("location");
+		if (!location || res.status < 300 || res.status >= 400) return res;
+
+		if (redirectsRemaining-- <= 0) throw new Error("Too many frame redirects");
+		currentUrl = new URL(location, currentUrl);
+	}
+}

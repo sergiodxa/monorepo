@@ -7,7 +7,8 @@
 		"./action": "./src/action.ts",
 		"./controller": "./src/controller.ts",
 		"./form": "./src/form.ts",
-		"./middleware": "./src/middleware.ts"
+		"./middleware": "./src/middleware.ts",
+		"./view": "./src/view.tsx"
 	},
 	"dependencies": {
 		"remix": "^3.0.0-alpha.4"

@@ -28,5 +28,5 @@
 		"builtin": true
 	},
 	"globals": {},
-	"ignorePatterns": []
+	"ignorePatterns": ["templates/app/database/schema.ts"]
 }

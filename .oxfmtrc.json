@@ -1,6 +1,6 @@
 {
 	"$schema": "./node_modules/oxfmt/configuration_schema.json",
-	"ignorePatterns": [],
+	"ignorePatterns": ["apps/auth-saas/src/app/controllers/dashboard/tenants/branding.ts"],
 	"useTabs": true,
 	"experimentalSortPackageJson": true,
 	"experimentalSortImports": {

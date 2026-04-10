@@ -1,13 +1,13 @@
 # @pkg/remix-helpers
 
-Convenient type-safe helpers for defining fetch-router actions, form controllers, controllers, and middleware.
+Convenient type-safe helpers for defining fetch-router actions, form controllers, controllers, middleware, and rendered views.
 
 ## Overview
 
 `@pkg/remix-helpers` wraps `@remix-run/fetch-router` primitives with identity
 functions so handler definitions stay concise while preserving strong typing.
-The helpers do not change runtime behavior; they only improve authoring
-ergonomics.
+It also includes a `view` helper for returning server-rendered HTML responses
+from route handlers using the active request context.
 
 The intended pattern is to use your app route map as the type source. Passing
 generics like `typeof routes.feed`, `typeof routes.cms.posts`, or
@@ -24,6 +24,7 @@ import type routes from "~/routes";
 import action from "@pkg/remix-helpers/action";
 import controller from "@pkg/remix-helpers/controller";
 import middleware from "@pkg/remix-helpers/middleware";
+import view from "@pkg/remix-helpers/view";
 
 export const feed = action<typeof routes.feed>(async (_ctx) => {
 	return new Response("Feed");
@@ -42,6 +43,10 @@ export const posts = controller<typeof routes.posts>({
 export const withAuth = middleware(async (ctx) => {
 	return ctx.next();
 });
+
+export const notFound = action(async () => {
+	return view(<h1>Not Found</h1>, { status: 404 });
+});
 ```
 
 ### Entry Points
@@ -51,6 +56,7 @@ import action from "@pkg/remix-helpers/action";
 import controller from "@pkg/remix-helpers/controller";
 import form from "@pkg/remix-helpers/form";
 import middleware from "@pkg/remix-helpers/middleware";
+import view from "@pkg/remix-helpers/view";
 ```
 
 ## API
@@ -186,6 +192,35 @@ export default (db: Database) => {
 };
 ```
 
+### `view(node, init?): Promise<Response>`
+
+Renders a Remix component tree into an HTML `Response` using the active request
+context.
+
+**When to use:** Route handlers that return server-rendered views and need frame
+resolution to reuse the current fetch-router request context.
+
+**Parameters:**
+
+- `node`: Remix component tree to render.
+- `init`: Optional `ResponseInit` used to set status and additional headers.
+
+**Returns:**
+
+- A `Response` with the rendered HTML body and `content-type` set to
+  `text/html; charset=utf-8`.
+
+**Example:**
+
+```tsx
+import action from "@pkg/remix-helpers/action";
+import view from "@pkg/remix-helpers/view";
+
+export default action(async () => {
+	return view(<main>Dashboard</main>);
+});
+```
+
 ## Patterns
 
 ### Pattern: Route-Map Typed Single Actions
@@ -242,6 +277,20 @@ export default (db: Database) => {
 };
 ```
 
+### Pattern: Server-Rendered Route Responses
+
+Return a rendered HTML response directly from a route handler while keeping the
+current request context available for frame resolution.
+
+```tsx
+import action from "@pkg/remix-helpers/action";
+import view from "@pkg/remix-helpers/view";
+
+export default action(async () => {
+	return view(<main>Welcome</main>, { status: 200 });
+});
+```
+
 ## Related Packages
 
 - [`@pkg/validate`](/packages/validate) - Validate request or form input inside handlers
@@ -253,4 +302,5 @@ export default (db: Database) => {
 1. Use `typeof routes...` generics whenever possible so `ctx` stays accurate for method and params.
 2. Use `action` for single `get/post` entries, `form` for `form(path)`, and `controller` for `resources(path)` branches.
 3. Keep middleware as factories when they need dependencies (database, services, feature flags).
-4. These helpers are identity wrappers, so they improve typing and readability without adding runtime overhead.
+4. Use `view` when a route handler should return HTML rendered from a Remix component tree.
+5. The route helpers are identity wrappers, so they improve typing and readability without adding runtime overhead.
