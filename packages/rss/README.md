@@ -1,43 +1,54 @@
 # @pkg/rss
 
-RSS 2.0 feed builder and parser for syndication.
+RSS 2.0 feed builder and parser.
 
 ## Overview
 
-This package provides an `RSS` class for building and parsing RSS 2.0 feeds. Use it to generate feeds for your blog, podcast, or any content that benefits from syndication.
+`@pkg/rss` helps you generate RSS 2.0 feeds for publishing and consume existing feeds from other sites.
 
-The class can both create feeds from scratch and parse existing feeds from URLs using the `htmlparser2` library.
+It supports the complete set of standard channel and item fields, plus common namespaced extensions such as `atom:link`, `content:encoded`, `dc:creator`, and `slash:comments`. It is a good fit for blog feeds, podcasts, bookmarking feeds, aggregators, and any workflow that needs to create, fetch, or transform RSS data.
 
 ## Usage
 
-### Building a Feed
+### Build a Feed
+
+Create a new feed by defining the channel metadata first, then append items before serializing the final XML.
 
 ```typescript
 import { RSS } from "@pkg/rss";
 
 let feed = new RSS({
 	title: "My Blog",
-	description: "A blog about web development",
+	description: "Articles about web development",
 	link: "https://example.com",
+	language: "en-us",
+	atomLink: {
+		href: "https://example.com/feed.xml",
+		rel: "self",
+		type: "application/rss+xml",
+	},
 });
 
 feed.addItem({
-	guid: "post-1",
+	guid: { value: "tag:example.com,2026:post-1", isPermaLink: false },
 	title: "Hello World",
-	description: "My first blog post",
+	description: "A short summary",
 	link: "https://example.com/posts/hello-world",
-	pubDate: new Date().toISOString(),
+	pubDate: new Date().toUTCString(),
+	contentEncoded: "<p>Full post content</p>",
 });
 
 let xml = feed.toString();
 ```
 
-### Parsing a Feed
+### Parse an Existing Feed
+
+When you already have RSS XML as a string, parse it into an `RSS` instance to inspect the channel metadata and items.
 
 ```typescript
 import { RSS } from "@pkg/rss";
 
-let feed = await RSS.fetch(new URL("https://example.com/feed.xml"));
+let feed = RSS.parse(xml);
 
 console.log(feed.channel.title);
 for (let item of feed.items) {
@@ -45,313 +56,131 @@ for (let item of feed.items) {
 }
 ```
 
-## API
+### Fetch a Feed
 
-### `RSS`
-
-A class for building and managing RSS feeds.
-
-#### `new RSS(channel: Channel)`
-
-Creates a new RSS feed with the given channel information.
-
-**Parameters:**
-
-- `channel.title`: The feed title
-- `channel.description`: The feed description
-- `channel.link`: The feed's website URL
-
-**Example:**
+Use `RSS.fetch` to download a remote feed and parse it in one step.
 
 ```typescript
-let feed = new RSS({
-	title: "Tech News",
-	description: "Latest technology news and updates",
-	link: "https://technews.example.com",
-});
-```
+import { RSS } from "@pkg/rss";
 
-#### `feed.channel: Channel`
-
-The feed's channel information (read-only).
-
-#### `feed.items: Item[]`
-
-Array of items in the feed (read-only).
-
-#### `feed.addItem(item: Item): void`
-
-Add an item to the feed.
-
-**Parameters:**
-
-- `item.guid`: Unique identifier for the item
-- `item.title`: Item title
-- `item.description`: Item description or content
-- `item.link`: URL to the full item
-- `item.pubDate`: Publication date (ISO 8601 string)
-
-**Example:**
-
-```typescript
-feed.addItem({
-	guid: "article-123",
-	title: "New Feature Released",
-	description: "We just released an exciting new feature...",
-	link: "https://example.com/blog/new-feature",
-	pubDate: new Date("2024-01-15").toISOString(),
-});
-```
-
-#### `feed.removeItem(guid: string): void`
-
-Remove an item by its GUID.
-
-**Parameters:**
-
-- `guid`: The GUID of the item to remove
-
-**Example:**
-
-```typescript
-feed.removeItem("article-123");
-```
-
-#### `feed.toJSON(): object`
-
-Get the feed as a JSON object.
-
-**Returns:**
-
-- Object with `channel` and `items` properties
-
-**Example:**
-
-```typescript
-let json = feed.toJSON();
-// { channel: { title, description, link }, items: [...] }
-```
-
-#### `feed.toString(): string`
-
-Generate the RSS XML string.
-
-**Returns:**
-
-- Valid RSS 2.0 XML string
-
-**Example:**
-
-```typescript
-let xml = feed.toString();
-// <?xml version="1.0" encoding="UTF-8"?>
-// <rss version="2.0">
-//   <channel>...</channel>
-// </rss>
-```
-
-#### `static RSS.fetch(url: URL): Promise<RSS>`
-
-Fetch and parse an RSS feed from a URL.
-
-**Parameters:**
-
-- `url`: URL of the RSS feed
-
-**Returns:**
-
-- Promise resolving to an RSS instance
-
-**Throws:**
-
-- Error if the feed cannot be fetched or parsed
-
-**Example:**
-
-```typescript
 let feed = await RSS.fetch(new URL("https://example.com/feed.xml"));
 ```
 
-### Types
+## API
 
-Types are exported via the `RSS` namespace:
+### `new RSS(channel: RSS.Channel)`
+
+Creates a new feed with the provided channel metadata.
+
+Required channel fields:
+
+- `title`
+- `description`
+- `link`
+
+### `rss.channel`
+
+Returns the current channel data as a clone.
+
+### `rss.items`
+
+Returns the current item list as clones.
+
+### `rss.addItem(item: RSS.Item)`
+
+Adds one item to the feed.
+
+### `rss.removeItem(guid: string)`
+
+Removes the first item whose guid value matches `guid`.
+
+### `rss.toJSON()`
+
+Returns `{ channel, items }` as plain serializable data.
+
+### `rss.toString()`
+
+Serializes the feed to RSS 2.0 XML.
+
+### `RSS.parse(source: string)`
+
+Parses raw RSS XML into an `RSS` instance.
+
+### `RSS.fetch(input, init?)`
+
+Fetches an XML document and parses it as RSS.
+
+## Supported RSS Fields
+
+### Channel
+
+`RSS.Channel` supports the required RSS 2.0 fields plus:
+
+- `language`
+- `copyright`
+- `managingEditor`
+- `webMaster`
+- `pubDate`
+- `lastBuildDate`
+- `category`
+- `generator`
+- `docs`
+- `cloud`
+- `ttl`
+- `image`
+- `rating`
+- `textInput`
+- `skipHours`
+- `skipDays`
+
+### Item
+
+`RSS.Item` supports:
+
+- `title`
+- `link`
+- `description`
+- `author`
+- `category`
+- `comments`
+- `enclosure`
+- `guid`
+- `pubDate`
+- `source`
+
+## Namespaced Extensions
+
+The package also models the common extensions documented in `spec/rss-profile.md`:
+
+- `atom:link` via `atomLink`
+- `content:encoded` via `contentEncoded`
+- `dc:creator` via `dcCreator`
+- `slash:comments` via `slashComments`
+
+Unknown namespaced elements are preserved through `extensions` so feeds can round-trip custom module data.
+
+If you build feeds with custom prefixed elements, declare their namespace on `channel.namespaces`.
 
 ```typescript
-import { RSS } from "@pkg/rss";
-
-// Access types via namespace
-type Channel = RSS.Channel;
-type Item = RSS.Item;
-```
-
-#### `RSS.Channel`
-
-```typescript
-interface Channel {
-	title: string;
-	description: string;
-	link: string;
-}
-```
-
-#### `RSS.Item`
-
-```typescript
-interface Item {
-	guid: string;
-	title: string;
-	description: string;
-	link: string;
-	pubDate: string;
-}
-```
-
-## Integration with React Router
-
-### RSS Feed Route
-
-Create a route that generates an RSS feed:
-
-```typescript
-// app/routes/feed[.]xml.ts
-import { RSS } from "@pkg/rss";
-import type { Route } from "./+types/feed[.]xml";
-
-export async function loader({ request }: Route.LoaderArgs) {
-	let baseUrl = new URL(request.url).origin;
-
-	let feed = new RSS({
-		title: "My Blog",
-		description: "Articles about web development",
-		link: baseUrl,
-	});
-
-	let posts = await db.query.posts.findMany({
-		orderBy: desc(posts.publishedAt),
-		limit: 20,
-	});
-
-	for (let post of posts) {
-		feed.addItem({
-			guid: post.id,
-			title: post.title,
-			description: post.excerpt,
-			link: `${baseUrl}/blog/${post.slug}`,
-			pubDate: post.publishedAt.toISOString(),
-		});
-	}
-
-	return new Response(feed.toString(), {
-		headers: {
-			"Content-Type": "application/rss+xml",
-			"Cache-Control": "public, max-age=3600",
+let feed = new RSS({
+	title: "Example",
+	description: "Example",
+	link: "https://example.com",
+	namespaces: {
+		media: "http://search.yahoo.com/mrss/",
+	},
+	extensions: [
+		{
+			name: "media:rating",
+			attributes: { scheme: "urn:simple" },
+			children: ["adult"],
 		},
-	});
-}
+	],
+});
 ```
 
-### RSS Feed Aggregator
+## Notes
 
-Aggregate multiple RSS feeds:
-
-```typescript
-import { RSS } from "@pkg/rss";
-
-export async function loader() {
-	let sources = ["https://blog1.example.com/feed.xml", "https://blog2.example.com/feed.xml"];
-
-	let feeds = await Promise.all(sources.map((url) => RSS.fetch(new URL(url)).catch(() => null)));
-
-	let allItems = feeds
-		.filter(Boolean)
-		.flatMap((feed) => feed.items)
-		.sort((a, b) => new Date(b.pubDate).getTime() - new Date(a.pubDate).getTime())
-		.slice(0, 50);
-
-	return ok({ items: allItems });
-}
-```
-
-## Pattern: Cached RSS Feed
-
-Cache the generated feed:
-
-```typescript
-import { RSS } from "@pkg/rss";
-import { Cache } from "@pkg/cache";
-
-export async function loader({ context }: Route.LoaderArgs) {
-	let cache = new Cache.KVStore(context.env.KV, context.waitUntil);
-
-	let xml = await cache.fetch(
-		"rss-feed",
-		async () => {
-			let feed = new RSS({
-				title: "My Blog",
-				description: "...",
-				link: "https://example.com",
-			});
-			// ... populate feed
-			return feed.toString();
-		},
-		{ ttl: 1800 }, // 30 minutes
-	);
-
-	return new Response(xml, {
-		headers: { "Content-Type": "application/rss+xml" },
-	});
-}
-```
-
-## Pattern: Category-Specific Feeds
-
-Generate multiple feeds for different categories:
-
-```typescript
-// app/routes/feed.$category[.]xml.ts
-import { RSS } from "@pkg/rss";
-
-export async function loader({ params, request }: Route.LoaderArgs) {
-	let baseUrl = new URL(request.url).origin;
-	let category = params.category;
-
-	let posts = await db.query.posts.findMany({
-		where: eq(posts.category, category),
-		orderBy: desc(posts.publishedAt),
-		limit: 20,
-	});
-
-	let feed = new RSS({
-		title: `My Blog - ${category}`,
-		description: `${category} articles`,
-		link: `${baseUrl}/category/${category}`,
-	});
-
-	for (let post of posts) {
-		feed.addItem({
-			guid: post.id,
-			title: post.title,
-			description: post.excerpt,
-			link: `${baseUrl}/blog/${post.slug}`,
-			pubDate: post.publishedAt.toISOString(),
-		});
-	}
-
-	return new Response(feed.toString(), {
-		headers: { "Content-Type": "application/rss+xml" },
-	});
-}
-```
-
-## Related Packages
-
-- [`@pkg/sitemap`](/packages/sitemap) - XML sitemap generation
-- [`@pkg/cache`](/packages/cache) - Cache feeds for performance
-
-## Tips
-
-1. **Use ISO 8601 dates** - The `pubDate` should be an ISO 8601 string for compatibility
-2. **Escape HTML in descriptions** - XML will be escaped automatically in `toString()`
-3. **Limit feed size** - RSS readers expect feeds with 10-50 items, not thousands
-4. **Add discovery link** - Include `<link rel="alternate" type="application/rss+xml">` in your HTML
-5. **Cache aggressively** - RSS feeds don't need real-time updates; cache for at least 15-30 minutes
+1. RSS date fields are preserved as strings; use RFC 822 style values such as `Tue, 14 Apr 2026 09:00:00 GMT`.
+2. `description` and `contentEncoded` are serialized as XML text, so embedded HTML is escaped unless it already arrived through parsed XML.
+3. `guid`, `category`, `enclosure`, and `atomLink` support both a compact single-value form and structured objects when attributes are needed.
