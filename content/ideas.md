@@ -113,6 +113,17 @@ _Relevant Files_:
 
 ## TUTORIALS (How-To Guides)
 
+### How to Parse and Serialize RSS XML with DOMParser on workerd
+
+Building a small XML tree abstraction on top of `DOMParser` and `XMLSerializer`, including declaration parsing, namespace-aware serialization, and the minimum XML features needed for RSS feeds.
+
+**Mentions:** `DOMParser`, `XMLSerializer`, RSS 2.0 structure, namespace prefixes, CDATA handling, explicit error results.
+
+_Relevant Files_:
+
+- `packages/xml/src/index.ts`
+- `packages/xml/src/index.test.ts`
+
 ### How to Build Custom SQLite Database Adapters for Remix
 
 Creating adapters that compile a custom query AST to SQLite for both Cloudflare D1 (async) and Durable Object SqlStorage (sync), supporting transactions, savepoints, RETURNING clauses, and upserts.
