@@ -5,6 +5,7 @@ import { buildDocument } from "./lib/build-document";
 import { cloneChannel, cloneItem } from "./lib/clone";
 import { parseFeed } from "./lib/parse-feed";
 import { getGuidValue } from "./lib/utils";
+import { validateChannel } from "./lib/validate-channel";
 
 /**
  * Groups the public RSS types under a single import surface.
@@ -212,6 +213,7 @@ export class RSS {
 	 * @param channel - The channel metadata for the feed
 	 */
 	constructor(channel: RSS.Channel) {
+		validateChannel(channel);
 		this.#channel = cloneChannel(channel);
 		this.#items = [];
 	}
@@ -221,6 +223,16 @@ export class RSS {
 	 */
 	get channel(): RSS.Channel {
 		return cloneChannel(this.#channel);
+	}
+
+	/**
+	 * Replaces the current channel definition after validating required fields.
+	 *
+	 * @param channel - The next channel value
+	 */
+	set channel(channel: RSS.Channel) {
+		validateChannel(channel);
+		this.#channel = cloneChannel(channel);
 	}
 
 	/**

@@ -80,7 +80,15 @@ Required channel fields:
 
 ### `rss.channel`
 
-Returns the current channel data as a clone.
+Returns the current channel data as a clone. You can also replace it with a new valid `RSS.Channel` value.
+
+```typescript
+rss.channel = {
+	...rss.channel,
+	description: "Updated description",
+	language: "en-us",
+};
+```
 
 ### `rss.items`
 

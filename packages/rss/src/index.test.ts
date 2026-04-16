@@ -85,6 +85,53 @@ describe("RSS", () => {
 		});
 	});
 
+	test("channel setter replaces and clones channel metadata", () => {
+		let rss = new RSS({
+			title: "Test Feed",
+			description: "A test feed",
+			link: "https://example.com",
+		});
+
+		rss.addItem({
+			guid: "1",
+			title: "First Post",
+			description: "This is the first post",
+		});
+
+		let channel: RSS.Channel = {
+			...rss.channel,
+			description: "An updated feed description",
+			language: "en-us",
+		};
+
+		rss.channel = channel;
+		channel.description = "Mutated";
+
+		expect(rss.channel).toEqual({
+			title: "Test Feed",
+			description: "An updated feed description",
+			link: "https://example.com",
+			language: "en-us",
+		});
+		expect(rss.items).toHaveLength(1);
+		expect(rss.items[0]?.title).toBe("First Post");
+	});
+
+	test("channel setter validates required fields", () => {
+		let rss = new RSS({
+			title: "Test Feed",
+			description: "A test feed",
+			link: "https://example.com",
+		});
+
+		expect(() => {
+			rss.channel = {
+				...rss.channel,
+				description: "",
+			};
+		}).toThrow("Channel must include title, description, and link.");
+	});
+
 	test("addItem adds and clones items", () => {
 		let rss = new RSS({
 			title: "Test Feed",
