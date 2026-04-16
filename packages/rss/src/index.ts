@@ -6,6 +6,7 @@ import { cloneChannel, cloneItem } from "./lib/clone";
 import { parseFeed } from "./lib/parse-feed";
 import { getGuidValue } from "./lib/utils";
 import { validateChannel } from "./lib/validate-channel";
+import { validateItem } from "./lib/validate-item";
 
 /**
  * Groups the public RSS types under a single import surface.
@@ -172,7 +173,7 @@ export namespace RSS {
 	/**
 	 * Stores one RSS item together with common namespace extensions.
 	 */
-	export interface Item {
+	export interface ItemBase {
 		guid?: GuidInput;
 		title?: string;
 		description?: string;
@@ -190,6 +191,11 @@ export namespace RSS {
 		attributes?: Record<string, string>;
 		extensions?: Element[];
 	}
+
+	/**
+	 * Stores one RSS item and requires at least a title or description.
+	 */
+	export type Item = ItemBase & ({ title: string } | { description: string });
 
 	/**
 	 * Represents the plain serializable shape returned by `toJSON()`.
@@ -248,6 +254,7 @@ export class RSS {
 	 * @param item - The item to append
 	 */
 	addItem(item: RSS.Item): void {
+		validateItem(item);
 		this.#items.push(cloneItem(item));
 	}
 

@@ -96,7 +96,7 @@ Returns the current item list as clones.
 
 ### `rss.addItem(item: RSS.Item)`
 
-Adds one item to the feed.
+Adds one item to the feed. Each item must include at least a `title` or `description`.
 
 ### `rss.removeItem(guid: string)`
 
@@ -144,6 +144,8 @@ Fetches an XML document and parses it as RSS.
 ### Item
 
 `RSS.Item` supports:
+
+At least one of `title` or `description` is required.
 
 - `title`
 - `link`

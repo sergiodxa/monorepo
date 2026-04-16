@@ -160,6 +160,18 @@ describe("RSS", () => {
 		});
 	});
 
+	test("addItem validates that items have a title or description", () => {
+		let rss = new RSS({
+			title: "Test Feed",
+			description: "A test feed",
+			link: "https://example.com",
+		});
+
+		expect(() => {
+			rss.addItem({ guid: "1" } as RSS.Item);
+		}).toThrow("Item must include at least a title or description.");
+	});
+
 	test("removeItem removes item by guid value", () => {
 		let rss = new RSS({
 			title: "Test Feed",
