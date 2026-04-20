@@ -47,7 +47,7 @@ describe("Sitemap", () => {
 			let sitemap = new Sitemap();
 			let xml = sitemap.toString();
 			expect(xml).toBe(
-				'<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"></urlset>',
+				'<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"/>',
 			);
 		});
 
@@ -56,7 +56,7 @@ describe("Sitemap", () => {
 			sitemap.append(new URL("https://example.com/page"));
 			let xml = sitemap.toString();
 			expect(xml).toBe(
-				'<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"><url><loc>https://example.com/page</loc></url></urlset>',
+				'<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"><url><loc>https://example.com/page</loc></url></urlset>',
 			);
 		});
 
@@ -66,7 +66,7 @@ describe("Sitemap", () => {
 			sitemap.append(new URL("https://example.com/page"), { updatedAt: date });
 			let xml = sitemap.toString();
 			expect(xml).toBe(
-				'<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"><url><loc>https://example.com/page</loc><lastmod>2024-01-15T12:30:00.000Z</lastmod></url></urlset>',
+				'<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"><url><loc>https://example.com/page</loc><lastmod>2024-01-15T12:30:00.000Z</lastmod></url></urlset>',
 			);
 		});
 
@@ -120,6 +120,13 @@ describe("Sitemap", () => {
 			expect(xml).toContain("<lastmod>2024-01-15T12:30:00.000Z</lastmod>");
 			expect(xml).toContain("<changefreq>monthly</changefreq>");
 			expect(xml).toContain("<priority>1</priority>");
+		});
+
+		test("escapes XML-sensitive characters in URLs", () => {
+			let sitemap = new Sitemap();
+			sitemap.append(new URL("https://example.com/search?q=fish&sort=asc"));
+			let xml = sitemap.toString();
+			expect(xml).toContain("<loc>https://example.com/search?q=fish&amp;sort=asc</loc>");
 		});
 	});
 });

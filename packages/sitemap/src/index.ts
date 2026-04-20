@@ -1,13 +1,29 @@
+import { XML } from "@pkg/xml";
+
+import { createURLChildren } from "./lib/create-url-children";
+
+/**
+ * Groups sitemap types under the package namespace.
+ */
 export namespace Sitemap {
+	/**
+	 * Limits `<changefreq>` values to the sitemap protocol enum.
+	 */
 	export type Frequency = "always" | "hourly" | "daily" | "weekly" | "monthly" | "yearly" | "never";
 
-	export interface URL {
+	/**
+	 * Stores one sitemap entry and its optional crawler metadata.
+	 */
+	export interface Entry {
 		loc: globalThis.URL;
 		updatedAt?: Date;
 		frequency?: Frequency;
 		priority?: number;
 	}
 
+	/**
+	 * Collects optional sitemap metadata accepted when appending a URL.
+	 */
 	export interface AppendOptions {
 		updatedAt?: Date;
 		frequency?: Frequency;
@@ -16,26 +32,45 @@ export namespace Sitemap {
 	}
 }
 
+/**
+ * Collects sitemap entries and serializes them as sitemap XML.
+ */
 export class Sitemap {
-	#urls = new Set<Sitemap.URL>();
+	entries = new Set<Sitemap.Entry>();
 
+	/**
+	 * Adds one URL entry with optional sitemap metadata.
+	 *
+	 * @param loc - Absolute URL to expose in the sitemap
+	 * @param options - Optional crawler metadata for the URL
+	 */
 	append(loc: globalThis.URL, options: Sitemap.AppendOptions = {}) {
-		this.#urls.add({ loc, ...options });
+		this.entries.add({ loc, ...options });
 	}
 
+	/**
+	 * Returns how many entries are currently queued for serialization.
+	 */
 	get size() {
-		return this.#urls.size;
+		return this.entries.size;
 	}
 
+	/**
+	 * Serializes the current entries into sitemap XML using `@pkg/xml`.
+	 */
 	toString() {
-		return `<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${[
-			...this.#urls,
-		].map((url) => {
-			let parts = [`<loc>${url.loc.toString()}</loc>`];
-			if (url.updatedAt) parts.push(`<lastmod>${url.updatedAt.toISOString()}</lastmod>`);
-			if (url.frequency) parts.push(`<changefreq>${url.frequency}</changefreq>`);
-			if (url.priority !== undefined) parts.push(`<priority>${url.priority}</priority>`);
-			return `<url>${parts.join("")}</url>`;
-		})}</urlset>`;
+		let xml = new XML({
+			declaration: { version: "1.0", encoding: "UTF-8" },
+			root: {
+				name: "urlset",
+				attributes: { xmlns: "http://www.sitemaps.org/schemas/sitemap/0.9" },
+				children: [...this.entries].map((url) => ({
+					name: "url",
+					children: createURLChildren(url),
+				})),
+			},
+		});
+
+		return xml.toString();
 	}
 }
