@@ -6,7 +6,7 @@ Type-safe TypeID helpers for working with prefixed UUID strings.
 
 `@pkg/typeid` wraps UUIDs in a small `TypeID` class so application code can keep the resource type close to the identifier itself. A `user` UUID becomes a string like `user_01h455vb4pex5vsknk084sn02q`, which is easier to route, log, and validate than a bare UUID.
 
-The package follows the [TypeID specification](https://github.com/jetify-com/typeid/tree/main/spec) for prefix validation and Base32 suffix encoding. It supports parsing existing TypeID strings, generating new values from UUIDs, and converting a TypeID back to its UUID form.
+The package follows the [TypeID specification](https://github.com/jetify-com/typeid/tree/main/spec) for prefix validation and Base32 suffix encoding. It supports parsing existing TypeID strings, generating new values from UUIDs, and converting a TypeID back to its UUID form. UUID validation is delegated to `@pkg/uuid`, so TypeID parsing and serialization now use the shared UUID type and error classes from that package.
 
 ## Usage
 
@@ -14,8 +14,9 @@ The package follows the [TypeID specification](https://github.com/jetify-com/typ
 
 ```typescript
 import { TypeID, typeid } from "@pkg/typeid";
+import { generateUUID } from "@pkg/uuid";
 
-let uuid = crypto.randomUUID();
+let uuid = generateUUID();
 
 let userId = TypeID.fromUUID("user", uuid);
 
@@ -29,7 +30,7 @@ userId.toString();
 // "user_..."
 
 let createPostId = typeid("post");
-let postId = createPostId(crypto.randomUUID());
+let postId = createPostId(generateUUID());
 ```
 
 ### Parse an Existing TypeID
@@ -81,6 +82,11 @@ Decodes the suffix back to a UUID string.
 **Returns:**
 
 - A UUID string
+
+**Throws:**
+
+- TypeID Base32 errors from `@pkg/typeid/errors` when the suffix is invalid
+- UUID validation errors from `@pkg/uuid` when the decoded value is not a canonical UUID
 
 **Example:**
 
@@ -146,8 +152,9 @@ Builds a TypeID from an existing UUID.
 
 ```typescript
 import { TypeID } from "@pkg/typeid";
+import { generateUUID } from "@pkg/uuid";
 
-let value = TypeID.fromUUID("org", crypto.randomUUID());
+let value = TypeID.fromUUID("org", generateUUID());
 ```
 
 ### `TypeID.isValid<const prefix extends string>(value: string, prefix?: prefix): boolean`
@@ -198,7 +205,7 @@ let invoiceId = createInvoiceId(crypto.randomUUID());
 
 ### `@pkg/typeid/errors`
 
-The package also exports its error classes from a dedicated entrypoint.
+The package also exports its TypeID-specific error classes from a dedicated entrypoint.
 
 **Example:**
 
@@ -214,6 +221,33 @@ try {
 
 	if (error instanceof TypeIdError) {
 		// handle any TypeID-related error
+	}
+}
+```
+
+### UUID Errors Come From `@pkg/uuid`
+
+`TypeID.toUUID()`, `TypeID.toString()`, and the Base32 encoder/decoder rely on `@pkg/uuid` for UUID validation. Catch UUID-specific failures from `@pkg/uuid`, not from `@pkg/typeid/errors`.
+
+**Example:**
+
+```typescript
+import { TypeID } from "@pkg/typeid";
+import { InvalidUUIDFormatError, InvalidUUIDLengthError, InvalidUUIDTypeError } from "@pkg/uuid";
+
+try {
+	TypeID.fromString("user_01h455vb4pex5vsknk084sn02q").toUUID();
+} catch (error) {
+	if (error instanceof InvalidUUIDTypeError) {
+		// handle non-string UUID values
+	}
+
+	if (error instanceof InvalidUUIDLengthError) {
+		// handle invalid UUID length
+	}
+
+	if (error instanceof InvalidUUIDFormatError) {
+		// handle malformed UUID values
 	}
 }
 ```
@@ -276,6 +310,7 @@ function serializeUser(user: UserRecord) {
 - [`@pkg/result`](/packages/result) - Wrap TypeID parsing in explicit success and failure values
 - [`@pkg/validate`](/packages/validate) - Validate request payloads before converting IDs into domain values
 - [`@pkg/response`](/packages/response) - Return parsed IDs from loaders and actions with typed response helpers
+- [`@pkg/uuid`](/packages/uuid) - Shared UUID type, validation, and error classes used by TypeID
 
 ## Tips
 
