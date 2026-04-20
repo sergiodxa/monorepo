@@ -4,7 +4,7 @@ Type-safe UUID helpers for validation, assertion, and generation.
 
 ## Overview
 
-`@pkg/uuid` provides a small set of primitives for working with UUID values as domain identifiers. It includes a branded `UUID` type, a runtime guard (`isUUID`), an assertion helper (`assertUUID`), and a generation helper (`generateUUID`).
+`@pkg/uuid` provides a small set of primitives for working with UUID values as domain identifiers. It includes a branded `UUID` type, a runtime guard (`isUUID`), an assertion helper (`assertUUID`), a generation helper (`generateUUID`), and dedicated error classes for invalid UUID input.
 
 The package is intentionally minimal so it can be used across loaders, actions, services, and shared libraries without pulling in extra dependencies. It relies on the platform `crypto.randomUUID()` API and the standard UUID string format.
 
@@ -84,9 +84,11 @@ Asserts that a string is a UUID and narrows its type.
 
 - `value`: The string to validate
 
-**Returns:**
+**Throws:**
 
-- No return value; throws `TypeError` when invalid
+- `InvalidUUIDTypeError` when `value` is not a string
+- `InvalidUUIDLengthError` when `value` does not have 36 characters
+- `InvalidUUIDFormatError` when `value` is not a canonical lowercase UUID
 
 **Example:**
 
@@ -97,6 +99,45 @@ let value = "550e8400-e29b-41d4-a716-446655440000";
 assertUUID(value);
 
 // value is UUID
+```
+
+### `InvalidUUIDTypeError`
+
+Thrown when UUID validation receives a non-string value.
+
+### `InvalidUUIDLengthError`
+
+Thrown when UUID validation receives a string that is not 36 characters long.
+
+### `InvalidUUIDFormatError`
+
+Thrown when UUID validation receives a string with the wrong UUID shape.
+
+**Example:**
+
+```typescript
+import {
+	assertUUID,
+	InvalidUUIDFormatError,
+	InvalidUUIDLengthError,
+	InvalidUUIDTypeError,
+} from "@pkg/uuid";
+
+try {
+	assertUUID(input);
+} catch (error) {
+	if (error instanceof InvalidUUIDTypeError) {
+		// handle non-string input
+	}
+
+	if (error instanceof InvalidUUIDLengthError) {
+		// handle wrong-length input
+	}
+
+	if (error instanceof InvalidUUIDFormatError) {
+		// handle malformed UUID input
+	}
+}
 ```
 
 ### `generateUUID(): UUID`
