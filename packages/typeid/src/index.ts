@@ -1,5 +1,8 @@
+import type { UUID } from "@pkg/uuid";
+
+import { assertUUID } from "@pkg/uuid";
+
 import type { Base32 } from "./lib/base32";
-import type { UUID } from "./lib/uuid";
 
 import { decode, encode } from "./lib/base32";
 import {
@@ -10,7 +13,6 @@ import {
 	PrefixMismatchError,
 } from "./lib/errors";
 import { isValidPrefix } from "./lib/is-valid-prefix";
-import { assertUUID } from "./lib/uuid";
 
 /** Delimiter between a TypeID prefix and suffix. */
 const SEPARATOR = "_";

@@ -1,5 +1,6 @@
+import { assertUUID } from "@pkg/uuid";
+
 import { InvalidBase32CharacterError, InvalidBase32StringError } from "./errors";
-import { assertUUID } from "./uuid";
 
 export type Base32 = string & { __base32: never };
 
