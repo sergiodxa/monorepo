@@ -152,25 +152,86 @@ Returns the root element.
 
 Returns the XML document as plain serializable data.
 
+```ts
+import { isFailure } from "@pkg/result";
+import { XML } from "@pkg/xml";
+
+let result = XML.parse('<rss version="2.0"><channel><title>Feed</title></channel></rss>');
+if (isFailure(result)) throw result.error;
+
+let json = result.data.toJSON();
+let xml = new XML(json);
+```
+
 #### `xml.toString(): string`
 
 Serializes the current `XML` instance into XML text.
+
+```ts
+import { isFailure } from "@pkg/result";
+import { XML } from "@pkg/xml";
+
+let result = XML.parse('<rss version="2.0"><channel><title>Feed</title></channel></rss>');
+if (isFailure(result)) throw result.error;
+
+let raw = result.data.toString();
+```
 
 #### `xml.find(predicate: XML.Predicate): XML.Element | undefined`
 
 Returns the first element that matches the predicate in depth-first order.
 
+```ts
+import { isFailure } from "@pkg/result";
+import { XML } from "@pkg/xml";
+
+let result = XML.parse('<rss version="2.0"><channel><title>Feed</title></channel></rss>');
+if (isFailure(result)) throw result.error;
+
+let title = result.data.find((element) => element.name === "title");
+```
+
 #### `xml.findAll(predicate: XML.Predicate): XML.Element[]`
 
 Returns every element that matches the predicate in depth-first order.
+
+```ts
+import { isFailure } from "@pkg/result";
+import { XML } from "@pkg/xml";
+
+let result = XML.parse('<rss version="2.0"><channel><title>Feed</title></channel></rss>');
+if (isFailure(result)) throw result.error;
+
+let allTitles = result.data.findAll((element) => element.name === "title");
+```
 
 #### `xml.query(path: string): XML.Element | undefined`
 
 Returns the first element matching a `/`-delimited path such as `channel/item/title`.
 
+```ts
+import { isFailure } from "@pkg/result";
+import { XML } from "@pkg/xml";
+
+let result = XML.parse('<rss version="2.0"><channel><title>Feed</title></channel></rss>');
+if (isFailure(result)) throw result.error;
+
+let title = result.data.query("channel/title");
+```
+
 #### `xml.queryAll(path: string): XML.Element[]`
 
 Returns all elements matching a `/`-delimited path such as `channel/item`.
+
+```ts
+import { isFailure } from "@pkg/result";
+import { XML } from "@pkg/xml";
+
+let result = XML.parse('<rss version="2.0"><channel><item>1</item><item>2</item></channel></rss>');
+if (isFailure(result)) throw result.error;
+
+let items = result.data.queryAll("channel/item");
+```
 
 ### `XMLParseError`
 
