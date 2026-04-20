@@ -1,6 +1,13 @@
 import { describe, expect, test } from "bun:test";
 
-import { assertUUID, generateUUID, isUUID } from "./index";
+import {
+	assertUUID,
+	generateUUID,
+	InvalidUUIDFormatError,
+	InvalidUUIDLengthError,
+	InvalidUUIDTypeError,
+	isUUID,
+} from "./index";
 
 describe(isUUID.name, () => {
 	test("returns true for valid UUIDs", () => {
@@ -23,11 +30,23 @@ describe(assertUUID.name, () => {
 		expect(() => assertUUID(value)).not.toThrow();
 	});
 
-	test("throws TypeError for invalid UUIDs", () => {
+	test("throws a length error for short UUIDs", () => {
 		let value = "not-a-uuid";
 
-		expect(() => assertUUID(value)).toThrow(TypeError);
-		expect(() => assertUUID(value)).toThrow(`Invalid UUID: ${value}`);
+		expect(() => assertUUID(value)).toThrow(InvalidUUIDLengthError);
+		expect(() => assertUUID(value)).toThrow("Invalid UUID length: 10");
+	});
+
+	test("throws a format error for malformed UUID strings", () => {
+		let value = "550e8400_e29b_41d4_a716_446655440000";
+
+		expect(() => assertUUID(value)).toThrow(InvalidUUIDFormatError);
+		expect(() => assertUUID(value)).toThrow(`Invalid UUID format: ${value}`);
+	});
+
+	test("throws a type error for non-string values", () => {
+		expect(() => assertUUID(null as never)).toThrow(InvalidUUIDTypeError);
+		expect(() => assertUUID(null as never)).toThrow("Expected a string, got object");
 	});
 });
 
