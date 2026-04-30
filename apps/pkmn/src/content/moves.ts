@@ -1,6 +1,6 @@
 import type { Move } from "../domain/move";
 
-import { Class, Effect } from "../domain/move";
+import { Class, StatusEffectType } from "../domain/move";
 import { Type } from "../domain/type";
 
 export const MOVES = {
@@ -10,7 +10,7 @@ export const MOVES = {
 		power: 40,
 		accuracy: 100,
 		pp: 35,
-		effect: Effect.NO_ADDITIONAL_EFFECT,
+		effect: { kind: "none" },
 	},
 	KARATE_CHOP: {
 		type: Type.FIGHTING,
@@ -18,7 +18,7 @@ export const MOVES = {
 		power: 50,
 		accuracy: 100,
 		pp: 25,
-		effect: Effect.NO_ADDITIONAL_EFFECT,
+		effect: { kind: "none" },
 	},
 	DOUBLE_SLAP: {
 		type: Type.NORMAL,
@@ -26,7 +26,7 @@ export const MOVES = {
 		power: 15,
 		accuracy: 85,
 		pp: 10,
-		effect: Effect.NO_ADDITIONAL_EFFECT,
+		effect: { kind: "none" },
 	},
 	COMET_PUNCH: {
 		type: Type.NORMAL,
@@ -34,7 +34,7 @@ export const MOVES = {
 		power: 18,
 		accuracy: 85,
 		pp: 15,
-		effect: Effect.NO_ADDITIONAL_EFFECT,
+		effect: { kind: "none" },
 	},
 	MEGA_PUNCH: {
 		type: Type.NORMAL,
@@ -42,7 +42,7 @@ export const MOVES = {
 		power: 80,
 		accuracy: 85,
 		pp: 20,
-		effect: Effect.NO_ADDITIONAL_EFFECT,
+		effect: { kind: "none" },
 	},
 	PAY_DAY: {
 		type: Type.NORMAL,
@@ -50,7 +50,7 @@ export const MOVES = {
 		power: 40,
 		accuracy: 100,
 		pp: 20,
-		effect: Effect.NO_ADDITIONAL_EFFECT,
+		effect: { kind: "none" },
 	},
 	FIRE_PUNCH: {
 		type: Type.FIRE,
@@ -58,7 +58,7 @@ export const MOVES = {
 		power: 75,
 		accuracy: 100,
 		pp: 15,
-		effect: Effect.NO_ADDITIONAL_EFFECT,
+		effect: { kind: "none" },
 	},
 	ICE_PUNCH: {
 		type: Type.ICE,
@@ -66,7 +66,7 @@ export const MOVES = {
 		power: 75,
 		accuracy: 100,
 		pp: 15,
-		effect: Effect.NO_ADDITIONAL_EFFECT,
+		effect: { kind: "none" },
 	},
 	THUNDER_PUNCH: {
 		type: Type.ELECTRIC,
@@ -74,7 +74,7 @@ export const MOVES = {
 		power: 75,
 		accuracy: 100,
 		pp: 15,
-		effect: Effect.NO_ADDITIONAL_EFFECT,
+		effect: { kind: "none" },
 	},
 	SCRATCH: {
 		type: Type.NORMAL,
@@ -82,7 +82,7 @@ export const MOVES = {
 		power: 40,
 		accuracy: 100,
 		pp: 35,
-		effect: Effect.NO_ADDITIONAL_EFFECT,
+		effect: { kind: "none" },
 	},
 	STOMP: {
 		type: Type.NORMAL,
@@ -90,7 +90,7 @@ export const MOVES = {
 		power: 65,
 		accuracy: 100,
 		pp: 20,
-		effect: Effect.NO_ADDITIONAL_EFFECT,
+		effect: { kind: "none" },
 	},
 	DOUBLE_KICK: {
 		type: Type.FIGHTING,
@@ -98,7 +98,7 @@ export const MOVES = {
 		power: 30,
 		accuracy: 100,
 		pp: 30,
-		effect: Effect.NO_ADDITIONAL_EFFECT,
+		effect: { kind: "none" },
 	},
 	TACKLE: {
 		type: Type.NORMAL,
@@ -106,7 +106,7 @@ export const MOVES = {
 		power: 40,
 		accuracy: 100,
 		pp: 35,
-		effect: Effect.NO_ADDITIONAL_EFFECT,
+		effect: { kind: "none" },
 	},
 	BODY_SLAM: {
 		type: Type.NORMAL,
@@ -114,7 +114,7 @@ export const MOVES = {
 		power: 85,
 		accuracy: 100,
 		pp: 15,
-		effect: Effect.NO_ADDITIONAL_EFFECT,
+		effect: { kind: "none" },
 	},
 	WRAP: {
 		type: Type.NORMAL,
@@ -122,7 +122,7 @@ export const MOVES = {
 		power: 15,
 		accuracy: 90,
 		pp: 20,
-		effect: Effect.NO_ADDITIONAL_EFFECT,
+		effect: { kind: "none" },
 	},
 	TAKE_DOWN: {
 		type: Type.NORMAL,
@@ -130,7 +130,7 @@ export const MOVES = {
 		power: 90,
 		accuracy: 85,
 		pp: 20,
-		effect: Effect.NO_ADDITIONAL_EFFECT,
+		effect: { kind: "none" },
 	},
 	THRASH: {
 		type: Type.NORMAL,
@@ -138,7 +138,7 @@ export const MOVES = {
 		power: 120,
 		accuracy: 100,
 		pp: 10,
-		effect: Effect.NO_ADDITIONAL_EFFECT,
+		effect: { kind: "none" },
 	},
 	DOUBLE_EDGE: {
 		type: Type.NORMAL,
@@ -146,7 +146,7 @@ export const MOVES = {
 		power: 120,
 		accuracy: 100,
 		pp: 15,
-		effect: Effect.NO_ADDITIONAL_EFFECT,
+		effect: { kind: "none" },
 	},
 	TAIL_WHIP: {
 		type: Type.NORMAL,
@@ -154,7 +154,7 @@ export const MOVES = {
 		power: 0,
 		accuracy: 100,
 		pp: 30,
-		effect: Effect.NO_ADDITIONAL_EFFECT,
+		effect: { kind: "none" },
 	},
 	POISON_STING: {
 		type: Type.POISON,
@@ -162,7 +162,7 @@ export const MOVES = {
 		power: 15,
 		accuracy: 100,
 		pp: 35,
-		effect: Effect.NO_ADDITIONAL_EFFECT,
+		effect: { kind: "none" },
 	},
 	TWINEEDLE: {
 		type: Type.BUG,
@@ -170,7 +170,7 @@ export const MOVES = {
 		power: 25,
 		accuracy: 100,
 		pp: 20,
-		effect: Effect.NO_ADDITIONAL_EFFECT,
+		effect: { kind: "none" },
 	},
 	PIN_MISSILE: {
 		type: Type.BUG,
@@ -178,7 +178,7 @@ export const MOVES = {
 		power: 25,
 		accuracy: 95,
 		pp: 20,
-		effect: Effect.NO_ADDITIONAL_EFFECT,
+		effect: { kind: "none" },
 	},
 	LEER: {
 		type: Type.NORMAL,
@@ -186,7 +186,7 @@ export const MOVES = {
 		power: 0,
 		accuracy: 100,
 		pp: 30,
-		effect: Effect.NO_ADDITIONAL_EFFECT,
+		effect: { kind: "none" },
 	},
 	BITE: {
 		type: Type.DARK,
@@ -194,7 +194,7 @@ export const MOVES = {
 		power: 60,
 		accuracy: 100,
 		pp: 25,
-		effect: Effect.NO_ADDITIONAL_EFFECT,
+		effect: { kind: "none" },
 	},
 	GROWL: {
 		type: Type.NORMAL,
@@ -202,7 +202,7 @@ export const MOVES = {
 		power: 0,
 		accuracy: 100,
 		pp: 40,
-		effect: Effect.NO_ADDITIONAL_EFFECT,
+		effect: { kind: "none" },
 	},
 	VINE_WHIP: {
 		type: Type.GRASS,
@@ -210,7 +210,7 @@ export const MOVES = {
 		power: 45,
 		accuracy: 100,
 		pp: 25,
-		effect: Effect.NO_ADDITIONAL_EFFECT,
+		effect: { kind: "none" },
 	},
 	RAZOR_LEAF: {
 		type: Type.GRASS,
@@ -218,7 +218,7 @@ export const MOVES = {
 		power: 55,
 		accuracy: 95,
 		pp: 25,
-		effect: Effect.NO_ADDITIONAL_EFFECT,
+		effect: { kind: "none" },
 	},
 	GROWTH: {
 		type: Type.NORMAL,
@@ -226,7 +226,7 @@ export const MOVES = {
 		power: 0,
 		accuracy: 0,
 		pp: 20,
-		effect: Effect.NO_ADDITIONAL_EFFECT,
+		effect: { kind: "none" },
 	},
 	LEECH_SEED: {
 		type: Type.GRASS,
@@ -234,7 +234,7 @@ export const MOVES = {
 		power: 0,
 		accuracy: 90,
 		pp: 10,
-		effect: Effect.NO_ADDITIONAL_EFFECT,
+		effect: { kind: "none" },
 	},
 	SOLAR_BEAM: {
 		type: Type.GRASS,
@@ -242,7 +242,7 @@ export const MOVES = {
 		power: 120,
 		accuracy: 100,
 		pp: 10,
-		effect: Effect.NO_ADDITIONAL_EFFECT,
+		effect: { kind: "none" },
 	},
 	SLEEP_POWDER: {
 		type: Type.GRASS,
@@ -250,7 +250,7 @@ export const MOVES = {
 		power: 0,
 		accuracy: 75,
 		pp: 15,
-		effect: Effect.NO_ADDITIONAL_EFFECT,
+		effect: { kind: "none" },
 	},
 	PETAL_DANCE: {
 		type: Type.GRASS,
@@ -258,7 +258,7 @@ export const MOVES = {
 		power: 120,
 		accuracy: 100,
 		pp: 10,
-		effect: Effect.NO_ADDITIONAL_EFFECT,
+		effect: { kind: "none" },
 	},
 	STRING_SHOT: {
 		type: Type.BUG,
@@ -266,7 +266,7 @@ export const MOVES = {
 		power: 0,
 		accuracy: 95,
 		pp: 40,
-		effect: Effect.NO_ADDITIONAL_EFFECT,
+		effect: { kind: "none" },
 	},
 	DRAGON_RAGE: {
 		type: Type.DRAGON,
@@ -274,7 +274,7 @@ export const MOVES = {
 		power: 0,
 		accuracy: 100,
 		pp: 10,
-		effect: Effect.NO_ADDITIONAL_EFFECT,
+		effect: { kind: "none" },
 	},
 	FIRE_SPIN: {
 		type: Type.FIRE,
@@ -282,7 +282,7 @@ export const MOVES = {
 		power: 15,
 		accuracy: 70,
 		pp: 15,
-		effect: Effect.NO_ADDITIONAL_EFFECT,
+		effect: { kind: "none" },
 	},
 	THUNDER_SHOCK: {
 		type: Type.ELECTRIC,
@@ -290,7 +290,7 @@ export const MOVES = {
 		power: 40,
 		accuracy: 100,
 		pp: 30,
-		effect: Effect.NO_ADDITIONAL_EFFECT,
+		effect: { kind: "none" },
 	},
 	SLAM: {
 		type: Type.NORMAL,
@@ -298,7 +298,7 @@ export const MOVES = {
 		power: 80,
 		accuracy: 75,
 		pp: 20,
-		effect: Effect.NO_ADDITIONAL_EFFECT,
+		effect: { kind: "none" },
 	},
 	MEGA_KICK: {
 		type: Type.NORMAL,
@@ -306,7 +306,7 @@ export const MOVES = {
 		power: 120,
 		accuracy: 75,
 		pp: 5,
-		effect: Effect.NO_ADDITIONAL_EFFECT,
+		effect: { kind: "none" },
 	},
 	JUMP_KICK: {
 		type: Type.FIGHTING,
@@ -314,7 +314,7 @@ export const MOVES = {
 		power: 100,
 		accuracy: 95,
 		pp: 10,
-		effect: Effect.NO_ADDITIONAL_EFFECT,
+		effect: { kind: "none" },
 	},
 	ROLLING_KICK: {
 		type: Type.FIGHTING,
@@ -322,7 +322,7 @@ export const MOVES = {
 		power: 60,
 		accuracy: 85,
 		pp: 15,
-		effect: Effect.NO_ADDITIONAL_EFFECT,
+		effect: { kind: "none" },
 	},
 	SAND_ATTACK: {
 		type: Type.GROUND,
@@ -330,7 +330,7 @@ export const MOVES = {
 		power: 0,
 		accuracy: 100,
 		pp: 15,
-		effect: Effect.NO_ADDITIONAL_EFFECT,
+		effect: { kind: "none" },
 	},
 	HEADBUTT: {
 		type: Type.NORMAL,
@@ -338,7 +338,7 @@ export const MOVES = {
 		power: 70,
 		accuracy: 100,
 		pp: 15,
-		effect: Effect.NO_ADDITIONAL_EFFECT,
+		effect: { kind: "none" },
 	},
 	HORN_ATTACK: {
 		type: Type.NORMAL,
@@ -346,7 +346,7 @@ export const MOVES = {
 		power: 65,
 		accuracy: 100,
 		pp: 25,
-		effect: Effect.NO_ADDITIONAL_EFFECT,
+		effect: { kind: "none" },
 	},
 	FURY_ATTACK: {
 		type: Type.NORMAL,
@@ -354,7 +354,7 @@ export const MOVES = {
 		power: 15,
 		accuracy: 85,
 		pp: 20,
-		effect: Effect.NO_ADDITIONAL_EFFECT,
+		effect: { kind: "none" },
 	},
 	HORN_DRILL: {
 		type: Type.NORMAL,
@@ -362,7 +362,7 @@ export const MOVES = {
 		power: 0,
 		accuracy: 30,
 		pp: 5,
-		effect: Effect.NO_ADDITIONAL_EFFECT,
+		effect: { kind: "none" },
 	},
 	POISON_POWDER: {
 		type: Type.POISON,
@@ -370,7 +370,7 @@ export const MOVES = {
 		power: 0,
 		accuracy: 75,
 		pp: 35,
-		effect: Effect.NO_ADDITIONAL_EFFECT,
+		effect: { kind: "none" },
 	},
 	CUT: {
 		type: Type.NORMAL,
@@ -378,7 +378,7 @@ export const MOVES = {
 		power: 50,
 		accuracy: 95,
 		pp: 30,
-		effect: Effect.NO_ADDITIONAL_EFFECT,
+		effect: { kind: "none" },
 	},
 	FLY: {
 		type: Type.FLYING,
@@ -386,7 +386,7 @@ export const MOVES = {
 		power: 90,
 		accuracy: 95,
 		pp: 15,
-		effect: Effect.FLY_EFFECT,
+		effect: { kind: "charge" },
 	},
 	SURF: {
 		type: Type.WATER,
@@ -394,7 +394,7 @@ export const MOVES = {
 		power: 90,
 		accuracy: 100,
 		pp: 15,
-		effect: Effect.NO_ADDITIONAL_EFFECT,
+		effect: { kind: "none" },
 	},
 	STRENGTH: {
 		type: Type.NORMAL,
@@ -402,7 +402,7 @@ export const MOVES = {
 		power: 80,
 		accuracy: 100,
 		pp: 15,
-		effect: Effect.NO_ADDITIONAL_EFFECT,
+		effect: { kind: "none" },
 	},
 	FLASH: {
 		type: Type.NORMAL,
@@ -410,7 +410,7 @@ export const MOVES = {
 		power: 0,
 		accuracy: 100,
 		pp: 20,
-		effect: Effect.NO_ADDITIONAL_EFFECT,
+		effect: { kind: "none" },
 	},
 	EMBER: {
 		type: Type.FIRE,
@@ -418,7 +418,7 @@ export const MOVES = {
 		power: 40,
 		accuracy: 100,
 		pp: 25,
-		effect: Effect.BURN_SIDE_EFFECT1,
+		effect: { kind: "apply-status", status: StatusEffectType.Burn, chance: 0.1 },
 	},
 	SMOKE_SCREEN: {
 		type: Type.FIRE,
@@ -426,7 +426,7 @@ export const MOVES = {
 		power: 0,
 		accuracy: 100,
 		pp: 20,
-		effect: Effect.NO_ADDITIONAL_EFFECT,
+		effect: { kind: "none" },
 	},
 	FIRE_FANG: {
 		type: Type.FIRE,
@@ -434,7 +434,7 @@ export const MOVES = {
 		power: 65,
 		accuracy: 95,
 		pp: 15,
-		effect: Effect.NO_ADDITIONAL_EFFECT,
+		effect: { kind: "none" },
 	},
 	FLAMETHROWER: {
 		type: Type.FIRE,
@@ -442,6 +442,6 @@ export const MOVES = {
 		power: 90,
 		accuracy: 100,
 		pp: 15,
-		effect: Effect.BURN_SIDE_EFFECT2,
+		effect: { kind: "apply-status", status: StatusEffectType.Burn, chance: 0.1 },
 	},
 } satisfies Record<string, Move>;

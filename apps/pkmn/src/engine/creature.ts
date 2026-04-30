@@ -1,6 +1,6 @@
 import type { MoveId } from "~/domain/move";
-import type { Nature } from "~/domain/nature";
-import type { Species } from "~/domain/species";
+import type { NatureId } from "~/domain/nature";
+import type { SpeciesId } from "~/domain/species";
 
 import type { StatSet } from "../domain/stat";
 
@@ -16,9 +16,9 @@ export enum State {
 
 export namespace Creature {
 	export interface Arguments {
-		species: Species.Symbol;
+		species: SpeciesId;
 		nickname?: string;
-		nature: Nature.Symbol;
+		nature: NatureId;
 		experience: number;
 		moveset: MoveSet;
 		status: {

@@ -1,21 +1,39 @@
 import { expect, test } from "bun:test";
 
-import type { Nature } from "~/domain/nature";
-import type { Species } from "~/domain/species";
+import { unwrap } from "@pkg/result";
 
-import { GAME_DATA } from "~/content/game-data";
+import type { NatureId } from "~/domain/nature";
+import type { SpeciesId } from "~/domain/species";
 
+import { GameData } from "~/domain/game-data";
+
+import { ITEMS } from "../content/items";
+import { TYPE_MATCHUPS } from "../content/matchups";
 import { MOVES } from "../content/moves";
+import { NATURES } from "../content/natures";
+import { SPECIES } from "../content/species";
 import { Stat } from "../domain/stat";
+
+import type { BattleEvent } from "./battle";
 
 import { Battle } from "./battle";
 import { Creature } from "./creature";
 import { getCreatureCurrentHP } from "./mechanics";
 
+const GAME_DATA = unwrap(
+	GameData.create({
+		species: SPECIES,
+		moves: MOVES,
+		items: ITEMS,
+		natures: NATURES,
+		typeChart: TYPE_MATCHUPS,
+	}),
+);
+
 const bulby = new Creature({
 	nickname: "Bulby",
-	species: "BULBASAUR" as Species.Symbol,
-	nature: "MODEST" as Nature.Symbol,
+	species: "BULBASAUR" as SpeciesId,
+	nature: "MODEST" as NatureId,
 	experience: 1000000,
 	moveset: ["VINE_WHIP", "EMBER", "GROWTH", "LEECH_SEED"],
 	iv: {
@@ -42,8 +60,8 @@ const bulby = new Creature({
 });
 
 const ivysaur = new Creature({
-	species: "IVYSAUR" as Species.Symbol,
-	nature: "BRAVE" as Nature.Symbol,
+	species: "IVYSAUR" as SpeciesId,
+	nature: "BRAVE" as NatureId,
 	experience: 1000000,
 	moveset: ["VINE_WHIP", "RAZOR_LEAF", "GROWTH", "LEECH_SEED"],
 	iv: {
@@ -75,10 +93,123 @@ test("Bulby uses Leech Seed on Ivysaur", () => {
 		creatures: [bulby, ivysaur],
 		random: () => 0,
 	});
+	let session = battle.start();
+	let events: BattleEvent[] = [];
 
-	while (!battle.fainted) {
-		battle.attack(1);
+	events.push(readEvent(session.next()));
+	events.push(readEvent(session.next()));
+
+	while (battle.state.phase !== "finished") {
+		events.push(
+			readEvent(
+				session.next([
+					{ type: "fight", move: 1, target: { side: 1, slot: 0 } },
+					{ type: "fight", move: 1, target: { side: 0, slot: 0 } },
+				]),
+			),
+		);
+
+		while (battle.state.phase === "resolving-turn") {
+			let result = session.next();
+			events.push(readEvent(result));
+			if (result.done) break;
+		}
 	}
 
-	expect(getCreatureCurrentHP(GAME_DATA, ivysaur)).toBe(0);
+	expect(events.some((event) => event.type === "move-used")).toBe(true);
+	expect(events.some((event) => event.type === "damage-dealt")).toBe(true);
+	expect(events.at(-1)).toEqual({ type: "battle-finished", winnerSide: 1 });
+	expect(getCreatureCurrentHP(GAME_DATA, bulby)).toBe(0);
+	expect(events).toEqual([
+		{ type: "battle-started" },
+		{ type: "turn-started", turn: 1 },
+		{
+			type: "action-required",
+			requests: [
+				{ side: 0, slot: 0 },
+				{ side: 1, slot: 0 },
+			],
+		},
+		{
+			type: "move-used",
+			user: { side: 0, slot: 0 },
+			moveId: "EMBER",
+			target: { side: 1, slot: 0 },
+		},
+		{
+			type: "effectiveness",
+			target: { side: 1, slot: 0 },
+			effectiveness: 2,
+		},
+		{ type: "critical-hit", target: { side: 1, slot: 0 } },
+		{ type: "damage-dealt", target: { side: 1, slot: 0 }, damage: 84, remainingHP: 177 },
+		{ type: "status-applied", target: { side: 1, slot: 0 }, status: 0 },
+		{
+			type: "move-used",
+			user: { side: 1, slot: 0 },
+			moveId: "RAZOR_LEAF",
+			target: { side: 0, slot: 0 },
+		},
+		{ type: "critical-hit", target: { side: 0, slot: 0 } },
+		{ type: "damage-dealt", target: { side: 0, slot: 0 }, damage: 118, remainingHP: 176 },
+		{ type: "turn-ended", turn: 1 },
+		{ type: "turn-started", turn: 2 },
+		{
+			type: "action-required",
+			requests: [
+				{ side: 0, slot: 0 },
+				{ side: 1, slot: 0 },
+			],
+		},
+		{
+			type: "move-used",
+			user: { side: 0, slot: 0 },
+			moveId: "EMBER",
+			target: { side: 1, slot: 0 },
+		},
+		{ type: "effectiveness", target: { side: 1, slot: 0 }, effectiveness: 2 },
+		{ type: "critical-hit", target: { side: 1, slot: 0 } },
+		{ type: "damage-dealt", target: { side: 1, slot: 0 }, damage: 84, remainingHP: 93 },
+		{
+			type: "move-used",
+			user: { side: 1, slot: 0 },
+			moveId: "RAZOR_LEAF",
+			target: { side: 0, slot: 0 },
+		},
+		{ type: "critical-hit", target: { side: 0, slot: 0 } },
+		{ type: "damage-dealt", target: { side: 0, slot: 0 }, damage: 118, remainingHP: 58 },
+		{ type: "turn-ended", turn: 2 },
+		{ type: "turn-started", turn: 3 },
+		{
+			type: "action-required",
+			requests: [
+				{ side: 0, slot: 0 },
+				{ side: 1, slot: 0 },
+			],
+		},
+		{
+			type: "move-used",
+			user: { side: 0, slot: 0 },
+			moveId: "EMBER",
+			target: { side: 1, slot: 0 },
+		},
+		{ type: "effectiveness", target: { side: 1, slot: 0 }, effectiveness: 2 },
+		{ type: "critical-hit", target: { side: 1, slot: 0 } },
+		{ type: "damage-dealt", target: { side: 1, slot: 0 }, damage: 84, remainingHP: 9 },
+		{
+			type: "move-used",
+			user: { side: 1, slot: 0 },
+			moveId: "RAZOR_LEAF",
+			target: { side: 0, slot: 0 },
+		},
+		{ type: "critical-hit", target: { side: 0, slot: 0 } },
+		{ type: "damage-dealt", target: { side: 0, slot: 0 }, damage: 118, remainingHP: 0 },
+		{ type: "creature-fainted", target: { side: 0, slot: 0 } },
+		{ type: "battle-finished", winnerSide: 1 },
+	]);
 });
+
+function readEvent(result: IteratorResult<BattleEvent, BattleEvent>) {
+	if (result.done) return result.value;
+	return result.value;
+}

@@ -3,81 +3,30 @@ import { Type } from "./type";
 /** String identifier of a move in loaded game data. */
 export type MoveId = string;
 
-export enum Effect {
-	ACCURACY_DOWN1_EFFECT,
-	ATTACK_DOWN_SIDE_EFFECT,
-	ATTACK_DOWN1_EFFECT,
-	ATTACK_TWICE_EFFECT,
-	ATTACK_UP1_EFFECT,
-	ATTACK_UP2_EFFECT,
-	BIDE_EFFECT,
-	BURN_SIDE_EFFECT1,
-	BURN_SIDE_EFFECT2,
-	CHARGE_EFFECT,
-	CONFUSION_EFFECT,
-	CONFUSION_SIDE_EFFECT,
-	CONVERSION_EFFECT,
-	DEFENSE_DOWN_SIDE_EFFECT,
-	DEFENSE_DOWN1_EFFECT,
-	DEFENSE_DOWN2_EFFECT,
-	DEFENSE_UP1_EFFECT,
-	DEFENSE_UP2_EFFECT,
-	DISABLE_EFFECT,
-	DRAIN_HP_EFFECT,
-	DREAM_EATER_EFFECT,
-	EVASION_UP1_EFFECT,
-	EXPLODE_EFFECT,
-	FLINCH_SIDE_EFFECT1,
-	FLINCH_SIDE_EFFECT2,
-	FLY_EFFECT,
-	FOCUS_ENERGY_EFFECT,
-	FREEZE_SIDE_EFFECT1,
-	HAZE_EFFECT,
-	HEAL_EFFECT,
-	HYPER_BEAM_EFFECT,
-	JUMP_KICK_EFFECT,
-	LEECH_SEED_EFFECT,
-	LIGHT_SCREEN_EFFECT,
-	METRONOME_EFFECT,
-	MIMIC_EFFECT,
-	MIRROR_MOVE_EFFECT,
-	MIST_EFFECT,
-	NO_ADDITIONAL_EFFECT,
-	OHKO_EFFECT,
-	PARALYZE_EFFECT,
-	PARALYZE_SIDE_EFFECT1,
-	PARALYZE_SIDE_EFFECT2,
-	PAY_DAY_EFFECT,
-	POISON_EFFECT,
-	POISON_SIDE_EFFECT1,
-	POISON_SIDE_EFFECT2,
-	RAGE_EFFECT,
-	RECOIL_EFFECT,
-	REFLECT_EFFECT,
-	SLEEP_EFFECT,
-	SPECIAL_DAMAGE_EFFECT,
-	SPECIAL_DOWN_SIDE_EFFECT,
-	SPECIAL_UP1_EFFECT,
-	SPECIAL_UP2_EFFECT,
-	SPEED_DOWN_SIDE_EFFECT,
-	SPEED_DOWN1_EFFECT,
-	SPEED_UP2_EFFECT,
-	SPLASH_EFFECT,
-	SUBSTITUTE_EFFECT,
-	SUPER_FANG_EFFECT,
-	SWIFT_EFFECT,
-	SWITCH_AND_TELEPORT_EFFECT,
-	THRASH_PETAL_DANCE_EFFECT,
-	TRANSFORM_EFFECT,
-	TRAPPING_EFFECT,
-	TWINEEDLE_EFFECT,
-	TWO_TO_FIVE_ATTACKS_EFFECT,
+export enum StatusEffectType {
+	Burn = "burn",
+	Paralysis = "paralysis",
+	Poison = "poison",
+	Sleep = "sleep",
+	Freeze = "freeze",
 }
 
 export enum Class {
-	Physical,
-	Special,
-	Status,
+	Physical = "physical",
+	Special = "special",
+	Status = "status",
+}
+
+export type MoveEffect =
+	| { kind: "none" }
+	| { kind: "apply-status"; status: StatusEffectType; chance: number }
+	| { kind: "leech-seed" }
+	| { kind: "charge" };
+
+export function isStatusEffectType(value: unknown): value is StatusEffectType {
+	return (
+		typeof value === "string" && Object.values(StatusEffectType).includes(value as StatusEffectType)
+	);
 }
 
 export interface Move {
@@ -86,5 +35,5 @@ export interface Move {
 	power: number;
 	accuracy: number;
 	pp: number;
-	effect: Effect;
+	effect: MoveEffect;
 }

@@ -1,18 +1,18 @@
-import type { Species } from "~/domain/species";
+import type { SpeciesId } from "~/domain/species";
 
 export namespace Bestiary {
 	export interface Arguments {
-		sight: Array<Species.Symbol>;
-		caught: Array<Species.Symbol>;
+		sight: Array<SpeciesId>;
+		caught: Array<SpeciesId>;
 	}
 }
 
 export class Bestiary {
 	/** Set of species that have been sighted */
-	readonly sight = new Set<Species.Symbol>();
+	readonly sight = new Set<SpeciesId>();
 
 	/** Set of species that have been caught */
-	readonly caught = new Set<Species.Symbol>();
+	readonly caught = new Set<SpeciesId>();
 
 	constructor(args: Bestiary.Arguments) {
 		args.sight.forEach((species) => this.sight.add(species));
@@ -27,7 +27,7 @@ export class Bestiary {
 	 * Marks a species as sighted. If the species was not previously sighted, it will be added to the sight set.
 	 * @param species - The species to mark as sighted, represented as a key of the SPECIES constant.
 	 */
-	markAsSighted(species: Species.Symbol) {
+	markAsSighted(species: SpeciesId) {
 		this.sight.add(species);
 	}
 
@@ -36,7 +36,7 @@ export class Bestiary {
 	 * the species was not previously sighted, it will also be added to the sight set.
 	 * @param species - The species to mark as caught, represented as a key of the SPECIES constant.
 	 */
-	markAsCaught(species: Species.Symbol) {
+	markAsCaught(species: SpeciesId) {
 		this.caught.add(species);
 		if (this.sight.has(species) === false) this.sight.add(species);
 	}

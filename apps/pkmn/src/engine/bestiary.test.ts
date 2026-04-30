@@ -1,12 +1,12 @@
 import { describe, test, expect } from "bun:test";
 
-import { assertsSpeciesSymbol } from "~/domain/species";
+import { assertsSpeciesId } from "~/domain/species";
 
 import { Bestiary } from "./bestiary";
 
 describe(Bestiary, () => {
 	let symbol = "BULBASAUR";
-	assertsSpeciesSymbol(symbol); // Type guard to ensure symbol is of type Species.Symbol
+	assertsSpeciesId(symbol);
 
 	test("#constructor initializes sight and caught sets based on arguments", () => {
 		let bestiary = new Bestiary({ sight: [], caught: [] });

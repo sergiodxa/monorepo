@@ -1,34 +1,35 @@
-import type { Species } from "./species";
+import type { ItemId } from "./item";
+import type { SpeciesId } from "./species";
 
 /** Evolution method of a creature */
 export enum EvolutionMethod {
-	Level,
-	Item,
-	Trade,
-	Friendship,
+	Level = "level",
+	Item = "item",
+	Trade = "trade",
+	Friendship = "friendship",
 }
 
 export namespace Evolution {
 	export interface ByLevel {
 		method: EvolutionMethod.Level;
-		speciesId: Species.Symbol;
+		speciesId: SpeciesId;
 		level: number;
 	}
 
 	export interface ByItem {
 		method: EvolutionMethod.Item;
-		speciesId: Species.Symbol;
-		itemId: string;
+		speciesId: SpeciesId;
+		itemId: ItemId;
 	}
 
 	export interface ByTrade {
 		method: EvolutionMethod.Trade;
-		speciesId: Species.Symbol;
+		speciesId: SpeciesId;
 	}
 
 	export interface ByFriendship {
 		method: EvolutionMethod.Friendship;
-		speciesId: Species.Symbol;
+		speciesId: SpeciesId;
 		level: number;
 	}
 }

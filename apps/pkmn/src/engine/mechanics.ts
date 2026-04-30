@@ -1,4 +1,4 @@
-import type { GameData } from "~/content/game-data";
+import type { GameData } from "~/domain/game-data";
 import type { Species } from "~/domain/species";
 
 import { LEVEL_CAP } from "~/constant";

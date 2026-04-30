@@ -1,21 +1,14 @@
 import type { Creature } from "./creature";
 
-/** Volatile battle-only state that should not be serialized with the creature. */
-export interface CombatantState {
-	/** The underlying persistent creature save state. */
-	creature: Creature;
+/** Volatile battle-only state layered on top of a persistent creature. */
+export class CombatantState {
 	/** Temporary flags that only exist for the duration of a battle. */
-	volatile: {
-		seeded: boolean;
+	readonly volatile = {
+		seeded: false,
 	};
-}
 
-/** Creates the initial battle-only state for a combatant. */
-export function createCombatantState(creature: Creature): CombatantState {
-	return {
-		creature,
-		volatile: {
-			seeded: false,
-		},
-	};
+	/**
+	 * @param creature - The persistent creature save state used by this combatant
+	 */
+	constructor(public readonly creature: Creature) {}
 }

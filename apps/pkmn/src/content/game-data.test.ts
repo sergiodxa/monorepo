@@ -2,23 +2,23 @@ import { describe, expect, test } from "bun:test";
 
 import { isFailure, isSuccess } from "@pkg/result";
 
+import { GameData } from "../domain/game-data";
+import { GrowthRate } from "../domain/growth-rate";
 import { Type as ItemType } from "../domain/item";
-import { Class, Effect } from "../domain/move";
+import { Class, StatusEffectType } from "../domain/move";
 import { Stat } from "../domain/stat";
 import { Type } from "../domain/type";
 
-import { createGameData } from "./game-data";
-
-describe(createGameData, () => {
+describe(GameData.create, () => {
 	test("returns indexed maps for valid content", () => {
-		let result = createGameData({
+		let result = GameData.create({
 			species: {
 				TESTMON: {
 					number: 1,
 					types: [Type.GRASS],
 					baseExperience: 1,
 					catchRate: 255,
-					growthRate: 1,
+					growthRate: GrowthRate.MediumFast,
 					stats: {
 						[Stat.HP]: 45,
 						[Stat.Attack]: 49,
@@ -39,7 +39,15 @@ describe(createGameData, () => {
 					power: 40,
 					accuracy: 100,
 					pp: 35,
-					effect: Effect.NO_ADDITIONAL_EFFECT,
+					effect: { kind: "none" },
+				},
+				EMBER: {
+					type: Type.FIRE,
+					class: Class.Special,
+					power: 40,
+					accuracy: 100,
+					pp: 25,
+					effect: { kind: "apply-status", status: StatusEffectType.Burn, chance: 0.1 },
 				},
 			},
 			items: {
@@ -78,14 +86,14 @@ describe(createGameData, () => {
 	});
 
 	test("fails when a species learnset references a missing move", () => {
-		let result = createGameData({
+		let result = GameData.create({
 			species: {
 				TESTMON: {
 					number: 1,
 					types: [Type.GRASS],
 					baseExperience: 1,
 					catchRate: 255,
-					growthRate: 1,
+					growthRate: GrowthRate.MediumFast,
 					stats: {
 						[Stat.HP]: 45,
 						[Stat.Attack]: 49,

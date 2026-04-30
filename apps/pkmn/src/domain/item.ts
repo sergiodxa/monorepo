@@ -3,17 +3,17 @@ import type { MoveId } from "./move";
 /** String identifier of an item in loaded game data. */
 export type ItemId = string;
 
+export interface Price {
+	buy: number;
+	sell: number;
+}
+
 export enum Type {
 	Pokeball,
 	Medicine,
 	HM,
 	MT,
 	Key,
-}
-
-interface Price {
-	buy: number;
-	sell: number;
 }
 
 export type Item =

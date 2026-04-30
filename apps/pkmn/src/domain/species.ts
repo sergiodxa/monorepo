@@ -5,10 +5,13 @@ import type { StatSet } from "./stat";
 import { GrowthRate } from "./growth-rate";
 import { Type } from "./type";
 
+/** String identifier of a species in loaded game data. */
+export type SpeciesId = string;
+
 /** A move a creature can learn, and the method by which it is learned */
 export type LearnsetEntry =
 	| { level: number; moveId: MoveId }
-	| { tmhm: number; moveId: MoveId }
+	| { tmhm: number }
 	| { tutor: true; moveId: MoveId }
 	| { egg: true; moveId: MoveId };
 
@@ -16,11 +19,6 @@ export enum Genre {
 	Male,
 	Female,
 	Genderless,
-}
-
-export namespace Species {
-	/** String identifier of a species in loaded game data. */
-	export type Symbol = string;
 }
 
 export interface Species {
@@ -44,12 +42,12 @@ export interface Species {
 	gender: Genre.Genderless | { [K in Genre.Male | Genre.Female]?: number };
 }
 
-export function isSpeciesSymbol(value: unknown): value is Species.Symbol {
+export function isSpeciesId(value: unknown): value is SpeciesId {
 	return typeof value === "string";
 }
 
-export function assertsSpeciesSymbol(value: unknown): asserts value is Species.Symbol {
-	if (!isSpeciesSymbol(value)) {
-		throw new TypeError(`Expected a Species.Symbol, but got ${typeof value}`);
+export function assertsSpeciesId(value: unknown): asserts value is SpeciesId {
+	if (!isSpeciesId(value)) {
+		throw new TypeError(`Expected a SpeciesId, but got ${typeof value}`);
 	}
 }
