@@ -6,5 +6,6 @@ export interface Nature {
 }
 
 export namespace Nature {
-	export type Symbol = string & { __brand: "Nature" };
+	/** String identifier of a nature in loaded game data. */
+	export type Symbol = string;
 }

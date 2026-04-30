@@ -1,5 +1,8 @@
 import { Type } from "./type";
 
+/** String identifier of a move in loaded game data. */
+export type MoveId = string;
+
 export enum Effect {
 	ACCURACY_DOWN1_EFFECT,
 	ATTACK_DOWN_SIDE_EFFECT,

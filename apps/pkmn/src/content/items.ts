@@ -1,6 +1,6 @@
-import { Item, Type } from "../domain/item";
+import type { Item } from "../domain/item";
 
-import { MOVES } from "./moves";
+import { Type } from "../domain/item";
 
 export const ITEMS = {
 	POKEBALL: {
@@ -42,26 +42,26 @@ export const ITEMS = {
 	HM01: {
 		type: Type.HM,
 		price: { buy: 1000, sell: 500 },
-		teaches: MOVES["CUT"],
+		teachesMoveId: "CUT",
 	},
 	HM02: {
 		type: Type.HM,
 		price: { buy: 1000, sell: 500 },
-		teaches: MOVES["FLY"],
+		teachesMoveId: "FLY",
 	},
 	HM03: {
 		type: Type.HM,
 		price: { buy: 1000, sell: 500 },
-		teaches: MOVES["SURF"],
+		teachesMoveId: "SURF",
 	},
 	HM04: {
 		type: Type.HM,
 		price: { buy: 1000, sell: 500 },
-		teaches: MOVES["STRENGTH"],
+		teachesMoveId: "STRENGTH",
 	},
 	HM05: {
 		type: Type.HM,
 		price: { buy: 1000, sell: 500 },
-		teaches: MOVES["FLASH"],
+		teachesMoveId: "FLASH",
 	},
 } satisfies Record<string, Item>;

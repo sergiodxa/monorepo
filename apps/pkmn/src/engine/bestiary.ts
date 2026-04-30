@@ -8,9 +8,6 @@ export namespace Bestiary {
 }
 
 export class Bestiary {
-	/** Complete list of species in the bestiary */
-	static readonly species = new Map<Species.Symbol, Species>();
-
 	/** Set of species that have been sighted */
 	readonly sight = new Set<Species.Symbol>();
 

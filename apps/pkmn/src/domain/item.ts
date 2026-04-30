@@ -1,4 +1,7 @@
-import type { Move } from "./move";
+import type { MoveId } from "./move";
+
+/** String identifier of an item in loaded game data. */
+export type ItemId = string;
 
 export enum Type {
 	Pokeball,
@@ -16,8 +19,8 @@ interface Price {
 export type Item =
 	| { type: Type.Pokeball; price: Price }
 	| { type: Type.Medicine; price: Price }
-	| { type: Type.HM; price: Price; teaches: Move }
-	| { type: Type.MT; price: Price; teaches: Move }
+	| { type: Type.HM; price: Price; teachesMoveId: MoveId }
+	| { type: Type.MT; price: Price; teachesMoveId: MoveId }
 	| { type: Type.Key };
 
 export enum Usage {

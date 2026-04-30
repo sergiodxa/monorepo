@@ -250,6 +250,9 @@
     },
     "apps/pkmn": {
       "name": "@apps/pkmn",
+      "dependencies": {
+        "@pkg/result": "workspace:*",
+      },
       "devDependencies": {
         "@total-typescript/ts-reset": "^0.6.1",
         "@types/node": "^25.5.2",

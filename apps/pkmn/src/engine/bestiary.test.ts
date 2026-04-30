@@ -1,6 +1,5 @@
 import { describe, test, expect } from "bun:test";
 
-import { SPECIES } from "~/content/species";
 import { assertsSpeciesSymbol } from "~/domain/species";
 
 import { Bestiary } from "./bestiary";
@@ -8,15 +7,6 @@ import { Bestiary } from "./bestiary";
 describe(Bestiary, () => {
 	let symbol = "BULBASAUR";
 	assertsSpeciesSymbol(symbol); // Type guard to ensure symbol is of type Species.Symbol
-
-	test(".species is a Map of every species of creature", () => {
-		expect(Bestiary.species).toBeInstanceOf(Map);
-	});
-
-	test(".species can register new species", () => {
-		Bestiary.species.set(symbol, SPECIES[symbol]!);
-		expect(Bestiary.species.get(symbol)).toEqual(SPECIES[symbol]);
-	});
 
 	test("#constructor initializes sight and caught sets based on arguments", () => {
 		let bestiary = new Bestiary({ sight: [], caught: [] });

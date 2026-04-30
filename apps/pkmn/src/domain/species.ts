@@ -1,5 +1,5 @@
 import type { Evolution } from "./evolution";
-import type { Move } from "./move";
+import type { MoveId } from "./move";
 import type { StatSet } from "./stat";
 
 import { GrowthRate } from "./growth-rate";
@@ -7,10 +7,10 @@ import { Type } from "./type";
 
 /** A move a creature can learn, and the method by which it is learned */
 export type LearnsetEntry =
-	| { level: number; move: Move }
-	| { tmhm: number; move: Move }
-	| { tutor: true; move: Move }
-	| { egg: true; move: Move };
+	| { level: number; moveId: MoveId }
+	| { tmhm: number; moveId: MoveId }
+	| { tutor: true; moveId: MoveId }
+	| { egg: true; moveId: MoveId };
 
 export enum Genre {
 	Male,
@@ -19,7 +19,8 @@ export enum Genre {
 }
 
 export namespace Species {
-	export type Symbol = string & { __brand: "Species" };
+	/** String identifier of a species in loaded game data. */
+	export type Symbol = string;
 }
 
 export interface Species {

@@ -1,87 +1,101 @@
+import type { GameData } from "../content/game-data";
 import type { Move } from "../domain/move";
 
-import { TYPE_MATCHUPS } from "../content/matchups";
-import { MOVES } from "../content/moves";
 import { Class, Effect } from "../domain/move";
+import { Stat } from "../domain/stat";
 import { Effectiveness } from "../domain/type";
 
+import { type CombatantState, createCombatantState } from "./combatant-state";
 import { Creature, State } from "./creature";
+import { getCreatureLevel, getCreatureSpecies, getCreatureStat } from "./mechanics";
 
 const CRITICAL_HIT_CHANCE = 1 / 24;
 
 type Fight = { type: "fight"; move: 1 | 2 | 3 | 4; target: "self" | "opponent" };
 type TurnCommand = Fight; // | Switch | Item | Run
 
+export namespace Battle {
+	export interface Arguments {
+		gameData: GameData;
+		creatures: [Creature, Creature];
+		random?: () => number;
+	}
+}
+
 export class Battle {
-	constructor(public readonly creatures: [Creature, Creature]) {}
+	private readonly combatants: [CombatantState, CombatantState];
+	private readonly gameData: GameData;
+	private readonly random: () => number;
+
+	constructor(args: Battle.Arguments) {
+		this.gameData = args.gameData;
+		this.random = args.random ?? Math.random;
+		this.combatants = [
+			createCombatantState(args.creatures[0]),
+			createCombatantState(args.creatures[1]),
+		];
+	}
+
+	get creatures(): [Creature, Creature] {
+		return [this.combatants[0].creature, this.combatants[1].creature];
+	}
 
 	get attacker() {
-		return this.creatures[0];
+		return this.combatants[0]!;
 	}
 
 	get defender() {
-		return this.creatures[1];
+		return this.combatants[1]!;
 	}
 
 	get fainted() {
-		return this.creatures.find((pkmn) => pkmn.status.damage >= pkmn.hp);
+		return this.creatures.find(
+			(creature) => creature.status.damage >= getCreatureStat(this.gameData, creature, Stat.HP),
+		);
 	}
 
 	turn(_command: [TurnCommand, TurnCommand]) {}
 
 	attack(moveIndex: number) {
-		let move = this.attacker.moveset[moveIndex];
+		let attacker = this.attacker.creature;
+		let defender = this.defender.creature;
+		let move = attacker.moveset[moveIndex];
 		if (!move) throw new Error("No move in this slot");
 
 		let moveData = this.canAttack(moveIndex);
 		if (!moveData) return;
 
-		console.log(`${this.attacker.name} uses ${move} on ${this.defender.name}!`);
-
 		let damage = this.calculateDamage(moveData);
-		console.log(`${this.defender.name} takes ${damage} damage!`);
 
 		if (moveData.effect === Effect.BURN_SIDE_EFFECT1) {
-			console.log(`${move} has a chance to burn the target!`);
-			if (this.defender.status.state === null) {
-				console.log(`${this.defender.name} is not currently affected by a status condition.`);
-				if (Math.random() < 0.1) {
-					console.log(`The burn effect activates!`);
-					this.defender.status.state = State.Burned;
-					console.log(`${this.defender.name} was burned!`);
-				} else console.log(`The burn effect did not activate.`);
-			} else {
-				console.log(
-					`${this.defender.name} is already affected by ${this.defender.status.state} and cannot be burned.`,
-				);
+			if (defender.status.state === null && this.random() < 0.1) {
+				defender.status.state = State.Burned;
 			}
 		}
 
-		if (this.defender.status.damage + damage >= this.defender.hp) {
-			console.log(`${this.defender.name} fainted!`);
-			this.defender.status.damage = this.defender.hp;
+		let defenderHP = getCreatureStat(this.gameData, defender, Stat.HP);
+		if (defender.status.damage + damage >= defenderHP) {
+			defender.status.damage = defenderHP;
 		} else {
-			this.defender.status.damage += damage;
+			defender.status.damage += damage;
 		}
 
 		return damage;
 	}
 
 	private canAttack(moveIndex: number): Move | false {
-		let move = this.attacker.moveset[moveIndex];
+		let attacker = this.attacker.creature;
+		let move = attacker.moveset[moveIndex];
 		if (!move) {
-			console.log(`No move in slot ${moveIndex + 1}`);
 			return false;
 		}
 
-		let moveData = MOVES[move];
+		let moveData = this.gameData.moves.get(move);
 		if (!moveData) {
-			console.log(`Invalid move: ${move}`);
 			return false;
 		}
 
-		if ((this.attacker.status.pp.at(moveIndex) ?? 0) <= 0) {
-			console.log(`${this.attacker.name} has no PP left for ${move}!`);
+		if ((attacker.status.pp.at(moveIndex) ?? 0) <= 0) {
 			return false;
 		}
 
@@ -97,20 +111,14 @@ export class Battle {
 
 		if (effectiveness === Effectiveness.SUPER) {
 			damage = Math.floor(damage * 2);
-			console.log("It's super effective!");
 		} else if (effectiveness === Effectiveness.WEAK) {
 			damage = Math.floor(damage * 0.5);
-			console.log("It's not very effective...");
 		} else if (effectiveness === Effectiveness.ZERO) {
 			damage = 0;
-			console.log("It has no effect!");
-		} else {
-			console.log("It's effective.");
 		}
 
 		if (this.isCriticalHit()) {
 			damage = Math.floor(damage * 1.5);
-			console.log("A critical hit!");
 		}
 
 		damage = Math.floor(damage * this.getRandom());
@@ -119,38 +127,46 @@ export class Battle {
 	}
 
 	private getTypeEffectiveness(move: Move): Effectiveness {
-		let moveMatch = TYPE_MATCHUPS[move.type];
+		let moveMatch = this.gameData.typeChart[move.type] ?? {};
+		let defenderSpecies = getCreatureSpecies(this.gameData, this.defender.creature);
 
-		return this.defender.species.types.reduce((factor, type) => {
-			if (type in moveMatch) return factor * moveMatch[type];
+		return defenderSpecies.types.reduce((factor, type) => {
+			let matchup = moveMatch[type];
+			if (matchup !== undefined) return factor * matchup;
 			return factor;
 		}, Effectiveness.NORMAL);
 	}
 
 	private getBaseDamage(move: Move) {
+		let attacker = this.attacker.creature;
+		let defender = this.defender.creature;
 		let attackStat =
-			move.class === Class.Physical ? this.attacker.attack : this.attacker.specialAttack;
+			move.class === Class.Physical
+				? getCreatureStat(this.gameData, attacker, 1)
+				: getCreatureStat(this.gameData, attacker, 3);
 		let defenseStat =
-			move.class === Class.Physical ? this.defender.defense : this.defender.specialDefense;
+			move.class === Class.Physical
+				? getCreatureStat(this.gameData, defender, 2)
+				: getCreatureStat(this.gameData, defender, 4);
+		let level = getCreatureLevel(this.gameData, attacker);
 
 		return (
-			Math.floor(
-				Math.floor((((2 * this.attacker.level) / 5 + 2) * move.power * attackStat) / defenseStat) /
-					50,
-			) + 2
+			Math.floor(Math.floor((((2 * level) / 5 + 2) * move.power * attackStat) / defenseStat) / 50) +
+			2
 		);
 	}
 
 	private getStabModified(move: Move) {
-		if (this.attacker.species.types.find((type) => type === move.type)) return 1.5;
+		let attackerSpecies = getCreatureSpecies(this.gameData, this.attacker.creature);
+		if (attackerSpecies.types.find((type) => type === move.type)) return 1.5;
 		return 1;
 	}
 
 	private isCriticalHit() {
-		return Math.random() < CRITICAL_HIT_CHANCE;
+		return this.random() < CRITICAL_HIT_CHANCE;
 	}
 
 	private getRandom() {
-		return (85 + Math.floor(Math.random() * 16)) / 100;
+		return (85 + Math.floor(this.random() * 16)) / 100;
 	}
 }

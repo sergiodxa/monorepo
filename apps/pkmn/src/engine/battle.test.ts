@@ -1,21 +1,16 @@
-import { test } from "bun:test";
+import { expect, test } from "bun:test";
 
 import type { Nature } from "~/domain/nature";
+import type { Species } from "~/domain/species";
 
-import { SPECIES } from "~/content/species";
-import { assertsSpeciesSymbol, type Species } from "~/domain/species";
+import { GAME_DATA } from "~/content/game-data";
 
 import { MOVES } from "../content/moves";
 import { Stat } from "../domain/stat";
 
 import { Battle } from "./battle";
-import { Bestiary } from "./bestiary";
 import { Creature } from "./creature";
-
-for (let symbol in SPECIES) {
-	assertsSpeciesSymbol(symbol); // Type guard to ensure symbol is of type Species.Symbol
-	Bestiary.species.set(symbol, SPECIES[symbol]!);
-}
+import { getCreatureCurrentHP } from "./mechanics";
 
 const bulby = new Creature({
 	nickname: "Bulby",
@@ -75,13 +70,15 @@ const ivysaur = new Creature({
 });
 
 test("Bulby uses Leech Seed on Ivysaur", () => {
-	let battle = new Battle([bulby, ivysaur]);
+	let battle = new Battle({
+		gameData: GAME_DATA,
+		creatures: [bulby, ivysaur],
+		random: () => 0,
+	});
 
 	while (!battle.fainted) {
-		console.table([
-			{ name: bulby.name, hp: bulby.currentHP, pp: bulby.status.pp },
-			{ name: ivysaur.name, hp: ivysaur.currentHP, pp: ivysaur.status.pp },
-		]);
 		battle.attack(1);
 	}
+
+	expect(getCreatureCurrentHP(GAME_DATA, ivysaur)).toBe(0);
 });

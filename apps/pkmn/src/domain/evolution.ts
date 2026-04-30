@@ -11,24 +11,24 @@ export enum EvolutionMethod {
 export namespace Evolution {
 	export interface ByLevel {
 		method: EvolutionMethod.Level;
-		species: Species.Symbol;
+		speciesId: Species.Symbol;
 		level: number;
 	}
 
 	export interface ByItem {
 		method: EvolutionMethod.Item;
-		species: Species.Symbol;
-		item: string;
+		speciesId: Species.Symbol;
+		itemId: string;
 	}
 
 	export interface ByTrade {
 		method: EvolutionMethod.Trade;
-		species: Species.Symbol;
+		speciesId: Species.Symbol;
 	}
 
 	export interface ByFriendship {
 		method: EvolutionMethod.Friendship;
-		species: Species.Symbol;
+		speciesId: Species.Symbol;
 		level: number;
 	}
 }
