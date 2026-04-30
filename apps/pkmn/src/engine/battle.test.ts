@@ -101,6 +101,112 @@ function createIvysaur() {
 	});
 }
 
+function createModestIvysaur() {
+	return new Creature({
+		species: "IVYSAUR" as SpeciesId,
+		nature: "MODEST" as NatureId,
+		experience: 1000000,
+		moveset: ["VINE_WHIP", "RAZOR_LEAF", "GROWTH", "LEECH_SEED"],
+		iv: {
+			[Stat.HP]: 31,
+			[Stat.Attack]: 31,
+			[Stat.Defense]: 31,
+			[Stat.SpecialAttack]: 31,
+			[Stat.SpecialDefense]: 31,
+			[Stat.Speed]: 31,
+		},
+		ev: {
+			[Stat.HP]: 0,
+			[Stat.Attack]: 0,
+			[Stat.Defense]: 0,
+			[Stat.SpecialAttack]: 0,
+			[Stat.SpecialDefense]: 0,
+			[Stat.Speed]: 0,
+		},
+		status: {
+			state: null,
+			damage: 0,
+			pp: [
+				MOVES["VINE_WHIP"].pp,
+				MOVES["RAZOR_LEAF"].pp,
+				MOVES["GROWTH"].pp,
+				MOVES["LEECH_SEED"].pp,
+			],
+		},
+	});
+}
+
+function createBraveBulbyWithQuickAttack() {
+	return new Creature({
+		nickname: "Bulby",
+		species: "BULBASAUR" as SpeciesId,
+		nature: "BRAVE" as NatureId,
+		experience: 1000000,
+		moveset: ["QUICK_ATTACK", "TACKLE", "GROWTH", "LEECH_SEED"],
+		iv: {
+			[Stat.HP]: 31,
+			[Stat.Attack]: 31,
+			[Stat.Defense]: 31,
+			[Stat.SpecialAttack]: 31,
+			[Stat.SpecialDefense]: 31,
+			[Stat.Speed]: 31,
+		},
+		ev: {
+			[Stat.HP]: 255,
+			[Stat.Attack]: 255,
+			[Stat.Defense]: 0,
+			[Stat.SpecialAttack]: 0,
+			[Stat.SpecialDefense]: 0,
+			[Stat.Speed]: 0,
+		},
+		status: {
+			state: null,
+			damage: 0,
+			pp: [
+				MOVES["QUICK_ATTACK"].pp,
+				MOVES["TACKLE"].pp,
+				MOVES["GROWTH"].pp,
+				MOVES["LEECH_SEED"].pp,
+			],
+		},
+	});
+}
+
+function createModestIvysaurWithQuickAttack() {
+	return new Creature({
+		species: "IVYSAUR" as SpeciesId,
+		nature: "MODEST" as NatureId,
+		experience: 1000000,
+		moveset: ["QUICK_ATTACK", "TACKLE", "GROWTH", "LEECH_SEED"],
+		iv: {
+			[Stat.HP]: 31,
+			[Stat.Attack]: 31,
+			[Stat.Defense]: 31,
+			[Stat.SpecialAttack]: 31,
+			[Stat.SpecialDefense]: 31,
+			[Stat.Speed]: 31,
+		},
+		ev: {
+			[Stat.HP]: 0,
+			[Stat.Attack]: 0,
+			[Stat.Defense]: 0,
+			[Stat.SpecialAttack]: 0,
+			[Stat.SpecialDefense]: 0,
+			[Stat.Speed]: 0,
+		},
+		status: {
+			state: null,
+			damage: 0,
+			pp: [
+				MOVES["QUICK_ATTACK"].pp,
+				MOVES["TACKLE"].pp,
+				MOVES["GROWTH"].pp,
+				MOVES["LEECH_SEED"].pp,
+			],
+		},
+	});
+}
+
 test("Bulby and Ivysaur exchange attacks until Bulby faints", () => {
 	let bulby = createBulby();
 	let ivysaur = createIvysaur();
@@ -148,26 +254,22 @@ test("Bulby and Ivysaur exchange attacks until Bulby faints", () => {
 		},
 		{
 			type: "move-used",
-			user: { side: 0, slot: 0 },
-			moveId: "EMBER",
-			target: { side: 1, slot: 0 },
-		},
-		{
-			type: "effectiveness",
-			target: { side: 1, slot: 0 },
-			effectiveness: 2,
-		},
-		{ type: "critical-hit", target: { side: 1, slot: 0 } },
-		{ type: "damage-dealt", target: { side: 1, slot: 0 }, damage: 84, remainingHP: 171 },
-		{ type: "status-applied", target: { side: 1, slot: 0 }, status: 0 },
-		{
-			type: "move-used",
 			user: { side: 1, slot: 0 },
 			moveId: "RAZOR_LEAF",
 			target: { side: 0, slot: 0 },
 		},
 		{ type: "critical-hit", target: { side: 0, slot: 0 } },
 		{ type: "damage-dealt", target: { side: 0, slot: 0 }, damage: 112, remainingHP: 182 },
+		{
+			type: "move-used",
+			user: { side: 0, slot: 0 },
+			moveId: "EMBER",
+			target: { side: 1, slot: 0 },
+		},
+		{ type: "effectiveness", target: { side: 1, slot: 0 }, effectiveness: 2 },
+		{ type: "critical-hit", target: { side: 1, slot: 0 } },
+		{ type: "damage-dealt", target: { side: 1, slot: 0 }, damage: 84, remainingHP: 171 },
+		{ type: "status-applied", target: { side: 1, slot: 0 }, status: 0 },
 		{ type: "turn-ended", turn: 1 },
 		{ type: "turn-started", turn: 2 },
 		{
@@ -179,6 +281,14 @@ test("Bulby and Ivysaur exchange attacks until Bulby faints", () => {
 		},
 		{
 			type: "move-used",
+			user: { side: 1, slot: 0 },
+			moveId: "RAZOR_LEAF",
+			target: { side: 0, slot: 0 },
+		},
+		{ type: "critical-hit", target: { side: 0, slot: 0 } },
+		{ type: "damage-dealt", target: { side: 0, slot: 0 }, damage: 112, remainingHP: 70 },
+		{
+			type: "move-used",
 			user: { side: 0, slot: 0 },
 			moveId: "EMBER",
 			target: { side: 1, slot: 0 },
@@ -186,14 +296,6 @@ test("Bulby and Ivysaur exchange attacks until Bulby faints", () => {
 		{ type: "effectiveness", target: { side: 1, slot: 0 }, effectiveness: 2 },
 		{ type: "critical-hit", target: { side: 1, slot: 0 } },
 		{ type: "damage-dealt", target: { side: 1, slot: 0 }, damage: 84, remainingHP: 87 },
-		{
-			type: "move-used",
-			user: { side: 1, slot: 0 },
-			moveId: "RAZOR_LEAF",
-			target: { side: 0, slot: 0 },
-		},
-		{ type: "critical-hit", target: { side: 0, slot: 0 } },
-		{ type: "damage-dealt", target: { side: 0, slot: 0 }, damage: 112, remainingHP: 70 },
 		{ type: "turn-ended", turn: 2 },
 		{ type: "turn-started", turn: 3 },
 		{
@@ -203,15 +305,6 @@ test("Bulby and Ivysaur exchange attacks until Bulby faints", () => {
 				{ side: 1, slot: 0 },
 			],
 		},
-		{
-			type: "move-used",
-			user: { side: 0, slot: 0 },
-			moveId: "EMBER",
-			target: { side: 1, slot: 0 },
-		},
-		{ type: "effectiveness", target: { side: 1, slot: 0 }, effectiveness: 2 },
-		{ type: "critical-hit", target: { side: 1, slot: 0 } },
-		{ type: "damage-dealt", target: { side: 1, slot: 0 }, damage: 84, remainingHP: 3 },
 		{
 			type: "move-used",
 			user: { side: 1, slot: 0 },
@@ -275,15 +368,15 @@ test("Leech Seed marks the target as seeded without dealing direct damage", () =
 		},
 		{
 			type: "move-used",
-			user: { side: 0, slot: 0 },
-			moveId: "LEECH_SEED",
-			target: { side: 1, slot: 0 },
-		},
-		{
-			type: "move-used",
 			user: { side: 1, slot: 0 },
 			moveId: "GROWTH",
 			target: { side: 0, slot: 0 },
+		},
+		{
+			type: "move-used",
+			user: { side: 0, slot: 0 },
+			moveId: "LEECH_SEED",
+			target: { side: 1, slot: 0 },
 		},
 		{ type: "turn-ended", turn: 1 },
 	]);
@@ -294,6 +387,87 @@ test("Leech Seed marks the target as seeded without dealing direct damage", () =
 	expect(getCreatureCurrentHP(GAME_DATA, ivysaur)).toBe(
 		getCreatureCurrentHP(GAME_DATA, createIvysaur()),
 	);
+});
+
+test("the faster creature acts first when move priority matches", () => {
+	let battle = new Battle({
+		gameData: GAME_DATA,
+		creatures: [createBulby(), createModestIvysaur()],
+		random: () => 1,
+	});
+	let session = battle.start();
+
+	readEvent(session.next());
+	readEvent(session.next());
+	readEvent(session.next());
+
+	let firstResolutionEvent = readEvent(
+		session.next([
+			{ type: "fight", move: 0, target: { side: 1, slot: 0 } },
+			{ type: "fight", move: 0, target: { side: 0, slot: 0 } },
+		]),
+	);
+
+	expect(firstResolutionEvent).toEqual({
+		type: "move-used",
+		user: { side: 1, slot: 0 },
+		moveId: "VINE_WHIP",
+		target: { side: 0, slot: 0 },
+	});
+});
+
+test("Quick Attack acts before a faster creature using a normal-priority move", () => {
+	let battle = new Battle({
+		gameData: GAME_DATA,
+		creatures: [createBraveBulbyWithQuickAttack(), createModestIvysaur()],
+		random: () => 1,
+	});
+	let session = battle.start();
+
+	readEvent(session.next());
+	readEvent(session.next());
+	readEvent(session.next());
+
+	let firstResolutionEvent = readEvent(
+		session.next([
+			{ type: "fight", move: 0, target: { side: 1, slot: 0 } },
+			{ type: "fight", move: 0, target: { side: 0, slot: 0 } },
+		]),
+	);
+
+	expect(firstResolutionEvent).toEqual({
+		type: "move-used",
+		user: { side: 0, slot: 0 },
+		moveId: "QUICK_ATTACK",
+		target: { side: 1, slot: 0 },
+	});
+});
+
+test("when both creatures use Quick Attack, the faster creature acts first", () => {
+	let battle = new Battle({
+		gameData: GAME_DATA,
+		creatures: [createBraveBulbyWithQuickAttack(), createModestIvysaurWithQuickAttack()],
+		random: () => 1,
+	});
+	let session = battle.start();
+
+	readEvent(session.next());
+	readEvent(session.next());
+	readEvent(session.next());
+
+	let firstResolutionEvent = readEvent(
+		session.next([
+			{ type: "fight", move: 0, target: { side: 1, slot: 0 } },
+			{ type: "fight", move: 0, target: { side: 0, slot: 0 } },
+		]),
+	);
+
+	expect(firstResolutionEvent).toEqual({
+		type: "move-used",
+		user: { side: 1, slot: 0 },
+		moveId: "QUICK_ATTACK",
+		target: { side: 0, slot: 0 },
+	});
 });
 
 function readEvent(result: IteratorResult<BattleEvent, BattleEvent>) {

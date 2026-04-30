@@ -108,6 +108,14 @@ export const MOVES = {
 		pp: 35,
 		effect: { kind: "none" },
 	},
+	QUICK_ATTACK: {
+		type: Type.NORMAL,
+		class: Class.Physical,
+		power: 40,
+		accuracy: 100,
+		pp: 30,
+		effect: { kind: "priority", value: 1 },
+	},
 	BODY_SLAM: {
 		type: Type.NORMAL,
 		class: Class.Physical,

@@ -13,6 +13,17 @@ const CRITICAL_HIT_CHANCE = 1 / 24;
 
 type TurnCommands = [TurnCommand, TurnCommand];
 
+interface TurnAction {
+	side: number;
+	command: FightCommand;
+	user: CombatantState;
+	target: CombatantState;
+	moveId: string;
+	move: Move;
+	priority: number;
+	speed: number;
+}
+
 type MoveEffectHandlerMap = {
 	[kind in MoveEffect["kind"]]: (
 		user: CombatantState,
@@ -147,6 +158,7 @@ export class Battle {
 
 	private readonly effectHandlers: MoveEffectHandlerMap = {
 		none: () => [],
+		priority: () => [],
 		"apply-status": (_user, target, effect) => this.applyStatusEffect(target, effect),
 		"leech-seed": (_user, target) => this.applyLeechSeedEffect(target),
 		charge: () => [],
@@ -221,6 +233,29 @@ export class Battle {
 	}
 
 	private *resolveTurn(commands: TurnCommands): BattleTurnSession {
+		for (let action of this.getTurnActions(commands)) {
+			if (this.isCombatantFainted(action.user)) continue;
+
+			yield {
+				type: "move-used",
+				user: { side: action.side, slot: 0 },
+				moveId: action.moveId,
+				target: action.command.target,
+			};
+
+			let resolution = this.resolveMove(action.user, action.target, action.move);
+			for (let event of resolution.events) yield event;
+
+			if (resolution.finished) {
+				yield this.finishBattle(action.side);
+				return;
+			}
+		}
+	}
+
+	private getTurnActions(commands: TurnCommands): TurnAction[] {
+		let actions: TurnAction[] = [];
+
 		for (let [sideIndex, command] of commands.entries()) {
 			let user = this.state.sides[sideIndex]!.active[0]!;
 			let target = this.state.sides[command.target.side]!.active[command.target.slot]!;
@@ -230,21 +265,25 @@ export class Battle {
 			let move = this.gameData.moves.get(moveId);
 			if (!move) throw new ReferenceError(`Move ${moveId} not found in game data.`);
 
-			yield {
-				type: "move-used",
-				user: { side: sideIndex, slot: 0 },
+			actions.push({
+				side: sideIndex,
+				command,
+				user,
+				target,
 				moveId,
-				target: command.target,
-			};
-
-			let resolution = this.resolveMove(user, target, move);
-			for (let event of resolution.events) yield event;
-
-			if (resolution.finished) {
-				yield this.finishBattle(sideIndex);
-				return;
-			}
+				move,
+				priority: this.getMovePriority(move),
+				speed: getCreatureStat(this.gameData, user.creature, Stat.Speed),
+			});
 		}
+
+		actions.sort((left, right) => {
+			if (left.priority !== right.priority) return right.priority - left.priority;
+			if (left.speed !== right.speed) return right.speed - left.speed;
+			return left.side - right.side;
+		});
+
+		return actions;
 	}
 
 	private resolveMove(user: CombatantState, target: CombatantState, move: Move) {
@@ -286,6 +325,10 @@ export class Battle {
 		switch (effect.kind) {
 			case "none": {
 				for (let event of this.effectHandlers.none(user, target, effect)) yield event;
+				return;
+			}
+			case "priority": {
+				for (let event of this.effectHandlers.priority(user, target, effect)) yield event;
 				return;
 			}
 			case "apply-status": {
@@ -345,6 +388,11 @@ export class Battle {
 				throw new RangeError(`Unsupported status effect ${String(status)}.`);
 			}
 		}
+	}
+
+	private getMovePriority(move: Move): number {
+		if (move.effect.kind === "priority") return move.effect.value;
+		return 0;
 	}
 
 	private calculateDamage(
@@ -419,6 +467,13 @@ export class Battle {
 		}
 
 		throw new ReferenceError("Combatant not found in battle state.");
+	}
+
+	private isCombatantFainted(combatant: CombatantState): boolean {
+		return (
+			combatant.creature.status.damage >=
+			getCreatureStat(this.gameData, combatant.creature, Stat.HP)
+		);
 	}
 
 	private finishBattle(winnerSide: number): BattleEvent {
