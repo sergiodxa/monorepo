@@ -5,6 +5,7 @@ import { Class, StatusEffectType } from "../domain/move";
 import { Stat } from "../domain/stat";
 import { Effectiveness } from "../domain/type";
 
+import { createFieldEffectState, createSideEffectState } from "./battle-state";
 import { CombatantState } from "./combatant-state";
 import { Creature, State } from "./creature";
 import { getCreatureLevel, getCreatureSpecies, getCreatureStat } from "./mechanics";
@@ -43,6 +44,31 @@ interface MoveEffectHandlerMap {
 		user: CombatantState,
 		target: CombatantState,
 		effect: Extract<MoveEffect, { kind: "trap" }>,
+	): BattleEvent[];
+	confuse(
+		user: CombatantState,
+		target: CombatantState,
+		effect: Extract<MoveEffect, { kind: "confuse" }>,
+	): BattleEvent[];
+	protect(
+		user: CombatantState,
+		target: CombatantState,
+		effect: Extract<MoveEffect, { kind: "protect" }>,
+	): BattleEvent[];
+	"modify-stat"(
+		user: CombatantState,
+		target: CombatantState,
+		effect: Extract<MoveEffect, { kind: "modify-stat" }>,
+	): BattleEvent[];
+	"side-effect"(
+		user: CombatantState,
+		target: CombatantState,
+		effect: Extract<MoveEffect, { kind: "side-effect" }>,
+	): BattleEvent[];
+	"field-effect"(
+		user: CombatantState,
+		target: CombatantState,
+		effect: Extract<MoveEffect, { kind: "field-effect" }>,
 	): BattleEvent[];
 	"apply-status"(
 		user: CombatantState,
@@ -159,6 +185,37 @@ export namespace BattleEvent {
 		status: State;
 	}
 
+	/** Reports volatile battle-only effects applied to one combatant. */
+	export interface VolatileAppliedEvent {
+		type: "volatile-applied";
+		target: BattlePosition;
+		effect: "confusion" | "protect" | "trap";
+	}
+
+	/** Reports a combat stat stage changing during battle. */
+	export interface StatStageChangedEvent {
+		type: "stat-stage-changed";
+		target: BattlePosition;
+		stat: Exclude<Stat, Stat.HP>;
+		stages: number;
+		value: number;
+	}
+
+	/** Reports side-wide effects such as Reflect or Tailwind. */
+	export interface SideEffectAppliedEvent {
+		type: "side-effect-applied";
+		side: number;
+		effect: "reflect" | "light-screen" | "tailwind";
+		turns: number;
+	}
+
+	/** Reports shared field effects such as Trick Room. */
+	export interface FieldEffectAppliedEvent {
+		type: "field-effect-applied";
+		effect: "trick-room";
+		turns: number;
+	}
+
 	/** Reports an active creature fainting in its slot. */
 	export interface CreatureFaintedEvent {
 		type: "creature-fainted";
@@ -189,6 +246,10 @@ export type BattleEvent =
 	| BattleEvent.CriticalHitEvent
 	| BattleEvent.DamageDealtEvent
 	| BattleEvent.StatusAppliedEvent
+	| BattleEvent.VolatileAppliedEvent
+	| BattleEvent.StatStageChangedEvent
+	| BattleEvent.SideEffectAppliedEvent
+	| BattleEvent.FieldEffectAppliedEvent
 	| BattleEvent.CreatureFaintedEvent
 	| BattleEvent.TurnEndedEvent
 	| BattleEvent.BattleFinishedEvent;
@@ -212,6 +273,7 @@ export interface BattleSideState {
 	slotTeams: number[];
 	teams: BattleTeamState[];
 	active: Array<BattleActiveSlotState | null>;
+	effects: ReturnType<typeof createSideEffectState>;
 }
 
 /** Mutable battle state that callers can inspect between generator steps. */
@@ -221,6 +283,7 @@ export interface BattleState {
 	winnerSide: number | null;
 	slots: 1 | 2 | 3;
 	sides: [BattleSideState, BattleSideState];
+	field: ReturnType<typeof createFieldEffectState>;
 }
 
 /** Long-lived battle session that yields events and accepts turn or replacement input. */
@@ -253,6 +316,11 @@ export class Battle {
 		none: () => [],
 		priority: () => [],
 		trap: (_user, target) => this.applyTrapEffect(target),
+		confuse: (_user, target, effect) => this.applyConfusionEffect(target, effect),
+		protect: (user) => this.applyProtectEffect(user),
+		"modify-stat": (user, target, effect) => this.applyStatChangeEffect(user, target, effect),
+		"side-effect": (user, target, effect) => this.applySideEffect(user, target, effect),
+		"field-effect": (_user, _target, effect) => this.applyFieldEffect(effect),
 		"apply-status": (_user, target, effect) => this.applyStatusEffect(target, effect),
 		"leech-seed": (_user, target) => this.applyLeechSeedEffect(target),
 		charge: () => [],
@@ -275,6 +343,7 @@ export class Battle {
 			phase: "idle",
 			winnerSide: null,
 			slots,
+			field: createFieldEffectState(),
 			sides: [
 				this.createSideState(args.sides[0], slots),
 				this.createSideState(args.sides[1], slots),
@@ -402,7 +471,13 @@ export class Battle {
 			};
 		}
 
-		return { canLeaveBattle: side.canLeaveBattle ?? false, slotTeams, teams, active };
+		return {
+			canLeaveBattle: side.canLeaveBattle ?? false,
+			slotTeams,
+			teams,
+			active,
+			effects: createSideEffectState(),
+		};
 	}
 
 	private assertValidSide(side: Battle.SideArguments, slots: 1 | 2 | 3) {
@@ -440,6 +515,7 @@ export class Battle {
 
 			for (let event of this.resolveMove(
 				action.user,
+				action.userPosition,
 				action.command.target,
 				target.combatant,
 				action.move,
@@ -493,13 +569,16 @@ export class Battle {
 				moveId,
 				move,
 				priority: this.getMovePriority(move),
-				speed: getCreatureStat(this.gameData, active.combatant.creature, Stat.Speed),
+				speed: this.getCombatantSpeed(request, active.combatant),
 			});
 		}
 
 		actions.sort((left, right) => {
 			if (left.priority !== right.priority) return right.priority - left.priority;
-			if (left.speed !== right.speed) return right.speed - left.speed;
+			if (left.speed !== right.speed) {
+				if (this.state.field.trickRoomTurns > 0) return left.speed - right.speed;
+				return right.speed - left.speed;
+			}
 			if (left.userPosition.side !== right.userPosition.side) {
 				return left.userPosition.side - right.userPosition.side;
 			}
@@ -512,13 +591,18 @@ export class Battle {
 
 	private *resolveMove(
 		user: CombatantState,
+		userPosition: BattlePosition,
 		targetPosition: BattlePosition,
 		target: CombatantState,
 		move: Move,
 	): Generator<BattleEvent, void, void> {
 		let events: BattleEvent[] = [];
 
-		if (move.class !== Class.Status && move.power > 0) {
+		if (user.volatile.confusionTurns > 0) {
+			user.volatile.confusionTurns -= 1;
+		}
+
+		if (move.class !== Class.Status && move.power > 0 && target.volatile.protecting === false) {
 			let effectiveness = this.getTypeEffectiveness(target, move);
 			let damage = this.calculateDamage(user, target, targetPosition, move, effectiveness, events);
 			let targetHP = getCreatureStat(this.gameData, target.creature, Stat.HP);
@@ -533,7 +617,7 @@ export class Battle {
 			});
 		}
 
-		for (let event of this.resolveEffect(user, target, targetPosition, move.effect)) {
+		for (let event of this.resolveEffect(user, userPosition, target, targetPosition, move.effect)) {
 			events.push(event);
 		}
 
@@ -547,6 +631,7 @@ export class Battle {
 
 	private *resolveEffect(
 		user: CombatantState,
+		userPosition: BattlePosition,
 		target: CombatantState,
 		targetPosition: BattlePosition,
 		effect: MoveEffect,
@@ -561,7 +646,47 @@ export class Battle {
 				return;
 			}
 			case "trap": {
-				for (let event of this.effectHandlers.trap(user, target, effect)) yield event;
+				this.effectHandlers.trap(user, target, effect);
+				yield { type: "volatile-applied", target: targetPosition, effect: "trap" };
+				return;
+			}
+			case "confuse": {
+				this.effectHandlers.confuse(user, target, effect);
+				yield { type: "volatile-applied", target: targetPosition, effect: "confusion" };
+				return;
+			}
+			case "protect": {
+				this.effectHandlers.protect(user, target, effect);
+				yield { type: "volatile-applied", target: userPosition, effect: "protect" };
+				return;
+			}
+			case "modify-stat": {
+				let resolvedTargetPosition = effect.target === "self" ? userPosition : targetPosition;
+				let [event] = this.effectHandlers["modify-stat"](user, target, effect);
+				if (!event || event.type !== "stat-stage-changed") return;
+				yield {
+					type: "stat-stage-changed",
+					target: resolvedTargetPosition,
+					stat: event.stat,
+					stages: event.stages,
+					value: event.value,
+				};
+				return;
+			}
+			case "side-effect": {
+				let resolvedSide = effect.target === "self" ? userPosition.side : targetPosition.side;
+				let [event] = this.effectHandlers["side-effect"](user, target, effect);
+				if (!event || event.type !== "side-effect-applied") return;
+				yield {
+					type: "side-effect-applied",
+					side: resolvedSide,
+					effect: event.effect,
+					turns: event.turns,
+				};
+				return;
+			}
+			case "field-effect": {
+				for (let event of this.effectHandlers["field-effect"](user, target, effect)) yield event;
 				return;
 			}
 			case "apply-status": {
@@ -604,7 +729,78 @@ export class Battle {
 
 	private applyTrapEffect(target: CombatantState): BattleEvent[] {
 		target.volatile.trapped = true;
-		return [];
+		return [{ type: "volatile-applied", target: { side: -1, slot: -1 }, effect: "trap" }];
+	}
+
+	private applyConfusionEffect(
+		target: CombatantState,
+		effect: Extract<MoveEffect, { kind: "confuse" }>,
+	): BattleEvent[] {
+		target.volatile.confusionTurns = effect.turns;
+		return [{ type: "volatile-applied", target: { side: -1, slot: -1 }, effect: "confusion" }];
+	}
+
+	private applyProtectEffect(user: CombatantState): BattleEvent[] {
+		user.volatile.protecting = true;
+		return [{ type: "volatile-applied", target: { side: -1, slot: -1 }, effect: "protect" }];
+	}
+
+	private applyStatChangeEffect(
+		user: CombatantState,
+		target: CombatantState,
+		effect: Extract<MoveEffect, { kind: "modify-stat" }>,
+	): BattleEvent[] {
+		let combatant = effect.target === "self" ? user : target;
+		let current = combatant.statStages[effect.stat];
+		let next = Math.max(-6, Math.min(6, current + effect.stages));
+		combatant.statStages[effect.stat] = next;
+
+		return [
+			{
+				type: "stat-stage-changed",
+				target: { side: -1, slot: -1 },
+				stat: effect.stat,
+				stages: effect.stages,
+				value: next,
+			},
+		];
+	}
+
+	private applySideEffect(
+		user: CombatantState,
+		target: CombatantState,
+		effect: Extract<MoveEffect, { kind: "side-effect" }>,
+	): BattleEvent[] {
+		let side =
+			effect.target === "self" ? this.getCombatantSide(user) : this.getCombatantSide(target);
+
+		switch (effect.effect) {
+			case "reflect": {
+				this.state.sides[side]!.effects.reflectTurns = effect.turns;
+				break;
+			}
+			case "light-screen": {
+				this.state.sides[side]!.effects.lightScreenTurns = effect.turns;
+				break;
+			}
+			case "tailwind": {
+				this.state.sides[side]!.effects.tailwindTurns = effect.turns;
+				break;
+			}
+		}
+
+		return [{ type: "side-effect-applied", side, effect: effect.effect, turns: effect.turns }];
+	}
+
+	private applyFieldEffect(effect: Extract<MoveEffect, { kind: "field-effect" }>): BattleEvent[] {
+		switch (effect.effect) {
+			case "trick-room": {
+				this.state.field.trickRoomTurns = effect.turns;
+				break;
+			}
+		}
+
+		return [{ type: "field-effect-applied", effect: effect.effect, turns: effect.turns }];
 	}
 
 	private getPersistentStatus(status: StatusEffectType): State {
@@ -631,6 +827,7 @@ export class Battle {
 	}
 
 	private reconcileAfterTurn() {
+		this.tickTurnEffects();
 		this.pendingReplacementRequests = [];
 		this.reconcileSideState(0);
 		this.reconcileSideState(1);
@@ -852,7 +1049,50 @@ export class Battle {
 
 	private getMovePriority(move: Move): number {
 		if (move.effect.kind === "priority") return move.effect.value;
+		if (move.effect.kind === "protect") return 4;
 		return 0;
+	}
+
+	private getCombatantSide(combatant: CombatantState): number {
+		for (let [sideIndex, side] of this.state.sides.entries()) {
+			for (let active of side.active) {
+				if (active?.combatant === combatant) return sideIndex;
+			}
+		}
+
+		throw new ReferenceError("Combatant not found in active battle state.");
+	}
+
+	private getCombatantSpeed(position: BattlePosition, combatant: CombatantState): number {
+		let speed = getCreatureStat(this.gameData, combatant.creature, Stat.Speed);
+		speed = Math.floor(speed * this.getStageModifier(combatant.statStages[Stat.Speed]));
+
+		if (this.state.sides[position.side]!.effects.tailwindTurns > 0) {
+			speed *= 2;
+		}
+
+		return speed;
+	}
+
+	private getStageModifier(stage: number): number {
+		if (stage >= 0) return (2 + stage) / 2;
+		return 2 / (2 + Math.abs(stage));
+	}
+
+	private tickTurnEffects() {
+		for (let side of this.state.sides) {
+			side.effects.reflectTurns = Math.max(0, side.effects.reflectTurns - 1);
+			side.effects.lightScreenTurns = Math.max(0, side.effects.lightScreenTurns - 1);
+			side.effects.tailwindTurns = Math.max(0, side.effects.tailwindTurns - 1);
+
+			for (let active of side.active) {
+				if (!active) continue;
+				active.combatant.volatile.flinched = false;
+				active.combatant.volatile.protecting = false;
+			}
+		}
+
+		this.state.field.trickRoomTurns = Math.max(0, this.state.field.trickRoomTurns - 1);
 	}
 
 	private calculateDamage(
@@ -900,18 +1140,35 @@ export class Battle {
 	private getBaseDamage(user: CombatantState, target: CombatantState, move: Move): number {
 		let attackStat =
 			move.class === Class.Physical
-				? getCreatureStat(this.gameData, user.creature, Stat.Attack)
-				: getCreatureStat(this.gameData, user.creature, Stat.SpecialAttack);
+				? Math.floor(
+						getCreatureStat(this.gameData, user.creature, Stat.Attack) *
+							this.getStageModifier(user.statStages[Stat.Attack]),
+					)
+				: Math.floor(
+						getCreatureStat(this.gameData, user.creature, Stat.SpecialAttack) *
+							this.getStageModifier(user.statStages[Stat.SpecialAttack]),
+					);
 		let defenseStat =
 			move.class === Class.Physical
-				? getCreatureStat(this.gameData, target.creature, Stat.Defense)
-				: getCreatureStat(this.gameData, target.creature, Stat.SpecialDefense);
+				? Math.floor(
+						getCreatureStat(this.gameData, target.creature, Stat.Defense) *
+							this.getStageModifier(target.statStages[Stat.Defense]),
+					)
+				: Math.floor(
+						getCreatureStat(this.gameData, target.creature, Stat.SpecialDefense) *
+							this.getStageModifier(target.statStages[Stat.SpecialDefense]),
+					);
 		let level = getCreatureLevel(this.gameData, user.creature);
-
-		return (
+		let baseDamage =
 			Math.floor(Math.floor((((2 * level) / 5 + 2) * move.power * attackStat) / defenseStat) / 50) +
-			2
-		);
+			2;
+		let targetSide = this.getCombatantSide(target);
+
+		if (move.class === Class.Physical && this.state.sides[targetSide]!.effects.reflectTurns > 0) {
+			return Math.floor(baseDamage * 0.5);
+		}
+
+		return baseDamage;
 	}
 
 	private getStabModifier(user: CombatantState, move: Move) {

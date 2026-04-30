@@ -400,6 +400,220 @@ test("Mean Look prevents leaving the battle on later turns", () => {
 	expect(battle.state.winnerSide).toBe(null);
 });
 
+test("Growl lowers the target attack stage", () => {
+	let battle = new Battle({
+		gameData: GAME_DATA,
+		sides: [{ teams: [[createBulbyWithGrowl()]] }, { teams: [[createModestIvysaur()]] }],
+		random: () => 1,
+	});
+	let session = battle.start();
+
+	readEvent(session.next());
+	readEvent(session.next());
+	let request = readEvent(session.next());
+	if (request.type !== "request-turn-commands") throw new TypeError("Expected turn request.");
+
+	let events = collectTurnEvents(session, battle, [
+		{ type: "fight", move: 0, target: { side: 1, slot: 0 } },
+		{ type: "fight", move: 2, target: { side: 0, slot: 0 } },
+	]);
+
+	expect(events).toContainEqual({
+		type: "stat-stage-changed",
+		target: { side: 1, slot: 0 },
+		stat: Stat.Attack,
+		stages: -1,
+		value: -1,
+	});
+	expect(battle.state.sides[1].active[0]?.combatant.statStages[Stat.Attack]).toBe(-1);
+});
+
+test("Growth raises the user's special attack stage", () => {
+	let battle = new Battle({
+		gameData: GAME_DATA,
+		sides: [{ teams: [[createBulby()]] }, { teams: [[createModestIvysaur()]] }],
+		random: () => 1,
+	});
+	let session = battle.start();
+
+	readEvent(session.next());
+	readEvent(session.next());
+	let request = readEvent(session.next());
+	if (request.type !== "request-turn-commands") throw new TypeError("Expected turn request.");
+
+	collectTurnEvents(session, battle, [
+		{ type: "fight", move: 2, target: { side: 1, slot: 0 } },
+		{ type: "fight", move: 2, target: { side: 0, slot: 0 } },
+	]);
+
+	expect(battle.state.sides[0].active[0]?.combatant.statStages[Stat.SpecialAttack]).toBe(1);
+});
+
+test("Tailwind doubles side speed and changes turn order", () => {
+	let battle = new Battle({
+		gameData: GAME_DATA,
+		sides: [{ teams: [[createBulbyWithTailwind()]] }, { teams: [[createModestIvysaur()]] }],
+		random: () => 1,
+	});
+	let session = battle.start();
+
+	readEvent(session.next());
+	readEvent(session.next());
+	let firstRequest = readEvent(session.next());
+	if (firstRequest.type !== "request-turn-commands") throw new TypeError("Expected turn request.");
+	collectTurnEvents(session, battle, [
+		{ type: "fight", move: 0, target: { side: 1, slot: 0 } },
+		{ type: "fight", move: 2, target: { side: 0, slot: 0 } },
+	]);
+
+	let secondTurnStarted = readEvent(session.next());
+	expect(secondTurnStarted).toEqual({ type: "turn-started", turn: 2 });
+	let secondRequest = readEvent(session.next());
+	if (secondRequest.type !== "request-turn-commands") throw new TypeError("Expected turn request.");
+
+	let firstResolutionEvent = readEvent(
+		session.next([
+			{ type: "fight", move: 1, target: { side: 1, slot: 0 } },
+			{ type: "fight", move: 0, target: { side: 0, slot: 0 } },
+		]),
+	);
+
+	expect(firstResolutionEvent).toEqual({
+		type: "move-used",
+		user: { side: 0, slot: 0 },
+		moveId: "EMBER",
+		target: { side: 1, slot: 0 },
+	});
+});
+
+test("Reflect reduces physical damage on the protected side", () => {
+	let withoutReflect = getOpeningDamage([
+		{ teams: [[createBulbyWithTackle()]] },
+		{ teams: [[createModestIvysaur()]] },
+	]);
+	let withReflectBattle = new Battle({
+		gameData: GAME_DATA,
+		sides: [{ teams: [[createBulbyWithReflect()]] }, { teams: [[createModestIvysaur()]] }],
+		random: () => 1,
+	});
+	let session = withReflectBattle.start();
+
+	readEvent(session.next());
+	readEvent(session.next());
+	let firstRequest = readEvent(session.next());
+	if (firstRequest.type !== "request-turn-commands") throw new TypeError("Expected turn request.");
+	collectTurnEvents(session, withReflectBattle, [
+		{ type: "fight", move: 0, target: { side: 1, slot: 0 } },
+		{ type: "fight", move: 2, target: { side: 0, slot: 0 } },
+	]);
+
+	let secondTurnStarted = readEvent(session.next());
+	expect(secondTurnStarted).toEqual({ type: "turn-started", turn: 2 });
+	let secondRequest = readEvent(session.next());
+	if (secondRequest.type !== "request-turn-commands") throw new TypeError("Expected turn request.");
+	let secondTurnEvents = collectTurnEvents(session, withReflectBattle, [
+		{ type: "fight", move: 1, target: { side: 1, slot: 0 } },
+		{ type: "fight", move: 0, target: { side: 0, slot: 0 } },
+	]);
+
+	let reflectedDamage = secondTurnEvents.find((event) => event.type === "damage-dealt");
+	if (!reflectedDamage || reflectedDamage.type !== "damage-dealt") {
+		throw new TypeError("Expected damage event.");
+	}
+
+	expect(reflectedDamage.damage).toBeLessThan(withoutReflect);
+	expect(withReflectBattle.state.sides[0].effects.reflectTurns).toBeGreaterThan(0);
+});
+
+test("Trick Room reverses speed order on the following turn", () => {
+	let battle = new Battle({
+		gameData: GAME_DATA,
+		sides: [{ teams: [[createBulbyWithTrickRoom()]] }, { teams: [[createModestIvysaur()]] }],
+		random: () => 1,
+	});
+	let session = battle.start();
+
+	readEvent(session.next());
+	readEvent(session.next());
+	let firstRequest = readEvent(session.next());
+	if (firstRequest.type !== "request-turn-commands") throw new TypeError("Expected turn request.");
+	collectTurnEvents(session, battle, [
+		{ type: "fight", move: 0, target: { side: 1, slot: 0 } },
+		{ type: "fight", move: 2, target: { side: 0, slot: 0 } },
+	]);
+
+	let secondTurnStarted = readEvent(session.next());
+	expect(secondTurnStarted).toEqual({ type: "turn-started", turn: 2 });
+	let secondRequest = readEvent(session.next());
+	if (secondRequest.type !== "request-turn-commands") throw new TypeError("Expected turn request.");
+
+	let firstResolutionEvent = readEvent(
+		session.next([
+			{ type: "fight", move: 1, target: { side: 1, slot: 0 } },
+			{ type: "fight", move: 0, target: { side: 0, slot: 0 } },
+		]),
+	);
+
+	expect(firstResolutionEvent).toEqual({
+		type: "move-used",
+		user: { side: 0, slot: 0 },
+		moveId: "TACKLE",
+		target: { side: 1, slot: 0 },
+	});
+});
+
+test("Protect prevents direct damage for the turn", () => {
+	let battle = new Battle({
+		gameData: GAME_DATA,
+		sides: [{ teams: [[createBulbyWithProtect()]] }, { teams: [[createModestIvysaur()]] }],
+		random: () => 1,
+	});
+	let session = battle.start();
+
+	readEvent(session.next());
+	readEvent(session.next());
+	let request = readEvent(session.next());
+	if (request.type !== "request-turn-commands") throw new TypeError("Expected turn request.");
+	let events = collectTurnEvents(session, battle, [
+		{ type: "fight", move: 0, target: { side: 1, slot: 0 } },
+		{ type: "fight", move: 0, target: { side: 0, slot: 0 } },
+	]);
+
+	expect(events).toContainEqual({
+		type: "volatile-applied",
+		target: { side: 0, slot: 0 },
+		effect: "protect",
+	});
+	expect(events.some((event) => event.type === "damage-dealt" && event.target.side === 0)).toBe(
+		false,
+	);
+});
+
+test("Confuse Ray applies confusion to the target", () => {
+	let battle = new Battle({
+		gameData: GAME_DATA,
+		sides: [{ teams: [[createBulbyWithConfuseRay()]] }, { teams: [[createModestIvysaur()]] }],
+		random: () => 1,
+	});
+	let session = battle.start();
+
+	readEvent(session.next());
+	readEvent(session.next());
+	let request = readEvent(session.next());
+	if (request.type !== "request-turn-commands") throw new TypeError("Expected turn request.");
+	let events = collectTurnEvents(session, battle, [
+		{ type: "fight", move: 0, target: { side: 1, slot: 0 } },
+		{ type: "fight", move: 2, target: { side: 0, slot: 0 } },
+	]);
+
+	expect(events).toContainEqual({
+		type: "volatile-applied",
+		target: { side: 1, slot: 0 },
+		effect: "confusion",
+	});
+	expect(battle.state.sides[1].active[0]?.combatant.volatile.confusionTurns).toBe(2);
+});
+
 test("an invalid team count for the battle format throws", () => {
 	expect(
 		() =>
@@ -431,6 +645,146 @@ function createBulby() {
 			[Stat.Speed]: 0,
 		},
 		status: createStatus(["VINE_WHIP", "RAZOR_LEAF", "GROWTH", "LEECH_SEED"]),
+	});
+}
+
+function createBulbyWithGrowl() {
+	return new Creature({
+		nickname: "Bulby",
+		species: "BULBASAUR" as SpeciesId,
+		nature: "MODEST" as NatureId,
+		experience: 1000000,
+		moveset: ["GROWL", "EMBER", "GROWTH", "LEECH_SEED"],
+		iv: createPerfectStats(),
+		ev: {
+			[Stat.HP]: 255,
+			[Stat.Attack]: 255,
+			[Stat.Defense]: 0,
+			[Stat.SpecialAttack]: 0,
+			[Stat.SpecialDefense]: 0,
+			[Stat.Speed]: 0,
+		},
+		status: createStatus(["GROWL", "EMBER", "GROWTH", "LEECH_SEED"]),
+	});
+}
+
+function createBulbyWithTailwind() {
+	return new Creature({
+		nickname: "Bulby",
+		species: "BULBASAUR" as SpeciesId,
+		nature: "MODEST" as NatureId,
+		experience: 1000000,
+		moveset: ["TAILWIND", "EMBER", "GROWTH", "LEECH_SEED"],
+		iv: createPerfectStats(),
+		ev: {
+			[Stat.HP]: 255,
+			[Stat.Attack]: 255,
+			[Stat.Defense]: 0,
+			[Stat.SpecialAttack]: 0,
+			[Stat.SpecialDefense]: 0,
+			[Stat.Speed]: 0,
+		},
+		status: createStatus(["TAILWIND", "EMBER", "GROWTH", "LEECH_SEED"]),
+	});
+}
+
+function createBulbyWithReflect() {
+	return new Creature({
+		nickname: "Bulby",
+		species: "BULBASAUR" as SpeciesId,
+		nature: "MODEST" as NatureId,
+		experience: 1000000,
+		moveset: ["REFLECT", "TACKLE", "GROWTH", "LEECH_SEED"],
+		iv: createPerfectStats(),
+		ev: {
+			[Stat.HP]: 255,
+			[Stat.Attack]: 255,
+			[Stat.Defense]: 0,
+			[Stat.SpecialAttack]: 0,
+			[Stat.SpecialDefense]: 0,
+			[Stat.Speed]: 0,
+		},
+		status: createStatus(["REFLECT", "TACKLE", "GROWTH", "LEECH_SEED"]),
+	});
+}
+
+function createBulbyWithTrickRoom() {
+	return new Creature({
+		nickname: "Bulby",
+		species: "BULBASAUR" as SpeciesId,
+		nature: "MODEST" as NatureId,
+		experience: 1000000,
+		moveset: ["TRICK_ROOM", "TACKLE", "GROWTH", "LEECH_SEED"],
+		iv: createPerfectStats(),
+		ev: {
+			[Stat.HP]: 255,
+			[Stat.Attack]: 255,
+			[Stat.Defense]: 0,
+			[Stat.SpecialAttack]: 0,
+			[Stat.SpecialDefense]: 0,
+			[Stat.Speed]: 0,
+		},
+		status: createStatus(["TRICK_ROOM", "TACKLE", "GROWTH", "LEECH_SEED"]),
+	});
+}
+
+function createBulbyWithProtect() {
+	return new Creature({
+		nickname: "Bulby",
+		species: "BULBASAUR" as SpeciesId,
+		nature: "MODEST" as NatureId,
+		experience: 1000000,
+		moveset: ["PROTECT", "EMBER", "GROWTH", "LEECH_SEED"],
+		iv: createPerfectStats(),
+		ev: {
+			[Stat.HP]: 255,
+			[Stat.Attack]: 255,
+			[Stat.Defense]: 0,
+			[Stat.SpecialAttack]: 0,
+			[Stat.SpecialDefense]: 0,
+			[Stat.Speed]: 0,
+		},
+		status: createStatus(["PROTECT", "EMBER", "GROWTH", "LEECH_SEED"]),
+	});
+}
+
+function createBulbyWithConfuseRay() {
+	return new Creature({
+		nickname: "Bulby",
+		species: "BULBASAUR" as SpeciesId,
+		nature: "MODEST" as NatureId,
+		experience: 1000000,
+		moveset: ["CONFUSE_RAY", "EMBER", "GROWTH", "LEECH_SEED"],
+		iv: createPerfectStats(),
+		ev: {
+			[Stat.HP]: 255,
+			[Stat.Attack]: 255,
+			[Stat.Defense]: 0,
+			[Stat.SpecialAttack]: 0,
+			[Stat.SpecialDefense]: 0,
+			[Stat.Speed]: 0,
+		},
+		status: createStatus(["CONFUSE_RAY", "EMBER", "GROWTH", "LEECH_SEED"]),
+	});
+}
+
+function createBulbyWithTackle() {
+	return new Creature({
+		nickname: "Bulby",
+		species: "BULBASAUR" as SpeciesId,
+		nature: "MODEST" as NatureId,
+		experience: 1000000,
+		moveset: ["TACKLE", "EMBER", "GROWTH", "LEECH_SEED"],
+		iv: createPerfectStats(),
+		ev: {
+			[Stat.HP]: 255,
+			[Stat.Attack]: 255,
+			[Stat.Defense]: 0,
+			[Stat.SpecialAttack]: 0,
+			[Stat.SpecialDefense]: 0,
+			[Stat.Speed]: 0,
+		},
+		status: createStatus(["TACKLE", "EMBER", "GROWTH", "LEECH_SEED"]),
 	});
 }
 
@@ -578,4 +932,41 @@ function getMovePP(
 function readEvent(result: IteratorResult<BattleEvent, BattleEvent>) {
 	if (result.done) return result.value;
 	return result.value;
+}
+
+function collectTurnEvents(
+	session: Generator<BattleEvent, BattleEvent, any>,
+	battle: Battle,
+	commands: Array<any>,
+) {
+	let events: BattleEvent[] = [];
+	events.push(readEvent(session.next(commands)));
+
+	while (true) {
+		let result = session.next();
+		let event = readEvent(result);
+		events.push(event);
+		if (event.type === "turn-ended") break;
+		if (result.done || battle.state.phase !== "resolving-turn") break;
+	}
+
+	return events;
+}
+
+function getOpeningDamage(sides: ConstructorParameters<typeof Battle>[0]["sides"]) {
+	let battle = new Battle({ gameData: GAME_DATA, sides, random: () => 1 });
+	let session = battle.start();
+
+	readEvent(session.next());
+	readEvent(session.next());
+	let request = readEvent(session.next());
+	if (request.type !== "request-turn-commands") throw new TypeError("Expected turn request.");
+	let events = collectTurnEvents(session, battle, [
+		{ type: "fight", move: 0, target: { side: 1, slot: 0 } },
+		{ type: "fight", move: 2, target: { side: 0, slot: 0 } },
+	]);
+	let damage = events.find((event) => event.type === "damage-dealt" && event.target.side === 1);
+	if (!damage || damage.type !== "damage-dealt")
+		throw new TypeError("Expected opening damage event.");
+	return damage.damage;
 }

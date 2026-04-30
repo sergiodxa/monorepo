@@ -1,3 +1,4 @@
+import { Stat } from "./stat";
 import { Type } from "./type";
 
 /** String identifier of a move in loaded game data. */
@@ -21,6 +22,16 @@ export type MoveEffect =
 	| { kind: "none" }
 	| { kind: "priority"; value: number }
 	| { kind: "trap" }
+	| { kind: "confuse"; turns: number }
+	| { kind: "protect" }
+	| { kind: "modify-stat"; stat: Exclude<Stat, Stat.HP>; stages: number; target: "self" | "target" }
+	| {
+			kind: "side-effect";
+			effect: "reflect" | "light-screen" | "tailwind";
+			turns: number;
+			target: "self" | "target";
+	  }
+	| { kind: "field-effect"; effect: "trick-room"; turns: number }
 	| { kind: "apply-status"; status: StatusEffectType; chance: number }
 	| { kind: "leech-seed" }
 	| { kind: "charge" };

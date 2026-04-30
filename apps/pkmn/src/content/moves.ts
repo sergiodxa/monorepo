@@ -1,6 +1,7 @@
 import type { Move } from "../domain/move";
 
 import { Class, StatusEffectType } from "../domain/move";
+import { Stat } from "../domain/stat";
 import { Type } from "../domain/type";
 
 export const MOVES = {
@@ -158,11 +159,11 @@ export const MOVES = {
 	},
 	TAIL_WHIP: {
 		type: Type.NORMAL,
-		class: Class.Physical,
+		class: Class.Status,
 		power: 0,
 		accuracy: 100,
 		pp: 30,
-		effect: { kind: "none" },
+		effect: { kind: "modify-stat", stat: Stat.Defense, stages: -1, target: "target" },
 	},
 	POISON_STING: {
 		type: Type.POISON,
@@ -210,7 +211,7 @@ export const MOVES = {
 		power: 0,
 		accuracy: 100,
 		pp: 40,
-		effect: { kind: "none" },
+		effect: { kind: "modify-stat", stat: Stat.Attack, stages: -1, target: "target" },
 	},
 	VINE_WHIP: {
 		type: Type.GRASS,
@@ -234,7 +235,7 @@ export const MOVES = {
 		power: 0,
 		accuracy: 0,
 		pp: 20,
-		effect: { kind: "none" },
+		effect: { kind: "modify-stat", stat: Stat.SpecialAttack, stages: 1, target: "self" },
 	},
 	MEAN_LOOK: {
 		type: Type.NORMAL,
@@ -243,6 +244,46 @@ export const MOVES = {
 		accuracy: 100,
 		pp: 5,
 		effect: { kind: "trap" },
+	},
+	CONFUSE_RAY: {
+		type: Type.GHOST,
+		class: Class.Status,
+		power: 0,
+		accuracy: 100,
+		pp: 10,
+		effect: { kind: "confuse", turns: 2 },
+	},
+	PROTECT: {
+		type: Type.NORMAL,
+		class: Class.Status,
+		power: 0,
+		accuracy: 0,
+		pp: 10,
+		effect: { kind: "protect" },
+	},
+	REFLECT: {
+		type: Type.PSYCHIC,
+		class: Class.Status,
+		power: 0,
+		accuracy: 0,
+		pp: 20,
+		effect: { kind: "side-effect", effect: "reflect", turns: 5, target: "self" },
+	},
+	TAILWIND: {
+		type: Type.FLYING,
+		class: Class.Status,
+		power: 0,
+		accuracy: 0,
+		pp: 15,
+		effect: { kind: "side-effect", effect: "tailwind", turns: 4, target: "self" },
+	},
+	TRICK_ROOM: {
+		type: Type.PSYCHIC,
+		class: Class.Status,
+		power: 0,
+		accuracy: 0,
+		pp: 5,
+		effect: { kind: "field-effect", effect: "trick-room", turns: 5 },
 	},
 	LEECH_SEED: {
 		type: Type.GRASS,
@@ -282,7 +323,7 @@ export const MOVES = {
 		power: 0,
 		accuracy: 95,
 		pp: 40,
-		effect: { kind: "none" },
+		effect: { kind: "modify-stat", stat: Stat.Speed, stages: -1, target: "target" },
 	},
 	DRAGON_RAGE: {
 		type: Type.DRAGON,
