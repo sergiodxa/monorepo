@@ -11,59 +11,119 @@ import { getCreatureLevel, getCreatureSpecies, getCreatureStat } from "./mechani
 
 const CRITICAL_HIT_CHANCE = 1 / 24;
 
-type TurnCommands = [TurnCommand, TurnCommand];
-
 interface TurnAction {
-	side: number;
-	command: FightCommand;
 	user: CombatantState;
-	target: CombatantState;
+	userPosition: BattlePosition;
+	command: TurnCommand;
 	moveId: string;
 	move: Move;
 	priority: number;
 	speed: number;
 }
 
-type MoveEffectHandlerMap = {
-	[kind in MoveEffect["kind"]]: (
+interface ReplacementSelection {
+	side: number;
+	slot: number;
+	team: number;
+	choices: number[];
+}
+
+interface MoveEffectHandlerMap {
+	none(
 		user: CombatantState,
 		target: CombatantState,
-		effect: Extract<MoveEffect, { kind: kind }>,
-	) => BattleEvent[];
-};
+		effect: Extract<MoveEffect, { kind: "none" }>,
+	): BattleEvent[];
+	priority(
+		user: CombatantState,
+		target: CombatantState,
+		effect: Extract<MoveEffect, { kind: "priority" }>,
+	): BattleEvent[];
+	trap(
+		user: CombatantState,
+		target: CombatantState,
+		effect: Extract<MoveEffect, { kind: "trap" }>,
+	): BattleEvent[];
+	"apply-status"(
+		user: CombatantState,
+		target: CombatantState,
+		effect: Extract<MoveEffect, { kind: "apply-status" }>,
+	): State[];
+	"leech-seed"(
+		user: CombatantState,
+		target: CombatantState,
+		effect: Extract<MoveEffect, { kind: "leech-seed" }>,
+	): BattleEvent[];
+	charge(
+		user: CombatantState,
+		target: CombatantState,
+		effect: Extract<MoveEffect, { kind: "charge" }>,
+	): BattleEvent[];
+}
 
-/** Identifies one active battle slot. */
+/** Identifies one battle slot on a side. */
 export interface BattlePosition {
 	side: number;
 	slot: number;
 }
 
-/** Player or AI move selection for one active combatant. */
+/** Selects a move for one active combatant. */
 export interface FightCommand {
 	type: "fight";
 	move: 0 | 1 | 2 | 3;
 	target: BattlePosition;
 }
 
-/** A command submitted for one active combatant during the input phase. */
-export type TurnCommand = FightCommand;
+/** Chooses a replacement creature for one empty slot. */
+export interface ReplacementCommand {
+	type: "replace";
+	target: BattlePosition;
+	creature: number;
+}
+
+/** Leaves the battle instead of filling a requested replacement slot. */
+export interface LeaveReplacementCommand {
+	type: "leave-battle";
+	target: BattlePosition;
+}
+
+/** Attempts to leave the battle with one active combatant. */
+export interface LeaveTurnCommand {
+	type: "leave-battle";
+}
+
+type ReplacementInput = Array<ReplacementCommand | LeaveReplacementCommand>;
+
+type BattleInput = TurnCommand[] | ReplacementInput;
+
+/** A command submitted for one active combatant during a turn. */
+export type TurnCommand = FightCommand | LeaveTurnCommand;
 
 export namespace BattleEvent {
-	/** Requests turn commands for all active combatants that can act this turn. */
+	/** Requests commands for every active combatant that can act this turn. */
 	export interface TurnCommandsRequestedEvent {
 		type: "request-turn-commands";
-		requests: [BattlePosition, BattlePosition];
+		requests: BattlePosition[];
 	}
 
+	/** Requests replacement choices for slots left empty after a turn. */
+	export interface ReplacementsRequestedEvent {
+		type: "request-replacements";
+		requests: ReplacementSelection[];
+	}
+
+	/** Marks the beginning of the battle session. */
 	export interface BattleStarted {
 		type: "battle-started";
 	}
 
+	/** Marks the beginning of a new turn. */
 	export interface TurnStarted {
 		type: "turn-started";
 		turn: number;
 	}
 
+	/** Reports one move being used against a target slot. */
 	export interface MoveUsed {
 		type: "move-used";
 		user: BattlePosition;
@@ -71,17 +131,20 @@ export namespace BattleEvent {
 		target: BattlePosition;
 	}
 
+	/** Reports a non-neutral type matchup. */
 	export interface EffectivenessEvent {
 		type: "effectiveness";
 		target: BattlePosition;
 		effectiveness: Effectiveness;
 	}
 
+	/** Reports a critical hit. */
 	export interface CriticalHitEvent {
 		type: "critical-hit";
 		target: BattlePosition;
 	}
 
+	/** Reports HP loss after damage resolves. */
 	export interface DamageDealtEvent {
 		type: "damage-dealt";
 		target: BattlePosition;
@@ -89,22 +152,26 @@ export namespace BattleEvent {
 		remainingHP: number;
 	}
 
+	/** Reports a major status applied by a move effect. */
 	export interface StatusAppliedEvent {
 		type: "status-applied";
 		target: BattlePosition;
 		status: State;
 	}
 
+	/** Reports an active creature fainting in its slot. */
 	export interface CreatureFaintedEvent {
 		type: "creature-fainted";
 		target: BattlePosition;
 	}
 
+	/** Marks the end of the current turn. */
 	export interface TurnEndedEvent {
 		type: "turn-ended";
 		turn: number;
 	}
 
+	/** Marks the end of the battle session. */
 	export interface BattleFinishedEvent {
 		type: "battle-finished";
 		winnerSide: number | null;
@@ -116,6 +183,7 @@ export type BattleEvent =
 	| BattleEvent.BattleStarted
 	| BattleEvent.TurnStarted
 	| BattleEvent.TurnCommandsRequestedEvent
+	| BattleEvent.ReplacementsRequestedEvent
 	| BattleEvent.MoveUsed
 	| BattleEvent.EffectivenessEvent
 	| BattleEvent.CriticalHitEvent
@@ -125,40 +193,66 @@ export type BattleEvent =
 	| BattleEvent.TurnEndedEvent
 	| BattleEvent.BattleFinishedEvent;
 
-/** Mutable battle state that the UI/tests can inspect between generator steps. */
-export interface BattleState {
-	turn: number;
-	phase: "idle" | "awaiting-input" | "resolving-turn" | "finished";
-	winnerSide: number | null;
-	sides: [BattleSideState, BattleSideState];
+/** One active slot backed by a creature from a specific team. */
+export interface BattleActiveSlotState {
+	teamIndex: number;
+	creatureIndex: number;
+	combatant: CombatantState;
+}
+
+/** Runtime state for one team on a side. */
+export interface BattleTeamState {
+	creatures: CombatantState[];
+	eliminated: boolean;
 }
 
 /** Runtime state for one side of the battle. */
 export interface BattleSideState {
-	active: [CombatantState];
+	canLeaveBattle: boolean;
+	slotTeams: number[];
+	teams: BattleTeamState[];
+	active: Array<BattleActiveSlotState | null>;
 }
 
-/** Long-lived battle session that yields events and accepts commands. */
-export type BattleSession = Generator<BattleEvent, BattleEvent, TurnCommands>;
+/** Mutable battle state that callers can inspect between generator steps. */
+export interface BattleState {
+	turn: number;
+	phase: "idle" | "awaiting-turn-input" | "awaiting-replacement" | "resolving-turn" | "finished";
+	winnerSide: number | null;
+	slots: 1 | 2 | 3;
+	sides: [BattleSideState, BattleSideState];
+}
+
+/** Long-lived battle session that yields events and accepts turn or replacement input. */
+export type BattleSession = Generator<BattleEvent, BattleEvent, BattleInput>;
 
 /** Generator that resolves one submitted turn into ordered battle events. */
 export type BattleTurnSession = Generator<BattleEvent, void, void>;
 
 export namespace Battle {
+	/** One side's submitted teams. */
+	export interface SideArguments {
+		canLeaveBattle?: boolean;
+		teams: Creature[][];
+	}
+
+	/** Battle setup describing format and both sides. */
 	export interface Arguments {
 		gameData: GameData;
-		creatures: [Creature, Creature];
+		sides: [SideArguments, SideArguments];
+		slots?: 1 | 2 | 3;
 		random?(): number;
 	}
 }
 
-/** Resolves battle turns and yields structured events for the caller to render. */
+/** Resolves battle turns for one format and requests replacements between turns when needed. */
 export class Battle {
 	readonly state: BattleState;
 
 	private readonly effectHandlers: MoveEffectHandlerMap = {
 		none: () => [],
 		priority: () => [],
+		trap: (_user, target) => this.applyTrapEffect(target),
 		"apply-status": (_user, target, effect) => this.applyStatusEffect(target, effect),
 		"leech-seed": (_user, target) => this.applyLeechSeedEffect(target),
 		charge: () => [],
@@ -166,29 +260,38 @@ export class Battle {
 
 	private readonly gameData: GameData;
 	private readonly random: () => number;
+	private pendingReplacementRequests: ReplacementSelection[] = [];
 
+	/**
+	 * @param args - Battle setup, loaded content, and optional RNG override
+	 */
 	constructor(args: Battle.Arguments) {
+		let slots = args.slots ?? 1;
+
 		this.gameData = args.gameData;
 		this.random = args.random ?? Math.random;
 		this.state = {
 			turn: 0,
 			phase: "idle",
 			winnerSide: null,
+			slots,
 			sides: [
-				{ active: [new CombatantState(args.creatures[0])] },
-				{ active: [new CombatantState(args.creatures[1])] },
+				this.createSideState(args.sides[0], slots),
+				this.createSideState(args.sides[1], slots),
 			],
 		};
+
+		this.reconcileSideState(0);
+		this.reconcileSideState(1);
+		this.updateWinnerSide();
 	}
 
+	/** Returns the first fainted creature currently tracked by the battle state, if any. */
 	get fainted() {
 		for (let side of this.state.sides) {
-			for (let combatant of side.active) {
-				if (
-					combatant.creature.status.damage >=
-					getCreatureStat(this.gameData, combatant.creature, Stat.HP)
-				) {
-					return combatant.creature;
+			for (let team of side.teams) {
+				for (let combatant of team.creatures) {
+					if (this.isCombatantFainted(combatant)) return combatant.creature;
 				}
 			}
 		}
@@ -197,129 +300,255 @@ export class Battle {
 	}
 
 	/**
-	 * Starts a battle session that yields events and pauses for commands every turn.
+	 * Starts a battle session that yields events, turn requests, and replacement requests.
 	 *
-	 * @yields Battle lifecycle events, input requests, and move resolution events in display order.
-	 * @returns A generator the caller can iterate to drive the battle UI/test flow
+	 * @yields Battle lifecycle events in the order they should be rendered by the caller.
+	 * @returns The finishing battle event when the session completes.
 	 */
 	*start(): BattleSession {
-		this.state.phase = "awaiting-input";
 		yield { type: "battle-started" };
 
+		if (this.state.winnerSide !== null) {
+			let event = this.finishBattle(this.state.winnerSide);
+			yield event;
+			return event;
+		}
+
 		while (this.state.phase !== "finished") {
+			if (this.pendingReplacementRequests.length > 0) {
+				this.state.phase = "awaiting-replacement";
+				let replacementCommands = yield {
+					type: "request-replacements",
+					requests: this.pendingReplacementRequests.map((request) => ({
+						side: request.side,
+						slot: request.slot,
+						team: request.team,
+						choices: [...request.choices],
+					})),
+				};
+
+				if (this.isReplacementCommands(replacementCommands) === false) {
+					throw new TypeError(
+						"Replacement input must be an array of replacement or leave-battle commands.",
+					);
+				}
+
+				this.applyReplacementCommands(replacementCommands);
+				this.pendingReplacementRequests = [];
+				this.reconcileSideState(0);
+				this.reconcileSideState(1);
+				this.updateWinnerSide();
+
+				if (this.state.winnerSide !== null) {
+					let event = this.finishBattle(this.state.winnerSide);
+					yield event;
+					return event;
+				}
+			}
+
 			this.state.turn += 1;
+			this.state.phase = "awaiting-turn-input";
 			yield { type: "turn-started", turn: this.state.turn };
-			let commands = yield {
+
+			let turnRequests = this.getTurnCommandRequests();
+			let turnCommands = yield {
 				type: "request-turn-commands",
-				requests: [
-					{ side: 0, slot: 0 },
-					{ side: 1, slot: 0 },
-				],
+				requests: turnRequests,
 			};
+
+			if (this.isTurnCommands(turnCommands) === false) {
+				throw new TypeError("Turn input must be an array of turn commands.");
+			}
 
 			this.state.phase = "resolving-turn";
 
-			for (let event of this.resolveTurn(commands)) {
+			for (let event of this.resolveTurn(turnRequests, turnCommands)) {
 				yield event;
-				if (event.type === "battle-finished") return event;
 			}
 
+			this.reconcileAfterTurn();
 			yield { type: "turn-ended", turn: this.state.turn };
 
-			this.state.phase = this.state.winnerSide === null ? "awaiting-input" : "finished";
+			if (this.state.winnerSide !== null) {
+				let event = this.finishBattle(this.state.winnerSide);
+				yield event;
+				return event;
+			}
 		}
 
 		return { type: "battle-finished", winnerSide: this.state.winnerSide };
 	}
 
-	private *resolveTurn(commands: TurnCommands): BattleTurnSession {
-		for (let action of this.getTurnActions(commands)) {
-			if (this.isCombatantFainted(action.user)) continue;
+	private createSideState(side: Battle.SideArguments, slots: 1 | 2 | 3): BattleSideState {
+		this.assertValidSide(side, slots);
 
-			yield {
-				type: "move-used",
-				user: { side: action.side, slot: 0 },
-				moveId: action.moveId,
-				target: action.command.target,
+		let slotTeams =
+			side.teams.length === 1 ? Array.from({ length: slots }, () => 0) : [0, 1, 2].slice(0, slots);
+		let teams = side.teams.map((team) => ({
+			creatures: team.map((creature) => new CombatantState(creature)),
+			eliminated: false,
+		}));
+		let active = Array.from({ length: slots }, () => null as BattleActiveSlotState | null);
+
+		for (let slotIndex = 0; slotIndex < slots; slotIndex += 1) {
+			let teamIndex = slotTeams[slotIndex]!;
+			let creatureIndex = this.getFirstAvailableCreatureIndex(teams, active, teamIndex);
+			if (creatureIndex === null) continue;
+
+			active[slotIndex] = {
+				teamIndex,
+				creatureIndex,
+				combatant: teams[teamIndex]!.creatures[creatureIndex]!,
 			};
+		}
 
-			let resolution = this.resolveMove(action.user, action.target, action.move);
-			for (let event of resolution.events) yield event;
+		return { canLeaveBattle: side.canLeaveBattle ?? false, slotTeams, teams, active };
+	}
 
-			if (resolution.finished) {
-				yield this.finishBattle(action.side);
-				return;
+	private assertValidSide(side: Battle.SideArguments, slots: 1 | 2 | 3) {
+		if (side.teams.length !== 1 && side.teams.length !== slots) {
+			throw new RangeError(
+				`A side in ${slots}v${slots} must provide either 1 team or ${slots} teams.`,
+			);
+		}
+
+		for (let team of side.teams) {
+			if (team.length < 1 || team.length > 6) {
+				throw new RangeError("Each battle team must contain between 1 and 6 creatures.");
 			}
 		}
 	}
 
-	private getTurnActions(commands: TurnCommands): TurnAction[] {
+	private *resolveTurn(requests: BattlePosition[], commands: TurnCommand[]): BattleTurnSession {
+		for (let action of this.getTurnActions(requests, commands)) {
+			if (action.command.type === "leave-battle") {
+				this.forfeitSide(action.userPosition.side);
+				return;
+			}
+
+			if (this.isCombatantActive(action.userPosition, action.user) === false) continue;
+
+			let target = this.getActiveCombatant(action.command.target);
+			if (target === null) continue;
+
+			yield {
+				type: "move-used",
+				user: action.userPosition,
+				moveId: action.moveId,
+				target: action.command.target,
+			};
+
+			for (let event of this.resolveMove(
+				action.user,
+				action.command.target,
+				target.combatant,
+				action.move,
+			)) {
+				yield event;
+			}
+		}
+	}
+
+	private getTurnActions(requests: BattlePosition[], commands: TurnCommand[]): TurnAction[] {
+		if (requests.length !== commands.length) {
+			throw new RangeError("Turn command count must match the number of requested active slots.");
+		}
+
 		let actions: TurnAction[] = [];
 
-		for (let [sideIndex, command] of commands.entries()) {
-			let user = this.state.sides[sideIndex]!.active[0]!;
-			let target = this.state.sides[command.target.side]!.active[command.target.slot]!;
-			let moveId = user.creature.moveset[command.move];
-			if (command.type !== "fight" || !moveId) continue;
+		for (let [index, request] of requests.entries()) {
+			let command = commands[index];
+			if (!command) continue;
+
+			let active = this.getActiveCombatant(request);
+			if (active === null) continue;
+
+			if (command.type === "leave-battle") {
+				if (this.canCombatantLeaveBattle(request, active.combatant) === false) continue;
+
+				actions.push({
+					user: active.combatant,
+					userPosition: request,
+					command,
+					moveId: "",
+					move: this.gameData.moves.get("TACKLE")!,
+					priority: Number.POSITIVE_INFINITY,
+					speed: Number.POSITIVE_INFINITY,
+				});
+				continue;
+			}
+
+			if (command.type !== "fight") continue;
+
+			let moveId = active.combatant.creature.moveset[command.move];
+			if (!moveId) continue;
 
 			let move = this.gameData.moves.get(moveId);
 			if (!move) throw new ReferenceError(`Move ${moveId} not found in game data.`);
 
 			actions.push({
-				side: sideIndex,
+				user: active.combatant,
+				userPosition: request,
 				command,
-				user,
-				target,
 				moveId,
 				move,
 				priority: this.getMovePriority(move),
-				speed: getCreatureStat(this.gameData, user.creature, Stat.Speed),
+				speed: getCreatureStat(this.gameData, active.combatant.creature, Stat.Speed),
 			});
 		}
 
 		actions.sort((left, right) => {
 			if (left.priority !== right.priority) return right.priority - left.priority;
 			if (left.speed !== right.speed) return right.speed - left.speed;
-			return left.side - right.side;
+			if (left.userPosition.side !== right.userPosition.side) {
+				return left.userPosition.side - right.userPosition.side;
+			}
+
+			return left.userPosition.slot - right.userPosition.slot;
 		});
 
 		return actions;
 	}
 
-	private resolveMove(user: CombatantState, target: CombatantState, move: Move) {
+	private *resolveMove(
+		user: CombatantState,
+		targetPosition: BattlePosition,
+		target: CombatantState,
+		move: Move,
+	): Generator<BattleEvent, void, void> {
 		let events: BattleEvent[] = [];
 
 		if (move.class !== Class.Status && move.power > 0) {
 			let effectiveness = this.getTypeEffectiveness(target, move);
-			let damage = this.calculateDamage(user, target, move, effectiveness, events);
+			let damage = this.calculateDamage(user, target, targetPosition, move, effectiveness, events);
 			let targetHP = getCreatureStat(this.gameData, target.creature, Stat.HP);
 			let remainingDamage = Math.min(targetHP, target.creature.status.damage + damage);
 			target.creature.status.damage = remainingDamage;
 
 			events.push({
 				type: "damage-dealt",
-				target: this.getCombatantLocation(target),
+				target: targetPosition,
 				damage,
 				remainingHP: targetHP - target.creature.status.damage,
 			});
 		}
 
-		events.push(...this.resolveEffect(user, target, move.effect));
-
-		let targetHP = getCreatureStat(this.gameData, target.creature, Stat.HP);
-		if (target.creature.status.damage >= targetHP) {
-			events.push({ type: "creature-fainted", target: this.getCombatantLocation(target) });
+		for (let event of this.resolveEffect(user, target, targetPosition, move.effect)) {
+			events.push(event);
 		}
 
-		return {
-			events,
-			finished: target.creature.status.damage >= targetHP,
-		};
+		if (this.isCombatantFainted(target)) {
+			this.clearActiveCombatant(targetPosition);
+			events.push({ type: "creature-fainted", target: targetPosition });
+		}
+
+		for (let event of events) yield event;
 	}
 
 	private *resolveEffect(
 		user: CombatantState,
 		target: CombatantState,
+		targetPosition: BattlePosition,
 		effect: MoveEffect,
 	): Generator<BattleEvent, void, void> {
 		switch (effect.kind) {
@@ -331,8 +560,14 @@ export class Battle {
 				for (let event of this.effectHandlers.priority(user, target, effect)) yield event;
 				return;
 			}
+			case "trap": {
+				for (let event of this.effectHandlers.trap(user, target, effect)) yield event;
+				return;
+			}
 			case "apply-status": {
-				for (let event of this.effectHandlers["apply-status"](user, target, effect)) yield event;
+				for (let status of this.applyStatusEffect(target, effect)) {
+					yield { type: "status-applied", target: targetPosition, status };
+				}
 				return;
 			}
 			case "leech-seed": {
@@ -352,18 +587,23 @@ export class Battle {
 	private applyStatusEffect(
 		target: CombatantState,
 		effect: Extract<MoveEffect, { kind: "apply-status" }>,
-	): BattleEvent[] {
+	): State[] {
 		if (target.creature.status.state !== null) return [];
 		if (this.random() >= effect.chance) return [];
 
 		let status = this.getPersistentStatus(effect.status);
 		target.creature.status.state = status;
 
-		return [{ type: "status-applied", target: this.getCombatantLocation(target), status }];
+		return [status];
 	}
 
 	private applyLeechSeedEffect(target: CombatantState): BattleEvent[] {
 		target.volatile.seeded = true;
+		return [];
+	}
+
+	private applyTrapEffect(target: CombatantState): BattleEvent[] {
+		target.volatile.trapped = true;
 		return [];
 	}
 
@@ -390,6 +630,226 @@ export class Battle {
 		}
 	}
 
+	private reconcileAfterTurn() {
+		this.pendingReplacementRequests = [];
+		this.reconcileSideState(0);
+		this.reconcileSideState(1);
+		this.updateWinnerSide();
+	}
+
+	private reconcileSideState(sideIndex: number) {
+		let side = this.state.sides[sideIndex]!;
+
+		for (let teamIndex = 0; teamIndex < side.teams.length; teamIndex += 1) {
+			if (this.teamHasRemainingPresence(sideIndex, teamIndex) === false) {
+				side.teams[teamIndex]!.eliminated = true;
+			}
+		}
+
+		for (let slotIndex = 0; slotIndex < side.active.length; slotIndex += 1) {
+			if (side.active[slotIndex] !== null) continue;
+
+			let teamIndex = side.slotTeams[slotIndex]!;
+			let team = side.teams[teamIndex]!;
+			if (team.eliminated) continue;
+
+			let choices = this.getAvailableReplacementChoices(sideIndex, teamIndex);
+			if (choices.length === 0) continue;
+
+			this.pendingReplacementRequests.push({
+				side: sideIndex,
+				slot: slotIndex,
+				team: teamIndex,
+				choices,
+			});
+		}
+	}
+
+	private updateWinnerSide() {
+		let side0Alive = this.sideHasRemainingContenders(0);
+		let side1Alive = this.sideHasRemainingContenders(1);
+
+		if (side0Alive === side1Alive) {
+			this.state.winnerSide = null;
+			return;
+		}
+
+		this.state.winnerSide = side0Alive ? 0 : 1;
+	}
+
+	private sideHasRemainingContenders(sideIndex: number): boolean {
+		let side = this.state.sides[sideIndex]!;
+
+		for (let teamIndex = 0; teamIndex < side.teams.length; teamIndex += 1) {
+			if (side.teams[teamIndex]!.eliminated) continue;
+			if (this.teamHasRemainingPresence(sideIndex, teamIndex)) return true;
+		}
+
+		return false;
+	}
+
+	private teamHasRemainingPresence(sideIndex: number, teamIndex: number): boolean {
+		let side = this.state.sides[sideIndex]!;
+
+		for (let active of side.active) {
+			if (active?.teamIndex === teamIndex) return true;
+		}
+
+		for (let [creatureIndex, combatant] of side.teams[teamIndex]!.creatures.entries()) {
+			if (this.isCreatureCurrentlyActive(side, teamIndex, creatureIndex)) continue;
+			if (this.isCombatantFainted(combatant)) continue;
+			return true;
+		}
+
+		return false;
+	}
+
+	private getAvailableReplacementChoices(sideIndex: number, teamIndex: number): number[] {
+		let side = this.state.sides[sideIndex]!;
+		let choices: number[] = [];
+
+		for (let [creatureIndex, combatant] of side.teams[teamIndex]!.creatures.entries()) {
+			if (this.isCombatantFainted(combatant)) continue;
+			if (this.isCreatureCurrentlyActive(side, teamIndex, creatureIndex)) continue;
+			choices.push(creatureIndex);
+		}
+
+		return choices;
+	}
+
+	private applyReplacementCommands(commands: ReplacementInput) {
+		if (commands.length !== this.pendingReplacementRequests.length) {
+			throw new RangeError(
+				"Replacement command count must match the number of replacement requests.",
+			);
+		}
+
+		for (let [index, request] of this.pendingReplacementRequests.entries()) {
+			let command = commands[index];
+			if (!command || (command.type !== "replace" && command.type !== "leave-battle")) {
+				throw new TypeError(
+					"Replacement input must contain only replacement or leave-battle commands.",
+				);
+			}
+
+			if (command.target.side !== request.side || command.target.slot !== request.slot) {
+				throw new RangeError("Replacement command target does not match the requested slot.");
+			}
+
+			if (command.type === "leave-battle") {
+				this.forfeitSide(request.side);
+				continue;
+			}
+
+			if (request.choices.includes(command.creature) === false) {
+				throw new RangeError("Replacement command selected a creature that is not available.");
+			}
+
+			this.activateReplacement(request.side, request.slot, request.team, command.creature);
+		}
+	}
+
+	private activateReplacement(
+		sideIndex: number,
+		slotIndex: number,
+		teamIndex: number,
+		creatureIndex: number,
+	) {
+		let side = this.state.sides[sideIndex]!;
+		let combatant = side.teams[teamIndex]!.creatures[creatureIndex]!;
+
+		side.active[slotIndex] = {
+			teamIndex,
+			creatureIndex,
+			combatant,
+		};
+	}
+
+	private forfeitSide(sideIndex: number) {
+		for (let team of this.state.sides[sideIndex]!.teams) {
+			team.eliminated = true;
+		}
+
+		for (
+			let slotIndex = 0;
+			slotIndex < this.state.sides[sideIndex]!.active.length;
+			slotIndex += 1
+		) {
+			this.state.sides[sideIndex]!.active[slotIndex] = null;
+		}
+	}
+
+	private canCombatantLeaveBattle(position: BattlePosition, combatant: CombatantState): boolean {
+		let side = this.state.sides[position.side]!;
+		if (side.canLeaveBattle === false) return false;
+		if (combatant.volatile.trapped) return false;
+		return true;
+	}
+
+	private getTurnCommandRequests(): BattlePosition[] {
+		let requests: BattlePosition[] = [];
+
+		for (let [sideIndex, side] of this.state.sides.entries()) {
+			for (let [slotIndex, active] of side.active.entries()) {
+				if (active === null) continue;
+				requests.push({ side: sideIndex, slot: slotIndex });
+			}
+		}
+
+		return requests;
+	}
+
+	private getFirstAvailableCreatureIndex(
+		teams: BattleTeamState[],
+		active: Array<BattleActiveSlotState | null>,
+		teamIndex: number,
+	): number | null {
+		for (let [creatureIndex, combatant] of teams[teamIndex]!.creatures.entries()) {
+			if (this.isCombatantFainted(combatant)) continue;
+			if (
+				active.some((slot) => slot?.teamIndex === teamIndex && slot.creatureIndex === creatureIndex)
+			)
+				continue;
+			return creatureIndex;
+		}
+
+		return null;
+	}
+
+	private getActiveCombatant(position: BattlePosition): BattleActiveSlotState | null {
+		let side = this.state.sides[position.side];
+		if (!side) return null;
+		return side.active[position.slot] ?? null;
+	}
+
+	private isCombatantActive(position: BattlePosition, combatant: CombatantState): boolean {
+		return this.getActiveCombatant(position)?.combatant === combatant;
+	}
+
+	private clearActiveCombatant(position: BattlePosition) {
+		let side = this.state.sides[position.side];
+		if (!side) return;
+		side.active[position.slot] = null;
+	}
+
+	private isCreatureCurrentlyActive(
+		side: BattleSideState,
+		teamIndex: number,
+		creatureIndex: number,
+	): boolean {
+		return side.active.some(
+			(active) => active?.teamIndex === teamIndex && active.creatureIndex === creatureIndex,
+		);
+	}
+
+	private isReplacementCommands(input: BattleInput): input is ReplacementInput {
+		return input.every((command) => command.type === "replace" || command.type === "leave-battle");
+	}
+
+	private isTurnCommands(input: BattleInput): input is TurnCommand[] {
+		return input.every((command) => command.type === "fight" || command.type === "leave-battle");
+	}
+
 	private getMovePriority(move: Move): number {
 		if (move.effect.kind === "priority") return move.effect.value;
 		return 0;
@@ -398,6 +858,7 @@ export class Battle {
 	private calculateDamage(
 		user: CombatantState,
 		target: CombatantState,
+		targetPosition: BattlePosition,
 		move: Move,
 		effectiveness: Effectiveness,
 		events: BattleEvent[],
@@ -408,7 +869,7 @@ export class Battle {
 		if (effectiveness !== Effectiveness.NORMAL) {
 			events.push({
 				type: "effectiveness",
-				target: this.getCombatantLocation(target),
+				target: targetPosition,
 				effectiveness,
 			});
 		}
@@ -419,7 +880,7 @@ export class Battle {
 
 		if (this.random() < CRITICAL_HIT_CHANCE) {
 			damage = Math.floor(damage * 1.5);
-			events.push({ type: "critical-hit", target: this.getCombatantLocation(target) });
+			events.push({ type: "critical-hit", target: targetPosition });
 		}
 
 		return Math.floor(damage * ((85 + Math.floor(this.random() * 16)) / 100));
@@ -459,16 +920,6 @@ export class Battle {
 		return 1;
 	}
 
-	private getCombatantLocation(combatant: CombatantState): BattlePosition {
-		for (let [sideIndex, side] of this.state.sides.entries()) {
-			for (let [slotIndex, active] of side.active.entries()) {
-				if (active === combatant) return { side: sideIndex, slot: slotIndex };
-			}
-		}
-
-		throw new ReferenceError("Combatant not found in battle state.");
-	}
-
 	private isCombatantFainted(combatant: CombatantState): boolean {
 		return (
 			combatant.creature.status.damage >=
@@ -476,7 +927,7 @@ export class Battle {
 		);
 	}
 
-	private finishBattle(winnerSide: number): BattleEvent {
+	private finishBattle(winnerSide: number): BattleEvent.BattleFinishedEvent {
 		this.state.winnerSide = winnerSide;
 		this.state.phase = "finished";
 		return { type: "battle-finished", winnerSide };

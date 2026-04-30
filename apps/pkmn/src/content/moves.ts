@@ -236,6 +236,14 @@ export const MOVES = {
 		pp: 20,
 		effect: { kind: "none" },
 	},
+	MEAN_LOOK: {
+		type: Type.NORMAL,
+		class: Class.Status,
+		power: 0,
+		accuracy: 100,
+		pp: 5,
+		effect: { kind: "trap" },
+	},
 	LEECH_SEED: {
 		type: Type.GRASS,
 		class: Class.Status,

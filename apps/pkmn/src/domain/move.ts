@@ -20,6 +20,7 @@ export enum Class {
 export type MoveEffect =
 	| { kind: "none" }
 	| { kind: "priority"; value: number }
+	| { kind: "trap" }
 	| { kind: "apply-status"; status: StatusEffectType; chance: number }
 	| { kind: "leech-seed" }
 	| { kind: "charge" };

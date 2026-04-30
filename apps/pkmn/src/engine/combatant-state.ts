@@ -5,6 +5,7 @@ export class CombatantState {
 	/** Temporary flags that only exist for the duration of a battle. */
 	readonly volatile = {
 		seeded: false,
+		trapped: false,
 	};
 
 	/**
