@@ -18,6 +18,9 @@ import "prismjs/components/prism-tsx.js";
 import "prismjs/components/prism-typescript.js";
 import "prismjs/components/prism-yaml.js";
 
+/**
+ * Validates the runtime attributes passed from Markdoc fence nodes.
+ */
 const AttributesSchema = z.object({
 	content: z.string(),
 	language: z.string().default("plain"),
@@ -25,6 +28,9 @@ const AttributesSchema = z.object({
 	title: z.string().optional(),
 });
 
+/**
+ * Maps common code fence aliases to Prism grammar identifiers.
+ */
 const LanguageAliasesSchema = z.object({
 	dotenv: z.literal("plain"),
 	env: z.literal("plain"),
@@ -46,12 +52,21 @@ const LanguageAliasesSchema = z.object({
 	yml: z.literal("yaml"),
 });
 
+/**
+ * Groups code fence types under the exported node name.
+ */
 export namespace fence {
+	/**
+	 * Limits normalized language values to the supported Prism identifiers.
+	 */
 	export type SupportedLanguage = z.output<typeof LanguageAliasesSchema>[keyof z.infer<
 		typeof LanguageAliasesSchema
 	>];
 }
 
+/**
+ * Transforms Markdoc fence nodes into `Fence` tags for client renderers.
+ */
 export const fence = {
 	attributes: {
 		language: { type: String, default: "plain" },
@@ -59,6 +74,9 @@ export const fence = {
 		title: { type: String },
 	},
 
+	/**
+	 * Normalizes fence attributes and applies Prism highlighting when available.
+	 */
 	transform(node) {
 		let parsed = AttributesSchema.parse({
 			content: node.children?.[0]?.attributes?.content ?? "",
@@ -81,6 +99,12 @@ export const fence = {
 	},
 } satisfies Schema;
 
+/**
+ * Normalizes user-provided language names to the Prism identifiers used by fences.
+ *
+ * @param language - Raw language value from markdown
+ * @returns Normalized language identifier used for highlighting
+ */
 export function normalizeLanguage(language: string): fence.SupportedLanguage {
 	let lang = language.toLowerCase() as keyof z.input<typeof LanguageAliasesSchema>;
 	let result = LanguageAliasesSchema.shape[lang];

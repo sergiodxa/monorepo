@@ -3,12 +3,23 @@ import { Button } from "@pkg/ui";
 import { CheckIcon, CopyIcon } from "lucide-react";
 import { useEffect } from "react";
 
+/**
+ * Groups copy button types under the component namespace.
+ */
 export namespace CopyButton {
+	/**
+	 * Identifies the rendered code element whose text should be copied.
+	 */
 	export interface Props {
 		targetId: string;
 	}
 }
 
+/**
+ * Copies the text content of a rendered code block and shows transient feedback.
+ *
+ * @param props - Target element identifier for the rendered code block
+ */
 export function CopyButton({ targetId }: CopyButton.Props) {
 	let { status, write, reset } = useClipboard();
 

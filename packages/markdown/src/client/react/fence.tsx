@@ -1,6 +1,12 @@
 import { CopyButton } from "./copy-button.js";
 
+/**
+ * Groups React code fence types under the component namespace.
+ */
 export namespace Fence {
+	/**
+	 * Describes the highlighted code block and optional header metadata.
+	 */
 	export interface Props {
 		content: string;
 		language: string;
@@ -10,6 +16,11 @@ export namespace Fence {
 	}
 }
 
+/**
+ * Renders a highlighted code block with optional metadata and copy controls.
+ *
+ * @param props - Highlighted code content and optional fence metadata
+ */
 export function Fence({ content, language, path, title, copyId }: Fence.Props) {
 	let hasHeader = Boolean(path || title);
 

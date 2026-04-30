@@ -1,6 +1,13 @@
 /* @jsxImportSource remix/component */
 import { css } from "remix/component";
+
+/**
+ * Groups Remix code fence types under the component namespace.
+ */
 export namespace Fence {
+	/**
+	 * Describes the highlighted code block and optional header metadata.
+	 */
 	export interface Props {
 		content: string;
 		language: string;
@@ -9,6 +16,9 @@ export namespace Fence {
 	}
 }
 
+/**
+ * Creates a Remix renderer for highlighted code fences.
+ */
 export function Fence() {
 	return ({ content, language, path, title }: Fence.Props) => {
 		let hasHeader = Boolean(path || title);
