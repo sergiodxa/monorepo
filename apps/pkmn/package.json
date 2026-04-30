@@ -1,0 +1,12 @@
+{
+	"name": "@apps/pkmn",
+	"private": true,
+	"type": "module",
+	"scripts": {},
+	"dependencies": {},
+	"devDependencies": {
+		"@total-typescript/ts-reset": "^0.6.1",
+		"@types/node": "^25.5.2",
+		"typescript": "^6.0.2"
+	}
+}

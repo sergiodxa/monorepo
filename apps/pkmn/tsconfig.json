@@ -1,0 +1,15 @@
+{
+	"extends": "../../tsconfig.json",
+	"include": ["src/**/*"],
+	"exclude": ["src/domain/idea.ts"],
+	"compilerOptions": {
+		"noEmit": true,
+		"ignoreDeprecations": "6.0",
+		"types": ["@types/bun"],
+		"baseUrl": ".",
+		"rootDirs": ["."],
+		"paths": {
+			"~/*": ["./src/*"]
+		}
+	}
+}
