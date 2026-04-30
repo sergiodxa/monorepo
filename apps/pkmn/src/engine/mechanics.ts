@@ -25,32 +25,47 @@ export function getCreatureNature(gameData: GameData, creature: Creature) {
 /** Computes a creature level from its current experience and growth rate. */
 export function getCreatureLevel(gameData: GameData, creature: Creature): number {
 	let { growthRate } = getCreatureSpecies(gameData, creature);
+
+	for (let level = LEVEL_CAP; level > 1; level -= 1) {
+		if (creature.experience >= getExperienceForLevel(growthRate, level)) return level;
+	}
+
+	return 1;
+}
+
+/** Returns the total experience required for a growth rate at a given level. */
+export function getExperienceForLevel(growthRate: GrowthRate, level: number): number {
+	let normalizedLevel = Math.max(1, Math.min(level, LEVEL_CAP));
+	if (normalizedLevel === 1) return 0;
+
 	switch (growthRate) {
 		case GrowthRate.Fast: {
-			return Math.min(LEVEL_CAP, Math.floor(Math.cbrt(creature.experience) * 5));
+			return Math.floor((4 * normalizedLevel ** 3) / 5);
 		}
 		case GrowthRate.MediumFast: {
-			return Math.min(LEVEL_CAP, Math.floor(Math.sqrt(creature.experience) * 10));
+			return normalizedLevel ** 3;
 		}
 		case GrowthRate.MediumSlow: {
-			return Math.min(LEVEL_CAP, Math.floor(Math.sqrt(creature.experience) * 10));
+			return Math.floor(
+				(6 * normalizedLevel ** 3) / 5 - 15 * normalizedLevel ** 2 + 100 * normalizedLevel - 140,
+			);
 		}
 		case GrowthRate.Slow: {
-			return Math.min(LEVEL_CAP, Math.floor(Math.cbrt(creature.experience) * 5));
+			return Math.floor((5 * normalizedLevel ** 3) / 4);
 		}
 		case GrowthRate.Fluctuating: {
-			if (creature.experience < 500000) {
-				return Math.min(LEVEL_CAP, Math.floor(Math.sqrt(creature.experience) * 10));
+			if (normalizedLevel <= 15) {
+				return Math.floor((normalizedLevel ** 3 * (normalizedLevel + 73)) / 150);
 			}
 
-			if (creature.experience < 1000000) {
-				return Math.min(LEVEL_CAP, Math.floor(Math.sqrt(creature.experience) * 10));
+			if (normalizedLevel <= 36) {
+				return Math.floor((normalizedLevel ** 3 * (normalizedLevel + 14)) / 50);
 			}
 
-			return Math.min(LEVEL_CAP, Math.floor(Math.sqrt(creature.experience) * 10));
+			return Math.floor((normalizedLevel ** 3 * (normalizedLevel + 64)) / 100);
 		}
 		default: {
-			throw new Error(`Unknown growth rate: ${growthRate}`);
+			throw new RangeError(`Unknown growth rate: ${growthRate}`);
 		}
 	}
 }

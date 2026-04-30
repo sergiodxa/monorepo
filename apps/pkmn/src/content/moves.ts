@@ -234,7 +234,7 @@ export const MOVES = {
 		power: 0,
 		accuracy: 90,
 		pp: 10,
-		effect: { kind: "none" },
+		effect: { kind: "leech-seed" },
 	},
 	SOLAR_BEAM: {
 		type: Type.GRASS,
