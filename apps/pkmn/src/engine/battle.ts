@@ -1,5 +1,11 @@
 import type { GameData } from "../domain/game-data";
-import type { BattleStatStage, Move, MoveEffect } from "../domain/move";
+import type {
+	BattleStatStage,
+	BuiltInMoveEffect,
+	Move,
+	MoveEffect,
+	PluginMoveEffect,
+} from "../domain/move";
 
 import { Class, StatusEffectType } from "../domain/move";
 import { Stat } from "../domain/stat";
@@ -29,6 +35,42 @@ interface ReplacementSelection {
 	team: number;
 	choices: number[];
 }
+
+interface BattlePluginEffectContext {
+	battle: Battle;
+	user: CombatantState;
+	userPosition: BattlePosition;
+	target: CombatantState;
+	targetPosition: BattlePosition;
+	move: Move;
+	state: BattleState;
+	random(): number;
+	flatten(effect: MoveEffect): MoveEffect[];
+	applyDamage(target: CombatantState, position: BattlePosition, damage: number): BattleEvent[];
+	applyAttackDamage(
+		target: CombatantState,
+		position: BattlePosition,
+		damage: number,
+	): BattleEvent[];
+	applyStatChange(
+		target: CombatantState,
+		position: BattlePosition,
+		stat: BattleStatStage,
+		stages: number,
+	): BattleEvent[];
+	applyStatus(
+		target: CombatantState,
+		position: BattlePosition,
+		status: StatusEffectType,
+		chance?: number,
+	): BattleEvent[];
+	emit(event: BattleEvent): void;
+}
+
+type BattlePluginEffectHandler = (
+	effect: PluginMoveEffect,
+	context: BattlePluginEffectContext,
+) => void | BattleEvent[];
 
 interface MoveEffectHandlerMap {
 	none(
@@ -323,6 +365,7 @@ export namespace Battle {
 		gameData: GameData;
 		sides: [SideArguments, SideArguments];
 		slots?: 1 | 2 | 3;
+		effectPlugins?: Record<string, BattlePluginEffectHandler>;
 		random?(): number;
 	}
 }
@@ -348,6 +391,7 @@ export class Battle {
 	};
 
 	private readonly gameData: GameData;
+	private readonly effectPlugins: Record<string, BattlePluginEffectHandler>;
 	private readonly random: () => number;
 	private pendingReplacementRequests: ReplacementSelection[] = [];
 
@@ -358,6 +402,7 @@ export class Battle {
 		let slots = args.slots ?? 1;
 
 		this.gameData = args.gameData;
+		this.effectPlugins = args.effectPlugins ?? {};
 		this.random = args.random ?? Math.random;
 		this.state = {
 			turn: 0,
@@ -635,7 +680,7 @@ export class Battle {
 			target: targetPosition,
 		});
 
-		let chargeEffect = effects.find((effect) => effect.kind === "charge");
+		let chargeEffect = this.findEffect(effects, "charge");
 		if (chargeEffect?.kind === "charge" && isChargingRelease === false) {
 			this.applyChargeEffect(user, chargeEffect);
 			user.volatile.chargingMoveId = moveId;
@@ -669,7 +714,14 @@ export class Battle {
 		}
 
 		for (let effect of effects) {
-			for (let event of this.resolveEffect(user, userPosition, target, targetPosition, effect)) {
+			for (let event of this.resolveEffect(
+				user,
+				userPosition,
+				target,
+				targetPosition,
+				move,
+				effect,
+			)) {
 				events.push(event);
 			}
 		}
@@ -692,8 +744,23 @@ export class Battle {
 		userPosition: BattlePosition,
 		target: CombatantState,
 		targetPosition: BattlePosition,
+		move: Move,
 		effect: MoveEffect,
 	): Generator<BattleEvent, void, void> {
+		if (this.isBuiltInEffect(effect) === false) {
+			for (let event of this.resolvePluginEffect(
+				effect,
+				user,
+				userPosition,
+				target,
+				targetPosition,
+				move,
+			)) {
+				yield event;
+			}
+			return;
+		}
+
 		switch (effect.kind) {
 			case "none": {
 				for (let event of this.effectHandlers.none(user, target, effect)) yield event;
@@ -706,6 +773,7 @@ export class Battle {
 						userPosition,
 						target,
 						targetPosition,
+						move,
 						nested,
 					)) {
 						yield event;
@@ -1168,7 +1236,7 @@ export class Battle {
 
 	private getMovePriority(move: Move): number {
 		for (let effect of this.flattenEffects(move.effect)) {
-			if (effect.kind === "priority") return effect.value;
+			if (this.hasEffectKind(effect, "priority")) return effect.value;
 			if (effect.kind === "protect") return 4;
 		}
 		return 0;
@@ -1275,7 +1343,7 @@ export class Battle {
 	}
 
 	private flattenEffects(effect: MoveEffect): MoveEffect[] {
-		if (effect.kind !== "compound") return [effect];
+		if (this.isBuiltInEffect(effect) === false || effect.kind !== "compound") return [effect];
 
 		let flattened: MoveEffect[] = [];
 		for (let nested of effect.effects) {
@@ -1285,6 +1353,100 @@ export class Battle {
 		}
 
 		return flattened;
+	}
+
+	private isBuiltInEffect(effect: MoveEffect): effect is BuiltInMoveEffect {
+		switch (effect.kind) {
+			case "none":
+			case "compound":
+			case "priority":
+			case "trap":
+			case "partial-trap":
+			case "confuse":
+			case "flinch":
+			case "protect":
+			case "multi-hit":
+			case "ohko":
+			case "fixed-damage":
+			case "recoil":
+			case "modify-stat":
+			case "side-effect":
+			case "field-effect":
+			case "apply-status":
+			case "leech-seed":
+			case "charge": {
+				return true;
+			}
+			default: {
+				return false;
+			}
+		}
+	}
+
+	private isPluginEffect(effect: MoveEffect): effect is PluginMoveEffect {
+		return Object.hasOwn(this.effectPlugins, effect.kind);
+	}
+
+	private *resolvePluginEffect(
+		effect: PluginMoveEffect,
+		user: CombatantState,
+		userPosition: BattlePosition,
+		target: CombatantState,
+		targetPosition: BattlePosition,
+		move: Move,
+	): Generator<BattleEvent, void, void> {
+		let handler = this.effectPlugins[effect.kind];
+		if (!handler) return;
+
+		let emitted: BattleEvent[] = [];
+		let context: BattlePluginEffectContext = {
+			battle: this,
+			user,
+			userPosition,
+			target,
+			targetPosition,
+			move,
+			state: this.state,
+			random: () => this.random(),
+			flatten: (nested) => this.flattenEffects(nested),
+			applyDamage: (combatant, position, damage) => {
+				let events: BattleEvent[] = [];
+				this.applyDamage(combatant, position, damage, events);
+				return events;
+			},
+			applyAttackDamage: (combatant, position, damage) => {
+				let events: BattleEvent[] = [];
+				this.applyAttackDamage(combatant, position, damage, events);
+				return events;
+			},
+			applyStatChange: (combatant, position, stat, stages) => {
+				let current = combatant.statStages[stat];
+				let value = Math.max(-6, Math.min(6, current + stages));
+				combatant.statStages[stat] = value;
+				return [{ type: "stat-stage-changed", target: position, stat, stages, value }];
+			},
+			applyStatus: (combatant, position, status, chance = 1) => {
+				let events: BattleEvent[] = [];
+				for (let applied of this.applyStatusEffect(combatant, {
+					kind: "apply-status",
+					status,
+					chance,
+				})) {
+					events.push({ type: "status-applied", target: position, status: applied });
+				}
+				return events;
+			},
+			emit: (event) => {
+				emitted.push(event);
+			},
+		};
+
+		let result = handler(effect, context);
+		if (Array.isArray(result)) {
+			for (let event of result) emitted.push(event);
+		}
+
+		for (let event of emitted) yield event;
 	}
 
 	private resolveBeforeMove(
@@ -1342,8 +1504,8 @@ export class Battle {
 		damageDealt: number,
 		events: BattleEvent[],
 	) {
-		let recoil = effects.find((effect) => effect.kind === "recoil");
-		if (!recoil || recoil.kind !== "recoil" || damageDealt === 0) return;
+		let recoil = this.findEffect(effects, "recoil");
+		if (!recoil || damageDealt === 0) return;
 
 		let damage = Math.max(1, Math.floor(damageDealt * recoil.ratio));
 		this.applyDamage(user, userPosition, damage, events);
@@ -1393,8 +1555,8 @@ export class Battle {
 	}
 
 	private getMoveHitCount(effects: MoveEffect[]): number {
-		let multiHit = effects.find((effect) => effect.kind === "multi-hit");
-		if (!multiHit || multiHit.kind !== "multi-hit") return 1;
+		let multiHit = this.findEffect(effects, "multi-hit");
+		if (!multiHit) return 1;
 		if (typeof multiHit.hits === "number") return multiHit.hits;
 
 		let [min, max] = multiHit.hits;
@@ -1409,18 +1571,36 @@ export class Battle {
 		effects: MoveEffect[],
 		events: BattleEvent[],
 	): number {
-		let ohko = effects.find((effect) => effect.kind === "ohko");
-		if (ohko && ohko.kind === "ohko") {
+		let ohko = this.findEffect(effects, "ohko");
+		if (ohko) {
 			return this.getRemainingHP(target);
 		}
 
-		let fixedDamage = effects.find((effect) => effect.kind === "fixed-damage");
-		if (fixedDamage && fixedDamage.kind === "fixed-damage") {
+		let fixedDamage = this.findEffect(effects, "fixed-damage");
+		if (fixedDamage) {
 			return fixedDamage.value;
 		}
 
 		let effectiveness = this.getTypeEffectiveness(target, move);
 		return this.calculateDamage(user, target, targetPosition, move, effectiveness, events);
+	}
+
+	private hasEffectKind<TKind extends BuiltInMoveEffect["kind"]>(
+		effect: MoveEffect,
+		kind: TKind,
+	): effect is Extract<BuiltInMoveEffect, { kind: TKind }> {
+		return this.isBuiltInEffect(effect) && effect.kind === kind;
+	}
+
+	private findEffect<TKind extends BuiltInMoveEffect["kind"]>(
+		effects: MoveEffect[],
+		kind: TKind,
+	): Extract<BuiltInMoveEffect, { kind: TKind }> | null {
+		for (let effect of effects) {
+			if (this.hasEffectKind(effect, kind)) return effect;
+		}
+
+		return null;
 	}
 
 	private applyDamage(
