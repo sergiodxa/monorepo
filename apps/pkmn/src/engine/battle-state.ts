@@ -1,14 +1,20 @@
+import type { BattleStatStage } from "../domain/move";
+
 import { Stat } from "../domain/stat";
 
 /** Battle-only effects that apply to one active combatant and clear on switch. */
 export interface CombatantVolatileState {
 	seeded: boolean;
 	trapped: boolean;
+	seededBy: number | null;
 	confusionTurns: number;
+	invulnerable: boolean;
 	flinched: boolean;
 	protecting: boolean;
 	partiallyTrappedTurns: number;
+	partialTrapSourceSide: number | null;
 	charging: boolean;
+	chargingMoveId: string | null;
 	recharging: boolean;
 	identified: boolean;
 	attracted: boolean;
@@ -19,7 +25,7 @@ export interface CombatantVolatileState {
 }
 
 /** Temporary stat stage changes applied during battle. */
-export type StatStageState = Record<Exclude<Stat, Stat.HP>, number>;
+export type StatStageState = Record<BattleStatStage, number>;
 
 /** Side-wide battle effects shared by one side. */
 export interface SideEffectState {
@@ -52,11 +58,15 @@ export function createCombatantVolatileState(): CombatantVolatileState {
 	return {
 		seeded: false,
 		trapped: false,
+		seededBy: null,
 		confusionTurns: 0,
+		invulnerable: false,
 		flinched: false,
 		protecting: false,
 		partiallyTrappedTurns: 0,
+		partialTrapSourceSide: null,
 		charging: false,
+		chargingMoveId: null,
 		recharging: false,
 		identified: false,
 		attracted: false,
@@ -75,6 +85,8 @@ export function createStatStageState(): StatStageState {
 		[Stat.SpecialAttack]: 0,
 		[Stat.SpecialDefense]: 0,
 		[Stat.Speed]: 0,
+		accuracy: 0,
+		evasion: 0,
 	};
 }
 

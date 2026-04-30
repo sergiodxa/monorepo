@@ -18,13 +18,23 @@ export enum Class {
 	Status = "status",
 }
 
+/** Mutable battle stat stages that moves can raise or lower. */
+export type BattleStatStage = Exclude<Stat, Stat.HP> | "accuracy" | "evasion";
+
 export type MoveEffect =
 	| { kind: "none" }
+	| { kind: "compound"; effects: MoveEffect[] }
 	| { kind: "priority"; value: number }
 	| { kind: "trap" }
+	| { kind: "partial-trap"; turns: number }
 	| { kind: "confuse"; turns: number }
+	| { kind: "flinch"; chance: number }
 	| { kind: "protect" }
-	| { kind: "modify-stat"; stat: Exclude<Stat, Stat.HP>; stages: number; target: "self" | "target" }
+	| { kind: "multi-hit"; hits: number | [number, number] }
+	| { kind: "ohko" }
+	| { kind: "fixed-damage"; value: number }
+	| { kind: "recoil"; ratio: number }
+	| { kind: "modify-stat"; stat: BattleStatStage; stages: number; target: "self" | "target" }
 	| {
 			kind: "side-effect";
 			effect: "reflect" | "light-screen" | "tailwind";
@@ -34,7 +44,7 @@ export type MoveEffect =
 	| { kind: "field-effect"; effect: "trick-room"; turns: number }
 	| { kind: "apply-status"; status: StatusEffectType; chance: number }
 	| { kind: "leech-seed" }
-	| { kind: "charge" };
+	| { kind: "charge"; invulnerable?: boolean };
 
 export function isStatusEffectType(value: unknown): value is StatusEffectType {
 	return (

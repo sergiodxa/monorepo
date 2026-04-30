@@ -15,11 +15,15 @@ test("createCombatantVolatileState starts with no active combatant effects", () 
 	expect(state).toEqual({
 		seeded: false,
 		trapped: false,
+		seededBy: null,
 		confusionTurns: 0,
+		invulnerable: false,
 		flinched: false,
 		protecting: false,
 		partiallyTrappedTurns: 0,
+		partialTrapSourceSide: null,
 		charging: false,
+		chargingMoveId: null,
 		recharging: false,
 		identified: false,
 		attracted: false,
@@ -39,6 +43,8 @@ test("createStatStageState starts every mutable stat at neutral", () => {
 		[Stat.SpecialAttack]: 0,
 		[Stat.SpecialDefense]: 0,
 		[Stat.Speed]: 0,
+		accuracy: 0,
+		evasion: 0,
 	});
 });
 

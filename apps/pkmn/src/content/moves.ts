@@ -27,7 +27,7 @@ export const MOVES = {
 		power: 15,
 		accuracy: 85,
 		pp: 10,
-		effect: { kind: "none" },
+		effect: { kind: "multi-hit", hits: [2, 5] },
 	},
 	COMET_PUNCH: {
 		type: Type.NORMAL,
@@ -35,7 +35,7 @@ export const MOVES = {
 		power: 18,
 		accuracy: 85,
 		pp: 15,
-		effect: { kind: "none" },
+		effect: { kind: "multi-hit", hits: [2, 5] },
 	},
 	MEGA_PUNCH: {
 		type: Type.NORMAL,
@@ -59,7 +59,7 @@ export const MOVES = {
 		power: 75,
 		accuracy: 100,
 		pp: 15,
-		effect: { kind: "none" },
+		effect: { kind: "apply-status", status: StatusEffectType.Burn, chance: 0.1 },
 	},
 	ICE_PUNCH: {
 		type: Type.ICE,
@@ -67,7 +67,7 @@ export const MOVES = {
 		power: 75,
 		accuracy: 100,
 		pp: 15,
-		effect: { kind: "none" },
+		effect: { kind: "apply-status", status: StatusEffectType.Freeze, chance: 0.1 },
 	},
 	THUNDER_PUNCH: {
 		type: Type.ELECTRIC,
@@ -75,7 +75,7 @@ export const MOVES = {
 		power: 75,
 		accuracy: 100,
 		pp: 15,
-		effect: { kind: "none" },
+		effect: { kind: "apply-status", status: StatusEffectType.Paralysis, chance: 0.1 },
 	},
 	SCRATCH: {
 		type: Type.NORMAL,
@@ -91,7 +91,7 @@ export const MOVES = {
 		power: 65,
 		accuracy: 100,
 		pp: 20,
-		effect: { kind: "none" },
+		effect: { kind: "flinch", chance: 0.3 },
 	},
 	DOUBLE_KICK: {
 		type: Type.FIGHTING,
@@ -99,7 +99,7 @@ export const MOVES = {
 		power: 30,
 		accuracy: 100,
 		pp: 30,
-		effect: { kind: "none" },
+		effect: { kind: "multi-hit", hits: 2 },
 	},
 	TACKLE: {
 		type: Type.NORMAL,
@@ -123,7 +123,7 @@ export const MOVES = {
 		power: 85,
 		accuracy: 100,
 		pp: 15,
-		effect: { kind: "none" },
+		effect: { kind: "apply-status", status: StatusEffectType.Paralysis, chance: 0.3 },
 	},
 	WRAP: {
 		type: Type.NORMAL,
@@ -131,7 +131,7 @@ export const MOVES = {
 		power: 15,
 		accuracy: 90,
 		pp: 20,
-		effect: { kind: "none" },
+		effect: { kind: "partial-trap", turns: 4 },
 	},
 	TAKE_DOWN: {
 		type: Type.NORMAL,
@@ -139,7 +139,7 @@ export const MOVES = {
 		power: 90,
 		accuracy: 85,
 		pp: 20,
-		effect: { kind: "none" },
+		effect: { kind: "recoil", ratio: 0.25 },
 	},
 	THRASH: {
 		type: Type.NORMAL,
@@ -155,7 +155,7 @@ export const MOVES = {
 		power: 120,
 		accuracy: 100,
 		pp: 15,
-		effect: { kind: "none" },
+		effect: { kind: "recoil", ratio: 1 / 3 },
 	},
 	TAIL_WHIP: {
 		type: Type.NORMAL,
@@ -171,7 +171,7 @@ export const MOVES = {
 		power: 15,
 		accuracy: 100,
 		pp: 35,
-		effect: { kind: "none" },
+		effect: { kind: "apply-status", status: StatusEffectType.Poison, chance: 0.3 },
 	},
 	TWINEEDLE: {
 		type: Type.BUG,
@@ -179,7 +179,13 @@ export const MOVES = {
 		power: 25,
 		accuracy: 100,
 		pp: 20,
-		effect: { kind: "none" },
+		effect: {
+			kind: "compound",
+			effects: [
+				{ kind: "multi-hit", hits: 2 },
+				{ kind: "apply-status", status: StatusEffectType.Poison, chance: 0.2 },
+			],
+		},
 	},
 	PIN_MISSILE: {
 		type: Type.BUG,
@@ -187,7 +193,7 @@ export const MOVES = {
 		power: 25,
 		accuracy: 95,
 		pp: 20,
-		effect: { kind: "none" },
+		effect: { kind: "multi-hit", hits: [2, 5] },
 	},
 	LEER: {
 		type: Type.NORMAL,
@@ -195,7 +201,7 @@ export const MOVES = {
 		power: 0,
 		accuracy: 100,
 		pp: 30,
-		effect: { kind: "none" },
+		effect: { kind: "modify-stat", stat: Stat.Defense, stages: -1, target: "target" },
 	},
 	BITE: {
 		type: Type.DARK,
@@ -203,7 +209,7 @@ export const MOVES = {
 		power: 60,
 		accuracy: 100,
 		pp: 25,
-		effect: { kind: "none" },
+		effect: { kind: "flinch", chance: 0.3 },
 	},
 	GROWL: {
 		type: Type.NORMAL,
@@ -269,6 +275,14 @@ export const MOVES = {
 		pp: 20,
 		effect: { kind: "side-effect", effect: "reflect", turns: 5, target: "self" },
 	},
+	LIGHT_SCREEN: {
+		type: Type.PSYCHIC,
+		class: Class.Status,
+		power: 0,
+		accuracy: 0,
+		pp: 30,
+		effect: { kind: "side-effect", effect: "light-screen", turns: 5, target: "self" },
+	},
 	TAILWIND: {
 		type: Type.FLYING,
 		class: Class.Status,
@@ -299,7 +313,7 @@ export const MOVES = {
 		power: 120,
 		accuracy: 100,
 		pp: 10,
-		effect: { kind: "none" },
+		effect: { kind: "charge", invulnerable: false },
 	},
 	SLEEP_POWDER: {
 		type: Type.GRASS,
@@ -307,7 +321,7 @@ export const MOVES = {
 		power: 0,
 		accuracy: 75,
 		pp: 15,
-		effect: { kind: "none" },
+		effect: { kind: "apply-status", status: StatusEffectType.Sleep, chance: 1 },
 	},
 	PETAL_DANCE: {
 		type: Type.GRASS,
@@ -331,7 +345,7 @@ export const MOVES = {
 		power: 0,
 		accuracy: 100,
 		pp: 10,
-		effect: { kind: "none" },
+		effect: { kind: "fixed-damage", value: 40 },
 	},
 	FIRE_SPIN: {
 		type: Type.FIRE,
@@ -339,7 +353,7 @@ export const MOVES = {
 		power: 15,
 		accuracy: 70,
 		pp: 15,
-		effect: { kind: "none" },
+		effect: { kind: "partial-trap", turns: 4 },
 	},
 	THUNDER_SHOCK: {
 		type: Type.ELECTRIC,
@@ -347,7 +361,7 @@ export const MOVES = {
 		power: 40,
 		accuracy: 100,
 		pp: 30,
-		effect: { kind: "none" },
+		effect: { kind: "apply-status", status: StatusEffectType.Paralysis, chance: 0.1 },
 	},
 	SLAM: {
 		type: Type.NORMAL,
@@ -379,7 +393,7 @@ export const MOVES = {
 		power: 60,
 		accuracy: 85,
 		pp: 15,
-		effect: { kind: "none" },
+		effect: { kind: "flinch", chance: 0.3 },
 	},
 	SAND_ATTACK: {
 		type: Type.GROUND,
@@ -387,7 +401,7 @@ export const MOVES = {
 		power: 0,
 		accuracy: 100,
 		pp: 15,
-		effect: { kind: "none" },
+		effect: { kind: "modify-stat", stat: "accuracy", stages: -1, target: "target" },
 	},
 	HEADBUTT: {
 		type: Type.NORMAL,
@@ -395,7 +409,7 @@ export const MOVES = {
 		power: 70,
 		accuracy: 100,
 		pp: 15,
-		effect: { kind: "none" },
+		effect: { kind: "flinch", chance: 0.3 },
 	},
 	HORN_ATTACK: {
 		type: Type.NORMAL,
@@ -411,7 +425,7 @@ export const MOVES = {
 		power: 15,
 		accuracy: 85,
 		pp: 20,
-		effect: { kind: "none" },
+		effect: { kind: "multi-hit", hits: [2, 5] },
 	},
 	HORN_DRILL: {
 		type: Type.NORMAL,
@@ -419,7 +433,7 @@ export const MOVES = {
 		power: 0,
 		accuracy: 30,
 		pp: 5,
-		effect: { kind: "none" },
+		effect: { kind: "ohko" },
 	},
 	POISON_POWDER: {
 		type: Type.POISON,
@@ -427,7 +441,7 @@ export const MOVES = {
 		power: 0,
 		accuracy: 75,
 		pp: 35,
-		effect: { kind: "none" },
+		effect: { kind: "apply-status", status: StatusEffectType.Poison, chance: 1 },
 	},
 	CUT: {
 		type: Type.NORMAL,
@@ -443,7 +457,7 @@ export const MOVES = {
 		power: 90,
 		accuracy: 95,
 		pp: 15,
-		effect: { kind: "charge" },
+		effect: { kind: "charge", invulnerable: true },
 	},
 	SURF: {
 		type: Type.WATER,
@@ -467,7 +481,7 @@ export const MOVES = {
 		power: 0,
 		accuracy: 100,
 		pp: 20,
-		effect: { kind: "none" },
+		effect: { kind: "modify-stat", stat: "accuracy", stages: -1, target: "target" },
 	},
 	EMBER: {
 		type: Type.FIRE,
@@ -483,7 +497,7 @@ export const MOVES = {
 		power: 0,
 		accuracy: 100,
 		pp: 20,
-		effect: { kind: "none" },
+		effect: { kind: "modify-stat", stat: "accuracy", stages: -1, target: "target" },
 	},
 	FIRE_FANG: {
 		type: Type.FIRE,
@@ -491,7 +505,13 @@ export const MOVES = {
 		power: 65,
 		accuracy: 95,
 		pp: 15,
-		effect: { kind: "none" },
+		effect: {
+			kind: "compound",
+			effects: [
+				{ kind: "apply-status", status: StatusEffectType.Burn, chance: 0.1 },
+				{ kind: "flinch", chance: 0.1 },
+			],
+		},
 	},
 	FLAMETHROWER: {
 		type: Type.FIRE,

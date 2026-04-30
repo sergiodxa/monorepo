@@ -1,5 +1,5 @@
 import type { GameData } from "../domain/game-data";
-import type { Move, MoveEffect } from "../domain/move";
+import type { BattleStatStage, Move, MoveEffect } from "../domain/move";
 
 import { Class, StatusEffectType } from "../domain/move";
 import { Stat } from "../domain/stat";
@@ -20,6 +20,7 @@ interface TurnAction {
 	move: Move;
 	priority: number;
 	speed: number;
+	isChargingRelease: boolean;
 }
 
 interface ReplacementSelection {
@@ -45,10 +46,20 @@ interface MoveEffectHandlerMap {
 		target: CombatantState,
 		effect: Extract<MoveEffect, { kind: "trap" }>,
 	): BattleEvent[];
+	"partial-trap"(
+		user: CombatantState,
+		target: CombatantState,
+		effect: Extract<MoveEffect, { kind: "partial-trap" }>,
+	): BattleEvent[];
 	confuse(
 		user: CombatantState,
 		target: CombatantState,
 		effect: Extract<MoveEffect, { kind: "confuse" }>,
+	): BattleEvent[];
+	flinch(
+		user: CombatantState,
+		target: CombatantState,
+		effect: Extract<MoveEffect, { kind: "flinch" }>,
 	): BattleEvent[];
 	protect(
 		user: CombatantState,
@@ -178,6 +189,13 @@ export namespace BattleEvent {
 		remainingHP: number;
 	}
 
+	/** Reports a move failing to connect. */
+	export interface MoveMissedEvent {
+		type: "move-missed";
+		user: BattlePosition;
+		target: BattlePosition;
+	}
+
 	/** Reports a major status applied by a move effect. */
 	export interface StatusAppliedEvent {
 		type: "status-applied";
@@ -189,14 +207,14 @@ export namespace BattleEvent {
 	export interface VolatileAppliedEvent {
 		type: "volatile-applied";
 		target: BattlePosition;
-		effect: "confusion" | "protect" | "trap";
+		effect: "confusion" | "flinch" | "partial-trap" | "protect" | "seed" | "trap";
 	}
 
 	/** Reports a combat stat stage changing during battle. */
 	export interface StatStageChangedEvent {
 		type: "stat-stage-changed";
 		target: BattlePosition;
-		stat: Exclude<Stat, Stat.HP>;
+		stat: BattleStatStage;
 		stages: number;
 		value: number;
 	}
@@ -245,6 +263,7 @@ export type BattleEvent =
 	| BattleEvent.EffectivenessEvent
 	| BattleEvent.CriticalHitEvent
 	| BattleEvent.DamageDealtEvent
+	| BattleEvent.MoveMissedEvent
 	| BattleEvent.StatusAppliedEvent
 	| BattleEvent.VolatileAppliedEvent
 	| BattleEvent.StatStageChangedEvent
@@ -316,14 +335,16 @@ export class Battle {
 		none: () => [],
 		priority: () => [],
 		trap: (_user, target) => this.applyTrapEffect(target),
+		"partial-trap": (user, target, effect) => this.applyPartialTrapEffect(user, target, effect),
 		confuse: (_user, target, effect) => this.applyConfusionEffect(target, effect),
+		flinch: (_user, target, effect) => this.applyFlinchEffect(target, effect),
 		protect: (user) => this.applyProtectEffect(user),
 		"modify-stat": (user, target, effect) => this.applyStatChangeEffect(user, target, effect),
 		"side-effect": (user, target, effect) => this.applySideEffect(user, target, effect),
 		"field-effect": (_user, _target, effect) => this.applyFieldEffect(effect),
 		"apply-status": (_user, target, effect) => this.applyStatusEffect(target, effect),
-		"leech-seed": (_user, target) => this.applyLeechSeedEffect(target),
-		charge: () => [],
+		"leech-seed": (user, target) => this.applyLeechSeedEffect(user, target),
+		charge: (user, _target, effect) => this.applyChargeEffect(user, effect),
 	};
 
 	private readonly gameData: GameData;
@@ -435,7 +456,9 @@ export class Battle {
 				yield event;
 			}
 
-			this.reconcileAfterTurn();
+			for (let event of this.reconcileAfterTurn()) {
+				yield event;
+			}
 			yield { type: "turn-ended", turn: this.state.turn };
 
 			if (this.state.winnerSide !== null) {
@@ -505,20 +528,15 @@ export class Battle {
 
 			let target = this.getActiveCombatant(action.command.target);
 			if (target === null) continue;
-
-			yield {
-				type: "move-used",
-				user: action.userPosition,
-				moveId: action.moveId,
-				target: action.command.target,
-			};
-
+			if (this.canMoveHitTarget(action.move, target.combatant) === false) continue;
 			for (let event of this.resolveMove(
 				action.user,
 				action.userPosition,
 				action.command.target,
 				target.combatant,
 				action.move,
+				action.moveId,
+				action.isChargingRelease,
 			)) {
 				yield event;
 			}
@@ -550,6 +568,7 @@ export class Battle {
 					move: this.gameData.moves.get("TACKLE")!,
 					priority: Number.POSITIVE_INFINITY,
 					speed: Number.POSITIVE_INFINITY,
+					isChargingRelease: false,
 				});
 				continue;
 			}
@@ -558,6 +577,8 @@ export class Battle {
 
 			let moveId = active.combatant.creature.moveset[command.move];
 			if (!moveId) continue;
+			let chargingMoveId = active.combatant.volatile.chargingMoveId;
+			if (chargingMoveId !== null) moveId = chargingMoveId;
 
 			let move = this.gameData.moves.get(moveId);
 			if (!move) throw new ReferenceError(`Move ${moveId} not found in game data.`);
@@ -570,6 +591,7 @@ export class Battle {
 				move,
 				priority: this.getMovePriority(move),
 				speed: this.getCombatantSpeed(request, active.combatant),
+				isChargingRelease: chargingMoveId !== null,
 			});
 		}
 
@@ -595,30 +617,66 @@ export class Battle {
 		targetPosition: BattlePosition,
 		target: CombatantState,
 		move: Move,
+		moveId: string,
+		isChargingRelease: boolean,
 	): Generator<BattleEvent, void, void> {
 		let events: BattleEvent[] = [];
+		let effects = this.flattenEffects(move.effect);
 
-		if (user.volatile.confusionTurns > 0) {
-			user.volatile.confusionTurns -= 1;
+		if (this.resolveBeforeMove(user, userPosition, events)) {
+			for (let event of events) yield event;
+			return;
 		}
 
-		if (move.class !== Class.Status && move.power > 0 && target.volatile.protecting === false) {
-			let effectiveness = this.getTypeEffectiveness(target, move);
-			let damage = this.calculateDamage(user, target, targetPosition, move, effectiveness, events);
-			let targetHP = getCreatureStat(this.gameData, target.creature, Stat.HP);
-			let remainingDamage = Math.min(targetHP, target.creature.status.damage + damage);
-			target.creature.status.damage = remainingDamage;
+		events.push({
+			type: "move-used",
+			user: userPosition,
+			moveId,
+			target: targetPosition,
+		});
 
-			events.push({
-				type: "damage-dealt",
-				target: targetPosition,
-				damage,
-				remainingHP: targetHP - target.creature.status.damage,
-			});
+		let chargeEffect = effects.find((effect) => effect.kind === "charge");
+		if (chargeEffect?.kind === "charge" && isChargingRelease === false) {
+			this.applyChargeEffect(user, chargeEffect);
+			user.volatile.chargingMoveId = moveId;
+			for (let event of events) yield event;
+			return;
 		}
 
-		for (let event of this.resolveEffect(user, userPosition, target, targetPosition, move.effect)) {
-			events.push(event);
+		if (chargeEffect?.kind === "charge") {
+			user.volatile.charging = false;
+			user.volatile.invulnerable = false;
+			user.volatile.chargingMoveId = null;
+		}
+
+		if (this.moveCanConnect(user, target, move) === false) {
+			events.push({ type: "move-missed", user: userPosition, target: targetPosition });
+			for (let event of events) yield event;
+			return;
+		}
+
+		if (this.moveDealsDamage(move, effects) && target.volatile.protecting === false) {
+			let damageDealt = this.applyMoveDamage(
+				user,
+				userPosition,
+				target,
+				targetPosition,
+				move,
+				effects,
+				events,
+			);
+			this.applyRecoilDamage(user, userPosition, effects, damageDealt, events);
+		}
+
+		for (let effect of effects) {
+			for (let event of this.resolveEffect(user, userPosition, target, targetPosition, effect)) {
+				events.push(event);
+			}
+		}
+
+		if (this.isCombatantFainted(user)) {
+			this.clearActiveCombatant(userPosition);
+			events.push({ type: "creature-fainted", target: userPosition });
 		}
 
 		if (this.isCombatantFainted(target)) {
@@ -641,6 +699,20 @@ export class Battle {
 				for (let event of this.effectHandlers.none(user, target, effect)) yield event;
 				return;
 			}
+			case "compound": {
+				for (let nested of effect.effects) {
+					for (let event of this.resolveEffect(
+						user,
+						userPosition,
+						target,
+						targetPosition,
+						nested,
+					)) {
+						yield event;
+					}
+				}
+				return;
+			}
 			case "priority": {
 				for (let event of this.effectHandlers.priority(user, target, effect)) yield event;
 				return;
@@ -650,14 +722,32 @@ export class Battle {
 				yield { type: "volatile-applied", target: targetPosition, effect: "trap" };
 				return;
 			}
+			case "partial-trap": {
+				this.effectHandlers["partial-trap"](user, target, effect);
+				yield { type: "volatile-applied", target: targetPosition, effect: "partial-trap" };
+				return;
+			}
 			case "confuse": {
 				this.effectHandlers.confuse(user, target, effect);
 				yield { type: "volatile-applied", target: targetPosition, effect: "confusion" };
 				return;
 			}
+			case "flinch": {
+				let [event] = this.effectHandlers.flinch(user, target, effect);
+				if (!event) return;
+				yield { type: "volatile-applied", target: targetPosition, effect: "flinch" };
+				return;
+			}
 			case "protect": {
 				this.effectHandlers.protect(user, target, effect);
 				yield { type: "volatile-applied", target: userPosition, effect: "protect" };
+				return;
+			}
+			case "multi-hit":
+			case "fixed-damage":
+			case "ohko":
+			case "recoil":
+			case "charge": {
 				return;
 			}
 			case "modify-stat": {
@@ -696,11 +786,9 @@ export class Battle {
 				return;
 			}
 			case "leech-seed": {
-				for (let event of this.effectHandlers["leech-seed"](user, target, effect)) yield event;
-				return;
-			}
-			case "charge": {
-				for (let event of this.effectHandlers.charge(user, target, effect)) yield event;
+				for (let _event of this.effectHandlers["leech-seed"](user, target, effect)) {
+					yield { type: "volatile-applied", target: targetPosition, effect: "seed" };
+				}
 				return;
 			}
 			default: {
@@ -714,7 +802,7 @@ export class Battle {
 		effect: Extract<MoveEffect, { kind: "apply-status" }>,
 	): State[] {
 		if (target.creature.status.state !== null) return [];
-		if (this.random() >= effect.chance) return [];
+		if (effect.chance < 1 && this.random() >= effect.chance) return [];
 
 		let status = this.getPersistentStatus(effect.status);
 		target.creature.status.state = status;
@@ -722,14 +810,26 @@ export class Battle {
 		return [status];
 	}
 
-	private applyLeechSeedEffect(target: CombatantState): BattleEvent[] {
+	private applyLeechSeedEffect(user: CombatantState, target: CombatantState): BattleEvent[] {
 		target.volatile.seeded = true;
-		return [];
+		target.volatile.seededBy = this.getCombatantSide(user);
+		return [{ type: "volatile-applied", target: { side: -1, slot: -1 }, effect: "seed" }];
 	}
 
 	private applyTrapEffect(target: CombatantState): BattleEvent[] {
 		target.volatile.trapped = true;
 		return [{ type: "volatile-applied", target: { side: -1, slot: -1 }, effect: "trap" }];
+	}
+
+	private applyPartialTrapEffect(
+		user: CombatantState,
+		target: CombatantState,
+		effect: Extract<MoveEffect, { kind: "partial-trap" }>,
+	): BattleEvent[] {
+		target.volatile.trapped = true;
+		target.volatile.partiallyTrappedTurns = effect.turns;
+		target.volatile.partialTrapSourceSide = this.getCombatantSide(user);
+		return [{ type: "volatile-applied", target: { side: -1, slot: -1 }, effect: "partial-trap" }];
 	}
 
 	private applyConfusionEffect(
@@ -738,6 +838,15 @@ export class Battle {
 	): BattleEvent[] {
 		target.volatile.confusionTurns = effect.turns;
 		return [{ type: "volatile-applied", target: { side: -1, slot: -1 }, effect: "confusion" }];
+	}
+
+	private applyFlinchEffect(
+		_target: CombatantState,
+		effect: Extract<MoveEffect, { kind: "flinch" }>,
+	): BattleEvent[] {
+		if (this.random() >= effect.chance) return [];
+		_target.volatile.flinched = true;
+		return [{ type: "volatile-applied", target: { side: -1, slot: -1 }, effect: "flinch" }];
 	}
 
 	private applyProtectEffect(user: CombatantState): BattleEvent[] {
@@ -803,6 +912,15 @@ export class Battle {
 		return [{ type: "field-effect-applied", effect: effect.effect, turns: effect.turns }];
 	}
 
+	private applyChargeEffect(
+		user: CombatantState,
+		effect: Extract<MoveEffect, { kind: "charge" }>,
+	): BattleEvent[] {
+		user.volatile.charging = true;
+		user.volatile.invulnerable = effect.invulnerable ?? true;
+		return [];
+	}
+
 	private getPersistentStatus(status: StatusEffectType): State {
 		switch (status) {
 			case StatusEffectType.Burn: {
@@ -826,7 +944,8 @@ export class Battle {
 		}
 	}
 
-	private reconcileAfterTurn() {
+	private *reconcileAfterTurn(): Generator<BattleEvent, void, void> {
+		for (let event of this.applyEndOfTurnEffects()) yield event;
 		this.tickTurnEffects();
 		this.pendingReplacementRequests = [];
 		this.reconcileSideState(0);
@@ -1048,9 +1167,17 @@ export class Battle {
 	}
 
 	private getMovePriority(move: Move): number {
-		if (move.effect.kind === "priority") return move.effect.value;
-		if (move.effect.kind === "protect") return 4;
+		for (let effect of this.flattenEffects(move.effect)) {
+			if (effect.kind === "priority") return effect.value;
+			if (effect.kind === "protect") return 4;
+		}
 		return 0;
+	}
+
+	private canMoveHitTarget(move: Move, target: CombatantState): boolean {
+		if (target.volatile.invulnerable === false) return true;
+		if (move.effect.kind === "charge") return true;
+		return false;
 	}
 
 	private getCombatantSide(combatant: CombatantState): number {
@@ -1067,6 +1194,10 @@ export class Battle {
 		let speed = getCreatureStat(this.gameData, combatant.creature, Stat.Speed);
 		speed = Math.floor(speed * this.getStageModifier(combatant.statStages[Stat.Speed]));
 
+		if (combatant.creature.status.state === State.Paralyzed) {
+			speed = Math.floor(speed * 0.5);
+		}
+
 		if (this.state.sides[position.side]!.effects.tailwindTurns > 0) {
 			speed *= 2;
 		}
@@ -1079,6 +1210,16 @@ export class Battle {
 		return 2 / (2 + Math.abs(stage));
 	}
 
+	private getAccuracyStageModifier(stage: number): number {
+		if (stage >= 0) return (3 + stage) / 3;
+		return 3 / (3 + Math.abs(stage));
+	}
+
+	private moveDealsDamage(move: Move, effects: MoveEffect[]): boolean {
+		if (move.class !== Class.Status && move.power > 0) return true;
+		return effects.some((effect) => effect.kind === "fixed-damage" || effect.kind === "ohko");
+	}
+
 	private tickTurnEffects() {
 		for (let side of this.state.sides) {
 			side.effects.reflectTurns = Math.max(0, side.effects.reflectTurns - 1);
@@ -1089,6 +1230,13 @@ export class Battle {
 				if (!active) continue;
 				active.combatant.volatile.flinched = false;
 				active.combatant.volatile.protecting = false;
+				if (
+					active.combatant.volatile.partiallyTrappedTurns === 0 &&
+					active.combatant.volatile.partialTrapSourceSide !== null
+				) {
+					active.combatant.volatile.trapped = false;
+					active.combatant.volatile.partialTrapSourceSide = null;
+				}
 			}
 		}
 
@@ -1124,6 +1272,224 @@ export class Battle {
 		}
 
 		return Math.floor(damage * ((85 + Math.floor(this.random() * 16)) / 100));
+	}
+
+	private flattenEffects(effect: MoveEffect): MoveEffect[] {
+		if (effect.kind !== "compound") return [effect];
+
+		let flattened: MoveEffect[] = [];
+		for (let nested of effect.effects) {
+			for (let resolved of this.flattenEffects(nested)) {
+				flattened.push(resolved);
+			}
+		}
+
+		return flattened;
+	}
+
+	private resolveBeforeMove(
+		user: CombatantState,
+		userPosition: BattlePosition,
+		events: BattleEvent[],
+	): boolean {
+		if (user.creature.status.state === State.Asleep) return true;
+		if (user.creature.status.state === State.Frozen) return true;
+		if (user.volatile.flinched) return true;
+		if (user.creature.status.state === State.Paralyzed && this.random() < 0.25) return true;
+		return this.resolveConfusion(user, userPosition, events);
+	}
+
+	private moveCanConnect(user: CombatantState, target: CombatantState, move: Move): boolean {
+		if (this.canMoveHitTarget(move, target) === false) return false;
+		if (move.accuracy === 0) return true;
+		if (user.statStages.accuracy === 0 && target.statStages.evasion === 0) return true;
+
+		let chance =
+			(move.accuracy / 100) *
+			this.getAccuracyStageModifier(user.statStages.accuracy) *
+			(1 / this.getAccuracyStageModifier(target.statStages.evasion));
+		if (chance >= 1) return true;
+		return this.random() < Math.max(0, chance);
+	}
+
+	private applyMoveDamage(
+		user: CombatantState,
+		_userPosition: BattlePosition,
+		target: CombatantState,
+		targetPosition: BattlePosition,
+		move: Move,
+		effects: MoveEffect[],
+		events: BattleEvent[],
+	): number {
+		let hitCount = this.getMoveHitCount(effects);
+		let totalDamage = 0;
+
+		for (let hit = 0; hit < hitCount; hit += 1) {
+			let damage = this.getResolvedMoveDamage(user, target, targetPosition, move, effects, events);
+			if (damage <= 0) break;
+
+			totalDamage += this.applyAttackDamage(target, targetPosition, damage, events);
+			if (this.isCombatantFainted(target)) break;
+		}
+
+		return totalDamage;
+	}
+
+	private applyRecoilDamage(
+		user: CombatantState,
+		userPosition: BattlePosition,
+		effects: MoveEffect[],
+		damageDealt: number,
+		events: BattleEvent[],
+	) {
+		let recoil = effects.find((effect) => effect.kind === "recoil");
+		if (!recoil || recoil.kind !== "recoil" || damageDealt === 0) return;
+
+		let damage = Math.max(1, Math.floor(damageDealt * recoil.ratio));
+		this.applyDamage(user, userPosition, damage, events);
+	}
+
+	private applyEndOfTurnEffects(): BattleEvent[] {
+		let events: BattleEvent[] = [];
+
+		for (let [sideIndex, side] of this.state.sides.entries()) {
+			for (let [slotIndex, active] of side.active.entries()) {
+				if (!active) continue;
+				let position = { side: sideIndex, slot: slotIndex };
+				let combatant = active.combatant;
+				let maxHP = getCreatureStat(this.gameData, combatant.creature, Stat.HP);
+
+				switch (combatant.creature.status.state) {
+					case State.Burned:
+					case State.Poisoned: {
+						this.applyDamage(combatant, position, Math.max(1, Math.floor(maxHP / 8)), events);
+						break;
+					}
+				}
+
+				if (combatant.volatile.seeded) {
+					let drained = this.applyDamage(
+						combatant,
+						position,
+						Math.max(1, Math.floor(maxHP / 8)),
+						events,
+					);
+					this.healSeedSource(combatant.volatile.seededBy, drained, events);
+				}
+
+				if (combatant.volatile.partiallyTrappedTurns > 0) {
+					combatant.volatile.partiallyTrappedTurns -= 1;
+					this.applyDamage(combatant, position, Math.max(1, Math.floor(maxHP / 8)), events);
+				}
+
+				if (this.isCombatantFainted(combatant)) {
+					this.clearActiveCombatant(position);
+					events.push({ type: "creature-fainted", target: position });
+				}
+			}
+		}
+
+		return events;
+	}
+
+	private getMoveHitCount(effects: MoveEffect[]): number {
+		let multiHit = effects.find((effect) => effect.kind === "multi-hit");
+		if (!multiHit || multiHit.kind !== "multi-hit") return 1;
+		if (typeof multiHit.hits === "number") return multiHit.hits;
+
+		let [min, max] = multiHit.hits;
+		return min + Math.floor(this.random() * (max - min + 1));
+	}
+
+	private getResolvedMoveDamage(
+		user: CombatantState,
+		target: CombatantState,
+		targetPosition: BattlePosition,
+		move: Move,
+		effects: MoveEffect[],
+		events: BattleEvent[],
+	): number {
+		let ohko = effects.find((effect) => effect.kind === "ohko");
+		if (ohko && ohko.kind === "ohko") {
+			return this.getRemainingHP(target);
+		}
+
+		let fixedDamage = effects.find((effect) => effect.kind === "fixed-damage");
+		if (fixedDamage && fixedDamage.kind === "fixed-damage") {
+			return fixedDamage.value;
+		}
+
+		let effectiveness = this.getTypeEffectiveness(target, move);
+		return this.calculateDamage(user, target, targetPosition, move, effectiveness, events);
+	}
+
+	private applyDamage(
+		combatant: CombatantState,
+		position: BattlePosition,
+		damage: number,
+		events: BattleEvent[],
+	): number {
+		let maxHP = getCreatureStat(this.gameData, combatant.creature, Stat.HP);
+		let next = Math.min(maxHP, combatant.creature.status.damage + damage);
+		let dealt = next - combatant.creature.status.damage;
+		combatant.creature.status.damage = next;
+
+		if (dealt > 0) {
+			events.push({
+				type: "damage-dealt",
+				target: position,
+				damage: dealt,
+				remainingHP: maxHP - combatant.creature.status.damage,
+			});
+		}
+
+		return dealt;
+	}
+
+	private applyAttackDamage(
+		combatant: CombatantState,
+		position: BattlePosition,
+		damage: number,
+		events: BattleEvent[],
+	): number {
+		let maxHP = getCreatureStat(this.gameData, combatant.creature, Stat.HP);
+		let next = Math.min(maxHP, combatant.creature.status.damage + damage);
+		let dealt = next - combatant.creature.status.damage;
+		combatant.creature.status.damage = next;
+
+		events.push({
+			type: "damage-dealt",
+			target: position,
+			damage,
+			remainingHP: maxHP - combatant.creature.status.damage,
+		});
+
+		return dealt;
+	}
+
+	private healSeedSource(sourceSide: number | null, amount: number, events: BattleEvent[]) {
+		if (sourceSide === null || amount === 0) return;
+
+		for (let [slotIndex, active] of this.state.sides[sourceSide]!.active.entries()) {
+			if (!active) continue;
+			let previous = active.combatant.creature.status.damage;
+			active.combatant.creature.status.damage = Math.max(0, previous - amount);
+			let healed = previous - active.combatant.creature.status.damage;
+			if (healed === 0) continue;
+			events.push({
+				type: "damage-dealt",
+				target: { side: sourceSide, slot: slotIndex },
+				damage: 0,
+				remainingHP: this.getRemainingHP(active.combatant),
+			});
+			return;
+		}
+	}
+
+	private getRemainingHP(combatant: CombatantState): number {
+		return (
+			getCreatureStat(this.gameData, combatant.creature, Stat.HP) - combatant.creature.status.damage
+		);
 	}
 
 	private getTypeEffectiveness(target: CombatantState, move: Move): Effectiveness {
@@ -1168,7 +1534,58 @@ export class Battle {
 			return Math.floor(baseDamage * 0.5);
 		}
 
+		if (
+			move.class === Class.Special &&
+			this.state.sides[targetSide]!.effects.lightScreenTurns > 0
+		) {
+			return Math.floor(baseDamage * 0.5);
+		}
+
 		return baseDamage;
+	}
+
+	private resolveConfusion(
+		user: CombatantState,
+		userPosition: BattlePosition,
+		events: BattleEvent[],
+	): boolean {
+		if (user.volatile.confusionTurns === 0) return false;
+
+		user.volatile.confusionTurns -= 1;
+		if (this.random() >= 0.5) return false;
+
+		let hp = getCreatureStat(this.gameData, user.creature, Stat.HP);
+		let damage = Math.min(hp, user.creature.status.damage + this.getConfusionDamage(user));
+		let dealt = damage - user.creature.status.damage;
+		user.creature.status.damage = damage;
+
+		events.push({
+			type: "damage-dealt",
+			target: userPosition,
+			damage: dealt,
+			remainingHP: hp - user.creature.status.damage,
+		});
+
+		if (this.isCombatantFainted(user)) {
+			this.clearActiveCombatant(userPosition);
+			events.push({ type: "creature-fainted", target: userPosition });
+		}
+
+		return true;
+	}
+
+	private getConfusionDamage(user: CombatantState): number {
+		let attack = Math.floor(
+			getCreatureStat(this.gameData, user.creature, Stat.Attack) *
+				this.getStageModifier(user.statStages[Stat.Attack]),
+		);
+		let defense = Math.floor(
+			getCreatureStat(this.gameData, user.creature, Stat.Defense) *
+				this.getStageModifier(user.statStages[Stat.Defense]),
+		);
+		let level = getCreatureLevel(this.gameData, user.creature);
+
+		return Math.floor(Math.floor((((2 * level) / 5 + 2) * 40 * attack) / defense) / 50) + 2;
 	}
 
 	private getStabModifier(user: CombatantState, move: Move) {
