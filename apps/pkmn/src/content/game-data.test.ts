@@ -9,6 +9,8 @@ import { Class, StatusEffectType } from "../domain/move";
 import { Stat } from "../domain/stat";
 import { Type } from "../domain/type";
 
+import { SPECIES } from "./species";
+
 describe(GameData.create, () => {
 	test("returns indexed maps for valid content", () => {
 		let result = GameData.create({
@@ -83,6 +85,31 @@ describe(GameData.create, () => {
 			expect(result.data.species.get("TESTMON")).toBeDefined();
 			expect(result.data.moves.get("TACKLE")).toBeDefined();
 		}
+	});
+
+	test("ships the full original 151 species roster with modern typings", () => {
+		expect(Object.keys(SPECIES)).toHaveLength(151);
+		let clefairy = SPECIES.CLEFAIRY;
+		let jigglypuff = SPECIES.JIGGLYPUFF;
+		let mrMime = SPECIES.MR_MIME;
+		let magnemite = SPECIES.MAGNEMITE;
+		let gengar = SPECIES.GENGAR;
+
+		expect(clefairy).toBeDefined();
+		expect(jigglypuff).toBeDefined();
+		expect(mrMime).toBeDefined();
+		expect(magnemite).toBeDefined();
+		expect(gengar).toBeDefined();
+
+		if (!clefairy || !jigglypuff || !mrMime || !magnemite || !gengar) {
+			throw new TypeError("Expected modern-typed Kanto species to be present.");
+		}
+
+		expect(clefairy.types).toEqual([Type.FAIRY]);
+		expect(jigglypuff.types).toEqual([Type.NORMAL, Type.FAIRY]);
+		expect(mrMime.types).toEqual([Type.PSYCHIC, Type.FAIRY]);
+		expect(magnemite.types).toEqual([Type.ELECTRIC, Type.STEEL]);
+		expect(gengar.types).toEqual([Type.GHOST, Type.POISON]);
 	});
 
 	test("fails when a species learnset references a missing move", () => {

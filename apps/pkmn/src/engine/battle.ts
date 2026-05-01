@@ -1010,7 +1010,6 @@ export class Battle {
 		if (target.volatile.invulnerable === false) return true;
 		if (move.effect.kind === "charge") return true;
 		if (this.state.field.gravityTurns > 0) return true;
-		if (target.volatile.identified && move.type === Type.NORMAL) return true;
 		return false;
 	}
 
@@ -1553,6 +1552,14 @@ export class Battle {
 		let targetSpecies = getCreatureSpecies(this.gameData, target.creature);
 
 		return targetSpecies.types.reduce((factor, type) => {
+			if (
+				target.volatile.identified &&
+				type === Type.GHOST &&
+				(move.type === Type.NORMAL || move.type === Type.FIGHTING)
+			) {
+				return factor;
+			}
+
 			let matchup = moveMatch[type];
 			if (matchup !== undefined) return factor * matchup;
 			return factor;

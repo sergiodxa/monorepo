@@ -1206,29 +1206,42 @@ test("Encore locks the target into its last successful move slot", () => {
 	expect(battle.state.sides[1].active[0]?.combatant.volatile.encoredMoveSlot).toBe(1);
 });
 
-test("Identify applies the identified volatile through battle move resolution", () => {
+test("Identify lets Normal moves hit a Ghost target on later turns", () => {
 	let battle = new Battle({
 		gameData: GAME_DATA,
-		sides: [{ teams: [[createBulbyWithIdentify()]] }, { teams: [[createModestIvysaur()]] }],
+		sides: [{ teams: [[createBulbyWithIdentify()]] }, { teams: [[createGastlyWithTackle()]] }],
 		random: () => 1,
 	});
 	let session = battle.start();
 
 	readEvent(session.next());
 	readEvent(session.next());
-	let request = readEvent(session.next());
-	if (request.type !== "request-turn-commands") throw new TypeError("Expected turn request.");
-	let events = collectTurnEvents(session, battle, [
+	let firstRequest = readEvent(session.next());
+	if (firstRequest.type !== "request-turn-commands") throw new TypeError("Expected turn request.");
+	let firstTurnEvents = collectTurnEvents(session, battle, [
 		{ type: "fight", move: 0, target: { side: 1, slot: 0 } },
-		{ type: "fight", move: 2, target: { side: 0, slot: 0 } },
+		{ type: "fight", move: 1, target: { side: 0, slot: 0 } },
 	]);
 
-	expect(events).toContainEqual({
+	expect(firstTurnEvents).toContainEqual({
 		type: "volatile-applied",
 		target: { side: 1, slot: 0 },
 		effect: "identify",
 	});
 	expect(battle.state.sides[1].active[0]?.combatant.volatile.identified).toBe(true);
+
+	let secondTurnStarted = readEvent(session.next());
+	expect(secondTurnStarted).toEqual({ type: "turn-started", turn: 2 });
+	let secondRequest = readEvent(session.next());
+	if (secondRequest.type !== "request-turn-commands") throw new TypeError("Expected turn request.");
+	let secondTurnEvents = collectTurnEvents(session, battle, [
+		{ type: "fight", move: 1, target: { side: 1, slot: 0 } },
+		{ type: "fight", move: 1, target: { side: 0, slot: 0 } },
+	]);
+
+	expect(
+		secondTurnEvents.some((event) => event.type === "damage-dealt" && event.target.side === 1),
+	).toBe(true);
 });
 
 test("Wrap traps and deals residual damage on later turns", () => {
@@ -2160,6 +2173,25 @@ function createModestIvysaurWithQuickAttack() {
 			[Stat.Speed]: 0,
 		},
 		status: createStatus(["QUICK_ATTACK", "TACKLE", "GROWTH", "LEECH_SEED"]),
+	});
+}
+
+function createGastlyWithTackle() {
+	return new Creature({
+		species: "GASTLY" as SpeciesId,
+		nature: "MODEST" as NatureId,
+		experience: 1000000,
+		moveset: ["TACKLE", "CONFUSE_RAY", "GROWTH", "LEECH_SEED"],
+		iv: createPerfectStats(),
+		ev: {
+			[Stat.HP]: 0,
+			[Stat.Attack]: 0,
+			[Stat.Defense]: 0,
+			[Stat.SpecialAttack]: 0,
+			[Stat.SpecialDefense]: 0,
+			[Stat.Speed]: 0,
+		},
+		status: createStatus(["TACKLE", "CONFUSE_RAY", "GROWTH", "LEECH_SEED"]),
 	});
 }
 
