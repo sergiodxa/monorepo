@@ -562,6 +562,75 @@ test("Trick Room reverses speed order on the following turn", () => {
 	});
 });
 
+test("Rain Dance applies rain to the shared field", () => {
+	let battle = new Battle({
+		gameData: GAME_DATA,
+		sides: [{ teams: [[createBulbyWithRainDance()]] }, { teams: [[createModestIvysaur()]] }],
+		random: () => 1,
+	});
+	let session = battle.start();
+
+	readEvent(session.next());
+	readEvent(session.next());
+	let request = readEvent(session.next());
+	if (request.type !== "request-turn-commands") throw new TypeError("Expected turn request.");
+	let events = collectTurnEvents(session, battle, [
+		{ type: "fight", move: 0, target: { side: 1, slot: 0 } },
+		{ type: "fight", move: 2, target: { side: 0, slot: 0 } },
+	]);
+
+	expect(events).toContainEqual({ type: "field-effect-applied", effect: "rain", turns: 5 });
+	expect(battle.state.field.weather).toBe("rain");
+	expect(battle.state.field.weatherTurns).toBe(4);
+});
+
+test("Grassy Terrain applies grassy terrain to the shared field", () => {
+	let battle = new Battle({
+		gameData: GAME_DATA,
+		sides: [{ teams: [[createBulbyWithGrassyTerrain()]] }, { teams: [[createModestIvysaur()]] }],
+		random: () => 1,
+	});
+	let session = battle.start();
+
+	readEvent(session.next());
+	readEvent(session.next());
+	let request = readEvent(session.next());
+	if (request.type !== "request-turn-commands") throw new TypeError("Expected turn request.");
+	let events = collectTurnEvents(session, battle, [
+		{ type: "fight", move: 0, target: { side: 1, slot: 0 } },
+		{ type: "fight", move: 2, target: { side: 0, slot: 0 } },
+	]);
+
+	expect(events).toContainEqual({
+		type: "field-effect-applied",
+		effect: "grassy-terrain",
+		turns: 5,
+	});
+	expect(battle.state.field.terrain).toBe("grassy");
+	expect(battle.state.field.terrainTurns).toBe(4);
+});
+
+test("Gravity applies gravity turns to the shared field", () => {
+	let battle = new Battle({
+		gameData: GAME_DATA,
+		sides: [{ teams: [[createBulbyWithGravity()]] }, { teams: [[createModestIvysaur()]] }],
+		random: () => 1,
+	});
+	let session = battle.start();
+
+	readEvent(session.next());
+	readEvent(session.next());
+	let request = readEvent(session.next());
+	if (request.type !== "request-turn-commands") throw new TypeError("Expected turn request.");
+	let events = collectTurnEvents(session, battle, [
+		{ type: "fight", move: 0, target: { side: 1, slot: 0 } },
+		{ type: "fight", move: 2, target: { side: 0, slot: 0 } },
+	]);
+
+	expect(events).toContainEqual({ type: "field-effect-applied", effect: "gravity", turns: 5 });
+	expect(battle.state.field.gravityTurns).toBe(4);
+});
+
 test("Protect prevents direct damage for the turn", () => {
 	let battle = new Battle({
 		gameData: GAME_DATA,
@@ -934,62 +1003,6 @@ test("accuracy drops can cause a move to miss", () => {
 	});
 });
 
-test("custom effect plugins can inject new move behavior", () => {
-	let move = {
-		...MOVES.TACKLE,
-		effect: { kind: "plugin-boost", stages: 2 },
-	};
-	let gameData = unwrap(
-		GameData.create({
-			species: SPECIES,
-			moves: { ...MOVES, PLUGIN_MOVE: move },
-			items: ITEMS,
-			natures: NATURES,
-			typeChart: TYPE_MATCHUPS,
-		}),
-	);
-	let battle = new Battle({
-		gameData,
-		sides: [
-			{ teams: [[createBulbyWithPluginMove()]] },
-			{ teams: [[createModestIvysaurWithTackle()]] },
-		],
-		effectPlugins: {
-			"plugin-boost": (effect, context) => {
-				if (typeof effect.stages !== "number") throw new TypeError("Expected numeric stages.");
-				for (let event of context.applyStatChange(
-					context.user,
-					context.userPosition,
-					Stat.Attack,
-					effect.stages,
-				)) {
-					context.emit(event);
-				}
-			},
-		},
-		random: () => 1,
-	});
-	let session = battle.start();
-
-	readEvent(session.next());
-	readEvent(session.next());
-	let request = readEvent(session.next());
-	if (request.type !== "request-turn-commands") throw new TypeError("Expected turn request.");
-	let events = collectTurnEvents(session, battle, [
-		{ type: "fight", move: 0, target: { side: 1, slot: 0 } },
-		{ type: "fight", move: 0, target: { side: 0, slot: 0 } },
-	]);
-
-	expect(events).toContainEqual({
-		type: "stat-stage-changed",
-		target: { side: 0, slot: 0 },
-		stat: Stat.Attack,
-		stages: 2,
-		value: 2,
-	});
-	expect(battle.state.sides[0].active[0]?.combatant.statStages[Stat.Attack]).toBe(2);
-});
-
 test("an invalid team count for the battle format throws", () => {
 	expect(
 		() =>
@@ -1101,6 +1114,66 @@ function createBulbyWithTrickRoom() {
 			[Stat.Speed]: 0,
 		},
 		status: createStatus(["TRICK_ROOM", "TACKLE", "GROWTH", "LEECH_SEED"]),
+	});
+}
+
+function createBulbyWithRainDance() {
+	return new Creature({
+		nickname: "Bulby",
+		species: "BULBASAUR" as SpeciesId,
+		nature: "MODEST" as NatureId,
+		experience: 1000000,
+		moveset: ["RAIN_DANCE", "EMBER", "GROWTH", "LEECH_SEED"],
+		iv: createPerfectStats(),
+		ev: {
+			[Stat.HP]: 255,
+			[Stat.Attack]: 255,
+			[Stat.Defense]: 0,
+			[Stat.SpecialAttack]: 0,
+			[Stat.SpecialDefense]: 0,
+			[Stat.Speed]: 0,
+		},
+		status: createStatus(["RAIN_DANCE", "EMBER", "GROWTH", "LEECH_SEED"]),
+	});
+}
+
+function createBulbyWithGrassyTerrain() {
+	return new Creature({
+		nickname: "Bulby",
+		species: "BULBASAUR" as SpeciesId,
+		nature: "MODEST" as NatureId,
+		experience: 1000000,
+		moveset: ["GRASSY_TERRAIN", "EMBER", "GROWTH", "LEECH_SEED"],
+		iv: createPerfectStats(),
+		ev: {
+			[Stat.HP]: 255,
+			[Stat.Attack]: 255,
+			[Stat.Defense]: 0,
+			[Stat.SpecialAttack]: 0,
+			[Stat.SpecialDefense]: 0,
+			[Stat.Speed]: 0,
+		},
+		status: createStatus(["GRASSY_TERRAIN", "EMBER", "GROWTH", "LEECH_SEED"]),
+	});
+}
+
+function createBulbyWithGravity() {
+	return new Creature({
+		nickname: "Bulby",
+		species: "BULBASAUR" as SpeciesId,
+		nature: "MODEST" as NatureId,
+		experience: 1000000,
+		moveset: ["GRAVITY", "EMBER", "GROWTH", "LEECH_SEED"],
+		iv: createPerfectStats(),
+		ev: {
+			[Stat.HP]: 255,
+			[Stat.Attack]: 255,
+			[Stat.Defense]: 0,
+			[Stat.SpecialAttack]: 0,
+			[Stat.SpecialDefense]: 0,
+			[Stat.Speed]: 0,
+		},
+		status: createStatus(["GRAVITY", "EMBER", "GROWTH", "LEECH_SEED"]),
 	});
 }
 
@@ -1341,30 +1414,6 @@ function createBulbyWithSandAttack() {
 			[Stat.Speed]: 0,
 		},
 		status: createStatus(["SAND_ATTACK", "EMBER", "GROWTH", "LEECH_SEED"]),
-	});
-}
-
-function createBulbyWithPluginMove() {
-	return new Creature({
-		nickname: "Bulby",
-		species: "BULBASAUR" as SpeciesId,
-		nature: "MODEST" as NatureId,
-		experience: 1000000,
-		moveset: ["PLUGIN_MOVE", "EMBER", "GROWTH", "LEECH_SEED"],
-		iv: createPerfectStats(),
-		ev: {
-			[Stat.HP]: 255,
-			[Stat.Attack]: 255,
-			[Stat.Defense]: 0,
-			[Stat.SpecialAttack]: 0,
-			[Stat.SpecialDefense]: 0,
-			[Stat.Speed]: 0,
-		},
-		status: {
-			state: null,
-			damage: 0,
-			pp: [35, MOVES.EMBER.pp, MOVES.GROWTH.pp, MOVES.LEECH_SEED.pp],
-		},
 	});
 }
 

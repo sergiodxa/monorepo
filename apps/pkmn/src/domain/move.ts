@@ -21,13 +21,23 @@ export enum Class {
 /** Mutable battle stat stages that moves can raise or lower. */
 export type BattleStatStage = Exclude<Stat, Stat.HP> | "accuracy" | "evasion";
 
-/** Open-ended effect shape that plugins can extend with custom fields. */
-export interface PluginMoveEffect {
-	kind: string;
-	[key: string]: unknown;
-}
+export type FieldEffectType =
+	| "trick-room"
+	| "sun"
+	| "rain"
+	| "sand"
+	| "hail"
+	| "snow"
+	| "fog"
+	| "electric-terrain"
+	| "grassy-terrain"
+	| "misty-terrain"
+	| "psychic-terrain"
+	| "gravity"
+	| "wonder-room"
+	| "magic-room";
 
-export type BuiltInMoveEffect =
+export type MoveEffect =
 	| { kind: "none" }
 	| { kind: "compound"; effects: MoveEffect[] }
 	| { kind: "priority"; value: number }
@@ -47,12 +57,10 @@ export type BuiltInMoveEffect =
 			turns: number;
 			target: "self" | "target";
 	  }
-	| { kind: "field-effect"; effect: "trick-room"; turns: number }
+	| { kind: "field-effect"; effect: FieldEffectType; turns: number }
 	| { kind: "apply-status"; status: StatusEffectType; chance: number }
 	| { kind: "leech-seed" }
 	| { kind: "charge"; invulnerable?: boolean };
-
-export type MoveEffect = BuiltInMoveEffect | PluginMoveEffect;
 
 export function isStatusEffectType(value: unknown): value is StatusEffectType {
 	return (

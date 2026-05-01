@@ -1,19 +1,14 @@
 import type { GameData } from "../domain/game-data";
-import type {
-	BattleStatStage,
-	BuiltInMoveEffect,
-	Move,
-	MoveEffect,
-	PluginMoveEffect,
-} from "../domain/move";
+import type { BattleStatStage, FieldEffectType, Move, MoveEffect } from "../domain/move";
 
-import { Class, StatusEffectType } from "../domain/move";
+import { Class } from "../domain/move";
 import { Stat } from "../domain/stat";
 import { Effectiveness } from "../domain/type";
 
 import { createFieldEffectState, createSideEffectState } from "./battle-state";
 import { CombatantState } from "./combatant-state";
 import { Creature, State } from "./creature";
+import { Effects } from "./effects";
 import { getCreatureLevel, getCreatureSpecies, getCreatureStat } from "./mechanics";
 
 const CRITICAL_HIT_CHANCE = 1 / 24;
@@ -34,110 +29,6 @@ interface ReplacementSelection {
 	slot: number;
 	team: number;
 	choices: number[];
-}
-
-interface BattlePluginEffectContext {
-	battle: Battle;
-	user: CombatantState;
-	userPosition: BattlePosition;
-	target: CombatantState;
-	targetPosition: BattlePosition;
-	move: Move;
-	state: BattleState;
-	random(): number;
-	flatten(effect: MoveEffect): MoveEffect[];
-	applyDamage(target: CombatantState, position: BattlePosition, damage: number): BattleEvent[];
-	applyAttackDamage(
-		target: CombatantState,
-		position: BattlePosition,
-		damage: number,
-	): BattleEvent[];
-	applyStatChange(
-		target: CombatantState,
-		position: BattlePosition,
-		stat: BattleStatStage,
-		stages: number,
-	): BattleEvent[];
-	applyStatus(
-		target: CombatantState,
-		position: BattlePosition,
-		status: StatusEffectType,
-		chance?: number,
-	): BattleEvent[];
-	emit(event: BattleEvent): void;
-}
-
-type BattlePluginEffectHandler = (
-	effect: PluginMoveEffect,
-	context: BattlePluginEffectContext,
-) => void | BattleEvent[];
-
-interface MoveEffectHandlerMap {
-	none(
-		user: CombatantState,
-		target: CombatantState,
-		effect: Extract<MoveEffect, { kind: "none" }>,
-	): BattleEvent[];
-	priority(
-		user: CombatantState,
-		target: CombatantState,
-		effect: Extract<MoveEffect, { kind: "priority" }>,
-	): BattleEvent[];
-	trap(
-		user: CombatantState,
-		target: CombatantState,
-		effect: Extract<MoveEffect, { kind: "trap" }>,
-	): BattleEvent[];
-	"partial-trap"(
-		user: CombatantState,
-		target: CombatantState,
-		effect: Extract<MoveEffect, { kind: "partial-trap" }>,
-	): BattleEvent[];
-	confuse(
-		user: CombatantState,
-		target: CombatantState,
-		effect: Extract<MoveEffect, { kind: "confuse" }>,
-	): BattleEvent[];
-	flinch(
-		user: CombatantState,
-		target: CombatantState,
-		effect: Extract<MoveEffect, { kind: "flinch" }>,
-	): BattleEvent[];
-	protect(
-		user: CombatantState,
-		target: CombatantState,
-		effect: Extract<MoveEffect, { kind: "protect" }>,
-	): BattleEvent[];
-	"modify-stat"(
-		user: CombatantState,
-		target: CombatantState,
-		effect: Extract<MoveEffect, { kind: "modify-stat" }>,
-	): BattleEvent[];
-	"side-effect"(
-		user: CombatantState,
-		target: CombatantState,
-		effect: Extract<MoveEffect, { kind: "side-effect" }>,
-	): BattleEvent[];
-	"field-effect"(
-		user: CombatantState,
-		target: CombatantState,
-		effect: Extract<MoveEffect, { kind: "field-effect" }>,
-	): BattleEvent[];
-	"apply-status"(
-		user: CombatantState,
-		target: CombatantState,
-		effect: Extract<MoveEffect, { kind: "apply-status" }>,
-	): State[];
-	"leech-seed"(
-		user: CombatantState,
-		target: CombatantState,
-		effect: Extract<MoveEffect, { kind: "leech-seed" }>,
-	): BattleEvent[];
-	charge(
-		user: CombatantState,
-		target: CombatantState,
-		effect: Extract<MoveEffect, { kind: "charge" }>,
-	): BattleEvent[];
 }
 
 /** Identifies one battle slot on a side. */
@@ -272,7 +163,7 @@ export namespace BattleEvent {
 	/** Reports shared field effects such as Trick Room. */
 	export interface FieldEffectAppliedEvent {
 		type: "field-effect-applied";
-		effect: "trick-room";
+		effect: FieldEffectType;
 		turns: number;
 	}
 
@@ -365,7 +256,6 @@ export namespace Battle {
 		gameData: GameData;
 		sides: [SideArguments, SideArguments];
 		slots?: 1 | 2 | 3;
-		effectPlugins?: Record<string, BattlePluginEffectHandler>;
 		random?(): number;
 	}
 }
@@ -374,24 +264,7 @@ export namespace Battle {
 export class Battle {
 	readonly state: BattleState;
 
-	private readonly effectHandlers: MoveEffectHandlerMap = {
-		none: () => [],
-		priority: () => [],
-		trap: (_user, target) => this.applyTrapEffect(target),
-		"partial-trap": (user, target, effect) => this.applyPartialTrapEffect(user, target, effect),
-		confuse: (_user, target, effect) => this.applyConfusionEffect(target, effect),
-		flinch: (_user, target, effect) => this.applyFlinchEffect(target, effect),
-		protect: (user) => this.applyProtectEffect(user),
-		"modify-stat": (user, target, effect) => this.applyStatChangeEffect(user, target, effect),
-		"side-effect": (user, target, effect) => this.applySideEffect(user, target, effect),
-		"field-effect": (_user, _target, effect) => this.applyFieldEffect(effect),
-		"apply-status": (_user, target, effect) => this.applyStatusEffect(target, effect),
-		"leech-seed": (user, target) => this.applyLeechSeedEffect(user, target),
-		charge: (user, _target, effect) => this.applyChargeEffect(user, effect),
-	};
-
 	private readonly gameData: GameData;
-	private readonly effectPlugins: Record<string, BattlePluginEffectHandler>;
 	private readonly random: () => number;
 	private pendingReplacementRequests: ReplacementSelection[] = [];
 
@@ -402,7 +275,6 @@ export class Battle {
 		let slots = args.slots ?? 1;
 
 		this.gameData = args.gameData;
-		this.effectPlugins = args.effectPlugins ?? {};
 		this.random = args.random ?? Math.random;
 		this.state = {
 			turn: 0,
@@ -747,269 +619,21 @@ export class Battle {
 		move: Move,
 		effect: MoveEffect,
 	): Generator<BattleEvent, void, void> {
-		if (this.isBuiltInEffect(effect) === false) {
-			for (let event of this.resolvePluginEffect(
-				effect,
-				user,
-				userPosition,
-				target,
-				targetPosition,
-				move,
-			)) {
-				yield event;
-			}
-			return;
-		}
-
-		switch (effect.kind) {
-			case "none": {
-				for (let event of this.effectHandlers.none(user, target, effect)) yield event;
-				return;
-			}
-			case "compound": {
-				for (let nested of effect.effects) {
-					for (let event of this.resolveEffect(
-						user,
-						userPosition,
-						target,
-						targetPosition,
-						move,
-						nested,
-					)) {
-						yield event;
-					}
-				}
-				return;
-			}
-			case "priority": {
-				for (let event of this.effectHandlers.priority(user, target, effect)) yield event;
-				return;
-			}
-			case "trap": {
-				this.effectHandlers.trap(user, target, effect);
-				yield { type: "volatile-applied", target: targetPosition, effect: "trap" };
-				return;
-			}
-			case "partial-trap": {
-				this.effectHandlers["partial-trap"](user, target, effect);
-				yield { type: "volatile-applied", target: targetPosition, effect: "partial-trap" };
-				return;
-			}
-			case "confuse": {
-				this.effectHandlers.confuse(user, target, effect);
-				yield { type: "volatile-applied", target: targetPosition, effect: "confusion" };
-				return;
-			}
-			case "flinch": {
-				let [event] = this.effectHandlers.flinch(user, target, effect);
-				if (!event) return;
-				yield { type: "volatile-applied", target: targetPosition, effect: "flinch" };
-				return;
-			}
-			case "protect": {
-				this.effectHandlers.protect(user, target, effect);
-				yield { type: "volatile-applied", target: userPosition, effect: "protect" };
-				return;
-			}
-			case "multi-hit":
-			case "fixed-damage":
-			case "ohko":
-			case "recoil":
-			case "charge": {
-				return;
-			}
-			case "modify-stat": {
-				let resolvedTargetPosition = effect.target === "self" ? userPosition : targetPosition;
-				let [event] = this.effectHandlers["modify-stat"](user, target, effect);
-				if (!event || event.type !== "stat-stage-changed") return;
-				yield {
-					type: "stat-stage-changed",
-					target: resolvedTargetPosition,
-					stat: event.stat,
-					stages: event.stages,
-					value: event.value,
-				};
-				return;
-			}
-			case "side-effect": {
-				let resolvedSide = effect.target === "self" ? userPosition.side : targetPosition.side;
-				let [event] = this.effectHandlers["side-effect"](user, target, effect);
-				if (!event || event.type !== "side-effect-applied") return;
-				yield {
-					type: "side-effect-applied",
-					side: resolvedSide,
-					effect: event.effect,
-					turns: event.turns,
-				};
-				return;
-			}
-			case "field-effect": {
-				for (let event of this.effectHandlers["field-effect"](user, target, effect)) yield event;
-				return;
-			}
-			case "apply-status": {
-				for (let status of this.applyStatusEffect(target, effect)) {
-					yield { type: "status-applied", target: targetPosition, status };
-				}
-				return;
-			}
-			case "leech-seed": {
-				for (let _event of this.effectHandlers["leech-seed"](user, target, effect)) {
-					yield { type: "volatile-applied", target: targetPosition, effect: "seed" };
-				}
-				return;
-			}
-			default: {
-				return;
-			}
+		for (let event of Effects.resolve(effect, {
+			user,
+			userPosition,
+			target,
+			targetPosition,
+			state: this.state,
+			random: () => this.random(),
+		})) {
+			yield event;
 		}
 	}
 
-	private applyStatusEffect(
-		target: CombatantState,
-		effect: Extract<MoveEffect, { kind: "apply-status" }>,
-	): State[] {
-		if (target.creature.status.state !== null) return [];
-		if (effect.chance < 1 && this.random() >= effect.chance) return [];
-
-		let status = this.getPersistentStatus(effect.status);
-		target.creature.status.state = status;
-
-		return [status];
-	}
-
-	private applyLeechSeedEffect(user: CombatantState, target: CombatantState): BattleEvent[] {
-		target.volatile.seeded = true;
-		target.volatile.seededBy = this.getCombatantSide(user);
-		return [{ type: "volatile-applied", target: { side: -1, slot: -1 }, effect: "seed" }];
-	}
-
-	private applyTrapEffect(target: CombatantState): BattleEvent[] {
-		target.volatile.trapped = true;
-		return [{ type: "volatile-applied", target: { side: -1, slot: -1 }, effect: "trap" }];
-	}
-
-	private applyPartialTrapEffect(
-		user: CombatantState,
-		target: CombatantState,
-		effect: Extract<MoveEffect, { kind: "partial-trap" }>,
-	): BattleEvent[] {
-		target.volatile.trapped = true;
-		target.volatile.partiallyTrappedTurns = effect.turns;
-		target.volatile.partialTrapSourceSide = this.getCombatantSide(user);
-		return [{ type: "volatile-applied", target: { side: -1, slot: -1 }, effect: "partial-trap" }];
-	}
-
-	private applyConfusionEffect(
-		target: CombatantState,
-		effect: Extract<MoveEffect, { kind: "confuse" }>,
-	): BattleEvent[] {
-		target.volatile.confusionTurns = effect.turns;
-		return [{ type: "volatile-applied", target: { side: -1, slot: -1 }, effect: "confusion" }];
-	}
-
-	private applyFlinchEffect(
-		_target: CombatantState,
-		effect: Extract<MoveEffect, { kind: "flinch" }>,
-	): BattleEvent[] {
-		if (this.random() >= effect.chance) return [];
-		_target.volatile.flinched = true;
-		return [{ type: "volatile-applied", target: { side: -1, slot: -1 }, effect: "flinch" }];
-	}
-
-	private applyProtectEffect(user: CombatantState): BattleEvent[] {
-		user.volatile.protecting = true;
-		return [{ type: "volatile-applied", target: { side: -1, slot: -1 }, effect: "protect" }];
-	}
-
-	private applyStatChangeEffect(
-		user: CombatantState,
-		target: CombatantState,
-		effect: Extract<MoveEffect, { kind: "modify-stat" }>,
-	): BattleEvent[] {
-		let combatant = effect.target === "self" ? user : target;
-		let current = combatant.statStages[effect.stat];
-		let next = Math.max(-6, Math.min(6, current + effect.stages));
-		combatant.statStages[effect.stat] = next;
-
-		return [
-			{
-				type: "stat-stage-changed",
-				target: { side: -1, slot: -1 },
-				stat: effect.stat,
-				stages: effect.stages,
-				value: next,
-			},
-		];
-	}
-
-	private applySideEffect(
-		user: CombatantState,
-		target: CombatantState,
-		effect: Extract<MoveEffect, { kind: "side-effect" }>,
-	): BattleEvent[] {
-		let side =
-			effect.target === "self" ? this.getCombatantSide(user) : this.getCombatantSide(target);
-
-		switch (effect.effect) {
-			case "reflect": {
-				this.state.sides[side]!.effects.reflectTurns = effect.turns;
-				break;
-			}
-			case "light-screen": {
-				this.state.sides[side]!.effects.lightScreenTurns = effect.turns;
-				break;
-			}
-			case "tailwind": {
-				this.state.sides[side]!.effects.tailwindTurns = effect.turns;
-				break;
-			}
-		}
-
-		return [{ type: "side-effect-applied", side, effect: effect.effect, turns: effect.turns }];
-	}
-
-	private applyFieldEffect(effect: Extract<MoveEffect, { kind: "field-effect" }>): BattleEvent[] {
-		switch (effect.effect) {
-			case "trick-room": {
-				this.state.field.trickRoomTurns = effect.turns;
-				break;
-			}
-		}
-
-		return [{ type: "field-effect-applied", effect: effect.effect, turns: effect.turns }];
-	}
-
-	private applyChargeEffect(
-		user: CombatantState,
-		effect: Extract<MoveEffect, { kind: "charge" }>,
-	): BattleEvent[] {
+	private applyChargeEffect(user: CombatantState, effect: Extract<MoveEffect, { kind: "charge" }>) {
 		user.volatile.charging = true;
 		user.volatile.invulnerable = effect.invulnerable ?? true;
-		return [];
-	}
-
-	private getPersistentStatus(status: StatusEffectType): State {
-		switch (status) {
-			case StatusEffectType.Burn: {
-				return State.Burned;
-			}
-			case StatusEffectType.Paralysis: {
-				return State.Paralyzed;
-			}
-			case StatusEffectType.Poison: {
-				return State.Poisoned;
-			}
-			case StatusEffectType.Sleep: {
-				return State.Asleep;
-			}
-			case StatusEffectType.Freeze: {
-				return State.Frozen;
-			}
-			default: {
-				throw new RangeError(`Unsupported status effect ${String(status)}.`);
-			}
-		}
 	}
 
 	private *reconcileAfterTurn(): Generator<BattleEvent, void, void> {
@@ -1308,7 +932,14 @@ export class Battle {
 			}
 		}
 
+		this.state.field.weatherTurns = Math.max(0, this.state.field.weatherTurns - 1);
+		if (this.state.field.weatherTurns === 0) this.state.field.weather = null;
+		this.state.field.terrainTurns = Math.max(0, this.state.field.terrainTurns - 1);
+		if (this.state.field.terrainTurns === 0) this.state.field.terrain = null;
 		this.state.field.trickRoomTurns = Math.max(0, this.state.field.trickRoomTurns - 1);
+		this.state.field.gravityTurns = Math.max(0, this.state.field.gravityTurns - 1);
+		this.state.field.wonderRoomTurns = Math.max(0, this.state.field.wonderRoomTurns - 1);
+		this.state.field.magicRoomTurns = Math.max(0, this.state.field.magicRoomTurns - 1);
 	}
 
 	private calculateDamage(
@@ -1343,7 +974,7 @@ export class Battle {
 	}
 
 	private flattenEffects(effect: MoveEffect): MoveEffect[] {
-		if (this.isBuiltInEffect(effect) === false || effect.kind !== "compound") return [effect];
+		if (effect.kind !== "compound") return [effect];
 
 		let flattened: MoveEffect[] = [];
 		for (let nested of effect.effects) {
@@ -1353,100 +984,6 @@ export class Battle {
 		}
 
 		return flattened;
-	}
-
-	private isBuiltInEffect(effect: MoveEffect): effect is BuiltInMoveEffect {
-		switch (effect.kind) {
-			case "none":
-			case "compound":
-			case "priority":
-			case "trap":
-			case "partial-trap":
-			case "confuse":
-			case "flinch":
-			case "protect":
-			case "multi-hit":
-			case "ohko":
-			case "fixed-damage":
-			case "recoil":
-			case "modify-stat":
-			case "side-effect":
-			case "field-effect":
-			case "apply-status":
-			case "leech-seed":
-			case "charge": {
-				return true;
-			}
-			default: {
-				return false;
-			}
-		}
-	}
-
-	private isPluginEffect(effect: MoveEffect): effect is PluginMoveEffect {
-		return Object.hasOwn(this.effectPlugins, effect.kind);
-	}
-
-	private *resolvePluginEffect(
-		effect: PluginMoveEffect,
-		user: CombatantState,
-		userPosition: BattlePosition,
-		target: CombatantState,
-		targetPosition: BattlePosition,
-		move: Move,
-	): Generator<BattleEvent, void, void> {
-		let handler = this.effectPlugins[effect.kind];
-		if (!handler) return;
-
-		let emitted: BattleEvent[] = [];
-		let context: BattlePluginEffectContext = {
-			battle: this,
-			user,
-			userPosition,
-			target,
-			targetPosition,
-			move,
-			state: this.state,
-			random: () => this.random(),
-			flatten: (nested) => this.flattenEffects(nested),
-			applyDamage: (combatant, position, damage) => {
-				let events: BattleEvent[] = [];
-				this.applyDamage(combatant, position, damage, events);
-				return events;
-			},
-			applyAttackDamage: (combatant, position, damage) => {
-				let events: BattleEvent[] = [];
-				this.applyAttackDamage(combatant, position, damage, events);
-				return events;
-			},
-			applyStatChange: (combatant, position, stat, stages) => {
-				let current = combatant.statStages[stat];
-				let value = Math.max(-6, Math.min(6, current + stages));
-				combatant.statStages[stat] = value;
-				return [{ type: "stat-stage-changed", target: position, stat, stages, value }];
-			},
-			applyStatus: (combatant, position, status, chance = 1) => {
-				let events: BattleEvent[] = [];
-				for (let applied of this.applyStatusEffect(combatant, {
-					kind: "apply-status",
-					status,
-					chance,
-				})) {
-					events.push({ type: "status-applied", target: position, status: applied });
-				}
-				return events;
-			},
-			emit: (event) => {
-				emitted.push(event);
-			},
-		};
-
-		let result = handler(effect, context);
-		if (Array.isArray(result)) {
-			for (let event of result) emitted.push(event);
-		}
-
-		for (let event of emitted) yield event;
 	}
 
 	private resolveBeforeMove(
@@ -1585,17 +1122,17 @@ export class Battle {
 		return this.calculateDamage(user, target, targetPosition, move, effectiveness, events);
 	}
 
-	private hasEffectKind<TKind extends BuiltInMoveEffect["kind"]>(
+	private hasEffectKind<TKind extends MoveEffect["kind"]>(
 		effect: MoveEffect,
 		kind: TKind,
-	): effect is Extract<BuiltInMoveEffect, { kind: TKind }> {
-		return this.isBuiltInEffect(effect) && effect.kind === kind;
+	): effect is Extract<MoveEffect, { kind: TKind }> {
+		return effect.kind === kind;
 	}
 
-	private findEffect<TKind extends BuiltInMoveEffect["kind"]>(
+	private findEffect<TKind extends MoveEffect["kind"]>(
 		effects: MoveEffect[],
 		kind: TKind,
-	): Extract<BuiltInMoveEffect, { kind: TKind }> | null {
+	): Extract<MoveEffect, { kind: TKind }> | null {
 		for (let effect of effects) {
 			if (this.hasEffectKind(effect, kind)) return effect;
 		}
