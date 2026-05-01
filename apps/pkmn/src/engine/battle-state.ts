@@ -20,8 +20,10 @@ export interface CombatantVolatileState {
 	attracted: boolean;
 	tauntedTurns: number;
 	encoreTurns: number;
+	encoredMoveSlot: 0 | 1 | 2 | 3 | null;
 	disabledMoveSlot: 0 | 1 | 2 | 3 | null;
 	disableTurns: number;
+	lastMoveSlot: 0 | 1 | 2 | 3 | null;
 }
 
 /** Temporary stat stage changes applied during battle. */
@@ -72,8 +74,10 @@ export function createCombatantVolatileState(): CombatantVolatileState {
 		attracted: false,
 		tauntedTurns: 0,
 		encoreTurns: 0,
+		encoredMoveSlot: null,
 		disabledMoveSlot: null,
 		disableTurns: 0,
+		lastMoveSlot: null,
 	};
 }
 

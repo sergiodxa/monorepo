@@ -400,6 +400,36 @@ test("Mean Look prevents leaving the battle on later turns", () => {
 	expect(battle.state.winnerSide).toBe(null);
 });
 
+test("a side can switch to a bench creature during turn input", () => {
+	let battle = new Battle({
+		gameData: GAME_DATA,
+		sides: [
+			{ teams: [[createBulbyWithTackle(), createBackupBulby()]] },
+			{ teams: [[createModestIvysaur()]] },
+		],
+		random: () => 1,
+	});
+	let session = battle.start();
+
+	readEvent(session.next());
+	readEvent(session.next());
+	let request = readEvent(session.next());
+	if (request.type !== "request-turn-commands") throw new TypeError("Expected turn request.");
+	let firstEvent = readEvent(
+		session.next([
+			{ type: "switch", target: { side: 0, slot: 0 }, creature: 1 },
+			{ type: "fight", move: 2, target: { side: 0, slot: 0 } },
+		]),
+	);
+
+	expect(firstEvent).toEqual({
+		type: "creature-switched",
+		target: { side: 0, slot: 0 },
+		creature: 1,
+	});
+	expect(battle.state.sides[0].active[0]?.creatureIndex).toBe(1);
+});
+
 test("Growl lowers the target attack stage", () => {
 	let battle = new Battle({
 		gameData: GAME_DATA,
@@ -426,6 +456,73 @@ test("Growl lowers the target attack stage", () => {
 		value: -1,
 	});
 	expect(battle.state.sides[1].active[0]?.combatant.statStages[Stat.Attack]).toBe(-1);
+});
+
+test("Safeguard blocks major status on the protected side", () => {
+	let battle = new Battle({
+		gameData: GAME_DATA,
+		sides: [
+			{ teams: [[createBulbyWithSafeguard()]] },
+			{ teams: [[createModestIvysaurWithSleepPowder()]] },
+		],
+		random: () => 1,
+	});
+	let session = battle.start();
+
+	readEvent(session.next());
+	readEvent(session.next());
+	let firstRequest = readEvent(session.next());
+	if (firstRequest.type !== "request-turn-commands") throw new TypeError("Expected turn request.");
+	collectTurnEvents(session, battle, [
+		{ type: "fight", move: 0, target: { side: 1, slot: 0 } },
+		{ type: "fight", move: 2, target: { side: 0, slot: 0 } },
+	]);
+
+	let secondTurnStarted = readEvent(session.next());
+	expect(secondTurnStarted).toEqual({ type: "turn-started", turn: 2 });
+	let secondRequest = readEvent(session.next());
+	if (secondRequest.type !== "request-turn-commands") throw new TypeError("Expected turn request.");
+	let events = collectTurnEvents(session, battle, [
+		{ type: "fight", move: 1, target: { side: 1, slot: 0 } },
+		{ type: "fight", move: 0, target: { side: 0, slot: 0 } },
+	]);
+
+	expect(events.some((event) => event.type === "status-applied" && event.target.side === 0)).toBe(
+		false,
+	);
+	expect(battle.state.sides[0].active[0]?.combatant.creature.status.state).toBe(null);
+});
+
+test("Mist blocks stat drops on the protected side", () => {
+	let battle = new Battle({
+		gameData: GAME_DATA,
+		sides: [{ teams: [[createBulbyWithMist()]] }, { teams: [[createModestIvysaurWithGrowl()]] }],
+		random: () => 1,
+	});
+	let session = battle.start();
+
+	readEvent(session.next());
+	readEvent(session.next());
+	let firstRequest = readEvent(session.next());
+	if (firstRequest.type !== "request-turn-commands") throw new TypeError("Expected turn request.");
+	collectTurnEvents(session, battle, [
+		{ type: "fight", move: 0, target: { side: 1, slot: 0 } },
+		{ type: "fight", move: 2, target: { side: 0, slot: 0 } },
+	]);
+
+	let secondTurnStarted = readEvent(session.next());
+	expect(secondTurnStarted).toEqual({ type: "turn-started", turn: 2 });
+	let secondRequest = readEvent(session.next());
+	if (secondRequest.type !== "request-turn-commands") throw new TypeError("Expected turn request.");
+	let events = collectTurnEvents(session, battle, [
+		{ type: "fight", move: 1, target: { side: 1, slot: 0 } },
+		{ type: "fight", move: 0, target: { side: 0, slot: 0 } },
+	]);
+
+	expect(
+		events.some((event) => event.type === "stat-stage-changed" && event.target.side === 0),
+	).toBe(false);
+	expect(battle.state.sides[0].active[0]?.combatant.statStages[Stat.Attack]).toBe(0);
 });
 
 test("Growth raises the user's special attack stage", () => {
@@ -610,6 +707,35 @@ test("Grassy Terrain applies grassy terrain to the shared field", () => {
 	expect(battle.state.field.terrainTurns).toBe(4);
 });
 
+test("Grassy Terrain heals grounded combatants at the end of the turn", () => {
+	let battle = new Battle({
+		gameData: GAME_DATA,
+		sides: [
+			{ teams: [[createDamagedBulbyWithGrassyTerrain()]] },
+			{ teams: [[createModestIvysaur()]] },
+		],
+		random: () => 1,
+	});
+	let session = battle.start();
+
+	readEvent(session.next());
+	readEvent(session.next());
+	let request = readEvent(session.next());
+	if (request.type !== "request-turn-commands") throw new TypeError("Expected turn request.");
+	let beforeDamage = battle.state.sides[0].active[0]?.combatant.creature.status.damage ?? 0;
+	let events = collectTurnEvents(session, battle, [
+		{ type: "fight", move: 0, target: { side: 1, slot: 0 } },
+		{ type: "fight", move: 2, target: { side: 0, slot: 0 } },
+	]);
+	let healedEvent = events.find(
+		(event) => event.type === "damage-dealt" && event.target.side === 0 && event.damage === 0,
+	);
+	let afterDamage = battle.state.sides[0].active[0]?.combatant.creature.status.damage ?? 0;
+
+	expect(healedEvent).toBeDefined();
+	expect(afterDamage).toBeLessThan(beforeDamage);
+});
+
 test("Gravity applies gravity turns to the shared field", () => {
 	let battle = new Battle({
 		gameData: GAME_DATA,
@@ -629,6 +755,44 @@ test("Gravity applies gravity turns to the shared field", () => {
 
 	expect(events).toContainEqual({ type: "field-effect-applied", effect: "gravity", turns: 5 });
 	expect(battle.state.field.gravityTurns).toBe(4);
+});
+
+test("Spikes damages a creature that switches in", () => {
+	let battle = new Battle({
+		gameData: GAME_DATA,
+		sides: [
+			{ teams: [[createBulbyWithSpikes()]] },
+			{ teams: [[createModestIvysaurWithTackle(), createBackupIvysaur()]] },
+		],
+		random: () => 1,
+	});
+	let session = battle.start();
+
+	readEvent(session.next());
+	readEvent(session.next());
+	let request = readEvent(session.next());
+	if (request.type !== "request-turn-commands") throw new TypeError("Expected turn request.");
+	collectTurnEvents(session, battle, [
+		{ type: "fight", move: 0, target: { side: 1, slot: 0 } },
+		{ type: "switch", target: { side: 1, slot: 0 }, creature: 1 },
+	]);
+
+	expect(battle.state.sides[1].effects.spikesLayers).toBe(1);
+
+	let secondTurnStarted = readEvent(session.next());
+	expect(secondTurnStarted).toEqual({ type: "turn-started", turn: 2 });
+	let secondRequest = readEvent(session.next());
+	if (secondRequest.type !== "request-turn-commands") throw new TypeError("Expected turn request.");
+	let events = collectTurnEvents(session, battle, [
+		{ type: "fight", move: 1, target: { side: 1, slot: 0 } },
+		{ type: "switch", target: { side: 1, slot: 0 }, creature: 0 },
+	]);
+
+	expect(events).toContainEqual({
+		type: "hazard-triggered",
+		target: { side: 1, slot: 0 },
+		effect: "spikes",
+	});
 });
 
 test("Protect prevents direct damage for the turn", () => {
@@ -866,6 +1030,205 @@ test("Take Down deals recoil to the user", () => {
 	expect(events.some((event) => event.type === "damage-dealt" && event.target.side === 0)).toBe(
 		true,
 	);
+});
+
+test("Sandstorm deals residual damage to non-immune combatants", () => {
+	let battle = new Battle({
+		gameData: GAME_DATA,
+		sides: [{ teams: [[createBulbyWithSandstorm()]] }, { teams: [[createModestIvysaur()]] }],
+		random: () => 1,
+	});
+	let session = battle.start();
+
+	readEvent(session.next());
+	readEvent(session.next());
+	let request = readEvent(session.next());
+	if (request.type !== "request-turn-commands") throw new TypeError("Expected turn request.");
+	let events = collectTurnEvents(session, battle, [
+		{ type: "fight", move: 0, target: { side: 1, slot: 0 } },
+		{ type: "fight", move: 2, target: { side: 0, slot: 0 } },
+	]);
+
+	expect(events).toContainEqual({ type: "field-effect-applied", effect: "sand", turns: 5 });
+	expect(events.some((event) => event.type === "damage-dealt" && event.target.side === 1)).toBe(
+		true,
+	);
+	expect(battle.state.field.weather).toBe("sand");
+	expect(battle.state.field.weatherTurns).toBe(4);
+});
+
+test("Hyper Beam forces the user to recharge on the next turn", () => {
+	let battle = new Battle({
+		gameData: GAME_DATA,
+		sides: [
+			{ teams: [[createBulbyWithHyperBeam()]] },
+			{ teams: [[createModestIvysaurWithTackle()]] },
+		],
+		random: () => 1,
+	});
+	let session = battle.start();
+
+	readEvent(session.next());
+	readEvent(session.next());
+	let firstRequest = readEvent(session.next());
+	if (firstRequest.type !== "request-turn-commands") throw new TypeError("Expected turn request.");
+	collectTurnEvents(session, battle, [
+		{ type: "fight", move: 0, target: { side: 1, slot: 0 } },
+		{ type: "fight", move: 0, target: { side: 0, slot: 0 } },
+	]);
+
+	let secondTurnStarted = readEvent(session.next());
+	expect(secondTurnStarted).toEqual({ type: "turn-started", turn: 2 });
+	let secondRequest = readEvent(session.next());
+	if (secondRequest.type !== "request-turn-commands") throw new TypeError("Expected turn request.");
+	let events = collectTurnEvents(session, battle, [
+		{ type: "fight", move: 0, target: { side: 1, slot: 0 } },
+		{ type: "fight", move: 0, target: { side: 0, slot: 0 } },
+	]);
+
+	expect(events).toContainEqual({
+		type: "move-failed",
+		user: { side: 0, slot: 0 },
+		reason: "recharge",
+	});
+});
+
+test("Taunt prevents the target from using status moves", () => {
+	let battle = new Battle({
+		gameData: GAME_DATA,
+		sides: [{ teams: [[createBulbyWithTaunt()]] }, { teams: [[createModestIvysaur()]] }],
+		random: () => 1,
+	});
+	let session = battle.start();
+
+	readEvent(session.next());
+	readEvent(session.next());
+	let firstRequest = readEvent(session.next());
+	if (firstRequest.type !== "request-turn-commands") throw new TypeError("Expected turn request.");
+	collectTurnEvents(session, battle, [
+		{ type: "fight", move: 0, target: { side: 1, slot: 0 } },
+		{ type: "fight", move: 2, target: { side: 0, slot: 0 } },
+	]);
+
+	let secondTurnStarted = readEvent(session.next());
+	expect(secondTurnStarted).toEqual({ type: "turn-started", turn: 2 });
+	let secondRequest = readEvent(session.next());
+	if (secondRequest.type !== "request-turn-commands") throw new TypeError("Expected turn request.");
+	let events = collectTurnEvents(session, battle, [
+		{ type: "fight", move: 1, target: { side: 1, slot: 0 } },
+		{ type: "fight", move: 2, target: { side: 0, slot: 0 } },
+	]);
+
+	expect(events).toContainEqual({
+		type: "move-failed",
+		user: { side: 1, slot: 0 },
+		reason: "taunt",
+	});
+});
+
+test("Disable prevents using the disabled move slot", () => {
+	let battle = new Battle({
+		gameData: GAME_DATA,
+		sides: [
+			{ teams: [[createBulbyWithDisable()]] },
+			{ teams: [[createModestIvysaurWithTackle()]] },
+		],
+		random: () => 1,
+	});
+	let session = battle.start();
+
+	readEvent(session.next());
+	readEvent(session.next());
+	let firstRequest = readEvent(session.next());
+	if (firstRequest.type !== "request-turn-commands") throw new TypeError("Expected turn request.");
+	collectTurnEvents(session, battle, [
+		{ type: "fight", move: 0, target: { side: 1, slot: 0 } },
+		{ type: "fight", move: 0, target: { side: 0, slot: 0 } },
+	]);
+
+	let secondTurnStarted = readEvent(session.next());
+	expect(secondTurnStarted).toEqual({ type: "turn-started", turn: 2 });
+	let secondRequest = readEvent(session.next());
+	if (secondRequest.type !== "request-turn-commands") throw new TypeError("Expected turn request.");
+	let events = collectTurnEvents(session, battle, [
+		{ type: "fight", move: 1, target: { side: 1, slot: 0 } },
+		{ type: "fight", move: 0, target: { side: 0, slot: 0 } },
+	]);
+
+	expect(events).toContainEqual({
+		type: "move-failed",
+		user: { side: 1, slot: 0 },
+		reason: "disabled",
+	});
+});
+
+test("Encore locks the target into its last successful move slot", () => {
+	let battle = new Battle({
+		gameData: GAME_DATA,
+		sides: [{ teams: [[createModestIvysaurWithEncore()]] }, { teams: [[createBulbyWithTackle()]] }],
+		random: () => 1,
+	});
+	let session = battle.start();
+
+	readEvent(session.next());
+	readEvent(session.next());
+	let firstRequest = readEvent(session.next());
+	if (firstRequest.type !== "request-turn-commands") throw new TypeError("Expected turn request.");
+	collectTurnEvents(session, battle, [
+		{ type: "fight", move: 1, target: { side: 1, slot: 0 } },
+		{ type: "fight", move: 1, target: { side: 0, slot: 0 } },
+	]);
+
+	let secondTurnStarted = readEvent(session.next());
+	expect(secondTurnStarted).toEqual({ type: "turn-started", turn: 2 });
+	let secondRequest = readEvent(session.next());
+	if (secondRequest.type !== "request-turn-commands") throw new TypeError("Expected turn request.");
+	collectTurnEvents(session, battle, [
+		{ type: "fight", move: 0, target: { side: 1, slot: 0 } },
+		{ type: "fight", move: 0, target: { side: 0, slot: 0 } },
+	]);
+
+	let thirdTurnStarted = readEvent(session.next());
+	expect(thirdTurnStarted).toEqual({ type: "turn-started", turn: 3 });
+	let thirdRequest = readEvent(session.next());
+	if (thirdRequest.type !== "request-turn-commands") throw new TypeError("Expected turn request.");
+	let events = collectTurnEvents(session, battle, [
+		{ type: "fight", move: 1, target: { side: 1, slot: 0 } },
+		{ type: "fight", move: 0, target: { side: 0, slot: 0 } },
+	]);
+
+	expect(events).toContainEqual({
+		type: "move-used",
+		user: { side: 1, slot: 0 },
+		moveId: "EMBER",
+		target: { side: 0, slot: 0 },
+	});
+	expect(battle.state.sides[1].active[0]?.combatant.volatile.encoredMoveSlot).toBe(1);
+});
+
+test("Identify applies the identified volatile through battle move resolution", () => {
+	let battle = new Battle({
+		gameData: GAME_DATA,
+		sides: [{ teams: [[createBulbyWithIdentify()]] }, { teams: [[createModestIvysaur()]] }],
+		random: () => 1,
+	});
+	let session = battle.start();
+
+	readEvent(session.next());
+	readEvent(session.next());
+	let request = readEvent(session.next());
+	if (request.type !== "request-turn-commands") throw new TypeError("Expected turn request.");
+	let events = collectTurnEvents(session, battle, [
+		{ type: "fight", move: 0, target: { side: 1, slot: 0 } },
+		{ type: "fight", move: 2, target: { side: 0, slot: 0 } },
+	]);
+
+	expect(events).toContainEqual({
+		type: "volatile-applied",
+		target: { side: 1, slot: 0 },
+		effect: "identify",
+	});
+	expect(battle.state.sides[1].active[0]?.combatant.volatile.identified).toBe(true);
 });
 
 test("Wrap traps and deals residual damage on later turns", () => {
@@ -1137,6 +1500,46 @@ function createBulbyWithRainDance() {
 	});
 }
 
+function createBulbyWithSafeguard() {
+	return new Creature({
+		nickname: "Bulby",
+		species: "BULBASAUR" as SpeciesId,
+		nature: "MODEST" as NatureId,
+		experience: 1000000,
+		moveset: ["SAFEGUARD", "EMBER", "GROWTH", "LEECH_SEED"],
+		iv: createPerfectStats(),
+		ev: {
+			[Stat.HP]: 255,
+			[Stat.Attack]: 255,
+			[Stat.Defense]: 0,
+			[Stat.SpecialAttack]: 0,
+			[Stat.SpecialDefense]: 0,
+			[Stat.Speed]: 0,
+		},
+		status: createStatus(["SAFEGUARD", "EMBER", "GROWTH", "LEECH_SEED"]),
+	});
+}
+
+function createBulbyWithMist() {
+	return new Creature({
+		nickname: "Bulby",
+		species: "BULBASAUR" as SpeciesId,
+		nature: "MODEST" as NatureId,
+		experience: 1000000,
+		moveset: ["MIST", "EMBER", "GROWTH", "LEECH_SEED"],
+		iv: createPerfectStats(),
+		ev: {
+			[Stat.HP]: 255,
+			[Stat.Attack]: 255,
+			[Stat.Defense]: 0,
+			[Stat.SpecialAttack]: 0,
+			[Stat.SpecialDefense]: 0,
+			[Stat.Speed]: 0,
+		},
+		status: createStatus(["MIST", "EMBER", "GROWTH", "LEECH_SEED"]),
+	});
+}
+
 function createBulbyWithGrassyTerrain() {
 	return new Creature({
 		nickname: "Bulby",
@@ -1157,6 +1560,12 @@ function createBulbyWithGrassyTerrain() {
 	});
 }
 
+function createDamagedBulbyWithGrassyTerrain() {
+	let creature = createBulbyWithGrassyTerrain();
+	creature.status.damage = 16;
+	return creature;
+}
+
 function createBulbyWithGravity() {
 	return new Creature({
 		nickname: "Bulby",
@@ -1174,6 +1583,46 @@ function createBulbyWithGravity() {
 			[Stat.Speed]: 0,
 		},
 		status: createStatus(["GRAVITY", "EMBER", "GROWTH", "LEECH_SEED"]),
+	});
+}
+
+function createBulbyWithSandstorm() {
+	return new Creature({
+		nickname: "Bulby",
+		species: "BULBASAUR" as SpeciesId,
+		nature: "MODEST" as NatureId,
+		experience: 1000000,
+		moveset: ["SANDSTORM", "EMBER", "GROWTH", "LEECH_SEED"],
+		iv: createPerfectStats(),
+		ev: {
+			[Stat.HP]: 255,
+			[Stat.Attack]: 255,
+			[Stat.Defense]: 0,
+			[Stat.SpecialAttack]: 0,
+			[Stat.SpecialDefense]: 0,
+			[Stat.Speed]: 0,
+		},
+		status: createStatus(["SANDSTORM", "EMBER", "GROWTH", "LEECH_SEED"]),
+	});
+}
+
+function createBulbyWithSpikes() {
+	return new Creature({
+		nickname: "Bulby",
+		species: "BULBASAUR" as SpeciesId,
+		nature: "MODEST" as NatureId,
+		experience: 1000000,
+		moveset: ["SPIKES", "EMBER", "GROWTH", "LEECH_SEED"],
+		iv: createPerfectStats(),
+		ev: {
+			[Stat.HP]: 255,
+			[Stat.Attack]: 255,
+			[Stat.Defense]: 0,
+			[Stat.SpecialAttack]: 0,
+			[Stat.SpecialDefense]: 0,
+			[Stat.Speed]: 0,
+		},
+		status: createStatus(["SPIKES", "EMBER", "GROWTH", "LEECH_SEED"]),
 	});
 }
 
@@ -1337,6 +1786,86 @@ function createBulbyWithTakeDown() {
 	});
 }
 
+function createBulbyWithHyperBeam() {
+	return new Creature({
+		nickname: "Bulby",
+		species: "BULBASAUR" as SpeciesId,
+		nature: "MODEST" as NatureId,
+		experience: 1000000,
+		moveset: ["HYPER_BEAM", "EMBER", "GROWTH", "LEECH_SEED"],
+		iv: createPerfectStats(),
+		ev: {
+			[Stat.HP]: 255,
+			[Stat.Attack]: 255,
+			[Stat.Defense]: 0,
+			[Stat.SpecialAttack]: 0,
+			[Stat.SpecialDefense]: 0,
+			[Stat.Speed]: 0,
+		},
+		status: createStatus(["HYPER_BEAM", "EMBER", "GROWTH", "LEECH_SEED"]),
+	});
+}
+
+function createBulbyWithTaunt() {
+	return new Creature({
+		nickname: "Bulby",
+		species: "BULBASAUR" as SpeciesId,
+		nature: "MODEST" as NatureId,
+		experience: 1000000,
+		moveset: ["TAUNT", "EMBER", "GROWTH", "LEECH_SEED"],
+		iv: createPerfectStats(),
+		ev: {
+			[Stat.HP]: 255,
+			[Stat.Attack]: 255,
+			[Stat.Defense]: 0,
+			[Stat.SpecialAttack]: 0,
+			[Stat.SpecialDefense]: 0,
+			[Stat.Speed]: 0,
+		},
+		status: createStatus(["TAUNT", "EMBER", "GROWTH", "LEECH_SEED"]),
+	});
+}
+
+function createBulbyWithDisable() {
+	return new Creature({
+		nickname: "Bulby",
+		species: "BULBASAUR" as SpeciesId,
+		nature: "MODEST" as NatureId,
+		experience: 1000000,
+		moveset: ["DISABLE", "EMBER", "GROWTH", "LEECH_SEED"],
+		iv: createPerfectStats(),
+		ev: {
+			[Stat.HP]: 255,
+			[Stat.Attack]: 255,
+			[Stat.Defense]: 0,
+			[Stat.SpecialAttack]: 0,
+			[Stat.SpecialDefense]: 0,
+			[Stat.Speed]: 0,
+		},
+		status: createStatus(["DISABLE", "EMBER", "GROWTH", "LEECH_SEED"]),
+	});
+}
+
+function createBulbyWithIdentify() {
+	return new Creature({
+		nickname: "Bulby",
+		species: "BULBASAUR" as SpeciesId,
+		nature: "MODEST" as NatureId,
+		experience: 1000000,
+		moveset: ["IDENTIFY", "EMBER", "GROWTH", "LEECH_SEED"],
+		iv: createPerfectStats(),
+		ev: {
+			[Stat.HP]: 255,
+			[Stat.Attack]: 255,
+			[Stat.Defense]: 0,
+			[Stat.SpecialAttack]: 0,
+			[Stat.SpecialDefense]: 0,
+			[Stat.Speed]: 0,
+		},
+		status: createStatus(["IDENTIFY", "EMBER", "GROWTH", "LEECH_SEED"]),
+	});
+}
+
 function createBulbyWithWrap() {
 	return new Creature({
 		nickname: "Bulby",
@@ -1443,6 +1972,25 @@ function createBackupBulby() {
 	});
 }
 
+function createBackupIvysaur() {
+	return new Creature({
+		species: "IVYSAUR" as SpeciesId,
+		nature: "MODEST" as NatureId,
+		experience: 1000000,
+		moveset: ["TACKLE", "EMBER", "GROWTH", "LEECH_SEED"],
+		iv: createPerfectStats(),
+		ev: {
+			[Stat.HP]: 0,
+			[Stat.Attack]: 0,
+			[Stat.Defense]: 0,
+			[Stat.SpecialAttack]: 0,
+			[Stat.SpecialDefense]: 0,
+			[Stat.Speed]: 0,
+		},
+		status: createStatus(["TACKLE", "EMBER", "GROWTH", "LEECH_SEED"]),
+	});
+}
+
 function createModestIvysaur() {
 	return new Creature({
 		species: "IVYSAUR" as SpeciesId,
@@ -1497,6 +2045,63 @@ function createModestIvysaurWithEmber() {
 			[Stat.Speed]: 0,
 		},
 		status: createStatus(["EMBER", "RAZOR_LEAF", "GROWTH", "LEECH_SEED"]),
+	});
+}
+
+function createModestIvysaurWithEncore() {
+	return new Creature({
+		species: "IVYSAUR" as SpeciesId,
+		nature: "MODEST" as NatureId,
+		experience: 1000000,
+		moveset: ["ENCORE", "EMBER", "GROWTH", "LEECH_SEED"],
+		iv: createPerfectStats(),
+		ev: {
+			[Stat.HP]: 0,
+			[Stat.Attack]: 0,
+			[Stat.Defense]: 0,
+			[Stat.SpecialAttack]: 0,
+			[Stat.SpecialDefense]: 0,
+			[Stat.Speed]: 0,
+		},
+		status: createStatus(["ENCORE", "EMBER", "GROWTH", "LEECH_SEED"]),
+	});
+}
+
+function createModestIvysaurWithGrowl() {
+	return new Creature({
+		species: "IVYSAUR" as SpeciesId,
+		nature: "MODEST" as NatureId,
+		experience: 1000000,
+		moveset: ["GROWL", "RAZOR_LEAF", "GROWTH", "LEECH_SEED"],
+		iv: createPerfectStats(),
+		ev: {
+			[Stat.HP]: 0,
+			[Stat.Attack]: 0,
+			[Stat.Defense]: 0,
+			[Stat.SpecialAttack]: 0,
+			[Stat.SpecialDefense]: 0,
+			[Stat.Speed]: 0,
+		},
+		status: createStatus(["GROWL", "RAZOR_LEAF", "GROWTH", "LEECH_SEED"]),
+	});
+}
+
+function createModestIvysaurWithSleepPowder() {
+	return new Creature({
+		species: "IVYSAUR" as SpeciesId,
+		nature: "MODEST" as NatureId,
+		experience: 1000000,
+		moveset: ["SLEEP_POWDER", "RAZOR_LEAF", "GROWTH", "LEECH_SEED"],
+		iv: createPerfectStats(),
+		ev: {
+			[Stat.HP]: 0,
+			[Stat.Attack]: 0,
+			[Stat.Defense]: 0,
+			[Stat.SpecialAttack]: 0,
+			[Stat.SpecialDefense]: 0,
+			[Stat.Speed]: 0,
+		},
+		status: createStatus(["SLEEP_POWDER", "RAZOR_LEAF", "GROWTH", "LEECH_SEED"]),
 	});
 }
 

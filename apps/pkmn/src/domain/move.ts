@@ -21,6 +21,18 @@ export enum Class {
 /** Mutable battle stat stages that moves can raise or lower. */
 export type BattleStatStage = Exclude<Stat, Stat.HP> | "accuracy" | "evasion";
 
+export type SideEffectType =
+	| "reflect"
+	| "light-screen"
+	| "tailwind"
+	| "safeguard"
+	| "mist"
+	| "lucky-chant"
+	| "spikes"
+	| "toxic-spikes"
+	| "stealth-rock"
+	| "sticky-web";
+
 export type FieldEffectType =
 	| "trick-room"
 	| "sun"
@@ -41,10 +53,16 @@ export type MoveEffect =
 	| { kind: "none" }
 	| { kind: "compound"; effects: MoveEffect[] }
 	| { kind: "priority"; value: number }
+	| { kind: "recharge" }
 	| { kind: "trap" }
 	| { kind: "partial-trap"; turns: number }
 	| { kind: "confuse"; turns: number }
 	| { kind: "flinch"; chance: number }
+	| { kind: "taunt"; turns: number }
+	| { kind: "encore"; turns: number }
+	| { kind: "disable"; turns: number; slot: 0 | 1 | 2 | 3 }
+	| { kind: "identify" }
+	| { kind: "attract" }
 	| { kind: "protect" }
 	| { kind: "multi-hit"; hits: number | [number, number] }
 	| { kind: "ohko" }
@@ -53,8 +71,19 @@ export type MoveEffect =
 	| { kind: "modify-stat"; stat: BattleStatStage; stages: number; target: "self" | "target" }
 	| {
 			kind: "side-effect";
-			effect: "reflect" | "light-screen" | "tailwind";
+			effect: "reflect" | "light-screen" | "tailwind" | "safeguard" | "mist" | "lucky-chant";
 			turns: number;
+			target: "self" | "target";
+	  }
+	| {
+			kind: "side-effect";
+			effect: "spikes" | "toxic-spikes";
+			layers: number;
+			target: "self" | "target";
+	  }
+	| {
+			kind: "side-effect";
+			effect: "stealth-rock" | "sticky-web";
 			target: "self" | "target";
 	  }
 	| { kind: "field-effect"; effect: FieldEffectType; turns: number }

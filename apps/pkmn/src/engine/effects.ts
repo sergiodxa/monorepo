@@ -50,6 +50,15 @@ export class Effects {
 		return [];
 	}
 
+	/** Applies the recharge volatile so the user must skip its next action. */
+	static recharge(
+		_effect: Extract<MoveEffect, { kind: "recharge" }>,
+		context: Effects.Context,
+	): BattleEvent[] {
+		context.user.volatile.recharging = true;
+		return [{ type: "volatile-applied", target: context.userPosition, effect: "recharge" }];
+	}
+
 	/** Prevents the target from leaving the battle. */
 	static trap(
 		_effect: Extract<MoveEffect, { kind: "trap" }>,
@@ -87,6 +96,54 @@ export class Effects {
 		if (context.random() >= effect.chance) return [];
 		context.target.volatile.flinched = true;
 		return [{ type: "volatile-applied", target: context.targetPosition, effect: "flinch" }];
+	}
+
+	/** Prevents the target from using status moves for a fixed number of turns. */
+	static taunt(
+		effect: Extract<MoveEffect, { kind: "taunt" }>,
+		context: Effects.Context,
+	): BattleEvent[] {
+		context.target.volatile.tauntedTurns = effect.turns;
+		return [{ type: "volatile-applied", target: context.targetPosition, effect: "taunt" }];
+	}
+
+	/** Forces the target to repeat its last successfully chosen move. */
+	static encore(
+		effect: Extract<MoveEffect, { kind: "encore" }>,
+		context: Effects.Context,
+	): BattleEvent[] {
+		if (context.target.volatile.lastMoveSlot === null) return [];
+		context.target.volatile.encoreTurns = effect.turns;
+		context.target.volatile.encoredMoveSlot = context.target.volatile.lastMoveSlot;
+		return [{ type: "volatile-applied", target: context.targetPosition, effect: "encore" }];
+	}
+
+	/** Disables one move slot on the target for a fixed number of turns. */
+	static disable(
+		effect: Extract<MoveEffect, { kind: "disable" }>,
+		context: Effects.Context,
+	): BattleEvent[] {
+		context.target.volatile.disabledMoveSlot = effect.slot;
+		context.target.volatile.disableTurns = effect.turns;
+		return [{ type: "volatile-applied", target: context.targetPosition, effect: "disable" }];
+	}
+
+	/** Marks the target as identified so ghost-type immunities can be ignored. */
+	static identify(
+		_effect: Extract<MoveEffect, { kind: "identify" }>,
+		context: Effects.Context,
+	): BattleEvent[] {
+		context.target.volatile.identified = true;
+		return [{ type: "volatile-applied", target: context.targetPosition, effect: "identify" }];
+	}
+
+	/** Applies attraction to the target. */
+	static attract(
+		_effect: Extract<MoveEffect, { kind: "attract" }>,
+		context: Effects.Context,
+	): BattleEvent[] {
+		context.target.volatile.attracted = true;
+		return [{ type: "volatile-applied", target: context.targetPosition, effect: "attract" }];
 	}
 
 	/** Applies protection to the user for the rest of the turn. */
@@ -137,6 +194,8 @@ export class Effects {
 	): BattleEvent[] {
 		let combatant = effect.target === "self" ? context.user : context.target;
 		let position = effect.target === "self" ? context.userPosition : context.targetPosition;
+		let side = context.state.sides[position.side]!;
+		if (effect.target === "target" && effect.stages < 0 && side.effects.mistTurns > 0) return [];
 		let current = combatant.statStages[effect.stat];
 		let value = Math.max(-6, Math.min(6, current + effect.stages));
 		combatant.statStages[effect.stat] = value;
@@ -167,6 +226,27 @@ export class Effects {
 			}
 			case "tailwind": {
 				return Effects.tailwind(effect, context, side);
+			}
+			case "safeguard": {
+				return Effects.safeguard(effect, context, side);
+			}
+			case "mist": {
+				return Effects.mist(effect, context, side);
+			}
+			case "lucky-chant": {
+				return Effects.luckyChant(effect, context, side);
+			}
+			case "spikes": {
+				return Effects.spikes(effect, context, side);
+			}
+			case "toxic-spikes": {
+				return Effects.toxicSpikes(effect, context, side);
+			}
+			case "stealth-rock": {
+				return Effects.stealthRock(effect, context, side);
+			}
+			case "sticky-web": {
+				return Effects.stickyWeb(effect, context, side);
 			}
 		}
 	}
@@ -229,6 +309,7 @@ export class Effects {
 	): BattleEvent[] {
 		if (context.target.creature.status.state !== null) return [];
 		if (effect.chance < 1 && context.random() >= effect.chance) return [];
+		if (context.state.sides[context.targetPosition.side]!.effects.safeguardTurns > 0) return [];
 
 		let status = Effects.getPersistentStatus(effect.status);
 		context.target.creature.status.state = status;
@@ -259,6 +340,7 @@ export class Effects {
 		context: Effects.Context,
 		side: number,
 	): BattleEvent[] {
+		if (!("turns" in effect)) return [];
 		context.state.sides[side]!.effects.reflectTurns = effect.turns;
 		return [{ type: "side-effect-applied", side, effect: "reflect", turns: effect.turns }];
 	}
@@ -269,6 +351,7 @@ export class Effects {
 		context: Effects.Context,
 		side: number,
 	): BattleEvent[] {
+		if (!("turns" in effect)) return [];
 		context.state.sides[side]!.effects.lightScreenTurns = effect.turns;
 		return [{ type: "side-effect-applied", side, effect: "light-screen", turns: effect.turns }];
 	}
@@ -279,8 +362,86 @@ export class Effects {
 		context: Effects.Context,
 		side: number,
 	): BattleEvent[] {
+		if (!("turns" in effect)) return [];
 		context.state.sides[side]!.effects.tailwindTurns = effect.turns;
 		return [{ type: "side-effect-applied", side, effect: "tailwind", turns: effect.turns }];
+	}
+
+	/** Applies Safeguard to one side. */
+	static safeguard(
+		effect: Extract<MoveEffect, { kind: "side-effect" }>,
+		context: Effects.Context,
+		side: number,
+	): BattleEvent[] {
+		if (!("turns" in effect)) return [];
+		context.state.sides[side]!.effects.safeguardTurns = effect.turns;
+		return [{ type: "side-effect-applied", side, effect: "safeguard", turns: effect.turns }];
+	}
+
+	/** Applies Mist to one side. */
+	static mist(
+		effect: Extract<MoveEffect, { kind: "side-effect" }>,
+		context: Effects.Context,
+		side: number,
+	): BattleEvent[] {
+		if (!("turns" in effect)) return [];
+		context.state.sides[side]!.effects.mistTurns = effect.turns;
+		return [{ type: "side-effect-applied", side, effect: "mist", turns: effect.turns }];
+	}
+
+	/** Applies Lucky Chant to one side. */
+	static luckyChant(
+		effect: Extract<MoveEffect, { kind: "side-effect" }>,
+		context: Effects.Context,
+		side: number,
+	): BattleEvent[] {
+		if (!("turns" in effect)) return [];
+		context.state.sides[side]!.effects.luckyChantTurns = effect.turns;
+		return [{ type: "side-effect-applied", side, effect: "lucky-chant", turns: effect.turns }];
+	}
+
+	/** Adds Spikes layers to one side up to the usual maximum. */
+	static spikes(
+		effect: Extract<MoveEffect, { kind: "side-effect" }>,
+		context: Effects.Context,
+		side: number,
+	): BattleEvent[] {
+		if (!("layers" in effect)) return [];
+		let layers = Math.min(3, context.state.sides[side]!.effects.spikesLayers + effect.layers);
+		context.state.sides[side]!.effects.spikesLayers = layers;
+		return [{ type: "side-effect-applied", side, effect: "spikes", layers }];
+	}
+
+	/** Adds Toxic Spikes layers to one side up to the usual maximum. */
+	static toxicSpikes(
+		effect: Extract<MoveEffect, { kind: "side-effect" }>,
+		context: Effects.Context,
+		side: number,
+	): BattleEvent[] {
+		if (!("layers" in effect)) return [];
+		let layers = Math.min(2, context.state.sides[side]!.effects.toxicSpikesLayers + effect.layers);
+		context.state.sides[side]!.effects.toxicSpikesLayers = layers;
+		return [{ type: "side-effect-applied", side, effect: "toxic-spikes", layers }];
+	}
+
+	/** Places Stealth Rock on one side. */
+	static stealthRock(
+		_effect: Extract<MoveEffect, { kind: "side-effect" }>,
+		context: Effects.Context,
+		side: number,
+	): BattleEvent[] {
+		context.state.sides[side]!.effects.stealthRock = true;
+		return [{ type: "side-effect-applied", side, effect: "stealth-rock" }];
+	}
+
+	/** Places Sticky Web on one side. */
+	static stickyWeb(
+		_effect: Extract<MoveEffect, { kind: "side-effect" }>,
+		context: Effects.Context,
+		side: number,
+	): BattleEvent[] {
+		context.state.sides[side]!.effects.stickyWeb = true;
+		return [{ type: "side-effect-applied", side, effect: "sticky-web" }];
 	}
 
 	/** Applies Trick Room to the field. */
@@ -460,10 +621,16 @@ const RESOLVERS: ResolverMap = {
 	none: Effects.none,
 	compound: Effects.compound,
 	priority: Effects.priority,
+	recharge: Effects.recharge,
 	trap: Effects.trap,
 	"partial-trap": Effects.partialTrap,
 	confuse: Effects.confuse,
 	flinch: Effects.flinch,
+	taunt: Effects.taunt,
+	encore: Effects.encore,
+	disable: Effects.disable,
+	identify: Effects.identify,
+	attract: Effects.attract,
 	protect: Effects.protect,
 	"multi-hit": Effects.multiHit,
 	ohko: Effects.ohko,

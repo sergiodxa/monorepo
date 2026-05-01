@@ -1,9 +1,15 @@
 import type { GameData } from "../domain/game-data";
-import type { BattleStatStage, FieldEffectType, Move, MoveEffect } from "../domain/move";
+import type {
+	BattleStatStage,
+	FieldEffectType,
+	Move,
+	MoveEffect,
+	SideEffectType,
+} from "../domain/move";
 
 import { Class } from "../domain/move";
 import { Stat } from "../domain/stat";
-import { Effectiveness } from "../domain/type";
+import { Effectiveness, Type } from "../domain/type";
 
 import { createFieldEffectState, createSideEffectState } from "./battle-state";
 import { CombatantState } from "./combatant-state";
@@ -17,8 +23,8 @@ interface TurnAction {
 	user: CombatantState;
 	userPosition: BattlePosition;
 	command: TurnCommand;
-	moveId: string;
-	move: Move;
+	moveId: string | null;
+	move: Move | null;
 	priority: number;
 	speed: number;
 	isChargingRelease: boolean;
@@ -44,6 +50,13 @@ export interface FightCommand {
 	target: BattlePosition;
 }
 
+/** Switches one active combatant with a bench creature from the same team. */
+export interface SwitchCommand {
+	type: "switch";
+	target: BattlePosition;
+	creature: number;
+}
+
 /** Chooses a replacement creature for one empty slot. */
 export interface ReplacementCommand {
 	type: "replace";
@@ -67,7 +80,7 @@ type ReplacementInput = Array<ReplacementCommand | LeaveReplacementCommand>;
 type BattleInput = TurnCommand[] | ReplacementInput;
 
 /** A command submitted for one active combatant during a turn. */
-export type TurnCommand = FightCommand | LeaveTurnCommand;
+export type TurnCommand = FightCommand | LeaveTurnCommand | SwitchCommand;
 
 export namespace BattleEvent {
 	/** Requests commands for every active combatant that can act this turn. */
@@ -140,7 +153,19 @@ export namespace BattleEvent {
 	export interface VolatileAppliedEvent {
 		type: "volatile-applied";
 		target: BattlePosition;
-		effect: "confusion" | "flinch" | "partial-trap" | "protect" | "seed" | "trap";
+		effect:
+			| "attract"
+			| "confusion"
+			| "disable"
+			| "encore"
+			| "flinch"
+			| "identify"
+			| "partial-trap"
+			| "protect"
+			| "recharge"
+			| "seed"
+			| "taunt"
+			| "trap";
 	}
 
 	/** Reports a combat stat stage changing during battle. */
@@ -156,8 +181,30 @@ export namespace BattleEvent {
 	export interface SideEffectAppliedEvent {
 		type: "side-effect-applied";
 		side: number;
-		effect: "reflect" | "light-screen" | "tailwind";
-		turns: number;
+		effect: SideEffectType;
+		turns?: number;
+		layers?: number;
+	}
+
+	/** Reports one active creature being replaced by a bench creature. */
+	export interface CreatureSwitchedEvent {
+		type: "creature-switched";
+		target: BattlePosition;
+		creature: number;
+	}
+
+	/** Reports a submitted move failing before normal resolution. */
+	export interface MoveFailedEvent {
+		type: "move-failed";
+		user: BattlePosition;
+		reason: "attract" | "disabled" | "encored" | "recharge" | "taunt";
+	}
+
+	/** Reports side-entry hazards damaging or debuffing a switched-in creature. */
+	export interface HazardTriggeredEvent {
+		type: "hazard-triggered";
+		target: BattlePosition;
+		effect: "spikes" | "toxic-spikes" | "stealth-rock" | "sticky-web";
 	}
 
 	/** Reports shared field effects such as Trick Room. */
@@ -202,6 +249,9 @@ export type BattleEvent =
 	| BattleEvent.StatStageChangedEvent
 	| BattleEvent.SideEffectAppliedEvent
 	| BattleEvent.FieldEffectAppliedEvent
+	| BattleEvent.CreatureSwitchedEvent
+	| BattleEvent.MoveFailedEvent
+	| BattleEvent.HazardTriggeredEvent
 	| BattleEvent.CreatureFaintedEvent
 	| BattleEvent.TurnEndedEvent
 	| BattleEvent.BattleFinishedEvent;
@@ -441,7 +491,13 @@ export class Battle {
 				return;
 			}
 
+			if (action.command.type === "switch") {
+				for (let event of this.resolveSwitch(action)) yield event;
+				continue;
+			}
+
 			if (this.isCombatantActive(action.userPosition, action.user) === false) continue;
+			if (!action.move || !action.moveId) continue;
 
 			let target = this.getActiveCombatant(action.command.target);
 			if (target === null) continue;
@@ -449,6 +505,7 @@ export class Battle {
 			for (let event of this.resolveMove(
 				action.user,
 				action.userPosition,
+				action.command,
 				action.command.target,
 				target.combatant,
 				action.move,
@@ -481,8 +538,8 @@ export class Battle {
 					user: active.combatant,
 					userPosition: request,
 					command,
-					moveId: "",
-					move: this.gameData.moves.get("TACKLE")!,
+					moveId: null,
+					move: null,
 					priority: Number.POSITIVE_INFINITY,
 					speed: Number.POSITIVE_INFINITY,
 					isChargingRelease: false,
@@ -490,7 +547,33 @@ export class Battle {
 				continue;
 			}
 
+			if (command.type === "switch") {
+				if (this.canSwitchCombatant(request, active, command.creature) === false) continue;
+
+				actions.push({
+					user: active.combatant,
+					userPosition: request,
+					command,
+					moveId: null,
+					move: null,
+					priority: 6,
+					speed: this.getCombatantSpeed(request, active.combatant),
+					isChargingRelease: false,
+				});
+				continue;
+			}
+
 			if (command.type !== "fight") continue;
+
+			if (
+				active.combatant.volatile.encoreTurns > 0 &&
+				active.combatant.volatile.encoredMoveSlot !== null
+			) {
+				command = {
+					...command,
+					move: active.combatant.volatile.encoredMoveSlot,
+				};
+			}
 
 			let moveId = active.combatant.creature.moveset[command.move];
 			if (!moveId) continue;
@@ -528,9 +611,44 @@ export class Battle {
 		return actions;
 	}
 
+	private *resolveSwitch(action: TurnAction) {
+		if (action.command.type !== "switch") return;
+		let active = this.getActiveCombatant(action.userPosition);
+		if (active === null) return;
+		let side = this.state.sides[action.userPosition.side]!;
+		let replacement = side.teams[active.teamIndex]!.creatures[action.command.creature];
+		if (!replacement) return;
+
+		this.resetSwitchVolatiles(active.combatant);
+		side.active[action.userPosition.slot] = {
+			teamIndex: active.teamIndex,
+			creatureIndex: action.command.creature,
+			combatant: replacement,
+		};
+
+		yield {
+			type: "creature-switched",
+			target: action.userPosition,
+			creature: action.command.creature,
+		} as BattleEvent.CreatureSwitchedEvent;
+
+		for (let event of this.applySwitchInHazards(action.userPosition, replacement)) {
+			yield event;
+		}
+
+		if (this.isCombatantFainted(replacement)) {
+			this.clearActiveCombatant(action.userPosition);
+			yield {
+				type: "creature-fainted",
+				target: action.userPosition,
+			} as BattleEvent.CreatureFaintedEvent;
+		}
+	}
+
 	private *resolveMove(
 		user: CombatantState,
 		userPosition: BattlePosition,
+		command: FightCommand,
 		targetPosition: BattlePosition,
 		target: CombatantState,
 		move: Move,
@@ -540,7 +658,7 @@ export class Battle {
 		let events: BattleEvent[] = [];
 		let effects = this.flattenEffects(move.effect);
 
-		if (this.resolveBeforeMove(user, userPosition, events)) {
+		if (this.resolveBeforeMove(user, userPosition, move, command, events)) {
 			for (let event of events) yield event;
 			return;
 		}
@@ -597,6 +715,8 @@ export class Battle {
 				events.push(event);
 			}
 		}
+
+		user.volatile.lastMoveSlot = command.move;
 
 		if (this.isCombatantFainted(user)) {
 			this.clearActiveCombatant(userPosition);
@@ -766,6 +886,7 @@ export class Battle {
 		let side = this.state.sides[sideIndex]!;
 		let combatant = side.teams[teamIndex]!.creatures[creatureIndex]!;
 
+		this.resetSwitchVolatiles(combatant);
 		side.active[slotIndex] = {
 			teamIndex,
 			creatureIndex,
@@ -791,6 +912,22 @@ export class Battle {
 		let side = this.state.sides[position.side]!;
 		if (side.canLeaveBattle === false) return false;
 		if (combatant.volatile.trapped) return false;
+		return true;
+	}
+
+	private canSwitchCombatant(
+		position: BattlePosition,
+		active: BattleActiveSlotState,
+		creatureIndex: number,
+	): boolean {
+		if (active.combatant.volatile.trapped) return false;
+		let side = this.state.sides[position.side]!;
+		let team = side.teams[active.teamIndex]!;
+		let replacement = team.creatures[creatureIndex];
+		if (!replacement) return false;
+		if (creatureIndex === active.creatureIndex) return false;
+		if (this.isCombatantFainted(replacement)) return false;
+		if (this.isCreatureCurrentlyActive(side, active.teamIndex, creatureIndex)) return false;
 		return true;
 	}
 
@@ -855,7 +992,10 @@ export class Battle {
 	}
 
 	private isTurnCommands(input: BattleInput): input is TurnCommand[] {
-		return input.every((command) => command.type === "fight" || command.type === "leave-battle");
+		return input.every(
+			(command) =>
+				command.type === "fight" || command.type === "leave-battle" || command.type === "switch",
+		);
 	}
 
 	private getMovePriority(move: Move): number {
@@ -869,6 +1009,8 @@ export class Battle {
 	private canMoveHitTarget(move: Move, target: CombatantState): boolean {
 		if (target.volatile.invulnerable === false) return true;
 		if (move.effect.kind === "charge") return true;
+		if (this.state.field.gravityTurns > 0) return true;
+		if (target.volatile.identified && move.type === Type.NORMAL) return true;
 		return false;
 	}
 
@@ -894,7 +1036,112 @@ export class Battle {
 			speed *= 2;
 		}
 
+		if (this.state.field.terrain === "electric") {
+			speed = Math.floor(speed * 1.1);
+		}
+
 		return speed;
+	}
+
+	private isGrounded(combatant: CombatantState): boolean {
+		if (combatant.volatile.invulnerable) return false;
+		let species = getCreatureSpecies(this.gameData, combatant.creature);
+		return species.types.includes(Type.FLYING) === false;
+	}
+
+	private resetSwitchVolatiles(combatant: CombatantState) {
+		combatant.volatile.seeded = false;
+		combatant.volatile.seededBy = null;
+		combatant.volatile.trapped = false;
+		combatant.volatile.confusionTurns = 0;
+		combatant.volatile.invulnerable = false;
+		combatant.volatile.flinched = false;
+		combatant.volatile.protecting = false;
+		combatant.volatile.partiallyTrappedTurns = 0;
+		combatant.volatile.partialTrapSourceSide = null;
+		combatant.volatile.charging = false;
+		combatant.volatile.chargingMoveId = null;
+		combatant.volatile.recharging = false;
+		combatant.volatile.attracted = false;
+		combatant.volatile.tauntedTurns = 0;
+		combatant.volatile.encoreTurns = 0;
+		combatant.volatile.encoredMoveSlot = null;
+		combatant.volatile.disabledMoveSlot = null;
+		combatant.volatile.disableTurns = 0;
+	}
+
+	private applySwitchInHazards(position: BattlePosition, combatant: CombatantState): BattleEvent[] {
+		let side = this.state.sides[position.side]!;
+		let effects = side.effects;
+		let events: BattleEvent[] = [];
+		let grounded = this.isGrounded(combatant);
+		let species = getCreatureSpecies(this.gameData, combatant.creature);
+
+		if (effects.spikesLayers > 0 && grounded) {
+			let fraction =
+				effects.spikesLayers === 1 ? 1 / 8 : effects.spikesLayers === 2 ? 1 / 6 : 1 / 4;
+			let damage = Math.max(
+				1,
+				Math.floor(getCreatureStat(this.gameData, combatant.creature, Stat.HP) * fraction),
+			);
+			events.push({ type: "hazard-triggered", target: position, effect: "spikes" });
+			this.applyDamage(combatant, position, damage, events);
+		}
+
+		if (
+			effects.toxicSpikesLayers > 0 &&
+			grounded &&
+			combatant.creature.status.state === null &&
+			species.types.includes(Type.POISON) === false &&
+			species.types.includes(Type.STEEL) === false
+		) {
+			combatant.creature.status.state = State.Poisoned;
+			events.push({ type: "hazard-triggered", target: position, effect: "toxic-spikes" });
+			events.push({ type: "status-applied", target: position, status: State.Poisoned });
+		}
+
+		if (effects.stealthRock) {
+			let effectiveness = this.getTypeEffectiveness(combatant, {
+				type: Type.ROCK,
+				class: Class.Physical,
+				power: 0,
+				accuracy: 0,
+				pp: 0,
+				effect: { kind: "none" },
+			} as Move);
+			let multiplier =
+				effectiveness === Effectiveness.SUPER
+					? 2
+					: effectiveness === Effectiveness.WEAK
+						? 0.5
+						: effectiveness === Effectiveness.ZERO
+							? 0
+							: 1;
+			let damage = Math.max(
+				0,
+				Math.floor(
+					getCreatureStat(this.gameData, combatant.creature, Stat.HP) * (1 / 8) * multiplier,
+				),
+			);
+			events.push({ type: "hazard-triggered", target: position, effect: "stealth-rock" });
+			if (damage > 0) this.applyDamage(combatant, position, damage, events);
+		}
+
+		if (effects.stickyWeb && grounded) {
+			let current = combatant.statStages[Stat.Speed];
+			let value = Math.max(-6, Math.min(6, current - 1));
+			combatant.statStages[Stat.Speed] = value;
+			events.push({ type: "hazard-triggered", target: position, effect: "sticky-web" });
+			events.push({
+				type: "stat-stage-changed",
+				target: position,
+				stat: Stat.Speed,
+				stages: -1,
+				value,
+			});
+		}
+
+		return events;
 	}
 
 	private getStageModifier(stage: number): number {
@@ -917,11 +1164,29 @@ export class Battle {
 			side.effects.reflectTurns = Math.max(0, side.effects.reflectTurns - 1);
 			side.effects.lightScreenTurns = Math.max(0, side.effects.lightScreenTurns - 1);
 			side.effects.tailwindTurns = Math.max(0, side.effects.tailwindTurns - 1);
+			side.effects.safeguardTurns = Math.max(0, side.effects.safeguardTurns - 1);
+			side.effects.mistTurns = Math.max(0, side.effects.mistTurns - 1);
+			side.effects.luckyChantTurns = Math.max(0, side.effects.luckyChantTurns - 1);
 
 			for (let active of side.active) {
 				if (!active) continue;
 				active.combatant.volatile.flinched = false;
 				active.combatant.volatile.protecting = false;
+				active.combatant.volatile.tauntedTurns = Math.max(
+					0,
+					active.combatant.volatile.tauntedTurns - 1,
+				);
+				active.combatant.volatile.encoreTurns = Math.max(
+					0,
+					active.combatant.volatile.encoreTurns - 1,
+				);
+				active.combatant.volatile.disableTurns = Math.max(
+					0,
+					active.combatant.volatile.disableTurns - 1,
+				);
+				if (active.combatant.volatile.disableTurns === 0) {
+					active.combatant.volatile.disabledMoveSlot = null;
+				}
 				if (
 					active.combatant.volatile.partiallyTrappedTurns === 0 &&
 					active.combatant.volatile.partialTrapSourceSide !== null
@@ -966,8 +1231,11 @@ export class Battle {
 		if (effectiveness === Effectiveness.ZERO) damage = 0;
 
 		if (this.random() < CRITICAL_HIT_CHANCE) {
-			damage = Math.floor(damage * 1.5);
-			events.push({ type: "critical-hit", target: targetPosition });
+			let targetSide = this.getCombatantSide(target);
+			if (this.state.sides[targetSide]!.effects.luckyChantTurns === 0) {
+				damage = Math.floor(damage * 1.5);
+				events.push({ type: "critical-hit", target: targetPosition });
+			}
 		}
 
 		return Math.floor(damage * ((85 + Math.floor(this.random() * 16)) / 100));
@@ -989,8 +1257,43 @@ export class Battle {
 	private resolveBeforeMove(
 		user: CombatantState,
 		userPosition: BattlePosition,
+		move: Move,
+		command: FightCommand,
 		events: BattleEvent[],
 	): boolean {
+		if (user.volatile.recharging) {
+			user.volatile.recharging = false;
+			events.push({ type: "move-failed", user: userPosition, reason: "recharge" });
+			return true;
+		}
+
+		if (user.volatile.tauntedTurns > 0 && move.class === Class.Status) {
+			events.push({ type: "move-failed", user: userPosition, reason: "taunt" });
+			return true;
+		}
+
+		if (
+			user.volatile.encoreTurns > 0 &&
+			user.volatile.encoredMoveSlot !== null &&
+			command.move !== user.volatile.encoredMoveSlot
+		) {
+			events.push({ type: "move-failed", user: userPosition, reason: "encored" });
+			return true;
+		}
+
+		if (
+			user.volatile.disabledMoveSlot !== null &&
+			user.volatile.disabledMoveSlot === command.move
+		) {
+			events.push({ type: "move-failed", user: userPosition, reason: "disabled" });
+			return true;
+		}
+
+		if (user.volatile.attracted && this.random() < 0.5) {
+			events.push({ type: "move-failed", user: userPosition, reason: "attract" });
+			return true;
+		}
+
 		if (user.creature.status.state === State.Asleep) return true;
 		if (user.creature.status.state === State.Frozen) return true;
 		if (user.volatile.flinched) return true;
@@ -1007,6 +1310,8 @@ export class Battle {
 			(move.accuracy / 100) *
 			this.getAccuracyStageModifier(user.statStages.accuracy) *
 			(1 / this.getAccuracyStageModifier(target.statStages.evasion));
+		if (this.state.field.gravityTurns > 0) chance *= 5 / 3;
+		if (this.state.field.weather === "fog") chance *= 0.6;
 		if (chance >= 1) return true;
 		return this.random() < Math.max(0, chance);
 	}
@@ -1079,6 +1384,40 @@ export class Battle {
 				if (combatant.volatile.partiallyTrappedTurns > 0) {
 					combatant.volatile.partiallyTrappedTurns -= 1;
 					this.applyDamage(combatant, position, Math.max(1, Math.floor(maxHP / 8)), events);
+				}
+
+				if (this.state.field.terrain === "grassy" && this.isGrounded(combatant)) {
+					let previous = combatant.creature.status.damage;
+					combatant.creature.status.damage = Math.max(
+						0,
+						previous - Math.max(1, Math.floor(maxHP / 16)),
+					);
+					if (previous !== combatant.creature.status.damage) {
+						events.push({
+							type: "damage-dealt",
+							target: position,
+							damage: 0,
+							remainingHP: this.getRemainingHP(combatant),
+						});
+					}
+				}
+
+				if (this.state.field.weather === "sand") {
+					let types = getCreatureSpecies(this.gameData, combatant.creature).types;
+					if (
+						types.includes(Type.ROCK) === false &&
+						types.includes(Type.GROUND) === false &&
+						types.includes(Type.STEEL) === false
+					) {
+						this.applyDamage(combatant, position, Math.max(1, Math.floor(maxHP / 16)), events);
+					}
+				}
+
+				if (this.state.field.weather === "hail") {
+					let types = getCreatureSpecies(this.gameData, combatant.creature).types;
+					if (types.includes(Type.ICE) === false) {
+						this.applyDamage(combatant, position, Math.max(1, Math.floor(maxHP / 16)), events);
+					}
 				}
 
 				if (this.isCombatantFainted(combatant)) {
@@ -1241,6 +1580,15 @@ export class Battle {
 						getCreatureStat(this.gameData, target.creature, Stat.SpecialDefense) *
 							this.getStageModifier(target.statStages[Stat.SpecialDefense]),
 					);
+
+		if (this.state.field.wonderRoomTurns > 0) {
+			let swappedDefense =
+				move.class === Class.Physical
+					? getCreatureStat(this.gameData, target.creature, Stat.SpecialDefense)
+					: getCreatureStat(this.gameData, target.creature, Stat.Defense);
+			defenseStat = Math.floor(swappedDefense);
+		}
+
 		let level = getCreatureLevel(this.gameData, user.creature);
 		let baseDamage =
 			Math.floor(Math.floor((((2 * level) / 5 + 2) * move.power * attackStat) / defenseStat) / 50) +
@@ -1255,6 +1603,32 @@ export class Battle {
 			move.class === Class.Special &&
 			this.state.sides[targetSide]!.effects.lightScreenTurns > 0
 		) {
+			return Math.floor(baseDamage * 0.5);
+		}
+
+		if (this.state.field.weather === "sun") {
+			if (move.type === Type.FIRE) return Math.floor(baseDamage * 1.5);
+			if (move.type === Type.WATER) return Math.floor(baseDamage * 0.5);
+		}
+
+		if (this.state.field.weather === "rain") {
+			if (move.type === Type.WATER) return Math.floor(baseDamage * 1.5);
+			if (move.type === Type.FIRE) return Math.floor(baseDamage * 0.5);
+		}
+
+		if (this.state.field.terrain === "electric" && move.type === Type.ELECTRIC) {
+			return Math.floor(baseDamage * 1.3);
+		}
+
+		if (this.state.field.terrain === "grassy" && move.type === Type.GRASS) {
+			return Math.floor(baseDamage * 1.3);
+		}
+
+		if (this.state.field.terrain === "psychic" && move.type === Type.PSYCHIC) {
+			return Math.floor(baseDamage * 1.3);
+		}
+
+		if (this.state.field.terrain === "misty" && move.type === Type.DRAGON) {
 			return Math.floor(baseDamage * 0.5);
 		}
 

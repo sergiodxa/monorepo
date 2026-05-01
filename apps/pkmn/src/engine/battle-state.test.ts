@@ -29,8 +29,10 @@ test("createCombatantVolatileState starts with no active combatant effects", () 
 		attracted: false,
 		tauntedTurns: 0,
 		encoreTurns: 0,
+		encoredMoveSlot: null,
 		disabledMoveSlot: null,
 		disableTurns: 0,
+		lastMoveSlot: null,
 	});
 });
 
