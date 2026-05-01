@@ -15,7 +15,12 @@ import { createFieldEffectState, createSideEffectState } from "./battle-state";
 import { CombatantState } from "./combatant-state";
 import { Creature, State } from "./creature";
 import { Effects } from "./effects";
-import { getCreatureLevel, getCreatureSpecies, getCreatureStat } from "./mechanics";
+import {
+	getCreatureLevel,
+	getCreatureSize,
+	getCreatureSpecies,
+	getCreatureStat,
+} from "./mechanics";
 
 const CRITICAL_HIT_CHANCE = 1 / 24;
 
@@ -37,6 +42,15 @@ interface ReplacementSelection {
 	choices: number[];
 }
 
+interface DelayedAttackState {
+	kind: "future-sight";
+	moveId: string;
+	user: CombatantState;
+	source: BattlePosition;
+	target: BattlePosition;
+	turnsRemaining: number;
+}
+
 /** Identifies one battle slot on a side. */
 export interface BattlePosition {
 	side: number;
@@ -48,6 +62,7 @@ export interface FightCommand {
 	type: "fight";
 	move: 0 | 1 | 2 | 3;
 	target: BattlePosition;
+	creature?: number;
 }
 
 /** Switches one active combatant with a bench creature from the same team. */
@@ -154,11 +169,17 @@ export namespace BattleEvent {
 		type: "volatile-applied";
 		target: BattlePosition;
 		effect:
+			| "aqua-ring"
 			| "attract"
+			| "charged-electric"
 			| "confusion"
+			| "curse"
+			| "destiny-bond"
 			| "disable"
+			| "endure"
 			| "encore"
 			| "flinch"
+			| "focus-energy"
 			| "identify"
 			| "partial-trap"
 			| "protect"
@@ -272,6 +293,8 @@ export interface BattleTeamState {
 /** Runtime state for one side of the battle. */
 export interface BattleSideState {
 	canLeaveBattle: boolean;
+	pendingHealingWishCount: number;
+	followMeUserSlot: number | null;
 	slotTeams: number[];
 	teams: BattleTeamState[];
 	active: Array<BattleActiveSlotState | null>;
@@ -286,6 +309,7 @@ export interface BattleState {
 	slots: 1 | 2 | 3;
 	sides: [BattleSideState, BattleSideState];
 	field: ReturnType<typeof createFieldEffectState>;
+	delayedAttacks: DelayedAttackState[];
 }
 
 /** Long-lived battle session that yields events and accepts turn or replacement input. */
@@ -332,6 +356,7 @@ export class Battle {
 			winnerSide: null,
 			slots,
 			field: createFieldEffectState(),
+			delayedAttacks: [],
 			sides: [
 				this.createSideState(args.sides[0], slots),
 				this.createSideState(args.sides[1], slots),
@@ -463,6 +488,8 @@ export class Battle {
 
 		return {
 			canLeaveBattle: side.canLeaveBattle ?? false,
+			pendingHealingWishCount: 0,
+			followMeUserSlot: null,
 			slotTeams,
 			teams,
 			active,
@@ -499,14 +526,19 @@ export class Battle {
 			if (this.isCombatantActive(action.userPosition, action.user) === false) continue;
 			if (!action.move || !action.moveId) continue;
 
-			let target = this.getActiveCombatant(action.command.target);
+			let resolvedTargetPosition = this.resolveFollowMeTarget(
+				action.userPosition,
+				action.move,
+				action.command.target,
+			);
+			let target = this.getActiveCombatant(resolvedTargetPosition);
 			if (target === null) continue;
 			if (this.canMoveHitTarget(action.move, target.combatant) === false) continue;
 			for (let event of this.resolveMove(
 				action.user,
 				action.userPosition,
 				action.command,
-				action.command.target,
+				resolvedTargetPosition,
 				target.combatant,
 				action.move,
 				action.moveId,
@@ -575,6 +607,16 @@ export class Battle {
 				};
 			}
 
+			if (
+				active.combatant.volatile.rampageTurns > 0 &&
+				active.combatant.volatile.rampageMoveSlot !== null
+			) {
+				command = {
+					...command,
+					move: active.combatant.volatile.rampageMoveSlot,
+				};
+			}
+
 			let moveId = active.combatant.creature.moveset[command.move];
 			if (!moveId) continue;
 			let chargingMoveId = active.combatant.volatile.chargingMoveId;
@@ -636,6 +678,14 @@ export class Battle {
 			yield event;
 		}
 
+		for (let event of this.applyHealingWish(
+			replacement,
+			action.userPosition.side,
+			action.userPosition,
+		)) {
+			yield event;
+		}
+
 		if (this.isCombatantFainted(replacement)) {
 			this.clearActiveCombatant(action.userPosition);
 			yield {
@@ -674,6 +724,7 @@ export class Battle {
 		if (chargeEffect?.kind === "charge" && isChargingRelease === false) {
 			this.applyChargeEffect(user, chargeEffect);
 			user.volatile.chargingMoveId = moveId;
+			user.volatile.actedThisBattle = true;
 			for (let event of events) yield event;
 			return;
 		}
@@ -684,14 +735,51 @@ export class Battle {
 			user.volatile.chargingMoveId = null;
 		}
 
+		if (this.resolveReactiveFailure(user, userPosition, effects, events)) {
+			for (let event of events) yield event;
+			return;
+		}
+
+		if (this.resolveCurse(user, userPosition, target, targetPosition, effects, events)) {
+			user.volatile.lastMoveSlot = command.move;
+			user.volatile.actedThisBattle = true;
+			for (let event of events) yield event;
+			return;
+		}
+
+		this.applyBellyDrum(user, userPosition, effects, events);
+
 		if (this.moveCanConnect(user, target, move) === false) {
+			this.applyCrashOnMiss(user, userPosition, effects, events);
+			user.volatile.lastMoveSlot = command.move;
+			user.volatile.actedThisBattle = true;
+			if (this.isCombatantFainted(user)) {
+				this.clearActiveCombatant(userPosition);
+				events.push({ type: "creature-fainted", target: userPosition });
+			}
 			events.push({ type: "move-missed", user: userPosition, target: targetPosition });
 			for (let event of events) yield event;
 			return;
 		}
 
+		for (let effect of effects) {
+			if (effect.kind === "break-protect") {
+				for (let event of this.resolveEffect(
+					user,
+					userPosition,
+					target,
+					targetPosition,
+					move,
+					effect,
+				)) {
+					events.push(event);
+				}
+			}
+		}
+
+		let damageDealt = 0;
 		if (this.moveDealsDamage(move, effects) && target.volatile.protecting === false) {
-			let damageDealt = this.applyMoveDamage(
+			damageDealt = this.applyMoveDamage(
 				user,
 				userPosition,
 				target,
@@ -700,10 +788,23 @@ export class Battle {
 				effects,
 				events,
 			);
+			this.applyDrainHealing(user, userPosition, target, effects, damageDealt, events);
 			this.applyRecoilDamage(user, userPosition, effects, damageDealt, events);
+			this.applySelfDestruct(user, userPosition, effects, events);
+			this.applyReactiveEffectsAfterDamage(
+				user,
+				userPosition,
+				target,
+				targetPosition,
+				effects,
+				damageDealt,
+				events,
+			);
 		}
 
 		for (let effect of effects) {
+			if (effect.kind === "break-protect") continue;
+			if (target.volatile.protecting && this.isEffectBlockedByProtect(effect)) continue;
 			for (let event of this.resolveEffect(
 				user,
 				userPosition,
@@ -715,8 +816,20 @@ export class Battle {
 				events.push(event);
 			}
 		}
+		this.applyHealingWishSelfKO(user, userPosition, effects, events);
+		this.scheduleDelayedAttacks(user, userPosition, targetPosition, moveId, effects);
 
 		user.volatile.lastMoveSlot = command.move;
+		user.volatile.actedThisBattle = true;
+		if (!this.findEffect(effects, "destiny-bond")) {
+			user.volatile.destinyBonded = false;
+		}
+		if (move.class !== Class.Status && move.type === Type.ELECTRIC) {
+			user.volatile.chargedElectric = false;
+		}
+		this.applyRampageState(user, effects, command.move);
+		this.applySwitchSelf(userPosition, command, effects, events);
+		this.applyForceSwitchTarget(targetPosition, target, move, effects, damageDealt, events);
 
 		if (this.isCombatantFainted(user)) {
 			this.clearActiveCombatant(userPosition);
@@ -757,6 +870,7 @@ export class Battle {
 	}
 
 	private *reconcileAfterTurn(): Generator<BattleEvent, void, void> {
+		for (let event of this.applyDelayedAttacks()) yield event;
 		for (let event of this.applyEndOfTurnEffects()) yield event;
 		this.tickTurnEffects();
 		this.pendingReplacementRequests = [];
@@ -892,6 +1006,7 @@ export class Battle {
 			creatureIndex,
 			combatant,
 		};
+		this.applyHealingWish(combatant, sideIndex, { side: sideIndex, slot: slotIndex });
 	}
 
 	private forfeitSide(sideIndex: number) {
@@ -1002,6 +1117,7 @@ export class Battle {
 		for (let effect of this.flattenEffects(move.effect)) {
 			if (this.hasEffectKind(effect, "priority")) return effect.value;
 			if (effect.kind === "protect") return 4;
+			if (effect.kind === "endure") return 4;
 		}
 		return 0;
 	}
@@ -1011,6 +1127,39 @@ export class Battle {
 		if (move.effect.kind === "charge") return true;
 		if (this.state.field.gravityTurns > 0) return true;
 		return false;
+	}
+
+	private resolveFollowMeTarget(
+		userPosition: BattlePosition,
+		move: Move,
+		targetPosition: BattlePosition,
+	): BattlePosition {
+		if (targetPosition.side === userPosition.side) return targetPosition;
+		if (!this.isMoveRedirectable(move)) return targetPosition;
+		let followMeUserSlot = this.state.sides[targetPosition.side]!.followMeUserSlot;
+		if (followMeUserSlot === null) return targetPosition;
+		let redirectedTarget =
+			this.state.sides[targetPosition.side]!.active[followMeUserSlot]?.combatant;
+		if (!redirectedTarget) return targetPosition;
+		return { side: targetPosition.side, slot: followMeUserSlot };
+	}
+
+	private isMoveRedirectable(move: Move): boolean {
+		if (move.class !== Class.Status) return true;
+		let effects = this.flattenEffects(move.effect);
+		return effects.some(
+			(effect) =>
+				effect.kind === "apply-status" ||
+				effect.kind === "attract" ||
+				effect.kind === "confuse" ||
+				effect.kind === "disable" ||
+				effect.kind === "encore" ||
+				effect.kind === "identify" ||
+				effect.kind === "leech-seed" ||
+				effect.kind === "taunt" ||
+				(effect.kind === "modify-stat" && effect.target === "target") ||
+				(effect.kind === "side-effect" && effect.target === "target"),
+		);
 	}
 
 	private getCombatantSide(combatant: CombatantState): number {
@@ -1049,6 +1198,7 @@ export class Battle {
 	}
 
 	private resetSwitchVolatiles(combatant: CombatantState) {
+		this.resetStatStages(combatant);
 		combatant.volatile.seeded = false;
 		combatant.volatile.seededBy = null;
 		combatant.volatile.trapped = false;
@@ -1056,17 +1206,32 @@ export class Battle {
 		combatant.volatile.invulnerable = false;
 		combatant.volatile.flinched = false;
 		combatant.volatile.protecting = false;
+		combatant.volatile.enduring = false;
+		combatant.volatile.destinyBonded = false;
+		combatant.volatile.chargedElectric = false;
+		combatant.volatile.focusEnergy = false;
+		combatant.volatile.aquaRing = false;
+		combatant.volatile.cursed = false;
 		combatant.volatile.partiallyTrappedTurns = 0;
 		combatant.volatile.partialTrapSourceSide = null;
 		combatant.volatile.charging = false;
 		combatant.volatile.chargingMoveId = null;
 		combatant.volatile.recharging = false;
+		combatant.volatile.actedThisBattle = false;
 		combatant.volatile.attracted = false;
 		combatant.volatile.tauntedTurns = 0;
 		combatant.volatile.encoreTurns = 0;
 		combatant.volatile.encoredMoveSlot = null;
 		combatant.volatile.disabledMoveSlot = null;
 		combatant.volatile.disableTurns = 0;
+		combatant.volatile.lastDamageThisTurn = null;
+	}
+
+	private resetStatStages(combatant: CombatantState) {
+		for (let [stat, value] of Object.entries(combatant.statStages)) {
+			if (value === 0) continue;
+			combatant.statStages[stat as keyof typeof combatant.statStages] = 0;
+		}
 	}
 
 	private applySwitchInHazards(position: BattlePosition, combatant: CombatantState): BattleEvent[] {
@@ -1155,11 +1320,46 @@ export class Battle {
 
 	private moveDealsDamage(move: Move, effects: MoveEffect[]): boolean {
 		if (move.class !== Class.Status && move.power > 0) return true;
-		return effects.some((effect) => effect.kind === "fixed-damage" || effect.kind === "ohko");
+		return effects.some(
+			(effect) =>
+				effect.kind === "counter-last-physical-hit" ||
+				effect.kind === "fixed-damage" ||
+				effect.kind === "fixed-damage-user-hp" ||
+				effect.kind === "fixed-damage-target-hp-gap" ||
+				effect.kind === "double-power-on-damaged-target" ||
+				effect.kind === "double-power-if-target-damaged-this-turn" ||
+				effect.kind === "double-power-on-status-target" ||
+				effect.kind === "power-from-target-speed" ||
+				effect.kind === "power-from-user-speed" ||
+				effect.kind === "power-from-user-hp" ||
+				effect.kind === "power-from-weight" ||
+				effect.kind === "ohko",
+		);
+	}
+
+	private isEffectBlockedByProtect(effect: MoveEffect): boolean {
+		switch (effect.kind) {
+			case "none":
+			case "priority":
+			case "recoil":
+			case "drain":
+			case "multi-hit":
+			case "fixed-damage":
+			case "fixed-damage-user-hp":
+			case "ohko":
+			case "charge":
+			case "break-protect": {
+				return false;
+			}
+			default: {
+				return true;
+			}
+		}
 	}
 
 	private tickTurnEffects() {
 		for (let side of this.state.sides) {
+			side.followMeUserSlot = null;
 			side.effects.reflectTurns = Math.max(0, side.effects.reflectTurns - 1);
 			side.effects.lightScreenTurns = Math.max(0, side.effects.lightScreenTurns - 1);
 			side.effects.tailwindTurns = Math.max(0, side.effects.tailwindTurns - 1);
@@ -1169,8 +1369,10 @@ export class Battle {
 
 			for (let active of side.active) {
 				if (!active) continue;
+				active.combatant.volatile.lastDamageThisTurn = null;
 				active.combatant.volatile.flinched = false;
 				active.combatant.volatile.protecting = false;
+				active.combatant.volatile.enduring = false;
 				active.combatant.volatile.tauntedTurns = Math.max(
 					0,
 					active.combatant.volatile.tauntedTurns - 1,
@@ -1229,7 +1431,7 @@ export class Battle {
 		if (effectiveness === Effectiveness.WEAK) damage = Math.floor(damage * 0.5);
 		if (effectiveness === Effectiveness.ZERO) damage = 0;
 
-		if (this.random() < CRITICAL_HIT_CHANCE) {
+		if (this.random() < this.getCriticalHitChance(user)) {
 			let targetSide = this.getCombatantSide(target);
 			if (this.state.sides[targetSide]!.effects.luckyChantTurns === 0) {
 				damage = Math.floor(damage * 1.5);
@@ -1293,6 +1495,14 @@ export class Battle {
 			return true;
 		}
 
+		if (
+			this.findEffect(this.flattenEffects(move.effect), "first-turn-only") &&
+			user.volatile.actedThisBattle
+		) {
+			events.push({ type: "move-failed", user: userPosition, reason: "disabled" });
+			return true;
+		}
+
 		if (user.creature.status.state === State.Asleep) return true;
 		if (user.creature.status.state === State.Frozen) return true;
 		if (user.volatile.flinched) return true;
@@ -1317,7 +1527,7 @@ export class Battle {
 
 	private applyMoveDamage(
 		user: CombatantState,
-		_userPosition: BattlePosition,
+		userPosition: BattlePosition,
 		target: CombatantState,
 		targetPosition: BattlePosition,
 		move: Move,
@@ -1331,7 +1541,15 @@ export class Battle {
 			let damage = this.getResolvedMoveDamage(user, target, targetPosition, move, effects, events);
 			if (damage <= 0) break;
 
-			totalDamage += this.applyAttackDamage(target, targetPosition, damage, events);
+			totalDamage += this.applyAttackDamage(
+				target,
+				targetPosition,
+				damage,
+				effects,
+				userPosition,
+				move.class,
+				events,
+			);
 			if (this.isCombatantFainted(target)) break;
 		}
 
@@ -1350,6 +1568,354 @@ export class Battle {
 
 		let damage = Math.max(1, Math.floor(damageDealt * recoil.ratio));
 		this.applyDamage(user, userPosition, damage, events);
+	}
+
+	private applyDrainHealing(
+		user: CombatantState,
+		userPosition: BattlePosition,
+		target: CombatantState,
+		effects: MoveEffect[],
+		damageDealt: number,
+		events: BattleEvent[],
+	) {
+		let drain = this.findEffect(effects, "drain");
+		if (!drain || damageDealt === 0) return;
+		if (drain.requiresSleepingTarget && target.creature.status.state !== State.Asleep) return;
+
+		let previous = user.creature.status.damage;
+		user.creature.status.damage = Math.max(
+			0,
+			previous - Math.max(1, Math.floor(damageDealt * drain.ratio)),
+		);
+		let healed = previous - user.creature.status.damage;
+		if (healed === 0) return;
+
+		events.push({
+			type: "damage-dealt",
+			target: userPosition,
+			damage: 0,
+			remainingHP: this.getRemainingHP(user),
+		});
+	}
+
+	private applyBellyDrum(
+		user: CombatantState,
+		userPosition: BattlePosition,
+		effects: MoveEffect[],
+		events: BattleEvent[],
+	) {
+		if (!this.findEffect(effects, "belly-drum")) return;
+		let maxHP = getCreatureStat(this.gameData, user.creature, Stat.HP);
+		let currentHP = this.getRemainingHP(user);
+		if (currentHP <= Math.floor(maxHP / 2)) return;
+		let cost = Math.floor(maxHP / 2);
+		user.creature.status.damage += cost;
+		user.statStages[Stat.Attack] = 6;
+		events.push({
+			type: "damage-dealt",
+			target: userPosition,
+			damage: cost,
+			remainingHP: this.getRemainingHP(user),
+		});
+		events.push({
+			type: "stat-stage-changed",
+			target: userPosition,
+			stat: Stat.Attack,
+			stages: 6,
+			value: 6,
+		});
+	}
+
+	private applyCrashOnMiss(
+		user: CombatantState,
+		userPosition: BattlePosition,
+		effects: MoveEffect[],
+		events: BattleEvent[],
+	) {
+		let crash = this.findEffect(effects, "crash-on-miss");
+		if (!crash) return;
+		let maxHP = getCreatureStat(this.gameData, user.creature, Stat.HP);
+		let damage = Math.max(1, Math.floor(maxHP * crash.ratio));
+		this.applyDamage(user, userPosition, damage, events);
+	}
+
+	private resolveReactiveFailure(
+		user: CombatantState,
+		userPosition: BattlePosition,
+		effects: MoveEffect[],
+		events: BattleEvent[],
+	): boolean {
+		if (!this.findEffect(effects, "fail-if-user-damaged-this-turn")) return false;
+		if (user.volatile.lastDamageThisTurn === null) return false;
+		events.push({ type: "move-failed", user: userPosition, reason: "disabled" });
+		user.volatile.actedThisBattle = true;
+		user.volatile.destinyBonded = false;
+		return true;
+	}
+
+	private applyReactiveEffectsAfterDamage(
+		user: CombatantState,
+		userPosition: BattlePosition,
+		target: CombatantState,
+		targetPosition: BattlePosition,
+		effects: MoveEffect[],
+		damageDealt: number,
+		events: BattleEvent[],
+	) {
+		if (damageDealt === 0) return;
+		if (this.isCombatantFainted(target)) {
+			let boostOnKO = this.findEffect(effects, "boost-on-ko");
+			if (boostOnKO) {
+				let current = user.statStages[boostOnKO.stat];
+				let value = Math.max(-6, Math.min(6, current + boostOnKO.stages));
+				user.statStages[boostOnKO.stat] = value;
+				events.push({
+					type: "stat-stage-changed",
+					target: userPosition,
+					stat: boostOnKO.stat,
+					stages: boostOnKO.stages,
+					value,
+				});
+			}
+
+			if (target.volatile.destinyBonded) {
+				this.applyDamage(user, userPosition, this.getRemainingHP(user), events);
+			}
+		}
+	}
+
+	private resolveCurse(
+		user: CombatantState,
+		userPosition: BattlePosition,
+		target: CombatantState,
+		targetPosition: BattlePosition,
+		effects: MoveEffect[],
+		events: BattleEvent[],
+	): boolean {
+		if (!this.findEffect(effects, "curse")) return false;
+		let species = getCreatureSpecies(this.gameData, user.creature);
+		if (!species.types.includes(Type.GHOST)) {
+			this.applyStatStageChange(user, userPosition, Stat.Attack, 1, events);
+			this.applyStatStageChange(user, userPosition, Stat.Defense, 1, events);
+			this.applyStatStageChange(user, userPosition, Stat.Speed, -1, events);
+			return true;
+		}
+		let maxHP = getCreatureStat(this.gameData, user.creature, Stat.HP);
+		let cost = Math.floor(maxHP / 2);
+		if (this.getRemainingHP(user) <= cost) return true;
+		user.creature.status.damage += cost;
+		target.volatile.cursed = true;
+		events.push({
+			type: "damage-dealt",
+			target: userPosition,
+			damage: cost,
+			remainingHP: this.getRemainingHP(user),
+		});
+		events.push({ type: "volatile-applied", target: targetPosition, effect: "curse" });
+		return true;
+	}
+
+	private applyStatStageChange(
+		combatant: CombatantState,
+		position: BattlePosition,
+		stat: BattleStatStage,
+		stages: number,
+		events: BattleEvent[],
+	) {
+		let current = combatant.statStages[stat];
+		let value = Math.max(-6, Math.min(6, current + stages));
+		combatant.statStages[stat] = value;
+		events.push({ type: "stat-stage-changed", target: position, stat, stages, value });
+	}
+
+	private applyHealingWish(
+		combatant: CombatantState,
+		sideIndex: number,
+		position: BattlePosition,
+	): BattleEvent[] {
+		let side = this.state.sides[sideIndex]!;
+		if (side.pendingHealingWishCount === 0) return [];
+		side.pendingHealingWishCount -= 1;
+		combatant.creature.status.damage = 0;
+		combatant.creature.status.state = null;
+		return [
+			{
+				type: "damage-dealt",
+				target: position,
+				damage: 0,
+				remainingHP: this.getRemainingHP(combatant),
+			},
+		];
+	}
+
+	private applyHealingWishSelfKO(
+		user: CombatantState,
+		userPosition: BattlePosition,
+		effects: MoveEffect[],
+		events: BattleEvent[],
+	) {
+		if (!this.findEffect(effects, "healing-wish")) return;
+		this.applyDamage(user, userPosition, this.getRemainingHP(user), events);
+	}
+
+	private applyForceSwitchTarget(
+		targetPosition: BattlePosition,
+		target: CombatantState,
+		move: Move,
+		effects: MoveEffect[],
+		damageDealt: number,
+		events: BattleEvent[],
+	) {
+		if (!this.findEffect(effects, "force-switch-target")) return;
+		if (target.volatile.protecting) return;
+		if (move.class !== Class.Status && damageDealt === 0) return;
+		if (this.isCombatantFainted(target)) return;
+		let active = this.getActiveCombatant(targetPosition);
+		if (!active) return;
+		let choices = this.getAvailableReplacementChoices(targetPosition.side, active.teamIndex);
+		if (choices.length === 0) return;
+		let index = Math.floor(this.random() * choices.length);
+		let creature = choices[index]!;
+		this.forceSwitchCombatant(targetPosition, active.teamIndex, creature, events);
+	}
+
+	private applySwitchSelf(
+		userPosition: BattlePosition,
+		command: FightCommand,
+		effects: MoveEffect[],
+		events: BattleEvent[],
+	) {
+		let switchSelf = this.findEffect(effects, "switch-self");
+		if (!switchSelf) return;
+		if (command.creature === undefined) return;
+		let active = this.getActiveCombatant(userPosition);
+		if (!active) return;
+		if (!this.canSwitchCombatant(userPosition, active, command.creature)) return;
+		this.switchCombatant(
+			userPosition,
+			active.teamIndex,
+			command.creature,
+			switchSelf.preserveStatStages ?? false,
+			events,
+		);
+	}
+
+	private forceSwitchCombatant(
+		position: BattlePosition,
+		teamIndex: number,
+		creatureIndex: number,
+		events: BattleEvent[],
+	) {
+		this.switchCombatant(position, teamIndex, creatureIndex, false, events);
+	}
+
+	private switchCombatant(
+		position: BattlePosition,
+		teamIndex: number,
+		creatureIndex: number,
+		preserveStatStages: boolean,
+		events: BattleEvent[],
+	) {
+		let side = this.state.sides[position.side]!;
+		let current = side.active[position.slot];
+		let replacement = side.teams[teamIndex]!.creatures[creatureIndex];
+		if (!current || !replacement) return;
+		let previousStages = structuredClone(current.combatant.statStages);
+		this.resetSwitchVolatiles(current.combatant);
+		this.activateReplacement(position.side, position.slot, teamIndex, creatureIndex);
+		if (preserveStatStages) {
+			for (let [stat, value] of Object.entries(previousStages)) {
+				replacement.statStages[stat as keyof typeof replacement.statStages] = value;
+			}
+		}
+		events.push({ type: "creature-switched", target: position, creature: creatureIndex });
+		for (let event of this.applySwitchInHazards(position, replacement)) {
+			events.push(event);
+		}
+		if (this.isCombatantFainted(replacement)) {
+			this.clearActiveCombatant(position);
+			events.push({ type: "creature-fainted", target: position });
+		}
+	}
+
+	private applyDelayedAttacks(): BattleEvent[] {
+		let events: BattleEvent[] = [];
+		let remaining: DelayedAttackState[] = [];
+
+		for (let delayedAttack of this.state.delayedAttacks) {
+			delayedAttack.turnsRemaining -= 1;
+			if (delayedAttack.turnsRemaining > 0) {
+				remaining.push(delayedAttack);
+				continue;
+			}
+			if (delayedAttack.kind !== "future-sight") continue;
+			let target = this.getActiveCombatant(delayedAttack.target);
+			if (!target) continue;
+			let move = this.gameData.moves.get(delayedAttack.moveId);
+			if (!move) continue;
+			let effects = this.flattenEffects(move.effect);
+			this.applyMoveDamage(
+				delayedAttack.user,
+				delayedAttack.source,
+				target.combatant,
+				delayedAttack.target,
+				move,
+				effects,
+				events,
+			);
+			if (this.isCombatantFainted(target.combatant)) {
+				this.clearActiveCombatant(delayedAttack.target);
+				events.push({ type: "creature-fainted", target: delayedAttack.target });
+			}
+		}
+
+		this.state.delayedAttacks = remaining;
+		return events;
+	}
+
+	private scheduleDelayedAttacks(
+		user: CombatantState,
+		userPosition: BattlePosition,
+		targetPosition: BattlePosition,
+		moveId: string,
+		effects: MoveEffect[],
+	) {
+		let delayedAttack = this.findEffect(effects, "delayed-attack");
+		if (!delayedAttack) return;
+		this.state.delayedAttacks.push({
+			kind: "future-sight",
+			moveId,
+			user,
+			source: userPosition,
+			target: targetPosition,
+			turnsRemaining: delayedAttack.turns,
+		});
+	}
+
+	private applySelfDestruct(
+		user: CombatantState,
+		userPosition: BattlePosition,
+		effects: MoveEffect[],
+		events: BattleEvent[],
+	) {
+		if (!this.findEffect(effects, "self-destruct")) return;
+		this.applyDamage(user, userPosition, this.getRemainingHP(user), events);
+	}
+
+	private applyRampageState(user: CombatantState, effects: MoveEffect[], moveSlot: 0 | 1 | 2 | 3) {
+		let rampage = this.findEffect(effects, "rampage");
+		if (!rampage) return;
+
+		if (user.volatile.rampageTurns === 0) {
+			user.volatile.rampageTurns = rampage.turns;
+			user.volatile.rampageMoveSlot = moveSlot;
+		}
+
+		user.volatile.rampageTurns = Math.max(0, user.volatile.rampageTurns - 1);
+		if (user.volatile.rampageTurns === 0) {
+			user.volatile.rampageMoveSlot = null;
+			user.volatile.confusionTurns = 2;
+		}
 	}
 
 	private applyEndOfTurnEffects(): BattleEvent[] {
@@ -1383,6 +1949,26 @@ export class Battle {
 				if (combatant.volatile.partiallyTrappedTurns > 0) {
 					combatant.volatile.partiallyTrappedTurns -= 1;
 					this.applyDamage(combatant, position, Math.max(1, Math.floor(maxHP / 8)), events);
+				}
+
+				if (combatant.volatile.aquaRing) {
+					let previous = combatant.creature.status.damage;
+					combatant.creature.status.damage = Math.max(
+						0,
+						previous - Math.max(1, Math.floor(maxHP / 16)),
+					);
+					if (previous !== combatant.creature.status.damage) {
+						events.push({
+							type: "damage-dealt",
+							target: position,
+							damage: 0,
+							remainingHP: this.getRemainingHP(combatant),
+						});
+					}
+				}
+
+				if (combatant.volatile.cursed) {
+					this.applyDamage(combatant, position, Math.max(1, Math.floor(maxHP / 4)), events);
 				}
 
 				if (this.state.field.terrain === "grassy" && this.isGrounded(combatant)) {
@@ -1456,6 +2042,26 @@ export class Battle {
 			return fixedDamage.value;
 		}
 
+		let fixedDamageUserHP = this.findEffect(effects, "fixed-damage-user-hp");
+		if (fixedDamageUserHP) {
+			return this.getRemainingHP(user);
+		}
+
+		let counterLastPhysicalHit = this.findEffect(effects, "counter-last-physical-hit");
+		if (counterLastPhysicalHit) {
+			let damage = user.volatile.lastDamageThisTurn;
+			if (!damage) return 0;
+			if (damage.moveClass !== Class.Physical) return 0;
+			if (damage.source.side !== targetPosition.side || damage.source.slot !== targetPosition.slot)
+				return 0;
+			return damage.amount * 2;
+		}
+
+		let fixedDamageTargetHPGap = this.findEffect(effects, "fixed-damage-target-hp-gap");
+		if (fixedDamageTargetHPGap) {
+			return Math.max(0, this.getRemainingHP(target) - this.getRemainingHP(user));
+		}
+
 		let effectiveness = this.getTypeEffectiveness(target, move);
 		return this.calculateDamage(user, target, targetPosition, move, effectiveness, events);
 	}
@@ -1505,17 +2111,29 @@ export class Battle {
 		combatant: CombatantState,
 		position: BattlePosition,
 		damage: number,
+		effects: MoveEffect[],
+		sourcePosition: BattlePosition,
+		moveClass: Class,
 		events: BattleEvent[],
 	): number {
 		let maxHP = getCreatureStat(this.gameData, combatant.creature, Stat.HP);
-		let next = Math.min(maxHP, combatant.creature.status.damage + damage);
+		let floor = this.findEffect(effects, "cannot-ko") ? 1 : 0;
+		let next = Math.min(maxHP - floor, combatant.creature.status.damage + damage);
+		if (combatant.volatile.enduring) next = Math.min(next, maxHP - 1);
 		let dealt = next - combatant.creature.status.damage;
 		combatant.creature.status.damage = next;
+		if (dealt > 0) {
+			combatant.volatile.lastDamageThisTurn = {
+				amount: dealt,
+				source: sourcePosition,
+				moveClass,
+			};
+		}
 
 		events.push({
 			type: "damage-dealt",
 			target: position,
-			damage,
+			damage: dealt,
 			remainingHP: maxHP - combatant.creature.status.damage,
 		});
 
@@ -1567,6 +2185,7 @@ export class Battle {
 	}
 
 	private getBaseDamage(user: CombatantState, target: CombatantState, move: Move): number {
+		let power = this.getMovePower(user, target, move);
 		let attackStat =
 			move.class === Class.Physical
 				? Math.floor(
@@ -1598,8 +2217,7 @@ export class Battle {
 
 		let level = getCreatureLevel(this.gameData, user.creature);
 		let baseDamage =
-			Math.floor(Math.floor((((2 * level) / 5 + 2) * move.power * attackStat) / defenseStat) / 50) +
-			2;
+			Math.floor(Math.floor((((2 * level) / 5 + 2) * power * attackStat) / defenseStat) / 50) + 2;
 		let targetSide = this.getCombatantSide(target);
 
 		if (move.class === Class.Physical && this.state.sides[targetSide]!.effects.reflectTurns > 0) {
@@ -1640,6 +2258,94 @@ export class Battle {
 		}
 
 		return baseDamage;
+	}
+
+	private getMovePower(user: CombatantState, target: CombatantState, move: Move): number {
+		let effects = this.flattenEffects(move.effect);
+
+		if (this.findEffect(effects, "double-power-on-damaged-target")) {
+			let targetMaxHP = getCreatureStat(this.gameData, target.creature, Stat.HP);
+			if (this.getRemainingHP(target) <= Math.floor(targetMaxHP / 2)) return move.power * 2;
+		}
+
+		if (
+			user.volatile.chargedElectric &&
+			move.class !== Class.Status &&
+			move.type === Type.ELECTRIC
+		) {
+			return move.power * 2;
+		}
+
+		if (this.findEffect(effects, "double-power-if-target-damaged-this-turn")) {
+			if (target.volatile.lastDamageThisTurn !== null) return move.power * 2;
+		}
+
+		if (this.findEffect(effects, "double-power-on-status-target")) {
+			if (target.creature.status.state !== null) return move.power * 2;
+		}
+
+		if (this.findEffect(effects, "power-from-target-speed")) {
+			let userSpeed = Math.max(1, this.getCombatantSpeed(this.getCombatantPosition(user), user));
+			let targetSpeed = Math.max(
+				1,
+				this.getCombatantSpeed(this.getCombatantPosition(target), target),
+			);
+			let ratio = userSpeed / targetSpeed;
+			if (ratio >= 4) return 150;
+			if (ratio >= 3) return 120;
+			if (ratio >= 2) return 80;
+			if (ratio >= 1) return 60;
+			return 40;
+		}
+
+		if (this.findEffect(effects, "power-from-user-speed")) {
+			let userSpeed = Math.max(1, this.getCombatantSpeed(this.getCombatantPosition(user), user));
+			let targetSpeed = Math.max(
+				1,
+				this.getCombatantSpeed(this.getCombatantPosition(target), target),
+			);
+			return Math.max(1, Math.min(150, Math.floor((25 * targetSpeed) / userSpeed)));
+		}
+
+		if (this.findEffect(effects, "power-from-user-hp")) {
+			let maxHP = getCreatureStat(this.gameData, user.creature, Stat.HP);
+			let currentHP = this.getRemainingHP(user);
+			let ratio = Math.floor((currentHP * 48) / maxHP);
+			if (ratio <= 1) return 200;
+			if (ratio <= 4) return 150;
+			if (ratio <= 9) return 100;
+			if (ratio <= 16) return 80;
+			if (ratio <= 32) return 40;
+			return 20;
+		}
+
+		if (this.findEffect(effects, "power-from-weight")) {
+			let userWeight = getCreatureSize(this.gameData, user.creature).weight;
+			let targetWeight = getCreatureSize(this.gameData, target.creature).weight;
+			let ratio = userWeight / Math.max(0.1, targetWeight);
+			if (ratio >= 5) return 120;
+			if (ratio >= 4) return 100;
+			if (ratio >= 3) return 80;
+			if (ratio >= 2) return 60;
+			return 40;
+		}
+
+		return move.power;
+	}
+
+	private getCriticalHitChance(user: CombatantState): number {
+		if (user.volatile.focusEnergy) return 0.5;
+		return CRITICAL_HIT_CHANCE;
+	}
+
+	private getCombatantPosition(combatant: CombatantState): BattlePosition {
+		for (let [sideIndex, side] of this.state.sides.entries()) {
+			for (let [slotIndex, active] of side.active.entries()) {
+				if (active?.combatant === combatant) return { side: sideIndex, slot: slotIndex };
+			}
+		}
+
+		throw new RangeError("Combatant is not currently active.");
 	}
 
 	private resolveConfusion(

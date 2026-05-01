@@ -55,6 +55,8 @@ export type MoveEffect =
 	| { kind: "priority"; value: number }
 	| { kind: "recharge" }
 	| { kind: "trap" }
+	| { kind: "force-switch-target" }
+	| { kind: "switch-self"; preserveStatStages?: boolean }
 	| { kind: "partial-trap"; turns: number }
 	| { kind: "confuse"; turns: number }
 	| { kind: "flinch"; chance: number }
@@ -63,11 +65,30 @@ export type MoveEffect =
 	| { kind: "disable"; turns: number; slot: 0 | 1 | 2 | 3 }
 	| { kind: "identify" }
 	| { kind: "attract" }
+	| { kind: "follow-me" }
 	| { kind: "protect" }
+	| { kind: "endure" }
+	| { kind: "destiny-bond" }
+	| { kind: "charged-electric" }
+	| { kind: "focus-energy" }
+	| { kind: "aqua-ring" }
+	| { kind: "healing-wish" }
+	| { kind: "curse" }
+	| { kind: "cannot-ko" }
+	| { kind: "belly-drum" }
+	| { kind: "first-turn-only" }
+	| { kind: "break-protect" }
+	| { kind: "crash-on-miss"; ratio: number }
+	| { kind: "rampage"; turns: number }
 	| { kind: "multi-hit"; hits: number | [number, number] }
 	| { kind: "ohko" }
 	| { kind: "fixed-damage"; value: number }
+	| { kind: "fixed-damage-user-hp" }
 	| { kind: "recoil"; ratio: number }
+	| { kind: "drain"; ratio: number; requiresSleepingTarget?: boolean }
+	| { kind: "self-destruct" }
+	| { kind: "reset-stat-stages"; target: "self" | "target" | "all-active" }
+	| { kind: "clear-side-effects"; target: "self" | "target" | "both"; effects: SideEffectType[] }
 	| { kind: "modify-stat"; stat: BattleStatStage; stages: number; target: "self" | "target" }
 	| {
 			kind: "side-effect";
@@ -89,6 +110,21 @@ export type MoveEffect =
 	| { kind: "field-effect"; effect: FieldEffectType; turns: number }
 	| { kind: "apply-status"; status: StatusEffectType; chance: number }
 	| { kind: "leech-seed" }
+	| {
+			kind:
+				| "double-power-on-damaged-target"
+				| "double-power-if-target-damaged-this-turn"
+				| "double-power-on-status-target"
+				| "power-from-target-speed"
+				| "power-from-user-speed"
+				| "power-from-user-hp"
+				| "power-from-weight";
+	  }
+	| { kind: "counter-last-physical-hit" }
+	| { kind: "fixed-damage-target-hp-gap" }
+	| { kind: "boost-on-ko"; stat: BattleStatStage; stages: number }
+	| { kind: "fail-if-user-damaged-this-turn" }
+	| { kind: "delayed-attack"; turns: number }
 	| { kind: "charge"; invulnerable?: boolean };
 
 export function isStatusEffectType(value: unknown): value is StatusEffectType {

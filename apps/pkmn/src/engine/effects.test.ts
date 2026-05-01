@@ -19,6 +19,12 @@ test("Effects.trap applies trapped volatile state", () => {
 	expect(context.target.volatile.trapped).toBe(true);
 });
 
+test("Effects.forceSwitchTarget is a no-op marker effect", () => {
+	let context = createContext();
+
+	expect(Effects.forceSwitchTarget({ kind: "force-switch-target" }, context)).toEqual([]);
+});
+
 test("Effects.partialTrap applies trapped turns and source side", () => {
 	let context = createContext();
 
@@ -64,6 +70,85 @@ test("Effects.protect applies protecting to the user", () => {
 	expect(context.user.volatile.protecting).toBe(true);
 });
 
+test("Effects.endure applies enduring to the user", () => {
+	let context = createContext();
+
+	expect(Effects.endure({ kind: "endure" }, context)).toEqual([
+		{ type: "volatile-applied", target: { side: 0, slot: 0 }, effect: "endure" },
+	]);
+	expect(context.user.volatile.enduring).toBe(true);
+});
+
+test("Effects.destinyBond applies destiny bond to the user", () => {
+	let context = createContext();
+
+	expect(Effects.destinyBond({ kind: "destiny-bond" }, context)).toEqual([
+		{ type: "volatile-applied", target: { side: 0, slot: 0 }, effect: "destiny-bond" },
+	]);
+	expect(context.user.volatile.destinyBonded).toBe(true);
+});
+
+test("Effects.chargedElectric applies charged electric to the user", () => {
+	let context = createContext();
+
+	expect(Effects.chargedElectric({ kind: "charged-electric" }, context)).toEqual([
+		{ type: "volatile-applied", target: { side: 0, slot: 0 }, effect: "charged-electric" },
+	]);
+	expect(context.user.volatile.chargedElectric).toBe(true);
+});
+
+test("Effects.focusEnergy applies focus energy to the user", () => {
+	let context = createContext();
+
+	expect(Effects.focusEnergy({ kind: "focus-energy" }, context)).toEqual([
+		{ type: "volatile-applied", target: { side: 0, slot: 0 }, effect: "focus-energy" },
+	]);
+	expect(context.user.volatile.focusEnergy).toBe(true);
+});
+
+test("Effects.aquaRing applies Aqua Ring to the user", () => {
+	let context = createContext();
+
+	expect(Effects.aquaRing({ kind: "aqua-ring" }, context)).toEqual([
+		{ type: "volatile-applied", target: { side: 0, slot: 0 }, effect: "aqua-ring" },
+	]);
+	expect(context.user.volatile.aquaRing).toBe(true);
+});
+
+test("Effects.followMe marks the user's slot for redirection", () => {
+	let context = createContext();
+
+	expect(Effects.followMe({ kind: "follow-me" }, context)).toEqual([]);
+	expect(context.state.sides[0]!.followMeUserSlot).toBe(0);
+});
+
+test("Effects.healingWish increments the pending side wish count", () => {
+	let context = createContext();
+
+	expect(Effects.healingWish({ kind: "healing-wish" }, context)).toEqual([]);
+	expect(context.state.sides[0]!.pendingHealingWishCount).toBe(1);
+});
+
+test("Effects.breakProtect clears target protection", () => {
+	let context = createContext();
+	context.target.volatile.protecting = true;
+
+	expect(Effects.breakProtect({ kind: "break-protect" }, context)).toEqual([]);
+	expect(context.target.volatile.protecting).toBe(false);
+});
+
+test("Effects.firstTurnOnly is a no-op marker effect", () => {
+	let context = createContext();
+
+	expect(Effects.firstTurnOnly({ kind: "first-turn-only" }, context)).toEqual([]);
+});
+
+test("Effects.rampage is a no-op marker effect", () => {
+	let context = createContext();
+
+	expect(Effects.rampage({ kind: "rampage", turns: 2 }, context)).toEqual([]);
+});
+
 test("Effects.modifyStat mutates the requested target stat stage", () => {
 	let context = createContext();
 
@@ -82,6 +167,68 @@ test("Effects.modifyStat mutates the requested target stat stage", () => {
 		},
 	]);
 	expect(context.target.statStages[Stat.Attack]).toBe(-2);
+});
+
+test("Effects.resetStatStages clears every active combatant stage when targeting all active", () => {
+	let context = createContext();
+	context.user.statStages[Stat.Attack] = 2;
+	context.target.statStages[Stat.Speed] = -1;
+	context.state.sides[0]!.active[0] = {
+		teamIndex: 0,
+		creatureIndex: 0,
+		combatant: context.user,
+	};
+	context.state.sides[1]!.active[0] = {
+		teamIndex: 0,
+		creatureIndex: 0,
+		combatant: context.target,
+	};
+
+	expect(
+		Effects.resetStatStages({ kind: "reset-stat-stages", target: "all-active" }, context),
+	).toEqual([
+		{
+			type: "stat-stage-changed",
+			target: { side: 0, slot: 0 },
+			stat: Stat.Attack,
+			stages: -2,
+			value: 0,
+		},
+		{
+			type: "stat-stage-changed",
+			target: { side: 1, slot: 0 },
+			stat: Stat.Speed,
+			stages: 1,
+			value: 0,
+		},
+	]);
+	expect(context.user.statStages[Stat.Attack]).toBe(0);
+	expect(context.target.statStages[Stat.Speed]).toBe(0);
+});
+
+test("Effects.clearSideEffects clears requested hazards and screens", () => {
+	let context = createContext();
+	context.state.sides[0]!.effects.reflectTurns = 5;
+	context.state.sides[1]!.effects.spikesLayers = 2;
+	context.state.sides[1]!.effects.stealthRock = true;
+
+	expect(
+		Effects.clearSideEffects(
+			{
+				kind: "clear-side-effects",
+				target: "both",
+				effects: ["reflect", "spikes", "stealth-rock"],
+			},
+			context,
+		),
+	).toEqual([
+		{ type: "side-effect-applied", side: 0, effect: "reflect", turns: 0 },
+		{ type: "side-effect-applied", side: 1, effect: "spikes", turns: 0 },
+		{ type: "side-effect-applied", side: 1, effect: "stealth-rock", turns: 0 },
+	]);
+	expect(context.state.sides[0]!.effects.reflectTurns).toBe(0);
+	expect(context.state.sides[1]!.effects.spikesLayers).toBe(0);
+	expect(context.state.sides[1]!.effects.stealthRock).toBe(false);
 });
 
 test("Effects.sideEffect routes reflect to the chosen side", () => {
@@ -147,6 +294,181 @@ test("Effects.leechSeed marks the target as seeded", () => {
 	expect(context.target.volatile.seededBy).toBe(0);
 });
 
+test("Effects.drain is a no-op marker effect", () => {
+	let context = createContext();
+
+	expect(Effects.drain({ kind: "drain", ratio: 0.5 }, context)).toEqual([]);
+});
+
+test("Effects.cannotKO is a no-op marker effect", () => {
+	let context = createContext();
+
+	expect(Effects.cannotKO({ kind: "cannot-ko" }, context)).toEqual([]);
+});
+
+test("Effects.bellyDrum is a no-op marker effect", () => {
+	let context = createContext();
+
+	expect(Effects.bellyDrum({ kind: "belly-drum" }, context)).toEqual([]);
+});
+
+test("Effects.crashOnMiss is a no-op marker effect", () => {
+	let context = createContext();
+
+	expect(Effects.crashOnMiss({ kind: "crash-on-miss", ratio: 1 / 2 }, context)).toEqual([]);
+});
+
+test("Effects.doublePowerOnDamagedTarget is a no-op marker effect", () => {
+	let context = createContext();
+
+	expect(
+		Effects.doublePowerOnDamagedTarget(
+			{ kind: "double-power-on-damaged-target" } as Extract<
+				MoveEffect,
+				{ kind: "double-power-on-damaged-target" }
+			>,
+			context,
+		),
+	).toEqual([]);
+});
+
+test("Effects.doublePowerOnStatusTarget is a no-op marker effect", () => {
+	let context = createContext();
+
+	expect(
+		Effects.doublePowerOnStatusTarget(
+			{ kind: "double-power-on-status-target" } as Extract<
+				MoveEffect,
+				{ kind: "double-power-on-status-target" }
+			>,
+			context,
+		),
+	).toEqual([]);
+});
+
+test("Effects.powerFromTargetSpeed is a no-op marker effect", () => {
+	let context = createContext();
+
+	expect(
+		Effects.powerFromTargetSpeed(
+			{ kind: "power-from-target-speed" } as Extract<
+				MoveEffect,
+				{ kind: "power-from-target-speed" }
+			>,
+			context,
+		),
+	).toEqual([]);
+});
+
+test("Effects.powerFromUserSpeed is a no-op marker effect", () => {
+	let context = createContext();
+
+	expect(
+		Effects.powerFromUserSpeed(
+			{ kind: "power-from-user-speed" } as Extract<MoveEffect, { kind: "power-from-user-speed" }>,
+			context,
+		),
+	).toEqual([]);
+});
+
+test("Effects.powerFromUserHP is a no-op marker effect", () => {
+	let context = createContext();
+
+	expect(
+		Effects.powerFromUserHP(
+			{ kind: "power-from-user-hp" } as Extract<MoveEffect, { kind: "power-from-user-hp" }>,
+			context,
+		),
+	).toEqual([]);
+});
+
+test("Effects.powerFromWeight is a no-op marker effect", () => {
+	let context = createContext();
+
+	expect(
+		Effects.powerFromWeight(
+			{ kind: "power-from-weight" } as Extract<MoveEffect, { kind: "power-from-weight" }>,
+			context,
+		),
+	).toEqual([]);
+});
+
+test("Effects.doublePowerIfTargetDamagedThisTurn is a no-op marker effect", () => {
+	let context = createContext();
+
+	expect(
+		Effects.doublePowerIfTargetDamagedThisTurn(
+			{ kind: "double-power-if-target-damaged-this-turn" } as Extract<
+				MoveEffect,
+				{ kind: "double-power-if-target-damaged-this-turn" }
+			>,
+			context,
+		),
+	).toEqual([]);
+});
+
+test("Effects.counterLastPhysicalHit is a no-op marker effect", () => {
+	let context = createContext();
+
+	expect(
+		Effects.counterLastPhysicalHit(
+			{ kind: "counter-last-physical-hit" } as Extract<
+				MoveEffect,
+				{ kind: "counter-last-physical-hit" }
+			>,
+			context,
+		),
+	).toEqual([]);
+});
+
+test("Effects.boostOnKO is a no-op marker effect", () => {
+	let context = createContext();
+
+	expect(Effects.boostOnKO({ kind: "boost-on-ko", stat: Stat.Attack, stages: 3 }, context)).toEqual(
+		[],
+	);
+});
+
+test("Effects.failIfUserDamagedThisTurn is a no-op marker effect", () => {
+	let context = createContext();
+
+	expect(
+		Effects.failIfUserDamagedThisTurn(
+			{ kind: "fail-if-user-damaged-this-turn" } as Extract<
+				MoveEffect,
+				{ kind: "fail-if-user-damaged-this-turn" }
+			>,
+			context,
+		),
+	).toEqual([]);
+});
+
+test("Effects.fixedDamageTargetHPGap is a no-op marker effect", () => {
+	let context = createContext();
+
+	expect(
+		Effects.fixedDamageTargetHPGap(
+			{ kind: "fixed-damage-target-hp-gap" } as Extract<
+				MoveEffect,
+				{ kind: "fixed-damage-target-hp-gap" }
+			>,
+			context,
+		),
+	).toEqual([]);
+});
+
+test("Effects.fixedDamageUserHP is a no-op marker effect", () => {
+	let context = createContext();
+
+	expect(Effects.fixedDamageUserHP({ kind: "fixed-damage-user-hp" }, context)).toEqual([]);
+});
+
+test("Effects.selfDestruct is a no-op marker effect", () => {
+	let context = createContext();
+
+	expect(Effects.selfDestruct({ kind: "self-destruct" }, context)).toEqual([]);
+});
+
 test("Effects.charge is a no-op marker effect", () => {
 	let context = createContext();
 
@@ -191,9 +513,12 @@ function createContext(randomValue = 0.5): Effects.Context {
 			phase: "resolving-turn",
 			winnerSide: null,
 			slots: 1,
+			delayedAttacks: [],
 			sides: [
 				{
 					canLeaveBattle: true,
+					pendingHealingWishCount: 0,
+					followMeUserSlot: null,
 					slotTeams: [0],
 					teams: [],
 					active: [null],
@@ -201,6 +526,8 @@ function createContext(randomValue = 0.5): Effects.Context {
 				},
 				{
 					canLeaveBattle: true,
+					pendingHealingWishCount: 0,
+					followMeUserSlot: null,
 					slotTeams: [0],
 					teams: [],
 					active: [null],

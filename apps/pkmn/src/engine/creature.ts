@@ -15,6 +15,14 @@ export enum State {
 }
 
 export namespace Creature {
+	export type SizeClass = "xs" | "sm" | "md" | "lg" | "xl" | "alpha";
+
+	export interface SizeData {
+		scale: number;
+		weight: number;
+		alpha?: boolean;
+	}
+
 	export interface Arguments {
 		species: SpeciesId;
 		nickname?: string;
@@ -28,6 +36,7 @@ export namespace Creature {
 		};
 		iv: StatSet;
 		ev: StatSet;
+		size?: SizeData;
 	}
 }
 
@@ -64,6 +73,10 @@ export class Creature {
 
 	get ev() {
 		return this.args.ev;
+	}
+
+	get size() {
+		return this.args.size ?? { scale: 128, weight: 128 };
 	}
 
 	toJSON(): Creature.Arguments {

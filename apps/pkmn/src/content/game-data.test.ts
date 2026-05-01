@@ -17,6 +17,7 @@ describe(GameData.create, () => {
 			species: {
 				TESTMON: {
 					number: 1,
+					size: { weight: 6.9, height: 0.7 },
 					types: [Type.GRASS],
 					baseExperience: 1,
 					catchRate: 255,
@@ -117,6 +118,7 @@ describe(GameData.create, () => {
 			species: {
 				TESTMON: {
 					number: 1,
+					size: { weight: 6.9, height: 0.7 },
 					types: [Type.GRASS],
 					baseExperience: 1,
 					catchRate: 255,

@@ -1,5 +1,7 @@
 import type { MoveEffect, StatusEffectType } from "../domain/move";
 
+import { Stat } from "../domain/stat";
+
 import type { BattleEvent, BattlePosition, BattleState } from "./battle";
 import type { CombatantState } from "./combatant-state";
 
@@ -68,6 +70,22 @@ export class Effects {
 		return [{ type: "volatile-applied", target: context.targetPosition, effect: "trap" }];
 	}
 
+	/** Leaves forced switching to battle resolution. */
+	static forceSwitchTarget(
+		_effect: Extract<MoveEffect, { kind: "force-switch-target" }>,
+		_context: Effects.Context,
+	): BattleEvent[] {
+		return [];
+	}
+
+	/** Leaves self-switching to battle resolution. */
+	static switchSelf(
+		_effect: Extract<MoveEffect, { kind: "switch-self" }>,
+		_context: Effects.Context,
+	): BattleEvent[] {
+		return [];
+	}
+
 	/** Applies partial trapping and records which side caused it. */
 	static partialTrap(
 		effect: Extract<MoveEffect, { kind: "partial-trap" }>,
@@ -93,7 +111,7 @@ export class Effects {
 		effect: Extract<MoveEffect, { kind: "flinch" }>,
 		context: Effects.Context,
 	): BattleEvent[] {
-		if (context.random() >= effect.chance) return [];
+		if (effect.chance < 1 && context.random() >= effect.chance) return [];
 		context.target.volatile.flinched = true;
 		return [{ type: "volatile-applied", target: context.targetPosition, effect: "flinch" }];
 	}
@@ -146,6 +164,15 @@ export class Effects {
 		return [{ type: "volatile-applied", target: context.targetPosition, effect: "attract" }];
 	}
 
+	/** Marks the user as the redirection target for opposing attacks this turn. */
+	static followMe(
+		_effect: Extract<MoveEffect, { kind: "follow-me" }>,
+		context: Effects.Context,
+	): BattleEvent[] {
+		context.state.sides[context.userPosition.side]!.followMeUserSlot = context.userPosition.slot;
+		return [];
+	}
+
 	/** Applies protection to the user for the rest of the turn. */
 	static protect(
 		_effect: Extract<MoveEffect, { kind: "protect" }>,
@@ -153,6 +180,117 @@ export class Effects {
 	): BattleEvent[] {
 		context.user.volatile.protecting = true;
 		return [{ type: "volatile-applied", target: context.userPosition, effect: "protect" }];
+	}
+
+	/** Applies endurance to the user for the rest of the turn. */
+	static endure(
+		_effect: Extract<MoveEffect, { kind: "endure" }>,
+		context: Effects.Context,
+	): BattleEvent[] {
+		context.user.volatile.enduring = true;
+		return [{ type: "volatile-applied", target: context.userPosition, effect: "endure" }];
+	}
+
+	/** Applies Destiny Bond to the user until its next action or switch. */
+	static destinyBond(
+		_effect: Extract<MoveEffect, { kind: "destiny-bond" }>,
+		context: Effects.Context,
+	): BattleEvent[] {
+		context.user.volatile.destinyBonded = true;
+		return [{ type: "volatile-applied", target: context.userPosition, effect: "destiny-bond" }];
+	}
+
+	/** Marks the user so its next Electric move is empowered. */
+	static chargedElectric(
+		_effect: Extract<MoveEffect, { kind: "charged-electric" }>,
+		context: Effects.Context,
+	): BattleEvent[] {
+		context.user.volatile.chargedElectric = true;
+		return [{ type: "volatile-applied", target: context.userPosition, effect: "charged-electric" }];
+	}
+
+	/** Raises the user's critical-hit ratio for later attacks. */
+	static focusEnergy(
+		_effect: Extract<MoveEffect, { kind: "focus-energy" }>,
+		context: Effects.Context,
+	): BattleEvent[] {
+		context.user.volatile.focusEnergy = true;
+		return [{ type: "volatile-applied", target: context.userPosition, effect: "focus-energy" }];
+	}
+
+	/** Applies Aqua Ring healing to the user until it switches out. */
+	static aquaRing(
+		_effect: Extract<MoveEffect, { kind: "aqua-ring" }>,
+		context: Effects.Context,
+	): BattleEvent[] {
+		context.user.volatile.aquaRing = true;
+		return [{ type: "volatile-applied", target: context.userPosition, effect: "aqua-ring" }];
+	}
+
+	/** Marks the side so the next switch-in is restored by Healing Wish. */
+	static healingWish(
+		_effect: Extract<MoveEffect, { kind: "healing-wish" }>,
+		context: Effects.Context,
+	): BattleEvent[] {
+		context.state.sides[context.userPosition.side]!.pendingHealingWishCount += 1;
+		return [];
+	}
+
+	/** Leaves Curse's split Ghost/non-Ghost behavior to battle resolution. */
+	static curse(
+		_effect: Extract<MoveEffect, { kind: "curse" }>,
+		_context: Effects.Context,
+	): BattleEvent[] {
+		return [];
+	}
+
+	/** Leaves Belly Drum's HP cost and stat update to battle resolution. */
+	static bellyDrum(
+		_effect: Extract<MoveEffect, { kind: "belly-drum" }>,
+		_context: Effects.Context,
+	): BattleEvent[] {
+		return [];
+	}
+
+	/** Leaves HP-floor handling to damage resolution. */
+	static cannotKO(
+		_effect: Extract<MoveEffect, { kind: "cannot-ko" }>,
+		_context: Effects.Context,
+	): BattleEvent[] {
+		return [];
+	}
+
+	/** Removes protection from the target before later effects resolve. */
+	static breakProtect(
+		_effect: Extract<MoveEffect, { kind: "break-protect" }>,
+		context: Effects.Context,
+	): BattleEvent[] {
+		context.target.volatile.protecting = false;
+		return [];
+	}
+
+	/** Leaves first-turn gating to pre-move resolution. */
+	static firstTurnOnly(
+		_effect: Extract<MoveEffect, { kind: "first-turn-only" }>,
+		_context: Effects.Context,
+	): BattleEvent[] {
+		return [];
+	}
+
+	/** Leaves locked-turn rampage handling to move resolution. */
+	static rampage(
+		_effect: Extract<MoveEffect, { kind: "rampage" }>,
+		_context: Effects.Context,
+	): BattleEvent[] {
+		return [];
+	}
+
+	/** Leaves miss crash handling to battle resolution. */
+	static crashOnMiss(
+		_effect: Extract<MoveEffect, { kind: "crash-on-miss" }>,
+		_context: Effects.Context,
+	): BattleEvent[] {
+		return [];
 	}
 
 	/** Leaves multi-hit handling to damage resolution. */
@@ -179,12 +317,84 @@ export class Effects {
 		return [];
 	}
 
+	/** Leaves user-HP fixed damage handling to damage resolution. */
+	static fixedDamageUserHP(
+		_effect: Extract<MoveEffect, { kind: "fixed-damage-user-hp" }>,
+		_context: Effects.Context,
+	): BattleEvent[] {
+		return [];
+	}
+
 	/** Leaves recoil handling to post-damage resolution. */
 	static recoil(
 		_effect: Extract<MoveEffect, { kind: "recoil" }>,
 		_context: Effects.Context,
 	): BattleEvent[] {
 		return [];
+	}
+
+	/** Leaves drain healing to post-damage resolution. */
+	static drain(
+		_effect: Extract<MoveEffect, { kind: "drain" }>,
+		_context: Effects.Context,
+	): BattleEvent[] {
+		return [];
+	}
+
+	/** Leaves user KO handling to post-damage resolution. */
+	static selfDestruct(
+		_effect: Extract<MoveEffect, { kind: "self-destruct" }>,
+		_context: Effects.Context,
+	): BattleEvent[] {
+		return [];
+	}
+
+	/** Resets temporary stat stages for the chosen combatants. */
+	static resetStatStages(
+		effect: Extract<MoveEffect, { kind: "reset-stat-stages" }>,
+		context: Effects.Context,
+	): BattleEvent[] {
+		if (effect.target === "all-active") {
+			let events: BattleEvent[] = [];
+			for (let [sideIndex, side] of context.state.sides.entries()) {
+				for (let [slotIndex, active] of side.active.entries()) {
+					if (!active) continue;
+					events.push(
+						...Effects.resetCombatantStatStages(active.combatant, {
+							side: sideIndex,
+							slot: slotIndex,
+						}),
+					);
+				}
+			}
+			return events;
+		}
+
+		let combatant = effect.target === "self" ? context.user : context.target;
+		let position = effect.target === "self" ? context.userPosition : context.targetPosition;
+		return Effects.resetCombatantStatStages(combatant, position);
+	}
+
+	/** Clears selected side effects from one or both sides. */
+	static clearSideEffects(
+		effect: Extract<MoveEffect, { kind: "clear-side-effects" }>,
+		context: Effects.Context,
+	): BattleEvent[] {
+		let sides =
+			effect.target === "both"
+				? [0, 1]
+				: [effect.target === "self" ? context.userPosition.side : context.targetPosition.side];
+		let events: BattleEvent[] = [];
+
+		for (let sideIndex of sides) {
+			let side = context.state.sides[sideIndex]!;
+			for (let cleared of effect.effects) {
+				if (Effects.clearSideEffect(side.effects, cleared) === false) continue;
+				events.push({ type: "side-effect-applied", side: sideIndex, effect: cleared, turns: 0 });
+			}
+		}
+
+		return events;
 	}
 
 	/** Mutates one combatant stat stage and reports the resulting value. */
@@ -324,6 +534,102 @@ export class Effects {
 		context.target.volatile.seeded = true;
 		context.target.volatile.seededBy = context.userPosition.side;
 		return [{ type: "volatile-applied", target: context.targetPosition, effect: "seed" }];
+	}
+
+	/** Leaves conditional damage calculations to battle resolution. */
+	static doublePowerOnDamagedTarget(
+		_effect: Extract<MoveEffect, { kind: "double-power-on-damaged-target" }>,
+		_context: Effects.Context,
+	): BattleEvent[] {
+		return [];
+	}
+
+	/** Leaves status-conditional damage calculations to battle resolution. */
+	static doublePowerOnStatusTarget(
+		_effect: Extract<MoveEffect, { kind: "double-power-on-status-target" }>,
+		_context: Effects.Context,
+	): BattleEvent[] {
+		return [];
+	}
+
+	/** Leaves speed-based power calculations to battle resolution. */
+	static powerFromTargetSpeed(
+		_effect: Extract<MoveEffect, { kind: "power-from-target-speed" }>,
+		_context: Effects.Context,
+	): BattleEvent[] {
+		return [];
+	}
+
+	/** Leaves inverse speed-based power calculations to battle resolution. */
+	static powerFromUserSpeed(
+		_effect: Extract<MoveEffect, { kind: "power-from-user-speed" }>,
+		_context: Effects.Context,
+	): BattleEvent[] {
+		return [];
+	}
+
+	/** Leaves low-HP power calculations to battle resolution. */
+	static powerFromUserHP(
+		_effect: Extract<MoveEffect, { kind: "power-from-user-hp" }>,
+		_context: Effects.Context,
+	): BattleEvent[] {
+		return [];
+	}
+
+	/** Leaves weight-based power calculations to battle resolution. */
+	static powerFromWeight(
+		_effect: Extract<MoveEffect, { kind: "power-from-weight" }>,
+		_context: Effects.Context,
+	): BattleEvent[] {
+		return [];
+	}
+
+	/** Leaves this-turn damage checks to battle resolution. */
+	static doublePowerIfTargetDamagedThisTurn(
+		_effect: Extract<MoveEffect, { kind: "double-power-if-target-damaged-this-turn" }>,
+		_context: Effects.Context,
+	): BattleEvent[] {
+		return [];
+	}
+
+	/** Leaves reflected physical damage to battle resolution. */
+	static counterLastPhysicalHit(
+		_effect: Extract<MoveEffect, { kind: "counter-last-physical-hit" }>,
+		_context: Effects.Context,
+	): BattleEvent[] {
+		return [];
+	}
+
+	/** Leaves boost-on-KO handling to battle resolution. */
+	static boostOnKO(
+		_effect: Extract<MoveEffect, { kind: "boost-on-ko" }>,
+		_context: Effects.Context,
+	): BattleEvent[] {
+		return [];
+	}
+
+	/** Leaves Focus Punch interruption checks to battle resolution. */
+	static failIfUserDamagedThisTurn(
+		_effect: Extract<MoveEffect, { kind: "fail-if-user-damaged-this-turn" }>,
+		_context: Effects.Context,
+	): BattleEvent[] {
+		return [];
+	}
+
+	/** Leaves delayed attack scheduling to battle resolution. */
+	static delayedAttack(
+		_effect: Extract<MoveEffect, { kind: "delayed-attack" }>,
+		_context: Effects.Context,
+	): BattleEvent[] {
+		return [];
+	}
+
+	/** Leaves Endeavor-style HP-gap damage calculations to battle resolution. */
+	static fixedDamageTargetHPGap(
+		_effect: Extract<MoveEffect, { kind: "fixed-damage-target-hp-gap" }>,
+		_context: Effects.Context,
+	): BattleEvent[] {
+		return [];
 	}
 
 	/** Leaves charge handling to the move resolution phase before effect dispatch. */
@@ -603,6 +909,97 @@ export class Effects {
 			}
 		}
 	}
+
+	/** Resets one combatant to neutral temporary stat stages and reports every change. */
+	private static resetCombatantStatStages(
+		combatant: CombatantState,
+		position: BattlePosition,
+	): BattleEvent[] {
+		let events: BattleEvent[] = [];
+		let stats = [
+			Stat.Attack,
+			Stat.Defense,
+			Stat.SpecialAttack,
+			Stat.SpecialDefense,
+			Stat.Speed,
+			"accuracy",
+			"evasion",
+		] as const;
+
+		for (let stat of stats) {
+			let value = combatant.statStages[stat];
+			if (value === 0) continue;
+			combatant.statStages[stat] = 0;
+			events.push({
+				type: "stat-stage-changed",
+				target: position,
+				stat,
+				stages: -value,
+				value: 0,
+			});
+		}
+
+		return events;
+	}
+
+	/** Clears one side effect and returns whether mutable state changed. */
+	private static clearSideEffect(
+		effects: Effects.Context["state"]["sides"][number]["effects"],
+		effect: Extract<MoveEffect, { kind: "clear-side-effects" }>["effects"][number],
+	): boolean {
+		switch (effect) {
+			case "reflect": {
+				if (effects.reflectTurns === 0) return false;
+				effects.reflectTurns = 0;
+				return true;
+			}
+			case "light-screen": {
+				if (effects.lightScreenTurns === 0) return false;
+				effects.lightScreenTurns = 0;
+				return true;
+			}
+			case "tailwind": {
+				if (effects.tailwindTurns === 0) return false;
+				effects.tailwindTurns = 0;
+				return true;
+			}
+			case "safeguard": {
+				if (effects.safeguardTurns === 0) return false;
+				effects.safeguardTurns = 0;
+				return true;
+			}
+			case "mist": {
+				if (effects.mistTurns === 0) return false;
+				effects.mistTurns = 0;
+				return true;
+			}
+			case "lucky-chant": {
+				if (effects.luckyChantTurns === 0) return false;
+				effects.luckyChantTurns = 0;
+				return true;
+			}
+			case "spikes": {
+				if (effects.spikesLayers === 0) return false;
+				effects.spikesLayers = 0;
+				return true;
+			}
+			case "toxic-spikes": {
+				if (effects.toxicSpikesLayers === 0) return false;
+				effects.toxicSpikesLayers = 0;
+				return true;
+			}
+			case "stealth-rock": {
+				if (effects.stealthRock === false) return false;
+				effects.stealthRock = false;
+				return true;
+			}
+			case "sticky-web": {
+				if (effects.stickyWeb === false) return false;
+				effects.stickyWeb = false;
+				return true;
+			}
+		}
+	}
 }
 
 export namespace Effects {
@@ -623,6 +1020,8 @@ const RESOLVERS: ResolverMap = {
 	priority: Effects.priority,
 	recharge: Effects.recharge,
 	trap: Effects.trap,
+	"force-switch-target": Effects.forceSwitchTarget,
+	"switch-self": Effects.switchSelf,
 	"partial-trap": Effects.partialTrap,
 	confuse: Effects.confuse,
 	flinch: Effects.flinch,
@@ -631,15 +1030,46 @@ const RESOLVERS: ResolverMap = {
 	disable: Effects.disable,
 	identify: Effects.identify,
 	attract: Effects.attract,
+	"follow-me": Effects.followMe,
 	protect: Effects.protect,
+	endure: Effects.endure,
+	"destiny-bond": Effects.destinyBond,
+	"charged-electric": Effects.chargedElectric,
+	"focus-energy": Effects.focusEnergy,
+	"aqua-ring": Effects.aquaRing,
+	"healing-wish": Effects.healingWish,
+	curse: Effects.curse,
+	"cannot-ko": Effects.cannotKO,
+	"belly-drum": Effects.bellyDrum,
+	"first-turn-only": Effects.firstTurnOnly,
+	"break-protect": Effects.breakProtect,
+	"crash-on-miss": Effects.crashOnMiss,
+	rampage: Effects.rampage,
 	"multi-hit": Effects.multiHit,
 	ohko: Effects.ohko,
 	"fixed-damage": Effects.fixedDamage,
+	"fixed-damage-user-hp": Effects.fixedDamageUserHP,
 	recoil: Effects.recoil,
+	drain: Effects.drain,
+	"self-destruct": Effects.selfDestruct,
+	"reset-stat-stages": Effects.resetStatStages,
+	"clear-side-effects": Effects.clearSideEffects,
 	"modify-stat": Effects.modifyStat,
 	"side-effect": Effects.sideEffect,
 	"field-effect": Effects.fieldEffect,
 	"apply-status": Effects.applyStatus,
 	"leech-seed": Effects.leechSeed,
+	"double-power-on-damaged-target": Effects.doublePowerOnDamagedTarget,
+	"double-power-on-status-target": Effects.doublePowerOnStatusTarget,
+	"power-from-target-speed": Effects.powerFromTargetSpeed,
+	"power-from-user-speed": Effects.powerFromUserSpeed,
+	"power-from-user-hp": Effects.powerFromUserHP,
+	"power-from-weight": Effects.powerFromWeight,
+	"double-power-if-target-damaged-this-turn": Effects.doublePowerIfTargetDamagedThisTurn,
+	"counter-last-physical-hit": Effects.counterLastPhysicalHit,
+	"boost-on-ko": Effects.boostOnKO,
+	"fail-if-user-damaged-this-turn": Effects.failIfUserDamagedThisTurn,
+	"delayed-attack": Effects.delayedAttack,
+	"fixed-damage-target-hp-gap": Effects.fixedDamageTargetHPGap,
 	charge: Effects.charge,
 };

@@ -21,9 +21,19 @@ export enum Genre {
 	Genderless,
 }
 
+/** Physical dimensions used by size-based battle mechanics. */
+export interface Size {
+	/** Weight in kilograms. */
+	weight: number;
+	/** Height in meters. */
+	height: number;
+}
+
 export interface Species {
 	/** ID of the creature species */
 	number: number;
+	/** Physical dimensions used by size-based mechanics. */
+	size: Size;
 	/** Type or pair of types of the creature */
 	types: [Type] | [Type, Type];
 	/** Base experience gained for defeating this creature */

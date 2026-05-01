@@ -15,7 +15,12 @@ import { Stat } from "../domain/stat";
 import { Type } from "../domain/type";
 
 import { Creature } from "./creature";
-import { getCreatureLevel, getExperienceForLevel } from "./mechanics";
+import {
+	getCreatureLevel,
+	getCreatureSize,
+	getCreatureSizeClass,
+	getExperienceForLevel,
+} from "./mechanics";
 
 let TEST_GAME_DATA = unwrap(
 	GameData.create({
@@ -80,9 +85,31 @@ test("getCreatureLevel resolves the highest level allowed by experience", () => 
 	}
 });
 
+test("getCreatureSize uses Gen 9 scale for height and keeps species weight", () => {
+	let mediumCreature = createCreature("FASTMON" as SpeciesId, 1000);
+	let tinyCreature = createCreature("FASTMON" as SpeciesId, 1000, { scale: 0, weight: 0 });
+	let alphaCreature = createCreature("FASTMON" as SpeciesId, 1000, {
+		scale: 255,
+		weight: 255,
+		alpha: true,
+	});
+
+	let mediumSize = getCreatureSize(TEST_GAME_DATA, mediumCreature);
+	let alphaSize = getCreatureSize(TEST_GAME_DATA, alphaCreature);
+	expect(mediumSize.weight).toBe(10);
+	expect(mediumSize.height).toBeCloseTo(1.0007843137254901);
+	expect(getCreatureSize(TEST_GAME_DATA, tinyCreature)).toEqual({ weight: 10, height: 0.8 });
+	expect(alphaSize.weight).toBe(10);
+	expect(alphaSize.height).toBeCloseTo(1.2);
+	expect(getCreatureSizeClass(tinyCreature)).toBe("xs");
+	expect(getCreatureSizeClass(mediumCreature)).toBe("md");
+	expect(getCreatureSizeClass(alphaCreature)).toBe("alpha");
+});
+
 function createSpecies(growthRate: GrowthRate): Species {
 	return {
 		number: 1,
+		size: { weight: 10, height: 1 },
 		types: [Type.NORMAL],
 		baseExperience: 64,
 		catchRate: 255,
@@ -101,11 +128,16 @@ function createSpecies(growthRate: GrowthRate): Species {
 	};
 }
 
-function createCreature(speciesId: SpeciesId, experience: number) {
+function createCreature(
+	speciesId: SpeciesId,
+	experience: number,
+	size: Creature.SizeData = { scale: 128, weight: 128 },
+) {
 	return new Creature({
 		species: speciesId,
 		nature: "HARDY" as NatureId,
 		experience,
+		size,
 		moveset: ["TACKLE", null, null, null],
 		status: {
 			state: null,

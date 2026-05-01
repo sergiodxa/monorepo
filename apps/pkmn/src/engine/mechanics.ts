@@ -1,5 +1,5 @@
 import type { GameData } from "~/domain/game-data";
-import type { Species } from "~/domain/species";
+import type { Size, Species } from "~/domain/species";
 
 import { LEVEL_CAP } from "~/constant";
 
@@ -87,6 +87,28 @@ export function getCreatureStat(gameData: GameData, creature: Creature, stat: St
 	if (nature.increases === stat) return Math.floor(statValue * 1.1);
 	if (nature.decreases === stat) return Math.floor(statValue * 0.9);
 	return statValue;
+}
+
+/** Returns physical dimensions after applying the creature's individual size class. */
+export function getCreatureSize(gameData: GameData, creature: Creature): Size {
+	let species = getCreatureSpecies(gameData, creature);
+	let scale = creature.size.alpha ? 255 : creature.size.scale;
+	let heightMultiplier = (scale / 255) * 0.4 + 0.8;
+
+	return {
+		weight: species.size.weight,
+		height: species.size.height * heightMultiplier,
+	};
+}
+
+/** Buckets one creature's saved scale into the broad size classes used by this game. */
+export function getCreatureSizeClass(creature: Creature): Creature.SizeClass {
+	if (creature.size.alpha) return "alpha";
+	if (creature.size.scale <= 59) return "xs";
+	if (creature.size.scale <= 99) return "sm";
+	if (creature.size.scale <= 155) return "md";
+	if (creature.size.scale <= 195) return "lg";
+	return "xl";
 }
 
 /** Returns the current remaining HP for a creature. */

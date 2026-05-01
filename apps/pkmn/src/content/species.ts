@@ -10,6 +10,7 @@ import { Type } from "../domain/type";
 interface SpeciesTemplate {
 	id: SpeciesId;
 	number: number;
+	size?: Species["size"];
 	types: Species["types"];
 	stats: Species["stats"];
 	gender?: Species["gender"];
@@ -58,6 +59,7 @@ function tradeEvolution(speciesId: SpeciesId): Evolution {
 function createSpecies(template: SpeciesTemplate): Species {
 	return {
 		number: template.number,
+		size: template.size ?? { weight: 100, height: 1 },
 		types: template.types,
 		gender: template.gender ?? EVEN_GENDER,
 		baseExperience: template.baseExperience ?? 100,
@@ -85,6 +87,7 @@ export const SPECIES = createSpeciesIndex([
 	{
 		id: "BULBASAUR",
 		number: 1,
+		size: { weight: 6.9, height: 0.7 },
 		types: [Type.GRASS, Type.POISON],
 		gender: STARTER_GENDER,
 		baseExperience: 64,
@@ -117,6 +120,7 @@ export const SPECIES = createSpeciesIndex([
 	{
 		id: "IVYSAUR",
 		number: 2,
+		size: { weight: 13, height: 1 },
 		types: [Type.GRASS, Type.POISON],
 		gender: STARTER_GENDER,
 		baseExperience: 142,
@@ -911,6 +915,7 @@ export const SPECIES = createSpeciesIndex([
 	{
 		id: "JIGGLYPUFF",
 		number: 39,
+		size: { weight: 5.5, height: 0.5 },
 		types: [Type.NORMAL, Type.FAIRY],
 		stats: createStats(115, 45, 20, 45, 25, 20),
 		learnset: [
@@ -1180,6 +1185,7 @@ export const SPECIES = createSpeciesIndex([
 	{
 		id: "DIGLETT",
 		number: 50,
+		size: { weight: 0.8, height: 0.2 },
 		types: [Type.GROUND],
 		stats: createStats(10, 55, 25, 35, 45, 95),
 		evolutions: [levelEvolution("DUGTRIO", 26)],
@@ -3221,6 +3227,7 @@ export const SPECIES = createSpeciesIndex([
 	{
 		id: "SNORLAX",
 		number: 143,
+		size: { weight: 460, height: 2.1 },
 		types: [Type.NORMAL],
 		stats: createStats(160, 110, 65, 65, 110, 30),
 		learnset: [

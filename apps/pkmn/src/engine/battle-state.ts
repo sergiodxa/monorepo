@@ -1,6 +1,14 @@
 import type { BattleStatStage } from "../domain/move";
 
+import { Class } from "../domain/move";
 import { Stat } from "../domain/stat";
+
+/** Records the last move-based damage a combatant took during the current turn. */
+export interface DamageHistoryState {
+	amount: number;
+	source: { side: number; slot: number };
+	moveClass: Class;
+}
 
 /** Battle-only effects that apply to one active combatant and clear on switch. */
 export interface CombatantVolatileState {
@@ -11,19 +19,29 @@ export interface CombatantVolatileState {
 	invulnerable: boolean;
 	flinched: boolean;
 	protecting: boolean;
+	enduring: boolean;
+	destinyBonded: boolean;
+	chargedElectric: boolean;
+	focusEnergy: boolean;
+	aquaRing: boolean;
+	cursed: boolean;
 	partiallyTrappedTurns: number;
 	partialTrapSourceSide: number | null;
 	charging: boolean;
 	chargingMoveId: string | null;
 	recharging: boolean;
+	actedThisBattle: boolean;
 	identified: boolean;
 	attracted: boolean;
 	tauntedTurns: number;
 	encoreTurns: number;
 	encoredMoveSlot: 0 | 1 | 2 | 3 | null;
+	rampageTurns: number;
+	rampageMoveSlot: 0 | 1 | 2 | 3 | null;
 	disabledMoveSlot: 0 | 1 | 2 | 3 | null;
 	disableTurns: number;
 	lastMoveSlot: 0 | 1 | 2 | 3 | null;
+	lastDamageThisTurn: DamageHistoryState | null;
 }
 
 /** Temporary stat stage changes applied during battle. */
@@ -65,19 +83,29 @@ export function createCombatantVolatileState(): CombatantVolatileState {
 		invulnerable: false,
 		flinched: false,
 		protecting: false,
+		enduring: false,
+		destinyBonded: false,
+		chargedElectric: false,
+		focusEnergy: false,
+		aquaRing: false,
+		cursed: false,
 		partiallyTrappedTurns: 0,
 		partialTrapSourceSide: null,
 		charging: false,
 		chargingMoveId: null,
 		recharging: false,
+		actedThisBattle: false,
 		identified: false,
 		attracted: false,
 		tauntedTurns: 0,
 		encoreTurns: 0,
 		encoredMoveSlot: null,
+		rampageTurns: 0,
+		rampageMoveSlot: null,
 		disabledMoveSlot: null,
 		disableTurns: 0,
 		lastMoveSlot: null,
+		lastDamageThisTurn: null,
 	};
 }
 
