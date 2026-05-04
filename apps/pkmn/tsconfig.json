@@ -1,11 +1,11 @@
 {
 	"extends": "../../tsconfig.json",
-	"include": ["src/**/*"],
+	"include": ["src/**/*", "scripts/**/*"],
 	"exclude": ["src/domain/idea.ts"],
 	"compilerOptions": {
 		"noEmit": true,
 		"ignoreDeprecations": "6.0",
-		"types": ["@types/bun"],
+		"types": ["bun", "node"],
 		"baseUrl": ".",
 		"rootDirs": ["."],
 		"paths": {

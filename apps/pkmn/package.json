@@ -2,7 +2,9 @@
 	"name": "@apps/pkmn",
 	"private": true,
 	"type": "module",
-	"scripts": {},
+	"scripts": {
+		"download:pokeapi": "bun run scripts/download-pokeapi-v2.ts"
+	},
 	"dependencies": {
 		"@pkg/result": "workspace:*"
 	},
