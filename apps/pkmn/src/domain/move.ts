@@ -1,5 +1,4 @@
 import { Stat } from "./stat";
-import { Type } from "./type";
 
 /** String identifier of a move in loaded game data. */
 export type MoveId = string;
@@ -12,7 +11,7 @@ export enum StatusEffectType {
 	Freeze = "freeze",
 }
 
-export enum Class {
+export enum DamageClass {
 	Physical = "physical",
 	Special = "special",
 	Status = "status",
@@ -134,8 +133,8 @@ export function isStatusEffectType(value: unknown): value is StatusEffectType {
 }
 
 export interface Move {
-	type: Type;
-	class: Class;
+	type: string;
+	damageClass: DamageClass;
 	power: number;
 	accuracy: number;
 	pp: number;

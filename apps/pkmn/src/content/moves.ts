@@ -1,13 +1,13 @@
 import type { Move } from "../domain/move";
 
-import { Class, StatusEffectType } from "../domain/move";
+import { DamageClass, StatusEffectType } from "../domain/move";
 import { Stat } from "../domain/stat";
 import { Type } from "../domain/type";
 
 export const MOVES = {
 	POUND: {
 		type: Type.NORMAL,
-		class: Class.Physical,
+		damageClass: DamageClass.Physical,
 		power: 40,
 		accuracy: 100,
 		pp: 35,
@@ -15,7 +15,7 @@ export const MOVES = {
 	},
 	KARATE_CHOP: {
 		type: Type.FIGHTING,
-		class: Class.Physical,
+		damageClass: DamageClass.Physical,
 		power: 50,
 		accuracy: 100,
 		pp: 25,
@@ -23,7 +23,7 @@ export const MOVES = {
 	},
 	DOUBLE_SLAP: {
 		type: Type.NORMAL,
-		class: Class.Physical,
+		damageClass: DamageClass.Physical,
 		power: 15,
 		accuracy: 85,
 		pp: 10,
@@ -31,7 +31,7 @@ export const MOVES = {
 	},
 	COMET_PUNCH: {
 		type: Type.NORMAL,
-		class: Class.Physical,
+		damageClass: DamageClass.Physical,
 		power: 18,
 		accuracy: 85,
 		pp: 15,
@@ -39,7 +39,7 @@ export const MOVES = {
 	},
 	MEGA_PUNCH: {
 		type: Type.NORMAL,
-		class: Class.Physical,
+		damageClass: DamageClass.Physical,
 		power: 80,
 		accuracy: 85,
 		pp: 20,
@@ -47,7 +47,7 @@ export const MOVES = {
 	},
 	PAY_DAY: {
 		type: Type.NORMAL,
-		class: Class.Physical,
+		damageClass: DamageClass.Physical,
 		power: 40,
 		accuracy: 100,
 		pp: 20,
@@ -55,7 +55,7 @@ export const MOVES = {
 	},
 	FIRE_PUNCH: {
 		type: Type.FIRE,
-		class: Class.Physical,
+		damageClass: DamageClass.Physical,
 		power: 75,
 		accuracy: 100,
 		pp: 15,
@@ -63,7 +63,7 @@ export const MOVES = {
 	},
 	ICE_PUNCH: {
 		type: Type.ICE,
-		class: Class.Physical,
+		damageClass: DamageClass.Physical,
 		power: 75,
 		accuracy: 100,
 		pp: 15,
@@ -71,7 +71,7 @@ export const MOVES = {
 	},
 	THUNDER_PUNCH: {
 		type: Type.ELECTRIC,
-		class: Class.Physical,
+		damageClass: DamageClass.Physical,
 		power: 75,
 		accuracy: 100,
 		pp: 15,
@@ -79,7 +79,7 @@ export const MOVES = {
 	},
 	SCRATCH: {
 		type: Type.NORMAL,
-		class: Class.Physical,
+		damageClass: DamageClass.Physical,
 		power: 40,
 		accuracy: 100,
 		pp: 35,
@@ -87,7 +87,7 @@ export const MOVES = {
 	},
 	STOMP: {
 		type: Type.NORMAL,
-		class: Class.Physical,
+		damageClass: DamageClass.Physical,
 		power: 65,
 		accuracy: 100,
 		pp: 20,
@@ -95,7 +95,7 @@ export const MOVES = {
 	},
 	DOUBLE_KICK: {
 		type: Type.FIGHTING,
-		class: Class.Physical,
+		damageClass: DamageClass.Physical,
 		power: 30,
 		accuracy: 100,
 		pp: 30,
@@ -103,7 +103,7 @@ export const MOVES = {
 	},
 	TACKLE: {
 		type: Type.NORMAL,
-		class: Class.Physical,
+		damageClass: DamageClass.Physical,
 		power: 40,
 		accuracy: 100,
 		pp: 35,
@@ -111,7 +111,7 @@ export const MOVES = {
 	},
 	QUICK_ATTACK: {
 		type: Type.NORMAL,
-		class: Class.Physical,
+		damageClass: DamageClass.Physical,
 		power: 40,
 		accuracy: 100,
 		pp: 30,
@@ -119,7 +119,7 @@ export const MOVES = {
 	},
 	BODY_SLAM: {
 		type: Type.NORMAL,
-		class: Class.Physical,
+		damageClass: DamageClass.Physical,
 		power: 85,
 		accuracy: 100,
 		pp: 15,
@@ -127,7 +127,7 @@ export const MOVES = {
 	},
 	WRAP: {
 		type: Type.NORMAL,
-		class: Class.Physical,
+		damageClass: DamageClass.Physical,
 		power: 15,
 		accuracy: 90,
 		pp: 20,
@@ -135,7 +135,7 @@ export const MOVES = {
 	},
 	TAKE_DOWN: {
 		type: Type.NORMAL,
-		class: Class.Physical,
+		damageClass: DamageClass.Physical,
 		power: 90,
 		accuracy: 85,
 		pp: 20,
@@ -143,7 +143,7 @@ export const MOVES = {
 	},
 	HYPER_BEAM: {
 		type: Type.NORMAL,
-		class: Class.Special,
+		damageClass: DamageClass.Special,
 		power: 150,
 		accuracy: 90,
 		pp: 5,
@@ -151,7 +151,7 @@ export const MOVES = {
 	},
 	THRASH: {
 		type: Type.NORMAL,
-		class: Class.Physical,
+		damageClass: DamageClass.Physical,
 		power: 120,
 		accuracy: 100,
 		pp: 10,
@@ -159,7 +159,7 @@ export const MOVES = {
 	},
 	DOUBLE_EDGE: {
 		type: Type.NORMAL,
-		class: Class.Physical,
+		damageClass: DamageClass.Physical,
 		power: 120,
 		accuracy: 100,
 		pp: 15,
@@ -167,7 +167,7 @@ export const MOVES = {
 	},
 	TAIL_WHIP: {
 		type: Type.NORMAL,
-		class: Class.Status,
+		damageClass: DamageClass.Status,
 		power: 0,
 		accuracy: 100,
 		pp: 30,
@@ -175,7 +175,7 @@ export const MOVES = {
 	},
 	POISON_STING: {
 		type: Type.POISON,
-		class: Class.Physical,
+		damageClass: DamageClass.Physical,
 		power: 15,
 		accuracy: 100,
 		pp: 35,
@@ -183,7 +183,7 @@ export const MOVES = {
 	},
 	TWINEEDLE: {
 		type: Type.BUG,
-		class: Class.Physical,
+		damageClass: DamageClass.Physical,
 		power: 25,
 		accuracy: 100,
 		pp: 20,
@@ -197,7 +197,7 @@ export const MOVES = {
 	},
 	PIN_MISSILE: {
 		type: Type.BUG,
-		class: Class.Physical,
+		damageClass: DamageClass.Physical,
 		power: 25,
 		accuracy: 95,
 		pp: 20,
@@ -205,7 +205,7 @@ export const MOVES = {
 	},
 	LEER: {
 		type: Type.NORMAL,
-		class: Class.Status,
+		damageClass: DamageClass.Status,
 		power: 0,
 		accuracy: 100,
 		pp: 30,
@@ -213,7 +213,7 @@ export const MOVES = {
 	},
 	BITE: {
 		type: Type.DARK,
-		class: Class.Physical,
+		damageClass: DamageClass.Physical,
 		power: 60,
 		accuracy: 100,
 		pp: 25,
@@ -221,7 +221,7 @@ export const MOVES = {
 	},
 	GROWL: {
 		type: Type.NORMAL,
-		class: Class.Status,
+		damageClass: DamageClass.Status,
 		power: 0,
 		accuracy: 100,
 		pp: 40,
@@ -229,7 +229,7 @@ export const MOVES = {
 	},
 	VINE_WHIP: {
 		type: Type.GRASS,
-		class: Class.Physical,
+		damageClass: DamageClass.Physical,
 		power: 45,
 		accuracy: 100,
 		pp: 25,
@@ -237,7 +237,7 @@ export const MOVES = {
 	},
 	RAZOR_LEAF: {
 		type: Type.GRASS,
-		class: Class.Physical,
+		damageClass: DamageClass.Physical,
 		power: 55,
 		accuracy: 95,
 		pp: 25,
@@ -245,7 +245,7 @@ export const MOVES = {
 	},
 	GROWTH: {
 		type: Type.NORMAL,
-		class: Class.Status,
+		damageClass: DamageClass.Status,
 		power: 0,
 		accuracy: 0,
 		pp: 20,
@@ -253,7 +253,7 @@ export const MOVES = {
 	},
 	MEAN_LOOK: {
 		type: Type.NORMAL,
-		class: Class.Status,
+		damageClass: DamageClass.Status,
 		power: 0,
 		accuracy: 100,
 		pp: 5,
@@ -261,7 +261,7 @@ export const MOVES = {
 	},
 	CONFUSE_RAY: {
 		type: Type.GHOST,
-		class: Class.Status,
+		damageClass: DamageClass.Status,
 		power: 0,
 		accuracy: 100,
 		pp: 10,
@@ -269,7 +269,7 @@ export const MOVES = {
 	},
 	PROTECT: {
 		type: Type.NORMAL,
-		class: Class.Status,
+		damageClass: DamageClass.Status,
 		power: 0,
 		accuracy: 0,
 		pp: 10,
@@ -277,7 +277,7 @@ export const MOVES = {
 	},
 	REFLECT: {
 		type: Type.PSYCHIC,
-		class: Class.Status,
+		damageClass: DamageClass.Status,
 		power: 0,
 		accuracy: 0,
 		pp: 20,
@@ -285,7 +285,7 @@ export const MOVES = {
 	},
 	LIGHT_SCREEN: {
 		type: Type.PSYCHIC,
-		class: Class.Status,
+		damageClass: DamageClass.Status,
 		power: 0,
 		accuracy: 0,
 		pp: 30,
@@ -293,7 +293,7 @@ export const MOVES = {
 	},
 	TAILWIND: {
 		type: Type.FLYING,
-		class: Class.Status,
+		damageClass: DamageClass.Status,
 		power: 0,
 		accuracy: 0,
 		pp: 15,
@@ -301,7 +301,7 @@ export const MOVES = {
 	},
 	SAFEGUARD: {
 		type: Type.NORMAL,
-		class: Class.Status,
+		damageClass: DamageClass.Status,
 		power: 0,
 		accuracy: 0,
 		pp: 25,
@@ -309,7 +309,7 @@ export const MOVES = {
 	},
 	MIST: {
 		type: Type.ICE,
-		class: Class.Status,
+		damageClass: DamageClass.Status,
 		power: 0,
 		accuracy: 0,
 		pp: 30,
@@ -317,7 +317,7 @@ export const MOVES = {
 	},
 	SPIKES: {
 		type: Type.GROUND,
-		class: Class.Status,
+		damageClass: DamageClass.Status,
 		power: 0,
 		accuracy: 0,
 		pp: 20,
@@ -325,7 +325,7 @@ export const MOVES = {
 	},
 	TOXIC_SPIKES: {
 		type: Type.POISON,
-		class: Class.Status,
+		damageClass: DamageClass.Status,
 		power: 0,
 		accuracy: 0,
 		pp: 20,
@@ -333,7 +333,7 @@ export const MOVES = {
 	},
 	STEALTH_ROCK: {
 		type: Type.ROCK,
-		class: Class.Status,
+		damageClass: DamageClass.Status,
 		power: 0,
 		accuracy: 0,
 		pp: 20,
@@ -341,7 +341,7 @@ export const MOVES = {
 	},
 	STICKY_WEB: {
 		type: Type.BUG,
-		class: Class.Status,
+		damageClass: DamageClass.Status,
 		power: 0,
 		accuracy: 0,
 		pp: 20,
@@ -349,7 +349,7 @@ export const MOVES = {
 	},
 	TRICK_ROOM: {
 		type: Type.PSYCHIC,
-		class: Class.Status,
+		damageClass: DamageClass.Status,
 		power: 0,
 		accuracy: 0,
 		pp: 5,
@@ -357,7 +357,7 @@ export const MOVES = {
 	},
 	SUNNY_DAY: {
 		type: Type.FIRE,
-		class: Class.Status,
+		damageClass: DamageClass.Status,
 		power: 0,
 		accuracy: 0,
 		pp: 5,
@@ -365,7 +365,7 @@ export const MOVES = {
 	},
 	RAIN_DANCE: {
 		type: Type.WATER,
-		class: Class.Status,
+		damageClass: DamageClass.Status,
 		power: 0,
 		accuracy: 0,
 		pp: 5,
@@ -373,7 +373,7 @@ export const MOVES = {
 	},
 	SANDSTORM: {
 		type: Type.ROCK,
-		class: Class.Status,
+		damageClass: DamageClass.Status,
 		power: 0,
 		accuracy: 0,
 		pp: 10,
@@ -381,7 +381,7 @@ export const MOVES = {
 	},
 	HAIL: {
 		type: Type.ICE,
-		class: Class.Status,
+		damageClass: DamageClass.Status,
 		power: 0,
 		accuracy: 0,
 		pp: 10,
@@ -389,7 +389,7 @@ export const MOVES = {
 	},
 	SNOWSCAPE: {
 		type: Type.ICE,
-		class: Class.Status,
+		damageClass: DamageClass.Status,
 		power: 0,
 		accuracy: 0,
 		pp: 10,
@@ -397,7 +397,7 @@ export const MOVES = {
 	},
 	ELECTRIC_TERRAIN: {
 		type: Type.ELECTRIC,
-		class: Class.Status,
+		damageClass: DamageClass.Status,
 		power: 0,
 		accuracy: 0,
 		pp: 10,
@@ -405,7 +405,7 @@ export const MOVES = {
 	},
 	GRASSY_TERRAIN: {
 		type: Type.GRASS,
-		class: Class.Status,
+		damageClass: DamageClass.Status,
 		power: 0,
 		accuracy: 0,
 		pp: 10,
@@ -413,7 +413,7 @@ export const MOVES = {
 	},
 	MISTY_TERRAIN: {
 		type: Type.FAIRY,
-		class: Class.Status,
+		damageClass: DamageClass.Status,
 		power: 0,
 		accuracy: 0,
 		pp: 10,
@@ -421,7 +421,7 @@ export const MOVES = {
 	},
 	PSYCHIC_TERRAIN: {
 		type: Type.PSYCHIC,
-		class: Class.Status,
+		damageClass: DamageClass.Status,
 		power: 0,
 		accuracy: 0,
 		pp: 10,
@@ -429,7 +429,7 @@ export const MOVES = {
 	},
 	GRAVITY: {
 		type: Type.PSYCHIC,
-		class: Class.Status,
+		damageClass: DamageClass.Status,
 		power: 0,
 		accuracy: 0,
 		pp: 5,
@@ -437,7 +437,7 @@ export const MOVES = {
 	},
 	TAUNT: {
 		type: Type.DARK,
-		class: Class.Status,
+		damageClass: DamageClass.Status,
 		power: 0,
 		accuracy: 100,
 		pp: 20,
@@ -445,7 +445,7 @@ export const MOVES = {
 	},
 	ENCORE: {
 		type: Type.NORMAL,
-		class: Class.Status,
+		damageClass: DamageClass.Status,
 		power: 0,
 		accuracy: 100,
 		pp: 5,
@@ -453,7 +453,7 @@ export const MOVES = {
 	},
 	IDENTIFY: {
 		type: Type.NORMAL,
-		class: Class.Status,
+		damageClass: DamageClass.Status,
 		power: 0,
 		accuracy: 0,
 		pp: 40,
@@ -461,7 +461,7 @@ export const MOVES = {
 	},
 	DISABLE: {
 		type: Type.NORMAL,
-		class: Class.Status,
+		damageClass: DamageClass.Status,
 		power: 0,
 		accuracy: 100,
 		pp: 20,
@@ -469,7 +469,7 @@ export const MOVES = {
 	},
 	ATTRACT: {
 		type: Type.NORMAL,
-		class: Class.Status,
+		damageClass: DamageClass.Status,
 		power: 0,
 		accuracy: 100,
 		pp: 15,
@@ -477,7 +477,7 @@ export const MOVES = {
 	},
 	WONDER_ROOM: {
 		type: Type.PSYCHIC,
-		class: Class.Status,
+		damageClass: DamageClass.Status,
 		power: 0,
 		accuracy: 0,
 		pp: 10,
@@ -485,7 +485,7 @@ export const MOVES = {
 	},
 	MAGIC_ROOM: {
 		type: Type.PSYCHIC,
-		class: Class.Status,
+		damageClass: DamageClass.Status,
 		power: 0,
 		accuracy: 0,
 		pp: 10,
@@ -493,7 +493,7 @@ export const MOVES = {
 	},
 	LEECH_SEED: {
 		type: Type.GRASS,
-		class: Class.Status,
+		damageClass: DamageClass.Status,
 		power: 0,
 		accuracy: 90,
 		pp: 10,
@@ -501,7 +501,7 @@ export const MOVES = {
 	},
 	SOLAR_BEAM: {
 		type: Type.GRASS,
-		class: Class.Special,
+		damageClass: DamageClass.Special,
 		power: 120,
 		accuracy: 100,
 		pp: 10,
@@ -509,7 +509,7 @@ export const MOVES = {
 	},
 	SLEEP_POWDER: {
 		type: Type.GRASS,
-		class: Class.Status,
+		damageClass: DamageClass.Status,
 		power: 0,
 		accuracy: 75,
 		pp: 15,
@@ -517,7 +517,7 @@ export const MOVES = {
 	},
 	PETAL_DANCE: {
 		type: Type.GRASS,
-		class: Class.Special,
+		damageClass: DamageClass.Special,
 		power: 120,
 		accuracy: 100,
 		pp: 10,
@@ -525,7 +525,7 @@ export const MOVES = {
 	},
 	STRING_SHOT: {
 		type: Type.BUG,
-		class: Class.Status,
+		damageClass: DamageClass.Status,
 		power: 0,
 		accuracy: 95,
 		pp: 40,
@@ -533,7 +533,7 @@ export const MOVES = {
 	},
 	DRAGON_RAGE: {
 		type: Type.DRAGON,
-		class: Class.Special,
+		damageClass: DamageClass.Special,
 		power: 0,
 		accuracy: 100,
 		pp: 10,
@@ -541,7 +541,7 @@ export const MOVES = {
 	},
 	FIRE_SPIN: {
 		type: Type.FIRE,
-		class: Class.Special,
+		damageClass: DamageClass.Special,
 		power: 15,
 		accuracy: 70,
 		pp: 15,
@@ -549,7 +549,7 @@ export const MOVES = {
 	},
 	THUNDER_SHOCK: {
 		type: Type.ELECTRIC,
-		class: Class.Special,
+		damageClass: DamageClass.Special,
 		power: 40,
 		accuracy: 100,
 		pp: 30,
@@ -557,7 +557,7 @@ export const MOVES = {
 	},
 	SLAM: {
 		type: Type.NORMAL,
-		class: Class.Physical,
+		damageClass: DamageClass.Physical,
 		power: 80,
 		accuracy: 75,
 		pp: 20,
@@ -565,7 +565,7 @@ export const MOVES = {
 	},
 	MEGA_KICK: {
 		type: Type.NORMAL,
-		class: Class.Physical,
+		damageClass: DamageClass.Physical,
 		power: 120,
 		accuracy: 75,
 		pp: 5,
@@ -573,7 +573,7 @@ export const MOVES = {
 	},
 	JUMP_KICK: {
 		type: Type.FIGHTING,
-		class: Class.Physical,
+		damageClass: DamageClass.Physical,
 		power: 100,
 		accuracy: 95,
 		pp: 10,
@@ -581,7 +581,7 @@ export const MOVES = {
 	},
 	ROLLING_KICK: {
 		type: Type.FIGHTING,
-		class: Class.Physical,
+		damageClass: DamageClass.Physical,
 		power: 60,
 		accuracy: 85,
 		pp: 15,
@@ -589,7 +589,7 @@ export const MOVES = {
 	},
 	SAND_ATTACK: {
 		type: Type.GROUND,
-		class: Class.Status,
+		damageClass: DamageClass.Status,
 		power: 0,
 		accuracy: 100,
 		pp: 15,
@@ -597,7 +597,7 @@ export const MOVES = {
 	},
 	HEADBUTT: {
 		type: Type.NORMAL,
-		class: Class.Physical,
+		damageClass: DamageClass.Physical,
 		power: 70,
 		accuracy: 100,
 		pp: 15,
@@ -605,7 +605,7 @@ export const MOVES = {
 	},
 	HORN_ATTACK: {
 		type: Type.NORMAL,
-		class: Class.Physical,
+		damageClass: DamageClass.Physical,
 		power: 65,
 		accuracy: 100,
 		pp: 25,
@@ -613,7 +613,7 @@ export const MOVES = {
 	},
 	FURY_ATTACK: {
 		type: Type.NORMAL,
-		class: Class.Physical,
+		damageClass: DamageClass.Physical,
 		power: 15,
 		accuracy: 85,
 		pp: 20,
@@ -621,7 +621,7 @@ export const MOVES = {
 	},
 	HORN_DRILL: {
 		type: Type.NORMAL,
-		class: Class.Physical,
+		damageClass: DamageClass.Physical,
 		power: 0,
 		accuracy: 30,
 		pp: 5,
@@ -629,7 +629,7 @@ export const MOVES = {
 	},
 	POISON_POWDER: {
 		type: Type.POISON,
-		class: Class.Status,
+		damageClass: DamageClass.Status,
 		power: 0,
 		accuracy: 75,
 		pp: 35,
@@ -637,7 +637,7 @@ export const MOVES = {
 	},
 	CUT: {
 		type: Type.NORMAL,
-		class: Class.Physical,
+		damageClass: DamageClass.Physical,
 		power: 50,
 		accuracy: 95,
 		pp: 30,
@@ -645,7 +645,7 @@ export const MOVES = {
 	},
 	FLY: {
 		type: Type.FLYING,
-		class: Class.Physical,
+		damageClass: DamageClass.Physical,
 		power: 90,
 		accuracy: 95,
 		pp: 15,
@@ -653,7 +653,7 @@ export const MOVES = {
 	},
 	SURF: {
 		type: Type.WATER,
-		class: Class.Special,
+		damageClass: DamageClass.Special,
 		power: 90,
 		accuracy: 100,
 		pp: 15,
@@ -661,7 +661,7 @@ export const MOVES = {
 	},
 	STRENGTH: {
 		type: Type.NORMAL,
-		class: Class.Physical,
+		damageClass: DamageClass.Physical,
 		power: 80,
 		accuracy: 100,
 		pp: 15,
@@ -669,7 +669,7 @@ export const MOVES = {
 	},
 	FLASH: {
 		type: Type.NORMAL,
-		class: Class.Status,
+		damageClass: DamageClass.Status,
 		power: 0,
 		accuracy: 100,
 		pp: 20,
@@ -677,7 +677,7 @@ export const MOVES = {
 	},
 	EMBER: {
 		type: Type.FIRE,
-		class: Class.Special,
+		damageClass: DamageClass.Special,
 		power: 40,
 		accuracy: 100,
 		pp: 25,
@@ -685,7 +685,7 @@ export const MOVES = {
 	},
 	SMOKE_SCREEN: {
 		type: Type.FIRE,
-		class: Class.Status,
+		damageClass: DamageClass.Status,
 		power: 0,
 		accuracy: 100,
 		pp: 20,
@@ -693,7 +693,7 @@ export const MOVES = {
 	},
 	FIRE_FANG: {
 		type: Type.FIRE,
-		class: Class.Physical,
+		damageClass: DamageClass.Physical,
 		power: 65,
 		accuracy: 95,
 		pp: 15,
@@ -707,7 +707,7 @@ export const MOVES = {
 	},
 	FLAMETHROWER: {
 		type: Type.FIRE,
-		class: Class.Special,
+		damageClass: DamageClass.Special,
 		power: 90,
 		accuracy: 100,
 		pp: 15,
@@ -715,7 +715,7 @@ export const MOVES = {
 	},
 	ABSORB: {
 		type: Type.GRASS,
-		class: Class.Special,
+		damageClass: DamageClass.Special,
 		power: 20,
 		accuracy: 100,
 		pp: 25,
@@ -723,7 +723,7 @@ export const MOVES = {
 	},
 	ACID: {
 		type: Type.POISON,
-		class: Class.Special,
+		damageClass: DamageClass.Special,
 		power: 40,
 		accuracy: 100,
 		pp: 30,
@@ -731,7 +731,7 @@ export const MOVES = {
 	},
 	ACID_ARMOR: {
 		type: Type.POISON,
-		class: Class.Status,
+		damageClass: DamageClass.Status,
 		power: 0,
 		accuracy: 0,
 		pp: 20,
@@ -739,7 +739,7 @@ export const MOVES = {
 	},
 	ACID_SPRAY: {
 		type: Type.POISON,
-		class: Class.Special,
+		damageClass: DamageClass.Special,
 		power: 40,
 		accuracy: 100,
 		pp: 20,
@@ -750,7 +750,7 @@ export const MOVES = {
 	},
 	ACUPRESSURE: {
 		type: Type.NORMAL,
-		class: Class.Status,
+		damageClass: DamageClass.Status,
 		power: 0,
 		accuracy: 0,
 		pp: 30,
@@ -758,7 +758,7 @@ export const MOVES = {
 	},
 	AERIAL_ACE: {
 		type: Type.FLYING,
-		class: Class.Physical,
+		damageClass: DamageClass.Physical,
 		power: 60,
 		accuracy: 0,
 		pp: 20,
@@ -766,7 +766,7 @@ export const MOVES = {
 	},
 	AFTER_YOU: {
 		type: Type.NORMAL,
-		class: Class.Status,
+		damageClass: DamageClass.Status,
 		power: 0,
 		accuracy: 0,
 		pp: 15,
@@ -774,7 +774,7 @@ export const MOVES = {
 	},
 	AGILITY: {
 		type: Type.PSYCHIC,
-		class: Class.Status,
+		damageClass: DamageClass.Status,
 		power: 0,
 		accuracy: 0,
 		pp: 30,
@@ -782,7 +782,7 @@ export const MOVES = {
 	},
 	AIR_CUTTER: {
 		type: Type.FLYING,
-		class: Class.Special,
+		damageClass: DamageClass.Special,
 		power: 60,
 		accuracy: 95,
 		pp: 25,
@@ -790,7 +790,7 @@ export const MOVES = {
 	},
 	AIR_SLASH: {
 		type: Type.FLYING,
-		class: Class.Special,
+		damageClass: DamageClass.Special,
 		power: 75,
 		accuracy: 95,
 		pp: 15,
@@ -798,7 +798,7 @@ export const MOVES = {
 	},
 	ALLY_SWITCH: {
 		type: Type.PSYCHIC,
-		class: Class.Status,
+		damageClass: DamageClass.Status,
 		power: 0,
 		accuracy: 0,
 		pp: 15,
@@ -806,7 +806,7 @@ export const MOVES = {
 	},
 	AMNESIA: {
 		type: Type.PSYCHIC,
-		class: Class.Status,
+		damageClass: DamageClass.Status,
 		power: 0,
 		accuracy: 0,
 		pp: 20,
@@ -814,7 +814,7 @@ export const MOVES = {
 	},
 	ANCIENT_POWER: {
 		type: Type.ROCK,
-		class: Class.Special,
+		damageClass: DamageClass.Special,
 		power: 60,
 		accuracy: 100,
 		pp: 5,
@@ -831,7 +831,7 @@ export const MOVES = {
 	},
 	AQUA_JET: {
 		type: Type.WATER,
-		class: Class.Physical,
+		damageClass: DamageClass.Physical,
 		power: 40,
 		accuracy: 100,
 		pp: 20,
@@ -839,7 +839,7 @@ export const MOVES = {
 	},
 	AQUA_RING: {
 		type: Type.WATER,
-		class: Class.Status,
+		damageClass: DamageClass.Status,
 		power: 0,
 		accuracy: 0,
 		pp: 20,
@@ -847,7 +847,7 @@ export const MOVES = {
 	},
 	AQUA_TAIL: {
 		type: Type.WATER,
-		class: Class.Physical,
+		damageClass: DamageClass.Physical,
 		power: 90,
 		accuracy: 90,
 		pp: 10,
@@ -855,7 +855,7 @@ export const MOVES = {
 	},
 	ASSURANCE: {
 		type: Type.DARK,
-		class: Class.Physical,
+		damageClass: DamageClass.Physical,
 		power: 60,
 		accuracy: 100,
 		pp: 10,
@@ -863,7 +863,7 @@ export const MOVES = {
 	},
 	ASTONISH: {
 		type: Type.GHOST,
-		class: Class.Physical,
+		damageClass: DamageClass.Physical,
 		power: 30,
 		accuracy: 100,
 		pp: 15,
@@ -871,7 +871,7 @@ export const MOVES = {
 	},
 	AURA_SPHERE: {
 		type: Type.FIGHTING,
-		class: Class.Special,
+		damageClass: DamageClass.Special,
 		power: 80,
 		accuracy: 0,
 		pp: 20,
@@ -879,7 +879,7 @@ export const MOVES = {
 	},
 	AURORA_BEAM: {
 		type: Type.ICE,
-		class: Class.Special,
+		damageClass: DamageClass.Special,
 		power: 65,
 		accuracy: 100,
 		pp: 20,
@@ -890,7 +890,7 @@ export const MOVES = {
 	},
 	AXE_KICK: {
 		type: Type.FIGHTING,
-		class: Class.Physical,
+		damageClass: DamageClass.Physical,
 		power: 120,
 		accuracy: 90,
 		pp: 10,
@@ -898,7 +898,7 @@ export const MOVES = {
 	},
 	BABY_DOLL_EYES: {
 		type: Type.FAIRY,
-		class: Class.Status,
+		damageClass: DamageClass.Status,
 		power: 0,
 		accuracy: 100,
 		pp: 30,
@@ -912,7 +912,7 @@ export const MOVES = {
 	},
 	BATON_PASS: {
 		type: Type.NORMAL,
-		class: Class.Status,
+		damageClass: DamageClass.Status,
 		power: 0,
 		accuracy: 0,
 		pp: 40,
@@ -920,7 +920,7 @@ export const MOVES = {
 	},
 	BEAT_UP: {
 		type: Type.DARK,
-		class: Class.Physical,
+		damageClass: DamageClass.Physical,
 		power: 0,
 		accuracy: 100,
 		pp: 10,
@@ -928,7 +928,7 @@ export const MOVES = {
 	},
 	BELCH: {
 		type: Type.POISON,
-		class: Class.Special,
+		damageClass: DamageClass.Special,
 		power: 120,
 		accuracy: 90,
 		pp: 10,
@@ -936,7 +936,7 @@ export const MOVES = {
 	},
 	BELLY_DRUM: {
 		type: Type.NORMAL,
-		class: Class.Status,
+		damageClass: DamageClass.Status,
 		power: 0,
 		accuracy: 0,
 		pp: 10,
@@ -944,7 +944,7 @@ export const MOVES = {
 	},
 	BIND: {
 		type: Type.NORMAL,
-		class: Class.Physical,
+		damageClass: DamageClass.Physical,
 		power: 15,
 		accuracy: 85,
 		pp: 20,
@@ -952,7 +952,7 @@ export const MOVES = {
 	},
 	BLAZE_KICK: {
 		type: Type.FIRE,
-		class: Class.Physical,
+		damageClass: DamageClass.Physical,
 		power: 85,
 		accuracy: 90,
 		pp: 10,
@@ -960,7 +960,7 @@ export const MOVES = {
 	},
 	BLIZZARD: {
 		type: Type.ICE,
-		class: Class.Special,
+		damageClass: DamageClass.Special,
 		power: 110,
 		accuracy: 70,
 		pp: 5,
@@ -968,7 +968,7 @@ export const MOVES = {
 	},
 	BLOCK: {
 		type: Type.NORMAL,
-		class: Class.Status,
+		damageClass: DamageClass.Status,
 		power: 0,
 		accuracy: 0,
 		pp: 5,
@@ -976,7 +976,7 @@ export const MOVES = {
 	},
 	BONE_RUSH: {
 		type: Type.GROUND,
-		class: Class.Physical,
+		damageClass: DamageClass.Physical,
 		power: 25,
 		accuracy: 90,
 		pp: 10,
@@ -984,7 +984,7 @@ export const MOVES = {
 	},
 	BONEMERANG: {
 		type: Type.GROUND,
-		class: Class.Physical,
+		damageClass: DamageClass.Physical,
 		power: 50,
 		accuracy: 90,
 		pp: 10,
@@ -992,7 +992,7 @@ export const MOVES = {
 	},
 	BRAVE_BIRD: {
 		type: Type.FLYING,
-		class: Class.Physical,
+		damageClass: DamageClass.Physical,
 		power: 120,
 		accuracy: 100,
 		pp: 15,
@@ -1000,7 +1000,7 @@ export const MOVES = {
 	},
 	BRICK_BREAK: {
 		type: Type.FIGHTING,
-		class: Class.Physical,
+		damageClass: DamageClass.Physical,
 		power: 75,
 		accuracy: 100,
 		pp: 15,
@@ -1012,7 +1012,7 @@ export const MOVES = {
 	},
 	BRINE: {
 		type: Type.WATER,
-		class: Class.Special,
+		damageClass: DamageClass.Special,
 		power: 65,
 		accuracy: 100,
 		pp: 10,
@@ -1020,7 +1020,7 @@ export const MOVES = {
 	},
 	BUBBLE_BEAM: {
 		type: Type.WATER,
-		class: Class.Special,
+		damageClass: DamageClass.Special,
 		power: 65,
 		accuracy: 100,
 		pp: 20,
@@ -1028,7 +1028,7 @@ export const MOVES = {
 	},
 	BUG_BITE: {
 		type: Type.BUG,
-		class: Class.Physical,
+		damageClass: DamageClass.Physical,
 		power: 60,
 		accuracy: 100,
 		pp: 20,
@@ -1036,7 +1036,7 @@ export const MOVES = {
 	},
 	BUG_BUZZ: {
 		type: Type.BUG,
-		class: Class.Special,
+		damageClass: DamageClass.Special,
 		power: 90,
 		accuracy: 100,
 		pp: 10,
@@ -1044,7 +1044,7 @@ export const MOVES = {
 	},
 	BULK_UP: {
 		type: Type.FIGHTING,
-		class: Class.Status,
+		damageClass: DamageClass.Status,
 		power: 0,
 		accuracy: 0,
 		pp: 20,
@@ -1058,7 +1058,7 @@ export const MOVES = {
 	},
 	BULLDOZE: {
 		type: Type.GROUND,
-		class: Class.Physical,
+		damageClass: DamageClass.Physical,
 		power: 60,
 		accuracy: 100,
 		pp: 20,
@@ -1069,7 +1069,7 @@ export const MOVES = {
 	},
 	BULLET_PUNCH: {
 		type: Type.STEEL,
-		class: Class.Physical,
+		damageClass: DamageClass.Physical,
 		power: 40,
 		accuracy: 100,
 		pp: 30,
@@ -1077,7 +1077,7 @@ export const MOVES = {
 	},
 	BULLET_SEED: {
 		type: Type.GRASS,
-		class: Class.Physical,
+		damageClass: DamageClass.Physical,
 		power: 25,
 		accuracy: 100,
 		pp: 30,
@@ -1085,7 +1085,7 @@ export const MOVES = {
 	},
 	CALM_MIND: {
 		type: Type.PSYCHIC,
-		class: Class.Status,
+		damageClass: DamageClass.Status,
 		power: 0,
 		accuracy: 0,
 		pp: 20,
@@ -1099,7 +1099,7 @@ export const MOVES = {
 	},
 	CHARGE: {
 		type: Type.ELECTRIC,
-		class: Class.Status,
+		damageClass: DamageClass.Status,
 		power: 0,
 		accuracy: 0,
 		pp: 20,
@@ -1113,7 +1113,7 @@ export const MOVES = {
 	},
 	CHARGE_BEAM: {
 		type: Type.ELECTRIC,
-		class: Class.Special,
+		damageClass: DamageClass.Special,
 		power: 50,
 		accuracy: 90,
 		pp: 10,
@@ -1121,7 +1121,7 @@ export const MOVES = {
 	},
 	CHARM: {
 		type: Type.FAIRY,
-		class: Class.Status,
+		damageClass: DamageClass.Status,
 		power: 0,
 		accuracy: 100,
 		pp: 20,
@@ -1129,7 +1129,7 @@ export const MOVES = {
 	},
 	CIRCLE_THROW: {
 		type: Type.FIGHTING,
-		class: Class.Physical,
+		damageClass: DamageClass.Physical,
 		power: 60,
 		accuracy: 90,
 		pp: 10,
@@ -1137,7 +1137,7 @@ export const MOVES = {
 	},
 	CLEAR_SMOG: {
 		type: Type.POISON,
-		class: Class.Special,
+		damageClass: DamageClass.Special,
 		power: 50,
 		accuracy: 0,
 		pp: 15,
@@ -1145,7 +1145,7 @@ export const MOVES = {
 	},
 	CLOSE_COMBAT: {
 		type: Type.FIGHTING,
-		class: Class.Physical,
+		damageClass: DamageClass.Physical,
 		power: 120,
 		accuracy: 100,
 		pp: 5,
@@ -1159,7 +1159,7 @@ export const MOVES = {
 	},
 	COIL: {
 		type: Type.POISON,
-		class: Class.Status,
+		damageClass: DamageClass.Status,
 		power: 0,
 		accuracy: 0,
 		pp: 20,
@@ -1174,7 +1174,7 @@ export const MOVES = {
 	},
 	CONFUSION: {
 		type: Type.PSYCHIC,
-		class: Class.Special,
+		damageClass: DamageClass.Special,
 		power: 50,
 		accuracy: 100,
 		pp: 25,
@@ -1182,7 +1182,7 @@ export const MOVES = {
 	},
 	CONVERSION: {
 		type: Type.NORMAL,
-		class: Class.Status,
+		damageClass: DamageClass.Status,
 		power: 0,
 		accuracy: 0,
 		pp: 30,
@@ -1190,7 +1190,7 @@ export const MOVES = {
 	},
 	CONVERSION_2: {
 		type: Type.NORMAL,
-		class: Class.Status,
+		damageClass: DamageClass.Status,
 		power: 0,
 		accuracy: 0,
 		pp: 30,
@@ -1198,7 +1198,7 @@ export const MOVES = {
 	},
 	COPYCAT: {
 		type: Type.NORMAL,
-		class: Class.Status,
+		damageClass: DamageClass.Status,
 		power: 0,
 		accuracy: 0,
 		pp: 20,
@@ -1206,7 +1206,7 @@ export const MOVES = {
 	},
 	COSMIC_POWER: {
 		type: Type.PSYCHIC,
-		class: Class.Status,
+		damageClass: DamageClass.Status,
 		power: 0,
 		accuracy: 0,
 		pp: 20,
@@ -1220,7 +1220,7 @@ export const MOVES = {
 	},
 	COUNTER: {
 		type: Type.FIGHTING,
-		class: Class.Physical,
+		damageClass: DamageClass.Physical,
 		power: 0,
 		accuracy: 100,
 		pp: 20,
@@ -1228,7 +1228,7 @@ export const MOVES = {
 	},
 	COVET: {
 		type: Type.NORMAL,
-		class: Class.Physical,
+		damageClass: DamageClass.Physical,
 		power: 60,
 		accuracy: 100,
 		pp: 25,
@@ -1236,7 +1236,7 @@ export const MOVES = {
 	},
 	CRABHAMMER: {
 		type: Type.WATER,
-		class: Class.Physical,
+		damageClass: DamageClass.Physical,
 		power: 100,
 		accuracy: 90,
 		pp: 10,
@@ -1244,7 +1244,7 @@ export const MOVES = {
 	},
 	CROSS_CHOP: {
 		type: Type.FIGHTING,
-		class: Class.Physical,
+		damageClass: DamageClass.Physical,
 		power: 100,
 		accuracy: 80,
 		pp: 5,
@@ -1252,7 +1252,7 @@ export const MOVES = {
 	},
 	CROSS_POISON: {
 		type: Type.POISON,
-		class: Class.Physical,
+		damageClass: DamageClass.Physical,
 		power: 70,
 		accuracy: 100,
 		pp: 20,
@@ -1260,7 +1260,7 @@ export const MOVES = {
 	},
 	CRUNCH: {
 		type: Type.DARK,
-		class: Class.Physical,
+		damageClass: DamageClass.Physical,
 		power: 80,
 		accuracy: 100,
 		pp: 15,
@@ -1268,7 +1268,7 @@ export const MOVES = {
 	},
 	CRUSH_CLAW: {
 		type: Type.NORMAL,
-		class: Class.Physical,
+		damageClass: DamageClass.Physical,
 		power: 75,
 		accuracy: 95,
 		pp: 10,
@@ -1276,7 +1276,7 @@ export const MOVES = {
 	},
 	CURSE: {
 		type: Type.GHOST,
-		class: Class.Status,
+		damageClass: DamageClass.Status,
 		power: 0,
 		accuracy: 0,
 		pp: 10,
@@ -1284,7 +1284,7 @@ export const MOVES = {
 	},
 	DARK_PULSE: {
 		type: Type.DARK,
-		class: Class.Special,
+		damageClass: DamageClass.Special,
 		power: 80,
 		accuracy: 100,
 		pp: 15,
@@ -1292,7 +1292,7 @@ export const MOVES = {
 	},
 	DAZZLING_GLEAM: {
 		type: Type.FAIRY,
-		class: Class.Special,
+		damageClass: DamageClass.Special,
 		power: 80,
 		accuracy: 100,
 		pp: 10,
@@ -1300,7 +1300,7 @@ export const MOVES = {
 	},
 	DEFENSE_CURL: {
 		type: Type.NORMAL,
-		class: Class.Status,
+		damageClass: DamageClass.Status,
 		power: 0,
 		accuracy: 0,
 		pp: 40,
@@ -1308,7 +1308,7 @@ export const MOVES = {
 	},
 	DEFOG: {
 		type: Type.FLYING,
-		class: Class.Status,
+		damageClass: DamageClass.Status,
 		power: 0,
 		accuracy: 0,
 		pp: 15,
@@ -1320,7 +1320,7 @@ export const MOVES = {
 	},
 	DESTINY_BOND: {
 		type: Type.GHOST,
-		class: Class.Status,
+		damageClass: DamageClass.Status,
 		power: 0,
 		accuracy: 0,
 		pp: 5,
@@ -1328,7 +1328,7 @@ export const MOVES = {
 	},
 	DETECT: {
 		type: Type.FIGHTING,
-		class: Class.Status,
+		damageClass: DamageClass.Status,
 		power: 0,
 		accuracy: 0,
 		pp: 5,
@@ -1336,7 +1336,7 @@ export const MOVES = {
 	},
 	DIG: {
 		type: Type.GROUND,
-		class: Class.Physical,
+		damageClass: DamageClass.Physical,
 		power: 80,
 		accuracy: 100,
 		pp: 10,
@@ -1344,7 +1344,7 @@ export const MOVES = {
 	},
 	DISARMING_VOICE: {
 		type: Type.FAIRY,
-		class: Class.Special,
+		damageClass: DamageClass.Special,
 		power: 40,
 		accuracy: 0,
 		pp: 15,
@@ -1352,7 +1352,7 @@ export const MOVES = {
 	},
 	DISCHARGE: {
 		type: Type.ELECTRIC,
-		class: Class.Special,
+		damageClass: DamageClass.Special,
 		power: 80,
 		accuracy: 100,
 		pp: 15,
@@ -1360,7 +1360,7 @@ export const MOVES = {
 	},
 	DIVE: {
 		type: Type.WATER,
-		class: Class.Physical,
+		damageClass: DamageClass.Physical,
 		power: 80,
 		accuracy: 100,
 		pp: 10,
@@ -1368,7 +1368,7 @@ export const MOVES = {
 	},
 	DOUBLE_HIT: {
 		type: Type.NORMAL,
-		class: Class.Physical,
+		damageClass: DamageClass.Physical,
 		power: 35,
 		accuracy: 90,
 		pp: 10,
@@ -1376,7 +1376,7 @@ export const MOVES = {
 	},
 	DOUBLE_TEAM: {
 		type: Type.NORMAL,
-		class: Class.Status,
+		damageClass: DamageClass.Status,
 		power: 0,
 		accuracy: 0,
 		pp: 15,
@@ -1384,7 +1384,7 @@ export const MOVES = {
 	},
 	DRAGON_BREATH: {
 		type: Type.DRAGON,
-		class: Class.Special,
+		damageClass: DamageClass.Special,
 		power: 60,
 		accuracy: 100,
 		pp: 20,
@@ -1392,7 +1392,7 @@ export const MOVES = {
 	},
 	DRAGON_CLAW: {
 		type: Type.DRAGON,
-		class: Class.Physical,
+		damageClass: DamageClass.Physical,
 		power: 80,
 		accuracy: 100,
 		pp: 15,
@@ -1400,7 +1400,7 @@ export const MOVES = {
 	},
 	DRAGON_DANCE: {
 		type: Type.DRAGON,
-		class: Class.Status,
+		damageClass: DamageClass.Status,
 		power: 0,
 		accuracy: 0,
 		pp: 20,
@@ -1414,7 +1414,7 @@ export const MOVES = {
 	},
 	DRAGON_PULSE: {
 		type: Type.DRAGON,
-		class: Class.Special,
+		damageClass: DamageClass.Special,
 		power: 85,
 		accuracy: 100,
 		pp: 10,
@@ -1422,7 +1422,7 @@ export const MOVES = {
 	},
 	DRAGON_RUSH: {
 		type: Type.DRAGON,
-		class: Class.Physical,
+		damageClass: DamageClass.Physical,
 		power: 100,
 		accuracy: 75,
 		pp: 10,
@@ -1430,7 +1430,7 @@ export const MOVES = {
 	},
 	DRAGON_TAIL: {
 		type: Type.DRAGON,
-		class: Class.Physical,
+		damageClass: DamageClass.Physical,
 		power: 60,
 		accuracy: 90,
 		pp: 10,
@@ -1438,7 +1438,7 @@ export const MOVES = {
 	},
 	DRAIN_PUNCH: {
 		type: Type.FIGHTING,
-		class: Class.Physical,
+		damageClass: DamageClass.Physical,
 		power: 75,
 		accuracy: 100,
 		pp: 10,
@@ -1446,7 +1446,7 @@ export const MOVES = {
 	},
 	DREAM_EATER: {
 		type: Type.PSYCHIC,
-		class: Class.Special,
+		damageClass: DamageClass.Special,
 		power: 100,
 		accuracy: 100,
 		pp: 15,
@@ -1454,7 +1454,7 @@ export const MOVES = {
 	},
 	DRILL_PECK: {
 		type: Type.FLYING,
-		class: Class.Physical,
+		damageClass: DamageClass.Physical,
 		power: 80,
 		accuracy: 100,
 		pp: 20,
@@ -1462,7 +1462,7 @@ export const MOVES = {
 	},
 	DRILL_RUN: {
 		type: Type.GROUND,
-		class: Class.Physical,
+		damageClass: DamageClass.Physical,
 		power: 80,
 		accuracy: 95,
 		pp: 10,
@@ -1470,7 +1470,7 @@ export const MOVES = {
 	},
 	DYNAMIC_PUNCH: {
 		type: Type.FIGHTING,
-		class: Class.Physical,
+		damageClass: DamageClass.Physical,
 		power: 100,
 		accuracy: 50,
 		pp: 5,
@@ -1478,7 +1478,7 @@ export const MOVES = {
 	},
 	EARTH_POWER: {
 		type: Type.GROUND,
-		class: Class.Special,
+		damageClass: DamageClass.Special,
 		power: 90,
 		accuracy: 100,
 		pp: 10,
@@ -1486,7 +1486,7 @@ export const MOVES = {
 	},
 	EARTHQUAKE: {
 		type: Type.GROUND,
-		class: Class.Physical,
+		damageClass: DamageClass.Physical,
 		power: 100,
 		accuracy: 100,
 		pp: 10,
@@ -1494,7 +1494,7 @@ export const MOVES = {
 	},
 	ECHOED_VOICE: {
 		type: Type.NORMAL,
-		class: Class.Special,
+		damageClass: DamageClass.Special,
 		power: 40,
 		accuracy: 100,
 		pp: 15,
@@ -1502,7 +1502,7 @@ export const MOVES = {
 	},
 	EERIE_IMPULSE: {
 		type: Type.ELECTRIC,
-		class: Class.Status,
+		damageClass: DamageClass.Status,
 		power: 0,
 		accuracy: 100,
 		pp: 15,
@@ -1510,7 +1510,7 @@ export const MOVES = {
 	},
 	ELECTRO_BALL: {
 		type: Type.ELECTRIC,
-		class: Class.Special,
+		damageClass: DamageClass.Special,
 		power: 0,
 		accuracy: 100,
 		pp: 10,
@@ -1518,7 +1518,7 @@ export const MOVES = {
 	},
 	ELECTROWEB: {
 		type: Type.ELECTRIC,
-		class: Class.Special,
+		damageClass: DamageClass.Special,
 		power: 55,
 		accuracy: 95,
 		pp: 15,
@@ -1526,7 +1526,7 @@ export const MOVES = {
 	},
 	ENDEAVOR: {
 		type: Type.NORMAL,
-		class: Class.Physical,
+		damageClass: DamageClass.Physical,
 		power: 0,
 		accuracy: 100,
 		pp: 5,
@@ -1534,7 +1534,7 @@ export const MOVES = {
 	},
 	ENDURE: {
 		type: Type.NORMAL,
-		class: Class.Status,
+		damageClass: DamageClass.Status,
 		power: 0,
 		accuracy: 0,
 		pp: 10,
@@ -1542,7 +1542,7 @@ export const MOVES = {
 	},
 	ENERGY_BALL: {
 		type: Type.GRASS,
-		class: Class.Special,
+		damageClass: DamageClass.Special,
 		power: 90,
 		accuracy: 100,
 		pp: 10,
@@ -1550,7 +1550,7 @@ export const MOVES = {
 	},
 	ENTRAINMENT: {
 		type: Type.NORMAL,
-		class: Class.Status,
+		damageClass: DamageClass.Status,
 		power: 0,
 		accuracy: 100,
 		pp: 15,
@@ -1558,7 +1558,7 @@ export const MOVES = {
 	},
 	EXPLOSION: {
 		type: Type.NORMAL,
-		class: Class.Physical,
+		damageClass: DamageClass.Physical,
 		power: 250,
 		accuracy: 100,
 		pp: 5,
@@ -1566,7 +1566,7 @@ export const MOVES = {
 	},
 	EXTRASENSORY: {
 		type: Type.PSYCHIC,
-		class: Class.Special,
+		damageClass: DamageClass.Special,
 		power: 80,
 		accuracy: 100,
 		pp: 20,
@@ -1574,7 +1574,7 @@ export const MOVES = {
 	},
 	EXTREME_SPEED: {
 		type: Type.NORMAL,
-		class: Class.Physical,
+		damageClass: DamageClass.Physical,
 		power: 80,
 		accuracy: 100,
 		pp: 5,
@@ -1582,7 +1582,7 @@ export const MOVES = {
 	},
 	FAKE_OUT: {
 		type: Type.NORMAL,
-		class: Class.Physical,
+		damageClass: DamageClass.Physical,
 		power: 40,
 		accuracy: 100,
 		pp: 10,
@@ -1597,7 +1597,7 @@ export const MOVES = {
 	},
 	FAKE_TEARS: {
 		type: Type.DARK,
-		class: Class.Status,
+		damageClass: DamageClass.Status,
 		power: 0,
 		accuracy: 100,
 		pp: 20,
@@ -1605,7 +1605,7 @@ export const MOVES = {
 	},
 	FALSE_SWIPE: {
 		type: Type.NORMAL,
-		class: Class.Physical,
+		damageClass: DamageClass.Physical,
 		power: 40,
 		accuracy: 100,
 		pp: 40,
@@ -1613,7 +1613,7 @@ export const MOVES = {
 	},
 	FEATHER_DANCE: {
 		type: Type.FLYING,
-		class: Class.Status,
+		damageClass: DamageClass.Status,
 		power: 0,
 		accuracy: 100,
 		pp: 15,
@@ -1621,7 +1621,7 @@ export const MOVES = {
 	},
 	FEINT: {
 		type: Type.NORMAL,
-		class: Class.Physical,
+		damageClass: DamageClass.Physical,
 		power: 30,
 		accuracy: 100,
 		pp: 10,
@@ -1632,7 +1632,7 @@ export const MOVES = {
 	},
 	FELL_STINGER: {
 		type: Type.BUG,
-		class: Class.Physical,
+		damageClass: DamageClass.Physical,
 		power: 50,
 		accuracy: 100,
 		pp: 25,
@@ -1640,7 +1640,7 @@ export const MOVES = {
 	},
 	FINAL_GAMBIT: {
 		type: Type.FIGHTING,
-		class: Class.Special,
+		damageClass: DamageClass.Special,
 		power: 0,
 		accuracy: 100,
 		pp: 5,
@@ -1651,7 +1651,7 @@ export const MOVES = {
 	},
 	FIRE_BLAST: {
 		type: Type.FIRE,
-		class: Class.Special,
+		damageClass: DamageClass.Special,
 		power: 110,
 		accuracy: 85,
 		pp: 5,
@@ -1659,7 +1659,7 @@ export const MOVES = {
 	},
 	FISSURE: {
 		type: Type.GROUND,
-		class: Class.Physical,
+		damageClass: DamageClass.Physical,
 		power: 0,
 		accuracy: 30,
 		pp: 5,
@@ -1667,7 +1667,7 @@ export const MOVES = {
 	},
 	FLAIL: {
 		type: Type.NORMAL,
-		class: Class.Physical,
+		damageClass: DamageClass.Physical,
 		power: 0,
 		accuracy: 100,
 		pp: 15,
@@ -1675,7 +1675,7 @@ export const MOVES = {
 	},
 	FLAME_CHARGE: {
 		type: Type.FIRE,
-		class: Class.Physical,
+		damageClass: DamageClass.Physical,
 		power: 50,
 		accuracy: 100,
 		pp: 20,
@@ -1683,7 +1683,7 @@ export const MOVES = {
 	},
 	FLAME_WHEEL: {
 		type: Type.FIRE,
-		class: Class.Physical,
+		damageClass: DamageClass.Physical,
 		power: 60,
 		accuracy: 100,
 		pp: 25,
@@ -1691,7 +1691,7 @@ export const MOVES = {
 	},
 	FLARE_BLITZ: {
 		type: Type.FIRE,
-		class: Class.Physical,
+		damageClass: DamageClass.Physical,
 		power: 120,
 		accuracy: 100,
 		pp: 15,
@@ -1699,7 +1699,7 @@ export const MOVES = {
 	},
 	FLASH_CANNON: {
 		type: Type.STEEL,
-		class: Class.Special,
+		damageClass: DamageClass.Special,
 		power: 80,
 		accuracy: 100,
 		pp: 10,
@@ -1707,7 +1707,7 @@ export const MOVES = {
 	},
 	FLATTER: {
 		type: Type.DARK,
-		class: Class.Status,
+		damageClass: DamageClass.Status,
 		power: 0,
 		accuracy: 100,
 		pp: 15,
@@ -1715,7 +1715,7 @@ export const MOVES = {
 	},
 	FLING: {
 		type: Type.DARK,
-		class: Class.Physical,
+		damageClass: DamageClass.Physical,
 		power: 0,
 		accuracy: 100,
 		pp: 10,
@@ -1723,7 +1723,7 @@ export const MOVES = {
 	},
 	FOCUS_ENERGY: {
 		type: Type.NORMAL,
-		class: Class.Status,
+		damageClass: DamageClass.Status,
 		power: 0,
 		accuracy: 0,
 		pp: 30,
@@ -1731,7 +1731,7 @@ export const MOVES = {
 	},
 	FOCUS_PUNCH: {
 		type: Type.FIGHTING,
-		class: Class.Physical,
+		damageClass: DamageClass.Physical,
 		power: 150,
 		accuracy: 100,
 		pp: 20,
@@ -1742,7 +1742,7 @@ export const MOVES = {
 	},
 	FOLLOW_ME: {
 		type: Type.NORMAL,
-		class: Class.Status,
+		damageClass: DamageClass.Status,
 		power: 0,
 		accuracy: 0,
 		pp: 20,
@@ -1750,7 +1750,7 @@ export const MOVES = {
 	},
 	FREEZE_DRY: {
 		type: Type.ICE,
-		class: Class.Special,
+		damageClass: DamageClass.Special,
 		power: 70,
 		accuracy: 100,
 		pp: 20,
@@ -1758,7 +1758,7 @@ export const MOVES = {
 	},
 	FURY_CUTTER: {
 		type: Type.BUG,
-		class: Class.Physical,
+		damageClass: DamageClass.Physical,
 		power: 40,
 		accuracy: 95,
 		pp: 20,
@@ -1766,7 +1766,7 @@ export const MOVES = {
 	},
 	FURY_SWIPES: {
 		type: Type.NORMAL,
-		class: Class.Physical,
+		damageClass: DamageClass.Physical,
 		power: 18,
 		accuracy: 80,
 		pp: 15,
@@ -1774,7 +1774,7 @@ export const MOVES = {
 	},
 	FUTURE_SIGHT: {
 		type: Type.PSYCHIC,
-		class: Class.Special,
+		damageClass: DamageClass.Special,
 		power: 120,
 		accuracy: 100,
 		pp: 10,
@@ -1782,7 +1782,7 @@ export const MOVES = {
 	},
 	GASTRO_ACID: {
 		type: Type.POISON,
-		class: Class.Status,
+		damageClass: DamageClass.Status,
 		power: 0,
 		accuracy: 100,
 		pp: 10,
@@ -1790,7 +1790,7 @@ export const MOVES = {
 	},
 	GIGA_DRAIN: {
 		type: Type.GRASS,
-		class: Class.Special,
+		damageClass: DamageClass.Special,
 		power: 75,
 		accuracy: 100,
 		pp: 10,
@@ -1798,7 +1798,7 @@ export const MOVES = {
 	},
 	GIGA_IMPACT: {
 		type: Type.NORMAL,
-		class: Class.Physical,
+		damageClass: DamageClass.Physical,
 		power: 150,
 		accuracy: 90,
 		pp: 5,
@@ -1806,7 +1806,7 @@ export const MOVES = {
 	},
 	GLARE: {
 		type: Type.NORMAL,
-		class: Class.Status,
+		damageClass: DamageClass.Status,
 		power: 0,
 		accuracy: 100,
 		pp: 30,
@@ -1814,7 +1814,7 @@ export const MOVES = {
 	},
 	GUARD_SPLIT: {
 		type: Type.PSYCHIC,
-		class: Class.Status,
+		damageClass: DamageClass.Status,
 		power: 0,
 		accuracy: 0,
 		pp: 10,
@@ -1822,7 +1822,7 @@ export const MOVES = {
 	},
 	GUARD_SWAP: {
 		type: Type.PSYCHIC,
-		class: Class.Status,
+		damageClass: DamageClass.Status,
 		power: 0,
 		accuracy: 0,
 		pp: 10,
@@ -1830,7 +1830,7 @@ export const MOVES = {
 	},
 	GUILLOTINE: {
 		type: Type.NORMAL,
-		class: Class.Physical,
+		damageClass: DamageClass.Physical,
 		power: 0,
 		accuracy: 30,
 		pp: 5,
@@ -1838,7 +1838,7 @@ export const MOVES = {
 	},
 	GUNK_SHOT: {
 		type: Type.POISON,
-		class: Class.Physical,
+		damageClass: DamageClass.Physical,
 		power: 120,
 		accuracy: 80,
 		pp: 5,
@@ -1846,7 +1846,7 @@ export const MOVES = {
 	},
 	GUST: {
 		type: Type.FLYING,
-		class: Class.Special,
+		damageClass: DamageClass.Special,
 		power: 40,
 		accuracy: 100,
 		pp: 35,
@@ -1854,7 +1854,7 @@ export const MOVES = {
 	},
 	GYRO_BALL: {
 		type: Type.STEEL,
-		class: Class.Physical,
+		damageClass: DamageClass.Physical,
 		power: 0,
 		accuracy: 100,
 		pp: 5,
@@ -1862,7 +1862,7 @@ export const MOVES = {
 	},
 	HAMMER_ARM: {
 		type: Type.FIGHTING,
-		class: Class.Physical,
+		damageClass: DamageClass.Physical,
 		power: 100,
 		accuracy: 90,
 		pp: 10,
@@ -1870,7 +1870,7 @@ export const MOVES = {
 	},
 	HARDEN: {
 		type: Type.NORMAL,
-		class: Class.Status,
+		damageClass: DamageClass.Status,
 		power: 0,
 		accuracy: 0,
 		pp: 30,
@@ -1878,7 +1878,7 @@ export const MOVES = {
 	},
 	HAZE: {
 		type: Type.ICE,
-		class: Class.Status,
+		damageClass: DamageClass.Status,
 		power: 0,
 		accuracy: 0,
 		pp: 30,
@@ -1886,7 +1886,7 @@ export const MOVES = {
 	},
 	HEAD_SMASH: {
 		type: Type.ROCK,
-		class: Class.Physical,
+		damageClass: DamageClass.Physical,
 		power: 150,
 		accuracy: 80,
 		pp: 5,
@@ -1894,7 +1894,7 @@ export const MOVES = {
 	},
 	HEAL_BELL: {
 		type: Type.NORMAL,
-		class: Class.Status,
+		damageClass: DamageClass.Status,
 		power: 0,
 		accuracy: 0,
 		pp: 5,
@@ -1902,7 +1902,7 @@ export const MOVES = {
 	},
 	HEAL_PULSE: {
 		type: Type.PSYCHIC,
-		class: Class.Status,
+		damageClass: DamageClass.Status,
 		power: 0,
 		accuracy: 0,
 		pp: 10,
@@ -1910,7 +1910,7 @@ export const MOVES = {
 	},
 	HEALING_WISH: {
 		type: Type.PSYCHIC,
-		class: Class.Status,
+		damageClass: DamageClass.Status,
 		power: 0,
 		accuracy: 0,
 		pp: 10,
@@ -1918,7 +1918,7 @@ export const MOVES = {
 	},
 	HEAT_WAVE: {
 		type: Type.FIRE,
-		class: Class.Special,
+		damageClass: DamageClass.Special,
 		power: 95,
 		accuracy: 90,
 		pp: 10,
@@ -1926,7 +1926,7 @@ export const MOVES = {
 	},
 	HEAVY_SLAM: {
 		type: Type.STEEL,
-		class: Class.Physical,
+		damageClass: DamageClass.Physical,
 		power: 0,
 		accuracy: 100,
 		pp: 10,
@@ -1934,7 +1934,7 @@ export const MOVES = {
 	},
 	HELPING_HAND: {
 		type: Type.NORMAL,
-		class: Class.Status,
+		damageClass: DamageClass.Status,
 		power: 0,
 		accuracy: 0,
 		pp: 20,
@@ -1942,7 +1942,7 @@ export const MOVES = {
 	},
 	HEX: {
 		type: Type.GHOST,
-		class: Class.Special,
+		damageClass: DamageClass.Special,
 		power: 65,
 		accuracy: 100,
 		pp: 10,
@@ -1950,7 +1950,7 @@ export const MOVES = {
 	},
 	HIGH_HORSEPOWER: {
 		type: Type.GROUND,
-		class: Class.Physical,
+		damageClass: DamageClass.Physical,
 		power: 95,
 		accuracy: 95,
 		pp: 10,
@@ -1958,7 +1958,7 @@ export const MOVES = {
 	},
 	HIGH_JUMP_KICK: {
 		type: Type.FIGHTING,
-		class: Class.Physical,
+		damageClass: DamageClass.Physical,
 		power: 130,
 		accuracy: 90,
 		pp: 10,
@@ -1966,7 +1966,7 @@ export const MOVES = {
 	},
 	HONE_CLAWS: {
 		type: Type.DARK,
-		class: Class.Status,
+		damageClass: DamageClass.Status,
 		power: 0,
 		accuracy: 0,
 		pp: 15,
@@ -1980,7 +1980,7 @@ export const MOVES = {
 	},
 	HOWL: {
 		type: Type.NORMAL,
-		class: Class.Status,
+		damageClass: DamageClass.Status,
 		power: 0,
 		accuracy: 0,
 		pp: 40,
@@ -1988,7 +1988,7 @@ export const MOVES = {
 	},
 	HURRICANE: {
 		type: Type.FLYING,
-		class: Class.Special,
+		damageClass: DamageClass.Special,
 		power: 110,
 		accuracy: 70,
 		pp: 10,
@@ -1996,7 +1996,7 @@ export const MOVES = {
 	},
 	HYDRO_PUMP: {
 		type: Type.WATER,
-		class: Class.Special,
+		damageClass: DamageClass.Special,
 		power: 110,
 		accuracy: 80,
 		pp: 5,
@@ -2004,7 +2004,7 @@ export const MOVES = {
 	},
 	HYPER_VOICE: {
 		type: Type.NORMAL,
-		class: Class.Special,
+		damageClass: DamageClass.Special,
 		power: 90,
 		accuracy: 100,
 		pp: 10,
@@ -2012,7 +2012,7 @@ export const MOVES = {
 	},
 	HYPNOSIS: {
 		type: Type.PSYCHIC,
-		class: Class.Status,
+		damageClass: DamageClass.Status,
 		power: 0,
 		accuracy: 60,
 		pp: 20,
@@ -2020,7 +2020,7 @@ export const MOVES = {
 	},
 	ICE_BEAM: {
 		type: Type.ICE,
-		class: Class.Special,
+		damageClass: DamageClass.Special,
 		power: 90,
 		accuracy: 100,
 		pp: 10,
@@ -2028,7 +2028,7 @@ export const MOVES = {
 	},
 	ICE_FANG: {
 		type: Type.ICE,
-		class: Class.Physical,
+		damageClass: DamageClass.Physical,
 		power: 65,
 		accuracy: 95,
 		pp: 15,
@@ -2036,7 +2036,7 @@ export const MOVES = {
 	},
 	ICE_SHARD: {
 		type: Type.ICE,
-		class: Class.Physical,
+		damageClass: DamageClass.Physical,
 		power: 40,
 		accuracy: 100,
 		pp: 30,
@@ -2044,7 +2044,7 @@ export const MOVES = {
 	},
 	ICICLE_CRASH: {
 		type: Type.ICE,
-		class: Class.Physical,
+		damageClass: DamageClass.Physical,
 		power: 85,
 		accuracy: 90,
 		pp: 10,
@@ -2052,7 +2052,7 @@ export const MOVES = {
 	},
 	ICICLE_SPEAR: {
 		type: Type.ICE,
-		class: Class.Physical,
+		damageClass: DamageClass.Physical,
 		power: 25,
 		accuracy: 100,
 		pp: 30,
@@ -2060,7 +2060,7 @@ export const MOVES = {
 	},
 	ICY_WIND: {
 		type: Type.ICE,
-		class: Class.Special,
+		damageClass: DamageClass.Special,
 		power: 55,
 		accuracy: 95,
 		pp: 15,
@@ -2071,7 +2071,7 @@ export const MOVES = {
 	},
 	IMPRISON: {
 		type: Type.PSYCHIC,
-		class: Class.Status,
+		damageClass: DamageClass.Status,
 		power: 0,
 		accuracy: 0,
 		pp: 10,
@@ -2079,7 +2079,7 @@ export const MOVES = {
 	},
 	INCINERATE: {
 		type: Type.FIRE,
-		class: Class.Special,
+		damageClass: DamageClass.Special,
 		power: 60,
 		accuracy: 100,
 		pp: 15,
@@ -2087,7 +2087,7 @@ export const MOVES = {
 	},
 	INFERNO: {
 		type: Type.FIRE,
-		class: Class.Special,
+		damageClass: DamageClass.Special,
 		power: 100,
 		accuracy: 50,
 		pp: 5,
@@ -2095,7 +2095,7 @@ export const MOVES = {
 	},
 	INGRAIN: {
 		type: Type.GRASS,
-		class: Class.Status,
+		damageClass: DamageClass.Status,
 		power: 0,
 		accuracy: 0,
 		pp: 20,
@@ -2103,7 +2103,7 @@ export const MOVES = {
 	},
 	IRON_DEFENSE: {
 		type: Type.STEEL,
-		class: Class.Status,
+		damageClass: DamageClass.Status,
 		power: 0,
 		accuracy: 0,
 		pp: 15,
@@ -2111,7 +2111,7 @@ export const MOVES = {
 	},
 	IRON_HEAD: {
 		type: Type.STEEL,
-		class: Class.Physical,
+		damageClass: DamageClass.Physical,
 		power: 80,
 		accuracy: 100,
 		pp: 15,
@@ -2119,7 +2119,7 @@ export const MOVES = {
 	},
 	IRON_TAIL: {
 		type: Type.STEEL,
-		class: Class.Physical,
+		damageClass: DamageClass.Physical,
 		power: 100,
 		accuracy: 75,
 		pp: 15,
@@ -2127,7 +2127,7 @@ export const MOVES = {
 	},
 	KNOCK_OFF: {
 		type: Type.DARK,
-		class: Class.Physical,
+		damageClass: DamageClass.Physical,
 		power: 65,
 		accuracy: 100,
 		pp: 20,
@@ -2135,7 +2135,7 @@ export const MOVES = {
 	},
 	LASER_FOCUS: {
 		type: Type.NORMAL,
-		class: Class.Status,
+		damageClass: DamageClass.Status,
 		power: 0,
 		accuracy: 0,
 		pp: 30,
@@ -2143,7 +2143,7 @@ export const MOVES = {
 	},
 	LAST_RESORT: {
 		type: Type.NORMAL,
-		class: Class.Physical,
+		damageClass: DamageClass.Physical,
 		power: 140,
 		accuracy: 100,
 		pp: 5,
@@ -2151,7 +2151,7 @@ export const MOVES = {
 	},
 	LAVA_PLUME: {
 		type: Type.FIRE,
-		class: Class.Special,
+		damageClass: DamageClass.Special,
 		power: 80,
 		accuracy: 100,
 		pp: 15,
@@ -2159,7 +2159,7 @@ export const MOVES = {
 	},
 	LEAF_BLADE: {
 		type: Type.GRASS,
-		class: Class.Physical,
+		damageClass: DamageClass.Physical,
 		power: 90,
 		accuracy: 100,
 		pp: 15,
@@ -2167,7 +2167,7 @@ export const MOVES = {
 	},
 	LEAF_STORM: {
 		type: Type.GRASS,
-		class: Class.Special,
+		damageClass: DamageClass.Special,
 		power: 130,
 		accuracy: 90,
 		pp: 5,
@@ -2175,7 +2175,7 @@ export const MOVES = {
 	},
 	LEECH_LIFE: {
 		type: Type.BUG,
-		class: Class.Physical,
+		damageClass: DamageClass.Physical,
 		power: 80,
 		accuracy: 100,
 		pp: 10,
@@ -2183,7 +2183,7 @@ export const MOVES = {
 	},
 	LICK: {
 		type: Type.GHOST,
-		class: Class.Physical,
+		damageClass: DamageClass.Physical,
 		power: 30,
 		accuracy: 100,
 		pp: 30,
@@ -2191,7 +2191,7 @@ export const MOVES = {
 	},
 	LIFE_DEW: {
 		type: Type.WATER,
-		class: Class.Status,
+		damageClass: DamageClass.Status,
 		power: 0,
 		accuracy: 0,
 		pp: 10,
@@ -2199,7 +2199,7 @@ export const MOVES = {
 	},
 	LIQUIDATION: {
 		type: Type.WATER,
-		class: Class.Physical,
+		damageClass: DamageClass.Physical,
 		power: 85,
 		accuracy: 100,
 		pp: 10,
@@ -2207,7 +2207,7 @@ export const MOVES = {
 	},
 	LOCK_ON: {
 		type: Type.NORMAL,
-		class: Class.Status,
+		damageClass: DamageClass.Status,
 		power: 0,
 		accuracy: 0,
 		pp: 5,
@@ -2215,7 +2215,7 @@ export const MOVES = {
 	},
 	LOVELY_KISS: {
 		type: Type.NORMAL,
-		class: Class.Status,
+		damageClass: DamageClass.Status,
 		power: 0,
 		accuracy: 75,
 		pp: 10,
@@ -2223,7 +2223,7 @@ export const MOVES = {
 	},
 	LOW_KICK: {
 		type: Type.FIGHTING,
-		class: Class.Physical,
+		damageClass: DamageClass.Physical,
 		power: 0,
 		accuracy: 100,
 		pp: 20,
@@ -2231,7 +2231,7 @@ export const MOVES = {
 	},
 	LOW_SWEEP: {
 		type: Type.FIGHTING,
-		class: Class.Physical,
+		damageClass: DamageClass.Physical,
 		power: 65,
 		accuracy: 100,
 		pp: 20,
@@ -2239,7 +2239,7 @@ export const MOVES = {
 	},
 	MACH_PUNCH: {
 		type: Type.FIGHTING,
-		class: Class.Physical,
+		damageClass: DamageClass.Physical,
 		power: 40,
 		accuracy: 100,
 		pp: 30,
@@ -2247,7 +2247,7 @@ export const MOVES = {
 	},
 	MAGNET_RISE: {
 		type: Type.ELECTRIC,
-		class: Class.Status,
+		damageClass: DamageClass.Status,
 		power: 0,
 		accuracy: 0,
 		pp: 10,
@@ -2255,7 +2255,7 @@ export const MOVES = {
 	},
 	MAGNETIC_FLUX: {
 		type: Type.ELECTRIC,
-		class: Class.Status,
+		damageClass: DamageClass.Status,
 		power: 0,
 		accuracy: 0,
 		pp: 20,
@@ -2263,7 +2263,7 @@ export const MOVES = {
 	},
 	MEGA_DRAIN: {
 		type: Type.GRASS,
-		class: Class.Special,
+		damageClass: DamageClass.Special,
 		power: 40,
 		accuracy: 100,
 		pp: 15,
@@ -2271,7 +2271,7 @@ export const MOVES = {
 	},
 	MEGAHORN: {
 		type: Type.BUG,
-		class: Class.Physical,
+		damageClass: DamageClass.Physical,
 		power: 120,
 		accuracy: 85,
 		pp: 10,
@@ -2279,7 +2279,7 @@ export const MOVES = {
 	},
 	MEMENTO: {
 		type: Type.DARK,
-		class: Class.Status,
+		damageClass: DamageClass.Status,
 		power: 0,
 		accuracy: 100,
 		pp: 10,
@@ -2287,7 +2287,7 @@ export const MOVES = {
 	},
 	METAL_BURST: {
 		type: Type.STEEL,
-		class: Class.Physical,
+		damageClass: DamageClass.Physical,
 		power: 0,
 		accuracy: 100,
 		pp: 10,
@@ -2295,7 +2295,7 @@ export const MOVES = {
 	},
 	METAL_CLAW: {
 		type: Type.STEEL,
-		class: Class.Physical,
+		damageClass: DamageClass.Physical,
 		power: 50,
 		accuracy: 95,
 		pp: 35,
@@ -2303,7 +2303,7 @@ export const MOVES = {
 	},
 	METAL_SOUND: {
 		type: Type.STEEL,
-		class: Class.Status,
+		damageClass: DamageClass.Status,
 		power: 0,
 		accuracy: 85,
 		pp: 40,
@@ -2311,7 +2311,7 @@ export const MOVES = {
 	},
 	METEOR_MASH: {
 		type: Type.STEEL,
-		class: Class.Physical,
+		damageClass: DamageClass.Physical,
 		power: 90,
 		accuracy: 90,
 		pp: 10,
@@ -2319,7 +2319,7 @@ export const MOVES = {
 	},
 	METRONOME: {
 		type: Type.NORMAL,
-		class: Class.Status,
+		damageClass: DamageClass.Status,
 		power: 0,
 		accuracy: 0,
 		pp: 10,
@@ -2327,7 +2327,7 @@ export const MOVES = {
 	},
 	MIMIC: {
 		type: Type.NORMAL,
-		class: Class.Status,
+		damageClass: DamageClass.Status,
 		power: 0,
 		accuracy: 0,
 		pp: 10,
@@ -2335,7 +2335,7 @@ export const MOVES = {
 	},
 	MINIMIZE: {
 		type: Type.NORMAL,
-		class: Class.Status,
+		damageClass: DamageClass.Status,
 		power: 0,
 		accuracy: 0,
 		pp: 10,
@@ -2343,7 +2343,7 @@ export const MOVES = {
 	},
 	MIRROR_COAT: {
 		type: Type.PSYCHIC,
-		class: Class.Special,
+		damageClass: DamageClass.Special,
 		power: 0,
 		accuracy: 100,
 		pp: 20,
@@ -2351,7 +2351,7 @@ export const MOVES = {
 	},
 	MOONBLAST: {
 		type: Type.FAIRY,
-		class: Class.Special,
+		damageClass: DamageClass.Special,
 		power: 95,
 		accuracy: 100,
 		pp: 15,
@@ -2359,7 +2359,7 @@ export const MOVES = {
 	},
 	MOONLIGHT: {
 		type: Type.FAIRY,
-		class: Class.Status,
+		damageClass: DamageClass.Status,
 		power: 0,
 		accuracy: 0,
 		pp: 5,
@@ -2367,7 +2367,7 @@ export const MOVES = {
 	},
 	MORNING_SUN: {
 		type: Type.NORMAL,
-		class: Class.Status,
+		damageClass: DamageClass.Status,
 		power: 0,
 		accuracy: 0,
 		pp: 5,
@@ -2375,7 +2375,7 @@ export const MOVES = {
 	},
 	MUD_SHOT: {
 		type: Type.GROUND,
-		class: Class.Special,
+		damageClass: DamageClass.Special,
 		power: 55,
 		accuracy: 95,
 		pp: 15,
@@ -2386,7 +2386,7 @@ export const MOVES = {
 	},
 	MUD_SLAP: {
 		type: Type.GROUND,
-		class: Class.Special,
+		damageClass: DamageClass.Special,
 		power: 20,
 		accuracy: 100,
 		pp: 10,
@@ -2394,7 +2394,7 @@ export const MOVES = {
 	},
 	MUDDY_WATER: {
 		type: Type.WATER,
-		class: Class.Special,
+		damageClass: DamageClass.Special,
 		power: 90,
 		accuracy: 85,
 		pp: 10,
@@ -2402,7 +2402,7 @@ export const MOVES = {
 	},
 	NASTY_PLOT: {
 		type: Type.DARK,
-		class: Class.Status,
+		damageClass: DamageClass.Status,
 		power: 0,
 		accuracy: 0,
 		pp: 20,
@@ -2410,7 +2410,7 @@ export const MOVES = {
 	},
 	NIGHT_SHADE: {
 		type: Type.GHOST,
-		class: Class.Special,
+		damageClass: DamageClass.Special,
 		power: 0,
 		accuracy: 100,
 		pp: 15,
@@ -2418,7 +2418,7 @@ export const MOVES = {
 	},
 	NIGHT_SLASH: {
 		type: Type.DARK,
-		class: Class.Physical,
+		damageClass: DamageClass.Physical,
 		power: 70,
 		accuracy: 100,
 		pp: 15,
@@ -2426,7 +2426,7 @@ export const MOVES = {
 	},
 	NUZZLE: {
 		type: Type.ELECTRIC,
-		class: Class.Physical,
+		damageClass: DamageClass.Physical,
 		power: 20,
 		accuracy: 100,
 		pp: 20,
@@ -2434,7 +2434,7 @@ export const MOVES = {
 	},
 	OUTRAGE: {
 		type: Type.DRAGON,
-		class: Class.Physical,
+		damageClass: DamageClass.Physical,
 		power: 120,
 		accuracy: 100,
 		pp: 10,
@@ -2442,7 +2442,7 @@ export const MOVES = {
 	},
 	OVERHEAT: {
 		type: Type.FIRE,
-		class: Class.Special,
+		damageClass: DamageClass.Special,
 		power: 130,
 		accuracy: 90,
 		pp: 5,
@@ -2450,7 +2450,7 @@ export const MOVES = {
 	},
 	PAIN_SPLIT: {
 		type: Type.NORMAL,
-		class: Class.Status,
+		damageClass: DamageClass.Status,
 		power: 0,
 		accuracy: 0,
 		pp: 20,
@@ -2458,7 +2458,7 @@ export const MOVES = {
 	},
 	PAYBACK: {
 		type: Type.DARK,
-		class: Class.Physical,
+		damageClass: DamageClass.Physical,
 		power: 50,
 		accuracy: 100,
 		pp: 10,
@@ -2466,7 +2466,7 @@ export const MOVES = {
 	},
 	PECK: {
 		type: Type.FLYING,
-		class: Class.Physical,
+		damageClass: DamageClass.Physical,
 		power: 35,
 		accuracy: 100,
 		pp: 35,
@@ -2474,7 +2474,7 @@ export const MOVES = {
 	},
 	PERISH_SONG: {
 		type: Type.NORMAL,
-		class: Class.Status,
+		damageClass: DamageClass.Status,
 		power: 0,
 		accuracy: 0,
 		pp: 5,
@@ -2482,7 +2482,7 @@ export const MOVES = {
 	},
 	PETAL_BLIZZARD: {
 		type: Type.GRASS,
-		class: Class.Physical,
+		damageClass: DamageClass.Physical,
 		power: 90,
 		accuracy: 100,
 		pp: 15,
@@ -2490,7 +2490,7 @@ export const MOVES = {
 	},
 	PLAY_NICE: {
 		type: Type.NORMAL,
-		class: Class.Status,
+		damageClass: DamageClass.Status,
 		power: 0,
 		accuracy: 0,
 		pp: 20,
@@ -2498,7 +2498,7 @@ export const MOVES = {
 	},
 	PLAY_ROUGH: {
 		type: Type.FAIRY,
-		class: Class.Physical,
+		damageClass: DamageClass.Physical,
 		power: 90,
 		accuracy: 90,
 		pp: 10,
@@ -2506,7 +2506,7 @@ export const MOVES = {
 	},
 	PLUCK: {
 		type: Type.FLYING,
-		class: Class.Physical,
+		damageClass: DamageClass.Physical,
 		power: 60,
 		accuracy: 100,
 		pp: 20,
@@ -2514,7 +2514,7 @@ export const MOVES = {
 	},
 	POISON_FANG: {
 		type: Type.POISON,
-		class: Class.Physical,
+		damageClass: DamageClass.Physical,
 		power: 50,
 		accuracy: 100,
 		pp: 15,
@@ -2522,7 +2522,7 @@ export const MOVES = {
 	},
 	POISON_GAS: {
 		type: Type.POISON,
-		class: Class.Status,
+		damageClass: DamageClass.Status,
 		power: 0,
 		accuracy: 90,
 		pp: 40,
@@ -2530,7 +2530,7 @@ export const MOVES = {
 	},
 	POISON_JAB: {
 		type: Type.POISON,
-		class: Class.Physical,
+		damageClass: DamageClass.Physical,
 		power: 80,
 		accuracy: 100,
 		pp: 20,
@@ -2538,7 +2538,7 @@ export const MOVES = {
 	},
 	POISON_TAIL: {
 		type: Type.POISON,
-		class: Class.Physical,
+		damageClass: DamageClass.Physical,
 		power: 50,
 		accuracy: 100,
 		pp: 25,
@@ -2546,7 +2546,7 @@ export const MOVES = {
 	},
 	POWDER_SNOW: {
 		type: Type.ICE,
-		class: Class.Special,
+		damageClass: DamageClass.Special,
 		power: 40,
 		accuracy: 100,
 		pp: 25,
@@ -2554,7 +2554,7 @@ export const MOVES = {
 	},
 	POWER_GEM: {
 		type: Type.ROCK,
-		class: Class.Special,
+		damageClass: DamageClass.Special,
 		power: 80,
 		accuracy: 100,
 		pp: 20,
@@ -2562,7 +2562,7 @@ export const MOVES = {
 	},
 	POWER_SPLIT: {
 		type: Type.PSYCHIC,
-		class: Class.Status,
+		damageClass: DamageClass.Status,
 		power: 0,
 		accuracy: 0,
 		pp: 10,
@@ -2570,7 +2570,7 @@ export const MOVES = {
 	},
 	POWER_SWAP: {
 		type: Type.PSYCHIC,
-		class: Class.Status,
+		damageClass: DamageClass.Status,
 		power: 0,
 		accuracy: 0,
 		pp: 10,
@@ -2578,7 +2578,7 @@ export const MOVES = {
 	},
 	POWER_WHIP: {
 		type: Type.GRASS,
-		class: Class.Physical,
+		damageClass: DamageClass.Physical,
 		power: 120,
 		accuracy: 85,
 		pp: 10,
@@ -2586,7 +2586,7 @@ export const MOVES = {
 	},
 	PRESENT: {
 		type: Type.NORMAL,
-		class: Class.Physical,
+		damageClass: DamageClass.Physical,
 		power: 0,
 		accuracy: 90,
 		pp: 15,
@@ -2594,7 +2594,7 @@ export const MOVES = {
 	},
 	PSYBEAM: {
 		type: Type.PSYCHIC,
-		class: Class.Special,
+		damageClass: DamageClass.Special,
 		power: 65,
 		accuracy: 100,
 		pp: 20,
@@ -2602,7 +2602,7 @@ export const MOVES = {
 	},
 	PSYCH_UP: {
 		type: Type.NORMAL,
-		class: Class.Status,
+		damageClass: DamageClass.Status,
 		power: 0,
 		accuracy: 0,
 		pp: 10,
@@ -2610,7 +2610,7 @@ export const MOVES = {
 	},
 	PSYCHIC: {
 		type: Type.PSYCHIC,
-		class: Class.Special,
+		damageClass: DamageClass.Special,
 		power: 90,
 		accuracy: 100,
 		pp: 10,
@@ -2618,7 +2618,7 @@ export const MOVES = {
 	},
 	PSYCHO_CUT: {
 		type: Type.PSYCHIC,
-		class: Class.Physical,
+		damageClass: DamageClass.Physical,
 		power: 70,
 		accuracy: 100,
 		pp: 20,
@@ -2626,7 +2626,7 @@ export const MOVES = {
 	},
 	PSYSHOCK: {
 		type: Type.PSYCHIC,
-		class: Class.Special,
+		damageClass: DamageClass.Special,
 		power: 80,
 		accuracy: 100,
 		pp: 10,
@@ -2634,7 +2634,7 @@ export const MOVES = {
 	},
 	PSYSTRIKE: {
 		type: Type.PSYCHIC,
-		class: Class.Special,
+		damageClass: DamageClass.Special,
 		power: 100,
 		accuracy: 100,
 		pp: 10,
@@ -2642,7 +2642,7 @@ export const MOVES = {
 	},
 	QUICK_GUARD: {
 		type: Type.FIGHTING,
-		class: Class.Status,
+		damageClass: DamageClass.Status,
 		power: 0,
 		accuracy: 0,
 		pp: 15,
@@ -2650,7 +2650,7 @@ export const MOVES = {
 	},
 	QUIVER_DANCE: {
 		type: Type.BUG,
-		class: Class.Status,
+		damageClass: DamageClass.Status,
 		power: 0,
 		accuracy: 0,
 		pp: 20,
@@ -2658,7 +2658,7 @@ export const MOVES = {
 	},
 	RAGE_FIST: {
 		type: Type.GHOST,
-		class: Class.Physical,
+		damageClass: DamageClass.Physical,
 		power: 50,
 		accuracy: 100,
 		pp: 10,
@@ -2666,7 +2666,7 @@ export const MOVES = {
 	},
 	RAGE_POWDER: {
 		type: Type.BUG,
-		class: Class.Status,
+		damageClass: DamageClass.Status,
 		power: 0,
 		accuracy: 0,
 		pp: 20,
@@ -2674,7 +2674,7 @@ export const MOVES = {
 	},
 	RAGING_BULL: {
 		type: Type.NORMAL,
-		class: Class.Physical,
+		damageClass: DamageClass.Physical,
 		power: 90,
 		accuracy: 100,
 		pp: 10,
@@ -2682,7 +2682,7 @@ export const MOVES = {
 	},
 	RAGING_FURY: {
 		type: Type.FIRE,
-		class: Class.Physical,
+		damageClass: DamageClass.Physical,
 		power: 120,
 		accuracy: 100,
 		pp: 10,
@@ -2690,7 +2690,7 @@ export const MOVES = {
 	},
 	RAPID_SPIN: {
 		type: Type.NORMAL,
-		class: Class.Physical,
+		damageClass: DamageClass.Physical,
 		power: 50,
 		accuracy: 100,
 		pp: 40,
@@ -2698,7 +2698,7 @@ export const MOVES = {
 	},
 	RAZOR_SHELL: {
 		type: Type.WATER,
-		class: Class.Physical,
+		damageClass: DamageClass.Physical,
 		power: 75,
 		accuracy: 95,
 		pp: 10,
@@ -2706,7 +2706,7 @@ export const MOVES = {
 	},
 	RECOVER: {
 		type: Type.NORMAL,
-		class: Class.Status,
+		damageClass: DamageClass.Status,
 		power: 0,
 		accuracy: 0,
 		pp: 5,
@@ -2714,7 +2714,7 @@ export const MOVES = {
 	},
 	RECYCLE: {
 		type: Type.NORMAL,
-		class: Class.Status,
+		damageClass: DamageClass.Status,
 		power: 0,
 		accuracy: 0,
 		pp: 10,
@@ -2722,7 +2722,7 @@ export const MOVES = {
 	},
 	REFLECT_TYPE: {
 		type: Type.NORMAL,
-		class: Class.Status,
+		damageClass: DamageClass.Status,
 		power: 0,
 		accuracy: 0,
 		pp: 15,
@@ -2730,7 +2730,7 @@ export const MOVES = {
 	},
 	REST: {
 		type: Type.PSYCHIC,
-		class: Class.Status,
+		damageClass: DamageClass.Status,
 		power: 0,
 		accuracy: 0,
 		pp: 5,
@@ -2738,7 +2738,7 @@ export const MOVES = {
 	},
 	RETALIATE: {
 		type: Type.NORMAL,
-		class: Class.Physical,
+		damageClass: DamageClass.Physical,
 		power: 70,
 		accuracy: 100,
 		pp: 5,
@@ -2746,7 +2746,7 @@ export const MOVES = {
 	},
 	REVENGE: {
 		type: Type.FIGHTING,
-		class: Class.Physical,
+		damageClass: DamageClass.Physical,
 		power: 60,
 		accuracy: 100,
 		pp: 10,
@@ -2754,7 +2754,7 @@ export const MOVES = {
 	},
 	REVERSAL: {
 		type: Type.FIGHTING,
-		class: Class.Physical,
+		damageClass: DamageClass.Physical,
 		power: 0,
 		accuracy: 100,
 		pp: 15,
@@ -2762,7 +2762,7 @@ export const MOVES = {
 	},
 	ROAR: {
 		type: Type.NORMAL,
-		class: Class.Status,
+		damageClass: DamageClass.Status,
 		power: 0,
 		accuracy: 0,
 		pp: 20,
@@ -2773,7 +2773,7 @@ export const MOVES = {
 	},
 	ROCK_BLAST: {
 		type: Type.ROCK,
-		class: Class.Physical,
+		damageClass: DamageClass.Physical,
 		power: 25,
 		accuracy: 90,
 		pp: 10,
@@ -2781,7 +2781,7 @@ export const MOVES = {
 	},
 	ROCK_POLISH: {
 		type: Type.ROCK,
-		class: Class.Status,
+		damageClass: DamageClass.Status,
 		power: 0,
 		accuracy: 0,
 		pp: 20,
@@ -2789,7 +2789,7 @@ export const MOVES = {
 	},
 	ROCK_SLIDE: {
 		type: Type.ROCK,
-		class: Class.Physical,
+		damageClass: DamageClass.Physical,
 		power: 75,
 		accuracy: 90,
 		pp: 10,
@@ -2797,7 +2797,7 @@ export const MOVES = {
 	},
 	ROCK_SMASH: {
 		type: Type.FIGHTING,
-		class: Class.Physical,
+		damageClass: DamageClass.Physical,
 		power: 40,
 		accuracy: 100,
 		pp: 15,
@@ -2805,7 +2805,7 @@ export const MOVES = {
 	},
 	ROCK_THROW: {
 		type: Type.ROCK,
-		class: Class.Physical,
+		damageClass: DamageClass.Physical,
 		power: 50,
 		accuracy: 90,
 		pp: 15,
@@ -2813,7 +2813,7 @@ export const MOVES = {
 	},
 	ROLE_PLAY: {
 		type: Type.PSYCHIC,
-		class: Class.Status,
+		damageClass: DamageClass.Status,
 		power: 0,
 		accuracy: 0,
 		pp: 10,
@@ -2821,7 +2821,7 @@ export const MOVES = {
 	},
 	ROLLOUT: {
 		type: Type.ROCK,
-		class: Class.Physical,
+		damageClass: DamageClass.Physical,
 		power: 30,
 		accuracy: 90,
 		pp: 20,
@@ -2829,7 +2829,7 @@ export const MOVES = {
 	},
 	ROOST: {
 		type: Type.FLYING,
-		class: Class.Status,
+		damageClass: DamageClass.Status,
 		power: 0,
 		accuracy: 0,
 		pp: 5,
@@ -2837,7 +2837,7 @@ export const MOVES = {
 	},
 	ROUND: {
 		type: Type.NORMAL,
-		class: Class.Special,
+		damageClass: DamageClass.Special,
 		power: 60,
 		accuracy: 100,
 		pp: 15,
@@ -2845,7 +2845,7 @@ export const MOVES = {
 	},
 	SAND_TOMB: {
 		type: Type.GROUND,
-		class: Class.Physical,
+		damageClass: DamageClass.Physical,
 		power: 35,
 		accuracy: 85,
 		pp: 15,
@@ -2853,7 +2853,7 @@ export const MOVES = {
 	},
 	SCARY_FACE: {
 		type: Type.NORMAL,
-		class: Class.Status,
+		damageClass: DamageClass.Status,
 		power: 0,
 		accuracy: 100,
 		pp: 10,
@@ -2861,7 +2861,7 @@ export const MOVES = {
 	},
 	SCREECH: {
 		type: Type.NORMAL,
-		class: Class.Status,
+		damageClass: DamageClass.Status,
 		power: 0,
 		accuracy: 85,
 		pp: 40,
@@ -2869,7 +2869,7 @@ export const MOVES = {
 	},
 	SEED_BOMB: {
 		type: Type.GRASS,
-		class: Class.Physical,
+		damageClass: DamageClass.Physical,
 		power: 80,
 		accuracy: 100,
 		pp: 15,
@@ -2877,7 +2877,7 @@ export const MOVES = {
 	},
 	SEISMIC_TOSS: {
 		type: Type.FIGHTING,
-		class: Class.Physical,
+		damageClass: DamageClass.Physical,
 		power: 0,
 		accuracy: 100,
 		pp: 20,
@@ -2885,7 +2885,7 @@ export const MOVES = {
 	},
 	SELF_DESTRUCT: {
 		type: Type.NORMAL,
-		class: Class.Physical,
+		damageClass: DamageClass.Physical,
 		power: 200,
 		accuracy: 100,
 		pp: 5,
@@ -2893,7 +2893,7 @@ export const MOVES = {
 	},
 	SHADOW_BALL: {
 		type: Type.GHOST,
-		class: Class.Special,
+		damageClass: DamageClass.Special,
 		power: 80,
 		accuracy: 100,
 		pp: 15,
@@ -2901,7 +2901,7 @@ export const MOVES = {
 	},
 	SHADOW_PUNCH: {
 		type: Type.GHOST,
-		class: Class.Physical,
+		damageClass: DamageClass.Physical,
 		power: 60,
 		accuracy: 0,
 		pp: 20,
@@ -2909,7 +2909,7 @@ export const MOVES = {
 	},
 	SHADOW_SNEAK: {
 		type: Type.GHOST,
-		class: Class.Physical,
+		damageClass: DamageClass.Physical,
 		power: 40,
 		accuracy: 100,
 		pp: 30,
@@ -2917,7 +2917,7 @@ export const MOVES = {
 	},
 	SHEER_COLD: {
 		type: Type.ICE,
-		class: Class.Special,
+		damageClass: DamageClass.Special,
 		power: 0,
 		accuracy: 30,
 		pp: 5,
@@ -2925,7 +2925,7 @@ export const MOVES = {
 	},
 	SHELL_SMASH: {
 		type: Type.NORMAL,
-		class: Class.Status,
+		damageClass: DamageClass.Status,
 		power: 0,
 		accuracy: 0,
 		pp: 15,
@@ -2933,7 +2933,7 @@ export const MOVES = {
 	},
 	SHOCK_WAVE: {
 		type: Type.ELECTRIC,
-		class: Class.Special,
+		damageClass: DamageClass.Special,
 		power: 60,
 		accuracy: 0,
 		pp: 20,
@@ -2941,7 +2941,7 @@ export const MOVES = {
 	},
 	SIMPLE_BEAM: {
 		type: Type.NORMAL,
-		class: Class.Status,
+		damageClass: DamageClass.Status,
 		power: 0,
 		accuracy: 100,
 		pp: 15,
@@ -2949,7 +2949,7 @@ export const MOVES = {
 	},
 	SING: {
 		type: Type.NORMAL,
-		class: Class.Status,
+		damageClass: DamageClass.Status,
 		power: 0,
 		accuracy: 55,
 		pp: 15,
@@ -2957,7 +2957,7 @@ export const MOVES = {
 	},
 	SKULL_BASH: {
 		type: Type.NORMAL,
-		class: Class.Physical,
+		damageClass: DamageClass.Physical,
 		power: 130,
 		accuracy: 100,
 		pp: 10,
@@ -2965,7 +2965,7 @@ export const MOVES = {
 	},
 	SKY_ATTACK: {
 		type: Type.FLYING,
-		class: Class.Physical,
+		damageClass: DamageClass.Physical,
 		power: 140,
 		accuracy: 90,
 		pp: 5,
@@ -2973,7 +2973,7 @@ export const MOVES = {
 	},
 	SLACK_OFF: {
 		type: Type.NORMAL,
-		class: Class.Status,
+		damageClass: DamageClass.Status,
 		power: 0,
 		accuracy: 0,
 		pp: 5,
@@ -2981,7 +2981,7 @@ export const MOVES = {
 	},
 	SLASH: {
 		type: Type.NORMAL,
-		class: Class.Physical,
+		damageClass: DamageClass.Physical,
 		power: 70,
 		accuracy: 100,
 		pp: 20,
@@ -2989,7 +2989,7 @@ export const MOVES = {
 	},
 	SLEEP_TALK: {
 		type: Type.NORMAL,
-		class: Class.Status,
+		damageClass: DamageClass.Status,
 		power: 0,
 		accuracy: 0,
 		pp: 10,
@@ -2997,7 +2997,7 @@ export const MOVES = {
 	},
 	SLUDGE: {
 		type: Type.POISON,
-		class: Class.Special,
+		damageClass: DamageClass.Special,
 		power: 65,
 		accuracy: 100,
 		pp: 20,
@@ -3005,7 +3005,7 @@ export const MOVES = {
 	},
 	SLUDGE_BOMB: {
 		type: Type.POISON,
-		class: Class.Special,
+		damageClass: DamageClass.Special,
 		power: 90,
 		accuracy: 100,
 		pp: 10,
@@ -3013,7 +3013,7 @@ export const MOVES = {
 	},
 	SLUDGE_WAVE: {
 		type: Type.POISON,
-		class: Class.Special,
+		damageClass: DamageClass.Special,
 		power: 95,
 		accuracy: 100,
 		pp: 10,
@@ -3021,7 +3021,7 @@ export const MOVES = {
 	},
 	SMACK_DOWN: {
 		type: Type.ROCK,
-		class: Class.Physical,
+		damageClass: DamageClass.Physical,
 		power: 50,
 		accuracy: 100,
 		pp: 15,
@@ -3029,7 +3029,7 @@ export const MOVES = {
 	},
 	SMOG: {
 		type: Type.POISON,
-		class: Class.Special,
+		damageClass: DamageClass.Special,
 		power: 30,
 		accuracy: 70,
 		pp: 20,
@@ -3037,7 +3037,7 @@ export const MOVES = {
 	},
 	SNORE: {
 		type: Type.NORMAL,
-		class: Class.Special,
+		damageClass: DamageClass.Special,
 		power: 50,
 		accuracy: 100,
 		pp: 15,
@@ -3045,7 +3045,7 @@ export const MOVES = {
 	},
 	SOAK: {
 		type: Type.WATER,
-		class: Class.Status,
+		damageClass: DamageClass.Status,
 		power: 0,
 		accuracy: 100,
 		pp: 20,
@@ -3053,7 +3053,7 @@ export const MOVES = {
 	},
 	SOFT_BOILED: {
 		type: Type.NORMAL,
-		class: Class.Status,
+		damageClass: DamageClass.Status,
 		power: 0,
 		accuracy: 0,
 		pp: 5,
@@ -3061,7 +3061,7 @@ export const MOVES = {
 	},
 	SPARK: {
 		type: Type.ELECTRIC,
-		class: Class.Physical,
+		damageClass: DamageClass.Physical,
 		power: 65,
 		accuracy: 100,
 		pp: 20,
@@ -3069,7 +3069,7 @@ export const MOVES = {
 	},
 	SPARKLING_ARIA: {
 		type: Type.WATER,
-		class: Class.Special,
+		damageClass: DamageClass.Special,
 		power: 90,
 		accuracy: 100,
 		pp: 10,
@@ -3077,7 +3077,7 @@ export const MOVES = {
 	},
 	SPIT_UP: {
 		type: Type.NORMAL,
-		class: Class.Special,
+		damageClass: DamageClass.Special,
 		power: 0,
 		accuracy: 100,
 		pp: 10,
@@ -3085,7 +3085,7 @@ export const MOVES = {
 	},
 	SPITE: {
 		type: Type.GHOST,
-		class: Class.Status,
+		damageClass: DamageClass.Status,
 		power: 0,
 		accuracy: 100,
 		pp: 10,
@@ -3093,7 +3093,7 @@ export const MOVES = {
 	},
 	SPLASH: {
 		type: Type.NORMAL,
-		class: Class.Status,
+		damageClass: DamageClass.Status,
 		power: 0,
 		accuracy: 0,
 		pp: 40,
@@ -3101,7 +3101,7 @@ export const MOVES = {
 	},
 	SPORE: {
 		type: Type.GRASS,
-		class: Class.Status,
+		damageClass: DamageClass.Status,
 		power: 0,
 		accuracy: 100,
 		pp: 15,
@@ -3109,7 +3109,7 @@ export const MOVES = {
 	},
 	STOCKPILE: {
 		type: Type.NORMAL,
-		class: Class.Status,
+		damageClass: DamageClass.Status,
 		power: 0,
 		accuracy: 0,
 		pp: 20,
@@ -3117,7 +3117,7 @@ export const MOVES = {
 	},
 	STOMPING_TANTRUM: {
 		type: Type.GROUND,
-		class: Class.Physical,
+		damageClass: DamageClass.Physical,
 		power: 75,
 		accuracy: 100,
 		pp: 10,
@@ -3125,7 +3125,7 @@ export const MOVES = {
 	},
 	STONE_EDGE: {
 		type: Type.ROCK,
-		class: Class.Physical,
+		damageClass: DamageClass.Physical,
 		power: 100,
 		accuracy: 80,
 		pp: 5,
@@ -3133,7 +3133,7 @@ export const MOVES = {
 	},
 	STORED_POWER: {
 		type: Type.PSYCHIC,
-		class: Class.Special,
+		damageClass: DamageClass.Special,
 		power: 20,
 		accuracy: 100,
 		pp: 10,
@@ -3141,7 +3141,7 @@ export const MOVES = {
 	},
 	STORM_THROW: {
 		type: Type.FIGHTING,
-		class: Class.Physical,
+		damageClass: DamageClass.Physical,
 		power: 60,
 		accuracy: 100,
 		pp: 10,
@@ -3149,7 +3149,7 @@ export const MOVES = {
 	},
 	STRENGTH_SAP: {
 		type: Type.GRASS,
-		class: Class.Status,
+		damageClass: DamageClass.Status,
 		power: 0,
 		accuracy: 100,
 		pp: 10,
@@ -3157,7 +3157,7 @@ export const MOVES = {
 	},
 	STUN_SPORE: {
 		type: Type.GRASS,
-		class: Class.Status,
+		damageClass: DamageClass.Status,
 		power: 0,
 		accuracy: 75,
 		pp: 30,
@@ -3165,7 +3165,7 @@ export const MOVES = {
 	},
 	SUBMISSION: {
 		type: Type.FIGHTING,
-		class: Class.Physical,
+		damageClass: DamageClass.Physical,
 		power: 80,
 		accuracy: 80,
 		pp: 20,
@@ -3173,7 +3173,7 @@ export const MOVES = {
 	},
 	SUCKER_PUNCH: {
 		type: Type.DARK,
-		class: Class.Physical,
+		damageClass: DamageClass.Physical,
 		power: 70,
 		accuracy: 100,
 		pp: 5,
@@ -3181,7 +3181,7 @@ export const MOVES = {
 	},
 	SUPER_FANG: {
 		type: Type.NORMAL,
-		class: Class.Physical,
+		damageClass: DamageClass.Physical,
 		power: 0,
 		accuracy: 90,
 		pp: 10,
@@ -3189,7 +3189,7 @@ export const MOVES = {
 	},
 	SUPERPOWER: {
 		type: Type.FIGHTING,
-		class: Class.Physical,
+		damageClass: DamageClass.Physical,
 		power: 120,
 		accuracy: 100,
 		pp: 5,
@@ -3203,7 +3203,7 @@ export const MOVES = {
 	},
 	SUPERSONIC: {
 		type: Type.NORMAL,
-		class: Class.Status,
+		damageClass: DamageClass.Status,
 		power: 0,
 		accuracy: 55,
 		pp: 20,
@@ -3211,7 +3211,7 @@ export const MOVES = {
 	},
 	SWAGGER: {
 		type: Type.NORMAL,
-		class: Class.Status,
+		damageClass: DamageClass.Status,
 		power: 0,
 		accuracy: 85,
 		pp: 15,
@@ -3219,7 +3219,7 @@ export const MOVES = {
 	},
 	SWALLOW: {
 		type: Type.NORMAL,
-		class: Class.Status,
+		damageClass: DamageClass.Status,
 		power: 0,
 		accuracy: 0,
 		pp: 10,
@@ -3227,7 +3227,7 @@ export const MOVES = {
 	},
 	SWEET_KISS: {
 		type: Type.FAIRY,
-		class: Class.Status,
+		damageClass: DamageClass.Status,
 		power: 0,
 		accuracy: 75,
 		pp: 10,
@@ -3235,7 +3235,7 @@ export const MOVES = {
 	},
 	SWEET_SCENT: {
 		type: Type.NORMAL,
-		class: Class.Status,
+		damageClass: DamageClass.Status,
 		power: 0,
 		accuracy: 100,
 		pp: 20,
@@ -3243,7 +3243,7 @@ export const MOVES = {
 	},
 	SWIFT: {
 		type: Type.NORMAL,
-		class: Class.Special,
+		damageClass: DamageClass.Special,
 		power: 60,
 		accuracy: 0,
 		pp: 20,
@@ -3251,7 +3251,7 @@ export const MOVES = {
 	},
 	SWITCHEROO: {
 		type: Type.DARK,
-		class: Class.Status,
+		damageClass: DamageClass.Status,
 		power: 0,
 		accuracy: 100,
 		pp: 10,
@@ -3259,7 +3259,7 @@ export const MOVES = {
 	},
 	SWORDS_DANCE: {
 		type: Type.NORMAL,
-		class: Class.Status,
+		damageClass: DamageClass.Status,
 		power: 0,
 		accuracy: 0,
 		pp: 20,
@@ -3267,7 +3267,7 @@ export const MOVES = {
 	},
 	SYNTHESIS: {
 		type: Type.GRASS,
-		class: Class.Status,
+		damageClass: DamageClass.Status,
 		power: 0,
 		accuracy: 0,
 		pp: 5,
@@ -3275,7 +3275,7 @@ export const MOVES = {
 	},
 	TEETER_DANCE: {
 		type: Type.NORMAL,
-		class: Class.Status,
+		damageClass: DamageClass.Status,
 		power: 0,
 		accuracy: 100,
 		pp: 20,
@@ -3283,7 +3283,7 @@ export const MOVES = {
 	},
 	TELEPORT: {
 		type: Type.PSYCHIC,
-		class: Class.Status,
+		damageClass: DamageClass.Status,
 		power: 0,
 		accuracy: 0,
 		pp: 20,
@@ -3291,7 +3291,7 @@ export const MOVES = {
 	},
 	THUNDER: {
 		type: Type.ELECTRIC,
-		class: Class.Special,
+		damageClass: DamageClass.Special,
 		power: 110,
 		accuracy: 70,
 		pp: 10,
@@ -3299,7 +3299,7 @@ export const MOVES = {
 	},
 	THUNDER_FANG: {
 		type: Type.ELECTRIC,
-		class: Class.Physical,
+		damageClass: DamageClass.Physical,
 		power: 65,
 		accuracy: 95,
 		pp: 15,
@@ -3307,7 +3307,7 @@ export const MOVES = {
 	},
 	THUNDER_WAVE: {
 		type: Type.ELECTRIC,
-		class: Class.Status,
+		damageClass: DamageClass.Status,
 		power: 0,
 		accuracy: 90,
 		pp: 20,
@@ -3315,7 +3315,7 @@ export const MOVES = {
 	},
 	THUNDERBOLT: {
 		type: Type.ELECTRIC,
-		class: Class.Special,
+		damageClass: DamageClass.Special,
 		power: 90,
 		accuracy: 100,
 		pp: 15,
@@ -3323,7 +3323,7 @@ export const MOVES = {
 	},
 	TICKLE: {
 		type: Type.NORMAL,
-		class: Class.Status,
+		damageClass: DamageClass.Status,
 		power: 0,
 		accuracy: 100,
 		pp: 20,
@@ -3331,7 +3331,7 @@ export const MOVES = {
 	},
 	TOXIC: {
 		type: Type.POISON,
-		class: Class.Status,
+		damageClass: DamageClass.Status,
 		power: 0,
 		accuracy: 90,
 		pp: 10,
@@ -3339,7 +3339,7 @@ export const MOVES = {
 	},
 	TRANSFORM: {
 		type: Type.NORMAL,
-		class: Class.Status,
+		damageClass: DamageClass.Status,
 		power: 0,
 		accuracy: 0,
 		pp: 10,
@@ -3347,7 +3347,7 @@ export const MOVES = {
 	},
 	TRI_ATTACK: {
 		type: Type.NORMAL,
-		class: Class.Special,
+		damageClass: DamageClass.Special,
 		power: 80,
 		accuracy: 100,
 		pp: 10,
@@ -3355,7 +3355,7 @@ export const MOVES = {
 	},
 	TWISTER: {
 		type: Type.DRAGON,
-		class: Class.Special,
+		damageClass: DamageClass.Special,
 		power: 40,
 		accuracy: 100,
 		pp: 20,
@@ -3363,7 +3363,7 @@ export const MOVES = {
 	},
 	UPROAR: {
 		type: Type.NORMAL,
-		class: Class.Special,
+		damageClass: DamageClass.Special,
 		power: 90,
 		accuracy: 100,
 		pp: 10,
@@ -3371,7 +3371,7 @@ export const MOVES = {
 	},
 	VACUUM_WAVE: {
 		type: Type.FIGHTING,
-		class: Class.Special,
+		damageClass: DamageClass.Special,
 		power: 40,
 		accuracy: 100,
 		pp: 30,
@@ -3379,7 +3379,7 @@ export const MOVES = {
 	},
 	VENOM_DRENCH: {
 		type: Type.POISON,
-		class: Class.Status,
+		damageClass: DamageClass.Status,
 		power: 0,
 		accuracy: 100,
 		pp: 20,
@@ -3387,7 +3387,7 @@ export const MOVES = {
 	},
 	VENOSHOCK: {
 		type: Type.POISON,
-		class: Class.Special,
+		damageClass: DamageClass.Special,
 		power: 65,
 		accuracy: 100,
 		pp: 10,
@@ -3395,7 +3395,7 @@ export const MOVES = {
 	},
 	VICE_GRIP: {
 		type: Type.NORMAL,
-		class: Class.Physical,
+		damageClass: DamageClass.Physical,
 		power: 55,
 		accuracy: 100,
 		pp: 30,
@@ -3403,7 +3403,7 @@ export const MOVES = {
 	},
 	VITAL_THROW: {
 		type: Type.FIGHTING,
-		class: Class.Physical,
+		damageClass: DamageClass.Physical,
 		power: 70,
 		accuracy: 0,
 		pp: 10,
@@ -3411,7 +3411,7 @@ export const MOVES = {
 	},
 	WATER_GUN: {
 		type: Type.WATER,
-		class: Class.Special,
+		damageClass: DamageClass.Special,
 		power: 40,
 		accuracy: 100,
 		pp: 25,
@@ -3419,7 +3419,7 @@ export const MOVES = {
 	},
 	WATER_PULSE: {
 		type: Type.WATER,
-		class: Class.Special,
+		damageClass: DamageClass.Special,
 		power: 60,
 		accuracy: 100,
 		pp: 20,
@@ -3427,7 +3427,7 @@ export const MOVES = {
 	},
 	WATER_SPOUT: {
 		type: Type.WATER,
-		class: Class.Special,
+		damageClass: DamageClass.Special,
 		power: 150,
 		accuracy: 100,
 		pp: 5,
@@ -3435,7 +3435,7 @@ export const MOVES = {
 	},
 	WATERFALL: {
 		type: Type.WATER,
-		class: Class.Physical,
+		damageClass: DamageClass.Physical,
 		power: 80,
 		accuracy: 100,
 		pp: 15,
@@ -3443,7 +3443,7 @@ export const MOVES = {
 	},
 	WAVE_CRASH: {
 		type: Type.WATER,
-		class: Class.Physical,
+		damageClass: DamageClass.Physical,
 		power: 120,
 		accuracy: 100,
 		pp: 10,
@@ -3451,7 +3451,7 @@ export const MOVES = {
 	},
 	WHIRLPOOL: {
 		type: Type.WATER,
-		class: Class.Special,
+		damageClass: DamageClass.Special,
 		power: 35,
 		accuracy: 85,
 		pp: 15,
@@ -3459,7 +3459,7 @@ export const MOVES = {
 	},
 	WHIRLWIND: {
 		type: Type.NORMAL,
-		class: Class.Status,
+		damageClass: DamageClass.Status,
 		power: 0,
 		accuracy: 0,
 		pp: 20,
@@ -3470,7 +3470,7 @@ export const MOVES = {
 	},
 	WIDE_GUARD: {
 		type: Type.ROCK,
-		class: Class.Status,
+		damageClass: DamageClass.Status,
 		power: 0,
 		accuracy: 0,
 		pp: 10,
@@ -3478,7 +3478,7 @@ export const MOVES = {
 	},
 	WILL_O_WISP: {
 		type: Type.FIRE,
-		class: Class.Status,
+		damageClass: DamageClass.Status,
 		power: 0,
 		accuracy: 85,
 		pp: 15,
@@ -3486,7 +3486,7 @@ export const MOVES = {
 	},
 	WING_ATTACK: {
 		type: Type.FLYING,
-		class: Class.Physical,
+		damageClass: DamageClass.Physical,
 		power: 60,
 		accuracy: 100,
 		pp: 35,
@@ -3494,7 +3494,7 @@ export const MOVES = {
 	},
 	WISH: {
 		type: Type.NORMAL,
-		class: Class.Status,
+		damageClass: DamageClass.Status,
 		power: 0,
 		accuracy: 0,
 		pp: 10,
@@ -3502,7 +3502,7 @@ export const MOVES = {
 	},
 	WITHDRAW: {
 		type: Type.WATER,
-		class: Class.Status,
+		damageClass: DamageClass.Status,
 		power: 0,
 		accuracy: 0,
 		pp: 40,
@@ -3510,7 +3510,7 @@ export const MOVES = {
 	},
 	WOOD_HAMMER: {
 		type: Type.GRASS,
-		class: Class.Physical,
+		damageClass: DamageClass.Physical,
 		power: 120,
 		accuracy: 100,
 		pp: 15,
@@ -3518,7 +3518,7 @@ export const MOVES = {
 	},
 	WORK_UP: {
 		type: Type.NORMAL,
-		class: Class.Status,
+		damageClass: DamageClass.Status,
 		power: 0,
 		accuracy: 0,
 		pp: 30,
@@ -3532,7 +3532,7 @@ export const MOVES = {
 	},
 	WORRY_SEED: {
 		type: Type.GRASS,
-		class: Class.Status,
+		damageClass: DamageClass.Status,
 		power: 0,
 		accuracy: 100,
 		pp: 10,
@@ -3540,7 +3540,7 @@ export const MOVES = {
 	},
 	X_SCISSOR: {
 		type: Type.BUG,
-		class: Class.Physical,
+		damageClass: DamageClass.Physical,
 		power: 80,
 		accuracy: 100,
 		pp: 15,
@@ -3548,7 +3548,7 @@ export const MOVES = {
 	},
 	YAWN: {
 		type: Type.NORMAL,
-		class: Class.Status,
+		damageClass: DamageClass.Status,
 		power: 0,
 		accuracy: 0,
 		pp: 10,
@@ -3556,7 +3556,7 @@ export const MOVES = {
 	},
 	ZAP_CANNON: {
 		type: Type.ELECTRIC,
-		class: Class.Special,
+		damageClass: DamageClass.Special,
 		power: 120,
 		accuracy: 50,
 		pp: 5,
@@ -3564,7 +3564,7 @@ export const MOVES = {
 	},
 	ZEN_HEADBUTT: {
 		type: Type.PSYCHIC,
-		class: Class.Physical,
+		damageClass: DamageClass.Physical,
 		power: 80,
 		accuracy: 90,
 		pp: 15,

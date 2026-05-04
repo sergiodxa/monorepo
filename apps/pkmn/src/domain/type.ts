@@ -1,23 +1,23 @@
 /** Type of a creature or move */
 export enum Type {
-	BUG,
-	DARK,
-	DRAGON,
-	ELECTRIC,
-	FAIRY,
-	FIGHTING,
-	FIRE,
-	FLYING,
-	GHOST,
-	GRASS,
-	GROUND,
-	ICE,
-	NORMAL,
-	POISON,
-	PSYCHIC,
-	ROCK,
-	STEEL,
-	WATER,
+	BUG = "bug",
+	DARK = "dark",
+	DRAGON = "dragon",
+	ELECTRIC = "electric",
+	FAIRY = "fairy",
+	FIGHTING = "fighting",
+	FIRE = "fire",
+	FLYING = "flying",
+	GHOST = "ghost",
+	GRASS = "grass",
+	GROUND = "ground",
+	ICE = "ice",
+	NORMAL = "normal",
+	POISON = "poison",
+	PSYCHIC = "psychic",
+	ROCK = "rock",
+	STEEL = "steel",
+	WATER = "water",
 }
 
 export enum Effectiveness {
@@ -28,8 +28,8 @@ export enum Effectiveness {
 	HYPER = 4,
 }
 
-export type Matchup = {
-	[key in Type]: {
-		[key in Type]?: Effectiveness;
+export type Matchup<T extends string | number | symbol> = {
+	[key in T]: {
+		[key in T]?: Effectiveness;
 	};
 };

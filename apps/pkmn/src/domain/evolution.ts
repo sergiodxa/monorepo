@@ -7,6 +7,7 @@ export enum EvolutionMethod {
 	Item = "item",
 	Trade = "trade",
 	Friendship = "friendship",
+	Place = "place",
 }
 
 export namespace Evolution {
@@ -16,21 +17,27 @@ export namespace Evolution {
 		level: number;
 	}
 
+	export interface ByTrade {
+		method: EvolutionMethod.Trade;
+		speciesId: SpeciesId;
+	}
+
 	export interface ByItem {
 		method: EvolutionMethod.Item;
 		speciesId: SpeciesId;
 		itemId: ItemId;
 	}
 
-	export interface ByTrade {
-		method: EvolutionMethod.Trade;
-		speciesId: SpeciesId;
-	}
-
 	export interface ByFriendship {
 		method: EvolutionMethod.Friendship;
 		speciesId: SpeciesId;
 		level: number;
+	}
+
+	export interface ByPlace {
+		method: EvolutionMethod.Place;
+		speciesId: SpeciesId;
+		placeId: number;
 	}
 }
 
@@ -39,4 +46,5 @@ export type Evolution =
 	| Evolution.ByLevel
 	| Evolution.ByItem
 	| Evolution.ByTrade
-	| Evolution.ByFriendship;
+	| Evolution.ByFriendship
+	| Evolution.ByPlace;

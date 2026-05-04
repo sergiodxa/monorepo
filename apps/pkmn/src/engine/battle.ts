@@ -7,7 +7,7 @@ import type {
 	SideEffectType,
 } from "../domain/move";
 
-import { Class } from "../domain/move";
+import { DamageClass } from "../domain/move";
 import { Stat } from "../domain/stat";
 import { Effectiveness, Type } from "../domain/type";
 
@@ -824,7 +824,7 @@ export class Battle {
 		if (!this.findEffect(effects, "destiny-bond")) {
 			user.volatile.destinyBonded = false;
 		}
-		if (move.class !== Class.Status && move.type === Type.ELECTRIC) {
+		if (move.damageClass !== DamageClass.Status && move.type === Type.ELECTRIC) {
 			user.volatile.chargedElectric = false;
 		}
 		this.applyRampageState(user, effects, command.move);
@@ -1145,7 +1145,7 @@ export class Battle {
 	}
 
 	private isMoveRedirectable(move: Move): boolean {
-		if (move.class !== Class.Status) return true;
+		if (move.damageClass !== DamageClass.Status) return true;
 		let effects = this.flattenEffects(move.effect);
 		return effects.some(
 			(effect) =>
@@ -1267,7 +1267,7 @@ export class Battle {
 		if (effects.stealthRock) {
 			let effectiveness = this.getTypeEffectiveness(combatant, {
 				type: Type.ROCK,
-				class: Class.Physical,
+				damageClass: DamageClass.Physical,
 				power: 0,
 				accuracy: 0,
 				pp: 0,
@@ -1319,7 +1319,7 @@ export class Battle {
 	}
 
 	private moveDealsDamage(move: Move, effects: MoveEffect[]): boolean {
-		if (move.class !== Class.Status && move.power > 0) return true;
+		if (move.damageClass !== DamageClass.Status && move.power > 0) return true;
 		return effects.some(
 			(effect) =>
 				effect.kind === "counter-last-physical-hit" ||
@@ -1468,7 +1468,7 @@ export class Battle {
 			return true;
 		}
 
-		if (user.volatile.tauntedTurns > 0 && move.class === Class.Status) {
+		if (user.volatile.tauntedTurns > 0 && move.damageClass === DamageClass.Status) {
 			events.push({ type: "move-failed", user: userPosition, reason: "taunt" });
 			return true;
 		}
@@ -1547,7 +1547,7 @@ export class Battle {
 				damage,
 				effects,
 				userPosition,
-				move.class,
+				move.damageClass,
 				events,
 			);
 			if (this.isCombatantFainted(target)) break;
@@ -1768,7 +1768,7 @@ export class Battle {
 	) {
 		if (!this.findEffect(effects, "force-switch-target")) return;
 		if (target.volatile.protecting) return;
-		if (move.class !== Class.Status && damageDealt === 0) return;
+		if (move.damageClass !== DamageClass.Status && damageDealt === 0) return;
 		if (this.isCombatantFainted(target)) return;
 		let active = this.getActiveCombatant(targetPosition);
 		if (!active) return;
@@ -2051,7 +2051,7 @@ export class Battle {
 		if (counterLastPhysicalHit) {
 			let damage = user.volatile.lastDamageThisTurn;
 			if (!damage) return 0;
-			if (damage.moveClass !== Class.Physical) return 0;
+			if (damage.moveClass !== DamageClass.Physical) return 0;
 			if (damage.source.side !== targetPosition.side || damage.source.slot !== targetPosition.slot)
 				return 0;
 			return damage.amount * 2;
@@ -2113,7 +2113,7 @@ export class Battle {
 		damage: number,
 		effects: MoveEffect[],
 		sourcePosition: BattlePosition,
-		moveClass: Class,
+		moveClass: DamageClass,
 		events: BattleEvent[],
 	): number {
 		let maxHP = getCreatureStat(this.gameData, combatant.creature, Stat.HP);
@@ -2187,7 +2187,7 @@ export class Battle {
 	private getBaseDamage(user: CombatantState, target: CombatantState, move: Move): number {
 		let power = this.getMovePower(user, target, move);
 		let attackStat =
-			move.class === Class.Physical
+			move.damageClass === DamageClass.Physical
 				? Math.floor(
 						getCreatureStat(this.gameData, user.creature, Stat.Attack) *
 							this.getStageModifier(user.statStages[Stat.Attack]),
@@ -2197,7 +2197,7 @@ export class Battle {
 							this.getStageModifier(user.statStages[Stat.SpecialAttack]),
 					);
 		let defenseStat =
-			move.class === Class.Physical
+			move.damageClass === DamageClass.Physical
 				? Math.floor(
 						getCreatureStat(this.gameData, target.creature, Stat.Defense) *
 							this.getStageModifier(target.statStages[Stat.Defense]),
@@ -2209,7 +2209,7 @@ export class Battle {
 
 		if (this.state.field.wonderRoomTurns > 0) {
 			let swappedDefense =
-				move.class === Class.Physical
+				move.damageClass === DamageClass.Physical
 					? getCreatureStat(this.gameData, target.creature, Stat.SpecialDefense)
 					: getCreatureStat(this.gameData, target.creature, Stat.Defense);
 			defenseStat = Math.floor(swappedDefense);
@@ -2220,12 +2220,15 @@ export class Battle {
 			Math.floor(Math.floor((((2 * level) / 5 + 2) * power * attackStat) / defenseStat) / 50) + 2;
 		let targetSide = this.getCombatantSide(target);
 
-		if (move.class === Class.Physical && this.state.sides[targetSide]!.effects.reflectTurns > 0) {
+		if (
+			move.damageClass === DamageClass.Physical &&
+			this.state.sides[targetSide]!.effects.reflectTurns > 0
+		) {
 			return Math.floor(baseDamage * 0.5);
 		}
 
 		if (
-			move.class === Class.Special &&
+			move.damageClass === DamageClass.Special &&
 			this.state.sides[targetSide]!.effects.lightScreenTurns > 0
 		) {
 			return Math.floor(baseDamage * 0.5);
@@ -2270,7 +2273,7 @@ export class Battle {
 
 		if (
 			user.volatile.chargedElectric &&
-			move.class !== Class.Status &&
+			move.damageClass !== DamageClass.Status &&
 			move.type === Type.ELECTRIC
 		) {
 			return move.power * 2;

@@ -10,7 +10,7 @@ import type { Species } from "../domain/species";
 import { TYPE_MATCHUPS } from "../content/matchups";
 import { GameData } from "../domain/game-data";
 import { GrowthRate } from "../domain/growth-rate";
-import { Genre } from "../domain/species";
+import { EggGroup, Gender } from "../domain/species";
 import { Stat } from "../domain/stat";
 import { Type } from "../domain/type";
 
@@ -124,7 +124,8 @@ function createSpecies(growthRate: GrowthRate): Species {
 		},
 		evolutions: [],
 		learnset: [],
-		gender: Genre.Genderless,
+		gender: Gender.Genderless,
+		eggGroup: EggGroup.Indeterminate,
 	};
 }
 

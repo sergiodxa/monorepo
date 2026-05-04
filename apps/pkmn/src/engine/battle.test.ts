@@ -12,7 +12,7 @@ import { TYPE_MATCHUPS } from "../content/matchups";
 import { MOVES } from "../content/moves";
 import { NATURES } from "../content/natures";
 import { SPECIES } from "../content/species";
-import { Class } from "../domain/move";
+import { DamageClass } from "../domain/move";
 import { Stat } from "../domain/stat";
 
 import type { BattleEvent } from "./battle";
@@ -206,6 +206,11 @@ test("a fainted slot requests a replacement before the next turn", () => {
 			user: { side: 1, slot: 0 },
 			moveId: "RAZOR_LEAF",
 			target: { side: 0, slot: 0 },
+		},
+		{
+			type: "effectiveness",
+			target: { side: 0, slot: 0 },
+			effectiveness: 0.25,
 		},
 		{ type: "damage-dealt", target: { side: 0, slot: 0 }, damage: 1, remainingHP: 0 },
 		{ type: "creature-fainted", target: { side: 0, slot: 0 } },
@@ -2176,7 +2181,7 @@ test("Assurance deals more damage after the target was already hit this turn", (
 	target.volatile.lastDamageThisTurn = {
 		amount: 12,
 		source: { side: 1, slot: 0 },
-		moveClass: Class.Physical,
+		moveClass: DamageClass.Physical,
 	};
 	let events = collectTurnEvents(session, battle, [
 		{ type: "fight", move: 0, target: { side: 1, slot: 0 } },

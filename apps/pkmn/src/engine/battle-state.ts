@@ -1,13 +1,13 @@
 import type { BattleStatStage } from "../domain/move";
 
-import { Class } from "../domain/move";
+import { DamageClass } from "../domain/move";
 import { Stat } from "../domain/stat";
 
 /** Records the last move-based damage a combatant took during the current turn. */
 export interface DamageHistoryState {
 	amount: number;
 	source: { side: number; slot: number };
-	moveClass: Class;
+	moveClass: DamageClass;
 }
 
 /** Battle-only effects that apply to one active combatant and clear on switch. */

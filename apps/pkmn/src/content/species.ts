@@ -3,7 +3,7 @@ import type { Species, SpeciesId } from "../domain/species";
 
 import { EvolutionMethod } from "../domain/evolution";
 import { GrowthRate } from "../domain/growth-rate";
-import { Genre } from "../domain/species";
+import { EggGroup, Gender } from "../domain/species";
 import { Stat } from "../domain/stat";
 import { Type } from "../domain/type";
 
@@ -11,9 +11,10 @@ interface SpeciesTemplate {
 	id: SpeciesId;
 	number: number;
 	size?: Species["size"];
-	types: Species["types"];
+	types: [Type] | [Type, Type];
 	stats: Species["stats"];
 	gender?: Species["gender"];
+	eggGroup?: Species["eggGroup"];
 	baseExperience?: number;
 	catchRate?: number;
 	growthRate?: GrowthRate;
@@ -21,10 +22,13 @@ interface SpeciesTemplate {
 	learnset?: Species["learnset"];
 }
 
-const STARTER_GENDER = { [Genre.Male]: 87.5, [Genre.Female]: 12.5 };
-const EVEN_GENDER = { [Genre.Male]: 50, [Genre.Female]: 50 };
-const FEMALE_ONLY = { [Genre.Female]: 100 };
-const MALE_ONLY = { [Genre.Male]: 100 };
+const GENDER_DISTRIBUTIONS = {
+	COMMON: { [Gender.Male]: 87.5, [Gender.Female]: 12.5 },
+	EVEN: { [Gender.Male]: 50, [Gender.Female]: 50 },
+	FEMALE_ONLY: { [Gender.Female]: 100 },
+	MALE_ONLY: { [Gender.Male]: 100 },
+	GENDERLESS: Gender.Genderless,
+} satisfies { [key: string]: Gender.Genderless | { male?: number; female?: number } };
 
 /** Returns a stat block in the order expected by the engine. */
 function createStats(
@@ -61,7 +65,8 @@ function createSpecies(template: SpeciesTemplate): Species {
 		number: template.number,
 		size: template.size ?? { weight: 100, height: 1 },
 		types: template.types,
-		gender: template.gender ?? EVEN_GENDER,
+		gender: template.gender ?? GENDER_DISTRIBUTIONS.EVEN,
+		eggGroup: template.eggGroup ?? EggGroup.Indeterminate,
 		baseExperience: template.baseExperience ?? 100,
 		catchRate: template.catchRate ?? 45,
 		growthRate: template.growthRate ?? GrowthRate.MediumFast,
@@ -89,7 +94,7 @@ export const SPECIES = createSpeciesIndex([
 		number: 1,
 		size: { weight: 6.9, height: 0.7 },
 		types: [Type.GRASS, Type.POISON],
-		gender: STARTER_GENDER,
+		gender: GENDER_DISTRIBUTIONS.COMMON,
 		baseExperience: 64,
 		catchRate: 45,
 		growthRate: GrowthRate.MediumFast,
@@ -122,7 +127,7 @@ export const SPECIES = createSpeciesIndex([
 		number: 2,
 		size: { weight: 13, height: 1 },
 		types: [Type.GRASS, Type.POISON],
-		gender: STARTER_GENDER,
+		gender: GENDER_DISTRIBUTIONS.COMMON,
 		baseExperience: 142,
 		catchRate: 45,
 		growthRate: GrowthRate.MediumSlow,
@@ -154,7 +159,7 @@ export const SPECIES = createSpeciesIndex([
 		id: "VENUSAUR",
 		number: 3,
 		types: [Type.GRASS, Type.POISON],
-		gender: STARTER_GENDER,
+		gender: GENDER_DISTRIBUTIONS.COMMON,
 		baseExperience: 236,
 		catchRate: 45,
 		growthRate: GrowthRate.Slow,
@@ -187,7 +192,7 @@ export const SPECIES = createSpeciesIndex([
 		id: "CHARMANDER",
 		number: 4,
 		types: [Type.FIRE],
-		gender: STARTER_GENDER,
+		gender: GENDER_DISTRIBUTIONS.COMMON,
 		baseExperience: 62,
 		catchRate: 45,
 		growthRate: GrowthRate.Fast,
@@ -220,7 +225,7 @@ export const SPECIES = createSpeciesIndex([
 		id: "CHARMELEON",
 		number: 5,
 		types: [Type.FIRE],
-		gender: STARTER_GENDER,
+		gender: GENDER_DISTRIBUTIONS.COMMON,
 		baseExperience: 142,
 		catchRate: 45,
 		growthRate: GrowthRate.Fluctuating,
@@ -252,7 +257,7 @@ export const SPECIES = createSpeciesIndex([
 		id: "CHARIZARD",
 		number: 6,
 		types: [Type.FIRE, Type.FLYING],
-		gender: STARTER_GENDER,
+		gender: GENDER_DISTRIBUTIONS.COMMON,
 		baseExperience: 240,
 		catchRate: 45,
 		growthRate: GrowthRate.Slow,
@@ -287,7 +292,7 @@ export const SPECIES = createSpeciesIndex([
 		id: "SQUIRTLE",
 		number: 7,
 		types: [Type.WATER],
-		gender: STARTER_GENDER,
+		gender: GENDER_DISTRIBUTIONS.COMMON,
 		stats: createStats(44, 48, 65, 50, 64, 43),
 		evolutions: [levelEvolution("WARTORTLE", 16)],
 		learnset: [
@@ -320,7 +325,7 @@ export const SPECIES = createSpeciesIndex([
 		id: "WARTORTLE",
 		number: 8,
 		types: [Type.WATER],
-		gender: STARTER_GENDER,
+		gender: GENDER_DISTRIBUTIONS.COMMON,
 		stats: createStats(59, 63, 80, 65, 80, 58),
 		evolutions: [levelEvolution("BLASTOISE", 36)],
 		learnset: [
@@ -353,7 +358,7 @@ export const SPECIES = createSpeciesIndex([
 		id: "BLASTOISE",
 		number: 9,
 		types: [Type.WATER],
-		gender: STARTER_GENDER,
+		gender: GENDER_DISTRIBUTIONS.COMMON,
 		stats: createStats(79, 83, 100, 85, 105, 78),
 		learnset: [
 			{ level: 0, moveId: "FLASH_CANNON" },
@@ -748,7 +753,7 @@ export const SPECIES = createSpeciesIndex([
 		id: "NIDORAN_F",
 		number: 29,
 		types: [Type.POISON],
-		gender: FEMALE_ONLY,
+		gender: GENDER_DISTRIBUTIONS.FEMALE_ONLY,
 		stats: createStats(55, 47, 52, 40, 40, 41),
 		evolutions: [levelEvolution("NIDORINA", 16)],
 		learnset: [
@@ -782,7 +787,7 @@ export const SPECIES = createSpeciesIndex([
 		id: "NIDORINA",
 		number: 30,
 		types: [Type.POISON],
-		gender: FEMALE_ONLY,
+		gender: GENDER_DISTRIBUTIONS.FEMALE_ONLY,
 		stats: createStats(70, 62, 67, 55, 55, 56),
 		learnset: [
 			{ level: 1, moveId: "GROWL" },
@@ -804,7 +809,7 @@ export const SPECIES = createSpeciesIndex([
 		id: "NIDOQUEEN",
 		number: 31,
 		types: [Type.POISON, Type.GROUND],
-		gender: FEMALE_ONLY,
+		gender: GENDER_DISTRIBUTIONS.FEMALE_ONLY,
 		stats: createStats(90, 92, 87, 75, 85, 76),
 		learnset: [
 			{ level: 0, moveId: "SUPERPOWER" },
@@ -829,7 +834,7 @@ export const SPECIES = createSpeciesIndex([
 		id: "NIDORAN_M",
 		number: 32,
 		types: [Type.POISON],
-		gender: MALE_ONLY,
+		gender: GENDER_DISTRIBUTIONS.MALE_ONLY,
 		stats: createStats(46, 57, 40, 40, 40, 50),
 		evolutions: [levelEvolution("NIDORINO", 16)],
 		learnset: [
@@ -865,7 +870,7 @@ export const SPECIES = createSpeciesIndex([
 		id: "NIDORINO",
 		number: 33,
 		types: [Type.POISON],
-		gender: MALE_ONLY,
+		gender: GENDER_DISTRIBUTIONS.MALE_ONLY,
 		stats: createStats(61, 72, 57, 55, 55, 65),
 		learnset: [
 			{ level: 1, moveId: "FOCUS_ENERGY" },
@@ -887,7 +892,7 @@ export const SPECIES = createSpeciesIndex([
 		id: "NIDOKING",
 		number: 34,
 		types: [Type.POISON, Type.GROUND],
-		gender: MALE_ONLY,
+		gender: GENDER_DISTRIBUTIONS.MALE_ONLY,
 		stats: createStats(81, 102, 77, 85, 75, 85),
 		learnset: [
 			{ level: 0, moveId: "MEGAHORN" },
@@ -1790,7 +1795,7 @@ export const SPECIES = createSpeciesIndex([
 		id: "MAGNEMITE",
 		number: 81,
 		types: [Type.ELECTRIC, Type.STEEL],
-		gender: Genre.Genderless,
+		gender: GENDER_DISTRIBUTIONS.GENDERLESS,
 		stats: createStats(25, 35, 70, 95, 55, 45),
 		evolutions: [levelEvolution("MAGNETON", 30)],
 		learnset: [
@@ -1817,7 +1822,7 @@ export const SPECIES = createSpeciesIndex([
 		id: "MAGNETON",
 		number: 82,
 		types: [Type.ELECTRIC, Type.STEEL],
-		gender: Genre.Genderless,
+		gender: GENDER_DISTRIBUTIONS.GENDERLESS,
 		stats: createStats(50, 60, 95, 120, 70, 70),
 		learnset: [
 			{ level: 0, moveId: "TRI_ATTACK" },
@@ -2228,7 +2233,7 @@ export const SPECIES = createSpeciesIndex([
 		id: "VOLTORB",
 		number: 100,
 		types: [Type.ELECTRIC],
-		gender: Genre.Genderless,
+		gender: GENDER_DISTRIBUTIONS.GENDERLESS,
 		stats: createStats(40, 30, 50, 55, 55, 100),
 		evolutions: [levelEvolution("ELECTRODE", 30)],
 		learnset: [
@@ -2257,7 +2262,7 @@ export const SPECIES = createSpeciesIndex([
 		id: "ELECTRODE",
 		number: 101,
 		types: [Type.ELECTRIC],
-		gender: Genre.Genderless,
+		gender: GENDER_DISTRIBUTIONS.GENDERLESS,
 		stats: createStats(60, 50, 70, 80, 80, 150),
 		learnset: [
 			{ level: 1, moveId: "CHARGE" },
@@ -2373,7 +2378,7 @@ export const SPECIES = createSpeciesIndex([
 		id: "HITMONLEE",
 		number: 106,
 		types: [Type.FIGHTING],
-		gender: MALE_ONLY,
+		gender: GENDER_DISTRIBUTIONS.MALE_ONLY,
 		stats: createStats(50, 120, 53, 35, 110, 87),
 		learnset: [
 			{ level: 0, moveId: "BRICK_BREAK" },
@@ -2407,7 +2412,7 @@ export const SPECIES = createSpeciesIndex([
 		id: "HITMONCHAN",
 		number: 107,
 		types: [Type.FIGHTING],
-		gender: MALE_ONLY,
+		gender: GENDER_DISTRIBUTIONS.MALE_ONLY,
 		stats: createStats(50, 105, 79, 35, 110, 76),
 		learnset: [
 			{ level: 0, moveId: "DRAIN_PUNCH" },
@@ -2546,7 +2551,7 @@ export const SPECIES = createSpeciesIndex([
 		id: "CHANSEY",
 		number: 113,
 		types: [Type.NORMAL],
-		gender: FEMALE_ONLY,
+		gender: GENDER_DISTRIBUTIONS.FEMALE_ONLY,
 		stats: createStats(250, 5, 5, 35, 105, 50),
 		learnset: [
 			{ level: 1, moveId: "CHARM" },
@@ -2580,7 +2585,7 @@ export const SPECIES = createSpeciesIndex([
 		id: "KANGASKHAN",
 		number: 115,
 		types: [Type.NORMAL],
-		gender: FEMALE_ONLY,
+		gender: GENDER_DISTRIBUTIONS.FEMALE_ONLY,
 		stats: createStats(105, 95, 80, 40, 80, 90),
 		learnset: [
 			{ level: 1, moveId: "POUND" },
@@ -2673,7 +2678,7 @@ export const SPECIES = createSpeciesIndex([
 		id: "STARYU",
 		number: 120,
 		types: [Type.WATER],
-		gender: Genre.Genderless,
+		gender: GENDER_DISTRIBUTIONS.GENDERLESS,
 		stats: createStats(30, 45, 55, 70, 55, 85),
 		learnset: [
 			{ level: 1, moveId: "HARDEN" },
@@ -2698,7 +2703,7 @@ export const SPECIES = createSpeciesIndex([
 		id: "STARMIE",
 		number: 121,
 		types: [Type.WATER, Type.PSYCHIC],
-		gender: Genre.Genderless,
+		gender: GENDER_DISTRIBUTIONS.GENDERLESS,
 		stats: createStats(60, 75, 85, 100, 85, 115),
 		learnset: [
 			{ level: 1, moveId: "BRINE" },
@@ -2819,7 +2824,7 @@ export const SPECIES = createSpeciesIndex([
 		id: "TAUROS",
 		number: 128,
 		types: [Type.NORMAL],
-		gender: MALE_ONLY,
+		gender: GENDER_DISTRIBUTIONS.MALE_ONLY,
 		stats: createStats(75, 100, 95, 40, 70, 110),
 		learnset: [
 			{ level: 1, moveId: "TACKLE" },
@@ -2913,7 +2918,7 @@ export const SPECIES = createSpeciesIndex([
 		id: "DITTO",
 		number: 132,
 		types: [Type.NORMAL],
-		gender: Genre.Genderless,
+		gender: GENDER_DISTRIBUTIONS.GENDERLESS,
 		stats: createStats(48, 48, 48, 48, 48, 48),
 		learnset: [{ level: 1, moveId: "TRANSFORM" }],
 	},
@@ -2921,7 +2926,7 @@ export const SPECIES = createSpeciesIndex([
 		id: "EEVEE",
 		number: 133,
 		types: [Type.NORMAL],
-		gender: STARTER_GENDER,
+		gender: GENDER_DISTRIBUTIONS.COMMON,
 		stats: createStats(55, 55, 50, 45, 65, 55),
 		learnset: [
 			{ level: 1, moveId: "COVET" },
@@ -2954,7 +2959,7 @@ export const SPECIES = createSpeciesIndex([
 		id: "VAPOREON",
 		number: 134,
 		types: [Type.WATER],
-		gender: STARTER_GENDER,
+		gender: GENDER_DISTRIBUTIONS.COMMON,
 		stats: createStats(130, 65, 60, 110, 95, 65),
 		learnset: [
 			{ level: 0, moveId: "WATER_GUN" },
@@ -2987,7 +2992,7 @@ export const SPECIES = createSpeciesIndex([
 		id: "JOLTEON",
 		number: 135,
 		types: [Type.ELECTRIC],
-		gender: STARTER_GENDER,
+		gender: GENDER_DISTRIBUTIONS.COMMON,
 		stats: createStats(65, 65, 60, 110, 95, 130),
 		learnset: [
 			{ level: 0, moveId: "THUNDER_SHOCK" },
@@ -3020,7 +3025,7 @@ export const SPECIES = createSpeciesIndex([
 		id: "FLAREON",
 		number: 136,
 		types: [Type.FIRE],
-		gender: STARTER_GENDER,
+		gender: GENDER_DISTRIBUTIONS.COMMON,
 		stats: createStats(65, 130, 60, 95, 110, 65),
 		learnset: [
 			{ level: 0, moveId: "EMBER" },
@@ -3052,7 +3057,7 @@ export const SPECIES = createSpeciesIndex([
 		id: "PORYGON",
 		number: 137,
 		types: [Type.NORMAL],
-		gender: Genre.Genderless,
+		gender: GENDER_DISTRIBUTIONS.GENDERLESS,
 		stats: createStats(65, 60, 70, 85, 75, 40),
 		learnset: [
 			{ level: 1, moveId: "CONVERSION" },
@@ -3075,7 +3080,7 @@ export const SPECIES = createSpeciesIndex([
 		id: "OMANYTE",
 		number: 138,
 		types: [Type.ROCK, Type.WATER],
-		gender: STARTER_GENDER,
+		gender: GENDER_DISTRIBUTIONS.COMMON,
 		stats: createStats(35, 40, 100, 90, 55, 35),
 		evolutions: [levelEvolution("OMASTAR", 40)],
 		learnset: [
@@ -3112,7 +3117,7 @@ export const SPECIES = createSpeciesIndex([
 		id: "OMASTAR",
 		number: 139,
 		types: [Type.ROCK, Type.WATER],
-		gender: STARTER_GENDER,
+		gender: GENDER_DISTRIBUTIONS.COMMON,
 		stats: createStats(70, 60, 125, 115, 70, 55),
 		learnset: [
 			{ level: 0, moveId: "CRUNCH" },
@@ -3137,7 +3142,7 @@ export const SPECIES = createSpeciesIndex([
 		id: "KABUTO",
 		number: 140,
 		types: [Type.ROCK, Type.WATER],
-		gender: STARTER_GENDER,
+		gender: GENDER_DISTRIBUTIONS.COMMON,
 		stats: createStats(30, 80, 90, 55, 45, 55),
 		evolutions: [levelEvolution("KABUTOPS", 40)],
 		learnset: [
@@ -3172,7 +3177,7 @@ export const SPECIES = createSpeciesIndex([
 		id: "KABUTOPS",
 		number: 141,
 		types: [Type.ROCK, Type.WATER],
-		gender: STARTER_GENDER,
+		gender: GENDER_DISTRIBUTIONS.COMMON,
 		stats: createStats(60, 115, 105, 65, 70, 80),
 		learnset: [
 			{ level: 0, moveId: "SLASH" },
@@ -3199,7 +3204,7 @@ export const SPECIES = createSpeciesIndex([
 		id: "AERODACTYL",
 		number: 142,
 		types: [Type.ROCK, Type.FLYING],
-		gender: STARTER_GENDER,
+		gender: GENDER_DISTRIBUTIONS.COMMON,
 		stats: createStats(80, 105, 65, 60, 75, 130),
 		learnset: [
 			{ level: 1, moveId: "ANCIENT_POWER" },
@@ -3269,7 +3274,7 @@ export const SPECIES = createSpeciesIndex([
 		id: "ARTICUNO",
 		number: 144,
 		types: [Type.ICE, Type.FLYING],
-		gender: Genre.Genderless,
+		gender: GENDER_DISTRIBUTIONS.GENDERLESS,
 		stats: createStats(90, 85, 100, 95, 125, 85),
 		learnset: [
 			{ level: 1, moveId: "GUST" },
@@ -3294,7 +3299,7 @@ export const SPECIES = createSpeciesIndex([
 		id: "ZAPDOS",
 		number: 145,
 		types: [Type.ELECTRIC, Type.FLYING],
-		gender: Genre.Genderless,
+		gender: GENDER_DISTRIBUTIONS.GENDERLESS,
 		stats: createStats(90, 90, 85, 125, 90, 100),
 		learnset: [
 			{ level: 1, moveId: "PECK" },
@@ -3319,7 +3324,7 @@ export const SPECIES = createSpeciesIndex([
 		id: "MOLTRES",
 		number: 146,
 		types: [Type.FIRE, Type.FLYING],
-		gender: Genre.Genderless,
+		gender: GENDER_DISTRIBUTIONS.GENDERLESS,
 		stats: createStats(90, 100, 90, 125, 85, 90),
 		learnset: [
 			{ level: 1, moveId: "GUST" },
@@ -3424,7 +3429,7 @@ export const SPECIES = createSpeciesIndex([
 		id: "MEWTWO",
 		number: 150,
 		types: [Type.PSYCHIC],
-		gender: Genre.Genderless,
+		gender: GENDER_DISTRIBUTIONS.GENDERLESS,
 		stats: createStats(106, 110, 90, 154, 90, 130),
 		learnset: [
 			{ level: 1, moveId: "CONFUSION" },
@@ -3449,7 +3454,7 @@ export const SPECIES = createSpeciesIndex([
 		id: "MEW",
 		number: 151,
 		types: [Type.PSYCHIC],
-		gender: Genre.Genderless,
+		gender: GENDER_DISTRIBUTIONS.GENDERLESS,
 		stats: createStats(100, 100, 100, 100, 100, 100),
 		learnset: [
 			{ level: 1, moveId: "POUND" },

@@ -1,8 +1,8 @@
 /** Experience growth rate of the creature */
 export enum GrowthRate {
-	Fast,
-	MediumFast,
-	MediumSlow,
-	Slow,
-	Fluctuating,
+	Fast = "fast",
+	MediumFast = "medium-fast",
+	MediumSlow = "medium-slow",
+	Slow = "slow",
+	Fluctuating = "fluctuating",
 }

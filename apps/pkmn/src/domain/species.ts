@@ -3,7 +3,6 @@ import type { MoveId } from "./move";
 import type { StatSet } from "./stat";
 
 import { GrowthRate } from "./growth-rate";
-import { Type } from "./type";
 
 /** String identifier of a species in loaded game data. */
 export type SpeciesId = string;
@@ -15,10 +14,29 @@ export type LearnsetEntry =
 	| { tutor: true; moveId: MoveId }
 	| { egg: true; moveId: MoveId };
 
-export enum Genre {
-	Male,
-	Female,
-	Genderless,
+export enum Gender {
+	Male = "male",
+	Female = "female",
+	Genderless = "genderless",
+}
+
+/** Breeding compatibility group used by species eggs. */
+export enum EggGroup {
+	Monster = "monster",
+	Water1 = "water1",
+	Bug = "bug",
+	Flying = "flying",
+	Ground = "ground",
+	Fairy = "fairy",
+	Plant = "plant",
+	HumanShape = "humanShape",
+	Water3 = "water3",
+	Mineral = "mineral",
+	Indeterminate = "indeterminate",
+	Water2 = "water2",
+	Ditto = "ditto",
+	Dragon = "dragon",
+	NoEggs = "noEggs",
 }
 
 /** Physical dimensions used by size-based battle mechanics. */
@@ -35,7 +53,7 @@ export interface Species {
 	/** Physical dimensions used by size-based mechanics. */
 	size: Size;
 	/** Type or pair of types of the creature */
-	types: [Type] | [Type, Type];
+	types: [string] | [string, string];
 	/** Base experience gained for defeating this creature */
 	baseExperience: number;
 	/** Catch rate of the creature */
@@ -49,7 +67,9 @@ export interface Species {
 	/** Learnset of the creature */
 	learnset: LearnsetEntry[];
 	/** Genders a creature can be, if any */
-	gender: Genre.Genderless | { [K in Genre.Male | Genre.Female]?: number };
+	gender: Gender.Genderless | { [K in Gender.Male | Gender.Female]?: number };
+	/** Breeding compatibility group for this creature. */
+	eggGroup: EggGroup;
 }
 
 export function isSpeciesId(value: unknown): value is SpeciesId {
