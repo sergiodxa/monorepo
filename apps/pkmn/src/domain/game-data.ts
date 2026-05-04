@@ -9,10 +9,9 @@ import type { Species } from "./species";
 import type { Matchup } from "./type";
 
 import { EvolutionMethod } from "./evolution";
-import { Type as ItemType } from "./item";
 
 /** Raw authored content before reference validation. */
-export interface GameDataSource {
+export interface GameDataSource<T extends string | number | symbol = string> {
 	/** Authored species records keyed by identifier. */
 	species: Record<string, Species>;
 	/** Authored move records keyed by identifier. */
@@ -22,7 +21,7 @@ export interface GameDataSource {
 	/** Authored nature records keyed by identifier. */
 	natures: Record<string, Nature>;
 	/** Authored type chart. */
-	typeChart: Matchup;
+	typeChart: Matchup<T>;
 }
 
 /** Reports invalid cross-references in authored content. */
@@ -31,7 +30,7 @@ export class GameDataError extends Error {
 }
 
 /** Loaded and validated content used by the engine at runtime. */
-export class GameData {
+export class GameData<T extends string | number | symbol = string> {
 	/**
 	 * @param species - All species indexed by identifier
 	 * @param moves - All moves indexed by identifier
@@ -44,7 +43,7 @@ export class GameData {
 		public readonly moves: ReadonlyMap<string, Move>,
 		public readonly items: ReadonlyMap<string, Item>,
 		public readonly natures: ReadonlyMap<string, Nature>,
-		public readonly typeChart: Matchup,
+		public readonly typeChart: Matchup<T>,
 	) {}
 
 	/**
@@ -53,7 +52,9 @@ export class GameData {
 	 * @param source - Authored content records
 	 * @returns Validated runtime maps or the first reference error found
 	 */
-	static create(source: GameDataSource): Result<GameData, GameDataError> {
+	static create<T extends string | number | symbol = string>(
+		source: GameDataSource<T>,
+	): Result<GameData<T>, GameDataError> {
 		let species = new Map(Object.entries(source.species));
 		let moves = new Map(Object.entries(source.moves));
 		let items = new Map(Object.entries(source.items));
@@ -90,16 +91,13 @@ export class GameData {
 		}
 
 		for (let [itemId, item] of items) {
-			if (
-				(item.type === ItemType.HM || item.type === ItemType.MT) &&
-				moves.has(item.teachesMoveId) === false
-			) {
+			if ("teachesMoveId" in item && moves.has(item.teachesMoveId) === false) {
 				return failure(
 					new GameDataError(`Item ${itemId} references missing move ${item.teachesMoveId}.`),
 				);
 			}
 		}
 
-		return success(new GameData(species, moves, items, natures, source.typeChart));
+		return success(new GameData<T>(species, moves, items, natures, source.typeChart));
 	}
 }

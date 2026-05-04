@@ -2,14 +2,15 @@ import { describe, expect, test } from "bun:test";
 
 import { isFailure, isSuccess } from "@pkg/result";
 
-import { GameData } from "../domain/game-data";
-import { GrowthRate } from "../domain/growth-rate";
-import { Type as ItemType } from "../domain/item";
-import { Class, StatusEffectType } from "../domain/move";
-import { Stat } from "../domain/stat";
-import { Type } from "../domain/type";
+import { SPECIES } from "../content/species";
 
-import { SPECIES } from "./species";
+import { GameData } from "./game-data";
+import { GrowthRate } from "./growth-rate";
+import { ItemAttribute, ItemCategory } from "./item";
+import { DamageClass, StatusEffectType } from "./move";
+import { EggGroup, Gender } from "./species";
+import { Stat } from "./stat";
+import { Type } from "./type";
 
 describe(GameData.create, () => {
 	test("returns indexed maps for valid content", () => {
@@ -32,13 +33,14 @@ describe(GameData.create, () => {
 					},
 					evolutions: [],
 					learnset: [{ level: 1, moveId: "TACKLE" }],
-					gender: { 0: 87.5, 1: 12.5 },
+					gender: { [Gender.Male]: 87.5, [Gender.Female]: 12.5 },
+					eggGroup: EggGroup.Indeterminate,
 				},
 			},
 			moves: {
 				TACKLE: {
 					type: Type.NORMAL,
-					class: Class.Physical,
+					damageClass: DamageClass.Physical,
 					power: 40,
 					accuracy: 100,
 					pp: 35,
@@ -46,7 +48,7 @@ describe(GameData.create, () => {
 				},
 				EMBER: {
 					type: Type.FIRE,
-					class: Class.Special,
+					damageClass: DamageClass.Special,
 					power: 40,
 					accuracy: 100,
 					pp: 25,
@@ -54,7 +56,12 @@ describe(GameData.create, () => {
 				},
 			},
 			items: {
-				HM01: { type: ItemType.HM, price: { buy: 1000, sell: 500 }, teachesMoveId: "TACKLE" },
+				HM01: {
+					category: ItemCategory.AllMachines,
+					attributes: [ItemAttribute.Countable, ItemAttribute.UsableOverworld],
+					price: { buy: 1000, sell: 500 },
+					teachesMoveId: "TACKLE",
+				},
 			},
 			natures: {
 				HARDY: { increases: null, decreases: null },
@@ -133,7 +140,8 @@ describe(GameData.create, () => {
 					},
 					evolutions: [],
 					learnset: [{ level: 1, moveId: "MISSING_MOVE" }],
-					gender: { 0: 87.5, 1: 12.5 },
+					gender: { [Gender.Male]: 87.5, [Gender.Female]: 12.5 },
+					eggGroup: EggGroup.Indeterminate,
 				},
 			},
 			moves: {},
