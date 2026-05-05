@@ -179,9 +179,20 @@ export function getWinnerSide(
 	state: BattleState,
 	isCombatantFainted: (combatant: CombatantState) => boolean,
 ): number | null {
+	let outcome = getBattleOutcome(state, isCombatantFainted);
+	if (outcome === undefined || outcome === null) return null;
+	return outcome;
+}
+
+/** Returns the resolved outcome, or undefined while the battle can still continue. */
+export function getBattleOutcome(
+	state: BattleState,
+	isCombatantFainted: (combatant: CombatantState) => boolean,
+): number | null | undefined {
 	let side0Alive = sideHasRemainingContenders(state, 0, isCombatantFainted);
 	let side1Alive = sideHasRemainingContenders(state, 1, isCombatantFainted);
 
+	if (side0Alive && side1Alive) return undefined;
 	if (side0Alive === side1Alive) return null;
 	return side0Alive ? 0 : 1;
 }

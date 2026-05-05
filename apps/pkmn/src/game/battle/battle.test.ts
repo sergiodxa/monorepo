@@ -174,6 +174,92 @@ test("when both creatures use Quick Attack, the faster creature acts first", () 
 	});
 });
 
+test("a zero-PP move cannot be used while other moves remain", () => {
+	let primary = createPrimaryFixture();
+	primary.status.pp[0] = 0;
+	let battle = new Battle({
+		gameData: GAME_DATA,
+		sides: [{ teams: [[primary]] }, { teams: [[createModestSecondaryFixture()]] }],
+		random: () => 1,
+	});
+	let session = battle.start();
+
+	readEvent(session.next());
+	readEvent(session.next());
+	let request = readEvent(session.next());
+	if (request.type !== "request-turn-commands") {
+		throw new TypeError("Expected turn command request.");
+	}
+
+	let events = collectTurnEvents(session, battle, [
+		{ type: "fight", move: 0, target: { side: 1, slot: 0 } },
+		{ type: "fight", move: 0, target: { side: 0, slot: 0 } },
+	]);
+
+	expect(
+		events.some(
+			(event) => event.type === "move-used" && event.user.side === 0 && event.user.slot === 0,
+		),
+	).toBe(false);
+	expect(primary.status.pp[0]).toBe(0);
+});
+
+test("PP is spent when a move is committed even if the user faints before acting", () => {
+	let primary = createLowHpPrimaryFixture();
+	primary.status.pp[0] = 1;
+	let battle = new Battle({
+		gameData: GAME_DATA,
+		sides: [{ teams: [[primary]] }, { teams: [[createModestSecondaryFixture()]] }],
+		random: () => 1,
+	});
+	let session = battle.start();
+
+	readEvent(session.next());
+	readEvent(session.next());
+	let request = readEvent(session.next());
+	if (request.type !== "request-turn-commands") {
+		throw new TypeError("Expected turn command request.");
+	}
+
+	collectTurnEvents(session, battle, [
+		{ type: "fight", move: 0, target: { side: 1, slot: 0 } },
+		{ type: "fight", move: 1, target: { side: 0, slot: 0 } },
+	]);
+
+	expect(primary.status.pp[0]).toBe(0);
+});
+
+test("the built-in fallback move is used when no regular move has PP", () => {
+	let primary = createPrimaryFixture();
+	primary.status.pp = [0, 0, 0, 0];
+	let battle = new Battle({
+		gameData: GAME_DATA,
+		sides: [{ teams: [[primary]] }, { teams: [[createModestSecondaryFixture()]] }],
+		random: () => 1,
+	});
+	let session = battle.start();
+
+	readEvent(session.next());
+	readEvent(session.next());
+	let request = readEvent(session.next());
+	if (request.type !== "request-turn-commands") {
+		throw new TypeError("Expected turn command request.");
+	}
+
+	let events = collectTurnEvents(session, battle, [
+		{ type: "fight", move: 0, target: { side: 1, slot: 0 } },
+		{ type: "fight", move: 0, target: { side: 0, slot: 0 } },
+	]);
+
+	expect(events).toContainEqual({
+		type: "move-used",
+		user: { side: 0, slot: 0 },
+		moveId: "fallback",
+		target: { side: 1, slot: 0 },
+	});
+	expect(primary.status.pp).toEqual([0, 0, 0, 0]);
+});
+
 test("a fainted slot requests a replacement before the next turn", () => {
 	let battle = new Battle({
 		gameData: GAME_DATA,
@@ -2074,7 +2160,7 @@ test("Focus Energy raises the user's critical-hit chance", () => {
 			{ teams: [[createPrimaryFixtureWithFocusEnergy()]] },
 			{ teams: [[createModestSecondaryFixtureWithGrowl()]] },
 		],
-		random: createRandomSequence(0.1, 1),
+		random: () => 0.1,
 	});
 	let session = battle.start();
 
@@ -2350,6 +2436,66 @@ test("Destiny Bond makes the attacker faint after knocking out the user", () => 
 	expect(events.some((event) => event.type === "creature-fainted" && event.target.side === 1)).toBe(
 		true,
 	);
+});
+
+test("a simultaneous elimination with no reserves finishes as a draw", () => {
+	let battle = new Battle({
+		gameData: GAME_DATA,
+		sides: [
+			{ teams: [[createLowHpPrimaryFixtureWithDestinyBond()]] },
+			{ teams: [[createLightFixtureWithTackle()]] },
+		],
+		random: () => 1,
+	});
+	let session = battle.start();
+
+	readEvent(session.next());
+	readEvent(session.next());
+	let request = readEvent(session.next());
+	if (request.type !== "request-turn-commands") throw new TypeError("Expected turn request.");
+	collectTurnEvents(session, battle, [
+		{ type: "fight", move: 0, target: { side: 1, slot: 0 } },
+		{ type: "fight", move: 0, target: { side: 0, slot: 0 } },
+	]);
+
+	let finishEvent = readEvent(session.next());
+
+	expect(finishEvent).toEqual({ type: "battle-finished", winnerSide: null });
+	expect(battle.state.phase).toBe("finished");
+	expect(battle.state.winnerSide).toBe(null);
+});
+
+test("a simultaneous elimination with reserves still requests replacements", () => {
+	let battle = new Battle({
+		gameData: GAME_DATA,
+		sides: [
+			{ teams: [[createLowHpPrimaryFixtureWithDestinyBond(), createBackupPrimaryFixture()]] },
+			{ teams: [[createLightFixtureWithTackle(), createBackupSecondaryFixture()]] },
+		],
+		random: () => 1,
+	});
+	let session = battle.start();
+
+	readEvent(session.next());
+	readEvent(session.next());
+	let request = readEvent(session.next());
+	if (request.type !== "request-turn-commands") throw new TypeError("Expected turn request.");
+	collectTurnEvents(session, battle, [
+		{ type: "fight", move: 0, target: { side: 1, slot: 0 } },
+		{ type: "fight", move: 0, target: { side: 0, slot: 0 } },
+	]);
+
+	let replacementEvent = readEvent(session.next());
+
+	expect(replacementEvent).toEqual({
+		type: "request-replacements",
+		requests: [
+			{ side: 0, slot: 0, team: 0, choices: [1] },
+			{ side: 1, slot: 0, team: 0, choices: [1] },
+		],
+	});
+	expect(battle.state.phase).toBe("awaiting-replacement");
+	expect(battle.state.winnerSide).toBe(null);
 });
 
 test("Fell Stinger sharply raises attack after a knockout", () => {

@@ -47,6 +47,7 @@ import { resolveMoveEvents } from "./systems/move-resolution";
 import {
 	applyReplacementCommands as applyReplacementCommandsSystem,
 	collectReplacementRequests,
+	getBattleOutcome,
 	getAvailableReplacementChoices as getAvailableReplacementChoicesSystem,
 	getWinnerSide,
 	resolveSwitchAction,
@@ -410,8 +411,9 @@ export class Battle {
 	*start(): BattleSession {
 		yield { type: "battle-started" };
 
-		if (this.state.winnerSide !== null) {
-			let event = this.finishBattle(this.state.winnerSide);
+		let openingOutcome = this.getResolvedBattleOutcome();
+		if (openingOutcome !== undefined) {
+			let event = this.finishBattle(openingOutcome);
 			yield event;
 			return event;
 		}
@@ -441,8 +443,9 @@ export class Battle {
 				this.reconcileSideState(1);
 				this.updateWinnerSide();
 
-				if (this.state.winnerSide !== null) {
-					let event = this.finishBattle(this.state.winnerSide);
+				let postReplacementOutcome = this.getResolvedBattleOutcome();
+				if (postReplacementOutcome !== undefined) {
+					let event = this.finishBattle(postReplacementOutcome);
 					yield event;
 					return event;
 				}
@@ -473,8 +476,9 @@ export class Battle {
 			}
 			yield { type: "turn-ended", turn: this.state.turn };
 
-			if (this.state.winnerSide !== null) {
-				let event = this.finishBattle(this.state.winnerSide);
+			let turnOutcome = this.getResolvedBattleOutcome();
+			if (turnOutcome !== undefined) {
+				let event = this.finishBattle(turnOutcome);
 				yield event;
 				return event;
 			}
@@ -574,6 +578,7 @@ export class Battle {
 			{
 				state: this.state,
 				gameData: this.gameData,
+				random: () => this.random(),
 				getActiveCombatant: (position) => this.getActiveCombatant(position),
 				canCombatantLeaveBattle: (position, combatant) =>
 					this.canCombatantLeaveBattle(position, combatant),
@@ -664,6 +669,10 @@ export class Battle {
 		this.state.winnerSide = getWinnerSide(this.state, (combatant) =>
 			this.isCombatantFainted(combatant),
 		);
+	}
+
+	private getResolvedBattleOutcome() {
+		return getBattleOutcome(this.state, (combatant) => this.isCombatantFainted(combatant));
 	}
 
 	private getAvailableReplacementChoices(sideIndex: number, teamIndex: number): number[] {
@@ -1926,7 +1935,7 @@ export class Battle {
 		);
 	}
 
-	private finishBattle(winnerSide: number): BattleEvent.BattleFinishedEvent {
+	private finishBattle(winnerSide: number | null): BattleEvent.BattleFinishedEvent {
 		this.state.winnerSide = winnerSide;
 		this.state.phase = "finished";
 		return { type: "battle-finished", winnerSide };

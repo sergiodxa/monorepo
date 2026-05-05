@@ -40,9 +40,9 @@
 
 ## Battle Spec Parity
 
-- [ ] Implement PP legality, PP spending-on-commit, and the fallback move flow when no regular move can be selected.
-- [ ] Replace the current equal-speed tie breaker with deterministic RNG-based action ordering that matches the battle spec.
-- [ ] Distinguish in battle result resolution between an unfinished battle and a simultaneous-elimination draw, and emit the correct finished event for draw outcomes.
+- [x] Implement PP legality, PP spending-on-commit, and the fallback move flow when no regular move can be selected.
+- [x] Replace the current equal-speed tie breaker with deterministic RNG-based action ordering that matches the battle spec.
+- [x] Distinguish in battle result resolution between an unfinished battle and a simultaneous-elimination draw, and emit the correct finished event for draw outcomes.
 - [ ] Add full start-of-turn major-status handling, including sleep turn tracking, wake-up rules, freeze thaw checks, thaw-on-use rules, and paralysis action loss.
 - [ ] Expand major-status application legality to cover type immunities, terrain prevention, and other battle-state restrictions defined in `docs/battle.md`.
 - [ ] Implement toxic-style poison tracking and escalating residual damage when the applied poison variant requires it.

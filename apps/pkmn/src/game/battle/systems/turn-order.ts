@@ -16,6 +16,9 @@
 import type { GameData } from "~/game/data/game-data";
 import type { Move } from "~/game/data/move";
 
+import { DamageClass } from "~/game/data/move";
+import { Type } from "~/game/data/type";
+
 import type {
 	BattleActiveSlotState,
 	BattlePosition,
@@ -24,6 +27,19 @@ import type {
 	TurnCommand,
 } from "../battle";
 import type { CombatantState } from "../combatant-state";
+
+const MOVE_SLOTS = [0, 1, 2, 3] as const;
+
+const FALLBACK_MOVE_ID = "fallback";
+
+const FALLBACK_MOVE: Move = {
+	type: Type.NORMAL,
+	damageClass: DamageClass.Physical,
+	power: 50,
+	accuracy: 0,
+	pp: 0,
+	effect: { kind: "none" },
+};
 
 /** Captures one validated command with its resolved move and ordering data. */
 export interface TurnAction {
@@ -41,6 +57,7 @@ export interface TurnAction {
 export interface TurnOrderingContext {
 	state: BattleState;
 	gameData: GameData;
+	random(): number;
 	getActiveCombatant(position: BattlePosition): BattleActiveSlotState | null;
 	canCombatantLeaveBattle(position: BattlePosition, combatant: CombatantState): boolean;
 	canSwitchCombatant(
@@ -62,7 +79,7 @@ export function getTurnActions(
 		throw new RangeError("Turn command count must match the number of requested active slots.");
 	}
 
-	let actions: TurnAction[] = [];
+	let actions: Array<TurnAction & { turnOrderRoll: number }> = [];
 
 	for (let [index, request] of requests.entries()) {
 		let command = commands[index];
@@ -75,6 +92,7 @@ export function getTurnActions(
 			if (context.canCombatantLeaveBattle(request, active.combatant) === false) continue;
 
 			actions.push({
+				turnOrderRoll: context.random(),
 				user: active.combatant,
 				userPosition: request,
 				command,
@@ -91,6 +109,7 @@ export function getTurnActions(
 			if (context.canSwitchCombatant(request, active, command.creature) === false) continue;
 
 			actions.push({
+				turnOrderRoll: context.random(),
 				user: active.combatant,
 				userPosition: request,
 				command,
@@ -105,17 +124,52 @@ export function getTurnActions(
 
 		if (command.type !== "fight") continue;
 
+		let chargingMoveId = active.combatant.volatile.chargingMoveId;
+		if (chargingMoveId !== null) {
+			let move = context.gameData.moves.get(chargingMoveId);
+			if (!move) throw new ReferenceError(`Move ${chargingMoveId} not found in game data.`);
+
+			actions.push({
+				turnOrderRoll: context.random(),
+				user: active.combatant,
+				userPosition: request,
+				command,
+				moveId: chargingMoveId,
+				move,
+				priority: context.getMovePriority(move),
+				speed: context.getCombatantSpeed(request, active.combatant),
+				isChargingRelease: true,
+			});
+			continue;
+		}
+
 		command = resolveForcedMoveSelection(active.combatant, command);
 
 		let moveId = active.combatant.creature.moveset[command.move];
-		if (!moveId) continue;
-		let chargingMoveId = active.combatant.volatile.chargingMoveId;
-		if (chargingMoveId !== null) moveId = chargingMoveId;
+		if (!moveId || canCommitMoveSlot(active.combatant, command.move) === false) {
+			if (hasCommittedRegularMove(active.combatant)) continue;
+
+			actions.push({
+				turnOrderRoll: context.random(),
+				user: active.combatant,
+				userPosition: request,
+				command,
+				moveId: FALLBACK_MOVE_ID,
+				move: FALLBACK_MOVE,
+				priority: context.getMovePriority(FALLBACK_MOVE),
+				speed: context.getCombatantSpeed(request, active.combatant),
+				isChargingRelease: false,
+			});
+			continue;
+		}
+
+		active.combatant.creature.status.pp[command.move] -= 1;
 
 		let move = context.gameData.moves.get(moveId);
 		if (!move) throw new ReferenceError(`Move ${moveId} not found in game data.`);
 
 		actions.push({
+			turnOrderRoll: context.random(),
 			user: active.combatant,
 			userPosition: request,
 			command,
@@ -123,7 +177,7 @@ export function getTurnActions(
 			move,
 			priority: context.getMovePriority(move),
 			speed: context.getCombatantSpeed(request, active.combatant),
-			isChargingRelease: chargingMoveId !== null,
+			isChargingRelease: false,
 		});
 	}
 
@@ -132,6 +186,9 @@ export function getTurnActions(
 		if (left.speed !== right.speed) {
 			if (context.state.field.trickRoomTurns > 0) return left.speed - right.speed;
 			return right.speed - left.speed;
+		}
+		if (left.turnOrderRoll !== right.turnOrderRoll) {
+			return right.turnOrderRoll - left.turnOrderRoll;
 		}
 		if (left.userPosition.side !== right.userPosition.side) {
 			return left.userPosition.side - right.userPosition.side;
@@ -163,4 +220,18 @@ function resolveForcedMoveSelection(
 	}
 
 	return command;
+}
+
+function canCommitMoveSlot(combatant: CombatantState, moveSlot: 0 | 1 | 2 | 3): boolean {
+	return (
+		combatant.creature.moveset[moveSlot] !== null && combatant.creature.status.pp[moveSlot] > 0
+	);
+}
+
+function hasCommittedRegularMove(combatant: CombatantState): boolean {
+	for (let moveSlot of MOVE_SLOTS) {
+		if (canCommitMoveSlot(combatant, moveSlot)) return true;
+	}
+
+	return false;
 }
