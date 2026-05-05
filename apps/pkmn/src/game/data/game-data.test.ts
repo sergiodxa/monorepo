@@ -45,7 +45,7 @@ describe(GameData.create, () => {
 					evolutions: [],
 					learnset: [{ level: 1, moveId: "TACKLE" }],
 					gender: { [Gender.Male]: 87.5, [Gender.Female]: 12.5 },
-					eggGroup: EggGroup.Indeterminate,
+					eggGroup: [EggGroup.Indeterminate],
 				},
 			},
 			moves: {
@@ -158,7 +158,7 @@ describe(GameData.create, () => {
 					evolutions: [],
 					learnset: [{ level: 1, moveId: "MISSING_MOVE" }],
 					gender: { [Gender.Male]: 87.5, [Gender.Female]: 12.5 },
-					eggGroup: EggGroup.Indeterminate,
+					eggGroup: [EggGroup.Indeterminate],
 				},
 			},
 			moves: {},

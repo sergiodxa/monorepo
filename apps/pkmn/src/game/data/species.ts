@@ -56,6 +56,9 @@ export enum EggGroup {
 	NoEggs = "noEggs",
 }
 
+/** One or two breeding compatibility groups assigned to a species. */
+export type EggGroups = [EggGroup] | [EggGroup, EggGroup];
+
 /** Physical dimensions used by size-based battle mechanics. */
 export interface Size {
 	/** Weight in kilograms. */
@@ -86,7 +89,7 @@ export interface Species {
 	/** Genders a creature can be, if any */
 	gender: Gender.Genderless | { [K in Gender.Male | Gender.Female]?: number };
 	/** Breeding compatibility group for this creature. */
-	eggGroup: EggGroup;
+	eggGroup: EggGroups;
 }
 
 export function isSpeciesId(value: unknown): value is SpeciesId {

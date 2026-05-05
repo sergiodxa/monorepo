@@ -82,7 +82,7 @@ function createSpecies(template: SpeciesTemplate): Species {
 		size: template.size ?? { weight: 100, height: 1 },
 		types: template.types,
 		gender: template.gender ?? GENDER_DISTRIBUTIONS.EVEN,
-		eggGroup: template.eggGroup ?? EggGroup.Indeterminate,
+		eggGroup: template.eggGroup ?? [EggGroup.Indeterminate],
 		baseExperience: template.baseExperience ?? 100,
 		catchRate: template.catchRate ?? 45,
 		growthRate: template.growthRate ?? GrowthRate.MediumFast,

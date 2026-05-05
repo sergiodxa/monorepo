@@ -139,7 +139,7 @@ function createSpecies(growthRate: GrowthRate): Species {
 		evolutions: [],
 		learnset: [],
 		gender: Gender.Genderless,
-		eggGroup: EggGroup.Indeterminate,
+		eggGroup: [EggGroup.Indeterminate],
 	};
 }
 
