@@ -1,11 +1,27 @@
-import type { Evolution } from "../domain/evolution";
-import type { Species, SpeciesId } from "../domain/species";
+/**
+ * Authored species content for the `pkmn` app's content layer.
+ *
+ * This module defines the species roster consumed by the game domain, including
+ * shared authoring helpers, default normalization rules, and the final indexed
+ * records used at runtime. It acts as the bridge between hand-written creature
+ * data and the engine-facing `Species` structures expected elsewhere in the app.
+ *
+ * Because this is a content file, it also serves as the canonical place to
+ * capture species-specific details such as typings, stats, learnsets, growth
+ * rules, and evolution chains in a format that stays readable for ongoing
+ * editorial and gameplay balancing work.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+import type { Evolution } from "~/game/data/evolution";
+import type { Species, SpeciesId } from "~/game/data/species";
 
-import { EvolutionMethod } from "../domain/evolution";
-import { GrowthRate } from "../domain/growth-rate";
-import { EggGroup, Gender } from "../domain/species";
-import { Stat } from "../domain/stat";
-import { Type } from "../domain/type";
+import { EvolutionMethod } from "~/game/data/evolution";
+import { GrowthRate } from "~/game/data/growth-rate";
+import { EggGroup, Gender } from "~/game/data/species";
+import { Stat } from "~/game/data/stat";
+import { Type } from "~/game/data/type";
 
 interface SpeciesTemplate {
 	id: SpeciesId;

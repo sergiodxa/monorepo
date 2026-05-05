@@ -1,7 +1,7 @@
 {
 	"extends": "../../tsconfig.json",
 	"include": ["src/**/*", "scripts/**/*"],
-	"exclude": ["src/domain/idea.ts"],
+	"exclude": ["src/game/data/idea.ts"],
 	"compilerOptions": {
 		"noEmit": true,
 		"ignoreDeprecations": "6.0",

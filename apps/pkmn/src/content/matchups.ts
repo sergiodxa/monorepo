@@ -1,8 +1,16 @@
-import type { Matchup } from "../domain/type";
+/**
+ * Content-layer matchup data for elemental type interactions used by the app.
+ *
+ * This module centralizes the authored effectiveness chart that describes how each attacking type performs against every defending type. It serves as the canonical source for matchup content so game logic can consume a stable, explicit matrix without embedding franchise-specific balance rules in the engine layer.
+ *
+ * By keeping this table in the content layer, the rest of the system can remain mechanics-driven while still rendering accurate matchup guidance, calculations, and educational UI based on curated content values.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+import type { Matchup } from "~/game/data/type";
 
-import { Effectiveness } from "../domain/type";
-
-import { Type } from "./types";
+import { Effectiveness, Type } from "~/game/data/type";
 
 export const TYPE_MATCHUPS = {
 	[Type.NORMAL]: {

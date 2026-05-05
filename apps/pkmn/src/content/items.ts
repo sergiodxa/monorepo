@@ -1,8 +1,18 @@
-import type { Item } from "../domain/item";
+/**
+ * Item content definitions for the PKMN content layer.
+ *
+ * This module centralizes the canonical item catalog used by the game content system, including battle items, capture tools, recovery items, and other inventory data. It provides the structured values that connect authored item behavior, pricing, categories, and special effects to the domain types consumed by the engine.
+ *
+ * As a content-layer source of truth, this file focuses on describing item data rather than implementing mechanics. The engine and domain layers can read from this module to resolve how items should appear, what they cost, and which content-specific rules or notes apply during gameplay.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+import type { Item } from "~/game/data/item";
 
-import { ItemAttribute, ItemCategory } from "../domain/item";
-import { Stat } from "../domain/stat";
-import { State } from "../engine/creature";
+import { ItemAttribute, ItemCategory } from "~/game/data/item";
+import { Stat } from "~/game/data/stat";
+import { State } from "~/game/data/status";
 
 export const ITEMS = {
 	POKEBALL: {

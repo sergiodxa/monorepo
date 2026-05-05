@@ -1,8 +1,23 @@
-import type { Move } from "../domain/move";
+/**
+ * Canonical move content for the game's content layer.
+ *
+ * This module defines the move catalog consumed by the battle and rules systems,
+ * pairing each move identifier with its authored data such as typing, damage
+ * class, power, accuracy, PP, and authored effect metadata.
+ *
+ * As a content-layer file, it acts as the source of truth for move behavior data
+ * without embedding engine logic here. The engine reads these records to resolve
+ * move execution consistently while keeping mechanics and authored content
+ * separated.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+import type { Move } from "~/game/data/move";
 
-import { DamageClass, StatusEffectType } from "../domain/move";
-import { Stat } from "../domain/stat";
-import { Type } from "../domain/type";
+import { DamageClass, StatusEffectType } from "~/game/data/move";
+import { Stat } from "~/game/data/stat";
+import { Type } from "~/game/data/type";
 
 export const MOVES = {
 	POUND: {
