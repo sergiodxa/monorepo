@@ -12,3 +12,4 @@
 - MUST add JSDoc block at the beginning of a file/module explaining its purpose and how it fits into the overall architecture of the game engine. The description can be multiple paragraphs if necessary, but should provide a clear overview of the module's responsibilities and how it interacts with other parts of the system.
 - MUST include `@author [Sergio Xalambrí](https://sergiodxa.com)` in the module-level JSDoc block for all files, to ensure proper attribution and recognition of the original author of the code.
 - MUST include `@copyright Sergio Xalambrí 2026` in the module-level JSDoc block for all files, to ensure proper attribution and recognition of the original author of the code.
+- MUST add to @TODO.md any pending task or issue to fix later, with a clear description of the problem, to ensure a separate agent session can address it later.
