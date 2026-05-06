@@ -7,11 +7,13 @@ import { $ } from "bun";
 let REMIX_TARBALL_URL = "https://api.github.com/repos/remix-run/remix/tarball/main";
 let ROOT_DIR = resolve(import.meta.dir, "..");
 let VENDOR_DIR = join(ROOT_DIR, "docs", "vendor");
+let SKILLS_DIR = join(ROOT_DIR, ".agents", "skills");
 let TEMP_DIR = join(tmpdir(), "sergiodxa-remix-vendor");
 let TAR_PATH = join(TEMP_DIR, "remix-main.tar.gz");
 let EXTRACT_DIR = join(TEMP_DIR, "extract");
 let REMIX_SCOPE_DIR = join(VENDOR_DIR, "@remix-run");
 let REMIX_PACKAGE_DIR = join(VENDOR_DIR, "remix");
+let REMIX_SKILL_DIR = join(SKILLS_DIR, "remix");
 
 interface PackageManifest {
 	name: string;
@@ -34,6 +36,8 @@ async function main() {
 	for (let packageDir of packageDirs) {
 		await copyPackageDocs(packageDir);
 	}
+
+	await copyRemixSkill(repoRoot);
 }
 
 /**
@@ -107,6 +111,22 @@ async function resetVendorDirs() {
 	await removeLegacyRemixPackageDirs();
 	await mkdir(VENDOR_DIR, { recursive: true });
 	await mkdir(REMIX_SCOPE_DIR, { recursive: true });
+}
+
+/**
+ * Copies the Remix template skill into the local .agents/skills directory.
+ */
+async function copyRemixSkill(repoRoot: string) {
+	let sourceDir = join(repoRoot, "template", ".agents", "skills", "remix");
+	let hasSkill = await isDirectory(sourceDir);
+
+	if (!hasSkill) return;
+
+	await mkdir(SKILLS_DIR, { recursive: true });
+	await rm(REMIX_SKILL_DIR, { recursive: true, force: true });
+	await cp(sourceDir, REMIX_SKILL_DIR, { recursive: true });
+
+	process.stdout.write(`Updated ${relativeSkillPath(REMIX_SKILL_DIR)}\n`);
 }
 
 /**
@@ -186,6 +206,14 @@ async function isDirectory(filePath: string) {
  */
 function relativeVendorPath(filePath: string) {
 	let relativePath = filePath.slice(dirname(VENDOR_DIR).length + 1);
+	return relativePath || basename(filePath);
+}
+
+/**
+ * Formats a skill path for script output.
+ */
+function relativeSkillPath(filePath: string) {
+	let relativePath = filePath.slice(dirname(SKILLS_DIR).length + 1);
 	return relativePath || basename(filePath);
 }
 
