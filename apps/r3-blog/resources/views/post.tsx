@@ -1,5 +1,5 @@
 import { MarkdownView } from "@pkg/markdown/client/remix";
-import { Frame, css } from "remix/component";
+import { Frame, css } from "remix/ui";
 
 import type { PostViewModel } from "~/app/http/view-models/post";
 

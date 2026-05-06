@@ -1,24 +1,23 @@
 import type { Database } from "remix/data-table";
 
-import * as s from "remix/data-schema";
-import { createTable } from "remix/data-table";
+import { column as c, table } from "remix/data-table";
 
 import { RecordNotFoundError } from "~/lib/db-errors";
 
 export default class Connection {
-	static table = createTable({
+	static table = table({
 		name: "connections",
 		primaryKey: ["id"],
 		timestamps: true,
 		columns: {
-			id: s.string(),
-			subject_id: s.string(),
-			provider: s.string(),
-			provider_user_id: s.string(),
-			access_token: s.nullable(s.string()),
-			refresh_token: s.nullable(s.string()),
-			created_at: s.string(),
-			updated_at: s.string(),
+			id: c.text(),
+			subject_id: c.text(),
+			provider: c.text(),
+			provider_user_id: c.text(),
+			access_token: c.text().nullable(),
+			refresh_token: c.text().nullable(),
+			created_at: c.text(),
+			updated_at: c.text(),
 		},
 	});
 

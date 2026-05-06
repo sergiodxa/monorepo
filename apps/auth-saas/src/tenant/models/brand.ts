@@ -1,7 +1,6 @@
 import type { Database } from "remix/data-table";
 
-import * as s from "remix/data-schema";
-import { createTable } from "remix/data-table";
+import { column as c, table } from "remix/data-table";
 
 import { sanitizeCss } from "~/lib/css-sanitizer";
 
@@ -17,18 +16,18 @@ export default class Brand {
 	};
 
 	/** Database table schema for branding. */
-	static table = createTable({
+	static table = table({
 		name: "branding",
 		primaryKey: ["id"],
 		timestamps: true,
 		columns: {
-			id: s.defaulted(s.string(), "default"),
-			logo_url: s.nullable(s.string()),
-			primary_color: s.nullable(s.string()),
-			background_color: s.nullable(s.string()),
-			custom_css: s.nullable(s.string()),
-			created_at: s.string(),
-			updated_at: s.string(),
+			id: c.text().default("default"),
+			logo_url: c.text().nullable(),
+			primary_color: c.text().nullable(),
+			background_color: c.text().nullable(),
+			custom_css: c.text().nullable(),
+			created_at: c.text(),
+			updated_at: c.text(),
 		},
 	});
 

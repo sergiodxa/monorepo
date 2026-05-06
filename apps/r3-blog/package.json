@@ -22,7 +22,7 @@
 		"@pkg/sitemap": "workspace:*",
 		"@pkg/validate": "workspace:*",
 		"inflected": "^2.1.0",
-		"remix": "^3.0.0-alpha.4"
+		"remix": "next"
 	},
 	"devDependencies": {
 		"@cloudflare/vite-plugin": "^1.31.2",

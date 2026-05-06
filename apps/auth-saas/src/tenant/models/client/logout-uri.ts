@@ -1,7 +1,6 @@
 import type { Database } from "remix/data-table";
 
-import * as s from "remix/data-schema";
-import { createTable } from "remix/data-table";
+import { column as c, table } from "remix/data-table";
 
 import { RecordNotFoundError } from "~/lib/db-errors";
 import {
@@ -55,17 +54,17 @@ export default class LogoutUri {
 	}
 
 	/** Database table schema for logout URIs. */
-	static table = createTable({
+	static table = table({
 		name: "client_logout_uris",
 		primaryKey: ["id"],
 		columns: {
-			id: s.string(),
-			client_id: s.string(),
-			uri: s.string(),
-			type: s.enum_(["post_logout", "backchannel", "frontchannel"]),
-			session_required: s.defaulted(s.boolean(), false),
-			environment: s.nullable(s.string()),
-			created_at: s.string(),
+			id: c.text(),
+			client_id: c.text(),
+			uri: c.text(),
+			type: c.enum(["post_logout", "backchannel", "frontchannel"]),
+			session_required: c.boolean().default(false),
+			environment: c.text().nullable(),
+			created_at: c.text(),
 		},
 	});
 

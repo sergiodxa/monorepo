@@ -1,5 +1,5 @@
-/* @jsxImportSource remix/component */
-import { css } from "remix/component";
+/* @jsxImportSource remix/ui */
+import { css } from "remix/ui";
 
 /**
  * Groups Remix code fence types under the component namespace.

@@ -1,9 +1,9 @@
-import type { RemixNode } from "remix/component";
-import type { ResolveFrameContext } from "remix/component/server";
 import type { Router } from "remix/fetch-router";
+import type { RemixNode } from "remix/ui";
+import type { ResolveFrameContext } from "remix/ui/server";
 
 import { getContext } from "remix/async-context-middleware";
-import { renderToStream } from "remix/component/server";
+import { renderToStream } from "remix/ui/server";
 
 /**
  * Renders a Remix component tree to an HTML `Response` using the active request context.

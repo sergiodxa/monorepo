@@ -1,7 +1,6 @@
 import type { Database } from "remix/data-table";
 
-import * as s from "remix/data-schema";
-import { createTable } from "remix/data-table";
+import { column as c, table } from "remix/data-table";
 
 /**
  * Cache TTL for tenant meta values (1 minute in milliseconds).
@@ -25,12 +24,12 @@ export default class TenantMeta {
 	static #issuerCache: MetaCache | null = null;
 
 	/** Database table schema for tenant metadata. */
-	static table = createTable({
+	static table = table({
 		name: "tenant_meta",
 		primaryKey: ["key"],
 		columns: {
-			key: s.string(),
-			value: s.string(),
+			key: c.text(),
+			value: c.text(),
 		},
 	});
 

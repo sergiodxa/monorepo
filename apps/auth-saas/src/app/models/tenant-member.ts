@@ -1,7 +1,6 @@
 import type { Database } from "remix/data-table";
 
-import * as s from "remix/data-schema";
-import { createTable } from "remix/data-table";
+import { column as c, table } from "remix/data-table";
 
 import { RecordNotFoundError } from "~/lib/db-errors";
 
@@ -14,17 +13,17 @@ export type TenantMemberRole = "admin" | "viewer";
  * Owners are stored in the tenants table, not here.
  */
 export default class TenantMember {
-	static table = createTable({
+	static table = table({
 		name: "tenant_members",
 		primaryKey: ["id"],
 		timestamps: true,
 		columns: {
-			id: s.string(),
-			tenant_id: s.string(),
-			subject_id: s.string(),
-			role: s.enum_(["admin", "viewer"]),
-			created_at: s.string(),
-			updated_at: s.string(),
+			id: c.text(),
+			tenant_id: c.text(),
+			subject_id: c.text(),
+			role: c.enum(["admin", "viewer"]),
+			created_at: c.text(),
+			updated_at: c.text(),
 		},
 	});
 

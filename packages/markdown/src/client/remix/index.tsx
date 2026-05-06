@@ -1,8 +1,8 @@
-/* @jsxImportSource remix/component */
-import type { RemixNode } from "remix/component";
+/* @jsxImportSource remix/ui */
+import type { RemixNode } from "remix/ui";
 
 import { cn } from "@pkg/cn";
-import { css } from "remix/component";
+import { css } from "remix/ui";
 
 import type { Markdown } from "../../server/index.js";
 

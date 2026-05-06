@@ -1,8 +1,7 @@
 import type { Database } from "remix/data-table";
 
 import { JWK } from "@edgefirst-dev/jwt";
-import * as s from "remix/data-schema";
-import { createTable } from "remix/data-table";
+import { column as c, table } from "remix/data-table";
 
 import { RecordNotFoundError } from "~/lib/db-errors";
 
@@ -28,17 +27,17 @@ export default class SigningKey {
 	static #cache: SigningKeyCache | null = null;
 
 	/** Database table schema for signing keys. */
-	static table = createTable({
+	static table = table({
 		name: "signing_keys",
 		primaryKey: ["id"],
 		columns: {
-			id: s.string(),
-			private_key: s.string(),
-			public_key: s.string(),
-			algorithm: s.defaulted(s.string(), "ES256"),
-			is_current: s.defaulted(s.boolean(), true),
-			created_at: s.string(),
-			expires_at: s.nullable(s.string()),
+			id: c.text(),
+			private_key: c.text(),
+			public_key: c.text(),
+			algorithm: c.text().default("ES256"),
+			is_current: c.boolean().default(true),
+			created_at: c.text(),
+			expires_at: c.text().nullable(),
 		},
 	});
 

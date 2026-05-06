@@ -1,7 +1,6 @@
 import type { Database } from "remix/data-table";
 
-import * as s from "remix/data-schema";
-import { createTable } from "remix/data-table";
+import { column as c, table } from "remix/data-table";
 
 import { RecordNotFoundError } from "~/lib/db-errors";
 
@@ -22,19 +21,19 @@ export interface TenantWithRole {
 }
 
 export default class Tenant {
-	static table = createTable({
+	static table = table({
 		name: "tenants",
 		primaryKey: ["id"],
 		timestamps: true,
 		columns: {
-			id: s.string(),
-			name: s.string(),
-			slug: s.string(),
-			owner_subject_id: s.string(),
-			region: s.enum_(["wnam", "enam", "sam", "weur", "eeur", "apac", "oc", "afr", "me"]),
-			status: s.enum_(["active", "suspended", "deleted"]),
-			created_at: s.string(),
-			updated_at: s.string(),
+			id: c.text(),
+			name: c.text(),
+			slug: c.text(),
+			owner_subject_id: c.text(),
+			region: c.enum(["wnam", "enam", "sam", "weur", "eeur", "apac", "oc", "afr", "me"]),
+			status: c.enum(["active", "suspended", "deleted"]),
+			created_at: c.text(),
+			updated_at: c.text(),
 		},
 	});
 

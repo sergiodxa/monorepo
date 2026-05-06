@@ -1,8 +1,7 @@
 import type { Database } from "remix/data-table";
 
 import bcrypt from "bcryptjs";
-import * as s from "remix/data-schema";
-import { createTable } from "remix/data-table";
+import { column as c, table } from "remix/data-table";
 
 import { RecordNotFoundError } from "~/lib/db-errors";
 import { toIsoString, toIsoStringOptional } from "~/lib/timestamp";
@@ -25,17 +24,17 @@ export default class Secret {
 	};
 
 	/** Database table schema for client secrets. */
-	static table = createTable({
+	static table = table({
 		name: "client_secrets",
 		primaryKey: ["id"],
 		columns: {
-			id: s.string(),
-			client_id: s.string(),
-			secret_hash: s.string(),
-			name: s.nullable(s.string()),
-			last_used_at: s.nullable(s.string()),
-			expires_at: s.nullable(s.string()),
-			created_at: s.string(),
+			id: c.text(),
+			client_id: c.text(),
+			secret_hash: c.text(),
+			name: c.text().nullable(),
+			last_used_at: c.text().nullable(),
+			expires_at: c.text().nullable(),
+			created_at: c.text(),
 		},
 	});
 

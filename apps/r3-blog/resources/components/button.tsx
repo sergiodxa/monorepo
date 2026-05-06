@@ -1,6 +1,6 @@
-import type { Props } from "remix/component";
+import type { Props } from "remix/ui";
 
-import { css } from "remix/component";
+import { css } from "remix/ui";
 
 /**
  * Creates a styled button component that applies the default accent UI tokens

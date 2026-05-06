@@ -1,7 +1,7 @@
 import type { Database } from "remix/data-table";
 
 import * as s from "remix/data-schema";
-import { createTable } from "remix/data-table";
+import { column as c, table } from "remix/data-table";
 
 import { RecordNotFoundError } from "~/lib/db-errors";
 
@@ -13,18 +13,18 @@ const ScopesSchema = s.array(
 );
 
 export default class Resource {
-	static table = createTable({
+	static table = table({
 		name: "resources",
 		primaryKey: ["id"],
 		timestamps: true,
 		columns: {
-			id: s.string(),
-			identifier: s.string(),
-			name: s.string(),
-			description: s.nullable(s.string()),
-			scopes: s.string(),
-			created_at: s.string(),
-			updated_at: s.string(),
+			id: c.text(),
+			identifier: c.text(),
+			name: c.text(),
+			description: c.text().nullable(),
+			scopes: c.text(),
+			created_at: c.text(),
+			updated_at: c.text(),
 		},
 	});
 

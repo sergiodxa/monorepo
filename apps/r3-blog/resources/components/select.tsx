@@ -1,6 +1,6 @@
-import type { Props } from "remix/component";
+import type { Props } from "remix/ui";
 
-import { css } from "remix/component";
+import { css } from "remix/ui";
 
 /**
  * Creates a styled `<select>` component that applies the app's neutral form-control

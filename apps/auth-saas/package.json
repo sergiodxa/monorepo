@@ -28,10 +28,9 @@
 		"@pkg/ui": "workspace:*",
 		"@pkg/validate": "workspace:*",
 		"@polar-sh/sdk": "^0.47.0",
-		"@remix-run/component": "^0.6.0",
 		"@simplewebauthn/server": "^13.3.0",
 		"bcryptjs": "^3.0.3",
-		"remix": "3.0.0-alpha.3",
+		"remix": "next",
 		"resend": "^6.10.0",
 		"zod": "^4.3.6"
 	},

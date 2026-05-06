@@ -1,4 +1,4 @@
-import { css } from "remix/component";
+import { css } from "remix/ui";
 
 import { Button } from "~/resources/components/button";
 import { Input } from "~/resources/components/input";

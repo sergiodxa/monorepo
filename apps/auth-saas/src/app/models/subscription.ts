@@ -1,7 +1,6 @@
 import type { Database } from "remix/data-table";
 
-import * as s from "remix/data-schema";
-import { createTable } from "remix/data-table";
+import { column as c, table } from "remix/data-table";
 
 import PolarService, { PolarError } from "~/app/services/polar";
 
@@ -15,20 +14,20 @@ export default class Subscription {
 		}
 	};
 
-	static table = createTable({
+	static table = table({
 		name: "subscriptions",
 		primaryKey: ["id"],
 		timestamps: true,
 		columns: {
-			id: s.string(),
-			tenant_id: s.string(),
-			polar_customer_id: s.nullable(s.string()),
-			polar_subscription_id: s.nullable(s.string()),
-			status: s.enum_(["active", "canceled", "past_due", "unpaid", "incomplete", "trialing"]),
-			current_period_start: s.nullable(s.string()),
-			current_period_end: s.nullable(s.string()),
-			created_at: s.string(),
-			updated_at: s.string(),
+			id: c.text(),
+			tenant_id: c.text(),
+			polar_customer_id: c.text().nullable(),
+			polar_subscription_id: c.text().nullable(),
+			status: c.enum(["active", "canceled", "past_due", "unpaid", "incomplete", "trialing"]),
+			current_period_start: c.text().nullable(),
+			current_period_end: c.text().nullable(),
+			created_at: c.text(),
+			updated_at: c.text(),
 		},
 	});
 

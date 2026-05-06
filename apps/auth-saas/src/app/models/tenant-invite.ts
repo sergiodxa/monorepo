@@ -1,7 +1,6 @@
 import type { Database } from "remix/data-table";
 
-import * as s from "remix/data-schema";
-import { createTable } from "remix/data-table";
+import { column as c, table } from "remix/data-table";
 
 import { RecordNotFoundError } from "~/lib/db-errors";
 
@@ -12,19 +11,19 @@ import type { TenantMemberRole } from "./tenant-member";
  * Invites are sent by email and can be accepted by the recipient.
  */
 export default class TenantInvite {
-	static table = createTable({
+	static table = table({
 		name: "tenant_invites",
 		primaryKey: ["id"],
 		timestamps: true,
 		columns: {
-			id: s.string(),
-			tenant_id: s.string(),
-			sender_subject_id: s.string(),
-			email: s.string(),
-			role: s.enum_(["admin", "viewer"]),
-			accepted_at: s.nullable(s.string()),
-			created_at: s.string(),
-			updated_at: s.string(),
+			id: c.text(),
+			tenant_id: c.text(),
+			sender_subject_id: c.text(),
+			email: c.text(),
+			role: c.enum(["admin", "viewer"]),
+			accepted_at: c.text().nullable(),
+			created_at: c.text(),
+			updated_at: c.text(),
 		},
 	});
 

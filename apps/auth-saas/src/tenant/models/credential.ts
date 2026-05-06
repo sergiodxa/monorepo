@@ -1,25 +1,24 @@
 import type { Database } from "remix/data-table";
 
 import bcrypt from "bcryptjs";
-import * as s from "remix/data-schema";
-import { createTable } from "remix/data-table";
+import { column as c, table } from "remix/data-table";
 
 export default class Credential {
 	static InvalidCredentialError = class extends Error {
 		override name = "InvalidCredentialError";
 	};
 
-	static table = createTable({
+	static table = table({
 		name: "credentials",
 		primaryKey: ["id"],
 		timestamps: true,
 		columns: {
-			id: s.string(),
-			subject_id: s.string(),
-			password_hash: s.string(),
-			verified_at: s.nullable(s.string()),
-			created_at: s.string(),
-			updated_at: s.string(),
+			id: c.text(),
+			subject_id: c.text(),
+			password_hash: c.text(),
+			verified_at: c.text().nullable(),
+			created_at: c.text(),
+			updated_at: c.text(),
 		},
 	});
 

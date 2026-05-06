@@ -1,10 +1,10 @@
-/* @jsxImportSource remix/component */
+/* @jsxImportSource remix/ui */
 import { describe, expect, test } from "bun:test";
 
 import { asyncContext } from "remix/async-context-middleware";
-import { Frame } from "remix/component";
 import { createRouter } from "remix/fetch-router";
 import { get, route } from "remix/fetch-router/routes";
+import { Frame } from "remix/ui";
 
 import view from "./view";
 

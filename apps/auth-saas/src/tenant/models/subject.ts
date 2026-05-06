@@ -1,7 +1,6 @@
 import type { Database } from "remix/data-table";
 
-import * as s from "remix/data-schema";
-import { createTable } from "remix/data-table";
+import { column as c, table } from "remix/data-table";
 
 import { RecordNotFoundError } from "~/lib/db-errors";
 
@@ -24,20 +23,20 @@ export default class Subject {
 	};
 
 	/** Database table schema for subjects. */
-	static table = createTable({
+	static table = table({
 		name: "subjects",
 		primaryKey: ["id"],
 		timestamps: true,
 		columns: {
-			id: s.string(),
-			email: s.string(),
-			email_verified_at: s.nullable(s.string()),
-			display_name: s.nullable(s.string()),
-			username: s.string(),
-			avatar_url: s.nullable(s.string()),
-			role: s.defaulted(s.enum_(["admin", "user"]), "user"),
-			created_at: s.string(),
-			updated_at: s.string(),
+			id: c.text(),
+			email: c.text(),
+			email_verified_at: c.text().nullable(),
+			display_name: c.text().nullable(),
+			username: c.text(),
+			avatar_url: c.text().nullable(),
+			role: c.enum(["admin", "user"]).default("user"),
+			created_at: c.text(),
+			updated_at: c.text(),
 		},
 	});
 

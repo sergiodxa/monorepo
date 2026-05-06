@@ -3,7 +3,7 @@
 	"include": ["src/**/*", "worker-configuration.d.ts", "vite.config.ts"],
 	"compilerOptions": {
 		"jsx": "react-jsx",
-		"jsxImportSource": "@remix-run/component",
+		"jsxImportSource": "remix/ui",
 		"noEmit": true,
 		"types": ["@total-typescript/ts-reset", "vite/client", "@types/bun"],
 		"baseUrl": ".",

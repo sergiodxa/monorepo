@@ -1,8 +1,8 @@
-/* @jsxImportSource remix/component */
+/* @jsxImportSource remix/ui */
 import type { RenderableTreeNode, Tag } from "@markdoc/markdoc";
-import type { RemixNode } from "remix/component";
+import type { RemixNode } from "remix/ui";
 
-import { createElement, css } from "remix/component";
+import { createElement, css } from "remix/ui";
 
 import type { Markdown } from "../../server/index.js";
 
@@ -55,6 +55,20 @@ function getTagChildren(node: Tag): Array<RenderableTreeNode> {
 	let children = (node as { children?: Array<RenderableTreeNode> }).children;
 	if (!children) return [];
 	return children;
+}
+
+/**
+ * Rewrites deprecated Remix UI `css` attributes into `mix` entries.
+ */
+function getRemixProps(attrs: Record<string, unknown>): Record<string, unknown> {
+	if (!("css" in attrs)) return attrs;
+
+	let { css: cssValue, mix, ...rest } = attrs;
+	let nextMix = Array.isArray(mix) ? [...mix] : typeof mix === "undefined" ? [] : [mix];
+
+	nextMix.push(css(cssValue));
+
+	return { ...rest, mix: nextMix };
 }
 
 /**
@@ -242,7 +256,7 @@ function renderChild(
 
 	return createElement(
 		tagName,
-		attrs,
+		getRemixProps(attrs),
 		...getTagChildren(node).map((item) => renderChild(item, components)),
 	);
 }

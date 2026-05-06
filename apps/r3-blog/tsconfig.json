@@ -15,7 +15,7 @@
 		"ignoreDeprecations": "6.0",
 		"allowImportingTsExtensions": true,
 		"jsx": "react-jsx",
-		"jsxImportSource": "remix/component",
+		"jsxImportSource": "remix/ui",
 		"types": ["@total-typescript/ts-reset", "vite/client", "@types/bun"],
 		"baseUrl": ".",
 		"rootDirs": ["."],

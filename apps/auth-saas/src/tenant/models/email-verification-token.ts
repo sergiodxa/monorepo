@@ -1,7 +1,6 @@
 import type { Database } from "remix/data-table";
 
-import * as s from "remix/data-schema";
-import { createTable } from "remix/data-table";
+import { column as c, table } from "remix/data-table";
 
 /** Time-to-live for email verification tokens (24 hours in milliseconds). */
 const TOKEN_TTL = 24 * 60 * 60 * 1000;
@@ -22,15 +21,15 @@ export default class EmailVerificationToken {
 	};
 
 	/** Database table schema for email verification tokens. */
-	static table = createTable({
+	static table = table({
 		name: "email_verification_tokens",
 		primaryKey: ["id"],
 		columns: {
-			id: s.string(),
-			subject_id: s.string(),
-			token: s.string(),
-			expires_at: s.number(),
-			created_at: s.number(),
+			id: c.text(),
+			subject_id: c.text(),
+			token: c.text(),
+			expires_at: c.integer(),
+			created_at: c.integer(),
 		},
 	});
 

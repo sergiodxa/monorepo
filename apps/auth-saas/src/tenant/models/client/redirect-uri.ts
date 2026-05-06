@@ -1,7 +1,6 @@
 import type { Database } from "remix/data-table";
 
-import * as s from "remix/data-schema";
-import { createTable } from "remix/data-table";
+import { column as c, table } from "remix/data-table";
 
 import { RecordNotFoundError } from "~/lib/db-errors";
 import { InvalidUriError, UnsafeSchemeError, validateScheme } from "~/lib/uri-validation";
@@ -28,15 +27,15 @@ export default class RedirectUri {
 	};
 
 	/** Database table schema for redirect URIs. */
-	static table = createTable({
+	static table = table({
 		name: "client_redirect_uris",
 		primaryKey: ["id"],
 		columns: {
-			id: s.string(),
-			client_id: s.string(),
-			uri: s.string(),
-			environment: s.nullable(s.string()),
-			created_at: s.string(),
+			id: c.text(),
+			client_id: c.text(),
+			uri: c.text(),
+			environment: c.text().nullable(),
+			created_at: c.text(),
 		},
 	});
 

@@ -1,8 +1,9 @@
 import { ok } from "@pkg/http/response/html";
 import { isFailure } from "@pkg/result";
 import { validate } from "@pkg/validate";
-import { renderToString } from "remix/component/server";
 import * as s from "remix/data-schema";
+import { css } from "remix/ui";
+import { renderToString } from "remix/ui/server";
 
 import form from "~/lib/form";
 import { WebAuthnAuth } from "~/tenant/client/webauthn-auth";
@@ -273,17 +274,19 @@ function ErrorPage() {
 	return ({ message }: { message: string }) => (
 		<Layout>
 			<div
-				css={{
-					maxWidth: "400px",
-					margin: "2rem auto",
-					padding: "2rem",
-					backgroundColor: "#FEF2F2",
-					borderRadius: "0.5rem",
-					border: "1px solid #FECACA",
-				}}
+				mix={[
+					css({
+						maxWidth: "400px",
+						margin: "2rem auto",
+						padding: "2rem",
+						backgroundColor: "#FEF2F2",
+						borderRadius: "0.5rem",
+						border: "1px solid #FECACA",
+					}),
+				]}
 			>
-				<h1 css={{ color: "#DC2626", marginBottom: "1rem" }}>Error</h1>
-				<p css={{ color: "#991B1B" }}>{message}</p>
+				<h1 mix={[css({ color: "#DC2626", marginBottom: "1rem" })]}>Error</h1>
+				<p mix={[css({ color: "#991B1B" })]}>{message}</p>
 			</div>
 		</Layout>
 	);
@@ -308,42 +311,50 @@ function LoginForm() {
 	return (props: LoginFormProps) => (
 		<Layout>
 			<div
-				css={{
-					maxWidth: "400px",
-					margin: "2rem auto",
-					padding: "2rem",
-					backgroundColor: "white",
-					borderRadius: "0.5rem",
-					boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
-				}}
+				mix={[
+					css({
+						maxWidth: "400px",
+						margin: "2rem auto",
+						padding: "2rem",
+						backgroundColor: "white",
+						borderRadius: "0.5rem",
+						boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
+					}),
+				]}
 			>
-				<div css={{ textAlign: "center", marginBottom: "2rem" }}>
+				<div mix={[css({ textAlign: "center", marginBottom: "2rem" })]}>
 					{props.clientLogo && (
 						<img
 							src={props.clientLogo}
 							alt={props.clientName}
-							css={{
-								width: "64px",
-								height: "64px",
-								borderRadius: "0.5rem",
-								marginBottom: "1rem",
-							}}
+							mix={[
+								css({
+									width: "64px",
+									height: "64px",
+									borderRadius: "0.5rem",
+									marginBottom: "1rem",
+								}),
+							]}
 						/>
 					)}
-					<h1 css={{ fontSize: "1.5rem", fontWeight: "600" }}>Sign in to {props.clientName}</h1>
-					<p css={{ color: "#6B7280", marginTop: "0.5rem" }}>Enter your email to continue</p>
+					<h1 mix={[css({ fontSize: "1.5rem", fontWeight: "600" })]}>
+						Sign in to {props.clientName}
+					</h1>
+					<p mix={[css({ color: "#6B7280", marginTop: "0.5rem" })]}>Enter your email to continue</p>
 				</div>
 
 				{props.error && (
 					<div
-						css={{
-							padding: "0.75rem",
-							backgroundColor: "#FEF2F2",
-							borderRadius: "0.375rem",
-							marginBottom: "1rem",
-							color: "#DC2626",
-							fontSize: "0.875rem",
-						}}
+						mix={[
+							css({
+								padding: "0.75rem",
+								backgroundColor: "#FEF2F2",
+								borderRadius: "0.375rem",
+								marginBottom: "1rem",
+								color: "#DC2626",
+								fontSize: "0.875rem",
+							}),
+						]}
 					>
 						{props.error}
 					</div>
@@ -366,15 +377,17 @@ function LoginForm() {
 					)}
 					<input type="hidden" name="action" value="check_email" />
 
-					<div css={{ marginBottom: "1rem" }}>
+					<div mix={[css({ marginBottom: "1rem" })]}>
 						<label
 							htmlFor="email"
-							css={{
-								display: "block",
-								fontSize: "0.875rem",
-								fontWeight: "500",
-								marginBottom: "0.25rem",
-							}}
+							mix={[
+								css({
+									display: "block",
+									fontSize: "0.875rem",
+									fontWeight: "500",
+									marginBottom: "0.25rem",
+								}),
+							]}
 						>
 							Email address
 						</label>
@@ -385,37 +398,41 @@ function LoginForm() {
 							required
 							autoComplete="email"
 							defaultValue={props.loginHint}
-							css={{
-								width: "100%",
-								padding: "0.75rem",
-								border: "1px solid #D1D5DB",
-								borderRadius: "0.375rem",
-								fontSize: "1rem",
-								"&:focus": {
-									outline: "none",
-									borderColor: "#3B82F6",
-									boxShadow: "0 0 0 3px rgba(59, 130, 246, 0.1)",
-								},
-							}}
+							mix={[
+								css({
+									width: "100%",
+									padding: "0.75rem",
+									border: "1px solid #D1D5DB",
+									borderRadius: "0.375rem",
+									fontSize: "1rem",
+									"&:focus": {
+										outline: "none",
+										borderColor: "#3B82F6",
+										boxShadow: "0 0 0 3px rgba(59, 130, 246, 0.1)",
+									},
+								}),
+							]}
 						/>
 					</div>
 
 					<button
 						type="submit"
-						css={{
-							width: "100%",
-							padding: "0.75rem",
-							backgroundColor: "#3B82F6",
-							color: "white",
-							border: "none",
-							borderRadius: "0.375rem",
-							fontSize: "1rem",
-							fontWeight: "500",
-							cursor: "pointer",
-							"&:hover": {
-								backgroundColor: "#2563EB",
-							},
-						}}
+						mix={[
+							css({
+								width: "100%",
+								padding: "0.75rem",
+								backgroundColor: "#3B82F6",
+								color: "white",
+								border: "none",
+								borderRadius: "0.375rem",
+								fontSize: "1rem",
+								fontWeight: "500",
+								cursor: "pointer",
+								"&:hover": {
+									backgroundColor: "#2563EB",
+								},
+							}),
+						]}
 					>
 						Continue
 					</button>
@@ -443,17 +460,19 @@ function AuthenticateForm() {
 	return (props: AuthenticateFormProps) => (
 		<Layout>
 			<div
-				css={{
-					maxWidth: "400px",
-					margin: "2rem auto",
-					padding: "2rem",
-					backgroundColor: "white",
-					borderRadius: "0.5rem",
-					boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
-					textAlign: "center",
-				}}
+				mix={[
+					css({
+						maxWidth: "400px",
+						margin: "2rem auto",
+						padding: "2rem",
+						backgroundColor: "white",
+						borderRadius: "0.5rem",
+						boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
+						textAlign: "center",
+					}),
+				]}
 			>
-				<h1 css={{ fontSize: "1.5rem", fontWeight: "600", marginBottom: "1rem" }}>
+				<h1 mix={[css({ fontSize: "1.5rem", fontWeight: "600", marginBottom: "1rem" })]}>
 					Sign in to {props.clientName}
 				</h1>
 
@@ -473,7 +492,9 @@ function AuthenticateForm() {
 				/>
 
 				<noscript>
-					<p css={{ color: "#DC2626" }}>JavaScript is required for passkey authentication.</p>
+					<p mix={[css({ color: "#DC2626" })]}>
+						JavaScript is required for passkey authentication.
+					</p>
 				</noscript>
 			</div>
 		</Layout>
@@ -495,17 +516,19 @@ function RegisterForm() {
 	return (props: RegisterFormProps) => (
 		<Layout>
 			<div
-				css={{
-					maxWidth: "400px",
-					margin: "2rem auto",
-					padding: "2rem",
-					backgroundColor: "white",
-					borderRadius: "0.5rem",
-					boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
-					textAlign: "center",
-				}}
+				mix={[
+					css({
+						maxWidth: "400px",
+						margin: "2rem auto",
+						padding: "2rem",
+						backgroundColor: "white",
+						borderRadius: "0.5rem",
+						boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
+						textAlign: "center",
+					}),
+				]}
 			>
-				<h1 css={{ fontSize: "1.5rem", fontWeight: "600", marginBottom: "1rem" }}>
+				<h1 mix={[css({ fontSize: "1.5rem", fontWeight: "600", marginBottom: "1rem" })]}>
 					Create your account
 				</h1>
 
@@ -541,7 +564,7 @@ function RegisterForm() {
 				/>
 
 				<noscript>
-					<p css={{ color: "#DC2626" }}>JavaScript is required for passkey registration.</p>
+					<p mix={[css({ color: "#DC2626" })]}>JavaScript is required for passkey registration.</p>
 				</noscript>
 			</div>
 		</Layout>

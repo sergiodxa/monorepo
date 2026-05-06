@@ -4,7 +4,7 @@ This document defines app-specific rules for `apps/r3-blog`.
 
 ## Rules
 
-- MUST keep the app SSR-only using Remix Component rendering (`renderToString`) and HTML responses.
+- MUST keep the app SSR-only using `remix/ui/server` rendering (`renderToString`) and HTML responses.
 - MUST keep Cloudflare Worker bootstrap in `bootstrap/worker.ts` and router creation in `bootstrap/app.tsx`.
 - MUST use model classes for data access in controllers (avoid ad-hoc DB queries in controllers).
 - MUST treat post publish state as:

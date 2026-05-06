@@ -1,6 +1,6 @@
-import type { RemixNode } from "remix/component";
+import type { RemixNode } from "remix/ui";
 
-import { css } from "remix/component";
+import { css } from "remix/ui";
 
 import appColorsStyles from "~/resources/css/colors.css?url";
 import routes from "~/routes/web";

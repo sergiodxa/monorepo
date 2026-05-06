@@ -1,7 +1,6 @@
 import type { Database } from "remix/data-table";
 
-import * as s from "remix/data-schema";
-import { createTable } from "remix/data-table";
+import { column as c, table } from "remix/data-table";
 
 import { RecordNotFoundError } from "~/lib/db-errors";
 import { InvalidUriError, UnsafeSchemeError, validateScheme } from "~/lib/uri-validation";
@@ -43,21 +42,21 @@ export default class Client {
 	}
 
 	/** Database table schema for clients. */
-	static table = createTable({
+	static table = table({
 		name: "clients",
 		primaryKey: ["id"],
 		timestamps: true,
 		columns: {
-			id: s.string(),
-			name: s.string(),
-			description: s.nullable(s.string()),
-			logo_url: s.nullable(s.string()),
-			type: s.enum_(["public", "confidential", "m2m"]),
-			allowed_scopes: s.nullable(s.string()),
-			allowed_resources: s.nullable(s.string()),
-			is_management_client: s.defaulted(s.boolean(), false),
-			created_at: s.string(),
-			updated_at: s.string(),
+			id: c.text(),
+			name: c.text(),
+			description: c.text().nullable(),
+			logo_url: c.text().nullable(),
+			type: c.enum(["public", "confidential", "m2m"]),
+			allowed_scopes: c.text().nullable(),
+			allowed_resources: c.text().nullable(),
+			is_management_client: c.boolean().default(false),
+			created_at: c.text(),
+			updated_at: c.text(),
 		},
 	});
 

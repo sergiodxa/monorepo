@@ -2,20 +2,20 @@ import { Database } from "bun:sqlite";
 
 import type {
 	AdapterCapabilityOverrides,
-	AdapterExecuteRequest,
-	AdapterResult,
+	DataManipulationOperation,
+	DataManipulationRequest,
+	DataManipulationResult,
+	DataMigrationOperation,
+	DataMigrationRequest,
+	DataMigrationResult,
 	DatabaseAdapter,
+	SqlStatement,
+	TableRef,
 	TransactionOptions,
 	TransactionToken,
 } from "remix/data-table";
 
-import {
-	type AdapterStatement,
-	type Predicate,
-	createDatabase,
-	getTableName,
-	getTablePrimaryKey,
-} from "remix/data-table";
+import { type Predicate, createDatabase, getTableName, getTablePrimaryKey } from "remix/data-table";
 
 interface BunSqliteAdapterOptions {
 	capabilities?: AdapterCapabilityOverrides;
@@ -46,68 +46,95 @@ export function createBunSqliteDatabaseAdapter(
 			returning: options?.capabilities?.returning ?? true,
 			savepoints: options?.capabilities?.savepoints ?? true,
 			upsert: options?.capabilities?.upsert ?? true,
+			transactionalDdl: options?.capabilities?.transactionalDdl ?? true,
+			migrationLock: options?.capabilities?.migrationLock ?? false,
 		},
 
-		async execute(request: AdapterExecuteRequest): Promise<AdapterResult> {
-			if (request.statement.kind === "insertMany" && request.statement.values.length === 0) {
+		compileSql(operation: DataManipulationOperation | DataMigrationOperation): SqlStatement[] {
+			if (!isDataManipulationOperation(operation)) {
+				throw new Error("Unsupported migration operation kind in test adapter: " + operation.kind);
+			}
+
+			let statement = compileSqliteStatement(operation);
+
+			return [{ text: statement.text, values: statement.values }];
+		},
+
+		async execute(request: DataManipulationRequest): Promise<DataManipulationResult> {
+			let operation = request.operation;
+
+			if (operation.kind === "insertMany" && operation.values.length === 0) {
 				return {
 					affectedRows: 0,
 					insertId: undefined,
-					rows: request.statement.returning ? [] : undefined,
+					rows: operation.returning ? [] : undefined,
 				};
 			}
 
-			let statement = compileSqliteStatement(request.statement);
+			let statement = compileSqliteStatement(operation);
+			let values = normalizeStatementValues(statement.values);
+			let stmt = db.prepare(statement.text);
 
-			let isReadStatement =
-				request.statement.kind === "select" ||
-				request.statement.kind === "count" ||
-				request.statement.kind === "exists";
+			let isReadStatement = shouldReadStatement(operation);
 
 			if (isReadStatement) {
-				let stmt = db.prepare(statement.text);
-				let rawRows = stmt.all(...statement.values) as Record<string, unknown>[];
+				let rawRows = stmt.all(...values) as Record<string, unknown>[];
 				let rows = normalizeRows(rawRows);
 
-				if (request.statement.kind === "count" || request.statement.kind === "exists") {
+				if (operation.kind === "count" || operation.kind === "exists") {
 					rows = normalizeCountRows(rows);
 				}
 
 				return {
 					rows,
-					affectedRows: undefined,
-					insertId: undefined,
+					affectedRows: normalizeAffectedRowsForReader(operation.kind, rows),
+					insertId: normalizeInsertIdForReader(operation.kind, operation, rows),
 				};
 			}
 
-			// For write statements
-			let stmt = db.prepare(statement.text);
-			stmt.run(...statement.values);
+			stmt.run(...values);
 
 			let changes = db.query("SELECT changes() as changes").get() as { changes: number };
 			let affectedRows = changes.changes;
 
-			// For write statements with RETURNING clause
-			if ("returning" in request.statement && request.statement.returning !== undefined) {
-				// Re-run as query to get returned rows
-				let returningStmt = db.prepare(statement.text);
-				let rawRows = returningStmt.all(...statement.values) as Record<string, unknown>[];
-				let rows = normalizeRows(rawRows);
-
-				return {
-					rows,
-					affectedRows,
-					insertId: normalizeInsertId(request.statement, rows),
-				};
-			}
-
-			// For write statements without RETURNING
 			let lastInsertRowId = db.query("SELECT last_insert_rowid() as id").get() as { id: number };
 
 			return {
 				affectedRows,
-				insertId: lastInsertRowId.id,
+				insertId: normalizeInsertIdForRun(operation.kind, operation, lastInsertRowId.id),
 			};
+		},
+
+		async migrate(request: DataMigrationRequest): Promise<DataMigrationResult> {
+			throw new Error(
+				"Unsupported migration operation kind in test adapter: " + request.operation.kind,
+			);
+		},
+
+		async hasTable(table: TableRef, transaction?: TransactionToken): Promise<boolean> {
+			if (transaction) {
+				assertTransaction(transaction);
+			}
+
+			let statement = db.prepare("select 1 from sqlite_master where type = ? and name = ? limit 1");
+			let row = statement.get("table", table.name);
+
+			return row !== null && row !== undefined;
+		},
+
+		async hasColumn(
+			table: TableRef,
+			column: string,
+			transaction?: TransactionToken,
+		): Promise<boolean> {
+			if (transaction) {
+				assertTransaction(transaction);
+			}
+
+			let statement = db.prepare("pragma table_info(" + quoteIdentifier(table.name) + ")");
+			let rows = statement.all() as Array<Record<string, unknown>>;
+
+			return rows.some((row) => row.name === column);
 		},
 
 		async beginTransaction(_options?: TransactionOptions): Promise<TransactionToken> {
@@ -151,9 +178,9 @@ export function createBunSqliteDatabaseAdapter(
 
 // SQL Compilation (copied from sql-storage-adapter.ts)
 
-type JoinClause = Extract<AdapterStatement, { kind: "select" }>["joins"][number];
-type UpsertStatement = Extract<AdapterStatement, { kind: "upsert" }>;
-type StatementTable = Extract<AdapterStatement, { kind: "select" }>["table"];
+type JoinClause = Extract<DataManipulationOperation, { kind: "select" }>["joins"][number];
+type UpsertStatement = Extract<DataManipulationOperation, { kind: "upsert" }>;
+type StatementTable = Extract<DataManipulationOperation, { kind: "select" }>["table"];
 
 interface CompiledSql {
 	text: string;
@@ -164,7 +191,7 @@ interface CompileContext {
 	values: unknown[];
 }
 
-function compileSqliteStatement(statement: AdapterStatement): CompiledSql {
+function compileSqliteStatement(statement: DataManipulationOperation): CompiledSql {
 	if (statement.kind === "raw") {
 		return {
 			text: statement.sql.text,
@@ -713,15 +740,31 @@ function normalizeCountRows(rows: Record<string, unknown>[]): Record<string, unk
 	});
 }
 
-function normalizeInsertId(
-	statement: AdapterExecuteRequest["statement"],
+function normalizeStatementValues(values: unknown[]): unknown[] {
+	return values.map((value) => (value === undefined ? null : value));
+}
+
+function normalizeAffectedRowsForReader(
+	kind: DataManipulationRequest["operation"]["kind"],
+	rows: Record<string, unknown>[],
+): number | undefined {
+	if (isWriteOperationKind(kind)) {
+		return rows.length;
+	}
+
+	return undefined;
+}
+
+function normalizeInsertIdForReader(
+	kind: DataManipulationRequest["operation"]["kind"],
+	operation: DataManipulationRequest["operation"],
 	rows: Record<string, unknown>[],
 ): unknown {
-	if (!isInsertStatementKind(statement.kind) || !isInsertStatement(statement)) {
+	if (!isInsertOperationKind(kind) || !isInsertOperation(operation)) {
 		return undefined;
 	}
 
-	let primaryKey = getTablePrimaryKey(statement.table);
+	let primaryKey = getTablePrimaryKey(operation.table);
 
 	if (primaryKey.length !== 1) {
 		return undefined;
@@ -733,18 +776,72 @@ function normalizeInsertId(
 	return row ? row[key] : undefined;
 }
 
-function isInsertStatementKind(kind: AdapterExecuteRequest["statement"]["kind"]): boolean {
+function normalizeInsertIdForRun(
+	kind: DataManipulationRequest["operation"]["kind"],
+	operation: DataManipulationRequest["operation"],
+	insertId: unknown,
+): unknown {
+	if (!isInsertOperationKind(kind) || !isInsertOperation(operation)) {
+		return undefined;
+	}
+
+	if (getTablePrimaryKey(operation.table).length !== 1) {
+		return undefined;
+	}
+
+	return insertId;
+}
+
+function shouldReadStatement(operation: DataManipulationRequest["operation"]): boolean {
+	if (operation.kind === "select" || operation.kind === "count" || operation.kind === "exists") {
+		return true;
+	}
+
+	if (operation.kind === "raw") {
+		return false;
+	}
+
+	return operation.returning !== undefined;
+}
+
+function isWriteOperationKind(kind: DataManipulationRequest["operation"]["kind"]): boolean {
+	return (
+		kind === "insert" ||
+		kind === "insertMany" ||
+		kind === "update" ||
+		kind === "delete" ||
+		kind === "upsert"
+	);
+}
+
+function isInsertOperationKind(kind: DataManipulationRequest["operation"]["kind"]): boolean {
 	return kind === "insert" || kind === "insertMany" || kind === "upsert";
 }
 
-function isInsertStatement(
-	statement: AdapterExecuteRequest["statement"],
-): statement is Extract<
-	AdapterExecuteRequest["statement"],
+function isInsertOperation(
+	operation: DataManipulationRequest["operation"],
+): operation is Extract<
+	DataManipulationRequest["operation"],
 	{ kind: "insert" | "insertMany" | "upsert" }
 > {
 	return (
-		statement.kind === "insert" || statement.kind === "insertMany" || statement.kind === "upsert"
+		operation.kind === "insert" || operation.kind === "insertMany" || operation.kind === "upsert"
+	);
+}
+
+function isDataManipulationOperation(
+	operation: DataManipulationOperation | DataMigrationOperation,
+): operation is DataManipulationOperation {
+	return (
+		operation.kind === "select" ||
+		operation.kind === "count" ||
+		operation.kind === "exists" ||
+		operation.kind === "insert" ||
+		operation.kind === "insertMany" ||
+		operation.kind === "update" ||
+		operation.kind === "delete" ||
+		operation.kind === "upsert" ||
+		operation.kind === "raw"
 	);
 }
 

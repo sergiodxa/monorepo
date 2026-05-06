@@ -1,7 +1,6 @@
 import type { Database } from "remix/data-table";
 
-import * as s from "remix/data-schema";
-import { createTable } from "remix/data-table";
+import { column as c, table } from "remix/data-table";
 
 import { base64UrlEncode } from "~/lib/base64url";
 
@@ -24,28 +23,28 @@ export default class WebAuthnChallenge {
 	};
 
 	/** Database table schema for WebAuthn challenges. */
-	static table = createTable({
+	static table = table({
 		name: "webauthn_challenges",
 		primaryKey: ["id"],
 		columns: {
-			id: s.string(),
+			id: c.text(),
 			/** Base64URL encoded challenge. */
-			challenge: s.string(),
-			type: s.enum_(["registration", "authentication"]),
+			challenge: c.text(),
+			type: c.enum(["registration", "authentication"]),
 			/** For authentication flows. */
-			subject_id: s.nullable(s.string()),
+			subject_id: c.text().nullable(),
 			/** For registration flows. */
-			email: s.nullable(s.string()),
-			client_id: s.nullable(s.string()),
-			redirect_uri: s.nullable(s.string()),
-			state: s.nullable(s.string()),
-			nonce: s.nullable(s.string()),
-			scope: s.nullable(s.string()),
+			email: c.text().nullable(),
+			client_id: c.text().nullable(),
+			redirect_uri: c.text().nullable(),
+			state: c.text().nullable(),
+			nonce: c.text().nullable(),
+			scope: c.text().nullable(),
 			/** PKCE code_challenge for OAuth 2.1 compliance. */
-			pkce_challenge: s.nullable(s.string()),
-			pkce_method: s.nullable(s.enum_(["S256", "plain"])),
-			expires_at: s.number(),
-			created_at: s.number(),
+			pkce_challenge: c.text().nullable(),
+			pkce_method: c.enum(["S256", "plain"]).nullable(),
+			expires_at: c.integer(),
+			created_at: c.integer(),
 		},
 	});
 

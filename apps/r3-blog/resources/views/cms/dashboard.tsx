@@ -1,4 +1,4 @@
-import { css } from "remix/component";
+import { css } from "remix/ui";
 
 import { CMSLayout } from "~/resources/components/layout/cms";
 import routes from "~/routes/web";

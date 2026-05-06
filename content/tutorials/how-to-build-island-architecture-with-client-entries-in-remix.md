@@ -11,9 +11,9 @@ In this tutorial, you will build that flow with Remix client entries. The result
 ## Create the Passkey Island
 
 ```tsx {% path="app/client/passkey-sign-in.tsx" %}
-import type { Handle } from "remix/component";
+import type { Handle } from "remix/ui";
 
-import { clientEntry } from "remix/component";
+import { clientEntry } from "remix/ui";
 
 interface PasskeySignInSetup {
 	challengeId: string;
@@ -21,14 +21,14 @@ interface PasskeySignInSetup {
 	verifyUrl: string;
 }
 
-interface PasskeySignInProps {
+interface PasskeySignInProps extends PasskeySignInSetup {
 	email: string;
 }
 
 export let PasskeySignIn = clientEntry(
 	"/assets/passkey-sign-in.js#PasskeySignIn",
-	function PasskeySignIn(handle: Handle, setup: unknown) {
-		let { challengeId, options, verifyUrl } = setup as PasskeySignInSetup;
+	function PasskeySignIn(handle: Handle<PasskeySignInProps>) {
+		let { challengeId, options, verifyUrl } = handle.props;
 		let status: "idle" | "authenticating" | "error" | "success" = "idle";
 		let errorMessage: string | null = null;
 
@@ -109,7 +109,7 @@ This file is the island. `clientEntry` registers a separately built client bundl
 
 ```tsx {% path="app/routes/login.tsx" %}
 import { ok } from "@pkg/http/response/html";
-import { renderToString } from "remix/component/server";
+import { renderToString } from "remix/ui/server";
 
 import { PasskeySignIn } from "~/client/passkey-sign-in";
 import { Layout } from "~/components/layout";
@@ -125,17 +125,15 @@ export async function loader(request: Request, env: Cloudflare.Env) {
 
 				<PasskeySignIn
 					email={challenge.email}
-					setup={{
-						challengeId: challenge.id,
-						options: {
-							challenge: challenge.challenge,
-							rpId: challenge.rpId,
-							allowCredentials: challenge.credentials,
-							timeout: 60000,
-							userVerification: "preferred",
-						},
-						verifyUrl: "/api/webauthn/verify",
+					challengeId={challenge.id}
+					options={{
+						challenge: challenge.challenge,
+						rpId: challenge.rpId,
+						allowCredentials: challenge.credentials,
+						timeout: 60000,
+						userVerification: "preferred",
 					}}
+					verifyUrl="/api/webauthn/verify"
 				/>
 
 				<noscript>
@@ -149,7 +147,7 @@ export async function loader(request: Request, env: Cloudflare.Env) {
 }
 ```
 
-The page stays server rendered. Only `PasskeySignIn` hydrates, and the `setup` prop passes the server generated challenge into the client entry.
+The page stays server rendered. Only `PasskeySignIn` hydrates, and the server generated challenge is passed into the client entry through `handle.props`.
 
 ## Post the Verification Result
 
@@ -201,9 +199,9 @@ The generated file name must match the path passed to `clientEntry`. That is wha
 ## Refine the Island Without Adding Hooks
 
 ```tsx {% path="app/client/passkey-sign-in.tsx" %}
-import type { Handle } from "remix/component";
+import type { Handle } from "remix/ui";
 
-import { clientEntry } from "remix/component";
+import { clientEntry } from "remix/ui";
 
 interface PasskeySignInSetup {
 	challengeId: string;
@@ -211,14 +209,14 @@ interface PasskeySignInSetup {
 	verifyUrl: string;
 }
 
-interface PasskeySignInProps {
+interface PasskeySignInProps extends PasskeySignInSetup {
 	email: string;
 }
 
 export let PasskeySignIn = clientEntry(
 	"/assets/passkey-sign-in.js#PasskeySignIn",
-	function PasskeySignIn(handle: Handle, setup: unknown) {
-		let { challengeId, options, verifyUrl } = setup as PasskeySignInSetup;
+	function PasskeySignIn(handle: Handle<PasskeySignInProps>) {
+		let { challengeId, options, verifyUrl } = handle.props;
 		let status: "idle" | "authenticating" | "error" | "success" = "idle";
 		let errorMessage: string | null = null;
 		let canRetry = false;

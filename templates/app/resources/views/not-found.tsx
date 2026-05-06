@@ -1,13 +1,13 @@
-import type { Handle } from "remix/component";
+import type { Handle } from "remix/ui";
 
 import type { NotFoundViewModel } from "~/app/http/view-models/not-found";
 
 namespace NotFoundView {
-	export interface Setup extends NotFoundViewModel.DefaultOutput {}
+	export interface Props extends NotFoundViewModel.DefaultOutput {}
 }
 
-export default function NotFoundView(_handle: Handle, setup: NotFoundView.Setup) {
+export default function NotFoundView(handle: Handle<NotFoundView.Props>) {
 	return () => {
-		return <h1>{setup.title}</h1>;
+		return <h1>{handle.props.title}</h1>;
 	};
 }

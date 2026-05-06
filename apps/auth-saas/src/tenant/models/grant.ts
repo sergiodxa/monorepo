@@ -1,22 +1,21 @@
 import type { Database } from "remix/data-table";
 
-import * as s from "remix/data-schema";
-import { createTable } from "remix/data-table";
+import { column as c, table } from "remix/data-table";
 
 import { RecordNotFoundError } from "~/lib/db-errors";
 
 export default class Grant {
-	static table = createTable({
+	static table = table({
 		name: "grants",
 		primaryKey: ["id"],
 		timestamps: true,
 		columns: {
-			id: s.string(),
-			subject_id: s.string(),
-			client_id: s.string(),
-			scopes: s.nullable(s.string()),
-			created_at: s.string(),
-			updated_at: s.string(),
+			id: c.text(),
+			subject_id: c.text(),
+			client_id: c.text(),
+			scopes: c.text().nullable(),
+			created_at: c.text(),
+			updated_at: c.text(),
 		},
 	});
 

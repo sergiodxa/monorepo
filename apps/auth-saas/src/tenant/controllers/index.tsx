@@ -1,5 +1,6 @@
 import { ok } from "@pkg/http/response/html";
-import { renderToString } from "remix/component/server";
+import { css } from "remix/ui";
+import { renderToString } from "remix/ui/server";
 
 import action from "~/lib/action";
 import { Layout } from "~/tenant/components/layout";
@@ -37,55 +38,63 @@ function TenantHomePage() {
 		return (
 			<Layout title="Tenant Home">
 				<div
-					css={{
-						minHeight: "100vh",
-						display: "flex",
-						alignItems: "center",
-						justifyContent: "center",
-						backgroundColor: backgroundColor,
-						padding: "1rem",
-					}}
+					mix={[
+						css({
+							minHeight: "100vh",
+							display: "flex",
+							alignItems: "center",
+							justifyContent: "center",
+							backgroundColor: backgroundColor,
+							padding: "1rem",
+						}),
+					]}
 				>
 					<div
-						css={{
-							maxWidth: "500px",
-							width: "100%",
-							backgroundColor: "#fff",
-							borderRadius: "0.5rem",
-							boxShadow: "0 1px 3px 0 rgb(0 0 0 / 0.1)",
-							padding: "2rem",
-							textAlign: "center",
-						}}
+						mix={[
+							css({
+								maxWidth: "500px",
+								width: "100%",
+								backgroundColor: "#fff",
+								borderRadius: "0.5rem",
+								boxShadow: "0 1px 3px 0 rgb(0 0 0 / 0.1)",
+								padding: "2rem",
+								textAlign: "center",
+							}),
+						]}
 					>
 						{brand.logo_url && (
 							<img
 								src={brand.logo_url}
 								alt="Logo"
-								css={{
-									maxWidth: "150px",
-									marginBottom: "1.5rem",
-									marginLeft: "auto",
-									marginRight: "auto",
-									display: "block",
-								}}
+								mix={[
+									css({
+										maxWidth: "150px",
+										marginBottom: "1.5rem",
+										marginLeft: "auto",
+										marginRight: "auto",
+										display: "block",
+									}),
+								]}
 							/>
 						)}
 
 						<div
-							css={{
-								width: "64px",
-								height: "64px",
-								borderRadius: "50%",
-								backgroundColor: primaryColor,
-								display: "flex",
-								alignItems: "center",
-								justifyContent: "center",
-								margin: "0 auto 1.5rem",
-							}}
+							mix={[
+								css({
+									width: "64px",
+									height: "64px",
+									borderRadius: "50%",
+									backgroundColor: primaryColor,
+									display: "flex",
+									alignItems: "center",
+									justifyContent: "center",
+									margin: "0 auto 1.5rem",
+								}),
+							]}
 						>
 							<svg
 								xmlns="http://www.w3.org/2000/svg"
-								css={{ width: "32px", height: "32px", color: "#fff" }}
+								mix={[css({ width: "32px", height: "32px", color: "#fff" })]}
 								fill="none"
 								viewBox="0 0 24 24"
 								stroke="currentColor"
@@ -100,93 +109,111 @@ function TenantHomePage() {
 						</div>
 
 						<h1
-							css={{
-								fontSize: "1.5rem",
-								fontWeight: "600",
-								color: "#111827",
-								marginBottom: "0.5rem",
-							}}
+							mix={[
+								css({
+									fontSize: "1.5rem",
+									fontWeight: "600",
+									color: "#111827",
+									marginBottom: "0.5rem",
+								}),
+							]}
 						>
 							Authentication Service
 						</h1>
 
 						<p
-							css={{
-								color: "#6B7280",
-								marginBottom: "2rem",
-							}}
+							mix={[
+								css({
+									color: "#6B7280",
+									marginBottom: "2rem",
+								}),
+							]}
 						>
 							This tenant is active and ready to handle authentication requests.
 						</p>
 
 						<div
-							css={{
-								display: "grid",
-								gridTemplateColumns: "1fr 1fr",
-								gap: "1rem",
-								marginBottom: "2rem",
-							}}
+							mix={[
+								css({
+									display: "grid",
+									gridTemplateColumns: "1fr 1fr",
+									gap: "1rem",
+									marginBottom: "2rem",
+								}),
+							]}
 						>
 							<div
-								css={{
-									backgroundColor: "#F3F4F6",
-									borderRadius: "0.5rem",
-									padding: "1rem",
-								}}
+								mix={[
+									css({
+										backgroundColor: "#F3F4F6",
+										borderRadius: "0.5rem",
+										padding: "1rem",
+									}),
+								]}
 							>
 								<div
-									css={{
-										fontSize: "2rem",
-										fontWeight: "700",
-										color: primaryColor,
-									}}
+									mix={[
+										css({
+											fontSize: "2rem",
+											fontWeight: "700",
+											color: primaryColor,
+										}),
+									]}
 								>
 									{stats.clients}
 								</div>
-								<div css={{ fontSize: "0.875rem", color: "#6B7280" }}>Clients</div>
+								<div mix={[css({ fontSize: "0.875rem", color: "#6B7280" })]}>Clients</div>
 							</div>
 
 							<div
-								css={{
-									backgroundColor: "#F3F4F6",
-									borderRadius: "0.5rem",
-									padding: "1rem",
-								}}
+								mix={[
+									css({
+										backgroundColor: "#F3F4F6",
+										borderRadius: "0.5rem",
+										padding: "1rem",
+									}),
+								]}
 							>
 								<div
-									css={{
-										fontSize: "2rem",
-										fontWeight: "700",
-										color: primaryColor,
-									}}
+									mix={[
+										css({
+											fontSize: "2rem",
+											fontWeight: "700",
+											color: primaryColor,
+										}),
+									]}
 								>
 									{stats.subjects}
 								</div>
-								<div css={{ fontSize: "0.875rem", color: "#6B7280" }}>Users</div>
+								<div mix={[css({ fontSize: "0.875rem", color: "#6B7280" })]}>Users</div>
 							</div>
 						</div>
 
-						<div css={{ fontSize: "0.875rem", color: "#9CA3AF" }}>
-							<p css={{ marginBottom: "0.5rem" }}>Available endpoints:</p>
-							<ul css={{ listStyle: "none", padding: 0, margin: 0 }}>
+						<div mix={[css({ fontSize: "0.875rem", color: "#9CA3AF" })]}>
+							<p mix={[css({ marginBottom: "0.5rem" })]}>Available endpoints:</p>
+							<ul mix={[css({ listStyle: "none", padding: 0, margin: 0 })]}>
 								<li>
 									<code
-										css={{
-											backgroundColor: "#F3F4F6",
-											padding: "0.125rem 0.25rem",
-											borderRadius: "0.25rem",
-										}}
+										mix={[
+											css({
+												backgroundColor: "#F3F4F6",
+												padding: "0.125rem 0.25rem",
+												borderRadius: "0.25rem",
+											}),
+										]}
 									>
 										/.well-known/openid-configuration
 									</code>
 								</li>
-								<li css={{ marginTop: "0.25rem" }}>
+								<li mix={[css({ marginTop: "0.25rem" })]}>
 									<code
-										css={{
-											backgroundColor: "#F3F4F6",
-											padding: "0.125rem 0.25rem",
-											borderRadius: "0.25rem",
-										}}
+										mix={[
+											css({
+												backgroundColor: "#F3F4F6",
+												padding: "0.125rem 0.25rem",
+												borderRadius: "0.25rem",
+											}),
+										]}
 									>
 										/authorize
 									</code>

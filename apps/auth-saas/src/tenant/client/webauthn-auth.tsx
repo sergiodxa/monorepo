@@ -1,6 +1,6 @@
-import type { Handle } from "remix/component";
+import type { Handle } from "remix/ui";
 
-import { clientEntry } from "remix/component";
+import { clientEntry, css } from "remix/ui";
 
 interface WebAuthnAuthSetup {
 	challengeId: string;
@@ -8,10 +8,14 @@ interface WebAuthnAuthSetup {
 	verifyUrl: string;
 }
 
+interface WebAuthnAuthProps extends WebAuthnAuthSetup {
+	email: string;
+}
+
 export let WebAuthnAuth = clientEntry(
 	"/assets/tenant/webauthn-auth.js#WebAuthnAuth",
-	function WebAuthnAuth(handle: Handle, setup: unknown) {
-		let { challengeId, options, verifyUrl } = setup as WebAuthnAuthSetup;
+	function WebAuthnAuth(handle: Handle<WebAuthnAuthProps>) {
+		let { challengeId, options, verifyUrl } = handle.props;
 		let status: "idle" | "authenticating" | "error" | "success" = "idle";
 		let errorMessage: string | null = null;
 
@@ -66,65 +70,71 @@ export let WebAuthnAuth = clientEntry(
 			authenticate();
 		});
 
-		return (props: { email: string }) => (
+		return () => (
 			<div
-				css={{
-					display: "flex",
-					flexDirection: "column",
-					alignItems: "center",
-					gap: "1rem",
-					padding: "2rem",
-				}}
+				mix={[
+					css({
+						display: "flex",
+						flexDirection: "column",
+						alignItems: "center",
+						gap: "1rem",
+						padding: "2rem",
+					}),
+				]}
 			>
 				<p>
-					Signing in as <strong>{props.email}</strong>
+					Signing in as <strong>{handle.props.email}</strong>
 				</p>
 
 				{status === "idle" && <p>Preparing authentication...</p>}
 
 				{status === "authenticating" && (
-					<div css={{ textAlign: "center" }}>
+					<div mix={[css({ textAlign: "center" })]}>
 						<p>Use your passkey to continue</p>
 						<div
-							css={{
-								marginTop: "1rem",
-								width: "24px",
-								height: "24px",
-								border: "2px solid #3B82F6",
-								borderTopColor: "transparent",
-								borderRadius: "50%",
-								animation: "spin 1s linear infinite",
-								margin: "0 auto",
-							}}
+							mix={[
+								css({
+									marginTop: "1rem",
+									width: "24px",
+									height: "24px",
+									border: "2px solid #3B82F6",
+									borderTopColor: "transparent",
+									borderRadius: "50%",
+									animation: "spin 1s linear infinite",
+									margin: "0 auto",
+								}),
+							]}
 						/>
 					</div>
 				)}
 
 				{status === "error" && (
-					<div css={{ textAlign: "center" }}>
-						<p css={{ color: "#EF4444" }}>{errorMessage}</p>
+					<div mix={[css({ textAlign: "center" })]}>
+						<p mix={[css({ color: "#EF4444" })]}>{errorMessage}</p>
 						<button
 							type="button"
 							on={{ click: () => authenticate() }}
-							css={{
-								marginTop: "1rem",
-								padding: "0.5rem 1rem",
-								backgroundColor: "#3B82F6",
-								color: "white",
-								border: "none",
-								borderRadius: "0.375rem",
-								cursor: "pointer",
-								"&:hover": {
-									backgroundColor: "#2563EB",
-								},
-							}}
+							mix={[
+								css({
+									marginTop: "1rem",
+									padding: "0.5rem 1rem",
+									backgroundColor: "#3B82F6",
+									color: "white",
+									border: "none",
+									borderRadius: "0.375rem",
+									cursor: "pointer",
+									"&:hover": {
+										backgroundColor: "#2563EB",
+									},
+								}),
+							]}
 						>
 							Try Again
 						</button>
 					</div>
 				)}
 
-				{status === "success" && <p css={{ color: "#10B981" }}>Success! Redirecting...</p>}
+				{status === "success" && <p mix={[css({ color: "#10B981" })]}>Success! Redirecting...</p>}
 			</div>
 		);
 	},

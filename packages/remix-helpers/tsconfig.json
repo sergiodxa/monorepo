@@ -4,6 +4,6 @@
 	"exclude": ["src/**/*.test.ts", "src/**/*.test.tsx"],
 	"compilerOptions": {
 		"jsx": "react-jsx",
-		"jsxImportSource": "remix/component"
+		"jsxImportSource": "remix/ui"
 	}
 }

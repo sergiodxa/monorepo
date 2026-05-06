@@ -1,5 +1,6 @@
 import { ok } from "@pkg/http/response/html";
-import { renderToString } from "remix/component/server";
+import { css } from "remix/ui";
+import { renderToString } from "remix/ui/server";
 
 import action from "~/lib/action";
 import { Layout } from "~/tenant/components/layout";
@@ -68,54 +69,62 @@ function VerifyEmailPage() {
 		return (
 			<Layout title={status === "success" ? "Email Verified" : "Verification Failed"}>
 				<div
-					css={{
-						minHeight: "100vh",
-						display: "flex",
-						alignItems: "center",
-						justifyContent: "center",
-						backgroundColor: backgroundColor,
-						padding: "1rem",
-					}}
+					mix={[
+						css({
+							minHeight: "100vh",
+							display: "flex",
+							alignItems: "center",
+							justifyContent: "center",
+							backgroundColor: backgroundColor,
+							padding: "1rem",
+						}),
+					]}
 				>
 					<div
-						css={{
-							maxWidth: "400px",
-							width: "100%",
-							backgroundColor: "#fff",
-							borderRadius: "0.5rem",
-							boxShadow: "0 1px 3px 0 rgb(0 0 0 / 0.1)",
-							padding: "2rem",
-							textAlign: "center",
-						}}
+						mix={[
+							css({
+								maxWidth: "400px",
+								width: "100%",
+								backgroundColor: "#fff",
+								borderRadius: "0.5rem",
+								boxShadow: "0 1px 3px 0 rgb(0 0 0 / 0.1)",
+								padding: "2rem",
+								textAlign: "center",
+							}),
+						]}
 					>
 						{brand.logo_url && (
 							<img
 								src={brand.logo_url}
 								alt="Logo"
-								css={{
-									maxWidth: "150px",
-									marginBottom: "1.5rem",
-								}}
+								mix={[
+									css({
+										maxWidth: "150px",
+										marginBottom: "1.5rem",
+									}),
+								]}
 							/>
 						)}
 
 						{status === "success" ? (
 							<>
 								<div
-									css={{
-										width: "64px",
-										height: "64px",
-										borderRadius: "50%",
-										backgroundColor: "#10B981",
-										display: "flex",
-										alignItems: "center",
-										justifyContent: "center",
-										margin: "0 auto 1.5rem",
-									}}
+									mix={[
+										css({
+											width: "64px",
+											height: "64px",
+											borderRadius: "50%",
+											backgroundColor: "#10B981",
+											display: "flex",
+											alignItems: "center",
+											justifyContent: "center",
+											margin: "0 auto 1.5rem",
+										}),
+									]}
 								>
 									<svg
 										xmlns="http://www.w3.org/2000/svg"
-										css={{ width: "32px", height: "32px", color: "#fff" }}
+										mix={[css({ width: "32px", height: "32px", color: "#fff" })]}
 										fill="none"
 										viewBox="0 0 24 24"
 										stroke="currentColor"
@@ -125,12 +134,14 @@ function VerifyEmailPage() {
 									</svg>
 								</div>
 								<h1
-									css={{
-										fontSize: "1.5rem",
-										fontWeight: "600",
-										color: "#111827",
-										marginBottom: "0.5rem",
-									}}
+									mix={[
+										css({
+											fontSize: "1.5rem",
+											fontWeight: "600",
+											color: "#111827",
+											marginBottom: "0.5rem",
+										}),
+									]}
 								>
 									Email Verified
 								</h1>
@@ -138,20 +149,22 @@ function VerifyEmailPage() {
 						) : (
 							<>
 								<div
-									css={{
-										width: "64px",
-										height: "64px",
-										borderRadius: "50%",
-										backgroundColor: "#EF4444",
-										display: "flex",
-										alignItems: "center",
-										justifyContent: "center",
-										margin: "0 auto 1.5rem",
-									}}
+									mix={[
+										css({
+											width: "64px",
+											height: "64px",
+											borderRadius: "50%",
+											backgroundColor: "#EF4444",
+											display: "flex",
+											alignItems: "center",
+											justifyContent: "center",
+											margin: "0 auto 1.5rem",
+										}),
+									]}
 								>
 									<svg
 										xmlns="http://www.w3.org/2000/svg"
-										css={{ width: "32px", height: "32px", color: "#fff" }}
+										mix={[css({ width: "32px", height: "32px", color: "#fff" })]}
 										fill="none"
 										viewBox="0 0 24 24"
 										stroke="currentColor"
@@ -161,12 +174,14 @@ function VerifyEmailPage() {
 									</svg>
 								</div>
 								<h1
-									css={{
-										fontSize: "1.5rem",
-										fontWeight: "600",
-										color: "#111827",
-										marginBottom: "0.5rem",
-									}}
+									mix={[
+										css({
+											fontSize: "1.5rem",
+											fontWeight: "600",
+											color: "#111827",
+											marginBottom: "0.5rem",
+										}),
+									]}
 								>
 									Verification Failed
 								</h1>
@@ -174,20 +189,24 @@ function VerifyEmailPage() {
 						)}
 
 						<p
-							css={{
-								color: "#6B7280",
-								marginBottom: "1.5rem",
-							}}
+							mix={[
+								css({
+									color: "#6B7280",
+									marginBottom: "1.5rem",
+								}),
+							]}
 						>
 							{message}
 						</p>
 
 						{status === "error" && (
 							<p
-								css={{
-									fontSize: "0.875rem",
-									color: "#9CA3AF",
-								}}
+								mix={[
+									css({
+										fontSize: "0.875rem",
+										color: "#9CA3AF",
+									}),
+								]}
 							>
 								If you continue to have issues, please contact support.
 							</p>

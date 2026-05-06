@@ -1,7 +1,6 @@
 import type { Database } from "remix/data-table";
 
-import * as s from "remix/data-schema";
-import { createTable } from "remix/data-table";
+import { column as c, table } from "remix/data-table";
 
 /**
  * Model for OAuth 2.0 authorization codes.
@@ -25,26 +24,26 @@ export default class AuthorizationCode {
 	};
 
 	/** Database table schema for authorization codes. */
-	static table = createTable({
+	static table = table({
 		name: "authorization_codes",
 		primaryKey: ["code"],
 		columns: {
-			code: s.string(),
-			client_id: s.string(),
-			subject_id: s.string(),
-			session_id: s.string(),
-			redirect_uri: s.string(),
+			code: c.text(),
+			client_id: c.text(),
+			subject_id: c.text(),
+			session_id: c.text(),
+			redirect_uri: c.text(),
 			/** Space-separated list of scopes. */
-			scope: s.nullable(s.string()),
-			nonce: s.nullable(s.string()),
-			pkce_challenge: s.nullable(s.string()),
-			pkce_method: s.nullable(s.enum_(["S256", "plain"])),
+			scope: c.text().nullable(),
+			nonce: c.text().nullable(),
+			pkce_challenge: c.text().nullable(),
+			pkce_method: c.enum(["S256", "plain"]).nullable(),
 			/** Unix timestamp in seconds. */
-			auth_time: s.number(),
+			auth_time: c.integer(),
 			/** Unix timestamp in milliseconds. */
-			expires_at: s.number(),
+			expires_at: c.integer(),
 			/** Unix timestamp in milliseconds. */
-			created_at: s.number(),
+			created_at: c.integer(),
 		},
 	});
 

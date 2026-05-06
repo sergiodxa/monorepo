@@ -1,28 +1,27 @@
 import type { Database } from "remix/data-table";
 
-import * as s from "remix/data-schema";
-import { createTable } from "remix/data-table";
+import { column as c, table } from "remix/data-table";
 
 import HostnameService from "~/app/services/hostname";
 import { RecordNotFoundError } from "~/lib/db-errors";
 
 export default class Hostname {
 	static CloudflareApiError = HostnameService.ApiError;
-	static table = createTable({
+	static table = table({
 		name: "hostnames",
 		primaryKey: ["id"],
 		timestamps: true,
 		columns: {
-			id: s.string(),
-			tenant_id: s.string(),
-			hostname: s.string(),
-			is_default: s.defaulted(s.boolean(), false),
-			status: s.enum_(["pending_validation", "active", "deleted"]),
-			ssl_status: s.nullable(s.string()),
-			validation_txt_name: s.nullable(s.string()),
-			validation_txt_value: s.nullable(s.string()),
-			created_at: s.string(),
-			updated_at: s.string(),
+			id: c.text(),
+			tenant_id: c.text(),
+			hostname: c.text(),
+			is_default: c.boolean().default(false),
+			status: c.enum(["pending_validation", "active", "deleted"]),
+			ssl_status: c.text().nullable(),
+			validation_txt_name: c.text().nullable(),
+			validation_txt_value: c.text().nullable(),
+			created_at: c.text(),
+			updated_at: c.text(),
 		},
 	});
 

@@ -1,7 +1,6 @@
 import type { Database } from "remix/data-table";
 
-import * as s from "remix/data-schema";
-import { createTable } from "remix/data-table";
+import { column as c, table } from "remix/data-table";
 
 import { RecordNotFoundError } from "~/lib/db-errors";
 
@@ -11,19 +10,19 @@ import { RecordNotFoundError } from "~/lib/db-errors";
  */
 export default class Session {
 	/** Database table schema for sessions. */
-	static table = createTable({
+	static table = table({
 		name: "sessions",
 		primaryKey: ["id"],
 		timestamps: true,
 		columns: {
-			id: s.string(),
-			subject_id: s.string(),
-			client_id: s.string(),
-			ip: s.nullable(s.string()),
-			user_agent: s.nullable(s.string()),
-			expires_at: s.string(),
-			created_at: s.string(),
-			updated_at: s.string(),
+			id: c.text(),
+			subject_id: c.text(),
+			client_id: c.text(),
+			ip: c.text().nullable(),
+			user_agent: c.text().nullable(),
+			expires_at: c.text(),
+			created_at: c.text(),
+			updated_at: c.text(),
 		},
 	});
 

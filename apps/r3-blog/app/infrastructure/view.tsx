@@ -1,7 +1,7 @@
-import type { RemixNode } from "remix/component";
+import type { RemixNode } from "remix/ui";
 
 import { getContext } from "remix/async-context-middleware";
-import { renderToStream } from "remix/component/server";
+import { renderToStream } from "remix/ui/server";
 
 /**
  * Optional HTTP metadata for the rendered HTML response.

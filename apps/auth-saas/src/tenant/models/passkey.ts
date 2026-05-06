@@ -1,28 +1,27 @@
 import type { Database } from "remix/data-table";
 
-import * as s from "remix/data-schema";
-import { createTable } from "remix/data-table";
+import { column as c, table } from "remix/data-table";
 
 import { RecordNotFoundError } from "~/lib/db-errors";
 
 export default class Passkey {
-	static table = createTable({
+	static table = table({
 		name: "passkeys",
 		primaryKey: ["id"],
 		columns: {
 			/** Database primary key (UUID). */
-			id: s.string(),
-			subject_id: s.string(),
+			id: c.text(),
+			subject_id: c.text(),
 			/** WebAuthn credential ID (base64url encoded). Used for allowCredentials in authentication. */
-			credential_id: s.nullable(s.string()),
-			public_key: s.string(),
-			counter: s.number(),
-			device_type: s.nullable(s.string()),
-			backed_up: s.defaulted(s.boolean(), false),
-			transports: s.nullable(s.string()),
-			name: s.nullable(s.string()),
-			created_at: s.string(),
-			last_used_at: s.nullable(s.string()),
+			credential_id: c.text().nullable(),
+			public_key: c.text(),
+			counter: c.integer(),
+			device_type: c.text().nullable(),
+			backed_up: c.boolean().default(false),
+			transports: c.text().nullable(),
+			name: c.text().nullable(),
+			created_at: c.text(),
+			last_used_at: c.text().nullable(),
 		},
 	});
 

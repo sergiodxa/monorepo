@@ -1,4 +1,4 @@
-import { css } from "remix/component";
+import { css } from "remix/ui";
 
 /**
  * Groups the data shapes used to render related post cards.
