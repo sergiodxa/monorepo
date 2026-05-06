@@ -39,13 +39,12 @@ export interface RosterSystemContext {
 		sideIndex: number,
 		position: BattlePosition,
 	): BattleEvent[];
-	activateReplacement(
-		sideIndex: number,
-		slotIndex: number,
-		teamIndex: number,
-		creatureIndex: number,
-	): void;
 	forfeitSide(sideIndex: number): void;
+}
+
+interface SwitchInOptions {
+	preserveStatStages?: CombatantState["statStages"];
+	emitSwitchEvent?: boolean;
 }
 
 /** Resolves a manual switch action and returns the emitted switch-side events. */
@@ -61,33 +60,15 @@ export function resolveSwitchAction(
 	if (!replacement) return [];
 
 	context.resetSwitchVolatiles(active.combatant);
-	side.active[action.userPosition.slot] = {
-		teamIndex: active.teamIndex,
-		creatureIndex: action.command.creature,
-		combatant: replacement,
-	};
-
-	let events: BattleEvent[] = [
-		{ type: "creature-switched", target: action.userPosition, creature: action.command.creature },
-	];
-
-	for (let event of context.applySwitchInHazards(action.userPosition, replacement)) {
-		events.push(event);
-	}
-
-	for (let event of context.applyHealingWish(
-		replacement,
-		action.userPosition.side,
+	let events: BattleEvent[] = [];
+	applySwitchInPipeline(
+		context,
 		action.userPosition,
-	)) {
-		events.push(event);
-	}
-
-	if (context.isCombatantFainted(replacement)) {
-		context.clearActiveCombatant(action.userPosition);
-		events.push({ type: "creature-fainted", target: action.userPosition });
-	}
-
+		active.teamIndex,
+		action.command.creature,
+		events,
+		{ emitSwitchEvent: true },
+	);
 	return events;
 }
 
@@ -146,7 +127,9 @@ export function applyReplacementCommands(
 	context: RosterSystemContext,
 	pendingReplacementRequests: ReplacementSelection[],
 	commands: ReplacementInput,
-) {
+): BattleEvent[] {
+	let events: BattleEvent[] = [];
+
 	if (commands.length !== pendingReplacementRequests.length) {
 		throw new RangeError(
 			"Replacement command count must match the number of replacement requests.",
@@ -170,8 +153,10 @@ export function applyReplacementCommands(
 			continue;
 		}
 
-		applyReplacementCommand(context, request, command);
+		applyReplacementCommand(context, request, command, events);
 	}
+
+	return events;
 }
 
 /** Computes which side, if any, still has remaining contenders. */
@@ -202,12 +187,64 @@ function applyReplacementCommand(
 	context: RosterSystemContext,
 	request: ReplacementSelection,
 	command: ReplacementCommand,
+	events: BattleEvent[],
 ) {
 	if (request.choices.includes(command.creature) === false) {
 		throw new RangeError("Replacement command selected a creature that is not available.");
 	}
 
-	context.activateReplacement(request.side, request.slot, request.team, command.creature);
+	applySwitchInPipeline(
+		context,
+		{ side: request.side, slot: request.slot },
+		request.team,
+		command.creature,
+		events,
+		{ emitSwitchEvent: true },
+	);
+}
+
+/** Applies the shared switch-in pipeline for manual, forced, and replacement entry. */
+export function applySwitchInPipeline(
+	context: RosterSystemContext,
+	position: BattlePosition,
+	teamIndex: number,
+	creatureIndex: number,
+	events: BattleEvent[],
+	options: SwitchInOptions = {},
+) {
+	let side = context.state.sides[position.side]!;
+	let replacement = side.teams[teamIndex]!.creatures[creatureIndex];
+	if (!replacement) return;
+
+	context.resetSwitchVolatiles(replacement);
+	if (options.preserveStatStages) {
+		for (let [stat, value] of Object.entries(options.preserveStatStages)) {
+			replacement.statStages[stat as keyof typeof replacement.statStages] = value;
+		}
+	}
+
+	side.active[position.slot] = {
+		teamIndex,
+		creatureIndex,
+		combatant: replacement,
+	};
+
+	if (options.emitSwitchEvent) {
+		events.push({ type: "creature-switched", target: position, creature: creatureIndex });
+	}
+
+	for (let event of context.applySwitchInHazards(position, replacement)) {
+		events.push(event);
+	}
+
+	for (let event of context.applyHealingWish(replacement, position.side, position)) {
+		events.push(event);
+	}
+
+	if (context.isCombatantFainted(replacement)) {
+		context.clearActiveCombatant(position);
+		events.push({ type: "creature-fainted", target: position });
+	}
 }
 
 /** Returns whether a side still has any active or bench contender left. */

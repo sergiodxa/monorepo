@@ -64,6 +64,8 @@ export interface CreatureHealthComponent {
 export interface CreatureStatusComponent {
 	/** Current persistent status ailment, if any. */
 	state: State | null;
+	/** Poison sub-variant when the current status uses poison-specific rules. */
+	poison?: "regular" | "escalating";
 }
 
 /** Ownership metadata for one creature entity. */
@@ -166,6 +168,7 @@ export function splitCreatureComponents(input: CreatureSplitInput): CreatureComp
 		},
 		status: {
 			state: creature.status.state,
+			...(creature.status.poison ? { poison: creature.status.poison } : {}),
 		},
 		ownership: input.ownerId ? { ownerId: input.ownerId } : undefined,
 		location: input.location ? structuredClone(input.location) : undefined,
@@ -182,6 +185,7 @@ export function mergeCreatureComponents(components: CreatureComponentSet): Creat
 		moveset: [...components.moves.moveset] as MoveSet,
 		status: {
 			state: components.status.state,
+			...(components.status.poison ? { poison: components.status.poison } : {}),
 			damage: components.health.damage,
 			pp: [...components.moves.pp] as [number, number, number, number],
 		},

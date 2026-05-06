@@ -16,6 +16,7 @@ import type { Effectiveness } from "~/game/data/type";
 
 import { DamageClass } from "~/game/data/move";
 import { Stat } from "~/game/data/stat";
+import { State } from "~/game/data/status";
 
 import type { BattleEvent, BattlePosition, BattleState } from "../battle";
 import type { CombatantState } from "../combatant-state";
@@ -27,6 +28,7 @@ export interface DamageSystemContext {
 	state: BattleState;
 	gameData: GameData;
 	random(): number;
+	isGrounded(combatant: CombatantState): boolean;
 	findEffect<TKind extends MoveEffect["kind"]>(
 		effects: MoveEffect[],
 		kind: TKind,
@@ -38,7 +40,7 @@ export interface DamageSystemContext {
 	getCombatantPosition(combatant: CombatantState): BattlePosition;
 	getCombatantSpeed(position: BattlePosition, combatant: CombatantState): number;
 	getStageModifier(stage: number): number;
-	getCriticalHitChance(user: CombatantState): number;
+	getCriticalHitChance(user: CombatantState, move: Move): number;
 	getStabModifier(user: CombatantState, move: Move): number;
 }
 
@@ -116,26 +118,36 @@ function calculateDamage(
 	effectiveness: Effectiveness,
 	events: BattleEvent[],
 ): number {
-	let damage = getBaseDamage(context, user, target, move);
+	let targetSide = context.getCombatantSide(target);
+	let criticalHit =
+		context.random() < context.getCriticalHitChance(user, move) &&
+		context.state.sides[targetSide]!.effects.luckyChantTurns === 0;
+	let damage = getBaseDamage(context, user, target, move, criticalHit);
 	damage = Math.floor(damage * context.getStabModifier(user, move));
 
 	if (effectiveness !== 1) {
 		events.push({ type: "effectiveness", target: targetPosition, effectiveness });
 	}
 
-	if (effectiveness === 2) damage = Math.floor(damage * 2);
-	if (effectiveness === 0.5) damage = Math.floor(damage * 0.5);
-	if (effectiveness === 0) damage = 0;
+	damage = Math.floor(damage * effectiveness);
 
-	if (context.random() < context.getCriticalHitChance(user)) {
-		let targetSide = context.getCombatantSide(target);
-		if (context.state.sides[targetSide]!.effects.luckyChantTurns === 0) {
-			damage = Math.floor(damage * 1.5);
-			events.push({ type: "critical-hit", target: targetPosition });
-		}
+	if (criticalHit) {
+		damage = Math.floor(damage * 1.5);
+		events.push({ type: "critical-hit", target: targetPosition });
 	}
 
+	damage = applyMajorStatusDamageModifiers(user, move, damage);
+
 	return Math.floor(damage * ((85 + Math.floor(context.random() * 16)) / 100));
+}
+
+/** Applies direct-damage penalties from major statuses that modify outgoing attacks. */
+function applyMajorStatusDamageModifiers(user: CombatantState, move: Move, damage: number): number {
+	if (user.creature.status.state === State.Burned && move.damageClass === DamageClass.Physical) {
+		return Math.floor(damage * 0.5);
+	}
+
+	return damage;
 }
 
 /** Computes pre-modifier base damage from stats, power, and field protections. */
@@ -144,27 +156,40 @@ function getBaseDamage(
 	user: CombatantState,
 	target: CombatantState,
 	move: Move,
+	criticalHit: boolean,
 ): number {
 	let power = getMovePower(context, user, target, move);
+	let attackStage =
+		move.damageClass === DamageClass.Physical
+			? user.statStages[Stat.Attack]
+			: user.statStages[Stat.SpecialAttack];
+	if (criticalHit && attackStage < 0) attackStage = 0;
+
+	let defenseStage =
+		move.damageClass === DamageClass.Physical
+			? target.statStages[Stat.Defense]
+			: target.statStages[Stat.SpecialDefense];
+	if (criticalHit && defenseStage > 0) defenseStage = 0;
+
 	let attackStat =
 		move.damageClass === DamageClass.Physical
 			? Math.floor(
 					getCreatureStat(context.gameData, user.creature, Stat.Attack) *
-						context.getStageModifier(user.statStages[Stat.Attack]),
+						context.getStageModifier(attackStage),
 				)
 			: Math.floor(
 					getCreatureStat(context.gameData, user.creature, Stat.SpecialAttack) *
-						context.getStageModifier(user.statStages[Stat.SpecialAttack]),
+						context.getStageModifier(attackStage),
 				);
 	let defenseStat =
 		move.damageClass === DamageClass.Physical
 			? Math.floor(
 					getCreatureStat(context.gameData, target.creature, Stat.Defense) *
-						context.getStageModifier(target.statStages[Stat.Defense]),
+						context.getStageModifier(defenseStage),
 				)
 			: Math.floor(
 					getCreatureStat(context.gameData, target.creature, Stat.SpecialDefense) *
-						context.getStageModifier(target.statStages[Stat.SpecialDefense]),
+						context.getStageModifier(defenseStage),
 				);
 
 	if (context.state.field.wonderRoomTurns > 0) {
@@ -204,19 +229,35 @@ function getBaseDamage(
 		if (move.type === "fire") return Math.floor(baseDamage * 0.5);
 	}
 
-	if (context.state.field.terrain === "electric" && move.type === "electric") {
+	if (
+		context.state.field.terrain === "electric" &&
+		move.type === "electric" &&
+		context.isGrounded(user)
+	) {
 		return Math.floor(baseDamage * 1.3);
 	}
 
-	if (context.state.field.terrain === "grassy" && move.type === "grass") {
+	if (
+		context.state.field.terrain === "grassy" &&
+		move.type === "grass" &&
+		context.isGrounded(user)
+	) {
 		return Math.floor(baseDamage * 1.3);
 	}
 
-	if (context.state.field.terrain === "psychic" && move.type === "psychic") {
+	if (
+		context.state.field.terrain === "psychic" &&
+		move.type === "psychic" &&
+		context.isGrounded(user)
+	) {
 		return Math.floor(baseDamage * 1.3);
 	}
 
-	if (context.state.field.terrain === "misty" && move.type === "dragon") {
+	if (
+		context.state.field.terrain === "misty" &&
+		move.type === "dragon" &&
+		context.isGrounded(target)
+	) {
 		return Math.floor(baseDamage * 0.5);
 	}
 

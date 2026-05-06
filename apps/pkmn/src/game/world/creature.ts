@@ -39,6 +39,7 @@ export namespace Creature {
 		moveset: MoveSet;
 		status: {
 			state: State | null;
+			poison?: "regular" | "escalating";
 			damage: number;
 			pp: [number, number, number, number];
 		};

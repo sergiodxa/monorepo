@@ -43,23 +43,34 @@
 - [x] Implement PP legality, PP spending-on-commit, and the fallback move flow when no regular move can be selected.
 - [x] Replace the current equal-speed tie breaker with deterministic RNG-based action ordering that matches the battle spec.
 - [x] Distinguish in battle result resolution between an unfinished battle and a simultaneous-elimination draw, and emit the correct finished event for draw outcomes.
-- [ ] Add full start-of-turn major-status handling, including sleep turn tracking, wake-up rules, freeze thaw checks, thaw-on-use rules, and paralysis action loss.
-- [ ] Expand major-status application legality to cover type immunities, terrain prevention, and other battle-state restrictions defined in `docs/battle.md`.
-- [ ] Implement toxic-style poison tracking and escalating residual damage when the applied poison variant requires it.
-- [ ] Add the missing volatile-condition rules from `docs/battle.md`, including infatuation duration/behavior, identify state interactions, and any unimplemented lock, charge, or delayed-action states.
+- [x] Add full start-of-turn major-status handling, including sleep turn tracking, wake-up rules, freeze thaw checks, thaw-on-use rules, and paralysis action loss.
+- [x] Expand major-status application legality to cover type immunities, terrain prevention, and other battle-state restrictions defined in `docs/battle.md`.
+- [ ] Add passive-trait and held-item major-status immunity hooks once those systems expose runtime legality checks to battle resolution.
+- [x] Implement toxic-style poison tracking and escalating residual damage when the applied poison variant requires it.
+- [x] Add the missing volatile-condition rules from `docs/battle.md`, including infatuation duration/behavior, identify state interactions, and any unimplemented lock, charge, or delayed-action states.
+- [x] Add the repeated-use declining success model for protect/endure-style volatile protection states.
 - [ ] Rework move targeting so actions can target a combatant, ally, side, or the battlefield instead of always requiring a single active-slot target.
 - [ ] Implement targeting-class-based doubles behavior, including adjacency rules, ally targeting, invalid-target failure vs retargeting, and spread targeting.
 - [ ] Implement spread-move damage reduction and per-target protection/immunity resolution for multi-target moves in doubles.
-- [ ] Add explicit pre-hit failure checks for move rules such as first-active-turn requirements, duplicate side or field effects at cap, minimum-HP floor rules, and user-damaged-this-turn requirements.
+- [x] Add explicit pre-hit failure checks for move rules such as first-active-turn requirements, duplicate side or field effects at cap, minimum-HP floor rules, and user-damaged-this-turn requirements.
+- [x] Separate toggle-style room-effect legality from duplicate-at-cap failure checks so `trick-room`-style moves can remove an active room state instead of always failing as duplicates.
 - [ ] Split move resolution into explicit spec phases for target validation, pre-hit legality, redirection, hit/immunity checks, main effect application, secondary effects, self-effects, and immediate faint processing.
-- [ ] Expand hit resolution to support always-hit moves that still respect stronger invalid/protection/immunity rules.
-- [ ] Implement critical-hit stage behavior that ignores the required attacker and defender stage modifiers instead of only applying a flat damage multiplier.
+- [x] Expand hit resolution to support always-hit moves that still respect stronger invalid/protection/immunity rules.
+- [x] Route missing-active-target failures through move resolution so stale single-target actions emit explicit invalid-target outcomes instead of silently skipping during turn iteration.
+- [x] Implement critical-hit stage behavior that ignores the required attacker and defender stage modifiers instead of only applying a flat damage multiplier.
+- [x] Extend the critical-hit chance model beyond `focus-energy` so high-crit moves and crit-rate item hooks contribute their documented stage bonuses.
 - [ ] Add the missing damage modifiers from the spec, including burn's physical-damage penalty, spread modifiers before final rounding, and any passive-trait or held-item hooks needed by the damage pipeline.
+- [ ] Reorder the extracted damage pipeline so major-status, side, field, trait, item, and spread modifiers run in the spec-defined stage order instead of the current mixed base-damage path.
 - [ ] Expand type-effectiveness handling to support the full effectiveness result set from `docs/battle.md`, including quarter and hyper-effective outcomes where applicable.
 - [ ] Implement entry-hazard edge cases from the spec, including toxic-spikes absorption/blocking behavior and fixed hazard processing order when multiple hazards trigger together.
-- [ ] Complete field-effect rules for weather, terrain, gravity, and room effects so their legality, grounded-state, accuracy, damage, status-prevention, and item-suppression interactions match the spec.
+- [x] Make terrain damage/status checks and hazard/healing grounded-state logic respect gravity-based grounding without adding the full trait/item hook system.
+- [ ] Complete the remaining field-effect rules for weather, terrain, gravity, and room effects so their legality, accuracy, damage, priority, and item-suppression interactions match the spec.
+- [ ] Block grounded-target priority interactions under `psychic-terrain` during move resolution.
+- [ ] Suppress held-item effects under `magic-room` once held-item runtime hooks exist.
+- [ ] Reconcile `gravity` with semi-invulnerable charge states and other airborne move-specific exceptions.
 - [ ] Implement passive-trait hooks as first-class timing windows across entry, action selection, move resolution, damage, switching, end-of-turn, and fainting.
 - [ ] Implement held-item hooks, including passive modifiers, timed triggers, consumption rules, and suppression under magic-room-style effects.
+- [ ] Route usable-in-battle `critical-rate` item activation through battle turn resolution so Dire Hit-style items apply their runtime crit-stage bonus without manual state mutation.
 - [ ] Unify switching and forced-switch pipelines so every switch path consistently clears only the temporary state the spec says should reset, preserves the persistent state the spec says should remain, and applies switch-in triggers in the documented order.
 - [ ] Add acceptance tests that mirror every behavior listed in the `docs/battle.md` acceptance criteria, especially PP exhaustion, fallback moves, deterministic tie breaks, draw resolution, spread moves, and status-duration rules.
 

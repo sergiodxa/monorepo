@@ -14,12 +14,19 @@
  */
 import type { Creature } from "~/game/world/creature";
 
-import { createCombatantVolatileState, createStatStageState } from "./state";
+import {
+	createCombatantMajorStatusState,
+	createCombatantVolatileState,
+	createStatStageState,
+} from "./state";
 
 /** Volatile battle-only state layered on top of a persistent creature. */
 export class CombatantState {
 	/** Temporary flags that only exist for the duration of a battle. */
 	readonly volatile = createCombatantVolatileState();
+
+	/** Runtime counters for persistent statuses that need battle-local bookkeeping. */
+	readonly majorStatus = createCombatantMajorStatusState();
 
 	/** Temporary stat stage boosts and drops applied while this combatant stays active. */
 	readonly statStages = createStatStageState();

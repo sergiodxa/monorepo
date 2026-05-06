@@ -167,7 +167,18 @@ export function applyEndOfTurnEffects(context: EndOfTurnContext): BattleEvent[] 
 			switch (combatant.creature.status.state) {
 				case State.Burned:
 				case State.Poisoned: {
-					context.applyDamage(combatant, position, Math.max(1, Math.floor(maxHP / 8)), events);
+					let damage =
+						combatant.creature.status.poison === "escalating"
+							? Math.max(1, Math.floor((maxHP * combatant.volatile.escalatingPoisonStage) / 16))
+							: Math.max(1, Math.floor(maxHP / 8));
+					context.applyDamage(combatant, position, damage, events);
+					if (
+						combatant.creature.status.state === State.Poisoned &&
+						combatant.creature.status.poison === "escalating" &&
+						combatant.volatile.escalatingPoisonStage > 0
+					) {
+						combatant.volatile.escalatingPoisonStage += 1;
+					}
 					break;
 				}
 			}
@@ -257,6 +268,10 @@ export function tickTurnEffects(state: BattleState) {
 			if (!active) continue;
 			active.combatant.volatile.lastDamageThisTurn = null;
 			active.combatant.volatile.flinched = false;
+			if (active.combatant.volatile.successfulProtectionThisTurn === false) {
+				active.combatant.volatile.protectionSuccessStreak = 0;
+			}
+			active.combatant.volatile.successfulProtectionThisTurn = false;
 			active.combatant.volatile.protecting = false;
 			active.combatant.volatile.enduring = false;
 			active.combatant.volatile.tauntedTurns = Math.max(

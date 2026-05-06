@@ -34,9 +34,12 @@ test("createCombatantVolatileState starts with no active combatant effects", () 
 		flinched: false,
 		protecting: false,
 		enduring: false,
+		protectionSuccessStreak: 0,
+		successfulProtectionThisTurn: false,
 		destinyBonded: false,
 		chargedElectric: false,
 		focusEnergy: false,
+		criticalHitStages: 0,
 		aquaRing: false,
 		cursed: false,
 		partiallyTrappedTurns: 0,
@@ -47,6 +50,7 @@ test("createCombatantVolatileState starts with no active combatant effects", () 
 		actedThisBattle: false,
 		identified: false,
 		attracted: false,
+		attractedBy: null,
 		tauntedTurns: 0,
 		encoreTurns: 0,
 		encoredMoveSlot: null,
@@ -56,6 +60,7 @@ test("createCombatantVolatileState starts with no active combatant effects", () 
 		disableTurns: 0,
 		lastMoveSlot: null,
 		lastDamageThisTurn: null,
+		escalatingPoisonStage: 0,
 	});
 });
 

@@ -119,7 +119,12 @@ export type MoveEffect =
 			target: "self" | "target";
 	  }
 	| { kind: "field-effect"; effect: FieldEffectType; turns: number }
-	| { kind: "apply-status"; status: StatusEffectType; chance: number }
+	| {
+			kind: "apply-status";
+			status: StatusEffectType;
+			chance: number;
+			poisonVariant?: "regular" | "escalating";
+	  }
 	| { kind: "leech-seed" }
 	| {
 			kind:
@@ -150,5 +155,6 @@ export interface Move {
 	power: number;
 	accuracy: number;
 	pp: number;
+	criticalHitStages?: number;
 	effect: MoveEffect;
 }

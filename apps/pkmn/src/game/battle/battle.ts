@@ -43,8 +43,9 @@ import {
 	scheduleDelayedAttacks as scheduleDelayedAttacksSystem,
 	tickTurnEffects as tickTurnEffectsSystem,
 } from "./systems/end-of-turn";
-import { resolveMoveEvents } from "./systems/move-resolution";
+import { resolveMissingTargetEvents, resolveMoveEvents } from "./systems/move-resolution";
 import {
+	applySwitchInPipeline,
 	applyReplacementCommands as applyReplacementCommandsSystem,
 	collectReplacementRequests,
 	getBattleOutcome,
@@ -55,6 +56,8 @@ import {
 import { getTurnActions as getOrderedTurnActions, type TurnAction } from "./systems/turn-order";
 
 const CRITICAL_HIT_CHANCE = 1 / 24;
+const HIGH_CRITICAL_HIT_CHANCE = 1 / 8;
+const VERY_HIGH_CRITICAL_HIT_CHANCE = 1 / 2;
 
 export interface ReplacementSelection {
 	side: number;
@@ -239,7 +242,14 @@ export namespace BattleEvent {
 	export interface MoveFailedEvent {
 		type: "move-failed";
 		user: BattlePosition;
-		reason: "attract" | "disabled" | "encored" | "recharge" | "taunt";
+		reason:
+			| "attract"
+			| "disabled"
+			| "encored"
+			| "invalid-target"
+			| "recharge"
+			| "requirement"
+			| "taunt";
 	}
 
 	/** Reports side-entry hazards damaging or debuffing a switched-in creature. */
@@ -437,7 +447,9 @@ export class Battle {
 					);
 				}
 
-				this.applyReplacementCommands(replacementCommands);
+				for (let event of this.applyReplacementCommands(replacementCommands)) {
+					yield event;
+				}
 				this.pendingReplacementRequests = [];
 				this.reconcileSideState(0);
 				this.reconcileSideState(1);
@@ -493,7 +505,11 @@ export class Battle {
 		let slotTeams =
 			side.teams.length === 1 ? Array.from({ length: slots }, () => 0) : [0, 1, 2].slice(0, slots);
 		let teams = side.teams.map((team) => ({
-			creatures: team.map((creature) => new CombatantState(creature)),
+			creatures: team.map((creature) => {
+				let combatant = new CombatantState(creature);
+				this.initializeMajorStatusState(combatant, creature.status.state);
+				return combatant;
+			}),
 			eliminated: false,
 		}));
 		let active = Array.from({ length: slots }, () => null as BattleActiveSlotState | null);
@@ -556,8 +572,18 @@ export class Battle {
 				action.command.target,
 			);
 			let target = this.getActiveCombatant(resolvedTargetPosition);
-			if (target === null) continue;
-			if (this.canMoveHitTarget(action.move, target.combatant) === false) continue;
+			if (target === null) {
+				for (let event of resolveMissingTargetEvents(
+					this.createMoveResolutionContext(),
+					action.user,
+					action.userPosition,
+					action.command,
+					action.move,
+				)) {
+					yield event;
+				}
+				continue;
+			}
 			for (let event of this.resolveMove(
 				action.user,
 				action.userPosition,
@@ -632,6 +658,7 @@ export class Battle {
 		effect: MoveEffect,
 	): Generator<BattleEvent, void, void> {
 		for (let event of Effects.resolve(effect, {
+			gameData: this.gameData,
 			user,
 			userPosition,
 			target,
@@ -639,8 +666,55 @@ export class Battle {
 			state: this.state,
 			random: () => this.random(),
 		})) {
+			if (event.type === "status-applied") {
+				this.initializeMajorStatusState(target, event.status);
+			}
 			yield event;
 		}
+	}
+
+	private initializeMajorStatusState(combatant: CombatantState, status: State | null) {
+		combatant.majorStatus.sleepTurns = 0;
+		if (status !== State.Asleep) return;
+		combatant.majorStatus.sleepTurns = this.getSleepTurnDuration();
+	}
+
+	private clearMajorStatusState(combatant: CombatantState) {
+		combatant.creature.status.state = null;
+		combatant.majorStatus.sleepTurns = 0;
+	}
+
+	private getSleepTurnDuration() {
+		return Math.floor(this.getRandomUnit() * 3) + 1;
+	}
+
+	private getRandomUnit() {
+		return Math.min(this.random(), 0.9999999999999999);
+	}
+
+	private moveThawsUser(move: Move) {
+		return move.type === Type.FIRE;
+	}
+
+	private resolveSleepBeforeMove(user: CombatantState) {
+		if (user.creature.status.state !== State.Asleep) return false;
+		if (user.majorStatus.sleepTurns === 0) {
+			this.clearMajorStatusState(user);
+			return false;
+		}
+
+		user.majorStatus.sleepTurns -= 1;
+		return true;
+	}
+
+	private resolveFreezeBeforeMove(user: CombatantState, move: Move) {
+		if (user.creature.status.state !== State.Frozen) return false;
+		if (this.moveThawsUser(move) || this.random() < 0.2) {
+			this.clearMajorStatusState(user);
+			return false;
+		}
+
+		return true;
 	}
 
 	private applyChargeEffect(user: CombatantState, effect: Extract<MoveEffect, { kind: "charge" }>) {
@@ -681,30 +755,12 @@ export class Battle {
 		);
 	}
 
-	private applyReplacementCommands(commands: ReplacementInput) {
-		applyReplacementCommandsSystem(
+	private applyReplacementCommands(commands: ReplacementInput): BattleEvent[] {
+		return applyReplacementCommandsSystem(
 			this.createRosterSystemContext(),
 			this.pendingReplacementRequests,
 			commands,
 		);
-	}
-
-	private activateReplacement(
-		sideIndex: number,
-		slotIndex: number,
-		teamIndex: number,
-		creatureIndex: number,
-	) {
-		let side = this.state.sides[sideIndex]!;
-		let combatant = side.teams[teamIndex]!.creatures[creatureIndex]!;
-
-		this.resetSwitchVolatiles(combatant);
-		side.active[slotIndex] = {
-			teamIndex,
-			creatureIndex,
-			combatant,
-		};
-		this.applyHealingWish(combatant, sideIndex, { side: sideIndex, slot: slotIndex });
 	}
 
 	private forfeitSide(sideIndex: number) {
@@ -890,6 +946,7 @@ export class Battle {
 	}
 
 	private isGrounded(combatant: CombatantState): boolean {
+		if (this.state.field.gravityTurns > 0) return true;
 		if (combatant.volatile.invulnerable) return false;
 		let species = getCreatureSpecies(this.gameData, combatant.creature);
 		return species.types.includes(Type.FLYING) === false;
@@ -905,9 +962,12 @@ export class Battle {
 		combatant.volatile.flinched = false;
 		combatant.volatile.protecting = false;
 		combatant.volatile.enduring = false;
+		combatant.volatile.protectionSuccessStreak = 0;
+		combatant.volatile.successfulProtectionThisTurn = false;
 		combatant.volatile.destinyBonded = false;
 		combatant.volatile.chargedElectric = false;
 		combatant.volatile.focusEnergy = false;
+		combatant.volatile.criticalHitStages = 0;
 		combatant.volatile.aquaRing = false;
 		combatant.volatile.cursed = false;
 		combatant.volatile.partiallyTrappedTurns = 0;
@@ -916,13 +976,17 @@ export class Battle {
 		combatant.volatile.chargingMoveId = null;
 		combatant.volatile.recharging = false;
 		combatant.volatile.actedThisBattle = false;
+		combatant.volatile.identified = false;
 		combatant.volatile.attracted = false;
+		combatant.volatile.attractedBy = null;
 		combatant.volatile.tauntedTurns = 0;
 		combatant.volatile.encoreTurns = 0;
 		combatant.volatile.encoredMoveSlot = null;
 		combatant.volatile.disabledMoveSlot = null;
 		combatant.volatile.disableTurns = 0;
 		combatant.volatile.lastDamageThisTurn = null;
+		combatant.volatile.escalatingPoisonStage =
+			combatant.creature.status.poison === "escalating" ? 1 : 0;
 	}
 
 	private resetStatStages(combatant: CombatantState) {
@@ -938,8 +1002,28 @@ export class Battle {
 		let events: BattleEvent[] = [];
 		let grounded = this.isGrounded(combatant);
 		let species = getCreatureSpecies(this.gameData, combatant.creature);
+		let canResolveNextHazard = () => this.isCombatantFainted(combatant) === false;
 
-		if (effects.spikesLayers > 0 && grounded) {
+		if (effects.stealthRock && canResolveNextHazard()) {
+			let effectiveness = this.getTypeEffectiveness(combatant, {
+				type: Type.ROCK,
+				damageClass: DamageClass.Physical,
+				power: 0,
+				accuracy: 0,
+				pp: 0,
+				effect: { kind: "none" },
+			} as Move);
+			let damage = Math.max(
+				0,
+				Math.floor(
+					getCreatureStat(this.gameData, combatant.creature, Stat.HP) * (1 / 8) * effectiveness,
+				),
+			);
+			events.push({ type: "hazard-triggered", target: position, effect: "stealth-rock" });
+			if (damage > 0) this.applyDamage(combatant, position, damage, events);
+		}
+
+		if (effects.spikesLayers > 0 && grounded && canResolveNextHazard()) {
 			let fraction =
 				effects.spikesLayers === 1 ? 1 / 8 : effects.spikesLayers === 2 ? 1 / 6 : 1 / 4;
 			let damage = Math.max(
@@ -950,46 +1034,28 @@ export class Battle {
 			this.applyDamage(combatant, position, damage, events);
 		}
 
-		if (
-			effects.toxicSpikesLayers > 0 &&
-			grounded &&
-			combatant.creature.status.state === null &&
-			species.types.includes(Type.POISON) === false &&
-			species.types.includes(Type.STEEL) === false
-		) {
-			combatant.creature.status.state = State.Poisoned;
-			events.push({ type: "hazard-triggered", target: position, effect: "toxic-spikes" });
-			events.push({ type: "status-applied", target: position, status: State.Poisoned });
+		if (effects.toxicSpikesLayers > 0 && grounded && canResolveNextHazard()) {
+			if (species.types.includes(Type.POISON)) {
+				effects.toxicSpikesLayers = 0;
+				events.push({ type: "hazard-triggered", target: position, effect: "toxic-spikes" });
+			} else if (
+				Effects.canApplyMajorStatus(State.Poisoned, {
+					gameData: this.gameData,
+					target: combatant,
+					targetPosition: position,
+					state: this.state,
+				})
+			) {
+				combatant.creature.status.state = State.Poisoned;
+				combatant.creature.status.poison =
+					effects.toxicSpikesLayers >= 2 ? "escalating" : "regular";
+				this.initializeMajorStatusState(combatant, State.Poisoned);
+				events.push({ type: "hazard-triggered", target: position, effect: "toxic-spikes" });
+				events.push({ type: "status-applied", target: position, status: State.Poisoned });
+			}
 		}
 
-		if (effects.stealthRock) {
-			let effectiveness = this.getTypeEffectiveness(combatant, {
-				type: Type.ROCK,
-				damageClass: DamageClass.Physical,
-				power: 0,
-				accuracy: 0,
-				pp: 0,
-				effect: { kind: "none" },
-			} as Move);
-			let multiplier =
-				effectiveness === Effectiveness.SUPER
-					? 2
-					: effectiveness === Effectiveness.WEAK
-						? 0.5
-						: effectiveness === Effectiveness.ZERO
-							? 0
-							: 1;
-			let damage = Math.max(
-				0,
-				Math.floor(
-					getCreatureStat(this.gameData, combatant.creature, Stat.HP) * (1 / 8) * multiplier,
-				),
-			);
-			events.push({ type: "hazard-triggered", target: position, effect: "stealth-rock" });
-			if (damage > 0) this.applyDamage(combatant, position, damage, events);
-		}
-
-		if (effects.stickyWeb && grounded) {
+		if (effects.stickyWeb && grounded && canResolveNextHazard()) {
 			let current = combatant.statStages[Stat.Speed];
 			let value = Math.max(-6, Math.min(6, current - 1));
 			combatant.statStages[Stat.Speed] = value;
@@ -1107,21 +1173,17 @@ export class Battle {
 			return true;
 		}
 
-		if (user.volatile.attracted && this.random() < 0.5) {
-			events.push({ type: "move-failed", user: userPosition, reason: "attract" });
-			return true;
+		if (user.volatile.attracted) {
+			if (this.hasActiveAttractionSource(user) === false) {
+				this.clearAttraction(user);
+			} else if (this.random() < 0.5) {
+				events.push({ type: "move-failed", user: userPosition, reason: "attract" });
+				return true;
+			}
 		}
 
-		if (
-			this.findEffect(this.flattenEffects(move.effect), "first-turn-only") &&
-			user.volatile.actedThisBattle
-		) {
-			events.push({ type: "move-failed", user: userPosition, reason: "disabled" });
-			return true;
-		}
-
-		if (user.creature.status.state === State.Asleep) return true;
-		if (user.creature.status.state === State.Frozen) return true;
+		if (this.resolveSleepBeforeMove(user)) return true;
+		if (this.resolveFreezeBeforeMove(user, move)) return true;
 		if (user.volatile.flinched) return true;
 		if (user.creature.status.state === State.Paralyzed && this.random() < 0.25) return true;
 		return this.resolveConfusion(user, userPosition, events);
@@ -1256,18 +1318,144 @@ export class Battle {
 		this.applyDamage(user, userPosition, damage, events);
 	}
 
-	private resolveReactiveFailure(
+	private resolvePreHitFailure(
 		user: CombatantState,
 		userPosition: BattlePosition,
+		target: CombatantState,
+		targetPosition: BattlePosition,
 		effects: MoveEffect[],
 		events: BattleEvent[],
 	): boolean {
-		if (!this.findEffect(effects, "fail-if-user-damaged-this-turn")) return false;
-		if (user.volatile.lastDamageThisTurn === null) return false;
-		events.push({ type: "move-failed", user: userPosition, reason: "disabled" });
-		user.volatile.actedThisBattle = true;
-		user.volatile.destinyBonded = false;
-		return true;
+		if (this.isProtectionSuccessDeclined(user, effects)) {
+			events.push({ type: "move-failed", user: userPosition, reason: "requirement" });
+			user.volatile.protectionSuccessStreak = 0;
+			user.volatile.successfulProtectionThisTurn = false;
+			return true;
+		}
+
+		if (this.findEffect(effects, "first-turn-only") && user.volatile.actedThisBattle) {
+			events.push({ type: "move-failed", user: userPosition, reason: "requirement" });
+			return true;
+		}
+
+		if (
+			this.findEffect(effects, "fail-if-user-damaged-this-turn") &&
+			user.volatile.lastDamageThisTurn !== null
+		) {
+			events.push({ type: "move-failed", user: userPosition, reason: "requirement" });
+			user.volatile.actedThisBattle = true;
+			user.volatile.destinyBonded = false;
+			return true;
+		}
+
+		if (this.findEffect(effects, "belly-drum")) {
+			let maxHP = getCreatureStat(this.gameData, user.creature, Stat.HP);
+			if (this.getRemainingHP(user) <= Math.floor(maxHP / 2)) {
+				events.push({ type: "move-failed", user: userPosition, reason: "requirement" });
+				return true;
+			}
+		}
+
+		if (
+			this.findEffect(effects, "fixed-damage-target-hp-gap") &&
+			this.getRemainingHP(target) <= this.getRemainingHP(user)
+		) {
+			events.push({ type: "move-failed", user: userPosition, reason: "requirement" });
+			return true;
+		}
+
+		for (let effect of effects) {
+			if (
+				effect.kind === "side-effect" &&
+				this.sideEffectAtCap(effect, userPosition, targetPosition)
+			) {
+				events.push({ type: "move-failed", user: userPosition, reason: "requirement" });
+				return true;
+			}
+
+			if (effect.kind === "field-effect" && this.fieldEffectAtCap(effect)) {
+				events.push({ type: "move-failed", user: userPosition, reason: "requirement" });
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	private isProtectionSuccessDeclined(user: CombatantState, effects: MoveEffect[]): boolean {
+		if (effects.some((effect) => effect.kind === "protect" || effect.kind === "endure") === false) {
+			return false;
+		}
+
+		let chance = 1 / 2 ** user.volatile.protectionSuccessStreak;
+		if (chance >= 1) return false;
+		return this.random() >= chance;
+	}
+
+	private sideEffectAtCap(
+		effect: Extract<MoveEffect, { kind: "side-effect" }>,
+		userPosition: BattlePosition,
+		targetPosition: BattlePosition,
+	): boolean {
+		let side = effect.target === "self" ? userPosition.side : targetPosition.side;
+		let state = this.state.sides[side]!.effects;
+
+		switch (effect.effect) {
+			case "reflect":
+				return state.reflectTurns > 0;
+			case "light-screen":
+				return state.lightScreenTurns > 0;
+			case "tailwind":
+				return state.tailwindTurns > 0;
+			case "safeguard":
+				return state.safeguardTurns > 0;
+			case "mist":
+				return state.mistTurns > 0;
+			case "lucky-chant":
+				return state.luckyChantTurns > 0;
+			case "spikes":
+				return state.spikesLayers >= 3;
+			case "toxic-spikes":
+				return state.toxicSpikesLayers >= 2;
+			case "stealth-rock":
+				return state.stealthRock;
+			case "sticky-web":
+				return state.stickyWeb;
+		}
+	}
+
+	private fieldEffectAtCap(effect: Extract<MoveEffect, { kind: "field-effect" }>): boolean {
+		if (this.isToggleRoomFieldEffect(effect.effect)) return false;
+
+		switch (effect.effect) {
+			case "trick-room":
+				return this.state.field.trickRoomTurns > 0;
+			case "gravity":
+				return this.state.field.gravityTurns > 0;
+			case "wonder-room":
+				return this.state.field.wonderRoomTurns > 0;
+			case "magic-room":
+				return this.state.field.magicRoomTurns > 0;
+			case "sun":
+			case "rain":
+			case "sand":
+			case "hail":
+			case "snow":
+			case "fog":
+				return this.state.field.weather === effect.effect;
+			case "electric-terrain":
+				return this.state.field.terrain === "electric";
+			case "grassy-terrain":
+				return this.state.field.terrain === "grassy";
+			case "misty-terrain":
+				return this.state.field.terrain === "misty";
+			case "psychic-terrain":
+				return this.state.field.terrain === "psychic";
+		}
+	}
+
+	private isToggleRoomFieldEffect(effect: FieldEffectType): boolean {
+		return effect === "trick-room" || effect === "wonder-room" || effect === "magic-room";
 	}
 
 	private applyReactiveEffectsAfterDamage(
@@ -1354,7 +1542,7 @@ export class Battle {
 		if (side.pendingHealingWishCount === 0) return [];
 		side.pendingHealingWishCount -= 1;
 		combatant.creature.status.damage = 0;
-		combatant.creature.status.state = null;
+		this.clearMajorStatusState(combatant);
 		return [
 			{
 				type: "damage-dealt",
@@ -1435,24 +1623,20 @@ export class Battle {
 	) {
 		let side = this.state.sides[position.side]!;
 		let current = side.active[position.slot];
-		let replacement = side.teams[teamIndex]!.creatures[creatureIndex];
-		if (!current || !replacement) return;
+		if (!current) return;
 		let previousStages = structuredClone(current.combatant.statStages);
 		this.resetSwitchVolatiles(current.combatant);
-		this.activateReplacement(position.side, position.slot, teamIndex, creatureIndex);
-		if (preserveStatStages) {
-			for (let [stat, value] of Object.entries(previousStages)) {
-				replacement.statStages[stat as keyof typeof replacement.statStages] = value;
-			}
-		}
-		events.push({ type: "creature-switched", target: position, creature: creatureIndex });
-		for (let event of this.applySwitchInHazards(position, replacement)) {
-			events.push(event);
-		}
-		if (this.isCombatantFainted(replacement)) {
-			this.clearActiveCombatant(position);
-			events.push({ type: "creature-fainted", target: position });
-		}
+		applySwitchInPipeline(
+			this.createRosterSystemContext(),
+			position,
+			teamIndex,
+			creatureIndex,
+			events,
+			{
+				emitSwitchEvent: true,
+				preserveStatStages: preserveStatStages ? previousStages : undefined,
+			},
+		);
 	}
 
 	private applyDelayedAttacks(): BattleEvent[] {
@@ -1631,6 +1815,23 @@ export class Battle {
 		);
 	}
 
+	private clearAttraction(combatant: CombatantState) {
+		combatant.volatile.attracted = false;
+		combatant.volatile.attractedBy = null;
+	}
+
+	private hasActiveAttractionSource(combatant: CombatantState) {
+		if (combatant.volatile.attractedBy === null) return false;
+
+		for (let side of this.state.sides) {
+			for (let active of side.active) {
+				if (active?.combatant.creature === combatant.volatile.attractedBy) return true;
+			}
+		}
+
+		return false;
+	}
+
 	private getTypeEffectiveness(target: CombatantState, move: Move): Effectiveness {
 		let moveMatch = this.gameData.typeChart[move.type] ?? {};
 		let targetSpecies = getCreatureSpecies(this.gameData, target.creature);
@@ -1650,9 +1851,20 @@ export class Battle {
 		}, Effectiveness.NORMAL);
 	}
 
-	private getCriticalHitChance(user: CombatantState): number {
-		if (user.volatile.focusEnergy) return 0.5;
-		return CRITICAL_HIT_CHANCE;
+	private getCriticalHitChance(user: CombatantState, move: Move): number {
+		let stages = user.volatile.criticalHitStages + (move.criticalHitStages ?? 0);
+		if (user.volatile.focusEnergy) stages += 2;
+
+		switch (Math.min(stages, 3)) {
+			case 0:
+				return CRITICAL_HIT_CHANCE;
+			case 1:
+				return HIGH_CRITICAL_HIT_CHANCE;
+			case 2:
+				return VERY_HIGH_CRITICAL_HIT_CHANCE;
+			default:
+				return 1;
+		}
 	}
 
 	private getCombatantPosition(combatant: CombatantState): BattlePosition {
@@ -1716,12 +1928,6 @@ export class Battle {
 				this.applySwitchInHazards(position, combatant),
 			applyHealingWish: (combatant: CombatantState, sideIndex: number, position: BattlePosition) =>
 				this.applyHealingWish(combatant, sideIndex, position),
-			activateReplacement: (
-				sideIndex: number,
-				slotIndex: number,
-				teamIndex: number,
-				creatureIndex: number,
-			) => this.activateReplacement(sideIndex, slotIndex, teamIndex, creatureIndex),
 			forfeitSide: (sideIndex: number) => this.forfeitSide(sideIndex),
 		};
 	}
@@ -1731,6 +1937,7 @@ export class Battle {
 			state: this.state,
 			gameData: this.gameData,
 			random: () => this.random(),
+			isGrounded: (combatant: CombatantState) => this.isGrounded(combatant),
 			findEffect: <TKind extends MoveEffect["kind"]>(effects: MoveEffect[], kind: TKind) =>
 				this.findEffect(effects, kind),
 			flattenEffects: (effect: MoveEffect) => this.flattenEffects(effect),
@@ -1742,7 +1949,8 @@ export class Battle {
 			getCombatantSpeed: (position: BattlePosition, combatant: CombatantState) =>
 				this.getCombatantSpeed(position, combatant),
 			getStageModifier: (stage: number) => this.getStageModifier(stage),
-			getCriticalHitChance: (combatant: CombatantState) => this.getCriticalHitChance(combatant),
+			getCriticalHitChance: (combatant: CombatantState, move: Move) =>
+				this.getCriticalHitChance(combatant, move),
 			getStabModifier: (combatant: CombatantState, move: Move) =>
 				this.getStabModifier(combatant, move),
 		};
@@ -1771,12 +1979,14 @@ export class Battle {
 			) => Array.from(this.resolveEffect(user, userPosition, target, targetPosition, move, effect)),
 			applyChargeEffect: (user: CombatantState, effect: Extract<MoveEffect, { kind: "charge" }>) =>
 				this.applyChargeEffect(user, effect),
-			resolveReactiveFailure: (
+			resolvePreHitFailure: (
 				user: CombatantState,
 				userPosition: BattlePosition,
+				target: CombatantState,
+				targetPosition: BattlePosition,
 				effects: MoveEffect[],
 				events: BattleEvent[],
-			) => this.resolveReactiveFailure(user, userPosition, effects, events),
+			) => this.resolvePreHitFailure(user, userPosition, target, targetPosition, effects, events),
 			resolveCurse: (
 				user: CombatantState,
 				userPosition: BattlePosition,

@@ -46,9 +46,11 @@ export interface MoveResolutionContext {
 		effect: MoveEffect,
 	): BattleEvent[];
 	applyChargeEffect(user: CombatantState, effect: Extract<MoveEffect, { kind: "charge" }>): void;
-	resolveReactiveFailure(
+	resolvePreHitFailure(
 		user: CombatantState,
 		userPosition: BattlePosition,
+		target: CombatantState,
+		targetPosition: BattlePosition,
 		effects: MoveEffect[],
 		events: BattleEvent[],
 	): boolean;
@@ -147,6 +149,29 @@ export interface MoveResolutionContext {
 }
 
 /**
+ * Resolves a committed move whose single-target slot no longer has an active combatant.
+ *
+ * This keeps stale target failures on the move-resolution path so battle orchestration emits
+ * an explicit invalid-target outcome instead of dropping the action during turn iteration.
+ */
+export function resolveMissingTargetEvents(
+	context: MoveResolutionContext,
+	user: CombatantState,
+	userPosition: BattlePosition,
+	command: FightCommand,
+	move: Move,
+): BattleEvent[] {
+	let events: BattleEvent[] = [];
+
+	if (context.resolveBeforeMove(user, userPosition, move, command, events)) {
+		return events;
+	}
+
+	events.push({ type: "move-failed", user: userPosition, reason: "invalid-target" });
+	return events;
+}
+
+/**
  * Resolves one submitted move into the exact ordered events expected by battle orchestration.
  *
  * The sequence is intentionally centralized here: pre-move locks and failures, charge handling, hit checks,
@@ -192,7 +217,7 @@ export function resolveMoveEvents(
 		user.volatile.chargingMoveId = null;
 	}
 
-	if (context.resolveReactiveFailure(user, userPosition, effects, events)) {
+	if (context.resolvePreHitFailure(user, userPosition, target, targetPosition, effects, events)) {
 		return events;
 	}
 

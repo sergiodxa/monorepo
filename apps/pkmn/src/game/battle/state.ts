@@ -11,6 +11,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 import type { BattleStatStage } from "~/game/data/move";
+import type { Creature } from "~/game/world/creature";
 
 import { DamageClass } from "~/game/data/move";
 import { Stat } from "~/game/data/stat";
@@ -20,6 +21,11 @@ export interface DamageHistoryState {
 	amount: number;
 	source: { side: number; slot: number };
 	moveClass: DamageClass;
+}
+
+/** Runtime counters for persistent statuses that need turn-by-turn battle tracking. */
+export interface CombatantMajorStatusState {
+	sleepTurns: number;
 }
 
 /** Battle-only effects that apply to one active combatant and clear on switch. */
@@ -32,9 +38,12 @@ export interface CombatantVolatileState {
 	flinched: boolean;
 	protecting: boolean;
 	enduring: boolean;
+	protectionSuccessStreak: number;
+	successfulProtectionThisTurn: boolean;
 	destinyBonded: boolean;
 	chargedElectric: boolean;
 	focusEnergy: boolean;
+	criticalHitStages: number;
 	aquaRing: boolean;
 	cursed: boolean;
 	partiallyTrappedTurns: number;
@@ -45,6 +54,7 @@ export interface CombatantVolatileState {
 	actedThisBattle: boolean;
 	identified: boolean;
 	attracted: boolean;
+	attractedBy: Creature | null;
 	tauntedTurns: number;
 	encoreTurns: number;
 	encoredMoveSlot: 0 | 1 | 2 | 3 | null;
@@ -54,6 +64,7 @@ export interface CombatantVolatileState {
 	disableTurns: number;
 	lastMoveSlot: 0 | 1 | 2 | 3 | null;
 	lastDamageThisTurn: DamageHistoryState | null;
+	escalatingPoisonStage: number;
 }
 
 /** Temporary stat stage changes applied during battle. */
@@ -96,9 +107,12 @@ export function createCombatantVolatileState(): CombatantVolatileState {
 		flinched: false,
 		protecting: false,
 		enduring: false,
+		protectionSuccessStreak: 0,
+		successfulProtectionThisTurn: false,
 		destinyBonded: false,
 		chargedElectric: false,
 		focusEnergy: false,
+		criticalHitStages: 0,
 		aquaRing: false,
 		cursed: false,
 		partiallyTrappedTurns: 0,
@@ -109,6 +123,7 @@ export function createCombatantVolatileState(): CombatantVolatileState {
 		actedThisBattle: false,
 		identified: false,
 		attracted: false,
+		attractedBy: null,
 		tauntedTurns: 0,
 		encoreTurns: 0,
 		encoredMoveSlot: null,
@@ -118,6 +133,14 @@ export function createCombatantVolatileState(): CombatantVolatileState {
 		disableTurns: 0,
 		lastMoveSlot: null,
 		lastDamageThisTurn: null,
+		escalatingPoisonStage: 0,
+	};
+}
+
+/** Returns a fresh persistent-status runtime state with no active counters. */
+export function createCombatantMajorStatusState(): CombatantMajorStatusState {
+	return {
+		sleepTurns: 0,
 	};
 }
 

@@ -12,8 +12,10 @@ import { expect, test } from "bun:test";
 
 import type { MoveEffect } from "~/game/data/move";
 
+import { GameData } from "~/game/data/game-data";
 import { StatusEffectType } from "~/game/data/move";
 import { Stat } from "~/game/data/stat";
+import { Type } from "~/game/data/type";
 import { Creature, State } from "~/game/world/creature";
 
 import { CombatantState } from "./combatant-state";
@@ -31,6 +33,16 @@ test("Effects.trap applies trapped volatile state", () => {
 		{ type: "volatile-applied", target: { side: 1, slot: 0 }, effect: "trap" },
 	]);
 	expect(context.target.volatile.trapped).toBe(true);
+});
+
+test("Effects.attract applies attraction and records the source", () => {
+	let context = createContext();
+
+	expect(Effects.attract({ kind: "attract" }, context)).toEqual([
+		{ type: "volatile-applied", target: { side: 1, slot: 0 }, effect: "attract" },
+	]);
+	expect(context.target.volatile.attracted).toBe(true);
+	expect(context.target.volatile.attractedBy).toBe(context.user.creature);
 });
 
 test("Effects.forceSwitchTarget is a no-op marker effect", () => {
@@ -82,6 +94,8 @@ test("Effects.protect applies protecting to the user", () => {
 		{ type: "volatile-applied", target: { side: 0, slot: 0 }, effect: "protect" },
 	]);
 	expect(context.user.volatile.protecting).toBe(true);
+	expect(context.user.volatile.protectionSuccessStreak).toBe(1);
+	expect(context.user.volatile.successfulProtectionThisTurn).toBe(true);
 });
 
 test("Effects.endure applies enduring to the user", () => {
@@ -91,6 +105,8 @@ test("Effects.endure applies enduring to the user", () => {
 		{ type: "volatile-applied", target: { side: 0, slot: 0 }, effect: "endure" },
 	]);
 	expect(context.user.volatile.enduring).toBe(true);
+	expect(context.user.volatile.protectionSuccessStreak).toBe(1);
+	expect(context.user.volatile.successfulProtectionThisTurn).toBe(true);
 });
 
 test("Effects.destinyBond applies destiny bond to the user", () => {
@@ -286,6 +302,36 @@ test("Effects.fieldEffect routes trick room to shared field state", () => {
 	expect(context.state.field.trickRoomTurns).toBe(5);
 });
 
+test("Effects.fieldEffect clears trick room when reused while active", () => {
+	let context = createContext();
+	context.state.field.trickRoomTurns = 3;
+
+	expect(
+		Effects.fieldEffect({ kind: "field-effect", effect: "trick-room", turns: 5 }, context),
+	).toEqual([{ type: "field-effect-applied", effect: "trick-room", turns: 0 }]);
+	expect(context.state.field.trickRoomTurns).toBe(0);
+});
+
+test("Effects.fieldEffect clears wonder room when reused while active", () => {
+	let context = createContext();
+	context.state.field.wonderRoomTurns = 2;
+
+	expect(
+		Effects.fieldEffect({ kind: "field-effect", effect: "wonder-room", turns: 5 }, context),
+	).toEqual([{ type: "field-effect-applied", effect: "wonder-room", turns: 0 }]);
+	expect(context.state.field.wonderRoomTurns).toBe(0);
+});
+
+test("Effects.fieldEffect clears magic room when reused while active", () => {
+	let context = createContext();
+	context.state.field.magicRoomTurns = 4;
+
+	expect(
+		Effects.fieldEffect({ kind: "field-effect", effect: "magic-room", turns: 5 }, context),
+	).toEqual([{ type: "field-effect-applied", effect: "magic-room", turns: 0 }]);
+	expect(context.state.field.magicRoomTurns).toBe(0);
+});
+
 test("Effects.applyStatus mutates the persistent creature state", () => {
 	let context = createContext(0);
 
@@ -296,6 +342,61 @@ test("Effects.applyStatus mutates the persistent creature state", () => {
 		),
 	).toEqual([{ type: "status-applied", target: { side: 1, slot: 0 }, status: State.Asleep }]);
 	expect(context.target.creature.status.state).toBe(State.Asleep);
+});
+
+test("Effects.applyStatus blocks type-immune major statuses", () => {
+	let context = createContext(0.5, [Type.FIRE]);
+
+	expect(
+		Effects.applyStatus(
+			{ kind: "apply-status", status: StatusEffectType.Burn, chance: 1 },
+			context,
+		),
+	).toEqual([]);
+	expect(context.target.creature.status.state).toBe(null);
+});
+
+test("Effects.applyStatus blocks sleep for grounded targets under electric terrain", () => {
+	let context = createContext(0.5, [Type.GRASS]);
+	context.state.field.terrain = "electric";
+	context.state.field.terrainTurns = 5;
+
+	expect(
+		Effects.applyStatus(
+			{ kind: "apply-status", status: StatusEffectType.Sleep, chance: 1 },
+			context,
+		),
+	).toEqual([]);
+	expect(context.target.creature.status.state).toBe(null);
+});
+
+test("Effects.applyStatus still allows sleep for ungrounded targets under electric terrain", () => {
+	let context = createContext(0.5, [Type.FLYING]);
+	context.state.field.terrain = "electric";
+	context.state.field.terrainTurns = 5;
+
+	expect(
+		Effects.applyStatus(
+			{ kind: "apply-status", status: StatusEffectType.Sleep, chance: 1 },
+			context,
+		),
+	).toEqual([{ type: "status-applied", target: { side: 1, slot: 0 }, status: State.Asleep }]);
+	expect(context.target.creature.status.state).toBe(State.Asleep);
+});
+
+test("Effects.applyStatus treats flying targets as grounded under gravity", () => {
+	let context = createContext(0.5, [Type.FLYING]);
+	context.state.field.terrain = "electric";
+	context.state.field.terrainTurns = 5;
+	context.state.field.gravityTurns = 5;
+
+	expect(
+		Effects.applyStatus(
+			{ kind: "apply-status", status: StatusEffectType.Sleep, chance: 1 },
+			context,
+		),
+	).toEqual([]);
+	expect(context.target.creature.status.state).toBe(null);
 });
 
 test("Effects.leechSeed marks the target as seeded", () => {
@@ -513,11 +614,19 @@ test("Effects.resolve dispatches compound nested effects", () => {
 	expect(context.user.statStages[Stat.Speed]).toBe(1);
 });
 
-function createContext(randomValue = 0.5): Effects.Context {
+function createContext(randomValue = 0.5, targetTypes: Type[] = [Type.GRASS]): Effects.Context {
 	let user = new CombatantState(createCreature());
 	let target = new CombatantState(createCreature());
+	let gameData = new GameData(
+		new Map([[TEST_SPECIES_ID, { types: targetTypes } as never]]),
+		new Map(),
+		new Map(),
+		new Map(),
+		{} as never,
+	);
 
 	return {
+		gameData,
 		user,
 		target,
 		userPosition: { side: 0, slot: 0 },

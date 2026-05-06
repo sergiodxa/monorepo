@@ -8,13 +8,17 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
+import type { GameData } from "~/game/data/game-data";
 import type { MoveEffect, StatusEffectType } from "~/game/data/move";
 
 import { Stat } from "~/game/data/stat";
 import { State } from "~/game/data/status";
+import { Type } from "~/game/data/type";
 
 import type { BattleEvent, BattlePosition, BattleState } from "./battle";
 import type { CombatantState } from "./combatant-state";
+
+import { getCreatureSpecies } from "./mechanics";
 
 type Resolver<TKind extends MoveEffect["kind"]> = (
 	effect: Extract<MoveEffect, { kind: TKind }>,
@@ -170,6 +174,7 @@ export class Effects {
 		context: Effects.Context,
 	): BattleEvent[] {
 		context.target.volatile.attracted = true;
+		context.target.volatile.attractedBy = context.user.creature;
 		return [{ type: "volatile-applied", target: context.targetPosition, effect: "attract" }];
 	}
 
@@ -188,6 +193,8 @@ export class Effects {
 		context: Effects.Context,
 	): BattleEvent[] {
 		context.user.volatile.protecting = true;
+		context.user.volatile.protectionSuccessStreak += 1;
+		context.user.volatile.successfulProtectionThisTurn = true;
 		return [{ type: "volatile-applied", target: context.userPosition, effect: "protect" }];
 	}
 
@@ -197,6 +204,8 @@ export class Effects {
 		context: Effects.Context,
 	): BattleEvent[] {
 		context.user.volatile.enduring = true;
+		context.user.volatile.protectionSuccessStreak += 1;
+		context.user.volatile.successfulProtectionThisTurn = true;
 		return [{ type: "volatile-applied", target: context.userPosition, effect: "endure" }];
 	}
 
@@ -526,13 +535,52 @@ export class Effects {
 		effect: Extract<MoveEffect, { kind: "apply-status" }>,
 		context: Effects.Context,
 	): BattleEvent[] {
-		if (context.target.creature.status.state !== null) return [];
-		if (effect.chance < 1 && context.random() >= effect.chance) return [];
-		if (context.state.sides[context.targetPosition.side]!.effects.safeguardTurns > 0) return [];
-
 		let status = Effects.getPersistentStatus(effect.status);
-		context.target.creature.status.state = status;
+		if (Effects.canApplyMajorStatus(status, context) === false) return [];
+		if (effect.chance < 1 && context.random() >= effect.chance) return [];
+
+		Effects.setPersistentStatus(context.target, status, effect.poisonVariant);
 		return [{ type: "status-applied", target: context.targetPosition, status }];
+	}
+
+	/** Returns whether the current battle state allows a new major status on the target. */
+	static canApplyMajorStatus(status: State, context: Effects.StatusContext): boolean {
+		if (context.target.creature.status.state !== null) return false;
+		if (context.state.sides[context.targetPosition.side]!.effects.safeguardTurns > 0) return false;
+
+		let species = getCreatureSpecies(context.gameData, context.target.creature);
+		if (
+			(status === State.Burned && species.types.includes(Type.FIRE)) ||
+			(status === State.Paralyzed && species.types.includes(Type.ELECTRIC)) ||
+			(status === State.Poisoned &&
+				(species.types.includes(Type.POISON) || species.types.includes(Type.STEEL))) ||
+			(status === State.Frozen && species.types.includes(Type.ICE))
+		) {
+			return false;
+		}
+
+		if (Effects.isGrounded(context.gameData, context.target, context.state)) {
+			if (context.state.field.terrain === "misty") return false;
+			if (context.state.field.terrain === "electric" && status === State.Asleep) return false;
+		}
+
+		return true;
+	}
+
+	private static setPersistentStatus(
+		target: CombatantState,
+		status: State,
+		poisonVariant?: "regular" | "escalating",
+	) {
+		target.creature.status.state = status;
+		if (status !== State.Poisoned) {
+			target.creature.status.poison = undefined;
+			target.volatile.escalatingPoisonStage = 0;
+			return;
+		}
+
+		target.creature.status.poison = poisonVariant ?? "regular";
+		target.volatile.escalatingPoisonStage = poisonVariant === "escalating" ? 1 : 0;
 	}
 
 	/** Applies Leech Seed to the target and records the source side. */
@@ -764,6 +812,11 @@ export class Effects {
 		effect: Extract<MoveEffect, { kind: "field-effect" }>,
 		context: Effects.Context,
 	): BattleEvent[] {
+		if (context.state.field.trickRoomTurns > 0) {
+			context.state.field.trickRoomTurns = 0;
+			return [{ type: "field-effect-applied", effect: "trick-room", turns: 0 }];
+		}
+
 		context.state.field.trickRoomTurns = effect.turns;
 		return [{ type: "field-effect-applied", effect: "trick-room", turns: effect.turns }];
 	}
@@ -882,6 +935,11 @@ export class Effects {
 		effect: Extract<MoveEffect, { kind: "field-effect" }>,
 		context: Effects.Context,
 	): BattleEvent[] {
+		if (context.state.field.wonderRoomTurns > 0) {
+			context.state.field.wonderRoomTurns = 0;
+			return [{ type: "field-effect-applied", effect: "wonder-room", turns: 0 }];
+		}
+
 		context.state.field.wonderRoomTurns = effect.turns;
 		return [{ type: "field-effect-applied", effect: "wonder-room", turns: effect.turns }];
 	}
@@ -891,6 +949,11 @@ export class Effects {
 		effect: Extract<MoveEffect, { kind: "field-effect" }>,
 		context: Effects.Context,
 	): BattleEvent[] {
+		if (context.state.field.magicRoomTurns > 0) {
+			context.state.field.magicRoomTurns = 0;
+			return [{ type: "field-effect-applied", effect: "magic-room", turns: 0 }];
+		}
+
 		context.state.field.magicRoomTurns = effect.turns;
 		return [{ type: "field-effect-applied", effect: "magic-room", turns: effect.turns }];
 	}
@@ -1009,16 +1072,33 @@ export class Effects {
 			}
 		}
 	}
+
+	/** Reuses the current battle grounded-state rule for terrain-based status prevention. */
+	private static isGrounded(
+		gameData: GameData,
+		combatant: CombatantState,
+		state: BattleState,
+	): boolean {
+		if (state.field.gravityTurns > 0) return true;
+		if (combatant.volatile.invulnerable) return false;
+		let species = getCreatureSpecies(gameData, combatant.creature);
+		return species.types.includes(Type.FLYING) === false;
+	}
 }
 
 export namespace Effects {
-	/** Mutable battle data exposed to effect implementations. */
-	export interface Context {
-		user: CombatantState;
-		userPosition: BattlePosition;
+	/** Battle data required to validate whether a major status can be applied. */
+	export interface StatusContext {
+		gameData: GameData;
 		target: CombatantState;
 		targetPosition: BattlePosition;
 		state: BattleState;
+	}
+
+	/** Mutable battle data exposed to effect implementations. */
+	export interface Context extends StatusContext {
+		user: CombatantState;
+		userPosition: BattlePosition;
 		random(): number;
 	}
 }

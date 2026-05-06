@@ -34,6 +34,7 @@ export const MOVES = {
 		power: 50,
 		accuracy: 100,
 		pp: 25,
+		criticalHitStages: 1,
 		effect: { kind: "none" },
 	},
 	DOUBLE_SLAP: {
@@ -256,6 +257,7 @@ export const MOVES = {
 		power: 55,
 		accuracy: 95,
 		pp: 25,
+		criticalHitStages: 1,
 		effect: { kind: "none" },
 	},
 	GROWTH: {
@@ -801,6 +803,7 @@ export const MOVES = {
 		power: 60,
 		accuracy: 95,
 		pp: 25,
+		criticalHitStages: 1,
 		effect: { kind: "none" },
 	},
 	AIR_SLASH: {
@@ -971,6 +974,7 @@ export const MOVES = {
 		power: 85,
 		accuracy: 90,
 		pp: 10,
+		criticalHitStages: 1,
 		effect: { kind: "none" },
 	},
 	BLIZZARD: {
@@ -1255,6 +1259,7 @@ export const MOVES = {
 		power: 100,
 		accuracy: 90,
 		pp: 10,
+		criticalHitStages: 1,
 		effect: { kind: "none" },
 	},
 	CROSS_CHOP: {
@@ -1263,6 +1268,7 @@ export const MOVES = {
 		power: 100,
 		accuracy: 80,
 		pp: 5,
+		criticalHitStages: 1,
 		effect: { kind: "none" },
 	},
 	CROSS_POISON: {
@@ -1271,6 +1277,7 @@ export const MOVES = {
 		power: 70,
 		accuracy: 100,
 		pp: 20,
+		criticalHitStages: 1,
 		effect: { kind: "none" },
 	},
 	CRUNCH: {
@@ -1481,6 +1488,7 @@ export const MOVES = {
 		power: 80,
 		accuracy: 95,
 		pp: 10,
+		criticalHitStages: 1,
 		effect: { kind: "none" },
 	},
 	DYNAMIC_PUNCH: {
@@ -2178,6 +2186,7 @@ export const MOVES = {
 		power: 90,
 		accuracy: 100,
 		pp: 15,
+		criticalHitStages: 1,
 		effect: { kind: "none" },
 	},
 	LEAF_STORM: {
@@ -2437,6 +2446,7 @@ export const MOVES = {
 		power: 70,
 		accuracy: 100,
 		pp: 15,
+		criticalHitStages: 1,
 		effect: { kind: "none" },
 	},
 	NUZZLE: {
@@ -2557,6 +2567,7 @@ export const MOVES = {
 		power: 50,
 		accuracy: 100,
 		pp: 25,
+		criticalHitStages: 1,
 		effect: { kind: "apply-status", status: StatusEffectType.Poison, chance: 0.1 },
 	},
 	POWDER_SNOW: {
@@ -2637,6 +2648,7 @@ export const MOVES = {
 		power: 70,
 		accuracy: 100,
 		pp: 20,
+		criticalHitStages: 1,
 		effect: { kind: "none" },
 	},
 	PSYSHOCK: {
@@ -2984,6 +2996,7 @@ export const MOVES = {
 		power: 140,
 		accuracy: 90,
 		pp: 5,
+		criticalHitStages: 1,
 		effect: { kind: "none" },
 	},
 	SLACK_OFF: {
@@ -3000,6 +3013,7 @@ export const MOVES = {
 		power: 70,
 		accuracy: 100,
 		pp: 20,
+		criticalHitStages: 1,
 		effect: { kind: "none" },
 	},
 	SLEEP_TALK: {
@@ -3144,6 +3158,7 @@ export const MOVES = {
 		power: 100,
 		accuracy: 80,
 		pp: 5,
+		criticalHitStages: 1,
 		effect: { kind: "none" },
 	},
 	STORED_POWER: {
@@ -3350,7 +3365,12 @@ export const MOVES = {
 		power: 0,
 		accuracy: 90,
 		pp: 10,
-		effect: { kind: "none" },
+		effect: {
+			kind: "apply-status",
+			status: StatusEffectType.Poison,
+			chance: 1,
+			poisonVariant: "escalating",
+		},
 	},
 	TRANSFORM: {
 		type: Type.NORMAL,
