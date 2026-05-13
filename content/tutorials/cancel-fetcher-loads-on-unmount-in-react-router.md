@@ -10,6 +10,8 @@ That becomes expensive when your loader acts as a backend for frontend and forwa
 
 ## Create the Upstream Request
 
+Start by moving the upstream fetch into a server-side helper. This keeps the loader focused on request parsing and makes the cancellation point explicit by accepting an `AbortSignal`.
+
 ```ts {% path="app/lib/catalog.server.ts" %}
 const CATALOG_API_URL = "https://catalog.internal/products/search";
 
@@ -38,6 +40,8 @@ Passing the `signal` into `fetch()` is the important part. If you skip that, can
 
 ## Create the Loader Route
 
+Next, create a resource route that reads the search query and passes `request.signal` through to the helper. This is the piece that lets React Router cancel work using the same request lifecycle it already manages.
+
 ```ts {% path="app/routes/resources.product-search-preview.ts" %}
 import { data } from "react-router";
 
@@ -59,8 +63,11 @@ The loader does not need any custom abort logic. It just forwards `request.signa
 
 ## Load the Route with a Fetcher
 
+Now create a route module that loads preview results with `fetcher.load()`. The example uses a dismissible search panel because it makes the unmount behavior easy to reproduce.
+
 ```tsx {% path="app/routes/product-search.tsx" %}
-import { useState, type ChangeEvent } from "react";
+import type { ChangeEvent } from "react";
+import { useState } from "react";
 import { useFetcher } from "react-router";
 
 interface Product {
@@ -100,8 +107,8 @@ function SearchPreview({ onClose }: SearchPreviewProps) {
 
 		setQuery(nextQuery);
 
-		if (nextQuery.length < 2) fetcher.reset();
-		else fetcher.load(`/resources/product-search-preview?${searchParams}`);
+		if (nextQuery.length < 2) return fetcher.reset();
+		fetcher.load(`/resources/product-search-preview?${searchParams}`);
 	}
 
 	return (
@@ -131,8 +138,11 @@ This route module uses `fetcher.load()` for every qualifying query without causi
 
 ## Reset the Fetcher on Unmount
 
+The missing piece is explicit cleanup when the search panel unmounts. React Router keeps fetchers around in v7, so if you want eager cancellation, you need to reset the fetcher during the effect cleanup.
+
 ```tsx {% path="app/routes/product-search.tsx" %}
-import { useEffect, useState, type ChangeEvent } from "react";
+import type { ChangeEvent } from "react";
+import { useEffect, useState } from "react";
 import { useFetcher } from "react-router";
 
 // ... previous code
@@ -152,11 +162,7 @@ function SearchPreview({ onClose }: SearchPreviewProps) {
 
 		setQuery(nextQuery);
 
-		if (nextQuery.length < 2) {
-			reset();
-			return;
-		}
-
+		if (nextQuery.length < 2) return reset();
 		fetcher.load(`/resources/product-search-preview?${searchParams}`);
 	}
 
