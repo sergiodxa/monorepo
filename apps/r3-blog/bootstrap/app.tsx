@@ -27,6 +27,7 @@ import feedRSS from "~/app/http/controllers/rss/feed";
 import tutorialsRSS from "~/app/http/controllers/rss/tutorials";
 import sitemap from "~/app/http/controllers/sitemap";
 import tutorials from "~/app/http/controllers/tutorials";
+import wellKnown from "~/app/http/controllers/well-known";
 import auth from "~/app/http/middleware/auth";
 import createDatabaseMiddleware from "~/app/http/middleware/db";
 import createEnvMiddleware from "~/app/http/middleware/env";
@@ -79,6 +80,7 @@ export default function createApplication(database: Database, env: App.Env) {
 		actions: {
 			feed,
 			colors,
+			wellKnown,
 
 			sitemap,
 

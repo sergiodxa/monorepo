@@ -11,6 +11,11 @@ export default route({
 	feed: get("/"),
 	colors: get("/colors"),
 
+	wellKnown: route({
+		webFinger: get("/.well-known/webfinger"),
+		avatar: get("/.well-known/avatar"),
+	}),
+
 	sitemap: get("/sitemap.xml"),
 
 	articles: get("/articles"),
