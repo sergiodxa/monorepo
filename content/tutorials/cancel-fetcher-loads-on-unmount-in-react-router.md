@@ -10,7 +10,7 @@ That becomes expensive when your loader acts as a backend for frontend and forwa
 
 ## Create the Upstream Request
 
-Start by moving the upstream fetch into a server-side helper. This keeps the loader focused on request parsing and makes the cancellation point explicit by accepting an `AbortSignal`.
+Start by moving the upstream fetch into a server helper. This keeps the loader focused on request parsing and makes the cancellation point explicit by accepting an `AbortSignal`.
 
 ```ts {% path="app/lib/catalog.server.ts" %}
 const CATALOG_API_URL = "https://catalog.internal/products/search";
@@ -189,7 +189,7 @@ function SearchPreview({ onClose }: SearchPreviewProps) {
 }
 ```
 
-This cleanup is the missing piece. React Router intentionally keeps fetchers around after unmount in v7, a behavior that previously lived behind `future.v7_fetcherPersist`, so eager server side cancellation is not the default behavior for `fetcher.load()`.
+This cleanup is the missing piece. React Router intentionally keeps fetchers around after unmount in v7, a behavior that previously lived behind `future.v7_fetcherPersist`, so it does not cancel `fetcher.load()` on unmount by default.
 
 Calling `reset()` in the cleanup is a reasonable workaround when you want the request to stop as soon as the hosting component disappears. The important detail is that the `useFetcher()` return value is not stable, but `reset` is, so the cleanup should depend on `reset` instead of the whole fetcher object.
 
