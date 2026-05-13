@@ -58,8 +58,9 @@ Tech versions MUST be actual released versions. When uncertain, confirm with the
 2. Tutorials MAY include a TL;DR with link to example repository
 3. Tutorials MUST use action-oriented headings
 4. Tutorials MUST build incrementally where each section adds to the previous
-5. Tutorials MUST show code first, then explain
-6. Tutorials SHOULD keep explanations between code blocks to 2-4 sentences
+5. Tutorials MUST introduce each section with 1-2 sentences before the first code block
+6. Tutorials MUST show code before the deeper explanation of that code
+7. Tutorials SHOULD keep explanations between code blocks to 2-4 sentences
 
 ### Article Structure
 
@@ -236,6 +237,8 @@ Example:
 - Content MUST NOT use phrases like "as you can see" or "it's worth noting"
 - Content SHOULD acknowledge uncertainty when it exists
 - Content MUST NOT use absolutism ("always", "never") unless technically accurate
+- Content SHOULD prefer natural phrasing over rigid tutorial boilerplate when both are equally clear
+- Content MAY use conversational setup lines like "Let's see how you could..." when they sound more human and stay concise
 
 ### Trade-offs
 
