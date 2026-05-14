@@ -1,6 +1,6 @@
 ---
-title: The Industrialization of Software Development
-excerpt: Why AI generated software changes who writes code, who reviews it, and where engineering value shifts.
+title: The Industrialization of Software Engineering
+excerpt: AI changes who writes code, who reviews it, and why engineering taste matters more than raw implementation.
 ---
 
 Before industrialization, most products were made by hand. If you wanted a table, someone had to know the materials, the tools, and the process to build it.
@@ -27,7 +27,7 @@ AI agents are good at repetitive implementation work. Give them an established s
 
 That makes them a strong fit for the part of the industry that builds similar systems over and over. Agencies and internal teams that mostly produce line of business software will adopt AI heavily, whether as a replacement for part of the work or as a force multiplier for the same team.
 
-But I think many people are overextending this lesson. Not every product can be treated this way. The more differentiated the product is, the more the value moves away from raw code production and toward architecture, product judgment, design, and long term maintenance.
+But I think many people are overextending this lesson. Not every product can be treated this way. The more differentiated the product is, the more the value moves away from raw code production and toward architecture, taste, product judgment, design, and long term maintenance.
 
 ## Why Senior Engineers Matter More
 
@@ -37,7 +37,9 @@ I can imagine a small product team made up mostly of senior engineers who design
 
 A senior frontend engineer might focus on the design system, accessibility rules, and interaction patterns. A senior backend engineer might focus on data models, API boundaries, and security constraints. Once those foundations are in place, AI can generate much of the surrounding code.
 
-This is where I think a lot of companies still misunderstand seniority. Senior engineers should not just be faster coders. They should be the people who decide what deserves precision, what can be automated, and what trade-offs are acceptable.
+This is where I think a lot of companies still misunderstand seniority. Senior engineers should not just be faster coders. They should be the people with the taste to decide what deserves precision, what can be automated, and what trade-offs are acceptable.
+
+To me, taste is the ability to tell the difference between code that merely works and software that actually feels well designed. It is knowing what to simplify, what to leave alone, and what looks correct at first glance but will become a problem later.
 
 ## What Happens to Junior Engineers
 
@@ -73,7 +75,7 @@ Honestly, I think that path makes more sense than treating QA as a dead end spec
 
 I think formal education may become more valuable in this world, not less.
 
-If AI can produce code for straightforward applications, then the human advantage shifts toward understanding systems, trade-offs, algorithms, data structures, and software design. Those are the areas where a strong academic foundation can help.
+If AI can produce code for straightforward applications, then the human advantage shifts toward understanding systems, trade-offs, algorithms, data structures, software design, and developing taste. Those are the areas where a strong academic foundation can help.
 
 Self taught engineers will still exist, and many will still be excellent. I am not arguing otherwise. But if a company is hiring someone to review AI generated systems, reason about architecture, and grow into a senior engineering role, it may care more about foundational knowledge than it does today.
 
@@ -81,6 +83,6 @@ That is similar to other industries. You might hire a self taught electrician fo
 
 ## Conclusion
 
-I think AI is pushing software development toward industrialization. That will make routine software cheaper and faster to produce, but it will also move engineering value away from raw implementation and toward design, review, and oversight.
+I think AI is pushing software engineering toward industrialization. That will make routine software cheaper and faster to produce, but it will also move engineering value away from raw implementation and toward design, review, oversight, and taste.
 
 The teams that adapt well will be the ones that treat AI as a production system, not as a substitute for judgment. The code may be generated at scale, but the important decisions still belong to humans.
