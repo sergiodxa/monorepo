@@ -81,8 +81,24 @@ Self taught engineers will still exist, and many will still be excellent. I am n
 
 That is similar to other industries. You might hire a self taught electrician for simple work at home. For a power plant, you usually want an engineer with deeper formal training.
 
+## Why Craftsmanship Still Matters
+
+Industrialization does not eliminate artisans. It just makes them rarer and, in some cases, more valuable.
+
+Some software will still be written mostly by hand, the same way some tables are still built by a craftsperson instead of a factory. That kind of work is slower and usually more expensive, but it can also be more coherent, more durable, and more thoughtful in the details. Not because handwritten code is magically better, but because every part of it received more care.
+
+I think some products will explicitly position themselves this way. Just like some goods are marketed as handmade, locally made, or crafted by a small team, some software may signal that it was designed and implemented mostly by humans. That may become a quality signal for a certain kind of user.
+
+In practice, this may look like a choice between an industrialized ticket system and a handmade one. The industrialized product may ship more features faster. The handmade one may have fewer features, but the features it does have may work better, feel more polished, and hold up longer.
+
+These code artisans will often be senior engineers, because taste usually takes time to develop. But I do not think this is only a role for people with long resumes or formal credentials. It can also describe the self taught engineer behind an avatar who became obsessed with one problem and ended up building an absurdly good library, or the student who has been building small things since childhood and already developed strong instincts for quality.
+
+What makes someone an artisan is not whether they use AI or whether they went to university. It is taste, care, and the ability to know what should exist, what should be simplified, and what is not good enough yet.
+
 ## Conclusion
 
 I think AI is pushing software engineering toward industrialization. That will make routine software cheaper and faster to produce, but it will also move engineering value away from raw implementation and toward design, review, oversight, and taste.
 
-The teams that adapt well will be the ones that treat AI as a production system, not as a substitute for judgment. The code may be generated at scale, but the important decisions still belong to humans.
+I also think industrialization will not eliminate craftsmanship. Some software will still be built more like a handmade product, with fewer features, more care, and a stronger point of view behind every decision.
+
+The teams that adapt well will be the ones that know which model they are using. If they are building at scale, they will need strong systems and strong judgment. If they are building by hand, they will need taste and the discipline to make that extra care worth the time.
