@@ -1,6 +1,6 @@
 ---
 title: The Industrialization of Software Engineering
-excerpt: AI changes who writes code, who reviews it, and why engineering taste matters more than raw implementation.
+excerpt: As software engineering becomes industrialized, writing code matters less than knowing what should be built.
 ---
 
 Before industrialization, most products were made by hand. If you wanted a table, someone had to know the materials, the tools, and the process to build it.
