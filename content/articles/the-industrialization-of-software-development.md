@@ -13,7 +13,7 @@ I think software is entering the same phase now. AI agents can already produce a
 
 Mass production does not eliminate craftsmanship. It changes where craftsmanship is applied.
 
-Most people do not need a handcrafted table. They need a table that is good enough, available now, and affordable. I think a lot of software will follow the same pattern.
+Most people do not need a handcrafted table. They need a table that is good enough, available now, and affordable. A lot of software will follow the same pattern.
 
 I do not believe every application deserves hand written code from top to bottom. Many internal tools, CRUD applications, and client specific business apps can be generated, reviewed, and shipped much faster with AI in the loop.
 
@@ -27,7 +27,7 @@ AI agents are good at repetitive implementation work. Give them an established s
 
 That makes them a strong fit for the part of the industry that builds similar systems over and over. Agencies and internal teams that mostly produce line of business software will adopt AI heavily, whether as a replacement for part of the work or as a force multiplier for the same team.
 
-But I think many people are overextending this lesson. Not every product can be treated this way. The more differentiated the product is, the more the value moves away from raw code production and toward architecture, taste, product judgment, design, and long term maintenance.
+But many people are overextending this lesson. Not every product can be treated this way. The more differentiated the product is, the more the value moves away from raw code production and toward architecture, taste, product judgment, design, and long term maintenance.
 
 ## Why Senior Engineers Matter More
 
@@ -37,7 +37,7 @@ I can imagine a small product team made up mostly of senior engineers who design
 
 A senior frontend engineer might focus on the design system, accessibility rules, and interaction patterns. A senior backend engineer might focus on data models, API boundaries, and security constraints. Once those foundations are in place, AI can generate much of the surrounding code.
 
-This is where I think a lot of companies still misunderstand seniority. Senior engineers should not just be faster coders. They should be the people with the taste to decide what deserves precision, what can be automated, and what trade-offs are acceptable.
+This is where a lot of companies still misunderstand seniority. Senior engineers should not just be faster coders. They should be the people with the taste to decide what deserves precision, what can be automated, and what trade-offs are acceptable.
 
 To me, taste is the ability to tell the difference between code that merely works and software that actually feels well designed. It is knowing what to simplify, what to leave alone, and what looks correct at first glance but will become a problem later.
 
@@ -45,9 +45,9 @@ To me, taste is the ability to tell the difference between code that merely work
 
 I do not think the junior role disappears. I think it changes.
 
-If teams generate more code, they also need more review, more testing, and more validation against requirements. That work has to be done by someone, and I think it is a reasonable entry point for a junior engineer.
+If teams generate more code, they also need more review, more testing, and more validation against requirements. That work has to be done by someone, and it is a reasonable entry point for a junior engineer.
 
-A junior can work closely with a senior engineer, learn the design decisions behind a feature, review AI generated code, test the system, and catch mismatches between the requirements and the implementation. That is still engineering work. In many cases, I think it is better engineering training than spending two years just moving tickets around.
+A junior can work closely with a senior engineer, learn the design decisions behind a feature, review AI generated code, test the system, and catch mismatches between the requirements and the implementation. That is still engineering work. In many cases, it is better engineering training than spending two years just moving tickets around.
 
 Over time, that junior can take on more design responsibility. The path to seniority becomes less about producing volume and more about learning judgment.
 
@@ -73,11 +73,13 @@ Honestly, I think that path makes more sense than treating QA as a dead end spec
 
 ## Why Education May Matter More
 
-I think formal education may become more valuable in this world, not less.
+Formal education may become more valuable in this world, not less.
 
 If AI can produce code for straightforward applications, then the human advantage shifts toward understanding systems, trade-offs, algorithms, data structures, software design, and developing taste. Those are the areas where a strong academic foundation can help.
 
 Self taught engineers will still exist, and many will still be excellent. I am not arguing otherwise. But if a company is hiring someone to review AI generated systems, reason about architecture, and grow into a senior engineering role, it may care more about foundational knowledge than it does today.
+
+A degree can help build those foundations, but it does not create taste on its own. Formal education can give someone a head start on architecture and systems thinking, while taste is usually acquired over time by working on real products.
 
 That is similar to other industries. You might hire a self taught electrician for simple work at home. For a power plant, you usually want an engineer with deeper formal training.
 
@@ -87,9 +89,9 @@ Industrialization does not eliminate artisans. It just makes them rarer and, in 
 
 Some software will still be written mostly by hand, the same way some tables are still built by a craftsperson instead of a factory. That kind of work is slower and usually more expensive, but it can also be more coherent, more durable, and more thoughtful in the details. Not because handwritten code is magically better, but because every part of it received more care.
 
-I think some products will explicitly position themselves this way. Just like some goods are marketed as handmade, locally made, or crafted by a small team, some software may signal that it was designed and implemented mostly by humans. That may become a quality signal for a certain kind of user.
+Some products will explicitly position themselves this way. Just like some goods are marketed as handmade, locally made, or crafted by a small team, some software may signal that it was designed and implemented mostly by humans. That may become a quality signal for a certain kind of user.
 
-In practice, this may look like a choice between an industrialized ticket system and a handmade one. The industrialized product may ship more features faster. The handmade one may have fewer features, but the features it does have may work better, feel more polished, and hold up longer.
+In practice, this may look like a choice between an industrialized product and a handmade one. The industrialized product may ship more features faster. The handmade one may have fewer features, but the features it does have may work better, feel more polished, and hold up longer.
 
 These code artisans will often be senior engineers, because taste usually takes time to develop. But I do not think this is only a role for people with long resumes or formal credentials. It can also describe the self taught engineer behind an avatar who became obsessed with one problem and ended up building an absurdly good library, or the student who has been building small things since childhood and already developed strong instincts for quality.
 
