@@ -1,12 +1,12 @@
 ---
 title: How to Use an `iife` Helper for Inline Control Flow in TypeScript
-excerpt: Create a small `iife` helper to use `if`, `try`/`catch`, and async code where JavaScript expects an expression.
+excerpt: Create a small `iife` helper to use `if`, `try`/`catch`, and async code where JavaScript only accepts expressions.
 tech: typescript@5.0.0 react@19.0.0
 ---
 
-One thing JavaScript still does not have is a `do` expression. If you have seen the [`do` expressions proposal](https://github.com/tc39/proposal-do-expressions), the idea is simple: write a block of code and get a value back from it as an expression.
+JavaScript still does not have `do` expressions. If you have seen the [`do` expressions proposal](https://github.com/tc39/proposal-do-expressions), the idea is simple: write a block of code and get a value back from it as an expression.
 
-That would be useful in a lot of places. Assigning a variable, building an object property, or returning JSX often needs `if`, `try`/`catch`, or a few local variables, but JavaScript only allows expressions there.
+This would be useful in a lot of places. Assigning a variable, building an object property, or returning JSX often needs `if`, `try`/`catch`, or a few local variables, but JavaScript only accepts expressions there.
 
 Since we do not have `do` expressions today, and may never get them, we can write a small helper function to let us achieve the same.
 
@@ -21,7 +21,7 @@ let result = (() => {
 })();
 ```
 
-That works, but the syntax is also a bit awkward to read and write. A small helper gives you the same idea with a shape that feels easier to scan.
+That works, but the syntax is a bit awkward to read and write. A small helper gives you the same idea with a shape that feels easier to scan.
 
 ```ts
 export function iife<T>(fn: () => T): T {
@@ -29,11 +29,11 @@ export function iife<T>(fn: () => T): T {
 }
 ```
 
-That is all it does. The benefit is that it lets you use the same pattern with less syntax, while keeping the code close to the place where the value is needed.
+That is all it does. The benefit is that it gives you the same pattern with less syntax, while keeping the code close to the place where the value is needed.
 
 ## Compute a Value Without Hoisting a Variable
 
-One of the most common cases is variable initialization. Usually the code ends up declaring a variable first and assigning it later.
+One of the most common cases is variable initialization. Usually this means declaring a variable first and assigning it later.
 
 ```ts
 let buttonLabel: string;
@@ -57,7 +57,7 @@ let buttonLabel = iife(() => {
 });
 ```
 
-This is a small example, but it shows the shape clearly. The whole block exists to produce one value.
+This is a small example, but it shows the shape clearly. The whole block exists to produce a single value.
 
 ## Branch in the Middle of JSX
 
@@ -76,7 +76,7 @@ The helper is more useful in JSX when you need to branch in the middle of a larg
 </header>
 ```
 
-This is the kind of JSX where `iife` helps. You are already inside a larger return value and only one small part needs block-style logic.
+This is the kind of JSX where `iife` helps. You are already inside a larger return value, and only one small part needs block-style logic.
 
 ## Use `try`/`catch` Inside an Assignment
 
@@ -112,7 +112,7 @@ This is one of the clearest uses for the pattern. The block exists to compute on
 
 The same idea works with async code. If the callback is async, `iife` returns a promise, so you can `await` it.
 
-You could move this logic into helpers like `fetchViewer` and `fetchProfile`, but then those helpers need more arguments because they no longer have access to the current scope. Keeping the inline flow inside `iife` can make those extracted functions stay simpler.
+You could move this logic into helpers like `fetchViewer` and `fetchProfile`, but then those helpers need more arguments because they no longer have access to the current scope. Keeping the inline flow inside `iife` can help keep those extracted functions simpler.
 
 ```ts
 interface Viewer {
@@ -143,13 +143,13 @@ let profile = await iife<Promise<Profile>>(async () => {
 
 Each block only keeps the variables it needs. You do not need names like `viewerResponse` and `profileResponse`, and you also do not need to extract small helpers just to avoid outer mutable state.
 
-If the requests are independent, `Promise.all` is still the better tool. This pattern helps when the work is sequential and you want each computed value to keep its own local setup.
+If the requests are independent, `Promise.all` is still the better tool. This pattern helps when the work is sequential and each computed value needs its own local setup.
 
 ## Keep Inline Logic Small
 
 This pattern works best when the inline block is short and only exists to compute one value. A couple of branches, a `try`/`catch`, or a small async sequence are usually fine.
 
-Once the block starts growing, the trade-off changes. At that point, a named function is often easier to understand because it gives the logic a clear boundary and a name that explains why it exists.
+Once the block starts growing, the trade-off changes. At that point, a named function is usually easier to understand because it gives the logic a clear boundary and a name that explains why it exists.
 
 ## Final Thoughts
 
