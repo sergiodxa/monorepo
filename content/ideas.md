@@ -80,6 +80,17 @@ _Relevant Files_:
 
 - `apps/auth-saas/src/lib/uri-validation.ts`
 
+### Expression-Oriented Control Flow in TypeScript
+
+JavaScript often forces a choice between expression contexts and statement-based control flow. A tiny `iife` helper can bridge that gap for JSX branching, inline value computation, and local `try`/`catch` handling, but it also introduces readability trade-offs that are worth exploring.
+
+**Mentions:** IIFE helpers, expression-oriented code, JSX branching, `try`/`catch` as expressions, local scoping trade-offs.
+
+_Relevant Files_:
+
+- `packages/iife/src/index.ts`
+- `packages/iife/README.md`
+
 ### Understanding Remix v3's Fetch Router Architecture
 
 Remix v3 introduces a fetch-router based approach for building full-stack web applications. The framework provides a clean separation between route definitions, middleware configuration, and controller logic with built-in support for custom database adapters.
