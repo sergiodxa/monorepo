@@ -1,4 +1,5 @@
 import { Json } from "@pkg/http/content-type";
+import { iife } from "@pkg/iife";
 import { Job } from "@pkg/jobs";
 import { isFailure } from "@pkg/result";
 import { env } from "cloudflare:workers";
@@ -85,7 +86,12 @@ export class CheckTcpJob extends Job {
 		writePingResult({
 			monitorId: monitor.id,
 			monitorType: "tcp",
-			status: storableStatus === "up" ? "up" : storableStatus === "timeout" ? "timeout" : "down",
+			status: iife(() => {
+				if (storableStatus === "up") return "up";
+				if (storableStatus === "timeout") return "timeout";
+
+				return "down";
+			}),
 			responseTimeMs: result.responseTimeMs ?? 0,
 			teamId: monitor.teamId,
 			responseStatus: 0, // TCP doesn't have HTTP status

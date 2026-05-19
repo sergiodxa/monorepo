@@ -1,5 +1,6 @@
 import type { ResolvedType } from "@pkg/types";
 
+import { iife } from "@pkg/iife";
 import { Badge, Button, confirm, Menu, Popover, Table } from "@pkg/ui";
 import { EllipsisVerticalIcon, LoaderIcon, PencilIcon, PlayIcon, TrashIcon } from "lucide-react";
 import { useTranslation } from "react-i18next";
@@ -61,26 +62,34 @@ export function HttpMonitorTableRow(props: {
 			</Table.Cell>
 
 			<Table.Cell className="text-left sm:w-44">
-				{props.monitor.status === "unknown" && (
-					<Badge color="neutral" variant="outline">
-						{t("status.unknown")}
-					</Badge>
-				)}
-				{props.monitor.status === "up" && (
-					<Badge color="primary" variant="outline">
-						{t("status.up")}
-					</Badge>
-				)}
-				{props.monitor.status === "degraded" && (
-					<Badge color="warning" variant="outline">
-						{t("status.degraded")}
-					</Badge>
-				)}
-				{props.monitor.status === "down" && (
-					<Badge color="danger" variant="outline">
-						{t("status.down")}
-					</Badge>
-				)}
+				{iife(() => {
+					switch (props.monitor.status) {
+						case "unknown":
+							return (
+								<Badge color="neutral" variant="outline">
+									{t("status.unknown")}
+								</Badge>
+							);
+						case "up":
+							return (
+								<Badge color="primary" variant="outline">
+									{t("status.up")}
+								</Badge>
+							);
+						case "degraded":
+							return (
+								<Badge color="warning" variant="outline">
+									{t("status.degraded")}
+								</Badge>
+							);
+						case "down":
+							return (
+								<Badge color="danger" variant="outline">
+									{t("status.down")}
+								</Badge>
+							);
+					}
+				})}
 			</Table.Cell>
 
 			{props.showLastIncident && (

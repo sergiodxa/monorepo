@@ -29,6 +29,7 @@
 		"@pkg/db-helpers": "workspace:*",
 		"@pkg/hooks": "workspace:*",
 		"@pkg/http": "workspace:*",
+		"@pkg/iife": "workspace:*",
 		"@pkg/jobs": "workspace:*",
 		"@pkg/location": "workspace:*",
 		"@pkg/logger": "workspace:*",

@@ -1,4 +1,5 @@
 import { cn } from "@pkg/cn";
+import { iife } from "@pkg/iife";
 import { Badge, Button, confirm, Empty, LinkButton, Menu, Popover, Table, Tabs } from "@pkg/ui";
 import {
 	CalendarIcon,
@@ -281,21 +282,28 @@ function MaintenanceRow(props: {
 				)}
 			</Table.Cell>
 			<Table.Cell className="w-28 text-center">
-				{props.status === "active" && (
-					<Badge color="warning" variant="outline">
-						{t("status.active")}
-					</Badge>
-				)}
-				{props.status === "upcoming" && (
-					<Badge color="primary" variant="outline">
-						{t("status.upcoming")}
-					</Badge>
-				)}
-				{props.status === "past" && (
-					<Badge color="neutral" variant="outline">
-						{t("status.past")}
-					</Badge>
-				)}
+				{iife(() => {
+					switch (props.status) {
+						case "active":
+							return (
+								<Badge color="warning" variant="outline">
+									{t("status.active")}
+								</Badge>
+							);
+						case "upcoming":
+							return (
+								<Badge color="primary" variant="outline">
+									{t("status.upcoming")}
+								</Badge>
+							);
+						case "past":
+							return (
+								<Badge color="neutral" variant="outline">
+									{t("status.past")}
+								</Badge>
+							);
+					}
+				})}
 			</Table.Cell>
 			<Table.Cell className="w-17 text-center">
 				<Menu.Trigger>
