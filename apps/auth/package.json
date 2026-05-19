@@ -28,6 +28,7 @@
 		"@pkg/db-helpers": "workspace:*",
 		"@pkg/get-client-ip": "workspace:*",
 		"@pkg/http": "workspace:*",
+		"@pkg/iife": "workspace:*",
 		"@pkg/jobs": "workspace:*",
 		"@pkg/logger": "workspace:*",
 		"@pkg/response": "workspace:*",

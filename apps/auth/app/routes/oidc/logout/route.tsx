@@ -1,3 +1,4 @@
+import { iife } from "@pkg/iife";
 import { isFailure } from "@pkg/result";
 import { Button, Form } from "@pkg/ui";
 import { validate } from "@pkg/validate";
@@ -187,13 +188,17 @@ function FrontchannelLogoutPage({
 			{/* Auto-redirect after iframes have had time to load */}
 			<script
 				dangerouslySetInnerHTML={{
-					__html: `
-						// Wait for iframes to load (2 seconds should be enough)
-						// Then redirect to the post_logout_redirect_uri
-						setTimeout(function() {
-							window.location.href = ${JSON.stringify(data.redirectUri)};
-						}, 2000);
-					`,
+					__html: iife(() => {
+						let redirectUri = JSON.stringify(data.redirectUri);
+
+						return `
+							// Wait for iframes to load (2 seconds should be enough)
+							// Then redirect to the post_logout_redirect_uri
+							setTimeout(function() {
+								window.location.href = ${redirectUri};
+							}, 2000);
+						`;
+					}),
 				}}
 			/>
 
