@@ -1,19 +1,7 @@
 import controller from "@pkg/remix-helpers/controller";
 
+import { PROFILE } from "~/config/profile";
 import routes from "~/routes/web";
-
-const CANONICAL_ORIGIN = "https://sergiodxa.com";
-const CANONICAL_RESOURCE = "acct:hello@sergiodxa.com";
-const CANONICAL_PROFILE_URL = new URL("/", CANONICAL_ORIGIN).toString();
-const CANONICAL_AVATAR_URL = new URL(routes.wellKnown.avatar.href(), CANONICAL_ORIGIN).toString();
-const X_PROFILE_URL = "https://x.com/sergiodxa";
-const GITHUB_PROFILE_URL = "https://github.com/sergiodxa";
-const GITHUB_SPONSORS_URL = "https://github.com/sponsors/sergiodxa";
-const YOUTUBE_PROFILE_URL = "https://www.youtube.com/sergiodxa";
-const GITHUB_AVATAR_URL = "https://github.com/sergiodxa.png";
-const PROFILE_NAME = "Sergio Xalambrí";
-const PROFILE_SUMMARY =
-	"Web Developer from Buenos Aires with 10+ years of experience. I work at Daffy and maintain several open-source libraries around React Router and OAuth2.";
 
 interface WebFingerProperties {
 	"http://schema.org/name": string;
@@ -45,9 +33,11 @@ interface WebFingerDocument {
  * @returns The canonical subject when the resource is recognized, otherwise `null`.
  */
 function normalizeResource(resource: string | null) {
-	if (resource === CANONICAL_RESOURCE) return CANONICAL_RESOURCE;
-	if (resource === CANONICAL_ORIGIN) return CANONICAL_RESOURCE;
-	if (resource === CANONICAL_PROFILE_URL) return CANONICAL_RESOURCE;
+	if (resource === PROFILE.canonical.resource) return PROFILE.canonical.resource;
+	if (resource === PROFILE.canonical.origin) return PROFILE.canonical.resource;
+	if (resource === new URL("/", PROFILE.canonical.origin).toString()) {
+		return PROFILE.canonical.resource;
+	}
 
 	return null;
 }
@@ -61,49 +51,52 @@ function normalizeResource(resource: string | null) {
 function createWebFingerDocument(subject: string): WebFingerDocument {
 	return {
 		subject,
-		aliases: [CANONICAL_PROFILE_URL],
+		aliases: [new URL("/", PROFILE.canonical.origin).toString()],
 		properties: {
-			"http://schema.org/name": PROFILE_NAME,
-			"http://schema.org/description": PROFILE_SUMMARY,
-			"http://schema.org/url": CANONICAL_PROFILE_URL,
-			"http://schema.org/image": CANONICAL_AVATAR_URL,
+			"http://schema.org/name": PROFILE.name,
+			"http://schema.org/description": PROFILE.summary,
+			"http://schema.org/url": new URL("/", PROFILE.canonical.origin).toString(),
+			"http://schema.org/image": new URL(
+				routes.wellKnown.avatar.href(),
+				PROFILE.canonical.origin,
+			).toString(),
 		},
 		links: [
-			{ rel: "self", type: "text/html", href: CANONICAL_PROFILE_URL },
+			{ rel: "self", type: "text/html", href: new URL("/", PROFILE.canonical.origin).toString() },
 			{
 				rel: "http://webfinger.net/rel/profile-page",
 				type: "text/html",
-				href: CANONICAL_PROFILE_URL,
+				href: new URL("/", PROFILE.canonical.origin).toString(),
 			},
 			{
 				rel: "http://webfinger.net/rel/avatar",
 				type: "image/png",
-				href: CANONICAL_AVATAR_URL,
+				href: new URL(routes.wellKnown.avatar.href(), PROFILE.canonical.origin).toString(),
 			},
 			{
 				rel: "alternate",
 				type: "application/rss+xml",
-				href: new URL(routes.rss.feed.href(), CANONICAL_ORIGIN).toString(),
+				href: new URL(routes.rss.feed.href(), PROFILE.canonical.origin).toString(),
 			},
 			{
 				rel: "alternate",
 				type: "application/rss+xml",
-				href: new URL(routes.rss.articles.href(), CANONICAL_ORIGIN).toString(),
+				href: new URL(routes.rss.articles.href(), PROFILE.canonical.origin).toString(),
 			},
 			{
 				rel: "alternate",
 				type: "application/rss+xml",
-				href: new URL(routes.rss.tutorials.href(), CANONICAL_ORIGIN).toString(),
+				href: new URL(routes.rss.tutorials.href(), PROFILE.canonical.origin).toString(),
 			},
 			{
 				rel: "alternate",
 				type: "application/rss+xml",
-				href: new URL(routes.rss.bookmarks.href(), CANONICAL_ORIGIN).toString(),
+				href: new URL(routes.rss.bookmarks.href(), PROFILE.canonical.origin).toString(),
 			},
-			{ rel: "me", href: X_PROFILE_URL },
-			{ rel: "me", href: GITHUB_PROFILE_URL },
-			{ rel: "me", href: GITHUB_SPONSORS_URL },
-			{ rel: "me", href: YOUTUBE_PROFILE_URL },
+			{ rel: "me", href: PROFILE.x.profile },
+			{ rel: "me", href: PROFILE.github.profile },
+			{ rel: "me", href: PROFILE.github.sponsor },
+			{ rel: "me", href: PROFILE.youtube.profile },
 		],
 	};
 }
@@ -159,7 +152,7 @@ export default controller<typeof routes.wellKnown>({
 		 * @returns PNG response sourced from GitHub, or a gateway error when the upstream fails.
 		 */
 		async avatar() {
-			let upstream = await fetch(GITHUB_AVATAR_URL, {
+			let upstream = await fetch(PROFILE.github.avatar, {
 				headers: { Accept: "image/png" },
 			});
 

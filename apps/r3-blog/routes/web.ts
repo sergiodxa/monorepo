@@ -10,6 +10,7 @@ import rss from "~/routes/rss";
 export default route({
 	feed: get("/"),
 	colors: get("/colors"),
+	sponsor: get("/sponsor"),
 
 	wellKnown: route({
 		webFinger: get("/.well-known/webfinger"),

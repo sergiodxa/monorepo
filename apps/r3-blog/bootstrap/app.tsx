@@ -26,6 +26,7 @@ import bookmarksRSS from "~/app/http/controllers/rss/bookmarks";
 import feedRSS from "~/app/http/controllers/rss/feed";
 import tutorialsRSS from "~/app/http/controllers/rss/tutorials";
 import sitemap from "~/app/http/controllers/sitemap";
+import sponsor from "~/app/http/controllers/sponsor";
 import tutorials from "~/app/http/controllers/tutorials";
 import wellKnown from "~/app/http/controllers/well-known";
 import auth from "~/app/http/middleware/auth";
@@ -80,6 +81,7 @@ export default function createApplication(database: Database, env: App.Env) {
 		actions: {
 			feed,
 			colors,
+			sponsor,
 			wellKnown,
 
 			sitemap,
