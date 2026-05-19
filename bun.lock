@@ -31,6 +31,7 @@
         "@pkg/db-helpers": "workspace:*",
         "@pkg/get-client-ip": "workspace:*",
         "@pkg/http": "workspace:*",
+        "@pkg/iife": "workspace:*",
         "@pkg/jobs": "workspace:*",
         "@pkg/logger": "workspace:*",
         "@pkg/response": "workspace:*",
@@ -312,6 +313,7 @@
         "@pkg/db-helpers": "workspace:*",
         "@pkg/hooks": "workspace:*",
         "@pkg/http": "workspace:*",
+        "@pkg/iife": "workspace:*",
         "@pkg/jobs": "workspace:*",
         "@pkg/location": "workspace:*",
         "@pkg/logger": "workspace:*",
@@ -457,6 +459,10 @@
       "devDependencies": {
         "@types/bun": "^1.3.11",
       },
+    },
+    "packages/iife": {
+      "name": "@pkg/iife",
+      "version": "0.0.1",
     },
     "packages/jobs": {
       "name": "@pkg/jobs",
@@ -1259,6 +1265,8 @@
     "@pkg/hooks": ["@pkg/hooks@workspace:packages/hooks"],
 
     "@pkg/http": ["@pkg/http@workspace:packages/http"],
+
+    "@pkg/iife": ["@pkg/iife@workspace:packages/iife"],
 
     "@pkg/jobs": ["@pkg/jobs@workspace:packages/jobs"],
 
