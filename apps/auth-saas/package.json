@@ -30,7 +30,7 @@
 		"@polar-sh/sdk": "^0.47.0",
 		"@simplewebauthn/server": "^13.3.0",
 		"bcryptjs": "^3.0.3",
-		"remix": "next",
+		"remix": "3.0.0-beta.3",
 		"resend": "^6.10.0",
 		"zod": "^4.3.6"
 	},
