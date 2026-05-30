@@ -46,13 +46,13 @@ export default function Component(_: Route.ComponentProps) {
 					<Form method="post" className="min-w-xs">
 						<TextField name="url" type="url" isRequired>
 							<Label>URL</Label>
-							<Input />
+							<Input aria-label="URL" />
 							<FieldError />
 						</TextField>
 
 						<TextField name="title">
 							<Label>Title (optional)</Label>
-							<Input />
+							<Input aria-label="Title" />
 							<FieldError />
 						</TextField>
 

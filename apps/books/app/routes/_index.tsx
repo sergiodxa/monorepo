@@ -66,6 +66,7 @@ function SubscribeForm({ title, label }: SubscribeFormProps) {
 						type="email"
 						name="email"
 						required
+						aria-label={label}
 						className="w-full rounded-xs border-2 border-stone-200 bg-white px-5 py-2.5 placeholder-stone-500 outline-none group-data-[status=failure]:border-red-500 group-data-[status=success]:border-green-500 focus-visible:border-black dark:border-stone-800 dark:bg-black dark:text-stone-100 dark:placeholder-stone-300 dark:focus-visible:border-white"
 						placeholder="user@domain.tld"
 						readOnly={status !== "idle"}

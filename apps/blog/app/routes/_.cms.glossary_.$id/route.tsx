@@ -151,21 +151,21 @@ export default function Component({ loaderData }: Route.ComponentProps) {
 
 						<TextField name="term" isRequired defaultValue={loaderData.glossary.term}>
 							<Label>Term</Label>
-							<Input />
+							<Input aria-label="Term" />
 							<FieldError />
 						</TextField>
 
 						{loaderData.mode === INTENT.update && (
 							<TextField name="slug" defaultValue={loaderData.glossary.slug}>
 								<Label>Slug</Label>
-								<Input />
+								<Input aria-label="Slug" />
 								<FieldError />
 							</TextField>
 						)}
 
 						<TextField name="title" defaultValue={loaderData.glossary.title}>
 							<Label>Title</Label>
-							<Input />
+							<Input aria-label="Title" />
 							<FieldError />
 						</TextField>
 

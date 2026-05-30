@@ -354,17 +354,23 @@ export function CMSGlossaryActionView() {
 
 							<label mix={[css({ display: "grid", gap: "0.25rem" })]}>
 								<span mix={[css({ color: "var(--ui-neutral-fg)" })]}>Term</span>
-								<Input name="term" value={values.term} required />
+								<Input name="term" aria-label="Term" value={values.term} required />
 							</label>
 
 							<label mix={[css({ display: "grid", gap: "0.25rem" })]}>
 								<span mix={[css({ color: "var(--ui-neutral-fg)" })]}>Title</span>
-								<Input name="title" value={values.title} />
+								<Input name="title" aria-label="Title" value={values.title} />
 							</label>
 
 							<label mix={[css({ display: "grid", gap: "0.25rem" })]}>
 								<span mix={[css({ color: "var(--ui-neutral-fg)" })]}>Slug</span>
-								<Input name="slug" value={values.slug} required readOnly={mode === "edit"} />
+								<Input
+									name="slug"
+									aria-label="Slug"
+									value={values.slug}
+									required
+									readOnly={mode === "edit"}
+								/>
 							</label>
 
 							<label mix={[css({ display: "grid", gap: "0.25rem" })]}>

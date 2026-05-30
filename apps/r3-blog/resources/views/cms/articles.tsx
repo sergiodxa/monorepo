@@ -362,17 +362,23 @@ export function CMSArticlesActionView() {
 
 							<label mix={[css({ display: "grid", gap: "0.25rem" })]}>
 								<span mix={[css({ color: "var(--ui-neutral-fg)" })]}>Title</span>
-								<Input name="title" value={values.title} required />
+								<Input name="title" aria-label="Title" value={values.title} required />
 							</label>
 
 							<label mix={[css({ display: "grid", gap: "0.25rem" })]}>
 								<span mix={[css({ color: "var(--ui-neutral-fg)" })]}>Slug</span>
-								<Input name="slug" value={values.slug} required readOnly={mode === "edit"} />
+								<Input
+									name="slug"
+									aria-label="Slug"
+									value={values.slug}
+									required
+									readOnly={mode === "edit"}
+								/>
 							</label>
 
 							<label mix={[css({ display: "grid", gap: "0.25rem" })]}>
 								<span mix={[css({ color: "var(--ui-neutral-fg)" })]}>Locale</span>
-								<Input name="locale" value={values.locale} required />
+								<Input name="locale" aria-label="Locale" value={values.locale} required />
 							</label>
 
 							<label mix={[css({ display: "grid", gap: "0.25rem" })]}>
@@ -398,12 +404,21 @@ export function CMSArticlesActionView() {
 
 							<label mix={[css({ display: "grid", gap: "0.25rem" })]}>
 								<span mix={[css({ color: "var(--ui-neutral-fg)" })]}>Canonical URL</span>
-								<Input name="canonical_url" value={values.canonical_url} />
+								<Input
+									name="canonical_url"
+									aria-label="Canonical URL"
+									value={values.canonical_url}
+								/>
 							</label>
 
 							<label mix={[css({ display: "grid", gap: "0.25rem" })]}>
 								<span mix={[css({ color: "var(--ui-neutral-fg)" })]}>Published At</span>
-								<Input type="date" name="published_at" value={values.published_at} />
+								<Input
+									type="date"
+									name="published_at"
+									aria-label="Published At"
+									value={values.published_at}
+								/>
 							</label>
 
 							<label mix={[css({ display: "grid", gap: "0.25rem" })]}>

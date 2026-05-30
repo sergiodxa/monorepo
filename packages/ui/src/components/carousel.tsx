@@ -114,7 +114,6 @@ export function Carousel({ className, id, ...props }: Carousel.Props) {
 			<section
 				{...props}
 				id={id}
-				role="region"
 				aria-roledescription="carousel"
 				className={cn("ui-carousel", className)}
 			>

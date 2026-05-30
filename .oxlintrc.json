@@ -14,7 +14,11 @@
 		"unicorn"
 	],
 	"categories": {},
-	"rules": {},
+	"rules": {
+		"jsx_a11y/control-has-associated-label": "allow",
+		"jsx_a11y/no-noninteractive-element-interactions": "allow",
+		"jsx_a11y/prefer-tag-over-role": "allow"
+	},
 	"settings": {
 		"jsx-a11y": {
 			"components": {

@@ -324,6 +324,7 @@ export default function Component({ loaderData }: Route.ComponentProps) {
 					>
 						<TextField name="name" isRequired>
 							<Input
+								aria-label={t("authorize.forms.credentials.fields.name.label")}
 								placeholder={t("authorize.forms.credentials.fields.name.placeholder")}
 								className="w-full"
 							/>
@@ -331,6 +332,7 @@ export default function Component({ loaderData }: Route.ComponentProps) {
 
 						<TextField name="username" isRequired>
 							<Input
+								aria-label={t("authorize.forms.credentials.fields.username.label")}
 								placeholder={t("authorize.forms.credentials.fields.username.placeholder")}
 								className="w-full"
 							/>
@@ -338,6 +340,7 @@ export default function Component({ loaderData }: Route.ComponentProps) {
 
 						<TextField name="email" type="email" isRequired>
 							<Input
+								aria-label={t("authorize.forms.credentials.fields.email.label")}
 								placeholder={t("authorize.forms.credentials.fields.email.placeholder")}
 								className="w-full"
 							/>
@@ -345,6 +348,7 @@ export default function Component({ loaderData }: Route.ComponentProps) {
 
 						<TextField name="password" type="password" isRequired>
 							<Input
+								aria-label={t("authorize.forms.credentials.fields.password.label")}
 								placeholder={t("authorize.forms.credentials.fields.password.placeholder")}
 								className="w-full"
 							/>

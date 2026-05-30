@@ -337,12 +337,12 @@ export function CMSRedirectsNewView() {
 						<form method="post" action={action} mix={[css({ display: "grid", gap: "0.65rem" })]}>
 							<label mix={[css({ display: "grid", gap: "0.25rem" })]}>
 								<span mix={[css({ color: "var(--ui-neutral-fg)" })]}>From</span>
-								<Input name="from" required />
+								<Input name="from" aria-label="From" required />
 							</label>
 
 							<label mix={[css({ display: "grid", gap: "0.25rem" })]}>
 								<span mix={[css({ color: "var(--ui-neutral-fg)" })]}>To</span>
-								<Input name="to" required />
+								<Input name="to" aria-label="To" required />
 							</label>
 
 							<label mix={[css({ display: "grid", gap: "0.25rem" })]}>
