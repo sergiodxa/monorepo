@@ -102,6 +102,17 @@ _Relevant Files_:
 - `apps/auth-saas/src/app/routes.ts`
 - `apps/auth-saas/src/app/router.ts`
 
+### Reusing Remix Route Contracts for Client-Side UI Routing
+
+A client-side router can reuse `remix/routes` definitions and route-pattern matching to render Remix UI components, mirroring the server fetch-router shape while returning `RemixNode` instead of `Response`.
+
+**Mentions:** Remix v3, `remix/routes`, route-pattern matching, client-side routing, Remix UI rendering, typed route params.
+
+_Relevant Files_:
+
+- `packages/r3-ui-router/src/index.ts`
+- `packages/r3-ui-router/README.md`
+
 ### Stateless Session Tokens with HMAC Signatures
 
 Using HMAC-signed JWT payloads stored in cookies for session management without database lookups on every request, while maintaining security through signature verification.

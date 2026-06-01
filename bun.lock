@@ -523,6 +523,16 @@
         "@types/react": "^19.2.14",
       },
     },
+    "packages/r3-ui-router": {
+      "name": "@pkg/r3-ui-router",
+      "version": "0.0.0",
+      "dependencies": {
+        "remix": "3.0.0-beta.3",
+      },
+      "devDependencies": {
+        "@types/bun": "^1.3.11",
+      },
+    },
     "packages/remix-helpers": {
       "name": "@pkg/remix-helpers",
       "version": "0.0.1",
@@ -1275,6 +1285,8 @@
     "@pkg/logger": ["@pkg/logger@workspace:packages/logger"],
 
     "@pkg/markdown": ["@pkg/markdown@workspace:packages/markdown"],
+
+    "@pkg/r3-ui-router": ["@pkg/r3-ui-router@workspace:packages/r3-ui-router"],
 
     "@pkg/remix-helpers": ["@pkg/remix-helpers@workspace:packages/remix-helpers"],
 
