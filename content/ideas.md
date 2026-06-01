@@ -113,6 +113,17 @@ _Relevant Files_:
 - `packages/r3-ui-router/src/index.ts`
 - `packages/r3-ui-router/README.md`
 
+### Modal Routes with URL Masking in Client-Side Routers
+
+Instagram-style overlays can render an internal route that preserves the background UI while showing a different public URL in the address bar. The direct URL remains reload-safe because initial page loads ignore masked history state and render the standalone route.
+
+**Mentions:** URL masking, modal routes, History API state, reload-safe direct routes, client-side routing, background preservation.
+
+_Relevant Files_:
+
+- `packages/r3-ui-router/src/index.ts`
+- `apps/r3-gallery/src/main.tsx`
+
 ### Stateless Session Tokens with HMAC Signatures
 
 Using HMAC-signed JWT payloads stored in cookies for session management without database lookups on every request, while maintaining security through signature verification.
