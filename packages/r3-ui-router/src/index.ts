@@ -112,6 +112,34 @@ export type UIController<routes extends RouteMap> = {
 };
 
 /**
+ * Defines a route view handler with params inferred from a route target.
+ *
+ * @param route Route target used only to infer handler context types.
+ * @param handler View handler for the route target.
+ * @returns The same handler function.
+ */
+export function createAction<route extends RouteTarget, handler extends ViewHandler<route>>(
+	_route: route,
+	handler: handler,
+): handler {
+	return handler;
+}
+
+/**
+ * Defines route-map handlers with params inferred from direct route leaves.
+ *
+ * @param routes Route map used only to infer handler context types.
+ * @param controller Controller handlers for the direct route leaves.
+ * @returns The same controller object.
+ */
+export function createController<routes extends RouteMap, controller extends UIController<routes>>(
+	_routes: routes,
+	controller: controller,
+): controller {
+	return controller;
+}
+
+/**
  * Matched route data returned by `router.match`.
  */
 export interface RouteMatch<route extends RouteTarget = RouteTarget> {
@@ -169,6 +197,8 @@ export interface RouterOptions {
  * Programmatic navigation options.
  */
 export interface NavigateOptions {
+	/** URL shown in browser history while rendering the `to` URL. */
+	mask?: RouterInput;
 	/** Replace the current history entry instead of pushing a new one. */
 	replace?: boolean;
 	/** Optional state stored in browser history. */
@@ -221,6 +251,15 @@ interface MountedRoot {
 	dispose(): void;
 }
 
+/** Browser history state shape used to restore masked render URLs on popstate. */
+interface RouterHistoryState {
+	__r3UIRouter?: {
+		renderURL: string;
+		visibleURL: string;
+	};
+	userState?: unknown;
+}
+
 /**
  * Provides the current router and route context to Remix UI descendants.
  *
@@ -243,7 +282,7 @@ export function RouterProvider(handle: Handle<RouterProviderProps, RouterProvide
 export function createRouter(options: RouterOptions = {}): UIRouter {
 	let matcher = createMultiMatcher<RouteEntry>();
 	let mountedRoots = new Set<MountedRoot>();
-	let baseURL = normalizeBaseURL(options.baseURL);
+	let baseURL = normalizeBaseURL(options.baseURL, getRouterWindow(options)?.location.href);
 	let createRoot = options.createRoot ?? createRemixRoot;
 	let interceptLinks = options.interceptLinks ?? true;
 
@@ -285,13 +324,16 @@ export function createRouter(options: RouterOptions = {}): UIRouter {
 
 		async navigate(to, navigationOptions) {
 			let url = resolveURL(to, baseURL);
+			let visibleURL = navigationOptions?.mask ? resolveURL(navigationOptions.mask, baseURL) : url;
 			let routerWindow = getRouterWindow(options);
 
-			if (routerWindow && url.origin === routerWindow.location.origin) {
+			if (routerWindow && visibleURL.origin === routerWindow.location.origin) {
+				let state = createHistoryState(navigationOptions?.state, url, visibleURL);
+
 				if (navigationOptions?.replace) {
-					routerWindow.history.replaceState(navigationOptions.state, "", url);
+					routerWindow.history.replaceState(state, "", visibleURL);
 				} else {
-					routerWindow.history.pushState(navigationOptions?.state, "", url);
+					routerWindow.history.pushState(state, "", visibleURL);
 				}
 			}
 
@@ -345,8 +387,8 @@ export function createRouter(options: RouterOptions = {}): UIRouter {
 				},
 			};
 
-			function handlePopState() {
-				void mounted.render();
+			function handlePopState(event: PopStateEvent) {
+				void mounted.render(getHistoryRenderURL(event.state) ?? undefined);
 			}
 
 			function handleClick(event: MouseEvent) {
@@ -437,6 +479,39 @@ function createRouterProviderValue(
 	};
 }
 
+/** Stores the unmasked render URL only when it differs from the visible URL. */
+function createHistoryState(userState: unknown, renderURL: URL, visibleURL: URL): unknown {
+	if (renderURL.href === visibleURL.href) return userState;
+
+	return {
+		__r3UIRouter: {
+			renderURL: renderURL.href,
+			visibleURL: visibleURL.href,
+		},
+		userState,
+	} satisfies RouterHistoryState;
+}
+
+/** Reads the unmasked render URL from a popstate event when available. */
+function getHistoryRenderURL(state: unknown): string | undefined {
+	if (!isRouterHistoryState(state)) return undefined;
+
+	return state.__r3UIRouter?.renderURL;
+}
+
+/** Checks whether browser history state contains router masking metadata. */
+function isRouterHistoryState(state: unknown): state is RouterHistoryState {
+	if (!state || typeof state !== "object") return false;
+	if (!("__r3UIRouter" in state)) return false;
+
+	let routerState = state.__r3UIRouter;
+
+	if (!routerState || typeof routerState !== "object") return false;
+	if (!("renderURL" in routerState)) return false;
+
+	return typeof routerState.renderURL === "string";
+}
+
 /** Registers one route target with the shared route-pattern matcher. */
 function registerRoute<route extends RouteTarget>(
 	matcher: ReturnType<typeof createMultiMatcher<RouteEntry>>,
@@ -478,10 +553,10 @@ function getRouterWindow(options: RouterOptions): RouterWindow | undefined {
 }
 
 /** Normalizes an optional base URL without surfacing URL parser errors. */
-function normalizeBaseURL(baseURL: string | URL | undefined): URL {
+function normalizeBaseURL(baseURL: string | URL | undefined, fallbackURL: string | undefined): URL {
 	if (baseURL instanceof URL) return baseURL;
 
-	let value = baseURL ?? DEFAULT_BASE_URL;
+	let value = baseURL ?? fallbackURL ?? DEFAULT_BASE_URL;
 
 	if (URL.canParse(value)) return new URL(value);
 

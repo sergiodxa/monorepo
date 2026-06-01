@@ -4,7 +4,15 @@ import type { RemixElement, RemixNode, VirtualRoot } from "remix/ui";
 
 import { route } from "remix/routes";
 
-import { createRouter, RouterProvider, type RouterProviderValue } from "./index";
+import {
+	createAction,
+	createController,
+	createRouter,
+	RouterProvider,
+	type RouterProviderValue,
+	type UIController,
+	type ViewHandler,
+} from "./index";
 
 interface ProviderRender {
 	value: RouterProviderValue;
@@ -97,6 +105,30 @@ describe(createRouter.name, () => {
 
 		expect(readProviderRender(await router.render("/posts")).children).toBe("index");
 		expect(readProviderRender(await router.render("/posts/123")).children).toBe("show:123");
+	});
+
+	test("createAction returns the same handler with route params inferred", () => {
+		let routes = route({ post: "/posts/:id" });
+		let original = ((ctx) => `post:${ctx.params.id}`) satisfies ViewHandler<typeof routes.post>;
+		let handler = createAction(routes.post, original);
+
+		expect(handler).toBe(original);
+	});
+
+	test("createController returns the same controller object", () => {
+		let routes = route({
+			posts: {
+				index: "/posts",
+				show: "/posts/:id",
+			},
+		});
+		let controller = {
+			index: () => "index",
+			show: (ctx) => `show:${ctx.params.id}`,
+		} satisfies UIController<typeof routes.posts>;
+		let wrapped = createController(routes.posts, controller);
+
+		expect(wrapped).toBe(controller);
 	});
 
 	test("renders the default element when no route matches", async () => {
@@ -261,6 +293,73 @@ describe(createRouter.name, () => {
 		await Promise.resolve();
 
 		expect(rendered).toEqual(["post:123"]);
+
+		mounted.dispose();
+	});
+
+	test("renders an internal URL while masking the browser URL", async () => {
+		let routes = route({ album: "/album/:id", photo: "/photo/:id" });
+		let rendered: RemixNode[] = [];
+		let historyState: unknown;
+		let visibleURL = "http://localhost:3000/album/1";
+		let popstateListener: EventListener | undefined;
+		let root: VirtualRoot = {
+			addEventListener() {},
+			removeEventListener() {},
+			dispatchEvent() {
+				return true;
+			},
+			render(node) {
+				rendered.push(readProviderRender(node).children);
+			},
+			dispose() {},
+			flush() {},
+		};
+		let router = createRouter({
+			interceptLinks: false,
+			getLocation() {
+				return visibleURL;
+			},
+			createRoot() {
+				return root;
+			},
+			window: {
+				location: {
+					href: visibleURL,
+					origin: "http://localhost:3000",
+				} as Location,
+				history: {
+					pushState(state, _unused, url) {
+						historyState = state;
+						visibleURL = new URL(String(url), visibleURL).href;
+					},
+					replaceState() {},
+				} as History,
+				addEventListener(type, listener) {
+					if (type === "popstate") popstateListener = listener;
+				},
+				removeEventListener() {},
+			},
+		});
+
+		router.map(routes.album, (ctx) => {
+			return `album:${ctx.params.id}:photo:${ctx.url.searchParams.get("photoId")}`;
+		});
+		router.map(routes.photo, (ctx) => `photo:${ctx.params.id}`);
+
+		let mounted = router.mount({} as HTMLElement);
+		await mounted.render();
+
+		await router.navigate("/album/1?photoId=7", { mask: "/photo/7" });
+
+		expect(visibleURL).toBe("http://localhost:3000/photo/7");
+		expect(rendered).toEqual(["album:1:photo:null", "album:1:photo:7"]);
+
+		popstateListener?.({ state: historyState } as PopStateEvent);
+		await Promise.resolve();
+		await Promise.resolve();
+
+		expect(rendered).toEqual(["album:1:photo:null", "album:1:photo:7", "album:1:photo:7"]);
 
 		mounted.dispose();
 	});

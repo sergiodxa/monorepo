@@ -18,9 +18,9 @@ Route handlers may be async. This lets a handler load the data needed to render 
 import type { Handle } from "remix/ui";
 import { route } from "remix/routes";
 
-import { createRouter } from "@pkg/r3-ui-router";
+import { createAction, createRouter } from "@pkg/r3-ui-router";
 
-let routes = route({
+const routes = route({
 	home: "/",
 	post: "/posts/:id",
 });
@@ -29,19 +29,30 @@ function HomePage() {
 	return () => <h1>Home</h1>;
 }
 
-function PostPage(handle: Handle<{ id: string }>) {
-	return () => <article>Post {handle.props.id}</article>;
+interface Post {
+	id: string;
+	title: string;
 }
 
-let router = createRouter();
+function PostPage(handle: Handle<{ post: Post }>) {
+	return () => <article>{handle.props.post.title}</article>;
+}
 
-router.map(routes.home, () => <HomePage />);
-router.map(routes.post, async (ctx) => {
-	let post = await fetchPost(ctx.params.id);
-	return <PostPage id={post.id} />;
-});
+const router = createRouter();
 
-let mounted = router.mount(document.body);
+router.map(
+	routes.home,
+	createAction(routes.home, () => <HomePage />),
+);
+router.map(
+	routes.post,
+	createAction(routes.post, async (ctx) => {
+		let post = await fetchPost(ctx.params.id);
+		return <PostPage post={post} />;
+	}),
+);
+
+const mounted = router.mount(document.body);
 ```
 
 ### Route Map Example
@@ -49,26 +60,29 @@ let mounted = router.mount(document.body);
 ```tsx
 import { route } from "remix/routes";
 
-import { createRouter } from "@pkg/r3-ui-router";
+import { createController, createRouter } from "@pkg/r3-ui-router";
 
-let routes = route({
+const routes = route({
 	posts: {
 		index: "/posts",
 		show: "/posts/:id",
 	},
 });
 
-let router = createRouter();
+const router = createRouter();
 
-router.map(routes.posts, {
-	index() {
-		return <h1>Posts</h1>;
-	},
+router.map(
+	routes.posts,
+	createController(routes.posts, {
+		index() {
+			return <h1>Posts</h1>;
+		},
 
-	show(ctx) {
-		return <h1>Post {ctx.params.id}</h1>;
-	},
-});
+		show(ctx) {
+			return <h1>Post {ctx.params.id}</h1>;
+		},
+	}),
+);
 ```
 
 ### Programmatic Navigation
@@ -124,7 +138,7 @@ Creates a client-side router that can map Remix route definitions to view handle
 **Example:**
 
 ```tsx
-let router = createRouter({
+const router = createRouter({
 	defaultElement(ctx) {
 		return <h1>Not found: {ctx.url.pathname}</h1>;
 	},
@@ -175,6 +189,50 @@ router.map(routes.posts, {
 });
 ```
 
+### `createAction(route, handler): ViewHandler`
+
+Defines a route handler while inferring `ctx.params` from the given route target. It returns the same handler, so it is useful when route handlers live in separate files before they are passed to `router.map`.
+
+**Parameters:**
+
+- `route`: A `Route` produced by `remix/routes`.
+- `handler`: Function receiving route-specific `Context` and returning a `RemixNode` or `Promise<RemixNode>`.
+
+**Returns:**
+
+- The same handler function.
+
+**Example:**
+
+```tsx
+export const renderPost = createAction(routes.post, async (ctx) => {
+	let post = await fetchPost(ctx.params.id);
+	return <PostPage post={post} />;
+});
+```
+
+### `createController(routeMap, controller): UIController`
+
+Defines direct route-map handlers while inferring `ctx.params` for each direct route leaf. It returns the same controller object.
+
+**Parameters:**
+
+- `routeMap`: A branch from a `remix/routes` route map.
+- `controller`: Object with handlers for each direct leaf route.
+
+**Returns:**
+
+- The same controller object.
+
+**Example:**
+
+```tsx
+export const postsController = createController(routes.posts, {
+	index: () => <PostsPage />,
+	show: (ctx) => <PostPage id={ctx.params.id} />,
+});
+```
+
 ### `router.match(input?: RouterInput): RouteMatch | null`
 
 Finds the most specific mapped route for a URL without rendering it.
@@ -190,7 +248,7 @@ Finds the most specific mapped route for a URL without rendering it.
 **Example:**
 
 ```typescript
-let match = router.match("/posts/hello");
+const match = router.match("/posts/hello");
 match?.params.id; // "hello"
 ```
 
@@ -209,16 +267,17 @@ Renders the matched handler for a URL without mounting it into the DOM. The retu
 **Example:**
 
 ```typescript
-let node = await router.render("/posts/hello");
+const node = await router.render("/posts/hello");
 ```
 
 ### `router.navigate(to: RouterInput, options?: NavigateOptions): Promise<void>`
 
-Updates browser history when possible and re-renders mounted roots.
+Updates browser history when possible and re-renders mounted roots. When `options.mask` is provided, the router renders `to` while showing `mask` in the address bar.
 
 **Parameters:**
 
 - `to`: Destination URL.
+- `options.mask`: Optional visible URL to store in browser history while rendering `to`.
 - `options.replace`: Use `history.replaceState` instead of `history.pushState`.
 - `options.state`: Optional history state.
 
@@ -227,6 +286,7 @@ Updates browser history when possible and re-renders mounted roots.
 ```typescript
 await router.navigate(routes.post.href({ id: "hello" }));
 await router.navigate(routes.home.href(), { replace: true });
+await router.navigate("/album/1?photoId=7", { mask: "/photo/7" });
 ```
 
 ### `router.mount(container: HTMLElement): MountedRouter`
@@ -244,7 +304,7 @@ Mounts the router into a DOM element and renders the current location.
 **Example:**
 
 ```typescript
-let mounted = router.mount(document.body);
+const mounted = router.mount(document.body);
 await mounted.render(routes.post.href({ id: "hello" }));
 mounted.dispose();
 ```
@@ -309,7 +369,7 @@ Options accepted by `createRouter` for URL resolution, default rendering, root c
 
 #### `NavigateOptions`
 
-Options accepted by `navigate`. Use `replace` to replace history and `state` to store browser history state.
+Options accepted by `navigate`. Use `mask` for modal-style routes, `replace` to replace history, and `state` to store browser history state.
 
 #### `MountedRouter`
 
@@ -326,7 +386,7 @@ Keep routes in one module and share them between server controllers and the clie
 ```typescript
 import { route } from "remix/routes";
 
-export let routes = route({
+export const routes = route({
 	home: "/",
 	post: "/posts/:id",
 });
