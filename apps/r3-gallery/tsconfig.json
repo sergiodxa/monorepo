@@ -1,0 +1,11 @@
+{
+	"extends": "../../tsconfig.json",
+	"include": ["index.html", "src/**/*", "vite.config.ts"],
+	"compilerOptions": {
+		"noEmit": true,
+		"allowImportingTsExtensions": true,
+		"jsx": "react-jsx",
+		"jsxImportSource": "remix/ui",
+		"types": ["@total-typescript/ts-reset", "vite/client", "bun"]
+	}
+}
