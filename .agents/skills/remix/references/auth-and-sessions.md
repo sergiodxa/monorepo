@@ -2,8 +2,7 @@
 
 ## What This Covers
 
-How to remember things about a browser between requests and how to identify a user. Read this when
-the task involves:
+How to remember things about a browser between requests and how to identify a user. Read this when the task involves:
 
 - Storing per-browser state across requests (login, cart, "I have submitted this form")
 - Adding a credentials login flow or an OAuth provider
@@ -11,23 +10,15 @@ the task involves:
 - Reading or writing `Session`, `Auth`, or other identity-related context values
 - Logging in, logging out, or rotating session IDs
 
-For raw cookies that are not session-backed (theme, locale, dismissed-banner), see
-`createCookie` in this file plus the broader `Package Map` in `SKILL.md`.
+For raw cookies that are not session-backed (theme, locale, dismissed-banner), see `createCookie` in this file plus the broader `Package Map` in `SKILL.md`.
 
 ## Sessions vs Plain Cookies
 
-Reach for `remix/session` when state is sensitive, must be tamper-resistant, or represents the
-identity of a request: who is logged in, which form a browser already submitted, what items are in
-a cart. Sessions sign or encrypt their backing cookie with a server-held secret and give you a
-typed `Session` object you can `get`, `set`, `flash`, `unset`, and `regenerateId`.
+Reach for `remix/session` when state is sensitive, must be tamper-resistant, or represents the identity of a request: who is logged in, which form a browser already submitted, what items are in a cart. Sessions sign or encrypt their backing cookie with a server-held secret and give you a typed `Session` object you can `get`, `set`, `flash`, `unset`, and `regenerateId`.
 
-Reach for `remix/cookie` directly when the browser is allowed to carry the value and the server
-does not need session semantics. This often means preferences (theme, locale, dismissed banner),
-but a signed cookie can also be fine for small low-risk values where you truly only need one
-cookie-shaped fact and do not need `Session` helpers.
+Reach for `remix/cookie` directly when the browser is allowed to carry the value and the server does not need session semantics. This often means preferences (theme, locale, dismissed banner), but a signed cookie can also be fine for small low-risk values where you truly only need one cookie-shaped fact and do not need `Session` helpers.
 
-If a malicious user editing the value would be a bug, or if the value needs server-managed
-lifecycle, reach for a session.
+If a malicious user editing the value would be a bug, or if the value needs server-managed lifecycle, reach for a session.
 
 ### Quick chooser
 
@@ -60,26 +51,24 @@ export let sessionCookie = createCookie("session", {
 });
 ```
 
-The cookie should always be `httpOnly`, default to `sameSite: 'Lax'`, and be `secure` in
-production. Demo defaults like `'s3cr3t'` are fine in tests but should never reach production —
-fail fast when the secret is missing.
+The cookie should always be `httpOnly`, default to `sameSite: 'Lax'`, and be `secure` in production. Demo defaults like `'s3cr3t'` are fine in tests but should never reach production — fail fast when the secret is missing.
 
 ### Create session storage
 
 ```typescript
 // Filesystem storage
-import { createFsSessionStorage } from "remix/session/fs-storage";
+import { createFsSessionStorage } from "remix/session-storage/fs";
 export let sessionStorage = createFsSessionStorage("./tmp/sessions");
 
 // Memory storage (for tests)
-import { createMemorySessionStorage } from "remix/session/memory-storage";
+import { createMemorySessionStorage } from "remix/session-storage/memory";
 export let sessionStorage = createMemorySessionStorage();
 ```
 
 ### Add session middleware
 
 ```typescript
-import { session } from "remix/session-middleware";
+import { session } from "remix/middleware/session";
 
 let router = createRouter({
 	middleware: [
@@ -117,9 +106,7 @@ async function handler({ get }) {
 
 ### Sessions for non-auth state
 
-Sessions are not just for login. They are the right place to store any tamper-sensitive
-per-browser fact: which form a browser already submitted, how many free actions are left in a
-trial, which feature flags a tester opted into, what items are in a cart.
+Sessions are not just for login. They are the right place to store any tamper-sensitive per-browser fact: which form a browser already submitted, how many free actions are left in a trial, which feature flags a tester opted into, what items are in a cart.
 
 ```typescript
 async function submit({ get }) {
@@ -141,17 +128,14 @@ async function submit({ get }) {
 }
 ```
 
-Notice that there is no manual `Set-Cookie` plumbing in the action — the session middleware handles
-that, and the handler returns an ordinary `Response`. Per-browser state enforced this way is still
-bypassable by clearing cookies; if the guarantee needs to survive that, you also need an account
-(see auth providers below).
+Notice that there is no manual `Set-Cookie` plumbing in the action — the session middleware handles that, and the handler returns an ordinary `Response`. Per-browser state enforced this way is still bypassable by clearing cookies; if the guarantee needs to survive that, you also need an account (see auth providers below).
 
 ## Auth Middleware
 
 ### Basic setup
 
 ```typescript
-import { auth, createSessionAuthScheme } from "remix/auth-middleware";
+import { auth, createSessionAuthScheme } from "remix/middleware/auth";
 import { Session } from "remix/session";
 import { Database } from "remix/data-table";
 
@@ -179,7 +163,7 @@ export function loadAuth() {
 ### Reading auth state
 
 ```typescript
-import { Auth } from "remix/auth-middleware";
+import { Auth } from "remix/middleware/auth";
 
 function handler({ get }) {
 	let auth = get(Auth);
@@ -296,14 +280,14 @@ let atmosphereProvider = createAtmosphereAuthProvider({
 });
 ```
 
-For Atmosphere-compatible atproto OAuth, create the provider once, call
-`atmosphereProvider.prepare(handleOrDid)` before `startExternalAuth(...)`, then pass the same
-module-scope provider to `finishExternalAuth(...)` and `refreshExternalAuth(...)`.
+For Atmosphere-compatible atproto OAuth, create the provider once, call `atmosphereProvider.prepare(handleOrDid)` before `startExternalAuth(...)`, then pass the same module-scope provider to `finishExternalAuth(...)` and `refreshExternalAuth(...)`.
 
 ### OAuth controller
 
 ```typescript
-export default {
+import { createController } from "remix/router";
+
+export default createController(routes.auth.google, {
 	actions: {
 		// GET /auth/google — redirect to Google
 		async index(context) {
@@ -329,15 +313,12 @@ export default {
 			return redirect(returnTo ?? routes.account.index.href());
 		},
 	},
-} satisfies Controller<typeof routes.auth.google>;
+});
 ```
 
 ### Refresh stored provider tokens
 
-Use `refreshExternalAuth(provider, tokens)` when an app has stored OAuth/OIDC tokens and needs a
-fresh access token from a refresh token. Built-in OIDC providers, X, and Atmosphere support
-refresh-token exchange. If the provider does not rotate the refresh token, the refreshed bundle
-preserves the current one.
+Use `refreshExternalAuth(provider, tokens)` when an app has stored OAuth/OIDC tokens and needs a fresh access token from a refresh token. Built-in OIDC providers, X, and Atmosphere support refresh-token exchange. If the provider does not rotate the refresh token, the refreshed bundle preserves the current one.
 
 ```typescript
 async function refreshGoogleTokens({ get }) {
@@ -359,16 +340,17 @@ async function refreshGoogleTokens({ get }) {
 Apply `requireAuth()` to every action in one controller:
 
 ```typescript
-import { requireAuth } from "remix/auth-middleware";
+import { createController } from "remix/router";
+import { requireAuth } from "remix/middleware/auth";
 
-export default {
+export default createController(routes.account, {
 	middleware: [requireAuth()],
 	actions: {
 		index() {
 			/* guaranteed authenticated */
 		},
 	},
-} satisfies Controller<typeof routes.account>;
+});
 ```
 
 Nested route maps need their own explicit protection:
@@ -379,7 +361,7 @@ router.map(routes.account, accountController);
 router.map(routes.account.settings, accountSettingsController);
 
 // app/actions/account/settings/controller.tsx
-export default {
+export default createController(routes.account.settings, {
 	middleware: [requireAuth()],
 	actions: {
 		index() {
@@ -389,7 +371,7 @@ export default {
 			/* guaranteed authenticated */
 		},
 	},
-} satisfies Controller<typeof routes.account.settings>;
+});
 ```
 
 ### Stacking middleware
@@ -397,14 +379,14 @@ export default {
 Combine auth checks with role checks:
 
 ```typescript
-export default {
+export default createController(routes.admin, {
 	middleware: [requireAuth(), requireAdmin()],
 	actions: {
 		index() {
 			/* requires auth + admin */
 		},
 	},
-} satisfies Controller<typeof routes.admin>;
+});
 ```
 
 ### Action-level protection
@@ -412,7 +394,7 @@ export default {
 Apply middleware to a single route:
 
 ```typescript
-import { Auth, requireAuth } from 'remix/auth-middleware'
+import { Auth, requireAuth } from 'remix/middleware/auth'
 
 router.get(routes.account.index, {
   middleware: [requireAuth()],
@@ -426,7 +408,7 @@ router.get(routes.account.index, {
 ### Redirect on auth failure
 
 ```typescript
-import { requireAuth } from "remix/auth-middleware";
+import { requireAuth } from "remix/middleware/auth";
 import { redirect } from "remix/response/redirect";
 
 export function requireAuthRedirect() {
