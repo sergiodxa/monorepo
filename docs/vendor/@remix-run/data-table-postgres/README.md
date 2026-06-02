@@ -24,15 +24,15 @@ npm i remix pg
 ## Usage
 
 ```ts
-import { Pool } from 'pg'
-import { createDatabase } from 'remix/data-table'
-import { createPostgresDatabaseAdapter } from 'remix/data-table/postgres'
+import { Pool } from "pg";
+import { createDatabase } from "remix/data-table";
+import { createPostgresDatabaseAdapter } from "remix/data-table/postgres";
 
 let pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-})
+	connectionString: process.env.DATABASE_URL,
+});
 
-let db = createDatabase(createPostgresDatabaseAdapter(pool))
+let db = createDatabase(createPostgresDatabaseAdapter(pool));
 ```
 
 Use `db.query(...)`, relation loading, and transactions from `remix/data-table`. Import any driver-specific types you need directly from `pg`.
@@ -54,10 +54,10 @@ Use `db.query(...)`, relation loading, and transactions from `remix/data-table`.
 Transaction options are passed through to the adapter as hints.
 
 ```ts
-await db.transaction(async (txDb) => txDb.exec('select 1'), {
-  isolationLevel: 'serializable',
-  readOnly: false,
-})
+await db.transaction(async (txDb) => txDb.exec("select 1"), {
+	isolationLevel: "serializable",
+	readOnly: false,
+});
 ```
 
 ## Related Packages

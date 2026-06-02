@@ -19,20 +19,20 @@ Historical examples below may show legacy component APIs from the release being 
   For example:
 
   ```ts
-  import type { RemixNode } from 'remix/ui'
-  import { renderToStream } from 'remix/ui/server'
+  import type { RemixNode } from "remix/ui";
+  import { renderToStream } from "remix/ui/server";
 
-  import { resolveEntryId } from './resolve-entry-id.ts'
+  import { resolveEntryId } from "./resolve-entry-id.ts";
 
   export function render(node: RemixNode) {
-    return renderToStream(node, {
-      async resolveClientEntry(entryId, component) {
-        return {
-          href: await resolveEntryId(entryId),
-          exportName: entryId.split('#')[1] || component.name,
-        }
-      },
-    })
+  	return renderToStream(node, {
+  		async resolveClientEntry(entryId, component) {
+  			return {
+  				href: await resolveEntryId(entryId),
+  				exportName: entryId.split("#")[1] || component.name,
+  			};
+  		},
+  	});
   }
   ```
 
@@ -51,7 +51,6 @@ Historical examples below may show legacy component APIs from the release being 
 - BREAKING CHANGE: remove legacy host-element `on` prop support in `@remix-run/ui`.
 
   Use the `on()` mixin instead:
-
   - Old: `<button on={{ click() {} }} />`
   - New: `<button mix={[on('click', () => {})]} />`
 
@@ -60,7 +59,6 @@ Historical examples below may show legacy component APIs from the release being 
 - BREAKING CHANGE: remove legacy host-element `css` prop runtime support in `@remix-run/ui`.
 
   Use the `css(...)` mixin instead:
-
   - Old: `<div css={{ color: 'red' }} />`
   - New: `<div mix={[css({ color: 'red' })]} />`
 
@@ -69,7 +67,6 @@ Historical examples below may show legacy component APIs from the release being 
 - BREAKING CHANGE: remove legacy host-element `animate` prop runtime support in `@remix-run/ui`.
 
   Use animation mixins instead:
-
   - Old: `<div animate={{ enter: true, exit: true, layout: true }} />`
   - New: `<div mix={[animateEntrance(), animateExit(), animateLayout()]} />`
 
@@ -78,7 +75,6 @@ Historical examples below may show legacy component APIs from the release being 
 - BREAKING CHANGE: remove legacy host-element `connect` prop support in `@remix-run/ui`.
 
   Use the `ref(...)` mixin instead:
-
   - Old: `<div connect={(node, signal) => {}} />`
   - New: `<div mix={[ref((node, signal) => {})]} />`
 
@@ -91,121 +87,118 @@ Historical examples below may show legacy component APIs from the release being 
   Before/after migration:
 
   **Interaction package APIs:**
-
   - Before: `defineInteraction(...)`, `createContainer(...)`, `on(target, listeners)` from `@remix-run/interaction`.
   - After: use component APIs (`createMixin(...)`, `on(...)`, `addEventListeners(...)`) from `@remix-run/ui`.
 
   ```ts
   // Before
-  import { on } from '@remix-run/interaction'
+  import { on } from "@remix-run/interaction";
 
   let dispose = on(window, {
-    resize() {
-      console.log('resized')
-    },
-  })
+  	resize() {
+  		console.log("resized");
+  	},
+  });
 
   // After
-  import { addEventListeners } from '@remix-run/ui'
+  import { addEventListeners } from "@remix-run/ui";
 
-  let controller = new AbortController()
+  let controller = new AbortController();
   addEventListeners(window, controller.signal, {
-    resize() {
-      console.log('resized')
-    },
-  })
+  	resize() {
+  		console.log("resized");
+  	},
+  });
   ```
 
   **Component handle API:**
-
   - Before: `handle.on(target, listeners)`.
   - After: `addEventListeners(target, handle.signal, listeners)`.
 
   ```tsx
   // Before
   function KeyboardTracker(handle: Handle) {
-    handle.on(document, {
-      keydown(event) {
-        console.log(event.key)
-      },
-    })
-    return () => null
+  	handle.on(document, {
+  		keydown(event) {
+  			console.log(event.key);
+  		},
+  	});
+  	return () => null;
   }
 
   // After
-  import { addEventListeners } from '@remix-run/ui'
+  import { addEventListeners } from "@remix-run/ui";
 
   function KeyboardTracker(handle: Handle) {
-    addEventListeners(document, handle.signal, {
-      keydown(event) {
-        console.log(event.key)
-      },
-    })
-    return () => null
+  	addEventListeners(document, handle.signal, {
+  		keydown(event) {
+  			console.log(event.key);
+  		},
+  	});
+  	return () => null;
   }
   ```
 
   **Custom interaction patterns:**
-
   - Before: `defineInteraction(...)` + interaction setup function.
   - After: event mixins (`createMixin(...)`) that compose `on(...)` listeners and dispatch typed custom events.
 
   ```tsx
   // Before
-  import { defineInteraction, type Interaction } from '@remix-run/interaction'
+  import { defineInteraction, type Interaction } from "@remix-run/interaction";
 
-  export let tempo = defineInteraction('my:tempo', Tempo)
+  export let tempo = defineInteraction("my:tempo", Tempo);
 
   function Tempo(handle: Interaction) {
-    handle.on(handle.target, {
-      click() {
-        handle.target.dispatchEvent(new TempoEvent(bmp))
-      },
-    })
+  	handle.on(handle.target, {
+  		click() {
+  			handle.target.dispatchEvent(new TempoEvent(bmp));
+  		},
+  	});
   }
 
   // App consumption (before, JSX)
   function TempoButtonBefore() {
-    return () => (
-      <button
-        on={{
-          [tempo](event) {
-            console.log(event.bpm)
-          },
-        }}
-      />
-    )
+  	return () => (
+  		<button
+  			on={{
+  				[tempo](event) {
+  					console.log(event.bpm);
+  				},
+  			}}
+  		/>
+  	);
   }
 
   // After
-  import { createMixin, on } from '@remix-run/ui'
+  import { createMixin, on } from "@remix-run/ui";
 
-  export let tempo = 'my:tempo' as const
+  export let tempo = "my:tempo" as const;
 
   export let tempoEvents = createMixin<HTMLElement>((handle) => {
-    return () => (
-      <handle.element
-        mix={[
-          on('click', (event) => {
-            event.currentTarget.dispatchEvent(new TempoEvent(bpm))
-          }),
-        ]}
-      />
-    )
-  })
+  	return () => (
+  		<handle.element
+  			mix={[
+  				on("click", (event) => {
+  					event.currentTarget.dispatchEvent(new TempoEvent(bpm));
+  				}),
+  			]}
+  		/>
+  	);
+  });
 
   // App consumption (after)
   function TempoButton() {
-    return () => (
-      <button
-        mix={[
-          tempoEvents(),
-          on(tempo, (event) => {
-            console.log(event.detail.bpm)
-          }),
-        ]}
-      />
-    )
+  	return () => (
+  		<button
+  			mix={[
+  				tempoEvents(),
+  				on(tempo, (event) => {
+  					console.log(event.detail.bpm);
+  				}),
+  			]}
+  		/>
+  	);
   }
   ```
 
@@ -220,7 +213,6 @@ Historical examples below may show legacy component APIs from the release being 
 - Add the new host `mix` prop and mixin authoring APIs in `@remix-run/ui`.
 
   New exports include:
-
   - `createMixin`
   - `MixinDescriptor`, `MixinHandle`, `MixinType`, `MixValue`
   - `on(...)`
@@ -230,14 +222,12 @@ Historical examples below may show legacy component APIs from the release being 
   This enables reusable host behaviors and composable element capabilities without bespoke host props.
 
 - Add new interaction mixins for normalized user input events:
-
   - `pressEvents(...)` for pointer/keyboard "press" interactions
   - `keysEvents(...)` for keyboard key state events
 
   These helpers provide a consistent mixin-based interaction model for input handling.
 
 - Add mixin-first animation APIs for host elements:
-
   - `animateEntrance(...)`
   - `animateExit(...)`
   - `animateLayout(...)`
@@ -297,12 +287,11 @@ Historical examples below may show legacy component APIs from the release being 
 ### Minor Changes
 
 - BREAKING CHANGE: `handle.update()` now returns `Promise<AbortSignal>` instead of accepting an optional task callback.
-
   - The promise is resolved when the update is complete (DOM is updated, tasks have run)
   - The signal is aborted when the component updates again or is removed.
 
   ```tsx
-  let signal = await handle.update()
+  let signal = await handle.update();
   // dom is updated
   // focus/scroll elements
   // do fetches, etc.
@@ -311,20 +300,19 @@ Historical examples below may show legacy component APIs from the release being 
   Note that `await handle.update()` resumes on a microtask after the flush completes, so the browser may paint before your code runs. For work that must happen synchronously during the flush (e.g. measuring elements and triggering another update without flicker), continue to use `handle.queueTask()` instead.
 
   ```tsx
-  handle.update()
+  handle.update();
   handle.queueTask(() => {
-    let rect = widthReferenceNode.getBoundingClientRect()
-    if (rect.width !== width) {
-      width = rect.width
-      handle.update()
-    }
-  })
+  	let rect = widthReferenceNode.getBoundingClientRect();
+  	if (rect.width !== width) {
+  		width = rect.width;
+  		handle.update();
+  	}
+  });
   ```
 
 - BREAKING CHANGE: rename virtual root teardown from `remove()` to `dispose()`.
 
   Old -> new:
-
   - `root.remove()` -> `root.dispose()` (for both `createRoot()` and `createRangeRoot()` roots)
   - `app.remove()` -> `app.dispose()` when using `run(...)`
 
@@ -333,7 +321,6 @@ Historical examples below may show legacy component APIs from the release being 
 - Add SSR with out-of-order streaming, selective hydration, async frames, and granular ui refresh
 
   ADDITIONS:
-
   - `<Frame>`
   - `renderToStream(node, { resolveFrame })`
   - `clientEntry`
@@ -358,7 +345,6 @@ Historical examples below may show legacy component APIs from the release being 
 ### Minor Changes
 
 - Add animation prop, spring, and tween utilities
-
   - `animate` prop on host elements enables enter, exit, and layout (FLIP) animations
   - `spring()` function creates spring-based animation iterators with configurable stiffness, damping, and mass
   - `tween()` function creates time-based animation iterators with customizable duration and easing (including `easings` presets)
@@ -379,7 +365,6 @@ Historical examples below may show legacy component APIs from the release being 
 ### Minor Changes
 
 - BREAKING CHANGE: Updated Component API
-
   - Removed stateless components favoring a single component shape
   - Components no longer called with `this` function context
   - Introduced `setup` prop
@@ -392,58 +377,58 @@ Historical examples below may show legacy component APIs from the release being 
 
   ```tsx
   function Counter(
-    // `this` binding
-    this: Handle,
-    // props available in setup scope
-    { initialCount }: { initialCount: number },
+  	// `this` binding
+  	this: Handle,
+  	// props available in setup scope
+  	{ initialCount }: { initialCount: number },
   ) {
-    let count = initialCount
+  	let count = initialCount;
 
-    return ({ label }: { label: string }) => (
-      <button
-        on={{
-          click: () => {
-            count++
-            this.update()
-          },
-        }}
-      >
-        {label} {count}
-      </button>
-    )
+  	return ({ label }: { label: string }) => (
+  		<button
+  			on={{
+  				click: () => {
+  					count++;
+  					this.update();
+  				},
+  			}}
+  		>
+  			{label} {count}
+  		</button>
+  	);
   }
 
-  let el = <Counter initialCount={10} label="Count" />
+  let el = <Counter initialCount={10} label="Count" />;
   ```
 
   **After**
 
   ```tsx
   function Counter(
-    // handle is a normal parameter
-    handle: Handle,
-    // only `setup` prop available in setup scope
-    setup: number,
+  	// handle is a normal parameter
+  	handle: Handle,
+  	// only `setup` prop available in setup scope
+  	setup: number,
   ) {
-    let count = setup
+  	let count = setup;
 
-    // props only available in render scope
-    return (props: { label: string }) => (
-      <button
-        on={{
-          click() {
-            count++
-            handle.update()
-          },
-        }}
-      >
-        {props.label} {count}
-      </button>
-    )
+  	// props only available in render scope
+  	return (props: { label: string }) => (
+  		<button
+  			on={{
+  				click() {
+  					count++;
+  					handle.update();
+  				},
+  			}}
+  		>
+  			{props.label} {count}
+  		</button>
+  	);
   }
 
   // usage
-  let el = <Counter setup={10} label="Count" />
+  let el = <Counter setup={10} label="Count" />;
   ```
 
   #### Discussion:
@@ -459,63 +444,62 @@ Historical examples below may show legacy component APIs from the release being 
   ```tsx
   // this has a bug
   function Counter(this: Handle) {
-    let count = 0
-    return (
-      <button
-        on={{
-          click: () => {
-            count++
-            this.update()
-          },
-        }}
-      >
-        This has a bug.
-      </button>
-    )
+  	let count = 0;
+  	return (
+  		<button
+  			on={{
+  				click: () => {
+  					count++;
+  					this.update();
+  				},
+  			}}
+  		>
+  			This has a bug.
+  		</button>
+  	);
   }
 
   // this was the fix, very hard to spot!
   function Counter(this: Handle) {
-    let count = 0
-    return () => (
-      <button
-        on={{
-          click: () => {
-            count++
-            this.update()
-          },
-        }}
-      >
-        This doesn't
-      </button>
-    )
+  	let count = 0;
+  	return () => (
+  		<button
+  			on={{
+  				click: () => {
+  					count++;
+  					this.update();
+  				},
+  			}}
+  		>
+  			This doesn't
+  		</button>
+  	);
   }
   ```
 
   The utility of being able to write `return (` instead of `() => (` has little benefit compared to the risks it created.
-
   - Both `handle` and `props` are optional arguments.
   - All components must return a function, there is no longer a distinction between stateful or stateless components
 
   ```tsx
   // "stateless" component before
   function SomeLayout({ children }: { children: RemixNode }) {
-    return (
-      <div>
-        <h1>Some Title</h1>
-        <main>{children}</main>
-      </div>
-    )
+  	return (
+  		<div>
+  			<h1>Some Title</h1>
+  			<main>{children}</main>
+  		</div>
+  	);
   }
 
   // after this change (returns a render function)
   function SomeLayout() {
-    return ({ children }: { children: RemixNode }) => (
-      <div>
-        <h1>Some Title</h1>
-        <main>{children}</main>
-      </div>
-    )
+  	return ({ children }: { children: RemixNode }) => (
+  		<div>
+  			<h1>Some Title</h1>
+  			<main>{children}</main>
+  		</div>
+  	);
   }
   ```
 
@@ -529,24 +513,24 @@ Historical examples below may show legacy component APIs from the release being 
 
   ```tsx
   function Counter(
-    this: Handle,
-    // captured `label` in the wrong scope
-    props: { label: string; initialCount: number },
+  	this: Handle,
+  	// captured `label` in the wrong scope
+  	props: { label: string; initialCount: number },
   ) {
-    let count = initialCount
+  	let count = initialCount;
 
-    return () => (
-      <button
-        on={{
-          click: () => {
-            count++
-            this.update()
-          },
-        }}
-      >
-        {label /* stale! */} {count}
-      </button>
-    )
+  	return () => (
+  		<button
+  			on={{
+  				click: () => {
+  					count++;
+  					this.update();
+  				},
+  			}}
+  		>
+  			{label /* stale! */} {count}
+  		</button>
+  	);
   }
   ```
 
@@ -556,27 +540,27 @@ Historical examples below may show legacy component APIs from the release being 
 
   ```tsx
   function Counter(
-    handle: Handle,
-    // only the setup prop is passed here, no access to `label`
-    setup: { count: number },
+  	handle: Handle,
+  	// only the setup prop is passed here, no access to `label`
+  	setup: { count: number },
   ) {
-    let count = setup.count
+  	let count = setup.count;
 
-    return ({ label }: { label: string }) => (
-      <button
-        on={{
-          click() {
-            count++
-            handle.update()
-          },
-        }}
-      >
-        {label} {count}
-      </button>
-    )
+  	return ({ label }: { label: string }) => (
+  		<button
+  			on={{
+  				click() {
+  					count++;
+  					handle.update();
+  				},
+  			}}
+  		>
+  			{label} {count}
+  		</button>
+  	);
   }
 
-  let el = <Counter setup={{ count: 10 }} label="Count" />
+  let el = <Counter setup={{ count: 10 }} label="Count" />;
   ```
 
   Now, the only way to make a prop stale is to do it very intentionally:
@@ -585,27 +569,27 @@ Historical examples below may show legacy component APIs from the release being 
   // this is a bad example, showing the difficulty and ill-advised method of
   // making a prop value static by moving props into the setup scope
   function Counter(handle: Handle, setup: number) {
-    let count = setup
-    let initialLabel: string
+  	let count = setup;
+  	let initialLabel: string;
 
-    return (props: { label: string }) => {
-      // what used to be an accident is now difficult to do on purpose
-      if (!initialLabel) {
-        initialLabel = props.label
-      }
-      return (
-        <button
-          on={{
-            click: () => {
-              count++
-              handle.update()
-            },
-          }}
-        >
-          {initialLabel} {count}
-        </button>
-      )
-    }
+  	return (props: { label: string }) => {
+  		// what used to be an accident is now difficult to do on purpose
+  		if (!initialLabel) {
+  			initialLabel = props.label;
+  		}
+  		return (
+  			<button
+  				on={{
+  					click: () => {
+  						count++;
+  						handle.update();
+  					},
+  				}}
+  			>
+  				{initialLabel} {count}
+  			</button>
+  		);
+  	};
   }
   ```
 
@@ -633,7 +617,6 @@ Historical examples below may show legacy component APIs from the release being 
   ```
 
   This is no longer a concern since props have been removed from the setup scope because:
-
   - If you need `setup` then you are likely stateful
   - If you are stateful you need the handle
   - Therefore `setup` isn't useful without `handle`
@@ -645,7 +628,7 @@ Historical examples below may show legacy component APIs from the release being 
   function Both(handle: Handle, setup: SomeInterface) {}
   function Neither() {}
   function OnlySetup(_: Handle, setup: SomeInterface) {
-    // rare: unclear what setup would be used for without a handle
+  	// rare: unclear what setup would be used for without a handle
   }
   ```
 
@@ -653,28 +636,28 @@ Historical examples below may show legacy component APIs from the release being 
 
   ```tsx
   function Counter(handle: Handle, setup: number) {
-    let count = setup
+  	let count = setup;
 
-    // function declarations inside the setup scope
-    function updateCount() {
-      count++
-      handle.update()
-    }
+  	// function declarations inside the setup scope
+  	function updateCount() {
+  		count++;
+  		handle.update();
+  	}
 
-    return (props: { label: string }) => {
-      return (
-        <button
-          on={{
-            // object method shorthand
-            click() {
-              updateCount()
-            },
-          }}
-        >
-          {props.label} {count}
-        </button>
-      )
-    }
+  	return (props: { label: string }) => {
+  		return (
+  			<button
+  				on={{
+  					// object method shorthand
+  					click() {
+  						updateCount();
+  					},
+  				}}
+  			>
+  				{props.label} {count}
+  			</button>
+  		);
+  	};
   }
   ```
 

@@ -9,32 +9,32 @@ Only the components you mark are hydrated. The rest of the page stays as static 
 Use `clientEntry` to mark a component for hydration. The first argument is the module URL and export name the client will use to load the component:
 
 ```tsx
-import { clientEntry, on, type Handle } from 'remix/ui'
+import { clientEntry, on, type Handle } from "remix/ui";
 
 export let Counter = clientEntry(
-  '/assets/counter.js#Counter',
-  function Counter(handle: Handle<{ initialCount?: number; label: string }>) {
-    let count = handle.props.initialCount ?? 0
+	"/assets/counter.js#Counter",
+	function Counter(handle: Handle<{ initialCount?: number; label: string }>) {
+		let count = handle.props.initialCount ?? 0;
 
-    return () => (
-      <div>
-        <span>
-          {handle.props.label}: {count}
-        </span>
-        <button
-          mix={[
-            on('click', () => {
-              count++
-              handle.update()
-            }),
-          ]}
-        >
-          +
-        </button>
-      </div>
-    )
-  },
-)
+		return () => (
+			<div>
+				<span>
+					{handle.props.label}: {count}
+				</span>
+				<button
+					mix={[
+						on("click", () => {
+							count++;
+							handle.update();
+						}),
+					]}
+				>
+					+
+				</button>
+			</div>
+		);
+	},
+);
 ```
 
 The format is `moduleUrl#ExportName`. If you omit the export name, the function's name is used as a fallback.
@@ -46,20 +46,20 @@ On the server, `clientEntry` components render like any other component. The ser
 Use `run` to start the client. It scans the document for client entry markers, loads the corresponding modules, and hydrates each one:
 
 ```tsx
-import { run } from 'remix/ui'
+import { run } from "remix/ui";
 
 let app = run({
-  async loadModule(moduleUrl, exportName) {
-    let mod = await import(moduleUrl)
-    return mod[exportName]
-  },
-  async resolveFrame(src, signal) {
-    let res = await fetch(src, { headers: { Accept: 'text/html' }, signal })
-    return res.body ?? (await res.text())
-  },
-})
+	async loadModule(moduleUrl, exportName) {
+		let mod = await import(moduleUrl);
+		return mod[exportName];
+	},
+	async resolveFrame(src, signal) {
+		let res = await fetch(src, { headers: { Accept: "text/html" }, signal });
+		return res.body ?? (await res.text());
+	},
+});
 
-await app.ready()
+await app.ready();
 ```
 
 ### `run` options
@@ -76,9 +76,9 @@ await app.ready()
 `app` is also an `EventTarget`. You can listen for errors from any hydrated component:
 
 ```tsx
-app.addEventListener('error', (event) => {
-  console.error('Component error:', event.error)
-})
+app.addEventListener("error", (event) => {
+	console.error("Component error:", event.error);
+});
 ```
 
 ## What gets serialized

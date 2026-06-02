@@ -5,16 +5,16 @@ A `<Frame>` renders server content into the page. Frames can stream in after the
 ## Basic usage
 
 ```tsx
-import { Frame } from 'remix/ui'
+import { Frame } from "remix/ui";
 
 function App() {
-  return () => (
-    <div>
-      <h1>Dashboard</h1>
-      <Frame src="/sidebar" fallback={<div>Loading sidebar...</div>} />
-      <Frame src="/main-content" />
-    </div>
-  )
+	return () => (
+		<div>
+			<h1>Dashboard</h1>
+			<Frame src="/sidebar" fallback={<div>Loading sidebar...</div>} />
+			<Frame src="/main-content" />
+		</div>
+	);
 }
 ```
 
@@ -45,15 +45,15 @@ The presence of a `fallback` prop determines streaming behavior:
 On the server, `renderToStream` calls your `resolveFrame` function to get the HTML for each frame:
 
 ```tsx
-import { renderToStream } from 'remix/ui/server'
+import { renderToStream } from "remix/ui/server";
 
 let stream = renderToStream(<App />, {
-  frameSrc: request.url,
-  async resolveFrame(src, _target, context) {
-    let res = await fetch(new URL(src, context?.currentFrameSrc ?? request.url))
-    return res.body // or res.text() for a string
-  },
-})
+	frameSrc: request.url,
+	async resolveFrame(src, _target, context) {
+		let res = await fetch(new URL(src, context?.currentFrameSrc ?? request.url));
+		return res.body; // or res.text() for a string
+	},
+});
 ```
 
 `resolveFrame` can return:
@@ -71,24 +71,24 @@ When a server frame response is itself rendered with `renderToStream()`, pass `f
 Client entries inside a frame can trigger a reload via `handle.frame.reload()`:
 
 ```tsx
-import { clientEntry, on, type Handle } from 'remix/ui'
+import { clientEntry, on, type Handle } from "remix/ui";
 
 export let RefreshButton = clientEntry(
-  '/assets/refresh.js#RefreshButton',
-  function RefreshButton(handle: Handle) {
-    return () => (
-      <button
-        mix={[
-          on('click', () => {
-            handle.frame.reload()
-          }),
-        ]}
-      >
-        Refresh
-      </button>
-    )
-  },
-)
+	"/assets/refresh.js#RefreshButton",
+	function RefreshButton(handle: Handle) {
+		return () => (
+			<button
+				mix={[
+					on("click", () => {
+						handle.frame.reload();
+					}),
+				]}
+			>
+				Refresh
+			</button>
+		);
+	},
+);
 ```
 
 You can also reload adjacent named frames:
@@ -101,19 +101,19 @@ You can also reload adjacent named frames:
 
 ```tsx
 function CartRow(handle: Handle) {
-  return () => (
-    <button
-      mix={[
-        on('click', async () => {
-          await handle.frames.get('cart-summary')?.reload()
-          await handle.frames.get('cart-empty')?.reload()
-          await handle.frame.reload()
-        }),
-      ]}
-    >
-      Save
-    </button>
-  )
+	return () => (
+		<button
+			mix={[
+				on("click", async () => {
+					await handle.frames.get("cart-summary")?.reload();
+					await handle.frames.get("cart-empty")?.reload();
+					await handle.frame.reload();
+				}),
+			]}
+		>
+			Save
+		</button>
+	);
 }
 ```
 
@@ -134,21 +134,21 @@ Frames can nest. Each frame owns its own region of the DOM and hydrates its clie
 
 ```tsx
 function App() {
-  return () => (
-    <div>
-      <Frame src="/outer" fallback={<div>Loading outer...</div>} />
-    </div>
-  )
+	return () => (
+		<div>
+			<Frame src="/outer" fallback={<div>Loading outer...</div>} />
+		</div>
+	);
 }
 
 // /outer response:
 function OuterFrame() {
-  return () => (
-    <div>
-      <h2>Outer</h2>
-      <Frame src="/inner" fallback={<div>Loading inner...</div>} />
-    </div>
-  )
+	return () => (
+		<div>
+			<h2>Outer</h2>
+			<Frame src="/inner" fallback={<div>Loading inner...</div>} />
+		</div>
+	);
 }
 ```
 

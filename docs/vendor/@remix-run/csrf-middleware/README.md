@@ -20,29 +20,29 @@ npm i remix
 This middleware requires [`session-middleware`](https://github.com/remix-run/remix/tree/main/packages/session-middleware) to run before it.
 
 ```ts
-import { createCookie } from 'remix/cookie'
-import { createRouter } from 'remix/router'
-import { createCookieSessionStorage } from 'remix/session-storage/cookie'
-import { session } from 'remix/middleware/session'
-import { csrf, getCsrfToken } from 'remix/middleware/csrf'
+import { createCookie } from "remix/cookie";
+import { createRouter } from "remix/router";
+import { createCookieSessionStorage } from "remix/session-storage/cookie";
+import { session } from "remix/middleware/session";
+import { csrf, getCsrfToken } from "remix/middleware/csrf";
 
-let sessionCookie = createCookie('__session', { secrets: ['secret1'] })
-let sessionStorage = createCookieSessionStorage()
+let sessionCookie = createCookie("__session", { secrets: ["secret1"] });
+let sessionStorage = createCookieSessionStorage();
 
 let router = createRouter({
-  middleware: [session(sessionCookie, sessionStorage), csrf()],
-})
+	middleware: [session(sessionCookie, sessionStorage), csrf()],
+});
 
-router.get('/form', (context) => {
-  let token = getCsrfToken(context)
+router.get("/form", (context) => {
+	let token = getCsrfToken(context);
 
-  return new Response(`
+	return new Response(`
     <form method="post" action="/submit">
       <input type="hidden" name="_csrf" value="${token}" />
       <button type="submit">Submit</button>
     </form>
-  `)
-})
+  `);
+});
 ```
 
 ## Token Sources

@@ -26,23 +26,23 @@ npm i remix
 ### Node
 
 ```ts
-import { DatabaseSync } from 'node:sqlite'
-import { createDatabase } from 'remix/data-table'
-import { createSqliteDatabaseAdapter } from 'remix/data-table/sqlite'
+import { DatabaseSync } from "node:sqlite";
+import { createDatabase } from "remix/data-table";
+import { createSqliteDatabaseAdapter } from "remix/data-table/sqlite";
 
-let sqlite = new DatabaseSync('app.db')
-let db = createDatabase(createSqliteDatabaseAdapter(sqlite))
+let sqlite = new DatabaseSync("app.db");
+let db = createDatabase(createSqliteDatabaseAdapter(sqlite));
 ```
 
 ### Bun
 
 ```ts
-import { Database } from 'bun:sqlite'
-import { createDatabase } from 'remix/data-table'
-import { createSqliteDatabaseAdapter } from 'remix/data-table/sqlite'
+import { Database } from "bun:sqlite";
+import { createDatabase } from "remix/data-table";
+import { createSqliteDatabaseAdapter } from "remix/data-table/sqlite";
 
-let sqlite = new Database('app.db')
-let db = createDatabase(createSqliteDatabaseAdapter(sqlite))
+let sqlite = new Database("app.db");
+let db = createDatabase(createSqliteDatabaseAdapter(sqlite));
 ```
 
 This is a good fit for local development, embedded deployments, and single-node services. Import any driver-specific types you need directly from your runtime's SQLite module.
@@ -62,12 +62,12 @@ This is a good fit for local development, embedded deployments, and single-node 
 ### In-Memory Database For Tests
 
 ```ts
-import { DatabaseSync } from 'node:sqlite'
-import { createDatabase } from 'remix/data-table'
-import { createSqliteDatabaseAdapter } from 'remix/data-table/sqlite'
+import { DatabaseSync } from "node:sqlite";
+import { createDatabase } from "remix/data-table";
+import { createSqliteDatabaseAdapter } from "remix/data-table/sqlite";
 
-let sqlite = new DatabaseSync(':memory:')
-let db = createDatabase(createSqliteDatabaseAdapter(sqlite))
+let sqlite = new DatabaseSync(":memory:");
+let db = createDatabase(createSqliteDatabaseAdapter(sqlite));
 ```
 
 ## Related Packages

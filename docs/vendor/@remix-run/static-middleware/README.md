@@ -21,14 +21,14 @@ npm i remix
 Static middleware is useful for serving static files from a directory.
 
 ```ts
-import { createRouter } from 'remix/router'
-import { staticFiles } from 'remix/middleware/static'
+import { createRouter } from "remix/router";
+import { staticFiles } from "remix/middleware/static";
 
 let router = createRouter({
-  middleware: [staticFiles('./public')],
-})
+	middleware: [staticFiles("./public")],
+});
 
-router.get('/', () => new Response('Home'))
+router.get("/", () => new Response("Home"));
 ```
 
 ### With Cache Control
@@ -37,40 +37,40 @@ Internally, the `staticFiles()` middleware uses the [`createFileResponse()` help
 
 ```ts
 let router = createRouter({
-  middleware: [
-    staticFiles('./public', {
-      cacheControl: 'public, max-age=31536000, immutable', // 1 year
-    }),
-  ],
-})
+	middleware: [
+		staticFiles("./public", {
+			cacheControl: "public, max-age=31536000, immutable", // 1 year
+		}),
+	],
+});
 ```
 
 ### Filter Files
 
 ```ts
 let router = createRouter({
-  middleware: [
-    staticFiles('./public', {
-      filter(path) {
-        // Don't serve hidden files
-        return !path.startsWith('.')
-      },
-    }),
-  ],
-})
+	middleware: [
+		staticFiles("./public", {
+			filter(path) {
+				// Don't serve hidden files
+				return !path.startsWith(".");
+			},
+		}),
+	],
+});
 ```
 
 ### Multiple Directories
 
 ```ts
 let router = createRouter({
-  middleware: [
-    staticFiles('./public'),
-    staticFiles('./assets', {
-      cacheControl: 'public, max-age=31536000',
-    }),
-  ],
-})
+	middleware: [
+		staticFiles("./public"),
+		staticFiles("./assets", {
+			cacheControl: "public, max-age=31536000",
+		}),
+	],
+});
 ```
 
 ## Security

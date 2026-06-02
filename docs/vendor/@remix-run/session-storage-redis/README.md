@@ -11,16 +11,16 @@ npm i remix
 ## Usage
 
 ```ts
-import { createClient } from 'redis'
-import { createRedisSessionStorage } from 'remix/session-storage/redis'
+import { createClient } from "redis";
+import { createRedisSessionStorage } from "remix/session-storage/redis";
 
-let redis = createClient({ url: process.env.REDIS_URL })
-await redis.connect()
+let redis = createClient({ url: process.env.REDIS_URL });
+await redis.connect();
 
 let sessionStorage = createRedisSessionStorage(redis, {
-  keyPrefix: 'session:',
-  ttl: 60 * 60 * 24,
-})
+	keyPrefix: "session:",
+	ttl: 60 * 60 * 24,
+});
 ```
 
 ## Options

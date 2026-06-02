@@ -18,36 +18,36 @@ npm i remix
 ### Opening Lazy Files
 
 ```ts
-import { openLazyFile } from 'remix/fs'
+import { openLazyFile } from "remix/fs";
 
 // Open a file from the filesystem
-let lazyFile = openLazyFile('./path/to/file.json')
+let lazyFile = openLazyFile("./path/to/file.json");
 
 // The file is lazy - no data is read until you call lazyFile.text(), lazyFile.bytes(), etc.
-let json = JSON.parse(await lazyFile.text())
+let json = JSON.parse(await lazyFile.text());
 
 // You can override file metadata
-let customLazyFile = openLazyFile('./image.jpg', {
-  name: 'custom-name.jpg',
-  type: 'image/jpeg',
-  lastModified: Date.now(),
-})
+let customLazyFile = openLazyFile("./image.jpg", {
+	name: "custom-name.jpg",
+	type: "image/jpeg",
+	lastModified: Date.now(),
+});
 ```
 
 ### Writing Files
 
 ```ts
-import { openLazyFile, writeFile } from 'remix/fs'
+import { openLazyFile, writeFile } from "remix/fs";
 
 // Read a file and write it elsewhere
-let lazyFile = openLazyFile('./source.txt')
-await writeFile('./destination.txt', lazyFile)
+let lazyFile = openLazyFile("./source.txt");
+await writeFile("./destination.txt", lazyFile);
 
 // Write to an open file handle
-import * as fsp from 'node:fs/promises'
-let handle = await fsp.open('./destination.txt', 'w')
-await writeFile(handle, lazyFile)
-await handle.close()
+import * as fsp from "node:fs/promises";
+let handle = await fsp.open("./destination.txt", "w");
+await writeFile(handle, lazyFile);
+await handle.close();
 ```
 
 ## Related Packages

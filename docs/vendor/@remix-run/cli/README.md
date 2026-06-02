@@ -58,17 +58,17 @@ remix --no-color doctor
 You can also run the CLI programmatically:
 
 ```ts
-import { runRemix } from 'remix/cli'
+import { runRemix } from "remix/cli";
 
-await runRemix(['new', 'my-remix-app'])
-await runRemix(['completion', 'bash'])
-await runRemix(['doctor'])
-await runRemix(['doctor', '--fix'])
-await runRemix(['routes'])
-await runRemix(['routes', '--table'])
-await runRemix(['routes', '--table', '--no-headers'])
-await runRemix(['test'])
-await runRemix(['version'])
+await runRemix(["new", "my-remix-app"]);
+await runRemix(["completion", "bash"]);
+await runRemix(["doctor"]);
+await runRemix(["doctor", "--fix"]);
+await runRemix(["routes"]);
+await runRemix(["routes", "--table"]);
+await runRemix(["routes", "--table", "--no-headers"]);
+await runRemix(["test"]);
+await runRemix(["version"]);
 ```
 
 `runRemix()` returns the CLI exit code as a promise.

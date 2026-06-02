@@ -36,35 +36,35 @@ npm i mysql2
 Define tables once, then create a database with an adapter.
 
 ```ts
-import { Pool } from 'pg'
-import { column as c, createDatabase, hasMany, query, table } from 'remix/data-table'
-import { createPostgresDatabaseAdapter } from 'remix/data-table/postgres'
+import { Pool } from "pg";
+import { column as c, createDatabase, hasMany, query, table } from "remix/data-table";
+import { createPostgresDatabaseAdapter } from "remix/data-table/postgres";
 
 let users = table({
-  name: 'users',
-  columns: {
-    id: c.uuid(),
-    email: c.varchar(255),
-    role: c.enum(['customer', 'admin']),
-    created_at: c.integer(),
-  },
-})
+	name: "users",
+	columns: {
+		id: c.uuid(),
+		email: c.varchar(255),
+		role: c.enum(["customer", "admin"]),
+		created_at: c.integer(),
+	},
+});
 
 let orders = table({
-  name: 'orders',
-  columns: {
-    id: c.uuid(),
-    user_id: c.uuid(),
-    status: c.enum(['pending', 'processing', 'shipped', 'delivered']),
-    total: c.decimal(10, 2),
-    created_at: c.integer(),
-  },
-})
+	name: "orders",
+	columns: {
+		id: c.uuid(),
+		user_id: c.uuid(),
+		status: c.enum(["pending", "processing", "shipped", "delivered"]),
+		total: c.decimal(10, 2),
+		created_at: c.integer(),
+	},
+});
 
-let userOrders = hasMany(users, orders)
+let userOrders = hasMany(users, orders);
 
-let pool = new Pool({ connectionString: process.env.DATABASE_URL })
-let db = createDatabase(createPostgresDatabaseAdapter(pool))
+let pool = new Pool({ connectionString: process.env.DATABASE_URL });
+let db = createDatabase(createPostgresDatabaseAdapter(pool));
 ```
 
 ## Query Objects
@@ -76,34 +76,34 @@ Use `query(table)` when you want to build a standalone reusable query object. Ex
 `query(table)` is the primary query-builder API. It gives you an unbound `Query` value that can be composed, stored, reused, and executed against any compatible database instance.
 
 ```ts
-import { eq, ilike, query } from 'remix/data-table'
+import { eq, ilike, query } from "remix/data-table";
 
 let pendingOrdersForExampleUsers = query(orders)
-  .join(users, eq(orders.user_id, users.id))
-  .where({ status: 'pending' })
-  .where(ilike(users.email, '%@example.com'))
-  .select({
-    orderId: orders.id,
-    customerEmail: users.email,
-    total: orders.total,
-    placedAt: orders.created_at,
-  })
-  .orderBy(orders.created_at, 'desc')
-  .limit(20)
+	.join(users, eq(orders.user_id, users.id))
+	.where({ status: "pending" })
+	.where(ilike(users.email, "%@example.com"))
+	.select({
+		orderId: orders.id,
+		customerEmail: users.email,
+		total: orders.total,
+		placedAt: orders.created_at,
+	})
+	.orderBy(orders.created_at, "desc")
+	.limit(20);
 
-let recentPendingOrders = await db.exec(pendingOrdersForExampleUsers)
+let recentPendingOrders = await db.exec(pendingOrdersForExampleUsers);
 ```
 
 Unbound queries stay lazy until you pass them to `db.exec(...)`:
 
 ```ts
 let shippedCustomerQuery = query(users)
-  .where({ role: 'customer' })
-  .with({
-    recentOrders: userOrders.where({ status: 'shipped' }).orderBy('created_at', 'desc').limit(3),
-  })
+	.where({ role: "customer" })
+	.with({
+		recentOrders: userOrders.where({ status: "shipped" }).orderBy("created_at", "desc").limit(3),
+	});
 
-let customers = await db.exec(shippedCustomerQuery)
+let customers = await db.exec(shippedCustomerQuery);
 
 // customers[0].recentOrders is fully typed
 ```
@@ -112,16 +112,16 @@ The same standalone query builder also handles terminal read and write operation
 
 ```ts
 let nextPendingOrder = await db.exec(
-  query(orders).where({ status: 'pending' }).orderBy('created_at', 'asc').first(),
-)
+	query(orders).where({ status: "pending" }).orderBy("created_at", "asc").first(),
+);
 
 await db.exec(
-  query(orders)
-    .where({ status: 'pending' })
-    .orderBy('created_at', 'asc')
-    .limit(100)
-    .update({ status: 'processing' }),
-)
+	query(orders)
+		.where({ status: "pending" })
+		.orderBy("created_at", "asc")
+		.limit(100)
+		.update({ status: "processing" }),
+);
 ```
 
 ### Bound Query Shorthand
@@ -130,11 +130,11 @@ If you already have a `db` instance in hand and do not need a standalone query v
 
 ```ts
 let recentPendingOrders = await db
-  .query(orders)
-  .where({ status: 'pending' })
-  .orderBy('created_at', 'desc')
-  .limit(20)
-  .all()
+	.query(orders)
+	.where({ status: "pending" })
+	.orderBy("created_at", "desc")
+	.limit(20)
+	.all();
 ```
 
 ## CRUD Helpers
@@ -144,24 +144,24 @@ let recentPendingOrders = await db
 ### Read operations
 
 ```ts
-import { or } from 'remix/data-table'
+import { or } from "remix/data-table";
 
-let user = await db.find(users, 'u_001')
+let user = await db.find(users, "u_001");
 
 let firstPending = await db.findOne(orders, {
-  where: { status: 'pending' },
-  orderBy: ['created_at', 'asc'],
-})
+	where: { status: "pending" },
+	orderBy: ["created_at", "asc"],
+});
 
 let page = await db.findMany(orders, {
-  where: or({ status: 'pending' }, { status: 'processing' }),
-  orderBy: [
-    ['status', 'asc'],
-    ['created_at', 'desc'],
-  ],
-  limit: 50,
-  offset: 0,
-})
+	where: or({ status: "pending" }, { status: "processing" }),
+	orderBy: [
+		["status", "asc"],
+		["created_at", "desc"],
+	],
+	limit: 50,
+	offset: 0,
+});
 ```
 
 `where` accepts the same single-table object/predicate inputs as `query().where(...)`, and `orderBy` uses tuple form:
@@ -174,39 +174,39 @@ let page = await db.findMany(orders, {
 ```ts
 // Default: metadata (affectedRows/insertId)
 let createResult = await db.create(users, {
-  id: 'u_002',
-  email: 'sam@example.com',
-  role: 'customer',
-  created_at: Date.now(),
-})
+	id: "u_002",
+	email: "sam@example.com",
+	role: "customer",
+	created_at: Date.now(),
+});
 
 // Return a typed row (with optional relations)
 let createdUser = await db.create(
-  users,
-  {
-    id: 'u_003',
-    email: 'pat@example.com',
-    role: 'customer',
-    created_at: Date.now(),
-  },
-  {
-    returnRow: true,
-    with: { recentOrders: userOrders.orderBy('created_at', 'desc').limit(1) },
-  },
-)
+	users,
+	{
+		id: "u_003",
+		email: "pat@example.com",
+		role: "customer",
+		created_at: Date.now(),
+	},
+	{
+		returnRow: true,
+		with: { recentOrders: userOrders.orderBy("created_at", "desc").limit(1) },
+	},
+);
 
 // Bulk insert metadata
 let createManyResult = await db.createMany(orders, [
-  { id: 'o_101', user_id: 'u_002', status: 'pending', total: 24.99, created_at: Date.now() },
-  { id: 'o_102', user_id: 'u_003', status: 'pending', total: 48.5, created_at: Date.now() },
-])
+	{ id: "o_101", user_id: "u_002", status: "pending", total: 24.99, created_at: Date.now() },
+	{ id: "o_102", user_id: "u_003", status: "pending", total: 48.5, created_at: Date.now() },
+]);
 
 // Return inserted rows (requires adapter RETURNING support)
 let insertedRows = await db.createMany(
-  orders,
-  [{ id: 'o_103', user_id: 'u_003', status: 'pending', total: 12, created_at: Date.now() }],
-  { returnRows: true },
-)
+	orders,
+	[{ id: "o_103", user_id: "u_003", status: "pending", total: 12, created_at: Date.now() }],
+	{ returnRows: true },
+);
 ```
 
 `createMany`/`insertMany` throw when every row in the batch is empty (no explicit values).
@@ -214,25 +214,25 @@ let insertedRows = await db.createMany(
 ### Update and delete helpers
 
 ```ts
-let updatedUser = await db.update(users, 'u_003', { role: 'admin' })
+let updatedUser = await db.update(users, "u_003", { role: "admin" });
 
 let updateManyResult = await db.updateMany(
-  orders,
-  { status: 'processing' },
-  {
-    where: { status: 'pending' },
-    orderBy: ['created_at', 'asc'],
-    limit: 25,
-  },
-)
+	orders,
+	{ status: "processing" },
+	{
+		where: { status: "pending" },
+		orderBy: ["created_at", "asc"],
+		limit: 25,
+	},
+);
 
-let deletedUser = await db.delete(users, 'u_002')
+let deletedUser = await db.delete(users, "u_002");
 
 let deleteManyResult = await db.deleteMany(orders, {
-  where: { status: 'delivered' },
-  orderBy: [['created_at', 'asc']],
-  limit: 200,
-})
+	where: { status: "delivered" },
+	orderBy: [["created_at", "asc"]],
+	limit: 200,
+});
 ```
 
 `db.update(...)` throws when the target row cannot be found.
@@ -252,55 +252,55 @@ Return behavior:
 Validation is optional and table-scoped. Define `validate(context)` to validate/coerce write payloads, and add lifecycle callbacks when you need custom read/write/delete behavior.
 
 ```ts
-import { column as c, fail, table } from 'remix/data-table'
+import { column as c, fail, table } from "remix/data-table";
 
 let payments = table({
-  name: 'payments',
-  columns: {
-    id: c.uuid(),
-    amount: c.decimal(10, 2),
-  },
-  beforeWrite({ value }) {
-    return {
-      value: {
-        ...value,
-        amount: typeof value.amount === 'string' ? value.amount.trim() : value.amount,
-      },
-    }
-  },
-  validate({ operation, value }) {
-    if (operation === 'create' && typeof value.amount === 'string') {
-      let amount = Number(value.amount)
+	name: "payments",
+	columns: {
+		id: c.uuid(),
+		amount: c.decimal(10, 2),
+	},
+	beforeWrite({ value }) {
+		return {
+			value: {
+				...value,
+				amount: typeof value.amount === "string" ? value.amount.trim() : value.amount,
+			},
+		};
+	},
+	validate({ operation, value }) {
+		if (operation === "create" && typeof value.amount === "string") {
+			let amount = Number(value.amount);
 
-      if (!Number.isFinite(amount)) {
-        return fail('Expected a numeric amount', ['amount'])
-      }
+			if (!Number.isFinite(amount)) {
+				return fail("Expected a numeric amount", ["amount"]);
+			}
 
-      return { value: { ...value, amount } }
-    }
+			return { value: { ...value, amount } };
+		}
 
-    return { value }
-  },
-  beforeDelete({ where }) {
-    if (where.length === 0) {
-      return fail('Refusing unscoped delete')
-    }
-  },
-  afterRead({ value }) {
-    if (!('amount' in value)) {
-      return { value }
-    }
+		return { value };
+	},
+	beforeDelete({ where }) {
+		if (where.length === 0) {
+			return fail("Refusing unscoped delete");
+		}
+	},
+	afterRead({ value }) {
+		if (!("amount" in value)) {
+			return { value };
+		}
 
-    return {
-      value: {
-        ...value,
-        // Example read-time shaping
-        amount:
-          typeof value.amount === 'number' ? Math.round(value.amount * 100) / 100 : value.amount,
-      },
-    }
-  },
-})
+		return {
+			value: {
+				...value,
+				// Example read-time shaping
+				amount:
+					typeof value.amount === "number" ? Math.round(value.amount * 100) / 100 : value.amount,
+			},
+		};
+	},
+});
 ```
 
 Use `fail(...)` in hooks when you want to return issues without manually building `{ issues: [...] }`.
@@ -325,20 +325,20 @@ Validation and lifecycle semantics:
 
 ```ts
 await db.transaction(async (tx) => {
-  let user = await tx.create(
-    users,
-    { id: 'u_010', email: 'new@example.com', role: 'customer', created_at: Date.now() },
-    { returnRow: true },
-  )
+	let user = await tx.create(
+		users,
+		{ id: "u_010", email: "new@example.com", role: "customer", created_at: Date.now() },
+		{ returnRow: true },
+	);
 
-  await tx.create(orders, {
-    id: 'o_500',
-    user_id: user.id,
-    status: 'pending',
-    total: 79,
-    created_at: Date.now(),
-  })
-})
+	await tx.create(orders, {
+		id: "o_500",
+		user_id: user.id,
+		status: "pending",
+		total: 79,
+		created_at: Date.now(),
+	});
+});
 ```
 
 ## Migrations
@@ -395,12 +395,12 @@ The runner sends each migration to the adapter as a single multi-statement scrip
 - `mysql2`: requires `multipleStatements: true` on the connection/pool.
 
 ```ts
-import { createPool } from 'mysql2/promise'
+import { createPool } from "mysql2/promise";
 
 let pool = createPool({
-  uri: process.env.DATABASE_URL,
-  multipleStatements: true,
-})
+	uri: process.env.DATABASE_URL,
+	multipleStatements: true,
+});
 ```
 
 ### Runner Script Example
@@ -408,29 +408,29 @@ let pool = createPool({
 In `app/db/migrate.ts`:
 
 ```ts
-import path from 'node:path'
-import { Pool } from 'pg'
-import { createPostgresDatabaseAdapter } from 'remix/data-table/postgres'
-import { createMigrationRunner } from 'remix/data-table/migrations'
-import { loadMigrations } from 'remix/data-table/migrations/node'
+import path from "node:path";
+import { Pool } from "pg";
+import { createPostgresDatabaseAdapter } from "remix/data-table/postgres";
+import { createMigrationRunner } from "remix/data-table/migrations";
+import { loadMigrations } from "remix/data-table/migrations/node";
 
-let directionArg = process.argv[2] ?? 'up'
-let direction = directionArg === 'down' ? 'down' : 'up'
-let to = process.argv[3]
+let directionArg = process.argv[2] ?? "up";
+let direction = directionArg === "down" ? "down" : "up";
+let to = process.argv[3];
 
-let pool = new Pool({ connectionString: process.env.DATABASE_URL })
-let adapter = createPostgresDatabaseAdapter(pool)
-let migrations = await loadMigrations(path.resolve('app/db/migrations'))
-let runner = createMigrationRunner(adapter, migrations)
+let pool = new Pool({ connectionString: process.env.DATABASE_URL });
+let adapter = createPostgresDatabaseAdapter(pool);
+let migrations = await loadMigrations(path.resolve("app/db/migrations"));
+let runner = createMigrationRunner(adapter, migrations);
 
 try {
-  let result = direction === 'up' ? await runner.up({ to }) : await runner.down({ to })
-  console.log(direction + ' complete', {
-    applied: result.applied.map((entry) => entry.id),
-    reverted: result.reverted.map((entry) => entry.id),
-  })
+	let result = direction === "up" ? await runner.up({ to }) : await runner.down({ to });
+	console.log(direction + " complete", {
+		applied: result.applied.map((entry) => entry.id),
+		reverted: result.reverted.map((entry) => entry.id),
+	});
 } finally {
-  await pool.end()
+	await pool.end();
 }
 ```
 
@@ -438,8 +438,8 @@ Use `journalTable` if you want a custom migrations journal table name:
 
 ```ts
 let runner = createMigrationRunner(adapter, migrations, {
-  journalTable: 'app_migrations',
-})
+	journalTable: "app_migrations",
+});
 ```
 
 Run it with your runtime, for example:
@@ -454,8 +454,8 @@ node ./app/db/migrate.ts down 20260228090000
 Use `step` for bounded rollforward/rollback behavior instead of a target id:
 
 ```ts
-await runner.up({ step: 1 })
-await runner.down({ step: 1 })
+await runner.up({ step: 1 });
+await runner.down({ step: 1 });
 ```
 
 `to` and `step` are mutually exclusive within a single run.
@@ -463,9 +463,9 @@ await runner.down({ step: 1 })
 Use `dryRun` to inspect the SQL plan without applying or journaling anything:
 
 ```ts
-let plan = await runner.up({ dryRun: true })
+let plan = await runner.up({ dryRun: true });
 for (let script of plan.sql) {
-  console.log(script)
+	console.log(script);
 }
 ```
 
@@ -491,43 +491,43 @@ You can also set `transaction` directly on a `MigrationDescriptor` when register
 For non-filesystem runtimes, register migrations directly:
 
 ```ts
-import { createMigrationRegistry, createMigrationRunner } from 'remix/data-table/migrations'
+import { createMigrationRegistry, createMigrationRunner } from "remix/data-table/migrations";
 
-let registry = createMigrationRegistry()
+let registry = createMigrationRegistry();
 registry.register({
-  id: '20260228090000',
-  name: 'create_users',
-  up: 'create table users (id serial primary key, email text not null);',
-  down: 'drop table users;',
-})
+	id: "20260228090000",
+	name: "create_users",
+	up: "create table users (id serial primary key, email text not null);",
+	down: "drop table users;",
+});
 
-let runner = createMigrationRunner(adapter, registry)
-await runner.up()
+let runner = createMigrationRunner(adapter, registry);
+await runner.up();
 ```
 
 ## Raw SQL Escape Hatch
 
 ```ts
-import { rawSql, sql } from 'remix/data-table'
+import { rawSql, sql } from "remix/data-table";
 
-await db.exec(sql`select * from users where id = ${'u_001'}`)
-await db.exec(rawSql('update users set role = ? where id = ?', ['admin', 'u_001']))
+await db.exec(sql`select * from users where id = ${"u_001"}`);
+await db.exec(rawSql("update users set role = ? where id = ?", ["admin", "u_001"]));
 ```
 
 Use `sql` when you need raw SQL plus safe value interpolation:
 
 ```ts
-import { sql } from 'remix/data-table'
+import { sql } from "remix/data-table";
 
-let email = input.email
-let minCreatedAt = input.minCreatedAt
+let email = input.email;
+let minCreatedAt = input.minCreatedAt;
 
 let result = await db.exec(sql`
   select id, email
   from users
   where email = ${email}
     and created_at >= ${minCreatedAt}
-`)
+`);
 ```
 
 `sql` keeps values parameterized per adapter dialect, so you can avoid manual string concatenation.

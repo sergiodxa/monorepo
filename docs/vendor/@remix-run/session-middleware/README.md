@@ -17,28 +17,28 @@ npm i remix
 ## Usage
 
 ```ts
-import { createRouter } from 'remix/router'
-import { createCookie } from 'remix/cookie'
-import { createCookieSessionStorage } from 'remix/session-storage/cookie'
-import { session } from 'remix/middleware/session'
+import { createRouter } from "remix/router";
+import { createCookie } from "remix/cookie";
+import { createCookieSessionStorage } from "remix/session-storage/cookie";
+import { session } from "remix/middleware/session";
 
-let sessionCookie = createCookie('__session', {
-  secrets: ['s3cr3t'], // session cookies must be signed!
-  httpOnly: true,
-  secure: true,
-  sameSite: 'lax',
-})
+let sessionCookie = createCookie("__session", {
+	secrets: ["s3cr3t"], // session cookies must be signed!
+	httpOnly: true,
+	secure: true,
+	sameSite: "lax",
+});
 
-let sessionStorage = createCookieSessionStorage()
+let sessionStorage = createCookieSessionStorage();
 
 let router = createRouter({
-  middleware: [session(sessionCookie, sessionStorage)],
-})
+	middleware: [session(sessionCookie, sessionStorage)],
+});
 
-router.get('/', (context) => {
-  context.session.set('count', Number(context.session.get('count') ?? 0) + 1)
-  return new Response(`Count: ${context.session.get('count')}`)
-})
+router.get("/", (context) => {
+	context.session.set("count", Number(context.session.get("count") ?? 0) + 1);
+	return new Response(`Count: ${context.session.get("count")}`);
+});
 ```
 
 The middleware:

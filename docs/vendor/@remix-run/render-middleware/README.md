@@ -20,25 +20,25 @@ npm i remix
 Use `renderWith()` to add a renderer to `context.render` and `context.get(Renderer)`.
 
 ```ts
-import { createRouter, type MiddlewareContext } from 'remix/router'
-import { renderWith } from 'remix/middleware/render'
+import { createRouter, type MiddlewareContext } from "remix/router";
+import { renderWith } from "remix/middleware/render";
 
 const render = renderWith(
-  (context) =>
-    function render(value: string, init?: ResponseInit) {
-      return new Response(`${context.url.pathname}: ${value}`, init)
-    },
-)
+	(context) =>
+		function render(value: string, init?: ResponseInit) {
+			return new Response(`${context.url.pathname}: ${value}`, init);
+		},
+);
 
-type AppContext = MiddlewareContext<[typeof render]>
+type AppContext = MiddlewareContext<[typeof render]>;
 
 const router = createRouter<AppContext>({
-  middleware: [render],
-})
+	middleware: [render],
+});
 
-router.get('/hello', (context) => {
-  return context.render('Hello')
-})
+router.get("/hello", (context) => {
+	return context.render("Hello");
+});
 ```
 
 Use `context.render(...)` (or `context.get(Renderer)(...)`).
@@ -46,46 +46,46 @@ Use `context.render(...)` (or `context.get(Renderer)(...)`).
 Renderers may render any value type, not just UI nodes.
 
 ```ts
-import { renderWith } from 'remix/middleware/render'
+import { renderWith } from "remix/middleware/render";
 
 const json = renderWith(
-  () =>
-    function render(data: unknown, init?: ResponseInit) {
-      return Response.json(data, init)
-    },
-)
+	() =>
+		function render(data: unknown, init?: ResponseInit) {
+			return Response.json(data, init);
+		},
+);
 
-router.get('/api', (context) => {
-  return context.render({ ok: true })
-})
+router.get("/api", (context) => {
+	return context.render({ ok: true });
+});
 ```
 
 For Remix UI, create a renderer that owns frame resolution and response creation.
 
 ```tsx
-import { createHtmlResponse } from 'remix/response/html'
-import { renderWith } from 'remix/middleware/render'
-import type { RemixNode } from 'remix/ui'
-import { renderToStream } from 'remix/ui/server'
+import { createHtmlResponse } from "remix/response/html";
+import { renderWith } from "remix/middleware/render";
+import type { RemixNode } from "remix/ui";
+import { renderToStream } from "remix/ui/server";
 
 const render = renderWith(
-  ({ router, url }) =>
-    function render(node: RemixNode, init?: ResponseInit) {
-      let stream = renderToStream(node, {
-        async resolveFrame(src) {
-          let response = await router.fetch(new URL(src, url))
+	({ router, url }) =>
+		function render(node: RemixNode, init?: ResponseInit) {
+			let stream = renderToStream(node, {
+				async resolveFrame(src) {
+					let response = await router.fetch(new URL(src, url));
 
-          if (!response.ok) {
-            return `<pre>Frame error: ${response.status}</pre>`
-          }
+					if (!response.ok) {
+						return `<pre>Frame error: ${response.status}</pre>`;
+					}
 
-          return response.body ?? response.text()
-        },
-      })
+					return response.body ?? response.text();
+				},
+			});
 
-      return createHtmlResponse(stream, init)
-    },
-)
+			return createHtmlResponse(stream, init);
+		},
+);
 ```
 
 ## Related Packages

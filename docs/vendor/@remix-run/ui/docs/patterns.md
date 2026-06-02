@@ -13,36 +13,36 @@ Only store state that's needed for rendering. Derive computed values instead of 
 ```tsx
 // ❌ Avoid: Storing computed values
 function TodoList(handle: Handle) {
-  let todos: string[] = []
-  let completedCount = 0 // Unnecessary state
+	let todos: string[] = [];
+	let completedCount = 0; // Unnecessary state
 
-  return () => (
-    <div>
-      {todos.map((todo, i) => (
-        <div key={i}>{todo}</div>
-      ))}
-      <div>Completed: {completedCount}</div>
-    </div>
-  )
+	return () => (
+		<div>
+			{todos.map((todo, i) => (
+				<div key={i}>{todo}</div>
+			))}
+			<div>Completed: {completedCount}</div>
+		</div>
+	);
 }
 
 // ✅ Prefer: Derive computed values in render
 function TodoList(handle: Handle) {
-  let todos: Array<{ text: string; completed: boolean }> = []
+	let todos: Array<{ text: string; completed: boolean }> = [];
 
-  return () => {
-    // Derive computed value in render
-    let completedCount = todos.filter((t) => t.completed).length
+	return () => {
+		// Derive computed value in render
+		let completedCount = todos.filter((t) => t.completed).length;
 
-    return (
-      <div>
-        {todos.map((todo, i) => (
-          <div key={i}>{todo.text}</div>
-        ))}
-        <div>Completed: {completedCount}</div>
-      </div>
-    )
-  }
+		return (
+			<div>
+				{todos.map((todo, i) => (
+					<div key={i}>{todo.text}</div>
+				))}
+				<div>Completed: {completedCount}</div>
+			</div>
+		);
+	};
 }
 ```
 
@@ -51,42 +51,42 @@ function TodoList(handle: Handle) {
 ```tsx
 // ❌ Avoid: Storing input value when you only need it on submit
 function SearchForm(handle: Handle) {
-  let query = '' // Unnecessary state
+	let query = ""; // Unnecessary state
 
-  return () => (
-    <form
-      mix={[
-        on('submit', (event) => {
-          event.preventDefault()
-          let formData = new FormData(event.currentTarget)
-          let query = formData.get('query') as string
-          // Use query for search
-        }),
-      ]}
-    >
-      <input name="query" />
-      <button type="submit">Search</button>
-    </form>
-  )
+	return () => (
+		<form
+			mix={[
+				on("submit", (event) => {
+					event.preventDefault();
+					let formData = new FormData(event.currentTarget);
+					let query = formData.get("query") as string;
+					// Use query for search
+				}),
+			]}
+		>
+			<input name="query" />
+			<button type="submit">Search</button>
+		</form>
+	);
 }
 
 // ✅ Prefer: Read input value directly from the form
 function SearchForm(handle: Handle) {
-  return () => (
-    <form
-      mix={[
-        on('submit', (event) => {
-          event.preventDefault()
-          let formData = new FormData(event.currentTarget)
-          let query = formData.get('query') as string
-          // Use query for search - no component state needed
-        }),
-      ]}
-    >
-      <input name="query" />
-      <button type="submit">Search</button>
-    </form>
-  )
+	return () => (
+		<form
+			mix={[
+				on("submit", (event) => {
+					event.preventDefault();
+					let formData = new FormData(event.currentTarget);
+					let query = formData.get("query") as string;
+					// Use query for search - no component state needed
+				}),
+			]}
+		>
+			<input name="query" />
+			<button type="submit">Search</button>
+		</form>
+	);
 }
 ```
 
@@ -97,23 +97,23 @@ Do as much work as possible in event handlers with minimal component state. Use 
 ```tsx
 // ✅ Good: Store state that affects rendering
 function Toggle(handle: Handle) {
-  let isOpen = false // Needed for rendering conditional content
+	let isOpen = false; // Needed for rendering conditional content
 
-  return () => (
-    <div>
-      <button
-        mix={[
-          on('click', () => {
-            isOpen = !isOpen
-            handle.update()
-          }),
-        ]}
-      >
-        Toggle
-      </button>
-      {isOpen && <div>Content</div>}
-    </div>
-  )
+	return () => (
+		<div>
+			<button
+				mix={[
+					on("click", () => {
+						isOpen = !isOpen;
+						handle.update();
+					}),
+				]}
+			>
+				Toggle
+			</button>
+			{isOpen && <div>Content</div>}
+		</div>
+	);
 }
 ```
 
@@ -125,22 +125,22 @@ The setup scope is perfect for one-time initialization:
 
 ```tsx
 function CacheExample(handle: Handle<{ cacheSize: number; key: string; value: any }>) {
-  // Initialize cache once
-  let cache = new Map<string, any>()
-  let maxSize = handle.props.cacheSize
+	// Initialize cache once
+	let cache = new Map<string, any>();
+	let maxSize = handle.props.cacheSize;
 
-  return () => {
-    // Use cache in render
-    if (cache.has(handle.props.key)) {
-      return <div>Cached: {cache.get(handle.props.key)}</div>
-    }
-    cache.set(handle.props.key, handle.props.value)
-    if (cache.size > maxSize) {
-      let firstKey = cache.keys().next().value
-      cache.delete(firstKey)
-    }
-    return <div>New: {handle.props.value}</div>
-  }
+	return () => {
+		// Use cache in render
+		if (cache.has(handle.props.key)) {
+			return <div>Cached: {cache.get(handle.props.key)}</div>;
+		}
+		cache.set(handle.props.key, handle.props.value);
+		if (cache.size > maxSize) {
+			let firstKey = cache.keys().next().value;
+			cache.delete(firstKey);
+		}
+		return <div>New: {handle.props.value}</div>;
+	};
 }
 ```
 
@@ -148,48 +148,48 @@ function CacheExample(handle: Handle<{ cacheSize: number; key: string; value: an
 
 ```tsx
 function Analytics(handle: Handle<{ apiKey: string; event: string; data?: any }>) {
-  // Initialize SDK once
-  let analytics = new AnalyticsSDK(handle.props.apiKey)
+	// Initialize SDK once
+	let analytics = new AnalyticsSDK(handle.props.apiKey);
 
-  // Cleanup on disconnect
-  handle.signal.addEventListener('abort', () => {
-    analytics.disconnect()
-  })
+	// Cleanup on disconnect
+	handle.signal.addEventListener("abort", () => {
+		analytics.disconnect();
+	});
 
-  return () => {
-    // SDK is ready to use
-    return <div>Tracking: {handle.props.event}</div>
-  }
+	return () => {
+		// SDK is ready to use
+		return <div>Tracking: {handle.props.event}</div>;
+	};
 }
 ```
 
 ### EventEmitters
 
 ```tsx
-import { TypedEventTarget } from 'remix/ui'
+import { TypedEventTarget } from "remix/ui";
 
 class DataEvent extends Event {
-  constructor(public value: string) {
-    super('data')
-  }
+	constructor(public value: string) {
+		super("data");
+	}
 }
 
 class DataEmitter extends TypedEventTarget<{ data: DataEvent }> {
-  emitData(value: string) {
-    this.dispatchEvent(new DataEvent(value))
-  }
+	emitData(value: string) {
+		this.dispatchEvent(new DataEvent(value));
+	}
 }
 
 function EventListener(handle: Handle<{ emitter: DataEmitter }>) {
-  // Set up listeners once with automatic cleanup
-  addEventListeners(handle.props.emitter, handle.signal, {
-    data(event) {
-      // Handle data
-      handle.update()
-    },
-  })
+	// Set up listeners once with automatic cleanup
+	addEventListeners(handle.props.emitter, handle.signal, {
+		data(event) {
+			// Handle data
+			handle.update();
+		},
+	});
 
-  return () => <div>Listening for events...</div>
+	return () => <div>Listening for events...</div>;
 }
 ```
 
@@ -197,23 +197,23 @@ function EventListener(handle: Handle<{ emitter: DataEmitter }>) {
 
 ```tsx
 function WindowResizeTracker(handle: Handle) {
-  let width = window.innerWidth
-  let height = window.innerHeight
+	let width = window.innerWidth;
+	let height = window.innerHeight;
 
-  // Set up global listeners once
-  addEventListeners(window, handle.signal, {
-    resize() {
-      width = window.innerWidth
-      height = window.innerHeight
-      handle.update()
-    },
-  })
+	// Set up global listeners once
+	addEventListeners(window, handle.signal, {
+		resize() {
+			width = window.innerWidth;
+			height = window.innerHeight;
+			handle.update();
+		},
+	});
 
-  return () => (
-    <div>
-      Window size: {width} x {height}
-    </div>
-  )
+	return () => (
+		<div>
+			Window size: {width} x {height}
+		</div>
+	);
 }
 ```
 
@@ -221,40 +221,40 @@ function WindowResizeTracker(handle: Handle) {
 
 ```tsx
 function Timer(handle: Handle<{ initialSeconds: number; paused?: boolean }>) {
-  // Initialize from props
-  let seconds = handle.props.initialSeconds
-  let interval: number | null = null
+	// Initialize from props
+	let seconds = handle.props.initialSeconds;
+	let interval: number | null = null;
 
-  function start() {
-    if (interval) return
-    interval = setInterval(() => {
-      seconds--
-      if (seconds <= 0) {
-        stop()
-      }
-      handle.update()
-    }, 1000)
-  }
+	function start() {
+		if (interval) return;
+		interval = setInterval(() => {
+			seconds--;
+			if (seconds <= 0) {
+				stop();
+			}
+			handle.update();
+		}, 1000);
+	}
 
-  function stop() {
-    if (interval) {
-      clearInterval(interval)
-      interval = null
-    }
-  }
+	function stop() {
+		if (interval) {
+			clearInterval(interval);
+			interval = null;
+		}
+	}
 
-  // Cleanup on disconnect
-  handle.signal.addEventListener('abort', stop)
+	// Cleanup on disconnect
+	handle.signal.addEventListener("abort", stop);
 
-  return () => {
-    if (!handle.props.paused && !interval) {
-      start()
-    } else if (handle.props.paused && interval) {
-      stop()
-    }
+	return () => {
+		if (!handle.props.paused && !interval) {
+			start();
+		} else if (handle.props.paused && interval) {
+			stop();
+		}
 
-    return <div>Time remaining: {seconds}s</div>
-  }
+		return <div>Time remaining: {seconds}s</div>;
+	};
 }
 ```
 
@@ -266,49 +266,49 @@ Use `handle.queueTask()` in event handlers for DOM operations that need to happe
 
 ```tsx
 function Modal(handle: Handle) {
-  let isOpen = false
-  let closeButton: HTMLButtonElement
-  let openButton: HTMLButtonElement
+	let isOpen = false;
+	let closeButton: HTMLButtonElement;
+	let openButton: HTMLButtonElement;
 
-  return () => (
-    <div>
-      <button
-        mix={[
-          ref((node) => (openButton = node)),
-          on('click', () => {
-            isOpen = true
-            handle.update()
-            // Queue focus operation after modal renders
-            handle.queueTask(() => {
-              closeButton.focus()
-            })
-          }),
-        ]}
-      >
-        Open Modal
-      </button>
+	return () => (
+		<div>
+			<button
+				mix={[
+					ref((node) => (openButton = node)),
+					on("click", () => {
+						isOpen = true;
+						handle.update();
+						// Queue focus operation after modal renders
+						handle.queueTask(() => {
+							closeButton.focus();
+						});
+					}),
+				]}
+			>
+				Open Modal
+			</button>
 
-      {isOpen && (
-        <div role="dialog">
-          <button
-            mix={[
-              ref((node) => (closeButton = node)),
-              on('click', () => {
-                isOpen = false
-                handle.update()
-                // Queue focus operation after modal closes
-                handle.queueTask(() => {
-                  openButton.focus()
-                })
-              }),
-            ]}
-          >
-            Close
-          </button>
-        </div>
-      )}
-    </div>
-  )
+			{isOpen && (
+				<div role="dialog">
+					<button
+						mix={[
+							ref((node) => (closeButton = node)),
+							on("click", () => {
+								isOpen = false;
+								handle.update();
+								// Queue focus operation after modal closes
+								handle.queueTask(() => {
+									openButton.focus();
+								});
+							}),
+						]}
+					>
+						Close
+					</button>
+				</div>
+			)}
+		</div>
+	);
 }
 ```
 
@@ -316,46 +316,46 @@ function Modal(handle: Handle) {
 
 ```tsx
 function ScrollableList(handle: Handle) {
-  let items: string[] = []
-  let newItemInput: HTMLInputElement
-  let listContainer: HTMLElement
+	let items: string[] = [];
+	let newItemInput: HTMLInputElement;
+	let listContainer: HTMLElement;
 
-  return () => (
-    <div>
-      <input
-        mix={[
-          ref((node) => (newItemInput = node)),
-          on('keydown', (event) => {
-            if (event.key === 'Enter') {
-              let text = event.currentTarget.value
-              if (text.trim()) {
-                items.push(text)
-                event.currentTarget.value = ''
-                handle.update()
-                // Queue scroll operation after new item renders
-                handle.queueTask(() => {
-                  listContainer.scrollTop = listContainer.scrollHeight
-                })
-              }
-            }
-          }),
-        ]}
-      />
-      <div
-        mix={[
-          ref((node) => (listContainer = node)),
-          css({
-            maxHeight: '300px',
-            overflowY: 'auto',
-          }),
-        ]}
-      >
-        {items.map((item, i) => (
-          <div key={i}>{item}</div>
-        ))}
-      </div>
-    </div>
-  )
+	return () => (
+		<div>
+			<input
+				mix={[
+					ref((node) => (newItemInput = node)),
+					on("keydown", (event) => {
+						if (event.key === "Enter") {
+							let text = event.currentTarget.value;
+							if (text.trim()) {
+								items.push(text);
+								event.currentTarget.value = "";
+								handle.update();
+								// Queue scroll operation after new item renders
+								handle.queueTask(() => {
+									listContainer.scrollTop = listContainer.scrollHeight;
+								});
+							}
+						}
+					}),
+				]}
+			/>
+			<div
+				mix={[
+					ref((node) => (listContainer = node)),
+					css({
+						maxHeight: "300px",
+						overflowY: "auto",
+					}),
+				]}
+			>
+				{items.map((item, i) => (
+					<div key={i}>{item}</div>
+				))}
+			</div>
+		</div>
+	);
 }
 ```
 
@@ -367,22 +367,22 @@ Only control an input's value when something besides the user's interaction with
 
 ```tsx
 function SearchInput(handle: Handle) {
-  let results: string[] = []
+	let results: string[] = [];
 
-  return () => (
-    <div>
-      <input
-        type="text"
-        mix={[
-          on('input', async (event, signal) => {
-            // Read value directly from the input - no component state needed
-            let query = event.currentTarget.value
-            // ... use query for search
-          }),
-        ]}
-      />
-    </div>
-  )
+	return () => (
+		<div>
+			<input
+				type="text"
+				mix={[
+					on("input", async (event, signal) => {
+						// Read value directly from the input - no component state needed
+						let query = event.currentTarget.value;
+						// ... use query for search
+					}),
+				]}
+			/>
+		</div>
+	);
 }
 ```
 
@@ -390,43 +390,43 @@ function SearchInput(handle: Handle) {
 
 ```tsx
 function SlugForm(handle: Handle) {
-  let slug = ''
-  let generatedSlug = ''
+	let slug = "";
+	let generatedSlug = "";
 
-  return () => (
-    <form>
-      <label>
-        <input
-          type="checkbox"
-          mix={[
-            on('change', (event) => {
-              if (event.currentTarget.checked) {
-                generatedSlug = crypto.randomUUID().slice(0, 8)
-              } else {
-                generatedSlug = ''
-              }
-              handle.update()
-            }),
-          ]}
-        />
-        Auto-generate slug
-      </label>
-      <label>
-        Slug
-        <input
-          type="text"
-          value={generatedSlug || slug}
-          disabled={!!generatedSlug}
-          mix={[
-            on('input', (event) => {
-              slug = event.currentTarget.value
-              handle.update()
-            }),
-          ]}
-        />
-      </label>
-    </form>
-  )
+	return () => (
+		<form>
+			<label>
+				<input
+					type="checkbox"
+					mix={[
+						on("change", (event) => {
+							if (event.currentTarget.checked) {
+								generatedSlug = crypto.randomUUID().slice(0, 8);
+							} else {
+								generatedSlug = "";
+							}
+							handle.update();
+						}),
+					]}
+				/>
+				Auto-generate slug
+			</label>
+			<label>
+				Slug
+				<input
+					type="text"
+					value={generatedSlug || slug}
+					disabled={!!generatedSlug}
+					mix={[
+						on("input", (event) => {
+							slug = event.currentTarget.value;
+							handle.update();
+						}),
+					]}
+				/>
+			</label>
+		</form>
+	);
 }
 ```
 
@@ -450,39 +450,39 @@ Event handlers receive an `AbortSignal` that's aborted when the handler is re-en
 
 ```tsx
 function SearchInput(handle: Handle) {
-  let results: string[] = []
-  let loading = false
+	let results: string[] = [];
+	let loading = false;
 
-  return () => (
-    <div>
-      <input
-        type="text"
-        mix={[
-          on('input', async (event, signal) => {
-            let query = event.currentTarget.value
-            loading = true
-            handle.update()
+	return () => (
+		<div>
+			<input
+				type="text"
+				mix={[
+					on("input", async (event, signal) => {
+						let query = event.currentTarget.value;
+						loading = true;
+						handle.update();
 
-            let response = await fetch(`/search?q=${query}`, { signal })
-            let data = await response.json()
-            if (signal.aborted) return
+						let response = await fetch(`/search?q=${query}`, { signal });
+						let data = await response.json();
+						if (signal.aborted) return;
 
-            results = data.results
-            loading = false
-            handle.update()
-          }),
-        ]}
-      />
-      {loading && <div>Loading...</div>}
-      {!loading && results.length > 0 && (
-        <ul>
-          {results.map((result, i) => (
-            <li key={i}>{result}</li>
-          ))}
-        </ul>
-      )}
-    </div>
-  )
+						results = data.results;
+						loading = false;
+						handle.update();
+					}),
+				]}
+			/>
+			{loading && <div>Loading...</div>}
+			{!loading && results.length > 0 && (
+				<ul>
+					{results.map((result, i) => (
+						<li key={i}>{result}</li>
+					))}
+				</ul>
+			)}
+		</div>
+	);
 }
 ```
 
@@ -492,31 +492,31 @@ Use `handle.queueTask()` in the render function for reactive data loading that r
 
 ```tsx
 function DataLoader(handle: Handle<{ url: string }>) {
-  let data: any = null
-  let loading = false
-  let error: Error | null = null
+	let data: any = null;
+	let loading = false;
+	let error: Error | null = null;
 
-  return () => {
-    // Queue data loading task that responds to prop changes
-    handle.queueTask(async (signal) => {
-      loading = true
-      error = null
-      handle.update()
+	return () => {
+		// Queue data loading task that responds to prop changes
+		handle.queueTask(async (signal) => {
+			loading = true;
+			error = null;
+			handle.update();
 
-      let response = await fetch(handle.props.url, { signal })
-      let json = await response.json()
-      if (signal.aborted) return
-      data = json
-      loading = false
-      handle.update()
-    })
+			let response = await fetch(handle.props.url, { signal });
+			let json = await response.json();
+			if (signal.aborted) return;
+			data = json;
+			loading = false;
+			handle.update();
+		});
 
-    if (loading) return <div>Loading...</div>
-    if (error) return <div>Error: {error.message}</div>
-    if (!data) return <div>No data</div>
+		if (loading) return <div>Loading...</div>;
+		if (error) return <div>Error: {error.message}</div>;
+		if (!data) return <div>No data</div>;
 
-    return <div>{JSON.stringify(data)}</div>
-  }
+		return <div>{JSON.stringify(data)}</div>;
+	};
 }
 ```
 
@@ -526,29 +526,29 @@ Load initial data in the setup scope:
 
 ```tsx
 function UserProfile(handle: Handle<{ userId: string; showEmail?: boolean }>) {
-  let user: User | null = null
-  let loading = true
+	let user: User | null = null;
+	let loading = true;
 
-  // Load initial data in setup scope using queueTask
-  handle.queueTask(async (signal) => {
-    let response = await fetch(`/api/users/${handle.props.userId}`, { signal })
-    let data = await response.json()
-    if (signal.aborted) return
-    user = data
-    loading = false
-    handle.update()
-  })
+	// Load initial data in setup scope using queueTask
+	handle.queueTask(async (signal) => {
+		let response = await fetch(`/api/users/${handle.props.userId}`, { signal });
+		let data = await response.json();
+		if (signal.aborted) return;
+		user = data;
+		loading = false;
+		handle.update();
+	});
 
-  return () => {
-    if (loading) return <div>Loading user...</div>
+	return () => {
+		if (loading) return <div>Loading user...</div>;
 
-    return (
-      <div>
-        <h1>{user.name}</h1>
-        {handle.props.showEmail && <p>{user.email}</p>}
-      </div>
-    )
-  }
+		return (
+			<div>
+				<h1>{user.name}</h1>
+				{handle.props.showEmail && <p>{user.email}</p>}
+			</div>
+		);
+	};
 }
 ```
 
