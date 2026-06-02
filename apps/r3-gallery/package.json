@@ -5,7 +5,10 @@
 	"scripts": {
 		"dev": "vite dev",
 		"build": "vite build",
-		"start": "vite preview"
+		"start": "vite preview",
+		"precf:deploy": "bun run build",
+		"cf:deploy": "bunx wrangler deploy",
+		"cf:typegen": "bunx wrangler types"
 	},
 	"dependencies": {
 		"@pkg/r3-ui-router": "workspace:*",
@@ -16,6 +19,7 @@
 		"@total-typescript/ts-reset": "^0.6.1",
 		"@types/bun": "^1.3.11",
 		"typescript": "^6.0.2",
-		"vite": "^8.0.8"
+		"vite": "^8.0.8",
+		"wrangler": "^4.81.1"
 	}
 }

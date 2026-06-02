@@ -297,6 +297,7 @@
         "@types/bun": "^1.3.11",
         "typescript": "^6.0.2",
         "vite": "^8.0.8",
+        "wrangler": "^4.81.1",
       },
     },
     "apps/r3-uptime": {

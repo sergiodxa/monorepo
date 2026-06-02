@@ -23,11 +23,11 @@ export const renderAlbum = createAction(routes.album, async function renderAlbum
 	if (isFailure(album)) {
 		return <StateMessage title="Could not load album" message={album.error.message} />;
 	}
-	
+
 	if (isFailure(photos)) {
 		return <StateMessage title="Could not load photos" message={photos.error.message} />;
 	}
-	
+
 	if (selectedPhoto && isFailure(selectedPhoto)) {
 		return (
 			<StateMessage title="Could not load selected photo" message={selectedPhoto.error.message} />
