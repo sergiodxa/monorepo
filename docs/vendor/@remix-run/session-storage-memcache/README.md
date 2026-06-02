@@ -1,6 +1,6 @@
 # session-storage-memcache
 
-Memcache session storage for [`@remix-run/session`](https://github.com/remix-run/remix/tree/main/packages/session).
+Memcache session storage for [`remix/session`](https://github.com/remix-run/remix/tree/main/packages/session).
 
 ## Installation
 
@@ -11,12 +11,12 @@ npm i remix
 ## Usage
 
 ```ts
-import { createMemcacheSessionStorage } from "remix/session-storage-memcache";
+import { createMemcacheSessionStorage } from 'remix/session-storage/memcache'
 
-let sessionStorage = createMemcacheSessionStorage("127.0.0.1:11211", {
-	keyPrefix: "my-app:session:",
-	ttlSeconds: 60 * 60 * 24 * 7,
-});
+let sessionStorage = createMemcacheSessionStorage('127.0.0.1:11211', {
+  keyPrefix: 'my-app:session:',
+  ttlSeconds: 60 * 60 * 24 * 7,
+})
 ```
 
 Available options:
@@ -29,8 +29,8 @@ Note: Memcache storage uses TCP sockets and requires a Node.js runtime.
 
 ## Related Packages
 
-- [`@remix-run/session`](https://github.com/remix-run/remix/tree/main/packages/session) - Core session primitives and storage interface
-- [`@remix-run/session-middleware`](https://github.com/remix-run/remix/tree/main/packages/session-middleware) - Middleware for wiring session storage into request handling
+- [`remix/session`](https://github.com/remix-run/remix/tree/main/packages/session) - Core session primitives and storage interface
+- [`remix/middleware/session`](https://github.com/remix-run/remix/tree/main/packages/session-middleware) - Middleware for wiring session storage into request handling
 
 ## License
 

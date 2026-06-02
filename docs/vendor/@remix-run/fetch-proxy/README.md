@@ -1,7 +1,6 @@
 # fetch-proxy
 
-HTTP proxy utilities built on the web [Fetch API](https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API).
-Use `fetch-proxy` to create `fetch` handlers that forward requests to target servers while optionally rewriting headers and cookies.
+HTTP proxy utilities built on the web [Fetch API](https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API). Use `fetch-proxy` to create `fetch` handlers that forward requests to target servers while optionally rewriting headers and cookies.
 
 ## Features
 
@@ -19,22 +18,22 @@ npm i remix
 ## Usage
 
 ```ts
-import { createFetchProxy } from "remix/fetch-proxy";
+import { createFetchProxy } from 'remix/fetch-proxy'
 
 // Create a proxy that sends all requests through to remix.run
-let proxy = createFetchProxy("https://remix.run");
+let proxy = createFetchProxy('https://remix.run')
 
 // This fetch handler is probably running as part of your server somewhere...
 function handleFetch(request: Request): Promise<Response> {
-	return proxy(request);
+  return proxy(request)
 }
 
 // Test it out by manually throwing a Request at it
-let response = await handleFetch(new Request("https://shopify.com"));
+let response = await handleFetch(new Request('https://shopify.com'))
 
-let text = await response.text();
-let title = text.match(/<title>([^<]+)<\/title>/)[1];
-assert(title.includes("Remix"));
+let text = await response.text()
+let title = text.match(/<title>([^<]+)<\/title>/)[1]
+assert(title.includes('Remix'))
 ```
 
 ## Related Packages

@@ -5,25 +5,25 @@ A generator-based tween function for animating values over time with cubic bezie
 ## Basic Usage
 
 ```tsx
-import { tween, easings } from "remix/ui/animation";
+import { tween, easings } from 'remix/ui/animation'
 
 let animation = tween({
-	from: 0,
-	to: 100,
-	duration: 1000,
-	curve: easings.easeInOut,
-});
+  from: 0,
+  to: 100,
+  duration: 1000,
+  curve: easings.easeInOut,
+})
 
 // Initialize generator
-animation.next();
+animation.next()
 
 function animate(timestamp: number) {
-	let { value, done } = animation.next(timestamp);
-	element.style.transform = `translateX(${value}px)`;
-	if (!done) requestAnimationFrame(animate);
+  let { value, done } = animation.next(timestamp)
+  element.style.transform = `translateX(${value}px)`
+  if (!done) requestAnimationFrame(animate)
 }
 
-requestAnimationFrame(animate);
+requestAnimationFrame(animate)
 ```
 
 ## How It Works
@@ -41,13 +41,13 @@ The generator uses cubic bezier curves to map linear time progress to eased valu
 Built-in easing curves matching CSS timing functions:
 
 ```tsx
-import { easings } from "remix/ui/animation";
+import { easings } from 'remix/ui/animation'
 
-easings.linear; // { x1: 0, y1: 0, x2: 1, y2: 1 }
-easings.ease; // { x1: 0.25, y1: 0.1, x2: 0.25, y2: 1 }
-easings.easeIn; // { x1: 0.42, y1: 0, x2: 1, y2: 1 }
-easings.easeOut; // { x1: 0, y1: 0, x2: 0.58, y2: 1 }
-easings.easeInOut; // { x1: 0.42, y1: 0, x2: 0.58, y2: 1 }
+easings.linear // { x1: 0, y1: 0, x2: 1, y2: 1 }
+easings.ease // { x1: 0.25, y1: 0.1, x2: 0.25, y2: 1 }
+easings.easeIn // { x1: 0.42, y1: 0, x2: 1, y2: 1 }
+easings.easeOut // { x1: 0, y1: 0, x2: 0.58, y2: 1 }
+easings.easeInOut // { x1: 0.42, y1: 0, x2: 0.58, y2: 1 }
 ```
 
 ## Custom Curves
@@ -56,18 +56,18 @@ Define custom bezier curves with control points:
 
 ```tsx
 let customCurve = {
-	x1: 0.68,
-	y1: -0.55,
-	x2: 0.265,
-	y2: 1.55,
-};
+  x1: 0.68,
+  y1: -0.55,
+  x2: 0.265,
+  y2: 1.55,
+}
 
 let animation = tween({
-	from: 0,
-	to: 100,
-	duration: 500,
-	curve: customCurve,
-});
+  from: 0,
+  to: 100,
+  duration: 500,
+  curve: customCurve,
+})
 ```
 
 The control points match CSS `cubic-bezier(x1, y1, x2, y2)` syntax.
@@ -78,47 +78,47 @@ Use tween with `handle.signal` for automatic cleanup:
 
 ```tsx
 function AnimatedValue(handle: Handle) {
-	let value = 0;
+  let value = 0
 
-	function animateTo(target: number) {
-		let animation = tween({
-			from: value,
-			to: target,
-			duration: 300,
-			curve: easings.easeOut,
-		});
+  function animateTo(target: number) {
+    let animation = tween({
+      from: value,
+      to: target,
+      duration: 300,
+      curve: easings.easeOut,
+    })
 
-		animation.next(); // Initialize
+    animation.next() // Initialize
 
-		function tick(timestamp: number) {
-			if (handle.signal.aborted) return;
+    function tick(timestamp: number) {
+      if (handle.signal.aborted) return
 
-			let result = animation.next(timestamp);
-			value = result.value;
-			handle.update();
+      let result = animation.next(timestamp)
+      value = result.value
+      handle.update()
 
-			if (!result.done) {
-				requestAnimationFrame(tick);
-			}
-		}
+      if (!result.done) {
+        requestAnimationFrame(tick)
+      }
+    }
 
-		requestAnimationFrame(tick);
-	}
+    requestAnimationFrame(tick)
+  }
 
-	return () => (
-		<div>
-			<div style={{ transform: `translateX(${value}px)` }}>Moving</div>
-			<button
-				mix={[
-					on("click", () => {
-						animateTo(200);
-					}),
-				]}
-			>
-				Animate
-			</button>
-		</div>
-	);
+  return () => (
+    <div>
+      <div style={{ transform: `translateX(${value}px)` }}>Moving</div>
+      <button
+        mix={[
+          on('click', () => {
+            animateTo(200)
+          }),
+        ]}
+      >
+        Animate
+      </button>
+    </div>
+  )
 }
 ```
 
@@ -127,27 +127,27 @@ function AnimatedValue(handle: Handle) {
 Animate multiple values with separate tweens:
 
 ```tsx
-let xAnimation = tween({ from: 0, to: 100, duration: 500, curve: easings.easeOut });
-let yAnimation = tween({ from: 0, to: 50, duration: 500, curve: easings.easeOut });
-let scaleAnimation = tween({ from: 1, to: 1.5, duration: 500, curve: easings.easeOut });
+let xAnimation = tween({ from: 0, to: 100, duration: 500, curve: easings.easeOut })
+let yAnimation = tween({ from: 0, to: 50, duration: 500, curve: easings.easeOut })
+let scaleAnimation = tween({ from: 1, to: 1.5, duration: 500, curve: easings.easeOut })
 
-xAnimation.next();
-yAnimation.next();
-scaleAnimation.next();
+xAnimation.next()
+yAnimation.next()
+scaleAnimation.next()
 
 function animate(timestamp: number) {
-	let x = xAnimation.next(timestamp);
-	let y = yAnimation.next(timestamp);
-	let scale = scaleAnimation.next(timestamp);
+  let x = xAnimation.next(timestamp)
+  let y = yAnimation.next(timestamp)
+  let scale = scaleAnimation.next(timestamp)
 
-	element.style.transform = `translate(${x.value}px, ${y.value}px) scale(${scale.value})`;
+  element.style.transform = `translate(${x.value}px, ${y.value}px) scale(${scale.value})`
 
-	if (!x.done || !y.done || !scale.done) {
-		requestAnimationFrame(animate);
-	}
+  if (!x.done || !y.done || !scale.done) {
+    requestAnimationFrame(animate)
+  }
 }
 
-requestAnimationFrame(animate);
+requestAnimationFrame(animate)
 ```
 
 ## API Reference
@@ -158,17 +158,17 @@ Creates a generator that interpolates between values over time.
 
 ```ts
 interface TweenOptions {
-	from: number; // Starting value
-	to: number; // Ending value
-	duration: number; // Duration in milliseconds
-	curve: BezierCurve; // Easing curve
+  from: number // Starting value
+  to: number // Ending value
+  duration: number // Duration in milliseconds
+  curve: BezierCurve // Easing curve
 }
 
 interface BezierCurve {
-	x1: number; // First control point X (0-1)
-	y1: number; // First control point Y
-	x2: number; // Second control point X (0-1)
-	y2: number; // Second control point Y
+  x1: number // First control point X (0-1)
+  y1: number // First control point Y
+  x2: number // Second control point X (0-1)
+  y2: number // Second control point Y
 }
 ```
 
@@ -195,8 +195,7 @@ Use `tween` for:
 - Animating non-CSS properties
 - Complex sequenced animations
 
-For most UI animations, prefer animation mixins (`animateEntrance`, `animateExit`, `animateLayout`)
-or CSS transitions with [`spring`](./spring.md).
+For most UI animations, prefer animation mixins (`animateEntrance`, `animateExit`, `animateLayout`) or CSS transitions with [`spring`](./spring.md).
 
 ## See Also
 

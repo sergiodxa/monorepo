@@ -1,4 +1,4 @@
-# `test`
+# test
 
 A test framework for JavaScript and TypeScript projects.
 
@@ -9,6 +9,7 @@ A test framework for JavaScript and TypeScript projects.
 - Playwright E2E testing via `t.serve`
 - In-browser component testing (pair with `render` from `remix/ui/test`)
 - Mock functions and method spies via `t.mock.fn` / `t.mock.method`
+- Per-test and hook timeouts with `t.signal` abort support
 - Unified code coverage reporting across unit and E2E tests
 - Watch mode
 - Config file support (`remix-test.config.ts`)
@@ -24,15 +25,15 @@ npm i remix
 Write test files that import from `remix/test`:
 
 ```ts
-import * as assert from "remix/assert";
-import { describe, it } from "remix/test";
+import * as assert from 'remix/assert'
+import { describe, it } from 'remix/test'
 
-describe("My Test Suite", () => {
-	it("tests a function", () => {
-		let result = something();
-		assert.equal(result, 42);
-	});
-});
+describe('My Test Suite', () => {
+  it('tests a function', () => {
+    let result = something()
+    assert.equal(result, 42)
+  })
+})
 ```
 
 Run tests with the CLI:
@@ -50,90 +51,83 @@ remix test "src/**/*.test.ts" "tests/**/*.test.tsx"
 
 Or, you may control via the `glob.test` config field/CLI arg. Each `glob.*` field accepts a single string or an array of patterns, and `--glob.*` flags can be repeated on the CLI.
 
-If you install `@remix-run/test` directly instead of the umbrella `remix` package, the same runner is available as `remix-test`:
-
-```sh
-npm i @remix-run/test
-remix-test
-```
-
 ### Config File
 
 Create a `remix-test.config.ts` (or `.js`) file at the root of your project (shown with default values):
 
 ```ts
-import type { RemixTestConfig } from "remix/test";
+import type { RemixTestConfig } from 'remix/test'
 
 export default {
-	// Browser options for E2E tests
-	browser: {
-		// Echo browser console output to the terminal
-		echo: false,
-		// Open browser (via playwright `headless:false`) and keep it open after tests
-		// complete (useful for debugging)
-		open: false,
-	},
+  // Browser options for E2E tests
+  browser: {
+    // Echo browser console output to the terminal
+    echo: false,
+    // Open browser (via playwright `headless:false`) and keep it open after tests
+    // complete (useful for debugging)
+    open: false,
+  },
 
-	// Max number of concurrent test workers (default `os.availableParallelism()`)
-	concurrency: 2,
+  // Max number of concurrent test workers (default `os.availableParallelism()`)
+  concurrency: 2,
 
-	// Pool for server and E2E test files ("forks", "threads")
-	pool: "forks",
+  // Pool for server and E2E test files ("forks", "threads")
+  pool: 'forks',
 
-	// Code coverage options
-	coverage: {
-		// Enable coverage reporting
-		enabled: true,
-		// Output directory (default: ".coverage")
-		dir: ".coverage",
-		// Glob pattern(s) to include/exclude
-		include: "src/**",
-		exclude: "src/**/*.test.ts",
-		// Minimum thresholds (%)
-		statements: 80,
-		lines: 80,
-		branches: 80,
-		functions: 80,
-	},
+  // Code coverage options
+  coverage: {
+    // Enable coverage reporting
+    enabled: true,
+    // Output directory (default: ".coverage")
+    dir: '.coverage',
+    // Glob pattern(s) to include/exclude
+    include: 'src/**',
+    exclude: 'src/**/*.test.ts',
+    // Minimum thresholds (%)
+    statements: 80,
+    lines: 80,
+    branches: 80,
+    functions: 80,
+  },
 
-	// Glob pattern(s) identifying test files
-	glob: {
-		// All test files (default: "**/*.test{,.browser,.e2e}.{ts,tsx}").
-		test: "**/*.test{,.browser,.e2e}.ts",
-		// Browser test files (default: "**/*.test.browser.{ts,tsx}")
-		browser: "**/*.test.browser.ts",
-		// E2E test files (default: "**/*.test.e2e.{ts,tsx}")
-		e2e: "**/*.test.e2e.ts",
-	},
+  // Glob pattern(s) identifying test files
+  glob: {
+    // All test files (default: "**/*.test{,.browser,.e2e}.{ts,tsx}").
+    test: '**/*.test{,.browser,.e2e}.ts',
+    // Browser test files (default: "**/*.test.browser.{ts,tsx}")
+    browser: '**/*.test.browser.ts',
+    // E2E test files (default: "**/*.test.e2e.{ts,tsx}")
+    e2e: '**/*.test.e2e.ts',
+  },
 
-	// Playwright configuration for E2E tests, or string path to an existing
-	// config file on disk
-	playwrightConfig: {
-		projects: [
-			{ name: "chromium", use: { browserName: "chromium" } },
-			{ name: "firefox", use: { browserName: "firefox" } },
-		],
-		use: {
-			navigationTimeout: 5_000,
-			actionTimeout: 5_000,
-		},
-	},
+  // Playwright configuration for E2E tests, or string path to an existing
+  // config file on disk
+  playwrightConfig: {
+    projects: [
+      { name: 'chromium', use: { browserName: 'chromium' } },
+      { name: 'firefox', use: { browserName: 'firefox' } },
+    ],
+    use: {
+      navigationTimeout: 5_000,
+      actionTimeout: 5_000,
+    },
+  },
 
-	// Playwright project(s) to run E2E tests for
-	project: "chromium",
+  // Playwright project(s) to run E2E tests for
+  project: 'chromium',
 
-	// Test reporter ("spec", "files", "tap", "dot")
-	reporter: "spec",
+  // Test reporter ("spec", "files", "tap", "dot")
+  reporter: 'spec',
 
-	// Path to a setup module (see Setup section below)
-	setup: "./test/setup.ts",
+  // Path to a setup module (see Setup section below)
+  setup: './test/setup.ts',
 
-	// Test type(s) to run ("server", "browser", "e2e")
-	type: ["server", "browser", "e2e"],
+  // Test type(s) to run ("server", "browser", "e2e")
+  type: ['server', 'browser', 'e2e'],
 
-	// Watch for file changes and re-run
-	watch: false,
-} satisfies RemixTestConfig;
+  // Watch for file changes and re-run
+  watch: false,
+} satisfies RemixTestConfig
 ```
 
 ### CLI Options
@@ -177,11 +171,11 @@ The `setup` option points to a module that can export `globalSetup` and/or `glob
 ```ts
 // ./test/setup.ts
 export async function globalSetup() {
-	await db.migrate();
+  await db.migrate()
 }
 
 export async function globalTeardown() {
-	await db.close();
+  await db.close()
 }
 ```
 
@@ -190,47 +184,49 @@ export async function globalTeardown() {
 ### Test framework
 
 ```ts
-import { beforeAll, afterAll, beforeEach, afterEach, describe, it } from "remix/test";
+import { beforeAll, afterAll, beforeEach, afterEach, describe, it } from 'remix/test'
 
-beforeAll(() => {});
-afterAll(() => {});
+beforeAll(() => {})
+afterAll(() => {})
 
-describe("My Test Suite", () => {
-	beforeEach(() => {});
-	afterEach(() => {});
+describe('My Test Suite', () => {
+  beforeEach(() => {})
+  afterEach(() => {})
 
-	it("tests something", () => {});
-	it("tests something else", () => {});
-});
+  it('tests something', () => {})
+  it('skips with a reason', { skip: 'requires API credentials' }, () => {})
+  it('tracks planned work', { todo: 'add retry coverage' }, () => {})
+  it('fails if it takes too long', { timeout: 5_000 }, async (t) => {
+    await fetchSomething({ signal: t.signal })
+  })
+  it('tests something else', () => {})
+})
 ```
 
 `suite` and `test` are aliases for `describe` and `it`.
 
 ```ts
-import { suite, test } from "remix/test";
+import { suite, test } from 'remix/test'
 
-suite("My Test Suite", () => {
-	test("tests something", () => {});
-});
+suite('My Test Suite', () => {
+  test('tests something', () => {})
+})
 ```
 
 ### Programmatic runner
 
-`@remix-run/test/cli` exports `runRemixTest()` for tools that want to run the test runner without
-exiting the current process:
+`remix/test/cli` exports `runRemixTest()` for tools that want to run the test runner without exiting the current process:
 
 ```ts
-import { runRemixTest } from "@remix-run/test/cli";
+import { runRemixTest } from 'remix/test/cli'
 
 let exitCode = await runRemixTest({
-	argv: ["--type", "server"],
-	cwd: process.cwd(),
-});
+  argv: ['--type', 'server'],
+  cwd: process.cwd(),
+})
 ```
 
-`runRemixTest()` returns the runner exit code. The `remix test` and `remix-test` bin wrappers call
-`process.exit()` with that code when the run finishes so open workers, browsers, or project handles
-cannot keep the CLI alive.
+`runRemixTest()` returns the runner exit code. The `remix test` bin wrapper calls `process.exit()` with that code when the run finishes so open workers, browsers, or project handles cannot keep the CLI alive.
 
 ### Test Context
 
@@ -239,27 +235,30 @@ Each test callback receives a `TestContext` (`t`) as its first argument with hel
 ```ts
 // from 'remix/test'
 interface TestContext {
-	// Register a cleanup function to run after the test completes
-	after(fn: () => void): void;
+  // Aborts when the test times out or when the user-provided test signal aborts
+  signal: AbortSignal
 
-	// Mock tracker, mirroring the shape of Node's `t.mock` from `node:test`
-	mock: {
-		// Create a mock function with an optional implementation
-		fn<T extends (...args: any[]) => any>(impl?: T): MockFunction<T>;
+  // Register a cleanup function to run after the test completes
+  after(fn: () => void): void
 
-		// Mock an object method with an optional implementation override
-		method<T extends object, K extends keyof T>(
-			obj: T,
-			methodName: K,
-			impl?: Function,
-		): MockFunction;
-	};
+  // Mock tracker, mirroring the shape of Node's `t.mock` from `node:test`
+  mock: {
+    // Create a mock function with an optional implementation
+    fn<T extends (...args: any[]) => any>(impl?: T): MockFunction<T>
 
-	// Replace global timer functions with controllable fakes
-	useFakeTimers(): FakeTimers;
+    // Mock an object method with an optional implementation override
+    method<T extends object, K extends keyof T>(
+      obj: T,
+      methodName: K,
+      impl?: Function,
+    ): MockFunction
+  }
 
-	// E2E only: connect a running test server to a Playwright Page
-	serve(server: { baseUrl: string; close(): Promise<void> }): Promise<Page>;
+  // Replace global timer functions with controllable fakes
+  useFakeTimers(): FakeTimers
+
+  // E2E only: connect a running test server to a Playwright Page
+  serve(server: { baseUrl: string; close(): Promise<void> }): Promise<Page>
 }
 ```
 
@@ -268,18 +267,18 @@ interface TestContext {
 Use `t.mock.fn()`/`t.mock.method()` to set up mocks and method spies. This is preferred over the standalone `mock` import because TestContext method mocks are automatically restored after the test runs.
 
 ```ts
-it("mocks and spies", (t) => {
-	// Create a mock function
-	let fn = t.mock.fn((x: number) => x * 2);
-	fn(3);
-	fn.mock.calls[0].result; // 6
+it('mocks and spies', (t) => {
+  // Create a mock function
+  let fn = t.mock.fn((x: number) => x * 2)
+  fn(3)
+  fn.mock.calls[0].result // 6
 
-	// Mock an existing method
-	let spy = t.mock.method(console, "warn");
-	console.warn("test");
-	spy.mock.calls.length; // 1
-	// spy is restored automatically when the test ends
-});
+  // Mock an existing method
+  let spy = t.mock.method(console, 'warn')
+  console.warn('test')
+  spy.mock.calls.length // 1
+  // spy is restored automatically when the test ends
+})
 ```
 
 #### Cleanup
@@ -287,11 +286,29 @@ it("mocks and spies", (t) => {
 You can register local test cleanup logic with `t.after()`:
 
 ```ts
-it("cleanup", (t) => {
-	let conn = db.connect();
-	t.after(() => conn.close());
-	// ...
-});
+it('cleanup', (t) => {
+  let conn = db.connect()
+  t.after(() => conn.close())
+  // ...
+})
+```
+
+#### Timeouts and Signals
+
+Pass `{ timeout: ms }` to `it()` or after any lifecycle hook callback to fail that work if it takes too long. Timed-out tests abort `t.signal`, so async code that accepts an `AbortSignal` can cancel promptly.
+
+```ts
+it('loads data', { timeout: 5_000 }, async (t) => {
+  let response = await fetch('/api/data', { signal: t.signal })
+  assert.equal(response.status, 200)
+})
+
+beforeEach(
+  async () => {
+    await resetDatabase()
+  },
+  { timeout: 1_000 },
+)
 ```
 
 #### Fake Timers
@@ -299,17 +316,17 @@ it("cleanup", (t) => {
 `t.useFakeTimers()` replaces the global timer functions (`setTimeout`, `setInterval`, etc.) with controllable fakes that are automatically restored after the test. It works in any test environment — server unit tests, browser tests, or E2E setup code.
 
 ```ts
-it("debounces a callback", (t) => {
-	let timers = t.useFakeTimers();
-	let calls = 0;
-	let debounced = debounce(() => calls++, 300);
+it('debounces a callback', (t) => {
+  let timers = t.useFakeTimers()
+  let calls = 0
+  let debounced = debounce(() => calls++, 300)
 
-	debounced();
-	timers.advance(299);
-	assert.equal(calls, 0);
-	timers.advance(1);
-	assert.equal(calls, 1);
-});
+  debounced()
+  timers.advance(299)
+  assert.equal(calls, 0)
+  timers.advance(1)
+  assert.equal(calls, 1)
+})
 ```
 
 | Method        | Description                                                                 |
@@ -322,14 +339,14 @@ it("debounces a callback", (t) => {
 In E2E test files, `t.serve()` connects a running test server to a Playwright `Page`. See [E2E Testing](#e2e-testing) for details.
 
 ```ts
-import { createTestServer } from "remix/node-fetch-server/test";
+import { createTestServer } from 'remix/node-fetch-server/test'
 
-it("navigates to home", async (t) => {
-	let router = createRouter();
-	let server = await createTestServer(router.fetch);
-	let page = await t.serve(server);
-	await page.goto("/");
-});
+it('navigates to home', async (t) => {
+  let router = createRouter()
+  let server = await createTestServer(router.fetch)
+  let page = await t.serve(server)
+  await page.goto('/')
+})
 ```
 
 ### Standalone mocks (module scope)
@@ -337,11 +354,11 @@ it("navigates to home", async (t) => {
 When you need a mock outside of a test body, import `mock` directly and call `restore()` manually:
 
 ```ts
-import { mock } from "remix/test";
+import { mock } from 'remix/test'
 
-let spy = mock.method(console, "log");
+let spy = mock.method(console, 'log')
 // ...
-spy.mock.restore?.();
+spy.mock.restore?.()
 ```
 
 ### Browser Testing
@@ -388,46 +405,46 @@ End-to-end (E2E) tests use [Playwright](https://playwright.dev) and are discover
 E2E tests receive `t.serve()` on the test context, which accepts a running test server and returns a Playwright [`Page`](https://playwright.dev/docs/api/class-page) whose `baseURL` points at that server. The server and page are automatically closed after each test.
 
 ```ts
-import * as assert from "remix/assert";
-import { createTestServer } from "remix/node-fetch-server/test";
-import { describe, it } from "remix/test";
-import { createRouter } from "./router.ts";
+import * as assert from 'remix/assert'
+import { createTestServer } from 'remix/node-fetch-server/test'
+import { describe, it } from 'remix/test'
+import { createRouter } from './router.ts'
 
-describe("checkout", () => {
-	it("adds an item to the cart", async (t) => {
-		let router = createRouter();
-		let server = await createTestServer(router.fetch);
-		let page = await t.serve(server);
+describe('checkout', () => {
+  it('adds an item to the cart', async (t) => {
+    let router = createRouter()
+    let server = await createTestServer(router.fetch)
+    let page = await t.serve(server)
 
-		await page.goto("/");
-		await page.getByRole("button", { name: "Add to Cart" }).click();
-		await page.getByRole("link", { name: "Cart" }).click();
-		await page.getByRole("heading", { name: "Shopping Cart" }).waitFor();
+    await page.goto('/')
+    await page.getByRole('button', { name: 'Add to Cart' }).click()
+    await page.getByRole('link', { name: 'Cart' }).click()
+    await page.getByRole('heading', { name: 'Shopping Cart' }).waitFor()
 
-		assert.equal(await page.locator("[data-test-cart-quantity]").innerText(), 1);
-	});
-});
+    assert.equal(await page.locator('[data-test-cart-quantity]').innerText(), 1)
+  })
+})
 ```
 
 Configure Playwright (browsers, timeouts, viewport, etc.) via `playwrightConfig` in your config file:
 
 ```ts
 export default {
-	playwrightConfig: {
-		projects: [
-			{ name: "chromium", use: { browserName: "chromium" } },
-			{ name: "firefox", use: { browserName: "firefox" } },
-			{ name: "webkit", use: { browserName: "webkit" } },
-		],
-		use: {
-			navigationTimeout: 5_000,
-			actionTimeout: 5_000,
-		},
-	},
+  playwrightConfig: {
+    projects: [
+      { name: 'chromium', use: { browserName: 'chromium' } },
+      { name: 'firefox', use: { browserName: 'firefox' } },
+      { name: 'webkit', use: { browserName: 'webkit' } },
+    ],
+    use: {
+      navigationTimeout: 5_000,
+      actionTimeout: 5_000,
+    },
+  },
 
-	// Or, point to an existing playwright config file
-	// playwrightConfig: './playwright.config.ts'
-} satisfies RemixTestConfig;
+  // Or, point to an existing playwright config file
+  // playwrightConfig: './playwright.config.ts'
+} satisfies RemixTestConfig
 ```
 
 Set `browser.open: true` to keep the browser open after tests finish — useful for debugging failures.

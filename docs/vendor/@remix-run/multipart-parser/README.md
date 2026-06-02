@@ -22,33 +22,33 @@ npm i remix
 The most common use case for `multipart-parser` is handling file uploads when you're building a web server. For this case, the `parseMultipartRequest` function is your friend. It automatically validates the request is `multipart/form-data`, extracts the multipart boundary from the `Content-Type` header, parses all fields and files in the `request.body` stream, and gives each one to you as a `MultipartPart` object with a rich API for accessing its metadata and content.
 
 ```ts
-import { MultipartParseError, parseMultipartRequest } from "remix/multipart-parser";
+import { MultipartParseError, parseMultipartRequest } from 'remix/multipart-parser'
 
 async function handleRequest(request: Request): void {
-	try {
-		for await (let part of parseMultipartRequest(request)) {
-			if (part.isFile) {
-				// Access file data in multiple formats
-				let buffer = part.arrayBuffer; // ArrayBuffer
-				console.log(`File received: ${part.filename} (${buffer.byteLength} bytes)`);
-				console.log(`Content type: ${part.mediaType}`);
-				console.log(`Field name: ${part.name}`);
-				console.log(`Content-Type header: ${part.headers["content-type"]}`);
+  try {
+    for await (let part of parseMultipartRequest(request)) {
+      if (part.isFile) {
+        // Access file data in multiple formats
+        let buffer = part.arrayBuffer // ArrayBuffer
+        console.log(`File received: ${part.filename} (${buffer.byteLength} bytes)`)
+        console.log(`Content type: ${part.mediaType}`)
+        console.log(`Field name: ${part.name}`)
+        console.log(`Content-Type header: ${part.headers['content-type']}`)
 
-				// Save to disk, upload to cloud storage, etc.
-				await saveFile(part.filename, part.bytes);
-			} else {
-				let text = part.text; // string
-				console.log(`Field received: ${part.name} = ${JSON.stringify(text)}`);
-			}
-		}
-	} catch (error) {
-		if (error instanceof MultipartParseError) {
-			console.error("Failed to parse multipart request:", error.message);
-		} else {
-			console.error("An unexpected error occurred:", error);
-		}
-	}
+        // Save to disk, upload to cloud storage, etc.
+        await saveFile(part.filename, part.bytes)
+      } else {
+        let text = part.text // string
+        console.log(`Field received: ${part.name} = ${JSON.stringify(text)}`)
+      }
+    }
+  } catch (error) {
+    if (error instanceof MultipartParseError) {
+      console.error('Failed to parse multipart request:', error.message)
+    } else {
+      console.error('An unexpected error occurred:', error)
+    }
+  }
 }
 ```
 
@@ -58,10 +58,10 @@ Each `MultipartPart` exposes decoded part headers as a plain object keyed by low
 
 ```ts
 for await (let part of parseMultipartRequest(request)) {
-	let contentDisposition = part.headers["content-disposition"];
-	let contentType = part.headers["content-type"];
+  let contentDisposition = part.headers['content-disposition']
+  let contentType = part.headers['content-type']
 
-	console.log(contentDisposition, contentType);
+  console.log(contentDisposition, contentType)
 }
 ```
 
@@ -71,39 +71,39 @@ A common use case when handling file uploads is limiting the overall shape of in
 
 ```ts
 import {
-	MultipartParseError,
-	MaxFileSizeExceededError,
-	MaxPartsExceededError,
-	MaxTotalSizeExceededError,
-	parseMultipartRequest,
-} from "remix/multipart-parser/node";
+  MultipartParseError,
+  MaxFileSizeExceededError,
+  MaxPartsExceededError,
+  MaxTotalSizeExceededError,
+  parseMultipartRequest,
+} from 'remix/multipart-parser/node'
 
-const oneMb = Math.pow(2, 20);
+const oneMb = Math.pow(2, 20)
 const limits = {
-	maxFileSize: 10 * oneMb,
-	maxParts: 100,
-	maxTotalSize: 25 * oneMb,
-};
+  maxFileSize: 10 * oneMb,
+  maxParts: 100,
+  maxTotalSize: 25 * oneMb,
+}
 
 async function handleRequest(request: Request): Promise<Response> {
-	try {
-		for await (let part of parseMultipartRequest(request, limits)) {
-			// ...
-		}
-	} catch (error) {
-		if (error instanceof MaxFileSizeExceededError) {
-			return new Response("File size limit exceeded", { status: 413 });
-		} else if (error instanceof MaxPartsExceededError) {
-			return new Response("Too many multipart parts", { status: 413 });
-		} else if (error instanceof MaxTotalSizeExceededError) {
-			return new Response("Multipart request is too large", { status: 413 });
-		} else if (error instanceof MultipartParseError) {
-			return new Response("Failed to parse multipart request", { status: 400 });
-		} else {
-			console.error(error);
-			return new Response("Internal Server Error", { status: 500 });
-		}
-	}
+  try {
+    for await (let part of parseMultipartRequest(request, limits)) {
+      // ...
+    }
+  } catch (error) {
+    if (error instanceof MaxFileSizeExceededError) {
+      return new Response('File size limit exceeded', { status: 413 })
+    } else if (error instanceof MaxPartsExceededError) {
+      return new Response('Too many multipart parts', { status: 413 })
+    } else if (error instanceof MaxTotalSizeExceededError) {
+      return new Response('Multipart request is too large', { status: 413 })
+    } else if (error instanceof MultipartParseError) {
+      return new Response('Failed to parse multipart request', { status: 400 })
+    } else {
+      console.error(error)
+      return new Response('Internal Server Error', { status: 500 })
+    }
+  }
 }
 ```
 
@@ -114,24 +114,24 @@ The main module (`import {} from 'remix/multipart-parser'`) assumes you're worki
 If however you're building a server for Node.js that relies on node-specific APIs like `http.IncomingMessage`, `stream.Readable`, and `buffer.Buffer` (ala Express or `http.createServer`), `multipart-parser` ships with an additional module that works directly with these APIs.
 
 ```ts
-import * as http from "node:http";
-import { MultipartParseError, parseMultipartRequest } from "remix/multipart-parser/node";
+import * as http from 'node:http'
+import { MultipartParseError, parseMultipartRequest } from 'remix/multipart-parser/node'
 
 let server = http.createServer(async (req, res) => {
-	try {
-		for await (let part of parseMultipartRequest(req)) {
-			// ...
-		}
-	} catch (error) {
-		if (error instanceof MultipartParseError) {
-			console.error("Failed to parse multipart request:", error.message);
-		} else {
-			console.error("An unexpected error occurred:", error);
-		}
-	}
-});
+  try {
+    for await (let part of parseMultipartRequest(req)) {
+      // ...
+    }
+  } catch (error) {
+    if (error instanceof MultipartParseError) {
+      console.error('Failed to parse multipart request:', error.message)
+    } else {
+      console.error('An unexpected error occurred:', error)
+    }
+  }
+})
 
-server.listen(8080);
+server.listen(8080)
 ```
 
 ## Low-level API
@@ -139,26 +139,26 @@ server.listen(8080);
 If you're working directly with multipart boundaries and buffers/streams of multipart data that are not necessarily part of a request, `multipart-parser` provides a low-level `parseMultipart()` API that you can use directly:
 
 ```ts
-import { parseMultipart } from "remix/multipart-parser";
+import { parseMultipart } from 'remix/multipart-parser'
 
-let message = new Uint8Array(/* ... */);
-let boundary = "----WebKitFormBoundary56eac3x";
+let message = new Uint8Array(/* ... */)
+let boundary = '----WebKitFormBoundary56eac3x'
 
 for (let part of parseMultipart(message, { boundary })) {
-	// ...
+  // ...
 }
 ```
 
 In addition, the `parseMultipartStream` function provides an `async` generator interface for multipart data in a `ReadableStream`:
 
 ```ts
-import { parseMultipartStream } from "remix/multipart-parser";
+import { parseMultipartStream } from 'remix/multipart-parser'
 
-let message = new ReadableStream(/* ... */);
-let boundary = "----WebKitFormBoundary56eac3x";
+let message = new ReadableStream(/* ... */)
+let boundary = '----WebKitFormBoundary56eac3x'
 
 for await (let part of parseMultipartStream(message, { boundary })) {
-	// ...
+  // ...
 }
 ```
 

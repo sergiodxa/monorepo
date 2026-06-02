@@ -4,18 +4,18 @@ All components follow a consistent two-phase structure.
 
 ## Component Structure
 
-1. **Component Phase** - Runs once when the component is first created
+1. **Setup Phase** - Runs once when the component is first created
 2. **Render Phase** - Runs on initial render and every update afterward
 
 ```tsx
 function MyComponent(handle: Handle<Props>) {
-	// Component phase: runs once
-	let state = initializeState(handle.props);
+  // Setup phase: runs once
+  let state = initializeState(handle.props)
 
-	// Return render function: runs on every update
-	return () => {
-		return <div>{/* render content */}</div>;
-	};
+  // Return render function: runs on every update
+  return () => {
+    return <div>{/* render content */}</div>
+  }
 }
 ```
 
@@ -24,14 +24,16 @@ function MyComponent(handle: Handle<Props>) {
 When a component is rendered:
 
 1. **First Render**:
+
    - The component function is called with `handle`
    - The returned render function is stored
    - The render function is called after `handle.props` is populated
    - Any tasks queued via `handle.queueTask()` are executed after rendering
 
 2. **Subsequent Updates**:
+
    - Only the render function is called
-   - Component phase is skipped, and the closure persists for the lifetime of the component instance
+   - Setup phase is skipped, and the closure persists for the lifetime of the component instance
    - `handle.props` is updated before the render function is called
    - Tasks queued during the update are executed after rendering
 
@@ -46,19 +48,19 @@ Props are available on `handle.props`. The object is stable, and its values are 
 
 ```tsx
 function Counter(handle: Handle<{ initialCount: number; label: string }>) {
-	let count = handle.props.initialCount;
+  let count = handle.props.initialCount
 
-	return () => {
-		return (
-			<div>
-				{handle.props.label}: {count}
-			</div>
-		);
-	};
+  return () => {
+    return (
+      <div>
+        {handle.props.label}: {count}
+      </div>
+    )
+  }
 }
 
 // Usage
-let element = <Counter initialCount={10} label="Count" />;
+let element = <Counter initialCount={10} label="Count" />
 ```
 
 ## Basic Rendering
@@ -67,10 +69,10 @@ The simplest component just returns JSX:
 
 ```tsx
 function Greeting(handle: Handle<{ name: string }>) {
-	return () => <div>Hello, {handle.props.name}!</div>;
+  return () => <div>Hello, {handle.props.name}!</div>
 }
 
-let el = <Greeting name="World" />;
+let el = <Greeting name="World" />
 ```
 
 ## Prop Passing
@@ -79,16 +81,16 @@ Props flow from parent to child through JSX attributes:
 
 ```tsx
 function Parent() {
-	return () => <Child message="Hello from parent" count={42} />;
+  return () => <Child message="Hello from parent" count={42} />
 }
 
-function Child() {
-	return (props: { message: string; count: number }) => (
-		<div>
-			<p>{props.message}</p>
-			<p>Count: {props.count}</p>
-		</div>
-	);
+function Child(handle: Handle<{ message: string; count: number }>) {
+  return () => (
+    <div>
+      <p>{handle.props.message}</p>
+      <p>Count: {handle.props.count}</p>
+    </div>
+  )
 }
 ```
 
@@ -98,23 +100,23 @@ State is managed with plain JavaScript variables. Call `handle.update()` to trig
 
 ```tsx
 function Counter(handle: Handle) {
-	let count = 0;
+  let count = 0
 
-	return () => (
-		<div>
-			<span>Count: {count}</span>
-			<button
-				mix={[
-					on("click", () => {
-						count++;
-						handle.update();
-					}),
-				]}
-			>
-				Increment
-			</button>
-		</div>
-	);
+  return () => (
+    <div>
+      <span>Count: {count}</span>
+      <button
+        mix={[
+          on('click', () => {
+            count++
+            handle.update()
+          }),
+        ]}
+      >
+        Increment
+      </button>
+    </div>
+  )
 }
 ```
 

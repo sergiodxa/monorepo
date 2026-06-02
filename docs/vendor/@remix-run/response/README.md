@@ -21,24 +21,24 @@ npm i remix
 This package provides no default export. Instead, import the specific helper you need:
 
 ```ts
-import { createFileResponse } from "remix/response/file";
-import { createHtmlResponse } from "remix/response/html";
-import { createRedirectResponse } from "remix/response/redirect";
-import { compressResponse } from "remix/response/compress";
+import { createFileResponse } from 'remix/response/file'
+import { createHtmlResponse } from 'remix/response/html'
+import { createRedirectResponse } from 'remix/response/redirect'
+import { compressResponse } from 'remix/response/compress'
 ```
 
 ### File Responses
 
-The `createFileResponse` helper creates a response for serving files with full HTTP semantics. It works with both native `File` objects and `LazyFile` from `@remix-run/lazy-file`:
+The `createFileResponse` helper creates a response for serving files with full HTTP semantics. It works with both native `File` objects and `LazyFile` from `remix/lazy-file`:
 
 ```ts
-import { createFileResponse } from "remix/response/file";
-import { openLazyFile } from "remix/fs";
+import { createFileResponse } from 'remix/response/file'
+import { openLazyFile } from 'remix/fs'
 
-let lazyFile = openLazyFile("./public/image.jpg");
+let lazyFile = openLazyFile('./public/image.jpg')
 let response = await createFileResponse(lazyFile, request, {
-	cacheControl: "public, max-age=3600",
-});
+  cacheControl: 'public, max-age=3600',
+})
 ```
 
 #### Features
@@ -55,29 +55,29 @@ let response = await createFileResponse(lazyFile, request, {
 
 ```ts
 await createFileResponse(file, request, {
-	// Cache-Control header value.
-	// Defaults to `undefined` (no Cache-Control header).
-	cacheControl: "public, max-age=3600",
+  // Cache-Control header value.
+  // Defaults to `undefined` (no Cache-Control header).
+  cacheControl: 'public, max-age=3600',
 
-	// ETag generation strategy:
-	// - 'weak': Generates weak ETags based on file size and mtime (default)
-	// - 'strong': Generates strong ETags by hashing file content
-	// - false: Disables ETag generation
-	etag: "weak",
+  // ETag generation strategy:
+  // - 'weak': Generates weak ETags based on file size and mtime (default)
+  // - 'strong': Generates strong ETags by hashing file content
+  // - false: Disables ETag generation
+  etag: 'weak',
 
-	// Hash algorithm for strong ETags (Web Crypto API algorithm names).
-	// Only used when etag: 'strong'.
-	// Defaults to 'SHA-256'.
-	digest: "SHA-256",
+  // Hash algorithm for strong ETags (Web Crypto API algorithm names).
+  // Only used when etag: 'strong'.
+  // Defaults to 'SHA-256'.
+  digest: 'SHA-256',
 
-	// Whether to generate Last-Modified headers.
-	// Defaults to `true`.
-	lastModified: true,
+  // Whether to generate Last-Modified headers.
+  // Defaults to `true`.
+  lastModified: true,
 
-	// Whether to support HTTP Range requests for partial content.
-	// Defaults to `true`.
-	acceptRanges: true,
-});
+  // Whether to support HTTP Range requests for partial content.
+  // Defaults to `true`.
+  acceptRanges: true,
+})
 ```
 
 #### Strong ETags and Content Hashing
@@ -86,35 +86,35 @@ For assets that require strong validation (e.g., to support [`If-Match`](https:/
 
 ```ts
 return createFileResponse(file, request, {
-	etag: "strong",
-});
+  etag: 'strong',
+})
 ```
 
 By default, strong ETags are generated using the Web Crypto API with the `'SHA-256'` algorithm. You can customize this:
 
 ```ts
 return createFileResponse(file, request, {
-	etag: "strong",
-	// Specify a different hash algorithm
-	digest: "SHA-512",
-});
+  etag: 'strong',
+  // Specify a different hash algorithm
+  digest: 'SHA-512',
+})
 ```
 
 For large files or custom hashing requirements, provide a custom digest function:
 
 ```ts
 await createFileResponse(file, request, {
-	etag: "strong",
-	async digest(file) {
-		// Custom streaming hash for large files
-		let { createHash } = await import("node:crypto");
-		let hash = createHash("sha256");
-		for await (let chunk of file.stream()) {
-			hash.update(chunk);
-		}
-		return hash.digest("hex");
-	},
-});
+  etag: 'strong',
+  async digest(file) {
+    // Custom streaming hash for large files
+    let { createHash } = await import('node:crypto')
+    let hash = createHash('sha256')
+    for await (let chunk of file.stream()) {
+      hash.update(chunk)
+    }
+    return hash.digest('hex')
+  },
+})
 ```
 
 ### HTML Responses
@@ -122,21 +122,21 @@ await createFileResponse(file, request, {
 The `createHtmlResponse` helper creates HTML responses with proper `Content-Type` and DOCTYPE handling:
 
 ```ts
-import { createHtmlResponse } from "remix/response/html";
+import { createHtmlResponse } from 'remix/response/html'
 
-let response = createHtmlResponse("<h1>Hello, World!</h1>");
+let response = createHtmlResponse('<h1>Hello, World!</h1>')
 // Content-Type: text/html; charset=UTF-8
 // Body: <!DOCTYPE html><h1>Hello, World!</h1>
 ```
 
-The helper automatically prepends `<!DOCTYPE html>` if not already present. It works with strings, `SafeHtml` [from `@remix-run/html-template`](https://github.com/remix-run/remix/tree/main/packages/html-template), Blobs/Files, ArrayBuffers, and ReadableStreams.
+The helper automatically prepends `<!DOCTYPE html>` if not already present. It works with strings, `SafeHtml` [from `remix/html-template`](https://github.com/remix-run/remix/tree/main/packages/html-template), Blobs/Files, ArrayBuffers, and ReadableStreams.
 
 ```ts
-import { html } from "remix/html-template";
-import { createHtmlResponse } from "remix/response/html";
+import { html } from 'remix/html-template'
+import { createHtmlResponse } from 'remix/response/html'
 
-let name = "<script>alert(1)</script>";
-let response = createHtmlResponse(html`<h1>Hello, ${name}!</h1>`);
+let name = '<script>alert(1)</script>'
+let response = createHtmlResponse(html`<h1>Hello, ${name}!</h1>`)
 // Safely escaped HTML
 ```
 
@@ -148,19 +148,19 @@ The `createRedirectResponse` helper creates redirect responses. The main improve
 - Accepts a `ResponseInit` object as the second argument, allowing you to set additional headers and status code.
 
 ```ts
-import { createRedirectResponse } from "remix/response/redirect";
+import { createRedirectResponse } from 'remix/response/redirect'
 
 // Default 302 redirect
-let response = createRedirectResponse("/login");
+let response = createRedirectResponse('/login')
 
 // Custom status code
-let response = createRedirectResponse("/new-page", 301);
+let response = createRedirectResponse('/new-page', 301)
 
 // With additional headers
-let response = createRedirectResponse("/dashboard", {
-	status: 303,
-	headers: { "X-Redirect-Reason": "authentication" },
-});
+let response = createRedirectResponse('/dashboard', {
+  status: 303,
+  headers: { 'X-Redirect-Reason': 'authentication' },
+})
 ```
 
 ### Compress Responses
@@ -168,12 +168,12 @@ let response = createRedirectResponse("/dashboard", {
 The `compressResponse` helper compresses a `Response` based on the client's `Accept-Encoding` header:
 
 ```ts
-import { compressResponse } from "remix/response/compress";
+import { compressResponse } from 'remix/response/compress'
 
 let response = new Response(JSON.stringify(data), {
-	headers: { "Content-Type": "application/json" },
-});
-let compressed = await compressResponse(response, request);
+  headers: { 'Content-Type': 'application/json' },
+})
+let compressed = await compressResponse(response, request)
 ```
 
 Compression is automatically skipped for:
@@ -192,32 +192,32 @@ The `compressResponse` helper accepts options to customize compression behavior:
 
 ```ts
 await compressResponse(response, request, {
-	// Minimum size in bytes to compress (only enforced if Content-Length is present).
-	// Default: 1024
-	threshold: 1024,
+  // Minimum size in bytes to compress (only enforced if Content-Length is present).
+  // Default: 1024
+  threshold: 1024,
 
-	// Which encodings the server supports for negotiation.
-	// Defaults to ['br', 'gzip', 'deflate']
-	encodings: ["br", "gzip", "deflate"],
+  // Which encodings the server supports for negotiation.
+  // Defaults to ['br', 'gzip', 'deflate']
+  encodings: ['br', 'gzip', 'deflate'],
 
-	// node:zlib options for gzip/deflate compression.
-	// For SSE responses (text/event-stream), flush: Z_SYNC_FLUSH
-	// is automatically applied unless you explicitly set a flush value.
-	// See: https://nodejs.org/api/zlib.html#class-options
-	zlib: {
-		level: 6,
-	},
+  // node:zlib options for gzip/deflate compression.
+  // For SSE responses (text/event-stream), flush: Z_SYNC_FLUSH
+  // is automatically applied unless you explicitly set a flush value.
+  // See: https://nodejs.org/api/zlib.html#class-options
+  zlib: {
+    level: 6,
+  },
 
-	// node:zlib options for Brotli compression.
-	// For SSE responses (text/event-stream), flush: BROTLI_OPERATION_FLUSH
-	// is automatically applied unless you explicitly set a flush value.
-	// See: https://nodejs.org/api/zlib.html#class-brotlioptions
-	brotli: {
-		params: {
-			[zlib.constants.BROTLI_PARAM_QUALITY]: 4,
-		},
-	},
-});
+  // node:zlib options for Brotli compression.
+  // For SSE responses (text/event-stream), flush: BROTLI_OPERATION_FLUSH
+  // is automatically applied unless you explicitly set a flush value.
+  // See: https://nodejs.org/api/zlib.html#class-brotlioptions
+  brotli: {
+    params: {
+      [zlib.constants.BROTLI_PARAM_QUALITY]: 4,
+    },
+  },
+})
 ```
 
 #### Range Requests and Compression
@@ -226,11 +226,11 @@ Range requests and compression are mutually exclusive. When `Accept-Ranges: byte
 
 ## Related Packages
 
-- [`@remix-run/headers`](https://github.com/remix-run/remix/tree/main/packages/headers) - Type-safe HTTP header manipulation
-- [`@remix-run/html-template`](https://github.com/remix-run/remix/tree/main/packages/html-template) - Safe HTML templating with automatic escaping
-- [`@remix-run/fs`](https://github.com/remix-run/remix/tree/main/packages/fs) - File system utilities including `openFile`
-- [`@remix-run/fetch-router`](https://github.com/remix-run/remix/tree/main/packages/fetch-router) - Build HTTP routers using the web fetch API
-- [`@remix-run/mime`](https://github.com/remix-run/remix/tree/main/packages/mime) - MIME type utilities
+- [`remix/headers`](https://github.com/remix-run/remix/tree/main/packages/headers) - Type-safe HTTP header manipulation
+- [`remix/html-template`](https://github.com/remix-run/remix/tree/main/packages/html-template) - Safe HTML templating with automatic escaping
+- [`remix/fs`](https://github.com/remix-run/remix/tree/main/packages/fs) - File system utilities including `openFile`
+- [`remix/router`](https://github.com/remix-run/remix/tree/main/packages/fetch-router) - Build HTTP routers using the web fetch API
+- [`remix/mime`](https://github.com/remix-run/remix/tree/main/packages/mime) - MIME type utilities
 
 ## License
 

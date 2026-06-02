@@ -22,31 +22,31 @@ npm i remix
 Use `createRequestListener()` when you want to plug a fetch handler into a standard Node.js server:
 
 ```ts
-import * as http from "node:http";
-import { createRequestListener } from "remix/node-fetch-server";
+import * as http from 'node:http'
+import { createRequestListener } from 'remix/node-fetch-server'
 
 async function handler(request: Request) {
-	let url = new URL(request.url);
+  let url = new URL(request.url)
 
-	if (url.pathname === "/" && request.method === "GET") {
-		return new Response("Welcome to the User API! Try GET /api/users");
-	}
+  if (url.pathname === '/' && request.method === 'GET') {
+    return new Response('Welcome to the User API! Try GET /api/users')
+  }
 
-	if (url.pathname === "/api/users" && request.method === "GET") {
-		return Response.json([
-			{ id: "1", name: "Alice", email: "alice@example.com" },
-			{ id: "2", name: "Bob", email: "bob@example.com" },
-		]);
-	}
+  if (url.pathname === '/api/users' && request.method === 'GET') {
+    return Response.json([
+      { id: '1', name: 'Alice', email: 'alice@example.com' },
+      { id: '2', name: 'Bob', email: 'bob@example.com' },
+    ])
+  }
 
-	return new Response("Not Found", { status: 404 });
+  return new Response('Not Found', { status: 404 })
 }
 
-let server = http.createServer(createRequestListener(handler));
+let server = http.createServer(createRequestListener(handler))
 
 server.listen(3000, () => {
-	console.log("Server running at http://localhost:3000");
-});
+  console.log('Server running at http://localhost:3000')
+})
 ```
 
 ### Working with Request Data
@@ -55,43 +55,43 @@ Handle different types of request data using standard web APIs:
 
 ```ts
 async function handler(request: Request) {
-	let url = new URL(request.url);
+  let url = new URL(request.url)
 
-	// Handle JSON data
-	if (request.method === "POST" && url.pathname === "/api/users") {
-		try {
-			let userData = await request.json();
+  // Handle JSON data
+  if (request.method === 'POST' && url.pathname === '/api/users') {
+    try {
+      let userData = await request.json()
 
-			// Validate required fields
-			if (!userData.name || !userData.email) {
-				return Response.json({ error: "Name and email are required" }, { status: 400 });
-			}
+      // Validate required fields
+      if (!userData.name || !userData.email) {
+        return Response.json({ error: 'Name and email are required' }, { status: 400 })
+      }
 
-			// Create user (your implementation)
-			let newUser = {
-				id: Date.now().toString(),
-				...userData,
-			};
+      // Create user (your implementation)
+      let newUser = {
+        id: Date.now().toString(),
+        ...userData,
+      }
 
-			return Response.json(newUser, { status: 201 });
-		} catch (error) {
-			return Response.json({ error: "Invalid JSON" }, { status: 400 });
-		}
-	}
+      return Response.json(newUser, { status: 201 })
+    } catch (error) {
+      return Response.json({ error: 'Invalid JSON' }, { status: 400 })
+    }
+  }
 
-	// Handle URL search params
-	if (url.pathname === "/api/search") {
-		let query = url.searchParams.get("q");
-		let limit = parseInt(url.searchParams.get("limit") || "10");
+  // Handle URL search params
+  if (url.pathname === '/api/search') {
+    let query = url.searchParams.get('q')
+    let limit = parseInt(url.searchParams.get('limit') || '10')
 
-		return Response.json({
-			query,
-			limit,
-			results: [], // Your search results here
-		});
-	}
+    return Response.json({
+      query,
+      limit,
+      results: [], // Your search results here
+    })
+  }
 
-	return new Response("Not Found", { status: 404 });
+  return new Response('Not Found', { status: 404 })
 }
 ```
 
@@ -101,50 +101,49 @@ Take advantage of web-standard streaming with `ReadableStream`:
 
 ```ts
 async function handler(request: Request) {
-	if (request.url.endsWith("/stream")) {
-		// Create a streaming response
-		let stream = new ReadableStream({
-			async start(controller) {
-				for (let i = 0; i < 5; i++) {
-					controller.enqueue(new TextEncoder().encode(`Chunk ${i}\n`));
-					await new Promise((resolve) => setTimeout(resolve, 1000));
-				}
-				controller.close();
-			},
-		});
+  if (request.url.endsWith('/stream')) {
+    // Create a streaming response
+    let stream = new ReadableStream({
+      async start(controller) {
+        for (let i = 0; i < 5; i++) {
+          controller.enqueue(new TextEncoder().encode(`Chunk ${i}\n`))
+          await new Promise((resolve) => setTimeout(resolve, 1000))
+        }
+        controller.close()
+      },
+    })
 
-		return new Response(stream, {
-			headers: { "Content-Type": "text/plain" },
-		});
-	}
+    return new Response(stream, {
+      headers: { 'Content-Type': 'text/plain' },
+    })
+  }
 
-	return new Response("Not Found", { status: 404 });
+  return new Response('Not Found', { status: 404 })
 }
 ```
 
 ### Custom Hostname Configuration
 
-Configure custom hostnames for deployment on VPS or custom environments. `node-fetch-server` uses
-the `host` option when constructing `request.url`.
+Configure custom hostnames for deployment on VPS or custom environments. `node-fetch-server` uses the `host` option when constructing `request.url`.
 
 ```ts
-import * as http from "node:http";
-import { createRequestListener } from "remix/node-fetch-server";
+import * as http from 'node:http'
+import { createRequestListener } from 'remix/node-fetch-server'
 
-let hostname = process.env.HOST || "api.example.com";
+let hostname = process.env.HOST || 'api.example.com'
 
 async function handler(request: Request) {
-	console.log(request.url); // http://api.example.com/path
+  console.log(request.url) // http://api.example.com/path
 
-	return Response.json({
-		message: "Hello from custom domain!",
-		url: request.url,
-	});
+  return Response.json({
+    message: 'Hello from custom domain!',
+    url: request.url,
+  })
 }
 
-let server = http.createServer(createRequestListener(handler, { host: hostname }));
+let server = http.createServer(createRequestListener(handler, { host: hostname }))
 
-server.listen(3000);
+server.listen(3000)
 ```
 
 ### Accessing Client Information
@@ -152,22 +151,22 @@ server.listen(3000);
 Get client connection details (IP address, port) for logging or security:
 
 ```ts
-import { type FetchHandler } from "remix/node-fetch-server";
+import { type FetchHandler } from 'remix/node-fetch-server'
 
 let handler: FetchHandler = async (request, client) => {
-	// Log client information
-	console.log(`Request from ${client.address}:${client.port}`);
+  // Log client information
+  console.log(`Request from ${client.address}:${client.port}`)
 
-	// Use for rate limiting, geolocation, etc.
-	if (isRateLimited(client.address)) {
-		return new Response("Too Many Requests", { status: 429 });
-	}
+  // Use for rate limiting, geolocation, etc.
+  if (isRateLimited(client.address)) {
+    return new Response('Too Many Requests', { status: 429 })
+  }
 
-	return Response.json({
-		message: "Hello!",
-		yourIp: client.address,
-	});
-};
+  return Response.json({
+    message: 'Hello!',
+    yourIp: client.address,
+  })
+}
 ```
 
 ### HTTPS Support
@@ -175,20 +174,20 @@ let handler: FetchHandler = async (request, client) => {
 Use with Node.js HTTPS module for secure connections:
 
 ```ts
-import * as https from "node:https";
-import * as fs from "node:fs";
-import { createRequestListener } from "remix/node-fetch-server";
+import * as https from 'node:https'
+import * as fs from 'node:fs'
+import { createRequestListener } from 'remix/node-fetch-server'
 
 let options = {
-	key: fs.readFileSync("private-key.pem"),
-	cert: fs.readFileSync("certificate.pem"),
-};
+  key: fs.readFileSync('private-key.pem'),
+  cert: fs.readFileSync('certificate.pem'),
+}
 
-let server = https.createServer(options, createRequestListener(handler));
+let server = https.createServer(options, createRequestListener(handler))
 
 server.listen(443, () => {
-	console.log("HTTPS Server running on port 443");
-});
+  console.log('HTTPS Server running on port 443')
+})
 ```
 
 ## Advanced Usage
@@ -198,36 +197,36 @@ server.listen(443, () => {
 For more control over request/response handling, use the low-level API:
 
 ```ts
-import * as http from "node:http";
-import { createRequest, sendResponse } from "remix/node-fetch-server";
+import * as http from 'node:http'
+import { createRequest, sendResponse } from 'remix/node-fetch-server'
 
 let server = http.createServer(async (req, res) => {
-	// Convert Node.js request to Fetch API Request
-	let request = createRequest(req, res, { host: process.env.HOST });
+  // Convert Node.js request to Fetch API Request
+  let request = createRequest(req, res, { host: process.env.HOST })
 
-	try {
-		// Add custom headers or middleware logic
-		let startTime = Date.now();
+  try {
+    // Add custom headers or middleware logic
+    let startTime = Date.now()
 
-		// Process the request with your handler
-		let response = await handler(request);
-		// Make sure the response is mutable
-		response = new Response(response.body, response);
+    // Process the request with your handler
+    let response = await handler(request)
+    // Make sure the response is mutable
+    response = new Response(response.body, response)
 
-		// Add response timing header
-		let duration = Date.now() - startTime;
-		response.headers.set("X-Response-Time", `${duration}ms`);
+    // Add response timing header
+    let duration = Date.now() - startTime
+    response.headers.set('X-Response-Time', `${duration}ms`)
 
-		// Send the response
-		await sendResponse(res, response);
-	} catch (error) {
-		console.error("Server error:", error);
-		res.writeHead(500, { "Content-Type": "text/plain" });
-		res.end("Internal Server Error");
-	}
-});
+    // Send the response
+    await sendResponse(res, response)
+  } catch (error) {
+    console.error('Server error:', error)
+    res.writeHead(500, { 'Content-Type': 'text/plain' })
+    res.end('Internal Server Error')
+  }
+})
 
-server.listen(3000);
+server.listen(3000)
 ```
 
 The low-level API provides:
@@ -250,37 +249,37 @@ Transitioning from Express? Here's a comparison of common patterns:
 
 ```ts
 // Express
-let app = express();
+let app = express()
 
-app.get("/users/:id", async (req, res) => {
-	let user = await db.getUser(req.params.id);
-	if (!user) {
-		return res.status(404).json({ error: "User not found" });
-	}
-	res.json(user);
-});
+app.get('/users/:id', async (req, res) => {
+  let user = await db.getUser(req.params.id)
+  if (!user) {
+    return res.status(404).json({ error: 'User not found' })
+  }
+  res.json(user)
+})
 
-app.listen(3000);
+app.listen(3000)
 
 // node-fetch-server
-import { createRequestListener } from "remix/node-fetch-server";
+import { createRequestListener } from 'remix/node-fetch-server'
 
 async function handler(request: Request) {
-	let url = new URL(request.url);
-	let match = url.pathname.match(/^\/users\/(\w+)$/);
+  let url = new URL(request.url)
+  let match = url.pathname.match(/^\/users\/(\w+)$/)
 
-	if (match && request.method === "GET") {
-		let user = await db.getUser(match[1]);
-		if (!user) {
-			return Response.json({ error: "User not found" }, { status: 404 });
-		}
-		return Response.json(user);
-	}
+  if (match && request.method === 'GET') {
+    let user = await db.getUser(match[1])
+    if (!user) {
+      return Response.json({ error: 'User not found' }, { status: 404 })
+    }
+    return Response.json(user)
+  }
 
-	return new Response("Not Found", { status: 404 });
+  return new Response('Not Found', { status: 404 })
 }
 
-http.createServer(createRequestListener(handler)).listen(3000);
+http.createServer(createRequestListener(handler)).listen(3000)
 ```
 
 ## Demos
@@ -291,7 +290,6 @@ The [`demos` directory](https://github.com/remix-run/remix/tree/main/packages/no
 
 ## Related Packages
 
-- [`node-serve`](https://github.com/remix-run/remix/tree/main/packages/node-serve) - Build high-performance Fetch API servers for Node.js
 - [`fetch-proxy`](https://github.com/remix-run/remix/tree/main/packages/fetch-proxy) - Build HTTP proxy servers using the web fetch API
 
 ## Benchmarks
@@ -322,7 +320,6 @@ Simple HTML response benchmarks without inspecting the incoming request.
 
 | Server                    |   Version | Requests/sec | Avg latency | Transfer/sec |
 | ------------------------- | --------: | -----------: | ----------: | -----------: |
-| `remix/node-serve`        |   `0.0.0` |     `62,225` |    `6.45ms` |     `9.85MB` |
 | `node:http`               | `24.15.0` |     `47,110` |   `10.66ms` |     `9.66MB` |
 | `remix/node-fetch-server` |  `0.13.0` |     `43,317` |   `11.69ms` |     `8.80MB` |
 | `express`                 |   `5.2.1` |     `39,752` |   `13.69ms` |     `9.59MB` |
@@ -333,7 +330,6 @@ POST benchmarks that read and print the request method, headers, and a small bod
 
 | Server                    |   Version | Requests/sec | Avg latency | Transfer/sec |
 | ------------------------- | --------: | -----------: | ----------: | -----------: |
-| `remix/node-serve`        |   `0.0.0` |     `31,213` |   `12.75ms` |     `4.94MB` |
 | `remix/node-fetch-server` |  `0.13.0` |     `25,430` |   `24.25ms` |     `5.17MB` |
 | `node:http`               | `24.15.0` |     `25,088` |   `23.89ms` |     `5.14MB` |
 | `express`                 |   `5.2.1` |     `22,845` |   `27.16ms` |     `5.51MB` |
@@ -344,7 +340,6 @@ POST benchmarks that read and print the request method, headers, and a 1 MB body
 
 | Server                    |   Version | Requests/sec | Avg latency | Transfer/sec |
 | ------------------------- | --------: | -----------: | ----------: | -----------: |
-| `remix/node-serve`        |   `0.0.0` |      `1,148` |  `327.72ms` |   `186.03KB` |
 | `remix/node-fetch-server` |  `0.13.0` |      `1,086` |  `217.69ms` |   `225.87KB` |
 | `node:http`               | `24.15.0` |      `1,079` |  `198.67ms` |   `226.54KB` |
 | `express`                 |   `5.2.1` |      `1,022` |  `216.07ms` |   `252.51KB` |

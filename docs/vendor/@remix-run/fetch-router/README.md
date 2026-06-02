@@ -21,67 +21,67 @@ npm i remix
 
 The main purpose of the router is to map incoming requests to request handlers and middleware. The router uses the `fetch()` API to accept a [`Request`](https://developer.mozilla.org/en-US/docs/Web/API/Request) and return a [`Response`](https://developer.mozilla.org/en-US/docs/Web/API/Response).
 
-Import route definition helpers (`route`, `form`, `resource`, `resources`, etc.) from `remix/routes` and runtime APIs (`createRouter`, `Middleware`, etc.) from `remix/fetch-router`.
+Import route definition helpers (`route`, `form`, `resource`, `resources`, etc.) from `remix/routes` and runtime APIs (`createRouter`, `Middleware`, etc.) from `remix/router`.
 
 The example below is a small site with a home page, an "about" page, and a blog.
 
 ```ts
-import { route } from "remix/routes";
-import { createRouter } from "remix/fetch-router";
-import { logger } from "remix/logger-middleware";
+import { route } from 'remix/routes'
+import { createRouter } from 'remix/router'
+import { logger } from 'remix/middleware/logger'
 
 // `route()` creates a "route map" that organizes routes by name. The keys
 // of the map may be any name, and may be nested to group related routes.
 let routes = route({
-	home: "/",
-	about: "/about",
-	blog: {
-		index: "/blog",
-		show: "/blog/:slug",
-	},
-});
+  home: '/',
+  about: '/about',
+  blog: {
+    index: '/blog',
+    show: '/blog/:slug',
+  },
+})
 
 let router = createRouter({
-	// Middleware is used to run code before and/or after actions run.
-	// In this case, the `logger()` middleware logs the request to the console.
-	middleware: [logger()],
-});
+  // Middleware is used to run code before and/or after actions run.
+  // In this case, the `logger()` middleware logs the request to the console.
+  middleware: [logger()],
+})
 
 // Map a controller that supplies actions for the root routes.
 // A controller is a plain object with an `actions` property that
 // matches the direct route leaves in a route map.
 router.map(routes, {
-	actions: {
-		home() {
-			return new Response("Home");
-		},
-		about() {
-			return new Response("About");
-		},
-	},
-});
+  actions: {
+    home() {
+      return new Response('Home')
+    },
+    about() {
+      return new Response('About')
+    },
+  },
+})
 
 // Map another controller that supplies actions for the blog routes.
 router.map(routes.blog, {
-	actions: {
-		index() {
-			return new Response("Blog");
-		},
-		show({ params }) {
-			// params is a type-safe object with the parameters from the route pattern
-			return new Response(`Post ${params.slug}`);
-		},
-	},
-});
+  actions: {
+    index() {
+      return new Response('Blog')
+    },
+    show({ params }) {
+      // params is a type-safe object with the parameters from the route pattern
+      return new Response(`Post ${params.slug}`)
+    },
+  },
+})
 
-let response = await router.fetch("https://remix.run/blog/hello-remix");
-console.log(await response.text()); // "Post hello-remix"
+let response = await router.fetch('https://remix.run/blog/hello-remix')
+console.log(await response.text()) // "Post hello-remix"
 ```
 
 The route map is an object of the same shape as the object pass into `route()`, including nested objects. The leaves of the map are `Route` objects, which you can see if you inspect the type of the `routes` variable in your IDE.
 
 ```ts
-type Routes = typeof routes;
+type Routes = typeof routes
 // {
 //   home: Route<'ANY', '/'>
 //   about: Route<'ANY', '/about'>
@@ -101,21 +101,21 @@ In addition to describing the structure of your routes, route maps also make it 
 Note: We're using the [`createHtmlResponse` helper from `response`](https://github.com/remix-run/remix/tree/main/packages/response#readme) below to create `Response`s with `Content-Type: text/html`. We're also using the `html` template tag to create safe HTML strings to use in the response body.
 
 ```ts
-import { route } from "remix/routes";
-import { createRouter } from "remix/fetch-router";
-import { html } from "remix/html-template";
-import { createHtmlResponse } from "remix/response/html";
+import { route } from 'remix/routes'
+import { createRouter } from 'remix/router'
+import { html } from 'remix/html-template'
+import { createHtmlResponse } from 'remix/response/html'
 
 let routes = route({
-	home: "/",
-	contact: "/contact",
-});
+  home: '/',
+  contact: '/contact',
+})
 
-let router = createRouter();
+let router = createRouter()
 
 // Register an action for `GET /`
 router.get(routes.home, () => {
-	return createHtmlResponse(`
+  return createHtmlResponse(`
     <html>
       <body>
         <h1>Home</h1>
@@ -124,12 +124,12 @@ router.get(routes.home, () => {
         </p>
       </body>
     </html>
-  `);
-});
+  `)
+})
 
 // Register an action for `GET /contact`
 router.get(routes.contact, () => {
-	return createHtmlResponse(`
+  return createHtmlResponse(`
     <html>
       <body>
         <h1>Contact Us</h1>
@@ -147,33 +147,33 @@ router.get(routes.contact, () => {
         </footer>
       </body>
     </html>
-  `);
-});
+  `)
+})
 
 // Register an action for `POST /contact`
 router.post(routes.contact, ({ get }) => {
-	// POST actions can read parsed FormData from request context using FormData
-	// as the context key after the formData middleware has run.
-	let formData = get(FormData);
-	let message = formData.get("message") as string;
-	let body = html`
-		<html>
-			<body>
-				<h1>Thanks!</h1>
-				<div>
-					<p>You said: ${message}</p>
-				</div>
-				<footer>
-					<p>
-						<a href="${routes.home.href()}">Home</a>
-					</p>
-				</footer>
-			</body>
-		</html>
-	`;
+  // POST actions can read parsed FormData from request context using FormData
+  // as the context key after the formData middleware has run.
+  let formData = get(FormData)
+  let message = formData.get('message') as string
+  let body = html`
+    <html>
+      <body>
+        <h1>Thanks!</h1>
+        <div>
+          <p>You said: ${message}</p>
+        </div>
+        <footer>
+          <p>
+            <a href="${routes.home.href()}">Home</a>
+          </p>
+        </footer>
+      </body>
+    </html>
+  `
 
-	return createHtmlResponse(body);
-});
+  return createHtmlResponse(body)
+})
 ```
 
 ### Routing Based on Request Method
@@ -181,8 +181,8 @@ router.post(routes.contact, ({ get }) => {
 In the example above, both the `home` and `contact` routes are able to be registered for any incoming [`request.method`](https://developer.mozilla.org/en-US/docs/Web/API/Request/method). If you inspect their types, you'll see:
 
 ```tsx
-type HomeRoute = typeof routes.home; // Route<'ANY', '/'>
-type ContactRoute = typeof routes.contact; // Route<'ANY', '/contact'>
+type HomeRoute = typeof routes.home // Route<'ANY', '/'>
+type ContactRoute = typeof routes.contact // Route<'ANY', '/contact'>
 ```
 
 We used `router.get()` and `router.post()` to register actions on each route specifically for the `GET` and `POST` request methods.
@@ -190,19 +190,19 @@ We used `router.get()` and `router.post()` to register actions on each route spe
 However, we can also encode the request method into the route definition itself using the `method` property on the route. When you include the `method` in the route definition, `router.map()` will register the action only for that specific request method. This can be more convenient than using `router.get()` and `router.post()` to register actions one at a time.
 
 ```ts
-import * as assert from "node:assert/strict";
-import { createRouter } from "remix/fetch-router";
-import { route } from "remix/routes";
+import * as assert from 'node:assert/strict'
+import { createRouter } from 'remix/router'
+import { route } from 'remix/routes'
 
 let routes = route({
-	home: { method: "GET", pattern: "/" },
-	contact: {
-		index: { method: "GET", pattern: "/contact" },
-		action: { method: "POST", pattern: "/contact" },
-	},
-});
+  home: { method: 'GET', pattern: '/' },
+  contact: {
+    index: { method: 'GET', pattern: '/contact' },
+    action: { method: 'POST', pattern: '/contact' },
+  },
+})
 
-type Routes = typeof routes;
+type Routes = typeof routes
 // Each route is now typed with a specific request method.
 // {
 //   home: Route<'GET', '/'>,
@@ -212,29 +212,29 @@ type Routes = typeof routes;
 //   },
 // }
 
-let router = createRouter();
+let router = createRouter()
 
 router.map(routes, {
-	actions: {
-		home({ method }) {
-			assert.equal(method, "GET");
-			return new Response("Home");
-		},
-	},
-});
+  actions: {
+    home({ method }) {
+      assert.equal(method, 'GET')
+      return new Response('Home')
+    },
+  },
+})
 
 router.map(routes.contact, {
-	actions: {
-		index({ method }) {
-			assert.equal(method, "GET");
-			return new Response("Contact");
-		},
-		action({ method }) {
-			assert.equal(method, "POST");
-			return new Response("Contact Action");
-		},
-	},
-});
+  actions: {
+    index({ method }) {
+      assert.equal(method, 'GET')
+      return new Response('Contact')
+    },
+    action({ method }) {
+      assert.equal(method, 'POST')
+      return new Response('Contact Action')
+    },
+  },
+})
 ```
 
 ### Declaring Routes
@@ -251,17 +251,17 @@ Continuing with [the example of the contact page](#routing-based-on-request-meth
 A `form()` route map contains two routes: `index` and `action`. The `index` route is a `GET` route that shows the form, and the `action` route is a `POST` route that handles the form submission.
 
 ```tsx
-import { createRouter } from "remix/fetch-router";
-import { route, form } from "remix/routes";
-import { createHtmlResponse } from "remix/response/html";
-import { html } from "remix/html-template";
+import { createRouter } from 'remix/router'
+import { route, form } from 'remix/routes'
+import { createHtmlResponse } from 'remix/response/html'
+import { html } from 'remix/html-template'
 
 let routes = route({
-	home: "/",
-	contact: form("contact"),
-});
+  home: '/',
+  contact: form('contact'),
+})
 
-type Routes = typeof routes;
+type Routes = typeof routes
 // {
 //   home: Route<'ANY', '/'>
 //   contact: {
@@ -270,12 +270,12 @@ type Routes = typeof routes;
 //   },
 // }
 
-let router = createRouter();
+let router = createRouter()
 
 router.map(routes, {
-	actions: {
-		home() {
-			return createHtmlResponse(`
+  actions: {
+    home() {
+      return createHtmlResponse(`
         <html>
           <body>
             <h1>Home</h1>
@@ -286,16 +286,16 @@ router.map(routes, {
             </footer>
           </body>
         </html>
-      `);
-		},
-	},
-});
+      `)
+    },
+  },
+})
 
 router.map(routes.contact, {
-	actions: {
-		// GET /contact - shows the form
-		index() {
-			return createHtmlResponse(`
+  actions: {
+    // GET /contact - shows the form
+    index() {
+      return createHtmlResponse(`
         <html>
           <body>
             <h1>Contact Us</h1>
@@ -306,29 +306,29 @@ router.map(routes.contact, {
             </form>
           </body>
         </html>
-      `);
-		},
-		// POST /contact - handles the form submission
-		action({ get }) {
-			let formData = get(FormData);
-			let message = formData.get("message") as string;
-			let body = html`
-				<html>
-					<body>
-						<h1>Thanks!</h1>
-						<p>You said: ${message}</p>
+      `)
+    },
+    // POST /contact - handles the form submission
+    action({ get }) {
+      let formData = get(FormData)
+      let message = formData.get('message') as string
+      let body = html`
+        <html>
+          <body>
+            <h1>Thanks!</h1>
+            <p>You said: ${message}</p>
 
-						<p>
-							Got more to say? <a href="${routes.contact.index.href()}">Send another message</a>
-						</p>
-					</body>
-				</html>
-			`;
+            <p>
+              Got more to say? <a href="${routes.contact.index.href()}">Send another message</a>
+            </p>
+          </body>
+        </html>
+      `
 
-			return createHtmlResponse(body);
-		},
-	},
-});
+      return createHtmlResponse(body)
+    },
+  },
+})
 ```
 
 #### Resource-based Routes
@@ -336,19 +336,19 @@ router.map(routes.contact, {
 The router provides a `resources()` helper that creates a route map with a set of resource-based routes, useful when defining RESTful API routes or modeling resources in a web application ([similar to Rails' `resources` helper](https://guides.rubyonrails.org/routing.html#resource-routing-the-rails-default)). You can think of "resources" as a way to define routes for a collection of related resources, like products, books, users, etc.
 
 ```ts
-import { createRouter } from "remix/fetch-router";
-import { route, resources } from "remix/routes";
+import { createRouter } from 'remix/router'
+import { route, resources } from 'remix/routes'
 
 let routes = route({
-	brands: {
-		...resources("brands", { only: ["index", "show"] }),
-		products: resources("brands/:brandId/products", {
-			only: ["index", "show"],
-		}),
-	},
-});
+  brands: {
+    ...resources('brands', { only: ['index', 'show'] }),
+    products: resources('brands/:brandId/products', {
+      only: ['index', 'show'],
+    }),
+  },
+})
 
-type Routes = typeof routes;
+type Routes = typeof routes
 // {
 //   brands: {
 //     index: Route<'GET', '/brands'>
@@ -360,49 +360,49 @@ type Routes = typeof routes;
 //   },
 // }
 
-let router = createRouter();
+let router = createRouter()
 
 router.map(routes.brands, {
-	actions: {
-		// GET /brands
-		index() {
-			return new Response("Brands Index");
-		},
-		// GET /brands/:id
-		show({ params }) {
-			return new Response(`Brand ${params.id}`);
-		},
-	},
-});
+  actions: {
+    // GET /brands
+    index() {
+      return new Response('Brands Index')
+    },
+    // GET /brands/:id
+    show({ params }) {
+      return new Response(`Brand ${params.id}`)
+    },
+  },
+})
 
 router.map(routes.brands.products, {
-	actions: {
-		// GET /brands/:brandId/products
-		index() {
-			return new Response("Products Index");
-		},
-		// GET /brands/:brandId/products/:id
-		show({ params }) {
-			return new Response(`Brand ${params.brandId}, Product ${params.id}`);
-		},
-	},
-});
+  actions: {
+    // GET /brands/:brandId/products
+    index() {
+      return new Response('Products Index')
+    },
+    // GET /brands/:brandId/products/:id
+    show({ params }) {
+      return new Response(`Brand ${params.brandId}, Product ${params.id}`)
+    },
+  },
+})
 ```
 
 The `resource()` helper creates a route map for a single resource (i.e. not something that is part of a collection). This is useful when defining operations on a singleton resource, like a user profile.
 
 ```tsx
-import { createRouter } from "remix/fetch-router";
-import { route, resources, resource } from "remix/routes";
+import { createRouter } from 'remix/router'
+import { route, resources, resource } from 'remix/routes'
 
 let routes = route({
-	user: {
-		...resources("users", { only: ["index", "show"] }),
-		profile: resource("users/:userId/profile", { only: ["show", "edit", "update"] }),
-	},
-});
+  user: {
+    ...resources('users', { only: ['index', 'show'] }),
+    profile: resource('users/:userId/profile', { only: ['show', 'edit', 'update'] }),
+  },
+})
 
-type Routes = typeof routes;
+type Routes = typeof routes
 // {
 //   user: {
 //     index: Route<'GET', '/users'>
@@ -419,8 +419,8 @@ type Routes = typeof routes;
 In both of the examples above we used the `only` option to limit the routes generated by `resources()`/`resource()` to only the routes we needed. Without the `only` option, a `resources('users')` route map contains 7 routes: `index`, `new`, `show`, `create`, `edit`, `update`, and `destroy`.
 
 ```tsx
-let routes = resources("users");
-type Routes = typeof routes;
+let routes = resources('users')
+type Routes = typeof routes
 // {
 //   index: Route<'GET', '/users'> - Lists all users
 //   new: Route<'GET', '/users/new'> - Shows a form to create a new user
@@ -435,8 +435,8 @@ type Routes = typeof routes;
 Similarly, a `resource('profile')` route map contains 6 routes: `new`, `show`, `create`, `edit`, `update`, and `destroy`. There is no `index` route because a `resource()` represents a singleton resource, not a collection, so there is no collection view.
 
 ```tsx
-let routes = resource("profile");
-type Routes = typeof routes;
+let routes = resource('profile')
+type Routes = typeof routes
 // {
 //   new: Route<'GET', '/profile/new'> - Shows a form to create the profile
 //   show: Route<'GET', '/profile'> - Shows the profile
@@ -450,16 +450,16 @@ type Routes = typeof routes;
 Resource route names may be customized using the `names` option when you'd prefer not to use the default `index`/`new`/`show`/`create`/`edit`/`update`/`destroy` route names.
 
 ```tsx
-import { createRouter } from "remix/fetch-router";
-import { route, resources } from "remix/routes";
+import { createRouter } from 'remix/router'
+import { route, resources } from 'remix/routes'
 
 let routes = route({
-	users: resources("users", {
-		only: ["index", "show"],
-		names: { index: "list", show: "view" },
-	}),
-});
-type Routes = typeof routes.users;
+  users: resources('users', {
+    only: ['index', 'show'],
+    names: { index: 'list', show: 'view' },
+  }),
+})
+type Routes = typeof routes.users
 // {
 //   list: Route<'GET', '/users'> - Lists all users
 //   view: Route<'GET', '/users/:id'> - Shows a single user
@@ -469,16 +469,16 @@ type Routes = typeof routes.users;
 If you want to use a param name other than `id`, you can use the `param` option.
 
 ```tsx
-import { createRouter } from "remix/fetch-router";
-import { route, resources } from "remix/routes";
+import { createRouter } from 'remix/router'
+import { route, resources } from 'remix/routes'
 
 let routes = route({
-	users: resources("users", {
-		only: ["index", "show", "edit", "update"],
-		param: "userId",
-	}),
-});
-type Routes = typeof routes.users;
+  users: resources('users', {
+    only: ['index', 'show', 'edit', 'update'],
+    param: 'userId',
+  }),
+})
+type Routes = typeof routes.users
 // {
 //   index: Route<'GET', '/users'> - Lists all users
 //   show: Route<'GET', '/users/:userId'> - Shows a single user
@@ -490,8 +490,8 @@ type Routes = typeof routes.users;
 You can use the `exclude` option to exclude routes from being generated.
 
 ```tsx
-let routes = resources("users", { exclude: ["edit", "update", "destroy"] });
-type Routes = typeof routes;
+let routes = resources('users', { exclude: ['edit', 'update', 'destroy'] })
+type Routes = typeof routes
 // {
 //   index: Route<'GET', '/users'> - Lists all users
 //   new: Route<'GET', '/users/new'> - Shows a form to create a new user
@@ -504,54 +504,84 @@ type Routes = typeof routes;
 
 Middleware functions run code before and/or after actions. They are a powerful way to add functionality to your app.
 
+Every middleware must either return a `Response`, return the response from `next()`, or call `await next()` before it returns. Middleware that returns without calling `next()` throws at runtime.
+
 A basic logging middleware might look like this:
 
 ```ts
-import type { Middleware } from "remix/fetch-router";
+import type { Middleware } from 'remix/router'
 
 // You can use the `Middleware` type to type middleware functions.
 function logger(): Middleware {
-	return async (context, next) => {
-		let start = new Date();
+  return async (context, next) => {
+    let start = new Date()
 
-		// Call next() to invoke the next middleware or action in the chain.
-		let response = await next();
+    // Call next() to invoke the next middleware or action in the chain.
+    let response = await next()
 
-		let end = new Date();
-		let duration = end.getTime() - start.getTime();
+    let end = new Date()
+    let duration = end.getTime() - start.getTime()
 
-		console.log(
-			`${context.request.method} ${context.request.url} ${response.status} ${duration}ms`,
-		);
+    console.log(`${context.request.method} ${context.request.url} ${response.status} ${duration}ms`)
 
-		return response;
-	};
+    return response
+  }
 }
 
 // Use it like this:
 let router = createRouter({
-	middleware: [logger()],
-});
+  middleware: [logger()],
+})
 ```
 
 Middleware is typically built as a function that returns a middleware function. This allows you to pass options to the middleware function if needed. For example, the `auth()` middleware below allows you to pass a `token` option that is used to authenticate the request.
 
 ```tsx
 interface AuthOptions {
-	token: string;
+  token: string
 }
 
 function auth(options?: AuthOptions): Middleware {
-	let token = options?.token ?? "secret";
+  let token = options?.token ?? 'secret'
 
-	return (context, next) => {
-		if (context.headers.get("Authorization") !== `Bearer ${token}`) {
-			return new Response("Unauthorized", { status: 401 });
-		}
-		return next();
-	};
+  return (context, next) => {
+    if (context.headers.get('Authorization') !== `Bearer ${token}`) {
+      return new Response('Unauthorized', { status: 401 })
+    }
+    return next()
+  }
 }
 ```
+
+Middleware can store values in request context with a key. To make that value available as `context.db`, add `property: 'db'` to the middleware type and pass `{ property: 'db' }` to `context.set()`:
+
+```ts
+import { createContextKey, type Middleware } from 'remix/router'
+
+interface Database {
+  findMany(): Promise<unknown[]>
+}
+
+const Database = createContextKey<Database>()
+
+function loadDatabase(): Middleware<{
+  key: typeof Database
+  value: Database
+  property: 'db'
+}> {
+  return async (context, next) => {
+    context.set(Database, await connectDatabase(), { property: 'db' })
+    return next()
+  }
+}
+
+router.get('/books', async (context) => {
+  let books = await context.db.findMany()
+  return Response.json(books)
+})
+```
+
+Use `context.db` (or `context.get(Database)`). If two values use the same property name, the router throws.
 
 Middleware may be used at three levels: globally on the router, on a controller, or inline on an individual action.
 
@@ -559,40 +589,42 @@ Global middleware is added to the router when it is created using the `createRou
 
 Controller middleware runs for every direct action in a controller. Action middleware runs only for one action, whether that action is registered in a controller or directly with `router.map()` or one of the method-specific helpers like `router.get()`, `router.post()`, `router.put()`, `router.delete()`, etc. The object form for actions is `{ handler, middleware? }`, so you can omit `middleware` entirely when you do not need it.
 
-A controller's `middleware` applies only to the direct route actions in that controller, and its `actions` object may not include nested route-map keys. Map nested route maps explicitly so each controller owns the direct route actions for one route map.
+A controller's `middleware` applies only to the direct route actions in that controller, and its `actions` object may not include nested route-map keys. This is the router's scoped middleware model: map nested route maps explicitly so each controller owns the direct route actions for one route map, and share middleware arrays between controllers that need the same boundary.
 
 ```tsx
 let routes = route({
-	home: "/",
-	admin: {
-		dashboard: "/admin/dashboard",
-		settings: "/admin/settings",
-	},
-});
+  home: '/',
+  admin: {
+    dashboard: '/admin/dashboard',
+    settings: '/admin/settings',
+  },
+})
 
 let router = createRouter({
-	// This middleware runs on all requests.
-	middleware: [staticFiles("./public")],
-});
+  // This middleware runs on all requests.
+  middleware: [staticFiles('./public')],
+})
 
-router.map(routes.home, () => new Response("Home"));
+let adminMiddleware = [auth({ token: 'secret' })]
+
+router.map(routes.home, () => new Response('Home'))
 
 router.map(routes.admin, {
-	// This middleware applies to all actions in this controller.
-	middleware: [auth({ token: "secret" })],
-	actions: {
-		dashboard() {
-			return new Response("Dashboard");
-		},
-		settings: {
-			// This middleware applies only to this action.
-			middleware: [requireAdmin()],
-			handler() {
-				return new Response("Settings");
-			},
-		},
-	},
-});
+  // This middleware applies to all actions in this controller.
+  middleware: adminMiddleware,
+  actions: {
+    dashboard() {
+      return new Response('Dashboard')
+    },
+    settings: {
+      // This middleware applies only to this action.
+      middleware: [requireAdmin()],
+      handler() {
+        return new Response('Settings')
+      },
+    },
+  },
+})
 ```
 
 ### Request Context
@@ -600,86 +632,133 @@ router.map(routes.admin, {
 Every action and middleware receives a `context` object with useful properties:
 
 ```ts
-const UserKey = createContextKey<{ id: string }>();
+const UserKey = createContextKey<{ id: string }>()
 
-router.get("/posts/:id", (context) => {
-	// request: The original Request object
-	console.log(context.request.method); // "GET"
-	console.log(context.request.headers.get("Accept"));
+router.get('/posts/:id', (context) => {
+  // request: The original Request object
+  console.log(context.request.method) // "GET"
+  console.log(context.request.headers.get('Accept'))
 
-	// url: Parsed URL object
-	console.log(context.url.pathname); // "/posts/123"
-	console.log(context.url.searchParams.get("sort"));
+  // url: Parsed URL object
+  console.log(context.url.pathname) // "/posts/123"
+  console.log(context.url.searchParams.get('sort'))
 
-	// params: Route parameters (fully typed!)
-	console.log(context.params.id); // "123"
+  // params: Route parameters (fully typed!)
+  console.log(context.params.id) // "123"
 
-	// set/get: type-safe request-scoped context data on the context object
-	context.set(UserKey, currentUser);
-	let user = context.get(UserKey);
-	console.log(user.id);
+  // set/get: type-safe request-scoped context data on the context object
+  context.set(UserKey, currentUser)
+  let user = context.get(UserKey)
+  if (user == null) throw new Error('Expected current user')
+  console.log(user.id)
 
-	return new Response(`Post ${context.params.id}`);
-});
+  return new Response(`Post ${context.params.id}`)
+})
 ```
 
 ### Typed Context Contracts
 
 Route params are only half of a handler's type contract. In many apps, handlers also depend on values that middleware loads into request context, like sessions, database connections, or authenticated users.
 
-`fetch-router` now lets you carry that context contract through the router, controller, and action types directly. A common pattern is to derive one app-local context type from your router middleware, then reuse it across stored controllers and actions.
+`fetch-router` lets you carry that context contract through the router and into stored controllers and actions. A common pattern is to derive one app-local context type from your router middleware, augment `RouterTypes.context` with it, then use `createAction()` and `createController()` to type stored handlers.
 
 ```ts
-import { Auth, requireAuth, type WithRequiredAuth } from "remix/auth-middleware";
-import { type BuildAction, type RequestContext, type WithParams } from "remix/fetch-router";
-import { route } from "remix/routes";
+import { Auth, requireAuth } from 'remix/middleware/auth'
+import {
+  createAction,
+  createController,
+  type AnyParams,
+  type ContextWithParams,
+  type MiddlewareContext,
+} from 'remix/router'
+import { route } from 'remix/routes'
+import { loadDatabase } from './middleware/database.ts'
+import { loadSession } from './middleware/session.ts'
 
 let routes = route({
-	account: "/account",
-});
+  account: '/account',
+})
 
-type AppContext<params extends Record<string, string> = {}> = WithParams<RequestContext, params>;
+type AuthIdentity = { id: string }
+type RootMiddleware = [ReturnType<typeof loadSession>, ReturnType<typeof loadDatabase>]
 
-type AuthIdentity = { id: string };
+type AppContext<params extends AnyParams = {}> = ContextWithParams<
+  MiddlewareContext<RootMiddleware>,
+  params
+>
 
-type AuthenticatedAppContext<params extends Record<string, string> = {}> = WithRequiredAuth<
-	AppContext<params>,
-	AuthIdentity
->;
+declare module 'remix/router' {
+  interface RouterTypes {
+    context: AppContext
+  }
+}
 
-let accountAction = {
-	middleware: [requireAuth<AuthIdentity>()],
-	handler(context) {
-		let auth = context.get(Auth);
-		return Response.json({ id: auth.identity.id });
-	},
-} satisfies BuildAction<"GET", typeof routes.account, AuthenticatedAppContext>;
+let accountMiddleware = [requireAuth<AuthIdentity>()] as const
+type AccountContext = MiddlewareContext<typeof accountMiddleware, AppContext>
+
+let accountAction = createAction<typeof routes.account, AccountContext>(routes.account, {
+  middleware: accountMiddleware,
+  handler(context) {
+    let auth = context.get(Auth)
+    return Response.json({ id: auth.identity.id })
+  },
+})
+
+let accountController = createController<typeof routes, AccountContext>(routes, {
+  middleware: accountMiddleware,
+  actions: {
+    account(context) {
+      let auth = context.get(Auth)
+      return Response.json({ id: auth.identity.id })
+    },
+  },
+})
 ```
 
-In this example, the action declares the stronger context it requires, and the action-local middleware makes that contract true at runtime. In a larger app, you can still derive a shared base context from router middleware with `MiddlewareContext<typeof middleware>` and build on top of it the same way.
+In this example, `RootMiddleware` is the middleware tuple that defines the app context contract. It should include middleware instances. When a middleware is created by a factory function like `loadSession()`, use `ReturnType<typeof loadSession>` so the type describes the middleware value that actually runs. `AccountContext` applies local account middleware on top of that base context before the handler runs.
+
+For small apps with a stable tuple-typed runtime array, `MiddlewareContext<typeof middleware>` is a fine shortcut. For larger apps, prefer the named `RootMiddleware` and `AppContext` pattern so runtime middleware assembly and context typing can evolve independently.
+
+When manually annotating stored handlers, use `Action<typeof route, Context>` for values that may be either a plain handler function or an action object with optional middleware.
 
 #### Middleware Provider Guidance
+
+`context.get(key)` returns a defined value when the context type includes the key or the key has a default. Constructor keys like `FormData` are useful, but they do not imply presence; use context transforms for required values and handle `undefined` otherwise.
 
 If you're authoring a middleware package that stores values in request context, treat that context contract as part of the package API. A good provider should usually export:
 
 - the context key consumers read with `context.get(...)`
-- the middleware that populates that key at runtime
-- one or more `With...` helper types (optional) that let applications describe the resulting request context without touching raw context entries directly
+- the middleware that populates that key at runtime, with a `Middleware` context transform that describes the value it provides
+- an optional direct context property for values handlers read frequently
+
+Apps can derive request context from the middleware tuple with `MiddlewareContext`. If they need to describe a context shape without a middleware tuple, they can use the core `ContextWithEntry` and `ContextWithEntries` helpers directly.
 
 ```ts
-import { createContextKey, type MergeContext, type RequestContext } from "remix/fetch-router";
+import { createContextKey, type Middleware, type MiddlewareContext } from 'remix/router'
 
 // The context key that consumers will need to read from `context.get(...)`
-export const CurrentUser = createContextKey<User | null>();
+export const CurrentUser = createContextKey<User | null>()
+const currentUserContextProperty = { property: 'currentUser' } as const
 
-// One or more With* helper types that apps can use to describe the request context
-export type WithCurrentUser<context extends RequestContext<any, any>> = MergeContext<
-	context,
-	[readonly [typeof CurrentUser, User | null]]
->;
+// The context effect carried by middleware that sets one context value
+export function loadCurrentUser(): Middleware<{
+  key: typeof CurrentUser
+  value: User | null
+  property: 'currentUser'
+}> {
+  return async (context, next) => {
+    context.set(CurrentUser, await getCurrentUser(context.request), currentUserContextProperty)
+    return next()
+  }
+}
+
+let middleware = [loadCurrentUser()] as const
+type AppContext = MiddlewareContext<typeof middleware>
+
+// Use context.currentUser (or context.get(CurrentUser)).
+// context.currentUser
+// context.get(CurrentUser)
 ```
-
-Built-in middleware packages may also export `With...` helpers when that makes controller and action contracts clearer, for example `auth-middleware` provides `WithAuth` and `WithRequiredAuth`.
 
 ### Additional Topics
 
@@ -707,8 +786,8 @@ Built-in middleware packages may also export `With...` helpers when that makes c
 #### Form Data and File Uploads
 
 - use the `formData()` middleware to parse the `FormData` object from the request body
-- use `context.get(FormData)` to access parsed form data
-- use `context.get(FormData).get(name)`/`getAll(name)` to access uploaded files
+- use `context.formData` or `context.get(FormData)` to access parsed form data
+- use `context.formData.get(name)`/`getAll(name)` to access uploaded files
 - use the `uploadHandler` option of the `formData()` middleware to handle file uploads
 
 #### Request Method Override
@@ -721,15 +800,15 @@ Built-in middleware packages may also export `With...` helpers when that makes c
 Response helpers for creating common HTTP responses are available in the [`response`](https://github.com/remix-run/remix/tree/main/packages/response) package:
 
 ```tsx
-import { createFileResponse } from "remix/response/file";
-import { createHtmlResponse } from "remix/response/html";
-import { createRedirectResponse } from "remix/response/redirect";
-import { compressResponse } from "remix/response/compress";
+import { createFileResponse } from 'remix/response/file'
+import { createHtmlResponse } from 'remix/response/html'
+import { createRedirectResponse } from 'remix/response/redirect'
+import { compressResponse } from 'remix/response/compress'
 
-let response = createHtmlResponse("<h1>Hello</h1>");
-let response = Response.json({ message: "Hello" });
-let response = createRedirectResponse("/");
-let response = compressResponse(uncompressedResponse, request);
+let response = createHtmlResponse('<h1>Hello</h1>')
+let response = Response.json({ message: 'Hello' })
+let response = createRedirectResponse('/')
+let response = compressResponse(uncompressedResponse, request)
 ```
 
 See the [`response` documentation](https://github.com/remix-run/remix/tree/main/packages/response#readme) for more details.
@@ -739,26 +818,26 @@ See the [`response` documentation](https://github.com/remix-run/remix/tree/main/
 For working with HTML strings and safe HTML interpolation, see the [`html-template`](https://github.com/remix-run/remix/tree/main/packages/html-template) package. It provides a `html` template tag with automatic escaping to prevent XSS vulnerabilities.
 
 ```ts
-import { html } from "remix/html-template";
-import { createHtmlResponse } from "remix/response/html";
+import { html } from 'remix/html-template'
+import { createHtmlResponse } from 'remix/response/html'
 
 // Use the template tag to escape unsafe variables in HTML.
-let unsafe = "<script>alert(1)</script>";
-let response = createHtmlResponse(html`<h1>${unsafe}</h1>`, { status: 400 });
+let unsafe = '<script>alert(1)</script>'
+let response = createHtmlResponse(html`<h1>${unsafe}</h1>`, { status: 400 })
 ```
 
 The `html.raw` template tag can be used to interpolate values without escaping them. This has the same semantics as `String.raw` but for HTML snippets that have already been escaped or are from trusted sources:
 
 ```ts
 // Use html.raw as a template tag to skip escaping interpolations
-let safeHtml = "<b>Bold</b>";
-let content = html.raw`<div class="content">${safeHtml}</div>`;
-let response = createHtmlResponse(content);
+let safeHtml = '<b>Bold</b>'
+let content = html.raw`<div class="content">${safeHtml}</div>`
+let response = createHtmlResponse(content)
 
 // This is particularly useful when building HTML from multiple safe fragments
-let header = "<header>Title</header>";
-let body = "<main>Content</main>";
-let footer = "<footer>Footer</footer>";
+let header = '<header>Title</header>'
+let body = '<main>Content</main>'
+let footer = '<footer>Footer</footer>'
 let page = html.raw`
   <!DOCTYPE html>
   <html>
@@ -768,11 +847,11 @@ let page = html.raw`
       ${footer}
     </body>
   </html>
-`;
+`
 
 // You can nest html.raw inside html to preserve SafeHtml fragments
-let icon = html.raw`<svg>...</svg>`;
-let button = html`<button>${icon} Click me</button>`; // icon is not escaped
+let icon = html.raw`<svg>...</svg>`
+let button = html`<button>${icon} Click me</button>` // icon is not escaped
 ```
 
 **Warning**: Only use `html.raw` with trusted content. Unlike the regular `html` template tag, `html.raw` does not escape its interpolations, which can lead to XSS vulnerabilities if used with untrusted user input.
@@ -784,27 +863,27 @@ See the [`html-template` documentation](https://github.com/remix-run/remix/tree/
 Testing is straightforward because `fetch-router` uses the standard `fetch()` API:
 
 ```ts
-import * as assert from "node:assert/strict";
-import { describe, it } from "node:test";
+import * as assert from 'node:assert/strict'
+import { describe, it } from 'node:test'
 
-describe("blog routes", () => {
-	it("creates a new post", async () => {
-		let response = await router.fetch("https://api.remix.run/posts", {
-			method: "POST",
-			headers: { "Content-Type": "application/json" },
-			body: JSON.stringify({ title: "Hello", content: "World" }),
-		});
+describe('blog routes', () => {
+  it('creates a new post', async () => {
+    let response = await router.fetch('https://api.remix.run/posts', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title: 'Hello', content: 'World' }),
+    })
 
-		assert.equal(response.status, 201);
-		let post = await response.json();
-		assert.equal(post.title, "Hello");
-	});
+    assert.equal(response.status, 201)
+    let post = await response.json()
+    assert.equal(post.title, 'Hello')
+  })
 
-	it("returns 404 for missing posts", async () => {
-		let response = await router.fetch("https://api.remix.run/posts/not-found");
-		assert.equal(response.status, 404);
-	});
-});
+  it('returns 404 for missing posts', async () => {
+    let response = await router.fetch('https://api.remix.run/posts/not-found')
+    assert.equal(response.status, 404)
+  })
+})
 ```
 
 No special test harness or mocking required! Just use `fetch()` like you would in production.
@@ -813,7 +892,7 @@ No special test harness or mocking required! Just use `fetch()` like you would i
 
 - [auth-middleware](https://github.com/remix-run/remix/tree/main/packages/auth-middleware) - Request authentication and route protection helpers
 - [session-middleware](https://github.com/remix-run/remix/tree/main/packages/session-middleware) - Load and persist sessions in request context
-- [form-data-middleware](https://github.com/remix-run/remix/tree/main/packages/form-data-middleware) - Parse request bodies into `context.get(FormData)`
+- [form-data-middleware](https://github.com/remix-run/remix/tree/main/packages/form-data-middleware) - Parse request bodies into `context.formData` (or `context.get(FormData)`)
 - [response](https://github.com/remix-run/remix/tree/main/packages/response) - Response helpers for HTML, JSON, files, and redirects
 
 ## Related Work

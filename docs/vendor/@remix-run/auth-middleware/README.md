@@ -1,6 +1,6 @@
 # auth-middleware
 
-Request-time authentication and route protection for Remix. Use this package to resolve identity into `context.get(Auth)` from sessions, bearer tokens, API keys, or your own schemes. Pair it with [`remix/auth`](https://github.com/remix-run/remix/tree/main/packages/auth) when you need browser login routes that call `verifyCredentials()` or `finishExternalAuth()`, then rotate the session id with `completeAuth()` before writing the auth record.
+Request-time authentication and route protection for Remix. Use this package to resolve identity into `context.auth` from sessions, bearer tokens, API keys, or your own schemes. Pair it with [`remix/auth`](https://github.com/remix-run/remix/tree/main/packages/auth) when you need browser login routes that call `verifyCredentials()` or `finishExternalAuth()`, then rotate the session id with `completeAuth()` before writing the auth record.
 
 ## Features
 
@@ -9,6 +9,7 @@ Request-time authentication and route protection for Remix. Use this package to 
 - Built-in auth schemes for sessions, bearer tokens, and API keys
 - Ordered fallback across multiple auth schemes
 - Public and private route support with the same resolved auth state
+- Read auth state with `context.auth` (or `context.get(Auth)`)
 - Designed to pair with browser login flows that persist session auth records earlier in the request lifecycle
 
 ## Installation
@@ -22,57 +23,61 @@ npm i remix
 The following example shows the request-time half of a session-backed browser login flow:
 
 - another part of the app has already called `completeAuth()` and written `{ userId }` into the returned session
-- `remix/auth-middleware` reads that value, resolves the current user, and protects the dashboard route
+- `remix/middleware/auth` reads that value, resolves the current user, and protects the dashboard route
 
 ```ts
-import { auth, Auth, createSessionAuthScheme, requireAuth } from "remix/auth-middleware";
-import { createRouter } from "remix/fetch-router";
-import { route } from "remix/routes";
-import type { GoodAuth } from "remix/auth-middleware";
-import { session } from "remix/session-middleware";
+import { auth, createSessionAuthScheme, requireAuth } from 'remix/middleware/auth'
+import { createRouter } from 'remix/router'
+import { route } from 'remix/routes'
+import { session } from 'remix/middleware/session'
 
 let routes = route({
-	app: {
-		dashboard: "/dashboard",
-	},
-});
+  app: {
+    dashboard: '/dashboard',
+  },
+})
+
+type User = { id: string; email: string }
 
 let router = createRouter({
-	middleware: [
-		session(sessionCookie, sessionStorage),
-		auth({
-			schemes: [
-				createSessionAuthScheme({
-					read(session) {
-						return session.get("auth") as { userId: string } | null;
-					},
-					verify(value) {
-						return users.getById(value.userId);
-					},
-					invalidate(session) {
-						session.unset("auth");
-					},
-				}),
-			],
-		}),
-	],
-});
+  middleware: [
+    session(sessionCookie, sessionStorage),
+    auth({
+      schemes: [
+        createSessionAuthScheme<User, { userId: string }>({
+          read(session) {
+            return session.get('auth') as { userId: string } | null
+          },
+          verify(value) {
+            return users.getById(value.userId)
+          },
+          invalidate(session) {
+            session.unset('auth')
+          },
+        }),
+      ],
+    }),
+  ],
+})
 
 router.get(routes.app.dashboard, {
-	middleware: [requireAuth()],
-	handler(context) {
-		let auth = context.get(Auth) as GoodAuth<{ id: string; email: string }>;
+  middleware: [requireAuth<User>()],
+  handler(context) {
+    let auth = context.auth
+    if (!auth.ok) {
+      return new Response('Unauthorized', { status: 401 })
+    }
 
-		return Response.json({
-			id: auth.identity.id,
-			email: auth.identity.email,
-			method: auth.method,
-		});
-	},
-});
+    return Response.json({
+      id: auth.identity.id,
+      email: auth.identity.email,
+      method: auth.method,
+    })
+  },
+})
 ```
 
-In this example, `createSessionAuthScheme()` turns a persisted session auth record back into request auth state, `auth()` stores that state at `context.get(Auth)`, and `requireAuth()` rejects anonymous requests.
+In this example, `createSessionAuthScheme()` turns a persisted session auth record back into request auth state, `auth()` stores that state at `context.auth` (or `context.get(Auth)`), and `requireAuth()` rejects anonymous requests.
 
 If you need to create the login route, start an OAuth redirect, finish a provider callback, or write the session auth record in the first place, use [`remix/auth`](https://github.com/remix-run/remix/tree/main/packages/auth):
 
@@ -84,14 +89,16 @@ If you need to create the login route, start an OAuth redirect, finish a provide
 
 This package includes two middlewares:
 
-- `auth()` to resolve auth state and store it in `context.get(Auth)`
+- `auth()` to resolve auth state and store it in `context.auth` (or `context.get(Auth)`)
 - `requireAuth()` to reject requests that aren't authenticated
 
 That separation is intentional so the same auth resolution can support public routes, API routes, and browser routes with different failure behavior.
 
-`auth()` resolves auth state and stores either `{ ok: true, identity, method }` or `{ ok: false, error? }` in `context.get(Auth)`.
+`auth()` resolves auth state and stores either `{ ok: true, identity, method }` or `{ ok: false, error? }` in `context.auth`.
 
 Use `requireAuth()` after `auth()` when a route must be authenticated. If `auth()` did not run first, `requireAuth()` throws. Otherwise it returns `401 Unauthorized` by default, or you can replace that with `onFailure(context, auth)` to return JSON, redirects, or any other custom response.
+
+Handlers whose context contract includes `auth()` and `requireAuth<Identity>()` can read `context.auth.identity` without a manual lookup or cast. You can also use `context.get(Auth)`.
 
 Auth challenges are forwarded to `WWW-Authenticate` automatically when the auth failure included a `challenge`, so clients that honor those challenges can react without custom header handling.
 
@@ -110,40 +117,40 @@ This package ships with three built-in auth schemes:
 If none of the built-in auth schemes match your environment, you can create your own auth scheme easily. A custom scheme usually wraps one auth mechanism behind a small `create*` factory function and returns an `AuthScheme`. For example, apps behind a trusted access proxy can authenticate requests from forwarded identity headers instead of sessions or bearer tokens.
 
 ```ts
-import type { RequestContext } from "remix/fetch-router";
-import type { AuthScheme } from "remix/auth-middleware";
+import type { RequestContext } from 'remix/router'
+import type { AuthScheme } from 'remix/middleware/auth'
 
 type User = {
-	id: string;
-	role: "admin" | "user";
-};
+  id: string
+  role: 'admin' | 'user'
+}
 
 function createTrustedProxyAuthScheme(): AuthScheme<User> {
-	return {
-		name: "trusted-proxy",
-		async authenticate(context: RequestContext) {
-			let email = context.headers.get("X-Forwarded-Email");
+  return {
+    name: 'trusted-proxy',
+    async authenticate(context: RequestContext) {
+      let email = context.headers.get('X-Forwarded-Email')
 
-			if (email == null) {
-				return;
-			}
+      if (email == null) {
+        return
+      }
 
-			let user = await users.getByEmail(email);
+      let user = await users.getByEmail(email)
 
-			if (user == null) {
-				return {
-					status: "failure",
-					code: "invalid_credentials",
-					message: "Unknown forwarded user",
-				};
-			}
+      if (user == null) {
+        return {
+          status: 'failure',
+          code: 'invalid_credentials',
+          message: 'Unknown forwarded user',
+        }
+      }
 
-			return {
-				status: "success",
-				identity: user,
-			};
-		},
-	};
+      return {
+        status: 'success',
+        identity: user,
+      }
+    },
+  }
 }
 ```
 
@@ -162,66 +169,66 @@ The scheme `name` becomes `auth.method` when authentication succeeds.
 If your app already has an auth cookie and you do not need a session-backed identity lookup, you can use a small custom auth scheme and still rely on `requireAuth()` for route protection.
 
 ```ts
-import { auth, requireAuth } from "remix/auth-middleware";
-import type { AuthScheme } from "remix/auth-middleware";
-import { createCookie } from "remix/cookie";
-import { createRouter } from "remix/fetch-router";
-import { redirect } from "remix/response/redirect";
+import { auth, requireAuth } from 'remix/middleware/auth'
+import type { AuthScheme } from 'remix/middleware/auth'
+import { createCookie } from 'remix/cookie'
+import { createRouter } from 'remix/router'
+import { redirect } from 'remix/response/redirect'
 
-let authCookie = createCookie("__auth", {
-	httpOnly: true,
-	sameSite: "lax",
-	path: "/",
-});
+let authCookie = createCookie('__auth', {
+  httpOnly: true,
+  sameSite: 'lax',
+  path: '/',
+})
 
-let authCookieScheme: AuthScheme<"demo-user"> = {
-	name: "auth-cookie",
-	async authenticate(context) {
-		let value = await authCookie.parse(context.headers.get("cookie"));
-		if (value !== "1") {
-			return;
-		}
+let authCookieScheme: AuthScheme<'demo-user'> = {
+  name: 'auth-cookie',
+  async authenticate(context) {
+    let value = await authCookie.parse(context.headers.get('Cookie'))
+    if (value !== '1') {
+      return
+    }
 
-		return {
-			status: "success",
-			identity: "demo-user",
-		};
-	},
-};
+    return {
+      status: 'success',
+      identity: 'demo-user',
+    }
+  },
+}
 
-let requireAuthCookie = requireAuth<"demo-user">({
-	onFailure(context) {
-		let isFrameRequest = context.request.headers.get("x-remix-frame") === "true";
-		if (isFrameRequest) {
-			return new Response("<p>Not authorized</p>", {
-				status: 401,
-				headers: {
-					"Content-Type": "text/html; charset=utf-8",
-				},
-			});
-		}
+let requireAuthCookie = requireAuth<'demo-user'>({
+  onFailure(context) {
+    let isFrameRequest = context.request.headers.get('X-Remix-Frame') === 'true'
+    if (isFrameRequest) {
+      return new Response('<p>Not authorized</p>', {
+        status: 401,
+        headers: {
+          'Content-Type': 'text/html; charset=utf-8',
+        },
+      })
+    }
 
-		return redirect("/login");
-	},
-});
+    return redirect('/login')
+  },
+})
 
 let router = createRouter({
-	middleware: [
-		auth({
-			schemes: [authCookieScheme],
-		}),
-	],
-});
+  middleware: [
+    auth({
+      schemes: [authCookieScheme],
+    }),
+  ],
+})
 
-router.get("/dashboard", {
-	middleware: [requireAuthCookie],
-	handler() {
-		return new Response("ok");
-	},
-});
+router.get('/dashboard', {
+  middleware: [requireAuthCookie],
+  handler() {
+    return new Response('ok')
+  },
+})
 ```
 
-This pattern keeps the auth check app-owned. Use [`remix/session-middleware`](https://github.com/remix-run/remix/tree/main/packages/session-middleware) and [`remix/auth`](https://github.com/remix-run/remix/tree/main/packages/auth) when you need server-managed session data, credential verification helpers, or OAuth/OIDC flows.
+This pattern keeps the auth check app-owned. Use [`remix/middleware/session`](https://github.com/remix-run/remix/tree/main/packages/session-middleware) and [`remix/auth`](https://github.com/remix-run/remix/tree/main/packages/auth) when you need server-managed session data, credential verification helpers, or OAuth/OIDC flows.
 
 ## Related Packages
 

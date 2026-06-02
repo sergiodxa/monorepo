@@ -1,14 +1,13 @@
 # data-table-mysql
 
-MySQL adapter for [`remix/data-table`](https://github.com/remix-run/remix/tree/main/packages/data-table).
-Use this package when you want `data-table` APIs backed by `mysql2`.
+MySQL adapter for [`remix/data-table`](https://github.com/remix-run/remix/tree/main/packages/data-table). Use this package when you want `data-table` APIs backed by `mysql2`.
 
 ## Features
 
 - **Native `mysql2` Integration**: Works with `mysql2/promise` `Pool` and `PoolConnection` instances
 - **Full `data-table` API Support**: Queries, relations, writes, and transactions
 - **Adapter-Owned Compiler**: SQL compilation lives in this adapter, with optional shared pure helpers from `data-table`
-- **Migration DDL Support**: Compiles and executes `DataMigrationOperation` operations for `remix/data-table/migrations`
+- **Multi-Statement Migrations**: `executeScript()` runs `up.sql` / `down.sql` files via `mysql2` (requires `multipleStatements: true`)
 - **MySQL Capabilities Enabled By Default**:
   - `returning: false`
   - `savepoints: true`
@@ -25,16 +24,15 @@ npm i remix mysql2
 ## Usage
 
 ```ts
-import { createPool } from "mysql2/promise";
-import { createDatabase } from "remix/data-table";
-import { createMysqlDatabaseAdapter } from "remix/data-table-mysql";
+import { createPool } from 'mysql2/promise'
+import { createDatabase } from 'remix/data-table'
+import { createMysqlDatabaseAdapter } from 'remix/data-table/mysql'
 
-let pool = createPool(process.env.DATABASE_URL as string);
-let db = createDatabase(createMysqlDatabaseAdapter(pool));
+let pool = createPool(process.env.DATABASE_URL as string)
+let db = createDatabase(createMysqlDatabaseAdapter(pool))
 ```
 
-Use `db.query(...)`, relation loading, and transactions from `remix/data-table`.
-Import any driver-specific types you need directly from `mysql2/promise`.
+Use `db.query(...)`, relation loading, and transactions from `remix/data-table`. Import any driver-specific types you need directly from `mysql2/promise`.
 
 ## Adapter Capabilities
 
@@ -48,25 +46,36 @@ Import any driver-specific types you need directly from `mysql2/promise`.
 
 ## Advanced Usage
 
-### `returning` On MySQL
+### Multi-Statement Migrations
 
-MySQL does not natively support SQL `RETURNING`. In this adapter, using `returning` on write
-operations throws `DataTableQueryError`.
-
-Use write metadata (`affectedRows`, `insertId`) on MySQL, or switch adapters when returned rows
-are required.
+`remix/data-table/migrations` sends each migration to the adapter as a single multi-statement SQL script. mysql2 only accepts multi-statement scripts when the connection is created with `multipleStatements: true`:
 
 ```ts
-import { DataTableQueryError } from "remix/data-table";
+import { createPool } from 'mysql2/promise'
+
+let pool = createPool({
+  uri: process.env.DATABASE_URL,
+  multipleStatements: true,
+})
+```
+
+### `returning` On MySQL
+
+MySQL does not natively support SQL `RETURNING`. In this adapter, using `returning` on write operations throws `DataTableQueryError`.
+
+Use write metadata (`affectedRows`, `insertId`) on MySQL, or switch adapters when returned rows are required.
+
+```ts
+import { DataTableQueryError } from 'remix/data-table'
 
 try {
-	await db
-		.query(Accounts)
-		.insert({ email: "a@example.com", status: "active" }, { returning: ["id"] });
+  await db
+    .query(Accounts)
+    .insert({ email: 'a@example.com', status: 'active' }, { returning: ['id'] })
 } catch (error) {
-	if (error instanceof DataTableQueryError) {
-		// insert() returning is not supported by this adapter
-	}
+  if (error instanceof DataTableQueryError) {
+    // insert() returning is not supported by this adapter
+  }
 }
 ```
 

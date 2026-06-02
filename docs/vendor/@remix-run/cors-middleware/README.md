@@ -19,26 +19,26 @@ npm i remix
 ## Usage
 
 ```ts
-import { createRouter } from "remix/fetch-router";
-import { cors } from "remix/cors-middleware";
+import { createRouter } from 'remix/router'
+import { cors } from 'remix/middleware/cors'
 
 let router = createRouter({
-	middleware: [
-		cors({
-			origin: ["https://app.example.com", "https://admin.example.com"],
-			credentials: true,
-			exposedHeaders: ["X-Request-Id"],
-		}),
-	],
-});
+  middleware: [
+    cors({
+      origin: ['https://app.example.com', 'https://admin.example.com'],
+      credentials: true,
+      exposedHeaders: ['X-Request-Id'],
+    }),
+  ],
+})
 
-router.get("/api/projects", () => {
-	return Response.json([{ id: "p1", name: "Remix" }], {
-		headers: {
-			"X-Request-Id": "req_123",
-		},
-	});
-});
+router.get('/api/projects', () => {
+  return Response.json([{ id: 'p1', name: 'Remix' }], {
+    headers: {
+      'X-Request-Id': 'req_123',
+    },
+  })
+})
 ```
 
 ## Origin Policies
@@ -56,31 +56,31 @@ router.get("/api/projects", () => {
 
 ```ts
 let router = createRouter({
-	middleware: [
-		cors({
-			origin: ["https://app.example.com", "https://admin.example.com"],
-			credentials: true,
-		}),
-	],
-});
+  middleware: [
+    cors({
+      origin: ['https://app.example.com', 'https://admin.example.com'],
+      credentials: true,
+    }),
+  ],
+})
 ```
 
 ### Dynamic Origin Policies
 
 ```ts
 let router = createRouter({
-	middleware: [
-		cors({
-			origin(origin, context) {
-				if (context.url.pathname.startsWith("/public/")) {
-					return "*";
-				}
+  middleware: [
+    cors({
+      origin(origin, context) {
+        if (context.url.pathname.startsWith('/public/')) {
+          return '*'
+        }
 
-				return origin.endsWith(".trusted.example");
-			},
-		}),
-	],
-});
+        return origin.endsWith('.trusted.example')
+      },
+    }),
+  ],
+})
 ```
 
 ## Preflight Behavior
@@ -89,34 +89,34 @@ By default, preflight requests are short-circuited with status `204`.
 
 ```ts
 let router = createRouter({
-	middleware: [
-		cors({
-			methods: ["GET", "POST", "PATCH"],
-			allowedHeaders: ["Authorization", "Content-Type"],
-			maxAge: 600,
-		}),
-	],
-});
+  middleware: [
+    cors({
+      methods: ['GET', 'POST', 'PATCH'],
+      allowedHeaders: ['Authorization', 'Content-Type'],
+      maxAge: 600,
+    }),
+  ],
+})
 ```
 
 Use a function-based `allowedHeaders` policy when the header allowlist depends on the request:
 
 ```ts
 let router = createRouter({
-	middleware: [
-		cors({
-			allowedHeaders(request) {
-				let requestedHeaders = request.headers.get("Access-Control-Request-Headers");
+  middleware: [
+    cors({
+      allowedHeaders(request) {
+        let requestedHeaders = request.headers.get('Access-Control-Request-Headers')
 
-				if (requestedHeaders?.includes("x-admin-token")) {
-					return ["Authorization", "Content-Type", "X-Admin-Token"];
-				}
+        if (requestedHeaders?.includes('x-admin-token')) {
+          return ['Authorization', 'Content-Type', 'X-Admin-Token']
+        }
 
-				return ["Authorization", "Content-Type"];
-			},
-		}),
-	],
-});
+        return ['Authorization', 'Content-Type']
+      },
+    }),
+  ],
+})
 ```
 
 Function-based `allowedHeaders` responses vary on `Access-Control-Request-Headers`, so caches do not reuse a preflight response for a different requested-header set.
@@ -127,12 +127,12 @@ Set `preflightContinue: true` to let downstream handlers process preflight reque
 
 ```ts
 let router = createRouter({
-	middleware: [
-		cors({
-			allowPrivateNetwork: true,
-		}),
-	],
-});
+  middleware: [
+    cors({
+      allowPrivateNetwork: true,
+    }),
+  ],
+})
 ```
 
 When `allowPrivateNetwork` is enabled, the middleware adds `Access-Control-Allow-Private-Network: true` for preflight requests that ask for private network access.
@@ -141,12 +141,12 @@ When `allowPrivateNetwork` is enabled, the middleware adds `Access-Control-Allow
 
 ```ts
 let router = createRouter({
-	middleware: [
-		cors({
-			exposedHeaders: ["X-Request-Id", "X-Trace-Id"],
-		}),
-	],
-});
+  middleware: [
+    cors({
+      exposedHeaders: ['X-Request-Id', 'X-Trace-Id'],
+    }),
+  ],
+})
 ```
 
 ## Caveats
