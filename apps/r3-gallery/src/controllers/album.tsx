@@ -2,6 +2,7 @@ import { createAction } from "@pkg/r3-ui-router";
 import { isFailure } from "@pkg/result";
 
 import { getAlbum, getAlbumPhotos, getPhoto } from "../data/jsonplaceholder";
+import { getLikes } from "../middleware/likes";
 import { routes } from "../routes";
 import { AlbumPage } from "../views/album";
 import { StateMessage } from "../views/state-message";
@@ -34,5 +35,12 @@ export const renderAlbum = createAction(routes.album, async function renderAlbum
 		);
 	}
 
-	return <AlbumPage album={album.data} photos={photos.data} selectedPhoto={selectedPhoto?.data} />;
+	return (
+		<AlbumPage
+			album={album.data}
+			photos={photos.data}
+			selectedPhoto={selectedPhoto?.data}
+			likedPhotoIds={getLikes(ctx).list(ctx.params.id)}
+		/>
+	);
 });

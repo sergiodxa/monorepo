@@ -18,7 +18,9 @@ Production URL: Not deployed.
 ## Features
 
 - Lists albums from JSONPlaceholder.
+- Uses `router.form()` and `router.submit()` for album shortcut actions.
 - Shows album photos at `/album/:id`.
+- Likes album photos with `fetcher.form()` and persists likes in `localStorage`.
 - Opens photos over the album grid with masked `/photo/:id` URLs.
 - Renders only the photo page when visiting `/photo/:id` directly.
 
@@ -28,11 +30,13 @@ Production URL: Not deployed.
 
 ## Routes
 
-| Route        | Description                                                       |
-| ------------ | ----------------------------------------------------------------- |
-| `/`          | Album list.                                                       |
-| `/album/:id` | Album photo grid, optionally with a modal photo from `?photoId=`. |
-| `/photo/:id` | Standalone photo page for direct visits and reloads.              |
+| Route                                       | Description                                                       |
+| ------------------------------------------- | ----------------------------------------------------------------- |
+| `/`                                         | Album list.                                                       |
+| `POST /album`                               | Form action that redirects to the submitted album.                |
+| `/album/:id`                                | Album photo grid, optionally with a modal photo from `?photoId=`. |
+| `POST /album/:albumId/photos/:photoId/like` | Fetcher action that toggles a persisted photo like.               |
+| `/photo/:id`                                | Standalone photo page for direct visits and reloads.              |
 
 ## Scripts
 

@@ -124,6 +124,18 @@ _Relevant Files_:
 - `packages/r3-ui-router/src/index.ts`
 - `apps/r3-gallery/src/main.tsx`
 
+### React Router-Style Actions and Fetchers for Remix UI
+
+Client-only Remix UI apps can reuse fetch-router route contracts for method-aware actions, middleware, request contexts, form mixins, and typed fetchers without introducing React hooks or components.
+
+**Mentions:** Remix UI, fetch-router, route actions, form mixins, typed fetchers, client-side mutations, localStorage middleware.
+
+_Relevant Files_:
+
+- `packages/r3-ui-router/src/index.ts`
+- `apps/r3-gallery/src/middleware/likes.ts`
+- `apps/r3-gallery/src/components/photo-grid-item.tsx`
+
 ### Stateless Session Tokens with HMAC Signatures
 
 Using HMAC-signed JWT payloads stored in cookies for session management without database lookups on every request, while maintaining security through signature verification.
