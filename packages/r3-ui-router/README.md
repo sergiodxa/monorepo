@@ -222,6 +222,29 @@ function BackButton(handle: Handle) {
 
 The value returned by `handle.context.get(RouterProvider)` includes every router method plus `context`, `match`, `url`, `params`, and `route` for the current render.
 
+### Frames
+
+Mounted routers configure Remix UI's `<Frame>` resolver automatically. A frame `src` renders through the same route action pipeline as `router.render`, so middleware, request context, params, and route actions all work inside embedded routes. Components inside frames can call `handle.frame.reload()` or reload named frames with `handle.frames.get(name)?.reload()`.
+
+```tsx
+import { Frame, on, type Handle } from "remix/ui";
+
+function Dashboard() {
+	return () => (
+		<section>
+			<h1>Dashboard</h1>
+			<Frame name="sidebar" src="/sidebar" fallback={<p>Loading sidebar...</p>} />
+		</section>
+	);
+}
+
+function Sidebar(handle: Handle) {
+	return () => <button mix={on("click", () => handle.frame.reload())}>Reload sidebar</button>;
+}
+```
+
+If `rootOptions.frameInit.resolveFrame` is provided, the router preserves that custom resolver instead of replacing it.
+
 ## API
 
 ### `createRouter(options?: RouterOptions): UIRouter`
@@ -439,7 +462,7 @@ await router.navigate("/album/1?photoId=7", { mask: "/photo/7" });
 
 ### `router.mount(container: HTMLElement): MountedRouter`
 
-Mounts the router into a DOM element and renders the current location. Mounted routers listen for same-origin Navigation API events when available; otherwise they listen for `popstate` and intercept same-origin anchor clicks.
+Mounts the router into a DOM element and renders the current location. Mounted routers listen for same-origin Navigation API events when available; otherwise they listen for `popstate` and intercept same-origin anchor clicks. Mounted roots also configure `rootOptions.frameInit.resolveFrame` so Remix UI frames can render and reload route content through this router.
 
 **Parameters:**
 

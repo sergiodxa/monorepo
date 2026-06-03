@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
-import type { RemixElement, RemixNode, VirtualRoot } from "remix/ui";
+import type { RemixElement, RemixNode, VirtualRoot, VirtualRootOptions } from "remix/ui";
 
 import { route } from "remix/routes";
 
@@ -683,5 +683,76 @@ describe(createRouter.name, () => {
 		mounted.dispose();
 
 		expect(removedNavigateListener).toBe(navigateListener);
+	});
+
+	test("mount configures frames to render router routes", async () => {
+		let routes = route({ home: "/", sidebar: "/sidebar" });
+		let rootOptions: VirtualRootOptions | undefined;
+		let root: VirtualRoot = {
+			addEventListener() {},
+			removeEventListener() {},
+			dispatchEvent() {
+				return true;
+			},
+			render() {},
+			dispose() {},
+			flush() {},
+		};
+		let router = createRouter({
+			interceptLinks: false,
+			getLocation() {
+				return "http://localhost/";
+			},
+			createRoot(_container, options) {
+				rootOptions = options;
+				return root;
+			},
+		});
+
+		router.map(routes.home, () => "home");
+		router.map(routes.sidebar, (ctx) => `sidebar:${ctx.request.method}`);
+
+		let mounted = router.mount({} as HTMLElement);
+		let frameNode = await rootOptions?.frameInit?.resolveFrame("/sidebar");
+
+		expect(rootOptions?.frameInit?.src).toBe("http://localhost/");
+		expect(readProviderRender(frameNode as RemixNode).children).toBe("sidebar:GET");
+
+		mounted.dispose();
+	});
+
+	test("preserves custom frame resolvers", async () => {
+		let rootOptions: VirtualRootOptions | undefined;
+		let root: VirtualRoot = {
+			addEventListener() {},
+			removeEventListener() {},
+			dispatchEvent() {
+				return true;
+			},
+			render() {},
+			dispose() {},
+			flush() {},
+		};
+		let router = createRouter({
+			interceptLinks: false,
+			rootOptions: {
+				frameInit: {
+					src: "/custom",
+					resolveFrame(src) {
+						return `custom:${src}`;
+					},
+				},
+			},
+			createRoot(_container, options) {
+				rootOptions = options;
+				return root;
+			},
+		});
+
+		let mounted = router.mount({} as HTMLElement);
+
+		expect(await rootOptions?.frameInit?.resolveFrame("/frame")).toBe("custom:/frame");
+
+		mounted.dispose();
 	});
 });

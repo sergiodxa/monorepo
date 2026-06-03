@@ -703,7 +703,7 @@ export function createRouter(options: RouterOptions = {}): UIRouter {
 		},
 
 		mount(container) {
-			let root = createRoot(container, options.rootOptions);
+			let root = createRoot(container, createRootOptions());
 			let routerWindow = getRouterWindow(options);
 			let activeController = new AbortController();
 			let renderVersion = 0;
@@ -898,6 +898,23 @@ export function createRouter(options: RouterOptions = {}): UIRouter {
 		return runMiddleware([...(options.middleware ?? []), ...entry.middleware], context, () =>
 			entry.handler(context),
 		);
+	}
+
+	function createRootOptions(): VirtualRootOptions {
+		let frameInit = options.rootOptions?.frameInit;
+
+		return {
+			...options.rootOptions,
+			frameInit: {
+				...frameInit,
+				src: frameInit?.src ?? resolveURL(getCurrentLocation(options, baseURL), baseURL).href,
+				resolveFrame(src, signal, target) {
+					if (frameInit?.resolveFrame) return frameInit.resolveFrame(src, signal, target);
+
+					return renderURL(src, signal ?? new AbortController().signal);
+				},
+			},
+		};
 	}
 
 	return router;
