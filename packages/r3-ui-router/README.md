@@ -4,11 +4,11 @@ Client-side routing for Remix UI components using route contracts from `remix/ro
 
 ## Overview
 
-`@pkg/r3-ui-router` experiments with the `remix/router` shape on the client. Instead of mapping a route to a Fetch handler that receives a `Request` context and returns a `Response`, it maps a route to a view handler that receives a URL context and returns a `RemixNode`.
+`@pkg/r3-ui-router` experiments with the `remix/router` shape on the client. It maps route actions to Remix UI renderers and browser-side submissions while preserving `Request`, URL, params, and method context.
 
 The package reuses `remix/routes` as the source of truth for URL patterns and `remix/route-pattern` for matching. Rendering is delegated to `remix/ui` through `createRoot`, so route handlers can return normal Remix UI JSX.
 
-Route handlers may be async. This lets a handler load the data needed to render the page before returning Remix UI. Mounted routers use the browser Navigation API when available, with a History API and same-origin link interception fallback for older browsers.
+Route actions may be async. This lets a handler load the data needed to render the page before returning Remix UI. Mounted routers use the browser Navigation API when available, with a History API and same-origin link interception fallback for older browsers.
 
 ## Usage
 
@@ -74,12 +74,75 @@ const router = createRouter();
 router.map(
 	routes.posts,
 	createController(routes.posts, {
-		index() {
-			return <h1>Posts</h1>;
-		},
+		actions: {
+			index() {
+				return <h1>Posts</h1>;
+			},
 
-		show(ctx) {
-			return <h1>Post {ctx.params.id}</h1>;
+			show(ctx) {
+				return <h1>Post {ctx.params.id}</h1>;
+			},
+		},
+	}),
+);
+```
+
+### Mutations and Fetchers
+
+```tsx
+import type { Handle } from "remix/ui";
+
+import { addEventListeners, on } from "remix/ui";
+import { form, route } from "remix/routes";
+
+import { RouterProvider, createController, createRouter } from "@pkg/r3-ui-router";
+
+const routes = route({
+	contact: form("contact"),
+});
+
+interface ContactResult {
+	ok: boolean;
+	message?: string;
+}
+
+function ContactPage(handle: Handle) {
+	let router = handle.context.get(RouterProvider);
+	let fetcher = router.getFetcher<ContactResult>("contact");
+
+	addEventListeners(fetcher, handle.signal, {
+		change() {
+			handle.update();
+		},
+	});
+
+	return () => (
+		<form method="POST" action={routes.contact.action.href()} mix={fetcher.form()}>
+			<textarea name="message" />
+			<button disabled={fetcher.state !== "idle"}>Send</button>
+			{fetcher.data?.message ? <p>{fetcher.data.message}</p> : null}
+		</form>
+	);
+}
+
+const router = createRouter();
+
+router.map(
+	routes.contact,
+	createController(routes.contact, {
+		actions: {
+			index() {
+				return <ContactPage />;
+			},
+
+			async action(ctx) {
+				let formData = await ctx.request.formData();
+
+				return {
+					ok: true,
+					message: `You said ${formData.get("message")}`,
+				} satisfies ContactResult;
+			},
 		},
 	}),
 );
@@ -133,7 +196,7 @@ Creates a client-side router that can map Remix route definitions to view handle
 
 **Returns:**
 
-- A `UIRouter` with `map`, `match`, `render`, `navigate`, and `mount` methods.
+- A `UIRouter` with `map`, `match`, `render`, `navigate`, `submit`, `getFetcher`, `revalidate`, `form`, and `mount` methods.
 
 **Example:**
 
@@ -152,7 +215,7 @@ Maps a single route definition to a view handler.
 **Parameters:**
 
 - `route`: A `Route` produced by `remix/routes`.
-- `handler`: Function receiving `Context` and returning a `RemixNode` or `Promise<RemixNode>`.
+- `handler`: Function receiving `Context` and returning an action result. GET render actions should return a `RemixNode` or `Promise<RemixNode>`.
 
 **Returns:**
 
@@ -174,7 +237,7 @@ Maps the direct route leaves in a route map to view handlers.
 **Parameters:**
 
 - `routeMap`: A branch from a `remix/routes` route map.
-- `controller`: Object with handlers for each direct leaf route.
+- `controller`: Object with an `actions` object for each direct leaf route. A bare action object is also accepted for small apps and existing call sites.
 
 **Returns:**
 
@@ -184,8 +247,10 @@ Maps the direct route leaves in a route map to view handlers.
 
 ```tsx
 router.map(routes.posts, {
-	index: () => <PostsPage />,
-	show: (ctx) => <PostPage id={ctx.params.id} />,
+	actions: {
+		index: () => <PostsPage />,
+		show: (ctx) => <PostPage id={ctx.params.id} />,
+	},
 });
 ```
 
@@ -196,7 +261,7 @@ Defines a route handler while inferring `ctx.params` from the given route target
 **Parameters:**
 
 - `route`: A `Route` produced by `remix/routes`.
-- `handler`: Function receiving route-specific `Context` and returning a `RemixNode` or `Promise<RemixNode>`.
+- `handler`: Function receiving route-specific `Context` and returning an action result.
 
 **Returns:**
 
@@ -228,10 +293,36 @@ Defines direct route-map handlers while inferring `ctx.params` for each direct r
 
 ```tsx
 export const postsController = createController(routes.posts, {
-	index: () => <PostsPage />,
-	show: (ctx) => <PostPage id={ctx.params.id} />,
+	actions: {
+		index: () => <PostsPage />,
+		show: (ctx) => <PostPage id={ctx.params.id} />,
+	},
 });
 ```
+
+### `router.submit(target, options?): Promise<data | undefined>`
+
+Submits data through an internal `Fetcher`, then navigates like a normal form submission. Redirect `Response` results navigate to their `Location`; other results navigate to the submitted route URL or revalidate when already on that URL.
+
+### `router.getFetcher<data = unknown>(name?): Fetcher<data>`
+
+Returns a fetcher for background route submissions. Named fetchers are shared by key; unnamed fetchers receive a unique key per call.
+
+### `router.revalidate(): Promise<void>`
+
+Re-runs the current route action for all mounted roots. Fetcher non-GET submissions call this after storing their result unless `revalidate: false` is passed.
+
+### `router.form(options?): MixinDescriptor<HTMLFormElement>`
+
+Returns a form mixin that intercepts same-page form submissions and submits through `router.submit`.
+
+### `fetcher.submit(target, options?): Promise<void>`
+
+Runs the matching route action without changing the current URL unless the action returns a redirect `Response`. The fetcher stores the result in `fetcher.data` and dispatches `change` events during state transitions.
+
+### `fetcher.form(options?): MixinDescriptor<HTMLFormElement>`
+
+Returns a form mixin that submits through the fetcher. This is the Remix UI equivalent of React Router's `fetcher.Form`.
 
 ### `router.match(input?: RouterInput): RouteMatch | null`
 
@@ -329,7 +420,7 @@ Extracts the route-pattern string from a `RouteTarget`. This powers handler para
 
 #### `Context<params, route>`
 
-Context passed to mapped view handlers. It includes `url`, decoded `params`, the matched `route`, an abort `signal`, and `navigate`.
+Context passed to mapped route actions. It includes `request`, `url`, `method`, decoded `params`, the matched `route`, an abort `signal`, and router helpers such as `navigate`, `submit`, `revalidate`, and `getFetcher`.
 
 #### `NotFoundContext`
 
@@ -337,7 +428,15 @@ Context passed to `options.defaultElement` when no mapped route matches. It incl
 
 #### `ViewHandler<route>`
 
-Function type for route renderers. It receives `Context` with params inferred from the mapped route and returns a `RemixNode` or `Promise<RemixNode>`.
+Function type for route actions. It receives `Context` with params inferred from the mapped route and can return UI, data, or a `Response`.
+
+#### `Fetcher<data>`
+
+Typed EventTarget used for background submissions. It exposes `state`, `data`, `formData`, `request`, `load`, `submit`, `form`, and `dispose`.
+
+#### `SubmitOptions`
+
+Options accepted by router and fetcher submissions. Use `action`, `method`, `encType`, `submitter`, and `revalidate` to control how a submission request is created.
 
 #### `RouterProviderValue`
 

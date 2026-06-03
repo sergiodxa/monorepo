@@ -131,6 +131,150 @@ describe(createRouter.name, () => {
 		expect(wrapped).toBe(controller);
 	});
 
+	test("maps fetch-router-style controller actions", async () => {
+		let routes = route({
+			contact: {
+				index: { method: "GET", pattern: "/contact" },
+				action: { method: "POST", pattern: "/contact" },
+			},
+		});
+		let router = createRouter();
+
+		router.map(
+			routes.contact,
+			createController(routes.contact, {
+				actions: {
+					index(ctx) {
+						return `index:${ctx.request.method}:${ctx.method}`;
+					},
+					async action(ctx) {
+						let formData = await ctx.request.formData();
+
+						return { message: formData.get("message") };
+					},
+				},
+			}),
+		);
+
+		let fetcher = router.getFetcher<{ message: FormDataEntryValue | null }>("contact");
+
+		expect(readProviderRender(await router.render("/contact")).children).toBe("index:GET:GET");
+
+		await fetcher.submit(
+			{ message: "hello" },
+			{
+				method: "POST",
+				action: "/contact",
+				revalidate: false,
+			},
+		);
+
+		expect(fetcher.data).toEqual({ message: "hello" });
+		expect(fetcher.state).toBe("idle");
+	});
+
+	test("fetcher submissions revalidate mounted roots", async () => {
+		let routes = route({
+			contact: {
+				index: { method: "GET", pattern: "/contact" },
+				action: { method: "POST", pattern: "/contact" },
+			},
+		});
+		let renders = 0;
+		let rendered: RemixNode[] = [];
+		let root: VirtualRoot = {
+			addEventListener() {},
+			removeEventListener() {},
+			dispatchEvent() {
+				return true;
+			},
+			render(node) {
+				rendered.push(readProviderRender(node).children);
+			},
+			dispose() {},
+			flush() {},
+		};
+		let router = createRouter({
+			interceptLinks: false,
+			getLocation() {
+				return "/contact";
+			},
+			createRoot() {
+				return root;
+			},
+		});
+
+		router.map(routes.contact, {
+			actions: {
+				index() {
+					renders++;
+					return `render:${renders}`;
+				},
+				action() {
+					return { ok: true };
+				},
+			},
+		});
+
+		let mounted = router.mount({} as HTMLElement);
+		await mounted.render();
+
+		let fetcher = router.getFetcher<{ ok: boolean }>();
+		let renderCount = rendered.length;
+
+		await fetcher.submit(null, { method: "POST", action: "/contact" });
+
+		expect(fetcher.data).toEqual({ ok: true });
+		expect(rendered).toHaveLength(renderCount + 1);
+		expect(rendered.at(-1)).toBe(`render:${renders}`);
+
+		mounted.dispose();
+	});
+
+	test("router submit navigates to redirect responses", async () => {
+		let routes = route({
+			save: { method: "POST", pattern: "/save" },
+			done: { method: "GET", pattern: "/done" },
+		});
+		let rendered: RemixNode[] = [];
+		let root: VirtualRoot = {
+			addEventListener() {},
+			removeEventListener() {},
+			dispatchEvent() {
+				return true;
+			},
+			render(node) {
+				rendered.push(readProviderRender(node).children);
+			},
+			dispose() {},
+			flush() {},
+		};
+		let router = createRouter({
+			interceptLinks: false,
+			getLocation() {
+				return "/done";
+			},
+			createRoot() {
+				return root;
+			},
+		});
+
+		router.map(
+			routes.save,
+			() => new Response(null, { status: 302, headers: { Location: "/done" } }),
+		);
+		router.map(routes.done, () => "done");
+
+		let mounted = router.mount({} as HTMLElement);
+		await mounted.render();
+
+		await router.submit(null, { method: "POST", action: "/save" });
+
+		expect(rendered).toEqual(["done", "done"]);
+
+		mounted.dispose();
+	});
+
 	test("renders the default element when no route matches", async () => {
 		let router = createRouter({
 			async defaultElement(ctx) {
