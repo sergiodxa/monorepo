@@ -159,6 +159,8 @@ export interface RouterWindow {
 	readonly location: Location;
 	/** Browser history used for programmatic navigation. */
 	readonly history: History;
+	/** Browser Navigation API used when available. */
+	readonly navigation?: RouterNavigation;
 	/** Subscribe to browser events such as `popstate`. */
 	addEventListener(
 		type: string,
@@ -171,6 +173,43 @@ export interface RouterWindow {
 		listener: EventListener,
 		options?: boolean | EventListenerOptions,
 	): void;
+}
+
+/** Browser Navigation API surface used by the router. */
+export interface RouterNavigation {
+	/** Programmatically navigate through the browser Navigation API. */
+	navigate(url: string, options?: RouterNavigationOptions): RouterNavigationResult;
+	/** Subscribe to Navigation API events. */
+	addEventListener(type: string, listener: EventListener): void;
+	/** Unsubscribe from Navigation API events. */
+	removeEventListener(type: string, listener: EventListener): void;
+}
+
+/** Options accepted by the browser Navigation API. */
+export interface RouterNavigationOptions {
+	/** Browser history behavior for the new navigation entry. */
+	history?: "push" | "replace";
+	/** Entry state stored with the navigation. */
+	state?: unknown;
+}
+
+/** Result returned by the browser Navigation API. */
+export interface RouterNavigationResult {
+	/** Resolves after the new entry is committed. */
+	committed: Promise<unknown>;
+	/** Resolves after intercepted navigation work finishes. */
+	finished: Promise<unknown>;
+}
+
+/** Navigation API event shape consumed by mounted routers. */
+interface RouterNavigationEvent extends Event {
+	canIntercept?: boolean;
+	navigationType?: "push" | "replace" | "reload" | "traverse";
+	destination: {
+		url: string;
+		getState(): unknown;
+	};
+	intercept(options: { handler(): Awaitable<void> }): void;
 }
 
 /**
@@ -328,6 +367,17 @@ export function createRouter(options: RouterOptions = {}): UIRouter {
 			let routerWindow = getRouterWindow(options);
 
 			if (routerWindow && visibleURL.origin === routerWindow.location.origin) {
+				if (routerWindow.navigation) {
+					let state = createNavigationState(navigationOptions?.state, url, visibleURL);
+					let result = routerWindow.navigation.navigate(visibleURL.href, {
+						history: navigationOptions?.replace ? "replace" : "push",
+						state,
+					});
+
+					await result.finished;
+					return;
+				}
+
 				let state = createHistoryState(navigationOptions?.state, url, visibleURL);
 
 				if (navigationOptions?.replace) {
@@ -337,7 +387,7 @@ export function createRouter(options: RouterOptions = {}): UIRouter {
 				}
 			}
 
-			await Promise.all(Array.from(mountedRoots, (mountedRoot) => mountedRoot.render(url)));
+			await renderMountedRoots(url);
 		},
 
 		mount(container) {
@@ -375,7 +425,9 @@ export function createRouter(options: RouterOptions = {}): UIRouter {
 					activeController.abort();
 					mountedRoots.delete(mounted);
 
-					if (routerWindow) {
+					if (routerWindow?.navigation) {
+						routerWindow.navigation.removeEventListener("navigate", handleNavigation);
+					} else if (routerWindow) {
 						routerWindow.removeEventListener("popstate", handlePopState);
 					}
 
@@ -391,6 +443,26 @@ export function createRouter(options: RouterOptions = {}): UIRouter {
 				void mounted.render(getHistoryRenderURL(event.state) ?? undefined);
 			}
 
+			function handleNavigation(event: Event) {
+				if (!isRouterNavigationEvent(event)) return;
+
+				let url = resolveURL(event.destination.url, baseURL);
+
+				if (!routerWindow || url.origin !== routerWindow.location.origin) return;
+
+				let state = readRouterState(event.destination.getState());
+				let shouldIntercept =
+					interceptLinks || event.navigationType === "traverse" || Boolean(state);
+
+				if (!shouldIntercept || event.canIntercept === false) return;
+
+				event.intercept({
+					async handler() {
+						await renderMountedRoots(state?.__r3UIRouter.renderURL ?? url);
+					},
+				});
+			}
+
 			function handleClick(event: MouseEvent) {
 				let link = getNavigableLink(event, routerWindow);
 
@@ -402,11 +474,13 @@ export function createRouter(options: RouterOptions = {}): UIRouter {
 
 			mountedRoots.add(mounted);
 
-			if (routerWindow) {
+			if (routerWindow?.navigation) {
+				routerWindow.navigation.addEventListener("navigate", handleNavigation);
+			} else if (routerWindow) {
 				routerWindow.addEventListener("popstate", handlePopState);
 			}
 
-			if (interceptLinks) {
+			if (interceptLinks && !routerWindow?.navigation) {
 				container.addEventListener("click", handleClick);
 			}
 
@@ -460,6 +534,10 @@ export function createRouter(options: RouterOptions = {}): UIRouter {
 		);
 	}
 
+	function renderMountedRoots(input: RouterInput): Promise<Array<RemixNode>> {
+		return Promise.all(Array.from(mountedRoots, (mountedRoot) => mountedRoot.render(input)));
+	}
+
 	return router;
 }
 
@@ -492,11 +570,33 @@ function createHistoryState(userState: unknown, renderURL: URL, visibleURL: URL)
 	} satisfies RouterHistoryState;
 }
 
+/** Stores router navigation metadata so Navigation API events can render masked URLs. */
+function createNavigationState(
+	userState: unknown,
+	renderURL: URL,
+	visibleURL: URL,
+): RouterHistoryState {
+	return {
+		__r3UIRouter: {
+			renderURL: renderURL.href,
+			visibleURL: visibleURL.href,
+		},
+		userState,
+	};
+}
+
 /** Reads the unmasked render URL from a popstate event when available. */
 function getHistoryRenderURL(state: unknown): string | undefined {
 	if (!isRouterHistoryState(state)) return undefined;
 
 	return state.__r3UIRouter?.renderURL;
+}
+
+/** Reads router metadata from Navigation API destination state. */
+function readRouterState(state: unknown): RouterHistoryState | undefined {
+	if (!isRouterHistoryState(state)) return undefined;
+
+	return state;
 }
 
 /** Checks whether browser history state contains router masking metadata. */
@@ -510,6 +610,19 @@ function isRouterHistoryState(state: unknown): state is RouterHistoryState {
 	if (!("renderURL" in routerState)) return false;
 
 	return typeof routerState.renderURL === "string";
+}
+
+/** Checks whether a browser event is a Navigation API event. */
+function isRouterNavigationEvent(event: Event): event is RouterNavigationEvent {
+	if (!("destination" in event)) return false;
+	if (!("intercept" in event)) return false;
+
+	let destination = (event as { destination: unknown }).destination;
+
+	if (!destination || typeof destination !== "object") return false;
+	if (!("url" in destination) || !("getState" in destination)) return false;
+
+	return typeof destination.url === "string" && typeof destination.getState === "function";
 }
 
 /** Registers one route target with the shared route-pattern matcher. */

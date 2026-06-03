@@ -8,7 +8,7 @@ Client-side routing for Remix UI components using route contracts from `remix/ro
 
 The package reuses `remix/routes` as the source of truth for URL patterns and `remix/route-pattern` for matching. Rendering is delegated to `remix/ui` through `createRoot`, so route handlers can return normal Remix UI JSX.
 
-Route handlers may be async. This lets a handler load the data needed to render the page before returning Remix UI.
+Route handlers may be async. This lets a handler load the data needed to render the page before returning Remix UI. Mounted routers use the browser Navigation API when available, with a History API and same-origin link interception fallback for older browsers.
 
 ## Usage
 
@@ -272,7 +272,7 @@ const node = await router.render("/posts/hello");
 
 ### `router.navigate(to: RouterInput, options?: NavigateOptions): Promise<void>`
 
-Updates browser history when possible and re-renders mounted roots. When `options.mask` is provided, the router renders `to` while showing `mask` in the address bar.
+Updates the browser through the Navigation API when available and re-renders mounted roots from intercepted navigation events. Older browsers fall back to `history.pushState`/`replaceState` and explicit root refreshes. When `options.mask` is provided, the router renders `to` while showing `mask` in the address bar.
 
 **Parameters:**
 
@@ -291,7 +291,7 @@ await router.navigate("/album/1?photoId=7", { mask: "/photo/7" });
 
 ### `router.mount(container: HTMLElement): MountedRouter`
 
-Mounts the router into a DOM element and renders the current location.
+Mounts the router into a DOM element and renders the current location. Mounted routers listen for same-origin Navigation API events when available; otherwise they listen for `popstate` and intercept same-origin anchor clicks.
 
 **Parameters:**
 
@@ -359,9 +359,21 @@ Object type for mapping direct route-map leaves. Each direct leaf route gets a h
 
 Result returned by `router.match`. It includes `url`, `route`, and decoded `params`.
 
+#### `RouterNavigation`
+
+Small browser Navigation API adapter used by `mount` and `navigate`. Override it in tests when you need to simulate `navigation.navigate` and `navigate` events.
+
+#### `RouterNavigationOptions`
+
+Options forwarded to `navigation.navigate`, including `history` and `state`.
+
+#### `RouterNavigationResult`
+
+Result returned by `navigation.navigate`. The router awaits `finished` so intercepted route rendering completes before `router.navigate` resolves.
+
 #### `RouterWindow`
 
-Small browser window adapter used by `mount` and `navigate`. Override it in tests when you need to simulate `location`, `history`, and `popstate`.
+Small browser window adapter used by `mount` and `navigate`. Override it in tests when you need to simulate `location`, `navigation`, `history`, and `popstate`.
 
 #### `RouterOptions`
 
@@ -404,3 +416,4 @@ Server code can still use `remix/router` to return `Response` objects, while bro
 1. **Define routes once** - Use `remix/routes` as the shared contract and avoid hard-coded path strings in view handlers.
 2. **Map direct leaves** - Route-map controllers only map direct leaf routes; nested route maps should be mapped explicitly.
 3. **Keep handlers pure** - Prefer returning UI from `ctx` and move browser effects into component event handlers.
+4. **Prefer platform navigation** - Mounted routers use `window.navigation` when available, so browser-driven navigations and programmatic router navigations share the same rendering path.

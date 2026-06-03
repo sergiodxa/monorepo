@@ -363,4 +363,107 @@ describe(createRouter.name, () => {
 
 		mounted.dispose();
 	});
+
+	test("uses the Navigation API when available", async () => {
+		let routes = route({ album: "/album/:id" });
+		let rendered: RemixNode[] = [];
+		let visibleURL = "http://localhost:3000/album/1";
+		let navigateListener: EventListener | undefined;
+		let removedNavigateListener: EventListener | undefined;
+		let navigationOptions: unknown;
+		let historyUsed = false;
+		let root: VirtualRoot = {
+			addEventListener() {},
+			removeEventListener() {},
+			dispatchEvent() {
+				return true;
+			},
+			render(node) {
+				rendered.push(readProviderRender(node).children);
+			},
+			dispose() {},
+			flush() {},
+		};
+		let router = createRouter({
+			interceptLinks: false,
+			getLocation() {
+				return visibleURL;
+			},
+			createRoot() {
+				return root;
+			},
+			window: {
+				location: {
+					href: visibleURL,
+					origin: "http://localhost:3000",
+				} as Location,
+				history: {
+					pushState() {
+						historyUsed = true;
+					},
+					replaceState() {
+						historyUsed = true;
+					},
+				} as History,
+				navigation: {
+					navigate(url, options) {
+						navigationOptions = options;
+						visibleURL = url;
+
+						let intercepted = Promise.resolve();
+						let event = {
+							canIntercept: true,
+							navigationType: options?.history ?? "push",
+							destination: {
+								url,
+								getState() {
+									return options?.state;
+								},
+							},
+							intercept(interceptOptions: { handler(): Promise<void> | void }) {
+								intercepted = Promise.resolve(interceptOptions.handler());
+							},
+						} as Event;
+
+						navigateListener?.(event);
+
+						return {
+							committed: Promise.resolve(),
+							finished: intercepted,
+						};
+					},
+					addEventListener(type, listener) {
+						if (type === "navigate") navigateListener = listener;
+					},
+					removeEventListener(type, listener) {
+						if (type === "navigate") removedNavigateListener = listener;
+					},
+				},
+				addEventListener() {},
+				removeEventListener() {},
+			},
+		});
+
+		router.map(routes.album, (ctx) => {
+			return `album:${ctx.params.id}:photo:${ctx.url.searchParams.get("photoId")}`;
+		});
+
+		let mounted = router.mount({} as HTMLElement);
+		await mounted.render();
+
+		await router.navigate("/album/1?photoId=7", { mask: "/photo/7" });
+
+		expect(historyUsed).toBe(false);
+		expect(visibleURL).toBe("http://localhost:3000/photo/7");
+		expect(navigationOptions).toEqual(
+			expect.objectContaining({
+				history: "push",
+			}),
+		);
+		expect(rendered).toEqual(["album:1:photo:null", "album:1:photo:7"]);
+
+		mounted.dispose();
+
+		expect(removedNavigateListener).toBe(navigateListener);
+	});
 });
