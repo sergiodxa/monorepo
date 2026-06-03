@@ -6,6 +6,7 @@ import { route } from "remix/routes";
 
 import {
 	createAction,
+	createContextKey,
 	createController,
 	createRouter,
 	RouterProvider,
@@ -275,6 +276,80 @@ describe(createRouter.name, () => {
 		mounted.dispose();
 	});
 
+	test("runs router, controller, and action middleware in order", async () => {
+		let routes = route({
+			admin: {
+				show: "/admin/:id",
+			},
+		});
+		let User = createContextKey<{ id: string }>();
+		let calls: string[] = [];
+		let router = createRouter({
+			middleware: [
+				async (ctx, next) => {
+					calls.push("router:before");
+					ctx.set(User, { id: "root" });
+					let result = await next();
+					calls.push("router:after");
+					return result;
+				},
+			],
+		});
+
+		router.map(
+			routes.admin,
+			createController(routes.admin, {
+				middleware: [
+					(ctx, next) => {
+						calls.push(`controller:${ctx.get(User)?.id}`);
+						ctx.set(User, { id: "controller" });
+						return next();
+					},
+				],
+				actions: {
+					show: {
+						middleware: [
+							(ctx, next) => {
+								calls.push(`action:${ctx.params.id}`);
+								return next();
+							},
+						],
+						handler(ctx) {
+							calls.push("handler");
+							return `user:${ctx.get(User)?.id}`;
+						},
+					},
+				},
+			}),
+		);
+
+		expect(readProviderRender(await router.render("/admin/123")).children).toBe("user:controller");
+		expect(calls).toEqual([
+			"router:before",
+			"controller:root",
+			"action:123",
+			"handler",
+			"router:after",
+		]);
+	});
+
+	test("middleware can short-circuit route actions", async () => {
+		let routes = route({ secret: "/secret" });
+		let router = createRouter();
+
+		router.map(
+			routes.secret,
+			createAction(routes.secret, {
+				middleware: [() => "blocked"],
+				handler() {
+					return "secret";
+				},
+			}),
+		);
+
+		expect(readProviderRender(await router.render("/secret")).children).toBe("blocked");
+	});
+
 	test("renders the default element when no route matches", async () => {
 		let router = createRouter({
 			async defaultElement(ctx) {
@@ -500,8 +575,7 @@ describe(createRouter.name, () => {
 		expect(rendered).toEqual(["album:1:photo:null", "album:1:photo:7"]);
 
 		popstateListener?.({ state: historyState } as PopStateEvent);
-		await Promise.resolve();
-		await Promise.resolve();
+		await new Promise((resolve) => setTimeout(resolve, 0));
 
 		expect(rendered).toEqual(["album:1:photo:null", "album:1:photo:7", "album:1:photo:7"]);
 

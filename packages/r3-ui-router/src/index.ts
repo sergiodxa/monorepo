@@ -22,6 +22,24 @@ export type RouteTarget<pattern extends string = string> = string | Route<any, p
  */
 export type Awaitable<value> = value | Promise<value>;
 
+/** Type-safe key for values stored in route action context. */
+export interface ContextKey<value> {
+	/** Value returned by `ctx.get(key)` when no value has been set. */
+	defaultValue?: value;
+}
+
+/** Creates a context key for middleware-provided values. */
+export function createContextKey<value>(): ContextKey<value>;
+export function createContextKey<value>(defaultValue: value): ContextKey<value> & {
+	defaultValue: value;
+};
+export function createContextKey<value>(defaultValue?: value): ContextKey<value> {
+	return defaultValue === undefined ? {} : { defaultValue };
+}
+
+/** Resolves the value type associated with a context key. */
+export type ContextValue<key> = key extends ContextKey<infer value> ? value : never;
+
 /**
  * Extracts the route-pattern source string from a route target.
  */
@@ -59,6 +77,12 @@ export interface Context<
 	revalidate(): Promise<void>;
 	/** Return a shared or unique fetcher for background submissions. */
 	getFetcher<data = unknown>(name?: string): Fetcher<data>;
+	/** Read a middleware-provided context value. */
+	get<key extends ContextKey<unknown>>(key: key): ContextValue<key> | undefined;
+	/** Check whether a middleware-provided value exists. */
+	has<key extends ContextKey<unknown>>(key: key): boolean;
+	/** Store a middleware-provided context value. */
+	set<key extends ContextKey<unknown>>(key: key, value: ContextValue<key>): void;
 }
 
 /**
@@ -81,6 +105,12 @@ export interface NotFoundContext {
 	revalidate(): Promise<void>;
 	/** Return a shared or unique fetcher for background submissions. */
 	getFetcher<data = unknown>(name?: string): Fetcher<data>;
+	/** Read a middleware-provided context value. */
+	get<key extends ContextKey<unknown>>(key: key): ContextValue<key> | undefined;
+	/** Check whether a middleware-provided value exists. */
+	has<key extends ContextKey<unknown>>(key: key): boolean;
+	/** Store a middleware-provided context value. */
+	set<key extends ContextKey<unknown>>(key: key, value: ContextValue<key>): void;
 }
 
 /**
@@ -95,6 +125,37 @@ export interface ViewHandler<route extends RouteTarget = RouteTarget> {
 	 */
 	(ctx: Context<MatchParams<RoutePatternSource<route>>, route>): Awaitable<unknown>;
 }
+
+/** Function that invokes the next middleware or action in the chain. */
+export interface NextFunction {
+	/** Continue to the next middleware or final route action. */
+	(): Promise<unknown>;
+}
+
+/** Middleware that can short-circuit or continue a route action. */
+export interface Middleware<context extends Context = Context> {
+	/**
+	 * Handles a route action before the final handler runs.
+	 *
+	 * @param context Mutable route action context shared by the full chain.
+	 * @param next Invokes the next middleware or final action.
+	 * @returns A result to short-circuit, or `undefined` to continue.
+	 */
+	(context: context, next: NextFunction): Awaitable<unknown | undefined | void>;
+}
+
+/** Route action object with inline middleware. */
+export interface ActionObject<route extends RouteTarget = RouteTarget> {
+	/** Middleware that runs only for this route action. */
+	middleware?: readonly Middleware[];
+	/** Final route action handler. */
+	handler: ViewHandler<route>;
+}
+
+/** Route action accepted by `router.map` and route-map controllers. */
+export type Action<route extends RouteTarget = RouteTarget> =
+	| ViewHandler<route>
+	| ActionObject<route>;
 
 /** State exposed by fetchers while a route action is running or revalidating. */
 export type FetcherState = "idle" | "submitting" | "loading";
@@ -167,11 +228,13 @@ export interface RouterProviderProps {
 export type UIControllerActions<routes extends RouteMap> = {
 	[name in keyof routes as routes[name] extends Route<any, any>
 		? name
-		: never]: routes[name] extends Route<any, any> ? ViewHandler<routes[name]> : never;
+		: never]: routes[name] extends Route<any, any> ? Action<routes[name]> : never;
 };
 
 /** Controller object for direct leaf routes in a route map branch. */
 export interface UIController<routes extends RouteMap> {
+	/** Middleware that runs for every direct action in this controller. */
+	middleware?: readonly Middleware[];
 	/** Route actions for direct leaf routes in the route map. */
 	actions: UIControllerActions<routes>;
 }
@@ -188,7 +251,7 @@ export type UIControllerInput<routes extends RouteMap> =
  * @param handler View handler for the route target.
  * @returns The same handler function.
  */
-export function createAction<route extends RouteTarget, handler extends ViewHandler<route>>(
+export function createAction<route extends RouteTarget, handler extends Action<route>>(
 	_route: route,
 	handler: handler,
 ): handler {
@@ -300,6 +363,8 @@ export interface RouterOptions {
 	window?: RouterWindow;
 	/** Intercept same-origin anchor clicks from mounted containers. Defaults to `true`. */
 	interceptLinks?: boolean;
+	/** Middleware that runs before matched route actions and default renders. */
+	middleware?: readonly Middleware[];
 }
 
 /**
@@ -333,9 +398,9 @@ export interface MountedRouter {
  */
 export interface UIRouter {
 	/** Map one route target to a view handler. */
-	map<route extends RouteTarget>(route: route, handler: ViewHandler<route>): UIRouter;
+	map<route extends RouteTarget>(route: route, handler: Action<route>): UIRouter;
 	/** Map the direct leaf routes in a route map to view handlers. */
-	map<routes extends RouteMap>(routes: routes, controller: UIController<routes>): UIRouter;
+	map<routes extends RouteMap>(routes: routes, controller: UIControllerInput<routes>): UIRouter;
 	/** Find the most specific registered route for a URL. */
 	match(input?: RouterInput): RouteMatch | null;
 	/** Render the matching route handler without mounting into the DOM. */
@@ -359,6 +424,7 @@ interface RouteEntry<route extends RouteTarget = RouteTarget> {
 	route: route;
 	handler: ViewHandler<route>;
 	method: string;
+	middleware: readonly Middleware[];
 }
 
 /** Internal contract used by fetchers to execute submissions. */
@@ -526,20 +592,21 @@ export function createRouter(options: RouterOptions = {}): UIRouter {
 	};
 
 	let router: UIRouter = {
-		map(target: RouteTarget | RouteMap, handler: ViewHandler | UIControllerInput<RouteMap>) {
+		map(target: RouteTarget | RouteMap, handler: Action | UIControllerInput<RouteMap>) {
 			if (isRouteTarget(target)) {
-				registerRoute(matcher, target, handler as ViewHandler);
+				registerRoute(matcher, target, handler as Action);
 				return router;
 			}
 
 			let actions = getControllerActions(handler);
+			let controllerMiddleware = getControllerMiddleware(handler);
 
 			for (let name in target) {
 				let route = target[name];
 				let routeHandler = actions[name];
 
-				if (route instanceof Route && typeof routeHandler === "function") {
-					registerRoute(matcher, route, routeHandler as ViewHandler);
+				if (route instanceof Route && isAction(routeHandler)) {
+					registerRoute(matcher, route, routeHandler, controllerMiddleware);
 				}
 			}
 
@@ -742,7 +809,7 @@ export function createRouter(options: RouterOptions = {}): UIRouter {
 		let match = matchRequest(request);
 
 		if (!match) {
-			let context: NotFoundContext = {
+			let context = createContext<NotFoundContext>({
 				request,
 				url,
 				method: request.method,
@@ -751,8 +818,11 @@ export function createRouter(options: RouterOptions = {}): UIRouter {
 				submit: router.submit,
 				revalidate: router.revalidate,
 				getFetcher: router.getFetcher,
-			};
-			let node = (await options.defaultElement?.(context)) ?? null;
+			});
+			let node =
+				(await runMiddleware(options.middleware ?? [], context as Context, async () => {
+					return (await options.defaultElement?.(context)) ?? null;
+				})) ?? null;
 
 			return createElement(
 				RouterProvider,
@@ -768,7 +838,7 @@ export function createRouter(options: RouterOptions = {}): UIRouter {
 			route: match.data.route,
 			params: match.params,
 		};
-		let context = {
+		let context = createContext({
 			request,
 			url: routeMatch.url,
 			method: request.method,
@@ -779,8 +849,8 @@ export function createRouter(options: RouterOptions = {}): UIRouter {
 			submit: router.submit,
 			revalidate: router.revalidate,
 			getFetcher: router.getFetcher,
-		} as Context;
-		let node = (await match.data.handler(context)) as RemixNode;
+		} as Context);
+		let node = (await runRouteAction(context, match.data)) as RemixNode;
 
 		return createElement(
 			RouterProvider,
@@ -808,7 +878,7 @@ export function createRouter(options: RouterOptions = {}): UIRouter {
 
 		if (!match) return null;
 
-		let context = {
+		let context = createContext({
 			request,
 			url: match.url,
 			method: request.method,
@@ -819,9 +889,15 @@ export function createRouter(options: RouterOptions = {}): UIRouter {
 			submit: router.submit,
 			revalidate: router.revalidate,
 			getFetcher: router.getFetcher,
-		} as Context;
+		} as Context);
 
-		return match.data.handler(context);
+		return runRouteAction(context, match.data);
+	}
+
+	function runRouteAction(context: Context, entry: RouteEntry): Promise<unknown> {
+		return runMiddleware([...(options.middleware ?? []), ...entry.middleware], context, () =>
+			entry.handler(context),
+		);
 	}
 
 	return router;
@@ -922,14 +998,110 @@ function getControllerActions(controller: unknown): Record<string, unknown> {
 	return controller as Record<string, unknown>;
 }
 
+/** Returns controller-level middleware from supported controller shapes. */
+function getControllerMiddleware(controller: unknown): readonly Middleware[] {
+	if (!isControllerObject(controller)) return [];
+
+	return controller.middleware ?? [];
+}
+
 /** Checks for the fetch-router-style controller shape. */
-function isControllerObject(value: unknown): value is { actions: Record<string, unknown> } {
+function isControllerObject(value: unknown): value is {
+	middleware?: readonly Middleware[];
+	actions: Record<string, unknown>;
+} {
 	if (!value || typeof value !== "object") return false;
 	if (!("actions" in value)) return false;
 
 	let actions = value.actions;
 
 	return Boolean(actions) && typeof actions === "object";
+}
+
+/** Checks whether a value can be registered as a route action. */
+function isAction(value: unknown): value is Action {
+	return typeof value === "function" || isActionObject(value);
+}
+
+/** Checks whether a value is an action object with inline middleware. */
+function isActionObject(value: unknown): value is ActionObject {
+	if (!value || typeof value !== "object") return false;
+	if (!("handler" in value)) return false;
+
+	return typeof value.handler === "function";
+}
+
+/** Normalizes plain handlers and action objects into one route entry shape. */
+function normalizeAction<route extends RouteTarget>(
+	action: Action<route>,
+	controllerMiddleware: readonly Middleware[],
+): { handler: ViewHandler<route>; middleware: readonly Middleware[] } {
+	if (isActionObject(action)) {
+		return {
+			handler: action.handler as ViewHandler<route>,
+			middleware: [...controllerMiddleware, ...(action.middleware ?? [])],
+		};
+	}
+
+	return {
+		handler: action,
+		middleware: controllerMiddleware,
+	};
+}
+
+/** Adds request-scoped context value storage to a context object. */
+function createContext<context extends Context | NotFoundContext>(
+	context: Omit<context, "get" | "has" | "set">,
+): context {
+	let values = new Map<ContextKey<unknown>, unknown>();
+	let extended = context as context;
+
+	extended.get = function get<key extends ContextKey<unknown>>(key: key) {
+		if (values.has(key)) return values.get(key) as ContextValue<key>;
+		return key.defaultValue as ContextValue<key> | undefined;
+	};
+	extended.has = function has<key extends ContextKey<unknown>>(key: key) {
+		return values.has(key) || "defaultValue" in key;
+	};
+	extended.set = function set<key extends ContextKey<unknown>>(key: key, value: ContextValue<key>) {
+		values.set(key, value);
+	};
+
+	return extended;
+}
+
+/** Runs middleware in order and falls through when middleware returns undefined. */
+async function runMiddleware(
+	middleware: readonly Middleware[],
+	context: Context,
+	handler: () => Awaitable<unknown>,
+): Promise<unknown> {
+	let index = -1;
+
+	async function dispatch(nextIndex: number): Promise<unknown> {
+		if (nextIndex <= index) throw new Error("Middleware next() called multiple times.");
+
+		index = nextIndex;
+
+		let current = middleware[nextIndex];
+
+		if (!current) return handler();
+
+		let nextCalled = false;
+		let nextResult: unknown;
+		let result = await current(context, async () => {
+			nextCalled = true;
+			nextResult = await dispatch(nextIndex + 1);
+			return nextResult;
+		});
+
+		if (result !== undefined) return result;
+		if (nextCalled) return nextResult;
+
+		return dispatch(nextIndex + 1);
+	}
+
+	return dispatch(0);
 }
 
 /** Mixin that submits forms through router navigation submissions. */
@@ -1257,9 +1429,17 @@ function getSubmitterTarget(submitter: HTMLElement | null): string | undefined {
 function registerRoute<route extends RouteTarget>(
 	matcher: ReturnType<typeof createMultiMatcher<RouteEntry>>,
 	route: route,
-	handler: ViewHandler<route>,
+	action: Action<route>,
+	controllerMiddleware: readonly Middleware[] = [],
 ) {
-	matcher.add(getRoutePattern(route), { route, handler, method: getRouteMethod(route) });
+	let normalized = normalizeAction(action, controllerMiddleware);
+
+	matcher.add(getRoutePattern(route), {
+		route,
+		handler: normalized.handler,
+		method: getRouteMethod(route),
+		middleware: normalized.middleware,
+	});
 }
 
 /** Checks whether a value can be registered as a single route target. */

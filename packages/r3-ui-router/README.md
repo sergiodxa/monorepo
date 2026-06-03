@@ -95,7 +95,12 @@ import type { Handle } from "remix/ui";
 import { addEventListeners, on } from "remix/ui";
 import { form, route } from "remix/routes";
 
-import { RouterProvider, createController, createRouter } from "@pkg/r3-ui-router";
+import {
+	RouterProvider,
+	createContextKey,
+	createController,
+	createRouter,
+} from "@pkg/r3-ui-router";
 
 const routes = route({
 	contact: form("contact"),
@@ -148,6 +153,45 @@ router.map(
 );
 ```
 
+### Middleware
+
+Middleware can run globally on the router, on every direct action in a controller, or on a single action object. Middleware receives the same mutable context as actions and can either return a result to short-circuit or call `next()`.
+
+```tsx
+import { createAction, createContextKey, createController, createRouter } from "@pkg/r3-ui-router";
+
+const CurrentUser = createContextKey<{ id: string }>();
+
+const router = createRouter({
+	middleware: [
+		async (ctx, next) => {
+			ctx.set(CurrentUser, { id: "user-1" });
+			return next();
+		},
+	],
+});
+
+router.map(
+	routes.admin,
+	createController(routes.admin, {
+		middleware: [
+			(ctx, next) => {
+				if (!ctx.get(CurrentUser)) return <ForbiddenPage />;
+				return next();
+			},
+		],
+		actions: {
+			dashboard: createAction(routes.admin.dashboard, {
+				middleware: [requireAdmin()],
+				handler(ctx) {
+					return <DashboardPage user={ctx.get(CurrentUser)!} />;
+				},
+			}),
+		},
+	}),
+);
+```
+
 ### Programmatic Navigation
 
 ```tsx
@@ -193,6 +237,7 @@ Creates a client-side router that can map Remix route definitions to view handle
 - `options.getLocation`: Optional location reader for non-browser tests.
 - `options.window`: Optional browser window adapter.
 - `options.interceptLinks`: Whether `mount` should intercept same-origin links. Defaults to `true`.
+- `options.middleware`: Global middleware that runs before matched route actions and default renders.
 
 **Returns:**
 
@@ -238,6 +283,7 @@ Maps the direct route leaves in a route map to view handlers.
 
 - `routeMap`: A branch from a `remix/routes` route map.
 - `controller`: Object with an `actions` object for each direct leaf route. A bare action object is also accepted for small apps and existing call sites.
+- `controller.middleware`: Optional middleware that runs for every direct action in the controller.
 
 **Returns:**
 
@@ -256,12 +302,12 @@ router.map(routes.posts, {
 
 ### `createAction(route, handler): ViewHandler`
 
-Defines a route handler while inferring `ctx.params` from the given route target. It returns the same handler, so it is useful when route handlers live in separate files before they are passed to `router.map`.
+Defines a route handler or action object while inferring `ctx.params` from the given route target. It returns the same value, so it is useful when route actions live in separate files before they are passed to `router.map`.
 
 **Parameters:**
 
 - `route`: A `Route` produced by `remix/routes`.
-- `handler`: Function receiving route-specific `Context` and returning an action result.
+- `handler`: Function or action object receiving route-specific `Context` and returning an action result.
 
 **Returns:**
 
@@ -273,6 +319,17 @@ Defines a route handler while inferring `ctx.params` from the given route target
 export const renderPost = createAction(routes.post, async (ctx) => {
 	let post = await fetchPost(ctx.params.id);
 	return <PostPage post={post} />;
+});
+```
+
+Action objects can attach middleware to one route action:
+
+```tsx
+export const renderAdmin = createAction(routes.admin, {
+	middleware: [requireAdmin()],
+	handler(ctx) {
+		return <AdminPage />;
+	},
 });
 ```
 
@@ -420,7 +477,19 @@ Extracts the route-pattern string from a `RouteTarget`. This powers handler para
 
 #### `Context<params, route>`
 
-Context passed to mapped route actions. It includes `request`, `url`, `method`, decoded `params`, the matched `route`, an abort `signal`, and router helpers such as `navigate`, `submit`, `revalidate`, and `getFetcher`.
+Context passed to mapped route actions and middleware. It includes `request`, `url`, `method`, decoded `params`, the matched `route`, an abort `signal`, router helpers such as `navigate`, `submit`, `revalidate`, and `getFetcher`, plus `get`, `set`, and `has` for middleware-provided values.
+
+#### `createContextKey(defaultValue?)`
+
+Creates a key used by middleware and actions to store request-scoped values on `ctx`.
+
+#### `Middleware`
+
+Function that receives `(ctx, next)`. Return a value to short-circuit the chain, return `next()` to continue explicitly, or return `undefined` to continue automatically.
+
+#### `ActionObject<route>`
+
+Object form for one route action with optional `middleware` and a final `handler`.
 
 #### `NotFoundContext`
 
