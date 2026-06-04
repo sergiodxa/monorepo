@@ -1124,24 +1124,35 @@ async function runMiddleware(
 /** Mixin that submits forms through router navigation submissions. */
 const routerFormMixin = createMixin<HTMLFormElement, [router: UIRouter, options: FormMixinOptions]>(
 	(handle) => {
-		return (router, options) => {
-			handle.queueTask((node, signal) => {
-				node.addEventListener(
-					"submit",
-					(submitEvent) => {
-						let event = submitEvent as SubmitEvent;
+		let currentRouter: UIRouter | undefined;
+		let currentOptions: FormMixinOptions = {};
+		let currentNode: HTMLFormElement | undefined;
+		let handleSubmit = (submitEvent: SubmitEvent) => {
+			let event = submitEvent;
 
-						if (!shouldHandleFormSubmit(event)) return;
+			if (!currentRouter || !shouldHandleFormSubmit(event)) return;
 
-						event.preventDefault();
-						void router.submit(event.currentTarget as HTMLFormElement, {
-							submitter: event.submitter,
-							revalidate: options.revalidate,
-						});
-					},
-					{ signal },
-				);
+			event.preventDefault();
+			void currentRouter.submit(event.currentTarget as HTMLFormElement, {
+				submitter: event.submitter,
+				revalidate: currentOptions.revalidate,
 			});
+		};
+
+		handle.addEventListener("insert", (event) => {
+			currentNode = event.node;
+			currentNode.addEventListener("submit", handleSubmit);
+		});
+		handle.addEventListener("remove", () => {
+			currentNode?.removeEventListener("submit", handleSubmit);
+			currentNode = undefined;
+		});
+
+		return (router, options) => {
+			currentRouter = router;
+			currentOptions = options;
+
+			return handle.element;
 		};
 	},
 );
@@ -1151,24 +1162,35 @@ const fetcherFormMixin = createMixin<
 	HTMLFormElement,
 	[fetcher: Fetcher, options: FormMixinOptions]
 >((handle) => {
-	return (fetcher, options) => {
-		handle.queueTask((node, signal) => {
-			node.addEventListener(
-				"submit",
-				(submitEvent) => {
-					let event = submitEvent as SubmitEvent;
+	let currentFetcher: Fetcher | undefined;
+	let currentOptions: FormMixinOptions = {};
+	let currentNode: HTMLFormElement | undefined;
+	let handleSubmit = (submitEvent: SubmitEvent) => {
+		let event = submitEvent;
 
-					if (!shouldHandleFormSubmit(event)) return;
+		if (!currentFetcher || !shouldHandleFormSubmit(event)) return;
 
-					event.preventDefault();
-					void fetcher.submit(event.currentTarget as HTMLFormElement, {
-						submitter: event.submitter,
-						revalidate: options.revalidate,
-					});
-				},
-				{ signal },
-			);
+		event.preventDefault();
+		void currentFetcher.submit(event.currentTarget as HTMLFormElement, {
+			submitter: event.submitter,
+			revalidate: currentOptions.revalidate,
 		});
+	};
+
+	handle.addEventListener("insert", (event) => {
+		currentNode = event.node;
+		currentNode.addEventListener("submit", handleSubmit);
+	});
+	handle.addEventListener("remove", () => {
+		currentNode?.removeEventListener("submit", handleSubmit);
+		currentNode = undefined;
+	});
+
+	return (fetcher, options) => {
+		currentFetcher = fetcher;
+		currentOptions = options;
+
+		return handle.element;
 	};
 });
 
@@ -1408,7 +1430,7 @@ function getMethodOverride(formData: FormData): string | undefined {
 
 /** Reads submitter action override attributes. */
 function getSubmitterAction(submitter: HTMLElement | null): string | undefined {
-	if (!submitter || !("formAction" in submitter)) return undefined;
+	if (!submitter?.hasAttribute("formaction") || !("formAction" in submitter)) return undefined;
 
 	let action = submitter.formAction;
 
@@ -1417,7 +1439,7 @@ function getSubmitterAction(submitter: HTMLElement | null): string | undefined {
 
 /** Reads submitter method override attributes. */
 function getSubmitterMethod(submitter: HTMLElement | null): string | undefined {
-	if (!submitter || !("formMethod" in submitter)) return undefined;
+	if (!submitter?.hasAttribute("formmethod") || !("formMethod" in submitter)) return undefined;
 
 	let method = submitter.formMethod;
 
@@ -1426,7 +1448,7 @@ function getSubmitterMethod(submitter: HTMLElement | null): string | undefined {
 
 /** Reads submitter encoding override attributes. */
 function getSubmitterEncType(submitter: HTMLElement | null): string | undefined {
-	if (!submitter || !("formEnctype" in submitter)) return undefined;
+	if (!submitter?.hasAttribute("formenctype") || !("formEnctype" in submitter)) return undefined;
 
 	let encType = submitter.formEnctype;
 
@@ -1435,7 +1457,7 @@ function getSubmitterEncType(submitter: HTMLElement | null): string | undefined 
 
 /** Reads submitter target override attributes. */
 function getSubmitterTarget(submitter: HTMLElement | null): string | undefined {
-	if (!submitter || !("formTarget" in submitter)) return undefined;
+	if (!submitter?.hasAttribute("formtarget") || !("formTarget" in submitter)) return undefined;
 
 	let target = submitter.formTarget;
 

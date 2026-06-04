@@ -232,6 +232,181 @@ describe(createRouter.name, () => {
 		mounted.dispose();
 	});
 
+	test("form submissions ignore default submitter action without an override attribute", async () => {
+		let routes = route({
+			album: "/album/:id",
+			likePhoto: { method: "POST", pattern: "/album/:albumId/photos/:photoId/like" },
+		});
+		let originalHTMLFormElement = globalThis.HTMLFormElement;
+		let originalHTMLButtonElement = globalThis.HTMLButtonElement;
+		let originalFormData = globalThis.FormData;
+
+		class TestFormElement {
+			action = "http://localhost/album/14/photos/651/like";
+			method = "post";
+			enctype = "application/x-www-form-urlencoded";
+		}
+
+		class TestButtonElement {
+			form = new TestFormElement();
+			formAction = "http://localhost/album/14";
+			formMethod = "";
+			formEnctype = "";
+			formTarget = "";
+
+			hasAttribute() {
+				return false;
+			}
+		}
+
+		class TestFormData {
+			fields: [string, string][] = [["intent", "like"]];
+
+			get(name: string) {
+				return this.fields.find(([fieldName]) => fieldName === name)?.[1] ?? null;
+			}
+
+			*[Symbol.iterator]() {
+				yield* this.fields;
+			}
+		}
+
+		try {
+			globalThis.HTMLFormElement = TestFormElement as never;
+			globalThis.HTMLButtonElement = TestButtonElement as never;
+			globalThis.FormData = TestFormData as never;
+
+			let router = createRouter();
+
+			router.map(routes.album, () => "album");
+			router.map(routes.likePhoto, (ctx) => `like:${ctx.params.albumId}:${ctx.params.photoId}`);
+
+			let submitter = new TestButtonElement();
+			let fetcher = router.getFetcher<string>();
+
+			await fetcher.submit(submitter.form as never, {
+				submitter: submitter as never,
+				revalidate: false,
+			});
+
+			expect(fetcher.data).toBe("like:14:651");
+		} finally {
+			globalThis.HTMLFormElement = originalHTMLFormElement;
+			globalThis.HTMLButtonElement = originalHTMLButtonElement;
+			globalThis.FormData = originalFormData;
+		}
+	});
+
+	test("fetcher form mixin submits inserted forms", async () => {
+		let routes = route({
+			likePhoto: { method: "POST", pattern: "/album/:albumId/photos/:photoId/like" },
+		});
+		let originalHTMLFormElement = globalThis.HTMLFormElement;
+		let originalHTMLButtonElement = globalThis.HTMLButtonElement;
+		let originalFormData = globalThis.FormData;
+
+		class TestFormElement {
+			action = "http://localhost/album/14/photos/651/like";
+			method = "post";
+			enctype = "application/x-www-form-urlencoded";
+			target = "";
+			listener: ((event: SubmitEvent) => void) | undefined;
+
+			addEventListener(_type: string, listener: (event: SubmitEvent) => void) {
+				this.listener = listener;
+			}
+
+			removeEventListener(_type: string, listener: (event: SubmitEvent) => void) {
+				if (this.listener === listener) this.listener = undefined;
+			}
+		}
+
+		class TestButtonElement {
+			form: TestFormElement;
+			formAction = "http://localhost/album/14";
+			formMethod = "";
+			formEnctype = "";
+			formTarget = "";
+
+			constructor(form: TestFormElement) {
+				this.form = form;
+			}
+
+			hasAttribute() {
+				return false;
+			}
+		}
+
+		class TestFormData {
+			fields: [string, string][] = [["intent", "like"]];
+
+			get(name: string) {
+				return this.fields.find(([fieldName]) => fieldName === name)?.[1] ?? null;
+			}
+
+			*[Symbol.iterator]() {
+				yield* this.fields;
+			}
+		}
+
+		try {
+			globalThis.HTMLFormElement = TestFormElement as never;
+			globalThis.HTMLButtonElement = TestButtonElement as never;
+			globalThis.FormData = TestFormData as never;
+
+			let router = createRouter();
+			let form = new TestFormElement();
+			let submitter = new TestButtonElement(form);
+			let insertListener: ((event: { node: TestFormElement }) => void) | undefined;
+			let removeListener: (() => void) | undefined;
+
+			router.map(routes.likePhoto, (ctx) => `like:${ctx.params.albumId}:${ctx.params.photoId}`);
+
+			let fetcher = router.getFetcher<string>();
+			let descriptor = fetcher.form() as unknown as {
+				type(handle: unknown): (...args: unknown[]) => unknown;
+				args: unknown[];
+			};
+			let apply = descriptor.type({
+				element: form,
+				addEventListener(type: string, listener: unknown) {
+					if (type === "insert") insertListener = listener as typeof insertListener;
+					if (type === "remove") removeListener = listener as typeof removeListener;
+				},
+			});
+			let submitted = new Promise<void>((resolve) => {
+				fetcher.addEventListener("change", () => {
+					if (fetcher.state === "idle" && fetcher.data) resolve();
+				});
+			});
+			let defaultPrevented = false;
+
+			apply(...descriptor.args);
+			insertListener?.({ node: form });
+			form.listener?.({
+				currentTarget: form,
+				defaultPrevented: false,
+				submitter,
+				preventDefault() {
+					defaultPrevented = true;
+				},
+			} as never);
+
+			await submitted;
+
+			expect(defaultPrevented).toBe(true);
+			expect(fetcher.data).toBe("like:14:651");
+
+			removeListener?.();
+
+			expect(form.listener).toBeUndefined();
+		} finally {
+			globalThis.HTMLFormElement = originalHTMLFormElement;
+			globalThis.HTMLButtonElement = originalHTMLButtonElement;
+			globalThis.FormData = originalFormData;
+		}
+	});
+
 	test("router submit navigates to redirect responses", async () => {
 		let routes = route({
 			save: { method: "POST", pattern: "/save" },
