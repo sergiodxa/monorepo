@@ -21,7 +21,7 @@ Production URL: Not deployed.
 - Uses `router.form()` and `router.submit()` for album shortcut actions.
 - Shows album photos at `/album/:id`.
 - Likes album photos with `fetcher.form()` and persists likes in `localStorage`.
-- Opens photos over the album grid with masked `/photo/:id` URLs.
+- Opens photos over the album grid with masked `/photo/:id` URLs rendered through `Frame`.
 - Renders only the photo page when visiting `/photo/:id` directly.
 
 ## Integrations

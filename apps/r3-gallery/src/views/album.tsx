@@ -1,7 +1,7 @@
 import type { Handle } from "remix/ui";
 
 import { RouterProvider } from "@pkg/r3-ui-router";
-import { css, on } from "remix/ui";
+import { Frame, css, on } from "remix/ui";
 
 import type { Album, Photo } from "../data/types";
 
@@ -89,98 +89,57 @@ export function AlbumPage(handle: Handle<AlbumPageProps>) {
 							}),
 						]}
 					>
-						<section
+						<div
 							mix={css({
-								display: "grid",
-								gridTemplateColumns: "minmax(0, 1.15fr) minmax(17rem, 0.85fr)",
-								overflow: "hidden",
+								display: "block",
+								overflow: "auto",
 								width: "min(100%, 62rem)",
 								maxHeight: "min(90vh, 44rem)",
 								borderRadius: "1.75rem",
 								background: "#fff7ed",
 								boxShadow: "0 2rem 8rem rgb(0 0 0 / 0.28)",
-								"@media (max-width: 760px)": {
-									gridTemplateColumns: "1fr",
-									overflow: "auto",
-								},
 							})}
 							role="dialog"
 							aria-modal="true"
-							aria-labelledby={`photo-${handle.props.selectedPhoto.id}-title`}
+							aria-label={`Photo ${handle.props.selectedPhoto.id}`}
 						>
-							<img
-								mix={css({ display: "block", width: "100%", height: "auto" })}
-								src={handle.props.selectedPhoto.url}
-								alt={handle.props.selectedPhoto.title}
+							<Frame
+								name="selected-photo"
+								src={routes.photo.href({ id: String(handle.props.selectedPhoto.id) })}
+								fallback={<div mix={css({ padding: "2rem" })}>Loading photo...</div>}
 							/>
-							<div
-								mix={css({
-									display: "grid",
-									boxSizing: "border-box",
-									alignContent: "space-between",
-									gap: "1.5rem",
-									padding: "clamp(1rem, 3vw, 2rem)",
-								})}
+							<button
+								type="button"
+								mix={[
+									css({
+										position: "absolute",
+										top: "1rem",
+										right: "1rem",
+										display: "inline-flex",
+										minHeight: "2.5rem",
+										alignItems: "center",
+										justifyContent: "center",
+										padding: "0.6rem 0.9rem",
+										border: "1px solid rgb(154 52 18 / 0.18)",
+										borderRadius: "999rem",
+										background: "rgb(255 255 255 / 0.82)",
+										color: "#7c2d12",
+										cursor: "pointer",
+										font: "inherit",
+										fontWeight: 800,
+										"&:focus-visible": {
+											outline: "3px solid #f97316",
+											outlineOffset: "4px",
+										},
+									}),
+									on<HTMLButtonElement, "click">("click", () => {
+										void router.navigate(routes.album.href({ id: albumId }));
+									}),
+								]}
 							>
-								<div>
-									<p
-										mix={css({
-											margin: 0,
-											color: "#9a3412",
-											fontSize: "0.78rem",
-											fontWeight: 800,
-											letterSpacing: "0.18em",
-											textTransform: "uppercase",
-										})}
-									>
-										Photo {handle.props.selectedPhoto.id}
-									</p>
-									<h2
-										mix={css({
-											margin: 0,
-											fontFamily: 'Georgia, "Times New Roman", serif',
-											fontSize: "clamp(2rem, 5vw, 4rem)",
-											fontWeight: 500,
-											letterSpacing: "-0.06em",
-											lineHeight: 0.95,
-										})}
-										id={`photo-${handle.props.selectedPhoto.id}-title`}
-									>
-										{titleCase(handle.props.selectedPhoto.title)}
-									</h2>
-								</div>
-								<button
-									type="button"
-									mix={[
-										css({
-											display: "inline-flex",
-											minHeight: "2.75rem",
-											alignItems: "center",
-											justifyContent: "center",
-											padding: "0.7rem 1rem",
-											border: "1px solid rgb(154 52 18 / 0.18)",
-											borderRadius: "999rem",
-											background: "rgb(255 255 255 / 0.74)",
-											color: "#7c2d12",
-											font: "inherit",
-											fontWeight: 800,
-											textDecoration: "none",
-											cursor: "pointer",
-											WebkitTapHighlightColor: "transparent",
-											"&:focus-visible": {
-												outline: "3px solid #f97316",
-												outlineOffset: "4px",
-											},
-										}),
-										on<HTMLButtonElement, "click">("click", () => {
-											void router.navigate(routes.album.href({ id: albumId }));
-										}),
-									]}
-								>
-									Close photo
-								</button>
-							</div>
-						</section>
+								Close photo
+							</button>
+						</div>
 					</div>
 				) : null}
 			</Shell>

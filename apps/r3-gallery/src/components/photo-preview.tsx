@@ -1,4 +1,4 @@
-import type { Handle } from "remix/ui";
+import type { Handle, RemixNode } from "remix/ui";
 
 import { css } from "remix/ui";
 
@@ -13,6 +13,7 @@ import { ActionLink } from "./action-link";
  * Props for photo preview UI shared by modal and direct page.
  */
 export interface PhotoPreviewProps {
+	actions?: RemixNode;
 	photo: Photo;
 }
 
@@ -70,9 +71,11 @@ export function PhotoPreview(handle: Handle<PhotoPreviewProps>) {
 					{titleCase(handle.props.photo.title)}
 				</h2>
 			</div>
-			<ActionLink href={routes.album.href({ id: String(handle.props.photo.albumId) })}>
-				Open album
-			</ActionLink>
+			{handle.props.actions ?? (
+				<ActionLink href={routes.album.href({ id: String(handle.props.photo.albumId) })}>
+					Open album
+				</ActionLink>
+			)}
 		</article>
 	);
 }
