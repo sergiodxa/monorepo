@@ -10,6 +10,8 @@ import { Fence } from "./fence.js";
 
 import type { MarkdownView } from "./index.js";
 
+type CSSProps = Parameters<typeof css>[0];
+
 const STYLES = {
 	heading: { color: "#171717", fontWeight: 700, lineHeight: 1.2 },
 	paragraph: { margin: "0 0 1rem" },
@@ -66,9 +68,14 @@ function getRemixProps(attrs: Record<string, unknown>): Record<string, unknown> 
 	let { css: cssValue, mix, ...rest } = attrs;
 	let nextMix = Array.isArray(mix) ? [...mix] : typeof mix === "undefined" ? [] : [mix];
 
-	nextMix.push(css(cssValue));
+	if (isCSSProps(cssValue)) nextMix.push(css(cssValue));
 
 	return { ...rest, mix: nextMix };
+}
+
+/** Narrows Markdoc `css` attributes to Remix UI CSS objects. */
+function isCSSProps(value: unknown): value is CSSProps {
+	return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 /**
@@ -97,18 +104,18 @@ function renderChild(
 
 	let Custom = components?.[tagName];
 	if (Custom) {
-		let Component = Custom();
-		return Component({ ...attrs, children });
+		return <Custom {...attrs}>{children}</Custom>;
 	}
 
 	if (tagName === "Fence") {
-		let Component = Fence();
-		return Component({
-			content: String(attrs.content ?? ""),
-			language: String(attrs.language ?? "plain"),
-			path: typeof attrs.path === "string" ? attrs.path : undefined,
-			title: typeof attrs.title === "string" ? attrs.title : undefined,
-		});
+		return (
+			<Fence
+				content={String(attrs.content ?? "")}
+				language={String(attrs.language ?? "plain")}
+				path={typeof attrs.path === "string" ? attrs.path : undefined}
+				title={typeof attrs.title === "string" ? attrs.title : undefined}
+			/>
+		);
 	}
 
 	if (tagName === "h1") {

@@ -1,4 +1,4 @@
-import type { Props } from "remix/ui";
+import type { Handle, Props } from "remix/ui";
 
 import { css } from "remix/ui";
 
@@ -6,8 +6,10 @@ import { css } from "remix/ui";
  * Creates a styled button component that applies the default accent UI tokens
  * and appends any caller-provided `mix` styles.
  */
-export function Button() {
-	return ({ children, mix, ...rest }: Props<"button">) => {
+export function Button(handle: Handle<Props<"button">>) {
+	return () => {
+		let { children, mix, ...rest } = handle.props;
+
 		return (
 			<button
 				{...rest}

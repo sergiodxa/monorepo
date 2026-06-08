@@ -1,5 +1,5 @@
 /* @jsxImportSource remix/ui */
-import type { RemixNode } from "remix/ui";
+import type { Handle, RemixNode } from "remix/ui";
 
 import { cn } from "@pkg/cn";
 import { css } from "remix/ui";
@@ -15,9 +15,7 @@ export namespace MarkdownView {
 	/**
 	 * Describes a component factory for custom Remix tag renderers.
 	 */
-	export type Component = () => (
-		props: Record<string, unknown> & { children?: RemixNode },
-	) => RemixNode;
+	export type Component = (handle: Handle<Record<string, unknown> & { children?: RemixNode }>) => () => RemixNode;
 
 	/**
 	 * Configures rendered markdown content, wrapper classes, and custom tag components.
@@ -31,8 +29,10 @@ export namespace MarkdownView {
 /**
  * Creates a Remix component that renders markdown content with the package defaults.
  */
-export function MarkdownView() {
-	return ({ content, className, components }: MarkdownView.Props) => {
+export function MarkdownView(handle: Handle<MarkdownView.Props>) {
+	return () => {
+		let { content, className, components } = handle.props;
+
 		return (
 			<div
 				className={cn(className)}

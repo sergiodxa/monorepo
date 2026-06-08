@@ -1,4 +1,6 @@
 /* @jsxImportSource remix/ui */
+import type { Handle } from "remix/ui";
+
 import { css } from "remix/ui";
 
 /**
@@ -19,8 +21,10 @@ export namespace Fence {
 /**
  * Creates a Remix renderer for highlighted code fences.
  */
-export function Fence() {
-	return ({ content, language, path, title }: Fence.Props) => {
+export function Fence(handle: Handle<Fence.Props>) {
+	return () => {
+		let { content, language, path, title } = handle.props;
+
 		let hasHeader = Boolean(path || title);
 
 		return (

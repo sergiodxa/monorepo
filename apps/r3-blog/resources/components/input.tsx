@@ -1,4 +1,4 @@
-import type { Props } from "remix/ui";
+import type { Handle, Props } from "remix/ui";
 
 import { css } from "remix/ui";
 
@@ -6,8 +6,10 @@ import { css } from "remix/ui";
  * Creates a styled input component that applies the blog UI baseline input styles,
  * then preserves and appends any caller-provided `mix` styles.
  */
-export function Input() {
-	return ({ mix, ...rest }: Props<"input">) => {
+export function Input(handle: Handle<Props<"input">>) {
+	return () => {
+		let { mix, ...rest } = handle.props;
+
 		return (
 			<input
 				{...rest}

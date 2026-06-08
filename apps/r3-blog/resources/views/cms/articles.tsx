@@ -386,6 +386,7 @@ export function CMSArticlesActionView() {
 								<textarea
 									name="excerpt"
 									rows={3}
+									defaultValue={values.excerpt}
 									mix={[
 										css({
 											padding: "0.45rem 0.55rem",
@@ -397,9 +398,7 @@ export function CMSArticlesActionView() {
 											fontFamily: "inherit",
 										}),
 									]}
-								>
-									{values.excerpt}
-								</textarea>
+								/>
 							</label>
 
 							<label mix={[css({ display: "grid", gap: "0.25rem" })]}>
@@ -427,6 +426,7 @@ export function CMSArticlesActionView() {
 									name="content"
 									rows={16}
 									required
+									defaultValue={values.content}
 									mix={[
 										css({
 											padding: "0.45rem 0.55rem",
@@ -438,9 +438,7 @@ export function CMSArticlesActionView() {
 											fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace",
 										}),
 									]}
-								>
-									{values.content}
-								</textarea>
+								/>
 							</label>
 
 							<div mix={[css({ display: "flex", gap: "0.5rem", flexWrap: "wrap" })]}>

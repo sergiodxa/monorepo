@@ -5,9 +5,6 @@ import {
 	type DataManipulationOperation,
 	type DataManipulationRequest,
 	type DataManipulationResult,
-	type DataMigrationOperation,
-	type DataMigrationRequest,
-	type DataMigrationResult,
 	type DatabaseAdapter,
 	type SqlStatement,
 	type TableRef,
@@ -97,13 +94,9 @@ export class D1DataTableAdapter implements DatabaseAdapter {
 	 * @param operation Operation to compile.
 	 * @returns Compiled SQL statements with positional bind values.
 	 */
-	compileSql(operation: DataManipulationOperation | DataMigrationOperation): Array<SqlStatement> {
-		if (isDataManipulationOperation(operation)) {
-			let statement = compileSqliteStatement(operation);
-			return [{ text: statement.text, values: statement.values }];
-		}
-
-		throw new Error("D1DataTableAdapter migration operation not supported: " + operation.kind);
+	compileSql(operation: DataManipulationOperation): Array<SqlStatement> {
+		let statement = compileSqliteStatement(operation);
+		return [{ text: statement.text, values: statement.values }];
 	}
 
 	/**
@@ -157,23 +150,11 @@ export class D1DataTableAdapter implements DatabaseAdapter {
 	}
 
 	/**
-	 * Executes migration operations as compiled SQL statements.
-	 * @param request Migration request to run.
-	 * @returns Number of applied migration operations.
+	 * Executes a raw SQL script through D1's multi-statement API.
+	 * @param sql SQL script to execute.
 	 */
-	async migrate(request: DataMigrationRequest): Promise<DataMigrationResult> {
-		let statements = this.compileSql(request.operation);
-
-		for (let statement of statements) {
-			await this.#database
-				.prepare(statement.text)
-				.bind(...statement.values)
-				.run();
-		}
-
-		return {
-			affectedOperations: statements.length,
-		};
+	async executeScript(sql: string): Promise<void> {
+		await this.#database.exec(sql);
 	}
 
 	/**
@@ -295,23 +276,6 @@ export function createD1DataTableAdapter(
 	},
 ) {
 	return new D1DataTableAdapter(database, options);
-}
-
-/** Narrows supported operations to data-manipulation variants. */
-function isDataManipulationOperation(
-	operation: DataManipulationOperation | DataMigrationOperation,
-): operation is DataManipulationOperation {
-	return (
-		operation.kind === "select" ||
-		operation.kind === "count" ||
-		operation.kind === "exists" ||
-		operation.kind === "insert" ||
-		operation.kind === "insertMany" ||
-		operation.kind === "update" ||
-		operation.kind === "delete" ||
-		operation.kind === "upsert" ||
-		operation.kind === "raw"
-	);
 }
 
 /** Returns `true` when an operation asks for a `returning` clause. */

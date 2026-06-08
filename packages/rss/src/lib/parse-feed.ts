@@ -192,7 +192,7 @@ function parseItem(element: XML.Element): Result<RSS.Item, Error> {
 	let dcCreators: string[] = [];
 	let enclosures: RSS.Enclosure[] = [];
 	let extensions: RSS.Element[] = [];
-	let item: RSS.Item = { attributes: cloneAttributes(element.attributes) };
+	let item: RSS.ItemBase = { attributes: cloneAttributes(element.attributes) };
 
 	for (let child of getChildElements(element)) {
 		switch (child.name) {
@@ -269,7 +269,7 @@ function parseItem(element: XML.Element): Result<RSS.Item, Error> {
 	if (extensions.length > 0) item.extensions = extensions;
 	if (isEmptyRecord(item.attributes)) delete item.attributes;
 
-	return success(item);
+	return success(item as RSS.Item);
 }
 
 /**

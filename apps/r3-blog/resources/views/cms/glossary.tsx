@@ -379,6 +379,7 @@ export function CMSGlossaryActionView() {
 									name="definition"
 									rows={8}
 									required
+									defaultValue={values.definition}
 									mix={[
 										css({
 											padding: "0.45rem 0.55rem",
@@ -390,9 +391,7 @@ export function CMSGlossaryActionView() {
 											fontFamily: "inherit",
 										}),
 									]}
-								>
-									{values.definition}
-								</textarea>
+								/>
 							</label>
 
 							<div mix={[css({ display: "flex", gap: "0.5rem", flexWrap: "wrap" })]}>

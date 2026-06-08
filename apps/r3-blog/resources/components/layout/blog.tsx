@@ -1,4 +1,4 @@
-import type { RemixNode } from "remix/ui";
+import type { Handle, RemixNode } from "remix/ui";
 
 import { css } from "remix/ui";
 
@@ -57,8 +57,9 @@ let navigationItems: Array<BlogLayout.NavigationItem> = [
  *
  * @returns A renderer that wraps page content with head metadata and navigation.
  */
-export function BlogLayout() {
-	return ({
+export function BlogLayout(handle: Handle<BlogLayout.Props>) {
+	return () => {
+		let {
 		activePath,
 		canonical,
 		children,
@@ -66,7 +67,9 @@ export function BlogLayout() {
 		meta = [],
 		stylesheets = [],
 		title,
-	}: BlogLayout.Props) => (
+		} = handle.props;
+
+		return (
 		<html lang="en">
 			<head>
 				<meta charSet="utf-8" />
@@ -174,5 +177,6 @@ export function BlogLayout() {
 				</div>
 			</body>
 		</html>
-	);
+		);
+	};
 }

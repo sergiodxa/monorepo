@@ -49,7 +49,8 @@ export async function view<ViewModel>(
 	options?: ViewOptions,
 ): Promise<Response> {
 	let request = getContext().request;
-	let stream = renderToStream(<ViewComponent model={viewModel} />, {
+	let render = ViewComponent();
+	let stream = renderToStream(render({ model: viewModel }), {
 		frameSrc: request.url,
 		resolveFrame(src, _, context) {
 			return resolveSsrFrame(request, src, context);

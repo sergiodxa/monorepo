@@ -102,7 +102,7 @@ export default action<typeof routes.rss.feed>(
 			 * @param b Right item in the comparison.
 			 * @returns Negative when `b` is newer than `a`; positive when `a` is newer than `b`.
 			 */
-			(a, b) => Date.parse(b.pubDate) - Date.parse(a.pubDate),
+			(a, b) => Date.parse(b.pubDate ?? "") - Date.parse(a.pubDate ?? ""),
 		);
 
 		for (let item of items) rss.addItem(item);

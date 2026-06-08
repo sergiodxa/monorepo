@@ -1,12 +1,14 @@
-import type { Props } from "remix/ui";
+import type { Handle, Props } from "remix/ui";
 
 import { css } from "remix/ui";
 
 /**
  * Creates a dialog component with the blog modal shell styles and merges caller `mix` overrides.
  */
-export function Modal() {
-	return ({ children, mix, ...rest }: Props<"dialog">) => {
+export function Modal(handle: Handle<Props<"dialog">>) {
+	return () => {
+		let { children, mix, ...rest } = handle.props;
+
 		return (
 			<dialog
 				{...rest}

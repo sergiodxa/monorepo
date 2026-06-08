@@ -1,4 +1,4 @@
-import type { RemixNode } from "remix/ui";
+import type { Handle, RemixNode } from "remix/ui";
 
 import { css } from "remix/ui";
 
@@ -45,8 +45,11 @@ let cmsNavigationItems: Array<CMSLayout.NavigationItem> = [
  *
  * @returns A renderer that wraps page content in the CMS shell.
  */
-export function CMSLayout() {
-	return ({ activePath, children, title }: CMSLayout.Props) => (
+export function CMSLayout(handle: Handle<CMSLayout.Props>) {
+	return () => {
+		let { activePath, children, title } = handle.props;
+
+		return (
 		<html lang="en">
 			<head>
 				<meta charSet="utf-8" />
@@ -102,5 +105,6 @@ export function CMSLayout() {
 				</div>
 			</body>
 		</html>
-	);
+		);
+	};
 }

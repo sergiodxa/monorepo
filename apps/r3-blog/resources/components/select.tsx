@@ -1,4 +1,4 @@
-import type { Props } from "remix/ui";
+import type { Handle, Props } from "remix/ui";
 
 import { css } from "remix/ui";
 
@@ -6,8 +6,10 @@ import { css } from "remix/ui";
  * Creates a styled `<select>` component that applies the app's neutral form-control
  * tokens while preserving caller-provided props and additional `mix` styles.
  */
-export function Select() {
-	return ({ children, mix, ...rest }: Props<"select">) => {
+export function Select(handle: Handle<Props<"select">>) {
+	return () => {
+		let { children, mix, ...rest } = handle.props;
+
 		let baseMix = css({
 			boxSizing: "border-box",
 			height: "2.25rem",

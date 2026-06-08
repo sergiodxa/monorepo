@@ -46,6 +46,8 @@ export function getEnv<key extends keyof App.Env>(key: key, fallback: App.Env[ke
  */
 export function getEnv<key extends keyof App.Env>(key: key, fallback?: App.Env[key]): App.Env[key] {
 	let env = getContext().get(envKey);
+	if (!env) throw new MissingEnvError(key);
+
 	let value = env[key] ?? fallback;
 	if (typeof value === "undefined") throw new MissingEnvError(key);
 	return value;

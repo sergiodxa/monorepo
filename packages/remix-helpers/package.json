@@ -5,6 +5,7 @@
 	"type": "module",
 	"exports": {
 		"./action": "./src/action.ts",
+		"./context": "./src/context.ts",
 		"./controller": "./src/controller.ts",
 		"./form": "./src/form.ts",
 		"./middleware": "./src/middleware.ts",

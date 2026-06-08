@@ -1,6 +1,7 @@
-import type { Controller } from "remix/fetch-router";
-import type { RequestContext } from "remix/fetch-router";
+import type { Controller, RequestContext } from "remix/fetch-router";
 import type { RouteMap } from "remix/fetch-router/routes";
+
+import type { DefaultContext } from "./context";
 
 /**
  * Preserves the full route map type for a fetch-router controller.
@@ -10,7 +11,7 @@ import type { RouteMap } from "remix/fetch-router/routes";
  */
 export default function controller<
 	routes extends RouteMap,
-	context extends RequestContext<any, any> = RequestContext<any, any>,
+	context extends RequestContext<any, any> = DefaultContext,
 >(controller: Controller<routes, context>): Controller<routes, context> {
 	return controller;
 }

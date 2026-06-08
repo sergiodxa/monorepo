@@ -3,6 +3,7 @@
 	"private": true,
 	"type": "module",
 	"scripts": {
+		"typecheck": "tsc --noEmit",
 		"dev": "vite dev",
 		"build": "vite build",
 		"start": "vite preview",

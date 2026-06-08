@@ -1,14 +1,16 @@
 import type { Database } from "remix/data-table";
+import type { Middleware } from "remix/fetch-router";
 
 import { redirect } from "@pkg/http/response";
+import type { DefaultContext } from "@pkg/remix-helpers/context";
+import middleware from "@pkg/remix-helpers/middleware";
 import { asyncContext } from "remix/async-context-middleware";
-import { requireAuth } from "remix/auth-middleware";
 import { createRouter } from "remix/fetch-router";
 import { formData } from "remix/form-data-middleware";
 import { methodOverride } from "remix/method-override-middleware";
 
 import articles from "~/app/http/controllers/articles";
-import authController from "~/app/http/controllers/auth";
+import { callbackAction, loginController, logoutController } from "~/app/http/controllers/auth";
 import bookmarks from "~/app/http/controllers/bookmarks";
 import articlesCMS from "~/app/http/controllers/cms/articles";
 import bookmarksCMS from "~/app/http/controllers/cms/bookmarks";
@@ -37,9 +39,16 @@ import createNoWWWMiddleware from "~/app/http/middleware/no-www";
 import redirects from "~/app/http/middleware/redirects";
 import requireAdmin from "~/app/http/middleware/require-admin";
 import session from "~/app/http/middleware/session";
+import { isAuthenticated } from "~/app/http/middleware/auth";
 import { view } from "~/app/infrastructure/view";
 import { NotFoundView } from "~/resources/views/not-found";
 import routes from "~/routes/web";
+
+/** Redirects anonymous CMS requests to login without changing request context typing. */
+let requireCMSAuth = middleware((_ctx, next) => {
+	if (isAuthenticated()) return next();
+	return redirect(routes.auth.login.index.href(), { status: redirect.Status.SeeOther });
+});
 
 /**
  * Builds the r3-blog HTTP router with global middleware, route mappings,
@@ -49,19 +58,20 @@ import routes from "~/routes/web";
  * @returns Configured router instance for the worker fetch entrypoint.
  */
 export default function createApplication(database: Database, env: App.Env) {
-	let router = createRouter({
-		middleware: [
-			createEnvMiddleware(env),
-			createNoWWWMiddleware(),
-			createNoTrailingSlashMiddleware(),
-			asyncContext(),
-			session,
-			formData(),
-			methodOverride(),
-			redirects,
-			createDatabaseMiddleware(database),
-			auth,
-		],
+	let globalMiddleware: Array<Middleware> = [
+		createEnvMiddleware(env),
+		createNoWWWMiddleware(),
+		createNoTrailingSlashMiddleware(),
+		asyncContext(),
+		session,
+		formData(),
+		methodOverride(),
+		redirects,
+		createDatabaseMiddleware(database),
+		auth,
+	];
+	let router = createRouter<DefaultContext>({
+		middleware: globalMiddleware,
 
 		async defaultHandler() {
 			return view(
@@ -76,57 +86,70 @@ export default function createApplication(database: Database, env: App.Env) {
 		},
 	});
 
-	router.map(routes, {
-		middleware: [],
+	router.map(routes.feed, feed);
+	router.map(routes.colors, colors);
+	router.map(routes.sponsor, sponsor);
+	router.map(routes.sitemap, sitemap);
+	router.map(routes.articles, articles);
+	router.map(routes.tutorials, tutorials);
+	router.map(routes.bookmarks, bookmarks);
+	router.map(routes.glossary, glossary);
+	router.map(routes.post, post);
+	router.map(routes.postRelated, postRelated);
+
+	router.map(routes.wellKnown, wellKnown);
+	router.map(routes.rss, {
 		actions: {
-			feed,
-			colors,
-			sponsor,
-			wellKnown,
-
-			sitemap,
-
-			articles,
-			tutorials,
-			bookmarks,
-			glossary,
-
-			post,
-			postRelated,
-
-			rss: {
-				actions: {
-					feed: feedRSS,
-					articles: articlesRSS,
-					tutorials: tutorialsRSS,
-					bookmarks: bookmarksRSS,
-				},
-			},
-
-			auth: authController,
-
-			cms: {
-				middleware: [
-					requireAuth({
-						onFailure() {
-							return redirect(routes.auth.login.index.href(), {
-								status: redirect.Status.SeeOther,
-							});
-						},
-					}),
-					requireAdmin,
-				],
-
-				actions: {
-					dashboard: dashboardCMS,
-					articles: articlesCMS,
-					tutorials: tutorialsCMS,
-					bookmarks: bookmarksCMS,
-					glossary: glossaryCMS,
-					redirects: redirectsCMS,
-				},
-			},
+			feed: feedRSS,
+			articles: articlesRSS,
+			tutorials: tutorialsRSS,
+			bookmarks: bookmarksRSS,
 		},
+	});
+	router.map(routes.auth.login, loginController);
+	router.map(routes.auth.logout, logoutController);
+	router.map(routes.auth.callback, callbackAction);
+	router.map(routes.cms.dashboard, {
+		middleware: [
+			requireCMSAuth,
+			requireAdmin,
+		],
+		handler: dashboardCMS,
+	});
+	router.map(routes.cms.articles, {
+		middleware: [
+			requireCMSAuth,
+			requireAdmin,
+		],
+		actions: articlesCMS.actions,
+	});
+	router.map(routes.cms.tutorials, {
+		middleware: [
+			requireCMSAuth,
+			requireAdmin,
+		],
+		actions: tutorialsCMS.actions,
+	});
+	router.map(routes.cms.bookmarks, {
+		middleware: [
+			requireCMSAuth,
+			requireAdmin,
+		],
+		actions: bookmarksCMS.actions,
+	});
+	router.map(routes.cms.glossary, {
+		middleware: [
+			requireCMSAuth,
+			requireAdmin,
+		],
+		actions: glossaryCMS.actions,
+	});
+	router.map(routes.cms.redirects, {
+		middleware: [
+			requireCMSAuth,
+			requireAdmin,
+		],
+		actions: redirectsCMS.actions,
 	});
 
 	return router;

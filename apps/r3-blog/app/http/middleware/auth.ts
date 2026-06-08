@@ -30,7 +30,7 @@ export let auth = createAuthMiddleware({
 				return typeof userId === "string" ? userId : null;
 			},
 			verify(userId) {
-				return User.findById(getContext().get(Database), userId);
+				return User.findById(readDatabase(), userId);
 			},
 			invalidate(session) {
 				session.unset(AUTH_SESSION_USER_ID_KEY);
@@ -123,7 +123,15 @@ function readSession() {
 		throw new Error("Session not found in context. Make sure to use the session middleware.");
 	}
 
-	return ctx.get(Session);
+	let session = ctx.get(Session);
+	if (!session) throw new Error("Session not found in context. Make sure to use the session middleware.");
+	return session;
+}
+
+function readDatabase() {
+	let database = getContext().get(Database);
+	if (!database) throw new Error("Database not found in context. Make sure to use the db middleware.");
+	return database;
 }
 
 function resolveCurrentUser() {
