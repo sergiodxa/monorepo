@@ -1,11 +1,30 @@
+import { fileURLToPath } from "node:url";
+
 import { cloudflare } from "@cloudflare/vite-plugin";
 import { defineConfig } from "vite";
-import tsconfigPaths from "vite-tsconfig-paths";
 
-/**
- * Configures Vite for the r3-blog SSR server with Cloudflare and tsconfig path plugins.
- */
+const clientEntryPath = fileURLToPath(new URL("./bootstrap/browser.ts", import.meta.url));
+
 export default defineConfig({
 	server: { port: 3000 },
-	plugins: [cloudflare({ viteEnvironment: { name: "ssr" } }), tsconfigPaths()],
+
+	resolve: { tsconfigPaths: true },
+
+	environments: {
+		client: {
+			build: {
+				rollupOptions: {
+					input: {
+						clientEntry: clientEntryPath,
+					},
+					output: {
+						entryFileNames: "assets/[name].js",
+						chunkFileNames: "assets/[name]-[hash].js",
+					},
+				},
+			},
+		},
+	},
+
+	plugins: [cloudflare({ viteEnvironment: { name: "ssr" } })],
 });
