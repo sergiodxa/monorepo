@@ -1,12 +1,11 @@
 import { redirect } from "@pkg/http/response";
-import controller from "@pkg/remix-helpers/controller";
 import { succeeded } from "@pkg/result";
 import { validate } from "@pkg/validate";
 import { Database } from "remix/data-table";
+import { createController } from "remix/fetch-router";
 
 import { getAuthUser } from "~/app/http/middleware/auth";
 import { TutorialViewModel } from "~/app/http/view-models/cms/tutorials";
-import { view } from "~/app/infrastructure/view";
 import { Post } from "~/app/repositories/post";
 import { TutorialPost } from "~/app/repositories/posts/tutorial";
 import { TutorialSchema } from "~/app/schemas/cms/tutorial";
@@ -19,7 +18,7 @@ import routes from "~/routes/web";
  * Keeps controller responsibilities focused on auth/flow decisions and delegates parsing,
  * shaping, and persistence to schema, view-model, and repository layers.
  */
-export default controller<typeof routes.cms.tutorials>({
+export default createController(routes.cms.tutorials, {
 	/**
 	 * Leaves middleware empty because CMS auth is enforced per mutating action.
 	 *
@@ -49,7 +48,7 @@ export default controller<typeof routes.cms.tutorials>({
 			}));
 			let items = TutorialViewModel.index({ items: sources });
 
-			return view(CMSTutorialsIndexView, { items });
+			return ctx.render(CMSTutorialsIndexView, { items });
 		},
 
 		/**
@@ -119,7 +118,7 @@ export default controller<typeof routes.cms.tutorials>({
 
 			if (!tutorial) {
 				let model = TutorialViewModel.notFound({ id });
-				return view(CMSTutorialsActionView, model, { status: 404 });
+				return ctx.render(CMSTutorialsActionView, model, { status: 404 });
 			}
 
 			let source: TutorialViewModel.SourceEditItem = {
@@ -133,7 +132,7 @@ export default controller<typeof routes.cms.tutorials>({
 			};
 			let model = TutorialViewModel.edit({ tutorial: source });
 
-			return view(CMSTutorialsActionView, model);
+			return ctx.render(CMSTutorialsActionView, model);
 		},
 
 		/**
@@ -144,10 +143,10 @@ export default controller<typeof routes.cms.tutorials>({
 		 *
 		 * @returns HTML response with an empty tutorial form model.
 		 */
-		async new() {
+		async new(ctx) {
 			let model = TutorialViewModel.new({});
 
-			return view(CMSTutorialsActionView, model);
+			return ctx.render(CMSTutorialsActionView, model);
 		},
 
 		/**
@@ -177,7 +176,7 @@ export default controller<typeof routes.cms.tutorials>({
 
 			if (!updated) {
 				let model = TutorialViewModel.notFound({ id });
-				return view(CMSTutorialsActionView, model, { status: 404 });
+				return ctx.render(CMSTutorialsActionView, model, { status: 404 });
 			}
 
 			return redirect(routes.cms.tutorials.edit.href({ id }), { status: redirect.Status.SeeOther });

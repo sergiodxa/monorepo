@@ -1,12 +1,11 @@
 import { redirect } from "@pkg/http/response";
-import controller from "@pkg/remix-helpers/controller";
 import { succeeded } from "@pkg/result";
 import { validate } from "@pkg/validate";
 import { Database } from "remix/data-table";
+import { createController } from "remix/fetch-router";
 
 import { getAuthUser } from "~/app/http/middleware/auth";
 import { ArticleViewModel } from "~/app/http/view-models/cms/articles";
-import { view } from "~/app/infrastructure/view";
 import { Post } from "~/app/repositories/post";
 import { ArticlePost } from "~/app/repositories/posts/article";
 import { ArticleSchema } from "~/app/schemas/cms/article";
@@ -19,7 +18,7 @@ import routes from "~/routes/web";
  * The controller returns rendered HTML views for read/edit screens and See Other redirects
  * for mutating actions to preserve PRG behavior in the CMS.
  */
-export default controller<typeof routes.cms.articles>({
+export default createController(routes.cms.articles, {
 	/**
 	 * Leaves route-level middleware empty because authentication is enforced by the CMS route group,
 	 * while action-level guards still protect direct access or misconfigured mounts.
@@ -46,7 +45,7 @@ export default controller<typeof routes.cms.articles>({
 			}));
 			let items = ArticleViewModel.index({ items: sources });
 
-			return view(CMSArticlesIndexView, { items });
+			return ctx.render(CMSArticlesIndexView, { items });
 		},
 
 		/**
@@ -114,7 +113,7 @@ export default controller<typeof routes.cms.articles>({
 
 			if (!article) {
 				let viewProps = ArticleViewModel.notFound({ id });
-				return view(CMSArticlesActionView, viewProps, { status: 404 });
+				return ctx.render(CMSArticlesActionView, viewProps, { status: 404 });
 			}
 
 			let source: ArticleViewModel.SourceEditItem = {
@@ -129,7 +128,7 @@ export default controller<typeof routes.cms.articles>({
 			};
 			let viewProps = ArticleViewModel.edit({ article: source });
 
-			return view(CMSArticlesActionView, viewProps);
+			return ctx.render(CMSArticlesActionView, viewProps);
 		},
 
 		/**
@@ -137,10 +136,10 @@ export default controller<typeof routes.cms.articles>({
 		 *
 		 * @returns SSR view response for the new article form.
 		 */
-		async new() {
+		async new(ctx) {
 			let viewProps = ArticleViewModel.new({});
 
-			return view(CMSArticlesActionView, viewProps);
+			return ctx.render(CMSArticlesActionView, viewProps);
 		},
 
 		/**
@@ -170,7 +169,7 @@ export default controller<typeof routes.cms.articles>({
 
 			if (!updated) {
 				let viewProps = ArticleViewModel.notFound({ id });
-				return view(CMSArticlesActionView, viewProps, { status: 404 });
+				return ctx.render(CMSArticlesActionView, viewProps, { status: 404 });
 			}
 
 			return redirect(routes.cms.articles.edit.href({ id }), { status: redirect.Status.SeeOther });

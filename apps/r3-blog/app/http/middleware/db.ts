@@ -1,4 +1,5 @@
-import middleware from "@pkg/remix-helpers/middleware";
+import type { Middleware } from "remix/fetch-router";
+
 import { Database } from "remix/data-table";
 
 /**
@@ -7,8 +8,9 @@ import { Database } from "remix/data-table";
  * @param database Database instance shared by downstream handlers.
  * @returns Middleware that stores `database` under the `Database` token.
  */
-export default function createDatabaseMiddleware(database: Database) {
-	return middleware((ctx) => {
+export default function createDatabaseMiddleware(database: Database): Middleware {
+	return (ctx, next) => {
 		ctx.set(Database, database);
-	});
+		return next();
+	};
 }

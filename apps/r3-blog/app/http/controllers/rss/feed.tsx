@@ -1,7 +1,7 @@
 import { xml } from "@pkg/http/response";
-import action from "@pkg/remix-helpers/action";
 import { RSS } from "@pkg/rss";
 import { Database } from "remix/data-table";
+import { createAction } from "remix/fetch-router";
 
 import { ArticlePost } from "~/app/repositories/posts/article";
 import { GlossaryPost } from "~/app/repositories/posts/glossary";
@@ -14,7 +14,8 @@ import routes from "~/routes/web";
  *
  * The feed merges multiple content streams into one timeline and omits preview-only posts.
  */
-export default action<typeof routes.rss.feed>(
+export default createAction(
+	routes.rss.feed,
 	/**
 	 * Fetches all RSS-eligible entities, normalizes them into `RSS.Item` records, and serializes XML.
 	 *

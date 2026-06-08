@@ -1,7 +1,7 @@
-import type { DefaultContext } from "@pkg/remix-helpers/context";
 import { Database } from "remix/data-table";
 
-import { view } from "~/app/infrastructure/view";
+import type { AppContext } from "~/app/http/context";
+
 import { ArticlePost } from "~/app/repositories/posts/article";
 import { GlossaryPost } from "~/app/repositories/posts/glossary";
 import { LikePost } from "~/app/repositories/posts/like";
@@ -14,7 +14,7 @@ import { CMSDashboardView } from "~/resources/views/cms/dashboard";
  * @param ctx Request-scoped dependency container used to resolve `Database`.
  * @returns HTML response for the dashboard with aggregate counters.
  */
-export default async function dashboard(ctx: DefaultContext) {
+export default async function dashboard(ctx: AppContext) {
 	let database = ctx.get(Database);
 	let [articles, tutorials, likes, glossary] = await Promise.all([
 		ArticlePost.count(database),
@@ -23,5 +23,5 @@ export default async function dashboard(ctx: DefaultContext) {
 		GlossaryPost.count(database),
 	]);
 
-	return view(CMSDashboardView, { stats: { articles, likes, tutorials, glossary } });
+	return ctx.render(CMSDashboardView, { stats: { articles, likes, tutorials, glossary } });
 }

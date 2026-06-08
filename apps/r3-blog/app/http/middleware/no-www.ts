@@ -1,12 +1,13 @@
+import type { Middleware } from "remix/fetch-router";
+
 import { redirect } from "@pkg/http/response";
-import middleware from "@pkg/remix-helpers/middleware";
 
 /**
  * Redirects `www.` hostnames to the apex domain with a permanent redirect.
  * Passes through unchanged requests when the hostname is already non-`www`.
  */
-export default function createNoWWWMiddleware() {
-	return middleware(async (ctx, next) => {
+export default function createNoWWWMiddleware(): Middleware {
+	return async (ctx, next) => {
 		let url = new URL(ctx.request.url);
 
 		if (url.hostname.startsWith("www.")) {
@@ -15,5 +16,5 @@ export default function createNoWWWMiddleware() {
 		}
 
 		return next();
-	});
+	};
 }

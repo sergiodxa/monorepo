@@ -1,6 +1,5 @@
-import middleware from "@pkg/remix-helpers/middleware";
 import { getContext } from "remix/async-context-middleware";
-import { createContextKey } from "remix/fetch-router";
+import { createContextKey, type Middleware } from "remix/fetch-router";
 
 const envKey = createContextKey<App.Env>();
 
@@ -10,11 +9,11 @@ const envKey = createContextKey<App.Env>();
  * @param env Environment bindings available to downstream handlers.
  * @returns Middleware that injects `env` into the request context.
  */
-export default function createEnvMiddleware(env: App.Env) {
-	return middleware((ctx, next) => {
+export default function createEnvMiddleware(env: App.Env): Middleware {
+	return (ctx, next) => {
 		ctx.set(envKey, env);
 		return next();
-	});
+	};
 }
 
 /**

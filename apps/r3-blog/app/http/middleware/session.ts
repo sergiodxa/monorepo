@@ -1,4 +1,5 @@
-import middleware from "@pkg/remix-helpers/middleware";
+import type { Middleware } from "remix/fetch-router";
+
 import { createCookie } from "remix/cookie";
 import { session } from "remix/session-middleware";
 
@@ -39,7 +40,7 @@ let cachedSessionMiddleware: ReturnType<typeof createSessionMiddleware> | null =
 /**
  * Attaches session handling to requests with a lazily created singleton.
  */
-export default middleware((ctx, next) => {
+let sessionMiddleware: Middleware = (ctx, next) => {
 	let sessionMiddleware = cachedSessionMiddleware;
 
 	if (!sessionMiddleware) {
@@ -48,7 +49,9 @@ export default middleware((ctx, next) => {
 	}
 
 	return sessionMiddleware(ctx, next);
-});
+};
+
+export default sessionMiddleware;
 
 /**
  * Creates the session middleware with cookie and KV-backed storage.

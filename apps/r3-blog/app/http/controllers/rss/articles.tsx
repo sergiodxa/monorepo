@@ -1,7 +1,7 @@
 import { xml } from "@pkg/http/response";
-import action from "@pkg/remix-helpers/action";
 import { RSS } from "@pkg/rss";
 import { Database } from "remix/data-table";
+import { createAction } from "remix/fetch-router";
 
 import { ArticlePost } from "~/app/repositories/posts/article";
 import routes from "~/routes/web";
@@ -11,7 +11,8 @@ import routes from "~/routes/web";
  *
  * The payload includes only public articles and always emits absolute URLs.
  */
-export default action<typeof routes.rss.articles>(
+export default createAction(
+	routes.rss.articles,
 	/**
 	 * Builds an RSS 2.0 document for article listings.
 	 *

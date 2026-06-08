@@ -1,16 +1,14 @@
 import { JWK } from "@edgefirst-dev/jwt";
 import { redirect } from "@pkg/http/response";
-import action from "@pkg/remix-helpers/action";
-import controller from "@pkg/remix-helpers/controller";
 import { startExternalAuth } from "remix/auth";
 import { Database } from "remix/data-table";
+import { createAction, createController, type Middleware } from "remix/fetch-router";
 import { Session } from "remix/session";
 
 import { createProvider, exchangeCodeForIdToken } from "~/app/auth/services/oauth";
 import { verifyIdToken } from "~/app/auth/value-objects/id-token";
 import { getIdToken, isAuthenticated, login, logout, setIdToken } from "~/app/http/middleware/auth";
 import { getEnv } from "~/app/http/middleware/env";
-import { view } from "~/app/infrastructure/view";
 import { User } from "~/app/repositories/user";
 import { LoginView } from "~/resources/views/auth/login";
 import { LogoutView } from "~/resources/views/auth/logout";
@@ -37,28 +35,30 @@ let idTokenVerificationKey = JWK.importRemote(
  * @example
  * GET /auth/callback?code=...&state=...
  */
-let guestOnlyMiddleware = [
+let guestOnlyMiddleware: Middleware[] = [
 	/**
 	 * Guards guest-only auth pages by short-circuiting authenticated requests.
 	 * @returns A redirect response when a session already exists.
 	 */
-	async () => {
+	async (_ctx, next) => {
 		if (isAuthenticated()) {
 			return redirect(routes.cms.dashboard.href(), { status: redirect.Status.SeeOther });
 		}
+
+		return next();
 	},
 ];
 
 /** Login route controller for rendering and starting the OAuth flow. */
-export let loginController = controller<typeof routes.auth.login>({
+export let loginController = createController(routes.auth.login, {
 	middleware: guestOnlyMiddleware,
 	actions: {
 		/**
 		 * Renders the login screen where users can start external authentication.
 		 * @returns The login HTML view without mutating session state.
 		 */
-		async index() {
-			return view(LoginView, {});
+		async index(ctx) {
+			return ctx.render(LoginView, {});
 		},
 
 		/**
@@ -81,15 +81,15 @@ export let loginController = controller<typeof routes.auth.login>({
 });
 
 /** Logout route controller for confirmation and local session teardown. */
-export let logoutController = controller<typeof routes.auth.logout>({
+export let logoutController = createController(routes.auth.logout, {
 	middleware: guestOnlyMiddleware,
 	actions: {
 		/**
 		 * Renders the logout confirmation screen before session termination.
 		 * @returns The logout HTML view for user confirmation.
 		 */
-		async index() {
-			return view(LogoutView, {});
+		async index(ctx) {
+			return ctx.render(LogoutView, {});
 		},
 
 		/**
@@ -121,7 +121,7 @@ export let logoutController = controller<typeof routes.auth.logout>({
 });
 
 /** OAuth callback action that completes login and establishes the local session. */
-export let callbackAction = action<typeof routes.auth.callback>({
+export let callbackAction = createAction(routes.auth.callback, {
 	middleware: [],
 	/**
 	 * Completes the OAuth callback handshake and establishes the local user session.
@@ -134,22 +134,22 @@ export let callbackAction = action<typeof routes.auth.callback>({
 		let transaction = session.get("__auth") as OAuthTransaction | null;
 		let callbackError = ctx.url.searchParams.get("error");
 		if (callbackError) {
-			return view(LoginView, {
+			return ctx.render(LoginView, {
 				error: ctx.url.searchParams.get("error_description") ?? callbackError,
 			});
 		}
 		if (!transaction || transaction.provider !== "sergiodxa") {
-			return view(LoginView, { error: "Authentication failed. Missing transaction." });
+			return ctx.render(LoginView, { error: "Authentication failed. Missing transaction." });
 		}
 		let state = ctx.url.searchParams.get("state");
 		let code = ctx.url.searchParams.get("code");
 		if (!state || !code) {
 			session.unset("__auth");
-			return view(LoginView, { error: "Authentication failed. Missing callback params." });
+			return ctx.render(LoginView, { error: "Authentication failed. Missing callback params." });
 		}
 		if (state !== transaction.state) {
 			session.unset("__auth");
-			return view(LoginView, { error: "Authentication failed. Invalid state." });
+			return ctx.render(LoginView, { error: "Authentication failed. Invalid state." });
 		}
 
 		try {
@@ -165,12 +165,12 @@ export let callbackAction = action<typeof routes.auth.callback>({
 			session.unset("__auth");
 		} catch {
 			session.unset("__auth");
-			return view(LoginView, { error: "Authentication failed. Please try again." });
+			return ctx.render(LoginView, { error: "Authentication failed. Please try again." });
 		}
 
 		let idTokenRaw = result.idToken;
 		if (!idTokenRaw) {
-			return view(LoginView, { error: "Authentication failed. Missing token response." });
+			return ctx.render(LoginView, { error: "Authentication failed. Missing token response." });
 		}
 
 		let idToken = await verifyIdToken(

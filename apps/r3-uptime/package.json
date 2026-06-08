@@ -12,7 +12,6 @@
 		"db:remote:migrate": "bunx wrangler d1 migrations apply --remote"
 	},
 	"dependencies": {
-		"@pkg/remix-helpers": "workspace:*",
 		"remix": "3.0.0-beta.4"
 	},
 	"devDependencies": {

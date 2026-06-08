@@ -1,6 +1,5 @@
-import action from "@pkg/remix-helpers/action";
+import { createAction } from "remix/fetch-router";
 
-import { view } from "~/app/infrastructure/view";
 import { ColorsView } from "~/resources/views/colors";
 import routes from "~/routes/web";
 
@@ -11,7 +10,8 @@ import routes from "~/routes/web";
  *
  * @returns HTML response for the public `/colors` catalog.
  */
-export default action<typeof routes.colors>(
+export default createAction(
+	routes.colors,
 	/**
 	 * Builds the minimal view model required by `ColorsView` for static token rendering.
 	 *
@@ -19,9 +19,9 @@ export default action<typeof routes.colors>(
 	 *
 	 * @returns HTML response containing the token documentation UI.
 	 */
-	async () => {
+	async (ctx) => {
 		let model: ColorsView.Model = {};
 
-		return view(ColorsView, model);
+		return ctx.render(ColorsView, model);
 	},
 );

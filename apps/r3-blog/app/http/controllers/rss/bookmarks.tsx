@@ -1,7 +1,7 @@
 import { xml } from "@pkg/http/response";
-import action from "@pkg/remix-helpers/action";
 import { RSS } from "@pkg/rss";
 import { Database } from "remix/data-table";
+import { createAction } from "remix/fetch-router";
 
 import { LikePost } from "~/app/repositories/posts/like";
 import routes from "~/routes/web";
@@ -12,7 +12,8 @@ import routes from "~/routes/web";
  * Contract: always responds with XML generated from persisted like records, using
  * the current request origin to produce canonical absolute links.
  */
-export default action<typeof routes.rss.bookmarks>(
+export default createAction(
+	routes.rss.bookmarks,
 	/**
 	 * Builds the bookmarks channel and serializes each liked URL as one RSS item.
 	 *

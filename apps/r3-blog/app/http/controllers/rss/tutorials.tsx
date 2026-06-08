@@ -1,7 +1,7 @@
 import { xml } from "@pkg/http/response";
-import action from "@pkg/remix-helpers/action";
 import { RSS } from "@pkg/rss";
 import { Database } from "remix/data-table";
+import { createAction } from "remix/fetch-router";
 
 import { TutorialPost } from "~/app/repositories/posts/tutorial";
 import routes from "~/routes/web";
@@ -11,7 +11,8 @@ import routes from "~/routes/web";
  *
  * The feed is tenant-aware because links are resolved against the incoming request URL.
  */
-export default action<typeof routes.rss.tutorials>(
+export default createAction(
+	routes.rss.tutorials,
 	/**
 	 * Builds the RSS payload for tutorials visible to the public.
 	 *

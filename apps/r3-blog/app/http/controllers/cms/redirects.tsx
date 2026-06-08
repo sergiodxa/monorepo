@@ -1,10 +1,9 @@
 import { redirect } from "@pkg/http/response";
-import controller from "@pkg/remix-helpers/controller";
 import { succeeded } from "@pkg/result";
 import { validate } from "@pkg/validate";
+import { createController } from "remix/fetch-router";
 
 import { getEnv } from "~/app/http/middleware/env";
-import { view } from "~/app/infrastructure/view";
 import { Redirect } from "~/app/repositories/redirect";
 import { RedirectSchema } from "~/app/schemas/cms/redirect";
 import { CMSRedirectsIndexView, CMSRedirectsNewView } from "~/resources/views/cms/redirects";
@@ -16,7 +15,7 @@ import routes from "~/routes/web";
  * The route is intentionally middleware-free because auth and CMS scoping are
  * resolved by higher-level route composition before these actions execute.
  */
-export default controller<typeof routes.cms.redirects>({
+export default createController(routes.cms.redirects, {
 	/**
 	 * No local middleware is registered for this controller.
 	 *
@@ -34,7 +33,7 @@ export default controller<typeof routes.cms.redirects>({
 		 *
 		 * @returns SSR HTML view model for the CMS redirects listing page.
 		 */
-		async index() {
+		async index(ctx) {
 			let redirects = await Redirect.findAll(getEnv("REDIRECTS"));
 			let items: Array<CMSRedirectsIndexView.Item> = redirects.map((item) => ({
 				from: item.from,
@@ -43,7 +42,7 @@ export default controller<typeof routes.cms.redirects>({
 				deleteAction: routes.cms.redirects.destroy.href({ id: encodeURIComponent(item.from) }),
 			}));
 
-			return view(CMSRedirectsIndexView, { items });
+			return ctx.render(CMSRedirectsIndexView, { items });
 		},
 
 		/**
@@ -98,9 +97,9 @@ export default controller<typeof routes.cms.redirects>({
 		 *
 		 * @returns SSR HTML view model for the CMS "New Redirect" page.
 		 */
-		async new() {
+		async new(ctx) {
 			let redirects = await Redirect.findAll(getEnv("REDIRECTS"));
-			return view(CMSRedirectsNewView, {
+			return ctx.render(CMSRedirectsNewView, {
 				title: "New Redirect",
 				description: `Current redirect count in KV: ${redirects.length}.`,
 				action: routes.cms.redirects.index.href(),

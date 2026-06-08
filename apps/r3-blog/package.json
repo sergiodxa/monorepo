@@ -17,7 +17,6 @@
 		"@pkg/http": "workspace:*",
 		"@pkg/location": "workspace:*",
 		"@pkg/markdown": "workspace:*",
-		"@pkg/remix-helpers": "workspace:*",
 		"@pkg/result": "workspace:*",
 		"@pkg/rss": "workspace:*",
 		"@pkg/sitemap": "workspace:*",

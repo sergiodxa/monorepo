@@ -1,4 +1,4 @@
-import controller from "@pkg/remix-helpers/controller";
+import { createController } from "remix/fetch-router";
 
 import { PROFILE } from "~/config/profile";
 import routes from "~/routes/web";
@@ -107,7 +107,7 @@ function createWebFingerDocument(subject: string): WebFingerDocument {
  * Contract: `webFinger` returns JRD JSON for the canonical identity, while `avatar`
  * returns a PNG fetched from GitHub using the stable redirecting profile image URL.
  */
-export default controller<typeof routes.wellKnown>({
+export default createController(routes.wellKnown, {
 	middleware: [],
 	actions: {
 		/**

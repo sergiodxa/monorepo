@@ -1,12 +1,10 @@
-import action from "@pkg/remix-helpers/action";
 import { Database } from "remix/data-table";
-
-import type routes from "~/routes/web";
+import { createAction } from "remix/fetch-router";
 
 import { FeedViewModel } from "~/app/http/view-models/feed";
-import { view } from "~/app/infrastructure/view";
 import { Feed } from "~/app/repositories/feed";
 import { FeedView } from "~/resources/views/feed";
+import routes from "~/routes/web";
 
 /**
  * Handles the `/feed` route by loading feed activity and rendering HTML.
@@ -16,7 +14,8 @@ import { FeedView } from "~/resources/views/feed";
  *
  * @example `action(routes.feed, handler)` maps GET `/feed` to this controller.
  */
-export default action<typeof routes.feed>(
+export default createAction(
+	routes.feed,
 	/**
 	 * Coordinates feed rendering for a single request lifecycle.
 	 *
@@ -29,12 +28,12 @@ export default action<typeof routes.feed>(
 	 * repository and view-model layers are the source of truth for feed semantics.
 	 *
 	 * @param ctx Route context that provides dependency access for this request.
-	 * @returns HTML response produced by `view(FeedView, model)`.
+	 * @returns HTML response produced by `ctx.render(FeedView, model)`.
 	 */
 	async function feedController(ctx) {
 		let activity = await Feed.listActivity(ctx.get(Database));
 		let model = FeedViewModel.index(activity);
 
-		return view(FeedView, model);
+		return ctx.render(FeedView, model);
 	},
 );

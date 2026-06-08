@@ -1,13 +1,16 @@
 import type { Database } from "remix/data-table";
-import type { Middleware } from "remix/fetch-router";
+import type { Middleware, RequestContext } from "remix/fetch-router";
+import type { ResolveFrameContext } from "remix/ui/server";
 
 import { redirect } from "@pkg/http/response";
-import type { DefaultContext } from "@pkg/remix-helpers/context";
-import middleware from "@pkg/remix-helpers/middleware";
 import { asyncContext } from "remix/async-context-middleware";
 import { createRouter } from "remix/fetch-router";
 import { formData } from "remix/form-data-middleware";
 import { methodOverride } from "remix/method-override-middleware";
+import { renderWith } from "remix/render-middleware";
+import { renderToStream } from "remix/ui/server";
+
+import type { AppContext, BlogRenderer, RenderOptions } from "~/app/http/context";
 
 import articles from "~/app/http/controllers/articles";
 import { callbackAction, loginController, logoutController } from "~/app/http/controllers/auth";
@@ -32,6 +35,7 @@ import sponsor from "~/app/http/controllers/sponsor";
 import tutorials from "~/app/http/controllers/tutorials";
 import wellKnown from "~/app/http/controllers/well-known";
 import auth from "~/app/http/middleware/auth";
+import { isAuthenticated } from "~/app/http/middleware/auth";
 import createDatabaseMiddleware from "~/app/http/middleware/db";
 import createEnvMiddleware from "~/app/http/middleware/env";
 import createNoTrailingSlashMiddleware from "~/app/http/middleware/no-trailing-slash";
@@ -39,16 +43,14 @@ import createNoWWWMiddleware from "~/app/http/middleware/no-www";
 import redirects from "~/app/http/middleware/redirects";
 import requireAdmin from "~/app/http/middleware/require-admin";
 import session from "~/app/http/middleware/session";
-import { isAuthenticated } from "~/app/http/middleware/auth";
-import { view } from "~/app/infrastructure/view";
 import { NotFoundView } from "~/resources/views/not-found";
 import routes from "~/routes/web";
 
 /** Redirects anonymous CMS requests to login without changing request context typing. */
-let requireCMSAuth = middleware((_ctx, next) => {
+let requireCMSAuth: Middleware = (_ctx, next) => {
 	if (isAuthenticated()) return next();
 	return redirect(routes.auth.login.index.href(), { status: redirect.Status.SeeOther });
-});
+};
 
 /**
  * Builds the r3-blog HTTP router with global middleware, route mappings,
@@ -58,7 +60,7 @@ let requireCMSAuth = middleware((_ctx, next) => {
  * @returns Configured router instance for the worker fetch entrypoint.
  */
 export default function createApplication(database: Database, env: App.Env) {
-	let globalMiddleware: Array<Middleware> = [
+	let globalMiddleware: Array<Middleware<any>> = [
 		createEnvMiddleware(env),
 		createNoWWWMiddleware(),
 		createNoTrailingSlashMiddleware(),
@@ -69,12 +71,13 @@ export default function createApplication(database: Database, env: App.Env) {
 		redirects,
 		createDatabaseMiddleware(database),
 		auth,
+		renderWith(createHtmlRenderer),
 	];
-	let router = createRouter<DefaultContext>({
+	let router = createRouter<AppContext>({
 		middleware: globalMiddleware,
 
-		async defaultHandler() {
-			return view(
+		async defaultHandler(ctx) {
+			return ctx.render(
 				NotFoundView,
 				{
 					title: "Page Not Found",
@@ -110,47 +113,60 @@ export default function createApplication(database: Database, env: App.Env) {
 	router.map(routes.auth.logout, logoutController);
 	router.map(routes.auth.callback, callbackAction);
 	router.map(routes.cms.dashboard, {
-		middleware: [
-			requireCMSAuth,
-			requireAdmin,
-		],
+		middleware: [requireCMSAuth, requireAdmin],
 		handler: dashboardCMS,
 	});
 	router.map(routes.cms.articles, {
-		middleware: [
-			requireCMSAuth,
-			requireAdmin,
-		],
+		middleware: [requireCMSAuth, requireAdmin],
 		actions: articlesCMS.actions,
 	});
 	router.map(routes.cms.tutorials, {
-		middleware: [
-			requireCMSAuth,
-			requireAdmin,
-		],
+		middleware: [requireCMSAuth, requireAdmin],
 		actions: tutorialsCMS.actions,
 	});
 	router.map(routes.cms.bookmarks, {
-		middleware: [
-			requireCMSAuth,
-			requireAdmin,
-		],
+		middleware: [requireCMSAuth, requireAdmin],
 		actions: bookmarksCMS.actions,
 	});
 	router.map(routes.cms.glossary, {
-		middleware: [
-			requireCMSAuth,
-			requireAdmin,
-		],
+		middleware: [requireCMSAuth, requireAdmin],
 		actions: glossaryCMS.actions,
 	});
 	router.map(routes.cms.redirects, {
-		middleware: [
-			requireCMSAuth,
-			requireAdmin,
-		],
+		middleware: [requireCMSAuth, requireAdmin],
 		actions: redirectsCMS.actions,
 	});
 
 	return router;
+}
+
+/** Creates the request-scoped renderer used by controllers via `ctx.render`. */
+function createHtmlRenderer(ctx: RequestContext): BlogRenderer {
+	return async function render(ViewComponent, viewModel, options?: RenderOptions) {
+		let renderView = ViewComponent();
+		let stream = renderToStream(renderView({ model: viewModel }), {
+			frameSrc: ctx.request.url,
+			resolveFrame(src, _target, context) {
+				return resolveSsrFrame(ctx.request, src, context);
+			},
+		});
+		let headers = new Headers(options?.headers);
+		headers.set("content-type", "text/html; charset=utf-8");
+
+		return new Response(stream, {
+			status: options?.status ?? 200,
+			headers,
+		});
+	};
+}
+
+/** Resolves SSR frames using the current request URL and forwarded headers. */
+async function resolveSsrFrame(request: Request, src: string, context?: ResolveFrameContext) {
+	let frameUrl = new URL(src, context?.currentFrameSrc ?? request.url);
+	let headers = new Headers(request.headers);
+	headers.set("accept", "text/html");
+
+	let response = await fetch(frameUrl, { headers });
+	if (response.ok) return response.body ?? (await response.text());
+	return "";
 }

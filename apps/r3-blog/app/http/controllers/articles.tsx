@@ -1,9 +1,8 @@
-import action from "@pkg/remix-helpers/action";
 import { Database } from "remix/data-table";
+import { createAction } from "remix/fetch-router";
 
 import { isAdmin } from "~/app/http/middleware/auth";
 import { ArticlesViewModel } from "~/app/http/view-models/articles";
-import { view } from "~/app/infrastructure/view";
 import { ArticlePost } from "~/app/repositories/posts/article";
 import { ArticlesView } from "~/resources/views/articles";
 import routes from "~/routes/web";
@@ -12,7 +11,8 @@ import routes from "~/routes/web";
  * Serves the public articles index by composing repository data into a server-rendered HTML response.
  * Contract: resolve `Database` from route context, map items through the view model, and render `ArticlesView`.
  */
-export default action<typeof routes.articles>(
+export default createAction(
+	routes.articles,
 	/**
 	 * Handles `GET /articles` using request-scoped dependencies from the route context.
 	 * @param ctx Route context that must provide a `Database` instance.
@@ -22,6 +22,6 @@ export default action<typeof routes.articles>(
 	async (ctx) => {
 		let articles = await ArticlePost.listItems(ctx.get(Database), { includePreview: isAdmin() });
 		let model = ArticlesViewModel.index(articles);
-		return view(ArticlesView, model);
+		return ctx.render(ArticlesView, model);
 	},
 );

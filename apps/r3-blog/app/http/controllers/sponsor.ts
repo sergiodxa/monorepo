@@ -1,5 +1,5 @@
 import { redirect } from "@pkg/http/response";
-import action from "@pkg/remix-helpers/action";
+import { createAction } from "remix/fetch-router";
 
 import { PROFILE } from "~/config/profile";
 import routes from "~/routes/web";
@@ -7,7 +7,8 @@ import routes from "~/routes/web";
 /**
  * Redirects the short public sponsor URL to Sergio's GitHub Sponsors page.
  */
-export default action<typeof routes.sponsor>(
+export default createAction(
+	routes.sponsor,
 	/**
 	 * Preserves a stable on-site sponsor URL while allowing the destination flow to change later.
 	 *

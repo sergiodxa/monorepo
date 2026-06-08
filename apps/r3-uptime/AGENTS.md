@@ -6,9 +6,8 @@ Rules are the guidelines that agents must follow when performing their tasks. Th
 
 Rules are written following RFC 2119, which defines the keywords "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT", "SHOULD", "SHOULD NOT", "RECOMMENDED", "MAY", and "OPTIONAL" in uppercase to indicate requirement levels.
 
-- MUST use `@pkg/remix-helpers/view` for rendering views in HTTP controllers.
-- MUST use `@pkg/remix-helpers/action` for defining individual HTTP controller actions.
-- MUST use `@pkg/remix-helpers/controller` for defining controller modules that export multiple actions.
+- MUST use `remix/fetch-router` helpers for defining typed HTTP actions and controllers.
+- MUST use `ctx.render` from `remix/render-middleware` for rendering views in HTTP controllers.
 - MUST use `getContext` from `remix/async-context-middleware` to access the request context outside controllers.
 - MUST use `ctx` argument of controller actions for request context access inside controllers.
 - MUST keep Cloudflare Worker bootstrap in `bootstrap/worker.ts` and application bootstrap in `bootstrap/app.tsx`.

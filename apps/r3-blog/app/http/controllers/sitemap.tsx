@@ -1,7 +1,7 @@
 import { xml } from "@pkg/http/response";
-import action from "@pkg/remix-helpers/action";
 import { Sitemap } from "@pkg/sitemap";
 import { Database } from "remix/data-table";
+import { createAction } from "remix/fetch-router";
 
 import { ArticlePost } from "~/app/repositories/posts/article";
 import { LikePost } from "~/app/repositories/posts/like";
@@ -14,7 +14,8 @@ import routes from "~/routes/web";
  * The payload mixes section-level URLs and individual published posts, and sets
  * `lastmod` hints using the freshest known creation date per section.
  */
-export default action<typeof routes.sitemap>(
+export default createAction(
+	routes.sitemap,
 	/**
 	 * Builds a canonical sitemap from static sections plus published articles/tutorials.
 	 *

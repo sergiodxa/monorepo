@@ -1,18 +1,16 @@
 import * as ct from "@pkg/http/content-type";
 import { accepts } from "@pkg/http/negotiate";
-import action from "@pkg/remix-helpers/action";
 import { enum_, optional, parse } from "remix/data-schema";
 import { Database } from "remix/data-table";
-
-import type routeMap from "~/routes/web";
+import { createAction } from "remix/fetch-router";
 
 import { isAdmin } from "~/app/http/middleware/auth";
 import { NotFoundViewModel } from "~/app/http/view-models/not-found";
 import { PostViewModel } from "~/app/http/view-models/post";
-import { view } from "~/app/infrastructure/view";
 import { Post } from "~/app/repositories/post";
 import { NotFoundView } from "~/resources/views/not-found";
 import { PostView } from "~/resources/views/post";
+import routeMap from "~/routes/web";
 
 /**
  * Canonical public post type segments accepted by this controller.
@@ -52,7 +50,8 @@ let SUPPORTED_CONTENT_TYPES = new Set<string>(["html", "md"]);
  * The handler validates route params first, negotiates response format from
  * URL extension and request headers, then returns markdown or HTML views.
  */
-export default action<typeof routeMap.post>(
+export default createAction(
+	routeMap.post,
 	/**
 	 * Serves one post resource in HTML or Markdown.
 	 * @param ctx Route action context with params, request, and model access.
@@ -68,7 +67,7 @@ export default action<typeof routeMap.post>(
 		});
 
 		if (validation.kind === "invalid-route") {
-			return renderNotFoundPage({
+			return renderNotFoundPage(ctx.render, {
 				title: "Invalid Post URL",
 				description: "The requested post URL is invalid.",
 				emoji: "🧭",
@@ -76,7 +75,7 @@ export default action<typeof routeMap.post>(
 		}
 
 		if (validation.kind === "unsupported-content-type") {
-			return renderNotFoundPage({
+			return renderNotFoundPage(ctx.render, {
 				title: "Unsupported Content Type",
 				description: `The content type "${validation.contentType}" is not supported.`,
 				emoji: "🚫",
@@ -84,7 +83,7 @@ export default action<typeof routeMap.post>(
 		}
 
 		if (validation.kind === "unsupported-post-type") {
-			return renderNotFoundPage({
+			return renderNotFoundPage(ctx.render, {
 				title: "Page Not Found",
 				description: "The content you requested could not be found.",
 				emoji: "🔎",
@@ -116,14 +115,14 @@ export default action<typeof routeMap.post>(
 			}
 
 			if (validation.params.postType === "articles") {
-				return renderNotFoundPage({
+				return renderNotFoundPage(ctx.render, {
 					title: "Article Not Found",
 					description: "This article does not exist or is no longer available.",
 					emoji: "📝",
 				});
 			}
 
-			return renderNotFoundPage({
+			return renderNotFoundPage(ctx.render, {
 				title: "Tutorial Not Found",
 				description: "This tutorial does not exist or is no longer available.",
 				emoji: "🛠️",
@@ -140,14 +139,14 @@ export default action<typeof routeMap.post>(
 			}
 
 			if (validation.params.postType === "articles") {
-				return renderForbiddenPage({
+				return renderForbiddenPage(ctx.render, {
 					title: "Article Not Published",
 					description: "This article is not available yet.",
 					emoji: "🔒",
 				});
 			}
 
-			return renderForbiddenPage({
+			return renderForbiddenPage(ctx.render, {
 				title: "Tutorial Not Published",
 				description: "This tutorial is not available yet.",
 				emoji: "🔒",
@@ -160,7 +159,7 @@ export default action<typeof routeMap.post>(
 			return markdown(200, viewModel.markdownBody);
 		}
 
-		return view(PostView, viewModel);
+		return ctx.render(PostView, viewModel);
 	},
 );
 
@@ -221,9 +220,12 @@ function markdown(status: number, body: string): Response {
  * @param input View model input used to build the not-found UI.
  * @returns HTML 404 response for missing or unsupported content.
  */
-async function renderNotFoundPage(input: NotFoundViewModel.Input): Promise<Response> {
+async function renderNotFoundPage(
+	render: import("~/app/http/context").BlogRenderer,
+	input: NotFoundViewModel.Input,
+): Promise<Response> {
 	let model = NotFoundViewModel.page(input);
-	return view(NotFoundView, model, { status: 404 });
+	return render(NotFoundView, model, { status: 404 });
 }
 
 /**
@@ -234,7 +236,10 @@ async function renderNotFoundPage(input: NotFoundViewModel.Input): Promise<Respo
  * @param input View model input used to build the forbidden UI.
  * @returns HTML 403 response for unpublished content.
  */
-async function renderForbiddenPage(input: NotFoundViewModel.Input): Promise<Response> {
+async function renderForbiddenPage(
+	render: import("~/app/http/context").BlogRenderer,
+	input: NotFoundViewModel.Input,
+): Promise<Response> {
 	let model = NotFoundViewModel.page(input);
-	return view(NotFoundView, model, { status: 403 });
+	return render(NotFoundView, model, { status: 403 });
 }

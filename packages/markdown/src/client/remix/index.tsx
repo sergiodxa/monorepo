@@ -15,7 +15,9 @@ export namespace MarkdownView {
 	/**
 	 * Describes a component factory for custom Remix tag renderers.
 	 */
-	export type Component = (handle: Handle<Record<string, unknown> & { children?: RemixNode }>) => () => RemixNode;
+	export type Component = (
+		handle: Handle<Record<string, unknown> & { children?: RemixNode }>,
+	) => () => RemixNode;
 
 	/**
 	 * Configures rendered markdown content, wrapper classes, and custom tag components.

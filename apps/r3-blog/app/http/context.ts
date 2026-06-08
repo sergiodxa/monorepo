@@ -1,0 +1,41 @@
+import type { ContextWithEntries, RequestContext } from "remix/fetch-router";
+import type { RemixNode } from "remix/ui";
+
+import { Auth } from "remix/auth-middleware";
+import { Database } from "remix/data-table";
+import { Renderer } from "remix/render-middleware";
+import { Session } from "remix/session";
+
+/** Optional HTTP metadata for rendered HTML responses. */
+export interface RenderOptions {
+	status?: number;
+	headers?: HeadersInit;
+}
+
+/** Renders an app view component with its view model into an HTML response. */
+export interface BlogRenderer {
+	<ViewModel>(
+		ViewComponent: () => (props: { model: ViewModel }) => RemixNode,
+		viewModel: ViewModel,
+		options?: RenderOptions,
+	): Promise<Response>;
+}
+
+/** Request context available after the app's global middleware stack runs. */
+export type AppContext = ContextWithEntries<
+	RequestContext<Record<string, string>>,
+	[
+		{ key: typeof Database; value: Database },
+		{ key: typeof FormData; value: FormData },
+		{ key: typeof Session; value: Session },
+		{ key: typeof Auth; value: unknown },
+		{ key: typeof Renderer; value: BlogRenderer; property: "render" },
+	]
+>;
+
+declare module "remix/fetch-router" {
+	/** Uses the app middleware context as the default for route helpers. */
+	interface RouterTypes {
+		context: AppContext;
+	}
+}

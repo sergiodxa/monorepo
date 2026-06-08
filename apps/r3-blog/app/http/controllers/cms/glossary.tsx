@@ -1,12 +1,11 @@
 import { redirect } from "@pkg/http/response";
-import controller from "@pkg/remix-helpers/controller";
 import { succeeded } from "@pkg/result";
 import { validate } from "@pkg/validate";
 import { parameterize } from "inflected";
 import { Database } from "remix/data-table";
+import { createController } from "remix/fetch-router";
 
 import { getAuthUser } from "~/app/http/middleware/auth";
-import { view } from "~/app/infrastructure/view";
 import { GlossaryPost } from "~/app/repositories/posts/glossary";
 import { GlossarySchema } from "~/app/schemas/cms/glossary";
 import { CMSGlossaryActionView, CMSGlossaryIndexView } from "~/resources/views/cms/glossary";
@@ -17,7 +16,7 @@ import routes from "~/routes/web";
  *
  * Contract: actions use `GlossaryPost` as the data boundary and return HTML views or 303 redirects.
  */
-export default controller<typeof routes.cms.glossary>({
+export default createController(routes.cms.glossary, {
 	/**
 	 * Controller-level middleware chain.
 	 *
@@ -42,7 +41,7 @@ export default controller<typeof routes.cms.glossary>({
 				deleteAction: routes.cms.glossary.destroy.href({ id: item.id }),
 			}));
 
-			return view(CMSGlossaryIndexView, { items });
+			return ctx.render(CMSGlossaryIndexView, { items });
 		},
 
 		/**
@@ -114,7 +113,7 @@ export default controller<typeof routes.cms.glossary>({
 					values: { term: "", title: "", slug: "", definition: "" },
 				} satisfies CMSGlossaryActionView.Props;
 
-				return view(CMSGlossaryActionView, viewProps, { status: 404 });
+				return ctx.render(CMSGlossaryActionView, viewProps, { status: 404 });
 			}
 
 			let viewProps = {
@@ -132,7 +131,7 @@ export default controller<typeof routes.cms.glossary>({
 				},
 			} satisfies CMSGlossaryActionView.Props;
 
-			return view(CMSGlossaryActionView, viewProps);
+			return ctx.render(CMSGlossaryActionView, viewProps);
 		},
 
 		/**
@@ -152,7 +151,7 @@ export default controller<typeof routes.cms.glossary>({
 				values: { term: "", title: "", slug: "", definition: "" },
 			} satisfies CMSGlossaryActionView.Props;
 
-			return view(CMSGlossaryActionView, viewProps);
+			return ctx.render(CMSGlossaryActionView, viewProps);
 		},
 
 		/**
@@ -191,7 +190,7 @@ export default controller<typeof routes.cms.glossary>({
 					values: { term: "", title: "", slug: "", definition: "" },
 				} satisfies CMSGlossaryActionView.Props;
 
-				return view(CMSGlossaryActionView, viewProps, { status: 404 });
+				return ctx.render(CMSGlossaryActionView, viewProps, { status: 404 });
 			}
 
 			return redirect(routes.cms.glossary.edit.href({ id }), { status: redirect.Status.SeeOther });

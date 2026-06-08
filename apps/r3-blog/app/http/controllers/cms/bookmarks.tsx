@@ -1,11 +1,10 @@
 import { redirect } from "@pkg/http/response";
-import controller from "@pkg/remix-helpers/controller";
 import { succeeded } from "@pkg/result";
 import { validate } from "@pkg/validate";
 import { Database } from "remix/data-table";
+import { createController } from "remix/fetch-router";
 
 import { getAuthUser } from "~/app/http/middleware/auth";
-import { view } from "~/app/infrastructure/view";
 import { LikePost } from "~/app/repositories/posts/like";
 import { BookmarkSchema } from "~/app/schemas/cms/bookmark";
 import { CMSBookmarksActionView, CMSBookmarksIndexView } from "~/resources/views/cms/bookmarks";
@@ -17,7 +16,7 @@ import routes from "~/routes/web";
  * The controller keeps route behavior explicit: redirects for missing auth/ids,
  * and 404 HTML views when an edit/update target no longer exists.
  */
-export default controller<typeof routes.cms.bookmarks>({
+export default createController(routes.cms.bookmarks, {
 	/**
 	 * Reserved for route-level guards.
 	 *
@@ -42,7 +41,7 @@ export default controller<typeof routes.cms.bookmarks>({
 				deleteAction: routes.cms.bookmarks.destroy.href({ id: bookmark.id }),
 			}));
 
-			return view(CMSBookmarksIndexView, { items });
+			return ctx.render(CMSBookmarksIndexView, { items });
 		},
 
 		/**
@@ -110,7 +109,7 @@ export default controller<typeof routes.cms.bookmarks>({
 					values: { title: "", url: "" },
 				} satisfies CMSBookmarksActionView.Props;
 
-				return view(CMSBookmarksActionView, model, { status: 404 });
+				return ctx.render(CMSBookmarksActionView, model, { status: 404 });
 			}
 
 			let model = {
@@ -126,7 +125,7 @@ export default controller<typeof routes.cms.bookmarks>({
 				},
 			} satisfies CMSBookmarksActionView.Props;
 
-			return view(CMSBookmarksActionView, model);
+			return ctx.render(CMSBookmarksActionView, model);
 		},
 
 		/**
@@ -146,7 +145,7 @@ export default controller<typeof routes.cms.bookmarks>({
 				values: { title: "", url: "" },
 			} satisfies CMSBookmarksActionView.Props;
 
-			return view(CMSBookmarksActionView, model);
+			return ctx.render(CMSBookmarksActionView, model);
 		},
 
 		/**
@@ -182,7 +181,7 @@ export default controller<typeof routes.cms.bookmarks>({
 					values: { title: "", url: "" },
 				} satisfies CMSBookmarksActionView.Props;
 
-				return view(CMSBookmarksActionView, viewModel, { status: 404 });
+				return ctx.render(CMSBookmarksActionView, viewModel, { status: 404 });
 			}
 
 			return redirect(routes.cms.bookmarks.edit.href({ id }), { status: redirect.Status.SeeOther });

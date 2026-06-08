@@ -1,9 +1,10 @@
-import middleware from "@pkg/remix-helpers/middleware";
+import type { Middleware } from "remix/fetch-router";
+
 import { Database } from "remix/data-table";
 
-export default (db: Database) => {
-	return middleware((ctx, next) => {
+export default (db: Database): Middleware => {
+	return (ctx, next) => {
 		ctx.set(Database, db);
 		return next();
-	});
+	};
 };

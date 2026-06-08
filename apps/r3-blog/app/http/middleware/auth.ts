@@ -124,13 +124,15 @@ function readSession() {
 	}
 
 	let session = ctx.get(Session);
-	if (!session) throw new Error("Session not found in context. Make sure to use the session middleware.");
+	if (!session)
+		throw new Error("Session not found in context. Make sure to use the session middleware.");
 	return session;
 }
 
 function readDatabase() {
 	let database = getContext().get(Database);
-	if (!database) throw new Error("Database not found in context. Make sure to use the db middleware.");
+	if (!database)
+		throw new Error("Database not found in context. Make sure to use the db middleware.");
 	return database;
 }
 

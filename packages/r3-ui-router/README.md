@@ -599,7 +599,6 @@ Server code can still use `remix/router` to return `Response` objects, while bro
 
 ## Related Packages
 
-- [`@pkg/remix-helpers`](/packages/remix-helpers) - Helpers for server-side Remix router controllers and views.
 - [`@pkg/ui`](/packages/ui) - Shared UI package used by applications in this monorepo.
 
 ## Tips

@@ -1,8 +1,7 @@
-import action from "@pkg/remix-helpers/action";
 import { Database } from "remix/data-table";
+import { createAction } from "remix/fetch-router";
 
 import { BookmarksViewModel } from "~/app/http/view-models/bookmarks";
-import { view } from "~/app/infrastructure/view";
 import { LikePost } from "~/app/repositories/posts/like";
 import { BookmarksView } from "~/resources/views/bookmarks";
 import routes from "~/routes/web";
@@ -12,7 +11,8 @@ import routes from "~/routes/web";
  * The route contract is an HTML response backed by repository data, not direct SQL in the controller.
  * @returns Server-rendered bookmarks page response.
  */
-export default action<typeof routes.bookmarks>(
+export default createAction(
+	routes.bookmarks,
 	/**
 	 * Resolves the database dependency from the request context and fetches liked posts.
 	 * Transforms repository records into the view model expected by `BookmarksView`.
@@ -23,6 +23,6 @@ export default action<typeof routes.bookmarks>(
 		let bookmarks = await LikePost.findAll(ctx.get(Database));
 		let model = BookmarksViewModel.index(bookmarks);
 
-		return view(BookmarksView, model);
+		return ctx.render(BookmarksView, model);
 	},
 );

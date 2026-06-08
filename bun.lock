@@ -266,7 +266,6 @@
         "@pkg/http": "workspace:*",
         "@pkg/location": "workspace:*",
         "@pkg/markdown": "workspace:*",
-        "@pkg/remix-helpers": "workspace:*",
         "@pkg/result": "workspace:*",
         "@pkg/rss": "workspace:*",
         "@pkg/sitemap": "workspace:*",
@@ -302,7 +301,6 @@
     "apps/r3-uptime": {
       "name": "@apps/r3-uptime",
       "dependencies": {
-        "@pkg/remix-helpers": "workspace:*",
         "remix": "3.0.0-beta.4",
       },
       "devDependencies": {
@@ -540,16 +538,6 @@
     "packages/r3-ui-router": {
       "name": "@pkg/r3-ui-router",
       "version": "0.0.0",
-      "dependencies": {
-        "remix": "3.0.0-beta.4",
-      },
-      "devDependencies": {
-        "@types/bun": "^1.3.11",
-      },
-    },
-    "packages/remix-helpers": {
-      "name": "@pkg/remix-helpers",
-      "version": "0.0.1",
       "dependencies": {
         "remix": "3.0.0-beta.4",
       },
@@ -1303,8 +1291,6 @@
     "@pkg/markdown": ["@pkg/markdown@workspace:packages/markdown"],
 
     "@pkg/r3-ui-router": ["@pkg/r3-ui-router@workspace:packages/r3-ui-router"],
-
-    "@pkg/remix-helpers": ["@pkg/remix-helpers@workspace:packages/remix-helpers"],
 
     "@pkg/response": ["@pkg/response@workspace:packages/response"],
 
