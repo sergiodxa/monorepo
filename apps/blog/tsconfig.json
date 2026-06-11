@@ -13,7 +13,6 @@
 		"noEmit": true,
 		"jsx": "react-jsx",
 		"types": ["@total-typescript/ts-reset", "vite/client"],
-		"baseUrl": ".",
 		"rootDirs": [".", "./.react-router/types"],
 		"paths": {
 			"~/*": ["./app/*"]
