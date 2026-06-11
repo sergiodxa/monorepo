@@ -14,7 +14,6 @@
 		"noEmit": true,
 		"jsx": "react-jsx",
 		"types": ["@total-typescript/ts-reset", "vite/client", "@types/bun"],
-		"baseUrl": ".",
 		"rootDirs": [".", "./.react-router/types"],
 		"paths": {
 			"~/*": ["./app/*"],
