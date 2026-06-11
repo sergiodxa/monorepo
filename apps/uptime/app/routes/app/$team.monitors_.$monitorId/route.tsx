@@ -1,6 +1,4 @@
-import type { LoaderFunctionArgs } from "react-router";
-
-// @ts-nocheck
+import type { Params } from "react-router";
 import { cn } from "@pkg/cn";
 import { isFailure } from "@pkg/result";
 import { Alert, Badge, Button, Card, LinkButton } from "@pkg/ui";
@@ -35,10 +33,50 @@ import { createSslInfo } from "~/services/check-ssl";
 import daysOfYear from "~/utils/days-of-year";
 import groupDatesPerWeek from "~/utils/group-dates-per-week";
 
-export async function loader({ params }: LoaderFunctionArgs) {
+import type { Route } from "./+types/route";
+
+interface LoaderData {
+	stats: {
+		usage: {
+			consumed: Awaited<ReturnType<typeof Customer.getUsagePerMonth>>;
+			estimated: string;
+		};
+		slowestResult: string;
+		uptime: {
+			value: string;
+		};
+	};
+	hasActiveSubscription: boolean;
+	monitor: { id: string; name: string };
+	ssl: ReturnType<typeof createSslInfo>;
+	results: Array<{ date: Date; total: number; successRate: number }>;
+	weeks: ReturnType<typeof groupDatesPerWeek>;
+}
+
+interface TeamMonitorParams {
+	team: string;
+	monitorId: string;
+}
+
+/** Keeps route params typed as required once the router matched this route. */
+function buildTeamMonitorParams(params: Params<string>): TeamMonitorParams {
+	let { team, monitorId } = params;
+
+	if (!team || !monitorId) {
+		throw new Error("Expected team and monitorId route params");
+	}
+
+	return { team, monitorId };
+}
+
+
+export async function loader({ params }: Route.LoaderArgs): Promise<Response | LoaderData> {
+	let routeParams = buildTeamMonitorParams(params);
+	let { monitorId } = routeParams;
+
 	logger().info("monitor.loader.start", {
 		route: "monitors.$monitorId",
-		monitorId: params.monitorId,
+		monitorId,
 		teamId: team().id,
 	});
 
@@ -50,7 +88,7 @@ export async function loader({ params }: LoaderFunctionArgs) {
 			return db().query.monitors.findFirst({
 				where(fields, operators) {
 					return operators.and(
-						operators.eq(fields.id, params.monitorId),
+						operators.eq(fields.id, monitorId),
 						operators.eq(fields.teamId, team().id),
 					);
 				},
@@ -65,7 +103,7 @@ export async function loader({ params }: LoaderFunctionArgs) {
 				},
 				where(fields, operators) {
 					return operators.and(
-						operators.eq(fields.monitorId, params.monitorId),
+						operators.eq(fields.monitorId, monitorId),
 						operators.eq(fields.monitorType, "http"),
 					);
 				},
@@ -75,26 +113,26 @@ export async function loader({ params }: LoaderFunctionArgs) {
 			});
 		}),
 		measure("Monitor.estimateConsumedPingsByMonitor", () => {
-			return Monitor.estimateConsumedPingsByMonitor(db(), params.monitorId, new Date());
+			return Monitor.estimateConsumedPingsByMonitor(db(), monitorId, new Date());
 		}),
 		measure("findSlowestResultAE", async () => {
-			let sql = `SELECT MAX(double1) AS maxResponseTime FROM uptime_monitor_results WHERE index1 = '${team().id}' AND blob1 = '${params.monitorId}' AND blob2 = 'http' AND timestamp >= NOW() - INTERVAL '24' HOUR`;
+			let sql = `SELECT MAX(double1) AS maxResponseTime FROM uptime_monitor_results WHERE index1 = '${team().id}' AND blob1 = '${monitorId}' AND blob2 = 'http' AND timestamp >= NOW() - INTERVAL '24' HOUR`;
 			let res = await queryAnalytics<{ maxResponseTime: number | null }>(sql);
 			if (isFailure(res)) return 0;
 			return res.data[0]?.maxResponseTime ?? 0;
 		}),
 		measure("findMonitorUsagePerMonth", () => {
-			return Customer.getUsagePerMonth(team().ownerId, { monitorId: params.monitorId }, new Date());
+			return Customer.getUsagePerMonth(team().ownerId, { monitorId }, new Date());
 		}),
 	]);
 
 	if (!monitor) {
 		logger().info("monitor.loader.not-found", {
 			route: "monitors.$monitorId",
-			monitorId: params.monitorId,
+			monitorId,
 			teamId: team().id,
 		});
-		return redirect(href("/app/:team/dashboard", params));
+		return redirect(href("/app/:team/dashboard", routeParams));
 	}
 
 	// Prepare SSL info
@@ -109,7 +147,7 @@ export async function loader({ params }: LoaderFunctionArgs) {
 
 	logger().info("monitor.loader.complete", {
 		route: "monitors.$monitorId",
-		monitorId: params.monitorId,
+		monitorId,
 		monitorName: monitor.name,
 		resultsCount: dailyStats.length,
 		sslStatus: sslInfo.status,
@@ -119,7 +157,7 @@ export async function loader({ params }: LoaderFunctionArgs) {
 		let total = row.totalChecks ?? 0;
 		let success = row.successfulChecks ?? 0;
 		return {
-			date: row.date,
+			date: new Date(row.date),
 			total,
 			successRate: total > 0 ? Number((success / total).toFixed(2)) : 0,
 		};
@@ -165,10 +203,11 @@ export async function loader({ params }: LoaderFunctionArgs) {
 export default function Component({
 	loaderData,
 	params,
-}: {
-	loaderData: Awaited<ReturnType<typeof loader>>;
-	params: { team: string; monitorId: string };
-}) {
+}: Route.ComponentProps) {
+	if (!("monitor" in loaderData)) return null;
+
+	let routeParams = buildTeamMonitorParams(params);
+
 	let { t } = useTranslation("translation", { keyPrefix: "page.monitor" });
 	let { t: tSidebar } = useTranslation("translation", {
 		keyPrefix: "app.layout.sidebar.navigation.items",
@@ -185,7 +224,7 @@ export default function Component({
 			<AppHeader
 				heading={loaderData.monitor.name}
 				breadcrumbs={[
-					{ label: tSidebar("dashboard"), href: href("/app/:team/dashboard", params) },
+					{ label: tSidebar("dashboard"), href: href("/app/:team/dashboard", routeParams) },
 					{ label: loaderData.monitor.name },
 				]}
 			>
@@ -194,7 +233,7 @@ export default function Component({
 					intent="play"
 					label={t("header.action.play")}
 					color="neutral"
-					action={href("/actions/:team/play-monitor", params)}
+					action={href("/actions/:team/play-monitor", routeParams)}
 				>
 					<PlayIcon aria-hidden className="size-4.5" />
 					<span className="max-sm:sr-only">{t("header.action.play")}</span>
@@ -203,7 +242,7 @@ export default function Component({
 				<LinkButton
 					color="neutral"
 					href={href("/app/:team/monitors/:monitorId/edit", {
-						team: params.team,
+						team: routeParams.team,
 						monitorId: loaderData.monitor.id,
 					})}
 					className="shrink-0 px-2"
@@ -234,13 +273,13 @@ export default function Component({
 					<Alert color="warning">
 						<Alert.Content>
 							<Alert.Title>{t("alert.subscription.title")}</Alert.Title>
-							<Alert.Description>{t("alert.subscription.description")}</Alert.Description>
-						</Alert.Content>
-						<Alert.Action>
-							<Link to={href("/app/:team/checkout", params)}>{t("alert.subscription.cta")}</Link>
-						</Alert.Action>
-					</Alert>
-				</div>
+						<Alert.Description>{t("alert.subscription.description")}</Alert.Description>
+					</Alert.Content>
+					<Alert.Action>
+						<Link to={href("/app/:team/checkout", routeParams)}>{t("alert.subscription.cta")}</Link>
+					</Alert.Action>
+				</Alert>
+			</div>
 			)}
 
 			<div className="flex flex-col gap-6 p-5 md:gap-12 md:p-12">
@@ -279,7 +318,7 @@ export default function Component({
 				<SslStatusCard
 					ssl={loaderData.ssl}
 					monitorId={loaderData.monitor.id}
-					teamSlug={params.team}
+					teamSlug={routeParams.team}
 				/>
 
 				<div className="-mx-5 overflow-x-auto px-5 md:mx-0 md:px-0">

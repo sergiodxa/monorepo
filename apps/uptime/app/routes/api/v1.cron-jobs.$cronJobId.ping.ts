@@ -275,7 +275,7 @@ export async function action({ request, params }: Route.ActionArgs) {
 	try {
 		await Customer.ingest(cronJob.team.ownerId, {
 			monitorId: cronJob.id,
-			resultId: ping?.id ?? "",
+			instanceId: ping?.id ?? "",
 			teamId: cronJob.team.id,
 		});
 	} catch (error) {

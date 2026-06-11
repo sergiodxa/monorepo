@@ -76,12 +76,6 @@ export function HttpMonitorTableRow(props: {
 									{t("status.up")}
 								</Badge>
 							);
-						case "degraded":
-							return (
-								<Badge color="warning" variant="outline">
-									{t("status.degraded")}
-								</Badge>
-							);
 						case "down":
 							return (
 								<Badge color="danger" variant="outline">

@@ -1,13 +1,17 @@
 import { isSameDay } from "date-fns";
 import { useTranslation } from "react-i18next";
 
-import type Monitor from "~/models/monitor";
-
 import * as BetterHeatmap from "~/components/heatmap-composable";
 import { useHints } from "~/utils/client-hints";
 
+interface HeatmapPoint {
+	date: Date;
+	total: number;
+	successRate: number;
+}
+
 export function Heatmap(props: {
-	points: Awaited<ReturnType<typeof Monitor.getResultsById>>;
+	points: HeatmapPoint[];
 	size: BetterHeatmap.Cell.Size;
 	weeks: Date[][];
 }) {

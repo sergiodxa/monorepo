@@ -102,7 +102,7 @@ export default class Customer {
 
 	static async getMonitorUsagePerMonth(externalId: string, monitorId: string, date: Date) {
 		try {
-			let { result } = await polar.events.list({
+			let response = await polar.events.list({
 				externalCustomerId: externalId,
 				startTimestamp: startOfMonth(startOfDay(date)),
 				endTimestamp: endOfMonth(endOfDay(date)),
@@ -111,7 +111,9 @@ export default class Customer {
 				limit: 1,
 			});
 
-			return result.pagination.totalCount;
+			return "totalCount" in response.pagination
+				? response.pagination.totalCount
+				: response.items.length;
 		} catch (error) {
 			console.error(error);
 			return 0;

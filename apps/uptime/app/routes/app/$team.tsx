@@ -36,6 +36,7 @@ export const middleware: Route.MiddlewareFunction[] = [
 				name: z.string(),
 				avatar: z.url(),
 				email: z.email(),
+				idToken: z.string(),
 			})
 			.parse(session.data);
 
