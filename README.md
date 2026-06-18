@@ -5,19 +5,23 @@ Personal projects ecosystem with applications and shared packages.
 ## Structure
 
 ```
-apps/              # Applications
-packages/          # Shared packages
-docs/              # Documentation and ADRs
-.agents/skills/    # AI agent skills
+.agents/skills/     # AI agent skills
+.vscode/            # VSCode Project Configuration
+apps/               # Applications
+docs/               # Documentation and ADRs
+docs/vendor/        # Documentation of third-party dependencies
+packages/           # Shared packages
+scripts/            # Global scripts
+templates/          # Templates for apps and packages
 ```
 
 ## Tech Stack
 
 - **Runtime**: Cloudflare Workers
-- **Framework**: React Router v7
+- **Framework**: React Router v7/Remix v3
 - **Package manager**: Bun
-- **Database**: Cloudflare D1 + Drizzle ORM
-- **Styling**: Tailwind CSS v4
+- **Database**: Cloudflare D1 + Drizzle ORM/Remix Data Table
+- **Styling**: Tailwind CSS v4/Remix uI
 
 ## Getting Started
 
