@@ -73,7 +73,7 @@ A hook for reading from and writing to the system clipboard with status tracking
 
 **Example:**
 
-```typescript
+```tsx
 import { useClipboard, useTimeout } from "@pkg/hooks";
 
 function CopyButton({ text }: { text: string }) {
@@ -113,7 +113,7 @@ Uses keyboard events to track CapsLock state changes, and a one-time mousemove l
 
 **Example:**
 
-```typescript
+```tsx
 import { useCapsLockDetection } from "@pkg/hooks";
 
 function PasswordInput() {
@@ -149,7 +149,7 @@ Creates a global store keyed by a symbol that any component can subscribe to. Wh
 
 **Example:**
 
-```typescript
+```tsx
 import { useValue } from "@pkg/hooks";
 
 // Define keys in a shared constants file for type safety
@@ -193,7 +193,7 @@ const useIsomorphicLayoutEffect: typeof useLayoutEffect;
 
 **Example:**
 
-```typescript
+```tsx
 import { useIsomorphicLayoutEffect } from "@pkg/hooks";
 
 function Tooltip({ targetRef }: { targetRef: RefObject<HTMLElement> }) {
@@ -232,7 +232,7 @@ A hook that manages a timeout with conditional triggering.
 
 **Example:**
 
-```typescript
+```tsx
 import { useClipboard, useTimeout } from "@pkg/hooks";
 
 function CopyButton({ text }: { text: string }) {
@@ -262,7 +262,7 @@ function CopyButton({ text }: { text: string }) {
 
 **Example with manual clear:**
 
-```typescript
+```tsx
 import { useTimeout } from "@pkg/hooks";
 
 function AutoSave({ isDirty }: { isDirty: boolean }) {
@@ -350,7 +350,7 @@ A hook that derives a simple status from a React Router fetcher's state and data
 
 **Example:**
 
-```typescript
+```tsx
 import { useFetcher } from "react-router";
 import { useFetcherStatus } from "@pkg/hooks";
 
@@ -437,7 +437,7 @@ interface Options {
 
 Use `useValue` to share state between components in different routes without context:
 
-```typescript
+```tsx
 import { useValue } from "@pkg/hooks";
 
 // keys.ts - Define keys in a shared file
@@ -487,7 +487,7 @@ function CartSummary() {
 
 Combine `useFetcherStatus` with `@pkg/response` for complete form handling:
 
-```typescript
+```tsx
 // Route action
 import { ok, badRequest } from "@pkg/response";
 import { validate } from "@pkg/validate";
@@ -527,7 +527,7 @@ function SaveForm() {
 
 Use `useToggle` with CSS transitions:
 
-```typescript
+```tsx
 import { useToggle } from "@pkg/hooks";
 import { cn } from "@pkg/cn";
 
@@ -554,7 +554,7 @@ function AnimatedPanel() {
 
 Create multiple independent toggle states:
 
-```typescript
+```tsx
 import { useToggle } from "@pkg/hooks";
 
 function Settings() {
