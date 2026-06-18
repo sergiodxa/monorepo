@@ -158,6 +158,63 @@ _Relevant Files_:
 
 ## TUTORIALS (How-To Guides)
 
+### How to Define Reusable Route Contracts with `remix/routes`
+
+Show how one route contract can drive links, redirects, and client-side navigation without stringly-typed URLs, including dynamic params and method-aware action routes.
+
+**Mentions:** Remix v3, `remix/routes`, `route({...})`, `.href()`, dynamic params, POST route definitions, route contracts.
+
+_Relevant Files_:
+
+- `apps/r3-gallery/src/routes.ts`
+- `apps/r3-gallery/src/views/albums.tsx`
+- `apps/r3-gallery/src/components/photo-grid-item.tsx`
+
+### How to Build a Modal Route with `Frame` in Remix UI
+
+Teach the "photo opens over the grid, but reload still works" pattern by rendering a standalone route inside `Frame` while keeping the parent route visible behind it.
+
+**Mentions:** Remix v3, `remix/ui`, `Frame`, modal routes, fallback UI, direct visits vs embedded rendering, reload-safe overlays.
+
+_Relevant Files_:
+
+- `apps/r3-gallery/src/views/album.tsx`
+- `apps/r3-gallery/src/views/photo.tsx`
+- `apps/r3-gallery/src/components/photo-preview.tsx`
+
+### How to Think in Remix UI Instead of React
+
+Most developers will not understand `Handle`, setup-time state, and explicit `handle.update()` yet. This could walk through how Remix UI components actually work, including render functions, context access, and event-driven updates.
+
+**Mentions:** Remix v3, `remix/ui`, `Handle`, render closures, `handle.props`, `handle.context`, `handle.update()`, `css()`, `on()`.
+
+_Relevant Files_:
+
+- `apps/r3-gallery/src/views/albums.tsx`
+- `apps/r3-gallery/src/components/photo-grid-item.tsx`
+- `apps/r3-gallery/src/components/action-link.tsx`
+
+### How to Validate Third-Party API Responses with `remix/data-schema`
+
+Use JSONPlaceholder as the example API and show how to define schemas once, infer types from them, and reject invalid external payloads before they reach the UI.
+
+**Mentions:** Remix v3, `remix/data-schema`, `s.object`, `s.array`, `InferOutput`, `parseSafe`, validating external APIs, schema-driven types.
+
+_Relevant Files_:
+
+- `apps/r3-gallery/src/data/types.ts`
+- `apps/r3-gallery/src/data/jsonplaceholder.ts`
+
+### How to Hydrate a Remix UI Component with `clientEntry` and DOM Refs
+
+This is a small but very teachable example: hydrate a browser-only component, wire DOM listeners with `ref(...)`, and coordinate parent/child custom events without React hooks.
+
+**Mentions:** Remix v3, `remix/ui`, `clientEntry`, `ref`, `queueMicrotask`, custom DOM events, hydration boundaries.
+
+_Relevant Files_:
+
+- `apps/r3-gallery/src/components/test.tsx`
+
 ### How to Parse and Serialize RSS XML with DOMParser on workerd
 
 Building a small XML tree abstraction on top of `DOMParser` and `XMLSerializer`, including declaration parsing, namespace-aware serialization, and the minimum XML features needed for RSS feeds.
