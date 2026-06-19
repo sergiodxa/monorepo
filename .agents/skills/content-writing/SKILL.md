@@ -42,13 +42,36 @@ All content MUST include:
 - `title`: The content title
 - `excerpt`: A description under 130 characters
 
+### Title Rules
+
+- Titles MUST be descriptive enough to communicate the subject at a glance
+- Titles MUST name the concrete topic, problem, pattern, or technology involved
+- Titles MUST NOT use vague titles like "Recent Thoughts", "Notes", "So Far, So Good", or other labels that hide the topic
+- Titles MUST NOT rely on clickbait, withheld context, or curiosity-gap phrasing
+- Titles SHOULD make the reader confident about what they will get before clicking
+- Titles SHOULD prefer specific nouns and verbs over broad umbrella wording like "guide", "tips", or "thoughts"
+- Titles MAY be narrow and technical when the content is narrow and technical
+
 ### Tutorial-Only Fields
 
 Tutorials MUST include:
 
 - `tech`: Package versions in format `name@version` or `@namespace/name@version`
 
+Tutorial title rules:
+
+- Tutorials MUST keep the "How to" opening
+- Tutorials MUST answer a specific "How to" question, not a broad topic area
+- Tutorials SHOULD complete the title with the concrete outcome, pattern, or tool after "How to"
+- Tutorials SHOULD avoid generic endings like "in JavaScript" unless the language is part of the actual point
+
 Tech versions MUST be actual released versions. When uncertain, confirm with the author.
+
+Article title rules:
+
+- Articles MUST NOT use the tutorial shape in disguise, such as "A Guide to X"
+- Articles SHOULD still be specific and scannable, even when they are conceptual
+- Articles MAY use titles framed around trade-offs, failure modes, or why a topic matters when that better matches the content
 
 ## Structure
 

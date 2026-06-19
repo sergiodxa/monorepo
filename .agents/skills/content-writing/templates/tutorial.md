@@ -12,6 +12,20 @@ excerpt: [Complete sentence under 130 characters describing what the reader will
 ---
 ```
 
+Title guidance:
+
+- Keep `How to` at the start
+- Make the rest of the title answer one specific question
+- Name the concrete pattern, feature, or tool
+- Avoid vague titles like `How to Improve Your App` when the tutorial is really about one narrower technique
+
+Examples:
+
+- `How to Validate Third-Party API Responses with remix/data-schema`
+- `How to Build a Modal Route with Frame in Remix UI`
+- Avoid: `How to Work with APIs`
+- Avoid: `How to Build Better Apps`
+
 ## Opening (1-2 paragraphs)
 
 Describe the use case with real-world examples. What problem does this solve? What scenarios commonly require this solution?

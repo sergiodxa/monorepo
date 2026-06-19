@@ -24,12 +24,21 @@ Article titles should be conceptual, not instructional:
 - "Why X Matters for Y"
 - "Defense in Depth for X"
 - "When X Fails"
+- "Request-Level State in React Router Middleware"
+- "Why Per-Request Singletons Beat Module Caches in Workers"
 
 **Bad titles (these are tutorial titles):**
 
 - "How to Implement X"
 - "Building X with Y"
 - "A Guide to X"
+
+Article title guidance:
+
+- Be descriptive enough that the topic is obvious in a feed
+- Name the actual concept, trade-off, or failure mode
+- Avoid vague bucket titles like `Notes`, `Weekly Links`, or `Some Thoughts`
+- Avoid clickbait or teasing phrasing that hides the point
 
 ## Opening (1-2 paragraphs)
 
