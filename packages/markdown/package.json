@@ -10,6 +10,9 @@
 		"./styles/light.css": "./styles/prism-light.css",
 		"./styles/dark.css": "./styles/prism-dark.css"
 	},
+	"scripts": {
+		"typecheck": "tsc --noEmit"
+	},
 	"dependencies": {
 		"@markdoc/markdoc": "^0.5.7",
 		"@pkg/cn": "workspace:*",
@@ -27,8 +30,5 @@
 		"@types/bun": "^1.3.14",
 		"@types/prismjs": "^1.26.6",
 		"@types/react": "^19.2.17"
-	},
-	"scripts": {
-		"typecheck": "tsc --noEmit"
 	}
 }

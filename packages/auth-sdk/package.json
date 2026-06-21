@@ -5,6 +5,9 @@
 	"exports": {
 		".": "./src/index.ts"
 	},
+	"scripts": {
+		"typecheck": "tsc --noEmit"
+	},
 	"dependencies": {
 		"@pkg/result": "workspace:*"
 	},
@@ -18,8 +21,5 @@
 		"@edgefirst-dev/api-client": "^0.3.0",
 		"jose": "^6.0.0",
 		"zod": "^4.0.0"
-	},
-	"scripts": {
-		"typecheck": "tsc --noEmit"
 	}
 }

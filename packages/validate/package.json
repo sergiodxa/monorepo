@@ -6,6 +6,9 @@
 	"exports": {
 		".": "./src/index.ts"
 	},
+	"scripts": {
+		"typecheck": "tsc --noEmit"
+	},
 	"dependencies": {
 		"@pkg/result": "workspace:*",
 		"@pkg/types": "workspace:*",
@@ -14,8 +17,5 @@
 	"devDependencies": {
 		"@types/bun": "^1.3.14",
 		"zod": "^4.4.3"
-	},
-	"scripts": {
-		"typecheck": "tsc --noEmit"
 	}
 }

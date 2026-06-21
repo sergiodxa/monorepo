@@ -6,6 +6,9 @@
 	"exports": {
 		".": "./src/index.ts"
 	},
+	"scripts": {
+		"typecheck": "tsc --noEmit"
+	},
 	"dependencies": {
 		"@pkg/result": "workspace:*",
 		"@types/node": "^26.0.0"
@@ -17,8 +20,5 @@
 	"peerDependencies": {
 		"react": "^19.2.7",
 		"react-router": "^8.0.1"
-	},
-	"scripts": {
-		"typecheck": "tsc --noEmit"
 	}
 }

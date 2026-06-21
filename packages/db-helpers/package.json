@@ -8,17 +8,17 @@
 			"default": "./src/index.ts"
 		}
 	},
+	"scripts": {
+		"typecheck": "tsc --noEmit"
+	},
+	"dependencies": {
+		"@cloudflare/workers-types": "^4.20260621.1"
+	},
 	"devDependencies": {
 		"@total-typescript/tsconfig": "^1.0.4",
 		"typescript": "^6.0.3"
 	},
 	"peerDependencies": {
 		"drizzle-orm": "^0.45.2"
-	},
-	"dependencies": {
-		"@cloudflare/workers-types": "^4.20260621.1"
-	},
-	"scripts": {
-		"typecheck": "tsc --noEmit"
 	}
 }
