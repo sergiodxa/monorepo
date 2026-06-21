@@ -14,5 +14,8 @@
 	},
 	"peerDependencies": {
 		"drizzle-orm": "^0.45.2"
+	},
+	"scripts": {
+		"typecheck": "tsc --noEmit"
 	}
 }

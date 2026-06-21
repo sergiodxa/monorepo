@@ -10,9 +10,9 @@
 		"cf:typegen": "wrangler types",
 		"rr:typegen": "react-router typegen",
 		"rr:routes": "react-router routes",
-		"check:types": "tsc",
 		"db:local:migrate": "wrangler d1 migrations apply --local",
-		"db:remote:migrate": "wrangler d1 migrations apply --remote"
+		"db:remote:migrate": "wrangler d1 migrations apply --remote",
+		"typecheck": "tsc --noEmit"
 	},
 	"dependencies": {
 		"@edgefirst-dev/jwt": "^1.3.0",

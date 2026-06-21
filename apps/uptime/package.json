@@ -12,11 +12,11 @@
 		"cf:typegen": "wrangler types",
 		"rr:routes": "react-router routes",
 		"rr:typegen": "react-router typegen",
-		"check:types": "tsc",
 		"db:local:drop": "rm -rf ./.wrangler",
 		"db:local:migrate": "wrangler d1 migrations apply --local",
 		"db:remote:migrate": "wrangler d1 migrations apply --remote",
-		"orm:generate": "drizzle-kit generate --config drizzle.config.ts"
+		"orm:generate": "drizzle-kit generate --config drizzle.config.ts",
+		"typecheck": "tsc --noEmit"
 	},
 	"dependencies": {
 		"@edgefirst-dev/api-client": "^0.3.0",

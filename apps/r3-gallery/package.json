@@ -8,7 +8,8 @@
 		"start": "vite preview",
 		"precf:deploy": "bun run build",
 		"cf:deploy": "bunx wrangler deploy",
-		"cf:typegen": "bunx wrangler types"
+		"cf:typegen": "bunx wrangler types",
+		"typecheck": "tsc --noEmit"
 	},
 	"dependencies": {
 		"@pkg/r3-ui-router": "workspace:*",

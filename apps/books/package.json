@@ -9,7 +9,8 @@
 		"cf:deploy": "wrangler deploy",
 		"rr:typegen": "react-router typegen",
 		"rr:routes": "react-router routes",
-		"cf:typegen": "wrangler types"
+		"cf:typegen": "wrangler types",
+		"typecheck": "tsc --noEmit"
 	},
 	"dependencies": {
 		"@edgefirst-dev/api-client": "^0.3.0",

@@ -4,7 +4,8 @@
 	"type": "module",
 	"scripts": {
 		"download:pokeapi": "bun run scripts/download-pokeapi-v2.ts",
-		"start": "bun run src/index.html"
+		"start": "bun run src/index.html",
+		"typecheck": "tsc --noEmit"
 	},
 	"dependencies": {
 		"@pkg/result": "workspace:*"

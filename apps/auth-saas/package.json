@@ -11,7 +11,8 @@
 		"cf:typegen": "wrangler types",
 		"db:local:drop": "rm -rf ./.wrangler",
 		"db:local:migrate": "wrangler d1 migrations apply auth-saas-platform --local",
-		"db:remote:migrate": "wrangler d1 migrations apply auth-saas-platform --remote"
+		"db:remote:migrate": "wrangler d1 migrations apply auth-saas-platform --remote",
+		"typecheck": "tsc --noEmit"
 	},
 	"dependencies": {
 		"@edgefirst-dev/jwt": "^1.3.0",
