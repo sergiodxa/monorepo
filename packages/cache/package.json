@@ -7,7 +7,7 @@
 		".": "./src/index.ts"
 	},
 	"devDependencies": {
-		"@cloudflare/workers-types": "^4.20260409.1"
+		"@cloudflare/workers-types": "^4.20260621.1"
 	},
 	"scripts": {
 		"typecheck": "tsc --noEmit"

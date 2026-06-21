@@ -8,10 +8,11 @@
 	},
 	"dependencies": {
 		"@pkg/types": "workspace:*",
+		"@types/react": "^19.2.17",
 		"ms": "^2.1.3"
 	},
 	"devDependencies": {
-		"@types/bun": "^1.3.11",
+		"@types/bun": "^1.3.14",
 		"@types/ms": "^2.1.0"
 	},
 	"scripts": {

@@ -7,15 +7,16 @@
 		".": "./src/index.ts"
 	},
 	"dependencies": {
-		"@pkg/result": "workspace:*"
+		"@pkg/result": "workspace:*",
+		"@types/node": "^26.0.0"
 	},
 	"devDependencies": {
-		"@types/bun": "^1.3.11",
-		"@types/react": "^19.2.14"
+		"@types/bun": "^1.3.14",
+		"@types/react": "^19.2.17"
 	},
 	"peerDependencies": {
-		"react": "^19.2.5",
-		"react-router": "^7.14.0"
+		"react": "^19.2.7",
+		"react-router": "^8.0.1"
 	},
 	"scripts": {
 		"typecheck": "tsc --noEmit"
