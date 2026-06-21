@@ -34,6 +34,7 @@ export async function queryArticle(request: Request, slug: string) {
 		isPreview,
 		publishedAt: article.publishedAt,
 		article: {
+			id: article.id,
 			title: article.title,
 			body: Markdown.parse(`# ${article.title}\n${article.content}`),
 		},

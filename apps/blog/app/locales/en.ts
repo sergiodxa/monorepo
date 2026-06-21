@@ -98,6 +98,9 @@ export default {
 
 	article: {
 		meta: { title: "{{note}} by sergiodxa" },
+		header: {
+			edit: "Edit Article",
+		},
 		preview: {
 			badge: "Preview until {{date}}",
 			badgeRelative: "Publishes {{relativeTime}}",
