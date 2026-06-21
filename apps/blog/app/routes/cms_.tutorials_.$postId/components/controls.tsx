@@ -80,7 +80,13 @@ export function Controls({ tutorial }: ControlsProps) {
 
 				<DatePicker
 					name="publishedAt"
-					defaultValue={tutorial.isPublished ? undefined : tutorial.publishedAt ? parseDate(tutorial.publishedAt) : undefined}
+					defaultValue={
+						tutorial.isPublished
+							? undefined
+							: tutorial.publishedAt
+								? parseDate(tutorial.publishedAt)
+								: undefined
+					}
 					minValue={today("UTC")}
 				>
 					<Label>Publish Date</Label>
