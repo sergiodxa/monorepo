@@ -11,7 +11,7 @@
 		"format:fix": "bunx oxfmt",
 		"lint": "oxlint --deny-warnings",
 		"lint:fix": "oxlint --deny-warnings --fix",
-		"typecheck": "tsc --noEmit"
+		"typecheck": "bun run --workspaces typecheck"
 	},
 	"dependencies": {
 		"@total-typescript/ts-reset": "^0.6.1",
