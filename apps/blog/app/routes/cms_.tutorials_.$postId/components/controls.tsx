@@ -80,9 +80,8 @@ export function Controls({ tutorial }: ControlsProps) {
 
 				<DatePicker
 					name="publishedAt"
-					defaultValue={tutorial.publishedAt ? parseDate(tutorial.publishedAt) : undefined}
+					defaultValue={tutorial.isPublished ? undefined : tutorial.publishedAt ? parseDate(tutorial.publishedAt) : undefined}
 					minValue={today("UTC")}
-					isReadOnly={tutorial.isPublished}
 				>
 					<Label>Publish Date</Label>
 					<DatePicker.Group>
@@ -94,7 +93,7 @@ export function Controls({ tutorial }: ControlsProps) {
 					<FieldError />
 					<Description>
 						{tutorial.isPublished
-							? "This tutorial is already published."
+							? "This tutorial is already published. Leave it empty to keep it published immediately, or pick a new date to reschedule."
 							: "Leave empty to publish immediately. Publishes at 5pm UTC / 10am PT on the selected date."}
 					</Description>
 					<Popover>

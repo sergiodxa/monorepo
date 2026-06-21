@@ -71,9 +71,8 @@ export function Controls({ article }: ControlsProps) {
 
 				<DatePicker
 					name="publishedAt"
-					defaultValue={article.publishedAt ? parseDate(article.publishedAt) : undefined}
+					defaultValue={article.isPublished ? undefined : article.publishedAt ? parseDate(article.publishedAt) : undefined}
 					minValue={today("UTC")}
-					isReadOnly={article.isPublished}
 				>
 					<Label>Publish Date</Label>
 					<DatePicker.Group>
@@ -85,7 +84,7 @@ export function Controls({ article }: ControlsProps) {
 					<FieldError />
 					<Description>
 						{article.isPublished
-							? "This article is already published."
+							? "This article is already published. Leave it empty to keep it published immediately, or pick a new date to reschedule."
 							: "Leave empty to publish immediately. Publishes at 5pm UTC / 10am PT on the selected date."}
 					</Description>
 					<Popover>
