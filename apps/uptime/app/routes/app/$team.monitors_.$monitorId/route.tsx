@@ -1,4 +1,5 @@
 import type { Params } from "react-router";
+
 import { cn } from "@pkg/cn";
 import { isFailure } from "@pkg/result";
 import { Alert, Badge, Button, Card, LinkButton } from "@pkg/ui";
@@ -68,7 +69,6 @@ function buildTeamMonitorParams(params: Params<string>): TeamMonitorParams {
 
 	return { team, monitorId };
 }
-
 
 export async function loader({ params }: Route.LoaderArgs): Promise<Response | LoaderData> {
 	let routeParams = buildTeamMonitorParams(params);
@@ -200,10 +200,7 @@ export async function loader({ params }: Route.LoaderArgs): Promise<Response | L
 	};
 }
 
-export default function Component({
-	loaderData,
-	params,
-}: Route.ComponentProps) {
+export default function Component({ loaderData, params }: Route.ComponentProps) {
 	if (!("monitor" in loaderData)) return null;
 
 	let routeParams = buildTeamMonitorParams(params);
@@ -273,13 +270,15 @@ export default function Component({
 					<Alert color="warning">
 						<Alert.Content>
 							<Alert.Title>{t("alert.subscription.title")}</Alert.Title>
-						<Alert.Description>{t("alert.subscription.description")}</Alert.Description>
-					</Alert.Content>
-					<Alert.Action>
-						<Link to={href("/app/:team/checkout", routeParams)}>{t("alert.subscription.cta")}</Link>
-					</Alert.Action>
-				</Alert>
-			</div>
+							<Alert.Description>{t("alert.subscription.description")}</Alert.Description>
+						</Alert.Content>
+						<Alert.Action>
+							<Link to={href("/app/:team/checkout", routeParams)}>
+								{t("alert.subscription.cta")}
+							</Link>
+						</Alert.Action>
+					</Alert>
+				</div>
 			)}
 
 			<div className="flex flex-col gap-6 p-5 md:gap-12 md:p-12">

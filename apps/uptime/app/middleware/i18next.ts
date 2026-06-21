@@ -31,18 +31,18 @@ const [i18nextMiddleware, getLocaleFromContext, getInstanceFromContext] = create
 		// Order of detection: cookie first (set from user preference), then Accept-Language header
 		order: ["cookie", "header"],
 	},
-		i18next: {
-			resources: {
-				en: { translation: en },
-				es: { translation: es },
-				de: { translation: de },
-				ja: { translation: ja },
-				fr: { translation: fr },
-				it: { translation: it },
-			},
-			interpolation: { escapeValue: false },
+	i18next: {
+		resources: {
+			en: { translation: en },
+			es: { translation: es },
+			de: { translation: de },
+			ja: { translation: ja },
+			fr: { translation: fr },
+			it: { translation: it },
 		},
-	});
+		interpolation: { escapeValue: false },
+	},
+});
 
 export function locale() {
 	return getLocaleFromContext(getContext());
