@@ -1,5 +1,5 @@
 ---
-title: How to Build a Command Palette Component
+title: How to Build a Command Palette with React Aria Components
 excerpt: Build a filterable command palette using React Aria Components with custom recursive filtering.
 tech: react@19.0.0 react-aria-components@1.0.0
 ---

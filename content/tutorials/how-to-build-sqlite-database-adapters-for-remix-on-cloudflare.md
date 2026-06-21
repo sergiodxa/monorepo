@@ -1,5 +1,5 @@
 ---
-title: How to Build SQLite Database Adapters for Remix on Cloudflare
+title: How to Build SQLite Adapters for D1 and SqlStorage in Remix on Cloudflare
 excerpt: Build SQLite adapters for SqlStorage and D1 from one shared compiler.
 tech: remix@3.0.0 @cloudflare/workers-types@4.20250214.0
 ---

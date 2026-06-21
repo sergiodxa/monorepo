@@ -1,5 +1,5 @@
 ---
-title: Building a Monorepo with Shared Packages
+title: Structuring a Bun Monorepo with Shared Packages
 excerpt: A monorepo with shared packages lets you reuse code across apps while keeping everything in sync.
 technologies: bun@1.0.0
 ---

@@ -1,5 +1,5 @@
 ---
-title: Why "Ping at the End" Changes Everything
+title: Why Ping at the End Turns Cron Monitoring Into Completion Monitoring
 excerpt: The position of your health check ping determines what you're actually monitoring.
 ---
 

@@ -1,5 +1,5 @@
 ---
-title: How to Build an Alert Cooldown System
+title: How to Build an Alert Deduplication System with Cooldowns
 excerpt: Prevent notification fatigue by deduplicating alerts with a time based cooldown system.
 technologies: drizzle-orm@0.30.0
 ---

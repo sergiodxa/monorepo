@@ -1,5 +1,5 @@
 ---
-title: How to Build an Accessible Carousel with Keyboard Navigation
+title: How to Build an Accessible Carousel with Keyboard Support
 excerpt: Build a carousel component with full keyboard support using arrow keys, Home, and End.
 tech: react@19.0.0
 ---

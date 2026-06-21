@@ -1,5 +1,5 @@
 ---
-title: How to Think in Remix UI Instead of React
+title: How to Approach UI Design in Remix UI
 excerpt: Build a small gallery and learn Handle, render closures, context, and manual updates in Remix UI.
 tech: remix@3.0.0-beta.4
 ---

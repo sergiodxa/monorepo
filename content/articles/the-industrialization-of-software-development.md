@@ -1,5 +1,5 @@
 ---
-title: The Industrialization of Software Engineering
+title: How AI Is Industrializing Software Engineering
 excerpt: As software engineering becomes industrialized, writing code matters less than knowing what should be built.
 ---
 

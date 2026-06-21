@@ -1,5 +1,5 @@
 ---
-title: How to Implement Recurring Maintenance Windows
+title: How to Parse and Match Recurring Maintenance Window Patterns
 excerpt: Build a pattern matching system for daily, weekly, and monthly maintenance schedules.
 technologies: date-fns@3.0.0
 ---

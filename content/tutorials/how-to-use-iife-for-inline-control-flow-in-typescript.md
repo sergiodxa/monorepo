@@ -1,5 +1,5 @@
 ---
-title: How to Use an `iife` Helper for Inline Control Flow in TypeScript
+title: How to Use an IIFE Helper for Inline Control Flow in TypeScript
 excerpt: Create a small `iife` helper to use `if`, `try`/`catch`, and async code where JavaScript only accepts expressions.
 tech: typescript@5.0.0 react@19.0.0
 ---

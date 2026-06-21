@@ -1,5 +1,5 @@
 ---
-title: How to Implement Content Matching Rules
+title: How to Validate Response Bodies with Content Matching Rules
 excerpt: Build a content matching system that validates response bodies using contains, not contains, and regex rules.
 technologies: typescript@5.0.0
 ---
