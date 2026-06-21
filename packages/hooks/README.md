@@ -117,14 +117,14 @@ Uses keyboard events to track CapsLock state changes, and a one-time mousemove l
 import { useCapsLockDetection } from "@pkg/hooks";
 
 function PasswordInput() {
-  let capsLockOn = useCapsLockDetection();
+	let capsLockOn = useCapsLockDetection();
 
-  return (
-    <div>
-      <input type="password" />
-      {capsLockOn && <span>CapsLock is on</span>}
-    </div>
-  );
+	return (
+		<div>
+			<input type="password" />
+			{capsLockOn && <span>CapsLock is on</span>}
+		</div>
+	);
 }
 ```
 
@@ -154,21 +154,21 @@ import { useValue } from "@pkg/hooks";
 
 // Define keys in a shared constants file for type safety
 const KEYS = {
-  counter: Symbol.for("app:counter"),
-  theme: Symbol.for("app:theme"),
+	counter: Symbol.for("app:counter"),
+	theme: Symbol.for("app:theme"),
 } as const;
 
 // In ComponentA (e.g., in /dashboard route)
 function Dashboard() {
-  let [count, setCount] = useValue(KEYS.counter, 0);
-  return <button onClick={() => setCount(count + 1)}>Count: {count}</button>;
+	let [count, setCount] = useValue(KEYS.counter, 0);
+	return <button onClick={() => setCount(count + 1)}>Count: {count}</button>;
 }
 
 // In ComponentB (e.g., in /settings route)
 function Settings() {
-  let [count, setCount] = useValue(KEYS.counter, 0);
-  // Both components share the same count state
-  return <div>Current count: {count}</div>;
+	let [count, setCount] = useValue(KEYS.counter, 0);
+	// Both components share the same count state
+	return <div>Current count: {count}</div>;
 }
 ```
 
@@ -197,14 +197,14 @@ const useIsomorphicLayoutEffect: typeof useLayoutEffect;
 import { useIsomorphicLayoutEffect } from "@pkg/hooks";
 
 function Tooltip({ targetRef }: { targetRef: RefObject<HTMLElement> }) {
-  let [position, setPosition] = useState({ top: 0, left: 0 });
+	let [position, setPosition] = useState({ top: 0, left: 0 });
 
-  useIsomorphicLayoutEffect(() => {
-    let rect = targetRef.current.getBoundingClientRect();
-    setPosition({ top: rect.bottom, left: rect.left });
-  }, [targetRef]);
+	useIsomorphicLayoutEffect(() => {
+		let rect = targetRef.current.getBoundingClientRect();
+		setPosition({ top: rect.bottom, left: rect.left });
+	}, [targetRef]);
 
-  return <div style={position}>Tooltip</div>;
+	return <div style={position}>Tooltip</div>;
 }
 ```
 
@@ -236,27 +236,27 @@ A hook that manages a timeout with conditional triggering.
 import { useClipboard, useTimeout } from "@pkg/hooks";
 
 function CopyButton({ text }: { text: string }) {
-  let clipboard = useClipboard();
+	let clipboard = useClipboard();
 
-  // Auto-reset after 2 seconds when copy succeeds
-  useTimeout(() => clipboard.reset(), {
-    delay: 2000,
-    when: clipboard.status === "success",
-  });
+	// Auto-reset after 2 seconds when copy succeeds
+	useTimeout(() => clipboard.reset(), {
+		delay: 2000,
+		when: clipboard.status === "success",
+	});
 
-  return (
-    <button
-      onClick={async () => {
-        let item = new ClipboardItem({
-          "text/plain": new Blob([text], { type: "text/plain" }),
-        });
-        await clipboard.write([item]);
-      }}
-      disabled={clipboard.status === "loading"}
-    >
-      {clipboard.status === "success" ? "Copied!" : "Copy"}
-    </button>
-  );
+	return (
+		<button
+			onClick={async () => {
+				let item = new ClipboardItem({
+					"text/plain": new Blob([text], { type: "text/plain" }),
+				});
+				await clipboard.write([item]);
+			}}
+			disabled={clipboard.status === "loading"}
+		>
+			{clipboard.status === "success" ? "Copied!" : "Copy"}
+		</button>
+	);
 }
 ```
 
@@ -266,17 +266,17 @@ function CopyButton({ text }: { text: string }) {
 import { useTimeout } from "@pkg/hooks";
 
 function AutoSave({ isDirty }: { isDirty: boolean }) {
-  let clear = useTimeout(() => save(), {
-    delay: 5000,
-    when: isDirty,
-  });
+	let clear = useTimeout(() => save(), {
+		delay: 5000,
+		when: isDirty,
+	});
 
-  return (
-    <div>
-      {isDirty && <span>Unsaved changes</span>}
-      <button onClick={clear}>Cancel auto-save</button>
-    </div>
-  );
+	return (
+		<div>
+			{isDirty && <span>Unsaved changes</span>}
+			<button onClick={clear}>Cancel auto-save</button>
+		</div>
+	);
 }
 ```
 
@@ -355,19 +355,19 @@ import { useFetcher } from "react-router";
 import { useFetcherStatus } from "@pkg/hooks";
 
 function SubscribeForm() {
-  let fetcher = useFetcher<{ ok: boolean; error?: string }>();
-  let status = useFetcherStatus(fetcher);
+	let fetcher = useFetcher<{ ok: boolean; error?: string }>();
+	let status = useFetcherStatus(fetcher);
 
-  return (
-    <fetcher.Form method="post" action="/api/subscribe">
-      <input type="email" name="email" disabled={status === "loading"} />
-      <button type="submit" disabled={status === "loading"}>
-        {status === "loading" ? "Subscribing..." : "Subscribe"}
-      </button>
-      {status === "failure" && <p className="error">{fetcher.data?.error}</p>}
-      {status === "success" && <p className="success">Subscribed!</p>}
-    </fetcher.Form>
-  );
+	return (
+		<fetcher.Form method="post" action="/api/subscribe">
+			<input type="email" name="email" disabled={status === "loading"} />
+			<button type="submit" disabled={status === "loading"}>
+				{status === "loading" ? "Subscribing..." : "Subscribe"}
+			</button>
+			{status === "failure" && <p className="error">{fetcher.data?.error}</p>}
+			{status === "success" && <p className="success">Subscribed!</p>}
+		</fetcher.Form>
+	);
 }
 ```
 
@@ -442,44 +442,41 @@ import { useValue } from "@pkg/hooks";
 
 // keys.ts - Define keys in a shared file
 export const KEYS = {
-  selectedItems: Symbol.for("app:selectedItems"),
-  sidebarOpen: Symbol.for("app:sidebarOpen"),
+	selectedItems: Symbol.for("app:selectedItems"),
+	sidebarOpen: Symbol.for("app:sidebarOpen"),
 } as const;
 
 // routes/products.tsx
 function ProductList() {
-  let [selectedIds, setSelectedIds] = useValue<Set<string>>(
-    KEYS.selectedItems,
-    new Set()
-  );
+	let [selectedIds, setSelectedIds] = useValue<Set<string>>(KEYS.selectedItems, new Set());
 
-  function toggleSelection(id: string) {
-    let next = new Set(selectedIds);
-    if (next.has(id)) next.delete(id);
-    else next.add(id);
-    setSelectedIds(next);
-  }
+	function toggleSelection(id: string) {
+		let next = new Set(selectedIds);
+		if (next.has(id)) next.delete(id);
+		else next.add(id);
+		setSelectedIds(next);
+	}
 
-  return (
-    <ul>
-      {products.map((p) => (
-        <li key={p.id}>
-          <input
-            type="checkbox"
-            checked={selectedIds.has(p.id)}
-            onChange={() => toggleSelection(p.id)}
-          />
-          {p.name}
-        </li>
-      ))}
-    </ul>
-  );
+	return (
+		<ul>
+			{products.map((p) => (
+				<li key={p.id}>
+					<input
+						type="checkbox"
+						checked={selectedIds.has(p.id)}
+						onChange={() => toggleSelection(p.id)}
+					/>
+					{p.name}
+				</li>
+			))}
+		</ul>
+	);
 }
 
 // routes/cart.tsx - Different route, same state
 function CartSummary() {
-  let [selectedIds] = useValue<Set<string>>(KEYS.selectedItems, new Set());
-  return <div>Selected items: {selectedIds.size}</div>;
+	let [selectedIds] = useValue<Set<string>>(KEYS.selectedItems, new Set());
+	return <div>Selected items: {selectedIds.size}</div>;
 }
 ```
 
@@ -494,12 +491,12 @@ import { validate } from "@pkg/validate";
 import { isFailure } from "@pkg/result";
 
 export async function action({ request }: Route.ActionArgs) {
-  let result = await validate(request, schema);
-  if (isFailure(result)) {
-    return badRequest({ error: "Invalid input" });
-  }
-  await saveData(result.data);
-  return ok({ message: "Saved!" });
+	let result = await validate(request, schema);
+	if (isFailure(result)) {
+		return badRequest({ error: "Invalid input" });
+	}
+	await saveData(result.data);
+	return ok({ message: "Saved!" });
 }
 
 // Component
@@ -507,19 +504,17 @@ import { useFetcher } from "react-router";
 import { useFetcherStatus } from "@pkg/hooks";
 
 function SaveForm() {
-  let fetcher = useFetcher<{ ok: boolean; error?: string; message?: string }>();
-  let status = useFetcherStatus(fetcher);
+	let fetcher = useFetcher<{ ok: boolean; error?: string; message?: string }>();
+	let status = useFetcherStatus(fetcher);
 
-  return (
-    <fetcher.Form method="post">
-      <input name="data" disabled={status === "loading"} />
-      <button disabled={status === "loading"}>
-        {status === "loading" ? "Saving..." : "Save"}
-      </button>
-      {status === "failure" && <p>{fetcher.data?.error}</p>}
-      {status === "success" && <p>{fetcher.data?.message}</p>}
-    </fetcher.Form>
-  );
+	return (
+		<fetcher.Form method="post">
+			<input name="data" disabled={status === "loading"} />
+			<button disabled={status === "loading"}>{status === "loading" ? "Saving..." : "Save"}</button>
+			{status === "failure" && <p>{fetcher.data?.error}</p>}
+			{status === "success" && <p>{fetcher.data?.message}</p>}
+		</fetcher.Form>
+	);
 }
 ```
 
@@ -532,21 +527,21 @@ import { useToggle } from "@pkg/hooks";
 import { cn } from "@pkg/cn";
 
 function AnimatedPanel() {
-  let [isVisible, toggle] = useToggle(false);
+	let [isVisible, toggle] = useToggle(false);
 
-  return (
-    <div>
-      <button onClick={toggle}>Toggle Panel</button>
-      <div
-        className={cn(
-          "transition-all duration-300",
-          isVisible ? "opacity-100 max-h-96" : "opacity-0 max-h-0 overflow-hidden"
-        )}
-      >
-        <div className="p-4">Panel content</div>
-      </div>
-    </div>
-  );
+	return (
+		<div>
+			<button onClick={toggle}>Toggle Panel</button>
+			<div
+				className={cn(
+					"transition-all duration-300",
+					isVisible ? "opacity-100 max-h-96" : "opacity-0 max-h-0 overflow-hidden",
+				)}
+			>
+				<div className="p-4">Panel content</div>
+			</div>
+		</div>
+	);
 }
 ```
 
@@ -558,34 +553,26 @@ Create multiple independent toggle states:
 import { useToggle } from "@pkg/hooks";
 
 function Settings() {
-  let [notificationsEnabled, toggleNotifications] = useToggle(true);
-  let [darkMode, toggleDarkMode] = useToggle(false);
-  let [compactView, toggleCompactView] = useToggle(false);
+	let [notificationsEnabled, toggleNotifications] = useToggle(true);
+	let [darkMode, toggleDarkMode] = useToggle(false);
+	let [compactView, toggleCompactView] = useToggle(false);
 
-  return (
-    <div>
-      <label>
-        <input
-          type="checkbox"
-          checked={notificationsEnabled}
-          onChange={toggleNotifications}
-        />
-        Enable notifications
-      </label>
-      <label>
-        <input type="checkbox" checked={darkMode} onChange={toggleDarkMode} />
-        Dark mode
-      </label>
-      <label>
-        <input
-          type="checkbox"
-          checked={compactView}
-          onChange={toggleCompactView}
-        />
-        Compact view
-      </label>
-    </div>
-  );
+	return (
+		<div>
+			<label>
+				<input type="checkbox" checked={notificationsEnabled} onChange={toggleNotifications} />
+				Enable notifications
+			</label>
+			<label>
+				<input type="checkbox" checked={darkMode} onChange={toggleDarkMode} />
+				Dark mode
+			</label>
+			<label>
+				<input type="checkbox" checked={compactView} onChange={toggleCompactView} />
+				Compact view
+			</label>
+		</div>
+	);
 }
 ```
 
