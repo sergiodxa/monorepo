@@ -45,7 +45,7 @@ The parent will only receive the event if it bubbles through the DOM. That is wh
 new CustomEvent("testEvent", {
 	detail: "Hello from Child!",
 	bubbles: true,
-})
+});
 ```
 
 Without that option, the event stops at the child element and the parent listener never sees it.

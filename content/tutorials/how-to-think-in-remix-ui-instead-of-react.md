@@ -79,11 +79,12 @@ export interface GalleryDemoProps {
 	photos: Photo[];
 }
 
-export let GalleryDemo = clientEntry(import.meta.url, function GalleryDemo(
-	handle: Handle<GalleryDemoProps>,
-) {
-	return () => <GalleryScope photos={handle.props.photos} />;
-});
+export let GalleryDemo = clientEntry(
+	import.meta.url,
+	function GalleryDemo(handle: Handle<GalleryDemoProps>) {
+		return () => <GalleryScope photos={handle.props.photos} />;
+	},
+);
 
 function GalleryScope(handle: Handle<GalleryDemoProps>) {
 	let selectedId = handle.props.photos[0]?.id ?? null;
@@ -175,11 +176,12 @@ interface GalleryContextValue {
 	toggleView(): void;
 }
 
-export let GalleryDemo = clientEntry(import.meta.url, function GalleryDemo(
-	handle: Handle<GalleryDemoProps>,
-) {
-	return () => <GalleryScope photos={handle.props.photos} />;
-});
+export let GalleryDemo = clientEntry(
+	import.meta.url,
+	function GalleryDemo(handle: Handle<GalleryDemoProps>) {
+		return () => <GalleryScope photos={handle.props.photos} />;
+	},
+);
 
 function GalleryScope(handle: Handle<GalleryDemoProps, GalleryContextValue>) {
 	let view: "grid" | "list" = "grid";
@@ -286,9 +288,7 @@ function PhotoList(handle: Handle<PhotoListProps>) {
 			mix={css({
 				display: "grid",
 				gridTemplateColumns:
-					gallery.view === "grid"
-						? "repeat(auto-fit, minmax(min(100%, 14rem), 1fr))"
-						: "1fr",
+					gallery.view === "grid" ? "repeat(auto-fit, minmax(min(100%, 14rem), 1fr))" : "1fr",
 				gap: "1rem",
 				margin: 0,
 				padding: 0,
@@ -359,8 +359,7 @@ function SelectedPhoto(handle: Handle<SelectedPhotoProps>) {
 	let gallery = handle.context.get(GalleryScope);
 
 	return () => {
-		let photo =
-			handle.props.photos.find((photo) => photo.id === gallery.selectedId) ?? null;
+		let photo = handle.props.photos.find((photo) => photo.id === gallery.selectedId) ?? null;
 
 		if (!photo) {
 			return <aside>No photo selected.</aside>;
@@ -441,11 +440,12 @@ interface GalleryContextValue {
 	toggleView(): void;
 }
 
-export let GalleryDemo = clientEntry(import.meta.url, function GalleryDemo(
-	handle: Handle<GalleryDemoProps>,
-) {
-	return () => <GalleryScope photos={handle.props.photos} />;
-});
+export let GalleryDemo = clientEntry(
+	import.meta.url,
+	function GalleryDemo(handle: Handle<GalleryDemoProps>) {
+		return () => <GalleryScope photos={handle.props.photos} />;
+	},
+);
 
 function GalleryScope(handle: Handle<GalleryDemoProps, GalleryContextValue>) {
 	let view: "grid" | "list" = "grid";
@@ -551,9 +551,7 @@ function PhotoList(handle: Handle<PhotoListProps>) {
 			mix={css({
 				display: "grid",
 				gridTemplateColumns:
-					gallery.view === "grid"
-						? "repeat(auto-fit, minmax(min(100%, 14rem), 1fr))"
-						: "1fr",
+					gallery.view === "grid" ? "repeat(auto-fit, minmax(min(100%, 14rem), 1fr))" : "1fr",
 				gap: "1rem",
 				margin: 0,
 				padding: 0,
@@ -624,8 +622,7 @@ function SelectedPhoto(handle: Handle<SelectedPhotoProps>) {
 	let gallery = handle.context.get(GalleryScope);
 
 	return () => {
-		let photo =
-			handle.props.photos.find((photo) => photo.id === gallery.selectedId) ?? null;
+		let photo = handle.props.photos.find((photo) => photo.id === gallery.selectedId) ?? null;
 
 		if (!photo) {
 			return <aside>No photo selected.</aside>;

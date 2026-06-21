@@ -41,9 +41,7 @@ export interface Photo {
 	url: string;
 }
 
-let albums: Album[] = [
-	{ id: "1", title: "Weekend in Lisbon" },
-];
+let albums: Album[] = [{ id: "1", title: "Weekend in Lisbon" }];
 
 let photos: Photo[] = [
 	{
@@ -159,7 +157,11 @@ export function AlbumRoute(handle: Handle<AlbumRouteProps>) {
 	let albumUrl = routes.album.href({ albumId: handle.props.album.id });
 
 	handle.queueTask((signal) => {
-		history.replaceState({ actualUrl: window.location.href } satisfies MaskState, "", window.location.href);
+		history.replaceState(
+			{ actualUrl: window.location.href } satisfies MaskState,
+			"",
+			window.location.href,
+		);
 
 		function syncFromHistory() {
 			let state = history.state as MaskState | null;
@@ -263,7 +265,9 @@ export function AlbumRoute(handle: Handle<AlbumRouteProps>) {
 							<Frame
 								name="selected-photo"
 								src={routes.photo.href({ photoId: selectedPhoto.id })}
-								fallback={<div mix={css({ padding: "2rem", color: "white" })}>Loading photo...</div>}
+								fallback={
+									<div mix={css({ padding: "2rem", color: "white" })}>Loading photo...</div>
+								}
 							/>
 
 							<button

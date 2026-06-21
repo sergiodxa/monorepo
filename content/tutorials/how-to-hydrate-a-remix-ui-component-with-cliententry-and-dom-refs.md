@@ -76,31 +76,32 @@ function CopyInviteButton(handle: Handle<InvitePanelProps>) {
 	);
 }
 
-export let InvitePanel = clientEntry(import.meta.url, function InvitePanel(
-	handle: Handle<InvitePanelProps>,
-) {
-	let status = "Nothing copied yet.";
+export let InvitePanel = clientEntry(
+	import.meta.url,
+	function InvitePanel(handle: Handle<InvitePanelProps>) {
+		let status = "Nothing copied yet.";
 
-	return () => (
-		<section
-			mix={ref((element, signal) => {
-				element.addEventListener(
-					"invite:copied",
-					(event) => {
-						let detail = (event as CustomEvent<InviteCopiedDetail>).detail;
-						status = `Copied ${detail.inviteUrl} at ${detail.copiedAt}.`;
-						handle.update();
-					},
-					{ signal },
-				);
-			})}
-		>
-			<p>{handle.props.inviteUrl}</p>
-			<CopyInviteButton inviteUrl={handle.props.inviteUrl} />
-			<output aria-live="polite">{status}</output>
-		</section>
-	);
-});
+		return () => (
+			<section
+				mix={ref((element, signal) => {
+					element.addEventListener(
+						"invite:copied",
+						(event) => {
+							let detail = (event as CustomEvent<InviteCopiedDetail>).detail;
+							status = `Copied ${detail.inviteUrl} at ${detail.copiedAt}.`;
+							handle.update();
+						},
+						{ signal },
+					);
+				})}
+			>
+				<p>{handle.props.inviteUrl}</p>
+				<CopyInviteButton inviteUrl={handle.props.inviteUrl} />
+				<output aria-live="polite">{status}</output>
+			</section>
+		);
+	},
+);
 ```
 
 `clientEntry` marks this component as a client island. The returned function renders the HTML, while the outer closure holds browser-only state and calls `handle.update()` when that state changes.
@@ -161,31 +162,32 @@ async function copyInviteLink() {
 Now attach a listener to the parent section. Because the event bubbles, the parent can react to the child without knowing how the child copied the link.
 
 ```tsx {% path="app/components/invite-panel.tsx" %}
-export let InvitePanel = clientEntry(import.meta.url, function InvitePanel(
-	handle: Handle<InvitePanelProps>,
-) {
-	let status = "Nothing copied yet.";
+export let InvitePanel = clientEntry(
+	import.meta.url,
+	function InvitePanel(handle: Handle<InvitePanelProps>) {
+		let status = "Nothing copied yet.";
 
-	return () => (
-		<section
-			mix={ref((element, signal) => {
-				element.addEventListener(
-					"invite:copied",
-					(event) => {
-						let detail = (event as CustomEvent<InviteCopiedDetail>).detail;
-						status = `Copied ${detail.inviteUrl} at ${detail.copiedAt}.`;
-						handle.update();
-					},
-					{ signal },
-				);
-			})}
-		>
-			<p>{handle.props.inviteUrl}</p>
-			<CopyInviteButton inviteUrl={handle.props.inviteUrl} />
-			<output aria-live="polite">{status}</output>
-		</section>
-	);
-});
+		return () => (
+			<section
+				mix={ref((element, signal) => {
+					element.addEventListener(
+						"invite:copied",
+						(event) => {
+							let detail = (event as CustomEvent<InviteCopiedDetail>).detail;
+							status = `Copied ${detail.inviteUrl} at ${detail.copiedAt}.`;
+							handle.update();
+						},
+						{ signal },
+					);
+				})}
+			>
+				<p>{handle.props.inviteUrl}</p>
+				<CopyInviteButton inviteUrl={handle.props.inviteUrl} />
+				<output aria-live="polite">{status}</output>
+			</section>
+		);
+	},
+);
 ```
 
 The parent owns the UI state, so it updates `status` and calls `handle.update()`. This is a good fit for client entries because you can keep local state in plain variables instead of introducing hooks for a small island.
@@ -259,31 +261,32 @@ function CopyInviteButton(handle: Handle<InvitePanelProps>) {
 	);
 }
 
-export let InvitePanel = clientEntry(import.meta.url, function InvitePanel(
-	handle: Handle<InvitePanelProps>,
-) {
-	let status = "Nothing copied yet.";
+export let InvitePanel = clientEntry(
+	import.meta.url,
+	function InvitePanel(handle: Handle<InvitePanelProps>) {
+		let status = "Nothing copied yet.";
 
-	return () => (
-		<section
-			mix={ref((element, signal) => {
-				element.addEventListener(
-					"invite:copied",
-					(event) => {
-						let detail = (event as CustomEvent<InviteCopiedDetail>).detail;
-						status = `Copied ${detail.inviteUrl} at ${detail.copiedAt}.`;
-						handle.update();
-					},
-					{ signal },
-				);
-			})}
-		>
-			<p>{handle.props.inviteUrl}</p>
-			<CopyInviteButton inviteUrl={handle.props.inviteUrl} />
-			<output aria-live="polite">{status}</output>
-		</section>
-	);
-});
+		return () => (
+			<section
+				mix={ref((element, signal) => {
+					element.addEventListener(
+						"invite:copied",
+						(event) => {
+							let detail = (event as CustomEvent<InviteCopiedDetail>).detail;
+							status = `Copied ${detail.inviteUrl} at ${detail.copiedAt}.`;
+							handle.update();
+						},
+						{ signal },
+					);
+				})}
+			>
+				<p>{handle.props.inviteUrl}</p>
+				<CopyInviteButton inviteUrl={handle.props.inviteUrl} />
+				<output aria-live="polite">{status}</output>
+			</section>
+		);
+	},
+);
 ```
 
 The route renders the HTML on the server, the client entry hydrates the island in the browser, the child button uses `navigator.clipboard`, and the parent reacts through a bubbling custom event.
