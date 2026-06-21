@@ -37,14 +37,20 @@ bun run dev              # Start development server
 
 Run from the repository root:
 
-| Command          | Description              |
-| ---------------- | ------------------------ |
-| `bun format`     | Check formatting         |
-| `bun format:fix` | Fix formatting           |
-| `bun lint`       | Check linting            |
-| `bun lint:fix`   | Fix linting issues       |
-| `bun typecheck`  | TypeScript type checking |
-| `bun test`       | Run all tests            |
+| Command                        | Description                |
+| ------------------------------ | -------------------------- |
+| `bun format`                   | Check formatting           |
+| `bun format:fix`               | Fix formatting             |
+| `bun lint`                     | Check linting              |
+| `bun lint:fix`                 | Fix linting issues         |
+| `bun typecheck`                | TypeScript type checking   |
+| `bun test`                     | Run all tests              |
+| `bun upgrade`                  | Upgrade all workspaces     |
+| `bun upgrade:dry-run`          | Preview all upgrades       |
+| `bun upgrade:apps`             | Upgrade app workspaces     |
+| `bun upgrade:apps:dry-run`     | Preview app upgrades       |
+| `bun upgrade:packages`         | Upgrade package workspaces |
+| `bun upgrade:packages:dry-run` | Preview package upgrades   |
 
 ## Workspace Imports
 
