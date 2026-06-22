@@ -1,3 +1,5 @@
+import { cn } from "@pkg/cn";
+
 import { CopyButton } from "./copy-button.js";
 
 /**
@@ -27,7 +29,10 @@ export function Fence({ content, language, path, title, copyId }: Fence.Props) {
 	return (
 		<div className="relative">
 			<pre
-				className={`language-${language} overflow-x-auto rounded-lg border bg-neutral-50 p-4 text-sm dark:bg-neutral-900`}
+				className={cn(
+					`language-${language}`,
+					"overflow-x-auto rounded-lg border bg-neutral-50 p-4 text-sm dark:bg-neutral-900",
+				)}
 			>
 				{hasHeader && (
 					<header className="mb-3 flex items-center justify-between border-b border-neutral-200 pb-2 dark:border-neutral-700">

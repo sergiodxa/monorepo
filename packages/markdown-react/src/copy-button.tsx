@@ -38,7 +38,9 @@ export function CopyButton({ targetId }: CopyButton.Props) {
 				if (!element) return;
 
 				let text = element.textContent ?? "";
-				let item = new ClipboardItem({ "text/plain": new Blob([text], { type: "text/plain" }) });
+				let item = new ClipboardItem({
+					"text/plain": new Blob([text], { type: "text/plain" }),
+				});
 
 				await write([item]);
 			}}

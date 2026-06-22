@@ -1,14 +1,19 @@
-/* @jsxImportSource remix/ui */
-import type { RenderableTreeNode, Tag } from "@markdoc/markdoc";
 import type { RemixNode } from "remix/ui";
 
 import { createElement, css } from "remix/ui";
 
-import type { Markdown } from "../../server/index.js";
-
 import { Fence } from "./fence.js";
 
 import type { MarkdownView } from "./index.js";
+
+type RenderableTreeNode = unknown;
+
+interface Tag {
+	$$mdtype?: string;
+	name?: string;
+	attributes?: Record<string, unknown>;
+	children?: Array<RenderableTreeNode>;
+}
 
 type CSSProps = Parameters<typeof css>[0];
 
@@ -197,7 +202,7 @@ function renderChild(
 						borderLeft: "3px solid #d4d4d4",
 						color: "#404040",
 					}),
-				]}
+					]}
 			>
 				{children}
 			</blockquote>
@@ -245,13 +250,11 @@ function renderChild(
 		);
 	}
 
-	if (tagName === "thead")
-		return <thead mix={[css({ backgroundColor: "#f5f5f5" })]}>{children}</thead>;
+	if (tagName === "thead") return <thead mix={[css({ backgroundColor: "#f5f5f5" })]}>{children}</thead>;
 
 	if (tagName === "tbody") return <tbody>{children}</tbody>;
 
-	if (tagName === "tr")
-		return <tr mix={[css({ borderBottom: "1px solid #e5e5e5" })]}>{children}</tr>;
+	if (tagName === "tr") return <tr mix={[css({ borderBottom: "1px solid #e5e5e5" })]}>{children}</tr>;
 
 	if (tagName === "th") {
 		return (
@@ -276,8 +279,8 @@ function renderChild(
  * @returns Remix output for the full markdown document
  */
 export function renderToRemix(
-	content: Markdown.AST,
+	content: RenderableTreeNode,
 	components?: MarkdownView.Props["components"],
 ): RemixNode {
-	return renderChild(content as RenderableTreeNode, components);
+	return renderChild(content, components);
 }
