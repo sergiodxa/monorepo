@@ -10,10 +10,10 @@
 		"typecheck": "tsc --noEmit"
 	},
 	"dependencies": {
+		"@markdoc/markdoc": "^0.5.4",
 		"@pkg/cn": "workspace:*",
 		"@pkg/hooks": "workspace:*",
 		"@pkg/ui": "workspace:*",
-		"@markdoc/markdoc": "^0.5.4",
 		"lucide-react": "^1.21.0"
 	},
 	"devDependencies": {
