@@ -202,7 +202,7 @@ function renderChild(
 						borderLeft: "3px solid #d4d4d4",
 						color: "#404040",
 					}),
-					]}
+				]}
 			>
 				{children}
 			</blockquote>
@@ -250,11 +250,13 @@ function renderChild(
 		);
 	}
 
-	if (tagName === "thead") return <thead mix={[css({ backgroundColor: "#f5f5f5" })]}>{children}</thead>;
+	if (tagName === "thead")
+		return <thead mix={[css({ backgroundColor: "#f5f5f5" })]}>{children}</thead>;
 
 	if (tagName === "tbody") return <tbody>{children}</tbody>;
 
-	if (tagName === "tr") return <tr mix={[css({ borderBottom: "1px solid #e5e5e5" })]}>{children}</tr>;
+	if (tagName === "tr")
+		return <tr mix={[css({ borderBottom: "1px solid #e5e5e5" })]}>{children}</tr>;
 
 	if (tagName === "th") {
 		return (

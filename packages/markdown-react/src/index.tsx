@@ -1,5 +1,6 @@
-import { renderers } from "@markdoc/markdoc";
 import type { RenderableTreeNodes } from "@markdoc/markdoc";
+
+import { renderers } from "@markdoc/markdoc";
 import * as React from "react";
 
 import { Fence } from "./fence.js";
