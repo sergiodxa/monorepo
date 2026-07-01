@@ -20,13 +20,13 @@ Remix v3 route handlers receive a typed request context object. Middleware can e
 
 ### Issues Identified
 
-| Issue | Impact |
-| ----- | ------ |
-| Service construction inside route handlers | Routes become harder to test and accumulate infrastructure wiring |
-| Service registration inside middleware | Application dependencies are redefined per request and mixed with lifecycle logic |
-| String or symbol dependency keys | Type inference is weaker and call sites are easier to mistype |
-| Global request state | Unsafe on Workers because isolates can handle overlapping requests |
-| Decorator or reflection-based injection | Adds runtime magic and does not align with Workers-friendly explicit code |
+| Issue                                      | Impact                                                                            |
+| ------------------------------------------ | --------------------------------------------------------------------------------- |
+| Service construction inside route handlers | Routes become harder to test and accumulate infrastructure wiring                 |
+| Service registration inside middleware     | Application dependencies are redefined per request and mixed with lifecycle logic |
+| String or symbol dependency keys           | Type inference is weaker and call sites are easier to mistype                     |
+| Global request state                       | Unsafe on Workers because isolates can handle overlapping requests                |
+| Decorator or reflection-based injection    | Adds runtime magic and does not align with Workers-friendly explicit code         |
 
 ## Decision
 
@@ -66,13 +66,13 @@ interface Container {
 
 The semantics are:
 
-| Method | Lifetime |
-| ------ | -------- |
-| `singleton(Class, factory)` | One instance per application container, reused across requests in the same Worker isolate |
-| `scoped(Class, factory)` | One instance per request-scoped container |
-| `instance(Class, value)` | A manually provided value in the current container, commonly used for request-specific values |
-| `get(Class)` | Resolve the dependency for the current container |
-| `createScope()` | Create a child container from the global application container |
+| Method                      | Lifetime                                                                                      |
+| --------------------------- | --------------------------------------------------------------------------------------------- |
+| `singleton(Class, factory)` | One instance per application container, reused across requests in the same Worker isolate     |
+| `scoped(Class, factory)`    | One instance per request-scoped container                                                     |
+| `instance(Class, value)`    | A manually provided value in the current container, commonly used for request-specific values |
+| `get(Class)`                | Resolve the dependency for the current container                                              |
+| `createScope()`             | Create a child container from the global application container                                |
 
 Singleton definitions and instances belong to the application container. Scoped instances belong to the request container that resolves them. `instance` values should override parent definitions for the current scope so request-specific values such as `Request`, Cloudflare bindings, Cloudflare execution context, current user, session, and request ID can be attached safely.
 
@@ -148,17 +148,17 @@ Middleware may resolve services from the container, but middleware must not regi
 
 Service providers and middleware have separate responsibilities:
 
-| Belongs in service providers | Belongs in middleware |
-| ---------------------------- | --------------------- |
-| Database client registration | Reading the current session |
-| Logger registration | Loading the current user |
-| Cache registration | Setting request ID |
-| Repository/model registration | Locale detection |
-| Mailer registration | CSRF checks |
-| Queue client registration | Permission checks |
-| Storage client registration | Response headers |
-| Billing/API client registration | Timing and instrumentation |
-| Auth service registration | Flash messages and redirects |
+| Belongs in service providers    | Belongs in middleware        |
+| ------------------------------- | ---------------------------- |
+| Database client registration    | Reading the current session  |
+| Logger registration             | Loading the current user     |
+| Cache registration              | Setting request ID           |
+| Repository/model registration   | Locale detection             |
+| Mailer registration             | CSRF checks                  |
+| Queue client registration       | Permission checks            |
+| Storage client registration     | Response headers             |
+| Billing/API client registration | Timing and instrumentation   |
+| Auth service registration       | Flash messages and redirects |
 
 This keeps dependency construction stable and request lifecycle behavior explicit.
 
@@ -197,15 +197,12 @@ function inject<
 	Return,
 >(
 	dependencies: Dependencies,
-	handler: (
-		ctx: Context,
-		...instances: InferInstances<Dependencies>
-	) => Return,
+	handler: (ctx: Context, ...instances: InferInstances<Dependencies>) => Return,
 ): (ctx: Context) => Return {
 	return (ctx) => {
 		let container = ctx.get(ServiceContainer);
 		let instances = dependencies.map((dependency) => container.get(dependency));
-		return handler(ctx, ...instances as InferInstances<Dependencies>);
+		return handler(ctx, ...(instances as InferInstances<Dependencies>));
 	};
 }
 ```
