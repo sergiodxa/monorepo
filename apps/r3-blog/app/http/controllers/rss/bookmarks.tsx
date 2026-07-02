@@ -5,7 +5,6 @@ import { getContext } from "remix/async-context-middleware";
 import { Database } from "remix/data-table";
 import { createAction } from "remix/fetch-router";
 
-
 import { LikePost } from "~/app/repositories/posts/like";
 import routes from "~/routes/web";
 
