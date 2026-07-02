@@ -46,16 +46,8 @@ export function parseDocument(source: string): Result<XML.Document, Error> {
 function createDOMParser(issues?: string[]): DOMParser {
 	if (typeof DOMParser !== "undefined") return new DOMParser();
 	return new PolyfillDOMParser({
-		errorHandler: {
-			warning(message) {
-				issues?.push(message);
-			},
-			error(message) {
-				issues?.push(message);
-			},
-			fatalError(message) {
-				issues?.push(message);
-			},
+		errorHandler(level, message) {
+			issues?.push(message);
 		},
 	}) as unknown as DOMParser;
 }
