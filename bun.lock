@@ -265,6 +265,7 @@
         "@edgefirst-dev/jwt": "^1.3.0",
         "@pkg/http": "workspace:*",
         "@pkg/location": "workspace:*",
+        "@pkg/logger": "workspace:*",
         "@pkg/markdown": "workspace:*",
         "@pkg/result": "workspace:*",
         "@pkg/rss": "workspace:*",
