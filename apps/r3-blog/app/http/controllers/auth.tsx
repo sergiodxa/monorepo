@@ -1,4 +1,5 @@
 import { redirect } from "@pkg/http/response";
+import { Logger } from "@pkg/logger";
 import { inject } from "@pkg/service-container";
 import { getContext } from "remix/async-context-middleware";
 import { startExternalAuth } from "remix/auth";
@@ -125,28 +126,47 @@ export let callbackAction = createAction(routes.auth.callback, {
 	 * @param ctx The callback request context containing URL params and scoped services.
 	 * @returns The login view with error details or a 303 redirect after successful sign-in.
 	 */
-	handler: inject([Database, IdTokenVerificationKeyService] as const, async (db, verificationKey) => {
+	handler: inject([Database, IdTokenVerificationKeyService, Logger] as const, async (db, verificationKey, logger) => {
 			let ctx = getContext();
 			let result: Awaited<ReturnType<typeof exchangeCodeForIdToken>>;
 			let session = ctx.get(Session);
 			let transaction = session.get("__auth") as OAuthTransaction | null;
+			logger.info("auth.callback.started", {
+				pathname: ctx.url.pathname,
+				hasTransaction: Boolean(transaction),
+			});
 			let callbackError = ctx.url.searchParams.get("error");
 			if (callbackError) {
+				logger.error("auth.callback.provider-error", {
+					error: callbackError,
+					description: ctx.url.searchParams.get("error_description") ?? null,
+				});
 				return ctx.render(LoginView, {
 					error: ctx.url.searchParams.get("error_description") ?? callbackError,
 				});
 			}
 			if (!transaction || transaction.provider !== "sergiodxa") {
+				logger.error("auth.callback.missing-transaction", {
+					provider: transaction?.provider ?? null,
+				});
 				return ctx.render(LoginView, { error: "Authentication failed. Missing transaction." });
 			}
 			let state = ctx.url.searchParams.get("state");
 			let code = ctx.url.searchParams.get("code");
 			if (!state || !code) {
 				session.unset("__auth");
+				logger.error("auth.callback.missing-params", {
+					hasState: Boolean(state),
+					hasCode: Boolean(code),
+				});
 				return ctx.render(LoginView, { error: "Authentication failed. Missing callback params." });
 			}
 			if (state !== transaction.state) {
 				session.unset("__auth");
+				logger.error("auth.callback.invalid-state", {
+					expectedState: transaction.state,
+					receivedState: state,
+				});
 				return ctx.render(LoginView, { error: "Authentication failed. Invalid state." });
 			}
 
@@ -163,11 +183,17 @@ export let callbackAction = createAction(routes.auth.callback, {
 				session.unset("__auth");
 			} catch {
 				session.unset("__auth");
+				logger.error("auth.callback.exchange-failed", {
+					provider: transaction.provider,
+				});
 				return ctx.render(LoginView, { error: "Authentication failed. Please try again." });
 			}
 
 			let idTokenRaw = result.idToken;
 			if (!idTokenRaw) {
+				logger.error("auth.callback.missing-id-token", {
+					provider: transaction.provider,
+				});
 				return ctx.render(LoginView, { error: "Authentication failed. Missing token response." });
 			}
 
@@ -186,6 +212,10 @@ export let callbackAction = createAction(routes.auth.callback, {
 
 			login(user);
 			setIdToken(idTokenRaw);
+			logger.info("auth.callback.completed", {
+				userId: user.id,
+				username: user.username,
+			});
 
 			let returnTo =
 				transaction.returnTo && transaction.returnTo.startsWith("/")
