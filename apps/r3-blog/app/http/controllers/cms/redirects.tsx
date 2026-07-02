@@ -1,11 +1,13 @@
 import { redirect } from "@pkg/http/response";
 import { succeeded } from "@pkg/result";
+import { inject } from "@pkg/service-container";
 import { validate } from "@pkg/validate";
+import { getContext } from "remix/async-context-middleware";
 import { createController } from "remix/fetch-router";
 
-import { getEnv } from "~/app/http/middleware/env";
 import { Redirect } from "~/app/repositories/redirect";
 import { RedirectSchema } from "~/app/schemas/cms/redirect";
+import { RedirectsService } from "~/app/services/redirects";
 import { CMSRedirectsIndexView, CMSRedirectsNewView } from "~/resources/views/cms/redirects";
 import routes from "~/routes/web";
 
@@ -19,8 +21,8 @@ export default createController(routes.cms.redirects, {
 	/**
 	 * No local middleware is registered for this controller.
 	 *
-	 * Contract: every action runs with only globally-applied middleware and reads
-	 * environment bindings directly through {@link getEnv}.
+	 * Contract: every action runs with only globally-applied middleware and resolves
+	 * redirect persistence through the shared redirects service.
 	 */
 	middleware: [],
 
@@ -33,8 +35,9 @@ export default createController(routes.cms.redirects, {
 		 *
 		 * @returns SSR HTML view model for the CMS redirects listing page.
 		 */
-		async index(ctx) {
-			let redirects = await Redirect.findAll(getEnv("REDIRECTS"));
+		index: inject([RedirectsService] as const, async (redirectsService) => {
+			let ctx = getContext();
+			let redirects = await redirectsService.findAll();
 			let items: Array<CMSRedirectsIndexView.Item> = redirects.map((item) => ({
 				from: item.from,
 				to: item.to,
@@ -43,7 +46,7 @@ export default createController(routes.cms.redirects, {
 			}));
 
 			return ctx.render(CMSRedirectsIndexView, { items });
-		},
+		}),
 
 		/**
 		 * Validates the create form, normalizes the source path, and upserts KV data.
@@ -55,7 +58,8 @@ export default createController(routes.cms.redirects, {
 		 * @param ctx - Request context providing form data extraction and params.
 		 * @returns See Other redirect to `new` on missing paths, otherwise `index`.
 		 */
-		async create(ctx) {
+		create: inject([RedirectsService] as const, async (redirectsService) => {
+			let ctx = getContext();
 			let result = await validate(ctx.get(FormData), RedirectSchema);
 			succeeded(result, "Invalid redirect form data");
 
@@ -67,9 +71,9 @@ export default createController(routes.cms.redirects, {
 				return redirect(routes.cms.redirects.new.href(), { status: redirect.Status.SeeOther });
 			}
 
-			await Redirect.upsert(getEnv("REDIRECTS"), { from, to, status });
+			await redirectsService.upsert({ from, to, status });
 			return redirect(routes.cms.redirects.index.href(), { status: redirect.Status.SeeOther });
-		},
+		}),
 
 		/**
 		 * Deletes a redirect resolved from the encoded `:id` route segment.
@@ -80,14 +84,15 @@ export default createController(routes.cms.redirects, {
 		 * @param ctx - Request context exposing route params.
 		 * @returns See Other redirect to the redirects index in all cases.
 		 */
-		async destroy(ctx) {
+		destroy: inject([RedirectsService] as const, async (redirectsService) => {
+			let ctx = getContext();
 			let from = getRedirectFromParam(ctx.params.id);
 			if (!from)
 				return redirect(routes.cms.redirects.index.href(), { status: redirect.Status.SeeOther });
 
-			await Redirect.destroy(getEnv("REDIRECTS"), from);
+			await redirectsService.destroy(from);
 			return redirect(routes.cms.redirects.index.href(), { status: redirect.Status.SeeOther });
-		},
+		}),
 
 		/**
 		 * Renders the redirect creation form with a live KV redirect count.
@@ -97,14 +102,15 @@ export default createController(routes.cms.redirects, {
 		 *
 		 * @returns SSR HTML view model for the CMS "New Redirect" page.
 		 */
-		async new(ctx) {
-			let redirects = await Redirect.findAll(getEnv("REDIRECTS"));
+		new: inject([RedirectsService] as const, async (redirectsService) => {
+			let ctx = getContext();
+			let redirects = await redirectsService.findAll();
 			return ctx.render(CMSRedirectsNewView, {
 				title: "New Redirect",
 				description: `Current redirect count in KV: ${redirects.length}.`,
 				action: routes.cms.redirects.index.href(),
 			});
-		},
+		}),
 	},
 });
 
