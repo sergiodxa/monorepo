@@ -4,6 +4,8 @@ import { Markdown } from "@pkg/markdown/server";
 import { succeeded } from "@pkg/result";
 import * as s from "remix/data-schema";
 
+type MarkdownContent = MarkdownType.Parsed<Record<string, never>>["content"];
+
 /**
  * Shared markdown parser configured to accept body-only content.
  *
@@ -40,8 +42,8 @@ export namespace PostViewModel {
 		post: {
 			/** Display title repeated in page body and share cards. */
 			title: string;
-			/** Parsed markdown AST; `null` when source content is empty. */
-			content: MarkdownType.AST | null;
+			/** Parsed markdown render tree; `null` when source content is empty. */
+			content: MarkdownContent | null;
 			/** URL slug used in public route segments. */
 			slug: string;
 			/** Public section path supported by this app. */
@@ -235,7 +237,7 @@ export class PostViewModel {
 	 * @param message Failure message used when parse result is unsuccessful.
 	 * @returns Parsed markdown AST content, or `null` for empty content.
 	 */
-	private static parseMarkdownContent(content: string, message: string): MarkdownType.AST | null {
+	private static parseMarkdownContent(content: string, message: string): MarkdownContent | null {
 		let parsed = markdown.parse(content || "");
 		succeeded(parsed, message);
 		return parsed.data.content;

@@ -1,6 +1,6 @@
 import { xml } from "@pkg/http/response";
-import { Sitemap } from "@pkg/sitemap";
 import { inject } from "@pkg/service-container";
+import { Sitemap } from "@pkg/sitemap";
 import { getContext } from "remix/async-context-middleware";
 import { Database } from "remix/data-table";
 import { createAction } from "remix/fetch-router";
