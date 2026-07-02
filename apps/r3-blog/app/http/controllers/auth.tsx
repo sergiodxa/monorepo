@@ -1,4 +1,3 @@
-import { JWK } from "@edgefirst-dev/jwt";
 import { redirect } from "@pkg/http/response";
 import { inject } from "@pkg/service-container";
 import { getContext } from "remix/async-context-middleware";
@@ -12,6 +11,7 @@ import { verifyIdToken } from "~/app/auth/value-objects/id-token";
 import { getIdToken, isAuthenticated, login, logout, setIdToken } from "~/app/http/middleware/auth";
 import { getEnv } from "~/app/http/middleware/env";
 import { User } from "~/app/repositories/user";
+import { IdTokenVerificationKeyService } from "~/app/services/id-token-verification-key";
 import { LoginView } from "~/resources/views/auth/login";
 import { LogoutView } from "~/resources/views/auth/logout";
 import routes from "~/routes/web";
@@ -22,11 +22,6 @@ interface OAuthTransaction {
 	codeVerifier: string;
 	returnTo?: string;
 }
-
-let idTokenVerificationKey = JWK.importRemote(
-	new URL("https://auth.sergiodxa.com/.well-known/jwks.json"),
-	{ alg: JWK.Algoritm.ES256 },
-);
 
 /**
  * Orchestrates the authentication flow for login, logout, and OAuth callback routes.
@@ -130,72 +125,72 @@ export let callbackAction = createAction(routes.auth.callback, {
 	 * @param ctx The callback request context containing URL params and scoped services.
 	 * @returns The login view with error details or a 303 redirect after successful sign-in.
 	 */
-		handler: inject([Database] as const, async (db) => {
+	handler: inject([Database, IdTokenVerificationKeyService] as const, async (db, verificationKey) => {
 			let ctx = getContext();
 			let result: Awaited<ReturnType<typeof exchangeCodeForIdToken>>;
-		let session = ctx.get(Session);
-		let transaction = session.get("__auth") as OAuthTransaction | null;
-		let callbackError = ctx.url.searchParams.get("error");
-		if (callbackError) {
-			return ctx.render(LoginView, {
-				error: ctx.url.searchParams.get("error_description") ?? callbackError,
+			let session = ctx.get(Session);
+			let transaction = session.get("__auth") as OAuthTransaction | null;
+			let callbackError = ctx.url.searchParams.get("error");
+			if (callbackError) {
+				return ctx.render(LoginView, {
+					error: ctx.url.searchParams.get("error_description") ?? callbackError,
+				});
+			}
+			if (!transaction || transaction.provider !== "sergiodxa") {
+				return ctx.render(LoginView, { error: "Authentication failed. Missing transaction." });
+			}
+			let state = ctx.url.searchParams.get("state");
+			let code = ctx.url.searchParams.get("code");
+			if (!state || !code) {
+				session.unset("__auth");
+				return ctx.render(LoginView, { error: "Authentication failed. Missing callback params." });
+			}
+			if (state !== transaction.state) {
+				session.unset("__auth");
+				return ctx.render(LoginView, { error: "Authentication failed. Invalid state." });
+			}
+
+			try {
+				result = await exchangeCodeForIdToken({
+					auth: {
+						clientId: getEnv("CLIENT_ID"),
+						clientSecret: getEnv("CLIENT_SECRET"),
+					},
+					code,
+					codeVerifier: transaction.codeVerifier,
+					redirectUri: new URL(routes.auth.callback.href(), ctx.request.url).toString(),
+				});
+				session.unset("__auth");
+			} catch {
+				session.unset("__auth");
+				return ctx.render(LoginView, { error: "Authentication failed. Please try again." });
+			}
+
+			let idTokenRaw = result.idToken;
+			if (!idTokenRaw) {
+				return ctx.render(LoginView, { error: "Authentication failed. Missing token response." });
+			}
+
+			let idToken = await verifyIdToken(
+				idTokenRaw,
+				await verificationKey.value,
+				getEnv("CLIENT_ID"),
+			);
+			let user = await User.findOrCreateFromAuthProfile(db, {
+				subjectId: idToken.subject,
+				email: idToken.email,
+				avatar: idToken.picture,
+				username: idToken.username,
+				displayName: idToken.name,
 			});
-		}
-		if (!transaction || transaction.provider !== "sergiodxa") {
-			return ctx.render(LoginView, { error: "Authentication failed. Missing transaction." });
-		}
-		let state = ctx.url.searchParams.get("state");
-		let code = ctx.url.searchParams.get("code");
-		if (!state || !code) {
-			session.unset("__auth");
-			return ctx.render(LoginView, { error: "Authentication failed. Missing callback params." });
-		}
-		if (state !== transaction.state) {
-			session.unset("__auth");
-			return ctx.render(LoginView, { error: "Authentication failed. Invalid state." });
-		}
 
-		try {
-			result = await exchangeCodeForIdToken({
-				auth: {
-					clientId: getEnv("CLIENT_ID"),
-					clientSecret: getEnv("CLIENT_SECRET"),
-				},
-				code,
-				codeVerifier: transaction.codeVerifier,
-				redirectUri: new URL(routes.auth.callback.href(), ctx.request.url).toString(),
-			});
-			session.unset("__auth");
-		} catch {
-			session.unset("__auth");
-			return ctx.render(LoginView, { error: "Authentication failed. Please try again." });
-		}
+			login(user);
+			setIdToken(idTokenRaw);
 
-		let idTokenRaw = result.idToken;
-		if (!idTokenRaw) {
-			return ctx.render(LoginView, { error: "Authentication failed. Missing token response." });
-		}
-
-		let idToken = await verifyIdToken(
-			idTokenRaw,
-			await idTokenVerificationKey,
-			getEnv("CLIENT_ID"),
-		);
-		let user = await User.findOrCreateFromAuthProfile(db, {
-			subjectId: idToken.subject,
-			email: idToken.email,
-			avatar: idToken.picture,
-			username: idToken.username,
-			displayName: idToken.name,
-		});
-
-		login(user);
-		setIdToken(idTokenRaw);
-
-		let returnTo =
-			transaction.returnTo && transaction.returnTo.startsWith("/")
-				? transaction.returnTo
-				: routes.cms.dashboard.href();
-		return redirect(returnTo, { status: redirect.Status.SeeOther });
-	}),
+			let returnTo =
+				transaction.returnTo && transaction.returnTo.startsWith("/")
+					? transaction.returnTo
+					: routes.cms.dashboard.href();
+			return redirect(returnTo, { status: redirect.Status.SeeOther });
+		}),
 });

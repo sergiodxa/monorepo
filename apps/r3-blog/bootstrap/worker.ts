@@ -1,11 +1,12 @@
 import { ServiceContainer } from "@pkg/service-container";
 
 import { DatabaseService } from "~/app/services/database";
+import { IdTokenVerificationKeyProvider } from "~/app/services/id-token-verification-key";
 
 import createApplication from "./app";
 
 let container = new ServiceContainer();
-let providers = [new DatabaseService()];
+let providers = [new DatabaseService(), new IdTokenVerificationKeyProvider()];
 
 for (let provider of providers) provider.register(container);
 
