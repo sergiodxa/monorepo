@@ -1,3 +1,5 @@
+import { inject } from "@pkg/service-container";
+import { getContext } from "remix/async-context-middleware";
 import { Database } from "remix/data-table";
 import { createAction } from "remix/fetch-router";
 
@@ -21,12 +23,13 @@ export default createAction(
 	 * @param ctx - Route context that provides app-scoped services.
 	 * @returns SSR response for the tutorials index route.
 	 */
-	async (ctx) => {
-		let tutorials = await TutorialPost.listItems(ctx.get(Database), {
+	inject([Database] as const, async (db) => {
+		let ctx = getContext();
+		let tutorials = await TutorialPost.listItems(db, {
 			includePreview: isAdmin(),
 		});
 		let model = TutorialsViewModel.index(tutorials);
 
 		return ctx.render(TutorialsView, model);
-	},
+	}),
 );

@@ -1,6 +1,8 @@
 import { redirect } from "@pkg/http/response";
 import { succeeded } from "@pkg/result";
+import { inject } from "@pkg/service-container";
 import { validate } from "@pkg/validate";
+import { getContext } from "remix/async-context-middleware";
 import { Database } from "remix/data-table";
 import { createController } from "remix/fetch-router";
 
@@ -37,8 +39,9 @@ export default createController(routes.cms.tutorials, {
 		 * @param ctx Request-scoped container used to resolve the database connection.
 		 * @returns HTML response with the tutorials list view-model.
 		 */
-		async index(ctx) {
-			let tutorials = await TutorialPost.findAll(ctx.get(Database), { includePreview: true });
+		index: inject([Database] as const, async (db) => {
+			let ctx = getContext();
+			let tutorials = await TutorialPost.findAll(db, { includePreview: true });
 			let sources: Array<TutorialViewModel.SourceIndexItem> = tutorials.map((tutorial) => ({
 				id: tutorial.id,
 				title: tutorial.meta.title,
@@ -49,7 +52,7 @@ export default createController(routes.cms.tutorials, {
 			let items = TutorialViewModel.index({ items: sources });
 
 			return ctx.render(CMSTutorialsIndexView, { items });
-		},
+		}),
 
 		/**
 		 * Creates a tutorial from validated form payload and redirects to the edit screen.
@@ -60,7 +63,8 @@ export default createController(routes.cms.tutorials, {
 		 * @param ctx Request-scoped container that provides submitted form data and database access.
 		 * @returns Redirect response to login, tutorials index fallback, or newly created edit page.
 		 */
-		async create(ctx) {
+		create: inject([Database] as const, async (db) => {
+			let ctx = getContext();
 			let user = getAuthUser();
 			if (!user)
 				return redirect(routes.auth.login.index.href(), { status: redirect.Status.SeeOther });
@@ -69,7 +73,7 @@ export default createController(routes.cms.tutorials, {
 			succeeded(result, "Invalid tutorial form data");
 			let input = TutorialViewModel.input({ data: result.data });
 
-			let created = await TutorialPost.create(ctx.get(Database), {
+			let created = await TutorialPost.create(db, {
 				author_id: user.id,
 				published_at: input.published_at,
 				meta: input.meta,
@@ -83,7 +87,7 @@ export default createController(routes.cms.tutorials, {
 			return redirect(routes.cms.tutorials.edit.href({ id: created.id }), {
 				status: redirect.Status.SeeOther,
 			});
-		},
+		}),
 
 		/**
 		 * Deletes a tutorial when an id is provided and always returns to the list page.
@@ -94,14 +98,15 @@ export default createController(routes.cms.tutorials, {
 		 * @param ctx Request context carrying optional route params and database access.
 		 * @returns Redirect response to the CMS tutorials index.
 		 */
-		async destroy(ctx) {
+		destroy: inject([Database] as const, async (db) => {
+			let ctx = getContext();
 			let id = ctx.params.id;
 			if (!id)
 				return redirect(routes.cms.tutorials.index.href(), { status: redirect.Status.SeeOther });
 
-			await TutorialPost.destroy(ctx.get(Database), id);
+			await TutorialPost.destroy(db, id);
 			return redirect(routes.cms.tutorials.index.href(), { status: redirect.Status.SeeOther });
-		},
+		}),
 
 		/**
 		 * Loads tutorial data for the edit form or returns a CMS-scoped 404 state.
@@ -112,9 +117,10 @@ export default createController(routes.cms.tutorials, {
 		 * @param ctx Request context containing route params and database access.
 		 * @returns HTML response for either the populated edit form or not-found model.
 		 */
-		async edit(ctx) {
+		edit: inject([Database] as const, async (db) => {
+			let ctx = getContext();
 			let id = ctx.params.id;
-			let tutorial = id ? await TutorialPost.findById(ctx.get(Database), id) : null;
+			let tutorial = id ? await TutorialPost.findById(db, id) : null;
 
 			if (!tutorial) {
 				let model = TutorialViewModel.notFound({ id });
@@ -133,7 +139,7 @@ export default createController(routes.cms.tutorials, {
 			let model = TutorialViewModel.edit({ tutorial: source });
 
 			return ctx.render(CMSTutorialsActionView, model);
-		},
+		}),
 
 		/**
 		 * Renders the blank tutorial form used by CMS create flows.
@@ -158,7 +164,8 @@ export default createController(routes.cms.tutorials, {
 		 * @param ctx Request context with route params, form data, and database access.
 		 * @returns Redirect response on success/guard failures, or 404 CMS action view when missing.
 		 */
-		async update(ctx) {
+		update: inject([Database] as const, async (db) => {
+			let ctx = getContext();
 			let user = getAuthUser();
 			let id = ctx.params.id;
 			if (!user || !id)
@@ -168,7 +175,7 @@ export default createController(routes.cms.tutorials, {
 			succeeded(result, "Invalid tutorial form data");
 			let input = TutorialViewModel.input({ data: result.data });
 
-			let updated = await TutorialPost.update(ctx.get(Database), id, {
+			let updated = await TutorialPost.update(db, id, {
 				author_id: user.id,
 				published_at: input.published_at,
 				meta: input.meta,
@@ -180,6 +187,6 @@ export default createController(routes.cms.tutorials, {
 			}
 
 			return redirect(routes.cms.tutorials.edit.href({ id }), { status: redirect.Status.SeeOther });
-		},
+		}),
 	},
 });

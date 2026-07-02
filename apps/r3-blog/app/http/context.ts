@@ -2,7 +2,6 @@ import type { ContextWithEntries, RequestContext } from "remix/fetch-router";
 import type { RemixNode } from "remix/ui";
 
 import { Auth } from "remix/auth-middleware";
-import { Database } from "remix/data-table";
 import { Renderer } from "remix/render-middleware";
 import { Session } from "remix/session";
 
@@ -25,7 +24,6 @@ export interface BlogRenderer {
 export type AppContext = ContextWithEntries<
 	RequestContext<Record<string, string>>,
 	[
-		{ key: typeof Database; value: Database },
 		{ key: typeof FormData; value: FormData },
 		{ key: typeof Session; value: Session },
 		{ key: typeof Auth; value: unknown },

@@ -1,5 +1,7 @@
 import { xml } from "@pkg/http/response";
 import { RSS } from "@pkg/rss";
+import { inject } from "@pkg/service-container";
+import { getContext } from "remix/async-context-middleware";
 import { Database } from "remix/data-table";
 import { createAction } from "remix/fetch-router";
 
@@ -23,10 +25,9 @@ export default createAction(
 	 * @param ctx Request context exposing container bindings and canonical request URL.
 	 * @returns XML response for feed readers polling the tutorials channel.
 	 */
-	async (ctx) => {
-		let database = ctx.get(Database);
-
-		let tutorials = await TutorialPost.findAll(database, { includePreview: false });
+	inject([Database] as const, async (db) => {
+		let ctx = getContext();
+		let tutorials = await TutorialPost.findAll(db, { includePreview: false });
 
 		let rss = new RSS({
 			title: "Tutorials — Sergio Xalambrí",
@@ -49,5 +50,5 @@ export default createAction(
 		}
 
 		return xml(rss.toString());
-	},
+	}),
 );

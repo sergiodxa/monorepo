@@ -1,4 +1,3 @@
-import type { Database } from "remix/data-table";
 import type { Middleware, RequestContext } from "remix/fetch-router";
 import type { ResolveFrameContext } from "remix/ui/server";
 
@@ -36,7 +35,6 @@ import tutorials from "~/app/http/controllers/tutorials";
 import wellKnown from "~/app/http/controllers/well-known";
 import auth from "~/app/http/middleware/auth";
 import { isAuthenticated } from "~/app/http/middleware/auth";
-import createDatabaseMiddleware from "~/app/http/middleware/db";
 import createEnvMiddleware from "~/app/http/middleware/env";
 import createNoTrailingSlashMiddleware from "~/app/http/middleware/no-trailing-slash";
 import createNoWWWMiddleware from "~/app/http/middleware/no-www";
@@ -55,11 +53,10 @@ let requireCMSAuth: Middleware = (_ctx, next) => {
 /**
  * Builds the r3-blog HTTP router with global middleware, route mappings,
  * CMS auth guards, and the HTML 404 fallback handler.
- * @param database Database connection used by request handlers.
  * @param env Worker environment bindings injected into request context.
  * @returns Configured router instance for the worker fetch entrypoint.
  */
-export default function createApplication(database: Database, env: App.Env) {
+export default function createApplication(env: App.Env) {
 	let globalMiddleware: Array<Middleware<any>> = [
 		createEnvMiddleware(env),
 		createNoWWWMiddleware(),
@@ -69,7 +66,6 @@ export default function createApplication(database: Database, env: App.Env) {
 		formData(),
 		methodOverride(),
 		redirects,
-		createDatabaseMiddleware(database),
 		auth,
 		renderWith(createHtmlRenderer),
 	];

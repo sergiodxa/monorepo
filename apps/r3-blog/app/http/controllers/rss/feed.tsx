@@ -1,5 +1,7 @@
 import { xml } from "@pkg/http/response";
 import { RSS } from "@pkg/rss";
+import { inject } from "@pkg/service-container";
+import { getContext } from "remix/async-context-middleware";
 import { Database } from "remix/data-table";
 import { createAction } from "remix/fetch-router";
 
@@ -23,9 +25,8 @@ export default createAction(
 	 * @param ctx Request-scoped action context with dependency injection and canonical request URL.
 	 * @returns XML response containing one reverse-chronological RSS feed across all content types.
 	 */
-	async (ctx) => {
-		let database = ctx.get(Database);
-
+	inject([Database] as const, async (database) => {
+		let ctx = getContext();
 		let [articles, tutorials, likes, glossary] = await Promise.all([
 			ArticlePost.findAll(database, { includePreview: false }),
 			TutorialPost.findAll(database, { includePreview: false }),
@@ -109,5 +110,5 @@ export default createAction(
 		for (let item of items) rss.addItem(item);
 
 		return xml(rss.toString());
-	},
+	}),
 );

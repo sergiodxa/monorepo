@@ -1,6 +1,8 @@
 import { redirect } from "@pkg/http/response";
 import { succeeded } from "@pkg/result";
+import { inject } from "@pkg/service-container";
 import { validate } from "@pkg/validate";
+import { getContext } from "remix/async-context-middleware";
 import { Database } from "remix/data-table";
 import { createController } from "remix/fetch-router";
 
@@ -35,8 +37,9 @@ export default createController(routes.cms.articles, {
 		 * @param ctx Request-scoped services used to resolve the database client.
 		 * @returns SSR view response for the article listing page.
 		 */
-		async index(ctx) {
-			let articles = await ArticlePost.findAll(ctx.get(Database), { includePreview: true });
+		index: inject([Database] as const, async (db) => {
+			let ctx = getContext();
+			let articles = await ArticlePost.findAll(db, { includePreview: true });
 			let sources: Array<ArticleViewModel.SourceIndexItem> = articles.map((article) => ({
 				id: article.id,
 				title: article.meta.title,
@@ -46,7 +49,7 @@ export default createController(routes.cms.articles, {
 			let items = ArticleViewModel.index({ items: sources });
 
 			return ctx.render(CMSArticlesIndexView, { items });
-		},
+		}),
 
 		/**
 		 * Creates a new article from validated form data.
@@ -57,7 +60,8 @@ export default createController(routes.cms.articles, {
 		 * @param ctx Request-scoped access to form data and database services.
 		 * @returns Redirect response to login, index, or the edit page for the created article.
 		 */
-		async create(ctx) {
+		create: inject([Database] as const, async (db) => {
+			let ctx = getContext();
 			let user = getAuthUser();
 			if (!user)
 				return redirect(routes.auth.login.index.href(), { status: redirect.Status.SeeOther });
@@ -66,7 +70,7 @@ export default createController(routes.cms.articles, {
 			succeeded(result, "Invalid article form data");
 			let input = ArticleViewModel.input({ data: result.data });
 
-			let created = await ArticlePost.create(ctx.get(Database), {
+			let created = await ArticlePost.create(db, {
 				author_id: user.id,
 				published_at: input.published_at,
 				meta: input.meta,
@@ -78,7 +82,7 @@ export default createController(routes.cms.articles, {
 			return redirect(routes.cms.articles.edit.href({ id: created.id }), {
 				status: redirect.Status.SeeOther,
 			});
-		},
+		}),
 
 		/**
 		 * Deletes an article by route id and returns to the CMS index.
@@ -89,14 +93,15 @@ export default createController(routes.cms.articles, {
 		 * @param ctx Request context containing route params and database service.
 		 * @returns Redirect response to the CMS article index.
 		 */
-		async destroy(ctx) {
+		destroy: inject([Database] as const, async (db) => {
+			let ctx = getContext();
 			let id = ctx.params.id;
 			if (!id)
 				return redirect(routes.cms.articles.index.href(), { status: redirect.Status.SeeOther });
 
-			await ArticlePost.destroy(ctx.get(Database), id);
+			await ArticlePost.destroy(db, id);
 			return redirect(routes.cms.articles.index.href(), { status: redirect.Status.SeeOther });
-		},
+		}),
 
 		/**
 		 * Loads an article for editing and renders a not-found CMS state when absent.
@@ -107,9 +112,10 @@ export default createController(routes.cms.articles, {
 		 * @param ctx Request context with route params and database service.
 		 * @returns SSR view response for edit form or not-found state.
 		 */
-		async edit(ctx) {
+		edit: inject([Database] as const, async (db) => {
+			let ctx = getContext();
 			let id = ctx.params.id;
-			let article = id ? await ArticlePost.findById(ctx.get(Database), id) : null;
+			let article = id ? await ArticlePost.findById(db, id) : null;
 
 			if (!article) {
 				let viewProps = ArticleViewModel.notFound({ id });
@@ -129,7 +135,7 @@ export default createController(routes.cms.articles, {
 			let viewProps = ArticleViewModel.edit({ article: source });
 
 			return ctx.render(CMSArticlesActionView, viewProps);
-		},
+		}),
 
 		/**
 		 * Renders the empty article form for creating a new entry.
@@ -151,7 +157,8 @@ export default createController(routes.cms.articles, {
 		 * @param ctx Request-scoped access to params, form data, and database services.
 		 * @returns Redirect response for success/guard paths or a 404 edit-state view.
 		 */
-		async update(ctx) {
+		update: inject([Database] as const, async (db) => {
+			let ctx = getContext();
 			let user = getAuthUser();
 			let id = ctx.params.id;
 			if (!user || !id)
@@ -161,7 +168,7 @@ export default createController(routes.cms.articles, {
 			succeeded(result, "Invalid article form data");
 			let input = ArticleViewModel.input({ data: result.data });
 
-			let updated = await ArticlePost.update(ctx.get(Database), id, {
+			let updated = await ArticlePost.update(db, id, {
 				author_id: user.id,
 				published_at: input.published_at,
 				meta: input.meta,
@@ -173,6 +180,6 @@ export default createController(routes.cms.articles, {
 			}
 
 			return redirect(routes.cms.articles.edit.href({ id }), { status: redirect.Status.SeeOther });
-		},
+		}),
 	},
 });

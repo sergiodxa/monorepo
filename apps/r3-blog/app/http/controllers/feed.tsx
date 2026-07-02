@@ -1,3 +1,5 @@
+import { inject } from "@pkg/service-container";
+import { getContext } from "remix/async-context-middleware";
 import { Database } from "remix/data-table";
 import { createAction } from "remix/fetch-router";
 
@@ -30,10 +32,11 @@ export default createAction(
 	 * @param ctx Route context that provides dependency access for this request.
 	 * @returns HTML response produced by `ctx.render(FeedView, model)`.
 	 */
-	async function feedController(ctx) {
-		let activity = await Feed.listActivity(ctx.get(Database));
+	inject([Database] as const, async function feedController(db) {
+		let ctx = getContext();
+		let activity = await Feed.listActivity(db);
 		let model = FeedViewModel.index(activity);
 
 		return ctx.render(FeedView, model);
-	},
+	}),
 );

@@ -1,5 +1,7 @@
 import * as ct from "@pkg/http/content-type";
 import { accepts } from "@pkg/http/negotiate";
+import { inject } from "@pkg/service-container";
+import { getContext } from "remix/async-context-middleware";
 import { enum_, optional, parse } from "remix/data-schema";
 import { Database } from "remix/data-table";
 import { createAction } from "remix/fetch-router";
@@ -59,7 +61,8 @@ export default createAction(
 	 * @example URL `/articles/hello-world.md` returns raw markdown when the post exists.
 	 * @example Header `Accept: text/markdown` can negotiate markdown when no extension is provided.
 	 */
-	async (ctx) => {
+	inject([Database] as const, async (db) => {
+		let ctx = getContext();
 		let validation = validatePostRequestParams({
 			postType: ctx.params.postType,
 			postSlug: ctx.params.postSlug,
@@ -94,7 +97,7 @@ export default createAction(
 			accepts(ctx.request).preferred(ct.HTML, ct.Markdown) === ct.Markdown ||
 			validation.params.contentType === "md";
 
-		let post = await Post.findByTypeAndSlug(ctx.get(Database), {
+		let post = await Post.findByTypeAndSlug(db, {
 			postType: validation.params.postType,
 			postSlug: validation.params.postSlug,
 		});
@@ -160,7 +163,7 @@ export default createAction(
 		}
 
 		return ctx.render(PostView, viewModel);
-	},
+	}),
 );
 
 /**

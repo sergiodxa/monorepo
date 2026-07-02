@@ -1,7 +1,10 @@
 import { xml } from "@pkg/http/response";
 import { RSS } from "@pkg/rss";
+import { inject } from "@pkg/service-container";
+import { getContext } from "remix/async-context-middleware";
 import { Database } from "remix/data-table";
 import { createAction } from "remix/fetch-router";
+
 
 import { LikePost } from "~/app/repositories/posts/like";
 import routes from "~/routes/web";
@@ -20,10 +23,9 @@ export default createAction(
 	 * @param ctx Route action context with DI access and request URL data.
 	 * @returns XML response ready for RSS clients and aggregators.
 	 */
-	async (ctx) => {
-		let database = ctx.get(Database);
-
-		let likes = await LikePost.findAll(database);
+	inject([Database] as const, async (db) => {
+		let ctx = getContext();
+		let likes = await LikePost.findAll(db);
 
 		let rss = new RSS({
 			title: "Bookmarks — Sergio Xalambrí",
@@ -42,5 +44,5 @@ export default createAction(
 		}
 
 		return xml(rss.toString());
-	},
+	}),
 );

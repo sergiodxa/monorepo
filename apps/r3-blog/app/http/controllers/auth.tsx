@@ -1,5 +1,7 @@
 import { JWK } from "@edgefirst-dev/jwt";
 import { redirect } from "@pkg/http/response";
+import { inject } from "@pkg/service-container";
+import { getContext } from "remix/async-context-middleware";
 import { startExternalAuth } from "remix/auth";
 import { Database } from "remix/data-table";
 import { createAction, createController, type Middleware } from "remix/fetch-router";
@@ -128,8 +130,9 @@ export let callbackAction = createAction(routes.auth.callback, {
 	 * @param ctx The callback request context containing URL params and scoped services.
 	 * @returns The login view with error details or a 303 redirect after successful sign-in.
 	 */
-	async handler(ctx) {
-		let result: Awaited<ReturnType<typeof exchangeCodeForIdToken>>;
+		handler: inject([Database] as const, async (db) => {
+			let ctx = getContext();
+			let result: Awaited<ReturnType<typeof exchangeCodeForIdToken>>;
 		let session = ctx.get(Session);
 		let transaction = session.get("__auth") as OAuthTransaction | null;
 		let callbackError = ctx.url.searchParams.get("error");
@@ -178,7 +181,7 @@ export let callbackAction = createAction(routes.auth.callback, {
 			await idTokenVerificationKey,
 			getEnv("CLIENT_ID"),
 		);
-		let user = await User.findOrCreateFromAuthProfile(ctx.get(Database), {
+		let user = await User.findOrCreateFromAuthProfile(db, {
 			subjectId: idToken.subject,
 			email: idToken.email,
 			avatar: idToken.picture,
@@ -194,5 +197,5 @@ export let callbackAction = createAction(routes.auth.callback, {
 				? transaction.returnTo
 				: routes.cms.dashboard.href();
 		return redirect(returnTo, { status: redirect.Status.SeeOther });
-	},
+	}),
 });

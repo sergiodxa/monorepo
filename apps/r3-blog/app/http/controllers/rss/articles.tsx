@@ -1,5 +1,7 @@
 import { xml } from "@pkg/http/response";
 import { RSS } from "@pkg/rss";
+import { inject } from "@pkg/service-container";
+import { getContext } from "remix/async-context-middleware";
 import { Database } from "remix/data-table";
 import { createAction } from "remix/fetch-router";
 
@@ -21,8 +23,9 @@ export default createAction(
 	 * @param ctx Request context with URL and dependency container access.
 	 * @returns XML response with channel metadata and one item per published article.
 	 */
-	async (ctx) => {
-		let articles = await ArticlePost.findAll(ctx.get(Database), { includePreview: false });
+	inject([Database] as const, async (db) => {
+		let ctx = getContext();
+		let articles = await ArticlePost.findAll(db, { includePreview: false });
 
 		/**
 		 * Channel metadata used by clients to identify this feed.
@@ -62,5 +65,5 @@ export default createAction(
 		}
 
 		return xml(rss.toString());
-	},
+	}),
 );

@@ -1,3 +1,5 @@
+import { inject } from "@pkg/service-container";
+import { getContext } from "remix/async-context-middleware";
 import { Database } from "remix/data-table";
 import { createAction } from "remix/fetch-router";
 
@@ -19,10 +21,11 @@ export default createAction(
 	 * @param ctx Request context that provides dependency resolution for data access.
 	 * @returns HTML response built from glossary records projected into the glossary view model.
 	 */
-	async (ctx) => {
-		let glossary = await GlossaryPost.findAll(ctx.get(Database));
+	inject([Database] as const, async (db) => {
+		let ctx = getContext();
+		let glossary = await GlossaryPost.findAll(db);
 		let model = GlossaryViewModel.index(glossary);
 
 		return ctx.render(GlossaryView, model);
-	},
+	}),
 );

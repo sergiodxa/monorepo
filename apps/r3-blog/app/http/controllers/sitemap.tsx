@@ -1,5 +1,7 @@
 import { xml } from "@pkg/http/response";
 import { Sitemap } from "@pkg/sitemap";
+import { inject } from "@pkg/service-container";
+import { getContext } from "remix/async-context-middleware";
 import { Database } from "remix/data-table";
 import { createAction } from "remix/fetch-router";
 
@@ -25,9 +27,8 @@ export default createAction(
 	 * @param ctx - Request context with database access and base URL.
 	 * @returns XML response ready for `/sitemap.xml` style endpoints.
 	 */
-	async function sitemapAction(ctx) {
-		let database = ctx.get(Database);
-
+	inject([Database] as const, async function sitemapAction(database) {
+		let ctx = getContext();
 		let [articles, tutorials, likes] = await Promise.all([
 			ArticlePost.findAll(database, { includePreview: false }),
 			TutorialPost.findAll(database, { includePreview: false }),
@@ -90,5 +91,5 @@ export default createAction(
 		}
 
 		return xml(sitemap.toString());
-	},
+	}),
 );

@@ -1,8 +1,13 @@
-import { createDatabase } from "remix/data-table";
+import { ServiceContainer } from "@pkg/service-container";
 
-import { createD1DataTableAdapter } from "~/app/infrastructure/database/d1-data-table-adapter";
+import { DatabaseService } from "~/app/services/database";
 
 import createApplication from "./app";
+
+let container = new ServiceContainer();
+let providers = [new DatabaseService()];
+
+for (let provider of providers) provider.register(container);
 
 /**
  * Handles incoming Worker requests by creating the app router with
@@ -10,25 +15,26 @@ import createApplication from "./app";
  */
 export default {
 	async fetch(request: Request, env: Cloudflare.Env) {
-		let database = createDatabase(createD1DataTableAdapter(env.DB));
-		let IS_PROD = resolveIsProd(request);
+		return container.scope(async () => {
+			let IS_PROD = resolveIsProd(request);
 
-		let [CLIENT_ID, CLIENT_SECRET, COOKIE_SESSION_SECRET] = await Promise.all([
-			env.CLIENT_ID.get(),
-			env.CLIENT_SECRET.get(),
-			env.COOKIE_SESSION_SECRET.get(),
-		]);
+			let [CLIENT_ID, CLIENT_SECRET, COOKIE_SESSION_SECRET] = await Promise.all([
+				env.CLIENT_ID.get(),
+				env.CLIENT_SECRET.get(),
+				env.COOKIE_SESSION_SECRET.get(),
+			]);
 
-		let router = createApplication(database, {
-			IS_PROD,
-			CLIENT_ID,
-			CLIENT_SECRET,
-			COOKIE_SESSION_SECRET,
-			AUTH: env.AUTH,
-			REDIRECTS: env.REDIRECTS,
+			let router = createApplication({
+				IS_PROD,
+				CLIENT_ID,
+				CLIENT_SECRET,
+				COOKIE_SESSION_SECRET,
+				AUTH: env.AUTH,
+				REDIRECTS: env.REDIRECTS,
+			});
+
+			return await router.fetch(request);
 		});
-
-		return await router.fetch(request);
 	},
 } satisfies ExportedHandler<Cloudflare.Env>;
 

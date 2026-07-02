@@ -1,3 +1,5 @@
+import { inject } from "@pkg/service-container";
+import { getContext } from "remix/async-context-middleware";
 import { Database } from "remix/data-table";
 import { createAction } from "remix/fetch-router";
 
@@ -19,10 +21,11 @@ export default createAction(
 	 * @param ctx Action context that provides dependency resolution for the current request.
 	 * @returns Server-rendered bookmarks page response.
 	 */
-	async (ctx) => {
-		let bookmarks = await LikePost.findAll(ctx.get(Database));
+	inject([Database] as const, async (db) => {
+		let ctx = getContext();
+		let bookmarks = await LikePost.findAll(db);
 		let model = BookmarksViewModel.index(bookmarks);
 
 		return ctx.render(BookmarksView, model);
-	},
+	}),
 );

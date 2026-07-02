@@ -1,3 +1,4 @@
+import { getServiceContainer } from "@pkg/service-container";
 import { getContext } from "remix/async-context-middleware";
 import { auth as createAuthMiddleware, Auth, createSessionAuthScheme } from "remix/auth-middleware";
 import { Database } from "remix/data-table";
@@ -130,10 +131,7 @@ function readSession() {
 }
 
 function readDatabase() {
-	let database = getContext().get(Database);
-	if (!database)
-		throw new Error("Database not found in context. Make sure to use the db middleware.");
-	return database;
+	return getServiceContainer().get(Database);
 }
 
 function resolveCurrentUser() {
