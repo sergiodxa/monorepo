@@ -52,6 +52,26 @@ let handler = inject([Database] as const, async (database) => {
 let response = appContainer.scope(() => handler());
 ```
 
+### Injected Handler With Forwarded Argument
+
+```typescript
+import { inject, ServiceContainer } from "@pkg/service-container";
+
+interface Job {
+	id: string;
+}
+
+let appContainer = new ServiceContainer();
+
+let handler = inject([Database] as const, async (database, job: Job) => {
+	let items = await database.findMany(job.id);
+
+	return Response.json({ items });
+});
+
+let response = appContainer.scope(() => handler({ id: "job-1" }));
+```
+
 ## API
 
 ### `ServiceContainer`
@@ -138,11 +158,11 @@ Creates a function that resolves dependencies from the active container.
 **Parameters:**
 
 - `dependencies`: Ordered service keys resolved from the active container.
-- `callback`: Callback receiving resolved services in dependency order.
+- `callback`: Callback receiving resolved services in dependency order, optionally followed by one forwarded runtime argument.
 
 **Returns:**
 
-- A function that resolves dependencies and returns the callback result.
+- A function that resolves dependencies and returns the callback result. The returned function can accept zero arguments or one forwarded argument, depending on the callback signature.
 
 **Example:**
 
@@ -154,6 +174,22 @@ let handler = inject([Database, Logger] as const, async (database, logger) => {
 });
 
 let response = container.scope(() => handler());
+```
+
+**Example with one forwarded argument:**
+
+```typescript
+interface JobContext {
+	jobName: string;
+}
+
+let handler = inject([Database, Logger] as const, async (database, logger, context: JobContext) => {
+	logger.info(`Loading ${context.jobName}`);
+
+	return Response.json({ items: database.findMany() });
+});
+
+let response = container.scope(() => handler({ jobName: "sync-items" }));
 ```
 
 ### `ServiceNotFoundError`
@@ -228,7 +264,7 @@ export default {
 };
 ```
 
-Use `inject` inside controllers. If the Remix `asyncContext()` middleware is installed, the callback can read the current request context with `getContext()`.
+Use `inject` inside controllers. If the Remix `asyncContext()` middleware is installed, the callback can read the current request context with `getContext()`. If you prefer, the controller context can also be forwarded as the single runtime argument and inferred from the route handler position.
 
 ```typescript
 import { createController } from "remix/fetch-router";
@@ -244,6 +280,22 @@ export let loginController = createController(routes.something, {
 		index: inject([Database, Logger] as const, async (database, logger) => {
 			let ctx = getContext();
 
+			logger.info("Handling index action");
+
+			let users = await database.query("SELECT * FROM users");
+
+			return ctx.render({ users });
+		}),
+	},
+});
+```
+
+Or forward the controller context directly:
+
+```typescript
+export let loginController = createController(routes.something, {
+	actions: {
+		index: inject([Database, Logger] as const, async (database, logger, ctx) => {
 			logger.info("Handling index action");
 
 			let users = await database.query("SELECT * FROM users");

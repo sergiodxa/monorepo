@@ -243,12 +243,36 @@ export function getServiceContainer(): Container {
 export function inject<Dependencies extends readonly ServiceKey<unknown>[], Return>(
 	dependencies: Dependencies,
 	callback: (...instances: InferInstances<Dependencies>) => Return,
-): () => Return {
-	return () => {
+): () => Return;
+
+/**
+ * Creates a function that resolves dependencies from the active container.
+ *
+ * @param dependencies Ordered service keys resolved from the active container.
+ * @param callback Callback receiving resolved services followed by one forwarded argument.
+ * @returns A function that resolves dependencies and forwards one runtime argument.
+ */
+export function inject<Dependencies extends readonly ServiceKey<unknown>[], Arg, Return>(
+	dependencies: Dependencies,
+	callback: (...args: [...InferInstances<Dependencies>, Arg]) => Return,
+): (arg: Arg) => Return;
+
+/**
+ * Creates a function that resolves dependencies from the active container.
+ *
+ * @param dependencies Ordered service keys resolved from the active container.
+ * @param callback Callback receiving resolved services plus at most one forwarded runtime argument.
+ * @returns A function that resolves dependencies and forwards any runtime arguments to the callback.
+ */
+export function inject<Dependencies extends readonly ServiceKey<unknown>[], Return>(
+	dependencies: Dependencies,
+	callback: (...args: Array<any>) => Return,
+): (...args: Array<any>) => Return {
+	return (...args: Array<any>) => {
 		let container = getServiceContainer();
 		let instances = dependencies.map((dependency) => container.get(dependency));
 
-		return callback(...(instances as InferInstances<Dependencies>));
+		return callback(...(instances as InferInstances<Dependencies>), ...args);
 	};
 }
 

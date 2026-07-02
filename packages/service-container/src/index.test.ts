@@ -149,6 +149,24 @@ describe(inject.name, () => {
 		expect(result).toBe("sync-items:1");
 	});
 
+	test("forwards one runtime argument after injected dependencies", () => {
+		let container = new ServiceContainer();
+		let database = new Database(1);
+		let context: TestContext = { name: "controller" };
+
+		container.singleton(Database, () => database);
+
+		let result = container.scope(() => {
+			let handler = inject([Database] as const, (db, ctx: TestContext) => {
+				return `${ctx.name}:${db.id}`;
+			});
+
+			return handler(context);
+		});
+
+		expect(result).toBe("controller:1");
+	});
+
 	test("requires an active service container scope", () => {
 		let handler = inject([Database] as const, () => new Response());
 
