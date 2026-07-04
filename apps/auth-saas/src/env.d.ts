@@ -5,7 +5,6 @@
 declare namespace Cloudflare {
 	interface Env {
 		// Secrets (set via wrangler secret)
-		RESEND_API_KEY: string;
 		POLAR_ACCESS_TOKEN: string;
 		POLAR_PRODUCT_ID: string;
 		POLAR_WEBHOOK_SECRET?: string; // Optional, for webhook signature verification

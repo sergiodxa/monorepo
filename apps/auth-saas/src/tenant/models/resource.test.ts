@@ -37,14 +37,14 @@ describe("Resource", () => {
 
 			let resources = await Resource.list(db);
 			expect(resources).toHaveLength(1);
-			expect(resources[0].identifier).toBe("https://api.example.com");
-			expect(resources[0].name).toBe("Example API");
-			expect(resources[0].description).toBe("An example API resource");
+			expect(resources[0]!.identifier).toBe("https://api.example.com");
+			expect(resources[0]!.name).toBe("Example API");
+			expect(resources[0]!.description).toBe("An example API resource");
 
-			let scopes = Resource.parseScopes(resources[0]);
+			let scopes = Resource.parseScopes(resources[0]!);
 			expect(scopes).toHaveLength(2);
-			expect(scopes[0].name).toBe("read");
-			expect(scopes[1].name).toBe("write");
+			expect(scopes[0]!.name).toBe("read");
+			expect(scopes[1]!.name).toBe("write");
 		});
 
 		test("creates a resource without description", async () => {
@@ -55,7 +55,7 @@ describe("Resource", () => {
 			});
 
 			let resources = await Resource.list(db);
-			expect(resources[0].description).toBeNull();
+			expect(resources[0]!.description).toBeNull();
 		});
 	});
 
@@ -68,7 +68,7 @@ describe("Resource", () => {
 			});
 
 			let resources = await Resource.list(db);
-			let resource = await Resource.show(db, resources[0].id);
+			let resource = await Resource.show(db, resources[0]!.id);
 
 			expect(resource).not.toBeNull();
 			expect(resource?.identifier).toBe("https://api.example.com");
@@ -131,7 +131,7 @@ describe("Resource", () => {
 			});
 
 			let resources = await Resource.list(db);
-			let resourceId = resources[0].id;
+			let resourceId = resources[0]!.id;
 
 			await Resource.update(db, resourceId, {
 				name: "Updated Name",
@@ -152,7 +152,7 @@ describe("Resource", () => {
 			});
 
 			let resources = await Resource.list(db);
-			let resourceId = resources[0].id;
+			let resourceId = resources[0]!.id;
 
 			await Resource.update(db, resourceId, {
 				scopes: [{ name: "read" }, { name: "write" }, { name: "delete" }],
@@ -172,7 +172,7 @@ describe("Resource", () => {
 			});
 
 			let resources = await Resource.list(db);
-			let resourceId = resources[0].id;
+			let resourceId = resources[0]!.id;
 
 			await Resource.update(db, resourceId, { description: null });
 
@@ -196,7 +196,7 @@ describe("Resource", () => {
 			});
 
 			let resources = await Resource.list(db);
-			let resourceId = resources[0].id;
+			let resourceId = resources[0]!.id;
 
 			await Resource.destroy(db, resourceId);
 
@@ -218,7 +218,7 @@ describe("Resource", () => {
 			});
 
 			let resources = await Resource.list(db);
-			let scopes = Resource.parseScopes(resources[0]);
+			let scopes = Resource.parseScopes(resources[0]!);
 
 			expect(scopes).toEqual([{ name: "read", description: "Read access" }, { name: "write" }]);
 		});

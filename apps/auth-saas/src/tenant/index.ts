@@ -71,6 +71,14 @@ export default class Tenant extends DurableObject {
 		]);
 	}
 
+	/**
+	 * Applies pending schema migrations exactly once, tracked by `PRAGMA user_version`.
+	 *
+	 * Each migration runs when the stored version is below its index, then the
+	 * version is bumped. This replaces the previous re-run-everything-with-swallowed-errors
+	 * approach, which re-executed idempotent-unsafe statements (e.g. the dashboard-client
+	 * seed) on every cold start.
+	 */
 	private async migrate() {
 		let migrations = await Promise.all([
 			import("./migrations/0001-init.sql?raw"),
@@ -79,17 +87,17 @@ export default class Tenant extends DurableObject {
 			import("./migrations/0004-add-signing-keys-current-index.sql?raw"),
 			import("./migrations/0005-seed-dashboard-client.sql?raw"),
 			import("./migrations/0006-add-passkey-credential-id.sql?raw"),
+			import("./migrations/0007-browser-sessions-and-login-tokens.sql?raw"),
 		]);
 
-		for (let migration of migrations) this.tryExec(migration.default);
-	}
+		let sql = this.ctx.storage.sql;
+		let row = sql.exec<{ user_version: number }>("PRAGMA user_version").one();
+		let applied = Number(row.user_version ?? 0);
 
-	/**
-	 * Executes SQL, ignoring errors (for idempotent ALTER TABLE statements).
-	 */
-	private tryExec(sql: string) {
-		try {
-			return this.ctx.storage.sql.exec(sql);
-		} catch {}
+		for (let version = applied; version < migrations.length; version++) {
+			sql.exec(migrations[version]!.default);
+			// PRAGMA does not accept bound parameters; the value is a controlled integer.
+			sql.exec(`PRAGMA user_version = ${version + 1}`);
+		}
 	}
 }

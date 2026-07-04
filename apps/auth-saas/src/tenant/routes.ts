@@ -35,6 +35,7 @@ export default route({
 
 	api: {
 		stats: get("api/stats"),
+		setup: post("api/setup"),
 
 		clients: {
 			...resources("api/clients", {
@@ -56,7 +57,7 @@ export default route({
 
 		subjects: {
 			...resources("api/subjects", {
-				only: ["index", "show", "update", "destroy"],
+				only: ["index", "show", "create", "update", "destroy"],
 			}),
 
 			verifyEmail: post("api/subjects/:id/verify-email"),

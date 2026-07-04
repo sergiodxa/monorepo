@@ -32,9 +32,9 @@ describe("Client", () => {
 
 			let clients = await Client.list(db);
 			expect(clients).toHaveLength(1);
-			expect(clients[0].name).toBe("My App");
-			expect(clients[0].type).toBe("public");
-			expect(Boolean(clients[0].is_management_client)).toBe(false);
+			expect(clients[0]!.name).toBe("My App");
+			expect(clients[0]!.type).toBe("public");
+			expect(Boolean(clients[0]!.is_management_client)).toBe(false);
 		});
 
 		test("creates a confidential client", async () => {
@@ -45,8 +45,8 @@ describe("Client", () => {
 			});
 
 			let clients = await Client.list(db);
-			expect(clients[0].type).toBe("confidential");
-			expect(clients[0].description).toBe("Backend service");
+			expect(clients[0]!.type).toBe("confidential");
+			expect(clients[0]!.description).toBe("Backend service");
 		});
 
 		test("creates a management client", async () => {
@@ -57,7 +57,7 @@ describe("Client", () => {
 			});
 
 			let clients = await Client.list(db);
-			expect(Boolean(clients[0].is_management_client)).toBe(true);
+			expect(Boolean(clients[0]!.is_management_client)).toBe(true);
 		});
 
 		test("stores allowed scopes as JSON", async () => {
@@ -68,7 +68,7 @@ describe("Client", () => {
 			});
 
 			let clients = await Client.list(db);
-			expect(clients[0].allowed_scopes).toBe('["openid","profile","email"]');
+			expect(clients[0]!.allowed_scopes).toBe('["openid","profile","email"]');
 		});
 	});
 
@@ -80,7 +80,7 @@ describe("Client", () => {
 			});
 
 			let clients = await Client.list(db);
-			let client = await Client.show(db, clients[0].id);
+			let client = await Client.show(db, clients[0]!.id);
 
 			expect(client).not.toBeNull();
 			expect(client?.name).toBe("My App");
@@ -100,12 +100,12 @@ describe("Client", () => {
 			});
 
 			let clients = await Client.list(db);
-			await Client.update(db, clients[0].id, {
+			await Client.update(db, clients[0]!.id, {
 				name: "Updated App",
 				description: "New description",
 			});
 
-			let updated = await Client.show(db, clients[0].id);
+			let updated = await Client.show(db, clients[0]!.id);
 			expect(updated?.name).toBe("Updated App");
 			expect(updated?.description).toBe("New description");
 		});
@@ -119,7 +119,7 @@ describe("Client", () => {
 			});
 
 			let clients = await Client.list(db);
-			await Client.destroy(db, clients[0].id);
+			await Client.destroy(db, clients[0]!.id);
 
 			let remaining = await Client.list(db);
 			expect(remaining).toHaveLength(0);

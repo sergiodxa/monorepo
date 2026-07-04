@@ -1,5 +1,5 @@
 import { noContent } from "@pkg/http/response";
-import { badRequest, notFound, ok } from "@pkg/http/response/json";
+import { badRequest, conflict, created, notFound, ok } from "@pkg/http/response/json";
 import { isFailure } from "@pkg/result";
 import { validate } from "@pkg/validate";
 import * as s from "remix/data-schema";
@@ -14,6 +14,20 @@ let UpdateSubjectSchema = s.object({
 	displayName: s.optional(s.string().pipe(maxLength(LIMITS.name.max))),
 	avatarUrl: s.optional(s.string().pipe(maxLength(LIMITS.url.max), httpsUrl())),
 	username: s.optional(s.string().pipe(maxLength(LIMITS.name.max))),
+});
+
+/**
+ * Import payload: an explicit `id` preserves the source `sub`; ISO timestamps
+ * carry over so verified emails and creation dates survive the migration.
+ */
+let ImportSubjectSchema = s.object({
+	id: s.string().pipe(maxLength(LIMITS.name.max)),
+	email: s.string().pipe(maxLength(LIMITS.email.max)),
+	username: s.string().pipe(maxLength(LIMITS.name.max)),
+	emailVerifiedAt: s.optional(s.nullable(s.string())),
+	displayName: s.optional(s.nullable(s.string().pipe(maxLength(LIMITS.name.max)))),
+	avatarUrl: s.optional(s.nullable(s.string().pipe(maxLength(LIMITS.url.max)))),
+	createdAt: s.optional(s.string()),
 });
 
 export const index = action<"GET", "/api/subjects">(async ({ db, logger }) => {
@@ -32,6 +46,33 @@ export const show = action<"GET", "/api/subjects/:id">(async ({ db, params, logg
 	}
 	log.info("Subject retrieved", { subjectId: params.id });
 	return ok(subject);
+});
+
+export const create = action<"POST", "/api/subjects">(async ({ db, request, logger }) => {
+	let log = logger.action("/api/subjects");
+	let body = await safeJsonParse(request);
+	if (isResponse(body)) {
+		log.info("Invalid JSON body");
+		return body;
+	}
+
+	let result = await validate(body, ImportSubjectSchema);
+	if (isFailure(result)) {
+		log.info("Invalid import body");
+		return badRequest({ error: "Invalid request", issues: result.error.issues });
+	}
+
+	try {
+		let subject = await Subject.import(db, result.data);
+		log.info("Subject imported", { subjectId: subject.id });
+		return created(subject);
+	} catch (error) {
+		if (error instanceof Subject.ConflictError) {
+			log.info("Subject import conflict", { message: error.message });
+			return conflict({ error: error.message });
+		}
+		throw error;
+	}
 });
 
 export const update = action<"PUT", "/api/subjects/:id">(

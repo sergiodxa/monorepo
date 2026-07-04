@@ -183,7 +183,7 @@ describe("Session", () => {
 
 			let remainingSessions = await Session.list(db);
 			expect(remainingSessions).toHaveLength(1);
-			expect(remainingSessions[0].subject_id).toBe(subject2.id);
+			expect(remainingSessions[0]!.subject_id).toBe(subject2.id);
 		});
 	});
 

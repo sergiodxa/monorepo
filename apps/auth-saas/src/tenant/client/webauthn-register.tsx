@@ -1,16 +1,19 @@
-import type { Handle } from "remix/ui";
+import type { Handle, SerializableObject } from "remix/ui";
 
-import { clientEntry, css } from "remix/ui";
+import { clientEntry, css, on } from "remix/ui";
 
-interface WebAuthnRegisterSetup {
+/**
+ * Props for the client entry. Declared as a `type` (not an interface) with only
+ * serializable members so it satisfies the `SerializableProps` constraint that
+ * `clientEntry` requires for hydration payloads.
+ */
+type WebAuthnRegisterProps = {
 	challengeId: string;
-	options: PublicKeyCredentialCreationOptionsJSON;
+	/** Serialized creation options forwarded to the browser WebAuthn API. */
+	options: PublicKeyCredentialCreationOptionsJSON & SerializableObject;
 	verifyUrl: string;
-}
-
-interface WebAuthnRegisterProps extends WebAuthnRegisterSetup {
 	email: string;
-}
+};
 
 export let WebAuthnRegister = clientEntry(
 	"/assets/tenant/webauthn-register.js#WebAuthnRegister",
@@ -113,8 +116,8 @@ export let WebAuthnRegister = clientEntry(
 						<p mix={[css({ color: "#EF4444" })]}>{errorMessage}</p>
 						<button
 							type="button"
-							on={{ click: () => register() }}
 							mix={[
+								on("click", () => register()),
 								css({
 									marginTop: "1rem",
 									padding: "0.5rem 1rem",

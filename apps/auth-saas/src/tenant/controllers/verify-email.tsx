@@ -1,3 +1,5 @@
+import type { Handle } from "remix/ui";
+
 import { ok } from "@pkg/http/response/html";
 import { css } from "remix/ui";
 import { renderToString } from "remix/ui/server";
@@ -63,8 +65,14 @@ interface VerifyEmailPageProps {
 	message: string;
 }
 
-function VerifyEmailPage() {
-	return ({ brand, status, message }: VerifyEmailPageProps) => {
+/**
+ * Renders the email verification result page for success and error states.
+ * @param handle - Component handle exposing the brand, status, and message props.
+ * @returns A render function producing the page markup.
+ */
+function VerifyEmailPage(handle: Handle<VerifyEmailPageProps>) {
+	return () => {
+		let { brand, status, message } = handle.props;
 		let backgroundColor = brand.background_color;
 		return (
 			<Layout title={status === "success" ? "Email Verified" : "Verification Failed"}>

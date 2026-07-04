@@ -86,7 +86,9 @@ export default action<"POST", "/webauthn/auth/options">(
 			rpID: rpId,
 			allowCredentials,
 			userVerification: "preferred",
-			challenge: base64UrlDecode(challenge),
+			// Copy into a Uint8Array backed by a plain ArrayBuffer to satisfy the
+			// current @simplewebauthn BufferSource typing.
+			challenge: new Uint8Array(base64UrlDecode(challenge)),
 		} satisfies GenerateAuthenticationOptionsOpts);
 
 		log.info("Authentication challenge created", {

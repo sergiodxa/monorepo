@@ -1,16 +1,19 @@
-import type { Handle } from "remix/ui";
+import type { Handle, SerializableObject } from "remix/ui";
 
-import { clientEntry, css } from "remix/ui";
+import { clientEntry, css, on } from "remix/ui";
 
-interface WebAuthnAuthSetup {
+/**
+ * Props for the client entry. Declared as a `type` (not an interface) with only
+ * serializable members so it satisfies the `SerializableProps` constraint that
+ * `clientEntry` requires for hydration payloads.
+ */
+type WebAuthnAuthProps = {
 	challengeId: string;
-	options: PublicKeyCredentialRequestOptionsJSON;
+	/** Serialized request options forwarded to the browser WebAuthn API. */
+	options: PublicKeyCredentialRequestOptionsJSON & SerializableObject;
 	verifyUrl: string;
-}
-
-interface WebAuthnAuthProps extends WebAuthnAuthSetup {
 	email: string;
-}
+};
 
 export let WebAuthnAuth = clientEntry(
 	"/assets/tenant/webauthn-auth.js#WebAuthnAuth",
@@ -113,8 +116,8 @@ export let WebAuthnAuth = clientEntry(
 						<p mix={[css({ color: "#EF4444" })]}>{errorMessage}</p>
 						<button
 							type="button"
-							on={{ click: () => authenticate() }}
 							mix={[
+								on("click", () => authenticate()),
 								css({
 									marginTop: "1rem",
 									padding: "0.5rem 1rem",

@@ -1,3 +1,5 @@
+import type { Handle } from "remix/ui";
+
 import { ok } from "@pkg/http/response/html";
 import { css } from "remix/ui";
 import { renderToString } from "remix/ui/server";
@@ -30,8 +32,14 @@ interface TenantHomePageProps {
 	stats: { clients: number; subjects: number };
 }
 
-function TenantHomePage() {
-	return ({ brand, stats }: TenantHomePageProps) => {
+/**
+ * Renders the tenant home page describing the active authentication service.
+ * @param handle - Component handle exposing the brand and stats props.
+ * @returns A render function producing the page markup.
+ */
+function TenantHomePage(handle: Handle<TenantHomePageProps>) {
+	return () => {
+		let { brand, stats } = handle.props;
 		let primaryColor = brand.primary_color;
 		let backgroundColor = brand.background_color;
 

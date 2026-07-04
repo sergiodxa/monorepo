@@ -125,22 +125,33 @@ export default action<"POST", "/webauthn/register/verify">(async ({ db, request,
 
 	let { registrationInfo } = verification;
 
-	let subject = await Subject.findByEmail(db, challenge.email);
-	if (!subject) {
-		let username = challenge.email.split("@")[0] ?? challenge.email;
-		subject = await Subject.register(db, { email: challenge.email, username });
-		log.info("Created new subject during registration", { subjectId: subject.id });
+	// Registration only ever creates a brand-new subject. If one already exists for
+	// this email (e.g. an imported user, or an account created on another device),
+	// attaching a passkey from an unauthenticated registration ceremony would be an
+	// account-takeover vector — that email must prove ownership via magic link
+	// before a passkey can be added. Reject here as defense in depth even though the
+	// /authorize check only offers registration for unknown emails.
+	let existing = await Subject.findByEmail(db, challenge.email);
+	if (existing) {
+		log.info("Registration attempted for existing subject", { subjectId: existing.id });
+		return badRequest({
+			error: "An account with this email already exists. Sign in with your email instead.",
+		});
 	}
+
+	let username = challenge.email.split("@")[0] ?? challenge.email;
+	let subject = await Subject.register(db, { email: challenge.email, username });
+	log.info("Created new subject during registration", { subjectId: subject.id });
 
 	let userAgent = request.headers.get("user-agent");
 	let passkeyName = generatePasskeyName(userAgent);
 
 	await Passkey.create(db, {
 		subjectId: subject.id,
-		// credentialID is already a Base64URLString from @simplewebauthn
-		credentialId: registrationInfo.credentialID,
-		publicKey: Buffer.from(registrationInfo.credentialPublicKey).toString("base64"),
-		counter: registrationInfo.counter,
+		// credential.id is already a Base64URLString from @simplewebauthn
+		credentialId: registrationInfo.credential.id,
+		publicKey: Buffer.from(registrationInfo.credential.publicKey).toString("base64"),
+		counter: registrationInfo.credential.counter,
 		deviceType: registrationInfo.credentialDeviceType,
 		backedUp: registrationInfo.credentialBackedUp,
 		transports: response.response.transports?.join(",") ?? null,
@@ -181,7 +192,10 @@ export default action<"POST", "/webauthn/register/verify">(async ({ db, request,
 			nonce: challenge.nonce ?? undefined,
 			pkce:
 				challenge.pkce_challenge && challenge.pkce_method
-					? { challenge: challenge.pkce_challenge, method: challenge.pkce_method }
+					? {
+							challenge: challenge.pkce_challenge,
+							method: challenge.pkce_method === "plain" ? "plain" : "S256",
+						}
 					: undefined,
 		});
 

@@ -14,6 +14,8 @@ export interface TenantWithRole {
 	owner_subject_id: string;
 	region: "wnam" | "enam" | "sam" | "weur" | "eeur" | "apac" | "oc" | "afr" | "me";
 	status: "active" | "suspended" | "deleted";
+	/** Whether this tenant is an internal (non-billed) tenant. */
+	internal: boolean;
 	created_at: string;
 	updated_at: string;
 	/** The user's role: owner, admin, or viewer. */
@@ -32,6 +34,7 @@ export default class Tenant {
 			owner_subject_id: c.text(),
 			region: c.enum(["wnam", "enam", "sam", "weur", "eeur", "apac", "oc", "afr", "me"]),
 			status: c.enum(["active", "suspended", "deleted"]),
+			internal: c.boolean().default(false),
 			created_at: c.text(),
 			updated_at: c.text(),
 		},
@@ -85,11 +88,11 @@ export default class Tenant {
 		let results: TenantWithRole[] = [];
 
 		for (let tenant of ownedTenants) {
-			results.push({ ...tenant, role: "owner" });
+			results.push({ ...tenant, role: "owner" } as TenantWithRole);
 		}
 
 		for (let tenant of pendingOwnedTenants) {
-			results.push({ ...tenant, role: "owner" });
+			results.push({ ...tenant, role: "owner" } as TenantWithRole);
 		}
 
 		for (let tenant of memberTenants) {
@@ -98,10 +101,7 @@ export default class Tenant {
 			if (results.some((t) => t.id === tenant.id)) continue;
 			let membership = memberships.find((m) => m.tenant_id === tenant.id);
 			if (!membership) continue;
-			results.push({
-				...tenant,
-				role: membership.role,
-			});
+			results.push({ ...tenant, role: membership.role } as TenantWithRole);
 		}
 
 		return results;
@@ -130,19 +130,19 @@ export default class Tenant {
 
 		// Check if owner
 		if (tenant.owner_subject_id === subjectId) {
-			return { ...tenant, role: "owner" };
+			return { ...tenant, role: "owner" } as TenantWithRole;
 		}
 
 		// Check if pending owner
 		if (tenant.owner_subject_id === `pending:${email}`) {
-			return { ...tenant, role: "owner" };
+			return { ...tenant, role: "owner" } as TenantWithRole;
 		}
 
 		// Check if member
 		let TenantMember = (await import("./tenant-member")).default;
 		let membership = await TenantMember.findByTenantAndSubject(db, id, subjectId);
 		if (membership) {
-			return { ...tenant, role: membership.role };
+			return { ...tenant, role: membership.role } as TenantWithRole;
 		}
 
 		return null;
@@ -159,6 +159,8 @@ export default class Tenant {
 			slug: string;
 			ownerSubjectId: string;
 			region: "wnam" | "enam" | "sam" | "weur" | "eeur" | "apac" | "oc" | "afr" | "me";
+			/** Internal tenants skip Polar billing (default false). */
+			internal?: boolean;
 		},
 	) {
 		let id = crypto.randomUUID();
@@ -171,6 +173,7 @@ export default class Tenant {
 			owner_subject_id: data.ownerSubjectId,
 			region: data.region,
 			status: "active",
+			internal: data.internal ?? false,
 			created_at: now,
 			updated_at: now,
 		});

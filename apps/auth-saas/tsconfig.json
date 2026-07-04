@@ -6,6 +6,10 @@
 		"jsxImportSource": "remix/ui",
 		"noEmit": true,
 		"types": ["@total-typescript/ts-reset", "vite/client", "@types/bun"],
+		// baseUrl is required for the router's ContextCompatibility generics and the
+		// `remix/fetch-router` context augmentations to resolve; ignoreDeprecations
+		// silences the TS6 deprecation warning until the repo moves to TS7.
+		"ignoreDeprecations": "6.0",
 		"baseUrl": ".",
 		"rootDirs": ["."],
 		"paths": {

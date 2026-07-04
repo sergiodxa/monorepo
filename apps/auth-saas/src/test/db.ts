@@ -1,13 +1,10 @@
-import { Database } from "bun:sqlite";
+import { Database, type SQLQueryBindings } from "bun:sqlite";
 
 import type {
 	AdapterCapabilityOverrides,
 	DataManipulationOperation,
 	DataManipulationRequest,
 	DataManipulationResult,
-	DataMigrationOperation,
-	DataMigrationRequest,
-	DataMigrationResult,
 	DatabaseAdapter,
 	SqlStatement,
 	TableRef,
@@ -50,11 +47,7 @@ export function createBunSqliteDatabaseAdapter(
 			migrationLock: options?.capabilities?.migrationLock ?? false,
 		},
 
-		compileSql(operation: DataManipulationOperation | DataMigrationOperation): SqlStatement[] {
-			if (!isDataManipulationOperation(operation)) {
-				throw new Error("Unsupported migration operation kind in test adapter: " + operation.kind);
-			}
-
+		compileSql(operation: DataManipulationOperation): SqlStatement[] {
 			let statement = compileSqliteStatement(operation);
 
 			return [{ text: statement.text, values: statement.values }];
@@ -105,10 +98,12 @@ export function createBunSqliteDatabaseAdapter(
 			};
 		},
 
-		async migrate(request: DataMigrationRequest): Promise<DataMigrationResult> {
-			throw new Error(
-				"Unsupported migration operation kind in test adapter: " + request.operation.kind,
-			);
+		async executeScript(sql: string, transaction?: TransactionToken): Promise<void> {
+			if (transaction) {
+				assertTransaction(transaction);
+			}
+
+			db.run(sql);
 		},
 
 		async hasTable(table: TableRef, transaction?: TransactionToken): Promise<boolean> {
@@ -740,8 +735,8 @@ function normalizeCountRows(rows: Record<string, unknown>[]): Record<string, unk
 	});
 }
 
-function normalizeStatementValues(values: unknown[]): unknown[] {
-	return values.map((value) => (value === undefined ? null : value));
+function normalizeStatementValues(values: unknown[]): SQLQueryBindings[] {
+	return values.map((value) => (value === undefined ? null : value)) as SQLQueryBindings[];
 }
 
 function normalizeAffectedRowsForReader(
@@ -826,22 +821,6 @@ function isInsertOperation(
 > {
 	return (
 		operation.kind === "insert" || operation.kind === "insertMany" || operation.kind === "upsert"
-	);
-}
-
-function isDataManipulationOperation(
-	operation: DataManipulationOperation | DataMigrationOperation,
-): operation is DataManipulationOperation {
-	return (
-		operation.kind === "select" ||
-		operation.kind === "count" ||
-		operation.kind === "exists" ||
-		operation.kind === "insert" ||
-		operation.kind === "insertMany" ||
-		operation.kind === "update" ||
-		operation.kind === "delete" ||
-		operation.kind === "upsert" ||
-		operation.kind === "raw"
 	);
 }
 

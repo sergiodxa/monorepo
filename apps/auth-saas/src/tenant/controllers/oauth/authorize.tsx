@@ -1,3 +1,5 @@
+import type { Handle } from "remix/ui";
+
 import { ok } from "@pkg/http/response/html";
 import { isFailure } from "@pkg/result";
 import { validate } from "@pkg/validate";
@@ -270,8 +272,8 @@ async function renderError(message: string) {
 	return ok(html);
 }
 
-function ErrorPage() {
-	return ({ message }: { message: string }) => (
+function ErrorPage(handle: Handle<{ message: string }>) {
+	return () => (
 		<Layout>
 			<div
 				mix={[
@@ -286,7 +288,7 @@ function ErrorPage() {
 				]}
 			>
 				<h1 mix={[css({ color: "#DC2626", marginBottom: "1rem" })]}>Error</h1>
-				<p mix={[css({ color: "#991B1B" })]}>{message}</p>
+				<p mix={[css({ color: "#991B1B" })]}>{handle.props.message}</p>
 			</div>
 		</Layout>
 	);
@@ -307,8 +309,9 @@ interface LoginFormProps {
 	error?: string;
 }
 
-function LoginForm() {
-	return (props: LoginFormProps) => (
+function LoginForm(handle: Handle<LoginFormProps>) {
+	let props = handle.props;
+	return () => (
 		<Layout>
 			<div
 				mix={[
@@ -456,8 +459,9 @@ interface AuthenticateFormProps {
 	clientName: string;
 }
 
-function AuthenticateForm() {
-	return (props: AuthenticateFormProps) => (
+function AuthenticateForm(handle: Handle<AuthenticateFormProps>) {
+	let props = handle.props;
+	return () => (
 		<Layout>
 			<div
 				mix={[
@@ -478,17 +482,15 @@ function AuthenticateForm() {
 
 				<WebAuthnAuth
 					email={props.email}
-					setup={{
-						challengeId: props.challengeId,
-						options: {
-							challenge: props.challenge,
-							rpId: props.rpId,
-							allowCredentials: props.allowCredentials,
-							timeout: 60000,
-							userVerification: "preferred",
-						},
-						verifyUrl: routes.webauthn.auth.verify.href(),
+					challengeId={props.challengeId}
+					options={{
+						challenge: props.challenge,
+						rpId: props.rpId,
+						allowCredentials: props.allowCredentials,
+						timeout: 60000,
+						userVerification: "preferred",
 					}}
+					verifyUrl={routes.webauthn.auth.verify.href()}
 				/>
 
 				<noscript>
@@ -512,8 +514,9 @@ interface RegisterFormProps {
 	clientName: string;
 }
 
-function RegisterForm() {
-	return (props: RegisterFormProps) => (
+function RegisterForm(handle: Handle<RegisterFormProps>) {
+	let props = handle.props;
+	return () => (
 		<Layout>
 			<div
 				mix={[
@@ -534,33 +537,31 @@ function RegisterForm() {
 
 				<WebAuthnRegister
 					email={props.email}
-					setup={{
-						challengeId: props.challengeId,
-						options: {
-							challenge: props.challenge,
-							rp: {
-								id: props.rpId,
-								name: props.rpName,
-							},
-							user: {
-								id: props.userId,
-								name: props.email,
-								displayName: props.email,
-							},
-							pubKeyCredParams: [
-								{ alg: -7, type: "public-key" }, // ES256
-								{ alg: -257, type: "public-key" }, // RS256
-							],
-							timeout: 60000,
-							attestation: "none",
-							authenticatorSelection: {
-								authenticatorAttachment: "platform",
-								residentKey: "preferred",
-								userVerification: "preferred",
-							},
+					challengeId={props.challengeId}
+					options={{
+						challenge: props.challenge,
+						rp: {
+							id: props.rpId,
+							name: props.rpName,
 						},
-						verifyUrl: routes.webauthn.register.verify.href(),
+						user: {
+							id: props.userId,
+							name: props.email,
+							displayName: props.email,
+						},
+						pubKeyCredParams: [
+							{ alg: -7, type: "public-key" }, // ES256
+							{ alg: -257, type: "public-key" }, // RS256
+						],
+						timeout: 60000,
+						attestation: "none",
+						authenticatorSelection: {
+							authenticatorAttachment: "platform",
+							residentKey: "preferred",
+							userVerification: "preferred",
+						},
 					}}
+					verifyUrl={routes.webauthn.register.verify.href()}
 				/>
 
 				<noscript>

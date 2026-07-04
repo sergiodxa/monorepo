@@ -1,10 +1,11 @@
 import type {
 	AdapterCapabilityOverrides,
-	AdapterExecuteRequest,
-	AdapterResult,
-	AdapterStatement,
+	DataManipulationOperation,
+	DataManipulationRequest,
+	DataManipulationResult,
 	DatabaseAdapter,
-	Predicate,
+	SqlStatement,
+	TableRef,
 	TransactionOptions,
 	TransactionToken,
 } from "remix/data-table";
@@ -15,6 +16,32 @@ interface D1AdapterOptions {
 	capabilities?: AdapterCapabilityOverrides;
 }
 
+/** Minimal D1 metadata used to normalize adapter results. */
+interface D1Meta {
+	changes?: number;
+	last_row_id?: number;
+}
+
+/** Shape returned by D1 `.all()` and `.run()` calls. */
+interface D1StatementResult {
+	results?: Record<string, unknown>[];
+	meta?: D1Meta;
+}
+
+/** Query interface used after preparing and binding a D1 statement. */
+interface D1PreparedQuery {
+	all<T = Record<string, unknown>>(): Promise<{ results?: T[]; meta?: D1Meta }>;
+	run<T = Record<string, unknown>>(): Promise<{ results?: T[]; meta?: D1Meta }>;
+}
+
+/**
+ * Creates a `DatabaseAdapter` backed by a Cloudflare D1 database.
+ *
+ * SQL generation follows SQLite semantics to match D1 behavior.
+ * @param db D1 binding used to prepare and execute SQL.
+ * @param options Optional capability overrides for adapter feature flags.
+ * @returns A `DatabaseAdapter` implementation for D1.
+ */
 export function createD1DatabaseAdapter(
 	db: D1Database,
 	options?: D1AdapterOptions,
@@ -33,66 +60,100 @@ export function createD1DatabaseAdapter(
 
 		capabilities: {
 			returning: options?.capabilities?.returning ?? true,
-			savepoints: options?.capabilities?.savepoints ?? true,
+			savepoints: options?.capabilities?.savepoints ?? false,
 			upsert: options?.capabilities?.upsert ?? true,
+			transactionalDdl: options?.capabilities?.transactionalDdl ?? true,
+			migrationLock: options?.capabilities?.migrationLock ?? false,
 		},
 
-		async execute(request: AdapterExecuteRequest): Promise<AdapterResult> {
-			if (request.statement.kind === "insertMany" && request.statement.values.length === 0) {
+		compileSql(operation: DataManipulationOperation): SqlStatement[] {
+			let statement = compileSqliteStatement(operation);
+
+			return [{ text: statement.text, values: statement.values }];
+		},
+
+		async execute(request: DataManipulationRequest): Promise<DataManipulationResult> {
+			let operation = request.operation;
+
+			if (operation.kind === "insertMany" && operation.values.length === 0) {
 				return {
 					affectedRows: 0,
 					insertId: undefined,
-					rows: request.statement.returning ? [] : undefined,
+					rows: operation.returning ? [] : undefined,
 				};
 			}
 
-			let statement = compileSqliteStatement(request.statement);
-			let d1Statement = db.prepare(statement.text).bind(...statement.values);
-			let result = await d1Statement.all();
+			let statement = compileSqliteStatement(operation);
+			let prepared = db
+				.prepare(statement.text)
+				.bind(...statement.values) as unknown as D1PreparedQuery;
 
-			let isReadStatement =
-				request.statement.kind === "select" ||
-				request.statement.kind === "count" ||
-				request.statement.kind === "exists";
+			let shouldReadRows =
+				operation.kind === "select" ||
+				operation.kind === "count" ||
+				operation.kind === "exists" ||
+				hasReturningClause(operation);
 
-			if (isReadStatement) {
-				let rows = normalizeRows(result.results);
+			if (shouldReadRows) {
+				let result = (await prepared.all()) as D1StatementResult;
+				let rows = normalizeRows(result.results ?? []);
 
-				if (request.statement.kind === "count" || request.statement.kind === "exists") {
+				if (operation.kind === "count" || operation.kind === "exists") {
 					rows = normalizeCountRows(rows);
 				}
 
 				return {
 					rows,
-					affectedRows: undefined,
-					insertId: undefined,
+					affectedRows: normalizeAffectedRowsForReader(operation.kind, rows, result.meta),
+					insertId: normalizeInsertIdForReader(operation.kind, operation, rows, result.meta),
 				};
 			}
 
-			// For write statements with RETURNING clause
-			if ("returning" in request.statement && request.statement.returning !== undefined) {
-				let rows = normalizeRows(result.results);
+			let result = (await prepared.run()) as D1StatementResult;
 
-				return {
-					rows,
-					affectedRows: result.meta.changes,
-					insertId: normalizeInsertId(request.statement, rows),
-				};
-			}
-
-			// For write statements without RETURNING
 			return {
-				affectedRows: result.meta.changes,
-				insertId: result.meta.last_row_id,
+				affectedRows: normalizeAffectedRowsForRun(operation.kind, result),
+				insertId: normalizeInsertIdForRun(operation.kind, operation, result),
 			};
 		},
 
-		async beginTransaction(_options?: TransactionOptions): Promise<TransactionToken> {
-			// D1 doesn't support explicit transactions in the same way
-			// We'll just track them for API compatibility
+		async executeScript(sql: string): Promise<void> {
+			await db.exec(sql);
+		},
+
+		async hasTable(table: TableRef, _transaction?: TransactionToken): Promise<boolean> {
+			let schema = table.schema ? quoteIdentifier(table.schema) + "." : "";
+			let sql =
+				"select 1 as exists from " + schema + "sqlite_master where type = ? and name = ? limit 1";
+			let result = await db.prepare(sql).bind("table", table.name).all<{ exists?: number }>();
+
+			return Boolean(result.results?.[0]);
+		},
+
+		async hasColumn(
+			table: TableRef,
+			column: string,
+			_transaction?: TransactionToken,
+		): Promise<boolean> {
+			let schema = table.schema ? quoteIdentifier(table.schema) + "." : "";
+			let sql = "pragma " + schema + "table_info(" + quoteIdentifier(table.name) + ")";
+			let result = await db.prepare(sql).all<{ name?: string }>();
+
+			return (result.results ?? []).some((entry) => entry.name === column);
+		},
+
+		async beginTransaction(options?: TransactionOptions): Promise<TransactionToken> {
+			if (options?.isolationLevel === "read uncommitted") {
+				await db.exec("PRAGMA read_uncommitted = true");
+			}
+
+			// Cloudflare D1 does not allow SQL BEGIN/COMMIT/ROLLBACK statements.
+			// DataTable still requires transaction tokens for scoped operations,
+			// so we create logical tokens and rely on per-statement execution.
 			transactionCounter += 1;
 			let token = { id: "tx_" + String(transactionCounter) };
 			transactions.add(token.id);
+
 			return token;
 		},
 
@@ -107,24 +168,25 @@ export function createD1DatabaseAdapter(
 		},
 
 		async createSavepoint(_token: TransactionToken, _name: string): Promise<void> {
-			// D1 doesn't support savepoints
+			throw new Error("D1 adapter savepoints are not supported");
 		},
 
 		async rollbackToSavepoint(_token: TransactionToken, _name: string): Promise<void> {
-			// D1 doesn't support savepoints
+			throw new Error("D1 adapter savepoints are not supported");
 		},
 
 		async releaseSavepoint(_token: TransactionToken, _name: string): Promise<void> {
-			// D1 doesn't support savepoints
+			throw new Error("D1 adapter savepoints are not supported");
 		},
 	};
 }
 
-// SQL Compilation (same as SqlStorage adapter)
+// SQL Compilation
 
-type JoinClause = Extract<AdapterStatement, { kind: "select" }>["joins"][number];
-type UpsertStatement = Extract<AdapterStatement, { kind: "upsert" }>;
-type StatementTable = Extract<AdapterStatement, { kind: "select" }>["table"];
+type JoinClause = Extract<DataManipulationOperation, { kind: "select" }>["joins"][number];
+type UpsertOperation = Extract<DataManipulationOperation, { kind: "upsert" }>;
+type StatementTable = Extract<DataManipulationOperation, { kind: "select" }>["table"];
+type Predicate = JoinClause["on"];
 
 interface CompiledSql {
 	text: string;
@@ -135,7 +197,7 @@ interface CompileContext {
 	values: unknown[];
 }
 
-function compileSqliteStatement(statement: AdapterStatement): CompiledSql {
+function compileSqliteStatement(statement: DataManipulationOperation): CompiledSql {
 	if (statement.kind === "raw") {
 		return {
 			text: statement.sql.text,
@@ -324,7 +386,7 @@ function compileInsertManyStatement(
 	};
 }
 
-function compileUpsertStatement(statement: UpsertStatement, context: CompileContext): CompiledSql {
+function compileUpsertStatement(statement: UpsertOperation, context: CompileContext): CompiledSql {
 	let insertColumns = Object.keys(statement.values);
 	let conflictTarget = statement.conflictTarget ?? [...getTablePrimaryKey(statement.table)];
 
@@ -340,12 +402,12 @@ function compileUpsertStatement(statement: UpsertStatement, context: CompileCont
 	if (updateColumns.length === 0) {
 		conflictClause =
 			" on conflict (" +
-			conflictTarget.map((column: string) => quotePath(column)).join(", ") +
+			conflictTarget.map((column) => quotePath(column)).join(", ") +
 			") do nothing";
 	} else {
 		conflictClause =
 			" on conflict (" +
-			conflictTarget.map((column: string) => quotePath(column)).join(", ") +
+			conflictTarget.map((column) => quotePath(column)).join(", ") +
 			") do update set " +
 			updateColumns
 				.map((column) => quotePath(column) + " = " + pushValue(context, updateValues[column]))
@@ -470,8 +532,7 @@ function compilePredicate(predicate: Predicate, context: CompileContext): string
 				return column + " is null";
 			}
 
-			let comparisonValue = compileComparisonValue(predicate, context);
-			return column + " = " + comparisonValue;
+			return column + " = " + compileComparisonValue(predicate, context);
 		}
 
 		if (predicate.operator === "ne") {
@@ -482,8 +543,7 @@ function compilePredicate(predicate: Predicate, context: CompileContext): string
 				return column + " is not null";
 			}
 
-			let comparisonValue = compileComparisonValue(predicate, context);
-			return column + " <> " + comparisonValue;
+			return column + " <> " + compileComparisonValue(predicate, context);
 		}
 
 		if (predicate.operator === "gt") {
@@ -526,8 +586,7 @@ function compilePredicate(predicate: Predicate, context: CompileContext): string
 		}
 
 		if (predicate.operator === "ilike") {
-			let comparisonValue = compileComparisonValue(predicate, context);
-			return "lower(" + column + ") like lower(" + comparisonValue + ")";
+			return "lower(" + column + ") like lower(" + compileComparisonValue(predicate, context) + ")";
 		}
 	}
 
@@ -650,37 +709,101 @@ function normalizeCountRows(rows: Record<string, unknown>[]): Record<string, unk
 	});
 }
 
-function normalizeInsertId(
-	statement: AdapterExecuteRequest["statement"],
+/** Returns `true` when an operation asks for a `returning` clause. */
+function hasReturningClause(operation: DataManipulationOperation): boolean {
+	return (
+		(operation.kind === "insert" ||
+			operation.kind === "insertMany" ||
+			operation.kind === "update" ||
+			operation.kind === "delete" ||
+			operation.kind === "upsert") &&
+		Boolean(operation.returning)
+	);
+}
+
+function normalizeAffectedRowsForReader(
+	kind: DataManipulationOperation["kind"],
 	rows: Record<string, unknown>[],
+	meta?: D1Meta,
+): number | undefined {
+	if (isWriteOperationKind(kind)) {
+		if (typeof meta?.changes === "number") {
+			return meta.changes;
+		}
+		return rows.length;
+	}
+	return undefined;
+}
+
+function normalizeInsertIdForReader(
+	kind: DataManipulationOperation["kind"],
+	operation: DataManipulationOperation,
+	rows: Record<string, unknown>[],
+	meta?: D1Meta,
 ): unknown {
-	if (!isInsertStatementKind(statement.kind) || !isInsertStatement(statement)) {
+	if (!isInsertOperationKind(kind) || !isInsertOperation(operation)) {
 		return undefined;
 	}
 
-	let primaryKey = getTablePrimaryKey(statement.table);
+	let primaryKey = getTablePrimaryKey(operation.table);
 
 	if (primaryKey.length !== 1) {
 		return undefined;
 	}
 
-	let key = primaryKey[0] as string;
-	let row = rows[rows.length - 1];
+	let key = primaryKey[0];
+	if (!key) {
+		return meta?.last_row_id;
+	}
 
-	return row ? row[key] : undefined;
+	let row = rows[rows.length - 1];
+	return row?.[key] ?? meta?.last_row_id;
 }
 
-function isInsertStatementKind(kind: AdapterExecuteRequest["statement"]["kind"]): boolean {
+function normalizeAffectedRowsForRun(
+	kind: DataManipulationOperation["kind"],
+	result: D1StatementResult,
+): number | undefined {
+	if (kind === "select" || kind === "count" || kind === "exists") {
+		return undefined;
+	}
+	return result.meta?.changes;
+}
+
+function normalizeInsertIdForRun(
+	kind: DataManipulationOperation["kind"],
+	operation: DataManipulationOperation,
+	result: D1StatementResult,
+): unknown {
+	if (!isInsertOperationKind(kind) || !isInsertOperation(operation)) {
+		return undefined;
+	}
+
+	if (getTablePrimaryKey(operation.table).length !== 1) {
+		return undefined;
+	}
+
+	return result.meta?.last_row_id;
+}
+
+function isWriteOperationKind(kind: DataManipulationOperation["kind"]): boolean {
+	return (
+		kind === "insert" ||
+		kind === "insertMany" ||
+		kind === "update" ||
+		kind === "delete" ||
+		kind === "upsert"
+	);
+}
+
+function isInsertOperationKind(kind: DataManipulationOperation["kind"]): boolean {
 	return kind === "insert" || kind === "insertMany" || kind === "upsert";
 }
 
-function isInsertStatement(
-	statement: AdapterExecuteRequest["statement"],
-): statement is Extract<
-	AdapterExecuteRequest["statement"],
-	{ kind: "insert" | "insertMany" | "upsert" }
-> {
+function isInsertOperation(
+	operation: DataManipulationOperation,
+): operation is Extract<DataManipulationOperation, { kind: "insert" | "insertMany" | "upsert" }> {
 	return (
-		statement.kind === "insert" || statement.kind === "insertMany" || statement.kind === "upsert"
+		operation.kind === "insert" || operation.kind === "insertMany" || operation.kind === "upsert"
 	);
 }

@@ -12,6 +12,8 @@ declare module "remix/fetch-router" {
 			slug: string;
 			region: string;
 			status: string;
+			/** Whether this is an internal (non-billed) tenant. */
+			internal: boolean;
 			/** The current user's role for this tenant. */
 			role: "owner" | TenantMemberRole;
 		};
@@ -48,6 +50,7 @@ export default middleware(async (context, next) => {
 		slug: tenant.slug,
 		region: tenant.region,
 		status: tenant.status,
+		internal: tenant.internal,
 		role: tenant.role,
 	};
 

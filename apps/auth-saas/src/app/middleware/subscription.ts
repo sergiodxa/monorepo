@@ -58,10 +58,11 @@ export default middleware(async (context, next) => {
 		return new Response("Internal error", { status: 500 });
 	}
 
-	// Platform tenant is exempt from subscription checks
-	if (context.tenant.id === PLATFORM_TENANT_ID) {
+	// The platform tenant and internal tenants (the owner's own tenants, e.g.
+	// sso.sergiodxa.com) are exempt from subscription checks.
+	if (context.tenant.id === PLATFORM_TENANT_ID || context.tenant.internal) {
 		context.subscription = {
-			id: "platform",
+			id: context.tenant.id,
 			status: "active",
 			isActive: true,
 			isPastDue: false,

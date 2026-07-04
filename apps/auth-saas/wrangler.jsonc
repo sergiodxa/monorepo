@@ -14,6 +14,16 @@
 
 	"assets": { "directory": "./assets", "binding": "ASSETS" },
 
+	// The platform dashboard runs on the platform domain (custom_domain). The sso.*
+	// hostnames are same-zone tenants resolved by the worker via the control-plane
+	// hostnames table (Cloudflare for SaaS metadata does not apply to own-zone hosts).
+	// Replace ids/zone as needed before deploy; see ADR-010 runbook Phase 0.
+	"routes": [
+		{ "pattern": "auth.sergiodxa.com", "custom_domain": true },
+		{ "pattern": "sso.sergiodxa.com/*", "zone_name": "sergiodxa.com" },
+		{ "pattern": "sso.blog.sergiodxa.com/*", "zone_name": "sergiodxa.com" },
+	],
+
 	"triggers": {
 		// Run MAU reporting job daily at 1:00 AM UTC
 		"crons": ["0 1 * * *"],
@@ -21,16 +31,24 @@
 
 	"queues": { "consumers": [], "producers": [] },
 
+	// Cloudflare Email Sending binding (the only email transport).
+	"send_email": [{ "name": "SEND_EMAIL" }],
+
 	"d1_databases": [
 		{
 			"binding": "PLATFORM_DB",
 			"database_name": "auth-saas-platform",
+			// Replace with the real D1 id from `wrangler d1 create auth-saas-platform`.
 			"database_id": "placeholder-dev-db-id",
 			"migrations_dir": "./src/app/migrations",
 		},
 	],
 
-	"kv_namespaces": [],
+	"kv_namespaces": [
+		// Caches hostname -> tenant resolution for same-zone hostnames.
+		// Replace with the real id from `wrangler kv namespace create HOSTNAMES_KV`.
+		{ "binding": "HOSTNAMES_KV", "id": "placeholder-hostnames-kv-id" },
+	],
 
 	"r2_buckets": [],
 

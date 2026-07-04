@@ -1,5 +1,6 @@
 import type { Logger } from "@pkg/logger/request";
 import type { Database } from "remix/data-table";
+import type { Middleware, RequestHandler } from "remix/fetch-router";
 
 import { createRouter } from "remix/fetch-router";
 import { formData } from "remix/form-data-middleware";
@@ -10,6 +11,7 @@ import * as clientRedirectUris from "./controllers/api/client/redirect-uris";
 import * as clientSecrets from "./controllers/api/client/secrets";
 import * as clients from "./controllers/api/clients";
 import * as resources from "./controllers/api/resources";
+import * as setup from "./controllers/api/setup";
 import * as signingKeys from "./controllers/api/signing-keys";
 import * as stats from "./controllers/api/stats";
 import * as subjectConnections from "./controllers/api/subject/connections";
@@ -39,81 +41,82 @@ import managementAuth from "./middleware/management-auth";
 import routes from "./routes";
 
 export default (db: Database, requestLogger: Logger) => {
+	// Typed as a non-tuple Middleware[] so the router context stays the base
+	// RequestContext (with its global augmentations) instead of a middleware-branded
+	// context; controllers below are typed against that same default context.
+	// `formData()` is cast to the base Middleware to drop its context-transform
+	// brand; the value it provides is surfaced via the global `formData` context
+	// augmentation (see src/router-context.d.ts), not the transform.
+	let middleware: Middleware[] = [logger(requestLogger), database(db), formData() as Middleware];
+
 	const router = createRouter({
-		middleware: [logger(requestLogger), database(db), formData()],
+		middleware,
 		defaultHandler: notFound,
 	});
 
-	router.map(routes, {
-		middleware: [],
+	// The current fetch-router requires one map() per route group: a controller's
+	// `actions` may only reference leaf routes, and nested route-map keys throw at
+	// runtime ("call router.map() for that route map separately").
+	let management: Middleware[] = [managementAuth()];
 
-		actions: {
-			index,
-			verifyEmail,
+	// Public + WebAuthn + OIDC endpoints.
+	router.map(routes.index, index);
+	router.map(routes.verifyEmail, verifyEmail);
 
-			webauthn: {
-				middleware: [],
-				actions: {
-					register: {
-						middleware: [],
-						actions: { options: registerOptions, verify: registerVerify },
-					},
-					auth: {
-						middleware: [],
-						actions: { options: authOptions, verify: authVerify },
-					},
-				},
-			},
-
-			oauth: {
-				middleware: [],
-				actions: { authorize, token, revoke, introspect },
-			},
-
-			oidc: {
-				middleware: [],
-				actions: { userinfo, logout },
-			},
-
-			discover: {
-				middleware: [],
-				actions: { jwks, oauth, oidc },
-			},
-
-			api: {
-				middleware: [managementAuth()],
-
-				actions: {
-					stats: stats.show,
-
-					clients: {
-						middleware: [],
-
-						actions: {
-							...clients,
-							secrets: { middleware: [], actions: clientSecrets },
-							"logout-uris": { middleware: [], actions: clientLogoutUris },
-							"redirect-uris": { middleware: [], actions: clientRedirectUris },
-						},
-					},
-
-					subjects: {
-						middleware: [],
-						actions: {
-							...subjects,
-							sessions: { middleware: [], actions: subjectSessions },
-							grants: { middleware: [], actions: subjectGrants },
-							passkeys: { middleware: [], actions: subjectPasskeys },
-							connections: { middleware: [], actions: subjectConnections },
-						},
-					},
-					resources: { middleware: [], actions: resources },
-					brand: { middleware: [], actions: brand },
-					"signing-keys": { middleware: [], actions: signingKeys },
-				},
-			},
-		},
+	router.map(routes.webauthn.register, {
+		actions: { options: registerOptions, verify: registerVerify },
 	});
+	router.map(routes.webauthn.auth, {
+		actions: { options: authOptions, verify: authVerify },
+	});
+
+	router.map(routes.oauth.authorize, authorize);
+	router.map(routes.oauth.token, token);
+	router.map(routes.oauth.revoke, revoke);
+	router.map(routes.oauth.introspect, introspect);
+
+	router.map(routes.oidc.userinfo, userinfo);
+	router.map(routes.oidc.logout, logout);
+
+	router.map(routes.discover.jwks, jwks);
+	router.map(routes.discover.oidc, oidc);
+	router.map(routes.discover.oauth, oauth);
+
+	// Management API — every route requires management-client or internal-token auth.
+	// stats/setup are single routes, so they take an action object; the `action`
+	// helper returns the `Action` union, narrowed here to the handler it actually is.
+	router.map(routes.api.stats, {
+		middleware: management,
+		handler: stats.show as RequestHandler,
+	});
+	router.map(routes.api.setup, {
+		middleware: management,
+		handler: setup.create as RequestHandler,
+	});
+
+	router.map(routes.api.clients, { middleware: management, actions: clients });
+	router.map(routes.api.clients.secrets, { middleware: management, actions: clientSecrets });
+	router.map(routes.api.clients["redirect-uris"], {
+		middleware: management,
+		actions: clientRedirectUris,
+	});
+	router.map(routes.api.clients["logout-uris"], {
+		middleware: management,
+		actions: clientLogoutUris,
+	});
+
+	router.map(routes.api.subjects, { middleware: management, actions: subjects });
+	router.map(routes.api.subjects.sessions, { middleware: management, actions: subjectSessions });
+	router.map(routes.api.subjects.grants, { middleware: management, actions: subjectGrants });
+	router.map(routes.api.subjects.passkeys, { middleware: management, actions: subjectPasskeys });
+	router.map(routes.api.subjects.connections, {
+		middleware: management,
+		actions: subjectConnections,
+	});
+
+	router.map(routes.api.resources, { middleware: management, actions: resources });
+	router.map(routes.api.brand, { middleware: management, actions: brand });
+	router.map(routes.api["signing-keys"], { middleware: management, actions: signingKeys });
 
 	return router;
 };

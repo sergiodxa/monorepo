@@ -1,9 +1,13 @@
-import type { Middleware, RequestMethod } from "remix/fetch-router";
+import type { Middleware } from "remix/fetch-router";
 
-export default function middleware<
-	method extends RequestMethod,
-	params extends Record<string, any>,
-	T extends Middleware<method, params> = Middleware<method, params>,
->(middleware: T): T {
+/**
+ * Types an inline middleware callback against the router's request context.
+ *
+ * The current fetch-router `Middleware` type takes a single context-transform
+ * parameter (defaulting to no transform); values a middleware attaches to the
+ * context are declared through `declare module "remix/fetch-router"`
+ * augmentations, so this helper only needs to contextually type `context`/`next`.
+ */
+export default function middleware(middleware: Middleware): Middleware {
 	return middleware;
 }

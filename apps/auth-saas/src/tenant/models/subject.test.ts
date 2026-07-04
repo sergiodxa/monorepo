@@ -128,4 +128,47 @@ describe("Subject", () => {
 			expect(subjects).toHaveLength(2);
 		});
 	});
+
+	describe("import", () => {
+		test("preserves the provided id and verified email", async () => {
+			let subject = await Subject.import(db, {
+				id: "legacy-subject-id",
+				email: "imported@example.com",
+				username: "imported",
+				emailVerifiedAt: "2026-01-01T00:00:00.000Z",
+				displayName: "Imported User",
+				avatarUrl: "https://example.com/a.png",
+				createdAt: "2025-06-01T00:00:00.000Z",
+			});
+
+			expect(subject.id).toBe("legacy-subject-id");
+			expect(subject.email).toBe("imported@example.com");
+			expect(subject.email_verified_at).toBe("2026-01-01T00:00:00.000Z");
+			expect(subject.display_name).toBe("Imported User");
+			expect(subject.created_at).toBe("2025-06-01T00:00:00.000Z");
+		});
+
+		test("rejects a duplicate id", async () => {
+			await Subject.import(db, { id: "dup-id", email: "a@example.com", username: "a" });
+			await expect(
+				Subject.import(db, { id: "dup-id", email: "b@example.com", username: "b" }),
+			).rejects.toBeInstanceOf(Subject.ConflictError);
+		});
+
+		test("rejects a duplicate email", async () => {
+			await Subject.import(db, { id: "id-1", email: "same@example.com", username: "a" });
+			await expect(
+				Subject.import(db, { id: "id-2", email: "same@example.com", username: "b" }),
+			).rejects.toBeInstanceOf(Subject.ConflictError);
+		});
+
+		test("leaves email unverified when no timestamp is given", async () => {
+			let subject = await Subject.import(db, {
+				id: "id-3",
+				email: "unverified@example.com",
+				username: "u",
+			});
+			expect(subject.email_verified_at).toBeNull();
+		});
+	});
 });

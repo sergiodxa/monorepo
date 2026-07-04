@@ -15,6 +15,8 @@ import action from "~/lib/action";
 let CreateTenantSchema = s.object({
 	name: s.string(),
 	region: s.enum_(["wnam", "enam", "sam", "weur", "eeur", "apac", "oc", "afr", "me"]),
+	// HTML checkbox: present ("on") when the tenant should skip billing.
+	internal: s.optional(s.string()),
 });
 
 /** Maps region codes to user-friendly display names. */
@@ -257,6 +259,16 @@ export default {
 									<p class="text-gray-500 text-xs mt-1">Choose the region closest to your users</p>
 								</div>
 
+								<div class="mb-4">
+									<label class="flex items-center gap-2 text-sm">
+										<input type="checkbox" id="internal" name="internal" />
+										<span>Internal tenant (skip billing)</span>
+									</label>
+									<p class="text-gray-500 text-xs mt-1">
+										For your own tenants (e.g. sso.sergiodxa.com); no Polar subscription is created.
+									</p>
+								</div>
+
 								<button
 									type="submit"
 									class="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700"
@@ -296,6 +308,7 @@ export default {
 			}
 
 			let slug = Tenant.generateSlug(result.data.name);
+			let internal = Boolean(result.data.internal);
 
 			// Create the tenant record in platform DB
 			let tenant = await Tenant.create(db, {
@@ -303,6 +316,7 @@ export default {
 				slug,
 				ownerSubjectId: platformSession.subjectId,
 				region: result.data.region,
+				internal,
 			});
 
 			// Create default hostname
@@ -314,8 +328,16 @@ export default {
 			});
 			await stub.fetch("https://tenant.internal/", { method: "HEAD" });
 
-			// Create default management client via the tenant API
+			// Provision tenant metadata (issuer + region). The issuer starts as the
+			// default hostname; the hostname controller re-runs setup when a custom
+			// domain is activated, so the issuer tracks the hostname clients use.
 			let tenantApi = new TenantApiService(tenant.id);
+			await tenantApi.setup({
+				issuer: `${slug}.${env.PLATFORM_DOMAIN}`,
+				region: result.data.region,
+			});
+
+			// Create default management client via the tenant API
 			let managementClient = await tenantApi.createClient({
 				name: "Management Client",
 				type: "m2m",
@@ -323,10 +345,15 @@ export default {
 				isManagementClient: true,
 			});
 
-			// Create subscription with Polar customer
+			// Create subscription with Polar customer. Internal tenants (the owner's
+			// own tenants) are exempt from billing and skip this entirely.
 			try {
-				await Subscription.create(db, tenant.id, platformSession.email, result.data.name);
-				log.info("Subscription created", { tenantId: tenant.id });
+				if (internal) {
+					log.info("Skipping subscription for internal tenant", { tenantId: tenant.id });
+				} else {
+					await Subscription.create(db, tenant.id, platformSession.email, result.data.name);
+					log.info("Subscription created", { tenantId: tenant.id });
+				}
 			} catch (error) {
 				// Log but don't fail tenant creation if Polar is unavailable
 				log.error("Failed to create subscription", {

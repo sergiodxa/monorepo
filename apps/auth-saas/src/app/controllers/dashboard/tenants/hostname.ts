@@ -5,6 +5,8 @@ import { validate } from "@pkg/validate";
 import * as s from "remix/data-schema";
 import { html, type SafeHtml } from "remix/html-template";
 
+import type { HostMetadata } from "~/lib/host-metadata";
+
 import { layout } from "~/app/lib/html";
 import tenantOwner from "~/app/middleware/tenant-owner";
 import Hostname from "~/app/models/hostname";
@@ -224,7 +226,12 @@ export default form<"/dashboard/tenants/:tenantId/hostname">({
 
 				try {
 					// Create hostname via Cloudflare API
-					await Hostname.createCustom(db, tenant.id, result.data.hostname, tenant.region);
+					await Hostname.createCustom(
+						db,
+						tenant.id,
+						result.data.hostname,
+						tenant.region as HostMetadata["region"],
+					);
 					log.info("Hostname added via Cloudflare", {
 						tenantId: tenant.id,
 						hostname: result.data.hostname,

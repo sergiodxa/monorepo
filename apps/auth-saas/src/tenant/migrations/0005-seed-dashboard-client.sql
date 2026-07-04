@@ -41,7 +41,8 @@ VALUES (
 )
 ON CONFLICT (id) DO NOTHING;
 
--- Set the issuer for the platform tenant (required for token endpoint)
-INSERT INTO tenant_meta (key, value)
-VALUES ('issuer', 'localhost:3004')
-ON CONFLICT (key) DO UPDATE SET value = 'localhost:3004';
+-- NOTE: The tenant issuer is intentionally NOT seeded here. Each tenant's issuer
+-- is written once at provisioning time via the internal setup endpoint
+-- (POST /api/setup, see src/tenant/controllers/api/setup.ts), derived from the
+-- tenant's real hostname. Seeding it in a migration reset every tenant's issuer
+-- to a fixed value on every Durable Object cold start.

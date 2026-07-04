@@ -22,6 +22,14 @@ export default class Subject {
 		}
 	};
 
+	/** Error thrown when importing a subject whose id or email already exists. */
+	static ConflictError = class extends Error {
+		override name = "SubjectConflictError";
+		constructor(message: string) {
+			super(message);
+		}
+	};
+
 	/** Database table schema for subjects. */
 	static table = table({
 		name: "subjects",
@@ -111,6 +119,52 @@ export default class Subject {
 
 		let subject = await db.findOne(Subject.table, { where: { id } });
 		if (!subject) throw new Error("Failed to create subject");
+		return subject;
+	}
+
+	/**
+	 * Imports a subject from another identity store, preserving its id so the OIDC
+	 * `sub` stays stable and client apps keep their local `subject_id` links.
+	 * Verified-email timestamps carry over; imported subjects have no passkeys and
+	 * must add one via the magic-link flow on first login.
+	 * @param db - Database instance.
+	 * @param data - Source subject fields (id required; timestamps as ISO strings).
+	 * @returns The imported subject record.
+	 * @throws {Subject.ConflictError} When the id or email already exists.
+	 */
+	static async import(
+		db: Database,
+		data: {
+			id: string;
+			email: string;
+			username: string;
+			emailVerifiedAt?: string | null;
+			displayName?: string | null;
+			avatarUrl?: string | null;
+			createdAt?: string;
+		},
+	) {
+		let existingById = await db.findOne(Subject.table, { where: { id: data.id } });
+		if (existingById) throw new Subject.ConflictError(`Subject "${data.id}" already exists`);
+
+		let existingByEmail = await Subject.findByEmail(db, data.email);
+		if (existingByEmail) throw new Subject.ConflictError(`Email "${data.email}" already exists`);
+
+		let now = new Date().toISOString();
+		await db.create(Subject.table, {
+			id: data.id,
+			email: data.email,
+			email_verified_at: data.emailVerifiedAt ?? null,
+			display_name: data.displayName ?? null,
+			username: data.username,
+			avatar_url: data.avatarUrl ?? null,
+			role: "user",
+			created_at: data.createdAt ?? now,
+			updated_at: now,
+		});
+
+		let subject = await db.findOne(Subject.table, { where: { id: data.id } });
+		if (!subject) throw new Error("Failed to import subject");
 		return subject;
 	}
 

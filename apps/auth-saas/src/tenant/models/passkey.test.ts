@@ -40,13 +40,13 @@ describe("Passkey", () => {
 
 			let passkeys = await Passkey.listBySubject(db, subject.id);
 			expect(passkeys).toHaveLength(1);
-			expect(passkeys[0].id).toBeString();
-			expect(passkeys[0].subject_id).toBe(subject.id);
-			expect(passkeys[0].public_key).toBe("test-public-key-123");
-			expect(passkeys[0].counter).toBe(0);
-			expect(passkeys[0].device_type).toBeNull();
-			expect(passkeys[0].name).toBeNull();
-			expect(passkeys[0].last_used_at).toBeNull();
+			expect(passkeys[0]!.id).toBeString();
+			expect(passkeys[0]!.subject_id).toBe(subject.id);
+			expect(passkeys[0]!.public_key).toBe("test-public-key-123");
+			expect(passkeys[0]!.counter).toBe(0);
+			expect(passkeys[0]!.device_type).toBeNull();
+			expect(passkeys[0]!.name).toBeNull();
+			expect(passkeys[0]!.last_used_at).toBeNull();
 		});
 
 		test("creates a passkey with all fields", async () => {
@@ -64,10 +64,10 @@ describe("Passkey", () => {
 			});
 
 			let passkeys = await Passkey.listBySubject(db, subject.id);
-			expect(passkeys[0].device_type).toBe("singleDevice");
-			expect(Boolean(passkeys[0].backed_up)).toBe(true);
-			expect(passkeys[0].transports).toBe('["internal","hybrid"]');
-			expect(passkeys[0].name).toBe("My MacBook");
+			expect(passkeys[0]!.device_type).toBe("singleDevice");
+			expect(Boolean(passkeys[0]!.backed_up)).toBe(true);
+			expect(passkeys[0]!.transports).toBe('["internal","hybrid"]');
+			expect(passkeys[0]!.name).toBe("My MacBook");
 		});
 	});
 
@@ -82,7 +82,7 @@ describe("Passkey", () => {
 			});
 
 			let passkeys = await Passkey.listBySubject(db, subject.id);
-			let passkey = await Passkey.show(db, passkeys[0].id);
+			let passkey = await Passkey.show(db, passkeys[0]!.id);
 			expect(passkey).not.toBeNull();
 			expect(passkey?.public_key).toBe("test-key");
 		});
@@ -145,7 +145,7 @@ describe("Passkey", () => {
 			});
 
 			let passkeys = await Passkey.listBySubject(db, subject.id);
-			let passkeyId = passkeys[0].id;
+			let passkeyId = passkeys[0]!.id;
 
 			await Passkey.updateCounter(db, passkeyId, 10);
 
@@ -171,7 +171,7 @@ describe("Passkey", () => {
 			});
 
 			let passkeys = await Passkey.listBySubject(db, subject.id);
-			let passkeyId = passkeys[0].id;
+			let passkeyId = passkeys[0]!.id;
 
 			await Passkey.rename(db, passkeyId, "New Name");
 
@@ -195,7 +195,7 @@ describe("Passkey", () => {
 			});
 
 			let passkeys = await Passkey.listBySubject(db, subject.id);
-			let passkeyId = passkeys[0].id;
+			let passkeyId = passkeys[0]!.id;
 
 			await Passkey.destroy(db, passkeyId);
 

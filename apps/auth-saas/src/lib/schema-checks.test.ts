@@ -9,6 +9,7 @@ describe("minLength", () => {
 		let schema = s.string().pipe(minLength(3));
 		let result = schema["~standard"].validate("abc");
 		expect(result.issues).toBeUndefined();
+		if (result.issues) throw new Error("expected success");
 		expect(result.value).toBe("abc");
 	});
 
@@ -16,13 +17,13 @@ describe("minLength", () => {
 		let schema = s.string().pipe(minLength(3));
 		let result = schema["~standard"].validate("ab");
 		expect(result.issues).toBeDefined();
-		expect(result.issues?.[0].message).toBe("Must be at least 3 characters");
+		expect(result.issues?.[0]?.message).toBe("Must be at least 3 characters");
 	});
 
 	test("uses custom message when provided", () => {
 		let schema = s.string().pipe(minLength(3, "Too short!"));
 		let result = schema["~standard"].validate("ab");
-		expect(result.issues?.[0].message).toBe("Too short!");
+		expect(result.issues?.[0]?.message).toBe("Too short!");
 	});
 });
 
@@ -31,6 +32,7 @@ describe("maxLength", () => {
 		let schema = s.string().pipe(maxLength(5));
 		let result = schema["~standard"].validate("hello");
 		expect(result.issues).toBeUndefined();
+		if (result.issues) throw new Error("expected success");
 		expect(result.value).toBe("hello");
 	});
 
@@ -38,13 +40,13 @@ describe("maxLength", () => {
 		let schema = s.string().pipe(maxLength(5));
 		let result = schema["~standard"].validate("hello!");
 		expect(result.issues).toBeDefined();
-		expect(result.issues?.[0].message).toBe("Must be at most 5 characters");
+		expect(result.issues?.[0]?.message).toBe("Must be at most 5 characters");
 	});
 
 	test("uses custom message when provided", () => {
 		let schema = s.string().pipe(maxLength(5, "Too long!"));
 		let result = schema["~standard"].validate("hello!");
-		expect(result.issues?.[0].message).toBe("Too long!");
+		expect(result.issues?.[0]?.message).toBe("Too long!");
 	});
 });
 
@@ -65,7 +67,7 @@ describe("url", () => {
 		let schema = s.string().pipe(url());
 		let result = schema["~standard"].validate("not-a-url");
 		expect(result.issues).toBeDefined();
-		expect(result.issues?.[0].message).toBe("Must be a valid URL");
+		expect(result.issues?.[0]?.message).toBe("Must be a valid URL");
 	});
 });
 
@@ -80,7 +82,7 @@ describe("httpsUrl", () => {
 		let schema = s.string().pipe(httpsUrl());
 		let result = schema["~standard"].validate("http://example.com");
 		expect(result.issues).toBeDefined();
-		expect(result.issues?.[0].message).toBe("Must be a valid HTTPS URL");
+		expect(result.issues?.[0]?.message).toBe("Must be a valid HTTPS URL");
 	});
 
 	test("fails for invalid URL", () => {

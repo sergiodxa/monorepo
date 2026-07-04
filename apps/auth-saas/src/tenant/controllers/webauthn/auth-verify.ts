@@ -116,9 +116,11 @@ export default action<"POST", "/webauthn/auth/verify">(async ({ db, request, log
 			expectedChallenge: challenge.challenge,
 			expectedOrigin: origin,
 			expectedRPID: rpId,
-			authenticator: {
-				credentialID: passkey.credential_id,
-				credentialPublicKey: publicKeyBytes,
+			credential: {
+				// Non-null: this passkey was just located by matching credential_id
+				// against response.id above.
+				id: passkey.credential_id!,
+				publicKey: publicKeyBytes,
 				counter: passkey.counter,
 				transports: passkey.transports
 					? (passkey.transports.split(",") as AuthenticatorTransport[])
@@ -164,7 +166,10 @@ export default action<"POST", "/webauthn/auth/verify">(async ({ db, request, log
 			nonce: challenge.nonce ?? undefined,
 			pkce:
 				challenge.pkce_challenge && challenge.pkce_method
-					? { challenge: challenge.pkce_challenge, method: challenge.pkce_method }
+					? {
+							challenge: challenge.pkce_challenge,
+							method: challenge.pkce_method === "plain" ? "plain" : "S256",
+						}
 					: undefined,
 		});
 

@@ -256,6 +256,21 @@ export class TenantApiService {
 		}
 	}
 
+	/**
+	 * Provisions tenant metadata on the Durable Object.
+	 *
+	 * Writes the tenant id, OIDC issuer (hostname without scheme), and region into
+	 * the tenant's own storage. Call once at creation and again whenever the
+	 * canonical hostname changes so the issuer tracks the hostname clients use.
+	 * @param data - Provisioning values.
+	 */
+	async setup(data: { issuer: string; region?: string }): Promise<void> {
+		await this.requestVoid("/api/setup", {
+			method: "POST",
+			body: JSON.stringify({ tenant_id: this.tenantId, ...data }),
+		});
+	}
+
 	/** Gets tenant statistics. */
 	async getStats(): Promise<TenantStats> {
 		return this.request("/api/stats", TenantStatsSchema);
