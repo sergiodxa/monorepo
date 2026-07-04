@@ -44,10 +44,10 @@ which is rarely how the code is actually navigated or changed.
 
 The package uses relative imports (`./`, `../`), not a path alias. ADR-011
 established why a `~/`-style alias cannot be used: a consumer (e.g.
-`apps/auth-saas`) compiles the package's `.ts` sources against its *own* tsconfig
+`apps/auth-saas`) compiles the package's `.ts` sources against its _own_ tsconfig
 paths, so a `~/` alias resolves to the consumer's `src`, not the package's.
 
-Package.json subpath imports (`#/*` → `./src/*`) would be move-stable *and*
+Package.json subpath imports (`#/*` → `./src/*`) would be move-stable _and_
 consumer-safe in principle (they resolve relative to the importing package). They
 were evaluated and **rejected**: with this repo's `moduleResolution: "bundler"`
 plus the `@total-typescript/tsconfig` base and the root tsconfig's catch-all
@@ -60,7 +60,7 @@ feature structure changes rarely.
 ## Decision
 
 Reorganize `@pkg/oidc-provider` **feature-first**: each domain concern is a
-top-level directory under `src/`, and files are grouped by layer *within* the
+top-level directory under `src/`, and files are grouped by layer _within_ the
 feature. Cross-cutting code lives in `shared/`; schema, client bundles, and the
 composition root stay in their own top-level directories.
 
@@ -74,10 +74,11 @@ src/
   globals.d.ts  router-context.d.ts
 
   shared/             # cross-cutting; no feature imports it for domain logic
-    action.ts middleware.ts form.ts db-errors.ts request-handler.ts
-    crypto-utils.ts base64url.ts safe-json.ts schema-checks.ts timestamp.ts
-    uri-validation.ts parse-basic-auth.ts reject.ts css-sanitizer.ts
-    user-agent.ts user-rate-limit.ts internal-auth.ts
+    lib/              # feature-agnostic helpers
+      action.ts middleware.ts form.ts db-errors.ts request-handler.ts
+      crypto-utils.ts base64url.ts safe-json.ts schema-checks.ts timestamp.ts
+      uri-validation.ts parse-basic-auth.ts reject.ts css-sanitizer.ts
+      user-agent.ts user-rate-limit.ts internal-auth.ts
     layout.tsx home.tsx not-found.ts
     middleware/{db,logger,analytics}.ts
     test/{db,fixtures}.ts
@@ -93,11 +94,19 @@ src/
   webauthn/      controllers/{register-options,register-verify,auth-options,auth-verify}  models/{passkey,webauthn-challenge}
   subjects/      controllers/{verify-email,subjects,sessions,grants,passkeys,connections}  models/{subject,credential,connection,email-verification-token}
   clients/       controllers/{clients,secrets,redirect-uris,logout-uris}  models/{client,secret,redirect-uri,logout-uri}
-  resources/     controllers/{resources,scopes}  models/{resource}
+  resources/     controllers/{resources}  models/{resource}
   branding/      controllers/{brand}  models/{brand}
   signing-keys/  controllers/{signing-keys}  models/{signing-key}
   management/    controllers/{setup,stats}  middleware/{management-auth}  models/{tenant-meta}
 ```
+
+> The utility helpers are nested one level under `shared/lib/` rather than sitting
+> flat in `shared/`. This avoids a name collision: the `middleware.ts` helper (the
+> `remix/fetch-router` type wrapper) would otherwise sit next to the
+> `shared/middleware/` runtime-middleware directory, and a file and directory with
+> the same stem cannot be referenced by an unambiguous relative import from inside
+> that directory. Scope management has no dedicated controller — scopes are handled
+> within `resources/controllers/resources.ts`.
 
 ### Placement Rules
 
@@ -195,7 +204,7 @@ configuration changes to resolve `imports`.
 
 Put every feature under `src/features/*`.
 
-**Rejected**: it adds a level without value; the features *are* the package, so they
+**Rejected**: it adds a level without value; the features _are_ the package, so they
 read better at the `src/` root next to `shared/`, `database/`, and the composition
 root.
 

@@ -4,13 +4,13 @@ import { Logger } from "@pkg/logger/request";
 import { createDatabase } from "remix/data-table";
 
 import { runMigrations } from "./database/migrations";
-import AuthorizationCode from "./models/authorization-code";
-import EmailVerificationToken from "./models/email-verification-token";
-import Session from "./models/session";
-import SigningKey from "./models/signing-key";
-import Subject from "./models/subject";
-import WebAuthnChallenge from "./models/webauthn-challenge";
+import AuthorizationCode from "./oauth/models/authorization-code";
+import Session from "./oauth/models/session";
 import { createProviderRouter } from "./provider";
+import SigningKey from "./signing-keys/models/signing-key";
+import EmailVerificationToken from "./subjects/models/email-verification-token";
+import Subject from "./subjects/models/subject";
+import WebAuthnChallenge from "./webauthn/models/webauthn-challenge";
 
 /** Sink for authentication/registration analytics events (host-provided). */
 export interface AnalyticsSink {
@@ -109,4 +109,4 @@ export function createOidcProvider(config: OidcProviderConfig): OidcProvider {
 
 // The platform<->tenant internal-token contract ships from here so the control
 // plane and the provider always agree on algorithm and claims.
-export { createInternalToken, verifyInternalToken } from "./lib/internal-auth";
+export { createInternalToken, verifyInternalToken } from "./shared/lib/internal-auth";
