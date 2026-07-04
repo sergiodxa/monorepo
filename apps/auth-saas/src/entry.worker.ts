@@ -3,22 +3,14 @@ import type { JSONValue } from "@pkg/types";
 import { isSuccess } from "@pkg/result";
 import { validate } from "@pkg/validate";
 import { env } from "cloudflare:workers";
-import * as s from "remix/data-schema";
 
 import { reportMAU } from "./app/jobs/report-mau";
 import { router } from "./app/router";
+import { HostMetadataSchema } from "./lib/host-metadata";
 import { checkRateLimit } from "./lib/rate-limit";
 import Tenant from "./tenant";
 
 export { Tenant };
-
-const HostMetadataSchema = s.object({
-	tenantId: s.union([s.literal("platform"), s.string()]),
-	region: s.defaulted(
-		s.enum_(["wnam", "enam", "sam", "weur", "eeur", "apac", "oc", "afr", "me"]),
-		"wnam",
-	),
-});
 
 export default {
 	async fetch(request) {
@@ -51,18 +43,20 @@ export default {
 		if (rateLimitResponse) return rateLimitResponse;
 
 		let hostMetadata = request.cf?.hostMetadata;
-		if (import.meta.env.DEV) hostMetadata = { tenantId: "platform", region: "wnam" };
+		if (import.meta.env.DEV) hostMetadata = { tenant_id: "platform", region: "wnam" };
 		if (!hostMetadata) return await router.fetch(request);
 
 		let result = await validate(hostMetadata as JSONValue, HostMetadataSchema);
 
 		if (isSuccess(result)) {
-			if (result.data.tenantId === "platform") {
+			if (result.data.tenant_id === "platform") {
 				let platform = env.TENANT.getByName("platform");
 				return await platform.fetch(request);
 			}
 
-			let tenant = env.TENANT.getByName(result.data.tenantId, { locationHint: result.data.region });
+			let tenant = env.TENANT.getByName(result.data.tenant_id, {
+				locationHint: result.data.region,
+			});
 			return await tenant.fetch(request);
 		}
 
