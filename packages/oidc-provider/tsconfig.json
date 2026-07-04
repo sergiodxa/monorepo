@@ -1,0 +1,14 @@
+{
+	"extends": "../../tsconfig.json",
+	"include": ["src/**/*"],
+	"compilerOptions": {
+		"jsx": "react-jsx",
+		"jsxImportSource": "remix/ui",
+		"types": ["@total-typescript/ts-reset", "@cloudflare/workers-types", "@types/bun"],
+		"ignoreDeprecations": "6.0",
+		"baseUrl": ".",
+		"paths": {
+			"~/*": ["src/*"]
+		}
+	}
+}

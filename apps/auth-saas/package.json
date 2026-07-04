@@ -25,6 +25,7 @@
 		"@pkg/jobs": "workspace:*",
 		"@pkg/location": "workspace:*",
 		"@pkg/logger": "workspace:*",
+		"@pkg/oidc-provider": "workspace:*",
 		"@pkg/response": "workspace:*",
 		"@pkg/result": "workspace:*",
 		"@pkg/types": "workspace:*",

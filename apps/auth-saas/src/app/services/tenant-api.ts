@@ -1,9 +1,8 @@
 import type { Schema } from "remix/data-schema";
 
+import { createInternalToken } from "@pkg/oidc-provider";
 import { env } from "cloudflare:workers";
 import * as s from "remix/data-schema";
-
-import { createInternalToken } from "~/lib/internal-auth";
 
 /** Schema for tenant statistics. */
 const TenantStatsSchema = s.object({

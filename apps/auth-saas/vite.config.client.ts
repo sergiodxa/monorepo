@@ -5,14 +5,19 @@ import tailwindcss from "@tailwindcss/vite";
 import { defineConfig } from "vite";
 import tsconfigPaths from "vite-tsconfig-paths";
 
-// Find all client entry files for browser build
-let clientEntries = globSync("src/tenant/client/**/*.{ts,tsx}", { cwd: import.meta.dirname });
+// The client entries live in @pkg/oidc-provider; build them into this app's
+// assets/tenant/ (served by the DO at /assets/tenant/*.js, matching the
+// clientEntry() URLs in the provider's components).
+let providerDir = path.resolve(import.meta.dirname, "../../packages/oidc-provider");
+let clientEntries = globSync("src/client/**/*.{ts,tsx}", { cwd: providerDir }).filter(
+	(file) => !file.includes(".test."),
+);
 
-// Convert to input object: { "entry": "src/tenant/client/entry.ts", ... }
+// Convert to input object: { "webauthn-auth": "<pkg>/src/client/webauthn-auth.tsx", ... }
 let clientInput = Object.fromEntries(
 	clientEntries.map((file) => {
 		let name = path.basename(file, path.extname(file));
-		return [name, path.resolve(import.meta.dirname, file)];
+		return [name, path.resolve(providerDir, file)];
 	}),
 );
 
