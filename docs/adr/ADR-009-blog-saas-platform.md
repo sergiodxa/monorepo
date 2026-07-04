@@ -16,24 +16,24 @@ There is an opportunity to build a multi-tenant blog platform — the WordPress.
 
 `apps/r3-blog` is the architectural blueprint:
 
-| Aspect         | Implementation                                                                                                                       |
-| -------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
-| Framework      | Remix v3 (`remix@3.0.0-beta.4`), `remix/fetch-router`, SSR-only via `remix/ui/server`                                                 |
-| Bootstrap      | `bootstrap/worker.ts` (Worker entry + service providers) and `bootstrap/app.tsx` (`createApplication(env)` returns a router)          |
-| DI             | `@pkg/service-container` per [ADR-008](./ADR-008-service-container-for-remix-v3.md); controllers use `inject([Database] as const, …)` |
-| Data           | `remix/data-table` over D1 through a hand-written `D1DataTableAdapter` (`app/infrastructure/database/d1-data-table-adapter.ts`)       |
-| Schema         | `posts` (id, author_id, type enum, published_at) + `post_meta` (key-value) + `users`; typed per-type MetaCodecs in repositories       |
-| Admin          | `/cms` routes guarded by session auth + admin role; OIDC login against `auth.sergiodxa.com`                                            |
-| Styling        | No Tailwind; OKLCH palette + semantic `--ui-*` tokens in `resources/css/colors.css`; `remix/ui` `css()` mixins                        |
+| Aspect    | Implementation                                                                                                                        |
+| --------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| Framework | Remix v3 (`remix@3.0.0-beta.4`), `remix/fetch-router`, SSR-only via `remix/ui/server`                                                 |
+| Bootstrap | `bootstrap/worker.ts` (Worker entry + service providers) and `bootstrap/app.tsx` (`createApplication(env)` returns a router)          |
+| DI        | `@pkg/service-container` per [ADR-008](./ADR-008-service-container-for-remix-v3.md); controllers use `inject([Database] as const, …)` |
+| Data      | `remix/data-table` over D1 through a hand-written `D1DataTableAdapter` (`app/infrastructure/database/d1-data-table-adapter.ts`)       |
+| Schema    | `posts` (id, author_id, type enum, published_at) + `post_meta` (key-value) + `users`; typed per-type MetaCodecs in repositories       |
+| Admin     | `/cms` routes guarded by session auth + admin role; OIDC login against `auth.sergiodxa.com`                                           |
+| Styling   | No Tailwind; OKLCH palette + semantic `--ui-*` tokens in `resources/css/colors.css`; `remix/ui` `css()` mixins                        |
 
 `apps/auth-saas` ([ADR-006](./ADR-006-auth-saas-platform.md)) already implements the platform architecture this ADR needs: one Durable Object per tenant with embedded SQLite, Cloudflare for SaaS custom hostnames routed via `request.cf.hostMetadata`, a D1 control plane, Polar billing with meters, Analytics Engine usage tracking, and daily reporting crons. Two pieces of it are directly reusable:
 
-| Prior art                                    | Location                                          |
-| -------------------------------------------- | ------------------------------------------------- |
-| `SqlStorage` → `remix/data-table` adapter    | `apps/auth-saas/src/lib/sql-storage-adapter.ts`   |
-| CF for SaaS custom hostname lifecycle        | `apps/auth-saas/src/app/services/hostname.ts`     |
-| Polar service + webhook handling             | `apps/auth-saas/src/app/services/polar.ts`        |
-| Analytics Engine tracking + reporting cron   | `apps/auth-saas/src/app/services/analytics.ts`    |
+| Prior art                                  | Location                                        |
+| ------------------------------------------ | ----------------------------------------------- |
+| `SqlStorage` → `remix/data-table` adapter  | `apps/auth-saas/src/lib/sql-storage-adapter.ts` |
+| CF for SaaS custom hostname lifecycle      | `apps/auth-saas/src/app/services/hostname.ts`   |
+| Polar service + webhook handling           | `apps/auth-saas/src/app/services/polar.ts`      |
+| Analytics Engine tracking + reporting cron | `apps/auth-saas/src/app/services/analytics.ts`  |
 
 ### Requirements
 
@@ -51,24 +51,24 @@ There is an opportunity to build a multi-tenant blog platform — the WordPress.
 
 ### Technology Choices
 
-| Requirement          | Technology                    | Rationale                                                                    |
-| -------------------- | ----------------------------- | ---------------------------------------------------------------------------- |
-| Tenant isolation     | Cloudflare Durable Objects    | Embedded SQLite per instance; true data isolation; proven in ADR-006         |
-| Engine isolation     | `remix/data-table` `DatabaseAdapter` | The engine sees only the adapter interface; hosts inject D1 or SqlStorage |
-| Custom domains       | Cloudflare for SaaS           | Managed TLS + custom hostname metadata routing; service already written      |
-| Usage tracking       | Cloudflare Analytics Engine   | High-cardinality, cheap writes at the request path                           |
-| Billing              | Polar                         | Subscriptions + meters + credits; SDK and webhook handling already in repo   |
-| Identity             | auth-saas tenant (OIDC)       | Dogfoods ADR-006; one account for dashboard and every blog admin             |
-| Email                | (none in this app)            | Email flows live in auth-saas, which will use Cloudflare Email Sending       |
+| Requirement      | Technology                           | Rationale                                                                  |
+| ---------------- | ------------------------------------ | -------------------------------------------------------------------------- |
+| Tenant isolation | Cloudflare Durable Objects           | Embedded SQLite per instance; true data isolation; proven in ADR-006       |
+| Engine isolation | `remix/data-table` `DatabaseAdapter` | The engine sees only the adapter interface; hosts inject D1 or SqlStorage  |
+| Custom domains   | Cloudflare for SaaS                  | Managed TLS + custom hostname metadata routing; service already written    |
+| Usage tracking   | Cloudflare Analytics Engine          | High-cardinality, cheap writes at the request path                         |
+| Billing          | Polar                                | Subscriptions + meters + credits; SDK and webhook handling already in repo |
+| Identity         | auth-saas tenant (OIDC)              | Dogfoods ADR-006; one account for dashboard and every blog admin           |
+| Email            | (none in this app)                   | Email flows live in auth-saas, which will use Cloudflare Email Sending     |
 
 ### Dependencies
 
-| Dependency                                                                | Status                                                          |
-| ------------------------------------------------------------------------- | --------------------------------------------------------------- |
-| auth-saas deployed with a `sso.blog.sergiodxa.com` tenant                 | Blocking for dashboard login and per-blog admin OIDC clients     |
-| auth-saas Management API M2M client for the platform                      | Blocking for automatic per-blog OIDC client provisioning         |
-| Remix v3 stable enough for a shared package (`3.0.0-beta.4` today)        | Accepted risk; r3-blog already ships on the beta                 |
-| Cloudflare for SaaS custom hostname `custom_metadata` availability on plan | Mitigated: unknown-host D1 fallback path works without metadata  |
+| Dependency                                                                 | Status                                                          |
+| -------------------------------------------------------------------------- | --------------------------------------------------------------- |
+| auth-saas deployed with a `sso.blog.sergiodxa.com` tenant                  | Blocking for dashboard login and per-blog admin OIDC clients    |
+| auth-saas Management API M2M client for the platform                       | Blocking for automatic per-blog OIDC client provisioning        |
+| Remix v3 stable enough for a shared package (`3.0.0-beta.4` today)         | Accepted risk; r3-blog already ships on the beta                |
+| Cloudflare for SaaS custom hostname `custom_metadata` availability on plan | Mitigated: unknown-host D1 fallback path works without metadata |
 
 ## Decision
 
@@ -116,23 +116,23 @@ Build three things:
 
 ### Key Design Decisions
 
-| Decision                        | Choice                                              | Rationale                                                                 |
-| ------------------------------- | --------------------------------------------------- | ------------------------------------------------------------------------- |
-| Engine packaging                | Workspace package `@pkg/blog-engine`                | One engine version fleet-wide; self-hosted and SaaS consume the same code |
-| Engine/host boundary            | Config object (`createBlogEngine(config)`)          | Container stays internal; adapters injected; "wp-config.php" analogy      |
-| DO identifier                   | Blog UUID (`env.BLOG.getByName(blogId)`)            | Hostname and slug changes never require data migration (ADR-006 parity)   |
-| Subdomain routing               | KV cache in front of D1 slug lookup                 | Slug→id is immutable; avoids a D1 round trip per request                  |
-| Tenant config                   | Pushed into DO SQLite (`platform_meta`) via RPC     | DO never reads D1 at request time; no staleness window                    |
-| State enforcement               | Inside the DO, from its own meta                    | Worker resolves identity only; identical enforcement for all hostnames    |
-| Subscription scope              | Per account, pooled allowance                       | Requirement: many blogs per account under one base fee                    |
-| Metered event                   | Billable page views                                 | See Billing section                                                       |
-| Post schema                     | `posts` core: id, slug, type, author_id, published_at, timestamps; rest in `post_meta` | User decision; publish semantics and authorship uniform across all types |
-| Publish states                  | `published_at`: NULL = draft, past = published, future = scheduled | One column, three states; drafts are required by the writer role |
-| Custom post types               | `post_types` table with JSON field definitions      | Runtime-defined types drive forms, validation, rendering, feeds           |
-| Roles and permissions           | `roles` table with JSON permission-key arrays; four built-ins + custom roles | Runtime-defined like post types; code checks permissions, never role names |
-| Theming                         | ~9 theme knobs derived into r3-blog's semantic tokens | Few variables by requirement; components stay on `--ui-*` tokens        |
-| Platform auth                   | OIDC RP against `sso.blog.sergiodxa.com`            | Dogfoods auth-saas; r3-blog's login flow ports directly                   |
-| Engine admin auth               | Configurable OIDC client per blog                   | Hosted blogs get a provisioned client on the platform IdP; self-hosted use any IdP |
+| Decision              | Choice                                                                                 | Rationale                                                                          |
+| --------------------- | -------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
+| Engine packaging      | Workspace package `@pkg/blog-engine`                                                   | One engine version fleet-wide; self-hosted and SaaS consume the same code          |
+| Engine/host boundary  | Config object (`createBlogEngine(config)`)                                             | Container stays internal; adapters injected; "wp-config.php" analogy               |
+| DO identifier         | Blog UUID (`env.BLOG.getByName(blogId)`)                                               | Hostname and slug changes never require data migration (ADR-006 parity)            |
+| Subdomain routing     | KV cache in front of D1 slug lookup                                                    | Slug→id is immutable; avoids a D1 round trip per request                           |
+| Tenant config         | Pushed into DO SQLite (`platform_meta`) via RPC                                        | DO never reads D1 at request time; no staleness window                             |
+| State enforcement     | Inside the DO, from its own meta                                                       | Worker resolves identity only; identical enforcement for all hostnames             |
+| Subscription scope    | Per account, pooled allowance                                                          | Requirement: many blogs per account under one base fee                             |
+| Metered event         | Billable page views                                                                    | See Billing section                                                                |
+| Post schema           | `posts` core: id, slug, type, author_id, published_at, timestamps; rest in `post_meta` | User decision; publish semantics and authorship uniform across all types           |
+| Publish states        | `published_at`: NULL = draft, past = published, future = scheduled                     | One column, three states; drafts are required by the writer role                   |
+| Custom post types     | `post_types` table with JSON field definitions                                         | Runtime-defined types drive forms, validation, rendering, feeds                    |
+| Roles and permissions | `roles` table with JSON permission-key arrays; four built-ins + custom roles           | Runtime-defined like post types; code checks permissions, never role names         |
+| Theming               | ~9 theme knobs derived into r3-blog's semantic tokens                                  | Few variables by requirement; components stay on `--ui-*` tokens                   |
+| Platform auth         | OIDC RP against `sso.blog.sergiodxa.com`                                               | Dogfoods auth-saas; r3-blog's login flow ports directly                            |
+| Engine admin auth     | Configurable OIDC client per blog                                                      | Hosted blogs get a provisioned client on the platform IdP; self-hosted use any IdP |
 
 ---
 
@@ -213,13 +213,13 @@ Schema validation uses `remix/data-schema` (riding the same `remix` peer depende
 
 The boundary follows the WordPress split: environment and secret material is injected by the host ("wp-config.php"); everything a blog owner edits lives in the blog's own database ("wp_options").
 
-| Injected by host                                        | Stored in the blog's DB                  |
-| -------------------------------------------------------- | ----------------------------------------- |
-| `DatabaseAdapter`                                         | site title, description, language         |
-| OIDC issuer + client id/secret (+ optional metadata)      | theme settings (all CSS variables)        |
-| session cookie secret                                     | post types + field definitions            |
-| logger, `waitUntil`, `isProd`                             | posts, post_meta, users/roles             |
-| optional `SessionStorage` override                        | custom CSS                                |
+| Injected by host                                     | Stored in the blog's DB            |
+| ---------------------------------------------------- | ---------------------------------- |
+| `DatabaseAdapter`                                    | site title, description, language  |
+| OIDC issuer + client id/secret (+ optional metadata) | theme settings (all CSS variables) |
+| session cookie secret                                | post types + field definitions     |
+| logger, `waitUntil`, `isProd`                        | posts, post_meta, users/roles      |
+| optional `SessionStorage` override                   | custom CSS                         |
 
 ```typescript
 // packages/blog-engine/src/index.ts
@@ -305,7 +305,7 @@ export function createBlogEngine(config: BlogEngineConfig): BlogEngine {
 		{ register: (c) => c.singleton(Database, () => createDatabase(config.database)) },
 		new LoggerProvider(config.logger),
 		new OAuthProviderProvider(config.auth), // discovery cached per isolate
-		new SettingsProvider(),                 // scoped: settings read once per request
+		new SettingsProvider(), // scoped: settings read once per request
 	];
 	for (let provider of providers) provider.register(container);
 
@@ -474,15 +474,15 @@ INSERT INTO settings (key, value, updated_at) VALUES
 
 Deliberate deviations from r3-blog's schema (all conscious decisions, not omissions):
 
-| Deviation                                | r3-blog today                                                        | Engine                                                            |
-| ---------------------------------------- | --------------------------------------------------------------------- | ------------------------------------------------------------------ |
-| `slug` is a core column                  | slug lives in `post_meta`; lookup needs collision resolution           | `UNIQUE(type, slug)`; lookup is one indexed query                  |
-| `published_at` NULL means draft          | NULL means published (legacy backward compatibility)                   | Three states: NULL = draft, past = published, future = scheduled — drafts are required by the writer role |
-| `author_id` has no delete cascade        | `ON DELETE CASCADE`                                                    | Deleting a user requires reassigning or deleting their posts first (WordPress-style prompt) |
-| `posts.type` is plain TEXT               | `c.enum(["like","tutorial","article","comment","glossary"])`          | Types are runtime-defined; validity enforced against `post_types`  |
-| `users.role_id` references `roles`       | `role` is a `c.enum(["guest","admin"])` column                        | Roles are runtime-defined rows with permission sets                |
-| `UNIQUE(post_id, key)` on post_meta      | Duplicate keys tolerated; codec resolves latest-wins                   | Upserts; the ambiguity class is deleted                            |
-| Sessions in SQL, not KV                  | `KVSessionStorage`                                                     | The engine's only hard dependency stays one SQL database           |
+| Deviation                           | r3-blog today                                                | Engine                                                                                                    |
+| ----------------------------------- | ------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------- |
+| `slug` is a core column             | slug lives in `post_meta`; lookup needs collision resolution | `UNIQUE(type, slug)`; lookup is one indexed query                                                         |
+| `published_at` NULL means draft     | NULL means published (legacy backward compatibility)         | Three states: NULL = draft, past = published, future = scheduled — drafts are required by the writer role |
+| `author_id` has no delete cascade   | `ON DELETE CASCADE`                                          | Deleting a user requires reassigning or deleting their posts first (WordPress-style prompt)               |
+| `posts.type` is plain TEXT          | `c.enum(["like","tutorial","article","comment","glossary"])` | Types are runtime-defined; validity enforced against `post_types`                                         |
+| `users.role_id` references `roles`  | `role` is a `c.enum(["guest","admin"])` column               | Roles are runtime-defined rows with permission sets                                                       |
+| `UNIQUE(post_id, key)` on post_meta | Duplicate keys tolerated; codec resolves latest-wins         | Upserts; the ambiguity class is deleted                                                                   |
+| Sessions in SQL, not KV             | `KVSessionStorage`                                           | The engine's only hard dependency stays one SQL database                                                  |
 
 Publish semantics: `published_at` NULL means draft (visible only in the CMS), a past date means published, a future date means scheduled (public at that time; previewable in the CMS). This deliberately breaks with r3-blog, where NULL means published for legacy reasons — a fresh engine with a writer role needs a real draft state.
 
@@ -524,7 +524,7 @@ Field definitions are deliberately minimal — seven input kinds, no nesting, no
 export type FieldKind = "text" | "textarea" | "markdown" | "date" | "url" | "boolean" | "tags";
 
 export interface FieldDefinition {
-	key: string;          // ^[a-z][a-z0-9_]*$, unique per type, not in RESERVED_FIELD_KEYS
+	key: string; // ^[a-z][a-z0-9_]*$, unique per type, not in RESERVED_FIELD_KEYS
 	label: string;
 	kind: FieldKind;
 	required: boolean;
@@ -533,7 +533,14 @@ export interface FieldDefinition {
 
 /** Core columns + implicit fields that user definitions may not shadow. */
 export const RESERVED_FIELD_KEYS = new Set([
-	"id", "slug", "type", "author_id", "title", "published_at", "created_at", "updated_at",
+	"id",
+	"slug",
+	"type",
+	"author_id",
+	"title",
+	"published_at",
+	"created_at",
+	"updated_at",
 ]);
 ```
 
@@ -588,7 +595,12 @@ function fieldSchema(field: FieldDefinition) {
 		date: s.string().refine((value) => !Number.isNaN(Date.parse(value)), "Expected a valid date"),
 		url: s.string().pipe(url()),
 		boolean: s.defaulted(s.string(), "").transform((value) => value === "on"), // HTML checkbox
-		tags: s.string().transform((value) => value.split(",").map((tag) => tag.trim()).filter(Boolean)),
+		tags: s.string().transform((value) =>
+			value
+				.split(",")
+				.map((tag) => tag.trim())
+				.filter(Boolean),
+		),
 	}[field.kind];
 	return field.required && field.kind !== "boolean" ? base : s.optional(base);
 }
@@ -597,7 +609,9 @@ export function buildPostFormSchema(definition: PostTypeDefinition) {
 	let shape = {
 		title: f.field(s.string().refine((value) => value.trim().length > 0, "Title is required")),
 		// Derived from title when absent.
-		slug: f.field(s.optional(s.string().refine((value) => SLUG_PATTERN.test(value), "Invalid slug"))),
+		slug: f.field(
+			s.optional(s.string().refine((value) => SLUG_PATTERN.test(value), "Invalid slug")),
+		),
 		published_at: f.field(
 			s.optional(s.string().refine((value) => !Number.isNaN(Date.parse(value)), "Invalid date")),
 		),
@@ -624,28 +638,28 @@ The same philosophy as custom post types applies to roles: the engine defines a 
 
 Permission catalog (engine-defined, append-only):
 
-| Permission           | Grants                                                                    |
-| --------------------- | -------------------------------------------------------------------------- |
-| `posts.create`        | Create drafts of any visible post type                                     |
-| `posts.edit_own`      | Edit posts where `author_id` is the current user                           |
-| `posts.edit_any`      | Edit any post, including reassigning its author                            |
-| `posts.delete_own`    | Delete own posts                                                           |
-| `posts.delete_any`    | Delete any post                                                            |
-| `posts.publish`       | Set or change `published_at`: publish now, schedule, or unpublish          |
-| `post_types.manage`   | Create, edit, and delete custom post types                                 |
-| `settings.manage`     | Edit site settings (title, description, language)                          |
-| `appearance.manage`   | Edit theme variables and custom CSS                                        |
-| `users.manage`        | Assign roles to users, delete users                                        |
-| `roles.manage`        | Create, edit, and delete custom roles                                      |
+| Permission          | Grants                                                            |
+| ------------------- | ----------------------------------------------------------------- |
+| `posts.create`      | Create drafts of any visible post type                            |
+| `posts.edit_own`    | Edit posts where `author_id` is the current user                  |
+| `posts.edit_any`    | Edit any post, including reassigning its author                   |
+| `posts.delete_own`  | Delete own posts                                                  |
+| `posts.delete_any`  | Delete any post                                                   |
+| `posts.publish`     | Set or change `published_at`: publish now, schedule, or unpublish |
+| `post_types.manage` | Create, edit, and delete custom post types                        |
+| `settings.manage`   | Edit site settings (title, description, language)                 |
+| `appearance.manage` | Edit theme variables and custom CSS                               |
+| `users.manage`      | Assign roles to users, delete users                               |
+| `roles.manage`      | Create, edit, and delete custom roles                             |
 
 Built-in roles (seeded by migration, `builtin = 1`):
 
-| Role     | Permissions                                                              | Notes                                                             |
-| -------- | ------------------------------------------------------------------------ | ------------------------------------------------------------------ |
-| `admin`  | All                                                                       | At least one admin user must always exist                          |
-| `editor` | All `posts.*` including `posts.publish`                                   | Can edit, publish, schedule, and delete anything; no site/user management |
-| `writer` | `posts.create`, `posts.edit_own`, `posts.delete_own`                      | Writes and edits own drafts; cannot publish or schedule            |
-| `reader` | None                                                                      | Default role for every user after the first; reserved for future membership features |
+| Role     | Permissions                                          | Notes                                                                                |
+| -------- | ---------------------------------------------------- | ------------------------------------------------------------------------------------ |
+| `admin`  | All                                                  | At least one admin user must always exist                                            |
+| `editor` | All `posts.*` including `posts.publish`              | Can edit, publish, schedule, and delete anything; no site/user management            |
+| `writer` | `posts.create`, `posts.edit_own`, `posts.delete_own` | Writes and edits own drafts; cannot publish or schedule                              |
+| `reader` | None                                                 | Default role for every user after the first; reserved for future membership features |
 
 Assignment and invariants (enforced in the repository layer, not just the UI):
 
@@ -728,15 +742,15 @@ Nine knobs, edited in `/cms/appearance`, stored in the `settings` row `theme`:
 ```typescript
 // packages/blog-engine/src/theme/theme.ts
 export interface ThemeSettings {
-	accent: string;        // --blog-accent  (color input; converted to oklch)
-	background: string;    // --blog-bg
-	foreground: string;    // --blog-fg
-	radius: "square" | "soft" | "rounded" | "round";  // --blog-radius: 0 | .375rem | .75rem | 1.25rem
-	spacing: "compact" | "comfortable" | "spacious";  // --blog-spacing: .75rem | 1rem | 1.25rem
-	fontHeading: FontPreset;  // --blog-font-heading (system stacks: serif|sans|mono|slab)
-	fontBody: FontPreset;     // --blog-font-body
-	fontSize: "small" | "medium" | "large";           // --blog-font-size: .9375rem | 1rem | 1.125rem
-	measure?: string;         // --blog-measure, default "65ch"
+	accent: string; // --blog-accent  (color input; converted to oklch)
+	background: string; // --blog-bg
+	foreground: string; // --blog-fg
+	radius: "square" | "soft" | "rounded" | "round"; // --blog-radius: 0 | .375rem | .75rem | 1.25rem
+	spacing: "compact" | "comfortable" | "spacious"; // --blog-spacing: .75rem | 1rem | 1.25rem
+	fontHeading: FontPreset; // --blog-font-heading (system stacks: serif|sans|mono|slab)
+	fontBody: FontPreset; // --blog-font-body
+	fontSize: "small" | "medium" | "large"; // --blog-font-size: .9375rem | 1rem | 1.125rem
+	measure?: string; // --blog-measure, default "65ch"
 }
 ```
 
@@ -772,14 +786,14 @@ CMS editing works without JavaScript (markdown fields are textareas, as in r3-bl
 
 ### Engine v1 Feature Set
 
-| In v1                                                                     | Explicitly not in v1                                        |
-| -------------------------------------------------------------------------- | ------------------------------------------------------------ |
-| Public feed, per-type list/detail, RSS (global + per type), sitemap, robots | Media uploads / file storage (future `fileStorage?` config)  |
-| Admin dashboard, posts CRUD for every type, post-types CRUD                 | Comments, search, webmentions/webfinger                      |
+| In v1                                                                       | Explicitly not in v1                                                                                         |
+| --------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| Public feed, per-type list/detail, RSS (global + per type), sitemap, robots | Media uploads / file storage (future `fileStorage?` config)                                                  |
+| Admin dashboard, posts CRUD for every type, post-types CRUD                 | Comments, search, webmentions/webfinger                                                                      |
 | Multi-user roles/permissions, users + custom roles management, bylines      | Review workflow (submission queues, notifications) — writers save drafts, editors find them in the post list |
-| Settings (title/description/language), appearance (theme + custom CSS)      | Redirects manager, importers, per-type template overrides    |
-| OIDC admin login, first-admin bootstrap, auto-migrations                    | Client-side editor, i18n of the admin UI                     |
-| LIMIT/OFFSET pagination                                                     |                                                              |
+| Settings (title/description/language), appearance (theme + custom CSS)      | Redirects manager, importers, per-type template overrides                                                    |
+| OIDC admin login, first-admin bootstrap, auto-migrations                    | Client-side editor, i18n of the admin UI                                                                     |
+| LIMIT/OFFSET pagination                                                     |                                                                                                              |
 
 r3-blog features that stay personal and do not port: profile config, webfinger/avatar, sponsor page, bookmarks/glossary/tutorials/likes as built-ins (they become just post type definitions a user could recreate), KV redirects manager, `/colors` page, R2 backups.
 
@@ -826,24 +840,24 @@ apps/blog-saas/
 
 Deliberate differences from auth-saas:
 
-| Aspect               | auth-saas                                     | blog-saas                                    | Why                                                        |
-| -------------------- | --------------------------------------------- | --------------------------------------------- | ----------------------------------------------------------- |
-| `src/tenant/` size   | Full OIDC provider (controllers, models, ...) | Thin DO wrapper                                | The engine lives in `@pkg/blog-engine`                       |
-| Platform auth        | WebAuthn proxy against a "platform" DO        | Standard OIDC RP against the sso tenant        | Reuse r3-blog's proven login flow; no special-case DO        |
-| "platform" DO        | Yes (dogfooding)                              | None                                           | Dashboard auth is external; owner blogs are ordinary tenants |
-| Subscription scope   | Per tenant                                    | Per **account**                                | Base fee covers N blogs with pooled allowance                |
-| DI                   | Context middleware only                       | `@pkg/service-container` per ADR-008           | ADR-008 is the going-forward pattern                         |
+| Aspect             | auth-saas                                     | blog-saas                               | Why                                                          |
+| ------------------ | --------------------------------------------- | --------------------------------------- | ------------------------------------------------------------ |
+| `src/tenant/` size | Full OIDC provider (controllers, models, ...) | Thin DO wrapper                         | The engine lives in `@pkg/blog-engine`                       |
+| Platform auth      | WebAuthn proxy against a "platform" DO        | Standard OIDC RP against the sso tenant | Reuse r3-blog's proven login flow; no special-case DO        |
+| "platform" DO      | Yes (dogfooding)                              | None                                    | Dashboard auth is external; owner blogs are ordinary tenants |
+| Subscription scope | Per tenant                                    | Per **account**                         | Base fee covers N blogs with pooled allowance                |
+| DI                 | Context middleware only                       | `@pkg/service-container` per ADR-008    | ADR-008 is the going-forward pattern                         |
 
 ### Worker Entry Routing
 
 Hostname classes:
 
 | Host                            | Detection                                       | Target                                  |
-| -------------------------------- | ------------------------------------------------ | ---------------------------------------- |
-| `blog.sergiodxa.com`             | `hostname === env.PLATFORM_DOMAIN`               | Assets, then dashboard/marketing router  |
-| Custom domain (`blog.acme.com`)  | `request.cf.hostMetadata.blog_id` (CF for SaaS)  | Blog DO by id                            |
-| `{slug}.blog.sergiodxa.com`      | Suffix match on `.${PLATFORM_DOMAIN}`            | Slug → blog id resolution, then Blog DO  |
-| Anything else                    | Fallthrough                                      | D1 hostnames lookup, else 404            |
+| ------------------------------- | ----------------------------------------------- | --------------------------------------- |
+| `blog.sergiodxa.com`            | `hostname === env.PLATFORM_DOMAIN`              | Assets, then dashboard/marketing router |
+| Custom domain (`blog.acme.com`) | `request.cf.hostMetadata.blog_id` (CF for SaaS) | Blog DO by id                           |
+| `{slug}.blog.sergiodxa.com`     | Suffix match on `.${PLATFORM_DOMAIN}`           | Slug → blog id resolution, then Blog DO |
+| Anything else                   | Fallthrough                                     | D1 hostnames lookup, else 404           |
 
 Slug → blog id resolution uses **KV in front of D1**: slug→id is effectively immutable (set at creation, renames out of scope for v1), which is the ideal KV workload — write-through on creation, explicit delete on blog deletion, no TTL. A per-request D1 lookup would add a cross-region round trip to every hosted blog request (D1 is single-primary while DOs sit near their audience); it remains only as the cache-miss path.
 
@@ -863,7 +877,16 @@ interface HostMetadata {
 	region?: string;
 }
 
-const RESERVED_SLUGS = new Set(["sso", "www", "api", "cdn", "assets", "mail", "status", "fallback"]);
+const RESERVED_SLUGS = new Set([
+	"sso",
+	"www",
+	"api",
+	"cdn",
+	"assets",
+	"mail",
+	"status",
+	"fallback",
+]);
 
 export default {
 	async fetch(request) {
@@ -921,8 +944,9 @@ async function resolveSlug(slug: string) {
 	let cached = await env.SLUG_CACHE.get<{ blogId: string; region: string }>(`slug:${slug}`, "json");
 	if (cached) return cached;
 
-	let row = await env.PLATFORM_DB
-		.prepare("SELECT id, region FROM blogs WHERE slug = ?1 AND status != 'deleted'")
+	let row = await env.PLATFORM_DB.prepare(
+		"SELECT id, region FROM blogs WHERE slug = ?1 AND status != 'deleted'",
+	)
 		.bind(slug)
 		.first<{ id: string; region: string }>();
 	if (!row) return null;
@@ -953,8 +977,8 @@ import { createSQLStorageDatabaseAdapter } from "@pkg/data-table-sqlstorage";
 interface PlatformMeta {
 	blog_id: string;
 	title: string;
-	subdomain_host: string;          // {slug}.blog.sergiodxa.com
-	canonical_host: string;          // subdomain_host or the active custom domain
+	subdomain_host: string; // {slug}.blog.sergiodxa.com
+	canonical_host: string; // subdomain_host or the active custom domain
 	custom_hostname_active: 0 | 1;
 	status: "active" | "suspended" | "deleted";
 	oidc_issuer: string;
@@ -994,10 +1018,14 @@ export default class Blog extends DurableObject<Cloudflare.Env> {
 	// ---- RPC surface (control plane only) ----
 
 	/** One-time provisioning before the hostname goes live. Idempotent. */
-	async initialize(meta: PlatformMeta) { /* writeMeta + bootEngine */ }
+	async initialize(meta: PlatformMeta) {
+		/* writeMeta + bootEngine */
+	}
 
 	/** Push-based config sync: suspension, custom-domain activation, title changes. */
-	async updateMeta(patch: Partial<PlatformMeta>) { /* merge + writeMeta + bootEngine */ }
+	async updateMeta(patch: Partial<PlatformMeta>) {
+		/* merge + writeMeta + bootEngine */
+	}
 
 	/** Dashboard stats without exposing engine internals. */
 	async getStats() {
@@ -1120,12 +1148,12 @@ CREATE INDEX idx_usage_unreported ON usage_daily(date) WHERE reported_at IS NULL
 
 Deviations from ADR-006's control plane, with reasons:
 
-| Deviation                                          | Reason                                                                          |
-| --------------------------------------------------- | -------------------------------------------------------------------------------- |
-| `accounts` table exists (auth-saas stores subject ids only) | Accounts carry billing identity (`polar_customer_id`) and profile          |
-| Subscription keyed to account, not blog             | Base fee covers N blogs with pooled allowance; per-blog would multiply the fee    |
-| Default subdomain not stored in `hostnames`         | Derivable from `slug`; storing it duplicates state with no CF object behind it    |
-| `usage_daily` replaces `mau_tracking`               | Different meter (page views, summed daily); idempotent reporting; history beyond Analytics Engine retention |
+| Deviation                                                   | Reason                                                                                                      |
+| ----------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| `accounts` table exists (auth-saas stores subject ids only) | Accounts carry billing identity (`polar_customer_id`) and profile                                           |
+| Subscription keyed to account, not blog                     | Base fee covers N blogs with pooled allowance; per-blog would multiply the fee                              |
+| Default subdomain not stored in `hostnames`                 | Derivable from `slug`; storing it duplicates state with no CF object behind it                              |
+| `usage_daily` replaces `mau_tracking`                       | Different meter (page views, summed daily); idempotent reporting; history beyond Analytics Engine retention |
 
 ### Blog Lifecycle
 
@@ -1152,12 +1180,12 @@ Steps 4-7 are retryable; the `provisioning` status makes half-created blogs visi
 
 Enforcement matrix:
 
-| State                         | Public traffic                | Blog admin (`/cms`)                          | Platform dashboard                        |
-| ------------------------------ | ------------------------------ | --------------------------------------------- | ------------------------------------------ |
-| `active` / `trialing`          | Served                         | Served                                        | Full                                       |
-| `past_due`                     | Served (grace)                 | Served                                        | Warning banner                             |
-| `canceled` / `unpaid` → suspended | 402 static "suspended" page | Served (owner can export content, fix billing) | Blocked except billing pages               |
-| `deleted` (retention window)   | 410 Gone                       | 410 Gone                                      | Restore action only                        |
+| State                             | Public traffic              | Blog admin (`/cms`)                            | Platform dashboard           |
+| --------------------------------- | --------------------------- | ---------------------------------------------- | ---------------------------- |
+| `active` / `trialing`             | Served                      | Served                                         | Full                         |
+| `past_due`                        | Served (grace)              | Served                                         | Warning banner               |
+| `canceled` / `unpaid` → suspended | 402 static "suspended" page | Served (owner can export content, fix billing) | Blocked except billing pages |
+| `deleted` (retention window)      | 410 Gone                    | 410 Gone                                       | Restore action only          |
 
 ### Custom Domain Flow
 
@@ -1179,12 +1207,12 @@ Migrating `r3.sergiodxa.com` (a same-zone hostname) later: remove the custom-dom
 
 **Metered event: billable page views.** Candidates considered:
 
-| Candidate            | Verdict  | Rationale                                                                                     |
-| --------------------- | -------- | ---------------------------------------------------------------------------------------------- |
-| Raw requests          | Rejected | Inflated by assets, feeds, bots, probes; means nothing to a blogger; theme-dependent           |
-| Bandwidth (GB)        | Rejected | Infra-normal (Netlify/Vercel) but opaque to bloggers and hard to measure on streamed bodies    |
-| Unique visitors (MAU-style) | Rejected | Requires identifying anonymous readers — privacy-hostile and gameable                    |
-| **Page views**        | Chosen   | Bloggers already think in page views; correlates with actual platform cost; pools naturally across any number of blogs |
+| Candidate                   | Verdict  | Rationale                                                                                                              |
+| --------------------------- | -------- | ---------------------------------------------------------------------------------------------------------------------- |
+| Raw requests                | Rejected | Inflated by assets, feeds, bots, probes; means nothing to a blogger; theme-dependent                                   |
+| Bandwidth (GB)              | Rejected | Infra-normal (Netlify/Vercel) but opaque to bloggers and hard to measure on streamed bodies                            |
+| Unique visitors (MAU-style) | Rejected | Requires identifying anonymous readers — privacy-hostile and gameable                                                  |
+| **Page views**              | Chosen   | Bloggers already think in page views; correlates with actual platform cost; pools naturally across any number of blogs |
 
 The concern that "charging for visits is strange" is addressed by the hybrid structure rather than the meter choice: the base fee makes visits free up to a generous allowance — overage only ever means the blog is succeeding. This is how WordPress.com sizes plans by traffic capacity.
 
@@ -1212,23 +1240,23 @@ env.ANALYTICS.writeDataPoint({
 
 **Polar configuration:**
 
-| Object                 | Configuration                                                                                           |
-| ----------------------- | -------------------------------------------------------------------------------------------------------- |
-| Meter `page_views`      | Event name `page_views`; aggregation: sum over `metadata.views`                                           |
-| Product "Blog"          | Recurring monthly. Base price TBD (working figure $5/month). Metered price TBD per 1,000 views overage (working figure $0.50/1k) |
-| Included allowance      | Polar meter-credits benefit on the product: TBD views/month (working figure 100,000 — a personal blog rarely exceeds 10k/month) |
-| Blogs per subscription  | Unlimited; usage pools into one meter per customer                                                        |
+| Object                 | Configuration                                                                                                                    |
+| ---------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| Meter `page_views`     | Event name `page_views`; aggregation: sum over `metadata.views`                                                                  |
+| Product "Blog"         | Recurring monthly. Base price TBD (working figure $5/month). Metered price TBD per 1,000 views overage (working figure $0.50/1k) |
+| Included allowance     | Polar meter-credits benefit on the product: TBD views/month (working figure 100,000 — a personal blog rarely exceeds 10k/month)  |
+| Blogs per subscription | Unlimited; usage pools into one meter per customer                                                                               |
 
 Checkout uses Polar hosted checkout (customer created lazily with `account_id` metadata); payment method, cancellation, and invoices go through the Polar customer portal — no custom billing UI.
 
 Webhooks (`/api/webhooks/polar`, HMAC-verified as in auth-saas):
 
-| Event                              | Handling                                                                    |
-| ----------------------------------- | ---------------------------------------------------------------------------- |
-| `checkout.completed`                | Link `polar_subscription_id` to the account via `metadata.account_id`        |
-| `subscription.active`               | Status → `active`; reactivate suspended blogs (fan-out `updateMeta`)          |
-| `subscription.updated`              | Sync status + period; `past_due` enters grace (no fan-out)                    |
-| `subscription.canceled` / revoked   | Status → `canceled`; fan out suspension to all account blogs                  |
+| Event                             | Handling                                                              |
+| --------------------------------- | --------------------------------------------------------------------- |
+| `checkout.completed`              | Link `polar_subscription_id` to the account via `metadata.account_id` |
+| `subscription.active`             | Status → `active`; reactivate suspended blogs (fan-out `updateMeta`)  |
+| `subscription.updated`            | Sync status + period; `past_due` enters grace (no fan-out)            |
+| `subscription.canceled` / revoked | Status → `canceled`; fan out suspension to all account blogs          |
 
 ### Platform Dashboard
 
@@ -1237,11 +1265,11 @@ Webhooks (`/api/webhooks/polar`, HMAC-verified as in auth-saas):
 import { form, get, post, resources, route } from "remix/fetch-router/routes";
 
 export default route({
-	index: get("/"),                       // marketing landing
+	index: get("/"), // marketing landing
 	health: get("/health"),
 
 	auth: {
-		login: form("/auth/login"),          // GET renders, POST starts OIDC PKCE flow
+		login: form("/auth/login"), // GET renders, POST starts OIDC PKCE flow
 		callback: get("/auth/callback"),
 		logout: form("/auth/logout"),
 	},
@@ -1251,7 +1279,7 @@ export default route({
 	},
 
 	dashboard: {
-		index: get("/dashboard"),            // blog list + usage summary
+		index: get("/dashboard"), // blog list + usage summary
 		billing: form("/dashboard/billing"), // subscription status, checkout, portal link
 
 		blogs: {
@@ -1293,13 +1321,13 @@ Single-account story: owners authenticate to the dashboard and to each blog's `/
 		// Tenant default subdomains (requires a proxied wildcard DNS record)
 		{ "pattern": "*.blog.sergiodxa.com/*", "zone_name": "sergiodxa.com" },
 		// CF for SaaS fallback origin (custom hostname traffic lands here)
-		{ "pattern": "fallback.blog.sergiodxa.com/*", "zone_name": "sergiodxa.com" }
+		{ "pattern": "fallback.blog.sergiodxa.com/*", "zone_name": "sergiodxa.com" },
 	],
 
 	"triggers": {
 		// 01:00 UTC: aggregate AE page views -> usage_daily -> Polar ingestion
 		// 02:00 UTC: purge soft-deleted blogs past retention; poll pending hostnames
-		"crons": ["0 1 * * *", "0 2 * * *"]
+		"crons": ["0 1 * * *", "0 2 * * *"],
 	},
 
 	"durable_objects": { "bindings": [{ "name": "BLOG", "class_name": "Blog" }] },
@@ -1310,8 +1338,8 @@ Single-account story: owners authenticate to the dashboard and to each blog's `/
 			"binding": "PLATFORM_DB",
 			"database_name": "blog-saas-platform",
 			"database_id": "<id>",
-			"migrations_dir": "./src/app/migrations"
-		}
+			"migrations_dir": "./src/app/migrations",
+		},
 	],
 
 	"kv_namespaces": [{ "binding": "SLUG_CACHE", "id": "<id>" }],
@@ -1320,8 +1348,8 @@ Single-account story: owners authenticate to the dashboard and to each blog's `/
 
 	"vars": {
 		"PLATFORM_DOMAIN": "blog.sergiodxa.com",
-		"OIDC_ISSUER": "https://sso.blog.sergiodxa.com"
-	}
+		"OIDC_ISSUER": "https://sso.blog.sergiodxa.com",
+	},
 
 	// Secrets (wrangler secret put / Secrets Store):
 	//   COOKIE_SESSION_SECRET                                   dashboard session cookie

@@ -16,26 +16,26 @@ This ADR covers: the work needed to make auth-saas production-ready (including d
 
 ### Current State: apps/auth (production IdP)
 
-| Aspect        | Implementation                                                                                              |
-| ------------- | ------------------------------------------------------------------------------------------------------------ |
-| Issuer        | `auth.sergiodxa.com` (no scheme in `iss` claim)                                                               |
-| Framework     | React Router v7 on Cloudflare Workers                                                                         |
-| Storage       | D1 (7 tables: subjects, credentials, connections, sessions, clients, grants), KV (authz codes), R2 (ES256 keys) |
-| Auth methods  | GitHub OAuth + email/password credentials                                                                     |
-| Endpoints     | authorize, token (code/refresh/client_credentials), userinfo, introspect, revoke, discovery, jwks, RP-initiated logout, check-session |
-| Logout        | RP-initiated with `id_token_hint`; sends back-channel logout tokens and front-channel iframes                 |
-| Clients       | D1 `clients` table, plaintext secrets, one redirect URI each                                                  |
-| Jobs          | Queue-based session cleanup (Cloudflare Queues, daily cron)                                                    |
+| Aspect       | Implementation                                                                                                                        |
+| ------------ | ------------------------------------------------------------------------------------------------------------------------------------- |
+| Issuer       | `auth.sergiodxa.com` (no scheme in `iss` claim)                                                                                       |
+| Framework    | React Router v7 on Cloudflare Workers                                                                                                 |
+| Storage      | D1 (7 tables: subjects, credentials, connections, sessions, clients, grants), KV (authz codes), R2 (ES256 keys)                       |
+| Auth methods | GitHub OAuth + email/password credentials                                                                                             |
+| Endpoints    | authorize, token (code/refresh/client_credentials), userinfo, introspect, revoke, discovery, jwks, RP-initiated logout, check-session |
+| Logout       | RP-initiated with `id_token_hint`; sends back-channel logout tokens and front-channel iframes                                         |
+| Clients      | D1 `clients` table, plaintext secrets, one redirect URI each                                                                          |
+| Jobs         | Queue-based session cleanup (Cloudflare Queues, daily cron)                                                                           |
 
 ### Client Inventory (the migration surface)
 
 Exactly three apps are clients of `auth.sergiodxa.com`; four others were verified as non-clients (`apps/books`, `apps/pkmn`, `apps/r3-gallery`, `apps/r3-uptime` — the last is a placeholder).
 
-| App            | Domain                 | Flow                        | Hardcoded auth endpoints in                                                                 | Local user link                        |
-| -------------- | ----------------------- | ---------------------------- | -------------------------------------------------------------------------------------------- | --------------------------------------- |
-| `apps/blog`    | sergiodxa.com           | OIDC code + PKCE             | `app/modules/auth.ts`, `app/entities/id-token.ts`, `app/middleware/session.ts`               | `users.subject_id` (unique) + email fallback |
-| `apps/uptime`  | uptime.sergiodxa.com    | OIDC code + PKCE, `@pkg/auth-sdk` for subject lookup | `app/modules/auth.ts`, `app/entities/id-token.ts`                          | `memberships.subject_id` + email fallback |
-| `apps/r3-blog` | r3.sergiodxa.com        | OIDC code + PKCE (Remix v3)  | `app/auth/services/oauth.ts`, `app/services/id-token-verification-key.ts`, `app/auth/value-objects/id-token.ts`, `app/http/controllers/auth.tsx` | `users.subject_id` (unique) + email fallback |
+| App            | Domain               | Flow                                                 | Hardcoded auth endpoints in                                                                                                                      | Local user link                              |
+| -------------- | -------------------- | ---------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------- |
+| `apps/blog`    | sergiodxa.com        | OIDC code + PKCE                                     | `app/modules/auth.ts`, `app/entities/id-token.ts`, `app/middleware/session.ts`                                                                   | `users.subject_id` (unique) + email fallback |
+| `apps/uptime`  | uptime.sergiodxa.com | OIDC code + PKCE, `@pkg/auth-sdk` for subject lookup | `app/modules/auth.ts`, `app/entities/id-token.ts`                                                                                                | `memberships.subject_id` + email fallback    |
+| `apps/r3-blog` | r3.sergiodxa.com     | OIDC code + PKCE (Remix v3)                          | `app/auth/services/oauth.ts`, `app/services/id-token-verification-key.ts`, `app/auth/value-objects/id-token.ts`, `app/http/controllers/auth.tsx` | `users.subject_id` (unique) + email fallback |
 
 Shared contracts (all three): scopes `openid profile email`, ES256 ID tokens verified against the JWKS, raw ID token stored in session for RP-initiated logout with `id_token_hint` + `Clear-Site-Data`, and `findOrCreateFromAuthProfile`-style provisioning (subject_id lookup, email fallback). No custom scopes or claims are used anywhere.
 
@@ -47,20 +47,20 @@ Complete: tenant DO with all core OIDC endpoints, WebAuthn registration/authenti
 
 Auditing the code against intended behavior surfaced these (several were unknown before this ADR):
 
-| # | Defect / gap | Location | Severity |
-| - | ------------- | -------- | -------- |
-| 1 | No silent SSO: every `/authorize` visit runs a full passkey ceremony; no IdP browser session exists | `src/tenant/controllers/oauth/authorize.tsx` | Blocks the shared-tenant SSO goal |
-| 2 | Account takeover: passkey registration attaches a new passkey to an existing subject matched by email, without proving email ownership, and auto-verifies the email | `src/tenant/controllers/webauthn/register-verify.ts:128-159` | Critical — fatal for imported passkey-less subjects |
-| 3 | `EmailService` is dead code: imported nowhere, verification emails are never sent | `src/app/services/email.ts` | High |
-| 4 | Migration 0005 re-seeds the dashboard client and resets every tenant's issuer to `localhost:3004` on every DO cold start (`ON CONFLICT DO UPDATE`); `TenantMeta.setIssuer`/`setTenantId` are never called by provisioning | `src/tenant/migrations/0005-seed-dashboard-client.sql` | Critical |
-| 5 | Platform-domain OIDC endpoints 404 in production: `/authorize` etc. reach the platform DO only through a dev-mode shim, so dashboard onboarding cannot work as deployed | `src/entry.worker.ts` | Critical |
-| 6 | No hostname→tenant routing besides `cf.hostMetadata` — and both launch tenants are same-zone hostnames where CF for SaaS metadata does not apply | `src/entry.worker.ts` | Blocks launch |
-| 7 | Magic-link login/recovery does not exist (passkey only) | — | Product requirement |
-| 8 | Back/front-channel logout: models and token class exist, no sending implementation | `src/tenant/controllers/oidc/logout.ts` | Parity gap (no client receives them today; not cutover-critical) |
-| 9 | `POST /api/subjects` (create) does not exist — there is no import path | `src/tenant/routes.ts` | Blocks subject import |
-| 10 | Billing exemption covers only the special `platform` tenant; internal tenants would require Polar subscriptions | `src/app/middleware/subscription.ts` | Blocks internal tenants |
-| 11 | Deploy config incomplete: placeholder D1 id, no routes, no email binding; typecheck broken (TS5101 `baseUrl` + ~552 errors, dominated by remix-beta route-param inference) | `wrangler.jsonc`, `tsconfig.json` | Blocks deploy |
-| 12 | Minor: rate-limit path list says `/oauth/authorize` but the route is `/authorize`; logout validates `post_logout_redirect_uri` against all logout-URI types instead of `post_logout` only; tenant SQLite declares INTEGER timestamps while models write ISO TEXT | various | Low |
+| #   | Defect / gap                                                                                                                                                                                                                                                     | Location                                                     | Severity                                                         |
+| --- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------ | ---------------------------------------------------------------- |
+| 1   | No silent SSO: every `/authorize` visit runs a full passkey ceremony; no IdP browser session exists                                                                                                                                                              | `src/tenant/controllers/oauth/authorize.tsx`                 | Blocks the shared-tenant SSO goal                                |
+| 2   | Account takeover: passkey registration attaches a new passkey to an existing subject matched by email, without proving email ownership, and auto-verifies the email                                                                                              | `src/tenant/controllers/webauthn/register-verify.ts:128-159` | Critical — fatal for imported passkey-less subjects              |
+| 3   | `EmailService` is dead code: imported nowhere, verification emails are never sent                                                                                                                                                                                | `src/app/services/email.ts`                                  | High                                                             |
+| 4   | Migration 0005 re-seeds the dashboard client and resets every tenant's issuer to `localhost:3004` on every DO cold start (`ON CONFLICT DO UPDATE`); `TenantMeta.setIssuer`/`setTenantId` are never called by provisioning                                        | `src/tenant/migrations/0005-seed-dashboard-client.sql`       | Critical                                                         |
+| 5   | Platform-domain OIDC endpoints 404 in production: `/authorize` etc. reach the platform DO only through a dev-mode shim, so dashboard onboarding cannot work as deployed                                                                                          | `src/entry.worker.ts`                                        | Critical                                                         |
+| 6   | No hostname→tenant routing besides `cf.hostMetadata` — and both launch tenants are same-zone hostnames where CF for SaaS metadata does not apply                                                                                                                 | `src/entry.worker.ts`                                        | Blocks launch                                                    |
+| 7   | Magic-link login/recovery does not exist (passkey only)                                                                                                                                                                                                          | —                                                            | Product requirement                                              |
+| 8   | Back/front-channel logout: models and token class exist, no sending implementation                                                                                                                                                                               | `src/tenant/controllers/oidc/logout.ts`                      | Parity gap (no client receives them today; not cutover-critical) |
+| 9   | `POST /api/subjects` (create) does not exist — there is no import path                                                                                                                                                                                           | `src/tenant/routes.ts`                                       | Blocks subject import                                            |
+| 10  | Billing exemption covers only the special `platform` tenant; internal tenants would require Polar subscriptions                                                                                                                                                  | `src/app/middleware/subscription.ts`                         | Blocks internal tenants                                          |
+| 11  | Deploy config incomplete: placeholder D1 id, no routes, no email binding; typecheck broken (TS5101 `baseUrl` + ~552 errors, dominated by remix-beta route-param inference)                                                                                       | `wrangler.jsonc`, `tsconfig.json`                            | Blocks deploy                                                    |
+| 12  | Minor: rate-limit path list says `/oauth/authorize` but the route is `/authorize`; logout validates `post_logout_redirect_uri` against all logout-URI types instead of `post_logout` only; tenant SQLite declares INTEGER timestamps while models write ISO TEXT | various                                                      | Low                                                              |
 
 Also verified: `apps/uptime` uses `@pkg/auth-sdk` at runtime (two routes), and auth-saas breaks it twice — subject lookup requires a management client (uptime's login client cannot call it), and the response shape changed. The SDK also hardcodes `https://auth.sergiodxa.com` ([ADR-005](./ADR-005-auth-package-redesign.md) planned a redesign that has not happened).
 
@@ -69,7 +69,7 @@ Also verified: `apps/uptime` uses `@pkg/auth-sdk` at runtime (two routes), and a
 1. **One shared personal tenant.** `sso.sergiodxa.com` is a single tenant; blog, uptime, and r3-blog become OAuth clients inside it, preserving SSO across the personal apps. Separate products get their own tenants: `sso.blog.sergiodxa.com` for the blog SaaS platform (ADR-009).
 2. **Subjects are exported/imported with preserved ids.** The OIDC `sub` stays stable, so every `subject_id` link in client apps keeps working with zero re-linking. Users re-enroll passkeys on first login (their verified-email status carries over).
 3. **Big-bang cutover.** One coordinated window: deploy auth-saas, create tenants, register clients, import subjects, deploy all three client apps, and move `auth.sergiodxa.com` — with a config-only rollback path per app and `apps/auth` kept intact through a soak period.
-4. **Auth methods**: email + passkey, with magic link as both recovery and first-login path; **Cloudflare Email Sending** replaces Resend (kept temporarily as a feature-flagged fallback).
+4. **Auth methods**: email + passkey, with magic link as both recovery and first-login path; **Cloudflare Email Sending** is the sole email transport (Resend removed entirely).
 
 ## Decision
 
@@ -99,19 +99,19 @@ Complete `apps/auth-saas` through eleven work packages, migrate the three client
 
 ### Key Design Decisions
 
-| Decision                     | Choice                                                        | Rationale                                                                  |
-| ---------------------------- | -------------------------------------------------------------- | --------------------------------------------------------------------------- |
-| Tenant granularity           | Shared `sso` tenant for personal apps; tenant per product      | SSO across personal apps requires one subject store                        |
-| Same-zone hostname routing   | Explicit worker routes + D1 `hostnames` lookup (KV-cached)     | CF for SaaS custom metadata does not apply to own-zone hostnames            |
-| Silent SSO                   | IdP browser-session cookie + `/authorize` short-circuit        | Without it, "SSO" is a passkey ceremony per app                             |
-| Subject import               | New `POST /api/subjects` Management API endpoint, id preserved | `sub` stability keeps every client app's local links intact                 |
-| Grants / connections / sessions / credentials | Not migrated (archived with the final D1 export) | Grants are auto-created bookkeeping; GitHub + passwords are being retired   |
-| Email                        | Cloudflare Email Sending (`send_email` binding), Resend behind `EMAIL_PROVIDER` flag | Cloudflare-native; fallback until CF sending is proven in soak |
-| Client endpoint config       | `AUTH_ISSUER` var + static path derivation (no runtime discovery) | We own both sides; discovery adds a network dependency per isolate       |
-| `@pkg/auth-sdk`              | Minimal patch (configurable base URL + new response shape); ADR-005 redesign stays deferred | Only uptime consumes it at runtime                          |
-| Dashboard identity           | Separate `platform` tenant subject store (two accounts for the same human) | Breaks the circular dependency of administering the sso tenant with an identity inside it |
-| Internal tenants             | `tenants.internal` flag (D1 column) bypassing billing          | Visible in dashboard, survives config drift, no Polar objects for own tenants |
-| Tenant members/invites       | Deferred (models exist, no controllers; single-admin platform) | Cut from launch scope                                                        |
+| Decision                                      | Choice                                                                                      | Rationale                                                                                 |
+| --------------------------------------------- | ------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| Tenant granularity                            | Shared `sso` tenant for personal apps; tenant per product                                   | SSO across personal apps requires one subject store                                       |
+| Same-zone hostname routing                    | Explicit worker routes + D1 `hostnames` lookup (KV-cached)                                  | CF for SaaS custom metadata does not apply to own-zone hostnames                          |
+| Silent SSO                                    | IdP browser-session cookie + `/authorize` short-circuit                                     | Without it, "SSO" is a passkey ceremony per app                                           |
+| Subject import                                | New `POST /api/subjects` Management API endpoint, id preserved                              | `sub` stability keeps every client app's local links intact                               |
+| Grants / connections / sessions / credentials | Not migrated (archived with the final D1 export)                                            | Grants are auto-created bookkeeping; GitHub + passwords are being retired                 |
+| Email                                         | Cloudflare Email Sending (`send_email` binding), sole transport                             | Cloudflare-native; no external email dependency or API key                                |
+| Client endpoint config                        | `AUTH_ISSUER` var + static path derivation (no runtime discovery)                           | We own both sides; discovery adds a network dependency per isolate                        |
+| `@pkg/auth-sdk`                               | Minimal patch (configurable base URL + new response shape); ADR-005 redesign stays deferred | Only uptime consumes it at runtime                                                        |
+| Dashboard identity                            | Separate `platform` tenant subject store (two accounts for the same human)                  | Breaks the circular dependency of administering the sso tenant with an identity inside it |
+| Internal tenants                              | `tenants.internal` flag (D1 column) bypassing billing                                       | Visible in dashboard, survives config drift, no Polar objects for own tenants             |
+| Tenant members/invites                        | Deferred (models exist, no controllers; single-admin platform)                              | Cut from launch scope                                                                     |
 
 ### WP1: Worker Entry Routing (same-zone hostnames + platform OIDC)
 
@@ -132,7 +132,9 @@ async function resolveHostname(hostname: string): Promise<ResolvedTenant | null>
 		`SELECT h.tenant_id AS tenantId, t.region AS region
 		 FROM hostnames h JOIN tenants t ON t.id = h.tenant_id
 		 WHERE h.hostname = ?1 AND h.status = 'active' AND t.status = 'active'`,
-	).bind(hostname).first<ResolvedTenant>();
+	)
+		.bind(hostname)
+		.first<ResolvedTenant>();
 
 	if (!row) return null;
 	await env.HOSTNAMES_KV.put(`host:${hostname}`, JSON.stringify(row), { expirationTtl: 300 });
@@ -214,32 +216,26 @@ Rate limiting: `/magic-link/request` joins the strict per-IP limiter (and the ex
 
 ### WP5: Cloudflare Email Sending
 
-`EmailService` becomes driver-based and actually wired (defect 3):
+`EmailService` sends solely through the Cloudflare `send_email` binding, wired into the flows (defect 3):
 
 ```jsonc
 // wrangler.jsonc
 "send_email": [{ "name": "SEND_EMAIL" }],
-"vars": { "EMAIL_PROVIDER": "cloudflare", "EMAIL_FROM": "SSO <sso@sergiodxa.com>" }
+"vars": { "EMAIL_FROM": "SSO <sso@sergiodxa.com>" }
 ```
 
 ```typescript
 import { EmailMessage } from "cloudflare:email";
-import { createMimeMessage } from "mimetext";
 
 static async send(options: { to: string; subject: string; html: string; text?: string }) {
-	if (env.EMAIL_PROVIDER === "resend") return EmailService.sendWithResend(options);
-	let { name, addr } = parseEmailFrom(env.EMAIL_FROM);
-	let msg = createMimeMessage();
-	msg.setSender({ name, addr });
-	msg.setRecipient(options.to);
-	msg.setSubject(options.subject);
-	if (options.text) msg.addMessage({ contentType: "text/plain", data: options.text });
-	msg.addMessage({ contentType: "text/html", data: options.html });
-	await env.SEND_EMAIL.send(new EmailMessage(addr, options.to, msg.asRaw()));
+	let from = env.EMAIL_FROM ?? "Auth SaaS <noreply@auth.sergiodxa.com>";
+	let fromAddress = parseAddress(from); // bare addr out of "Name <addr>"
+	let raw = buildMimeMessage({ from, fromAddress, ...options }); // multipart/alternative, base64 bodies
+	await env.SEND_EMAIL.send(new EmailMessage(fromAddress, options.to, raw));
 }
 ```
 
-Add `sendMagicLinkEmail`, wire `sendVerificationEmail` into registration, delete `sendPasswordResetEmail` (no password auth exists). **Resend stays as an `EMAIL_PROVIDER=resend` fallback** until Cloudflare's sending path is confirmed working for arbitrary recipients on this account — classic Email Routing `send_email` only delivers to verified destination addresses, which is fine for a personal tenant but must be verified before external tenants exist. Removed after soak. New dependency: `mimetext`.
+The MIME message is built by hand (no `mimetext` dependency): a `multipart/alternative` body with base64-encoded text and HTML parts, `Message-ID`/`Date`/RFC-2047 subject headers. Add `sendMagicLinkEmail`, wire `sendVerificationEmail` into registration, delete `sendPasswordResetEmail` (no password auth exists). Resend is removed entirely — the `resend` dependency, the `RESEND_API_KEY` secret, and the `EMAIL_PROVIDER` switch are all gone. Caveat to verify in soak: classic Email Routing `send_email` only delivers to verified destination addresses, which is fine for the personal tenant but must be confirmed for arbitrary recipients before external tenants exist.
 
 ### WP6: Back-Channel + Front-Channel Logout Fan-Out
 
@@ -288,20 +284,20 @@ Subscription middleware bypasses billing when the tenant is `platform` or `inter
 
 1. Real D1 (`wrangler d1 create auth-saas-platform`) + migrations applied (0001-0003).
 2. KV namespace for `HOSTNAMES_KV`; routes block (WP1); `send_email` binding (WP5); crons already correct.
-3. Secrets set: `POLAR_ACCESS_TOKEN`, `POLAR_PRODUCT_ID`, `POLAR_WEBHOOK_SECRET`, `CF_API_TOKEN`, `CF_ZONE_ID`, `CF_ACCOUNT_ID`, `INTERNAL_SECRET`, `SESSION_SECRET` (+ `RESEND_API_KEY` while the fallback lives).
+3. Secrets set: `POLAR_ACCESS_TOKEN`, `POLAR_PRODUCT_ID`, `POLAR_WEBHOOK_SECRET`, `CF_API_TOKEN`, `CF_ZONE_ID`, `CF_ACCOUNT_ID`, `INTERNAL_SECRET`, `SESSION_SECRET`. (No email secret — Cloudflare Email Sending uses the `SEND_EMAIL` binding.)
 4. **Typecheck green**: remove `baseUrl` from `tsconfig.json` (TS6 allows relative `paths` without it), fix `src/lib/d1-adapter.ts`/`db-errors.ts` against current `remix/data-table` exports, and resolve the ~400 route-param inference errors from the remix beta (upgrade the beta or regenerate route typings). 552 errors today.
 5. `bun test` green, including WP10 additions.
 
 ### WP10: Migration-Critical Tests
 
-| Path             | Tests                                                                                                   |
-| ---------------- | -------------------------------------------------------------------------------------------------------- |
-| Subject import   | id preserved verbatim; verified email carried; duplicate id/email → 409; count parity                     |
-| Magic link       | enumeration-safe responses; per-email limit; single-use + expiry; PKCE context round-trip; passkey-enrollment gate |
+| Path             | Tests                                                                                                                   |
+| ---------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| Subject import   | id preserved verbatim; verified email carried; duplicate id/email → 409; count parity                                   |
+| Magic link       | enumeration-safe responses; per-email limit; single-use + expiry; PKCE context round-trip; passkey-enrollment gate      |
 | Logout fan-out   | logout-token claims; backchannel POST body; frontchannel URL building; post_logout type filter; browser-session scoping |
-| Hostname routing | resolver (D1 hit, KV hit, unknown host, inactive tenant); platform-domain OIDC → platform DO dispatch     |
-| Silent SSO       | valid cookie issues code with no UI; `prompt=login` forces ceremony; `prompt=none` without session → `login_required` |
-| End-to-end       | authorize → webauthn (stubbed) → token (PKCE + Basic) → userinfo → logout against a DO test fixture       |
+| Hostname routing | resolver (D1 hit, KV hit, unknown host, inactive tenant); platform-domain OIDC → platform DO dispatch                   |
+| Silent SSO       | valid cookie issues code with no UI; `prompt=login` forces ceremony; `prompt=none` without session → `login_required`   |
+| End-to-end       | authorize → webauthn (stubbed) → token (PKCE + Basic) → userinfo → logout against a DO test fixture                     |
 
 ### WP11: Client App Changes
 
@@ -324,12 +320,12 @@ Touched files — apps/blog: `app/modules/auth.ts`, `app/entities/id-token.ts`, 
 
 Client registrations in the `sso` tenant:
 
-| Client            | Type                | Redirect URI                             | post_logout URI                   |
-| ----------------- | -------------------- | ----------------------------------------- | ---------------------------------- |
-| Blog              | confidential         | `https://sergiodxa.com/auth/callback`     | `https://sergiodxa.com/`           |
-| Uptime            | confidential         | `https://uptime.sergiodxa.com/auth`       | `https://uptime.sergiodxa.com`     |
-| R3 Blog           | confidential         | `https://r3.sergiodxa.com/auth/callback`  | `https://r3.sergiodxa.com/feed`    |
-| uptime-management | m2m (management)     | —                                         | —                                  |
+| Client            | Type             | Redirect URI                             | post_logout URI                 |
+| ----------------- | ---------------- | ---------------------------------------- | ------------------------------- |
+| Blog              | confidential     | `https://sergiodxa.com/auth/callback`    | `https://sergiodxa.com/`        |
+| Uptime            | confidential     | `https://uptime.sergiodxa.com/auth`      | `https://uptime.sergiodxa.com`  |
+| R3 Blog           | confidential     | `https://r3.sergiodxa.com/auth/callback` | `https://r3.sergiodxa.com/feed` |
+| uptime-management | m2m (management) | —                                        | —                               |
 
 New CLIENT_ID/CLIENT_SECRET per app (auth-saas hashes secrets; the old plaintext ones remain recoverable from apps/auth's D1 for rollback). Blog/uptime via `wrangler secret put`; r3-blog via the Secrets Store values `BLOG_CLIENT_ID`/`BLOG_CLIENT_SECRET` (record old values first).
 
@@ -368,7 +364,7 @@ Per app: redeploy the previous release, or revert `AUTH_ISSUER` + restore the ol
 1. Watch observability logs, magic-link deliverability, and the MAU cron.
 2. Archive: `wrangler d1 export auth --remote` → upload to R2 (subjects, grants, connections, clients preserved indefinitely).
 3. Decommission apps/auth: confirm zero workers.dev traffic, `wrangler delete`, remove its D1/KV/R2/queue after the export is verified.
-4. Repo: delete `apps/auth` (git history preserves it; a routeless worker and dead directory invite drift); drop `RESEND_API_KEY` if the Cloudflare email driver held up; update ADR statuses.
+4. Repo: delete `apps/auth` (git history preserves it; a routeless worker and dead directory invite drift); update ADR statuses.
 
 ## Consequences
 
@@ -446,7 +442,7 @@ Migrate one app at a time while others stay on apps/auth.
 
 ### 4. Keep Resend
 
-**Partially kept**: it remains a feature-flagged fallback during soak, but the direction is Cloudflare-native email, removing an external dependency and API key.
+**Rejected**: Cloudflare Email Sending is the sole transport. Resend (SDK dependency + `RESEND_API_KEY`) is removed, dropping an external dependency and API key. If Cloudflare sending proves insufficient for arbitrary recipients, a driver abstraction can be reintroduced then.
 
 ### 5. Keep apps/auth as the Personal IdP Forever
 
@@ -465,29 +461,48 @@ Use auth-saas only for external tenants.
 - [ADR-005: Auth Package Redesign](./ADR-005-auth-package-redesign.md) — stays deferred; minimal SDK patch only
 - [ADR-006: Auth SaaS Platform](./ADR-006-auth-saas-platform.md) — the architecture this ADR completes; its Phase 6 "migration from apps/auth" item is superseded by the shared-tenant model here
 - [ADR-009: Blog SaaS Platform](./ADR-009-blog-saas-platform.md) — downstream dependency unblocked in Phase 0
+- [ADR-011: OIDC Provider Engine Package](./ADR-011-oidc-provider-engine-package.md) — extracts the tenant provider stabilized here into `@pkg/oidc-provider` (self-hostable, like `@pkg/blog-engine`)
 - [OIDC Back-Channel Logout 1.0](https://openid.net/specs/openid-connect-backchannel-1_0.html)
 - [Cloudflare Email Routing - Send emails from Workers](https://developers.cloudflare.com/email-routing/email-workers/send-email-workers/)
-- docs/adr/auth/*.md — historical record of apps/auth (unchanged)
+- docs/adr/auth/\*.md — historical record of apps/auth (unchanged)
 
 ## Current Progress
 
-- [ ] Phase A: Correctness blockers (WP1, WP2, WP4-fix, WP9)
-- [ ] Phase B: Product features (WP3, WP4, WP5, WP8)
-- [ ] Phase C: Migration machinery (WP7, WP10, WP11)
-- [ ] Phase D: Logout fan-out (WP6)
-- [ ] Phase E: Runbook
-  - [ ] Phase 0: Pre-cutover
-  - [ ] Phase 1: Cutover window
-  - [ ] Phase 3: Soak + decommission apps/auth
+As of 2026-07-04, `apps/auth-saas` typechecks clean (was 552 errors), passes 254 tests, lints clean, and builds to deployable artifacts. Fixing the pre-existing breakage that blocked deploy (a runtime router crash on nested `router.map`, `context.formData` never populated, JSX components using the wrong factory shape, `remix/data-table` adapter API drift, and `@simplewebauthn` API drift) was a prerequisite for all feature work and is included below.
+
+- [x] Phase A: Correctness blockers
+  - [x] WP9: typecheck to green + wrangler config (routes, KV, `send_email`, `ignoreDeprecations`)
+  - [x] WP2: provisioning fixes (issuer-reset migration removed; `PRAGMA user_version` migration tracking; `POST /api/setup` internal endpoint + `TenantApiService.setup` + wired into tenant creation)
+  - [x] WP1: worker entry routing (platform-domain OIDC → platform DO; same-zone hostname → KV-cached D1 lookup)
+  - [x] WP4-fix: passkey-registration takeover guard (registration rejects existing subjects; API drift fixed)
+  - [x] Pre-existing runtime blockers: router refactored to per-group `map()`; `formData` context augmentation; JSX components → `Handle<Props>` pattern; D1/SqlStorage adapters + webauthn controllers realigned to current APIs
+- [~] Phase B: Product features
+  - [x] WP5: Cloudflare Email Sending (`EmailService` over the `send_email` binding, hand-built MIME; magic-link + verification templates; Resend removed entirely — dependency, secret, and provider switch all gone)
+  - [x] WP8: internal-tenant billing flag (D1 migration, model, middleware bypass, create-form checkbox)
+  - [ ] WP3: IdP browser session + silent SSO — migration 0007 (`browser_sessions`) is in place; model + `/authorize` short-circuit not yet implemented
+  - [ ] WP4: magic-link login/recovery — migration 0007 (`login_tokens`) + email template in place; `/magic-link/*` controllers + `/authorize` branch not yet implemented
+- [~] Phase C: Migration machinery
+  - [x] WP7: subject import (`Subject.import` preserving id/verified-email; `POST /api/subjects`; `scripts/import-subjects.ts`; tests)
+  - [~] WP10: added `Subject.import` tests; magic-link/silent-SSO/logout tests pending their features
+  - [ ] WP11: client-app changes (blog, uptime, r3-blog) + `@pkg/auth-sdk` patch — not started (separate apps)
+- [ ] Phase D: WP6 logout fan-out (back/front-channel) — not started; explicitly non-cutover-blocking
+- [ ] Phase E: Runbook (operational: create tenants, import users, cutover) — not started
+
+### Remaining before the migration can run
+
+- **WP4 (magic link) is required to import existing users.** The takeover guard makes registration new-accounts-only, so imported subjects (which have no passkey) can only sign in via magic link. A fresh deploy serving only new passkey users is fully functional without it; importing apps/auth users is not.
+- **WP3 (silent SSO)** is required for one-login-across-apps within the shared tenant; without it each app triggers its own passkey/magic-link ceremony.
+- **WP11** updates the three client apps to point at `AUTH_ISSUER`.
+- Deploy prerequisites (WP9 config): replace the placeholder D1 and `HOSTNAMES_KV` ids with real ones, set secrets, and provision DNS/TLS per the runbook.
 
 ## Notes
 
 - **Defects discovered during this design** (see Context table): the most important are the account-takeover vector in passkey registration (must land before any subject import), the issuer-resetting migration 0005, and the platform-domain OIDC 404 — none were known before auditing.
-- The premise "clients receive front-channel iframes" turned out false: apps/auth *sends* front/back-channel logout, but no client app ever implemented a receiver (ADR-003 is Deferred). WP6 is parity work for future external tenants, not cutover-critical.
+- The premise "clients receive front-channel iframes" turned out false: apps/auth _sends_ front/back-channel logout, but no client app ever implemented a receiver (ADR-003 is Deferred). WP6 is parity work for future external tenants, not cutover-critical.
 - `POST /api/subjects` did not exist at all (the question was whether it accepted explicit ids — there was nothing to check).
 - apps/uptime is the only runtime consumer of `@pkg/auth-sdk`; both the grant-type gating and the response shape of auth-saas break it, hence the `uptime-management` client and the SDK patch.
 - Tenant SQLite declares INTEGER timestamp columns but every model writes ISO TEXT strings (SQLite type affinity tolerates this); the import script must follow the models, not the DDL.
 - blog and r3-blog share the `AUTH` KV session namespace — both must deploy inside the same cutover window so mixed old/new sessions don't linger; `Clear-Site-Data` on logout clears stragglers.
 - The `auth.sergiodxa.com` custom domain lives in the Cloudflare dashboard, not in apps/auth's wrangler.jsonc — the "route move" in Phase 1 is a dashboard operation.
-- Cloudflare Email Sending caveat: classic Email Routing `send_email` delivers only to verified destination addresses; fine for the personal tenant, must be re-verified before external tenants rely on it (hence the Resend fallback flag).
+- Cloudflare Email Sending caveat: classic Email Routing `send_email` delivers only to verified destination addresses; fine for the personal tenant, must be re-verified before external tenants rely on it. Resend was removed rather than kept as a fallback (user decision); reintroduce a driver only if this proves insufficient.
 - Tenant members/invites (models exist, no controllers) are cut from launch scope; revisit if auth-saas gets external customers.
