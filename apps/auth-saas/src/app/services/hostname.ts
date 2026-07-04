@@ -3,6 +3,8 @@ import type { Schema } from "remix/data-schema";
 import { env } from "cloudflare:workers";
 import * as s from "remix/data-schema";
 
+import type { HostMetadata } from "~/lib/host-metadata";
+
 /** Schema for SSL validation DNS TXT records. */
 const SSLValidationRecordSchema = s.object({
 	txt_name: s.string(),
@@ -177,14 +179,16 @@ export default class HostnameService {
 	 * Creates a custom hostname with tenant metadata using TXT validation for SSL.
 	 * @param hostname - The hostname to create.
 	 * @param tenantId - Tenant ID to associate with the hostname.
-	 * @param region - Optional region (defaults to "auto").
+	 * @param region - Optional DO location hint (defaults to "wnam", matching the
+	 * worker entry's fallback when metadata omits it).
 	 * @returns The created custom hostname.
 	 */
 	static async createHostname(
 		hostname: string,
 		tenantId: string,
-		region?: string,
+		region?: HostMetadata["region"],
 	): Promise<CustomHostname> {
+		let metadata: HostMetadata = { tenant_id: tenantId, region: region ?? "wnam" };
 		let response = await HostnameService.request("POST", "", SingleResponseSchema, {
 			hostname,
 			ssl: {
@@ -194,10 +198,7 @@ export default class HostnameService {
 					min_tls_version: "1.2",
 				},
 			},
-			custom_metadata: {
-				tenant_id: tenantId,
-				region: region ?? "auto",
-			},
+			custom_metadata: metadata,
 		});
 
 		return response.result;
