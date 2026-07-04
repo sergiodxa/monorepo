@@ -2,7 +2,9 @@
 
 ## Status
 
-**In Progress** - 2026-02-26 (Updated: 2026-03-02)
+**In Progress** - 2026-02-26 (Updated: 2026-07-04)
+
+Completion, deployment, and the migration of `apps/auth` clients to tenants are now tracked in [ADR-010](./ADR-010-auth-saas-completion-and-tenant-migration.md), which also supersedes the Phase 6 item "Migration from apps/auth to be a tenant" (shared personal tenant, not tenant-per-app).
 
 ### Implementation Progress
 
