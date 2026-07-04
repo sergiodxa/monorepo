@@ -2,6 +2,8 @@ import type { Database } from "remix/data-table";
 
 import { column as c, table } from "remix/data-table";
 
+import type { HostMetadata } from "~/lib/host-metadata";
+
 import HostnameService from "~/app/services/hostname";
 import { RecordNotFoundError } from "~/lib/db-errors";
 
@@ -62,7 +64,12 @@ export default class Hostname {
 	 * Create a custom hostname via Cloudflare for SaaS API.
 	 * This calls the real Cloudflare API and stores the result locally.
 	 */
-	static async createCustom(db: Database, tenantId: string, hostname: string, region?: string) {
+	static async createCustom(
+		db: Database,
+		tenantId: string,
+		hostname: string,
+		region?: HostMetadata["region"],
+	) {
 		// Call Cloudflare API to create the custom hostname
 		let cfHostname = await HostnameService.createHostname(hostname, tenantId, region);
 
