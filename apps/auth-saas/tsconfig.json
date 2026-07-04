@@ -1,6 +1,17 @@
 {
 	"extends": "../../tsconfig.json",
-	"include": ["src/**/*", "worker-configuration.d.ts", "vite.config.ts"],
+	"include": [
+		"app/**/*",
+		"bootstrap/**/*",
+		"config/**/*.d.ts",
+		"database/**/*",
+		"infrastructure/**/*",
+		"resources/**/*",
+		"routes/**/*",
+		"vite.config.ts",
+		"vite.config.client.ts",
+		"worker-configuration.d.ts"
+	],
 	"compilerOptions": {
 		"jsx": "react-jsx",
 		"jsxImportSource": "remix/ui",
@@ -13,7 +24,13 @@
 		"baseUrl": ".",
 		"rootDirs": ["."],
 		"paths": {
-			"~/*": ["src/*"]
+			"~/app/*": ["app/*"],
+			"~/bootstrap/*": ["bootstrap/*"],
+			"~/config/*": ["config/*"],
+			"~/database/*": ["database/*"],
+			"~/infrastructure/*": ["infrastructure/*"],
+			"~/resources/*": ["resources/*"],
+			"~/routes/*": ["routes/*"]
 		}
 	}
 }

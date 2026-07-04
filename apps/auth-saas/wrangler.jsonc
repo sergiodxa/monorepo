@@ -1,7 +1,7 @@
 {
 	"$schema": "https://unpkg.com/wrangler@latest/config-schema.json",
 	"name": "auth-saas",
-	"main": "./src/entry.worker.ts",
+	"main": "./bootstrap/worker.ts",
 	"compatibility_date": "2026-01-01",
 	"compatibility_flags": ["nodejs_compat"],
 	"workers_dev": true,
@@ -40,7 +40,7 @@
 			"database_name": "auth-saas-platform",
 			// Replace with the real D1 id from `wrangler d1 create auth-saas-platform`.
 			"database_id": "placeholder-dev-db-id",
-			"migrations_dir": "./src/app/migrations",
+			"migrations_dir": "./database/migrations",
 		},
 	],
 
