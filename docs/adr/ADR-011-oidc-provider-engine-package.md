@@ -2,7 +2,26 @@
 
 ## Status
 
-**Proposed** - 2026-07-04
+**Implemented** - 2026-07-04
+
+`@pkg/oidc-provider` (plus the `@pkg/data-table-sqlstorage` / `@pkg/data-table-d1`
+adapter extractions) exists and is consumed by `apps/auth-saas`; all packages and
+the app typecheck clean, 292 tests pass, and the app builds and passes
+`wrangler deploy --dry-run`. Deviations from the design as written:
+
+- **Migrations** keep the existing `?raw` SQL files, run through a small journaled
+  runner (`adapter.executeScript` + an `oidc_migrations` table) rather than a
+  registry of inline SQL strings — same effect (idempotent, ordered), and the model
+  tests keep loading the `.sql` files directly.
+- **Imports**: the package uses relative imports, not a `~/` alias — a consuming
+  project resolves the package's `.ts` sources against its own tsconfig paths, so a
+  `~/` alias would break there.
+- The provider exposes **`ensureSigningKeys()` and `cleanup()`** lifecycle hooks
+  (for the DO's boot and alarm) alongside `fetch`/`migrate`.
+- The package is **fully self-contained**: it vendors every lib helper it needs
+  (not only the tenant-only ones); the dashboard keeps its own copies of the generic
+  wrappers, while `internal-auth` ships from the package as the single owner of the
+  platform↔tenant token contract.
 
 ## Background
 
