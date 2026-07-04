@@ -89,6 +89,8 @@
       "dependencies": {
         "@edgefirst-dev/jwt": "^1.3.0",
         "@pkg/cn": "workspace:*",
+        "@pkg/data-table-d1": "workspace:*",
+        "@pkg/data-table-sqlstorage": "workspace:*",
         "@pkg/db-helpers": "workspace:*",
         "@pkg/get-client-ip": "workspace:*",
         "@pkg/http": "workspace:*",
@@ -428,6 +430,28 @@
       "devDependencies": {
         "@types/bun": "^1.3.14",
         "@types/react": "^19.2.17",
+      },
+    },
+    "packages/data-table-d1": {
+      "name": "@pkg/data-table-d1",
+      "version": "0.0.0",
+      "dependencies": {
+        "remix": "3.0.0-beta.4",
+      },
+      "devDependencies": {
+        "@cloudflare/workers-types": "^4.20260409.1",
+        "@types/bun": "^1.3.14",
+      },
+    },
+    "packages/data-table-sqlstorage": {
+      "name": "@pkg/data-table-sqlstorage",
+      "version": "0.0.0",
+      "dependencies": {
+        "remix": "3.0.0-beta.4",
+      },
+      "devDependencies": {
+        "@cloudflare/workers-types": "^4.20260409.1",
+        "@types/bun": "^1.3.14",
       },
     },
     "packages/db-helpers": {
@@ -1317,6 +1341,10 @@
     "@pkg/cache": ["@pkg/cache@workspace:packages/cache"],
 
     "@pkg/cn": ["@pkg/cn@workspace:packages/cn"],
+
+    "@pkg/data-table-d1": ["@pkg/data-table-d1@workspace:packages/data-table-d1"],
+
+    "@pkg/data-table-sqlstorage": ["@pkg/data-table-sqlstorage@workspace:packages/data-table-sqlstorage"],
 
     "@pkg/db-helpers": ["@pkg/db-helpers@workspace:packages/db-helpers"],
 

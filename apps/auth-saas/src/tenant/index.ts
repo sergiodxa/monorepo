@@ -1,8 +1,7 @@
+import { createSQLStorageDatabaseAdapter } from "@pkg/data-table-sqlstorage";
 import { Logger } from "@pkg/logger/request";
 import { DurableObject } from "cloudflare:workers";
 import { createDatabase } from "remix/data-table";
-
-import { createSQLStorageDatabaseAdapter } from "~/lib/sql-storage-adapter";
 
 import AuthorizationCode from "./models/authorization-code";
 import EmailVerificationToken from "./models/email-verification-token";

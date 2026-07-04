@@ -17,6 +17,8 @@
 	"dependencies": {
 		"@edgefirst-dev/jwt": "^1.3.0",
 		"@pkg/cn": "workspace:*",
+		"@pkg/data-table-d1": "workspace:*",
+		"@pkg/data-table-sqlstorage": "workspace:*",
 		"@pkg/db-helpers": "workspace:*",
 		"@pkg/get-client-ip": "workspace:*",
 		"@pkg/http": "workspace:*",

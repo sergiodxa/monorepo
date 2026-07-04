@@ -1,9 +1,9 @@
 import type { Database } from "remix/data-table";
 
+import { createD1DatabaseAdapter } from "@pkg/data-table-d1";
 import { env } from "cloudflare:workers";
 import { createDatabase } from "remix/data-table";
 
-import { createD1DatabaseAdapter } from "~/lib/d1-adapter";
 import middleware from "~/lib/middleware";
 
 declare module "remix/fetch-router" {
