@@ -1,15 +1,105 @@
 # @pkg/data-table-d1
 
-A `remix/data-table` `DatabaseAdapter` backed by Cloudflare D1. Lets
-`remix/data-table` models run against a D1 database.
+A `remix/data-table` `DatabaseAdapter` backed by Cloudflare D1.
 
-```ts
-import { createDatabase } from "remix/data-table";
+## Overview
+
+[`remix/data-table`](https://github.com/remix-run/remix) models talk to a database
+through a `DatabaseAdapter`. This package implements that adapter over a Cloudflare
+D1 binding, so `remix/data-table` models, queries, and migrations run against D1 in
+a Worker.
+
+SQL is generated with SQLite semantics to match D1. D1 does not support SQL
+`BEGIN`/`COMMIT`, so `remix/data-table` transactions are modeled as logical tokens
+(savepoints are not supported); `RETURNING` and upserts are enabled by default. It
+was extracted from `apps/auth-saas` so self-hosted workers and other D1-backed apps
+can share one adapter (see [ADR-011](/docs/adr/ADR-011-oidc-provider-engine-package.md)).
+
+## Usage
+
+### Basic Example
+
+```typescript
 import { createD1DatabaseAdapter } from "@pkg/data-table-d1";
+import { createDatabase } from "remix/data-table";
 
-let db = createDatabase(createD1DatabaseAdapter(env.DB));
+export default {
+	async fetch(request, env) {
+		let db = createDatabase(createD1DatabaseAdapter(env.DB));
+		let users = await db.findMany(usersTable);
+		return Response.json(users);
+	},
+} satisfies ExportedHandler<Env>;
 ```
 
-Extracted from `apps/auth-saas` so self-hosted workers and other D1-backed apps
-can share one adapter. See
-[ADR-011](../../docs/adr/ADR-011-oidc-provider-engine-package.md).
+## API
+
+### `createD1DatabaseAdapter(db: D1Database, options?: D1AdapterOptions): DatabaseAdapter`
+
+Creates a `remix/data-table` `DatabaseAdapter` that executes against a Cloudflare
+D1 binding.
+
+**Parameters:**
+
+- `db`: The D1 binding to execute SQL against (e.g. `env.DB`).
+- `options.capabilities`: Optional overrides for the adapter's feature flags
+  (`AdapterCapabilityOverrides` from `remix/data-table`). Defaults: `returning`,
+  `upsert`, and `transactionalDdl` are `true`; `savepoints` and `migrationLock` are
+  `false`.
+
+**Returns:**
+
+- A `DatabaseAdapter` you pass to `createDatabase(...)`.
+
+**Example:**
+
+```typescript
+let adapter = createD1DatabaseAdapter(env.DB);
+let db = createDatabase(adapter);
+```
+
+## Pattern: Caching the database per isolate
+
+`createDatabase` is cheap, but the binding is stable for the isolate, so build the
+adapter once and reuse it across requests:
+
+```typescript
+import { createD1DatabaseAdapter } from "@pkg/data-table-d1";
+import { createDatabase } from "remix/data-table";
+
+let db: ReturnType<typeof createDatabase> | null = null;
+
+export default {
+	async fetch(request, env) {
+		db ??= createDatabase(createD1DatabaseAdapter(env.DB));
+		return Response.json(await db.findMany(usersTable));
+	},
+} satisfies ExportedHandler<Env>;
+```
+
+## Pattern: Self-hosting `@pkg/oidc-provider` on D1
+
+The adapter is what lets the host-agnostic provider run on a plain Worker; the host
+injects it and the provider only ever sees the `DatabaseAdapter` interface:
+
+```typescript
+import { createD1DatabaseAdapter } from "@pkg/data-table-d1";
+import { createOidcProvider } from "@pkg/oidc-provider";
+
+let provider = createOidcProvider({
+	database: createD1DatabaseAdapter(env.DB),
+	internalSecret: await env.INTERNAL_SECRET.get(),
+});
+```
+
+## Related Packages
+
+- [`@pkg/data-table-sqlstorage`](/packages/data-table-sqlstorage) - The same adapter for a Durable Object `SqlStorage`
+- [`@pkg/oidc-provider`](/packages/oidc-provider) - Host-agnostic OIDC provider that consumes this adapter
+
+## Tips
+
+1. **Prefer `RETURNING` over insert ids** - `returning` is enabled by default; rely on it rather than D1's `last_row_id` where possible.
+2. **Savepoints are unsupported** - D1 has no `BEGIN`/`COMMIT`; transactions are logical tokens, so don't rely on nested savepoints.
+3. **Apply migrations with `wrangler d1 migrations apply`** - Use D1's own migration tooling (or the adapter's `executeScript` at boot) rather than expecting the adapter to journal schema changes.
+4. **Reuse the adapter** - Build it once per isolate instead of per request.
