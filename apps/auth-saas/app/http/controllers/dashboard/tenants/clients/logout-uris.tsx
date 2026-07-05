@@ -1,23 +1,33 @@
-import { html as htmlResponse } from "@pkg/http/response";
+/**
+ * Tenant client logout-URIs controller: renders the add form and creates a logout URI,
+ * then redirects back to the client. Edit/update are unsupported (redirect no-ops) and
+ * destroy removes a URI. Rendering uses `remix/ui` JSX via `ctx.render`.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { isFailure } from "@pkg/result";
 import { validate } from "@pkg/validate";
-import * as s from "remix/data-schema";
+import { getContext } from "remix/async-context-middleware";
+import * as ds from "remix/data-schema";
 import { createAction } from "remix/fetch-router";
-import { html } from "remix/html-template";
 
-import { layout } from "~/resources/layouts/document";
+import { Document } from "~/app/views/document";
+import * as s from "~/app/views/styles";
 import routes from "~/routes/web";
 
-let CreateLogoutUriSchema = s.object({
-	uri: s.string(),
-	type: s.enum_(["post_logout", "backchannel", "frontchannel"]),
-	environment: s.optional(s.string()),
+let CreateLogoutUriSchema = ds.object({
+	uri: ds.string(),
+	type: ds.enum_(["post_logout", "backchannel", "frontchannel"]),
+	environment: ds.optional(ds.string()),
 });
 
 export default {
 	new: createAction(
 		routes.dashboard.tenants.clients["logout-uris"].new,
 		async ({ params, tenant, tenantApi, logger }) => {
+			let ctx = getContext();
 			let log = logger.loader(
 				`/dashboard/tenants/${tenant.id}/clients/${params.clientId}/logout-uris/new`,
 			);
@@ -29,86 +39,76 @@ export default {
 
 			log.info("New logout URI form loaded", { tenantId: tenant.id, clientId: params.clientId });
 
-			return htmlResponse(
-				String(
-					layout({
-						title: `New Logout URI - ${client.name}`,
-						tenant,
-						backLink: routes.dashboard.tenants.clients.show.href({
+			return ctx.render(
+				<Document
+					title={`New Logout URI - ${client.name}`}
+					tenant={tenant}
+					backLink={routes.dashboard.tenants.clients.show.href({
+						tenantId: tenant.id,
+						id: params.clientId,
+					})}
+					backText={client.name}
+				>
+					<h2 mix={[s.pageTitle]}>Add Logout URI</h2>
+
+					<form
+						mix={[s.form]}
+						method="post"
+						action={routes.dashboard.tenants.clients["logout-uris"].create.href({
 							tenantId: tenant.id,
-							id: params.clientId,
-						}),
-						backText: client.name,
-						content: html`
-							<h2 class="text-2xl font-bold mb-6">Add Logout URI</h2>
+							clientId: params.clientId,
+						})}
+					>
+						<div mix={[s.field]}>
+							<label mix={[s.label]} htmlFor="uri">
+								Logout URI
+							</label>
+							<input
+								mix={[s.control]}
+								type="url"
+								id="uri"
+								name="uri"
+								required
+								placeholder="https://myapp.com/logout"
+							/>
+							<p mix={[s.mutedXs]}>The URL where users will be redirected after logout</p>
+						</div>
 
-							<form
-								method="POST"
-								action="${routes.dashboard.tenants.clients["logout-uris"].create.href({
-									tenantId: tenant.id,
-									clientId: params.clientId,
-								})}"
-								class="bg-white rounded-lg border p-6 space-y-4 max-w-lg"
-							>
-								<div>
-									<label class="block text-sm font-medium text-gray-700 mb-1" for="uri"
-										>Logout URI</label
-									>
-									<input
-										type="url"
-										id="uri"
-										name="uri"
-										required
-										class="w-full border rounded-lg px-3 py-2"
-										placeholder="https://myapp.com/logout"
-									/>
-									<p class="text-gray-500 text-xs mt-1">
-										The URL where users will be redirected after logout
-									</p>
-								</div>
+						<div mix={[s.field]}>
+							<label mix={[s.label]} htmlFor="type">
+								Type
+							</label>
+							<select mix={[s.selectControl]} id="type" name="type" required>
+								<option value="post_logout">Post-Logout Redirect</option>
+								<option value="backchannel">Back-Channel Logout</option>
+								<option value="frontchannel">Front-Channel Logout</option>
+							</select>
+							<p mix={[s.mutedXs]}>
+								Post-logout: Browser redirect after logout
+								<br />
+								Back-channel: Server-to-server logout notification
+								<br />
+								Front-channel: Hidden iframe logout notification
+							</p>
+						</div>
 
-								<div>
-									<label class="block text-sm font-medium text-gray-700 mb-1" for="type"
-										>Type</label
-									>
-									<select id="type" name="type" required class="w-full border rounded-lg px-3 py-2">
-										<option value="post_logout">Post-Logout Redirect</option>
-										<option value="backchannel">Back-Channel Logout</option>
-										<option value="frontchannel">Front-Channel Logout</option>
-									</select>
-									<p class="text-gray-500 text-xs mt-1">
-										Post-logout: Browser redirect after logout<br />
-										Back-channel: Server-to-server logout notification<br />
-										Front-channel: Hidden iframe logout notification
-									</p>
-								</div>
+						<div mix={[s.field]}>
+							<label mix={[s.label]} htmlFor="environment">
+								Environment (optional)
+							</label>
+							<select mix={[s.selectControl]} id="environment" name="environment">
+								<option value="">Any</option>
+								<option value="development">Development</option>
+								<option value="staging">Staging</option>
+								<option value="production">Production</option>
+							</select>
+						</div>
 
-								<div>
-									<label class="block text-sm font-medium text-gray-700 mb-1" for="environment"
-										>Environment (optional)</label
-									>
-									<select
-										id="environment"
-										name="environment"
-										class="w-full border rounded-lg px-3 py-2"
-									>
-										<option value="">Any</option>
-										<option value="development">Development</option>
-										<option value="staging">Staging</option>
-										<option value="production">Production</option>
-									</select>
-								</div>
-
-								<button
-									type="submit"
-									class="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700"
-								>
-									Add Logout URI
-								</button>
-							</form>
-						`,
-					}),
-				),
+						<button mix={[s.button, s.buttonBlock]} type="submit">
+							Add Logout URI
+						</button>
+					</form>
+				</Document>,
 			);
 		},
 	),

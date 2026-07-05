@@ -1,22 +1,32 @@
-import { html as htmlResponse } from "@pkg/http/response";
+/**
+ * Tenant client redirect-URIs controller: renders the add form and creates a redirect
+ * URI, then redirects back to the client. Edit/update are unsupported (redirect
+ * no-ops) and destroy removes a URI. Rendering uses `remix/ui` JSX via `ctx.render`.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { isFailure } from "@pkg/result";
 import { validate } from "@pkg/validate";
-import * as s from "remix/data-schema";
+import { getContext } from "remix/async-context-middleware";
+import * as ds from "remix/data-schema";
 import { createAction } from "remix/fetch-router";
-import { html } from "remix/html-template";
 
-import { layout } from "~/resources/layouts/document";
+import { Document } from "~/app/views/document";
+import * as s from "~/app/views/styles";
 import routes from "~/routes/web";
 
-let CreateRedirectUriSchema = s.object({
-	uri: s.string(),
-	environment: s.optional(s.string()),
+let CreateRedirectUriSchema = ds.object({
+	uri: ds.string(),
+	environment: ds.optional(ds.string()),
 });
 
 export default {
 	new: createAction(
 		routes.dashboard.tenants.clients["redirect-uris"].new,
 		async ({ params, tenant, tenantApi, logger }) => {
+			let ctx = getContext();
 			let log = logger.loader(
 				`/dashboard/tenants/${tenant.id}/clients/${params.clientId}/redirect-uris/new`,
 			);
@@ -28,73 +38,59 @@ export default {
 
 			log.info("New redirect URI form loaded", { tenantId: tenant.id, clientId: params.clientId });
 
-			return htmlResponse(
-				String(
-					layout({
-						title: `New Redirect URI - ${client.name}`,
-						tenant,
-						backLink: routes.dashboard.tenants.clients.show.href({
+			return ctx.render(
+				<Document
+					title={`New Redirect URI - ${client.name}`}
+					tenant={tenant}
+					backLink={routes.dashboard.tenants.clients.show.href({
+						tenantId: tenant.id,
+						id: params.clientId,
+					})}
+					backText={client.name}
+				>
+					<h2 mix={[s.pageTitle]}>Add Redirect URI</h2>
+
+					<form
+						mix={[s.form]}
+						method="post"
+						action={routes.dashboard.tenants.clients["redirect-uris"].create.href({
 							tenantId: tenant.id,
-							id: params.clientId,
-						}),
-						backText: client.name,
-						content: html`
-							<h2 class="text-2xl font-bold mb-6">Add Redirect URI</h2>
+							clientId: params.clientId,
+						})}
+					>
+						<div mix={[s.field]}>
+							<label mix={[s.label]} htmlFor="uri">
+								Redirect URI
+							</label>
+							<input
+								mix={[s.control]}
+								type="url"
+								id="uri"
+								name="uri"
+								required
+								placeholder="https://myapp.com/callback"
+							/>
+							<p mix={[s.mutedXs]}>The URL where users will be redirected after authentication</p>
+						</div>
 
-							<form
-								method="POST"
-								action="${routes.dashboard.tenants.clients["redirect-uris"].create.href({
-									tenantId: tenant.id,
-									clientId: params.clientId,
-								})}"
-								class="bg-white rounded-lg border p-6 space-y-4 max-w-lg"
-							>
-								<div>
-									<label class="block text-sm font-medium text-gray-700 mb-1" for="uri"
-										>Redirect URI</label
-									>
-									<input
-										type="url"
-										id="uri"
-										name="uri"
-										required
-										class="w-full border rounded-lg px-3 py-2"
-										placeholder="https://myapp.com/callback"
-									/>
-									<p class="text-gray-500 text-xs mt-1">
-										The URL where users will be redirected after authentication
-									</p>
-								</div>
+						<div mix={[s.field]}>
+							<label mix={[s.label]} htmlFor="environment">
+								Environment (optional)
+							</label>
+							<select mix={[s.selectControl]} id="environment" name="environment">
+								<option value="">Any</option>
+								<option value="development">Development</option>
+								<option value="staging">Staging</option>
+								<option value="production">Production</option>
+							</select>
+							<p mix={[s.mutedXs]}>Restrict this URI to a specific environment</p>
+						</div>
 
-								<div>
-									<label class="block text-sm font-medium text-gray-700 mb-1" for="environment"
-										>Environment (optional)</label
-									>
-									<select
-										id="environment"
-										name="environment"
-										class="w-full border rounded-lg px-3 py-2"
-									>
-										<option value="">Any</option>
-										<option value="development">Development</option>
-										<option value="staging">Staging</option>
-										<option value="production">Production</option>
-									</select>
-									<p class="text-gray-500 text-xs mt-1">
-										Restrict this URI to a specific environment
-									</p>
-								</div>
-
-								<button
-									type="submit"
-									class="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700"
-								>
-									Add Redirect URI
-								</button>
-							</form>
-						`,
-					}),
-				),
+						<button mix={[s.button, s.buttonBlock]} type="submit">
+							Add Redirect URI
+						</button>
+					</form>
+				</Document>,
 			);
 		},
 	),

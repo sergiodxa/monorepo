@@ -1,16 +1,25 @@
-import { html as htmlResponse } from "@pkg/http/response";
+/**
+ * Tenant billing controller: renders the subscription/usage/pricing page and handles
+ * billing portal, checkout, and cancel actions. Rendering uses `remix/ui` JSX via
+ * `ctx.render`; all subscription logic, redirects, and status codes are preserved.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { Location } from "@pkg/location";
 import { inject } from "@pkg/service-container";
 import { env } from "cloudflare:workers";
 import { getContext } from "remix/async-context-middleware";
 import { Database } from "remix/data-table";
 import { createController } from "remix/fetch-router";
-import { html } from "remix/html-template";
 
 import tenantOwner from "~/app/http/middleware/tenant-owner";
 import Subscription from "~/app/models/subscription";
 import AnalyticsService from "~/app/services/analytics";
-import { layout } from "~/resources/layouts/document";
+import { SubscriptionBadge } from "~/app/views/components";
+import { Document } from "~/app/views/document";
+import * as s from "~/app/views/styles";
 import routes from "~/routes/web";
 
 export default createController(routes.dashboard.tenants.billing, {
@@ -18,7 +27,8 @@ export default createController(routes.dashboard.tenants.billing, {
 
 	actions: {
 		index: inject([Database] as const, async (db) => {
-			let { request, tenant, logger } = getContext();
+			let ctx = getContext();
+			let { request, tenant, logger } = ctx;
 			let log = logger.loader(`/dashboard/tenants/${tenant.id}/billing`);
 
 			let url = new URL(request.url);
@@ -58,175 +68,140 @@ export default createController(routes.dashboard.tenants.billing, {
 			let additionalMau = Math.max(0, mau - includedMau);
 			let estimatedCost = 5 + additionalMau * 0.01;
 
-			let blockedBanner = blockedReason
-				? html`
-						<div class="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
-							<p class="text-red-800 font-medium">Access Restricted</p>
-							<p class="text-red-700 text-sm mt-1">${getBlockedMessage(blockedReason)}</p>
-						</div>
-					`
-				: null;
+			let portalAction = String(
+				new Location({
+					pathname: routes.dashboard.tenants.billing.action.href({ tenantId: tenant.id }),
+					search: new URLSearchParams({ action: "portal" }),
+				}),
+			);
+			let checkoutAction = String(
+				new Location({
+					pathname: routes.dashboard.tenants.billing.action.href({ tenantId: tenant.id }),
+					search: new URLSearchParams({ action: "checkout" }),
+				}),
+			);
 
-			let successBanner = showSuccess
-				? html`
-						<div class="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
-							<p class="text-green-800 font-medium">Subscription activated successfully!</p>
-							<p class="text-green-700 text-sm mt-1">
+			return ctx.render(
+				<Document title={`Billing - ${tenant.name}`} tenant={tenant}>
+					<h2 mix={[s.pageTitle]}>Billing</h2>
+					<p mix={[s.lead]}>Manage your subscription and billing settings.</p>
+
+					{blockedReason && (
+						<div mix={[s.noticeRed]}>
+							<p mix={[s.noticeRedTitle]}>Access Restricted</p>
+							<p mix={[s.noticeRedText]}>{getBlockedMessage(blockedReason)}</p>
+						</div>
+					)}
+
+					{showSuccess && (
+						<div mix={[s.noticeGreen]}>
+							<p mix={[s.noticeGreenTitle]}>Subscription activated successfully!</p>
+							<p mix={[s.noticeGreenText]}>
 								Thank you for subscribing. Your subscription is now active.
 							</p>
 						</div>
-					`
-				: null;
+					)}
 
-			let subscriptionSection = subscription
-				? html`
-						<div class="flex items-center gap-3 mb-4">
-							<span class="text-2xl font-bold">Auth SaaS</span>
-							<span
-								class="px-2 py-1 text-sm rounded ${Subscription.getStatusColor(
-									subscription.status,
-								)}"
-							>
-								${Subscription.getStatusLabel(subscription.status)}
-							</span>
+					<section mix={[s.section]}>
+						<h3 mix={[s.cardTitle]}>Current Plan</h3>
+						{subscription ? (
+							<>
+								<div mix={[s.inlineRow]} style="margin-bottom:1rem">
+									<span mix={[s.bigNumber]}>Auth SaaS</span>
+									<SubscriptionBadge status={subscription.status}>
+										{Subscription.getStatusLabel(subscription.status)}
+									</SubscriptionBadge>
+								</div>
+								{periodStart && periodEnd && (
+									<p mix={[s.mutedSmall]}>
+										Current period: {periodStart} - {periodEnd}
+									</p>
+								)}
+							</>
+						) : (
+							<p mix={[s.muted]}>No subscription found. Please contact support.</p>
+						)}
+					</section>
+
+					<section mix={[s.section]}>
+						<h3 mix={[s.cardTitle]}>Pricing</h3>
+						<div mix={[s.stack]} style="gap:1rem">
+							<div mix={[s.card]}>
+								<div mix={[s.pricingRow]}>
+									<span mix={[s.cardTitle]} style="margin:0">
+										Base Plan
+									</span>
+									<span mix={[s.bigNumber]} style="font-size:1.125rem">
+										$5/month
+									</span>
+								</div>
+								<p mix={[s.mutedSmall]}>Includes 1,000 MAU</p>
+							</div>
+							<div mix={[s.card]}>
+								<div mix={[s.pricingRow]}>
+									<span mix={[s.cardTitle]} style="margin:0">
+										Additional MAU
+									</span>
+									<span mix={[s.bigNumber]} style="font-size:1.125rem">
+										$0.01/MAU
+									</span>
+								</div>
+								<p mix={[s.mutedSmall]}>Charged based on usage above 1,000 MAU</p>
+							</div>
 						</div>
-						${periodStart && periodEnd
-							? html`<p class="text-gray-500 text-sm">
-									Current period: ${periodStart} - ${periodEnd}
-								</p>`
-							: null}
-					`
-				: html` <p class="text-gray-500">No subscription found. Please contact support.</p> `;
+					</section>
 
-			let usageSection =
-				mau > 0
-					? html`
-							<div class="mt-4 pt-4 border-t">
-								<p class="text-sm text-gray-600">
-									<span class="font-medium">Included:</span> ${Math.min(
-										mau,
-										includedMau,
-									).toLocaleString()}
-									MAU
+					<section mix={[s.section]}>
+						<h3 mix={[s.cardTitle]}>Usage This Month</h3>
+						<div mix={[s.hugeNumber]}>{mau.toLocaleString()}</div>
+						<p mix={[s.mutedSmall]}>Monthly Active Users</p>
+						{mau > 0 ? (
+							<div mix={[s.usageBox]}>
+								<p mix={[s.mutedSmall]}>
+									<strong>Included:</strong> {Math.min(mau, includedMau).toLocaleString()} MAU
 								</p>
-								${additionalMau > 0
-									? html`
-											<p class="text-sm text-gray-600">
-												<span class="font-medium">Additional:</span>
-												${additionalMau.toLocaleString()} MAU @ $0.01/each =
-												$${(additionalMau * 0.01).toFixed(2)}
-											</p>
-										`
-									: null}
-								<p class="text-sm font-medium text-gray-900 mt-2">
-									Estimated cost: $${estimatedCost.toFixed(2)}
+								{additionalMau > 0 && (
+									<p mix={[s.mutedSmall]}>
+										<strong>Additional:</strong> {additionalMau.toLocaleString()} MAU @ $0.01/each ={" "}
+										${(additionalMau * 0.01).toFixed(2)}
+									</p>
+								)}
+								<p mix={[s.mutedSmall]} style="font-weight:500;color:#111827;margin-top:0.5rem">
+									Estimated cost: ${estimatedCost.toFixed(2)}
 								</p>
 							</div>
-						`
-					: html`
-							<p class="text-gray-400 text-xs mt-2">
-								Usage tracking will begin when users start authenticating.
-							</p>
-						`;
+						) : (
+							<p mix={[s.helpXs]}>Usage tracking will begin when users start authenticating.</p>
+						)}
+					</section>
 
-			let manageSection = subscription?.polar_customer_id
-				? html`
-						<section class="bg-white rounded-lg border p-6">
-							<h3 class="font-semibold mb-4">Manage Subscription</h3>
-							<p class="text-gray-500 mb-4">
+					{subscription?.polar_customer_id ? (
+						<section mix={[s.section]}>
+							<h3 mix={[s.cardTitle]}>Manage Subscription</h3>
+							<p mix={[s.lead]}>
 								Access your billing portal to update payment methods, view invoices, or manage your
 								subscription.
 							</p>
-							<form
-								method="POST"
-								action="${String(
-									new Location({
-										pathname: routes.dashboard.tenants.billing.action.href({ tenantId: tenant.id }),
-										search: new URLSearchParams({ action: "portal" }),
-									}),
-								)}"
-							>
-								<button
-									type="submit"
-									class="bg-gray-900 text-white px-4 py-2 rounded-lg hover:bg-gray-800"
-								>
+							<form method="post" action={portalAction}>
+								<button mix={[s.button, s.buttonDark]} type="submit">
 									Open Billing Portal
 								</button>
 							</form>
 						</section>
-					`
-				: html`
-						<section class="bg-blue-50 rounded-lg border border-blue-200 p-6">
-							<h3 class="font-semibold text-blue-900 mb-2">Start Your Subscription</h3>
-							<p class="text-blue-800 mb-4">
+					) : (
+						<section mix={[s.sectionBlue]}>
+							<h3 mix={[s.sectionBlueTitle]}>Start Your Subscription</h3>
+							<p mix={[s.sectionBlueText]}>
 								Subscribe to Auth SaaS to unlock all features and continue using the service.
 							</p>
-							<form
-								method="POST"
-								action="${String(
-									new Location({
-										pathname: routes.dashboard.tenants.billing.action.href({ tenantId: tenant.id }),
-										search: new URLSearchParams({ action: "checkout" }),
-									}),
-								)}"
-							>
-								<button
-									type="submit"
-									class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
-								>
+							<form method="post" action={checkoutAction}>
+								<button mix={[s.button]} type="submit">
 									Subscribe Now
 								</button>
 							</form>
 						</section>
-					`;
-
-			return htmlResponse(
-				String(
-					layout({
-						title: `Billing - ${tenant.name}`,
-						tenant,
-						content: html`
-							<h2 class="text-2xl font-bold mb-6">Billing</h2>
-							<p class="text-gray-500 mb-6">Manage your subscription and billing settings.</p>
-
-							${blockedBanner} ${successBanner}
-
-							<section class="bg-white rounded-lg border p-6 mb-6">
-								<h3 class="font-semibold mb-4">Current Plan</h3>
-								${subscriptionSection}
-							</section>
-
-							<section class="bg-white rounded-lg border p-6 mb-6">
-								<h3 class="font-semibold mb-4">Pricing</h3>
-								<div class="grid gap-4">
-									<div class="border rounded-lg p-4">
-										<div class="flex justify-between items-center mb-2">
-											<span class="font-medium">Base Plan</span>
-											<span class="text-lg font-bold">$5/month</span>
-										</div>
-										<p class="text-gray-500 text-sm">Includes 1,000 MAU</p>
-									</div>
-									<div class="border rounded-lg p-4">
-										<div class="flex justify-between items-center mb-2">
-											<span class="font-medium">Additional MAU</span>
-											<span class="text-lg font-bold">$0.01/MAU</span>
-										</div>
-										<p class="text-gray-500 text-sm">Charged based on usage above 1,000 MAU</p>
-									</div>
-								</div>
-							</section>
-
-							<section class="bg-white rounded-lg border p-6 mb-6">
-								<h3 class="font-semibold mb-4">Usage This Month</h3>
-								<div class="text-3xl font-bold mb-2">${mau.toLocaleString()}</div>
-								<p class="text-gray-500 text-sm">Monthly Active Users</p>
-								${usageSection}
-							</section>
-
-							${manageSection}
-						`,
-					}),
-				),
+					)}
+				</Document>,
 			);
 		}),
 
@@ -295,7 +270,9 @@ export default createController(routes.dashboard.tenants.billing, {
 
 			return new Response(null, {
 				status: 302,
-				headers: { Location: routes.dashboard.tenants.billing.index.href({ tenantId: tenant.id }) },
+				headers: {
+					Location: routes.dashboard.tenants.billing.index.href({ tenantId: tenant.id }),
+				},
 			});
 		}),
 	},
@@ -303,6 +280,10 @@ export default createController(routes.dashboard.tenants.billing, {
 
 /**
  * Get a human-readable message for the blocked reason.
+ * @param reason - The `blocked` query-param value indicating why access is restricted.
+ * @returns A user-facing explanation of the restriction.
+ * @example
+ * getBlockedMessage("unpaid"); // "Your subscription payment has failed. …"
  */
 function getBlockedMessage(reason: string): string {
 	switch (reason) {

@@ -1,9 +1,16 @@
 /**
- * Utilities for parsing user agent strings into human-readable device information.
+ * Utilities for parsing user agent strings into human-readable device information,
+ * plus a `remix/ui` device icon used by the dashboard user views.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
  */
 
-import { html, type SafeHtml } from "remix/html-template";
+import type { RemixNode } from "remix/ui";
 
+import * as s from "~/app/views/styles";
+
+/** Parsed browser, OS, and device type derived from a user agent string. */
 interface ParsedUserAgent {
 	browser: string;
 	os: string;
@@ -12,8 +19,10 @@ interface ParsedUserAgent {
 
 /**
  * Parses a user agent string into browser and OS information.
- * @param userAgent - Raw user agent string
- * @returns Parsed browser, OS, and device type
+ * @param userAgent - Raw user agent string.
+ * @returns Parsed browser, OS, and device type.
+ * @example
+ * parseUserAgent(navigator.userAgent); // { browser: "Chrome", os: "macOS", device: "desktop" }
  */
 export function parseUserAgent(userAgent: string | null): ParsedUserAgent {
 	if (!userAgent) {
@@ -27,6 +36,11 @@ export function parseUserAgent(userAgent: string | null): ParsedUserAgent {
 	return { browser, os, device };
 }
 
+/**
+ * Identifies the browser family from a user agent string.
+ * @param ua - Raw user agent string.
+ * @returns The browser display name, or a fallback when unknown.
+ */
 function parseBrowser(ua: string): string {
 	// Order matters - check more specific browsers first
 	if (ua.includes("Edg/")) return "Edge";
@@ -39,6 +53,11 @@ function parseBrowser(ua: string): string {
 	return "Unknown Browser";
 }
 
+/**
+ * Identifies the operating system from a user agent string.
+ * @param ua - Raw user agent string.
+ * @returns The OS display name, or a fallback when unknown.
+ */
 function parseOS(ua: string): string {
 	// Mobile OS first
 	if (ua.includes("iPhone") || ua.includes("iPad")) return "iOS";
@@ -56,6 +75,11 @@ function parseOS(ua: string): string {
 	return "Unknown OS";
 }
 
+/**
+ * Classifies the device form factor from a user agent string.
+ * @param ua - Raw user agent string.
+ * @returns The device type: desktop, mobile, tablet, or unknown.
+ */
 function parseDevice(ua: string): "desktop" | "mobile" | "tablet" | "unknown" {
 	if (ua.includes("iPad") || ua.includes("Tablet")) return "tablet";
 	if (ua.includes("Mobile") || ua.includes("iPhone") || ua.includes("Android")) {
@@ -70,8 +94,10 @@ function parseDevice(ua: string): "desktop" | "mobile" | "tablet" | "unknown" {
 
 /**
  * Formats parsed user agent into a display string like "Safari on macOS".
- * @param parsed - Parsed user agent info
- * @returns Formatted string
+ * @param parsed - Parsed user agent info.
+ * @returns Formatted "<browser> on <os>" string, or "Unknown device".
+ * @example
+ * formatUserAgent({ browser: "Safari", os: "macOS", device: "desktop" }); // "Safari on macOS"
  */
 export function formatUserAgent(parsed: ParsedUserAgent): string {
 	if (parsed.browser === "Unknown" && parsed.os === "Unknown") {
@@ -82,8 +108,10 @@ export function formatUserAgent(parsed: ParsedUserAgent): string {
 
 /**
  * Generates a passkey name from user agent, like "Chrome on macOS" or "Safari on iPhone".
- * @param userAgent - Raw user agent string
- * @returns Passkey name string
+ * @param userAgent - Raw user agent string.
+ * @returns A human-readable passkey name.
+ * @example
+ * generatePasskeyName(request.headers.get("user-agent")); // "Chrome on macOS"
  */
 export function generatePasskeyName(userAgent: string | null): string {
 	let parsed = parseUserAgent(userAgent);
@@ -91,55 +119,23 @@ export function generatePasskeyName(userAgent: string | null): string {
 }
 
 /**
- * Returns an SVG icon for the device type.
- * @param device - Device type
- * @returns SafeHtml SVG element
+ * Returns a `remix/ui` SVG icon for the device type.
+ * @param device - Device type to render an icon for.
+ * @returns A `remix/ui` node containing the device's SVG icon.
+ * @example
+ * <div>{getDeviceIcon(parsed.device)}</div>
  */
-export function getDeviceIcon(device: "desktop" | "mobile" | "tablet" | "unknown"): SafeHtml {
-	switch (device) {
-		case "desktop":
-			return html`
-				<svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-					<path
-						stroke-linecap="round"
-						stroke-linejoin="round"
-						stroke-width="1.5"
-						d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
-					/>
-				</svg>
-			`;
-		case "mobile":
-			return html`
-				<svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-					<path
-						stroke-linecap="round"
-						stroke-linejoin="round"
-						stroke-width="1.5"
-						d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"
-					/>
-				</svg>
-			`;
-		case "tablet":
-			return html`
-				<svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-					<path
-						stroke-linecap="round"
-						stroke-linejoin="round"
-						stroke-width="1.5"
-						d="M12 18h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"
-					/>
-				</svg>
-			`;
-		default:
-			return html`
-				<svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-					<path
-						stroke-linecap="round"
-						stroke-linejoin="round"
-						stroke-width="1.5"
-						d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
-					/>
-				</svg>
-			`;
-	}
+export function getDeviceIcon(device: "desktop" | "mobile" | "tablet" | "unknown"): RemixNode {
+	let path =
+		device === "mobile"
+			? "M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"
+			: device === "tablet"
+				? "M12 18h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"
+				: "M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z";
+
+	return (
+		<svg mix={[s.deviceIcon]} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+			<path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d={path} />
+		</svg>
+	);
 }

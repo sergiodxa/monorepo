@@ -21,6 +21,10 @@
 		// `remix/fetch-router` context augmentations to resolve; ignoreDeprecations
 		// silences the TS6 deprecation warning until the repo moves to TS7.
 		"ignoreDeprecations": "6.0",
+		// The render middleware pulls in `remix/render-middleware` (beta), whose `dist`
+		// is TypeScript source importing siblings with `.ts` extensions; allow it (safe
+		// under `noEmit`). Mirrors the sibling `blog-saas` app.
+		"allowImportingTsExtensions": true,
 		"baseUrl": ".",
 		"rootDirs": ["."],
 		"paths": {

@@ -1,22 +1,32 @@
-import { html as htmlResponse } from "@pkg/http/response";
+/**
+ * Tenant resource scopes controller: renders the add-scope form and appends a scope,
+ * then redirects. Scope edit/update are unsupported (redirect no-ops) and destroy
+ * removes a scope by index. Rendering uses `remix/ui` JSX via `ctx.render`.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { isFailure } from "@pkg/result";
 import { validate } from "@pkg/validate";
-import * as s from "remix/data-schema";
+import { getContext } from "remix/async-context-middleware";
+import * as ds from "remix/data-schema";
 import { createAction } from "remix/fetch-router";
-import { html } from "remix/html-template";
 
-import { layout } from "~/resources/layouts/document";
+import { Document } from "~/app/views/document";
+import * as s from "~/app/views/styles";
 import routes from "~/routes/web";
 
-let CreateScopeSchema = s.object({
-	name: s.string(),
-	description: s.optional(s.string()),
+let CreateScopeSchema = ds.object({
+	name: ds.string(),
+	description: ds.optional(ds.string()),
 });
 
 export default {
 	new: createAction(
 		routes.dashboard.tenants.resources.scopes.new,
 		async ({ params, tenant, tenantApi, logger }) => {
+			let ctx = getContext();
 			let log = logger.loader(
 				`/dashboard/tenants/${tenant.id}/resources/${params.resourceId}/scopes/new`,
 			);
@@ -28,68 +38,62 @@ export default {
 
 			log.info("New scope form loaded", { tenantId: tenant.id, resourceId: params.resourceId });
 
-			return htmlResponse(
-				String(
-					layout({
-						title: `New Scope - ${resource.name}`,
-						tenant,
-						backLink: routes.dashboard.tenants.resources.show.href({
+			return ctx.render(
+				<Document
+					title={`New Scope - ${resource.name}`}
+					tenant={tenant}
+					backLink={routes.dashboard.tenants.resources.show.href({
+						tenantId: tenant.id,
+						id: params.resourceId,
+					})}
+					backText={resource.name}
+				>
+					<h2 mix={[s.pageTitle]}>Add Scope</h2>
+
+					<form
+						mix={[s.form]}
+						method="post"
+						action={routes.dashboard.tenants.resources.scopes.create.href({
 							tenantId: tenant.id,
-							id: params.resourceId,
-						}),
-						backText: resource.name,
-						content: html`
-							<h2 class="text-2xl font-bold mb-6">Add Scope</h2>
+							resourceId: params.resourceId,
+						})}
+					>
+						<div mix={[s.field]}>
+							<label mix={[s.label]} htmlFor="name">
+								Scope Name
+							</label>
+							<input
+								mix={[s.control]}
+								type="text"
+								id="name"
+								name="name"
+								required
+								placeholder="read:users"
+							/>
+							<p mix={[s.mutedXs]}>
+								Use lowercase with colons for namespacing (e.g., read:users, write:posts)
+							</p>
+						</div>
 
-							<form
-								method="POST"
-								action="${routes.dashboard.tenants.resources.scopes.create.href({
-									tenantId: tenant.id,
-									resourceId: params.resourceId,
-								})}"
-								class="bg-white rounded-lg border p-6 space-y-4 max-w-lg"
-							>
-								<div>
-									<label class="block text-sm font-medium text-gray-700 mb-1" for="name"
-										>Scope Name</label
-									>
-									<input
-										type="text"
-										id="name"
-										name="name"
-										required
-										class="w-full border rounded-lg px-3 py-2"
-										placeholder="read:users"
-									/>
-									<p class="text-gray-500 text-xs mt-1">
-										Use lowercase with colons for namespacing (e.g., read:users, write:posts)
-									</p>
-								</div>
+						<div mix={[s.field]}>
+							<label mix={[s.label]} htmlFor="description">
+								Description
+							</label>
+							<textarea
+								mix={[s.textarea]}
+								id="description"
+								name="description"
+								rows={2}
+								placeholder="Read user profile information"
+							/>
+							<p mix={[s.mutedXs]}>Shown to users during consent</p>
+						</div>
 
-								<div>
-									<label class="block text-sm font-medium text-gray-700 mb-1" for="description"
-										>Description</label
-									>
-									<textarea
-										id="description"
-										name="description"
-										rows="2"
-										class="w-full border rounded-lg px-3 py-2"
-										placeholder="Read user profile information"
-									></textarea>
-									<p class="text-gray-500 text-xs mt-1">Shown to users during consent</p>
-								</div>
-
-								<button
-									type="submit"
-									class="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700"
-								>
-									Add Scope
-								</button>
-							</form>
-						`,
-					}),
-				),
+						<button mix={[s.button, s.buttonBlock]} type="submit">
+							Add Scope
+						</button>
+					</form>
+				</Document>,
 			);
 		},
 	),

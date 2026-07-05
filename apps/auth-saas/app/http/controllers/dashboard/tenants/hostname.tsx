@@ -1,23 +1,32 @@
-import { html as htmlResponse } from "@pkg/http/response";
+/**
+ * Tenant hostname controller: renders the default/custom hostname configuration page
+ * (with DNS validation details) and handles add/refresh/delete actions, re-pointing
+ * the tenant issuer as needed. Rendering uses `remix/ui` JSX via `ctx.render`.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { Location } from "@pkg/location";
 import { isFailure } from "@pkg/result";
 import { inject } from "@pkg/service-container";
 import { validate } from "@pkg/validate";
 import { getContext } from "remix/async-context-middleware";
-import * as s from "remix/data-schema";
+import * as ds from "remix/data-schema";
 import { Database } from "remix/data-table";
 import { createController } from "remix/fetch-router";
-import { html, type SafeHtml } from "remix/html-template";
 
 import type { HostMetadata } from "~/app/lib/host-metadata";
 
 import tenantOwner from "~/app/http/middleware/tenant-owner";
 import Hostname from "~/app/models/hostname";
-import { layout } from "~/resources/layouts/document";
+import { ConfirmButton } from "~/app/views/components";
+import { Document } from "~/app/views/document";
+import * as s from "~/app/views/styles";
 import routes from "~/routes/web";
 
-let AddHostnameSchema = s.object({
-	hostname: s.string(),
+let AddHostnameSchema = ds.object({
+	hostname: ds.string(),
 });
 
 export default createController(routes.dashboard.tenants.hostname, {
@@ -25,7 +34,8 @@ export default createController(routes.dashboard.tenants.hostname, {
 
 	actions: {
 		index: inject([Database] as const, async (db) => {
-			let { tenant, logger } = getContext();
+			let ctx = getContext();
+			let { tenant, logger } = ctx;
 			let log = logger.loader(`/dashboard/tenants/${tenant.id}/hostname`);
 
 			let hostnames = await Hostname.listByTenant(db, tenant.id);
@@ -35,156 +45,132 @@ export default createController(routes.dashboard.tenants.hostname, {
 			let defaultHostname = hostnames.find((h) => Boolean(h.is_default));
 			let customHostnames = hostnames.filter((h) => !h.is_default);
 
-			let customHostnamesList: SafeHtml | null =
-				customHostnames.length === 0
-					? html` <p class="text-gray-500">No custom hostnames configured.</p> `
-					: html`<ul class="space-y-4 mb-4">
-							${customHostnames.map(
-								(h) => html`
-									<li
-										class="flex justify-between items-center border-b pb-4 last:border-0 last:pb-0"
-									>
+			return ctx.render(
+				<Document title={`Hostname - ${tenant.name}`} tenant={tenant}>
+					<h2 mix={[s.pageTitle]}>Hostname Configuration</h2>
+					<p mix={[s.lead]}>Configure custom domains for your authentication endpoints.</p>
+
+					<section mix={[s.section]}>
+						<h3 mix={[s.cardTitle]}>Default Hostname</h3>
+						<div mix={[s.infoBox]}>
+							<code mix={[s.codePlain]} style="font-size:1.125rem">
+								{defaultHostname ? defaultHostname.hostname : "Not configured"}
+							</code>
+							<p mix={[s.mutedSmall]}>This is automatically assigned and cannot be changed.</p>
+						</div>
+					</section>
+
+					<section mix={[s.section]}>
+						<h3 mix={[s.cardTitle]}>Custom Hostnames</h3>
+						{customHostnames.length === 0 ? (
+							<p mix={[s.muted]}>No custom hostnames configured.</p>
+						) : (
+							<ul mix={[s.list]}>
+								{customHostnames.map((h) => (
+									<li mix={[s.listRowStart]} key={h.id} style="justify-content:space-between">
 										<div>
-											<code class="font-medium">${h.hostname}</code>
-											<div class="flex items-center gap-2 mt-1">
-												<span
-													class="px-2 py-0.5 text-xs rounded ${h.status === "active"
-														? "bg-green-100 text-green-800"
-														: "bg-yellow-100 text-yellow-800"}"
-												>
-													${h.status}
+											<code mix={[s.cardTitle, s.codePlain]}>{h.hostname}</code>
+											<div mix={[s.sessionMeta]}>
+												<span mix={[s.badge, h.status === "active" ? s.badgeGreen : s.badgeYellow]}>
+													{h.status}
 												</span>
-												${h.ssl_status
-													? html`<span class="text-gray-500 text-xs">SSL: ${h.ssl_status}</span>`
-													: null}
+												{h.ssl_status && <span mix={[s.mutedSmall]}>SSL: {h.ssl_status}</span>}
 											</div>
-											${h.status === "pending_validation" && h.validation_txt_name
-												? html`
-														<div class="mt-2 p-3 bg-yellow-50 rounded text-sm">
-															<p class="font-medium text-yellow-800">DNS Validation Required</p>
-															<p class="text-yellow-700 mt-1">Add this TXT record to your DNS:</p>
-															<div class="mt-2 font-mono text-xs bg-white p-2 rounded border">
-																<p><strong>Name:</strong> ${h.validation_txt_name}</p>
-																<p><strong>Value:</strong> ${h.validation_txt_value ?? ""}</p>
-															</div>
-														</div>
-													`
-												: null}
+											{h.status === "pending_validation" && h.validation_txt_name && (
+												<div mix={[s.validationBox]}>
+													<p mix={[s.noticeYellowStrong]}>DNS Validation Required</p>
+													<p mix={[s.noticeYellowStrong]} style="font-weight:400">
+														Add this TXT record to your DNS:
+													</p>
+													<div mix={[s.dnsBox]}>
+														<p>
+															<strong>Name:</strong> {h.validation_txt_name}
+														</p>
+														<p>
+															<strong>Value:</strong> {h.validation_txt_value ?? ""}
+														</p>
+													</div>
+												</div>
+											)}
 										</div>
-										<div class="flex gap-2">
-											${h.status !== "active"
-												? html`<form
-														method="POST"
-														action="${String(
-															new Location({
-																pathname: routes.dashboard.tenants.hostname.action.href({
-																	tenantId: tenant.id,
-																}),
-																search: new URLSearchParams({
-																	action: "refresh",
-																	hostnameId: h.id,
-																}),
+										<div mix={[s.actions]}>
+											{h.status !== "active" && (
+												<form
+													mix={[s.inlineFormEl]}
+													method="post"
+													action={String(
+														new Location({
+															pathname: routes.dashboard.tenants.hostname.action.href({
+																tenantId: tenant.id,
 															}),
-														)}"
-														class="inline"
-													>
-														<button type="submit" class="text-blue-600 hover:text-blue-800 text-sm">
-															Check Status
-														</button>
-													</form>`
-												: null}
+															search: new URLSearchParams({
+																action: "refresh",
+																hostnameId: h.id,
+															}),
+														}),
+													)}
+												>
+													<button mix={[s.linkBlueSm]} type="submit">
+														Check Status
+													</button>
+												</form>
+											)}
 											<form
-												method="POST"
-												action="${String(
+												mix={[s.inlineFormEl]}
+												method="post"
+												action={String(
 													new Location({
 														pathname: routes.dashboard.tenants.hostname.action.href({
 															tenantId: tenant.id,
 														}),
 														search: new URLSearchParams({ action: "delete", hostnameId: h.id }),
 													}),
-												)}"
-												class="inline"
+												)}
 											>
-												<button
-													type="submit"
-													class="text-red-600 hover:text-red-800 text-sm"
-													onclick="return confirm('Remove this hostname?')"
-												>
+												<ConfirmButton mix={s.linkRedSm} message="Remove this hostname?">
 													Remove
-												</button>
+												</ConfirmButton>
 											</form>
 										</div>
 									</li>
-								`,
-							)}
-						</ul>`;
+								))}
+							</ul>
+						)}
 
-			return htmlResponse(
-				String(
-					layout({
-						title: `Hostname - ${tenant.name}`,
-						tenant,
-						content: html`
-							<h2 class="text-2xl font-bold mb-6">Hostname Configuration</h2>
-							<p class="text-gray-500 mb-6">
-								Configure custom domains for your authentication endpoints.
-							</p>
+						<form
+							mix={[s.inlineForm]}
+							method="post"
+							action={routes.dashboard.tenants.hostname.action.href({ tenantId: tenant.id })}
+						>
+							<input
+								mix={[s.control, s.grow]}
+								type="text"
+								name="hostname"
+								placeholder="auth.yourdomain.com"
+								required
+							/>
+							<button mix={[s.button]} type="submit">
+								Add Hostname
+							</button>
+						</form>
+					</section>
 
-							<section class="bg-white rounded-lg border p-6 mb-6">
-								<h3 class="font-semibold mb-4">Default Hostname</h3>
-								<div class="bg-gray-50 rounded-lg p-4">
-									<code class="text-lg"
-										>${defaultHostname ? defaultHostname.hostname : "Not configured"}</code
-									>
-									<p class="text-gray-500 text-sm mt-1">
-										This is automatically assigned and cannot be changed.
-									</p>
-								</div>
-							</section>
-
-							<section class="bg-white rounded-lg border p-6 mb-6">
-								<h3 class="font-semibold mb-4">Custom Hostnames</h3>
-								${customHostnamesList}
-
-								<form
-									method="POST"
-									action="${routes.dashboard.tenants.hostname.action.href({ tenantId: tenant.id })}"
-									class="flex gap-2 mt-4"
-								>
-									<input
-										type="text"
-										name="hostname"
-										placeholder="auth.yourdomain.com"
-										required
-										class="flex-1 border rounded-lg px-3 py-2"
-									/>
-									<button
-										type="submit"
-										class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
-									>
-										Add Hostname
-									</button>
-								</form>
-							</section>
-
-							<section class="bg-blue-50 rounded-lg border border-blue-200 p-6">
-								<h3 class="font-semibold text-blue-900 mb-2">How to set up a custom hostname</h3>
-								<ol class="list-decimal list-inside text-blue-800 space-y-1 text-sm">
-									<li>Add your hostname using the form above</li>
-									<li>Add the TXT record shown to your DNS provider</li>
-									<li>
-										Add a CNAME record pointing to
-										<code class="bg-blue-100 px-1 rounded"
-											>${defaultHostname?.hostname ?? "your-tenant.auth.sergiodxa.com"}</code
-										>
-									</li>
-									<li>Wait for DNS propagation (may take up to 24 hours)</li>
-									<li>The hostname will automatically activate once validated</li>
-								</ol>
-							</section>
-						`,
-					}),
-				),
+					<section mix={[s.sectionBlue]}>
+						<h3 mix={[s.sectionBlueTitle]}>How to set up a custom hostname</h3>
+						<ol mix={[s.orderedList]}>
+							<li>Add your hostname using the form above</li>
+							<li>Add the TXT record shown to your DNS provider</li>
+							<li>
+								Add a CNAME record pointing to{" "}
+								<code mix={[s.code]}>
+									{defaultHostname?.hostname ?? "your-tenant.auth.sergiodxa.com"}
+								</code>
+							</li>
+							<li>Wait for DNS propagation (may take up to 24 hours)</li>
+							<li>The hostname will automatically activate once validated</li>
+						</ol>
+					</section>
+				</Document>,
 			);
 		}),
 
