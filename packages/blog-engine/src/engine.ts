@@ -12,6 +12,7 @@ import type { OIDCConfig } from "./auth/oidc";
 import appearance from "./appearance/controllers/cms";
 import assets from "./assets/controllers/assets";
 import { callback, login, logout } from "./auth/controllers/auth";
+import { authMiddleware } from "./auth/middleware/auth";
 import dashboard from "./cms/controllers/dashboard";
 import postTypes from "./post-types/controllers/cms";
 import posts from "./posts/controllers/cms";
@@ -55,6 +56,7 @@ export function createEngineRouter(deps: EngineRouterDeps) {
 		renderMiddleware as Middleware,
 		asyncContext(),
 		deps.sessionMiddleware,
+		authMiddleware as Middleware,
 		formData() as Middleware,
 		methodOverride(),
 	];

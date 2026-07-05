@@ -1,33 +1,14 @@
 import type { Handle, RemixNode } from "remix/ui";
 
 import { redirect } from "@pkg/http/response";
+import { finishExternalAuth, startExternalAuth } from "remix/auth";
 import { createAction, createController } from "remix/fetch-router";
 
 import routes from "../../routes";
 import * as s from "../../shared/components/styles";
 import { User } from "../../users/models/user";
-import {
-	getIdToken,
-	getSession,
-	login as signIn,
-	logout as signOut,
-	setIdToken,
-} from "../middleware/auth";
-import {
-	buildAuthorizationUrl,
-	createPkce,
-	exchangeCode,
-	resolveMetadata,
-	verifyIdToken,
-} from "../oidc";
-
-/** OIDC PKCE transaction stored in the session between login start and callback. */
-interface AuthTransaction {
-	provider: string;
-	state: string;
-	codeVerifier: string;
-	returnTo?: string;
-}
+import { getIdToken, login as signIn, logout as signOut, setIdToken } from "../middleware/auth";
+import { createProvider, resolveEndSessionEndpoint, toAuthProfile } from "../oidc";
 
 /** Standalone centered page shell for the auth screens. */
 function AuthPage(handle: Handle<{ title: string; error?: string; children: RemixNode }>) {
@@ -49,8 +30,13 @@ function AuthPage(handle: Handle<{ title: string; error?: string; children: Remi
 	};
 }
 
-function safeNext(value: string | null): string | undefined {
+function safeNext(value: string | null | undefined): string | undefined {
 	return value && value.startsWith("/") ? value : undefined;
+}
+
+/** The absolute `/auth/callback` URL for this request's host. */
+function callbackUri(request: Request): string {
+	return new URL(routes.auth.callback.href(), request.url).toString();
 }
 
 /** `/auth/login` — renders the sign-in screen (GET) and starts the flow (POST). */
@@ -75,83 +61,36 @@ export const login = createController(routes.auth.login, {
 		},
 
 		async action(ctx) {
-			let { request, oidc } = ctx;
-			let metadata = await resolveMetadata(oidc);
-			let pkce = await createPkce();
-			let state = crypto.randomUUID();
-			let redirectUri = new URL(routes.auth.callback.href(), request.url).toString();
-			let next = safeNext(new URL(request.url).searchParams.get("next"));
-
-			let transaction: AuthTransaction = {
-				provider: "oidc",
-				state,
-				codeVerifier: pkce.verifier,
-				returnTo: next,
-			};
-			getSession().set("__auth", transaction);
-
-			let authorizeUrl = buildAuthorizationUrl(metadata, {
-				clientId: oidc.clientId,
-				redirectUri,
-				scopes: oidc.scopes,
-				state,
-				challenge: pkce.challenge,
-			});
-			return redirect(authorizeUrl, { status: redirect.Status.SeeOther });
+			let provider = createProvider(ctx.oidc, callbackUri(ctx.request));
+			let next = safeNext(new URL(ctx.request.url).searchParams.get("next"));
+			// startExternalAuth stores the PKCE/state transaction in the session.
+			return startExternalAuth(provider, ctx, { returnTo: next });
 		},
 	},
 });
 
 /** GET /auth/callback — completes the flow and establishes the local session. */
 export const callback = createAction(routes.auth.callback, async (ctx) => {
-	let { db, request, oidc, logger } = ctx;
-	let log = logger.loader("/auth/callback");
-	let url = new URL(request.url);
-	let session = getSession();
-	let transaction = session.get("__auth") as AuthTransaction | undefined;
+	let log = ctx.logger.loader("/auth/callback");
 	let loginUrl = routes.auth.login.index.href();
-
-	let providerError = url.searchParams.get("error");
-	if (providerError) {
-		return redirect(`${loginUrl}?error=${encodeURIComponent(providerError)}`, {
-			status: redirect.Status.SeeOther,
-		});
-	}
-	if (!transaction) {
-		return redirect(`${loginUrl}?error=missing_transaction`, { status: redirect.Status.SeeOther });
-	}
-
-	let state = url.searchParams.get("state");
-	let code = url.searchParams.get("code");
-	session.unset("__auth");
-	if (!state || !code || state !== transaction.state) {
-		return redirect(`${loginUrl}?error=invalid_request`, { status: redirect.Status.SeeOther });
-	}
+	let provider = createProvider(ctx.oidc, callbackUri(ctx.request));
 
 	try {
-		let metadata = await resolveMetadata(oidc);
-		let redirectUri = new URL(routes.auth.callback.href(), request.url).toString();
-		let { idToken } = await exchangeCode(metadata, {
-			clientId: oidc.clientId,
-			clientSecret: oidc.clientSecret,
-			code,
-			codeVerifier: transaction.codeVerifier,
-			redirectUri,
+		let { result, returnTo } = await finishExternalAuth(provider, ctx);
+		let user = await User.findOrCreateFromAuthProfile(ctx.db, toAuthProfile(result.profile), {
+			admins: ctx.oidc.admins,
 		});
-		let profile = verifyIdToken(idToken, { issuer: oidc.issuer, clientId: oidc.clientId });
-		let user = await User.findOrCreateFromAuthProfile(db, profile, { admins: oidc.admins });
 		signIn(user);
-		setIdToken(idToken);
+		if (typeof result.tokens.idToken === "string") setIdToken(result.tokens.idToken);
 		log.info("Login completed", { userId: user.id });
+		let dest = safeNext(returnTo) ?? routes.cms.dashboard.href();
+		return redirect(dest, { status: redirect.Status.SeeOther });
 	} catch (error) {
 		log.error("Login failed", { error: String(error) });
 		return redirect(`${loginUrl}?error=authentication_failed`, {
 			status: redirect.Status.SeeOther,
 		});
 	}
-
-	let returnTo = safeNext(transaction.returnTo ?? null) ?? routes.cms.dashboard.href();
-	return redirect(returnTo, { status: redirect.Status.SeeOther });
 });
 
 /** `/auth/logout` — sign-out confirmation (GET) and session teardown (POST). */
@@ -171,14 +110,13 @@ export const logout = createController(routes.auth.logout, {
 		},
 
 		async action(ctx) {
-			let { request, oidc } = ctx;
 			let idToken = getIdToken();
-			let origin = new URL(request.url).origin;
-			let metadata = await resolveMetadata(oidc).catch(() => null);
+			let origin = new URL(ctx.request.url).origin;
+			let endSession = await resolveEndSessionEndpoint(ctx.oidc);
 			signOut();
 
-			if (metadata?.end_session_endpoint) {
-				let logoutUrl = new URL(metadata.end_session_endpoint);
+			if (endSession) {
+				let logoutUrl = new URL(endSession);
 				if (idToken) logoutUrl.searchParams.set("id_token_hint", idToken);
 				logoutUrl.searchParams.set("post_logout_redirect_uri", `${origin}/`);
 				return redirect(logoutUrl.toString(), {

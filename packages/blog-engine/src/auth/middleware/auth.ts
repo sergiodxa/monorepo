@@ -1,4 +1,5 @@
 import { getContext } from "remix/async-context-middleware";
+import { auth, Auth, createSessionAuthScheme } from "remix/auth-middleware";
 import { createContextKey } from "remix/fetch-router";
 import { Session } from "remix/session";
 
@@ -12,10 +13,32 @@ import { User } from "../../users/models/user";
 const USER_ID_KEY = "userId";
 const ID_TOKEN_KEY = "idToken";
 
-/** Cached per-request auth user (undefined = not yet resolved). */
-let authUserKey = createContextKey<SelectUser | null>();
 /** Cached per-request permission set. */
 let permissionsKey = createContextKey<Set<Permission>>();
+
+/**
+ * Auth middleware: resolves the signed-in user from the session via
+ * `createSessionAuthScheme`. The session id is read from the session (populated by
+ * the session middleware) and verified by loading the `User`; the result is exposed
+ * as `ctx.get(Auth)` / `ctx.auth`. Anonymous requests skip the DB read.
+ */
+export const authMiddleware = auth({
+	schemes: [
+		createSessionAuthScheme<SelectUser, string>({
+			read(session) {
+				let id = session.get(USER_ID_KEY);
+				return typeof id === "string" ? id : null;
+			},
+			verify(userId, context) {
+				return User.findById(context.db, userId);
+			},
+			invalidate(session) {
+				session.unset(USER_ID_KEY);
+				session.unset(ID_TOKEN_KEY);
+			},
+		}),
+	],
+});
 
 /** Returns the current request's session (requires the session middleware). */
 export function getSession(): Session {
@@ -24,16 +47,12 @@ export function getSession(): Session {
 	return ctx.get(Session) as Session;
 }
 
-/** Resolves (and caches) the authenticated user for this request, or null. */
-export async function getAuthUser(): Promise<SelectUser | null> {
+/** The authenticated user resolved by {@link authMiddleware}, or null. */
+export function getAuthUser(): SelectUser | null {
 	let ctx = getContext();
-	if (ctx.has(authUserKey)) return ctx.get(authUserKey) ?? null;
-
-	let session = getSession();
-	let userId = session.get(USER_ID_KEY);
-	let user = typeof userId === "string" ? await User.findById(ctx.db, userId) : null;
-	ctx.set(authUserKey, user);
-	return user;
+	if (!ctx.has(Auth)) return null;
+	let state = ctx.get(Auth);
+	return state.ok ? (state.identity as SelectUser) : null;
 }
 
 /** Resolves (and caches) the current user's permission set (empty when anon). */
@@ -41,15 +60,15 @@ export async function getPermissions(): Promise<Set<Permission>> {
 	let ctx = getContext();
 	if (ctx.has(permissionsKey)) return ctx.get(permissionsKey) ?? new Set<Permission>();
 
-	let user = await getAuthUser();
+	let user = getAuthUser();
 	let permissions = user ? await Role.permissionsFor(ctx.db, user.role_id) : new Set<Permission>();
 	ctx.set(permissionsKey, permissions);
 	return permissions;
 }
 
 /** True when the request has an authenticated user. */
-export async function isAuthenticated(): Promise<boolean> {
-	return (await getAuthUser()) !== null;
+export function isAuthenticated(): boolean {
+	return getAuthUser() !== null;
 }
 
 /** Signs a user in: rotates the session id and stores the user id. */
@@ -57,16 +76,11 @@ export function login(user: SelectUser): void {
 	let session = getSession();
 	session.regenerateId();
 	session.set(USER_ID_KEY, user.id);
-	getContext().set(authUserKey, user);
 }
 
-/** Destroys the session and clears cached auth state. */
+/** Destroys the session. */
 export function logout(): void {
-	let session = getSession();
-	session.destroy();
-	let ctx = getContext();
-	ctx.set(authUserKey, null);
-	ctx.set(permissionsKey, new Set<Permission>());
+	getSession().destroy();
 }
 
 /** Reads the stored OIDC id token (for logout `id_token_hint`). */
