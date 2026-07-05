@@ -1,3 +1,6 @@
+import { getServiceContainer } from "@pkg/service-container";
+import { Database } from "remix/data-table";
+
 import type { TenantMemberRole } from "~/app/models/tenant-member";
 
 import middleware from "~/app/lib/middleware";
@@ -33,8 +36,10 @@ export default middleware(async (context, next) => {
 		return new Response("Tenant ID required", { status: 400 });
 	}
 
+	let db = getServiceContainer().get(Database);
+
 	let tenant = await Tenant.showWithAccess(
-		context.db,
+		db,
 		tenantId,
 		context.platformSession.subjectId,
 		context.platformSession.email,

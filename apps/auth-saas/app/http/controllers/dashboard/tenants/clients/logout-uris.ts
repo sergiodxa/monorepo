@@ -2,9 +2,9 @@ import { html as htmlResponse } from "@pkg/http/response";
 import { isFailure } from "@pkg/result";
 import { validate } from "@pkg/validate";
 import * as s from "remix/data-schema";
+import { createAction } from "remix/fetch-router";
 import { html } from "remix/html-template";
 
-import action from "~/app/lib/action";
 import { layout } from "~/resources/layouts/document";
 import routes from "~/routes/web";
 
@@ -15,7 +15,8 @@ let CreateLogoutUriSchema = s.object({
 });
 
 export default {
-	new: action<"GET", "/dashboard/tenants/:tenantId/clients/:clientId/logout-uris/new">(
+	new: createAction(
+		routes.dashboard.tenants.clients["logout-uris"].new,
 		async ({ params, tenant, tenantApi, logger }) => {
 			let log = logger.loader(
 				`/dashboard/tenants/${tenant.id}/clients/${params.clientId}/logout-uris/new`,
@@ -112,7 +113,8 @@ export default {
 		},
 	),
 
-	create: action<"POST", "/dashboard/tenants/:tenantId/clients/:clientId/logout-uris">(
+	create: createAction(
+		routes.dashboard.tenants.clients["logout-uris"].create,
 		async ({ formData, params, tenant, tenantApi, logger }) => {
 			let log = logger.action(
 				`/dashboard/tenants/${tenant.id}/clients/${params.clientId}/logout-uris`,
@@ -146,7 +148,8 @@ export default {
 		},
 	),
 
-	edit: action<"GET", "/dashboard/tenants/:tenantId/clients/:clientId/logout-uris/:id/edit">(
+	edit: createAction(
+		routes.dashboard.tenants.clients["logout-uris"].edit,
 		async ({ params, tenant, logger }) => {
 			let log = logger.loader(
 				`/dashboard/tenants/${tenant.id}/clients/${params.clientId}/logout-uris/${params.id}/edit`,
@@ -165,7 +168,8 @@ export default {
 		},
 	),
 
-	update: action<"PUT", "/dashboard/tenants/:tenantId/clients/:clientId/logout-uris/:id">(
+	update: createAction(
+		routes.dashboard.tenants.clients["logout-uris"].update,
 		async ({ params, tenant, logger }) => {
 			let log = logger.action(
 				`/dashboard/tenants/${tenant.id}/clients/${params.clientId}/logout-uris/${params.id}`,
@@ -184,7 +188,8 @@ export default {
 		},
 	),
 
-	destroy: action<"DELETE", "/dashboard/tenants/:tenantId/clients/:clientId/logout-uris/:id">(
+	destroy: createAction(
+		routes.dashboard.tenants.clients["logout-uris"].destroy,
 		async ({ params, tenant, tenantApi, logger }) => {
 			let log = logger.action(
 				`/dashboard/tenants/${tenant.id}/clients/${params.clientId}/logout-uris/${params.id}`,

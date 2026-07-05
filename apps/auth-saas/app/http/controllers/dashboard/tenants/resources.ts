@@ -2,9 +2,9 @@ import { html as htmlResponse } from "@pkg/http/response";
 import { isFailure } from "@pkg/result";
 import { validate } from "@pkg/validate";
 import * as s from "remix/data-schema";
+import { createAction } from "remix/fetch-router";
 import { html } from "remix/html-template";
 
-import action from "~/app/lib/action";
 import { layout } from "~/resources/layouts/document";
 import routes from "~/routes/web";
 
@@ -21,7 +21,8 @@ let UpdateResourceSchema = s.object({
 });
 
 export default {
-	index: action<"GET", "/dashboard/tenants/:tenantId/resources">(
+	index: createAction(
+		routes.dashboard.tenants.resources.index,
 		async ({ tenant, tenantApi, logger }) => {
 			let log = logger.loader(`/dashboard/tenants/${tenant.id}/resources`);
 
@@ -86,7 +87,8 @@ export default {
 		},
 	),
 
-	show: action<"GET", "/dashboard/tenants/:tenantId/resources/:id">(
+	show: createAction(
+		routes.dashboard.tenants.resources.show,
 		async ({ params, tenant, tenantApi, logger }) => {
 			let log = logger.loader(`/dashboard/tenants/${tenant.id}/resources/${params.id}`);
 
@@ -205,7 +207,7 @@ export default {
 		},
 	),
 
-	new: action<"GET", "/dashboard/tenants/:tenantId/resources/new">(({ tenant, logger }) => {
+	new: createAction(routes.dashboard.tenants.resources.new, ({ tenant, logger }) => {
 		let log = logger.loader(`/dashboard/tenants/${tenant.id}/resources/new`);
 		log.info("New resource form loaded", { tenantId: tenant.id });
 
@@ -277,7 +279,8 @@ export default {
 		);
 	}),
 
-	create: action<"POST", "/dashboard/tenants/:tenantId/resources">(
+	create: createAction(
+		routes.dashboard.tenants.resources.create,
 		async ({ formData, tenant, tenantApi, logger }) => {
 			let log = logger.action(`/dashboard/tenants/${tenant.id}/resources`);
 
@@ -307,7 +310,8 @@ export default {
 		},
 	),
 
-	edit: action<"GET", "/dashboard/tenants/:tenantId/resources/:id/edit">(
+	edit: createAction(
+		routes.dashboard.tenants.resources.edit,
 		async ({ params, tenant, tenantApi, logger }) => {
 			let log = logger.loader(`/dashboard/tenants/${tenant.id}/resources/${params.id}/edit`);
 
@@ -400,7 +404,8 @@ ${resource.description ?? ""}</textarea
 		},
 	),
 
-	update: action<"PUT", "/dashboard/tenants/:tenantId/resources/:id">(
+	update: createAction(
+		routes.dashboard.tenants.resources.update,
 		async ({ formData, params, tenant, tenantApi, logger }) => {
 			let log = logger.action(`/dashboard/tenants/${tenant.id}/resources/${params.id}`);
 
@@ -432,7 +437,8 @@ ${resource.description ?? ""}</textarea
 		},
 	),
 
-	destroy: action<"DELETE", "/dashboard/tenants/:tenantId/resources/:id">(
+	destroy: createAction(
+		routes.dashboard.tenants.resources.destroy,
 		async ({ params, tenant, tenantApi, logger }) => {
 			let log = logger.action(`/dashboard/tenants/${tenant.id}/resources/${params.id}`);
 

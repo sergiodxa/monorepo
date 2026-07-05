@@ -3,6 +3,7 @@ import type { Database } from "remix/data-table";
 import { column as c, table } from "remix/data-table";
 
 import { RecordNotFoundError } from "~/app/lib/db-errors";
+import Hostname from "~/app/models/hostname";
 
 import type { TenantMemberRole } from "./tenant-member";
 
@@ -202,12 +203,18 @@ export default class Tenant {
 			},
 		);
 
+		// Suspending or deleting a tenant must stop its hostnames from routing to it.
+		if (data.status === "suspended" || data.status === "deleted") {
+			await Hostname.invalidateTenantCache(db, id);
+		}
+
 		return (await db.findOne(Tenant.table, { where: { id } }))!;
 	}
 
 	static async destroy(db: Database, id: string) {
 		let tenant = await db.findOne(Tenant.table, { where: { id } });
 		if (!tenant) throw new RecordNotFoundError(Tenant.table, { id });
+		await Hostname.invalidateTenantCache(db, id);
 		return await db.delete(Tenant.table, { id });
 	}
 

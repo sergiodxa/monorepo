@@ -1,8 +1,10 @@
-import action from "~/app/lib/action";
+import { createAction } from "remix/fetch-router";
+
 import routes from "~/routes/web";
 
 export default {
-	destroy: action<"DELETE", "/dashboard/tenants/:tenantId/users/:userId/sessions/:id">(
+	destroy: createAction(
+		routes.dashboard.tenants.users.sessions.destroy,
 		async ({ params, tenant, tenantApi, logger }) => {
 			let log = logger.action(
 				`/dashboard/tenants/${tenant.id}/users/${params.userId}/sessions/${params.id}`,

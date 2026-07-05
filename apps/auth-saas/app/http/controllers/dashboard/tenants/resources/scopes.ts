@@ -2,9 +2,9 @@ import { html as htmlResponse } from "@pkg/http/response";
 import { isFailure } from "@pkg/result";
 import { validate } from "@pkg/validate";
 import * as s from "remix/data-schema";
+import { createAction } from "remix/fetch-router";
 import { html } from "remix/html-template";
 
-import action from "~/app/lib/action";
 import { layout } from "~/resources/layouts/document";
 import routes from "~/routes/web";
 
@@ -14,7 +14,8 @@ let CreateScopeSchema = s.object({
 });
 
 export default {
-	new: action<"GET", "/dashboard/tenants/:tenantId/resources/:resourceId/scopes/new">(
+	new: createAction(
+		routes.dashboard.tenants.resources.scopes.new,
 		async ({ params, tenant, tenantApi, logger }) => {
 			let log = logger.loader(
 				`/dashboard/tenants/${tenant.id}/resources/${params.resourceId}/scopes/new`,
@@ -93,7 +94,8 @@ export default {
 		},
 	),
 
-	create: action<"POST", "/dashboard/tenants/:tenantId/resources/:resourceId/scopes">(
+	create: createAction(
+		routes.dashboard.tenants.resources.scopes.create,
 		async ({ formData, params, tenant, tenantApi, logger }) => {
 			let log = logger.action(
 				`/dashboard/tenants/${tenant.id}/resources/${params.resourceId}/scopes`,
@@ -140,7 +142,8 @@ export default {
 		},
 	),
 
-	edit: action<"GET", "/dashboard/tenants/:tenantId/resources/:resourceId/scopes/:id/edit">(
+	edit: createAction(
+		routes.dashboard.tenants.resources.scopes.edit,
 		async ({ params, tenant, logger }) => {
 			let log = logger.loader(
 				`/dashboard/tenants/${tenant.id}/resources/${params.resourceId}/scopes/${params.id}/edit`,
@@ -159,7 +162,8 @@ export default {
 		},
 	),
 
-	update: action<"PUT", "/dashboard/tenants/:tenantId/resources/:resourceId/scopes/:id">(
+	update: createAction(
+		routes.dashboard.tenants.resources.scopes.update,
 		async ({ params, tenant, logger }) => {
 			let log = logger.action(
 				`/dashboard/tenants/${tenant.id}/resources/${params.resourceId}/scopes/${params.id}`,
@@ -178,7 +182,8 @@ export default {
 		},
 	),
 
-	destroy: action<"DELETE", "/dashboard/tenants/:tenantId/resources/:resourceId/scopes/:id">(
+	destroy: createAction(
+		routes.dashboard.tenants.resources.scopes.destroy,
 		async ({ params, tenant, tenantApi, logger }) => {
 			let log = logger.action(
 				`/dashboard/tenants/${tenant.id}/resources/${params.resourceId}/scopes/${params.id}`,

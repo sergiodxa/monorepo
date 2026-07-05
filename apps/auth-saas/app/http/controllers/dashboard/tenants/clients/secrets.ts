@@ -2,9 +2,9 @@ import { html as htmlResponse } from "@pkg/http/response";
 import { isFailure } from "@pkg/result";
 import { validate } from "@pkg/validate";
 import * as s from "remix/data-schema";
+import { createAction } from "remix/fetch-router";
 import { html } from "remix/html-template";
 
-import action from "~/app/lib/action";
 import { layout } from "~/resources/layouts/document";
 import routes from "~/routes/web";
 
@@ -14,7 +14,8 @@ let CreateSecretSchema = s.object({
 });
 
 export default {
-	new: action<"GET", "/dashboard/tenants/:tenantId/clients/:clientId/secrets/new">(
+	new: createAction(
+		routes.dashboard.tenants.clients.secrets.new,
 		async ({ params, tenant, tenantApi, logger }) => {
 			let log = logger.loader(
 				`/dashboard/tenants/${tenant.id}/clients/${params.clientId}/secrets/new`,
@@ -96,7 +97,8 @@ export default {
 		},
 	),
 
-	create: action<"POST", "/dashboard/tenants/:tenantId/clients/:clientId/secrets">(
+	create: createAction(
+		routes.dashboard.tenants.clients.secrets.create,
 		async ({ formData, params, tenant, tenantApi, logger }) => {
 			let log = logger.action(`/dashboard/tenants/${tenant.id}/clients/${params.clientId}/secrets`);
 
@@ -157,7 +159,8 @@ export default {
 		},
 	),
 
-	edit: action<"GET", "/dashboard/tenants/:tenantId/clients/:clientId/secrets/:id/edit">(
+	edit: createAction(
+		routes.dashboard.tenants.clients.secrets.edit,
 		async ({ params, tenant, logger }) => {
 			let log = logger.loader(
 				`/dashboard/tenants/${tenant.id}/clients/${params.clientId}/secrets/${params.id}/edit`,
@@ -177,7 +180,8 @@ export default {
 		},
 	),
 
-	update: action<"PUT", "/dashboard/tenants/:tenantId/clients/:clientId/secrets/:id">(
+	update: createAction(
+		routes.dashboard.tenants.clients.secrets.update,
 		async ({ params, tenant, logger }) => {
 			let log = logger.action(
 				`/dashboard/tenants/${tenant.id}/clients/${params.clientId}/secrets/${params.id}`,
@@ -197,7 +201,8 @@ export default {
 		},
 	),
 
-	destroy: action<"DELETE", "/dashboard/tenants/:tenantId/clients/:clientId/secrets/:id">(
+	destroy: createAction(
+		routes.dashboard.tenants.clients.secrets.destroy,
 		async ({ params, tenant, tenantApi, logger }) => {
 			let log = logger.action(
 				`/dashboard/tenants/${tenant.id}/clients/${params.clientId}/secrets/${params.id}`,

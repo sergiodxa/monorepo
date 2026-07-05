@@ -83,9 +83,9 @@ export function layout(options: LayoutOptions): SafeHtml {
 				<nav class="bg-white shadow-sm border-b">
 					<div class="max-w-6xl mx-auto px-4 py-4 flex justify-between items-center">
 						<div class="flex items-center gap-4">${breadcrumb} ${tenantBreadcrumb}</div>
-						<a href="${routes.onboarding.index.href()}" class="text-gray-600 hover:text-gray-900"
-							>Sign out</a
-						>
+						<form method="POST" action="${routes.logout.href()}" class="inline">
+							<button type="submit" class="text-gray-600 hover:text-gray-900">Sign out</button>
+						</form>
 					</div>
 				</nav>
 

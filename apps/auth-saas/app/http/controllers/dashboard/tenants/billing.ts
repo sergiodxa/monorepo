@@ -1,20 +1,24 @@
 import { html as htmlResponse } from "@pkg/http/response";
 import { Location } from "@pkg/location";
+import { inject } from "@pkg/service-container";
 import { env } from "cloudflare:workers";
+import { getContext } from "remix/async-context-middleware";
+import { Database } from "remix/data-table";
+import { createController } from "remix/fetch-router";
 import { html } from "remix/html-template";
 
 import tenantOwner from "~/app/http/middleware/tenant-owner";
-import form from "~/app/lib/form";
 import Subscription from "~/app/models/subscription";
 import AnalyticsService from "~/app/services/analytics";
 import { layout } from "~/resources/layouts/document";
 import routes from "~/routes/web";
 
-export default form<"/dashboard/tenants/:tenantId/billing">({
+export default createController(routes.dashboard.tenants.billing, {
 	middleware: [tenantOwner],
 
 	actions: {
-		async index({ db, request, tenant, logger }) {
+		index: inject([Database] as const, async (db) => {
+			let { request, tenant, logger } = getContext();
 			let log = logger.loader(`/dashboard/tenants/${tenant.id}/billing`);
 
 			let url = new URL(request.url);
@@ -224,9 +228,10 @@ export default form<"/dashboard/tenants/:tenantId/billing">({
 					}),
 				),
 			);
-		},
+		}),
 
-		async action({ request, db, tenant, logger }) {
+		action: inject([Database] as const, async (db) => {
+			let { request, tenant, logger } = getContext();
 			let log = logger.action(`/dashboard/tenants/${tenant.id}/billing`);
 
 			let url = new URL(request.url);
@@ -292,7 +297,7 @@ export default form<"/dashboard/tenants/:tenantId/billing">({
 				status: 302,
 				headers: { Location: routes.dashboard.tenants.billing.index.href({ tenantId: tenant.id }) },
 			});
-		},
+		}),
 	},
 });
 

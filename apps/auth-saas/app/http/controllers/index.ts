@@ -1,12 +1,12 @@
 import { html } from "@pkg/http/response";
+import { createAction } from "remix/fetch-router";
 
-import action from "~/app/lib/action";
 import routes from "~/routes/web";
 
 /**
  * Landing page - marketing page for Auth SaaS
  */
-export default action<"GET", "/">(({ logger }) => {
+export default createAction(routes.index, ({ logger }) => {
 	logger.loader("/").info("Landing page loaded");
 
 	return html(`

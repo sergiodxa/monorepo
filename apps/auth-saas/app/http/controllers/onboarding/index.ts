@@ -1,5 +1,7 @@
-import action from "~/app/lib/action";
+import { createAction } from "remix/fetch-router";
+
 import { base64UrlEncode } from "~/app/lib/crypto-utils";
+import routes from "~/routes/web";
 
 /** Well-known client ID for the dashboard OAuth client. */
 const DASHBOARD_CLIENT_ID = "dashboard";
@@ -8,7 +10,7 @@ const DASHBOARD_CLIENT_ID = "dashboard";
  * Onboarding entry point - redirects to platform tenant OAuth flow.
  * This dogfoods the authentication by using the platform tenant's OAuth endpoint.
  */
-export default action<"GET", "/onboarding">(async ({ request, logger }) => {
+export default createAction(routes.onboarding.index, async ({ request, logger }) => {
 	let log = logger.loader("/onboarding");
 
 	// Generate PKCE code verifier and challenge

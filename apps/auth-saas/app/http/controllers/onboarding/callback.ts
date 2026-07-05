@@ -2,13 +2,16 @@ import type { JSONValue } from "@pkg/types";
 
 import { html } from "@pkg/http/response";
 import { isFailure } from "@pkg/result";
+import { inject } from "@pkg/service-container";
 import { validate } from "@pkg/validate";
 import { env } from "cloudflare:workers";
+import { getContext } from "remix/async-context-middleware";
 import * as s from "remix/data-schema";
+import { Database } from "remix/data-table";
+import { createAction } from "remix/fetch-router";
 
-import action from "~/app/lib/action";
 import { base64UrlDecode } from "~/app/lib/crypto-utils";
-import { createSessionToken } from "~/app/lib/platform-session";
+import { createSessionCookie, createSessionToken } from "~/app/lib/platform-session";
 import Tenant from "~/app/models/tenant";
 import routes from "~/routes/web";
 
@@ -49,124 +52,125 @@ const DASHBOARD_CLIENT_ID = "dashboard";
  * OAuth callback handler for platform authentication.
  * Exchanges the authorization code for tokens and creates a platform session.
  */
-export default action<"GET", "/onboarding/callback">(async ({ request, db, logger }) => {
-	let log = logger.loader("/onboarding/callback");
-	let url = new URL(request.url);
+export default createAction(
+	routes.onboarding.callback,
+	inject([Database] as const, async (db) => {
+		let { request, logger } = getContext();
+		let log = logger.loader("/onboarding/callback");
+		let url = new URL(request.url);
 
-	// Parse callback parameters
-	let params = Object.fromEntries(url.searchParams);
-	let result = await validate(params, CallbackSchema);
-	if (isFailure(result)) {
-		log.error("Invalid callback parameters", { issues: result.error.issues });
-		return renderError("Invalid callback parameters");
-	}
+		// Parse callback parameters
+		let params = Object.fromEntries(url.searchParams);
+		let result = await validate(params, CallbackSchema);
+		if (isFailure(result)) {
+			log.error("Invalid callback parameters", { issues: result.error.issues });
+			return renderError("Invalid callback parameters");
+		}
 
-	let { code, state } = result.data;
+		let { code, state } = result.data;
 
-	// Get and validate OAuth state from cookie
-	let cookieHeader = request.headers.get("Cookie") ?? "";
-	let stateMatch = cookieHeader.match(/__oauth_state=([^;]+)/);
-	if (!stateMatch || !stateMatch[1]) {
-		log.error("Missing OAuth state cookie");
-		return renderError("Session expired. Please try again.");
-	}
+		// Get and validate OAuth state from cookie
+		let cookieHeader = request.headers.get("Cookie") ?? "";
+		let stateMatch = cookieHeader.match(/__oauth_state=([^;]+)/);
+		if (!stateMatch || !stateMatch[1]) {
+			log.error("Missing OAuth state cookie");
+			return renderError("Session expired. Please try again.");
+		}
 
-	let oauthStateResult = await validate(
-		JSON.parse(base64UrlDecode(stateMatch[1])) as JSONValue,
-		OAuthStateSchema,
-	);
-	if (isFailure(oauthStateResult)) {
-		log.error("Invalid OAuth state cookie");
-		return renderError("Invalid session state. Please try again.");
-	}
+		let oauthStateResult = await validate(
+			JSON.parse(base64UrlDecode(stateMatch[1])) as JSONValue,
+			OAuthStateSchema,
+		);
+		if (isFailure(oauthStateResult)) {
+			log.error("Invalid OAuth state cookie");
+			return renderError("Invalid session state. Please try again.");
+		}
 
-	let { codeVerifier, state: expectedState } = oauthStateResult.data;
+		let { codeVerifier, state: expectedState } = oauthStateResult.data;
 
-	// Verify state matches (CSRF protection)
-	if (state !== expectedState) {
-		log.error("State mismatch", { expected: expectedState, received: state });
-		return renderError("Security validation failed. Please try again.");
-	}
+		// Verify state matches (CSRF protection)
+		if (state !== expectedState) {
+			log.error("State mismatch", { expected: expectedState, received: state });
+			return renderError("Security validation failed. Please try again.");
+		}
 
-	// Exchange code for tokens
-	let baseUrl = `${url.protocol}//${url.host}`;
-	let tokenUrl = new URL("/oauth/token", baseUrl);
+		// Exchange code for tokens
+		let baseUrl = `${url.protocol}//${url.host}`;
+		let tokenUrl = new URL("/oauth/token", baseUrl);
 
-	let tokenResponse = await fetch(tokenUrl.toString(), {
-		method: "POST",
-		headers: {
-			"Content-Type": "application/x-www-form-urlencoded",
-		},
-		body: new URLSearchParams({
-			grant_type: "authorization_code",
-			code,
-			redirect_uri: `${baseUrl}/onboarding/callback`,
-			client_id: DASHBOARD_CLIENT_ID,
-			code_verifier: codeVerifier,
-		}),
-	});
+		let tokenResponse = await fetch(tokenUrl.toString(), {
+			method: "POST",
+			headers: {
+				"Content-Type": "application/x-www-form-urlencoded",
+			},
+			body: new URLSearchParams({
+				grant_type: "authorization_code",
+				code,
+				redirect_uri: `${baseUrl}/onboarding/callback`,
+				client_id: DASHBOARD_CLIENT_ID,
+				code_verifier: codeVerifier,
+			}),
+		});
 
-	if (!tokenResponse.ok) {
-		let errorText = await tokenResponse.text();
-		log.error("Token exchange failed", { status: tokenResponse.status, error: errorText });
-		return renderError("Authentication failed. Please try again.");
-	}
+		if (!tokenResponse.ok) {
+			let errorText = await tokenResponse.text();
+			log.error("Token exchange failed", { status: tokenResponse.status, error: errorText });
+			return renderError("Authentication failed. Please try again.");
+		}
 
-	let tokenData = (await tokenResponse.json()) as JSONValue;
-	let tokenResult = await validate(tokenData, TokenResponseSchema);
-	if (isFailure(tokenResult)) {
-		log.error("Invalid token response", { issues: tokenResult.error.issues });
-		return renderError("Authentication failed. Please try again.");
-	}
+		let tokenData = (await tokenResponse.json()) as JSONValue;
+		let tokenResult = await validate(tokenData, TokenResponseSchema);
+		if (isFailure(tokenResult)) {
+			log.error("Invalid token response", { issues: tokenResult.error.issues });
+			return renderError("Authentication failed. Please try again.");
+		}
 
-	// Decode the ID token to get user info
-	let idToken = tokenResult.data.id_token;
-	if (!idToken) {
-		log.error("No ID token in response");
-		return renderError("Authentication failed. Please try again.");
-	}
+		// Decode the ID token to get user info
+		let idToken = tokenResult.data.id_token;
+		if (!idToken) {
+			log.error("No ID token in response");
+			return renderError("Authentication failed. Please try again.");
+		}
 
-	let claims = decodeIdToken(idToken) as JSONValue;
-	let claimsResult = await validate(claims, IdTokenClaimsSchema);
-	if (isFailure(claimsResult)) {
-		log.error("Invalid ID token claims", { issues: claimsResult.error.issues });
-		return renderError("Authentication failed. Please try again.");
-	}
+		let claims = decodeIdToken(idToken) as JSONValue;
+		let claimsResult = await validate(claims, IdTokenClaimsSchema);
+		if (isFailure(claimsResult)) {
+			log.error("Invalid ID token claims", { issues: claimsResult.error.issues });
+			return renderError("Authentication failed. Please try again.");
+		}
 
-	let { sub: subjectId, email, sid: tenantSessionId } = claimsResult.data;
-	if (!email) {
-		log.error("No email in ID token");
-		return renderError("Email is required for authentication.");
-	}
+		let { sub: subjectId, email, sid: tenantSessionId } = claimsResult.data;
+		if (!email) {
+			log.error("No email in ID token");
+			return renderError("Email is required for authentication.");
+		}
 
-	// Resolve any pending ownership for this email
-	let resolvedCount = await Tenant.resolvePendingOwnership(db, email, subjectId);
-	if (resolvedCount > 0) {
-		log.info("Resolved pending ownership", { email, count: resolvedCount });
-	}
+		// Resolve any pending ownership for this email
+		let resolvedCount = await Tenant.resolvePendingOwnership(db, email, subjectId);
+		if (resolvedCount > 0) {
+			log.info("Resolved pending ownership", { email, count: resolvedCount });
+		}
 
-	// Create platform session with the tenant session ID from the ID token
-	let sessionToken = await createSessionToken(
-		subjectId,
-		email,
-		env.SESSION_SECRET,
-		tenantSessionId,
-	);
+		// Create platform session with the tenant session ID from the ID token
+		let sessionToken = await createSessionToken(
+			subjectId,
+			email,
+			env.SESSION_SECRET,
+			tenantSessionId,
+		);
 
-	log.info("Login successful", { subjectId, tenantSessionId });
+		log.info("Login successful", { subjectId, tenantSessionId });
 
-	// Redirect to dashboard with session cookie
-	let headers = new Headers();
-	headers.set("Location", routes.dashboard.index.href());
-	headers.append(
-		"Set-Cookie",
-		`__platform_session=${sessionToken}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${30 * 24 * 60 * 60}`,
-	);
-	// Clear the OAuth state cookie
-	headers.append("Set-Cookie", `__oauth_state=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0`);
+		// Redirect to dashboard with session cookie (Secure in production via the helper).
+		let headers = new Headers();
+		headers.set("Location", routes.dashboard.index.href());
+		headers.append("Set-Cookie", createSessionCookie(sessionToken, !import.meta.env.DEV));
+		// Clear the OAuth state cookie
+		headers.append("Set-Cookie", `__oauth_state=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0`);
 
-	return new Response(null, { status: 302, headers });
-});
+		return new Response(null, { status: 302, headers });
+	}),
+);
 
 /**
  * Decodes an ID token (JWT) without verification.

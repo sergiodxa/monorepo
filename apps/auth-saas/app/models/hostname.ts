@@ -5,6 +5,7 @@ import { column as c, table } from "remix/data-table";
 import type { HostMetadata } from "~/app/lib/host-metadata";
 
 import { RecordNotFoundError } from "~/app/lib/db-errors";
+import { invalidateHostnameCache } from "~/app/lib/hostname-cache";
 import HostnameService from "~/app/services/hostname";
 
 export default class Hostname {
@@ -29,6 +30,15 @@ export default class Hostname {
 
 	static listByTenant(db: Database, tenantId: string) {
 		return db.findMany(Hostname.table, { where: { tenant_id: tenantId } });
+	}
+
+	/**
+	 * Drops the KV resolution cache for every hostname of a tenant. Called when a
+	 * tenant is suspended or deleted so its hostnames stop resolving from cache.
+	 */
+	static async invalidateTenantCache(db: Database, tenantId: string) {
+		let hostnames = await Hostname.listByTenant(db, tenantId);
+		await Promise.all(hostnames.map((hostname) => invalidateHostnameCache(hostname.hostname)));
 	}
 
 	static show(db: Database, id: string) {
@@ -123,6 +133,8 @@ export default class Hostname {
 			},
 		);
 
+		// Status may have flipped (e.g. active -> pending), so drop any cached mapping.
+		await invalidateHostnameCache(hostname.hostname);
 		return (await db.findOne(Hostname.table, { where: { id } }))!;
 	}
 
@@ -145,6 +157,8 @@ export default class Hostname {
 			},
 		);
 
+		// Force the next request to re-read the now-active mapping from D1.
+		await invalidateHostnameCache(hostname.hostname);
 		return (await db.findOne(Hostname.table, { where: { id } }))!;
 	}
 
@@ -167,7 +181,10 @@ export default class Hostname {
 			}
 		}
 
-		return await db.delete(Hostname.table, { id });
+		let result = await db.delete(Hostname.table, { id });
+		// Stop routing the deleted hostname to its former tenant.
+		await invalidateHostnameCache(hostname.hostname);
+		return result;
 	}
 
 	/**

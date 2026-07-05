@@ -1,5 +1,7 @@
 import type { Middleware, RequestHandler } from "remix/fetch-router";
 
+import { asyncContext } from "remix/async-context-middleware";
+import { cop } from "remix/cop-middleware";
 import { createRouter } from "remix/fetch-router";
 import { formData } from "remix/form-data-middleware";
 import { methodOverride } from "remix/method-override-middleware";
@@ -22,12 +24,12 @@ import userPasskeys from "~/app/http/controllers/dashboard/tenants/users/passkey
 import userSessions from "~/app/http/controllers/dashboard/tenants/users/sessions";
 import health from "~/app/http/controllers/health";
 import index from "~/app/http/controllers/index";
+import logout from "~/app/http/controllers/logout";
 import notFound from "~/app/http/controllers/not-found";
 import onboardingCallback from "~/app/http/controllers/onboarding/callback";
 import onboardingIndex from "~/app/http/controllers/onboarding/index";
-import csrf from "~/app/http/middleware/csrf";
-import database from "~/app/http/middleware/db";
 import logger from "~/app/http/middleware/logger";
+import requireTenantRole from "~/app/http/middleware/require-tenant-role";
 import session from "~/app/http/middleware/session";
 import subscription from "~/app/http/middleware/subscription";
 import tenantOwner from "~/app/http/middleware/tenant-owner";
@@ -43,7 +45,7 @@ import routes from "~/routes/web";
 let globalMiddleware: Middleware[] = [
 	trailingSlash,
 	logger,
-	database,
+	asyncContext(),
 	formData() as Middleware,
 	methodOverride(),
 ];
@@ -57,8 +59,19 @@ export const router = createRouter({
 // keys in a controller throw at runtime). Middleware does not cascade across
 // separate map() calls, so each group lists its full chain on top of the
 // router-global middleware.
-let dashboard: Middleware[] = [session, csrf];
-let tenantScope: Middleware[] = [session, csrf, tenantOwner, subscription];
+// Tokenless cross-origin protection (Sec-Fetch-Site/Origin). Rejects same-site too,
+// so a tenant subdomain cannot forge requests to the platform dashboard.
+let crossOrigin = cop();
+let dashboard: Middleware[] = [session, crossOrigin];
+// Mutations on tenant-scoped resources require owner or admin; `viewer` members keep
+// read access (requireTenantRole only gates non-safe methods).
+let tenantScope: Middleware[] = [
+	session,
+	crossOrigin,
+	tenantOwner,
+	requireTenantRole("owner", "admin"),
+	subscription,
+];
 
 // Public + webhook + onboarding.
 router.map(routes.index, index);
@@ -73,10 +86,24 @@ router.map(routes.dashboard.index, {
 	middleware: dashboard,
 	handler: dashboardIndex as RequestHandler,
 });
+router.map(routes.logout, { middleware: dashboard, handler: logout as RequestHandler });
 router.map(routes.dashboard.tenants, { middleware: dashboard, actions: tenants });
-router.map(routes.dashboard.tenants.branding, { ...branding, middleware: dashboard });
-router.map(routes.dashboard.tenants.hostname, { ...hostname, middleware: dashboard });
-router.map(routes.dashboard.tenants.billing, { ...billing, middleware: dashboard });
+// These compose the controller's own tenant middleware onto the dashboard chain
+// (spreading `{ ...ctrl, middleware }` would otherwise drop it, unsetting
+// `context.tenant`). Branding/hostname are owner+admin; billing is owner-only and
+// intentionally skips the `subscription` gate so a lapsed plan can still be fixed.
+router.map(routes.dashboard.tenants.branding, {
+	...branding,
+	middleware: [...dashboard, tenantOwner, requireTenantRole("owner", "admin"), subscription],
+});
+router.map(routes.dashboard.tenants.hostname, {
+	...hostname,
+	middleware: [...dashboard, tenantOwner, requireTenantRole("owner", "admin")],
+});
+router.map(routes.dashboard.tenants.billing, {
+	...billing,
+	middleware: [...dashboard, tenantOwner, requireTenantRole("owner")],
+});
 
 // Tenant-scoped management (owner + active subscription required).
 router.map(routes.dashboard.tenants.clients, { middleware: tenantScope, actions: clients });

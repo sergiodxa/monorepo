@@ -5,7 +5,9 @@ import { validate } from "@pkg/validate";
 import { env } from "cloudflare:workers";
 
 import { reportMAU } from "~/app/jobs/report-mau";
+import { container } from "~/app/lib/container";
 import { HostMetadataSchema } from "~/app/lib/host-metadata";
+import { HOSTNAME_CACHE_TTL, hostnameCacheKey } from "~/app/lib/hostname-cache";
 import { checkRateLimit } from "~/app/lib/rate-limit";
 
 import { router } from "./app";
@@ -64,7 +66,7 @@ function isTenantPath(pathname: string): boolean {
  * default subdomains, for which Cloudflare for SaaS `hostMetadata` is unavailable.
  */
 async function resolveHostname(hostname: string): Promise<ResolvedTenant | null> {
-	let cacheKey = `host:${hostname}`;
+	let cacheKey = hostnameCacheKey(hostname);
 	let cached = await env.HOSTNAMES_KV.get<ResolvedTenant>(cacheKey, "json");
 	if (cached) return cached;
 
@@ -80,7 +82,10 @@ async function resolveHostname(hostname: string): Promise<ResolvedTenant | null>
 	if (!row) return null;
 
 	let resolved: ResolvedTenant = { tenantId: row.tenantId, region: row.region };
-	await env.HOSTNAMES_KV.put(cacheKey, JSON.stringify(resolved));
+	// Short TTL bounds staleness even if an invalidation is ever missed.
+	await env.HOSTNAMES_KV.put(cacheKey, JSON.stringify(resolved), {
+		expirationTtl: HOSTNAME_CACHE_TTL,
+	});
 	return resolved;
 }
 
@@ -120,7 +125,7 @@ export default {
 			if (isTenantPath(url.pathname)) {
 				return await forwardToTenant(request, { tenantId: PLATFORM_TENANT });
 			}
-			return await router.fetch(request);
+			return await container.scope(() => router.fetch(request));
 		}
 
 		// 3. Custom hostname carrying Cloudflare for SaaS metadata -> tenant DO.
@@ -144,9 +149,11 @@ export default {
 	},
 
 	async scheduled(controller) {
-		// Daily MAU reporting job (runs at 1:00 AM UTC)
-		if (controller.cron === "0 1 * * *") {
-			await reportMAU(controller);
-		}
+		await container.scope(async () => {
+			// Daily MAU reporting job (runs at 1:00 AM UTC)
+			if (controller.cron === "0 1 * * *") {
+				await reportMAU(controller);
+			}
+		});
 	},
 } satisfies ExportedHandler<Cloudflare.Env>;

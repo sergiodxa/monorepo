@@ -1,14 +1,17 @@
 import { html as htmlResponse } from "@pkg/http/response";
 import { Location } from "@pkg/location";
 import { isFailure } from "@pkg/result";
+import { inject } from "@pkg/service-container";
 import { validate } from "@pkg/validate";
+import { getContext } from "remix/async-context-middleware";
 import * as s from "remix/data-schema";
+import { Database } from "remix/data-table";
+import { createController } from "remix/fetch-router";
 import { html, type SafeHtml } from "remix/html-template";
 
 import type { HostMetadata } from "~/app/lib/host-metadata";
 
 import tenantOwner from "~/app/http/middleware/tenant-owner";
-import form from "~/app/lib/form";
 import Hostname from "~/app/models/hostname";
 import { layout } from "~/resources/layouts/document";
 import routes from "~/routes/web";
@@ -17,11 +20,12 @@ let AddHostnameSchema = s.object({
 	hostname: s.string(),
 });
 
-export default form<"/dashboard/tenants/:tenantId/hostname">({
+export default createController(routes.dashboard.tenants.hostname, {
 	middleware: [tenantOwner],
 
 	actions: {
-		async index({ db, tenant, logger }) {
+		index: inject([Database] as const, async (db) => {
+			let { tenant, logger } = getContext();
 			let log = logger.loader(`/dashboard/tenants/${tenant.id}/hostname`);
 
 			let hostnames = await Hostname.listByTenant(db, tenant.id);
@@ -182,9 +186,10 @@ export default form<"/dashboard/tenants/:tenantId/hostname">({
 					}),
 				),
 			);
-		},
+		}),
 
-		async action({ request, formData, db, tenant, logger }) {
+		action: inject([Database] as const, async (db) => {
+			let { request, formData, tenant, tenantApi, logger } = getContext();
 			let log = logger.action(`/dashboard/tenants/${tenant.id}/hostname`);
 
 			let url = new URL(request.url);
@@ -197,6 +202,22 @@ export default form<"/dashboard/tenants/:tenantId/hostname">({
 					if (hostname && hostname.tenant_id === tenant.id && !hostname.is_default) {
 						await Hostname.destroy(db, hostnameId);
 						log.info("Hostname deleted", { tenantId: tenant.id, hostnameId });
+						// If the removed hostname may have been the canonical issuer, re-point the
+						// tenant at the best remaining hostname (another active custom, else default)
+						// so discovery/tokens/WebAuthn RP stay on a hostname that still resolves.
+						if (hostname.status === "active") {
+							let remaining = await Hostname.listByTenant(db, tenant.id);
+							let nextIssuer =
+								remaining.find((h) => !h.is_default && h.status === "active") ??
+								remaining.find((h) => h.is_default);
+							if (nextIssuer) {
+								await tenantApi.setup({ issuer: nextIssuer.hostname, region: tenant.region });
+								log.info("Tenant issuer reset after hostname deletion", {
+									tenantId: tenant.id,
+									issuer: nextIssuer.hostname,
+								});
+							}
+						}
 					}
 				}
 			} else if (actionType === "refresh") {
@@ -204,8 +225,17 @@ export default form<"/dashboard/tenants/:tenantId/hostname">({
 				if (hostnameId) {
 					let hostname = await Hostname.show(db, hostnameId);
 					if (hostname && hostname.tenant_id === tenant.id) {
-						await Hostname.refresh(db, hostnameId);
+						let refreshed = await Hostname.refresh(db, hostnameId);
 						log.info("Hostname refreshed", { tenantId: tenant.id, hostnameId });
+						// A newly active custom hostname becomes the canonical issuer, so re-point
+						// tenant discovery/tokens/WebAuthn RP at it.
+						if (!refreshed.is_default && refreshed.status === "active") {
+							await tenantApi.setup({ issuer: refreshed.hostname, region: tenant.region });
+							log.info("Tenant issuer updated to custom hostname", {
+								tenantId: tenant.id,
+								issuer: refreshed.hostname,
+							});
+						}
 					}
 				}
 			} else {
@@ -255,6 +285,6 @@ export default form<"/dashboard/tenants/:tenantId/hostname">({
 					Location: routes.dashboard.tenants.hostname.index.href({ tenantId: tenant.id }),
 				},
 			});
-		},
+		}),
 	},
 });

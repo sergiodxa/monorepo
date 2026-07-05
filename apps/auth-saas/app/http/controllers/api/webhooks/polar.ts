@@ -2,12 +2,17 @@ import type { JSONValue } from "@pkg/types";
 
 import { json } from "@pkg/http/response";
 import { isFailure } from "@pkg/result";
+import { inject } from "@pkg/service-container";
 import { validate } from "@pkg/validate";
+import { validateEvent, WebhookVerificationError } from "@polar-sh/sdk/webhooks.js";
 import { env } from "cloudflare:workers";
+import { getContext } from "remix/async-context-middleware";
 import * as s from "remix/data-schema";
+import { Database } from "remix/data-table";
+import { createAction } from "remix/fetch-router";
 
-import action from "~/app/lib/action";
 import Subscription from "~/app/models/subscription";
+import routes from "~/routes/web";
 
 /** Polar webhook event types we handle. */
 let HANDLED_EVENT_TYPES = [
@@ -59,44 +64,6 @@ let WebhookPayloadSchema = s.object({
 });
 
 /**
- * Verify Polar webhook signature using HMAC-SHA256.
- * @param body - The raw request body string.
- * @param signature - The signature from the X-Polar-Signature header.
- * @param secret - The webhook secret.
- * @returns True if the signature is valid.
- */
-async function verifyWebhookSignature(
-	body: string,
-	signature: string | null,
-	secret: string,
-): Promise<boolean> {
-	if (!signature) return false;
-
-	let encoder = new TextEncoder();
-	let key = await crypto.subtle.importKey(
-		"raw",
-		encoder.encode(secret),
-		{ name: "HMAC", hash: "SHA-256" },
-		false,
-		["sign"],
-	);
-
-	let signatureBuffer = await crypto.subtle.sign("HMAC", key, encoder.encode(body));
-	let expectedSignature = Array.from(new Uint8Array(signatureBuffer))
-		.map((b) => b.toString(16).padStart(2, "0"))
-		.join("");
-
-	/** Constant-time comparison to prevent timing attacks. */
-	if (signature.length !== expectedSignature.length) return false;
-
-	let result = 0;
-	for (let i = 0; i < signature.length; i++) {
-		result |= signature.charCodeAt(i) ^ expectedSignature.charCodeAt(i);
-	}
-	return result === 0;
-}
-
-/**
  * Polar webhook handler for subscription lifecycle management.
  *
  * Events handled:
@@ -105,139 +72,154 @@ async function verifyWebhookSignature(
  * - subscription.canceled: Handle subscription cancellation
  * - subscription.updated: Sync subscription status changes
  */
-export default action<"POST", "/api/webhooks/polar">(async ({ db, request, logger }) => {
-	let log = logger.action("/api/webhooks/polar");
+export default createAction(
+	routes.api.webhooks.polar,
+	inject([Database] as const, async (db) => {
+		let { request, logger } = getContext();
+		let log = logger.action("/api/webhooks/polar");
 
-	let body = await request.text();
+		let body = await request.text();
+		let webhookSecret = env.POLAR_WEBHOOK_SECRET;
 
-	let signature = request.headers.get("X-Polar-Signature");
-	let webhookSecret = env.POLAR_WEBHOOK_SECRET;
-
-	if (!webhookSecret && !import.meta.env.DEV) {
-		log.error("POLAR_WEBHOOK_SECRET not configured in production");
-		return json({ error: "Webhook secret not configured" }, { status: 500 });
-	}
-
-	if (webhookSecret) {
-		let isValid = await verifyWebhookSignature(body, signature, webhookSecret);
-		if (!isValid) {
-			log.info("Invalid webhook signature");
-			return json({ error: "Invalid signature" }, { status: 401 });
-		}
-	}
-
-	let payload: unknown;
-	try {
-		payload = JSON.parse(body);
-	} catch {
-		log.info("Invalid JSON payload");
-		return json({ error: "Invalid JSON" }, { status: 400 });
-	}
-
-	let result = await validate(payload as JSONValue, WebhookPayloadSchema);
-	if (isFailure(result)) {
-		log.info("Invalid webhook payload", { issues: result.error.issues.length });
-		return json({ error: "Invalid payload" }, { status: 400 });
-	}
-
-	let { type, data } = result.data;
-
-	log.info("Webhook received", { type, dataId: data.id });
-
-	if (!isHandledEventType(type)) {
-		log.info("Unhandled webhook event type", { type });
-		return json({ received: true });
-	}
-
-	try {
-		switch (type) {
-			case "checkout.completed": {
-				let tenantId = data.metadata?.tenant_id;
-				let subscriptionId = data.subscription_id;
-
-				if (tenantId && subscriptionId) {
-					await Subscription.linkPolarSubscription(db, tenantId, subscriptionId);
-					log.info("Subscription linked after checkout", { tenantId, subscriptionId });
-				} else {
-					log.info("Checkout completed but missing tenant_id or subscription_id", {
-						tenantId,
-						subscriptionId,
-					});
-				}
-				break;
+		if (!webhookSecret) {
+			if (!import.meta.env.DEV) {
+				log.error("POLAR_WEBHOOK_SECRET not configured in production");
+				return json({ error: "Webhook secret not configured" }, { status: 500 });
 			}
+		} else {
+			// Polar signs webhooks with the Standard Webhooks scheme (webhook-id,
+			// webhook-timestamp, webhook-signature headers); `validateEvent` verifies them
+			// and throws WebhookVerificationError on a bad/missing signature.
+			let headers: Record<string, string> = {};
+			request.headers.forEach((value, key) => {
+				headers[key] = value;
+			});
+			try {
+				validateEvent(body, headers, webhookSecret);
+			} catch (error) {
+				if (error instanceof WebhookVerificationError) {
+					log.info("Invalid webhook signature");
+					return json({ error: "Invalid signature" }, { status: 401 });
+				}
+				// The signature verified but the SDK could not type the event (e.g. an event
+				// type it does not model); our own schema validation below handles the payload.
+			}
+		}
 
-			case "subscription.active":
-			case "subscription.updated": {
-				let subscriptions = await db.findMany(Subscription.table, {
-					where: { polar_subscription_id: data.id },
-				});
+		let payload: unknown;
+		try {
+			payload = JSON.parse(body);
+		} catch {
+			log.info("Invalid JSON payload");
+			return json({ error: "Invalid JSON" }, { status: 400 });
+		}
 
-				if (subscriptions.length > 0) {
-					let subscription = subscriptions[0]!;
-					let newStatus = isValidSubscriptionStatus(data.status)
-						? data.status
-						: subscription.status;
-					await db.update(
-						Subscription.table,
-						{ id: subscription.id },
-						{
+		let result = await validate(payload as JSONValue, WebhookPayloadSchema);
+		if (isFailure(result)) {
+			log.info("Invalid webhook payload", { issues: result.error.issues.length });
+			return json({ error: "Invalid payload" }, { status: 400 });
+		}
+
+		let { type, data } = result.data;
+
+		log.info("Webhook received", { type, dataId: data.id });
+
+		if (!isHandledEventType(type)) {
+			log.info("Unhandled webhook event type", { type });
+			return json({ received: true });
+		}
+
+		try {
+			switch (type) {
+				case "checkout.completed": {
+					let tenantId = data.metadata?.tenant_id;
+					let subscriptionId = data.subscription_id;
+
+					if (tenantId && subscriptionId) {
+						await Subscription.linkPolarSubscription(db, tenantId, subscriptionId);
+						log.info("Subscription linked after checkout", { tenantId, subscriptionId });
+					} else {
+						log.info("Checkout completed but missing tenant_id or subscription_id", {
+							tenantId,
+							subscriptionId,
+						});
+					}
+					break;
+				}
+
+				case "subscription.active":
+				case "subscription.updated": {
+					let subscriptions = await db.findMany(Subscription.table, {
+						where: { polar_subscription_id: data.id },
+					});
+
+					if (subscriptions.length > 0) {
+						let subscription = subscriptions[0]!;
+						let newStatus = isValidSubscriptionStatus(data.status)
+							? data.status
+							: subscription.status;
+						await db.update(
+							Subscription.table,
+							{ id: subscription.id },
+							{
+								status: newStatus,
+								current_period_start:
+									data.current_period_start ?? subscription.current_period_start,
+								current_period_end: data.current_period_end ?? subscription.current_period_end,
+								updated_at: new Date().toISOString(),
+							},
+						);
+						log.info("Subscription status synced", {
+							subscriptionId: subscription.id,
 							status: newStatus,
-							current_period_start: data.current_period_start ?? subscription.current_period_start,
-							current_period_end: data.current_period_end ?? subscription.current_period_end,
-							updated_at: new Date().toISOString(),
-						},
-					);
-					log.info("Subscription status synced", {
-						subscriptionId: subscription.id,
-						status: newStatus,
+						});
+					}
+					break;
+				}
+
+				case "subscription.canceled": {
+					let subscriptions = await db.findMany(Subscription.table, {
+						where: { polar_subscription_id: data.id },
 					});
+
+					if (subscriptions.length > 0) {
+						let subscription = subscriptions[0]!;
+						await db.update(
+							Subscription.table,
+							{ id: subscription.id },
+							{
+								status: "canceled",
+								updated_at: new Date().toISOString(),
+							},
+						);
+						log.info("Subscription canceled", { subscriptionId: subscription.id });
+					}
+					break;
 				}
-				break;
+			}
+		} catch (error) {
+			/**
+			 * Database and network errors should be retried.
+			 * Validation errors should not be retried to prevent infinite loops.
+			 */
+			let isRetryable = isRetryableError(error);
+
+			log.error("Webhook processing failed", {
+				type,
+				error: error instanceof Error ? error.message : String(error),
+				retryable: isRetryable,
+			});
+
+			if (isRetryable) {
+				return json({ error: "Processing failed, please retry" }, { status: 500 });
 			}
 
-			case "subscription.canceled": {
-				let subscriptions = await db.findMany(Subscription.table, {
-					where: { polar_subscription_id: data.id },
-				});
-
-				if (subscriptions.length > 0) {
-					let subscription = subscriptions[0]!;
-					await db.update(
-						Subscription.table,
-						{ id: subscription.id },
-						{
-							status: "canceled",
-							updated_at: new Date().toISOString(),
-						},
-					);
-					log.info("Subscription canceled", { subscriptionId: subscription.id });
-				}
-				break;
-			}
-		}
-	} catch (error) {
-		/**
-		 * Database and network errors should be retried.
-		 * Validation errors should not be retried to prevent infinite loops.
-		 */
-		let isRetryable = isRetryableError(error);
-
-		log.error("Webhook processing failed", {
-			type,
-			error: error instanceof Error ? error.message : String(error),
-			retryable: isRetryable,
-		});
-
-		if (isRetryable) {
-			return json({ error: "Processing failed, please retry" }, { status: 500 });
+			/** Non-retryable errors return 200 to prevent Polar from retrying indefinitely. */
 		}
 
-		/** Non-retryable errors return 200 to prevent Polar from retrying indefinitely. */
-	}
-
-	return json({ received: true });
-});
+		return json({ received: true });
+	}),
+);
 
 /**
  * Determines if an error is retryable (transient) vs permanent.

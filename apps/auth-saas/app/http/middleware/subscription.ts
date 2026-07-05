@@ -1,4 +1,6 @@
 import { Location } from "@pkg/location";
+import { getServiceContainer } from "@pkg/service-container";
+import { Database } from "remix/data-table";
 
 import middleware from "~/app/lib/middleware";
 import Subscription from "~/app/models/subscription";
@@ -72,7 +74,8 @@ export default middleware(async (context, next) => {
 		return next();
 	}
 
-	let subscription = await Subscription.findByTenant(context.db, context.tenant.id);
+	let db = getServiceContainer().get(Database);
+	let subscription = await Subscription.findByTenant(db, context.tenant.id);
 
 	if (!subscription) {
 		log.info("No subscription found for tenant", { tenantId: context.tenant.id });

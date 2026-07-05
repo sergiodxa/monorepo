@@ -2,9 +2,9 @@ import { html as htmlResponse } from "@pkg/http/response";
 import { isFailure } from "@pkg/result";
 import { validate } from "@pkg/validate";
 import * as s from "remix/data-schema";
+import { createAction } from "remix/fetch-router";
 import { html } from "remix/html-template";
 
-import action from "~/app/lib/action";
 import { layout } from "~/resources/layouts/document";
 import routes from "~/routes/web";
 
@@ -21,7 +21,8 @@ let UpdateClientSchema = s.object({
 });
 
 export default {
-	index: action<"GET", "/dashboard/tenants/:tenantId/clients">(
+	index: createAction(
+		routes.dashboard.tenants.clients.index,
 		async ({ tenant, tenantApi, logger }) => {
 			let log = logger.loader(`/dashboard/tenants/${tenant.id}/clients`);
 
@@ -89,7 +90,8 @@ export default {
 		},
 	),
 
-	show: action<"GET", "/dashboard/tenants/:tenantId/clients/:id">(
+	show: createAction(
+		routes.dashboard.tenants.clients.show,
 		async ({ params, tenant, tenantApi, logger }) => {
 			let log = logger.loader(`/dashboard/tenants/${tenant.id}/clients/${params.id}`);
 
@@ -334,7 +336,7 @@ export default {
 		},
 	),
 
-	new: action<"GET", "/dashboard/tenants/:tenantId/clients/new">(({ tenant, logger }) => {
+	new: createAction(routes.dashboard.tenants.clients.new, ({ tenant, logger }) => {
 		let log = logger.loader(`/dashboard/tenants/${tenant.id}/clients/new`);
 		log.info("New client form loaded", { tenantId: tenant.id });
 
@@ -403,7 +405,8 @@ export default {
 		);
 	}),
 
-	create: action<"POST", "/dashboard/tenants/:tenantId/clients">(
+	create: createAction(
+		routes.dashboard.tenants.clients.create,
 		async ({ formData, tenant, tenantApi, logger }) => {
 			let log = logger.action(`/dashboard/tenants/${tenant.id}/clients`);
 
@@ -432,7 +435,8 @@ export default {
 		},
 	),
 
-	edit: action<"GET", "/dashboard/tenants/:tenantId/clients/:id/edit">(
+	edit: createAction(
+		routes.dashboard.tenants.clients.edit,
 		async ({ params, tenant, tenantApi, logger }) => {
 			let log = logger.loader(`/dashboard/tenants/${tenant.id}/clients/${params.id}/edit`);
 
@@ -531,7 +535,8 @@ ${client.description ?? ""}</textarea
 		},
 	),
 
-	update: action<"PUT", "/dashboard/tenants/:tenantId/clients/:id">(
+	update: createAction(
+		routes.dashboard.tenants.clients.update,
 		async ({ formData, params, tenant, tenantApi, logger }) => {
 			let log = logger.action(`/dashboard/tenants/${tenant.id}/clients/${params.id}`);
 
@@ -563,7 +568,8 @@ ${client.description ?? ""}</textarea
 		},
 	),
 
-	destroy: action<"DELETE", "/dashboard/tenants/:tenantId/clients/:id">(
+	destroy: createAction(
+		routes.dashboard.tenants.clients.destroy,
 		async ({ params, tenant, tenantApi, logger }) => {
 			let log = logger.action(`/dashboard/tenants/${tenant.id}/clients/${params.id}`);
 

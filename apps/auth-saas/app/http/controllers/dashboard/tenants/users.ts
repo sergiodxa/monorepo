@@ -3,9 +3,9 @@ import { Location } from "@pkg/location";
 import { isFailure } from "@pkg/result";
 import { validate } from "@pkg/validate";
 import * as s from "remix/data-schema";
+import { createAction } from "remix/fetch-router";
 import { html } from "remix/html-template";
 
-import action from "~/app/lib/action";
 import { formatUserAgent, getDeviceIcon, parseUserAgent } from "~/app/lib/user-agent";
 import { TenantApiError } from "~/app/services/tenant-api";
 import { layout } from "~/resources/layouts/document";
@@ -18,7 +18,8 @@ let UpdateUserSchema = s.object({
 });
 
 export default {
-	index: action<"GET", "/dashboard/tenants/:tenantId/users">(
+	index: createAction(
+		routes.dashboard.tenants.users.index,
 		async ({ tenant, tenantApi, logger }) => {
 			let log = logger.loader(`/dashboard/tenants/${tenant.id}/users`);
 
@@ -94,7 +95,8 @@ export default {
 		},
 	),
 
-	show: action<"GET", "/dashboard/tenants/:tenantId/users/:id">(
+	show: createAction(
+		routes.dashboard.tenants.users.show,
 		async ({ params, tenant, tenantApi, logger, platformSession }) => {
 			let log = logger.loader(`/dashboard/tenants/${tenant.id}/users/${params.id}`);
 
@@ -364,7 +366,8 @@ export default {
 		},
 	),
 
-	edit: action<"GET", "/dashboard/tenants/:tenantId/users/:id/edit">(
+	edit: createAction(
+		routes.dashboard.tenants.users.edit,
 		async ({ params, tenant, tenantApi, logger, request }) => {
 			let log = logger.loader(`/dashboard/tenants/${tenant.id}/users/${params.id}/edit`);
 
@@ -471,7 +474,8 @@ export default {
 		},
 	),
 
-	update: action<"PUT", "/dashboard/tenants/:tenantId/users/:id">(
+	update: createAction(
+		routes.dashboard.tenants.users.update,
 		async ({ formData, params, tenant, tenantApi, logger }) => {
 			let log = logger.action(`/dashboard/tenants/${tenant.id}/users/${params.id}`);
 
@@ -528,7 +532,8 @@ export default {
 		},
 	),
 
-	destroy: action<"DELETE", "/dashboard/tenants/:tenantId/users/:id">(
+	destroy: createAction(
+		routes.dashboard.tenants.users.destroy,
 		async ({ params, tenant, tenantApi, logger }) => {
 			let log = logger.action(`/dashboard/tenants/${tenant.id}/users/${params.id}`);
 

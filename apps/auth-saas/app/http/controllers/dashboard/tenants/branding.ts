@@ -2,11 +2,11 @@ import { html as htmlResponse } from "@pkg/http/response";
 import { isFailure } from "@pkg/result";
 import { validate } from "@pkg/validate";
 import * as s from "remix/data-schema";
+import { createController } from "remix/fetch-router";
 import { html } from "remix/html-template";
 
 import subscription from "~/app/http/middleware/subscription";
 import tenantOwner from "~/app/http/middleware/tenant-owner";
-import form from "~/app/lib/form";
 import { layout } from "~/resources/layouts/document";
 import routes from "~/routes/web";
 
@@ -17,7 +17,7 @@ let UpdateBrandingSchema = s.object({
 	customCss: s.optional(s.nullable(s.string())),
 });
 
-export default form<"/dashboard/tenants/:tenantId/branding">({
+export default createController(routes.dashboard.tenants.branding, {
 	middleware: [tenantOwner, subscription],
 
 	actions: {
@@ -110,7 +110,7 @@ export default form<"/dashboard/tenants/:tenantId/branding">({
 										rows="4"
 										class="w-full border rounded-lg px-3 py-2 font-mono text-sm"
 									>
-							${branding?.custom_css ?? ""}</textarea
+																																			${branding?.custom_css ?? ""}</textarea
 									>
 									<p class="text-gray-500 text-xs mt-1">Advanced: Add custom CSS to style login pages</p>
 								</div>
