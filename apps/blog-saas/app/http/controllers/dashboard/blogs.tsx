@@ -19,7 +19,8 @@ import { Page } from "~/app/views/layout";
 import * as s from "~/app/views/styles";
 import routes from "~/routes/web";
 
-const REGIONS: Region[] = ["wnam", "enam", "sam", "weur", "eeur", "apac", "oc", "afr", "me"];
+/** Allow-list of valid DO location-hint regions; arbitrary form input is rejected. */
+export const REGIONS: Region[] = ["wnam", "enam", "sam", "weur", "eeur", "apac", "oc", "afr", "me"];
 
 /**
  * Loads a blog owned by the current account. Returns a `Response` (login redirect or

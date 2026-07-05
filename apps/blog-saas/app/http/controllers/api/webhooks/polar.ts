@@ -52,9 +52,6 @@ export default createAction(
 			case "subscription.active":
 			case "subscription.updated": {
 				let status = normalizeStatus(data.status);
-				// Only our configured product grants entitlement; a different product must
-				// never activate blogs even if the event is otherwise valid.
-				let productMatches = data.product_id === env.POLAR_PRODUCT_ID;
 				await Subscription.upsert(db, accountId, {
 					polar_subscription_id: data.id ?? null,
 					polar_product_id: data.product_id ?? null,
@@ -62,7 +59,9 @@ export default createAction(
 					current_period_start: data.current_period_start ?? null,
 					current_period_end: data.current_period_end ?? null,
 				});
-				if (productMatches && (status === "active" || status === "trialing")) {
+				// Only our configured product grants entitlement; a different product must
+				// never activate blogs even if the event is otherwise valid.
+				if (entitlesActivation(data.product_id, status, env.POLAR_PRODUCT_ID)) {
 					await provisioner.setAccountBlogsStatus(accountId, "active");
 				}
 				break;
@@ -83,7 +82,7 @@ export default createAction(
  * Maps a Polar status string to our subscription status enum. Unknown statuses fail
  * closed to `past_due` (no entitlement granted) rather than defaulting to `active`.
  */
-function normalizeStatus(status: string | undefined): SubscriptionStatus {
+export function normalizeStatus(status: string | undefined): SubscriptionStatus {
 	switch (status) {
 		case "active":
 		case "trialing":
@@ -94,4 +93,18 @@ function normalizeStatus(status: string | undefined): SubscriptionStatus {
 		default:
 			return "past_due";
 	}
+}
+
+/**
+ * Decides whether a subscription event should activate an account's blogs. Requires
+ * both that the event references our configured product (a different product must
+ * never grant entitlement) and that the normalized status is entitling.
+ */
+export function entitlesActivation(
+	productId: string | undefined,
+	status: SubscriptionStatus,
+	configuredProductId: string,
+): boolean {
+	let productMatches = productId === configuredProductId;
+	return productMatches && (status === "active" || status === "trialing");
 }
