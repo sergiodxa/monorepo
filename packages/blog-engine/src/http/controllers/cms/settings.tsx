@@ -3,9 +3,13 @@ import { ok } from "@pkg/http/response/html";
 
 import { Settings } from "../../../domain/settings";
 import action from "../../../shared/lib/action";
+import { renderDocument } from "../../../shared/lib/render";
 import { getAuthUser, getPermissions } from "../../../shared/middleware/auth";
-import { cmsLayout } from "../../../views/cms-layout";
-import { attr } from "../../../views/html";
+import { CmsLayout } from "../../../views/cms-layout";
+
+function redirectHome(): Response {
+	return redirect("/cms", { status: redirect.Status.SeeOther });
+}
 
 /** GET /cms/settings — site title/description/language form. */
 export const index = action<"GET", "/cms/settings">(async ({ db }) => {
@@ -19,22 +23,32 @@ export const index = action<"GET", "/cms/settings">(async ({ db }) => {
 		Settings.language(db),
 	]);
 
-	let body =
-		`<form method="post">` +
-		`<label for="site_title">Site title</label><input type="text" id="site_title" name="site_title" value="${attr(title)}">` +
-		`<label for="site_description">Site description</label><input type="text" id="site_description" name="site_description" value="${attr(description)}">` +
-		`<label for="language">Language</label><input type="text" id="language" name="language" value="${attr(language)}">` +
-		`<p><button type="submit">Save settings</button></p></form>`;
-
-	return ok(
-		cmsLayout({
-			title: "Settings",
-			siteTitle: title,
-			userLabel: user.display_name || user.email,
-			permissions,
-			body,
-		}),
+	let body = await renderDocument(
+		<CmsLayout
+			title="Settings"
+			siteTitle={title}
+			userLabel={user.display_name || user.email}
+			permissions={permissions}
+		>
+			<form method="post">
+				<label htmlFor="site_title">Site title</label>
+				<input type="text" id="site_title" name="site_title" defaultValue={title} />
+				<label htmlFor="site_description">Site description</label>
+				<input
+					type="text"
+					id="site_description"
+					name="site_description"
+					defaultValue={description}
+				/>
+				<label htmlFor="language">Language</label>
+				<input type="text" id="language" name="language" defaultValue={language} />
+				<p>
+					<button type="submit">Save settings</button>
+				</p>
+			</form>
+		</CmsLayout>,
 	);
+	return ok(body);
 });
 
 /** POST /cms/settings — persists site settings. */
@@ -52,7 +66,3 @@ export const action_ = action<"POST", "/cms/settings">(async ({ db, formData }) 
 	await Settings.set(db, "language", String(formData.get("language") ?? "en").trim() || "en");
 	return redirect("/cms/settings", { status: redirect.Status.SeeOther });
 });
-
-function redirectHome(): Response {
-	return redirect("/cms", { status: redirect.Status.SeeOther });
-}

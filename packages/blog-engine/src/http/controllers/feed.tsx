@@ -4,8 +4,9 @@ import { createMetaCodec } from "../../domain/meta-codec";
 import { Post } from "../../domain/post";
 import { PostType } from "../../domain/post-type";
 import action from "../../shared/lib/action";
-import { documentLayout } from "../../views/layout";
-import { excerptFor, renderPostList, type PostListItem } from "../../views/post-render";
+import { renderDocument } from "../../shared/lib/render";
+import { Layout } from "../../views/layout";
+import { excerptFor, PostList, type PostListItem } from "../../views/post-render";
 import { loadSiteChrome } from "../../views/site";
 
 /** Home feed: recent published posts across every visible post type. */
@@ -31,15 +32,10 @@ export default action<"GET", "/">(async ({ db }) => {
 		(a, b) => (Date.parse(b.publishedAt ?? "") || 0) - (Date.parse(a.publishedAt ?? "") || 0),
 	);
 
-	return ok(
-		documentLayout({
-			title: chrome.siteTitle,
-			siteTitle: chrome.siteTitle,
-			description: chrome.description,
-			themeStyle: chrome.themeStyle,
-			customCss: chrome.customCss,
-			navLinks: chrome.navLinks,
-			body: renderPostList(items.slice(0, 20)),
-		}),
+	let body = await renderDocument(
+		<Layout title={chrome.siteTitle} {...chrome}>
+			<PostList items={items.slice(0, 20)} />
+		</Layout>,
 	);
+	return ok(body);
 });

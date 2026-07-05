@@ -4,9 +4,9 @@ import { createMetaCodec } from "../../domain/meta-codec";
 import { Post } from "../../domain/post";
 import { PostType } from "../../domain/post-type";
 import action from "../../shared/lib/action";
-import { escape } from "../../views/html";
-import { documentLayout } from "../../views/layout";
-import { renderDate, renderFields } from "../../views/post-render";
+import { renderDocument } from "../../shared/lib/render";
+import { Layout } from "../../views/layout";
+import { PostDate, PostFields } from "../../views/post-render";
 import { loadSiteChrome } from "../../views/site";
 
 import { renderNotFound } from "./not-found";
@@ -22,21 +22,17 @@ export default action<"GET", "/:typePath/:slug">(async ({ db, params }) => {
 
 	let chrome = await loadSiteChrome(db);
 	let title = post.meta.title || "(untitled)";
-	let body =
-		`<article>` +
-		`<header><h1>${escape(title)}</h1>${renderDate(post.published_at)}</header>` +
-		renderFields(type, post.meta) +
-		`</article>`;
 
-	return ok(
-		documentLayout({
-			title: `${title} · ${chrome.siteTitle}`,
-			siteTitle: chrome.siteTitle,
-			description: chrome.description,
-			themeStyle: chrome.themeStyle,
-			customCss: chrome.customCss,
-			navLinks: chrome.navLinks,
-			body,
-		}),
+	let body = await renderDocument(
+		<Layout title={`${title} · ${chrome.siteTitle}`} {...chrome}>
+			<article>
+				<header>
+					<h1>{title}</h1>
+					<PostDate publishedAt={post.published_at} />
+				</header>
+				<PostFields definition={type} meta={post.meta} />
+			</article>
+		</Layout>,
 	);
+	return ok(body);
 });

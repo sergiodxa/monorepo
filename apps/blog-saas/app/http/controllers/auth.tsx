@@ -5,7 +5,6 @@ import { env } from "cloudflare:workers";
 import { clearSession, getSessionData, updateSessionData } from "~/app/http/middleware/session";
 import action from "~/app/lib/action";
 import { platformDb } from "~/app/lib/db";
-import { page } from "~/app/lib/html";
 import {
 	buildAuthorizationUrl,
 	createPkce,
@@ -13,16 +12,21 @@ import {
 	exchangeCode,
 	verifyIdToken,
 } from "~/app/lib/oidc";
+import { renderDocument } from "~/app/lib/render";
 import Account from "~/app/models/account";
+import { Page } from "~/app/views/layout";
 
 /** GET /auth/login — sign-in screen. */
 export const loginIndex = action<"GET", "/auth/login">(async () => {
-	return ok(
-		page(
-			"Sign in",
-			`<h1>Sign in</h1><form method="post" action="/auth/login"><button type="submit">Continue with SSO</button></form>`,
-		),
+	let body = await renderDocument(
+		<Page title="Sign in">
+			<h1>Sign in</h1>
+			<form method="post" action="/auth/login">
+				<button type="submit">Continue with SSO</button>
+			</form>
+		</Page>,
 	);
+	return ok(body);
 });
 
 /** POST /auth/login — starts the OIDC authorization-code + PKCE flow. */

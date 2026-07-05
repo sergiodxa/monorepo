@@ -8,12 +8,13 @@ import type Blog from "~/bootstrap/tenant";
 import { getAccountId } from "~/app/http/middleware/session";
 import action from "~/app/lib/action";
 import { platformDb } from "~/app/lib/db";
-import { attr, escape, page } from "~/app/lib/html";
+import { renderDocument } from "~/app/lib/render";
 import BlogModel from "~/app/models/blog";
 import Hostname from "~/app/models/hostname";
 import UsageDaily from "~/app/models/usage";
 import { BlogProvisioner } from "~/app/services/blog-provisioner";
 import { HostnameService } from "~/app/services/hostname";
+import { Page } from "~/app/views/layout";
 
 const REGIONS: Region[] = ["wnam", "enam", "sam", "weur", "eeur", "apac", "oc", "afr", "me"];
 
@@ -30,16 +31,30 @@ async function ownedBlog(blogId: string) {
 /** GET /dashboard/blogs/new — create form. */
 export const newBlog = action<"GET", "/dashboard/blogs/new">(async () => {
 	if (!getAccountId()) return redirect("/auth/login", { status: redirect.Status.SeeOther });
-	let regionOptions = REGIONS.map((region) => `<option value="${region}">${region}</option>`).join(
-		"",
+	let body = await renderDocument(
+		<Page title="Create a blog">
+			<p>
+				<a href="/dashboard">← Dashboard</a>
+			</p>
+			<h1>Create a blog</h1>
+			<form method="post" action="/dashboard/blogs">
+				<label htmlFor="name">Blog name</label>
+				<input type="text" id="name" name="name" required />
+				<label htmlFor="region">Region</label>
+				<select id="region" name="region">
+					{REGIONS.map((region) => (
+						<option value={region} key={region}>
+							{region}
+						</option>
+					))}
+				</select>
+				<p>
+					<button type="submit">Create blog</button>
+				</p>
+			</form>
+		</Page>,
 	);
-	let body =
-		`<p><a href="/dashboard">← Dashboard</a></p><h1>Create a blog</h1>` +
-		`<form method="post" action="/dashboard/blogs">` +
-		`<label for="name">Blog name</label><input type="text" id="name" name="name" required>` +
-		`<label for="region">Region</label><select id="region" name="region">${regionOptions}</select>` +
-		`<p><button type="submit">Create blog</button></p></form>`;
-	return ok(page("Create a blog", body));
+	return ok(body);
 });
 
 /** POST /dashboard/blogs — provisions a new blog. */
@@ -70,6 +85,7 @@ export const show = action<"GET", "/dashboard/blogs/:blogId">(async ({ params })
 	let db = platformDb();
 	let hostname = await Hostname.findByBlog(db, blog.id);
 	let subdomain = `${blog.slug}.${env.PLATFORM_DOMAIN}`;
+	let adminHost = blog.custom_hostname_active && hostname ? hostname.hostname : subdomain;
 
 	let stats = "—";
 	try {
@@ -80,23 +96,42 @@ export const show = action<"GET", "/dashboard/blogs/:blogId">(async ({ params })
 		// Stats are best-effort.
 	}
 
-	let lifecycle =
-		blog.status === "deleted"
-			? `<form method="post" action="/dashboard/blogs/${attr(blog.id)}/restore"><button type="submit">Restore</button></form>`
-			: `<form method="post" action="/dashboard/blogs/${attr(blog.id)}"><input type="hidden" name="_method" value="DELETE"><button class="btn danger" type="submit">Delete blog</button></form>`;
-
-	let body =
-		`<p><a href="/dashboard">← Dashboard</a></p><h1>${escape(blog.name)}</h1>` +
-		`<p>Status: <strong>${escape(blog.status)}</strong></p>` +
-		`<p>Address: <a href="https://${attr(subdomain)}">${escape(subdomain)}</a>` +
-		`${blog.custom_hostname_active ? " (custom domain active — subdomain disabled)" : ""}</p>` +
-		`<p>Admin: <a href="https://${attr(blog.custom_hostname_active && hostname ? hostname.hostname : subdomain)}/cms">Open CMS</a></p>` +
-		`<p>Storage: ${escape(stats)}</p>` +
-		`<p><a href="/dashboard/blogs/${attr(blog.id)}/domain">Custom domain</a> · ` +
-		`<a href="/dashboard/blogs/${attr(blog.id)}/usage">Usage</a></p>` +
-		lifecycle;
-
-	return ok(page(blog.name, body));
+	let body = await renderDocument(
+		<Page title={blog.name}>
+			<p>
+				<a href="/dashboard">← Dashboard</a>
+			</p>
+			<h1>{blog.name}</h1>
+			<p>
+				Status: <strong>{blog.status}</strong>
+			</p>
+			<p>
+				Address: <a href={`https://${subdomain}`}>{subdomain}</a>
+				{blog.custom_hostname_active ? " (custom domain active — subdomain disabled)" : ""}
+			</p>
+			<p>
+				Admin: <a href={`https://${adminHost}/cms`}>Open CMS</a>
+			</p>
+			<p>Storage: {stats}</p>
+			<p>
+				<a href={`/dashboard/blogs/${blog.id}/domain`}>Custom domain</a> ·{" "}
+				<a href={`/dashboard/blogs/${blog.id}/usage`}>Usage</a>
+			</p>
+			{blog.status === "deleted" ? (
+				<form method="post" action={`/dashboard/blogs/${blog.id}/restore`}>
+					<button type="submit">Restore</button>
+				</form>
+			) : (
+				<form method="post" action={`/dashboard/blogs/${blog.id}`}>
+					<input type="hidden" name="_method" value="DELETE" />
+					<button class="danger" type="submit">
+						Delete blog
+					</button>
+				</form>
+			)}
+		</Page>,
+	);
+	return ok(body);
 });
 
 /** GET /dashboard/blogs/:blogId/edit — rename form. */
@@ -105,12 +140,20 @@ export const edit = action<"GET", "/dashboard/blogs/:blogId/edit">(async ({ para
 	if ("redirect" in result) return result.redirect;
 	if ("notFound" in result) return result.notFound;
 	let { blog } = result;
-	let body =
-		`<h1>Rename blog</h1><form method="post" action="/dashboard/blogs/${attr(blog.id)}">` +
-		`<input type="hidden" name="_method" value="PUT">` +
-		`<label for="name">Name</label><input type="text" id="name" name="name" value="${attr(blog.name)}">` +
-		`<p><button type="submit">Save</button></p></form>`;
-	return ok(page("Rename blog", body));
+	let body = await renderDocument(
+		<Page title="Rename blog">
+			<h1>Rename blog</h1>
+			<form method="post" action={`/dashboard/blogs/${blog.id}`}>
+				<input type="hidden" name="_method" value="PUT" />
+				<label htmlFor="name">Name</label>
+				<input type="text" id="name" name="name" defaultValue={blog.name} />
+				<p>
+					<button type="submit">Save</button>
+				</p>
+			</form>
+		</Page>,
+	);
+	return ok(body);
 });
 
 /** PUT /dashboard/blogs/:blogId — renames a blog (pushes the title to the DO). */
@@ -159,20 +202,38 @@ export const domainIndex = action<"GET", "/dashboard/blogs/:blogId/domain">(asyn
 	let { blog } = result;
 	let hostname = await Hostname.findByBlog(platformDb(), blog.id);
 
-	let current = hostname
-		? `<p>Domain: <strong>${escape(hostname.hostname)}</strong> — status: ${escape(hostname.status)}</p>` +
-			(hostname.validation_txt_name
-				? `<p class="muted">Add TXT <code>${escape(hostname.validation_txt_name)}</code> = <code>${escape(hostname.validation_txt_value ?? "")}</code>, and a CNAME to <code>fallback.${escape(env.PLATFORM_DOMAIN)}</code>.</p>`
-				: "")
-		: `<p class="muted">No custom domain yet.</p>`;
-
-	let body =
-		`<p><a href="/dashboard/blogs/${attr(blog.id)}">← ${escape(blog.name)}</a></p><h1>Custom domain</h1>` +
-		current +
-		`<form method="post" action="/dashboard/blogs/${attr(blog.id)}/domain">` +
-		`<label for="hostname">Domain (e.g. blog.example.com)</label><input type="text" id="hostname" name="hostname">` +
-		`<p><button type="submit">Add domain</button></p></form>`;
-	return ok(page("Custom domain", body));
+	let body = await renderDocument(
+		<Page title="Custom domain">
+			<p>
+				<a href={`/dashboard/blogs/${blog.id}`}>← {blog.name}</a>
+			</p>
+			<h1>Custom domain</h1>
+			{hostname ? (
+				<>
+					<p>
+						Domain: <strong>{hostname.hostname}</strong> — status: {hostname.status}
+					</p>
+					{hostname.validation_txt_name && (
+						<p class="muted">
+							Add TXT <code>{hostname.validation_txt_name}</code> ={" "}
+							<code>{hostname.validation_txt_value ?? ""}</code>, and a CNAME to{" "}
+							<code>fallback.{env.PLATFORM_DOMAIN}</code>.
+						</p>
+					)}
+				</>
+			) : (
+				<p class="muted">No custom domain yet.</p>
+			)}
+			<form method="post" action={`/dashboard/blogs/${blog.id}/domain`}>
+				<label htmlFor="hostname">Domain (e.g. blog.example.com)</label>
+				<input type="text" id="hostname" name="hostname" />
+				<p>
+					<button type="submit">Add domain</button>
+				</p>
+			</form>
+		</Page>,
+	);
+	return ok(body);
 });
 
 /** POST /dashboard/blogs/:blogId/domain — registers a custom hostname. */
@@ -215,13 +276,34 @@ export const usage = action<"GET", "/dashboard/blogs/:blogId/usage">(async ({ pa
 
 	let rows = await platformDb().findMany(UsageDaily.table, { where: { blog_id: blog.id } });
 	let sorted = rows.sort((a, b) => b.date.localeCompare(a.date)).slice(0, 30);
-	let table = sorted
-		.map((row) => `<tr><td>${escape(row.date)}</td><td>${row.page_views}</td></tr>`)
-		.join("");
-	let body =
-		`<p><a href="/dashboard/blogs/${attr(blog.id)}">← ${escape(blog.name)}</a></p><h1>Usage</h1>` +
-		(sorted.length
-			? `<table><thead><tr><th>Date</th><th>Page views</th></tr></thead><tbody>${table}</tbody></table>`
-			: `<p class="muted">No usage recorded yet.</p>`);
-	return ok(page("Usage", body));
+
+	let body = await renderDocument(
+		<Page title="Usage">
+			<p>
+				<a href={`/dashboard/blogs/${blog.id}`}>← {blog.name}</a>
+			</p>
+			<h1>Usage</h1>
+			{sorted.length ? (
+				<table>
+					<thead>
+						<tr>
+							<th>Date</th>
+							<th>Page views</th>
+						</tr>
+					</thead>
+					<tbody>
+						{sorted.map((row) => (
+							<tr key={row.date}>
+								<td>{row.date}</td>
+								<td>{row.page_views}</td>
+							</tr>
+						))}
+					</tbody>
+				</table>
+			) : (
+				<p class="muted">No usage recorded yet.</p>
+			)}
+		</Page>,
+	);
+	return ok(body);
 });

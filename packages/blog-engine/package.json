@@ -12,9 +12,9 @@
 		"typecheck": "tsc --noEmit"
 	},
 	"dependencies": {
-		"@markdoc/markdoc": "^0.5.7",
 		"@pkg/http": "workspace:*",
 		"@pkg/logger": "workspace:*",
+		"@pkg/markdown": "workspace:*",
 		"@pkg/markdown-server": "workspace:*",
 		"@pkg/result": "workspace:*",
 		"@pkg/rss": "workspace:*",

@@ -4,8 +4,9 @@ import { createMetaCodec } from "../../domain/meta-codec";
 import { Post } from "../../domain/post";
 import { PostType } from "../../domain/post-type";
 import action from "../../shared/lib/action";
-import { documentLayout } from "../../views/layout";
-import { excerptFor, renderPostList, type PostListItem } from "../../views/post-render";
+import { renderDocument } from "../../shared/lib/render";
+import { Layout } from "../../views/layout";
+import { excerptFor, PostList, type PostListItem } from "../../views/post-render";
 import { loadSiteChrome } from "../../views/site";
 
 import { renderNotFound } from "./not-found";
@@ -27,15 +28,11 @@ export default action<"GET", "/:typePath">(async ({ db, params }) => {
 			excerpt: excerptFor(type, post.meta),
 		}));
 
-	return ok(
-		documentLayout({
-			title: `${type.label} · ${chrome.siteTitle}`,
-			siteTitle: chrome.siteTitle,
-			description: chrome.description,
-			themeStyle: chrome.themeStyle,
-			customCss: chrome.customCss,
-			navLinks: chrome.navLinks,
-			body: `<h1>${type.label}</h1>${renderPostList(items)}`,
-		}),
+	let body = await renderDocument(
+		<Layout title={`${type.label} · ${chrome.siteTitle}`} {...chrome}>
+			<h1>{type.label}</h1>
+			<PostList items={items} />
+		</Layout>,
 	);
+	return ok(body);
 });

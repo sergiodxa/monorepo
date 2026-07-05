@@ -1,16 +1,17 @@
 import type { Database } from "remix/data-table";
+import type { Handle, RemixNode } from "remix/ui";
 
 import { redirect } from "@pkg/http/response";
 import { badRequest, forbidden, notFound, ok } from "@pkg/http/response/html";
 
 import { createMetaCodec, type PostMetaValues } from "../../../domain/meta-codec";
 import { Post } from "../../../domain/post";
-import { PostType, type PostTypeDefinition } from "../../../domain/post-type";
+import { PostType, type FieldDefinition, type PostTypeDefinition } from "../../../domain/post-type";
 import { Settings } from "../../../domain/settings";
 import action from "../../../shared/lib/action";
+import { renderDocument } from "../../../shared/lib/render";
 import { getAuthUser, getPermissions } from "../../../shared/middleware/auth";
-import { cmsLayout } from "../../../views/cms-layout";
-import { attr, escape } from "../../../views/html";
+import { CmsLayout } from "../../../views/cms-layout";
 
 /** Derives a URL slug from a title. */
 function slugify(value: string): string {
@@ -21,73 +22,69 @@ function slugify(value: string): string {
 		.slice(0, 80);
 }
 
-/** Renders the CMS form inputs for a type's fields. */
-function renderFields(type: PostTypeDefinition, meta: Partial<PostMetaValues>): string {
-	return type.fields
-		.map((field) => {
-			let name = `meta_${field.key}`;
-			let value = meta[field.key];
-			let help = field.description ? `<p class="help">${escape(field.description)}</p>` : "";
-			let label = `<label for="${attr(name)}">${escape(field.label)}${field.required ? " *" : ""}</label>`;
-			if (field.kind === "markdown" || field.kind === "textarea") {
-				return `${label}<textarea id="${attr(name)}" name="${attr(name)}">${escape(value ?? "")}</textarea>${help}`;
-			}
-			if (field.kind === "boolean") {
-				return `<label><input type="checkbox" name="${attr(name)}"${value ? " checked" : ""}> ${escape(field.label)}</label>${help}`;
-			}
-			if (field.kind === "tags") {
-				let tags = Array.isArray(value) ? value.join(", ") : "";
-				return `${label}<input type="text" id="${attr(name)}" name="${attr(name)}" value="${attr(tags)}">${help}`;
-			}
-			let inputType = field.kind === "url" ? "url" : field.kind === "date" ? "date" : "text";
-			return `${label}<input type="${inputType}" id="${attr(name)}" name="${attr(name)}" value="${attr(value ?? "")}">${help}`;
-		})
-		.join("");
+/** Renders one CMS field input by kind. */
+function FieldInput(handle: Handle<{ field: FieldDefinition; value: unknown }>) {
+	return () => {
+		let { field, value } = handle.props;
+		let name = `meta_${field.key}`;
+		let help = field.description ? <p class="help">{field.description}</p> : null;
+		let label = (
+			<label htmlFor={name}>
+				{field.label}
+				{field.required ? " *" : ""}
+			</label>
+		);
+		if (field.kind === "markdown" || field.kind === "textarea") {
+			return (
+				<>
+					{label}
+					<textarea id={name} name={name} defaultValue={typeof value === "string" ? value : ""} />
+					{help}
+				</>
+			);
+		}
+		if (field.kind === "boolean") {
+			return (
+				<>
+					<label>
+						<input type="checkbox" name={name} defaultChecked={Boolean(value)} /> {field.label}
+					</label>
+					{help}
+				</>
+			);
+		}
+		if (field.kind === "tags") {
+			let tags = Array.isArray(value) ? value.join(", ") : "";
+			return (
+				<>
+					{label}
+					<input type="text" id={name} name={name} defaultValue={tags} />
+					{help}
+				</>
+			);
+		}
+		let inputType = field.kind === "url" ? "url" : field.kind === "date" ? "date" : "text";
+		return (
+			<>
+				{label}
+				<input
+					type={inputType}
+					id={name}
+					name={name}
+					defaultValue={typeof value === "string" ? value : ""}
+				/>
+				{help}
+			</>
+		);
+	};
 }
 
-/** Renders the create/edit post form. */
-async function renderForm(
-	db: Database,
-	type: PostTypeDefinition,
-	options: {
-		canPublish: boolean;
-		userLabel: string;
-		permissions: ReadonlySet<string>;
-		post?: { id: string; slug: string; published_at: string | null; meta: PostMetaValues };
-		error?: string;
-	},
-): Promise<string> {
-	let siteTitle = await Settings.siteTitle(db);
-	let post = options.post;
-	// Create posts to the collection; edit posts to the member route (PUT via override).
-	let formAction = post
-		? `/cms/types/${type.name}/posts/${post.id}`
-		: `/cms/types/${type.name}/posts`;
-	let methodField = post ? `<input type="hidden" name="_method" value="PUT">` : "";
-	let publishInput = options.canPublish
-		? `<label for="published_at">Publish date (leave blank for draft)</label>` +
-			`<input type="datetime-local" id="published_at" name="published_at" value="${attr(toLocalInput(post?.published_at ?? null))}">`
-		: `<p class="help">You can save drafts. An editor will publish them.</p>`;
-
-	let body =
-		(options.error ? `<div class="notice">${escape(options.error)}</div>` : "") +
-		`<form method="post" action="${attr(formAction)}">` +
-		methodField +
-		`<label for="title">Title *</label><input type="text" id="title" name="title" value="${attr(post?.meta.title ?? "")}" required>` +
-		`<label for="slug">Slug</label><input type="text" id="slug" name="slug" value="${attr(post?.slug ?? "")}">` +
-		`<p class="help">Leave blank to derive from the title.</p>` +
-		renderFields(type, post?.meta ?? { title: "" }) +
-		publishInput +
-		`<p><button type="submit">Save</button> <a class="btn secondary" href="/cms/types/${attr(type.name)}/posts">Cancel</a></p>` +
-		`</form>`;
-
-	return cmsLayout({
-		title: post ? `Edit ${type.label}` : `New ${type.label}`,
-		siteTitle,
-		userLabel: options.userLabel,
-		permissions: options.permissions as ReadonlySet<never>,
-		body,
-	});
+interface FormOptions {
+	canPublish: boolean;
+	userLabel: string;
+	permissions: ReadonlySet<never>;
+	post?: { id: string; slug: string; published_at: string | null; meta: PostMetaValues };
+	error?: string;
 }
 
 /** Converts an ISO timestamp to a `datetime-local` input value. */
@@ -96,6 +93,62 @@ function toLocalInput(iso: string | null): string {
 	let ts = Date.parse(iso);
 	if (Number.isNaN(ts)) return "";
 	return new Date(ts).toISOString().slice(0, 16);
+}
+
+/** Renders the create/edit post form document. */
+async function renderForm(
+	db: Database,
+	type: PostTypeDefinition,
+	options: FormOptions,
+): Promise<string> {
+	let siteTitle = await Settings.siteTitle(db);
+	let post = options.post;
+	let formAction = post
+		? `/cms/types/${type.name}/posts/${post.id}`
+		: `/cms/types/${type.name}/posts`;
+
+	let publishInput: RemixNode = options.canPublish ? (
+		<>
+			<label htmlFor="published_at">Publish date (leave blank for draft)</label>
+			<input
+				type="datetime-local"
+				id="published_at"
+				name="published_at"
+				defaultValue={toLocalInput(post?.published_at ?? null)}
+			/>
+		</>
+	) : (
+		<p class="help">You can save drafts. An editor will publish them.</p>
+	);
+
+	return renderDocument(
+		<CmsLayout
+			title={post ? `Edit ${type.label}` : `New ${type.label}`}
+			siteTitle={siteTitle}
+			userLabel={options.userLabel}
+			permissions={options.permissions}
+			notice={options.error}
+		>
+			<form method="post" action={formAction}>
+				{post && <input type="hidden" name="_method" value="PUT" />}
+				<label htmlFor="title">Title *</label>
+				<input type="text" id="title" name="title" defaultValue={post?.meta.title ?? ""} required />
+				<label htmlFor="slug">Slug</label>
+				<input type="text" id="slug" name="slug" defaultValue={post?.slug ?? ""} />
+				<p class="help">Leave blank to derive from the title.</p>
+				{type.fields.map((field) => (
+					<FieldInput key={field.key} field={field} value={post?.meta[field.key]} />
+				))}
+				{publishInput}
+				<p>
+					<button type="submit">Save</button>{" "}
+					<a class="btn secondary" href={`/cms/types/${type.name}/posts`}>
+						Cancel
+					</a>
+				</p>
+			</form>
+		</CmsLayout>,
+	);
 }
 
 /** Reads native metadata values from the submitted form for a type. */
@@ -128,6 +181,14 @@ async function ctxInfo() {
 	return { user, permissions };
 }
 
+/** Parses the `published_at` form field to an ISO string or null (draft). */
+function parsePublishedAt(formData: FormData): string | null {
+	let raw = String(formData.get("published_at") ?? "").trim();
+	if (!raw) return null;
+	let ts = Date.parse(raw);
+	return Number.isNaN(ts) ? null : new Date(ts).toISOString();
+}
+
 export const index = action<"GET", "/cms/types/:typeName/posts">(async ({ db, params }) => {
 	let type = await requireType(db, params.typeName);
 	let { user, permissions } = await ctxInfo();
@@ -137,35 +198,50 @@ export const index = action<"GET", "/cms/types/:typeName/posts">(async ({ db, pa
 	let posts = await Post.findManyForType(db, type.name, codec);
 	let siteTitle = await Settings.siteTitle(db);
 
-	let rows = posts
-		.map((post) => {
-			let canEdit = permissions.has("posts.edit_any") || post.author_id === user.id;
-			let state =
-				post.published_at === null
-					? "Draft"
-					: Post.isScheduled(post.published_at)
-						? "Scheduled"
-						: "Published";
-			let editLink = canEdit
-				? `<a href="/cms/types/${attr(type.name)}/posts/${attr(post.id)}/edit">Edit</a>`
-				: "";
-			return `<tr><td>${escape(post.meta.title || "(untitled)")}</td><td>${state}</td><td>${editLink}</td></tr>`;
-		})
-		.join("");
-
-	let body =
-		`<p><a class="btn" href="/cms/types/${attr(type.name)}/posts/new">New ${escape(type.label)}</a></p>` +
-		`<table><thead><tr><th>Title</th><th>State</th><th></th></tr></thead><tbody>${rows}</tbody></table>`;
-
-	return ok(
-		cmsLayout({
-			title: type.label,
-			siteTitle,
-			userLabel: user.display_name || user.email,
-			permissions,
-			body,
-		}),
+	let body = await renderDocument(
+		<CmsLayout
+			title={type.label}
+			siteTitle={siteTitle}
+			userLabel={user.display_name || user.email}
+			permissions={permissions}
+		>
+			<p>
+				<a class="btn" href={`/cms/types/${type.name}/posts/new`}>
+					New {type.label}
+				</a>
+			</p>
+			<table>
+				<thead>
+					<tr>
+						<th>Title</th>
+						<th>State</th>
+						<th />
+					</tr>
+				</thead>
+				<tbody>
+					{posts.map((post) => {
+						let canEdit = permissions.has("posts.edit_any") || post.author_id === user.id;
+						let state =
+							post.published_at === null
+								? "Draft"
+								: Post.isScheduled(post.published_at)
+									? "Scheduled"
+									: "Published";
+						return (
+							<tr key={post.id}>
+								<td>{post.meta.title || "(untitled)"}</td>
+								<td>{state}</td>
+								<td>
+									{canEdit && <a href={`/cms/types/${type.name}/posts/${post.id}/edit`}>Edit</a>}
+								</td>
+							</tr>
+						);
+					})}
+				</tbody>
+			</table>
+		</CmsLayout>,
 	);
+	return ok(body);
 });
 
 export const newPost = action<"GET", "/cms/types/:typeName/posts/new">(async ({ db, params }) => {
@@ -280,11 +356,3 @@ export const destroy = action<"DELETE", "/cms/types/:typeName/posts/:id">(
 		return redirect(`/cms/types/${type.name}/posts`, { status: redirect.Status.SeeOther });
 	},
 );
-
-/** Parses the `published_at` form field to an ISO string or null (draft). */
-function parsePublishedAt(formData: FormData): string | null {
-	let raw = String(formData.get("published_at") ?? "").trim();
-	if (!raw) return null;
-	let ts = Date.parse(raw);
-	return Number.isNaN(ts) ? null : new Date(ts).toISOString();
-}

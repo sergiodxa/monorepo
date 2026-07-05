@@ -4,10 +4,11 @@ import { ok } from "@pkg/http/response/html";
 import { getAccountId } from "~/app/http/middleware/session";
 import action from "~/app/lib/action";
 import { platformDb } from "~/app/lib/db";
-import { escape, page } from "~/app/lib/html";
+import { renderDocument } from "~/app/lib/render";
 import Account from "~/app/models/account";
 import Subscription from "~/app/models/subscription";
 import { PolarService } from "~/app/services/polar";
+import { Page } from "~/app/views/layout";
 
 /** GET /dashboard/billing — subscription status + checkout/portal entry points. */
 export const index = action<"GET", "/dashboard/billing">(async () => {
@@ -20,17 +21,33 @@ export const index = action<"GET", "/dashboard/billing">(async () => {
 		Subscription.findByAccount(db, accountId),
 	]);
 
-	let status = subscription?.status ?? "none";
-	let cta = account?.polar_customer_id
-		? `<button type="submit" name="intent" value="portal">Manage billing</button>`
-		: `<button type="submit" name="intent" value="checkout">Start subscription</button>`;
-
-	let body =
-		`<p><a href="/dashboard">← Dashboard</a></p><h1>Billing</h1>` +
-		`<p>Current status: <strong>${escape(status)}</strong></p>` +
-		`<p class="muted">A base monthly fee includes a generous page-view allowance pooled across all your blogs; overage is metered.</p>` +
-		`<form method="post" action="/dashboard/billing">${cta}</form>`;
-	return ok(page("Billing", body));
+	let body = await renderDocument(
+		<Page title="Billing">
+			<p>
+				<a href="/dashboard">← Dashboard</a>
+			</p>
+			<h1>Billing</h1>
+			<p>
+				Current status: <strong>{subscription?.status ?? "none"}</strong>
+			</p>
+			<p class="muted">
+				A base monthly fee includes a generous page-view allowance pooled across all your blogs;
+				overage is metered.
+			</p>
+			<form method="post" action="/dashboard/billing">
+				{account?.polar_customer_id ? (
+					<button type="submit" name="intent" value="portal">
+						Manage billing
+					</button>
+				) : (
+					<button type="submit" name="intent" value="checkout">
+						Start subscription
+					</button>
+				)}
+			</form>
+		</Page>,
+	);
+	return ok(body);
 });
 
 /** POST /dashboard/billing — opens Polar checkout or the customer portal. */

@@ -1,5 +1,8 @@
+import type { Handle, RemixNode } from "remix/ui";
+
 import { redirect } from "@pkg/http/response";
 import { ok } from "@pkg/http/response/html";
+import { css } from "remix/ui";
 
 import {
 	buildAuthorizationUrl,
@@ -11,8 +14,8 @@ import {
 import { User } from "../../domain/user";
 import routes from "../../routes";
 import action from "../../shared/lib/action";
+import { renderDocument } from "../../shared/lib/render";
 import { getIdToken, getSession, login, logout, setIdToken } from "../../shared/middleware/auth";
-import { attr, escape } from "../../views/html";
 
 /** OIDC PKCE transaction stored in the session between login start and callback. */
 interface AuthTransaction {
@@ -22,15 +25,34 @@ interface AuthTransaction {
 	returnTo?: string;
 }
 
-/** Minimal standalone page shell for the auth screens. */
-function authPage(title: string, body: string): string {
-	return (
-		`<!doctype html><html lang="en"><head><meta charset="utf-8">` +
-		`<meta name="viewport" content="width=device-width, initial-scale=1"><title>${escape(title)}</title>` +
-		`<style>body{font-family:system-ui;max-width:24rem;margin:6rem auto;padding:0 1rem;text-align:center}` +
-		`button{font:inherit;padding:0.6rem 1.2rem;border:0;border-radius:0.375rem;background:#2563eb;color:#fff;cursor:pointer}` +
-		`.error{color:#b91c1c;margin-bottom:1rem}</style></head><body>${body}</body></html>`
-	);
+/** Standalone centered page shell for the auth screens. */
+function AuthPage(handle: Handle<{ title: string; error?: string; children: RemixNode }>) {
+	return () => {
+		let { title, error, children } = handle.props;
+		return (
+			<html lang="en">
+				<head>
+					<meta charSet="utf-8" />
+					<meta name="viewport" content="width=device-width, initial-scale=1" />
+					<title>{title}</title>
+				</head>
+				<body
+					mix={[
+						css({
+							fontFamily: "system-ui, sans-serif",
+							maxWidth: "24rem",
+							margin: "6rem auto",
+							padding: "0 1rem",
+							textAlign: "center",
+						}),
+					]}
+				>
+					{error && <p mix={[css({ color: "#b91c1c", marginBottom: "1rem" })]}>{error}</p>}
+					{children}
+				</body>
+			</html>
+		);
+	};
 }
 
 function safeNext(value: string | null): string | undefined {
@@ -44,14 +66,15 @@ export const loginIndex = action<"GET", "/auth/login">(async ({ request }) => {
 	let errorParam = url.searchParams.get("error");
 	let formAction =
 		routes.auth.login.action.href() + (next ? `?next=${encodeURIComponent(next)}` : "");
-	return ok(
-		authPage(
-			"Sign in",
-			(errorParam ? `<p class="error">${escape(errorParam)}</p>` : "") +
-				`<h1>Sign in</h1>` +
-				`<form method="post" action="${attr(formAction)}"><button type="submit">Continue</button></form>`,
-		),
+	let body = await renderDocument(
+		<AuthPage title="Sign in" error={errorParam ?? undefined}>
+			<h1>Sign in</h1>
+			<form method="post" action={formAction}>
+				<button type="submit">Continue</button>
+			</form>
+		</AuthPage>,
 	);
+	return ok(body);
 });
 
 /** POST /auth/login — starts the OIDC authorization-code + PKCE flow. */
@@ -95,8 +118,9 @@ export const callback = action<"GET", "/auth/callback">(async ({ db, request, oi
 			status: redirect.Status.SeeOther,
 		});
 	}
-	if (!transaction)
+	if (!transaction) {
 		return redirect(`${loginUrl}?error=missing_transaction`, { status: redirect.Status.SeeOther });
+	}
 
 	let state = url.searchParams.get("state");
 	let code = url.searchParams.get("code");
@@ -133,13 +157,15 @@ export const callback = action<"GET", "/auth/callback">(async ({ db, request, oi
 
 /** GET /auth/logout — renders the sign-out confirmation. */
 export const logoutIndex = action<"GET", "/auth/logout">(async () => {
-	return ok(
-		authPage(
-			"Sign out",
-			`<h1>Sign out</h1><form method="post" action="${attr(routes.auth.logout.action.href())}">` +
-				`<button type="submit">Sign out</button></form>`,
-		),
+	let body = await renderDocument(
+		<AuthPage title="Sign out">
+			<h1>Sign out</h1>
+			<form method="post" action={routes.auth.logout.action.href()}>
+				<button type="submit">Sign out</button>
+			</form>
+		</AuthPage>,
 	);
+	return ok(body);
 });
 
 /** POST /auth/logout — clears the session and redirects through the IdP logout. */

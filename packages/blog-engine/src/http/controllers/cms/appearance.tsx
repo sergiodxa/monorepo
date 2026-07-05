@@ -1,21 +1,28 @@
+import type { RemixNode } from "remix/ui";
+
 import { redirect } from "@pkg/http/response";
 import { ok } from "@pkg/http/response/html";
 
 import { Settings } from "../../../domain/settings";
 import action from "../../../shared/lib/action";
+import { renderDocument } from "../../../shared/lib/render";
 import { getAuthUser, getPermissions } from "../../../shared/middleware/auth";
 import { DEFAULT_THEME, resolveTheme, type ThemeSettings } from "../../../theme/theme";
-import { cmsLayout } from "../../../views/cms-layout";
-import { attr } from "../../../views/html";
+import { CmsLayout } from "../../../views/cms-layout";
 
-function select(name: string, value: string, options: string[]): string {
-	let opts = options
-		.map(
-			(option) =>
-				`<option value="${attr(option)}"${option === value ? " selected" : ""}>${option}</option>`,
-		)
-		.join("");
-	return `<label for="${attr(name)}">${name}</label><select id="${attr(name)}" name="${attr(name)}">${opts}</select>`;
+function selectField(name: string, value: string, options: string[]): RemixNode {
+	return (
+		<>
+			<label htmlFor={name}>{name}</label>
+			<select id={name} name={name} defaultValue={value}>
+				{options.map((option) => (
+					<option value={option} key={option}>
+						{option}
+					</option>
+				))}
+			</select>
+		</>
+	);
 }
 
 /** GET /cms/appearance — theme knobs + custom CSS form. */
@@ -33,30 +40,37 @@ export const index = action<"GET", "/cms/appearance">(async ({ db }) => {
 	]);
 	let theme = resolveTheme(stored);
 
-	let body =
-		`<form method="post">` +
-		`<label for="accent">Accent color</label><input type="color" id="accent" name="accent" value="${attr(theme.accent)}">` +
-		`<label for="background">Background color</label><input type="color" id="background" name="background" value="${attr(theme.background)}">` +
-		`<label for="foreground">Text color</label><input type="color" id="foreground" name="foreground" value="${attr(theme.foreground)}">` +
-		select("radius", theme.radius, ["square", "soft", "rounded", "round"]) +
-		select("spacing", theme.spacing, ["compact", "comfortable", "spacious"]) +
-		select("fontHeading", theme.fontHeading, ["sans", "serif", "mono", "slab"]) +
-		select("fontBody", theme.fontBody, ["sans", "serif", "mono", "slab"]) +
-		select("fontSize", theme.fontSize, ["small", "medium", "large"]) +
-		`<label for="measure">Content width</label><input type="text" id="measure" name="measure" value="${attr(theme.measure)}">` +
-		`<label for="custom_css">Custom CSS</label><textarea id="custom_css" name="custom_css">${attr(customCss)}</textarea>` +
-		`<p class="help">Custom CSS is emitted last so it overrides the theme.</p>` +
-		`<p><button type="submit">Save appearance</button></p></form>`;
-
-	return ok(
-		cmsLayout({
-			title: "Appearance",
-			siteTitle,
-			userLabel: user.display_name || user.email,
-			permissions,
-			body,
-		}),
+	let body = await renderDocument(
+		<CmsLayout
+			title="Appearance"
+			siteTitle={siteTitle}
+			userLabel={user.display_name || user.email}
+			permissions={permissions}
+		>
+			<form method="post">
+				<label htmlFor="accent">Accent color</label>
+				<input type="color" id="accent" name="accent" defaultValue={theme.accent} />
+				<label htmlFor="background">Background color</label>
+				<input type="color" id="background" name="background" defaultValue={theme.background} />
+				<label htmlFor="foreground">Text color</label>
+				<input type="color" id="foreground" name="foreground" defaultValue={theme.foreground} />
+				{selectField("radius", theme.radius, ["square", "soft", "rounded", "round"])}
+				{selectField("spacing", theme.spacing, ["compact", "comfortable", "spacious"])}
+				{selectField("fontHeading", theme.fontHeading, ["sans", "serif", "mono", "slab"])}
+				{selectField("fontBody", theme.fontBody, ["sans", "serif", "mono", "slab"])}
+				{selectField("fontSize", theme.fontSize, ["small", "medium", "large"])}
+				<label htmlFor="measure">Content width</label>
+				<input type="text" id="measure" name="measure" defaultValue={theme.measure} />
+				<label htmlFor="custom_css">Custom CSS</label>
+				<textarea id="custom_css" name="custom_css" defaultValue={customCss} />
+				<p class="help">Custom CSS is emitted last so it overrides the theme.</p>
+				<p>
+					<button type="submit">Save appearance</button>
+				</p>
+			</form>
+		</CmsLayout>,
 	);
+	return ok(body);
 });
 
 /** POST /cms/appearance — persists theme + custom CSS. */
