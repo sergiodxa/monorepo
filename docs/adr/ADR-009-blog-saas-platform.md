@@ -2,7 +2,18 @@
 
 ## Status
 
-**Proposed** - 2026-07-04
+**Implemented (partial)** - 2026-07-04
+
+The blog engine (`@pkg/blog-engine`) is complete for v1 (public site, CMS, roles,
+theming, OIDC login), and `apps/blog-saas` is built end-to-end: worker routing, the
+Blog Durable Object, control-plane schema/models, dashboard (OIDC login, blog CRUD,
+provisioning), and scaffolded services/crons for custom domains and billing. The
+external-integration surfaces (Polar webhook signature verification, Cloudflare for
+SaaS hostname activation UX) are wired but need real credentials and hardening
+before GA. Note: `apps/blog-saas` uses the Laravel-style `templates/app` layout
+(bootstrap/, routes/, app/http/…) rather than the `src/`-based layout sketched below,
+matching the repo's current app convention. The self-hosted D1 example is documented
+in the engine README rather than shipped as a separate app.
 
 ## Background
 
@@ -1557,14 +1568,14 @@ Ship admin/editor/writer/reader as a TypeScript enum with fixed permission check
 
 ## Current Progress
 
-- [ ] Phase 0: Adapter extractions
-- [ ] Phase 1: Engine core
-- [ ] Phase 2: Engine CMS
-- [ ] Phase 3: Platform scaffold and routing
-- [ ] Phase 4: Dashboard
-- [ ] Phase 5: Custom domains
-- [ ] Phase 6: Billing and lifecycle
-- [ ] Phase 7: Production setup
+- [x] Phase 0: Adapter extractions (`@pkg/data-table-d1`, `@pkg/data-table-sqlstorage`)
+- [x] Phase 1: Engine core (schema, migrations, domain, theme, OIDC, public site)
+- [x] Phase 2: Engine CMS (posts/post-types/users/roles/settings/appearance)
+- [x] Phase 3: Platform scaffold and routing (worker, Blog DO, control-plane D1)
+- [x] Phase 4: Dashboard (OIDC login, account, blog CRUD, provisioning)
+- [~] Phase 5: Custom domains (HostnameService + form + poll cron wired; needs live CF for SaaS)
+- [~] Phase 6: Billing and lifecycle (metering, PolarService, webhook, crons wired; needs Polar setup + webhook HMAC)
+- [ ] Phase 7: Production setup (zone/DNS, secrets, deploy)
 
 ## Notes
 
