@@ -1,12 +1,13 @@
 import { Sitemap } from "@pkg/sitemap";
+import { createAction } from "remix/fetch-router";
 
 import { PostType } from "../../post-types/models/post-type";
 import { createMetaCodec } from "../../posts/models/meta-codec";
 import { Post } from "../../posts/models/post";
-import action from "../../shared/lib/action";
+import routes from "../../routes";
 
 /** Serves `/sitemap.xml`: home, each visible type index, and every published post. */
-export default action<"GET", "/sitemap.xml">(async ({ db, request }) => {
+export default createAction(routes.sitemap, async ({ db, request }) => {
 	let origin = new URL(request.url).origin;
 	let sitemap = new Sitemap();
 	sitemap.append(new URL("/", origin));

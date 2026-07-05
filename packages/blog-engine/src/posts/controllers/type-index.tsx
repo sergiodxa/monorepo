@@ -1,19 +1,19 @@
-import { ok } from "@pkg/http/response/html";
+import { createAction } from "remix/fetch-router";
 
 import { PostType } from "../../post-types/models/post-type";
+import routes from "../../routes";
 import { Layout } from "../../shared/components/layout";
 import { excerptFor, PostList, type PostListItem } from "../../shared/components/post-render";
-import action from "../../shared/lib/action";
-import { renderDocument } from "../../shared/lib/render";
 import { renderNotFound } from "../../shared/not-found";
 import { loadSiteChrome } from "../../shared/site";
 import { createMetaCodec } from "../models/meta-codec";
 import { Post } from "../models/post";
 
 /** Public per-type index: `/:typePath` lists published posts of that type. */
-export default action<"GET", "/:typePath">(async ({ db, params }) => {
+export default createAction(routes.typeIndex, async (ctx) => {
+	let { db, params } = ctx;
 	let type = await PostType.findByPath(db, params.typePath);
-	if (!type || !type.visible) return renderNotFound(db);
+	if (!type || !type.visible) return renderNotFound(ctx);
 
 	let chrome = await loadSiteChrome(db);
 	let codec = createMetaCodec(type);
@@ -27,11 +27,10 @@ export default action<"GET", "/:typePath">(async ({ db, params }) => {
 			excerpt: excerptFor(type, post.meta),
 		}));
 
-	let body = await renderDocument(
+	return ctx.render(
 		<Layout title={`${type.label} · ${chrome.siteTitle}`} {...chrome}>
 			<h1>{type.label}</h1>
 			<PostList items={items} />
 		</Layout>,
 	);
-	return ok(body);
 });

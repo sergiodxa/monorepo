@@ -7,6 +7,8 @@ import type { PostMetaValues } from "../../posts/models/meta-codec";
 
 import { parseMarkdown } from "../markdown";
 
+import * as s from "./styles";
+
 /** A summary row for post list views. */
 export interface PostListItem {
 	title: string;
@@ -30,13 +32,13 @@ export function excerptFor(definition: PostTypeDefinition, meta: PostMetaValues)
 export function PostDate(handle: Handle<{ publishedAt: string | null }>) {
 	return () => {
 		let { publishedAt } = handle.props;
-		if (publishedAt === null) return <span class="meta">Draft</span>;
+		if (publishedAt === null) return <span mix={[s.meta]}>Draft</span>;
 		let ts = Date.parse(publishedAt);
-		if (Number.isNaN(ts)) return <span class="meta" />;
+		if (Number.isNaN(ts)) return <span mix={[s.meta]} />;
 		let date = new Date(ts);
 		let label = date.toLocaleDateString("en", { year: "numeric", month: "long", day: "numeric" });
 		return (
-			<time class="meta" datetime={date.toISOString()}>
+			<time mix={[s.meta]} datetime={date.toISOString()}>
 				{label}
 			</time>
 		);
@@ -47,11 +49,11 @@ export function PostDate(handle: Handle<{ publishedAt: string | null }>) {
 export function PostList(handle: Handle<{ items: PostListItem[] }>) {
 	return () => {
 		let { items } = handle.props;
-		if (items.length === 0) return <p class="meta">No posts yet.</p>;
+		if (items.length === 0) return <p mix={[s.meta]}>No posts yet.</p>;
 		return (
-			<ul class="post-list">
+			<ul mix={[s.postList]}>
 				{items.map((item) => (
-					<li key={item.href}>
+					<li mix={[s.postListItem]} key={item.href}>
 						<a href={item.href}>{item.title}</a> <PostDate publishedAt={item.publishedAt} />
 						{item.excerpt && <p>{item.excerpt}</p>}
 					</li>
@@ -73,14 +75,14 @@ export function FieldValue(handle: Handle<{ kind: string; value: unknown }>) {
 			let url = String(value ?? "");
 			return url ? <a href={url}>{url}</a> : <></>;
 		}
-		if (kind === "boolean") return <span class="meta">{value ? "Yes" : "No"}</span>;
+		if (kind === "boolean") return <span mix={[s.meta]}>{value ? "Yes" : "No"}</span>;
 		if (kind === "tags") {
 			let tags = Array.isArray(value) ? value : [];
 			return (
 				<>
-					{tags.map((tag) => (
-						<span class="tag" key={String(tag)}>
-							{String(tag)}{" "}
+					{tags.map((t) => (
+						<span mix={[s.tag]} key={String(t)}>
+							{String(t)}{" "}
 						</span>
 					))}
 				</>
@@ -99,7 +101,7 @@ export function PostFields(
 		return (
 			<>
 				{definition.fields.map((field) => (
-					<div class={`field field-${field.key}`} key={field.key}>
+					<div key={field.key}>
 						<FieldValue kind={field.kind} value={meta[field.key]} />
 					</div>
 				))}

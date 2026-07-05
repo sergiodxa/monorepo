@@ -1,68 +1,85 @@
 import { redirect } from "@pkg/http/response";
-import { ok } from "@pkg/http/response/html";
+import { createController } from "remix/fetch-router";
 
 import { getAuthUser, getPermissions } from "../../auth/middleware/auth";
+import { requirePermission } from "../../auth/middleware/require-permission";
+import routes from "../../routes";
 import { CmsLayout } from "../../shared/components/cms-layout";
-import action from "../../shared/lib/action";
-import { renderDocument } from "../../shared/lib/render";
+import * as s from "../../shared/components/styles";
 import { Settings } from "../models/settings";
 
-function redirectHome(): Response {
-	return redirect("/cms", { status: redirect.Status.SeeOther });
-}
+/** `/cms/settings` — site title/description/language (gated by `settings.manage`). */
+export default createController(routes.cms.settings, {
+	middleware: [requirePermission("settings.manage")],
+	actions: {
+		async index(ctx) {
+			let { db } = ctx;
+			let user = await getAuthUser();
+			let permissions = await getPermissions();
+			let [title, description, language] = await Promise.all([
+				Settings.siteTitle(db),
+				Settings.siteDescription(db),
+				Settings.language(db),
+			]);
 
-/** GET /cms/settings — site title/description/language form. */
-export const index = action<"GET", "/cms/settings">(async ({ db }) => {
-	let user = await getAuthUser();
-	let permissions = await getPermissions();
-	if (!user || !permissions.has("settings.manage")) return redirectHome();
+			return ctx.render(
+				<CmsLayout
+					title="Settings"
+					siteTitle={title}
+					userLabel={user ? user.display_name || user.email : ""}
+					permissions={permissions}
+				>
+					<form method="post">
+						<label mix={[s.label]} htmlFor="site_title">
+							Site title
+						</label>
+						<input
+							mix={[s.control]}
+							type="text"
+							id="site_title"
+							name="site_title"
+							defaultValue={title}
+						/>
+						<label mix={[s.label]} htmlFor="site_description">
+							Site description
+						</label>
+						<input
+							mix={[s.control]}
+							type="text"
+							id="site_description"
+							name="site_description"
+							defaultValue={description}
+						/>
+						<label mix={[s.label]} htmlFor="language">
+							Language
+						</label>
+						<input
+							mix={[s.control]}
+							type="text"
+							id="language"
+							name="language"
+							defaultValue={language}
+						/>
+						<p>
+							<button mix={[s.button]} type="submit">
+								Save settings
+							</button>
+						</p>
+					</form>
+				</CmsLayout>,
+			);
+		},
 
-	let [title, description, language] = await Promise.all([
-		Settings.siteTitle(db),
-		Settings.siteDescription(db),
-		Settings.language(db),
-	]);
-
-	let body = await renderDocument(
-		<CmsLayout
-			title="Settings"
-			siteTitle={title}
-			userLabel={user.display_name || user.email}
-			permissions={permissions}
-		>
-			<form method="post">
-				<label htmlFor="site_title">Site title</label>
-				<input type="text" id="site_title" name="site_title" defaultValue={title} />
-				<label htmlFor="site_description">Site description</label>
-				<input
-					type="text"
-					id="site_description"
-					name="site_description"
-					defaultValue={description}
-				/>
-				<label htmlFor="language">Language</label>
-				<input type="text" id="language" name="language" defaultValue={language} />
-				<p>
-					<button type="submit">Save settings</button>
-				</p>
-			</form>
-		</CmsLayout>,
-	);
-	return ok(body);
-});
-
-/** POST /cms/settings — persists site settings. */
-export const action_ = action<"POST", "/cms/settings">(async ({ db, formData }) => {
-	let user = await getAuthUser();
-	let permissions = await getPermissions();
-	if (!user || !permissions.has("settings.manage")) return redirectHome();
-
-	await Settings.set(
-		db,
-		"site_title",
-		String(formData.get("site_title") ?? "").trim() || "My Blog",
-	);
-	await Settings.set(db, "site_description", String(formData.get("site_description") ?? ""));
-	await Settings.set(db, "language", String(formData.get("language") ?? "en").trim() || "en");
-	return redirect("/cms/settings", { status: redirect.Status.SeeOther });
+		async action(ctx) {
+			let { db, formData } = ctx;
+			await Settings.set(
+				db,
+				"site_title",
+				String(formData.get("site_title") ?? "").trim() || "My Blog",
+			);
+			await Settings.set(db, "site_description", String(formData.get("site_description") ?? ""));
+			await Settings.set(db, "language", String(formData.get("language") ?? "en").trim() || "en");
+			return redirect("/cms/settings", { status: redirect.Status.SeeOther });
+		},
+	},
 });

@@ -1,13 +1,16 @@
 import type { Database } from "remix/data-table";
+import type { RequestContext } from "remix/fetch-router";
 
 import { redirect } from "@pkg/http/response";
-import { badRequest, notFound, ok } from "@pkg/http/response/html";
+import { badRequest, notFound } from "@pkg/http/response/html";
+import { createController } from "remix/fetch-router";
 
 import { getAuthUser, getPermissions } from "../../auth/middleware/auth";
+import { requirePermission } from "../../auth/middleware/require-permission";
+import routes from "../../routes";
 import { Settings } from "../../settings/models/settings";
 import { CmsLayout } from "../../shared/components/cms-layout";
-import action from "../../shared/lib/action";
-import { renderDocument } from "../../shared/lib/render";
+import * as s from "../../shared/components/styles";
 import { PERMISSIONS, PERMISSION_KEYS, type Permission } from "../../shared/permissions";
 import { Role, type RoleInput, type RoleWithPermissions } from "../models/role";
 
@@ -34,14 +37,14 @@ function readForm(formData: FormData): RoleInput {
 }
 
 async function renderForm(
-	db: Database,
+	ctx: RequestContext,
 	role: RoleWithPermissions | undefined,
 	title: string,
 	error?: string,
-): Promise<string> {
-	let { user, permissions, siteTitle } = await chrome(db);
+): Promise<Response> {
+	let { user, permissions, siteTitle } = await chrome(ctx.db);
 	let granted = new Set<Permission>(role?.permissions ?? []);
-	return renderDocument(
+	return ctx.render(
 		<CmsLayout
 			title={title}
 			siteTitle={siteTitle}
@@ -50,18 +53,32 @@ async function renderForm(
 			notice={error}
 		>
 			<form method="post">
-				<label htmlFor="name">Name (machine)</label>
+				<label mix={[s.label]} htmlFor="name">
+					Name (machine)
+				</label>
 				<input
+					mix={[s.control]}
 					type="text"
 					id="name"
 					name="name"
 					defaultValue={role?.name ?? ""}
 					readonly={role?.builtin}
 				/>
-				<label htmlFor="label">Label</label>
-				<input type="text" id="label" name="label" defaultValue={role?.label ?? ""} />
-				<label htmlFor="description">Description</label>
+				<label mix={[s.label]} htmlFor="label">
+					Label
+				</label>
 				<input
+					mix={[s.control]}
+					type="text"
+					id="label"
+					name="label"
+					defaultValue={role?.label ?? ""}
+				/>
+				<label mix={[s.label]} htmlFor="description">
+					Description
+				</label>
+				<input
+					mix={[s.control]}
 					type="text"
 					id="description"
 					name="description"
@@ -70,7 +87,7 @@ async function renderForm(
 				<fieldset>
 					<legend>Permissions</legend>
 					{PERMISSION_KEYS.map((key) => (
-						<label key={key}>
+						<label mix={[s.label]} key={key}>
 							<input
 								type="checkbox"
 								name={`perm_${key}`}
@@ -82,13 +99,15 @@ async function renderForm(
 					))}
 				</fieldset>
 				{role?.builtin && (
-					<p class="help">
+					<p mix={[s.help]}>
 						Built-in roles keep their permissions; only label/description can change.
 					</p>
 				)}
 				<p>
-					<button type="submit">Save</button>{" "}
-					<a class="btn secondary" href="/cms/roles">
+					<button mix={[s.button]} type="submit">
+						Save
+					</button>{" "}
+					<a mix={[s.button, s.buttonSecondary]} href="/cms/roles">
 						Cancel
 					</a>
 				</p>
@@ -97,86 +116,87 @@ async function renderForm(
 	);
 }
 
-export const index = action<"GET", "/cms/roles">(async ({ db }) => {
-	let { user, permissions, siteTitle } = await chrome(db);
-	let roles = await Role.findAll(db);
-	let body = await renderDocument(
-		<CmsLayout
-			title="Roles"
-			siteTitle={siteTitle}
-			userLabel={label(user)}
-			permissions={permissions}
-		>
-			<p>
-				<a class="btn" href="/cms/roles/new">
-					New role
-				</a>
-			</p>
-			<table>
-				<thead>
-					<tr>
-						<th>Label</th>
-						<th>Name</th>
-						<th>Kind</th>
-						<th />
-					</tr>
-				</thead>
-				<tbody>
-					{roles.map((role) => (
-						<tr key={role.id}>
-							<td>{role.label}</td>
-							<td>{role.name}</td>
-							<td>{role.builtin ? "built-in" : "custom"}</td>
-							<td>
-								<a href={`/cms/roles/${role.id}/edit`}>Edit</a>
-							</td>
-						</tr>
-					))}
-				</tbody>
-			</table>
-		</CmsLayout>,
-	);
-	return ok(body);
-});
+/** `/cms/roles` — create, edit, and delete custom roles (gated by `roles.manage`). */
+export default createController(routes.cms.roles, {
+	middleware: [requirePermission("roles.manage")],
+	actions: {
+		async index(ctx) {
+			let { user, permissions, siteTitle } = await chrome(ctx.db);
+			let roles = await Role.findAll(ctx.db);
+			return ctx.render(
+				<CmsLayout
+					title="Roles"
+					siteTitle={siteTitle}
+					userLabel={label(user)}
+					permissions={permissions}
+				>
+					<p>
+						<a mix={[s.button]} href="/cms/roles/new">
+							New role
+						</a>
+					</p>
+					<table mix={[s.table]}>
+						<thead>
+							<tr>
+								<th mix={[s.cell]}>Label</th>
+								<th mix={[s.cell]}>Name</th>
+								<th mix={[s.cell]}>Kind</th>
+								<th mix={[s.cell]} />
+							</tr>
+						</thead>
+						<tbody>
+							{roles.map((role) => (
+								<tr key={role.id}>
+									<td mix={[s.cell]}>{role.label}</td>
+									<td mix={[s.cell]}>{role.name}</td>
+									<td mix={[s.cell]}>{role.builtin ? "built-in" : "custom"}</td>
+									<td mix={[s.cell]}>
+										<a href={`/cms/roles/${role.id}/edit`}>Edit</a>
+									</td>
+								</tr>
+							))}
+						</tbody>
+					</table>
+				</CmsLayout>,
+			);
+		},
 
-export const newRole = action<"GET", "/cms/roles/new">(async ({ db }) => {
-	return ok(await renderForm(db, undefined, "New Role"));
-});
+		async new(ctx) {
+			return renderForm(ctx, undefined, "New Role");
+		},
 
-export const create = action<"POST", "/cms/roles">(async ({ db, formData }) => {
-	try {
-		await Role.create(db, readForm(formData));
-	} catch (error) {
-		return badRequest(
-			await renderForm(db, undefined, "New Role", String((error as Error).message)),
-		);
-	}
-	return redirect("/cms/roles", { status: redirect.Status.SeeOther });
-});
+		async create(ctx) {
+			try {
+				await Role.create(ctx.db, readForm(ctx.formData));
+			} catch (error) {
+				return renderForm(ctx, undefined, "New Role", String((error as Error).message));
+			}
+			return redirect("/cms/roles", { status: redirect.Status.SeeOther });
+		},
 
-export const edit = action<"GET", "/cms/roles/:id/edit">(async ({ db, params }) => {
-	let role = await Role.findById(db, params.id);
-	if (!role) return notFound("Not found");
-	return ok(await renderForm(db, role, `Edit ${role.label}`));
-});
+		async edit(ctx) {
+			let role = await Role.findById(ctx.db, ctx.params.id);
+			if (!role) return notFound("Not found");
+			return renderForm(ctx, role, `Edit ${role.label}`);
+		},
 
-export const update = action<"PUT", "/cms/roles/:id">(async ({ db, params, formData }) => {
-	try {
-		await Role.update(db, params.id, readForm(formData));
-	} catch (error) {
-		let role = await Role.findById(db, params.id);
-		return badRequest(
-			await renderForm(db, role ?? undefined, "Edit Role", String((error as Error).message)),
-		);
-	}
-	return redirect("/cms/roles", { status: redirect.Status.SeeOther });
-});
+		async update(ctx) {
+			try {
+				await Role.update(ctx.db, ctx.params.id, readForm(ctx.formData));
+			} catch (error) {
+				let role = await Role.findById(ctx.db, ctx.params.id);
+				return renderForm(ctx, role ?? undefined, "Edit Role", String((error as Error).message));
+			}
+			return redirect("/cms/roles", { status: redirect.Status.SeeOther });
+		},
 
-export const destroy = action<"DELETE", "/cms/roles/:id">(async ({ db, params }) => {
-	try {
-		await Role.destroy(db, params.id);
-	} catch (error) {
-		return badRequest(String((error as Error).message));
-	}
-	return redirect("/cms/roles", { status: redirect.Status.SeeOther });
+		async destroy(ctx) {
+			try {
+				await Role.destroy(ctx.db, ctx.params.id);
+			} catch (error) {
+				return badRequest(String((error as Error).message));
+			}
+			return redirect("/cms/roles", { status: redirect.Status.SeeOther });
+		},
+	},
 });

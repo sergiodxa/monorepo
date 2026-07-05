@@ -1,16 +1,16 @@
-import { ok } from "@pkg/http/response/html";
+import { createAction } from "remix/fetch-router";
 
 import { PostType } from "../../post-types/models/post-type";
+import routes from "../../routes";
 import { Layout } from "../../shared/components/layout";
 import { excerptFor, PostList, type PostListItem } from "../../shared/components/post-render";
-import action from "../../shared/lib/action";
-import { renderDocument } from "../../shared/lib/render";
 import { loadSiteChrome } from "../../shared/site";
 import { createMetaCodec } from "../models/meta-codec";
 import { Post } from "../models/post";
 
 /** Home feed: recent published posts across every visible post type. */
-export default action<"GET", "/">(async ({ db }) => {
+export default createAction(routes.feed, async (ctx) => {
+	let { db } = ctx;
 	let chrome = await loadSiteChrome(db);
 	let types = await PostType.findVisible(db);
 
@@ -32,10 +32,9 @@ export default action<"GET", "/">(async ({ db }) => {
 		(a, b) => (Date.parse(b.publishedAt ?? "") || 0) - (Date.parse(a.publishedAt ?? "") || 0),
 	);
 
-	let body = await renderDocument(
+	return ctx.render(
 		<Layout title={chrome.siteTitle} {...chrome}>
 			<PostList items={items.slice(0, 20)} />
 		</Layout>,
 	);
-	return ok(body);
 });

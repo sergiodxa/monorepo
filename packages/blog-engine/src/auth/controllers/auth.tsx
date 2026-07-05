@@ -1,12 +1,10 @@
 import type { Handle, RemixNode } from "remix/ui";
 
 import { redirect } from "@pkg/http/response";
-import { ok } from "@pkg/http/response/html";
-import { css } from "remix/ui";
+import { createAction, createController } from "remix/fetch-router";
 
 import routes from "../../routes";
-import action from "../../shared/lib/action";
-import { renderDocument } from "../../shared/lib/render";
+import * as s from "../../shared/components/styles";
 import { User } from "../../users/models/user";
 import { getIdToken, getSession, login, logout, setIdToken } from "../middleware/auth";
 import {
@@ -36,18 +34,8 @@ function AuthPage(handle: Handle<{ title: string; error?: string; children: Remi
 					<meta name="viewport" content="width=device-width, initial-scale=1" />
 					<title>{title}</title>
 				</head>
-				<body
-					mix={[
-						css({
-							fontFamily: "system-ui, sans-serif",
-							maxWidth: "24rem",
-							margin: "6rem auto",
-							padding: "0 1rem",
-							textAlign: "center",
-						}),
-					]}
-				>
-					{error && <p mix={[css({ color: "#b91c1c", marginBottom: "1rem" })]}>{error}</p>}
+				<body mix={[s.authBody]}>
+					{error && <p mix={[s.errorText]}>{error}</p>}
 					{children}
 				</body>
 			</html>
@@ -59,53 +47,58 @@ function safeNext(value: string | null): string | undefined {
 	return value && value.startsWith("/") ? value : undefined;
 }
 
-/** GET /auth/login — renders the sign-in screen. */
-export const loginIndex = action<"GET", "/auth/login">(async ({ request }) => {
-	let url = new URL(request.url);
-	let next = url.searchParams.get("next");
-	let errorParam = url.searchParams.get("error");
-	let formAction =
-		routes.auth.login.action.href() + (next ? `?next=${encodeURIComponent(next)}` : "");
-	let body = await renderDocument(
-		<AuthPage title="Sign in" error={errorParam ?? undefined}>
-			<h1>Sign in</h1>
-			<form method="post" action={formAction}>
-				<button type="submit">Continue</button>
-			</form>
-		</AuthPage>,
-	);
-	return ok(body);
-});
+/** `/auth/login` — renders the sign-in screen (GET) and starts the flow (POST). */
+export const login = createController(routes.auth.login, {
+	actions: {
+		async index(ctx) {
+			let url = new URL(ctx.request.url);
+			let next = url.searchParams.get("next");
+			let errorParam = url.searchParams.get("error");
+			let formAction =
+				routes.auth.login.action.href() + (next ? `?next=${encodeURIComponent(next)}` : "");
+			return ctx.render(
+				<AuthPage title="Sign in" error={errorParam ?? undefined}>
+					<h1>Sign in</h1>
+					<form method="post" action={formAction}>
+						<button mix={[s.button]} type="submit">
+							Continue
+						</button>
+					</form>
+				</AuthPage>,
+			);
+		},
 
-/** POST /auth/login — starts the OIDC authorization-code + PKCE flow. */
-export const loginStart = action<"POST", "/auth/login">(async ({ request, oidc }) => {
-	let metadata = await resolveMetadata(oidc);
-	let pkce = await createPkce();
-	let state = crypto.randomUUID();
-	let redirectUri = new URL(routes.auth.callback.href(), request.url).toString();
-	let next = safeNext(new URL(request.url).searchParams.get("next"));
+		async action(ctx) {
+			let { request, oidc } = ctx;
+			let metadata = await resolveMetadata(oidc);
+			let pkce = await createPkce();
+			let state = crypto.randomUUID();
+			let redirectUri = new URL(routes.auth.callback.href(), request.url).toString();
+			let next = safeNext(new URL(request.url).searchParams.get("next"));
 
-	let session = getSession();
-	let transaction: AuthTransaction = {
-		provider: "oidc",
-		state,
-		codeVerifier: pkce.verifier,
-		returnTo: next,
-	};
-	session.set("__auth", transaction);
+			let transaction: AuthTransaction = {
+				provider: "oidc",
+				state,
+				codeVerifier: pkce.verifier,
+				returnTo: next,
+			};
+			getSession().set("__auth", transaction);
 
-	let authorizeUrl = buildAuthorizationUrl(metadata, {
-		clientId: oidc.clientId,
-		redirectUri,
-		scopes: oidc.scopes,
-		state,
-		challenge: pkce.challenge,
-	});
-	return redirect(authorizeUrl, { status: redirect.Status.SeeOther });
+			let authorizeUrl = buildAuthorizationUrl(metadata, {
+				clientId: oidc.clientId,
+				redirectUri,
+				scopes: oidc.scopes,
+				state,
+				challenge: pkce.challenge,
+			});
+			return redirect(authorizeUrl, { status: redirect.Status.SeeOther });
+		},
+	},
 });
 
 /** GET /auth/callback — completes the flow and establishes the local session. */
-export const callback = action<"GET", "/auth/callback">(async ({ db, request, oidc, logger }) => {
+export const callback = createAction(routes.auth.callback, async (ctx) => {
+	let { db, request, oidc, logger } = ctx;
 	let log = logger.loader("/auth/callback");
 	let url = new URL(request.url);
 	let session = getSession();
@@ -155,35 +148,39 @@ export const callback = action<"GET", "/auth/callback">(async ({ db, request, oi
 	return redirect(returnTo, { status: redirect.Status.SeeOther });
 });
 
-/** GET /auth/logout — renders the sign-out confirmation. */
-export const logoutIndex = action<"GET", "/auth/logout">(async () => {
-	let body = await renderDocument(
-		<AuthPage title="Sign out">
-			<h1>Sign out</h1>
-			<form method="post" action={routes.auth.logout.action.href()}>
-				<button type="submit">Sign out</button>
-			</form>
-		</AuthPage>,
-	);
-	return ok(body);
-});
+/** `/auth/logout` — sign-out confirmation (GET) and session teardown (POST). */
+export const logout_ = createController(routes.auth.logout, {
+	actions: {
+		async index(ctx) {
+			return ctx.render(
+				<AuthPage title="Sign out">
+					<h1>Sign out</h1>
+					<form method="post" action={routes.auth.logout.action.href()}>
+						<button mix={[s.button]} type="submit">
+							Sign out
+						</button>
+					</form>
+				</AuthPage>,
+			);
+		},
 
-/** POST /auth/logout — clears the session and redirects through the IdP logout. */
-export const logoutAction = action<"POST", "/auth/logout">(async ({ request, oidc }) => {
-	let idToken = getIdToken();
-	let origin = new URL(request.url).origin;
-	let metadata = await resolveMetadata(oidc).catch(() => null);
-	logout();
+		async action(ctx) {
+			let { request, oidc } = ctx;
+			let idToken = getIdToken();
+			let origin = new URL(request.url).origin;
+			let metadata = await resolveMetadata(oidc).catch(() => null);
+			logout();
 
-	if (metadata?.end_session_endpoint) {
-		let logoutUrl = new URL(metadata.end_session_endpoint);
-		if (idToken) logoutUrl.searchParams.set("id_token_hint", idToken);
-		logoutUrl.searchParams.set("post_logout_redirect_uri", `${origin}/`);
-		return redirect(logoutUrl.toString(), {
-			status: redirect.Status.SeeOther,
-			headers: { "Clear-Site-Data": '"*"' },
-		});
-	}
-
-	return redirect("/", { status: redirect.Status.SeeOther });
+			if (metadata?.end_session_endpoint) {
+				let logoutUrl = new URL(metadata.end_session_endpoint);
+				if (idToken) logoutUrl.searchParams.set("id_token_hint", idToken);
+				logoutUrl.searchParams.set("post_logout_redirect_uri", `${origin}/`);
+				return redirect(logoutUrl.toString(), {
+					status: redirect.Status.SeeOther,
+					headers: { "Clear-Site-Data": '"*"' },
+				});
+			}
+			return redirect("/", { status: redirect.Status.SeeOther });
+		},
+	},
 });

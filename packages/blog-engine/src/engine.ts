@@ -1,6 +1,6 @@
 import type { Logger } from "@pkg/logger/request";
 import type { Database } from "remix/data-table";
-import type { Middleware, RequestHandler } from "remix/fetch-router";
+import type { Middleware } from "remix/fetch-router";
 
 import { asyncContext } from "remix/async-context-middleware";
 import { createRouter } from "remix/fetch-router";
@@ -9,28 +9,28 @@ import { methodOverride } from "remix/method-override-middleware";
 
 import type { OIDCConfig } from "./auth/oidc";
 
-import * as appearance from "./appearance/controllers/cms";
+import appearance from "./appearance/controllers/cms";
 import assets from "./assets/controllers/assets";
-import * as auth from "./auth/controllers/auth";
-import { requireAuth, requirePermission } from "./auth/middleware/require-permission";
+import { callback, login, logout_ } from "./auth/controllers/auth";
 import dashboard from "./cms/controllers/dashboard";
-import * as postTypes from "./post-types/controllers/cms";
-import * as posts from "./posts/controllers/cms";
+import postTypes from "./post-types/controllers/cms";
+import posts from "./posts/controllers/cms";
 import feed from "./posts/controllers/feed";
 import post from "./posts/controllers/post";
 import typeIndex from "./posts/controllers/type-index";
-import * as roles from "./roles/controllers/cms";
+import roles from "./roles/controllers/cms";
 import routes from "./routes";
-import * as settings from "./settings/controllers/cms";
+import settings from "./settings/controllers/cms";
 import databaseMiddleware from "./shared/middleware/db";
 import loggerMiddleware from "./shared/middleware/logger";
 import oidcMiddleware from "./shared/middleware/oidc";
+import renderMiddleware from "./shared/middleware/render";
 import trailingSlash from "./shared/middleware/trailing-slash";
 import notFound from "./shared/not-found";
 import robots from "./syndication/controllers/robots";
 import * as rss from "./syndication/controllers/rss";
 import sitemap from "./syndication/controllers/sitemap";
-import * as users from "./users/controllers/cms";
+import users from "./users/controllers/cms";
 
 /** Dependencies the request pipeline is bound to. */
 export interface EngineRouterDeps {
@@ -42,8 +42,9 @@ export interface EngineRouterDeps {
 
 /**
  * Builds the engine's fetch-router. Each request gets a fresh router so the
- * request-scoped logger can be injected (matching `@pkg/oidc-provider`). The
- * router maps one route group per `map()` call (nested route-map keys throw).
+ * request-scoped logger can be injected (matching `@pkg/oidc-provider`). Each CMS
+ * controller carries its own permission middleware, so the router just maps
+ * route→controller (one group per `map()`; nested route-map keys throw).
  */
 export function createEngineRouter(deps: EngineRouterDeps) {
 	let globalMiddleware: Middleware[] = [
@@ -51,6 +52,7 @@ export function createEngineRouter(deps: EngineRouterDeps) {
 		loggerMiddleware(deps.logger),
 		databaseMiddleware(deps.db),
 		oidcMiddleware(deps.oidc),
+		renderMiddleware as Middleware,
 		asyncContext(),
 		deps.sessionMiddleware,
 		formData() as Middleware,
@@ -68,62 +70,18 @@ export function createEngineRouter(deps: EngineRouterDeps) {
 	router.map(routes.assets, assets);
 
 	// Auth.
-	router.map(routes.auth.login, { actions: { index: auth.loginIndex, action: auth.loginStart } });
-	router.map(routes.auth.logout, {
-		actions: { index: auth.logoutIndex, action: auth.logoutAction },
-	});
-	router.map(routes.auth.callback, auth.callback);
+	router.map(routes.auth.login, login);
+	router.map(routes.auth.logout, logout_);
+	router.map(routes.auth.callback, callback);
 
-	// CMS (permission-gated per group; finer own-vs-any checks live in controllers).
-	router.map(routes.cms.dashboard, {
-		middleware: [requireAuth()],
-		handler: dashboard as RequestHandler,
-	});
-	router.map(routes.cms.posts, {
-		middleware: [requirePermission("posts.create")],
-		actions: {
-			index: posts.index,
-			new: posts.newPost,
-			create: posts.create,
-			edit: posts.edit,
-			update: posts.update,
-			destroy: posts.destroy,
-		},
-	});
-	router.map(routes.cms.postTypes, {
-		middleware: [requirePermission("post_types.manage")],
-		actions: {
-			index: postTypes.index,
-			new: postTypes.newType,
-			create: postTypes.create,
-			edit: postTypes.edit,
-			update: postTypes.update,
-			destroy: postTypes.destroy,
-		},
-	});
-	router.map(routes.cms.users, {
-		middleware: [requirePermission("users.manage")],
-		actions: { index: users.index, edit: users.edit, update: users.update, destroy: users.destroy },
-	});
-	router.map(routes.cms.roles, {
-		middleware: [requirePermission("roles.manage")],
-		actions: {
-			index: roles.index,
-			new: roles.newRole,
-			create: roles.create,
-			edit: roles.edit,
-			update: roles.update,
-			destroy: roles.destroy,
-		},
-	});
-	router.map(routes.cms.settings, {
-		middleware: [requirePermission("settings.manage")],
-		actions: { index: settings.index, action: settings.action_ },
-	});
-	router.map(routes.cms.appearance, {
-		middleware: [requirePermission("appearance.manage")],
-		actions: { index: appearance.index, action: appearance.action_ },
-	});
+	// CMS (each controller declares its own permission middleware).
+	router.map(routes.cms.dashboard, dashboard);
+	router.map(routes.cms.posts, posts);
+	router.map(routes.cms.postTypes, postTypes);
+	router.map(routes.cms.users, users);
+	router.map(routes.cms.roles, roles);
+	router.map(routes.cms.settings, settings);
+	router.map(routes.cms.appearance, appearance);
 
 	// Dynamic public routes registered last so fixed routes win.
 	router.map(routes.typeIndex, typeIndex);

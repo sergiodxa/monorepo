@@ -1,13 +1,14 @@
 import type { Database } from "remix/data-table";
 
 import { RSS } from "@pkg/rss";
+import { createAction } from "remix/fetch-router";
 
 import { PostType, type PostTypeDefinition } from "../../post-types/models/post-type";
 import { createMetaCodec } from "../../posts/models/meta-codec";
 import { Post } from "../../posts/models/post";
+import routes from "../../routes";
 import { Settings } from "../../settings/models/settings";
 import { excerptFor } from "../../shared/components/post-render";
-import action from "../../shared/lib/action";
 import { renderNotFound } from "../../shared/not-found";
 
 /** Builds RSS items for one post type's published posts. */
@@ -36,7 +37,7 @@ function xmlResponse(body: string): Response {
 }
 
 /** Global feed `/rss.xml`: published posts across all visible types. */
-export const feedRss = action<"GET", "/rss.xml">(async ({ db, request }) => {
+export const feedRss = createAction(routes.rss, async ({ db, request }) => {
 	let origin = new URL(request.url).origin;
 	let [siteTitle, description, types] = await Promise.all([
 		Settings.siteTitle(db),
@@ -52,7 +53,7 @@ export const feedRss = action<"GET", "/rss.xml">(async ({ db, request }) => {
 });
 
 /** Per-type feed `/:typePath.rss`. */
-export const typeRss = action<"GET", "/:typePath.rss">(async ({ db, request, params }) => {
+export const typeRss = createAction(routes.typeRss, async ({ db, request, params }) => {
 	let type = await PostType.findByPath(db, params.typePath);
 	if (!type || !type.visible) return renderNotFound(db);
 
