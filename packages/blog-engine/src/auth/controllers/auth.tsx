@@ -38,7 +38,7 @@ function AuthPage(handle: Handle<{ title: string; error?: string; children: Remi
  * path. Rejects protocol-relative (`//host`) and backslash (`/\host`) tricks and any
  * absolute URL to another origin, returning the normalized path (or `undefined`).
  */
-function safeNext(value: string | null | undefined, request: Request): string | undefined {
+export function safeNext(value: string | null | undefined, request: Request): string | undefined {
 	if (!value || !value.startsWith("/") || value.startsWith("//") || value.startsWith("/\\")) {
 		return undefined;
 	}
