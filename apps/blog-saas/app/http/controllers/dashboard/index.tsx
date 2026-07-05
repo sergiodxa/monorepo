@@ -1,18 +1,18 @@
 import { redirect } from "@pkg/http/response";
-import { ok } from "@pkg/http/response/html";
 import { env } from "cloudflare:workers";
+import { createAction } from "remix/fetch-router";
 
 import { getAccountId } from "~/app/http/middleware/session";
-import action from "~/app/lib/action";
 import { platformDb } from "~/app/lib/db";
-import { renderDocument } from "~/app/lib/render";
 import Account from "~/app/models/account";
 import Blog from "~/app/models/blog";
 import Subscription from "~/app/models/subscription";
 import { Page } from "~/app/views/layout";
+import * as s from "~/app/views/styles";
+import routes from "~/routes/web";
 
 /** GET /dashboard — the account's blogs + subscription status. */
-export default action<"GET", "/dashboard">(async () => {
+export default createAction(routes.dashboard.index, async (ctx) => {
 	let accountId = getAccountId();
 	if (!accountId) return redirect("/auth/login", { status: redirect.Status.SeeOther });
 
@@ -23,12 +23,12 @@ export default action<"GET", "/dashboard">(async () => {
 		Subscription.findByAccount(db, accountId),
 	]);
 
-	let body = await renderDocument(
+	return ctx.render(
 		<Page title="Dashboard">
 			<p>
 				<a href="/">← Home</a> · Signed in as {account?.email ?? ""} ·{" "}
 				<form method="post" action="/auth/logout" style="display:inline">
-					<button class="danger" type="submit">
+					<button mix={[s.button, s.buttonDanger]} type="submit">
 						Sign out
 					</button>
 				</form>
@@ -39,17 +39,17 @@ export default action<"GET", "/dashboard">(async () => {
 				<a href="/dashboard/billing">Manage billing</a>
 			</p>
 			<p>
-				<a class="btn" href="/dashboard/blogs/new">
+				<a mix={[s.button]} href="/dashboard/blogs/new">
 					Create a blog
 				</a>
 			</p>
 			{blogs.length ? (
-				<table>
+				<table mix={[s.table]}>
 					<thead>
 						<tr>
-							<th>Name</th>
-							<th>Address</th>
-							<th>Status</th>
+							<th mix={[s.cell]}>Name</th>
+							<th mix={[s.cell]}>Address</th>
+							<th mix={[s.cell]}>Status</th>
 						</tr>
 					</thead>
 					<tbody>
@@ -57,26 +57,25 @@ export default action<"GET", "/dashboard">(async () => {
 							let host = `${blog.slug}.${env.PLATFORM_DOMAIN}`;
 							return (
 								<tr key={blog.id}>
-									<td>
+									<td mix={[s.cell]}>
 										<a href={`/dashboard/blogs/${blog.id}`}>{blog.name}</a>
 									</td>
-									<td>
+									<td mix={[s.cell]}>
 										{blog.status === "active" ? (
 											<a href={`https://${host}`}>{host}</a>
 										) : (
-											<span class="muted">{host}</span>
+											<span mix={[s.muted]}>{host}</span>
 										)}
 									</td>
-									<td>{blog.status}</td>
+									<td mix={[s.cell]}>{blog.status}</td>
 								</tr>
 							);
 						})}
 					</tbody>
 				</table>
 			) : (
-				<p class="muted">No blogs yet.</p>
+				<p mix={[s.muted]}>No blogs yet.</p>
 			)}
 		</Page>,
 	);
-	return ok(body);
 });

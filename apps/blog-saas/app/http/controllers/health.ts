@@ -1,6 +1,7 @@
 import { json } from "@pkg/http/response";
+import { createAction } from "remix/fetch-router";
 
-import action from "~/app/lib/action";
+import routes from "~/routes/web";
 
 /** Liveness probe. */
-export default action<"GET", "/health">(async () => json({ status: "ok" }));
+export default createAction(routes.health, async () => json({ status: "ok" }));

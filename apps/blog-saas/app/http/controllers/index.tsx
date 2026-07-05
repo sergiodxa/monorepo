@@ -1,32 +1,31 @@
-import { ok } from "@pkg/http/response/html";
+import { createAction } from "remix/fetch-router";
 
 import { getAccountId } from "~/app/http/middleware/session";
-import action from "~/app/lib/action";
-import { renderDocument } from "~/app/lib/render";
 import { Page } from "~/app/views/layout";
+import * as s from "~/app/views/styles";
+import routes from "~/routes/web";
 
 /** Marketing landing page. */
-export default action<"GET", "/">(async () => {
+export default createAction(routes.index, async (ctx) => {
 	let signedIn = getAccountId() !== null;
-	let body = await renderDocument(
+	return ctx.render(
 		<Page title="Blogs, hosted">
 			<h1>Launch a blog in seconds</h1>
-			<p class="muted">
+			<p mix={[s.muted]}>
 				A multi-tenant blog platform. Create a blog, get a subdomain, bring your own domain, and
 				write.
 			</p>
 			<p>
 				{signedIn ? (
-					<a class="btn" href="/dashboard">
+					<a mix={[s.button]} href="/dashboard">
 						Go to your dashboard
 					</a>
 				) : (
-					<a class="btn" href="/auth/login">
+					<a mix={[s.button]} href="/auth/login">
 						Sign in to get started
 					</a>
 				)}
 			</p>
 		</Page>,
 	);
-	return ok(body);
 });

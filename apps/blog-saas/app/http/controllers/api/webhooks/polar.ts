@@ -1,11 +1,12 @@
 import { json } from "@pkg/http/response";
+import { createAction } from "remix/fetch-router";
 
-import action from "~/app/lib/action";
 import { platformDb } from "~/app/lib/db";
 import Account from "~/app/models/account";
 import Subscription, { type SubscriptionStatus } from "~/app/models/subscription";
 import { BlogProvisioner } from "~/app/services/blog-provisioner";
 import { PolarService } from "~/app/services/polar";
+import routes from "~/routes/web";
 
 /** Shape of the Polar webhook payload fields this handler reads. */
 interface PolarEvent {
@@ -22,7 +23,7 @@ interface PolarEvent {
 }
 
 /** POST /api/webhooks/polar — syncs subscription state and fans suspension out. */
-export default action<"POST", "/api/webhooks/polar">(async ({ request }) => {
+export default createAction(routes.api.webhooks.polar, async ({ request }) => {
 	let body = await request.text();
 	let polar = new PolarService();
 	if (!polar.verifyWebhook(request, body))

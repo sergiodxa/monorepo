@@ -9,11 +9,12 @@ import { methodOverride } from "remix/method-override-middleware";
 
 import polarWebhook from "~/app/http/controllers/api/webhooks/polar";
 import * as auth from "~/app/http/controllers/auth";
-import * as billing from "~/app/http/controllers/dashboard/billing";
-import * as blogs from "~/app/http/controllers/dashboard/blogs";
+import billing from "~/app/http/controllers/dashboard/billing";
+import blogs, { domain, restore, usage } from "~/app/http/controllers/dashboard/blogs";
 import dashboardIndex from "~/app/http/controllers/dashboard/index";
 import health from "~/app/http/controllers/health";
 import index from "~/app/http/controllers/index";
+import renderMiddleware from "~/app/http/middleware/render";
 import { createSessionMiddleware } from "~/app/http/middleware/session";
 import routes from "~/routes/web";
 
@@ -25,6 +26,7 @@ import routes from "~/routes/web";
 export function createDashboardRouter() {
 	let middleware: Middleware[] = [
 		asyncContext(),
+		renderMiddleware as Middleware,
 		createSessionMiddleware(env.COOKIE_SESSION_SECRET, true),
 		formData() as Middleware,
 		methodOverride(),
@@ -38,31 +40,18 @@ export function createDashboardRouter() {
 	router.map(routes.index, index);
 	router.map(routes.health, health);
 
-	router.map(routes.auth.login, { actions: { index: auth.loginIndex, action: auth.loginStart } });
+	router.map(routes.auth.login, auth.login);
 	router.map(routes.auth.callback, auth.callback);
-	router.map(routes.auth.logout, { actions: { action: auth.logoutAction } });
+	router.map(routes.auth.logout, auth.logout_);
 
 	router.map(routes.api.webhooks.polar, polarWebhook);
 
 	router.map(routes.dashboard.index, dashboardIndex);
-	router.map(routes.dashboard.billing, {
-		actions: { index: billing.index, action: billing.action_ },
-	});
-	router.map(routes.dashboard.blogs, {
-		actions: {
-			new: blogs.newBlog,
-			create: blogs.create,
-			show: blogs.show,
-			edit: blogs.edit,
-			update: blogs.update,
-			destroy: blogs.destroy,
-		},
-	});
-	router.map(routes.dashboard.blogDomain, {
-		actions: { index: blogs.domainIndex, action: blogs.domainCreate },
-	});
-	router.map(routes.dashboard.blogUsage, blogs.usage);
-	router.map(routes.dashboard.blogRestore, blogs.restore);
+	router.map(routes.dashboard.billing, billing);
+	router.map(routes.dashboard.blogs, blogs);
+	router.map(routes.dashboard.blogDomain, domain);
+	router.map(routes.dashboard.blogUsage, usage);
+	router.map(routes.dashboard.blogRestore, restore);
 
 	return router;
 }
