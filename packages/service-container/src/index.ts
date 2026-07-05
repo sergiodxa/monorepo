@@ -1,3 +1,12 @@
+/**
+ * A small class-keyed dependency-injection container (ADR-008): registers
+ * singleton / scoped / pre-constructed `instance` services and resolves them
+ * through async-local scopes, so controllers and jobs use `inject([...])`
+ * instead of constructing dependencies ad hoc.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
 import { AsyncLocalStorage } from "node:async_hooks";
 
 /**
