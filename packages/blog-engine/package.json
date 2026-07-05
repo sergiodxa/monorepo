@@ -20,7 +20,7 @@
 		"@pkg/rss": "workspace:*",
 		"@pkg/sitemap": "workspace:*",
 		"@pkg/validate": "workspace:*",
-		"remix": "3.0.0-beta.4"
+		"remix": "3.0.0-beta.5"
 	},
 	"devDependencies": {
 		"@cloudflare/workers-types": "^4.20260621.1",

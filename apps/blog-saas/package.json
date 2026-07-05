@@ -22,7 +22,7 @@
 		"@pkg/types": "workspace:*",
 		"@pkg/validate": "workspace:*",
 		"@polar-sh/sdk": "^0.48.1",
-		"remix": "3.0.0-beta.4"
+		"remix": "3.0.0-beta.5"
 	},
 	"devDependencies": {
 		"@cloudflare/vite-plugin": "^1.42.1",

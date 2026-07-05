@@ -24,7 +24,7 @@
 		"@pkg/sitemap": "workspace:*",
 		"@pkg/validate": "workspace:*",
 		"inflected": "^2.1.0",
-		"remix": "3.0.0-beta.4"
+		"remix": "3.0.0-beta.5"
 	},
 	"devDependencies": {
 		"@cloudflare/vite-plugin": "^1.42.1",
