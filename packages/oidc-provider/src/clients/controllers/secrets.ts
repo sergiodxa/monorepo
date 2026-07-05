@@ -1,3 +1,13 @@
+/**
+ * Management API controller for a client's secrets (`/api/clients/:clientId/secrets`).
+ *
+ * Lists secret metadata and creates or deletes secrets; the plaintext secret is
+ * returned only once, at creation time.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import type { RequestContext } from "remix/fetch-router";
 
 import { noContent } from "@pkg/http/response";
@@ -16,11 +26,16 @@ import { LIMITS, maxLength } from "../../shared/lib/schema-checks";
 import Client from "../models/client";
 import Secret from "../models/secret";
 
+/** Validation schema for the create-secret request body. */
 let CreateSecretSchema = s.object({
 	name: s.optional(s.string().pipe(maxLength(LIMITS.name.max))),
 	expiresAt: s.optional(s.string().pipe(maxLength(30))), // ISO date string
 });
 
+/**
+ * `GET /api/clients/:clientId/secrets` — lists a client's secret metadata.
+ * @returns A JSON `Response` with the secrets, or `notFound` if the client is missing.
+ */
 export const index = createAction(
 	routes.api.clients.secrets.index,
 	inject([Database] as const, async (db) => {
@@ -40,6 +55,10 @@ export const index = createAction(
 	}),
 );
 
+/**
+ * `POST /api/clients/:clientId/secrets` — creates a secret, returning it once.
+ * @returns A JSON `Response` with the new secret's id and plaintext value, or an error `Response`.
+ */
 export const create = createAction(
 	routes.api.clients.secrets.create,
 	inject([Database] as const, async (db) => {
@@ -77,6 +96,10 @@ export const create = createAction(
 	}),
 );
 
+/**
+ * `DELETE /api/clients/:clientId/secrets/:id` — deletes a secret.
+ * @returns A `204 No Content` `Response`, or `notFound`.
+ */
 export const destroy = createAction(
 	routes.api.clients.secrets.destroy,
 	inject([Database] as const, async (db) => {

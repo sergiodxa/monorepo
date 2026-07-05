@@ -1,3 +1,14 @@
+/**
+ * Test fixture factories for creating subjects, clients, sessions, and more.
+ *
+ * Wraps the model layer with convenient helpers that fill in sensible defaults
+ * (unique emails, secrets, redirect URIs) so tests can set up realistic OAuth/OIDC
+ * state in a single call.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import type { Database } from "remix/data-table";
 
 import Client from "../../clients/models/client";
@@ -10,7 +21,10 @@ import Subject from "../../subjects/models/subject";
 import Passkey from "../../webauthn/models/passkey";
 
 /**
- * Creates a test subject with optional overrides
+ * Creates a test subject with optional overrides.
+ * @param db - Test database handle.
+ * @param overrides - Optional email, username, and verified flag.
+ * @returns The created (and optionally email-verified) subject.
  */
 export async function createSubject(
 	db: Database,
@@ -30,7 +44,11 @@ export async function createSubject(
 }
 
 /**
- * Creates a test client with optional overrides
+ * Creates a test client with optional overrides.
+ * @param db - Test database handle.
+ * @param overrides - Optional name, type, and management-client flag.
+ * @returns The created client record.
+ * @throws {Error} If the client cannot be found after creation.
  */
 export async function createClient(
 	db: Database,
@@ -60,7 +78,10 @@ export async function createClient(
 }
 
 /**
- * Creates a client with a secret and redirect URI for OAuth testing
+ * Creates a client with a secret and redirect URI for OAuth testing.
+ * @param db - Test database handle.
+ * @param overrides - Optional name, type, and redirect URI.
+ * @returns The client, its redirect URI, and the plaintext secret (null for public clients).
  */
 export async function createOAuthClient(
 	db: Database,
@@ -89,7 +110,9 @@ export async function createOAuthClient(
 }
 
 /**
- * Creates a management client with secret
+ * Creates a management client with a secret.
+ * @param db - Test database handle.
+ * @returns The management client and its plaintext secret.
  */
 export async function createManagementClient(db: Database) {
 	let client = await createClient(db, {
@@ -104,7 +127,10 @@ export async function createManagementClient(db: Database) {
 }
 
 /**
- * Creates a test session for a subject and client
+ * Creates a test session for a subject and client.
+ * @param db - Test database handle.
+ * @param options - The `subjectId` and `clientId` to bind the session to.
+ * @returns The created session record.
  */
 export async function createSession(
 	db: Database,
@@ -120,7 +146,10 @@ export async function createSession(
 }
 
 /**
- * Creates a test passkey for a subject
+ * Creates a test passkey for a subject.
+ * @param db - Test database handle.
+ * @param options - The `subjectId` and optional passkey name.
+ * @returns The created passkey record.
  */
 export async function createPasskey(
 	db: Database,
@@ -142,7 +171,11 @@ export async function createPasskey(
 }
 
 /**
- * Creates a test resource with scopes
+ * Creates a test resource with scopes.
+ * @param db - Test database handle.
+ * @param overrides - Optional identifier, name, and scopes.
+ * @returns The created resource record.
+ * @throws {Error} If the resource cannot be found after creation.
  */
 export async function createResource(
 	db: Database,
@@ -171,7 +204,10 @@ export async function createResource(
 }
 
 /**
- * Creates a grant between a subject and client
+ * Creates a grant between a subject and client.
+ * @param db - Test database handle.
+ * @param options - The `subjectId` and `clientId` to link.
+ * @returns The found-or-created grant record.
  */
 export async function createGrant(
 	db: Database,

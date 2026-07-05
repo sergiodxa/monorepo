@@ -1,3 +1,14 @@
+/**
+ * Model for tenant branding configuration.
+ *
+ * Stores the single-row branding record (logo, colors, custom CSS) for the
+ * tenant's authentication UI, applying defaults on read and sanitizing custom CSS
+ * on write to prevent injection.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import type { Database } from "remix/data-table";
 
 import { column as c, table } from "remix/data-table";

@@ -1,3 +1,14 @@
+/**
+ * OpenID Connect RP-Initiated Logout endpoint controller (RP-Initiated Logout 1.0).
+ *
+ * Identifies the subject from the `id_token_hint` (or client from `client_id`),
+ * destroys all of the subject's sessions, and either redirects to a validated
+ * `post_logout_redirect_uri` or renders a logged-out page.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { JWK } from "@edgefirst-dev/jwt";
 import { isFailure } from "@pkg/result";
 import { inject } from "@pkg/service-container";
@@ -17,6 +28,7 @@ import { reject } from "../../shared/lib/reject";
 import SigningKey from "../../signing-keys/models/signing-key";
 import Subject from "../../subjects/models/subject";
 
+/** Validation schema for the RP-initiated logout query parameters. */
 let LogoutSchema = s.object({
 	id_token_hint: s.optional(s.string()),
 	post_logout_redirect_uri: s.optional(s.string()),
@@ -27,6 +39,7 @@ let LogoutSchema = s.object({
 /**
  * OpenID Connect RP-Initiated Logout 1.0 endpoint.
  * Destroys all sessions for the subject identified by the id_token_hint.
+ * @returns A redirect `Response` to the post-logout URI, an HTML logged-out page, or an OAuth error `Response`.
  */
 export default createAction(
 	routes.oidc.logout,

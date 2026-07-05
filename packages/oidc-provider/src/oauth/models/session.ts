@@ -1,3 +1,14 @@
+/**
+ * Model for user authentication sessions.
+ *
+ * Manages the session lifecycle (creation with a 30-day expiry, activity touch,
+ * revocation, and cleanup) and derives usage metrics such as active-session and
+ * monthly-active-user counts.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import type { Database } from "remix/data-table";
 
 import { column as c, table } from "remix/data-table";
@@ -101,6 +112,8 @@ export default class Session {
 	 * @param db - Database instance
 	 * @param data - Session data including subject, client, and optional metadata
 	 * @returns The generated session ID
+	 * @example
+	 * let sessionId = await Session.create(db, { subjectId, clientId });
 	 */
 	static async create(
 		db: Database,

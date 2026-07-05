@@ -1,3 +1,13 @@
+/**
+ * Management API tenant setup endpoint controller.
+ *
+ * Lets the control plane provision or re-provision a tenant's metadata (id,
+ * issuer, region) so the OIDC issuer always matches the hostname clients use.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import type { JSONValue } from "@pkg/types";
 
 import { badRequest, ok } from "@pkg/http/response/json";
@@ -29,6 +39,7 @@ const SetupSchema = s.object({
  * hostname changes, so the OIDC issuer always matches the hostname clients use.
  * Guarded by the management-auth middleware, which accepts the platform's signed
  * internal token even before an issuer exists on a freshly-created tenant.
+ * @returns A JSON `Response` `{ ok: true }` on success, or a `badRequest` on invalid payload.
  */
 export const create = createAction(
 	routes.api.setup,

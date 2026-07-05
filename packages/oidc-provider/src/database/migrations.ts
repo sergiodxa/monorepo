@@ -1,3 +1,14 @@
+/**
+ * Engine-owned schema migration runner.
+ *
+ * Holds the ordered list of `?raw` SQL migrations and applies the pending ones
+ * against any host adapter (D1, SqlStorage, bun:sqlite), tracking progress in an
+ * `oidc_migrations` journal so each migration runs exactly once per database.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import type { DatabaseAdapter } from "remix/data-table";
 
 import { column as c, createDatabase, table } from "remix/data-table";
@@ -47,6 +58,8 @@ const journal = table({
  * which each adapter (D1, SqlStorage, bun:sqlite) handles.
  * @param adapter - The database adapter to migrate.
  * @returns The ids applied in this run.
+ * @example
+ * let { applied } = await runMigrations(config.database);
  */
 export async function runMigrations(adapter: DatabaseAdapter): Promise<{ applied: string[] }> {
 	await adapter.executeScript(

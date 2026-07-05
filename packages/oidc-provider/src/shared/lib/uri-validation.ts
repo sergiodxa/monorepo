@@ -1,6 +1,9 @@
 /**
  * Shared URI validation utilities for OAuth 2.0 endpoints.
  * Enforces security constraints on redirect URIs, logout URIs, and logo URLs.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
  */
 
 /** Allowed URI schemes for production. */
@@ -18,6 +21,9 @@ export const FORBIDDEN_SCHEMES = ["javascript", "data", "vbscript", "file"];
 /** Error thrown when a URI is malformed. */
 export class InvalidUriError extends Error {
 	override name = "InvalidUriError";
+	/**
+	 * @param message - Human-readable explanation (defaults to `"Invalid URI"`).
+	 */
 	constructor(message: string = "Invalid URI") {
 		super(message);
 	}
@@ -26,11 +32,16 @@ export class InvalidUriError extends Error {
 /** Error thrown when a URI uses a forbidden or unsafe scheme. */
 export class UnsafeSchemeError extends Error {
 	override name = "UnsafeSchemeError";
+	/**
+	 * @param scheme - The offending URI scheme (e.g. `"javascript"`).
+	 * @param context - Where the URI came from, for the message (defaults to `"URI"`).
+	 */
 	constructor(scheme: string, context: string = "URI") {
 		super(`Unsafe ${context} scheme: ${scheme}. Only HTTPS is allowed (HTTP for localhost).`);
 	}
 }
 
+/** Options controlling how {@link validateScheme} reports errors. */
 interface ValidateSchemeOptions {
 	/** Context for error messages (e.g., "redirect URI", "logout URI", "logo URL") */
 	context?: string;
@@ -44,6 +55,8 @@ interface ValidateSchemeOptions {
  * @param options - Validation options
  * @throws {InvalidUriError} If URI is malformed
  * @throws {UnsafeSchemeError} If URI uses a forbidden scheme
+ * @example
+ * validateScheme("https://app.example.com/callback", { context: "redirect URI" });
  */
 export function validateScheme(uri: string, options?: ValidateSchemeOptions): void {
 	let context = options?.context ?? "URI";

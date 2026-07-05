@@ -1,3 +1,13 @@
+/**
+ * Management API controller for subjects/users (`/api/subjects`).
+ *
+ * Exposes actions to list, show, import, update, delete, and mark-email-verified
+ * for subjects; create is an import that preserves the source `sub` and timestamps.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import type { RequestContext } from "remix/fetch-router";
 
 import { noContent } from "@pkg/http/response";
@@ -16,6 +26,7 @@ import { isResponse, safeJsonParse } from "../../shared/lib/safe-json";
 import { httpsUrl, LIMITS, maxLength } from "../../shared/lib/schema-checks";
 import Subject from "../models/subject";
 
+/** Validation schema for the update-subject request body. */
 let UpdateSubjectSchema = s.object({
 	displayName: s.optional(s.string().pipe(maxLength(LIMITS.name.max))),
 	avatarUrl: s.optional(s.string().pipe(maxLength(LIMITS.url.max), httpsUrl())),
@@ -36,6 +47,10 @@ let ImportSubjectSchema = s.object({
 	createdAt: s.optional(s.string()),
 });
 
+/**
+ * `GET /api/subjects` — lists all subjects.
+ * @returns A JSON `Response` with the array of subjects.
+ */
 export const index = createAction(
 	routes.api.subjects.index,
 	inject([Database] as const, async (db) => {
@@ -47,6 +62,10 @@ export const index = createAction(
 	}),
 );
 
+/**
+ * `GET /api/subjects/:id` — retrieves a single subject.
+ * @returns A JSON `Response` with the subject, or `notFound`.
+ */
 export const show = createAction(
 	routes.api.subjects.show,
 	inject([Database] as const, async (db) => {
@@ -62,6 +81,10 @@ export const show = createAction(
 	}),
 );
 
+/**
+ * `POST /api/subjects` — imports a subject, preserving its id and timestamps.
+ * @returns A JSON `Response` with the imported subject, `conflict` on duplicate, or an error `Response`.
+ */
 export const create = createAction(
 	routes.api.subjects.create,
 	inject([Database] as const, async (db) => {
@@ -93,6 +116,10 @@ export const create = createAction(
 	}),
 );
 
+/**
+ * `PATCH/PUT /api/subjects/:id` — updates a subject's profile.
+ * @returns A JSON `Response` with the updated subject, or an error `Response`.
+ */
 export const update = createAction(
 	routes.api.subjects.update,
 	inject([Database] as const, async (db) => {
@@ -132,6 +159,10 @@ export const update = createAction(
 	}),
 );
 
+/**
+ * `DELETE /api/subjects/:id` — deletes a subject.
+ * @returns A `204 No Content` `Response`, or `notFound`.
+ */
 export const destroy = createAction(
 	routes.api.subjects.destroy,
 	inject([Database] as const, async (db) => {
@@ -151,6 +182,10 @@ export const destroy = createAction(
 	}),
 );
 
+/**
+ * `POST /api/subjects/:id/verify-email` — marks a subject's email as verified.
+ * @returns A JSON `Response` confirming verification, or `notFound`.
+ */
 export const verifyEmail = createAction(
 	routes.api.subjects.verifyEmail,
 	inject([Database] as const, async (db) => {

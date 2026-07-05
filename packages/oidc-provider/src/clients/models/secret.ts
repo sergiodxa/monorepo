@@ -1,3 +1,14 @@
+/**
+ * Model for OAuth 2.0 client secrets.
+ *
+ * Generates prefixed secrets, stores only their bcrypt hashes, and verifies
+ * presented secrets in a timing-safe way (parallel comparison plus a dummy
+ * comparison when a client has no secrets) to avoid leaking which secret matched.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import type { Database } from "remix/data-table";
 
 import bcrypt from "bcryptjs";
@@ -106,6 +117,8 @@ export default class Secret {
 	 * @param clientId - Client ID
 	 * @param plainSecret - Plain secret to verify
 	 * @returns True if the secret is valid
+	 * @example
+	 * if (await Secret.verify(db, client.id, presentedSecret)) authenticateClient();
 	 */
 	static async verify(db: Database, clientId: string, plainSecret: string): Promise<boolean> {
 		let secrets = await db.findMany(Secret.table, { where: { client_id: clientId } });

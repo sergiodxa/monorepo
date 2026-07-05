@@ -1,3 +1,14 @@
+/**
+ * Model for OAuth 2.0 clients (relying parties).
+ *
+ * Owns client registration and configuration: allowed scopes/resources, client
+ * type, and logo URL (validated to prevent XSS), plus lookup, batch fetch, update,
+ * and deletion used by the Management API and OAuth flows.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import type { Database } from "remix/data-table";
 
 import { column as c, table } from "remix/data-table";
@@ -17,6 +28,7 @@ export default class Client {
 	/** Error thrown when a logo URL is invalid or uses an unsafe scheme. */
 	static InvalidLogoUrlError = class extends InvalidUriError {
 		override name = "InvalidLogoUrlError";
+		/** @param message - Explanation (defaults to `"Invalid logo URL"`). */
 		constructor(message: string = "Invalid logo URL") {
 			super(message);
 		}
@@ -131,6 +143,8 @@ export default class Client {
 	 * @param data - Client configuration
 	 * @returns Created client record
 	 * @throws {InvalidLogoUrlError} If logo URL uses an unsafe scheme
+	 * @example
+	 * let { id } = await Client.create(db, { name: "My App", type: "confidential" });
 	 */
 	static async create(
 		db: Database,

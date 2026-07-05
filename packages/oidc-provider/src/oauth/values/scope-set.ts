@@ -1,6 +1,18 @@
 /**
  * Value Object for OAuth 2.0 scope handling.
  * Provides type-safe operations for parsing, validating, and serializing scopes.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
+/**
+ * Immutable-ish set of OAuth 2.0 scope strings with helpers for parsing from
+ * space-separated/JSON forms, validating against allowed scopes, and serializing
+ * back for storage or responses.
+ * @example
+ * let requested = ScopeSet.fromString("openid profile email");
+ * requested.isSubsetOf(client.allowedScopes);
  */
 export default class ScopeSet {
 	/** Internal set of scope strings. */
@@ -18,6 +30,8 @@ export default class ScopeSet {
 	 * Parses a space-separated scope string into a ScopeSet.
 	 * @param scopeString - Space-separated scope string (e.g., "openid profile email")
 	 * @returns New ScopeSet containing the parsed scopes
+	 * @example
+	 * ScopeSet.fromString("openid email").toArray(); // ["openid", "email"]
 	 */
 	static fromString(scopeString: string | null | undefined): ScopeSet {
 		if (!scopeString) return new ScopeSet();

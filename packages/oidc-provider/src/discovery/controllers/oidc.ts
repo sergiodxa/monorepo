@@ -1,3 +1,14 @@
+/**
+ * OpenID Connect Discovery endpoint (`/.well-known/openid-configuration`).
+ *
+ * Advertises the provider's OIDC capabilities and endpoint URLs so clients can
+ * auto-configure, deriving the issuer from tenant metadata (falling back to the
+ * request host).
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { JWK } from "@edgefirst-dev/jwt";
 import { inject } from "@pkg/service-container";
 import { getContext } from "remix/async-context-middleware";
@@ -10,6 +21,7 @@ import routes from "../../routes";
 /**
  * OpenID Connect Discovery endpoint (OIDC Discovery 1.0).
  * Provides discovery information about the OpenID Provider.
+ * @returns A JSON `Response` with the OpenID Provider configuration.
  */
 export default createAction(
 	routes.discover.oidc,

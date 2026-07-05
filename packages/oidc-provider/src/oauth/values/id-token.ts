@@ -1,3 +1,14 @@
+/**
+ * Value Object for OpenID Connect ID Tokens.
+ *
+ * Wraps a signed JWT with typed accessors for identity claims and a factory that
+ * mints a one-hour ID token, including only the profile/email claims permitted by
+ * the requested scopes.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { JWT } from "@edgefirst-dev/jwt";
 
 /** ID token time-to-live in milliseconds (1 hour). */
@@ -95,6 +106,8 @@ export default class IdToken extends JWT {
 	 * @param client - Client requesting the token
 	 * @param options - Optional nonce, scope, authTime, and sessionId
 	 * @returns New IdToken instance
+	 * @example
+	 * let idToken = IdToken.generate(issuer, subject, client, { scope: ["openid", "email"] });
 	 */
 	static generate(
 		issuer: string,

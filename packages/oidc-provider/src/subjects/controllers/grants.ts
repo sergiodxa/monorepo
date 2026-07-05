@@ -1,3 +1,14 @@
+/**
+ * Management API controller for a subject's consent grants
+ * (`/api/subjects/:id/grants`).
+ *
+ * Lists the clients a subject has authorized (enriched with client info) and lets
+ * an operator revoke an individual grant.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import type { RequestContext } from "remix/fetch-router";
 
 import { noContent } from "@pkg/http/response";
@@ -14,6 +25,10 @@ import { RecordNotFoundError } from "../../shared/lib/db-errors";
 import { toIsoString } from "../../shared/lib/timestamp";
 import Subject from "../models/subject";
 
+/**
+ * `GET /api/subjects/:id/grants` — lists a subject's grants with client info.
+ * @returns A JSON `Response` with the grants, or `notFound` if the subject is missing.
+ */
 export const index = createAction(
 	routes.api.subjects.grants.index,
 	inject([Database] as const, async (db) => {
@@ -50,6 +65,10 @@ export const index = createAction(
 	}),
 );
 
+/**
+ * `DELETE /api/subjects/:id/grants/:grantId` — revokes one of a subject's grants.
+ * @returns A `204 No Content` `Response`, or `notFound` if the subject or grant is missing.
+ */
 export const destroy = createAction(
 	routes.api.subjects.grants.destroy,
 	inject([Database] as const, async (db) => {

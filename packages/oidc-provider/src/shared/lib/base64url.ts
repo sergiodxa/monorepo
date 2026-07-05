@@ -1,12 +1,17 @@
 /**
  * Base64URL encoding/decoding utilities.
  * Used for WebAuthn challenges and other binary data.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
  */
 
 /**
  * Decodes a Base64URL string to a Uint8Array.
  * @param base64url - Base64URL encoded string
  * @returns Decoded bytes
+ * @example
+ * base64UrlDecode("aGVsbG8"); // Uint8Array of "hello"
  */
 export function base64UrlDecode(base64url: string): Uint8Array {
 	let base64 = base64url.replace(/-/g, "+").replace(/_/g, "/");
@@ -24,6 +29,8 @@ export function base64UrlDecode(base64url: string): Uint8Array {
  * Encodes a Uint8Array to a Base64URL string.
  * @param bytes - Bytes to encode
  * @returns Base64URL encoded string (no padding)
+ * @example
+ * base64UrlEncode(new TextEncoder().encode("hello")); // "aGVsbG8"
  */
 export function base64UrlEncode(bytes: Uint8Array): string {
 	return btoa(String.fromCharCode(...bytes))

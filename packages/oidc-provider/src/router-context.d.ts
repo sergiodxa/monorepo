@@ -1,3 +1,14 @@
+/**
+ * Ambient router-context augmentations for the provider.
+ *
+ * Declares the `formData` value that the global `formData()` middleware attaches
+ * to every request context, so controllers can read `context.formData` in a
+ * type-safe way.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import type {} from "remix/fetch-router";
 
 /**

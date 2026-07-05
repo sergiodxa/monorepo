@@ -1,3 +1,14 @@
+/**
+ * WebAuthn registration options endpoint controller.
+ *
+ * Validates and rate-limits the email, ensures it has no existing passkey,
+ * find-or-creates the subject, and issues a single-use challenge plus the creation
+ * options for the browser's WebAuthn `create` ceremony.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { badRequest, ok, tooManyRequests } from "@pkg/http/response/json";
 import { isFailure } from "@pkg/result";
 import { inject } from "@pkg/service-container";
@@ -19,6 +30,7 @@ import Subject from "../../subjects/models/subject";
 import Passkey from "../models/passkey";
 import WebAuthnChallenge from "../models/webauthn-challenge";
 
+/** Validation schema for the registration-options request body. */
 let RequestSchema = s.object({
 	email: s.string(),
 	clientId: s.optional(s.string()),
@@ -30,6 +42,8 @@ let RequestSchema = s.object({
 
 /**
  * Basic email format validation (RFC 5322 simplified).
+ * @param email - The email address to check.
+ * @returns True if the email has a plausible `local@domain.tld` shape.
  */
 function isValidEmail(email: string): boolean {
 	let parts = email.split("@");
@@ -46,6 +60,7 @@ function isValidEmail(email: string): boolean {
  * WebAuthn registration options endpoint.
  * Generates a challenge for passkey registration.
  * Rate-limited per email to prevent registration abuse.
+ * @returns A JSON `Response` with `{ challengeId, options }`, or an error `Response`.
  */
 export default createAction(
 	routes.webauthn.register.options,

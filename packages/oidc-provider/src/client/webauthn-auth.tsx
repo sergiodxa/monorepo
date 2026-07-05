@@ -1,3 +1,14 @@
+/**
+ * Client-side WebAuthn authentication component for the sign-in flow.
+ *
+ * Hydrates in the browser, immediately invokes `navigator.credentials.get` with
+ * the server-issued request options, posts the assertion back for verification,
+ * and follows the returned redirect on success.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import type { Handle, SerializableObject } from "remix/ui";
 
 import { clientEntry, css, on } from "remix/ui";
@@ -15,6 +26,12 @@ type WebAuthnAuthProps = {
 	email: string;
 };
 
+/**
+ * Hydratable client entry that drives passkey authentication in the browser.
+ *
+ * Renders sign-in progress/error UI and starts the WebAuthn `get` ceremony on
+ * mount, redirecting to the server-provided URL once the assertion verifies.
+ */
 export let WebAuthnAuth = clientEntry(
 	"/assets/tenant/webauthn-auth.js#WebAuthnAuth",
 	function WebAuthnAuth(handle: Handle<WebAuthnAuthProps>) {

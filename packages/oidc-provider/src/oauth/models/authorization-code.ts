@@ -1,3 +1,14 @@
+/**
+ * Model for OAuth 2.0 authorization codes.
+ *
+ * Issues short-lived, single-use codes for the authorization-code flow and
+ * consumes them atomically (deleting on read) while carrying the PKCE, nonce, and
+ * auth-time data the token endpoint needs.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import type { Database } from "remix/data-table";
 
 import { column as c, table } from "remix/data-table";
@@ -95,6 +106,8 @@ export default class AuthorizationCode {
 	 * @returns The code's associated data
 	 * @throws {AlreadyConsumedError} If the code has already been consumed
 	 * @throws {ExpiredCodeError} If the code has expired
+	 * @example
+	 * let data = await AuthorizationCode.consume(db, code);
 	 */
 	static async consume(db: Database, code: string) {
 		let record = await db.findOne(AuthorizationCode.table, { where: { code } });

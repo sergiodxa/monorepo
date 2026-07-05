@@ -1,3 +1,13 @@
+/**
+ * Tenant home page controller and view for the provider root (`/`).
+ *
+ * Renders a status page for the active tenant showing branding plus client and
+ * user counts, and lists the key OAuth/OIDC endpoints the tenant exposes.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import type { Handle } from "remix/ui";
 
 import { ok } from "@pkg/http/response/html";
@@ -14,6 +24,13 @@ import Subject from "../subjects/models/subject";
 
 import { Layout } from "./layout";
 
+/**
+ * `GET /` action rendering the tenant home page with live client/user counts.
+ *
+ * Loads branding and aggregate counts from the tenant database and returns the
+ * rendered HTML document.
+ * @returns An HTML `Response` with the tenant status page.
+ */
 export default createAction(routes.index, async ({ logger }) => {
 	let db = getServiceContainer().get(Database);
 	let log = logger.loader("/");

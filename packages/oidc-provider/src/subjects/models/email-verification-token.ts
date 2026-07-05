@@ -1,3 +1,13 @@
+/**
+ * Model for single-use email verification tokens.
+ *
+ * Issues 24-hour, URL-safe tokens tied to a subject and consumes them atomically
+ * (deleting on read) so a subject's email address can be verified via a link.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import type { Database } from "remix/data-table";
 
 import { column as c, table } from "remix/data-table";

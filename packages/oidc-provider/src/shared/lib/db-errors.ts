@@ -1,3 +1,14 @@
+/**
+ * Typed error classes for common database constraint failures.
+ *
+ * Models throw these instead of raw driver errors so controllers can map a
+ * missing/duplicate/foreign-key violation to the right HTTP status without
+ * inspecting vendor-specific messages.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import type { AnyTable, PrimaryKeyInput, TableColumnName } from "remix/data-table";
 
 import { getTableName } from "remix/data-table";

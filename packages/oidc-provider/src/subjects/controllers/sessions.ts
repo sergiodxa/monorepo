@@ -1,3 +1,14 @@
+/**
+ * Management API controller for a subject's sessions
+ * (`/api/subjects/:id/sessions`).
+ *
+ * Lists a subject's active sessions (enriched with client info) and lets an
+ * operator revoke an individual session.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import type { RequestContext } from "remix/fetch-router";
 
 import { noContent } from "@pkg/http/response";
@@ -14,6 +25,10 @@ import { RecordNotFoundError } from "../../shared/lib/db-errors";
 import { toIsoString } from "../../shared/lib/timestamp";
 import Subject from "../models/subject";
 
+/**
+ * `GET /api/subjects/:id/sessions` — lists a subject's sessions with client info.
+ * @returns A JSON `Response` with the sessions, or `notFound` if the subject is missing.
+ */
 export const index = createAction(
 	routes.api.subjects.sessions.index,
 	inject([Database] as const, async (db) => {
@@ -52,6 +67,10 @@ export const index = createAction(
 	}),
 );
 
+/**
+ * `DELETE /api/subjects/:id/sessions/:sessionId` — revokes one of a subject's sessions.
+ * @returns A `204 No Content` `Response`, or `notFound` if the subject or session is missing.
+ */
 export const destroy = createAction(
 	routes.api.subjects.sessions.destroy,
 	inject([Database] as const, async (db) => {

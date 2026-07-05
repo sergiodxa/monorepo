@@ -1,3 +1,14 @@
+/**
+ * Public entry point of the host-agnostic OIDC/OAuth2 provider engine.
+ *
+ * Exposes {@link createOidcProvider}, its config/instance types, and the internal
+ * platform<->tenant token helpers. The same engine runs on Cloudflare Durable
+ * Objects or a plain Worker; hosts differ only in the database adapter they inject.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import type { DatabaseAdapter } from "remix/data-table";
 
 import { Logger } from "@pkg/logger/request";

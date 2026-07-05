@@ -8,6 +8,9 @@
  * - behavior: (IE-specific)
  * - @import (loading external stylesheets)
  * - javascript: pseudo-protocol
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
  */
 
 /**
@@ -34,6 +37,9 @@ const EXTERNAL_URL_PATTERN = /url\s*\(\s*['"]?\s*(https?:\/\/|\/\/)/gi;
  * Sanitizes custom CSS by removing dangerous patterns.
  * @param css - The CSS string to sanitize
  * @returns The sanitized CSS, or null if the CSS is entirely unsafe
+ * @example
+ * sanitizeCss("body { color: red }"); // unchanged
+ * sanitizeCss("a { background: url(https://evil.com/x) }"); // external url removed
  */
 export function sanitizeCss(css: string | null | undefined): string | null {
 	if (!css) return null;
@@ -83,9 +89,12 @@ export function isValidCss(css: string | null | undefined): boolean {
 }
 
 /**
- * Error thrown when CSS validation fails.
+ * Error thrown when CSS validation fails because dangerous patterns were found.
  */
 export class UnsafeCssError extends Error {
+	/**
+	 * @param message - Human-readable explanation (defaults to a generic unsafe-CSS message).
+	 */
 	constructor(message = "CSS contains potentially unsafe patterns") {
 		super(message);
 		this.name = "UnsafeCssError";

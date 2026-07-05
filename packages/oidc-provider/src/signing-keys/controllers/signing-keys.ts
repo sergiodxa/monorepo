@@ -1,3 +1,13 @@
+/**
+ * Management API controller for JWT signing keys (`/api/signing-keys`).
+ *
+ * Exposes actions to list keys and to generate, rotate, and delete them, so the
+ * control plane can manage the tenant's token-signing key material.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import type { RequestContext } from "remix/fetch-router";
 
 import { noContent } from "@pkg/http/response";
@@ -12,6 +22,10 @@ import { RecordNotFoundError } from "../../shared/lib/db-errors";
 import { toIsoString, toIsoStringOptional } from "../../shared/lib/timestamp";
 import SigningKey from "../models/signing-key";
 
+/**
+ * `GET /api/signing-keys` — lists signing keys (public metadata only).
+ * @returns A JSON `Response` with the array of key metadata.
+ */
 export const index = createAction(
 	routes.api["signing-keys"].index,
 	inject([Database] as const, async (db) => {
@@ -34,6 +48,10 @@ export const index = createAction(
 	}),
 );
 
+/**
+ * `POST /api/signing-keys` — generates a new key and marks it current.
+ * @returns A JSON `Response` with the new key's id and algorithm.
+ */
 export const create = createAction(
 	routes.api["signing-keys"].create,
 	inject([Database] as const, async (db) => {
@@ -52,6 +70,10 @@ export const create = createAction(
 	}),
 );
 
+/**
+ * `POST /api/signing-keys/rotate` — generates a new current key, retiring the old.
+ * @returns A JSON `Response` with the new current key's id and algorithm.
+ */
 export const rotate = createAction(
 	routes.api["signing-keys"].rotate,
 	inject([Database] as const, async (db) => {
@@ -70,6 +92,10 @@ export const rotate = createAction(
 	}),
 );
 
+/**
+ * `DELETE /api/signing-keys/:id` — deletes a non-current key.
+ * @returns A `204 No Content` `Response`, `notFound`, or `badRequest` for the current key.
+ */
 export const destroy = createAction(
 	routes.api["signing-keys"].destroy,
 	inject([Database] as const, async (db) => {

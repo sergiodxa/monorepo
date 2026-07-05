@@ -1,3 +1,13 @@
+/**
+ * Management API controller for OAuth clients (`/api/clients`).
+ *
+ * Exposes the CRUD actions for registering and configuring clients, validating
+ * request bodies and normalizing timestamps in responses.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import type { RequestContext } from "remix/fetch-router";
 
 import { noContent } from "@pkg/http/response";
@@ -19,6 +29,11 @@ import Client from "../models/client";
 
 type ClientRow = Awaited<ReturnType<typeof Client.list>>[number];
 
+/**
+ * Normalizes a client row for API responses, converting stored timestamps to ISO strings.
+ * @param client - The raw client record.
+ * @returns The client with `created_at`/`updated_at` as ISO strings.
+ */
 function normalizeClient(client: ClientRow) {
 	return {
 		...client,
@@ -27,11 +42,16 @@ function normalizeClient(client: ClientRow) {
 	};
 }
 
+/** Reusable check for the client `name` field. */
 let nameSchema = s.string().pipe(minLength(LIMITS.name.min), maxLength(LIMITS.name.max));
+/** Reusable check for the client `description` field. */
 let descriptionSchema = s.string().pipe(maxLength(LIMITS.description.max));
+/** Reusable check for the client `logoUrl` field (HTTPS, bounded length). */
 let logoUrlSchema = s.string().pipe(maxLength(LIMITS.url.max), httpsUrl());
+/** Reusable check for a single scope name. */
 let scopeSchema = s.string().pipe(minLength(LIMITS.scope.min), maxLength(LIMITS.scope.max));
 
+/** Validation schema for the create-client request body. */
 let CreateClientSchema = s.object({
 	name: nameSchema,
 	type: s.enum_(["public", "confidential", "m2m"]),
@@ -42,6 +62,7 @@ let CreateClientSchema = s.object({
 	isManagementClient: s.optional(s.boolean()),
 });
 
+/** Validation schema for the update-client request body (all fields optional). */
 let UpdateClientSchema = s.object({
 	name: s.optional(nameSchema),
 	type: s.optional(s.enum_(["public", "confidential", "m2m"])),
@@ -52,6 +73,10 @@ let UpdateClientSchema = s.object({
 	isManagementClient: s.optional(s.boolean()),
 });
 
+/**
+ * `GET /api/clients` — lists all registered clients.
+ * @returns A JSON `Response` with the array of clients.
+ */
 export const index = createAction(
 	routes.api.clients.index,
 	inject([Database] as const, async (db) => {
@@ -63,6 +88,10 @@ export const index = createAction(
 	}),
 );
 
+/**
+ * `GET /api/clients/:id` — retrieves a single client.
+ * @returns A JSON `Response` with the client, or `notFound`.
+ */
 export const show = createAction(
 	routes.api.clients.show,
 	inject([Database] as const, async (db) => {
@@ -78,6 +107,10 @@ export const show = createAction(
 	}),
 );
 
+/**
+ * `POST /api/clients` — creates a new client from a validated JSON body.
+ * @returns A JSON `Response` with the new client `id`, or an error `Response`.
+ */
 export const create = createAction(
 	routes.api.clients.create,
 	inject([Database] as const, async (db) => {
@@ -120,6 +153,10 @@ export const create = createAction(
 	}),
 );
 
+/**
+ * `PATCH/PUT /api/clients/:id` — updates a client from a validated JSON body.
+ * @returns A JSON `Response` with the updated client, or an error `Response`.
+ */
 export const update = createAction(
 	routes.api.clients.update,
 	inject([Database] as const, async (db) => {
@@ -167,6 +204,10 @@ export const update = createAction(
 	}),
 );
 
+/**
+ * `DELETE /api/clients/:id` — deletes a client.
+ * @returns A `204 No Content` `Response`, or `notFound`.
+ */
 export const destroy = createAction(
 	routes.api.clients.destroy,
 	inject([Database] as const, async (db) => {

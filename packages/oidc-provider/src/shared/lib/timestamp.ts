@@ -4,6 +4,9 @@
  * The database stores timestamps as INTEGER (Unix milliseconds), but the application
  * creates them as ISO strings. This module provides utilities to normalize timestamps
  * to ISO strings for API responses.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
  */
 
 /**
@@ -12,6 +15,9 @@
  *
  * @param value - A timestamp as either a Unix timestamp (number) or ISO string
  * @returns The timestamp as an ISO 8601 string
+ * @example
+ * toIsoString(1735689600000); // "2025-01-01T00:00:00.000Z"
+ * toIsoString("2025-01-01T00:00:00.000Z"); // unchanged
  */
 export function toIsoString(value: string | number): string {
 	if (typeof value === "number") {

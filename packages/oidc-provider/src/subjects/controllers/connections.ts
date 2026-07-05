@@ -1,3 +1,14 @@
+/**
+ * Management API controller for a subject's external connections
+ * (`/api/subjects/:id/connections`).
+ *
+ * Lists a subject's linked identity-provider accounts and lets an operator unlink
+ * an individual connection.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import type { RequestContext } from "remix/fetch-router";
 
 import { noContent } from "@pkg/http/response";
@@ -13,6 +24,10 @@ import { toIsoString } from "../../shared/lib/timestamp";
 import Connection from "../models/connection";
 import Subject from "../models/subject";
 
+/**
+ * `GET /api/subjects/:id/connections` — lists a subject's external connections.
+ * @returns A JSON `Response` with the connections, or `notFound` if the subject is missing.
+ */
 export const index = createAction(
 	routes.api.subjects.connections.index,
 	inject([Database] as const, async (db) => {
@@ -41,6 +56,10 @@ export const index = createAction(
 	}),
 );
 
+/**
+ * `DELETE /api/subjects/:id/connections/:connectionId` — unlinks one of a subject's connections.
+ * @returns A `204 No Content` `Response`, or `notFound` if the subject or connection is missing.
+ */
 export const destroy = createAction(
 	routes.api.subjects.connections.destroy,
 	inject([Database] as const, async (db) => {

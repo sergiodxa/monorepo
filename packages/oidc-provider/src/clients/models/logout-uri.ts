@@ -1,3 +1,14 @@
+/**
+ * Model for a client's registered logout URIs.
+ *
+ * Stores post-logout redirect, back-channel, and front-channel logout endpoints
+ * per client, validating each URI's scheme on creation and letting the logout flow
+ * look them up by type.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import type { Database } from "remix/data-table";
 
 import { column as c, table } from "remix/data-table";
@@ -17,6 +28,7 @@ export default class LogoutUri {
 	/** Error thrown when a logout URI is malformed. */
 	static InvalidLogoutUriError = class extends InvalidUriError {
 		override name = "InvalidLogoutUriError";
+		/** Builds the error with a fixed "Invalid logout URI" message. */
 		constructor() {
 			super("Invalid logout URI");
 		}
@@ -25,6 +37,7 @@ export default class LogoutUri {
 	/** Error thrown when a logout URI uses a forbidden or unsafe scheme. */
 	static UnsafeSchemeError = class extends UnsafeSchemeError {
 		override name = "UnsafeSchemeError";
+		/** @param scheme - The offending URI scheme. */
 		constructor(scheme: string) {
 			super(scheme, "logout URI");
 		}
@@ -134,6 +147,8 @@ export default class LogoutUri {
 	 * @param clientId - Client ID
 	 * @param type - Logout URI type
 	 * @returns Array of matching logout URI records
+	 * @example
+	 * let endpoints = await LogoutUri.findByType(db, clientId, "backchannel");
 	 */
 	static async findByType(
 		db: Database,

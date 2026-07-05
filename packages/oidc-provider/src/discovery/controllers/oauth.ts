@@ -1,3 +1,15 @@
+/**
+ * OAuth 2.0 Authorization Server Metadata endpoint
+ * (`/.well-known/oauth-authorization-server`).
+ *
+ * Advertises the authorization server's capabilities and endpoint URLs per
+ * RFC 8414, deriving the issuer from tenant metadata (falling back to the request
+ * host).
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { JWK } from "@edgefirst-dev/jwt";
 import { inject } from "@pkg/service-container";
 import { getContext } from "remix/async-context-middleware";
@@ -10,6 +22,7 @@ import routes from "../../routes";
 /**
  * OAuth 2.0 Authorization Server Metadata endpoint (RFC 8414).
  * Provides discovery information about the OAuth 2.0 authorization server.
+ * @returns A JSON `Response` with the authorization server metadata.
  */
 export default createAction(
 	routes.discover.oauth,

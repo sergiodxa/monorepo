@@ -1,3 +1,13 @@
+/**
+ * Model for tenant metadata key-value storage.
+ *
+ * Persists per-tenant configuration such as issuer URL, tenant id, and region,
+ * with a short per-tenant in-memory cache for the frequently-read issuer value.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import type { Database } from "remix/data-table";
 
 import { column as c, table } from "remix/data-table";

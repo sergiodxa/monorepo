@@ -1,6 +1,12 @@
 /**
  * Internal authentication for platform-to-tenant DO communication.
  * Uses HMAC-signed JWTs to securely identify internal requests.
+ *
+ * This contract is shared verbatim with the control plane (re-exported from
+ * `index.ts`) so both sides agree on the HS256 algorithm and required claims.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
  */
 
 import type { JSONValue } from "@pkg/types";
@@ -26,6 +32,9 @@ const InternalTokenPayloadSchema = s.object({
  * Token is short-lived (5 minutes) to minimize exposure window if compromised.
  * @param secret - The secret key for signing the token
  * @returns A signed JWT token string
+ * @example
+ * let token = await createInternalToken(env.INTERNAL_SECRET);
+ * fetch(url, { headers: { authorization: `Bearer ${token}` } });
  */
 export async function createInternalToken(secret: string): Promise<string> {
 	let header = { alg: "HS256", typ: "JWT" };
@@ -53,6 +62,8 @@ export async function createInternalToken(secret: string): Promise<string> {
  * @param token - The JWT token to verify
  * @param secret - The secret key used for signing
  * @returns True if the token is valid and not expired
+ * @example
+ * if (!(await verifyInternalToken(bearer, env.INTERNAL_SECRET))) return unauthorized();
  */
 export async function verifyInternalToken(token: string, secret: string): Promise<boolean> {
 	let parts = token.split(".");

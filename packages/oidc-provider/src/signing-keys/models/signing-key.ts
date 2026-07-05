@@ -1,3 +1,14 @@
+/**
+ * Model for the tenant's JWT signing keys.
+ *
+ * Manages the ES256 key pairs used to sign and verify OAuth/OIDC tokens: listing,
+ * fetching the current key, generation, rotation, and deletion, with a short
+ * per-tenant in-memory cache to avoid re-importing keys on every request.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import type { Database } from "remix/data-table";
 
 import { JWK } from "@edgefirst-dev/jwt";
@@ -131,6 +142,8 @@ export default class SigningKey {
 	 * Any existing current keys are marked as not current.
 	 * @param db - Database instance
 	 * @returns The newly generated key pair
+	 * @example
+	 * if (!(await SigningKey.getCurrent(db))) await SigningKey.generate(db);
 	 */
 	static async generate(db: Database): Promise<JWK.KeyPair> {
 		let rawKeyPair = await JWK.generateKeyPair(JWK.Algoritm.ES256);
@@ -231,6 +244,7 @@ export default class SigningKey {
 	/** Error thrown when attempting to delete the current signing key. */
 	static CannotDeleteCurrentKeyError = class extends Error {
 		override name = "CannotDeleteCurrentKeyError";
+		/** Builds the error with a fixed "rotate first" message. */
 		constructor() {
 			super("Cannot delete the current signing key. Rotate first.");
 		}

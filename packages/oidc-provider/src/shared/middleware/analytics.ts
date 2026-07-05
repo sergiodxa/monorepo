@@ -1,3 +1,13 @@
+/**
+ * Middleware that publishes the host-provided analytics sink on the request context.
+ *
+ * Controllers emit authentication/registration events through `context.analytics`
+ * so they stay decoupled from whichever (or no) analytics backend the host wired up.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import type { AnalyticsSink } from "../../index";
 
 import middleware from "../lib/middleware";
@@ -16,6 +26,9 @@ declare module "remix/fetch-router" {
  * controllers can emit authentication/registration events without importing a
  * runtime-specific service.
  * @param sink - The analytics sink resolved from provider config.
+ * @returns A router middleware that assigns the sink and continues the chain.
+ * @example
+ * router.use(analytics(config.analytics));
  */
 export default (sink: AnalyticsSink) => {
 	return middleware((context, next) => {

@@ -1,9 +1,16 @@
 /**
  * Utilities for parsing user agent strings into human-readable device information.
+ *
+ * Used to label passkeys and browser sessions with friendly names (e.g. "Chrome
+ * on macOS") and to pick a matching device icon in the account UI.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
  */
 
 import { html, type SafeHtml } from "remix/html-template";
 
+/** Human-readable browser, OS, and device type parsed from a user agent string. */
 interface ParsedUserAgent {
 	browser: string;
 	os: string;
@@ -14,6 +21,9 @@ interface ParsedUserAgent {
  * Parses a user agent string into browser and OS information.
  * @param userAgent - Raw user agent string
  * @returns Parsed browser, OS, and device type
+ * @example
+ * parseUserAgent(request.headers.get("user-agent"));
+ * // { browser: "Safari", os: "macOS", device: "desktop" }
  */
 export function parseUserAgent(userAgent: string | null): ParsedUserAgent {
 	if (!userAgent) {
@@ -27,6 +37,11 @@ export function parseUserAgent(userAgent: string | null): ParsedUserAgent {
 	return { browser, os, device };
 }
 
+/**
+ * Identifies the browser from a user agent string.
+ * @param ua - Raw user agent string.
+ * @returns A browser name, or `"Unknown Browser"` when none matches.
+ */
 function parseBrowser(ua: string): string {
 	// Order matters - check more specific browsers first
 	if (ua.includes("Edg/")) return "Edge";
@@ -39,6 +54,11 @@ function parseBrowser(ua: string): string {
 	return "Unknown Browser";
 }
 
+/**
+ * Identifies the operating system from a user agent string.
+ * @param ua - Raw user agent string.
+ * @returns An OS name, or `"Unknown OS"` when none matches.
+ */
 function parseOS(ua: string): string {
 	// Mobile OS first
 	if (ua.includes("iPhone") || ua.includes("iPad")) return "iOS";
@@ -56,6 +76,11 @@ function parseOS(ua: string): string {
 	return "Unknown OS";
 }
 
+/**
+ * Classifies the device form factor from a user agent string.
+ * @param ua - Raw user agent string.
+ * @returns `"desktop"`, `"mobile"`, `"tablet"`, or `"unknown"`.
+ */
 function parseDevice(ua: string): "desktop" | "mobile" | "tablet" | "unknown" {
 	if (ua.includes("iPad") || ua.includes("Tablet")) return "tablet";
 	if (ua.includes("Mobile") || ua.includes("iPhone") || ua.includes("Android")) {

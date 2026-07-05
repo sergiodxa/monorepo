@@ -1,3 +1,14 @@
+/**
+ * Model for single-use WebAuthn challenges.
+ *
+ * Issues short-lived registration/authentication challenges that also carry the
+ * pending OAuth parameters (client, redirect, PKCE, nonce, scope) so the flow can
+ * resume after the browser completes the WebAuthn ceremony.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import type { Database } from "remix/data-table";
 
 import { column as c, table } from "remix/data-table";
@@ -143,6 +154,8 @@ export default class WebAuthnChallenge {
 	 * @returns The challenge record
 	 * @throws {InvalidChallengeError} If the challenge is invalid or already consumed
 	 * @throws {ExpiredChallengeError} If the challenge has expired
+	 * @example
+	 * let challenge = await WebAuthnChallenge.consume(db, challengeId);
 	 */
 	static async consume(db: Database, id: string) {
 		let record = await db.findOne(WebAuthnChallenge.table, { where: { id } });

@@ -1,3 +1,14 @@
+/**
+ * Test-only Bun SQLite database adapter mirroring the production SqlStorage adapter.
+ *
+ * Lets models and controllers run against an in-memory SQLite database in unit
+ * tests. The SQL-compilation helpers are ported from the SqlStorage adapter so the
+ * generated statements match production behavior.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { Database, type SQLQueryBindings } from "bun:sqlite";
 
 import type {
@@ -22,6 +33,11 @@ interface BunSqliteAdapterOptions {
  * Creates a database adapter for Bun's SQLite that mirrors the SqlStorage adapter
  * used in production. This allows us to test models and controllers with an
  * in-memory SQLite database.
+ * @param db - An open Bun `bun:sqlite` database instance.
+ * @param options - Optional capability overrides for the adapter.
+ * @returns A `DatabaseAdapter` backed by the given SQLite database.
+ * @example
+ * let adapter = createBunSqliteDatabaseAdapter(new Database(":memory:"));
  */
 export function createBunSqliteDatabaseAdapter(
 	db: Database,
@@ -825,7 +841,10 @@ function isInsertOperation(
 }
 
 /**
- * Creates an in-memory test database with migrations applied
+ * Creates an in-memory test database with migrations applied.
+ * @returns The remix `db` handle and the underlying `sqliteDb` instance.
+ * @example
+ * let { db } = await createTestDatabase();
  */
 export async function createTestDatabase() {
 	let sqliteDb = new Database(":memory:");

@@ -1,3 +1,14 @@
+/**
+ * WebAuthn authentication options endpoint controller.
+ *
+ * Given an email, rate-limits the request, looks up the subject's passkeys, and
+ * issues a single-use challenge plus `allowCredentials` for the browser's WebAuthn
+ * `get` ceremony.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { badRequest, ok, tooManyRequests } from "@pkg/http/response/json";
 import { isFailure } from "@pkg/result";
 import { inject } from "@pkg/service-container";
@@ -19,6 +30,7 @@ import Subject from "../../subjects/models/subject";
 import Passkey from "../models/passkey";
 import WebAuthnChallenge from "../models/webauthn-challenge";
 
+/** Validation schema for the authentication-options request body. */
 let RequestSchema = s.object({
 	email: s.string(),
 	clientId: s.optional(s.string()),
@@ -32,6 +44,7 @@ let RequestSchema = s.object({
  * WebAuthn authentication options endpoint.
  * Generates a challenge for passkey authentication.
  * Rate-limited per email to prevent brute force attacks.
+ * @returns A JSON `Response` with `{ challengeId, options }`, or an error `Response`.
  */
 export default createAction(
 	routes.webauthn.auth.options,

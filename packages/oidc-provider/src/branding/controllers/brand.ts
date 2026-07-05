@@ -1,3 +1,13 @@
+/**
+ * Management API controller for tenant branding (`/api/brand`).
+ *
+ * Reads the branding configuration (with defaults applied) and updates it from a
+ * validated body; custom CSS is sanitized by the model on write.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { badRequest, ok } from "@pkg/http/response/json";
 import { isFailure } from "@pkg/result";
 import { inject } from "@pkg/service-container";
@@ -15,6 +25,7 @@ import Brand from "../models/brand";
 // Custom CSS max length: 50KB should be plenty
 let CSS_MAX_LENGTH = 50_000;
 
+/** Validation schema for the update-brand request body. */
 let UpdateBrandSchema = s.object({
 	logoUrl: s.optional(s.nullable(s.string().pipe(maxLength(LIMITS.url.max), httpsUrl()))),
 	primaryColor: s.optional(s.nullable(s.string().pipe(hexColor()))),
@@ -22,6 +33,10 @@ let UpdateBrandSchema = s.object({
 	customCss: s.optional(s.nullable(s.string().pipe(maxLength(CSS_MAX_LENGTH)))),
 });
 
+/**
+ * `GET /api/brand` — returns the tenant's branding configuration.
+ * @returns A JSON `Response` with the branding record (defaults applied).
+ */
 export const show = createAction(
 	routes.api.brand.show,
 	inject([Database] as const, async (db) => {
@@ -36,6 +51,10 @@ export const show = createAction(
 	}),
 );
 
+/**
+ * `PUT /api/brand` — updates branding from a validated JSON body.
+ * @returns A JSON `Response` with the updated branding record, or an error `Response`.
+ */
 export const update = createAction(
 	routes.api.brand.update,
 	inject([Database] as const, async (db) => {

@@ -1,3 +1,14 @@
+/**
+ * Model for a client's registered OAuth 2.0 redirect URIs.
+ *
+ * Stores the allow-list of redirect URIs per client, validating each URI's scheme
+ * on creation (HTTPS-only outside localhost) and exposing an exact-match check the
+ * authorization endpoint uses to reject unregistered `redirect_uri` values.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import type { Database } from "remix/data-table";
 
 import { column as c, table } from "remix/data-table";
@@ -17,6 +28,7 @@ export default class RedirectUri {
 	/** Error thrown when a redirect URI is malformed. */
 	static InvalidRedirectUriError = class extends InvalidUriError {
 		override name = "InvalidRedirectUriError";
+		/** Builds the error with a fixed "Invalid redirect URI" message. */
 		constructor() {
 			super("Invalid redirect URI");
 		}
@@ -25,6 +37,7 @@ export default class RedirectUri {
 	/** Error thrown when a redirect URI uses a forbidden or unsafe scheme. */
 	static UnsafeSchemeError = class extends UnsafeSchemeError {
 		override name = "UnsafeSchemeError";
+		/** @param scheme - The offending URI scheme. */
 		constructor(scheme: string) {
 			super(scheme, "redirect URI");
 		}
@@ -122,6 +135,8 @@ export default class RedirectUri {
 	 * @param clientId - Client ID
 	 * @param uri - Redirect URI to validate
 	 * @returns True if the URI is registered for the client
+	 * @example
+	 * if (!(await RedirectUri.validate(db, clientId, redirectUri))) return reject(...);
 	 */
 	static async validate(db: Database, clientId: string, uri: string): Promise<boolean> {
 		let result = await db.findOne(RedirectUri.table, {

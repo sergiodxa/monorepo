@@ -1,3 +1,14 @@
+/**
+ * OAuth 2.0 Token endpoint controller.
+ *
+ * Handles the `authorization_code`, `refresh_token`, and `client_credentials`
+ * grants: authenticating the client, enforcing PKCE and scope/resource rules, and
+ * minting signed access and ID tokens.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import type { Logger } from "@pkg/logger/batched";
 
 import { JWK } from "@edgefirst-dev/jwt";
@@ -24,6 +35,7 @@ import AccessToken from "../values/access-token";
 import IdToken from "../values/id-token";
 import ScopeSet from "../values/scope-set";
 
+/** Validation schema for `authorization_code` grant request bodies. */
 let AuthorizationCodeSchema = s.object({
 	grant_type: s.literal("authorization_code"),
 	code: s.string(),
@@ -33,6 +45,7 @@ let AuthorizationCodeSchema = s.object({
 	code_verifier: s.optional(s.string()),
 });
 
+/** Validation schema for `refresh_token` grant request bodies. */
 let RefreshTokenSchema = s.object({
 	grant_type: s.literal("refresh_token"),
 	refresh_token: s.string(),
@@ -40,6 +53,7 @@ let RefreshTokenSchema = s.object({
 	client_secret: s.optional(s.string()),
 });
 
+/** Validation schema for `client_credentials` grant request bodies. */
 let ClientCredentialsSchema = s.object({
 	grant_type: s.literal("client_credentials"),
 	client_id: s.string(),
@@ -51,6 +65,9 @@ let ClientCredentialsSchema = s.object({
 /**
  * OAuth 2.0 Token endpoint (RFC 6749 Section 3.2).
  * Supports authorization_code, refresh_token, and client_credentials grant types.
+ * Reads `grant_type` from the form body (and Basic auth for client credentials)
+ * and dispatches to the matching grant handler.
+ * @returns A JSON token `Response`, or an OAuth error `Response`.
  */
 export default createAction(
 	routes.oauth.token,
@@ -88,6 +105,11 @@ export default createAction(
 /**
  * Handles the authorization_code grant type (RFC 6749 Section 4.1.3).
  * Authorization codes are single-use per RFC 6749.
+ * @param db - Tenant database instance.
+ * @param body - Parsed token request parameters (form body plus Basic-auth creds).
+ * @param log - Request-scoped action logger.
+ * @returns A JSON `Response` with access/ID (and optional refresh) tokens, or an OAuth error `Response`.
+ * @throws Rethrows unexpected errors from consuming the authorization code.
  */
 async function handleAuthorizationCode(db: Database, body: Record<string, unknown>, log: Logger) {
 	log.info("Authorization code grant started");
@@ -311,6 +333,10 @@ async function handleAuthorizationCode(db: Database, body: Record<string, unknow
 /**
  * Handles the refresh_token grant type (RFC 6749 Section 6).
  * Issues new access and ID tokens using a valid refresh token (session ID).
+ * @param db - Tenant database instance.
+ * @param body - Parsed token request parameters (form body plus Basic-auth creds).
+ * @param log - Request-scoped action logger.
+ * @returns A JSON `Response` with refreshed tokens, or an OAuth error `Response`.
  */
 async function handleRefreshToken(db: Database, body: Record<string, unknown>, log: Logger) {
 	log.info("Refresh token grant started");
@@ -447,6 +473,10 @@ async function handleRefreshToken(db: Database, body: Record<string, unknown>, l
 /**
  * Handles the client_credentials grant type (RFC 6749 Section 4.4).
  * Only available to machine-to-machine (m2m) clients.
+ * @param db - Tenant database instance.
+ * @param body - Parsed token request parameters (form body plus Basic-auth creds).
+ * @param log - Request-scoped action logger.
+ * @returns A JSON `Response` with an access token, or an OAuth error `Response`.
  */
 async function handleClientCredentials(db: Database, body: Record<string, unknown>, log: Logger) {
 	log.info("Client credentials grant started");
@@ -561,6 +591,10 @@ async function handleClientCredentials(db: Database, body: Record<string, unknow
 /**
  * Validates PKCE code_verifier against the stored challenge.
  * Supports both S256 (SHA-256 hash) and plain methods per RFC 7636.
+ * @param verifier - The `code_verifier` sent by the client.
+ * @param challenge - The stored `code_challenge` from the authorization request.
+ * @param method - The PKCE method used to derive the challenge.
+ * @returns True if the verifier matches the challenge.
  */
 async function validatePKCE(
 	verifier: string,

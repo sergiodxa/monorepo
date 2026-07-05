@@ -1,3 +1,14 @@
+/**
+ * Management API controller for a client's logout URIs
+ * (`/api/clients/:clientId/logout-uris`).
+ *
+ * Lists, creates (with URI validation), and deletes the post-logout, back-channel,
+ * and front-channel logout endpoints registered for a client.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import type { RequestContext } from "remix/fetch-router";
 
 import { noContent } from "@pkg/http/response";
@@ -19,6 +30,11 @@ import LogoutUri from "../models/logout-uri";
 
 type LogoutUriRow = Awaited<ReturnType<typeof LogoutUri.list>>[number];
 
+/**
+ * Normalizes a logout-URI row for API responses (timestamp to ISO string).
+ * @param logoutUri - The raw logout-URI record.
+ * @returns The record with `created_at` as an ISO string.
+ */
 function normalizeLogoutUri(logoutUri: LogoutUriRow) {
 	return {
 		...logoutUri,
@@ -26,6 +42,7 @@ function normalizeLogoutUri(logoutUri: LogoutUriRow) {
 	};
 }
 
+/** Validation schema for the create-logout-URI request body. */
 let CreateLogoutUriSchema = s.object({
 	uri: s.string().pipe(minLength(LIMITS.url.min), maxLength(LIMITS.url.max), httpsUrl()),
 	type: s.enum_(["post_logout", "backchannel", "frontchannel"]),
@@ -33,6 +50,10 @@ let CreateLogoutUriSchema = s.object({
 	environment: s.optional(s.string().pipe(maxLength(50))),
 });
 
+/**
+ * `GET /api/clients/:clientId/logout-uris` — lists a client's logout URIs.
+ * @returns A JSON `Response` with the logout URIs, or `notFound` if the client is missing.
+ */
 export const index = createAction(
 	routes.api.clients["logout-uris"].index,
 	inject([Database] as const, async (db) => {
@@ -52,6 +73,10 @@ export const index = createAction(
 	}),
 );
 
+/**
+ * `POST /api/clients/:clientId/logout-uris` — adds a logout URI to a client.
+ * @returns A JSON `Response` with the new URI's id, or an error `Response`.
+ */
 export const create = createAction(
 	routes.api.clients["logout-uris"].create,
 	inject([Database] as const, async (db) => {
@@ -82,6 +107,10 @@ export const create = createAction(
 	}),
 );
 
+/**
+ * `DELETE /api/clients/:clientId/logout-uris/:id` — removes a logout URI.
+ * @returns A `204 No Content` `Response`, or `notFound`.
+ */
 export const destroy = createAction(
 	routes.api.clients["logout-uris"].destroy,
 	inject([Database] as const, async (db) => {

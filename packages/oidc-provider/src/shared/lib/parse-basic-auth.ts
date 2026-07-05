@@ -1,7 +1,25 @@
 /**
- * Parse HTTP Basic Authentication header.
- * @param header The Authorization header value
- * @returns Parsed clientId and clientSecret, or null if invalid
+ * Parser for HTTP Basic `Authorization` headers.
+ *
+ * OAuth clients may authenticate at the token endpoint via `client_secret_basic`,
+ * which encodes the client id and secret in a Basic auth header; this module
+ * decodes and URL-unescapes those credentials.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
+/**
+ * Parse an HTTP Basic Authentication header into client credentials.
+ *
+ * Returns `null` (never throws) for any header that is missing, not `Basic`,
+ * malformed base64, or lacking a non-empty id and secret. Both fields are
+ * percent-decoded per the OAuth `client_secret_basic` scheme.
+ * @param header - The `Authorization` header value, or null when absent.
+ * @returns Parsed `clientId`/`clientSecret`, or null if the header is invalid.
+ * @example
+ * let creds = parseBasicAuth(request.headers.get("authorization"));
+ * if (creds) authenticateClient(creds.clientId, creds.clientSecret);
  */
 export default function parseBasicAuth(
 	header: string | null,

@@ -1,5 +1,18 @@
+/**
+ * Central route table for the OIDC provider, defining every endpoint's method
+ * and path.
+ *
+ * A single typed `route(...)` tree the router and controllers both reference, so
+ * paths for OAuth, OIDC, discovery, WebAuthn, and the Management API are declared
+ * in exactly one place.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { del, form, get, post, put, resource, resources, route } from "remix/fetch-router/routes";
 
+/** Typed route tree consumed by the provider router and controllers. */
 export default route({
 	index: get("/"),
 	verifyEmail: get("verify-email"),

@@ -1,3 +1,14 @@
+/**
+ * OAuth 2.0 Authorization Endpoint controller and its server-rendered UI.
+ *
+ * Renders the email/passkey sign-in flow: validates the authorization request,
+ * checks whether the email already has passkeys, and shows the WebAuthn
+ * authentication or registration form (carrying the pending OAuth parameters).
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import type { Handle } from "remix/ui";
 
 import { ok } from "@pkg/http/response/html";
@@ -39,6 +50,7 @@ let AuthorizeRequestSchema = s.object({
 	login_hint: s.optional(s.string()),
 });
 
+/** Validation schema for the sign-in form POST that carries the OAuth parameters. */
 let LoginFormSchema = s.object({
 	email: s.string(),
 	client_id: s.string(),
@@ -54,6 +66,9 @@ let LoginFormSchema = s.object({
 /**
  * OAuth 2.0 Authorization Endpoint (RFC 6749 Section 3.1).
  * Handles the authorization code flow with PKCE support.
+ *
+ * `index` (GET) validates the request and renders the email form; `action` (POST)
+ * processes the email and renders the passkey authentication or registration form.
  */
 export default createController(routes.oauth.authorize, {
 	middleware: [],
@@ -272,11 +287,21 @@ export default createController(routes.oauth.authorize, {
 	},
 });
 
+/**
+ * Renders the error page to an HTML `Response`.
+ * @param message - User-facing error message to display.
+ * @returns An HTML `Response` (status 200) containing the error page.
+ */
 async function renderError(message: string) {
 	let html = await renderToString(<ErrorPage message={message} />);
 	return ok(html);
 }
 
+/**
+ * Full-page error view shown when the authorization request is invalid.
+ * @param handle - Component handle exposing the error `message`.
+ * @returns A render function producing the error markup.
+ */
 function ErrorPage(handle: Handle<{ message: string }>) {
 	return () => (
 		<Layout>
@@ -314,6 +339,12 @@ interface LoginFormProps {
 	error?: string;
 }
 
+/**
+ * Email entry form that begins the sign-in flow, preserving OAuth parameters as
+ * hidden fields.
+ * @param handle - Component handle exposing the login form props.
+ * @returns A render function producing the form markup.
+ */
 function LoginForm(handle: Handle<LoginFormProps>) {
 	let props = handle.props;
 	return () => (
@@ -464,6 +495,11 @@ interface AuthenticateFormProps {
 	clientName: string;
 }
 
+/**
+ * Passkey sign-in view that mounts the {@link WebAuthnAuth} client component.
+ * @param handle - Component handle exposing the authentication form props.
+ * @returns A render function producing the form markup.
+ */
 function AuthenticateForm(handle: Handle<AuthenticateFormProps>) {
 	let props = handle.props;
 	return () => (
@@ -519,6 +555,11 @@ interface RegisterFormProps {
 	clientName: string;
 }
 
+/**
+ * Passkey enrollment view that mounts the {@link WebAuthnRegister} client component.
+ * @param handle - Component handle exposing the registration form props.
+ * @returns A render function producing the form markup.
+ */
 function RegisterForm(handle: Handle<RegisterFormProps>) {
 	let props = handle.props;
 	return () => (

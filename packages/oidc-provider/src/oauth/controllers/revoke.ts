@@ -1,3 +1,14 @@
+/**
+ * OAuth 2.0 Token Revocation endpoint controller (RFC 7009).
+ *
+ * Authenticates the calling client and revokes refresh tokens (sessions). Access
+ * tokens are stateless JWTs and cannot be revoked; the endpoint always returns 200
+ * regardless of token validity to prevent enumeration.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { isFailure } from "@pkg/result";
 import { inject } from "@pkg/service-container";
 import { validate } from "@pkg/validate";
@@ -13,6 +24,7 @@ import parseBasicAuth from "../../shared/lib/parse-basic-auth";
 import { reject } from "../../shared/lib/reject";
 import Session from "../models/session";
 
+/** Validation schema for token revocation request bodies. */
 let RevokeSchema = s.object({
 	token: s.string(),
 	token_type_hint: s.optional(s.enum_(["access_token", "refresh_token"])),
@@ -29,6 +41,7 @@ let RevokeSchema = s.object({
  *
  * Note: Access tokens are stateless JWTs and cannot be revoked server-side.
  * Only refresh tokens (sessions) can be truly revoked.
+ * @returns An empty `200` `Response` on success, or an OAuth error `Response` for bad client auth.
  */
 export default createAction(
 	routes.oauth.revoke,

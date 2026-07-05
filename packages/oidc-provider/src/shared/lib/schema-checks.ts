@@ -1,6 +1,11 @@
 /**
- * Schema checks for input validation.
- * These are used with data-schema's pipe() method.
+ * Reusable `remix/data-schema` field checks for input validation.
+ *
+ * Models and controllers compose these via `pipe()` to enforce lengths, URL,
+ * email, and hex-color formats consistently across the provider's schemas.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
  */
 
 import type { Check } from "remix/data-schema";
@@ -10,6 +15,8 @@ import type { Check } from "remix/data-schema";
  * @param min - The minimum length
  * @param message - Optional custom error message
  * @returns A Check function for use with pipe()
+ * @example
+ * s.string().pipe(minLength(1, "Name is required"));
  */
 export function minLength(min: number, message?: string): Check<string> {
 	return {

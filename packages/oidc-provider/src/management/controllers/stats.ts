@@ -1,3 +1,13 @@
+/**
+ * Management API statistics endpoint controller.
+ *
+ * Aggregates tenant usage counts (users, clients, sessions, active sessions, and
+ * monthly active users) for the control-plane dashboard.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { ok } from "@pkg/http/response/json";
 import { inject } from "@pkg/service-container";
 import { getContext } from "remix/async-context-middleware";
@@ -9,6 +19,10 @@ import Session from "../../oauth/models/session";
 import routes from "../../routes";
 import Subject from "../../subjects/models/subject";
 
+/**
+ * `GET /api/stats` action returning aggregate tenant usage counts as JSON.
+ * @returns A JSON `Response` with user, client, and session statistics.
+ */
 export const show = createAction(
 	routes.api.stats,
 	inject([Database] as const, async (db) => {

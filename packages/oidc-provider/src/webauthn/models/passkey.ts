@@ -1,10 +1,25 @@
+/**
+ * Model for WebAuthn passkey credentials registered by subjects.
+ *
+ * Stores each authenticator's public key, signature counter, and metadata, and
+ * provides lookup by credential id plus counter updates, renaming, and deletion
+ * used across the WebAuthn registration and authentication flows.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import type { Database } from "remix/data-table";
 
 import { column as c, table } from "remix/data-table";
 
 import { RecordNotFoundError } from "../../shared/lib/db-errors";
 
+/**
+ * Persistence model for a subject's registered WebAuthn passkeys.
+ */
 export default class Passkey {
+	/** Database table schema for passkeys. */
 	static table = table({
 		name: "passkeys",
 		primaryKey: ["id"],
@@ -25,10 +40,22 @@ export default class Passkey {
 		},
 	});
 
+	/**
+	 * Lists all passkeys registered by a subject.
+	 * @param db - Database instance.
+	 * @param subjectId - Subject ID to filter by.
+	 * @returns Array of passkey records for the subject.
+	 */
 	static listBySubject(db: Database, subjectId: string) {
 		return db.findMany(Passkey.table, { where: { subject_id: subjectId } });
 	}
 
+	/**
+	 * Retrieves a single passkey by its primary key.
+	 * @param db - Database instance.
+	 * @param id - Passkey ID.
+	 * @returns Passkey record or null if not found.
+	 */
 	static show(db: Database, id: string) {
 		return db.findOne(Passkey.table, { where: { id } });
 	}
@@ -43,6 +70,14 @@ export default class Passkey {
 		return db.findOne(Passkey.table, { where: { credential_id: credentialId } });
 	}
 
+	/**
+	 * Persists a newly registered passkey credential for a subject.
+	 * @param db - Database instance.
+	 * @param data - Credential material and metadata from the authenticator.
+	 * @returns The created passkey write result.
+	 * @example
+	 * await Passkey.create(db, { subjectId, credentialId, publicKey, counter: 0 });
+	 */
 	static async create(
 		db: Database,
 		data: {
@@ -72,6 +107,15 @@ export default class Passkey {
 		});
 	}
 
+	/**
+	 * Updates a passkey's signature counter and last-used timestamp after a
+	 * successful authentication (used to detect cloned authenticators).
+	 * @param db - Database instance.
+	 * @param id - Passkey ID.
+	 * @param counter - New signature counter reported by the authenticator.
+	 * @returns The update result.
+	 * @throws {RecordNotFoundError} If the passkey does not exist.
+	 */
 	static async updateCounter(db: Database, id: string, counter: number) {
 		let passkey = await db.findOne(Passkey.table, { where: { id } });
 		if (!passkey) throw new RecordNotFoundError(Passkey.table, { id });
@@ -86,6 +130,14 @@ export default class Passkey {
 		);
 	}
 
+	/**
+	 * Renames a passkey (its user-facing label).
+	 * @param db - Database instance.
+	 * @param id - Passkey ID.
+	 * @param name - New display name.
+	 * @returns The update result.
+	 * @throws {RecordNotFoundError} If the passkey does not exist.
+	 */
 	static async rename(db: Database, id: string, name: string) {
 		let passkey = await db.findOne(Passkey.table, { where: { id } });
 		if (!passkey) throw new RecordNotFoundError(Passkey.table, { id });
@@ -93,6 +145,13 @@ export default class Passkey {
 		return await db.update(Passkey.table, { id }, { name });
 	}
 
+	/**
+	 * Deletes a passkey credential.
+	 * @param db - Database instance.
+	 * @param id - Passkey ID.
+	 * @returns Deletion result.
+	 * @throws {RecordNotFoundError} If the passkey does not exist.
+	 */
 	static async destroy(db: Database, id: string) {
 		let passkey = await db.findOne(Passkey.table, { where: { id } });
 		if (!passkey) throw new RecordNotFoundError(Passkey.table, { id });

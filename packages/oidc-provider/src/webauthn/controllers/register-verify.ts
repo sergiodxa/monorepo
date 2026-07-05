@@ -1,3 +1,14 @@
+/**
+ * WebAuthn registration verification endpoint controller.
+ *
+ * Consumes the challenge, verifies the new passkey, creates the subject and stores
+ * the credential (implicitly verifying email ownership), and — when the challenge
+ * carries OAuth params — creates a session and authorization code to continue.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { badRequest, ok, tooManyRequests } from "@pkg/http/response/json";
 import { isFailure } from "@pkg/result";
 import { inject } from "@pkg/service-container";
@@ -19,6 +30,7 @@ import Subject from "../../subjects/models/subject";
 import Passkey from "../models/passkey";
 import WebAuthnChallenge from "../models/webauthn-challenge";
 
+/** Validation schema for the WebAuthn registration (attestation) response body. */
 let RequestSchema = s.object({
 	challengeId: s.string(),
 	response: s.object({
@@ -43,6 +55,7 @@ let RequestSchema = s.object({
  * Verifies a passkey registration response and stores the credential.
  * Rate-limited per email to prevent registration abuse.
  * Passkey registration implicitly verifies email ownership.
+ * @returns A JSON `Response` with a redirect (OAuth flow) or subject info, or an error `Response`.
  */
 export default createAction(
 	routes.webauthn.register.verify,

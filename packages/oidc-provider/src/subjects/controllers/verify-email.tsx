@@ -1,3 +1,14 @@
+/**
+ * Email verification landing page controller and view (`GET /verify-email`).
+ *
+ * Consumes the token from the verification link, marks the subject's email
+ * verified, and renders a success or error page (invalid, expired, or already
+ * used) with the tenant's branding applied.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import type { Handle } from "remix/ui";
 
 import { ok } from "@pkg/http/response/html";
@@ -14,6 +25,10 @@ import { Layout } from "../../shared/layout";
 import EmailVerificationToken from "../models/email-verification-token";
 import Subject from "../models/subject";
 
+/**
+ * `GET /verify-email` action that consumes the token and renders the result page.
+ * @returns An HTML `Response` with the success or error verification page.
+ */
 export default createAction(
 	routes.verifyEmail,
 	inject([Database] as const, async (db) => {

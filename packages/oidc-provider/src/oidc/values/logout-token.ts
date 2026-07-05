@@ -1,3 +1,13 @@
+/**
+ * Value Object for OpenID Connect Back-Channel Logout Tokens.
+ *
+ * Builds the short-lived, signed JWT sent to a client's back-channel logout
+ * endpoint to notify it that a subject's session has been terminated.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { JWT } from "@edgefirst-dev/jwt";
 
 /**
@@ -45,6 +55,8 @@ export default class LogoutToken extends JWT {
 	 * @param clientId - Client to notify
 	 * @param sessionId - Optional session identifier
 	 * @returns New LogoutToken instance
+	 * @example
+	 * let token = LogoutToken.generate(issuer, subject.id, client.id, session.id);
 	 */
 	static generate(issuer: string, subjectId: string, clientId: string, sessionId?: string) {
 		let now = Math.floor(Date.now() / 1000);

@@ -1,3 +1,14 @@
+/**
+ * OAuth 2.0 Token Introspection endpoint controller (RFC 7662).
+ *
+ * Authenticates the calling client, then reports whether a presented token is
+ * active and returns its metadata — checking refresh tokens (sessions) and
+ * verifying access-token JWTs against the tenant's signing keys.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { ok } from "@pkg/http/response/json";
 import { isFailure } from "@pkg/result";
 import { inject } from "@pkg/service-container";
@@ -17,6 +28,7 @@ import SigningKey from "../../signing-keys/models/signing-key";
 import Session from "../models/session";
 import AccessToken from "../values/access-token";
 
+/** Validation schema for token introspection request bodies. */
 let IntrospectSchema = s.object({
 	token: s.string(),
 	token_type_hint: s.optional(s.enum_(["access_token", "refresh_token"])),
@@ -28,6 +40,7 @@ let IntrospectSchema = s.object({
  * OAuth 2.0 Token Introspection endpoint (RFC 7662).
  * Allows resource servers to query the authorization server about the active state of a token.
  * Returns token metadata including subject, client, expiration, and scope.
+ * @returns A JSON `Response` with `{ active: boolean, ... }`, or an OAuth error `Response`.
  */
 export default createAction(
 	routes.oauth.introspect,

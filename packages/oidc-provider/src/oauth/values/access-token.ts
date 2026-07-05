@@ -1,3 +1,13 @@
+/**
+ * Value Object for OAuth 2.0 Access Tokens (JWT profile, RFC 9068).
+ *
+ * Wraps a signed JWT with typed accessors for the standard authorization claims
+ * and a factory for minting new one-hour tokens for a subject and audience.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { JWT } from "@edgefirst-dev/jwt";
 
 /** Access token time-to-live in milliseconds (1 hour). */
@@ -75,6 +85,8 @@ export default class AccessToken extends JWT {
 	 * @param subjectId - Subject identifier
 	 * @param scope - Optional array of scope strings
 	 * @returns New AccessToken instance
+	 * @example
+	 * let token = AccessToken.generate(issuer, resource.identifier, subject.id, ["read"]);
 	 */
 	static generate(
 		issuer: string,

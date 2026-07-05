@@ -1,3 +1,14 @@
+/**
+ * Authentication middleware guarding every Management API route.
+ *
+ * Accepts either the control plane's HMAC-signed internal token or a Bearer access
+ * token belonging to a client flagged as a management client, and exposes the
+ * resolved client on `context.managementClient`.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { unauthorized } from "@pkg/http/response/json";
 import { getServiceContainer } from "@pkg/service-container";
 import { Database } from "remix/data-table";
@@ -16,6 +27,7 @@ import TenantMeta from "../models/tenant-meta";
  * Internal requests (from the platform dashboard) use signed tokens
  * for secure authentication, verified using a shared secret.
  * @param internalSecret - HMAC secret shared with the control plane for internal tokens.
+ * @returns A router middleware that authenticates management requests or returns `401`.
  */
 export default (internalSecret: string) => {
 	return middleware(async (context, next) => {

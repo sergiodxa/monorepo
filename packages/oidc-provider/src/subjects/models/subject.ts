@@ -1,3 +1,14 @@
+/**
+ * Model for subjects (the provider's end users).
+ *
+ * Owns the subject lifecycle: registration with an unverified email, import from
+ * another identity store (preserving the stable OIDC `sub`), profile updates,
+ * email verification, deletion, and cleanup of stale unverified accounts.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import type { Database } from "remix/data-table";
 
 import { column as c, table } from "remix/data-table";
@@ -17,6 +28,7 @@ export default class Subject {
 	/** Error thrown when a username is already taken by another subject. */
 	static UsernameAlreadyTakenError = class extends Error {
 		override name = "UsernameAlreadyTakenError";
+		/** @param username - The already-taken username, included in the message. */
 		constructor(username: string) {
 			super(`Username "${username}" is already taken`);
 		}
@@ -25,6 +37,7 @@ export default class Subject {
 	/** Error thrown when importing a subject whose id or email already exists. */
 	static ConflictError = class extends Error {
 		override name = "SubjectConflictError";
+		/** @param message - Explanation of which field (id or email) conflicted. */
 		constructor(message: string) {
 			super(message);
 		}
@@ -102,6 +115,8 @@ export default class Subject {
 	 * @param db - Database instance
 	 * @param data - Registration data including email and username
 	 * @returns Created subject record
+	 * @example
+	 * let subject = await Subject.register(db, { email, username });
 	 */
 	static async register(db: Database, data: { email: string; username: string }) {
 		let id = crypto.randomUUID();

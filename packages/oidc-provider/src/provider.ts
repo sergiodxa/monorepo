@@ -1,3 +1,14 @@
+/**
+ * Assembles the OIDC provider's fetch-router: middleware pipeline plus route map.
+ *
+ * Wires every controller (OAuth, OIDC, discovery, WebAuthn, and the Management
+ * API) to its route and scopes each request inside a service container so
+ * handlers resolve the correct per-request database via dependency injection.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import type { Logger } from "@pkg/logger/request";
 import type { Middleware, RequestHandler } from "remix/fetch-router";
 

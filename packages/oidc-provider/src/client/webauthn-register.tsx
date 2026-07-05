@@ -1,3 +1,14 @@
+/**
+ * Client-side WebAuthn registration component for the passkey enrollment flow.
+ *
+ * Hydrates in the browser, immediately invokes `navigator.credentials.create`
+ * with the server-issued creation options, posts the new credential back for
+ * verification, and follows the returned redirect on success.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import type { Handle, SerializableObject } from "remix/ui";
 
 import { clientEntry, css, on } from "remix/ui";
@@ -15,6 +26,12 @@ type WebAuthnRegisterProps = {
 	email: string;
 };
 
+/**
+ * Hydratable client entry that drives passkey registration in the browser.
+ *
+ * Renders enrollment progress/error UI and starts the WebAuthn `create` ceremony
+ * on mount, redirecting to the server-provided URL once the credential verifies.
+ */
 export let WebAuthnRegister = clientEntry(
 	"/assets/tenant/webauthn-register.js#WebAuthnRegister",
 	function WebAuthnRegister(handle: Handle<WebAuthnRegisterProps>) {

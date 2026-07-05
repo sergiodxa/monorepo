@@ -2,6 +2,9 @@
  * Per-user rate limiting for authentication endpoints.
  * Uses in-memory storage with TTL-based expiration.
  * This is used within Durable Objects where central rate limiters aren't available.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
  */
 
 /**
@@ -72,6 +75,9 @@ interface RateLimitResult {
  * @param action - The action being rate limited
  * @param config - The rate limit configuration
  * @returns The rate limit result
+ * @example
+ * let { success } = checkUserRateLimit(email, "authVerify", USER_RATE_LIMITS.authVerify);
+ * if (!success) return tooManyRequests();
  */
 export function checkUserRateLimit(
 	identifier: string,

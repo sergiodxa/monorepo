@@ -1,3 +1,14 @@
+/**
+ * Management API controller for a subject's passkeys
+ * (`/api/subjects/:id/passkeys`).
+ *
+ * Lists a subject's passkeys, renames one, and deletes one — refusing to remove a
+ * subject's last remaining passkey so they never get locked out.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import type { RequestContext } from "remix/fetch-router";
 
 import { noContent } from "@pkg/http/response";
@@ -18,10 +29,15 @@ import { toIsoString, toIsoStringOptional } from "../../shared/lib/timestamp";
 import Passkey from "../../webauthn/models/passkey";
 import Subject from "../models/subject";
 
+/** Validation schema for the update-passkey (rename) request body. */
 let UpdatePasskeySchema = s.object({
 	name: s.string().pipe(maxLength(LIMITS.name.max)),
 });
 
+/**
+ * `GET /api/subjects/:id/passkeys` — lists a subject's passkeys.
+ * @returns A JSON `Response` with the passkeys, or `notFound` if the subject is missing.
+ */
 export const index = createAction(
 	routes.api.subjects.passkeys.index,
 	inject([Database] as const, async (db) => {
@@ -52,6 +68,10 @@ export const index = createAction(
 	}),
 );
 
+/**
+ * `PUT /api/subjects/:id/passkeys/:passkeyId` — renames one of a subject's passkeys.
+ * @returns A JSON `Response` with the updated passkey, or an error `Response`.
+ */
 export const update = createAction(
 	routes.api.subjects.passkeys.update,
 	inject([Database] as const, async (db) => {
@@ -122,6 +142,11 @@ export const update = createAction(
 	}),
 );
 
+/**
+ * `DELETE /api/subjects/:id/passkeys/:passkeyId` — deletes one of a subject's passkeys.
+ * Refuses to delete the subject's only remaining passkey.
+ * @returns A `204 No Content` `Response`, or an error `Response`.
+ */
 export const destroy = createAction(
 	routes.api.subjects.passkeys.destroy,
 	inject([Database] as const, async (db) => {

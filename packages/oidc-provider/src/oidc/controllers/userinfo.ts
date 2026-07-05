@@ -1,3 +1,13 @@
+/**
+ * OpenID Connect UserInfo endpoint controller (OIDC Core Section 5.3).
+ *
+ * Verifies the Bearer access token, then returns the standard claims for the
+ * authenticated subject, gated by the token's granted scopes (`email`, `profile`).
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { json } from "@pkg/http/response";
 import { inject } from "@pkg/service-container";
 import { getContext } from "remix/async-context-middleware";
@@ -14,6 +24,10 @@ import Subject from "../../subjects/models/subject";
  * Returns an OAuth error response with WWW-Authenticate header per RFC 6750.
  * Bearer token errors must include the WWW-Authenticate header to inform
  * the client how to properly authenticate.
+ * @param error - OAuth 2.0 error code (e.g. `"invalid_token"`).
+ * @param description - Human-readable explanation of the error.
+ * @param status - HTTP status code (defaults to 401).
+ * @returns A JSON error `Response` with a `WWW-Authenticate` header.
  */
 function reject(error: string, description: string, status: number = 401) {
 	return json(
@@ -31,6 +45,7 @@ function reject(error: string, description: string, status: number = 401) {
 /**
  * OpenID Connect UserInfo endpoint (OIDC Core Section 5.3).
  * Returns claims about the authenticated end-user based on the access token scope.
+ * @returns A JSON `Response` of user claims, or an OAuth error `Response`.
  */
 export default createAction(
 	routes.oidc.userinfo,

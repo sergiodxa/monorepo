@@ -1,3 +1,13 @@
+/**
+ * JSON Web Key Set (JWKS) endpoint (`/.well-known/jwks.json`).
+ *
+ * Publishes the tenant's public signing keys so clients and resource servers can
+ * verify the JWTs this authorization server issues.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { JWK } from "@edgefirst-dev/jwt";
 import { ok } from "@pkg/http/response/json";
 import { inject } from "@pkg/service-container";
@@ -11,6 +21,7 @@ import SigningKey from "../../signing-keys/models/signing-key";
 /**
  * JSON Web Key Set (JWKS) endpoint (RFC 7517).
  * Provides the public keys used to verify JWTs issued by this authorization server.
+ * @returns A JSON `Response` containing the public JWK set.
  */
 export default createAction(
 	routes.discover.jwks,
