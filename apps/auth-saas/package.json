@@ -3,9 +3,9 @@
 	"private": true,
 	"type": "module",
 	"scripts": {
-		"dev": "vite build --config vite.config.client.ts --watch &  vite dev",
-		"build": "vite build --config vite.config.client.ts && vite build",
-		"build:client": "vite build --config vite.config.client.ts",
+		"dev": "vite build --config vite.config.client.ts --watch & vite build --config vite.config.browser.ts --watch & vite dev",
+		"build": "vite build --config vite.config.browser.ts && vite build --config vite.config.client.ts && vite build",
+		"build:client": "vite build --config vite.config.browser.ts && vite build --config vite.config.client.ts",
 		"start": "vite preview",
 		"cf:deploy": "wrangler deploy",
 		"cf:typegen": "wrangler types",
