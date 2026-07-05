@@ -1,0 +1,57 @@
+{
+	"$schema": "https://unpkg.com/wrangler@latest/config-schema.json",
+	"name": "blog-saas",
+	"main": "./bootstrap/worker.ts",
+	"compatibility_date": "2026-06-01",
+	"compatibility_flags": ["nodejs_compat"],
+	"workers_dev": true,
+
+	"dev": { "port": 3005 },
+
+	"observability": { "enabled": true },
+
+	"assets": { "directory": "./assets", "binding": "ASSETS" },
+
+	// One-time zone setup (not automatable): proxied wildcard `*.blog.sergiodxa.com`,
+	// a proxied `fallback.blog.sergiodxa.com` set as the CF for SaaS fallback origin,
+	// and an explicit `sso.blog.sergiodxa.com/*` route to the auth-saas worker.
+	"routes": [
+		{ "pattern": "blog.sergiodxa.com", "custom_domain": true },
+		{ "pattern": "*.blog.sergiodxa.com/*", "zone_name": "sergiodxa.com" },
+		{ "pattern": "fallback.blog.sergiodxa.com/*", "zone_name": "sergiodxa.com" },
+	],
+
+	"triggers": {
+		// 01:00 UTC: aggregate page views -> usage_daily -> Polar ingestion.
+		// 02:00 UTC: purge soft-deleted blogs past retention; poll pending hostnames.
+		"crons": ["0 1 * * *", "0 2 * * *"],
+	},
+
+	"durable_objects": { "bindings": [{ "name": "BLOG", "class_name": "Blog" }] },
+	"migrations": [{ "tag": "add-blog-do", "new_sqlite_classes": ["Blog"] }],
+
+	"d1_databases": [
+		{
+			"binding": "PLATFORM_DB",
+			"database_name": "blog-saas-platform",
+			"database_id": "placeholder-dev-db-id",
+			"migrations_dir": "./database/migrations",
+		},
+	],
+
+	"kv_namespaces": [{ "binding": "SLUG_CACHE", "id": "placeholder-slug-cache-id" }],
+
+	"analytics_engine_datasets": [{ "binding": "ANALYTICS", "dataset": "blog-saas-analytics" }],
+
+	"vars": {
+		"PLATFORM_DOMAIN": "blog.sergiodxa.com",
+		"OIDC_ISSUER": "https://sso.blog.sergiodxa.com",
+	},
+
+	// Secrets (wrangler secret put):
+	//   COOKIE_SESSION_SECRET                                   dashboard session cookie
+	//   OIDC_CLIENT_ID / OIDC_CLIENT_SECRET                     dashboard client on the sso tenant
+	//   SSO_MANAGEMENT_CLIENT_ID / SSO_MANAGEMENT_CLIENT_SECRET per-blog client provisioning
+	//   CF_API_TOKEN / CF_ZONE_ID / CF_ACCOUNT_ID               CF for SaaS + AE SQL API
+	//   POLAR_ACCESS_TOKEN / POLAR_WEBHOOK_SECRET / POLAR_PRODUCT_ID
+}
