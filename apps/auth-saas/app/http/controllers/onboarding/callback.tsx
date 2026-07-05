@@ -1,6 +1,16 @@
+/**
+ * `GET /onboarding/callback` — the platform OAuth callback. Exchanges the authorization
+ * code for tokens, validates the ID token, resolves pending tenant ownership, and
+ * establishes the platform session before redirecting to the dashboard. The error page
+ * is rendered with `remix/ui` JSX via `ctx.render` (replacing the former Tailwind-CDN
+ * `html()` string template); all OAuth/onboarding behavior is preserved.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import type { JSONValue } from "@pkg/types";
 
-import { html } from "@pkg/http/response";
 import { isFailure } from "@pkg/result";
 import { inject } from "@pkg/service-container";
 import { validate } from "@pkg/validate";
@@ -13,6 +23,7 @@ import { createAction } from "remix/fetch-router";
 import { base64UrlDecode } from "~/app/lib/crypto-utils";
 import { createSessionCookie, createSessionToken } from "~/app/lib/platform-session";
 import Tenant from "~/app/models/tenant";
+import { AuthErrorPage, PublicDocument } from "~/app/views/landing";
 import routes from "~/routes/web";
 
 /** Schema for OAuth callback query parameters. */
@@ -189,28 +200,19 @@ function decodeIdToken(idToken: string): unknown {
 }
 
 /**
- * Renders an error page.
+ * Renders the onboarding authentication-error page as a `remix/ui` document with a
+ * `400 Bad Request` status, using the request-scoped `ctx.render` helper.
+ *
+ * @param message - The error message shown to the visitor.
+ * @returns A `Response` containing the rendered error document.
+ * @example
+ * return renderError("Authentication failed. Please try again.");
  */
 function renderError(message: string) {
-	return html(
-		`<!DOCTYPE html>
-<html lang="en">
-<head>
-	<meta charset="UTF-8">
-	<meta name="viewport" content="width=device-width, initial-scale=1.0">
-	<title>Authentication Error - Auth SaaS</title>
-	<script src="https://cdn.tailwindcss.com"></script>
-</head>
-<body class="bg-gray-50 min-h-screen flex items-center justify-center">
-	<div class="max-w-md w-full px-4">
-		<div class="bg-white rounded-lg border shadow-sm p-6 text-center">
-			<h1 class="text-xl font-bold text-red-600 mb-4">Authentication Error</h1>
-			<p class="text-gray-600 mb-4">${message}</p>
-			<a href="${routes.onboarding.index.href()}" class="text-blue-600 hover:underline">Try again</a>
-		</div>
-	</div>
-</body>
-</html>`,
+	return getContext().render(
+		<PublicDocument title="Authentication Error - Auth SaaS" variant="error">
+			<AuthErrorPage message={message} />
+		</PublicDocument>,
 		{ status: 400 },
 	);
 }
