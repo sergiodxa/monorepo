@@ -1,5 +1,7 @@
+import { getServiceContainer } from "@pkg/service-container";
 import { getContext } from "remix/async-context-middleware";
 import { auth, Auth, createSessionAuthScheme } from "remix/auth-middleware";
+import { Database } from "remix/data-table";
 import { createContextKey } from "remix/fetch-router";
 import { Session } from "remix/session";
 
@@ -29,8 +31,8 @@ export const authMiddleware = auth({
 				let id = session.get(USER_ID_KEY);
 				return typeof id === "string" ? id : null;
 			},
-			verify(userId, context) {
-				return User.findById(context.db, userId);
+			verify(userId) {
+				return User.findById(getServiceContainer().get(Database), userId);
 			},
 			invalidate(session) {
 				session.unset(USER_ID_KEY);
@@ -52,7 +54,8 @@ export function getAuthUser(): SelectUser | null {
 	let ctx = getContext();
 	if (!ctx.has(Auth)) return null;
 	let state = ctx.get(Auth);
-	return state.ok ? (state.identity as SelectUser) : null;
+	if (!state || !state.ok) return null;
+	return state.identity as SelectUser;
 }
 
 /** Resolves (and caches) the current user's permission set (empty when anon). */
@@ -61,7 +64,9 @@ export async function getPermissions(): Promise<Set<Permission>> {
 	if (ctx.has(permissionsKey)) return ctx.get(permissionsKey) ?? new Set<Permission>();
 
 	let user = getAuthUser();
-	let permissions = user ? await Role.permissionsFor(ctx.db, user.role_id) : new Set<Permission>();
+	let permissions = user
+		? await Role.permissionsFor(getServiceContainer().get(Database), user.role_id)
+		: new Set<Permission>();
 	ctx.set(permissionsKey, permissions);
 	return permissions;
 }

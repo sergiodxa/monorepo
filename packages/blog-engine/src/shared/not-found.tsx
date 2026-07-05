@@ -1,11 +1,14 @@
 import type { RequestContext } from "remix/fetch-router";
 
+import { getServiceContainer } from "@pkg/service-container";
+import { Database } from "remix/data-table";
+
 import { Layout } from "./components/layout";
 import { loadSiteChrome } from "./site";
 
 /** Renders a themed 404 through `ctx.render` (shared by fall-through + unknown routes). */
 export async function renderNotFound(ctx: RequestContext): Promise<Response> {
-	let chrome = await loadSiteChrome(ctx.db);
+	let chrome = await loadSiteChrome(getServiceContainer().get(Database));
 	return ctx.render(
 		<Layout title="Not found" {...chrome}>
 			<h1>Not found</h1>

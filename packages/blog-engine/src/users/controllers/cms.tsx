@@ -2,6 +2,9 @@ import type { Database } from "remix/data-table";
 
 import { redirect } from "@pkg/http/response";
 import { badRequest, notFound } from "@pkg/http/response/html";
+import { inject } from "@pkg/service-container";
+import { getContext } from "remix/async-context-middleware";
+import { Database as DatabaseKey } from "remix/data-table";
 import { createController } from "remix/fetch-router";
 
 import { getAuthUser, getPermissions } from "../../auth/middleware/auth";
@@ -14,13 +17,15 @@ import { CmsLayout } from "../../shared/components/cms-layout";
 import * as s from "../../shared/components/styles";
 import { User } from "../models/user";
 
+/** Loads the shared CMS chrome (current user, permissions, site title) for a view. */
 async function chrome(db: Database) {
-	let user = await getAuthUser();
+	let user = getAuthUser();
 	let permissions = await getPermissions();
 	let siteTitle = await Settings.siteTitle(db);
 	return { user, permissions, siteTitle };
 }
 
+/** Renders a user's display label, falling back to their email. */
 function label(user: { display_name: string; email: string } | null): string {
 	return user ? user.display_name || user.email : "";
 }
@@ -29,8 +34,8 @@ function label(user: { display_name: string; email: string } | null): string {
 export default createController(routes.cms.users, {
 	middleware: [requirePermission("users.manage")],
 	actions: {
-		async index(ctx) {
-			let { db } = ctx;
+		index: inject([DatabaseKey] as const, async (db) => {
+			let ctx = getContext();
 			let { user, permissions, siteTitle } = await chrome(db);
 			let [users, roles] = await Promise.all([User.findAll(db), Role.findAll(db)]);
 			let roleName = new Map(roles.map((role) => [role.id, role.label]));
@@ -66,13 +71,13 @@ export default createController(routes.cms.users, {
 					</table>
 				</CmsLayout>,
 			);
-		},
+		}),
 
-		async edit(ctx) {
-			let { db, params } = ctx;
+		edit: inject([DatabaseKey] as const, async (db) => {
+			let ctx = getContext();
 			let { user, permissions, siteTitle } = await chrome(db);
 			let [target, roles, users] = await Promise.all([
-				User.findById(db, params.id),
+				User.findById(db, ctx.params.id!),
 				Role.findAll(db),
 				User.findAll(db),
 			]);
@@ -91,7 +96,12 @@ export default createController(routes.cms.users, {
 						<label mix={[s.label]} htmlFor="role_id">
 							Role
 						</label>
-						<select mix={[s.control]} id="role_id" name="role_id" defaultValue={target.role_id}>
+						<select
+							mix={[s.selectControl]}
+							id="role_id"
+							name="role_id"
+							defaultValue={target.role_id}
+						>
 							{roles.map((role) => (
 								<option value={role.id} key={role.id}>
 									{role.label}
@@ -111,7 +121,7 @@ export default createController(routes.cms.users, {
 						<label mix={[s.label]} htmlFor="reassign_to">
 							Reassign this user's posts to
 						</label>
-						<select mix={[s.control]} id="reassign_to" name="reassign_to">
+						<select mix={[s.selectControl]} id="reassign_to" name="reassign_to">
 							<option value="">— delete their posts —</option>
 							{others.map((candidate) => (
 								<option value={candidate.id} key={candidate.id}>
@@ -127,25 +137,26 @@ export default createController(routes.cms.users, {
 					</form>
 				</CmsLayout>,
 			);
-		},
+		}),
 
-		async update(ctx) {
+		update: inject([DatabaseKey] as const, async (db) => {
+			let ctx = getContext();
 			let roleId = String(ctx.formData.get("role_id") ?? "");
 			try {
-				await User.changeRole(ctx.db, ctx.params.id, roleId);
+				await User.changeRole(db, ctx.params.id!, roleId);
 			} catch (error) {
 				return badRequest(String((error as Error).message));
 			}
 			return redirect("/cms/users", { status: redirect.Status.SeeOther });
-		},
+		}),
 
-		async destroy(ctx) {
-			let { db, params, formData } = ctx;
-			let target = await User.findById(db, params.id);
+		destroy: inject([DatabaseKey] as const, async (db) => {
+			let ctx = getContext();
+			let target = await User.findById(db, ctx.params.id!);
 			if (!target) return notFound("Not found");
 
 			let postCount = await Post.countByAuthor(db, target.id);
-			let reassignTo = String(formData.get("reassign_to") ?? "").trim();
+			let reassignTo = String(ctx.formData.get("reassign_to") ?? "").trim();
 			try {
 				if (postCount > 0) {
 					if (reassignTo) await Post.reassignAuthor(db, target.id, reassignTo);
@@ -159,6 +170,6 @@ export default createController(routes.cms.users, {
 				return badRequest(String((error as Error).message));
 			}
 			return redirect("/cms/users", { status: redirect.Status.SeeOther });
-		},
+		}),
 	},
 });

@@ -1,8 +1,10 @@
 import type { Database } from "remix/data-table";
-import type { RequestContext } from "remix/fetch-router";
 
 import { redirect } from "@pkg/http/response";
 import { badRequest, notFound } from "@pkg/http/response/html";
+import { inject } from "@pkg/service-container";
+import { getContext } from "remix/async-context-middleware";
+import { Database as DatabaseKey } from "remix/data-table";
 import { createController } from "remix/fetch-router";
 
 import { getAuthUser, getPermissions } from "../../auth/middleware/auth";
@@ -14,13 +16,15 @@ import * as s from "../../shared/components/styles";
 import { PERMISSIONS, PERMISSION_KEYS, type Permission } from "../../shared/permissions";
 import { Role, type RoleInput, type RoleWithPermissions } from "../models/role";
 
+/** Loads the shared CMS chrome (current user, permissions, site title) for a view. */
 async function chrome(db: Database) {
-	let user = await getAuthUser();
+	let user = getAuthUser();
 	let permissions = await getPermissions();
 	let siteTitle = await Settings.siteTitle(db);
 	return { user, permissions, siteTitle };
 }
 
+/** Renders a user's display label, falling back to their email. */
 function label(user: { display_name: string; email: string } | null): string {
 	return user ? user.display_name || user.email : "";
 }
@@ -36,13 +40,15 @@ function readForm(formData: FormData): RoleInput {
 	};
 }
 
+/** Renders the role create/edit form document via the request's renderer. */
 async function renderForm(
-	ctx: RequestContext,
+	db: Database,
 	role: RoleWithPermissions | undefined,
 	title: string,
 	error?: string,
 ): Promise<Response> {
-	let { user, permissions, siteTitle } = await chrome(ctx.db);
+	let ctx = getContext();
+	let { user, permissions, siteTitle } = await chrome(db);
 	let granted = new Set<Permission>(role?.permissions ?? []);
 	return ctx.render(
 		<CmsLayout
@@ -120,9 +126,10 @@ async function renderForm(
 export default createController(routes.cms.roles, {
 	middleware: [requirePermission("roles.manage")],
 	actions: {
-		async index(ctx) {
-			let { user, permissions, siteTitle } = await chrome(ctx.db);
-			let roles = await Role.findAll(ctx.db);
+		index: inject([DatabaseKey] as const, async (db) => {
+			let ctx = getContext();
+			let { user, permissions, siteTitle } = await chrome(db);
+			let roles = await Role.findAll(db);
 			return ctx.render(
 				<CmsLayout
 					title="Roles"
@@ -159,44 +166,48 @@ export default createController(routes.cms.roles, {
 					</table>
 				</CmsLayout>,
 			);
-		},
+		}),
 
-		async new(ctx) {
-			return renderForm(ctx, undefined, "New Role");
-		},
+		new: inject([DatabaseKey] as const, async (db) => {
+			return renderForm(db, undefined, "New Role");
+		}),
 
-		async create(ctx) {
+		create: inject([DatabaseKey] as const, async (db) => {
+			let ctx = getContext();
 			try {
-				await Role.create(ctx.db, readForm(ctx.formData));
+				await Role.create(db, readForm(ctx.formData));
 			} catch (error) {
-				return renderForm(ctx, undefined, "New Role", String((error as Error).message));
+				return renderForm(db, undefined, "New Role", String((error as Error).message));
 			}
 			return redirect("/cms/roles", { status: redirect.Status.SeeOther });
-		},
+		}),
 
-		async edit(ctx) {
-			let role = await Role.findById(ctx.db, ctx.params.id);
+		edit: inject([DatabaseKey] as const, async (db) => {
+			let ctx = getContext();
+			let role = await Role.findById(db, ctx.params.id!);
 			if (!role) return notFound("Not found");
-			return renderForm(ctx, role, `Edit ${role.label}`);
-		},
+			return renderForm(db, role, `Edit ${role.label}`);
+		}),
 
-		async update(ctx) {
+		update: inject([DatabaseKey] as const, async (db) => {
+			let ctx = getContext();
 			try {
-				await Role.update(ctx.db, ctx.params.id, readForm(ctx.formData));
+				await Role.update(db, ctx.params.id!, readForm(ctx.formData));
 			} catch (error) {
-				let role = await Role.findById(ctx.db, ctx.params.id);
-				return renderForm(ctx, role ?? undefined, "Edit Role", String((error as Error).message));
+				let role = await Role.findById(db, ctx.params.id!);
+				return renderForm(db, role ?? undefined, "Edit Role", String((error as Error).message));
 			}
 			return redirect("/cms/roles", { status: redirect.Status.SeeOther });
-		},
+		}),
 
-		async destroy(ctx) {
+		destroy: inject([DatabaseKey] as const, async (db) => {
+			let ctx = getContext();
 			try {
-				await Role.destroy(ctx.db, ctx.params.id);
+				await Role.destroy(db, ctx.params.id!);
 			} catch (error) {
 				return badRequest(String((error as Error).message));
 			}
 			return redirect("/cms/roles", { status: redirect.Status.SeeOther });
-		},
+		}),
 	},
 });

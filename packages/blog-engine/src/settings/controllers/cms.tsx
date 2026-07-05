@@ -1,4 +1,7 @@
 import { redirect } from "@pkg/http/response";
+import { inject } from "@pkg/service-container";
+import { getContext } from "remix/async-context-middleware";
+import { Database } from "remix/data-table";
 import { createController } from "remix/fetch-router";
 
 import { getAuthUser, getPermissions } from "../../auth/middleware/auth";
@@ -12,8 +15,8 @@ import { Settings } from "../models/settings";
 export default createController(routes.cms.settings, {
 	middleware: [requirePermission("settings.manage")],
 	actions: {
-		async index(ctx) {
-			let { db } = ctx;
+		index: inject([Database] as const, async (db) => {
+			let ctx = getContext();
 			let user = await getAuthUser();
 			let permissions = await getPermissions();
 			let [title, description, language] = await Promise.all([
@@ -68,10 +71,11 @@ export default createController(routes.cms.settings, {
 					</form>
 				</CmsLayout>,
 			);
-		},
+		}),
 
-		async action(ctx) {
-			let { db, formData } = ctx;
+		action: inject([Database] as const, async (db) => {
+			let ctx = getContext();
+			let formData = ctx.formData;
 			await Settings.set(
 				db,
 				"site_title",
@@ -80,6 +84,6 @@ export default createController(routes.cms.settings, {
 			await Settings.set(db, "site_description", String(formData.get("site_description") ?? ""));
 			await Settings.set(db, "language", String(formData.get("language") ?? "en").trim() || "en");
 			return redirect("/cms/settings", { status: redirect.Status.SeeOther });
-		},
+		}),
 	},
 });

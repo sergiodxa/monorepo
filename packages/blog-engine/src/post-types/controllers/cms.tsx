@@ -1,8 +1,10 @@
 import type { Database } from "remix/data-table";
-import type { RequestContext } from "remix/fetch-router";
 
 import { redirect } from "@pkg/http/response";
 import { notFound } from "@pkg/http/response/html";
+import { inject } from "@pkg/service-container";
+import { getContext } from "remix/async-context-middleware";
+import { Database as DatabaseKey } from "remix/data-table";
 import { createController } from "remix/fetch-router";
 
 import { getAuthUser, getPermissions } from "../../auth/middleware/auth";
@@ -13,13 +15,15 @@ import { CmsLayout } from "../../shared/components/cms-layout";
 import * as s from "../../shared/components/styles";
 import { PostType, type FieldDefinition, type PostTypeInput } from "../models/post-type";
 
+/** Loads the shared CMS chrome (current user, permissions, site title) for a view. */
 async function chrome(db: Database) {
-	let user = await getAuthUser();
+	let user = getAuthUser();
 	let permissions = await getPermissions();
 	let siteTitle = await Settings.siteTitle(db);
 	return { user, permissions, siteTitle };
 }
 
+/** Renders a user's display label, falling back to their email. */
 function label(user: { display_name: string; email: string } | null): string {
 	return user ? user.display_name || user.email : "";
 }
@@ -54,13 +58,15 @@ function safeReadForm(formData: FormData): Partial<PostTypeInput> {
 	}
 }
 
+/** Renders the post-type create/edit form document via the request's renderer. */
 async function renderForm(
-	ctx: RequestContext,
+	db: Database,
 	input: Partial<PostTypeInput> & { builtin?: boolean },
 	title: string,
 	error?: string,
 ): Promise<Response> {
-	let { user, permissions, siteTitle } = await chrome(ctx.db);
+	let ctx = getContext();
+	let { user, permissions, siteTitle } = await chrome(db);
 	return ctx.render(
 		<CmsLayout
 			title={title}
@@ -145,9 +151,10 @@ async function renderForm(
 export default createController(routes.cms.postTypes, {
 	middleware: [requirePermission("post_types.manage")],
 	actions: {
-		async index(ctx) {
-			let { user, permissions, siteTitle } = await chrome(ctx.db);
-			let types = await PostType.findAll(ctx.db);
+		index: inject([DatabaseKey] as const, async (db) => {
+			let ctx = getContext();
+			let { user, permissions, siteTitle } = await chrome(db);
+			let types = await PostType.findAll(db);
 			return ctx.render(
 				<CmsLayout
 					title="Post Types"
@@ -184,54 +191,58 @@ export default createController(routes.cms.postTypes, {
 					</table>
 				</CmsLayout>,
 			);
-		},
+		}),
 
-		async new(ctx) {
-			return renderForm(ctx, { visible: true, fields: [] }, "New Post Type");
-		},
+		new: inject([DatabaseKey] as const, async (db) => {
+			return renderForm(db, { visible: true, fields: [] }, "New Post Type");
+		}),
 
-		async create(ctx) {
+		create: inject([DatabaseKey] as const, async (db) => {
+			let ctx = getContext();
 			try {
-				await PostType.create(ctx.db, readForm(ctx.formData));
+				await PostType.create(db, readForm(ctx.formData));
 			} catch (error) {
 				return renderForm(
-					ctx,
+					db,
 					safeReadForm(ctx.formData),
 					"New Post Type",
 					String((error as Error).message),
 				);
 			}
 			return redirect("/cms/post-types", { status: redirect.Status.SeeOther });
-		},
+		}),
 
-		async edit(ctx) {
-			let types = await PostType.findAll(ctx.db);
+		edit: inject([DatabaseKey] as const, async (db) => {
+			let ctx = getContext();
+			let types = await PostType.findAll(db);
 			let type = types.find((candidate) => candidate.id === ctx.params.id);
 			if (!type) return notFound("Not found");
-			return renderForm(ctx, type, `Edit ${type.label}`);
-		},
+			return renderForm(db, type, `Edit ${type.label}`);
+		}),
 
-		async update(ctx) {
+		update: inject([DatabaseKey] as const, async (db) => {
+			let ctx = getContext();
 			try {
-				await PostType.update(ctx.db, ctx.params.id, readForm(ctx.formData));
+				await PostType.update(db, ctx.params.id!, readForm(ctx.formData));
 			} catch (error) {
 				return renderForm(
-					ctx,
+					db,
 					safeReadForm(ctx.formData),
 					"Edit Post Type",
 					String((error as Error).message),
 				);
 			}
 			return redirect("/cms/post-types", { status: redirect.Status.SeeOther });
-		},
+		}),
 
-		async destroy(ctx) {
+		destroy: inject([DatabaseKey] as const, async (db) => {
+			let ctx = getContext();
 			try {
-				await PostType.destroy(ctx.db, ctx.params.id);
+				await PostType.destroy(db, ctx.params.id!);
 			} catch {
 				// Built-in types cannot be deleted; ignore and return to the list.
 			}
 			return redirect("/cms/post-types", { status: redirect.Status.SeeOther });
-		},
+		}),
 	},
 });

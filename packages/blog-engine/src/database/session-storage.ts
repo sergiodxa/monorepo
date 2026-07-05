@@ -34,6 +34,14 @@ export class SqlSessionStorage<
 		let row = await this.#db.findOne(sessions, { where: { id: cookie } });
 		if (!row) return createSession<valueData, flashData>(cookie);
 
+		// Enforce server-side expiry: a presented id at/after its stored expiry (or with
+		// an unparseable expiry) is invalid — delete the row and start a fresh session.
+		let expiresAt = Date.parse(row.expires_at);
+		if (Number.isNaN(expiresAt) || expiresAt <= Date.now()) {
+			await this.remove(cookie);
+			return createSession<valueData, flashData>(cookie);
+		}
+
 		let data = parseData<valueData, flashData>(row.data);
 		if (!data) return createSession<valueData, flashData>(cookie);
 

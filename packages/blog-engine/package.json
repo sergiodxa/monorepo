@@ -18,6 +18,7 @@
 		"@pkg/markdown-server": "workspace:*",
 		"@pkg/result": "workspace:*",
 		"@pkg/rss": "workspace:*",
+		"@pkg/service-container": "workspace:*",
 		"@pkg/sitemap": "workspace:*",
 		"@pkg/validate": "workspace:*",
 		"remix": "3.0.0-beta.5"

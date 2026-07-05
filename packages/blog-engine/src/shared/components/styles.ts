@@ -1,3 +1,5 @@
+import type { CSSMixinDescriptor, ElementProps, MixinDescriptor } from "remix/ui";
+
 import { css } from "remix/ui";
 
 /**
@@ -108,6 +110,22 @@ export const control = css({
 	borderRadius: "0.375rem",
 	font: "inherit",
 });
+/**
+ * Re-types a `css()` mixin for a specific host element. `css()` binds its mixin to
+ * the global `Element`, but `@cloudflare/workers-types` shadows `Element` with
+ * HTMLRewriter's (whose `remove()` returns `Element`), so a plain `Element` mixin is
+ * not assignable to the `mix` prop once JSX resolves an element to its concrete DOM
+ * type (`<select>`, or `<input>` with a computed `type`). Only the compile-time type
+ * changes; the runtime value is identical.
+ */
+export function mixFor<Node extends EventTarget>(
+	mixin: CSSMixinDescriptor,
+): MixinDescriptor<Node, CSSMixinDescriptor["args"], ElementProps> {
+	return mixin as unknown as MixinDescriptor<Node, CSSMixinDescriptor["args"], ElementProps>;
+}
+
+/** {@link control} re-typed for `<select>` (see {@link mixFor}). */
+export const selectControl = mixFor<HTMLSelectElement>(control);
 export const textarea = css({
 	width: "100%",
 	padding: "0.5rem",

@@ -9,6 +9,10 @@
 		// these .ts sources against its own tsconfig, so a path alias would not apply
 		// there. baseUrl + ignoreDeprecations remain for the router's context typing.
 		"ignoreDeprecations": "6.0",
-		"baseUrl": "."
+		"baseUrl": ".",
+		// `remix/auth-middleware` (beta) ships its `dist` as TypeScript source that
+		// imports sibling modules with explicit `.ts` extensions; allow it (safe under
+		// the inherited `noEmit`). Consumers compiling these sources need it too.
+		"allowImportingTsExtensions": true
 	}
 }

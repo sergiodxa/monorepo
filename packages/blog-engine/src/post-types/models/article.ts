@@ -3,14 +3,16 @@ import type { PostTypeDefinition, FieldDefinition } from "./post-type";
 import { ARTICLE_TYPE_NAME } from "./post-type";
 
 /**
- * Typed metadata for the built-in `article` post type. This interface is asserted
- * against {@link ARTICLE_FIELDS} in a unit test so the two never drift.
+ * Typed metadata for the built-in `article` post type. This is asserted against
+ * {@link ARTICLE_FIELDS} in a unit test so the two never drift. Declared as a type
+ * alias (not an interface) so it carries an implicit index signature and stays
+ * assignable to the codec's `Partial<PostMetaValues>` input.
  */
-export interface ArticleMeta {
+export type ArticleMeta = {
 	title: string;
 	excerpt?: string;
 	content: string;
-}
+};
 
 /** The seeded field definitions for the built-in article type (see migrations). */
 export const ARTICLE_FIELDS: FieldDefinition[] = [

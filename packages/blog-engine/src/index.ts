@@ -2,7 +2,8 @@ import type { DatabaseAdapter } from "remix/data-table";
 import type { SessionStorage } from "remix/session";
 
 import { Logger } from "@pkg/logger/request";
-import { createDatabase } from "remix/data-table";
+import { ServiceContainer } from "@pkg/service-container";
+import { createDatabase, Database } from "remix/data-table";
 
 import type { OIDCMetadata } from "./auth/oidc";
 
@@ -75,6 +76,8 @@ export interface BlogEngine {
  */
 export function createBlogEngine(config: BlogEngineConfig): BlogEngine {
 	let db = createDatabase(config.database);
+	let container = new ServiceContainer();
+	container.instance(Database, db);
 	let sessionMiddleware = createSessionMiddleware({
 		db,
 		secret: config.session.secret,
@@ -96,8 +99,8 @@ export function createBlogEngine(config: BlogEngineConfig): BlogEngine {
 
 			let logger = new Logger(request);
 			try {
-				let router = createEngineRouter({ db, logger, sessionMiddleware, oidc });
-				let response = await router.fetch(request);
+				let router = createEngineRouter({ logger, sessionMiddleware, oidc });
+				let response = await container.scope(() => router.fetch(request));
 				logger.response = response;
 				return response;
 			} finally {

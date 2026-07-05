@@ -1,7 +1,10 @@
 import type { Handle, RemixNode } from "remix/ui";
 
 import { redirect } from "@pkg/http/response";
+import { inject } from "@pkg/service-container";
+import { getContext } from "remix/async-context-middleware";
 import { finishExternalAuth, startExternalAuth } from "remix/auth";
+import { Database } from "remix/data-table";
 import { createAction, createController } from "remix/fetch-router";
 
 import routes from "../../routes";
@@ -30,8 +33,23 @@ function AuthPage(handle: Handle<{ title: string; error?: string; children: Remi
 	};
 }
 
-function safeNext(value: string | null | undefined): string | undefined {
-	return value && value.startsWith("/") ? value : undefined;
+/**
+ * Validates a post-login `next`/`returnTo` target so it can only be a same-origin
+ * path. Rejects protocol-relative (`//host`) and backslash (`/\host`) tricks and any
+ * absolute URL to another origin, returning the normalized path (or `undefined`).
+ */
+function safeNext(value: string | null | undefined, request: Request): string | undefined {
+	if (!value || !value.startsWith("/") || value.startsWith("//") || value.startsWith("/\\")) {
+		return undefined;
+	}
+	try {
+		let base = new URL(request.url);
+		let resolved = new URL(value, base);
+		if (resolved.origin !== base.origin) return undefined;
+		return resolved.pathname + resolved.search + resolved.hash;
+	} catch {
+		return undefined;
+	}
 }
 
 /** The absolute `/auth/callback` URL for this request's host. */
@@ -62,7 +80,7 @@ export const login = createController(routes.auth.login, {
 
 		async action(ctx) {
 			let provider = createProvider(ctx.oidc, callbackUri(ctx.request));
-			let next = safeNext(new URL(ctx.request.url).searchParams.get("next"));
+			let next = safeNext(new URL(ctx.request.url).searchParams.get("next"), ctx.request);
 			// startExternalAuth stores the PKCE/state transaction in the session.
 			return startExternalAuth(provider, ctx, { returnTo: next });
 		},
@@ -70,28 +88,32 @@ export const login = createController(routes.auth.login, {
 });
 
 /** GET /auth/callback — completes the flow and establishes the local session. */
-export const callback = createAction(routes.auth.callback, async (ctx) => {
-	let log = ctx.logger.loader("/auth/callback");
-	let loginUrl = routes.auth.login.index.href();
-	let provider = createProvider(ctx.oidc, callbackUri(ctx.request));
+export const callback = createAction(
+	routes.auth.callback,
+	inject([Database] as const, async (db) => {
+		let ctx = getContext();
+		let log = ctx.logger.loader("/auth/callback");
+		let loginUrl = routes.auth.login.index.href();
+		let provider = createProvider(ctx.oidc, callbackUri(ctx.request));
 
-	try {
-		let { result, returnTo } = await finishExternalAuth(provider, ctx);
-		let user = await User.findOrCreateFromAuthProfile(ctx.db, toAuthProfile(result.profile), {
-			admins: ctx.oidc.admins,
-		});
-		signIn(user);
-		if (typeof result.tokens.idToken === "string") setIdToken(result.tokens.idToken);
-		log.info("Login completed", { userId: user.id });
-		let dest = safeNext(returnTo) ?? routes.cms.dashboard.href();
-		return redirect(dest, { status: redirect.Status.SeeOther });
-	} catch (error) {
-		log.error("Login failed", { error: String(error) });
-		return redirect(`${loginUrl}?error=authentication_failed`, {
-			status: redirect.Status.SeeOther,
-		});
-	}
-});
+		try {
+			let { result, returnTo } = await finishExternalAuth(provider, ctx);
+			let user = await User.findOrCreateFromAuthProfile(db, toAuthProfile(result.profile), {
+				admins: ctx.oidc.admins,
+			});
+			signIn(user);
+			if (typeof result.tokens.idToken === "string") setIdToken(result.tokens.idToken);
+			log.info("Login completed", { userId: user.id });
+			let dest = safeNext(returnTo, ctx.request) ?? routes.cms.dashboard.href();
+			return redirect(dest, { status: redirect.Status.SeeOther });
+		} catch (error) {
+			log.error("Login failed", { error: String(error) });
+			return redirect(`${loginUrl}?error=authentication_failed`, {
+				status: redirect.Status.SeeOther,
+			});
+		}
+	}),
+);
 
 /** `/auth/logout` — sign-out confirmation (GET) and session teardown (POST). */
 export const logout = createController(routes.auth.logout, {

@@ -1,8 +1,8 @@
 import type { Logger } from "@pkg/logger/request";
-import type { Database } from "remix/data-table";
 import type { Middleware } from "remix/fetch-router";
 
 import { asyncContext } from "remix/async-context-middleware";
+import { cop } from "remix/cop-middleware";
 import { createRouter } from "remix/fetch-router";
 import { formData } from "remix/form-data-middleware";
 import { methodOverride } from "remix/method-override-middleware";
@@ -22,7 +22,6 @@ import typeIndex from "./posts/controllers/type-index";
 import roles from "./roles/controllers/cms";
 import routes from "./routes";
 import settings from "./settings/controllers/cms";
-import databaseMiddleware from "./shared/middleware/db";
 import loggerMiddleware from "./shared/middleware/logger";
 import oidcMiddleware from "./shared/middleware/oidc";
 import renderMiddleware from "./shared/middleware/render";
@@ -35,7 +34,6 @@ import users from "./users/controllers/cms";
 
 /** Dependencies the request pipeline is bound to. */
 export interface EngineRouterDeps {
-	db: Database;
 	logger: Logger;
 	sessionMiddleware: Middleware;
 	oidc: OIDCConfig;
@@ -51,12 +49,14 @@ export function createEngineRouter(deps: EngineRouterDeps) {
 	let globalMiddleware: Middleware[] = [
 		trailingSlash,
 		loggerMiddleware(deps.logger),
-		databaseMiddleware(deps.db),
 		oidcMiddleware(deps.oidc),
 		renderMiddleware as Middleware,
 		asyncContext(),
 		deps.sessionMiddleware,
 		authMiddleware as Middleware,
+		// Tokenless cross-origin protection: rejects unsafe cross-origin/same-site
+		// requests (sibling blog subdomains are same-site) using Sec-Fetch-Site/Origin.
+		cop(),
 		formData() as Middleware,
 		methodOverride(),
 	];

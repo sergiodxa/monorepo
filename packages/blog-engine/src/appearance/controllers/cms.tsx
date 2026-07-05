@@ -1,6 +1,9 @@
 import type { RemixNode } from "remix/ui";
 
 import { redirect } from "@pkg/http/response";
+import { inject } from "@pkg/service-container";
+import { getContext } from "remix/async-context-middleware";
+import { Database } from "remix/data-table";
 import { createController } from "remix/fetch-router";
 
 import { getAuthUser, getPermissions } from "../../auth/middleware/auth";
@@ -17,7 +20,7 @@ function selectField(name: string, value: string, options: string[]): RemixNode 
 			<label mix={[s.label]} htmlFor={name}>
 				{name}
 			</label>
-			<select mix={[s.control]} id={name} name={name} defaultValue={value}>
+			<select mix={[s.selectControl]} id={name} name={name} defaultValue={value}>
 				{options.map((option) => (
 					<option value={option} key={option}>
 						{option}
@@ -32,9 +35,9 @@ function selectField(name: string, value: string, options: string[]): RemixNode 
 export default createController(routes.cms.appearance, {
 	middleware: [requirePermission("appearance.manage")],
 	actions: {
-		async index(ctx) {
-			let { db } = ctx;
-			let user = await getAuthUser();
+		index: inject([Database] as const, async (db) => {
+			let ctx = getContext();
+			let user = getAuthUser();
 			let permissions = await getPermissions();
 			let [stored, customCss, siteTitle] = await Promise.all([
 				Settings.theme(db),
@@ -114,10 +117,11 @@ export default createController(routes.cms.appearance, {
 					</form>
 				</CmsLayout>,
 			);
-		},
+		}),
 
-		async action(ctx) {
-			let { db, formData } = ctx;
+		action: inject([Database] as const, async (db) => {
+			let ctx = getContext();
+			let formData = ctx.formData;
 			let get = (key: string, fallback: string) =>
 				String(formData.get(key) ?? fallback).trim() || fallback;
 			let theme: ThemeSettings = {
@@ -139,6 +143,6 @@ export default createController(routes.cms.appearance, {
 				String(formData.get("custom_css") ?? "").slice(0, 32 * 1024),
 			);
 			return redirect("/cms/appearance", { status: redirect.Status.SeeOther });
-		},
+		}),
 	},
 });
