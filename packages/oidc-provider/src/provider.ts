@@ -1,7 +1,9 @@
 import type { Logger } from "@pkg/logger/request";
-import type { Database } from "remix/data-table";
 import type { Middleware, RequestHandler } from "remix/fetch-router";
 
+import { ServiceContainer } from "@pkg/service-container";
+import { asyncContext } from "remix/async-context-middleware";
+import { Database } from "remix/data-table";
 import { createRouter } from "remix/fetch-router";
 import { formData } from "remix/form-data-middleware";
 
@@ -26,7 +28,6 @@ import * as resources from "./resources/controllers/resources";
 import routes from "./routes";
 import index from "./shared/home";
 import analyticsMiddleware from "./shared/middleware/analytics";
-import database from "./shared/middleware/db";
 import logger from "./shared/middleware/logger";
 import notFound from "./shared/not-found";
 import * as signingKeys from "./signing-keys/controllers/signing-keys";
@@ -62,15 +63,24 @@ export function createProviderRouter(
 	requestLogger: Logger,
 	options: ProviderRouterOptions,
 ) {
+	// The provider resolves its Database through the service container (ADR-008 DI)
+	// instead of a context-injection middleware. The container is registered per
+	// request with this request's db and its `scope` wraps the router's fetch below,
+	// so controllers/helpers resolve the correct tenant db via inject/getServiceContainer.
+	let container = new ServiceContainer();
+	container.instance(Database, db);
+
 	// Typed as a non-tuple Middleware[] so the router context stays the base
 	// RequestContext (with its global augmentations) instead of a middleware-branded
 	// context; controllers below are typed against that same default context.
+	// `asyncContext()` publishes the request context to AsyncLocalStorage so handlers
+	// wrapped in `inject` can read it via `getContext()`.
 	// `formData()` is cast to the base Middleware to drop its context-transform
 	// brand; the value it provides is surfaced via the global `formData` context
 	// augmentation (see router-context.d.ts), not the transform.
 	let middleware: Middleware[] = [
+		asyncContext(),
 		logger(requestLogger),
-		database(db),
 		analyticsMiddleware(options.analytics),
 		formData() as Middleware,
 	];
@@ -144,5 +154,13 @@ export function createProviderRouter(
 	router.map(routes.api.brand, { middleware: management, actions: brand });
 	router.map(routes.api["signing-keys"], { middleware: management, actions: signingKeys });
 
-	return router;
+	// Run every request inside the container scope so `getServiceContainer()` /
+	// `inject(...)` resolve services (the Database registered above) during handling.
+	// Only `fetch` is used by the caller (see index.ts), so we expose just that,
+	// scoped to this request's container.
+	return {
+		fetch(input: string | URL | Request, init?: RequestInit): Promise<Response> {
+			return container.scope(() => router.fetch(input, init));
+		},
+	};
 }

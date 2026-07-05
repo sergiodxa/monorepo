@@ -23,8 +23,13 @@ interface SigningKeyCache {
  * Keys are cached in-memory to avoid expensive imports on every token operation.
  */
 export default class SigningKey {
-	/** In-memory cache for imported key pairs. */
-	static #cache: SigningKeyCache | null = null;
+	/**
+	 * In-memory cache of imported key pairs, keyed by the tenant's `Database` instance.
+	 * Multiple tenant Durable Objects can share one Worker isolate, so a single static
+	 * cache would let one tenant sign/verify tokens with another tenant's keys; keying
+	 * by `db` scopes the cache per tenant.
+	 */
+	static #cache = new WeakMap<Database, SigningKeyCache>();
 
 	/** Database table schema for signing keys. */
 	static table = table({
@@ -85,14 +90,13 @@ export default class SigningKey {
 	 * @returns Array of imported key pairs
 	 */
 	static async getAll(db: Database): Promise<JWK.KeyPair[]> {
-		if (SigningKey.#cache && Date.now() < SigningKey.#cache.expiresAt) {
-			return SigningKey.#cache.keys;
-		}
+		let cached = SigningKey.#cache.get(db);
+		if (cached && Date.now() < cached.expiresAt) return cached.keys;
 
 		let records = await db.findMany(SigningKey.table);
 
 		if (records.length === 0) {
-			SigningKey.#cache = { keys: [], expiresAt: Date.now() + SIGNING_KEY_CACHE_TTL_MS };
+			SigningKey.#cache.set(db, { keys: [], expiresAt: Date.now() + SIGNING_KEY_CACHE_TTL_MS });
 			return [];
 		}
 
@@ -108,17 +112,18 @@ export default class SigningKey {
 			),
 		);
 
-		SigningKey.#cache = { keys, expiresAt: Date.now() + SIGNING_KEY_CACHE_TTL_MS };
+		SigningKey.#cache.set(db, { keys, expiresAt: Date.now() + SIGNING_KEY_CACHE_TTL_MS });
 
 		return keys;
 	}
 
 	/**
-	 * Invalidates the signing key cache.
+	 * Invalidates the cached signing keys for a tenant.
 	 * Call this after generating or rotating keys.
+	 * @param db - Database instance whose cache entry to drop
 	 */
-	static invalidateCache(): void {
-		SigningKey.#cache = null;
+	static invalidateCache(db: Database): void {
+		SigningKey.#cache.delete(db);
 	}
 
 	/**
@@ -155,7 +160,7 @@ export default class SigningKey {
 			expires_at: null,
 		});
 
-		SigningKey.invalidateCache();
+		SigningKey.invalidateCache(db);
 
 		return keyPair;
 	}
@@ -194,7 +199,7 @@ export default class SigningKey {
 			expires_at: null,
 		});
 
-		SigningKey.invalidateCache();
+		SigningKey.invalidateCache(db);
 
 		return keyPair;
 	}
@@ -218,7 +223,7 @@ export default class SigningKey {
 
 		let result = await db.delete(SigningKey.table, { id });
 
-		SigningKey.invalidateCache();
+		SigningKey.invalidateCache(db);
 
 		return result;
 	}

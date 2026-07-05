@@ -1,17 +1,21 @@
 import type { Handle } from "remix/ui";
 
 import { ok } from "@pkg/http/response/html";
+import { getServiceContainer } from "@pkg/service-container";
+import { Database } from "remix/data-table";
+import { createAction } from "remix/fetch-router";
 import { css } from "remix/ui";
 import { renderToString } from "remix/ui/server";
 
 import Brand from "../branding/models/brand";
 import Client from "../clients/models/client";
+import routes from "../routes";
 import Subject from "../subjects/models/subject";
 
 import { Layout } from "./layout";
-import action from "./lib/action";
 
-export default action<"GET", "/">(async ({ db, logger }) => {
+export default createAction(routes.index, async ({ logger }) => {
+	let db = getServiceContainer().get(Database);
 	let log = logger.loader("/");
 
 	let [brand, clientCount, subjectCount] = await Promise.all([

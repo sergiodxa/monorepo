@@ -1,10 +1,16 @@
+import type { RequestContext } from "remix/fetch-router";
+
 import { noContent } from "@pkg/http/response";
 import { badRequest, conflict, created, notFound, ok } from "@pkg/http/response/json";
 import { isFailure } from "@pkg/result";
+import { inject } from "@pkg/service-container";
 import { validate } from "@pkg/validate";
+import { getContext } from "remix/async-context-middleware";
 import * as s from "remix/data-schema";
+import { Database } from "remix/data-table";
+import { createAction } from "remix/fetch-router";
 
-import action from "../../shared/lib/action";
+import routes from "../../routes";
 import { RecordNotFoundError } from "../../shared/lib/db-errors";
 import { isResponse, safeJsonParse } from "../../shared/lib/safe-json";
 import { httpsUrl, LIMITS, maxLength } from "../../shared/lib/schema-checks";
@@ -30,53 +36,67 @@ let ImportSubjectSchema = s.object({
 	createdAt: s.optional(s.string()),
 });
 
-export const index = action<"GET", "/api/subjects">(async ({ db, logger }) => {
-	let log = logger.loader("/api/subjects");
-	let subjects = await Subject.list(db);
-	log.info("Subjects listed", { count: subjects.length });
-	return ok(subjects);
-});
+export const index = createAction(
+	routes.api.subjects.index,
+	inject([Database] as const, async (db) => {
+		let { logger } = getContext();
+		let log = logger.loader("/api/subjects");
+		let subjects = await Subject.list(db);
+		log.info("Subjects listed", { count: subjects.length });
+		return ok(subjects);
+	}),
+);
 
-export const show = action<"GET", "/api/subjects/:id">(async ({ db, params, logger }) => {
-	let log = logger.loader("/api/subjects/:id");
-	let subject = await Subject.show(db, params.id);
-	if (!subject) {
-		log.info("Subject not found", { subjectId: params.id });
-		return notFound({ error: "Subject not found" });
-	}
-	log.info("Subject retrieved", { subjectId: params.id });
-	return ok(subject);
-});
-
-export const create = action<"POST", "/api/subjects">(async ({ db, request, logger }) => {
-	let log = logger.action("/api/subjects");
-	let body = await safeJsonParse(request);
-	if (isResponse(body)) {
-		log.info("Invalid JSON body");
-		return body;
-	}
-
-	let result = await validate(body, ImportSubjectSchema);
-	if (isFailure(result)) {
-		log.info("Invalid import body");
-		return badRequest({ error: "Invalid request", issues: result.error.issues });
-	}
-
-	try {
-		let subject = await Subject.import(db, result.data);
-		log.info("Subject imported", { subjectId: subject.id });
-		return created(subject);
-	} catch (error) {
-		if (error instanceof Subject.ConflictError) {
-			log.info("Subject import conflict", { message: error.message });
-			return conflict({ error: error.message });
+export const show = createAction(
+	routes.api.subjects.show,
+	inject([Database] as const, async (db) => {
+		let { params, logger } = getContext() as RequestContext<{ id: string }>;
+		let log = logger.loader("/api/subjects/:id");
+		let subject = await Subject.show(db, params.id);
+		if (!subject) {
+			log.info("Subject not found", { subjectId: params.id });
+			return notFound({ error: "Subject not found" });
 		}
-		throw error;
-	}
-});
+		log.info("Subject retrieved", { subjectId: params.id });
+		return ok(subject);
+	}),
+);
 
-export const update = action<"PUT", "/api/subjects/:id">(
-	async ({ db, params, request, logger }) => {
+export const create = createAction(
+	routes.api.subjects.create,
+	inject([Database] as const, async (db) => {
+		let { request, logger } = getContext();
+		let log = logger.action("/api/subjects");
+		let body = await safeJsonParse(request);
+		if (isResponse(body)) {
+			log.info("Invalid JSON body");
+			return body;
+		}
+
+		let result = await validate(body, ImportSubjectSchema);
+		if (isFailure(result)) {
+			log.info("Invalid import body");
+			return badRequest({ error: "Invalid request", issues: result.error.issues });
+		}
+
+		try {
+			let subject = await Subject.import(db, result.data);
+			log.info("Subject imported", { subjectId: subject.id });
+			return created(subject);
+		} catch (error) {
+			if (error instanceof Subject.ConflictError) {
+				log.info("Subject import conflict", { message: error.message });
+				return conflict({ error: error.message });
+			}
+			throw error;
+		}
+	}),
+);
+
+export const update = createAction(
+	routes.api.subjects.update,
+	inject([Database] as const, async (db) => {
+		let { params, request, logger } = getContext() as RequestContext<{ id: string }>;
 		let log = logger.action("/api/subjects/:id");
 		let body = await safeJsonParse(request);
 		if (isResponse(body)) {
@@ -109,26 +129,32 @@ export const update = action<"PUT", "/api/subjects/:id">(
 			}
 			throw error;
 		}
-	},
+	}),
 );
 
-export const destroy = action<"DELETE", "/api/subjects/:id">(async ({ db, params, logger }) => {
-	let log = logger.action("/api/subjects/:id");
-	try {
-		await Subject.destroy(db, params.id);
-		log.info("Subject deleted", { subjectId: params.id });
-		return noContent();
-	} catch (error) {
-		if (error instanceof RecordNotFoundError) {
-			log.info("Subject not found", { subjectId: params.id });
-			return notFound({ error: "Subject not found" });
+export const destroy = createAction(
+	routes.api.subjects.destroy,
+	inject([Database] as const, async (db) => {
+		let { params, logger } = getContext() as RequestContext<{ id: string }>;
+		let log = logger.action("/api/subjects/:id");
+		try {
+			await Subject.destroy(db, params.id);
+			log.info("Subject deleted", { subjectId: params.id });
+			return noContent();
+		} catch (error) {
+			if (error instanceof RecordNotFoundError) {
+				log.info("Subject not found", { subjectId: params.id });
+				return notFound({ error: "Subject not found" });
+			}
+			throw error;
 		}
-		throw error;
-	}
-});
+	}),
+);
 
-export const verifyEmail = action<"POST", "/api/subjects/:id/verify-email">(
-	async ({ params, db, logger }) => {
+export const verifyEmail = createAction(
+	routes.api.subjects.verifyEmail,
+	inject([Database] as const, async (db) => {
+		let { params, logger } = getContext() as RequestContext<{ id: string }>;
 		let log = logger.action("/api/subjects/:id/verify-email");
 		try {
 			await Subject.verifyEmail(db, params.id);
@@ -141,5 +167,5 @@ export const verifyEmail = action<"POST", "/api/subjects/:id/verify-email">(
 			}
 			throw error;
 		}
-	},
+	}),
 );

@@ -1,14 +1,18 @@
 import { badRequest, ok, tooManyRequests } from "@pkg/http/response/json";
 import { isFailure } from "@pkg/result";
+import { inject } from "@pkg/service-container";
 import { validate } from "@pkg/validate";
 import {
 	generateAuthenticationOptions,
 	type GenerateAuthenticationOptionsOpts,
 } from "@simplewebauthn/server";
+import { getContext } from "remix/async-context-middleware";
 import * as s from "remix/data-schema";
+import { Database } from "remix/data-table";
+import { createAction } from "remix/fetch-router";
 
 import TenantMeta from "../../management/models/tenant-meta";
-import action from "../../shared/lib/action";
+import routes from "../../routes";
 import { base64UrlDecode } from "../../shared/lib/base64url";
 import { checkUserRateLimit, USER_RATE_LIMITS } from "../../shared/lib/user-rate-limit";
 import Subject from "../../subjects/models/subject";
@@ -29,8 +33,10 @@ let RequestSchema = s.object({
  * Generates a challenge for passkey authentication.
  * Rate-limited per email to prevent brute force attacks.
  */
-export default action<"POST", "/webauthn/auth/options">(
-	async ({ db, formData, request, logger }) => {
+export default createAction(
+	routes.webauthn.auth.options,
+	inject([Database] as const, async (db) => {
+		let { formData, request, logger } = getContext();
 		let log = logger.action("/webauthn/auth/options");
 
 		let result = await validate(Object.fromEntries(formData), RequestSchema);
@@ -103,5 +109,5 @@ export default action<"POST", "/webauthn/auth/options">(
 			challengeId,
 			options: authenticationOptions,
 		});
-	},
+	}),
 );

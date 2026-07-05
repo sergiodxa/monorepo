@@ -1,14 +1,20 @@
 import { JWK } from "@edgefirst-dev/jwt";
+import { inject } from "@pkg/service-container";
+import { getContext } from "remix/async-context-middleware";
+import { Database } from "remix/data-table";
+import { createAction } from "remix/fetch-router";
 
 import TenantMeta from "../../management/models/tenant-meta";
-import action from "../../shared/lib/action";
+import routes from "../../routes";
 
 /**
  * OAuth 2.0 Authorization Server Metadata endpoint (RFC 8414).
  * Provides discovery information about the OAuth 2.0 authorization server.
  */
-export default action<"GET", "/.well-known/oauth-authorization-server">(
-	async ({ db, request, logger }) => {
+export default createAction(
+	routes.discover.oauth,
+	inject([Database] as const, async (db) => {
+		let { request, logger } = getContext();
 		let log = logger.loader("/.well-known/oauth-authorization-server");
 
 		let issuer = await TenantMeta.getIssuer(db);
@@ -54,5 +60,5 @@ export default action<"GET", "/.well-known/oauth-authorization-server">(
 				"Cache-Control": "public, max-age=3600",
 			},
 		});
-	},
+	}),
 );

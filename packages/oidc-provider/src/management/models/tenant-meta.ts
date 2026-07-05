@@ -20,8 +20,12 @@ interface MetaCache {
  * Frequently accessed values are cached in-memory for performance.
  */
 export default class TenantMeta {
-	/** In-memory cache for issuer value. */
-	static #issuerCache: MetaCache | null = null;
+	/**
+	 * In-memory issuer cache, keyed by the tenant's `Database` instance. Multiple
+	 * tenant Durable Objects can share one Worker isolate, so a single static cache
+	 * would leak one tenant's issuer to another; keying by `db` scopes it per tenant.
+	 */
+	static #issuerCache = new WeakMap<Database, MetaCache>();
 
 	/** Database table schema for tenant metadata. */
 	static table = table({
@@ -85,13 +89,12 @@ export default class TenantMeta {
 	 * @returns Issuer URL or null if not configured
 	 */
 	static async getIssuer(db: Database): Promise<string | null> {
-		if (TenantMeta.#issuerCache && Date.now() < TenantMeta.#issuerCache.expiresAt) {
-			return TenantMeta.#issuerCache.value;
-		}
+		let cached = TenantMeta.#issuerCache.get(db);
+		if (cached && Date.now() < cached.expiresAt) return cached.value;
 
 		let value = await TenantMeta.get(db, TenantMeta.KEYS.ISSUER);
 
-		TenantMeta.#issuerCache = { value, expiresAt: Date.now() + TENANT_META_CACHE_TTL_MS };
+		TenantMeta.#issuerCache.set(db, { value, expiresAt: Date.now() + TENANT_META_CACHE_TTL_MS });
 
 		return value;
 	}
@@ -103,7 +106,7 @@ export default class TenantMeta {
 	 */
 	static async setIssuer(db: Database, issuer: string): Promise<void> {
 		await TenantMeta.set(db, TenantMeta.KEYS.ISSUER, issuer);
-		TenantMeta.#issuerCache = null;
+		TenantMeta.#issuerCache.delete(db);
 	}
 
 	/**

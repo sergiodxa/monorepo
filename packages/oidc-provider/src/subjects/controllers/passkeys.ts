@@ -1,10 +1,16 @@
+import type { RequestContext } from "remix/fetch-router";
+
 import { noContent } from "@pkg/http/response";
 import { badRequest, notFound, ok } from "@pkg/http/response/json";
 import { isFailure } from "@pkg/result";
+import { inject } from "@pkg/service-container";
 import { validate } from "@pkg/validate";
+import { getContext } from "remix/async-context-middleware";
 import * as s from "remix/data-schema";
+import { Database } from "remix/data-table";
+import { createAction } from "remix/fetch-router";
 
-import action from "../../shared/lib/action";
+import routes from "../../routes";
 import { RecordNotFoundError } from "../../shared/lib/db-errors";
 import { isResponse, safeJsonParse } from "../../shared/lib/safe-json";
 import { LIMITS, maxLength } from "../../shared/lib/schema-checks";
@@ -16,34 +22,43 @@ let UpdatePasskeySchema = s.object({
 	name: s.string().pipe(maxLength(LIMITS.name.max)),
 });
 
-export const index = action<"GET", "/api/subjects/:id/passkeys">(async ({ db, params, logger }) => {
-	let log = logger.loader("/api/subjects/:id/passkeys");
+export const index = createAction(
+	routes.api.subjects.passkeys.index,
+	inject([Database] as const, async (db) => {
+		let { params, logger } = getContext() as RequestContext<{ id: string }>;
+		let log = logger.loader("/api/subjects/:id/passkeys");
 
-	let subject = await Subject.show(db, params.id);
-	if (!subject) {
-		log.info("Subject not found", { subjectId: params.id });
-		return notFound({ error: "Subject not found" });
-	}
+		let subject = await Subject.show(db, params.id);
+		if (!subject) {
+			log.info("Subject not found", { subjectId: params.id });
+			return notFound({ error: "Subject not found" });
+		}
 
-	let passkeys = await Passkey.listBySubject(db, params.id);
+		let passkeys = await Passkey.listBySubject(db, params.id);
 
-	log.info("Passkeys listed", { subjectId: params.id, count: passkeys.length });
+		log.info("Passkeys listed", { subjectId: params.id, count: passkeys.length });
 
-	return ok(
-		passkeys.map((passkey) => ({
-			id: passkey.id,
-			name: passkey.name,
-			deviceType: passkey.device_type,
-			backedUp: passkey.backed_up,
-			transports: passkey.transports ? passkey.transports.split(",") : [],
-			createdAt: toIsoString(passkey.created_at),
-			lastUsedAt: toIsoStringOptional(passkey.last_used_at),
-		})),
-	);
-});
+		return ok(
+			passkeys.map((passkey) => ({
+				id: passkey.id,
+				name: passkey.name,
+				deviceType: passkey.device_type,
+				backedUp: passkey.backed_up,
+				transports: passkey.transports ? passkey.transports.split(",") : [],
+				createdAt: toIsoString(passkey.created_at),
+				lastUsedAt: toIsoStringOptional(passkey.last_used_at),
+			})),
+		);
+	}),
+);
 
-export const update = action<"PUT", "/api/subjects/:id/passkeys/:passkeyId">(
-	async ({ db, params, request, logger }) => {
+export const update = createAction(
+	routes.api.subjects.passkeys.update,
+	inject([Database] as const, async (db) => {
+		let { params, request, logger } = getContext() as RequestContext<{
+			id: string;
+			passkeyId: string;
+		}>;
 		let log = logger.action("/api/subjects/:id/passkeys/:passkeyId");
 
 		let subject = await Subject.show(db, params.id);
@@ -104,11 +119,13 @@ export const update = action<"PUT", "/api/subjects/:id/passkeys/:passkeyId">(
 			}
 			throw error;
 		}
-	},
+	}),
 );
 
-export const destroy = action<"DELETE", "/api/subjects/:id/passkeys/:passkeyId">(
-	async ({ db, params, logger }) => {
+export const destroy = createAction(
+	routes.api.subjects.passkeys.destroy,
+	inject([Database] as const, async (db) => {
+		let { params, logger } = getContext() as RequestContext<{ id: string; passkeyId: string }>;
 		let log = logger.action("/api/subjects/:id/passkeys/:passkeyId");
 
 		let subject = await Subject.show(db, params.id);
@@ -149,5 +166,5 @@ export const destroy = action<"DELETE", "/api/subjects/:id/passkeys/:passkeyId">
 			}
 			throw error;
 		}
-	},
+	}),
 );

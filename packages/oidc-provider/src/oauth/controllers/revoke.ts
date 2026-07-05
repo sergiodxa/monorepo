@@ -1,10 +1,14 @@
 import { isFailure } from "@pkg/result";
+import { inject } from "@pkg/service-container";
 import { validate } from "@pkg/validate";
+import { getContext } from "remix/async-context-middleware";
 import * as s from "remix/data-schema";
+import { Database } from "remix/data-table";
+import { createAction } from "remix/fetch-router";
 
 import Client from "../../clients/models/client";
 import Secret from "../../clients/models/secret";
-import action from "../../shared/lib/action";
+import routes from "../../routes";
 import parseBasicAuth from "../../shared/lib/parse-basic-auth";
 import { reject } from "../../shared/lib/reject";
 import Session from "../models/session";
@@ -26,77 +30,81 @@ let RevokeSchema = s.object({
  * Note: Access tokens are stateless JWTs and cannot be revoked server-side.
  * Only refresh tokens (sessions) can be truly revoked.
  */
-export default action<"POST", "/oauth/revoke">(async ({ db, formData, request, logger }) => {
-	let log = logger.action("/oauth/revoke");
+export default createAction(
+	routes.oauth.revoke,
+	inject([Database] as const, async (db) => {
+		let { formData, request, logger } = getContext();
+		let log = logger.action("/oauth/revoke");
 
-	let basicAuth = parseBasicAuth(request.headers.get("authorization"));
-	let body = Object.fromEntries(formData) as Record<string, unknown>;
+		let basicAuth = parseBasicAuth(request.headers.get("authorization"));
+		let body = Object.fromEntries(formData) as Record<string, unknown>;
 
-	if (basicAuth) {
-		body.client_id = basicAuth.clientId;
-		body.client_secret = basicAuth.clientSecret;
-	}
+		if (basicAuth) {
+			body.client_id = basicAuth.clientId;
+			body.client_secret = basicAuth.clientSecret;
+		}
 
-	let result = await validate(body, RevokeSchema);
-	if (isFailure(result)) {
-		log.info("Validation failed", { reason: "invalid_request" });
-		return reject("invalid_request", "Missing or invalid parameters");
-	}
+		let result = await validate(body, RevokeSchema);
+		if (isFailure(result)) {
+			log.info("Validation failed", { reason: "invalid_request" });
+			return reject("invalid_request", "Missing or invalid parameters");
+		}
 
-	let { token, token_type_hint, client_id, client_secret } = result.data;
+		let { token, token_type_hint, client_id, client_secret } = result.data;
 
-	log.info("Token revocation started", {
-		clientId: client_id,
-		tokenTypeHint: token_type_hint ?? "none",
-		authMethod: basicAuth ? "basic" : "body",
-	});
+		log.info("Token revocation started", {
+			clientId: client_id,
+			tokenTypeHint: token_type_hint ?? "none",
+			authMethod: basicAuth ? "basic" : "body",
+		});
 
-	if (!client_id || !client_secret) {
-		log.info("Client authentication missing");
-		return reject("invalid_client", "Client authentication required", 401);
-	}
+		if (!client_id || !client_secret) {
+			log.info("Client authentication missing");
+			return reject("invalid_client", "Client authentication required", 401);
+		}
 
-	let client = await Client.show(db, client_id);
-	if (!client) {
-		log.info("Client not found", { clientId: client_id });
-		return reject("invalid_client", "Client not found", 401);
-	}
+		let client = await Client.show(db, client_id);
+		if (!client) {
+			log.info("Client not found", { clientId: client_id });
+			return reject("invalid_client", "Client not found", 401);
+		}
 
-	let secretValid = await Secret.verify(db, client.id, client_secret);
-	if (!secretValid) {
-		log.info("Invalid client secret", { clientId: client.id });
-		return reject("invalid_client", "Invalid client credentials", 401);
-	}
+		let secretValid = await Secret.verify(db, client.id, client_secret);
+		if (!secretValid) {
+			log.info("Invalid client secret", { clientId: client.id });
+			return reject("invalid_client", "Invalid client credentials", 401);
+		}
 
-	if (token_type_hint === "access_token") {
-		log.info("Access token revocation skipped (stateless JWT)", { clientId: client.id });
-		return new Response(null, { status: 200 });
-	}
-
-	let session = await Session.show(db, token);
-	if (session) {
-		/**
-		 * Per RFC 7009, return 200 even if the token belongs to a different client.
-		 * This prevents token enumeration attacks.
-		 */
-		if (session.client_id !== client.id) {
-			log.info("Session belongs to different client", {
-				clientId: client.id,
-				sessionClientId: session.client_id,
-				sessionId: session.id,
-			});
+		if (token_type_hint === "access_token") {
+			log.info("Access token revocation skipped (stateless JWT)", { clientId: client.id });
 			return new Response(null, { status: 200 });
 		}
 
-		await Session.destroy(db, session.id);
-		log.info("Session revoked", {
-			clientId: client.id,
-			sessionId: session.id,
-			subjectId: session.subject_id,
-		});
-	} else {
-		log.info("Session not found for revocation", { clientId: client.id });
-	}
+		let session = await Session.show(db, token);
+		if (session) {
+			/**
+			 * Per RFC 7009, return 200 even if the token belongs to a different client.
+			 * This prevents token enumeration attacks.
+			 */
+			if (session.client_id !== client.id) {
+				log.info("Session belongs to different client", {
+					clientId: client.id,
+					sessionClientId: session.client_id,
+					sessionId: session.id,
+				});
+				return new Response(null, { status: 200 });
+			}
 
-	return new Response(null, { status: 200 });
-});
+			await Session.destroy(db, session.id);
+			log.info("Session revoked", {
+				clientId: client.id,
+				sessionId: session.id,
+				subjectId: session.subject_id,
+			});
+		} else {
+			log.info("Session not found for revocation", { clientId: client.id });
+		}
+
+		return new Response(null, { status: 200 });
+	}),
+);

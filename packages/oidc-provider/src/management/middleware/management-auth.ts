@@ -1,4 +1,6 @@
 import { unauthorized } from "@pkg/http/response/json";
+import { getServiceContainer } from "@pkg/service-container";
+import { Database } from "remix/data-table";
 
 import Client from "../../clients/models/client";
 import AccessToken from "../../oauth/values/access-token";
@@ -18,6 +20,7 @@ import TenantMeta from "../models/tenant-meta";
 export default (internalSecret: string) => {
 	return middleware(async (context, next) => {
 		let log = context.logger.middleware("management-auth");
+		let db = getServiceContainer().get(Database);
 
 		// Check for internal token (from platform dashboard)
 		// Uses HMAC-signed JWT for secure internal authentication
@@ -46,7 +49,7 @@ export default (internalSecret: string) => {
 		let token = authHeader.slice(7);
 
 		// Get issuer and signing keys
-		let issuer = await TenantMeta.getIssuer(context.db);
+		let issuer = await TenantMeta.getIssuer(db);
 		if (!issuer) {
 			log.error("Issuer not configured");
 			return unauthorized({
@@ -55,7 +58,7 @@ export default (internalSecret: string) => {
 			});
 		}
 
-		let signingKeys = await SigningKey.getAll(context.db);
+		let signingKeys = await SigningKey.getAll(db);
 		if (signingKeys.length === 0) {
 			log.error("No signing keys available");
 			return unauthorized({
@@ -97,7 +100,7 @@ export default (internalSecret: string) => {
 		}
 
 		// Verify the client has management API access
-		let client = await Client.show(context.db, clientId);
+		let client = await Client.show(db, clientId);
 		if (!client) {
 			log.info("Client not found", { clientId });
 			return unauthorized({

@@ -14,6 +14,7 @@
 		"@pkg/http": "workspace:*",
 		"@pkg/logger": "workspace:*",
 		"@pkg/result": "workspace:*",
+		"@pkg/service-container": "workspace:*",
 		"@pkg/types": "workspace:*",
 		"@pkg/validate": "workspace:*",
 		"@simplewebauthn/server": "^13.3.1",

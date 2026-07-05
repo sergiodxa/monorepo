@@ -108,6 +108,23 @@ export default class Client {
 	}
 
 	/**
+	 * Parses a client's stored `allowed_resources` JSON into a string array of resource
+	 * identifiers the client may request tokens for. Returns `[]` when unset/invalid.
+	 * @param client - Client record (only `allowed_resources` is read)
+	 * @returns The permitted resource identifiers
+	 */
+	static parseAllowedResources(client: { allowed_resources: string | null }): string[] {
+		if (!client.allowed_resources) return [];
+		try {
+			let parsed: unknown = JSON.parse(client.allowed_resources);
+			if (!Array.isArray(parsed)) return [];
+			return parsed.filter((value): value is string => typeof value === "string");
+		} catch {
+			return [];
+		}
+	}
+
+	/**
 	 * Creates a new client.
 	 * Logo URL is validated to prevent XSS attacks.
 	 * @param db - Database instance

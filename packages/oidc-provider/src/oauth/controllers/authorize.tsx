@@ -2,8 +2,12 @@ import type { Handle } from "remix/ui";
 
 import { ok } from "@pkg/http/response/html";
 import { isFailure } from "@pkg/result";
+import { inject } from "@pkg/service-container";
 import { validate } from "@pkg/validate";
+import { getContext } from "remix/async-context-middleware";
 import * as s from "remix/data-schema";
+import { Database } from "remix/data-table";
+import { createController } from "remix/fetch-router";
 import { css } from "remix/ui";
 import { renderToString } from "remix/ui/server";
 
@@ -14,7 +18,6 @@ import RedirectUri from "../../clients/models/redirect-uri";
 import TenantMeta from "../../management/models/tenant-meta";
 import routes from "../../routes";
 import { Layout } from "../../shared/layout";
-import form from "../../shared/lib/form";
 import Subject from "../../subjects/models/subject";
 import Passkey from "../../webauthn/models/passkey";
 import WebAuthnChallenge from "../../webauthn/models/webauthn-challenge";
@@ -52,11 +55,12 @@ let LoginFormSchema = s.object({
  * OAuth 2.0 Authorization Endpoint (RFC 6749 Section 3.1).
  * Handles the authorization code flow with PKCE support.
  */
-export default form<"/authorize">({
+export default createController(routes.oauth.authorize, {
 	middleware: [],
 
 	actions: {
-		async index({ db, request, logger }) {
+		index: inject([Database] as const, async (db) => {
+			let { request, logger } = getContext();
 			let log = logger.loader("/authorize");
 			let url = new URL(request.url);
 			let params = Object.fromEntries(url.searchParams);
@@ -115,9 +119,10 @@ export default form<"/authorize">({
 				/>,
 			);
 			return ok(body);
-		},
+		}),
 
-		async action({ db, formData, request, logger }) {
+		action: inject([Database] as const, async (db) => {
+			let { formData, request, logger } = getContext();
 			let log = logger.action("/authorize");
 			let body = Object.fromEntries(formData);
 
@@ -263,7 +268,7 @@ export default form<"/authorize">({
 				/>,
 			);
 			return ok(html);
-		},
+		}),
 	},
 });
 

@@ -1,13 +1,17 @@
 import { badRequest, ok, tooManyRequests } from "@pkg/http/response/json";
 import { isFailure } from "@pkg/result";
+import { inject } from "@pkg/service-container";
 import { validate } from "@pkg/validate";
 import { verifyAuthenticationResponse } from "@simplewebauthn/server";
+import { getContext } from "remix/async-context-middleware";
 import * as s from "remix/data-schema";
+import { Database } from "remix/data-table";
+import { createAction } from "remix/fetch-router";
 
 import TenantMeta from "../../management/models/tenant-meta";
 import AuthorizationCode from "../../oauth/models/authorization-code";
 import Session from "../../oauth/models/session";
-import action from "../../shared/lib/action";
+import routes from "../../routes";
 import { isResponse, safeJsonParse } from "../../shared/lib/safe-json";
 import { checkUserRateLimit, USER_RATE_LIMITS } from "../../shared/lib/user-rate-limit";
 import Subject from "../../subjects/models/subject";
@@ -37,8 +41,10 @@ let RequestSchema = s.object({
  * Rate-limited per email to prevent brute force attacks.
  * Updates passkey counter after successful authentication to prevent replay attacks.
  */
-export default action<"POST", "/webauthn/auth/verify">(
-	async ({ db, request, logger, analytics }) => {
+export default createAction(
+	routes.webauthn.auth.verify,
+	inject([Database] as const, async (db) => {
+		let { request, logger, analytics } = getContext();
 		let log = logger.action("/webauthn/auth/verify");
 
 		let body = await safeJsonParse(request);
@@ -198,5 +204,5 @@ export default action<"POST", "/webauthn/auth/verify">(
 			subjectId: subject.id,
 			email: subject.email,
 		});
-	},
+	}),
 );

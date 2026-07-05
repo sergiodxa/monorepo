@@ -1,10 +1,16 @@
+import type { RequestContext } from "remix/fetch-router";
+
 import { noContent } from "@pkg/http/response";
 import { badRequest, created, notFound, ok } from "@pkg/http/response/json";
 import { isFailure } from "@pkg/result";
+import { inject } from "@pkg/service-container";
 import { validate } from "@pkg/validate";
+import { getContext } from "remix/async-context-middleware";
 import * as s from "remix/data-schema";
+import { Database } from "remix/data-table";
+import { createAction } from "remix/fetch-router";
 
-import action from "../../shared/lib/action";
+import routes from "../../routes";
 import { RecordNotFoundError } from "../../shared/lib/db-errors";
 import { httpsUrl, LIMITS, maxLength, minLength } from "../../shared/lib/schema-checks";
 import { toIsoString } from "../../shared/lib/timestamp";
@@ -27,8 +33,10 @@ let CreateLogoutUriSchema = s.object({
 	environment: s.optional(s.string().pipe(maxLength(50))),
 });
 
-export const index = action<"GET", "/api/clients/:clientId/logout-uris">(
-	async ({ params, db, logger }) => {
+export const index = createAction(
+	routes.api.clients["logout-uris"].index,
+	inject([Database] as const, async (db) => {
+		let { params, logger } = getContext() as RequestContext<{ clientId: string }>;
 		let log = logger.loader("/api/clients/:clientId/logout-uris");
 
 		// Verify client exists
@@ -41,11 +49,13 @@ export const index = action<"GET", "/api/clients/:clientId/logout-uris">(
 		let logoutUris = await LogoutUri.list(db, params.clientId);
 		log.info("Logout URIs listed", { clientId: params.clientId, count: logoutUris.length });
 		return ok(logoutUris.map(normalizeLogoutUri));
-	},
+	}),
 );
 
-export const create = action<"POST", "/api/clients/:clientId/logout-uris">(
-	async ({ params, db, formData, logger }) => {
+export const create = createAction(
+	routes.api.clients["logout-uris"].create,
+	inject([Database] as const, async (db) => {
+		let { params, formData, logger } = getContext() as RequestContext<{ clientId: string }>;
 		let log = logger.action("/api/clients/:clientId/logout-uris");
 
 		// Verify client exists
@@ -69,11 +79,13 @@ export const create = action<"POST", "/api/clients/:clientId/logout-uris">(
 			type: result.data.type,
 		});
 		return created({ id });
-	},
+	}),
 );
 
-export const destroy = action<"DELETE", "/api/clients/:clientId/logout-uris/:id">(
-	async ({ params, db, logger }) => {
+export const destroy = createAction(
+	routes.api.clients["logout-uris"].destroy,
+	inject([Database] as const, async (db) => {
+		let { params, logger } = getContext() as RequestContext<{ clientId: string; id: string }>;
 		let log = logger.action("/api/clients/:clientId/logout-uris/:id");
 
 		// Verify client exists
@@ -94,5 +106,5 @@ export const destroy = action<"DELETE", "/api/clients/:clientId/logout-uris/:id"
 			}
 			throw error;
 		}
-	},
+	}),
 );

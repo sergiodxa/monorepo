@@ -1,49 +1,61 @@
+import type { RequestContext } from "remix/fetch-router";
+
 import { noContent } from "@pkg/http/response";
 import { notFound, ok } from "@pkg/http/response/json";
+import { inject } from "@pkg/service-container";
+import { getContext } from "remix/async-context-middleware";
+import { Database } from "remix/data-table";
+import { createAction } from "remix/fetch-router";
 
 import Client from "../../clients/models/client";
 import Session from "../../oauth/models/session";
-import action from "../../shared/lib/action";
+import routes from "../../routes";
 import { RecordNotFoundError } from "../../shared/lib/db-errors";
 import { toIsoString } from "../../shared/lib/timestamp";
 import Subject from "../models/subject";
 
-export const index = action<"GET", "/api/subjects/:id/sessions">(async ({ db, params, logger }) => {
-	let log = logger.loader("/api/subjects/:id/sessions");
+export const index = createAction(
+	routes.api.subjects.sessions.index,
+	inject([Database] as const, async (db) => {
+		let { params, logger } = getContext() as RequestContext<{ id: string }>;
+		let log = logger.loader("/api/subjects/:id/sessions");
 
-	let subject = await Subject.show(db, params.id);
-	if (!subject) {
-		log.info("Subject not found", { subjectId: params.id });
-		return notFound({ error: "Subject not found" });
-	}
+		let subject = await Subject.show(db, params.id);
+		if (!subject) {
+			log.info("Subject not found", { subjectId: params.id });
+			return notFound({ error: "Subject not found" });
+		}
 
-	let sessions = await Session.listBySubject(db, params.id);
+		let sessions = await Session.listBySubject(db, params.id);
 
-	// Fetch all unique client IDs to avoid N+1
-	let clientIds = [...new Set(sessions.map((s) => s.client_id))];
-	let clients = await Client.listByIds(db, clientIds);
-	let clientMap = new Map(clients.map((c) => [c.id, c]));
+		// Fetch all unique client IDs to avoid N+1
+		let clientIds = [...new Set(sessions.map((s) => s.client_id))];
+		let clients = await Client.listByIds(db, clientIds);
+		let clientMap = new Map(clients.map((c) => [c.id, c]));
 
-	log.info("Sessions listed", { subjectId: params.id, count: sessions.length });
+		log.info("Sessions listed", { subjectId: params.id, count: sessions.length });
 
-	return ok(
-		sessions.map((session) => {
-			let client = clientMap.get(session.client_id);
-			return {
-				id: session.id,
-				client: client ? { id: client.id, name: client.name } : null,
-				ip: session.ip,
-				userAgent: session.user_agent,
-				expiresAt: toIsoString(session.expires_at),
-				createdAt: toIsoString(session.created_at),
-				updatedAt: toIsoString(session.updated_at),
-			};
-		}),
-	);
-});
+		return ok(
+			sessions.map((session) => {
+				let client = clientMap.get(session.client_id);
+				return {
+					id: session.id,
+					client: client ? { id: client.id, name: client.name } : null,
+					ip: session.ip,
+					userAgent: session.user_agent,
+					expiresAt: toIsoString(session.expires_at),
+					createdAt: toIsoString(session.created_at),
+					updatedAt: toIsoString(session.updated_at),
+				};
+			}),
+		);
+	}),
+);
 
-export const destroy = action<"DELETE", "/api/subjects/:id/sessions/:sessionId">(
-	async ({ db, params, logger }) => {
+export const destroy = createAction(
+	routes.api.subjects.sessions.destroy,
+	inject([Database] as const, async (db) => {
+		let { params, logger } = getContext() as RequestContext<{ id: string; sessionId: string }>;
 		let log = logger.action("/api/subjects/:id/sessions/:sessionId");
 
 		let subject = await Subject.show(db, params.id);
@@ -76,5 +88,5 @@ export const destroy = action<"DELETE", "/api/subjects/:id/sessions/:sessionId">
 			}
 			throw error;
 		}
-	},
+	}),
 );

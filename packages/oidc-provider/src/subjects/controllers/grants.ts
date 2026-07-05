@@ -1,47 +1,59 @@
+import type { RequestContext } from "remix/fetch-router";
+
 import { noContent } from "@pkg/http/response";
 import { notFound, ok } from "@pkg/http/response/json";
+import { inject } from "@pkg/service-container";
+import { getContext } from "remix/async-context-middleware";
+import { Database } from "remix/data-table";
+import { createAction } from "remix/fetch-router";
 
 import Client from "../../clients/models/client";
 import Grant from "../../oauth/models/grant";
-import action from "../../shared/lib/action";
+import routes from "../../routes";
 import { RecordNotFoundError } from "../../shared/lib/db-errors";
 import { toIsoString } from "../../shared/lib/timestamp";
 import Subject from "../models/subject";
 
-export const index = action<"GET", "/api/subjects/:id/grants">(async ({ db, params, logger }) => {
-	let log = logger.loader("/api/subjects/:id/grants");
+export const index = createAction(
+	routes.api.subjects.grants.index,
+	inject([Database] as const, async (db) => {
+		let { params, logger } = getContext() as RequestContext<{ id: string }>;
+		let log = logger.loader("/api/subjects/:id/grants");
 
-	let subject = await Subject.show(db, params.id);
-	if (!subject) {
-		log.info("Subject not found", { subjectId: params.id });
-		return notFound({ error: "Subject not found" });
-	}
+		let subject = await Subject.show(db, params.id);
+		if (!subject) {
+			log.info("Subject not found", { subjectId: params.id });
+			return notFound({ error: "Subject not found" });
+		}
 
-	let grants = await Grant.listBySubject(db, params.id);
+		let grants = await Grant.listBySubject(db, params.id);
 
-	// Fetch all unique client IDs in a single query to avoid N+1
-	let clientIds = [...new Set(grants.map((g) => g.client_id))];
-	let clients = await Client.listByIds(db, clientIds);
-	let clientMap = new Map(clients.map((c) => [c.id, c]));
+		// Fetch all unique client IDs in a single query to avoid N+1
+		let clientIds = [...new Set(grants.map((g) => g.client_id))];
+		let clients = await Client.listByIds(db, clientIds);
+		let clientMap = new Map(clients.map((c) => [c.id, c]));
 
-	let enrichedGrants = grants.map((grant) => {
-		let client = clientMap.get(grant.client_id);
-		return {
-			id: grant.id,
-			client: client ? { id: client.id, name: client.name } : null,
-			scopes: grant.scopes ? grant.scopes.split(" ") : [],
-			createdAt: toIsoString(grant.created_at),
-			updatedAt: toIsoString(grant.updated_at),
-		};
-	});
+		let enrichedGrants = grants.map((grant) => {
+			let client = clientMap.get(grant.client_id);
+			return {
+				id: grant.id,
+				client: client ? { id: client.id, name: client.name } : null,
+				scopes: grant.scopes ? grant.scopes.split(" ") : [],
+				createdAt: toIsoString(grant.created_at),
+				updatedAt: toIsoString(grant.updated_at),
+			};
+		});
 
-	log.info("Grants listed", { subjectId: params.id, count: grants.length });
+		log.info("Grants listed", { subjectId: params.id, count: grants.length });
 
-	return ok(enrichedGrants);
-});
+		return ok(enrichedGrants);
+	}),
+);
 
-export const destroy = action<"DELETE", "/api/subjects/:id/grants/:grantId">(
-	async ({ db, params, logger }) => {
+export const destroy = createAction(
+	routes.api.subjects.grants.destroy,
+	inject([Database] as const, async (db) => {
+		let { params, logger } = getContext() as RequestContext<{ id: string; grantId: string }>;
 		let log = logger.action("/api/subjects/:id/grants/:grantId");
 
 		let subject = await Subject.show(db, params.id);
@@ -78,5 +90,5 @@ export const destroy = action<"DELETE", "/api/subjects/:id/grants/:grantId">(
 			}
 			throw error;
 		}
-	},
+	}),
 );

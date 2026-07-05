@@ -1,14 +1,18 @@
 import { badRequest, ok, tooManyRequests } from "@pkg/http/response/json";
 import { isFailure } from "@pkg/result";
+import { inject } from "@pkg/service-container";
 import { validate } from "@pkg/validate";
 import {
 	generateRegistrationOptions,
 	type GenerateRegistrationOptionsOpts,
 } from "@simplewebauthn/server";
+import { getContext } from "remix/async-context-middleware";
 import * as s from "remix/data-schema";
+import { Database } from "remix/data-table";
+import { createAction } from "remix/fetch-router";
 
 import TenantMeta from "../../management/models/tenant-meta";
-import action from "../../shared/lib/action";
+import routes from "../../routes";
 import { base64UrlDecode } from "../../shared/lib/base64url";
 import { checkUserRateLimit, USER_RATE_LIMITS } from "../../shared/lib/user-rate-limit";
 import Subject from "../../subjects/models/subject";
@@ -43,8 +47,10 @@ function isValidEmail(email: string): boolean {
  * Generates a challenge for passkey registration.
  * Rate-limited per email to prevent registration abuse.
  */
-export default action<"POST", "/webauthn/register/options">(
-	async ({ db, formData, request, logger }) => {
+export default createAction(
+	routes.webauthn.register.options,
+	inject([Database] as const, async (db) => {
+		let { formData, request, logger } = getContext();
 		let log = logger.action("/webauthn/register/options");
 
 		let result = await validate(Object.fromEntries(formData), RequestSchema);
@@ -128,5 +134,5 @@ export default action<"POST", "/webauthn/register/options">(
 			challengeId,
 			options: registrationOptions,
 		});
-	},
+	}),
 );

@@ -1,14 +1,22 @@
+import type { RequestContext } from "remix/fetch-router";
+
 import { noContent } from "@pkg/http/response";
 import { notFound, ok } from "@pkg/http/response/json";
+import { inject } from "@pkg/service-container";
+import { getContext } from "remix/async-context-middleware";
+import { Database } from "remix/data-table";
+import { createAction } from "remix/fetch-router";
 
-import action from "../../shared/lib/action";
+import routes from "../../routes";
 import { RecordNotFoundError } from "../../shared/lib/db-errors";
 import { toIsoString } from "../../shared/lib/timestamp";
 import Connection from "../models/connection";
 import Subject from "../models/subject";
 
-export const index = action<"GET", "/api/subjects/:id/connections">(
-	async ({ db, params, logger }) => {
+export const index = createAction(
+	routes.api.subjects.connections.index,
+	inject([Database] as const, async (db) => {
+		let { params, logger } = getContext() as RequestContext<{ id: string }>;
 		let log = logger.loader("/api/subjects/:id/connections");
 
 		let subject = await Subject.show(db, params.id);
@@ -30,11 +38,13 @@ export const index = action<"GET", "/api/subjects/:id/connections">(
 				updatedAt: toIsoString(connection.updated_at),
 			})),
 		);
-	},
+	}),
 );
 
-export const destroy = action<"DELETE", "/api/subjects/:id/connections/:connectionId">(
-	async ({ db, params, logger }) => {
+export const destroy = createAction(
+	routes.api.subjects.connections.destroy,
+	inject([Database] as const, async (db) => {
+		let { params, logger } = getContext() as RequestContext<{ id: string; connectionId: string }>;
 		let log = logger.action("/api/subjects/:id/connections/:connectionId");
 
 		let subject = await Subject.show(db, params.id);
@@ -68,5 +78,5 @@ export const destroy = action<"DELETE", "/api/subjects/:id/connections/:connecti
 			}
 			throw error;
 		}
-	},
+	}),
 );

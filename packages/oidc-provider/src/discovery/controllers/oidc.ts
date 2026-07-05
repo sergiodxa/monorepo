@@ -1,14 +1,20 @@
 import { JWK } from "@edgefirst-dev/jwt";
+import { inject } from "@pkg/service-container";
+import { getContext } from "remix/async-context-middleware";
+import { Database } from "remix/data-table";
+import { createAction } from "remix/fetch-router";
 
 import TenantMeta from "../../management/models/tenant-meta";
-import action from "../../shared/lib/action";
+import routes from "../../routes";
 
 /**
  * OpenID Connect Discovery endpoint (OIDC Discovery 1.0).
  * Provides discovery information about the OpenID Provider.
  */
-export default action<"GET", "/.well-known/openid-configuration">(
-	async ({ db, request, logger }) => {
+export default createAction(
+	routes.discover.oidc,
+	inject([Database] as const, async (db) => {
+		let { request, logger } = getContext();
 		let log = logger.loader("/.well-known/openid-configuration");
 
 		let issuer = await TenantMeta.getIssuer(db);
@@ -71,5 +77,5 @@ export default action<"GET", "/.well-known/openid-configuration">(
 				"Cache-Control": "public, max-age=3600",
 			},
 		});
-	},
+	}),
 );

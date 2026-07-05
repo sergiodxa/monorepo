@@ -1,15 +1,19 @@
 import type { Logger } from "@pkg/logger/batched";
-import type { Database } from "remix/data-table";
 
 import { JWK } from "@edgefirst-dev/jwt";
 import { isFailure } from "@pkg/result";
+import { inject } from "@pkg/service-container";
 import { validate } from "@pkg/validate";
+import { getContext } from "remix/async-context-middleware";
 import * as s from "remix/data-schema";
+import { Database } from "remix/data-table";
+import { createAction } from "remix/fetch-router";
 
 import Client from "../../clients/models/client";
 import Secret from "../../clients/models/secret";
 import TenantMeta from "../../management/models/tenant-meta";
-import action from "../../shared/lib/action";
+import Resource from "../../resources/models/resource";
+import routes from "../../routes";
 import parseBasicAuth from "../../shared/lib/parse-basic-auth";
 import { reject } from "../../shared/lib/reject";
 import SigningKey from "../../signing-keys/models/signing-key";
@@ -48,33 +52,38 @@ let ClientCredentialsSchema = s.object({
  * OAuth 2.0 Token endpoint (RFC 6749 Section 3.2).
  * Supports authorization_code, refresh_token, and client_credentials grant types.
  */
-export default action<"POST", "/oauth/token">(async ({ db, formData, request, logger }) => {
-	let log = logger.action("/oauth/token");
-	let grantType = formData.get("grant_type");
+export default createAction(
+	routes.oauth.token,
+	inject([Database] as const, async (db) => {
+		let ctx = getContext();
+		let { formData, request, logger } = ctx;
+		let log = logger.action("/oauth/token");
+		let grantType = formData.get("grant_type");
 
-	let basicAuth = parseBasicAuth(request.headers.get("authorization"));
-	let body = Object.fromEntries(formData);
+		let basicAuth = parseBasicAuth(request.headers.get("authorization"));
+		let body = Object.fromEntries(formData);
 
-	if (basicAuth) {
-		body.client_id = basicAuth.clientId;
-		body.client_secret = basicAuth.clientSecret;
-	}
+		if (basicAuth) {
+			body.client_id = basicAuth.clientId;
+			body.client_secret = basicAuth.clientSecret;
+		}
 
-	if (grantType === "authorization_code") {
-		return await handleAuthorizationCode(db, body, log);
-	}
+		if (grantType === "authorization_code") {
+			return await handleAuthorizationCode(db, body, log);
+		}
 
-	if (grantType === "refresh_token") {
-		return await handleRefreshToken(db, body, log);
-	}
+		if (grantType === "refresh_token") {
+			return await handleRefreshToken(db, body, log);
+		}
 
-	if (grantType === "client_credentials") {
-		return await handleClientCredentials(db, body, log);
-	}
+		if (grantType === "client_credentials") {
+			return await handleClientCredentials(db, body, log);
+		}
 
-	log.info("Unsupported grant type requested", { grantType: String(grantType) });
-	return reject("unsupported_grant_type", "The authorization grant type is not supported");
-});
+		log.info("Unsupported grant type requested", { grantType: String(grantType) });
+		return reject("unsupported_grant_type", "The authorization grant type is not supported");
+	}),
+);
 
 /**
  * Handles the authorization_code grant type (RFC 6749 Section 4.1.3).
@@ -270,12 +279,18 @@ async function handleAuthorizationCode(db: Database, body: Record<string, unknow
 	);
 	let signedIdToken = await idToken.sign(JWK.Algoritm.ES256, signingKeys);
 
+	// Only hand out a refresh token when the client requested (and was granted, per the
+	// scope check above) `offline_access`; otherwise the session id is not exposed as a
+	// long-lived refresh credential.
+	let issueRefreshToken = authzData.scope.includes("offline_access");
+
 	log.info("Token issued successfully", {
 		clientId: client.id,
 		subjectId: subject.id,
 		sessionId: session.id,
 		grantType: "authorization_code",
 		scope: authzData.scope,
+		refreshToken: issueRefreshToken,
 	});
 
 	return new Response(
@@ -283,7 +298,7 @@ async function handleAuthorizationCode(db: Database, body: Record<string, unknow
 			access_token: signedAccessToken,
 			token_type: "Bearer",
 			expires_in: AccessToken.ttl,
-			refresh_token: session.id,
+			...(issueRefreshToken ? { refresh_token: session.id } : {}),
 			id_token: signedIdToken,
 		}),
 		{
@@ -501,6 +516,22 @@ async function handleClientCredentials(db: Database, body: Record<string, unknow
 	}
 
 	let resources = Array.isArray(resource) ? resource : resource ? [resource] : [];
+	// RFC 8707: every requested resource must be registered AND on the client's
+	// allow-list, otherwise a client could mint access tokens for arbitrary audiences.
+	if (resources.length > 0) {
+		let allowed = new Set(Client.parseAllowedResources(client));
+		for (let target of resources) {
+			if (!allowed.has(target)) {
+				log.info("Resource not permitted for client", { clientId: client.id, resource: target });
+				return reject("invalid_target", `Resource not allowed: ${target}`);
+			}
+			let registered = await Resource.findByIdentifier(db, target);
+			if (!registered) {
+				log.info("Unknown resource requested", { clientId: client.id, resource: target });
+				return reject("invalid_target", `Unknown resource: ${target}`);
+			}
+		}
+	}
 	let audience = [`https://${issuer}`, ...resources];
 	let scopeArray = requestedScopes.isEmpty() ? undefined : requestedScopes.toArray();
 
