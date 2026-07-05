@@ -1,6 +1,11 @@
 # Auth SaaS Platform
 
-This app is an Auth SaaS platform that provides authentication and authorization services for applications.
+The multi-tenant identity platform: each tenant is an OIDC/OAuth2 provider running
+isolated in its own Cloudflare Durable Object. The provider engine itself lives in
+[`@pkg/oidc-provider`](../../packages/oidc-provider); this app is the thin host +
+control plane (routing, tenant provisioning, custom domains, billing). See
+[ADR-006](../../docs/adr/ADR-006-auth-saas-platform.md) and
+[ADR-010](../../docs/adr/ADR-010-auth-saas-completion-and-tenant-migration.md).
 
 ## Commands
 
@@ -24,6 +29,7 @@ bun run db:remote:migrate # Apply migrations to remote database
 - MUST use `remix/*` packages for the app, not React or React Router
 - MUST check Remix docs on https://github.com/remix-run/remix for any questions about how to do things in Remix way
 - MUST follow MVC, use models for business logic, use controllers for handling requests and responses, use `remix/ui` for UI
+- MUST keep the OIDC/OAuth2 provider logic in `@pkg/oidc-provider`; this app is a thin host (the tenant Durable Object wraps the engine) plus the control plane
 
 ## Structure
 
@@ -44,3 +50,10 @@ aliases (e.g. `~/app/http/controllers/...`, `~/routes/web`), not `src/`.
 - `resources/layouts/` — server-rendered HTML layouts.
 - `database/migrations/` — D1 control-plane migrations (`migrations_dir`).
 - `config/` — ambient `*.d.ts` (env + router-context augmentations).
+
+## Key principle
+
+The worker resolves **identity** only (which tenant a request is for, by platform
+domain / `cf.hostMetadata` / same-zone hostname lookup); the tenant Durable Object
+runs `@pkg/oidc-provider` against its own SqlStorage-backed database. Tenant config
+is pushed into the DO, so the request path never waits on a control-plane read.
