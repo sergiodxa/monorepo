@@ -6,7 +6,13 @@ import { createAction, createController } from "remix/fetch-router";
 import routes from "../../routes";
 import * as s from "../../shared/components/styles";
 import { User } from "../../users/models/user";
-import { getIdToken, getSession, login, logout, setIdToken } from "../middleware/auth";
+import {
+	getIdToken,
+	getSession,
+	login as signIn,
+	logout as signOut,
+	setIdToken,
+} from "../middleware/auth";
 import {
 	buildAuthorizationUrl,
 	createPkce,
@@ -134,7 +140,7 @@ export const callback = createAction(routes.auth.callback, async (ctx) => {
 		});
 		let profile = verifyIdToken(idToken, { issuer: oidc.issuer, clientId: oidc.clientId });
 		let user = await User.findOrCreateFromAuthProfile(db, profile, { admins: oidc.admins });
-		login(user);
+		signIn(user);
 		setIdToken(idToken);
 		log.info("Login completed", { userId: user.id });
 	} catch (error) {
@@ -149,7 +155,7 @@ export const callback = createAction(routes.auth.callback, async (ctx) => {
 });
 
 /** `/auth/logout` — sign-out confirmation (GET) and session teardown (POST). */
-export const logout_ = createController(routes.auth.logout, {
+export const logout = createController(routes.auth.logout, {
 	actions: {
 		async index(ctx) {
 			return ctx.render(
@@ -169,7 +175,7 @@ export const logout_ = createController(routes.auth.logout, {
 			let idToken = getIdToken();
 			let origin = new URL(request.url).origin;
 			let metadata = await resolveMetadata(oidc).catch(() => null);
-			logout();
+			signOut();
 
 			if (metadata?.end_session_endpoint) {
 				let logoutUrl = new URL(metadata.end_session_endpoint);

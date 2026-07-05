@@ -11,7 +11,7 @@ import type { OIDCConfig } from "./auth/oidc";
 
 import appearance from "./appearance/controllers/cms";
 import assets from "./assets/controllers/assets";
-import { callback, login, logout_ } from "./auth/controllers/auth";
+import { callback, login, logout } from "./auth/controllers/auth";
 import dashboard from "./cms/controllers/dashboard";
 import postTypes from "./post-types/controllers/cms";
 import posts from "./posts/controllers/cms";
@@ -71,7 +71,7 @@ export function createEngineRouter(deps: EngineRouterDeps) {
 
 	// Auth.
 	router.map(routes.auth.login, login);
-	router.map(routes.auth.logout, logout_);
+	router.map(routes.auth.logout, logout);
 	router.map(routes.auth.callback, callback);
 
 	// CMS (each controller declares its own permission middleware).
