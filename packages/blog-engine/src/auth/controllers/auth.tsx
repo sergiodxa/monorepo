@@ -1,3 +1,11 @@
+/**
+ * Auth controllers for the admin panel's OIDC login/logout flow: the sign-in and
+ * sign-out screens, the flow start (PKCE), and the callback that establishes the
+ * local session. Includes `safeNext`, the same-origin redirect guard for `next`.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
 import type { Handle, RemixNode } from "remix/ui";
 
 import { redirect } from "@pkg/http/response";
@@ -13,7 +21,12 @@ import { User } from "../../users/models/user";
 import { getIdToken, login as signIn, logout as signOut, setIdToken } from "../middleware/auth";
 import { createProvider, resolveEndSessionEndpoint, toAuthProfile } from "../oidc";
 
-/** Standalone centered page shell for the auth screens. */
+/**
+ * Standalone centered page shell for the auth screens (login/logout), with an
+ * optional error banner.
+ * @param handle - Component handle exposing `title`, optional `error`, and `children`.
+ * @returns A render function producing the auth page document.
+ */
 function AuthPage(handle: Handle<{ title: string; error?: string; children: RemixNode }>) {
 	return () => {
 		let { title, error, children } = handle.props;
@@ -36,7 +49,13 @@ function AuthPage(handle: Handle<{ title: string; error?: string; children: Remi
 /**
  * Validates a post-login `next`/`returnTo` target so it can only be a same-origin
  * path. Rejects protocol-relative (`//host`) and backslash (`/\host`) tricks and any
- * absolute URL to another origin, returning the normalized path (or `undefined`).
+ * absolute URL to another origin — an open-redirect guard for the auth flow.
+ * @param value - The candidate redirect target from the query or session.
+ * @param request - The current request, used to resolve the origin.
+ * @returns The normalized same-origin path, or `undefined` when unsafe.
+ * @example
+ * safeNext("/cms/posts", request); // "/cms/posts"
+ * safeNext("//evil.example", request); // undefined
  */
 export function safeNext(value: string | null | undefined, request: Request): string | undefined {
 	if (!value || !value.startsWith("/") || value.startsWith("//") || value.startsWith("/\\")) {
@@ -52,7 +71,12 @@ export function safeNext(value: string | null | undefined, request: Request): st
 	}
 }
 
-/** The absolute `/auth/callback` URL for this request's host. */
+/**
+ * Builds the absolute `/auth/callback` URL for this request's host (the OIDC
+ * redirect URI), derived per request so it works on any host or subdomain.
+ * @param request - The current request.
+ * @returns The absolute callback URL.
+ */
 function callbackUri(request: Request): string {
 	return new URL(routes.auth.callback.href(), request.url).toString();
 }

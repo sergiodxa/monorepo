@@ -1,3 +1,11 @@
+/**
+ * Turns a post type's field definitions into a runtime metadata codec: per-kind
+ * value encode/decode plus {@link createMetaCodec}, which maps {@link PostMetaValues}
+ * to and from `post_meta` rows. This is what makes runtime-defined post types work.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
 import type { PostTypeDefinition, FieldKind } from "../../post-types/models/post-type";
 
 import type { Post } from "./post";
@@ -11,7 +19,13 @@ export interface PostMetaValues {
 	[key: string]: unknown;
 }
 
-/** Encodes a native field value to its `post_meta.value` (TEXT) storage form. */
+/**
+ * Encodes a native field value to its `post_meta.value` (TEXT) storage form
+ * (booleans as `"1"`/`"0"`, tags as a JSON array, everything else stringified).
+ * @param kind - The field kind driving the encoding.
+ * @param value - The native value to encode.
+ * @returns The TEXT form to store.
+ */
 export function encodeFieldValue(kind: FieldKind, value: unknown): string {
 	switch (kind) {
 		case "boolean":
@@ -23,7 +37,13 @@ export function encodeFieldValue(kind: FieldKind, value: unknown): string {
 	}
 }
 
-/** Decodes a stored `post_meta.value` back to its native field value. */
+/**
+ * Decodes a stored `post_meta.value` back to its native field value (inverse of
+ * {@link encodeFieldValue}); malformed tag JSON degrades to an empty array.
+ * @param kind - The field kind driving the decoding.
+ * @param raw - The stored TEXT value.
+ * @returns The native value.
+ */
 export function decodeFieldValue(kind: FieldKind, raw: string): unknown {
 	switch (kind) {
 		case "boolean":

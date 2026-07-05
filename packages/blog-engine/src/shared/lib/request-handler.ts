@@ -1,3 +1,11 @@
+/**
+ * Tiny identity helper that contextually types a value as a router `RequestHandler`,
+ * so a handler written inline gets its context/return types inferred without a
+ * manual annotation.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
 import type { RequestContext, RequestHandler } from "remix/fetch-router";
 
 /**

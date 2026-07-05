@@ -1,3 +1,11 @@
+/**
+ * The CMS dashboard controller at `/cms`: the admin home showing a per-type post
+ * count table and quick links. Open to any authenticated user (anonymous requests
+ * redirect to login).
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
 import { redirect } from "@pkg/http/response";
 import { inject } from "@pkg/service-container";
 import { getContext } from "remix/async-context-middleware";

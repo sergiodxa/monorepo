@@ -1,3 +1,11 @@
+/**
+ * Session-backed authentication layer: the {@link authMiddleware} that resolves the
+ * signed-in user from the session, plus the request-scoped helpers controllers use
+ * to read the user, cache their permission set, and sign in/out.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
 import { getServiceContainer } from "@pkg/service-container";
 import { getContext } from "remix/async-context-middleware";
 import { auth, Auth, createSessionAuthScheme } from "remix/auth-middleware";
@@ -42,14 +50,21 @@ export const authMiddleware = auth({
 	],
 });
 
-/** Returns the current request's session (requires the session middleware). */
+/**
+ * Returns the current request's session.
+ * @returns The active session for this request.
+ * @throws {Error} When the session middleware is not installed.
+ */
 export function getSession(): Session {
 	let ctx = getContext();
 	if (!ctx.has(Session)) throw new Error("Session middleware is not installed.");
 	return ctx.get(Session) as Session;
 }
 
-/** The authenticated user resolved by {@link authMiddleware}, or null. */
+/**
+ * Returns the authenticated user resolved by {@link authMiddleware}.
+ * @returns The signed-in user row, or `null` when the request is anonymous.
+ */
 export function getAuthUser(): SelectUser | null {
 	let ctx = getContext();
 	if (!ctx.has(Auth)) return null;
@@ -58,7 +73,10 @@ export function getAuthUser(): SelectUser | null {
 	return state.identity as SelectUser;
 }
 
-/** Resolves (and caches) the current user's permission set (empty when anon). */
+/**
+ * Resolves (and caches per request) the current user's permission set.
+ * @returns The user's granted permissions, or an empty set when anonymous.
+ */
 export async function getPermissions(): Promise<Set<Permission>> {
 	let ctx = getContext();
 	if (ctx.has(permissionsKey)) return ctx.get(permissionsKey) ?? new Set<Permission>();
@@ -71,12 +89,19 @@ export async function getPermissions(): Promise<Set<Permission>> {
 	return permissions;
 }
 
-/** True when the request has an authenticated user. */
+/**
+ * Reports whether the request has an authenticated user.
+ * @returns True when a user is signed in.
+ */
 export function isAuthenticated(): boolean {
 	return getAuthUser() !== null;
 }
 
-/** Signs a user in: rotates the session id and stores the user id. */
+/**
+ * Signs a user in by rotating the session id (fixation defense) and storing the user
+ * id in the session.
+ * @param user - The user to associate with the session.
+ */
 export function login(user: SelectUser): void {
 	let session = getSession();
 	session.regenerateId();
@@ -88,13 +113,19 @@ export function logout(): void {
 	getSession().destroy();
 }
 
-/** Reads the stored OIDC id token (for logout `id_token_hint`). */
+/**
+ * Reads the stored OIDC id token (used as the logout `id_token_hint`).
+ * @returns The id token, or `null` when none is stored.
+ */
 export function getIdToken(): string | null {
 	let value = getSession().get(ID_TOKEN_KEY);
 	return typeof value === "string" ? value : null;
 }
 
-/** Stores the OIDC id token in the session. */
+/**
+ * Stores the OIDC id token in the session for use at logout.
+ * @param token - The id token returned by the provider.
+ */
 export function setIdToken(token: string): void {
 	getSession().set(ID_TOKEN_KEY, token);
 }

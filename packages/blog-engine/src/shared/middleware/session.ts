@@ -1,3 +1,11 @@
+/**
+ * Factory ({@link createSessionMiddleware}) for the cookie-backed session middleware
+ * used by the admin panel, plus the {@link SessionValues} shape persisted in a
+ * session. Defaults to {@link SqlSessionStorage} but accepts a storage override.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
 import type { Database } from "remix/data-table";
 import type { Middleware } from "remix/fetch-router";
 import type { SessionStorage } from "remix/session";
@@ -33,7 +41,12 @@ export interface SessionMiddlewareOptions {
 	storage?: SessionStorage;
 }
 
-/** Builds the cookie-backed session middleware for the engine's admin panel. */
+/**
+ * Builds the cookie-backed session middleware for the engine's admin panel, wiring
+ * the signed cookie to a session storage (SQL-backed by default).
+ * @param options - Cookie/secret settings and an optional storage override.
+ * @returns The configured session middleware.
+ */
 export function createSessionMiddleware(options: SessionMiddlewareOptions): Middleware {
 	let cookie = createCookie(options.cookieName ?? "blog:session", {
 		path: "/",

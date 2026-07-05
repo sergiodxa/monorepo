@@ -1,3 +1,11 @@
+/**
+ * Shared public-facing post rendering primitives: list items, publish dates, and the
+ * field renderers that turn a post's typed metadata into markup per field kind
+ * (markdown, url, boolean, tags, …). Reused by the feed, type index, and post views.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
 import type { Handle } from "remix/ui";
 
 import { MarkdownView } from "@pkg/markdown/client/remix";
@@ -17,7 +25,13 @@ export interface PostListItem {
 	excerpt: string;
 }
 
-/** Returns a short excerpt: the first text/textarea field value in field order. */
+/**
+ * Derives a short excerpt for a post: the first non-empty text/textarea field value
+ * in field order (used by list views, feeds, and RSS descriptions).
+ * @param definition - The post type whose fields are scanned.
+ * @param meta - The post's decoded metadata.
+ * @returns The first suitable field value, or `""` when none qualifies.
+ */
 export function excerptFor(definition: PostTypeDefinition, meta: PostMetaValues): string {
 	for (let field of definition.fields) {
 		if (field.kind === "textarea" || field.kind === "text") {
@@ -28,7 +42,12 @@ export function excerptFor(definition: PostTypeDefinition, meta: PostMetaValues)
 	return "";
 }
 
-/** Renders a publish date as `<time>`, or a "Draft" note. */
+/**
+ * Renders a publish date as a localized `<time>` element, or a "Draft" note when the
+ * date is null.
+ * @param handle - Component handle exposing `publishedAt`.
+ * @returns A render function producing the date markup.
+ */
 export function PostDate(handle: Handle<{ publishedAt: string | null }>) {
 	return () => {
 		let { publishedAt } = handle.props;
@@ -45,7 +64,11 @@ export function PostDate(handle: Handle<{ publishedAt: string | null }>) {
 	};
 }
 
-/** Renders a list of posts. */
+/**
+ * Renders a list of posts, or a "No posts yet." note when empty.
+ * @param handle - Component handle exposing the `items` to render.
+ * @returns A render function producing the list markup.
+ */
 export function PostList(handle: Handle<{ items: PostListItem[] }>) {
 	return () => {
 		let { items } = handle.props;
@@ -63,7 +86,12 @@ export function PostList(handle: Handle<{ items: PostListItem[] }>) {
 	};
 }
 
-/** Renders a single field value according to its kind. */
+/**
+ * Renders a single field value according to its kind (markdown, url, boolean, tags,
+ * or plain text).
+ * @param handle - Component handle exposing the field `kind` and `value`.
+ * @returns A render function producing the value markup.
+ */
 export function FieldValue(handle: Handle<{ kind: string; value: unknown }>) {
 	return () => {
 		let { kind, value } = handle.props;
@@ -92,7 +120,12 @@ export function FieldValue(handle: Handle<{ kind: string; value: unknown }>) {
 	};
 }
 
-/** Renders every defined field of a post (title handled separately by the caller). */
+/**
+ * Renders every defined field of a post in order (the title is rendered separately by
+ * the caller).
+ * @param handle - Component handle exposing the type `definition` and post `meta`.
+ * @returns A render function producing the fields markup.
+ */
 export function PostFields(
 	handle: Handle<{ definition: PostTypeDefinition; meta: PostMetaValues }>,
 ) {

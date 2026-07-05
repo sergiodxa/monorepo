@@ -1,3 +1,11 @@
+/**
+ * Public post detail controller for `/:typePath/:slug`: renders one published post's
+ * title, date, and fields. Drafts, scheduled posts, and unknown/hidden types fall
+ * through to the themed 404.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
 import { inject } from "@pkg/service-container";
 import { getContext } from "remix/async-context-middleware";
 import { Database } from "remix/data-table";

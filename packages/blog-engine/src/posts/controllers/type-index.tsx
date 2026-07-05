@@ -1,3 +1,10 @@
+/**
+ * Public per-type index controller for `/:typePath`: lists a visible post type's
+ * published posts. Unknown or hidden types fall through to the themed 404.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
 import { inject } from "@pkg/service-container";
 import { getContext } from "remix/async-context-middleware";
 import { Database } from "remix/data-table";

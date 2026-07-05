@@ -1,3 +1,11 @@
+/**
+ * Local user persistence: the {@link User} repository handling role assignment, OIDC
+ * profile reconciliation (first-admin bootstrap and the admin allowlist), and the
+ * last-admin invariant that keeps at least one administrator at all times.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
 import type { Database } from "remix/data-table";
 
 import type { SelectUser } from "../../database/schema";
@@ -38,27 +46,52 @@ export class User {
 		}
 	};
 
-	/** Lists all users. */
+	/**
+	 * Lists all users.
+	 * @param db - Database handle.
+	 * @returns Every user row.
+	 */
 	static findAll(db: Database): Promise<SelectUser[]> {
 		return db.findMany(this.table);
 	}
 
-	/** Finds a user by id. */
+	/**
+	 * Finds a user by id.
+	 * @param db - Database handle.
+	 * @param id - The user id.
+	 * @returns The user row, or `null` when not found.
+	 */
 	static findById(db: Database, id: string): Promise<SelectUser | null> {
 		return db.findOne(this.table, { where: { id } });
 	}
 
-	/** Finds a user by OIDC subject id. */
+	/**
+	 * Finds a user by their OIDC subject id.
+	 * @param db - Database handle.
+	 * @param subjectId - The OIDC `sub` claim.
+	 * @returns The user row, or `null` when not found.
+	 */
 	static findBySubjectId(db: Database, subjectId: string): Promise<SelectUser | null> {
 		return db.findOne(this.table, { where: { subject_id: subjectId } });
 	}
 
-	/** Finds a user by email. */
+	/**
+	 * Finds a user by email.
+	 * @param db - Database handle.
+	 * @param email - The user's email address.
+	 * @returns The user row, or `null` when not found.
+	 */
 	static findByEmail(db: Database, email: string): Promise<SelectUser | null> {
 		return db.findOne(this.table, { where: { email } });
 	}
 
-	/** Creates a user and reads it back. */
+	/**
+	 * Creates a user and reads it back.
+	 * @param db - Database handle.
+	 * @param input - The user to create (id defaults to a random UUID).
+	 * @returns The created user row.
+	 * @throws {User.InvalidError} If the read-back fails.
+	 */
 	static async create(db: Database, input: CreateUserInput): Promise<SelectUser> {
 		let now = new Date().toISOString();
 		let id = input.id ?? crypto.randomUUID();
@@ -86,6 +119,7 @@ export class User {
 	 * @param profile - OIDC profile of the user logging in.
 	 * @param options.admins - Emails/subject ids always mapped to the admin role.
 	 * @returns The linked or created user row.
+	 * @throws {User.InvalidError} If a create/update read-back fails.
 	 */
 	static async findOrCreateFromAuthProfile(
 		db: Database,
@@ -132,7 +166,12 @@ export class User {
 		});
 	}
 
-	/** Counts users whose role grants admin capabilities. */
+	/**
+	 * Counts users whose role grants admin capabilities (used for the last-admin
+	 * invariant and first-admin bootstrap).
+	 * @param db - Database handle.
+	 * @returns The number of administrators.
+	 */
 	static async countAdmins(db: Database): Promise<number> {
 		let roles = await Role.findAll(db);
 		let adminRoleIds = new Set(
@@ -146,6 +185,11 @@ export class User {
 	/**
 	 * Changes a user's role, enforcing the last-admin invariant: the final admin
 	 * cannot be demoted.
+	 * @param db - Database handle.
+	 * @param userId - The user whose role changes.
+	 * @param roleId - The target role id.
+	 * @returns The updated user row.
+	 * @throws {User.InvalidError} When the user/role is missing or the last admin would be demoted.
 	 */
 	static async changeRole(db: Database, userId: string, roleId: string): Promise<SelectUser> {
 		let user = await this.findById(db, userId);
@@ -175,7 +219,10 @@ export class User {
 
 	/**
 	 * Deletes a user, enforcing the last-admin invariant. The caller must first
-	 * reassign or delete the user's posts (the FK has no cascade).
+	 * reassign or delete the user's posts (the FK has no cascade). No-op when missing.
+	 * @param db - Database handle.
+	 * @param userId - The user to delete.
+	 * @throws {User.InvalidError} When deleting would remove the last administrator.
 	 */
 	static async destroy(db: Database, userId: string): Promise<void> {
 		let user = await this.findById(db, userId);

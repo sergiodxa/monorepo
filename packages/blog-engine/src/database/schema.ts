@@ -1,3 +1,11 @@
+/**
+ * Engine-owned database schema and its persisted row types. These `table()`
+ * definitions drive the query layer; the physical DDL lives in the migration SQL in
+ * {@link ./migrations.ts} and both must be kept in sync.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
 import type { TableRow } from "remix/data-table";
 
 import { column as c, table } from "remix/data-table";

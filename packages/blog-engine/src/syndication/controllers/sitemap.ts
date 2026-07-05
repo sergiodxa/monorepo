@@ -1,3 +1,11 @@
+/**
+ * Controller for `/sitemap.xml`, listing the home page, each visible type index, and
+ * every published post (with its last-modified date) so search engines can crawl the
+ * whole public site.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
 import { inject } from "@pkg/service-container";
 import { Sitemap } from "@pkg/sitemap";
 import { getContext } from "remix/async-context-middleware";

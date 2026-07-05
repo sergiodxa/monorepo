@@ -1,3 +1,11 @@
+/**
+ * Middleware that installs `ctx.render`, the request-scoped renderer turning a
+ * `remix/ui` node into a full HTML-document `Response` (prepending `<!doctype html>`),
+ * plus the module augmentation that types it.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
 import type { RequestContext } from "remix/fetch-router";
 import type { RemixNode } from "remix/ui";
 

@@ -1,3 +1,11 @@
+/**
+ * Route middleware factory ({@link requirePermission}) that gates a controller on a
+ * set of permissions: anonymous users are redirected to login, and authenticated but
+ * unauthorized users get a 403 "no access" page.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
 import type { Handle } from "remix/ui";
 
 import { redirect } from "@pkg/http/response";

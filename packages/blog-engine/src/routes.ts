@@ -1,3 +1,11 @@
+/**
+ * Central route table for the whole engine, shared by the router (`engine.ts`) and
+ * every controller so paths and `href()` builders stay in one place. Fixed routes
+ * are declared before the dynamic `:typePath` public routes so they win.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
 import { form, get, resources, route } from "remix/fetch-router/routes";
 
 /**

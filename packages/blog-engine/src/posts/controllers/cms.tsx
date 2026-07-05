@@ -1,3 +1,11 @@
+/**
+ * The generic post CRUD controller at `/cms/types/:typeName/posts` — one controller
+ * serving every post type by driving its form and validation from the type's field
+ * definitions. Enforces the per-action posts.* permissions (create/edit/publish/delete).
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
 import type { Database } from "remix/data-table";
 import type { Handle, RemixNode } from "remix/ui";
 
@@ -23,7 +31,12 @@ import { type Permission } from "../../shared/permissions";
 import { createMetaCodec, type PostMetaValues } from "../models/meta-codec";
 import { Post } from "../models/post";
 
-/** Derives a URL slug from a title. */
+/**
+ * Derives a URL slug from a title (lowercased, non-alphanumerics collapsed to
+ * dashes, trimmed, capped at 80 chars).
+ * @param value - The source text (usually the post title).
+ * @returns The derived slug.
+ */
 function slugify(value: string): string {
 	return value
 		.toLowerCase()
@@ -32,7 +45,12 @@ function slugify(value: string): string {
 		.slice(0, 80);
 }
 
-/** Renders one CMS field input by kind. */
+/**
+ * Renders one CMS form input for a field, choosing the control by field kind
+ * (textarea/markdown, checkbox, tags, or a typed text input).
+ * @param handle - Component handle exposing the `field` and its current `value`.
+ * @returns A render function producing the labeled input.
+ */
 function FieldInput(handle: Handle<{ field: FieldDefinition; value: unknown }>) {
 	return () => {
 		let { field, value } = handle.props;
@@ -108,7 +126,11 @@ interface FormOptions {
 	error?: string;
 }
 
-/** Converts an ISO timestamp to a `datetime-local` input value. */
+/**
+ * Converts an ISO timestamp to the `datetime-local` input value format (`YYYY-MM-DDThh:mm`).
+ * @param iso - The ISO timestamp, or null.
+ * @returns The input value, or `""` when null/invalid.
+ */
 function toLocalInput(iso: string | null): string {
 	if (!iso) return "";
 	let ts = Date.parse(iso);
@@ -116,7 +138,15 @@ function toLocalInput(iso: string | null): string {
 	return new Date(ts).toISOString().slice(0, 16);
 }
 
-/** Renders the create/edit post form document via `ctx.render`. */
+/**
+ * Builds the create/edit post form document (as a `remix/ui` node) for a type,
+ * pre-filling values on edit and hiding the publish control without `posts.publish`.
+ * @param db - Database handle (reserved for future field data needs).
+ * @param type - The post type whose fields shape the form.
+ * @param options - Current user/permissions, the post being edited, and any error.
+ * @param siteTitle - The site title for the CMS chrome.
+ * @returns The form document node to render.
+ */
 function renderForm(
 	db: Database,
 	type: PostTypeDefinition,
@@ -194,7 +224,13 @@ function renderForm(
 	);
 }
 
-/** Reads native metadata values from the submitted form for a type. */
+/**
+ * Reads native metadata values from the submitted form for a type, decoding each
+ * field by kind (booleans from presence, tags from a comma list, else strings).
+ * @param formData - The submitted form data.
+ * @param type - The post type whose fields are read.
+ * @returns The decoded metadata values (including `title`).
+ */
 function readMeta(formData: FormData, type: PostTypeDefinition): PostMetaValues {
 	let meta: PostMetaValues = { title: String(formData.get("title") ?? "").trim() };
 	for (let field of type.fields) {
@@ -210,12 +246,21 @@ function readMeta(formData: FormData, type: PostTypeDefinition): PostMetaValues 
 	return meta;
 }
 
-/** Resolves the post type for the route, or `null` when unknown. */
+/**
+ * Resolves the post type named in the route.
+ * @param db - Database handle.
+ * @param typeName - The `:typeName` route param.
+ * @returns The post type definition, or `null` when unknown.
+ */
 function requireType(db: Database, typeName: string): Promise<PostTypeDefinition | null> {
 	return PostType.findByName(db, typeName);
 }
 
-/** Parses the `published_at` form field to an ISO string or null (draft). */
+/**
+ * Parses the `published_at` form field into an ISO string, or null for a draft.
+ * @param formData - The submitted form data.
+ * @returns The ISO publish timestamp, or null when blank/invalid.
+ */
 function parsePublishedAt(formData: FormData): string | null {
 	let raw = String(formData.get("published_at") ?? "").trim();
 	if (!raw) return null;

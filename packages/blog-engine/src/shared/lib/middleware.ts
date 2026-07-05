@@ -1,3 +1,11 @@
+/**
+ * Tiny identity helper that contextually types an inline middleware callback against
+ * the router's `Middleware` type, so inline middleware get `context`/`next` typing
+ * without a manual annotation.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
 import type { Middleware } from "remix/fetch-router";
 
 /**

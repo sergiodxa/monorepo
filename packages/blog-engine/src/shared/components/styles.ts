@@ -1,3 +1,11 @@
+/**
+ * Central stylesheet for the engine's views: reusable `remix/ui` `css()` mixins for
+ * the public site and CMS, the raw reset/content rule-sets, and the {@link mixFor}
+ * helper for re-typing a mixin to a concrete host element.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
 import type { CSSMixinDescriptor, ElementProps, MixinDescriptor } from "remix/ui";
 
 import { css } from "remix/ui";
@@ -117,6 +125,8 @@ export const control = css({
  * not assignable to the `mix` prop once JSX resolves an element to its concrete DOM
  * type (`<select>`, or `<input>` with a computed `type`). Only the compile-time type
  * changes; the runtime value is identical.
+ * @param mixin - The `css()` mixin to re-type.
+ * @returns The same mixin value, typed for the given host element.
  */
 export function mixFor<Node extends EventTarget>(
 	mixin: CSSMixinDescriptor,

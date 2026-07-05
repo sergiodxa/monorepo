@@ -1,3 +1,11 @@
+/**
+ * Post persistence: the `Post` namespace of input/result types and the `Post` class
+ * of generic CRUD plus codec-driven typed helpers. Owns the core `posts` row and its
+ * related `post_meta` rows, and the publish-state predicates used everywhere.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
 import type { Database } from "remix/data-table";
 
 import type { SelectPost, SelectPostMeta } from "../../database/schema";
@@ -92,7 +100,12 @@ export class Post {
 	/** Table reference used by all post read/write operations. */
 	static table = posts;
 
-	/** Returns whether a `published_at` value is public right now (NULL = draft). */
+	/**
+	 * Reports whether a `published_at` value is public right now (NULL = draft, a
+	 * future date = scheduled and not yet public).
+	 * @param published_at - The stored publish timestamp, or null.
+	 * @returns True when the post is published and visible now.
+	 */
 	static isPublished(published_at: string | null): boolean {
 		if (published_at === null) return false;
 		let timestamp = Date.parse(published_at);
@@ -100,7 +113,11 @@ export class Post {
 		return timestamp <= Date.now();
 	}
 
-	/** True when a post is scheduled (a future `published_at`). */
+	/**
+	 * Reports whether a post is scheduled (a valid `published_at` in the future).
+	 * @param published_at - The stored publish timestamp, or null.
+	 * @returns True when the post is scheduled for a future time.
+	 */
 	static isScheduled(published_at: string | null): boolean {
 		if (published_at === null) return false;
 		let timestamp = Date.parse(published_at);
@@ -108,7 +125,13 @@ export class Post {
 		return timestamp > Date.now();
 	}
 
-	/** Newest-first comparator using `published_at`, falling back to `created_at`. */
+	/**
+	 * Newest-first comparator using `published_at`, falling back to `created_at`
+	 * (suitable for `Array.prototype.sort`).
+	 * @param a - The first post to compare.
+	 * @param b - The second post to compare.
+	 * @returns A negative/zero/positive number ordering `b` before `a` by date.
+	 */
 	static compareByDateDesc(
 		a: { published_at: string | null; created_at: string },
 		b: { published_at: string | null; created_at: string },
@@ -118,7 +141,14 @@ export class Post {
 		return (Number.isNaN(bv) ? 0 : bv) - (Number.isNaN(av) ? 0 : av);
 	}
 
-	/** Lists posts (optionally filtered by type), newest first, with metadata. */
+	/**
+	 * Lists posts (optionally filtered by type), newest first, each with its metadata
+	 * rows attached. Sorting and pagination happen in memory after the read.
+	 * @param db - Database handle.
+	 * @param options.type - Restrict to one post type.
+	 * @param options.pagination - LIMIT/OFFSET applied after sorting.
+	 * @returns The matching posts with metadata.
+	 */
 	static async findMany(
 		db: Database,
 		options: { type?: Post.Type; pagination?: Post.Pagination } = {},
@@ -134,12 +164,22 @@ export class Post {
 		return this.attachMeta(db, page);
 	}
 
-	/** Counts posts of one type. */
+	/**
+	 * Counts posts of one type.
+	 * @param db - Database handle.
+	 * @param type - The post type machine name.
+	 * @returns The number of posts of that type.
+	 */
 	static async count(db: Database, type: Post.Type): Promise<number> {
 		return db.count(this.table, { where: { type } });
 	}
 
-	/** Finds one post by id with metadata attached. */
+	/**
+	 * Finds one post by id with its metadata attached.
+	 * @param db - Database handle.
+	 * @param id - The post id.
+	 * @returns The post with metadata, or `null` when not found.
+	 */
 	static async findById(db: Database, id: string): Promise<Post.FoundPost | null> {
 		let post = await db.findOne(this.table, { where: { id } });
 		if (!post) return null;
@@ -147,7 +187,14 @@ export class Post {
 		return { ...post, meta };
 	}
 
-	/** Finds one post by (type, slug) — a single indexed lookup — with metadata. */
+	/**
+	 * Finds one post by its (type, slug) pair — a single indexed lookup — with
+	 * metadata attached.
+	 * @param db - Database handle.
+	 * @param type - The post type machine name.
+	 * @param slug - The post slug (unique within the type).
+	 * @returns The post with metadata, or `null` when not found.
+	 */
 	static async findBySlug(
 		db: Database,
 		type: Post.Type,
@@ -159,7 +206,13 @@ export class Post {
 		return { ...post, meta };
 	}
 
-	/** Creates a post row and its metadata rows in one transaction. */
+	/**
+	 * Creates a post row and its metadata rows atomically in one transaction, then
+	 * reads the result back.
+	 * @param db - Database handle.
+	 * @param input - Core columns plus optional metadata rows.
+	 * @returns The created post with metadata, or `null` if the read-back fails.
+	 */
 	static async create(db: Database, input: Post.CreateInput): Promise<Post.FoundPost | null> {
 		let now = this.timestamp;
 		let id = input.id ?? crypto.randomUUID();
@@ -183,7 +236,14 @@ export class Post {
 		return this.findById(db, id);
 	}
 
-	/** Updates a post row and upserts metadata entries by key. */
+	/**
+	 * Updates a post row and upserts its metadata entries by key (existing keys are
+	 * updated, new keys inserted) in one transaction.
+	 * @param db - Database handle.
+	 * @param id - The post id to update.
+	 * @param input - Fields to change; omitted fields keep their current value.
+	 * @returns The updated post with metadata, or `null` when not found.
+	 */
 	static async update(
 		db: Database,
 		id: string,
@@ -229,13 +289,23 @@ export class Post {
 		return this.findById(db, id);
 	}
 
-	/** Deletes a post by id (post_meta cascades in SQL). */
+	/**
+	 * Deletes a post by id; its `post_meta` rows cascade in SQL.
+	 * @param db - Database handle.
+	 * @param id - The post id to delete.
+	 * @returns Always `true` once the delete has been issued.
+	 */
 	static async destroy(db: Database, id: string): Promise<boolean> {
 		await db.delete(this.table, { id });
 		return true;
 	}
 
-	/** Reassigns every post of one author to another (used before user deletion). */
+	/**
+	 * Reassigns every post of one author to another (used before deleting a user).
+	 * @param db - Database handle.
+	 * @param fromId - The current author id.
+	 * @param toId - The new author id.
+	 */
 	static async reassignAuthor(db: Database, fromId: string, toId: string): Promise<void> {
 		let rows = await db.findMany(this.table, { where: { author_id: fromId } });
 		for (let row of rows) {
@@ -243,14 +313,26 @@ export class Post {
 		}
 	}
 
-	/** Counts posts authored by a user (used to gate user deletion). */
+	/**
+	 * Counts posts authored by a user (used to gate user deletion).
+	 * @param db - Database handle.
+	 * @param authorId - The author's user id.
+	 * @returns The number of posts authored by that user.
+	 */
 	static countByAuthor(db: Database, authorId: string): Promise<number> {
 		return db.count(this.table, { where: { author_id: authorId } });
 	}
 
 	// ---- Typed helpers (codec-driven) ----
 
-	/** Lists typed posts for one type with decoded metadata. */
+	/**
+	 * Lists typed posts for one type, decoding each post's metadata via the codec.
+	 * @param db - Database handle.
+	 * @param type - The post type machine name.
+	 * @param codec - Codec mapping metadata rows to the typed shape.
+	 * @param pagination - Optional LIMIT/OFFSET.
+	 * @returns The posts with decoded, typed metadata.
+	 */
 	static async findManyForType<meta extends object>(
 		db: Database,
 		type: Post.Type,
@@ -261,7 +343,14 @@ export class Post {
 		return found.map((post) => this.toTyped(post, codec));
 	}
 
-	/** Finds a typed post by id. */
+	/**
+	 * Finds a typed post by id, requiring it to belong to the given type.
+	 * @param db - Database handle.
+	 * @param type - The expected post type machine name.
+	 * @param id - The post id.
+	 * @param codec - Codec decoding the metadata.
+	 * @returns The typed post, or `null` when missing or of another type.
+	 */
 	static async findByIdForType<meta extends object>(
 		db: Database,
 		type: Post.Type,
@@ -273,7 +362,14 @@ export class Post {
 		return this.toTyped(found, codec);
 	}
 
-	/** Finds a typed post by (type, slug). */
+	/**
+	 * Finds a typed post by its (type, slug) pair.
+	 * @param db - Database handle.
+	 * @param type - The post type machine name.
+	 * @param slug - The post slug.
+	 * @param codec - Codec decoding the metadata.
+	 * @returns The typed post, or `null` when not found.
+	 */
 	static async findBySlugForType<meta extends object>(
 		db: Database,
 		type: Post.Type,
@@ -285,7 +381,14 @@ export class Post {
 		return this.toTyped(found, codec);
 	}
 
-	/** Creates a typed post via its codec. */
+	/**
+	 * Creates a typed post, serializing its metadata via the codec.
+	 * @param db - Database handle.
+	 * @param type - The post type machine name.
+	 * @param input - Typed create payload (slug, author, metadata, …).
+	 * @param codec - Codec serializing/deserializing the metadata.
+	 * @returns The created typed post, or `null` if the read-back fails.
+	 */
 	static async createForType<meta extends object>(
 		db: Database,
 		type: Post.Type,
@@ -305,7 +408,16 @@ export class Post {
 		return created ? this.toTyped(created, codec) : null;
 	}
 
-	/** Updates a typed post via its codec. */
+	/**
+	 * Updates a typed post, serializing changed metadata via the codec. Requires the
+	 * post to exist and belong to the given type.
+	 * @param db - Database handle.
+	 * @param type - The expected post type machine name.
+	 * @param id - The post id to update.
+	 * @param input - Typed update payload (partial metadata allowed).
+	 * @param codec - Codec serializing/deserializing the metadata.
+	 * @returns The updated typed post, or `null` when missing or mismatched.
+	 */
 	static async updateForType<meta extends object>(
 		db: Database,
 		type: Post.Type,

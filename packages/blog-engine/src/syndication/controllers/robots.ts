@@ -1,3 +1,11 @@
+/**
+ * Controller for `/robots.txt`, allowing all crawlers and pointing them at the
+ * sitemap. The sitemap URL is derived from the request origin so it works on any host
+ * or subdomain.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
 import { text } from "@pkg/http/response";
 import { createAction } from "remix/fetch-router";
 

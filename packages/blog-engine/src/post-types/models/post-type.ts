@@ -1,3 +1,11 @@
+/**
+ * Runtime-defined post types: the field/definition types, the naming rules and
+ * reserved-word sets, and the {@link PostType} repository with validation and
+ * built-in protection. Post types are the engine's answer to WordPress custom types.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
 import type { Database } from "remix/data-table";
 
 import type { SelectPostType } from "../../database/schema";
@@ -95,31 +103,55 @@ export class PostType {
 		}
 	};
 
-	/** Lists all post types. */
+	/**
+	 * Lists all post types.
+	 * @param db - Database handle.
+	 * @returns Every post type as a parsed definition.
+	 */
 	static async findAll(db: Database): Promise<PostTypeDefinition[]> {
 		let rows = await db.findMany(this.table);
 		return rows.map((row) => this.toDefinition(row));
 	}
 
-	/** Lists post types that participate in public routes/feeds/sitemap. */
+	/**
+	 * Lists post types that participate in public routes/feeds/sitemap.
+	 * @param db - Database handle.
+	 * @returns The visible post types as parsed definitions.
+	 */
 	static async findVisible(db: Database): Promise<PostTypeDefinition[]> {
 		let rows = await db.findMany(this.table, { where: { visible: 1 } });
 		return rows.map((row) => this.toDefinition(row));
 	}
 
-	/** Finds a post type by machine name. */
+	/**
+	 * Finds a post type by machine name.
+	 * @param db - Database handle.
+	 * @param name - The machine name (== `posts.type`).
+	 * @returns The parsed definition, or `null` when not found.
+	 */
 	static async findByName(db: Database, name: string): Promise<PostTypeDefinition | null> {
 		let row = await db.findOne(this.table, { where: { name } });
 		return row ? this.toDefinition(row) : null;
 	}
 
-	/** Finds a post type by public path segment. */
+	/**
+	 * Finds a post type by its public path segment.
+	 * @param db - Database handle.
+	 * @param path - The plural URL segment (e.g. "articles").
+	 * @returns The parsed definition, or `null` when not found.
+	 */
 	static async findByPath(db: Database, path: string): Promise<PostTypeDefinition | null> {
 		let row = await db.findOne(this.table, { where: { path } });
 		return row ? this.toDefinition(row) : null;
 	}
 
-	/** Creates a custom post type after validation. */
+	/**
+	 * Creates a custom post type after validating its shape and uniqueness.
+	 * @param db - Database handle.
+	 * @param input - The post type to create.
+	 * @returns The created post type definition.
+	 * @throws {PostType.InvalidError} On invalid input or a duplicate name/path.
+	 */
 	static async create(db: Database, input: PostTypeInput): Promise<PostTypeDefinition> {
 		this.validate(input);
 		if (await this.findByName(db, input.name)) {
@@ -151,6 +183,11 @@ export class PostType {
 	/**
 	 * Updates a post type. Built-in types keep their `name` and may only append
 	 * fields (existing seeded fields cannot be removed or re-kinded).
+	 * @param db - Database handle.
+	 * @param id - The post type id to update.
+	 * @param input - The new post type values.
+	 * @returns The updated post type definition.
+	 * @throws {PostType.InvalidError} When not found, invalid, or violating built-in rules.
 	 */
 	static async update(db: Database, id: string, input: PostTypeInput): Promise<PostTypeDefinition> {
 		let existingRow = await db.findOne(this.table, { where: { id } });
@@ -184,7 +221,12 @@ export class PostType {
 		return this.toDefinition(updated);
 	}
 
-	/** Deletes a custom post type (built-ins cannot be deleted). */
+	/**
+	 * Deletes a custom post type (built-ins cannot be deleted). No-op when missing.
+	 * @param db - Database handle.
+	 * @param id - The post type id to delete.
+	 * @throws {PostType.InvalidError} When the target is a built-in type.
+	 */
 	static async destroy(db: Database, id: string): Promise<void> {
 		let row = await db.findOne(this.table, { where: { id } });
 		if (!row) return;
@@ -192,7 +234,12 @@ export class PostType {
 		await db.delete(this.table, { id });
 	}
 
-	/** Validates the input shape and rules (throws {@link PostType.InvalidError}). */
+	/**
+	 * Validates a post type's shape and rules: slug patterns for name/path, reserved
+	 * paths, a non-empty label, and per-field key/kind/uniqueness constraints.
+	 * @param input - The post type input to validate.
+	 * @throws {PostType.InvalidError} On the first rule violation.
+	 */
 	static validate(input: PostTypeInput): void {
 		if (!SLUG_PATTERN.test(input.name)) {
 			throw new this.InvalidError("Name must be lowercase letters, numbers, and dashes.");
@@ -237,7 +284,12 @@ export class PostType {
 		}
 	}
 
-	/** Maps a DB row to a parsed {@link PostTypeDefinition}. */
+	/**
+	 * Maps a DB row to a parsed {@link PostTypeDefinition}, tolerating malformed
+	 * `fields` JSON by treating it as a type with no custom fields.
+	 * @param row - The raw `post_types` row.
+	 * @returns The parsed definition.
+	 */
 	static toDefinition(row: SelectPostType): PostTypeDefinition {
 		let fields: FieldDefinition[] = [];
 		try {

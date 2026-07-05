@@ -1,4 +1,13 @@
 /**
+ * The permission catalog: the engine's fixed set of capability keys plus the helpers
+ * for checking and parsing them. Roles are named bundles of these keys, so code
+ * always checks permissions rather than role names.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
+/**
  * The engine's fixed catalog of permission keys (capabilities). Roles are just
  * named bundles of these keys stored in the database; code checks permissions,
  * never role names — this is what makes owner-defined custom roles possible.
@@ -32,19 +41,34 @@ export const PERMISSION_KEYS = Object.keys(PERMISSIONS) as Permission[];
  */
 export const ADMIN_PERMISSIONS: Permission[] = ["users.manage", "roles.manage"];
 
-/** Returns true when `granted` contains every key in `required`. */
+/**
+ * Reports whether `granted` contains every key in `required` (used for AND gates).
+ * @param granted - The permissions the current user holds.
+ * @param required - The permissions all of which are required.
+ * @returns True when every required key is granted.
+ */
 export function hasAll(granted: ReadonlySet<string>, required: readonly Permission[]): boolean {
 	for (let key of required) if (!granted.has(key)) return false;
 	return true;
 }
 
-/** Returns true when `granted` contains at least one key in `required`. */
+/**
+ * Reports whether `granted` contains at least one key in `required` (OR gate).
+ * @param granted - The permissions the current user holds.
+ * @param required - The permissions any of which suffices.
+ * @returns True when at least one required key is granted.
+ */
 export function hasAny(granted: ReadonlySet<string>, required: readonly Permission[]): boolean {
 	for (let key of required) if (granted.has(key)) return true;
 	return false;
 }
 
-/** Parses a role's stored permissions JSON into a set, dropping unknown keys. */
+/**
+ * Parses a role's stored permissions JSON into a set, dropping any key not in the
+ * catalog so unknown/legacy keys never grant access.
+ * @param json - The JSON array of permission keys from a role row.
+ * @returns The set of recognized permissions (empty on malformed input).
+ */
 export function parsePermissions(json: string): Set<Permission> {
 	let out = new Set<Permission>();
 	try {

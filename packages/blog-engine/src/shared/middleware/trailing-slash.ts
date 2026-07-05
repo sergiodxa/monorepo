@@ -1,3 +1,10 @@
+/**
+ * Middleware that canonicalizes URLs by permanently redirecting `/path/` to `/path`
+ * (the root `/` excepted), so a page never has two addressable forms.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
 import { redirect } from "@pkg/http/response";
 
 import middleware from "../lib/middleware";

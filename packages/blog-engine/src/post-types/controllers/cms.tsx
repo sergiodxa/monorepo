@@ -1,3 +1,11 @@
+/**
+ * The post-type management controller at `/cms/post-types`: create, edit, and delete
+ * custom post types (fields entered as a JSON array in v1). Gated by
+ * `post_types.manage`; built-in types are protected by the model layer.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
 import type { Database } from "remix/data-table";
 
 import { redirect } from "@pkg/http/response";
@@ -15,7 +23,11 @@ import { CmsLayout } from "../../shared/components/cms-layout";
 import * as s from "../../shared/components/styles";
 import { PostType, type FieldDefinition, type PostTypeInput } from "../models/post-type";
 
-/** Loads the shared CMS chrome (current user, permissions, site title) for a view. */
+/**
+ * Loads the shared CMS chrome (current user, permission set, site title) for a view.
+ * @param db - Database handle.
+ * @returns The current user, their permissions, and the site title.
+ */
 async function chrome(db: Database) {
 	let user = getAuthUser();
 	let permissions = await getPermissions();
@@ -23,12 +35,21 @@ async function chrome(db: Database) {
 	return { user, permissions, siteTitle };
 }
 
-/** Renders a user's display label, falling back to their email. */
+/**
+ * Renders a user's display label, falling back to their email.
+ * @param user - The user, or null.
+ * @returns The display name, the email, or `""` when null.
+ */
 function label(user: { display_name: string; email: string } | null): string {
 	return user ? user.display_name || user.email : "";
 }
 
-/** Reads a post-type form (fields entered as a JSON array textarea for v1). */
+/**
+ * Reads a post-type form; the fields are entered as a JSON array textarea in v1.
+ * @param formData - The submitted form data.
+ * @returns The parsed post-type input.
+ * @throws {SyntaxError} When the fields textarea is not valid JSON.
+ */
 function readForm(formData: FormData): PostTypeInput {
 	let fieldsRaw = String(formData.get("fields") ?? "[]");
 	let fields: FieldDefinition[] = [];
@@ -44,7 +65,12 @@ function readForm(formData: FormData): PostTypeInput {
 	};
 }
 
-/** Reads the form defensively for error re-rendering (bad JSON tolerated). */
+/**
+ * Reads the form defensively for error re-rendering, tolerating invalid fields JSON
+ * (falls back to empty fields) so the form can be shown again with the user's input.
+ * @param formData - The submitted form data.
+ * @returns A best-effort partial post-type input (never throws).
+ */
 function safeReadForm(formData: FormData): Partial<PostTypeInput> {
 	try {
 		return readForm(formData);
@@ -58,7 +84,15 @@ function safeReadForm(formData: FormData): Partial<PostTypeInput> {
 	}
 }
 
-/** Renders the post-type create/edit form document via the request's renderer. */
+/**
+ * Renders the post-type create/edit form document via the request's renderer,
+ * pre-filling the given input and optionally showing an error banner.
+ * @param db - Database handle (used to load the CMS chrome).
+ * @param input - Field values to pre-fill (with an optional `builtin` flag).
+ * @param title - The page/heading title.
+ * @param error - Optional error message to display.
+ * @returns The rendered form response.
+ */
 async function renderForm(
 	db: Database,
 	input: Partial<PostTypeInput> & { builtin?: boolean },

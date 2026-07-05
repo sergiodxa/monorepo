@@ -1,3 +1,11 @@
+/**
+ * RSS feed controllers: the global `/rss.xml` feed across all visible post types and
+ * the per-type `/:typePath.rss` feed. Both emit only published posts, mapping each to
+ * an RSS item built from the type's fields.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
 import { RSS } from "@pkg/rss";
 import { inject } from "@pkg/service-container";
 import { getContext } from "remix/async-context-middleware";
@@ -12,7 +20,14 @@ import { Settings } from "../../settings/models/settings";
 import { excerptFor } from "../../shared/components/post-render";
 import { renderNotFound } from "../../shared/not-found";
 
-/** Builds RSS items for one post type's published posts. */
+/**
+ * Builds RSS items for one post type's published posts (drafts and scheduled posts
+ * are skipped), linking each to its absolute URL.
+ * @param db - Database handle.
+ * @param origin - The request origin used to build absolute links.
+ * @param type - The post type whose posts become feed items.
+ * @returns The RSS items for the type's published posts.
+ */
 async function itemsForType(
 	db: Database,
 	origin: string,

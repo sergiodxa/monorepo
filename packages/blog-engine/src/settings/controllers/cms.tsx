@@ -1,3 +1,11 @@
+/**
+ * The site settings controller at `/cms/settings`: edit the site title, description,
+ * and language. Gated by `settings.manage`; values are persisted through the
+ * {@link Settings} model with sensible fallbacks.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
 import { redirect } from "@pkg/http/response";
 import { inject } from "@pkg/service-container";
 import { getContext } from "remix/async-context-middleware";

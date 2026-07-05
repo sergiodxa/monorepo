@@ -1,3 +1,10 @@
+/**
+ * Home feed controller for `/`: the site's front page, aggregating recent published
+ * posts across every visible post type into one newest-first list.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
 import { inject } from "@pkg/service-container";
 import { getContext } from "remix/async-context-middleware";
 import { Database } from "remix/data-table";

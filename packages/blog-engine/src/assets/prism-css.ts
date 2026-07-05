@@ -1,4 +1,13 @@
 /**
+ * The Prism syntax-highlighting stylesheet as a string constant, self-served at
+ * `/assets/prism.css`. A compact light theme keyed to the token classes prismjs
+ * emits, kept in TypeScript so hosts need no build-pipeline cooperation.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
+/**
  * Prism syntax-highlighting CSS shipped as a TypeScript string constant and
  * self-served by the engine at `/assets/prism.css`, so hosts need no build-pipeline
  * cooperation. A compact light theme keyed to the token classes prismjs emits.

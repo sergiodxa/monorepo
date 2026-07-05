@@ -1,3 +1,11 @@
+/**
+ * The public-site HTML document component ({@link Layout}) plus its props and the
+ * `sanitizeCustomCss` guard. Renders the theme `:root` block, resets, content
+ * typography, header/nav, and owner custom CSS around each page's children.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
 import type { Handle, RemixNode } from "remix/ui";
 
 import * as s from "./styles";
@@ -67,7 +75,12 @@ export function Layout(handle: Handle<LayoutProps>) {
 	};
 }
 
-/** Neutralizes `</style` sequences so custom CSS cannot break out of its block. */
+/**
+ * Neutralizes `</style` sequences so owner-provided custom CSS cannot break out of
+ * its `<style>` block, and caps the length at 32 KiB (an injection guard).
+ * @param css - The owner-provided custom CSS.
+ * @returns The sanitized, length-capped CSS safe to inline.
+ */
 export function sanitizeCustomCss(css: string): string {
 	return css.replace(/<\/(style)/gi, "<\\/$1").slice(0, 32 * 1024);
 }

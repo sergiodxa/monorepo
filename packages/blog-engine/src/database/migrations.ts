@@ -1,3 +1,11 @@
+/**
+ * Ordered, inlined SQL migrations for the engine's own tables plus a journaled
+ * runner. SQL bodies are inlined (no filesystem) so a Durable Object can apply them,
+ * and {@link runMigrations} is idempotent so hosts can call it on every cold start.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
 import type { DatabaseAdapter } from "remix/data-table";
 
 import { column as c, createDatabase, table } from "remix/data-table";
@@ -8,6 +16,7 @@ interface EngineMigration {
 	sql: string;
 }
 
+/** First migration: creates every engine table and its indexes/foreign keys. */
 const CREATE_TABLES = /* sql */ `
 CREATE TABLE posts (
 	id TEXT PRIMARY KEY,
@@ -90,6 +99,7 @@ CREATE TABLE sessions (
 CREATE INDEX idx_sessions_expires_at ON sessions (expires_at);
 `;
 
+/** Second migration: seeds the built-in article type, the four roles, and defaults. */
 const SEED_DEFAULTS = /* sql */ `
 INSERT INTO post_types (id, name, path, label, description, fields, builtin, visible, created_at, updated_at)
 VALUES (

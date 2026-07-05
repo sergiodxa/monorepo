@@ -1,3 +1,12 @@
+/**
+ * Fixed lookup tables backing the theme knobs: system font stacks, radius/spacing/
+ * font-size scales, and the OKLCH lightness ladder used to generate palette stops.
+ * Kept data-only so {@link renderThemeStyle} can map settings onto CSS tokens.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 /** Named typography preset mapping to a system font stack. */
 export type FontPreset = "sans" | "serif" | "mono" | "slab";
 

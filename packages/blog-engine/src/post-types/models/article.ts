@@ -1,3 +1,11 @@
+/**
+ * The built-in `article` post type: its typed metadata shape and the seeded field
+ * definitions/definition constant. Used as the fallback when the DB row is
+ * unavailable (e.g. tests) and asserted against the migration seed in a unit test.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
 import type { PostTypeDefinition, FieldDefinition } from "./post-type";
 
 import { ARTICLE_TYPE_NAME } from "./post-type";

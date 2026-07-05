@@ -1,3 +1,11 @@
+/**
+ * Assembles the engine's request pipeline: the global middleware stack and the
+ * route→controller map. A fresh router is built per request (via
+ * {@link createEngineRouter}) so the request-scoped logger can be injected.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
 import type { Logger } from "@pkg/logger/request";
 import type { Middleware } from "remix/fetch-router";
 
@@ -44,6 +52,8 @@ export interface EngineRouterDeps {
  * request-scoped logger can be injected (matching `@pkg/oidc-provider`). Each CMS
  * controller carries its own permission middleware, so the router just maps
  * route→controller (one group per `map()`; nested route-map keys throw).
+ * @param deps - The request-scoped logger, session middleware, and OIDC config.
+ * @returns A configured fetch-router ready to handle the request.
  */
 export function createEngineRouter(deps: EngineRouterDeps) {
 	let globalMiddleware: Middleware[] = [

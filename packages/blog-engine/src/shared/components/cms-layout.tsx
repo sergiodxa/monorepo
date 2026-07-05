@@ -1,3 +1,11 @@
+/**
+ * The CMS admin chrome component ({@link CmsLayout}): a sidebar-plus-content document
+ * whose navigation shows only the sections the current user's permissions allow.
+ * Wraps every admin page.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
 import type { Handle, RemixNode } from "remix/ui";
 
 import type { Permission } from "../permissions";

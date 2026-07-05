@@ -1,3 +1,11 @@
+/**
+ * The role management controller at `/cms/roles`: create, edit, and delete custom
+ * roles, choosing permissions from the catalog via checkboxes. Gated by
+ * `roles.manage`; built-in roles are protected by the model layer.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
 import type { Database } from "remix/data-table";
 
 import { redirect } from "@pkg/http/response";
@@ -16,7 +24,11 @@ import * as s from "../../shared/components/styles";
 import { PERMISSIONS, PERMISSION_KEYS, type Permission } from "../../shared/permissions";
 import { Role, type RoleInput, type RoleWithPermissions } from "../models/role";
 
-/** Loads the shared CMS chrome (current user, permissions, site title) for a view. */
+/**
+ * Loads the shared CMS chrome (current user, permission set, site title) for a view.
+ * @param db - Database handle.
+ * @returns The current user, their permissions, and the site title.
+ */
 async function chrome(db: Database) {
 	let user = getAuthUser();
 	let permissions = await getPermissions();
@@ -24,12 +36,20 @@ async function chrome(db: Database) {
 	return { user, permissions, siteTitle };
 }
 
-/** Renders a user's display label, falling back to their email. */
+/**
+ * Renders a user's display label, falling back to their email.
+ * @param user - The user, or null.
+ * @returns The display name, the email, or `""` when null.
+ */
 function label(user: { display_name: string; email: string } | null): string {
 	return user ? user.display_name || user.email : "";
 }
 
-/** Reads a role form; permissions come from checked checkboxes. */
+/**
+ * Reads a role form; the selected permissions come from checked checkboxes.
+ * @param formData - The submitted form data.
+ * @returns The parsed role input.
+ */
 function readForm(formData: FormData): RoleInput {
 	let permissions = PERMISSION_KEYS.filter((key) => formData.get(`perm_${key}`) != null);
 	return {
@@ -40,7 +60,15 @@ function readForm(formData: FormData): RoleInput {
 	};
 }
 
-/** Renders the role create/edit form document via the request's renderer. */
+/**
+ * Renders the role create/edit form document via the request's renderer, pre-checking
+ * the role's permissions and disabling edits for built-in roles.
+ * @param db - Database handle (used to load the CMS chrome).
+ * @param role - The role being edited, or undefined when creating.
+ * @param title - The page/heading title.
+ * @param error - Optional error message to display.
+ * @returns The rendered form response.
+ */
 async function renderForm(
 	db: Database,
 	role: RoleWithPermissions | undefined,

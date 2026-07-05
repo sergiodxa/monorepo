@@ -1,3 +1,12 @@
+/**
+ * Public entry point of the blog engine: the {@link createBlogEngine} factory plus
+ * the config/instance types and re-exported public types. This is the WordPress-core
+ * boundary a host binds storage and secrets to, host-agnostic across Workers, DOs,
+ * Bun, and Node.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
 import type { DatabaseAdapter } from "remix/data-table";
 import type { SessionStorage } from "remix/session";
 

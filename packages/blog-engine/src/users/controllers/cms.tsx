@@ -1,3 +1,11 @@
+/**
+ * The user management controller at `/cms/users`: list users, change a user's role,
+ * and delete a user (reassigning or deleting their posts first). Gated by
+ * `users.manage`; the last-admin invariant is enforced by the model layer.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
 import type { Database } from "remix/data-table";
 
 import { redirect } from "@pkg/http/response";
@@ -17,7 +25,11 @@ import { CmsLayout } from "../../shared/components/cms-layout";
 import * as s from "../../shared/components/styles";
 import { User } from "../models/user";
 
-/** Loads the shared CMS chrome (current user, permissions, site title) for a view. */
+/**
+ * Loads the shared CMS chrome (current user, permission set, site title) for a view.
+ * @param db - Database handle.
+ * @returns The current user, their permissions, and the site title.
+ */
 async function chrome(db: Database) {
 	let user = getAuthUser();
 	let permissions = await getPermissions();
@@ -25,7 +37,11 @@ async function chrome(db: Database) {
 	return { user, permissions, siteTitle };
 }
 
-/** Renders a user's display label, falling back to their email. */
+/**
+ * Renders a user's display label, falling back to their email.
+ * @param user - The user, or null.
+ * @returns The display name, the email, or `""` when null.
+ */
 function label(user: { display_name: string; email: string } | null): string {
 	return user ? user.display_name || user.email : "";
 }

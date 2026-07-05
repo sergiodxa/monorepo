@@ -1,3 +1,11 @@
+/**
+ * The appearance controller at `/cms/appearance`: edit the theme knobs (colors,
+ * radius, spacing, fonts, measure) and owner custom CSS. Gated by `appearance.manage`;
+ * saved values feed {@link renderThemeStyle} on the public site.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
 import type { RemixNode } from "remix/ui";
 
 import { redirect } from "@pkg/http/response";
@@ -14,6 +22,13 @@ import { CmsLayout } from "../../shared/components/cms-layout";
 import * as s from "../../shared/components/styles";
 import { DEFAULT_THEME, resolveTheme, type ThemeSettings } from "../theme/theme";
 
+/**
+ * Renders a labeled `<select>` for one theme knob whose name doubles as its label.
+ * @param name - The field name/id (and displayed label).
+ * @param value - The currently selected value.
+ * @param options - The selectable option values.
+ * @returns The labeled select node.
+ */
 function selectField(name: string, value: string, options: string[]): RemixNode {
 	return (
 		<>

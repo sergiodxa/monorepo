@@ -1,3 +1,11 @@
+/**
+ * Middleware that attaches the request-scoped {@link Logger} to the context as
+ * `ctx.logger`, and the module augmentation that types it, so controllers can log
+ * against the per-request logger created in `index.ts`.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
 import type { Logger } from "@pkg/logger/request";
 
 import middleware from "../lib/middleware";

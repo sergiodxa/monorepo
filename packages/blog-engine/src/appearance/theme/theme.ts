@@ -1,3 +1,12 @@
+/**
+ * The theme model and CSS generator: the {@link ThemeSettings} knobs, their defaults,
+ * and {@link renderThemeStyle}, which derives an OKLCH palette and emits the `:root`
+ * variables the components consume — so the palette is a runtime artifact of settings
+ * rather than a shipped stylesheet.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
 import type { FontPreset } from "./presets";
 
 import {
@@ -45,7 +54,11 @@ interface Oklch {
 	h: number; // degrees
 }
 
-/** Merges a partial theme with the engine defaults. */
+/**
+ * Merges a partial theme over the engine defaults, filling any unset knob.
+ * @param theme - Partial theme settings, or undefined.
+ * @returns A complete {@link ThemeSettings}.
+ */
 export function resolveTheme(theme: Partial<ThemeSettings> | undefined): ThemeSettings {
 	return { ...DEFAULT_THEME, ...theme };
 }
@@ -104,7 +117,11 @@ export function renderThemeStyle(settings: Partial<ThemeSettings> | undefined): 
 	return `:root {\n\t${lines.join("\n\t")}\n}`;
 }
 
-/** Formats an OKLCH color as a CSS `oklch()` value. */
+/**
+ * Formats an OKLCH color as a CSS `oklch()` value, clamping/normalizing components.
+ * @param color - The OKLCH color to format.
+ * @returns A CSS `oklch(L% C H)` string.
+ */
 function oklch({ l, c, h }: Oklch): string {
 	let lp = round(clamp(l, 0, 1) * 100, 2);
 	let cp = round(Math.max(c, 0), 4);
@@ -113,8 +130,10 @@ function oklch({ l, c, h }: Oklch): string {
 }
 
 /**
- * Converts a `#rgb`/`#rrggbb` hex color to OKLCH. Falls back to a neutral gray on
- * malformed input so rendering never throws on bad settings.
+ * Converts a `#rgb`/`#rrggbb` hex color to OKLCH (via linear sRGB and OKLab), falling
+ * back to a neutral gray on malformed input so rendering never throws on bad settings.
+ * @param hex - The hex color string.
+ * @returns The equivalent OKLCH color.
  */
 export function hexToOklch(hex: string): Oklch {
 	let rgb = parseHex(hex);
