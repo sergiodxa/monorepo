@@ -155,8 +155,17 @@ export class ServiceContainer implements Container {
 	 * @returns The resolved service instance.
 	 */
 	get<T>(key: ServiceKey<T>): T {
-		if (this.#instances.has(key)) {
-			return this.#instances.get(key) as T;
+		// Resolve an already-constructed value (`instance()`) or a previously
+		// cached singleton/scoped value from this scope OR any ancestor. Walking
+		// parents is what lets a request scope read the application container's
+		// `instance()` registrations — e.g. the per-request Database registered
+		// via `container.instance(Database, db)` before wrapping the router in
+		// `container.scope(...)`. Without it, `get()` in a child scope never sees
+		// the parent's instances and throws.
+		let resolved = this.findInstance(key);
+
+		if (resolved) {
+			return resolved.value;
 		}
 
 		let definition = this.findDefinition(key);
@@ -166,11 +175,9 @@ export class ServiceContainer implements Container {
 		}
 
 		if (definition.lifetime === "singleton") {
+			// The loop above already returned any cached root instance, so this
+			// resolves the singleton once and caches it on the root container.
 			let container = this.getRoot();
-
-			if (container.#instances.has(key)) {
-				return container.#instances.get(key) as T;
-			}
 
 			let value = definition.factory(container);
 
@@ -196,6 +203,14 @@ export class ServiceContainer implements Container {
 		let container = new ServiceContainer(this);
 
 		return containerStorage.run(container, callback);
+	}
+
+	private findInstance<T>(key: ServiceKey<T>): { value: T } | undefined {
+		if (this.#instances.has(key)) {
+			return { value: this.#instances.get(key) as T };
+		}
+
+		return this.parent?.findInstance(key);
 	}
 
 	private findDefinition<T>(key: ServiceKey<T>): Definition<T> | undefined {

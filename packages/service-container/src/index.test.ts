@@ -8,6 +8,7 @@ import { route } from "remix/fetch-router/routes";
 import { renderWith } from "remix/render-middleware";
 
 import {
+	getServiceContainer,
 	inject,
 	ServiceContainer,
 	ServiceContainerScopeError,
@@ -103,6 +104,40 @@ describe(ServiceContainer.name, () => {
 		container.instance(Logger, logger);
 
 		expect(container.get(Logger)).toBe(logger);
+	});
+
+	test("resolves parent instance registrations from child scopes", () => {
+		// Mirrors how the blog-engine / oidc-provider routers wire per-request
+		// dependencies: the application container registers a pre-constructed
+		// value with `instance()`, then wraps `router.fetch` in `scope()` so
+		// controllers resolve it via `inject()` / `getServiceContainer()`.
+		let container = new ServiceContainer();
+		let database = new Database(7);
+
+		container.instance(Database, database);
+
+		let direct = container.scope(() => getServiceContainer().get(Database));
+		let injected = container.scope(() => inject([Database] as const, (db) => db)());
+
+		expect(direct).toBe(database);
+		expect(injected).toBe(database);
+	});
+
+	test("prefers a child scope instance over a parent registration", () => {
+		let container = new ServiceContainer();
+		let parentDatabase = new Database(1);
+		let childDatabase = new Database(2);
+
+		container.instance(Database, parentDatabase);
+
+		let resolved = container.scope(() => {
+			getServiceContainer().instance(Database, childDatabase);
+
+			return getServiceContainer().get(Database);
+		});
+
+		expect(resolved).toBe(childDatabase);
+		expect(container.get(Database)).toBe(parentDatabase);
 	});
 
 	test("throws a diagnostic error for missing registrations", () => {
