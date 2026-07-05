@@ -1,3 +1,11 @@
+/**
+ * The dashboard's document shell view: a minimal HTML page wrapper that sets the
+ * title, injects the CSS reset and base styles, renders its children, and loads the
+ * client hydration bundle so server-rendered pages become interactive.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
 import type { Handle, RemixNode } from "remix/ui";
 
 import * as s from "./styles";
@@ -10,7 +18,20 @@ import * as s from "./styles";
  */
 let CLIENT_ENTRY_SRC = "/assets/clientEntry.js";
 
-/** Minimal dashboard document shell, styled with `remix/ui` `css()` mixins. */
+/**
+ * Minimal dashboard document shell, styled with `remix/ui` `css()` mixins. Wraps page
+ * content in a full HTML document with a titled `<head>`, the base styles, and the
+ * client hydration script.
+ *
+ * @param handle The `remix/ui` handle providing `title` and `children` props.
+ * @returns A render function producing the page's HTML tree.
+ * @example
+ * return ctx.render(
+ *   <Page title="Dashboard">
+ *     <h1>Your blogs</h1>
+ *   </Page>,
+ * );
+ */
 export function Page(handle: Handle<{ title: string; children: RemixNode }>) {
 	return () => {
 		let { title, children } = handle.props;

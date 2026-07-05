@@ -1,3 +1,11 @@
+/**
+ * The `Hostname` control-plane model: one row per blog's custom hostname (Cloudflare
+ * for SaaS), tracking validation and SSL status plus the DNS TXT records the owner
+ * must add, with the queries the domain form and the polling cron rely on.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
 import type { Database, TableRow } from "remix/data-table";
 
 import { column as c, table } from "remix/data-table";
@@ -22,22 +30,48 @@ export default class Hostname {
 		},
 	});
 
-	/** Finds the hostname record for a blog. */
+	/**
+	 * Finds the custom-hostname record belonging to a blog (at most one per blog).
+	 *
+	 * @param db The control-plane database.
+	 * @param blogId The owning blog id.
+	 * @returns The hostname row, or `null` if the blog has no custom domain.
+	 */
 	static findByBlog(db: Database, blogId: string) {
 		return db.findOne(this.table, { where: { blog_id: blogId } });
 	}
 
-	/** Finds a hostname record by hostname string. */
+	/**
+	 * Finds a hostname record by its (globally unique) hostname string.
+	 *
+	 * @param db The control-plane database.
+	 * @param hostname The hostname to match.
+	 * @returns The hostname row, or `null` if none is registered.
+	 */
 	static findByHostname(db: Database, hostname: string) {
 		return db.findOne(this.table, { where: { hostname } });
 	}
 
-	/** Lists hostnames still pending validation (for the polling cron). */
+	/**
+	 * Lists hostnames still awaiting validation, for the polling cron to refresh.
+	 *
+	 * @param db The control-plane database.
+	 * @returns The hostname rows in `pending_validation` status.
+	 */
 	static findPending(db: Database) {
 		return db.findMany(this.table, { where: { status: "pending_validation" } });
 	}
 
-	/** Creates a pending hostname record. */
+	/**
+	 * Creates a hostname record in `pending_validation` status, storing the DNS TXT
+	 * validation challenge returned by Cloudflare (if any).
+	 *
+	 * @param db The control-plane database.
+	 * @param input The hostname id, owning blog id, hostname, and optional TXT
+	 *   validation name/value.
+	 * @returns The created hostname row.
+	 * @throws If the created row cannot be read back.
+	 */
 	static async create(
 		db: Database,
 		input: {
@@ -65,7 +99,16 @@ export default class Hostname {
 		return created;
 	}
 
-	/** Updates a hostname's validation/ssl status. */
+	/**
+	 * Updates a hostname's validation and SSL status, typically from the polling cron
+	 * as Cloudflare progresses the hostname toward active.
+	 *
+	 * @param db The control-plane database.
+	 * @param id The hostname id.
+	 * @param status The new validation status.
+	 * @param sslStatus The new SSL status, or `null`/omitted to clear it.
+	 * @returns A promise resolving once the update completes.
+	 */
 	static async setStatus(db: Database, id: string, status: string, sslStatus?: string | null) {
 		await db.update(
 			this.table,
@@ -74,7 +117,14 @@ export default class Hostname {
 		);
 	}
 
-	/** Deletes a hostname record. */
+	/**
+	 * Deletes a hostname record. Used to roll back after a failed registration so no
+	 * orphaned Cloudflare hostname is left behind.
+	 *
+	 * @param db The control-plane database.
+	 * @param id The hostname id.
+	 * @returns A promise resolving once the deletion completes.
+	 */
 	static async destroy(db: Database, id: string) {
 		await db.delete(this.table, { id });
 	}

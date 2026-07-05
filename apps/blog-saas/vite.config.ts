@@ -1,3 +1,11 @@
+/**
+ * Vite build configuration for the blog-saas worker: registers the Cloudflare and
+ * tsconfig-paths plugins, and defines a `client` build environment that bundles the
+ * browser hydration entry so server-rendered `remix/ui` pages hydrate.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
 import { fileURLToPath } from "node:url";
 
 import { cloudflare } from "@cloudflare/vite-plugin";

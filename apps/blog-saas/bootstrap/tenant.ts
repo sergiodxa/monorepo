@@ -1,3 +1,11 @@
+/**
+ * The per-tenant Blog Durable Object: a thin host that stores control-plane-pushed
+ * config in its own SQLite, boots `@pkg/blog-engine` over a SqlStorage adapter,
+ * enforces lifecycle state (suspended/deleted/custom-domain), and forwards requests.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
 import type { BlogEngine } from "@pkg/blog-engine";
 
 import { createBlogEngine } from "@pkg/blog-engine";
@@ -22,7 +30,13 @@ export interface PlatformMeta {
 	owner: string;
 }
 
-/** Minimal "suspended" placeholder page (402 Payment Required). */
+/**
+ * Builds the minimal placeholder page served for a suspended blog, prompting the
+ * owner to fix billing. Returned instead of the real site so public traffic hits a
+ * clear message rather than an error.
+ *
+ * @returns A 402 Payment Required HTML response.
+ */
 function suspendedPage(): Response {
 	return new Response(
 		`<!doctype html><meta charset="utf-8"><title>Suspended</title>` +
@@ -39,9 +53,19 @@ function suspendedPage(): Response {
  * over a SqlStorage adapter, enforces lifecycle state, and forwards requests.
  */
 export default class Blog extends DurableObject<Cloudflare.Env> {
+	/** Cached tenant config; `null` until the DO is provisioned via {@link initialize}. */
 	#meta: PlatformMeta | null = null;
+	/** The booted blog engine; `null` until config exists and {@link bootEngine} runs. */
 	#app: BlogEngine | null = null;
 
+	/**
+	 * Rehydrates the DO on wake: ensures the meta table, loads any stored config,
+	 * boots the engine if config exists, and (re)schedules the housekeeping alarm —
+	 * all inside `blockConcurrencyWhile` so no request is served mid-boot.
+	 *
+	 * @param ctx Durable Object runtime state (storage, alarms, concurrency).
+	 * @param env The worker environment bindings.
+	 */
 	constructor(ctx: DurableObjectState, env: Cloudflare.Env) {
 		super(ctx, env);
 		ctx.blockConcurrencyWhile(async () => {
@@ -52,10 +76,17 @@ export default class Blog extends DurableObject<Cloudflare.Env> {
 		});
 	}
 
+	/** Creates the single-row `platform_meta` table if absent (idempotent). */
 	private ensureMetaTable(): void {
 		this.ctx.storage.sql.exec("CREATE TABLE IF NOT EXISTS platform_meta (data TEXT NOT NULL);");
 	}
 
+	/**
+	 * Reads the stored tenant config from the DO's SQLite.
+	 *
+	 * @returns The parsed {@link PlatformMeta}, or `null` if none is stored or the
+	 *   stored JSON is corrupt.
+	 */
 	private readMeta(): PlatformMeta | null {
 		let rows = [
 			...this.ctx.storage.sql.exec<{ data: string }>("SELECT data FROM platform_meta LIMIT 1;"),
@@ -68,12 +99,25 @@ export default class Blog extends DurableObject<Cloudflare.Env> {
 		}
 	}
 
+	/**
+	 * Persists tenant config, replacing any existing row, and updates the in-memory
+	 * cache so subsequent reads see the new value without a round-trip.
+	 *
+	 * @param meta The tenant config to store.
+	 */
 	private writeMeta(meta: PlatformMeta): void {
 		this.ctx.storage.sql.exec("DELETE FROM platform_meta;");
 		this.ctx.storage.sql.exec("INSERT INTO platform_meta (data) VALUES (?);", JSON.stringify(meta));
 		this.#meta = meta;
 	}
 
+	/**
+	 * Constructs and migrates the `@pkg/blog-engine` instance for this tenant, wiring
+	 * it to the DO's own SqlStorage and the per-blog session/OIDC config. Migrations
+	 * run here (inside the boot's `blockConcurrencyWhile`) since the engine owns them.
+	 *
+	 * @param meta The tenant config providing session, auth, and owner settings.
+	 */
 	private async bootEngine(meta: PlatformMeta): Promise<void> {
 		this.#app = createBlogEngine({
 			database: createSQLStorageDatabaseAdapter(this.ctx.storage.sql),
@@ -93,7 +137,13 @@ export default class Blog extends DurableObject<Cloudflare.Env> {
 
 	// ---- RPC surface (control plane only) ----
 
-	/** One-time provisioning before the hostname goes live. Idempotent. */
+	/**
+	 * One-time provisioning called by the control plane before the hostname goes live:
+	 * stores config, boots the engine, and schedules housekeeping. Idempotent, so a
+	 * retried provisioning attempt is safe.
+	 *
+	 * @param meta The full tenant config to install.
+	 */
 	async initialize(meta: PlatformMeta): Promise<void> {
 		this.ensureMetaTable();
 		this.writeMeta(meta);
@@ -101,7 +151,13 @@ export default class Blog extends DurableObject<Cloudflare.Env> {
 		await this.scheduleAlarm();
 	}
 
-	/** Push-based config sync (suspension, custom-domain activation, title changes). */
+	/**
+	 * Push-based config sync from the control plane (suspension, custom-domain
+	 * activation, title changes). Merges the patch over current config and reboots the
+	 * engine so the change takes effect; a no-op if the DO was never initialized.
+	 *
+	 * @param patch The subset of {@link PlatformMeta} fields to overwrite.
+	 */
 	async updateMeta(patch: Partial<PlatformMeta>): Promise<void> {
 		let current = this.#meta ?? this.readMeta();
 		if (!current) return;
@@ -110,12 +166,21 @@ export default class Blog extends DurableObject<Cloudflare.Env> {
 		await this.bootEngine(next);
 	}
 
-	/** Dashboard stats without exposing engine internals. */
+	/**
+	 * Reports lightweight tenant stats for the dashboard without exposing engine
+	 * internals.
+	 *
+	 * @returns The DO's SQLite database size in bytes.
+	 */
 	async getStats(): Promise<{ databaseSize: number }> {
 		return { databaseSize: this.ctx.storage.sql.databaseSize };
 	}
 
-	/** Hard delete: wipes SQLite + alarm so the DO stops billing and ceases to exist. */
+	/**
+	 * Hard-deletes the tenant: deletes the alarm and wipes all DO storage so the
+	 * Durable Object stops incurring cost and effectively ceases to exist. Called by
+	 * the purge job after the retention window.
+	 */
 	async destroy(): Promise<void> {
 		await this.ctx.storage.deleteAlarm();
 		await this.ctx.storage.deleteAll();
@@ -125,6 +190,14 @@ export default class Blog extends DurableObject<Cloudflare.Env> {
 
 	// ---- Request path ----
 
+	/**
+	 * Serves a request through the tenant's blog engine after enforcing lifecycle
+	 * gates: unprovisioned → 404, deleted → 410, custom-domain-active subdomain hides
+	 * public pages (admin stays), suspended → 402 for public paths (`/cms` stays open).
+	 *
+	 * @param request The incoming request routed to this tenant DO.
+	 * @returns The engine's response, or a lifecycle-gate response (404/410/402).
+	 */
 	override async fetch(request: Request): Promise<Response> {
 		if (!this.#meta || !this.#app) return new Response("Not found", { status: 404 });
 		let meta = this.#meta;
@@ -150,6 +223,10 @@ export default class Blog extends DurableObject<Cloudflare.Env> {
 		return this.#app.fetch(request);
 	}
 
+	/**
+	 * Durable Object alarm handler; fires daily and simply re-arms the next alarm so
+	 * the DO keeps a heartbeat for future housekeeping.
+	 */
 	override async alarm(): Promise<void> {
 		await this.scheduleAlarm();
 	}

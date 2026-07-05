@@ -1,3 +1,11 @@
+/**
+ * The dashboard's shared style mixins: a small set of reusable `remix/ui` `css()`
+ * descriptors (body, buttons, form controls, tables, etc.) plus the global CSS reset,
+ * kept in one place so the plain-HTML views stay consistent.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
 import type { CSSMixinDescriptor, ElementProps, MixinDescriptor } from "remix/ui";
 
 import { css } from "remix/ui";

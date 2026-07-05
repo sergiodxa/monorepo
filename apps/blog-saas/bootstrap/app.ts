@@ -1,3 +1,11 @@
+/**
+ * Assembles the platform-domain HTTP router: the shared middleware stack (async
+ * context, HTML rendering, signed session, cross-origin protection, form/method
+ * parsing) and every dashboard, auth, marketing, and webhook route mapping.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
 import type { Middleware } from "remix/fetch-router";
 
 import { notFound } from "@pkg/http/response/html";
@@ -23,6 +31,9 @@ import routes from "~/routes/web";
  * Builds the platform dashboard + marketing router. The worker entry only reaches
  * this on the platform domain; each route group is mapped separately (nested
  * route-map keys throw at runtime).
+ *
+ * @returns A configured `fetch-router` whose `.fetch(request)` handles every
+ *   platform-domain route, falling back to a 404 for unmatched paths.
  */
 export function createDashboardRouter() {
 	let middleware: Middleware[] = [

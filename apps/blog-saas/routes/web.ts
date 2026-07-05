@@ -6,6 +6,9 @@ import { form, get, post, resources, route } from "remix/fetch-router/routes";
  * The per-blog `domain`/`usage`/`restore` routes are siblings of the `blogs`
  * resources map (not nested inside it): the router maps one route group per
  * `map()` call and a nested route-map key throws at runtime.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
  */
 export default route({
 	index: get("/"),

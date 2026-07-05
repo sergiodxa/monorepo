@@ -1,3 +1,10 @@
+/**
+ * Analytics Engine query helpers for the platform: reads back the per-blog page-view
+ * counts written by the worker so the reporting cron can materialize daily usage.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
 import { env } from "cloudflare:workers";
 
 /** A per-blog page-view total for one day. */

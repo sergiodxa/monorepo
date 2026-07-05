@@ -1,3 +1,11 @@
+/**
+ * The usage-reporting cron job: materializes the previous day's Analytics Engine
+ * page views into the `usage_daily` rollup, then ingests any unreported blog-days
+ * into Polar's metered billing with at-most-once semantics.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
 import { PolarClient } from "@pkg/polar";
 import { getServiceContainer } from "@pkg/service-container";
 import { Database } from "remix/data-table";
@@ -7,7 +15,11 @@ import Blog from "~/app/models/blog";
 import UsageDaily from "~/app/models/usage";
 import { queryDailyPageViews } from "~/app/services/analytics";
 
-/** Yesterday's UTC date as `YYYY-MM-DD`. */
+/**
+ * Computes yesterday's UTC date, the day the reporting run rolls up.
+ *
+ * @returns Yesterday's date as `YYYY-MM-DD` in UTC.
+ */
 function yesterday(): string {
 	return new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
 }
@@ -16,6 +28,8 @@ function yesterday(): string {
  * Daily reporting cron (01:00 UTC): materializes Analytics Engine page views into
  * `usage_daily`, then ingests unreported blog-days into Polar. The `reported_at`
  * guard gives at-most-once ingestion per blog-day; failures retry next run.
+ *
+ * @returns A promise resolving once the day is rolled up and reported.
  */
 export async function reportUsage(): Promise<void> {
 	let db = getServiceContainer().get(Database);

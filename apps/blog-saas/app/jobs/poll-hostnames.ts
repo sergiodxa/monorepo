@@ -1,3 +1,11 @@
+/**
+ * The hostname-polling cron job: refreshes the validation/SSL status of pending
+ * custom hostnames from Cloudflare and activates the custom domain once a hostname
+ * goes live, so custom-domain onboarding is hands-off.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
 import { HostnameClient } from "@pkg/hostname";
 import { getServiceContainer } from "@pkg/service-container";
 import { Database } from "remix/data-table";
@@ -8,7 +16,10 @@ import { BlogProvisioner } from "~/app/services/blog-provisioner";
 /**
  * Hostname polling cron (02:00 UTC): refreshes pending custom-hostname validation
  * so activation is hands-off. When a hostname goes active, flips the blog to the
- * custom domain (subdomain stops working).
+ * custom domain (subdomain stops working). Per-hostname errors are swallowed so a
+ * transient Cloudflare API failure just retries on the next poll.
+ *
+ * @returns A promise resolving once all pending hostnames have been polled.
  */
 export async function pollHostnames(): Promise<void> {
 	let db = getServiceContainer().get(Database);

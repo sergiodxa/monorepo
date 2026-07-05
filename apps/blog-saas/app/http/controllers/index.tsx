@@ -1,3 +1,11 @@
+/**
+ * The `/` controller: the marketing landing page, whose primary call-to-action links
+ * to the dashboard or the sign-in flow depending on whether the visitor already has a
+ * session.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
 import { createAction } from "remix/fetch-router";
 
 import { getAccountId } from "~/app/http/middleware/session";
@@ -5,7 +13,13 @@ import { Page } from "~/app/views/layout";
 import * as s from "~/app/views/styles";
 import routes from "~/routes/web";
 
-/** Marketing landing page. */
+/**
+ * Renders the marketing landing page for `GET /`, adapting the call-to-action to the
+ * viewer's auth state.
+ *
+ * @param ctx The request context (provides `ctx.render`).
+ * @returns The rendered landing-page HTML response.
+ */
 export default createAction(routes.index, async (ctx) => {
 	let signedIn = getAccountId() !== null;
 	return ctx.render(

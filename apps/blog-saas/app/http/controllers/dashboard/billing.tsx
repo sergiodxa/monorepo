@@ -1,3 +1,11 @@
+/**
+ * The `/dashboard/billing` controller: shows the account's subscription status and,
+ * on submit, sends the owner to the right Polar surface — the customer portal if they
+ * already have a Polar customer, otherwise a checkout session to start a subscription.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
 import { redirect } from "@pkg/http/response";
 import { PolarClient } from "@pkg/polar";
 import { inject } from "@pkg/service-container";
@@ -13,7 +21,14 @@ import { Page } from "~/app/views/layout";
 import * as s from "~/app/views/styles";
 import routes from "~/routes/web";
 
-/** `/dashboard/billing` — subscription status + Polar checkout/portal. */
+/**
+ * Billing controller for `/dashboard/billing`: `index` renders subscription status
+ * and the portal/checkout button; `action` redirects to the Polar portal or checkout
+ * (falling back to the billing page if Polar is unavailable).
+ *
+ * @returns The billing page (`index`), or a redirect to Polar or `/auth/login`
+ *   (`action`).
+ */
 export default createController(routes.dashboard.billing, {
 	actions: {
 		index: inject([Database] as const, async (db) => {

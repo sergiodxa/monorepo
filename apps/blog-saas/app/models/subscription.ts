@@ -1,3 +1,11 @@
+/**
+ * The `Subscription` control-plane model: one account-level Polar subscription (base
+ * fee plus a pooled metered allowance), mirroring Polar's status and period so the
+ * platform can decide entitlement without calling Polar on every request.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
 import type { Database, TableRow } from "remix/data-table";
 
 import { column as c, table } from "remix/data-table";
@@ -31,22 +39,50 @@ export default class Subscription {
 		},
 	});
 
-	/** Finds the subscription for an account. */
+	/**
+	 * Finds the subscription belonging to an account (at most one per account).
+	 *
+	 * @param db The control-plane database.
+	 * @param accountId The owning account id.
+	 * @returns The subscription row, or `null` if the account has none.
+	 */
 	static findByAccount(db: Database, accountId: string) {
 		return db.findOne(this.table, { where: { account_id: accountId } });
 	}
 
-	/** Finds a subscription by its Polar id. */
+	/**
+	 * Finds a subscription by its Polar subscription id.
+	 *
+	 * @param db The control-plane database.
+	 * @param polarSubscriptionId The Polar subscription id.
+	 * @returns The subscription row, or `null` if none matches.
+	 */
 	static findByPolarId(db: Database, polarSubscriptionId: string) {
 		return db.findOne(this.table, { where: { polar_subscription_id: polarSubscriptionId } });
 	}
 
-	/** True when the subscription entitles the account to create/serve blogs. */
+	/**
+	 * Reports whether a subscription entitles the account to create and serve blogs,
+	 * i.e. it is `active` or `trialing`.
+	 *
+	 * @param row The subscription row to test, or `null`.
+	 * @returns `true` if the subscription grants entitlement.
+	 */
 	static isActive(row: SubscriptionRow | null): boolean {
 		return row?.status === "active" || row?.status === "trialing";
 	}
 
-	/** Upserts a subscription for an account. */
+	/**
+	 * Upserts an account's subscription from a partial patch: updates the existing row
+	 * or creates one with sensible defaults. Called by the Polar webhook to keep local
+	 * state in sync with billing events.
+	 *
+	 * @param db The control-plane database.
+	 * @param accountId The owning account id.
+	 * @param patch The subscription fields to set (id/account/timestamps are managed).
+	 * @returns The up-to-date subscription row.
+	 * @throws If a freshly created subscription cannot be read back.
+	 */
 	static async upsert(
 		db: Database,
 		accountId: string,

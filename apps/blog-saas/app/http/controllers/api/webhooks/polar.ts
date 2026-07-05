@@ -1,3 +1,11 @@
+/**
+ * The Polar webhook controller: verifies incoming billing events, keeps the local
+ * account/subscription state in sync, and fans entitlement changes out to the
+ * account's blogs (activating them on entitling events, suspending them on cancel).
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
 import { json } from "@pkg/http/response";
 import { PolarClient } from "@pkg/polar";
 import { inject } from "@pkg/service-container";
@@ -25,7 +33,14 @@ interface PolarEvent {
 	};
 }
 
-/** POST /api/webhooks/polar — syncs subscription state and fans suspension out. */
+/**
+ * Webhook handler for `POST /api/webhooks/polar`: verifies the signature, then on
+ * subscription create/update events upserts the subscription and activates the
+ * account's blogs when entitled, and on cancel/revoke events suspends them.
+ *
+ * @returns `401` for an invalid signature, otherwise `{ received: true }` JSON
+ *   (including for ignored events referencing unknown accounts).
+ */
 export default createAction(
 	routes.api.webhooks.polar,
 	inject([Database, PolarClient, BlogProvisioner] as const, async (db, polar, provisioner) => {
@@ -81,6 +96,12 @@ export default createAction(
 /**
  * Maps a Polar status string to our subscription status enum. Unknown statuses fail
  * closed to `past_due` (no entitlement granted) rather than defaulting to `active`.
+ *
+ * @param status The raw status string from the Polar event (may be undefined).
+ * @returns The corresponding {@link SubscriptionStatus}, or `past_due` if unknown.
+ * @example
+ * normalizeStatus("trialing"); // "trialing"
+ * normalizeStatus("mystery"); // "past_due"
  */
 export function normalizeStatus(status: string | undefined): SubscriptionStatus {
 	switch (status) {
@@ -99,6 +120,11 @@ export function normalizeStatus(status: string | undefined): SubscriptionStatus 
  * Decides whether a subscription event should activate an account's blogs. Requires
  * both that the event references our configured product (a different product must
  * never grant entitlement) and that the normalized status is entitling.
+ *
+ * @param productId The product id from the event (may be undefined).
+ * @param status The normalized subscription status.
+ * @param configuredProductId The platform's configured product id to match against.
+ * @returns `true` only if the product matches and the status is `active`/`trialing`.
  */
 export function entitlesActivation(
 	productId: string | undefined,

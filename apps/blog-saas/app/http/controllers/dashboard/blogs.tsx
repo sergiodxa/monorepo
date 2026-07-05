@@ -1,3 +1,11 @@
+/**
+ * The blog management controllers under `/dashboard/blogs`: the resourceful
+ * create/show/edit/update/delete actions plus the sibling custom-domain, usage, and
+ * restore routes, all scoped so an account can only touch blogs it owns.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
 import { HostnameClient } from "@pkg/hostname";
 import { redirect } from "@pkg/http/response";
 import { badRequest, notFound } from "@pkg/http/response/html";
@@ -23,8 +31,13 @@ import routes from "~/routes/web";
 export const REGIONS: Region[] = ["wnam", "enam", "sam", "weur", "eeur", "apac", "oc", "afr", "me"];
 
 /**
- * Loads a blog owned by the current account. Returns a `Response` (login redirect or
- * 404) that the caller should return as-is, otherwise the account id and blog.
+ * Loads a blog and asserts the current account owns it, the shared authorization
+ * guard for every per-blog action. Returns a `Response` (login redirect or 404) the
+ * caller should return as-is, or the account id and blog on success.
+ *
+ * @param db The control-plane database.
+ * @param blogId The id of the blog to load.
+ * @returns A `Response` to short-circuit with, or `{ accountId, blog }` when owned.
  */
 async function ownedBlog(
 	db: Database,
@@ -40,7 +53,13 @@ async function ownedBlog(
 	return { accountId, blog };
 }
 
-/** `/dashboard/blogs` — create/show/edit/delete an account's blogs. */
+/**
+ * Resourceful controller for `/dashboard/blogs`: `new`/`create` build a blog (via the
+ * provisioner), `show` displays it with live DO stats, `edit`/`update` rename it, and
+ * `destroy` soft-deletes it. Every action requires an authenticated, owning account.
+ *
+ * @returns A rendered page, or a redirect/error response per action.
+ */
 export default createController(routes.dashboard.blogs, {
 	actions: {
 		new: inject([] as const, async () => {
@@ -211,7 +230,13 @@ export default createController(routes.dashboard.blogs, {
 	},
 });
 
-/** `/dashboard/blogs/:blogId/domain` — custom domain form + registration. */
+/**
+ * Custom-domain controller for `/dashboard/blogs/:blogId/domain`: `index` shows the
+ * current hostname and DNS instructions; `action` registers a new domain with
+ * Cloudflare and persists it, rolling back the CF hostname if the local write fails.
+ *
+ * @returns The domain page (`index`), or a redirect/`badRequest` (`action`).
+ */
 export const domain = createController(routes.dashboard.blogDomain, {
 	actions: {
 		index: inject([Database] as const, async (db) => {
@@ -303,7 +328,12 @@ export const domain = createController(routes.dashboard.blogDomain, {
 	},
 });
 
-/** GET /dashboard/blogs/:blogId/usage — recent page-view rollups. */
+/**
+ * Usage controller for `GET /dashboard/blogs/:blogId/usage`: renders the blog's most
+ * recent daily page-view rollups (up to 30 days, newest first).
+ *
+ * @returns The rendered usage page, or an ownership short-circuit response.
+ */
 export const usage = createAction(
 	routes.dashboard.blogUsage,
 	inject([Database] as const, async (db) => {
@@ -346,7 +376,12 @@ export const usage = createAction(
 	}),
 );
 
-/** POST /dashboard/blogs/:blogId/restore — restores a soft-deleted blog. */
+/**
+ * Restore controller for `POST /dashboard/blogs/:blogId/restore`: restores a
+ * soft-deleted blog (via the provisioner) and returns to the blog's page.
+ *
+ * @returns A redirect to the blog page, or an ownership short-circuit response.
+ */
 export const restore = createAction(
 	routes.dashboard.blogRestore,
 	inject([Database, BlogProvisioner] as const, async (db, provisioner) => {

@@ -1,3 +1,11 @@
+/**
+ * The auth controllers implementing the dashboard's OIDC login flow: the sign-in and
+ * sign-out screens, the authorization-code start (with PKCE + state stored in the
+ * session), and the callback that verifies the ID token and creates the session.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
 import { redirect } from "@pkg/http/response";
 import {
 	buildAuthorizationUrl,
@@ -18,7 +26,13 @@ import { Page } from "~/app/views/layout";
 import * as s from "~/app/views/styles";
 import routes from "~/routes/web";
 
-/** `/auth/login` — sign-in screen (GET) and OIDC flow start (POST). */
+/**
+ * `/auth/login` controller: renders the sign-in screen on `GET` and, on `POST`,
+ * starts the OIDC authorization-code flow — creating a PKCE pair and state, saving
+ * them in the session, and redirecting to the IdP.
+ *
+ * @returns The sign-in page (`index`) or a redirect to the IdP (`action`).
+ */
 export const login = createController(routes.auth.login, {
 	actions: {
 		async index(ctx) {
@@ -51,7 +65,14 @@ export const login = createController(routes.auth.login, {
 	},
 });
 
-/** GET /auth/callback — completes login and creates the dashboard session. */
+/**
+ * `GET /auth/callback` controller: completes the OIDC flow. Validates the returned
+ * state against the stored transaction, exchanges the code, verifies the ID token,
+ * upserts the local account, and establishes the dashboard session.
+ *
+ * @returns A redirect to `/dashboard` on success, or back to `/auth/login` if the
+ *   transaction is missing or the state/code check fails.
+ */
 export const callback = createAction(
 	routes.auth.callback,
 	inject([Database] as const, async (db) => {
@@ -86,7 +107,13 @@ export const callback = createAction(
 	}),
 );
 
-/** `/auth/logout` — clears the session and redirects through the IdP logout. */
+/**
+ * `/auth/logout` controller: renders the sign-out confirmation on `GET` and, on
+ * `POST`, clears the session and redirects through the IdP's end-session endpoint
+ * (falling back to `/` when the IdP advertises none).
+ *
+ * @returns The sign-out page (`index`) or a logout redirect (`action`).
+ */
 export const logout_ = createController(routes.auth.logout, {
 	actions: {
 		async index(ctx) {

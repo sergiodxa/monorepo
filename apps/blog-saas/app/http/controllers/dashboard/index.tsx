@@ -1,3 +1,11 @@
+/**
+ * The `/dashboard` index controller: the authenticated account's home, listing its
+ * blogs with their addresses and lifecycle status alongside the current subscription
+ * state and links into billing and blog creation.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
 import { redirect } from "@pkg/http/response";
 import { inject } from "@pkg/service-container";
 import { env } from "cloudflare:workers";
@@ -13,7 +21,12 @@ import { Page } from "~/app/views/layout";
 import * as s from "~/app/views/styles";
 import routes from "~/routes/web";
 
-/** GET /dashboard — the account's blogs + subscription status. */
+/**
+ * Renders the dashboard home for `GET /dashboard`, loading the account, its blogs,
+ * and subscription. Redirects unauthenticated visitors to the login page.
+ *
+ * @returns The rendered dashboard HTML response, or a redirect to `/auth/login`.
+ */
 export default createAction(
 	routes.dashboard.index,
 	inject([Database] as const, async (db) => {

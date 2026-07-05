@@ -1,3 +1,11 @@
+/**
+ * The Cloudflare Worker entrypoint: routes every request to the right destination
+ * (custom domain, platform dashboard, wildcard tenant subdomain, or unknown host),
+ * meters billable page views, and dispatches the cron-scheduled maintenance jobs.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
 import { Logger } from "@pkg/logger/request";
 import { env } from "cloudflare:workers";
 
@@ -29,11 +37,24 @@ const RESERVED_SLUGS = new Set([
 	"fallback",
 ]);
 
+/**
+ * Builds the shared 404 response for unroutable hosts/slugs.
+ *
+ * @returns A 404 Not Found response.
+ */
 function notFound(): Response {
 	return new Response("Not found", { status: 404 });
 }
 
-/** Routes a request to the tenant DO and meters billable page views. */
+/**
+ * Routes a request to a tenant Durable Object (optionally pinned to a region) and
+ * meters the billable page view on the way back.
+ *
+ * @param request The incoming request to forward.
+ * @param blogId The tenant blog id used to address the DO.
+ * @param region Optional DO location hint keeping the DO near the blog's region.
+ * @returns The tenant DO's response.
+ */
 async function forwardToBlog(request: Request, blogId: string, region?: string): Promise<Response> {
 	let locationHint = region as DurableObjectLocationHint | undefined;
 	let stub = env.BLOG.getByName(blogId, locationHint ? { locationHint } : undefined);
@@ -42,7 +63,13 @@ async function forwardToBlog(request: Request, blogId: string, region?: string):
 	return response;
 }
 
-/** KV-first slug → blog resolution; cache misses fall back to D1 and repopulate KV. */
+/**
+ * Resolves a subdomain slug to its blog. Reads the KV slug cache first; on a miss,
+ * looks up the non-deleted blog in D1 and repopulates KV so later requests hit cache.
+ *
+ * @param slug The subdomain label (the part before `.{PLATFORM_DOMAIN}`).
+ * @returns The blog id and region, or `null` if no matching non-deleted blog exists.
+ */
 async function resolveSlug(slug: string): Promise<{ blogId: string; region: string } | null> {
 	let cached = await env.SLUG_CACHE.get<{ blogId: string; region: string }>(`slug:${slug}`, "json");
 	if (cached) return cached;
@@ -59,7 +86,15 @@ async function resolveSlug(slug: string): Promise<{ blogId: string; region: stri
 	return entry;
 }
 
-/** Same-zone/explicit-route custom domains carry no hostMetadata: look them up in D1. */
+/**
+ * Resolves a custom domain to its blog by joining the `hostnames` and `blogs` tables
+ * in D1. Used for same-zone/explicit-route domains, which arrive without CF for SaaS
+ * `hostMetadata`.
+ *
+ * @param hostname The request's full hostname.
+ * @returns The blog id and region for an active hostname on a non-deleted blog, or
+ *   `null` if none matches.
+ */
 async function resolveCustomHostname(
 	hostname: string,
 ): Promise<{ blogId: string; region: string } | null> {
@@ -73,7 +108,15 @@ async function resolveCustomHostname(
 	return row ? { blogId: row.id, region: row.region } : null;
 }
 
-/** A billable page view: GET, non-/cms, 200 text/html document navigation. */
+/**
+ * Decides whether a request/response pair counts as a billable page view: a `GET`
+ * for a non-`/cms` path returning a 200 `text/html` document navigation (identified
+ * via `sec-fetch-dest`, falling back to the `accept` header).
+ *
+ * @param request The incoming request.
+ * @param response The response produced for it.
+ * @returns `true` if the exchange is a billable page view.
+ */
 function isBillablePageView(request: Request, response: Response): boolean {
 	if (request.method !== "GET") return false;
 	if (response.status !== 200) return false;
@@ -85,7 +128,14 @@ function isBillablePageView(request: Request, response: Response): boolean {
 	return (request.headers.get("accept") ?? "").includes("text/html");
 }
 
-/** Non-blocking Analytics Engine write for a billable page view. */
+/**
+ * Records a billable page view to Analytics Engine (non-blocking). No-op for
+ * exchanges that are not billable page views per {@link isBillablePageView}.
+ *
+ * @param request The incoming request.
+ * @param response The response produced for it.
+ * @param blogId The tenant blog id the view is attributed to.
+ */
 function trackPageView(request: Request, response: Response, blogId: string): void {
 	if (!isBillablePageView(request, response)) return;
 	let url = new URL(request.url);
@@ -97,6 +147,15 @@ function trackPageView(request: Request, response: Response, blogId: string): vo
 }
 
 export default {
+	/**
+	 * Main request handler. Dispatches by hostname in priority order: CF for SaaS
+	 * custom domains (via `hostMetadata`), the platform domain (static assets then the
+	 * dashboard router), wildcard tenant subdomains, and finally same-zone custom
+	 * domains resolved from D1; anything unmatched returns 404.
+	 *
+	 * @param request The incoming request.
+	 * @returns The response from the resolved destination, or a 404.
+	 */
 	async fetch(request) {
 		let url = new URL(request.url);
 		let hostname = url.hostname;
@@ -138,6 +197,14 @@ export default {
 		return notFound();
 	},
 
+	/**
+	 * Cron entrypoint. Runs each scheduled maintenance job in a fresh container scope:
+	 * usage reporting at 01:00 UTC, and deleted-blog purge + hostname polling at
+	 * 02:00 UTC.
+	 *
+	 * @param controller The scheduled controller carrying the triggering `cron`
+	 *   expression.
+	 */
 	async scheduled(controller) {
 		await container.scope(async () => {
 			if (controller.cron === "0 1 * * *") await reportUsage();

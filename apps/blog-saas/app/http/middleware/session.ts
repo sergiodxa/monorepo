@@ -1,3 +1,11 @@
+/**
+ * The dashboard session middleware and its typed accessors: a signed-cookie session
+ * holding the authenticated account id, IdP token, and in-flight OIDC PKCE
+ * transaction, with defensive read/write helpers used across the auth flow.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
 import type { Middleware } from "remix/fetch-router";
 
 import { getContext } from "remix/async-context-middleware";
@@ -28,6 +36,10 @@ const SESSION_MAX_AGE = 60 * 60 * 24 * 30;
  * storage (`remix/session-middleware` + `createCookieSessionStorage`). The cookie is
  * signed with the platform secret, so a tampered payload fails verification and reads
  * back as an empty session.
+ *
+ * @param secret The signing secret for the session cookie.
+ * @param isProd When `true`, marks the cookie `Secure` (HTTPS-only).
+ * @returns The configured session middleware.
  */
 export function createSessionMiddleware(secret: string, isProd: boolean): Middleware {
 	let cookie = createCookie(SESSION_COOKIE, {
@@ -41,14 +53,24 @@ export function createSessionMiddleware(secret: string, isProd: boolean): Middle
 	return session(cookie, createCookieSessionStorage()) as Middleware;
 }
 
-/** The current request's session (requires the session middleware). */
+/**
+ * Resolves the current request's session from the async context.
+ *
+ * @returns The active {@link Session}.
+ * @throws If the session middleware is not installed on the request.
+ */
 function current(): Session {
 	let ctx = getContext();
 	if (!ctx.has(Session)) throw new Error("Session middleware is not installed.");
 	return ctx.get(Session) as Session;
 }
 
-/** Reads the current session data, validating each field's shape defensively. */
+/**
+ * Reads the current session data, validating each field's runtime shape defensively
+ * so a malformed cookie cannot inject unexpected values.
+ *
+ * @returns The validated session data (fields absent when missing or invalid).
+ */
 export function getSessionData(): SessionData {
 	let store = current();
 	let data: SessionData = {};
@@ -61,7 +83,13 @@ export function getSessionData(): SessionData {
 	return data;
 }
 
-/** Mutates the session data; keys set to `undefined` are removed. */
+/**
+ * Applies a partial update to the session data. A key present in the patch with an
+ * `undefined` value is unset; other keys are written.
+ *
+ * @param patch The session fields to set or unset.
+ * @returns Nothing.
+ */
 export function updateSessionData(patch: Partial<SessionData>): void {
 	let store = current();
 	for (let key of ["accountId", "idToken", "auth"] as const) {
@@ -72,12 +100,20 @@ export function updateSessionData(patch: Partial<SessionData>): void {
 	}
 }
 
-/** Clears the session. */
+/**
+ * Destroys the current session, clearing all of its data (used on logout).
+ *
+ * @returns Nothing.
+ */
 export function clearSession(): void {
 	current().destroy();
 }
 
-/** The authenticated account id, or null. */
+/**
+ * Reads the authenticated account id from the session.
+ *
+ * @returns The account id, or `null` if the request is unauthenticated.
+ */
 export function getAccountId(): string | null {
 	return getSessionData().accountId ?? null;
 }

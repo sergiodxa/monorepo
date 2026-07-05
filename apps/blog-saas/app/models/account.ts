@@ -1,3 +1,11 @@
+/**
+ * The `Account` control-plane model: one row per IdP subject, holding the platform
+ * user's profile and Polar billing identity, plus the queries/mutations used to look
+ * up, upsert, and update accounts during auth and billing flows.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
 import type { Database, TableRow } from "remix/data-table";
 
 import { column as c, table } from "remix/data-table";
@@ -20,17 +28,45 @@ export default class Account {
 		},
 	});
 
-	/** Finds an account by IdP subject id. */
+	/**
+	 * Finds an account by its IdP subject id (the stable identifier from the OIDC
+	 * provider).
+	 *
+	 * @param db The control-plane database.
+	 * @param subject The OIDC subject id to match.
+	 * @returns The matching account row, or `null` if none exists.
+	 */
 	static findBySubject(db: Database, subject: string) {
 		return db.findOne(this.table, { where: { oidc_subject: subject } });
 	}
 
-	/** Finds an account by id. */
+	/**
+	 * Finds an account by its primary key.
+	 *
+	 * @param db The control-plane database.
+	 * @param id The account id.
+	 * @returns The matching account row, or `null` if none exists.
+	 */
 	static findById(db: Database, id: string) {
 		return db.findOne(this.table, { where: { id } });
 	}
 
-	/** Upserts the local account for an authenticated IdP profile. */
+	/**
+	 * Upserts the local account for an authenticated IdP profile: refreshes the email
+	 * and display name of an existing account, or creates a new one. Called on every
+	 * successful login so the local record tracks the IdP.
+	 *
+	 * @param db The control-plane database.
+	 * @param profile The verified IdP profile (subject, email, optional display name).
+	 * @returns The up-to-date account row.
+	 * @throws If a freshly created account cannot be read back.
+	 * @example
+	 * let account = await Account.findOrCreateFromProfile(db, {
+	 *   subject: profile.subject,
+	 *   email: profile.email,
+	 *   displayName: profile.displayName,
+	 * });
+	 */
 	static async findOrCreateFromProfile(
 		db: Database,
 		profile: { subject: string; email: string; displayName?: string | null },
@@ -64,7 +100,15 @@ export default class Account {
 		return created;
 	}
 
-	/** Sets (or clears) the Polar customer id. */
+	/**
+	 * Sets (or clears) the account's Polar customer id, linking the local account to
+	 * its billing customer. Passing `null` unlinks it.
+	 *
+	 * @param db The control-plane database.
+	 * @param id The account id to update.
+	 * @param customerId The Polar customer id, or `null` to clear it.
+	 * @returns A promise resolving once the update completes.
+	 */
 	static async setPolarCustomerId(db: Database, id: string, customerId: string | null) {
 		await db.update(
 			this.table,

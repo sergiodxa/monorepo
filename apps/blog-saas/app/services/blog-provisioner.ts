@@ -1,3 +1,11 @@
+/**
+ * The `BlogProvisioner` service: the single place that keeps the control plane and a
+ * tenant blog in sync across its lifecycle — slug generation, per-blog OIDC client
+ * provisioning, Durable Object config push (RPC), and the KV slug cache.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
 import type { Database } from "remix/data-table";
 
 import { env } from "cloudflare:workers";
@@ -33,11 +41,23 @@ type BlogStub = DurableObjectStub<Blog>;
 export class BlogProvisioner {
 	#db: Database;
 
+	/**
+	 * @param db The control-plane database this provisioner reads and writes.
+	 */
 	constructor(db: Database) {
 		this.#db = db;
 	}
 
-	/** Provisions a new blog end-to-end. Steps 3-7 are retryable via `provisioning`. */
+	/**
+	 * Provisions a new blog end-to-end: generates a unique slug, inserts the row in
+	 * `provisioning`, then runs the retryable provisioning steps. If provisioning
+	 * fails the row stays `provisioning` and can be retried via {@link provision}.
+	 *
+	 * @param input The new blog's owning account, display name, and region.
+	 * @returns The provisioned blog row (or the freshly created row if re-reading fails).
+	 * @example
+	 * let blog = await provisioner.create({ accountId, name: "My Blog", region: "wnam" });
+	 */
 	async create(input: { accountId: string; name: string; region: Region }): Promise<BlogModelRow> {
 		let slug = await this.uniqueSlug(input.name);
 		let blog = await BlogModel.create(this.#db, {
@@ -51,7 +71,15 @@ export class BlogProvisioner {
 		return (await BlogModel.findById(this.#db, blog.id)) ?? blog;
 	}
 
-	/** Runs the retryable provisioning steps for an existing (provisioning) blog. */
+	/**
+	 * Runs the retryable provisioning steps for an existing blog: provisions its OIDC
+	 * client, decides the initial status from the account's subscription entitlement,
+	 * pushes config to the DO, seeds the KV slug cache, and records the status.
+	 *
+	 * @param blogId The id of the (typically `provisioning`) blog to provision.
+	 * @returns A promise resolving once provisioning completes.
+	 * @throws If no blog exists for `blogId`, or if OIDC client provisioning fails.
+	 */
 	async provision(blogId: string): Promise<void> {
 		let blog = await BlogModel.findById(this.#db, blogId);
 		if (!blog) throw new Error("Blog not found");
@@ -90,7 +118,14 @@ export class BlogProvisioner {
 		await BlogModel.setStatus(this.#db, blog.id, status);
 	}
 
-	/** Soft-deletes a blog: 410 from the DO, KV removed; hard purge happens later. */
+	/**
+	 * Soft-deletes a blog: marks the row deleted (so the DO answers 410), and removes
+	 * the KV slug cache entry so the subdomain stops resolving. The hard purge happens
+	 * later via {@link purge}. A no-op if the blog does not exist.
+	 *
+	 * @param blogId The id of the blog to soft-delete.
+	 * @returns A promise resolving once the soft delete completes.
+	 */
 	async softDelete(blogId: string): Promise<void> {
 		let blog = await BlogModel.findById(this.#db, blogId);
 		if (!blog) return;
@@ -99,7 +134,14 @@ export class BlogProvisioner {
 		await this.stub(blog.id, blog.region).updateMeta({ status: "deleted" });
 	}
 
-	/** Restores a soft-deleted blog within the retention window. */
+	/**
+	 * Restores a soft-deleted blog within its retention window: flips the row back to
+	 * active, re-seeds the KV slug cache, and tells the DO it is active again. A no-op
+	 * if the blog does not exist.
+	 *
+	 * @param blogId The id of the blog to restore.
+	 * @returns A promise resolving once the restore completes.
+	 */
 	async restore(blogId: string): Promise<void> {
 		let blog = await BlogModel.findById(this.#db, blogId);
 		if (!blog) return;
@@ -111,7 +153,13 @@ export class BlogProvisioner {
 		await this.stub(blog.id, blog.region).updateMeta({ status: "active" });
 	}
 
-	/** Hard-deletes a blog: DO storage wiped, D1 row removed. */
+	/**
+	 * Hard-deletes a blog: wipes the DO's storage and removes the D1 row. Called by
+	 * the purge cron after the retention window. A no-op if the blog does not exist.
+	 *
+	 * @param blogId The id of the blog to purge.
+	 * @returns A promise resolving once the purge completes.
+	 */
 	async purge(blogId: string): Promise<void> {
 		let blog = await BlogModel.findById(this.#db, blogId);
 		if (!blog) return;
@@ -119,7 +167,15 @@ export class BlogProvisioner {
 		await BlogModel.destroy(this.#db, blog.id);
 	}
 
-	/** Activates a validated custom domain: subdomain stops working, canonical flips. */
+	/**
+	 * Activates a validated custom domain for a blog: records the flag in D1 and pushes
+	 * the new canonical host to the DO, after which the subdomain stops serving public
+	 * pages. A no-op if the blog does not exist.
+	 *
+	 * @param blogId The id of the blog to activate the domain for.
+	 * @param hostname The validated custom hostname to make canonical.
+	 * @returns A promise resolving once activation completes.
+	 */
 	async activateCustomHostname(blogId: string, hostname: string): Promise<void> {
 		let blog = await BlogModel.findById(this.#db, blogId);
 		if (!blog) return;
@@ -130,7 +186,15 @@ export class BlogProvisioner {
 		});
 	}
 
-	/** Fans a status change out to every blog of an account (suspend/reactivate). */
+	/**
+	 * Fans a status change out to every blog of an account, updating each D1 row and
+	 * pushing the status to each DO. Used by the Polar webhook to suspend or reactivate
+	 * all of an account's blogs on subscription changes.
+	 *
+	 * @param accountId The account whose blogs to update.
+	 * @param status The status to apply to every blog.
+	 * @returns A promise resolving once all blogs are updated.
+	 */
 	async setAccountBlogsStatus(accountId: string, status: "suspended" | "active"): Promise<void> {
 		let blogs = await BlogModel.listByAccount(this.#db, accountId);
 		for (let blog of blogs) {
@@ -139,16 +203,38 @@ export class BlogProvisioner {
 		}
 	}
 
+	/**
+	 * Resolves the typed RPC stub for a blog's Durable Object, pinned near its region.
+	 *
+	 * @param blogId The blog id used to address the DO by name.
+	 * @param region The blog's region, used as a DO location hint.
+	 * @returns A typed stub for RPC calls to the blog DO.
+	 */
 	private stub(blogId: string, region: string): BlogStub {
 		let locationHint = region as DurableObjectLocationHint;
 		return env.BLOG.getByName(blogId, { locationHint }) as unknown as BlogStub;
 	}
 
+	/**
+	 * Looks up an account's email, used as the blog owner (first admin) in the DO
+	 * config.
+	 *
+	 * @param accountId The account id.
+	 * @returns The account's email, or an empty string if the account is missing.
+	 */
 	private async accountEmail(accountId: string): Promise<string> {
 		let account = await Account.findById(this.#db, accountId);
 		return account?.email ?? "";
 	}
 
+	/**
+	 * Derives a URL-safe, unique slug from a blog name: lowercased and hyphenated,
+	 * avoiding reserved subdomains, and suffixed with random hex if the base collides
+	 * with an existing blog.
+	 *
+	 * @param name The blog's display name.
+	 * @returns A slug not currently used by any blog and not reserved.
+	 */
 	private async uniqueSlug(name: string): Promise<string> {
 		let base =
 			name
@@ -161,7 +247,16 @@ export class BlogProvisioner {
 		return `${slug}-${crypto.randomUUID().slice(0, 6)}`;
 	}
 
-	/** Provisions a confidential OIDC client for this blog on the sso tenant. */
+	/**
+	 * Provisions a confidential OIDC client for this blog on the sso tenant, with its
+	 * callback registered on the blog's subdomain so admin auth keeps working even
+	 * after a custom domain is activated.
+	 *
+	 * @param slug The blog slug, used to name the client.
+	 * @param subdomainHost The blog's subdomain host, used to build the redirect URI.
+	 * @returns The new client's credentials.
+	 * @throws If the provisioning request fails or returns no credentials.
+	 */
 	private async provisionOidcClient(
 		slug: string,
 		subdomainHost: string,
@@ -190,7 +285,13 @@ export class BlogProvisioner {
 		return { clientId, clientSecret };
 	}
 
-	/** Obtains an M2M access token for the sso tenant's Management API. */
+	/**
+	 * Obtains a machine-to-machine access token for the sso tenant's Management API
+	 * via the client-credentials grant, used to authorize OIDC client provisioning.
+	 *
+	 * @returns The bearer access token.
+	 * @throws If the token request fails or the response has no `access_token`.
+	 */
 	private async managementToken(): Promise<string> {
 		let response = await fetch(new URL("/oauth/token", env.OIDC_ISSUER), {
 			method: "POST",
