@@ -35,12 +35,6 @@ let HANDLED_EVENT_TYPES = [
 /** Union type of handled Polar webhook event types. */
 type HandledEventType = (typeof HANDLED_EVENT_TYPES)[number];
 
-/** Valid subscription status values from Polar. */
-let SUBSCRIPTION_STATUSES = ["active", "canceled", "past_due"] as const;
-
-/** Union type of valid subscription statuses. */
-type SubscriptionStatus = (typeof SUBSCRIPTION_STATUSES)[number];
-
 /**
  * Type guard to check if event type is one we handle.
  * @param type - The event type string to check.
@@ -48,15 +42,6 @@ type SubscriptionStatus = (typeof SUBSCRIPTION_STATUSES)[number];
  */
 function isHandledEventType(type: string): type is HandledEventType {
 	return HANDLED_EVENT_TYPES.includes(type as HandledEventType);
-}
-
-/**
- * Type guard to check if status is a valid subscription status.
- * @param status - The status string to check.
- * @returns True if the status is a valid subscription status.
- */
-function isValidSubscriptionStatus(status: string | undefined): status is SubscriptionStatus {
-	return status !== undefined && SUBSCRIPTION_STATUSES.includes(status as SubscriptionStatus);
 }
 
 /** Base webhook payload schema for Polar webhooks. */
@@ -162,8 +147,11 @@ export default createAction(
 
 					if (subscriptions.length > 0) {
 						let subscription = subscriptions[0]!;
-						let newStatus = isValidSubscriptionStatus(data.status)
-							? data.status
+						// Map every Polar status through the canonical mapper so transitions
+						// to unpaid/incomplete/trialing (all valid enum values) are synced,
+						// not just active/canceled/past_due. Missing status keeps the current.
+						let newStatus = data.status
+							? Subscription.mapPolarStatus(data.status)
 							: subscription.status;
 						await db.update(
 							Subscription.table,
