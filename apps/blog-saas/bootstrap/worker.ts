@@ -4,6 +4,7 @@ import { env } from "cloudflare:workers";
 import { pollHostnames } from "~/app/jobs/poll-hostnames";
 import { purgeDeletedBlogs } from "~/app/jobs/purge-deleted-blogs";
 import { reportUsage } from "~/app/jobs/report-usage";
+import { container } from "~/app/lib/container";
 
 import { createDashboardRouter } from "./app";
 import Blog from "./tenant";
@@ -113,7 +114,7 @@ export default {
 
 			let logger = new Logger(request);
 			try {
-				let response = await createDashboardRouter(logger).fetch(request);
+				let response = await container.scope(() => createDashboardRouter().fetch(request));
 				logger.response = response;
 				return response;
 			} finally {
@@ -138,10 +139,12 @@ export default {
 	},
 
 	async scheduled(controller) {
-		if (controller.cron === "0 1 * * *") await reportUsage();
-		if (controller.cron === "0 2 * * *") {
-			await purgeDeletedBlogs();
-			await pollHostnames();
-		}
+		await container.scope(async () => {
+			if (controller.cron === "0 1 * * *") await reportUsage();
+			if (controller.cron === "0 2 * * *") {
+				await purgeDeletedBlogs();
+				await pollHostnames();
+			}
+		});
 	},
 } satisfies ExportedHandler<Cloudflare.Env>;

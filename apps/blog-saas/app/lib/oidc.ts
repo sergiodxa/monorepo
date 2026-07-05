@@ -119,14 +119,18 @@ export function verifyIdToken(
 		name?: string;
 	};
 
-	if (claims.iss && claims.iss.replace(/\/+$/, "") !== expected.issuer.replace(/\/+$/, "")) {
+	// Require iss/aud/exp/sub — a token missing any of these must be rejected, not
+	// silently accepted (per OIDC §3.1.3.7, these are mandatory ID-token claims).
+	if (!claims.iss || claims.iss.replace(/\/+$/, "") !== expected.issuer.replace(/\/+$/, "")) {
 		throw new Error("Issuer mismatch");
 	}
 	let audiences = Array.isArray(claims.aud) ? claims.aud : claims.aud ? [claims.aud] : [];
-	if (audiences.length > 0 && !audiences.includes(expected.clientId))
+	if (audiences.length === 0 || !audiences.includes(expected.clientId)) {
 		throw new Error("Audience mismatch");
-	if (typeof claims.exp === "number" && claims.exp * 1000 <= Date.now())
-		throw new Error("Token expired");
+	}
+	if (typeof claims.exp !== "number" || claims.exp * 1000 <= Date.now()) {
+		throw new Error("Token expired or missing expiration");
+	}
 	if (!claims.sub) throw new Error("Missing subject");
 
 	return { subject: claims.sub, email: claims.email ?? "", displayName: claims.name ?? null };

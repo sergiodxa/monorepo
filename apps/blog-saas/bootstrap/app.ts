@@ -3,6 +3,7 @@ import type { Middleware } from "remix/fetch-router";
 import { notFound } from "@pkg/http/response/html";
 import { env } from "cloudflare:workers";
 import { asyncContext } from "remix/async-context-middleware";
+import { cop } from "remix/cop-middleware";
 import { createRouter } from "remix/fetch-router";
 import { formData } from "remix/form-data-middleware";
 import { methodOverride } from "remix/method-override-middleware";
@@ -28,6 +29,10 @@ export function createDashboardRouter() {
 		asyncContext(),
 		renderMiddleware as Middleware,
 		createSessionMiddleware(env.COOKIE_SESSION_SECRET, true),
+		// Tokenless cross-origin protection: rejects unsafe cross-origin/same-site
+		// requests (tenant subdomains are same-site). The Polar webhook is server-to-
+		// server and authenticated by its signature, so it is exempted.
+		cop({ insecureBypassPatterns: ["/api/webhooks/"] }),
 		formData() as Middleware,
 		methodOverride(),
 	];

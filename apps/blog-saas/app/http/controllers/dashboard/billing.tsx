@@ -1,8 +1,10 @@
 import { redirect } from "@pkg/http/response";
+import { inject } from "@pkg/service-container";
+import { getContext } from "remix/async-context-middleware";
+import { Database } from "remix/data-table";
 import { createController } from "remix/fetch-router";
 
 import { getAccountId } from "~/app/http/middleware/session";
-import { platformDb } from "~/app/lib/db";
 import Account from "~/app/models/account";
 import Subscription from "~/app/models/subscription";
 import { PolarService } from "~/app/services/polar";
@@ -13,11 +15,11 @@ import routes from "~/routes/web";
 /** `/dashboard/billing` — subscription status + Polar checkout/portal. */
 export default createController(routes.dashboard.billing, {
 	actions: {
-		async index(ctx) {
+		index: inject([Database] as const, async (db) => {
+			let ctx = getContext();
 			let accountId = getAccountId();
 			if (!accountId) return redirect("/auth/login", { status: redirect.Status.SeeOther });
 
-			let db = platformDb();
 			let [account, subscription] = await Promise.all([
 				Account.findById(db, accountId),
 				Subscription.findByAccount(db, accountId),
@@ -49,15 +51,14 @@ export default createController(routes.dashboard.billing, {
 					</form>
 				</Page>,
 			);
-		},
+		}),
 
-		async action(ctx) {
+		action: inject([Database, PolarService] as const, async (db, polar) => {
+			let ctx = getContext();
 			let accountId = getAccountId();
 			if (!accountId) return redirect("/auth/login", { status: redirect.Status.SeeOther });
 
-			let db = platformDb();
 			let account = await Account.findById(db, accountId);
-			let polar = new PolarService();
 			let origin = new URL(ctx.request.url).origin;
 
 			if (account?.polar_customer_id) {
@@ -68,6 +69,6 @@ export default createController(routes.dashboard.billing, {
 				if (checkout) return redirect(checkout, { status: redirect.Status.SeeOther });
 			}
 			return redirect("/dashboard/billing", { status: redirect.Status.SeeOther });
-		},
+		}),
 	},
 });

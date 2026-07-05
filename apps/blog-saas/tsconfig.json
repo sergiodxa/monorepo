@@ -16,6 +16,10 @@
 		"types": ["@total-typescript/ts-reset", "@cloudflare/workers-types", "@types/bun"],
 		"ignoreDeprecations": "6.0",
 		"baseUrl": ".",
+		// `@pkg/blog-engine` is consumed as source and pulls in `remix/auth-middleware`
+		// (beta), whose `dist` is TypeScript source importing siblings with `.ts`
+		// extensions; allow it (safe under `noEmit`).
+		"allowImportingTsExtensions": true,
 		"rootDirs": ["."],
 		"paths": {
 			"~/app/*": ["app/*"],

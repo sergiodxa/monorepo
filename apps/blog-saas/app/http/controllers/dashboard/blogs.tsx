@@ -1,13 +1,15 @@
 import { redirect } from "@pkg/http/response";
 import { badRequest, notFound } from "@pkg/http/response/html";
+import { inject } from "@pkg/service-container";
 import { env } from "cloudflare:workers";
+import { getContext } from "remix/async-context-middleware";
+import { Database } from "remix/data-table";
 import { createAction, createController } from "remix/fetch-router";
 
 import type { Region } from "~/app/models/blog";
 import type Blog from "~/bootstrap/tenant";
 
 import { getAccountId } from "~/app/http/middleware/session";
-import { platformDb } from "~/app/lib/db";
 import BlogModel from "~/app/models/blog";
 import Hostname from "~/app/models/hostname";
 import UsageDaily from "~/app/models/usage";
@@ -19,20 +21,29 @@ import routes from "~/routes/web";
 
 const REGIONS: Region[] = ["wnam", "enam", "sam", "weur", "eeur", "apac", "oc", "afr", "me"];
 
-/** Loads a blog owned by the current account, or returns a redirect/404 Response. */
-async function ownedBlog(blogId: string) {
+/**
+ * Loads a blog owned by the current account. Returns a `Response` (login redirect or
+ * 404) that the caller should return as-is, otherwise the account id and blog.
+ */
+async function ownedBlog(
+	db: Database,
+	blogId: string,
+): Promise<
+	| Response
+	| { accountId: string; blog: NonNullable<Awaited<ReturnType<typeof BlogModel.findById>>> }
+> {
 	let accountId = getAccountId();
-	if (!accountId)
-		return { redirect: redirect("/auth/login", { status: redirect.Status.SeeOther }) };
-	let blog = await BlogModel.findById(platformDb(), blogId);
-	if (!blog || blog.account_id !== accountId) return { notFound: notFound("Not found") };
+	if (!accountId) return redirect("/auth/login", { status: redirect.Status.SeeOther });
+	let blog = await BlogModel.findById(db, blogId);
+	if (!blog || blog.account_id !== accountId) return notFound("Not found");
 	return { accountId, blog };
 }
 
 /** `/dashboard/blogs` — create/show/edit/delete an account's blogs. */
 export default createController(routes.dashboard.blogs, {
 	actions: {
-		async new(ctx) {
+		new: inject([] as const, async () => {
+			let ctx = getContext();
 			if (!getAccountId()) return redirect("/auth/login", { status: redirect.Status.SeeOther });
 			return ctx.render(
 				<Page title="Create a blog">
@@ -48,7 +59,7 @@ export default createController(routes.dashboard.blogs, {
 						<label mix={[s.label]} htmlFor="region">
 							Region
 						</label>
-						<select mix={[s.control]} id="region" name="region">
+						<select mix={[s.selectControl]} id="region" name="region">
 							{REGIONS.map((region) => (
 								<option value={region} key={region}>
 									{region}
@@ -63,34 +74,40 @@ export default createController(routes.dashboard.blogs, {
 					</form>
 				</Page>,
 			);
-		},
+		}),
 
-		async create(ctx) {
+		create: inject([BlogProvisioner] as const, async (provisioner) => {
+			let ctx = getContext();
 			let accountId = getAccountId();
 			if (!accountId) return redirect("/auth/login", { status: redirect.Status.SeeOther });
 
 			let name = String(ctx.formData.get("name") ?? "").trim();
-			let region = String(ctx.formData.get("region") ?? "wnam") as Region;
 			if (!name) return badRequest("Blog name is required");
 
+			// Validate the region against the known list rather than casting arbitrary
+			// form input to a DurableObjectLocationHint.
+			let regionInput = String(ctx.formData.get("region") ?? "wnam");
+			if (!REGIONS.includes(regionInput as Region)) return badRequest("Invalid region");
+			let region: Region = regionInput as Region;
+
 			try {
-				await new BlogProvisioner(platformDb()).create({ accountId, name, region });
+				await provisioner.create({ accountId, name, region });
 			} catch {
 				// The blog row remains in `provisioning`; the owner can retry from its page.
 			}
 			return redirect("/dashboard", { status: redirect.Status.SeeOther });
-		},
+		}),
 
-		async show(ctx) {
-			let result = await ownedBlog(ctx.params.blogId);
-			if ("redirect" in result) return result.redirect;
-			if ("notFound" in result) return result.notFound;
+		show: inject([Database] as const, async (db) => {
+			let ctx = getContext();
+			let result = await ownedBlog(db, ctx.params.id!);
+			if (result instanceof Response) return result;
 			let { blog } = result;
 
-			let db = platformDb();
-			let hostname = await Hostname.findByBlog(db, blog.id);
 			let subdomain = `${blog.slug}.${env.PLATFORM_DOMAIN}`;
-			let adminHost = blog.custom_hostname_active && hostname ? hostname.hostname : subdomain;
+			// Admin auth (the OIDC callback) is registered on the subdomain, so the CMS
+			// link always targets the subdomain — even after a custom domain is active.
+			let adminHost = subdomain;
 
 			let stats = "—";
 			try {
@@ -138,12 +155,12 @@ export default createController(routes.dashboard.blogs, {
 					)}
 				</Page>,
 			);
-		},
+		}),
 
-		async edit(ctx) {
-			let result = await ownedBlog(ctx.params.blogId);
-			if ("redirect" in result) return result.redirect;
-			if ("notFound" in result) return result.notFound;
+		edit: inject([Database] as const, async (db) => {
+			let ctx = getContext();
+			let result = await ownedBlog(db, ctx.params.id!);
+			if (result instanceof Response) return result;
 			let { blog } = result;
 			return ctx.render(
 				<Page title="Rename blog">
@@ -162,17 +179,17 @@ export default createController(routes.dashboard.blogs, {
 					</form>
 				</Page>,
 			);
-		},
+		}),
 
-		async update(ctx) {
-			let result = await ownedBlog(ctx.params.blogId);
-			if ("redirect" in result) return result.redirect;
-			if ("notFound" in result) return result.notFound;
+		update: inject([Database] as const, async (db) => {
+			let ctx = getContext();
+			let result = await ownedBlog(db, ctx.params.id!);
+			if (result instanceof Response) return result;
 			let { blog } = result;
 
 			let name = String(ctx.formData.get("name") ?? "").trim();
 			if (name) {
-				await platformDb().update(
+				await db.update(
 					BlogModel.table,
 					{ id: blog.id },
 					{ name, updated_at: new Date().toISOString() },
@@ -181,27 +198,27 @@ export default createController(routes.dashboard.blogs, {
 				await stub.updateMeta({ title: name }).catch(() => {});
 			}
 			return redirect(`/dashboard/blogs/${blog.id}`, { status: redirect.Status.SeeOther });
-		},
+		}),
 
-		async destroy(ctx) {
-			let result = await ownedBlog(ctx.params.blogId);
-			if ("redirect" in result) return result.redirect;
-			if ("notFound" in result) return result.notFound;
-			await new BlogProvisioner(platformDb()).softDelete(result.blog.id);
+		destroy: inject([Database, BlogProvisioner] as const, async (db, provisioner) => {
+			let ctx = getContext();
+			let result = await ownedBlog(db, ctx.params.id!);
+			if (result instanceof Response) return result;
+			await provisioner.softDelete(result.blog.id);
 			return redirect("/dashboard", { status: redirect.Status.SeeOther });
-		},
+		}),
 	},
 });
 
 /** `/dashboard/blogs/:blogId/domain` — custom domain form + registration. */
 export const domain = createController(routes.dashboard.blogDomain, {
 	actions: {
-		async index(ctx) {
-			let result = await ownedBlog(ctx.params.blogId);
-			if ("redirect" in result) return result.redirect;
-			if ("notFound" in result) return result.notFound;
+		index: inject([Database] as const, async (db) => {
+			let ctx = getContext();
+			let result = await ownedBlog(db, ctx.params.blogId!);
+			if (result instanceof Response) return result;
 			let { blog } = result;
-			let hostname = await Hostname.findByBlog(platformDb(), blog.id);
+			let hostname = await Hostname.findByBlog(db, blog.id);
 
 			return ctx.render(
 				<Page title="Custom domain">
@@ -238,12 +255,12 @@ export const domain = createController(routes.dashboard.blogDomain, {
 					</form>
 				</Page>,
 			);
-		},
+		}),
 
-		async action(ctx) {
-			let result = await ownedBlog(ctx.params.blogId);
-			if ("redirect" in result) return result.redirect;
-			if ("notFound" in result) return result.notFound;
+		action: inject([Database, HostnameService] as const, async (db, service) => {
+			let ctx = getContext();
+			let result = await ownedBlog(db, ctx.params.blogId!);
+			if (result instanceof Response) return result;
 			let { blog } = result;
 
 			let hostname = String(ctx.formData.get("hostname") ?? "")
@@ -252,9 +269,23 @@ export const domain = createController(routes.dashboard.blogDomain, {
 			if (!hostname || hostname.endsWith(`.${env.PLATFORM_DOMAIN}`))
 				return badRequest("Invalid domain");
 
+			// Pre-check the local unique constraints (one hostname per blog, globally
+			// unique hostname) before calling Cloudflare, so a duplicate cannot leave an
+			// orphaned custom hostname behind.
+			if (await Hostname.findByBlog(db, blog.id))
+				return badRequest("This blog already has a custom domain.");
+			if (await Hostname.findByHostname(db, hostname))
+				return badRequest("That domain is already registered.");
+
+			let created;
 			try {
-				let created = await new HostnameService().create(hostname, blog.id, blog.region);
-				await Hostname.create(platformDb(), {
+				created = await service.create(hostname, blog.id, blog.region);
+			} catch {
+				return badRequest("Could not register the domain. Check your Cloudflare configuration.");
+			}
+
+			try {
+				await Hostname.create(db, {
 					id: created.id,
 					blogId: blog.id,
 					hostname,
@@ -262,58 +293,66 @@ export const domain = createController(routes.dashboard.blogDomain, {
 					validationTxtValue: created.validationTxtValue,
 				});
 			} catch {
-				return badRequest("Could not register the domain. Check your Cloudflare configuration.");
+				// Roll back the Cloudflare hostname so we do not leak an orphan resource.
+				await service.destroy(created.id).catch(() => {});
+				return badRequest("Could not save the domain. Please try again.");
 			}
 			return redirect(`/dashboard/blogs/${blog.id}/domain`, { status: redirect.Status.SeeOther });
-		},
+		}),
 	},
 });
 
 /** GET /dashboard/blogs/:blogId/usage — recent page-view rollups. */
-export const usage = createAction(routes.dashboard.blogUsage, async (ctx) => {
-	let result = await ownedBlog(ctx.params.blogId);
-	if ("redirect" in result) return result.redirect;
-	if ("notFound" in result) return result.notFound;
-	let { blog } = result;
+export const usage = createAction(
+	routes.dashboard.blogUsage,
+	inject([Database] as const, async (db) => {
+		let ctx = getContext();
+		let result = await ownedBlog(db, ctx.params.blogId!);
+		if (result instanceof Response) return result;
+		let { blog } = result;
 
-	let rows = await platformDb().findMany(UsageDaily.table, { where: { blog_id: blog.id } });
-	let sorted = rows.sort((a, b) => b.date.localeCompare(a.date)).slice(0, 30);
+		let rows = await db.findMany(UsageDaily.table, { where: { blog_id: blog.id } });
+		let sorted = rows.sort((a, b) => b.date.localeCompare(a.date)).slice(0, 30);
 
-	return ctx.render(
-		<Page title="Usage">
-			<p>
-				<a href={`/dashboard/blogs/${blog.id}`}>← {blog.name}</a>
-			</p>
-			<h1>Usage</h1>
-			{sorted.length ? (
-				<table mix={[s.table]}>
-					<thead>
-						<tr>
-							<th mix={[s.cell]}>Date</th>
-							<th mix={[s.cell]}>Page views</th>
-						</tr>
-					</thead>
-					<tbody>
-						{sorted.map((row) => (
-							<tr key={row.date}>
-								<td mix={[s.cell]}>{row.date}</td>
-								<td mix={[s.cell]}>{row.page_views}</td>
+		return ctx.render(
+			<Page title="Usage">
+				<p>
+					<a href={`/dashboard/blogs/${blog.id}`}>← {blog.name}</a>
+				</p>
+				<h1>Usage</h1>
+				{sorted.length ? (
+					<table mix={[s.table]}>
+						<thead>
+							<tr>
+								<th mix={[s.cell]}>Date</th>
+								<th mix={[s.cell]}>Page views</th>
 							</tr>
-						))}
-					</tbody>
-				</table>
-			) : (
-				<p mix={[s.muted]}>No usage recorded yet.</p>
-			)}
-		</Page>,
-	);
-});
+						</thead>
+						<tbody>
+							{sorted.map((row) => (
+								<tr key={row.date}>
+									<td mix={[s.cell]}>{row.date}</td>
+									<td mix={[s.cell]}>{row.page_views}</td>
+								</tr>
+							))}
+						</tbody>
+					</table>
+				) : (
+					<p mix={[s.muted]}>No usage recorded yet.</p>
+				)}
+			</Page>,
+		);
+	}),
+);
 
 /** POST /dashboard/blogs/:blogId/restore — restores a soft-deleted blog. */
-export const restore = createAction(routes.dashboard.blogRestore, async (ctx) => {
-	let result = await ownedBlog(ctx.params.blogId);
-	if ("redirect" in result) return result.redirect;
-	if ("notFound" in result) return result.notFound;
-	await new BlogProvisioner(platformDb()).restore(result.blog.id);
-	return redirect(`/dashboard/blogs/${result.blog.id}`, { status: redirect.Status.SeeOther });
-});
+export const restore = createAction(
+	routes.dashboard.blogRestore,
+	inject([Database, BlogProvisioner] as const, async (db, provisioner) => {
+		let ctx = getContext();
+		let result = await ownedBlog(db, ctx.params.blogId!);
+		if (result instanceof Response) return result;
+		await provisioner.restore(result.blog.id);
+		return redirect(`/dashboard/blogs/${result.blog.id}`, { status: redirect.Status.SeeOther });
+	}),
+);

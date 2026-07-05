@@ -1,4 +1,6 @@
-import { platformDb } from "~/app/lib/db";
+import { getServiceContainer } from "@pkg/service-container";
+import { Database } from "remix/data-table";
+
 import Blog from "~/app/models/blog";
 import { BlogProvisioner } from "~/app/services/blog-provisioner";
 
@@ -10,9 +12,9 @@ const RETENTION_DAYS = 30;
  * {@link RETENTION_DAYS} ago — wiping the DO storage and the D1 row.
  */
 export async function purgeDeletedBlogs(): Promise<void> {
-	let db = platformDb();
+	let db = getServiceContainer().get(Database);
 	let cutoff = new Date(Date.now() - RETENTION_DAYS * 24 * 60 * 60 * 1000).toISOString();
-	let provisioner = new BlogProvisioner(db);
+	let provisioner = getServiceContainer().get(BlogProvisioner);
 
 	for (let blog of await Blog.findDeletedBefore(db, cutoff)) {
 		await provisioner.purge(blog.id);

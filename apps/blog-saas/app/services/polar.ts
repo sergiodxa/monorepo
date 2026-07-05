@@ -1,3 +1,4 @@
+import { validateEvent, WebhookVerificationError } from "@polar-sh/sdk/webhooks.js";
 import { env } from "cloudflare:workers";
 
 /**
@@ -66,10 +67,29 @@ export class PolarService {
 	}
 
 	/**
-	 * Verifies a webhook signature. TODO: use the Polar SDK's `validateEvent` with
-	 * `POLAR_WEBHOOK_SECRET` for HMAC verification before trusting the payload.
+	 * Verifies a Polar webhook against `POLAR_WEBHOOK_SECRET` using the Standard
+	 * Webhooks scheme (`webhook-id`/`webhook-timestamp`/`webhook-signature` headers).
+	 * Fails closed: an unset secret or an invalid signature returns `false`.
+	 * @param request - The incoming webhook request (for its headers).
+	 * @param body - The raw request body used to compute the signature.
 	 */
-	verifyWebhook(_request: Request, _body: string): boolean {
-		return true;
+	verifyWebhook(request: Request, body: string): boolean {
+		let secret = env.POLAR_WEBHOOK_SECRET;
+		if (!secret) return false;
+
+		let headers: Record<string, string> = {};
+		request.headers.forEach((value, key) => {
+			headers[key] = value;
+		});
+
+		try {
+			validateEvent(body, headers, secret);
+			return true;
+		} catch (error) {
+			if (error instanceof WebhookVerificationError) return false;
+			// The signature verified but the SDK could not type the event (e.g. an event
+			// type it does not model); the security boundary passed, so accept it.
+			return true;
+		}
 	}
 }

@@ -1,9 +1,11 @@
 import { redirect } from "@pkg/http/response";
+import { inject } from "@pkg/service-container";
 import { env } from "cloudflare:workers";
+import { getContext } from "remix/async-context-middleware";
+import { Database } from "remix/data-table";
 import { createAction, createController } from "remix/fetch-router";
 
 import { clearSession, getSessionData, updateSessionData } from "~/app/http/middleware/session";
-import { platformDb } from "~/app/lib/db";
 import {
 	buildAuthorizationUrl,
 	createPkce,
@@ -50,39 +52,56 @@ export const login = createController(routes.auth.login, {
 });
 
 /** GET /auth/callback — completes login and creates the dashboard session. */
-export const callback = createAction(routes.auth.callback, async (ctx) => {
-	let url = new URL(ctx.request.url);
-	let transaction = getSessionData().auth;
-	if (!transaction) return redirect("/auth/login", { status: redirect.Status.SeeOther });
+export const callback = createAction(
+	routes.auth.callback,
+	inject([Database] as const, async (db) => {
+		let ctx = getContext();
+		let url = new URL(ctx.request.url);
+		let transaction = getSessionData().auth;
+		if (!transaction) return redirect("/auth/login", { status: redirect.Status.SeeOther });
 
-	let state = url.searchParams.get("state");
-	let code = url.searchParams.get("code");
-	if (!state || !code || state !== transaction.state) {
-		return redirect("/auth/login", { status: redirect.Status.SeeOther });
-	}
+		let state = url.searchParams.get("state");
+		let code = url.searchParams.get("code");
+		if (!state || !code || state !== transaction.state) {
+			return redirect("/auth/login", { status: redirect.Status.SeeOther });
+		}
 
-	let metadata = await discover(env.OIDC_ISSUER);
-	let { idToken } = await exchangeCode(metadata, {
-		clientId: env.OIDC_CLIENT_ID,
-		clientSecret: env.OIDC_CLIENT_SECRET,
-		code,
-		codeVerifier: transaction.codeVerifier,
-		redirectUri: new URL("/auth/callback", ctx.request.url).toString(),
-	});
-	let profile = verifyIdToken(idToken, { issuer: env.OIDC_ISSUER, clientId: env.OIDC_CLIENT_ID });
+		let metadata = await discover(env.OIDC_ISSUER);
+		let { idToken } = await exchangeCode(metadata, {
+			clientId: env.OIDC_CLIENT_ID,
+			clientSecret: env.OIDC_CLIENT_SECRET,
+			code,
+			codeVerifier: transaction.codeVerifier,
+			redirectUri: new URL("/auth/callback", ctx.request.url).toString(),
+		});
+		let profile = verifyIdToken(idToken, { issuer: env.OIDC_ISSUER, clientId: env.OIDC_CLIENT_ID });
 
-	let account = await Account.findOrCreateFromProfile(platformDb(), {
-		subject: profile.subject,
-		email: profile.email,
-		displayName: profile.displayName,
-	});
-	updateSessionData({ accountId: account.id, idToken, auth: undefined });
-	return redirect("/dashboard", { status: redirect.Status.SeeOther });
-});
+		let account = await Account.findOrCreateFromProfile(db, {
+			subject: profile.subject,
+			email: profile.email,
+			displayName: profile.displayName,
+		});
+		updateSessionData({ accountId: account.id, idToken, auth: undefined });
+		return redirect("/dashboard", { status: redirect.Status.SeeOther });
+	}),
+);
 
 /** `/auth/logout` — clears the session and redirects through the IdP logout. */
 export const logout_ = createController(routes.auth.logout, {
 	actions: {
+		async index(ctx) {
+			return ctx.render(
+				<Page title="Sign out">
+					<h1>Sign out</h1>
+					<form method="post" action="/auth/logout">
+						<button mix={[s.button]} type="submit">
+							Sign out
+						</button>
+					</form>
+				</Page>,
+			);
+		},
+
 		async action(ctx) {
 			let idToken = getSessionData().idToken;
 			clearSession();

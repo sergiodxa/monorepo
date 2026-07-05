@@ -1,3 +1,5 @@
+import type { CSSMixinDescriptor, ElementProps, MixinDescriptor } from "remix/ui";
+
 import { css } from "remix/ui";
 
 /** Reusable `remix/ui` `css()` mixins for the dashboard UI. */
@@ -37,6 +39,19 @@ export const button = css({
 });
 export const buttonDanger = css({ background: "#dc2626" });
 export const muted = css({ color: "#6b7280" });
+
+/**
+ * `<select>` variant of {@link control}. `css()` binds its mixin to the global
+ * `Element`, but `@cloudflare/workers-types` shadows `Element` with HTMLRewriter's
+ * (whose `remove()` returns `Element`), so a plain `Element` mixin is not assignable
+ * to a select's `mix` prop. This re-types the same mixin for `HTMLSelectElement`; the
+ * runtime value is identical.
+ */
+export const selectControl = control as unknown as MixinDescriptor<
+	HTMLSelectElement,
+	CSSMixinDescriptor["args"],
+	ElementProps
+>;
 
 /** Universal reset injected once. */
 export const RESET_CSS = "*,*::before,*::after{box-sizing:border-box}";

@@ -133,9 +133,13 @@ export default class Blog extends DurableObject<Cloudflare.Env> {
 		// Deleted blogs answer 410 during the retention window (before purge).
 		if (meta.status === "deleted") return new Response("Gone", { status: 410 });
 
-		// Subdomain stops working once the custom domain is active (no redirect).
+		// Once the custom domain is active the public site moves there and the subdomain
+		// stops serving public pages (no redirect). The admin surface (`/cms`, `/auth`)
+		// stays on the subdomain because the per-blog OIDC client's callback is
+		// registered there; otherwise activating a domain would lock the owner out.
 		if (meta.custom_hostname_active === 1 && url.hostname === meta.subdomain_host) {
-			return new Response("Not found", { status: 404 });
+			let isAdminPath = url.pathname.startsWith("/cms") || url.pathname.startsWith("/auth");
+			if (!isAdminPath) return new Response("Not found", { status: 404 });
 		}
 
 		// Suspension: public traffic blocked; /cms stays reachable to fix billing.

@@ -1,4 +1,6 @@
-import { platformDb } from "~/app/lib/db";
+import { getServiceContainer } from "@pkg/service-container";
+import { Database } from "remix/data-table";
+
 import Account from "~/app/models/account";
 import Blog from "~/app/models/blog";
 import UsageDaily from "~/app/models/usage";
@@ -16,14 +18,14 @@ function yesterday(): string {
  * guard gives at-most-once ingestion per blog-day; failures retry next run.
  */
 export async function reportUsage(): Promise<void> {
-	let db = platformDb();
+	let db = getServiceContainer().get(Database);
 	let date = yesterday();
 
 	for (let row of await queryDailyPageViews(date)) {
 		await UsageDaily.record(db, row.blogId, date, row.views);
 	}
 
-	let polar = new PolarService();
+	let polar = getServiceContainer().get(PolarService);
 	for (let usage of await UsageDaily.findUnreported(db)) {
 		let blog = await Blog.findById(db, usage.blog_id);
 		if (!blog) continue;

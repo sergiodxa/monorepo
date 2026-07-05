@@ -19,6 +19,7 @@
 		"@pkg/http": "workspace:*",
 		"@pkg/logger": "workspace:*",
 		"@pkg/result": "workspace:*",
+		"@pkg/service-container": "workspace:*",
 		"@pkg/types": "workspace:*",
 		"@pkg/validate": "workspace:*",
 		"@polar-sh/sdk": "^0.48.1",

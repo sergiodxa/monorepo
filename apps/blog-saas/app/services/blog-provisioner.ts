@@ -8,6 +8,7 @@ import type { PlatformMeta } from "~/bootstrap/tenant";
 
 import Account from "~/app/models/account";
 import BlogModel from "~/app/models/blog";
+import Subscription from "~/app/models/subscription";
 
 /** Slugs that cannot be used for a blog (reserved subdomains). */
 const RESERVED_SLUGS = new Set([
@@ -59,13 +60,21 @@ export class BlogProvisioner {
 		let account = await this.accountEmail(blog.account_id);
 		let client = await this.provisionOidcClient(blog.slug, subdomainHost);
 
+		// A blog is only served once the account has an entitling subscription; without
+		// one it is provisioned suspended and the Polar webhook flips it to active when
+		// the subscription becomes active/trialing.
+		let entitled = Subscription.isActive(
+			await Subscription.findByAccount(this.#db, blog.account_id),
+		);
+		let status: "active" | "suspended" = entitled ? "active" : "suspended";
+
 		let meta: PlatformMeta = {
 			blog_id: blog.id,
 			title: blog.name,
 			subdomain_host: subdomainHost,
 			canonical_host: subdomainHost,
 			custom_hostname_active: 0,
-			status: "active",
+			status,
 			oidc_issuer: env.OIDC_ISSUER,
 			oidc_client_id: client.clientId,
 			oidc_client_secret: client.clientSecret,
@@ -78,7 +87,7 @@ export class BlogProvisioner {
 			`slug:${blog.slug}`,
 			JSON.stringify({ blogId: blog.id, region: blog.region }),
 		);
-		await BlogModel.setStatus(this.#db, blog.id, "active");
+		await BlogModel.setStatus(this.#db, blog.id, status);
 	}
 
 	/** Soft-deletes a blog: 410 from the DO, KV removed; hard purge happens later. */

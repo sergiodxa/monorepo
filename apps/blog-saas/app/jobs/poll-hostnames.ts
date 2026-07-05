@@ -1,4 +1,6 @@
-import { platformDb } from "~/app/lib/db";
+import { getServiceContainer } from "@pkg/service-container";
+import { Database } from "remix/data-table";
+
 import Hostname from "~/app/models/hostname";
 import { BlogProvisioner } from "~/app/services/blog-provisioner";
 import { HostnameService } from "~/app/services/hostname";
@@ -9,9 +11,9 @@ import { HostnameService } from "~/app/services/hostname";
  * custom domain (subdomain stops working).
  */
 export async function pollHostnames(): Promise<void> {
-	let db = platformDb();
-	let service = new HostnameService();
-	let provisioner = new BlogProvisioner(db);
+	let db = getServiceContainer().get(Database);
+	let service = getServiceContainer().get(HostnameService);
+	let provisioner = getServiceContainer().get(BlogProvisioner);
 
 	for (let hostname of await Hostname.findPending(db)) {
 		try {
