@@ -1,0 +1,51 @@
+import type { Database } from "remix/data-table";
+import type { Middleware } from "remix/fetch-router";
+import type { SessionStorage } from "remix/session";
+
+import { createCookie } from "remix/cookie";
+import { session } from "remix/session-middleware";
+
+import { SqlSessionStorage } from "../../database/session-storage";
+
+/** Session lifetime in seconds (one year). */
+const SESSION_TTL_SECONDS = 60 * 60 * 24 * 365;
+
+/** Values persisted in a blog admin session. */
+export interface SessionValues extends Record<string, unknown> {
+	userId?: string;
+	idToken?: string;
+	/** OIDC PKCE transaction, present only between login start and callback. */
+	__auth?: {
+		provider: string;
+		state: string;
+		codeVerifier: string;
+		returnTo?: string;
+	};
+}
+
+/** Options for {@link createSessionMiddleware}. */
+export interface SessionMiddlewareOptions {
+	db: Database;
+	secret: string;
+	cookieName?: string;
+	isProd?: boolean;
+	/** Optional storage override; defaults to {@link SqlSessionStorage} over the DB. */
+	storage?: SessionStorage;
+}
+
+/** Builds the cookie-backed session middleware for the engine's admin panel. */
+export function createSessionMiddleware(options: SessionMiddlewareOptions): Middleware {
+	let cookie = createCookie(options.cookieName ?? "blog:session", {
+		path: "/",
+		maxAge: SESSION_TTL_SECONDS,
+		httpOnly: true,
+		sameSite: "Lax",
+		secure: options.isProd ?? false,
+		secrets: [options.secret],
+	});
+
+	let storage =
+		options.storage ?? new SqlSessionStorage(options.db, { ttlSeconds: SESSION_TTL_SECONDS });
+
+	return session(cookie, storage) as Middleware;
+}

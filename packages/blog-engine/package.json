@@ -1,0 +1,29 @@
+{
+	"name": "@pkg/blog-engine",
+	"version": "0.0.0",
+	"private": true,
+	"type": "module",
+	"exports": {
+		".": "./src/index.ts",
+		"./migrations": "./src/database/migrations.ts",
+		"./schema": "./src/database/schema.ts"
+	},
+	"scripts": {
+		"typecheck": "tsc --noEmit"
+	},
+	"dependencies": {
+		"@markdoc/markdoc": "^0.5.7",
+		"@pkg/http": "workspace:*",
+		"@pkg/logger": "workspace:*",
+		"@pkg/markdown-server": "workspace:*",
+		"@pkg/result": "workspace:*",
+		"@pkg/rss": "workspace:*",
+		"@pkg/sitemap": "workspace:*",
+		"@pkg/validate": "workspace:*",
+		"remix": "3.0.0-beta.4"
+	},
+	"devDependencies": {
+		"@cloudflare/workers-types": "^4.20260621.1",
+		"@types/bun": "^1.3.14"
+	}
+}

@@ -208,6 +208,30 @@
         "wrangler": "^4.103.0",
       },
     },
+    "apps/blog-saas": {
+      "name": "@apps/blog-saas",
+      "dependencies": {
+        "@pkg/blog-engine": "workspace:*",
+        "@pkg/data-table-d1": "workspace:*",
+        "@pkg/data-table-sqlstorage": "workspace:*",
+        "@pkg/http": "workspace:*",
+        "@pkg/logger": "workspace:*",
+        "@pkg/result": "workspace:*",
+        "@pkg/types": "workspace:*",
+        "@pkg/validate": "workspace:*",
+        "@polar-sh/sdk": "^0.48.1",
+        "remix": "3.0.0-beta.4",
+      },
+      "devDependencies": {
+        "@cloudflare/vite-plugin": "^1.42.1",
+        "@cloudflare/workers-types": "^4.20260621.1",
+        "@types/bun": "^1.3.14",
+        "typescript": "^6.0.2",
+        "vite": "^8.0.16",
+        "vite-tsconfig-paths": "^6.1.1",
+        "wrangler": "^4.103.0",
+      },
+    },
     "apps/books": {
       "name": "@apps/books",
       "dependencies": {
@@ -412,6 +436,25 @@
         "@edgefirst-dev/api-client": "^0.3.0",
         "jose": "^6.0.0",
         "zod": "^4.0.0",
+      },
+    },
+    "packages/blog-engine": {
+      "name": "@pkg/blog-engine",
+      "version": "0.0.0",
+      "dependencies": {
+        "@markdoc/markdoc": "^0.5.7",
+        "@pkg/http": "workspace:*",
+        "@pkg/logger": "workspace:*",
+        "@pkg/markdown-server": "workspace:*",
+        "@pkg/result": "workspace:*",
+        "@pkg/rss": "workspace:*",
+        "@pkg/sitemap": "workspace:*",
+        "@pkg/validate": "workspace:*",
+        "remix": "3.0.0-beta.4",
+      },
+      "devDependencies": {
+        "@cloudflare/workers-types": "^4.20260621.1",
+        "@types/bun": "^1.3.14",
       },
     },
     "packages/cache": {
@@ -780,6 +823,8 @@
     "@apps/auth-saas": ["@apps/auth-saas@workspace:apps/auth-saas"],
 
     "@apps/blog": ["@apps/blog@workspace:apps/blog"],
+
+    "@apps/blog-saas": ["@apps/blog-saas@workspace:apps/blog-saas"],
 
     "@apps/books": ["@apps/books@workspace:apps/books"],
 
@@ -1358,6 +1403,8 @@
     "@pkg/arrays": ["@pkg/arrays@workspace:packages/arrays"],
 
     "@pkg/auth-sdk": ["@pkg/auth-sdk@workspace:packages/auth-sdk"],
+
+    "@pkg/blog-engine": ["@pkg/blog-engine@workspace:packages/blog-engine"],
 
     "@pkg/cache": ["@pkg/cache@workspace:packages/cache"],
 
