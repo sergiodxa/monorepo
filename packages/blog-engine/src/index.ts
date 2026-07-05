@@ -11,9 +11,9 @@ import { createEngineRouter } from "./engine";
 import { createSessionMiddleware } from "./shared/middleware/session";
 
 export type { OIDCMetadata } from "./auth/oidc";
-export type { ThemeSettings } from "./theme/theme";
-export type { FieldDefinition, FieldKind } from "./domain/post-type";
-export type { Permission } from "./domain/permissions";
+export type { ThemeSettings } from "./appearance/theme/theme";
+export type { FieldDefinition, FieldKind } from "./post-types/models/post-type";
+export type { Permission } from "./shared/permissions";
 
 /** Configuration for {@link createBlogEngine}. */
 export interface BlogEngineConfig {

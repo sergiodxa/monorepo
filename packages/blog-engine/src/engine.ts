@@ -9,28 +9,28 @@ import { methodOverride } from "remix/method-override-middleware";
 
 import type { OIDCConfig } from "./auth/oidc";
 
-import assets from "./http/controllers/assets";
-import * as auth from "./http/controllers/auth";
-import * as appearance from "./http/controllers/cms/appearance";
-import dashboard from "./http/controllers/cms/dashboard";
-import * as postTypes from "./http/controllers/cms/post-types";
-import * as posts from "./http/controllers/cms/posts";
-import * as roles from "./http/controllers/cms/roles";
-import * as settings from "./http/controllers/cms/settings";
-import * as users from "./http/controllers/cms/users";
-import feed from "./http/controllers/feed";
-import notFound from "./http/controllers/not-found";
-import post from "./http/controllers/post";
-import robots from "./http/controllers/robots";
-import * as rss from "./http/controllers/rss";
-import sitemap from "./http/controllers/sitemap";
-import typeIndex from "./http/controllers/type-index";
+import * as appearance from "./appearance/controllers/cms";
+import assets from "./assets/controllers/assets";
+import * as auth from "./auth/controllers/auth";
+import { requireAuth, requirePermission } from "./auth/middleware/require-permission";
+import dashboard from "./cms/controllers/dashboard";
+import * as postTypes from "./post-types/controllers/cms";
+import * as posts from "./posts/controllers/cms";
+import feed from "./posts/controllers/feed";
+import post from "./posts/controllers/post";
+import typeIndex from "./posts/controllers/type-index";
+import * as roles from "./roles/controllers/cms";
 import routes from "./routes";
+import * as settings from "./settings/controllers/cms";
 import databaseMiddleware from "./shared/middleware/db";
 import loggerMiddleware from "./shared/middleware/logger";
 import oidcMiddleware from "./shared/middleware/oidc";
-import { requireAuth, requirePermission } from "./shared/middleware/require-permission";
 import trailingSlash from "./shared/middleware/trailing-slash";
+import notFound from "./shared/not-found";
+import robots from "./syndication/controllers/robots";
+import * as rss from "./syndication/controllers/rss";
+import sitemap from "./syndication/controllers/sitemap";
+import * as users from "./users/controllers/cms";
 
 /** Dependencies the request pipeline is bound to. */
 export interface EngineRouterDeps {

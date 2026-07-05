@@ -1,4 +1,4 @@
-import type { AuthProfile } from "../domain/user";
+import type { AuthProfile } from "../users/models/user";
 
 /** OIDC provider endpoints (mirrors remix/auth's provider metadata). */
 export interface OIDCMetadata {
