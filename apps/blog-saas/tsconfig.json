@@ -13,7 +13,13 @@
 		"jsx": "react-jsx",
 		"jsxImportSource": "remix/ui",
 		"noEmit": true,
-		"types": ["@total-typescript/ts-reset", "@cloudflare/workers-types", "@types/bun"],
+		// `vite/client` augments `ImportMeta` with `glob`, used by `bootstrap/browser.ts`.
+		"types": [
+			"@total-typescript/ts-reset",
+			"@cloudflare/workers-types",
+			"@types/bun",
+			"vite/client"
+		],
 		"ignoreDeprecations": "6.0",
 		"baseUrl": ".",
 		// `@pkg/blog-engine` is consumed as source and pulls in `remix/auth-middleware`
