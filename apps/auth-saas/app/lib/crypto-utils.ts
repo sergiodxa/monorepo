@@ -1,6 +1,9 @@
 /**
  * Shared cryptographic utilities for HMAC signing and constant-time comparison.
  * Used by CSRF, platform sessions, and internal auth modules.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
  */
 
 /**
@@ -9,6 +12,8 @@
  * @param secret - The secret key for HMAC signing
  * @returns Base64url-encoded HMAC-SHA256 signature
  * @throws {Error} If the secret is empty or not provided
+ * @example
+ * let sig = await hmacSign(payload, env.SESSION_SECRET);
  */
 export async function hmacSign(input: string, secret: string): Promise<string> {
 	if (!secret || secret.length === 0) {
@@ -35,6 +40,8 @@ export async function hmacSign(input: string, secret: string): Promise<string> {
  * Encodes a string or byte array to base64url format (URL-safe base64 without padding).
  * @param input - The string or Uint8Array to encode
  * @returns Base64url-encoded string
+ * @example
+ * let token = base64UrlEncode(crypto.getRandomValues(new Uint8Array(32)));
  */
 export function base64UrlEncode(input: string | Uint8Array): string {
 	let str: string;
@@ -50,6 +57,8 @@ export function base64UrlEncode(input: string | Uint8Array): string {
  * Decodes a base64url-encoded string.
  * @param input - The base64url-encoded string to decode
  * @returns The decoded string
+ * @example
+ * let json = base64UrlDecode(cookieValue);
  */
 export function base64UrlDecode(input: string): string {
 	let str = input.replace(/-/g, "+").replace(/_/g, "/");
@@ -66,6 +75,8 @@ export function base64UrlDecode(input: string): string {
  * @param a - First string to compare
  * @param b - Second string to compare
  * @returns True if the strings are equal
+ * @example
+ * if (!constantTimeCompare(expectedToken, providedToken)) throw forbidden();
  */
 export function constantTimeCompare(a: string, b: string): boolean {
 	let result = a.length ^ b.length;

@@ -1,3 +1,12 @@
+/**
+ * Daily scheduled job that reports each tenant's Monthly Active Users (MAU) to Polar
+ * for usage-based billing. Queries Analytics Engine for per-tenant MAU, joins it to
+ * Polar customer IDs from D1, and pushes the counts to Polar's meters API.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { Logger } from "@pkg/logger";
 import { PolarClient } from "@pkg/polar";
 import { env } from "cloudflare:workers";
@@ -24,6 +33,12 @@ interface SubscriptionRow {
  * do not prevent other tenants from being processed.
  *
  * @param controller - Cloudflare scheduled controller with cron metadata
+ * @returns A promise that resolves when the reporting run completes.
+ * @throws Re-throws any error from the MAU query or D1 lookup (per-tenant Polar
+ * report failures are caught and logged, not thrown).
+ * @example
+ * // Wired from the worker's scheduled handler:
+ * if (controller.cron === "0 1 * * *") await reportMAU(controller);
  */
 export async function reportMAU(controller: ScheduledController): Promise<void> {
 	let logger = new Logger();

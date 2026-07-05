@@ -1,9 +1,22 @@
+/**
+ * Typed error classes for common database failure modes (missing record, unique
+ * constraint violation, foreign-key violation). Models throw these so controllers can
+ * map them to appropriate HTTP responses instead of leaking raw D1 error strings.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import type { AnyTable, PrimaryKeyInput, TableColumnName } from "remix/data-table";
 
 import { getTableName } from "remix/data-table";
 
 /**
  * Thrown when a record cannot be located for a given primary key.
+ *
+ * @example
+ * let tenant = await db.find(Tenant.table, id);
+ * if (!tenant) throw new RecordNotFoundError(Tenant.table, id);
  */
 export class RecordNotFoundError<table extends AnyTable> extends Error {
 	override name = "RecordNotFoundError";
@@ -22,6 +35,9 @@ export class RecordNotFoundError<table extends AnyTable> extends Error {
 
 /**
  * Thrown when a unique constraint would be violated by a write.
+ *
+ * @example
+ * throw new DuplicateRecordError(Tenant.table, "slug", slug);
  */
 export class DuplicateRecordError<table extends AnyTable> extends Error {
 	override name = "DuplicateRecordError";
@@ -42,6 +58,9 @@ export class DuplicateRecordError<table extends AnyTable> extends Error {
 
 /**
  * Thrown when a foreign-key constraint fails for a write.
+ *
+ * @example
+ * throw new ForeignKeyError(TenantMember.table, "tenant_id", tenantId);
  */
 export class ForeignKeyError<table extends AnyTable> extends Error {
 	override name = "ForeignKeyError";

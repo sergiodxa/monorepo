@@ -1,3 +1,12 @@
+/**
+ * `GET /onboarding` — the onboarding entry point that kicks off the platform's own
+ * OAuth 2.0 / PKCE authorization flow. The dashboard dogfoods its own OIDC provider
+ * by treating itself as the `dashboard` OAuth client.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { createAction } from "remix/fetch-router";
 
 import { base64UrlEncode } from "~/app/lib/crypto-utils";
@@ -9,6 +18,13 @@ const DASHBOARD_CLIENT_ID = "dashboard";
 /**
  * Onboarding entry point - redirects to platform tenant OAuth flow.
  * This dogfoods the authentication by using the platform tenant's OAuth endpoint.
+ *
+ * Generates a PKCE verifier/challenge and CSRF `state`, stashes them in a short-lived
+ * `__oauth_state` cookie, then redirects the browser to `/authorize`.
+ *
+ * @returns A `302` redirect to the authorization URL with the PKCE state cookie set.
+ * @example
+ * router.map(routes.onboarding.index, onboardingIndex);
  */
 export default createAction(routes.onboarding.index, async ({ request, logger }) => {
 	let log = logger.loader("/onboarding");

@@ -1,3 +1,13 @@
+/**
+ * Builds the platform dashboard's fetch-router: assembles the global middleware chain
+ * (trailing-slash, logging, async context, rendering, form data, method override) and
+ * maps every public, onboarding, dashboard, and tenant-scoped route to its controller
+ * with the appropriate auth/subscription middleware.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import type { Middleware, RequestHandler } from "remix/fetch-router";
 
 import { asyncContext } from "remix/async-context-middleware";
@@ -52,6 +62,14 @@ let globalMiddleware: Middleware[] = [
 	methodOverride(),
 ];
 
+/**
+ * The platform dashboard router, configured with the global middleware chain and a
+ * 404 default handler. Routes are registered onto it below; the worker entry calls
+ * `router.fetch(request)` inside a container scope.
+ *
+ * @example
+ * return await container.scope(() => router.fetch(request));
+ */
 export const router = createRouter({
 	middleware: globalMiddleware,
 	defaultHandler: notFound,

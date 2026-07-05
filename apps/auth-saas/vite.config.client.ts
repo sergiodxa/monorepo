@@ -1,3 +1,13 @@
+/**
+ * Vite build for the tenant OIDC client bundles. Globs the `@pkg/oidc-provider` client
+ * entries (e.g. WebAuthn flows) and builds them as an ES library into `assets/tenant/`,
+ * preserving named exports so the tenant Durable Object can hydrate each component from
+ * its `clientEntry()` URL. Kept separate from the dashboard browser bundle build.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { globSync } from "node:fs";
 import path from "node:path";
 

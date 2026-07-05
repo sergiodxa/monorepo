@@ -1,6 +1,9 @@
 /**
  * Rate limiting utilities for auth endpoints.
  * Uses Cloudflare's Rate Limiting API binding.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
  */
 
 /**
@@ -39,6 +42,9 @@ interface RateLimiters {
  * @param request - The incoming request
  * @param limiters - The rate limiter bindings
  * @returns A 429 response if rate limited, null otherwise
+ * @example
+ * let limited = await checkRateLimit(request, limiters);
+ * if (limited) return limited;
  */
 export async function checkRateLimit(
 	request: Request,

@@ -1,3 +1,13 @@
+/**
+ * Client service for the dashboard to manage a tenant's data through its Durable
+ * Object Management API. Issues signed internal tokens, performs validated JSON
+ * requests, and exposes typed CRUD methods for clients, secrets, redirect/logout URIs,
+ * users, sessions, resources, branding, passkeys, grants, connections, and signing keys.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import type { Schema } from "remix/data-schema";
 
 import { createInternalToken } from "@pkg/oidc-provider";
@@ -168,6 +178,10 @@ const MessageResponseSchema = s.object({ message: s.string() });
 /**
  * Service for communicating with tenant Durable Objects via their Management API.
  * Used by the dashboard to manage tenant data with signed internal tokens.
+ *
+ * @example
+ * let api = new TenantApiService(tenantId);
+ * let stats = await api.getStats();
  */
 export class TenantApiService {
 	/**
@@ -675,8 +689,20 @@ export class TenantApiService {
 	}
 }
 
-/** Error thrown when tenant API requests fail. */
+/**
+ * Error thrown when tenant API requests fail.
+ *
+ * @example
+ * catch (error) {
+ *   if (error instanceof TenantApiError && error.status === 404) return null;
+ *   throw error;
+ * }
+ */
 export class TenantApiError extends Error {
+	/**
+	 * @param status - HTTP status code from the API response.
+	 * @param message - Human-readable error message.
+	 */
 	constructor(
 		/** HTTP status code from the API response. */
 		public status: number,

@@ -1,3 +1,13 @@
+/**
+ * Session middleware for the platform dashboard. Reads and verifies the signed,
+ * self-contained platform session token from the cookie, attaches the authenticated
+ * subject to `context.platformSession`, and redirects to onboarding when absent or
+ * invalid. No database lookup is required because the token is cryptographically signed.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { redirect } from "@pkg/http/response";
 import { env } from "cloudflare:workers";
 
@@ -34,6 +44,11 @@ declare module "remix/fetch-router" {
  * so no database lookup is needed for validation.
  *
  * Redirects to onboarding if no valid session exists.
+ *
+ * @returns The downstream response when authenticated, or a redirect to onboarding
+ * (clearing the cookie when the token is invalid/expired).
+ * @example
+ * router.map(routes.dashboard.index, { middleware: session, handler });
  */
 export default middleware(async (context, next) => {
 	let log = context.logger.middleware("session");

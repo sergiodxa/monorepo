@@ -1,6 +1,9 @@
 /**
  * Platform session cookie utilities.
  * Uses HMAC-signed tokens to securely store session data without database lookups.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
  */
 
 import type { JSONValue } from "@pkg/types";
@@ -50,6 +53,8 @@ type SessionPayload = s.InferOutput<typeof SessionPayloadSchema>;
  * @param secret - The secret key for signing
  * @param sessionId - Optional tenant session ID (from ID token sid claim)
  * @returns A signed session token string
+ * @example
+ * let token = await createSessionToken(user.id, user.email, env.SESSION_SECRET);
  */
 export async function createSessionToken(
 	subjectId: string,
@@ -80,6 +85,9 @@ export async function createSessionToken(
  * @param token - The session token to verify
  * @param secret - The secret key used for signing
  * @returns The decoded session data, or null if invalid/expired
+ * @example
+ * let session = await verifySessionToken(token, env.SESSION_SECRET);
+ * if (!session) return redirect(routes.onboarding.index.href());
  */
 export async function verifySessionToken(
 	token: string,
@@ -131,6 +139,8 @@ export async function verifySessionToken(
  * @param token - The session token to store
  * @param isProduction - Whether to add the Secure flag
  * @returns The Set-Cookie header value
+ * @example
+ * headers.append("Set-Cookie", createSessionCookie(token, !import.meta.env.DEV));
  */
 export function createSessionCookie(token: string, isProduction: boolean): string {
 	let parts = [
@@ -151,6 +161,8 @@ export function createSessionCookie(token: string, isProduction: boolean): strin
 /**
  * Creates a Set-Cookie header value to clear the session cookie.
  * @returns The Set-Cookie header value with Max-Age=0
+ * @example
+ * headers.append("Set-Cookie", clearSessionCookie());
  */
 export function clearSessionCookie(): string {
 	return `${PLATFORM_SESSION_COOKIE}=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0`;
@@ -161,6 +173,8 @@ export function clearSessionCookie(): string {
  * @param cookies - The Cookie header string
  * @param name - The cookie name to extract
  * @returns The cookie value, or null if not found
+ * @example
+ * let token = getCookie(request.headers.get("Cookie") ?? "", PLATFORM_SESSION_COOKIE);
  */
 export function getCookie(cookies: string, name: string): string | null {
 	let match = cookies.match(new RegExp(`(?:^|; )${name}=([^;]*)`));

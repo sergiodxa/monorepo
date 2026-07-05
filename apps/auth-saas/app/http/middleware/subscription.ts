@@ -1,3 +1,13 @@
+/**
+ * Middleware that enforces the current tenant's billing subscription state, attaching
+ * a normalized `context.subscription` (active / past-due / blocked flags) and
+ * redirecting blocked tenants to the billing page. The platform tenant and internal
+ * tenants are exempt. Must run after `tenantOwner`, which resolves `context.tenant`.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { Location } from "@pkg/location";
 import { getServiceContainer } from "@pkg/service-container";
 import { Database } from "remix/data-table";
@@ -51,6 +61,11 @@ const PLATFORM_TENANT_ID = "platform";
  * - canceled/unpaid/incomplete: Blocked with redirect to billing page
  *
  * Note: The platform tenant is exempt from subscription checks.
+ *
+ * @returns The downstream response when access is allowed, a `302` redirect to billing
+ * when blocked, or a `500` response when used without tenant context.
+ * @example
+ * router.map(route, { middleware: [tenantOwner, subscription], handler });
  */
 export default middleware(async (context, next) => {
 	let log = context.logger.middleware("subscription");

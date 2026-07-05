@@ -1,3 +1,13 @@
+/**
+ * Analytics service for tracking authentication-related events and querying Monthly
+ * Active Users (MAU). Writes high-cardinality data points to Cloudflare Analytics
+ * Engine and reads them back via the Analytics Engine SQL API, with UUID/month input
+ * validation to guard against SQL injection.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { env } from "cloudflare:workers";
 
 /**
@@ -79,6 +89,10 @@ class AnalyticsValidationError extends Error {
  * - blob4: month (YYYY-MM format for MAU tracking)
  * - double1: count (always 1 for individual events)
  * - index1: tenant_id (for efficient querying)
+ *
+ * @example
+ * AnalyticsService.trackAuthentication(tenantId, subjectId);
+ * let mau = await AnalyticsService.queryMAU(tenantId, "2026-07");
  */
 export default class AnalyticsService {
 	/**

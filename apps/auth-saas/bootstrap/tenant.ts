@@ -1,3 +1,12 @@
+/**
+ * Defines the per-tenant Durable Object that hosts an isolated OIDC provider instance.
+ * Each tenant gets its own SqlStorage-backed database, signing keys, and cleanup alarm;
+ * this class wires those up and forwards HTTP requests to `@pkg/oidc-provider`.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import type { OidcProvider } from "@pkg/oidc-provider";
 
 import { createSQLStorageDatabaseAdapter } from "@pkg/data-table-sqlstorage";
@@ -16,6 +25,13 @@ import AnalyticsService from "~/app/services/analytics";
 export default class Tenant extends DurableObject<Cloudflare.Env> {
 	#provider: OidcProvider;
 
+	/**
+	 * Constructs the tenant DO, creating the OIDC provider over the DO's SqlStorage and
+	 * blocking concurrency until the one-time setup (migrate, keys, alarm) completes.
+	 *
+	 * @param ctx - The Durable Object state (storage, concurrency controls).
+	 * @param env - The Cloudflare worker environment bindings.
+	 */
 	constructor(ctx: DurableObjectState, env: Cloudflare.Env) {
 		super(ctx, env);
 
@@ -43,10 +59,22 @@ export default class Tenant extends DurableObject<Cloudflare.Env> {
 		await this.scheduleCleanupAlarm();
 	}
 
+	/**
+	 * Handles an incoming HTTP request by delegating to the tenant's OIDC provider.
+	 *
+	 * @param request - The request forwarded to this tenant DO.
+	 * @returns The OIDC provider's response.
+	 */
 	override fetch(request: Request) {
 		return this.#provider.fetch(request);
 	}
 
+	/**
+	 * Durable Object alarm handler: runs the provider's periodic cleanup and reschedules
+	 * the next daily alarm.
+	 *
+	 * @returns A promise that resolves once cleanup and rescheduling complete.
+	 */
 	override async alarm() {
 		await this.#provider.cleanup();
 		await this.scheduleCleanupAlarm();

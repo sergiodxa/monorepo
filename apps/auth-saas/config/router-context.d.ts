@@ -10,6 +10,9 @@ import type {} from "remix/fetch-router";
  * `db`/`logger`/session middleware augment `RequestContext` from their own modules.
  * (The tenant Durable Object's OIDC surface is served by `@pkg/oidc-provider`, which
  * carries its own context augmentations.)
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
  */
 declare module "remix/fetch-router" {
 	interface RequestContext {

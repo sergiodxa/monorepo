@@ -1,3 +1,12 @@
+/**
+ * Data model for tenant custom hostnames. Wraps the `hostnames` D1 table and the
+ * Cloudflare for SaaS API so tenants can attach default (`slug.platform`) and custom
+ * domains, tracking validation/SSL status and keeping the KV resolution cache in sync.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import type { Database } from "remix/data-table";
 
 import { HostnameApiError, HostnameClient } from "@pkg/hostname";
@@ -21,8 +30,17 @@ let client = new HostnameClient({
 	metadataKey: "tenant_id",
 });
 
+/**
+ * Active-record–style model for tenant hostnames, exposing static query and mutation
+ * helpers over the `hostnames` table plus Cloudflare for SaaS integration.
+ *
+ * @example
+ * let hostnames = await Hostname.listByTenant(db, tenantId);
+ */
 export default class Hostname {
+	/** Re-exported Cloudflare hostname API error type for callers to catch. */
 	static CloudflareApiError = HostnameApiError;
+	/** The `hostnames` D1 table definition (columns, primary key, timestamps). */
 	static table = table({
 		name: "hostnames",
 		primaryKey: ["id"],
@@ -41,6 +59,13 @@ export default class Hostname {
 		},
 	});
 
+	/**
+	 * Lists every hostname belonging to a tenant.
+	 *
+	 * @param db - The platform database handle.
+	 * @param tenantId - The tenant whose hostnames to list.
+	 * @returns A promise resolving to the tenant's hostname rows.
+	 */
 	static listByTenant(db: Database, tenantId: string) {
 		return db.findMany(Hostname.table, { where: { tenant_id: tenantId } });
 	}
@@ -48,20 +73,50 @@ export default class Hostname {
 	/**
 	 * Drops the KV resolution cache for every hostname of a tenant. Called when a
 	 * tenant is suspended or deleted so its hostnames stop resolving from cache.
+	 *
+	 * @param db - The platform database handle.
+	 * @param tenantId - The tenant whose cached hostname resolutions to evict.
+	 * @returns A promise that resolves once all cache entries are invalidated.
 	 */
 	static async invalidateTenantCache(db: Database, tenantId: string) {
 		let hostnames = await Hostname.listByTenant(db, tenantId);
 		await Promise.all(hostnames.map((hostname) => invalidateHostnameCache(hostname.hostname)));
 	}
 
+	/**
+	 * Finds a hostname by its primary-key id.
+	 *
+	 * @param db - The platform database handle.
+	 * @param id - The hostname id.
+	 * @returns A promise resolving to the hostname row, or null when not found.
+	 */
 	static show(db: Database, id: string) {
 		return db.findOne(Hostname.table, { where: { id } });
 	}
 
+	/**
+	 * Finds a hostname row by its hostname string.
+	 *
+	 * @param db - The platform database handle.
+	 * @param hostname - The fully-qualified hostname to look up.
+	 * @returns A promise resolving to the hostname row, or null when not found.
+	 */
 	static findByHostname(db: Database, hostname: string) {
 		return db.findOne(Hostname.table, { where: { hostname } });
 	}
 
+	/**
+	 * Creates the tenant's default `slug.platformDomain` hostname (already active, no
+	 * Cloudflare custom-hostname registration required).
+	 *
+	 * @param db - The platform database handle.
+	 * @param tenantId - The owning tenant id.
+	 * @param slug - The tenant slug used as the subdomain label.
+	 * @param platformDomain - The base platform domain the subdomain hangs off.
+	 * @returns A promise resolving to the newly-created default hostname row.
+	 * @example
+	 * let host = await Hostname.createDefault(db, tenant.id, tenant.slug, env.PLATFORM_DOMAIN);
+	 */
 	static async createDefault(db: Database, tenantId: string, slug: string, platformDomain: string) {
 		let id = crypto.randomUUID();
 		let now = new Date().toISOString();
@@ -86,6 +141,13 @@ export default class Hostname {
 	/**
 	 * Create a custom hostname via Cloudflare for SaaS API.
 	 * This calls the real Cloudflare API and stores the result locally.
+	 *
+	 * @param db - The platform database handle.
+	 * @param tenantId - The owning tenant id (attached as Cloudflare metadata).
+	 * @param hostname - The custom hostname to register.
+	 * @param region - Optional Cloudflare region hint for the hostname metadata.
+	 * @returns A promise resolving to the stored hostname row (with validation details).
+	 * @throws {HostnameApiError} When the Cloudflare API rejects the request.
 	 */
 	static async createCustom(
 		db: Database,
@@ -121,6 +183,11 @@ export default class Hostname {
 	/**
 	 * Refresh hostname status from Cloudflare API.
 	 * Updates local D1 record with latest status from Cloudflare.
+	 *
+	 * @param db - The platform database handle.
+	 * @param id - The hostname id to refresh.
+	 * @returns A promise resolving to the updated (or unchanged default) hostname row.
+	 * @throws {RecordNotFoundError} When no hostname exists for the given id.
 	 */
 	static async refresh(db: Database, id: string) {
 		let hostname = await db.findOne(Hostname.table, { where: { id } });
@@ -154,6 +221,11 @@ export default class Hostname {
 	/**
 	 * Activate a hostname (update local status to active).
 	 * Called after Cloudflare reports the hostname is active.
+	 *
+	 * @param db - The platform database handle.
+	 * @param id - The hostname id to activate.
+	 * @returns A promise resolving to the activated hostname row.
+	 * @throws {RecordNotFoundError} When no hostname exists for the given id.
 	 */
 	static async activate(db: Database, id: string) {
 		let hostname = await db.findOne(Hostname.table, { where: { id } });
@@ -177,6 +249,12 @@ export default class Hostname {
 
 	/**
 	 * Delete a hostname from both Cloudflare and local D1.
+	 *
+	 * @param db - The platform database handle.
+	 * @param id - The hostname id to delete.
+	 * @returns A promise resolving to the D1 delete result.
+	 * @throws {RecordNotFoundError} When no hostname exists for the given id.
+	 * @throws {HostnameApiError} When Cloudflare deletion fails for a non-404 reason.
 	 */
 	static async destroy(db: Database, id: string) {
 		let hostname = await db.findOne(Hostname.table, { where: { id } });
@@ -202,6 +280,9 @@ export default class Hostname {
 
 	/**
 	 * Get human-readable status message for a hostname.
+	 *
+	 * @param hostname - An object carrying the hostname `status` and `ssl_status`.
+	 * @returns A human-readable status label (e.g. "Active", "Pending DNS validation").
 	 */
 	static getStatusMessage(hostname: { status: string; ssl_status: string | null }): string {
 		if (hostname.status === "active") return "Active";

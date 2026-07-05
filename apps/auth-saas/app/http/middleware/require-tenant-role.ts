@@ -1,3 +1,12 @@
+/**
+ * Middleware factory that gates mutating (non-safe) tenant requests behind a set of
+ * allowed roles, while letting read-only requests through so `viewer` members retain
+ * read access. Must run after `tenantOwner`, which populates `context.tenant.role`.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { forbidden } from "@pkg/http/response/html";
 
 import type { TenantMemberRole } from "~/app/models/tenant-member";
@@ -19,6 +28,8 @@ const SAFE_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
  * enforced regardless of whether the override has been applied yet.
  * @param allowed - Roles permitted to perform the mutation.
  * @returns Middleware enforcing the role for mutating requests.
+ * @example
+ * router.map(route, { middleware: [tenantOwner, requireTenantRole("owner", "admin")], handler });
  */
 export default function requireTenantRole(...allowed: AllowedRole[]) {
 	return middleware(async (context, next) => {

@@ -1,3 +1,12 @@
+/**
+ * Data model for tenant team membership. Wraps the `tenant_members` D1 table, which
+ * grants non-owner subjects `admin` or `viewer` access to a tenant. Tenant owners live
+ * in the `tenants` table, not here.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import type { Database } from "remix/data-table";
 
 import { column as c, table } from "remix/data-table";
@@ -11,8 +20,12 @@ export type TenantMemberRole = "admin" | "viewer";
  * TenantMember model for managing team access to tenants.
  * Members can have admin (full access except billing) or viewer (read-only) roles.
  * Owners are stored in the tenants table, not here.
+ *
+ * @example
+ * let members = await TenantMember.listByTenant(db, tenantId);
  */
 export default class TenantMember {
+	/** The `tenant_members` D1 table definition (columns, primary key, timestamps). */
 	static table = table({
 		name: "tenant_members",
 		primaryKey: ["id"],
@@ -31,6 +44,7 @@ export default class TenantMember {
 	 * Lists all members of a tenant.
 	 * @param db - Database connection.
 	 * @param tenantId - The tenant ID.
+	 * @returns A promise resolving to the tenant's member rows.
 	 */
 	static listByTenant(db: Database, tenantId: string) {
 		return db.findMany(TenantMember.table, { where: { tenant_id: tenantId } });
@@ -40,6 +54,7 @@ export default class TenantMember {
 	 * Lists all tenants a subject is a member of.
 	 * @param db - Database connection.
 	 * @param subjectId - The subject ID.
+	 * @returns A promise resolving to the membership rows for that subject.
 	 */
 	static listBySubject(db: Database, subjectId: string) {
 		return db.findMany(TenantMember.table, { where: { subject_id: subjectId } });
@@ -50,6 +65,7 @@ export default class TenantMember {
 	 * @param db - Database connection.
 	 * @param tenantId - The tenant ID.
 	 * @param subjectId - The subject ID.
+	 * @returns A promise resolving to the membership row, or null when none exists.
 	 */
 	static findByTenantAndSubject(db: Database, tenantId: string, subjectId: string) {
 		return db.findOne(TenantMember.table, {
@@ -61,6 +77,7 @@ export default class TenantMember {
 	 * Creates a new tenant membership.
 	 * @param db - Database connection.
 	 * @param data - Membership data.
+	 * @returns A promise resolving to the newly-created membership row.
 	 */
 	static async create(
 		db: Database,
@@ -90,6 +107,8 @@ export default class TenantMember {
 	 * @param db - Database connection.
 	 * @param id - The membership ID.
 	 * @param role - The new role.
+	 * @returns A promise resolving to the updated membership row.
+	 * @throws {RecordNotFoundError} When no membership exists for the given id.
 	 */
 	static async updateRole(db: Database, id: string, role: TenantMemberRole) {
 		let member = await db.findOne(TenantMember.table, { where: { id } });
@@ -111,6 +130,8 @@ export default class TenantMember {
 	 * Removes a member from a tenant.
 	 * @param db - Database connection.
 	 * @param id - The membership ID.
+	 * @returns A promise resolving to the D1 delete result.
+	 * @throws {RecordNotFoundError} When no membership exists for the given id.
 	 */
 	static async destroy(db: Database, id: string) {
 		let member = await db.findOne(TenantMember.table, { where: { id } });

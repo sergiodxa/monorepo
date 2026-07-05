@@ -1,3 +1,13 @@
+/**
+ * The Cloudflare Worker entry point. Routes every incoming request to the right place —
+ * static assets, the platform dashboard router, or a tenant Durable Object (resolved via
+ * Cloudflare for SaaS `hostMetadata` or a KV-cached control-plane lookup) — and runs the
+ * daily scheduled MAU-reporting cron. Also re-exports the {@link Tenant} Durable Object.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import type { JSONValue } from "@pkg/types";
 
 import { isSuccess } from "@pkg/result";
@@ -107,7 +117,19 @@ async function forwardToTenant(request: Request, target: ResolvedTenant): Promis
 	return await stub.fetch(request);
 }
 
+/**
+ * The worker's exported handler, implementing the `fetch` (HTTP) and `scheduled` (cron)
+ * runtime hooks.
+ */
 export default {
+	/**
+	 * Routes an incoming HTTP request: static assets first, then the platform dashboard
+	 * router or the appropriate tenant Durable Object depending on host and path.
+	 *
+	 * @param request - The incoming request.
+	 * @returns The response from assets, the dashboard router, or a tenant DO (or a 404
+	 * when the host cannot be resolved).
+	 */
 	async fetch(request) {
 		let url = new URL(request.url);
 		let hostname = url.hostname;
@@ -148,6 +170,13 @@ export default {
 		return new Response("Not found", { status: 404 });
 	},
 
+	/**
+	 * Cron entry point: runs scheduled jobs within a container scope. Currently triggers
+	 * the daily MAU reporting job at 1:00 AM UTC.
+	 *
+	 * @param controller - The Cloudflare scheduled controller carrying the cron pattern.
+	 * @returns A promise that resolves once the matched job(s) complete.
+	 */
 	async scheduled(controller) {
 		await container.scope(async () => {
 			// Daily MAU reporting job (runs at 1:00 AM UTC)

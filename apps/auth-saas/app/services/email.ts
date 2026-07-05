@@ -1,3 +1,13 @@
+/**
+ * Transactional email service backed by Cloudflare Email Sending. Sends verification
+ * and magic-link messages through the `SEND_EMAIL` binding using hand-built
+ * multipart/alternative MIME messages, with local helpers for MIME assembly, header
+ * encoding, and an HTML-to-text fallback.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { EmailMessage } from "cloudflare:email";
 import { env } from "cloudflare:workers";
 
@@ -14,6 +24,9 @@ interface SendOptions {
  *
  * Sends through the `SEND_EMAIL` binding using a hand-built multipart/alternative
  * MIME message.
+ *
+ * @example
+ * await EmailService.sendMagicLinkEmail(user.email, loginUrl, tenant.name);
  */
 export default class EmailService {
 	/** Error thrown when email sending fails. */

@@ -1,3 +1,12 @@
+/**
+ * Data model for pending team invitations to a tenant. Wraps the `tenant_invites` D1
+ * table; invites are addressed by email, carry a role, and are marked accepted when the
+ * recipient joins the tenant.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import type { Database } from "remix/data-table";
 
 import { column as c, table } from "remix/data-table";
@@ -9,8 +18,12 @@ import type { TenantMemberRole } from "./tenant-member";
 /**
  * TenantInvite model for pending team invitations.
  * Invites are sent by email and can be accepted by the recipient.
+ *
+ * @example
+ * let pending = await TenantInvite.listPendingByTenant(db, tenantId);
  */
 export default class TenantInvite {
+	/** The `tenant_invites` D1 table definition (columns, primary key, timestamps). */
 	static table = table({
 		name: "tenant_invites",
 		primaryKey: ["id"],
@@ -31,6 +44,7 @@ export default class TenantInvite {
 	 * Lists all pending invites for a tenant.
 	 * @param db - Database connection.
 	 * @param tenantId - The tenant ID.
+	 * @returns A promise resolving to the tenant's unaccepted invite rows.
 	 */
 	static listPendingByTenant(db: Database, tenantId: string) {
 		return db.findMany(TenantInvite.table, {
@@ -42,6 +56,7 @@ export default class TenantInvite {
 	 * Lists all pending invites for an email address.
 	 * @param db - Database connection.
 	 * @param email - The email address.
+	 * @returns A promise resolving to the unaccepted invite rows for that email.
 	 */
 	static listPendingByEmail(db: Database, email: string) {
 		return db.findMany(TenantInvite.table, {
@@ -53,6 +68,7 @@ export default class TenantInvite {
 	 * Finds an invite by ID.
 	 * @param db - Database connection.
 	 * @param id - The invite ID.
+	 * @returns A promise resolving to the invite row, or null when not found.
 	 */
 	static show(db: Database, id: string) {
 		return db.findOne(TenantInvite.table, { where: { id } });
@@ -63,6 +79,7 @@ export default class TenantInvite {
 	 * @param db - Database connection.
 	 * @param tenantId - The tenant ID.
 	 * @param email - The email address.
+	 * @returns A promise resolving to the matching pending invite, or null when none.
 	 */
 	static findPendingByTenantAndEmail(db: Database, tenantId: string, email: string) {
 		return db.findOne(TenantInvite.table, {
@@ -74,6 +91,7 @@ export default class TenantInvite {
 	 * Creates a new invite.
 	 * @param db - Database connection.
 	 * @param data - Invite data.
+	 * @returns A promise resolving to the newly-created invite row.
 	 */
 	static async create(
 		db: Database,
@@ -105,6 +123,8 @@ export default class TenantInvite {
 	 * Marks an invite as accepted.
 	 * @param db - Database connection.
 	 * @param id - The invite ID.
+	 * @returns A promise resolving to the updated (accepted) invite row.
+	 * @throws {RecordNotFoundError} When no invite exists for the given id.
 	 */
 	static async accept(db: Database, id: string) {
 		let invite = await db.findOne(TenantInvite.table, { where: { id } });
@@ -127,6 +147,8 @@ export default class TenantInvite {
 	 * Deletes an invite (cancel or cleanup).
 	 * @param db - Database connection.
 	 * @param id - The invite ID.
+	 * @returns A promise resolving to the D1 delete result.
+	 * @throws {RecordNotFoundError} When no invite exists for the given id.
 	 */
 	static async destroy(db: Database, id: string) {
 		let invite = await db.findOne(TenantInvite.table, { where: { id } });

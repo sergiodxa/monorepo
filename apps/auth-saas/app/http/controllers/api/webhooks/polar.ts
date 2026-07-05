@@ -1,3 +1,13 @@
+/**
+ * `POST /api/webhooks/polar` — receives Polar billing webhooks and syncs subscription
+ * lifecycle changes (checkout completion, activation, updates, cancellation) into the
+ * local {@link Subscription} store. Verifies the Standard Webhooks signature and uses
+ * retryable/non-retryable error classification to control Polar's redelivery.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import type { JSONValue } from "@pkg/types";
 
 import { json } from "@pkg/http/response";
@@ -71,6 +81,11 @@ let WebhookPayloadSchema = s.object({
  * - subscription.active: Handle subscription activation
  * - subscription.canceled: Handle subscription cancellation
  * - subscription.updated: Sync subscription status changes
+ *
+ * @returns A JSON acknowledgement (`{ received: true }`), or a `4xx`/`5xx` error for
+ * an invalid signature, malformed payload, or a retryable processing failure.
+ * @example
+ * router.map(routes.api.webhooks.polar, polarWebhook);
  */
 export default createAction(
 	routes.api.webhooks.polar,

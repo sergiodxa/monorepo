@@ -1,3 +1,13 @@
+/**
+ * Core data model for tenants (the top-level accounts of the SaaS). Wraps the `tenants`
+ * D1 table and provides access-resolution helpers that combine ownership, pending
+ * ownership, and team membership into a single role, plus slug generation and cache
+ * invalidation when a tenant is suspended or deleted.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import type { Database } from "remix/data-table";
 
 import { column as c, table } from "remix/data-table";
@@ -7,7 +17,7 @@ import Hostname from "~/app/models/hostname";
 
 import type { TenantMemberRole } from "./tenant-member";
 
-/** Represents the user's role/access level for a tenant. */
+/** A tenant row augmented with the current user's resolved role/access level. */
 export interface TenantWithRole {
 	id: string;
 	name: string;
@@ -23,7 +33,15 @@ export interface TenantWithRole {
 	role: "owner" | TenantMemberRole;
 }
 
+/**
+ * Active-record–style model for tenants, exposing static query and mutation helpers
+ * over the `tenants` table plus access-resolution logic across owners and members.
+ *
+ * @example
+ * let tenant = await Tenant.showWithAccess(db, id, subjectId, email);
+ */
 export default class Tenant {
+	/** The `tenants` D1 table definition (columns, primary key, timestamps). */
 	static table = table({
 		name: "tenants",
 		primaryKey: ["id"],
@@ -41,10 +59,23 @@ export default class Tenant {
 		},
 	});
 
+	/**
+	 * Lists every tenant in the platform (administrative listing).
+	 *
+	 * @param db - Database connection.
+	 * @returns A promise resolving to all tenant rows.
+	 */
 	static list(db: Database) {
 		return db.findMany(Tenant.table);
 	}
 
+	/**
+	 * Lists the tenants directly owned by a subject.
+	 *
+	 * @param db - Database connection.
+	 * @param ownerSubjectId - The owner's subject ID.
+	 * @returns A promise resolving to the tenant rows owned by that subject.
+	 */
 	static listByOwner(db: Database, ownerSubjectId: string) {
 		return db.findMany(Tenant.table, { where: { owner_subject_id: ownerSubjectId } });
 	}
@@ -55,6 +86,7 @@ export default class Tenant {
 	 * @param db - Database connection.
 	 * @param subjectId - The subject ID.
 	 * @param email - The subject's email (for pending owner resolution).
+	 * @returns A promise resolving to accessible tenants, each with the resolved role.
 	 */
 	static async listAccessibleBySubject(
 		db: Database,
@@ -108,6 +140,13 @@ export default class Tenant {
 		return results;
 	}
 
+	/**
+	 * Finds a tenant by its primary-key id.
+	 *
+	 * @param db - Database connection.
+	 * @param id - The tenant ID.
+	 * @returns A promise resolving to the tenant row, or null when not found.
+	 */
 	static show(db: Database, id: string) {
 		return db.findOne(Tenant.table, { where: { id } });
 	}
@@ -119,6 +158,8 @@ export default class Tenant {
 	 * @param id - The tenant ID.
 	 * @param subjectId - The subject ID.
 	 * @param email - The subject's email (for pending owner resolution).
+	 * @returns A promise resolving to the tenant with its role, or null when the tenant
+	 * is missing or the subject has no access.
 	 */
 	static async showWithAccess(
 		db: Database,
@@ -149,10 +190,24 @@ export default class Tenant {
 		return null;
 	}
 
+	/**
+	 * Finds a tenant by its unique slug.
+	 *
+	 * @param db - Database connection.
+	 * @param slug - The tenant slug to look up.
+	 * @returns A promise resolving to the tenant row, or null when not found.
+	 */
 	static findBySlug(db: Database, slug: string) {
 		return db.findOne(Tenant.table, { where: { slug } });
 	}
 
+	/**
+	 * Creates a new active tenant.
+	 *
+	 * @param db - Database connection.
+	 * @param data - The tenant attributes (name, slug, owner, region, internal flag).
+	 * @returns A promise resolving to the newly-created tenant row.
+	 */
 	static async create(
 		db: Database,
 		data: {
@@ -182,6 +237,16 @@ export default class Tenant {
 		return (await db.findOne(Tenant.table, { where: { id } }))!;
 	}
 
+	/**
+	 * Updates a tenant's name and/or status. Suspending or deleting a tenant also
+	 * invalidates its hostname resolution cache so its domains stop routing to it.
+	 *
+	 * @param db - Database connection.
+	 * @param id - The tenant ID to update.
+	 * @param data - The fields to change (name and/or status).
+	 * @returns A promise resolving to the updated tenant row.
+	 * @throws {RecordNotFoundError} When no tenant exists for the given id.
+	 */
 	static async update(
 		db: Database,
 		id: string,
@@ -211,6 +276,14 @@ export default class Tenant {
 		return (await db.findOne(Tenant.table, { where: { id } }))!;
 	}
 
+	/**
+	 * Permanently deletes a tenant and invalidates its hostname resolution cache.
+	 *
+	 * @param db - Database connection.
+	 * @param id - The tenant ID to delete.
+	 * @returns A promise resolving to the D1 delete result.
+	 * @throws {RecordNotFoundError} When no tenant exists for the given id.
+	 */
 	static async destroy(db: Database, id: string) {
 		let tenant = await db.findOne(Tenant.table, { where: { id } });
 		if (!tenant) throw new RecordNotFoundError(Tenant.table, { id });
@@ -224,6 +297,7 @@ export default class Tenant {
 	 * @param db - Database connection.
 	 * @param email - The email to resolve pending ownership for.
 	 * @param subjectId - The actual subject ID to assign.
+	 * @returns A promise resolving to the number of tenants whose ownership was resolved.
 	 */
 	static async resolvePendingOwnership(db: Database, email: string, subjectId: string) {
 		let pendingOwnerValue = `pending:${email}`;
@@ -245,6 +319,15 @@ export default class Tenant {
 		return pendingTenants.length;
 	}
 
+	/**
+	 * Generates a URL-safe, unique-ish slug from a tenant name by lowercasing,
+	 * replacing non-alphanumerics with hyphens, trimming, and appending random chars.
+	 *
+	 * @param name - The tenant display name to derive a slug from.
+	 * @returns A slug of the form `some-name-ab12`.
+	 * @example
+	 * let slug = Tenant.generateSlug("Acme, Inc."); // e.g. "acme-inc-4f9a"
+	 */
 	static generateSlug(name: string): string {
 		let base = name
 			.toLowerCase()

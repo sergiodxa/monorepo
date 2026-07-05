@@ -1,5 +1,22 @@
+/**
+ * The centralized, type-safe route table for the platform dashboard. Declares every URL
+ * (public, onboarding, webhooks, and the nested dashboard/tenant resource routes) so
+ * controllers, middleware, and views share a single source of truth for paths and can
+ * build hrefs via `routes.*.href(...)`.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { del, form, get, post, resources, route } from "remix/fetch-router/routes";
 
+/**
+ * The application route map. Each leaf is a typed route with `.href(params)` for
+ * building URLs and is used as the key when mapping controllers in `bootstrap/app.ts`.
+ *
+ * @example
+ * routes.dashboard.tenants.users.show.href({ tenantId, id: userId });
+ */
 export default route({
 	index: get("/"),
 	health: get("/health"),

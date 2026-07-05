@@ -1,3 +1,12 @@
+/**
+ * Data model for tenant billing subscriptions. Wraps the `subscriptions` D1 table and
+ * the Polar billing API, handling customer/subscription creation, status syncing,
+ * cancellation, and checkout/portal URL generation, plus status label/color helpers.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import type { Database } from "remix/data-table";
 
 import { PolarClient, PolarError } from "@pkg/polar";
@@ -19,16 +28,27 @@ function polar(): PolarClient {
 	return (polarClient ??= new PolarClient({ accessToken: env.POLAR_ACCESS_TOKEN }));
 }
 
+/**
+ * Active-record–style model for tenant subscriptions, exposing static query and
+ * mutation helpers over the `subscriptions` table plus Polar billing integration.
+ *
+ * @example
+ * let subscription = await Subscription.findByTenant(db, tenantId);
+ */
 export default class Subscription {
+	/** Re-exported Polar API error type for callers to catch. */
 	static PolarApiError = PolarError;
 
+	/** Error thrown when no subscription exists for a given tenant. */
 	static NotFoundError = class extends Error {
 		override name = "SubscriptionNotFoundError";
+		/** @param tenantId - The tenant whose subscription was not found. */
 		constructor(public tenantId: string) {
 			super(`Subscription for tenant ${tenantId} not found`);
 		}
 	};
 
+	/** The `subscriptions` D1 table definition (columns, primary key, timestamps). */
 	static table = table({
 		name: "subscriptions",
 		primaryKey: ["id"],
@@ -48,6 +68,9 @@ export default class Subscription {
 
 	/**
 	 * Map Polar subscription status to our status enum.
+	 *
+	 * @param polarStatus - The raw status string returned by Polar.
+	 * @returns The equivalent local subscription status (defaults to `incomplete`).
 	 */
 	static mapPolarStatus(
 		polarStatus: string,
@@ -74,6 +97,10 @@ export default class Subscription {
 
 	/**
 	 * Get subscription by tenant ID.
+	 *
+	 * @param db - The platform database handle.
+	 * @param tenantId - The tenant whose subscription to fetch.
+	 * @returns A promise resolving to the subscription row, or null when none exists.
 	 */
 	static findByTenant(db: Database, tenantId: string) {
 		return db.findOne(Subscription.table, { where: { tenant_id: tenantId } });
@@ -81,6 +108,10 @@ export default class Subscription {
 
 	/**
 	 * Get subscription by ID.
+	 *
+	 * @param db - The platform database handle.
+	 * @param id - The subscription id.
+	 * @returns A promise resolving to the subscription row, or null when none exists.
 	 */
 	static show(db: Database, id: string) {
 		return db.findOne(Subscription.table, { where: { id } });
@@ -89,6 +120,13 @@ export default class Subscription {
 	/**
 	 * Create a subscription record for a tenant.
 	 * Also creates a customer in Polar if not already existing.
+	 *
+	 * @param db - The platform database handle.
+	 * @param tenantId - The tenant to create the subscription for.
+	 * @param ownerEmail - The owner email used to create the Polar customer.
+	 * @param tenantName - The tenant display name for the Polar customer.
+	 * @returns A promise resolving to the newly-created (trialing) subscription row.
+	 * @throws {PolarError} When creating the Polar customer fails.
 	 */
 	static async create(db: Database, tenantId: string, ownerEmail: string, tenantName: string) {
 		let id = crypto.randomUUID();
@@ -117,6 +155,12 @@ export default class Subscription {
 	/**
 	 * Update subscription with Polar subscription details.
 	 * Called after checkout completion or webhook.
+	 *
+	 * @param db - The platform database handle.
+	 * @param tenantId - The tenant whose subscription to link.
+	 * @param polarSubscriptionId - The Polar subscription id to attach and sync from.
+	 * @returns A promise resolving to the updated subscription row.
+	 * @throws {Subscription.NotFoundError} When the tenant has no subscription record.
 	 */
 	static async linkPolarSubscription(db: Database, tenantId: string, polarSubscriptionId: string) {
 		let subscription = await db.findOne(Subscription.table, {
@@ -147,6 +191,12 @@ export default class Subscription {
 
 	/**
 	 * Sync subscription status from Polar.
+	 *
+	 * @param db - The platform database handle.
+	 * @param tenantId - The tenant whose subscription to sync.
+	 * @returns A promise resolving to the (possibly-updated) subscription row; unchanged
+	 * when no Polar subscription is linked yet.
+	 * @throws {Subscription.NotFoundError} When the tenant has no subscription record.
 	 */
 	static async syncFromPolar(db: Database, tenantId: string) {
 		let subscription = await db.findOne(Subscription.table, {
@@ -180,6 +230,11 @@ export default class Subscription {
 
 	/**
 	 * Cancel subscription at period end.
+	 *
+	 * @param db - The platform database handle.
+	 * @param tenantId - The tenant whose subscription to cancel.
+	 * @returns A promise resolving to the canceled subscription row.
+	 * @throws {Subscription.NotFoundError} When the tenant has no subscription record.
 	 */
 	static async cancel(db: Database, tenantId: string) {
 		let subscription = await db.findOne(Subscription.table, {
@@ -205,6 +260,14 @@ export default class Subscription {
 
 	/**
 	 * Create a checkout session URL for upgrading to a paid plan.
+	 *
+	 * @param db - The platform database handle.
+	 * @param tenantId - The tenant initiating checkout.
+	 * @param productId - The Polar product id to check out.
+	 * @param successUrl - The URL Polar redirects to after a successful checkout.
+	 * @returns A promise resolving to the hosted Polar checkout URL.
+	 * @throws {Subscription.NotFoundError} When the tenant has no subscription record.
+	 * @throws {Error} When the subscription has no linked Polar customer.
 	 */
 	static async createCheckoutUrl(
 		db: Database,
@@ -232,6 +295,12 @@ export default class Subscription {
 
 	/**
 	 * Create a customer portal session URL for managing subscription.
+	 *
+	 * @param db - The platform database handle.
+	 * @param tenantId - The tenant whose billing portal to open.
+	 * @returns A promise resolving to the hosted Polar customer-portal URL.
+	 * @throws {Subscription.NotFoundError} When the tenant has no subscription record.
+	 * @throws {Error} When the subscription has no linked Polar customer.
 	 */
 	static async createPortalUrl(db: Database, tenantId: string): Promise<string> {
 		let subscription = await db.findOne(Subscription.table, {
@@ -248,6 +317,9 @@ export default class Subscription {
 
 	/**
 	 * Get human-readable status label.
+	 *
+	 * @param status - The subscription status value.
+	 * @returns A human-readable label (e.g. "Active", "Trial", "Past Due").
 	 */
 	static getStatusLabel(status: string): string {
 		switch (status) {
@@ -270,6 +342,9 @@ export default class Subscription {
 
 	/**
 	 * Get status badge color class.
+	 *
+	 * @param status - The subscription status value.
+	 * @returns Tailwind background/text color classes for the status badge.
 	 */
 	static getStatusColor(status: string): string {
 		switch (status) {
