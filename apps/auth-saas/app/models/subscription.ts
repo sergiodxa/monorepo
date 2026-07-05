@@ -49,7 +49,7 @@ export default class Subscription {
 	/**
 	 * Map Polar subscription status to our status enum.
 	 */
-	private static mapPolarStatus(
+	static mapPolarStatus(
 		polarStatus: string,
 	): "active" | "canceled" | "past_due" | "unpaid" | "incomplete" | "trialing" {
 		switch (polarStatus) {

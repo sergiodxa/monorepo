@@ -1,0 +1,4 @@
+[test]
+# Registers a virtual `cloudflare:workers` module (see test/setup.ts) so source
+# files that import `env` at module load can be exercised under `bun test`.
+preload = ["./test/setup.ts"]
