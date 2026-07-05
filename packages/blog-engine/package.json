@@ -16,6 +16,7 @@
 		"@pkg/logger": "workspace:*",
 		"@pkg/markdown": "workspace:*",
 		"@pkg/markdown-server": "workspace:*",
+		"@pkg/oidc-client": "workspace:*",
 		"@pkg/result": "workspace:*",
 		"@pkg/rss": "workspace:*",
 		"@pkg/service-container": "workspace:*",

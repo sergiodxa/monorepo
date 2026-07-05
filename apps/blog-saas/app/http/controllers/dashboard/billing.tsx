@@ -1,5 +1,7 @@
 import { redirect } from "@pkg/http/response";
+import { PolarClient } from "@pkg/polar";
 import { inject } from "@pkg/service-container";
+import { env } from "cloudflare:workers";
 import { getContext } from "remix/async-context-middleware";
 import { Database } from "remix/data-table";
 import { createController } from "remix/fetch-router";
@@ -7,7 +9,6 @@ import { createController } from "remix/fetch-router";
 import { getAccountId } from "~/app/http/middleware/session";
 import Account from "~/app/models/account";
 import Subscription from "~/app/models/subscription";
-import { PolarService } from "~/app/services/polar";
 import { Page } from "~/app/views/layout";
 import * as s from "~/app/views/styles";
 import routes from "~/routes/web";
@@ -53,7 +54,7 @@ export default createController(routes.dashboard.billing, {
 			);
 		}),
 
-		action: inject([Database, PolarService] as const, async (db, polar) => {
+		action: inject([Database, PolarClient] as const, async (db, polar) => {
 			let ctx = getContext();
 			let accountId = getAccountId();
 			if (!accountId) return redirect("/auth/login", { status: redirect.Status.SeeOther });
@@ -61,14 +62,23 @@ export default createController(routes.dashboard.billing, {
 			let account = await Account.findById(db, accountId);
 			let origin = new URL(ctx.request.url).origin;
 
-			if (account?.polar_customer_id) {
-				let portal = await polar.portalUrl(account.polar_customer_id);
-				if (portal) return redirect(portal, { status: redirect.Status.SeeOther });
-			} else {
-				let checkout = await polar.createCheckout(accountId, `${origin}/dashboard`);
-				if (checkout) return redirect(checkout, { status: redirect.Status.SeeOther });
+			// Best-effort: fall through to the billing page if Polar is unavailable.
+			try {
+				if (account?.polar_customer_id) {
+					let { url } = await polar.createPortalSession(account.polar_customer_id);
+					return redirect(url, { status: redirect.Status.SeeOther });
+				} else {
+					let { url } = await polar.createCheckoutSession(
+						env.POLAR_PRODUCT_ID,
+						undefined,
+						`${origin}/dashboard`,
+						{ account_id: accountId },
+					);
+					return redirect(url, { status: redirect.Status.SeeOther });
+				}
+			} catch {
+				return redirect("/dashboard/billing", { status: redirect.Status.SeeOther });
 			}
-			return redirect("/dashboard/billing", { status: redirect.Status.SeeOther });
 		}),
 	},
 });

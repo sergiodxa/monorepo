@@ -1,3 +1,4 @@
+import { PolarClient } from "@pkg/polar";
 import { getServiceContainer } from "@pkg/service-container";
 import { Database } from "remix/data-table";
 
@@ -5,7 +6,6 @@ import Account from "~/app/models/account";
 import Blog from "~/app/models/blog";
 import UsageDaily from "~/app/models/usage";
 import { queryDailyPageViews } from "~/app/services/analytics";
-import { PolarService } from "~/app/services/polar";
 
 /** Yesterday's UTC date as `YYYY-MM-DD`. */
 function yesterday(): string {
@@ -25,7 +25,7 @@ export async function reportUsage(): Promise<void> {
 		await UsageDaily.record(db, row.blogId, date, row.views);
 	}
 
-	let polar = getServiceContainer().get(PolarService);
+	let polar = getServiceContainer().get(PolarClient);
 	for (let usage of await UsageDaily.findUnreported(db)) {
 		let blog = await Blog.findById(db, usage.blog_id);
 		if (!blog) continue;

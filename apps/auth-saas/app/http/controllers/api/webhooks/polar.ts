@@ -1,10 +1,10 @@
 import type { JSONValue } from "@pkg/types";
 
 import { json } from "@pkg/http/response";
+import { PolarClient } from "@pkg/polar";
 import { isFailure } from "@pkg/result";
 import { inject } from "@pkg/service-container";
 import { validate } from "@pkg/validate";
-import { validateEvent, WebhookVerificationError } from "@polar-sh/sdk/webhooks.js";
 import { env } from "cloudflare:workers";
 import { getContext } from "remix/async-context-middleware";
 import * as s from "remix/data-schema";
@@ -88,21 +88,13 @@ export default createAction(
 			}
 		} else {
 			// Polar signs webhooks with the Standard Webhooks scheme (webhook-id,
-			// webhook-timestamp, webhook-signature headers); `validateEvent` verifies them
-			// and throws WebhookVerificationError on a bad/missing signature.
-			let headers: Record<string, string> = {};
-			request.headers.forEach((value, key) => {
-				headers[key] = value;
-			});
-			try {
-				validateEvent(body, headers, webhookSecret);
-			} catch (error) {
-				if (error instanceof WebhookVerificationError) {
-					log.info("Invalid webhook signature");
-					return json({ error: "Invalid signature" }, { status: 401 });
-				}
-				// The signature verified but the SDK could not type the event (e.g. an event
-				// type it does not model); our own schema validation below handles the payload.
+			// webhook-timestamp, webhook-signature headers). `verifyWebhook` fails closed
+			// on a bad/missing signature and accepts an authentic-but-unmodeled event
+			// (whose payload our own schema validation below still handles).
+			let polar = new PolarClient({ accessToken: env.POLAR_ACCESS_TOKEN });
+			if (!polar.verifyWebhook(request, body, webhookSecret)) {
+				log.info("Invalid webhook signature");
+				return json({ error: "Invalid signature" }, { status: 401 });
 			}
 		}
 

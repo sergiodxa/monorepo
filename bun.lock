@@ -93,11 +93,13 @@
         "@pkg/data-table-sqlstorage": "workspace:*",
         "@pkg/db-helpers": "workspace:*",
         "@pkg/get-client-ip": "workspace:*",
+        "@pkg/hostname": "workspace:*",
         "@pkg/http": "workspace:*",
         "@pkg/jobs": "workspace:*",
         "@pkg/location": "workspace:*",
         "@pkg/logger": "workspace:*",
         "@pkg/oidc-provider": "workspace:*",
+        "@pkg/polar": "workspace:*",
         "@pkg/response": "workspace:*",
         "@pkg/result": "workspace:*",
         "@pkg/service-container": "workspace:*",
@@ -215,8 +217,11 @@
         "@pkg/blog-engine": "workspace:*",
         "@pkg/data-table-d1": "workspace:*",
         "@pkg/data-table-sqlstorage": "workspace:*",
+        "@pkg/hostname": "workspace:*",
         "@pkg/http": "workspace:*",
         "@pkg/logger": "workspace:*",
+        "@pkg/oidc-client": "workspace:*",
+        "@pkg/polar": "workspace:*",
         "@pkg/result": "workspace:*",
         "@pkg/service-container": "workspace:*",
         "@pkg/types": "workspace:*",
@@ -448,6 +453,7 @@
         "@pkg/logger": "workspace:*",
         "@pkg/markdown": "workspace:*",
         "@pkg/markdown-server": "workspace:*",
+        "@pkg/oidc-client": "workspace:*",
         "@pkg/result": "workspace:*",
         "@pkg/rss": "workspace:*",
         "@pkg/service-container": "workspace:*",
@@ -536,6 +542,16 @@
       "peerDependencies": {
         "react": "^19.2.7",
         "react-router": "^8.0.1",
+      },
+    },
+    "packages/hostname": {
+      "name": "@pkg/hostname",
+      "version": "0.0.1",
+      "dependencies": {
+        "remix": "3.0.0-beta.5",
+      },
+      "devDependencies": {
+        "@types/bun": "^1.3.14",
       },
     },
     "packages/http": {
@@ -655,6 +671,16 @@
         "@types/prismjs": "^1.26.6",
       },
     },
+    "packages/oidc-client": {
+      "name": "@pkg/oidc-client",
+      "version": "0.0.1",
+      "dependencies": {
+        "remix": "3.0.0-beta.5",
+      },
+      "devDependencies": {
+        "@types/bun": "^1.3.14",
+      },
+    },
     "packages/oidc-provider": {
       "name": "@pkg/oidc-provider",
       "version": "0.0.0",
@@ -673,6 +699,16 @@
       "devDependencies": {
         "@cloudflare/workers-types": "^4.20260409.1",
         "@types/bcryptjs": "^3.0.0",
+        "@types/bun": "^1.3.14",
+      },
+    },
+    "packages/polar": {
+      "name": "@pkg/polar",
+      "version": "0.0.1",
+      "dependencies": {
+        "@polar-sh/sdk": "^0.48.1",
+      },
+      "devDependencies": {
         "@types/bun": "^1.3.14",
       },
     },
@@ -1424,6 +1460,8 @@
 
     "@pkg/hooks": ["@pkg/hooks@workspace:packages/hooks"],
 
+    "@pkg/hostname": ["@pkg/hostname@workspace:packages/hostname"],
+
     "@pkg/http": ["@pkg/http@workspace:packages/http"],
 
     "@pkg/iife": ["@pkg/iife@workspace:packages/iife"],
@@ -1442,7 +1480,11 @@
 
     "@pkg/markdown-server": ["@pkg/markdown-server@workspace:packages/markdown-server"],
 
+    "@pkg/oidc-client": ["@pkg/oidc-client@workspace:packages/oidc-client"],
+
     "@pkg/oidc-provider": ["@pkg/oidc-provider@workspace:packages/oidc-provider"],
+
+    "@pkg/polar": ["@pkg/polar@workspace:packages/polar"],
 
     "@pkg/r3-ui-router": ["@pkg/r3-ui-router@workspace:packages/r3-ui-router"],
 

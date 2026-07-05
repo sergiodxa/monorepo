@@ -1,11 +1,11 @@
 import { createD1DatabaseAdapter } from "@pkg/data-table-d1";
+import { HostnameClient } from "@pkg/hostname";
+import { PolarClient } from "@pkg/polar";
 import { ServiceContainer } from "@pkg/service-container";
 import { env } from "cloudflare:workers";
 import { createDatabase, Database } from "remix/data-table";
 
 import { BlogProvisioner } from "~/app/services/blog-provisioner";
-import { HostnameService } from "~/app/services/hostname";
-import { PolarService } from "~/app/services/polar";
 
 /**
  * The platform service container (ADR-008). Registered once per isolate; the worker
@@ -15,6 +15,15 @@ import { PolarService } from "~/app/services/polar";
 export const container = new ServiceContainer();
 
 container.singleton(Database, () => createDatabase(createD1DatabaseAdapter(env.PLATFORM_DB)));
-container.singleton(PolarService, () => new PolarService());
-container.singleton(HostnameService, () => new HostnameService());
+container.singleton(PolarClient, () => new PolarClient({ accessToken: env.POLAR_ACCESS_TOKEN }));
+container.singleton(
+	HostnameClient,
+	() =>
+		new HostnameClient({
+			apiToken: env.CF_API_TOKEN,
+			zoneId: env.CF_ZONE_ID,
+			platformDomain: env.PLATFORM_DOMAIN,
+			metadataKey: "blog_id",
+		}),
+);
 container.scoped(BlogProvisioner, (c) => new BlogProvisioner(c.get(Database)));

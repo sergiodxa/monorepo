@@ -1,4 +1,5 @@
 import { json } from "@pkg/http/response";
+import { PolarClient } from "@pkg/polar";
 import { inject } from "@pkg/service-container";
 import { env } from "cloudflare:workers";
 import { getContext } from "remix/async-context-middleware";
@@ -8,7 +9,6 @@ import { createAction } from "remix/fetch-router";
 import Account from "~/app/models/account";
 import Subscription, { type SubscriptionStatus } from "~/app/models/subscription";
 import { BlogProvisioner } from "~/app/services/blog-provisioner";
-import { PolarService } from "~/app/services/polar";
 import routes from "~/routes/web";
 
 /** Shape of the Polar webhook payload fields this handler reads. */
@@ -28,10 +28,10 @@ interface PolarEvent {
 /** POST /api/webhooks/polar — syncs subscription state and fans suspension out. */
 export default createAction(
 	routes.api.webhooks.polar,
-	inject([Database, PolarService, BlogProvisioner] as const, async (db, polar, provisioner) => {
+	inject([Database, PolarClient, BlogProvisioner] as const, async (db, polar, provisioner) => {
 		let ctx = getContext();
 		let body = await ctx.request.text();
-		if (!polar.verifyWebhook(ctx.request, body))
+		if (!polar.verifyWebhook(ctx.request, body, env.POLAR_WEBHOOK_SECRET))
 			return new Response("invalid signature", { status: 401 });
 
 		let event = JSON.parse(body) as PolarEvent;

@@ -1,4 +1,11 @@
 import { redirect } from "@pkg/http/response";
+import {
+	buildAuthorizationUrl,
+	createPkce,
+	discover,
+	exchangeCode,
+	verifyIdToken,
+} from "@pkg/oidc-client";
 import { inject } from "@pkg/service-container";
 import { env } from "cloudflare:workers";
 import { getContext } from "remix/async-context-middleware";
@@ -6,13 +13,6 @@ import { Database } from "remix/data-table";
 import { createAction, createController } from "remix/fetch-router";
 
 import { clearSession, getSessionData, updateSessionData } from "~/app/http/middleware/session";
-import {
-	buildAuthorizationUrl,
-	createPkce,
-	discover,
-	exchangeCode,
-	verifyIdToken,
-} from "~/app/lib/oidc";
 import Account from "~/app/models/account";
 import { Page } from "~/app/views/layout";
 import * as s from "~/app/views/styles";

@@ -1,8 +1,8 @@
 import { Logger } from "@pkg/logger";
+import { PolarClient } from "@pkg/polar";
 import { env } from "cloudflare:workers";
 
 import AnalyticsService from "~/app/services/analytics";
-import PolarService from "~/app/services/polar";
 
 /** Database row for subscription data with Polar customer ID. */
 interface SubscriptionRow {
@@ -27,6 +27,7 @@ interface SubscriptionRow {
  */
 export async function reportMAU(controller: ScheduledController): Promise<void> {
 	let logger = new Logger();
+	let polar = new PolarClient({ accessToken: env.POLAR_ACCESS_TOKEN });
 	let month = AnalyticsService.getCurrentMonth();
 
 	logger.info("MAU reporting job started", {
@@ -76,7 +77,7 @@ export async function reportMAU(controller: ScheduledController): Promise<void> 
 			}
 
 			try {
-				await PolarService.reportMAU(polarCustomerId, mau, tenant_id, month);
+				await polar.reportMAU(polarCustomerId, mau, tenant_id, month);
 				reported++;
 			} catch (error) {
 				failed++;

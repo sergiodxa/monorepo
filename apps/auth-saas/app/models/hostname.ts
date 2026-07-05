@@ -1,15 +1,28 @@
 import type { Database } from "remix/data-table";
 
+import { HostnameApiError, HostnameClient } from "@pkg/hostname";
+import { env } from "cloudflare:workers";
 import { column as c, table } from "remix/data-table";
 
 import type { HostMetadata } from "~/app/lib/host-metadata";
 
 import { RecordNotFoundError } from "~/app/lib/db-errors";
 import { invalidateHostnameCache } from "~/app/lib/hostname-cache";
-import HostnameService from "~/app/services/hostname";
+
+/**
+ * Cloudflare for SaaS client tagged with the `tenant_id` metadata key, so custom
+ * hostnames created here carry the tenant metadata the worker entry reads to route
+ * custom domains.
+ */
+let client = new HostnameClient({
+	apiToken: env.CF_API_TOKEN,
+	zoneId: env.CF_ZONE_ID,
+	platformDomain: env.PLATFORM_DOMAIN,
+	metadataKey: "tenant_id",
+});
 
 export default class Hostname {
-	static CloudflareApiError = HostnameService.ApiError;
+	static CloudflareApiError = HostnameApiError;
 	static table = table({
 		name: "hostnames",
 		primaryKey: ["id"],
@@ -81,10 +94,10 @@ export default class Hostname {
 		region?: HostMetadata["region"],
 	) {
 		// Call Cloudflare API to create the custom hostname
-		let cfHostname = await HostnameService.createHostname(hostname, tenantId, region);
+		let cfHostname = await client.create(hostname, tenantId, region);
 
 		// Extract validation record if present
-		let validationRecord = HostnameService.getValidationRecord(cfHostname);
+		let validationRecord = HostnameClient.getValidationTxtRecord(cfHostname);
 
 		let now = new Date().toISOString();
 
@@ -95,9 +108,9 @@ export default class Hostname {
 			hostname: cfHostname.hostname,
 			is_default: false,
 			status: cfHostname.status === "active" ? "active" : "pending_validation",
-			ssl_status: cfHostname.ssl.status,
-			validation_txt_name: validationRecord?.txt_name ?? null,
-			validation_txt_value: validationRecord?.txt_value ?? null,
+			ssl_status: cfHostname.sslStatus,
+			validation_txt_name: validationRecord?.name ?? null,
+			validation_txt_value: validationRecord?.value ?? null,
 			created_at: now,
 			updated_at: now,
 		});
@@ -117,18 +130,18 @@ export default class Hostname {
 		if (hostname.is_default) return hostname;
 
 		// Fetch latest status from Cloudflare
-		let cfHostname = await HostnameService.getHostname(id);
-		let validationRecord = HostnameService.getValidationRecord(cfHostname);
+		let cfHostname = await client.status(id);
+		let validationRecord = HostnameClient.getValidationTxtRecord(cfHostname);
 
 		// Update local record
 		await db.update(
 			Hostname.table,
 			{ id },
 			{
-				status: HostnameService.isActive(cfHostname) ? "active" : "pending_validation",
-				ssl_status: cfHostname.ssl.status,
-				validation_txt_name: validationRecord?.txt_name ?? null,
-				validation_txt_value: validationRecord?.txt_value ?? null,
+				status: HostnameClient.isActive(cfHostname) ? "active" : "pending_validation",
+				ssl_status: cfHostname.sslStatus,
+				validation_txt_name: validationRecord?.name ?? null,
+				validation_txt_value: validationRecord?.value ?? null,
 				updated_at: new Date().toISOString(),
 			},
 		);
@@ -172,10 +185,10 @@ export default class Hostname {
 		// Delete from Cloudflare if it's a custom hostname
 		if (!hostname.is_default) {
 			try {
-				await HostnameService.deleteHostname(id);
+				await client.delete(id);
 			} catch (error) {
 				// Ignore 404 errors (hostname already deleted from Cloudflare)
-				if (!(error instanceof HostnameService.ApiError && error.statusCode === 404)) {
+				if (!(error instanceof HostnameApiError && error.statusCode === 404)) {
 					throw error;
 				}
 			}

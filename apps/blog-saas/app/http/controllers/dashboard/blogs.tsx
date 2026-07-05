@@ -1,3 +1,4 @@
+import { HostnameClient } from "@pkg/hostname";
 import { redirect } from "@pkg/http/response";
 import { badRequest, notFound } from "@pkg/http/response/html";
 import { inject } from "@pkg/service-container";
@@ -14,7 +15,6 @@ import BlogModel from "~/app/models/blog";
 import Hostname from "~/app/models/hostname";
 import UsageDaily from "~/app/models/usage";
 import { BlogProvisioner } from "~/app/services/blog-provisioner";
-import { HostnameService } from "~/app/services/hostname";
 import { Page } from "~/app/views/layout";
 import * as s from "~/app/views/styles";
 import routes from "~/routes/web";
@@ -257,7 +257,7 @@ export const domain = createController(routes.dashboard.blogDomain, {
 			);
 		}),
 
-		action: inject([Database, HostnameService] as const, async (db, service) => {
+		action: inject([Database, HostnameClient] as const, async (db, service) => {
 			let ctx = getContext();
 			let result = await ownedBlog(db, ctx.params.blogId!);
 			if (result instanceof Response) return result;
@@ -294,7 +294,7 @@ export const domain = createController(routes.dashboard.blogDomain, {
 				});
 			} catch {
 				// Roll back the Cloudflare hostname so we do not leak an orphan resource.
-				await service.destroy(created.id).catch(() => {});
+				await service.delete(created.id).catch(() => {});
 				return badRequest("Could not save the domain. Please try again.");
 			}
 			return redirect(`/dashboard/blogs/${blog.id}/domain`, { status: redirect.Status.SeeOther });

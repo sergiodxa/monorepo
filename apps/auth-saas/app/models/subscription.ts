@@ -1,8 +1,23 @@
 import type { Database } from "remix/data-table";
 
+import { PolarClient, PolarError } from "@pkg/polar";
+import { env } from "cloudflare:workers";
 import { column as c, table } from "remix/data-table";
 
-import PolarService, { PolarError } from "~/app/services/polar";
+/**
+ * Lazily-constructed shared Polar client. Created once from the access token in
+ * the environment and reused across calls (the previous service instantiated the
+ * SDK per call; a single instance is behaviour-identical and cheaper).
+ */
+let polarClient: PolarClient | undefined;
+
+/**
+ * Get the shared {@link PolarClient}, constructing it on first use.
+ * @returns The Polar billing client configured from `POLAR_ACCESS_TOKEN`.
+ */
+function polar(): PolarClient {
+	return (polarClient ??= new PolarClient({ accessToken: env.POLAR_ACCESS_TOKEN }));
+}
 
 export default class Subscription {
 	static PolarApiError = PolarError;
@@ -80,7 +95,7 @@ export default class Subscription {
 		let now = new Date().toISOString();
 
 		// Create customer in Polar
-		let customer = await PolarService.createCustomer(ownerEmail, tenantName, {
+		let customer = await polar().createCustomer(ownerEmail, tenantName, {
 			tenant_id: tenantId,
 		});
 
@@ -110,7 +125,7 @@ export default class Subscription {
 		if (!subscription) throw new Subscription.NotFoundError(tenantId);
 
 		// Fetch subscription details from Polar
-		let polarSub = await PolarService.getSubscription(polarSubscriptionId);
+		let polarSub = await polar().getSubscription(polarSubscriptionId);
 
 		// Map Polar status to our status enum
 		let status = Subscription.mapPolarStatus(polarSub.status);
@@ -144,7 +159,7 @@ export default class Subscription {
 			return subscription;
 		}
 
-		let polarSub = await PolarService.getSubscription(subscription.polar_subscription_id);
+		let polarSub = await polar().getSubscription(subscription.polar_subscription_id);
 
 		// Map Polar status to our status enum
 		let status = Subscription.mapPolarStatus(polarSub.status);
@@ -173,7 +188,7 @@ export default class Subscription {
 		if (!subscription) throw new Subscription.NotFoundError(tenantId);
 
 		if (subscription.polar_subscription_id) {
-			await PolarService.cancelSubscription(subscription.polar_subscription_id);
+			await polar().revokeSubscription(subscription.polar_subscription_id);
 		}
 
 		await db.update(
@@ -205,7 +220,7 @@ export default class Subscription {
 			throw new Error("No Polar customer linked to this subscription");
 		}
 
-		let checkout = await PolarService.createCheckoutSession(
+		let checkout = await polar().createCheckoutSession(
 			productId,
 			subscription.polar_customer_id,
 			successUrl,
@@ -227,7 +242,7 @@ export default class Subscription {
 			throw new Error("No Polar customer linked to this subscription");
 		}
 
-		let portal = await PolarService.createPortalSession(subscription.polar_customer_id);
+		let portal = await polar().createPortalSession(subscription.polar_customer_id);
 		return portal.url;
 	}
 
