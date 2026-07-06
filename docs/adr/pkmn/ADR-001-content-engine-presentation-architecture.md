@@ -113,18 +113,18 @@ type LearnsetEntry =
 	| { egg: true; moveId: string };
 
 enum EvolutionMethod {
-	Level,
-	Item,
-	Trade,
-	Friendship,
-	Place,
-}
+	Level = "level",
+	Item = "item",
+	Trade = "trade",
+	Friendship = "friendship",
+	Place = "place",
+} // string-valued enum (values are serialized into content data)
 
 type Evolution =
 	| { method: Level; speciesId: string; level: number }
 	| { method: Item; speciesId: string; itemId: string }
 	| { method: Trade; speciesId: string; heldItemId?: string } // heldItemId (planned)
-	| { method: Friendship; speciesId: string } // level field removed (planned)
+	| { method: Friendship; speciesId: string; level: number } // level is unused by the friendship trigger; its removal is planned
 	| { method: Place; speciesId: string; placeId: number };
 ```
 
@@ -274,7 +274,7 @@ enum ItemAttribute {
 type Item = Base & (Capture | Medicine | BattleItem | TeachesMove | Misc);
 
 interface Base {
-	category: string; // content-defined grouping for bag pockets (planned: string, currently enum)
+	category: ItemCategory; // engine enum today; planned: widen to a content-defined string for bag pockets
 	attributes: [ItemAttribute, ...ItemAttribute[]];
 	price?: Price; // absent means "cannot be bought/sold"
 }
@@ -429,7 +429,7 @@ interface World {
 		iv: StatSet;
 		ev: StatSet;
 		friendship?: number /* planned */;
-		size?: SizeData;
+		size?: Creature.SizeData;
 	}>;
 	creatureMoves: ComponentStore<{
 		moveset: [MoveId, MoveId | null, MoveId | null, MoveId | null];
@@ -478,7 +478,7 @@ Notes on the model:
 ### 2.4 Persistence
 
 - `PERSISTENT_WORLD_STORE_KEYS` lists the save-backed stores (player-rooted and creature stores plus ownership and location). `TRANSIENT_WORLD_STORE_KEYS` lists battle mirrors and `activeBattle`.
-- `Engine.snapshot()` returns a deep-cloned world containing only persistent stores. **(planned)** the `entities` array in a snapshot is filtered to ids that still own a persistent component, so transient `battle:*` ids never leak into saves.
+- `Engine.snapshot()` returns a deep-cloned world containing only persistent stores. This document names that return shape `PersistentWorld`; today it is the inferred return type of `pickPersistentWorld` (no exported type alias yet — naming/exporting it is a trivial planned cleanup). **(planned)** the `entities` array in a snapshot is filtered to ids that still own a persistent component, so transient `battle:*` ids never leak into saves.
 - `migrateWorld(input)` upgrades any older or bootstrap payload into the current shape: it accepts a legacy `creature` blob store, splits it into the component stores, infers `ownership` and `creatureLocation` from party/box membership, and initializes empty transient stores. All world loading goes through it; there is no in-place save versioning.
 - Saving mid-battle is unsupported by design: battles are ephemeral. The presentation layer only offers saving outside battle.
 
@@ -593,7 +593,7 @@ Stack counts per item id on the player. `addInventoryItem` and `removeInventoryI
 
 #### 2.9.4 Capture **(formula planned)**
 
-The state transition exists (`captureCreature`: set ownership, place into party or first box with room, set location, mark bestiary). The Gen 3 capture attempt formula to implement in front of it:
+The state transition exists (`captureCreature`: set ownership, place into party or, when the party is full, the first storage box, set location). It does **not** yet mark the bestiary — that trigger is part of the **(planned)** battle write-back in 2.9.3. The Gen 3 capture attempt formula to implement in front of it:
 
 ```
 a = floor((3*maxHP - 2*currentHP) * catchRate * ballMultiplier / (3*maxHP)) * statusBonus
@@ -609,7 +609,7 @@ Only encounter-located creatures in an active wild battle can be captured; captu
 
 #### 2.9.5 Experience and level-ups
 
-`grantCreatureExperience` adds experience (clamped at the level-100 total for the growth rate **(planned clamp)**) and reports `levelBefore/levelAfter`. **(planned)** on faint in battle, award to each non-fainted participant:
+`grantCreatureExperience` adds experience (clamped to non-negative; the level-100 total-for-the-growth-rate cap is a **(planned clamp)**) and reports `levelBefore`/`levelAfter` and the new `totalExperience`. **(planned)** on faint in battle, award to each non-fainted participant:
 
 ```
 exp = floor(baseExperience * faintedLevel / 7 / participants) * trainerBattleModifier(1.5 for trainer battles)
@@ -660,7 +660,7 @@ IVs are 0..31 (rolled at creature creation), EVs 0..255 per stat / 510 total. Le
 
 #### 2.11.1 Session protocol
 
-A battle is a generator (`battle.start(): BattleSession`) that:
+A battle is a resumable generator produced by the `Battle` class's `start()` method (`new Battle(args).start(): BattleSession`, where `BattleSession = Generator<BattleEvent, BattleEvent, BattleInput>`) that:
 
 1. yields lifecycle and narration events in exact presentation order,
 2. suspends by yielding `request-turn-commands { requests: BattlePosition[] }` or `request-replacements { requests: ReplacementSelection[] }`,
@@ -696,7 +696,7 @@ Battle events (the full narration vocabulary):
 1. If any slots are empty and benches have creatures: request replacements, apply them through the switch-in pipeline, re-check the winner.
 2. Increment turn, yield `turn-started`, request one command per active slot.
 3. **Commit**: for each `fight`, spend 1 PP now (even if the move later fails). A slot whose chosen move has no PP falls back: if any other move has PP the command is invalid (presentation must not send it — legality comes from the pending-request selector); if no move has PP, the slot uses the **fallback move** (typeless 50-power physical attack that bypasses accuracy and deals 1/4 of damage dealt as recoil **(recoil and typeless behavior planned)**).
-4. **Order actions**: `leave-battle` first (priority +inf), then `switch` (priority 6), then moves by move priority (protect/endure +4), ties by effective speed (inverted while trick room is active), remaining ties by a per-action RNG roll.
+4. **Order actions**: `leave-battle` first (priority +inf), then `switch` (priority 6), then moves by move priority (protect/endure +4), ties by effective speed (inverted while trick room is active), remaining ties by a per-action RNG roll, with a final deterministic side-then-slot fallback.
 5. **Resolve each action** (2.11.4). Skip actions whose user left the field.
 6. **End of turn** (2.11.7).
 7. Winner check: side with no usable creatures loses; both = draw. Otherwise loop.
@@ -707,7 +707,7 @@ Effective speed = stat x stage modifier, halved by paralysis, doubled by tailwin
 
 For one `fight` action, in order:
 
-1. **Before-move gates** (first failure ends the action): recharging; taunt (status moves); encore (forces the encored slot); disable (blocks the disabled slot); attract (50% skip if the source is still active); sleep (decrement counter, act only if it hits 0); freeze (20% thaw, or thaw if the used move declares it thaws the user); flinch; paralysis (25% full stop); confusion (decrement, 50% self-hit with a typeless 40-power physical self-attack, which can faint the user).
+1. **Before-move gates** (first failure ends the action): recharging; taunt (status moves); encore (forces the encored slot); disable (blocks the disabled slot); attract (50% skip if the source is still active); sleep (decrement counter, act only if it hits 0); freeze (20% thaw, or thaw if the used move is fire-type — there is no per-move "thaws user" flag today); flinch; paralysis (25% full stop); confusion (decrement, 50% self-hit with a typeless 40-power physical self-attack, which can faint the user).
 2. **Charge handling**: a charge move's first turn sets charging (+ optional semi-invulnerability), consumes the turn; its second turn releases automatically.
 3. **Target check**: single-target moves whose slot is now empty fail with `move-failed: invalid-target`.
 4. **Redirection**: follow-me redirects redirectable moves to the redirector's slot.
@@ -731,7 +731,7 @@ fog weather:    chance * 0.6
 hit if random() < chance
 ```
 
-The base-accuracy roll always runs — there is no shortcut at neutral stages. OHKO moves use `accuracy = 30 + (userLevel - targetLevel)` and fail against higher-level targets **(planned; today they read accuracy 30 from data)**. Semi-invulnerable targets (charge moves) can only be hit by moves that declare it or under gravity.
+The base-accuracy roll always runs — there is no shortcut at neutral stages **(spec target; today `moveCanConnect` short-circuits and auto-hits when both the accuracy and evasion stages are 0, so sub-100% moves never miss at neutral stages — known deviation, see Notes)**. OHKO moves use `accuracy = 30 + (userLevel - targetLevel)` and fail against higher-level targets **(planned; today they read accuracy 30 from data)**. Semi-invulnerable targets (charge moves) can only be hit by moves that declare it or under gravity.
 
 #### 2.11.6 Damage
 
@@ -741,7 +741,7 @@ base = floor(floor(floor(2*level/5 + 2) * power * A / D) / 50) + 2
 
 - `A/D`: attack vs defense for physical, special attack vs special defense for special. Stage modifiers apply as `(2+s)/2` up, `2/(2+|s|)` down. A critical hit ignores the attacker's negative stages and the defender's positive stages. Wonder room swaps the defender's defense stats.
 - Variable-power effects override `power` first (HP-ratio tables, speed ratios, weight ratios, charged-electric doubling, double-on-status and the other conditional doublers).
-- Then multiply, flooring after each step, **all applicable modifiers in this order** (no early exit):
+- Then multiply, flooring after each step, **all applicable modifiers in this order**. Steps 4–9 stack as written. **Spec target: steps 1–3 (screens/weather/terrain) also stack with no early exit; the code currently folds them into base damage as mutually exclusive early-returns (only the first match applies) and does not exempt screens on crits — known deviation, see Notes.**
   1. screens: reflect halves physical, light screen halves special (not on crits)
   2. weather: sun fire x1.5 / water x0.5; rain water x1.5 / fire x0.5
   3. terrain (grounded users): electric/grassy/psychic boost their type x1.3; misty halves dragon vs grounded targets
@@ -847,6 +847,7 @@ The table is normative: implementations and tests follow it, and changing a row 
 - Engine boundary tests dispatch commands and assert on returned events plus selector output.
 - Every acceptance criterion in the mechanics tables above gets at least one test; regressions in ruleset rows are treated as spec violations.
 - Content sanity tests: every species reference resolves, every move with special behavior carries a modeled effect (guards against `power: 0` + `kind: "none"` dead entries).
+- Gap **(planned)**: the `src/game/systems/` world systems (inventory, storage, bestiary, capture, experience, evolution) have no dedicated tests yet; today's coverage lives under `battle/`, `data/`, `world/`, and the engine boundary. Their behaviors (storage reindexing, capture placement, experience/level math) still need acceptance tests.
 
 ---
 
@@ -1272,28 +1273,28 @@ class AnimationQueue {
 
 Event-to-animation mapping (each battle event appends tasks; the queue drains before the scene reads the next pending request):
 
-| Battle event           | Presentation                                                                                                             |
-| ---------------------- | ------------------------------------------------------------------------------------------------------------------------ |
-| `battle-started`       | slide-in sprites, intro message, battle BGM                                                                              |
-| `turn-started`         | nothing (bookkeeping)                                                                                                    |
-| `move-used`            | message "X used Y!", attacker lunge/flash animation, move SFX                                                            |
-| `move-missed`          | message "It missed!"                                                                                                     |
-| `move-failed`          | reason-specific message ("X is paralyzed!", "But it failed!")                                                            |
-| `move-blocked`         | protect shield flash, "X protected itself!"                                                                              |
-| `critical-hit`         | message "A critical hit!" + screen shake                                                                                 |
-| `effectiveness`        | message ("It's super effective!" / "not very effective" / "It doesn't affect X")                                         |
-| `damage-dealt`         | target flicker + HP bar tween from event's `remainingHP` (never from selector diffs); low-HP bar turns yellow/red + beep |
-| `healed`               | green flash + HP bar tween up                                                                                            |
-| `status-applied`       | status icon + message; poison/burn palette flash                                                                         |
-| `volatile-applied`     | effect-specific animation (confusion birds, attract hearts, ...)                                                         |
-| `stat-stage-changed`   | rising/falling stat glow + message with the new direction                                                                |
-| `side-effect-applied`  | screen/hazard placement animation                                                                                        |
-| `field-effect-applied` | weather/terrain overlay change (rain streaks, sun tint, fog alpha)                                                       |
-| `hazard-triggered`     | hazard hit animation before the damage event that follows                                                                |
-| `creature-switched`    | recall ball animation, send-out with cry                                                                                 |
-| `creature-fainted`     | sprite drop + cry + message                                                                                              |
-| `turn-ended`           | nothing                                                                                                                  |
-| `battle-finished`      | victory/defeat message + BGM change, then pop the scene                                                                  |
+| Battle event               | Presentation                                                                                                             |
+| -------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| `battle-started`           | slide-in sprites, intro message, battle BGM                                                                              |
+| `turn-started`             | nothing (bookkeeping)                                                                                                    |
+| `move-used`                | message "X used Y!", attacker lunge/flash animation, move SFX                                                            |
+| `move-missed`              | message "It missed!"                                                                                                     |
+| `move-failed`              | reason-specific message ("X is paralyzed!", "But it failed!")                                                            |
+| `move-blocked` _(planned)_ | protect shield flash, "X protected itself!"                                                                              |
+| `critical-hit`             | message "A critical hit!" + screen shake                                                                                 |
+| `effectiveness`            | message ("It's super effective!" / "not very effective" / "It doesn't affect X")                                         |
+| `damage-dealt`             | target flicker + HP bar tween from event's `remainingHP` (never from selector diffs); low-HP bar turns yellow/red + beep |
+| `healed` _(planned)_       | green flash + HP bar tween up                                                                                            |
+| `status-applied`           | status icon + message; poison/burn palette flash                                                                         |
+| `volatile-applied`         | effect-specific animation (confusion birds, attract hearts, ...)                                                         |
+| `stat-stage-changed`       | rising/falling stat glow + message with the new direction                                                                |
+| `side-effect-applied`      | screen/hazard placement animation                                                                                        |
+| `field-effect-applied`     | weather/terrain overlay change (rain streaks, sun tint, fog alpha)                                                       |
+| `hazard-triggered`         | hazard hit animation before the damage event that follows                                                                |
+| `creature-switched`        | recall ball animation, send-out with cry                                                                                 |
+| `creature-fainted`         | sprite drop + cry + message                                                                                              |
+| `turn-ended`               | nothing                                                                                                                  |
+| `battle-finished`          | victory/defeat message + BGM change, then pop the scene                                                                  |
 
 Flow: when the queue is idle and `selectBattle(battleId).pendingRequest` is `turn`, open the command menu (Fight / Bag / Creatures / Run) per requested slot; Fight lists the four moves with PP and disables empty ones; Bag pushes the bag scene in battle mode (`use-item` with `battleId`); Creatures pushes party for a `switch` command; Run submits `leave-battle`. Submissions dispatch `submit-battle-turn`, and the returned `battle-events-appended` payload feeds the queue. `replacement` requests open the forced-switch party view. HP bars, names, levels, and status icons render from `BattleView`; wild battles hide the enemy HP numbers, showing only the bar.
 
@@ -1386,6 +1387,15 @@ At 240x160 nothing here is expensive; the rules that keep it that way: pre-rende
 1. Party/Summary/Bag/Bestiary/Storage scenes.
 2. Options, audio channels, title continue flow, content completeness pass (model the 247 moves still carrying `kind: "none"`).
 
+### Phase 6: Parity extensions
+
+**Priority:** Low
+
+1. Passive traits and held items as timing-window hooks (2.12): the hook data model, the named windows, and migrating the move-effect kinds that simplify onto them; magic-room held-item suppression and trait-driven status/immunity checks.
+2. Breeding (2.9.8): egg creation from compatible egg groups/genders, inherited moves and IVs, egg entities with a `hatchCounter`, and the overworld step-cycle that hatches them.
+
+These are the two **(planned)** systems that Phases 1–5 do not schedule; they are deferred because the game loop closes without them.
+
 ## Alternatives Considered
 
 ### 1. DOM or React for the presentation layer
@@ -1433,11 +1443,12 @@ Let content ship arbitrary effect callbacks per move.
 - [ ] Phase 3: overworld (tilemaps, movement, NPCs, scripts, encounters, save)
 - [ ] Phase 4: battle presentation (animation queue, command menus, capture/escape flows)
 - [ ] Phase 5: menus and content completeness
+- [ ] Phase 6: parity extensions (passive traits/held-item hooks, breeding)
 
 ## Notes
 
 - The presentation replaces the `src/ui/` DOM mock; the directory is renamed to `src/presentation/` when Phase 2 starts, and the mock is deleted rather than ported.
-- Known code deviations from this spec at the time of writing (all tracked in `TODO.md`): the neutral-stage accuracy shortcut, missing battle write-back, `ItemCategory` enum carrying franchise terms in the engine layer, a non-spec +10% speed boost under electric terrain, numeric `State` enum, missing `Erratic` curve, and OHKO moves authored without their `ohko` effect.
+- Known code deviations from this spec at the time of writing (all tracked in `TODO.md`): the neutral-stage accuracy shortcut; missing battle write-back; screens/weather/terrain applied as mutually-exclusive early-returns in `getBaseDamage` instead of stacking, and screens not exempted on critical hits; `ItemCategory` enum carrying franchise terms in the engine layer; a non-spec +10% speed boost under electric terrain; numeric `State` enum; missing `Erratic` curve; the `Evolution.ByFriendship` record still carrying an unused `level` field; and OHKO moves authored without their `ohko` effect.
 - The fallback move exists so a battle can always progress under PP exhaustion; it is intentionally not part of any learnset and never appears in menus — the presentation shows a "no moves left" prompt that submits any `fight` command, and the engine substitutes the fallback.
 - Battle mirrors are rebuilt wholesale after every engine step; selectors must treat them as ephemeral reads, never hold references across dispatches.
 - Audio unlock must happen inside a user-gesture handler (`AudioContext.resume()`); the Boot scene's "press any button" screen exists for that reason, not just style.
