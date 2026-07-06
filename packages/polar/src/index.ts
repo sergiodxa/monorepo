@@ -71,10 +71,10 @@ export interface SessionResult {
 /**
  * Type-safe Polar billing client.
  *
- * Wraps `@polar-sh/sdk` behind a small, stable API that covers both the
- * seat/MAU billing used by auth-saas and the metered page-view billing used by
- * blog-saas. Instantiate once (typically as a service-container singleton) and
- * inject wherever billing operations are needed.
+ * Wraps `@polar-sh/sdk` behind a small, stable API covering customer,
+ * subscription, checkout/portal, event-ingestion, and webhook operations —
+ * enough for both seat/MAU and metered usage billing. Instantiate once
+ * (typically as a service-container singleton) and inject wherever needed.
  *
  * @example
  * ```ts
@@ -280,8 +280,8 @@ export class PolarClient {
 
 	/**
 	 * Report a Monthly Active Users (MAU) count for an entity. Thin wrapper over
-	 * {@link ingestEvents} that emits a single `"mau"` event. Used by auth-saas'
-	 * daily reporting cron.
+	 * {@link ingestEvents} that emits a single `"mau"` event, for a daily
+	 * reporting cron.
 	 *
 	 * @param customerId - The Polar customer ID to bill.
 	 * @param mau - The monthly active user count.
@@ -307,7 +307,7 @@ export class PolarClient {
 	/**
 	 * Ingest a page-view meter event for a customer. Best-effort: returns `false`
 	 * instead of throwing on API failure so the caller's reporting cron can retry
-	 * on the next run. Used by blog-saas' metered page-view billing.
+	 * on the next run.
 	 *
 	 * @param customerId - The Polar customer ID to bill.
 	 * @param views - The number of page views to report.

@@ -171,10 +171,10 @@ export interface HostnameClientOptions {
 	 */
 	platformDomain?: string;
 	/**
-	 * `custom_metadata` key used to tag the owning entity. Defaults to
-	 * `"tenant_id"` (auth-saas); blog-saas passes `"blog_id"`. This controls both
-	 * what is written by {@link HostnameClient.create} and what
-	 * {@link HostnameClient.listByEntity} filters on.
+	 * `custom_metadata` key used to tag the owning entity (e.g. `"tenant_id"` or
+	 * `"blog_id"`). Defaults to `"tenant_id"`. This controls both what is written
+	 * by {@link HostnameClient.create} and what {@link HostnameClient.listByEntity}
+	 * filters on.
 	 */
 	metadataKey?: string;
 }
