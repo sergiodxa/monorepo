@@ -12,6 +12,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 import type { Engine } from "~/game/engine";
+import type { World } from "~/game/world/world";
 
 import { migrateWorld } from "~/game/world/migrate";
 
@@ -55,11 +56,16 @@ export class SaveStore {
 		globalThis.localStorage.setItem(this.key, JSON.stringify(file));
 	}
 
-	/** Loads and normalises the save, or returns null when the slot is empty or unreadable. */
-	load(): SaveFile | null {
+	/**
+	 * Loads and normalises the save, or returns null when the slot is empty or unreadable.
+	 *
+	 * The returned `world` is migrated to the full runtime `World` shape, ready to
+	 * hand straight to `Engine.create`.
+	 */
+	load(): (Omit<SaveFile, "world"> & { world: World }) | null {
 		let file = this.read();
 		if (!file || file.version !== 1) return null;
-		return { ...file, world: migrateWorld(file.world) as PersistentWorld };
+		return { ...file, world: migrateWorld(file.world) };
 	}
 
 	/** Deletes the save in this slot. */
