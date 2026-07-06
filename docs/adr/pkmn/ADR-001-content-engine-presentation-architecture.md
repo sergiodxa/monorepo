@@ -627,7 +627,7 @@ and add the species `evYield` to each participant's EVs, capped at 255 per stat 
 
 #### 2.9.8 Breeding **(planned)**
 
-Two creatures of compatible egg groups and opposite genders (or one plus a `Ditto`-group member) can produce an egg: species = base evolution of the mother's line, inherited moves = intersection of father's moves with the child's learnset plus authored egg moves, IVs = 3 stats inherited from parents at random, nature = random (or mother's with an everstone-style held item). Eggs are creature entities with a `hatchCounter` progress field that decrements per overworld step-cycle. Full spec in `docs/breeding.md`; this summary is the contract.
+Two creatures of compatible egg groups and opposite genders (or one plus a `Ditto`-group member) can produce an egg. The offspring derives from the **family source parent** — the female, or the non-`Ditto` parent when breeding with `Ditto` (not simply "the mother"): species = that parent's breedable base species, subject to family-specific overrides (incense/split families); inherited moves = the offspring's level-1 moves plus any egg-tagged moves currently known by **either** parent plus special-family moves, deduped and trimmed to 4; IVs = 3 stats inherited from the parents at random by default (5 with a Destiny-Knot-style held item), the rest rolled; nature = random, or the nature of an everstone-style item's holder (either parent). Eggs are creature entities with a `hatchCounter` progress field that decrements per overworld step-cycle. Full spec in `docs/breeding.md`; this summary is the contract.
 
 ### 2.10 Creature math
 
@@ -751,6 +751,7 @@ base = floor(floor(floor(2*level/5 + 2) * power * A / D) / 50) + 2
   7. burn halves physical damage from burned attackers
   8. spread modifier x0.75 when a spread move hits multiple targets **(planned with multi-target support)**
   9. random factor: `* (85 + randomInt(0..15)) / 100`
+- This numbered order is the normative sequence (it supersedes the looser conceptual list in `docs/battle.md`). Final damage for any connecting damaging move floors to at least 1, except when type effectiveness is 0 (which prevents damage entirely and emits `effectiveness 0`).
 - Fixed-damage effects (fixed value, user-HP, HP-gap, counter x2) bypass the formula. `cannot-ko` leaves 1 HP; endure leaves 1 HP.
 
 #### 2.11.7 End of turn
