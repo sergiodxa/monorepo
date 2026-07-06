@@ -206,38 +206,54 @@ export class Post {
 	}
 
 	/**
-	 * Creates a post row and its metadata rows atomically in one transaction, then
-	 * reads the result back.
+	 * Creates a post row and its metadata rows atomically, then reads the result
+	 * back. Atomic via a transaction on the Durable Object adapter; on D1 (which has
+	 * no interactive transactions) a failed write is compensated by deleting the
+	 * partial post, so the operation is all-or-nothing on both adapters.
 	 * @param db - Database handle.
 	 * @param input - Core columns plus optional metadata rows.
 	 * @returns The created post with metadata, or `null` if the read-back fails.
+	 * @throws Re-throws the underlying write error after compensating.
 	 */
 	static async create(db: Database, input: Post.CreateInput): Promise<Post.FoundPost | null> {
 		let now = this.timestamp;
 		let id = input.id ?? crypto.randomUUID();
 		let meta = input.meta ?? [];
 
-		await db.transaction(async (tx) => {
-			await tx.create(this.table, {
-				id,
-				slug: input.slug,
-				type: input.type,
-				author_id: input.author_id,
-				published_at: input.published_at ?? null,
-				created_at: input.created_at ?? now,
-				updated_at: input.updated_at ?? now,
+		try {
+			await db.transaction(async (tx) => {
+				await tx.create(this.table, {
+					id,
+					slug: input.slug,
+					type: input.type,
+					author_id: input.author_id,
+					published_at: input.published_at ?? null,
+					created_at: input.created_at ?? now,
+					updated_at: input.updated_at ?? now,
+				});
+				for (let item of meta) {
+					await PostMeta.create(tx, { post_id: id, key: item.key, value: item.value });
+				}
 			});
-			for (let item of meta) {
-				await PostMeta.create(tx, { post_id: id, key: item.key, value: item.value });
-			}
-		});
+		} catch (error) {
+			// The Durable Object adapter rolls the transaction back, but D1 commits
+			// each statement independently, so a mid-write failure can leave a partial
+			// post. When we generated the id, compensate by deleting the partial post
+			// (its `post_meta` rows cascade, as in destroy), restoring all-or-nothing
+			// on both adapters. When the caller supplied the id, the failure may be a
+			// primary-key collision with a pre-existing post, so we must NOT delete it.
+			if (!input.id) await db.delete(this.table, { id }).catch(() => {});
+			throw error;
+		}
 
 		return this.findById(db, id);
 	}
 
 	/**
 	 * Updates a post row and upserts its metadata entries by key (existing keys are
-	 * updated, new keys inserted) in one transaction.
+	 * updated, new keys inserted) in one transaction. Atomic on the Durable Object
+	 * adapter; on D1 the per-key upsert is idempotent, so a failed update is safe to
+	 * retry to convergence.
 	 * @param db - Database handle.
 	 * @param id - The post id to update.
 	 * @param input - Fields to change; omitted fields keep their current value.
