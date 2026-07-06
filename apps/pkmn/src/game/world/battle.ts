@@ -324,12 +324,18 @@ export function syncBattleState(
 			effects: structuredClone(side.effects),
 		};
 
+		let creatureIds = sideIndex === 0 ? participants.playerParty : participants.enemyParty;
+		// The party id list is flat across every team on the side, so ids are indexed by a
+		// running offset rather than the per-team creature index. With a single team the two
+		// are equal, so single-team sides keep their exact previous mapping.
+		let partyIndex = 0;
+
 		for (let teamIndex = 0; teamIndex < side.teams.length; teamIndex += 1) {
 			let team = side.teams[teamIndex]!;
-			let creatureIds = sideIndex === 0 ? participants.playerParty : participants.enemyParty;
 
 			for (let creatureIndex = 0; creatureIndex < team.creatures.length; creatureIndex += 1) {
-				let creatureId = creatureIds[creatureIndex]!;
+				let creatureId = creatureIds[partyIndex]!;
+				partyIndex += 1;
 				let memberEntityId = getBattleMemberEntityId(battleId, sideIndex, teamIndex, creatureIndex);
 				let activeSlot = getActiveSlotIndex(state, sideIndex, teamIndex, creatureIndex);
 				let combatant = team.creatures[creatureIndex]!;
