@@ -7,8 +7,6 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { RequestContext } from "remix/fetch-router";
-
 import { isFailure } from "@pkg/result";
 import { inject } from "@pkg/service-container";
 import { validate } from "@pkg/validate";
@@ -58,13 +56,14 @@ export default {
 	show: createAction(
 		routes.dashboard.tenants.show,
 		inject([Database] as const, async (db) => {
-			let ctx = getContext() as RequestContext<{ id: string }>;
+			let ctx = getContext();
 			let { params, platformSession, logger } = ctx;
-			let log = logger.loader(`/dashboard/tenants/${params.id}`);
+			let { id } = ds.parse(ds.object({ id: ds.string() }), params);
+			let log = logger.loader(`/dashboard/tenants/${id}`);
 
 			let tenant = await Tenant.showWithAccess(
 				db,
-				params.id,
+				id,
 				platformSession.subjectId,
 				platformSession.email,
 			);
@@ -72,13 +71,10 @@ export default {
 				return new Response("Not found", { status: 404 });
 			}
 
-			let api = new TenantApiService(params.id);
-			let [stats, hostnames] = await Promise.all([
-				api.getStats(),
-				Hostname.listByTenant(db, params.id),
-			]);
+			let api = new TenantApiService(id);
+			let [stats, hostnames] = await Promise.all([api.getStats(), Hostname.listByTenant(db, id)]);
 
-			log.info("Tenant detail loaded", { tenantId: params.id });
+			log.info("Tenant detail loaded", { tenantId: id });
 
 			let defaultHostname = hostnames.find((h) => Boolean(h.is_default));
 
@@ -88,7 +84,7 @@ export default {
 						<h2 mix={[s.pageTitle]} style="margin:0">
 							{tenant.name}
 						</h2>
-						<a mix={[s.linkBlue]} href={routes.dashboard.tenants.edit.href({ id: params.id })}>
+						<a mix={[s.linkBlue]} href={routes.dashboard.tenants.edit.href({ id })}>
 							Edit
 						</a>
 					</div>
@@ -141,42 +137,42 @@ export default {
 					<div mix={[s.cardGrid]}>
 						<a
 							mix={[s.linkCard]}
-							href={routes.dashboard.tenants.clients.index.href({ tenantId: params.id })}
+							href={routes.dashboard.tenants.clients.index.href({ tenantId: id })}
 						>
 							<h3 mix={[s.cardTitle]}>Clients</h3>
 							<p mix={[s.mutedSmall]}>Manage OAuth clients</p>
 						</a>
 						<a
 							mix={[s.linkCard]}
-							href={routes.dashboard.tenants.users.index.href({ tenantId: params.id })}
+							href={routes.dashboard.tenants.users.index.href({ tenantId: id })}
 						>
 							<h3 mix={[s.cardTitle]}>Users</h3>
 							<p mix={[s.mutedSmall]}>Manage users and sessions</p>
 						</a>
 						<a
 							mix={[s.linkCard]}
-							href={routes.dashboard.tenants.resources.index.href({ tenantId: params.id })}
+							href={routes.dashboard.tenants.resources.index.href({ tenantId: id })}
 						>
 							<h3 mix={[s.cardTitle]}>Resources</h3>
 							<p mix={[s.mutedSmall]}>Manage API resources and scopes</p>
 						</a>
 						<a
 							mix={[s.linkCard]}
-							href={routes.dashboard.tenants.branding.index.href({ tenantId: params.id })}
+							href={routes.dashboard.tenants.branding.index.href({ tenantId: id })}
 						>
 							<h3 mix={[s.cardTitle]}>Branding</h3>
 							<p mix={[s.mutedSmall]}>Customize login appearance</p>
 						</a>
 						<a
 							mix={[s.linkCard]}
-							href={routes.dashboard.tenants.hostname.index.href({ tenantId: params.id })}
+							href={routes.dashboard.tenants.hostname.index.href({ tenantId: id })}
 						>
 							<h3 mix={[s.cardTitle]}>Hostname</h3>
 							<p mix={[s.mutedSmall]}>Configure custom domain</p>
 						</a>
 						<a
 							mix={[s.linkCard]}
-							href={routes.dashboard.tenants.billing.index.href({ tenantId: params.id })}
+							href={routes.dashboard.tenants.billing.index.href({ tenantId: id })}
 						>
 							<h3 mix={[s.cardTitle]}>Billing</h3>
 							<p mix={[s.mutedSmall]}>Manage subscription</p>
@@ -348,13 +344,14 @@ export default {
 	edit: createAction(
 		routes.dashboard.tenants.edit,
 		inject([Database] as const, async (db) => {
-			let ctx = getContext() as RequestContext<{ id: string }>;
+			let ctx = getContext();
 			let { params, platformSession, logger } = ctx;
-			let log = logger.loader(`/dashboard/tenants/${params.id}/edit`);
+			let { id } = ds.parse(ds.object({ id: ds.string() }), params);
+			let log = logger.loader(`/dashboard/tenants/${id}/edit`);
 
 			let tenant = await Tenant.showWithAccess(
 				db,
-				params.id,
+				id,
 				platformSession.subjectId,
 				platformSession.email,
 			);
@@ -367,21 +364,17 @@ export default {
 				return new Response("Forbidden", { status: 403 });
 			}
 
-			log.info("Tenant edit form loaded", { tenantId: params.id });
+			log.info("Tenant edit form loaded", { tenantId: id });
 
 			return ctx.render(
 				<Document
 					title={`Edit ${tenant.name}`}
-					backLink={routes.dashboard.tenants.show.href({ id: params.id })}
+					backLink={routes.dashboard.tenants.show.href({ id })}
 					backText="Back to Tenant"
 				>
 					<h1 mix={[s.pageTitle]}>Edit Tenant</h1>
 
-					<form
-						mix={[s.form]}
-						method="post"
-						action={routes.dashboard.tenants.update.href({ id: params.id })}
-					>
+					<form mix={[s.form]} method="post" action={routes.dashboard.tenants.update.href({ id })}>
 						<input type="hidden" name="_method" value="PUT" />
 
 						<div mix={[s.field]}>
@@ -420,14 +413,13 @@ export default {
 	update: createAction(
 		routes.dashboard.tenants.update,
 		inject([Database] as const, async (db) => {
-			let { formData, params, platformSession, logger } = getContext() as RequestContext<{
-				id: string;
-			}>;
-			let log = logger.action(`/dashboard/tenants/${params.id}`);
+			let { formData, params, platformSession, logger } = getContext();
+			let { id } = ds.parse(ds.object({ id: ds.string() }), params);
+			let log = logger.action(`/dashboard/tenants/${id}`);
 
 			let tenant = await Tenant.showWithAccess(
 				db,
-				params.id,
+				id,
 				platformSession.subjectId,
 				platformSession.email,
 			);
@@ -448,13 +440,13 @@ export default {
 				return new Response("Validation error", { status: 400 });
 			}
 
-			await Tenant.update(db, params.id, { name: result.data.name });
+			await Tenant.update(db, id, { name: result.data.name });
 
-			log.info("Tenant updated", { tenantId: params.id });
+			log.info("Tenant updated", { tenantId: id });
 
 			return new Response(null, {
 				status: 302,
-				headers: { Location: routes.dashboard.tenants.show.href({ id: params.id }) },
+				headers: { Location: routes.dashboard.tenants.show.href({ id }) },
 			});
 		}),
 	),
