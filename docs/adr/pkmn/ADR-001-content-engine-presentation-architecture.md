@@ -556,7 +556,7 @@ type GameEvent =
 	| { type: "creature-evolved"; creatureId; speciesId };
 ```
 
-**(planned)** additions: `item-used`, `capture-attempted { shakes: 0..3; success: boolean }`, `move-learned`, `party-healed`, `encounter-spawned`, and `creature-can-evolve { creatureId; choices: SpeciesId[] }` (emitted after level-ups so the presentation can offer evolution).
+**(planned)** additions: `item-used`, `capture-attempted { shakes: 0..3; success: boolean }`, `move-learned`, `creature-can-learn { creatureId; moveId; slots: (0|1|2|3)[] }` (emitted when a level-up move needs a slot choice), `party-healed`, `encounter-spawned`, and `creature-can-evolve { creatureId; choices: SpeciesId[] }` (emitted after level-ups so the presentation can offer evolution).
 
 ### 2.8 Selectors and views
 
@@ -593,7 +593,7 @@ Stack counts per item id on the player. `addInventoryItem` and `removeInventoryI
 
 #### 2.9.4 Capture **(formula planned)**
 
-The state transition exists (`captureCreature`: set ownership, place into party or, when the party is full, the first storage box, set location). It does **not** yet mark the bestiary — that trigger is part of the **(planned)** battle write-back in 2.9.3. The Gen 3 capture attempt formula to implement in front of it:
+The state transition exists (`captureCreature`: set ownership, place into party or, when the party is full, the first storage box, set location). It does **not** yet mark the bestiary — that is one of the **(planned)** bestiary triggers (2.9.3), wired as part of the battle write-back (2.11.11). The Gen 3 capture attempt formula to implement in front of it:
 
 ```
 a = floor((3*maxHP - 2*currentHP) * catchRate * ballMultiplier / (3*maxHP)) * statusBonus
@@ -612,7 +612,7 @@ Only encounter-located creatures in an active wild battle can be captured; captu
 `grantCreatureExperience` adds experience (clamped to non-negative; the level-100 total-for-the-growth-rate cap is a **(planned clamp)**) and reports `levelBefore`/`levelAfter` and the new `totalExperience`. **(planned)** on faint in battle, award to each non-fainted participant:
 
 ```
-exp = floor(baseExperience * faintedLevel / 7 / participants) * trainerBattleModifier(1.5 for trainer battles)
+exp = floor(baseExperience * faintedLevel / 7 / participants) * battleModifier   // 1.5 for player-vs-player battles, 1.0 for wild
 ```
 
 and add the species `evYield` to each participant's EVs, capped at 255 per stat and 510 total. **(planned)** after a level-up, check the learnset for moves at the new level (emit a learn opportunity; auto-learn into a free slot, otherwise ask via `creature-can-learn` event) and check evolution eligibility (2.9.7).
@@ -627,7 +627,7 @@ and add the species `evYield` to each participant's EVs, capped at 255 per stat 
 
 #### 2.9.8 Breeding **(planned)**
 
-Two creatures of compatible egg groups and opposite genders (or one plus a `Ditto`-group member) can produce an egg. The offspring derives from the **family source parent** — the female, or the non-`Ditto` parent when breeding with `Ditto` (not simply "the mother"): species = that parent's breedable base species, subject to family-specific overrides (incense/split families); inherited moves = the offspring's level-1 moves plus any egg-tagged moves currently known by **either** parent plus special-family moves, deduped and trimmed to 4; IVs = 3 stats inherited from the parents at random by default (5 with a Destiny-Knot-style held item), the rest rolled; nature = random, or the nature of an everstone-style item's holder (either parent). Eggs are creature entities with a `hatchCounter` progress field that decrements per overworld step-cycle. Full spec in `docs/breeding.md`; this summary is the contract.
+Two creatures of compatible egg groups and opposite genders (or one plus a member of the **universal breeding group** — the content-defined egg group that pairs with anything) can produce an egg. The offspring derives from the **family source parent** — the female, or the non-universal-group parent when breeding with a universal-group member (not simply "the mother"): species = that parent's breedable base species, subject to family-specific overrides (incense/split families); inherited moves = the offspring's level-1 moves plus any egg-tagged moves currently known by **either** parent plus special-family moves, deduped and trimmed to 4; IVs = 3 stats inherited from the parents at random by default (5 with a Destiny-Knot-style held item), the rest rolled; nature = random, or the nature of an everstone-style item's holder (either parent). Eggs are creature entities with a `hatchCounter` progress field that decrements per overworld step-cycle. Full spec in `docs/breeding.md`; this summary is the contract.
 
 ### 2.10 Creature math
 
@@ -654,7 +654,7 @@ IVs are 0..31 (rolled at creature creation), EVs 0..255 per stat / 510 total. Le
 
 **Size**: species carry height/weight; individual creatures may carry a size record (`scale` 0..255, `alpha` flag) that buckets into `xs/sm/md/lg/xl/alpha` display classes and scales height. Weight feeds `power-from-weight` moves.
 
-**Major status enum**: `State` is a string enum **(planned change from numeric)**: `"burned" | "paralyzed" | "poisoned" | "asleep" | "frozen"` — string values because the enum is serialized into saves and displayed by the presentation.
+**Major status enum**: `State` is a string enum **(planned change from numeric)** whose values match the status strings used everywhere else in this spec (`apply-status`, `cure-status`, the 2.11.8 table, the capture bonus): `"burn" | "paralysis" | "poison" | "sleep" | "freeze"` — string values because the enum is serialized into saves and displayed by the presentation.
 
 ### 2.11 Battle system
 
@@ -689,7 +689,7 @@ Battle events (the full narration vocabulary):
 
 #### 2.11.2 Formats
 
-`slots: 1 | 2 | 3` (singles, doubles, triples). Each side provides either one team (it fills all its slots) or exactly `slots` teams (multi-trainer sides). Teams hold 1..6 creatures. Wild battles are a 1v1 where the wild side is a single-creature team and the player side has `canLeaveBattle: true`.
+`slots: 1 | 2 | 3` (singles, doubles, triples). Each side provides either one team (it fills all its slots) or exactly `slots` teams (multi-player sides). Teams hold 1..6 creatures. Wild battles are a 1v1 where the wild side is a single-creature team and the player side has `canLeaveBattle: true`.
 
 #### 2.11.3 Turn lifecycle
 
@@ -832,7 +832,7 @@ Where generations disagree, the engine picks one behavior. Current decisions:
 | Hazards beyond spikes                                            | stealth rock, toxic spikes, sticky web        | Gen 4/5 backport |
 | Terrains, rooms, gravity                                         | supported                                     | Gen 4-7 backport |
 | Fairy type                                                       | in the default chart                          | Gen 6 backport   |
-| Escape odds, capture formula, experience formulas, stat formulas | Gen 3                                         |
+| Escape odds, capture formula, experience formulas, stat formulas | Gen 3 formulas                                | Gen 3            |
 
 The table is normative: implementations and tests follow it, and changing a row is an ADR-worthy decision.
 
