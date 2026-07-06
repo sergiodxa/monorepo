@@ -47,6 +47,14 @@ export namespace GameEvent {
 		count: number;
 	}
 
+	/** Reports the player's money balance after a change. */
+	export interface MoneyChanged {
+		type: "money-changed";
+		playerId: PlayerId;
+		/** The new balance after the change. */
+		amount: number;
+	}
+
 	/** Reports a species progress update in the bestiary. */
 	export interface BestiaryUpdated {
 		type: "bestiary-updated";
@@ -124,6 +132,7 @@ export type GameEvent =
 	| GameEvent.BattleInputRequested
 	| GameEvent.BattleFinished
 	| GameEvent.InventoryUpdated
+	| GameEvent.MoneyChanged
 	| GameEvent.BestiaryUpdated
 	| GameEvent.CreaturePlacementChanged
 	| GameEvent.CreatureCaptured

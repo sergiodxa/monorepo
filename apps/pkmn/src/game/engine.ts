@@ -42,6 +42,7 @@ import { evolveCreature, getLevelUpEvolution } from "./systems/evolution-system"
 import { awardBattleExperience, grantCreatureExperience } from "./systems/experience-system";
 import { addInventoryItem, removeInventoryItem } from "./systems/inventory-system";
 import { healParty } from "./systems/party-system";
+import { buyItem, changeMoney, sellItem } from "./systems/shop-system";
 import {
 	ensureStorageBox,
 	moveCreatureToParty,
@@ -122,6 +123,24 @@ export class Engine {
 			case "attempt-capture": {
 				return this.attemptCapture(command);
 			}
+			case "buy-item": {
+				let result = buyItem(
+					this.gameData,
+					this.world,
+					command.playerId,
+					command.itemId,
+					command.count,
+				);
+				if (!result.ok) return [];
+				let count =
+					this.selectInventory(command.playerId).entries.find(
+						(entry) => entry.id === command.itemId,
+					)?.count ?? 0;
+				return [
+					{ type: "inventory-updated", itemId: command.itemId, count },
+					{ type: "money-changed", playerId: command.playerId, amount: result.balance },
+				];
+			}
 			case "capture-creature": {
 				let captured = captureCreature(this.world, command.playerId, command.creatureId);
 				return [
@@ -132,6 +151,10 @@ export class Engine {
 						boxId: "boxId" in captured ? captured.boxId : undefined,
 					},
 				];
+			}
+			case "change-money": {
+				let balance = changeMoney(this.world, command.playerId, command.amount);
+				return [{ type: "money-changed", playerId: command.playerId, amount: balance }];
 			}
 			case "evolve-creature": {
 				evolveCreature(this.world, command.creatureId, command.speciesId);
@@ -177,6 +200,24 @@ export class Engine {
 						(entry) => entry.id === command.itemId,
 					)?.count ?? 0;
 				return [{ type: "inventory-updated", itemId: command.itemId, count }];
+			}
+			case "sell-item": {
+				let result = sellItem(
+					this.gameData,
+					this.world,
+					command.playerId,
+					command.itemId,
+					command.count,
+				);
+				if (!result.ok) return [];
+				let count =
+					this.selectInventory(command.playerId).entries.find(
+						(entry) => entry.id === command.itemId,
+					)?.count ?? 0;
+				return [
+					{ type: "inventory-updated", itemId: command.itemId, count },
+					{ type: "money-changed", playerId: command.playerId, amount: result.balance },
+				];
 			}
 			case "spawn-encounter": {
 				let { creatureId } = spawnEncounter(this.gameData, this.world, command, this.random);

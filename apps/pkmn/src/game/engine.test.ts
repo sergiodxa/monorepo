@@ -67,6 +67,88 @@ test("Engine selectors stay UI-oriented after inventory and bestiary commands", 
 	expect(player.party.creatures[0]?.location).toBe("party:1");
 });
 
+test("change-money adjusts the balance and reports the new total", () => {
+	let playerId = createPlayerId("hero");
+	let enemyId = createPlayerId("rival");
+	let allyId = createCreatureId("ally-1");
+	let enemyCreatureId = createCreatureId("enemy-1");
+	let engine = createEngine(playerId, enemyId, allyId, enemyCreatureId);
+
+	let reward = engine.dispatch({ type: "change-money", playerId, amount: 500 });
+	expect(reward).toEqual([{ type: "money-changed", playerId, amount: 500 }]);
+	expect(engine.selectPlayer(playerId).money).toBe(500);
+
+	// A penalty larger than the balance clamps at zero rather than going negative.
+	let penalty = engine.dispatch({ type: "change-money", playerId, amount: -900 });
+	expect(penalty).toEqual([{ type: "money-changed", playerId, amount: 0 }]);
+	expect(engine.selectPlayer(playerId).money).toBe(0);
+});
+
+test("buy-item spends money and adds stock, reporting both events", () => {
+	let pricedItemId = Object.entries(ITEMS).find(([, item]) => "price" in item && item.price)?.[0];
+	expect(pricedItemId).toBeDefined();
+	let buyPrice = (ITEMS as Record<string, { price?: { buy: number } }>)[pricedItemId!]!.price!.buy;
+
+	let playerId = createPlayerId("hero");
+	let enemyId = createPlayerId("rival");
+	let allyId = createCreatureId("ally-1");
+	let enemyCreatureId = createCreatureId("enemy-1");
+	let engine = createEngine(playerId, enemyId, allyId, enemyCreatureId);
+
+	let before =
+		engine.selectPlayer(playerId).inventory.entries.find((entry) => entry.id === pricedItemId!)
+			?.count ?? 0;
+
+	engine.dispatch({ type: "change-money", playerId, amount: buyPrice * 2 });
+	let events = engine.dispatch({ type: "buy-item", playerId, itemId: pricedItemId!, count: 2 });
+
+	expect(events).toEqual([
+		{ type: "inventory-updated", itemId: pricedItemId!, count: before + 2 },
+		{ type: "money-changed", playerId, amount: 0 },
+	]);
+	let player = engine.selectPlayer(playerId);
+	expect(player.money).toBe(0);
+	expect(player.inventory.entries.find((entry) => entry.id === pricedItemId!)?.count).toBe(
+		before + 2,
+	);
+
+	// Cannot afford another copy, so nothing changes and no events are emitted.
+	expect(engine.dispatch({ type: "buy-item", playerId, itemId: pricedItemId!, count: 1 })).toEqual(
+		[],
+	);
+});
+
+test("sell-item removes stock and credits money, reporting both events", () => {
+	let sellableId = Object.entries(ITEMS).find(
+		([, item]) => "price" in item && item.price && item.price.sell > 0,
+	)?.[0];
+	expect(sellableId).toBeDefined();
+	let sellPrice = (ITEMS as Record<string, { price?: { sell: number } }>)[sellableId!]!.price!.sell;
+
+	let playerId = createPlayerId("hero");
+	let enemyId = createPlayerId("rival");
+	let allyId = createCreatureId("ally-1");
+	let enemyCreatureId = createCreatureId("enemy-1");
+	let engine = createEngine(playerId, enemyId, allyId, enemyCreatureId);
+
+	let before =
+		engine.selectPlayer(playerId).inventory.entries.find((entry) => entry.id === sellableId!)
+			?.count ?? 0;
+
+	engine.dispatch({ type: "add-inventory-item", playerId, itemId: sellableId!, count: 2 });
+	let events = engine.dispatch({ type: "sell-item", playerId, itemId: sellableId!, count: 1 });
+
+	expect(events).toEqual([
+		{ type: "inventory-updated", itemId: sellableId!, count: before + 1 },
+		{ type: "money-changed", playerId, amount: sellPrice },
+	]);
+	let player = engine.selectPlayer(playerId);
+	expect(player.money).toBe(sellPrice);
+	expect(player.inventory.entries.find((entry) => entry.id === sellableId!)?.count).toBe(
+		before + 1,
+	);
+});
+
 /** Creates one engine instance with a small migrated bootstrap world. */
 function createEngine(playerId: string, enemyId: string, allyId: string, enemyCreatureId: string) {
 	return Engine.create({

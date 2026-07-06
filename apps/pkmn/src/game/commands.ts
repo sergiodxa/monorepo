@@ -57,6 +57,29 @@ export namespace Command {
 		count: number;
 	}
 
+	/** Buys one or more copies of an item, deducting the player's money. */
+	export interface BuyItem {
+		type: "buy-item";
+		playerId: PlayerId;
+		itemId: ItemId;
+		count: number;
+	}
+
+	/** Sells one or more copies of an item, crediting the player's money. */
+	export interface SellItem {
+		type: "sell-item";
+		playerId: PlayerId;
+		itemId: ItemId;
+		count: number;
+	}
+
+	/** Adjusts the player's money by a signed amount (rewards or penalties). */
+	export interface ChangeMoney {
+		type: "change-money";
+		playerId: PlayerId;
+		amount: number;
+	}
+
 	/** Records that one species has been seen. */
 	export interface MarkSpeciesSeen {
 		type: "mark-species-seen";
@@ -139,13 +162,16 @@ export namespace Command {
 export type Command =
 	| Command.AddInventoryItem
 	| Command.AttemptCapture
+	| Command.BuyItem
 	| Command.CaptureCreature
+	| Command.ChangeMoney
 	| Command.EvolveCreature
 	| Command.GrantCreatureExperience
 	| Command.HealParty
 	| Command.MarkSpeciesCaught
 	| Command.MarkSpeciesSeen
 	| Command.RemoveInventoryItem
+	| Command.SellItem
 	| Command.SpawnEncounter
 	| Command.StartBattle
 	| Command.StoreCreature

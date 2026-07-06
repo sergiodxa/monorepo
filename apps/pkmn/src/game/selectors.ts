@@ -19,6 +19,7 @@ import {
 	getCreatureComponentSet,
 	getPlayerBestiary,
 	getPlayerInventory,
+	getPlayerMoney,
 	getPlayerParty,
 	getPlayerProfile,
 	getPlayerStorageBoxes,
@@ -101,6 +102,7 @@ export interface CreatureSummaryView {
 export interface PlayerView {
 	id: PlayerId;
 	name: string;
+	money: number;
 	party: PartyView;
 	inventory: InventoryView;
 	bestiary: BestiaryView;
@@ -226,6 +228,7 @@ export function selectPlayerView(gameData: GameData, world: World, playerId: Pla
 	return {
 		id: playerId,
 		name: getPlayerProfile(world).name,
+		money: getPlayerMoney(world, playerId),
 		party: selectPartyView(gameData, world, playerId),
 		inventory: selectInventoryView(gameData, world, playerId),
 		bestiary: selectBestiaryView(gameData, world, playerId),

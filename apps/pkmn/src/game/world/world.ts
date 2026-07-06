@@ -60,6 +60,12 @@ export interface InventoryComponent {
 	items: Partial<Record<ItemId, number>>;
 }
 
+/** Spendable currency balance owned by the player root. */
+export interface MoneyComponent {
+	/** Current balance; never negative. */
+	amount: number;
+}
+
 /** Bestiary progress tracked by species rather than creature instance. */
 export interface BestiaryComponent {
 	/** Species the player has encountered. */
@@ -92,6 +98,8 @@ export interface World {
 	party: ComponentStore<PartyComponent>;
 	/** Inventory components keyed by entity id. */
 	inventory: ComponentStore<InventoryComponent>;
+	/** Money components keyed by entity id. */
+	money: ComponentStore<MoneyComponent>;
 	/** Bestiary components keyed by entity id. */
 	bestiary: ComponentStore<BestiaryComponent>;
 	/** Storage components keyed by entity id. */
@@ -143,6 +151,11 @@ export function getPlayerParty(world: World): PartyComponent {
 /** Returns the player's current inventory component. */
 export function getPlayerInventory(world: World): InventoryComponent {
 	return requireComponent(world.inventory, world.playerId, "inventory");
+}
+
+/** Returns one player's current money balance, defaulting to zero when absent. */
+export function getPlayerMoney(world: World, playerId: PlayerId): number {
+	return world.money[playerId]?.amount ?? 0;
 }
 
 /** Returns the player's current bestiary component. */

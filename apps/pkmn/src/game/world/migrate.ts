@@ -20,6 +20,7 @@ import type {
 import type {
 	BestiaryComponent,
 	InventoryComponent,
+	MoneyComponent,
 	PartyComponent,
 	PlayerProfileComponent,
 	StorageBoxesComponent,
@@ -41,6 +42,8 @@ export interface LegacyWorld {
 	party: Partial<Record<string, PartyComponent>>;
 	/** Inventory components keyed by entity id. */
 	inventory: Partial<Record<string, InventoryComponent>>;
+	/** Money components keyed by entity id. */
+	money?: Partial<Record<string, MoneyComponent>>;
 	/** Bestiary components keyed by entity id. */
 	bestiary: Partial<Record<string, BestiaryComponent>>;
 	/** Storage components keyed by entity id. */
@@ -76,6 +79,7 @@ export function migrateWorld(input: LegacyWorld | World): World {
 		playerProfile: structuredClone(input.playerProfile),
 		party: structuredClone(input.party),
 		inventory: structuredClone(input.inventory),
+		money: structuredClone(input.money ?? {}),
 		bestiary: structuredClone(input.bestiary),
 		storageBoxes: structuredClone(input.storageBoxes),
 		creatureIdentity: structuredClone(input.creatureIdentity ?? {}),
