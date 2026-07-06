@@ -10,7 +10,8 @@
 		"./response": "./src/response.ts",
 		"./response/json": "./src/response/json.ts",
 		"./response/html": "./src/response/html.ts",
-		"./negotiate": "./src/negotiate.ts"
+		"./negotiate": "./src/negotiate.ts",
+		"./route-params": "./src/route-params.ts"
 	},
 	"scripts": {
 		"typecheck": "tsc --noEmit"
