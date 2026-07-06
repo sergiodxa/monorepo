@@ -50,6 +50,7 @@ export function createNewGameWorld(content: GameDataSource): World {
 	if (ids.length === 0) throw new RangeError("Content has no species to start a game.");
 	let natureId = firstKey(content.natures) ?? "HARDY";
 	let starterId = createCreatureId("starter");
+	let starterSpeciesId = ids[0]!;
 
 	return migrateWorld({
 		entities: [HERO_ID, WILD_ID, starterId],
@@ -67,14 +68,15 @@ export function createNewGameWorld(content: GameDataSource): World {
 			[WILD_ID]: { items: {} },
 		},
 		bestiary: {
-			[HERO_ID]: { seen: [], caught: [] },
+			// The player owns the starter from the start, so it is already seen and caught.
+			[HERO_ID]: { seen: [starterSpeciesId], caught: [starterSpeciesId] },
 			[WILD_ID]: { seen: [], caught: [] },
 		},
 		storageBoxes: {
 			[HERO_ID]: { boxes: [{ id: "box-1", name: "Box 1", creatureIds: [] }] },
 			[WILD_ID]: { boxes: [] },
 		},
-		creature: { [starterId]: makeCreature(content, ids[0]!, natureId) },
+		creature: { [starterId]: makeCreature(content, starterSpeciesId, natureId) },
 	}) as World;
 }
 
