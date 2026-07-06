@@ -1,3 +1,13 @@
+/**
+ * LandingFeatures component: a marketing section that renders a badged heading,
+ * description, and a responsive grid of feature cards, each with an icon, title,
+ * and description. It exists as a reusable presentation block that landing pages
+ * feed with their own feature lists to showcase product capabilities.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import type { ReactNode } from "react";
 
 import { Badge, Card } from "@pkg/ui";

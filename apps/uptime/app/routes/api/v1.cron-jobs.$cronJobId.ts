@@ -1,3 +1,13 @@
+/**
+ * API route for reading, updating, and deleting a single cron-job monitor. The
+ * loader returns the job (cron-jobs:read scope); the action handles PUT and DELETE
+ * (cron-jobs:write scope), re-parsing the cron expression and timezone to recompute
+ * the next expected run. It lets teams manage scheduled-job monitors via the API.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { isFailure } from "@pkg/result";
 import { validate } from "@pkg/validate";
 import { eq } from "drizzle-orm";

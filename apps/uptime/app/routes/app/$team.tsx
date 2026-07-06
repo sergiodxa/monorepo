@@ -1,3 +1,13 @@
+/**
+ * Layout route for the authenticated team area: its middleware chain authenticates the
+ * subject, resolves the team by slug, enforces membership, and caches whether the
+ * owner has an active subscription, then renders the sidebar shell around child routes.
+ * It exists as the guarded parent for every per-team page.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { Sidebar, useSidebar } from "@pkg/ui";
 import { waitUntil } from "cloudflare:workers";
 import { useEffect } from "react";

@@ -1,3 +1,13 @@
+/**
+ * Health-check endpoint route whose loader verifies database connectivity by counting
+ * rows in the teams and monitors tables in parallel, returning "OK" with a 200 when
+ * both succeed or the failure reason with a 500 otherwise. It exists so uptime probes
+ * and orchestrators can confirm the app and its database are reachable.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { text } from "@pkg/http/response";
 import { InternalServerError, Ok } from "@pkg/http/status-code";
 import { count } from "drizzle-orm";

@@ -1,3 +1,13 @@
+/**
+ * Marketing landing page for the e-commerce monitoring use case. Its loader
+ * builds localized SEO meta, and the component composes the shared landing
+ * sections with copy about monitoring checkout flows, payment APIs, product
+ * pages, and inventory endpoints to protect revenue from downtime.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import {
 	BoxIcon,
 	CheckCircleIcon,

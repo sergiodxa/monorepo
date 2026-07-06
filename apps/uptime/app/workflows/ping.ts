@@ -1,3 +1,14 @@
+/**
+ * The Cloudflare Workflow that runs a single HTTP monitor check end to end. It loads the
+ * monitor, performs a region-hinted fetch, evaluates the expected status and any content
+ * checks, writes the result to Analytics Engine, dispatches down/recovery alerts (email,
+ * Slack, Discord) while respecting cooldowns and maintenance windows, and ingests usage.
+ * It exists to reliably orchestrate these steps with retries so pings survive failures.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import type { WorkflowEvent, WorkflowStep } from "cloudflare:workers";
 
 import { BatchedLogger } from "@pkg/logger";

@@ -1,3 +1,13 @@
+/**
+ * Route module for the team "create maintenance" action. Validates the window fields,
+ * ensures the end time is after the start, and inserts a maintenance window for the
+ * team, optionally scoped to a monitor and flagged for alert suppression, status-page
+ * display and recurrence. Exists so teams can schedule planned downtime windows.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { badRequest, created } from "@pkg/response";
 import { isFailure } from "@pkg/result";
 import { validate } from "@pkg/validate";

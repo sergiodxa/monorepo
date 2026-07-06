@@ -1,3 +1,12 @@
+/**
+ * Catch-all splat route that handles any unmatched URL. Its loader returns a 404
+ * response and the component renders a localized "not found" page, giving the app
+ * a consistent fallback for pages that do not exist.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { notFound } from "@pkg/response";
 import { useTranslation } from "react-i18next";
 

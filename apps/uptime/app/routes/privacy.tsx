@@ -1,3 +1,13 @@
+/**
+ * Privacy policy route for the Uptime marketing site. Its loader reads the
+ * signed-in state and builds localized SEO meta, and the component renders the
+ * full GDPR-oriented policy prose (data collected, usage, sharing, retention,
+ * rights, security, cookies) within the shared landing header and footer.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { LandingFooter, LandingHeader } from "~/components/landing";
 import { generateMeta } from "~/lib/seo";
 import { i18next } from "~/middleware/i18next";

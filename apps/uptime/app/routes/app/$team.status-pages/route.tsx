@@ -1,3 +1,13 @@
+/**
+ * Route module for the status pages list. Its loader lists the team's status pages with
+ * their linked-monitor counts and visibility, and the component renders them in a table
+ * with links to the public page, plus per-row view, edit, and confirm-delete actions,
+ * falling back to an empty state prompting creation when the team has none.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { cn } from "@pkg/cn";
 import { Button, confirm, Empty, LinkButton, Menu, Popover, Table } from "@pkg/ui";
 import {

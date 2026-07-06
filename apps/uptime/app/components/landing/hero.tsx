@@ -1,3 +1,13 @@
+/**
+ * LandingHero component: the top hero section for marketing pages. It renders a
+ * badge, title, description, primary and secondary CTAs (dashboard vs sign-up by
+ * sign-in state), a highlights list, and a light/dark dashboard screenshot. It
+ * exists as a reusable, configurable header shared across the landing pages.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import type { ReactNode } from "react";
 
 import { Badge } from "@pkg/ui";

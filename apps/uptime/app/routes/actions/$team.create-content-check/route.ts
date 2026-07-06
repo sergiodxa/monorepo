@@ -1,3 +1,13 @@
+/**
+ * Route module for the team "create content check" action. Validates the check type
+ * (contains, not_contains or regex) and value, confirms the target monitor belongs to
+ * the team, enforces a limit of ten checks per monitor, and inserts the content check.
+ * Exists so teams can assert on response-body content for an HTTP monitor.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { badRequest, created, notFound, unprocessableEntity } from "@pkg/response";
 import { isFailure } from "@pkg/result";
 import { validate } from "@pkg/validate";

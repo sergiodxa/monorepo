@@ -1,3 +1,13 @@
+/**
+ * Queued job that verifies a team's ownership of a custom domain by performing a
+ * DNS-over-HTTPS TXT lookup on `_ping-verification.<hostname>` and matching the
+ * expected token. On success it stamps the team domain's `verifiedAt`; on failure
+ * it logs the outcome. It gates custom-domain features behind proven ownership.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { Job } from "@pkg/jobs";
 import { isFailure } from "@pkg/result";
 import { validate } from "@pkg/validate";

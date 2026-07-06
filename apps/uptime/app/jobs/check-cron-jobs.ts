@@ -1,3 +1,13 @@
+/**
+ * Scheduled job that evaluates enabled cron job monitors against their expected run
+ * time and grace period, transitioning them to `late` or `missed`, and dispatches
+ * cooldown-aware email, webhook, Slack, and Discord alerts on those transitions.
+ * It exists to detect cron executions that run late or never arrive and warn teams.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { Json } from "@pkg/http/content-type";
 import { Job } from "@pkg/jobs";
 import { env } from "cloudflare:workers";

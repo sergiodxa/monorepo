@@ -1,3 +1,13 @@
+/**
+ * Unit tests for the `groupDatesPerWeek` helper. They confirm it buckets a year's worth
+ * of dates into arrays of weeks and that the first and last weeks of 2025 contain exactly
+ * the expected partial-week dates. They exist to pin down the week-grouping edges that the
+ * heatmap's weekly columns rely on.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { describe, expect, test } from "bun:test";
 
 import daysOfYear from "./days-of-year";

@@ -1,3 +1,14 @@
+/**
+ * API v1 endpoint that replaces a status page's monitor and cron job associations: an
+ * API-key middleware authenticates the request and the PUT action (status-pages:write)
+ * validates the given ids, verifies they belong to the team, then clears and re-inserts
+ * the ordered associations. It exists to let API clients set which checks a status page
+ * displays.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { isFailure } from "@pkg/result";
 import { validate } from "@pkg/validate";
 import { eq } from "drizzle-orm";

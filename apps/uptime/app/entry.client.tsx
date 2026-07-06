@@ -1,3 +1,14 @@
+/**
+ * Client-side hydration entry point for the uptime app. Initialises i18next in
+ * the browser with the fetch backend, HTML-tag language detection, and the
+ * namespaces the server rendered, then hydrates the React Router app inside the
+ * i18next provider within a React transition. It exists to bring the SSR'd markup
+ * to life on the client.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import i18next from "i18next";
 import I18nextBrowserLanguageDetector from "i18next-browser-languagedetector";
 import Fetch from "i18next-fetch-backend";

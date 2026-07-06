@@ -1,3 +1,13 @@
+/**
+ * Marketing landing page for the "For Indie Hackers" audience segment. Its loader
+ * builds localized SEO meta, and the component composes the shared landing
+ * sections with copy pitching affordable, usage-based monitoring for
+ * bootstrappers: cheap pings, simple setup, and no enterprise complexity.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import {
 	BellOffIcon,
 	DollarSignIcon,

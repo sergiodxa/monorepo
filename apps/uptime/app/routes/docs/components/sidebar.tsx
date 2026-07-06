@@ -1,3 +1,13 @@
+/**
+ * Presentational sidebar component for the documentation site. It renders the docs
+ * title, a search field, and either flat search results or docs grouped by section
+ * as navigation links, with an optional close button for mobile. It is a controlled
+ * component: search value, results, and close behavior are supplied via props.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { Button, NavLink, ScrollArea, SearchField, Separator, Text } from "@pkg/ui";
 import { X } from "lucide-react";
 

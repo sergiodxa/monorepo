@@ -1,3 +1,13 @@
+/**
+ * API route listing alert-delivery events recorded for a single monitor. The
+ * loader authenticates by API key, requires the alerts:read scope, verifies the
+ * monitor belongs to the caller's team, then returns the most recent alert events
+ * ordered by send time with a caller-supplied limit. It backs alert history views.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { z } from "zod/v4";
 
 import {

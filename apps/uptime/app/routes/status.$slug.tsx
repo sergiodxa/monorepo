@@ -1,3 +1,13 @@
+/**
+ * Public status page route rendered at /status/:slug. Its loader fetches the
+ * status page, its linked monitors and cron jobs, derives per-item and overall
+ * operational/degraded/down status, and builds 30-day uptime heatmaps. The
+ * component renders the branded page, banner, monitor/cron cards, and error state.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { cn } from "@pkg/cn";
 import { isSameDay } from "date-fns";
 import {

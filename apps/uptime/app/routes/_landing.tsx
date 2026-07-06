@@ -1,3 +1,13 @@
+/**
+ * Layout route for the public marketing pages. It wraps its child routes' `Outlet`
+ * with the shared landing header and footer, and its loader exposes the viewer's
+ * signed-in state so nested pages can tailor calls to action. It exists to provide
+ * consistent chrome and shared session data across the landing site.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { Outlet } from "react-router";
 
 import { LandingFooter, LandingHeader } from "~/components/landing";

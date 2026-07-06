@@ -1,3 +1,13 @@
+/**
+ * API v1 endpoint that returns aggregate stats for all of a team's monitors: an
+ * API-key middleware authenticates the request and the loader (monitors:read) delegates
+ * to the Monitor model's per-team stats query. It exists to give API clients a single
+ * roll-up of monitor statistics without fetching each monitor.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import {
 	apiAuth,
 	ApiAuthContext,

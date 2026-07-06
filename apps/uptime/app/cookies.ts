@@ -1,3 +1,13 @@
+/**
+ * Cookie definitions for the uptime app. Declares the signed, httpOnly cookies
+ * the app uses: the year-long session and i18n language cookies, a short-lived
+ * return-to redirect cookie, and a dashboard-tab preference cookie, all sharing
+ * the same signing secret. It exists to centralise cookie configuration.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { env } from "cloudflare:workers";
 import { createCookie } from "react-router";
 

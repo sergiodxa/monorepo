@@ -1,3 +1,13 @@
+/**
+ * Layout route for the documentation section: its loader lists doc sections and SEO
+ * meta, and the component renders the docs shell with a searchable sidebar (fuzzy
+ * search via Fuse), a responsive mobile menu, breadcrumbs, and a context-aware CTA. It
+ * exists to frame every docs page with consistent navigation and search.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { useValue } from "@pkg/hooks";
 import prismDark from "@pkg/markdown/styles/dark.css?url";
 import prismLight from "@pkg/markdown/styles/light.css?url";

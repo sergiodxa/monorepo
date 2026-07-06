@@ -1,3 +1,13 @@
+/**
+ * API route for listing and creating cron-job monitors for the authenticated team.
+ * The loader returns all jobs (cron-jobs:read scope); the action creates one via
+ * POST (cron-jobs:write scope), validating the cron expression with cron-parser and
+ * computing the next expected run. It is the collection endpoint for job monitors.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { isFailure } from "@pkg/result";
 import { validate } from "@pkg/validate";
 import { z } from "zod/v4";

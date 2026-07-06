@@ -1,3 +1,13 @@
+/**
+ * Marketing feature route for the integrations landing page. It composes the shared
+ * hero, trust indicators, feature grid, how-it-works steps, and FAQ with copy about
+ * native Slack and Discord notifications, channel routing, team mentions, and custom
+ * webhooks. It exists as an SEO page promoting the chat/webhook integrations.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import {
 	BellIcon,
 	FilterIcon,

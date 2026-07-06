@@ -1,3 +1,14 @@
+/**
+ * API v1 endpoint that returns the check history for a single monitor: an API-key
+ * middleware authenticates the request and the loader (monitors:read) confirms the
+ * monitor belongs to the team, then returns paginated results ordered newest-first with
+ * limit/offset and a hasMore flag. It exists to expose monitor result history over the
+ * public API.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { z } from "zod/v4";
 
 import {

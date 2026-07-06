@@ -1,3 +1,13 @@
+/**
+ * Marketing audience route rendering the "For Enterprises" landing page. It composes
+ * the shared hero, trust indicators, feature grid, how-it-works steps, and FAQ with
+ * enterprise-focused copy around domain verification, auto-provisioning, role-based
+ * access, and SLAs. It exists as an SEO-targeted page aimed at large organizations.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import {
 	CalendarClockIcon,
 	GlobeIcon,

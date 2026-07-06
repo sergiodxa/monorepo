@@ -1,3 +1,13 @@
+/**
+ * API route for listing and creating alerts for the authenticated team. The loader
+ * returns alerts with sensitive config (webhook URLs and secrets) stripped; the
+ * action creates one via POST for email, webhook, slack, or discord strategies,
+ * enforcing a per-team limit of ten. It manages notification channels via the API.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { isFailure } from "@pkg/result";
 import { validate } from "@pkg/validate";
 import { count, eq } from "drizzle-orm";

@@ -1,3 +1,13 @@
+/**
+ * Route module for the team "update DNS monitor" action. Validates the submitted fields,
+ * looks up the DNS monitor, verifies it belongs to the current team, and updates its
+ * name, domain, record type, expected value, interval and enabled state. Exists so teams
+ * can edit an existing DNS monitor and are redirected back to the team's DNS list.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { badRequest, forbidden, notFound, ok } from "@pkg/response";
 import { isFailure } from "@pkg/result";
 import { validate } from "@pkg/validate";

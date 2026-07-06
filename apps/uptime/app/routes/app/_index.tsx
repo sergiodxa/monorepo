@@ -1,3 +1,12 @@
+/**
+ * Index route for `/app` that redirects the signed-in subject to their first team by
+ * looking up the earliest-created membership, or to the marketing home page when they
+ * belong to no team. It exists to land users on a concrete team without a chooser.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { href, redirect } from "react-router";
 
 import { db } from "~/middleware/drizzle";

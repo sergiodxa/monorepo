@@ -1,3 +1,13 @@
+/**
+ * Loading placeholder for a dashboard stat card. It renders the shared `Card`
+ * shell with `Skeleton` blocks sized to match a real stat card's label, value,
+ * and description, keeping the dashboard grid stable while the underlying metric
+ * queries are still resolving.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { Card, Skeleton } from "@pkg/ui";
 
 export function StatCardSkeleton() {

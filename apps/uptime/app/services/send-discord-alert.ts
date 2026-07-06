@@ -1,3 +1,13 @@
+/**
+ * Discord alert service. It builds a colored embed for down, recovered, and
+ * degraded monitor events—formatting status, downtime duration, and a dashboard
+ * link—and POSTs it to a Discord webhook, returning a Result. It exists to
+ * deliver monitor status notifications to a team's Discord channel.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { Json } from "@pkg/http/content-type";
 import { type Result, failure, success } from "@pkg/result";
 

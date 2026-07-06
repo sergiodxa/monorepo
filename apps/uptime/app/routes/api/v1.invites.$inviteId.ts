@@ -1,3 +1,13 @@
+/**
+ * API route that deletes a single pending team invite. Its action requires a
+ * DELETE method and the invites:write scope, confirms the invite belongs to the
+ * caller's team, and removes it from the database. It exists so teams can rescind
+ * outstanding invitations programmatically.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { eq } from "drizzle-orm";
 
 import * as schema from "~/db/schema";

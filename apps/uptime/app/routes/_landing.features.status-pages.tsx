@@ -1,3 +1,13 @@
+/**
+ * Marketing landing page for the status pages feature. Its loader builds
+ * localized SEO meta including SoftwareApplication JSON-LD, and the component
+ * composes the shared landing sections with copy about branded public or private
+ * status pages that reflect monitor health in real time with uptime history.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import {
 	CheckCircleIcon,
 	EyeIcon,

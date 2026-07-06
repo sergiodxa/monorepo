@@ -1,3 +1,13 @@
+/**
+ * Marketing comparison page pitching Uptime against Site24x7. Its loader builds
+ * localized SEO meta, and the component feeds static feature, why-switch,
+ * honest-take, pricing-scenario, and FAQ data into the shared compare sections to
+ * contrast simple usage-based pricing with Site24x7's tiered all-in-one platform.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { CheckIcon, DollarSignIcon, SparklesIcon, ZapIcon } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useRouteLoaderData } from "react-router";

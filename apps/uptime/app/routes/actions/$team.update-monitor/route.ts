@@ -1,3 +1,14 @@
+/**
+ * Route action that updates an existing HTTP monitor for a team. It validates the
+ * name, URL, expected status, check interval (converted from minutes to seconds),
+ * and location hint, verifies the monitor belongs to the current team, then applies
+ * the changes via the Monitor model. It exists so teams can edit monitor settings,
+ * redirecting to the dashboard on success.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { badRequest, notFound, ok } from "@pkg/response";
 import { isFailure } from "@pkg/result";
 import { validate } from "@pkg/validate";

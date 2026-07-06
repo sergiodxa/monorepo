@@ -1,3 +1,13 @@
+/**
+ * Authentication module wiring OAuth2/OIDC against auth.sergiodxa.com: it builds
+ * the strategy, verifies the returned id token, provisions or links the customer,
+ * and resolves the user's teams (joining by domain or creating one). It also
+ * implements SSO-aware logout that clears the session and redirects to the IdP.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { env } from "cloudflare:workers";
 import { redirect } from "react-router";
 import { OAuth2Strategy } from "remix-auth-oauth2";

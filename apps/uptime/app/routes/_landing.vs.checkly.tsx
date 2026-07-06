@@ -1,3 +1,13 @@
+/**
+ * Marketing comparison route rendering the "Uptime vs Checkly" landing page. It
+ * defines the feature-parity table, why-switch reasons, honest-take caveats,
+ * pricing scenarios, and FAQ, and composes them via the shared compare components.
+ * It exists as an SEO-targeted page to convert visitors evaluating Checkly.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { DollarSignIcon, MousePointerClickIcon, UsersIcon, ZapIcon } from "lucide-react";
 import { useRouteLoaderData } from "react-router";
 

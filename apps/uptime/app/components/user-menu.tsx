@@ -1,3 +1,13 @@
+/**
+ * The sidebar user menu React component. It displays the signed-in user's avatar (or name
+ * initials) and name, and opens a menu linking to the account page for the current team and
+ * to logout. It exists to give users quick access to account settings and signing out from
+ * anywhere in the app shell.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { Avatar, Button, Menu, Popover } from "@pkg/ui";
 import { ChevronsUpDownIcon } from "lucide-react";
 import { useTranslation } from "react-i18next";

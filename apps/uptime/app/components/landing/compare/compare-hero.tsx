@@ -1,3 +1,13 @@
+/**
+ * Renders the hero section for a competitor comparison page, showing an "Uptime vs
+ * {competitor}" headline, tagline, description, and a primary CTA that adapts to the
+ * signed-in state, plus reassurance badges. It exists to open each versus page with a
+ * focused, conversion-oriented header.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { Badge } from "@pkg/ui";
 import { ArrowRightIcon, CheckIcon } from "lucide-react";
 import { href, Link } from "react-router";

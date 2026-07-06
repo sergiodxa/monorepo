@@ -1,3 +1,14 @@
+/**
+ * API authentication helpers for the app's public REST API. Extracts a Bearer token, hashes
+ * it with SHA-256, looks up the matching API key and team in the database, checks expiry and
+ * scopes, and exposes an `ApiAuthContext` plus helpers to generate keys and build standard
+ * JSON error/success responses. Exists to centralize token-based auth and API response
+ * shaping for API routes.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import type { StatusCode } from "@pkg/http/status-code";
 
 import { json } from "@pkg/http/response";

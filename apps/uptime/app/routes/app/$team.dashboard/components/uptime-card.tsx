@@ -1,3 +1,13 @@
+/**
+ * Dashboard stat card showing the team's overall HTTP uptime. It reads the
+ * resolved HTTP monitors data and renders a translated `StatCard` with the
+ * uptime ratio formatted as a locale-aware percentage, giving a single headline
+ * reliability figure for the monitored endpoints.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import type { ResolvedType } from "@pkg/types";
 
 import { useTranslation } from "react-i18next";

@@ -1,3 +1,13 @@
+/**
+ * Route module for the user account page. Its loader gathers the signed-in subject's
+ * profile from the auth service, their team memberships (with owner detection), and their
+ * preferred language, and the component renders profile, language-preference, and teams
+ * sections, letting members leave teams and switch UI language via fetcher forms.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import type { RouterContextProvider } from "react-router";
 
 import { cn } from "@pkg/cn";

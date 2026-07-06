@@ -1,3 +1,13 @@
+/**
+ * Vendored Workers KV session storage adapter for React Router. It implements
+ * createSessionStorage's create/read/update/delete callbacks against a KVNamespace,
+ * generating random 64-bit session ids with collision checks. It exists to store
+ * session data in KV instead of cookies, allowing far larger session payloads.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import type { SessionData, SessionIdStorageStrategy, SessionStorage } from "react-router";
 
 import { createSessionStorage } from "react-router";

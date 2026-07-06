@@ -1,3 +1,13 @@
+/**
+ * Route module for the team "end maintenance" action. Validates the maintenance window
+ * id, confirms it belongs to the current team, and marks it as ended early by setting
+ * its endedEarlyAt timestamp to now. Exists so teams can close an active maintenance
+ * window ahead of its scheduled end, redirecting back to the maintenance page.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { badRequest, forbidden, notFound, ok } from "@pkg/response";
 import { isFailure } from "@pkg/result";
 import { validate } from "@pkg/validate";

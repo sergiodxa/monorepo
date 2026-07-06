@@ -1,3 +1,13 @@
+/**
+ * API route for reading, updating, and deleting a single HTTP monitor. The loader
+ * returns the monitor including its SSL-monitoring fields (monitors:read scope); the
+ * action handles PUT and DELETE (monitors:write scope), applying only the provided
+ * fields on update. It is the per-resource endpoint for managing website monitors.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { isFailure } from "@pkg/result";
 import { validate } from "@pkg/validate";
 import { eq } from "drizzle-orm";

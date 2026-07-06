@@ -1,3 +1,13 @@
+/**
+ * API route serving read-only aggregate statistics for a single HTTP monitor.
+ * Its loader authenticates the request via API key, enforces the monitors:read
+ * scope, confirms the monitor belongs to the caller's team, and returns the
+ * computed stats. It exists to power dashboards and programmatic monitor reporting.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import {
 	apiAuth,
 	ApiAuthContext,

@@ -1,3 +1,14 @@
+/**
+ * The billing model that wraps the Polar client to manage customers and usage-based billing.
+ * It creates and looks up customers, links external IDs, checks for active subscriptions,
+ * starts checkouts, ingests `ping` usage events, and queries monthly ping usage totals for a
+ * customer or an individual monitor. It exists to isolate all Polar billing interactions
+ * behind a single typed model keyed by the auth subject's external ID.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { endOfDay, endOfMonth, startOfDay, startOfMonth } from "date-fns";
 
 import type IdToken from "~/entities/id-token";

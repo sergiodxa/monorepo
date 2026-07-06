@@ -1,3 +1,13 @@
+/**
+ * Marketing comparison route rendering the "Uptime vs Pingdom" landing page. It
+ * defines the feature-parity table, why-switch reasons, honest-take caveats,
+ * pricing scenarios, and FAQ contrasting usage-based pricing and bundled status
+ * pages with Pingdom, composed via the shared compare components as an SEO page.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { CheckIcon, DollarSignIcon, SparklesIcon, ZapIcon } from "lucide-react";
 import { useRouteLoaderData } from "react-router";
 

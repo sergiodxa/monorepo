@@ -1,3 +1,13 @@
+/**
+ * Unit tests for the `daysOfYear` helper. They verify it returns every date in the year
+ * containing a given date (365 entries for a common year, 366 for a leap year) and that
+ * the range spans from January 1st to December 31st inclusive. They exist to guard the
+ * date boundaries and leap-year handling the year-view heatmap depends on.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { describe, expect, test } from "bun:test";
 
 import daysOfYear from "./days-of-year";

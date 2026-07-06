@@ -1,3 +1,13 @@
+/**
+ * API route for reading, updating, and deleting a single status page. The loader
+ * returns the page with its associated monitor and cron-job ids (status-pages:read
+ * scope); the action handles PUT and DELETE (status-pages:write scope), cascading
+ * removal of monitor/cron-job links on delete. It manages status pages via the API.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { isFailure } from "@pkg/result";
 import { validate } from "@pkg/validate";
 import { eq } from "drizzle-orm";

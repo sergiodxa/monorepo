@@ -1,3 +1,14 @@
+/**
+ * Route showing the detail page for a single cron job monitor. The loader fetches the job
+ * scoped to the team along with its stats and recent pings, and the component renders job
+ * info, stat cards, copy-to-clipboard integration snippets (curl, bash, Python, Node) for
+ * the ping endpoint, a ping history table, and edit/delete actions. Exists to give teams
+ * insight into a scheduled job's heartbeats and how to wire it up.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { Alert, Badge, Button, Card, confirm, LinkButton, Table } from "@pkg/ui";
 import { format, formatDistanceToNow } from "date-fns";
 import { CopyIcon, PencilIcon, TrashIcon } from "lucide-react";

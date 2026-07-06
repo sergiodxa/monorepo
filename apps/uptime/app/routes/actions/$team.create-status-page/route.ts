@@ -1,3 +1,13 @@
+/**
+ * Route module for the team "create status page" action. Validates the page fields and
+ * selected monitor/cron-job ids, enforces slug uniqueness, inserts the status page, and
+ * links the chosen monitors and cron jobs in order. Exists so teams can publish a new
+ * public status page and are redirected back to their status pages list.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { badRequest } from "@pkg/response";
 import { isFailure } from "@pkg/result";
 import { validate } from "@pkg/validate";

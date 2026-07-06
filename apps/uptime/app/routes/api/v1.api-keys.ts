@@ -1,3 +1,13 @@
+/**
+ * API route for listing and creating API keys for the authenticated team. The
+ * loader returns key metadata without secrets (api-keys:read scope); the action
+ * generates a new key via POST (api-keys:write scope), enforcing a per-team limit of
+ * ten and returning the plaintext key once. It is the collection endpoint for credentials.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { isFailure } from "@pkg/result";
 import { validate } from "@pkg/validate";
 import { count, eq } from "drizzle-orm";

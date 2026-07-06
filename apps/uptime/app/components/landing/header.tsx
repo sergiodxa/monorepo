@@ -1,3 +1,13 @@
+/**
+ * Renders the sticky landing page header with the logo, in-page navigation links
+ * (features, pricing, FAQ, docs), and a primary call-to-action button. The CTA and
+ * its target adapt to whether the visitor is signed in, so the marketing pages get
+ * one consistent, localized top bar.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { ArrowRightIcon } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { href, Link } from "react-router";

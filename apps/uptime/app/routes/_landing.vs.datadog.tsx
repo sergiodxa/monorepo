@@ -1,3 +1,13 @@
+/**
+ * Marketing comparison page pitching Uptime against Datadog Synthetic Monitoring.
+ * Its loader builds localized SEO meta, and the component feeds static feature,
+ * reasons-to-switch, honest-take, pricing, and FAQ data into the shared compare
+ * sections to argue for focused, affordable uptime monitoring alongside Datadog.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { CheckIcon, DollarSignIcon, SparklesIcon, ZapIcon } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useRouteLoaderData } from "react-router";

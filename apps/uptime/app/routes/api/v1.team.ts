@@ -1,3 +1,13 @@
+/**
+ * API v1 endpoint for the authenticated team: an API-key middleware authenticates the
+ * request, the loader returns the team's details (teams:read), and the PUT action
+ * validates and updates the team's name and/or logo (teams:write). It exists to let API
+ * clients read and edit the current team's profile.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { isFailure } from "@pkg/result";
 import { validate } from "@pkg/validate";
 import { eq } from "drizzle-orm";

@@ -1,3 +1,12 @@
+/**
+ * Renders the "why switch" section of a comparison page, laying out a grid of reason
+ * cards each with an icon, title, and description under a heading. It exists to present
+ * the key selling points that motivate teams to move to Uptime from a competitor.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import type { ReactNode } from "react";
 
 import { Badge, Card } from "@pkg/ui";

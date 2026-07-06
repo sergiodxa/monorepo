@@ -1,3 +1,13 @@
+/**
+ * DNS check service. It resolves A/AAAA/CNAME/MX/TXT/NS records via Cloudflare's
+ * DNS-over-HTTPS API, compares the resolved values against an expected or
+ * previous value to flag "changed", and reports response time plus errors. It
+ * also exposes human-readable status text and colors for DNS monitor results.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { z } from "zod/v4";
 
 const BASE_URL = new URL("https://cloudflare-dns.com/dns-query");

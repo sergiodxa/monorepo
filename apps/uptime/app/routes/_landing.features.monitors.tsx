@@ -1,3 +1,13 @@
+/**
+ * Marketing feature route for the HTTP monitors landing page. It composes the shared
+ * hero, trust indicators, feature grid, how-it-works steps, and FAQ with copy about
+ * running HTTP health checks from 9 global regions at 1-60 minute intervals with
+ * status-code validation. It exists as an SEO page promoting the core monitoring.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import {
 	ActivityIcon,
 	CalendarIcon,

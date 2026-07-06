@@ -1,3 +1,13 @@
+/**
+ * Route action that deletes an HTTP monitor for a team. It validates the submitted
+ * monitor id, blocks members without admin/owner rights, confirms the monitor
+ * exists, then removes it via the Monitor model, logging each outcome. It exists so
+ * the dashboard can delete monitors with proper authorization and toast feedback.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { badRequest, forbidden, notFound, ok } from "@pkg/response";
 import { isFailure } from "@pkg/result";
 import { validate } from "@pkg/validate";

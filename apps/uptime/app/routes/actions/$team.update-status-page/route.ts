@@ -1,3 +1,13 @@
+/**
+ * Route module for the team "update status page" action. Validates the page fields and
+ * selected monitor/cron-job ids, confirms the page belongs to the team, enforces slug
+ * uniqueness against other pages, updates the record, and rebuilds its ordered monitor
+ * and cron-job associations. Exists so teams can edit an existing public status page.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { badRequest } from "@pkg/response";
 import { isFailure } from "@pkg/result";
 import { validate } from "@pkg/validate";

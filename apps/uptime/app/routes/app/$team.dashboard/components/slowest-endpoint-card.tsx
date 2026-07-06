@@ -1,3 +1,13 @@
+/**
+ * Dashboard stat card highlighting the slowest HTTP endpoint for the team. When
+ * a slowest endpoint exists it renders a `StatCard` naming that monitor and its
+ * locale-formatted response time in milliseconds; otherwise it falls back to a
+ * translated no-data variant, so the worst performer is easy to spot.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import type { ResolvedType } from "@pkg/types";
 
 import { Trans, useTranslation } from "react-i18next";

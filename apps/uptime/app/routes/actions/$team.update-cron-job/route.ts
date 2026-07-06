@@ -1,3 +1,13 @@
+/**
+ * Route module for the team "update cron job" action. Validates the submitted fields,
+ * confirms the cron job monitor belongs to the current team, parses and verifies the
+ * cron expression, and updates name, schedule, grace period and enabled state while
+ * recomputing the next expected run. Exists so teams can edit scheduled-job monitors.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { badRequest, notFound, ok } from "@pkg/response";
 import { isFailure } from "@pkg/result";
 import { validate } from "@pkg/validate";

@@ -1,3 +1,13 @@
+/**
+ * API v1 collection endpoint for status pages: an API-key middleware authenticates the
+ * request, the loader lists a team's status pages (status-pages:read), and the action
+ * validates and creates a new one (status-pages:write) with a unique slug and display
+ * options. It exists to manage status pages over the public API.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { isFailure } from "@pkg/result";
 import { validate } from "@pkg/validate";
 import { z } from "zod/v4";

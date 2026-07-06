@@ -1,3 +1,13 @@
+/**
+ * Route module for the team "set dashboard tab" action. Validates the requested tab
+ * (http, dns, tcp or cron-jobs) and persists the choice by serializing it into the
+ * dashboardTab cookie. Exists so the team dashboard can remember which monitor category
+ * the user last viewed across visits.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { isFailure } from "@pkg/result";
 import { validate } from "@pkg/validate";
 import { data } from "react-router";

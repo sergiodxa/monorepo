@@ -1,3 +1,13 @@
+/**
+ * Scheduled job that finds every team domain still lacking a `verifiedAt` stamp
+ * and batch-enqueues a `verifyDomainOwnership` message onto the queue for each one.
+ * It acts as the periodic driver that keeps re-attempting DNS ownership checks so
+ * pending domains eventually get verified without manual intervention.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { Job } from "@pkg/jobs";
 import { env, waitUntil } from "cloudflare:workers";
 

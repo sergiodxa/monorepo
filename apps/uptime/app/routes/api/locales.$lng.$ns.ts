@@ -1,3 +1,13 @@
+/**
+ * Resource route that serves i18next translation bundles: its loader validates the
+ * requested language and namespace params against the bundled locales (en, es, de, ja,
+ * fr, it), returns the matching translations, and applies browser/CDN cache headers in
+ * production. It exists to lazily deliver localized strings to the client.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { cacheHeader } from "pretty-cache-header";
 import { data } from "react-router";
 import { z } from "zod";

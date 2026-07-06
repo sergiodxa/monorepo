@@ -1,3 +1,13 @@
+/**
+ * Route for a team's checkout flow: its loader routes the team owner to a Polar
+ * customer portal when a subscription is active or to a hosted checkout otherwise,
+ * while non-owners get a 403 with their year-to-date ping usage. It exists to gate
+ * billing to owners and drive subscription purchase for the app.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { Card } from "@pkg/ui";
 import { startOfYear } from "date-fns";
 import { useTranslation } from "react-i18next";

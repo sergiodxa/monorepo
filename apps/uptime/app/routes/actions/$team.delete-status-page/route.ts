@@ -1,3 +1,13 @@
+/**
+ * Route module for the team "delete status page" action. Validates the status page id,
+ * confirms it belongs to the current team, removes its monitor associations, and then
+ * deletes the status page itself. Exists so teams can tear down a public status page
+ * and its links cleanly with localized feedback.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { badRequest, ok } from "@pkg/response";
 import { isFailure } from "@pkg/result";
 import { validate } from "@pkg/validate";

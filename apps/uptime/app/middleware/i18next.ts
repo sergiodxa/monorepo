@@ -1,3 +1,14 @@
+/**
+ * Internationalization middleware and configuration for the app. Declares the supported
+ * languages and display names, wires up `createI18nextMiddleware` with cookie- and
+ * header-based locale detection and the bundled translation resources, and exposes `locale()`
+ * and `i18next()` accessors plus the i18next type augmentation. Exists to centralize
+ * multi-language setup for both server and route code.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import type { RouterContextProvider } from "react-router";
 
 import { createI18nextMiddleware } from "remix-i18next/middleware";

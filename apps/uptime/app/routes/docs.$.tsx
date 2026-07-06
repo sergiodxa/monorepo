@@ -1,3 +1,13 @@
+/**
+ * Splat route that renders an individual documentation page at /docs/*. Its
+ * loader resolves the slug to a locale-aware doc loader, parses the Markdown and
+ * frontmatter, and builds SEO meta; the component renders the title, description,
+ * and parsed content, with an error boundary for missing or unparsable docs.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { MarkdownView } from "@pkg/markdown/client/react";
 import { notFound } from "@pkg/response";
 import { isFailure } from "@pkg/result";

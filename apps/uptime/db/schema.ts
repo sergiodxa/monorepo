@@ -1,3 +1,15 @@
+/**
+ * Drizzle SQLite schema for the uptime app's D1 database. Defines every table and
+ * its relations — teams, memberships, invites, domains, HTTP/DNS/TCP/SSL and cron
+ * job monitors with their results, alerts and alert events, status pages and their
+ * join tables, maintenance windows, content checks, API keys, user preferences,
+ * and aggregated daily stats — plus shared timestamp columns and inferred insert/
+ * select types. It exists as the single source of truth for the data model.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { uuid, pk, timestamp, url } from "@pkg/db-helpers";
 import { relations } from "drizzle-orm";
 import { index, integer, sqliteTable, text } from "drizzle-orm/sqlite-core";

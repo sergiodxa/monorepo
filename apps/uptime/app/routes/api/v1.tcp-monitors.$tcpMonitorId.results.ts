@@ -1,3 +1,13 @@
+/**
+ * API route serving the check-result history for a single TCP monitor. Its loader
+ * authenticates by API key, requires the tcp-monitors:read scope, confirms team
+ * ownership of the monitor, and returns paginated results (status, response time,
+ * error) ordered by check time. It backs TCP monitor history and charts.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { z } from "zod/v4";
 
 import type { ApiKeyScope } from "~/db/schema";

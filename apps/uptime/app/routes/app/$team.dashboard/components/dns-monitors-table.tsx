@@ -1,3 +1,13 @@
+/**
+ * Table listing the team's DNS monitors on the dashboard. It renders an
+ * empty-state with a create call-to-action when there are none, and otherwise a
+ * horizontally scrollable table with name, domain, record-type, status, and
+ * last-checked columns, delegating each row to `DnsMonitorTableRow`.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import type { ResolvedType } from "@pkg/types";
 
 import { cn } from "@pkg/cn";

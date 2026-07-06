@@ -1,3 +1,14 @@
+/**
+ * The data-access model for teams, exposing static methods over the Drizzle database. It
+ * finds a team by UUID or slug (with memberships), lists teams a subject belongs to, auto-
+ * joins users to teams whose verified email domain matches theirs, creates a personal team
+ * with an owning admin membership on signup, and resolves a team's slug by id. It centralizes
+ * team lookup, membership, and domain-based provisioning logic.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import type { Database } from "~/db/index";
 import type IdToken from "~/entities/id-token";
 

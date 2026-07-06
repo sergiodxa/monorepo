@@ -1,3 +1,13 @@
+/**
+ * Renders the pricing comparison section of a versus page, tabulating cost scenarios
+ * for the competitor versus Uptime alongside the resulting savings, with a footnote on
+ * the competitor's starting price. It exists to make the cost advantage of Uptime
+ * concrete on each comparison page.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { Badge } from "@pkg/ui";
 
 interface ComparePricingProps {

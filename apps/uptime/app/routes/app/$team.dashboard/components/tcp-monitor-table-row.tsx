@@ -1,3 +1,13 @@
+/**
+ * Table row for a single TCP monitor on the dashboard. It renders the monitor
+ * name, its host:port endpoint, a colored up/down/timeout/pending status badge,
+ * response time, and last-checked time, plus an actions menu with view, edit,
+ * and confirm-then-delete operations driven by a fetcher.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import type { ResolvedType } from "@pkg/types";
 
 import { Badge, Button, confirm, Menu, Popover, Table } from "@pkg/ui";

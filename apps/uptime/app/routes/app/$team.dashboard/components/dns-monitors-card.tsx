@@ -1,3 +1,13 @@
+/**
+ * Dashboard stat card summarizing the team's DNS monitors. It reads the resolved
+ * DNS monitors data and renders a translated `StatCard` with the total count plus
+ * a breakdown of ok, changed, and error monitors, surfacing DNS health at a
+ * glance alongside the other dashboard metrics.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import type { ResolvedType } from "@pkg/types";
 
 import { useTranslation } from "react-i18next";

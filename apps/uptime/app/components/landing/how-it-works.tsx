@@ -1,3 +1,13 @@
+/**
+ * Presents the landing page "how it works" section, laying out an ordered list of
+ * numbered (or custom-icon) steps under a badge, heading, and description. It is a
+ * reusable presentational component so different landing variants can describe their
+ * onboarding flow with their own copy.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import type { ReactNode } from "react";
 
 import { Badge } from "@pkg/ui";

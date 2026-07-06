@@ -1,3 +1,15 @@
+/**
+ * Cloudflare Worker entry point for the uptime app. Handles HTTP requests through
+ * the React Router request handler, dispatches cron triggers on various schedules
+ * (per-minute pings, SSL/DNS/TCP checks, daily cleanups and stat aggregation) by
+ * enqueuing messages, and consumes the queue by validating each message type and
+ * lazily running the matching job. Re-exports the Ping workflow and GeoFetch
+ * Durable Object. It exists as the runtime glue between Cloudflare and the app.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import type { RequestHandler } from "react-router";
 
 import { logger } from "@pkg/logger";

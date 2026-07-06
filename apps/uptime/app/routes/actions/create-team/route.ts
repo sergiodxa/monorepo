@@ -1,3 +1,13 @@
+/**
+ * Route module for the "create team" action. Validates the team name, derives a URL
+ * slug from it (appending a suffix on collision), inserts the team owned by the current
+ * subject, and creates the owner's admin membership. Exists so an authenticated user can
+ * start a new team and be redirected into its dashboard.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { badRequest, created } from "@pkg/response";
 import { isFailure } from "@pkg/result";
 import { validate } from "@pkg/validate";

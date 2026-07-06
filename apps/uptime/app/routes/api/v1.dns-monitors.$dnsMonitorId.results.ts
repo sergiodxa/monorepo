@@ -1,3 +1,14 @@
+/**
+ * API v1 endpoint that returns the check history for a single DNS monitor: an API-key
+ * middleware authenticates the request and the loader (dns-monitors:read) confirms the
+ * monitor belongs to the team, then returns its recent results ordered newest-first up
+ * to a bounded limit. It exists to expose DNS monitor result history over the public
+ * API.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { z } from "zod/v4";
 
 import {

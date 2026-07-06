@@ -1,3 +1,13 @@
+/**
+ * Renders the closing call-to-action band for a comparison page, prompting visitors to
+ * switch from the named competitor with a primary CTA that adapts to the signed-in
+ * state and reassurance badges. It exists to convert readers at the end of each versus
+ * page.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { ArrowRightIcon, CheckIcon } from "lucide-react";
 import { href, Link } from "react-router";
 

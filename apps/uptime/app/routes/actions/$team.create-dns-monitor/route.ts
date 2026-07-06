@@ -1,3 +1,13 @@
+/**
+ * Route action that creates a DNS monitor for a team. It validates the name, domain,
+ * record type, expected value, and check interval, enforces a per-team limit of
+ * twenty DNS monitors, and inserts the record. It exists so teams can watch DNS
+ * records for changes, redirecting to the DNS page on success.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { badRequest, created, unprocessableEntity } from "@pkg/response";
 import { isFailure } from "@pkg/result";
 import { validate } from "@pkg/validate";

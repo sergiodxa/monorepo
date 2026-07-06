@@ -1,3 +1,13 @@
+/**
+ * API route that deletes a single API key belonging to the authenticated team.
+ * Its action requires a DELETE method, enforces the api-keys:write scope, confirms
+ * the target key is owned by the caller's team, and removes it from the database.
+ * It exists so teams can revoke their own credentials programmatically.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { eq } from "drizzle-orm";
 
 import * as schema from "~/db/schema";

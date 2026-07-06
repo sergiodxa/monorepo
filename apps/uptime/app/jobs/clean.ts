@@ -1,3 +1,12 @@
+/**
+ * Scheduled maintenance job that deletes stale monitor result rows by delegating to
+ * `Monitor.cleanResults`, then logs the number of rows removed. It exists to purge
+ * old HTTP monitor check history so the results table does not grow without bound.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { Job } from "@pkg/jobs";
 import { env } from "cloudflare:workers";
 

@@ -1,3 +1,14 @@
+/**
+ * Route module for the team settings page, restricted to team admins. Its loader fetches
+ * members (resolved against the auth service), pending invites, and custom domains, and the
+ * page composes several sections: general team info, member management with role changes and
+ * removal, domain add/remove with DNS verification instructions, billing, and a danger zone
+ * for team deletion. It exists as the central place to administer a team and its access.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { cn } from "@pkg/cn";
 import { forbidden } from "@pkg/response";
 import { isFailure, succeeded } from "@pkg/result";

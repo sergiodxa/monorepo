@@ -1,3 +1,14 @@
+/**
+ * Route module for creating a new API key for the current team, restricted to team admins.
+ * The page renders a form for the key name, a set of scope checkboxes (monitors, alerts, and
+ * cron-job read/write/ping permissions), and an optional expiry date; on success it navigates
+ * back to the API keys list carrying the freshly created key in navigation state. It exists so
+ * admins can mint scoped credentials for programmatic access.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { forbidden } from "@pkg/response";
 import {
 	Button,

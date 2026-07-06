@@ -1,3 +1,13 @@
+/**
+ * Loading placeholder for the dashboard monitors table. It renders a `Table`
+ * with skeleton header columns and five skeleton rows shaped like real monitor
+ * rows (name, latency chart, status, response time, actions), preserving layout
+ * and preventing content shift while monitor data is still loading.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { Skeleton, Table } from "@pkg/ui";
 
 export function MonitorsTableSkeleton() {

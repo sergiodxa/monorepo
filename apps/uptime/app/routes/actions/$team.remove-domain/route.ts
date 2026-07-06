@@ -1,3 +1,13 @@
+/**
+ * Route module for the team "remove domain" action. Validates the domain id, enforces
+ * that non-member roles are required, looks up the team's custom domain, and deletes it
+ * from the database. Exists so team admins can detach a verified or pending custom
+ * hostname from their team with localized feedback.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { badRequest, forbidden, notFound, ok } from "@pkg/response";
 import { isFailure } from "@pkg/result";
 import { validate } from "@pkg/validate";

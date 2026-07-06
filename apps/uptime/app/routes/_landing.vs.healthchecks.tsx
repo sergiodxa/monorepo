@@ -1,3 +1,13 @@
+/**
+ * Marketing comparison route rendering the "Uptime vs Healthchecks.io" landing page.
+ * It defines the feature-parity table, why-switch reasons, honest-take caveats,
+ * pricing scenarios, and FAQ positioning Uptime as an all-in-one platform versus a
+ * cron-only tool, composed via the shared compare components as an SEO page.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { BellIcon, GlobeIcon, LayoutDashboardIcon, ZapIcon } from "lucide-react";
 import { useRouteLoaderData } from "react-router";
 

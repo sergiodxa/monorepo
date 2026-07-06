@@ -1,3 +1,13 @@
+/**
+ * API route for listing and creating TCP monitors for the authenticated team. The
+ * loader returns all monitors with their last-check state (tcp-monitors:read scope);
+ * the action creates one via POST (tcp-monitors:write scope) from host, port, timeout,
+ * and interval. It is the collection endpoint for host/port connectivity monitors.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { isFailure } from "@pkg/result";
 import { validate } from "@pkg/validate";
 import { z } from "zod/v4";

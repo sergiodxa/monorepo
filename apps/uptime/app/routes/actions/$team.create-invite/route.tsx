@@ -1,3 +1,13 @@
+/**
+ * Route module for the team "create invite" action. Validates the invitee email,
+ * requires a non-member role, reuses or creates an invite for the current team, and
+ * sends a TeamInviteEmail via Resend with a link to accept. Exists so team admins can
+ * invite new members and resend pending invitations.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { badRequest, forbidden, ok } from "@pkg/response";
 import { isFailure } from "@pkg/result";
 import { validate } from "@pkg/validate";

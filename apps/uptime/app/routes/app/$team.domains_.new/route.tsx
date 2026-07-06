@@ -1,3 +1,14 @@
+/**
+ * Route module for adding a new custom domain to the current team. Its loader forbids
+ * members (non-admins) from access and surfaces subscription status, while the page renders
+ * a form that posts a hostname to the add-domain action plus an ErrorBoundary that renders
+ * forbidden and unknown error states. It exists to gate domain creation behind the admin
+ * role and an active subscription.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { forbidden } from "@pkg/response";
 import { Alert, Button, Description, FieldError, Input, Label, TextField } from "@pkg/ui";
 import { TriangleAlertIcon } from "lucide-react";

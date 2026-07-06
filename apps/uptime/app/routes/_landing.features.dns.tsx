@@ -1,3 +1,13 @@
+/**
+ * Marketing feature route for the DNS monitoring landing page. It composes the
+ * shared hero, trust indicators, feature grid, how-it-works steps, and FAQ with
+ * copy about monitoring A, AAAA, CNAME, MX, TXT, and NS records and detecting
+ * hijacking. It exists as an SEO page promoting the DNS monitoring capability.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import {
 	ClockIcon,
 	DatabaseIcon,

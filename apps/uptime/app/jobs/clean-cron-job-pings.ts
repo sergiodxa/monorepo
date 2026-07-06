@@ -1,3 +1,13 @@
+/**
+ * Scheduled maintenance job that prunes cron job ping records older than 365 days
+ * by delegating to `CronJobMonitor.cleanPings`, then logs how many rows it removed.
+ * It exists to cap unbounded growth of the cron ping history table and keep the
+ * database lean over time.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { Job } from "@pkg/jobs";
 import { env } from "cloudflare:workers";
 

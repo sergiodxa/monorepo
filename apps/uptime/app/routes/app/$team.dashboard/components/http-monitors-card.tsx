@@ -1,3 +1,13 @@
+/**
+ * Dashboard stat card summarizing the team's HTTP monitors. It reads the
+ * resolved HTTP monitors data and renders a translated `StatCard` showing the
+ * total monitor count plus how many are currently up versus down, giving an
+ * at-a-glance health figure for the team's endpoints.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import type { ResolvedType } from "@pkg/types";
 
 import { useTranslation } from "react-i18next";

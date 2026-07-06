@@ -1,3 +1,13 @@
+/**
+ * API v1 collection endpoint for team invites: an API-key middleware authenticates the
+ * request, the loader lists a team's invites (invites:read), and the action validates
+ * an email and creates a new pending invite from the team owner (invites:write). It
+ * exists to manage team membership invitations over the public API.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { isFailure } from "@pkg/result";
 import { validate } from "@pkg/validate";
 import { z } from "zod/v4";

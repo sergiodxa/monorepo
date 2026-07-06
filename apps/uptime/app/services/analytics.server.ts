@@ -1,3 +1,13 @@
+/**
+ * Analytics Engine service for ping results. It queries Cloudflare's Analytics
+ * Engine SQL API (with a KV-cached variant and cache-key/TTL helpers), writes
+ * ping data points via the PING_RESULTS binding, and reads a monitor's latest
+ * status, centralizing all monitoring metric reads and writes for the dashboard.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { Text } from "@pkg/http/content-type";
 import { failure, isFailure, success, type Result } from "@pkg/result";
 import { env } from "cloudflare:workers";

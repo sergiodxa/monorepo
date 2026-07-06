@@ -1,3 +1,13 @@
+/**
+ * Marketing landing page for the "For Agencies" audience segment. Its loader
+ * builds localized SEO meta, and the component composes the shared landing
+ * sections (hero, trust indicators, features, how-it-works, FAQ, final CTA) with
+ * agency-focused copy about monitoring many client sites from one dashboard.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import {
 	BellIcon,
 	BuildingIcon,

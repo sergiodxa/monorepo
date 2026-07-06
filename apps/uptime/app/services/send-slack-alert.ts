@@ -1,3 +1,13 @@
+/**
+ * Slack alert service. It builds a Block Kit message with colored attachments for
+ * down, recovered, and degraded monitor events—showing status, time, downtime
+ * duration, and a "View Monitor" button—and POSTs it to a Slack webhook. It
+ * exists to deliver monitor status notifications to a team's Slack channel.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { Json } from "@pkg/http/content-type";
 import { type Result, failure, success } from "@pkg/result";
 

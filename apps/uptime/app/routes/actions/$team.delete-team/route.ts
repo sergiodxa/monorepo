@@ -1,3 +1,13 @@
+/**
+ * Route module for the team "delete team" action. Requires the caller to be the team
+ * owner and a typed DELETE confirmation, then cancels any active Polar subscription,
+ * cascades deletes across monitor results, alerts, monitors, domains, invites and
+ * memberships, and finally removes the team. Exists to fully tear down a team account.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { badRequest, forbidden, ok } from "@pkg/response";
 import { isFailure } from "@pkg/result";
 import { validate } from "@pkg/validate";

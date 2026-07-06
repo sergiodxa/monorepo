@@ -1,3 +1,13 @@
+/**
+ * Route action that toggles a team member's role between admin and member. It
+ * validates the target subject and current role, requires the caller to be an
+ * admin/owner, refuses to change the team owner's role, and updates the membership
+ * accordingly. It exists so team admins can promote or demote members safely.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { badRequest, forbidden, ok } from "@pkg/response";
 import { isFailure } from "@pkg/result";
 import { validate } from "@pkg/validate";

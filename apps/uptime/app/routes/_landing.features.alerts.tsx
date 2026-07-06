@@ -1,3 +1,13 @@
+/**
+ * Marketing feature route for the alerts landing page. It composes the shared hero,
+ * trust indicators, feature grid, how-it-works steps, and FAQ with copy about email,
+ * Slack, Discord, and signed-webhook notifications and sub-second delivery. It exists
+ * as an SEO page promoting the alerting capability.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { BellIcon, MailIcon, RouteIcon, ShieldCheckIcon, WebhookIcon, ZapIcon } from "lucide-react";
 import { useRouteLoaderData } from "react-router";
 

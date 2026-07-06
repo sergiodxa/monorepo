@@ -1,3 +1,13 @@
+/**
+ * Route module for the TCP monitors list page. Its loader lists the team's TCP monitors
+ * along with the team's subscription status, and the component renders them in a table with
+ * status badges, last-checked and response-time columns, plus edit and confirm-delete
+ * actions, showing an empty state and a subscription upsell alert when appropriate.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { Alert, Badge, Button, confirm, Empty, LinkButton, Table } from "@pkg/ui";
 import { format } from "date-fns";
 import { NetworkIcon, PlusIcon, TrashIcon } from "lucide-react";

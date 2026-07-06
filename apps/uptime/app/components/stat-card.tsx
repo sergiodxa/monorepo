@@ -1,3 +1,13 @@
+/**
+ * A small presentational React component that renders a single dashboard statistic inside a
+ * card: a muted label, a large bold value, and a secondary description line. Each field
+ * accepts arbitrary React nodes for flexible formatting. Dashboards use it to display
+ * summary metrics like uptime percentage and ping usage in a consistent layout.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { Card } from "@pkg/ui";
 
 export function StatCard(props: {

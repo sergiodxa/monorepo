@@ -1,3 +1,13 @@
+/**
+ * Maps a monitor check's success rate (0-100, or null for no data) to a Tailwind
+ * background-color class, including its dark-mode variant. It grades from primary green
+ * for healthy rates down through warning amber to danger red, with a neutral color when
+ * data is missing. Heatmap cells use it to visually convey uptime health at a glance.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 export default function getCellColor(successRate: number | null): string {
 	if (!successRate) return "bg-neutral-300 dark:bg-neutral-700";
 	if (successRate === 100) return "bg-primary-600 dark:bg-primary-500";

@@ -1,3 +1,13 @@
+/**
+ * Route module for the team "retry domain verification" action. Validates the domain id,
+ * requires a non-member role, and re-enqueues an ownership-verification job on the
+ * Cloudflare queue for a still-unverified team domain (short-circuiting if already
+ * verified). Exists so teams can re-trigger a stalled custom-domain verification.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { badRequest, created, forbidden, ok } from "@pkg/response";
 import { isFailure } from "@pkg/result";
 import { validate } from "@pkg/validate";

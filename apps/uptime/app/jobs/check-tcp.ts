@@ -1,3 +1,13 @@
+/**
+ * Scheduled job that polls every enabled TCP monitor, connects to each host and
+ * port, records the up/down/timeout result to Analytics Engine, and dispatches
+ * email, webhook, Slack, and Discord alerts whenever a monitor's status flips.
+ * It exists to power TCP port availability monitoring and notify teams of outages.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { Json } from "@pkg/http/content-type";
 import { iife } from "@pkg/iife";
 import { Job } from "@pkg/jobs";

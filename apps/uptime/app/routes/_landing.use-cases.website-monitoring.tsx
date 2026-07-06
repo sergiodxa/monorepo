@@ -1,3 +1,13 @@
+/**
+ * Marketing use-case route for the website monitoring landing page. It composes the
+ * shared hero, trust indicators, feature grid, how-it-works steps, and FAQ with copy
+ * about monitoring landing pages and e-commerce sites from 9 regions with instant
+ * downtime alerts. It exists as an SEO page targeting the website monitoring use case.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import {
 	BellIcon,
 	ClockIcon,

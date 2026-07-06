@@ -1,3 +1,13 @@
+/**
+ * Renders the "honest take" section of a comparison page, listing scenarios where the
+ * competitor might be the better choice as warning-styled callout cards. It exists to
+ * build trust through transparency on each versus page by acknowledging the
+ * competitor's strengths.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { Badge } from "@pkg/ui";
 import { AlertTriangleIcon } from "lucide-react";
 

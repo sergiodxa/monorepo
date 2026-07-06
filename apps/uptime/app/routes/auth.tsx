@@ -1,3 +1,13 @@
+/**
+ * OAuth callback route for the `/auth` endpoint: its loader completes the OAuth2
+ * flow, populates the user session from the id token, and redirects to the app
+ * (falling back to a rendered error page on `OAuth2RequestError`), while its action
+ * kicks off authentication. It exists to bridge the IdP login into an app session.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { useTranslation } from "react-i18next";
 import { data, href, redirect } from "react-router";
 import { OAuth2RequestError } from "remix-auth-oauth2";

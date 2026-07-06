@@ -1,3 +1,14 @@
+/**
+ * Route action that creates a notification alert for a team. It validates a
+ * discriminated-union input for email, webhook, Slack, or Discord strategies,
+ * enforces a per-team limit of ten alerts, builds the strategy-specific config, and
+ * inserts the alert. It exists so teams can configure how monitor failures notify
+ * them, redirecting to the alerts page on success.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { badRequest, created, unprocessableEntity } from "@pkg/response";
 import { isFailure } from "@pkg/result";
 import { validate } from "@pkg/validate";

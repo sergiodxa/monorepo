@@ -1,3 +1,14 @@
+/**
+ * Route showing the detail page for a single TCP monitor. The loader fetches the monitor
+ * scoped to the team plus its recent check results, computing uptime and average response
+ * time, and the component renders monitor info, stat cards, and a table of result history
+ * with status badges. Exists to give teams visibility into a TCP endpoint's health over
+ * time.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { Alert, Badge, Card, LinkButton, Table } from "@pkg/ui";
 import { format } from "date-fns";
 import { PencilIcon } from "lucide-react";

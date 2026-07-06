@@ -1,3 +1,13 @@
+/**
+ * Marketing landing page for the microservices monitoring use case. Its loader
+ * builds localized SEO meta, and the component composes the shared landing
+ * sections from module-level data arrays with copy about per-service monitoring,
+ * independent health tracking, dependency awareness, and team alert routing.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { ActivityIcon, BoxesIcon, NetworkIcon, ZapIcon } from "lucide-react";
 import { useRouteLoaderData } from "react-router";
 

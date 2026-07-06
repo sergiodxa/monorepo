@@ -1,3 +1,13 @@
+/**
+ * The background `PingJob` that triggers a scheduled HTTP monitor check. It validates its
+ * `{ monitorId, ownerId }` input, skips (non-retriably on bad input) when the owner has no
+ * active subscription, and otherwise invokes the monitor model to enqueue the ping. It
+ * exists to gate automated monitoring on billing and run each check off the request path.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { Job } from "@pkg/jobs";
 import { isFailure } from "@pkg/result";
 import { validate } from "@pkg/validate";

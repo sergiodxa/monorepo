@@ -1,3 +1,13 @@
+/**
+ * Renders a compact stat band for the landing page, mapping a list of trust
+ * indicators (icon, value, label) into a responsive centered grid. It exists to
+ * surface social-proof metrics such as uptime figures or user counts in a single
+ * reusable strip.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import type { ReactNode } from "react";
 
 interface Indicator {

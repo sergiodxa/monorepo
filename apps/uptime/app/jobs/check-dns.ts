@@ -1,3 +1,13 @@
+/**
+ * Hourly scheduled job that checks every enabled DNS monitor, resolves its record,
+ * stores each result and updates the monitor's latest status/value, and fires
+ * email, webhook, Slack, and Discord alerts when a record changes or errors.
+ * It exists to detect DNS record drift and misconfigurations and notify teams.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { Json } from "@pkg/http/content-type";
 import { Job } from "@pkg/jobs";
 import { env } from "cloudflare:workers";

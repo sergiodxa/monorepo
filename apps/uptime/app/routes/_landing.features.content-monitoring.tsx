@@ -1,3 +1,13 @@
+/**
+ * Marketing feature route for the content monitoring landing page. It composes the
+ * shared hero, trust indicators, feature grid, how-it-works steps, and FAQ with copy
+ * about keyword presence/absence checks, defacement detection, and full-HTML response
+ * inspection. It exists as an SEO page promoting keyword/content monitoring.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import {
 	AlertTriangleIcon,
 	CheckCircleIcon,

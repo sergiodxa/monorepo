@@ -1,3 +1,13 @@
+/**
+ * Table row for a single cron job on the dashboard. It renders the job name,
+ * schedule, a colored healthy/late/missed/unknown status badge, and last-ping
+ * and next-expected times, plus an actions menu offering view, edit, and
+ * confirm-then-delete operations driven by a fetcher.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import type { ResolvedType } from "@pkg/types";
 
 import { Badge, Button, confirm, Menu, Popover, Table } from "@pkg/ui";

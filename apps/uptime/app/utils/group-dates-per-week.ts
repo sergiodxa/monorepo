@@ -1,3 +1,13 @@
+/**
+ * Groups a flat list of dates into buckets by calendar week, returning an array of
+ * per-week date arrays. It uses date-fns with a Sunday week start to compute each date's
+ * week and week-year, nudging the numbering so weeks line up within a single year. The
+ * heatmap uses it to lay dates out into weekly columns.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { getWeek, getWeekYear } from "date-fns";
 
 export default function groupDatesPerWeek(dates: Date[]) {

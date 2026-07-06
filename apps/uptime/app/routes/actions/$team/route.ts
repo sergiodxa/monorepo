@@ -1,3 +1,14 @@
+/**
+ * Route module holding the middleware chain shared by all team-scoped action routes. It
+ * reads and validates the authenticated subject from the session, resolves the team by
+ * its slug and loads the subject's membership, then enforces that the subject actually
+ * belongs to the team, redirecting to login or another team otherwise. Exists to gate
+ * every `$team.*` action behind consistent auth and team-membership checks.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { href, redirect } from "react-router";
 import { z } from "zod/v4";
 

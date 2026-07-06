@@ -1,3 +1,13 @@
+/**
+ * Route action that updates the current user's preferred UI language. It validates
+ * the selection (mapping "auto" to null for auto-detection), upserts the user's
+ * preference row, and sets or clears the i18n cookie so the change applies at once.
+ * It exists so users can switch languages, with the client reloading to apply it.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { badRequest } from "@pkg/response";
 import { isFailure } from "@pkg/result";
 import { validate } from "@pkg/validate";

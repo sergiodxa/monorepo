@@ -1,3 +1,14 @@
+/**
+ * Team dashboard route: the main overview page rendering uptime stats and monitor tables
+ * for a team. Its loader reads the selected tab from a cookie and returns streamed promises
+ * for HTTP, DNS, TCP, cron and SSL monitor data plus ping usage, which the component reveals
+ * via Suspense/Await cards, tabs and a subscription alert. It exists to give teams a single
+ * at-a-glance view of all their monitors and consumption.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { Alert, Button, LinkButton, Tabs } from "@pkg/ui";
 import { PlusIcon, RefreshCwIcon, TriangleAlertIcon } from "lucide-react";
 import { Suspense } from "react";

@@ -1,3 +1,13 @@
+/**
+ * Marketing audience route rendering the "For Startups" landing page. It composes
+ * the shared hero, trust indicators, feature grid, how-it-works steps, and FAQ with
+ * startup-focused copy around team collaboration, alerting, and scaling. It exists
+ * as an SEO-targeted page aimed at converting fast-moving startup teams.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import {
 	BellRingIcon,
 	GlobeIcon,

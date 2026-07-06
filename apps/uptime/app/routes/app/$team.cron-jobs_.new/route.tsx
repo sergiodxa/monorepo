@@ -1,3 +1,14 @@
+/**
+ * Route for creating a new cron job monitor for a team. It renders a form with cron
+ * expression presets, a live human-readable description of the schedule, a grace period,
+ * a timezone combobox drawn from a common-timezones list, and alert/enabled toggles,
+ * posting to the create-cron-job action. Exists to let teams register scheduled jobs whose
+ * heartbeats should be monitored.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import {
 	Alert,
 	Button,

@@ -1,3 +1,13 @@
+/**
+ * Logout route: its loader redirects visitors without a session to the home page and
+ * otherwise renders a confirmation form, while its action delegates to the auth
+ * module's `logout` to clear the session and perform SSO sign-out. It exists to give
+ * users an explicit, confirmed way to end their session.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { Button } from "@pkg/ui";
 import { useTranslation } from "react-i18next";
 import { Form, href, redirect } from "react-router";

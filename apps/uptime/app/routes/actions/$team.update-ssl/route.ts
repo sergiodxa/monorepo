@@ -1,3 +1,13 @@
+/**
+ * Route module for the team "update SSL" action. Validates the SSL monitoring fields for
+ * a monitor, confirms the monitor belongs to the team, computes an initial SSL status
+ * from the expiry date and warning threshold, and persists the SSL settings. Exists so
+ * teams can enable and configure certificate-expiry monitoring for an HTTP monitor.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { badRequest, notFound, ok } from "@pkg/response";
 import { isFailure } from "@pkg/result";
 import { validate } from "@pkg/validate";

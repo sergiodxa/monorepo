@@ -1,3 +1,13 @@
+/**
+ * Marketing landing page for the maintenance windows feature. Its loader builds
+ * localized SEO meta including SoftwareApplication JSON-LD, and the component
+ * composes the shared landing sections with copy about scheduling planned
+ * downtime, suppressing alerts, recurring windows, and keeping metrics accurate.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import {
 	BellOffIcon,
 	CalendarIcon,

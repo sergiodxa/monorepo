@@ -1,3 +1,14 @@
+/**
+ * API v1 endpoint that reports a team's overall status: an API-key middleware
+ * authenticates the request and the loader (monitors:read) fetches each monitor's
+ * latest result, derives per-monitor up/down state, and rolls it up into an overall
+ * status (operational through major_outage) with counts. It exists to give API clients
+ * a single health summary.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { desc, eq } from "drizzle-orm";
 
 import * as schema from "~/db/schema";

@@ -1,3 +1,13 @@
+/**
+ * Marketing landing page for the SaaS monitoring use case. Its loader builds
+ * localized SEO meta, and the component composes the shared landing sections with
+ * copy about monitoring a SaaS app's critical paths—dashboard, APIs, auth, and
+ * billing—across environments so customer-facing reliability stays intact.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import {
 	CreditCardIcon,
 	KeyIcon,

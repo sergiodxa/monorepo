@@ -1,3 +1,13 @@
+/**
+ * Maintenance window service. It determines whether a monitor or team is
+ * currently in an active or recurring maintenance window and whether alerts
+ * should be suppressed, and parses/evaluates recurring patterns
+ * (daily/weekly/monthly time ranges). It exists to silence alerts during planned downtime.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { and, eq, gte, isNull, lte, or } from "drizzle-orm";
 
 import type { Database } from "~/db";

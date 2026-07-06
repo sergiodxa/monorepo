@@ -1,3 +1,13 @@
+/**
+ * Route module for the team "create TCP monitor" action. Validates the submitted name,
+ * host, port and interval/timeout fields, persists a new TcpMonitor for the current
+ * team, and returns a localized success or error response. Exists so the app can
+ * register new TCP uptime checks and redirect back to the team's TCP monitors list.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { badRequest, created } from "@pkg/response";
 import { isFailure } from "@pkg/result";
 import { validate } from "@pkg/validate";

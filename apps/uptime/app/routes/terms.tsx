@@ -1,3 +1,13 @@
+/**
+ * Terms of Service route that renders the app's legal terms as static prose within
+ * the landing header/footer chrome, and whose loader supplies SEO metadata plus the
+ * viewer's signed-in state. It exists to publish the binding usage terms covering
+ * accounts, acceptable use, billing, data retention, liability, and termination.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { Link } from "react-router";
 
 import { LandingFooter, LandingHeader } from "~/components/landing";

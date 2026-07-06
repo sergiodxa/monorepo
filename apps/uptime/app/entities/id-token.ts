@@ -1,3 +1,13 @@
+/**
+ * OIDC ID token entity. It extends the JWT class to expose typed accessors for
+ * standard claims (subject, audience, name, email, picture, username, email
+ * verification) and provides verifyIdToken, which validates a token against the
+ * auth provider's remote JWKS, audience, and issuer. It authenticates users.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { JWK, JWT } from "@edgefirst-dev/jwt";
 import { env } from "cloudflare:workers";
 

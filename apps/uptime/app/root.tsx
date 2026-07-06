@@ -1,3 +1,14 @@
+/**
+ * Root route module for the uptime app. Declares the global middleware chain,
+ * font/style link tags, and document `Layout` (html shell, meta, organization
+ * JSON-LD, toaster, confirm dialog, and NProgress navigation bar), then renders
+ * the app tree under react-aria's RouterProvider and defines the top-level
+ * ErrorBoundary. It exists as the outermost wrapper every route renders inside.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { ConfirmDialog, Toaster } from "@pkg/ui";
 import NProgress from "nprogress";
 import { useEffect } from "react";

@@ -1,3 +1,13 @@
+/**
+ * A tiny client helper that sends a heartbeat to a cron job monitor's public ping endpoint.
+ * Given a monitor UUID and an API key, it POSTs an authenticated request to the Uptime API,
+ * skipping when no key is supplied and swallowing network errors so callers never fail. It
+ * exists so scheduled jobs can report that they ran.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { Json } from "@pkg/http/content-type";
 
 /**

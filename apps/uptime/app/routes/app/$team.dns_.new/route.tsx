@@ -1,3 +1,14 @@
+/**
+ * Route for creating a new DNS monitor for a team. It renders a form for the monitor name,
+ * domain, DNS record type (A, AAAA, CNAME, MX, TXT, NS), an optional expected value, a
+ * check interval chosen from preset durations, and an enabled toggle, posting to the
+ * create-dns-monitor action. Exists to let teams watch a domain's DNS records for expected
+ * values.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import {
 	Button,
 	Description,

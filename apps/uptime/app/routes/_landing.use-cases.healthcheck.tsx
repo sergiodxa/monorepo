@@ -1,3 +1,13 @@
+/**
+ * Marketing use-case route for the health check monitoring landing page. It composes
+ * the shared hero, trust indicators, feature grid, how-it-works steps, and FAQ with
+ * copy about externally probing /health endpoints and complementing Kubernetes and
+ * Docker probes. It exists as an SEO page targeting the health-check use case.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import {
 	ActivityIcon,
 	CheckCircleIcon,

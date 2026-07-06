@@ -1,3 +1,13 @@
+/**
+ * Unit tests for the content-check service. They exercise checkContentRule for
+ * contains, not_contains, and regex rules (including case sensitivity, empty
+ * bodies, and invalid patterns), checkContentRules aggregation, isValidRegex, and
+ * getCheckDescription, guarding the response-body assertion logic against changes.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { describe, expect, test } from "bun:test";
 
 import {

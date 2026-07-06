@@ -1,3 +1,13 @@
+/**
+ * The Uptime brand logo as an inline SVG React component. It renders the mark on a
+ * 1024x1024 viewBox using `currentColor` so it inherits text color, and spreads through any
+ * SVG props for sizing, className, and accessibility. It exists to provide a single,
+ * scalable, theme-aware logo reused across the app's chrome.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 export default function Logo(props: React.SVGProps<SVGSVGElement>) {
 	return (
 		<svg

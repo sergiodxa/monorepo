@@ -1,3 +1,13 @@
+/**
+ * API v1 item endpoint for a single DNS monitor: an API-key middleware authenticates
+ * the request, the loader fetches one monitor scoped to the team (dns-monitors:read),
+ * and the action updates or deletes it (dns-monitors:write). It exists to read, edit,
+ * and remove individual DNS monitors over the public API.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { isFailure } from "@pkg/result";
 import { validate } from "@pkg/validate";
 import { eq } from "drizzle-orm";

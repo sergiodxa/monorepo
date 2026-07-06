@@ -1,3 +1,14 @@
+/**
+ * Route module for editing an existing HTTP monitor. Its loader fetches the monitor and
+ * its content checks scoped to the current team, and the page renders three forms: general
+ * monitor settings (name, URL, check interval, expected status, region), a section to add
+ * and delete content checks, and SSL certificate monitoring settings. It exists so team
+ * members can reconfigure a monitor and its associated checks after creation.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import {
 	Alert,
 	Button,

@@ -1,3 +1,13 @@
+/**
+ * API route that ends a scheduled maintenance window early. Its action requires a
+ * POST method and the maintenance:write scope, confirms the window belongs to the
+ * caller's team, stamps endedEarlyAt to now, and returns the serialized window. It
+ * lets teams close out maintenance ahead of the planned end time via the API.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { eq } from "drizzle-orm";
 
 import type { SelectMaintenanceWindow } from "~/db/schema";

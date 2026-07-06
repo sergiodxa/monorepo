@@ -1,3 +1,13 @@
+/**
+ * SEO helpers for building React Router meta descriptors and JSON-LD structured data. It
+ * exposes `generateMeta` to produce title, description, Open Graph, Twitter Card, and
+ * canonical-URL tags with absolute URLs, plus schema builders for Organization, WebSite,
+ * SoftwareApplication, and FAQ pages. It centralizes consistent metadata across routes.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import type { MetaDescriptor } from "react-router";
 
 export const BASE_URL = "https://uptime.sergiodxa.com";

@@ -1,3 +1,13 @@
+/**
+ * Route module for the team "delete TCP monitor" action. Validates the monitor id,
+ * requires a non-member role, confirms the monitor belongs to the current team, and
+ * deletes it. Exists so team admins can remove a TCP uptime check with localized
+ * success or error feedback.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { badRequest, forbidden, notFound, ok } from "@pkg/response";
 import { isFailure } from "@pkg/result";
 import { validate } from "@pkg/validate";

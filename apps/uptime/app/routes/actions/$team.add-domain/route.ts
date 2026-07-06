@@ -1,3 +1,13 @@
+/**
+ * Route module for the team "add domain" action. Validates the hostname, requires a
+ * non-member role, avoids duplicate or already-verified entries, inserts a pending
+ * team domain, and enqueues an ownership-verification job on the Cloudflare queue.
+ * Exists so teams can attach a custom domain and kick off its verification flow.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { Location } from "@pkg/location";
 import { accepted, badRequest, created, forbidden } from "@pkg/response";
 import { isFailure } from "@pkg/result";

@@ -1,3 +1,13 @@
+/**
+ * Client hints wiring built on `@epic-web/client-hints`. It configures the time-zone hint,
+ * exports `getHints` for server use, a `ClientHintCheck` script component that revalidates
+ * on color-scheme changes, and a `useHints` hook to read hints from the root loader data.
+ * It exists so the app can adapt rendering to the user's time zone and preferred theme.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { getHintUtils } from "@epic-web/client-hints";
 import { subscribeToSchemeChange } from "@epic-web/client-hints/color-scheme";
 import { clientHint as timeZoneHint } from "@epic-web/client-hints/time-zone";

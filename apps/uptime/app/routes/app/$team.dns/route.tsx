@@ -1,3 +1,13 @@
+/**
+ * Route for the team's DNS monitors index page. The loader queries all DNS monitors for the
+ * current team and formats their last-checked timestamps; the component renders them in a
+ * table with per-row actions to run a check, edit, or delete, or an empty state when none
+ * exist. It exists to give teams an overview and management surface for their DNS monitoring.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { cn } from "@pkg/cn";
 import { Badge, Button, confirm, Empty, LinkButton, Menu, Popover, Table } from "@pkg/ui";
 import {

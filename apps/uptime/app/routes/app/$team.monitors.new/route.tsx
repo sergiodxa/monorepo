@@ -1,3 +1,14 @@
+/**
+ * Route for creating a new monitor. Its loader checks whether the team has an active
+ * subscription, and the component renders an AppHeader plus a CreateMonitorForm collecting
+ * name, URL, check interval, expected HTTP status and region before submitting to the
+ * create-monitor action via a fetcher. It exists to provide the guided form through which
+ * users add HTTP monitors to a team.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import {
 	Alert,
 	Button,

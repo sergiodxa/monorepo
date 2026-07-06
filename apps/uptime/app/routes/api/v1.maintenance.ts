@@ -1,3 +1,14 @@
+/**
+ * API v1 collection endpoint for maintenance windows: an API-key middleware
+ * authenticates the request, the loader lists a team's windows (maintenance:read), and
+ * the action validates and creates a new window (maintenance:write), checking any
+ * referenced monitor and that endsAt follows startsAt. It exists to expose maintenance
+ * scheduling over the public API.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { isFailure } from "@pkg/result";
 import { validate } from "@pkg/validate";
 import { z } from "zod/v4";

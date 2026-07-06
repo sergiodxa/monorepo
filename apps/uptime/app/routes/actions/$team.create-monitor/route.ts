@@ -1,3 +1,13 @@
+/**
+ * Route module for the team "create monitor" action. Validates the HTTP monitor fields
+ * (name, method, url, expected status and interval), creates a Monitor for the current
+ * subject and team, and immediately pings it once. Exists so users can add an HTTP
+ * uptime check and be redirected to the team dashboard on success.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { badRequest, created } from "@pkg/response";
 import { isFailure } from "@pkg/result";
 import { validate } from "@pkg/validate";

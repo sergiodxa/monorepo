@@ -1,3 +1,13 @@
+/**
+ * API route for reading, updating, and deleting a single TCP monitor. The loader
+ * returns the monitor's config and last-check state (tcp-monitors:read scope); the
+ * action handles PUT and DELETE (tcp-monitors:write scope) after confirming team
+ * ownership. It lets teams manage host/port connectivity monitors via the API.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { isFailure } from "@pkg/result";
 import { validate } from "@pkg/validate";
 import { eq } from "drizzle-orm";

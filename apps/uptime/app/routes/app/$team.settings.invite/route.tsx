@@ -1,3 +1,14 @@
+/**
+ * Route for the team member invite modal, rendered over the team settings page. The
+ * loader rejects members without admin/owner roles, and the component posts an email to
+ * the create-invite action via a fetcher, then navigates back to settings on success. It
+ * exists so admins can invite teammates through a dismissable dialog without leaving
+ * settings.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { forbidden } from "@pkg/response";
 import { Button, Description, Dialog, FieldError, Input, Label, Modal, TextField } from "@pkg/ui";
 import { useEffect, useRef, useState } from "react";

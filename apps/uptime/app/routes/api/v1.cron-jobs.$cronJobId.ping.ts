@@ -1,3 +1,14 @@
+/**
+ * API route for a cron job's pings. The loader returns paginated ping history
+ * (cron-jobs:read scope); the action records a heartbeat via POST (cron-jobs:ping
+ * scope), enforcing a one-per-minute rate limit, judging on-time vs late against the
+ * grace period, updating job status, and ingesting billing usage. It is the endpoint
+ * scheduled jobs call to prove they ran.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { z } from "zod/v4";
 
 import * as schema from "~/db/schema";

@@ -1,3 +1,14 @@
+/**
+ * Route for a single HTTP monitor's detail page. The loader gathers the monitor, its daily
+ * uptime stats, usage/estimated pings, slowest response time from analytics, and SSL info in
+ * parallel, computing an uptime percentage; the component shows stat cards, an SSL certificate
+ * status card, and a heatmap, with actions to run, edit, or refresh the monitor. It exists to
+ * give teams an at-a-glance health and usage view of one monitor.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import type { Params } from "react-router";
 
 import { cn } from "@pkg/cn";

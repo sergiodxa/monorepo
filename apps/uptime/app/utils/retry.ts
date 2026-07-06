@@ -1,3 +1,13 @@
+/**
+ * A generic async retry helper whose default export re-runs an operation until it returns
+ * a value, is explicitly stopped, or requests another attempt. The operation receives a
+ * context with `retry()`, `stop(reason)`, and the current `attempts` count, and a fixed
+ * delay separates tries. It exists to give callers fine-grained control over retry loops.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { setTimeout } from "node:timers/promises";
 
 /**

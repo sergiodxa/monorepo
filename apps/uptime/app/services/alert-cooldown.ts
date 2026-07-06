@@ -1,3 +1,13 @@
+/**
+ * Alert cooldown and event-recording service. It checks whether a monitor's alert
+ * of a given event type is still within its cooldown window by querying the last
+ * sent alert event, and records new alert events (sent, skipped, or failed) with
+ * context for audit trails. It exists to prevent duplicate alert spam.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import type { DrizzleD1Database } from "drizzle-orm/d1";
 
 import { and, desc, eq, gte } from "drizzle-orm";

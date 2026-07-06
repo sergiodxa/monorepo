@@ -1,3 +1,13 @@
+/**
+ * Route module for the team "create cron job" action. Validates the submitted fields,
+ * verifies the cron expression parses in the chosen timezone, and creates a
+ * CronJobMonitor for the current team, computing its next expected run when enabled.
+ * Exists so teams can register scheduled-job (heartbeat) monitors from the UI.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { badRequest, created } from "@pkg/response";
 import { isFailure } from "@pkg/result";
 import { validate } from "@pkg/validate";

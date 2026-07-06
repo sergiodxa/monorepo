@@ -1,3 +1,13 @@
+/**
+ * Route action that removes a member from a team, validating the request payload and
+ * enforcing that only owners/admins may act and that the team owner can never be removed.
+ * On success it deletes the membership and any matching pending invite in a single batch,
+ * so a member and their outstanding invitation are cleaned up together.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { badRequest, forbidden, ok } from "@pkg/response";
 import { isFailure } from "@pkg/result";
 import { validate } from "@pkg/validate";

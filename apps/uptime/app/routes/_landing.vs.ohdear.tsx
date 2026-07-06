@@ -1,3 +1,13 @@
+/**
+ * Marketing comparison route rendering the "Uptime vs Oh Dear" landing page. It
+ * defines the feature-parity table, why-switch reasons, honest-take caveats,
+ * pricing scenarios, and FAQ contrasting usage-based versus per-site pricing, then
+ * composes them via the shared compare components as an SEO-targeted conversion page.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { CheckIcon, DollarSignIcon, SparklesIcon, ZapIcon } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useRouteLoaderData } from "react-router";

@@ -1,3 +1,13 @@
+/**
+ * Table row for a single HTTP monitor on the dashboard. It renders the monitor
+ * name, a client-only latency sparkline, an up/down/unknown status badge, and a
+ * response-time cell, plus an actions menu with fetcher-driven play, edit, and
+ * confirm-then-delete operations so a monitor can be managed inline in the list.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import type { ResolvedType } from "@pkg/types";
 
 import { iife } from "@pkg/iife";

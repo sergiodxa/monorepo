@@ -1,3 +1,13 @@
+/**
+ * Unit tests for the SSL certificate status service. They verify calculateSslStatus
+ * across expired/expiring/valid/unknown dates, shouldSendSslAlert threshold logic,
+ * status text and color mapping, expiry-date parsing, and createSslInfo behavior
+ * when monitoring is enabled or disabled, locking in the certificate status rules.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { describe, expect, test } from "bun:test";
 
 import { addDays, subDays } from "date-fns";

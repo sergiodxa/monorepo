@@ -1,3 +1,13 @@
+/**
+ * Unit tests for the `getDayLabel` helper. They assert that a zero-based weekday index
+ * maps to the expected short weekday name in English and that the function honors other
+ * locales (French, Spanish, German, Italian, Japanese, Chinese, Portuguese). They exist
+ * to lock in the Monday-first ordering and locale-aware formatting the heatmap relies on.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { describe, expect, test } from "bun:test";
 
 import getDayLabel from "./get-day-label";

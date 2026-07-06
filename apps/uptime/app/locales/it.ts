@@ -1,3 +1,13 @@
+/**
+ * Italian (it) translation dictionary for the Uptime app. It maps every UI copy key
+ * to its Italian string across the landing page, dashboard, monitors, alerts, teams,
+ * domains, status pages, and toast/error messages. It exists so the interface can be
+ * rendered in Italian, mirroring the shape of the English base dictionary.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 export default {
 	landing: {
 		meta: {

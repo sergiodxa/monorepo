@@ -1,3 +1,13 @@
+/**
+ * Route module for the team "delete cron job" action. Validates the cron job id,
+ * requires a non-member role, confirms the CronJobMonitor belongs to the current team,
+ * and deletes it. Exists so team admins can remove a scheduled-job monitor with
+ * localized success or error feedback.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { badRequest, forbidden, notFound, ok } from "@pkg/response";
 import { isFailure } from "@pkg/result";
 import { validate } from "@pkg/validate";

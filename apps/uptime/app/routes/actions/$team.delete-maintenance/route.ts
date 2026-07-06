@@ -1,3 +1,13 @@
+/**
+ * Route module for the team "delete maintenance" action. Validates the maintenance
+ * window id, confirms it belongs to the current team, and deletes the window entirely.
+ * Exists so teams can remove a scheduled or past maintenance window, redirecting back to
+ * the maintenance page with localized feedback.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { badRequest, forbidden, notFound, ok } from "@pkg/response";
 import { isFailure } from "@pkg/result";
 import { validate } from "@pkg/validate";

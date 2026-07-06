@@ -1,3 +1,13 @@
+/**
+ * The sidebar team switcher React component. It shows the active team's logo (or initials)
+ * and, when a user belongs to more than one team, opens a menu to pick another and navigate
+ * to that team's dashboard; with a single team it renders a plain, non-interactive label.
+ * It exists to let users move between the teams they are members of.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { Button, Logo, Menu, Popover } from "@pkg/ui";
 import { CheckIcon, ChevronsUpDownIcon } from "lucide-react";
 import { useTranslation } from "react-i18next";

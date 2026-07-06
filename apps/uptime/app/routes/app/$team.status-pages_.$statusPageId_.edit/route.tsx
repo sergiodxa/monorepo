@@ -1,3 +1,13 @@
+/**
+ * Route module for editing an existing status page. Its loader fetches the team-scoped
+ * status page along with all of the team's monitors and cron jobs (and which are currently
+ * linked), redirecting back to the list if the page is missing. The component renders a
+ * pre-filled form to update details, visibility switches, and monitor/cron-job selections.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import {
 	Button,
 	Checkbox,

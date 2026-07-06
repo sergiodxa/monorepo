@@ -1,3 +1,13 @@
+/**
+ * Route for the invite-acceptance page. Its loader requires a logged-in session,
+ * looks up the invite, rejects it if missing, already accepted, or addressed to a
+ * different email, then atomically marks it accepted and creates the team membership
+ * before redirecting into the team. The component renders any error message.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { badRequest, forbidden, gone, notFound } from "@pkg/response";
 import { and, eq } from "drizzle-orm";
 import { href, redirect } from "react-router";

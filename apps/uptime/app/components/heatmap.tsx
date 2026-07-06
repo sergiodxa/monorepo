@@ -1,3 +1,14 @@
+/**
+ * The high-level uptime heatmap React component. It assembles the composable heatmap
+ * primitives (day labels, weekly table, tooltips, legend) and maps each day's data point to
+ * a colored cell, matching points to dates by day and formatting the success-rate, date, and
+ * check-count tooltip in the user's locale and time zone. It visualizes a monitor's uptime
+ * history at a glance.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { isSameDay } from "date-fns";
 import { useTranslation } from "react-i18next";
 

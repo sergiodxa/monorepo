@@ -1,3 +1,13 @@
+/**
+ * Marketing landing page for the "For Solo Developers" audience segment. Its
+ * loader builds localized SEO meta, and the component composes the shared landing
+ * sections with copy pitching professional monitoring at an indie price: free
+ * manual checks, affordable automation, and simple setup for side projects.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import {
 	BellOffIcon,
 	CalendarIcon,

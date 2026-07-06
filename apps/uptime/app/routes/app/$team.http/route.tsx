@@ -1,3 +1,14 @@
+/**
+ * Route listing a team's HTTP monitors. The loader queries each monitor with its latest
+ * result, derives an up/degraded/down/unknown status from the expected status and degraded
+ * threshold, and formats the last-checked time in the client's locale and timezone. The
+ * component renders the monitors in a table with status badges and view/edit/delete
+ * actions, or an empty state. Exists as the overview of a team's HTTP uptime checks.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { cn } from "@pkg/cn";
 import { Badge, Button, confirm, Empty, LinkButton, Menu, Popover, Table } from "@pkg/ui";
 import {

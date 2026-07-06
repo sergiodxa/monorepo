@@ -1,3 +1,14 @@
+/**
+ * The application sidebar React component. It renders the team picker, the primary
+ * navigation links (dashboard, HTTP/DNS/TCP/cron monitors, alerts, maintenance, status
+ * pages), an admin-only group (docs, API keys, settings), and the user menu, highlighting
+ * the active item via route matching and localizing all labels. It is the main navigation
+ * chrome for the signed-in app.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { Sidebar } from "@pkg/ui";
 import {
 	ActivityIcon,

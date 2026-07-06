@@ -1,3 +1,13 @@
+/**
+ * Route module for the team "create API key" action. Validates the name, scopes and
+ * optional expiry, enforces a per-team limit of ten keys, generates a hashed key with a
+ * displayable prefix, and stores it. Exists so teams can mint scoped API keys, returning
+ * the full secret exactly once for the caller to copy.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { badRequest, created } from "@pkg/response";
 import { isFailure } from "@pkg/result";
 import { validate } from "@pkg/validate";

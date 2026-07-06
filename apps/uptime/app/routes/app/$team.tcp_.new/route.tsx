@@ -1,3 +1,13 @@
+/**
+ * Route module for creating a new TCP monitor. Its loader surfaces the team's subscription
+ * status, and the page renders a form capturing the monitor name, host, port, check interval,
+ * and connection timeout before posting to the create-tcp-monitor action. It exists so teams
+ * can set up port-level connectivity monitoring for a host.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import {
 	Alert,
 	Button,

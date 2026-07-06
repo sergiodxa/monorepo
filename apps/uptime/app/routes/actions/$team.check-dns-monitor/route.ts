@@ -1,3 +1,13 @@
+/**
+ * Route module for the team "check DNS monitor" action. Validates the monitor id,
+ * verifies ownership by the current team, runs an on-demand DNS check via checkDns,
+ * records the result and updates the monitor's last status/value. Exists so users can
+ * manually trigger a DNS monitor evaluation outside its scheduled cadence.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { badRequest, forbidden, notFound, ok } from "@pkg/response";
 import { isFailure } from "@pkg/result";
 import { validate } from "@pkg/validate";

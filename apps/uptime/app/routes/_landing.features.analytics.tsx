@@ -1,3 +1,13 @@
+/**
+ * Marketing feature route for the analytics landing page. It composes the shared
+ * hero, trust indicators, feature grid, how-it-works steps, and FAQ with copy about
+ * visual heatmaps, P99 response-time tracking, uptime percentages, and 365-day data
+ * retention. It exists as an SEO page promoting the analytics capability.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import {
 	BarChartIcon,
 	CalendarIcon,

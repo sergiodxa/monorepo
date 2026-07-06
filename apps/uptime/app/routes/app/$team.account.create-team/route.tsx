@@ -1,3 +1,14 @@
+/**
+ * Route module for the create-team modal dialog. It renders a dismissable modal with a form
+ * that posts a new team name to the create-team action, delegating the success redirect to
+ * that action while handling dialog dismissal by navigating back. Its ErrorBoundary returns
+ * null to avoid bubbling errors to the parent during navigation. It exists to let a user spin
+ * up a new team from within the account area.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { Button, Description, Dialog, FieldError, Input, Label, Modal, TextField } from "@pkg/ui";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";

@@ -1,3 +1,13 @@
+/**
+ * Daily scheduled job that evaluates SSL certificate expiry for every monitor with
+ * SSL monitoring enabled, updates each monitor's SSL status and last-checked time,
+ * and sends email/webhook alerts when a certificate is expired or nearing expiry.
+ * It exists to warn teams before their TLS certificates lapse and cause outages.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { Json } from "@pkg/http/content-type";
 import { Job } from "@pkg/jobs";
 import { env } from "cloudflare:workers";

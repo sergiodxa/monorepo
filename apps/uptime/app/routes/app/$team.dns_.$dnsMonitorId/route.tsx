@@ -1,3 +1,13 @@
+/**
+ * Route module for the DNS monitor detail page. Its loader fetches a single team-scoped
+ * DNS monitor plus its recent check results and derives stats (total checks, success rate,
+ * average response time), and the component renders the monitor info, stat cards, and a
+ * history table while offering manual re-check, refresh, and edit actions.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { Badge, Button, LinkButton, Table } from "@pkg/ui";
 import { LoaderIcon, PencilIcon, PlayIcon, RefreshCwIcon } from "lucide-react";
 import { useId } from "react";

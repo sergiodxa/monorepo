@@ -1,3 +1,13 @@
+/**
+ * Marketing landing page for the public REST API feature. Its loader builds
+ * localized SEO meta including SoftwareApplication JSON-LD, and the component
+ * composes the shared landing sections with copy about programmatic monitor
+ * management, alert configuration, metrics access, API keys, and rate limits.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import {
 	BookOpenIcon,
 	CodeIcon,

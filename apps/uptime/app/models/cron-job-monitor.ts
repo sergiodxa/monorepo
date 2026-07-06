@@ -1,3 +1,14 @@
+/**
+ * The data-access model for cron job (heartbeat) monitors, exposing static methods over the
+ * Drizzle database: CRUD, per-team listing and counting, ping recording with rate limiting
+ * and on-time detection, overdue/late/missed status computation, ping statistics, cleanup,
+ * and cron-expression helpers that compute the next run and produce human-readable schedule
+ * descriptions. It centralizes all cron-monitor persistence and scheduling logic.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { CronExpressionParser } from "cron-parser";
 import { count, eq, lt, sql } from "drizzle-orm";
 

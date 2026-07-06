@@ -1,3 +1,14 @@
+/**
+ * Route module for the team's alert history page. Its loader gathers the team's alerts, then
+ * loads the 100 most recent alert events, enriching each with its originating alert and
+ * monitor. The page renders an empty state when there is no history or a table of events
+ * showing the alert, monitor, event type, delivery status, and timestamp. It exists to give
+ * teams an audit trail of when and how alert notifications were dispatched.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { cn } from "@pkg/cn";
 import { Empty, LinkButton, Table } from "@pkg/ui";
 import { HistoryIcon, BellIcon } from "lucide-react";

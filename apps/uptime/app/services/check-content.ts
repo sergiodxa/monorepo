@@ -1,3 +1,13 @@
+/**
+ * Content-check service for response-body assertions. It evaluates a single rule
+ * (contains, not_contains, or regex, with optional case sensitivity and
+ * empty-body handling), aggregates multiple rules into a pass/fail summary,
+ * validates regex patterns, and produces human-readable check descriptions.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import type { SelectMonitorContentCheck } from "~/db/schema";
 
 export type ContentCheckType = "contains" | "not_contains" | "regex";

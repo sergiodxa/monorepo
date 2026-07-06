@@ -1,3 +1,13 @@
+/**
+ * Route action that lets the current user leave a team. It validates the team id,
+ * confirms the caller's membership exists, forbids owners and admins from leaving,
+ * then deletes the membership. It exists so ordinary members can remove themselves
+ * from a team while protecting teams from losing their owner or admins.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { badRequest, forbidden, ok } from "@pkg/response";
 import { isFailure } from "@pkg/result";
 import { validate } from "@pkg/validate";

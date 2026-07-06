@@ -1,3 +1,13 @@
+/**
+ * API v1 endpoint that lists the delivery events for a single alert: an API-key
+ * middleware authenticates the request and the loader (alerts:read) confirms the alert
+ * belongs to the team, then returns its events ordered newest-first up to a bounded
+ * limit. It exists to expose an alert's notification history over the public API.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { z } from "zod/v4";
 
 import {

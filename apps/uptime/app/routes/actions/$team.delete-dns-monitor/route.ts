@@ -1,3 +1,13 @@
+/**
+ * Route action that deletes a DNS monitor for a team. It validates the monitor id,
+ * confirms the monitor exists and belongs to the current team, deletes its stored
+ * results first, then removes the monitor itself. It exists so teams can remove DNS
+ * monitors and their history, redirecting to the DNS page on success.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { badRequest, forbidden, notFound, ok } from "@pkg/response";
 import { isFailure } from "@pkg/result";
 import { validate } from "@pkg/validate";

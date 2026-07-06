@@ -1,3 +1,13 @@
+/**
+ * Marketing feature route for the SSL certificate monitoring landing page. It composes
+ * the shared hero, trust indicators, feature grid, how-it-works steps, and FAQ with
+ * copy about expiration warnings, chain validation, domain matching, and security
+ * checks. It exists as an SEO page promoting the SSL monitoring capability.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import {
 	AlertTriangleIcon,
 	CalendarIcon,

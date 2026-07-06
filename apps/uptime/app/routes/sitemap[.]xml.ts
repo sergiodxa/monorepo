@@ -1,3 +1,13 @@
+/**
+ * Route that generates the site's sitemap.xml. It holds a static list of landing,
+ * feature, use-case, audience, comparison, and legal pages with priorities and
+ * change frequencies, appends dynamically listed documentation pages, and emits
+ * the XML with caching headers so search engines can discover every URL.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { xml } from "@pkg/http/response";
 import { Sitemap } from "@pkg/sitemap";
 

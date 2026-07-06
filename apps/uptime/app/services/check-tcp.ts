@@ -1,4 +1,14 @@
 /**
+ * TCP connectivity check service. It attempts an outbound TCP connection via the
+ * Workers connect() API and maps success, refusal, timeout, DNS, and unsupported
+ * cases to a result, plus an HTTP HEAD-based port-check fallback. It exists
+ * because Workers TCP sockets are restricted, so callers need a graceful path.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
+/**
  * TCP Connection Check Service
  *
  * IMPORTANT: Cloudflare Workers TCP socket support (connect() API) is limited:

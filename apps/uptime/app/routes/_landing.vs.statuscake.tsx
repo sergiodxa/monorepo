@@ -1,3 +1,13 @@
+/**
+ * Marketing comparison page pitching Uptime against StatusCake. Its loader builds
+ * localized SEO meta, and the component feeds static feature, why-switch,
+ * honest-take, pricing-scenario, and FAQ data into the shared compare sections to
+ * highlight a cheaper entry price, longer retention, and unlimited team members.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { CheckIcon, DollarSignIcon, SparklesIcon, UsersIcon } from "lucide-react";
 import { useRouteLoaderData } from "react-router";
 

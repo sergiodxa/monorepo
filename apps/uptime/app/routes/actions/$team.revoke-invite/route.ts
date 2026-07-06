@@ -1,3 +1,13 @@
+/**
+ * Route module for the team "revoke invite" action. Validates the invite id, requires a
+ * non-member role, looks up the invite, refuses to revoke one already accepted, and
+ * deletes the pending invite. Exists so team admins can cancel an outstanding invitation
+ * before it is accepted.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { badRequest, forbidden, notFound, ok } from "@pkg/response";
 import { isFailure } from "@pkg/result";
 import { validate } from "@pkg/validate";

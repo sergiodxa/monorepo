@@ -1,3 +1,14 @@
+/**
+ * Route for the team's alerts index page. The loader lists the team's alerts and subscription
+ * status; the component renders them in a table showing notification strategy (email, Slack,
+ * Discord, or webhook), recovery-notification setting, and a humanized cooldown, with a delete
+ * action, a link to alert history, and a create button capped at ten alerts. It exists to let
+ * teams manage how they are notified about incidents.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import type { TFunction } from "i18next";
 
 import { cn } from "@pkg/cn";

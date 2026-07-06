@@ -1,3 +1,13 @@
+/**
+ * The marketing home page route rendered inside the landing layout. It assembles
+ * the hero, trust indicators, feature and use-case grids, FAQ, and an interactive
+ * usage-based pricing calculator that estimates monthly cost from monitor check
+ * frequencies. It exists as the primary top-of-funnel entry point for the product.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { cn } from "@pkg/cn";
 import { Accordion, Badge, Card, Separator } from "@pkg/ui";
 import {

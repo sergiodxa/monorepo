@@ -1,3 +1,13 @@
+/**
+ * A set of composable React building blocks for the uptime heatmap: a colored `Cell` sized
+ * sm/md/lg and tinted by success rate, a `CellTooltip` overlay, a `Table` that lays cells
+ * out in weekly columns, localized `DayLabels`, and a `Legend` explaining the color scale.
+ * Split into small pieces so different heatmap layouts can assemble them as needed.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { cn } from "@pkg/cn";
 import { useMemo } from "react";
 import {

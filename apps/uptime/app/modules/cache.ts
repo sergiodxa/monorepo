@@ -1,3 +1,13 @@
+/**
+ * Thin static wrapper over the Cloudflare Workers KV binding that exposes get, set
+ * (with optional TTL), delete, and a `getOrSet` read-through helper. It exists to
+ * give the app a small, uniform caching API and to centralize KV access behind one
+ * class instead of touching the binding directly across the codebase.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { env } from "cloudflare:workers";
 
 export class Cache {

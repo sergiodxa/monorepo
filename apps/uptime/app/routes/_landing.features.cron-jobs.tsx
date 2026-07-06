@@ -1,3 +1,13 @@
+/**
+ * Marketing feature route for the cron job monitoring landing page. It renders the
+ * hero, trust indicators, feature grid, how-it-works steps, multi-language ping
+ * integration code samples, and FAQ describing heartbeat monitoring for scheduled
+ * tasks. It exists as an SEO page promoting the cron monitoring capability.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { Card } from "@pkg/ui";
 import {
 	AlarmClockIcon,

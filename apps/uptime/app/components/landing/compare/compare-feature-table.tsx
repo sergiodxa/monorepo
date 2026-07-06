@@ -1,3 +1,13 @@
+/**
+ * Renders the feature-by-feature comparison table between Uptime and a competitor,
+ * with a helper cell that shows check/x icons for booleans and mono-formats numeric
+ * values. It exists to give each versus page a scannable side-by-side breakdown of how
+ * the products stack up.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { Badge } from "@pkg/ui";
 import { CheckIcon, XIcon } from "lucide-react";
 

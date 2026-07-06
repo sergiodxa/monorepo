@@ -1,3 +1,13 @@
+/**
+ * Renders the "perfect for" callout on a comparison page, showing a gradient card with
+ * a title, description, and an optional set of checkmarked highlight pills. It exists
+ * to summarize which audiences or use cases Uptime is best suited for on each versus
+ * page.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { CheckIcon } from "lucide-react";
 
 interface ComparePerfectForProps {

@@ -1,3 +1,13 @@
+/**
+ * Route for editing an existing DNS monitor. The loader loads the monitor scoped to the current
+ * team, throwing a 404 if it is missing; the component renders a form to update name, domain,
+ * record type, expected value, check interval, and enabled state before posting to the update
+ * action. It exists so teams can reconfigure their DNS monitors.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import {
 	Button,
 	Description,

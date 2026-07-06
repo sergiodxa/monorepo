@@ -1,3 +1,13 @@
+/**
+ * English translation dictionary for the Uptime app, and the canonical source of truth
+ * for every translatable string: landing page, marketing/comparison and SEO meta, the
+ * dashboard, monitors, alerts, teams, domains, status pages, and toast/error copy. Other
+ * locale files mirror this shape so the UI can render in the user's chosen language.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 export default {
 	landing: {
 		meta: {

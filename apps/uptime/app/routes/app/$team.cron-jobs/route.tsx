@@ -1,3 +1,14 @@
+/**
+ * Route for the team's cron job monitors index page. The loader lists the team's cron job
+ * monitors with humanized schedules and subscription status; the component renders them in a
+ * table showing status, last ping, and next expected run, with edit and delete actions, or an
+ * empty state and a subscription warning. It exists to let teams manage their scheduled-job
+ * (heartbeat) monitors.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { Alert, Badge, Button, confirm, Empty, LinkButton, Table } from "@pkg/ui";
 import { formatDistanceToNow } from "date-fns";
 import { ClockIcon, PlusIcon, TrashIcon } from "lucide-react";

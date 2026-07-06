@@ -1,3 +1,13 @@
+/**
+ * Route module for the team "remove alert" action. Validates the alert id, looks up the
+ * alert, verifies it belongs to the current team, and deletes it. Exists so teams can
+ * remove a configured alert channel/rule, redirecting back to the team's alerts page on
+ * success with localized feedback.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { badRequest, forbidden, notFound, ok } from "@pkg/response";
 import { isFailure } from "@pkg/result";
 import { validate } from "@pkg/validate";

@@ -1,3 +1,13 @@
+/**
+ * Marketing landing page for the "For DevOps" audience segment. Its loader builds
+ * localized SEO meta, and the component composes the shared landing sections with
+ * copy emphasizing API-first, webhook-driven monitoring that fits existing
+ * tooling (PagerDuty, Terraform, Datadog/Grafana) with no vendor lock-in.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import {
 	BellIcon,
 	CodeIcon,

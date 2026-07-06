@@ -1,3 +1,13 @@
+/**
+ * API route that lists the memberships of the authenticated team. Its loader
+ * requires the teams:read scope and returns each member's id, subject, role, and
+ * timestamps ordered by creation date. It exists so teams can enumerate who
+ * belongs to them and with what role via the API.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import {
 	apiAuth,
 	ApiAuthContext,

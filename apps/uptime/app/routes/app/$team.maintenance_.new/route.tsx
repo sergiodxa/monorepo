@@ -1,3 +1,14 @@
+/**
+ * Route for creating a new maintenance window. The loader lists the team's monitors to populate
+ * a target selector; the component renders a form with a start date-time picker, a duration
+ * select that derives the end time, an optional recurrence pattern, and switches for
+ * suppressing alerts and showing on the status page, handling hydration so the initial time
+ * matches the client. It exists to let teams schedule planned downtime.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { CalendarDateTime, getLocalTimeZone, now } from "@internationalized/date";
 import {
 	Button,

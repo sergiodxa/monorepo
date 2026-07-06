@@ -1,3 +1,13 @@
+/**
+ * Maps a Cloudflare Durable Object location hint (region code such as `afr`, `apac`, or
+ * `wnam`) to a representative animal emoji, falling back to a globe when unrecognized.
+ * The UI uses it to give each monitoring region a compact, friendly visual label instead
+ * of showing raw region codes.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 export default function regionToEmoji(locationHint: DurableObjectLocationHint) {
 	if (locationHint === "afr") return "🦁"; // Africa
 	if (locationHint === "apac") return "🐉"; // Asia-Pacific

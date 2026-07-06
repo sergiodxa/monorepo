@@ -1,3 +1,13 @@
+/**
+ * Route module for the team "play monitor" action. Validates the monitor id, triggers an
+ * on-demand ping that starts the monitor's check workflow, and polls the workflow status
+ * with retry until it completes or fails. Exists so users can manually run an HTTP
+ * monitor check now and receive the outcome synchronously via a toast.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { badRequest, internalServerError, notFound, ok } from "@pkg/response";
 import { isFailure } from "@pkg/result";
 import { validate } from "@pkg/validate";

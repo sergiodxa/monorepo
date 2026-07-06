@@ -1,3 +1,13 @@
+/**
+ * Marketing comparison route rendering the "Uptime vs Cronitor" landing page. It
+ * defines the feature-parity table, why-switch reasons, honest-take caveats,
+ * pricing scenarios, and FAQ highlighting DNS/TCP monitoring and simpler pricing,
+ * composed via the shared compare components as an SEO-targeted conversion page.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { DollarSignIcon, FocusIcon, GlobeIcon, ZapIcon } from "lucide-react";
 import { useRouteLoaderData } from "react-router";
 

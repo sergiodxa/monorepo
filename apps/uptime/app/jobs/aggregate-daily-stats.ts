@@ -1,3 +1,13 @@
+/**
+ * Scheduled job that rolls up the previous day's raw HTTP and TCP check results
+ * from Analytics Engine into per-monitor daily totals (checks, successes, failures,
+ * average/max response time, derived status) and upserts them into the D1
+ * `monitorDailyStats` table. It exists to precompute uptime summaries for reporting.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { Job } from "@pkg/jobs";
 import { isFailure } from "@pkg/result";
 import { env } from "cloudflare:workers";

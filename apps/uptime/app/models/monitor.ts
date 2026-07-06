@@ -1,3 +1,14 @@
+/**
+ * The data-access model for HTTP monitors, exposing static methods over the Drizzle
+ * database. It handles CRUD, per-team listing with attached results, triggering pings via
+ * the PING workflow, enqueueing due monitors onto the queue based on their interval, result
+ * cleanup, uptime/last-check/p99 statistics per monitor or team, daily success-rate rollups,
+ * and estimated monthly ping consumption across HTTP, DNS, TCP, and cron monitors.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { env, waitUntil } from "cloudflare:workers";
 import { CronExpressionParser } from "cron-parser";
 import {

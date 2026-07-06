@@ -1,3 +1,14 @@
+/**
+ * Route module for editing an existing cron job monitor. Its loader loads the cron job scoped
+ * to the current team, and the page renders a form to update its name, description, schedule
+ * (via cron presets or a custom expression with a live human-readable description), grace
+ * period, timezone, late-alert toggle, and enabled state. It exists so teams can reconfigure
+ * scheduled-job monitoring after creation.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import {
 	Alert,
 	Button,

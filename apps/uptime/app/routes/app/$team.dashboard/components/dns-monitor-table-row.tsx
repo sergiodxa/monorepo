@@ -1,3 +1,13 @@
+/**
+ * Table row for a single DNS monitor on the dashboard. It renders the monitor
+ * name, watched domain, record type, and a colored ok/changed/error/unknown
+ * status badge along with the last-checked time, plus an actions menu offering
+ * view, edit, and confirm-then-delete operations driven by a fetcher.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import type { ResolvedType } from "@pkg/types";
 
 import { Badge, Button, confirm, Menu, Popover, Table } from "@pkg/ui";

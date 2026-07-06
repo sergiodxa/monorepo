@@ -1,3 +1,13 @@
+/**
+ * Health-check route for the Analytics Engine integration. Its loader verifies
+ * the PING_RESULTS write binding exists and probes the read API by counting
+ * recorded events, returning ok, degraded, or service-unavailable JSON. It
+ * exists so operators can quickly confirm the analytics pipeline is wired up.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { ok, serviceUnavailable } from "@pkg/http/response/json";
 import { isFailure } from "@pkg/result";
 import { env } from "cloudflare:workers";

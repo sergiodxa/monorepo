@@ -1,3 +1,13 @@
+/**
+ * API v1 endpoint that deletes a single content check belonging to a monitor: an
+ * API-key middleware authenticates the request and the DELETE action (monitors:write)
+ * verifies the check's monitor belongs to the team before removing it. It exists to let
+ * API clients remove a monitor's content checks.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { eq } from "drizzle-orm";
 
 import * as schema from "~/db/schema";

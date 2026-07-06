@@ -1,3 +1,14 @@
+/**
+ * Route for creating a new alert notification channel for a team. It renders a form whose
+ * fields adapt to the chosen delivery strategy (email, webhook, Slack, or Discord) plus
+ * recovery and cooldown options, posting to the create-alert action. It also warns when
+ * the team lacks an active subscription. Exists to let teams configure where downtime
+ * alerts are sent.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import {
 	Alert,
 	Button,

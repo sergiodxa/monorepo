@@ -1,3 +1,13 @@
+/**
+ * Marketing landing page for the teams collaboration feature. Its loader builds
+ * localized SEO meta including SoftwareApplication JSON-LD, and the component
+ * composes the shared landing sections with copy about unlimited members,
+ * role-based access, domain-verified auto-provisioning, and team invitations.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { GlobeIcon, ShieldIcon, UserPlusIcon, UsersIcon } from "lucide-react";
 import { useRouteLoaderData } from "react-router";
 

@@ -1,3 +1,13 @@
+/**
+ * LandingFinalCTA component: the closing call-to-action section for marketing
+ * pages. It renders a gradient banner with a title, description, and a single
+ * button that links to the dashboard or sign-up depending on sign-in state. It
+ * exists as a reusable conversion block shared across the landing pages.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { ArrowRightIcon } from "lucide-react";
 import { href, Link } from "react-router";
 

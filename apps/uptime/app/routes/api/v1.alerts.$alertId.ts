@@ -1,3 +1,14 @@
+/**
+ * API v1 item endpoint for a single alert: an API-key middleware authenticates the
+ * request, the loader returns the alert with its notification config sanitized of
+ * secrets (alerts:read), and the action updates or deletes it (alerts:write), verifying
+ * any linked monitor. It exists to read, edit, and remove individual alerts over the
+ * public API.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { isFailure } from "@pkg/result";
 import { validate } from "@pkg/validate";
 import { eq } from "drizzle-orm";

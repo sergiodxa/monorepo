@@ -1,3 +1,14 @@
+/**
+ * The data-access model for TCP monitors, exposing static methods over the Drizzle
+ * database. It handles CRUD and per-team listing, records check results and updates the
+ * monitor's last status/response time, reads recent results, and fetches all enabled
+ * monitors (with their team owner) for scheduled checking. It centralizes TCP-monitor
+ * persistence so services and jobs can manage port-connectivity monitoring.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { eq } from "drizzle-orm";
 
 import type { Database } from "~/db/index";

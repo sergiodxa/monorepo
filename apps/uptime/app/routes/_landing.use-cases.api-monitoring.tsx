@@ -1,3 +1,13 @@
+/**
+ * Marketing use-case route for the API monitoring landing page. It composes the
+ * shared hero, trust indicators, feature grid, how-it-works steps, and FAQ with
+ * copy about monitoring REST/GraphQL endpoints and webhooks using custom auth
+ * headers and status-code validation. It exists as an SEO page for API monitoring.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import {
 	ClockIcon,
 	CodeIcon,

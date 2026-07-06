@@ -1,3 +1,15 @@
+/**
+ * Server-side data queries backing the team dashboard. It exposes per-type fetchers
+ * (getHttpMonitorsData, getDnsMonitorsData, getTcpMonitorsData, getCronJobsData,
+ * getSslMonitorsData) that read monitors from the database and, for HTTP, aggregate cached
+ * analytics into uptime, latency samples and slowest-endpoint figures. It centralises this
+ * shaping so the route loader can stream ready-to-render summaries, wrapped in server-timing
+ * measurement via a local query() helper.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import type { TFunction } from "i18next";
 
 import { isFailure } from "@pkg/result";

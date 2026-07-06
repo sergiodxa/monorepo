@@ -1,3 +1,14 @@
+/**
+ * API v1 collection endpoint for HTTP monitors: an API-key middleware authenticates the
+ * request, the loader lists a team's monitors (monitors:read), and the action validates
+ * and creates a new monitor (monitors:write) with request settings, thresholds, region
+ * hint, and optional SSL monitoring. It exists to manage uptime monitors over the
+ * public API.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { isFailure } from "@pkg/result";
 import { validate } from "@pkg/validate";
 import { z } from "zod/v4";

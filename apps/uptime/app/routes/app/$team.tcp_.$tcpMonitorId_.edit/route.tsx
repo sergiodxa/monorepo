@@ -1,3 +1,14 @@
+/**
+ * Route for editing an existing TCP monitor. The loader loads the monitor scoped to the
+ * current team (redirecting to the TCP list if not found) plus the team's subscription status;
+ * the component renders a form to update name, host, port, check interval, timeout, and enabled
+ * state, warning when there is no active subscription. It exists so teams can reconfigure their
+ * TCP monitors.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import {
 	Alert,
 	Button,

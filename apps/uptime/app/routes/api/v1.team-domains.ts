@@ -1,3 +1,13 @@
+/**
+ * API route for managing a team's custom domains. The loader lists domains
+ * (team-domains:read scope); the action adds a domain via POST and removes one by
+ * id via DELETE (team-domains:write scope). It exists so teams can register and
+ * revoke the hostnames used for their status pages programmatically.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { isFailure } from "@pkg/result";
 import { validate } from "@pkg/validate";
 import { eq } from "drizzle-orm";

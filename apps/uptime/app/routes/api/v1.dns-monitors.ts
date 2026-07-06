@@ -1,3 +1,14 @@
+/**
+ * API v1 collection endpoint for DNS monitors: an API-key middleware authenticates the
+ * request, the loader lists a team's DNS monitors (dns-monitors:read), and the action
+ * validates and creates a new one (dns-monitors:write) with a record type, optional
+ * expected value, and check interval. It exists to manage DNS monitors over the public
+ * API.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { isFailure } from "@pkg/result";
 import { validate } from "@pkg/validate";
 import { z } from "zod/v4";

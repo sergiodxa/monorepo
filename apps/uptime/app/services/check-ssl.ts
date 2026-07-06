@@ -1,3 +1,13 @@
+/**
+ * SSL certificate status service. Because Workers cannot read TLS details from
+ * fetch(), it works from manually entered expiry dates to compute status
+ * (valid/expiring/expired/unknown), days until expiry, whether to alert against
+ * warning thresholds, and human-readable text/colors and UI-ready SSL info.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { differenceInDays, isBefore } from "date-fns";
 
 export type SslStatus = "unknown" | "valid" | "expiring" | "expired" | "error";

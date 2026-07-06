@@ -1,3 +1,13 @@
+/**
+ * Route action that deletes an API key belonging to the current team. It validates the
+ * incoming apiKeyId, verifies the key is actually owned by this team before deleting,
+ * and reports a not-found error otherwise. This guards key deletion against cross-team
+ * access and keeps the destructive operation scoped to the requesting team.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { badRequest, notFound, ok } from "@pkg/response";
 import { isFailure } from "@pkg/result";
 import { validate } from "@pkg/validate";

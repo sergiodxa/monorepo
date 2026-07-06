@@ -1,3 +1,13 @@
+/**
+ * Route module for the team "update TCP monitor" action. Validates the submitted fields,
+ * confirms the TcpMonitor belongs to the current team, and updates its name, host, port,
+ * interval, timeout and enabled state. Exists so teams can edit an existing TCP uptime
+ * check and are redirected back to that monitor's detail page.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { badRequest, notFound, ok } from "@pkg/response";
 import { isFailure } from "@pkg/result";
 import { validate } from "@pkg/validate";

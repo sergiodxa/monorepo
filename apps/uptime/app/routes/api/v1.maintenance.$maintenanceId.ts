@@ -1,3 +1,14 @@
+/**
+ * API v1 item endpoint for a single maintenance window: an API-key middleware
+ * authenticates the request, the loader fetches one window scoped to the team
+ * (maintenance:read), and the action updates or deletes it (maintenance:write),
+ * re-validating dates and any referenced monitor. It exists to read, edit, and remove
+ * individual maintenance windows over the public API.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { isFailure } from "@pkg/result";
 import { validate } from "@pkg/validate";
 import { eq } from "drizzle-orm";

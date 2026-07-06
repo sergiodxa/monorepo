@@ -1,3 +1,13 @@
+/**
+ * Renders the marketing site footer with grouped link columns for features, use
+ * cases, solutions, competitor comparisons, docs, and legal pages, plus a dynamic
+ * copyright line. All labels are pulled from i18n translations so the landing pages
+ * share one localized, navigable footer.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { useTranslation } from "react-i18next";
 import { href, Link } from "react-router";
 

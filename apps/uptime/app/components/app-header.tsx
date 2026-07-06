@@ -1,3 +1,13 @@
+/**
+ * The sticky top header React component for app pages. It renders a mobile sidebar toggle,
+ * an optional breadcrumb trail, the page heading, and an optional slot for page-level
+ * actions aligned to the right. It exists to give every app screen a consistent header with
+ * navigation context and room for contextual controls.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import type { ReactNode } from "react";
 
 import { Breadcrumb, BreadcrumbLink, Breadcrumbs, Sidebar } from "@pkg/ui";

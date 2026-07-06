@@ -1,3 +1,14 @@
+/**
+ * Drizzle Kit configuration for the uptime app's Cloudflare D1 database. Loads
+ * credentials from a local `.dev.vars` file when present, validates that the
+ * Cloudflare account, database, and API token are set, then defines the SQLite
+ * dialect over the D1 HTTP driver along with schema and migration output paths.
+ * It exists so migrations can be generated and pushed to D1 from the CLI.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import * as FS from "node:fs";
 import * as Path from "node:path";
 import { fileURLToPath } from "node:url";

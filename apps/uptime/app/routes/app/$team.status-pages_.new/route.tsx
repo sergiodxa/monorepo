@@ -1,3 +1,13 @@
+/**
+ * Route module for creating a new status page. Its loader lists the team's monitors and
+ * cron jobs so they can be attached to the page, and the component renders a form for the
+ * page's name, slug, title, description, logo, visibility switches, and monitor/cron-job
+ * selections, submitting to the create-status-page action.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import {
 	Button,
 	Checkbox,

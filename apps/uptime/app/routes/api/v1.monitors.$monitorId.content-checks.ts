@@ -1,3 +1,13 @@
+/**
+ * API route for listing and creating content checks on a single monitor. The loader
+ * returns a monitor's contains/not_contains/regex checks (monitors:read scope); the
+ * action adds one via POST (monitors:write scope) after confirming team ownership. It
+ * lets teams assert that a monitored response body contains expected content.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { isFailure } from "@pkg/result";
 import { validate } from "@pkg/validate";
 import { z } from "zod/v4";

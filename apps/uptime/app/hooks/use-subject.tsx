@@ -1,3 +1,13 @@
+/**
+ * React context plumbing for the signed-in subject (user). It defines a `SubjectProvider`
+ * that supplies the current user (id, name, email, avatar, isAdmin) to the tree and a
+ * `useSubject` hook that reads it, throwing if used outside a provider. It exists so
+ * components can access the current user without prop drilling.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { createContext, useContext } from "react";
 
 interface Subject {

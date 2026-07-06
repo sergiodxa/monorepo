@@ -1,3 +1,13 @@
+/**
+ * Route action that deletes a content check attached to a monitor. It validates the
+ * content-check id, loads the check together with its monitor to verify the monitor
+ * belongs to the current team, then removes the content check. It exists so teams
+ * can remove content assertions from a monitor, redirecting back to its edit page.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { badRequest, forbidden, notFound, ok } from "@pkg/response";
 import { isFailure } from "@pkg/result";
 import { validate } from "@pkg/validate";

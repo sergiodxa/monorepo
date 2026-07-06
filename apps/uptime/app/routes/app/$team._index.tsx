@@ -1,3 +1,13 @@
+/**
+ * Index route for a team slug that only redirects: members go to the team dashboard,
+ * the team's owner is sent to their canonical team page, and anyone without a matching
+ * membership or ownership is bounced to auth. It exists to resolve the bare
+ * `/app/:team` URL to the right destination.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { href, redirect } from "react-router";
 
 import { db } from "~/middleware/drizzle";

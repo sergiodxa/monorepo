@@ -1,3 +1,14 @@
+/**
+ * Server-side rendering entry point for the uptime app. Renders the React Router
+ * app to a readable stream wrapped in the i18next provider, waits for full render
+ * only for bots (streaming chunked responses otherwise), sets the HTML content
+ * type, and instruments the render with server-timing measurements. It exists to
+ * produce the HTML response for each incoming request.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import type { EntryContext, RouterContextProvider } from "react-router";
 
 import { HTML } from "@pkg/http/content-type";

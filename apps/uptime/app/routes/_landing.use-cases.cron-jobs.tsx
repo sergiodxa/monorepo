@@ -1,3 +1,13 @@
+/**
+ * Marketing use-case route for the cron job monitoring landing page. Alongside the
+ * shared hero, trust indicators, feature grid, and FAQ, it defines a local
+ * `LandingScenarios` section that showcases real-world cron schedules and grace
+ * periods. It exists as an SEO page targeting scheduled-task monitoring use cases.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { Badge, Card } from "@pkg/ui";
 import {
 	ArrowRightLeftIcon,

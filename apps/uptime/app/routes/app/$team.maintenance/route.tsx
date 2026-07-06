@@ -1,3 +1,14 @@
+/**
+ * Route for the team's maintenance windows index page. The loader fetches the team's
+ * maintenance windows with their associated monitor and categorizes them into active, upcoming,
+ * and past buckets using the current time and any early-end timestamp; the component renders
+ * each bucket in tabbed tables with actions to end an active window or delete one, or an empty
+ * state. It exists to let teams schedule and manage planned downtime.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { cn } from "@pkg/cn";
 import { iife } from "@pkg/iife";
 import { Badge, Button, confirm, Empty, LinkButton, Menu, Popover, Table, Tabs } from "@pkg/ui";

@@ -1,3 +1,13 @@
+/**
+ * Route module for the team "update team" action. Requires the subject to be an admin,
+ * validates the team name and optional logo URL, and persists the changes to the teams
+ * table. Exists so team admins can rename their team and set its logo, redirecting back
+ * to the team settings page on success.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { badRequest, forbidden, ok } from "@pkg/response";
 import { isFailure } from "@pkg/result";
 import { validate } from "@pkg/validate";

@@ -1,3 +1,13 @@
+/**
+ * Documentation module that loads the bundled Markdown docs via import.meta.glob,
+ * validates their frontmatter with a Zod schema, and groups the entries into
+ * ordered sections for rendering. It also resolves per-slug, locale-aware doc
+ * loaders. It exists to back the app's docs site from local Markdown files.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { Markdown } from "@pkg/markdown/server";
 import { isSuccess } from "@pkg/result";
 import { z } from "zod";

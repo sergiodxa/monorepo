@@ -1,3 +1,13 @@
+/**
+ * Route listing a team's API keys. The loader restricts access to admins and queries the
+ * team's keys, while the component renders them in a table with delete actions and shows a
+ * one-time alert revealing a newly created key passed through navigation state. Exists to
+ * let admins manage the API keys used to authenticate against the uptime API.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { cn } from "@pkg/cn";
 import { forbidden } from "@pkg/response";
 import { Alert, Badge, Button, confirm, Empty, Menu, Popover, Table } from "@pkg/ui";

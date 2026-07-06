@@ -1,3 +1,14 @@
+/**
+ * A reusable submit button React component that posts a monitor action through a React
+ * Router fetcher. It renders a single-button form carrying hidden `monitorId` and `intent`
+ * fields, shows a spin-delayed pending state while the request is in flight, and accepts an
+ * optional action URL and submit handler. Monitor rows use it for per-row actions like
+ * running or deleting a monitor.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import type { ComponentProps } from "react";
 
 import { Button } from "@pkg/ui";

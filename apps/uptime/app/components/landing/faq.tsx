@@ -1,3 +1,13 @@
+/**
+ * Renders the landing page FAQ section, splitting a list of question/answer items
+ * into two balanced accordion columns under a badge, heading, and description. It
+ * exists to present frequently asked questions in a compact, expandable two-column
+ * layout on the marketing pages.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { Accordion, Badge } from "@pkg/ui";
 import { ChevronDownIcon } from "lucide-react";
 
