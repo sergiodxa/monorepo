@@ -9,6 +9,7 @@
 import { RSS } from "@pkg/rss";
 import { inject } from "@pkg/service-container";
 import { getContext } from "remix/async-context-middleware";
+import * as s from "remix/data-schema";
 import { Database } from "remix/data-table";
 import { createAction } from "remix/fetch-router";
 
@@ -78,7 +79,8 @@ export const typeRss = createAction(
 	routes.typeRss,
 	inject([Database] as const, async (db) => {
 		let ctx = getContext();
-		let type = await PostType.findByPath(db, ctx.params.typePath!);
+		let { typePath } = s.parse(s.object({ typePath: s.string() }), ctx.params);
+		let type = await PostType.findByPath(db, typePath);
 		if (!type || !type.visible) return renderNotFound(ctx);
 
 		let origin = new URL(ctx.request.url).origin;

@@ -11,6 +11,7 @@ import { redirect } from "@pkg/http/response";
 import { notFound } from "@pkg/http/response/html";
 import { inject } from "@pkg/service-container";
 import { getContext } from "remix/async-context-middleware";
+import * as ds from "remix/data-schema";
 import { Database } from "remix/data-table";
 import { createController } from "remix/fetch-router";
 
@@ -180,6 +181,9 @@ async function renderForm(
 	);
 }
 
+/** Route params identifying the post type being edited (`:id`). */
+const RouteParams = ds.object({ id: ds.string() });
+
 /** `/cms/post-types` — custom post type management (gated by `post_types.manage`). */
 export default createController(routes.cms.postTypes, {
 	middleware: [requirePermission("post_types.manage")],
@@ -247,16 +251,18 @@ export default createController(routes.cms.postTypes, {
 
 		edit: inject([Database] as const, async (db) => {
 			let ctx = getContext();
+			let { id } = ds.parse(RouteParams, ctx.params);
 			let types = await PostType.findAll(db);
-			let type = types.find((candidate) => candidate.id === ctx.params.id);
+			let type = types.find((candidate) => candidate.id === id);
 			if (!type) return notFound("Not found");
 			return renderForm(db, type, `Edit ${type.label}`);
 		}),
 
 		update: inject([Database] as const, async (db) => {
 			let ctx = getContext();
+			let { id } = ds.parse(RouteParams, ctx.params);
 			try {
-				await PostType.update(db, ctx.params.id!, readForm(ctx.formData));
+				await PostType.update(db, id, readForm(ctx.formData));
 			} catch (error) {
 				return renderForm(
 					db,
@@ -270,8 +276,9 @@ export default createController(routes.cms.postTypes, {
 
 		destroy: inject([Database] as const, async (db) => {
 			let ctx = getContext();
+			let { id } = ds.parse(RouteParams, ctx.params);
 			try {
-				await PostType.destroy(db, ctx.params.id!);
+				await PostType.destroy(db, id);
 			} catch {
 				// Built-in types cannot be deleted; ignore and return to the list.
 			}

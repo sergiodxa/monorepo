@@ -11,6 +11,7 @@ import { redirect } from "@pkg/http/response";
 import { badRequest, notFound } from "@pkg/http/response/html";
 import { inject } from "@pkg/service-container";
 import { getContext } from "remix/async-context-middleware";
+import * as ds from "remix/data-schema";
 import { Database } from "remix/data-table";
 import { createController } from "remix/fetch-router";
 
@@ -44,6 +45,9 @@ async function chrome(db: Database) {
 function label(user: { display_name: string; email: string } | null): string {
 	return user ? user.display_name || user.email : "";
 }
+
+/** Route params identifying the user being managed (`:id`). */
+const RouteParams = ds.object({ id: ds.string() });
 
 /** `/cms/users` — list users, change role, delete with reassignment (`users.manage`). */
 export default createController(routes.cms.users, {
@@ -90,9 +94,10 @@ export default createController(routes.cms.users, {
 
 		edit: inject([Database] as const, async (db) => {
 			let ctx = getContext();
+			let { id } = ds.parse(RouteParams, ctx.params);
 			let { user, permissions, siteTitle } = await chrome(db);
 			let [target, roles, users] = await Promise.all([
-				User.findById(db, ctx.params.id!),
+				User.findById(db, id),
 				Role.findAll(db),
 				User.findAll(db),
 			]);
@@ -156,9 +161,10 @@ export default createController(routes.cms.users, {
 
 		update: inject([Database] as const, async (db) => {
 			let ctx = getContext();
+			let { id } = ds.parse(RouteParams, ctx.params);
 			let roleId = String(ctx.formData.get("role_id") ?? "");
 			try {
-				await User.changeRole(db, ctx.params.id!, roleId);
+				await User.changeRole(db, id, roleId);
 			} catch (error) {
 				return badRequest(String((error as Error).message));
 			}
@@ -167,7 +173,8 @@ export default createController(routes.cms.users, {
 
 		destroy: inject([Database] as const, async (db) => {
 			let ctx = getContext();
-			let target = await User.findById(db, ctx.params.id!);
+			let { id } = ds.parse(RouteParams, ctx.params);
+			let target = await User.findById(db, id);
 			if (!target) return notFound("Not found");
 
 			let postCount = await Post.countByAuthor(db, target.id);

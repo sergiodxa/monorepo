@@ -11,6 +11,7 @@ import { redirect } from "@pkg/http/response";
 import { badRequest, notFound } from "@pkg/http/response/html";
 import { inject } from "@pkg/service-container";
 import { getContext } from "remix/async-context-middleware";
+import * as ds from "remix/data-schema";
 import { Database } from "remix/data-table";
 import { createController } from "remix/fetch-router";
 
@@ -149,6 +150,9 @@ async function renderForm(
 	);
 }
 
+/** Route params identifying the role being edited (`:id`). */
+const RouteParams = ds.object({ id: ds.string() });
+
 /** `/cms/roles` — create, edit, and delete custom roles (gated by `roles.manage`). */
 export default createController(routes.cms.roles, {
 	middleware: [requirePermission("roles.manage")],
@@ -211,17 +215,19 @@ export default createController(routes.cms.roles, {
 
 		edit: inject([Database] as const, async (db) => {
 			let ctx = getContext();
-			let role = await Role.findById(db, ctx.params.id!);
+			let { id } = ds.parse(RouteParams, ctx.params);
+			let role = await Role.findById(db, id);
 			if (!role) return notFound("Not found");
 			return renderForm(db, role, `Edit ${role.label}`);
 		}),
 
 		update: inject([Database] as const, async (db) => {
 			let ctx = getContext();
+			let { id } = ds.parse(RouteParams, ctx.params);
 			try {
-				await Role.update(db, ctx.params.id!, readForm(ctx.formData));
+				await Role.update(db, id, readForm(ctx.formData));
 			} catch (error) {
-				let role = await Role.findById(db, ctx.params.id!);
+				let role = await Role.findById(db, id);
 				return renderForm(db, role ?? undefined, "Edit Role", String((error as Error).message));
 			}
 			return redirect("/cms/roles", { status: redirect.Status.SeeOther });
@@ -229,8 +235,9 @@ export default createController(routes.cms.roles, {
 
 		destroy: inject([Database] as const, async (db) => {
 			let ctx = getContext();
+			let { id } = ds.parse(RouteParams, ctx.params);
 			try {
-				await Role.destroy(db, ctx.params.id!);
+				await Role.destroy(db, id);
 			} catch (error) {
 				return badRequest(String((error as Error).message));
 			}

@@ -8,6 +8,7 @@
  */
 import { inject } from "@pkg/service-container";
 import { getContext } from "remix/async-context-middleware";
+import * as s from "remix/data-schema";
 import { Database } from "remix/data-table";
 import { createAction } from "remix/fetch-router";
 
@@ -25,11 +26,15 @@ export default createAction(
 	routes.post,
 	inject([Database] as const, async (db) => {
 		let ctx = getContext();
-		let type = await PostType.findByPath(db, ctx.params.typePath!);
+		let { typePath, slug } = s.parse(
+			s.object({ typePath: s.string(), slug: s.string() }),
+			ctx.params,
+		);
+		let type = await PostType.findByPath(db, typePath);
 		if (!type || !type.visible) return renderNotFound(ctx);
 
 		let codec = createMetaCodec(type);
-		let post = await Post.findBySlugForType(db, type.name, ctx.params.slug!, codec);
+		let post = await Post.findBySlugForType(db, type.name, slug, codec);
 		if (!post || !Post.isPublished(post.published_at)) return renderNotFound(ctx);
 
 		let chrome = await loadSiteChrome(db);
