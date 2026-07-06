@@ -41,3 +41,8 @@ test("a new game gives the player exactly one party creature (the starter)", () 
 	let world = createNewGameWorld(content);
 	expect(world.party[HERO_ID]?.creatureIds.length).toBe(1);
 });
+
+test("a new game seeds the hero with a large starting balance", () => {
+	let world = createNewGameWorld(content);
+	expect(world.money[HERO_ID]?.amount).toBe(100000);
+});

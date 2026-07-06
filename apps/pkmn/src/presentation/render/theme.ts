@@ -92,6 +92,16 @@ export const PLAYER = {
 	facingNub: "#202020",
 } as const;
 
+/** Body colors for the procedural overworld NPC sprites, one per role (`drawNpc`). */
+export const NPC_COLOR = {
+	/** The healer NPC's body (`overworld/overworld-scene.ts`). */
+	healer: "#ff80c0",
+	/** The shop NPC's body (`overworld/overworld-scene.ts`). */
+	shop: "#40b0e0",
+	/** The trainer NPC's body (`overworld/overworld-scene.ts`). */
+	trainer: "#e0a020",
+} as const;
+
 /** Full-screen background fills, one per scene. */
 export const SCENE_BACKGROUND = {
 	/** The boot loading screen fill (`scenes/boot.ts`). */

@@ -44,6 +44,14 @@ const PERFECT_IV = 31;
 /** The level every seeded creature starts at (experience 0). */
 const STARTER_LEVEL = 1;
 
+/**
+ * Starting money the hero is seeded with.
+ *
+ * Deliberately large so the shop and trainer NPCs are immediately exercisable
+ * without a grind — the overworld ships as a sandbox, not a balanced economy.
+ */
+const STARTING_MONEY = 100000;
+
 /** Builds a migrated new-game world from content, or throws if content is empty. */
 export function createNewGameWorld(content: GameDataSource): World {
 	let ids = Object.keys(content.species);
@@ -75,6 +83,9 @@ export function createNewGameWorld(content: GameDataSource): World {
 		storageBoxes: {
 			[HERO_ID]: { boxes: [{ id: "box-1", name: "Box 1", creatureIds: [] }] },
 			[WILD_ID]: { boxes: [] },
+		},
+		money: {
+			[HERO_ID]: { amount: STARTING_MONEY },
 		},
 		creature: { [starterId]: makeCreature(content, starterSpeciesId, natureId) },
 	}) as World;

@@ -57,8 +57,19 @@ export class PlayerController {
 		this.facing = facing;
 	}
 
-	/** Advances movement by `dt`; returns whether a tile was reached this step. */
-	update(input: InputManager, map: GameMap, dt: number): { arrived: boolean } {
+	/**
+	 * Advances movement by `dt`; returns whether a tile was reached this step.
+	 *
+	 * @param isOccupied - Optional predicate marking extra impassable tiles (e.g.
+	 *   NPCs) on top of the map's own collision, so the player cannot step onto
+	 *   them but still turns to face them.
+	 */
+	update(
+		input: InputManager,
+		map: GameMap,
+		dt: number,
+		isOccupied?: (x: number, y: number) => boolean,
+	): { arrived: boolean } {
 		if (this.stepDir) {
 			this.offset += this.speed * dt;
 			this.walkedPx += this.speed * dt;
@@ -77,7 +88,10 @@ export class PlayerController {
 
 		this.facing = direction;
 		let delta = directionDelta(direction);
-		if (map.isBlocked(this.tileX + delta.dx, this.tileY + delta.dy)) return { arrived: false };
+		let nextX = this.tileX + delta.dx;
+		let nextY = this.tileY + delta.dy;
+		if (map.isBlocked(nextX, nextY)) return { arrived: false };
+		if (isOccupied?.(nextX, nextY)) return { arrived: false };
 
 		this.stepDir = direction;
 		this.speed = TILE_SIZE / (input.isHeld(Button.B) ? RUN_MS : WALK_MS);

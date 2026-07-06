@@ -16,7 +16,7 @@ import type { BattlePosition, ReplacementSelection, TurnCommand } from "~/game/b
 import type { ReplacementCommand } from "~/game/battle/battle";
 import type { GameEvent } from "~/game/events";
 import type { BattleView, CreatureSummaryView } from "~/game/selectors";
-import type { BattleId, CreatureId } from "~/game/world/ids";
+import type { BattleId, CreatureId, PlayerId } from "~/game/world/ids";
 
 import type { Scene } from "../core/scene";
 
@@ -32,6 +32,24 @@ import { AnimationQueue } from "./animation-queue";
 import { BattleCommandMenu } from "./command-menu";
 import { buildBattleTasks, type BattleHud } from "./event-animations";
 import { HpBar } from "./hp-bar";
+
+/** A money stake settled when a battle ends (used by trainer fights). */
+export interface BattleReward {
+	/** The player whose balance the win/loss adjusts. */
+	playerId: PlayerId;
+	/** Money credited when the player wins (side 0). */
+	winReward: number;
+	/** Money debited when the player loses. */
+	lossPenalty: number;
+}
+
+/** Optional configuration that turns a plain wild battle into a staked one. */
+export interface BattleOptions {
+	/** A money stake to settle on finish; omitted for ordinary wild battles. */
+	reward?: BattleReward;
+	/** Whether the Bag/throw-ball path is allowed; false disables capture (trainer fights). */
+	canCapture?: boolean;
+}
 
 /** Renders and drives one battle from the engine's event stream. */
 export class BattleScene implements Scene {
@@ -65,8 +83,22 @@ export class BattleScene implements Scene {
 	/** Creatures that became eligible to evolve during the battle, shown after it ends. */
 	private readonly pendingEvolutions: Array<{ creatureId: CreatureId; speciesId: string }> = [];
 
-	/** @param battleId - The battle this scene presents. */
-	constructor(private readonly battleId: BattleId) {}
+	/** Whether the money stake has already been settled, so it fires exactly once. */
+	private rewardSettled = false;
+
+	/**
+	 * @param battleId - The battle this scene presents.
+	 * @param options - Optional stake and capture rules; wild battles pass nothing.
+	 */
+	constructor(
+		private readonly battleId: BattleId,
+		private readonly options: BattleOptions = {},
+	) {}
+
+	/** Whether throwing a ball is allowed in this battle (default true). */
+	private get canCapture(): boolean {
+		return this.options.canCapture ?? true;
+	}
 
 	/**
 	 * Reacts to engine-level events a dispatch produced.
@@ -142,6 +174,7 @@ export class BattleScene implements Scene {
 					: winnerSide === 1
 						? "You were defeated..."
 						: "The battle ended in a draw.";
+			this.settleReward(game, winnerSide);
 			this.finishing = true;
 			return;
 		}
@@ -153,7 +186,10 @@ export class BattleScene implements Scene {
 			let result = this.menu.update(game.input, moves);
 			if (result?.kind === "fight") this.submitTurn(game, request.turn, result.move);
 			else if (result?.kind === "run") this.submitRun(game, request.turn);
-			else if (result?.kind === "bag") this.throwBall(game);
+			else if (result?.kind === "bag") {
+				if (this.canCapture) this.throwBall(game);
+				else this.enqueueMessage("You can't catch a trainer's creature!");
+			}
 			// the Creatures (switch) menu is not wired to in-battle switching yet.
 		} else if (request?.type === "replacement") {
 			this.submitReplacements(game, request.replacement);
@@ -230,6 +266,30 @@ export class BattleScene implements Scene {
 				return linger >= 700;
 			},
 		});
+	}
+
+	/**
+	 * Settles the money stake once, when the winner is first known.
+	 *
+	 * A win (side 0) credits the reward and a loss debits the penalty via
+	 * `change-money`; a draw (any other side) leaves the balance untouched. The
+	 * `rewardSettled` guard keeps the finish loop from paying out every frame.
+	 */
+	private settleReward(game: GameClient, winnerSide: number) {
+		let reward = this.options.reward;
+		if (!reward || this.rewardSettled) return;
+		this.rewardSettled = true;
+		if (winnerSide === 0) {
+			game.dispatch({ type: "change-money", playerId: reward.playerId, amount: reward.winReward });
+			this.enqueueMessage(`You won ₽${reward.winReward}!`);
+		} else if (winnerSide === 1) {
+			game.dispatch({
+				type: "change-money",
+				playerId: reward.playerId,
+				amount: -reward.lossPenalty,
+			});
+			this.enqueueMessage(`You paid ₽${reward.lossPenalty}...`);
+		}
 	}
 
 	/** Submits a fleeing turn for the player's slots (foe slots still act). */

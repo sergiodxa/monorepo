@@ -14,6 +14,8 @@
 import { TILE_SIZE } from "../core/loop";
 import { Collision, type EncounterEntry, type TileMap } from "../render/tilemap";
 
+import type { Npc } from "./npc";
+
 /** Queryable wrapper around one authored map. */
 export class GameMap {
 	/** Tile indices that belong to any encounter zone. */
@@ -116,3 +118,28 @@ export function createSampleMap(): TileMap {
 
 /** The default spawn tile and facing for a new game on the sample map. */
 export const SAMPLE_SPAWN = { mapId: "route-1", x: 5, y: 5, facing: "down" as const };
+
+/**
+ * Builds the three interactable NPCs standing around the sample-map spawn.
+ *
+ * All three sit on walkable interior tiles a step or two from `SAMPLE_SPAWN`
+ * (5,5) so the player meets them immediately. The trainer's creature species is
+ * resolved by the caller from loaded content, keeping this helper free of any
+ * content assumptions.
+ *
+ * @param trainerSpeciesId - The species the trainer NPC fields.
+ */
+export function createSampleNpcs(trainerSpeciesId: string): Npc[] {
+	return [
+		{ id: "healer", x: 7, y: 5, role: "healer", label: "H" },
+		{ id: "shop", x: 7, y: 7, role: "shop", label: "$" },
+		{
+			id: "trainer",
+			x: 5,
+			y: 3,
+			role: "trainer",
+			label: "T",
+			trainer: { speciesId: trainerSpeciesId, level: 5 },
+		},
+	];
+}

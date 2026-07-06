@@ -25,12 +25,15 @@ import { TILE_SIZE } from "../core/loop";
 import { HERO_ID, WILD_ID } from "../core/new-game";
 import { Camera } from "../render/camera";
 import { drawText } from "../render/text";
-import { PLAYER, TEXT } from "../render/theme";
+import { NPC_COLOR, PLAYER, TEXT } from "../render/theme";
 import { TileMapRenderer } from "../render/tilemap";
+import { DialogueScene } from "../scenes/dialogue";
 import { MenuScene } from "../scenes/menu";
+import { ShopScene } from "../scenes/shop";
 
 import { chooseEncounter, rollEncounter } from "./encounters";
-import { createSampleMap, GameMap, SAMPLE_SPAWN } from "./map-loader";
+import { createSampleMap, createSampleNpcs, GameMap, SAMPLE_SPAWN } from "./map-loader";
+import { facingNpc, type Npc, npcAt } from "./npc";
 import { PlayerController } from "./player-controller";
 
 /** Where the player enters an overworld map. */
@@ -55,6 +58,9 @@ export class OverworldScene implements Scene {
 	/** The player actor. */
 	private player!: PlayerController;
 
+	/** The interactable NPCs on this map (created on enter). */
+	private npcs: Npc[] = [];
+
 	/** Monotonic counter making each battle id unique. */
 	private battleCount = 0;
 
@@ -66,6 +72,10 @@ export class OverworldScene implements Scene {
 		this.map = new GameMap(data);
 		this.renderer = new TileMapRenderer(data, game.assets.image(data.tileset));
 		this.player = new PlayerController(this.spawn.x, this.spawn.y, this.spawn.facing);
+		// The trainer fields a mid-pool species so it differs from the starter it fights.
+		let speciesIds = Object.keys(game.content.species);
+		let trainerSpeciesId = speciesIds[Math.min(3, speciesIds.length - 1)] ?? speciesIds[0] ?? "";
+		this.npcs = createSampleNpcs(trainerSpeciesId);
 		game.audio.playBgm(data.bgm);
 	}
 
@@ -81,7 +91,24 @@ export class OverworldScene implements Scene {
 			return;
 		}
 
-		let { arrived } = this.player.update(game.input, this.map, dt);
+		if (!this.player.moving && game.input.isPressed(Button.A)) {
+			let target = facingNpc(this.npcs, {
+				x: this.player.tile.x,
+				y: this.player.tile.y,
+				facing: this.player.facing,
+			});
+			if (target) {
+				this.interact(game, target);
+				return;
+			}
+		}
+
+		let { arrived } = this.player.update(
+			game.input,
+			this.map,
+			dt,
+			(x, y) => npcAt(this.npcs, x, y) !== null,
+		);
 		this.camera.centerOn(
 			this.player.pixelX + TILE_SIZE / 2,
 			this.player.pixelY + TILE_SIZE / 2,
@@ -90,6 +117,63 @@ export class OverworldScene implements Scene {
 		);
 
 		if (arrived) this.checkEncounter(game);
+	}
+
+	/** Runs an NPC's behavior when the player interacts with it. */
+	private interact(game: GameClient, npc: Npc) {
+		switch (npc.role) {
+			case "healer":
+				game.dispatch({ type: "heal-party", playerId: HERO_ID });
+				game.scenes.push(new DialogueScene(["Your team is fully healed!"]));
+				break;
+			case "shop":
+				game.scenes.push(new ShopScene());
+				break;
+			case "trainer":
+				this.startTrainerBattle(game, npc);
+				break;
+		}
+	}
+
+	/**
+	 * Starts a rebattlable trainer fight against the NPC's freshly spawned creature.
+	 *
+	 * Each fight spawns a new creature under a unique encounter id and stakes money
+	 * through the battle scene's reward config, so the player can walk back and
+	 * challenge the trainer again as often as they like.
+	 */
+	private startTrainerBattle(game: GameClient, npc: Npc) {
+		let trainer = npc.trainer;
+		if (!trainer) return;
+		let playerParty = game.engine.selectParty(HERO_ID).creatures.map((creature) => creature.id);
+		if (playerParty.length === 0) return;
+
+		let encounterId = `trainer-${this.battleCount}`;
+		let spawned = game.dispatch({
+			type: "spawn-encounter",
+			encounterId,
+			speciesId: trainer.speciesId,
+			level: trainer.level,
+		});
+		let creature = spawned.find((event) => event.type === "encounter-spawned");
+		if (creature?.type !== "encounter-spawned") return;
+
+		let battleId = createBattleId(`trainer-${this.battleCount++}`);
+		game.dispatch({
+			type: "start-battle",
+			battleId,
+			playerId: HERO_ID,
+			enemyId: WILD_ID,
+			playerParty,
+			enemyParty: [creature.creatureId],
+			slots: 1,
+		});
+		game.scenes.push(
+			new BattleScene(battleId, {
+				canCapture: false,
+				reward: { playerId: HERO_ID, winReward: 500, lossPenalty: 250 },
+			}),
+		);
 	}
 
 	/** Captures the presentation state to persist if the player saves. */
@@ -107,10 +191,14 @@ export class OverworldScene implements Scene {
 
 	render(game: GameClient, ctx: CanvasRenderingContext2D) {
 		this.renderer.drawGround(ctx, this.camera);
+		for (let npc of this.npcs) this.drawNpc(ctx, npc);
 		this.drawPlayer(ctx);
 		this.renderer.drawOverhead(ctx, this.camera);
-		drawText(ctx, "Grass: wild battles   Start: menu", 4, 4, { color: TEXT.inverseWhite });
-		void game;
+		drawText(ctx, "Grass: wild battles   A: talk   Start: menu", 4, 4, {
+			color: TEXT.inverseWhite,
+		});
+		let money = game.engine.selectPlayer(HERO_ID).money;
+		drawText(ctx, `₽${money}`, 4, 16, { color: TEXT.inverseWhite });
 	}
 
 	/** Rolls a wild encounter for the tile the player just reached and starts the battle. */
@@ -173,5 +261,19 @@ export class OverworldScene implements Scene {
 		};
 		let [nx, ny] = nub[this.player.facing];
 		ctx.fillRect(nx, ny, 2, 2);
+	}
+
+	/** Draws one NPC as a procedural sprite, colored by role, offset by the camera. */
+	private drawNpc(ctx: CanvasRenderingContext2D, npc: Npc) {
+		let x = Math.round(npc.x * TILE_SIZE - this.camera.x);
+		let y = Math.round(npc.y * TILE_SIZE - this.camera.y);
+
+		ctx.fillStyle = NPC_COLOR[npc.role];
+		ctx.fillRect(x + 3, y - 6, 10, 20);
+		ctx.fillStyle = PLAYER.skin;
+		ctx.fillRect(x + 4, y - 8, 8, 6);
+
+		// The role glyph over the head keeps the three NPCs distinguishable.
+		drawText(ctx, npc.label, x + 8, y - 8, { align: "center", color: TEXT.inverseWhite });
 	}
 }
