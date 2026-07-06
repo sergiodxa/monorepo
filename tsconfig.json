@@ -4,6 +4,10 @@
 	"references": [],
 	"compilerOptions": {
 		"jsx": "react-jsx",
+		// Every JSX workspace renders through remix/ui, so make it the default runtime
+		// here (this is the tsconfig Bun reads when `bun test` runs from the repo root).
+		// The few React-only packages override this back to "react".
+		"jsxImportSource": "remix/ui",
 		"types": ["@total-typescript/ts-reset"],
 		"moduleResolution": "bundler",
 		"paths": {
