@@ -45,6 +45,7 @@ bunx react-router routes --json # Extract React Router routes as JSON for AI age
 - MUST write documentation for each shared package, following [](./docs/guides/package-documentation.md) as guidelines
 - MUST write documentation for each application, following [](./docs/guides/app-documentation.md) as guidelines
 - MUST write an ADR for any significant architectural decisions, following [](./docs/guides/adr-writing.md) as guidelines
+- MUST write a short ADR whenever the user corrects an agent about the architecture of the repo or of a specific app/package, documenting the corrected decision so the mistake never repeats — place it in `docs/adr/` (or the app's subdirectory, e.g. `docs/adr/<app>/`, when scoped to one app) and follow [](./docs/guides/adr-writing.md)
 - MUST `build`, `migrate` and `deploy` applications when necessary, in that order, may skip migration if not application
 - MUST build before migrate, so deploy can be done in a single step after migration, without extra waiting time for build
 - MUST deploy after migration, to ensure the latest code is running with the new database schema
