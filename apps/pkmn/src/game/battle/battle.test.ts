@@ -622,7 +622,7 @@ test("Growl lowers the target attack stage", () => {
 	expect(battle.state.sides[1].active[0]?.combatant.statStages[Stat.Attack]).toBe(-1);
 });
 
-test.skip("Safeguard blocks major status on the protected side", () => {
+test("Safeguard blocks major status on the protected side", () => {
 	let battle = new Battle({
 		gameData: GAME_DATA,
 		sides: [
@@ -637,6 +637,11 @@ test.skip("Safeguard blocks major status on the protected side", () => {
 	readEvent(session.next());
 	let firstRequest = readEvent(session.next());
 	if (firstRequest.type !== "request-turn-commands") throw new TypeError("Expected turn request.");
+	collectTurnEvents(session, battle, [
+		{ type: "fight", move: 0, target: { side: 1, slot: 0 } },
+		{ type: "fight", move: 2, target: { side: 0, slot: 0 } },
+	]);
+
 	let secondTurnStarted = readEvent(session.next());
 	expect(secondTurnStarted).toEqual({ type: "turn-started", turn: 2 });
 	let secondRequest = readEvent(session.next());
@@ -652,7 +657,7 @@ test.skip("Safeguard blocks major status on the protected side", () => {
 	expect(battle.state.sides[0].active[0]?.combatant.creature.status.state).toBe(null);
 });
 
-test.skip("Electric Terrain blocks sleep for grounded targets", () => {
+test("Electric Terrain blocks sleep for grounded targets", () => {
 	let battle = new Battle({
 		gameData: GAME_DATA,
 		sides: [
@@ -667,6 +672,11 @@ test.skip("Electric Terrain blocks sleep for grounded targets", () => {
 	readEvent(session.next());
 	let firstRequest = readEvent(session.next());
 	if (firstRequest.type !== "request-turn-commands") throw new TypeError("Expected turn request.");
+	collectTurnEvents(session, battle, [
+		{ type: "fight", move: 0, target: { side: 1, slot: 0 } },
+		{ type: "fight", move: 2, target: { side: 0, slot: 0 } },
+	]);
+
 	let secondTurnStarted = readEvent(session.next());
 	expect(secondTurnStarted).toEqual({ type: "turn-started", turn: 2 });
 	let secondRequest = readEvent(session.next());
@@ -682,7 +692,7 @@ test.skip("Electric Terrain blocks sleep for grounded targets", () => {
 	expect(battle.state.sides[0].active[0]?.combatant.creature.status.state).toBe(null);
 });
 
-test.skip("Misty Terrain blocks grounded major status applications", () => {
+test("Misty Terrain blocks grounded major status applications", () => {
 	let battle = new Battle({
 		gameData: GAME_DATA,
 		sides: [
@@ -697,6 +707,11 @@ test.skip("Misty Terrain blocks grounded major status applications", () => {
 	readEvent(session.next());
 	let firstRequest = readEvent(session.next());
 	if (firstRequest.type !== "request-turn-commands") throw new TypeError("Expected turn request.");
+	collectTurnEvents(session, battle, [
+		{ type: "fight", move: 0, target: { side: 1, slot: 0 } },
+		{ type: "fight", move: 2, target: { side: 0, slot: 0 } },
+	]);
+
 	let secondTurnStarted = readEvent(session.next());
 	expect(secondTurnStarted).toEqual({ type: "turn-started", turn: 2 });
 	let secondRequest = readEvent(session.next());
@@ -712,7 +727,7 @@ test.skip("Misty Terrain blocks grounded major status applications", () => {
 	expect(battle.state.sides[0].active[0]?.combatant.creature.status.state).toBe(null);
 });
 
-test.skip("Mist blocks stat drops on the protected side", () => {
+test("Mist blocks stat drops on the protected side", () => {
 	let battle = new Battle({
 		gameData: GAME_DATA,
 		sides: [
@@ -727,6 +742,11 @@ test.skip("Mist blocks stat drops on the protected side", () => {
 	readEvent(session.next());
 	let firstRequest = readEvent(session.next());
 	if (firstRequest.type !== "request-turn-commands") throw new TypeError("Expected turn request.");
+	collectTurnEvents(session, battle, [
+		{ type: "fight", move: 0, target: { side: 1, slot: 0 } },
+		{ type: "fight", move: 2, target: { side: 0, slot: 0 } },
+	]);
+
 	let secondTurnStarted = readEvent(session.next());
 	expect(secondTurnStarted).toEqual({ type: "turn-started", turn: 2 });
 	let secondRequest = readEvent(session.next());
