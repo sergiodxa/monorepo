@@ -16,6 +16,7 @@ import { GameClient } from "../core/game-client";
 import { Button } from "../core/input";
 import { SCREEN_HEIGHT, SCREEN_WIDTH } from "../core/loop";
 import { drawText } from "../render/text";
+import { BootProgress, SceneBackground, Text } from "../render/theme";
 
 import { TitleScene } from "./title";
 
@@ -51,23 +52,26 @@ export class BootScene implements Scene {
 	}
 
 	render(_game: GameClient, ctx: CanvasRenderingContext2D) {
-		ctx.fillStyle = "#101820";
+		ctx.fillStyle = SceneBackground.boot;
 		ctx.fillRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
-		drawText(ctx, "PKMN", SCREEN_WIDTH / 2, 60, { align: "center", color: "#f8f8f8" });
+		drawText(ctx, "PKMN", SCREEN_WIDTH / 2, 60, { align: "center", color: Text.inverse });
 
 		if (!this.ready) {
 			let ratio = this.total > 0 ? this.loaded / this.total : 1;
-			ctx.fillStyle = "#404850";
+			ctx.fillStyle = BootProgress.track;
 			ctx.fillRect(70, 96, 100, 6);
-			ctx.fillStyle = "#f8f8f8";
+			ctx.fillStyle = BootProgress.fill;
 			ctx.fillRect(70, 96, Math.round(100 * ratio), 6);
-			drawText(ctx, "Loading...", SCREEN_WIDTH / 2, 110, { align: "center", color: "#a0a8b0" });
+			drawText(ctx, "Loading...", SCREEN_WIDTH / 2, 110, {
+				align: "center",
+				color: Text.bootLoading,
+			});
 			return;
 		}
 
 		drawText(ctx, "Press Z / Enter to start", SCREEN_WIDTH / 2, 104, {
 			align: "center",
-			color: "#f8f8f8",
+			color: Text.inverse,
 		});
 	}
 }

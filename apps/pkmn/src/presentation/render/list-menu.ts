@@ -13,6 +13,7 @@
 import { Button, type InputManager } from "../core/input";
 
 import { drawText } from "./text";
+import { Text } from "./theme";
 import { Window } from "./window";
 
 /** Tracks selection in a scrolling vertical list. */
@@ -73,12 +74,12 @@ export class ListMenu {
 		for (let row = this.scroll; row < end; row++) {
 			let drawY = y + 6 + (row - this.scroll) * 14;
 			if (row === this.index) Window.cursor(ctx, x + 4, drawY + 1);
-			drawText(ctx, items[row] ?? "", x + 14, drawY, { color: "#202020" });
+			drawText(ctx, items[row] ?? "", x + 14, drawY, { color: Text.default });
 		}
 
-		if (this.scroll > 0) drawText(ctx, "▲", x + width - 12, y + 4, { color: "#606060" });
+		if (this.scroll > 0) drawText(ctx, "▲", x + width - 12, y + 4, { color: Text.muted });
 		if (end < items.length) {
-			drawText(ctx, "▼", x + width - 12, y + height - 12, { color: "#606060" });
+			drawText(ctx, "▼", x + width - 12, y + height - 12, { color: Text.muted });
 		}
 	}
 }

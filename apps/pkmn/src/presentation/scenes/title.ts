@@ -22,6 +22,7 @@ import { createNewGameWorld } from "../core/new-game";
 import { SAMPLE_SPAWN } from "../overworld/map-loader";
 import { OverworldScene, type Spawn } from "../overworld/overworld-scene";
 import { drawText } from "../render/text";
+import { SceneBackground, Text } from "../render/theme";
 import { Window } from "../render/window";
 
 /** The start-menu options in navigation order. */
@@ -53,15 +54,17 @@ export class TitleScene implements Scene {
 	}
 
 	render(_game: GameClient, ctx: CanvasRenderingContext2D) {
-		ctx.fillStyle = "#2848a0";
+		ctx.fillStyle = SceneBackground.title;
 		ctx.fillRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
-		drawText(ctx, "PKMN", SCREEN_WIDTH / 2, 40, { align: "center", color: "#f8f8f8" });
+		drawText(ctx, "PKMN", SCREEN_WIDTH / 2, 40, { align: "center", color: Text.inverse });
 
 		Window.frame(ctx, 84, 90, 72, 44);
 		for (let i = 0; i < OPTIONS.length; i++) {
 			let disabled = OPTIONS[i] === "Continue" && !this.canContinue;
 			if (i === this.index) Window.cursor(ctx, 92, 100 + i * 16);
-			drawText(ctx, OPTIONS[i]!, 104, 100 + i * 16, { color: disabled ? "#a0a0a0" : "#202020" });
+			drawText(ctx, OPTIONS[i]!, 104, 100 + i * 16, {
+				color: disabled ? Text.disabled : Text.default,
+			});
 		}
 	}
 

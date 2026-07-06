@@ -13,6 +13,7 @@
  */
 import { Button, type InputManager } from "../core/input";
 import { drawText } from "../render/text";
+import { Text } from "../render/theme";
 import { Window } from "../render/window";
 
 /** One selectable move in the Fight submenu. */
@@ -127,8 +128,8 @@ export class BattleCommandMenu {
 			let x = 18 + (index % 2) * 116;
 			let y = 122 + Math.floor(index / 2) * 18;
 			if (index === this.moveIndex) Window.cursor(ctx, x - 10, y);
-			drawText(ctx, move.id ?? "-", x, y, { color: move.pp > 0 ? "#202020" : "#a0a0a0" });
-			drawText(ctx, `PP ${move.pp}`, x + 78, y, { color: "#606060" });
+			drawText(ctx, move.id ?? "-", x, y, { color: move.pp > 0 ? Text.default : Text.disabled });
+			drawText(ctx, `PP ${move.pp}`, x + 78, y, { color: Text.muted });
 		}
 	}
 }

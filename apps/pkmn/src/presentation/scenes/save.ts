@@ -17,6 +17,7 @@ import type { Scene } from "../core/scene";
 import { Button } from "../core/input";
 import { SCREEN_HEIGHT, SCREEN_WIDTH } from "../core/loop";
 import { drawText } from "../render/text";
+import { SceneBackground, Text } from "../render/theme";
 import { Window } from "../render/window";
 
 /** Confirms and writes a save. */
@@ -45,15 +46,15 @@ export class SaveScene implements Scene {
 	}
 
 	render(_game: GameClient, ctx: CanvasRenderingContext2D) {
-		ctx.fillStyle = "#203040";
+		ctx.fillStyle = SceneBackground.save;
 		ctx.fillRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
 		Window.frame(ctx, 30, 60, 180, 44);
 		if (this.saved) {
 			drawText(ctx, "Game saved!", 120, 74, { align: "center" });
-			drawText(ctx, "Press a button", 120, 90, { align: "center", color: "#606060" });
+			drawText(ctx, "Press a button", 120, 90, { align: "center", color: Text.muted });
 		} else {
 			drawText(ctx, "Save your game?", 120, 74, { align: "center" });
-			drawText(ctx, "A: Yes    B: No", 120, 90, { align: "center", color: "#606060" });
+			drawText(ctx, "A: Yes    B: No", 120, 90, { align: "center", color: Text.muted });
 		}
 	}
 }

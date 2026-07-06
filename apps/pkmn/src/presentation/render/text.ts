@@ -11,6 +11,7 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
+import { Text } from "./theme";
 
 /** Pixel height of one line of text at the default size. */
 export const LINE_HEIGHT = 12;
@@ -34,7 +35,7 @@ export function drawText(
 	options: TextOptions = {},
 ) {
 	ctx.font = FONT;
-	ctx.fillStyle = options.color ?? "#202020";
+	ctx.fillStyle = options.color ?? Text.default;
 	ctx.textAlign = options.align ?? "left";
 	ctx.textBaseline = options.baseline ?? "top";
 	ctx.fillText(text, Math.round(x), Math.round(y));

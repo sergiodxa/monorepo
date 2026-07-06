@@ -9,6 +9,7 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
+import { WindowColor } from "./theme";
 
 /** Draws framed panels and the shared selection cursor. */
 export class Window {
@@ -33,8 +34,8 @@ export class Window {
 
 		let radius = 4;
 		ctx.save();
-		ctx.fillStyle = "#f8f8f8";
-		ctx.strokeStyle = "#3060a8";
+		ctx.fillStyle = WindowColor.panel;
+		ctx.strokeStyle = WindowColor.border;
 		ctx.lineWidth = 2;
 		ctx.beginPath();
 		ctx.moveTo(x + radius, y);
@@ -51,7 +52,7 @@ export class Window {
 	/** Draws the triangular selection cursor pointing right at `(x, y)`. */
 	static cursor(ctx: CanvasRenderingContext2D, x: number, y: number) {
 		ctx.save();
-		ctx.fillStyle = "#202020";
+		ctx.fillStyle = WindowColor.cursor;
 		ctx.beginPath();
 		ctx.moveTo(x, y);
 		ctx.lineTo(x + 6, y + 4);

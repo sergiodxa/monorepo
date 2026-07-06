@@ -18,6 +18,7 @@ import type { Scene } from "../core/scene";
 import { Button } from "../core/input";
 import { SCREEN_HEIGHT, SCREEN_WIDTH } from "../core/loop";
 import { drawText } from "../render/text";
+import { SceneBackground, Text } from "../render/theme";
 import { Window } from "../render/window";
 
 /** Presents and applies one evolution. */
@@ -58,19 +59,19 @@ export class EvolutionScene implements Scene {
 	}
 
 	render(_game: GameClient, ctx: CanvasRenderingContext2D) {
-		ctx.fillStyle = "#101828";
+		ctx.fillStyle = SceneBackground.evolution;
 		ctx.fillRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
 		Window.frame(ctx, 20, 56, 200, 48);
 		if (this.evolved) {
 			drawText(ctx, `${this.fromName} evolved into ${this.speciesId}!`, 120, 72, {
 				align: "center",
 			});
-			drawText(ctx, "Press a button", 120, 90, { align: "center", color: "#606060" });
+			drawText(ctx, "Press a button", 120, 90, { align: "center", color: Text.muted });
 		} else {
 			drawText(ctx, `${this.fromName} is evolving into ${this.speciesId}!`, 120, 68, {
 				align: "center",
 			});
-			drawText(ctx, "A: Evolve    B: Cancel", 120, 90, { align: "center", color: "#606060" });
+			drawText(ctx, "A: Evolve    B: Cancel", 120, 90, { align: "center", color: Text.muted });
 		}
 	}
 }

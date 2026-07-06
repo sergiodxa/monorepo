@@ -11,6 +11,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 import { drawText } from "../render/text";
+import { HpBarColor } from "../render/theme";
 
 /** A single combatant's HP bar with an eased displayed value. */
 export class HpBar {
@@ -56,17 +57,18 @@ export class HpBar {
 		let ratio = this.max > 0 ? Math.max(0, Math.min(1, this.displayed / this.max)) : 0;
 		let height = 5;
 
-		ctx.fillStyle = "#202020";
+		ctx.fillStyle = HpBarColor.outline;
 		ctx.fillRect(x - 1, y - 1, width + 2, height + 2);
-		ctx.fillStyle = "#585858";
+		ctx.fillStyle = HpBarColor.track;
 		ctx.fillRect(x, y, width, height);
-		ctx.fillStyle = ratio > 0.5 ? "#48c048" : ratio > 0.2 ? "#e8c020" : "#e04030";
+		ctx.fillStyle =
+			ratio > 0.5 ? HpBarColor.fillHigh : ratio > 0.2 ? HpBarColor.fillMedium : HpBarColor.fillLow;
 		ctx.fillRect(x, y, Math.round(width * ratio), height);
 
 		if (showNumbers) {
 			drawText(ctx, `${Math.ceil(this.displayed)}/${this.max}`, x + width, y + height + 2, {
 				align: "right",
-				color: "#f8f8f8",
+				color: HpBarColor.numbers,
 			});
 		}
 	}
