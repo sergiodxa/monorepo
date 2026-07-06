@@ -30,6 +30,7 @@ import { GameData } from "./data/game-data";
 import { selectView } from "./selectors";
 import { markSpeciesCaught, markSpeciesSeen } from "./systems/bestiary-system";
 import { captureCreature } from "./systems/capture-system";
+import { despawnEncounter, spawnEncounter } from "./systems/encounter-system";
 import { evolveCreature } from "./systems/evolution-system";
 import { grantCreatureExperience } from "./systems/experience-system";
 import { addInventoryItem, removeInventoryItem } from "./systems/inventory-system";
@@ -166,6 +167,18 @@ export class Engine {
 						(entry) => entry.id === command.itemId,
 					)?.count ?? 0;
 				return [{ type: "inventory-updated", itemId: command.itemId, count }];
+			}
+			case "spawn-encounter": {
+				let { creatureId } = spawnEncounter(this.gameData, this.world, command, this.random);
+				return [
+					{
+						type: "encounter-spawned",
+						encounterId: command.encounterId,
+						creatureId,
+						speciesId: command.speciesId,
+						level: command.level,
+					},
+				];
 			}
 			case "start-battle": {
 				return this.startBattle(command);
@@ -346,7 +359,16 @@ export class Engine {
 			let runtime = this.getBattleRuntime(battleId);
 			writeBackPlayerBattleResults(this.world, runtime, battleId);
 			let participants = this.world.battleParticipants[battleId];
-			if (participants) removeComponent(this.world.activeBattle, participants.playerId);
+			if (participants) {
+				removeComponent(this.world.activeBattle, participants.playerId);
+				// Wild creatures that were not captured leave with the battle.
+				for (let enemyId of participants.enemyParty) {
+					let location = this.world.creatureLocation[enemyId];
+					if (location?.kind === "encounter" && !this.world.ownership[enemyId]) {
+						despawnEncounter(this.world, enemyId);
+					}
+				}
+			}
 			this.battleRuntime.delete(battleId);
 			events.push({ type: "battle-finished", battleId, winnerSide: finishEvent.winnerSide });
 		}

@@ -10,6 +10,7 @@
  */
 /** Experience growth rate of the creature */
 export enum GrowthRate {
+	Erratic = "erratic",
 	Fast = "fast",
 	MediumFast = "medium-fast",
 	MediumSlow = "medium-slow",

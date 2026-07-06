@@ -12,7 +12,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 import { TILE_SIZE } from "../core/loop";
-import { Collision, type TileMap } from "../render/tilemap";
+import { Collision, type EncounterEntry, type TileMap } from "../render/tilemap";
 
 /** Queryable wrapper around one authored map. */
 export class GameMap {
@@ -56,6 +56,13 @@ export class GameMap {
 		let index = y * this.data.width + x;
 		for (let zone of this.data.encounters) if (zone.zone.includes(index)) return zone.rate;
 		return 0;
+	}
+
+	/** The encounter table for a tile, or an empty list when it has none. */
+	encounterTableAt(x: number, y: number): EncounterEntry[] {
+		let index = y * this.data.width + x;
+		for (let zone of this.data.encounters) if (zone.zone.includes(index)) return zone.table;
+		return [];
 	}
 
 	/** The warp at a tile, if any. */

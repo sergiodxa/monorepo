@@ -28,7 +28,7 @@ import { drawText } from "../render/text";
 import { TileMapRenderer } from "../render/tilemap";
 import { MenuScene } from "../scenes/menu";
 
-import { rollEncounter, pickWildCreature } from "./encounters";
+import { chooseEncounter, rollEncounter } from "./encounters";
 import { createSampleMap, GameMap, SAMPLE_SPAWN } from "./map-loader";
 import { PlayerController } from "./player-controller";
 
@@ -112,15 +112,30 @@ export class OverworldScene implements Scene {
 		void game;
 	}
 
-	/** Rolls a wild encounter for the tile the player just reached. */
+	/** Rolls a wild encounter for the tile the player just reached and starts the battle. */
 	private checkEncounter(game: GameClient) {
 		let { x, y } = this.player.tile;
 		if (!rollEncounter(this.map, x, y, Math.random)) return;
 
 		let playerParty = game.engine.selectParty(HERO_ID).creatures.map((creature) => creature.id);
-		let pool = game.engine.selectParty(WILD_ID).creatures.map((creature) => creature.id);
-		let wild = pickWildCreature(pool, Math.random);
-		if (playerParty.length === 0 || wild === null) return;
+		if (playerParty.length === 0) return;
+
+		let choice = chooseEncounter(
+			this.map.encounterTableAt(x, y),
+			Object.keys(game.content.species),
+			Math.random,
+		);
+		if (!choice) return;
+
+		let encounterId = `enc-${this.battleCount}`;
+		let spawned = game.dispatch({
+			type: "spawn-encounter",
+			encounterId,
+			speciesId: choice.speciesId,
+			level: choice.level,
+		});
+		let wild = spawned.find((event) => event.type === "encounter-spawned");
+		if (wild?.type !== "encounter-spawned") return;
 
 		let battleId = createBattleId(`wild-${this.battleCount++}`);
 		game.dispatch({
@@ -129,7 +144,7 @@ export class OverworldScene implements Scene {
 			playerId: HERO_ID,
 			enemyId: WILD_ID,
 			playerParty,
-			enemyParty: [wild],
+			enemyParty: [wild.creatureId],
 			slots: 1,
 		});
 		game.scenes.push(new BattleScene(battleId));

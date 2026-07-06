@@ -51,6 +51,23 @@ export function getExperienceForLevel(growthRate: GrowthRate, level: number): nu
 	if (normalizedLevel === 1) return 0;
 
 	switch (growthRate) {
+		case GrowthRate.Erratic: {
+			if (normalizedLevel <= 50) {
+				return Math.floor((normalizedLevel ** 3 * (100 - normalizedLevel)) / 50);
+			}
+
+			if (normalizedLevel <= 68) {
+				return Math.floor((normalizedLevel ** 3 * (150 - normalizedLevel)) / 100);
+			}
+
+			if (normalizedLevel <= 98) {
+				return Math.floor(
+					(normalizedLevel ** 3 * Math.floor((1911 - 10 * normalizedLevel) / 3)) / 500,
+				);
+			}
+
+			return Math.floor((normalizedLevel ** 3 * (160 - normalizedLevel)) / 100);
+		}
 		case GrowthRate.Fast: {
 			return Math.floor((4 * normalizedLevel ** 3) / 5);
 		}

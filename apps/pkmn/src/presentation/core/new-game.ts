@@ -24,14 +24,8 @@ import { migrateWorld } from "~/game/world/migrate";
 /** The player id every new game starts with. */
 export const HERO_ID = createPlayerId("hero");
 
-/** The owner of the pre-seeded wild-encounter creatures. */
+/** The nominal opponent used to label wild battles (its party stays empty). */
 export const WILD_ID = createPlayerId("wild");
-
-/** Species chosen for the player's starter and the wild pool. */
-export interface StarterChoice {
-	starterSpeciesId: string;
-	wildSpeciesIds: string[];
-}
 
 /** A creature blob in the legacy shape `migrateWorld` splits into components. */
 interface CreatureBlob {
@@ -52,21 +46,13 @@ const STARTER_LEVEL = 1;
 
 /** Builds a migrated new-game world from content, or throws if content is empty. */
 export function createNewGameWorld(content: GameDataSource): World {
-	let choice = pickStarters(content);
+	let ids = Object.keys(content.species);
+	if (ids.length === 0) throw new RangeError("Content has no species to start a game.");
 	let natureId = firstKey(content.natures) ?? "HARDY";
-
 	let starterId = createCreatureId("starter");
-	let wildIds = choice.wildSpeciesIds.map((_, index) => createCreatureId(`wild-${index + 1}`));
-
-	let creature: Record<string, CreatureBlob> = {
-		[starterId]: makeCreature(content, choice.starterSpeciesId, natureId),
-	};
-	for (let index = 0; index < wildIds.length; index++) {
-		creature[wildIds[index]!] = makeCreature(content, choice.wildSpeciesIds[index]!, natureId);
-	}
 
 	return migrateWorld({
-		entities: [HERO_ID, WILD_ID, starterId, ...wildIds],
+		entities: [HERO_ID, WILD_ID, starterId],
 		playerId: HERO_ID,
 		playerProfile: {
 			[HERO_ID]: { name: "Hero" },
@@ -74,7 +60,7 @@ export function createNewGameWorld(content: GameDataSource): World {
 		},
 		party: {
 			[HERO_ID]: { creatureIds: [starterId] },
-			[WILD_ID]: { creatureIds: wildIds },
+			[WILD_ID]: { creatureIds: [] },
 		},
 		inventory: {
 			[HERO_ID]: { items: {} },
@@ -88,23 +74,8 @@ export function createNewGameWorld(content: GameDataSource): World {
 			[HERO_ID]: { boxes: [{ id: "box-1", name: "Box 1", creatureIds: [] }] },
 			[WILD_ID]: { boxes: [] },
 		},
-		creature,
+		creature: { [starterId]: makeCreature(content, ids[0]!, natureId) },
 	}) as World;
-}
-
-/** The wild creature ids seeded into the world, in encounter-pool order. */
-export function wildCreatureIds(wildCount: number): string[] {
-	return Array.from({ length: wildCount }, (_, index) => createCreatureId(`wild-${index + 1}`));
-}
-
-/** Picks a starter species and up to three wild species from content order. */
-function pickStarters(content: GameDataSource): StarterChoice {
-	let ids = Object.keys(content.species);
-	if (ids.length === 0) throw new RangeError("Content has no species to start a game.");
-	let starterSpeciesId = ids[0]!;
-	let wildSpeciesIds = ids.slice(1, 4);
-	if (wildSpeciesIds.length === 0) wildSpeciesIds = [starterSpeciesId];
-	return { starterSpeciesId, wildSpeciesIds };
 }
 
 /** Builds one creature blob for a species, deriving its moveset from the learnset. */

@@ -8,7 +8,10 @@
  */
 import type { ReplacementCommand, TurnCommand } from "./battle/battle";
 import type { ItemId } from "./data/item";
+import type { MoveId } from "./data/move";
+import type { NatureId } from "./data/nature";
 import type { SpeciesId } from "./data/species";
+import type { StatSet } from "./data/stat";
 import type { BattleId, CreatureId, PlayerId } from "./world/ids";
 
 /** Commands accepted by the game engine boundary. */
@@ -110,6 +113,17 @@ export namespace Command {
 		type: "heal-party";
 		playerId: PlayerId;
 	}
+
+	/** Creates a wild creature at an encounter location, rolling any omitted fields. */
+	export interface SpawnEncounter {
+		type: "spawn-encounter";
+		encounterId: string;
+		speciesId: SpeciesId;
+		level: number;
+		natureId?: NatureId;
+		iv?: Partial<StatSet>;
+		moveIds?: MoveId[];
+	}
 }
 
 /** Intent submitted through the engine boundary. */
@@ -122,6 +136,7 @@ export type Command =
 	| Command.MarkSpeciesCaught
 	| Command.MarkSpeciesSeen
 	| Command.RemoveInventoryItem
+	| Command.SpawnEncounter
 	| Command.StartBattle
 	| Command.StoreCreature
 	| Command.SubmitBattleReplacements

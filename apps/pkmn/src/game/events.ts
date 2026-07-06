@@ -92,6 +92,15 @@ export namespace GameEvent {
 		playerId: PlayerId;
 		count: number;
 	}
+
+	/** Reports that a wild creature was spawned for an encounter. */
+	export interface EncounterSpawned {
+		type: "encounter-spawned";
+		encounterId: string;
+		creatureId: CreatureId;
+		speciesId: SpeciesId;
+		level: number;
+	}
 }
 
 /** High-level engine event emitted after a command is applied. */
@@ -106,4 +115,5 @@ export type GameEvent =
 	| GameEvent.CreatureCaptured
 	| GameEvent.CreatureExperienceGranted
 	| GameEvent.CreatureEvolved
-	| GameEvent.PartyHealed;
+	| GameEvent.PartyHealed
+	| GameEvent.EncounterSpawned;
