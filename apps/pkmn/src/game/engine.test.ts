@@ -261,6 +261,62 @@ test("attempt-capture catches a wild creature and ends the battle", () => {
 	expect(owned || stored).toBe(true);
 });
 
+test("regression: reading the battle view after a wild battle ends does not crash", () => {
+	// Bug: finishing a battle despawned the encounter creature immediately, so the
+	// presentation's next selectBattle threw "Missing creature identity". The wild
+	// must survive until the next battle's cleanup.
+	let playerId = createPlayerId("hero");
+	let enemyId = createPlayerId("rival");
+	let allyId = createCreatureId("ally-1");
+	let seedEnemy = createCreatureId("enemy-1");
+	let engine = createBattleEngine(playerId, enemyId, allyId, seedEnemy, () => 0.5);
+	let battleId = createBattleId("wild-1");
+
+	let spawn = engine.dispatch({
+		type: "spawn-encounter",
+		encounterId: "enc-0",
+		speciesId: SECONDARY_SPECIES_ID,
+		level: 5,
+	});
+	let wild = spawn.find((event) => event.type === "encounter-spawned");
+	if (wild?.type !== "encounter-spawned") throw new Error("expected an encounter");
+
+	engine.dispatch({
+		type: "start-battle",
+		battleId,
+		playerId,
+		enemyId,
+		playerParty: [allyId],
+		enemyParty: [wild.creatureId],
+		slots: 1,
+	});
+
+	// Forfeit to end the battle deterministically (the enemy still acts).
+	let finished = false;
+	for (let turn = 0; turn < 200 && !finished; turn += 1) {
+		let battle = engine.selectActiveBattle(playerId);
+		if (battle?.events.at(-1)?.type !== "request-turn-commands") break;
+		let requests = battle.events.at(-1);
+		if (requests?.type !== "request-turn-commands") break;
+		let events = engine.dispatch({
+			type: "submit-battle-turn",
+			battleId,
+			commands: requests.requests.map((request) =>
+				request.side === 0
+					? { type: "leave-battle" as const }
+					: { type: "fight" as const, move: 0 as const, target: { side: 0, slot: 0 } },
+			),
+		});
+		finished = events.some((event) => event.type === "battle-finished");
+	}
+	expect(finished).toBe(true);
+
+	// The crash reproduction: this threw before the fix.
+	expect(() => engine.selectBattle(battleId)).not.toThrow();
+	// The wild is transient: never saved.
+	expect(engine.snapshot().entities.includes(wild.creatureId)).toBe(false);
+});
+
 test("heal-party fully restores a damaged party", () => {
 	let playerId = createPlayerId("hero");
 	let enemyId = createPlayerId("rival");

@@ -23,7 +23,7 @@ import type { World } from "~/game/world/world";
 
 import { getExperienceForLevel } from "~/game/battle/mechanics";
 import { Stat } from "~/game/data/stat";
-import { removeComponent, setComponent } from "~/game/world/helpers";
+import { setComponent } from "~/game/world/helpers";
 import { createCreatureId } from "~/game/world/ids";
 
 /** Inputs for spawning one wild encounter creature. */
@@ -74,18 +74,6 @@ export function spawnEncounter(
 	});
 
 	return { creatureId };
-}
-
-/** Deletes a wild creature entity and all of its components (used when it is not captured). */
-export function despawnEncounter(world: World, creatureId: CreatureId) {
-	removeComponent(world.creatureIdentity, creatureId);
-	removeComponent(world.creatureProgress, creatureId);
-	removeComponent(world.creatureMoves, creatureId);
-	removeComponent(world.creatureHealth, creatureId);
-	removeComponent(world.creatureStatus, creatureId);
-	removeComponent(world.creatureLocation, creatureId);
-	removeComponent(world.ownership, creatureId);
-	world.entities = world.entities.filter((entityId) => entityId !== creatureId);
 }
 
 /** Picks a random nature id from the loaded content. */

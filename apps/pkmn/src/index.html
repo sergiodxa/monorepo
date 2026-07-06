@@ -4,6 +4,25 @@
 		<meta charset="UTF-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 		<title>PKMN</title>
+		<style>
+			html,
+			body {
+				margin: 0;
+				height: 100%;
+				background: #000;
+				overflow: hidden;
+			}
+			#app {
+				position: fixed;
+				inset: 0;
+				display: flex;
+				align-items: center;
+				justify-content: center;
+			}
+			#app canvas {
+				image-rendering: pixelated;
+			}
+		</style>
 	</head>
 	<body>
 		<div id="app"></div>

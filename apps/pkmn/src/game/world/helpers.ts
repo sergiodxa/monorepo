@@ -97,10 +97,26 @@ export function listComponentEntities<T>(store: ComponentStore<T>): EntityId[] {
  * save output stable even when the engine adds new battle-only helper stores.
  */
 export function pickPersistentWorld(world: World) {
+	// Wild (encounter-located) creatures are transient — they never belong in a save.
+	let excluded = new Set<EntityId>();
+	for (let entityId of Object.keys(world.creatureLocation)) {
+		if (world.creatureLocation[entityId]?.kind === "encounter") excluded.add(entityId);
+	}
+
 	let persistentIds = new Set<EntityId>([world.playerId]);
 	for (let key of PERSISTENT_WORLD_STORE_KEYS) {
-		for (let entityId of Object.keys(world[key])) persistentIds.add(entityId);
+		for (let entityId of Object.keys(world[key])) {
+			if (!excluded.has(entityId)) persistentIds.add(entityId);
+		}
 	}
+
+	let cloneWithout = <T>(store: ComponentStore<T>): ComponentStore<T> => {
+		let out: ComponentStore<T> = {};
+		for (let entityId of Object.keys(store)) {
+			if (!excluded.has(entityId)) out[entityId] = structuredClone(store[entityId]);
+		}
+		return out;
+	};
 
 	return {
 		entities: world.entities.filter((entityId) => persistentIds.has(entityId)),
@@ -110,12 +126,12 @@ export function pickPersistentWorld(world: World) {
 		inventory: structuredClone(world.inventory),
 		bestiary: structuredClone(world.bestiary),
 		storageBoxes: structuredClone(world.storageBoxes),
-		creatureIdentity: structuredClone(world.creatureIdentity),
-		creatureProgress: structuredClone(world.creatureProgress),
-		creatureMoves: structuredClone(world.creatureMoves),
-		creatureHealth: structuredClone(world.creatureHealth),
-		creatureStatus: structuredClone(world.creatureStatus),
-		ownership: structuredClone(world.ownership),
-		creatureLocation: structuredClone(world.creatureLocation),
+		creatureIdentity: cloneWithout(world.creatureIdentity),
+		creatureProgress: cloneWithout(world.creatureProgress),
+		creatureMoves: cloneWithout(world.creatureMoves),
+		creatureHealth: cloneWithout(world.creatureHealth),
+		creatureStatus: cloneWithout(world.creatureStatus),
+		ownership: cloneWithout(world.ownership),
+		creatureLocation: cloneWithout(world.creatureLocation),
 	};
 }

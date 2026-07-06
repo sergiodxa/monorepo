@@ -37,7 +37,7 @@ import {
 	captureStatusBonus,
 	computeCaptureAttempt,
 } from "./systems/capture-system";
-import { despawnEncounter, spawnEncounter } from "./systems/encounter-system";
+import { spawnEncounter } from "./systems/encounter-system";
 import { evolveCreature, getLevelUpEvolution } from "./systems/evolution-system";
 import { awardBattleExperience, grantCreatureExperience } from "./systems/experience-system";
 import { addInventoryItem, removeInventoryItem } from "./systems/inventory-system";
@@ -472,14 +472,9 @@ export class Engine {
 					}
 				}
 			}
-
-			// Wild creatures that were not captured leave with the battle.
-			for (let enemyId of participants.enemyParty) {
-				let location = this.world.creatureLocation[enemyId];
-				if (location?.kind === "encounter" && !this.world.ownership[enemyId]) {
-					despawnEncounter(this.world, enemyId);
-				}
-			}
+			// Uncaptured wild creatures are despawned later by cleanupBattle, not here:
+			// the presentation still reads the enemy summary through selectBattle while it
+			// animates the finish, so deleting its components now would crash that read.
 		}
 
 		this.battleRuntime.delete(battleId);

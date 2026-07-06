@@ -212,6 +212,23 @@ export function writeBackPlayerBattleResults(
 export function cleanupBattle(world: World, battleId: BattleId) {
 	let removedIds = new Set<string>([battleId]);
 
+	// Uncaptured wild creatures leave with the battle. This is deferred to cleanup
+	// (rather than done at battle finish) so the presentation can still read the
+	// enemy through selectBattle while it animates the ending.
+	let participants = getComponent(world.battleParticipants, battleId);
+	for (let enemyId of participants?.enemyParty ?? []) {
+		if (world.creatureLocation[enemyId]?.kind === "encounter" && !world.ownership[enemyId]) {
+			removeComponent(world.creatureIdentity, enemyId);
+			removeComponent(world.creatureProgress, enemyId);
+			removeComponent(world.creatureMoves, enemyId);
+			removeComponent(world.creatureHealth, enemyId);
+			removeComponent(world.creatureStatus, enemyId);
+			removeComponent(world.creatureLocation, enemyId);
+			removeComponent(world.ownership, enemyId);
+			removedIds.add(enemyId);
+		}
+	}
+
 	removeComponent(world.battleParticipants, battleId);
 	removeComponent(world.battlePhase, battleId);
 	removeComponent(world.battleField, battleId);

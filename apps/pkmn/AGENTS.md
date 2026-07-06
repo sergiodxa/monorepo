@@ -13,3 +13,5 @@
 - MUST include `@author [Sergio Xalambrí](https://sergiodxa.com)` in the module-level JSDoc block for all files, to ensure proper attribution and recognition of the original author of the code.
 - MUST include `@copyright Sergio Xalambrí 2026` in the module-level JSDoc block for all files, to ensure proper attribution and recognition of the original author of the code.
 - MUST add to @TODO.md any pending task or issue to fix later, with a clear description of the problem, to ensure a separate agent session can address it later.
+- MUST add a regression test for every bug fixed: write a test that fails against the old (buggy) behavior and passes with the fix, so the bug cannot silently return. Name or comment the test to reference the bug, and keep it alongside the module's other tests.
+- MUST keep tests colocated with the code they cover (a `*.test.ts` next to each module) and aim for every exported function to have direct test coverage.
