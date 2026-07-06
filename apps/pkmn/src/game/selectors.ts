@@ -8,6 +8,8 @@
  */
 import type { BattleEvent } from "./battle/battle";
 import type { GameData } from "./data/game-data";
+import type { NatureId } from "./data/nature";
+import type { StatSet } from "./data/stat";
 import type { BattleId, CreatureId, PlayerId } from "./world/ids";
 import type { World } from "./world/world";
 
@@ -96,6 +98,12 @@ export interface CreatureSummaryView {
 	moves: Array<{ id: string | null; pp: number }>;
 	location: string;
 	ownerId?: PlayerId;
+	/** Individual values per stat, carried through from creature progress. */
+	ivs: StatSet;
+	/** Effort values per stat, carried through from creature progress. */
+	evs: StatSet;
+	/** Nature identifier as the engine represents it. */
+	nature: NatureId;
 }
 
 /** Read model returned when the UI asks for the player summary. */
@@ -220,6 +228,9 @@ export function selectCreatureSummaryView(
 		})),
 		location: describeLocation(components.location),
 		ownerId: components.ownership?.ownerId,
+		ivs: structuredClone(components.progress.iv),
+		evs: structuredClone(components.progress.ev),
+		nature: components.progress.natureId,
 	};
 }
 
