@@ -1,29 +1,61 @@
 /**
  * Low-resolution text drawing and layout helpers.
  *
- * The presentation targets a crisp pixel look; this module uses the canvas text
- * API with a small monospace stack as an acceptable first pass (a bundled bitmap
- * font can replace it later without touching callers). It centralises the font
- * string, measuring, and word-wrapping to a pixel width so dialogue and menus
- * page consistently. A `Typewriter` reveals text one character at a time for
- * message windows.
+ * The presentation targets a crisp pixel look, so text is rendered with the
+ * original bitmap font in `./font` rather than the browser's anti-aliased
+ * `fillText`, which is blurry at the integer-scaled retro resolution. Each
+ * character is blitted as lit 1×1 pixels in the requested color, advancing by a
+ * fixed glyph width so measuring and word-wrapping are exact integer math. This
+ * module centralises measuring, alignment, baseline handling, and word-wrapping to
+ * a pixel width so dialogue and menus page consistently. A `Typewriter` reveals
+ * text one character at a time for message windows.
+ *
+ * The public API (`LINE_HEIGHT`, `TextOptions`, `drawText`, `measureText`,
+ * `wrapText`, `Typewriter`) is unchanged from the earlier canvas-font version; only
+ * the rendering internals switched to the bitmap font.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
+import { blitGlyph, GLYPH_ADVANCE, GLYPH_HEIGHT } from "./font";
 import * as theme from "./theme";
 
-/** Pixel height of one line of text at the default size. */
+/**
+ * Pixel height of one line of text, including a little leading below the glyph so
+ * stacked lines do not touch. Callers space rows by this amount.
+ */
 export const LINE_HEIGHT = 12;
-
-/** The canvas font string used for all presentation text. */
-const FONT = '10px "Courier New", monospace';
 
 /** Options controlling one `drawText` call. */
 export interface TextOptions {
 	color?: string;
 	align?: CanvasTextAlign;
 	baseline?: CanvasTextBaseline;
+}
+
+/**
+ * The rendered pixel width of `count` glyphs at the fixed bitmap metrics.
+ *
+ * Each glyph occupies a full `GLYPH_ADVANCE` cell (glyph width plus one pixel of
+ * letter spacing), including after the last glyph; this keeps measuring, drawing,
+ * and alignment consistent and matches how `drawText` places characters.
+ */
+function widthOf(count: number): number {
+	return count * GLYPH_ADVANCE;
+}
+
+/** Maps a canvas text baseline to the pixel offset of the glyph top from `y`. */
+function baselineOffset(baseline: CanvasTextBaseline): number {
+	switch (baseline) {
+		case "middle":
+			return -Math.round(GLYPH_HEIGHT / 2);
+		case "bottom":
+		case "alphabetic":
+		case "ideographic":
+			return -GLYPH_HEIGHT;
+		default:
+			return 0; // "top" and "hanging".
+	}
 }
 
 /** Draws a single line of text at `(x, y)` with pixel-crisp defaults. */
@@ -34,29 +66,35 @@ export function drawText(
 	y: number,
 	options: TextOptions = {},
 ) {
-	ctx.font = FONT;
+	let align = options.align ?? "left";
+	let baseline = options.baseline ?? "top";
 	ctx.fillStyle = options.color ?? theme.TEXT.default;
-	ctx.textAlign = options.align ?? "left";
-	ctx.textBaseline = options.baseline ?? "top";
-	ctx.fillText(text, Math.round(x), Math.round(y));
+
+	let width = widthOf(text.length);
+	let left = Math.round(x);
+	if (align === "center") left = Math.round(x - width / 2);
+	else if (align === "right" || align === "end") left = Math.round(x - width);
+	let top = Math.round(y) + baselineOffset(baseline);
+
+	for (let index = 0; index < text.length; index++) {
+		blitGlyph(ctx, text[index]!, left + index * GLYPH_ADVANCE, top);
+	}
 }
 
 /** Measures the rendered pixel width of a string in the presentation font. */
-export function measureText(ctx: CanvasRenderingContext2D, text: string): number {
-	ctx.font = FONT;
-	return ctx.measureText(text).width;
+export function measureText(_ctx: CanvasRenderingContext2D, text: string): number {
+	return widthOf(text.length);
 }
 
 /** Wraps text to a maximum pixel width, breaking on spaces, into display lines. */
 export function wrapText(ctx: CanvasRenderingContext2D, text: string, maxWidth: number): string[] {
-	ctx.font = FONT;
 	let lines: string[] = [];
 	for (let paragraph of text.split("\n")) {
 		let words = paragraph.split(" ");
 		let line = "";
 		for (let word of words) {
 			let candidate = line ? `${line} ${word}` : word;
-			if (ctx.measureText(candidate).width > maxWidth && line) {
+			if (measureText(ctx, candidate) > maxWidth && line) {
 				lines.push(line);
 				line = word;
 			} else {
