@@ -938,10 +938,6 @@ export class Battle {
 			speed *= 2;
 		}
 
-		if (this.state.field.terrain === "electric") {
-			speed = Math.floor(speed * 1.1);
-		}
-
 		return speed;
 	}
 
@@ -1192,7 +1188,6 @@ export class Battle {
 	private moveCanConnect(user: CombatantState, target: CombatantState, move: Move): boolean {
 		if (this.canMoveHitTarget(move, target) === false) return false;
 		if (move.accuracy === 0) return true;
-		if (user.statStages.accuracy === 0 && target.statStages.evasion === 0) return true;
 
 		let chance =
 			(move.accuracy / 100) *

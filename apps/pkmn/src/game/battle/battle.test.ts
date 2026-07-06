@@ -28,7 +28,8 @@ import { DamageClass } from "~/game/data/move";
 import { Stat } from "~/game/data/stat";
 import { Creature, State } from "~/game/world/creature";
 
-import type { BattleEvent } from "./battle";
+import type { BattleEvent, BattlePosition } from "./battle";
+import type { CombatantState } from "./combatant-state";
 
 import { Battle } from "./battle";
 import { getCreatureCurrentHP, getCreatureStat } from "./mechanics";
@@ -271,7 +272,9 @@ test("a fainted slot requests a replacement before the next turn", () => {
 			{ teams: [[createLowHpPrimaryFixture(), createBackupPrimaryFixture()]] },
 			{ teams: [[createModestSecondaryFixture()]] },
 		],
-		random: () => 1,
+		// 0.94 passes Razor Leaf's 95% accuracy while keeping the damage roll at its
+		// maximum, so the fainting-blow event stream stays deterministic.
+		random: () => 0.94,
 	});
 	let session = battle.start();
 	let events: BattleEvent[] = [];
@@ -358,7 +361,8 @@ test("a side loses when its only team has no replacement left", () => {
 			{ teams: [[createLowHpPrimaryFixture()]] },
 			{ teams: [[createModestSecondaryFixture()]] },
 		],
-		random: () => 1,
+		// 0.94 passes Razor Leaf's 95% accuracy while keeping the damage roll maximal.
+		random: () => 0.94,
 	});
 	let session = battle.start();
 	let lastEvent: BattleEvent | null = null;
@@ -396,7 +400,8 @@ test("a side can leave the battle instead of sending a replacement", () => {
 			},
 			{ teams: [[createModestSecondaryFixture()]] },
 		],
-		random: () => 1,
+		// 0.94 passes Razor Leaf's 95% accuracy while keeping the damage roll maximal.
+		random: () => 0.94,
 	});
 	let session = battle.start();
 	let lastEvent: BattleEvent | null = null;
@@ -1413,7 +1418,8 @@ test("Toxic applies escalating poison and increases residual damage each turn", 
 			{ teams: [[createPrimaryFixtureWithToxic()]] },
 			{ teams: [[createModestSecondaryFixtureWithTackle(HEAVY_SPECIES_ID)]] },
 		],
-		random: () => 1,
+		// 0.89 passes Toxic's 90% accuracy so the poison lands.
+		random: () => 0.89,
 	});
 	let session = battle.start();
 
@@ -1527,7 +1533,8 @@ test("Escalating poison resets to its opening stage after the combatant switches
 				],
 			},
 		],
-		random: () => 1,
+		// 0.89 passes Toxic's 90% accuracy so the poison lands.
+		random: () => 0.89,
 	});
 	let session = battle.start();
 
@@ -2383,7 +2390,9 @@ test("Fly spends one turn charging, avoids later attacks, then hits on the next 
 			{ teams: [[createPrimaryFixtureWithFly()]] },
 			{ teams: [[createModestSecondaryFixtureWithTackle()]] },
 		],
-		random: () => 1,
+		// 0.94 passes Fly's 95% accuracy on the strike turn while keeping damage maximal;
+		// the opponent's Tackle still misses the airborne user via semi-invulnerability.
+		random: () => 0.94,
 	});
 	let session = battle.start();
 
@@ -2962,17 +2971,21 @@ test("Future Sight deals damage at the end of a later turn", () => {
 });
 
 test("Charge doubles the user's next Electric attack once", () => {
-	let normalDamage = getFirstDamageDealt([
-		{ teams: [[createPrimaryFixtureWithChargeBeam()]] },
-		{ teams: [[createModestSecondaryFixtureWithGrowl()]] },
-	]);
+	// 0.89 passes Charge Beam's 90% accuracy so both the baseline and charged shots land.
+	let normalDamage = getFirstDamageDealt(
+		[
+			{ teams: [[createPrimaryFixtureWithChargeBeam()]] },
+			{ teams: [[createModestSecondaryFixtureWithGrowl()]] },
+		],
+		() => 0.89,
+	);
 	let battle = new Battle({
 		gameData: GAME_DATA,
 		sides: [
 			{ teams: [[createPrimaryFixtureWithCharge()]] },
 			{ teams: [[createModestSecondaryFixtureWithGrowl()]] },
 		],
-		random: createRandomSequence(1, 1, 1, 1),
+		random: () => 0.89,
 	});
 	let session = battle.start();
 
@@ -3548,7 +3561,8 @@ test("Hyper Beam forces the user to recharge on the next turn", () => {
 			{ teams: [[createPrimaryFixtureWithHyperBeam()]] },
 			{ teams: [[createModestSecondaryFixtureWithTackle()]] },
 		],
-		random: () => 1,
+		// 0.89 passes Hyper Beam's 90% accuracy so it connects and forces the recharge.
+		random: () => 0.89,
 	});
 	let session = battle.start();
 
@@ -3854,7 +3868,8 @@ test("Wrap traps and deals residual damage on later turns", () => {
 			{ teams: [[createPrimaryFixtureWithWrap()]] },
 			{ teams: [[createModestSecondaryFixtureWithTackle()]] },
 		],
-		random: () => 1,
+		// 0.89 passes Wrap's 90% accuracy so the trap and residual damage occur.
+		random: () => 0.89,
 	});
 	let session = battle.start();
 
@@ -3892,7 +3907,8 @@ test("Double Slap can hit multiple times in one move", () => {
 			{ teams: [[createPrimaryFixtureWithDoubleSlap()]] },
 			{ teams: [[createModestSecondaryFixtureWithTackle()]] },
 		],
-		random: createRandomSequence(1, 0.9),
+		// 0.84 passes Double Slap's 85% accuracy and yields the maximum hit count.
+		random: () => 0.84,
 	});
 	let session = battle.start();
 
@@ -3916,7 +3932,8 @@ test("Sleep Powder applies sleep and sleeping combatants cannot act", () => {
 			{ teams: [[createPrimaryFixtureWithSleepPowder()]] },
 			{ teams: [[createModestSecondaryFixtureWithTackle()]] },
 		],
-		random: () => 1,
+		// 0.74 passes Sleep Powder's 75% accuracy so the sleep lands.
+		random: () => 0.74,
 	});
 	let session = battle.start();
 
@@ -3956,7 +3973,8 @@ test("Hypnosis applies sleep and sleeping combatants cannot act", () => {
 			{ teams: [[createPrimaryFixtureWithHypnosis()]] },
 			{ teams: [[createModestSecondaryFixtureWithTackle()]] },
 		],
-		random: () => 1,
+		// 0.59 passes Hypnosis's 60% accuracy so the sleep lands.
+		random: () => 0.59,
 	});
 	let session = battle.start();
 
@@ -4205,6 +4223,121 @@ test("accuracy drops can cause a move to miss", () => {
 	});
 });
 
+// Regression: the neutral-stage accuracy shortcut in `moveCanConnect` made moves
+// with accuracy < 100 always hit at neutral stat stages, so the base-accuracy roll
+// never ran. A 70%-accuracy move must be able to miss when the accuracy roll fails.
+test("a sub-100 accuracy move can miss at neutral stages when the accuracy roll fails", () => {
+	let battle = new Battle({
+		gameData: GAME_DATA,
+		sides: [
+			{ teams: [[createPrimaryFixtureWithBlizzard()]] },
+			{ teams: [[createModestSecondaryFixture()]] },
+		],
+		// A high roll fails the 70% base-accuracy check (0.99 < 0.7 is false).
+		random: () => 0.99,
+	});
+	let session = battle.start();
+
+	readEvent(session.next());
+	readEvent(session.next());
+	let request = readEvent(session.next());
+	if (request.type !== "request-turn-commands") throw new TypeError("Expected turn request.");
+	let events = collectTurnEvents(session, battle, [
+		{ type: "fight", move: 0, target: { side: 1, slot: 0 } },
+		{ type: "fight", move: 2, target: { side: 0, slot: 0 } },
+	]);
+
+	expect(events).toContainEqual({
+		type: "move-missed",
+		user: { side: 0, slot: 0 },
+		target: { side: 1, slot: 0 },
+	});
+	expect(
+		events.some(
+			(event) =>
+				event.type === "damage-dealt" && event.target.side === 1 && event.target.slot === 0,
+		),
+	).toBe(false);
+});
+
+// Companion to the accuracy regression: a low roll passes the base-accuracy check so
+// the same move connects and deals damage instead of missing.
+test("a sub-100 accuracy move connects at neutral stages when the accuracy roll succeeds", () => {
+	let battle = new Battle({
+		gameData: GAME_DATA,
+		sides: [
+			{ teams: [[createPrimaryFixtureWithBlizzard()]] },
+			{ teams: [[createModestSecondaryFixture()]] },
+		],
+		// A low roll passes the 70% base-accuracy check (0 < 0.7 is true).
+		random: () => 0,
+	});
+	let session = battle.start();
+
+	readEvent(session.next());
+	readEvent(session.next());
+	let request = readEvent(session.next());
+	if (request.type !== "request-turn-commands") throw new TypeError("Expected turn request.");
+	let events = collectTurnEvents(session, battle, [
+		{ type: "fight", move: 0, target: { side: 1, slot: 0 } },
+		{ type: "fight", move: 2, target: { side: 0, slot: 0 } },
+	]);
+
+	expect(
+		events.some(
+			(event) => event.type === "move-missed" && event.user.side === 0 && event.user.slot === 0,
+		),
+	).toBe(false);
+	expect(
+		events.some(
+			(event) =>
+				event.type === "damage-dealt" && event.target.side === 1 && event.target.slot === 0,
+		),
+	).toBe(true);
+});
+
+// Regression: `getCombatantSpeed` applied a non-spec +10% speed boost under electric
+// terrain (`Math.floor(speed * 1.1)`). Electric terrain must not change effective speed.
+test("electric terrain does not boost a combatant's effective speed", () => {
+	let battle = new Battle({
+		gameData: GAME_DATA,
+		sides: [
+			{ teams: [[createPrimaryFixtureWithElectricTerrain()]] },
+			{ teams: [[createModestSecondaryFixture()]] },
+		],
+		random: () => 1,
+	});
+	let session = battle.start();
+
+	readEvent(session.next());
+	readEvent(session.next());
+	let request = readEvent(session.next());
+	if (request.type !== "request-turn-commands") throw new TypeError("Expected turn request.");
+
+	let combatant = battle.state.sides[0].active[0]?.combatant;
+	if (!combatant) throw new TypeError("Expected an active combatant.");
+	let position: BattlePosition = { side: 0, slot: 0 };
+	let readSpeed = (
+		battle as unknown as {
+			getCombatantSpeed(position: BattlePosition, combatant: CombatantState): number;
+		}
+	).getCombatantSpeed.bind(battle);
+
+	expect(battle.state.field.terrain).toBe(null);
+	let speedWithoutTerrain = readSpeed(position, combatant);
+
+	// Slot 0 casts Electric Terrain (move 0), setting the shared terrain to electric.
+	collectTurnEvents(session, battle, [
+		{ type: "fight", move: 0, target: { side: 1, slot: 0 } },
+		{ type: "fight", move: 2, target: { side: 0, slot: 0 } },
+	]);
+
+	expect(battle.state.field.terrain).toBe("electric");
+	let speedUnderTerrain = readSpeed(position, combatant);
+
+	expect(speedUnderTerrain).toBe(speedWithoutTerrain);
+});
+
 test("Glare applies guaranteed paralysis", () => {
 	let battle = new Battle({
 		gameData: GAME_DATA,
@@ -4295,7 +4428,8 @@ test("Metal Sound sharply lowers the target special defense", () => {
 			{ teams: [[createPrimaryFixtureWithMetalSound()]] },
 			{ teams: [[createModestSecondaryFixtureWithTackle()]] },
 		],
-		random: () => 1,
+		// 0.84 passes Metal Sound's 85% accuracy so the special-defense drop applies.
+		random: () => 0.84,
 	});
 	let session = battle.start();
 
@@ -4356,7 +4490,8 @@ test("Icy Wind deals damage and lowers the target speed", () => {
 			{ teams: [[createPrimaryFixtureWithIcyWind()]] },
 			{ teams: [[createModestSecondaryFixtureWithTackle()]] },
 		],
-		random: () => 1,
+		// 0.94 passes Icy Wind's 95% accuracy while keeping damage maximal.
+		random: () => 0.94,
 	});
 	let session = battle.start();
 
@@ -4389,7 +4524,8 @@ test("Leaf Storm lowers the user's special attack after hitting", () => {
 			{ teams: [[createPrimaryFixtureWithLeafStorm()]] },
 			{ teams: [[createModestSecondaryFixtureWithTackle()]] },
 		],
-		random: () => 1,
+		// 0.89 passes Leaf Storm's 90% accuracy while keeping damage maximal.
+		random: () => 0.89,
 	});
 	let session = battle.start();
 
@@ -5242,6 +5378,26 @@ function createSlowPrimaryFixtureWithSwift() {
 			[Stat.Speed]: 0,
 		},
 		status: createStatus(["SWIFT", "EMBER", "GROWTH", "LEECH_SEED"]),
+	});
+}
+
+function createPrimaryFixtureWithBlizzard() {
+	return new Creature({
+		nickname: "Reserve Alpha",
+		species: PRIMARY_SPECIES_ID,
+		nature: "MODEST" as NatureId,
+		experience: 1000000,
+		moveset: ["BLIZZARD", "EMBER", "GROWTH", "LEECH_SEED"],
+		iv: createPerfectStats(),
+		ev: {
+			[Stat.HP]: 255,
+			[Stat.Attack]: 255,
+			[Stat.Defense]: 0,
+			[Stat.SpecialAttack]: 0,
+			[Stat.SpecialDefense]: 0,
+			[Stat.Speed]: 0,
+		},
+		status: createStatus(["BLIZZARD", "EMBER", "GROWTH", "LEECH_SEED"]),
 	});
 }
 
@@ -6992,8 +7148,11 @@ function getOpeningDamage(sides: ConstructorParameters<typeof Battle>[0]["sides"
 	return damage.damage;
 }
 
-function getFirstDamageDealt(sides: ConstructorParameters<typeof Battle>[0]["sides"]) {
-	let battle = new Battle({ gameData: GAME_DATA, sides, random: () => 1 });
+function getFirstDamageDealt(
+	sides: ConstructorParameters<typeof Battle>[0]["sides"],
+	random: () => number = () => 1,
+) {
+	let battle = new Battle({ gameData: GAME_DATA, sides, random });
 	let session = battle.start();
 
 	readEvent(session.next());
