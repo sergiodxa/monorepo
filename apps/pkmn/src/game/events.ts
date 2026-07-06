@@ -9,7 +9,7 @@
 import type { BattleEvent } from "./battle/battle";
 import type { ItemId } from "./data/item";
 import type { SpeciesId } from "./data/species";
-import type { BattleId, CreatureId } from "./world/ids";
+import type { BattleId, CreatureId, PlayerId } from "./world/ids";
 
 /** Events emitted by the engine boundary. */
 export namespace GameEvent {
@@ -85,6 +85,13 @@ export namespace GameEvent {
 		creatureId: CreatureId;
 		speciesId: SpeciesId;
 	}
+
+	/** Reports that the player's whole party was fully restored. */
+	export interface PartyHealed {
+		type: "party-healed";
+		playerId: PlayerId;
+		count: number;
+	}
 }
 
 /** High-level engine event emitted after a command is applied. */
@@ -98,4 +105,5 @@ export type GameEvent =
 	| GameEvent.CreaturePlacementChanged
 	| GameEvent.CreatureCaptured
 	| GameEvent.CreatureExperienceGranted
-	| GameEvent.CreatureEvolved;
+	| GameEvent.CreatureEvolved
+	| GameEvent.PartyHealed;

@@ -97,8 +97,13 @@ export function listComponentEntities<T>(store: ComponentStore<T>): EntityId[] {
  * save output stable even when the engine adds new battle-only helper stores.
  */
 export function pickPersistentWorld(world: World) {
+	let persistentIds = new Set<EntityId>([world.playerId]);
+	for (let key of PERSISTENT_WORLD_STORE_KEYS) {
+		for (let entityId of Object.keys(world[key])) persistentIds.add(entityId);
+	}
+
 	return {
-		entities: structuredClone(world.entities),
+		entities: world.entities.filter((entityId) => persistentIds.has(entityId)),
 		playerId: world.playerId,
 		playerProfile: structuredClone(world.playerProfile),
 		party: structuredClone(world.party),

@@ -138,3 +138,117 @@ function createBootstrapCreature(species: string) {
 		},
 	};
 }
+
+/** A damaging move used to force battles to a deterministic conclusion. */
+let DAMAGING_MOVE_ID = Object.entries(MOVES).find(
+	([, move]) => move.power > 0 && String(move.damageClass) !== "status",
+)![0];
+
+test("Engine writes battle results back and keeps the battle out of snapshots", () => {
+	let playerId = createPlayerId("hero");
+	let enemyId = createPlayerId("rival");
+	let allyId = createCreatureId("ally-1");
+	let enemyCreatureId = createCreatureId("enemy-1");
+	let engine = createBattleEngine(playerId, enemyId, allyId, enemyCreatureId, () => 0.5);
+
+	engine.dispatch({
+		type: "start-battle",
+		battleId: createBattleId("b1"),
+		playerId,
+		enemyId,
+		playerParty: [allyId],
+		enemyParty: [enemyCreatureId],
+		slots: 1,
+	});
+
+	let finished = false;
+	for (let turn = 0; turn < 200 && !finished; turn += 1) {
+		let battle = engine.selectActiveBattle(playerId);
+		if (!battle) break;
+		let last = battle.events.at(-1);
+		if (last?.type === "request-turn-commands") {
+			let events = engine.dispatch({
+				type: "submit-battle-turn",
+				battleId: battle.id,
+				commands: last.requests.map((request) => ({
+					type: "fight" as const,
+					move: 0 as const,
+					target: { side: request.side === 0 ? 1 : 0, slot: 0 },
+				})),
+			});
+			finished = events.some((event) => event.type === "battle-finished");
+		} else break; // single-creature teams never request replacements
+	}
+
+	expect(finished).toBe(true);
+	expect(engine.selectActiveBattle(playerId)).toBeNull();
+	expect(engine.snapshot().entities.some((id) => id.startsWith("battle"))).toBe(false);
+});
+
+test("heal-party fully restores a damaged party", () => {
+	let playerId = createPlayerId("hero");
+	let enemyId = createPlayerId("rival");
+	let allyId = createCreatureId("ally-1");
+	let enemyCreatureId = createCreatureId("enemy-1");
+	let engine = createBattleEngine(playerId, enemyId, allyId, enemyCreatureId, () => 0.5, 5);
+
+	let before = engine.selectCreatureSummary(allyId);
+	expect(before.currentHP).toBe(before.maxHP - 5);
+
+	let events = engine.dispatch({ type: "heal-party", playerId });
+	expect(events).toEqual([{ type: "party-healed", playerId, count: 1 }]);
+
+	let after = engine.selectCreatureSummary(allyId);
+	expect(after.currentHP).toBe(after.maxHP);
+});
+
+/** Creates an engine wired for deterministic battles with a chosen RNG and optional starting damage. */
+function createBattleEngine(
+	playerId: string,
+	enemyId: string,
+	allyId: string,
+	enemyCreatureId: string,
+	random: () => number,
+	allyDamage = 0,
+) {
+	let creature = (species: string, damage: number) => ({
+		species,
+		nature: DEFAULT_NATURE_ID,
+		experience: 0,
+		moveset: [DAMAGING_MOVE_ID, null, null, null] as [string, null, null, null],
+		status: {
+			state: null,
+			damage,
+			pp: [35, 0, 0, 0] as [number, number, number, number],
+		},
+		iv: { hp: 31, attack: 31, defense: 31, "special-attack": 31, "special-defense": 31, speed: 31 },
+		ev: { hp: 0, attack: 0, defense: 0, "special-attack": 0, "special-defense": 0, speed: 0 },
+	});
+
+	return Engine.create({
+		content: {
+			species: SPECIES,
+			moves: MOVES,
+			items: ITEMS,
+			natures: NATURES,
+			typeChart: TYPE_MATCHUPS,
+		},
+		random,
+		world: migrateWorld({
+			entities: [playerId, enemyId, allyId, enemyCreatureId],
+			playerId,
+			playerProfile: { [playerId]: { name: "Hero" }, [enemyId]: { name: "Rival" } },
+			party: {
+				[playerId]: { creatureIds: [allyId] },
+				[enemyId]: { creatureIds: [enemyCreatureId] },
+			},
+			inventory: { [playerId]: { items: {} }, [enemyId]: { items: {} } },
+			bestiary: { [playerId]: { seen: [], caught: [] }, [enemyId]: { seen: [], caught: [] } },
+			storageBoxes: { [playerId]: { boxes: [] }, [enemyId]: { boxes: [] } },
+			creature: {
+				[allyId]: creature(PRIMARY_SPECIES_ID, allyDamage),
+				[enemyCreatureId]: creature(SECONDARY_SPECIES_ID, 0),
+			},
+		}),
+	});
+}

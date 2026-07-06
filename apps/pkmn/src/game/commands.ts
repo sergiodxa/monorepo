@@ -104,6 +104,12 @@ export namespace Command {
 		creatureId: CreatureId;
 		speciesId: SpeciesId;
 	}
+
+	/** Fully restores every party creature's HP, status, and PP. */
+	export interface HealParty {
+		type: "heal-party";
+		playerId: PlayerId;
+	}
 }
 
 /** Intent submitted through the engine boundary. */
@@ -112,6 +118,7 @@ export type Command =
 	| Command.CaptureCreature
 	| Command.EvolveCreature
 	| Command.GrantCreatureExperience
+	| Command.HealParty
 	| Command.MarkSpeciesCaught
 	| Command.MarkSpeciesSeen
 	| Command.RemoveInventoryItem

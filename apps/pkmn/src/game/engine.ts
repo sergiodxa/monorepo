@@ -33,14 +33,20 @@ import { captureCreature } from "./systems/capture-system";
 import { evolveCreature } from "./systems/evolution-system";
 import { grantCreatureExperience } from "./systems/experience-system";
 import { addInventoryItem, removeInventoryItem } from "./systems/inventory-system";
+import { healParty } from "./systems/party-system";
 import {
 	ensureStorageBox,
 	moveCreatureToParty,
 	moveCreatureToStorage,
 } from "./systems/storage-system";
-import { syncBattleState, type BattleRuntimeHandle } from "./world/battle";
+import {
+	cleanupBattle,
+	syncBattleState,
+	writeBackPlayerBattleResults,
+	type BattleRuntimeHandle,
+} from "./world/battle";
 import { ensureEntityRegistered } from "./world/entity";
-import { pickPersistentWorld } from "./world/helpers";
+import { pickPersistentWorld, removeComponent } from "./world/helpers";
 import { migrateWorld } from "./world/migrate";
 import { createCreatureFromWorld } from "./world/world";
 
@@ -51,6 +57,8 @@ export namespace Engine {
 		content: GameDataSource;
 		/** Initial world state used when the engine starts. */
 		world: World;
+		/** Seedable RNG threaded into battles so whole sessions are reproducible. */
+		random?(): number;
 	}
 }
 
@@ -65,10 +73,14 @@ export class Engine {
 	/** Private transient bridge while the battle runtime is still generator-driven. */
 	private readonly battleRuntime = new Map<string, BattleRuntimeHandle>();
 
+	/** Seedable RNG passed into every battle for reproducible sessions. */
+	private readonly random: () => number;
+
 	/** @param options - Static content and initial world state for this engine instance */
 	private constructor(options: Engine.Options) {
 		this.gameData = unwrap(GameData.create(options.content));
 		this.world = migrateWorld(structuredClone(options.world));
+		this.random = options.random ?? Math.random;
 	}
 
 	/** Boots a new engine instance from static content and initial world state. */
@@ -128,6 +140,10 @@ export class Engine {
 					command.experience,
 				);
 				return [{ type: "creature-experience-granted", creatureId: command.creatureId, ...result }];
+			}
+			case "heal-party": {
+				let count = healParty(this.gameData, this.world, command.playerId);
+				return [{ type: "party-healed", playerId: command.playerId, count }];
 			}
 			case "mark-species-caught": {
 				markSpeciesCaught(this.world, command.playerId, command.speciesId);
@@ -249,6 +265,11 @@ export class Engine {
 
 	/** Creates a transient battle entity backed by the current battle resolver. */
 	private startBattle(command: Extract<Command, { type: "start-battle" }>): GameEvent[] {
+		// Reclaim mirrors from any battle whose session has already ended.
+		for (let battleId of Object.keys(this.world.battlePhase)) {
+			if (!this.battleRuntime.has(battleId)) cleanupBattle(this.world, battleId);
+		}
+
 		let playerCreatures = command.playerParty.map((creatureId) =>
 			createCreatureFromWorld(this.world, creatureId),
 		);
@@ -257,8 +278,9 @@ export class Engine {
 		);
 		let battle = new BattleRuntime({
 			gameData: this.gameData,
-			sides: [{ teams: [playerCreatures] }, { teams: [enemyCreatures] }],
+			sides: [{ teams: [playerCreatures], canLeaveBattle: true }, { teams: [enemyCreatures] }],
 			slots: command.slots,
+			random: this.random,
 		});
 		let session = battle.start();
 
@@ -321,6 +343,10 @@ export class Engine {
 		}
 		let finishEvent = emitted.find((event) => event.type === "battle-finished");
 		if (finishEvent?.type === "battle-finished") {
+			let runtime = this.getBattleRuntime(battleId);
+			writeBackPlayerBattleResults(this.world, runtime, battleId);
+			let participants = this.world.battleParticipants[battleId];
+			if (participants) removeComponent(this.world.activeBattle, participants.playerId);
 			this.battleRuntime.delete(battleId);
 			events.push({ type: "battle-finished", battleId, winnerSide: finishEvent.winnerSide });
 		}

@@ -159,6 +159,91 @@ export function getBattleLog(world: World, battleId: BattleId): BattleLogCompone
 }
 
 /**
+ * Copies the final state of every player-side combatant back into persistent stores.
+ *
+ * Battles run on cloned creature aggregates, so damage, major status, and spent PP
+ * only exist in the runtime until this runs. It walks the player side (side 0) in
+ * flat party order, mirrors each combatant's `damage`/`status`/`pp` onto the
+ * persistent components, and downgrades toxic (escalating) poison to regular
+ * poison, matching the Gen 3 battle-end rule. Enemy sides are intentionally left
+ * untouched — the world does not persist opponents.
+ */
+export function writeBackPlayerBattleResults(
+	world: World,
+	runtime: BattleRuntimeHandle,
+	battleId: BattleId,
+) {
+	let participants = requireComponent(world.battleParticipants, battleId, "battle participants");
+	let playerSide = runtime.battle.state.sides[0];
+	if (!playerSide) return;
+
+	let partyIndex = 0;
+	for (let team of playerSide.teams) {
+		for (let combatant of team.creatures) {
+			let creatureId = participants.playerParty[partyIndex];
+			partyIndex += 1;
+			if (!creatureId) continue;
+
+			let status = combatant.creature.status;
+			world.creatureHealth[creatureId] = { damage: status.damage };
+
+			let poison = status.poison === "escalating" ? "regular" : status.poison;
+			world.creatureStatus[creatureId] =
+				poison && status.state !== null ? { state: status.state, poison } : { state: status.state };
+
+			let moves = world.creatureMoves[creatureId];
+			if (moves) {
+				world.creatureMoves[creatureId] = {
+					moveset: [...moves.moveset],
+					pp: [...status.pp] as [number, number, number, number],
+				};
+			}
+		}
+	}
+}
+
+/**
+ * Deletes every transient mirror component and entity id for one finished battle.
+ *
+ * Battles are ephemeral: once a session ends its mirrors carry no save value, so
+ * removing them (and their `battle*` entity ids) keeps the world from accumulating
+ * dead battle state and stops those ids from leaking into snapshots.
+ */
+export function cleanupBattle(world: World, battleId: BattleId) {
+	let removedIds = new Set<string>([battleId]);
+
+	removeComponent(world.battleParticipants, battleId);
+	removeComponent(world.battlePhase, battleId);
+	removeComponent(world.battleField, battleId);
+	removeComponent(world.battleLog, battleId);
+	removeComponent(world.battlePendingTurn, battleId);
+	removeComponent(world.battlePendingReplacement, battleId);
+
+	for (let sideIndex = 0; sideIndex < 2; sideIndex += 1) {
+		let sideEntityId = getBattleSideEntityId(battleId, sideIndex);
+		if (world.battleSide[sideEntityId]) {
+			removeComponent(world.battleSide, sideEntityId);
+			removedIds.add(sideEntityId);
+		}
+	}
+
+	for (let memberId of Object.keys(world.battleMember)) {
+		if (world.battleMember[memberId]?.battleId === battleId) {
+			removeComponent(world.battleMember, memberId);
+			removedIds.add(memberId);
+		}
+	}
+
+	for (let playerId of Object.keys(world.activeBattle)) {
+		if (world.activeBattle[playerId]?.battleId === battleId) {
+			removeComponent(world.activeBattle, playerId);
+		}
+	}
+
+	world.entities = world.entities.filter((entityId) => !removedIds.has(entityId));
+}
+
+/**
  * Mirrors one runtime battle step back into ECS stores after the engine advances the private session.
  *
  * This keeps selectors world-driven even while the underlying turn resolver still lives in the generator
