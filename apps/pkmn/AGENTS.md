@@ -14,3 +14,4 @@
 - MUST include `@copyright Sergio Xalambrí 2026` in the module-level JSDoc block for all files, to ensure proper attribution and recognition of the original author of the code.
 - MUST add to @TODO.md any pending task or issue to fix later, with a clear description of the problem, to ensure a separate agent session can address it later.
 - MUST keep tests colocated with the code they cover (a `*.test.ts` next to each module) and aim for every exported function to have direct test coverage. (The repo-wide regression-test rule lives in the root `AGENTS.md`.)
+- MUST import the presentation theme as a namespace — `import * as theme from "../render/theme"` (adjust the relative path) — and reference colors as `theme.TILE.solid`, `theme.TEXT.default`, etc., never as named imports of individual theme groups.
