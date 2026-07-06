@@ -8,11 +8,17 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-/** Persistent major status conditions that can remain on a creature outside battle. */
+/**
+ * Persistent major status conditions that can remain on a creature outside battle.
+ *
+ * String-valued so the stored/serialized state stays stable across reordering and
+ * renders directly; the values match the status strings used by move effects,
+ * medicines, and the capture bonus elsewhere in the engine.
+ */
 export enum State {
-	Burned,
-	Paralyzed,
-	Poisoned,
-	Asleep,
-	Frozen,
+	Burned = "burn",
+	Paralyzed = "paralysis",
+	Poisoned = "poison",
+	Asleep = "sleep",
+	Frozen = "freeze",
 }

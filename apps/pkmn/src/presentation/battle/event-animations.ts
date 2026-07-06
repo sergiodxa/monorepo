@@ -67,7 +67,7 @@ export function buildBattleTasks(events: BattleEvent[], hud: BattleHud): Animati
 				message("But it failed!");
 				break;
 			case "status-applied":
-				message(`${hud.nameAt(event.target)} was afflicted by ${statusName(event.status)}!`);
+				message(`${hud.nameAt(event.target)} was afflicted by ${event.status}!`);
 				break;
 			case "volatile-applied":
 				message(`${hud.nameAt(event.target)} — ${event.effect.replace(/-/g, " ")}!`);
@@ -139,9 +139,4 @@ function faintTask(position: BattlePosition, hud: BattleHud): AnimationTask {
 			return true;
 		},
 	};
-}
-
-/** Maps the numeric major-status enum value to a display word. */
-function statusName(status: number): string {
-	return ["burn", "paralysis", "poison", "sleep", "freeze"][status] ?? "a status";
 }

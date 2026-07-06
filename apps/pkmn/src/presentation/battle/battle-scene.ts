@@ -16,7 +16,7 @@ import type { BattlePosition, ReplacementSelection, TurnCommand } from "~/game/b
 import type { ReplacementCommand } from "~/game/battle/battle";
 import type { GameEvent } from "~/game/events";
 import type { BattleView, CreatureSummaryView } from "~/game/selectors";
-import type { BattleId } from "~/game/world/ids";
+import type { BattleId, CreatureId } from "~/game/world/ids";
 
 import type { Scene } from "../core/scene";
 
@@ -25,6 +25,7 @@ import { Button } from "../core/input";
 import { SCREEN_WIDTH } from "../core/loop";
 import { drawText, Typewriter, wrapText } from "../render/text";
 import { Window } from "../render/window";
+import { EvolutionScene } from "../scenes/evolution";
 
 import { AnimationQueue } from "./animation-queue";
 import { BattleCommandMenu } from "./command-menu";
@@ -60,6 +61,9 @@ export class BattleScene implements Scene {
 	/** Whether the last capture attempt caught the target. */
 	private captured = false;
 
+	/** Creatures that became eligible to evolve during the battle, shown after it ends. */
+	private readonly pendingEvolutions: Array<{ creatureId: CreatureId; speciesId: string }> = [];
+
 	/** @param battleId - The battle this scene presents. */
 	constructor(private readonly battleId: BattleId) {}
 
@@ -79,6 +83,9 @@ export class BattleScene implements Scene {
 						? "Gotcha! It was caught!"
 						: `It shook ${event.shakes} time(s), then broke free!`,
 				);
+			}
+			if (event.type === "creature-can-evolve" && event.choices[0]) {
+				this.pendingEvolutions.push({ creatureId: event.creatureId, speciesId: event.choices[0] });
 			}
 			if (event.type === "battle-finished") this.endedWinnerSide = event.winnerSide;
 		}
@@ -114,7 +121,14 @@ export class BattleScene implements Scene {
 		this.syncBars(view);
 
 		if (this.finishing) {
-			if (game.input.isPressed(Button.A) || game.input.isPressed(Button.B)) game.scenes.pop();
+			if (game.input.isPressed(Button.A) || game.input.isPressed(Button.B)) {
+				game.scenes.pop();
+				// Offer any evolutions the level-ups unlocked, back on the overworld.
+				for (let pending of this.pendingEvolutions) {
+					let name = game.engine.selectCreatureSummary(pending.creatureId).name;
+					game.scenes.push(new EvolutionScene(pending.creatureId, pending.speciesId, name));
+				}
+			}
 			return;
 		}
 

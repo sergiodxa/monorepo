@@ -3932,7 +3932,7 @@ test("Sleep Powder applies sleep and sleeping combatants cannot act", () => {
 	expect(firstTurnEvents).toContainEqual({
 		type: "status-applied",
 		target: { side: 1, slot: 0 },
-		status: 3,
+		status: State.Asleep,
 	});
 
 	let secondTurnStarted = readEvent(session.next());
@@ -3972,7 +3972,7 @@ test("Hypnosis applies sleep and sleeping combatants cannot act", () => {
 	expect(firstTurnEvents).toContainEqual({
 		type: "status-applied",
 		target: { side: 1, slot: 0 },
-		status: 3,
+		status: State.Asleep,
 	});
 
 	let secondTurnStarted = readEvent(session.next());
