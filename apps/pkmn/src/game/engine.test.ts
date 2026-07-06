@@ -185,6 +185,33 @@ test("Engine writes battle results back and keeps the battle out of snapshots", 
 	expect(engine.snapshot().entities.some((id) => id.startsWith("battle"))).toBe(false);
 });
 
+test("winning a battle awards experience to the party", () => {
+	let playerId = createPlayerId("hero");
+	let enemyId = createPlayerId("rival");
+	let allyId = createCreatureId("ally-1");
+	let enemyCreatureId = createCreatureId("enemy-1");
+	// Start the enemy already fainted so the player wins immediately and deterministically.
+	let engine = createBattleEngine(playerId, enemyId, allyId, enemyCreatureId, () => 0.5, 0, 9999);
+
+	let events = engine.dispatch({
+		type: "start-battle",
+		battleId: createBattleId("b1"),
+		playerId,
+		enemyId,
+		playerParty: [allyId],
+		enemyParty: [enemyCreatureId],
+		slots: 1,
+	});
+
+	expect(events.some((event) => event.type === "battle-finished")).toBe(true);
+	let granted = events.find((event) => event.type === "creature-experience-granted");
+	expect(granted?.type).toBe("creature-experience-granted");
+	if (granted?.type === "creature-experience-granted") {
+		expect(granted.creatureId).toBe(allyId);
+		expect(granted.totalExperience).toBeGreaterThan(0);
+	}
+});
+
 test("heal-party fully restores a damaged party", () => {
 	let playerId = createPlayerId("hero");
 	let enemyId = createPlayerId("rival");
@@ -210,6 +237,7 @@ function createBattleEngine(
 	enemyCreatureId: string,
 	random: () => number,
 	allyDamage = 0,
+	enemyDamage = 0,
 ) {
 	let creature = (species: string, damage: number) => ({
 		species,
@@ -247,7 +275,7 @@ function createBattleEngine(
 			storageBoxes: { [playerId]: { boxes: [] }, [enemyId]: { boxes: [] } },
 			creature: {
 				[allyId]: creature(PRIMARY_SPECIES_ID, allyDamage),
-				[enemyCreatureId]: creature(SECONDARY_SPECIES_ID, 0),
+				[enemyCreatureId]: creature(SECONDARY_SPECIES_ID, enemyDamage),
 			},
 		}),
 	});

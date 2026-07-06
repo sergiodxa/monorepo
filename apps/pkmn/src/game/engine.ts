@@ -31,8 +31,8 @@ import { selectView } from "./selectors";
 import { markSpeciesCaught, markSpeciesSeen } from "./systems/bestiary-system";
 import { captureCreature } from "./systems/capture-system";
 import { despawnEncounter, spawnEncounter } from "./systems/encounter-system";
-import { evolveCreature } from "./systems/evolution-system";
-import { grantCreatureExperience } from "./systems/experience-system";
+import { evolveCreature, getLevelUpEvolution } from "./systems/evolution-system";
+import { awardBattleExperience, grantCreatureExperience } from "./systems/experience-system";
 import { addInventoryItem, removeInventoryItem } from "./systems/inventory-system";
 import { healParty } from "./systems/party-system";
 import {
@@ -361,6 +361,30 @@ export class Engine {
 			let participants = this.world.battleParticipants[battleId];
 			if (participants) {
 				removeComponent(this.world.activeBattle, participants.playerId);
+
+				// Award experience for a win before enemies are cleared, then report
+				// each gain and any evolution the level-up unlocks.
+				if (finishEvent.winnerSide === 0) {
+					let grants = awardBattleExperience(
+						this.gameData,
+						this.world,
+						participants.enemyParty,
+						participants.playerParty,
+					);
+					for (let grant of grants) {
+						events.push({ type: "creature-experience-granted", ...grant });
+						if (grant.levelAfter <= grant.levelBefore) continue;
+						let choice = getLevelUpEvolution(this.gameData, this.world, grant.creatureId);
+						if (choice) {
+							events.push({
+								type: "creature-can-evolve",
+								creatureId: grant.creatureId,
+								choices: [choice],
+							});
+						}
+					}
+				}
+
 				// Wild creatures that were not captured leave with the battle.
 				for (let enemyId of participants.enemyParty) {
 					let location = this.world.creatureLocation[enemyId];

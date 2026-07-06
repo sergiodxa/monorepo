@@ -14,8 +14,17 @@ import type { GameData } from "../data/game-data";
 import type { CreatureId } from "../world/ids";
 import type { World } from "../world/world";
 
-import { getCreatureLevel } from "../battle/mechanics";
+import { getCreatureLevel, getCreatureSpecies, getCreatureStat } from "../battle/mechanics";
+import { Stat } from "../data/stat";
 import { createCreatureFromWorld, getCreatureComponentSet } from "../world/world";
+
+/** One creature's experience gain and resulting level delta. */
+export interface ExperienceGrant {
+	creatureId: CreatureId;
+	levelBefore: number;
+	levelAfter: number;
+	totalExperience: number;
+}
 
 /** Applies earned experience and reports the level delta for selector and event updates. */
 export function grantCreatureExperience(
@@ -36,4 +45,41 @@ export function grantCreatureExperience(
 	let levelAfter = getCreatureLevel(gameData, after);
 
 	return { levelBefore, levelAfter, totalExperience: after.experience };
+}
+
+/**
+ * Awards experience for defeated enemies to the surviving party members.
+ *
+ * Uses the Gen 3 base formula `floor(baseExperience * enemyLevel / 7)` split
+ * evenly among non-fainted participants. Fainted party members earn nothing, and
+ * enemies must still exist (call this before despawning uncaptured wild creatures).
+ * Returns one grant per creature that gained experience so the caller can emit the
+ * matching progression events.
+ */
+export function awardBattleExperience(
+	gameData: GameData,
+	world: World,
+	enemyIds: CreatureId[],
+	partyIds: CreatureId[],
+): ExperienceGrant[] {
+	let survivors = partyIds.filter((creatureId) => {
+		let creature = createCreatureFromWorld(world, creatureId);
+		let maxHP = getCreatureStat(gameData, creature, Stat.HP);
+		return (world.creatureHealth[creatureId]?.damage ?? 0) < maxHP;
+	});
+	if (survivors.length === 0) return [];
+
+	let grants: ExperienceGrant[] = [];
+	for (let enemyId of enemyIds) {
+		if (!world.creatureIdentity[enemyId]) continue;
+		let enemy = createCreatureFromWorld(world, enemyId);
+		let species = getCreatureSpecies(gameData, enemy);
+		let level = getCreatureLevel(gameData, enemy);
+		let award = Math.floor(Math.floor((species.baseExperience * level) / 7) / survivors.length);
+		if (award <= 0) continue;
+		for (let creatureId of survivors) {
+			grants.push({ creatureId, ...grantCreatureExperience(gameData, world, creatureId, award) });
+		}
+	}
+	return grants;
 }

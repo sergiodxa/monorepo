@@ -101,6 +101,13 @@ export namespace GameEvent {
 		speciesId: SpeciesId;
 		level: number;
 	}
+
+	/** Reports that a creature is eligible to evolve, offering the choices. */
+	export interface CreatureCanEvolve {
+		type: "creature-can-evolve";
+		creatureId: CreatureId;
+		choices: SpeciesId[];
+	}
 }
 
 /** High-level engine event emitted after a command is applied. */
@@ -116,4 +123,5 @@ export type GameEvent =
 	| GameEvent.CreatureExperienceGranted
 	| GameEvent.CreatureEvolved
 	| GameEvent.PartyHealed
-	| GameEvent.EncounterSpawned;
+	| GameEvent.EncounterSpawned
+	| GameEvent.CreatureCanEvolve;
