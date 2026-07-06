@@ -46,6 +46,167 @@ const GENDER_DISTRIBUTIONS = {
 	GENDERLESS: Gender.Genderless,
 } satisfies { [key: string]: Gender.Genderless | { male?: number; female?: number } };
 
+/**
+ * Canonical Generation III effort value (EV) yields keyed by species id. Each
+ * entry is the partial stat block a defeated creature of that species awards to
+ * every battle participant, summing to a small total (1-3 EVs). Kept apart from
+ * the roster so the large stat/learnset entries stay readable, and applied to
+ * every species through {@link createSpeciesIndex} so no entry can lack a yield.
+ */
+const EV_YIELDS = {
+	BULBASAUR: { [Stat.SpecialAttack]: 1 },
+	IVYSAUR: { [Stat.SpecialAttack]: 1, [Stat.SpecialDefense]: 1 },
+	VENUSAUR: { [Stat.SpecialAttack]: 2, [Stat.SpecialDefense]: 1 },
+	CHARMANDER: { [Stat.Speed]: 1 },
+	CHARMELEON: { [Stat.SpecialAttack]: 1, [Stat.Speed]: 1 },
+	CHARIZARD: { [Stat.SpecialAttack]: 3 },
+	SQUIRTLE: { [Stat.Defense]: 1 },
+	WARTORTLE: { [Stat.Defense]: 1, [Stat.SpecialDefense]: 1 },
+	BLASTOISE: { [Stat.SpecialDefense]: 3 },
+	CATERPIE: { [Stat.HP]: 1 },
+	METAPOD: { [Stat.Defense]: 2 },
+	BUTTERFREE: { [Stat.SpecialAttack]: 2, [Stat.SpecialDefense]: 1 },
+	WEEDLE: { [Stat.Speed]: 1 },
+	KAKUNA: { [Stat.Defense]: 2 },
+	BEEDRILL: { [Stat.Attack]: 2, [Stat.SpecialDefense]: 1 },
+	PIDGEY: { [Stat.Speed]: 1 },
+	PIDGEOTTO: { [Stat.Speed]: 2 },
+	PIDGEOT: { [Stat.Speed]: 3 },
+	RATTATA: { [Stat.Speed]: 1 },
+	RATICATE: { [Stat.Speed]: 2 },
+	SPEAROW: { [Stat.Speed]: 1 },
+	FEAROW: { [Stat.Speed]: 2 },
+	EKANS: { [Stat.Attack]: 1 },
+	ARBOK: { [Stat.Attack]: 2 },
+	PIKACHU: { [Stat.Speed]: 2 },
+	RAICHU: { [Stat.Speed]: 3 },
+	SANDSHREW: { [Stat.Defense]: 1 },
+	SANDSLASH: { [Stat.Defense]: 2 },
+	NIDORAN_F: { [Stat.HP]: 1 },
+	NIDORINA: { [Stat.HP]: 2 },
+	NIDOQUEEN: { [Stat.HP]: 3 },
+	NIDORAN_M: { [Stat.Attack]: 1 },
+	NIDORINO: { [Stat.Attack]: 2 },
+	NIDOKING: { [Stat.Attack]: 3 },
+	CLEFAIRY: { [Stat.HP]: 2 },
+	CLEFABLE: { [Stat.HP]: 3 },
+	VULPIX: { [Stat.Speed]: 1 },
+	NINETALES: { [Stat.SpecialDefense]: 1, [Stat.Speed]: 1 },
+	JIGGLYPUFF: { [Stat.HP]: 2 },
+	WIGGLYTUFF: { [Stat.HP]: 3 },
+	ZUBAT: { [Stat.Speed]: 1 },
+	GOLBAT: { [Stat.Speed]: 2 },
+	ODDISH: { [Stat.SpecialAttack]: 1 },
+	GLOOM: { [Stat.SpecialAttack]: 2 },
+	VILEPLUME: { [Stat.SpecialAttack]: 3 },
+	PARAS: { [Stat.Attack]: 1 },
+	PARASECT: { [Stat.Attack]: 2, [Stat.Defense]: 1 },
+	VENONAT: { [Stat.SpecialDefense]: 1 },
+	VENOMOTH: { [Stat.SpecialAttack]: 1, [Stat.Speed]: 1 },
+	DIGLETT: { [Stat.Speed]: 1 },
+	DUGTRIO: { [Stat.Speed]: 2 },
+	MEOWTH: { [Stat.Speed]: 1 },
+	PERSIAN: { [Stat.Speed]: 2 },
+	PSYDUCK: { [Stat.SpecialAttack]: 1 },
+	GOLDUCK: { [Stat.SpecialAttack]: 2 },
+	MANKEY: { [Stat.Attack]: 1 },
+	PRIMEAPE: { [Stat.Attack]: 2 },
+	GROWLITHE: { [Stat.Attack]: 1 },
+	ARCANINE: { [Stat.Attack]: 2 },
+	POLIWAG: { [Stat.Speed]: 1 },
+	POLIWHIRL: { [Stat.Speed]: 2 },
+	POLIWRATH: { [Stat.Defense]: 3 },
+	ABRA: { [Stat.SpecialAttack]: 1 },
+	KADABRA: { [Stat.SpecialAttack]: 2 },
+	ALAKAZAM: { [Stat.SpecialAttack]: 3 },
+	MACHOP: { [Stat.Attack]: 1 },
+	MACHOKE: { [Stat.Attack]: 2 },
+	MACHAMP: { [Stat.Attack]: 3 },
+	BELLSPROUT: { [Stat.Attack]: 1 },
+	WEEPINBELL: { [Stat.Attack]: 2 },
+	VICTREEBEL: { [Stat.Attack]: 3 },
+	TENTACOOL: { [Stat.SpecialDefense]: 1 },
+	TENTACRUEL: { [Stat.SpecialDefense]: 2 },
+	GEODUDE: { [Stat.Defense]: 1 },
+	GRAVELER: { [Stat.Defense]: 2 },
+	GOLEM: { [Stat.Defense]: 3 },
+	PONYTA: { [Stat.Speed]: 1 },
+	RAPIDASH: { [Stat.Speed]: 2 },
+	SLOWPOKE: { [Stat.HP]: 1 },
+	SLOWBRO: { [Stat.Defense]: 2 },
+	MAGNEMITE: { [Stat.SpecialAttack]: 1 },
+	MAGNETON: { [Stat.SpecialAttack]: 2 },
+	FARFETCHD: { [Stat.Attack]: 1 },
+	DODUO: { [Stat.Attack]: 1 },
+	DODRIO: { [Stat.Attack]: 2 },
+	SEEL: { [Stat.SpecialDefense]: 1 },
+	DEWGONG: { [Stat.SpecialDefense]: 2 },
+	GRIMER: { [Stat.HP]: 1 },
+	MUK: { [Stat.HP]: 1, [Stat.Attack]: 1 },
+	SHELLDER: { [Stat.Defense]: 1 },
+	CLOYSTER: { [Stat.Defense]: 2 },
+	GASTLY: { [Stat.SpecialAttack]: 1 },
+	HAUNTER: { [Stat.SpecialAttack]: 2 },
+	GENGAR: { [Stat.SpecialAttack]: 3 },
+	ONIX: { [Stat.Defense]: 1 },
+	DROWZEE: { [Stat.SpecialDefense]: 1 },
+	HYPNO: { [Stat.SpecialDefense]: 2 },
+	KRABBY: { [Stat.Attack]: 1 },
+	KINGLER: { [Stat.Attack]: 2 },
+	VOLTORB: { [Stat.Speed]: 1 },
+	ELECTRODE: { [Stat.Speed]: 2 },
+	EXEGGCUTE: { [Stat.Defense]: 1 },
+	EXEGGUTOR: { [Stat.SpecialAttack]: 2 },
+	CUBONE: { [Stat.Defense]: 1 },
+	MAROWAK: { [Stat.Defense]: 2 },
+	HITMONLEE: { [Stat.Attack]: 2 },
+	HITMONCHAN: { [Stat.SpecialDefense]: 2 },
+	LICKITUNG: { [Stat.HP]: 2 },
+	KOFFING: { [Stat.Defense]: 1 },
+	WEEZING: { [Stat.Defense]: 2 },
+	RHYHORN: { [Stat.Attack]: 1 },
+	RHYDON: { [Stat.Attack]: 2 },
+	CHANSEY: { [Stat.HP]: 2 },
+	TANGELA: { [Stat.Defense]: 1 },
+	KANGASKHAN: { [Stat.HP]: 2 },
+	HORSEA: { [Stat.SpecialAttack]: 1 },
+	SEADRA: { [Stat.Defense]: 1, [Stat.SpecialAttack]: 1 },
+	GOLDEEN: { [Stat.Attack]: 1 },
+	SEAKING: { [Stat.Attack]: 2 },
+	STARYU: { [Stat.Speed]: 1 },
+	STARMIE: { [Stat.Speed]: 2 },
+	MR_MIME: { [Stat.SpecialDefense]: 2 },
+	SCYTHER: { [Stat.Attack]: 1 },
+	JYNX: { [Stat.SpecialAttack]: 2 },
+	ELECTABUZZ: { [Stat.Speed]: 2 },
+	MAGMAR: { [Stat.SpecialAttack]: 2 },
+	PINSIR: { [Stat.Attack]: 2 },
+	TAUROS: { [Stat.Attack]: 1, [Stat.Speed]: 1 },
+	MAGIKARP: { [Stat.Speed]: 1 },
+	GYARADOS: { [Stat.Attack]: 2 },
+	LAPRAS: { [Stat.HP]: 2 },
+	DITTO: { [Stat.HP]: 1 },
+	EEVEE: { [Stat.SpecialDefense]: 1 },
+	VAPOREON: { [Stat.HP]: 2 },
+	JOLTEON: { [Stat.Speed]: 2 },
+	FLAREON: { [Stat.Attack]: 2 },
+	PORYGON: { [Stat.SpecialAttack]: 1 },
+	OMANYTE: { [Stat.Defense]: 1 },
+	OMASTAR: { [Stat.Defense]: 2 },
+	KABUTO: { [Stat.Defense]: 1 },
+	KABUTOPS: { [Stat.Attack]: 2 },
+	AERODACTYL: { [Stat.Speed]: 2 },
+	SNORLAX: { [Stat.HP]: 2 },
+	ARTICUNO: { [Stat.SpecialDefense]: 3 },
+	ZAPDOS: { [Stat.SpecialAttack]: 3 },
+	MOLTRES: { [Stat.SpecialAttack]: 3 },
+	DRATINI: { [Stat.Attack]: 1 },
+	DRAGONAIR: { [Stat.Attack]: 2 },
+	DRAGONITE: { [Stat.Attack]: 3 },
+	MEWTWO: { [Stat.SpecialAttack]: 3 },
+	MEW: { [Stat.HP]: 3 },
+} satisfies Record<SpeciesId, Species["evYield"]>;
+
 /** Returns a stat block in the order expected by the engine. */
 function createStats(
 	hp: number,
@@ -75,8 +236,13 @@ function tradeEvolution(speciesId: SpeciesId): Evolution {
 	return { method: EvolutionMethod.Trade, speciesId };
 }
 
-/** Normalizes authored roster entries into runtime species records. */
-function createSpecies(template: SpeciesTemplate): Species {
+/**
+ * Normalizes authored roster entries into runtime species records.
+ *
+ * @param template Authored roster entry with defaults still unresolved.
+ * @param evYield Canonical effort value yield resolved by id from {@link EV_YIELDS}.
+ */
+function createSpecies(template: SpeciesTemplate, evYield: Species["evYield"]): Species {
 	return {
 		number: template.number,
 		size: template.size ?? { weight: 100, height: 1 },
@@ -87,17 +253,25 @@ function createSpecies(template: SpeciesTemplate): Species {
 		catchRate: template.catchRate ?? 45,
 		growthRate: template.growthRate ?? GrowthRate.MediumFast,
 		stats: template.stats,
+		evYield,
 		evolutions: template.evolutions ?? [],
 		learnset: template.learnset ?? [],
 	};
 }
 
-/** Builds the original Kanto roster keyed by species identifier. */
+/**
+ * Builds the original Kanto roster keyed by species identifier, attaching each
+ * species' canonical EV yield. Throws if a roster entry has no {@link EV_YIELDS}
+ * mapping so a missing yield fails loudly at content-load time rather than
+ * silently shipping a species that awards no effort values.
+ */
 function createSpeciesIndex(entries: SpeciesTemplate[]): Record<SpeciesId, Species> {
 	let species: Record<SpeciesId, Species> = {};
 
 	for (let entry of entries) {
-		species[entry.id] = createSpecies(entry);
+		let evYield = (EV_YIELDS as Record<SpeciesId, Species["evYield"]>)[entry.id];
+		if (!evYield) throw new Error(`Species "${entry.id}" is missing an EV yield.`);
+		species[entry.id] = createSpecies(entry, evYield);
 	}
 
 	return species;

@@ -82,6 +82,14 @@ export interface Species {
 	growthRate: GrowthRate;
 	/** Base stats of the creature */
 	stats: StatSet;
+	/**
+	 * Effort values awarded to each participant when this species faints. A
+	 * partial map keyed by {@link Stat}; a missing stat contributes no EVs.
+	 * Optional on the contract so the award code tolerates its absence (treating
+	 * a missing yield as zero EVs); the content layer guarantees every species
+	 * carries one.
+	 */
+	evYield?: Partial<StatSet>;
 	/** Evolutions of the creature */
 	evolutions: Evolution[];
 	/** Learnset of the creature */

@@ -5,7 +5,9 @@
  * exact, then confirm `grantCreatureExperience` accumulates experience, clamps negative amounts, and
  * reports the level delta and new total. They also confirm `awardBattleExperience` splits
  * `floor(baseExperience * enemyLevel / 7)` among non-fainted survivors, skips fainted members and
- * sub-one awards, and emits one grant per surviving creature per defeated enemy.
+ * sub-one awards, and emits one grant per surviving creature per defeated enemy. Finally they confirm
+ * each survivor gains the fainted species' `evYield` and that the per-stat (255) and total (510) EV
+ * caps hold.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -20,11 +22,16 @@ import { GameData, type GameDataSource } from "../data/game-data";
 import { GrowthRate } from "../data/growth-rate";
 import { DamageClass, type Move } from "../data/move";
 import { type Species } from "../data/species";
+import { Stat } from "../data/stat";
 import { createCreatureId, createPlayerId } from "../world/ids";
 import { migrateWorld } from "../world/migrate";
 import { type World } from "../world/world";
 
-import { awardBattleExperience, grantCreatureExperience } from "./experience-system";
+import {
+	awardBattleExperience,
+	grantCreatureEvYield,
+	grantCreatureExperience,
+} from "./experience-system";
 
 let SPECIES_ID = "SPECIES_A";
 let WEAK_SPECIES_ID = "SPECIES_WEAK";
@@ -33,6 +40,9 @@ let NATURE_ID = "HARDY";
 
 /** Base experience of the fixture species, chosen so awards land on clean integers. */
 let BASE_EXPERIENCE = 64;
+
+/** Effort value yield of the fixture species: two stats summing to three. */
+let EV_YIELD = { [Stat.Attack]: 2, [Stat.Defense]: 1 };
 
 /** Builds a flat stat block so HP math stays predictable. */
 function statSet(value: number) {
@@ -56,6 +66,7 @@ function createGameData(): GameData {
 		catchRate: 45,
 		growthRate: GrowthRate.MediumFast,
 		stats: statSet(50),
+		evYield: EV_YIELD,
 		evolutions: [],
 		learnset: [{ level: 1, moveId: MOVE_ID }],
 		gender: { male: 50, female: 50 },
@@ -89,6 +100,7 @@ function createWeakGameData(): GameData {
 		catchRate: 45,
 		growthRate: GrowthRate.MediumFast,
 		stats: statSet(50),
+		evYield: EV_YIELD,
 		evolutions: [],
 		learnset: [{ level: 1, moveId: MOVE_ID }],
 		gender: { male: 50, female: 50 },
@@ -113,8 +125,12 @@ function createWeakGameData(): GameData {
 	return unwrap(GameData.create(source));
 }
 
-/** Builds one creature blob at the given total experience and current damage. */
-function createCreature(experience: number, damage = 0): LegacyCreatureComponent {
+/** Builds one creature blob at the given total experience, damage, and starting EVs. */
+function createCreature(
+	experience: number,
+	damage = 0,
+	ev: LegacyCreatureComponent["ev"] = statSet(0),
+): LegacyCreatureComponent {
 	return {
 		species: SPECIES_ID,
 		nature: NATURE_ID,
@@ -122,7 +138,7 @@ function createCreature(experience: number, damage = 0): LegacyCreatureComponent
 		moveset: [MOVE_ID, null, null, null],
 		status: { state: null, damage, pp: [35, 0, 0, 0] },
 		iv: statSet(0),
-		ev: statSet(0),
+		ev,
 	};
 }
 
@@ -285,4 +301,100 @@ test("awardBattleExperience emits one grant per enemy for a survivor", () => {
 	// One grant per defeated enemy, each adding 91.
 	expect(grants).toHaveLength(2);
 	expect(world.creatureProgress[ally]?.experience).toBe(125 + 91 + 91);
+});
+
+test("awardBattleExperience adds the fainted species' EV yield to each survivor", () => {
+	let allyA = createCreatureId("ally-a");
+	let allyB = createCreatureId("ally-b");
+	let enemy = createCreatureId("enemy");
+	let { world } = createWorld({
+		[allyA]: createCreature(125),
+		[allyB]: createCreature(125),
+		[enemy]: createCreature(1000),
+	});
+
+	awardBattleExperience(createGameData(), world, [enemy], [allyA, allyB]);
+
+	// Both survivors gain the fixture yield of Attack +2, Defense +1.
+	for (let ally of [allyA, allyB]) {
+		expect(world.creatureProgress[ally]?.ev[Stat.Attack]).toBe(2);
+		expect(world.creatureProgress[ally]?.ev[Stat.Defense]).toBe(1);
+		expect(world.creatureProgress[ally]?.ev[Stat.HP]).toBe(0);
+	}
+});
+
+test("awardBattleExperience accumulates EV yield across multiple defeated enemies", () => {
+	let ally = createCreatureId("ally");
+	let enemyA = createCreatureId("enemy-a");
+	let enemyB = createCreatureId("enemy-b");
+	let { world } = createWorld({
+		[ally]: createCreature(125),
+		[enemyA]: createCreature(1000),
+		[enemyB]: createCreature(1000),
+	});
+
+	awardBattleExperience(createGameData(), world, [enemyA, enemyB], [ally]);
+
+	// Two faints of the fixture species: Attack +2 twice, Defense +1 twice.
+	expect(world.creatureProgress[ally]?.ev[Stat.Attack]).toBe(4);
+	expect(world.creatureProgress[ally]?.ev[Stat.Defense]).toBe(2);
+});
+
+test("awardBattleExperience still awards EV yield when the experience award rounds to zero", () => {
+	let ally = createCreatureId("ally");
+	let weakEnemy = createCreatureId("weak");
+	// A base-experience-3 enemy at level 1 awards no experience, but still yields EVs on faint.
+	let { world } = createWorld({
+		[ally]: createCreature(125),
+		[weakEnemy]: createCreature(0),
+	});
+	world.creatureIdentity[weakEnemy] = { speciesId: WEAK_SPECIES_ID };
+
+	let grants = awardBattleExperience(createWeakGameData(), world, [weakEnemy], [ally]);
+
+	expect(grants).toEqual([]);
+	expect(world.creatureProgress[ally]?.experience).toBe(125);
+	expect(world.creatureProgress[ally]?.ev[Stat.Attack]).toBe(2);
+	expect(world.creatureProgress[ally]?.ev[Stat.Defense]).toBe(1);
+});
+
+test("grantCreatureEvYield clamps a single stat to 255", () => {
+	let id = createCreatureId("one");
+	let { world } = createWorld({ [id]: createCreature(125, 0, statSet(0)) });
+
+	// Apply Attack +255 twelve times; the stat can never exceed 255.
+	for (let index = 0; index < 12; index += 1) {
+		grantCreatureEvYield(world, id, { [Stat.Attack]: 255 });
+	}
+
+	expect(world.creatureProgress[id]?.ev[Stat.Attack]).toBe(255);
+});
+
+test("grantCreatureEvYield stops adding once the 510 total cap is reached", () => {
+	let id = createCreatureId("one");
+	// Start already carrying 508 EVs (255 Attack + 253 Defense), leaving 2 points of headroom.
+	let startingEv = {
+		...statSet(0),
+		[Stat.Attack]: 255,
+		[Stat.Defense]: 253,
+	};
+	let { world } = createWorld({ [id]: createCreature(125, 0, startingEv) });
+
+	// A yield of Speed +3 can only add 2 before the 510 total cap blocks the rest.
+	grantCreatureEvYield(world, id, { [Stat.Speed]: 3 });
+
+	let ev = world.creatureProgress[id]?.ev;
+	expect(ev?.[Stat.Speed]).toBe(2);
+	let total = Object.values(Stat).reduce((sum, stat) => sum + (ev?.[stat] ?? 0), 0);
+	expect(total).toBe(510);
+});
+
+test("grantCreatureEvYield is a no-op for a missing or empty yield", () => {
+	let id = createCreatureId("one");
+	let { world } = createWorld({ [id]: createCreature(125, 0, { ...statSet(0), [Stat.HP]: 4 }) });
+
+	grantCreatureEvYield(world, id, undefined);
+	grantCreatureEvYield(world, id, {});
+
+	expect(world.creatureProgress[id]?.ev[Stat.HP]).toBe(4);
 });
