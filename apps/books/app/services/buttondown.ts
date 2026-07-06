@@ -1,3 +1,12 @@
+/**
+ * Buttondown API client service that authenticates with the configured API key and
+ * exposes helpers to check subscription status, subscribe with UTM/IP data, and patch
+ * subscriber metadata, plus a ButtondownError type; exported as a singleton instance.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { APIClient } from "@edgefirst-dev/api-client";
 import { Json } from "@pkg/http/content-type";
 import { env } from "cloudflare:workers";

@@ -1,3 +1,12 @@
+/**
+ * Checkout route whose loader starts a Polar checkout for the requested product type,
+ * creating an essentials checkout with discount codes allowed, or a complete checkout
+ * that applies any currently applicable discount, then redirects to the checkout URL.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { isFailure, isSuccess } from "@pkg/result";
 import { redirectDocument } from "react-router";
 

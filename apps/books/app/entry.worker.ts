@@ -1,3 +1,12 @@
+/**
+ * Cloudflare Worker fetch entry point that lazily builds the React Router request
+ * handler, creates a per-request router context seeded with a request Logger, and
+ * dispatches each incoming request while capturing, logging, and flushing errors.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import type { RequestHandler } from "react-router";
 
 import { Logger } from "@pkg/logger/request";

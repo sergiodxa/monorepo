@@ -1,3 +1,12 @@
+/**
+ * Sample chapter request form component that posts an email to the /sample route to
+ * unlock a free chapter, carrying UTM parameters from the URL as hidden fields and
+ * reflecting idle/loading state on the submit button plus any validation error.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { useMemo } from "react";
 import { Form, href, useNavigation, useSearchParams } from "react-router";
 

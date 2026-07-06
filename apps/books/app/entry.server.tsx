@@ -1,3 +1,12 @@
+/**
+ * Server rendering entry point that streams the React Router app to HTML with
+ * renderToReadableStream, waiting for full readiness for bots and streaming
+ * chunked responses otherwise, while logging render start, errors, and completion.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import type { EntryContext, RouterContextProvider } from "react-router";
 
 import { HTML } from "@pkg/http/content-type";

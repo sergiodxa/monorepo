@@ -1,3 +1,12 @@
+/**
+ * Home/index route presenting the handbook pitch and an early-access SubscribeForm
+ * that posts to /api/subscribe via a fetcher, forwarding UTM parameters and showing
+ * idle/loading/success/failure states inline for the newsletter signup.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { useMemo } from "react";
 import { useFetcher, useSearchParams } from "react-router";
 

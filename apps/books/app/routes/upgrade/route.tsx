@@ -1,3 +1,13 @@
+/**
+ * Upgrade route that lets an existing reader move from The Book to the Complete
+ * Package: its action looks up the customer and their Essentials order in Polar, then
+ * creates a discounted upgrade checkout (or falls back to a full complete checkout),
+ * and its component renders the email form.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { Location } from "@pkg/location";
 import { badRequest } from "@pkg/response";
 import { isFailure } from "@pkg/result";

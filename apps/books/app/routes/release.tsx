@@ -1,3 +1,12 @@
+/**
+ * Public landing/release page for the React Router OAuth2 Handbook whose loader pulls
+ * live Polar prices and any active discount, and which renders the hero, description,
+ * sample form, testimonial, pricing tiers, author bio, and FAQ sections.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { href, Link } from "react-router";
 import { z } from "zod";
 

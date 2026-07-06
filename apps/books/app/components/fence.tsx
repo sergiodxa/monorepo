@@ -1,3 +1,12 @@
+/**
+ * Fence code-block component and its Markdoc tag definition, using Prism to syntax
+ * highlight fenced code in supported languages and falling back to plain preformatted
+ * text when a language grammar is missing, so book content renders highlighted code.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import Prism from "prismjs";
 
 import "prismjs/components/prism-cshtml";

@@ -1,3 +1,13 @@
+/**
+ * Sample chapter route that, on form submission, validates the email and subscribes
+ * the visitor, then transforms the bundled sample Markdoc into React to render the
+ * free chapter; it shows the chapter even when the email already exists and themes
+ * code with Prism GitHub styles.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import Markdoc from "@markdoc/markdoc";
 import { getClientIP } from "@pkg/get-client-ip";
 import { badRequest, ok } from "@pkg/response";

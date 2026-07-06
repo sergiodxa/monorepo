@@ -1,3 +1,12 @@
+/**
+ * Root route module for the React Router OAuth2 Handbook site, defining the HTML
+ * document Layout with meta/OpenGraph tags and Cloudflare analytics, the root
+ * middleware, the App outlet, and a shared ErrorBoundary for 404 and error pages.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { isRouteErrorResponse, Outlet, Scripts, ScrollRestoration } from "react-router";
 
 import type { Route } from "./+types/root";

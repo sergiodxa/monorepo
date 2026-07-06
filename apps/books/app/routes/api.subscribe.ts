@@ -1,3 +1,12 @@
+/**
+ * API route action that handles newsletter subscribe form submissions, validating
+ * the payload, resolving the client IP, and invoking the subscribe use case; it maps
+ * Buttondown errors to friendly messages and redirects to /release on success.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { getClientIP } from "@pkg/get-client-ip";
 import { badRequest } from "@pkg/response";
 import { isFailure } from "@pkg/result";

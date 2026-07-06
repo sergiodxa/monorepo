@@ -1,3 +1,12 @@
+/**
+ * Polar webhook route that verifies incoming events with the webhook secret and, on
+ * an order.paid event, tags the paying customer in Buttondown with the purchased tier
+ * (complete or individual); it returns 200 on success and 400 on failure.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import type { Logger } from "@pkg/logger/batched";
 
 import { ok, badRequest } from "@pkg/response";

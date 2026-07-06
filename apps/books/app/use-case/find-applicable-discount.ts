@@ -1,3 +1,12 @@
+/**
+ * Use case that queries Polar for the currently valid discount on the Complete
+ * package, filtering the known early/first-week/second-week discounts by start and
+ * end dates, redemption limits, and product scope, and returns it as a Result.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import type { Result } from "@pkg/result";
 
 import { success, failure } from "@pkg/result";

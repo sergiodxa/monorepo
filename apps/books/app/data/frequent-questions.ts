@@ -1,3 +1,12 @@
+/**
+ * Static content data for the site's FAQ section, exporting the frequently asked
+ * questions and answers grouped into two columns covering prerequisites, framework
+ * support, package differences, licensing, team pricing, support, and PPP pricing.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 export default [
 	[
 		{

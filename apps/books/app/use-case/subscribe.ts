@@ -1,3 +1,12 @@
+/**
+ * Use case that subscribes an email to the Buttondown newsletter, short-circuiting
+ * when the address is missing or already subscribed, forwarding UTM attribution and
+ * the caller's IP, and returning a Result that maps Buttondown failures to errors.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import type { Result } from "@pkg/result";
 
 import { success, failure } from "@pkg/result";
