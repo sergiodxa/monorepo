@@ -48,6 +48,14 @@ export interface IngestEvent {
 	metadata?: Record<string, string | number | boolean>;
 	/** When the event happened. Defaults to Polar's ingestion time when omitted. */
 	timestamp?: Date;
+	/**
+	 * A caller-supplied unique id for this event, forwarded to Polar as `external_id`.
+	 * Polar deduplicates on it, so re-sending an event with the same `externalId` is a
+	 * no-op — the safe way to make an at-most-once reporting cron idempotent across a
+	 * partial failure (the event was accepted but the local "reported" flag did not
+	 * persist). Omit for events that need no deduplication.
+	 */
+	externalId?: string;
 }
 
 /**
@@ -274,6 +282,7 @@ export class PolarClient {
 				name: event.name,
 				metadata: event.metadata,
 				timestamp: event.timestamp,
+				externalId: event.externalId,
 			})),
 		});
 	}
@@ -309,20 +318,34 @@ export class PolarClient {
 	 * instead of throwing on API failure so the caller's reporting cron can retry
 	 * on the next run.
 	 *
+	 * Pass `externalId` to make retries idempotent: Polar deduplicates on it, so if a
+	 * previous run's event was accepted but the caller failed to record it locally, the
+	 * next run re-sending the same `externalId` will not double-bill. A deterministic key
+	 * derived from the reported entity and day (e.g. `page_views:{blog_id}:{day}`) is the
+	 * natural choice.
+	 *
 	 * @param customerId - The Polar customer ID to bill.
 	 * @param views - The number of page views to report.
 	 * @param day - The day being reported in `YYYY-MM-DD` format.
+	 * @param externalId - Optional deduplication id forwarded to Polar as `external_id`.
 	 * @returns `true` when the event was accepted, `false` when ingestion failed.
 	 *
 	 * @example
 	 * ```ts
-	 * let ok = await polar.ingestPageViews(customerId, 128, "2026-07-04");
+	 * let ok = await polar.ingestPageViews(customerId, 128, "2026-07-04", `page_views:${blogId}:2026-07-04`);
 	 * if (ok) await UsageDaily.markReported(db, usage.id);
 	 * ```
 	 */
-	async ingestPageViews(customerId: string, views: number, day: string): Promise<boolean> {
+	async ingestPageViews(
+		customerId: string,
+		views: number,
+		day: string,
+		externalId?: string,
+	): Promise<boolean> {
 		try {
-			await this.ingestEvents([{ customerId, name: "page_views", metadata: { views, day } }]);
+			await this.ingestEvents([
+				{ customerId, name: "page_views", metadata: { views, day }, externalId },
+			]);
 			return true;
 		} catch {
 			return false;

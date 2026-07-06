@@ -230,7 +230,35 @@ describe("PolarClient", () => {
 		]);
 		expect(calls["events.ingest"]).toEqual([
 			{
-				events: [{ customerId: "cus_1", name: "mau", metadata: { count: 3 }, timestamp: when }],
+				events: [
+					{
+						customerId: "cus_1",
+						name: "mau",
+						metadata: { count: 3 },
+						timestamp: when,
+						externalId: undefined,
+					},
+				],
+			},
+		]);
+	});
+
+	test("ingestEvents forwards externalId to the SDK for deduplication", async () => {
+		let polar = new PolarClient({ accessToken: "t" });
+		await polar.ingestEvents([
+			{ customerId: "cus_1", name: "page_views", metadata: { views: 5 }, externalId: "dedupe-1" },
+		]);
+		expect(calls["events.ingest"]).toEqual([
+			{
+				events: [
+					{
+						customerId: "cus_1",
+						name: "page_views",
+						metadata: { views: 5 },
+						timestamp: undefined,
+						externalId: "dedupe-1",
+					},
+				],
 			},
 		]);
 	});
@@ -246,6 +274,7 @@ describe("PolarClient", () => {
 						name: "mau",
 						metadata: { tenant_id: "t_1", month: "2026-07", count: 1200 },
 						timestamp: undefined,
+						externalId: undefined,
 					},
 				],
 			},
@@ -265,6 +294,31 @@ describe("PolarClient", () => {
 							name: "page_views",
 							metadata: { views: 42, day: "2026-07-04" },
 							timestamp: undefined,
+							externalId: undefined,
+						},
+					],
+				},
+			]);
+		});
+
+		test("forwards a deterministic externalId so retries are deduplicated", async () => {
+			let polar = new PolarClient({ accessToken: "t" });
+			let ok = await polar.ingestPageViews(
+				"cus_1",
+				42,
+				"2026-07-04",
+				"page_views:blog-1:2026-07-04",
+			);
+			expect(ok).toBe(true);
+			expect(calls["events.ingest"]).toEqual([
+				{
+					events: [
+						{
+							customerId: "cus_1",
+							name: "page_views",
+							metadata: { views: 42, day: "2026-07-04" },
+							timestamp: undefined,
+							externalId: "page_views:blog-1:2026-07-04",
 						},
 					],
 				},
