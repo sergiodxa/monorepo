@@ -1,0 +1,5 @@
+[test]
+# Runs before the whole suite when `bun test` is invoked from the repo root.
+# Registers the virtual `cloudflare:workers` module (see test/setup.ts) so source
+# files that import `env` at module load can be exercised across every workspace.
+preload = ["./test/setup.ts"]
