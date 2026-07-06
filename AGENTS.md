@@ -50,7 +50,7 @@ bunx react-router routes --json # Extract React Router routes as JSON for AI age
 - MUST use `@pkg/logger`, never `console.log`
 - MUST use RequestLogger for logging inside worker fetch handlers
 - MUST use `@pkg/jobs` for background jobs
-- MUST use `@pkg/validate` along Zod to validate data, specially on loaders and actions
+- MUST validate external/untrusted data (loaders, actions, webhooks, env-derived input) with `remix/data-schema` via `@pkg/validate`; do not add Zod to new code
 - MUST use `const` only for module-level variables, and `let` for everything else, never use `const` for local variables inside functions or blocks
 - MUST use `interface` when possible, and `type` only when necessary (e.g. for union types)
 - MUST import `env` from `cloudflare:workers` and never from `process.env` or other sources
@@ -61,10 +61,16 @@ bunx react-router routes --json # Extract React Router routes as JSON for AI age
 - MUST follow the guidelines in this document, and suggest improvements when necessary
 - MUST use `bunx` instead of `npx`, or any other package runner, to ensure consistent behavior across environments
 - MUST use namespaces for types only; no runtime values, functions, or classes inside namespaces.
+- MUST check what Remix v3 provides before hand-rolling middleware/helpers — prefer `remix/cop-middleware`, `remix/session-middleware`, `createAction`/`createController`, `remix/data-schema`, `remix/auth`, and `remix/ui` over custom equivalents
+- MUST resolve app services (Database, API clients) through `@pkg/service-container` (ADR-008) via `inject([...])` / `getServiceContainer()`; keep request-lifecycle values (session, current user, tenant, request logger) in middleware/context, never in the container
+- MUST render server HTML as `remix/ui` JSX with `css()` mixins; never build HTML from strings (`remix/html-template` or inline HTML template literals)
+- MUST call the global `fetch` directly; never add an injectable fetch parameter (e.g. `fetchImpl: typeof fetch = fetch`), and stub `globalThis.fetch` in tests instead
+- MUST describe code on its own terms in comments; never name another app or package as the source of a pattern (e.g. "mirrors the r3-blog app")
+- MUST keep `packages/*` app-agnostic: no imports from, or references to, `apps/*` in code or comments
 
 ### Documentation
 
-- MUST start every module (every file) under `apps/` with a module-level JSDoc comment at the very top of the file, describing in ~3 lines what the module is, what it does, and why it exists, followed by `@author` and `@copyright` tags, using this exact style:
+- MUST start every module (every file) under `apps/` and `packages/` with a module-level JSDoc comment at the very top of the file, describing in ~3 lines what the module is, what it does, and why it exists, followed by `@author` and `@copyright` tags, using this exact style:
 
   ```
   /**
@@ -76,7 +82,7 @@ bunx react-router routes --json # Extract React Router routes as JSON for AI age
   ```
 
   When a `#!` shebang must be first, place the block immediately after it.
-- MUST write JSDoc comments for every exported class, function, method, variable, type, interface, and constant in this app.
+- MUST write JSDoc comments for every exported class, function, method, variable, type, interface, and constant in this app or package.
 - MUST write JSDoc comments for non-exported, non-private module symbols when they are part of a file's behavior contract (helpers, mappers, normalizers, comparators, etc.).
 - MUST write JSDoc comments for every non-private member of exported classes (including static members, instance methods, getters/setters, and constructor when present).
 - MUST write JSDoc comments for inline controller callbacks (middleware callbacks, action handlers, and route handlers) inside controller definitions.
@@ -96,3 +102,20 @@ bunx react-router routes --json # Extract React Router routes as JSON for AI age
 
 - MUST NOT use placeholder or template wording in JSDoc (for example: "Defines ...", "Represents ...", or "Handles ..." without meaningful contract detail).
 - MUST NOT duplicate type names or signatures in prose when that adds no new information.
+
+### Testing
+
+- MUST back database tests with an in-memory adapter (`bun:sqlite`) that mirrors the production adapter, rather than mocking the query layer
+- MUST stub `globalThis.fetch` (save/restore) and use `mock.module("cloudflare:workers", …)` to supply `env`/bindings in tests, never an injected fake
+- MUST keep `*.test.ts` files type-safe: they are included in typechecking, so every test file must pass `bun typecheck`
+
+### Data & transactions
+
+- `db.transaction()` is atomic only on `@pkg/data-table-sqlstorage` (Durable Object SQLite). `@pkg/data-table-d1` has no interactive transactions, so any multi-step mutation that may run on D1 MUST be written D1-safe (single-statement/upsert or compensating operations)
+- MUST isolate per-tenant caches by keying them on the tenant's `Database` instance, so one tenant's data can never leak to another
+
+### Security
+
+- MUST verify OIDC ID tokens (JWKS signature plus `iss`/`aud`/`exp`/`nonce`) before trusting any claim
+- MUST verify inbound webhook signatures and fail closed when the signing secret is missing or unset
+- MUST enforce authorization/entitlement at the runtime boundary that actually receives the traffic (e.g. the tenant Durable Object, since `cf.hostMetadata` bypasses the control-plane database), not only in the control plane
