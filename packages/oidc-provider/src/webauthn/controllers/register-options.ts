@@ -1,9 +1,10 @@
 /**
  * WebAuthn registration options endpoint controller.
  *
- * Validates and rate-limits the email, ensures it has no existing passkey,
- * find-or-creates the subject, and issues a single-use challenge plus the creation
- * options for the browser's WebAuthn `create` ceremony.
+ * Validates and rate-limits the email and ensures it has no existing passkey, then
+ * issues a single-use challenge plus the creation options for the browser's WebAuthn
+ * `create` ceremony. The subject itself is not persisted here — it is created during
+ * verification, only after the attestation is cryptographically verified.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -90,6 +91,12 @@ export default createAction(
 			});
 		}
 
+		// Look up any existing subject only to reject when it already has a passkey
+		// (that account should sign in, not register). Crucially, do NOT persist a new
+		// subject here: registration is completed by /webauthn/register/verify, which
+		// creates the subject only after the attestation is cryptographically verified.
+		// Persisting during options generation made the normal options->verify flow fail
+		// because verify rejects when a subject with this email already exists.
 		let existingSubject = await Subject.findByEmail(db, email);
 		if (existingSubject) {
 			let existingPasskeys = await Passkey.listBySubject(db, existingSubject.id);
@@ -99,21 +106,18 @@ export default createAction(
 			}
 		}
 
-		let subject: Awaited<ReturnType<typeof Subject.findByEmail>>;
-		if (existingSubject) {
-			subject = existingSubject;
-			log.info("Using existing subject", { subjectId: existingSubject.id });
-		} else {
-			let username = email.split("@")[0] ?? email;
-			subject = await Subject.register(db, { email, username });
-			log.info("Created new subject", { subjectId: subject!.id });
-		}
-
 		let issuer = await TenantMeta.getIssuer(db);
 		let rpId = issuer ? new URL(`https://${issuer}`).hostname : new URL(request.url).hostname;
 		let rpName = rpId;
 
-		let { id: challengeId, challenge } = await WebAuthnChallenge.createForRegistration(db, {
+		// `userId` is a fresh random WebAuthn user handle bound to this challenge; it is
+		// uncorrelated with the email/PII (per WebAuthn guidance) and is what the
+		// authenticator stores for a discoverable credential.
+		let {
+			id: challengeId,
+			challenge,
+			userId,
+		} = await WebAuthnChallenge.createForRegistration(db, {
 			email,
 			clientId,
 			redirectUri,
@@ -122,12 +126,14 @@ export default createAction(
 			scope,
 		});
 
+		let displayName = existingSubject?.display_name ?? email;
+
 		let registrationOptions = await generateRegistrationOptions({
 			rpName,
 			rpID: rpId,
 			userName: email,
-			userDisplayName: subject!.display_name ?? email,
-			userID: new TextEncoder().encode(subject!.id),
+			userDisplayName: displayName,
+			userID: new Uint8Array(base64UrlDecode(userId)),
 			attestationType: "none",
 			authenticatorSelection: {
 				residentKey: "preferred",
@@ -139,7 +145,6 @@ export default createAction(
 		} satisfies GenerateRegistrationOptionsOpts);
 
 		log.info("Registration challenge created", {
-			subjectId: subject!.id,
 			challengeId,
 			clientId: clientId ?? null,
 			hasRedirectUri: !!redirectUri,

@@ -134,6 +134,70 @@ describe("Passkey", () => {
 		});
 	});
 
+	describe("listForAuthentication", () => {
+		test("returns only passkeys with a non-null credential_id", async () => {
+			let subject = await createSubject(db, { verified: true });
+
+			// A passkey created through the model always stores its credential_id.
+			await Passkey.create(db, {
+				subjectId: subject.id,
+				credentialId: "cred-with-id",
+				publicKey: "key-1",
+				counter: 0,
+			});
+
+			// A legacy passkey migrated before credential_id was persisted (migration
+			// 0006) has a null credential_id and must be excluded from authentication.
+			await db.create(Passkey.table, {
+				id: crypto.randomUUID(),
+				subject_id: subject.id,
+				credential_id: null,
+				public_key: "key-legacy",
+				counter: 0,
+				device_type: null,
+				backed_up: false,
+				transports: null,
+				name: null,
+				created_at: new Date().toISOString(),
+				last_used_at: null,
+			});
+
+			let all = await Passkey.listBySubject(db, subject.id);
+			expect(all).toHaveLength(2);
+
+			let usable = await Passkey.listForAuthentication(db, subject.id);
+			expect(usable).toHaveLength(1);
+			expect(usable[0]!.credential_id).toBe("cred-with-id");
+		});
+
+		test("returns empty array when the subject only has null-credential passkeys", async () => {
+			let subject = await createSubject(db, { verified: true });
+
+			await db.create(Passkey.table, {
+				id: crypto.randomUUID(),
+				subject_id: subject.id,
+				credential_id: null,
+				public_key: "key-legacy",
+				counter: 0,
+				device_type: null,
+				backed_up: false,
+				transports: null,
+				name: null,
+				created_at: new Date().toISOString(),
+				last_used_at: null,
+			});
+
+			let usable = await Passkey.listForAuthentication(db, subject.id);
+			expect(usable).toHaveLength(0);
+		});
+
+		test("returns empty array when subject has no passkeys", async () => {
+			let subject = await createSubject(db, { verified: true });
+			let usable = await Passkey.listForAuthentication(db, subject.id);
+			expect(usable).toHaveLength(0);
+		});
+	});
+
 	describe("updateCounter", () => {
 		test("updates the counter and last_used_at", async () => {
 			let subject = await createSubject(db, { verified: true });

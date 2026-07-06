@@ -75,7 +75,9 @@ export default createAction(
 			return badRequest({ error: "No passkey found. Please register first." });
 		}
 
-		let passkeys = await Passkey.listBySubject(db, subject.id);
+		// Only passkeys with a stored credential_id can be used for authentication;
+		// legacy rows without one (migration 0006) cannot appear in allowCredentials.
+		let passkeys = await Passkey.listForAuthentication(db, subject.id);
 		if (passkeys.length === 0) {
 			log.info("No passkeys found for subject", { subjectId: subject.id });
 			return badRequest({ error: "No passkey found. Please register first." });
@@ -93,8 +95,12 @@ export default createAction(
 			scope,
 		});
 
+		// The browser matches allowCredentials against the authenticator's stored
+		// credential id, so this must be the WebAuthn credential_id (base64url), NOT
+		// the database primary key. listForAuthentication already dropped null rows,
+		// so credential_id is present here.
 		let allowCredentials = passkeys.map((passkey) => ({
-			id: passkey.id,
+			id: passkey.credential_id!,
 			type: "public-key" as const,
 			transports: passkey.transports
 				? (passkey.transports.split(",") as AuthenticatorTransport[])

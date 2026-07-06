@@ -51,6 +51,21 @@ export default class Passkey {
 	}
 
 	/**
+	 * Lists a subject's passkeys that can be used for authentication, i.e. those
+	 * with a stored WebAuthn `credential_id`. Legacy rows migrated before the
+	 * credential id was persisted (see migration 0006) have a null `credential_id`
+	 * and are excluded, since they cannot appear in `allowCredentials` nor be matched
+	 * against an assertion.
+	 * @param db - Database instance.
+	 * @param subjectId - Subject ID to filter by.
+	 * @returns Passkeys for the subject that have a non-null `credential_id`.
+	 */
+	static async listForAuthentication(db: Database, subjectId: string) {
+		let passkeys = await Passkey.listBySubject(db, subjectId);
+		return passkeys.filter((passkey) => passkey.credential_id != null);
+	}
+
+	/**
 	 * Retrieves a single passkey by its primary key.
 	 * @param db - Database instance.
 	 * @param id - Passkey ID.
