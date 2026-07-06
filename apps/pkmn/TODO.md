@@ -101,13 +101,13 @@
 - [x] Remove duplicate concepts between battle runtime objects and world components.
 - [x] Review JSDoc across the new engine files to ensure every exported symbol is documented.
 - [x] Add focused tests for engine dispatch, selectors, and ECS world helpers.
+- [ ] Add tests for the world systems in `src/game/systems/` (inventory, storage, bestiary, capture placement, experience/level math, evolution swap); today only `battle/`, `data/`, `world/`, and the engine boundary have coverage.
 - [x] Revisit naming and folder boundaries once the battle refactor is complete.
 
 ## Review Findings 2026-07-06: Bugs
 
 - [ ] Persist battle outcomes back into the world: battles run on cloned creature aggregates, so damage, major status, and spent PP are never written back to `creatureHealth`/`creatureStatus`/`creatureMoves` when a battle finishes; the party leaves every battle at full health. Add an end-of-battle write-back step in `src/game/engine.ts` (or a dedicated system) that copies final combatant state into the persistent stores.
 - [ ] Fix the hit check in `src/game/battle/battle.ts` (`moveCanConnect`): the early return when both accuracy and evasion stages are 0 skips the base-accuracy roll entirely, so 70%-accuracy and even 30%-accuracy moves never miss at neutral stages. `docs/battle.md` requires base accuracy to always be considered.
-- [ ] Delete `src/game/_battle/index.ts`: it is a dead prototype with top-level side effects that references four undefined functions and currently makes `bun run typecheck` fail.
 - [ ] Clear `world.activeBattle[playerId]` (and clean up battle/battle-side/battle-member mirror components plus their ids in `world.entities`) when a battle finishes; today they accumulate forever and `selectActiveBattle` keeps returning finished battles.
 - [ ] Stop leaking transient battle entity ids into saves: `pickPersistentWorld` clones the whole `entities` array, which includes `battle:*`, `battle-side:*`, and `battle-member:*` ids whose components are stripped, leaving dangling references in snapshots.
 - [ ] Give the fallback move in `src/game/battle/systems/turn-order.ts` its documented behavior: it currently has no recoil and is typed `normal`, so type immunity zeroes it out; the spec expects a typeless last-resort attack with self-damage.
