@@ -12,6 +12,7 @@ import { badRequest, notFound } from "@pkg/http/response/html";
 import { inject } from "@pkg/service-container";
 import { env } from "cloudflare:workers";
 import { getContext } from "remix/async-context-middleware";
+import * as ds from "remix/data-schema";
 import { Database } from "remix/data-table";
 import { createAction, createController } from "remix/fetch-router";
 
@@ -120,7 +121,8 @@ export default createController(routes.dashboard.blogs, {
 
 		show: inject([Database] as const, async (db) => {
 			let ctx = getContext();
-			let result = await ownedBlog(db, ctx.params.id!);
+			let { id } = ds.parse(ds.object({ id: ds.string() }), ctx.params);
+			let result = await ownedBlog(db, id);
 			if (result instanceof Response) return result;
 			let { blog } = result;
 
@@ -179,7 +181,8 @@ export default createController(routes.dashboard.blogs, {
 
 		edit: inject([Database] as const, async (db) => {
 			let ctx = getContext();
-			let result = await ownedBlog(db, ctx.params.id!);
+			let { id } = ds.parse(ds.object({ id: ds.string() }), ctx.params);
+			let result = await ownedBlog(db, id);
 			if (result instanceof Response) return result;
 			let { blog } = result;
 			return ctx.render(
@@ -203,7 +206,8 @@ export default createController(routes.dashboard.blogs, {
 
 		update: inject([Database] as const, async (db) => {
 			let ctx = getContext();
-			let result = await ownedBlog(db, ctx.params.id!);
+			let { id } = ds.parse(ds.object({ id: ds.string() }), ctx.params);
+			let result = await ownedBlog(db, id);
 			if (result instanceof Response) return result;
 			let { blog } = result;
 
@@ -222,7 +226,8 @@ export default createController(routes.dashboard.blogs, {
 
 		destroy: inject([Database, BlogProvisioner] as const, async (db, provisioner) => {
 			let ctx = getContext();
-			let result = await ownedBlog(db, ctx.params.id!);
+			let { id } = ds.parse(ds.object({ id: ds.string() }), ctx.params);
+			let result = await ownedBlog(db, id);
 			if (result instanceof Response) return result;
 			await provisioner.softDelete(result.blog.id);
 			return redirect("/dashboard", { status: redirect.Status.SeeOther });
@@ -241,7 +246,8 @@ export const domain = createController(routes.dashboard.blogDomain, {
 	actions: {
 		index: inject([Database] as const, async (db) => {
 			let ctx = getContext();
-			let result = await ownedBlog(db, ctx.params.blogId!);
+			let { blogId } = ds.parse(ds.object({ blogId: ds.string() }), ctx.params);
+			let result = await ownedBlog(db, blogId);
 			if (result instanceof Response) return result;
 			let { blog } = result;
 			let hostname = await Hostname.findByBlog(db, blog.id);
@@ -285,7 +291,8 @@ export const domain = createController(routes.dashboard.blogDomain, {
 
 		action: inject([Database, HostnameClient] as const, async (db, service) => {
 			let ctx = getContext();
-			let result = await ownedBlog(db, ctx.params.blogId!);
+			let { blogId } = ds.parse(ds.object({ blogId: ds.string() }), ctx.params);
+			let result = await ownedBlog(db, blogId);
 			if (result instanceof Response) return result;
 			let { blog } = result;
 
@@ -338,7 +345,8 @@ export const usage = createAction(
 	routes.dashboard.blogUsage,
 	inject([Database] as const, async (db) => {
 		let ctx = getContext();
-		let result = await ownedBlog(db, ctx.params.blogId!);
+		let { blogId } = ds.parse(ds.object({ blogId: ds.string() }), ctx.params);
+		let result = await ownedBlog(db, blogId);
 		if (result instanceof Response) return result;
 		let { blog } = result;
 
@@ -386,7 +394,8 @@ export const restore = createAction(
 	routes.dashboard.blogRestore,
 	inject([Database, BlogProvisioner] as const, async (db, provisioner) => {
 		let ctx = getContext();
-		let result = await ownedBlog(db, ctx.params.blogId!);
+		let { blogId } = ds.parse(ds.object({ blogId: ds.string() }), ctx.params);
+		let result = await ownedBlog(db, blogId);
 		if (result instanceof Response) return result;
 		await provisioner.restore(result.blog.id);
 		return redirect(`/dashboard/blogs/${result.blog.id}`, { status: redirect.Status.SeeOther });
