@@ -1,3 +1,16 @@
+/**
+ * Turn-based battle engine modeled as a resumable generator. It defines the battle
+ * domain types (combatants, sides, events, and commands) and drives a match as a
+ * `Session` generator that yields events and suspends while awaiting player commands.
+ *
+ * Structuring the battle as a generator keeps the pure game logic decoupled from any
+ * particular renderer or input source: callers step the session, react to each event,
+ * and feed commands back in, so the same engine can back a UI, tests, or an AI player.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import type { CreatureId } from "../world/ids";
 
 export namespace Battle {
