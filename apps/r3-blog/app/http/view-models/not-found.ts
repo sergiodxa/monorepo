@@ -1,4 +1,14 @@
 /**
+ * View model for the 404 page. Defines the render-ready `Page` contract (title,
+ * description, emoji) and a `page` factory that maps caller input into that shape via
+ * a direct field copy. It exists so controllers build not-found template data through
+ * one canonical mapper instead of constructing ad hoc objects.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
+/**
  * Contracts for not-found page data exchanged between controllers and templates.
  *
  * Keeping these types grouped clarifies the public shape used by `NotFoundViewModel`.

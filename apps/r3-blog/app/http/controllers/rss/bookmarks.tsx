@@ -1,3 +1,13 @@
+/**
+ * HTTP action for the bookmarks-only RSS feed. It loads persisted like records and emits
+ * an RSS 2.0 document where each item links directly to the bookmarked URL, with channel
+ * links resolved as absolute URLs against the current request origin. It exists to
+ * publish the owner's saved links as a subscribable feed.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { xml } from "@pkg/http/response";
 import { RSS } from "@pkg/rss";
 import { inject } from "@pkg/service-container";

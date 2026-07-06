@@ -1,3 +1,13 @@
+/**
+ * View for the login page. Renders a centered heading, explanatory copy, an
+ * optional error message, and a form whose submit button kicks off the OAuth
+ * login action to authenticate for CMS access. Exists as the entry point users
+ * hit before reaching admin-only routes.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { css } from "remix/ui";
 
 import { BlogLayout } from "~/resources/components/layout/blog";

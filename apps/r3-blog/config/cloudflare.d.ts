@@ -1,3 +1,12 @@
+/**
+ * Ambient Cloudflare runtime type declarations for r3-blog. Defines the minimal
+ * KV, D1, and Secrets Store contracts the app adapters rely on, the `Cloudflare.Env`
+ * bindings from wrangler.jsonc, and the Worker `ExportedHandler` shape.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 declare global {
 	/** Minimal Cloudflare KV contract used by app adapters and tests. */
 	interface KVNamespace {

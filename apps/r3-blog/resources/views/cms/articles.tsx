@@ -1,3 +1,13 @@
+/**
+ * Views for managing articles in the CMS. `CMSArticlesIndexView` renders a table
+ * of articles with status indicators plus edit and modal-confirmed delete
+ * actions, and `CMSArticlesActionView` renders the create/edit form for an
+ * article's fields. Exist to power the admin CRUD screens for articles.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { css } from "remix/ui";
 
 import { Button } from "~/resources/components/button";

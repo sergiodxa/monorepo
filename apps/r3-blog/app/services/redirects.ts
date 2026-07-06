@@ -1,3 +1,12 @@
+/**
+ * Redirects service for r3-blog. Wraps the REDIRECTS KV namespace behind the
+ * Redirect repository, exposing path lookup, listing, upsert, and delete
+ * operations, and registers itself as an application-container singleton.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import type { Container, ServiceProvider } from "@pkg/service-container";
 
 import { env } from "cloudflare:workers";

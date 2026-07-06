@@ -1,3 +1,13 @@
+/**
+ * Unit tests for the KV-backed session storage adapter. They exercise round-trip
+ * read/write of session data and verify that destroying a session removes its KV key and
+ * clears the cookie, using an in-memory fake KV namespace. It exists to guard the
+ * adapter's persistence and teardown behavior without a real KV binding.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { describe, expect, test } from "bun:test";
 
 import { KVSessionStorage } from "./kv-session-storage-adapter";

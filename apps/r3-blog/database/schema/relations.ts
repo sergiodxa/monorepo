@@ -1,3 +1,12 @@
+/**
+ * Declares the relational graph between the r3-blog schema tables. Wires users to
+ * their authored posts, posts to their author and metadata rows, and metadata
+ * back to its owning post so repositories can traverse joins without manual SQL.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { belongsTo, hasMany } from "remix/data-table";
 
 import { postMeta } from "./post-meta";

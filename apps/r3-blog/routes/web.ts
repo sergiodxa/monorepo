@@ -1,3 +1,12 @@
+/**
+ * Top-level route table for r3-blog. Declares the public pages (feed, colors,
+ * sponsor, listings, individual posts, sitemap, WebFinger/avatar) and mounts the
+ * auth, RSS, and CMS sub-route trees so the router can resolve every URL.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { get, route } from "remix/fetch-router/routes";
 
 import auth from "~/routes/auth";

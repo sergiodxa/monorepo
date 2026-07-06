@@ -1,3 +1,13 @@
+/**
+ * View for the site home/feed page. Renders the author intro, an RSS link, and
+ * a chronological "Activity" timeline of posts, each with an icon, label, date,
+ * and optional preview badge. Includes a helper to format activity dates for
+ * compact display. Exists as the landing page of the public blog.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { css } from "remix/ui";
 
 import { BlogLayout } from "~/resources/components/layout/blog";

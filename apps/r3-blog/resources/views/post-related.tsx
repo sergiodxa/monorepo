@@ -1,3 +1,13 @@
+/**
+ * View for the "Related tutorials" section shown at the bottom of a post page.
+ * Defines the `PostRelatedView.Item`/`Model` shapes and returns a renderer that
+ * builds a responsive grid of related-tutorial cards, collapsing to an empty
+ * fragment when there are no related items to display.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { css } from "remix/ui";
 
 /**

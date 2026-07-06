@@ -1,3 +1,14 @@
+/**
+ * Repository for glossary posts, scoping the shared `Post` model to the
+ * `glossary` post type. It defines the glossary metadata shape, a codec that maps
+ * typed metadata to and from `post_meta` rows (resolving the latest value per
+ * key), and static CRUD/count helpers. Exists to give callers type-safe glossary
+ * persistence without touching the generic post layer directly.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import type { Database } from "remix/data-table";
 
 import { Post } from "~/app/repositories/post";

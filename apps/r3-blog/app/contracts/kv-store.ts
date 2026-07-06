@@ -1,4 +1,13 @@
 /**
+ * Defines the `KVStore` interface: an app-level abstraction over a key-value
+ * store with get, put, delete, and list operations. Decouples repositories and
+ * services from the concrete Cloudflare KV binding so they can be tested/mocked.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
+/**
  * Contract for reading, writing, and listing values in a key-value store.
  */
 export interface KVStore {

@@ -1,3 +1,12 @@
+/**
+ * Spanish translation dictionary for r3-blog. Holds the localized UI copy for the
+ * public site (nav, home, articles, tutorials, bookmarks, glossary, RSS) and the
+ * CMS, typed against the English catalog so both locales stay structurally in sync.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import type en from "./en";
 
 /**

@@ -1,3 +1,13 @@
+/**
+ * HTTP action for the `/feed` route. It loads combined activity from the feed
+ * repository, normalizes it through the feed view model, and renders the feed HTML view.
+ * It exists to keep the handler focused on request orchestration while data loading and
+ * view-shaping stay in the repository and view-model layers.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { inject } from "@pkg/service-container";
 import { getContext } from "remix/async-context-middleware";
 import { Database } from "remix/data-table";

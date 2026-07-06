@@ -1,3 +1,13 @@
+/**
+ * Authentication controllers for the blog. Exposes guest-only login and logout route
+ * controllers plus the OAuth callback action, driving a full PKCE authorization-code
+ * flow against the external identity provider, verifying the returned ID token, and
+ * establishing the local user session. It exists to centralize the sign-in/out lifecycle.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { redirect } from "@pkg/http/response";
 import { Logger } from "@pkg/logger";
 import { inject } from "@pkg/service-container";

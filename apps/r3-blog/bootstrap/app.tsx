@@ -1,3 +1,12 @@
+/**
+ * Assembles the r3-blog HTTP application. Wires global middleware, maps public,
+ * RSS, auth, and admin-guarded CMS routes onto the fetch router, and provides the
+ * streaming HTML renderer and SSR frame resolver used by controllers.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import type { Middleware, RequestContext } from "remix/fetch-router";
 import type { ResolveFrameContext } from "remix/ui/server";
 

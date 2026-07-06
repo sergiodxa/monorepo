@@ -1,3 +1,13 @@
+/**
+ * HTTP action for the XML sitemap. It combines static section URLs (feed, articles,
+ * tutorials, bookmarks, glossary) with individual published articles and tutorials,
+ * deriving `lastmod` hints from the freshest creation date per section. It exists to give
+ * crawlers a canonical, discoverable index of the site's public pages.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { xml } from "@pkg/http/response";
 import { inject } from "@pkg/service-container";
 import { Sitemap } from "@pkg/sitemap";

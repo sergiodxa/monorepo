@@ -1,3 +1,13 @@
+/**
+ * View for the logout confirmation page. Renders a centered heading, a
+ * "are you sure" prompt, and a form whose submit button posts to the logout
+ * action to sign the user out of the CMS. Exists to require an explicit
+ * confirmation step before ending the session.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { css } from "remix/ui";
 
 import { BlogLayout } from "~/resources/components/layout/blog";

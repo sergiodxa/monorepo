@@ -1,3 +1,13 @@
+/**
+ * CMS controller for URL redirect rules backed by the REDIRECTS KV namespace. It renders
+ * the index and creation form and handles create and destroy actions, normalizing and
+ * URI-encoding source paths so nested paths survive as route params. It exists to let
+ * operators manage redirect rules through the backoffice against the shared redirects service.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { redirect } from "@pkg/http/response";
 import { succeeded } from "@pkg/result";
 import { inject } from "@pkg/service-container";

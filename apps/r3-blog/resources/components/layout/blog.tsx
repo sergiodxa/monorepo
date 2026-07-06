@@ -1,3 +1,13 @@
+/**
+ * Layout component for public blog pages. Renders the HTML document shell with
+ * title, description, canonical, and custom meta tags, injects shared and
+ * per-page stylesheets, and draws the gradient body plus the main navigation
+ * bar before the page children. Exists to give every public page a shared shell.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import type { Handle, RemixNode } from "remix/ui";
 
 import { css } from "remix/ui";

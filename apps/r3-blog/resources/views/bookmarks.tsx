@@ -1,3 +1,13 @@
+/**
+ * View for the public bookmarks list page. Renders an intro, an RSS subscribe
+ * link, and a dated list of bookmark links with an optional suffix link (e.g. an
+ * archive snapshot). Includes helpers to normalize bookmark URLs into safe hrefs
+ * and to format dates. Exists to publish links the author read and liked.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { css } from "remix/ui";
 
 import { BlogLayout } from "~/resources/components/layout/blog";

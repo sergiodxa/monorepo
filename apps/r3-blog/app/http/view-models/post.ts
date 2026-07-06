@@ -1,3 +1,13 @@
+/**
+ * View model for public post pages. Maps loaded article and tutorial payloads into the
+ * normalized page contract, handling post-type branching, canonical URL selection,
+ * Open Graph/Twitter meta generation, and markdown parsing into a render tree. It
+ * centralizes this logic so the post controller stays focused on request handling.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import type { Markdown as MarkdownType } from "@pkg/markdown/server";
 
 import { Markdown } from "@pkg/markdown/server";

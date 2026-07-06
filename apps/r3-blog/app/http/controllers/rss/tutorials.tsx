@@ -1,3 +1,13 @@
+/**
+ * HTTP action for the tutorials-only RSS feed. It loads published tutorials and emits an
+ * RSS 2.0 document with channel and item links resolved as absolute URLs against the
+ * current request origin, using stable fallbacks for missing metadata. It exists to serve
+ * feed readers a dedicated, tenant-aware public tutorials channel.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { xml } from "@pkg/http/response";
 import { RSS } from "@pkg/rss";
 import { inject } from "@pkg/service-container";

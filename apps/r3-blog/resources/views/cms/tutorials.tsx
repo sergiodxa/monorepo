@@ -1,3 +1,13 @@
+/**
+ * Views for managing tutorials in the CMS. `CMSTutorialsIndexView` renders a
+ * table of tutorials with tag chips, status indicators, and edit plus
+ * modal-confirmed delete actions, and `CMSTutorialsActionView` renders the
+ * create/edit form. Exist to power the admin CRUD screens for tutorials.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { css } from "remix/ui";
 
 import { Button } from "~/resources/components/button";

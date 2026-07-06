@@ -1,3 +1,13 @@
+/**
+ * Views for managing redirect rules in the CMS. `CMSRedirectsIndexView` renders a
+ * table of from/to/status rules with modal-confirmed delete actions, and
+ * `CMSRedirectsNewView` renders the form to create a redirect with a status-code
+ * select. Exist to power the admin screens for KV-stored redirect rules.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { css } from "remix/ui";
 
 import { Button } from "~/resources/components/button";

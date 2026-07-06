@@ -1,3 +1,14 @@
+/**
+ * OAuth/OIDC service for authenticating against the sergiodxa auth server. It
+ * exposes `createProvider` to build a configured OIDC auth provider with the
+ * issuer's endpoints and scopes, and `exchangeCodeForIdToken` to trade an
+ * authorization code plus PKCE verifier for an ID token. Exists to centralize
+ * the app's OAuth login flow and its shared credential/input contracts.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import type { OIDCAuthProfile } from "remix/auth";
 
 import { createOIDCAuthProvider } from "remix/auth";

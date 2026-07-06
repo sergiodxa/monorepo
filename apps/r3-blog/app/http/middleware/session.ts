@@ -1,3 +1,13 @@
+/**
+ * HTTP middleware that attaches cookie-based, KV-backed session handling to each
+ * request. It defines the session value shape, cookie name, one-year TTL, and KV
+ * prefix, and lazily builds a singleton session middleware wired to a signed
+ * cookie and `KVSessionStorage`. Exists to persist login state across requests.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import type { Middleware } from "remix/fetch-router";
 
 import { createCookie } from "remix/cookie";

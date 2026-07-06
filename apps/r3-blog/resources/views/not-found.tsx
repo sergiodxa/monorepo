@@ -1,3 +1,12 @@
+/**
+ * View for the 404 not-found page. Renders a centered emoji badge, title, and
+ * description supplied by the route model inside the shared BlogLayout. Exists to
+ * give missing routes a friendly, on-brand fallback screen.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { css } from "remix/ui";
 
 import { BlogLayout } from "~/resources/components/layout/blog";

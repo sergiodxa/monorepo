@@ -1,3 +1,13 @@
+/**
+ * Data-schema for validating CMS article form submissions. `ArticleSchema`
+ * defaults title, locale, and content when absent and treats slug, excerpt,
+ * canonical_url, and published_at as optional. Exists to normalize and validate
+ * article input before it reaches the repository layer.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { defaulted, object, optional, string } from "remix/data-schema";
 
 /**

@@ -1,3 +1,13 @@
+/**
+ * View for the color-palette reference page. Declares the accent, neutral, and
+ * semantic UI token lists from colors.css and renders them as example neutral
+ * and accent UI cards plus grids of 50x50 swatches. Exists as a living style
+ * guide so the blog's design tokens can be previewed in the browser.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { css } from "remix/ui";
 
 import { BlogLayout } from "~/resources/components/layout/blog";

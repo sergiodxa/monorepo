@@ -1,3 +1,14 @@
+/**
+ * Repository for tutorial posts, scoping the shared `Post` model to the
+ * `tutorial` post type. It defines tutorial metadata types, a codec (including
+ * tag parsing/serialization) to/from `post_meta` rows, CRUD/count/find-by-slug
+ * helpers, a `listItems` projection, and related-tutorial lookup by shared tags.
+ * Filters out unpublished previews by default. Exists for type-safe tutorial data.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import type { Database } from "remix/data-table";
 
 import { and, eq, inList } from "remix/data-table";

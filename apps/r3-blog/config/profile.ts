@@ -1,4 +1,13 @@
 /**
+ * Defines the PROFILE constant holding Sergio's canonical site identity: display
+ * name, bio summary, WebFinger resource, and X, GitHub, and YouTube profile URLs.
+ * Centralizes these values so public routes and views share one source of truth.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
+/**
  * Centralizes Sergio's canonical site and social profile URLs for public routes and views.
  */
 export const PROFILE = {

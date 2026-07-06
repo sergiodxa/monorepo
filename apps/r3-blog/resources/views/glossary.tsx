@@ -1,3 +1,13 @@
+/**
+ * View for the public glossary page. Renders each term as a definition-list
+ * entry with an anchor id, optional alias, and definition, and highlights the
+ * entry matching the current URL fragment via `:target` styles. Exports a helper
+ * to build a term's in-page href. Exists to publish the author's term glossary.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { css } from "remix/ui";
 
 import { BlogLayout } from "~/resources/components/layout/blog";

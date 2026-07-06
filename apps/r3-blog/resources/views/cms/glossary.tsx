@@ -1,3 +1,13 @@
+/**
+ * Views for managing glossary terms in the CMS. `CMSGlossaryIndexView` renders a
+ * table of terms with their in-page slug anchors and edit plus modal-confirmed
+ * delete actions, and `CMSGlossaryActionView` renders the create/edit form.
+ * Exist to power the admin CRUD screens for glossary entries.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { css } from "remix/ui";
 
 import { Button } from "~/resources/components/button";

@@ -1,3 +1,12 @@
+/**
+ * Feed repository for r3-blog. Composes a single time-ordered public activity
+ * feed by loading articles, tutorials, bookmarks, and glossary entries in
+ * parallel, normalizing them to a shared item shape, and sorting newest-first.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import type { Database } from "remix/data-table";
 
 import { Post } from "~/app/repositories/post";

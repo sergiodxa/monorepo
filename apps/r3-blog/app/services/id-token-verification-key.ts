@@ -1,3 +1,12 @@
+/**
+ * ID-token verification key service for r3-blog. Imports and caches the remote
+ * ES256 JWK set from the auth server's JWKS endpoint so upstream identity tokens
+ * can be verified, and registers the resolver as an application-container singleton.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import type { Container, ServiceProvider } from "@pkg/service-container";
 
 import { JWK } from "@edgefirst-dev/jwt";

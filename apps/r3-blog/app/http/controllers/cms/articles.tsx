@@ -1,3 +1,13 @@
+/**
+ * CMS controller for article CRUD. It renders index and edit/new HTML views and handles
+ * create, update, and destroy actions, validating form data against the article schema and
+ * using See Other redirects to preserve post/redirect/get flow. It exists to manage
+ * articles from the backoffice, returning in-context 404 views for missing records.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { redirect } from "@pkg/http/response";
 import { succeeded } from "@pkg/result";
 import { inject } from "@pkg/service-container";

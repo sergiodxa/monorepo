@@ -1,3 +1,13 @@
+/**
+ * Data-schema for validating CMS tutorial form submissions. `TutorialSchema`
+ * defaults title, excerpt, and content when absent and treats slug, tags, and
+ * published_at as optional. Exists to normalize and validate tutorial input
+ * before it reaches the repository layer.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { defaulted, object, optional, string } from "remix/data-schema";
 
 /**

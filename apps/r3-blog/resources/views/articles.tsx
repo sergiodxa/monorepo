@@ -1,3 +1,13 @@
+/**
+ * View for the public articles list page. Renders an intro, an RSS subscribe
+ * link, and a dated list of article links (with optional preview badges) inside
+ * the shared BlogLayout. Exports helpers to build an article's canonical href
+ * and to format list dates. Exists to index all published articles.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { css } from "remix/ui";
 
 import { BlogLayout } from "~/resources/components/layout/blog";

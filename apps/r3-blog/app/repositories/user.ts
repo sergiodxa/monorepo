@@ -1,3 +1,12 @@
+/**
+ * User repository for r3-blog. Provides CRUD access to the `users` table plus
+ * lookups by id, email, subject id, and username, and reconciles auth-provider
+ * profiles into local accounts (create-or-update) at login time.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import type { Database } from "remix/data-table";
 
 import * as schema from "~/database/schema";

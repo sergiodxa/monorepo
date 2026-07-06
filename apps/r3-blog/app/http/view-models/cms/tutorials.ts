@@ -1,3 +1,13 @@
+/**
+ * View model for the CMS tutorial screens. It maps repository records into index rows,
+ * edit-form state, new-form defaults, and not-found fallbacks, and normalizes submitted
+ * form values into repository input, including tag CSV/array parsing and ISO publish-date
+ * coercion. It exists to isolate CMS formatting rules from the tutorial controllers.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { parameterize } from "inflected";
 
 import routes from "~/routes/web";

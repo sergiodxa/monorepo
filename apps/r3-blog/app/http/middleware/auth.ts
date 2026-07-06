@@ -1,3 +1,14 @@
+/**
+ * HTTP auth middleware and session helpers. It configures a session-based auth
+ * scheme that reads the user id from the session and verifies it against the user
+ * repository, and exports helpers to read the current user, check
+ * authenticated/admin status, log in/out, and get/set the stored ID token.
+ * Exists as the app's central authentication and identity access layer.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { getServiceContainer } from "@pkg/service-container";
 import { getContext } from "remix/async-context-middleware";
 import { auth as createAuthMiddleware, Auth, createSessionAuthScheme } from "remix/auth-middleware";

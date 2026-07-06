@@ -1,3 +1,12 @@
+/**
+ * OAuth provider service for r3-blog. Builds the configured OIDC provider for a
+ * request using the worker's client credentials and the current origin's callback
+ * URL, and registers the factory as an application-container singleton.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import type { Container, ServiceProvider } from "@pkg/service-container";
 
 import { env } from "cloudflare:workers";

@@ -1,3 +1,13 @@
+/**
+ * HTTP action for public article and tutorial post pages. It validates route params,
+ * negotiates the response format (HTML or Markdown) from the URL extension and Accept
+ * header, loads the post, enforces publish/admin visibility rules, and renders the post
+ * view or a typed 404/403. It exists to serve single posts across both content formats.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import * as ct from "@pkg/http/content-type";
 import { accepts } from "@pkg/http/negotiate";
 import { inject } from "@pkg/service-container";

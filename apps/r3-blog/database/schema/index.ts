@@ -1,4 +1,13 @@
 /**
+ * Barrel module for the r3-blog database schema. Re-exports the posts, post_meta,
+ * and users tables, their relation definitions, and the select/insert row types,
+ * giving repositories one import point for the whole schema surface.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
+/**
  * Re-exports module members.
  */
 export { postMeta } from "./post-meta";

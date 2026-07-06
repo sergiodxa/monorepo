@@ -1,3 +1,13 @@
+/**
+ * CMS controller for tutorial CRUD. It renders index and edit/new HTML views and handles
+ * create, update, and destroy actions, validating form data against the tutorial schema
+ * and using See Other redirects for the post/redirect/get flow. It exists to manage
+ * tutorials from the backoffice while delegating parsing and shaping to schema/view-model layers.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { redirect } from "@pkg/http/response";
 import { succeeded } from "@pkg/result";
 import { inject } from "@pkg/service-container";

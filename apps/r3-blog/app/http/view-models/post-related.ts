@@ -1,3 +1,13 @@
+/**
+ * View model for the related-posts block shown on a post page. Transforms repository
+ * related-post rows into link-ready cards, building each href through the tutorials
+ * route and formatting a human-readable reason from the matched tag. It exists to keep
+ * related-post presentation out of controllers while preserving repository ranking.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import type { Post } from "~/app/repositories/post";
 
 import routes from "~/routes/web";

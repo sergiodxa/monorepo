@@ -1,3 +1,13 @@
+/**
+ * Controller for `.well-known` discovery endpoints. It serves a WebFinger JRD document
+ * for the site's canonical identity (normalizing acct-URI and homepage-URL resource
+ * forms) and proxies the owner's public avatar as a PNG from GitHub. It exists to make
+ * the site discoverable by fediverse and identity clients under standard well-known paths.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { createController } from "remix/fetch-router";
 
 import { PROFILE } from "~/config/profile";

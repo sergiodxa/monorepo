@@ -1,3 +1,12 @@
+/**
+ * Logger service provider for r3-blog. Registers the shared `@pkg/logger` Logger
+ * as an application-container singleton for the current isolate, giving
+ * non-request-scoped infrastructure code a common logging instance.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import type { Container, ServiceProvider } from "@pkg/service-container";
 
 import { Logger } from "@pkg/logger";

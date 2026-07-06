@@ -1,3 +1,13 @@
+/**
+ * KV-backed session storage adapter implementing Remix's `SessionStorage`. It persists
+ * session data as JSON in a KV store under a configurable key prefix with a configurable
+ * TTL, and supports reading, saving, rotating, and destroying sessions. It exists to back
+ * sessions with edge KV storage instead of cookies or a relational database.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import type { Session, SessionStorage } from "remix/session";
 
 import { createSession } from "remix/session";

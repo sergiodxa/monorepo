@@ -1,3 +1,14 @@
+/**
+ * Repository for `like` posts (liked links/bookmarks), scoping the shared `Post`
+ * model to the `like` post type. It defines the title/url metadata shape, a codec
+ * to/from `post_meta` rows, standard CRUD/count helpers, and utilities to
+ * normalize a URL and build a Wayback Machine snapshot URL from `created_at`.
+ * Exists to give callers type-safe like persistence and link helpers.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import type { Database } from "remix/data-table";
 
 import { Post } from "~/app/repositories/post";

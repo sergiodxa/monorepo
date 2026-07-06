@@ -1,3 +1,13 @@
+/**
+ * View model for the articles index. Maps article repository list records into
+ * render-ready rows, building each `/articles/:slug` link from canonical route
+ * definitions and deriving preview state from publish-date semantics. It exists to keep
+ * article listing controllers free of routing and publish-state logic; order is preserved.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import type { ArticlePost } from "~/app/repositories/posts/article";
 
 import { Post } from "~/app/repositories/post";

@@ -1,3 +1,12 @@
+/**
+ * HTTP action for the public `/colors` route. It renders the design-token reference page
+ * from `ColorsView` with an empty, deterministic model and performs no I/O. It exists as
+ * a static catalog used to audit and preview the site's semantic color tokens.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { createAction } from "remix/fetch-router";
 
 import { ColorsView } from "~/resources/views/colors";

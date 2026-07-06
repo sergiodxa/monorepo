@@ -1,3 +1,12 @@
+/**
+ * Client-side entrypoint for the r3-blog browser bundle. Boots the Remix UI
+ * runtime, lazily resolving client modules from resources and routes via a glob
+ * map, and fetches SSR frames over the network for progressive hydration.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { run } from "remix/ui";
 
 const clientModules = import.meta.glob([

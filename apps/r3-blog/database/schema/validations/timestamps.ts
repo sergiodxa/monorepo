@@ -1,3 +1,12 @@
+/**
+ * Shared timestamp validation for the r3-blog schema. Provides `validateTimestamps`,
+ * which checks that named audit columns hold ISO-8601 UTC values with milliseconds,
+ * honoring nullability and skipping absent fields, returning data-table issues.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { fail } from "remix/data-table";
 
 let ISO_UTC_MILLIS_REGEX = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/;

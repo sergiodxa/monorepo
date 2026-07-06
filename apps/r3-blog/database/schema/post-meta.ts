@@ -1,3 +1,12 @@
+/**
+ * Data-table schema for the `post_meta` table. Defines extensible key-value
+ * metadata rows attached to posts via a cascading `post_id` foreign key, with
+ * validated audit timestamps, letting posts carry arbitrary structured extras.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import type { TableRow } from "remix/data-table";
 
 import { column as c, table } from "remix/data-table";

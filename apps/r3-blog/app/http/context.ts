@@ -1,3 +1,12 @@
+/**
+ * Request-context types for the r3-blog HTTP layer. Defines the `BlogRenderer`
+ * and render-option shapes and the `AppContext` produced after global middleware
+ * (form data, session, auth, renderer), and sets it as the router default type.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import type { ContextWithEntries, RequestContext } from "remix/fetch-router";
 import type { RemixNode } from "remix/ui";
 

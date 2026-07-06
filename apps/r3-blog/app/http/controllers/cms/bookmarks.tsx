@@ -1,3 +1,13 @@
+/**
+ * CMS controller for bookmark CRUD. It renders index and edit/new HTML views and handles
+ * create, update, and destroy actions against the like-post repository, validating form
+ * data with the bookmark schema and using See Other redirects. It exists to manage
+ * bookmarks from the admin dashboard, returning in-context 404 views for missing records.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { redirect } from "@pkg/http/response";
 import { succeeded } from "@pkg/result";
 import { inject } from "@pkg/service-container";

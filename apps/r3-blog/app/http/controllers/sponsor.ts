@@ -1,3 +1,13 @@
+/**
+ * HTTP action for the public `/sponsor` route. It issues a temporary redirect from the
+ * stable on-site sponsor URL to the configured GitHub Sponsors profile. It exists so the
+ * site can advertise a permanent sponsor link while the actual destination can change
+ * later without breaking shared URLs.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { redirect } from "@pkg/http/response";
 import { createAction } from "remix/fetch-router";
 

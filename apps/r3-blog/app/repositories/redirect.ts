@@ -1,3 +1,12 @@
+/**
+ * Redirect repository for r3-blog, backed by the REDIRECTS KV namespace. Reads,
+ * lists, upserts, and deletes redirect rules, normalizing `from` paths and
+ * parsing both legacy plain-string and structured JSON values into one contract.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import type { KVStore } from "~/app/contracts/kv-store";
 
 /**

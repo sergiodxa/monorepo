@@ -1,3 +1,13 @@
+/**
+ * HTTP action for the public `/bookmarks` page. It fetches liked-post records from the
+ * database, maps them through the bookmarks view model, and renders the bookmarks HTML
+ * view. It exists to keep bookmark retrieval in the repository layer rather than issuing
+ * SQL from the controller.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { inject } from "@pkg/service-container";
 import { getContext } from "remix/async-context-middleware";
 import { Database } from "remix/data-table";

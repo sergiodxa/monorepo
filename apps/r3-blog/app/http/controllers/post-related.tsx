@@ -1,3 +1,13 @@
+/**
+ * HTTP action for the related-posts fragment on post detail pages. It queries up to
+ * three related posts by type and slug from the database and renders them through the
+ * related-post view. Only tutorial relationships are served; missing params or a
+ * non-tutorial post type intentionally return an empty collection view.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { inject } from "@pkg/service-container";
 import { getContext } from "remix/async-context-middleware";
 import { Database } from "remix/data-table";

@@ -1,3 +1,13 @@
+/**
+ * HTTP middleware factory that enforces no-trailing-slash URLs. Any non-root path
+ * ending in `/` is permanently redirected to the same URL without the trailing
+ * slash; other requests pass through. Exists to keep URLs canonical for SEO and
+ * consistent routing.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import type { Middleware } from "remix/fetch-router";
 
 import { redirect } from "@pkg/http/response";

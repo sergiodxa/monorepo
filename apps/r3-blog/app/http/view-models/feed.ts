@@ -1,3 +1,13 @@
+/**
+ * View model for the activity feed page. Maps repository feed records into render-ready
+ * timeline rows, selecting per-kind copy, routes, and icon metadata for articles,
+ * tutorials, bookmarks, and glossary entries, and dropping entries missing required
+ * routing data. It centralizes feed presentation so controllers remain thin.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import type { Feed } from "~/app/repositories/feed";
 
 import { LikePost } from "~/app/repositories/posts/like";

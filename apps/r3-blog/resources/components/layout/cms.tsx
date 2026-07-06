@@ -1,3 +1,13 @@
+/**
+ * Layout component for the CMS/admin section. Renders the HTML document shell
+ * with head metadata, shared color styles, and a top navigation bar linking the
+ * dashboard, content sections, and logout, then wraps each page's children.
+ * Exists to give all authenticated CMS screens a consistent chrome.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import type { Handle, RemixNode } from "remix/ui";
 
 import { css } from "remix/ui";

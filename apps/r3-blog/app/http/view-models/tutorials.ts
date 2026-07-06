@@ -1,3 +1,13 @@
+/**
+ * View model for the tutorials index. Maps tutorial repository list records into
+ * render-ready rows, building each `/tutorials/:slug` link from canonical routes and
+ * deriving preview state from publish-date semantics. It exists to keep tutorial
+ * listing controllers thin; it only maps and annotates records without sorting or filtering.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import type { TutorialPost } from "~/app/repositories/posts/tutorial";
 
 import { Post } from "~/app/repositories/post";

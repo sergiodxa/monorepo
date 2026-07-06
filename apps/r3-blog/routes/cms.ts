@@ -1,3 +1,12 @@
+/**
+ * Route definitions for the r3-blog CMS. Declares the dashboard endpoint plus
+ * RESTful resource routes for articles, tutorials, bookmarks, glossary, and
+ * redirects, tuning each with include/exclude sets to match its editorial CRUD.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { get, resources, route } from "remix/fetch-router/routes";
 
 /**

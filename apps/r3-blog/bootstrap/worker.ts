@@ -1,3 +1,12 @@
+/**
+ * Cloudflare Worker fetch entrypoint for r3-blog. Registers the service-container
+ * providers once, then per request opens a container scope, resolves secrets and
+ * bindings from the environment, and forwards the request to the app router.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import type { ServiceProvider } from "@pkg/service-container";
 
 import { ServiceContainer } from "@pkg/service-container";

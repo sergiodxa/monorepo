@@ -1,3 +1,13 @@
+/**
+ * View for the public tutorials list page. Renders an intro, an RSS subscribe
+ * link, and a dated list of tutorial links (with optional preview badges) inside
+ * the shared BlogLayout. Exports helpers to build a tutorial href from a slug
+ * and to format list dates. Exists to index all published tutorials.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { css } from "remix/ui";
 
 import { BlogLayout } from "~/resources/components/layout/blog";

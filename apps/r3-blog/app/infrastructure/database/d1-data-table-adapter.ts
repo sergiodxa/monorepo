@@ -1,3 +1,13 @@
+/**
+ * Cloudflare D1 database adapter for `remix/data-table`. It compiles the library's data
+ * manipulation operations into SQLite-compatible SQL, executes them via D1's prepared
+ * statement API, and normalizes results (rows, affected counts, insert ids). It exists to
+ * run the app on D1, using logical transaction tokens since D1 forbids BEGIN/COMMIT and savepoints.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import {
 	getTableName,
 	getTablePrimaryKey,

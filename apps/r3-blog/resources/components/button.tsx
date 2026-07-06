@@ -1,3 +1,12 @@
+/**
+ * Reusable Button UI component for r3-blog. Renders a native `<button>` styled
+ * with the app's accent design tokens (colors, radius, sizing) and merges any
+ * caller-supplied `mix` styles, giving a consistent primary button across views.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import type { Handle, Props } from "remix/ui";
 
 import { css } from "remix/ui";

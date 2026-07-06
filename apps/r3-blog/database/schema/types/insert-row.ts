@@ -1,3 +1,12 @@
+/**
+ * Defines the generic `InsertRow` type helper for the schema. Derives an
+ * insert-time payload from a table schema by making its row fields optional so
+ * DB defaults and generated columns can be omitted while keeping value types.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import type { AnyTable, TableRow } from "remix/data-table";
 
 /**

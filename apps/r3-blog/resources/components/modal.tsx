@@ -1,3 +1,12 @@
+/**
+ * Reusable Modal UI component for r3-blog. Renders a native `<dialog>` styled with
+ * the app's neutral design tokens and a dimmed backdrop, merging caller `mix`
+ * overrides, so dialogs share one consistent shell across the site and CMS.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import type { Handle, Props } from "remix/ui";
 
 import { css } from "remix/ui";

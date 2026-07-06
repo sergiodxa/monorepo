@@ -1,3 +1,12 @@
+/**
+ * Data-table schema for the `users` table. Defines local account profile fields
+ * (email, username, avatar, display name) plus a guest/admin role and an optional
+ * external `subject_id`, with validated audit timestamps for each record.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import type { TableRow } from "remix/data-table";
 
 import { column as c, table } from "remix/data-table";

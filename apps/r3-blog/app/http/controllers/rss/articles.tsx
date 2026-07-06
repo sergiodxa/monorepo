@@ -1,3 +1,13 @@
+/**
+ * HTTP action for the articles-only RSS feed. It loads published articles, builds an
+ * RSS 2.0 document with channel metadata pointing at the articles index, and emits one
+ * item per article using absolute canonical URLs and a `created_at` publish-date fallback.
+ * It exists to give feed readers a dedicated, public articles channel.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { xml } from "@pkg/http/response";
 import { RSS } from "@pkg/rss";
 import { inject } from "@pkg/service-container";

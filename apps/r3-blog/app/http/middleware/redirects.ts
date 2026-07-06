@@ -1,3 +1,13 @@
+/**
+ * HTTP middleware that applies configured redirect rules. For GET/HEAD requests
+ * it looks up a redirect for the current path via `RedirectsService` and, when a
+ * valid non-self target exists, returns a redirect response with the rule's
+ * status; otherwise it passes through. Exists to serve author-managed redirects.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import type { Middleware } from "remix/fetch-router";
 
 import { inject } from "@pkg/service-container";

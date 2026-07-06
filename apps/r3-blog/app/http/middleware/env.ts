@@ -1,3 +1,13 @@
+/**
+ * HTTP middleware and accessor for environment bindings. `createEnvMiddleware`
+ * stores `App.Env` in the request context, and the overloaded `getEnv` reads a
+ * key back out with optional fallback, throwing `MissingEnvError` when a required
+ * value is absent. Exists to expose typed env access to downstream handlers.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { getContext } from "remix/async-context-middleware";
 import { createContextKey, type Middleware } from "remix/fetch-router";
 

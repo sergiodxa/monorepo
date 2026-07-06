@@ -1,3 +1,13 @@
+/**
+ * HTTP action for the CMS dashboard. It resolves aggregate counts of articles, tutorials,
+ * bookmarks, and glossary terms in parallel from the repository layer and renders the
+ * dashboard view with those stats. It exists to give CMS operators an at-a-glance summary
+ * of content volume on the backoffice landing page.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { inject } from "@pkg/service-container";
 import { getContext } from "remix/async-context-middleware";
 import { Database } from "remix/data-table";

@@ -1,3 +1,12 @@
+/**
+ * Data-table schema for the `posts` table. Defines the shared record for all
+ * post-like content (articles, tutorials, likes, comments, glossary), enforcing
+ * an author foreign key, an enumerated type, and validated audit timestamps.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import type { TableRow } from "remix/data-table";
 
 import { column as c, table } from "remix/data-table";

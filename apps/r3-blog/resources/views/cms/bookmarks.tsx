@@ -1,3 +1,13 @@
+/**
+ * Views for managing bookmarks in the CMS. `CMSBookmarksIndexView` renders a
+ * table of bookmarks with normalized URL links and edit plus modal-confirmed
+ * delete actions, and `CMSBookmarksActionView` renders the create/edit form.
+ * Includes a URL-normalizing helper. Exist to power the admin CRUD for bookmarks.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { css } from "remix/ui";
 
 import { Button } from "~/resources/components/button";

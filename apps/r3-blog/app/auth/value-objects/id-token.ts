@@ -1,3 +1,13 @@
+/**
+ * Value object wrapping an OpenID Connect ID token. The `IdToken` class extends
+ * JWT to expose strongly-typed getters for standard claims (sub, aud, name,
+ * email, picture, preferred_username, email_verified), and `verifyIdToken`
+ * validates a raw token's signature against the sergiodxa auth issuer/audience.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { JWK, JWT } from "@edgefirst-dev/jwt";
 
 /**

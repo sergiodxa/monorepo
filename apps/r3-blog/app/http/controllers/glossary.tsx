@@ -1,3 +1,13 @@
+/**
+ * HTTP action for the public `/glossary` index. It resolves all glossary entries from the
+ * database, projects them through the glossary view model, and renders the glossary HTML
+ * view. It exists to serve the server-rendered glossary listing while keeping data access
+ * in the repository layer.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { inject } from "@pkg/service-container";
 import { getContext } from "remix/async-context-middleware";
 import { Database } from "remix/data-table";

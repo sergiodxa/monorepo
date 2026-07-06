@@ -1,3 +1,12 @@
+/**
+ * Post repository for r3-blog and the core of its content model. Owns generic
+ * post CRUD, publish-date semantics, timestamp normalization, joined post+meta
+ * reads, and typed per-type mapping via codecs for articles, tutorials, etc.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import type { Database } from "remix/data-table";
 
 import { eq } from "remix/data-table";

@@ -1,3 +1,14 @@
+/**
+ * Repository for article posts, scoping the shared `Post` model to the `article`
+ * post type. It defines article metadata types, a codec mapping typed metadata to
+ * and from `post_meta` rows, and CRUD/count/find-by-slug helpers plus a
+ * `listItems` projection that joins title/slug meta and sorts by publish date.
+ * Filters out unpublished previews by default. Exists for type-safe article data.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import type { Database } from "remix/data-table";
 
 import { and, eq, inList } from "remix/data-table";

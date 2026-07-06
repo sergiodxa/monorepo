@@ -1,3 +1,13 @@
+/**
+ * HTTP action for the public `/tutorials` index. It loads tutorial list items from the
+ * database (including preview posts when the viewer is an admin), maps them through the
+ * tutorials view model, and renders the tutorials HTML view. It exists to project
+ * persisted tutorial records into a server-rendered listing page.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { inject } from "@pkg/service-container";
 import { getContext } from "remix/async-context-middleware";
 import { Database } from "remix/data-table";

@@ -1,3 +1,13 @@
+/**
+ * View model for the bookmarks page. Normalizes liked-post records into render-ready
+ * rows, ordering them by activity time (publish date, else creation date) and deriving
+ * preview state plus optional Wayback Machine archive metadata for absolute HTTP URLs.
+ * It centralizes bookmark presentation logic so controllers only pass through raw data.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { LikePost as LikePostRepository } from "~/app/repositories/posts/like";
 
 /**

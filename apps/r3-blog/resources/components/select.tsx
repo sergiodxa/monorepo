@@ -1,3 +1,12 @@
+/**
+ * Reusable Select UI component for r3-blog. Renders a native `<select>` styled with
+ * the app's neutral form-control design tokens (sizing, border, colors) and merges
+ * caller `mix` styles, keeping dropdowns visually consistent with other form fields.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import type { Handle, Props } from "remix/ui";
 
 import { css } from "remix/ui";

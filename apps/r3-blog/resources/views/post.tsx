@@ -1,3 +1,13 @@
+/**
+ * View for the blog post detail page. Renders the post's tags, eyebrow, title,
+ * a "View as Markdown" link, and the Markdown-rendered body inside the shared
+ * BlogLayout, plus a GitHub sponsor call-to-action and, for tutorials, an
+ * embedded related-posts frame. Exists to present a single article or tutorial.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { MarkdownView } from "@pkg/markdown/client/remix";
 import { Frame, css } from "remix/ui";
 

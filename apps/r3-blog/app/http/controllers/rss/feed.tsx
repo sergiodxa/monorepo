@@ -1,3 +1,13 @@
+/**
+ * HTTP action for the combined RSS feed. It loads published articles, tutorials,
+ * bookmarks, and glossary terms, normalizes them into RSS items with absolute links,
+ * sorts them newest-first, and serializes the feed as XML. It exists to expose the entire
+ * site's activity as a single reverse-chronological feed that excludes preview-only posts.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { xml } from "@pkg/http/response";
 import { RSS } from "@pkg/rss";
 import { inject } from "@pkg/service-container";

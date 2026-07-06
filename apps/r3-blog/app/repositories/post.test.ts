@@ -1,3 +1,12 @@
+/**
+ * Unit tests for the Post repository. Exercises `Post.isPublishedAt`, verifying
+ * that a null publish date counts as published and that unix-second timestamps in
+ * the past are treated as published while future ones are treated as preview.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { describe, expect, test } from "bun:test";
 
 import { Post } from "./post";

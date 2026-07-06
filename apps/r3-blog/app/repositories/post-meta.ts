@@ -1,3 +1,12 @@
+/**
+ * PostMeta repository for r3-blog. Provides read/create access to the key-value
+ * `post_meta` rows attached to posts, with lookups by id, post, and key/value,
+ * plus a create helper that fills generated ids and ISO timestamps on insert.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import type { Database } from "remix/data-table";
 
 import * as schema from "~/database/schema";

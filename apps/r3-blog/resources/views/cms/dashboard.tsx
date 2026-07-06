@@ -1,3 +1,13 @@
+/**
+ * View for the CMS dashboard. Renders a grid of stat cards summarizing counts of
+ * articles, likes, tutorials, and glossary terms, each linking to its management
+ * section, inside the CMSLayout shell. Exists as the landing page of the admin
+ * area with at-a-glance content totals.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { css } from "remix/ui";
 
 import { CMSLayout } from "~/resources/components/layout/cms";

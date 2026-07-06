@@ -1,3 +1,13 @@
+/**
+ * HTTP action for the public `/articles` index. It loads article list items from the
+ * database (including preview posts when the viewer is an admin), maps them through the
+ * articles view model, and renders the articles HTML view. It exists to compose
+ * repository data into a server-rendered listing without SQL in the controller.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { inject } from "@pkg/service-container";
 import { getContext } from "remix/async-context-middleware";
 import { Database } from "remix/data-table";

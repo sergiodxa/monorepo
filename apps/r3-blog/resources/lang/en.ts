@@ -1,4 +1,13 @@
 /**
+ * English translation dictionary for r3-blog and the source-of-truth locale.
+ * Holds the UI copy for the public site (nav, home, articles, tutorials,
+ * bookmarks, glossary, RSS) and the CMS; its shape defines the translation contract.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
+/**
  * English translation strings used across the blog UI and CMS.
  */
 export default {
