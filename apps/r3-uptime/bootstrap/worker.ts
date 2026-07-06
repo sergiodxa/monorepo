@@ -1,3 +1,13 @@
+/**
+ * Cloudflare Worker entry point for the r3-uptime app. Its fetch handler builds a
+ * data-table database backed by the D1 binding, constructs the application router
+ * with that dependency, and forwards each incoming request to it. It exists as the
+ * runtime edge that connects Cloudflare's environment to the app composition root.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { createDatabase } from "remix/data-table";
 
 import { createD1DataTableAdapter } from "~/infrastructure/database/d1-data-table-adapter";

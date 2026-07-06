@@ -1,3 +1,14 @@
+/**
+ * Application bootstrap that assembles the r3-uptime fetch-router. It registers the
+ * core middleware stack (async context, form data, method override, database, HTML
+ * rendering), mounts the web routes, and wires a request-scoped SSR renderer that
+ * resolves and follows nested frame redirects. It exists as the composition root
+ * shared by the worker and any other runtime entry point.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import type { RequestContext, Router } from "remix/fetch-router";
 import type { RemixNode } from "remix/ui";
 import type { ResolveFrameContext } from "remix/ui/server";

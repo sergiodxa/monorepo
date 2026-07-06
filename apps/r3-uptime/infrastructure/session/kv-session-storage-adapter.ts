@@ -1,3 +1,13 @@
+/**
+ * KV-backed session storage adapter for remix/session. It implements SessionStorage
+ * by reading, writing, and destroying JSON-serialized session payloads in a key-value
+ * store under a configurable key prefix and TTL, validating the stored tuple shape on
+ * read. It exists so the app can persist sessions on Cloudflare KV at the edge.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import type { Session, SessionStorage } from "remix/session";
 
 import { createSession } from "remix/session";

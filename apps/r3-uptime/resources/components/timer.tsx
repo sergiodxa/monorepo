@@ -1,3 +1,13 @@
+/**
+ * Interactive Counter client component for the r3-uptime UI. Registered as a remix/ui
+ * client entry, it renders increment and decrement buttons around a live count and
+ * calls handle.update to re-render on each click. It exists as a demonstration of
+ * client-side interactivity and hydration in the app's rendering stack.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import type { Handle } from "remix/ui";
 
 import { clientEntry, css, on } from "remix/ui";

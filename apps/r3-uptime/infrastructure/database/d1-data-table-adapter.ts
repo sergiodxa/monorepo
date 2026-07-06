@@ -1,3 +1,15 @@
+/**
+ * Cloudflare D1 adapter for remix/data-table. It implements the DatabaseAdapter
+ * interface by compiling data-manipulation and migration operations into SQLite SQL,
+ * binding and executing them against a D1 binding, and normalizing rows, affected
+ * counts, and insert ids. Because D1 lacks BEGIN/COMMIT and savepoints, it models
+ * logical transaction tokens and rejects savepoint calls. It exists to let the app
+ * run the data-table query layer on Cloudflare's edge SQLite database.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import {
 	getTableName,
 	getTablePrimaryKey,

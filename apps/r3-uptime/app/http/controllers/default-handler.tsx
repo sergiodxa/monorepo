@@ -1,3 +1,13 @@
+/**
+ * Default request handler for the r3-uptime router. It builds the not-found view
+ * model, composes the not-found view and Counter component into the document layout,
+ * and renders the result as a 404 response. It exists as the fetch-router fallback
+ * that serves the 404 page for any request that matches no route.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import type { Renderer } from "remix/render-middleware";
 import type { RemixNode } from "remix/ui";
 

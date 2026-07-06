@@ -1,3 +1,14 @@
+/**
+ * Browser entry point that hydrates the r3-uptime client. It globs the resources and
+ * routes modules, then runs the remix/ui client with a loader that dynamically
+ * imports the requested client-entry module by URL and a resolver that fetches SSR
+ * frame HTML. It exists as the single script the SSR document loads to bring the
+ * server-rendered UI to life on the client.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { run } from "remix/ui";
 
 const clientModules = import.meta.glob([
