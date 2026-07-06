@@ -133,6 +133,52 @@ test("Misty Terrain reduces dragon damage only against grounded targets", () => 
 	expect(airborneDamage).toBe(neutralDamage);
 });
 
+// Regression: field-protection modifiers (screens, weather, terrain) used to be
+// mutually exclusive early returns, so only the first matching one applied. They
+// must now stack as sequential multiplies.
+test("Screens and weather stack instead of only the first modifier applying", () => {
+	let base = createDamageScenario("EMBER");
+	let screenOnly = createDamageScenario("EMBER");
+	let weatherOnly = createDamageScenario("EMBER");
+	let both = createDamageScenario("EMBER");
+
+	// EMBER is a special fire move: light screen halves special, sun boosts fire.
+	screenOnly.state.sides[1]!.effects.lightScreenTurns = 5;
+
+	weatherOnly.state.field.weather = "sun";
+	weatherOnly.state.field.weatherTurns = 5;
+
+	both.state.sides[1]!.effects.lightScreenTurns = 5;
+	both.state.field.weather = "sun";
+	both.state.field.weatherTurns = 5;
+
+	let baseDamage = resolveDirectDamage(base);
+	let screenDamage = resolveDirectDamage(screenOnly);
+	let weatherDamage = resolveDirectDamage(weatherOnly);
+	let bothDamage = resolveDirectDamage(both);
+
+	// Each modifier alone changes the damage in its own direction.
+	expect(screenDamage).toBe(Math.floor(Math.floor(baseDamage * 0.5)));
+	expect(weatherDamage).toBe(Math.floor(baseDamage * 1.5));
+
+	// With both active the screen (×0.5) and sun (×1.5) multipliers stack,
+	// flooring after each step. Neither single-modifier result matches.
+	expect(bothDamage).toBe(Math.floor(Math.floor(baseDamage * 0.5) * 1.5));
+	expect(bothDamage).not.toBe(screenDamage);
+	expect(bothDamage).not.toBe(weatherDamage);
+});
+
+// Regression: a critical hit must ignore reflect/light-screen halving.
+test("Critical hits are not reduced by screens", () => {
+	let withoutScreen = createDamageScenario();
+	let withScreen = createDamageScenario();
+
+	// TACKLE is a physical move, so reflect would normally halve it.
+	withScreen.state.sides[1]!.effects.reflectTurns = 5;
+
+	expect(resolveCriticalDamage(withScreen)).toBe(resolveCriticalDamage(withoutScreen));
+});
+
 function createDamageScenario(
 	moveId: MoveId = "TACKLE",
 	userSpeciesId = PRIMARY_SPECIES_ID,

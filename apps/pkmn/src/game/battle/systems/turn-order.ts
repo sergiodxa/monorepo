@@ -17,7 +17,6 @@ import type { GameData } from "~/game/data/game-data";
 import type { Move } from "~/game/data/move";
 
 import { DamageClass } from "~/game/data/move";
-import { Type } from "~/game/data/type";
 
 import type {
 	BattleActiveSlotState,
@@ -32,13 +31,20 @@ const MOVE_SLOTS = [0, 1, 2, 3] as const;
 
 const FALLBACK_MOVE_ID = "fallback";
 
+/**
+ * Sentinel move type with no entry in any type chart. The effectiveness lookup
+ * treats a missing attacking-type entry as neutral (×1), so the fallback move
+ * is never zeroed by type immunity the way a `normal`-typed move would be.
+ */
+const TYPELESS = "typeless";
+
 const FALLBACK_MOVE: Move = {
-	type: Type.NORMAL,
+	type: TYPELESS,
 	damageClass: DamageClass.Physical,
 	power: 50,
 	accuracy: 0,
 	pp: 0,
-	effect: { kind: "none" },
+	effect: { kind: "recoil", ratio: 0.25 },
 };
 
 /** Captures one validated command with its resolved move and ordering data. */

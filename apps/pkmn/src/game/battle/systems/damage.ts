@@ -205,28 +205,34 @@ function getBaseDamage(
 		Math.floor(Math.floor((((2 * level) / 5 + 2) * power * attackStat) / defenseStat) / 50) + 2;
 	let targetSide = context.getCombatantSide(target);
 
-	if (
-		move.damageClass === DamageClass.Physical &&
-		context.state.sides[targetSide]!.effects.reflectTurns > 0
-	) {
-		return Math.floor(baseDamage * 0.5);
-	}
+	// Field protections stack: screens, then weather, then terrain are applied
+	// as sequential multiplies (flooring after each step) rather than mutually
+	// exclusive early returns, so a move can be affected by several at once.
+	if (!criticalHit) {
+		// Screens are ignored on a critical hit.
+		if (
+			move.damageClass === DamageClass.Physical &&
+			context.state.sides[targetSide]!.effects.reflectTurns > 0
+		) {
+			baseDamage = Math.floor(baseDamage * 0.5);
+		}
 
-	if (
-		move.damageClass === DamageClass.Special &&
-		context.state.sides[targetSide]!.effects.lightScreenTurns > 0
-	) {
-		return Math.floor(baseDamage * 0.5);
+		if (
+			move.damageClass === DamageClass.Special &&
+			context.state.sides[targetSide]!.effects.lightScreenTurns > 0
+		) {
+			baseDamage = Math.floor(baseDamage * 0.5);
+		}
 	}
 
 	if (context.state.field.weather === "sun") {
-		if (move.type === "fire") return Math.floor(baseDamage * 1.5);
-		if (move.type === "water") return Math.floor(baseDamage * 0.5);
+		if (move.type === "fire") baseDamage = Math.floor(baseDamage * 1.5);
+		if (move.type === "water") baseDamage = Math.floor(baseDamage * 0.5);
 	}
 
 	if (context.state.field.weather === "rain") {
-		if (move.type === "water") return Math.floor(baseDamage * 1.5);
-		if (move.type === "fire") return Math.floor(baseDamage * 0.5);
+		if (move.type === "water") baseDamage = Math.floor(baseDamage * 1.5);
+		if (move.type === "fire") baseDamage = Math.floor(baseDamage * 0.5);
 	}
 
 	if (
@@ -234,7 +240,7 @@ function getBaseDamage(
 		move.type === "electric" &&
 		context.isGrounded(user)
 	) {
-		return Math.floor(baseDamage * 1.3);
+		baseDamage = Math.floor(baseDamage * 1.3);
 	}
 
 	if (
@@ -242,7 +248,7 @@ function getBaseDamage(
 		move.type === "grass" &&
 		context.isGrounded(user)
 	) {
-		return Math.floor(baseDamage * 1.3);
+		baseDamage = Math.floor(baseDamage * 1.3);
 	}
 
 	if (
@@ -250,7 +256,7 @@ function getBaseDamage(
 		move.type === "psychic" &&
 		context.isGrounded(user)
 	) {
-		return Math.floor(baseDamage * 1.3);
+		baseDamage = Math.floor(baseDamage * 1.3);
 	}
 
 	if (
@@ -258,7 +264,7 @@ function getBaseDamage(
 		move.type === "dragon" &&
 		context.isGrounded(target)
 	) {
-		return Math.floor(baseDamage * 0.5);
+		baseDamage = Math.floor(baseDamage * 0.5);
 	}
 
 	return baseDamage;

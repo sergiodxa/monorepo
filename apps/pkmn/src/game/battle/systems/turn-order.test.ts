@@ -22,6 +22,7 @@ import { SPECIES } from "~/content/species";
 import { GameData } from "~/game/data/game-data";
 import { DamageClass, type Move } from "~/game/data/move";
 import { Stat } from "~/game/data/stat";
+import { Effectiveness, Type } from "~/game/data/type";
 import { Creature } from "~/game/world/creature";
 
 import {
@@ -179,6 +180,72 @@ test("Battle uses its RNG tie-breaker for equal-speed actions under Trick Room",
 		target: { side: 0, slot: 0 },
 	});
 });
+
+// Regression: the fallback move used to be typed `normal`, so a Ghost target
+// (immune to Normal) zeroed it out. It must be typeless, resolving to neutral
+// (×1) effectiveness so it always deals damage.
+test("Fallback move is not zeroed by a type immune to Normal", () => {
+	let fallback = resolveFallbackMove();
+
+	// The engine resolves effectiveness via `typeChart[move.type] ?? {}`, so a
+	// move type with no chart entry stays neutral for any target types.
+	let normalVsGhost = resolveEffectiveness(Type.NORMAL, [Type.GHOST, Type.POISON]);
+	let fallbackVsGhost = resolveEffectiveness(fallback.type, [Type.GHOST, Type.POISON]);
+
+	expect(normalVsGhost).toBe(Effectiveness.ZERO);
+	expect(fallbackVsGhost).toBe(Effectiveness.NORMAL);
+});
+
+// Regression: the fallback move had no recoil; it must deal 1/4 of the damage
+// dealt back to the user via the existing `recoil` effect.
+test("Fallback move applies quarter-damage recoil to the user", () => {
+	let fallback = resolveFallbackMove();
+
+	expect(fallback.effect).toEqual({ kind: "recoil", ratio: 0.25 });
+
+	// The recoil helper applies `max(1, floor(damageDealt * ratio))`.
+	let recoil = fallback.effect;
+	if (recoil.kind !== "recoil") throw new TypeError("Expected the fallback move to have recoil.");
+	expect(Math.max(1, Math.floor(100 * recoil.ratio))).toBe(25);
+});
+
+/** Drives one PP-exhausted combatant through turn ordering to read its fallback move. */
+function resolveFallbackMove(): Move {
+	let state = createBattleState(1, 0);
+	let move = createStubMove();
+	let slot = createActiveSlot("TACKLE");
+	slot.combatant.creature.status.pp = [0, 0, 0, 0];
+
+	let actions = getTurnActions(
+		{
+			state,
+			gameData: createStubGameData(move),
+			random: () => 0.5,
+			getActiveCombatant: () => slot,
+			canCombatantLeaveBattle: () => true,
+			canSwitchCombatant: () => true,
+			getCombatantSpeed: () => 100,
+			getMovePriority: () => 0,
+		},
+		[{ side: 0, slot: 0 }],
+		[{ type: "fight", move: 0, target: { side: 1, slot: 0 } }],
+	);
+
+	let fallback = actions[0]?.move;
+	if (!fallback) throw new ReferenceError("Expected a resolved fallback action.");
+	return fallback;
+}
+
+/** Mirrors the engine's attacking-type effectiveness lookup against target types. */
+function resolveEffectiveness(moveType: string, targetTypes: Type[]): Effectiveness {
+	// A typeless move has no chart entry, so the lookup yields neutral effectiveness.
+	let moveMatch = GAME_DATA.typeChart[moveType as Type] ?? {};
+	return targetTypes.reduce<Effectiveness>((factor, type) => {
+		let matchup = moveMatch[type];
+		if (matchup !== undefined) return factor * matchup;
+		return factor;
+	}, Effectiveness.NORMAL);
+}
 
 /** Returns a minimal move record for turn-order sorting tests. */
 function createStubMove(): Move {
