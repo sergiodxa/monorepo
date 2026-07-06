@@ -67,7 +67,7 @@ bunx react-router routes --json # Extract React Router routes as JSON for AI age
 - MUST check what Remix v3 provides before hand-rolling middleware/helpers — prefer `remix/cop-middleware`, `remix/session-middleware`, `createAction`/`createController`, `remix/data-schema`, `remix/auth`, and `remix/ui` over custom equivalents
 - MUST resolve app services (Database, API clients) through `@pkg/service-container` (ADR-008) via `inject([...])` / `getServiceContainer()`; keep request-lifecycle values (session, current user, tenant, request logger) in middleware/context, never in the container
 - MUST render server HTML as `remix/ui` JSX with `css()` mixins; never build HTML from strings (`remix/html-template` or inline HTML template literals)
-- MUST call the global `fetch` directly; never add an injectable fetch parameter (e.g. `fetchImpl: typeof fetch = fetch`) — mock outbound requests with MSW in tests instead
+- MUST call the global `fetch` directly; never add an injectable fetch parameter (e.g. `fetchImpl: typeof fetch = fetch`)
 - MUST describe code on its own terms in comments; never name another app or package as the source of a pattern (e.g. "mirrors the r3-blog app")
 - MUST keep `packages/*` app-agnostic: no imports from, or references to, `apps/*` in code or comments
 
