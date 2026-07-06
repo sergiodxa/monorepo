@@ -34,6 +34,9 @@ bunx react-router routes --json # Extract React Router routes as JSON for AI age
 
 - MUST use Bun to install dependencies, run scripts, and execute tests
 - MUST follow Conventional Commits for commit messages
+- MUST commit directly on `main`; never create a branch unless explicitly asked (other sessions commit to `main` concurrently, and an unprompted branch strands their commits)
+- MUST run `bun format:fix` at the repo root before every commit
+- MUST preserve every individual commit when merging into `main` — use a fast-forward merge (`git merge --ff-only`), never squash and never create a merge commit
 - MUST use `@pkg/result` for error handling instead of throwing exceptions
 - MUST write using `bun:test`, never using external test runners like Jest or Mocha, or Node's built-in `assert` module
 - MUST run tests from the root of the repository, never from individual package directories
@@ -82,6 +85,7 @@ bunx react-router routes --json # Extract React Router routes as JSON for AI age
   ```
 
   When a `#!` shebang must be first, place the block immediately after it.
+
 - MUST write JSDoc comments for every exported class, function, method, variable, type, interface, and constant in this app or package.
 - MUST write JSDoc comments for non-exported, non-private module symbols when they are part of a file's behavior contract (helpers, mappers, normalizers, comparators, etc.).
 - MUST write JSDoc comments for every non-private member of exported classes (including static members, instance methods, getters/setters, and constructor when present).
