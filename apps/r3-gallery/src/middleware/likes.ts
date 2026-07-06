@@ -1,3 +1,13 @@
+/**
+ * Likes middleware and storage for the gallery. It exposes a context key plus a
+ * localStorage-backed store (with an in-memory fallback for non-browser runs) that
+ * lists, checks, and toggles liked photo ids per album, so route actions can persist
+ * likes across navigations without a server.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import type { Context, Middleware } from "@pkg/r3-ui-router";
 
 import { createContextKey } from "@pkg/r3-ui-router";

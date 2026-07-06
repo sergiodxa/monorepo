@@ -1,3 +1,13 @@
+/**
+ * Photo route action controller for the gallery. It fetches a single photo by id from
+ * the JSONPlaceholder data layer and renders the standalone photo page, or a
+ * state-message error view on failure. It backs direct `/photo/:id` visits and reloads
+ * of the masked photo URL.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { createAction } from "@pkg/r3-ui-router";
 import { isFailure } from "@pkg/result";
 

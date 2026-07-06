@@ -1,3 +1,13 @@
+/**
+ * Album route action controller for the gallery. It loads the album, its photos, and
+ * an optionally selected photo (from the `photoId` query) in parallel, surfaces any
+ * failure as a state message, and renders the album page with the current liked photo
+ * ids so the grid and optional overlay can display together.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { createAction } from "@pkg/r3-ui-router";
 import { isFailure } from "@pkg/result";
 

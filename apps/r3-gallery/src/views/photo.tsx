@@ -1,3 +1,13 @@
+/**
+ * PhotoPage view for the gallery. It renders a photo either as a full standalone page
+ * (wrapped in the Shell for direct `/photo/:id` visits) or, when shown inside a Frame,
+ * as a bare preview with a "Reload frame" control. It exists to adapt one photo view to
+ * both the direct route and the album modal overlay.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import type { Handle } from "remix/ui";
 
 import { css, on } from "remix/ui";

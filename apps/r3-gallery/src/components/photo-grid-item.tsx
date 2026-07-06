@@ -1,3 +1,13 @@
+/**
+ * PhotoGridItem component for album grids. It renders a photo thumbnail that opens as
+ * a masked modal route while preserving the album URL, plus a like form wired to a
+ * router fetcher that toggles and reflects liked state optimistically. It exists to
+ * make each grid cell an interactive, likeable, deep-linkable photo.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import type { Handle } from "remix/ui";
 
 import { RouterProvider } from "@pkg/r3-ui-router";

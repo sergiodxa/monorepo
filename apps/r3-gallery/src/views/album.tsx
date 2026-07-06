@@ -1,3 +1,13 @@
+/**
+ * AlbumPage view for the gallery. It renders one album's photo grid with liked counts
+ * and a back link, and, when a photo is selected, layers a modal dialog that loads the
+ * photo through a Frame while keeping the grid behind it. It exists to present an album
+ * and its optional photo overlay as a single cohesive route.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import type { Handle } from "remix/ui";
 
 import { RouterProvider } from "@pkg/r3-ui-router";

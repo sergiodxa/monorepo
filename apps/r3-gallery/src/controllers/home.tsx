@@ -1,3 +1,12 @@
+/**
+ * Home route action controller for the gallery. It loads the album list from the
+ * JSONPlaceholder data layer and renders the albums index, or a state-message error
+ * view when the fetch fails, serving as the entry screen of the app.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { createAction } from "@pkg/r3-ui-router";
 import { isFailure } from "@pkg/result";
 

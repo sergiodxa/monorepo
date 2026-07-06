@@ -1,3 +1,12 @@
+/**
+ * ActionLink component for the gallery, a reusable pill-shaped anchor with default and
+ * compact size variants and the shared orange focus-visible treatment. It centralizes
+ * the app's navigation-link styling so routes render consistent, accessible links.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import type { Handle, RemixNode } from "remix/ui";
 
 import { css } from "remix/ui";

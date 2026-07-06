@@ -1,3 +1,12 @@
+/**
+ * Client entry point for the gallery app. It builds the UI router, wires every route
+ * to its controller action, installs the likes middleware, and mounts the router onto
+ * the `#app` element so the single-page gallery boots in the browser.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { createController, createRouter } from "@pkg/r3-ui-router";
 
 import { renderAlbum } from "./controllers/album";

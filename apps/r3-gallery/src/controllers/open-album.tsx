@@ -1,3 +1,13 @@
+/**
+ * Open-album action controller for the gallery. It reads the submitted album id from
+ * the shortcut form, validates that it is an integer, and issues a 302 redirect to the
+ * matching album page (or back home when invalid), turning the form post into
+ * navigation.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { createAction } from "@pkg/r3-ui-router";
 
 import { routes } from "../routes";

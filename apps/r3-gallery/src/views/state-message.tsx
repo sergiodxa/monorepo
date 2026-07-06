@@ -1,3 +1,13 @@
+/**
+ * StateMessage view for the gallery. It renders error and empty states inside the
+ * shared Shell as an alert region with a title, message, and a link back to the album
+ * index. It gives every controller one consistent way to surface load failures or
+ * missing data to the user.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import type { Handle } from "remix/ui";
 
 import { css } from "remix/ui";

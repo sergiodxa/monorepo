@@ -1,3 +1,12 @@
+/**
+ * Not-found controller for the gallery, used as the router's default element for
+ * unmatched URLs. It renders a state message that reports which pathname failed to
+ * match, giving visitors a clear fallback when no route applies.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import type { RemixNode } from "remix/ui";
 
 import { StateMessage } from "../views/state-message";

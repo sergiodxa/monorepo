@@ -1,3 +1,13 @@
+/**
+ * Data schemas and types for the gallery's JSONPlaceholder payloads. It defines
+ * runtime validation schemas for single and collection album and photo responses and
+ * derives the `Album` and `Photo` TypeScript types, giving the data layer and views a
+ * single validated shape to rely on.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import type { InferOutput } from "remix/data-schema";
 
 import * as s from "remix/data-schema";

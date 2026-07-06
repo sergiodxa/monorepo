@@ -1,3 +1,12 @@
+/**
+ * Like-photo action controller for the gallery. It validates the album and photo ids
+ * from the route params in middleware and then toggles the photo's like via the
+ * middleware-provided likes storage, returning the new like state to the fetcher.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { createAction } from "@pkg/r3-ui-router";
 
 import { getLikes } from "../middleware/likes";

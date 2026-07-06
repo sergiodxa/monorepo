@@ -1,3 +1,13 @@
+/**
+ * AlbumsPage view for the gallery. It renders the album index as large tappable cards
+ * plus a shortcut panel with a "Jump to album" number form and a "Surprise me" button
+ * that opens a random album. It is the landing screen that lets visitors browse or jump
+ * straight into any album.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import type { Handle } from "remix/ui";
 
 import { RouterProvider } from "@pkg/r3-ui-router";

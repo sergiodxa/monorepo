@@ -1,3 +1,12 @@
+/**
+ * Shell layout component for the gallery. It renders the shared page frame with a
+ * gradient background, an eyebrow/title/intro header block, and a centered main area
+ * for route children, so every route presents the same consistent chrome and styling.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import type { Handle, RemixNode } from "remix/ui";
 
 import { css } from "remix/ui";

@@ -1,3 +1,13 @@
+/**
+ * PhotoPreview component for the gallery, rendering a large photo card with its album
+ * label, title-cased heading, and an optional actions slot that defaults to an "Open
+ * album" link. It is shared between the standalone photo page and the modal overlay so
+ * a photo looks consistent in both contexts.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import type { Handle, RemixNode } from "remix/ui";
 
 import { css } from "remix/ui";

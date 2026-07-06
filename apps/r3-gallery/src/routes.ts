@@ -1,3 +1,12 @@
+/**
+ * Central route contract for the gallery, declaring the home, album, photo, and
+ * form-post routes (open-album and like-photo) with their methods and patterns. It
+ * exists so links and the client router share one typed source of URL definitions.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { route } from "remix/routes";
 
 /**

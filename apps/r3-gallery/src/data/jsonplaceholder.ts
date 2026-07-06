@@ -1,3 +1,13 @@
+/**
+ * JSONPlaceholder data layer for the gallery. It fetches and schema-validates albums,
+ * a single album, an album's photos, and a single photo, returning Result values so
+ * network and validation failures are handled without throwing. It centralizes all of
+ * the app's remote data access behind one typed, non-throwing API.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import type { Result } from "@pkg/result";
 
 import { failure, isFailure, success, wrap } from "@pkg/result";
