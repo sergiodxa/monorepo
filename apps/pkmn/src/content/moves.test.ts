@@ -13,6 +13,8 @@ import { expect, test } from "bun:test";
 
 import type { Move, MoveEffect } from "~/game/data/move";
 
+import { StatusEffectType } from "~/game/data/move";
+
 import { MOVES } from "./moves";
 
 /** The move set indexed by arbitrary string id for lookup in tests. */
@@ -30,4 +32,77 @@ test("one-hit-KO moves declare the ohko effect (regression)", () => {
 		expect(move, `${id} should exist`).toBeDefined();
 		expect(effectKinds(move!.effect), `${id} should be a one-hit KO`).toContain("ohko");
 	}
+});
+
+test("well-known status moves carry an authored effect kind", () => {
+	let expectations: Record<string, string> = {
+		GROWL: "modify-stat",
+		SWORDS_DANCE: "modify-stat",
+		WITHDRAW: "modify-stat",
+		ROCK_POLISH: "modify-stat",
+		TOXIC: "apply-status",
+		THUNDER_WAVE: "apply-status",
+		WILL_O_WISP: "apply-status",
+		SPORE: "apply-status",
+		STUN_SPORE: "apply-status",
+		SUPERSONIC: "confuse",
+		SWEET_KISS: "confuse",
+		TEETER_DANCE: "confuse",
+		BLOCK: "trap",
+		LEECH_SEED: "leech-seed",
+		REFLECT: "side-effect",
+		LOW_KICK: "power-from-weight",
+		REVERSAL: "power-from-user-hp",
+	};
+	for (let [id, kind] of Object.entries(expectations)) {
+		let move = movesById[id];
+		expect(move, `${id} should exist`).toBeDefined();
+		expect(effectKinds(move!.effect), `${id} should declare ${kind}`).toContain(kind);
+	}
+});
+
+test("TOXIC applies escalating poison, not a flat status", () => {
+	let move = movesById.TOXIC;
+	expect(move).toBeDefined();
+	let effect = move!.effect;
+	expect(effect.kind).toBe("apply-status");
+	if (effect.kind === "apply-status") {
+		expect(effect.status).toBe(StatusEffectType.Poison);
+		expect(effect.poisonVariant).toBe("escalating");
+		expect(effect.chance).toBe(1);
+	}
+});
+
+test("compound status moves combine a stat drop with confusion", () => {
+	for (let id of ["SWAGGER", "FLATTER"]) {
+		let move = movesById[id];
+		expect(move, `${id} should exist`).toBeDefined();
+		let kinds = effectKinds(move!.effect);
+		expect(kinds, `${id} should raise a stat`).toContain("modify-stat");
+		expect(kinds, `${id} should confuse`).toContain("confuse");
+	}
+});
+
+test("every guaranteed apply-status move keeps chance in the 0..1 range", () => {
+	function assertChances(effect: MoveEffect) {
+		if (effect.kind === "compound") {
+			for (let inner of effect.effects) assertChances(inner);
+			return;
+		}
+		if (effect.kind === "apply-status" || effect.kind === "flinch") {
+			expect(effect.chance).toBeGreaterThanOrEqual(0);
+			expect(effect.chance).toBeLessThanOrEqual(1);
+		}
+	}
+	for (let move of Object.values(movesById)) assertChances(move.effect);
+});
+
+test("power-0 moves still lacking an effect stays at or below the known baseline", () => {
+	// Coverage guard: counts status/utility moves that deal no damage AND carry no
+	// authored effect, so they resolve to a no-op. The baseline can only shrink as
+	// more moves gain effects; a rise means a modeled move regressed to `none`.
+	let stranded = Object.entries(movesById).filter(
+		([, move]) => move.power === 0 && move.effect.kind === "none",
+	);
+	expect(stranded.length).toBeLessThanOrEqual(65);
 });

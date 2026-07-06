@@ -991,7 +991,7 @@ export const MOVES = {
 		power: 0,
 		accuracy: 0,
 		pp: 5,
-		effect: { kind: "none" },
+		effect: { kind: "trap" },
 	},
 	BONE_RUSH: {
 		type: Type.GROUND,
@@ -1734,7 +1734,13 @@ export const MOVES = {
 		power: 0,
 		accuracy: 100,
 		pp: 15,
-		effect: { kind: "none" },
+		effect: {
+			kind: "compound",
+			effects: [
+				{ kind: "modify-stat", stat: Stat.SpecialAttack, stages: 1, target: "target" },
+				{ kind: "confuse", turns: 2 },
+			],
+		},
 	},
 	FLING: {
 		type: Type.DARK,
@@ -2251,7 +2257,7 @@ export const MOVES = {
 		power: 0,
 		accuracy: 100,
 		pp: 20,
-		effect: { kind: "none" },
+		effect: { kind: "power-from-weight" },
 	},
 	LOW_SWEEP: {
 		type: Type.FIGHTING,
@@ -2681,7 +2687,14 @@ export const MOVES = {
 		power: 0,
 		accuracy: 0,
 		pp: 20,
-		effect: { kind: "none" },
+		effect: {
+			kind: "compound",
+			effects: [
+				{ kind: "modify-stat", stat: Stat.SpecialAttack, stages: 1, target: "self" },
+				{ kind: "modify-stat", stat: Stat.SpecialDefense, stages: 1, target: "self" },
+				{ kind: "modify-stat", stat: Stat.Speed, stages: 1, target: "self" },
+			],
+		},
 	},
 	RAGE_FIST: {
 		type: Type.GHOST,
@@ -2785,7 +2798,7 @@ export const MOVES = {
 		power: 0,
 		accuracy: 100,
 		pp: 15,
-		effect: { kind: "none" },
+		effect: { kind: "power-from-user-hp" },
 	},
 	ROAR: {
 		type: Type.NORMAL,
@@ -2812,7 +2825,7 @@ export const MOVES = {
 		power: 0,
 		accuracy: 0,
 		pp: 20,
-		effect: { kind: "none" },
+		effect: { kind: "modify-stat", stat: Stat.Speed, stages: 2, target: "self" },
 	},
 	ROCK_SLIDE: {
 		type: Type.ROCK,
@@ -2956,7 +2969,16 @@ export const MOVES = {
 		power: 0,
 		accuracy: 0,
 		pp: 15,
-		effect: { kind: "none" },
+		effect: {
+			kind: "compound",
+			effects: [
+				{ kind: "modify-stat", stat: Stat.Defense, stages: -1, target: "self" },
+				{ kind: "modify-stat", stat: Stat.SpecialDefense, stages: -1, target: "self" },
+				{ kind: "modify-stat", stat: Stat.Attack, stages: 2, target: "self" },
+				{ kind: "modify-stat", stat: Stat.SpecialAttack, stages: 2, target: "self" },
+				{ kind: "modify-stat", stat: Stat.Speed, stages: 2, target: "self" },
+			],
+		},
 	},
 	SHOCK_WAVE: {
 		type: Type.ELECTRIC,
@@ -3134,7 +3156,7 @@ export const MOVES = {
 		power: 0,
 		accuracy: 100,
 		pp: 15,
-		effect: { kind: "none" },
+		effect: { kind: "apply-status", status: StatusEffectType.Sleep, chance: 1 },
 	},
 	STOCKPILE: {
 		type: Type.NORMAL,
@@ -3142,7 +3164,13 @@ export const MOVES = {
 		power: 0,
 		accuracy: 0,
 		pp: 20,
-		effect: { kind: "none" },
+		effect: {
+			kind: "compound",
+			effects: [
+				{ kind: "modify-stat", stat: Stat.Defense, stages: 1, target: "self" },
+				{ kind: "modify-stat", stat: Stat.SpecialDefense, stages: 1, target: "self" },
+			],
+		},
 	},
 	STOMPING_TANTRUM: {
 		type: Type.GROUND,
@@ -3191,7 +3219,7 @@ export const MOVES = {
 		power: 0,
 		accuracy: 75,
 		pp: 30,
-		effect: { kind: "none" },
+		effect: { kind: "apply-status", status: StatusEffectType.Paralysis, chance: 1 },
 	},
 	SUBMISSION: {
 		type: Type.FIGHTING,
@@ -3237,7 +3265,7 @@ export const MOVES = {
 		power: 0,
 		accuracy: 55,
 		pp: 20,
-		effect: { kind: "none" },
+		effect: { kind: "confuse", turns: 2 },
 	},
 	SWAGGER: {
 		type: Type.NORMAL,
@@ -3245,7 +3273,13 @@ export const MOVES = {
 		power: 0,
 		accuracy: 85,
 		pp: 15,
-		effect: { kind: "none" },
+		effect: {
+			kind: "compound",
+			effects: [
+				{ kind: "modify-stat", stat: Stat.Attack, stages: 2, target: "target" },
+				{ kind: "confuse", turns: 2 },
+			],
+		},
 	},
 	SWALLOW: {
 		type: Type.NORMAL,
@@ -3261,7 +3295,7 @@ export const MOVES = {
 		power: 0,
 		accuracy: 75,
 		pp: 10,
-		effect: { kind: "none" },
+		effect: { kind: "confuse", turns: 2 },
 	},
 	SWEET_SCENT: {
 		type: Type.NORMAL,
@@ -3269,7 +3303,7 @@ export const MOVES = {
 		power: 0,
 		accuracy: 100,
 		pp: 20,
-		effect: { kind: "none" },
+		effect: { kind: "modify-stat", stat: "evasion", stages: -2, target: "target" },
 	},
 	SWIFT: {
 		type: Type.NORMAL,
@@ -3309,7 +3343,7 @@ export const MOVES = {
 		power: 0,
 		accuracy: 100,
 		pp: 20,
-		effect: { kind: "none" },
+		effect: { kind: "confuse", turns: 2 },
 	},
 	TELEPORT: {
 		type: Type.PSYCHIC,
@@ -3341,7 +3375,7 @@ export const MOVES = {
 		power: 0,
 		accuracy: 90,
 		pp: 20,
-		effect: { kind: "none" },
+		effect: { kind: "apply-status", status: StatusEffectType.Paralysis, chance: 1 },
 	},
 	THUNDERBOLT: {
 		type: Type.ELECTRIC,
@@ -3357,7 +3391,13 @@ export const MOVES = {
 		power: 0,
 		accuracy: 100,
 		pp: 20,
-		effect: { kind: "none" },
+		effect: {
+			kind: "compound",
+			effects: [
+				{ kind: "modify-stat", stat: Stat.Attack, stages: -1, target: "target" },
+				{ kind: "modify-stat", stat: Stat.Defense, stages: -1, target: "target" },
+			],
+		},
 	},
 	TOXIC: {
 		type: Type.POISON,
@@ -3517,7 +3557,7 @@ export const MOVES = {
 		power: 0,
 		accuracy: 85,
 		pp: 15,
-		effect: { kind: "none" },
+		effect: { kind: "apply-status", status: StatusEffectType.Burn, chance: 1 },
 	},
 	WING_ATTACK: {
 		type: Type.FLYING,
@@ -3541,7 +3581,7 @@ export const MOVES = {
 		power: 0,
 		accuracy: 0,
 		pp: 40,
-		effect: { kind: "none" },
+		effect: { kind: "modify-stat", stat: Stat.Defense, stages: 1, target: "self" },
 	},
 	WOOD_HAMMER: {
 		type: Type.GRASS,
