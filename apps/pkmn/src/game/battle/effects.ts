@@ -18,7 +18,7 @@ import { Type } from "~/game/data/type";
 import type { BattleEvent, BattlePosition, BattleState } from "./battle";
 import type { CombatantState } from "./combatant-state";
 
-import { getCreatureSpecies } from "./mechanics";
+import { getCreatureSpecies, getCreatureStat } from "./mechanics";
 
 type Resolver<TKind extends MoveEffect["kind"]> = (
 	effect: Extract<MoveEffect, { kind: TKind }>,
@@ -349,6 +349,27 @@ export class Effects {
 		_context: Effects.Context,
 	): BattleEvent[] {
 		return [];
+	}
+
+	/** Restores a fraction of the user's max HP and reports the new remaining HP. */
+	static heal(
+		effect: Extract<MoveEffect, { kind: "heal" }>,
+		context: Effects.Context,
+	): BattleEvent[] {
+		let maxHP = getCreatureStat(context.gameData, context.user.creature, Stat.HP);
+		let amount = Math.floor(effect.ratio * maxHP);
+		let previous = context.user.creature.status.damage;
+		context.user.creature.status.damage = Math.max(0, previous - amount);
+		let healed = previous - context.user.creature.status.damage;
+		if (healed === 0) return [];
+		return [
+			{
+				type: "damage-dealt",
+				target: context.userPosition,
+				damage: 0,
+				remainingHP: maxHP - context.user.creature.status.damage,
+			},
+		];
 	}
 
 	/** Leaves drain healing to post-damage resolution. */
@@ -1139,6 +1160,7 @@ const RESOLVERS: ResolverMap = {
 	"fixed-damage": Effects.fixedDamage,
 	"fixed-damage-user-hp": Effects.fixedDamageUserHP,
 	recoil: Effects.recoil,
+	heal: Effects.heal,
 	drain: Effects.drain,
 	"self-destruct": Effects.selfDestruct,
 	"reset-stat-stages": Effects.resetStatStages,

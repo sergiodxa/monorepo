@@ -96,6 +96,7 @@ export type MoveEffect =
 	| { kind: "fixed-damage"; value: number }
 	| { kind: "fixed-damage-user-hp" }
 	| { kind: "recoil"; ratio: number }
+	| { kind: "heal"; ratio: number }
 	| { kind: "drain"; ratio: number; requiresSleepingTarget?: boolean }
 	| { kind: "self-destruct" }
 	| { kind: "reset-stat-stages"; target: "self" | "target" | "all-active" }

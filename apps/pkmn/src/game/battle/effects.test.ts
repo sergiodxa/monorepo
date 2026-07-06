@@ -13,6 +13,7 @@ import { expect, test } from "bun:test";
 import type { MoveEffect } from "~/game/data/move";
 
 import { GameData } from "~/game/data/game-data";
+import { GrowthRate } from "~/game/data/growth-rate";
 import { StatusEffectType } from "~/game/data/move";
 import { Stat } from "~/game/data/stat";
 import { Type } from "~/game/data/type";
@@ -20,6 +21,7 @@ import { Creature, State } from "~/game/world/creature";
 
 import { CombatantState } from "./combatant-state";
 import { Effects } from "./effects";
+import { getCreatureStat } from "./mechanics";
 import { createFieldEffectState, createSideEffectState } from "./state";
 
 let TEST_SPECIES_ID = "SPECIES_ALPHA";
@@ -409,6 +411,43 @@ test("Effects.leechSeed marks the target as seeded", () => {
 	expect(context.target.volatile.seededBy).toBe(0);
 });
 
+test("Effects.heal restores a fraction of the user's max HP", () => {
+	let context = createHealContext();
+	let maxHP = getCreatureStat(context.gameData, context.user.creature, Stat.HP);
+	context.user.creature.status.damage = maxHP - 1;
+	let expectedHealed = Math.floor(0.5 * maxHP);
+
+	expect(Effects.heal({ kind: "heal", ratio: 0.5 }, context)).toEqual([
+		{
+			type: "damage-dealt",
+			target: { side: 0, slot: 0 },
+			damage: 0,
+			remainingHP: maxHP - (maxHP - 1 - expectedHealed),
+		},
+	]);
+	expect(context.user.creature.status.damage).toBe(maxHP - 1 - expectedHealed);
+});
+
+test("Effects.heal clamps restored HP at the user's maximum", () => {
+	let context = createHealContext();
+	let maxHP = getCreatureStat(context.gameData, context.user.creature, Stat.HP);
+	// Missing less HP than the heal would restore, so healing tops out at full.
+	context.user.creature.status.damage = 1;
+
+	expect(Effects.heal({ kind: "heal", ratio: 0.5 }, context)).toEqual([
+		{ type: "damage-dealt", target: { side: 0, slot: 0 }, damage: 0, remainingHP: maxHP },
+	]);
+	expect(context.user.creature.status.damage).toBe(0);
+});
+
+test("Effects.heal does nothing meaningful at full HP", () => {
+	let context = createHealContext();
+	context.user.creature.status.damage = 0;
+
+	expect(Effects.heal({ kind: "heal", ratio: 0.5 }, context)).toEqual([]);
+	expect(context.user.creature.status.damage).toBe(0);
+});
+
 test("Effects.drain is a no-op marker effect", () => {
 	let context = createContext();
 
@@ -661,6 +700,29 @@ function createContext(randomValue = 0.5, targetTypes: Type[] = [Type.GRASS]): E
 		},
 		random: () => randomValue,
 	};
+}
+
+/** Builds a context whose game data yields a concrete max HP for heal assertions. */
+function createHealContext(): Effects.Context {
+	let context = createContext();
+	let stats = {
+		[Stat.HP]: 50,
+		[Stat.Attack]: 50,
+		[Stat.Defense]: 50,
+		[Stat.SpecialAttack]: 50,
+		[Stat.SpecialDefense]: 50,
+		[Stat.Speed]: 50,
+	};
+	let gameData = new GameData(
+		new Map([
+			[TEST_SPECIES_ID, { types: [Type.GRASS], growthRate: GrowthRate.MediumFast, stats } as never],
+		]),
+		new Map(),
+		new Map(),
+		new Map([[TEST_NATURE_ID, { increases: null, decreases: null } as never]]),
+		{} as never,
+	);
+	return { ...context, gameData };
 }
 
 function createCreature() {

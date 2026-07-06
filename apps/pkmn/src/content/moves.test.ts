@@ -61,6 +61,22 @@ test("well-known status moves carry an authored effect kind", () => {
 	}
 });
 
+test("percentage self-heal moves declare the heal effect", () => {
+	for (let id of [
+		"RECOVER",
+		"SOFT_BOILED",
+		"SLACK_OFF",
+		"ROOST",
+		"SYNTHESIS",
+		"MORNING_SUN",
+		"MOONLIGHT",
+	]) {
+		let move = movesById[id];
+		expect(move, `${id} should exist`).toBeDefined();
+		expect(effectKinds(move!.effect), `${id} should heal the user`).toContain("heal");
+	}
+});
+
 test("TOXIC applies escalating poison, not a flat status", () => {
 	let move = movesById.TOXIC;
 	expect(move).toBeDefined();
@@ -104,5 +120,5 @@ test("power-0 moves still lacking an effect stays at or below the known baseline
 	let stranded = Object.entries(movesById).filter(
 		([, move]) => move.power === 0 && move.effect.kind === "none",
 	);
-	expect(stranded.length).toBeLessThanOrEqual(65);
+	expect(stranded.length).toBeLessThanOrEqual(58);
 });

@@ -2393,7 +2393,7 @@ export const MOVES = {
 		power: 0,
 		accuracy: 0,
 		pp: 5,
-		effect: { kind: "none" },
+		effect: { kind: "heal", ratio: 0.5 },
 	},
 	MORNING_SUN: {
 		type: Type.NORMAL,
@@ -2401,7 +2401,7 @@ export const MOVES = {
 		power: 0,
 		accuracy: 0,
 		pp: 5,
-		effect: { kind: "none" },
+		effect: { kind: "heal", ratio: 0.5 },
 	},
 	MUD_SHOT: {
 		type: Type.GROUND,
@@ -2750,7 +2750,7 @@ export const MOVES = {
 		power: 0,
 		accuracy: 0,
 		pp: 5,
-		effect: { kind: "none" },
+		effect: { kind: "heal", ratio: 0.5 },
 	},
 	RECYCLE: {
 		type: Type.NORMAL,
@@ -2873,7 +2873,7 @@ export const MOVES = {
 		power: 0,
 		accuracy: 0,
 		pp: 5,
-		effect: { kind: "none" },
+		effect: { kind: "heal", ratio: 0.5 },
 	},
 	ROUND: {
 		type: Type.NORMAL,
@@ -3027,7 +3027,7 @@ export const MOVES = {
 		power: 0,
 		accuracy: 0,
 		pp: 5,
-		effect: { kind: "none" },
+		effect: { kind: "heal", ratio: 0.5 },
 	},
 	SLASH: {
 		type: Type.NORMAL,
@@ -3108,7 +3108,7 @@ export const MOVES = {
 		power: 0,
 		accuracy: 0,
 		pp: 5,
-		effect: { kind: "none" },
+		effect: { kind: "heal", ratio: 0.5 },
 	},
 	SPARK: {
 		type: Type.ELECTRIC,
@@ -3335,7 +3335,7 @@ export const MOVES = {
 		power: 0,
 		accuracy: 0,
 		pp: 5,
-		effect: { kind: "none" },
+		effect: { kind: "heal", ratio: 0.5 },
 	},
 	TEETER_DANCE: {
 		type: Type.NORMAL,
