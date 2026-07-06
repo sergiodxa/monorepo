@@ -29,9 +29,8 @@ let hostnamesKv = {
 
 mock.module("cloudflare:workers", () => ({ env: { HOSTNAMES_KV: hostnamesKv } }));
 
-let { HOSTNAME_CACHE_TTL, hostnameCacheKey, invalidateHostnameCache } = await import(
-	"./hostname-cache"
-);
+let { HOSTNAME_CACHE_TTL, hostnameCacheKey, invalidateHostnameCache } =
+	await import("./hostname-cache");
 
 beforeEach(() => {
 	kvOperations = [];
