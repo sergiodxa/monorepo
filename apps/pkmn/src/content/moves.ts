@@ -1686,7 +1686,7 @@ export const MOVES = {
 		power: 0,
 		accuracy: 30,
 		pp: 5,
-		effect: { kind: "none" },
+		effect: { kind: "ohko" },
 	},
 	FLAIL: {
 		type: Type.NORMAL,
@@ -1857,7 +1857,7 @@ export const MOVES = {
 		power: 0,
 		accuracy: 30,
 		pp: 5,
-		effect: { kind: "none" },
+		effect: { kind: "ohko" },
 	},
 	GUNK_SHOT: {
 		type: Type.POISON,
@@ -2948,7 +2948,7 @@ export const MOVES = {
 		power: 0,
 		accuracy: 30,
 		pp: 5,
-		effect: { kind: "none" },
+		effect: { kind: "ohko" },
 	},
 	SHELL_SMASH: {
 		type: Type.NORMAL,
