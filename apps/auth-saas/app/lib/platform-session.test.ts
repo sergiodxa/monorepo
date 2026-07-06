@@ -17,6 +17,7 @@ import {
 	createSessionCookie,
 	createSessionToken,
 	getCookie,
+	isPlatformSessionActive,
 	verifySessionToken,
 } from "./platform-session";
 
@@ -250,5 +251,44 @@ describe("getCookie", () => {
 
 	test("returns an empty string for a present but empty cookie", () => {
 		expect(getCookie("empty=; other=1", "empty")).toBe("");
+	});
+});
+
+describe("isPlatformSessionActive", () => {
+	test("accepts when the sid exists server-side", async () => {
+		let active = await isPlatformSessionActive("sid-abc", async () => true);
+		expect(active).toBe(true);
+	});
+
+	test("rejects when the sid no longer exists (revoked/logged out)", async () => {
+		let active = await isPlatformSessionActive("sid-abc", async () => false);
+		expect(active).toBe(false);
+	});
+
+	test("rejects a token with no sid (cannot be revoked, fail closed)", async () => {
+		let checked = false;
+		let active = await isPlatformSessionActive(undefined, async () => {
+			checked = true;
+			return true;
+		});
+		expect(active).toBe(false);
+		// The store must not even be consulted for a sid-less token.
+		expect(checked).toBe(false);
+	});
+
+	test("fails open when the session store is unreachable", async () => {
+		let active = await isPlatformSessionActive("sid-abc", async () => {
+			throw new Error("network");
+		});
+		expect(active).toBe(true);
+	});
+
+	test("passes the sid through to the checker", async () => {
+		let seen = "";
+		await isPlatformSessionActive("sid-xyz", async (sid) => {
+			seen = sid;
+			return true;
+		});
+		expect(seen).toBe("sid-xyz");
 	});
 });

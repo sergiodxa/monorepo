@@ -22,6 +22,7 @@ import { Database } from "remix/data-table";
 import { createAction } from "remix/fetch-router";
 
 import Subscription from "~/app/models/subscription";
+import { TenantApiService } from "~/app/services/tenant-api";
 import routes from "~/routes/web";
 
 /** Polar webhook event types we handle. */
@@ -164,6 +165,10 @@ export default createAction(
 								updated_at: new Date().toISOString(),
 							},
 						);
+						// Propagate the runtime entitlement gate: a status that no longer
+						// entitles the tenant (e.g. active -> unpaid) must suspend its provider
+						// surface, and a recovery (e.g. past_due -> active) must lift it.
+						await syncTenantSuspension(subscription.tenant_id, newStatus);
 						log.info("Subscription status synced", {
 							subscriptionId: subscription.id,
 							status: newStatus,
@@ -187,6 +192,9 @@ export default createAction(
 								updated_at: new Date().toISOString(),
 							},
 						);
+						// A canceled subscription never entitles the tenant: suspend its
+						// provider surface so tenant OIDC traffic stops, not just dashboard access.
+						await syncTenantSuspension(subscription.tenant_id, "canceled");
 						log.info("Subscription canceled", { subscriptionId: subscription.id });
 					}
 					break;
@@ -215,6 +223,22 @@ export default createAction(
 		return json({ received: true });
 	}),
 );
+
+/**
+ * Pushes the tenant-runtime entitlement gate into the tenant Durable Object to match the
+ * new subscription status, so a lapsed subscription stops the tenant's OIDC provider
+ * surface (not just dashboard access) and a recovery restores it.
+ *
+ * Runs inside the webhook's try/catch, so a transient Durable Object failure propagates
+ * and is classified as retryable, letting Polar redeliver until the gate is applied.
+ *
+ * @param tenantId - The tenant whose Durable Object gate to update.
+ * @param status - The tenant's new local subscription status.
+ * @returns A promise that resolves once the gate is pushed.
+ */
+async function syncTenantSuspension(tenantId: string, status: string): Promise<void> {
+	await new TenantApiService(tenantId).setSuspended(!Subscription.isEntitled(status));
+}
 
 /**
  * Determines if an error is retryable (transient) vs permanent.

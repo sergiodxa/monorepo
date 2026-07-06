@@ -27,15 +27,15 @@ export default middleware(async (context, next) => {
 	try {
 		let response = await next();
 		context.logger.response = response;
-		context.logger.flush();
 		return response;
 	} catch (error) {
 		context.logger.error("unhandled_error", {
 			error: error instanceof Error ? error.message : String(error),
 			stack: error instanceof Error ? error.stack : undefined,
 		});
-		context.logger.flush();
 		throw error;
+	} finally {
+		context.logger.flush();
 	}
 });
 

@@ -18,15 +18,13 @@ import { reportMAU } from "~/app/jobs/report-mau";
 import { container } from "~/app/lib/container";
 import { HostMetadataSchema } from "~/app/lib/host-metadata";
 import { HOSTNAME_CACHE_TTL, hostnameCacheKey } from "~/app/lib/hostname-cache";
+import { ensurePlatformProvisioned, PLATFORM_TENANT } from "~/app/lib/platform-bootstrap";
 import { checkRateLimit } from "~/app/lib/rate-limit";
 
 import { router } from "./app";
 import Tenant from "./tenant";
 
 export { Tenant };
-
-/** Special Durable Object name for the dogfooding "platform" tenant. */
-const PLATFORM_TENANT = "platform";
 
 /** Resolved tenant target for a request. */
 interface ResolvedTenant {
@@ -81,10 +79,14 @@ async function resolveHostname(hostname: string): Promise<ResolvedTenant | null>
 	if (cached) return cached;
 
 	let row = await env.PLATFORM_DB.prepare(
+		// Only active tenants resolve: suspended (billing lapse / operator action) and
+		// deleted tenants must stop routing to their DO. The tenant DO also enforces its
+		// own suspension flag, but excluding them here stops resolution at the edge and
+		// keeps the `hostMetadata`/KV re-check honest once the cache is invalidated.
 		`SELECT h.tenant_id AS tenantId, t.region AS region
 		 FROM hostnames h
 		 JOIN tenants t ON t.id = h.tenant_id
-		 WHERE h.hostname = ?1 AND h.status = 'active' AND t.status != 'deleted'
+		 WHERE h.hostname = ?1 AND h.status = 'active' AND t.status = 'active'
 		 LIMIT 1`,
 	)
 		.bind(hostname)
@@ -145,6 +147,10 @@ export default {
 		// 2. Platform domain: OIDC surface -> platform tenant DO, everything else -> dashboard router.
 		if (isPlatformHost(hostname)) {
 			if (isTenantPath(url.pathname)) {
+				// The platform tenant row is seeded by migration but its DO is never set up
+				// via /api/setup, so provision its issuer once before serving OIDC traffic;
+				// otherwise dashboard token exchange fails with "Issuer not configured".
+				await ensurePlatformProvisioned(undefined, env.PLATFORM_DOMAIN);
 				return await forwardToTenant(request, { tenantId: PLATFORM_TENANT });
 			}
 			return await container.scope(() => router.fetch(request));

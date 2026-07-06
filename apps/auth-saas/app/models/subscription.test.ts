@@ -53,6 +53,24 @@ describe("Subscription.mapPolarStatus", () => {
 	});
 });
 
+describe("Subscription.isEntitled", () => {
+	// Entitling statuses keep the tenant's provider surface up. These must agree with the
+	// dashboard subscription gate (active/trialing full access, past_due warning access).
+	for (let status of ["active", "trialing", "past_due"]) {
+		test(`${status} is entitled (provider stays up)`, () => {
+			expect(Subscription.isEntitled(status)).toBe(true);
+		});
+	}
+
+	// Non-entitling statuses must suspend the tenant so its OIDC traffic stops, not just
+	// dashboard access. This is the runtime suspension-gate decision.
+	for (let status of ["canceled", "unpaid", "incomplete", "mystery", ""]) {
+		test(`${status || "<empty>"} is not entitled (tenant suspended)`, () => {
+			expect(Subscription.isEntitled(status)).toBe(false);
+		});
+	}
+});
+
 describe("Subscription.getStatusLabel", () => {
 	test.each([
 		["active", "Active"],

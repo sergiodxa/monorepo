@@ -180,3 +180,34 @@ export function getCookie(cookies: string, name: string): string | null {
 	let match = cookies.match(new RegExp(`(?:^|; )${name}=([^;]*)`));
 	return match?.[1] ?? null;
 }
+
+/**
+ * Decides whether a platform session should be accepted on a privileged route by
+ * confirming its `sid` still exists server-side. The signed token alone is not
+ * revocable — a copied token stays valid until expiry — so this couples acceptance to
+ * live session state, making logout and server-side revocation effective.
+ *
+ * Fail-closed on a missing `sid` (the token cannot be revoked, so it is rejected) and
+ * fail-open on an infrastructure error reaching the session store (so a transient outage
+ * does not sign every operator out); a session that resolves to "not found" is rejected.
+ *
+ * @param sessionId - The `sid` claim from the verified platform session token.
+ * @param checkSession - Async check returning whether the `sid` exists server-side.
+ * @returns `true` when the session should be accepted, `false` when it must be rejected.
+ * @example
+ * let ok = await isPlatformSessionActive(sid, (id) => api.sessionExists(subjectId, id));
+ */
+export async function isPlatformSessionActive(
+	sessionId: string | undefined,
+	checkSession: (sessionId: string) => Promise<boolean>,
+): Promise<boolean> {
+	// No sid means the token predates revocable sessions and cannot be checked: reject it.
+	if (!sessionId) return false;
+
+	try {
+		return await checkSession(sessionId);
+	} catch {
+		// Infrastructure error reaching the session store: do not lock operators out.
+		return true;
+	}
+}

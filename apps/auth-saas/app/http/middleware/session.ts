@@ -12,12 +12,15 @@ import { redirect } from "@pkg/http/response";
 import { env } from "cloudflare:workers";
 
 import middleware from "~/app/lib/middleware";
+import { PLATFORM_TENANT } from "~/app/lib/platform-bootstrap";
 import {
 	clearSessionCookie,
 	getCookie,
+	isPlatformSessionActive,
 	PLATFORM_SESSION_COOKIE,
 	verifySessionToken,
 } from "~/app/lib/platform-session";
+import { TenantApiService } from "~/app/services/tenant-api";
 import routes from "~/routes/web";
 
 /**
@@ -65,6 +68,23 @@ export default middleware(async (context, next) => {
 
 	if (!session) {
 		log.info("Invalid or expired session token, clearing session");
+		return redirect(routes.onboarding.index.href(), {
+			headers: {
+				"Set-Cookie": clearSessionCookie(),
+			},
+		});
+	}
+
+	// The signed token is self-contained, but that alone cannot be revoked: a copied
+	// token would stay valid for its full 30-day life even after logout. Validate the
+	// embedded `sid` against the platform tenant's live session state so logout and
+	// server-side revocation take effect. A token without a `sid` cannot be revoked, so
+	// it is rejected (fail closed); all tokens minted by the callback carry one.
+	let active = await isPlatformSessionActive(session.sessionId, (sid) =>
+		new TenantApiService(PLATFORM_TENANT).sessionExists(session.subjectId, sid),
+	);
+	if (!active) {
+		log.info("Platform session revoked or missing sid, clearing session");
 		return redirect(routes.onboarding.index.href(), {
 			headers: {
 				"Set-Cookie": clearSessionCookie(),

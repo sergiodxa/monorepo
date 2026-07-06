@@ -67,6 +67,27 @@ export default class Subscription {
 	});
 
 	/**
+	 * Subscription statuses that entitle a tenant to serve traffic. `active` and
+	 * `trialing` grant full access; `past_due` keeps access with a warning (the dashboard
+	 * subscription gate only blocks `canceled`/`unpaid`/`incomplete`). Kept in sync with
+	 * the subscription middleware so the runtime entitlement gate and the dashboard gate
+	 * agree on when a tenant's OIDC provider surface stays up.
+	 */
+	static ENTITLING_STATUSES = new Set(["active", "trialing", "past_due"]);
+
+	/**
+	 * Whether a subscription status entitles the tenant to serve its OIDC provider surface.
+	 *
+	 * @param status - The local subscription status value.
+	 * @returns `true` when the tenant should keep serving, `false` when it must be suspended.
+	 * @example
+	 * await api.setSuspended(!Subscription.isEntitled(newStatus));
+	 */
+	static isEntitled(status: string): boolean {
+		return Subscription.ENTITLING_STATUSES.has(status);
+	}
+
+	/**
 	 * Map Polar subscription status to our status enum.
 	 *
 	 * @param polarStatus - The raw status string returned by Polar.

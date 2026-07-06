@@ -21,6 +21,7 @@ import { Database } from "remix/data-table";
 import { createAction } from "remix/fetch-router";
 
 import { base64UrlDecode } from "~/app/lib/crypto-utils";
+import { verifyIdToken } from "~/app/lib/id-token-verify";
 import { createSessionCookie, createSessionToken } from "~/app/lib/platform-session";
 import Tenant from "~/app/models/tenant";
 import { AuthErrorPage, PublicDocument } from "~/app/views/landing";
@@ -36,6 +37,7 @@ let CallbackSchema = s.object({
 let OAuthStateSchema = s.object({
 	codeVerifier: s.string(),
 	state: s.string(),
+	nonce: s.string(),
 });
 
 /** Schema for the token response. */
@@ -97,7 +99,7 @@ export default createAction(
 			return renderError("Invalid session state. Please try again.");
 		}
 
-		let { codeVerifier, state: expectedState } = oauthStateResult.data;
+		let { codeVerifier, state: expectedState, nonce: expectedNonce } = oauthStateResult.data;
 
 		// Verify state matches (CSRF protection)
 		if (state !== expectedState) {
@@ -136,15 +138,35 @@ export default createAction(
 			return renderError("Authentication failed. Please try again.");
 		}
 
-		// Decode the ID token to get user info
+		// Get the ID token from the token response.
 		let idToken = tokenResult.data.id_token;
 		if (!idToken) {
 			log.error("No ID token in response");
 			return renderError("Authentication failed. Please try again.");
 		}
 
-		let claims = decodeIdToken(idToken) as JSONValue;
-		let claimsResult = await validate(claims, IdTokenClaimsSchema);
+		// Verify the ID token's signature and claims against the platform tenant JWKS.
+		// The previous flow trusted a base64-decoded payload; an attacker who could reach
+		// this endpoint could mint a session for any subject. We now require a valid
+		// signature, issuer, audience, and time claims before trusting any claim.
+		let verifiedClaims = await verifyIdToken(idToken, {
+			jwksUrl: new URL("/.well-known/jwks.json", baseUrl).toString(),
+			issuer: `https://${env.PLATFORM_DOMAIN}`,
+			audience: DASHBOARD_CLIENT_ID,
+		});
+		if (!verifiedClaims) {
+			log.error("ID token verification failed");
+			return renderError("Authentication failed. Please try again.");
+		}
+
+		// Bind the ID token to this authorization request: the nonce must match the one
+		// stored when the flow started, rejecting replayed or injected tokens.
+		if (verifiedClaims.nonce !== expectedNonce) {
+			log.error("ID token nonce mismatch");
+			return renderError("Security validation failed. Please try again.");
+		}
+
+		let claimsResult = await validate(verifiedClaims.claims, IdTokenClaimsSchema);
 		if (isFailure(claimsResult)) {
 			log.error("Invalid ID token claims", { issues: claimsResult.error.issues });
 			return renderError("Authentication failed. Please try again.");
@@ -182,22 +204,6 @@ export default createAction(
 		return new Response(null, { status: 302, headers });
 	}),
 );
-
-/**
- * Decodes an ID token (JWT) without verification.
- * The token was already verified by the OAuth server during token exchange.
- */
-function decodeIdToken(idToken: string): unknown {
-	let parts = idToken.split(".");
-	if (parts.length !== 3) return {};
-	let payload = parts[1];
-	if (!payload) return {};
-	try {
-		return JSON.parse(base64UrlDecode(payload));
-	} catch {
-		return {};
-	}
-}
 
 /**
  * Renders the onboarding authentication-error page as a `remix/ui` document with a

@@ -86,8 +86,52 @@ describe("checkRateLimit routing", () => {
 
 	test("falls back to an unknown IP when the header is absent", async () => {
 		let limiters = buildLimiters();
-		await checkRateLimit(request("/oauth/authorize"), limiters as never);
-		expect(limiters.authLimiter.calls).toEqual([{ key: "unknown:/oauth/authorize" }]);
+		await checkRateLimit(request("/authorize"), limiters as never);
+		expect(limiters.authLimiter.calls).toEqual([{ key: "unknown:/authorize" }]);
+	});
+
+	// Regression: the limiter previously targeted /oauth/authorize and /oidc/userinfo,
+	// which never matched the real OIDC routes (/authorize, /userinfo), leaving those
+	// high-traffic identity endpoints uncovered. Pin the concrete provider paths here.
+	for (let path of [
+		"/authorize",
+		"/oauth/token",
+		"/oauth/revoke",
+		"/oauth/introspect",
+		"/oidc/logout",
+		"/userinfo",
+		"/webauthn/register/options",
+		"/webauthn/register/verify",
+		"/webauthn/auth/options",
+		"/webauthn/auth/verify",
+	]) {
+		test(`routes the real OIDC path ${path} to the auth limiter`, async () => {
+			let limiters = buildLimiters();
+			let result = await checkRateLimit(request(path, "2.2.2.2"), limiters as never);
+
+			expect(result).toBeNull();
+			expect(limiters.authLimiter.calls).toEqual([{ key: `2.2.2.2:${path}` }]);
+			expect(limiters.strictLimiter.calls).toHaveLength(0);
+			expect(limiters.managementLimiter.calls).toHaveLength(0);
+		});
+	}
+
+	test("does not route the old (wrong) /oauth/authorize path to any limiter", async () => {
+		let limiters = buildLimiters();
+		let result = await checkRateLimit(request("/oauth/authorize", "2.2.2.2"), limiters as never);
+
+		// /oauth/authorize is NOT a real route; the auth limiter must not fire for it.
+		expect(result).toBeNull();
+		expect(limiters.authLimiter.calls).toHaveLength(0);
+	});
+
+	test("does not route the old (wrong) /oidc/userinfo path to any limiter", async () => {
+		let limiters = buildLimiters();
+		let result = await checkRateLimit(request("/oidc/userinfo", "2.2.2.2"), limiters as never);
+
+		// /oidc/userinfo is NOT a real route; the auth limiter must not fire for it.
+		expect(result).toBeNull();
+		expect(limiters.authLimiter.calls).toHaveLength(0);
 	});
 });
 

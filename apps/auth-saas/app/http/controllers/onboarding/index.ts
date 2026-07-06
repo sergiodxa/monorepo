@@ -36,6 +36,10 @@ export default createAction(routes.onboarding.index, async ({ request, logger })
 	// Generate state for CSRF protection
 	let state = crypto.randomUUID();
 
+	// Generate a nonce bound to this authorization request. It is echoed back in the ID
+	// token and checked in the callback so a replayed/injected ID token is rejected.
+	let nonce = crypto.randomUUID();
+
 	// Build the OAuth authorization URL
 	let url = new URL(request.url);
 	let baseUrl = `${url.protocol}//${url.host}`;
@@ -47,13 +51,14 @@ export default createAction(routes.onboarding.index, async ({ request, logger })
 	authorizeUrl.searchParams.set("redirect_uri", `${baseUrl}/onboarding/callback`);
 	authorizeUrl.searchParams.set("scope", "openid email profile");
 	authorizeUrl.searchParams.set("state", state);
+	authorizeUrl.searchParams.set("nonce", nonce);
 	authorizeUrl.searchParams.set("code_challenge", codeChallenge);
 	authorizeUrl.searchParams.set("code_challenge_method", "S256");
 
 	log.info("Redirecting to OAuth authorization", { clientId: DASHBOARD_CLIENT_ID });
 
-	// Store PKCE verifier and state in a short-lived cookie
-	let oauthStateCookie = JSON.stringify({ codeVerifier, state });
+	// Store PKCE verifier, state, and nonce in a short-lived cookie
+	let oauthStateCookie = JSON.stringify({ codeVerifier, state, nonce });
 	let cookieValue = base64UrlEncode(oauthStateCookie);
 
 	return new Response(null, {

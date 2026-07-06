@@ -8,12 +8,20 @@
 
 /**
  * Paths that require auth rate limiting (10 req/10s).
+ *
+ * These must match the real OIDC provider routes served by the tenant Durable Object
+ * (see `packages/oidc-provider/src/routes.ts`): the authorization endpoint is `/authorize`
+ * and UserInfo is `/userinfo` (NOT `/oauth/authorize` / `/oidc/userinfo`, which never
+ * matched, leaving those high-traffic identity endpoints uncovered). Keep this list in
+ * sync with that route table; `rate-limit.test.ts` pins the concrete paths.
  */
 const AUTH_RATE_LIMITED_PATHS = [
-	"/oauth/authorize",
+	"/authorize",
 	"/oauth/token",
+	"/oauth/revoke",
+	"/oauth/introspect",
 	"/oidc/logout",
-	"/oidc/userinfo",
+	"/userinfo",
 	"/webauthn/register/options",
 	"/webauthn/register/verify",
 	"/webauthn/auth/options",

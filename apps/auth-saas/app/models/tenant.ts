@@ -14,6 +14,7 @@ import { column as c, table } from "remix/data-table";
 
 import { RecordNotFoundError } from "~/app/lib/db-errors";
 import Hostname from "~/app/models/hostname";
+import { TenantApiService } from "~/app/services/tenant-api";
 
 import type { TenantMemberRole } from "./tenant-member";
 
@@ -238,8 +239,12 @@ export default class Tenant {
 	}
 
 	/**
-	 * Updates a tenant's name and/or status. Suspending or deleting a tenant also
-	 * invalidates its hostname resolution cache so its domains stop routing to it.
+	 * Updates a tenant's name and/or status. A status change also propagates the
+	 * tenant-runtime entitlement gate: suspending or deleting pushes the suspension flag
+	 * into the tenant Durable Object and invalidates its hostname resolution cache so its
+	 * domains stop routing to it and its provider surface stops serving; reactivating
+	 * clears the flag. Cache/DO propagation failures are swallowed so a control-plane
+	 * status write is never lost — the DO's short cache TTL and re-checks bound staleness.
 	 *
 	 * @param db - Database connection.
 	 * @param id - The tenant ID to update.
@@ -268,12 +273,34 @@ export default class Tenant {
 			},
 		);
 
-		// Suspending or deleting a tenant must stop its hostnames from routing to it.
+		// Suspending or deleting a tenant must stop its hostnames from routing to it and
+		// stop the tenant DO from serving its provider surface.
 		if (data.status === "suspended" || data.status === "deleted") {
 			await Hostname.invalidateTenantCache(db, id);
+			await Tenant.pushSuspension(id, true);
+		} else if (data.status === "active" && tenant.status !== "active") {
+			// Reactivating a previously non-active tenant lifts the runtime gate.
+			await Tenant.pushSuspension(id, false);
 		}
 
 		return (await db.findOne(Tenant.table, { where: { id } }))!;
+	}
+
+	/**
+	 * Pushes the tenant-runtime suspension flag into the tenant Durable Object, tolerating
+	 * failures so a control-plane status change is never lost when the DO is unreachable.
+	 *
+	 * @param id - The tenant ID whose Durable Object to update.
+	 * @param suspended - `true` to suspend the tenant's provider surface, `false` to restore it.
+	 * @returns A promise that resolves once the flag is pushed (or the failure is swallowed).
+	 */
+	private static async pushSuspension(id: string, suspended: boolean): Promise<void> {
+		try {
+			await new TenantApiService(id).setSuspended(suspended);
+		} catch {
+			// Best-effort: the control-plane status is the source of truth and other paths
+			// (hostname cache invalidation, subscription gate) still block dashboard access.
+		}
 	}
 
 	/**

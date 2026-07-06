@@ -284,6 +284,25 @@ export class TenantApiService {
 		});
 	}
 
+	/**
+	 * Pushes the tenant-runtime entitlement gate into the Durable Object.
+	 *
+	 * Sets or clears the DO's suspension flag so the tenant enforces it locally: a
+	 * suspended tenant blocks its OIDC/OAuth2 provider surface even for traffic that
+	 * reaches the DO directly via Cloudflare for SaaS `hostMetadata` (which bypasses the
+	 * control-plane database). Call whenever billing entitlement or tenant status changes.
+	 *
+	 * @param suspended - `true` to suspend the tenant's provider surface, `false` to restore it.
+	 * @example
+	 * await new TenantApiService(tenantId).setSuspended(true);
+	 */
+	async setSuspended(suspended: boolean): Promise<void> {
+		await this.requestVoid("/__control/suspend", {
+			method: "POST",
+			body: JSON.stringify({ suspended }),
+		});
+	}
+
 	/** Gets tenant statistics. */
 	async getStats(): Promise<TenantStats> {
 		return this.request("/api/stats", TenantStatsSchema);
@@ -500,6 +519,22 @@ export class TenantApiService {
 	 */
 	async listUserSessions(userId: string): Promise<Session[]> {
 		return this.request(`/api/subjects/${userId}/sessions`, s.array(SessionSchema));
+	}
+
+	/**
+	 * Checks whether a specific session still exists for a user (i.e. has not been
+	 * revoked or expired-and-cleaned-up). Used to validate a platform session token's
+	 * `sid` on privileged routes so logout/revocation takes effect server-side.
+	 *
+	 * @param userId - The user (subject) ID.
+	 * @param sessionId - The session ID (`sid`) to check.
+	 * @returns `true` when a session with that id exists for the user, `false` otherwise.
+	 * @example
+	 * if (!(await api.sessionExists(subjectId, sid))) return redirectToOnboarding();
+	 */
+	async sessionExists(userId: string, sessionId: string): Promise<boolean> {
+		let sessions = await this.listUserSessions(userId);
+		return sessions.some((session) => session.id === sessionId);
 	}
 
 	/**
