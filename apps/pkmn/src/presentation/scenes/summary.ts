@@ -16,7 +16,7 @@ import type { Scene } from "../core/scene";
 import { Button } from "../core/input";
 import { SCREEN_HEIGHT, SCREEN_WIDTH } from "../core/loop";
 import { drawText } from "../render/text";
-import { SceneBackground, Text } from "../render/theme";
+import { SCENE_BACKGROUND, TEXT } from "../render/theme";
 import { Window } from "../render/window";
 
 /** Shows one creature's details. */
@@ -33,23 +33,23 @@ export class SummaryScene implements Scene {
 	}
 
 	render(game: GameClient, ctx: CanvasRenderingContext2D) {
-		ctx.fillStyle = SceneBackground.summary;
+		ctx.fillStyle = SCENE_BACKGROUND.summary;
 		ctx.fillRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
 
 		let creature = game.engine.selectCreatureSummary(this.creatureId);
 		Window.frame(ctx, 6, 6, 228, 52);
 		drawText(ctx, creature.name, 14, 12);
 		drawText(ctx, `L${creature.level}`, 226, 12, { align: "right" });
-		drawText(ctx, `Species: ${creature.speciesId}`, 14, 26, { color: Text.secondary });
-		drawText(ctx, `HP ${creature.currentHP}/${creature.maxHP}`, 14, 40, { color: Text.secondary });
-		drawText(ctx, `Status: ${creature.status ?? "OK"}`, 140, 40, { color: Text.secondary });
+		drawText(ctx, `Species: ${creature.speciesId}`, 14, 26, { color: TEXT.secondary });
+		drawText(ctx, `HP ${creature.currentHP}/${creature.maxHP}`, 14, 40, { color: TEXT.secondary });
+		drawText(ctx, `Status: ${creature.status ?? "OK"}`, 140, 40, { color: TEXT.secondary });
 
 		Window.frame(ctx, 6, 64, 228, 88);
-		drawText(ctx, "MOVES", 14, 70, { color: Text.default });
+		drawText(ctx, "MOVES", 14, 70, { color: TEXT.default });
 		creature.moves.forEach((move, index) => {
 			let y = 86 + index * 15;
 			drawText(ctx, move.id ?? "-", 20, y);
-			drawText(ctx, `PP ${move.pp}`, 220, y, { align: "right", color: Text.muted });
+			drawText(ctx, `PP ${move.pp}`, 220, y, { align: "right", color: TEXT.muted });
 		});
 	}
 }

@@ -17,7 +17,7 @@ import type { Direction } from "../core/direction";
 import { SCREEN_HEIGHT, SCREEN_WIDTH, TILE_SIZE } from "../core/loop";
 
 import { type Camera } from "./camera";
-import { Tile } from "./theme";
+import { TILE } from "./theme";
 
 /** One declarative step an NPC or trigger script runs. */
 export type ScriptCommand =
@@ -153,23 +153,23 @@ export class TileMapRenderer {
 			let y = Math.floor(index / this.map.width) * TILE_SIZE;
 			ctx.fillStyle = this.tileColor(index);
 			ctx.fillRect(x, y, TILE_SIZE, TILE_SIZE);
-			ctx.strokeStyle = Tile.gridLine;
+			ctx.strokeStyle = TILE.gridLine;
 			ctx.strokeRect(x + 0.5, y + 0.5, TILE_SIZE - 1, TILE_SIZE - 1);
 		}
 	}
 
 	/** Picks a placeholder color for one cell. */
 	private tileColor(index: number): string {
-		if (this.encounterTiles.has(index)) return Tile.grass;
+		if (this.encounterTiles.has(index)) return TILE.grass;
 		switch (this.map.collision[index]) {
 			case Collision.Solid:
-				return Tile.solid;
+				return TILE.solid;
 			case Collision.Water:
-				return Tile.water;
+				return TILE.water;
 			case Collision.LedgeDown:
-				return Tile.ledge;
+				return TILE.ledge;
 			default:
-				return Tile.walkable;
+				return TILE.walkable;
 		}
 	}
 }

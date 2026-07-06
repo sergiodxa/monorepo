@@ -15,7 +15,7 @@
  */
 
 /** Colors for the battle backdrop drawn in `battle/battle-scene.ts`. */
-export const BattleBackdrop = {
+export const BATTLE_BACKDROP = {
 	/** The upper sky band of the battle backdrop (`drawBackground`). */
 	sky: "#98d0e0",
 	/** The lower ground strip of the battle backdrop (`drawBackground`). */
@@ -23,7 +23,7 @@ export const BattleBackdrop = {
 } as const;
 
 /** Colors for the animated HP bar drawn in `battle/hp-bar.ts`. */
-export const HpBarColor = {
+export const HP_BAR_COLOR = {
 	/** The 1px outline framing the bar (`draw`). */
 	outline: "#202020",
 	/** The empty track behind the fill (`draw`). */
@@ -39,7 +39,7 @@ export const HpBarColor = {
 } as const;
 
 /** Colors for the shared menu/message window in `render/window.ts`. */
-export const WindowColor = {
+export const WINDOW_COLOR = {
 	/** The procedural panel fill when no windowskin is supplied (`frame`). */
 	panel: "#f8f8f8",
 	/** The procedural panel border (`frame`). */
@@ -49,7 +49,7 @@ export const WindowColor = {
 } as const;
 
 /** Text colors used by `render/text.ts` and its callers. */
-export const Text = {
+export const TEXT = {
 	/** The default `drawText` color when no `color` option is given (`render/text.ts`). */
 	default: "#202020",
 	/** Secondary body copy: species/HP/status lines, party count (`scenes/summary.ts`, `scenes/storage.ts`). */
@@ -67,7 +67,7 @@ export const Text = {
 } as const;
 
 /** Placeholder tile colors for the procedural `TileMapRenderer` in `render/tilemap.ts`. */
-export const Tile = {
+export const TILE = {
 	/** A walkable/grass cell with no special collision (`tileColor` default). */
 	walkable: "#8ccf6f",
 	/** A walkable cell inside an encounter zone, tinted as tall grass (`tileColor`). */
@@ -83,7 +83,7 @@ export const Tile = {
 } as const;
 
 /** Colors for the procedural player sprite drawn in `overworld/overworld-scene.ts`. */
-export const Player = {
+export const PLAYER = {
 	/** The player's body/torso rectangle (`drawPlayer`). */
 	body: "#d03030",
 	/** The player's head/skin rectangle (`drawPlayer`). */
@@ -93,7 +93,7 @@ export const Player = {
 } as const;
 
 /** Full-screen background fills, one per scene. */
-export const SceneBackground = {
+export const SCENE_BACKGROUND = {
 	/** The boot loading screen fill (`scenes/boot.ts`). */
 	boot: "#101820",
 	/** The title screen fill (`scenes/title.ts`). */
@@ -115,7 +115,7 @@ export const SceneBackground = {
 } as const;
 
 /** The boot progress bar's two-tone fill (`scenes/boot.ts`). */
-export const BootProgress = {
+export const BOOT_PROGRESS = {
 	/** The empty track behind the progress fill. */
 	track: "#404850",
 	/** The filled portion of the progress bar. */
@@ -127,7 +127,7 @@ export const BootProgress = {
  * `battle/battle-scene.ts`. Only the hue is derived from the species id; the
  * saturation and lightness are constant, so the whole family shares one look.
  */
-export const CreaturePlaceholder = {
+export const CREATURE_PLACEHOLDER = {
 	/** Constant saturation (%) for the placeholder sprite fill (`colorFor`). */
 	saturation: 55,
 	/** Constant lightness (%) for the placeholder sprite fill (`colorFor`). */
@@ -140,9 +140,9 @@ export const CreaturePlaceholder = {
  * Builds the placeholder creature fill for a given hue.
  *
  * The hue is derived per-species by the caller (a stable hash of the species
- * id); saturation and lightness are the fixed `CreaturePlaceholder` values so
+ * id); saturation and lightness are the fixed `CREATURE_PLACEHOLDER` values so
  * only the hue varies between species.
  */
 export function creatureColor(hue: number): string {
-	return `hsl(${hue}, ${CreaturePlaceholder.saturation}%, ${CreaturePlaceholder.lightness}%)`;
+	return `hsl(${hue}, ${CREATURE_PLACEHOLDER.saturation}%, ${CREATURE_PLACEHOLDER.lightness}%)`;
 }

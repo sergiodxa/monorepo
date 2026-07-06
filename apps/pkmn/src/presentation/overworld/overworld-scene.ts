@@ -25,7 +25,7 @@ import { TILE_SIZE } from "../core/loop";
 import { HERO_ID, WILD_ID } from "../core/new-game";
 import { Camera } from "../render/camera";
 import { drawText } from "../render/text";
-import { Player, Text } from "../render/theme";
+import { PLAYER, TEXT } from "../render/theme";
 import { TileMapRenderer } from "../render/tilemap";
 import { MenuScene } from "../scenes/menu";
 
@@ -109,7 +109,7 @@ export class OverworldScene implements Scene {
 		this.renderer.drawGround(ctx, this.camera);
 		this.drawPlayer(ctx);
 		this.renderer.drawOverhead(ctx, this.camera);
-		drawText(ctx, "Grass: wild battles   Start: menu", 4, 4, { color: Text.inverseWhite });
+		drawText(ctx, "Grass: wild battles   Start: menu", 4, 4, { color: TEXT.inverseWhite });
 		void game;
 	}
 
@@ -156,13 +156,13 @@ export class OverworldScene implements Scene {
 		let x = Math.round(this.player.pixelX - this.camera.x);
 		let y = Math.round(this.player.pixelY - this.camera.y);
 
-		ctx.fillStyle = Player.body;
+		ctx.fillStyle = PLAYER.body;
 		ctx.fillRect(x + 3, y - 6, 10, 20);
-		ctx.fillStyle = Player.skin;
+		ctx.fillStyle = PLAYER.skin;
 		ctx.fillRect(x + 4, y - 8, 8, 6);
 
 		// A small nub indicating facing.
-		ctx.fillStyle = Player.facingNub;
+		ctx.fillStyle = PLAYER.facingNub;
 		let cx = x + 8;
 		let cy = y + 2;
 		let nub: Record<Direction, [number, number]> = {
