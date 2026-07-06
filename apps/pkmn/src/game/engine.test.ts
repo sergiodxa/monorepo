@@ -212,6 +212,55 @@ test("winning a battle awards experience to the party", () => {
 	}
 });
 
+test("attempt-capture catches a wild creature and ends the battle", () => {
+	let ballId = Object.entries(ITEMS).find(
+		([, item]) => "effect" in item && "multiplier" in item.effect,
+	)?.[0];
+	expect(ballId).toBeDefined();
+
+	let playerId = createPlayerId("hero");
+	let enemyId = createPlayerId("rival");
+	let allyId = createCreatureId("ally-1");
+	let enemyCreatureId = createCreatureId("enemy-1");
+	// random() === 0 makes every shake check pass, so the catch is deterministic.
+	let engine = createBattleEngine(playerId, enemyId, allyId, enemyCreatureId, () => 0);
+	let battleId = createBattleId("b1");
+
+	engine.dispatch({ type: "add-inventory-item", playerId, itemId: ballId!, count: 1 });
+	let spawn = engine.dispatch({
+		type: "spawn-encounter",
+		encounterId: "e1",
+		speciesId: SECONDARY_SPECIES_ID,
+		level: 5,
+	});
+	let wild = spawn.find((event) => event.type === "encounter-spawned");
+	if (wild?.type !== "encounter-spawned") throw new Error("expected an encounter");
+
+	engine.dispatch({
+		type: "start-battle",
+		battleId,
+		playerId,
+		enemyId,
+		playerParty: [allyId],
+		enemyParty: [wild.creatureId],
+		slots: 1,
+	});
+
+	let events = engine.dispatch({ type: "attempt-capture", battleId, playerId, itemId: ballId! });
+
+	expect(events.some((event) => event.type === "capture-attempted" && event.success)).toBe(true);
+	expect(events.some((event) => event.type === "creature-captured")).toBe(true);
+	expect(events.some((event) => event.type === "battle-finished")).toBe(true);
+	expect(engine.selectActiveBattle(playerId)).toBeNull();
+	let owned = engine
+		.selectParty(playerId)
+		.creatures.some((creature) => creature.id === wild.creatureId);
+	let stored = engine
+		.selectStorage(playerId)
+		.boxes.some((box) => box.creatures.some((creature) => creature.id === wild.creatureId));
+	expect(owned || stored).toBe(true);
+});
+
 test("heal-party fully restores a damaged party", () => {
 	let playerId = createPlayerId("hero");
 	let enemyId = createPlayerId("rival");

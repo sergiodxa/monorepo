@@ -14,6 +14,7 @@
  */
 import type { BattlePosition, ReplacementSelection, TurnCommand } from "~/game/battle/battle";
 import type { ReplacementCommand } from "~/game/battle/battle";
+import type { GameEvent } from "~/game/events";
 import type { BattleView, CreatureSummaryView } from "~/game/selectors";
 import type { BattleId } from "~/game/world/ids";
 
@@ -22,7 +23,7 @@ import type { Scene } from "../core/scene";
 import { GameClient } from "../core/game-client";
 import { Button } from "../core/input";
 import { SCREEN_WIDTH } from "../core/loop";
-import { drawText, wrapText } from "../render/text";
+import { drawText, Typewriter, wrapText } from "../render/text";
 import { Window } from "../render/window";
 
 import { AnimationQueue } from "./animation-queue";
@@ -53,8 +54,35 @@ export class BattleScene implements Scene {
 	/** True once the finish message is showing and only the pop is pending. */
 	private finishing = false;
 
+	/** Winner reported by a battle-finished engine event (covers capture/flee endings). */
+	private endedWinnerSide: number | null | undefined = undefined;
+
+	/** Whether the last capture attempt caught the target. */
+	private captured = false;
+
 	/** @param battleId - The battle this scene presents. */
 	constructor(private readonly battleId: BattleId) {}
+
+	/**
+	 * Reacts to engine-level events a dispatch produced.
+	 *
+	 * Capture and flee end a battle outside the turn resolver, so their outcome
+	 * arrives here as `capture-attempted`/`battle-finished` game events rather than
+	 * in the battle log; this narrates the shakes and records the ending.
+	 */
+	onEngineEvents(events: GameEvent[]) {
+		for (let event of events) {
+			if (event.type === "capture-attempted") {
+				this.captured ||= event.success;
+				this.enqueueMessage(
+					event.success
+						? "Gotcha! It was caught!"
+						: `It shook ${event.shakes} time(s), then broke free!`,
+				);
+			}
+			if (event.type === "battle-finished") this.endedWinnerSide = event.winnerSide;
+		}
+	}
 
 	/** Initializes HP bars and queues the intro message. */
 	enter(game: GameClient) {
@@ -90,11 +118,13 @@ export class BattleScene implements Scene {
 			return;
 		}
 
-		if (view.winnerSide !== null) {
-			this.message =
-				view.winnerSide === 0
+		let winnerSide = this.endedWinnerSide ?? view.winnerSide;
+		if (winnerSide !== null) {
+			this.message = this.captured
+				? "The wild creature was caught!"
+				: winnerSide === 0
 					? "You won the battle!"
-					: view.winnerSide === 1
+					: winnerSide === 1
 						? "You were defeated..."
 						: "The battle ended in a draw.";
 			this.finishing = true;
@@ -108,7 +138,8 @@ export class BattleScene implements Scene {
 			let result = this.menu.update(game.input, moves);
 			if (result?.kind === "fight") this.submitTurn(game, request.turn, result.move);
 			else if (result?.kind === "run") this.submitRun(game, request.turn);
-			// bag/switch menus are handled by the menu scenes and are not wired here yet.
+			else if (result?.kind === "bag") this.throwBall(game);
+			// the Creatures (switch) menu is not wired to in-battle switching yet.
 		} else if (request?.type === "replacement") {
 			this.submitReplacements(game, request.replacement);
 		}
@@ -126,8 +157,9 @@ export class BattleScene implements Scene {
 		if (ally) this.drawInfo(ctx, ally, 128, 78, true);
 
 		let turnRequest = this.pendingRequest(view)?.type === "turn";
+		let live = view.winnerSide === null && this.endedWinnerSide === undefined && !this.finishing;
 		if (this.message !== null) this.drawMessage(ctx, this.message);
-		else if (this.queue.idle && turnRequest && view.winnerSide === null) {
+		else if (this.queue.idle && turnRequest && live) {
 			this.menu.render(ctx, this.playerMoves(view));
 		}
 	}
@@ -150,6 +182,39 @@ export class BattleScene implements Scene {
 		game.dispatch({ type: "submit-battle-turn", battleId: this.battleId, commands });
 		this.menu.reset();
 		this.processNewEvents(game.engine.selectBattle(this.battleId));
+	}
+
+	/** Throws the first ball in the bag at the wild target, if one is available. */
+	private throwBall(game: GameClient) {
+		this.menu.reset();
+		let ball = game.engine
+			.selectInventory()
+			.entries.find((entry) => /ball/i.test(entry.id) && entry.count > 0);
+		if (!ball) {
+			this.enqueueMessage("You have no balls to throw!");
+			return;
+		}
+		game.dispatch({
+			type: "attempt-capture",
+			battleId: this.battleId,
+			playerId: game.engine.selectPlayer().id,
+			itemId: ball.id,
+		});
+	}
+
+	/** Enqueues a self-contained narration message (used for capture and prompts). */
+	private enqueueMessage(text: string) {
+		let writer = new Typewriter(text, 50);
+		let linger = 0;
+		this.queue.enqueue({
+			update: (dt) => {
+				writer.update(dt);
+				this.message = writer.visibleText;
+				if (!writer.done) return false;
+				linger += dt;
+				return linger >= 700;
+			},
+		});
 	}
 
 	/** Submits a fleeing turn for the player's slots (foe slots still act). */

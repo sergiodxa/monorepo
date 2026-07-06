@@ -6,7 +6,7 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import type { ReplacementCommand, TurnCommand } from "./battle/battle";
+import type { BattlePosition, ReplacementCommand, TurnCommand } from "./battle/battle";
 import type { ItemId } from "./data/item";
 import type { MoveId } from "./data/move";
 import type { NatureId } from "./data/nature";
@@ -124,11 +124,21 @@ export namespace Command {
 		iv?: Partial<StatSet>;
 		moveIds?: MoveId[];
 	}
+
+	/** Throws a capture item at a wild target, ending the battle on success. */
+	export interface AttemptCapture {
+		type: "attempt-capture";
+		battleId: BattleId;
+		playerId: PlayerId;
+		itemId: ItemId;
+		target?: BattlePosition;
+	}
 }
 
 /** Intent submitted through the engine boundary. */
 export type Command =
 	| Command.AddInventoryItem
+	| Command.AttemptCapture
 	| Command.CaptureCreature
 	| Command.EvolveCreature
 	| Command.GrantCreatureExperience

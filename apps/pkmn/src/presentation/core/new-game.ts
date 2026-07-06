@@ -63,7 +63,7 @@ export function createNewGameWorld(content: GameDataSource): World {
 			[WILD_ID]: { creatureIds: [] },
 		},
 		inventory: {
-			[HERO_ID]: { items: {} },
+			[HERO_ID]: { items: startingItems(content) },
 			[WILD_ID]: { items: {} },
 		},
 		bestiary: {
@@ -145,6 +145,29 @@ function deriveMoveset(content: GameDataSource, species: Species): string[] {
 		moves.push(entry.moveId);
 	}
 	return moves.slice(-4);
+}
+
+/** Builds a small starting bag by finding a capture item and a healing item in content. */
+function startingItems(content: GameDataSource): Record<string, number> {
+	let items: Record<string, number> = {};
+	let ballId = findItem(content, (effect) => "multiplier" in effect);
+	let potionId = findItem(content, (effect) => "kind" in effect && effect.kind === "heal-hp");
+	if (ballId) items[ballId] = 5;
+	if (potionId) items[potionId] = 3;
+	return items;
+}
+
+/** Returns the id of the first item whose effect matches, or null when none do. */
+function findItem(
+	content: GameDataSource,
+	matches: (effect: Record<string, unknown>) => boolean,
+): string | null {
+	for (let [id, item] of Object.entries(content.items)) {
+		if ("effect" in item && item.effect && typeof item.effect === "object") {
+			if (matches(item.effect as unknown as Record<string, unknown>)) return id;
+		}
+	}
+	return null;
 }
 
 /** Returns the first key of a record, or null when it is empty. */

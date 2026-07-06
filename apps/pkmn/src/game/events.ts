@@ -108,6 +108,13 @@ export namespace GameEvent {
 		creatureId: CreatureId;
 		choices: SpeciesId[];
 	}
+
+	/** Reports the outcome of a capture attempt: how many shakes and whether it caught. */
+	export interface CaptureAttempted {
+		type: "capture-attempted";
+		shakes: number;
+		success: boolean;
+	}
 }
 
 /** High-level engine event emitted after a command is applied. */
@@ -124,4 +131,5 @@ export type GameEvent =
 	| GameEvent.CreatureEvolved
 	| GameEvent.PartyHealed
 	| GameEvent.EncounterSpawned
-	| GameEvent.CreatureCanEvolve;
+	| GameEvent.CreatureCanEvolve
+	| GameEvent.CaptureAttempted;

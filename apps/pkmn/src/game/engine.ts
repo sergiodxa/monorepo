@@ -9,6 +9,7 @@
 import { unwrap } from "@pkg/result";
 
 import type { BattleEvent, ReplacementCommand, TurnCommand } from "./battle/battle";
+import type { BattlePosition } from "./battle/battle";
 import type { Command } from "./commands";
 import type { GameDataSource } from "./data/game-data";
 import type { GameEvent } from "./events";
@@ -26,10 +27,16 @@ import type {
 import type { World } from "./world/world";
 
 import { Battle as BattleRuntime } from "./battle/battle";
+import { getCreatureSpecies, getCreatureStat } from "./battle/mechanics";
 import { GameData } from "./data/game-data";
+import { Stat } from "./data/stat";
 import { selectView } from "./selectors";
 import { markSpeciesCaught, markSpeciesSeen } from "./systems/bestiary-system";
-import { captureCreature } from "./systems/capture-system";
+import {
+	captureCreature,
+	captureStatusBonus,
+	computeCaptureAttempt,
+} from "./systems/capture-system";
 import { despawnEncounter, spawnEncounter } from "./systems/encounter-system";
 import { evolveCreature, getLevelUpEvolution } from "./systems/evolution-system";
 import { awardBattleExperience, grantCreatureExperience } from "./systems/experience-system";
@@ -111,6 +118,9 @@ export class Engine {
 						count: inventory.items[command.itemId] ?? 0,
 					},
 				];
+			}
+			case "attempt-capture": {
+				return this.attemptCapture(command);
 			}
 			case "capture-creature": {
 				let captured = captureCreature(this.world, command.playerId, command.creatureId);
@@ -311,6 +321,66 @@ export class Engine {
 		return [{ type: "battle-started", battleId: command.battleId }, ...events];
 	}
 
+	/**
+	 * Throws a capture item at a wild target and, on success, catches it and ends the battle.
+	 *
+	 * Reads the target's live HP and status from the running battle, runs the Gen 3
+	 * capture formula with the ball's multiplier, and consumes the ball. A success
+	 * converts the (encounter-located) target into an owned creature, marks the
+	 * bestiary, and finalizes the battle with no experience; a failure just reports
+	 * the shakes and leaves the battle awaiting the next action.
+	 */
+	private attemptCapture(command: Extract<Command, { type: "attempt-capture" }>): GameEvent[] {
+		let runtime = this.battleRuntime.get(command.battleId);
+		let item = this.gameData.items.get(command.itemId);
+		if (!runtime || !item || !("effect" in item) || !("multiplier" in item.effect)) return [];
+
+		let target: BattlePosition = command.target ?? { side: 1, slot: 0 };
+		let active = runtime.battle.state.sides[target.side]?.active[target.slot];
+		let participants = this.world.battleParticipants[command.battleId];
+		let creatureId = participants?.enemyParty[active?.creatureIndex ?? -1];
+		if (!active || !creatureId) return [];
+		// Only wild (encounter-located) creatures can be captured.
+		if (this.world.creatureLocation[creatureId]?.kind !== "encounter") return [];
+
+		let creature = active.combatant.creature;
+		let maxHP = getCreatureStat(this.gameData, creature, Stat.HP);
+		let species = getCreatureSpecies(this.gameData, creature);
+		let attempt = computeCaptureAttempt({
+			maxHP,
+			currentHP: maxHP - creature.status.damage,
+			catchRate: species.catchRate,
+			ballMultiplier: item.effect.multiplier,
+			statusBonus: captureStatusBonus(creature.status.state),
+			random: this.random,
+		});
+
+		removeInventoryItem(this.world, command.playerId, command.itemId, 1);
+		let ballCount =
+			this.selectInventory(command.playerId).entries.find((entry) => entry.id === command.itemId)
+				?.count ?? 0;
+
+		let events: GameEvent[] = [
+			{ type: "capture-attempted", shakes: attempt.shakes, success: attempt.success },
+			{ type: "inventory-updated", itemId: command.itemId, count: ballCount },
+		];
+		if (!attempt.success) return events;
+
+		let captured = captureCreature(this.world, command.playerId, creatureId);
+		markSpeciesCaught(this.world, command.playerId, creature.speciesId);
+		events.push(
+			{
+				type: "creature-captured",
+				creatureId,
+				placement: captured.placement,
+				boxId: "boxId" in captured ? captured.boxId : undefined,
+			},
+			{ type: "bestiary-updated", speciesId: creature.speciesId, status: "caught" },
+			...this.finalizeBattle(command.battleId, 0, false),
+		);
+		return events;
+	}
+
 	/** Advances the current battle session with one set of turn commands. */
 	private submitBattleTurn(battleId: string, commands: TurnCommand[]): GameEvent[] {
 		let runtime = this.getBattleRuntime(battleId);
@@ -356,47 +426,64 @@ export class Engine {
 		}
 		let finishEvent = emitted.find((event) => event.type === "battle-finished");
 		if (finishEvent?.type === "battle-finished") {
-			let runtime = this.getBattleRuntime(battleId);
-			writeBackPlayerBattleResults(this.world, runtime, battleId);
-			let participants = this.world.battleParticipants[battleId];
-			if (participants) {
-				removeComponent(this.world.activeBattle, participants.playerId);
+			events.push(...this.finalizeBattle(battleId, finishEvent.winnerSide, true));
+		}
 
-				// Award experience for a win before enemies are cleared, then report
-				// each gain and any evolution the level-up unlocks.
-				if (finishEvent.winnerSide === 0) {
-					let grants = awardBattleExperience(
-						this.gameData,
-						this.world,
-						participants.enemyParty,
-						participants.playerParty,
-					);
-					for (let grant of grants) {
-						events.push({ type: "creature-experience-granted", ...grant });
-						if (grant.levelAfter <= grant.levelBefore) continue;
-						let choice = getLevelUpEvolution(this.gameData, this.world, grant.creatureId);
-						if (choice) {
-							events.push({
-								type: "creature-can-evolve",
-								creatureId: grant.creatureId,
-								choices: [choice],
-							});
-						}
-					}
-				}
+		return events;
+	}
 
-				// Wild creatures that were not captured leave with the battle.
-				for (let enemyId of participants.enemyParty) {
-					let location = this.world.creatureLocation[enemyId];
-					if (location?.kind === "encounter" && !this.world.ownership[enemyId]) {
-						despawnEncounter(this.world, enemyId);
+	/**
+	 * Writes back results, awards experience, clears mirrors, and returns the closing events.
+	 *
+	 * Shared by natural battle endings and by capture/escape, which end a battle from
+	 * outside the turn resolver. Experience is awarded only on a genuine win
+	 * (`awardExperience` and `winnerSide === 0`), not for a capture or flee.
+	 */
+	private finalizeBattle(
+		battleId: string,
+		winnerSide: number | null,
+		awardExperience: boolean,
+	): GameEvent[] {
+		let events: GameEvent[] = [];
+		let runtime = this.battleRuntime.get(battleId);
+		if (runtime) writeBackPlayerBattleResults(this.world, runtime, battleId);
+
+		let participants = this.world.battleParticipants[battleId];
+		if (participants) {
+			removeComponent(this.world.activeBattle, participants.playerId);
+
+			if (awardExperience && winnerSide === 0) {
+				let grants = awardBattleExperience(
+					this.gameData,
+					this.world,
+					participants.enemyParty,
+					participants.playerParty,
+				);
+				for (let grant of grants) {
+					events.push({ type: "creature-experience-granted", ...grant });
+					if (grant.levelAfter <= grant.levelBefore) continue;
+					let choice = getLevelUpEvolution(this.gameData, this.world, grant.creatureId);
+					if (choice) {
+						events.push({
+							type: "creature-can-evolve",
+							creatureId: grant.creatureId,
+							choices: [choice],
+						});
 					}
 				}
 			}
-			this.battleRuntime.delete(battleId);
-			events.push({ type: "battle-finished", battleId, winnerSide: finishEvent.winnerSide });
+
+			// Wild creatures that were not captured leave with the battle.
+			for (let enemyId of participants.enemyParty) {
+				let location = this.world.creatureLocation[enemyId];
+				if (location?.kind === "encounter" && !this.world.ownership[enemyId]) {
+					despawnEncounter(this.world, enemyId);
+				}
+			}
 		}
 
+		this.battleRuntime.delete(battleId);
+		events.push({ type: "battle-finished", battleId, winnerSide });
 		return events;
 	}
 
