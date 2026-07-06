@@ -9,11 +9,14 @@ through a `DatabaseAdapter`. This package implements that adapter over a Durable
 Object's embedded SQLite (`ctx.storage.sql`), so the same models, queries, and
 migrations you write for D1 or `node:sqlite` run unchanged inside a Durable Object.
 
-SQL is generated with SQLite semantics. Every statement runs inside the Durable
-Object's implicit transaction, so `remix/data-table` transactions are modeled as
-logical tokens (savepoints are not supported). It was extracted from `apps/auth-saas`
-so the multi-tenant platform's tenant Durable Object and any other DO-backed app
-can share one adapter (see [ADR-011](/docs/adr/ADR-011-oidc-provider-engine-package.md)).
+SQL is generated with SQLite semantics. Durable Object SQLite (`ctx.storage.sql`)
+runs synchronously and accepts `BEGIN`/`COMMIT`/`ROLLBACK` and `SAVEPOINT`, so
+`remix/data-table` transactions are **real and atomic**: statements issued inside a
+`transaction()` scope commit together on success and roll back as a unit if the
+callback throws, and nested transactions are supported via savepoints. It was
+extracted from `apps/auth-saas` so the multi-tenant platform's tenant Durable
+Object and any other DO-backed app can share one adapter (see
+[ADR-011](/docs/adr/ADR-011-oidc-provider-engine-package.md)).
 
 ## Usage
 
@@ -93,5 +96,5 @@ let provider = createOidcProvider({
 
 1. **Pass `ctx.storage.sql`, not `ctx.storage`** - The adapter needs the SQL handle, which requires a SQLite-backed Durable Object class in your Wrangler migration.
 2. **Prefer `RETURNING` over insert ids** - `returning` is enabled by default; SqlStorage has no reliable last-insert-id, so reads after writes should use `RETURNING`.
-3. **Savepoints are unsupported** - Everything runs in the DO's implicit transaction; don't rely on nested savepoints.
+3. **Transactions are atomic** - `transaction()` runs a real `BEGIN`/`COMMIT`/`ROLLBACK`, so a failure inside the callback rolls back every write in the scope; nested transactions use savepoints.
 4. **Build the adapter once per instance** - Create it in the Durable Object constructor (or once per isolate) rather than per request.

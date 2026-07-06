@@ -19,8 +19,11 @@ interface SqlStorageAdapterOptions {
 /**
  * Creates a `DatabaseAdapter` backed by a Cloudflare Durable Object `SqlStorage`.
  *
- * SQL generation follows SQLite semantics. All statements run inside the Durable
- * Object's implicit transaction, so transactions are modeled as logical tokens.
+ * SQL generation follows SQLite semantics. Durable Object SQLite (`ctx.storage.sql`)
+ * runs synchronously inside the object and accepts `BEGIN`/`COMMIT`/`ROLLBACK` and
+ * `SAVEPOINT` statements, so transactions are executed for real: statements issued
+ * within a `transaction()` scope are committed atomically on success and rolled back
+ * as a unit on failure. Nested transactions are implemented with savepoints.
  * @param db `SqlStorage` handle used to execute SQL.
  * @param options Optional capability overrides for adapter feature flags.
  * @returns A `DatabaseAdapter` implementation for `SqlStorage`.
@@ -43,7 +46,7 @@ export function createSQLStorageDatabaseAdapter(
 
 		capabilities: {
 			returning: options?.capabilities?.returning ?? true,
-			savepoints: options?.capabilities?.savepoints ?? false,
+			savepoints: options?.capabilities?.savepoints ?? true,
 			upsert: options?.capabilities?.upsert ?? true,
 			transactionalDdl: options?.capabilities?.transactionalDdl ?? true,
 			migrationLock: options?.capabilities?.migrationLock ?? false,
@@ -138,14 +141,20 @@ export function createSQLStorageDatabaseAdapter(
 			return cursor.toArray().some((row) => row.name === column);
 		},
 
+		/**
+		 * Opens a real SQLite transaction with `BEGIN` so every statement issued
+		 * within the scope commits or rolls back as a single atomic unit.
+		 * @param options Transaction hints; `read uncommitted` toggles the matching
+		 * pragma before the transaction begins.
+		 * @returns A token identifying the open transaction.
+		 */
 		async beginTransaction(options?: TransactionOptions): Promise<TransactionToken> {
 			if (options?.isolationLevel === "read uncommitted") {
 				db.exec("PRAGMA read_uncommitted = true");
 			}
 
-			// Durable Object storage runs everything inside its own implicit
-			// transaction, so DataTable transaction tokens are tracked logically
-			// and rely on per-statement execution.
+			db.exec("BEGIN");
+
 			transactionCounter += 1;
 			let token = { id: "tx_" + String(transactionCounter) };
 			transactions.add(token.id);
@@ -153,26 +162,59 @@ export function createSQLStorageDatabaseAdapter(
 			return token;
 		},
 
+		/**
+		 * Commits the open transaction with `COMMIT`, persisting every buffered
+		 * statement atomically.
+		 * @param token Token returned by {@link beginTransaction}.
+		 */
 		async commitTransaction(token: TransactionToken): Promise<void> {
 			assertTransaction(token);
+			db.exec("COMMIT");
 			transactions.delete(token.id);
 		},
 
+		/**
+		 * Rolls back the open transaction with `ROLLBACK`, discarding every statement
+		 * issued within the scope so no partial state is persisted.
+		 * @param token Token returned by {@link beginTransaction}.
+		 */
 		async rollbackTransaction(token: TransactionToken): Promise<void> {
 			assertTransaction(token);
+			db.exec("ROLLBACK");
 			transactions.delete(token.id);
 		},
 
-		async createSavepoint(_token: TransactionToken, _name: string): Promise<void> {
-			throw new Error("SqlStorage adapter savepoints are not supported");
+		/**
+		 * Creates a named savepoint inside the open transaction, enabling nested
+		 * transactions to roll back independently.
+		 * @param token Token returned by {@link beginTransaction}.
+		 * @param name Savepoint name.
+		 */
+		async createSavepoint(token: TransactionToken, name: string): Promise<void> {
+			assertTransaction(token);
+			db.exec("SAVEPOINT " + quoteIdentifier(name));
 		},
 
-		async rollbackToSavepoint(_token: TransactionToken, _name: string): Promise<void> {
-			throw new Error("SqlStorage adapter savepoints are not supported");
+		/**
+		 * Rolls back to a previously created savepoint, discarding statements issued
+		 * after it while keeping the enclosing transaction open.
+		 * @param token Token returned by {@link beginTransaction}.
+		 * @param name Savepoint name to roll back to.
+		 */
+		async rollbackToSavepoint(token: TransactionToken, name: string): Promise<void> {
+			assertTransaction(token);
+			db.exec("ROLLBACK TO SAVEPOINT " + quoteIdentifier(name));
 		},
 
-		async releaseSavepoint(_token: TransactionToken, _name: string): Promise<void> {
-			throw new Error("SqlStorage adapter savepoints are not supported");
+		/**
+		 * Releases a previously created savepoint, merging its statements into the
+		 * enclosing transaction.
+		 * @param token Token returned by {@link beginTransaction}.
+		 * @param name Savepoint name to release.
+		 */
+		async releaseSavepoint(token: TransactionToken, name: string): Promise<void> {
+			assertTransaction(token);
+			db.exec("RELEASE SAVEPOINT " + quoteIdentifier(name));
 		},
 	};
 }

@@ -38,6 +38,23 @@ interface D1PreparedQuery {
  * Creates a `DatabaseAdapter` backed by a Cloudflare D1 database.
  *
  * SQL generation follows SQLite semantics to match D1 behavior.
+ *
+ * IMPORTANT — transactions are NOT atomic on D1. Cloudflare D1 has no interactive
+ * transactions: it exposes no `BEGIN`/`COMMIT`/`ROLLBACK`, and its only atomic
+ * primitive, `db.batch([...])`, requires every statement up front and defers all
+ * results until the batch runs. The `remix/data-table` adapter contract instead
+ * requires each statement to execute and return its result (rows, `RETURNING`
+ * output, `insertId`) synchronously within the `transaction()` callback — for
+ * example `Database.update()` reads the `RETURNING` row and throws if it is
+ * missing. Those two models are incompatible, so this adapter cannot buffer a
+ * scope into a single `batch()` without breaking result-returning callers or
+ * fabricating results. It therefore tracks transaction tokens logically and runs
+ * each statement immediately; every statement auto-commits on its own and a later
+ * failure leaves the earlier statements committed. Callers that need atomic
+ * multi-row writes on D1 must express them as a single SQL statement (for example
+ * an `insertMany`, a single `UPDATE`, or an `INSERT ... ON CONFLICT`) rather than
+ * relying on `transaction()`. The Durable Object adapter
+ * (`@pkg/data-table-sqlstorage`) does provide real atomic transactions.
  * @param db D1 binding used to prepare and execute SQL.
  * @param options Optional capability overrides for adapter feature flags.
  * @returns A `DatabaseAdapter` implementation for D1.
@@ -142,14 +159,25 @@ export function createD1DatabaseAdapter(
 			return (result.results ?? []).some((entry) => entry.name === column);
 		},
 
+		/**
+		 * Starts a logical transaction scope.
+		 *
+		 * WARNING — this does NOT provide atomicity. Cloudflare D1 has no interactive
+		 * transactions, so no `BEGIN` is issued; statements executed within the scope
+		 * each auto-commit independently and a later failure will not roll back the
+		 * earlier ones. The token exists only to satisfy the `remix/data-table`
+		 * adapter contract for scoped operations. See the note on
+		 * {@link createD1DatabaseAdapter} for why real transactions are not possible
+		 * here and what to use instead.
+		 * @param options Transaction hints; `read uncommitted` toggles the matching
+		 * pragma.
+		 * @returns A logical token identifying the scope.
+		 */
 		async beginTransaction(options?: TransactionOptions): Promise<TransactionToken> {
 			if (options?.isolationLevel === "read uncommitted") {
 				await db.exec("PRAGMA read_uncommitted = true");
 			}
 
-			// Cloudflare D1 does not allow SQL BEGIN/COMMIT/ROLLBACK statements.
-			// DataTable still requires transaction tokens for scoped operations,
-			// so we create logical tokens and rely on per-statement execution.
 			transactionCounter += 1;
 			let token = { id: "tx_" + String(transactionCounter) };
 			transactions.add(token.id);
@@ -157,11 +185,22 @@ export function createD1DatabaseAdapter(
 			return token;
 		},
 
+		/**
+		 * Ends a logical transaction scope. No `COMMIT` is issued because statements
+		 * were already committed as they ran; this only discards the logical token.
+		 * @param token Token returned by {@link beginTransaction}.
+		 */
 		async commitTransaction(token: TransactionToken): Promise<void> {
 			assertTransaction(token);
 			transactions.delete(token.id);
 		},
 
+		/**
+		 * Ends a logical transaction scope after an error. This CANNOT undo statements
+		 * that already ran within the scope — D1 has no `ROLLBACK` — so partial writes
+		 * may remain. It only discards the logical token.
+		 * @param token Token returned by {@link beginTransaction}.
+		 */
 		async rollbackTransaction(token: TransactionToken): Promise<void> {
 			assertTransaction(token);
 			transactions.delete(token.id);
