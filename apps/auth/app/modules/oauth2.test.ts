@@ -1,3 +1,13 @@
+/**
+ * Test suite for the OIDC provider module. Exercises the token endpoint's three
+ * grant types, plus revoke, introspect, userinfo, logout, and ID-token claim
+ * behavior against a mocked repository, verifying the OAuth/OIDC provider's
+ * success paths and error handling.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { afterEach, beforeAll, describe, expect, mock, test } from "bun:test";
 
 import { JWK } from "@edgefirst-dev/jwt";

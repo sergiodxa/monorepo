@@ -1,3 +1,14 @@
+/**
+ * The auth server's own OAuth callback route (/auth/callback), used when the auth app
+ * logs in as its own OIDC client. Its loader validates the returned code and state
+ * against the stored authz session, exchanges the authorization code for tokens,
+ * persists the access and refresh tokens in the cookie session, and redirects to the
+ * account sessions page. Exists to complete the auth server's self-login flow.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { badRequest } from "@pkg/response";
 import { Card } from "@pkg/ui";
 import { useTranslation } from "react-i18next";

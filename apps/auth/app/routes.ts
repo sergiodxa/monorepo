@@ -1,3 +1,13 @@
+/**
+ * Route configuration for the auth app. Loads flat file-system routes from
+ * separate directories (auth, oauth, oidc, well-known, account, admin, api)
+ * and mounts each group under its URL prefix, assembling the full route tree
+ * for the OAuth/OIDC server and its account and admin surfaces.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import type { RouteConfig } from "@react-router/dev/routes";
 
 import { prefix } from "@react-router/dev/routes";

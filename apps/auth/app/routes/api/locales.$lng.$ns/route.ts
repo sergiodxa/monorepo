@@ -1,3 +1,14 @@
+/**
+ * The i18n locale-resource API route (GET /api/locales/:lng/:ns). Its loader
+ * validates the requested language and namespace against the bundled translation
+ * resources, returns the matching namespace JSON, and in production attaches
+ * browser/CDN cache-control headers with stale-while-revalidate and stale-if-error.
+ * Exists to serve translation catalogs to the client-side i18next runtime.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { cacheHeader } from "pretty-cache-header";
 import { data } from "react-router";
 import { z } from "zod";

@@ -1,3 +1,13 @@
+/**
+ * GitHub OAuth login strategy for the auth app. Builds a remix-auth OAuth2
+ * strategy against GitHub, fetches the user's profile and email, and either
+ * resolves an existing connection to its subject or creates a new subject and
+ * connection (and a matching Polar customer) before returning the subject id.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { env } from "cloudflare:workers";
 import { href } from "react-router";
 import { OAuth2Strategy } from "remix-auth-oauth2";

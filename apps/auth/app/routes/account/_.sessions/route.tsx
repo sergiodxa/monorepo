@@ -1,3 +1,15 @@
+/**
+ * The active-sessions account route (/account/sessions). Its loader lists the signed-in
+ * subject's sessions with device, IP and timestamps, marking the current one; the
+ * action revokes a single session or all of them, logging the user out and clearing
+ * cookies when the current or last session is removed. The component renders the
+ * session list with per-device parsing and confirm-guarded revoke actions. Exists to
+ * let users review and revoke their own login sessions.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { ok } from "@pkg/response";
 import { Badge, Button, Card, confirm } from "@pkg/ui";
 import { MonitorIcon, SmartphoneIcon } from "lucide-react";

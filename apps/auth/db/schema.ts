@@ -1,3 +1,13 @@
+/**
+ * Drizzle SQLite schema for the auth database. Defines the subjects,
+ * credentials, connections, sessions, clients, and grants tables — plus their
+ * indexes and relations — that model users, their password and social logins,
+ * refresh-token sessions, and registered OAuth clients and consent grants.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { fk, pk, timestamp, url } from "@pkg/db-helpers";
 import { relations } from "drizzle-orm";
 import { index, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";

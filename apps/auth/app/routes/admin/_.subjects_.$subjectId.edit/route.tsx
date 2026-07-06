@@ -1,3 +1,14 @@
+/**
+ * The admin edit-subject route (/admin/subjects/:subjectId/edit). Its loader loads the
+ * target subject (404 if missing); the action validates and persists changes to display
+ * name, username, avatar, role and email-verified state before redirecting to the
+ * subject detail page, and the component renders the edit form. Exists to let admins
+ * modify any user's account.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { ok } from "@pkg/response";
 import { isFailure } from "@pkg/result";
 import {

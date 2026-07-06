@@ -1,3 +1,15 @@
+/**
+ * The OIDC RP-Initiated Logout route (/oidc/logout). Its loader validates the logout
+ * request, identifies the subject from the id_token_hint or session, sends back-channel
+ * logout tokens to relying parties, gathers front-channel logout URLs, deletes the
+ * session and clears cookies, then either renders a page of hidden logout iframes or
+ * redirects to the post-logout URI; the action handles the interactive logout button.
+ * Exists to implement single logout across all connected clients.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { iife } from "@pkg/iife";
 import { isFailure } from "@pkg/result";
 import { Button, Form } from "@pkg/ui";

@@ -1,3 +1,14 @@
+/**
+ * The subject-lookup API route (GET /api/subjects/:subjectId). Its loader
+ * authenticates the calling client, then returns the requested subject, reading from
+ * a per-client KV cache first and falling back to the database while populating the
+ * cache for a week; it records Server-Timing metrics and returns 401/404 as needed.
+ * Exists so trusted clients can fetch subject profile data by id.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { TimingCollector } from "@edgefirst-dev/server-timing";
 import { notFound, ok, unauthorized } from "@pkg/http/response/json";
 import { env, waitUntil } from "cloudflare:workers";

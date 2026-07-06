@@ -1,3 +1,13 @@
+/**
+ * English translation catalog for the auth app. Holds all user-facing UI
+ * strings — layout metadata, OAuth scope descriptions, the authorize and logout
+ * flows, account/admin navigation, and the profile, sessions, grants, clients,
+ * and subjects screens — as the single source of copy consumed by i18next.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 export default {
 	layout: {
 		meta: {

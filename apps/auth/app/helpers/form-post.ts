@@ -1,3 +1,13 @@
+/**
+ * Form-post response helper for the auth app. Builds the OAuth 2.0 Form Post
+ * Response Mode reply — an HTML page with an auto-submitting, HTML-escaped form
+ * that POSTs the authorization response params to the client's redirect URI —
+ * with a no-script fallback and no-store caching headers.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { html } from "@pkg/http/response";
 
 /**

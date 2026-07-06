@@ -1,3 +1,13 @@
+/**
+ * Core OAuth 2.0 / OIDC provider for the auth app. Implements the token,
+ * revoke, introspect, userinfo, and logout endpoints plus the authorization-
+ * code, refresh-token, and client-credentials grants, PKCE and login flows, and
+ * back-/front-channel logout, working against a pluggable repository interface.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { timingSafeEqual } from "node:crypto";
 
 import { JWK, JWT } from "@edgefirst-dev/jwt";

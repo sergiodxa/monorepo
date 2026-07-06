@@ -1,3 +1,13 @@
+/**
+ * i18next middleware for the auth app. Configures server-side language detection
+ * via a signed cookie, loads the English translation resources, and exposes an
+ * accessor for the per-request i18next instance while augmenting i18next's types
+ * so translation keys are checked against the app's locale definitions.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { env } from "cloudflare:workers";
 import { createCookie } from "react-router";
 import { createI18nextMiddleware } from "remix-i18next/middleware";

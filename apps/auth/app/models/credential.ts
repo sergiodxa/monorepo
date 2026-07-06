@@ -1,3 +1,12 @@
+/**
+ * Credential model for the auth app. Provides data-access helpers to look up a
+ * subject's password credential and to create a new one from a password hash,
+ * encapsulating the credentials-table queries used by the password login flow.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import type { Database } from "~/db/index";
 
 import * as schema from "~/db/schema";

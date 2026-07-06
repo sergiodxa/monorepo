@@ -1,3 +1,13 @@
+/**
+ * Helpers for reading OAuth/OIDC access tokens that this server issued and stored
+ * in its own cookie session. Decodes the JWT payload without signature verification,
+ * checks whether a token is expired or expiring soon, and extracts the subject id.
+ * Exists to let request handlers cheaply inspect trusted first-party tokens.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { decodeJwt } from "jose";
 
 interface DecodedAccessToken {

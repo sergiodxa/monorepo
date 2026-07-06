@@ -1,3 +1,13 @@
+/**
+ * Client hydration entry point for the auth app. Initializes i18next with the
+ * browser language detector and a fetch backend that loads translations from
+ * the locales API, then hydrates the server-rendered document with the React
+ * Router app inside StrictMode so the page becomes interactive.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import i18next from "i18next";
 import I18nextBrowserLanguageDetector from "i18next-browser-languagedetector";
 import Fetch from "i18next-fetch-backend";

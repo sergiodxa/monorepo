@@ -1,3 +1,13 @@
+/**
+ * Cloudflare Worker entry point for the auth app. Exposes the fetch handler
+ * that lazily builds and serves the React Router request handler, a scheduled
+ * cron trigger that enqueues session cleanup, and a queue consumer that
+ * validates messages and dispatches the clean-expired-sessions job.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { logger } from "@pkg/logger";
 import { env, waitUntil } from "cloudflare:workers";
 import { type RequestHandler, RouterContextProvider } from "react-router";

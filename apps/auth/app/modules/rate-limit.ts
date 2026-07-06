@@ -1,3 +1,13 @@
+/**
+ * Rate-limiting module for the auth app. Wraps the Cloudflare rate limiter
+ * bindings behind a `checkRateLimit` helper keyed per endpoint (token,
+ * introspect, revoke, authorize, login) and provides a standard 429 response,
+ * protecting the OAuth endpoints from abuse.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { tooManyRequests } from "@pkg/http/response/json";
 
 import { bindings } from "~/middleware/cloudflare";

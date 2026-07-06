@@ -1,3 +1,14 @@
+/**
+ * The authorized-apps account route (/account/grants). Its loader lists the clients
+ * the signed-in subject has granted access to; the action revokes a grant and deletes
+ * that client's sessions to sign the user out of it, while refusing to revoke the auth
+ * server's own grant. The component renders each granted app with a confirm-guarded
+ * revoke button. Exists to let users review and revoke third-party app authorizations.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { ok } from "@pkg/response";
 import { Button, Card, confirm, Logo, Text } from "@pkg/ui";
 import { useTranslation } from "react-i18next";

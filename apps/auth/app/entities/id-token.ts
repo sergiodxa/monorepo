@@ -1,3 +1,14 @@
+/**
+ * OIDC ID Token entity: a JWT subclass exposing typed accessors for standard claims
+ * (sub, aud, name, email, picture, preferred_username, email_verified, nonce,
+ * auth_time) and a generator that builds an ID Token for a subject and client,
+ * emitting scope-gated email and profile claims per OIDC Core 1.0. Exists to model
+ * the identity token this provider issues to relying parties.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { JWT } from "@edgefirst-dev/jwt";
 
 import { ID_TOKEN_TTL, ISSUER } from "~/config";

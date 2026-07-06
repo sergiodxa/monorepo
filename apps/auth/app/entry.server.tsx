@@ -1,3 +1,13 @@
+/**
+ * Server rendering entry point for the auth app. Streams the React tree to an
+ * HTML response with the i18next provider, waiting for full render for bots and
+ * using chunked transfer otherwise, and downgrades the status to 500 on render
+ * errors. This is how server-side responses are produced for each request.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import type { EntryContext } from "react-router";
 
 import { HTML } from "@pkg/http/content-type";

@@ -1,3 +1,13 @@
+/**
+ * API authorization helper for the auth app. Verifies a Bearer access token
+ * against the server's JWKS and resolves the calling OAuth client, using a
+ * week-long KV cache (populated in the background) to avoid repeated database
+ * lookups, so API routes can authenticate machine-to-machine requests.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import type { TimingCollector } from "@edgefirst-dev/server-timing";
 
 import { env, waitUntil } from "cloudflare:workers";

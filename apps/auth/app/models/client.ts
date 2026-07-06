@@ -1,3 +1,13 @@
+/**
+ * Client model for the auth app. Manages registered OAuth client applications
+ * with CRUD helpers, secret generation and regeneration, listing and counting,
+ * and an ensure-exists routine that bootstraps the auth server's own client on
+ * first run, backing the admin client-management screens.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { count, eq } from "drizzle-orm";
 
 import type { Database } from "~/db/index";

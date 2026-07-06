@@ -1,3 +1,12 @@
+/**
+ * StatCard component for the auth app. Renders a compact metric card showing a
+ * label, a large value, a supporting description, and an optional icon, used to
+ * display dashboard statistics such as client, user, and session counts.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import type { ReactNode } from "react";
 
 import { Card } from "@pkg/ui";

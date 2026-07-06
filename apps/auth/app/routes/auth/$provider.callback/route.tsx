@@ -1,3 +1,15 @@
+/**
+ * The social-login callback route (/auth/:provider/callback). Its loader rate-limits
+ * by IP, resolves the authenticated subject from the identity provider (currently
+ * GitHub), then completes the pending authorization by issuing an authz code, setting
+ * the OP browser-state cookie for session management, and redirecting back to the RP
+ * via query or form_post response mode. Exists to bridge third-party sign-in into the
+ * OIDC authorization flow.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { getClientIP } from "@pkg/get-client-ip";
 import { badRequest } from "@pkg/response";
 import { redirectDocument } from "react-router";

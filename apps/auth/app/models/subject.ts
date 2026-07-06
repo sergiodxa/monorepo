@@ -1,3 +1,13 @@
+/**
+ * Subject model for the auth app. Provides data-access helpers for user
+ * accounts, including lookup by email or id, paginated listing, counting, and
+ * create/update/delete operations, serving as the persistence layer for users
+ * across the login flows and admin user-management screens.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { count, eq } from "drizzle-orm";
 
 import type { Database } from "~/db/index";

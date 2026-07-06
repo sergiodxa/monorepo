@@ -1,3 +1,14 @@
+/**
+ * The admin new-client route (/admin/clients/new). Its action validates the client
+ * details and creates the OAuth client, then returns the generated client secret once
+ * so it can be shown to the admin. The component renders the creation form and, after
+ * success, a one-time display of the new client's id, secret and URIs. Exists to let
+ * admins register new OAuth clients.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { isFailure } from "@pkg/result";
 import { Alert, Button, Card, Form, Input, Label, LinkButton, TextArea, TextField } from "@pkg/ui";
 import { validate } from "@pkg/validate";

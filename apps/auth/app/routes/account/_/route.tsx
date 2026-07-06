@@ -1,3 +1,14 @@
+/**
+ * The authenticated account layout route. Its middleware guards all nested account
+ * pages: it requires both access and refresh tokens in the session, transparently
+ * refreshes the access token via the OIDC service when it is about to expire, and
+ * clears the session and redirects to /authorize on any failure. The component simply
+ * renders the child routes. Exists to enforce a valid session across the account area.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { href, Outlet, redirect } from "react-router";
 
 import { isAccessTokenExpiringSoon } from "~/helpers/decode-token";

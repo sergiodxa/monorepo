@@ -1,3 +1,15 @@
+/**
+ * The OAuth 2.0 token revocation endpoint route (POST /oauth/revoke). Its action
+ * authenticates the client via HTTP Basic credentials, rate-limits by client id, and
+ * revokes refresh tokens through the OIDC service; access tokens are stateless JWTs
+ * so they are a no-op. Per RFC 7009 it always returns 200 OK even for invalid or
+ * unknown tokens to prevent token-probing attacks. Exists to let clients invalidate
+ * tokens they no longer need.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { badRequest, unauthorized } from "@pkg/http/response/json";
 import { isFailure } from "@pkg/result";
 import { validate } from "@pkg/validate";

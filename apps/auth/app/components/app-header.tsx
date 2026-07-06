@@ -1,3 +1,12 @@
+/**
+ * AppHeader component for the auth app. Renders a sticky page header with an
+ * optional breadcrumb trail, a heading, and an optional right-aligned actions
+ * area, giving the account and admin pages a consistent top bar.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import type { ReactNode } from "react";
 
 import { Breadcrumb, BreadcrumbLink, Breadcrumbs } from "@pkg/ui";

@@ -1,3 +1,13 @@
+/**
+ * The admin clients-list route (/admin/clients). Its loader returns a paginated list
+ * of OAuth clients with total counts; the action deletes a client by id. The component
+ * renders the clients table with view/edit links, confirm-guarded delete forms, and
+ * pagination controls. Exists as the admin overview for managing registered clients.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { ok } from "@pkg/response";
 import {
 	Button,

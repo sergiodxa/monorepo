@@ -1,3 +1,13 @@
+/**
+ * Connection model for the auth app. Handles social-login links that tie an
+ * external provider identity (provider plus external id) to a subject, with
+ * helpers to find an existing connection and to create a new one, used when
+ * resolving or provisioning accounts during provider login.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import type { Database } from "~/db/index";
 
 import * as schema from "~/db/schema";

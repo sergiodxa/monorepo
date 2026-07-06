@@ -1,3 +1,13 @@
+/**
+ * Static configuration for the OAuth 2.0 / OIDC authorization server. Declares
+ * the issuer identity, client id, token lifetimes, and supported scopes, and
+ * builds the public `.well-known` discovery document describing every endpoint
+ * and capability clients need to connect to and use this auth server.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { JWK } from "@edgefirst-dev/jwt";
 import ms from "ms";
 

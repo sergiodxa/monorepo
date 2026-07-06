@@ -1,3 +1,14 @@
+/**
+ * The OIDC UserInfo endpoint route (GET /userinfo). Its loader reads the Bearer
+ * access token, resolves the subject and granted scopes via the OIDC service, and
+ * returns the standard claims (always sub, plus email and profile claims gated by
+ * scope), responding 401 with WWW-Authenticate headers on missing or invalid tokens.
+ * Exists to expose authenticated user claims per OIDC Core 1.0 Section 5.3.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { ok, unauthorized } from "@pkg/http/response/json";
 
 import { logger } from "~/middleware/logger";

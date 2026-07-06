@@ -1,3 +1,13 @@
+/**
+ * Grant model for the auth app. Manages consent grants that record which
+ * clients a subject has authorized, offering find-or-create, per-subject
+ * listing with client details, counting by client, and deletion by subject,
+ * client, or both — the persistence layer behind OAuth consent.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { and, count, eq } from "drizzle-orm";
 
 import type { Database } from "~/db/index";

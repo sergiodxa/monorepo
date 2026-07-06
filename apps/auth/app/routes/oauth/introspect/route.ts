@@ -1,3 +1,14 @@
+/**
+ * The OAuth 2.0 token introspection endpoint route (POST /oauth/introspect). Its
+ * action authenticates the calling resource server via HTTP Basic credentials,
+ * rate-limits by client id, validates the token payload, and returns the token's
+ * metadata and validity per RFC 7662 — collapsing any error to { active: false } so
+ * invalid tokens reveal nothing. Exists so resource servers can verify tokens.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { badRequest, ok, unauthorized } from "@pkg/http/response/json";
 import { isFailure } from "@pkg/result";
 import { validate } from "@pkg/validate";

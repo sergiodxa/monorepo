@@ -1,3 +1,13 @@
+/**
+ * JWKS signing module for the auth app. Includes a KV-backed FileStorage
+ * implementation and exposes helpers to load or generate the ES256 signing key
+ * pair from R2 and to sign JWTs with it, providing the cryptographic keys used
+ * to issue and verify the server's OIDC tokens.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import type {
 	FileKey,
 	FileMetadata,

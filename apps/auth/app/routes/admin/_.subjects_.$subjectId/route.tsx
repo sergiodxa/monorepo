@@ -1,3 +1,14 @@
+/**
+ * The admin subject-detail route (/admin/subjects/:subjectId). Its loader loads the
+ * subject and their sessions (404 if missing); the action deletes the subject along
+ * with its sessions and grants, or revokes one or all of the subject's sessions. The
+ * component renders the profile details and a per-device session list with confirm-
+ * guarded actions. Exists to let admins inspect and manage an individual user.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { ok } from "@pkg/response";
 import { Avatar, Badge, Button, Card, confirm, Form, Label, LinkButton } from "@pkg/ui";
 import { MonitorIcon, SmartphoneIcon } from "lucide-react";

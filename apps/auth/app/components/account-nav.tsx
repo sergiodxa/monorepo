@@ -1,3 +1,13 @@
+/**
+ * AccountNav component for the auth app. Renders the account section's tab
+ * navigation (profile, sessions, and authorized apps) with an admin-panel link
+ * shown only to admins and a logout form, providing the translated toolbar that
+ * moves users between their account pages.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { Button, Form, LinkButton, NavLink, Toolbar } from "@pkg/ui";
 import {
 	AppWindowIcon,

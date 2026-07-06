@@ -1,3 +1,13 @@
+/**
+ * Root route module for the auth app. Registers the global middleware chain
+ * (context storage, logger, i18next, drizzle, session), defines the HTML
+ * document layout and stylesheet links, renders the app shell with a shared
+ * confirm dialog, and provides the top-level error boundary for the whole app.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { ConfirmDialog } from "@pkg/ui";
 import {
 	isRouteErrorResponse,

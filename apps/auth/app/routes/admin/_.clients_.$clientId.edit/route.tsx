@@ -1,3 +1,14 @@
+/**
+ * The admin edit-client route (/admin/clients/:clientId/edit). Its loader loads the
+ * client (404 if missing); the action validates and persists changes and, when the
+ * regenerate-secret box is checked, returns a freshly generated secret to display
+ * once. The component renders the edit form and the one-time new-secret view. Exists
+ * to let admins update a client and optionally rotate its secret.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { ok } from "@pkg/response";
 import { isFailure } from "@pkg/result";
 import {

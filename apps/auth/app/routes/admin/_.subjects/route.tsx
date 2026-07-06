@@ -1,3 +1,13 @@
+/**
+ * The admin users-list route (/admin/subjects). Its loader returns a paginated list of
+ * subjects with total counts, and the component renders them in a table with avatars,
+ * roles and view/edit links plus pagination controls. Exists as the admin overview for
+ * browsing registered users.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { ok } from "@pkg/response";
 import {
 	Avatar,

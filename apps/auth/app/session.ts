@@ -1,3 +1,13 @@
+/**
+ * Session storage for the auth app. Defines the typed session data (OAuth
+ * tokens plus in-flight authorization request state) and a Cloudflare KV-backed
+ * cookie session stored under an httpOnly, lax "sid" cookie scoped to the
+ * sergiodxa.com domain in production, used to persist the user's login state.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { createWorkersKVSessionStorage } from "@react-router/cloudflare";
 import { env } from "cloudflare:workers";
 import { createCookie } from "react-router";

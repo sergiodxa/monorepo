@@ -1,3 +1,13 @@
+/**
+ * The profile view account route (/account/profile). Its loader resolves the signed-in
+ * subject from the access token and returns their display name, username, email and
+ * avatar; the component renders a read-only profile card with a link to the edit page.
+ * Exists to show users their own account details.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { ok } from "@pkg/response";
 import { Avatar, Card, Label, LinkButton } from "@pkg/ui";
 import { useTranslation } from "react-i18next";

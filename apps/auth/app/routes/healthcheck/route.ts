@@ -1,3 +1,13 @@
+/**
+ * Health-check route (GET /healthcheck). Its loader probes the two critical backing
+ * services in parallel — a Drizzle query against the clients table and a KV list —
+ * and returns "OK" only when both succeed, otherwise a 500 naming the failed one.
+ * Exists so uptime monitors can verify the worker's database and KV connectivity.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { text } from "@pkg/http/response";
 import { InternalServerError, Ok } from "@pkg/http/status-code";
 import { env } from "cloudflare:workers";

@@ -1,3 +1,13 @@
+/**
+ * OAuth 2.0 access token entity: a JWT subclass with typed accessors for jti, aud,
+ * exp, iat, iss, sub and scope, plus a generator that mints a signed access token
+ * for an audience and subject with a space-separated scope per RFC 9068. Exists to
+ * model and produce the bearer tokens this provider issues for API access.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { JWT } from "@edgefirst-dev/jwt";
 
 import { ACCESS_TOKEN_TTL, ISSUER } from "../config";

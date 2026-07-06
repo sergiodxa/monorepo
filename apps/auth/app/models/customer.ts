@@ -1,3 +1,13 @@
+/**
+ * Customer model for the auth app. Bridges auth subjects to Polar customers by
+ * creating, looking up by email, and assigning an external id, including a
+ * find-or-create helper that links a subject to its Polar customer without
+ * overwriting an external id Polar has already set.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import type { SelectSubject } from "~/db/schema";
 
 import polar from "~/clients/polar";

@@ -1,3 +1,13 @@
+/**
+ * Drizzle Kit configuration for the auth database. Loads Cloudflare
+ * credentials from `.dev.vars` when present and targets a SQLite/D1 dialect,
+ * switching to the d1-http driver only when account, database, and API token
+ * are available so migration generation works without live credentials.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import * as FS from "node:fs";
 import * as Path from "node:path";
 import { fileURLToPath } from "node:url";

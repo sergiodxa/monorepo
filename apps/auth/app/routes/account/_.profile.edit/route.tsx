@@ -1,3 +1,14 @@
+/**
+ * The edit-profile account route (/account/profile/edit). Its loader resolves the
+ * signed-in subject from the access token and preloads their display name, username
+ * and avatar; the action validates the submitted values and persists them via the
+ * Subject model before redirecting back to the profile page, and the component renders
+ * the edit form. Exists to let users update their own profile fields.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { ok } from "@pkg/response";
 import { isFailure } from "@pkg/result";
 import { Alert, Button, Card, Form, Input, Label, LinkButton, TextField } from "@pkg/ui";

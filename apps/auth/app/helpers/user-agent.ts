@@ -1,3 +1,13 @@
+/**
+ * User-agent parsing helper for the auth app. Performs lightweight string
+ * matching on a raw user-agent header to infer the browser, operating system,
+ * and device type, producing the human-readable labels shown in the session and
+ * device listings.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 interface ParsedUserAgent {
 	browser: string;
 	os: string;

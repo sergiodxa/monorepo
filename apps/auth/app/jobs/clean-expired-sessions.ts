@@ -1,3 +1,13 @@
+/**
+ * Clean-expired-sessions job for the auth app. A scheduled job that finds and
+ * deletes sessions past their expiry, logging the outcome (and a no-op when
+ * none exist), so stale refresh-token sessions are purged from the database on
+ * a recurring cron/queue trigger.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { Job } from "@pkg/jobs";
 import { env } from "cloudflare:workers";
 

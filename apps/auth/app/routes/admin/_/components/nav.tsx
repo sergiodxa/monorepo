@@ -1,3 +1,13 @@
+/**
+ * The admin section navigation component. Renders a toolbar with localized links to the
+ * dashboard, clients and subjects pages, plus a profile link and a logout form that
+ * posts to the OIDC logout endpoint. Exists as the shared top navigation for the admin
+ * layout.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { Button, Form, LinkButton, NavLink, Toolbar } from "@pkg/ui";
 import { AppWindowIcon, LayoutDashboardIcon, LogOutIcon, UserIcon, UsersIcon } from "lucide-react";
 import { useTranslation } from "react-i18next";

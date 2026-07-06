@@ -1,3 +1,13 @@
+/**
+ * The admin client-detail route (/admin/clients/:clientId). Its loader loads the client
+ * and its authorized-users count (404 if missing); the action deletes the client and
+ * its grants. The component renders the client's metadata and URIs with edit and
+ * confirm-guarded delete actions. Exists to let admins inspect and remove a client.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { ok } from "@pkg/response";
 import { Button, Card, confirm, Form, Label, LinkButton } from "@pkg/ui";
 import { useTranslation } from "react-i18next";

@@ -1,3 +1,12 @@
+/**
+ * The admin dashboard index route (/admin). Its loader fetches aggregate counts of
+ * clients, subjects and active sessions, and the component renders them as stat cards
+ * under the app header. Exists as the landing overview of the admin area.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { ok } from "@pkg/response";
 import { KeyRoundIcon, UsersIcon, ZapIcon } from "lucide-react";
 import { useTranslation } from "react-i18next";

@@ -1,3 +1,14 @@
+/**
+ * Concrete OIDC provider instance for auth.sergiodxa.com, wiring the generic OIDC
+ * engine to this app's persistence: Drizzle-backed lookups for clients, sessions,
+ * subjects, credentials and grants, KV-backed single-use authorization codes, and
+ * queries that enumerate sessions for back-channel and front-channel logout. Exists
+ * as the single place that binds OIDC login and logout flows to the data layer.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { env } from "cloudflare:workers";
 import { and, eq, ne } from "drizzle-orm";
 import { z } from "zod";

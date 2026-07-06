@@ -1,3 +1,15 @@
+/**
+ * The OAuth 2.0 token endpoint route (POST /oauth/token). Its action validates the
+ * request into one of the supported grant types (authorization_code, refresh_token,
+ * client_credentials), rate-limits by client id or IP, parses HTTP Basic client
+ * credentials, and delegates to the OIDC service to mint tokens, returning RFC 6750
+ * no-store headers and mapping provider errors to OAuth error responses. Exists as
+ * the endpoint that exchanges grants for access, refresh and id tokens.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { badRequest, internalServerError, ok } from "@pkg/http/response/json";
 import { isFailure } from "@pkg/result";
 import { validate } from "@pkg/validate";

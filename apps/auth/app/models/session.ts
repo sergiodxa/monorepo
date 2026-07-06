@@ -1,3 +1,13 @@
+/**
+ * Session model for the auth app. Encapsulates refresh-token sessions, with
+ * helpers to create, look up, list per subject, touch, and revoke sessions
+ * (by id, subject, or subject+client), plus finding and purging expired ones
+ * and counting active sessions — the store backing tokens and device listings.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { and, count, eq, gt } from "drizzle-orm";
 
 import type { Database } from "~/db/index";

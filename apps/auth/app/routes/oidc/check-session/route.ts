@@ -1,3 +1,14 @@
+/**
+ * The OIDC check-session route (/oidc/check-session). Its loader serves a small HTML
+ * page, meant to be embedded as an iframe by relying parties, that listens for a
+ * postMessage of "client_id session_state", recomputes the expected session state from
+ * the op_browser_state cookie and salt, and replies "changed" or "unchanged". Exists
+ * to let RPs poll session validity without network requests per OIDC Session Management.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import type { Route } from "./+types/route";
 
 /**

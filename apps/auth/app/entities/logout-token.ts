@@ -1,3 +1,13 @@
+/**
+ * OIDC back-channel logout token entity: a JWT subclass exposing sub, aud, sid and
+ * the required back-channel-logout events claim, plus a generator that mints a
+ * short-lived logout token notifying a relying party that a user has logged out.
+ * Exists to model the token this provider sends to RPs during back-channel logout.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { JWT } from "@edgefirst-dev/jwt";
 
 import { ISSUER } from "~/config";

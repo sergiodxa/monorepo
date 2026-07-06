@@ -1,3 +1,15 @@
+/**
+ * The OAuth 2.0 / OIDC authorization endpoint route (/authorize) and its sign-in UI.
+ * The loader validates authorization request params, rate-limits by IP, enforces the
+ * prompt values (none/login/create), performs SSO by issuing an authz code for an
+ * already-logged-in subject, and otherwise seeds the login session; the action logs
+ * the user in via credentials and the component renders the registration and GitHub
+ * sign-in panels. Exists as the user-facing entry point to the authorization flow.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { getClientIP } from "@pkg/get-client-ip";
 import { badRequest, notFound, ok } from "@pkg/response";
 import { isFailure } from "@pkg/result";
