@@ -1,0 +1,189 @@
+/**
+ * Verifies the capture system's status bonus, catch-value roll, and placement rules.
+ *
+ * The tests pin `captureStatusBonus` to the Gen 3 multipliers, drive `computeCaptureAttempt` with a
+ * seeded RNG so guaranteed catches, deterministic shake counts, and failures are reproducible, and
+ * confirm `captureCreature` claims ownership and places the creature into the party when room exists or
+ * the first storage box when the party is full, always recording the resulting location.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+import { expect, test } from "bun:test";
+
+import type { LegacyCreatureComponent } from "../world/components";
+
+import { State } from "../data/status";
+import { createCreatureId, createPlayerId } from "../world/ids";
+import { migrateWorld } from "../world/migrate";
+import { getPlayerParty, getPlayerStorageBoxes, type World } from "../world/world";
+
+import { captureCreature, captureStatusBonus, computeCaptureAttempt } from "./capture-system";
+
+/** Builds a minimal unowned encounter creature blob. */
+function createCreature(): LegacyCreatureComponent {
+	return {
+		species: "SPECIES_A",
+		nature: "HARDY",
+		experience: 0,
+		moveset: ["MOVE_A", null, null, null],
+		status: { state: null, damage: 0, pp: [10, 0, 0, 0] },
+		iv: { hp: 0, attack: 0, defense: 0, "special-attack": 0, "special-defense": 0, speed: 0 },
+		ev: { hp: 0, attack: 0, defense: 0, "special-attack": 0, "special-defense": 0, speed: 0 },
+	};
+}
+
+/** Builds a one-player world with the given party members plus one wild target creature. */
+function createWorld(partyIds: string[], wildId: string): { world: World; playerId: string } {
+	let playerId = createPlayerId("hero");
+	let creature: Record<string, LegacyCreatureComponent> = { [wildId]: createCreature() };
+	let entities = [playerId, wildId];
+	for (let id of partyIds) {
+		creature[id] = createCreature();
+		entities.push(id);
+	}
+	let world = migrateWorld({
+		entities,
+		playerId,
+		playerProfile: { [playerId]: { name: "Hero" } },
+		party: { [playerId]: { creatureIds: partyIds } },
+		inventory: { [playerId]: { items: {} } },
+		money: { [playerId]: { amount: 0 } },
+		bestiary: { [playerId]: { seen: [], caught: [] } },
+		storageBoxes: { [playerId]: { boxes: [] } },
+		creature,
+	});
+	return { world, playerId };
+}
+
+test("captureStatusBonus doubles for sleep", () => {
+	expect(captureStatusBonus(State.Asleep)).toBe(2);
+});
+
+test("captureStatusBonus doubles for freeze", () => {
+	expect(captureStatusBonus(State.Frozen)).toBe(2);
+});
+
+test("captureStatusBonus is 1.5 for other major statuses", () => {
+	expect(captureStatusBonus(State.Burned)).toBe(1.5);
+	expect(captureStatusBonus(State.Paralyzed)).toBe(1.5);
+	expect(captureStatusBonus(State.Poisoned)).toBe(1.5);
+});
+
+test("captureStatusBonus is 1 with no status", () => {
+	expect(captureStatusBonus(null)).toBe(1);
+});
+
+test("computeCaptureAttempt guarantees a catch when a >= 255", () => {
+	// A low-HP target with a strong ball pushes a to 506, well past the guaranteed threshold,
+	// so the RNG is never consulted (random() === 1 would fail every shake if it were).
+	let result = computeCaptureAttempt({
+		maxHP: 100,
+		currentHP: 1,
+		catchRate: 255,
+		ballMultiplier: 2,
+		statusBonus: 1,
+		random: () => 1,
+	});
+	expect(result).toEqual({ shakes: 3, success: true });
+});
+
+test("computeCaptureAttempt fails immediately when a is below 1", () => {
+	// catchRate 0 zeroes out a, so no shakes can pass.
+	let result = computeCaptureAttempt({
+		maxHP: 100,
+		currentHP: 100,
+		catchRate: 0,
+		ballMultiplier: 1,
+		statusBonus: 1,
+		random: () => 0,
+	});
+	expect(result).toEqual({ shakes: 0, success: false });
+});
+
+test("computeCaptureAttempt catches when every shake check passes", () => {
+	// random() === 0 makes floor(0 * 65536) === 0 < b for all four checks.
+	let result = computeCaptureAttempt({
+		maxHP: 100,
+		currentHP: 1,
+		catchRate: 100,
+		ballMultiplier: 1,
+		statusBonus: 1,
+		random: () => 0,
+	});
+	expect(result).toEqual({ shakes: 3, success: true });
+});
+
+test("computeCaptureAttempt reports zero shakes when the first check fails", () => {
+	// random() === 1 makes floor(1 * 65536) === 65536, never less than b, so it breaks immediately.
+	let result = computeCaptureAttempt({
+		maxHP: 100,
+		currentHP: 1,
+		catchRate: 100,
+		ballMultiplier: 1,
+		statusBonus: 1,
+		random: () => 1,
+	});
+	expect(result).toEqual({ shakes: 0, success: false });
+});
+
+test("computeCaptureAttempt reports a partial shake count from a scripted RNG", () => {
+	// First two checks pass (0 < b), the third fails and breaks the loop, so exactly two shakes.
+	let rolls = [0, 0, 1, 0];
+	let index = 0;
+	let result = computeCaptureAttempt({
+		maxHP: 100,
+		currentHP: 1,
+		catchRate: 100,
+		ballMultiplier: 1,
+		statusBonus: 1,
+		random: () => rolls[index++]!,
+	});
+	expect(result).toEqual({ shakes: 2, success: false });
+});
+
+test("captureCreature places the creature into the party when there is room", () => {
+	let wild = createCreatureId("wild");
+	let existing = createCreatureId("existing");
+	let { world, playerId } = createWorld([existing], wild);
+
+	let result = captureCreature(world, playerId, wild);
+
+	expect(result).toEqual({ placement: "party" });
+	expect(world.ownership[wild]).toEqual({ ownerId: playerId });
+	expect(getPlayerParty(world).creatureIds).toEqual([existing, wild]);
+	expect(world.creatureLocation[wild]).toEqual({ kind: "party", playerId, slot: 1 });
+});
+
+test("captureCreature places the creature into the party at slot zero when empty", () => {
+	let wild = createCreatureId("wild");
+	let { world, playerId } = createWorld([], wild);
+
+	let result = captureCreature(world, playerId, wild);
+
+	expect(result).toEqual({ placement: "party" });
+	expect(getPlayerParty(world).creatureIds).toEqual([wild]);
+	expect(world.creatureLocation[wild]).toEqual({ kind: "party", playerId, slot: 0 });
+});
+
+test("captureCreature falls back to the first storage box when the party is full", () => {
+	let full = ["c0", "c1", "c2", "c3", "c4", "c5"].map((key) => createCreatureId(key));
+	let wild = createCreatureId("wild");
+	let { world, playerId } = createWorld(full, wild);
+
+	let result = captureCreature(world, playerId, wild);
+
+	expect(result).toEqual({ placement: "storage", boxId: "box-1" });
+	expect(world.ownership[wild]).toEqual({ ownerId: playerId });
+	// Party stays full and unchanged.
+	expect(getPlayerParty(world).creatureIds).toEqual(full);
+	let box = getPlayerStorageBoxes(world).boxes[0];
+	expect(box?.id).toBe("box-1");
+	expect(box?.creatureIds).toEqual([wild]);
+	expect(world.creatureLocation[wild]).toEqual({
+		kind: "storage",
+		playerId,
+		boxId: "box-1",
+		slot: 0,
+	});
+});
