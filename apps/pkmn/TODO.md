@@ -106,19 +106,19 @@
 
 ## Review Findings 2026-07-06: Bugs
 
-- [ ] Persist battle outcomes back into the world: battles run on cloned creature aggregates, so damage, major status, and spent PP are never written back to `creatureHealth`/`creatureStatus`/`creatureMoves` when a battle finishes; the party leaves every battle at full health. Add an end-of-battle write-back step in `src/game/engine.ts` (or a dedicated system) that copies final combatant state into the persistent stores.
+- [x] Persist battle outcomes back into the world: `writeBackPlayerBattleResults` (in `src/game/world/battle.ts`) copies final damage/status/PP into the persistent stores at battle finish (toxic downgraded to regular poison).
 - [ ] Fix the hit check in `src/game/battle/battle.ts` (`moveCanConnect`): the early return when both accuracy and evasion stages are 0 skips the base-accuracy roll entirely, so 70%-accuracy and even 30%-accuracy moves never miss at neutral stages. `docs/battle.md` requires base accuracy to always be considered.
-- [ ] Clear `world.activeBattle[playerId]` (and clean up battle/battle-side/battle-member mirror components plus their ids in `world.entities`) when a battle finishes; today they accumulate forever and `selectActiveBattle` keeps returning finished battles.
-- [ ] Stop leaking transient battle entity ids into saves: `pickPersistentWorld` clones the whole `entities` array, which includes `battle:*`, `battle-side:*`, and `battle-member:*` ids whose components are stripped, leaving dangling references in snapshots.
+- [x] Clear `world.activeBattle[playerId]` on finish and reclaim battle/side/member mirrors + their entity ids (`cleanupBattle`, invoked from `Engine.startBattle` for ended battles); `activeBattle` is cleared in `finalizeBattle`.
+- [x] Stop leaking transient battle entity ids into saves: `pickPersistentWorld` now filters `entities` to persistent-component owners, so `battle:*` ids never reach snapshots.
 - [ ] Give the fallback move in `src/game/battle/systems/turn-order.ts` its documented behavior: it currently has no recoil and is typed `normal`, so type immunity zeroes it out; the spec expects a typeless last-resort attack with self-damage.
 - [ ] Wire OHKO move content to the `ohko` effect: `FISSURE`, `GUILLOTINE`, and `SHEER_COLD` in `src/content/moves.ts` have `power: 0` and `effect: { kind: "none" }`, so they deal no damage at all.
 
 ## Review Findings 2026-07-06: Engine gaps for the Gen 3 target
 
-- [ ] Implement the capture formula: `capture-creature` succeeds unconditionally; species `catchRate` and item `CaptureEffect.multiplier` are never read. Add the catch-chance calculation (HP factor, status bonus, ball multiplier, shake checks) as a battle-aware system.
-- [ ] Wire experience gain into battle resolution: species `baseExperience` is unused and no experience or EVs are awarded when an enemy faints. Requires per-species EV yield data as well.
-- [ ] Add level-up move learning and evolution eligibility: learnsets and evolution rules exist as data, but nothing computes "this creature can now learn X / evolve into Y" after `grant-creature-experience`; `evolve-creature` accepts any species swap without validating a matching evolution rule.
-- [ ] Add the missing `Erratic` growth rate to `src/game/data/growth-rate.ts` (Gen 3 ships six curves; several species cannot be represented without it).
+- [x] Implement the capture formula: `computeCaptureAttempt` (in `src/game/systems/capture-system.ts`) runs the Gen 3 catch value + four-shake check, read through the `attempt-capture` command using the ball multiplier and target's live HP/status.
+- [ ] Add EV yield to experience gain: experience is now awarded on victory (`awardBattleExperience`), but per-species `evYield` data and EV application on faint are still missing.
+- [ ] Add level-up move learning: evolution eligibility is now emitted (`creature-can-evolve` after level-ups, via `getLevelUpEvolution`), but nothing offers newly-learnable moves, and `evolve-creature` still accepts any species swap without re-validating the rule.
+- [x] Add the missing `Erratic` growth rate to `src/game/data/growth-rate.ts` (added to `GrowthRate` and `getExperienceForLevel`).
 - [ ] Add per-creature instance state needed by Gen 2/3 mechanics: gender (species ratios exist but instances have none; breeding and attract depend on it), friendship (needed by `EvolutionMethod.Friendship`), and a held-item slot (needed by the planned held-item hooks).
 - [ ] Extend evolution methods for Gen 3 coverage: trade-with-held-item, stat-comparison, and personality/random branches are missing, and `Evolution.ByFriendship` carries a `level` field that friendship evolutions do not use.
 - [ ] Fix the damage modifier chain in `src/game/battle/systems/damage.ts` (`getBaseDamage`): screens, weather, and terrain modifiers are early returns, so only the first matching modifier applies instead of stacking in spec order.
@@ -132,9 +132,9 @@
 - [ ] Split `MoveEffect` into pipeline modifiers vs. appliable actions, or move to timing-window hooks: about half the entries in the `Effects` resolver map are no-ops deferring to hardcoded pipeline steps, and adding one effect kind today touches the union, the resolver map, the pipeline, and often `isEffectBlockedByProtect`/`moveDealsDamage`. A hook/timing-window model would also be the natural home for the planned passive-trait and held-item hooks.
 - [ ] Move type-tied mechanics out of engine code into data-driven type metadata: thaw-on-fire, status immunities by type, grounded-ness (`flying`), curse (`ghost`), identify (`ghost`/`normal`/`fighting`), toxic-spikes absorption (`poison`), weather immunities and boosts, terrain boosts, and charge consumption (`electric`) are all hardcoded against the fixed `Type` enum, which contradicts the content-agnostic goal.
 - [ ] Replace the franchise-specific `ItemCategory` enum in `src/game/data/item.ts` (ApricornBalls, MegaStones, ZCrystals, DynamaxCrystals, TeraShard, …) with content-defined category strings; this is Pokemon vocabulary inside the engine layer.
-- [ ] Make `State` in `src/game/data/status.ts` a string enum: the numeric values end up in save data (fragile across reordering) and render as "0"–"4" through `String(...)` in selectors.
+- [x] Make `State` in `src/game/data/status.ts` a string enum (burn/paralysis/poison/sleep/freeze), so saved status is stable and renders directly.
 - [ ] Rebuild volatile state on switch from `createCombatantVolatileState()` instead of the ~35-line manual field reset in `resetSwitchVolatiles`; every new volatile field added to state.ts must currently be remembered there by hand.
-- [ ] Thread a seedable RNG through `Engine` battle commands (`Battle` already accepts `random`, but `Engine.startBattle` never passes one), so engine-driven battles can be deterministic for replays and tests.
+- [x] Thread a seedable RNG through `Engine` (`Engine.Options.random`) into every battle and into encounter/capture rolls, so engine-driven sessions are reproducible.
 - [ ] Emit an explicit event when Protect blocks a move (nothing is emitted today, so a UI cannot narrate it) and consider a dedicated heal event instead of `damage-dealt` with `damage: 0`.
 - [ ] Track attraction sources by battle position or creature id instead of holding a direct `Creature` object reference in `volatile.attractedBy`.
 - [ ] Derive `pickPersistentWorld` from `PERSISTENT_WORLD_STORE_KEYS` instead of hand-listing the same keys a second time.

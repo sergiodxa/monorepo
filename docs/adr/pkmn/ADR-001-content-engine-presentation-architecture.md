@@ -4,7 +4,7 @@
 
 **Accepted** - 2026-07-06
 
-Content and engine are largely implemented; the Part 3 presentation layer is now implemented as a playable canvas client in `src/presentation/` (with procedural placeholder graphics in place of real art/audio). The Phase 1 engine loop (write-back, capture, item use, encounters, escape, experience) is still open. See Current Progress.
+Content, engine, and the Part 3 presentation layer are implemented, and the Phase 1 engine loop is closed: battles write back to the save, wild encounters spawn through `spawn-encounter`, wins award experience and surface evolutions, and captures work via the Gen 3 formula. The game is playable end to end on procedural placeholder graphics. Remaining work is refinements (in-battle medicine `use-item`, escape odds, EV yield), Phase 6 (traits/breeding), and real art/audio. See Current Progress.
 
 ## Background
 
@@ -1439,17 +1439,17 @@ Let content ship arbitrary effect callbacks per move.
 - [x] Engine: command/event/selector boundary with typed views
 - [x] Engine: world systems (inventory, storage, bestiary, capture transition, experience grant, evolution swap)
 - [x] Engine: battle core (formats, turn lifecycle, move pipeline, statuses, volatiles, hazards, side/field effects, replacements, draw handling)
-- [ ] Phase 1: close the engine loop (write-back, capture formula, item use, encounters, escape, experience award, evolution eligibility)
+- [x] Phase 1: close the engine loop — battle write-back + mirror cleanup + snapshot filtering, seedable RNG, the Erratic curve, `spawn-encounter`, the Gen 3 capture formula (`attempt-capture`), experience award on victory, level-up evolution eligibility, and `heal-party`. Remaining: in-battle medicine `use-item`, escape odds (flee currently forfeits), and EV yield.
 - [x] Phase 2: presentation core (GameClient, fixed-step loop, input, assets, audio, scene stack, boot/title, window/text/typewriter)
-- [x] Phase 3: overworld (tilemap render, grid movement, collision, camera, encounter rolling, save/load) — NPCs, scripts, warps, and dialogue wiring still pending
-- [x] Phase 4: battle presentation (animation queue, event→animation mapping, command menu, HP bars, forced replacements) — in-battle bag/party, capture, escape, and post-battle evolution flows still pending
+- [x] Phase 3: overworld (tilemap render, grid movement, collision, camera, encounter rolling via `spawn-encounter`, save/load) — NPCs, scripts, warps, and dialogue wiring still pending
+- [x] Phase 4: battle presentation (animation queue, event→animation mapping, command menu, HP bars, forced replacements, capture flow, post-battle evolution) — in-battle bag-for-items and party switching still pending
 - [x] Phase 5: menus (party, summary, bag, bestiary, storage, save) — content-completeness pass still pending
 - [ ] Phase 6: parity extensions (passive traits/held-item hooks, breeding)
 
 ## Notes
 
 - The presentation replaced the `src/ui/` DOM mock: it now lives in `src/presentation/` and the mock was deleted rather than ported. It ships with procedural placeholder graphics (colored tiles and sprites, a drawn window frame, canvas text) so the game runs before any art/audio assets exist; real assets drop in through the (currently empty) `assets/manifest.ts` without touching rendering code.
-- Known code deviations from this spec at the time of writing (all tracked in `TODO.md`): the neutral-stage accuracy shortcut; missing battle write-back; screens/weather/terrain applied as mutually-exclusive early-returns in `getBaseDamage` instead of stacking, and screens not exempted on critical hits; `ItemCategory` enum carrying franchise terms in the engine layer; a non-spec +10% speed boost under electric terrain; numeric `State` enum; missing `Erratic` curve; the `Evolution.ByFriendship` record still carrying an unused `level` field; and OHKO moves authored without their `ohko` effect.
+- Known code deviations from this spec at the time of writing (all tracked in `TODO.md`): the neutral-stage accuracy shortcut; screens/weather/terrain applied as mutually-exclusive early-returns in `getBaseDamage` instead of stacking, and screens not exempted on critical hits; `ItemCategory` enum carrying franchise terms in the engine layer; a non-spec +10% speed boost under electric terrain; the `Evolution.ByFriendship` record still carrying an unused `level` field; and OHKO moves authored without their `ohko` effect. (Battle write-back, the numeric `State` enum, and the missing `Erratic` curve have since been resolved.)
 - The fallback move exists so a battle can always progress under PP exhaustion; it is intentionally not part of any learnset and never appears in menus — the presentation shows a "no moves left" prompt that submits any `fight` command, and the engine substitutes the fallback.
 - Battle mirrors are rebuilt wholesale after every engine step; selectors must treat them as ephemeral reads, never hold references across dispatches.
 - Audio unlock must happen inside a user-gesture handler (`AudioContext.resume()`); the Boot scene's "press any button" screen exists for that reason, not just style.
