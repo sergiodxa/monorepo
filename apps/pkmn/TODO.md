@@ -140,6 +140,5 @@
 - [ ] Derive `pickPersistentWorld` from `PERSISTENT_WORLD_STORE_KEYS` instead of hand-listing the same keys a second time.
 - [ ] Cache creature levels during battle: `getCreatureLevel` scans from level 100 downward on every call and is invoked several times per damage calculation.
 - [ ] Enforce party/storage invariants in `src/game/systems/storage-system.ts`: depositing the last party member is currently allowed, boxes have no capacity, and ownership is not verified before moving a creature.
-- [ ] Remove hardcoded Pokemon content ids from `src/ui/index.ts` ("BULBASAUR") and `src/index.ts` ("POKEBALL"); the demo should derive ids from the loaded content or engine state so the layer rule in AGENTS.md holds outside `src/content`.
 - [ ] Fix `syncBattleState` member mapping for multi-team sides: creature ids are resolved from `playerParty`/`enemyParty` by index, which is wrong once a side has more than one team (latent until multi-team battles are exposed).
 - [ ] Delete or archive `agent-feedback.md`: it reviews the pre-ECS layout (`src/engine/`, `src/domain/`) and is now almost entirely stale.

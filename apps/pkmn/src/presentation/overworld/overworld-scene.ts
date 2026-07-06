@@ -15,15 +15,18 @@
 import { createBattleId } from "~/game/world/ids";
 
 import type { Direction } from "../core/direction";
+import type { PresentationSave } from "../core/save";
 import type { Scene } from "../core/scene";
 
 import { BattleScene } from "../battle/battle-scene";
 import { GameClient } from "../core/game-client";
+import { Button } from "../core/input";
 import { TILE_SIZE } from "../core/loop";
 import { HERO_ID, WILD_ID } from "../core/new-game";
 import { Camera } from "../render/camera";
 import { drawText } from "../render/text";
 import { TileMapRenderer } from "../render/tilemap";
+import { MenuScene } from "../scenes/menu";
 
 import { rollEncounter, pickWildCreature } from "./encounters";
 import { createSampleMap, GameMap, SAMPLE_SPAWN } from "./map-loader";
@@ -72,6 +75,11 @@ export class OverworldScene implements Scene {
 	}
 
 	update(game: GameClient, dt: number) {
+		if (!this.player.moving && game.input.isPressed(Button.Start)) {
+			game.scenes.push(new MenuScene(this.snapshotState()));
+			return;
+		}
+
 		let { arrived } = this.player.update(game.input, this.map, dt);
 		this.camera.centerOn(
 			this.player.pixelX + TILE_SIZE / 2,
@@ -83,11 +91,24 @@ export class OverworldScene implements Scene {
 		if (arrived) this.checkEncounter(game);
 	}
 
+	/** Captures the presentation state to persist if the player saves. */
+	private snapshotState(): PresentationSave {
+		return {
+			mapId: this.spawn.mapId,
+			x: this.player.tile.x,
+			y: this.player.tile.y,
+			facing: this.player.facing,
+			flags: {},
+			variables: {},
+			options: { textSpeed: 2, volume: { bgm: 0.7, sfx: 0.8, cries: 0.8 } },
+		};
+	}
+
 	render(game: GameClient, ctx: CanvasRenderingContext2D) {
 		this.renderer.drawGround(ctx, this.camera);
 		this.drawPlayer(ctx);
 		this.renderer.drawOverhead(ctx, this.camera);
-		drawText(ctx, "Grass = wild battles", 4, 4, { color: "#ffffff" });
+		drawText(ctx, "Grass: wild battles   Start: menu", 4, 4, { color: "#ffffff" });
 		void game;
 	}
 
