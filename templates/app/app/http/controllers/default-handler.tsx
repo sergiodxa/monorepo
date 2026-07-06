@@ -18,7 +18,7 @@ export default function defaultHandler(ctx: RenderContext) {
 	return ctx.render(
 		renderDocument({
 			title: props.title,
-			children: [<NotFoundView {...props} />, <Counter />],
+			children: [<NotFoundView key="view" {...props} />, <Counter key="counter" />],
 		}),
 		{ status: 404 },
 	);
