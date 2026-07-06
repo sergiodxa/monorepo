@@ -102,3 +102,44 @@
 - [x] Review JSDoc across the new engine files to ensure every exported symbol is documented.
 - [x] Add focused tests for engine dispatch, selectors, and ECS world helpers.
 - [x] Revisit naming and folder boundaries once the battle refactor is complete.
+
+## Review Findings 2026-07-06: Bugs
+
+- [ ] Persist battle outcomes back into the world: battles run on cloned creature aggregates, so damage, major status, and spent PP are never written back to `creatureHealth`/`creatureStatus`/`creatureMoves` when a battle finishes; the party leaves every battle at full health. Add an end-of-battle write-back step in `src/game/engine.ts` (or a dedicated system) that copies final combatant state into the persistent stores.
+- [ ] Fix the hit check in `src/game/battle/battle.ts` (`moveCanConnect`): the early return when both accuracy and evasion stages are 0 skips the base-accuracy roll entirely, so 70%-accuracy and even 30%-accuracy moves never miss at neutral stages. `docs/battle.md` requires base accuracy to always be considered.
+- [ ] Delete `src/game/_battle/index.ts`: it is a dead prototype with top-level side effects that references four undefined functions and currently makes `bun run typecheck` fail.
+- [ ] Clear `world.activeBattle[playerId]` (and clean up battle/battle-side/battle-member mirror components plus their ids in `world.entities`) when a battle finishes; today they accumulate forever and `selectActiveBattle` keeps returning finished battles.
+- [ ] Stop leaking transient battle entity ids into saves: `pickPersistentWorld` clones the whole `entities` array, which includes `battle:*`, `battle-side:*`, and `battle-member:*` ids whose components are stripped, leaving dangling references in snapshots.
+- [ ] Give the fallback move in `src/game/battle/systems/turn-order.ts` its documented behavior: it currently has no recoil and is typed `normal`, so type immunity zeroes it out; the spec expects a typeless last-resort attack with self-damage.
+- [ ] Wire OHKO move content to the `ohko` effect: `FISSURE`, `GUILLOTINE`, and `SHEER_COLD` in `src/content/moves.ts` have `power: 0` and `effect: { kind: "none" }`, so they deal no damage at all.
+
+## Review Findings 2026-07-06: Engine gaps for the Gen 3 target
+
+- [ ] Implement the capture formula: `capture-creature` succeeds unconditionally; species `catchRate` and item `CaptureEffect.multiplier` are never read. Add the catch-chance calculation (HP factor, status bonus, ball multiplier, shake checks) as a battle-aware system.
+- [ ] Wire experience gain into battle resolution: species `baseExperience` is unused and no experience or EVs are awarded when an enemy faints. Requires per-species EV yield data as well.
+- [ ] Add level-up move learning and evolution eligibility: learnsets and evolution rules exist as data, but nothing computes "this creature can now learn X / evolve into Y" after `grant-creature-experience`; `evolve-creature` accepts any species swap without validating a matching evolution rule.
+- [ ] Add the missing `Erratic` growth rate to `src/game/data/growth-rate.ts` (Gen 3 ships six curves; several species cannot be represented without it).
+- [ ] Add per-creature instance state needed by Gen 2/3 mechanics: gender (species ratios exist but instances have none; breeding and attract depend on it), friendship (needed by `EvolutionMethod.Friendship`), and a held-item slot (needed by the planned held-item hooks).
+- [ ] Extend evolution methods for Gen 3 coverage: trade-with-held-item, stat-comparison, and personality/random branches are missing, and `Evolution.ByFriendship` carries a `level` field that friendship evolutions do not use.
+- [ ] Fix the damage modifier chain in `src/game/battle/systems/damage.ts` (`getBaseDamage`): screens, weather, and terrain modifiers are early returns, so only the first matching modifier applies instead of stacking in spec order.
+- [ ] Make critical hits ignore Reflect/Light Screen per the Gen 3 rules, and document the chosen critical-hit chance table (the current 1/24 base is the modern table, not Gen 3's 1/16).
+- [ ] Document (or revisit) modern-rule choices that differ from Gen 3: electric-type paralysis immunity, 50% paralysis speed cut, sleep duration 1-3, fixed rampage/confusion turn counts.
+- [ ] Implement the breeding system specified in `docs/breeding.md` (egg groups and gender data exist; no system consumes them).
+
+## Review Findings 2026-07-06: Architecture and extensibility
+
+- [ ] Replace the per-call context objects in `src/game/battle/battle.ts` (`createMoveResolutionContext` exposes ~25 callbacks, plus damage/end-of-turn/roster variants) with a single `BattleContext` interface that `Battle` implements once; extracted systems currently cannot be understood or reused without the whole class, and every new mechanic must be threaded through the context lambdas.
+- [ ] Split `MoveEffect` into pipeline modifiers vs. appliable actions, or move to timing-window hooks: about half the entries in the `Effects` resolver map are no-ops deferring to hardcoded pipeline steps, and adding one effect kind today touches the union, the resolver map, the pipeline, and often `isEffectBlockedByProtect`/`moveDealsDamage`. A hook/timing-window model would also be the natural home for the planned passive-trait and held-item hooks.
+- [ ] Move type-tied mechanics out of engine code into data-driven type metadata: thaw-on-fire, status immunities by type, grounded-ness (`flying`), curse (`ghost`), identify (`ghost`/`normal`/`fighting`), toxic-spikes absorption (`poison`), weather immunities and boosts, terrain boosts, and charge consumption (`electric`) are all hardcoded against the fixed `Type` enum, which contradicts the content-agnostic goal.
+- [ ] Replace the franchise-specific `ItemCategory` enum in `src/game/data/item.ts` (ApricornBalls, MegaStones, ZCrystals, DynamaxCrystals, TeraShard, …) with content-defined category strings; this is Pokemon vocabulary inside the engine layer.
+- [ ] Make `State` in `src/game/data/status.ts` a string enum: the numeric values end up in save data (fragile across reordering) and render as "0"–"4" through `String(...)` in selectors.
+- [ ] Rebuild volatile state on switch from `createCombatantVolatileState()` instead of the ~35-line manual field reset in `resetSwitchVolatiles`; every new volatile field added to state.ts must currently be remembered there by hand.
+- [ ] Thread a seedable RNG through `Engine` battle commands (`Battle` already accepts `random`, but `Engine.startBattle` never passes one), so engine-driven battles can be deterministic for replays and tests.
+- [ ] Emit an explicit event when Protect blocks a move (nothing is emitted today, so a UI cannot narrate it) and consider a dedicated heal event instead of `damage-dealt` with `damage: 0`.
+- [ ] Track attraction sources by battle position or creature id instead of holding a direct `Creature` object reference in `volatile.attractedBy`.
+- [ ] Derive `pickPersistentWorld` from `PERSISTENT_WORLD_STORE_KEYS` instead of hand-listing the same keys a second time.
+- [ ] Cache creature levels during battle: `getCreatureLevel` scans from level 100 downward on every call and is invoked several times per damage calculation.
+- [ ] Enforce party/storage invariants in `src/game/systems/storage-system.ts`: depositing the last party member is currently allowed, boxes have no capacity, and ownership is not verified before moving a creature.
+- [ ] Remove hardcoded Pokemon content ids from `src/ui/index.ts` ("BULBASAUR") and `src/index.ts` ("POKEBALL"); the demo should derive ids from the loaded content or engine state so the layer rule in AGENTS.md holds outside `src/content`.
+- [ ] Fix `syncBattleState` member mapping for multi-team sides: creature ids are resolved from `playerParty`/`enemyParty` by index, which is wrong once a side has more than one team (latent until multi-team battles are exposed).
+- [ ] Delete or archive `agent-feedback.md`: it reviews the pre-ECS layout (`src/engine/`, `src/domain/`) and is now almost entirely stale.
