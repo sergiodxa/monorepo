@@ -9,12 +9,11 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { RequestContext } from "remix/fetch-router";
-
 import { noContent } from "@pkg/http/response";
 import { notFound, ok } from "@pkg/http/response/json";
 import { inject } from "@pkg/service-container";
 import { getContext } from "remix/async-context-middleware";
+import * as s from "remix/data-schema";
 import { Database } from "remix/data-table";
 import { createAction } from "remix/fetch-router";
 
@@ -32,16 +31,17 @@ import Subject from "../models/subject";
 export const index = createAction(
 	routes.api.subjects.grants.index,
 	inject([Database] as const, async (db) => {
-		let { params, logger } = getContext() as RequestContext<{ id: string }>;
+		let { params, logger } = getContext();
+		let { id } = s.parse(s.object({ id: s.string() }), params);
 		let log = logger.loader("/api/subjects/:id/grants");
 
-		let subject = await Subject.show(db, params.id);
+		let subject = await Subject.show(db, id);
 		if (!subject) {
-			log.info("Subject not found", { subjectId: params.id });
+			log.info("Subject not found", { subjectId: id });
 			return notFound({ error: "Subject not found" });
 		}
 
-		let grants = await Grant.listBySubject(db, params.id);
+		let grants = await Grant.listBySubject(db, id);
 
 		// Fetch all unique client IDs in a single query to avoid N+1
 		let clientIds = [...new Set(grants.map((g) => g.client_id))];
@@ -59,7 +59,7 @@ export const index = createAction(
 			};
 		});
 
-		log.info("Grants listed", { subjectId: params.id, count: grants.length });
+		log.info("Grants listed", { subjectId: id, count: grants.length });
 
 		return ok(enrichedGrants);
 	}),
@@ -72,34 +72,35 @@ export const index = createAction(
 export const destroy = createAction(
 	routes.api.subjects.grants.destroy,
 	inject([Database] as const, async (db) => {
-		let { params, logger } = getContext() as RequestContext<{ id: string; grantId: string }>;
+		let { params, logger } = getContext();
+		let { id, grantId } = s.parse(s.object({ id: s.string(), grantId: s.string() }), params);
 		let log = logger.action("/api/subjects/:id/grants/:grantId");
 
-		let subject = await Subject.show(db, params.id);
+		let subject = await Subject.show(db, id);
 		if (!subject) {
-			log.info("Subject not found", { subjectId: params.id });
+			log.info("Subject not found", { subjectId: id });
 			return notFound({ error: "Subject not found" });
 		}
 
-		let grant = await Grant.show(db, params.grantId);
+		let grant = await Grant.show(db, grantId);
 		if (!grant) {
-			log.info("Grant not found", { subjectId: params.id, grantId: params.grantId });
+			log.info("Grant not found", { subjectId: id, grantId });
 			return notFound({ error: "Grant not found" });
 		}
 
-		if (grant.subject_id !== params.id) {
+		if (grant.subject_id !== id) {
 			log.info("Grant does not belong to subject", {
-				subjectId: params.id,
-				grantId: params.grantId,
+				subjectId: id,
+				grantId,
 			});
 			return notFound({ error: "Grant not found" });
 		}
 
 		try {
-			await Grant.destroy(db, params.grantId);
+			await Grant.destroy(db, grantId);
 			log.info("Grant revoked", {
-				subjectId: params.id,
-				grantId: params.grantId,
+				subjectId: id,
+				grantId,
 				clientId: grant.client_id,
 			});
 			return noContent();

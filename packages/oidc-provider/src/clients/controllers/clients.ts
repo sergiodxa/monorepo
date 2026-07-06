@@ -8,8 +8,6 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { RequestContext } from "remix/fetch-router";
-
 import { noContent } from "@pkg/http/response";
 import { badRequest, created, notFound, ok } from "@pkg/http/response/json";
 import { isFailure } from "@pkg/result";
@@ -95,14 +93,15 @@ export const index = createAction(
 export const show = createAction(
 	routes.api.clients.show,
 	inject([Database] as const, async (db) => {
-		let { params, logger } = getContext() as RequestContext<{ id: string }>;
+		let { params, logger } = getContext();
+		let { id } = s.parse(s.object({ id: s.string() }), params);
 		let log = logger.loader("/api/clients/:id");
-		let client = await Client.show(db, params.id);
+		let client = await Client.show(db, id);
 		if (client) {
-			log.info("Client retrieved", { clientId: params.id });
+			log.info("Client retrieved", { clientId: id });
 			return ok(normalizeClient(client));
 		}
-		log.info("Client not found", { clientId: params.id });
+		log.info("Client not found", { clientId: id });
 		return notFound({ error: "Client not found" });
 	}),
 );
@@ -160,24 +159,25 @@ export const create = createAction(
 export const update = createAction(
 	routes.api.clients.update,
 	inject([Database] as const, async (db) => {
-		let { params, request, logger } = getContext() as RequestContext<{ id: string }>;
+		let { params, request, logger } = getContext();
+		let { id } = s.parse(s.object({ id: s.string() }), params);
 		let log = logger.action("/api/clients/:id");
 		let body = await safeJsonParse(request);
 		if (isResponse(body)) {
-			log.info("Invalid JSON body", { clientId: params.id });
+			log.info("Invalid JSON body", { clientId: id });
 			return body;
 		}
 
 		let result = await validate(body, UpdateClientSchema);
 		if (isFailure(result)) {
-			log.info("Invalid request body", { clientId: params.id });
+			log.info("Invalid request body", { clientId: id });
 			return badRequest({ error: "Invalid request", issues: result.error.issues });
 		}
 
 		let data = result.data;
 
 		try {
-			await Client.update(db, params.id, {
+			await Client.update(db, id, {
 				name: data.name,
 				type: data.type,
 				description: data.description,
@@ -187,16 +187,16 @@ export const update = createAction(
 				isManagementClient: data.isManagementClient,
 			});
 
-			let client = await Client.show(db, params.id);
-			log.info("Client updated", { clientId: params.id });
+			let client = await Client.show(db, id);
+			log.info("Client updated", { clientId: id });
 			return ok(client ? normalizeClient(client) : null);
 		} catch (error) {
 			if (error instanceof RecordNotFoundError) {
-				log.info("Client not found", { clientId: params.id });
+				log.info("Client not found", { clientId: id });
 				return notFound({ error: "Client not found" });
 			}
 			if (error instanceof Client.InvalidLogoUrlError) {
-				log.info("Invalid logo URL", { clientId: params.id, error: error.message });
+				log.info("Invalid logo URL", { clientId: id, error: error.message });
 				return badRequest({ error: error.message });
 			}
 			throw error;
@@ -211,15 +211,16 @@ export const update = createAction(
 export const destroy = createAction(
 	routes.api.clients.destroy,
 	inject([Database] as const, async (db) => {
-		let { params, logger } = getContext() as RequestContext<{ id: string }>;
+		let { params, logger } = getContext();
+		let { id } = s.parse(s.object({ id: s.string() }), params);
 		let log = logger.action("/api/clients/:id");
 		try {
-			await Client.destroy(db, params.id);
-			log.info("Client deleted", { clientId: params.id });
+			await Client.destroy(db, id);
+			log.info("Client deleted", { clientId: id });
 			return noContent();
 		} catch (error) {
 			if (error instanceof RecordNotFoundError) {
-				log.info("Client not found", { clientId: params.id });
+				log.info("Client not found", { clientId: id });
 				return notFound({ error: "Client not found" });
 			}
 			throw error;

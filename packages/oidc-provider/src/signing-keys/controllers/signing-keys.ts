@@ -8,12 +8,11 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { RequestContext } from "remix/fetch-router";
-
 import { noContent } from "@pkg/http/response";
 import { badRequest, created, notFound, ok } from "@pkg/http/response/json";
 import { inject } from "@pkg/service-container";
 import { getContext } from "remix/async-context-middleware";
+import * as s from "remix/data-schema";
 import { Database } from "remix/data-table";
 import { createAction } from "remix/fetch-router";
 
@@ -99,20 +98,21 @@ export const rotate = createAction(
 export const destroy = createAction(
 	routes.api["signing-keys"].destroy,
 	inject([Database] as const, async (db) => {
-		let { params, logger } = getContext() as RequestContext<{ id: string }>;
+		let { params, logger } = getContext();
+		let { id } = s.parse(s.object({ id: s.string() }), params);
 		let log = logger.action("/api/signing-keys/:id");
 
 		try {
-			await SigningKey.destroy(db, params.id);
-			log.info("Signing key deleted", { keyId: params.id });
+			await SigningKey.destroy(db, id);
+			log.info("Signing key deleted", { keyId: id });
 			return noContent();
 		} catch (error) {
 			if (error instanceof RecordNotFoundError) {
-				log.info("Signing key not found", { keyId: params.id });
+				log.info("Signing key not found", { keyId: id });
 				return notFound({ error: "Signing key not found" });
 			}
 			if (error instanceof SigningKey.CannotDeleteCurrentKeyError) {
-				log.info("Cannot delete current signing key", { keyId: params.id });
+				log.info("Cannot delete current signing key", { keyId: id });
 				return badRequest({ error: error.message });
 			}
 			throw error;

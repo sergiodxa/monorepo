@@ -9,12 +9,11 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { RequestContext } from "remix/fetch-router";
-
 import { noContent } from "@pkg/http/response";
 import { notFound, ok } from "@pkg/http/response/json";
 import { inject } from "@pkg/service-container";
 import { getContext } from "remix/async-context-middleware";
+import * as s from "remix/data-schema";
 import { Database } from "remix/data-table";
 import { createAction } from "remix/fetch-router";
 
@@ -31,18 +30,19 @@ import Subject from "../models/subject";
 export const index = createAction(
 	routes.api.subjects.connections.index,
 	inject([Database] as const, async (db) => {
-		let { params, logger } = getContext() as RequestContext<{ id: string }>;
+		let { params, logger } = getContext();
+		let { id } = s.parse(s.object({ id: s.string() }), params);
 		let log = logger.loader("/api/subjects/:id/connections");
 
-		let subject = await Subject.show(db, params.id);
+		let subject = await Subject.show(db, id);
 		if (!subject) {
-			log.info("Subject not found", { subjectId: params.id });
+			log.info("Subject not found", { subjectId: id });
 			return notFound({ error: "Subject not found" });
 		}
 
-		let connections = await Connection.listBySubject(db, params.id);
+		let connections = await Connection.listBySubject(db, id);
 
-		log.info("Connections listed", { subjectId: params.id, count: connections.length });
+		log.info("Connections listed", { subjectId: id, count: connections.length });
 
 		return ok(
 			connections.map((connection) => ({
@@ -63,31 +63,35 @@ export const index = createAction(
 export const destroy = createAction(
 	routes.api.subjects.connections.destroy,
 	inject([Database] as const, async (db) => {
-		let { params, logger } = getContext() as RequestContext<{ id: string; connectionId: string }>;
+		let { params, logger } = getContext();
+		let { id, connectionId } = s.parse(
+			s.object({ id: s.string(), connectionId: s.string() }),
+			params,
+		);
 		let log = logger.action("/api/subjects/:id/connections/:connectionId");
 
-		let subject = await Subject.show(db, params.id);
+		let subject = await Subject.show(db, id);
 		if (!subject) {
-			log.info("Subject not found", { subjectId: params.id });
+			log.info("Subject not found", { subjectId: id });
 			return notFound({ error: "Subject not found" });
 		}
 
-		let connections = await Connection.listBySubject(db, params.id);
-		let connection = connections.find((c) => c.id === params.connectionId);
+		let connections = await Connection.listBySubject(db, id);
+		let connection = connections.find((c) => c.id === connectionId);
 
 		if (!connection) {
 			log.info("Connection not found", {
-				subjectId: params.id,
-				connectionId: params.connectionId,
+				subjectId: id,
+				connectionId,
 			});
 			return notFound({ error: "Connection not found" });
 		}
 
 		try {
-			await Connection.destroy(db, params.connectionId);
+			await Connection.destroy(db, connectionId);
 			log.info("Connection deleted", {
-				subjectId: params.id,
-				connectionId: params.connectionId,
+				subjectId: id,
+				connectionId,
 				provider: connection.provider,
 			});
 			return noContent();

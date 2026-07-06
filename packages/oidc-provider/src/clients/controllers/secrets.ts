@@ -8,8 +8,6 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { RequestContext } from "remix/fetch-router";
-
 import { noContent } from "@pkg/http/response";
 import { badRequest, created, notFound, ok } from "@pkg/http/response/json";
 import { isFailure } from "@pkg/result";
@@ -39,18 +37,19 @@ let CreateSecretSchema = s.object({
 export const index = createAction(
 	routes.api.clients.secrets.index,
 	inject([Database] as const, async (db) => {
-		let { params, logger } = getContext() as RequestContext<{ clientId: string }>;
+		let { params, logger } = getContext();
+		let { clientId } = s.parse(s.object({ clientId: s.string() }), params);
 		let log = logger.loader("/api/clients/:clientId/secrets");
 
 		// Verify client exists
-		let client = await Client.show(db, params.clientId);
+		let client = await Client.show(db, clientId);
 		if (!client) {
-			log.info("Client not found", { clientId: params.clientId });
+			log.info("Client not found", { clientId });
 			return notFound({ error: "Client not found" });
 		}
 
-		let secrets = await Secret.list(db, params.clientId);
-		log.info("Secrets listed", { clientId: params.clientId, count: secrets.length });
+		let secrets = await Secret.list(db, clientId);
+		log.info("Secrets listed", { clientId, count: secrets.length });
 		return ok(secrets);
 	}),
 );
@@ -62,30 +61,31 @@ export const index = createAction(
 export const create = createAction(
 	routes.api.clients.secrets.create,
 	inject([Database] as const, async (db) => {
-		let { params, formData, logger } = getContext() as RequestContext<{ clientId: string }>;
+		let { params, formData, logger } = getContext();
+		let { clientId } = s.parse(s.object({ clientId: s.string() }), params);
 		let log = logger.action("/api/clients/:clientId/secrets");
 
 		// Verify client exists
-		let client = await Client.show(db, params.clientId);
+		let client = await Client.show(db, clientId);
 		if (!client) {
-			log.info("Client not found", { clientId: params.clientId });
+			log.info("Client not found", { clientId });
 			return notFound({ error: "Client not found" });
 		}
 
 		let result = await validate(Object.fromEntries(formData), CreateSecretSchema);
 		if (isFailure(result)) {
-			log.info("Invalid request body", { clientId: params.clientId });
+			log.info("Invalid request body", { clientId });
 			return badRequest({ error: "Invalid request", issues: result.error.issues });
 		}
 
 		let { id, plainSecret } = await Secret.create(
 			db,
-			params.clientId,
+			clientId,
 			result.data.name,
 			result.data.expiresAt,
 		);
 
-		log.info("Secret created", { clientId: params.clientId, secretId: id });
+		log.info("Secret created", { clientId, secretId: id });
 
 		// Return the plain secret only once - it cannot be retrieved later
 		return created({
@@ -103,23 +103,24 @@ export const create = createAction(
 export const destroy = createAction(
 	routes.api.clients.secrets.destroy,
 	inject([Database] as const, async (db) => {
-		let { params, logger } = getContext() as RequestContext<{ clientId: string; id: string }>;
+		let { params, logger } = getContext();
+		let { clientId, id } = s.parse(s.object({ clientId: s.string(), id: s.string() }), params);
 		let log = logger.action("/api/clients/:clientId/secrets/:id");
 
 		// Verify client exists
-		let client = await Client.show(db, params.clientId);
+		let client = await Client.show(db, clientId);
 		if (!client) {
-			log.info("Client not found", { clientId: params.clientId });
+			log.info("Client not found", { clientId });
 			return notFound({ error: "Client not found" });
 		}
 
 		try {
-			await Secret.destroy(db, params.id);
-			log.info("Secret deleted", { clientId: params.clientId, secretId: params.id });
+			await Secret.destroy(db, id);
+			log.info("Secret deleted", { clientId, secretId: id });
 			return noContent();
 		} catch (error) {
 			if (error instanceof RecordNotFoundError) {
-				log.info("Secret not found", { clientId: params.clientId, secretId: params.id });
+				log.info("Secret not found", { clientId, secretId: id });
 				return notFound({ error: "Secret not found" });
 			}
 			throw error;

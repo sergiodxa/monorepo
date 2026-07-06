@@ -9,8 +9,6 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { RequestContext } from "remix/fetch-router";
-
 import { noContent } from "@pkg/http/response";
 import { badRequest, created, notFound, ok } from "@pkg/http/response/json";
 import { isFailure } from "@pkg/result";
@@ -57,18 +55,19 @@ let CreateLogoutUriSchema = s.object({
 export const index = createAction(
 	routes.api.clients["logout-uris"].index,
 	inject([Database] as const, async (db) => {
-		let { params, logger } = getContext() as RequestContext<{ clientId: string }>;
+		let { params, logger } = getContext();
+		let { clientId } = s.parse(s.object({ clientId: s.string() }), params);
 		let log = logger.loader("/api/clients/:clientId/logout-uris");
 
 		// Verify client exists
-		let client = await Client.show(db, params.clientId);
+		let client = await Client.show(db, clientId);
 		if (!client) {
-			log.info("Client not found", { clientId: params.clientId });
+			log.info("Client not found", { clientId });
 			return notFound({ error: "Client not found" });
 		}
 
-		let logoutUris = await LogoutUri.list(db, params.clientId);
-		log.info("Logout URIs listed", { clientId: params.clientId, count: logoutUris.length });
+		let logoutUris = await LogoutUri.list(db, clientId);
+		log.info("Logout URIs listed", { clientId, count: logoutUris.length });
 		return ok(logoutUris.map(normalizeLogoutUri));
 	}),
 );
@@ -80,26 +79,27 @@ export const index = createAction(
 export const create = createAction(
 	routes.api.clients["logout-uris"].create,
 	inject([Database] as const, async (db) => {
-		let { params, formData, logger } = getContext() as RequestContext<{ clientId: string }>;
+		let { params, formData, logger } = getContext();
+		let { clientId } = s.parse(s.object({ clientId: s.string() }), params);
 		let log = logger.action("/api/clients/:clientId/logout-uris");
 
 		// Verify client exists
-		let client = await Client.show(db, params.clientId);
+		let client = await Client.show(db, clientId);
 		if (!client) {
-			log.info("Client not found", { clientId: params.clientId });
+			log.info("Client not found", { clientId });
 			return notFound({ error: "Client not found" });
 		}
 
 		let result = await validate(Object.fromEntries(formData), CreateLogoutUriSchema);
 		if (isFailure(result)) {
-			log.info("Invalid request body", { clientId: params.clientId });
+			log.info("Invalid request body", { clientId });
 			return badRequest({ error: "Invalid request", issues: result.error.issues });
 		}
 
-		let { id } = await LogoutUri.create(db, params.clientId, result.data);
+		let { id } = await LogoutUri.create(db, clientId, result.data);
 
 		log.info("Logout URI created", {
-			clientId: params.clientId,
+			clientId,
 			logoutUriId: id,
 			type: result.data.type,
 		});
@@ -114,23 +114,24 @@ export const create = createAction(
 export const destroy = createAction(
 	routes.api.clients["logout-uris"].destroy,
 	inject([Database] as const, async (db) => {
-		let { params, logger } = getContext() as RequestContext<{ clientId: string; id: string }>;
+		let { params, logger } = getContext();
+		let { clientId, id } = s.parse(s.object({ clientId: s.string(), id: s.string() }), params);
 		let log = logger.action("/api/clients/:clientId/logout-uris/:id");
 
 		// Verify client exists
-		let client = await Client.show(db, params.clientId);
+		let client = await Client.show(db, clientId);
 		if (!client) {
-			log.info("Client not found", { clientId: params.clientId });
+			log.info("Client not found", { clientId });
 			return notFound({ error: "Client not found" });
 		}
 
 		try {
-			await LogoutUri.destroy(db, params.id);
-			log.info("Logout URI deleted", { clientId: params.clientId, logoutUriId: params.id });
+			await LogoutUri.destroy(db, id);
+			log.info("Logout URI deleted", { clientId, logoutUriId: id });
 			return noContent();
 		} catch (error) {
 			if (error instanceof RecordNotFoundError) {
-				log.info("Logout URI not found", { clientId: params.clientId, logoutUriId: params.id });
+				log.info("Logout URI not found", { clientId, logoutUriId: id });
 				return notFound({ error: "Logout URI not found" });
 			}
 			throw error;

@@ -8,8 +8,6 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { RequestContext } from "remix/fetch-router";
-
 import { noContent } from "@pkg/http/response";
 import { badRequest, conflict, created, notFound, ok } from "@pkg/http/response/json";
 import { isFailure } from "@pkg/result";
@@ -69,14 +67,15 @@ export const index = createAction(
 export const show = createAction(
 	routes.api.subjects.show,
 	inject([Database] as const, async (db) => {
-		let { params, logger } = getContext() as RequestContext<{ id: string }>;
+		let { params, logger } = getContext();
+		let { id } = s.parse(s.object({ id: s.string() }), params);
 		let log = logger.loader("/api/subjects/:id");
-		let subject = await Subject.show(db, params.id);
+		let subject = await Subject.show(db, id);
 		if (!subject) {
-			log.info("Subject not found", { subjectId: params.id });
+			log.info("Subject not found", { subjectId: id });
 			return notFound({ error: "Subject not found" });
 		}
-		log.info("Subject retrieved", { subjectId: params.id });
+		log.info("Subject retrieved", { subjectId: id });
 		return ok(subject);
 	}),
 );
@@ -123,33 +122,34 @@ export const create = createAction(
 export const update = createAction(
 	routes.api.subjects.update,
 	inject([Database] as const, async (db) => {
-		let { params, request, logger } = getContext() as RequestContext<{ id: string }>;
+		let { params, request, logger } = getContext();
+		let { id } = s.parse(s.object({ id: s.string() }), params);
 		let log = logger.action("/api/subjects/:id");
 		let body = await safeJsonParse(request);
 		if (isResponse(body)) {
-			log.info("Invalid JSON body", { subjectId: params.id });
+			log.info("Invalid JSON body", { subjectId: id });
 			return body;
 		}
 
 		let result = await validate(body, UpdateSubjectSchema);
 		if (isFailure(result)) {
-			log.info("Invalid request body", { subjectId: params.id });
+			log.info("Invalid request body", { subjectId: id });
 			return badRequest({ error: "Invalid request", issues: result.error.issues });
 		}
 
 		try {
-			await Subject.update(db, params.id, result.data);
-			let subject = await Subject.show(db, params.id);
-			log.info("Subject updated", { subjectId: params.id });
+			await Subject.update(db, id, result.data);
+			let subject = await Subject.show(db, id);
+			log.info("Subject updated", { subjectId: id });
 			return ok(subject);
 		} catch (error) {
 			if (error instanceof RecordNotFoundError) {
-				log.info("Subject not found", { subjectId: params.id });
+				log.info("Subject not found", { subjectId: id });
 				return notFound({ error: "Subject not found" });
 			}
 			if (error instanceof Subject.UsernameAlreadyTakenError) {
 				log.info("Username already taken", {
-					subjectId: params.id,
+					subjectId: id,
 					username: result.data.username,
 				});
 				return badRequest({ error: error.message });
@@ -166,15 +166,16 @@ export const update = createAction(
 export const destroy = createAction(
 	routes.api.subjects.destroy,
 	inject([Database] as const, async (db) => {
-		let { params, logger } = getContext() as RequestContext<{ id: string }>;
+		let { params, logger } = getContext();
+		let { id } = s.parse(s.object({ id: s.string() }), params);
 		let log = logger.action("/api/subjects/:id");
 		try {
-			await Subject.destroy(db, params.id);
-			log.info("Subject deleted", { subjectId: params.id });
+			await Subject.destroy(db, id);
+			log.info("Subject deleted", { subjectId: id });
 			return noContent();
 		} catch (error) {
 			if (error instanceof RecordNotFoundError) {
-				log.info("Subject not found", { subjectId: params.id });
+				log.info("Subject not found", { subjectId: id });
 				return notFound({ error: "Subject not found" });
 			}
 			throw error;
@@ -189,15 +190,16 @@ export const destroy = createAction(
 export const verifyEmail = createAction(
 	routes.api.subjects.verifyEmail,
 	inject([Database] as const, async (db) => {
-		let { params, logger } = getContext() as RequestContext<{ id: string }>;
+		let { params, logger } = getContext();
+		let { id } = s.parse(s.object({ id: s.string() }), params);
 		let log = logger.action("/api/subjects/:id/verify-email");
 		try {
-			await Subject.verifyEmail(db, params.id);
-			log.info("Email verified", { subjectId: params.id });
+			await Subject.verifyEmail(db, id);
+			log.info("Email verified", { subjectId: id });
 			return ok({ message: "Email verified" });
 		} catch (error) {
 			if (error instanceof RecordNotFoundError) {
-				log.info("Subject not found", { subjectId: params.id });
+				log.info("Subject not found", { subjectId: id });
 				return notFound({ error: "Subject not found" });
 			}
 			throw error;

@@ -8,8 +8,6 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { RequestContext } from "remix/fetch-router";
-
 import { noContent } from "@pkg/http/response";
 import { badRequest, created, notFound, ok } from "@pkg/http/response/json";
 import { isFailure } from "@pkg/result";
@@ -96,14 +94,15 @@ export const index = createAction(
 export const show = createAction(
 	routes.api.resources.show,
 	inject([Database] as const, async (db) => {
-		let { params, logger } = getContext() as RequestContext<{ id: string }>;
+		let { params, logger } = getContext();
+		let { id } = s.parse(s.object({ id: s.string() }), params);
 		let log = logger.loader("/api/resources/:id");
-		let resource = await Resource.show(db, params.id);
+		let resource = await Resource.show(db, id);
 		if (!resource) {
-			log.info("Resource not found", { resourceId: params.id });
+			log.info("Resource not found", { resourceId: id });
 			return notFound({ error: "Resource not found" });
 		}
-		log.info("Resource retrieved", { resourceId: params.id });
+		log.info("Resource retrieved", { resourceId: id });
 		return ok(normalizeResource(resource));
 	}),
 );
@@ -145,32 +144,33 @@ export const create = createAction(
 export const update = createAction(
 	routes.api.resources.update,
 	inject([Database] as const, async (db) => {
-		let { params, request, logger } = getContext() as RequestContext<{ id: string }>;
+		let { params, request, logger } = getContext();
+		let { id } = s.parse(s.object({ id: s.string() }), params);
 		let log = logger.action("/api/resources/:id");
 		let body = await safeJsonParse(request);
 		if (isResponse(body)) {
-			log.info("Invalid JSON body", { resourceId: params.id });
+			log.info("Invalid JSON body", { resourceId: id });
 			return body;
 		}
 
 		let result = await validate(body, UpdateResourceSchema);
 		if (isFailure(result)) {
-			log.info("Invalid request body", { resourceId: params.id });
+			log.info("Invalid request body", { resourceId: id });
 			return badRequest({ error: "Invalid request", issues: result.error.issues });
 		}
 
 		try {
-			await Resource.update(db, params.id, result.data);
-			let resource = await Resource.show(db, params.id);
+			await Resource.update(db, id, result.data);
+			let resource = await Resource.show(db, id);
 			if (!resource) {
-				log.info("Resource not found after update", { resourceId: params.id });
+				log.info("Resource not found after update", { resourceId: id });
 				return notFound({ error: "Resource not found" });
 			}
-			log.info("Resource updated", { resourceId: params.id });
+			log.info("Resource updated", { resourceId: id });
 			return ok(normalizeResource(resource));
 		} catch (error) {
 			if (error instanceof RecordNotFoundError) {
-				log.info("Resource not found", { resourceId: params.id });
+				log.info("Resource not found", { resourceId: id });
 				return notFound({ error: "Resource not found" });
 			}
 			throw error;
@@ -185,15 +185,16 @@ export const update = createAction(
 export const destroy = createAction(
 	routes.api.resources.destroy,
 	inject([Database] as const, async (db) => {
-		let { params, logger } = getContext() as RequestContext<{ id: string }>;
+		let { params, logger } = getContext();
+		let { id } = s.parse(s.object({ id: s.string() }), params);
 		let log = logger.action("/api/resources/:id");
 		try {
-			await Resource.destroy(db, params.id);
-			log.info("Resource deleted", { resourceId: params.id });
+			await Resource.destroy(db, id);
+			log.info("Resource deleted", { resourceId: id });
 			return noContent();
 		} catch (error) {
 			if (error instanceof RecordNotFoundError) {
-				log.info("Resource not found", { resourceId: params.id });
+				log.info("Resource not found", { resourceId: id });
 				return notFound({ error: "Resource not found" });
 			}
 			throw error;

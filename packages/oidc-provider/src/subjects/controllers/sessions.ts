@@ -9,12 +9,11 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { RequestContext } from "remix/fetch-router";
-
 import { noContent } from "@pkg/http/response";
 import { notFound, ok } from "@pkg/http/response/json";
 import { inject } from "@pkg/service-container";
 import { getContext } from "remix/async-context-middleware";
+import * as s from "remix/data-schema";
 import { Database } from "remix/data-table";
 import { createAction } from "remix/fetch-router";
 
@@ -32,23 +31,24 @@ import Subject from "../models/subject";
 export const index = createAction(
 	routes.api.subjects.sessions.index,
 	inject([Database] as const, async (db) => {
-		let { params, logger } = getContext() as RequestContext<{ id: string }>;
+		let { params, logger } = getContext();
+		let { id } = s.parse(s.object({ id: s.string() }), params);
 		let log = logger.loader("/api/subjects/:id/sessions");
 
-		let subject = await Subject.show(db, params.id);
+		let subject = await Subject.show(db, id);
 		if (!subject) {
-			log.info("Subject not found", { subjectId: params.id });
+			log.info("Subject not found", { subjectId: id });
 			return notFound({ error: "Subject not found" });
 		}
 
-		let sessions = await Session.listBySubject(db, params.id);
+		let sessions = await Session.listBySubject(db, id);
 
 		// Fetch all unique client IDs to avoid N+1
-		let clientIds = [...new Set(sessions.map((s) => s.client_id))];
+		let clientIds = [...new Set(sessions.map((session) => session.client_id))];
 		let clients = await Client.listByIds(db, clientIds);
 		let clientMap = new Map(clients.map((c) => [c.id, c]));
 
-		log.info("Sessions listed", { subjectId: params.id, count: sessions.length });
+		log.info("Sessions listed", { subjectId: id, count: sessions.length });
 
 		return ok(
 			sessions.map((session) => {
@@ -74,32 +74,33 @@ export const index = createAction(
 export const destroy = createAction(
 	routes.api.subjects.sessions.destroy,
 	inject([Database] as const, async (db) => {
-		let { params, logger } = getContext() as RequestContext<{ id: string; sessionId: string }>;
+		let { params, logger } = getContext();
+		let { id, sessionId } = s.parse(s.object({ id: s.string(), sessionId: s.string() }), params);
 		let log = logger.action("/api/subjects/:id/sessions/:sessionId");
 
-		let subject = await Subject.show(db, params.id);
+		let subject = await Subject.show(db, id);
 		if (!subject) {
-			log.info("Subject not found", { subjectId: params.id });
+			log.info("Subject not found", { subjectId: id });
 			return notFound({ error: "Subject not found" });
 		}
 
-		let session = await Session.show(db, params.sessionId);
+		let session = await Session.show(db, sessionId);
 		if (!session) {
-			log.info("Session not found", { subjectId: params.id, sessionId: params.sessionId });
+			log.info("Session not found", { subjectId: id, sessionId });
 			return notFound({ error: "Session not found" });
 		}
 
-		if (session.subject_id !== params.id) {
+		if (session.subject_id !== id) {
 			log.info("Session does not belong to subject", {
-				subjectId: params.id,
-				sessionId: params.sessionId,
+				subjectId: id,
+				sessionId,
 			});
 			return notFound({ error: "Session not found" });
 		}
 
 		try {
-			await Session.destroy(db, params.sessionId);
-			log.info("Session destroyed", { subjectId: params.id, sessionId: params.sessionId });
+			await Session.destroy(db, sessionId);
+			log.info("Session destroyed", { subjectId: id, sessionId });
 			return noContent();
 		} catch (error) {
 			if (error instanceof RecordNotFoundError) {
