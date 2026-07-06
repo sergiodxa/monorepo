@@ -1,3 +1,14 @@
+/**
+ * Client-side hydration entry point for the blog app. Initializes i18next in the
+ * browser with the fetch backend, language detection from the html tag, and the
+ * namespaces the server rendered, then hydrates the document with the React
+ * Router app wrapped in the i18next provider inside a startTransition. This is
+ * what boots the interactive app after the server-rendered HTML loads.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import i18next from "i18next";
 import I18nextBrowserLanguageDetector from "i18next-browser-languagedetector";
 import Fetch from "i18next-fetch-backend";

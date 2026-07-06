@@ -1,3 +1,13 @@
+/**
+ * CMS route that lists configured redirects. Its loader reads every key from the
+ * redirects KV namespace and parses each entry's from/to metadata, and its
+ * component renders that list in a toolbar with a link to create a new redirect.
+ * It exists to give admins an overview of all active URL redirects.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { ok } from "@pkg/response";
 import { Button, Form, Heading, Toolbar } from "@pkg/ui";
 import { z } from "zod";

@@ -1,3 +1,13 @@
+/**
+ * Detail route rendering a single article or tutorial from the /:postType/*
+ * path. It runs a KV-backed redirects middleware, validates the post type and
+ * slug, loads the post via queryArticle/queryTutorial, and dispatches to the
+ * ArticleView or TutorialView, with forbidden and error boundary fallbacks.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { notFound, ok } from "@pkg/response";
 import { Alert, Link } from "@pkg/ui";
 import dark from "prism-theme-github/themes/prism-theme-github-copilot.css?url";

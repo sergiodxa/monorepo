@@ -1,3 +1,13 @@
+/**
+ * Article entity for the blog. Extends the base PostSchema into a Zod schema for
+ * article posts with title, slug, locale, optional excerpt, content, tags and
+ * canonical URL, and transforms each parsed article to add a derived isPublished
+ * flag. It exists to define, validate and normalize the shape of articles.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { z } from "zod";
 
 import { PostSchema } from "./post";

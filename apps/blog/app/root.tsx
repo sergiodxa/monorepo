@@ -1,3 +1,14 @@
+/**
+ * Root route module for the blog app. Composes the global middleware chain
+ * (no-www, redirects, logging, i18n, session, drizzle, caching, and more),
+ * defines the document Layout with all shared head metadata and analytics, and
+ * exports the app-wide loader, links, meta, ErrorBoundary, and language-syncing
+ * root component. Every route in the app renders inside this shell.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { ok } from "@pkg/response";
 import { ConfirmDialog } from "@pkg/ui";
 import { useEffect } from "react";

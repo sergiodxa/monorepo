@@ -1,3 +1,13 @@
+/**
+ * Tutorials listing route for the blog. Its loader reads an optional `q` search
+ * term, fetches matching tutorials and page meta with short cache headers, and its
+ * component renders the localized list with a subscribe box, draft badges and an
+ * admin-only "Write" link. It exists as the public index of tutorials.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { ok } from "@pkg/response";
 import { Badge, Button, Form, Link } from "@pkg/ui";
 import { cacheHeader } from "pretty-cache-header";

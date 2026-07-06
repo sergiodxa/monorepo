@@ -1,3 +1,13 @@
+/**
+ * Table component listing articles in the CMS. It renders each article's title,
+ * scheduled badge, and date, plus per-row actions to edit, move to a tutorial, or
+ * delete (with a confirmation dialog and fetcher submission). Exists as the article
+ * management table for the dashboard's articles section.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { Badge, Button, Card, confirm, Form, Link, Table } from "@pkg/ui";
 import { useTranslation } from "react-i18next";
 import { useFetcher } from "react-router";

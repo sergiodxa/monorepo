@@ -1,3 +1,14 @@
+/**
+ * Database schema for the blog app. Defines the SQLite/D1 tables via Drizzle for
+ * users, posts, and post_meta, along with their relations and inferred
+ * select/insert types. The post/post_meta key-value split lets a single posts
+ * table back every content type, and users link to auth.sergiodxa.com subjects
+ * with a blog-specific role. This is the source of truth for the data model.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { pk, timestamp } from "@pkg/db-helpers";
 import { relations } from "drizzle-orm";
 import { sqliteTable, text } from "drizzle-orm/sqlite-core";

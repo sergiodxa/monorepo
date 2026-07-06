@@ -1,3 +1,14 @@
+/**
+ * Cloudflare Worker fetch entry point for the blog app. Lazily imports the
+ * React Router server build, memoizes a request handler, and on each request
+ * builds a router context seeded with the Worker's env, execution context, and
+ * Cloudflare request properties. This is the outermost runtime boundary that
+ * hands incoming HTTP requests to the framework.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import type { ExecutionContext } from "@cloudflare/workers-types";
 import type { RequestHandler } from "react-router";
 

@@ -1,3 +1,13 @@
+/**
+ * Subscribe component for the blog app. Renders a localized call-to-action
+ * paragraph that invites readers to subscribe via RSS, using a Trans component so
+ * the "rss" placeholder becomes a styled link to the /rss feed. It is reused
+ * across the home, articles, tutorials, and bookmarks pages.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import type { TFunction } from "i18next";
 
 import { Link } from "@pkg/ui";

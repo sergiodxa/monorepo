@@ -1,3 +1,13 @@
+/**
+ * Short-link redirect route for /r/:redirectId that maps a small allowlist of
+ * memorable ids to their full article URLs and forwards visitors there. Unknown
+ * ids fall back to the home page, giving frequently shared articles stable,
+ * concise links.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { href, redirect, redirectDocument } from "react-router";
 import invariant from "tiny-invariant";
 

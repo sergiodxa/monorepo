@@ -1,3 +1,13 @@
+/**
+ * Renders the CMS table of liked links, listing each like's title, date, and
+ * actions with edit and delete controls. The delete action uses a confirmation
+ * dialog and a fetcher submission so authors can manage their saved likes
+ * inline without leaving the list view.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { Button, Card, confirm, Link, LinkButton, Table } from "@pkg/ui";
 import { href, useFetcher } from "react-router";
 

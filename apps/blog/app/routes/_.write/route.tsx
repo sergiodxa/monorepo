@@ -1,3 +1,13 @@
+/**
+ * Route for the authoring surface at /write, rendering the shared Markdown
+ * Editor inside a centered layout. Its loader resolves the localized page title
+ * via i18next for the document meta, giving authors a dedicated screen to draft
+ * new content.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { ok } from "@pkg/response";
 
 import { getI18nextInstance, getLocale } from "~/middleware/i18next";

@@ -1,3 +1,13 @@
+/**
+ * Base post entity for the blog. Defines the Zod PostSchema shared by all post
+ * types (id, type, author, timestamps and nullable publishedAt), a variant that
+ * derives an isPublished flag, and the related exported types. It exists as the
+ * common foundation the article, tutorial, like and glossary entities extend.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { z } from "zod";
 
 import { UserSchema } from "./user";

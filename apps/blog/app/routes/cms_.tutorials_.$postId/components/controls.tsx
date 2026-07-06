@@ -1,3 +1,14 @@
+/**
+ * Controls sidebar for the tutorial CMS editor, rendering the metadata form
+ * fields (title, auto-generated slug, tags, excerpt, and publish date) inside a
+ * Card. It derives the slug from the title via parameterize and drives publish
+ * scheduling with a DatePicker so authors can set or reschedule when a tutorial
+ * goes live.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { parseDate, today } from "@internationalized/date";
 import { useValue } from "@pkg/hooks";
 import {

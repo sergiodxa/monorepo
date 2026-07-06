@@ -1,3 +1,14 @@
+/**
+ * Public glossary route for the blog. Its loader fetches glossary terms and sets
+ * page title, description and canonical meta, and its component renders a
+ * definition list where each term is anchor-linkable and highlighted when
+ * targeted, with admin-only edit links. It exists as the reader-facing glossary of
+ * web development terms.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { ok } from "@pkg/response";
 import { Button, Card, Form } from "@pkg/ui";
 import { useTranslation } from "react-i18next";

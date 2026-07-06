@@ -1,3 +1,13 @@
+/**
+ * Vanity redirect route for /projects/:project that forwards to the matching
+ * open-source repository on GitHub. It maps a small allowlist of known project
+ * slugs to their URLs and falls back to the home page for unknown or missing
+ * projects, giving each project a stable short link.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { redirect, redirectDocument } from "react-router";
 import invariant from "tiny-invariant";
 

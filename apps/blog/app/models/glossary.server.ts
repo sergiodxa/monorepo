@@ -1,3 +1,13 @@
+/**
+ * Glossary model for the blog app. Extends the base Post model for "glossary"
+ * type entries, exposing term/title/definition/slug accessors, an anchored
+ * pathname, and CRUD operations, plus a fuzzy search over terms and definitions
+ * powered by Fuse.js. This is the domain model behind the site's glossary.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import Fuse from "fuse.js";
 
 import type { Database } from "~/db";

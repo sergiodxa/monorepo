@@ -1,3 +1,13 @@
+/**
+ * Identifier generator route for the blog. Its loader produces one fresh value of
+ * each supported ID format (UUID v4, UUID v7, CUID and ULID), and its component
+ * displays them in selectable outputs with a button that revalidates to generate
+ * new ones. It exists as a small utility page for grabbing unique identifiers.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { createId } from "@paralleldrive/cuid2";
 import { ok } from "@pkg/response";
 import { Button } from "@pkg/ui";

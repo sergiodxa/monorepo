@@ -1,3 +1,13 @@
+/**
+ * CMS route for editing a single bookmark ("like"). Its loader fetches the like
+ * by UUID and its action validates a title/URL form before updating the record on
+ * behalf of the current user; the component renders the edit form. Exists so admins
+ * can amend saved links from the dashboard.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { ok } from "@pkg/response";
 import { succeeded } from "@pkg/result";
 import { Button, Card, FieldError, Form, Input, Label, TextField } from "@pkg/ui";

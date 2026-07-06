@@ -1,3 +1,13 @@
+/**
+ * Controlled Markdown text-area component for the article editor. It renders a
+ * growing, monospaced textarea named "content" and reports edits through an onChange
+ * callback. Exists as the raw writing surface for the article body within the editor
+ * layout.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { Group, TextArea } from "@pkg/ui";
 import { useRef } from "react";
 

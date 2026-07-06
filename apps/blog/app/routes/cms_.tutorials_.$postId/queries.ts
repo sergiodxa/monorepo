@@ -1,3 +1,14 @@
+/**
+ * Data helpers for the CMS tutorial editor route. clearCache invalidates the
+ * cached tutorial lists, search results and feeds after edits, and prettify runs
+ * Prettier in-browser (via standalone plus its plugins) to reformat Markdown
+ * content. It exists to keep cache invalidation and formatting logic out of the
+ * editor route module.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import type { Options } from "prettier";
 
 import * as acornPlugin from "prettier/plugins/acorn";

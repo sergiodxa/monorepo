@@ -1,3 +1,14 @@
+/**
+ * Service that loads a single article by its slug. It queries the post_meta table
+ * for the matching slug, joins in the post, its meta and author, assembles those
+ * key/value meta rows into an Article shape and validates it with ArticleSchema,
+ * returning a Result with an ArticleNotFoundError when nothing matches. It exists
+ * to give article routes one typed lookup from slug to a domain entity.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { type Result, failure, success } from "@pkg/result";
 
 import type { Article } from "~/entities/article";

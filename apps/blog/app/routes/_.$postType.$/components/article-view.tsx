@@ -1,3 +1,13 @@
+/**
+ * Presentational component that renders a single article page. It shows a scheduled
+ * preview badge with a localized publish date, an admin-only edit button, and the
+ * article body via MarkdownView, followed by a support call-to-action. Exists as the
+ * article variant of the shared post view.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { Badge, Button, Form } from "@pkg/ui";
 import { useTranslation } from "react-i18next";
 

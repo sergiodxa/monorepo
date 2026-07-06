@@ -1,3 +1,13 @@
+/**
+ * English translation bundle for the blog app. Provides the strings for
+ * navigation, home, articles, tutorials, bookmarks, glossary, auth, the CMS
+ * dashboard, and RSS feeds. As the default locale, its object shape is the
+ * canonical type that the other locale bundles are checked against.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 export default {
 	header: { title: "Sergio Xalambrí" },
 

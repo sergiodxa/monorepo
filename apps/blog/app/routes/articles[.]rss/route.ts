@@ -1,3 +1,13 @@
+/**
+ * Loader route that builds the articles RSS feed. It lists all articles, resolves
+ * localized feed title/description/CTA via i18next, and emits one RSS item per
+ * article with an absolute link back to the site. Exists to let readers subscribe
+ * to new articles through any feed reader.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { RSS } from "@pkg/rss";
 import { href } from "react-router";
 import { xml } from "remix-utils/responses";

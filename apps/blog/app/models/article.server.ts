@@ -1,3 +1,14 @@
+/**
+ * Article model for the blog app. Extends the base Post model for "article"
+ * entries with title/slug/locale/content/excerpt/canonical-url accessors, Markdoc
+ * rendering, and word counts, and provides slug- and id-based lookup, CRUD, and
+ * Fuse.js fuzzy search over titles and content. This is the domain model behind
+ * the site's long-form articles.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { and, eq } from "drizzle-orm";
 import Fuse from "fuse.js";
 

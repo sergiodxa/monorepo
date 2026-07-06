@@ -1,3 +1,14 @@
+/**
+ * Service that loads a single tutorial by its slug. It queries the post_meta table
+ * for the matching slug, joins in the post, its meta and author, assembles the
+ * key/value meta rows into a Tutorial shape and validates it with TutorialSchema,
+ * returning a Result with a TutorialNotFoundError when nothing matches. It exists
+ * to give tutorial routes one typed lookup from slug to a domain entity.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { type Result, failure, success } from "@pkg/result";
 
 import type { Tutorial } from "~/entities/tutorial";

@@ -1,3 +1,13 @@
+/**
+ * Server-side helpers for the article editor route. clearCache invalidates the KV
+ * cache entries for article lists, feeds, and searches, while prettify formats
+ * Markdown content in-browser using Prettier's standalone build and plugins. Exists
+ * to support saving and cleaning up article content in the CMS.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import type { Options } from "prettier";
 
 import * as acornPlugin from "prettier/plugins/acorn";

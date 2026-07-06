@@ -1,3 +1,13 @@
+/**
+ * Bookmarks listing route for the blog. Its loader fetches liked links and builds
+ * localized page meta including RSS and canonical links, and its component renders
+ * the list of bookmarks, each with an optional Wayback Machine archive link. It
+ * exists as the public page of links the author has bookmarked.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { ok } from "@pkg/response";
 import { Link } from "@pkg/ui";
 import { useTranslation } from "react-i18next";

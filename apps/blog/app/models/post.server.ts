@@ -1,3 +1,14 @@
+/**
+ * Base Post model for the blog app. Defines the shared entity behind every
+ * content type (articles, tutorials, likes, glossary, comments), backed by the
+ * posts and post_meta tables via Drizzle. It handles publish-state logic, lazy
+ * author loading, and the list/show/create/update/destroy operations, including
+ * flattening arbitrary meta into key/value rows. All specific models extend it.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { and, desc, eq, sql } from "drizzle-orm";
 
 import type { Database } from "~/db";

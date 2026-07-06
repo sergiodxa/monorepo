@@ -1,3 +1,13 @@
+/**
+ * CMS route for creating a redirect. Its action validates a from/to pair of
+ * leading-slash paths and stores the redirect in the redirects KV namespace keyed
+ * by the source path, then redirects back to the redirects list; its component
+ * renders the creation form. It exists to let admins add URL redirects.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { succeeded } from "@pkg/result";
 import { Button, Card, FieldError, Form, Input, Label, TextField } from "@pkg/ui";
 import { validate } from "@pkg/validate";

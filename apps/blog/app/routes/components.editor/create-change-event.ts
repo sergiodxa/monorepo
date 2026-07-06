@@ -1,3 +1,13 @@
+/**
+ * Editor helper that constructs the ChangeEvent object emitted by the Markdown
+ * editor, bundling the selected text, its selection range, the current markdown
+ * value, and the native DOM change event. It gives toolbar actions a consistent
+ * payload describing an edit.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import type { ChangeEvent } from "react";
 
 import type { SelectionType } from "./get-selection";

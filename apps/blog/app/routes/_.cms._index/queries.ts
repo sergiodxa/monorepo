@@ -1,3 +1,13 @@
+/**
+ * Data helpers for the CMS dashboard index. queryStats counts posts by type,
+ * createQuickLike fetches a URL and scrapes its title to save a new bookmark (unless
+ * already saved), and queryLastDaySearch reads recent search terms from the KV cache.
+ * Exists to power the dashboard's stats, quick-like, and recent-search widgets.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { count, eq } from "drizzle-orm";
 
 import type { UUID } from "~/utils/uuid";

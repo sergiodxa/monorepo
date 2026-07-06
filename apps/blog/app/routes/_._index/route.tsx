@@ -1,3 +1,13 @@
+/**
+ * Home page route rendering the activity feed with a page header and newsletter
+ * subscribe callout. Its loader reads the optional "q" search param, fetches
+ * matching feed items via queryFeed, sets cache-control headers, and builds
+ * localized title/OG meta so the landing page supports searching and caching.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { ok } from "@pkg/response";
 import { cacheHeader } from "pretty-cache-header";
 import { useTranslation } from "react-i18next";

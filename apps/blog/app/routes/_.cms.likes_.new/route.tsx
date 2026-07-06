@@ -1,3 +1,13 @@
+/**
+ * CMS route for creating a new "like" (a bookmarked link) at /cms/likes/new. Its
+ * action validates the submitted URL and optional title, persists the like for
+ * the current user via the Like model, and redirects back to the likes list. The
+ * component renders the corresponding creation form.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { succeeded } from "@pkg/result";
 import { Button, Card, FieldError, Form, Input, Label, TextField } from "@pkg/ui";
 import { validate } from "@pkg/validate";

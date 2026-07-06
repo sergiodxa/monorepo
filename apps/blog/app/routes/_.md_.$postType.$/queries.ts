@@ -1,3 +1,13 @@
+/**
+ * Data-loading helpers for the raw-Markdown route. queryArticle and queryTutorial
+ * look up a post by slug, log and throw when not found, and return the content as a
+ * Markdown string prefixed with a title heading (adding a localized tags line for
+ * tutorials). Exists to feed the /md/... plain-Markdown responses.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { isFailure } from "@pkg/result";
 
 import { getI18nextInstance, getLocale } from "~/middleware/i18next";

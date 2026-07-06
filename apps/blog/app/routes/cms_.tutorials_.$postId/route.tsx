@@ -1,3 +1,14 @@
+/**
+ * CMS tutorial editor route for the blog. Its loader seeds a blank or existing
+ * tutorial by post id, its action validates the form and handles the write, update
+ * and prettify intents (creating/updating via the Tutorial model and clearing
+ * caches), and its component renders the live Markdown editor with preview and
+ * controls. It exists as the authoring screen for creating and editing tutorials.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { useValue } from "@pkg/hooks";
 import { badRequest, ok } from "@pkg/response";
 import { isFailure } from "@pkg/result";

@@ -1,3 +1,13 @@
+/**
+ * Dashboard stats component. It takes per-type counts (articles, likes, tutorials,
+ * glossary) and renders a grid of cards for the non-zero totals, each with a
+ * localized label, the count, and a "view all" link to that section. Exists to give
+ * admins an at-a-glance summary of content volume.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { Card, Heading, Link } from "@pkg/ui";
 import { useTranslation } from "react-i18next";
 

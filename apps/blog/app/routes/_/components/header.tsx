@@ -1,3 +1,13 @@
+/**
+ * Site header component for the public layout. It renders the localized primary
+ * navigation (adding a CMS link for admins), a sponsor link, and a search field that
+ * submits its query on change. Exists as the shared top-of-page navigation and search
+ * bar for all public pages.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { Form, Label, Link, SearchField } from "@pkg/ui";
 import { useTranslation } from "react-i18next";
 import { useSearchParams, useSubmit } from "react-router";

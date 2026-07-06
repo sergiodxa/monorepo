@@ -1,3 +1,12 @@
+/**
+ * Editor helper that applies a SelectionType back onto a textarea by calling
+ * setSelectionRange with a forward direction. It restores or moves the caret and
+ * highlighted range after the editor programmatically rewrites the content.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import type { SelectionType } from "./get-selection";
 
 /**

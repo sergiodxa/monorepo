@@ -1,3 +1,13 @@
+/**
+ * Metadata controls panel for the article editor. It provides fields for title,
+ * auto-generated slug (derived from the title once hydrated), excerpt, and a publish
+ * date picker with calendar for scheduling. Exists to let authors edit an article's
+ * metadata alongside its body content.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { parseDate, today } from "@internationalized/date";
 import { useValue } from "@pkg/hooks";
 import {

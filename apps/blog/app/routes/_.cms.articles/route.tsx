@@ -1,3 +1,13 @@
+/**
+ * CMS articles management route listing every article (including drafts) with a
+ * link to create a new one. Its loader formats each article for display, and its
+ * action handles the delete and move-to-tutorial intents before redirecting back
+ * to the list.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { ok } from "@pkg/response";
 import { Button, Form, Heading, Toolbar } from "@pkg/ui";
 import { href, redirect } from "react-router";

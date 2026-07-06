@@ -1,3 +1,13 @@
+/**
+ * CMS tutorials index route. Its loader lists all tutorials (published or not) with
+ * localized dates for display, its action handles the delete intent, and its
+ * component renders a toolbar plus the tutorial list. Exists as the dashboard screen
+ * for managing tutorial posts.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { ok } from "@pkg/response";
 import { Button, Form, Heading, Toolbar } from "@pkg/ui";
 import { href, redirect } from "react-router";

@@ -1,3 +1,12 @@
+/**
+ * Support component for the blog app. Renders a localized alert card inviting
+ * readers to sponsor the author, with a form that submits to the /sponsor route.
+ * It exists as a reusable call-to-action block surfaced across content pages.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { Alert, Button, Form } from "@pkg/ui";
 import { useTranslation } from "react-i18next";
 

@@ -1,3 +1,13 @@
+/**
+ * Presentational component that renders a single tutorial page. It displays clickable
+ * tag links, admin edit and view-Markdown buttons, an optional scheduled preview
+ * badge, the tutorial body, and a lazily awaited list of tag-based recommendations.
+ * Exists as the tutorial variant of the shared post view.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { cn } from "@pkg/cn";
 import { Badge, Button, Card, Form, Link, TagGroup } from "@pkg/ui";
 import { Suspense } from "react";

@@ -1,3 +1,13 @@
+/**
+ * Helpers for the CMS tutorials route. MarkdownSchema is a Zod schema that parses a
+ * tutorial's Markdown into a title, optional hashtag-derived tags, and body, while
+ * deleteTutorial removes a tutorial by id. Exists to normalize authored tutorial
+ * input and back the list's delete action.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { z } from "zod";
 
 import type { UUID } from "~/utils/uuid";

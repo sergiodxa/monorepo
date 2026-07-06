@@ -1,3 +1,13 @@
+/**
+ * CMS route for managing glossary terms. Its loader lists glossary entries, its
+ * action handles a delete intent by destroying the selected term, and its
+ * component renders a table of terms with edit links and a confirming delete
+ * button. It exists to let admins review, edit and remove glossary definitions.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import type { ValidationErrors } from "@react-types/shared";
 
 import { badRequest, ok } from "@pkg/response";

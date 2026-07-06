@@ -1,3 +1,13 @@
+/**
+ * Dashboard card component for quickly saving a bookmark. It renders a URL form that
+ * posts the create-like intent, reloading the document on submit and displaying any
+ * validation error returned for the URL field. Exists to let admins add a new "like"
+ * from the dashboard without leaving the page.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { Button, Card, FieldError, Form, Input, Label, TextField } from "@pkg/ui";
 import { useTranslation } from "react-i18next";
 

@@ -1,3 +1,14 @@
+/**
+ * Markdoc code-fence component for the blog. Provides a Fence React component that
+ * renders a syntax-highlighted `<pre>` block with an optional file-path header, and
+ * a Markdoc schema whose transform validates node attributes, maps some language
+ * aliases and runs Prism highlighting (falling back to plain on failure). It exists
+ * to render fenced code blocks in Markdoc content with consistent highlighting.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { type Schema, Tag } from "@markdoc/markdoc";
 import Prism from "prismjs";
 import { z } from "zod";

@@ -1,3 +1,13 @@
+/**
+ * Data-access helpers for the CMS articles route. It defines the MarkdownSchema
+ * that splits a Markdown document into a title and body, deletes articles, and
+ * converts an article into a tutorial (updating the post type, busting the
+ * relevant caches, and writing a KV redirect from the old to the new path).
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { and, eq } from "drizzle-orm";
 import { z } from "zod";
 

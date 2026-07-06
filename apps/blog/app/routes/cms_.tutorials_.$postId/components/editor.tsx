@@ -1,3 +1,13 @@
+/**
+ * Editor component for the tutorial CMS route, rendering a full-height,
+ * monospace textarea bound to a controlled string value. It wraps the shared
+ * TextArea in a Group and forwards edits through an onChange callback so the
+ * parent route can manage the tutorial's Markdown content state.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { Group, TextArea } from "@pkg/ui";
 import { useRef } from "react";
 

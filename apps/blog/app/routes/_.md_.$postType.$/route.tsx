@@ -1,3 +1,13 @@
+/**
+ * Route that serves the raw Markdown source of a post. Its loader validates the
+ * post type ("articles" or "tutorials") and slug, then returns the corresponding
+ * content with a Markdown media type via queryArticle/queryTutorial. Exists to
+ * expose LLM- and tooling-friendly plain-text versions of published posts.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { markdown } from "@pkg/http/response";
 import { notFound } from "@pkg/response";
 import { z } from "zod";

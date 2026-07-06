@@ -1,3 +1,13 @@
+/**
+ * Logout route for the blog. Its loader requires an authenticated user, its action
+ * calls the session logout helper, and its component renders a localized
+ * confirmation form that posts to trigger the logout. It exists to give users an
+ * explicit, protected way to end their session.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { Button, Form } from "@pkg/ui";
 import { useTranslation } from "react-i18next";
 

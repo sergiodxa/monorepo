@@ -1,3 +1,13 @@
+/**
+ * Loader route that generates the site's XML sitemap. It loads all articles,
+ * tutorials, and bookmarks, appends the home and section index URLs with their most
+ * recent update dates, then appends every individual post URL. Exists to help search
+ * engines discover and re-crawl the blog's content.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { Sitemap } from "@pkg/sitemap";
 import { href } from "react-router";
 import { xml } from "remix-utils/responses";

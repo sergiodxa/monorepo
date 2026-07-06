@@ -1,3 +1,13 @@
+/**
+ * Presentational list component for the CMS redirects route. RedirectsList renders
+ * a given array of from/to redirect entries as a table inside a card, keyed by the
+ * combined paths. It exists to isolate the redirects table markup from the route's
+ * loader and action logic.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { Card, Table } from "@pkg/ui";
 
 interface Redirect {

@@ -1,3 +1,13 @@
+/**
+ * Data-access layer for the home feed, querying all posts with their meta from
+ * the database and normalizing them into FeedItem shapes. It applies published
+ * visibility rules (bypassed for admins), full-text search over post_meta with
+ * relevance-weighted ordering, and derives each post's link, title, and content.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import type { UUID } from "~/utils/uuid";
 
 import { getDB } from "~/middleware/drizzle";

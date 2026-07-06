@@ -1,3 +1,13 @@
+/**
+ * Full-page article editor route. Its loader seeds a blank or existing article, its
+ * action validates and handles write/update/prettify intents (creating or updating
+ * the article and clearing caches), and its component wires a live-preview Markdown
+ * editor with controls and quick actions. Exists as the CMS authoring surface for articles.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { useValue } from "@pkg/hooks";
 import { badRequest, ok } from "@pkg/response";
 import { isFailure } from "@pkg/result";

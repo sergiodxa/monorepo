@@ -1,3 +1,13 @@
+/**
+ * Toolbar button components for the Markdown editor, exposing bold, italic,
+ * link, code, quote, image, and heading actions under the Button namespace.
+ * Each button wraps the selected text with the right Markdown syntax and
+ * repositions the caret via an updater/handler pair dispatched to the editor.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import type { ReactNode } from "react";
 
 import { Button as UIButton } from "@pkg/ui";

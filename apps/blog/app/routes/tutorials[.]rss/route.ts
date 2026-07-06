@@ -1,3 +1,13 @@
+/**
+ * RSS feed route for the blog's tutorials. Its loader lists all tutorials, builds
+ * a localized RSS document with translated channel title and description, and adds
+ * one item per tutorial with its link, excerpt and publish date, returning it as
+ * XML. It exists to expose tutorials as a subscribable feed.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { RSS } from "@pkg/rss";
 import { href } from "react-router";
 import { xml } from "remix-utils/responses";

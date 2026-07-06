@@ -1,3 +1,13 @@
+/**
+ * Split-pane Markdown editor route pairing a formatting toolbar and textarea
+ * with a live rendered preview. Its action parses submitted content into a
+ * Markdoc tree, and the Editor component wires the reducer state to a fetcher
+ * that re-renders the preview whenever the content changes.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import type { RenderableTreeNode } from "@markdoc/markdoc";
 import type { Dispatch, RefObject } from "react";
 

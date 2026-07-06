@@ -1,3 +1,14 @@
+/**
+ * Quick-actions sidebar for the CMS tutorial editor. QuickActions renders a
+ * vertical toolbar with an image-upload button and a prettify button; the latter
+ * submits the editor form with a prettify intent via a fetcher and, when formatted
+ * content returns, dispatches it back into the editor. It exists to give the editor
+ * inline formatting and media shortcuts.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { Button, Toolbar, Tooltip, TooltipTrigger } from "@pkg/ui";
 import { Brush, ImagePlus } from "lucide-react";
 import { type Dispatch, useEffect } from "react";

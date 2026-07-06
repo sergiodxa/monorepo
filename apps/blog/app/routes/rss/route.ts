@@ -1,3 +1,13 @@
+/**
+ * RSS feed route that aggregates articles, likes, tutorials, and glossary terms,
+ * sorts the combined items by publish date, and serializes them into an XML feed
+ * with a localized title and description. It gives readers a single subscribable
+ * feed covering all of the site's content types.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { RSS } from "@pkg/rss";
 import { href } from "react-router";
 import { xml } from "remix-utils/responses";

@@ -1,3 +1,13 @@
+/**
+ * Navigation toolbar for the CMS layout. It renders localized NavLinks to the
+ * dashboard sections (articles, likes, tutorials, glossary, cache, redirects) and a
+ * logout form. Exists to give admins consistent in-CMS navigation and a sign-out
+ * control across all dashboard pages.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { Button, Form, NavLink, Toolbar } from "@pkg/ui";
 import { LogOutIcon } from "lucide-react";
 import { useTranslation } from "react-i18next";

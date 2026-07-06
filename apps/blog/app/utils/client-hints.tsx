@@ -1,3 +1,14 @@
+/**
+ * Client hints utilities for the blog app. Builds an epic-web client-hints
+ * helper for the user's time zone, exporting getHints for the loader, a
+ * ClientHintCheck script component that seeds the hints on first load, and a
+ * useHints hook that reads them from the root loader data. This lets the app
+ * render time-zone-aware output.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { getHintUtils } from "@epic-web/client-hints";
 import { clientHint as timeZoneHint } from "@epic-web/client-hints/time-zone";
 import { useRouteLoaderData } from "react-router";

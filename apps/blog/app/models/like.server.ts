@@ -1,3 +1,13 @@
+/**
+ * Like model for the blog app. Extends the base Post model for "like" entries
+ * (bookmarked links), exposing title and parsed URL accessors, CRUD operations,
+ * and Fuse.js fuzzy search over titles. This is the domain model behind the
+ * bookmarks/likes the site publishes.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import Fuse from "fuse.js";
 
 import type { Database } from "~/db";

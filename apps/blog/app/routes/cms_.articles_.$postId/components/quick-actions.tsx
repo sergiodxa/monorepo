@@ -1,3 +1,13 @@
+/**
+ * Vertical quick-actions toolbar for the article editor. It offers an image-upload
+ * button and a prettify button that submits the editor form with a "prettify" intent,
+ * then writes the formatted content back into the editor via dispatch. Exists to give
+ * authors inline formatting and asset shortcuts while writing.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { Button, Toolbar, Tooltip, TooltipTrigger } from "@pkg/ui";
 import { Brush, ImagePlus } from "lucide-react";
 import { type Dispatch, useEffect } from "react";

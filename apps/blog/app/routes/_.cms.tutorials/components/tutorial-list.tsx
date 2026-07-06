@@ -1,3 +1,13 @@
+/**
+ * Table component listing tutorials in the CMS. It renders each tutorial's title,
+ * tags (with a scheduled marker for unpublished ones), and date, plus per-row edit
+ * and delete actions where delete goes through a confirmation dialog. Exists as the
+ * tutorial management table for the dashboard's tutorials section.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { Button, Card, confirm, Form, Link, Table, TagGroup } from "@pkg/ui";
 import { useId } from "react";
 import { useTranslation } from "react-i18next";

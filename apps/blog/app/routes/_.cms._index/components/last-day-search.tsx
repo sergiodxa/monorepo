@@ -1,3 +1,13 @@
+/**
+ * Dashboard component showing recent search terms. It renders two cards listing the
+ * article and tutorial queries visitors ran (as gathered from the cache), each as a
+ * bulleted list. Exists to give admins quick insight into what readers are searching
+ * for on the site.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { Card, Heading } from "@pkg/ui";
 import { useTranslation } from "react-i18next";
 

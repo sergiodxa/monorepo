@@ -1,3 +1,13 @@
+/**
+ * Top-level public layout route. It renders the shared Header above an Outlet for
+ * child pages, preloads the avatar image via a links function, and provides an
+ * ErrorBoundary that maps 404s and other errors to a friendly title. Exists as the
+ * common chrome wrapping all non-CMS pages.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { Outlet, isRouteErrorResponse, useRouteError } from "react-router";
 
 import type { Route } from "./+types/route";

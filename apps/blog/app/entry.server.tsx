@@ -1,3 +1,14 @@
+/**
+ * Server-side rendering entry point for the blog app. Streams the React tree to
+ * HTML with renderToReadableStream inside an i18next provider, waits for full
+ * render before responding to bots (and uses chunked transfer otherwise), logs
+ * render errors, and returns the streamed response with the correct status and
+ * content type. This is how each SSR request is turned into an HTML response.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import type { EntryContext } from "react-router";
 
 import { HTML } from "@pkg/http/content-type";

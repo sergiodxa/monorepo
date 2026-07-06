@@ -1,3 +1,14 @@
+/**
+ * API route that serves i18n translation resources. Its loader validates the
+ * requested language and namespace params against the bundled en/es resources,
+ * returns 400 for unknown values, and otherwise responds with the namespace's
+ * translations plus production cache headers. It exists to let the client fetch
+ * localized strings on demand.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { cacheHeader } from "pretty-cache-header";
 import { data } from "react-router";
 import { z } from "zod";

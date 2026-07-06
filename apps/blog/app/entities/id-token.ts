@@ -1,3 +1,14 @@
+/**
+ * OpenID Connect ID token entity for the blog. Subclasses JWT to expose typed
+ * accessors for standard and profile claims (subject, audience, name, email,
+ * picture, preferred_username, email_verified) and provides verifyIdToken, which
+ * validates a token against the provider's remote JWKS, audience and issuer. It
+ * exists to safely read the identity claims returned by the OAuth2 login flow.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { JWK, JWT } from "@edgefirst-dev/jwt";
 import { env } from "cloudflare:workers";
 

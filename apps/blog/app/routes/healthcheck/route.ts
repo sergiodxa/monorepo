@@ -1,3 +1,13 @@
+/**
+ * Health check route that verifies the app can reach its database by running a
+ * lightweight count query against the posts table before responding with "OK".
+ * It gives uptime monitors and load balancers a simple endpoint to confirm the
+ * service and its data layer are alive.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { ok } from "@pkg/response";
 import { count } from "drizzle-orm";
 

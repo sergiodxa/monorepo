@@ -1,3 +1,13 @@
+/**
+ * Data-access layer for the RSS feed that gathers articles, likes, tutorials,
+ * and glossary terms and normalizes each into a shared RSSItem shape. It builds
+ * absolute links, localized call-to-action descriptions, and RFC-822 publish
+ * dates so the feed route can merge and serialize them into a single feed.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { href } from "react-router";
 
 import { getRequest } from "~/middleware/context-storage";

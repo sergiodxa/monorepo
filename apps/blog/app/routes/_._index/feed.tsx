@@ -1,3 +1,13 @@
+/**
+ * Renders the home page activity feed as an h-feed microformat list, mapping
+ * each FeedItem (article, tutorial, like, or glossary) to a timeline entry with
+ * a type-specific icon, translated body, date, and preview badge. It gives the
+ * landing page a unified chronological view of all published and draft content.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import type { TFunction } from "i18next";
 import type { ReactNode } from "react";
 

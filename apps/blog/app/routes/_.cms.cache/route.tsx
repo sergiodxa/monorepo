@@ -1,3 +1,13 @@
+/**
+ * CMS route for managing the cache. Its loader lists all cache keys, its action
+ * either clears the entire cache or deletes a selected subset of keys based on the
+ * submitted intent, and its component renders the key list with clear and
+ * delete-selected controls. It exists to let admins inspect and purge cached data.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { ok } from "@pkg/response";
 import { Button, Form, Heading, Toolbar } from "@pkg/ui";
 import { useId } from "react";

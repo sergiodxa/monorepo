@@ -1,3 +1,13 @@
+/**
+ * CMS route for managing likes (bookmarks). Its loader lists likes with
+ * locale-formatted timestamps, its action handles a delete intent by removing the
+ * selected like, and its component renders a toolbar and the likes list with a
+ * link to create new ones. It exists to let admins review and delete bookmarks.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import type { ValidationErrors } from "@react-types/shared";
 
 import { badRequest, ok } from "@pkg/response";

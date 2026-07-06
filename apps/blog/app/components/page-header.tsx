@@ -1,3 +1,13 @@
+/**
+ * Page header component for the blog app. Renders a section's localized title and
+ * description heading block, using a Trans component so the description can carry
+ * inline markup. It provides a consistent header used across the articles,
+ * tutorials, glossary, and bookmarks listing pages.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import type { TFunction } from "i18next";
 
 import { Trans } from "react-i18next";

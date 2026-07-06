@@ -1,3 +1,13 @@
+/**
+ * Login route rendering the sign-in form with a single GitHub authentication
+ * button. Its loader redirects already-authenticated users to the home page,
+ * and its action delegates to the auth module to start the GitHub OAuth flow so
+ * only anonymous visitors reach this screen.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { ok } from "@pkg/response";
 import { Button, Form } from "@pkg/ui";
 import { useTranslation } from "react-i18next";

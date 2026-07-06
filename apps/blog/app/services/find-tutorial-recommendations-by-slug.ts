@@ -1,3 +1,13 @@
+/**
+ * Service that finds tutorials recommended for a given tutorial slug. It runs a
+ * raw SQL query over the posts/post_meta tables to pick up to three other
+ * tutorials sharing a tag prefix with the current one, then validates the rows
+ * with Zod. It exists to power "related tutorials" suggestions from tag overlap.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { sql } from "drizzle-orm";
 import { z } from "zod";
 

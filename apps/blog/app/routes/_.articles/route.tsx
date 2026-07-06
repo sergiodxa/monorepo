@@ -1,3 +1,13 @@
+/**
+ * Articles index route that lists published articles (plus drafts for admins)
+ * with a page header and subscribe callout. Its loader fetches the articles,
+ * sets short cache-control headers, and emits localized title plus RSS and
+ * canonical link meta so the listing is discoverable and syndicated.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { internalServerError, ok } from "@pkg/response";
 import { Badge, Link } from "@pkg/ui";
 import { cacheHeader } from "pretty-cache-header";

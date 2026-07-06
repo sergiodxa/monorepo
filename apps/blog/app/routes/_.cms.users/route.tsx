@@ -1,3 +1,13 @@
+/**
+ * CMS users route. Its loader lists users, optionally filtered by an exact
+ * display-name query, and localizes their timestamps; the component renders a
+ * search form that auto-submits on input/blur plus a table of users. Exists to let
+ * admins browse and look up registered users from the dashboard.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import type { FocusEvent, FormEvent } from "react";
 
 import { ok } from "@pkg/response";

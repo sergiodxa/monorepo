@@ -1,3 +1,13 @@
+/**
+ * Dashboard card component for triggering a database backup. It posts the dump intent,
+ * shows a pending state while the export runs, and surfaces success or error alerts
+ * based on the action result. Exists to give admins a one-click way to snapshot the
+ * database from the dashboard.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { Alert, Button, Card, Form } from "@pkg/ui";
 import { useNavigation } from "react-router";
 

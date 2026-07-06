@@ -1,3 +1,12 @@
+/**
+ * Editor helper that extracts the currently selected substring from the full
+ * content given a selection range. It validates the content and selection
+ * arguments and returns the sliced text that toolbar actions operate on.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import type { SelectionType } from "./get-selection";
 
 /**

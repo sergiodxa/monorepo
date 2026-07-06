@@ -1,3 +1,13 @@
+/**
+ * CMS dashboard home route. Its loader gathers post stats, recent search terms, and
+ * GitHub sponsors; its action handles the quick-like and database-dump intents with
+ * validation and error reporting; its component lays out the stats, quick actions,
+ * and recent-search panels. Exists as the landing screen of the admin dashboard.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { badRequest, ok } from "@pkg/response";
 import { isFailure, isSuccess } from "@pkg/result";
 import { validate } from "@pkg/validate";

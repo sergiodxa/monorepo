@@ -1,3 +1,14 @@
+/**
+ * Server-side GitHub client for the blog. Wraps Octokit with GitHub App
+ * authentication to fetch and list Markdown content files, resolve a file's first
+ * commit date, read sponsorship data, check sponsoring status and fetch user
+ * profiles. It exists to isolate all GitHub REST/GraphQL access behind a typed,
+ * Result-returning API used for content sourcing and sponsor features.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { createAppAuth } from "@octokit/auth-app";
 import { Octokit } from "@octokit/core";
 import { type Result, failure, success } from "@pkg/result";

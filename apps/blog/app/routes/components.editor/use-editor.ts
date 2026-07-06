@@ -1,3 +1,13 @@
+/**
+ * State management for the Markdown editor, providing a reducer and React
+ * context that track the textarea value and apply formatting updates. It exposes
+ * the useEditor hook plus Provider and useDispatch/useState/useElement/useUpdate
+ * accessors so toolbar buttons can transform the selected text.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import type { Dispatch, RefObject } from "react";
 
 import { createContext, createRef, useCallback, useContext, useReducer } from "react";

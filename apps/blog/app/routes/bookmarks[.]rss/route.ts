@@ -1,3 +1,13 @@
+/**
+ * Loader route that builds the bookmarks ("likes") RSS feed. It lists all saved
+ * likes, resolves localized feed metadata via i18next, and emits one RSS item per
+ * bookmark linking to the external URL. Exists to let readers subscribe to the links
+ * the author saves.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { RSS } from "@pkg/rss";
 import { href } from "react-router";
 import { xml } from "remix-utils/responses";

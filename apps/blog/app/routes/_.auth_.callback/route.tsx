@@ -1,3 +1,14 @@
+/**
+ * OAuth callback route that completes the sign-in flow after the identity
+ * provider redirects back. It exchanges the code for tokens, verifies the ID
+ * token, upserts the matching user (by subject id or email, defaulting new users
+ * to the guest role), stores the session and ID token, then redirects home or
+ * renders a localized error on OAuth failure.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { eq, or } from "drizzle-orm";
 import { useTranslation } from "react-i18next";
 import { data, href, redirect } from "react-router";

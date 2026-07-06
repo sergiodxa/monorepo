@@ -1,3 +1,14 @@
+/**
+ * Tutorial model for the blog app. Extends the base Post model for "tutorial"
+ * entries with title/slug/excerpt/content/tags accessors, Markdoc rendering, and
+ * word counts, and adds slug-based lookup, tech-aware fuzzy search (parsing
+ * tech:name@version tags with semver matching), and a SQL-based related-tutorial
+ * recommendation query. This is the domain model behind the tutorials section.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { and, eq, sql } from "drizzle-orm";
 import Fuse from "fuse.js";
 import * as semver from "semver";

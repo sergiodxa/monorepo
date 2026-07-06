@@ -1,3 +1,14 @@
+/**
+ * Publish-date formatting utility for the blog app. Exposes formatPublishDate,
+ * which returns either a locale-aware absolute date/time for dates 24h+ away or a
+ * relative-time string (via Intl.RelativeTimeFormat) for nearer dates, flagging
+ * which form it chose. It exists to render human-friendly, localized publish and
+ * scheduled-publish timestamps.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 const ONE_HOUR_MS = 60 * 60 * 1000;
 const ONE_DAY_MS = 24 * ONE_HOUR_MS;
 

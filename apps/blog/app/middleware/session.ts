@@ -1,3 +1,14 @@
+/**
+ * Session management for the blog app. Defines the user and session Zod schemas,
+ * the signed KV-backed session cookie, and the session middleware, and exposes
+ * helpers to read the session/user, require an authenticated user, and log out
+ * (clearing the session and redirecting through the auth server's OIDC logout).
+ * This is the app's source of truth for who is signed in.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { createWorkersKVSessionStorage } from "@react-router/cloudflare";
 import { env } from "cloudflare:workers";
 import { createCookie, href, redirect } from "react-router";

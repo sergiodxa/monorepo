@@ -1,3 +1,13 @@
+/**
+ * Spanish translation bundle for the blog app. Provides the localized strings for
+ * navigation, home, articles, tutorials, bookmarks, glossary, auth, the CMS
+ * dashboard, and RSS feeds. It is typed against the English bundle so both
+ * locales are guaranteed to stay structurally in sync.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import type en from "./en";
 
 export default {

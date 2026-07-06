@@ -1,3 +1,13 @@
+/**
+ * CMS route for creating and editing a glossary term at /cms/glossary/:id. Its
+ * loader seeds an empty form for "new" or loads an existing term by id, and its
+ * action validates the submission, creates or updates the term, busts the
+ * glossary feed caches, and redirects to the term's anchor on the glossary page.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { ok } from "@pkg/response";
 import { succeeded } from "@pkg/result";
 import {

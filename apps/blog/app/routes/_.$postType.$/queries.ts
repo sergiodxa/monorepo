@@ -1,3 +1,13 @@
+/**
+ * Data and metadata builders for the article/tutorial detail route. It fetches a
+ * post by slug (plus tutorial recommendations), enforces published-only access
+ * for non-admins, parses the body Markdown, and assembles the full meta set
+ * (titles, canonical/alternate links, Open Graph, Twitter, and JSON-LD).
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { isFailure } from "@pkg/result";
 import { type MetaDescriptor, href } from "react-router";
 
