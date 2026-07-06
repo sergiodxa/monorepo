@@ -566,6 +566,17 @@
         "@types/bun": "^1.3.14",
       },
     },
+    "packages/i18n": {
+      "name": "@pkg/i18n",
+      "version": "0.0.1",
+      "dependencies": {
+        "i18next": "^26.3.1",
+        "remix": "3.0.0-beta.5",
+      },
+      "devDependencies": {
+        "@types/bun": "^1.3.14",
+      },
+    },
     "packages/iife": {
       "name": "@pkg/iife",
       "version": "0.0.1",
@@ -1465,6 +1476,8 @@
     "@pkg/hostname": ["@pkg/hostname@workspace:packages/hostname"],
 
     "@pkg/http": ["@pkg/http@workspace:packages/http"],
+
+    "@pkg/i18n": ["@pkg/i18n@workspace:packages/i18n"],
 
     "@pkg/iife": ["@pkg/iife@workspace:packages/iife"],
 

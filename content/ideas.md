@@ -384,3 +384,14 @@ _Relevant Files_:
 - `apps/r3-blog/bootstrap/app.tsx`
 - `apps/r3-blog/routes/web.ts`
 - `apps/r3-blog/tsconfig.json`
+
+### Porting remix-i18next to Remix v3 Middleware
+
+What changes when a React Router i18n library moves to Remix v3's fetch-router: the language detector survives almost untouched, but context propagation flips from `createContext` getters to request-context properties, sessions become a live object middleware can reuse instead of re-reading from storage, and a per-request i18next instance replaces module-level state so concurrent requests in different languages never bleed into each other.
+
+**Mentions:** remix-i18next, fetch-router middleware, `RequestContext` augmentation, per-request i18next instances, Accept-Language parsing, backend plugins.
+
+_Relevant Files_:
+
+- `packages/i18n/src/middleware.ts`
+- `packages/i18n/src/lib/language-detector.ts`
