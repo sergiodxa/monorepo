@@ -124,6 +124,7 @@ export const callback = createAction(
 			let { result, returnTo } = await finishExternalAuth(provider, ctx);
 			let user = await User.findOrCreateFromAuthProfile(db, toAuthProfile(result.profile), {
 				admins: ctx.oidc.admins,
+				bootstrapFirstAdmin: ctx.oidc.bootstrapFirstAdmin,
 			});
 			signIn(user);
 			if (typeof result.tokens.idToken === "string") setIdToken(result.tokens.idToken);

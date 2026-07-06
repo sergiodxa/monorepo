@@ -118,13 +118,16 @@ export class User {
 	 * @param db - Database handle.
 	 * @param profile - OIDC profile of the user logging in.
 	 * @param options.admins - Emails/subject ids always mapped to the admin role.
+	 * @param options.bootstrapFirstAdmin - When `true` (default), the first user to
+	 * sign in while no admin exists is made admin (self-hosted convenience). Set
+	 * `false` on multi-tenant hosts so only allow-listed users can become admin.
 	 * @returns The linked or created user row.
 	 * @throws {User.InvalidError} If a create/update read-back fails.
 	 */
 	static async findOrCreateFromAuthProfile(
 		db: Database,
 		profile: AuthProfile,
-		options: { admins?: string[] } = {},
+		options: { admins?: string[]; bootstrapFirstAdmin?: boolean } = {},
 	): Promise<SelectUser> {
 		let existing =
 			(await this.findBySubjectId(db, profile.subjectId)) ??
@@ -151,10 +154,15 @@ export class User {
 		let admins = new Set((options.admins ?? []).map((value) => value.toLowerCase()));
 		let isAllowlisted =
 			admins.has(profile.email.toLowerCase()) || admins.has(profile.subjectId.toLowerCase());
+		// The empty-admins bootstrap (first user becomes admin) is convenient for
+		// self-hosted single-operator installs, but unsafe for multi-tenant hosts:
+		// a stray SSO user could reach a freshly provisioned tenant before the owner
+		// and claim admin. Hosts that pass an `admins` allow-list disable it with
+		// `bootstrapFirstAdmin: false`, so only allow-listed users can be admin.
+		let bootstrapFirstAdmin = options.bootstrapFirstAdmin ?? true;
+		let isFirstAdmin = bootstrapFirstAdmin && (await this.countAdmins(db)) === 0;
 		let roleId =
-			isAllowlisted || (await this.countAdmins(db)) === 0
-				? await Role.adminRoleId(db)
-				: await Role.readerRoleId(db);
+			isAllowlisted || isFirstAdmin ? await Role.adminRoleId(db) : await Role.readerRoleId(db);
 
 		return this.create(db, {
 			subjectId: profile.subjectId,

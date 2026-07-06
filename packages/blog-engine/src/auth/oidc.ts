@@ -1,3 +1,4 @@
+import type { OIDCConfig, OIDCMetadata } from "@pkg/oidc-client";
 /**
  * The engine's OIDC relying-party surface for the admin panel. The implementation
  * now lives in the shared `@pkg/oidc-client` package; this module re-exports it so
@@ -14,8 +15,23 @@ import { toAuthProfile as toNormalizedProfile } from "@pkg/oidc-client";
 
 import type { AuthProfile } from "../users/models/user";
 
-export type { OIDCConfig, OIDCMetadata } from "@pkg/oidc-client";
+export type { OIDCConfig, OIDCMetadata };
 export { createProvider, resolveEndSessionEndpoint } from "@pkg/oidc-client";
+
+/**
+ * The engine's admin-panel OIDC config: the shared relying-party {@link OIDCConfig}
+ * plus engine-specific admin options. Kept in the engine (not the shared client)
+ * because admin bootstrapping is an engine authorization concern.
+ */
+export type EngineAuthConfig = OIDCConfig & {
+	/**
+	 * Grant the admin role to the first user to sign in while no admin exists yet.
+	 * Default `true` (self-hosted convenience). Multi-tenant hosts set `false` so a
+	 * stray SSO user cannot claim admin on a freshly provisioned tenant before its
+	 * owner does.
+	 */
+	bootstrapFirstAdmin?: boolean;
+};
 
 /**
  * Maps an OIDC profile to the engine's {@link AuthProfile}. Delegates to

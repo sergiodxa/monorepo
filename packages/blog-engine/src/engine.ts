@@ -15,7 +15,7 @@ import { createRouter } from "remix/fetch-router";
 import { formData } from "remix/form-data-middleware";
 import { methodOverride } from "remix/method-override-middleware";
 
-import type { OIDCConfig } from "./auth/oidc";
+import type { EngineAuthConfig } from "./auth/oidc";
 
 import appearance from "./appearance/controllers/cms";
 import assets from "./assets/controllers/assets";
@@ -44,7 +44,7 @@ import users from "./users/controllers/cms";
 export interface EngineRouterDeps {
 	logger: Logger;
 	sessionMiddleware: Middleware;
-	oidc: OIDCConfig;
+	oidc: EngineAuthConfig;
 }
 
 /**

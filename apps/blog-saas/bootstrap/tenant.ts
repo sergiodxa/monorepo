@@ -129,6 +129,10 @@ export default class Blog extends DurableObject<Cloudflare.Env> {
 				clientId: meta.oidc_client_id,
 				clientSecret: meta.oidc_client_secret,
 				admins: [meta.owner],
+				// Multi-tenant: only the provisioned owner (allow-listed above) may be an
+				// admin. Disable the first-user bootstrap so a stray SSO visitor to a
+				// freshly provisioned tenant cannot claim admin before the owner does.
+				bootstrapFirstAdmin: false,
 			},
 		});
 		// Engine-owned migrations, inside blockConcurrencyWhile on boot.

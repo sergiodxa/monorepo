@@ -41,6 +41,13 @@ export interface BlogEngineConfig {
 		scopes?: string[];
 		/** Emails or subject ids always mapped to the admin role on login. */
 		admins?: string[];
+		/**
+		 * Grant the admin role to the first user to sign in when no admin exists yet.
+		 * Default `true` (self-hosted convenience). Multi-tenant hosts set `false` and
+		 * rely on `admins`, so a stray SSO user cannot claim admin on a freshly
+		 * provisioned tenant before its owner signs in.
+		 */
+		bootstrapFirstAdmin?: boolean;
 	};
 
 	session: {
