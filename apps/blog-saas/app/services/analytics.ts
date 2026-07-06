@@ -21,6 +21,11 @@ export interface DailyPageViews {
  * @returns Per-blog totals (empty on query failure; the cron retries next run).
  */
 export async function queryDailyPageViews(date: string): Promise<DailyPageViews[]> {
+	// The Analytics Engine SQL API takes a raw string, so guard the interpolated
+	// `date` to a literal `YYYY-MM-DD` (callers pass `yesterday()`). Anything else
+	// is rejected fail-soft rather than risking SQL injection.
+	if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return [];
+
 	let query =
 		`SELECT blob1 AS blogId, sum(_sample_interval * double1) AS views ` +
 		`FROM 'blog-saas-analytics' WHERE blob4 = '${date}' GROUP BY blob1`;
