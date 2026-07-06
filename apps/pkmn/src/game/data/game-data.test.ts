@@ -17,7 +17,7 @@ import { SPECIES } from "~/content/species";
 
 import { GameData } from "./game-data";
 import { GrowthRate } from "./growth-rate";
-import { ItemAttribute, ItemCategory } from "./item";
+import { ItemAttribute } from "./item";
 import { DamageClass, StatusEffectType } from "./move";
 import { EggGroup, Gender } from "./species";
 import { Stat } from "./stat";
@@ -68,7 +68,7 @@ describe(GameData.create, () => {
 			},
 			items: {
 				HM01: {
-					category: ItemCategory.AllMachines,
+					category: "all-machines",
 					attributes: [ItemAttribute.Countable, ItemAttribute.UsableOverworld],
 					price: { buy: 1000, sell: 500 },
 					teachesMoveId: "TACKLE",

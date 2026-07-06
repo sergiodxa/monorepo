@@ -28,64 +28,6 @@ export interface Price {
 	sell: number;
 }
 
-/** Content-backed category assigned to an item. */
-export enum ItemCategory {
-	StatBoosts,
-	EffortDrop,
-	Medicine,
-	Other,
-	InAPinch,
-	PickyHealing,
-	TypeProtection,
-	BakingOnly,
-	Collectibles,
-	Evolution,
-	Spelunking,
-	HeldItems,
-	Choice,
-	EffortTraining,
-	BadHeldItems,
-	Training,
-	Plates,
-	SpeciesSpecific,
-	TypeEnhancement,
-	EventItems,
-	Gameplay,
-	PlotAdvancement,
-	Unused,
-	Loot,
-	AllMail,
-	Vitamins,
-	Healing,
-	PpRecovery,
-	Revival,
-	StatusCures,
-	Mulch,
-	SpecialBalls,
-	StandardBalls,
-	DexCompletion,
-	Scarves,
-	AllMachines,
-	Flutes,
-	ApricornBalls,
-	ApricornBox,
-	DataCards,
-	Jewels,
-	MiracleShooter,
-	MegaStones,
-	Memories,
-	ZCrystals,
-	SpeciesCandies,
-	CatchingBonus,
-	DynamaxCrystals,
-	NatureMints,
-	CurryIngredients,
-	TeraShard,
-	SandwichIngredients,
-	TmMaterials,
-	Picnic,
-}
-
 /** Attribute flags engines can inspect to determine what an item can do. */
 export enum ItemAttribute {
 	Countable,
@@ -180,7 +122,7 @@ export type BattleItemEffect =
 export namespace Item {
 	/** Shared shape for every item regardless of its specialized payload. */
 	export interface Base {
-		category: ItemCategory;
+		category: string;
 		attributes: [ItemAttribute, ...ItemAttribute[]];
 		price?: Price;
 	}
