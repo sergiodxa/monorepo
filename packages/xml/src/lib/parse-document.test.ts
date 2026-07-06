@@ -62,7 +62,7 @@ describe("parseDocument", () => {
 
 		expect(isFailure(result)).toBe(true);
 		if (isFailure(result)) {
-			expect(result.error.message).toContain("unclosed xml attribute");
+			expect(result.error.message).toContain("Opening and ending tag mismatch");
 		}
 	});
 });

@@ -21,7 +21,15 @@ let XML_DECLARATION_ATTRIBUTE_PATTERN = /([a-zA-Z_:][\w:.-]*)\s*=\s*(["'])(.*?)\
 export function parseDocument(source: string): Result<XML.Document, Error> {
 	let issues: string[] = [];
 	let parser = createDOMParser(issues);
-	let document = parser.parseFromString(source, XML_MIME_TYPE);
+
+	let document: Document;
+	try {
+		document = parser.parseFromString(source, XML_MIME_TYPE);
+	} catch (error) {
+		let message = error instanceof Error ? error.message : "Failed to parse XML.";
+		return failure(new Error(message));
+	}
+
 	let parserError = getParserError(document);
 
 	if (parserError) {
@@ -46,7 +54,7 @@ export function parseDocument(source: string): Result<XML.Document, Error> {
 function createDOMParser(issues?: string[]): DOMParser {
 	if (typeof DOMParser !== "undefined") return new DOMParser();
 	return new PolyfillDOMParser({
-		errorHandler(level, message) {
+		onError(level, message) {
 			issues?.push(message);
 		},
 	}) as unknown as DOMParser;
