@@ -61,10 +61,15 @@ export class BattleCommandMenu {
 		else this.renderRoot(ctx);
 	}
 
-	/** Handles the root 2x2 grid. */
+	/** Handles the root 2x2 grid (column 0/1 = left/right, row 0/1 = top/bottom). */
 	private updateRoot(input: InputManager): BattleMenuResult | null {
-		if (input.isRepeating(Button.Right) || input.isRepeating(Button.Left)) this.rootIndex ^= 1;
-		if (input.isRepeating(Button.Down) || input.isRepeating(Button.Up)) this.rootIndex ^= 2;
+		let column = this.rootIndex % 2;
+		let row = this.rootIndex < 2 ? 0 : 1;
+		if (input.isRepeating(Button.Left)) column = 0;
+		if (input.isRepeating(Button.Right)) column = 1;
+		if (input.isRepeating(Button.Up)) row = 0;
+		if (input.isRepeating(Button.Down)) row = 1;
+		this.rootIndex = row * 2 + column;
 
 		if (input.isPressed(Button.A)) {
 			switch (ROOT_LABELS[this.rootIndex]) {

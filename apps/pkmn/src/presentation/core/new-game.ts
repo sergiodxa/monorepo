@@ -47,6 +47,9 @@ interface CreatureBlob {
 /** Maximum individual values, applied uniformly to seeded creatures. */
 const PERFECT_IV = 31;
 
+/** The level every seeded creature starts at (experience 0). */
+const STARTER_LEVEL = 1;
+
 /** Builds a migrated new-game world from content, or throws if content is empty. */
 export function createNewGameWorld(content: GameDataSource): World {
 	let choice = pickStarters(content);
@@ -146,23 +149,31 @@ function makeStatSet(value: number): StatSet {
 	};
 }
 
-/** Returns the earliest four learnset moves (by level) that name a move. */
+/**
+ * Returns the moves a fresh creature knows: the most recent level-up moves it
+ * would have learned by `STARTER_LEVEL`, newest last, capped at four.
+ *
+ * Only level-up entries count — tutor, machine, and egg moves are excluded, since
+ * a starting creature has not been taught them. This mirrors the planned
+ * `spawn-encounter` rule ("last four learnset moves at that level").
+ */
 function deriveMoveset(content: GameDataSource, species: Species): string[] {
-	let leveled = species.learnset
-		.filter((entry): entry is Extract<typeof entry, { moveId: string }> => "moveId" in entry)
-		.map((entry) => ({ moveId: entry.moveId, level: "level" in entry ? entry.level : 0 }))
-		.filter((entry) => content.moves[entry.moveId] !== undefined)
+	let learnable = species.learnset
+		.filter(
+			(entry): entry is Extract<typeof entry, { level: number; moveId: string }> =>
+				"level" in entry && "moveId" in entry,
+		)
+		.filter((entry) => entry.level <= STARTER_LEVEL && content.moves[entry.moveId] !== undefined)
 		.sort((a, b) => a.level - b.level);
 
 	let seen = new Set<string>();
 	let moves: string[] = [];
-	for (let entry of leveled) {
+	for (let entry of learnable) {
 		if (seen.has(entry.moveId)) continue;
 		seen.add(entry.moveId);
 		moves.push(entry.moveId);
-		if (moves.length === 4) break;
 	}
-	return moves;
+	return moves.slice(-4);
 }
 
 /** Returns the first key of a record, or null when it is empty. */
