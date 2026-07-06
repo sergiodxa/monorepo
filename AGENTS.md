@@ -64,6 +64,18 @@ bunx react-router routes --json # Extract React Router routes as JSON for AI age
 
 ### Documentation
 
+- MUST start every module (every file) under `apps/` with a module-level JSDoc comment at the very top of the file, describing in ~3 lines what the module is, what it does, and why it exists, followed by `@author` and `@copyright` tags, using this exact style:
+
+  ```
+  /**
+   * <what the module is, what it does, and why it exists — ~3 lines>
+   *
+   * @author [Sergio Xalambrí](https://sergiodxa.com)
+   * @copyright Sergio Xalambrí 2026
+   */
+  ```
+
+  When a `#!` shebang must be first, place the block immediately after it.
 - MUST write JSDoc comments for every exported class, function, method, variable, type, interface, and constant in this app.
 - MUST write JSDoc comments for non-exported, non-private module symbols when they are part of a file's behavior contract (helpers, mappers, normalizers, comparators, etc.).
 - MUST write JSDoc comments for every non-private member of exported classes (including static members, instance methods, getters/setters, and constructor when present).
