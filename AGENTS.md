@@ -56,6 +56,7 @@ bunx react-router routes --json # Extract React Router routes as JSON for AI age
 - MUST use `@pkg/jobs` for background jobs
 - MUST validate external/untrusted data (loaders, actions, webhooks, env-derived input) with `remix/data-schema` via `@pkg/validate`; do not add Zod to new code
 - MUST use `const` only for module-level variables, and `let` for everything else, never use `const` for local variables inside functions or blocks
+- MUST name module-level constant values in `ALL_UPPER_SNAKE_CASE` (e.g. `FIXED_STEP_MS`, `TYPE_MATCHUPS`, `PERSISTENT_WORLD_STORE_KEYS`); module-level functions stay `camelCase` and classes/namespaces/enums stay `PascalCase`
 - MUST use `interface` when possible, and `type` only when necessary (e.g. for union types)
 - MUST import `env` from `cloudflare:workers` and never from `process.env` or other sources
 - MUST extend root `tsconfig.json` in all packages and applications
@@ -114,6 +115,7 @@ bunx react-router routes --json # Extract React Router routes as JSON for AI age
 - MUST back database tests with an in-memory adapter (`bun:sqlite`) that mirrors the production adapter, rather than mocking the query layer
 - MUST mock outbound HTTP with MSW (`setupServer` from `msw/node`) in tests, and use `mock.module("cloudflare:workers", …)` to supply `env`/bindings; never stub `globalThis.fetch` or inject a fake
 - MUST keep `*.test.ts` files type-safe: they are included in typechecking, so every test file must pass `bun typecheck`
+- MUST add a regression test for every bug fixed: a test that fails against the old (buggy) behavior and passes with the fix, kept alongside the module's other tests, so the bug can never silently return
 
 ### Data & transactions
 
