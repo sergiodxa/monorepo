@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, mock, test } from "bun:test";
 
 /**
  * Unit tests for the usage-reporting cron `reportUsage`, focused on the metered-usage
@@ -12,6 +12,9 @@ import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
  * @copyright Sergio Xalambrí 2026
  */
 import type { PolarClient as PolarClientType } from "@pkg/polar";
+
+import { http, HttpResponse } from "msw";
+import { setupServer } from "msw/node";
 
 import type { TestDatabase } from "~/app/test/db";
 
@@ -30,8 +33,13 @@ let { ServiceContainer } = await import("@pkg/service-container");
 let { Database } = await import("remix/data-table");
 let { reportUsage } = await import("./report-usage");
 
+/** The Analytics Engine SQL API endpoint `queryDailyPageViews` POSTs to. */
+let SQL_URL = "https://api.cloudflare.com/client/v4/accounts/acct-1/analytics_engine/sql";
+
+/** MSW server intercepting the analytics SQL API. */
+let server = setupServer();
+
 let harness: TestDatabase;
-let realFetch = globalThis.fetch;
 
 /** One recorded `ingestPageViews` call. */
 interface IngestCall {
@@ -63,11 +71,13 @@ function makeContainer() {
 	return container;
 }
 
-/** Stubs the analytics SQL API to return the given per-blog rows for any date. */
+/** Registers an MSW handler making the analytics SQL API return the given rows. */
 function stubAnalytics(rows: Array<{ blogId: string; views: number }>): void {
-	globalThis.fetch = (async () =>
-		new Response(JSON.stringify({ data: rows }), { status: 200 })) as unknown as typeof fetch;
+	server.use(http.post(SQL_URL, () => HttpResponse.json({ data: rows }, { status: 200 })));
 }
+
+beforeAll(() => server.listen({ onUnhandledRequest: "error" }));
+afterAll(() => server.close());
 
 beforeEach(() => {
 	harness = createTestDatabase();
@@ -77,7 +87,7 @@ beforeEach(() => {
 
 afterEach(() => {
 	harness.sqliteDb.close();
-	globalThis.fetch = realFetch;
+	server.resetHandlers();
 });
 
 /** Seeds an account (with a Polar customer id) and a blog, returning both ids. */

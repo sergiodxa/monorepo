@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, mock, test } from "bun:test";
 
 /**
  * Unit tests for `BlogProvisioner`, the blog-lifecycle service: the billing
@@ -11,6 +11,9 @@ import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
  * @copyright Sergio Xalambrí 2026
  */
 import type { HostnameClient } from "@pkg/hostname";
+
+import { http } from "msw";
+import { setupServer } from "msw/node";
 
 import type { TestDatabase } from "~/app/test/db";
 import type { PlatformMeta } from "~/bootstrap/tenant";
@@ -55,18 +58,30 @@ let Subscription = (await import("~/app/models/subscription")).default;
 let { BlogProvisioner } = await import("./blog-provisioner");
 
 let harness: TestDatabase;
-let realFetch = globalThis.fetch;
+
+/** MSW server intercepting the OIDC management-token and client-creation calls. */
+let server = setupServer();
+
+/** The two OIDC provisioning endpoints on the sso tenant (`env.OIDC_ISSUER`). */
+let TOKEN_URL = "https://sso.test/oauth/token";
+let CLIENTS_URL = "https://sso.test/api/clients";
 
 /** Records every outbound request URL so tests can assert the OIDC flow ran. */
 let fetchedUrls: string[];
 
-/** Installs a `fetch` stub answering the two OIDC provisioning calls with `impl`. */
+/**
+ * Registers MSW handlers answering the two OIDC provisioning calls with `impl`,
+ * recording each request URL in {@link fetchedUrls} so tests can assert the flow ran.
+ */
 function stubFetch(impl: (url: string) => Response | Promise<Response> = defaultOidcFetch): void {
-	globalThis.fetch = (async (input: RequestInfo | URL) => {
-		let url = input instanceof URL ? input.toString() : String(input);
+	async function handle(url: string): Promise<Response> {
 		fetchedUrls.push(url);
 		return impl(url);
-	}) as typeof fetch;
+	}
+	server.use(
+		http.post(TOKEN_URL, ({ request }) => handle(request.url)),
+		http.post(CLIENTS_URL, ({ request }) => handle(request.url)),
+	);
 }
 
 /** Happy-path OIDC responses: a management token then client credentials. */
@@ -83,6 +98,9 @@ function defaultOidcFetch(url: string): Response {
 	throw new Error(`unexpected fetch to ${url}`);
 }
 
+beforeAll(() => server.listen({ onUnhandledRequest: "error" }));
+afterAll(() => server.close());
+
 beforeEach(() => {
 	harness = createTestDatabase();
 	slugCache = new Map();
@@ -93,7 +111,7 @@ beforeEach(() => {
 
 afterEach(() => {
 	harness.sqliteDb.close();
-	globalThis.fetch = realFetch;
+	server.resetHandlers();
 });
 
 /** Seeds an account and returns its id. */

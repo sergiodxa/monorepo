@@ -9,9 +9,11 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import { afterEach, beforeAll, describe, expect, test } from "bun:test";
+import { afterAll, afterEach, beforeAll, describe, expect, test } from "bun:test";
 
 import { JWK, JWT } from "@edgefirst-dev/jwt";
+import { http, HttpResponse } from "msw";
+import { setupServer } from "msw/node";
 
 import { verifyIdToken } from "./id-token-verify";
 
@@ -23,18 +25,18 @@ let keyPair: JWK.KeyPair[];
 let otherKeyPair: JWK.KeyPair[];
 let jwks: ReturnType<typeof JWK.toJSON>;
 
-/** Original global `fetch`, restored after each test that stubs it. */
-let originalFetch = globalThis.fetch;
+/** MSW server intercepting the JWKS fetch. */
+let server = setupServer();
 
 beforeAll(async () => {
+	server.listen({ onUnhandledRequest: "error" });
 	keyPair = [await JWK.importKeyPair(await JWK.generateKeyPair(JWK.Algoritm.ES256))];
 	otherKeyPair = [await JWK.importKeyPair(await JWK.generateKeyPair(JWK.Algoritm.ES256))];
 	jwks = JWK.toJSON(keyPair);
 });
 
-afterEach(() => {
-	globalThis.fetch = originalFetch;
-});
+afterEach(() => server.resetHandlers());
+afterAll(() => server.close());
 
 /**
  * Signs an ID token with the primary test key, allowing individual claims to be
@@ -70,13 +72,13 @@ async function signIdToken(
 	return token.sign(JWK.Algoritm.ES256, keys);
 }
 
-/** Stubs the global `fetch` to serve the given JWKS body with a chosen status. */
+/** Registers an MSW handler serving the given JWKS body with a chosen status. */
 function stubJwksFetch(body: unknown, ok = true): void {
-	globalThis.fetch = (async () =>
-		new Response(JSON.stringify(body), {
-			status: ok ? 200 : 503,
-			headers: { "Content-Type": "application/json" },
-		})) as unknown as typeof fetch;
+	server.use(
+		http.get(JWKS_URL, () =>
+			HttpResponse.json(body as Record<string, unknown>, { status: ok ? 200 : 503 }),
+		),
+	);
 }
 
 describe("verifyIdToken — accepts", () => {
