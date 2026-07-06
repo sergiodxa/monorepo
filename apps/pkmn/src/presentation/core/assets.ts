@@ -58,10 +58,7 @@ export class AssetStore {
 		let loaded = 0;
 		let step = () => onProgress(++loaded, total);
 
-		if (total === 0) {
-			onProgress(0, 0);
-			return;
-		}
+		if (total === 0) return onProgress(0, 0);
 
 		let tasks: Promise<void>[] = [];
 
