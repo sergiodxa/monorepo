@@ -14,7 +14,7 @@ import type { Scene } from "../core/scene";
 import { SCREEN_HEIGHT, SCREEN_WIDTH } from "../core/loop";
 import { ListMenu } from "../render/list-menu";
 import { drawText } from "../render/text";
-import { SCENE_BACKGROUND, TEXT } from "../render/theme";
+import * as theme from "../render/theme";
 
 import { SummaryScene } from "./summary";
 
@@ -43,9 +43,9 @@ export class PartyScene implements Scene {
 	}
 
 	render(game: GameClient, ctx: CanvasRenderingContext2D) {
-		ctx.fillStyle = SCENE_BACKGROUND.party;
+		ctx.fillStyle = theme.SCENE_BACKGROUND.party;
 		ctx.fillRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
-		drawText(ctx, "PARTY", 8, 6, { color: TEXT.default });
+		drawText(ctx, "PARTY", 8, 6, { color: theme.TEXT.default });
 
 		let party = game.engine.selectParty();
 		let items = party.creatures.map(

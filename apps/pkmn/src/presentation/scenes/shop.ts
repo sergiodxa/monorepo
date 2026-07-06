@@ -19,7 +19,7 @@ import { SCREEN_HEIGHT, SCREEN_WIDTH } from "../core/loop";
 import { HERO_ID } from "../core/new-game";
 import { ListMenu } from "../render/list-menu";
 import { drawText } from "../render/text";
-import { SCENE_BACKGROUND, TEXT } from "../render/theme";
+import * as theme from "../render/theme";
 import { Window } from "../render/window";
 
 import { type BuyEntry, buyableItems, type SellEntry, sellableItems } from "./shop-list";
@@ -68,10 +68,12 @@ export class ShopScene implements Scene {
 	}
 
 	render(game: GameClient, ctx: CanvasRenderingContext2D) {
-		ctx.fillStyle = SCENE_BACKGROUND.bag;
+		ctx.fillStyle = theme.SCENE_BACKGROUND.bag;
 		ctx.fillRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
-		drawText(ctx, this.tab === "buy" ? "SHOP - BUY" : "SHOP - SELL", 8, 6, { color: TEXT.default });
-		drawText(ctx, "L/R: switch  A: trade  B: leave", 8, 150, { color: TEXT.muted });
+		drawText(ctx, this.tab === "buy" ? "SHOP - BUY" : "SHOP - SELL", 8, 6, {
+			color: theme.TEXT.default,
+		});
+		drawText(ctx, "L/R: switch  A: trade  B: leave", 8, 150, { color: theme.TEXT.muted });
 
 		this.drawMoney(game, ctx);
 
@@ -82,7 +84,7 @@ export class ShopScene implements Scene {
 
 		if (rows.length === 0) {
 			drawText(ctx, this.tab === "buy" ? "Nothing for sale." : "Nothing to sell.", 16, 40, {
-				color: TEXT.muted,
+				color: theme.TEXT.muted,
 			});
 			return;
 		}
@@ -119,7 +121,7 @@ export class ShopScene implements Scene {
 	private drawMoney(game: GameClient, ctx: CanvasRenderingContext2D) {
 		let money = game.engine.selectPlayer(HERO_ID).money;
 		Window.frame(ctx, 150, 4, 86, 24);
-		drawText(ctx, "MONEY", 158, 8, { color: TEXT.muted });
-		drawText(ctx, `₽${money}`, 158, 18, { color: TEXT.default });
+		drawText(ctx, "MONEY", 158, 8, { color: theme.TEXT.muted });
+		drawText(ctx, `₽${money}`, 158, 18, { color: theme.TEXT.default });
 	}
 }

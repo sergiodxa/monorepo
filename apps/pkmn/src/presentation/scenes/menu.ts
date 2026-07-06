@@ -16,7 +16,7 @@ import type { Scene } from "../core/scene";
 
 import { ListMenu } from "../render/list-menu";
 import { drawText } from "../render/text";
-import { TEXT } from "../render/theme";
+import * as theme from "../render/theme";
 
 import { BagScene } from "./bag";
 import { BestiaryScene } from "./bestiary";
@@ -75,6 +75,6 @@ export class MenuScene implements Scene {
 
 	render(_game: GameClient, ctx: CanvasRenderingContext2D) {
 		this.list.render(ctx, [...ENTRIES], 158, 6, 76);
-		drawText(ctx, "MENU", 168, 150, { color: TEXT.inverseWhite });
+		drawText(ctx, "MENU", 168, 150, { color: theme.TEXT.inverseWhite });
 	}
 }

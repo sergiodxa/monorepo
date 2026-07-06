@@ -14,7 +14,7 @@ import type { Scene } from "../core/scene";
 import { SCREEN_HEIGHT, SCREEN_WIDTH } from "../core/loop";
 import { ListMenu } from "../render/list-menu";
 import { drawText } from "../render/text";
-import { SCENE_BACKGROUND, TEXT } from "../render/theme";
+import * as theme from "../render/theme";
 
 /** Lists inventory contents. */
 export class BagScene implements Scene {
@@ -34,13 +34,13 @@ export class BagScene implements Scene {
 	}
 
 	render(game: GameClient, ctx: CanvasRenderingContext2D) {
-		ctx.fillStyle = SCENE_BACKGROUND.bag;
+		ctx.fillStyle = theme.SCENE_BACKGROUND.bag;
 		ctx.fillRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
-		drawText(ctx, "BAG", 8, 6, { color: TEXT.default });
+		drawText(ctx, "BAG", 8, 6, { color: theme.TEXT.default });
 
 		let inventory = game.engine.selectInventory();
 		if (inventory.entries.length === 0) {
-			drawText(ctx, "The bag is empty.", 16, 30, { color: TEXT.muted });
+			drawText(ctx, "The bag is empty.", 16, 30, { color: theme.TEXT.muted });
 			return;
 		}
 		let items = inventory.entries.map(

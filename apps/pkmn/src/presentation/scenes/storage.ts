@@ -15,7 +15,7 @@ import type { Scene } from "../core/scene";
 import { SCREEN_HEIGHT, SCREEN_WIDTH } from "../core/loop";
 import { ListMenu } from "../render/list-menu";
 import { drawText } from "../render/text";
-import { SCENE_BACKGROUND, TEXT } from "../render/theme";
+import * as theme from "../render/theme";
 
 /** Lists the first storage box and withdraws to the party. */
 export class StorageScene implements Scene {
@@ -49,21 +49,23 @@ export class StorageScene implements Scene {
 	}
 
 	render(game: GameClient, ctx: CanvasRenderingContext2D) {
-		ctx.fillStyle = SCENE_BACKGROUND.storage;
+		ctx.fillStyle = theme.SCENE_BACKGROUND.storage;
 		ctx.fillRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
 
 		let storage = game.engine.selectStorage();
 		let box = storage.boxes[0];
 		let party = game.engine.selectParty();
-		drawText(ctx, `STORAGE  ${box?.name ?? "-"}  (A: withdraw)`, 8, 6, { color: TEXT.default });
+		drawText(ctx, `STORAGE  ${box?.name ?? "-"}  (A: withdraw)`, 8, 6, {
+			color: theme.TEXT.default,
+		});
 		drawText(ctx, `Party: ${party.creatures.length}/6`, 226, 6, {
 			align: "right",
-			color: TEXT.secondary,
+			color: theme.TEXT.secondary,
 		});
 
 		let creatures = box?.creatures ?? [];
 		if (creatures.length === 0) {
-			drawText(ctx, "This box is empty.", 16, 30, { color: TEXT.muted });
+			drawText(ctx, "This box is empty.", 16, 30, { color: theme.TEXT.muted });
 			return;
 		}
 		let items = creatures.map((creature) => `${creature.name}  L${creature.level}`);

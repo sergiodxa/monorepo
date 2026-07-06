@@ -14,7 +14,7 @@ import type { Scene } from "../core/scene";
 import { SCREEN_HEIGHT, SCREEN_WIDTH } from "../core/loop";
 import { ListMenu } from "../render/list-menu";
 import { drawText } from "../render/text";
-import { SCENE_BACKGROUND, TEXT } from "../render/theme";
+import * as theme from "../render/theme";
 
 /** Lists bestiary progress. */
 export class BestiaryScene implements Scene {
@@ -34,16 +34,16 @@ export class BestiaryScene implements Scene {
 	}
 
 	render(game: GameClient, ctx: CanvasRenderingContext2D) {
-		ctx.fillStyle = SCENE_BACKGROUND.bestiary;
+		ctx.fillStyle = theme.SCENE_BACKGROUND.bestiary;
 		ctx.fillRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
 
 		let bestiary = game.engine.selectBestiary();
 		let caught = bestiary.entries.filter((entry) => entry.caught).length;
 		let seen = bestiary.entries.filter((entry) => entry.seen).length;
-		drawText(ctx, `BESTIARY  seen ${seen}  caught ${caught}`, 8, 6, { color: TEXT.default });
+		drawText(ctx, `BESTIARY  seen ${seen}  caught ${caught}`, 8, 6, { color: theme.TEXT.default });
 
 		if (bestiary.entries.length === 0) {
-			drawText(ctx, "No sightings yet.", 16, 30, { color: TEXT.muted });
+			drawText(ctx, "No sightings yet.", 16, 30, { color: theme.TEXT.muted });
 			return;
 		}
 		let items = bestiary.entries.map(

@@ -24,7 +24,7 @@ import { GameClient } from "../core/game-client";
 import { Button } from "../core/input";
 import { SCREEN_WIDTH } from "../core/loop";
 import { drawText, Typewriter, wrapText } from "../render/text";
-import { BATTLE_BACKDROP, CREATURE_PLACEHOLDER, creatureColor, TEXT } from "../render/theme";
+import * as theme from "../render/theme";
 import { Window } from "../render/window";
 import { EvolutionScene } from "../scenes/evolution";
 
@@ -378,9 +378,9 @@ export class BattleScene implements Scene {
 
 	/** Draws the sky/ground battle backdrop. */
 	private drawBackground(ctx: CanvasRenderingContext2D) {
-		ctx.fillStyle = BATTLE_BACKDROP.sky;
+		ctx.fillStyle = theme.BATTLE_BACKDROP.sky;
 		ctx.fillRect(0, 0, SCREEN_WIDTH, 112);
-		ctx.fillStyle = BATTLE_BACKDROP.ground;
+		ctx.fillStyle = theme.BATTLE_BACKDROP.ground;
 		ctx.fillRect(0, 96, SCREEN_WIDTH, 16);
 	}
 
@@ -394,7 +394,7 @@ export class BattleScene implements Scene {
 	) {
 		if (this.fainted.has(`${back ? 0 : 1}:0`)) return;
 		ctx.fillStyle = colorFor(summary.speciesId);
-		ctx.strokeStyle = CREATURE_PLACEHOLDER.outline;
+		ctx.strokeStyle = theme.CREATURE_PLACEHOLDER.outline;
 		ctx.lineWidth = 1;
 		ctx.beginPath();
 		ctx.ellipse(x + 24, y + 24, 22, 22, 0, 0, Math.PI * 2);
@@ -402,7 +402,7 @@ export class BattleScene implements Scene {
 		ctx.stroke();
 		drawText(ctx, initials(summary.speciesId), x + 24, y + 20, {
 			align: "center",
-			color: TEXT.inverseWhite,
+			color: theme.TEXT.inverseWhite,
 		});
 		void back;
 	}
@@ -435,7 +435,7 @@ function colorFor(speciesId: string): string {
 	for (let index = 0; index < speciesId.length; index++) {
 		hash = (hash * 31 + speciesId.charCodeAt(index)) & 0xffff;
 	}
-	return creatureColor(hash % 360);
+	return theme.creatureColor(hash % 360);
 }
 
 /** The first two letters of a species id, for the placeholder sprite. */

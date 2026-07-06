@@ -25,7 +25,7 @@ import { TILE_SIZE } from "../core/loop";
 import { HERO_ID, WILD_ID } from "../core/new-game";
 import { Camera } from "../render/camera";
 import { drawText } from "../render/text";
-import { NPC_COLOR, PLAYER, TEXT } from "../render/theme";
+import * as theme from "../render/theme";
 import { TileMapRenderer } from "../render/tilemap";
 import { DialogueScene } from "../scenes/dialogue";
 import { MenuScene } from "../scenes/menu";
@@ -195,10 +195,10 @@ export class OverworldScene implements Scene {
 		this.drawPlayer(ctx);
 		this.renderer.drawOverhead(ctx, this.camera);
 		drawText(ctx, "Grass: wild battles   A: talk   Start: menu", 4, 4, {
-			color: TEXT.inverseWhite,
+			color: theme.TEXT.inverseWhite,
 		});
 		let money = game.engine.selectPlayer(HERO_ID).money;
-		drawText(ctx, `₽${money}`, 4, 16, { color: TEXT.inverseWhite });
+		drawText(ctx, `₽${money}`, 4, 16, { color: theme.TEXT.inverseWhite });
 	}
 
 	/** Rolls a wild encounter for the tile the player just reached and starts the battle. */
@@ -244,13 +244,13 @@ export class OverworldScene implements Scene {
 		let x = Math.round(this.player.pixelX - this.camera.x);
 		let y = Math.round(this.player.pixelY - this.camera.y);
 
-		ctx.fillStyle = PLAYER.body;
+		ctx.fillStyle = theme.PLAYER.body;
 		ctx.fillRect(x + 3, y - 6, 10, 20);
-		ctx.fillStyle = PLAYER.skin;
+		ctx.fillStyle = theme.PLAYER.skin;
 		ctx.fillRect(x + 4, y - 8, 8, 6);
 
 		// A small nub indicating facing.
-		ctx.fillStyle = PLAYER.facingNub;
+		ctx.fillStyle = theme.PLAYER.facingNub;
 		let cx = x + 8;
 		let cy = y + 2;
 		let nub: Record<Direction, [number, number]> = {
@@ -268,12 +268,12 @@ export class OverworldScene implements Scene {
 		let x = Math.round(npc.x * TILE_SIZE - this.camera.x);
 		let y = Math.round(npc.y * TILE_SIZE - this.camera.y);
 
-		ctx.fillStyle = NPC_COLOR[npc.role];
+		ctx.fillStyle = theme.NPC_COLOR[npc.role];
 		ctx.fillRect(x + 3, y - 6, 10, 20);
-		ctx.fillStyle = PLAYER.skin;
+		ctx.fillStyle = theme.PLAYER.skin;
 		ctx.fillRect(x + 4, y - 8, 8, 6);
 
 		// The role glyph over the head keeps the three NPCs distinguishable.
-		drawText(ctx, npc.label, x + 8, y - 8, { align: "center", color: TEXT.inverseWhite });
+		drawText(ctx, npc.label, x + 8, y - 8, { align: "center", color: theme.TEXT.inverseWhite });
 	}
 }

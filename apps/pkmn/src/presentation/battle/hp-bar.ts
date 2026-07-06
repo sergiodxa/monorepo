@@ -11,7 +11,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 import { drawText } from "../render/text";
-import { HP_BAR_COLOR } from "../render/theme";
+import * as theme from "../render/theme";
 
 /** A single combatant's HP bar with an eased displayed value. */
 export class HpBar {
@@ -57,22 +57,22 @@ export class HpBar {
 		let ratio = this.max > 0 ? Math.max(0, Math.min(1, this.displayed / this.max)) : 0;
 		let height = 5;
 
-		ctx.fillStyle = HP_BAR_COLOR.outline;
+		ctx.fillStyle = theme.HP_BAR_COLOR.outline;
 		ctx.fillRect(x - 1, y - 1, width + 2, height + 2);
-		ctx.fillStyle = HP_BAR_COLOR.track;
+		ctx.fillStyle = theme.HP_BAR_COLOR.track;
 		ctx.fillRect(x, y, width, height);
 		ctx.fillStyle =
 			ratio > 0.5
-				? HP_BAR_COLOR.fillHigh
+				? theme.HP_BAR_COLOR.fillHigh
 				: ratio > 0.2
-					? HP_BAR_COLOR.fillMedium
-					: HP_BAR_COLOR.fillLow;
+					? theme.HP_BAR_COLOR.fillMedium
+					: theme.HP_BAR_COLOR.fillLow;
 		ctx.fillRect(x, y, Math.round(width * ratio), height);
 
 		if (showNumbers) {
 			drawText(ctx, `${Math.ceil(this.displayed)}/${this.max}`, x + width, y + height + 2, {
 				align: "right",
-				color: HP_BAR_COLOR.numbers,
+				color: theme.HP_BAR_COLOR.numbers,
 			});
 		}
 	}
