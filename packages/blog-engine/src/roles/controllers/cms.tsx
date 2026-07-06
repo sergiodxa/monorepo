@@ -6,13 +6,12 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import type { Database } from "remix/data-table";
 
 import { redirect } from "@pkg/http/response";
 import { badRequest, notFound } from "@pkg/http/response/html";
 import { inject } from "@pkg/service-container";
 import { getContext } from "remix/async-context-middleware";
-import { Database as DatabaseKey } from "remix/data-table";
+import { Database } from "remix/data-table";
 import { createController } from "remix/fetch-router";
 
 import { getAuthUser, getPermissions } from "../../auth/middleware/auth";
@@ -154,7 +153,7 @@ async function renderForm(
 export default createController(routes.cms.roles, {
 	middleware: [requirePermission("roles.manage")],
 	actions: {
-		index: inject([DatabaseKey] as const, async (db) => {
+		index: inject([Database] as const, async (db) => {
 			let ctx = getContext();
 			let { user, permissions, siteTitle } = await chrome(db);
 			let roles = await Role.findAll(db);
@@ -196,11 +195,11 @@ export default createController(routes.cms.roles, {
 			);
 		}),
 
-		new: inject([DatabaseKey] as const, async (db) => {
+		new: inject([Database] as const, async (db) => {
 			return renderForm(db, undefined, "New Role");
 		}),
 
-		create: inject([DatabaseKey] as const, async (db) => {
+		create: inject([Database] as const, async (db) => {
 			let ctx = getContext();
 			try {
 				await Role.create(db, readForm(ctx.formData));
@@ -210,14 +209,14 @@ export default createController(routes.cms.roles, {
 			return redirect("/cms/roles", { status: redirect.Status.SeeOther });
 		}),
 
-		edit: inject([DatabaseKey] as const, async (db) => {
+		edit: inject([Database] as const, async (db) => {
 			let ctx = getContext();
 			let role = await Role.findById(db, ctx.params.id!);
 			if (!role) return notFound("Not found");
 			return renderForm(db, role, `Edit ${role.label}`);
 		}),
 
-		update: inject([DatabaseKey] as const, async (db) => {
+		update: inject([Database] as const, async (db) => {
 			let ctx = getContext();
 			try {
 				await Role.update(db, ctx.params.id!, readForm(ctx.formData));
@@ -228,7 +227,7 @@ export default createController(routes.cms.roles, {
 			return redirect("/cms/roles", { status: redirect.Status.SeeOther });
 		}),
 
-		destroy: inject([DatabaseKey] as const, async (db) => {
+		destroy: inject([Database] as const, async (db) => {
 			let ctx = getContext();
 			try {
 				await Role.destroy(db, ctx.params.id!);

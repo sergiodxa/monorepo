@@ -6,13 +6,12 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import type { Database } from "remix/data-table";
 
 import { redirect } from "@pkg/http/response";
 import { notFound } from "@pkg/http/response/html";
 import { inject } from "@pkg/service-container";
 import { getContext } from "remix/async-context-middleware";
-import { Database as DatabaseKey } from "remix/data-table";
+import { Database } from "remix/data-table";
 import { createController } from "remix/fetch-router";
 
 import { getAuthUser, getPermissions } from "../../auth/middleware/auth";
@@ -185,7 +184,7 @@ async function renderForm(
 export default createController(routes.cms.postTypes, {
 	middleware: [requirePermission("post_types.manage")],
 	actions: {
-		index: inject([DatabaseKey] as const, async (db) => {
+		index: inject([Database] as const, async (db) => {
 			let ctx = getContext();
 			let { user, permissions, siteTitle } = await chrome(db);
 			let types = await PostType.findAll(db);
@@ -227,11 +226,11 @@ export default createController(routes.cms.postTypes, {
 			);
 		}),
 
-		new: inject([DatabaseKey] as const, async (db) => {
+		new: inject([Database] as const, async (db) => {
 			return renderForm(db, { visible: true, fields: [] }, "New Post Type");
 		}),
 
-		create: inject([DatabaseKey] as const, async (db) => {
+		create: inject([Database] as const, async (db) => {
 			let ctx = getContext();
 			try {
 				await PostType.create(db, readForm(ctx.formData));
@@ -246,7 +245,7 @@ export default createController(routes.cms.postTypes, {
 			return redirect("/cms/post-types", { status: redirect.Status.SeeOther });
 		}),
 
-		edit: inject([DatabaseKey] as const, async (db) => {
+		edit: inject([Database] as const, async (db) => {
 			let ctx = getContext();
 			let types = await PostType.findAll(db);
 			let type = types.find((candidate) => candidate.id === ctx.params.id);
@@ -254,7 +253,7 @@ export default createController(routes.cms.postTypes, {
 			return renderForm(db, type, `Edit ${type.label}`);
 		}),
 
-		update: inject([DatabaseKey] as const, async (db) => {
+		update: inject([Database] as const, async (db) => {
 			let ctx = getContext();
 			try {
 				await PostType.update(db, ctx.params.id!, readForm(ctx.formData));
@@ -269,7 +268,7 @@ export default createController(routes.cms.postTypes, {
 			return redirect("/cms/post-types", { status: redirect.Status.SeeOther });
 		}),
 
-		destroy: inject([DatabaseKey] as const, async (db) => {
+		destroy: inject([Database] as const, async (db) => {
 			let ctx = getContext();
 			try {
 				await PostType.destroy(db, ctx.params.id!);

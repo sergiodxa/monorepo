@@ -6,14 +6,13 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import type { Database } from "remix/data-table";
 import type { Handle, RemixNode } from "remix/ui";
 
 import { redirect } from "@pkg/http/response";
 import { badRequest, forbidden, notFound } from "@pkg/http/response/html";
 import { inject } from "@pkg/service-container";
 import { getContext } from "remix/async-context-middleware";
-import { Database as DatabaseKey } from "remix/data-table";
+import { Database } from "remix/data-table";
 import { createController } from "remix/fetch-router";
 
 import { getAuthUser, getPermissions } from "../../auth/middleware/auth";
@@ -272,7 +271,7 @@ function parsePublishedAt(formData: FormData): string | null {
 export default createController(routes.cms.posts, {
 	middleware: [requirePermission("posts.create")],
 	actions: {
-		index: inject([DatabaseKey] as const, async (db) => {
+		index: inject([Database] as const, async (db) => {
 			let ctx = getContext();
 			let { params } = ctx;
 			let type = await requireType(db, params.typeName!);
@@ -332,7 +331,7 @@ export default createController(routes.cms.posts, {
 			);
 		}),
 
-		new: inject([DatabaseKey] as const, async (db) => {
+		new: inject([Database] as const, async (db) => {
 			let ctx = getContext();
 			let type = await requireType(db, ctx.params.typeName!);
 			if (!type) return notFound("Unknown post type");
@@ -354,7 +353,7 @@ export default createController(routes.cms.posts, {
 			);
 		}),
 
-		create: inject([DatabaseKey] as const, async (db) => {
+		create: inject([Database] as const, async (db) => {
 			let ctx = getContext();
 			let { params, formData } = ctx;
 			let type = await requireType(db, params.typeName!);
@@ -393,7 +392,7 @@ export default createController(routes.cms.posts, {
 			return redirect(`/cms/types/${type.name}/posts`, { status: redirect.Status.SeeOther });
 		}),
 
-		edit: inject([DatabaseKey] as const, async (db) => {
+		edit: inject([Database] as const, async (db) => {
 			let ctx = getContext();
 			let { params } = ctx;
 			let type = await requireType(db, params.typeName!);
@@ -429,7 +428,7 @@ export default createController(routes.cms.posts, {
 			);
 		}),
 
-		update: inject([DatabaseKey] as const, async (db) => {
+		update: inject([Database] as const, async (db) => {
 			let ctx = getContext();
 			let { params, formData } = ctx;
 			let type = await requireType(db, params.typeName!);
@@ -462,7 +461,7 @@ export default createController(routes.cms.posts, {
 			return redirect(`/cms/types/${type.name}/posts`, { status: redirect.Status.SeeOther });
 		}),
 
-		destroy: inject([DatabaseKey] as const, async (db) => {
+		destroy: inject([Database] as const, async (db) => {
 			let ctx = getContext();
 			let { params } = ctx;
 			let type = await requireType(db, params.typeName!);

@@ -6,13 +6,12 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import type { Database } from "remix/data-table";
 
 import { redirect } from "@pkg/http/response";
 import { badRequest, notFound } from "@pkg/http/response/html";
 import { inject } from "@pkg/service-container";
 import { getContext } from "remix/async-context-middleware";
-import { Database as DatabaseKey } from "remix/data-table";
+import { Database } from "remix/data-table";
 import { createController } from "remix/fetch-router";
 
 import { getAuthUser, getPermissions } from "../../auth/middleware/auth";
@@ -50,7 +49,7 @@ function label(user: { display_name: string; email: string } | null): string {
 export default createController(routes.cms.users, {
 	middleware: [requirePermission("users.manage")],
 	actions: {
-		index: inject([DatabaseKey] as const, async (db) => {
+		index: inject([Database] as const, async (db) => {
 			let ctx = getContext();
 			let { user, permissions, siteTitle } = await chrome(db);
 			let [users, roles] = await Promise.all([User.findAll(db), Role.findAll(db)]);
@@ -89,7 +88,7 @@ export default createController(routes.cms.users, {
 			);
 		}),
 
-		edit: inject([DatabaseKey] as const, async (db) => {
+		edit: inject([Database] as const, async (db) => {
 			let ctx = getContext();
 			let { user, permissions, siteTitle } = await chrome(db);
 			let [target, roles, users] = await Promise.all([
@@ -155,7 +154,7 @@ export default createController(routes.cms.users, {
 			);
 		}),
 
-		update: inject([DatabaseKey] as const, async (db) => {
+		update: inject([Database] as const, async (db) => {
 			let ctx = getContext();
 			let roleId = String(ctx.formData.get("role_id") ?? "");
 			try {
@@ -166,7 +165,7 @@ export default createController(routes.cms.users, {
 			return redirect("/cms/users", { status: redirect.Status.SeeOther });
 		}),
 
-		destroy: inject([DatabaseKey] as const, async (db) => {
+		destroy: inject([Database] as const, async (db) => {
 			let ctx = getContext();
 			let target = await User.findById(db, ctx.params.id!);
 			if (!target) return notFound("Not found");
