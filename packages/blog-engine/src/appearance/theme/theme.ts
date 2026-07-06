@@ -66,8 +66,8 @@ export function resolveTheme(theme: Partial<ThemeSettings> | undefined): ThemeSe
 /**
  * Renders a complete `:root { … }` style block from theme settings. Colors are
  * derived to an OKLCH lightness ladder (hue/chroma held from the inputs) and
- * mapped onto the same `--ui-*` semantic tokens r3-blog's components use, so no
- * static stylesheet ships — the palette is a runtime artifact of settings.
+ * mapped onto the `--ui-*` semantic tokens the components consume, so no static
+ * stylesheet ships — the palette is a runtime artifact of settings.
  * @param settings - Partial or complete theme settings.
  * @returns CSS text for a single `:root` rule.
  */
@@ -102,7 +102,7 @@ export function renderThemeStyle(settings: Partial<ThemeSettings> | undefined): 
 		);
 	}
 
-	// Semantic tokens (mirrors r3-blog colors.css mapping; components stay on --ui-*).
+	// Semantic tokens the components consume (kept on --ui-*).
 	lines.push(`--ui-bg: var(--blog-bg);`);
 	lines.push(`--ui-fg: var(--blog-fg);`);
 	lines.push(`--ui-muted: var(--color-neutral-500);`);

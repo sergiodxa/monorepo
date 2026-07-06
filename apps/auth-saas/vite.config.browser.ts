@@ -1,9 +1,8 @@
 /**
- * Vite build for the platform dashboard's client-side JS bundle. Mirrors the `client`
- * build environment used by the sibling `r3-blog` app: it bundles `bootstrap/browser.ts`
- * (the `remix/ui` browser runtime) into `assets/clientEntry.js`, which the ASSETS
- * binding serves at `/assets/clientEntry.js` and the dashboard document shell loads via
- * a `<script type="module">`.
+ * Vite build for the platform dashboard's client-side JS bundle. It bundles
+ * `bootstrap/browser.ts` (the `remix/ui` browser runtime) into `assets/clientEntry.js`,
+ * which the ASSETS binding serves at `/assets/clientEntry.js` and the dashboard document
+ * shell loads via a `<script type="module">`.
  *
  * This is intentionally separate from `vite.config.client.ts` (which builds the
  * `@pkg/oidc-provider` tenant entries into `assets/tenant/` as a library) because the

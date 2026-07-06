@@ -52,7 +52,8 @@ describe("queryDailyPageViews", () => {
 	});
 
 	test("returns empty on a non-ok Analytics Engine response", async () => {
-		globalThis.fetch = (async () => new Response("nope", { status: 500 })) as unknown as typeof fetch;
+		globalThis.fetch = (async () =>
+			new Response("nope", { status: 500 })) as unknown as typeof fetch;
 		expect(await queryDailyPageViews("2026-07-04")).toEqual([]);
 	});
 });

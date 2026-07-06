@@ -1,9 +1,8 @@
 /**
  * Client-side entry for the platform dashboard. Boots the `remix/ui` runtime so the
  * server-rendered dashboard pages hydrate in the browser, loading any `clientEntry()`
- * component modules on demand and resolving `<Frame>` navigations. Mirrors the
- * `bootstrap/browser.ts` used by the sibling `r3-blog` app, with the module glob
- * pointing at this app's client-safe `app/views` and `routes` layers.
+ * component modules on demand and resolving `<Frame>` navigations. The module glob
+ * points at this app's client-safe `app/views` and `routes` layers.
  *
  * The built asset is emitted to `assets/clientEntry.js` (see `vite.config.client.ts`)
  * and referenced from the dashboard document shell via a `<script type="module">`.
@@ -17,8 +16,8 @@ import { run } from "remix/ui";
 /**
  * Every client-loadable module in the app, keyed by its source path. `run()` resolves
  * a `clientEntry()` module URL to one of these lazy importers. Only client-safe layers
- * are globbed — the presentational `app/views` (where `clientEntry()` islands live, the
- * analog of `r3-blog`'s `resources`) and the `routes` map — never the server-only HTTP
+ * are globbed — the presentational `app/views` (where `clientEntry()` islands live) and
+ * the `routes` map — never the server-only HTTP
  * controllers, which import Worker APIs (`cloudflare:workers`) that cannot resolve in
  * the browser. Server-only modules (`*.server.*`) are excluded defensively.
  */

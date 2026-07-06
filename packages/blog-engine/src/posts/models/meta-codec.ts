@@ -61,8 +61,7 @@ export function decodeFieldValue(kind: FieldKind, raw: string): unknown {
 }
 
 /**
- * Derives a runtime {@link Post.MetaCodec} from a post-type definition. This is
- * the generalization of r3-blog's hand-written per-type codecs: the field
+ * Derives a runtime {@link Post.MetaCodec} from a post-type definition: the field
  * definitions drive serialization, deserialization, forms, and validation.
  * @param definition - The post type whose fields shape the metadata.
  * @returns A codec mapping {@link PostMetaValues} to/from `post_meta` rows.

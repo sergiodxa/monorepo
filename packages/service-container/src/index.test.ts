@@ -107,10 +107,9 @@ describe(ServiceContainer.name, () => {
 	});
 
 	test("resolves parent instance registrations from child scopes", () => {
-		// Mirrors how the blog-engine / oidc-provider routers wire per-request
-		// dependencies: the application container registers a pre-constructed
-		// value with `instance()`, then wraps `router.fetch` in `scope()` so
-		// controllers resolve it via `inject()` / `getServiceContainer()`.
+		// The application-container pattern for per-request dependencies: register
+		// a pre-constructed value with `instance()`, then wrap request work in
+		// `scope()` so it resolves via `inject()` / `getServiceContainer()`.
 		let container = new ServiceContainer();
 		let database = new Database(7);
 

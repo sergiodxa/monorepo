@@ -17,9 +17,8 @@ import { PostMeta } from "./post-meta";
 /**
  * Shared type contracts for post persistence and typed metadata mapping.
  *
- * Generalized from `apps/r3-blog/app/repositories/post.ts`: `type` is a plain
- * string (runtime-defined types), `slug` is a core column (unique per type), and
- * `published_at` NULL means draft (not published).
+ * `type` is a plain string (runtime-defined types), `slug` is a core column
+ * (unique per type), and `published_at` NULL means draft (not published).
  */
 export namespace Post {
 	/** Post type discriminator (machine name of a runtime-defined post type). */

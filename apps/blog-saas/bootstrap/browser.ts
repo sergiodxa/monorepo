@@ -1,12 +1,10 @@
 /**
  * Client-side entrypoint that boots the `remix/ui` runtime so server-rendered
- * pages hydrate in the browser. Mirrors `apps/r3-blog/bootstrap/browser.ts`,
- * with the module glob adjusted to blog-saas's layout: blog-saas has no
- * `resources` directory, so its client-safe view components live under
- * `app/views` (the analog of r3-blog's `resources`). The `app/http/controllers`
- * modules are intentionally excluded — they are server route handlers that pull
- * in worker-only imports (e.g. `cloudflare:workers`) and must never reach the
- * client bundle.
+ * pages hydrate in the browser. The client-safe view components live under
+ * `app/views`, so the module glob targets those plus `routes`. The
+ * `app/http/controllers` modules are intentionally excluded — they are server
+ * route handlers that pull in worker-only imports (e.g. `cloudflare:workers`)
+ * and must never reach the client bundle.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

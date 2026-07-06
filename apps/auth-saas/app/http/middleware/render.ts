@@ -1,7 +1,6 @@
 /**
  * Installs a request-scoped `ctx.render(jsx)` helper for the platform dashboard so
  * controllers can return `remix/ui` JSX documents instead of hand-built HTML strings.
- * Mirrors the render middleware used by the sibling `blog-saas` app.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

@@ -18,8 +18,8 @@ let clientEntryPath = fileURLToPath(new URL("./bootstrap/browser.ts", import.met
 export default defineConfig({
 	server: { port: 3005 },
 
-	// The `client` build environment mirrors `apps/r3-blog/vite.config.ts`: it
-	// bundles `bootstrap/browser.ts` so server-rendered `remix/ui` pages hydrate.
+	// The `client` build environment bundles `bootstrap/browser.ts` so
+	// server-rendered `remix/ui` pages hydrate.
 	// The `@cloudflare/vite-plugin` detects this environment, emits the bundle,
 	// and wires the deployed worker to serve it (via the `ASSETS` binding).
 	environments: {
