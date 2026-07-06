@@ -1,7 +1,12 @@
 /**
  * The dashboard session middleware and its typed accessors: a signed-cookie session
- * holding the authenticated account id, IdP token, and in-flight OIDC PKCE
- * transaction, with defensive read/write helpers used across the auth flow.
+ * holding the authenticated account id and the in-flight OIDC PKCE transaction, with
+ * defensive read/write helpers used across the auth flow.
+ *
+ * The cookie is signed but not encrypted, so it deliberately never holds the raw IdP
+ * ID token (whose claims would then be readable by the browser and could push the
+ * cookie past size limits). RP-initiated logout identifies the client by its
+ * configured `client_id` instead of an `id_token_hint`.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -24,7 +29,6 @@ export interface AuthTransaction {
 /** Signed-cookie session payload for the dashboard. */
 export interface SessionData {
 	accountId?: string;
-	idToken?: string;
 	auth?: AuthTransaction;
 }
 
@@ -76,8 +80,6 @@ export function getSessionData(): SessionData {
 	let data: SessionData = {};
 	let accountId = store.get("accountId");
 	if (typeof accountId === "string") data.accountId = accountId;
-	let idToken = store.get("idToken");
-	if (typeof idToken === "string") data.idToken = idToken;
 	let auth = store.get("auth");
 	if (auth && typeof auth === "object") data.auth = auth as AuthTransaction;
 	return data;
@@ -92,7 +94,7 @@ export function getSessionData(): SessionData {
  */
 export function updateSessionData(patch: Partial<SessionData>): void {
 	let store = current();
-	for (let key of ["accountId", "idToken", "auth"] as const) {
+	for (let key of ["accountId", "auth"] as const) {
 		if (!(key in patch)) continue;
 		let value = patch[key];
 		if (value === undefined) store.unset(key);

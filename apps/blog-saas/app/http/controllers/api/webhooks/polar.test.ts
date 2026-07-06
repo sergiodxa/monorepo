@@ -1,7 +1,9 @@
 /**
  * Unit tests for the Polar webhook helpers: `normalizeStatus` (which fails closed to
- * `past_due` for unknown Polar statuses) and `entitlesActivation` (the product-match
- * gate that only lets the configured product activate an account's blogs).
+ * `past_due` for unknown Polar statuses), `entitlesActivation` (the product-match gate
+ * that only lets the configured product activate an account's blogs), and
+ * `webhookBlogStatus` (the create/update decision that suspends the account's blogs on
+ * any non-entitling status rather than leaving them serving).
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -15,7 +17,7 @@ mock.module("cloudflare:workers", () => ({
 	DurableObject: class {},
 }));
 
-let { normalizeStatus, entitlesActivation } = await import("./polar");
+let { normalizeStatus, entitlesActivation, webhookBlogStatus } = await import("./polar");
 
 describe("normalizeStatus", () => {
 	test("passes known Polar statuses through unchanged", () => {
@@ -59,5 +61,28 @@ describe("entitlesActivation", () => {
 		for (let status of ["past_due", "canceled", "unpaid", "incomplete"] as const) {
 			expect(entitlesActivation("prod_configured", status, "prod_configured")).toBe(false);
 		}
+	});
+});
+
+describe("webhookBlogStatus", () => {
+	test("returns active for the configured product with an entitling status", () => {
+		expect(webhookBlogStatus("prod_configured", "active", "prod_configured")).toBe("active");
+		expect(webhookBlogStatus("prod_configured", "trialing", "prod_configured")).toBe("active");
+	});
+
+	test("suspends when a matching product moves to a non-entitling status on update", () => {
+		// This is the finding: an active→past_due/unpaid/canceled transition delivered as
+		// subscription.updated must suspend the account's blogs immediately.
+		for (let status of ["past_due", "unpaid", "canceled", "incomplete"] as const) {
+			expect(webhookBlogStatus("prod_configured", status, "prod_configured")).toBe("suspended");
+		}
+	});
+
+	test("suspends when the event references a different product, even if active", () => {
+		expect(webhookBlogStatus("prod_other", "active", "prod_configured")).toBe("suspended");
+	});
+
+	test("suspends when the product id is missing", () => {
+		expect(webhookBlogStatus(undefined, "active", "prod_configured")).toBe("suspended");
 	});
 });

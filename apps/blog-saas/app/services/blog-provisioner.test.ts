@@ -1,3 +1,5 @@
+import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
+
 /**
  * Unit tests for `BlogProvisioner`, the blog-lifecycle service: the billing
  * entitlement gate that decides whether a new blog boots active or suspended, slug
@@ -8,7 +10,7 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
+import type { HostnameClient } from "@pkg/hostname";
 
 import type { TestDatabase } from "~/app/test/db";
 import type { PlatformMeta } from "~/bootstrap/tenant";
@@ -48,6 +50,7 @@ mock.module("cloudflare:workers", () => ({
 let { createTestDatabase } = await import("~/app/test/db");
 let Account = (await import("~/app/models/account")).default;
 let Blog = (await import("~/app/models/blog")).default;
+let Hostname = (await import("~/app/models/hostname")).default;
 let Subscription = (await import("~/app/models/subscription")).default;
 let { BlogProvisioner } = await import("./blog-provisioner");
 
@@ -248,8 +251,10 @@ describe("BlogProvisioner lifecycle side effects", () => {
 		expect(stubCalls).toContainEqual({ method: "updateMeta", arg: { status: "deleted" } });
 	});
 
-	test("restore re-activates the blog, re-adds the KV entry and reactivates the DO", async () => {
+	test("restore re-activates an entitled blog, re-adds the KV entry and reactivates the DO", async () => {
 		let accountId = await seedAccount();
+		// An entitling subscription is required for restore to bring the blog back active.
+		await Subscription.upsert(harness.db, accountId, { status: "active" });
 		let provisioner = new BlogProvisioner(harness.db);
 		let blog = await provisioner.create({ accountId, name: "My Blog", region: "wnam" });
 		await provisioner.softDelete(blog.id);
@@ -264,6 +269,40 @@ describe("BlogProvisioner lifecycle side effects", () => {
 		expect(stubCalls).toContainEqual({ method: "updateMeta", arg: { status: "active" } });
 	});
 
+	test("restore brings a blog back suspended when the account is not entitled", async () => {
+		// No active/trialing subscription: restoring must not silently re-serve the blog.
+		let accountId = await seedAccount();
+		let provisioner = new BlogProvisioner(harness.db);
+		let blog = await provisioner.create({ accountId, name: "My Blog", region: "wnam" });
+		await provisioner.softDelete(blog.id);
+		stubCalls = [];
+
+		await provisioner.restore(blog.id);
+
+		expect((await Blog.findById(harness.db, blog.id))?.status).toBe("suspended");
+		// The slug cache is still re-seeded; the DO's own gate 402s public traffic.
+		expect(slugCache.get(`slug:${blog.slug}`)).toBe(
+			JSON.stringify({ blogId: blog.id, region: "wnam" }),
+		);
+		expect(stubCalls).toContainEqual({ method: "updateMeta", arg: { status: "suspended" } });
+	});
+
+	test("restore re-suspends when the subscription lapsed to past_due after deletion", async () => {
+		let accountId = await seedAccount();
+		await Subscription.upsert(harness.db, accountId, { status: "active" });
+		let provisioner = new BlogProvisioner(harness.db);
+		let blog = await provisioner.create({ accountId, name: "My Blog", region: "wnam" });
+		await provisioner.softDelete(blog.id);
+		// Billing lapsed while the blog was soft-deleted.
+		await Subscription.upsert(harness.db, accountId, { status: "past_due" });
+		stubCalls = [];
+
+		await provisioner.restore(blog.id);
+
+		expect((await Blog.findById(harness.db, blog.id))?.status).toBe("suspended");
+		expect(stubCalls).toContainEqual({ method: "updateMeta", arg: { status: "suspended" } });
+	});
+
 	test("purge destroys the DO and removes the blog row", async () => {
 		let accountId = await seedAccount();
 		let provisioner = new BlogProvisioner(harness.db);
@@ -274,6 +313,70 @@ describe("BlogProvisioner lifecycle side effects", () => {
 
 		expect(await Blog.findById(harness.db, blog.id)).toBeNull();
 		expect(stubCalls).toContainEqual({ method: "destroy", arg: undefined });
+	});
+
+	test("purge deletes the Cloudflare custom hostname before destroying the DO/row", async () => {
+		let accountId = await seedAccount();
+		// Record the order of side effects so we can assert CF deletion happens first,
+		// before the D1 row cascade would remove the hostname id we need.
+		let events: string[] = [];
+		let hostnames = {
+			delete: async (id: string) => void events.push(`cf-delete:${id}`),
+		};
+		let provisioner = new BlogProvisioner(harness.db, hostnames as unknown as HostnameClient);
+		let blog = await provisioner.create({ accountId, name: "My Blog", region: "wnam" });
+		await Hostname.create(harness.db, {
+			id: "hn_cf_1",
+			blogId: blog.id,
+			hostname: "blog.example.com",
+		});
+		stubCalls = [];
+
+		await provisioner.purge(blog.id);
+
+		// Cloudflare deletion ran (with the stored id) and the blog row is gone. In
+		// production the D1 FK cascade then removes the local hostname row.
+		expect(events).toEqual(["cf-delete:hn_cf_1"]);
+		expect(stubCalls).toContainEqual({ method: "destroy", arg: undefined });
+		expect(await Blog.findById(harness.db, blog.id)).toBeNull();
+	});
+
+	test("purge leaves the blog for retry when Cloudflare hostname deletion fails", async () => {
+		let accountId = await seedAccount();
+		let hostnames = {
+			delete: async () => {
+				throw new Error("cloudflare down");
+			},
+		};
+		let provisioner = new BlogProvisioner(harness.db, hostnames as unknown as HostnameClient);
+		let blog = await provisioner.create({ accountId, name: "My Blog", region: "wnam" });
+		await Hostname.create(harness.db, {
+			id: "hn_cf_2",
+			blogId: blog.id,
+			hostname: "blog.example.com",
+		});
+		stubCalls = [];
+
+		await expect(provisioner.purge(blog.id)).rejects.toThrow();
+
+		// Neither the DO nor the row were touched, so the next purge run retries cleanly.
+		expect(await Blog.findById(harness.db, blog.id)).not.toBeNull();
+		expect(await Hostname.findByBlog(harness.db, blog.id)).not.toBeNull();
+		expect(stubCalls).not.toContainEqual({ method: "destroy", arg: undefined });
+	});
+
+	test("purge without a custom hostname skips Cloudflare deletion", async () => {
+		let accountId = await seedAccount();
+		let deletedIds: string[] = [];
+		let hostnames = { delete: async (id: string) => void deletedIds.push(id) };
+		let provisioner = new BlogProvisioner(harness.db, hostnames as unknown as HostnameClient);
+		let blog = await provisioner.create({ accountId, name: "My Blog", region: "wnam" });
+		stubCalls = [];
+
+		await provisioner.purge(blog.id);
+
+		expect(deletedIds).toHaveLength(0);
+		expect(await Blog.findById(harness.db, blog.id)).toBeNull();
 	});
 
 	test("activateCustomHostname flips the flag and pushes the canonical host", async () => {

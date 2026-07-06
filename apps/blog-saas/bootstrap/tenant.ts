@@ -197,7 +197,8 @@ export default class Blog extends DurableObject<Cloudflare.Env> {
 	/**
 	 * Serves a request through the tenant's blog engine after enforcing lifecycle
 	 * gates: unprovisioned → 404, deleted → 410, custom-domain-active subdomain hides
-	 * public pages (admin stays), suspended → 402 for public paths (`/cms` stays open).
+	 * public pages (admin stays), suspended → 402 for public paths (the admin surface,
+	 * `/cms` plus its `/auth` login flow, stays open so billing can be fixed).
 	 *
 	 * @param request The incoming request routed to this tenant DO.
 	 * @returns The engine's response, or a lifecycle-gate response (404/410/402).
@@ -219,8 +220,13 @@ export default class Blog extends DurableObject<Cloudflare.Env> {
 			if (!isAdminPath) return new Response("Not found", { status: 404 });
 		}
 
-		// Suspension: public traffic blocked; /cms stays reachable to fix billing.
-		if (meta.status === "suspended" && !url.pathname.startsWith("/cms")) {
+		// Suspension: public traffic blocked, but the whole admin surface stays reachable
+		// so the owner can fix billing. `/cms` is the CMS itself; `/auth` is the OIDC
+		// login flow the CMS depends on — an unauthenticated owner hitting `/cms` is
+		// redirected to `/auth/login`, so blocking `/auth` here would 402 that redirect
+		// and lock the owner out of the very page meant to stay open.
+		let isAdminPath = url.pathname.startsWith("/cms") || url.pathname.startsWith("/auth");
+		if (meta.status === "suspended" && !isAdminPath) {
 			return suspendedPage();
 		}
 

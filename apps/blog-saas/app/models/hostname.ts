@@ -8,7 +8,7 @@
  */
 import type { Database, TableRow } from "remix/data-table";
 
-import { column as c, table } from "remix/data-table";
+import { column as c, isNull, ne, or, table } from "remix/data-table";
 
 /** Custom-hostname (Cloudflare for SaaS) record; one per blog. */
 export default class Hostname {
@@ -53,13 +53,21 @@ export default class Hostname {
 	}
 
 	/**
-	 * Lists hostnames still awaiting validation, for the polling cron to refresh.
+	 * Lists hostnames that are not yet fully active, for the polling cron to refresh.
+	 *
+	 * A hostname is "incomplete" while either its validation status or its SSL status is
+	 * not `active` (SSL being `null` also counts as incomplete). Selecting on that — not
+	 * just the initial `pending_validation` — keeps polling a hostname across every
+	 * intermediate Cloudflare status (e.g. `pending`, `pending_issuance`,
+	 * `pending_deployment`) so it is never dropped before it goes live.
 	 *
 	 * @param db The control-plane database.
-	 * @returns The hostname rows in `pending_validation` status.
+	 * @returns The hostname rows that are not both status- and SSL-active.
 	 */
-	static findPending(db: Database) {
-		return db.findMany(this.table, { where: { status: "pending_validation" } });
+	static findIncomplete(db: Database) {
+		return db.findMany(this.table, {
+			where: or(ne("status", "active"), isNull("ssl_status"), ne("ssl_status", "active")),
+		});
 	}
 
 	/**

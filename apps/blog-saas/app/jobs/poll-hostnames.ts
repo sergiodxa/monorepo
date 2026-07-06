@@ -26,10 +26,13 @@ export async function pollHostnames(): Promise<void> {
 	let client = getServiceContainer().get(HostnameClient);
 	let provisioner = getServiceContainer().get(BlogProvisioner);
 
-	for (let hostname of await Hostname.findPending(db)) {
+	for (let hostname of await Hostname.findIncomplete(db)) {
 		try {
 			let status = await client.status(hostname.id);
 			await Hostname.setStatus(db, hostname.id, status.status, status.sslStatus);
+			// Only stop tracking (and flip the blog to the custom domain) once Cloudflare
+			// reports both the hostname and its SSL as active; every intermediate status
+			// keeps the row eligible for the next poll via `findIncomplete`.
 			if (HostnameClient.isActive(status)) {
 				await provisioner.activateCustomHostname(hostname.blog_id, hostname.hostname);
 			}

@@ -34,4 +34,7 @@ container.singleton(
 			metadataKey: "blog_id",
 		}),
 );
-container.scoped(BlogProvisioner, (c) => new BlogProvisioner(c.get(Database)));
+container.scoped(
+	BlogProvisioner,
+	(c) => new BlogProvisioner(c.get(Database), c.get(HostnameClient)),
+);

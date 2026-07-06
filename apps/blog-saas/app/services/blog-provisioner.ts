@@ -6,6 +6,7 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
+import type { HostnameClient } from "@pkg/hostname";
 import type { Database } from "remix/data-table";
 
 import { env } from "cloudflare:workers";
@@ -16,6 +17,7 @@ import type { PlatformMeta } from "~/bootstrap/tenant";
 
 import Account from "~/app/models/account";
 import BlogModel from "~/app/models/blog";
+import Hostname from "~/app/models/hostname";
 import Subscription from "~/app/models/subscription";
 
 /** Slugs that cannot be used for a blog (reserved subdomains). */
@@ -40,12 +42,18 @@ type BlogStub = DurableObjectStub<Blog>;
  */
 export class BlogProvisioner {
 	#db: Database;
+	#hostnames: HostnameClient | null;
 
 	/**
 	 * @param db The control-plane database this provisioner reads and writes.
+	 * @param hostnames The Cloudflare custom-hostname client, used by {@link purge} to
+	 *   delete the external hostname before removing the local blog. Optional so tests
+	 *   and lifecycle paths that never purge can construct the provisioner without it;
+	 *   when absent, {@link purge} skips (and does not complete) external deletion.
 	 */
-	constructor(db: Database) {
+	constructor(db: Database, hostnames: HostnameClient | null = null) {
 		this.#db = db;
+		this.#hostnames = hostnames;
 	}
 
 	/**
@@ -135,9 +143,12 @@ export class BlogProvisioner {
 	}
 
 	/**
-	 * Restores a soft-deleted blog within its retention window: flips the row back to
-	 * active, re-seeds the KV slug cache, and tells the DO it is active again. A no-op
-	 * if the blog does not exist.
+	 * Restores a soft-deleted blog within its retention window, re-checking billing
+	 * entitlement first: the row and DO come back `active` only when the account
+	 * currently has an entitling subscription, otherwise the blog is restored
+	 * `suspended` so a lapsed account cannot re-serve a blog by restoring it. Re-seeds
+	 * the KV slug cache either way (the DO's own gate then serves or 402s public
+	 * traffic). A no-op if the blog does not exist.
 	 *
 	 * @param blogId The id of the blog to restore.
 	 * @returns A promise resolving once the restore completes.
@@ -145,24 +156,42 @@ export class BlogProvisioner {
 	async restore(blogId: string): Promise<void> {
 		let blog = await BlogModel.findById(this.#db, blogId);
 		if (!blog) return;
-		await BlogModel.restore(this.#db, blog.id);
+		let entitled = Subscription.isActive(
+			await Subscription.findByAccount(this.#db, blog.account_id),
+		);
+		let status: "active" | "suspended" = entitled ? "active" : "suspended";
+		await BlogModel.restore(this.#db, blog.id, status);
 		await env.SLUG_CACHE.put(
 			`slug:${blog.slug}`,
 			JSON.stringify({ blogId: blog.id, region: blog.region }),
 		);
-		await this.stub(blog.id, blog.region).updateMeta({ status: "active" });
+		await this.stub(blog.id, blog.region).updateMeta({ status });
 	}
 
 	/**
-	 * Hard-deletes a blog: wipes the DO's storage and removes the D1 row. Called by
-	 * the purge cron after the retention window. A no-op if the blog does not exist.
+	 * Hard-deletes a blog: deletes its Cloudflare custom hostname (if any), wipes the
+	 * DO's storage, and removes the D1 row. Called by the purge cron after the retention
+	 * window. A no-op if the blog does not exist.
+	 *
+	 * The external hostname is deleted first because destroying the D1 blog row cascades
+	 * away the local `hostnames` record; without deleting Cloudflare first we would lose
+	 * the id needed to clean it up and orphan the custom hostname. If Cloudflare deletion
+	 * fails, the DO and row are left intact so the next purge run retries rather than
+	 * leaking the external resource.
 	 *
 	 * @param blogId The id of the blog to purge.
 	 * @returns A promise resolving once the purge completes.
+	 * @throws If the Cloudflare custom-hostname deletion fails (so the cron retries).
 	 */
 	async purge(blogId: string): Promise<void> {
 		let blog = await BlogModel.findById(this.#db, blogId);
 		if (!blog) return;
+
+		// Delete the external Cloudflare hostname before the row cascade removes its id.
+		// A failure here throws so the blog is left for the next purge run to retry.
+		let hostname = await Hostname.findByBlog(this.#db, blog.id);
+		if (hostname && this.#hostnames) await this.#hostnames.delete(hostname.id);
+
 		await this.stub(blog.id, blog.region).destroy();
 		await BlogModel.destroy(this.#db, blog.id);
 	}

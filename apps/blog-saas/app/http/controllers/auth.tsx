@@ -102,7 +102,9 @@ export const callback = createAction(
 			email: profile.email,
 			displayName: profile.displayName,
 		});
-		updateSessionData({ accountId: account.id, idToken, auth: undefined });
+		// Store only the local account id. The raw ID token is intentionally not kept in
+		// the signed (not encrypted) session cookie; logout uses the client id instead.
+		updateSessionData({ accountId: account.id, auth: undefined });
 		return redirect("/dashboard", { status: redirect.Status.SeeOther });
 	}),
 );
@@ -130,13 +132,15 @@ export const logout_ = createController(routes.auth.logout, {
 		},
 
 		async action(ctx) {
-			let idToken = getSessionData().idToken;
 			clearSession();
 			let origin = new URL(ctx.request.url).origin;
 			let metadata = await discover(env.OIDC_ISSUER).catch(() => null);
 			if (metadata?.end_session_endpoint) {
 				let logoutUrl = new URL(metadata.end_session_endpoint);
-				if (idToken) logoutUrl.searchParams.set("id_token_hint", idToken);
+				// Identify the RP by its client id rather than an `id_token_hint`, since the
+				// raw ID token is no longer stored client-side. The end-session endpoint
+				// accepts `client_id` and still honours the post-logout redirect.
+				logoutUrl.searchParams.set("client_id", env.OIDC_CLIENT_ID);
 				logoutUrl.searchParams.set("post_logout_redirect_uri", `${origin}/`);
 				return redirect(logoutUrl.toString(), { status: redirect.Status.SeeOther });
 			}

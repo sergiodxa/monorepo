@@ -36,7 +36,9 @@ interface PolarEvent {
 /**
  * Webhook handler for `POST /api/webhooks/polar`: verifies the signature, then on
  * subscription create/update events upserts the subscription and activates the
- * account's blogs when entitled, and on cancel/revoke events suspends them.
+ * account's blogs when entitled or suspends them when the status is non-entitling
+ * (so a downgrade delivered as `subscription.updated` takes effect immediately), and
+ * on cancel/revoke events suspends them.
  *
  * @returns `401` for an invalid signature, otherwise `{ received: true }` JSON
  *   (including for ignored events referencing unknown accounts).
@@ -74,11 +76,12 @@ export default createAction(
 					current_period_start: data.current_period_start ?? null,
 					current_period_end: data.current_period_end ?? null,
 				});
-				// Only our configured product grants entitlement; a different product must
-				// never activate blogs even if the event is otherwise valid.
-				if (entitlesActivation(data.product_id, status, env.POLAR_PRODUCT_ID)) {
-					await provisioner.setAccountBlogsStatus(accountId, "active");
-				}
+				// Only our configured product with an entitling status keeps blogs serving;
+				// anything else (different product, or a status that moved to past_due/
+				// unpaid/canceled/etc. on this same update event) must suspend the account's
+				// blogs now rather than waiting for a separate cancel/revoke event.
+				let target = webhookBlogStatus(data.product_id, status, env.POLAR_PRODUCT_ID);
+				await provisioner.setAccountBlogsStatus(accountId, target);
 				break;
 			}
 			case "subscription.canceled":
@@ -133,4 +136,28 @@ export function entitlesActivation(
 ): boolean {
 	let productMatches = productId === configuredProductId;
 	return productMatches && (status === "active" || status === "trialing");
+}
+
+/**
+ * Decides the blog status a create/update subscription event must fan out to the
+ * account's blogs: `active` when the event {@link entitlesActivation entitles}
+ * activation, otherwise `suspended`. Returning `suspended` for every non-entitling
+ * event is what makes an `active → past_due`/`unpaid`/`canceled` transition delivered
+ * as a `subscription.updated` take effect immediately, instead of leaving blogs
+ * serving until a later cancel/revoke event.
+ *
+ * @param productId The product id from the event (may be undefined).
+ * @param status The normalized subscription status.
+ * @param configuredProductId The platform's configured product id to match against.
+ * @returns `"active"` when entitled, otherwise `"suspended"`.
+ * @example
+ * webhookBlogStatus("prod_x", "active", "prod_x"); // "active"
+ * webhookBlogStatus("prod_x", "past_due", "prod_x"); // "suspended"
+ */
+export function webhookBlogStatus(
+	productId: string | undefined,
+	status: SubscriptionStatus,
+	configuredProductId: string,
+): "active" | "suspended" {
+	return entitlesActivation(productId, status, configuredProductId) ? "active" : "suspended";
 }

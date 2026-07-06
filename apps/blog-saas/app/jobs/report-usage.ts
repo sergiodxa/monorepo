@@ -25,9 +25,27 @@ function yesterday(): string {
 }
 
 /**
+ * Builds the deterministic Polar deduplication id for a blog-day usage event. Because
+ * it depends only on the blog and date, re-sending the same blog-day always carries
+ * the same `external_id`, so Polar discards the duplicate — the guard that keeps
+ * reporting idempotent when a prior run ingested the event but failed to persist
+ * `reported_at`.
+ *
+ * @param blogId The blog the usage belongs to.
+ * @param date The reported day as `YYYY-MM-DD`.
+ * @returns The stable external id, e.g. `page_views:blog-1:2026-07-04`.
+ */
+function usageEventId(blogId: string, date: string): string {
+	return `page_views:${blogId}:${date}`;
+}
+
+/**
  * Daily reporting cron (01:00 UTC): materializes Analytics Engine page views into
- * `usage_daily`, then ingests unreported blog-days into Polar. The `reported_at`
- * guard gives at-most-once ingestion per blog-day; failures retry next run.
+ * `usage_daily`, then ingests unreported blog-days into Polar. Each event carries a
+ * deterministic `(blog_id, date)` deduplication id, so if a run ingests an event but
+ * fails to stamp `reported_at`, the next run re-sends the same id and Polar discards
+ * the duplicate — giving true at-most-once billing per blog-day across partial
+ * failure. Failures retry next run.
  *
  * @returns A promise resolving once the day is rolled up and reported.
  */
@@ -45,7 +63,12 @@ export async function reportUsage(): Promise<void> {
 		if (!blog) continue;
 		let account = await Account.findById(db, blog.account_id);
 		if (!account?.polar_customer_id) continue;
-		let ok = await polar.ingestPageViews(account.polar_customer_id, usage.page_views, usage.date);
+		let ok = await polar.ingestPageViews(
+			account.polar_customer_id,
+			usage.page_views,
+			usage.date,
+			usageEventId(usage.blog_id, usage.date),
+		);
 		if (ok) await UsageDaily.markReported(db, usage.id);
 	}
 }

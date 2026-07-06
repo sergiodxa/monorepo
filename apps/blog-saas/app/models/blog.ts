@@ -147,18 +147,21 @@ export default class Blog {
 	}
 
 	/**
-	 * Restores a soft-deleted blog by clearing `deleted_at` and setting it back to
-	 * `active` (only meaningful within the retention window).
+	 * Restores a soft-deleted blog by clearing `deleted_at` and setting it to the given
+	 * lifecycle status (only meaningful within the retention window). The caller passes
+	 * `active` only when billing currently entitles the account, otherwise `suspended`,
+	 * so a restore never re-serves a blog the account is no longer paying for.
 	 *
 	 * @param db The control-plane database.
 	 * @param id The blog id.
+	 * @param status The status to restore to (`active` when entitled, else `suspended`).
 	 * @returns A promise resolving once the update completes.
 	 */
-	static async restore(db: Database, id: string) {
+	static async restore(db: Database, id: string, status: "active" | "suspended") {
 		await db.update(
 			this.table,
 			{ id },
-			{ status: "active", deleted_at: null, updated_at: new Date().toISOString() },
+			{ status, deleted_at: null, updated_at: new Date().toISOString() },
 		);
 	}
 

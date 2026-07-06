@@ -194,7 +194,7 @@ describe("Blog status transitions", () => {
 		expect(deleted?.deleted_at).not.toBeNull();
 	});
 
-	test("restore clears deleted_at and returns the blog to active", async () => {
+	test("restore clears deleted_at and returns the blog to the given status (active)", async () => {
 		let accountId = await seedAccount();
 		let blog = await Blog.create(harness.db, {
 			accountId,
@@ -204,10 +204,27 @@ describe("Blog status transitions", () => {
 		});
 		await Blog.softDelete(harness.db, blog.id);
 
-		await Blog.restore(harness.db, blog.id);
+		await Blog.restore(harness.db, blog.id, "active");
 
 		let restored = await Blog.findById(harness.db, blog.id);
 		expect(restored?.status).toBe("active");
+		expect(restored?.deleted_at).toBeNull();
+	});
+
+	test("restore can bring a blog back suspended when billing does not entitle it", async () => {
+		let accountId = await seedAccount();
+		let blog = await Blog.create(harness.db, {
+			accountId,
+			name: "My Blog",
+			slug: "my-blog",
+			region: "wnam",
+		});
+		await Blog.softDelete(harness.db, blog.id);
+
+		await Blog.restore(harness.db, blog.id, "suspended");
+
+		let restored = await Blog.findById(harness.db, blog.id);
+		expect(restored?.status).toBe("suspended");
 		expect(restored?.deleted_at).toBeNull();
 	});
 });

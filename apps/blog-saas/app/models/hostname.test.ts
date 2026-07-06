@@ -1,7 +1,8 @@
 /**
  * Unit tests for the `Hostname` control-plane model: pending-record creation, the
- * per-blog/per-hostname lookups, the `findPending` polling query, and status/ssl
- * mutation and deletion, against an in-memory SQLite database.
+ * per-blog/per-hostname lookups, the `findIncomplete` polling query (which must keep
+ * selecting a hostname through every not-yet-active status), and status/ssl mutation
+ * and deletion, against an in-memory SQLite database.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -96,8 +97,8 @@ describe("Hostname lookups", () => {
 	});
 });
 
-describe("Hostname.findPending", () => {
-	test("returns only hostnames still awaiting validation", async () => {
+describe("Hostname.findIncomplete", () => {
+	test("excludes only hostnames that are both status- and ssl-active", async () => {
 		let pendingBlog = await seedBlog("pending");
 		let activeBlog = await seedBlog("active");
 		await Hostname.create(harness.db, {
@@ -112,10 +113,53 @@ describe("Hostname.findPending", () => {
 		});
 		await Hostname.setStatus(harness.db, "hn_active", "active", "active");
 
-		let pending = await Hostname.findPending(harness.db);
+		let incomplete = await Hostname.findIncomplete(harness.db);
 
-		expect(pending).toHaveLength(1);
-		expect(pending[0]!.id).toBe("hn_pending");
+		expect(incomplete).toHaveLength(1);
+		expect(incomplete[0]!.id).toBe("hn_pending");
+	});
+
+	test("still selects a hostname after an intermediate status replaces pending_validation", async () => {
+		// This is the regression the review flagged: once Cloudflare moves the hostname
+		// off `pending_validation` (to `pending`, `pending_issuance`, etc.) a query keyed
+		// on `pending_validation` would drop it before it ever goes active.
+		let blogId = await seedBlog("intermediate");
+		await Hostname.create(harness.db, {
+			id: "hn_mid",
+			blogId,
+			hostname: "mid.example.com",
+		});
+
+		for (let [status, sslStatus] of [
+			["pending", "pending_validation"],
+			["active", "pending_validation"],
+			["active", "pending_issuance"],
+			["active", "pending_deployment"],
+		] as const) {
+			await Hostname.setStatus(harness.db, "hn_mid", status, sslStatus);
+			let incomplete = await Hostname.findIncomplete(harness.db);
+			expect(incomplete.map((row) => row.id)).toContain("hn_mid");
+		}
+
+		// Only once both statuses are active does it drop out of the polling set.
+		await Hostname.setStatus(harness.db, "hn_mid", "active", "active");
+		let incomplete = await Hostname.findIncomplete(harness.db);
+		expect(incomplete.map((row) => row.id)).not.toContain("hn_mid");
+	});
+
+	test("selects a hostname whose ssl_status is still null", async () => {
+		let blogId = await seedBlog("nullssl");
+		await Hostname.create(harness.db, {
+			id: "hn_null",
+			blogId,
+			hostname: "nullssl.example.com",
+		});
+		// A freshly created hostname has status pending_validation and ssl_status null.
+		await Hostname.setStatus(harness.db, "hn_null", "active", null);
+
+		let incomplete = await Hostname.findIncomplete(harness.db);
+
+		expect(incomplete.map((row) => row.id)).toContain("hn_null");
 	});
 });
 
