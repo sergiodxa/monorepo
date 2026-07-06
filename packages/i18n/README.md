@@ -88,7 +88,7 @@ Importing the module augments `RequestContext` from `remix/fetch-router` with:
 
 ### `LanguageDetector`
 
-Detects the user's preferred language fully server-side from a `Request`. Every candidate is validated against the supported languages — first with an exact subtag match, then loosely by primary language code (so `es-MX` can match a supported `es`) — and the fallback language is returned when nothing matches.
+Detects the user's preferred language fully server-side from a `Request`. Every candidate is validated against the supported languages — first with an exact subtag match, then loosely by primary language code (so `es-AR` can match a supported `es`) — and the fallback language is returned when nothing matches.
 
 #### `new LanguageDetector(options: LanguageDetectorOptions)`
 
