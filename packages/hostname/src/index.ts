@@ -3,15 +3,14 @@
  *
  * A single, DI-friendly wrapper over the Cloudflare custom hostnames API
  * (`https://api.cloudflare.com/client/v4/zones/{zone}/custom_hostnames`). It
- * merges the two copies that previously lived in `apps/auth-saas` and
- * `apps/blog-saas`: it keeps the schema-validated response parsing from the
- * auth-saas version (so malformed API payloads surface as {@link HostnameApiError}
- * instead of `undefined`), while exposing an instance API that can be registered
- * with `@pkg/service-container` and constructed from per-app configuration.
+ * schema-validates API responses (so malformed payloads surface as
+ * {@link HostnameApiError} instead of `undefined`) and exposes an instance API
+ * that can be registered with `@pkg/service-container` and constructed from
+ * per-app configuration.
  *
  * The stored `custom_metadata` key that identifies the owning entity is
- * configurable via the constructor (`metadataKey`), so both the auth-saas
- * `tenant_id` and blog-saas `blog_id` semantics are preserved verbatim — nothing
+ * configurable via the constructor (`metadataKey`), so a caller keys hostnames
+ * by whatever entity id it owns (e.g. a `tenant_id` or `blog_id`) — nothing
  * about the metadata written to Cloudflare changes.
  *
  * @see https://developers.cloudflare.com/cloudflare-for-platforms/cloudflare-for-saas/domain-support/
@@ -101,9 +100,9 @@ export type CustomHostname = s.InferOutput<typeof CustomHostnameSchema>;
  * Normalized result of a custom-hostname operation.
  *
  * Exposes both the flattened validation fields (`sslStatus`,
- * `validationTxtName`, `validationTxtValue`) used by the blog-saas polling job
- * and the nested `ssl` object / `hostname` / `createdAt` fields used by the
- * auth-saas `Hostname` model, so a single shape satisfies every consumer.
+ * `validationTxtName`, `validationTxtValue`) used by status-polling callers and
+ * the nested `ssl` object / `hostname` / `createdAt` fields used by model-layer
+ * callers, so a single shape satisfies every consumer.
  */
 export interface HostnameResult {
 	/** Cloudflare's custom hostname ID. */
