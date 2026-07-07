@@ -60,7 +60,7 @@ import {
 import { ensureEntityRegistered } from "./world/entity";
 import { pickPersistentWorld, removeComponent } from "./world/helpers";
 import { migrateWorld } from "./world/migrate";
-import { createCreatureFromWorld } from "./world/world";
+import { createCreatureFromWorld, getPlayerBestiary } from "./world/world";
 
 export namespace Engine {
 	/** Input required to boot one engine instance. */
@@ -391,6 +391,20 @@ export class Engine {
 		let enemyCreatures = command.enemyParty.map((creatureId) =>
 			createCreatureFromWorld(this.world, creatureId),
 		);
+
+		// Every distinct opposing species is recorded as seen the moment the battle
+		// begins — this covers both wild encounters and trainer parties, and fires
+		// before any capture so a creature counts as seen even if the player flees.
+		let seenSpecies = new Set<string>();
+		let seenEvents: GameEvent[] = [];
+		for (let creature of enemyCreatures) {
+			if (seenSpecies.has(creature.speciesId)) continue;
+			seenSpecies.add(creature.speciesId);
+			if (getPlayerBestiary(this.world).seen.includes(creature.speciesId)) continue;
+			markSpeciesSeen(this.world, command.playerId, creature.speciesId);
+			seenEvents.push({ type: "bestiary-updated", speciesId: creature.speciesId, status: "seen" });
+		}
+
 		let battle = new BattleRuntime({
 			gameData: this.gameData,
 			sides: [
@@ -413,7 +427,7 @@ export class Engine {
 		this.battleRuntime.set(command.battleId, { battle, session });
 
 		let events = this.collectBattleEvents(command.battleId, session.next());
-		return [{ type: "battle-started", battleId: command.battleId }, ...events];
+		return [{ type: "battle-started", battleId: command.battleId }, ...seenEvents, ...events];
 	}
 
 	/**

@@ -269,6 +269,39 @@ test("Engine writes battle results back and keeps the battle out of snapshots", 
 	expect(engine.snapshot().entities.some((id) => id.startsWith("battle"))).toBe(false);
 });
 
+test("starting a battle marks every enemy species as seen (wild or trainer)", () => {
+	let playerId = createPlayerId("hero");
+	let enemyId = createPlayerId("rival");
+	let allyId = createCreatureId("ally-1");
+	let enemyCreatureId = createCreatureId("enemy-1");
+	let engine = createBattleEngine(playerId, enemyId, allyId, enemyCreatureId, () => 0.5);
+
+	// The enemy species is neither seen nor caught before the battle begins.
+	expect(engine.selectPlayer(playerId).bestiary.entries).toEqual([]);
+
+	let events = engine.dispatch({
+		type: "start-battle",
+		battleId: createBattleId("b1"),
+		playerId,
+		enemyId,
+		playerParty: [allyId],
+		enemyParty: [enemyCreatureId],
+		slots: 1,
+	});
+
+	// Seen is recorded at battle start — before any capture or even the first turn —
+	// so it applies whether the encounter is wild or a trainer's party, and even if
+	// the player flees. It is reported as a seen (not caught) discovery.
+	expect(events).toContainEqual({
+		type: "bestiary-updated",
+		speciesId: SECONDARY_SPECIES_ID,
+		status: "seen",
+	});
+	expect(engine.selectPlayer(playerId).bestiary.entries).toEqual([
+		{ speciesId: SECONDARY_SPECIES_ID, name: SECONDARY_SPECIES_ID, seen: true, caught: false },
+	]);
+});
+
 test("winning a battle awards experience to the party", () => {
 	let playerId = createPlayerId("hero");
 	let enemyId = createPlayerId("rival");
