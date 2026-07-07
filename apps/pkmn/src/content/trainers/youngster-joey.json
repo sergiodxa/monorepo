@@ -1,0 +1,22 @@
+{
+	"id": "youngster-joey",
+	"name": "Youngster Joey",
+	"spriteId": null,
+	"quotes": {
+		"intro": "Hey, you! Let's battle!",
+		"win": "My creature is in the top percentage!",
+		"lose": "Wh-what? I lost?!"
+	},
+	"party": [
+		{
+			"speciesId": "RATTATA",
+			"level": 5,
+			"moves": ["TACKLE", "TAIL_WHIP"]
+		},
+		{
+			"speciesId": "PIDGEY",
+			"level": 6,
+			"moves": ["TACKLE", "SAND_ATTACK"]
+		}
+	]
+}
