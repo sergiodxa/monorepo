@@ -68,20 +68,40 @@ export function getResolvedMoveDamage(
 	if (ohko) return context.getRemainingHP(target);
 
 	let fixedDamage = context.findEffect(effects, "fixed-damage");
-	if (fixedDamage) return fixedDamage.value;
+	if (fixedDamage) {
+		// Fixed-damage bypasses the stat/power formula entirely: the returned number
+		// is the damage, so the defender's stats and stages never enter into it.
+		if ("value" in fixedDamage) return fixedDamage.value;
+
+		if (fixedDamage.amount === "user-level") {
+			// Level-based damage still honors type immunity: a move whose type does
+			// not affect the target (effectiveness 0) deals nothing, but when it can
+			// connect the damage is exactly the user's level rather than a computed
+			// value. Effectiveness above/below 1 does not scale it.
+			if (context.getTypeEffectiveness(target, move) === 0) return 0;
+			return getCreatureLevel(context.gameData, user.creature);
+		}
+
+		// "half-target-hp": remove half the target's current HP, at least 1.
+		return Math.max(1, Math.floor(context.getRemainingHP(target) / 2));
+	}
 
 	let fixedDamageUserHP = context.findEffect(effects, "fixed-damage-user-hp");
 	if (fixedDamageUserHP) return context.getRemainingHP(user);
 
 	let counterLastPhysicalHit = context.findEffect(effects, "counter-last-physical-hit");
 	if (counterLastPhysicalHit) {
-		let damage = user.volatile.lastDamageThisTurn;
-		if (!damage) return 0;
-		if (damage.moveClass !== DamageClass.Physical) return 0;
-		if (damage.source.side !== targetPosition.side || damage.source.slot !== targetPosition.slot) {
-			return 0;
-		}
-		return damage.amount * 2;
+		return getCounterDamage(user, targetPosition, 2, DamageClass.Physical);
+	}
+
+	let counterLastSpecialHit = context.findEffect(effects, "counter-last-special-hit");
+	if (counterLastSpecialHit) {
+		return getCounterDamage(user, targetPosition, counterLastSpecialHit.ratio, DamageClass.Special);
+	}
+
+	let counterLastAnyHit = context.findEffect(effects, "counter-last-any-hit");
+	if (counterLastAnyHit) {
+		return getCounterDamage(user, targetPosition, counterLastAnyHit.ratio, null);
 	}
 
 	let fixedDamageTargetHPGap = context.findEffect(effects, "fixed-damage-target-hp-gap");
@@ -91,6 +111,30 @@ export function getResolvedMoveDamage(
 
 	let effectiveness = context.getTypeEffectiveness(target, move);
 	return calculateDamage(context, user, target, targetPosition, move, effectiveness, events);
+}
+
+/**
+ * Reflects the damage the user took this turn back at the source that dealt it.
+ *
+ * The returned value is a multiple of the recorded incoming damage, so it bypasses
+ * the normal stat/power formula the same way OHKO and fixed-damage do. Passing a
+ * `requiredClass` limits the reflection to hits of that damage class; passing null
+ * accepts any recorded hit. Nothing is reflected when no qualifying damage was
+ * taken this turn, or when the last hit came from a different slot than the target.
+ */
+function getCounterDamage(
+	user: CombatantState,
+	targetPosition: BattlePosition,
+	ratio: number,
+	requiredClass: DamageClass | null,
+): number {
+	let damage = user.volatile.lastDamageThisTurn;
+	if (!damage) return 0;
+	if (requiredClass !== null && damage.moveClass !== requiredClass) return 0;
+	if (damage.source.side !== targetPosition.side || damage.source.slot !== targetPosition.slot) {
+		return 0;
+	}
+	return Math.floor(damage.amount * ratio);
 }
 
 /** Computes self-hit confusion damage using the same stat pipeline as normal attacks. */

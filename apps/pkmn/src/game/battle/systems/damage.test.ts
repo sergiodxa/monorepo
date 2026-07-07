@@ -20,8 +20,10 @@ import { MOVES } from "~/content/moves";
 import { NATURES } from "~/content/natures";
 import { SPECIES } from "~/content/species";
 import { CombatantState } from "~/game/battle/combatant-state";
+import { getCreatureLevel } from "~/game/battle/mechanics";
 import { createFieldEffectState, createSideEffectState } from "~/game/battle/state";
 import { GameData } from "~/game/data/game-data";
+import { DamageClass } from "~/game/data/move";
 import { Stat } from "~/game/data/stat";
 import { Effectiveness } from "~/game/data/type";
 import { Creature, State } from "~/game/world/creature";
@@ -179,6 +181,101 @@ test("Critical hits are not reduced by screens", () => {
 	expect(resolveCriticalDamage(withScreen)).toBe(resolveCriticalDamage(withoutScreen));
 });
 
+test("Level-based fixed damage deals exactly the user's level", () => {
+	let scenario = createDamageScenario("NIGHT_SHADE");
+	let level = getCreatureLevel(GAME_DATA, scenario.user.creature);
+
+	expect(resolveFixedDamage(scenario)).toBe(level);
+});
+
+test("Level-based fixed damage ignores the defender's defensive stats and stages", () => {
+	let neutral = createDamageScenario("SEISMIC_TOSS");
+	let bulky = createDamageScenario("SEISMIC_TOSS");
+	bulky.target.statStages[Stat.Defense] = 6;
+	bulky.target.statStages[Stat.SpecialDefense] = 6;
+
+	let level = getCreatureLevel(GAME_DATA, neutral.user.creature);
+	expect(resolveFixedDamage(neutral)).toBe(level);
+	expect(resolveFixedDamage(bulky)).toBe(level);
+});
+
+test("Level-based fixed damage is zeroed by type immunity", () => {
+	// A Fighting move cannot touch a Ghost-immune target: effectiveness 0 -> 0 damage,
+	// even though the damage number would otherwise be the user's level.
+	let scenario = createDamageScenario("SEISMIC_TOSS");
+	expect(resolveFixedDamage(scenario, Effectiveness.ZERO)).toBe(0);
+});
+
+test("Half-target-HP damage removes half the target's current HP", () => {
+	let scenario = createDamageScenario("SUPER_FANG");
+	// resolveFixedDamage reports the target at 100 remaining HP.
+	expect(resolveFixedDamage(scenario)).toBe(50);
+});
+
+test("Half-target-HP damage floors and never drops below 1", () => {
+	let scenario = createDamageScenario("SUPER_FANG");
+	// Odd current HP floors: floor(1 / 2) is clamped up to the 1-damage minimum.
+	expect(resolveFixedDamage(scenario, Effectiveness.NORMAL, 1)).toBe(1);
+	// floor(3 / 2) = 1.
+	expect(resolveFixedDamage(scenario, Effectiveness.NORMAL, 3)).toBe(1);
+	// floor(5 / 2) = 2.
+	expect(resolveFixedDamage(scenario, Effectiveness.NORMAL, 5)).toBe(2);
+});
+
+test("Special counter returns double the special damage taken from the target", () => {
+	let scenario = createDamageScenario("MIRROR_COAT");
+	scenario.user.volatile.lastDamageThisTurn = {
+		amount: 40,
+		source: { side: 1, slot: 0 },
+		moveClass: DamageClass.Special,
+	};
+
+	expect(resolveFixedDamage(scenario)).toBe(80);
+});
+
+test("Special counter ignores physical damage taken", () => {
+	let scenario = createDamageScenario("MIRROR_COAT");
+	scenario.user.volatile.lastDamageThisTurn = {
+		amount: 40,
+		source: { side: 1, slot: 0 },
+		moveClass: DamageClass.Physical,
+	};
+
+	expect(resolveFixedDamage(scenario)).toBe(0);
+});
+
+test("Any-category counter returns 1.5x the last damage taken, flooring", () => {
+	let scenario = createDamageScenario("METAL_BURST");
+	scenario.user.volatile.lastDamageThisTurn = {
+		amount: 41,
+		source: { side: 1, slot: 0 },
+		moveClass: DamageClass.Physical,
+	};
+
+	// floor(41 * 1.5) = 61.
+	expect(resolveFixedDamage(scenario)).toBe(61);
+});
+
+test("Counter reflects nothing when no damage was taken this turn", () => {
+	let mirrorCoat = createDamageScenario("MIRROR_COAT");
+	let metalBurst = createDamageScenario("METAL_BURST");
+
+	expect(resolveFixedDamage(mirrorCoat)).toBe(0);
+	expect(resolveFixedDamage(metalBurst)).toBe(0);
+});
+
+test("Counter reflects nothing when the last hit came from another slot", () => {
+	let scenario = createDamageScenario("METAL_BURST");
+	scenario.user.volatile.lastDamageThisTurn = {
+		amount: 40,
+		source: { side: 1, slot: 1 },
+		moveClass: DamageClass.Physical,
+	};
+
+	// The counter target is slot 0, but the damage came from slot 1.
+	expect(resolveFixedDamage(scenario)).toBe(0);
+});
+
 function createDamageScenario(
 	moveId: MoveId = "TACKLE",
 	userSpeciesId = PRIMARY_SPECIES_ID,
@@ -297,6 +394,56 @@ function resolveDirectDamage(scenario: ReturnType<typeof createDamageScenario>) 
 			flattenEffects: (effect: MoveEffect) => [effect],
 			getRemainingHP: () => 100,
 			getTypeEffectiveness: () => 1,
+			getCombatantSide: (combatant) => (combatant === scenario.target ? 1 : 0),
+			getCombatantPosition: (combatant) =>
+				combatant === scenario.target ? { side: 1, slot: 0 } : { side: 0, slot: 0 },
+			getCombatantSpeed: () => 100,
+			getStageModifier: (stage) => {
+				if (stage >= 0) return (2 + stage) / 2;
+				return 2 / (2 + Math.abs(stage));
+			},
+			getCriticalHitChance: () => 0,
+			getStabModifier: () => 1,
+		},
+		scenario.user,
+		scenario.target,
+		{ side: 1, slot: 0 },
+		scenario.move,
+		flattenMoveEffects(scenario.move),
+		scenario.events,
+	);
+}
+
+/**
+ * Resolves damage for the effect-override paths (fixed-damage and counter) that
+ * bypass the normal formula. The target reports `targetRemainingHP` current HP so
+ * fraction-based moves are deterministic, and `effectiveness` feeds the type-immunity
+ * check that level-based fixed damage still respects.
+ */
+function resolveFixedDamage(
+	scenario: ReturnType<typeof createDamageScenario>,
+	effectiveness: Effectiveness = Effectiveness.NORMAL,
+	targetRemainingHP = 100,
+) {
+	return getResolvedMoveDamage(
+		{
+			state: scenario.state,
+			gameData: GAME_DATA,
+			random: () => 0,
+			isGrounded: (combatant) => isGrounded(combatant),
+			findEffect: <TKind extends MoveEffect["kind"]>(
+				effects: MoveEffect[],
+				kind: TKind,
+			): Extract<MoveEffect, { kind: TKind }> | null => {
+				for (let effect of effects) {
+					if (effect.kind === kind) return effect as Extract<MoveEffect, { kind: TKind }>;
+				}
+
+				return null;
+			},
+			flattenEffects: (effect: MoveEffect) => [effect],
+			getRemainingHP: (combatant) => (combatant === scenario.target ? targetRemainingHP : 100),
+			getTypeEffectiveness: () => effectiveness,
 			getCombatantSide: (combatant) => (combatant === scenario.target ? 1 : 0),
 			getCombatantPosition: (combatant) =>
 				combatant === scenario.target ? { side: 1, slot: 0 } : { side: 0, slot: 0 },

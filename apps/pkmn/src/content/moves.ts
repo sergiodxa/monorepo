@@ -942,6 +942,9 @@ export const MOVES = {
 		power: 0,
 		accuracy: 100,
 		pp: 10,
+		// TODO: deferred no-op. Beat Up strikes once per healthy party member, each
+		// hit using that member's Attack against the target's Defense. That requires
+		// whole-party iteration and per-hit resolution the engine does not model yet.
 		effect: { kind: "none" },
 	},
 	BELCH: {
@@ -1748,6 +1751,9 @@ export const MOVES = {
 		power: 0,
 		accuracy: 100,
 		pp: 10,
+		// TODO: deferred no-op. Fling's power comes from the user's held item, and
+		// held-item data on combatants is being added by a concurrent task. Model it
+		// once that data (and the item->power mapping) is available.
 		effect: { kind: "none" },
 	},
 	FOCUS_ENERGY: {
@@ -2321,7 +2327,8 @@ export const MOVES = {
 		power: 0,
 		accuracy: 100,
 		pp: 10,
-		effect: { kind: "none" },
+		// Returns 1.5x the last damage the user took this turn, from any category.
+		effect: { kind: "counter-last-any-hit", ratio: 1.5 },
 	},
 	METAL_CLAW: {
 		type: Type.STEEL,
@@ -2377,7 +2384,8 @@ export const MOVES = {
 		power: 0,
 		accuracy: 100,
 		pp: 20,
-		effect: { kind: "none" },
+		// Returns double the special damage the user took this turn from the target.
+		effect: { kind: "counter-last-special-hit", ratio: 2 },
 	},
 	MOONBLAST: {
 		type: Type.FAIRY,
@@ -2444,7 +2452,9 @@ export const MOVES = {
 		power: 0,
 		accuracy: 100,
 		pp: 15,
-		effect: { kind: "none" },
+		// Deals damage equal to the user's level; its Ghost type still means it
+		// cannot hit a target immune to Ghost.
+		effect: { kind: "fixed-damage", amount: "user-level" },
 	},
 	NIGHT_SLASH: {
 		type: Type.DARK,
@@ -2622,6 +2632,9 @@ export const MOVES = {
 		power: 0,
 		accuracy: 90,
 		pp: 15,
+		// TODO: deferred no-op. Present randomly either damages (at one of several
+		// power tiers) or heals the target. That heal-or-damage branch on a single
+		// attacking move has no effect kind yet; defer until one exists.
 		effect: { kind: "none" },
 	},
 	PSYBEAM: {
@@ -2921,7 +2934,9 @@ export const MOVES = {
 		power: 0,
 		accuracy: 100,
 		pp: 20,
-		effect: { kind: "none" },
+		// Deals damage equal to the user's level; its Fighting type still means it
+		// cannot hit a target immune to Fighting.
+		effect: { kind: "fixed-damage", amount: "user-level" },
 	},
 	SELF_DESTRUCT: {
 		type: Type.NORMAL,
@@ -3132,6 +3147,9 @@ export const MOVES = {
 		power: 0,
 		accuracy: 100,
 		pp: 10,
+		// TODO: deferred no-op. Spit Up's power scales with the user's Stockpile
+		// count, and no Stockpile counter exists on combatant state yet. Model it
+		// once stockpiling is tracked.
 		effect: { kind: "none" },
 	},
 	SPITE: {
@@ -3243,7 +3261,8 @@ export const MOVES = {
 		power: 0,
 		accuracy: 90,
 		pp: 10,
-		effect: { kind: "none" },
+		// Halves the target's current HP (rounded down, minimum 1).
+		effect: { kind: "fixed-damage", amount: "half-target-hp" },
 	},
 	SUPERPOWER: {
 		type: Type.FIGHTING,

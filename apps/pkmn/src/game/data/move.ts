@@ -94,6 +94,7 @@ export type MoveEffect =
 	| { kind: "multi-hit"; hits: number | [number, number] }
 	| { kind: "ohko" }
 	| { kind: "fixed-damage"; value: number }
+	| { kind: "fixed-damage"; amount: "user-level" | "half-target-hp" }
 	| { kind: "fixed-damage-user-hp" }
 	| { kind: "recoil"; ratio: number }
 	| { kind: "heal"; ratio: number }
@@ -138,6 +139,8 @@ export type MoveEffect =
 				| "power-from-weight";
 	  }
 	| { kind: "counter-last-physical-hit" }
+	| { kind: "counter-last-special-hit"; ratio: number }
+	| { kind: "counter-last-any-hit"; ratio: number }
 	| { kind: "fixed-damage-target-hp-gap" }
 	| { kind: "boost-on-ko"; stat: BattleStatStage; stages: number }
 	| { kind: "fail-if-user-damaged-this-turn" }

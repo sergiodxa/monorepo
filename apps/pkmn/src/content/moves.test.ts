@@ -113,6 +113,50 @@ test("every guaranteed apply-status move keeps chance in the 0..1 range", () => 
 	for (let move of Object.values(movesById)) assertChances(move.effect);
 });
 
+test("level-based fixed-damage moves declare fixed-damage by user-level", () => {
+	for (let id of ["NIGHT_SHADE", "SEISMIC_TOSS"]) {
+		let move = movesById[id];
+		expect(move, `${id} should exist`).toBeDefined();
+		let effect = move!.effect;
+		expect(effect.kind, `${id} should be fixed-damage`).toBe("fixed-damage");
+		if (effect.kind === "fixed-damage" && "amount" in effect) {
+			expect(effect.amount, `${id} should scale with the user's level`).toBe("user-level");
+		} else {
+			throw new Error(`${id} should carry an amount-based fixed-damage effect`);
+		}
+	}
+});
+
+test("SUPER_FANG halves the target's current HP", () => {
+	let move = movesById.SUPER_FANG;
+	expect(move).toBeDefined();
+	let effect = move!.effect;
+	expect(effect.kind).toBe("fixed-damage");
+	if (effect.kind === "fixed-damage" && "amount" in effect) {
+		expect(effect.amount).toBe("half-target-hp");
+	} else {
+		throw new Error("SUPER_FANG should carry an amount-based fixed-damage effect");
+	}
+});
+
+test("counter/reflect moves declare their reflecting effect and ratio", () => {
+	let mirrorCoat = movesById.MIRROR_COAT;
+	expect(mirrorCoat).toBeDefined();
+	let mirrorEffect = mirrorCoat!.effect;
+	expect(mirrorEffect.kind).toBe("counter-last-special-hit");
+	if (mirrorEffect.kind === "counter-last-special-hit") {
+		expect(mirrorEffect.ratio).toBe(2);
+	}
+
+	let metalBurst = movesById.METAL_BURST;
+	expect(metalBurst).toBeDefined();
+	let metalEffect = metalBurst!.effect;
+	expect(metalEffect.kind).toBe("counter-last-any-hit");
+	if (metalEffect.kind === "counter-last-any-hit") {
+		expect(metalEffect.ratio).toBe(1.5);
+	}
+});
+
 test("power-0 moves still lacking an effect stays at or below the known baseline", () => {
 	// Coverage guard: counts status/utility moves that deal no damage AND carry no
 	// authored effect, so they resolve to a no-op. The baseline can only shrink as
@@ -120,5 +164,5 @@ test("power-0 moves still lacking an effect stays at or below the known baseline
 	let stranded = Object.entries(movesById).filter(
 		([, move]) => move.power === 0 && move.effect.kind === "none",
 	);
-	expect(stranded.length).toBeLessThanOrEqual(58);
+	expect(stranded.length).toBeLessThanOrEqual(53);
 });

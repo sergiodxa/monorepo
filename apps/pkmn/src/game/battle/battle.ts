@@ -1247,6 +1247,8 @@ export class Battle {
 		return effects.some(
 			(effect) =>
 				effect.kind === "counter-last-physical-hit" ||
+				effect.kind === "counter-last-special-hit" ||
+				effect.kind === "counter-last-any-hit" ||
 				effect.kind === "fixed-damage" ||
 				effect.kind === "fixed-damage-user-hp" ||
 				effect.kind === "fixed-damage-target-hp-gap" ||

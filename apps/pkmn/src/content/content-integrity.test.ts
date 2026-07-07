@@ -48,15 +48,15 @@ const MAX_EV_YIELD_TOTAL = 3;
  * or a new damaging move was authored without its power source.
  */
 const KNOWN_STRANDED_DAMAGING_MOVES = new Set([
+	// Each remaining entry needs engine support that does not exist yet:
+	// BEAT_UP (per-party-member hits), FLING (held-item power, concurrent task),
+	// PRESENT (random heal-or-damage), SPIT_UP (Stockpile counter). The others
+	// (NIGHT_SHADE, SEISMIC_TOSS, SUPER_FANG, MIRROR_COAT, METAL_BURST) now carry
+	// fixed-damage/counter effects and no longer resolve to a no-op.
 	"BEAT_UP",
 	"FLING",
-	"METAL_BURST",
-	"MIRROR_COAT",
-	"NIGHT_SHADE",
 	"PRESENT",
-	"SEISMIC_TOSS",
 	"SPIT_UP",
-	"SUPER_FANG",
 ]);
 
 /** Collections re-typed by arbitrary string id for iteration in tests. */

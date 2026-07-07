@@ -678,6 +678,22 @@ export class Effects {
 		return [];
 	}
 
+	/** Leaves reflected special damage to battle resolution. */
+	static counterLastSpecialHit(
+		_effect: Extract<MoveEffect, { kind: "counter-last-special-hit" }>,
+		_context: Effects.Context,
+	): BattleEvent[] {
+		return [];
+	}
+
+	/** Leaves reflected any-category damage to battle resolution. */
+	static counterLastAnyHit(
+		_effect: Extract<MoveEffect, { kind: "counter-last-any-hit" }>,
+		_context: Effects.Context,
+	): BattleEvent[] {
+		return [];
+	}
+
 	/** Leaves boost-on-KO handling to battle resolution. */
 	static boostOnKO(
 		_effect: Extract<MoveEffect, { kind: "boost-on-ko" }>,
@@ -1178,6 +1194,8 @@ const RESOLVERS: ResolverMap = {
 	"power-from-weight": Effects.powerFromWeight,
 	"double-power-if-target-damaged-this-turn": Effects.doublePowerIfTargetDamagedThisTurn,
 	"counter-last-physical-hit": Effects.counterLastPhysicalHit,
+	"counter-last-special-hit": Effects.counterLastSpecialHit,
+	"counter-last-any-hit": Effects.counterLastAnyHit,
 	"boost-on-ko": Effects.boostOnKO,
 	"fail-if-user-damaged-this-turn": Effects.failIfUserDamagedThisTurn,
 	"delayed-attack": Effects.delayedAttack,
