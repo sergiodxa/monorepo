@@ -1,9 +1,10 @@
 /**
- * Tests for the summary screen's pure IV/EV table derivation.
+ * Tests for the summary screen's pure stat-value table derivation.
  *
- * Covers `statTrainingRows`, which pairs a creature's individual and effort
- * values into ordered, labeled rows for display. The canvas drawing itself is
- * not exercised here; only the ordering and value pairing are asserted.
+ * Covers `statValueRows`, which maps a creature's current stat values into
+ * ordered, labeled rows for display. The canvas drawing itself is not exercised
+ * here; only the ordering, value mapping, and the regression that effort values
+ * are never surfaced are asserted.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -12,19 +13,19 @@ import { expect, test } from "bun:test";
 
 import type { StatSet } from "~/game/data/stat";
 
-import { statTrainingRows } from "./summary";
+import { statValueRows } from "./summary";
 
-/** IV spread with a distinct value per stat for order-sensitive assertions. */
-let IVS: StatSet = {
-	hp: 31,
-	attack: 30,
-	defense: 29,
-	"special-attack": 28,
-	"special-defense": 27,
-	speed: 26,
+/** Current stat values with a distinct number per stat for order assertions. */
+let STATS: StatSet = {
+	hp: 120,
+	attack: 84,
+	defense: 76,
+	"special-attack": 95,
+	"special-defense": 70,
+	speed: 102,
 };
 
-/** EV spread that differs from the IVs on every stat. */
+/** An EV spread whose values are absent from `STATS` so leaks are detectable. */
 let EVS: StatSet = {
 	hp: 252,
 	attack: 6,
@@ -34,19 +35,31 @@ let EVS: StatSet = {
 	speed: 100,
 };
 
-test("statTrainingRows lists stats in a fixed display order", () => {
-	let rows = statTrainingRows(IVS, EVS);
+test("statValueRows lists stats in a fixed display order", () => {
+	let rows = statValueRows(STATS);
 	expect(rows.map((row) => row.label)).toEqual(["HP", "ATK", "DEF", "SPA", "SPD", "SPE"]);
 });
 
-test("statTrainingRows pairs each stat's IV and EV values", () => {
-	let rows = statTrainingRows(IVS, EVS);
+test("statValueRows maps each stat's current value in order", () => {
+	let rows = statValueRows(STATS);
 	expect(rows).toEqual([
-		{ label: "HP", iv: 31, ev: 252 },
-		{ label: "ATK", iv: 30, ev: 6 },
-		{ label: "DEF", iv: 29, ev: 0 },
-		{ label: "SPA", iv: 28, ev: 100 },
-		{ label: "SPD", iv: 27, ev: 50 },
-		{ label: "SPE", iv: 26, ev: 100 },
+		{ label: "HP", value: 120 },
+		{ label: "ATK", value: 84 },
+		{ label: "DEF", value: 76 },
+		{ label: "SPA", value: 95 },
+		{ label: "SPD", value: 70 },
+		{ label: "SPE", value: 102 },
 	]);
+});
+
+test("statValueRows shows current stat values and never effort values", () => {
+	let rows = statValueRows(STATS);
+
+	// Regression: the STATS page must show current stat values, not EVs. Every
+	// row carries a `value` (never an `ev`) and none of the EV numbers leak in.
+	for (let row of rows) {
+		expect(row).not.toHaveProperty("ev");
+		expect(Object.values(EVS)).not.toContain(row.value);
+	}
+	expect(rows.map((row) => row.value)).toEqual(Object.values(STATS));
 });

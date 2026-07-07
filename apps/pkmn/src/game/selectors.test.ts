@@ -1,10 +1,11 @@
 /**
- * Tests for the creature summary selector's stat-training fields.
+ * Tests for the creature summary selector's stat fields.
  *
- * Verifies that `selectCreatureSummaryView` carries a creature's individual
- * values, effort values, and nature through from its progress component into the
- * UI-oriented read model without altering them, and that the exposed stat sets
- * are copies rather than references into the world stores.
+ * Verifies that `selectCreatureSummaryView` exposes a creature's current
+ * computed stat values (derived through the shared stat formula), carries its
+ * individual values, effort values, and nature through from its progress
+ * component without altering them, and that the exposed stat sets are copies
+ * rather than references into the world stores.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -21,10 +22,13 @@ import { SPECIES } from "~/content/species";
 
 import type { StatSet } from "./data/stat";
 
+import { getCreatureStat } from "./battle/mechanics";
 import { GameData } from "./data/game-data";
+import { Stat } from "./data/stat";
 import { selectCreatureSummaryView } from "./selectors";
 import { createCreatureId, createPlayerId } from "./world/ids";
 import { migrateWorld } from "./world/migrate";
+import { createCreatureFromWorld } from "./world/world";
 
 let SPECIES_ID = Object.keys(SPECIES)[0]!;
 let NATURE_ID = Object.keys(NATURES)[0]!;
@@ -93,6 +97,31 @@ function worldWithCreature(ivs: StatSet, evs: StatSet, natureId: string) {
 	});
 	return { world, creatureId };
 }
+
+test("selectCreatureSummaryView exposes current computed stat values via the stat formula", () => {
+	let { world, creatureId } = worldWithCreature(KNOWN_IVS, KNOWN_EVS, NATURE_ID);
+	let data = gameData();
+
+	let view = selectCreatureSummaryView(data, world, creatureId);
+
+	// The summary's stats must match the shared battle stat path exactly, stat
+	// for stat, so the screen reflects the creature's real current values.
+	let creature = createCreatureFromWorld(world, creatureId);
+	let expected: StatSet = {
+		hp: getCreatureStat(data, creature, Stat.HP),
+		attack: getCreatureStat(data, creature, Stat.Attack),
+		defense: getCreatureStat(data, creature, Stat.Defense),
+		"special-attack": getCreatureStat(data, creature, Stat.SpecialAttack),
+		"special-defense": getCreatureStat(data, creature, Stat.SpecialDefense),
+		speed: getCreatureStat(data, creature, Stat.Speed),
+	};
+
+	expect(view.stats).toEqual(expected);
+	// The HP stat and the exposed max HP come from the same computation.
+	expect(view.stats.hp).toBe(view.maxHP);
+	// Current stats are distinct from the effort-value spread they are not.
+	expect(view.stats).not.toEqual(KNOWN_EVS);
+});
 
 test("selectCreatureSummaryView carries IVs, EVs, and nature through exactly", () => {
 	let { world, creatureId } = worldWithCreature(KNOWN_IVS, KNOWN_EVS, NATURE_ID);

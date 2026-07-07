@@ -99,6 +99,8 @@ export interface CreatureSummaryView {
 	moves: Array<{ id: string | null; pp: number }>;
 	location: string;
 	ownerId?: PlayerId;
+	/** Current computed value per stat, derived through the shared stat formula. */
+	stats: StatSet;
 	/** Individual values per stat, carried through from creature progress. */
 	ivs: StatSet;
 	/** Effort values per stat, carried through from creature progress. */
@@ -219,12 +221,17 @@ export function selectCreatureSummaryView(
 	let species = gameData.species.get(components.identity.speciesId);
 	if (!species) throw new ReferenceError(`Missing species ${components.identity.speciesId}.`);
 
+	let stats = Object.values(Stat).reduce((set, stat) => {
+		set[stat] = getCreatureStat(gameData, creature, stat);
+		return set;
+	}, {} as StatSet);
+
 	return {
 		id: creatureId,
 		name: components.identity.nickname ?? components.identity.speciesId,
 		speciesId: components.identity.speciesId,
 		level: getCreatureLevel(gameData, creature),
-		maxHP: getCreatureStat(gameData, creature, Stat.HP),
+		maxHP: stats[Stat.HP],
 		currentHP: getCreatureCurrentHP(gameData, creature),
 		status: components.status.state === null ? null : String(components.status.state),
 		moves: components.moves.moveset.map((moveId, index) => ({
@@ -233,6 +240,7 @@ export function selectCreatureSummaryView(
 		})),
 		location: describeLocation(components.location),
 		ownerId: components.ownership?.ownerId,
+		stats,
 		ivs: structuredClone(components.progress.iv),
 		evs: structuredClone(components.progress.ev),
 		nature: components.progress.natureId,
