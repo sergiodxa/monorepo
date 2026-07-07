@@ -16,7 +16,7 @@
  * builder degrades to `null` when no `document` is available (e.g. under test).
  *
  * How a future openly-licensed pack replaces this: declare an `atlas` entry in
- * `assets/manifest.ts` pointing at the pack's image plus a region map, and the
+ * `content/manifest.json` pointing at the pack's image plus a region map, and the
  * asset store loads it exactly like this generated one — the renderer code that
  * blits by region name does not change. Commercial/ripped art is never allowed.
  *
