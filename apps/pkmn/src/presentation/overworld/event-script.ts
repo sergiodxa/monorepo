@@ -1,103 +1,129 @@
 /**
- * A sequential interpreter for an event interaction's declarative script.
+ * A resumable interpreter for an event page's declarative command list.
  *
- * An event's `interaction.script` is a list of `ScriptCommand`s (see `map-schema`)
- * that must run in order, and some commands block: a `message` waits for the
- * player to dismiss the dialogue, a battle command waits for the battle to end,
- * and a `warp` ends the run because the map is being reloaded underneath it. This
- * module runs that list against a host interface the scene implements, keeping the
- * sequencing logic pure and testable while the host owns the actual dialogue,
- * engine dispatch, and scene pushes.
+ * A page's `commands` (see `map-schema`) is a list of {@link EventCommand}s that run
+ * in order, and the union is recursive: `show-choices` branches into the chosen
+ * label's commands and `conditional-branch` into its `then`/`else`, so the runner
+ * keeps an explicit stack of command frames rather than a single cursor. Some
+ * commands block — `text` waits for the dialogue to be dismissed, `show-choices`
+ * for a choice, the battle commands for the fight to end, `wait` for its frames, and
+ * `warp` ends the run because the map reloads underneath it — so this is a
+ * pull-driven state machine, not an async function: `advance()` runs synchronous
+ * commands back-to-back and parks on the first blocking one, whose host hook it
+ * calls; the host later calls `resume()` (with the picked choice, for a choice) to
+ * continue. This suits the fixed-timestep loop and lets a test drive a whole page by
+ * calling `advance`/`resume` and asserting the host calls happen in order.
  *
- * The runner is a small pull-driven state machine rather than an async function:
- * `advance()` runs synchronous commands (set-flag, give-item, heal-party,
- * face-player, move) immediately and stops at the first blocking command, calling
- * the matching host hook and parking until the host reports completion via
- * `resume()`. This suits the fixed-timestep loop (no promises mid-frame) and lets
- * a test drive a whole script by calling `advance`/`resume` and asserting the host
- * calls happen in order. All franchise vocabulary stays out of here: the runner
- * only forwards authored command data to the host.
+ * The runner adds no franchise meaning: it forwards authored command data to the
+ * host and evaluates branch conditions through the injected flag context, which the
+ * scene binds to the interacting event so a `selfSwitch` condition resolves to that
+ * event's namespaced flag.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import type { Direction } from "../core/direction";
-import type { ScriptCommand } from "../render/map-schema";
+import type { Direction, EventCommand, TrainerParty } from "../render/map-schema";
 
-/** Trainer battle data an event fights with, forwarded to the host verbatim. */
-export interface TrainerBattleData {
-	name?: string;
-	party: Array<{ speciesId: string; level: number }>;
-	reward?: number;
-}
-
-/** Fixed wild-creature data a `wild` event battles with. */
-export interface WildBattleData {
-	speciesId: string;
-	level: number;
+/**
+ * The flag context a running page evaluates `conditional-branch` conditions against.
+ *
+ * `isFlagOn` reads a global switch (a story flag) by name; `selfSwitchFlag` maps one
+ * of the interacting event's self-switch names to the namespaced flag it is stored
+ * under, so a `selfSwitch` condition reads the right per-event flag.
+ */
+export interface EventFlagContext {
+	/** Reads whether a global switch (story flag) is currently on. */
+	isFlagOn(flag: string): boolean;
+	/** The namespaced flag name one of this event's self-switches is stored under. */
+	selfSwitchFlag(name: string): string;
 }
 
 /**
- * The side-effect surface a running script drives.
+ * The side-effect surface a running page's commands drive.
  *
- * Synchronous hooks (setFlag, giveItem, healParty, facePlayer, move) apply an
- * effect and let the script continue on the same `advance`. Blocking hooks
- * (showMessage, startTrainerBattle, startWildBattle, warp) begin an effect the
- * runner then parks on; the host calls `resume()` once it finishes. `warp` never
- * resumes — the map reload replaces the runner — so the run ends after it.
+ * Synchronous hooks (controlSwitch, controlSelfSwitch, giveItem, healParty,
+ * facePlayer, move) apply an effect and let the run continue on the same `advance`.
+ * Blocking hooks (showText, showChoices, startTrainerBattle, startWildBattle, wait,
+ * warp) begin an effect the runner parks on; the host calls `resume()` once it
+ * finishes — `resume(index)` for a choice, passing the picked choice's index. `warp`
+ * never resumes: the map reload replaces the runner, ending the run after it.
  */
-export interface ScriptHost {
-	/** Shows one dialogue line and later calls `resume()` when it is dismissed. */
-	showMessage(text: string): void;
+export interface EventCommandHost {
+	/** Shows one message and later calls `resume()` when it is dismissed. */
+	showText(text: string): void;
+	/**
+	 * Presents a choice list and later calls `resume(index)` with the picked choice.
+	 *
+	 * @param prompt - Optional text shown above the choices.
+	 * @param labels - The choice labels, in order; the resumed index picks one.
+	 */
+	showChoices(prompt: string | undefined, labels: string[]): void;
+	/** Turns a global switch (story flag) on or off (maps to set-flag). */
+	controlSwitch(flag: string, value: boolean): void;
+	/** Turns one of this event's self-switches on or off by its namespaced flag. */
+	controlSelfSwitch(flag: string, value: boolean): void;
 	/** Adds items to the player's bag (maps to the engine's add-inventory-item). */
 	giveItem(itemId: string, count: number): void;
 	/** Fully restores the player's party (maps to heal-party). */
 	healParty(): void;
-	/** Sets a story flag to true (maps to set-flag). */
-	setFlag(flag: string): void;
 	/** Turns the interacting event to face the player. */
 	facePlayer(): void;
 	/** Steps the event along an authored route (best-effort overworld nicety). */
-	move(route: Direction[]): void;
-	/** Starts a trainer battle by id, then calls `resume()` when it ends. */
-	startTrainerBattle(trainerId: string, data: TrainerBattleData | undefined): void;
+	move(steps: Direction[]): void;
+	/** Starts a non-capturable trainer battle, then calls `resume()` when it ends. */
+	startTrainerBattle(trainer: TrainerParty): void;
+	/** Starts a capturable wild encounter, then calls `resume()` when it ends. */
+	startWildBattle(speciesId: string, level: number): void;
+	/** Pauses for a number of frames, then calls `resume()` when they elapse. */
+	wait(frames: number): void;
 	/** Reloads the map at a new position; the run ends here (no resume). */
-	warp(toMap: string, toX: number, toY: number): void;
+	warp(map: string, x: number, y: number): void;
 }
 
 /** Whether a runner is idle between steps, parked on a blocking step, or finished. */
-export type ScriptStatus = "idle" | "blocked" | "done";
+export type EventCommandStatus = "idle" | "blocked" | "done";
+
+/** One list of commands being run, and how far into it the runner has reached. */
+interface Frame {
+	commands: readonly EventCommand[];
+	cursor: number;
+}
 
 /**
- * Drives one script's commands in order against a {@link ScriptHost}.
+ * Drives one page's commands in order against an {@link EventCommandHost}.
  *
- * Construct with the script, the host, and the optional trainer/wild data pulled
- * from the event's interaction, then call `advance()` to run until the script
- * blocks or finishes. While blocked, the host drives its effect and calls
- * `resume()` to continue; `advance()` is idempotent while blocked or done, so the
- * scene can call it every frame without double-running a step.
+ * Construct with the commands, the host, and the flag context bound to the
+ * interacting event, then call `advance()` to run until the page blocks or finishes.
+ * While blocked, the host drives its effect and calls `resume()` to continue;
+ * `advance()` is idempotent while blocked or done, so the scene can call it every
+ * frame without double-running a step. Nested commands (`show-choices`,
+ * `conditional-branch`) push a new frame the runner drains before returning to the
+ * step after the nesting command.
  */
-export class ScriptRunner {
-	/** Index of the next command to run. */
-	private cursor = 0;
+export class EventCommandRunner {
+	/** The stack of command frames; the top frame is the one being drained. */
+	private readonly frames: Frame[] = [];
 
 	/** Current run state: idle (ready to advance), blocked (waiting), or done. */
-	private state: ScriptStatus = "idle";
+	private state: EventCommandStatus = "idle";
+
+	/** The choices offered by the parked `show-choices`, awaiting a resumed index. */
+	private pendingChoices: EventCommand[][] | null = null;
 
 	/**
-	 * @param script - The ordered commands to run.
+	 * @param commands - The ordered commands to run.
 	 * @param host - The side-effect surface the commands drive.
-	 * @param trainer - Trainer battle data for `start-trainer-battle` steps, if any.
-	 * @param wild - Wild battle data for the event's `wild` battle, if any.
+	 * @param flags - The flag context branch conditions are evaluated against.
 	 */
 	constructor(
-		private readonly script: readonly ScriptCommand[],
-		private readonly host: ScriptHost,
-		private readonly trainer?: TrainerBattleData,
-		private readonly wild?: WildBattleData,
-	) {}
+		commands: readonly EventCommand[],
+		private readonly host: EventCommandHost,
+		private readonly flags: EventFlagContext,
+	) {
+		this.frames.push({ commands, cursor: 0 });
+	}
 
-	/** Whether the whole script has finished running. */
+	/** Whether the whole page has finished running. */
 	get done(): boolean {
 		return this.state === "done";
 	}
@@ -108,17 +134,23 @@ export class ScriptRunner {
 	}
 
 	/**
-	 * Runs commands until one blocks or the script ends.
+	 * Runs commands until one blocks or the page ends.
 	 *
 	 * Synchronous commands run back-to-back within one call; the first blocking
-	 * command begins its host effect and parks the runner. A no-op while already
-	 * blocked or done, so it is safe to call once per frame.
+	 * command begins its host effect and parks the runner. Finished frames pop so the
+	 * run resumes after the command that nested them. A no-op while already blocked or
+	 * done, so it is safe to call once per frame.
 	 */
 	advance() {
 		if (this.state !== "idle") return;
-		while (this.cursor < this.script.length) {
-			let command = this.script[this.cursor]!;
-			this.cursor += 1;
+		while (this.frames.length > 0) {
+			let frame = this.frames[this.frames.length - 1]!;
+			if (frame.cursor >= frame.commands.length) {
+				this.frames.pop();
+				continue;
+			}
+			let command = frame.commands[frame.cursor]!;
+			frame.cursor += 1;
 			if (this.run(command)) return; // a blocking command parked the runner
 		}
 		this.state = "done";
@@ -127,11 +159,18 @@ export class ScriptRunner {
 	/**
 	 * Resumes after a blocking step the host has finished, running the next steps.
 	 *
-	 * A no-op unless the runner is actually blocked, so a stray resume cannot skip
-	 * a step or advance a finished script.
+	 * A no-op unless the runner is actually blocked, so a stray resume cannot skip a
+	 * step or advance a finished page. For a parked `show-choices`, `choiceIndex`
+	 * selects the branch to run; its commands are pushed as a new frame before the run
+	 * continues. Other blocking commands ignore the argument.
 	 */
-	resume() {
+	resume(choiceIndex?: number) {
 		if (this.state !== "blocked") return;
+		if (this.pendingChoices) {
+			let branch = this.pendingChoices[choiceIndex ?? 0] ?? [];
+			this.pendingChoices = null;
+			this.frames.push({ commands: branch, cursor: 0 });
+		}
 		this.state = "idle";
 		this.advance();
 	}
@@ -139,39 +178,83 @@ export class ScriptRunner {
 	/**
 	 * Runs one command; returns true when it blocks (parks the runner).
 	 *
-	 * Synchronous commands return false so `advance` keeps going. Blocking commands
-	 * set the state to blocked and return true; `warp` blocks too but the host is
-	 * expected never to resume it, ending the run as the map reloads.
+	 * Synchronous commands return false so `advance` keeps going. Nesting commands
+	 * (`conditional-branch`) push the chosen branch as a frame and return false so it
+	 * runs next; `show-choices` blocks so the host can present the labels and resume
+	 * with a pick. Blocking commands set the state to blocked and return true; `warp`
+	 * blocks too but the host is expected never to resume it, ending the run as the
+	 * map reloads.
 	 */
-	private run(command: ScriptCommand): boolean {
-		switch (command.do) {
-			case "message":
+	private run(command: EventCommand): boolean {
+		switch (command.kind) {
+			case "text":
 				this.state = "blocked";
-				this.host.showMessage(command.text);
+				this.host.showText(command.text);
 				return true;
+			case "show-choices":
+				this.state = "blocked";
+				this.pendingChoices = command.choices.map((choice) => choice.commands);
+				this.host.showChoices(
+					command.prompt,
+					command.choices.map((choice) => choice.label),
+				);
+				return true;
+			case "conditional-branch": {
+				let branch = this.conditionHolds(command.condition) ? command.then : (command.else ?? []);
+				this.frames.push({ commands: branch, cursor: 0 });
+				return false;
+			}
+			case "control-switch":
+				this.host.controlSwitch(command.flag, command.value);
+				return false;
+			case "control-self-switch":
+				this.host.controlSelfSwitch(this.flags.selfSwitchFlag(command.name), command.value);
+				return false;
 			case "give-item":
 				this.host.giveItem(command.itemId, command.count);
 				return false;
 			case "heal-party":
 				this.host.healParty();
 				return false;
-			case "set-flag":
-				this.host.setFlag(command.flag);
-				return false;
 			case "face-player":
 				this.host.facePlayer();
 				return false;
 			case "move":
-				this.host.move([...command.route]);
+				this.host.move([...command.steps]);
 				return false;
 			case "start-trainer-battle":
 				this.state = "blocked";
-				this.host.startTrainerBattle(command.trainerId, this.trainer);
+				this.host.startTrainerBattle(command.trainer);
+				return true;
+			case "wild-encounter":
+				this.state = "blocked";
+				this.host.startWildBattle(command.speciesId, command.level);
+				return true;
+			case "wait":
+				this.state = "blocked";
+				this.host.wait(command.frames);
 				return true;
 			case "warp":
 				this.state = "blocked";
-				this.host.warp(command.toMap, command.toX, command.toY);
+				this.host.warp(command.map, command.x, command.y);
 				return true;
 		}
+	}
+
+	/**
+	 * Evaluates a branch condition against the bound flag context.
+	 *
+	 * A `switch` condition reads a global flag; a `selfSwitch` condition reads the
+	 * interacting event's namespaced self-switch flag. Both must hold when both are
+	 * present; an empty condition (neither field) always holds.
+	 */
+	private conditionHolds(condition: { switch?: string; selfSwitch?: string }): boolean {
+		if (condition.switch && !this.flags.isFlagOn(condition.switch)) return false;
+		if (
+			condition.selfSwitch &&
+			!this.flags.isFlagOn(this.flags.selfSwitchFlag(condition.selfSwitch))
+		)
+			return false;
+		return true;
 	}
 }

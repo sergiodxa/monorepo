@@ -17,7 +17,7 @@ import type { LegacyWorld } from "./migrate";
 import { pickPersistentWorld } from "./helpers";
 import { createPlayerId } from "./ids";
 import { migrateWorld } from "./migrate";
-import { getFlag, setFlag } from "./world";
+import { getFlag, selfSwitchFlag, setFlag } from "./world";
 
 let PLAYER_ID = createPlayerId("hero");
 
@@ -64,4 +64,23 @@ test("the persistent snapshot carries story flags", () => {
 
 	let snapshot = pickPersistentWorld(world);
 	expect(snapshot.flags[PLAYER_ID]?.values["caught-legendary"]).toBe(true);
+});
+
+test("selfSwitchFlag namespaces a switch by its map and entity id", () => {
+	expect(selfSwitchFlag("route-1", "npc-a", "A")).toBe("event:route-1:npc-a:A");
+	// The same short name on different entities/maps never collides.
+	expect(selfSwitchFlag("route-2", "npc-a", "A")).not.toBe(selfSwitchFlag("route-1", "npc-a", "A"));
+	expect(selfSwitchFlag("route-1", "npc-b", "A")).not.toBe(selfSwitchFlag("route-1", "npc-a", "A"));
+});
+
+test("a self-switch flag reads and persists like any other flag", () => {
+	let world = migrateWorld(legacyWorld());
+	let flag = selfSwitchFlag("route-1", "gate", "A");
+	expect(getFlag(world, flag)).toBe(false);
+
+	setFlag(world, flag);
+	expect(getFlag(world, flag)).toBe(true);
+
+	let snapshot = pickPersistentWorld(world);
+	expect(snapshot.flags[PLAYER_ID]?.values[flag]).toBe(true);
 });

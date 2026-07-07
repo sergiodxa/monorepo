@@ -1,43 +1,62 @@
 /**
- * Verifies idle movement for spawned event entities.
+ * Verifies autonomous movement for spawned event entities.
  *
  * A `random` step must respect collision (never onto a blocked tile) and report
  * "no move" when boxed in; a `route` step loops its authored list and keeps its
- * cursor in phase even when a step is blocked; and `none` never moves. The tick
- * only steps once its slow cadence elapses.
+ * cursor in phase even when a step is blocked; and `fixed` never moves. The tick
+ * only steps once the cadence derived from the config's speed/freq elapses, and the
+ * page options refine it (`directionFix` turns without stepping, `through` ignores
+ * collision).
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 import { expect, test } from "bun:test";
 
-import type { EventEntity } from "./event-runtime";
+import type { AutonomousMovement, PageOptions } from "../render/map-schema";
 
 import {
 	createMovementState,
+	type MovableActor,
 	nextRandomStep,
 	nextRouteStep,
 	STEP_INTERVAL_MS,
+	stepIntervalFor,
 	tickEventMovement,
 } from "./event-movement";
 
-/** Builds a minimal movable entity with the given movement config. */
-function entity(movement: EventEntity["movement"], x = 2, y = 2): EventEntity {
+/** Builds one autonomous-movement config, defaulting the tuning fields. */
+function movement(overrides: Partial<AutonomousMovement> & Pick<AutonomousMovement, "type">) {
 	return {
-		id: "e",
-		x,
-		y,
-		facing: "down",
-		kind: "npc",
-		interactionMode: "action",
-		sprite: null,
-		movement,
-		interaction: { script: [], trainer: undefined, wild: undefined },
-		flag: null,
-		once: false,
-		done: false,
+		speed: undefined,
+		freq: undefined,
+		route: undefined,
+		...overrides,
+	} as AutonomousMovement;
+}
+
+/** Builds a page-options record, defaulting every toggle to unset. */
+function options(overrides: Partial<PageOptions> = {}): PageOptions {
+	return {
+		moveAnimation: undefined,
+		stopAnimation: undefined,
+		directionFix: undefined,
+		through: undefined,
+		alwaysOnTop: undefined,
+		...overrides,
 	};
 }
+
+/** No page options set (the common case for these movement tests). */
+const NO_OPTIONS: PageOptions = options();
+
+/** Builds a minimal movable actor at the given tile facing down. */
+function actor(x = 2, y = 2): MovableActor {
+	return { x, y, facing: "down" };
+}
+
+/** A predicate that blocks no tile. */
+const OPEN = () => false;
 
 test("nextRandomStep never returns a direction into a blocked tile", () => {
 	// Only "up" from (2,2) is free; everything else is blocked.
@@ -67,85 +86,133 @@ test("nextRouteStep loops the authored steps and wraps at the end", () => {
 	expect(nextRouteStep([], 0)).toBeNull();
 });
 
-test("tickEventMovement leaves a none entity in place", () => {
-	let e = entity("none");
+test("stepIntervalFor yields the baseline at default speed/freq and shortens as they rise", () => {
+	expect(stepIntervalFor(movement({ type: "random" }))).toBe(STEP_INTERVAL_MS);
+	// Faster and more frequent both shorten the interval below the baseline.
+	expect(stepIntervalFor(movement({ type: "random", speed: 6, freq: 6 }))).toBeLessThan(
+		STEP_INTERVAL_MS,
+	);
+	// Clamped to a small floor so a very fast actor never steps every frame.
+	expect(stepIntervalFor(movement({ type: "random", speed: 99, freq: 99 }))).toBe(120);
+});
+
+test("tickEventMovement leaves a fixed entity in place", () => {
+	let a = actor();
 	let state = createMovementState();
 	tickEventMovement(
-		e,
+		a,
 		state,
+		movement({ type: "fixed" }),
+		NO_OPTIONS,
 		STEP_INTERVAL_MS * 5,
-		() => false,
+		OPEN,
 		() => 0,
 	);
-	expect(e).toMatchObject({ x: 2, y: 2 });
+	expect(a).toMatchObject({ x: 2, y: 2 });
 });
 
 test("tickEventMovement only steps once the cadence elapses", () => {
-	let e = entity({ type: "route", steps: ["right"] });
+	let a = actor();
 	let state = createMovementState();
+	let route = movement({ type: "route", route: ["right"] });
 
-	tickEventMovement(
-		e,
-		state,
-		STEP_INTERVAL_MS - 1,
-		() => false,
-		() => 0,
-	);
-	expect(e.x).toBe(2);
+	tickEventMovement(a, state, route, NO_OPTIONS, STEP_INTERVAL_MS - 1, OPEN, () => 0);
+	expect(a.x).toBe(2);
 
-	tickEventMovement(
-		e,
-		state,
-		1,
-		() => false,
-		() => 0,
-	);
-	expect(e.x).toBe(3);
+	tickEventMovement(a, state, route, NO_OPTIONS, 1, OPEN, () => 0);
+	expect(a.x).toBe(3);
 });
 
 test("tickEventMovement walks a route in order and loops it", () => {
-	let e = entity({ type: "route", steps: ["right", "down"] }, 2, 2);
+	let a = actor(2, 2);
 	let state = createMovementState();
-	let step = () =>
-		tickEventMovement(
-			e,
-			state,
-			STEP_INTERVAL_MS,
-			() => false,
-			() => 0,
-		);
+	let route = movement({ type: "route", route: ["right", "down"] });
+	let step = () => tickEventMovement(a, state, route, NO_OPTIONS, STEP_INTERVAL_MS, OPEN, () => 0);
 
 	step();
-	expect(e).toMatchObject({ x: 3, y: 2, facing: "right" });
+	expect(a).toMatchObject({ x: 3, y: 2, facing: "right" });
 	step();
-	expect(e).toMatchObject({ x: 3, y: 3, facing: "down" });
+	expect(a).toMatchObject({ x: 3, y: 3, facing: "down" });
 	step(); // wraps back to the first step
-	expect(e).toMatchObject({ x: 4, y: 3, facing: "right" });
+	expect(a).toMatchObject({ x: 4, y: 3, facing: "right" });
 });
 
 test("tickEventMovement keeps the route cursor in phase when a step is blocked", () => {
-	let e = entity({ type: "route", steps: ["right", "down"] }, 2, 2);
+	let a = actor(2, 2);
 	let state = createMovementState();
+	let route = movement({ type: "route", route: ["right", "down"] });
 	// Block the first step's target (3,2); the second step (down) must still run next.
 	let isBlocked = (x: number, y: number) => x === 3 && y === 2;
 
-	tickEventMovement(e, state, STEP_INTERVAL_MS, isBlocked, () => 0);
-	expect(e).toMatchObject({ x: 2, y: 2, facing: "right" }); // turned but blocked
+	tickEventMovement(a, state, route, NO_OPTIONS, STEP_INTERVAL_MS, isBlocked, () => 0);
+	expect(a).toMatchObject({ x: 2, y: 2, facing: "right" }); // turned but blocked
 
-	tickEventMovement(e, state, STEP_INTERVAL_MS, isBlocked, () => 0);
-	expect(e).toMatchObject({ x: 2, y: 3, facing: "down" }); // second step, not repeated first
+	tickEventMovement(a, state, route, NO_OPTIONS, STEP_INTERVAL_MS, isBlocked, () => 0);
+	expect(a).toMatchObject({ x: 2, y: 3, facing: "down" }); // second step, not repeated first
 });
 
 test("tickEventMovement blocks a random step against collision but still turns", () => {
-	let e = entity("random", 2, 2);
+	let a = actor(2, 2);
 	let state = createMovementState();
-	// Everything blocked: the entity cannot move and stays put.
+	// Only "up" is free; the random roll picks it, the actor turns and steps up.
+	let isBlocked = (x: number, y: number) => !(x === 2 && y === 1);
+
 	tickEventMovement(
-		e,
+		a,
 		state,
+		movement({ type: "random" }),
+		NO_OPTIONS,
+		STEP_INTERVAL_MS,
+		isBlocked,
+		() => 0,
+	);
+	expect(a).toMatchObject({ x: 2, y: 1, facing: "up" });
+});
+
+test("tickEventMovement leaves a boxed-in random entity put but does not crash", () => {
+	let a = actor(2, 2);
+	let state = createMovementState();
+	// Everything blocked: no direction is free, so the entity stays where it is.
+	tickEventMovement(
+		a,
+		state,
+		movement({ type: "random" }),
+		NO_OPTIONS,
 		STEP_INTERVAL_MS,
 		() => true,
 		() => 0,
 	);
-	expect(e).toMatchObject({ x: 2, y: 2 });
+	expect(a).toMatchObject({ x: 2, y: 2 });
+});
+
+test("tickEventMovement with through ignores collision and steps onto a blocked tile", () => {
+	let a = actor(2, 2);
+	let state = createMovementState();
+	let route = movement({ type: "route", route: ["right"] });
+	tickEventMovement(
+		a,
+		state,
+		route,
+		options({ through: true }),
+		STEP_INTERVAL_MS,
+		() => true,
+		() => 0,
+	);
+	expect(a).toMatchObject({ x: 3, y: 2, facing: "right" });
+});
+
+test("tickEventMovement with directionFix moves without turning the facing", () => {
+	let a = actor(2, 2);
+	let state = createMovementState();
+	let route = movement({ type: "route", route: ["right"] });
+	tickEventMovement(
+		a,
+		state,
+		route,
+		options({ directionFix: true }),
+		STEP_INTERVAL_MS,
+		OPEN,
+		() => 0,
+	);
+	expect(a).toMatchObject({ x: 3, y: 2, facing: "down" }); // stepped right but still faces down
 });

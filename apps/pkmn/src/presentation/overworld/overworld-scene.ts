@@ -1,13 +1,16 @@
 /**
- * The overworld scene: walking the map and triggering wild battles.
+ * The overworld scene: walking the map, running events, and wild battles.
  *
  * It loads a map (from the asset store, or the built-in sample map), follows the
- * player with a clamped camera, and moves the player one tile at a time. When the
- * player finishes a step onto tall grass it rolls an encounter and, on a hit,
- * dispatches `start-battle` against a wild creature from the seeded pool and
- * pushes the battle scene on top of itself. Everything the engine owns (party,
- * battle state) is reached through commands and selectors; the scene only decides
- * where the player is and when a battle begins.
+ * player with a clamped camera, and moves the player one tile at a time. Authored
+ * map events become live entities whose active page — the last page whose switch and
+ * self-switch conditions hold — decides their graphic, autonomous movement, trigger,
+ * and command script; the scene draws them, moves them, and fires their commands on
+ * the right trigger. When the player finishes a step onto tall grass it rolls a wild
+ * encounter and, on a hit, starts a battle. Everything the engine owns (party,
+ * battle state, flags) is reached through commands and selectors; the scene only
+ * decides where the player is, which page is active, and when a script or battle
+ * begins.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -18,7 +21,7 @@ import { createBattleId } from "~/game/world/ids";
 
 import type { PresentationSave } from "../core/save";
 import type { Scene } from "../core/scene";
-import type { SpriteRef } from "../render/map-schema";
+import type { EventPage, PageOptions, SpriteRef, TrainerParty } from "../render/map-schema";
 
 import { BattleScene } from "../battle/battle-scene";
 import { type Direction, directionDelta, oppositeDirection } from "../core/direction";
@@ -33,19 +36,21 @@ import { buildPlaceholderAtlas } from "../render/placeholder-atlas";
 import { drawText } from "../render/text";
 import * as theme from "../render/theme";
 import { TileMapRenderer } from "../render/tilemap";
+import { ChoiceScene } from "../scenes/choice";
 import { DialogueScene } from "../scenes/dialogue";
 import { MenuScene } from "../scenes/menu";
 import { ShopScene } from "../scenes/shop";
 
 import { chooseEncounter, rollEncounter } from "./encounters";
 import { createMovementState, type MovementState, tickEventMovement } from "./event-movement";
-import { type EventEntity, eventAt, spawnEvents } from "./event-runtime";
 import {
-	ScriptRunner,
-	type ScriptHost,
-	type TrainerBattleData,
-	type WildBattleData,
-} from "./event-script";
+	type EventEntity,
+	eventAt,
+	refreshActivePages,
+	selfSwitchFlag,
+	spawnEvents,
+} from "./event-runtime";
+import { EventCommandRunner, type EventCommandHost } from "./event-script";
 import { createSampleMap, createSampleNpcs, GameMap, SAMPLE_SPAWN } from "./map-loader";
 import { facingNpc, type Npc, npcAt } from "./npc";
 import { PlayerController } from "./player-controller";
@@ -55,6 +60,9 @@ const DEFAULT_TRAINER_REWARD = 500;
 
 /** Left inset (px) the HUD hint is drawn at, reserved on both sides for symmetry. */
 const HUD_HINT_MARGIN = 4;
+
+/** Milliseconds one `wait` frame stands for when a script pauses. */
+const WAIT_FRAME_MS = 1000 / 60;
 
 /**
  * The essential HUD hint, kept short enough to fit any sane screen width.
@@ -121,16 +129,28 @@ export class OverworldScene implements Scene {
 	/** The live entities spawned from the map's authored events (created on enter). */
 	private events: EventEntity[] = [];
 
-	/** Per-event idle-movement bookkeeping, keyed by event id. */
+	/** Per-event autonomous-movement bookkeeping, keyed by event id. */
 	private readonly movement = new Map<string, MovementState>();
 
 	/** The interaction currently running, or null when the player is free to move. */
 	private interaction: {
-		/** The event whose interaction is running. */
+		/** The event whose active page is running. */
 		entity: EventEntity;
-		/** The script runner sequencing that interaction's commands. */
-		runner: ScriptRunner;
+		/** The command runner sequencing that page's commands. */
+		runner: EventCommandRunner;
 	} | null = null;
+
+	/** Frames left on a `wait` command before its runner resumes. */
+	private waitFramesLeft = 0;
+
+	/**
+	 * The index a `show-choices` picker recorded, consumed when its scene pops.
+	 *
+	 * The picker records the pick here (rather than resuming directly) so the single
+	 * resume path in `resume()` — which fires on every scene pop — passes it to the
+	 * runner and clears it. Null while no choice is pending.
+	 */
+	private pendingChoiceIndex: number | null = null;
 
 	/** A warp requested by a running script, applied once the frame settles. */
 	private pendingWarp: { mapId: string; x: number; y: number; facing: Direction } | null = null;
@@ -165,35 +185,44 @@ export class OverworldScene implements Scene {
 		let second = speciesIds[Math.min(4, speciesIds.length - 1)] ?? first;
 		this.npcs = createSampleNpcs([first, second]);
 
-		// Spawn the map's authored events, skipping any whose completion flag is set,
-		// and give each a fresh movement state. The existing sample NPCs above stay
-		// alongside these map events (unifying the two is a later follow-up).
-		this.events = spawnEvents(this.map.events, (flag) => game.engine.selectFlag(flag));
+		// Spawn the map's authored events with their active page selected from the
+		// current flags, and give each a fresh movement state. The existing sample
+		// NPCs above stay alongside these map events (unifying the two is a follow-up).
+		this.events = spawnEvents(this.spawn.mapId, this.map.events, (flag) =>
+			game.engine.selectFlag(flag),
+		);
 		this.movement.clear();
 		for (let entity of this.events) this.movement.set(entity.id, createMovementState());
 
 		game.audio.playBgm(data.bgm);
-		this.runAutorunEvents(game);
+		this.runEntryEvents(game);
 	}
 
 	exit() {}
 
 	resume() {
-		// Returning from a scene a running script pushed (a dialogue it was waiting
-		// on, or a battle it started): continue the script from where it parked. The
-		// blocked guard means returning from the menu or a non-script scene does
+		// Returning from a scene a running script pushed (a dialogue/choice it was
+		// waiting on, or a battle it started): continue the script from where it parked.
+		// The blocked guard means returning from the menu or a non-script scene does
 		// nothing. `advance` inside `resume` runs the next synchronous steps and may
 		// park again on the next blocking command.
-		if (this.interaction?.runner.blocked) this.interaction.runner.resume();
+		if (this.interaction?.runner.blocked && this.waitFramesLeft <= 0) {
+			// A parked `show-choices` resumes with the recorded pick; every other blocking
+			// command ignores the argument, so passing null (as undefined) is a no-op there.
+			let index = this.pendingChoiceIndex;
+			this.pendingChoiceIndex = null;
+			this.interaction.runner.resume(index ?? undefined);
+		}
 	}
 
 	update(game: GameClient, dt: number) {
 		this.elapsed += dt;
 
 		// A running interaction freezes the overworld: the script drives scenes it
-		// pushed (dialogue/battles) and resumes on their pop, so all this loop does is
-		// notice when the script finishes and settle its results.
+		// pushed (dialogue/choices/battles) and resumes on their pop, so this loop only
+		// counts down a `wait` and settles when the script finishes.
 		if (this.interaction) {
+			this.tickWait(dt);
 			this.settleInteraction(game);
 			return;
 		}
@@ -204,36 +233,42 @@ export class OverworldScene implements Scene {
 		}
 
 		if (!this.player.moving && game.input.isPressed(Button.A)) {
-			let facing = {
-				x: this.player.tile.x,
-				y: this.player.tile.y,
-				facing: this.player.facing,
-			};
 			let delta = directionDelta(this.player.facing);
-			let event = eventAt(this.events, facing.x + delta.dx, facing.y + delta.dy);
-			if (event && event.interactionMode === "action") {
+			let event = eventAt(
+				this.events,
+				this.player.tile.x + delta.dx,
+				this.player.tile.y + delta.dy,
+			);
+			if (event && this.triggerOf(event) === "action") {
 				this.startInteraction(game, event);
 				return;
 			}
-			let target = facingNpc(this.npcs, facing);
+			let target = facingNpc(this.npcs, {
+				x: this.player.tile.x,
+				y: this.player.tile.y,
+				facing: this.player.facing,
+			});
 			if (target) {
 				this.interact(game, target);
 				return;
 			}
 		}
 
-		// Idle-move every event against collision, the player, other events, and NPCs.
+		// Move every event with an active autonomous-movement page against collision,
+		// the player, other events, and NPCs.
 		for (let entity of this.events) {
+			let page = entity.page;
 			let state = this.movement.get(entity.id);
-			if (state) {
-				tickEventMovement(
-					entity,
-					state,
-					dt,
-					(x, y) => this.actorBlocked(entity, x, y),
-					Math.random,
-				);
-			}
+			if (!page || !state) continue;
+			tickEventMovement(
+				entity,
+				state,
+				page.autonomousMovement,
+				page.options as PageOptions,
+				dt,
+				(x, y) => this.actorBlocked(entity, x, y),
+				Math.random,
+			);
 		}
 
 		let { arrived } = this.player.update(game.input, this.map, dt, (x, y) =>
@@ -247,30 +282,49 @@ export class OverworldScene implements Scene {
 		);
 
 		if (arrived) this.checkTouchAndEncounter(game);
+
+		// A parallel event runs continuously in the background: with the player free to
+		// move, start the first eligible one this frame if none is already running.
+		if (!this.interaction) this.runParallelEvents(game);
+	}
+
+	/** Counts down an active `wait` and resumes the runner once its frames elapse. */
+	private tickWait(dt: number) {
+		if (this.waitFramesLeft <= 0) return;
+		this.waitFramesLeft -= dt / WAIT_FRAME_MS;
+		if (this.waitFramesLeft <= 0) {
+			this.waitFramesLeft = 0;
+			this.interaction?.runner.resume();
+		}
 	}
 
 	/**
 	 * Fires any touch event the player just reached, else rolls a wild encounter.
 	 *
-	 * Two touch shapes are handled: an invisible walkable trigger the player steps
-	 * *onto* (its tile equals the player's), and a solid touch NPC/creature the player
-	 * walks *into* (its tile is one step ahead in the facing direction). Either fires
-	 * its interaction before an encounter can roll, so stepping onto a trigger tile
-	 * never also starts a wild battle on the same arrival.
+	 * Two touch shapes are handled: a `player-touch` event the player steps *onto* (its
+	 * tile equals the player's), and an `event-touch` event the player walks *into*
+	 * (its tile is one step ahead in the facing direction). Either fires its page
+	 * script before an encounter can roll, so stepping onto a trigger tile never also
+	 * starts a wild battle on the same arrival.
 	 */
 	private checkTouchAndEncounter(game: GameClient) {
 		let onTile = eventAt(this.events, this.player.tile.x, this.player.tile.y);
-		if (onTile && onTile.interactionMode === "touch") {
+		if (onTile && this.triggerOf(onTile) === "player-touch") {
 			this.startInteraction(game, onTile);
 			return;
 		}
 		let delta = directionDelta(this.player.facing);
 		let ahead = eventAt(this.events, this.player.tile.x + delta.dx, this.player.tile.y + delta.dy);
-		if (ahead && ahead.interactionMode === "touch") {
+		if (ahead && this.triggerOf(ahead) === "event-touch") {
 			this.startInteraction(game, ahead);
 			return;
 		}
 		this.checkEncounter(game);
+	}
+
+	/** The active page's trigger for an entity, or null when the entity is inert. */
+	private triggerOf(entity: EventEntity): EventPage["trigger"] | null {
+		return entity.page?.trigger ?? null;
 	}
 
 	/** True when the player cannot step onto a tile (a sample NPC or a solid event holds it). */
@@ -281,11 +335,11 @@ export class OverworldScene implements Scene {
 	}
 
 	/**
-	 * True when a tile is impassable for an idle event actor moving off `self`.
+	 * True when a tile is impassable for an autonomous event actor moving off `self`.
 	 *
-	 * Events avoid walls, the player, sample NPCs, and other events. An invisible
-	 * walkable trigger does not block a moving event, matching how it does not block
-	 * the player, so a patrolling NPC can cross a trigger tile.
+	 * Events avoid walls, the player, sample NPCs, and other events. An inert or
+	 * invisible event does not block a moving event, matching how it does not block the
+	 * player, so a patrolling NPC can cross a trigger tile.
 	 */
 	private actorBlocked(self: EventEntity, x: number, y: number): boolean {
 		if (this.map.isBlocked(x, y)) return true;
@@ -330,11 +384,7 @@ export class OverworldScene implements Scene {
 	 * @param idPrefix - Stable prefix making each spawned creature's trainer id unique.
 	 * @param trainer - The party, optional name, and optional reward to field.
 	 */
-	private startTrainerFight(
-		game: GameClient,
-		idPrefix: string,
-		trainer: TrainerBattleData,
-	): boolean {
+	private startTrainerFight(game: GameClient, idPrefix: string, trainer: TrainerParty): boolean {
 		if (trainer.party.length === 0) return false;
 		let playerParty = game.engine.selectParty(HERO_ID).creatures.map((creature) => creature.id);
 		if (playerParty.length === 0) return false;
@@ -378,23 +428,23 @@ export class OverworldScene implements Scene {
 	}
 
 	/**
-	 * Starts a fixed (often legendary) wild battle from a `wild` event.
+	 * Starts a fixed (often legendary) wild battle from a `wild-encounter` command.
 	 *
-	 * Spawns one wild creature from the event's authored species/level and pushes a
+	 * Spawns one wild creature from the command's authored species/level and pushes a
 	 * normal capturable wild battle, so the player can catch the legendary. Returns
 	 * whether the battle was pushed so the caller can settle the event afterward.
 	 */
-	private startWildEncounter(game: GameClient, idPrefix: string, wild: WildBattleData): boolean {
+	private startWildEncounter(
+		game: GameClient,
+		idPrefix: string,
+		speciesId: string,
+		level: number,
+	): boolean {
 		let playerParty = game.engine.selectParty(HERO_ID).creatures.map((creature) => creature.id);
 		if (playerParty.length === 0) return false;
 
 		let encounterId = `${idPrefix}-${this.battleCount}`;
-		let spawned = game.dispatch({
-			type: "spawn-encounter",
-			encounterId,
-			speciesId: wild.speciesId,
-			level: wild.level,
-		});
+		let spawned = game.dispatch({ type: "spawn-encounter", encounterId, speciesId, level });
 		let creature = spawned.find((event) => event.type === "encounter-spawned");
 		if (creature?.type !== "encounter-spawned") return false;
 
@@ -414,81 +464,75 @@ export class OverworldScene implements Scene {
 	}
 
 	/**
-	 * Runs every `autorun` event whose gate allows it, once on map enter.
+	 * Runs the first eligible `autorun` event on map enter.
 	 *
 	 * Only the first eligible autorun event runs its script this enter; a script
 	 * blocks the overworld and drives its own scenes, so starting more than one at a
-	 * time would interleave dialogues. The rest wait until the interaction settles
-	 * and the player triggers them (or a later enter re-checks them).
+	 * time would interleave dialogues. The rest wait until the interaction settles and
+	 * a later frame (or a re-selected page) makes one eligible again.
 	 */
-	private runAutorunEvents(game: GameClient) {
+	private runEntryEvents(game: GameClient) {
+		if (this.interaction) return;
 		for (let entity of this.events) {
-			if (entity.interactionMode !== "autorun" || entity.done) continue;
+			if (this.triggerOf(entity) !== "autorun") continue;
 			this.startInteraction(game, entity);
 			return;
 		}
 	}
 
 	/**
-	 * Begins an event's interaction: builds a script runner and advances it once.
+	 * Starts the first eligible `parallel` event when the player is free.
 	 *
-	 * The runner runs synchronous commands immediately and parks on the first
-	 * blocking command (a message or trainer battle), whose host hook has pushed the
+	 * A parallel page runs in the background whenever its conditions hold. The scene
+	 * has a single interaction slot, so it starts one parallel script at a time; when
+	 * it settles, the next frame starts the next eligible one. A parallel page whose
+	 * script has no lasting effect will keep re-firing, so authors typically flip a
+	 * self-switch inside it to move the event to a later, quieter page.
+	 */
+	private runParallelEvents(game: GameClient) {
+		for (let entity of this.events) {
+			if (this.triggerOf(entity) !== "parallel") continue;
+			this.startInteraction(game, entity);
+			return;
+		}
+	}
+
+	/**
+	 * Begins an event's interaction: builds a command runner and advances it once.
+	 *
+	 * The runner runs synchronous commands immediately and parks on the first blocking
+	 * command (text, a choice, a battle, or a wait), whose host hook has pushed the
 	 * scene it waits on. If the script finishes without blocking (or was empty), the
 	 * interaction settles immediately. A second interaction cannot start while one is
 	 * running because the overworld is frozen until it settles.
 	 */
 	private startInteraction(game: GameClient, entity: EventEntity) {
-		if (this.interaction || entity.done) return;
-		let runner = new ScriptRunner(
-			entity.interaction.script,
-			this.buildScriptHost(game, entity),
-			entity.interaction.trainer,
-			entity.interaction.wild,
-		);
+		if (this.interaction || !entity.page) return;
+		let runner = new EventCommandRunner(entity.page.commands, this.buildCommandHost(game, entity), {
+			isFlagOn: (flag) => game.engine.selectFlag(flag),
+			selfSwitchFlag: (name) => selfSwitchFlag(entity.mapId, entity.id, name),
+		});
 		this.interaction = { entity, runner };
 		runner.advance();
 		this.settleInteraction(game);
 	}
 
 	/**
-	 * Advances a running interaction and finalizes it once its script is done.
+	 * Finalizes a running interaction once its script is done.
 	 *
-	 * While the runner is blocked, this does nothing (a pushed scene is driving it,
-	 * and `resume` continues it on pop). When the script finishes, a `wild` event
-	 * starts its battle (once), then the event is marked done, its completion flag is
-	 * set so it does not respawn, and control returns to the player — unless a warp
-	 * is pending, which reloads the map instead.
+	 * While the runner is blocked, this does nothing (a pushed scene is driving it, and
+	 * `resume` continues it on pop). When the script finishes, active pages are
+	 * re-selected against the current flags (a `control-switch`/`control-self-switch`
+	 * may have moved events to new pages), and control returns to the player — unless a
+	 * warp is pending, which reloads the map instead.
 	 */
 	private settleInteraction(game: GameClient) {
 		let active = this.interaction;
 		if (!active || active.runner.blocked) return;
 		if (!active.runner.done) return;
 
-		let entity = active.entity;
-
-		// A `wild` event battles after its script's lead-in finishes. Starting the
-		// battle re-parks us on the battle scene by re-opening the interaction as
-		// blocked-equivalent: we keep the interaction set and wait for the next
-		// settle (post-battle) with the wild data already consumed.
-		if (entity.kind === "wild" && entity.interaction.wild && !entity.done) {
-			entity.done = true; // consume so the battle is not restarted on the next settle
-			let started = this.startWildEncounter(game, entity.id, entity.interaction.wild);
-			if (started) {
-				// The battle scene is on top now; the interaction lingers so `resume`
-				// finalizes the flag when the battle pops.
-				return;
-			}
-		}
-
-		this.finishInteraction(game, entity);
-	}
-
-	/** Marks an event spent, persists its completion flag, and applies any warp. */
-	private finishInteraction(game: GameClient, entity: EventEntity) {
-		entity.done = true;
-		if (entity.flag) game.dispatch({ type: "set-flag", flag: entity.flag });
 		this.interaction = null;
+		this.waitFramesLeft = 0;
 
 		if (this.pendingWarp) {
 			let warp = this.pendingWarp;
@@ -497,44 +541,59 @@ export class OverworldScene implements Scene {
 			return;
 		}
 
-		// A completed event with a set flag should disappear from the map right away.
-		if (entity.flag && game.engine.selectFlag(entity.flag)) {
-			this.events = this.events.filter((candidate) => candidate.id !== entity.id);
-			this.movement.delete(entity.id);
-		}
+		// Flags the script set may have changed which page each event shows.
+		refreshActivePages(this.events, (flag) => game.engine.selectFlag(flag));
 	}
 
 	/**
-	 * Builds the side-effect surface one event's script drives.
+	 * Builds the side-effect surface one event page's commands drive.
 	 *
-	 * Synchronous hooks map to engine dispatches (give-item, heal-party, set-flag) or
-	 * mutate the interacting entity (face-player, move). Blocking hooks push the
-	 * scenes the runner parks on: `showMessage` pushes a dialogue, `startTrainerBattle`
-	 * a battle, and `warp` records the destination and lets the run end so the map
-	 * reloads. Every hook forwards authored data; no franchise meaning is added here.
+	 * Synchronous hooks map to engine dispatches (give-item, heal-party, the two
+	 * switch controls) or mutate the interacting entity (face-player, move). Blocking
+	 * hooks push the scenes the runner parks on: `showText` a dialogue, `showChoices` a
+	 * choice picker that resumes with the picked index, the battle hooks a battle, and
+	 * `warp` records the destination and lets the run end so the map reloads. Every
+	 * hook forwards authored data; no franchise meaning is added here.
 	 */
-	private buildScriptHost(game: GameClient, entity: EventEntity): ScriptHost {
+	private buildCommandHost(game: GameClient, entity: EventEntity): EventCommandHost {
 		return {
-			showMessage: (text) => game.scenes.push(new DialogueScene([text])),
+			showText: (text) => game.scenes.push(new DialogueScene([text])),
+			showChoices: (prompt, labels) => {
+				game.scenes.push(
+					new ChoiceScene({
+						...(prompt ? { prompt } : {}),
+						labels,
+						onChoose: (index) => {
+							// Resume runs on scene pop through `resume()`; stash the pick for it by
+							// resuming here would double-run, so record it on the runner via resume
+							// after the pop. Instead we resume with the index directly on pop.
+							this.pendingChoiceIndex = index;
+						},
+					}),
+				);
+			},
+			controlSwitch: (flag, value) => game.dispatch({ type: "set-flag", flag, value }),
+			controlSelfSwitch: (flag, value) => game.dispatch({ type: "set-flag", flag, value }),
 			giveItem: (itemId, count) =>
 				game.dispatch({ type: "add-inventory-item", playerId: HERO_ID, itemId, count }),
 			healParty: () => game.dispatch({ type: "heal-party", playerId: HERO_ID }),
-			setFlag: (flag) => game.dispatch({ type: "set-flag", flag }),
 			facePlayer: () => {
 				entity.facing = oppositeDirection(this.player.facing);
 			},
-			move: (route) => this.stepEventRoute(entity, route),
-			startTrainerBattle: (trainerId, data) => {
-				// The map author's trainer id is a label; the fight uses the event's own
-				// party data (which the runner passed as `data`). If a battle cannot start
-				// the runner is unparked so the rest of the script still runs.
-				let started = data
-					? this.startTrainerFight(game, `${entity.id}-${trainerId}`, data)
-					: false;
+			move: (steps) => this.stepEventRoute(entity, steps),
+			startTrainerBattle: (trainer) => {
+				let started = this.startTrainerFight(game, `${entity.id}-trainer`, trainer);
 				if (!started) this.interaction?.runner.resume();
 			},
-			warp: (toMap, toX, toY) => {
-				this.pendingWarp = { mapId: toMap, x: toX, y: toY, facing: this.player.facing };
+			startWildBattle: (speciesId, level) => {
+				let started = this.startWildEncounter(game, entity.id, speciesId, level);
+				if (!started) this.interaction?.runner.resume();
+			},
+			wait: (frames) => {
+				this.waitFramesLeft = Math.max(0, frames);
+			},
+			warp: (map, x, y) => {
+				this.pendingWarp = { mapId: map, x, y, facing: this.player.facing };
 			},
 		};
 	}
@@ -542,9 +601,9 @@ export class OverworldScene implements Scene {
 	/**
 	 * Steps an event through an authored route immediately, skipping blocked tiles.
 	 *
-	 * A best-effort overworld nicety for the `move` script command: each step turns
-	 * the entity and moves it onto the target tile when free, so an NPC can walk aside
-	 * or approach as part of a cutscene. Blocked steps only turn the entity.
+	 * A best-effort overworld nicety for the `move` command: each step turns the entity
+	 * and moves it onto the target tile when free, so an NPC can walk aside or approach
+	 * as part of a cutscene. Blocked steps only turn the entity.
 	 */
 	private stepEventRoute(entity: EventEntity, route: readonly Direction[]) {
 		for (let direction of route) {
@@ -563,8 +622,8 @@ export class OverworldScene implements Scene {
 	 * Reloads the target map at a new position, replacing this scene.
 	 *
 	 * A warp changes which map is loaded, so the overworld is re-entered fresh (new
-	 * events, movement, camera) at the destination tile. Replacing rather than
-	 * pushing keeps the scene stack flat as the player travels between maps.
+	 * events, movement, camera) at the destination tile. Replacing rather than pushing
+	 * keeps the scene stack flat as the player travels between maps.
 	 */
 	private warpTo(
 		game: GameClient,
@@ -589,43 +648,55 @@ export class OverworldScene implements Scene {
 	render(game: GameClient, ctx: CanvasRenderingContext2D) {
 		this.renderer.drawGround(ctx, this.camera);
 		for (let npc of this.npcs) this.drawNpc(ctx, npc);
-		for (let entity of this.events) this.drawEvent(game, ctx, entity);
+		// Ground-level events draw with the actors; always-on-top events draw last.
+		for (let entity of this.events)
+			if (!this.isAlwaysOnTop(entity)) this.drawEvent(game, ctx, entity);
 		this.drawPlayer(ctx);
-		// The overhead layer draws above every actor, including event NPCs.
+		// The overhead layer draws above every ground actor, including event NPCs.
 		this.renderer.drawOverhead(ctx, this.camera);
+		// Always-on-top events (a bridge rail, a treetop) draw above the overhead layer.
+		for (let entity of this.events)
+			if (this.isAlwaysOnTop(entity)) this.drawEvent(game, ctx, entity);
 		// Money now lives in the Trainer menu; the HUD only shows the fitting hint.
 		drawText(ctx, overworldHint(hudHintMaxWidth()), HUD_HINT_MARGIN, HUD_HINT_MARGIN, {
 			color: theme.TEXT.inverseWhite,
 		});
 	}
 
+	/** Whether an event's active page asks to draw above the overhead layer. */
+	private isAlwaysOnTop(entity: EventEntity): boolean {
+		return (entity.page?.options as PageOptions | undefined)?.alwaysOnTop === true;
+	}
+
 	/**
-	 * Draws one event entity from its authored sprite, or a placeholder.
+	 * Draws one event entity from its active page's graphic, or a placeholder.
 	 *
-	 * A `trigger` with no sprite is invisible by design and draws nothing. An event
-	 * with a sprite blits it from the atlas (an atlas region) or the raw tileset
-	 * image (an image rect) at the entity's tile, respecting its facing where the
-	 * region is directional; when the art is missing it falls back to a small
-	 * procedural marker so the entity is still visible before real sprites exist.
+	 * An inert event (no active page) or one whose page graphic is `null` is invisible
+	 * by design and draws nothing. Otherwise the graphic blits from the atlas (an atlas
+	 * region) or the raw tileset image (an image rect) at the entity's tile, respecting
+	 * its facing where the region is directional; when the art is missing it falls back
+	 * to a small procedural marker so the entity is still visible before real sprites
+	 * exist.
 	 */
 	private drawEvent(game: GameClient, ctx: CanvasRenderingContext2D, entity: EventEntity) {
-		if (entity.kind === "trigger" && entity.sprite === null) return;
+		let graphic = entity.page?.graphic ?? null;
+		if (!entity.page || graphic === null) return;
 		let x = Math.round(entity.x * TILE_SIZE - this.camera.x);
 		let y = Math.round(entity.y * TILE_SIZE - this.camera.y);
 
-		if (this.drawEventSprite(game, ctx, entity.sprite, entity.facing, x, y)) return;
+		if (this.drawEventSprite(game, ctx, graphic, entity.facing, x, y)) return;
 
 		// No sprite art: a facing-tinted procedural body so the entity is visible.
 		this.drawProceduralActor(ctx, x, y, theme.NPC_COLOR.trainer);
 	}
 
 	/**
-	 * Blits an event's sprite ref from the atlas or a raw image, returning success.
+	 * Blits an event's graphic ref from the atlas or a raw image, returning success.
 	 *
-	 * An atlas ref first tries a facing-specific region (`"<region>.<facing>.0"`) so
-	 * a directional character sheet turns with the entity, then the region as
-	 * authored; an image ref blits the raw source rect from the named image. Returns
-	 * false when nothing could be drawn so the caller can fall back procedurally.
+	 * An atlas ref first tries a facing-specific region (`"<region>.<facing>.0"`) so a
+	 * directional character sheet turns with the entity, then the region as authored;
+	 * an image ref blits the raw source rect from the named image. Returns false when
+	 * nothing could be drawn so the caller can fall back procedurally.
 	 */
 	private drawEventSprite(
 		game: GameClient,
@@ -752,12 +823,11 @@ export class OverworldScene implements Scene {
 /**
  * Whether an event blocks movement onto its tile.
  *
- * Visible actors (an NPC, a fixed wild creature, or any sprited event) are solid
- * so the player and other events cannot walk through them. An invisible trigger
- * (a `trigger` with no sprite) is walkable so the player can step onto it to fire
- * its touch/action interaction.
+ * An event is solid only while its active page shows a graphic (a visible NPC or
+ * creature), so the player and other events cannot walk through it. An inert event
+ * (no active page) or an invisible trigger (a page with a `null` graphic) is walkable
+ * so the player can step onto it to fire its touch trigger.
  */
 function isSolidEvent(event: EventEntity): boolean {
-	if (event.kind === "trigger") return event.sprite !== null;
-	return true;
+	return event.page !== null && event.page.graphic !== null;
 }

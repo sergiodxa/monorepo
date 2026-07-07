@@ -213,6 +213,23 @@ export function setFlag(world: World, flag: string, value = true): boolean {
 	return value;
 }
 
+/**
+ * Builds the flag name a per-entity self-switch is stored under.
+ *
+ * A self-switch is a switch scoped to one authored entity on one map, so its
+ * flag name namespaces the entity's map and id alongside the switch's own name.
+ * The engine still treats the result as an opaque boolean flag — it assigns no
+ * meaning to the parts — but the stable, collision-free naming lets many entities
+ * carry a switch of the same short name without clashing across the shared store.
+ *
+ * @param mapId - The map the entity belongs to.
+ * @param entityId - The entity's id, unique within that map.
+ * @param name - The self-switch's short authored name (e.g. "A").
+ */
+export function selfSwitchFlag(mapId: string, entityId: string, name: string): string {
+	return `event:${mapId}:${entityId}:${name}`;
+}
+
 /** Returns the split components required to rebuild one creature aggregate. */
 export function getCreatureComponentSet(
 	world: World,
