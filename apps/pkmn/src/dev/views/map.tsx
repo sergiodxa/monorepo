@@ -12,12 +12,12 @@
  * `images`/`atlases` or a URL, each sliced into a clickable tile grid — the
  * selected tile carries its tileset index), a layer/tool bar (ground/decor/
  * overhead/collision plus paint/erase/fill/event, and the collision kind when
- * editing collision), and the map canvas itself. In event mode a click places or
- * selects an event; a side panel edits its {@link MapEvent} fields per the schema —
- * kind, facing, sprite (atlas region / raw image / none), movement (none/random/
- * route), interaction mode, a small script builder (message / start-trainer-battle
- * / set-flag / warp), and the trainer party or wild species+level the kind needs.
- * Export POSTs the serialized {@link MapData} to the map export action.
+ * editing collision), and the map canvas itself. In event mode a click places a new
+ * event (one default page) or opens the {@link EventEditor} dialog on the clicked
+ * one — the RPG-Maker-XP-style modal that edits its {@link MapEvent}'s name and
+ * ordered {@link EventPage}s (conditions, graphic, autonomous movement, options,
+ * trigger, and the recursive command list) and commits back on OK. Export POSTs the
+ * serialized {@link MapData} to the map export action.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -28,16 +28,16 @@ import type { Handle } from "remix/ui";
 import { css, on, ref } from "remix/ui";
 
 import manifest from "~/content/manifest.json";
-import { SPECIES } from "~/content/species";
 import {
 	EMPTY_CELL,
+	type EventPage,
 	type MapEvent,
-	type ScriptCommand,
 	type Tileset,
 	unpackTileRef,
 } from "~/presentation/render/map-schema";
 import { Collision, tileSourceRect } from "~/presentation/render/tilemap";
 
+import { defaultPage, TRIGGERS } from "../editors/event-page-editor";
 import {
 	type CollisionKind,
 	COLLISION_VALUES,
@@ -56,6 +56,8 @@ import {
 	tileScreenRect,
 	tileScreenSize,
 } from "../map-render";
+
+import { EventEditor } from "./event-editor";
 
 /** The style-object shape the `css()` mixin accepts, used for shared base styles. */
 type Styles = Parameters<typeof css>[0];
@@ -84,21 +86,10 @@ const FIELD: Styles = {
 /** Shared style for the small labels above each control group. */
 const LABEL = css({ display: "grid", gap: "0.25rem", fontSize: "0.8rem", color: "#9ca3af" });
 
-/** Sentinel `<option>` value meaning "no sprite" in the event sprite picker. */
-const NO_SPRITE = "";
-
-/** Sorted list of manifest image ids the tileset/sprite pickers offer. */
+/** Sorted list of manifest image ids the tileset picker offers. */
 const IMAGE_IDS = Object.keys(
 	(manifest as { images?: Record<string, string> }).images ?? {},
 ).sort();
-
-/** Sorted list of manifest atlas ids the event sprite picker offers. */
-const ATLAS_IDS = Object.keys(
-	(manifest as { atlases?: Record<string, unknown> }).atlases ?? {},
-).sort();
-
-/** Sorted list of real species ids the trainer/wild pickers offer. */
-const SPECIES_IDS = Object.keys(SPECIES).sort();
 
 /** The indigo accent the editor uses to mark the active control/selection. */
 const ACCENT = "#6366f1";
@@ -106,8 +97,8 @@ const ACCENT = "#6366f1";
 /** The idle border color shared by the small control buttons. */
 const IDLE_BORDER = "#3f3f46";
 
-/** The cardinal directions offered by facing / route pickers. */
-const DIRECTIONS = ["up", "down", "left", "right"] as const;
+/** The event triggers shown in the on-canvas legend (id → human label). */
+const TRIGGER_LEGEND = TRIGGERS;
 
 /** The selectable editing layers, in bar order, with their labels. */
 const EDIT_LAYERS: Array<{ id: EditLayer; label: string }> = [
@@ -131,14 +122,6 @@ const COLLISION_KINDS: Array<{ id: CollisionKind; label: string; color: string }
 	{ id: "solid", label: "Solid", color: "rgba(248, 113, 113, 0.45)" },
 	{ id: "water", label: "Water", color: "rgba(96, 165, 250, 0.45)" },
 	{ id: "ledge", label: "Ledge", color: "rgba(250, 204, 21, 0.45)" },
-];
-
-/** The script commands the small script builder can append, with labels. */
-const SCRIPT_COMMANDS: Array<{ id: ScriptCommand["do"]; label: string }> = [
-	{ id: "message", label: "Message" },
-	{ id: "start-trainer-battle", label: "Start trainer battle" },
-	{ id: "set-flag", label: "Set flag" },
-	{ id: "warp", label: "Warp" },
 ];
 
 /** A loaded tileset image plus the metadata needed to slice it into tiles. */
@@ -170,9 +153,6 @@ function loadImage(url: string): Promise<HTMLImageElement> {
 		image.src = url;
 	});
 }
-
-/** Ledger of the marker glyphs → color for a small on-canvas event legend. */
-const EVENT_GLYPHS: Record<MapEvent["kind"], string> = { npc: "N", wild: "W", trigger: "T" };
 
 /**
  * Canvas-backed map renderer and pointer handler — the imperative DOM shell around
@@ -409,18 +389,17 @@ class MapCanvas {
 	}
 
 	/**
-	 * Blits an event's chosen sprite into its tile rect, scaled to fill. Supports a
-	 * raw image sub-rect (image id + x/y/w/h) from a loaded tileset image and, when
-	 * the atlas image happens to be loaded as a tileset, an atlas region drawn from
-	 * that image is out of scope (atlases aren't loaded here) so those fall back to
-	 * the badge placeholder. Returns whether a sprite was drawn.
+	 * Blits an event's first-page graphic into its tile rect, scaled to fill. Supports
+	 * a raw image sub-rect (image id + x/y/w/h) from a loaded tileset image; an atlas
+	 * region is out of scope here (atlases aren't loaded on this canvas) so those fall
+	 * back to the badge placeholder. Returns whether a sprite was drawn.
 	 */
 	#drawEventSprite(
 		context: CanvasRenderingContext2D,
 		event: MapEvent,
 		rect: { x: number; y: number; w: number; h: number },
 	): boolean {
-		let sprite = event.sprite;
+		let sprite = event.pages[0]?.graphic ?? null;
 		if (sprite === null || !("image" in sprite)) return false;
 		let loaded = this.tilesets.find((entry) => entry?.image === sprite.image) ?? null;
 		if (!loaded) return false;
@@ -526,7 +505,7 @@ class MapCanvas {
 			if (existing) {
 				this.onPickEvent(existing.id);
 			} else {
-				let placed = this.editor.addEvent(tile.x, tile.y, "trigger");
+				let placed = this.editor.addEvent(tile.x, tile.y);
 				this.onPickEvent(placed ? placed.id : null);
 			}
 			this.render();
@@ -700,17 +679,17 @@ export function MapTool(handle: Handle<Record<string, never>>) {
 		refresh();
 	}
 
-	/** Patches the selected event and re-renders. */
-	function configureSelected(patch: Partial<MapEvent>) {
+	/** Commits the event editor dialog's edited name + pages back to the map. */
+	function commitEvent(patch: { name: string | undefined; pages: EventPage[] }) {
 		if (selectedEventId === null) return;
 		editor.configureEvent(selectedEventId, patch);
+		selectedEventId = null;
+		report("Event saved.", false);
 		refresh();
 	}
 
-	/** Removes the selected event. */
-	function removeSelected() {
-		if (selectedEventId === null) return;
-		editor.removeEvent(selectedEventId);
+	/** Closes the event editor dialog without saving. */
+	function cancelEvent() {
 		selectedEventId = null;
 		refresh();
 	}
@@ -1201,7 +1180,7 @@ export function MapTool(handle: Handle<Record<string, never>>) {
 							</span>
 						</div>
 
-						{/* Legend for the event badges + collision colors. */}
+						{/* Legend for the event trigger badges + collision colors. */}
 						<div
 							mix={css({
 								display: "flex",
@@ -1212,32 +1191,38 @@ export function MapTool(handle: Handle<Record<string, never>>) {
 								color: "#9ca3af",
 							})}
 						>
-							{(["npc", "wild", "trigger"] as const).map((kind) => (
-								<span
-									key={kind}
-									mix={css({ display: "flex", gap: "0.3rem", alignItems: "center" })}
-								>
+							{TRIGGER_LEGEND.map((entry) => {
+								let style = eventMarkerStyle({
+									id: "",
+									x: 0,
+									y: 0,
+									name: undefined,
+									pages: [{ ...defaultPage(), trigger: entry.id }],
+								});
+								return (
 									<span
-										mix={css({
-											display: "inline-flex",
-											width: "1rem",
-											height: "1rem",
-											alignItems: "center",
-											justifyContent: "center",
-											borderRadius: "0.15rem",
-											fontSize: "0.62rem",
-											color: "#0b1120",
-											background: eventMarkerStyle({
-												kind,
-												sprite: null,
-											} as MapEvent).color,
-										})}
+										key={entry.id}
+										mix={css({ display: "flex", gap: "0.3rem", alignItems: "center" })}
 									>
-										{EVENT_GLYPHS[kind]}
+										<span
+											mix={css({
+												display: "inline-flex",
+												width: "1rem",
+												height: "1rem",
+												alignItems: "center",
+												justifyContent: "center",
+												borderRadius: "0.15rem",
+												fontSize: "0.62rem",
+												color: "#0b1120",
+												background: style.color,
+											})}
+										>
+											{style.glyph}
+										</span>
+										{entry.label}
 									</span>
-									{kind}
-								</span>
-							))}
+								);
+							})}
 							{COLLISION_KINDS.filter((entry) => entry.id !== "walkable").map((entry) => (
 								<span
 									key={entry.id}
@@ -1259,17 +1244,9 @@ export function MapTool(handle: Handle<Record<string, never>>) {
 						</div>
 					</div>
 
-					{/* Event panel. */}
+					{/* Event editor dialog (modal), opened when an event is placed/clicked. */}
 					{selectedEvent ? (
-						<EventPanel
-							event={selectedEvent}
-							onConfigure={configureSelected}
-							onRemove={removeSelected}
-							onClose={() => {
-								selectedEventId = null;
-								void handle.update();
-							}}
-						/>
+						<EventEditor event={selectedEvent} onCommit={commitEvent} onCancel={cancelEvent} />
 					) : null}
 				</div>
 
@@ -1527,833 +1504,4 @@ function drawTilePreview(
 		tileIndex,
 	);
 	context.drawImage(loaded.element, source.x, source.y, source.w, source.h, 0, 0, size, size);
-}
-
-/** Props for the per-event configuration side panel. */
-interface EventPanelProps {
-	/** The event being edited (a snapshot; edits flow through `onConfigure`). */
-	event: MapEvent;
-	/** Applies a field-level patch to the event. */
-	onConfigure: (patch: Partial<MapEvent>) => void;
-	/** Removes the event. */
-	onRemove: () => void;
-	/** Closes the panel without removing the event. */
-	onClose: () => void;
-}
-
-/**
- * The event configuration side panel. Edits the selected {@link MapEvent}'s fields
- * per the schema: id, kind, facing, sprite (atlas region / raw image / none),
- * movement (none / random / route), interaction mode, a small script builder, and
- * the trainer party or wild species+level the kind needs.
- *
- * @param handle Component handle exposing the event props.
- * @returns The render function for the event panel.
- */
-function EventPanel(handle: Handle<EventPanelProps>) {
-	return () => {
-		let { event, onConfigure, onRemove, onClose } = handle.props;
-		return (
-			<aside
-				mix={css({
-					display: "grid",
-					gap: "0.6rem",
-					width: "20rem",
-					padding: "0.85rem 1rem 1rem",
-					border: "1px solid #3f3f46",
-					borderRadius: "0.5rem",
-				})}
-			>
-				<div mix={css({ display: "flex", justifyContent: "space-between", alignItems: "center" })}>
-					<h3 mix={css({ margin: 0, fontSize: "1rem" })}>
-						Event @ {event.x},{event.y}
-					</h3>
-					<button
-						type="button"
-						mix={[
-							css({ ...CONTROL_BUTTON, padding: "0.15rem 0.4rem", fontSize: "0.75rem" }),
-							on<HTMLButtonElement, "click">("click", () => onClose()),
-						]}
-					>
-						Close
-					</button>
-				</div>
-
-				<label mix={LABEL}>
-					Id
-					<input
-						type="text"
-						value={event.id}
-						mix={[
-							css(FIELD),
-							on<HTMLInputElement, "change">("change", (e) => {
-								onConfigure({ id: (e.target as HTMLInputElement).value });
-							}),
-						]}
-					/>
-				</label>
-
-				<label mix={LABEL}>
-					Kind
-					<select
-						value={event.kind}
-						mix={[
-							css(FIELD),
-							on<HTMLSelectElement, "change">("change", (e) => {
-								onConfigure({ kind: (e.target as HTMLSelectElement).value as MapEvent["kind"] });
-							}),
-						]}
-					>
-						<option value="npc" selected={event.kind === "npc"}>
-							NPC
-						</option>
-						<option value="wild" selected={event.kind === "wild"}>
-							Wild
-						</option>
-						<option value="trigger" selected={event.kind === "trigger"}>
-							Trigger
-						</option>
-					</select>
-				</label>
-
-				<label mix={LABEL}>
-					Facing
-					<select
-						value={event.facing}
-						mix={[
-							css(FIELD),
-							on<HTMLSelectElement, "change">("change", (e) => {
-								onConfigure({
-									facing: (e.target as HTMLSelectElement).value as MapEvent["facing"],
-								});
-							}),
-						]}
-					>
-						{DIRECTIONS.map((direction) => (
-							<option key={direction} value={direction} selected={event.facing === direction}>
-								{direction}
-							</option>
-						))}
-					</select>
-				</label>
-
-				<label mix={LABEL}>
-					Interaction mode
-					<select
-						value={event.interactionMode}
-						mix={[
-							css(FIELD),
-							on<HTMLSelectElement, "change">("change", (e) => {
-								onConfigure({
-									interactionMode: (e.target as HTMLSelectElement)
-										.value as MapEvent["interactionMode"],
-								});
-							}),
-						]}
-					>
-						<option value="action" selected={event.interactionMode === "action"}>
-							Action (A press)
-						</option>
-						<option value="touch" selected={event.interactionMode === "touch"}>
-							Touch (step on)
-						</option>
-						<option value="autorun" selected={event.interactionMode === "autorun"}>
-							Autorun
-						</option>
-					</select>
-				</label>
-
-				<label mix={LABEL}>
-					Movement
-					{(() => {
-						let movementMode = typeof event.movement === "object" ? "route" : event.movement;
-						return (
-							<select
-								value={movementMode}
-								mix={[
-									css(FIELD),
-									on<HTMLSelectElement, "change">("change", (e) => {
-										let value = (e.target as HTMLSelectElement).value;
-										if (value === "route") onConfigure({ movement: { type: "route", steps: [] } });
-										else onConfigure({ movement: value as "none" | "random" });
-									}),
-								]}
-							>
-								<option value="none" selected={movementMode === "none"}>
-									None
-								</option>
-								<option value="random" selected={movementMode === "random"}>
-									Random
-								</option>
-								<option value="route" selected={movementMode === "route"}>
-									Route
-								</option>
-							</select>
-						);
-					})()}
-				</label>
-
-				{typeof event.movement === "object" ? (
-					<RouteEditor
-						steps={event.movement.steps}
-						onChange={(steps) => onConfigure({ movement: { type: "route", steps } })}
-					/>
-				) : null}
-
-				<SpritePicker sprite={event.sprite} onChange={(sprite) => onConfigure({ sprite })} />
-
-				<ScriptBuilder
-					script={event.interaction.script}
-					onChange={(script) => onConfigure({ interaction: { ...event.interaction, script } })}
-				/>
-
-				{event.kind === "wild" ? (
-					<WildEditor
-						wild={event.interaction.wild ?? null}
-						onChange={(wild) => onConfigure({ interaction: { ...event.interaction, wild } })}
-					/>
-				) : null}
-
-				{event.kind === "npc" ? (
-					<TrainerEditor
-						trainer={event.interaction.trainer ?? null}
-						onChange={(trainer) => onConfigure({ interaction: { ...event.interaction, trainer } })}
-					/>
-				) : null}
-
-				<label
-					mix={css({
-						display: "flex",
-						gap: "0.4rem",
-						alignItems: "center",
-						fontSize: "0.8rem",
-						color: "#9ca3af",
-					})}
-				>
-					<input
-						type="checkbox"
-						checked={event.once}
-						mix={on<HTMLInputElement, "change">("change", (e) => {
-							onConfigure({ once: (e.target as HTMLInputElement).checked });
-						})}
-					/>
-					Fires at most once
-				</label>
-
-				<label mix={LABEL}>
-					Story flag (optional)
-					<input
-						type="text"
-						value={event.flag ?? ""}
-						placeholder="caught-legendary"
-						mix={[
-							css(FIELD),
-							on<HTMLInputElement, "change">("change", (e) => {
-								let value = (e.target as HTMLInputElement).value.trim();
-								onConfigure({ flag: value.length > 0 ? value : undefined });
-							}),
-						]}
-					/>
-				</label>
-
-				<button
-					type="button"
-					mix={[
-						css({
-							justifySelf: "start",
-							padding: "0.4rem 0.75rem",
-							fontFamily: "inherit",
-							color: "#450a0a",
-							background: "#f87171",
-							border: "none",
-							borderRadius: "0.375rem",
-							cursor: "pointer",
-						}),
-						on<HTMLButtonElement, "click">("click", () => onRemove()),
-					]}
-				>
-					Delete event
-				</button>
-			</aside>
-		);
-	};
-}
-
-/** Props for the movement-route step editor. */
-interface RouteEditorProps {
-	/** The current ordered route steps. */
-	steps: MapEvent["facing"][];
-	/** Called with the updated step list. */
-	onChange: (steps: MapEvent["facing"][]) => void;
-}
-
-/**
- * Editor for a movement route's ordered steps: shows the current directions and
- * lets the author append or clear steps.
- *
- * @param handle Component handle exposing the route props.
- * @returns The render function for the route editor.
- */
-function RouteEditor(handle: Handle<RouteEditorProps>) {
-	return () => {
-		let { steps, onChange } = handle.props;
-		return (
-			<div mix={LABEL}>
-				Route steps: {steps.length > 0 ? steps.join(" → ") : "(none)"}
-				<div mix={css({ display: "flex", flexWrap: "wrap", gap: "0.3rem" })}>
-					{DIRECTIONS.map((direction) => (
-						<button
-							key={direction}
-							type="button"
-							mix={[
-								css({ ...CONTROL_BUTTON, padding: "0.2rem 0.5rem", fontSize: "0.75rem" }),
-								on<HTMLButtonElement, "click">("click", () => onChange([...steps, direction])),
-							]}
-						>
-							+{direction}
-						</button>
-					))}
-					<button
-						type="button"
-						mix={[
-							css({ ...CONTROL_BUTTON, padding: "0.2rem 0.5rem", fontSize: "0.75rem" }),
-							on<HTMLButtonElement, "click">("click", () => onChange([])),
-						]}
-					>
-						Clear
-					</button>
-				</div>
-			</div>
-		);
-	};
-}
-
-/** Props for the event sprite picker. */
-interface SpritePickerProps {
-	/** The current sprite (atlas region, raw image, or null). */
-	sprite: MapEvent["sprite"];
-	/** Called with the updated sprite. */
-	onChange: (sprite: MapEvent["sprite"]) => void;
-}
-
-/**
- * Picks an event's sprite: none, an atlas region (atlas id + region name), or a
- * raw image sub-rect (image id + x/y/w/h). Matches the schema's `SpriteRef` union.
- *
- * @param handle Component handle exposing the sprite props.
- * @returns The render function for the sprite picker.
- */
-function SpritePicker(handle: Handle<SpritePickerProps>) {
-	return () => {
-		let { sprite, onChange } = handle.props;
-		let mode = sprite === null ? "none" : "atlas" in sprite ? "atlas" : "image";
-		return (
-			<div mix={css({ display: "grid", gap: "0.4rem" })}>
-				<label mix={LABEL}>
-					Sprite
-					<select
-						value={mode}
-						mix={[
-							css(FIELD),
-							on<HTMLSelectElement, "change">("change", (e) => {
-								let next = (e.target as HTMLSelectElement).value;
-								if (next === "none") onChange(null);
-								else if (next === "atlas") onChange({ atlas: ATLAS_IDS[0] ?? "", region: "" });
-								else onChange({ image: IMAGE_IDS[0] ?? "", x: 0, y: 0, w: 16, h: 16 });
-							}),
-						]}
-					>
-						<option value={NO_SPRITE} selected={mode === "none"}>
-							None
-						</option>
-						<option value="atlas" selected={mode === "atlas"}>
-							Atlas region
-						</option>
-						<option value="image" selected={mode === "image"}>
-							Raw image rect
-						</option>
-					</select>
-				</label>
-
-				{sprite !== null && "atlas" in sprite ? (
-					<div mix={css({ display: "flex", gap: "0.4rem" })}>
-						<input
-							type="text"
-							value={sprite.atlas}
-							placeholder="atlas"
-							mix={[
-								css({ ...FIELD, width: "50%" }),
-								on<HTMLInputElement, "change">("change", (e) => {
-									onChange({ atlas: (e.target as HTMLInputElement).value, region: sprite.region });
-								}),
-							]}
-						/>
-						<input
-							type="text"
-							value={sprite.region}
-							placeholder="hero.down"
-							mix={[
-								css({ ...FIELD, width: "50%" }),
-								on<HTMLInputElement, "change">("change", (e) => {
-									onChange({ atlas: sprite.atlas, region: (e.target as HTMLInputElement).value });
-								}),
-							]}
-						/>
-					</div>
-				) : null}
-
-				{sprite !== null && "image" in sprite ? (
-					<div mix={css({ display: "flex", flexWrap: "wrap", gap: "0.4rem" })}>
-						<input
-							type="text"
-							value={sprite.image}
-							placeholder="image id"
-							mix={[
-								css({ ...FIELD, width: "100%" }),
-								on<HTMLInputElement, "change">("change", (e) => {
-									onChange({ ...sprite, image: (e.target as HTMLInputElement).value });
-								}),
-							]}
-						/>
-						{(["x", "y", "w", "h"] as const).map((field) => (
-							<input
-								key={field}
-								type="number"
-								min={field === "w" || field === "h" ? "1" : "0"}
-								value={String(sprite[field])}
-								title={field}
-								mix={[
-									css({ ...FIELD, width: "3.5rem" }),
-									on<HTMLInputElement, "change">("change", (e) => {
-										onChange({ ...sprite, [field]: Number((e.target as HTMLInputElement).value) });
-									}),
-								]}
-							/>
-						))}
-					</div>
-				) : null}
-			</div>
-		);
-	};
-}
-
-/** Props for the interaction script builder. */
-interface ScriptBuilderProps {
-	/** The current ordered script commands. */
-	script: ScriptCommand[];
-	/** Called with the updated command list. */
-	onChange: (script: ScriptCommand[]) => void;
-}
-
-/**
- * A small declarative script builder for an event interaction. Supports appending
- * and removing the four commonly authored commands — message, start-trainer-battle,
- * set-flag, and warp — and editing each command's fields inline. Advanced commands
- * (give-item, heal-party, face-player, move) are part of the schema but not exposed
- * here; they can be added later without changing the format.
- *
- * @param handle Component handle exposing the script props.
- * @returns The render function for the script builder.
- */
-function ScriptBuilder(handle: Handle<ScriptBuilderProps>) {
-	return () => {
-		let { script, onChange } = handle.props;
-
-		/** Appends a fresh command of the chosen kind with sensible blank fields. */
-		function append(kind: ScriptCommand["do"]) {
-			let command: ScriptCommand =
-				kind === "message"
-					? { do: "message", text: "" }
-					: kind === "start-trainer-battle"
-						? { do: "start-trainer-battle", trainerId: "" }
-						: kind === "set-flag"
-							? { do: "set-flag", flag: "" }
-							: { do: "warp", toMap: "", toX: 0, toY: 0 };
-			onChange([...script, command]);
-		}
-
-		/** Replaces the command at `index` with an updated copy. */
-		function update(index: number, next: ScriptCommand) {
-			onChange(script.map((command, i) => (i === index ? next : command)));
-		}
-
-		return (
-			<div mix={css({ display: "grid", gap: "0.4rem" })}>
-				<span mix={css({ fontSize: "0.8rem", color: "#9ca3af" })}>Interaction script</span>
-				{script.map((command, index) => (
-					<div
-						key={index}
-						mix={css({
-							display: "grid",
-							gap: "0.3rem",
-							padding: "0.4rem",
-							border: "1px solid #27272a",
-							borderRadius: "0.3rem",
-						})}
-					>
-						<div
-							mix={css({ display: "flex", justifyContent: "space-between", alignItems: "center" })}
-						>
-							<span mix={css({ fontSize: "0.75rem", color: "#e5e7eb" })}>{command.do}</span>
-							<button
-								type="button"
-								mix={[
-									css({ ...CONTROL_BUTTON, padding: "0.1rem 0.35rem", fontSize: "0.7rem" }),
-									on<HTMLButtonElement, "click">("click", () =>
-										onChange(script.filter((_, i) => i !== index)),
-									),
-								]}
-							>
-								×
-							</button>
-						</div>
-						<ScriptCommandFields command={command} onChange={(next) => update(index, next)} />
-					</div>
-				))}
-				<div mix={css({ display: "flex", flexWrap: "wrap", gap: "0.3rem" })}>
-					{SCRIPT_COMMANDS.map((entry) => (
-						<button
-							key={entry.id}
-							type="button"
-							mix={[
-								css({ ...CONTROL_BUTTON, padding: "0.2rem 0.5rem", fontSize: "0.72rem" }),
-								on<HTMLButtonElement, "click">("click", () => append(entry.id)),
-							]}
-						>
-							+ {entry.label}
-						</button>
-					))}
-				</div>
-			</div>
-		);
-	};
-}
-
-/** Props for one script command's editable fields. */
-interface ScriptCommandFieldsProps {
-	/** The command whose fields are edited. */
-	command: ScriptCommand;
-	/** Called with the updated command. */
-	onChange: (command: ScriptCommand) => void;
-}
-
-/**
- * Renders the editable fields for one script command, per its `do` discriminant.
- * Only the four builder-exposed commands have fields here; any other command shows
- * a read-only note.
- *
- * @param handle Component handle exposing the command props.
- * @returns The render function for one command's fields.
- */
-function ScriptCommandFields(handle: Handle<ScriptCommandFieldsProps>) {
-	return () => {
-		let { command, onChange } = handle.props;
-		if (command.do === "message") {
-			return (
-				<textarea
-					value={command.text}
-					placeholder="Message text"
-					rows={2}
-					mix={[
-						css({ ...FIELD, resize: "vertical" }),
-						on<HTMLTextAreaElement, "change">("change", (e) => {
-							onChange({ do: "message", text: (e.target as HTMLTextAreaElement).value });
-						}),
-					]}
-				/>
-			);
-		}
-		if (command.do === "start-trainer-battle") {
-			return (
-				<input
-					type="text"
-					value={command.trainerId}
-					placeholder="trainer id"
-					mix={[
-						css(FIELD),
-						on<HTMLInputElement, "change">("change", (e) => {
-							onChange({
-								do: "start-trainer-battle",
-								trainerId: (e.target as HTMLInputElement).value,
-							});
-						}),
-					]}
-				/>
-			);
-		}
-		if (command.do === "set-flag") {
-			return (
-				<input
-					type="text"
-					value={command.flag}
-					placeholder="flag name"
-					mix={[
-						css(FIELD),
-						on<HTMLInputElement, "change">("change", (e) => {
-							onChange({ do: "set-flag", flag: (e.target as HTMLInputElement).value });
-						}),
-					]}
-				/>
-			);
-		}
-		if (command.do === "warp") {
-			let warp = command;
-			return (
-				<div mix={css({ display: "flex", flexWrap: "wrap", gap: "0.3rem" })}>
-					<input
-						type="text"
-						value={warp.toMap}
-						placeholder="to map"
-						mix={[
-							css({ ...FIELD, width: "100%" }),
-							on<HTMLInputElement, "change">("change", (e) => {
-								onChange({ ...warp, toMap: (e.target as HTMLInputElement).value });
-							}),
-						]}
-					/>
-					<input
-						type="number"
-						min="0"
-						value={String(warp.toX)}
-						title="to x"
-						mix={[
-							css({ ...FIELD, width: "4rem" }),
-							on<HTMLInputElement, "change">("change", (e) => {
-								onChange({ ...warp, toX: Number((e.target as HTMLInputElement).value) });
-							}),
-						]}
-					/>
-					<input
-						type="number"
-						min="0"
-						value={String(warp.toY)}
-						title="to y"
-						mix={[
-							css({ ...FIELD, width: "4rem" }),
-							on<HTMLInputElement, "change">("change", (e) => {
-								onChange({ ...warp, toY: Number((e.target as HTMLInputElement).value) });
-							}),
-						]}
-					/>
-				</div>
-			);
-		}
-		return <span mix={css({ fontSize: "0.72rem", color: "#9ca3af" })}>(no editable fields)</span>;
-	};
-}
-
-/** The wild block shape a `wild` event carries in its interaction (schema-derived). */
-type WildBlock = NonNullable<MapEvent["interaction"]["wild"]>;
-
-/** Props for the wild-encounter editor. */
-interface WildEditorProps {
-	/** The current wild block, or null. */
-	wild: WildBlock | null;
-	/** Called with the updated wild block, or null to clear it. */
-	onChange: (wild: WildBlock | undefined) => void;
-}
-
-/**
- * Editor for a `wild` event's fixed encounter: a species (from the roster) and a
- * level. Clearing the species removes the wild block entirely.
- *
- * @param handle Component handle exposing the wild props.
- * @returns The render function for the wild editor.
- */
-function WildEditor(handle: Handle<WildEditorProps>) {
-	return () => {
-		let { wild, onChange } = handle.props;
-		let current = wild ?? { speciesId: SPECIES_IDS[0] ?? "", level: 5 };
-		return (
-			<div mix={css({ display: "flex", gap: "0.4rem", alignItems: "flex-end" })}>
-				<label mix={LABEL}>
-					Wild species
-					<select
-						value={current.speciesId}
-						mix={[
-							css(FIELD),
-							on<HTMLSelectElement, "change">("change", (e) => {
-								onChange({
-									speciesId: (e.target as HTMLSelectElement).value,
-									level: current.level,
-								});
-							}),
-						]}
-					>
-						{SPECIES_IDS.map((id) => (
-							<option key={id} value={id} selected={current.speciesId === id}>
-								{id}
-							</option>
-						))}
-					</select>
-				</label>
-				<label mix={LABEL}>
-					Level
-					<input
-						type="number"
-						min="1"
-						value={String(current.level)}
-						mix={[
-							css({ ...FIELD, width: "4.5rem" }),
-							on<HTMLInputElement, "change">("change", (e) => {
-								onChange({
-									speciesId: current.speciesId,
-									level: Math.max(1, Math.trunc(Number((e.target as HTMLInputElement).value))),
-								});
-							}),
-						]}
-					/>
-				</label>
-			</div>
-		);
-	};
-}
-
-/** The trainer block shape an `npc` trainer event carries (schema-derived). */
-type TrainerBlock = NonNullable<MapEvent["interaction"]["trainer"]>;
-
-/** Props for the trainer-party editor. */
-interface TrainerEditorProps {
-	/** The current trainer block, or null when the NPC is not a trainer. */
-	trainer: TrainerBlock | null;
-	/** Called with the updated trainer block, or undefined to clear it. */
-	onChange: (trainer: TrainerBlock | undefined) => void;
-}
-
-/**
- * Editor for an `npc` event's trainer battle: an optional name and reward, plus an
- * ordered party of species+level members. Toggling the trainer on seeds an empty
- * party; toggling it off clears the block.
- *
- * @param handle Component handle exposing the trainer props.
- * @returns The render function for the trainer editor.
- */
-function TrainerEditor(handle: Handle<TrainerEditorProps>) {
-	return () => {
-		let { trainer, onChange } = handle.props;
-		if (trainer === null) {
-			return (
-				<button
-					type="button"
-					mix={[
-						css({ ...CONTROL_BUTTON, justifySelf: "start" }),
-						on<HTMLButtonElement, "click">("click", () =>
-							onChange({ name: undefined, party: [], reward: undefined }),
-						),
-					]}
-				>
-					Make trainer
-				</button>
-			);
-		}
-		return (
-			<div mix={css({ display: "grid", gap: "0.4rem" })}>
-				<div mix={css({ display: "flex", justifyContent: "space-between", alignItems: "center" })}>
-					<span mix={css({ fontSize: "0.8rem", color: "#9ca3af" })}>Trainer party</span>
-					<button
-						type="button"
-						mix={[
-							css({ ...CONTROL_BUTTON, padding: "0.1rem 0.4rem", fontSize: "0.72rem" }),
-							on<HTMLButtonElement, "click">("click", () => onChange(undefined)),
-						]}
-					>
-						Not a trainer
-					</button>
-				</div>
-				<div mix={css({ display: "flex", gap: "0.4rem" })}>
-					<input
-						type="text"
-						value={trainer.name ?? ""}
-						placeholder="name"
-						mix={[
-							css({ ...FIELD, width: "60%" }),
-							on<HTMLInputElement, "change">("change", (e) => {
-								let name = (e.target as HTMLInputElement).value.trim();
-								onChange({ ...trainer, name: name.length > 0 ? name : undefined });
-							}),
-						]}
-					/>
-					<input
-						type="number"
-						min="0"
-						value={String(trainer.reward ?? 0)}
-						title="reward"
-						mix={[
-							css({ ...FIELD, width: "40%" }),
-							on<HTMLInputElement, "change">("change", (e) => {
-								let reward = Math.max(0, Math.trunc(Number((e.target as HTMLInputElement).value)));
-								onChange({ ...trainer, reward });
-							}),
-						]}
-					/>
-				</div>
-				{trainer.party.map((member, index) => (
-					<div key={index} mix={css({ display: "flex", gap: "0.4rem", alignItems: "flex-end" })}>
-						<select
-							value={member.speciesId}
-							mix={[
-								css({ ...FIELD, flex: "1" }),
-								on<HTMLSelectElement, "change">("change", (e) => {
-									let party = trainer.party.map((m, i) =>
-										i === index ? { ...m, speciesId: (e.target as HTMLSelectElement).value } : m,
-									);
-									onChange({ ...trainer, party });
-								}),
-							]}
-						>
-							{SPECIES_IDS.map((id) => (
-								<option key={id} value={id} selected={member.speciesId === id}>
-									{id}
-								</option>
-							))}
-						</select>
-						<input
-							type="number"
-							min="1"
-							value={String(member.level)}
-							title="level"
-							mix={[
-								css({ ...FIELD, width: "4rem" }),
-								on<HTMLInputElement, "change">("change", (e) => {
-									let level = Math.max(1, Math.trunc(Number((e.target as HTMLInputElement).value)));
-									let party = trainer.party.map((m, i) => (i === index ? { ...m, level } : m));
-									onChange({ ...trainer, party });
-								}),
-							]}
-						/>
-						<button
-							type="button"
-							mix={[
-								css({ ...CONTROL_BUTTON, padding: "0.2rem 0.45rem", fontSize: "0.72rem" }),
-								on<HTMLButtonElement, "click">("click", () => {
-									onChange({ ...trainer, party: trainer.party.filter((_, i) => i !== index) });
-								}),
-							]}
-						>
-							×
-						</button>
-					</div>
-				))}
-				<button
-					type="button"
-					mix={[
-						css({
-							...CONTROL_BUTTON,
-							justifySelf: "start",
-							padding: "0.2rem 0.5rem",
-							fontSize: "0.72rem",
-						}),
-						on<HTMLButtonElement, "click">("click", () => {
-							onChange({
-								...trainer,
-								party: [...trainer.party, { speciesId: SPECIES_IDS[0] ?? "", level: 5 }],
-							});
-						}),
-					]}
-				>
-					+ Add member
-				</button>
-			</div>
-		);
-	};
 }

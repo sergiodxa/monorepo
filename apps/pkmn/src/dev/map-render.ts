@@ -8,16 +8,17 @@
  *   pixels a given zoom produces. One constant, {@link BASE_TILE_PX}, sets how many
  *   display pixels one tile spans at zoom 1; everything else scales off it, so the
  *   view and its tests agree on the blit rectangle.
- * - Event markers: {@link eventMarkerStyle} maps a {@link MapEvent}'s kind to the
- *   badge glyph, accent color, and whether it is an "invisible" marker (a trigger, or
- *   any event with no sprite) the canvas should outline rather than fill, so the
- *   renderer can draw a consistent, legible marker for every event.
+ * - Event markers: {@link eventMarkerStyle} classifies a {@link MapEvent} by its
+ *   first page's trigger and graphic into a badge glyph, accent color, and an
+ *   "invisible" flag (a page with no graphic, or a non-`action` trigger) the canvas
+ *   should outline rather than fill, so the renderer draws a consistent, legible
+ *   marker for every event under the RPG-Maker-XP page model.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { MapEvent } from "~/presentation/render/map-schema";
+import type { EventPage, MapEvent } from "~/presentation/render/map-schema";
 
 /** Display pixels one map tile spans at zoom 1; every screen size scales off this. */
 export const BASE_TILE_PX = 16;
@@ -44,14 +45,14 @@ export interface TileCoord {
 
 /** How the canvas should draw one event's marker: glyph, accent, and fill style. */
 export interface EventMarkerStyle {
-	/** The single-character badge drawn over the marker (`N`/`W`/`T`). */
+	/** The single-character badge drawn over the marker (an arrow or bullet). */
 	glyph: string;
 	/** The marker's accent color (border + badge background). */
 	color: string;
 	/**
-	 * True when the event has no on-map body of its own (a `trigger`, or any event
-	 * with no sprite) so the canvas should draw an outlined placeholder rather than a
-	 * solid fill, keeping real sprites unobscured.
+	 * True when the event's active page has no graphic of its own (or fires without
+	 * an action-button press) so the canvas draws an outlined placeholder rather than
+	 * a solid fill, keeping real sprites unobscured.
 	 */
 	invisible: boolean;
 }
@@ -110,25 +111,37 @@ export function screenToTile(
 	return { x, y };
 }
 
-/** Glyph + accent color per event kind, shared by the marker and any legend. */
-const KIND_STYLE: Record<MapEvent["kind"], { glyph: string; color: string }> = {
-	npc: { glyph: "N", color: "rgba(129, 140, 248, 0.95)" },
-	wild: { glyph: "W", color: "rgba(74, 222, 128, 0.95)" },
-	trigger: { glyph: "T", color: "rgba(250, 204, 21, 0.95)" },
+/** Glyph + accent color per page trigger, shared by the marker and any legend. */
+const TRIGGER_STYLE: Record<EventPage["trigger"], { glyph: string; color: string }> = {
+	action: { glyph: "●", color: "rgba(129, 140, 248, 0.95)" },
+	"player-touch": { glyph: "▶", color: "rgba(74, 222, 128, 0.95)" },
+	"event-touch": { glyph: "◆", color: "rgba(56, 189, 248, 0.95)" },
+	autorun: { glyph: "▲", color: "rgba(250, 204, 21, 0.95)" },
+	parallel: { glyph: "∥", color: "rgba(244, 114, 182, 0.95)" },
+};
+
+/** The blank marker style for an event with no pages (should not happen in practice). */
+const EMPTY_STYLE: EventMarkerStyle = {
+	glyph: "?",
+	color: "rgba(148, 163, 184, 0.95)",
+	invisible: true,
 };
 
 /**
- * The marker style for one event: its kind glyph and accent color, and whether it
- * should be drawn as an outlined "invisible" placeholder (a trigger, or any event
- * lacking a sprite) so a real sprite is never hidden behind a solid block.
+ * The marker style for one event, classified from its first page: a glyph and accent
+ * color reflecting the page's `trigger`, and an "invisible" flag set when the page
+ * has no graphic (or fires without an action-button press) so the canvas outlines a
+ * placeholder rather than hiding a real sprite behind a solid block.
  *
- * @param event The event to classify.
+ * @param event The event to classify (its first page is the representative one).
  */
 export function eventMarkerStyle(event: MapEvent): EventMarkerStyle {
-	let base = KIND_STYLE[event.kind];
+	let page = event.pages[0];
+	if (!page) return EMPTY_STYLE;
+	let base = TRIGGER_STYLE[page.trigger];
 	return {
 		glyph: base.glyph,
 		color: base.color,
-		invisible: event.kind === "trigger" || event.sprite === null,
+		invisible: page.graphic === null || page.trigger !== "action",
 	};
 }

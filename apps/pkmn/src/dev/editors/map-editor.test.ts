@@ -217,18 +217,21 @@ describe("fill", () => {
 });
 
 describe("events", () => {
-	test("addEvent places an event with defaults and a unique id", () => {
+	test("addEvent places an event with one default page and a unique id", () => {
 		let editor = new MapEditor();
 		editor.createMap(5, 5);
-		let a = editor.addEvent(1, 1, "npc");
-		let b = editor.addEvent(2, 2, "npc");
+		let a = editor.addEvent(1, 1);
+		let b = editor.addEvent(2, 2);
 		expect(a).not.toBeNull();
 		expect(b).not.toBeNull();
 		expect(a!.id).not.toBe(b!.id);
-		expect(a!.kind).toBe("npc");
-		expect(a!.interactionMode).toBe("action");
-		expect(a!.movement).toBe("none");
-		expect(a!.sprite).toBeNull();
+		expect(a!.name).toBe(a!.id);
+		expect(a!.pages.length).toBe(1);
+		let page = a!.pages[0]!;
+		expect(page.trigger).toBe("action");
+		expect(page.graphic).toBeNull();
+		expect(page.autonomousMovement.type).toBe("fixed");
+		expect(page.commands).toEqual([]);
 		expect(editor.events.length).toBe(2);
 	});
 
@@ -239,21 +242,29 @@ describe("events", () => {
 		expect(editor.events.length).toBe(0);
 	});
 
-	test("configureEvent merges a patch, deep-merging interaction", () => {
+	test("configureEvent overwrites name and the whole page list", () => {
 		let editor = new MapEditor();
 		editor.createMap(5, 5);
-		let placed = editor.addEvent(1, 1, "trigger")!;
+		let placed = editor.addEvent(1, 1)!;
 		let updated = editor.configureEvent(placed.id, {
-			interactionMode: "touch",
-			interaction: {
-				script: [{ do: "message", text: "Hi" }],
-				trainer: undefined,
-				wild: undefined,
-			},
+			name: "Old Man",
+			pages: [
+				{ ...placed.pages[0]!, trigger: "autorun", commands: [{ kind: "text", text: "Hi" }] },
+			],
 		});
 		expect(updated).not.toBeNull();
-		expect(updated!.interactionMode).toBe("touch");
-		expect(updated!.interaction.script).toEqual([{ do: "message", text: "Hi" }]);
+		expect(updated!.name).toBe("Old Man");
+		expect(updated!.pages[0]!.trigger).toBe("autorun");
+		expect(updated!.pages[0]!.commands).toEqual([{ kind: "text", text: "Hi" }]);
+	});
+
+	test("configureEvent with an empty page list falls back to one default page", () => {
+		let editor = new MapEditor();
+		editor.createMap(5, 5);
+		let placed = editor.addEvent(1, 1)!;
+		let updated = editor.setEventPages(placed.id, []);
+		expect(updated!.pages.length).toBe(1);
+		expect(updated!.pages[0]!.trigger).toBe("action");
 	});
 
 	test("moveEvent relocates within bounds and ignores off-map", () => {
@@ -274,12 +285,20 @@ describe("events", () => {
 		expect(editor.events.length).toBe(0);
 	});
 
+	test("findEvent returns a copy by id, or null for an unknown one", () => {
+		let editor = new MapEditor();
+		editor.createMap(5, 5);
+		let placed = editor.addEvent(1, 1)!;
+		expect(editor.findEvent(placed.id)!.x).toBe(1);
+		expect(editor.findEvent("nope")).toBeNull();
+	});
+
 	test("event copies do not leak internal mutation", () => {
 		let editor = new MapEditor();
 		editor.createMap(5, 5);
 		let placed = editor.addEvent(1, 1)!;
-		placed.interaction.script.push({ do: "heal-party" });
-		expect(editor.eventAt(1, 1)!.interaction.script.length).toBe(0);
+		placed.pages[0]!.commands.push({ kind: "heal-party" });
+		expect(editor.eventAt(1, 1)!.pages[0]!.commands.length).toBe(0);
 	});
 });
 
@@ -390,16 +409,39 @@ describe("toMapData round-trips through loadMap", () => {
 		editor.paintTile("decor", 1, 1);
 		editor.paintCollision(0, 0, Collision.Solid);
 
-		let npc = editor.addEvent(2, 1, "npc")!;
+		let npc = editor.addEvent(2, 1)!;
 		editor.configureEvent(npc.id, {
-			facing: "left",
-			sprite: { atlas: "overworld", region: "hero.down" },
-			movement: { type: "route", steps: ["left", "right"] },
-			interaction: {
-				script: [{ do: "message", text: "Hello!" }],
-				trainer: { name: "Joey", party: [{ speciesId: "RATTATA", level: 5 }], reward: 100 },
-				wild: undefined,
-			},
+			name: "Youngster Joey",
+			pages: [
+				{
+					conditions: { switches: ["met-joey"], selfSwitch: "A" },
+					graphic: { atlas: "overworld", region: "hero.down" },
+					autonomousMovement: { type: "route", speed: 3, freq: 4, route: ["left", "right"] },
+					options: { through: true, alwaysOnTop: true },
+					trigger: "action",
+					commands: [
+						{ kind: "text", text: "Hello!" },
+						{
+							kind: "start-trainer-battle",
+							trainer: { name: "Joey", party: [{ speciesId: "RATTATA", level: 5 }], reward: 100 },
+						},
+						{
+							kind: "show-choices",
+							prompt: "Rematch?",
+							choices: [
+								{ label: "Yes", commands: [{ kind: "heal-party" }] },
+								{ label: "No", commands: [] },
+							],
+						},
+						{
+							kind: "conditional-branch",
+							condition: { selfSwitch: "A" },
+							then: [{ kind: "give-item", itemId: "POTION", count: 2 }],
+							else: [{ kind: "wait", frames: 30 }],
+						},
+					],
+				},
+			],
 		});
 
 		let map = editor.toMapData();

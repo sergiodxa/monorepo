@@ -22,14 +22,16 @@
 
 import {
 	EMPTY_CELL,
+	type EventPage,
 	type MapData,
 	type MapEvent,
 	packTileRef,
-	type ScriptCommand,
 	type Tileset,
 	TILESET_STRIDE,
 } from "~/presentation/render/map-schema";
 import { Collision } from "~/presentation/render/tilemap";
+
+import { clonePage, defaultPage } from "./event-page-editor";
 
 /** The paintable tile layers, in back-to-front render order. */
 export const TILE_LAYERS = ["ground", "decor", "overhead"] as const;
@@ -633,31 +635,20 @@ export class MapEditor {
 	}
 
 	/**
-	 * Places a new event at a tile and returns it. The event is seeded with sensible
-	 * defaults (a `trigger` firing on `action`, no sprite, no movement, an empty
-	 * script) matching {@link MapEventSchema}'s defaults, and a generated unique id.
-	 * A no-op returning `null` for an off-map coordinate.
+	 * Places a new event at a tile and returns it. The event is seeded with a
+	 * generated unique id, a display name matching that id, and exactly one default
+	 * {@link EventPage} (no conditions, no graphic, fixed movement, all options off,
+	 * an `action` trigger, an empty command list) matching the RPG-Maker-XP model. A
+	 * no-op returning `null` for an off-map coordinate.
 	 *
 	 * @param x Tile column.
 	 * @param y Tile row.
-	 * @param kind The event kind (defaults to `trigger`).
 	 * @returns The placed event (a copy), or `null` when off-map.
 	 */
-	addEvent(x: number, y: number, kind: MapEvent["kind"] = "trigger"): MapEvent | null {
+	addEvent(x: number, y: number): MapEvent | null {
 		if (!this.#inBounds(x, y)) return null;
-		let event: MapEvent = {
-			id: this.#uniqueEventId(kind),
-			x,
-			y,
-			kind,
-			facing: "down",
-			sprite: null,
-			movement: "none",
-			interaction: { script: [], trainer: undefined, wild: undefined },
-			interactionMode: "action",
-			flag: undefined,
-			once: false,
-		};
+		let id = this.#uniqueEventId();
+		let event: MapEvent = { id, x, y, name: id, pages: [defaultPage()] };
 		this.#events.push(event);
 		return cloneEvent(event);
 	}
@@ -691,26 +682,49 @@ export class MapEditor {
 	}
 
 	/**
-	 * Merges a partial patch into the event with the given id, replacing only the
-	 * provided fields (a shallow, field-level merge, with `interaction` merged one
-	 * level deep). A no-op for an unknown id. Returns the updated event (a copy) or
-	 * `null`.
+	 * Overwrites the event with the given id's identity/position/name and its whole
+	 * page list from a patch, replacing only the provided fields. This is the commit
+	 * point the event editor dialog uses to save a whole edited event at once (the
+	 * dialog edits a working copy and hands back the final `pages`). A no-op for an
+	 * unknown id. Returns the updated event (a copy) or `null`.
 	 *
 	 * @param id The event id to configure.
-	 * @param patch The fields to overwrite on the event.
+	 * @param patch The fields to overwrite on the event (`name`, `pages`, position…).
 	 * @returns The updated event (a copy), or `null` for an unknown id.
 	 */
 	configureEvent(id: string, patch: Partial<MapEvent>): MapEvent | null {
 		let event = this.#events.find((entry) => entry.id === id);
 		if (!event) return null;
-		if (patch.interaction) {
-			patch = { ...patch, interaction: { ...event.interaction, ...patch.interaction } };
+		if (patch.id !== undefined) event.id = patch.id;
+		if (patch.x !== undefined && this.#inBounds(patch.x, event.y)) event.x = patch.x;
+		if (patch.y !== undefined && this.#inBounds(event.x, patch.y)) event.y = patch.y;
+		if ("name" in patch) event.name = patch.name;
+		if (patch.pages !== undefined) {
+			event.pages = patch.pages.length > 0 ? patch.pages.map(clonePage) : [defaultPage()];
 		}
-		Object.assign(event, patch);
 		return cloneEvent(event);
 	}
 
+	/**
+	 * Replaces the whole page list of the event with the given id. A convenience over
+	 * {@link configureEvent} for the dialog's save path; falls back to one default
+	 * page when handed an empty list so an event is never page-less. A no-op for an
+	 * unknown id. Returns the updated event (a copy) or `null`.
+	 *
+	 * @param id The event id whose pages to replace.
+	 * @param pages The new page list (deep-copied in).
+	 */
+	setEventPages(id: string, pages: EventPage[]): MapEvent | null {
+		return this.configureEvent(id, { pages });
+	}
+
 	/** Finds an event by id (a copy), or `null`. */
+	findEvent(id: string): MapEvent | null {
+		let event = this.#events.find((entry) => entry.id === id);
+		return event ? cloneEvent(event) : null;
+	}
+
+	/** Finds an event by tile position (a copy), or `null`. */
 	eventAt(x: number, y: number): MapEvent | null {
 		let event = this.#events.find((entry) => entry.x === x && entry.y === y);
 		return event ? cloneEvent(event) : null;
@@ -745,14 +759,14 @@ export class MapEditor {
 		};
 	}
 
-	/** Generates an event id unique among current events, prefixed by kind. */
-	#uniqueEventId(kind: MapEvent["kind"]): string {
+	/** Generates an `event-N` id unique among the current events. */
+	#uniqueEventId(): string {
 		let taken = new Set(this.#events.map((event) => event.id));
 		let n = this.#events.length + 1;
-		let id = `${kind}-${n}`;
+		let id = `event-${n}`;
 		while (taken.has(id)) {
 			n++;
-			id = `${kind}-${n}`;
+			id = `event-${n}`;
 		}
 		return id;
 	}
@@ -811,32 +825,14 @@ function resizeGrid(
 	return next;
 }
 
-/** Returns a deep-enough copy of an event so callers cannot mutate the editor's. */
+/** Returns a deep copy of an event (id/position/name plus every page) so callers
+ * cannot mutate the editor's internal state through the snapshot. */
 function cloneEvent(event: MapEvent): MapEvent {
 	return {
 		id: event.id,
 		x: event.x,
 		y: event.y,
-		kind: event.kind,
-		facing: event.facing,
-		sprite: event.sprite ? { ...event.sprite } : null,
-		movement:
-			typeof event.movement === "object"
-				? { type: "route", steps: [...event.movement.steps] }
-				: event.movement,
-		interaction: {
-			script: event.interaction.script.map((command) => ({ ...command }) as ScriptCommand),
-			trainer: event.interaction.trainer
-				? {
-						name: event.interaction.trainer.name,
-						party: event.interaction.trainer.party.map((member) => ({ ...member })),
-						reward: event.interaction.trainer.reward,
-					}
-				: undefined,
-			wild: event.interaction.wild ? { ...event.interaction.wild } : undefined,
-		},
-		interactionMode: event.interactionMode,
-		flag: event.flag,
-		once: event.once,
+		name: event.name,
+		pages: event.pages.map(clonePage),
 	};
 }

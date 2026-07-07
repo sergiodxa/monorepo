@@ -3,15 +3,16 @@
  * canvas: the tile→screen size/rect math scales with zoom off {@link BASE_TILE_PX},
  * {@link canvasSize} sizes the whole bitmap, {@link screenToTile} inverts the mapping
  * and rejects off-map offsets, and {@link eventMarkerStyle} picks the right glyph,
- * color, and "invisible" flag per event kind and sprite.
+ * color, and "invisible" flag from the event's first page trigger and graphic.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 import { describe, expect, test } from "bun:test";
 
-import type { MapEvent } from "~/presentation/render/map-schema";
+import type { EventPage, MapEvent, SpriteRef } from "~/presentation/render/map-schema";
 
+import { defaultPage } from "./editors/event-page-editor";
 import {
 	BASE_TILE_PX,
 	canvasSize,
@@ -21,20 +22,17 @@ import {
 	tileScreenSize,
 } from "./map-render";
 
-/** Builds a minimal event with the fields the marker classifier reads. */
-function event(kind: MapEvent["kind"], sprite: MapEvent["sprite"] = null): MapEvent {
+/**
+ * Builds a minimal event with one page whose `trigger` and `graphic` are the fields
+ * the marker classifier reads.
+ */
+function event(trigger: EventPage["trigger"], graphic: SpriteRef = null): MapEvent {
 	return {
-		id: `${kind}-1`,
+		id: `${trigger}-1`,
 		x: 0,
 		y: 0,
-		kind,
-		facing: "down",
-		sprite,
-		movement: "none",
-		interaction: { script: [], trainer: undefined, wild: undefined },
-		interactionMode: "action",
-		flag: undefined,
-		once: false,
+		name: undefined,
+		pages: [{ ...defaultPage(), trigger, graphic }],
 	};
 }
 
@@ -100,31 +98,39 @@ describe("screenToTile", () => {
 });
 
 describe("eventMarkerStyle", () => {
-	test("an npc with a sprite is a solid marker", () => {
-		let style = eventMarkerStyle(event("npc", { image: "hero", x: 0, y: 0, w: 16, h: 16 }));
-		expect(style.glyph).toBe("N");
+	test("an action-trigger page with a graphic is a solid marker", () => {
+		let style = eventMarkerStyle(event("action", { image: "hero", x: 0, y: 0, w: 16, h: 16 }));
+		expect(style.glyph).toBe("●");
 		expect(style.invisible).toBe(false);
 	});
 
-	test("an npc without a sprite is drawn as an invisible placeholder", () => {
-		expect(eventMarkerStyle(event("npc", null)).invisible).toBe(true);
+	test("an action page without a graphic is drawn as an invisible placeholder", () => {
+		expect(eventMarkerStyle(event("action", null)).invisible).toBe(true);
 	});
 
-	test("a wild event carries the W glyph", () => {
-		let style = eventMarkerStyle(event("wild"));
-		expect(style.glyph).toBe("W");
+	test("a player-touch page carries the ▶ glyph", () => {
+		let style = eventMarkerStyle(event("player-touch"));
+		expect(style.glyph).toBe("▶");
 	});
 
-	test("a trigger is always invisible regardless of sprite", () => {
-		let withSprite = eventMarkerStyle(event("trigger", { image: "x", x: 0, y: 0, w: 8, h: 8 }));
-		expect(withSprite.glyph).toBe("T");
-		expect(withSprite.invisible).toBe(true);
+	test("a non-action trigger is always invisible regardless of graphic", () => {
+		let withGraphic = eventMarkerStyle(event("autorun", { image: "x", x: 0, y: 0, w: 8, h: 8 }));
+		expect(withGraphic.glyph).toBe("▲");
+		expect(withGraphic.invisible).toBe(true);
 	});
 
-	test("each kind gets a distinct accent color", () => {
+	test("each trigger gets a distinct accent color", () => {
 		let colors = new Set(
-			(["npc", "wild", "trigger"] as const).map((kind) => eventMarkerStyle(event(kind)).color),
+			(["action", "player-touch", "event-touch", "autorun", "parallel"] as const).map(
+				(trigger) => eventMarkerStyle(event(trigger)).color,
+			),
 		);
-		expect(colors.size).toBe(3);
+		expect(colors.size).toBe(5);
+	});
+
+	test("an event with no pages falls back to a neutral placeholder", () => {
+		let style = eventMarkerStyle({ id: "x", x: 0, y: 0, name: undefined, pages: [] });
+		expect(style.invisible).toBe(true);
+		expect(style.glyph).toBe("?");
 	});
 });
