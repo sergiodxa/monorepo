@@ -14,7 +14,7 @@ import { expect, test } from "bun:test";
 import { TILE_SIZE } from "../core/loop";
 import { Collision, type EncounterEntry, type TileMap } from "../render/tilemap";
 
-import { createSampleMap, GameMap } from "./map-loader";
+import { createSampleMap, createSampleNpcs, GameMap } from "./map-loader";
 
 test("createSampleMap returns a 20x15 route with a walled border", () => {
 	let map = createSampleMap();
@@ -70,6 +70,27 @@ test("encounterRate returns the zone rate on grass and 0 elsewhere", () => {
 test("encounterTableAt returns the tile's table (empty for the sample map)", () => {
 	expect(SAMPLE.encounterTableAt(9, 3)).toEqual([]);
 	expect(SAMPLE.encounterTableAt(5, 5)).toEqual([]);
+});
+
+test("createSampleNpcs gives the trainer a named, rewarded, multi-creature party", () => {
+	let npcs = createSampleNpcs(["FIRST", "SECOND"]);
+	let trainer = npcs.find((npc) => npc.role === "trainer");
+	expect(trainer?.trainer?.name).toBe("Rival");
+	expect(trainer?.trainer?.reward).toBe(500);
+	expect(trainer?.trainer?.party).toEqual([
+		{ speciesId: "FIRST", level: 5 },
+		{ speciesId: "SECOND", level: 6 },
+	]);
+	// The healer and shop carry no trainer data.
+	expect(npcs.find((npc) => npc.role === "healer")?.trainer).toBeUndefined();
+});
+
+test("createSampleNpcs fields the sole species twice when no second is offered", () => {
+	let trainer = createSampleNpcs(["ONLY"]).find((npc) => npc.role === "trainer");
+	expect(trainer?.trainer?.party).toEqual([
+		{ speciesId: "ONLY", level: 5 },
+		{ speciesId: "ONLY", level: 6 },
+	]);
 });
 
 test("warpAt finds a warp on its tile and returns null elsewhere", () => {

@@ -397,5 +397,6 @@ function describeLocation(location: World["creatureLocation"][CreatureId] | unde
 	if (location.kind === "storage") return `storage:${location.boxId}:${location.slot + 1}`;
 	if (location.kind === "battle")
 		return `battle:${location.battleId}:${location.side}:${location.slot}`;
+	if (location.kind === "trainer") return `trainer:${location.trainerId}`;
 	return `encounter:${location.encounterId}`;
 }

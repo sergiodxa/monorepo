@@ -906,6 +906,263 @@ test("the matching stone evolution is a no-op when the stone is not in the bag",
 	expect(engine.selectCreatureSummary(creatureId).speciesId).toBe(STONE_SPECIES_ID);
 });
 
+test("spawn-trainer-creature builds a non-persisted trainer creature that cannot be captured", () => {
+	let ballId = Object.entries(ITEMS).find(
+		([, item]) => "effect" in item && "multiplier" in item.effect,
+	)?.[0];
+	expect(ballId).toBeDefined();
+
+	let playerId = createPlayerId("hero");
+	let enemyId = createPlayerId("rival");
+	let allyId = createCreatureId("ally-1");
+	let seedEnemy = createCreatureId("enemy-1");
+	let engine = createBattleEngine(playerId, enemyId, allyId, seedEnemy, () => 0);
+	let battleId = createBattleId("tb-capture");
+
+	engine.dispatch({ type: "add-inventory-item", playerId, itemId: ballId!, count: 1 });
+	let spawn = engine.dispatch({
+		type: "spawn-trainer-creature",
+		trainerId: "rival-0",
+		speciesId: SECONDARY_SPECIES_ID,
+		level: 5,
+	});
+	let creature = spawn.find((event) => event.type === "trainer-creature-spawned");
+	if (creature?.type !== "trainer-creature-spawned") throw new Error("expected a trainer creature");
+	// The trainer creature is a real creature the selectors can read at a trainer location.
+	expect(engine.selectCreatureSummary(creature.creatureId).location).toBe("trainer:rival-0");
+	// It is transient: never part of a save snapshot.
+	expect(engine.snapshot().entities.includes(creature.creatureId)).toBe(false);
+
+	engine.dispatch({
+		type: "start-battle",
+		battleId,
+		playerId,
+		enemyId,
+		playerParty: [allyId],
+		enemyParty: [creature.creatureId],
+		slots: 1,
+		canLeaveBattle: false,
+	});
+
+	// A ball thrown in a trainer battle is refused: no capture, and the battle continues.
+	let events = engine.dispatch({ type: "attempt-capture", battleId, playerId, itemId: ballId! });
+	expect(events).toEqual([]);
+	expect(events.some((event) => event.type === "creature-captured")).toBe(false);
+	expect(engine.selectActiveBattle(playerId)).not.toBeNull();
+});
+
+test("trainer creatures are despawned after their battle and stay out of snapshots", () => {
+	let playerId = createPlayerId("hero");
+	let enemyId = createPlayerId("rival");
+	let allyId = createCreatureId("ally-1");
+	let seedEnemy = createCreatureId("enemy-1");
+	let engine = createTrainerBattleEngine(playerId, enemyId, allyId, seedEnemy);
+	let battleId = createBattleId("tb-despawn");
+
+	let spawn = engine.dispatch({
+		type: "spawn-trainer-creature",
+		trainerId: "rival-a",
+		speciesId: SECONDARY_SPECIES_ID,
+		level: 2,
+	});
+	let creature = spawn.find((event) => event.type === "trainer-creature-spawned");
+	if (creature?.type !== "trainer-creature-spawned") throw new Error("expected a trainer creature");
+
+	engine.dispatch({
+		type: "start-battle",
+		battleId,
+		playerId,
+		enemyId,
+		playerParty: [allyId],
+		enemyParty: [creature.creatureId],
+		slots: 1,
+		canLeaveBattle: false,
+	});
+
+	let result = driveTrainerBattle(engine, playerId, battleId);
+	expect(result.finished).toBe(true);
+	expect(result.winner).toBe(0);
+
+	// The reading-after-finish path must not throw (mirrors the wild regression).
+	expect(() => engine.selectBattle(battleId)).not.toThrow();
+	// The trainer creature is transient: never saved.
+	expect(engine.snapshot().entities.includes(creature.creatureId)).toBe(false);
+
+	// Starting a fresh battle reclaims the finished battle's mirrors and despawns the
+	// trainer creature entirely, leaving no leftover world entity.
+	let spawn2 = engine.dispatch({
+		type: "spawn-trainer-creature",
+		trainerId: "rival-b",
+		speciesId: SECONDARY_SPECIES_ID,
+		level: 2,
+	});
+	let creature2 = spawn2.find((event) => event.type === "trainer-creature-spawned");
+	if (creature2?.type !== "trainer-creature-spawned")
+		throw new Error("expected a trainer creature");
+	engine.dispatch({
+		type: "start-battle",
+		battleId: createBattleId("tb-despawn-2"),
+		playerId,
+		enemyId,
+		playerParty: [allyId],
+		enemyParty: [creature2.creatureId],
+		slots: 1,
+		canLeaveBattle: false,
+	});
+	expect(() => engine.selectCreatureSummary(creature.creatureId)).toThrow();
+});
+
+test("defeating a trainer's first creature sends out the next until the whole party is down", () => {
+	let playerId = createPlayerId("hero");
+	let enemyId = createPlayerId("rival");
+	let allyId = createCreatureId("ally-1");
+	let seedEnemy = createCreatureId("enemy-1");
+	let engine = createTrainerBattleEngine(playerId, enemyId, allyId, seedEnemy);
+	let battleId = createBattleId("tb-party");
+
+	let enemyParty: string[] = [];
+	for (let index = 0; index < 2; index += 1) {
+		let spawn = engine.dispatch({
+			type: "spawn-trainer-creature",
+			trainerId: `rival-${index}`,
+			speciesId: SECONDARY_SPECIES_ID,
+			level: 2,
+		});
+		let creature = spawn.find((event) => event.type === "trainer-creature-spawned");
+		if (creature?.type !== "trainer-creature-spawned")
+			throw new Error("expected a trainer creature");
+		enemyParty.push(creature.creatureId);
+	}
+
+	engine.dispatch({
+		type: "start-battle",
+		battleId,
+		playerId,
+		enemyId,
+		playerParty: [allyId],
+		// Both creatures ride on one enemy team so a faint forces the bench member out.
+		enemyParty,
+		slots: 1,
+		canLeaveBattle: false,
+	});
+
+	let result = driveTrainerBattle(engine, playerId, battleId);
+	// The battle only ends once both trainer creatures are defeated, and the enemy's
+	// second creature was sent out through the standard side-1 replacement flow.
+	expect(result.finished).toBe(true);
+	expect(result.winner).toBe(0);
+	expect(result.sawEnemyReplacement).toBe(true);
+});
+
+/**
+ * Drives a trainer battle to completion by having the player attack every turn and
+ * filling any forced replacement with each slot's first available bench creature.
+ *
+ * Reports whether the battle finished, which side won, and whether the enemy (side 1)
+ * was ever asked to send out a replacement — the signal that its next creature was
+ * fielded after the active one fainted.
+ */
+function driveTrainerBattle(
+	engine: Engine,
+	playerId: string,
+	battleId: ReturnType<typeof createBattleId>,
+) {
+	let finished = false;
+	let winner: number | null = null;
+	let sawEnemyReplacement = false;
+
+	for (let turn = 0; turn < 300 && !finished; turn += 1) {
+		let battle = engine.selectActiveBattle(playerId);
+		if (!battle) break;
+		let last = battle.events.at(-1);
+
+		if (last?.type === "request-turn-commands") {
+			let events = engine.dispatch({
+				type: "submit-battle-turn",
+				battleId,
+				commands: last.requests.map((request) => ({
+					type: "fight" as const,
+					move: 0 as const,
+					target: { side: request.side === 0 ? 1 : 0, slot: 0 },
+				})),
+			});
+			let done = events.find((event) => event.type === "battle-finished");
+			if (done?.type === "battle-finished") {
+				finished = true;
+				winner = done.winnerSide;
+			}
+		} else if (last?.type === "request-replacements") {
+			sawEnemyReplacement ||= last.requests.some((request) => request.side === 1);
+			let events = engine.dispatch({
+				type: "submit-battle-replacements",
+				battleId,
+				commands: last.requests.map((request) => ({
+					type: "replace" as const,
+					target: { side: request.side, slot: request.slot },
+					creature: request.choices[0]!,
+				})),
+			});
+			let done = events.find((event) => event.type === "battle-finished");
+			if (done?.type === "battle-finished") {
+				finished = true;
+				winner = done.winnerSide;
+			}
+		} else break;
+	}
+
+	return { finished, winner, sawEnemyReplacement };
+}
+
+/**
+ * Creates an engine whose lone party creature vastly outlevels its opponents, so the
+ * player reliably wins trainer battles in a bounded number of turns without relying on
+ * damage rolls. The seed enemy exists only to satisfy the bootstrap enemy party.
+ */
+function createTrainerBattleEngine(
+	playerId: string,
+	enemyId: string,
+	allyId: string,
+	enemyCreatureId: string,
+) {
+	let creature = (species: string, experience: number) => ({
+		species,
+		nature: DEFAULT_NATURE_ID,
+		experience,
+		moveset: [DAMAGING_MOVE_ID, null, null, null] as [string, null, null, null],
+		status: { state: null, damage: 0, pp: [35, 0, 0, 0] as [number, number, number, number] },
+		iv: { hp: 31, attack: 31, defense: 31, "special-attack": 31, "special-defense": 31, speed: 31 },
+		ev: { hp: 0, attack: 0, defense: 0, "special-attack": 0, "special-defense": 0, speed: 0 },
+	});
+
+	return Engine.create({
+		content: {
+			species: SPECIES,
+			moves: MOVES,
+			items: ITEMS,
+			natures: NATURES,
+			typeChart: TYPE_MATCHUPS,
+		},
+		random: () => 0.5,
+		world: migrateWorld({
+			entities: [playerId, enemyId, allyId, enemyCreatureId],
+			playerId,
+			playerProfile: { [playerId]: { name: "Hero" }, [enemyId]: { name: "Rival" } },
+			party: {
+				[playerId]: { creatureIds: [allyId] },
+				[enemyId]: { creatureIds: [enemyCreatureId] },
+			},
+			inventory: { [playerId]: { items: {} }, [enemyId]: { items: {} } },
+			bestiary: { [playerId]: { seen: [], caught: [] }, [enemyId]: { seen: [], caught: [] } },
+			storageBoxes: { [playerId]: { boxes: [] }, [enemyId]: { boxes: [] } },
+			money: { [playerId]: { amount: 0 } },
+			creature: {
+				[allyId]: creature(PRIMARY_SPECIES_ID, 50 ** 3),
+				[enemyCreatureId]: creature(SECONDARY_SPECIES_ID, 0),
+			},
+		}),
+	});
+}
+
 /** Creates an engine wired for deterministic battles with a chosen RNG and optional starting damage. */
 function createBattleEngine(
 	playerId: string,

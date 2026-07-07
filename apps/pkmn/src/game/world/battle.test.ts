@@ -27,7 +27,12 @@ import type { BattleRuntimeHandle } from "./battle";
 import type { CreatureId } from "./ids";
 import type { World } from "./world";
 
-import { getBattleMemberEntityId, syncBattleState, writeBackPlayerBattleResults } from "./battle";
+import {
+	cleanupBattle,
+	getBattleMemberEntityId,
+	syncBattleState,
+	writeBackPlayerBattleResults,
+} from "./battle";
 import { Creature } from "./creature";
 import { createBattleId, createCreatureId, createPlayerId } from "./ids";
 
@@ -218,4 +223,45 @@ test("writeBackPlayerBattleResults writes multi-team results to the matching fla
 
 	// Team A's first creature is untouched by team B's larger damage value.
 	expect(world.creatureHealth[teamAFirst]?.damage).toBe(5);
+});
+
+test("cleanupBattle despawns unowned trainer creatures like encounter creatures", () => {
+	let world = createWorld();
+	let battleId = createBattleId("trainer-cleanup");
+	let wildId = createCreatureId("wild-1");
+	let trainerId = createCreatureId("trainer-1");
+	let allyId = createCreatureId("ally-1");
+
+	// Seed a wild and a trainer enemy plus one owned ally, each with a full component set.
+	for (let id of [wildId, trainerId, allyId]) {
+		world.entities.push(id);
+		world.creatureIdentity[id] = { speciesId: "test-species" };
+		world.creatureProgress[id] = { natureId: "n", experience: 0, iv: {} as never, ev: {} as never };
+		world.creatureMoves[id] = { moveset: ["move-a", null, null, null], pp: [10, 0, 0, 0] };
+		world.creatureHealth[id] = { damage: 0 };
+		world.creatureStatus[id] = { state: null };
+	}
+	world.creatureLocation[wildId] = { kind: "encounter", encounterId: "e1" };
+	world.creatureLocation[trainerId] = { kind: "trainer", trainerId: "rival-0" };
+	world.creatureLocation[allyId] = { kind: "battle", battleId, side: 1, slot: 0 };
+	// The ally is owned, so it must survive cleanup even though it sat on the enemy side.
+	world.ownership[allyId] = { ownerId: createPlayerId("hero") };
+
+	world.battleParticipants[battleId] = {
+		playerId: createPlayerId("hero"),
+		enemyId: createPlayerId("rival"),
+		playerParty: [],
+		enemyParty: [wildId, trainerId, allyId],
+	};
+
+	cleanupBattle(world, battleId);
+
+	// Both transient enemy kinds are gone from the world; the owned creature stays.
+	expect(trainerId in world.creatureIdentity).toBe(false);
+	expect(trainerId in world.creatureLocation).toBe(false);
+	expect(world.entities.includes(trainerId)).toBe(false);
+	expect(wildId in world.creatureIdentity).toBe(false);
+	expect(world.entities.includes(wildId)).toBe(false);
+	expect(world.entities.includes(allyId)).toBe(true);
+	expect(allyId in world.creatureIdentity).toBe(true);
 });

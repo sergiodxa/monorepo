@@ -38,7 +38,7 @@ import {
 	captureStatusBonus,
 	computeCaptureAttempt,
 } from "./systems/capture-system";
-import { spawnEncounter } from "./systems/encounter-system";
+import { spawnEncounter, spawnTrainerCreature } from "./systems/encounter-system";
 import { evolveCreature, getItemEvolution, getLevelUpEvolution } from "./systems/evolution-system";
 import { awardBattleExperience, grantCreatureExperience } from "./systems/experience-system";
 import { addInventoryItem, removeInventoryItem } from "./systems/inventory-system";
@@ -267,6 +267,18 @@ export class Engine {
 					},
 				];
 			}
+			case "spawn-trainer-creature": {
+				let { creatureId } = spawnTrainerCreature(this.gameData, this.world, command, this.random);
+				return [
+					{
+						type: "trainer-creature-spawned",
+						trainerId: command.trainerId,
+						creatureId,
+						speciesId: command.speciesId,
+						level: command.level,
+					},
+				];
+			}
 			case "start-battle": {
 				return this.startBattle(command);
 			}
@@ -381,7 +393,10 @@ export class Engine {
 		);
 		let battle = new BattleRuntime({
 			gameData: this.gameData,
-			sides: [{ teams: [playerCreatures], canLeaveBattle: true }, { teams: [enemyCreatures] }],
+			sides: [
+				{ teams: [playerCreatures], canLeaveBattle: command.canLeaveBattle ?? true },
+				{ teams: [enemyCreatures] },
+			],
 			slots: command.slots,
 			random: this.random,
 		});
@@ -430,7 +445,8 @@ export class Engine {
 					]
 				: undefined;
 		if (!active || !creatureId) return [];
-		// Only wild (encounter-located) creatures can be captured.
+		// Only wild (encounter-located) creatures can be captured; trainer creatures
+		// sit at a `trainer` location and are refused here.
 		if (this.world.creatureLocation[creatureId]?.kind !== "encounter") return [];
 
 		let creature = active.combatant.creature;

@@ -123,13 +123,16 @@ export const SAMPLE_SPAWN = { mapId: "route-1", x: 5, y: 5, facing: "down" as co
  * Builds the three interactable NPCs standing around the sample-map spawn.
  *
  * All three sit on walkable interior tiles a step or two from `SAMPLE_SPAWN`
- * (5,5) so the player meets them immediately. The trainer's creature species is
- * resolved by the caller from loaded content, keeping this helper free of any
- * content assumptions.
+ * (5,5) so the player meets them immediately. The trainer fields a small party
+ * whose species are resolved by the caller from loaded content, keeping this
+ * helper free of any content assumptions; a single resolved species is fielded
+ * twice at staggered levels when the caller has no second species to offer.
  *
- * @param trainerSpeciesId - The species the trainer NPC fields.
+ * @param trainerSpeciesIds - Ordered species the trainer's party is built from.
  */
-export function createSampleNpcs(trainerSpeciesId: string): Npc[] {
+export function createSampleNpcs(trainerSpeciesIds: readonly string[]): Npc[] {
+	let first = trainerSpeciesIds[0] ?? "";
+	let second = trainerSpeciesIds[1] ?? first;
 	return [
 		{ id: "healer", x: 7, y: 5, role: "healer", label: "H" },
 		{ id: "shop", x: 7, y: 7, role: "shop", label: "$" },
@@ -139,7 +142,14 @@ export function createSampleNpcs(trainerSpeciesId: string): Npc[] {
 			y: 3,
 			role: "trainer",
 			label: "T",
-			trainer: { speciesId: trainerSpeciesId, level: 5 },
+			trainer: {
+				name: "Rival",
+				party: [
+					{ speciesId: first, level: 5 },
+					{ speciesId: second, level: 6 },
+				],
+				reward: 500,
+			},
 		},
 	];
 }

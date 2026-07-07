@@ -99,10 +99,11 @@ export function listComponentEntities<T>(store: ComponentStore<T>): EntityId[] {
  * save output stable even when the engine adds new battle-only helper stores.
  */
 export function pickPersistentWorld(world: World) {
-	// Wild (encounter-located) creatures are transient — they never belong in a save.
+	// Wild (encounter) and opposing trainer creatures are transient — they never belong in a save.
 	let excluded = new Set<EntityId>();
 	for (let entityId of Object.keys(world.creatureLocation)) {
-		if (world.creatureLocation[entityId]?.kind === "encounter") excluded.add(entityId);
+		let kind = world.creatureLocation[entityId]?.kind;
+		if (kind === "encounter" || kind === "trainer") excluded.add(entityId);
 	}
 
 	let persistentIds = new Set<EntityId>([world.playerId]);

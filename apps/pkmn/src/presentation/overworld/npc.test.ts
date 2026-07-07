@@ -15,7 +15,14 @@ import { facingNpc, type Npc, npcAt } from "./npc";
 let npcs: Npc[] = [
 	{ id: "healer", x: 7, y: 5, role: "healer", label: "H" },
 	{ id: "shop", x: 7, y: 7, role: "shop", label: "$" },
-	{ id: "trainer", x: 5, y: 3, role: "trainer", label: "T", trainer: { speciesId: "X", level: 5 } },
+	{
+		id: "trainer",
+		x: 5,
+		y: 3,
+		role: "trainer",
+		label: "T",
+		trainer: { name: "Rival", party: [{ speciesId: "X", level: 5 }], reward: 500 },
+	},
 ];
 
 test("npcAt returns the NPC standing on a tile", () => {

@@ -126,6 +126,7 @@ export type CreatureLocationComponent =
 	| CreaturePartyLocationComponent
 	| CreatureStorageLocationComponent
 	| CreatureEncounterLocationComponent
+	| CreatureTrainerLocationComponent
 	| CreatureBattleLocationComponent;
 
 /** Places one creature in the player's active party order. */
@@ -147,6 +148,18 @@ export interface CreatureStorageLocationComponent {
 export interface CreatureEncounterLocationComponent {
 	kind: "encounter";
 	encounterId: string;
+}
+
+/**
+ * Marks one creature as belonging to an opposing trainer's fielded party.
+ *
+ * Trainer creatures are transient like encounter creatures — excluded from
+ * persistence and despawned when their battle ends — but they are never
+ * capturable, so they carry a distinct kind the capture path refuses.
+ */
+export interface CreatureTrainerLocationComponent {
+	kind: "trainer";
+	trainerId: string;
 }
 
 /** Places one creature in one transient battle slot. */

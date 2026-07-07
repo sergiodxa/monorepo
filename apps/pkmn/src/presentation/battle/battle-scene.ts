@@ -57,6 +57,8 @@ export interface BattleOptions {
 	reward?: BattleReward;
 	/** Whether the Bag/throw-ball path is allowed; false disables capture (trainer fights). */
 	canCapture?: boolean;
+	/** Opposing trainer's name; drives the intro/defeat lines when set (trainer fights). */
+	trainerName?: string;
 }
 
 /** Renders and drives one battle from the engine's event stream. */
@@ -157,7 +159,9 @@ export class BattleScene implements Scene {
 		let view = game.engine.selectBattle(this.battleId);
 		this.syncBars(view);
 		let foe = view.enemies[0];
-		if (foe) this.message = `A wild ${foe.name} appeared!`;
+		let trainerName = this.options.trainerName;
+		if (trainerName) this.message = `${trainerName} wants to battle!`;
+		else if (foe) this.message = `A wild ${foe.name} appeared!`;
 		this.consumed = view.events.length; // the opening burst needs no narration
 	}
 
@@ -215,10 +219,13 @@ export class BattleScene implements Scene {
 				this.autoLearnedMoves.length = 0;
 				return;
 			}
+			let trainerName = this.options.trainerName;
 			this.message = this.captured
 				? "The wild creature was caught!"
 				: winnerSide === 0
-					? "You won the battle!"
+					? trainerName
+						? `You defeated ${trainerName}!`
+						: "You won the battle!"
 					: winnerSide === 1
 						? "You were defeated..."
 						: "The battle ended in a draw.";

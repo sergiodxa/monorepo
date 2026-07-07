@@ -79,3 +79,37 @@ test("pickPersistentWorld omits transient battle stores", () => {
 	expect("activeBattle" in snapshot).toBe(false);
 	expect(snapshot.playerProfile[playerId]?.name).toBe("Hero");
 });
+
+test("pickPersistentWorld excludes encounter and trainer creatures from the save", () => {
+	let playerId = createPlayerId("hero");
+	let ownedId = createCreatureId("owned-1");
+	let wildId = createCreatureId("wild-1");
+	let trainerId = createCreatureId("trainer-1");
+	let world = migrateWorld({
+		entities: [playerId],
+		playerId,
+		playerProfile: { [playerId]: { name: "Hero" } },
+		party: { [playerId]: { creatureIds: [] } },
+		inventory: { [playerId]: { items: {} } },
+		bestiary: { [playerId]: { seen: [], caught: [] } },
+		storageBoxes: { [playerId]: { boxes: [] } },
+		creature: {},
+	});
+
+	let identity = { speciesId: TEST_SPECIES_ID };
+	for (let id of [ownedId, wildId, trainerId]) {
+		world.entities.push(id);
+		world.creatureIdentity[id] = { ...identity };
+	}
+	world.creatureLocation[ownedId] = { kind: "party", playerId, slot: 0 };
+	world.creatureLocation[wildId] = { kind: "encounter", encounterId: "e1" };
+	world.creatureLocation[trainerId] = { kind: "trainer", trainerId: "rival-0" };
+
+	let snapshot = pickPersistentWorld(world);
+	// Owned party creatures survive; transient encounter and trainer creatures do not.
+	expect(snapshot.entities.includes(ownedId)).toBe(true);
+	expect(snapshot.entities.includes(wildId)).toBe(false);
+	expect(snapshot.entities.includes(trainerId)).toBe(false);
+	expect(trainerId in snapshot.creatureIdentity).toBe(false);
+	expect(trainerId in snapshot.creatureLocation).toBe(false);
+});

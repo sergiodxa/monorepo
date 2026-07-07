@@ -12,6 +12,8 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
+import type { CreatureId } from "~/game/world/ids";
+
 import { createBattleId } from "~/game/world/ids";
 
 import type { Direction } from "../core/direction";
@@ -35,6 +37,9 @@ import { chooseEncounter, rollEncounter } from "./encounters";
 import { createSampleMap, createSampleNpcs, GameMap, SAMPLE_SPAWN } from "./map-loader";
 import { facingNpc, type Npc, npcAt } from "./npc";
 import { PlayerController } from "./player-controller";
+
+/** Money staked on a trainer fight when the trainer defines no explicit reward. */
+const DEFAULT_TRAINER_REWARD = 500;
 
 /** Where the player enters an overworld map. */
 export interface Spawn {
@@ -72,10 +77,11 @@ export class OverworldScene implements Scene {
 		this.map = new GameMap(data);
 		this.renderer = new TileMapRenderer(data, game.assets.image(data.tileset));
 		this.player = new PlayerController(this.spawn.x, this.spawn.y, this.spawn.facing);
-		// The trainer fields a mid-pool species so it differs from the starter it fights.
+		// The trainer fields mid-pool species so its party differs from the starter it fights.
 		let speciesIds = Object.keys(game.content.species);
-		let trainerSpeciesId = speciesIds[Math.min(3, speciesIds.length - 1)] ?? speciesIds[0] ?? "";
-		this.npcs = createSampleNpcs(trainerSpeciesId);
+		let first = speciesIds[Math.min(3, speciesIds.length - 1)] ?? speciesIds[0] ?? "";
+		let second = speciesIds[Math.min(4, speciesIds.length - 1)] ?? first;
+		this.npcs = createSampleNpcs([first, second]);
 		game.audio.playBgm(data.bgm);
 	}
 
@@ -136,42 +142,53 @@ export class OverworldScene implements Scene {
 	}
 
 	/**
-	 * Starts a rebattlable trainer fight against the NPC's freshly spawned creature.
+	 * Starts a rebattlable trainer fight against the NPC's freshly spawned party.
 	 *
-	 * Each fight spawns a new creature under a unique encounter id and stakes money
-	 * through the battle scene's reward config, so the player can walk back and
-	 * challenge the trainer again as often as they like.
+	 * Each fight spawns the trainer's whole party as real, non-capturable creatures
+	 * (transient, excluded from saves, and despawned when the battle ends) and stakes
+	 * money through the battle scene's reward config. The fight is inescapable, capture
+	 * is disabled, and the enemy sends out its next creature as each active one faints,
+	 * so the player wins only when the entire party is down and can rechallenge freely.
 	 */
 	private startTrainerBattle(game: GameClient, npc: Npc) {
 		let trainer = npc.trainer;
-		if (!trainer) return;
+		if (!trainer || trainer.party.length === 0) return;
 		let playerParty = game.engine.selectParty(HERO_ID).creatures.map((creature) => creature.id);
 		if (playerParty.length === 0) return;
 
-		let encounterId = `trainer-${this.battleCount}`;
-		let spawned = game.dispatch({
-			type: "spawn-encounter",
-			encounterId,
-			speciesId: trainer.speciesId,
-			level: trainer.level,
-		});
-		let creature = spawned.find((event) => event.type === "encounter-spawned");
-		if (creature?.type !== "encounter-spawned") return;
+		let battleNumber = this.battleCount++;
+		let enemyParty: CreatureId[] = [];
+		for (let [index, member] of trainer.party.entries()) {
+			let spawned = game.dispatch({
+				type: "spawn-trainer-creature",
+				trainerId: `${npc.id}-${battleNumber}-${index}`,
+				speciesId: member.speciesId,
+				level: member.level,
+			});
+			let creature = spawned.find((event) => event.type === "trainer-creature-spawned");
+			if (creature?.type !== "trainer-creature-spawned") return;
+			enemyParty.push(creature.creatureId);
+		}
 
-		let battleId = createBattleId(`trainer-${this.battleCount++}`);
+		let reward = trainer.reward ?? DEFAULT_TRAINER_REWARD;
+		let battleId = createBattleId(`trainer-${battleNumber}`);
 		game.dispatch({
 			type: "start-battle",
 			battleId,
 			playerId: HERO_ID,
 			enemyId: WILD_ID,
 			playerParty,
-			enemyParty: [creature.creatureId],
+			// The whole party rides on one enemy team, so a faint forces the next
+			// bench creature out through the engine's standard replacement flow.
+			enemyParty,
 			slots: 1,
+			canLeaveBattle: false,
 		});
 		game.scenes.push(
 			new BattleScene(battleId, {
 				canCapture: false,
-				reward: { playerId: HERO_ID, winReward: 500, lossPenalty: 250 },
+				reward: { playerId: HERO_ID, winReward: reward, lossPenalty: Math.floor(reward / 2) },
+				...(trainer.name ? { trainerName: trainer.name } : {}),
 			}),
 		);
 	}

@@ -1,13 +1,14 @@
 /**
- * Spawns wild creatures for overworld encounters.
+ * Spawns wild creatures for overworld encounters and creatures for opposing trainers.
  *
- * Given a species and level, this creates a fresh creature entity at an encounter
- * location, rolling anything the caller omits: a random nature, individual values
- * (0..31 per stat), and the moveset (the most recent level-up moves the species
- * would know at that level). Experience is set to the exact total for the level
- * from the species growth curve. The creature is unowned until a capture converts
- * it, so it lives only at the encounter until then. All randomness flows through
- * the injected RNG so encounters are reproducible under a seed.
+ * Given a species and level, this creates a fresh creature entity, rolling anything
+ * the caller omits: a random nature, individual values (0..31 per stat), and the
+ * moveset (the most recent level-up moves the species would know at that level).
+ * Experience is set to the exact total for the level from the species growth curve.
+ * Encounter creatures live unowned at an encounter location until a capture converts
+ * them; trainer creatures share that transient, unowned shape but sit at a distinct
+ * trainer location the capture path refuses. All randomness flows through the
+ * injected RNG so both spawns are reproducible under a seed.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -17,6 +18,7 @@ import type { MoveId } from "~/game/data/move";
 import type { NatureId } from "~/game/data/nature";
 import type { Gender, Species, SpeciesId } from "~/game/data/species";
 import type { StatSet } from "~/game/data/stat";
+import type { CreatureLocationComponent } from "~/game/world/components";
 import type { MoveSet } from "~/game/world/creature";
 import type { CreatureId } from "~/game/world/ids";
 import type { World } from "~/game/world/world";
@@ -27,9 +29,8 @@ import { createCreatureInstance, rollGender } from "~/game/world/components";
 import { setComponent } from "~/game/world/helpers";
 import { createCreatureId } from "~/game/world/ids";
 
-/** Inputs for spawning one wild encounter creature. */
-export interface SpawnEncounterArgs {
-	encounterId: string;
+/** Inputs shared by every transient-creature spawn (wild encounters and trainers). */
+interface SpawnCreatureArgs {
 	speciesId: SpeciesId;
 	level: number;
 	natureId?: NatureId;
@@ -39,6 +40,16 @@ export interface SpawnEncounterArgs {
 	gender?: Gender;
 }
 
+/** Inputs for spawning one wild encounter creature. */
+export interface SpawnEncounterArgs extends SpawnCreatureArgs {
+	encounterId: string;
+}
+
+/** Inputs for spawning one creature fielded by an opposing trainer. */
+export interface SpawnTrainerCreatureArgs extends SpawnCreatureArgs {
+	trainerId: string;
+}
+
 /** Creates a wild creature entity at an encounter location and returns its id. */
 export function spawnEncounter(
 	gameData: GameData,
@@ -46,10 +57,51 @@ export function spawnEncounter(
 	args: SpawnEncounterArgs,
 	random: () => number,
 ): { creatureId: CreatureId } {
+	return spawnTransientCreature(
+		gameData,
+		world,
+		createCreatureId(`encounter:${args.encounterId}`),
+		args,
+		{ kind: "encounter", encounterId: args.encounterId },
+		random,
+	);
+}
+
+/**
+ * Creates a non-capturable creature at a trainer location and returns its id.
+ *
+ * The creature is transient exactly like an encounter creature — excluded from
+ * persistence and despawned when its battle ends — but its `trainer` location
+ * keeps the capture path from ever converting it into an owned creature.
+ */
+export function spawnTrainerCreature(
+	gameData: GameData,
+	world: World,
+	args: SpawnTrainerCreatureArgs,
+	random: () => number,
+): { creatureId: CreatureId } {
+	return spawnTransientCreature(
+		gameData,
+		world,
+		createCreatureId(`trainer:${args.trainerId}`),
+		args,
+		{ kind: "trainer", trainerId: args.trainerId },
+		random,
+	);
+}
+
+/** Builds one transient creature entity at a given location, rolling omitted fields. */
+function spawnTransientCreature(
+	gameData: GameData,
+	world: World,
+	creatureId: CreatureId,
+	args: SpawnCreatureArgs,
+	location: CreatureLocationComponent,
+	random: () => number,
+): { creatureId: CreatureId } {
 	let species = gameData.species.get(args.speciesId);
 	if (!species) throw new ReferenceError(`Unknown species ${args.speciesId}.`);
 
-	let creatureId = createCreatureId(`encounter:${args.encounterId}`);
 	let natureId = args.natureId ?? pickNature(gameData, random);
 	let moveset = buildMoveset(gameData, species, args.level, args.moveIds);
 
@@ -77,10 +129,7 @@ export function spawnEncounter(
 		creatureId,
 		createCreatureInstance({ gender: args.gender ?? rollGender(species.gender, random) }),
 	);
-	setComponent(world, world.creatureLocation, creatureId, {
-		kind: "encounter",
-		encounterId: args.encounterId,
-	});
+	setComponent(world, world.creatureLocation, creatureId, location);
 
 	return { creatureId };
 }

@@ -25,6 +25,14 @@ export namespace Command {
 		playerParty: CreatureId[];
 		enemyParty: CreatureId[];
 		slots?: 1 | 2 | 3;
+		/**
+		 * Whether the player side may flee voluntarily; defaults to true.
+		 *
+		 * Wild battles leave this on so the player can run. Trainer battles pass
+		 * false, reusing the battle's per-side `canLeaveBattle` flag to make the
+		 * fight inescapable.
+		 */
+		canLeaveBattle?: boolean;
 	}
 
 	/** Submits one full turn of commands for every requested active slot. */
@@ -162,6 +170,23 @@ export namespace Command {
 		moveIds?: MoveId[];
 	}
 
+	/**
+	 * Creates a non-capturable creature fielded by an opposing trainer.
+	 *
+	 * Rolls omitted fields exactly like `spawn-encounter`, but places the creature
+	 * at a `trainer` location so it is excluded from persistence and despawned when
+	 * the battle ends, while the capture path refuses it.
+	 */
+	export interface SpawnTrainerCreature {
+		type: "spawn-trainer-creature";
+		trainerId: string;
+		speciesId: SpeciesId;
+		level: number;
+		natureId?: NatureId;
+		iv?: Partial<StatSet>;
+		moveIds?: MoveId[];
+	}
+
 	/** Throws a capture item at a wild target, ending the battle on success. */
 	export interface AttemptCapture {
 		type: "attempt-capture";
@@ -204,6 +229,7 @@ export type Command =
 	| Command.RemoveInventoryItem
 	| Command.SellItem
 	| Command.SpawnEncounter
+	| Command.SpawnTrainerCreature
 	| Command.StartBattle
 	| Command.StoreCreature
 	| Command.SubmitBattleReplacements

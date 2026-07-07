@@ -15,12 +15,22 @@ import { type Direction, directionDelta } from "../core/direction";
 /** What an overworld NPC does when the player interacts with it. */
 export type NpcRole = "healer" | "shop" | "trainer";
 
-/** The creature a trainer NPC fields, spawned fresh for each battle. */
-export interface TrainerData {
-	/** The species the trainer's sole creature is spawned from. */
+/** One creature slot in a trainer's party, spawned fresh for each battle. */
+export interface TrainerPartyMember {
+	/** The species this party member is spawned from. */
 	speciesId: string;
-	/** The level the trainer's creature is spawned at. */
+	/** The level this party member is spawned at. */
 	level: number;
+}
+
+/** The party a trainer NPC fields, spawned fresh for each battle. */
+export interface TrainerData {
+	/** Optional display name shown in trainer intro/defeat lines. */
+	name?: string;
+	/** The ordered creatures the trainer sends out, at least one. */
+	party: TrainerPartyMember[];
+	/** Money credited on a win and debited on a loss; a default applies when omitted. */
+	reward?: number;
 }
 
 /** A fixed, interactable character standing on one overworld tile. */

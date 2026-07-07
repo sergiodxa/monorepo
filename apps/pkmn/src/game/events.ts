@@ -112,6 +112,15 @@ export namespace GameEvent {
 		level: number;
 	}
 
+	/** Reports that a non-capturable creature was spawned for an opposing trainer. */
+	export interface TrainerCreatureSpawned {
+		type: "trainer-creature-spawned";
+		trainerId: string;
+		creatureId: CreatureId;
+		speciesId: SpeciesId;
+		level: number;
+	}
+
 	/** Reports that a creature is eligible to evolve, offering the choices. */
 	export interface CreatureCanEvolve {
 		type: "creature-can-evolve";
@@ -173,6 +182,7 @@ export type GameEvent =
 	| GameEvent.CreatureEvolved
 	| GameEvent.PartyHealed
 	| GameEvent.EncounterSpawned
+	| GameEvent.TrainerCreatureSpawned
 	| GameEvent.CreatureCanEvolve
 	| GameEvent.CaptureAttempted
 	| GameEvent.LearnedMove
