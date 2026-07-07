@@ -19,6 +19,7 @@ import type {
 } from "./components";
 import type {
 	BestiaryComponent,
+	FlagsComponent,
 	InventoryComponent,
 	MoneyComponent,
 	PartyComponent,
@@ -48,6 +49,8 @@ export interface LegacyWorld {
 	bestiary: Partial<Record<string, BestiaryComponent>>;
 	/** Storage components keyed by entity id. */
 	storageBoxes: Partial<Record<string, StorageBoxesComponent>>;
+	/** Story-flag components keyed by entity id (absent on saves that predate flags). */
+	flags?: Partial<Record<string, FlagsComponent>>;
 	/** Legacy aggregate creature blobs keyed by entity id. */
 	creature?: Partial<Record<string, LegacyCreatureComponent>>;
 	/** Split creature identity components keyed by entity id. */
@@ -84,6 +87,8 @@ export function migrateWorld(input: LegacyWorld | World): World {
 		money: structuredClone(input.money ?? {}),
 		bestiary: structuredClone(input.bestiary),
 		storageBoxes: structuredClone(input.storageBoxes),
+		// Older saves predate the flags store; default to an empty flag set.
+		flags: structuredClone(input.flags ?? {}),
 		creatureIdentity: structuredClone(input.creatureIdentity ?? {}),
 		creatureProgress: structuredClone(input.creatureProgress ?? {}),
 		creatureMoves: structuredClone(input.creatureMoves ?? {}),

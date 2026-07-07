@@ -117,6 +117,7 @@ function createWorld(): World {
 		creatureInstance: {},
 		ownership: {},
 		creatureLocation: {},
+		flags: {},
 		activeBattle: {},
 		battleParticipants: {},
 		battlePhase: {},

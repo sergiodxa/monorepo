@@ -69,6 +69,23 @@ test("Engine selectors stay UI-oriented after inventory and bestiary commands", 
 	expect(player.party.creatures[0]?.location).toBe("party:1");
 });
 
+test("set-flag persists a flag the selector then reads", () => {
+	let playerId = createPlayerId("hero");
+	let enemyId = createPlayerId("rival");
+	let allyId = createCreatureId("ally-1");
+	let enemyCreatureId = createCreatureId("enemy-1");
+	let engine = createEngine(playerId, enemyId, allyId, enemyCreatureId);
+
+	expect(engine.selectFlag("met-professor")).toBe(false);
+
+	let events = engine.dispatch({ type: "set-flag", flag: "met-professor" });
+	expect(events).toEqual([{ type: "flag-set", flag: "met-professor", value: true }]);
+	expect(engine.selectFlag("met-professor")).toBe(true);
+
+	engine.dispatch({ type: "set-flag", flag: "met-professor", value: false });
+	expect(engine.selectFlag("met-professor")).toBe(false);
+});
+
 test("change-money adjusts the balance and reports the new total", () => {
 	let playerId = createPlayerId("hero");
 	let enemyId = createPlayerId("rival");

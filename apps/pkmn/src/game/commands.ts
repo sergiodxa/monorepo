@@ -177,6 +177,20 @@ export namespace Command {
 		playerId: PlayerId;
 	}
 
+	/**
+	 * Sets one named boolean story flag on the world.
+	 *
+	 * Flags are engine-generic persisted switches; the engine assigns no meaning to
+	 * a flag's name and only records the boolean the caller provides. `value`
+	 * defaults to true so setting a flag is the common case.
+	 */
+	export interface SetFlag {
+		type: "set-flag";
+		flag: string;
+		/** The value to store; defaults to true when omitted. */
+		value?: boolean;
+	}
+
 	/** Creates a wild creature at an encounter location, rolling any omitted fields. */
 	export interface SpawnEncounter {
 		type: "spawn-encounter";
@@ -246,6 +260,7 @@ export type Command =
 	| Command.MarkSpeciesSeen
 	| Command.RemoveInventoryItem
 	| Command.SellItem
+	| Command.SetFlag
 	| Command.SpawnEncounter
 	| Command.SpawnTrainerCreature
 	| Command.StartBattle

@@ -87,6 +87,20 @@ export interface ActiveBattleComponent {
 	battleId: BattleId;
 }
 
+/**
+ * Named boolean story flags persisted with the world.
+ *
+ * A flag is a small, engine-generic switch (`false`/absent means unset) that
+ * survives across turns and save/load, so authored content can gate a one-time
+ * event or record that something happened. The engine stays vocabulary-free: it
+ * neither reads nor assigns any meaning to a flag's name, it only stores and
+ * reports the boolean the caller sets.
+ */
+export interface FlagsComponent {
+	/** Flag values keyed by name; a missing or false entry means the flag is unset. */
+	values: Record<string, boolean>;
+}
+
 /** Serializable ECS-style world state backed by component stores. */
 export interface World {
 	/** Every entity currently registered in the world. */
@@ -121,6 +135,8 @@ export interface World {
 	ownership: ComponentStore<OwnershipComponent>;
 	/** Location components keyed by creature id. */
 	creatureLocation: ComponentStore<CreatureLocationComponent>;
+	/** Named story-flag values keyed by the player root entity id. */
+	flags: ComponentStore<FlagsComponent>;
 	/** Active battle references keyed by entity id. */
 	activeBattle: ComponentStore<ActiveBattleComponent>;
 	/** Battle participants keyed by battle entity id. */
@@ -169,6 +185,32 @@ export function getPlayerBestiary(world: World): BestiaryComponent {
 /** Returns the player's current storage component. */
 export function getPlayerStorageBoxes(world: World): StorageBoxesComponent {
 	return requireComponent(world.storageBoxes, world.playerId, "storage boxes");
+}
+
+/**
+ * Returns the player's story-flag component, materializing an empty one when absent.
+ *
+ * Flags are optional on older saves, so this never throws: a world without a
+ * flags entry is treated as having no flags set, and the empty component is
+ * written back so later reads and writes share one record.
+ */
+export function getFlags(world: World): FlagsComponent {
+	let flags = world.flags[world.playerId];
+	if (flags) return flags;
+	let created: FlagsComponent = { values: {} };
+	world.flags[world.playerId] = created;
+	return created;
+}
+
+/** Reads one named flag, defaulting to false when unset. */
+export function getFlag(world: World, flag: string): boolean {
+	return getFlags(world).values[flag] === true;
+}
+
+/** Sets one named flag to a boolean value and returns the value written. */
+export function setFlag(world: World, flag: string, value = true): boolean {
+	getFlags(world).values[flag] = value;
+	return value;
 }
 
 /** Returns the split components required to rebuild one creature aggregate. */

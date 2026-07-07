@@ -18,7 +18,13 @@ import { failure, type Result, success } from "@pkg/result";
 import { parseSafe } from "remix/data-schema";
 
 import { TILE_SIZE } from "../core/loop";
-import { EMPTY_CELL, type MapData, MapDataSchema, unpackTileRef } from "../render/map-schema";
+import {
+	EMPTY_CELL,
+	type MapData,
+	MapDataSchema,
+	type MapEvent,
+	unpackTileRef,
+} from "../render/map-schema";
 import { Collision, type EncounterEntry, type TileMap, type Tileset } from "../render/tilemap";
 
 import type { Npc } from "./npc";
@@ -119,6 +125,11 @@ export class GameMap {
 	/** The map's tilesets, in declaration order (index matches packed tile refs). */
 	get tilesets(): readonly Tileset[] {
 		return this.data.tilesets;
+	}
+
+	/** The authored events on this map (NPCs, wild creatures, invisible triggers). */
+	get events(): readonly MapEvent[] {
+		return this.data.events;
 	}
 
 	/** One tile layer's flat cell array by name (`-1` empty, else a packed tile ref). */

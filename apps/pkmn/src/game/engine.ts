@@ -60,7 +60,7 @@ import {
 import { ensureEntityRegistered } from "./world/entity";
 import { pickPersistentWorld, removeComponent } from "./world/helpers";
 import { migrateWorld } from "./world/migrate";
-import { createCreatureFromWorld, getPlayerBestiary } from "./world/world";
+import { createCreatureFromWorld, getFlag, getPlayerBestiary, setFlag } from "./world/world";
 
 export namespace Engine {
 	/** Input required to boot one engine instance. */
@@ -255,6 +255,10 @@ export class Engine {
 					{ type: "money-changed", playerId: command.playerId, amount: result.balance },
 				];
 			}
+			case "set-flag": {
+				let value = setFlag(this.world, command.flag, command.value ?? true);
+				return [{ type: "flag-set", flag: command.flag, value }];
+			}
 			case "spawn-encounter": {
 				let { creatureId } = spawnEncounter(this.gameData, this.world, command, this.random);
 				return [
@@ -364,6 +368,11 @@ export class Engine {
 	/** Returns the current active battle read model for one player, if any. */
 	selectActiveBattle(playerId = this.world.playerId): BattleView | null {
 		return this.select({ type: "active-battle", playerId }) as BattleView | null;
+	}
+
+	/** Reads one named story flag, defaulting to false when unset. */
+	selectFlag(flag: string): boolean {
+		return getFlag(this.world, flag);
 	}
 
 	/** Returns the current battle read model for one battle id. */

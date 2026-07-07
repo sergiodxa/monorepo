@@ -251,6 +251,9 @@ export const MapDataSchema = object({
 	bgm: defaulted(string(), ""),
 });
 
+/** One event's optional sprite: an atlas region, a raw image rect, or null. */
+export type SpriteRef = InferOutput<typeof SpriteRefSchema>;
+
 /** One declarative step an event interaction or trigger runs. */
 export type ScriptCommand = InferOutput<typeof ScriptCommandSchema>;
 

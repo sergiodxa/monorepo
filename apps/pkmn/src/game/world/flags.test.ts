@@ -1,0 +1,67 @@
+/**
+ * Verifies the persisted story-flag store: reading, writing, migration default,
+ * and that flags survive the persistent snapshot.
+ *
+ * Flags are engine-generic booleans an event runtime uses to gate one-time
+ * events. Migration must materialize an empty flag set for older saves, the
+ * accessors must read false for unset names, and set flags must appear in the
+ * save-only snapshot so they persist across sessions.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+import { expect, test } from "bun:test";
+
+import type { LegacyWorld } from "./migrate";
+
+import { pickPersistentWorld } from "./helpers";
+import { createPlayerId } from "./ids";
+import { migrateWorld } from "./migrate";
+import { getFlag, setFlag } from "./world";
+
+let PLAYER_ID = createPlayerId("hero");
+
+/** Builds a legacy save with no flags store at all. */
+function legacyWorld(): LegacyWorld {
+	return {
+		entities: [PLAYER_ID],
+		playerId: PLAYER_ID,
+		playerProfile: { [PLAYER_ID]: { name: "Hero" } },
+		party: { [PLAYER_ID]: { creatureIds: [] } },
+		inventory: { [PLAYER_ID]: { items: {} } },
+		money: { [PLAYER_ID]: { amount: 0 } },
+		bestiary: { [PLAYER_ID]: { seen: [], caught: [] } },
+		storageBoxes: { [PLAYER_ID]: { boxes: [] } },
+	};
+}
+
+test("migrateWorld defaults the flags store to empty for saves without one", () => {
+	let world = migrateWorld(legacyWorld());
+	expect(world.flags).toEqual({});
+	expect(getFlag(world, "any-flag")).toBe(false);
+});
+
+test("setFlag persists a flag the selector then reads", () => {
+	let world = migrateWorld(legacyWorld());
+	expect(getFlag(world, "met-professor")).toBe(false);
+
+	setFlag(world, "met-professor");
+	expect(getFlag(world, "met-professor")).toBe(true);
+});
+
+test("setFlag can clear a previously set flag", () => {
+	let world = migrateWorld(legacyWorld());
+	setFlag(world, "gate-open");
+	expect(getFlag(world, "gate-open")).toBe(true);
+
+	setFlag(world, "gate-open", false);
+	expect(getFlag(world, "gate-open")).toBe(false);
+});
+
+test("the persistent snapshot carries story flags", () => {
+	let world = migrateWorld(legacyWorld());
+	setFlag(world, "caught-legendary");
+
+	let snapshot = pickPersistentWorld(world);
+	expect(snapshot.flags[PLAYER_ID]?.values["caught-legendary"]).toBe(true);
+});

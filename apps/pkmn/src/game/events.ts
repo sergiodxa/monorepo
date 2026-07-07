@@ -103,6 +103,13 @@ export namespace GameEvent {
 		count: number;
 	}
 
+	/** Reports that one named story flag was set to a value. */
+	export interface FlagSet {
+		type: "flag-set";
+		flag: string;
+		value: boolean;
+	}
+
 	/** Reports that a wild creature was spawned for an encounter. */
 	export interface EncounterSpawned {
 		type: "encounter-spawned";
@@ -181,6 +188,7 @@ export type GameEvent =
 	| GameEvent.CreatureExperienceGranted
 	| GameEvent.CreatureEvolved
 	| GameEvent.PartyHealed
+	| GameEvent.FlagSet
 	| GameEvent.EncounterSpawned
 	| GameEvent.TrainerCreatureSpawned
 	| GameEvent.CreatureCanEvolve
