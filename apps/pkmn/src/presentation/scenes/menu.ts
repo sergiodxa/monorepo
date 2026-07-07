@@ -1,8 +1,8 @@
 /**
  * The pause-menu root, opened with Start from the overworld.
  *
- * It lists the sub-screens (Party, Bag, Bestiary, Storage, Save) and pushes the
- * chosen one, or closes back to the map. It is translucent so the overworld stays
+ * It lists the sub-screens (Party, Bag, Bestiary, Storage, Trainer, Save) and
+ * pushes the chosen one, or closes back to the map. It is translucent so the overworld stays
  * visible behind its side panel, and it carries the presentation-save snapshot
  * captured when it opened so the Save screen can persist the exact position the
  * player paused at.
@@ -23,9 +23,10 @@ import { BestiaryScene } from "./bestiary";
 import { PartyScene } from "./party";
 import { SaveScene } from "./save";
 import { StorageScene } from "./storage";
+import { TrainerScene } from "./trainer";
 
 /** Root pause-menu entries in order. */
-const ENTRIES = ["Party", "Bag", "Bestiary", "Storage", "Save", "Close"] as const;
+const ENTRIES = ["Party", "Bag", "Bestiary", "Storage", "Trainer", "Save", "Close"] as const;
 
 /** The pause-menu root that routes to each sub-screen. */
 export class MenuScene implements Scene {
@@ -64,6 +65,9 @@ export class MenuScene implements Scene {
 				break;
 			case "Storage":
 				game.scenes.push(new StorageScene());
+				break;
+			case "Trainer":
+				game.scenes.push(new TrainerScene());
 				break;
 			case "Save":
 				game.scenes.push(new SaveScene(this.presentation));

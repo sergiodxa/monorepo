@@ -23,10 +23,11 @@ import type { Scene } from "../core/scene";
 import { BattleScene } from "../battle/battle-scene";
 import { GameClient } from "../core/game-client";
 import { Button } from "../core/input";
-import { TILE_SIZE } from "../core/loop";
+import { SCREEN_WIDTH, TILE_SIZE } from "../core/loop";
 import { HERO_ID, WILD_ID } from "../core/new-game";
 import { type Atlas, drawSprite } from "../render/atlas";
 import { Camera } from "../render/camera";
+import { GLYPH_ADVANCE } from "../render/font";
 import { buildPlaceholderAtlas } from "../render/placeholder-atlas";
 import { drawText } from "../render/text";
 import * as theme from "../render/theme";
@@ -42,6 +43,46 @@ import { PlayerController } from "./player-controller";
 
 /** Money staked on a trainer fight when the trainer defines no explicit reward. */
 const DEFAULT_TRAINER_REWARD = 500;
+
+/** Left inset (px) the HUD hint is drawn at, reserved on both sides for symmetry. */
+const HUD_HINT_MARGIN = 4;
+
+/**
+ * The essential HUD hint, kept short enough to fit any sane screen width.
+ *
+ * `overworldHint` falls back to this when no fuller variant fits, so it lists
+ * only the two actions the player cannot discover by walking (talk and menu).
+ */
+const HUD_HINT_ESSENTIAL = "A: talk   Start: menu";
+
+/** The HUD hint variants from fullest to the essential fallback. */
+const HUD_HINT_VARIANTS = [
+	"Grass: wild battles   A: talk   Start: menu",
+	"Grass: battles  A: talk  Start: menu",
+	HUD_HINT_ESSENTIAL,
+] as const;
+
+/** The rendered pixel width of a string at the fixed bitmap font metrics. */
+function hintWidth(text: string): number {
+	return text.length * GLYPH_ADVANCE;
+}
+
+/**
+ * Picks the fullest overworld HUD hint that fits within `maxWidth` pixels.
+ *
+ * The overworld renders at a fixed internal resolution, so the hint must never
+ * exceed the usable width or it is clipped off-screen. This chooses the most
+ * informative variant that still measures within the budget, falling back to the
+ * shortest essential hint when even that is tight.
+ */
+export function overworldHint(maxWidth: number): string {
+	return HUD_HINT_VARIANTS.find((variant) => hintWidth(variant) <= maxWidth) ?? HUD_HINT_ESSENTIAL;
+}
+
+/** The usable width for the HUD hint given the internal screen width and margins. */
+export function hudHintMaxWidth(): number {
+	return SCREEN_WIDTH - HUD_HINT_MARGIN * 2;
+}
 
 /** Where the player enters an overworld map. */
 export interface Spawn {
@@ -222,16 +263,15 @@ export class OverworldScene implements Scene {
 		};
 	}
 
-	render(game: GameClient, ctx: CanvasRenderingContext2D) {
+	render(_game: GameClient, ctx: CanvasRenderingContext2D) {
 		this.renderer.drawGround(ctx, this.camera);
 		for (let npc of this.npcs) this.drawNpc(ctx, npc);
 		this.drawPlayer(ctx);
 		this.renderer.drawOverhead(ctx, this.camera);
-		drawText(ctx, "Grass: wild battles   A: talk   Start: menu", 4, 4, {
+		// Money now lives in the Trainer menu; the HUD only shows the fitting hint.
+		drawText(ctx, overworldHint(hudHintMaxWidth()), HUD_HINT_MARGIN, HUD_HINT_MARGIN, {
 			color: theme.TEXT.inverseWhite,
 		});
-		let money = game.engine.selectPlayer(HERO_ID).money;
-		drawText(ctx, `₽${money}`, 4, 16, { color: theme.TEXT.inverseWhite });
 	}
 
 	/** Rolls a wild encounter for the tile the player just reached and starts the battle. */
