@@ -14,20 +14,55 @@
  * accepts. The view supplies the real move/species ids, and the export path
  * re-validates the final record before writing.
  *
+ * Two static helpers support the create-new flow without touching instance state:
+ * {@link SpeciesEditor.createNew} builds a complete, schema-valid default
+ * {@link Species} for a fresh entry, and {@link SpeciesEditor.isDuplicateId} flags
+ * a chosen id that would collide with an existing roster entry so a new species
+ * never silently overwrites one.
+ *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
 import type { Evolution } from "~/game/data/evolution";
 import type { Species, SpeciesSprite } from "~/game/data/species";
-import type { Stat, StatSet } from "~/game/data/stat";
+import type { StatSet } from "~/game/data/stat";
 
 import { EvolutionMethod } from "~/game/data/evolution";
 import { GrowthRate } from "~/game/data/growth-rate";
-import { Gender } from "~/game/data/species";
+import { EggGroup, Gender } from "~/game/data/species";
+import { Stat } from "~/game/data/stat";
+import { Type } from "~/game/data/type";
 
 /** The elemental types a species carries: one or two type ids. */
 export type SpeciesTypes = [string] | [string, string];
+
+/** Default base value used for every stat of a newly created species. */
+const DEFAULT_STAT_VALUE = 50;
+
+/** Default type assigned to a newly created species (a single, common type). */
+const DEFAULT_TYPE: Type = Type.NORMAL;
+
+/** Default growth rate assigned to a newly created species. */
+const DEFAULT_GROWTH_RATE: GrowthRate = GrowthRate.MediumFast;
+
+/** Default egg group assigned to a newly created species. */
+const DEFAULT_EGG_GROUP: EggGroup = EggGroup.Monster;
+
+/** Default physical size (weight in kg, height in m) for a newly created species. */
+const DEFAULT_SIZE = { weight: 1, height: 1 };
+
+/** Default base experience awarded when a newly created species faints. */
+const DEFAULT_BASE_EXPERIENCE = 64;
+
+/** Default catch rate for a newly created species. */
+const DEFAULT_CATCH_RATE = 45;
+
+/** Default 50/50 male/female split for a newly created species. */
+const DEFAULT_GENDER: { [K in Gender.Male | Gender.Female]?: number } = {
+	[Gender.Male]: 50,
+	[Gender.Female]: 50,
+};
 
 /**
  * Editor for a single species record. Wraps every editable field and exposes
@@ -50,6 +85,64 @@ export class SpeciesEditor {
 	constructor(id: string, initial: Species) {
 		this.#id = id;
 		this.#species = this.#clone(initial);
+	}
+
+	/**
+	 * Builds a complete, schema-valid default {@link Species} for a brand-new entry.
+	 *
+	 * Every field is initialized to a sensible, valid default: the six base stats to
+	 * {@link DEFAULT_STAT_VALUE}, a single {@link DEFAULT_TYPE}, a
+	 * {@link DEFAULT_GROWTH_RATE}, a 50/50 gender split, a zero EV yield (an empty
+	 * partial map), an empty learnset and empty evolutions, and no sprite. The
+	 * returned record has no id of its own — the caller pairs it with a chosen id
+	 * (see {@link isDuplicateId}) when it seeds the editor via the constructor.
+	 *
+	 * @param dex The dex number to assign (coerced to a non-negative whole number).
+	 * @returns A fresh, valid default species ready to load into a new editor.
+	 */
+	static createNew(dex: number): Species {
+		let number = Number.isFinite(dex) ? Math.max(0, Math.trunc(dex)) : 0;
+		return {
+			number,
+			size: { ...DEFAULT_SIZE },
+			types: [DEFAULT_TYPE],
+			baseExperience: DEFAULT_BASE_EXPERIENCE,
+			catchRate: DEFAULT_CATCH_RATE,
+			growthRate: DEFAULT_GROWTH_RATE,
+			stats: {
+				[Stat.HP]: DEFAULT_STAT_VALUE,
+				[Stat.Attack]: DEFAULT_STAT_VALUE,
+				[Stat.Defense]: DEFAULT_STAT_VALUE,
+				[Stat.SpecialAttack]: DEFAULT_STAT_VALUE,
+				[Stat.SpecialDefense]: DEFAULT_STAT_VALUE,
+				[Stat.Speed]: DEFAULT_STAT_VALUE,
+			},
+			evYield: {},
+			evolutions: [],
+			learnset: [],
+			gender: { ...DEFAULT_GENDER },
+			eggGroup: [DEFAULT_EGG_GROUP],
+			sprite: null,
+		};
+	}
+
+	/**
+	 * Reports whether a candidate id already exists in a roster of species ids, so a
+	 * new-species flow can flag a collision before overwriting an existing entry. The
+	 * comparison is on the trimmed id exactly as stored (ids are case-sensitive
+	 * uppercase keys).
+	 *
+	 * @param id The candidate species id.
+	 * @param existingIds The ids already present in the roster.
+	 * @returns `true` when `id` (trimmed) collides with an existing id.
+	 */
+	static isDuplicateId(id: string, existingIds: Iterable<string>): boolean {
+		let candidate = id.trim();
+		if (candidate.length === 0) return false;
+		for (let existing of existingIds) {
+			if (existing === candidate) return true;
+		}
+		return false;
 	}
 
 	/** The id this species is edited under. */

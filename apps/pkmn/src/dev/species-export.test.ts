@@ -24,6 +24,7 @@ import { Gender } from "~/game/data/species";
 import { Stat } from "~/game/data/stat";
 import { Type } from "~/game/data/type";
 
+import { SpeciesEditor } from "./editors/species-editor";
 import { validateWritePath } from "./path-safety";
 import {
 	APP_ROOT,
@@ -125,6 +126,27 @@ describe("shapeSpeciesExport", () => {
 		if (isSuccess(result)) {
 			let parsed = JSON.parse(result.data.contents) as Record<string, Species>;
 			expect(Object.keys(parsed).sort()).toEqual(["BULBASAUR", "MEW"]);
+		}
+	});
+
+	test("adds a not-yet-present id without dropping others, and the result validates", () => {
+		// A realistic create-new flow: a fresh default species keyed by a new id.
+		let existing: Record<SpeciesId, Species> = {
+			BULBASAUR: { ...validSpecies(), number: 1 },
+			IVYSAUR: { ...validSpecies(), number: 2 },
+		};
+		let created: Species = SpeciesEditor.createNew(151);
+		let result = shapeSpeciesExport(existing, "MEW", created);
+		expect(isSuccess(result)).toBe(true);
+		if (isSuccess(result)) {
+			let raw = JSON.parse(result.data.contents) as unknown;
+			// The whole-file map still validates through the content schema.
+			let parsed = parseSpecies(raw);
+			expect(Object.keys(parsed).sort()).toEqual(["BULBASAUR", "IVYSAUR", "MEW"]);
+			// Every existing entry survives untouched, plus the new one is present.
+			expect(parsed.BULBASAUR!.number).toBe(1);
+			expect(parsed.IVYSAUR!.number).toBe(2);
+			expect(parsed.MEW!.number).toBe(151);
 		}
 	});
 

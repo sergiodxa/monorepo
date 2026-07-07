@@ -13,6 +13,7 @@ import { describe, expect, test } from "bun:test";
 
 import type { Species } from "~/game/data/species";
 
+import { parseSpecies } from "~/content/species-schema";
 import { EvolutionMethod } from "~/game/data/evolution";
 import { GrowthRate } from "~/game/data/growth-rate";
 import { Gender } from "~/game/data/species";
@@ -52,6 +53,77 @@ function baseSpecies(): Species {
 function makeEditor(): SpeciesEditor {
 	return new SpeciesEditor("BULBASAUR", baseSpecies());
 }
+
+describe("createNew (default species factory)", () => {
+	test("produces a schema-valid default species that round-trips through the schema", () => {
+		let created = SpeciesEditor.createNew(151);
+		// parseSpecies throws on an invalid record; a clean round-trip proves validity.
+		let parsed = parseSpecies({ MEW: created });
+		expect(parsed.MEW).toEqual(created);
+	});
+
+	test("respects the chosen dex number (coerced to a whole number)", () => {
+		expect(SpeciesEditor.createNew(151).number).toBe(151);
+		expect(SpeciesEditor.createNew(25.9).number).toBe(25);
+		expect(SpeciesEditor.createNew(-3).number).toBe(0);
+		expect(SpeciesEditor.createNew(Number.NaN).number).toBe(0);
+	});
+
+	test("initializes sensible, complete defaults", () => {
+		let created = SpeciesEditor.createNew(1);
+		expect(created.types).toHaveLength(1);
+		expect(created.learnset).toEqual([]);
+		expect(created.evolutions).toEqual([]);
+		expect(created.evYield).toEqual({});
+		expect(created.sprite).toBeNull();
+		// Every base stat is present and non-negative.
+		for (let stat of Object.values(Stat)) {
+			expect(created.stats[stat]).toBeGreaterThanOrEqual(0);
+		}
+	});
+
+	test("can be loaded into an editor under a chosen id and edited", () => {
+		let editor = new SpeciesEditor("NEWMON", SpeciesEditor.createNew(200));
+		expect(editor.id).toBe("NEWMON");
+		let next = editor.setStat(Stat.Attack, 120);
+		expect(next.stats[Stat.Attack]).toBe(120);
+		// The default record stays valid after edits.
+		expect(() => parseSpecies({ NEWMON: next })).not.toThrow();
+	});
+
+	test("each call returns an independent record (no shared references)", () => {
+		let a = SpeciesEditor.createNew(1);
+		let b = SpeciesEditor.createNew(2);
+		a.stats[Stat.HP] = 999;
+		a.types.push("hacked");
+		expect(b.stats[Stat.HP]).not.toBe(999);
+		expect(b.types).toHaveLength(1);
+	});
+});
+
+describe("isDuplicateId (collision guard)", () => {
+	let roster = ["BULBASAUR", "IVYSAUR", "VENUSAUR"];
+
+	test("flags an id already present in the roster", () => {
+		expect(SpeciesEditor.isDuplicateId("IVYSAUR", roster)).toBe(true);
+	});
+
+	test("allows a brand-new id", () => {
+		expect(SpeciesEditor.isDuplicateId("MEW", roster)).toBe(false);
+	});
+
+	test("trims the candidate before comparing", () => {
+		expect(SpeciesEditor.isDuplicateId("  VENUSAUR  ", roster)).toBe(true);
+	});
+
+	test("a blank id is never a duplicate", () => {
+		expect(SpeciesEditor.isDuplicateId("   ", roster)).toBe(false);
+	});
+
+	test("is case-sensitive (ids are uppercase keys)", () => {
+		expect(SpeciesEditor.isDuplicateId("bulbasaur", roster)).toBe(false);
+	});
+});
 
 describe("identity and classification", () => {
 	test("tracks the id it was loaded under", () => {
