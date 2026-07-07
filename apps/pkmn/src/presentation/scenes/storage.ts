@@ -22,7 +22,8 @@ export class StorageScene implements Scene {
 	/** The list widget for box contents. */
 	private readonly list = new ListMenu(6);
 
-	enter() {
+	enter(game: GameClient) {
+		this.list.useAudio(game.audio);
 		this.list.reset();
 	}
 

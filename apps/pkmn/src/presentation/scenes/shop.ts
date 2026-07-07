@@ -35,7 +35,8 @@ export class ShopScene implements Scene {
 	/** The active tab, toggled with L/R. */
 	private tab: ShopTab = "buy";
 
-	enter() {
+	enter(game: GameClient) {
+		this.list.useAudio(game.audio);
 		this.list.reset();
 	}
 

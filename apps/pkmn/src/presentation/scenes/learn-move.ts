@@ -52,7 +52,9 @@ export class LearnMoveScene implements Scene {
 		private readonly creatureName: string,
 	) {}
 
-	enter() {}
+	enter(game: GameClient) {
+		this.menu.useAudio(game.audio);
+	}
 
 	exit() {}
 

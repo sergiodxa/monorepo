@@ -12,6 +12,9 @@
  */
 import { expect, test } from "bun:test";
 
+import type { SfxPlayer } from "../battle/battle-sfx";
+import type { SfxName } from "../core/sfx";
+
 import { Button, type InputManager } from "../core/input";
 
 import { ListMenu } from "./list-menu";
@@ -25,6 +28,17 @@ function fakeInput(state: { repeating?: Button[]; pressed?: Button[] }): InputMa
 		isPressed: (button: Button) => pressed.has(button),
 		isHeld: () => false,
 	} as unknown as InputManager;
+}
+
+/** A spy effect player recording every synthesized effect it is asked to play. */
+function fakeAudio() {
+	let played: SfxName[] = [];
+	let audio: SfxPlayer = {
+		playSynthSfx: (name) => {
+			played.push(name);
+		},
+	};
+	return { audio, played };
 }
 
 test("update moves the cursor down on a repeating Down", () => {
@@ -88,4 +102,51 @@ test("confirmed and cancelled report the A/B press edges", () => {
 	expect(menu.confirmed(fakeInput({ pressed: [Button.B] }))).toBe(false);
 	expect(menu.cancelled(fakeInput({ pressed: [Button.B] }))).toBe(true);
 	expect(menu.cancelled(fakeInput({ pressed: [Button.A] }))).toBe(false);
+});
+
+test("moving the cursor plays menu-move when an audio player is attached", () => {
+	let { audio, played } = fakeAudio();
+	let menu = new ListMenu(5, audio);
+	menu.update(fakeInput({ repeating: [Button.Down] }), 5);
+	expect(menu.selected).toBe(1);
+	expect(played).toEqual(["menu-move"]);
+});
+
+test("a frame with no cursor movement plays no menu-move", () => {
+	let { audio, played } = fakeAudio();
+	let menu = new ListMenu(5, audio);
+	menu.update(fakeInput({}), 5);
+	expect(played).toEqual([]);
+});
+
+test("useAudio attaches the player after construction", () => {
+	let { audio, played } = fakeAudio();
+	let menu = new ListMenu(5).useAudio(audio);
+	menu.update(fakeInput({ repeating: [Button.Down] }), 5);
+	expect(played).toEqual(["menu-move"]);
+});
+
+test("confirmed plays menu-confirm on the press and stays silent otherwise", () => {
+	let { audio, played } = fakeAudio();
+	let menu = new ListMenu(5, audio);
+	expect(menu.confirmed(fakeInput({ pressed: [Button.A] }))).toBe(true);
+	expect(menu.confirmed(fakeInput({}))).toBe(false);
+	expect(played).toEqual(["menu-confirm"]);
+});
+
+test("cancelled plays menu-cancel on the press and stays silent otherwise", () => {
+	let { audio, played } = fakeAudio();
+	let menu = new ListMenu(5, audio);
+	expect(menu.cancelled(fakeInput({ pressed: [Button.B] }))).toBe(true);
+	expect(menu.cancelled(fakeInput({}))).toBe(false);
+	expect(played).toEqual(["menu-cancel"]);
+});
+
+test("without an audio player, moving and confirming are safe no-ops", () => {
+	let menu = new ListMenu(5);
+	// No audio attached: exercising every hooked path must not throw.
+	menu.update(fakeInput({ repeating: [Button.Down] }), 5);
+	expect(menu.confirmed(fakeInput({ pressed: [Button.A] }))).toBe(true);
+	expect(menu.cancelled(fakeInput({ pressed: [Button.B] }))).toBe(true);
+	expect(menu.selected).toBe(1);
 });

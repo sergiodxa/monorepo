@@ -23,7 +23,8 @@ export class PartyScene implements Scene {
 	/** The list widget for party members. */
 	private readonly list = new ListMenu(6);
 
-	enter() {
+	enter(game: GameClient) {
+		this.list.useAudio(game.audio);
 		this.list.reset();
 	}
 

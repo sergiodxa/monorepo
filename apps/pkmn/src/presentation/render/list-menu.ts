@@ -10,6 +10,8 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
+import type { SfxPlayer } from "../battle/battle-sfx";
+
 import { Button, type InputManager } from "../core/input";
 
 import { drawText } from "./text";
@@ -24,8 +26,28 @@ export class ListMenu {
 	/** First visible row when the list is longer than the window. */
 	private scroll = 0;
 
-	/** @param rows - How many rows are visible at once. */
-	constructor(private readonly rows = 5) {}
+	/**
+	 * @param rows - How many rows are visible at once.
+	 * @param audio - Optional effect player; when given, cursor moves blip
+	 *   `menu-move` and confirm/cancel blip `menu-confirm`/`menu-cancel`. Omitting
+	 *   it (the default) keeps the widget silent and its behavior unchanged.
+	 */
+	constructor(
+		private readonly rows = 5,
+		private audio?: SfxPlayer,
+	) {}
+
+	/**
+	 * Attaches (or replaces) the effect player after construction.
+	 *
+	 * Scenes build the menu as a field initializer, before their `enter(game)` gives
+	 * them the client, so they call this from `enter` to add sound. It returns the
+	 * menu for chaining and is a plain assignment — passing nothing leaves it silent.
+	 */
+	useAudio(audio: SfxPlayer): this {
+		this.audio = audio;
+		return this;
+	}
 
 	/** Moves the cursor from input, clamped and scrolled to a list of `count` items. */
 	update(input: InputManager, count: number) {
@@ -34,9 +56,11 @@ export class ListMenu {
 			this.scroll = 0;
 			return;
 		}
+		let before = this.index;
 		if (input.isRepeating(Button.Down)) this.index = (this.index + 1) % count;
 		if (input.isRepeating(Button.Up)) this.index = (this.index - 1 + count) % count;
 		if (this.index >= count) this.index = count - 1;
+		if (this.index !== before) this.audio?.playSynthSfx("menu-move");
 
 		if (this.index < this.scroll) this.scroll = this.index;
 		if (this.index >= this.scroll + this.rows) this.scroll = this.index - this.rows + 1;
@@ -44,14 +68,18 @@ export class ListMenu {
 		if (this.scroll > maxScroll) this.scroll = maxScroll;
 	}
 
-	/** True when A was pressed this frame. */
+	/** True when A was pressed this frame; blips `menu-confirm` on the press. */
 	confirmed(input: InputManager): boolean {
-		return input.isPressed(Button.A);
+		let pressed = input.isPressed(Button.A);
+		if (pressed) this.audio?.playSynthSfx("menu-confirm");
+		return pressed;
 	}
 
-	/** True when B was pressed this frame. */
+	/** True when B was pressed this frame; blips `menu-cancel` on the press. */
 	cancelled(input: InputManager): boolean {
-		return input.isPressed(Button.B);
+		let pressed = input.isPressed(Button.B);
+		if (pressed) this.audio?.playSynthSfx("menu-cancel");
+		return pressed;
 	}
 
 	/** The highlighted index. */

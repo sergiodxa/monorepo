@@ -37,7 +37,10 @@ import { Window } from "../render/window";
 import { EvolutionScene } from "../scenes/evolution";
 import { LearnMoveScene } from "../scenes/learn-move";
 
+import type { SfxPlayer } from "./battle-sfx";
+
 import { AnimationQueue } from "./animation-queue";
+import { sfxForGameEvent } from "./battle-sfx";
 import { BattleCommandMenu } from "./command-menu";
 import { chooseEnemyAction, type EnemyMoveOption } from "./enemy-ai";
 import { buildBattleTasks, type BattleHud } from "./event-animations";
@@ -118,6 +121,16 @@ export class BattleScene implements Scene {
 	private atlas: Atlas | null = null;
 
 	/**
+	 * The effect player, captured on enter so `onEngineEvents` can reach it.
+	 *
+	 * Engine events (a level-up rides in on `creature-experience-granted`) arrive
+	 * through `onEngineEvents`, which the scene stack calls without the client, so
+	 * the scene keeps the audio reference from `enter`. Null before enter; every
+	 * play is a safe no-op regardless.
+	 */
+	private audio: SfxPlayer | null = null;
+
+	/**
 	 * @param battleId - The battle this scene presents.
 	 * @param options - Optional stake and capture rules; wild battles pass nothing.
 	 */
@@ -140,6 +153,10 @@ export class BattleScene implements Scene {
 	 */
 	onEngineEvents(events: GameEvent[]) {
 		for (let event of events) {
+			// A level-up (creature-experience-granted crossing a level) plays its jingle
+			// as it arrives; other engine events carry no sound.
+			let sfx = sfxForGameEvent(event);
+			if (sfx) this.audio?.playSynthSfx(sfx);
 			if (event.type === "capture-attempted") {
 				this.captured ||= event.success;
 				this.enqueueMessage(
@@ -167,6 +184,7 @@ export class BattleScene implements Scene {
 
 	/** Initializes HP bars and queues the intro message. */
 	enter(game: GameClient) {
+		this.audio = game.audio;
 		this.atlas = game.assets.atlas("overworld") ?? buildPlaceholderAtlas();
 		let view = game.engine.selectBattle(this.battleId);
 		this.syncBars(view);
@@ -185,7 +203,7 @@ export class BattleScene implements Scene {
 		let view = game.engine.selectBattle(this.battleId);
 		for (let bar of this.bars.values()) bar.update(dt);
 
-		this.processNewEvents(view);
+		this.processNewEvents(game, view);
 		this.queue.update(dt);
 		if (!this.queue.idle) {
 			// Let the player hurry narration along.
@@ -280,11 +298,11 @@ export class BattleScene implements Scene {
 	}
 
 	/** Turns any unconsumed battle-log events into queued animation tasks. */
-	private processNewEvents(view: BattleView) {
+	private processNewEvents(game: GameClient, view: BattleView) {
 		if (this.consumed >= view.events.length) return;
 		let fresh = view.events.slice(this.consumed);
 		this.consumed = view.events.length;
-		this.queue.enqueue(...buildBattleTasks(fresh, this.hud(view)));
+		this.queue.enqueue(...buildBattleTasks(fresh, this.hud(view), game.audio));
 	}
 
 	/** Submits a full turn: the player's move plus an AI-chosen move per foe slot. */
@@ -297,7 +315,7 @@ export class BattleScene implements Scene {
 		);
 		game.dispatch({ type: "submit-battle-turn", battleId: this.battleId, commands });
 		this.menu.reset();
-		this.processNewEvents(game.engine.selectBattle(this.battleId));
+		this.processNewEvents(game, game.engine.selectBattle(this.battleId));
 	}
 
 	/**
@@ -367,7 +385,7 @@ export class BattleScene implements Scene {
 		);
 		game.dispatch({ type: "submit-battle-turn", battleId: this.battleId, commands });
 		this.menu.reset();
-		this.processNewEvents(game.engine.selectBattle(this.battleId));
+		this.processNewEvents(game, game.engine.selectBattle(this.battleId));
 	}
 
 	/** Throws the first ball in the bag at the wild target, if one is available. */
@@ -435,7 +453,7 @@ export class BattleScene implements Scene {
 		);
 		game.dispatch({ type: "submit-battle-turn", battleId: this.battleId, commands });
 		this.menu.reset();
-		this.processNewEvents(game.engine.selectBattle(this.battleId));
+		this.processNewEvents(game, game.engine.selectBattle(this.battleId));
 	}
 
 	/**
@@ -479,7 +497,7 @@ export class BattleScene implements Scene {
 		}
 		if (commands.length === 0) return;
 		game.dispatch({ type: "submit-battle-replacements", battleId: this.battleId, commands });
-		this.processNewEvents(game.engine.selectBattle(this.battleId));
+		this.processNewEvents(game, game.engine.selectBattle(this.battleId));
 	}
 
 	/** The pending input request, resolved from the most recent request event. */

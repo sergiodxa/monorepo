@@ -16,9 +16,23 @@ import type { BattleEvent, BattlePosition } from "~/game/battle/battle";
 
 import { Stat } from "~/game/data/stat";
 
+import type { SfxName } from "../core/sfx";
+
 import type { AnimationTask } from "./animation-queue";
+import type { SfxPlayer } from "./battle-sfx";
 
 import { type BattleHud, buildBattleTasks } from "./event-animations";
+
+/** A spy effect player recording every synthesized effect it is asked to play. */
+function fakeAudio() {
+	let played: SfxName[] = [];
+	let audio: SfxPlayer = {
+		playSynthSfx: (name) => {
+			played.push(name);
+		},
+	};
+	return { audio, played };
+}
 
 /** A recording HUD that logs every call and returns scripted stub values. */
 function fakeHud() {
@@ -178,4 +192,75 @@ test("bookkeeping events (turn-started, requests) produce no tasks", () => {
 		{ type: "turn-ended", turn: 1 },
 	];
 	expect(buildBattleTasks(events, hud)).toHaveLength(0);
+});
+
+test("a damaging damage-dealt plays the hit effect when audio is supplied", () => {
+	let { hud } = fakeHud();
+	let { audio, played } = fakeAudio();
+	let events: BattleEvent[] = [
+		{ type: "damage-dealt", target: TARGET, damage: 12, remainingHP: 30 },
+	];
+	drain(buildBattleTasks(events, hud, audio));
+	expect(played).toEqual(["hit"]);
+});
+
+test("a zero-damage damage-dealt plays nothing", () => {
+	let { hud } = fakeHud();
+	let { audio, played } = fakeAudio();
+	let events: BattleEvent[] = [
+		{ type: "damage-dealt", target: TARGET, damage: 0, remainingHP: 30 },
+	];
+	drain(buildBattleTasks(events, hud, audio));
+	expect(played).toEqual([]);
+});
+
+test("a faint plays the faint effect after narrating the faint", () => {
+	let { hud } = fakeHud();
+	let { audio, played } = fakeAudio();
+	drain(buildBattleTasks([{ type: "creature-fainted", target: TARGET }], hud, audio));
+	expect(played).toEqual(["faint"]);
+});
+
+test("a healing item plays the heal effect", () => {
+	let { hud } = fakeHud();
+	let { audio, played } = fakeAudio();
+	let events: BattleEvent[] = [
+		{
+			type: "item-used",
+			user: USER,
+			itemId: "potion",
+			side: 0,
+			team: 0,
+			creature: 0,
+			remainingHP: 40,
+			healed: 20,
+			status: null,
+			revived: false,
+		},
+	];
+	drain(buildBattleTasks(events, hud, audio));
+	expect(played).toEqual(["heal"]);
+});
+
+test("omitting the audio player leaves every event silent and still builds the tasks", () => {
+	let { hud, hpCalls } = fakeHud();
+	let events: BattleEvent[] = [
+		{ type: "damage-dealt", target: TARGET, damage: 12, remainingHP: 30 },
+		{ type: "creature-fainted", target: TARGET },
+	];
+	// No audio argument: the tasks still build and drive the HUD without throwing.
+	let tasks = buildBattleTasks(events, hud);
+	drain(tasks);
+	expect(hpCalls).toEqual([{ position: TARGET, remaining: 30 }]);
+});
+
+test("effects fire in event order across a mixed burst", () => {
+	let { hud } = fakeHud();
+	let { audio, played } = fakeAudio();
+	let events: BattleEvent[] = [
+		{ type: "damage-dealt", target: TARGET, damage: 40, remainingHP: 0 },
+		{ type: "creature-fainted", target: TARGET },
+	];
+	drain(buildBattleTasks(events, hud, audio));
+	expect(played).toEqual(["hit", "faint"]);
 });

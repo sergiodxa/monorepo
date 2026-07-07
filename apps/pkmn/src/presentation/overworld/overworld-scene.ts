@@ -259,6 +259,10 @@ export class OverworldScene implements Scene {
 		let wild = spawned.find((event) => event.type === "encounter-spawned");
 		if (wild?.type !== "encounter-spawned") return;
 
+		// A wild battle is now certain to start: sound the encounter jingle as the
+		// battle scene is pushed. Safe no-op when audio is unavailable.
+		game.audio.playSynthSfx("encounter");
+
 		let battleId = createBattleId(`wild-${this.battleCount++}`);
 		game.dispatch({
 			type: "start-battle",

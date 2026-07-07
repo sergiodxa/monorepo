@@ -21,7 +21,8 @@ export class BagScene implements Scene {
 	/** The list widget for inventory rows. */
 	private readonly list = new ListMenu(8);
 
-	enter() {
+	enter(game: GameClient) {
+		this.list.useAudio(game.audio);
 		this.list.reset();
 	}
 

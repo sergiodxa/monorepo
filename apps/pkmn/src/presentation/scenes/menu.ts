@@ -37,7 +37,8 @@ export class MenuScene implements Scene {
 	/** @param presentation - The save snapshot to persist if the player saves. */
 	constructor(private readonly presentation: PresentationSave) {}
 
-	enter() {
+	enter(game: GameClient) {
+		this.list.useAudio(game.audio);
 		this.list.reset();
 	}
 

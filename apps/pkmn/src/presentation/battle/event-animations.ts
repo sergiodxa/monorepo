@@ -16,6 +16,10 @@ import type { BattleEvent, BattlePosition } from "~/game/battle/battle";
 import { Typewriter } from "../render/text";
 
 import type { AnimationTask } from "./animation-queue";
+import type { SfxPlayer } from "./battle-sfx";
+
+import { callbackTask } from "./animation-queue";
+import { sfxForBattleEvent } from "./battle-sfx";
 
 /** How long a fully-typed message lingers before the next task runs. */
 const MESSAGE_LINGER_MS = 700;
@@ -39,10 +43,27 @@ export interface BattleHud {
 	markFainted(position: BattlePosition): void;
 }
 
-/** Builds the ordered task list for one burst of battle events. */
-export function buildBattleTasks(events: BattleEvent[], hud: BattleHud): AnimationTask[] {
+/**
+ * Builds the ordered task list for one burst of battle events.
+ *
+ * When an `audio` player is supplied, events that carry a sound effect enqueue a
+ * zero-duration task that plays it at the visual moment — `hit` as an HP bar
+ * starts draining, `heal` as a treated bar refills, `faint` alongside the faint
+ * marker. The `audio` argument is optional so existing callers and tests keep
+ * working, and the synth is a safe no-op when Web Audio is unavailable.
+ */
+export function buildBattleTasks(
+	events: BattleEvent[],
+	hud: BattleHud,
+	audio?: SfxPlayer,
+): AnimationTask[] {
 	let tasks: AnimationTask[] = [];
 	let message = (text: string) => tasks.push(messageTask(text, hud));
+	let sfx = (event: BattleEvent) => {
+		if (!audio) return;
+		let name = sfxForBattleEvent(event);
+		if (name) tasks.push(callbackTask(() => audio.playSynthSfx(name)));
+	};
 
 	for (let event of events) {
 		switch (event.type) {
@@ -58,6 +79,7 @@ export function buildBattleTasks(events: BattleEvent[], hud: BattleHud): Animati
 				message("A critical hit!");
 				break;
 			case "damage-dealt":
+				sfx(event);
 				tasks.push(hpTask(event.target, event.remainingHP, hud));
 				break;
 			case "move-missed":
@@ -74,8 +96,10 @@ export function buildBattleTasks(events: BattleEvent[], hud: BattleHud): Animati
 				if (event.revived) message(`${hud.nameAt(event.user)} was revived!`);
 				// Only the acting slot has a rendered HP bar; drive it toward the
 				// reported HP so healing a benched teammate stays a no-op on screen.
-				if (event.healed > 0 || event.revived)
+				if (event.healed > 0 || event.revived) {
+					sfx(event);
 					tasks.push(hpTask(event.user, event.remainingHP, hud));
+				}
 				break;
 			}
 			case "status-applied":
@@ -101,6 +125,7 @@ export function buildBattleTasks(events: BattleEvent[], hud: BattleHud): Animati
 				break;
 			case "creature-fainted":
 				tasks.push(messageTask(`${hud.nameAt(event.target)} fainted!`, hud));
+				sfx(event);
 				tasks.push(faintTask(event.target, hud));
 				break;
 			// turn-started / turn-ended / requests / battle-started / battle-finished:
