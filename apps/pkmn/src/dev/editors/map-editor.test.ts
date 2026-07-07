@@ -22,7 +22,19 @@ import {
 } from "~/presentation/render/map-schema";
 import { Collision } from "~/presentation/render/tilemap";
 
-import { clampZoom, DEFAULT_ZOOM, MapEditor, MAX_ZOOM, MIN_ZOOM } from "./map-editor";
+import {
+	clampZoom,
+	copyRegion,
+	DEFAULT_ZOOM,
+	ellipseCells,
+	MapEditor,
+	MAX_ZOOM,
+	MIN_ZOOM,
+	normalizeRegion,
+	pasteRegion,
+	rectCells,
+	type RegionBlock,
+} from "./map-editor";
 
 /** A minimal tileset declaration tests add to give paint refs something to name. */
 function tileset(id: string): Tileset {

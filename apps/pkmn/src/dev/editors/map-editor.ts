@@ -31,6 +31,8 @@ import {
 } from "~/presentation/render/map-schema";
 import { Collision } from "~/presentation/render/tilemap";
 
+import type { TileCoord } from "../map-render";
+
 import { clonePage, defaultPage } from "./event-page-editor";
 
 /** The paintable tile layers, in back-to-front render order. */
@@ -50,9 +52,11 @@ export type EditLayer = TileLayerName | "collision";
  * The map-editing tools. `paint` writes the selected tile (or collision value) to
  * the tile under the cursor, `erase` clears a tile-layer cell to {@link EMPTY_CELL}
  * (or collision to walkable), `fill` flood-fills the contiguous same-value region,
- * and `event` places/selects an event marker rather than painting.
+ * `rectangle`/`ellipse` press-drag a shape then fill every cell it covers on
+ * release, `select` press-drags a rectangular region to copy/cut/paste, and `event`
+ * places/selects an event marker rather than painting.
  */
-export type MapTool = "paint" | "erase" | "fill" | "event";
+export type MapTool = "paint" | "erase" | "fill" | "rectangle" | "ellipse" | "select" | "event";
 
 /** The collision values the collision tool can paint, mapped to their meanings. */
 export const COLLISION_VALUES = {
@@ -71,6 +75,171 @@ export interface TileSelection {
 	tilesetIndex: number;
 	/** Zero-based tile index within that tileset's grid. */
 	tileIndex: number;
+}
+
+/**
+ * A rectangular region of tiles, normalized so `x`/`y` is the top-left corner and
+ * `width`/`height` are always positive. Both {@link MapEditor.select} and the
+ * rectangle/ellipse fills describe their extent with one of these.
+ */
+export interface TileRegion {
+	/** Left column of the region (inclusive). */
+	x: number;
+	/** Top row of the region (inclusive). */
+	y: number;
+	/** Region width in tiles (>= 1). */
+	width: number;
+	/** Region height in tiles (>= 1). */
+	height: number;
+}
+
+/**
+ * A copied rectangular block of a single layer/grid: its `width`×`height` in tiles
+ * and the flat `width * height` array of cell values captured from the source (row
+ * by row). Pasting stamps this block at an anchor, clipping any cell that would land
+ * off-map.
+ */
+export interface RegionBlock {
+	/** Block width in tiles. */
+	width: number;
+	/** Block height in tiles. */
+	height: number;
+	/** The captured cells, row-major (`row * width + col`). */
+	cells: number[];
+}
+
+/**
+ * Normalizes two drag endpoints (in either order) into a {@link TileRegion} with a
+ * positive size, so a rectangle/ellipse/selection is the same regardless of drag
+ * direction. Pure: the coordinates are used as-is (callers clamp to the map).
+ *
+ * @param x0 One corner's column.
+ * @param y0 One corner's row.
+ * @param x1 The opposite corner's column.
+ * @param y1 The opposite corner's row.
+ */
+export function normalizeRegion(x0: number, y0: number, x1: number, y1: number): TileRegion {
+	let minX = Math.min(x0, x1);
+	let minY = Math.min(y0, y1);
+	let maxX = Math.max(x0, x1);
+	let maxY = Math.max(y0, y1);
+	return { x: minX, y: minY, width: maxX - minX + 1, height: maxY - minY + 1 };
+}
+
+/**
+ * Every tile coordinate covered by the inclusive rectangle spanning two drag
+ * endpoints, in row-major order. The bounds are inclusive of both endpoints and the
+ * result is identical regardless of which corner the drag started from. Pure and
+ * DOM-free so the fill and its tests share the exact geometry.
+ *
+ * @param x0 One corner's column.
+ * @param y0 One corner's row.
+ * @param x1 The opposite corner's column.
+ * @param y1 The opposite corner's row.
+ */
+export function rectCells(x0: number, y0: number, x1: number, y1: number): TileCoord[] {
+	let region = normalizeRegion(x0, y0, x1, y1);
+	let cells: TileCoord[] = [];
+	for (let y = region.y; y < region.y + region.height; y++) {
+		for (let x = region.x; x < region.x + region.width; x++) {
+			cells.push({ x, y });
+		}
+	}
+	return cells;
+}
+
+/**
+ * Every tile coordinate inside the ellipse inscribed in the inclusive rectangle
+ * spanning two drag endpoints, in row-major order. A cell is inside when its center
+ * satisfies the ellipse equation for the region's half-extents; a 1×N or N×1 drag
+ * degenerates to the full rectangle (the ellipse fills its bounding line). Pure and
+ * DOM-free so the fill and its tests share the exact geometry.
+ *
+ * @param x0 One corner's column.
+ * @param y0 One corner's row.
+ * @param x1 The opposite corner's column.
+ * @param y1 The opposite corner's row.
+ */
+export function ellipseCells(x0: number, y0: number, x1: number, y1: number): TileCoord[] {
+	let region = normalizeRegion(x0, y0, x1, y1);
+	// Half-extents and center of the inscribed ellipse, in tile units.
+	let radiusX = region.width / 2;
+	let radiusY = region.height / 2;
+	let centerX = region.x + radiusX - 0.5;
+	let centerY = region.y + radiusY - 0.5;
+	let cells: TileCoord[] = [];
+	for (let y = region.y; y < region.y + region.height; y++) {
+		for (let x = region.x; x < region.x + region.width; x++) {
+			// A degenerate axis (radius 0) never divides; that axis contributes 0 so the
+			// whole 1-wide/1-tall line counts as inside.
+			let normX = radiusX === 0 ? 0 : (x - centerX) / radiusX;
+			let normY = radiusY === 0 ? 0 : (y - centerY) / radiusY;
+			if (normX * normX + normY * normY <= 1) cells.push({ x, y });
+		}
+	}
+	return cells;
+}
+
+/**
+ * Copies a rectangular region out of a flat grid into a {@link RegionBlock}, reading
+ * each cell (or `outside` for a coordinate past the grid bounds so a region dragged
+ * over an edge still yields a full block). Pure: the source grid is only read.
+ *
+ * @param grid The source flat grid, `gridWidth * gridHeight` cells.
+ * @param gridWidth The source width in cells.
+ * @param gridHeight The source height in cells.
+ * @param region The rectangular region to copy.
+ * @param outside The value to record for a cell outside the grid bounds.
+ */
+export function copyRegion(
+	grid: number[],
+	gridWidth: number,
+	gridHeight: number,
+	region: TileRegion,
+	outside: number,
+): RegionBlock {
+	let cells: number[] = [];
+	for (let row = 0; row < region.height; row++) {
+		for (let col = 0; col < region.width; col++) {
+			let x = region.x + col;
+			let y = region.y + row;
+			let inBounds = x >= 0 && y >= 0 && x < gridWidth && y < gridHeight;
+			cells.push(inBounds ? grid[y * gridWidth + x]! : outside);
+		}
+	}
+	return { width: region.width, height: region.height, cells };
+}
+
+/**
+ * Stamps a {@link RegionBlock} into a flat grid at an anchor (its top-left corner),
+ * clipping any cell that would land outside the grid. Pure: it returns a new grid
+ * rather than mutating the input, so the editor can swap the whole layer in.
+ *
+ * @param grid The destination flat grid, `gridWidth * gridHeight` cells.
+ * @param gridWidth The destination width in cells.
+ * @param gridHeight The destination height in cells.
+ * @param block The block to stamp.
+ * @param anchorX The column the block's left edge lands on.
+ * @param anchorY The row the block's top edge lands on.
+ */
+export function pasteRegion(
+	grid: number[],
+	gridWidth: number,
+	gridHeight: number,
+	block: RegionBlock,
+	anchorX: number,
+	anchorY: number,
+): number[] {
+	let next = [...grid];
+	for (let row = 0; row < block.height; row++) {
+		for (let col = 0; col < block.width; col++) {
+			let x = anchorX + col;
+			let y = anchorY + row;
+			if (x < 0 || y < 0 || x >= gridWidth || y >= gridHeight) continue;
+			next[y * gridWidth + x] = block.cells[row * block.width + col]!;
+		}
+	}
+	return next;
 }
 
 /** Default map width in tiles when a fresh map is created. */
@@ -166,6 +335,16 @@ export class MapEditor {
 
 	/** Whether the collision overlay is always shown (not just on the collision layer). */
 	#showCollision: boolean = false;
+
+	/** The current rectangular selection (a copy is exposed), or `null` when none. */
+	#selectionRegion: TileRegion | null = null;
+
+	/**
+	 * The last copied/cut block, or `null` when the clipboard is empty. A block is
+	 * captured from whichever layer/grid was active at copy time; pasting stamps it
+	 * onto the currently active layer/grid.
+	 */
+	#clipboard: RegionBlock | null = null;
 
 	/**
 	 * @param options Optional initial id and dimensions; omitted fields fall back to
@@ -264,6 +443,16 @@ export class MapEditor {
 		return this.#showCollision;
 	}
 
+	/** The current rectangular selection (a copy), or `null` when nothing is selected. */
+	get selectionRegion(): TileRegion | null {
+		return this.#selectionRegion ? { ...this.#selectionRegion } : null;
+	}
+
+	/** Whether the clipboard holds a copied/cut block that {@link paste} can stamp. */
+	get hasClipboard(): boolean {
+		return this.#clipboard !== null;
+	}
+
 	/** Whether a tile layer is currently drawn (visible). */
 	isLayerVisible(name: TileLayerName): boolean {
 		return this.#layerVisibility[name];
@@ -323,6 +512,7 @@ export class MapEditor {
 		};
 		this.#collision = walkableGrid(this.#width, this.#height);
 		this.#events = [];
+		this.#selectionRegion = null;
 		return this;
 	}
 
@@ -361,6 +551,8 @@ export class MapEditor {
 		this.#width = nextWidth;
 		this.#height = nextHeight;
 		this.#events = this.#events.filter((event) => this.#inBounds(event.x, event.y));
+		// A selection made against the old bounds may now be off-map; drop it.
+		this.#selectionRegion = null;
 		return this;
 	}
 
@@ -632,6 +824,159 @@ export class MapEditor {
 			y,
 			packTileRef(this.#selection.tilesetIndex, this.#selection.tileIndex),
 		);
+	}
+
+	/**
+	 * The value the rectangle/ellipse tools write on the active layer/grid: the packed
+	 * selected ref for a tile layer, or the active collision kind for the collision
+	 * grid. `null` when a tile layer is active but no tileset is declared (nothing to
+	 * paint), so callers can no-op.
+	 */
+	#brushValue(): number | null {
+		if (this.#layer === "collision") return COLLISION_VALUES[this.#collisionKind];
+		if (this.#tilesets.length === 0) return null;
+		return packTileRef(this.#selection.tilesetIndex, this.#selection.tileIndex);
+	}
+
+	/**
+	 * Fills every tile the rectangle spanning two drag endpoints covers with the
+	 * active brush (the selected tile on a tile layer, or the collision kind on the
+	 * collision grid). Cells outside the map are skipped and a tile-layer fill with no
+	 * tileset declared is a no-op. Returns the number of cells changed.
+	 *
+	 * @param x0 One drag-corner column.
+	 * @param y0 One drag-corner row.
+	 * @param x1 The opposite drag-corner column.
+	 * @param y1 The opposite drag-corner row.
+	 */
+	rectangle(x0: number, y0: number, x1: number, y1: number): number {
+		return this.#fillCells(rectCells(x0, y0, x1, y1));
+	}
+
+	/**
+	 * Fills every tile the ellipse inscribed in the drag rectangle covers with the
+	 * active brush (see {@link rectangle} for the value chosen and no-op rules).
+	 * Returns the number of cells changed.
+	 *
+	 * @param x0 One drag-corner column.
+	 * @param y0 One drag-corner row.
+	 * @param x1 The opposite drag-corner column.
+	 * @param y1 The opposite drag-corner row.
+	 */
+	ellipse(x0: number, y0: number, x1: number, y1: number): number {
+		return this.#fillCells(ellipseCells(x0, y0, x1, y1));
+	}
+
+	/** Writes the active brush into every in-bounds cell of a coordinate list. */
+	#fillCells(cells: TileCoord[]): number {
+		let value = this.#brushValue();
+		if (value === null) return 0;
+		let grid = this.#layer === "collision" ? this.#collision : this.#layers[this.#layer];
+		let changed = 0;
+		for (let cell of cells) {
+			if (!this.#inBounds(cell.x, cell.y)) continue;
+			grid[cell.y * this.#width + cell.x] = value;
+			changed++;
+		}
+		return changed;
+	}
+
+	/**
+	 * Records a rectangular selection spanning two drag endpoints, normalized so it is
+	 * the same regardless of drag direction and clamped to the map bounds. The
+	 * selection is what {@link copySelection} / {@link cutSelection} grab; it does not
+	 * itself change any cell. Returns the stored selection (a copy).
+	 *
+	 * @param x0 One drag-corner column.
+	 * @param y0 One drag-corner row.
+	 * @param x1 The opposite drag-corner column.
+	 * @param y1 The opposite drag-corner row.
+	 */
+	select(x0: number, y0: number, x1: number, y1: number): TileRegion {
+		let region = normalizeRegion(x0, y0, x1, y1);
+		// Clamp to the map so a selection never extends past an edge.
+		let minX = Math.max(0, region.x);
+		let minY = Math.max(0, region.y);
+		let maxX = Math.min(this.#width - 1, region.x + region.width - 1);
+		let maxY = Math.min(this.#height - 1, region.y + region.height - 1);
+		this.#selectionRegion = {
+			x: minX,
+			y: minY,
+			width: Math.max(1, maxX - minX + 1),
+			height: Math.max(1, maxY - minY + 1),
+		};
+		return { ...this.#selectionRegion };
+	}
+
+	/** Clears the current selection (without touching the clipboard). */
+	clearSelection(): this {
+		this.#selectionRegion = null;
+		return this;
+	}
+
+	/**
+	 * Copies the current selection's cells from the active layer/grid into the
+	 * clipboard, ready for {@link paste}. A no-op returning `null` when nothing is
+	 * selected. The copied block records the layer's raw cell values (empty cells and
+	 * walkable collision included) so a paste reproduces the region exactly.
+	 *
+	 * @returns The captured block (a copy), or `null` when there is no selection.
+	 */
+	copySelection(): RegionBlock | null {
+		if (this.#selectionRegion === null) return null;
+		let outside = this.#layer === "collision" ? Collision.Walkable : EMPTY_CELL;
+		let grid = this.#layer === "collision" ? this.#collision : this.#layers[this.#layer];
+		let block = copyRegion(grid, this.#width, this.#height, this.#selectionRegion, outside);
+		this.#clipboard = { width: block.width, height: block.height, cells: [...block.cells] };
+		return { width: block.width, height: block.height, cells: [...block.cells] };
+	}
+
+	/**
+	 * Copies the current selection into the clipboard, then clears every selected cell
+	 * on the active layer/grid (empty on a tile layer, walkable on collision). A no-op
+	 * returning `null` when nothing is selected.
+	 *
+	 * @returns The captured block (a copy), or `null` when there is no selection.
+	 */
+	cutSelection(): RegionBlock | null {
+		let block = this.copySelection();
+		if (block === null || this.#selectionRegion === null) return block;
+		let cleared = this.#layer === "collision" ? Collision.Walkable : EMPTY_CELL;
+		let grid = this.#layer === "collision" ? this.#collision : this.#layers[this.#layer];
+		for (let row = 0; row < this.#selectionRegion.height; row++) {
+			for (let col = 0; col < this.#selectionRegion.width; col++) {
+				let x = this.#selectionRegion.x + col;
+				let y = this.#selectionRegion.y + row;
+				if (this.#inBounds(x, y)) grid[y * this.#width + x] = cleared;
+			}
+		}
+		return block;
+	}
+
+	/**
+	 * Stamps the clipboard block onto the active layer/grid with its top-left corner
+	 * at the anchor, clipping any cell that would land off-map. A no-op returning `0`
+	 * when the clipboard is empty. Returns the number of cells stamped (in-bounds).
+	 *
+	 * @param anchorX The column the block's left edge lands on.
+	 * @param anchorY The row the block's top edge lands on.
+	 */
+	paste(anchorX: number, anchorY: number): number {
+		if (this.#clipboard === null) return 0;
+		let grid = this.#layer === "collision" ? this.#collision : this.#layers[this.#layer];
+		let next = pasteRegion(grid, this.#width, this.#height, this.#clipboard, anchorX, anchorY);
+		if (this.#layer === "collision") this.#collision = next;
+		else this.#layers[this.#layer] = next;
+		// Count how many cells actually landed in bounds.
+		let stamped = 0;
+		for (let row = 0; row < this.#clipboard.height; row++) {
+			for (let col = 0; col < this.#clipboard.width; col++) {
+				let x = anchorX + col;
+				let y = anchorY + row;
+				if (this.#inBounds(x, y)) stamped++;
+			}
+		}
+		return stamped;
 	}
 
 	/**
