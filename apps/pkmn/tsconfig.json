@@ -6,6 +6,8 @@
 		"noEmit": true,
 		"resolveJsonModule": true,
 		"ignoreDeprecations": "6.0",
+		"jsx": "react-jsx",
+		"jsxImportSource": "remix/ui",
 		"types": ["bun", "node"],
 		"baseUrl": ".",
 		"rootDirs": ["."],

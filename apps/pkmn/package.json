@@ -5,10 +5,12 @@
 	"scripts": {
 		"download:pokeapi": "bun run scripts/download-pokeapi-v2.ts",
 		"start": "bun run src/index.html",
+		"dev": "APP_ENV=development bun run src/dev/server.ts",
 		"typecheck": "tsc --noEmit"
 	},
 	"dependencies": {
-		"@pkg/result": "workspace:*"
+		"@pkg/result": "workspace:*",
+		"remix": "3.0.0-beta.5"
 	},
 	"devDependencies": {
 		"@total-typescript/ts-reset": "^0.6.1",
