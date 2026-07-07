@@ -33,4 +33,6 @@ export default route({
 	exportSprite: form("/dev/export/sprite"),
 	exportAtlas: form("/dev/export/atlas"),
 	exportTrainer: form("/dev/export/trainer"),
+	exportMap: form("/dev/export/map"),
+	exportSpecies: form("/dev/export/species"),
 });
