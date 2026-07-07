@@ -42,12 +42,16 @@ import {
 	type CollisionKind,
 	COLLISION_VALUES,
 	type EditLayer,
+	ellipseCells,
 	MapEditor,
 	MAX_ZOOM,
 	MIN_ZOOM,
 	type MapTool,
+	normalizeRegion,
+	rectCells,
 	TILE_LAYERS,
 	type TileLayerName,
+	type TileRegion,
 } from "../editors/map-editor";
 import {
 	canvasSize,
@@ -113,8 +117,20 @@ const TOOLS: Array<{ id: MapTool; label: string }> = [
 	{ id: "paint", label: "Paint" },
 	{ id: "erase", label: "Erase" },
 	{ id: "fill", label: "Fill" },
+	{ id: "rectangle", label: "Rectangle" },
+	{ id: "ellipse", label: "Ellipse" },
+	{ id: "select", label: "Select" },
 	{ id: "event", label: "Event" },
 ];
+
+/** The stroke color for a live shape-drag preview outline. */
+const PREVIEW_OUTLINE = "rgba(165, 180, 252, 0.95)";
+
+/** The translucent fill drawn inside a live shape-drag preview. */
+const PREVIEW_FILL = "rgba(129, 140, 248, 0.28)";
+
+/** The stroke color for a committed rectangular selection. */
+const SELECTION_OUTLINE = "rgba(250, 204, 21, 0.95)";
 
 /** The collision kinds, in bar order, with their labels and overlay colors. */
 const COLLISION_KINDS: Array<{ id: CollisionKind; label: string; color: string }> = [
@@ -171,8 +187,22 @@ class MapCanvas {
 	/** Whether a paint/erase drag is in progress. */
 	#painting = false;
 
+	/**
+	 * The anchor tile a rectangle/ellipse/select drag started on, or `null` when no
+	 * shape/selection drag is in progress. The committed layer is never touched until
+	 * release; only the preview overlay reflects the in-progress drag.
+	 */
+	#dragStart: { x: number; y: number } | null = null;
+
 	/** The tile currently under the pointer, or `null` when the pointer is off-canvas. */
 	#hover: { x: number; y: number } | null = null;
+
+	/**
+	 * Whether the select tool is armed to stamp the clipboard on the next click. Set by
+	 * {@link armPaste} when the view's Paste button is pressed; the paste previews under
+	 * the cursor and commits (then disarms) on the next canvas click.
+	 */
+	#pasteArmed = false;
 
 	/** The id of the currently selected event, so its marker is highlighted. */
 	#selectedEventId: string | null = null;
@@ -189,6 +219,9 @@ class MapCanvas {
 	 * @param onChange Called after a paint/event gesture so the view re-renders.
 	 * @param onPickEvent Called with an event id (or null) when event mode selects one.
 	 * @param onHover Called with the hovered tile (or null) so the view shows coords.
+	 * @param onSelectionChange Called after a selection or paste-arm change so the view
+	 *   re-renders the Copy/Cut/Paste controls (whose enabled state tracks the editor's
+	 *   selection and clipboard).
 	 */
 	constructor(
 		private readonly editor: MapEditor,
@@ -196,7 +229,23 @@ class MapCanvas {
 		private readonly onChange: () => void,
 		private readonly onPickEvent: (id: string | null) => void,
 		private readonly onHover: (tile: { x: number; y: number } | null) => void,
+		private readonly onSelectionChange: () => void,
 	) {}
+
+	/** Whether the select tool is currently armed to stamp the clipboard on click. */
+	get pasteArmed(): boolean {
+		return this.#pasteArmed;
+	}
+
+	/**
+	 * Arms (or disarms) the clipboard paste: while armed, the clipboard block previews
+	 * under the cursor and the next canvas click stamps it on the active layer. Arming
+	 * is a no-op when the clipboard is empty. Re-renders the preview.
+	 */
+	armPaste(armed: boolean): void {
+		this.#pasteArmed = armed && this.editor.hasClipboard;
+		this.render();
+	}
 
 	/** Replaces the loaded-tileset list (after the sidebar loads/removes one). */
 	setTilesets(tilesets: Array<LoadedTileset | null>): void {
@@ -266,6 +315,9 @@ class MapCanvas {
 
 		this.#drawEvents(context);
 		this.#drawCursor(context);
+		this.#drawSelection(context);
+		this.#drawShapePreview(context);
+		this.#drawPastePreview(context);
 	}
 
 	/** Blits one tile layer's non-empty cells from their tileset images. */
@@ -463,6 +515,96 @@ class MapCanvas {
 		context.strokeRect(rect.x + 1, rect.y + 1, rect.w - 2, rect.h - 2);
 	}
 
+	/** Outlines the committed rectangular selection with a dashed marquee, if any. */
+	#drawSelection(context: CanvasRenderingContext2D): void {
+		let region = this.editor.selectionRegion;
+		if (region === null) return;
+		let zoom = this.editor.zoom;
+		let dash = Math.max(2, zoom);
+		context.strokeStyle = SELECTION_OUTLINE;
+		context.lineWidth = Math.max(1, Math.floor(zoom / 2));
+		context.setLineDash([dash, dash]);
+		this.#strokeRegion(context, region);
+		context.setLineDash([]);
+	}
+
+	/**
+	 * While a rectangle/ellipse/select drag is in progress, previews its extent: a
+	 * rectangle/ellipse tints every covered cell and outlines its bounding box; a select
+	 * drag draws only the marquee outline. A no-op when no such drag is in progress. The
+	 * committed layer is never touched — this is overlay only.
+	 */
+	#drawShapePreview(context: CanvasRenderingContext2D): void {
+		let start = this.#dragStart;
+		let end = this.#hover;
+		if (start === null || end === null) return;
+		let tool = this.editor.tool;
+		if (tool !== "rectangle" && tool !== "ellipse" && tool !== "select") return;
+		let zoom = this.editor.zoom;
+
+		// Translucent fill over each covered cell (shape tools only; select is outline).
+		if (tool === "rectangle" || tool === "ellipse") {
+			let cells =
+				tool === "ellipse"
+					? ellipseCells(start.x, start.y, end.x, end.y)
+					: rectCells(start.x, start.y, end.x, end.y);
+			context.fillStyle = PREVIEW_FILL;
+			for (let cell of cells) {
+				if (!this.#inViewBounds(cell.x, cell.y)) continue;
+				let rect = tileScreenRect(cell.x, cell.y, zoom);
+				context.fillRect(rect.x, rect.y, rect.w, rect.h);
+			}
+		}
+
+		// Bounding-box outline so the drag extent reads even for a sparse ellipse.
+		context.strokeStyle = tool === "select" ? SELECTION_OUTLINE : PREVIEW_OUTLINE;
+		context.lineWidth = Math.max(1, Math.floor(zoom / 2));
+		this.#strokeRegion(context, normalizeRegion(start.x, start.y, end.x, end.y));
+	}
+
+	/** True when a tile coordinate is inside the map (view-side bounds check). */
+	#inViewBounds(x: number, y: number): boolean {
+		return x >= 0 && y >= 0 && x < this.editor.width && y < this.editor.height;
+	}
+
+	/**
+	 * When the select tool is armed to paste, previews the clipboard's footprint under
+	 * the cursor (its top-left corner at the hovered tile) so the author sees where the
+	 * stamp will land before committing. A no-op when not armed or off-canvas.
+	 */
+	#drawPastePreview(context: CanvasRenderingContext2D): void {
+		if (!this.#pasteArmed) return;
+		let hover = this.#hover;
+		let clip = this.editor.clipboardSize;
+		if (hover === null || clip === null) return;
+		let zoom = this.editor.zoom;
+		context.fillStyle = PREVIEW_FILL;
+		for (let row = 0; row < clip.height; row++) {
+			for (let col = 0; col < clip.width; col++) {
+				let x = hover.x + col;
+				let y = hover.y + row;
+				if (!this.#inViewBounds(x, y)) continue;
+				let rect = tileScreenRect(x, y, zoom);
+				context.fillRect(rect.x, rect.y, rect.w, rect.h);
+			}
+		}
+		context.strokeStyle = PREVIEW_OUTLINE;
+		context.lineWidth = Math.max(1, Math.floor(zoom / 2));
+		this.#strokeRegion(context, { x: hover.x, y: hover.y, width: clip.width, height: clip.height });
+	}
+
+	/** Strokes a tile region's outline in canvas pixels (uses the current stroke style). */
+	#strokeRegion(context: CanvasRenderingContext2D, region: TileRegion): void {
+		let topLeft = tileScreenRect(region.x, region.y, this.editor.zoom);
+		let size = tileScreenSize(this.editor.zoom);
+		context.strokeRect(
+			topLeft.x + 0.5,
+			topLeft.y + 0.5,
+			region.width * size - 1,
+			region.height * size - 1,
+		);
+	}
+
 	/** Maps a pointer event to a tile coordinate, or `null` when off-canvas. */
 	#tileAt(event: PointerEvent): { x: number; y: number } | null {
 		if (this.#canvas === null) return null;
@@ -530,28 +672,77 @@ class MapCanvas {
 		this.onChange();
 	}
 
-	/** Begins a gesture; paint/erase drag, fill/event are one-shot. */
+	/**
+	 * Begins a gesture. Paint/erase start a drag; fill/event are one-shot;
+	 * rectangle/ellipse/select begin a drag rectangle that only previews until release;
+	 * an armed select click stamps the clipboard instead of starting a selection.
+	 */
 	#handlePointerDown(event: PointerEvent): void {
 		let tile = this.#tileAt(event);
 		if (tile === null) return;
-		let dragTool = this.editor.tool === "paint" || this.editor.tool === "erase";
-		if (dragTool) {
+		let tool = this.editor.tool;
+
+		// An armed paste stamps the clipboard at the click and disarms; no drag begins.
+		if (tool === "select" && this.#pasteArmed) {
+			this.editor.paste(tile.x, tile.y);
+			this.#pasteArmed = false;
+			this.render();
+			this.onChange();
+			this.onSelectionChange();
+			return;
+		}
+
+		// Rectangle/ellipse/select all drag a region; capture so the release is caught
+		// even if the pointer leaves the canvas, and preview without committing.
+		if (tool === "rectangle" || tool === "ellipse" || tool === "select") {
+			this.#dragStart = tile;
+			this.#canvas?.setPointerCapture(event.pointerId);
+			this.render();
+			return;
+		}
+
+		if (tool === "paint" || tool === "erase") {
 			this.#painting = true;
 			this.#canvas?.setPointerCapture(event.pointerId);
 		}
 		this.#applyAt(tile);
 	}
 
-	/** Tracks the hovered tile and continues a paint/erase drag while held. */
+	/** Tracks the hovered tile and continues a paint/erase drag (or shape preview). */
 	#handlePointerMove(event: PointerEvent): void {
 		let tile = this.#tileAt(event);
 		this.#updateHover(tile);
 		if (this.#painting && tile !== null) this.#applyAt(tile);
 	}
 
-	/** Ends a drag. */
+	/**
+	 * Ends a gesture. A paint/erase drag just stops; a rectangle/ellipse drag commits
+	 * the shape fill on the active layer; a select drag records the rectangular
+	 * selection. The drag anchor is cleared and the view re-rendered either way.
+	 */
 	#stopPainting(): void {
 		this.#painting = false;
+		let start = this.#dragStart;
+		if (start === null) return;
+		this.#dragStart = null;
+
+		// Release outside the map falls back to the last hovered in-bounds tile so a
+		// drag that ends past an edge still commits its covered region.
+		let end = this.#hover ?? start;
+		let tool = this.editor.tool;
+		if (tool === "rectangle") {
+			this.editor.rectangle(start.x, start.y, end.x, end.y);
+			this.render();
+			this.onChange();
+		} else if (tool === "ellipse") {
+			this.editor.ellipse(start.x, start.y, end.x, end.y);
+			this.render();
+			this.onChange();
+		} else if (tool === "select") {
+			this.editor.select(start.x, start.y, end.x, end.y);
+			this.render();
+			this.onSelectionChange();
+		}
 	}
 }
 
@@ -601,6 +792,7 @@ export function MapTool(handle: Handle<Record<string, never>>) {
 			hoverTile = tile;
 			void handle.update();
 		},
+		() => void handle.update(),
 	);
 
 	/** Reports an outcome inline and re-renders. */
@@ -613,6 +805,34 @@ export function MapTool(handle: Handle<Record<string, never>>) {
 	/** Re-renders the canvas (in sync with the selected event) and the view together. */
 	function refresh() {
 		canvas.setSelectedEvent(selectedEventId);
+		void handle.update();
+	}
+
+	/** Copies the current selection to the clipboard so it can be pasted. */
+	function copySelection() {
+		let block = editor.copySelection();
+		if (block === null) report("Select a region first.", true);
+		else report(`Copied ${block.width}×${block.height} region.`, false);
+		void handle.update();
+	}
+
+	/** Cuts the current selection to the clipboard, clearing it on the active layer. */
+	function cutSelection() {
+		let block = editor.cutSelection();
+		if (block === null) report("Select a region first.", true);
+		else report(`Cut ${block.width}×${block.height} region.`, false);
+		canvas.render();
+		void handle.update();
+	}
+
+	/** Arms the paste tool so the next canvas click stamps the clipboard block. */
+	function armPaste() {
+		if (!editor.hasClipboard) {
+			report("Copy or cut a region before pasting.", true);
+			return;
+		}
+		canvas.armPaste(true);
+		report("Click the map to stamp the clipboard.", false);
 		void handle.update();
 	}
 
@@ -871,6 +1091,8 @@ export function MapTool(handle: Handle<Record<string, never>>) {
 										}),
 										on<HTMLButtonElement, "click">("click", () => {
 											editor.setTool(entry.id);
+											// Leaving the select tool disarms a pending paste so no stray stamp lands.
+											if (entry.id !== "select") canvas.armPaste(false);
 											refresh();
 										}),
 									]}
@@ -880,6 +1102,61 @@ export function MapTool(handle: Handle<Record<string, never>>) {
 							))}
 						</div>
 					</div>
+					{editor.tool === "select" ? (
+						<div mix={LABEL}>
+							Selection
+							<div mix={css({ display: "flex", gap: "0.35rem" })}>
+								<button
+									type="button"
+									disabled={editor.selectionRegion === null}
+									title="Copy the selected region to the clipboard"
+									mix={[
+										css({
+											...CONTROL_BUTTON,
+											opacity: editor.selectionRegion === null ? 0.45 : 1,
+											cursor: editor.selectionRegion === null ? "not-allowed" : "pointer",
+										}),
+										on<HTMLButtonElement, "click">("click", () => copySelection()),
+									]}
+								>
+									Copy
+								</button>
+								<button
+									type="button"
+									disabled={editor.selectionRegion === null}
+									title="Cut the selected region to the clipboard (clears it on the layer)"
+									mix={[
+										css({
+											...CONTROL_BUTTON,
+											opacity: editor.selectionRegion === null ? 0.45 : 1,
+											cursor: editor.selectionRegion === null ? "not-allowed" : "pointer",
+										}),
+										on<HTMLButtonElement, "click">("click", () => cutSelection()),
+									]}
+								>
+									Cut
+								</button>
+								<button
+									type="button"
+									disabled={!editor.hasClipboard}
+									title="Stamp the clipboard: click the map to place it"
+									mix={[
+										css({
+											...CONTROL_BUTTON,
+											borderColor: canvas.pasteArmed ? ACCENT : IDLE_BORDER,
+											background: canvas.pasteArmed ? "#1e1b4b" : "#18181b",
+											opacity: editor.hasClipboard ? 1 : 0.45,
+											cursor: editor.hasClipboard ? "pointer" : "not-allowed",
+										}),
+										on<HTMLButtonElement, "click">("click", () => armPaste()),
+									]}
+								>
+									{canvas.pasteArmed ? "Click map to paste" : "Paste"}
+								</button>
+							</div>
+						</div>
+					) : null}
+
 					{editor.layer === "collision" ? (
 						<div mix={LABEL}>
 							Collision kind

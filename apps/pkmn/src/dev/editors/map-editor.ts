@@ -453,6 +453,17 @@ export class MapEditor {
 		return this.#clipboard !== null;
 	}
 
+	/**
+	 * The clipboard block's footprint in tiles, or `null` when the clipboard is empty.
+	 * The view previews the paste stamp's extent from this without reading the block's
+	 * cells (which stay encapsulated).
+	 */
+	get clipboardSize(): { width: number; height: number } | null {
+		return this.#clipboard
+			? { width: this.#clipboard.width, height: this.#clipboard.height }
+			: null;
+	}
+
 	/** Whether a tile layer is currently drawn (visible). */
 	isLayerVisible(name: TileLayerName): boolean {
 		return this.#layerVisibility[name];
