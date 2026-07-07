@@ -29,9 +29,25 @@ export interface TransactionResult {
 	balance: number;
 }
 
+/** Upper bound on how many copies of one item a single purchase may request. */
+export const MAX_PURCHASE_COUNT = 999;
+
 /** Returns one player's current money balance, defaulting to zero when absent. */
 export function getMoney(world: World, playerId: PlayerId): number {
 	return getPlayerMoney(world, playerId);
+}
+
+/**
+ * The most copies of a `price`-each item a `money` balance can afford at once.
+ *
+ * Returns `min(MAX_PURCHASE_COUNT, floor(money / price))`, so it is `0` when the
+ * balance cannot cover a single copy and caps at `MAX_PURCHASE_COUNT` however
+ * large the balance grows. A non-positive price yields `0`, since such an item
+ * has no meaningful per-unit cost to divide by.
+ */
+export function maxAffordable(money: number, price: number): number {
+	if (price <= 0) return 0;
+	return Math.min(MAX_PURCHASE_COUNT, Math.floor(money / price));
 }
 
 /**

@@ -19,7 +19,14 @@ import { createPlayerId } from "../world/ids";
 import { migrateWorld } from "../world/migrate";
 import { getPlayerInventory, getPlayerMoney, type World } from "../world/world";
 
-import { buyItem, changeMoney, getMoney, sellItem } from "./shop-system";
+import {
+	buyItem,
+	changeMoney,
+	getMoney,
+	MAX_PURCHASE_COUNT,
+	maxAffordable,
+	sellItem,
+} from "./shop-system";
 
 let PRICED_ITEM_ID = "PRICED_ITEM";
 let FREE_ITEM_ID = "FREE_ITEM";
@@ -67,6 +74,34 @@ function createWorld(
 	});
 	return { world, playerId };
 }
+
+test("maxAffordable divides money by price and floors the result", () => {
+	expect(maxAffordable(1000, 100)).toBe(10);
+	expect(maxAffordable(950, 100)).toBe(9);
+	expect(maxAffordable(199, 100)).toBe(1);
+});
+
+test("maxAffordable returns zero when the balance cannot cover one unit", () => {
+	expect(maxAffordable(99, 100)).toBe(0);
+	expect(maxAffordable(0, 100)).toBe(0);
+});
+
+test("maxAffordable caps at MAX_PURCHASE_COUNT for a huge balance", () => {
+	expect(maxAffordable(10_000_000, 1)).toBe(MAX_PURCHASE_COUNT);
+	expect(MAX_PURCHASE_COUNT).toBe(999);
+});
+
+test("maxAffordable hits exact multiples on the boundary", () => {
+	expect(maxAffordable(500, 100)).toBe(5);
+	// A balance of exactly 999 units still tops out at the cap.
+	expect(maxAffordable(999, 1)).toBe(999);
+	expect(maxAffordable(1000, 1)).toBe(999);
+});
+
+test("maxAffordable returns zero for a non-positive price", () => {
+	expect(maxAffordable(1000, 0)).toBe(0);
+	expect(maxAffordable(1000, -5)).toBe(0);
+});
 
 test("getMoney defaults to zero when the player has no money component", () => {
 	let { world, playerId } = createWorld(0);
