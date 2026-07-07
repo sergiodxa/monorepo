@@ -22,7 +22,7 @@ import {
 } from "~/presentation/render/map-schema";
 import { Collision } from "~/presentation/render/tilemap";
 
-import { MapEditor } from "./map-editor";
+import { clampZoom, DEFAULT_ZOOM, MapEditor, MAX_ZOOM, MIN_ZOOM } from "./map-editor";
 
 /** A minimal tileset declaration tests add to give paint refs something to name. */
 function tileset(id: string): Tileset {
@@ -280,6 +280,102 @@ describe("events", () => {
 		let placed = editor.addEvent(1, 1)!;
 		placed.interaction.script.push({ do: "heal-party" });
 		expect(editor.eventAt(1, 1)!.interaction.script.length).toBe(0);
+	});
+});
+
+describe("zoom", () => {
+	test("clampZoom rounds and clamps to MIN_ZOOM..=MAX_ZOOM", () => {
+		expect(clampZoom(0)).toBe(MIN_ZOOM);
+		expect(clampZoom(-3)).toBe(MIN_ZOOM);
+		expect(clampZoom(100)).toBe(MAX_ZOOM);
+		expect(clampZoom(3.9)).toBe(3);
+		expect(clampZoom(Number.NaN)).toBe(MIN_ZOOM);
+	});
+
+	test("a fresh editor starts at the default zoom", () => {
+		expect(new MapEditor().zoom).toBe(DEFAULT_ZOOM);
+	});
+
+	test("setZoom clamps its argument", () => {
+		let editor = new MapEditor();
+		editor.setZoom(999);
+		expect(editor.zoom).toBe(MAX_ZOOM);
+		editor.setZoom(0);
+		expect(editor.zoom).toBe(MIN_ZOOM);
+	});
+
+	test("stepZoom moves one whole step at a time and clamps at the ends", () => {
+		let editor = new MapEditor();
+		editor.setZoom(MIN_ZOOM);
+		editor.stepZoom(-1);
+		expect(editor.zoom).toBe(MIN_ZOOM); // clamped at the floor
+		editor.stepZoom(5); // only steps by one regardless of magnitude
+		expect(editor.zoom).toBe(MIN_ZOOM + 1);
+		editor.setZoom(MAX_ZOOM);
+		editor.stepZoom(1);
+		expect(editor.zoom).toBe(MAX_ZOOM); // clamped at the ceiling
+	});
+});
+
+describe("visual toggles", () => {
+	test("every tile layer starts visible", () => {
+		let editor = new MapEditor();
+		expect(editor.layerVisibility).toEqual({ ground: true, decor: true, overhead: true });
+		expect(editor.isLayerVisible("ground")).toBe(true);
+	});
+
+	test("toggleLayer flips one layer and returns the new state", () => {
+		let editor = new MapEditor();
+		expect(editor.toggleLayer("decor")).toBe(false);
+		expect(editor.isLayerVisible("decor")).toBe(false);
+		// Other layers are untouched.
+		expect(editor.isLayerVisible("ground")).toBe(true);
+		expect(editor.toggleLayer("decor")).toBe(true);
+		expect(editor.isLayerVisible("decor")).toBe(true);
+	});
+
+	test("setLayerVisible sets an explicit value without disturbing others", () => {
+		let editor = new MapEditor();
+		editor.setLayerVisible("overhead", false);
+		expect(editor.layerVisibility).toEqual({ ground: true, decor: true, overhead: false });
+	});
+
+	test("layerVisibility returns a copy callers cannot use to mutate state", () => {
+		let editor = new MapEditor();
+		let snapshot = editor.layerVisibility;
+		snapshot.ground = false;
+		expect(editor.isLayerVisible("ground")).toBe(true);
+	});
+
+	test("grid starts on and toggles", () => {
+		let editor = new MapEditor();
+		expect(editor.showGrid).toBe(true);
+		expect(editor.toggleGrid()).toBe(false);
+		expect(editor.showGrid).toBe(false);
+		editor.setShowGrid(true);
+		expect(editor.showGrid).toBe(true);
+	});
+
+	test("collision overlay starts off and toggles", () => {
+		let editor = new MapEditor();
+		expect(editor.showCollision).toBe(false);
+		expect(editor.toggleCollision()).toBe(true);
+		expect(editor.showCollision).toBe(true);
+		editor.setShowCollision(false);
+		expect(editor.showCollision).toBe(false);
+	});
+
+	test("visual state does not leak into the serialized map", () => {
+		let editor = new MapEditor({ id: "visual" });
+		editor.createMap(2, 2);
+		editor.setZoom(4);
+		editor.toggleLayer("ground");
+		editor.toggleGrid();
+		editor.toggleCollision();
+		let map = editor.toMapData();
+		expect(map).not.toHaveProperty("zoom");
+		expect(map).not.toHaveProperty("layerVisibility");
+		expect(isSuccess(loadMap(map))).toBe(true);
 	});
 });
 

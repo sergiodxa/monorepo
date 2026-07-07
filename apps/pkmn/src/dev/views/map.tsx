@@ -43,10 +43,19 @@ import {
 	COLLISION_VALUES,
 	type EditLayer,
 	MapEditor,
+	MAX_ZOOM,
+	MIN_ZOOM,
 	type MapTool,
 	TILE_LAYERS,
 	type TileLayerName,
 } from "../editors/map-editor";
+import {
+	canvasSize,
+	eventMarkerStyle,
+	screenToTile,
+	tileScreenRect,
+	tileScreenSize,
+} from "../map-render";
 
 /** The style-object shape the `css()` mixin accepts, used for shared base styles. */
 type Styles = Parameters<typeof css>[0];
@@ -91,8 +100,11 @@ const ATLAS_IDS = Object.keys(
 /** Sorted list of real species ids the trainer/wild pickers offer. */
 const SPECIES_IDS = Object.keys(SPECIES).sort();
 
-/** How many display pixels one tile spans on the map canvas, before zoom. */
-const CANVAS_TILE_SIZE = 24;
+/** The indigo accent the editor uses to mark the active control/selection. */
+const ACCENT = "#6366f1";
+
+/** The idle border color shared by the small control buttons. */
+const IDLE_BORDER = "#3f3f46";
 
 /** The cardinal directions offered by facing / route pickers. */
 const DIRECTIONS = ["up", "down", "left", "right"] as const;
@@ -159,12 +171,18 @@ function loadImage(url: string): Promise<HTMLImageElement> {
 	});
 }
 
+/** Ledger of the marker glyphs → color for a small on-canvas event legend. */
+const EVENT_GLYPHS: Record<MapEvent["kind"], string> = { npc: "N", wild: "W", trigger: "T" };
+
 /**
  * Canvas-backed map renderer and pointer handler — the imperative DOM shell around
- * the pure {@link MapEditor}. It blits the three tile layers (and a collision
- * overlay when that layer is active) from the loaded tileset images, draws event
- * markers, and translates pointer gestures into editor mutations, calling back the
- * view to re-render after each change.
+ * the pure {@link MapEditor}. It blits the visible tile layers (dimming the ones that
+ * are not the active editing layer) and the collision overlay from the loaded tileset
+ * images, draws each event's sprite with a kind badge (outlining sprite-less triggers
+ * and highlighting the selected event), previews the selected tile under the cursor,
+ * and translates pointer gestures into editor mutations, calling back the view to
+ * re-render after each change. All geometry runs through the pure `map-render`
+ * helpers so the blit rectangles are testable without a canvas.
  */
 class MapCanvas {
 	/** The display canvas, or `null` before attach / after detach. */
@@ -173,9 +191,16 @@ class MapCanvas {
 	/** Whether a paint/erase drag is in progress. */
 	#painting = false;
 
+	/** The tile currently under the pointer, or `null` when the pointer is off-canvas. */
+	#hover: { x: number; y: number } | null = null;
+
+	/** The id of the currently selected event, so its marker is highlighted. */
+	#selectedEventId: string | null = null;
+
 	/** Bound pointer handlers, kept so detach removes the exact refs. */
 	#onPointerDown = (event: PointerEvent) => this.#handlePointerDown(event);
 	#onPointerMove = (event: PointerEvent) => this.#handlePointerMove(event);
+	#onPointerLeave = () => this.#clearHover();
 	#onPointerUp = () => this.#stopPainting();
 
 	/**
@@ -183,17 +208,25 @@ class MapCanvas {
 	 * @param tilesets Loaded tileset images keyed by tileset index (view-owned).
 	 * @param onChange Called after a paint/event gesture so the view re-renders.
 	 * @param onPickEvent Called with an event id (or null) when event mode selects one.
+	 * @param onHover Called with the hovered tile (or null) so the view shows coords.
 	 */
 	constructor(
 		private readonly editor: MapEditor,
 		private tilesets: Array<LoadedTileset | null>,
 		private readonly onChange: () => void,
 		private readonly onPickEvent: (id: string | null) => void,
+		private readonly onHover: (tile: { x: number; y: number } | null) => void,
 	) {}
 
 	/** Replaces the loaded-tileset list (after the sidebar loads/removes one). */
 	setTilesets(tilesets: Array<LoadedTileset | null>): void {
 		this.tilesets = tilesets;
+	}
+
+	/** Sets which event id is highlighted on the canvas, then re-renders. */
+	setSelectedEvent(id: string | null): void {
+		this.#selectedEventId = id;
+		this.render();
 	}
 
 	/** Binds the canvas, wires pointer listeners, and renders once. */
@@ -202,6 +235,7 @@ class MapCanvas {
 		canvas.style.touchAction = "none";
 		canvas.addEventListener("pointerdown", this.#onPointerDown);
 		canvas.addEventListener("pointermove", this.#onPointerMove);
+		canvas.addEventListener("pointerleave", this.#onPointerLeave);
 		window.addEventListener("pointerup", this.#onPointerUp);
 		this.render();
 	}
@@ -212,51 +246,66 @@ class MapCanvas {
 		if (canvas !== null) {
 			canvas.removeEventListener("pointerdown", this.#onPointerDown);
 			canvas.removeEventListener("pointermove", this.#onPointerMove);
+			canvas.removeEventListener("pointerleave", this.#onPointerLeave);
 		}
 		window.removeEventListener("pointerup", this.#onPointerUp);
 		this.#painting = false;
 		this.#canvas = null;
 	}
 
-	/** Draws every layer, the collision overlay (when active), and event markers. */
+	/** Draws every visible layer, the collision overlay, event markers, and the cursor. */
 	render(): void {
 		if (this.#canvas === null) return;
 		let context = this.#canvas.getContext("2d");
 		if (context === null) return;
 
-		let width = this.editor.width * CANVAS_TILE_SIZE;
-		let height = this.editor.height * CANVAS_TILE_SIZE;
+		let zoom = this.editor.zoom;
+		let { width, height } = canvasSize(this.editor.width, this.editor.height, zoom);
 		this.#canvas.width = width;
 		this.#canvas.height = height;
 		context.imageSmoothingEnabled = false;
 
-		// Backdrop + grid.
+		// Backdrop.
 		context.fillStyle = "#0b0b0e";
 		context.fillRect(0, 0, width, height);
 
-		for (let name of TILE_LAYERS) this.#drawLayer(context, name);
+		// Tile layers, back-to-front; hidden layers skipped, non-active ones dimmed so
+		// the layer being edited stands out.
+		let active = this.editor.layer;
+		for (let name of TILE_LAYERS) {
+			if (!this.editor.isLayerVisible(name)) continue;
+			context.globalAlpha = active === "collision" || active === name ? 1 : 0.35;
+			this.#drawLayer(context, name);
+		}
+		context.globalAlpha = 1;
 
-		if (this.editor.layer === "collision") this.#drawCollisionOverlay(context);
+		// Collision overlay when editing collision, or when the always-on toggle is set.
+		if (active === "collision" || this.editor.showCollision) this.#drawCollisionOverlay(context);
 
-		this.#drawGrid(context, width, height);
+		if (this.editor.showGrid) this.#drawGrid(context, width, height);
+
 		this.#drawEvents(context);
+		this.#drawCursor(context);
 	}
 
 	/** Blits one tile layer's non-empty cells from their tileset images. */
 	#drawLayer(context: CanvasRenderingContext2D, name: TileLayerName): void {
-		let map = this.editor.toMapData();
-		let layer = map.layers[name];
+		let zoom = this.editor.zoom;
+		let layer = this.editor.toMapData().layers[name];
 		for (let index = 0; index < layer.length; index++) {
 			let cell = layer[index]!;
 			if (cell === EMPTY_CELL) continue;
 			let { tilesetIndex, tileIndex } = unpackTileRef(cell);
 			let loaded = this.tilesets[tilesetIndex] ?? null;
-			let x = (index % this.editor.width) * CANVAS_TILE_SIZE;
-			let y = Math.floor(index / this.editor.width) * CANVAS_TILE_SIZE;
+			let rect = tileScreenRect(
+				index % this.editor.width,
+				Math.floor(index / this.editor.width),
+				zoom,
+			);
 			if (loaded === null) {
 				// No image yet: draw a labeled placeholder so the cell is still visible.
 				context.fillStyle = "#3f3f46";
-				context.fillRect(x + 1, y + 1, CANVAS_TILE_SIZE - 2, CANVAS_TILE_SIZE - 2);
+				context.fillRect(rect.x + 1, rect.y + 1, rect.w - 2, rect.h - 2);
 				continue;
 			}
 			let source = tileSourceRect(
@@ -275,64 +324,164 @@ class MapCanvas {
 				source.y,
 				source.w,
 				source.h,
-				x,
-				y,
-				CANVAS_TILE_SIZE,
-				CANVAS_TILE_SIZE,
+				rect.x,
+				rect.y,
+				rect.w,
+				rect.h,
 			);
 		}
 	}
 
-	/** Tints each cell by its collision value while the collision layer is active. */
+	/** Tints each cell by its collision value (walkable cells stay clear). */
 	#drawCollisionOverlay(context: CanvasRenderingContext2D): void {
+		let zoom = this.editor.zoom;
 		for (let y = 0; y < this.editor.height; y++) {
 			for (let x = 0; x < this.editor.width; x++) {
 				let value = this.editor.collisionAt(x, y);
 				let kind = COLLISION_KINDS.find((entry) => COLLISION_VALUES[entry.id] === value);
 				if (!kind || kind.id === "walkable") continue;
+				let rect = tileScreenRect(x, y, zoom);
 				context.fillStyle = kind.color;
-				context.fillRect(
-					x * CANVAS_TILE_SIZE,
-					y * CANVAS_TILE_SIZE,
-					CANVAS_TILE_SIZE,
-					CANVAS_TILE_SIZE,
-				);
+				context.fillRect(rect.x, rect.y, rect.w, rect.h);
 			}
 		}
 	}
 
 	/** Strokes the per-tile grid so cells read as distinct. */
 	#drawGrid(context: CanvasRenderingContext2D, width: number, height: number): void {
+		let size = tileScreenSize(this.editor.zoom);
 		context.strokeStyle = "rgba(255, 255, 255, 0.08)";
 		context.lineWidth = 1;
 		context.beginPath();
 		for (let x = 0; x <= this.editor.width; x++) {
-			let px = x * CANVAS_TILE_SIZE + 0.5;
+			let px = x * size + 0.5;
 			context.moveTo(px, 0);
 			context.lineTo(px, height);
 		}
 		for (let y = 0; y <= this.editor.height; y++) {
-			let py = y * CANVAS_TILE_SIZE + 0.5;
+			let py = y * size + 0.5;
 			context.moveTo(0, py);
 			context.lineTo(width, py);
 		}
 		context.stroke();
 	}
 
-	/** Draws a marker + kind glyph at every event tile. */
+	/**
+	 * Draws each event: its sprite (atlas region or raw image sub-rect) when set, an
+	 * outlined placeholder for sprite-less events and triggers, then a kind badge in
+	 * the corner. The selected event gets a bright highlight ring.
+	 */
 	#drawEvents(context: CanvasRenderingContext2D): void {
-		let glyphs: Record<MapEvent["kind"], string> = { npc: "N", wild: "W", trigger: "T" };
+		let zoom = this.editor.zoom;
+		let size = tileScreenSize(zoom);
 		for (let event of this.editor.events) {
-			let x = event.x * CANVAS_TILE_SIZE;
-			let y = event.y * CANVAS_TILE_SIZE;
-			context.fillStyle = "rgba(129, 140, 248, 0.85)";
-			context.fillRect(x + 2, y + 2, CANVAS_TILE_SIZE - 4, CANVAS_TILE_SIZE - 4);
+			let rect = tileScreenRect(event.x, event.y, zoom);
+			let style = eventMarkerStyle(event);
+			let drew = this.#drawEventSprite(context, event, rect);
+
+			if (!drew) {
+				// No usable sprite: an outlined tinted placeholder so the tile stays legible.
+				context.fillStyle = style.invisible ? "rgba(24, 24, 27, 0.55)" : style.color;
+				context.fillRect(rect.x + 2, rect.y + 2, rect.w - 4, rect.h - 4);
+				context.strokeStyle = style.color;
+				context.lineWidth = Math.max(1, Math.floor(zoom / 2));
+				if (style.invisible) context.setLineDash([Math.max(2, zoom), Math.max(2, zoom)]);
+				context.strokeRect(rect.x + 1.5, rect.y + 1.5, rect.w - 3, rect.h - 3);
+				context.setLineDash([]);
+			}
+
+			// Kind badge in the top-left corner.
+			let badge = Math.max(8, Math.floor(size * 0.42));
+			context.fillStyle = style.color;
+			context.fillRect(rect.x, rect.y, badge, badge);
 			context.fillStyle = "#0b1120";
-			context.font = `${Math.floor(CANVAS_TILE_SIZE * 0.6)}px system-ui, sans-serif`;
+			context.font = `${Math.floor(badge * 0.8)}px system-ui, sans-serif`;
 			context.textAlign = "center";
 			context.textBaseline = "middle";
-			context.fillText(glyphs[event.kind], x + CANVAS_TILE_SIZE / 2, y + CANVAS_TILE_SIZE / 2 + 1);
+			context.fillText(style.glyph, rect.x + badge / 2, rect.y + badge / 2 + 1);
+
+			if (event.id === this.#selectedEventId) {
+				context.strokeStyle = "#fbbf24";
+				context.lineWidth = Math.max(2, Math.floor(zoom));
+				context.strokeRect(rect.x + 1, rect.y + 1, rect.w - 2, rect.h - 2);
+			}
 		}
+	}
+
+	/**
+	 * Blits an event's chosen sprite into its tile rect, scaled to fill. Supports a
+	 * raw image sub-rect (image id + x/y/w/h) from a loaded tileset image and, when
+	 * the atlas image happens to be loaded as a tileset, an atlas region drawn from
+	 * that image is out of scope (atlases aren't loaded here) so those fall back to
+	 * the badge placeholder. Returns whether a sprite was drawn.
+	 */
+	#drawEventSprite(
+		context: CanvasRenderingContext2D,
+		event: MapEvent,
+		rect: { x: number; y: number; w: number; h: number },
+	): boolean {
+		let sprite = event.sprite;
+		if (sprite === null || !("image" in sprite)) return false;
+		let loaded = this.tilesets.find((entry) => entry?.image === sprite.image) ?? null;
+		if (!loaded) return false;
+		context.drawImage(
+			loaded.element,
+			sprite.x,
+			sprite.y,
+			sprite.w,
+			sprite.h,
+			rect.x,
+			rect.y,
+			rect.w,
+			rect.h,
+		);
+		return true;
+	}
+
+	/**
+	 * Highlights the hovered tile: a preview of the selected tile in paint mode, or a
+	 * plain outline otherwise, so the author sees where the next action lands.
+	 */
+	#drawCursor(context: CanvasRenderingContext2D): void {
+		let hover = this.#hover;
+		if (hover === null) return;
+		let zoom = this.editor.zoom;
+		let rect = tileScreenRect(hover.x, hover.y, zoom);
+
+		// A ghost of the selected tile while painting a tile layer.
+		if (this.editor.tool === "paint" && this.editor.layer !== "collision") {
+			let selection = this.editor.selection;
+			let loaded = this.tilesets[selection.tilesetIndex] ?? null;
+			if (loaded !== null) {
+				let source = tileSourceRect(
+					{
+						id: "",
+						image: loaded.image,
+						columns: loaded.columns,
+						tileWidth: loaded.tileWidth,
+						tileHeight: loaded.tileHeight,
+					},
+					selection.tileIndex,
+				);
+				context.globalAlpha = 0.6;
+				context.drawImage(
+					loaded.element,
+					source.x,
+					source.y,
+					source.w,
+					source.h,
+					rect.x,
+					rect.y,
+					rect.w,
+					rect.h,
+				);
+				context.globalAlpha = 1;
+			}
+		}
+
+		context.strokeStyle = ACCENT;
+		context.lineWidth = Math.max(2, Math.floor(zoom));
+		context.strokeRect(rect.x + 1, rect.y + 1, rect.w - 2, rect.h - 2);
 	}
 
 	/** Maps a pointer event to a tile coordinate, or `null` when off-canvas. */
@@ -340,10 +489,31 @@ class MapCanvas {
 		if (this.#canvas === null) return null;
 		let rect = this.#canvas.getBoundingClientRect();
 		if (rect.width === 0 || rect.height === 0) return null;
-		let x = Math.floor(((event.clientX - rect.left) / rect.width) * this.editor.width);
-		let y = Math.floor(((event.clientY - rect.top) / rect.height) * this.editor.height);
-		if (x < 0 || y < 0 || x >= this.editor.width || y >= this.editor.height) return null;
-		return { x, y };
+		// Map the client point into the canvas's own bitmap pixels, undoing CSS scaling.
+		let scaleX = this.#canvas.width / rect.width;
+		let scaleY = this.#canvas.height / rect.height;
+		let offsetX = (event.clientX - rect.left) * scaleX;
+		let offsetY = (event.clientY - rect.top) * scaleY;
+		return screenToTile(offsetX, offsetY, this.editor.width, this.editor.height, this.editor.zoom);
+	}
+
+	/** Records the hovered tile, re-renders the cursor, and reports it to the view. */
+	#updateHover(tile: { x: number; y: number } | null): void {
+		let prev = this.#hover;
+		let changed = prev?.x !== tile?.x || prev?.y !== tile?.y;
+		this.#hover = tile;
+		if (changed) {
+			this.render();
+			this.onHover(tile);
+		}
+	}
+
+	/** Clears the hovered tile when the pointer leaves the canvas. */
+	#clearHover(): void {
+		if (this.#hover === null) return;
+		this.#hover = null;
+		this.render();
+		this.onHover(null);
 	}
 
 	/** Applies the active tool to a tile without recording a drag boundary. */
@@ -393,11 +563,11 @@ class MapCanvas {
 		this.#applyAt(tile);
 	}
 
-	/** Continues a paint/erase drag while the pointer is held. */
+	/** Tracks the hovered tile and continues a paint/erase drag while held. */
 	#handlePointerMove(event: PointerEvent): void {
-		if (!this.#painting) return;
 		let tile = this.#tileAt(event);
-		if (tile !== null) this.#applyAt(tile);
+		this.#updateHover(tile);
+		if (this.#painting && tile !== null) this.#applyAt(tile);
 	}
 
 	/** Ends a drag. */
@@ -428,6 +598,9 @@ export function MapTool(handle: Handle<Record<string, never>>) {
 	let tileSize = editor.tileWidth;
 	let selectedEventId: string | null = null;
 
+	// The tile under the pointer, mirrored into the coordinate readout.
+	let hoverTile: { x: number; y: number } | null = null;
+
 	// New-tileset controls.
 	let tilesetImageChoice = IMAGE_IDS[0] ?? "";
 	let tilesetUrl = "";
@@ -442,6 +615,11 @@ export function MapTool(handle: Handle<Record<string, never>>) {
 		() => void handle.update(),
 		(id) => {
 			selectedEventId = id;
+			canvas.setSelectedEvent(id);
+			void handle.update();
+		},
+		(tile) => {
+			hoverTile = tile;
 			void handle.update();
 		},
 	);
@@ -453,9 +631,9 @@ export function MapTool(handle: Handle<Record<string, never>>) {
 		void handle.update();
 	}
 
-	/** Re-renders the canvas and the surrounding view together. */
+	/** Re-renders the canvas (in sync with the selected event) and the view together. */
 	function refresh() {
-		canvas.render();
+		canvas.setSelectedEvent(selectedEventId);
 		void handle.update();
 	}
 
@@ -661,8 +839,20 @@ export function MapTool(handle: Handle<Record<string, never>>) {
 					</label>
 				</div>
 
-				{/* Layer + tool bar. */}
-				<div mix={css({ display: "flex", flexWrap: "wrap", gap: "1rem", alignItems: "flex-end" })}>
+				{/* Layer + tool + view bar. */}
+				<div
+					mix={css({
+						display: "flex",
+						flexWrap: "wrap",
+						gap: "1.25rem",
+						alignItems: "flex-end",
+						width: "100%",
+						padding: "0.75rem 1rem",
+						background: "#141417",
+						border: "1px solid #27272a",
+						borderRadius: "0.5rem",
+					})}
+				>
 					<div mix={LABEL}>
 						Layer
 						<div mix={css({ display: "flex", gap: "0.35rem" })}>
@@ -673,7 +863,8 @@ export function MapTool(handle: Handle<Record<string, never>>) {
 									mix={[
 										css({
 											...CONTROL_BUTTON,
-											borderColor: editor.layer === entry.id ? "#6366f1" : "#3f3f46",
+											borderColor: editor.layer === entry.id ? ACCENT : IDLE_BORDER,
+											background: editor.layer === entry.id ? "#1e1b4b" : "#18181b",
 										}),
 										on<HTMLButtonElement, "click">("click", () => {
 											editor.setLayer(entry.id);
@@ -696,7 +887,8 @@ export function MapTool(handle: Handle<Record<string, never>>) {
 									mix={[
 										css({
 											...CONTROL_BUTTON,
-											borderColor: editor.tool === entry.id ? "#6366f1" : "#3f3f46",
+											borderColor: editor.tool === entry.id ? ACCENT : IDLE_BORDER,
+											background: editor.tool === entry.id ? "#1e1b4b" : "#18181b",
 										}),
 										on<HTMLButtonElement, "click">("click", () => {
 											editor.setTool(entry.id);
@@ -720,7 +912,9 @@ export function MapTool(handle: Handle<Record<string, never>>) {
 										mix={[
 											css({
 												...CONTROL_BUTTON,
-												borderColor: editor.collisionKind === entry.id ? "#6366f1" : "#3f3f46",
+												borderColor: editor.collisionKind === entry.id ? ACCENT : IDLE_BORDER,
+												// A swatch of the kind's overlay color so the mapping is obvious.
+												boxShadow: `inset 0 -3px 0 0 ${entry.color}`,
 											}),
 											on<HTMLButtonElement, "click">("click", () => {
 												editor.setCollisionKind(entry.id);
@@ -734,6 +928,128 @@ export function MapTool(handle: Handle<Record<string, never>>) {
 							</div>
 						</div>
 					) : null}
+
+					{/* Layer visibility toggles. */}
+					<div mix={LABEL}>
+						Show layers
+						<div mix={css({ display: "flex", gap: "0.35rem" })}>
+							{EDIT_LAYERS.filter((entry) => entry.id !== "collision").map((entry) => {
+								let visible = editor.isLayerVisible(entry.id as TileLayerName);
+								return (
+									<button
+										key={entry.id}
+										type="button"
+										title={`${visible ? "Hide" : "Show"} ${entry.label}`}
+										mix={[
+											css({
+												...CONTROL_BUTTON,
+												padding: "0.4rem 0.6rem",
+												opacity: visible ? 1 : 0.45,
+												borderColor: visible ? ACCENT : IDLE_BORDER,
+											}),
+											on<HTMLButtonElement, "click">("click", () => {
+												editor.toggleLayer(entry.id as TileLayerName);
+												refresh();
+											}),
+										]}
+									>
+										{visible ? "◉" : "◯"} {entry.label}
+									</button>
+								);
+							})}
+						</div>
+					</div>
+
+					{/* View toggles: grid + always-on collision overlay. */}
+					<div mix={LABEL}>
+						View
+						<div mix={css({ display: "flex", gap: "0.35rem" })}>
+							<button
+								type="button"
+								mix={[
+									css({
+										...CONTROL_BUTTON,
+										borderColor: editor.showGrid ? ACCENT : IDLE_BORDER,
+										opacity: editor.showGrid ? 1 : 0.55,
+									}),
+									on<HTMLButtonElement, "click">("click", () => {
+										editor.toggleGrid();
+										refresh();
+									}),
+								]}
+							>
+								# Grid
+							</button>
+							<button
+								type="button"
+								title="Show the collision overlay on every layer"
+								mix={[
+									css({
+										...CONTROL_BUTTON,
+										borderColor: editor.showCollision ? ACCENT : IDLE_BORDER,
+										opacity: editor.showCollision ? 1 : 0.55,
+									}),
+									on<HTMLButtonElement, "click">("click", () => {
+										editor.toggleCollision();
+										refresh();
+									}),
+								]}
+							>
+								⛰ Collision
+							</button>
+						</div>
+					</div>
+
+					{/* Zoom stepper. */}
+					<div mix={LABEL}>
+						Zoom
+						<div mix={css({ display: "flex", gap: "0.35rem", alignItems: "center" })}>
+							<button
+								type="button"
+								title="Zoom out"
+								mix={[
+									css({
+										...CONTROL_BUTTON,
+										padding: "0.4rem 0.65rem",
+										opacity: editor.zoom <= MIN_ZOOM ? 0.45 : 1,
+									}),
+									on<HTMLButtonElement, "click">("click", () => {
+										editor.stepZoom(-1);
+										refresh();
+									}),
+								]}
+							>
+								−
+							</button>
+							<span
+								mix={css({
+									minWidth: "2.75rem",
+									textAlign: "center",
+									color: "#e5e7eb",
+									fontSize: "0.85rem",
+								})}
+							>
+								{editor.zoom}×
+							</span>
+							<button
+								type="button"
+								title="Zoom in"
+								mix={[
+									css({
+										...CONTROL_BUTTON,
+										padding: "0.4rem 0.65rem",
+										opacity: editor.zoom >= MAX_ZOOM ? 0.45 : 1,
+									}),
+									on<HTMLButtonElement, "click">("click", () => {
+										editor.stepZoom(1);
+										refresh();
+									}),
+								]}
+							>
+								+
+							</button>
+						</div>
+					</div>
 				</div>
 
 				{/* Sidebar + canvas. */}
@@ -743,6 +1059,14 @@ export function MapTool(handle: Handle<Record<string, never>>) {
 					{/* Tileset sidebar. */}
 					<aside mix={css({ display: "grid", gap: "0.75rem", width: "18rem" })}>
 						<h3 mix={css({ margin: 0, fontSize: "1rem" })}>Tilesets</h3>
+
+						{/* Selected-tile preview so the active brush is always visible. */}
+						<SelectedTilePreview
+							loaded={loaded[editor.selection.tilesetIndex] ?? null}
+							tilesetIndex={editor.selection.tilesetIndex}
+							tileIndex={editor.selection.tileIndex}
+						/>
+
 						<div mix={css({ display: "grid", gap: "0.5rem" })}>
 							<label mix={LABEL}>
 								Manifest image
@@ -820,28 +1144,119 @@ export function MapTool(handle: Handle<Record<string, never>>) {
 					</aside>
 
 					{/* Map canvas. */}
-					<div mix={css({ display: "grid", gap: "0.5rem" })}>
-						<canvas
-							mix={[
-								css({
-									imageRendering: "pixelated",
-									border: "1px solid #3f3f46",
-									borderRadius: "0.375rem",
-									maxWidth: "100%",
-									touchAction: "none",
-									cursor: "crosshair",
-								}),
-								ref<HTMLCanvasElement>((element, signal) => {
-									canvas.attach(element);
-									signal.addEventListener("abort", () => canvas.detach());
-								}),
-							]}
-						/>
-						<p mix={css({ margin: 0, color: "#9ca3af", fontSize: "0.8rem" })}>
-							{editor.tilesets.length === 0
-								? "Load a tileset to start painting."
-								: `${editor.tilesets.length} tileset(s), ${editor.events.length} event(s).`}
-						</p>
+					<div mix={css({ display: "grid", gap: "0.5rem", flex: "1 1 24rem", minWidth: "0" })}>
+						<div
+							mix={css({
+								overflow: "auto",
+								maxWidth: "100%",
+								maxHeight: "70vh",
+								padding: "0.5rem",
+								background: "#141417",
+								border: "1px solid #27272a",
+								borderRadius: "0.5rem",
+							})}
+						>
+							<canvas
+								mix={[
+									css({
+										imageRendering: "pixelated",
+										display: "block",
+										touchAction: "none",
+										cursor: "crosshair",
+									}),
+									ref<HTMLCanvasElement>((element, signal) => {
+										canvas.attach(element);
+										signal.addEventListener("abort", () => canvas.detach());
+									}),
+								]}
+							/>
+						</div>
+						<div
+							mix={css({
+								display: "flex",
+								flexWrap: "wrap",
+								gap: "0.75rem",
+								alignItems: "center",
+								color: "#9ca3af",
+								fontSize: "0.8rem",
+							})}
+						>
+							<span
+								mix={css({
+									fontVariantNumeric: "tabular-nums",
+									color: hoverTile ? "#e5e7eb" : "#6b7280",
+								})}
+							>
+								{hoverTile ? `tile (${hoverTile.x}, ${hoverTile.y})` : "tile (–, –)"}
+							</span>
+							<span mix={css({ color: "#3f3f46" })}>•</span>
+							<span>
+								{editor.width}×{editor.height} @ {editor.zoom}×
+							</span>
+							<span mix={css({ color: "#3f3f46" })}>•</span>
+							<span>
+								{editor.tilesets.length === 0
+									? "Load a tileset to start painting."
+									: `${editor.tilesets.length} tileset(s), ${editor.events.length} event(s).`}
+							</span>
+						</div>
+
+						{/* Legend for the event badges + collision colors. */}
+						<div
+							mix={css({
+								display: "flex",
+								flexWrap: "wrap",
+								gap: "0.75rem",
+								alignItems: "center",
+								fontSize: "0.72rem",
+								color: "#9ca3af",
+							})}
+						>
+							{(["npc", "wild", "trigger"] as const).map((kind) => (
+								<span
+									key={kind}
+									mix={css({ display: "flex", gap: "0.3rem", alignItems: "center" })}
+								>
+									<span
+										mix={css({
+											display: "inline-flex",
+											width: "1rem",
+											height: "1rem",
+											alignItems: "center",
+											justifyContent: "center",
+											borderRadius: "0.15rem",
+											fontSize: "0.62rem",
+											color: "#0b1120",
+											background: eventMarkerStyle({
+												kind,
+												sprite: null,
+											} as MapEvent).color,
+										})}
+									>
+										{EVENT_GLYPHS[kind]}
+									</span>
+									{kind}
+								</span>
+							))}
+							{COLLISION_KINDS.filter((entry) => entry.id !== "walkable").map((entry) => (
+								<span
+									key={entry.id}
+									mix={css({ display: "flex", gap: "0.3rem", alignItems: "center" })}
+								>
+									<span
+										mix={css({
+											display: "inline-block",
+											width: "1rem",
+											height: "1rem",
+											borderRadius: "0.15rem",
+											background: entry.color,
+											border: "1px solid #27272a",
+										})}
+									/>
+									{entry.label}
+								</span>
+							))}
+						</div>
 					</div>
 
 					{/* Event panel. */}
@@ -929,13 +1344,16 @@ function TilesetPalette(handle: Handle<TilesetPaletteProps>) {
 		let loaded = props.loaded;
 		let tileCount = loaded ? countTiles(loaded) : props.tileset.columns * 4;
 		let columns = props.tileset.columns;
+		let isActive = props.selectedTileset === props.index;
+		let dimensions = loaded ? `${loaded.element.width}×${loaded.element.height}px` : "loading";
 		return (
 			<div
 				mix={css({
 					display: "grid",
-					gap: "0.35rem",
+					gap: "0.4rem",
 					padding: "0.5rem",
-					border: "1px solid #3f3f46",
+					background: isActive ? "#141417" : "transparent",
+					border: `1px solid ${isActive ? ACCENT : IDLE_BORDER}`,
 					borderRadius: "0.375rem",
 				})}
 			>
@@ -947,8 +1365,13 @@ function TilesetPalette(handle: Handle<TilesetPaletteProps>) {
 						gap: "0.5rem",
 					})}
 				>
-					<span mix={css({ fontSize: "0.8rem", color: "#e5e7eb" })}>
-						#{props.index} {props.tileset.id}
+					<span mix={css({ display: "grid", gap: "0.1rem" })}>
+						<span mix={css({ fontSize: "0.8rem", color: "#e5e7eb" })}>
+							#{props.index} {props.tileset.id}
+						</span>
+						<span mix={css({ fontSize: "0.68rem", color: "#9ca3af" })}>
+							{dimensions} · {columns} cols · {tileCount} tiles
+						</span>
 					</span>
 					<button
 						type="button"
@@ -968,11 +1391,13 @@ function TilesetPalette(handle: Handle<TilesetPaletteProps>) {
 							display: "grid",
 							gridTemplateColumns: `repeat(${columns}, 1fr)`,
 							gap: "1px",
+							background: "#27272a",
+							padding: "1px",
+							borderRadius: "0.25rem",
 						})}
 					>
 						{Array.from({ length: tileCount }, (_, tileIndex) => {
-							let isSelected =
-								props.selectedTileset === props.index && props.selectedTile === tileIndex;
+							let isSelected = isActive && props.selectedTile === tileIndex;
 							return (
 								<canvas
 									key={tileIndex}
@@ -982,9 +1407,14 @@ function TilesetPalette(handle: Handle<TilesetPaletteProps>) {
 											width: "100%",
 											aspectRatio: "1 / 1",
 											imageRendering: "pixelated",
-											outline: isSelected ? "2px solid #818cf8" : "1px solid #27272a",
+											borderRadius: "0.1rem",
+											outline: isSelected ? `2px solid ${ACCENT}` : "1px solid #18181b",
+											outlineOffset: isSelected ? "1px" : "0",
+											boxShadow: isSelected ? "0 0 0 1px #c7d2fe" : "none",
 											cursor: "pointer",
+											transition: "outline-color 80ms ease",
 										}),
+										css({ "&:hover": { outline: "2px solid #a5b4fc" } } as Styles),
 										ref<HTMLCanvasElement>((element) => {
 											drawTilePreview(element, loaded, tileIndex);
 										}),
@@ -995,6 +1425,73 @@ function TilesetPalette(handle: Handle<TilesetPaletteProps>) {
 						})}
 					</div>
 				)}
+			</div>
+		);
+	};
+}
+
+/** Props for the always-visible selected-tile preview. */
+interface SelectedTilePreviewProps {
+	/** The loaded tileset the selected tile is from, or null. */
+	loaded: LoadedTileset | null;
+	/** The selected tileset index (for the caption). */
+	tilesetIndex: number;
+	/** The selected tile index within that tileset. */
+	tileIndex: number;
+}
+
+/**
+ * A large preview of the currently selected tile (the active paint brush), shown at
+ * the top of the sidebar so the author always sees what will be painted. Renders a
+ * dashed "no tile" placeholder before a tileset is loaded.
+ *
+ * @param handle Component handle exposing the preview props.
+ * @returns The render function for the selected-tile preview.
+ */
+function SelectedTilePreview(handle: Handle<SelectedTilePreviewProps>) {
+	return () => {
+		let { loaded, tilesetIndex, tileIndex } = handle.props;
+		return (
+			<div
+				mix={css({
+					display: "flex",
+					gap: "0.6rem",
+					alignItems: "center",
+					padding: "0.5rem",
+					background: "#141417",
+					border: "1px solid #27272a",
+					borderRadius: "0.375rem",
+				})}
+			>
+				{loaded === null ? (
+					<div
+						mix={css({
+							width: "48px",
+							height: "48px",
+							borderRadius: "0.25rem",
+							border: "2px dashed #3f3f46",
+						})}
+					/>
+				) : (
+					<canvas
+						mix={[
+							css({
+								width: "48px",
+								height: "48px",
+								imageRendering: "pixelated",
+								borderRadius: "0.25rem",
+								outline: `2px solid ${ACCENT}`,
+							}),
+							ref<HTMLCanvasElement>((element) => drawTilePreview(element, loaded, tileIndex)),
+						]}
+					/>
+				)}
+				<div mix={css({ display: "grid", gap: "0.15rem" })}>
+					<span mix={css({ fontSize: "0.8rem", color: "#e5e7eb" })}>Selected tile</span>
+					<span mix={css({ fontSize: "0.72rem", color: "#9ca3af" })}>
+						{loaded === null ? "no tileset loaded" : `set #${tilesetIndex} · tile ${tileIndex}`}
+					</span>
+				</div>
 			</div>
 		);
 	};

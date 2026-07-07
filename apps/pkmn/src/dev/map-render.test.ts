@@ -1,0 +1,130 @@
+/**
+ * Verifies the pure map-render geometry and event-marker classification without a
+ * canvas: the tile→screen size/rect math scales with zoom off {@link BASE_TILE_PX},
+ * {@link canvasSize} sizes the whole bitmap, {@link screenToTile} inverts the mapping
+ * and rejects off-map offsets, and {@link eventMarkerStyle} picks the right glyph,
+ * color, and "invisible" flag per event kind and sprite.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+import { describe, expect, test } from "bun:test";
+
+import type { MapEvent } from "~/presentation/render/map-schema";
+
+import {
+	BASE_TILE_PX,
+	canvasSize,
+	eventMarkerStyle,
+	screenToTile,
+	tileScreenRect,
+	tileScreenSize,
+} from "./map-render";
+
+/** Builds a minimal event with the fields the marker classifier reads. */
+function event(kind: MapEvent["kind"], sprite: MapEvent["sprite"] = null): MapEvent {
+	return {
+		id: `${kind}-1`,
+		x: 0,
+		y: 0,
+		kind,
+		facing: "down",
+		sprite,
+		movement: "none",
+		interaction: { script: [], trainer: undefined, wild: undefined },
+		interactionMode: "action",
+		flag: undefined,
+		once: false,
+	};
+}
+
+describe("tileScreenSize", () => {
+	test("scales the base tile size by a whole zoom factor", () => {
+		expect(tileScreenSize(1)).toBe(BASE_TILE_PX);
+		expect(tileScreenSize(3)).toBe(BASE_TILE_PX * 3);
+	});
+
+	test("treats a fractional or sub-1 zoom as at least 1x whole steps", () => {
+		expect(tileScreenSize(2.9)).toBe(BASE_TILE_PX * 2);
+		expect(tileScreenSize(0)).toBe(BASE_TILE_PX);
+	});
+});
+
+describe("tileScreenRect", () => {
+	test("places a tile at its zoomed pixel origin with a square size", () => {
+		let rect = tileScreenRect(3, 2, 2);
+		let size = BASE_TILE_PX * 2;
+		expect(rect).toEqual({ x: 3 * size, y: 2 * size, w: size, h: size });
+	});
+
+	test("the origin tile sits at (0,0)", () => {
+		expect(tileScreenRect(0, 0, 4)).toEqual({
+			x: 0,
+			y: 0,
+			w: BASE_TILE_PX * 4,
+			h: BASE_TILE_PX * 4,
+		});
+	});
+});
+
+describe("canvasSize", () => {
+	test("multiplies the tile count by the zoomed tile size", () => {
+		expect(canvasSize(10, 8, 2)).toEqual({
+			width: 10 * BASE_TILE_PX * 2,
+			height: 8 * BASE_TILE_PX * 2,
+		});
+	});
+});
+
+describe("screenToTile", () => {
+	test("inverts tileScreenRect for an in-bounds offset", () => {
+		let zoom = 3;
+		let rect = tileScreenRect(4, 5, zoom);
+		// A point anywhere inside the tile maps back to that tile.
+		expect(screenToTile(rect.x + 2, rect.y + 2, 10, 10, zoom)).toEqual({ x: 4, y: 5 });
+	});
+
+	test("floors to the containing tile", () => {
+		let size = tileScreenSize(2);
+		expect(screenToTile(size * 1 + size - 1, 0, 8, 8, 2)).toEqual({ x: 1, y: 0 });
+	});
+
+	test("returns null for offsets past the map bounds", () => {
+		let zoom = 2;
+		expect(screenToTile(-1, 0, 5, 5, zoom)).toBeNull();
+		expect(screenToTile(0, -1, 5, 5, zoom)).toBeNull();
+		let past = tileScreenSize(zoom) * 5;
+		expect(screenToTile(past, 0, 5, 5, zoom)).toBeNull();
+		expect(screenToTile(0, past, 5, 5, zoom)).toBeNull();
+	});
+});
+
+describe("eventMarkerStyle", () => {
+	test("an npc with a sprite is a solid marker", () => {
+		let style = eventMarkerStyle(event("npc", { image: "hero", x: 0, y: 0, w: 16, h: 16 }));
+		expect(style.glyph).toBe("N");
+		expect(style.invisible).toBe(false);
+	});
+
+	test("an npc without a sprite is drawn as an invisible placeholder", () => {
+		expect(eventMarkerStyle(event("npc", null)).invisible).toBe(true);
+	});
+
+	test("a wild event carries the W glyph", () => {
+		let style = eventMarkerStyle(event("wild"));
+		expect(style.glyph).toBe("W");
+	});
+
+	test("a trigger is always invisible regardless of sprite", () => {
+		let withSprite = eventMarkerStyle(event("trigger", { image: "x", x: 0, y: 0, w: 8, h: 8 }));
+		expect(withSprite.glyph).toBe("T");
+		expect(withSprite.invisible).toBe(true);
+	});
+
+	test("each kind gets a distinct accent color", () => {
+		let colors = new Set(
+			(["npc", "wild", "trigger"] as const).map((kind) => eventMarkerStyle(event(kind)).color),
+		);
+		expect(colors.size).toBe(3);
+	});
+});

@@ -83,6 +83,28 @@ export const DEFAULT_TILE_SIZE = 16;
 /** Upper bound on a map dimension in tiles, keeping arrays and the JSON sane. */
 export const MAX_MAP_DIMENSION = 256;
 
+/** Smallest zoom factor the map canvas renders at (one screen pixel per source pixel). */
+export const MIN_ZOOM = 1;
+
+/** Largest zoom factor the map canvas renders at, keeping the canvas bitmap sane. */
+export const MAX_ZOOM = 8;
+
+/** The zoom the editor starts at and returns to when reset. */
+export const DEFAULT_ZOOM = 2;
+
+/** Per-layer visibility flags: whether each tile layer is drawn on the canvas. */
+export type LayerVisibility = Record<TileLayerName, boolean>;
+
+/**
+ * Clamps a zoom factor to a whole number in `MIN_ZOOM..=MAX_ZOOM`. Kept module-level
+ * and pure so the render helper and its tests can reuse the exact clamp the editor
+ * enforces. A non-finite input falls back to {@link MIN_ZOOM}.
+ */
+export function clampZoom(value: number): number {
+	let whole = Number.isFinite(value) ? Math.trunc(value) : MIN_ZOOM;
+	return Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, whole));
+}
+
 /**
  * Editor for a single map definition. Wraps the mutable grid/tileset/event state
  * behind pure mutation methods; {@link toMapData} serializes the current state to
@@ -130,6 +152,18 @@ export class MapEditor {
 
 	/** The collision kind the collision tool paints. */
 	#collisionKind: CollisionKind = "solid";
+
+	/** Integer zoom factor the view blits the map canvas at. */
+	#zoom: number = DEFAULT_ZOOM;
+
+	/** Per-layer visibility flags; a hidden layer is skipped when drawing. */
+	#layerVisibility: LayerVisibility = { ground: true, decor: true, overhead: true };
+
+	/** Whether the tile grid is stroked over the map canvas. */
+	#showGrid: boolean = true;
+
+	/** Whether the collision overlay is always shown (not just on the collision layer). */
+	#showCollision: boolean = false;
 
 	/**
 	 * @param options Optional initial id and dimensions; omitted fields fall back to
@@ -206,6 +240,31 @@ export class MapEditor {
 	/** The collision kind the collision tool paints. */
 	get collisionKind(): CollisionKind {
 		return this.#collisionKind;
+	}
+
+	/** The current integer zoom factor the map canvas blits at. */
+	get zoom(): number {
+		return this.#zoom;
+	}
+
+	/** The per-layer visibility flags (a copy, so callers cannot mutate the internal). */
+	get layerVisibility(): LayerVisibility {
+		return { ...this.#layerVisibility };
+	}
+
+	/** Whether the tile grid is stroked over the map canvas. */
+	get showGrid(): boolean {
+		return this.#showGrid;
+	}
+
+	/** Whether the collision overlay is drawn regardless of the active layer. */
+	get showCollision(): boolean {
+		return this.#showCollision;
+	}
+
+	/** Whether a tile layer is currently drawn (visible). */
+	isLayerVisible(name: TileLayerName): boolean {
+		return this.#layerVisibility[name];
 	}
 
 	/** The declared tilesets, in order (copies, so callers cannot mutate them). */
@@ -371,6 +430,55 @@ export class MapEditor {
 	setCollisionKind(kind: CollisionKind): this {
 		this.#collisionKind = kind;
 		return this;
+	}
+
+	/** Sets the zoom factor, clamped to `MIN_ZOOM..=MAX_ZOOM` (whole steps). */
+	setZoom(zoom: number): this {
+		this.#zoom = clampZoom(zoom);
+		return this;
+	}
+
+	/** Steps the zoom in (`+1`) or out (`-1`) by one whole factor, clamped. */
+	stepZoom(delta: number): this {
+		this.#zoom = clampZoom(this.#zoom + Math.sign(delta));
+		return this;
+	}
+
+	/** Sets whether a tile layer is drawn on the canvas. */
+	setLayerVisible(name: TileLayerName, visible: boolean): this {
+		this.#layerVisibility = { ...this.#layerVisibility, [name]: visible };
+		return this;
+	}
+
+	/** Toggles a tile layer's visibility and returns the new visibility. */
+	toggleLayer(name: TileLayerName): boolean {
+		let next = !this.#layerVisibility[name];
+		this.#layerVisibility = { ...this.#layerVisibility, [name]: next };
+		return next;
+	}
+
+	/** Sets whether the tile grid is stroked over the map canvas. */
+	setShowGrid(show: boolean): this {
+		this.#showGrid = show;
+		return this;
+	}
+
+	/** Toggles the tile grid and returns the new state. */
+	toggleGrid(): boolean {
+		this.#showGrid = !this.#showGrid;
+		return this.#showGrid;
+	}
+
+	/** Sets whether the collision overlay is drawn regardless of the active layer. */
+	setShowCollision(show: boolean): this {
+		this.#showCollision = show;
+		return this;
+	}
+
+	/** Toggles the always-on collision overlay and returns the new state. */
+	toggleCollision(): boolean {
+		this.#showCollision = !this.#showCollision;
+		return this.#showCollision;
 	}
 
 	/**
