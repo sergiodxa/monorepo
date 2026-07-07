@@ -16,6 +16,8 @@ import { expect, test } from "bun:test";
 
 import { isFailure, isSuccess } from "@pkg/result";
 
+import route1 from "~/content/maps/route-1.json";
+
 import { TILE_SIZE } from "../core/loop";
 import { EMPTY_CELL, packTileRef } from "../render/map-schema";
 import { Collision, type EncounterEntry, type TileMap } from "../render/tilemap";
@@ -101,6 +103,33 @@ test("loadMap rejects a tile ref naming a tileset index that does not exist", ()
 test("createSampleMap loads through the validator unchanged", () => {
 	let result = loadMap(createSampleMap());
 	expect(isSuccess(result)).toBe(true);
+});
+
+test("the authored route-1.json loads through the validator with its migrated events", () => {
+	let result = loadMap(route1);
+	expect(isSuccess(result)).toBe(true);
+	if (isFailure(result)) return;
+	expect(result.data.events).toHaveLength(3);
+	// Each migrated event is a single page carrying its trigger and command list.
+	let youngster = result.data.events.find((event) => event.id === "route-1-youngster")!;
+	expect(youngster.pages).toHaveLength(1);
+	expect(youngster.pages[0]!.trigger).toBe("action");
+	expect(youngster.pages[0]!.autonomousMovement).toEqual({
+		type: "route",
+		speed: undefined,
+		freq: undefined,
+		route: ["left", "left", "right", "right"],
+	});
+	expect(youngster.pages[0]!.commands[1]).toEqual({
+		kind: "start-trainer-battle",
+		trainer: { name: "Youngster Joey", party: [{ speciesId: "RATTATA", level: 5 }], reward: 400 },
+	});
+	let legendary = result.data.events.find((event) => event.id === "route-1-legendary")!;
+	expect(legendary.pages[0]!.commands.at(-1)).toEqual({
+		kind: "wild-encounter",
+		speciesId: "MEW",
+		level: 30,
+	});
 });
 
 test("createSampleMap returns a 20x15 route with a walled border", () => {

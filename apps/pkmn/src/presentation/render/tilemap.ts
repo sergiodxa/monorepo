@@ -26,7 +26,7 @@ import { type Camera } from "./camera";
 import { EMPTY_CELL, type MapData, type Tileset, unpackTileRef } from "./map-schema";
 import * as theme from "./theme";
 
-export type { EncounterEntry, MapEvent, ScriptCommand, Tileset } from "./map-schema";
+export type { EncounterEntry, EventCommand, EventPage, MapEvent, Tileset } from "./map-schema";
 
 /** The runtime map type: the validated on-disk `MapData`. */
 export type TileMap = MapData;

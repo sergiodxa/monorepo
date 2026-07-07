@@ -13,9 +13,13 @@
  * `columns`), three tile `layers` (`ground`, `decor`, `overhead`), a `collision`
  * grid, wild-`encounters`, `warps`, background music, and an `events` list. Layer
  * cells are packed tile references (see {@link packTileRef}); `-1` means empty.
- * The `events` schema is modeled richly now — a moving NPC, a wild/legendary
- * creature, or an invisible trigger — even though the game only partially acts on
- * events today, so the editor and a later event runtime share one definition.
+ * The `events` schema follows the RPG-Maker-XP model: each {@link MapEvent} is a
+ * tile position holding one or more {@link EventPage}s, and the first page whose
+ * `conditions` (switches / self-switch) currently hold is the page that runs. A
+ * page pairs its graphic, autonomous movement, and options with a `trigger` (how
+ * it fires) and a recursive list of {@link EventCommand}s (its "event script").
+ * The command union is recursive — `show-choices` and `conditional-branch` nest
+ * further commands — so the editor and a later event runtime share one definition.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -30,10 +34,12 @@ import {
 	number,
 	object,
 	optional,
+	type Schema,
 	string,
 	union,
 } from "remix/data-schema";
 import { min } from "remix/data-schema/checks";
+import { lazy } from "remix/data-schema/lazy";
 
 /**
  * Base each tileset index is multiplied by when packing a layer cell. A cell's
@@ -91,7 +97,10 @@ const wholeNumber = () => number().pipe(min(0));
 const positiveNumber = () => number().pipe(min(1));
 
 /** A single cardinal-direction value, preserved as a literal union in the output. */
-const direction = () => enum_(["up", "down", "left", "right"] as const);
+const DirectionSchema = enum_(["up", "down", "left", "right"] as const);
+
+/** A single cardinal-direction value, preserved as a literal union in the output. */
+const direction = () => DirectionSchema;
 
 /** Matches one exact string, preserved as a literal in the output type. */
 const exact = <const value extends string>(value: value) => enum_([value] as const);
@@ -114,76 +123,192 @@ const SpriteRefSchema = nullable(
 	]),
 );
 
-/** How an event actor moves on the map while idle. */
-const MovementSchema = union([
-	exact("none"),
-	exact("random"),
-	object({ type: exact("route"), steps: array(direction()) }),
-]);
+/** A single cardinal direction an actor faces or steps toward. */
+export type Direction = InferOutput<typeof DirectionSchema>;
+
+/** One event's optional sprite: an atlas region, a raw image rect, or null. */
+export type SpriteRef = InferOutput<typeof SpriteRefSchema>;
+
+/** A fixed trainer party an event can battle the player with. */
+export interface TrainerParty {
+	/** The trainer's display name, if any. */
+	name?: string;
+	/** The species and levels the trainer fields, in order. */
+	party: { speciesId: string; level: number }[];
+	/** The money reward for beating the trainer, if any. */
+	reward?: number;
+}
 
 /**
- * One declarative step an event's interaction runs. Mirrors the existing
- * `ScriptCommand` language so an event's `interaction.script` and a legacy
- * trigger's `script` speak the same commands, keeping map content data-only.
+ * One declarative command in a page's event script — a recursive discriminated
+ * union keyed on `kind`. `show-choices` and `conditional-branch` nest further
+ * commands, which is why this type is defined by hand (rather than inferred) so
+ * {@link EventCommandSchema} can reference it through {@link lazy}.
  */
-const ScriptCommandSchema = union([
-	object({ do: exact("message"), text: string() }),
-	object({ do: exact("give-item"), itemId: string(), count: wholeNumber() }),
-	object({ do: exact("heal-party") }),
-	object({ do: exact("start-trainer-battle"), trainerId: string() }),
-	object({ do: exact("set-flag"), flag: string() }),
-	object({ do: exact("warp"), toMap: string(), toX: wholeNumber(), toY: wholeNumber() }),
-	object({ do: exact("face-player") }),
-	object({ do: exact("move"), route: array(direction()) }),
-]);
+export type EventCommand =
+	| { kind: "text"; text: string }
+	| {
+			kind: "show-choices";
+			prompt?: string;
+			choices: { label: string; commands: EventCommand[] }[];
+	  }
+	| {
+			kind: "conditional-branch";
+			condition: { switch?: string; selfSwitch?: string };
+			then: EventCommand[];
+			else?: EventCommand[];
+	  }
+	| { kind: "control-switch"; flag: string; value: boolean }
+	| { kind: "control-self-switch"; name: string; value: boolean }
+	| { kind: "start-trainer-battle"; trainer: TrainerParty }
+	| { kind: "wild-encounter"; speciesId: string; level: number }
+	| { kind: "heal-party" }
+	| { kind: "give-item"; itemId: string; count: number }
+	| { kind: "warp"; map: string; x: number; y: number }
+	| { kind: "face-player" }
+	| { kind: "move"; steps: Direction[] }
+	| { kind: "wait"; frames: number };
 
-/**
- * What talking to (or stepping on) an event does. Groups the declarative script
- * with the trainer/wild data a later event runtime needs: a `trainer` party turns
- * the event into a trainer battle, a `wild` block into a fixed (often legendary)
- * encounter.
- */
-const InteractionSchema = object({
-	/** The declarative steps run when the event fires. */
-	script: defaulted(array(ScriptCommandSchema), () => [] as ScriptCommand[]),
-	/** A fixed trainer party this event fights with, if it is a trainer. */
-	trainer: optional(
-		object({
-			name: optional(string()),
-			party: array(object({ speciesId: string(), level: positiveNumber() })),
-			reward: optional(wholeNumber()),
-		}),
-	),
-	/** A fixed (often legendary) wild creature this event battles, if it is a `wild` event. */
-	wild: optional(object({ speciesId: string(), level: positiveNumber() })),
+/** A fixed trainer party an event can battle the player with. */
+const TrainerPartySchema = object({
+	name: optional(string()),
+	party: array(object({ speciesId: string(), level: positiveNumber() })),
+	reward: optional(wholeNumber()),
 });
 
 /**
- * One authored map event. `kind` distinguishes a visible, possibly moving NPC
- * (`npc`), a fixed wild/legendary creature (`wild`), and an invisible tile trigger
- * (`trigger`). `interactionMode` says when the interaction fires: on the player's
- * A press (`action`), on stepping onto the tile (`touch`), or automatically when
- * conditions hold (`autorun`) — the RPG-Maker trigger axis. `facing`, `movement`,
- * `sprite`, `flag`, and `once` round out the config an editor exposes.
+ * One declarative command in a page's event script — the recursive discriminated
+ * union at the heart of the event model, keyed on `kind`.
+ *
+ * Most commands are flat effects (`text`, `warp`, `heal-party`, ...), but
+ * `show-choices` and `conditional-branch` nest further command lists, so the union
+ * is defined through {@link lazy} and typed against the {@link EventCommand}
+ * recursive type: `EventCommandSchema` references itself for those nested lists
+ * without a circular initialization crash.
+ */
+const EventCommandSchema: Schema<unknown, EventCommand> = union([
+	/** Shows a message box with the given text. */
+	object({ kind: exact("text"), text: string() }),
+	/**
+	 * Shows a list of choices; the commands under the chosen label run next. An
+	 * optional `prompt` is shown above the choices.
+	 */
+	object({
+		kind: exact("show-choices"),
+		prompt: optional(string()),
+		choices: array(object({ label: string(), commands: array(lazy(() => EventCommandSchema)) })),
+	}),
+	/**
+	 * Runs `then` when the condition (a switch or self-switch being on) holds,
+	 * otherwise the optional `else`.
+	 */
+	object({
+		kind: exact("conditional-branch"),
+		condition: object({ switch: optional(string()), selfSwitch: optional(string()) }),
+		then: array(lazy(() => EventCommandSchema)),
+		else: optional(array(lazy(() => EventCommandSchema))),
+	}),
+	/** Turns a global switch (a story flag) on or off. */
+	object({ kind: exact("control-switch"), flag: string(), value: boolean() }),
+	/** Turns one of this event's self-switches on or off. */
+	object({ kind: exact("control-self-switch"), name: string(), value: boolean() }),
+	/** Starts a trainer battle against the given party. */
+	object({ kind: exact("start-trainer-battle"), trainer: TrainerPartySchema }),
+	/** Starts a fixed (often legendary) wild encounter. */
+	object({
+		kind: exact("wild-encounter"),
+		speciesId: string(),
+		level: positiveNumber(),
+	}),
+	/** Fully heals the player's party. */
+	object({ kind: exact("heal-party") }),
+	/** Gives the player an item (default one). */
+	object({ kind: exact("give-item"), itemId: string(), count: defaulted(positiveNumber(), 1) }),
+	/** Warps the player to another map and tile. */
+	object({ kind: exact("warp"), map: string(), x: wholeNumber(), y: wholeNumber() }),
+	/** Turns this event to face the player. */
+	object({ kind: exact("face-player") }),
+	/** Walks this event through the given steps. */
+	object({ kind: exact("move"), steps: array(direction()) }),
+	/** Pauses the script for the given number of frames. */
+	object({ kind: exact("wait"), frames: wholeNumber() }),
+]);
+
+/**
+ * The conditions that must currently hold for a page to be the active one. A page
+ * with no conditions (both fields absent) always qualifies; the first qualifying
+ * page — in declaration order — is the one that runs.
+ */
+const PageConditionsSchema = object({
+	/** Global switches (story flags) that must all be on. */
+	switches: optional(array(string())),
+	/** A self-switch on this event that must be on. */
+	selfSwitch: optional(string()),
+});
+
+/**
+ * How a page's actor moves on its own while the page is active. `fixed` stays put,
+ * `random` wanders, and `route` walks the given cycle of `steps`. `speed` and
+ * `freq` tune movement speed and frequency for the runtime.
+ */
+const AutonomousMovementSchema = object({
+	type: enum_(["fixed", "random", "route"] as const),
+	speed: optional(positiveNumber()),
+	freq: optional(positiveNumber()),
+	route: optional(array(direction())),
+});
+
+/**
+ * The rendering/behaviour toggles a page exposes, mirroring RPG-Maker-XP's event
+ * options. All default off; the runtime interprets them.
+ */
+const PageOptionsSchema = object({
+	/** Animate the walking frames even while standing still. */
+	moveAnimation: optional(boolean()),
+	/** Keep animating the walk cycle while stopped. */
+	stopAnimation: optional(boolean()),
+	/** Lock the graphic's facing so movement never turns it. */
+	directionFix: optional(boolean()),
+	/** Ignore collision, passing through everything. */
+	through: optional(boolean()),
+	/** Draw above the player and other events. */
+	alwaysOnTop: optional(boolean()),
+});
+
+/**
+ * One page of an event: the config that applies while this page is the active one.
+ * Its `conditions` decide when it is active, its `graphic` is what it looks like
+ * (`null` = invisible trigger), and its `trigger` says when its `commands` run.
+ */
+const EventPageSchema = object({
+	conditions: defaulted(PageConditionsSchema, () => ({})),
+	graphic: defaulted(SpriteRefSchema, () => null),
+	autonomousMovement: defaulted(AutonomousMovementSchema, () => ({
+		type: "fixed" as const,
+		speed: undefined,
+		freq: undefined,
+		route: undefined,
+	})),
+	options: defaulted(PageOptionsSchema, () => ({})),
+	trigger: defaulted(
+		enum_(["action", "player-touch", "event-touch", "autorun", "parallel"] as const),
+		"action",
+	),
+	commands: defaulted(array(EventCommandSchema), () => [] as EventCommand[]),
+});
+
+/**
+ * One authored map event: a named tile position holding an ordered list of
+ * {@link EventPage}s. At runtime the first page whose conditions currently hold is
+ * the active page — its graphic, movement, and commands are the ones in effect.
  */
 const MapEventSchema = object({
 	id: string(),
 	x: wholeNumber(),
 	y: wholeNumber(),
-	kind: enum_(["npc", "wild", "trigger"] as const),
-	facing: defaulted(direction(), "down"),
-	sprite: defaulted(SpriteRefSchema, () => null),
-	movement: defaulted(MovementSchema, "none"),
-	interaction: defaulted(InteractionSchema, () => ({
-		script: [] as ScriptCommand[],
-		trainer: undefined,
-		wild: undefined,
-	})),
-	interactionMode: defaulted(enum_(["action", "touch", "autorun"] as const), "action"),
-	/** A story flag gating or set by this event; absent when unconditioned. */
-	flag: optional(string()),
-	/** Whether the event fires at most once (default false). */
-	once: defaulted(boolean(), false),
+	/** A human-readable label for the editor; not required at runtime. */
+	name: optional(string()),
+	pages: array(EventPageSchema),
 });
 
 /** One tileset an atlas of tiles is sliced from: an image reference and its grid. */
@@ -251,13 +376,22 @@ export const MapDataSchema = object({
 	bgm: defaulted(string(), ""),
 });
 
-/** One event's optional sprite: an atlas region, a raw image rect, or null. */
-export type SpriteRef = InferOutput<typeof SpriteRefSchema>;
+/** The conditions gating when one event page is the active one. */
+export type PageConditions = InferOutput<typeof PageConditionsSchema>;
 
-/** One declarative step an event interaction or trigger runs. */
-export type ScriptCommand = InferOutput<typeof ScriptCommandSchema>;
+/** How a page's actor moves on its own while the page is active. */
+export type AutonomousMovement = InferOutput<typeof AutonomousMovementSchema>;
 
-/** An authored map event (NPC, wild creature, or invisible trigger). */
+/** How a page fires its commands (the RPG-Maker trigger axis). */
+export type EventTrigger = InferOutput<typeof EventPageSchema>["trigger"];
+
+/** The rendering/behaviour toggles one event page exposes. */
+export type PageOptions = InferOutput<typeof PageOptionsSchema>;
+
+/** One page of an event: the config in effect while its conditions hold. */
+export type EventPage = InferOutput<typeof EventPageSchema>;
+
+/** An authored map event: a tile position holding one or more {@link EventPage}s. */
 export type MapEvent = InferOutput<typeof MapEventSchema>;
 
 /** One tileset declaration on a map. */
