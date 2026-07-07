@@ -2,12 +2,16 @@
  * The learn-move scene: replace a move or skip when a full moveset can learn one.
  *
  * Shown after the engine reports a `can-learn-move` event (a creature reached a
- * level whose move it could learn, but its four slots are full). It lists the four
- * current moves plus the new move, lets the player pick a slot to overwrite or
+ * level whose move it could learn, but its four slots are full) and reused by the
+ * bag when teaching a machine's move to a creature with no free slot. It lists the
+ * four current moves plus the new move, lets the player pick a slot to overwrite or
  * cancel to skip, and dispatches `learn-move` with the chosen slot (a cancel maps
  * to an out-of-range slot the engine treats as declined). The scene is
  * self-contained — it takes the creature, the offered move, and the current
- * moveset — so whatever surface offers the move only has to push it.
+ * moveset — so whatever surface offers the move only has to push it. An optional
+ * `onResolve` callback fires after the dispatch with the resolved slot (or a
+ * negative index when declined) so a caller can react — the bag uses it to consume
+ * a single-use machine only once a move is actually learned.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -44,12 +48,16 @@ export class LearnMoveScene implements Scene {
 	 * @param moveId - The move offered (shown by its content id).
 	 * @param currentMoveset - The creature's four move slots at offer time.
 	 * @param creatureName - The creature's display name, for the prompt.
+	 * @param onResolve - Called after the dispatch with the resolved slot index,
+	 *   or a negative index when the player declined. Lets a caller react to the
+	 *   outcome (the bag consumes a single-use machine only on a real learn).
 	 */
 	constructor(
 		private readonly creatureId: CreatureId,
 		private readonly moveId: string,
 		private readonly currentMoveset: MoveSet,
 		private readonly creatureName: string,
+		private readonly onResolve?: (slotIndex: number) => void,
 	) {}
 
 	enter(game: GameClient) {
@@ -123,5 +131,6 @@ export class LearnMoveScene implements Scene {
 			replaceSlotIndex < 0 || replaceSlotIndex >= this.currentMoveset.length
 				? `${this.creatureName} did not learn ${this.moveId}.`
 				: `${this.creatureName} learned ${this.moveId}!`;
+		this.onResolve?.(replaceSlotIndex);
 	}
 }
