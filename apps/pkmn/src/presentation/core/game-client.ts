@@ -17,11 +17,11 @@ import type { GameDataSource } from "~/game/data/game-data";
 import type { Engine } from "~/game/engine";
 import type { GameEvent } from "~/game/events";
 
-import { MANIFEST } from "~/assets/manifest";
+import manifest from "~/assets/manifest.json";
 
 import type { Scene } from "./scene";
 
-import { AssetStore } from "./assets";
+import { AssetStore, type AssetManifest } from "./assets";
 import { AudioManager } from "./audio";
 import { InputManager } from "./input";
 import { FIXED_STEP_MS, MAX_FRAME_MS, SCREEN_HEIGHT, SCREEN_WIDTH } from "./loop";
@@ -40,7 +40,7 @@ export class GameClient {
 	readonly input = new InputManager();
 
 	/** Eagerly-loaded assets addressed by manifest id. */
-	readonly assets = new AssetStore(MANIFEST);
+	readonly assets = new AssetStore(manifest as AssetManifest);
 
 	/** Music, effect, and cry playback. */
 	readonly audio = new AudioManager(this.assets);
