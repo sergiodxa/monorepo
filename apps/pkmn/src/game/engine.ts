@@ -9,7 +9,7 @@
 import { unwrap } from "@pkg/result";
 
 import type { BattleEvent, ReplacementCommand, TurnCommand } from "./battle/battle";
-import type { BattlePosition } from "./battle/battle";
+import type { BattlePosition, BattleSideState } from "./battle/battle";
 import type { Command } from "./commands";
 import type { GameDataSource } from "./data/game-data";
 import type { GameEvent } from "./events";
@@ -377,9 +377,19 @@ export class Engine {
 		if (!runtime || !item || !("effect" in item) || !("multiplier" in item.effect)) return [];
 
 		let target: BattlePosition = command.target ?? { side: 1, slot: 0 };
-		let active = runtime.battle.state.sides[target.side]?.active[target.slot];
+		let side = runtime.battle.state.sides[target.side];
+		let active = side?.active[target.slot];
 		let participants = this.world.battleParticipants[command.battleId];
-		let creatureId = participants?.enemyParty[active?.creatureIndex ?? -1];
+		// The party id list is flat across every team on the side, so the active
+		// creature's id lives at a running offset (creatures of earlier teams plus
+		// the team-local index), not at the bare per-team `creatureIndex`. With a
+		// single team the two are equal, so single-team sides are unchanged.
+		let creatureId =
+			side && active
+				? participants?.enemyParty[
+						getFlatCreatureIndex(side, active.teamIndex, active.creatureIndex)
+					]
+				: undefined;
 		if (!active || !creatureId) return [];
 		// Only wild (encounter-located) creatures can be captured.
 		if (this.world.creatureLocation[creatureId]?.kind !== "encounter") return [];
@@ -529,4 +539,27 @@ export class Engine {
 		if (runtime) return runtime;
 		throw new ReferenceError(`Missing battle runtime for ${battleId}.`);
 	}
+}
+
+/**
+ * Maps one active slot's team and team-local creature index to its flat party-id index.
+ *
+ * A side's persistent id list is flat across every team, ordered by team, so the id
+ * for an active combatant sits at the running offset of all earlier teams' creatures
+ * plus its own team-local index. Single-team sides collapse the offset to zero, so the
+ * flat index equals the team-local index and their mapping is unchanged.
+ *
+ * Exported for regression coverage: the equivalent per-team-index-vs-flat-list mismatch
+ * was already fixed in `syncBattleState`.
+ */
+export function getFlatCreatureIndex(
+	side: BattleSideState,
+	teamIndex: number,
+	creatureIndex: number,
+): number {
+	let offset = 0;
+	for (let index = 0; index < teamIndex; index += 1) {
+		offset += side.teams[index]?.creatures.length ?? 0;
+	}
+	return offset + creatureIndex;
 }

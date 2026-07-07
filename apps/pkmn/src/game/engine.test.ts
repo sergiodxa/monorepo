@@ -14,7 +14,9 @@ import { MOVES } from "~/content/moves";
 import { NATURES } from "~/content/natures";
 import { SPECIES } from "~/content/species";
 
-import { Engine } from "./engine";
+import type { BattleSideState } from "./battle/battle";
+
+import { Engine, getFlatCreatureIndex } from "./engine";
 import { createBattleId, createCreatureId, createPlayerId } from "./world/ids";
 import { migrateWorld } from "./world/migrate";
 
@@ -343,6 +345,72 @@ test("attempt-capture catches a wild creature and ends the battle", () => {
 	expect(owned || stored).toBe(true);
 });
 
+test("regression: attempt-capture resolves the active enemy by flat party index", () => {
+	// The active enemy's world id must be read from `enemyParty` by its FLAT index
+	// across teams (creatures of earlier teams + the team-local index), the same
+	// mismatch already fixed in syncBattleState. A team-1 slot with team-local index 0
+	// must map to the flat index that follows team 0, not to flat index 0.
+	let side: BattleSideState = {
+		canLeaveBattle: false,
+		pendingHealingWishCount: 0,
+		followMeUserSlot: null,
+		slotTeams: [0, 1],
+		teams: [
+			{ creatures: [combatantStub(), combatantStub()], eliminated: false },
+			{ creatures: [combatantStub()], eliminated: false },
+		],
+		active: [],
+		effects: {} as BattleSideState["effects"],
+	};
+
+	// Team 0 holds two creatures (flat 0 and 1); team 1's first creature is flat 2.
+	expect(getFlatCreatureIndex(side, 0, 0)).toBe(0);
+	expect(getFlatCreatureIndex(side, 0, 1)).toBe(1);
+	expect(getFlatCreatureIndex(side, 1, 0)).toBe(2);
+	// A single-team side keeps flat index equal to the team-local index.
+	expect(getFlatCreatureIndex(side, 0, 0)).toBe(0);
+});
+
+test("regression: attempt-capture catches the active single-team enemy at flat index 0", () => {
+	// Single-team enemy sides must be unchanged: the sole active enemy sits at flat
+	// index 0 and remains catchable exactly as before the flat-index fix.
+	let ballId = Object.entries(ITEMS).find(
+		([, item]) => "effect" in item && "multiplier" in item.effect,
+	)?.[0];
+	expect(ballId).toBeDefined();
+
+	let playerId = createPlayerId("hero");
+	let enemyId = createPlayerId("rival");
+	let allyId = createCreatureId("ally-1");
+	let enemyCreatureId = createCreatureId("enemy-1");
+	let engine = createBattleEngine(playerId, enemyId, allyId, enemyCreatureId, () => 0);
+	let battleId = createBattleId("flat-1");
+
+	engine.dispatch({ type: "add-inventory-item", playerId, itemId: ballId!, count: 1 });
+	let spawn = engine.dispatch({
+		type: "spawn-encounter",
+		encounterId: "e-flat",
+		speciesId: SECONDARY_SPECIES_ID,
+		level: 5,
+	});
+	let wild = spawn.find((event) => event.type === "encounter-spawned");
+	if (wild?.type !== "encounter-spawned") throw new Error("expected an encounter");
+
+	engine.dispatch({
+		type: "start-battle",
+		battleId,
+		playerId,
+		enemyId,
+		playerParty: [allyId],
+		enemyParty: [wild.creatureId],
+		slots: 1,
+	});
+
+	let events = engine.dispatch({ type: "attempt-capture", battleId, playerId, itemId: ballId! });
+	let captured = events.find((event) => event.type === "creature-captured");
+	expect(captured?.type === "creature-captured" ? captured.creatureId : null).toBe(wild.creatureId);
+});
+
 test("regression: reading the battle view after a wild battle ends does not crash", () => {
 	// Bug: finishing a battle despawned the encounter creature immediately, so the
 	// presentation's next selectBattle threw "Missing creature identity". The wild
@@ -415,6 +483,11 @@ test("heal-party fully restores a damaged party", () => {
 	let after = engine.selectCreatureSummary(allyId);
 	expect(after.currentHP).toBe(after.maxHP);
 });
+
+/** A throwaway combatant placeholder; getFlatCreatureIndex only counts array length. */
+function combatantStub(): BattleSideState["teams"][number]["creatures"][number] {
+	return {} as BattleSideState["teams"][number]["creatures"][number];
+}
 
 /** Creates an engine wired for deterministic battles with a chosen RNG and optional starting damage. */
 function createBattleEngine(
