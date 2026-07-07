@@ -26,6 +26,7 @@ const TOOLS: ToolLink[] = [
 	{ path: "/map", label: "Map", description: "Compose tile maps." },
 	{ path: "/species", label: "Species", description: "Author species content." },
 	{ path: "/trainer", label: "Trainer", description: "Author trainer content." },
+	{ path: "/importer", label: "Importer", description: "Import a PNG as a sliced atlas." },
 ];
 
 /** Props for the launcher: a client-side navigation callback. */

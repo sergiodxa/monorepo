@@ -25,6 +25,7 @@ export default route({
 	map: get("/map"),
 	species: get("/species"),
 	trainer: get("/trainer"),
+	importer: get("/importer"),
 
 	client: get("/client.js"),
 
@@ -35,4 +36,5 @@ export default route({
 	exportTrainer: form("/dev/export/trainer"),
 	exportMap: form("/dev/export/map"),
 	exportSpecies: form("/dev/export/species"),
+	exportImport: form("/dev/export/import"),
 });

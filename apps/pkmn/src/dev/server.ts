@@ -14,6 +14,7 @@ import { createRouter } from "remix/fetch-router";
 
 import { runAtlasExport } from "./atlas-export";
 import { runBinaryExport, runExport, runSpriteExport } from "./export";
+import { runImporterExport } from "./importer-export";
 import { runMapExport } from "./map-export";
 import { PathSafetyError } from "./path-safety";
 import routes from "./routes";
@@ -97,6 +98,7 @@ function createDevRouter(clientBundle: string) {
 	router.map(routes.map, serveShell);
 	router.map(routes.species, serveShell);
 	router.map(routes.trainer, serveShell);
+	router.map(routes.importer, serveShell);
 
 	router.map(routes.client, () => {
 		return new Response(clientBundle, {
@@ -192,6 +194,17 @@ function createDevRouter(clientBundle: string) {
 		handleExport(ctx.request, runSpeciesExport, (data) => ({
 			id: data.id,
 			path: data.path,
+			bytesWritten: data.bytesWritten,
+		})),
+	);
+
+	router.map(routes.exportImport.action, (ctx) =>
+		handleExport(ctx.request, runImporterExport, (data) => ({
+			id: data.id,
+			path: data.path,
+			url: data.url,
+			atlasId: data.atlasId,
+			regions: data.regions,
 			bytesWritten: data.bytesWritten,
 		})),
 	);

@@ -1,0 +1,226 @@
+/**
+ * Verifies the importer-export flow: the pure payload shaping
+ * ({@link deriveImporterTarget} validates the atlas id and its whole region map
+ * and derives the `src/assets/<id>.png` image target; {@link registerAtlas} adds
+ * the image AND the full atlas — every region — to a manifest without mutating the
+ * input or clobbering unrelated entries), and a real {@link runImporterExport}
+ * round-trip that writes a PNG and persists a multi-region atlas, snapshotting and
+ * restoring the real manifest so the test leaves no trace.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+import { describe, expect, test } from "bun:test";
+import { rm } from "node:fs/promises";
+import { resolve } from "node:path";
+
+import { isFailure, isSuccess } from "@pkg/result";
+
+import { AtlasExportError, type ManifestAtlases } from "./atlas-export";
+import { APP_ROOT, MANIFEST_PATH } from "./export";
+import { deriveImporterTarget, registerAtlas, runImporterExport } from "./importer-export";
+import { SpriteNameError } from "./sprite-export";
+
+// A 1×1 transparent PNG, base64-encoded, used as the importer export body.
+let ONE_PX_PNG_BASE64 =
+	"iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAC0lEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==";
+
+describe("deriveImporterTarget accepts valid assignments", () => {
+	test("derives the image target and the full region map from the id", () => {
+		let result = deriveImporterTarget({
+			id: "world-tiles",
+			regions: {
+				"tile.0": { x: 0, y: 0, w: 16, h: 16 },
+				"tile.1": { x: 16, y: 0, w: 16, h: 16 },
+			},
+		});
+		expect(isSuccess(result)).toBe(true);
+		if (isSuccess(result)) {
+			expect(result.data.image.name).toBe("world-tiles");
+			expect(result.data.image.path).toBe("src/assets/world-tiles.png");
+			expect(result.data.image.url).toBe("/assets/world-tiles.png");
+			expect(result.data.atlasId).toBe("world-tiles");
+			expect(result.data.regions).toEqual({
+				"tile.0": { x: 0, y: 0, w: 16, h: 16 },
+				"tile.1": { x: 16, y: 0, w: 16, h: 16 },
+			});
+		}
+	});
+
+	test("trims the id and allows dotted region names", () => {
+		let result = deriveImporterTarget({
+			id: "  hero  ",
+			regions: { "hero.down": { x: 0, y: 0, w: 16, h: 32 } },
+		});
+		expect(isSuccess(result)).toBe(true);
+		if (isSuccess(result)) expect(result.data.atlasId).toBe("hero");
+	});
+});
+
+describe("deriveImporterTarget rejects invalid assignments", () => {
+	let regions = { "tile.0": { x: 0, y: 0, w: 8, h: 8 } };
+
+	test("an empty region map yields an AtlasExportError", () => {
+		let result = deriveImporterTarget({ id: "atlas", regions: {} });
+		expect(isFailure(result)).toBe(true);
+		if (isFailure(result)) expect(result.error).toBeInstanceOf(AtlasExportError);
+	});
+
+	let idCases: Array<[label: string, id: string]> = [
+		["empty", ""],
+		["uppercase", "Atlas"],
+		["underscore", "my_atlas"],
+		["leading dot", ".atlas"],
+		["over length", "a".repeat(65)],
+	];
+	for (let [label, id] of idCases) {
+		test(`bad id (${label}) is rejected`, () => {
+			let result = deriveImporterTarget({ id, regions });
+			expect(isFailure(result)).toBe(true);
+			// An empty/too-long id is caught as an AtlasExportError; a slug-shaped id
+			// that still fails the sprite name rule surfaces as a SpriteNameError.
+			if (isFailure(result)) {
+				expect(
+					result.error instanceof AtlasExportError || result.error instanceof SpriteNameError,
+				).toBe(true);
+			}
+		});
+	}
+
+	test("a bad region name yields an AtlasExportError", () => {
+		let result = deriveImporterTarget({
+			id: "atlas",
+			regions: { "Bad Region": { x: 0, y: 0, w: 8, h: 8 } },
+		});
+		expect(isFailure(result)).toBe(true);
+		if (isFailure(result)) expect(result.error).toBeInstanceOf(AtlasExportError);
+	});
+
+	let rectCases: Array<[label: string, rect: { x: number; y: number; w: number; h: number }]> = [
+		["negative x", { x: -1, y: 0, w: 8, h: 8 }],
+		["fractional y", { x: 0, y: 1.5, w: 8, h: 8 }],
+		["zero width", { x: 0, y: 0, w: 0, h: 8 }],
+		["zero height", { x: 0, y: 0, w: 8, h: 0 }],
+	];
+	for (let [label, rect] of rectCases) {
+		test(`bad rect (${label}) yields an AtlasExportError`, () => {
+			let result = deriveImporterTarget({ id: "atlas", regions: { "tile.0": rect } });
+			expect(isFailure(result)).toBe(true);
+			if (isFailure(result)) expect(result.error).toBeInstanceOf(AtlasExportError);
+		});
+	}
+});
+
+describe("registerAtlas", () => {
+	let target = {
+		image: {
+			name: "world-tiles",
+			path: "src/assets/world-tiles.png",
+			url: "/assets/world-tiles.png",
+		},
+		atlasId: "world-tiles",
+		regions: {
+			"tile.0": { x: 0, y: 0, w: 16, h: 16 },
+			"tile.1": { x: 16, y: 0, w: 16, h: 16 },
+		},
+	};
+
+	test("registers the image and the whole atlas with every region", () => {
+		let manifest: ManifestAtlases = { images: {}, atlases: {} };
+		let next = registerAtlas(manifest, target);
+		expect(next.images).toEqual({ "world-tiles": "/assets/world-tiles.png" });
+		expect(next.atlases["world-tiles"]).toEqual({
+			image: "/assets/world-tiles.png",
+			regions: {
+				"tile.0": { x: 0, y: 0, w: 16, h: 16 },
+				"tile.1": { x: 16, y: 0, w: 16, h: 16 },
+			},
+		});
+	});
+
+	test("carries through other manifest kinds untouched", () => {
+		let manifest: ManifestAtlases = {
+			images: { other: "/assets/other.png" },
+			audio: { theme: { url: "/audio/theme.ogg" } },
+			atlases: {},
+		};
+		let next = registerAtlas(manifest, target);
+		expect(next.images.other).toBe("/assets/other.png");
+		expect(next.audio).toEqual({ theme: { url: "/audio/theme.ogg" } });
+	});
+
+	test("does not mutate the input manifest", () => {
+		let manifest: ManifestAtlases = { images: {}, atlases: {} };
+		registerAtlas(manifest, target);
+		expect(manifest.images).toEqual({});
+		expect(manifest.atlases).toEqual({});
+	});
+});
+
+describe("runImporterExport", () => {
+	test("rejects a malformed payload before writing", async () => {
+		let result = await runImporterExport({ id: "atlas" });
+		expect(isFailure(result)).toBe(true);
+	});
+
+	test("rejects a non-object regions field", async () => {
+		let result = await runImporterExport({ id: "atlas", pngBase64: ONE_PX_PNG_BASE64, regions: 5 });
+		expect(isFailure(result)).toBe(true);
+	});
+
+	test("rejects an empty region map before writing", async () => {
+		let result = await runImporterExport({
+			id: "atlas",
+			pngBase64: ONE_PX_PNG_BASE64,
+			regions: {},
+		});
+		expect(isFailure(result)).toBe(true);
+	});
+
+	test("writes the PNG and registers the full atlas in the manifest", async () => {
+		let ATLAS_ID = "importer-export-test-atlas";
+		let ASSET_PATH = `src/assets/${ATLAS_ID}.png`;
+		let manifestFile = Bun.file(resolve(APP_ROOT, MANIFEST_PATH));
+		let original = (await manifestFile.exists()) ? await manifestFile.text() : null;
+
+		try {
+			let result = await runImporterExport({
+				id: ATLAS_ID,
+				pngBase64: ONE_PX_PNG_BASE64,
+				regions: {
+					"tile.0": { x: 0, y: 0, w: 1, h: 1 },
+					"tile.1": { x: 0, y: 0, w: 1, h: 1 },
+				},
+			});
+			expect(isSuccess(result)).toBe(true);
+			if (isSuccess(result)) {
+				expect(result.data.id).toBe(ATLAS_ID);
+				expect(result.data.path).toBe(ASSET_PATH);
+				expect(result.data.url).toBe(`/assets/${ATLAS_ID}.png`);
+				expect(result.data.atlasId).toBe(ATLAS_ID);
+				expect(result.data.regions.sort()).toEqual(["tile.0", "tile.1"]);
+				expect(result.data.bytesWritten).toBeGreaterThan(0);
+
+				// The PNG landed on disk with the expected magic bytes.
+				let pngBytes = new Uint8Array(await Bun.file(resolve(APP_ROOT, ASSET_PATH)).arrayBuffer());
+				expect(Array.from(pngBytes.subarray(0, 4))).toEqual([0x89, 0x50, 0x4e, 0x47]);
+
+				// The manifest now holds both the flat image and the full atlas.
+				let manifestText = await Bun.file(resolve(APP_ROOT, MANIFEST_PATH)).text();
+				let manifest = JSON.parse(manifestText) as ManifestAtlases;
+				expect(manifest.images[ATLAS_ID]).toBe(`/assets/${ATLAS_ID}.png`);
+				expect(manifest.atlases[ATLAS_ID]).toEqual({
+					image: `/assets/${ATLAS_ID}.png`,
+					regions: {
+						"tile.0": { x: 0, y: 0, w: 1, h: 1 },
+						"tile.1": { x: 0, y: 0, w: 1, h: 1 },
+					},
+				});
+			}
+		} finally {
+			// Restore the manifest and delete the scratch PNG — leave no trace.
+			if (original !== null) await Bun.write(resolve(APP_ROOT, MANIFEST_PATH), original);
+			await rm(resolve(APP_ROOT, ASSET_PATH), { force: true });
+		}
+	});
+});

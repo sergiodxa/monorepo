@@ -12,6 +12,7 @@ import type { Handle } from "remix/ui";
 
 import { createRoot, css, on } from "remix/ui";
 
+import { ImporterTool } from "./views/importer";
 import { Launcher } from "./views/launcher";
 import { MapTool } from "./views/map";
 import { SpeciesTool } from "./views/species";
@@ -19,10 +20,10 @@ import { SpriteDrawingTool } from "./views/sprite";
 import { TrainerTool } from "./views/trainer";
 
 /** The client-navigable tool paths. `/` is the launcher; the rest are editors. */
-export type ToolPath = "/" | "/sprite" | "/map" | "/species" | "/trainer";
+export type ToolPath = "/" | "/sprite" | "/map" | "/species" | "/trainer" | "/importer";
 
 /** Every path the client understands, used to sanitize the initial URL. */
-const KNOWN_PATHS: ToolPath[] = ["/", "/sprite", "/map", "/species", "/trainer"];
+const KNOWN_PATHS: ToolPath[] = ["/", "/sprite", "/map", "/species", "/trainer", "/importer"];
 
 /**
  * Coerces an arbitrary pathname to a known {@link ToolPath}, falling back to the
@@ -116,6 +117,7 @@ function renderView(path: ToolPath, navigate: (path: ToolPath) => void) {
 	if (path === "/map") return <MapTool />;
 	if (path === "/species") return <SpeciesTool />;
 	if (path === "/trainer") return <TrainerTool />;
+	if (path === "/importer") return <ImporterTool />;
 	return <Launcher navigate={navigate} />;
 }
 
