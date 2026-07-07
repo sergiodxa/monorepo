@@ -566,7 +566,7 @@ test("using a medicine in battle decrements the bag, spends the turn, and heals"
 	let inventoryEvent = events.find((event) => event.type === "inventory-updated");
 	expect(inventoryEvent?.type === "inventory-updated" ? inventoryEvent.count : null).toBe(1);
 	expect(
-		engine.selectInventory(playerId).entries.find((entry) => entry.id === HEAL_ITEM_ID)?.count,
+		engine.selectInventory(playerId).entries.find((entry) => entry.id === OW_HEAL_ITEM_ID)?.count,
 	).toBe(1);
 
 	// The item resolved through the battle log and actually restored HP.
@@ -620,7 +620,7 @@ test("using a medicine that is not in the bag consumes nothing and heals nothing
 	// No inventory change and no item-used event: the absent item cannot be used.
 	expect(events.some((event) => event.type === "inventory-updated")).toBe(false);
 	expect(
-		engine.selectInventory(playerId).entries.find((entry) => entry.id === HEAL_ITEM_ID)?.count,
+		engine.selectInventory(playerId).entries.find((entry) => entry.id === OW_HEAL_ITEM_ID)?.count,
 	).toBeUndefined();
 	let appended = events.find((event) => event.type === "battle-events-appended");
 	let logged = appended?.type === "battle-events-appended" ? appended.events : [];
@@ -937,6 +937,148 @@ test("the matching stone evolution is a no-op when the stone is not in the bag",
 
 	expect(events).toEqual([]);
 	expect(engine.selectCreatureSummary(creatureId).speciesId).toBe(STONE_SPECIES_ID);
+});
+
+/** Overworld medicine ids pulled from the real content, one per recovery kind exercised. */
+let OW_HEAL_ITEM_ID = "POTION";
+let OW_REVIVE_ITEM_ID = "REVIVE";
+let OW_CURE_ITEM_ID = "ANTIDOTE";
+
+/**
+ * Creates an engine with one party creature carrying the given damage and status.
+ *
+ * The bag starts with one of each medicine kind so a single fixture drives the heal,
+ * revive, and cure paths.
+ */
+function createMedicineEngine(
+	playerId: string,
+	creatureId: string,
+	damage: number,
+	state: string | null,
+) {
+	let creature = createBootstrapCreature(STONE_SPECIES_ID);
+	creature.status = { ...creature.status, damage, state } as typeof creature.status;
+	return Engine.create({
+		content: {
+			species: SPECIES,
+			moves: MOVES,
+			items: ITEMS,
+			natures: NATURES,
+			typeChart: TYPE_MATCHUPS,
+		},
+		random: () => 0.5,
+		world: migrateWorld({
+			entities: [playerId, creatureId],
+			playerId,
+			playerProfile: { [playerId]: { name: "Hero" } },
+			party: { [playerId]: { creatureIds: [creatureId] } },
+			inventory: {
+				[playerId]: {
+					items: { [OW_HEAL_ITEM_ID]: 1, [OW_REVIVE_ITEM_ID]: 1, [OW_CURE_ITEM_ID]: 1 },
+				},
+			},
+			bestiary: { [playerId]: { seen: [], caught: [] } },
+			storageBoxes: { [playerId]: { boxes: [] } },
+			creature: { [creatureId]: creature },
+		}),
+	});
+}
+
+test("use-medicine heals a damaged party creature and decrements the bag", () => {
+	let playerId = createPlayerId("hero");
+	let creatureId = createCreatureId("buddy-1");
+	let engine = createMedicineEngine(playerId, creatureId, 5, null);
+	let before = engine.selectCreatureSummary(creatureId).currentHP;
+
+	let events = engine.dispatch({
+		type: "use-medicine",
+		playerId,
+		creatureId,
+		itemId: OW_HEAL_ITEM_ID,
+	});
+
+	expect(events).toEqual([{ type: "inventory-updated", itemId: OW_HEAL_ITEM_ID, count: 0 }]);
+	let after = engine.selectCreatureSummary(creatureId);
+	// POTION restores 20, far more than the 5 missing HP, so it tops off at the max.
+	expect(after.currentHP).toBe(after.maxHP);
+	expect(after.currentHP).toBeGreaterThan(before);
+	expect(
+		engine.selectInventory(playerId).entries.find((entry) => entry.id === OW_HEAL_ITEM_ID),
+	).toBeUndefined();
+});
+
+test("use-medicine on a full-HP creature is a no-op that keeps the item", () => {
+	let playerId = createPlayerId("hero");
+	let creatureId = createCreatureId("buddy-1");
+	let engine = createMedicineEngine(playerId, creatureId, 0, null);
+
+	let events = engine.dispatch({
+		type: "use-medicine",
+		playerId,
+		creatureId,
+		itemId: OW_HEAL_ITEM_ID,
+	});
+
+	expect(events).toEqual([]);
+	let entry = engine.selectInventory(playerId).entries.find((row) => row.id === OW_HEAL_ITEM_ID);
+	expect(entry?.count).toBe(1);
+});
+
+test("use-medicine revive works on a fainted creature", () => {
+	let playerId = createPlayerId("hero");
+	let creatureId = createCreatureId("buddy-1");
+	let maxHP = createMedicineEngine(playerId, creatureId, 0, null).selectCreatureSummary(
+		creatureId,
+	).maxHP;
+	let engine = createMedicineEngine(playerId, creatureId, maxHP, null);
+	// The creature is fainted at zero HP before the revive.
+	expect(engine.selectCreatureSummary(creatureId).currentHP).toBe(0);
+
+	let events = engine.dispatch({
+		type: "use-medicine",
+		playerId,
+		creatureId,
+		itemId: OW_REVIVE_ITEM_ID,
+	});
+
+	expect(events).toEqual([{ type: "inventory-updated", itemId: OW_REVIVE_ITEM_ID, count: 0 }]);
+	expect(engine.selectCreatureSummary(creatureId).currentHP).toBeGreaterThan(0);
+});
+
+test("use-medicine revive on a healthy creature is a no-op that keeps the item", () => {
+	let playerId = createPlayerId("hero");
+	let creatureId = createCreatureId("buddy-1");
+	let engine = createMedicineEngine(playerId, creatureId, 0, null);
+
+	let events = engine.dispatch({
+		type: "use-medicine",
+		playerId,
+		creatureId,
+		itemId: OW_REVIVE_ITEM_ID,
+	});
+
+	expect(events).toEqual([]);
+	expect(
+		engine.selectInventory(playerId).entries.find((row) => row.id === OW_REVIVE_ITEM_ID)?.count,
+	).toBe(1);
+});
+
+test("use-medicine cures a matching status and consumes the cure", () => {
+	let playerId = createPlayerId("hero");
+	let creatureId = createCreatureId("buddy-1");
+	// ANTIDOTE clears poison; the content status string for poison is "poison".
+	let engine = createMedicineEngine(playerId, creatureId, 0, "poison");
+	expect(engine.selectCreatureSummary(creatureId).status).toBe("poison");
+
+	let events = engine.dispatch({
+		type: "use-medicine",
+		playerId,
+		creatureId,
+		itemId: OW_CURE_ITEM_ID,
+	});
+
+	expect(events).toEqual([{ type: "inventory-updated", itemId: OW_CURE_ITEM_ID, count: 0 }]);
+	expect(engine.selectCreatureSummary(creatureId).status).toBeNull();
 });
 
 test("spawn-trainer-creature builds a non-persisted trainer creature that cannot be captured", () => {

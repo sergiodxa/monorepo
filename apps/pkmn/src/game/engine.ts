@@ -43,7 +43,7 @@ import { evolveCreature, getItemEvolution, getLevelUpEvolution } from "./systems
 import { awardBattleExperience, grantCreatureExperience } from "./systems/experience-system";
 import { addInventoryItem, removeInventoryItem } from "./systems/inventory-system";
 import { hasFreeMoveSlot, learnMove, movesLearnedBetween } from "./systems/learn-system";
-import { isMedicineEffect } from "./systems/medicine-system";
+import { applyMedicine, isMedicineEffect } from "./systems/medicine-system";
 import { healParty } from "./systems/party-system";
 import { buyItem, changeMoney, sellItem } from "./systems/shop-system";
 import {
@@ -304,6 +304,9 @@ export class Engine {
 			case "use-item-on-creature": {
 				return this.useItemOnCreature(command);
 			}
+			case "use-medicine": {
+				return this.useMedicine(command);
+			}
 			case "withdraw-creature": {
 				if (!moveCreatureToParty(this.world, command.playerId, command.creatureId, command.boxId))
 					return [];
@@ -535,6 +538,40 @@ export class Engine {
 			{ type: "inventory-updated", itemId: command.itemId, count },
 			{ type: "creature-evolved", creatureId: command.creatureId, speciesId: target },
 		];
+	}
+
+	/**
+	 * Uses one overworld medicine item on a creature, resolving HP and status recovery.
+	 *
+	 * The item must exist, carry a recovery medicine effect (heal, cure, revive), and
+	 * be owned in the bag. The effect is resolved against the creature's stored HP and
+	 * status through the shared `applyMedicine` rules; only when it would actually change
+	 * something is the creature's health/status written back and one copy consumed. A
+	 * missing item, a non-recovery item, an empty stack, or an effect that changes nothing
+	 * (a heal at full HP, a revive on a healthy creature) is a no-op that returns no events
+	 * and touches neither the creature nor the bag, mirroring `useItemOnCreature`.
+	 */
+	private useMedicine(command: Extract<Command, { type: "use-medicine" }>): GameEvent[] {
+		let item = this.gameData.items.get(command.itemId);
+		if (!item || !("effect" in item) || !isMedicineEffect(item.effect)) return [];
+
+		let creature = createCreatureFromWorld(this.world, command.creatureId);
+		let maxHP = getCreatureStat(this.gameData, creature, Stat.HP);
+		let result = applyMedicine(item.effect, {
+			currentHP: maxHP - creature.status.damage,
+			maxHP,
+			status: creature.status.state,
+		});
+		if (!result.applied) return [];
+
+		if (!removeInventoryItem(this.world, command.playerId, command.itemId, 1)) return [];
+		let count =
+			this.selectInventory(command.playerId).entries.find((entry) => entry.id === command.itemId)
+				?.count ?? 0;
+
+		this.world.creatureHealth[command.creatureId] = { damage: maxHP - result.currentHP };
+		this.world.creatureStatus[command.creatureId] = { state: result.status };
+		return [{ type: "inventory-updated", itemId: command.itemId, count }];
 	}
 
 	/**

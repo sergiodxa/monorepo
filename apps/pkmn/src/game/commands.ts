@@ -153,6 +153,24 @@ export namespace Command {
 		itemId: ItemId;
 	}
 
+	/**
+	 * Uses one overworld medicine item on a specific creature.
+	 *
+	 * The item must be a stored medicine whose effect recovers HP or status. Only
+	 * when applying it would change the creature — a heal on a damaged target, a
+	 * cure on a matching status, a revive on a fainted one — does the creature's
+	 * stored HP and status update and one copy leave the bag. A missing item, an
+	 * empty stack, a non-recovery item, or an effect that would change nothing (a
+	 * heal at full HP, a revive on a healthy creature) is a no-op that neither
+	 * touches the creature nor consumes the item.
+	 */
+	export interface UseMedicine {
+		type: "use-medicine";
+		playerId: PlayerId;
+		creatureId: CreatureId;
+		itemId: ItemId;
+	}
+
 	/** Fully restores every party creature's HP, status, and PP. */
 	export interface HealParty {
 		type: "heal-party";
@@ -235,4 +253,5 @@ export type Command =
 	| Command.SubmitBattleReplacements
 	| Command.SubmitBattleTurn
 	| Command.UseItemOnCreature
+	| Command.UseMedicine
 	| Command.WithdrawCreature;
