@@ -67,6 +67,30 @@ test("Right then Down from move0 reaches move3 (bottom-right)", () => {
 	expect(result).toEqual({ kind: "fight", move: 3 });
 });
 
+test("selecting Creatures returns a switch decision (not a no-op)", () => {
+	// The root grid is [Fight, Bag / Creatures, Run]; Creatures is bottom-left, one
+	// Down from Fight. Confirming it must return a switch intent so the scene can
+	// open the party picker — the bug being guarded is Creatures doing nothing.
+	let menu = new BattleCommandMenu();
+	menu.update(fakeInput({ repeating: [Button.Down] }), FOUR_MOVES); // Fight -> Creatures
+	let result = menu.update(fakeInput({ pressed: [Button.A] }), FOUR_MOVES);
+	expect(result).toEqual({ kind: "switch" });
+});
+
+test("selecting Bag returns a bag decision", () => {
+	let menu = new BattleCommandMenu();
+	menu.update(fakeInput({ repeating: [Button.Right] }), FOUR_MOVES); // Fight -> Bag
+	let result = menu.update(fakeInput({ pressed: [Button.A] }), FOUR_MOVES);
+	expect(result).toEqual({ kind: "bag" });
+});
+
+test("selecting Run returns a run decision", () => {
+	let menu = new BattleCommandMenu();
+	menu.update(fakeInput({ repeating: [Button.Right, Button.Down] }), FOUR_MOVES); // -> Run
+	let result = menu.update(fakeInput({ pressed: [Button.A] }), FOUR_MOVES);
+	expect(result).toEqual({ kind: "run" });
+});
+
 test("the root menu box fits both columns on screen", () => {
 	let layout = rootMenuLayout();
 	expect(layout.boxWidth).toBeLessThanOrEqual(SCREEN_WIDTH);

@@ -24,6 +24,16 @@ export class HpBar {
 	private target: number;
 
 	/**
+	 * Identifies the creature the bar currently tracks.
+	 *
+	 * A slot's bar is reused across replacements, so the fresh combatant would
+	 * otherwise inherit the fainted one's `displayed` value and ease *up* from 0 to
+	 * full. `bindTo` records the active creature and snaps the bar when it changes,
+	 * so the bar always tracks the actually-active creature (guards against Bug 2).
+	 */
+	private creatureKey: string | null = null;
+
+	/**
 	 * @param max - Maximum HP, the full-bar value.
 	 * @param current - Starting HP, shown immediately.
 	 */
@@ -35,7 +45,38 @@ export class HpBar {
 		this.target = current;
 	}
 
-	/** Points the bar at a new HP value (and optionally a new maximum). */
+	/**
+	 * Binds the bar to the creature now occupying its slot, snapping on a change.
+	 *
+	 * When the slot's creature changes (a replacement or voluntary switch) the bar
+	 * jumps straight to the new creature's HP instead of easing from the previous
+	 * occupant's displayed value, so a fresh full-HP creature never animates up from
+	 * a fainted 0. On the first bind and on unchanged keys the displayed value is
+	 * left alone so ordinary damage/heal easing is unaffected.
+	 */
+	bindTo(creatureKey: string, current: number, max = this.max) {
+		if (this.creatureKey !== creatureKey) {
+			// A new creature took the slot: snap straight to its HP so a full-HP
+			// replacement never eases up from the previous occupant's value.
+			this.creatureKey = creatureKey;
+			this.max = max;
+			this.displayed = current;
+			this.target = current;
+			return;
+		}
+		// Same creature: track its HP the ordinary way, so damage/heal still eases.
+		this.setTarget(current, max);
+	}
+
+	/**
+	 * Points the bar at a new HP value (and optionally a new maximum).
+	 *
+	 * Both a drain and a legitimate refill (a heal or revive on the *same* creature)
+	 * ease toward the new value. A refill caused by a *different* creature taking the
+	 * slot — the fainted-then-replaced case that is Bug 2 — is not reached here: the
+	 * scene rebinds the bar through `bindTo`, which snaps rather than easing, so the
+	 * bar never climbs up from a fainted 0.
+	 */
 	setTarget(current: number, max = this.max) {
 		this.max = max;
 		this.target = current;

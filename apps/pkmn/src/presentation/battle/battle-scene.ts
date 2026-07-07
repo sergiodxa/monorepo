@@ -41,6 +41,7 @@ import type { SfxPlayer } from "./battle-sfx";
 import { AnimationQueue } from "./animation-queue";
 import { BattleBag, type BattleBagItem, battleItemUse } from "./battle-bag";
 import { sfxForGameEvent } from "./battle-sfx";
+import { BattleSwitch, decideReplacement, type SwitchChoice } from "./battle-switch";
 import { BattleCommandMenu } from "./command-menu";
 import { chooseEnemyAction, type EnemyMoveOption } from "./enemy-ai";
 import { buildBattleTasks, type BattleHud } from "./event-animations";
@@ -80,6 +81,24 @@ export class BattleScene implements Scene {
 
 	/** Whether the Bag item menu is currently open over the action menu. */
 	private bagOpen = false;
+
+	/** The creature picker for forced replacements and voluntary switches. */
+	private readonly switcher = new BattleSwitch();
+
+	/**
+	 * How the switch picker is open, or null when it is closed.
+	 *
+	 * `replacement` fills a forced faint replacement for the player slot in
+	 * `switchSlot` (cancel blocked); `switch` is a voluntary switch from the action
+	 * menu that spends the turn (cancel returns to the action menu).
+	 */
+	private switchMode: "replacement" | "switch" | null = null;
+
+	/** The player slot the open replacement picker fills, when in `replacement` mode. */
+	private switchSlot = 0;
+
+	/** Chosen replacement creature per player slot, cached across frames mid-prompt. */
+	private readonly playerChoices = new Map<number, number>();
 
 	/** HP bars for active slots, keyed by `side:slot`. */
 	private readonly bars = new Map<string, HpBar>();
@@ -193,6 +212,7 @@ export class BattleScene implements Scene {
 	enter(game: GameClient) {
 		this.audio = game.audio;
 		this.bag.useAudio(game.audio);
+		this.switcher.useAudio(game.audio);
 		this.atlas = game.assets.atlas("overworld") ?? buildPlaceholderAtlas();
 		let view = game.engine.selectBattle(this.battleId);
 		this.syncBars(view);
@@ -279,19 +299,31 @@ export class BattleScene implements Scene {
 				this.updateBag(game, view, request.turn);
 				return;
 			}
+			if (this.switchMode === "switch") {
+				this.updateVoluntarySwitch(game, view, request.turn);
+				return;
+			}
 			let moves = this.playerMoves(view);
 			let result = this.menu.update(game.input, moves);
 			if (result?.kind === "fight") this.submitTurn(game, request.turn, result.move);
 			else if (result?.kind === "run") this.submitRun(game, request.turn);
 			else if (result?.kind === "bag") this.openBag();
-			// the Creatures (switch) menu is not wired to in-battle switching yet.
+			else if (result?.kind === "switch") this.openVoluntarySwitch(view);
 		} else if (request?.type === "replacement") {
-			this.submitReplacements(game, request.replacement);
+			this.updateReplacement(game, view, request.replacement);
 		}
 	}
 
 	render(game: GameClient, ctx: CanvasRenderingContext2D) {
 		let view = game.engine.selectBattle(this.battleId);
+
+		// The switch/replacement picker is a full-screen party list drawn over the
+		// battlefield, mirroring the party screen.
+		if (this.switchMode !== null && this.queue.idle) {
+			this.switcher.render(ctx, this.switcherChoices(view));
+			return;
+		}
+
 		this.drawBackground(ctx);
 
 		let foe = view.enemies[0];
@@ -313,6 +345,19 @@ export class BattleScene implements Scene {
 				);
 			} else this.menu.render(ctx, this.playerMoves(view));
 		}
+	}
+
+	/** The choices the open switch picker should draw, per its current mode. */
+	private switcherChoices(view: BattleView): SwitchChoice[] {
+		if (this.switchMode === "replacement") {
+			let request = this.pendingRequest(view);
+			let selection =
+				request?.type === "replacement"
+					? request.replacement.find((entry) => entry.side === 0 && entry.slot === this.switchSlot)
+					: undefined;
+			return this.switchChoices(view, selection?.choices ?? []);
+		}
+		return this.voluntarySwitchChoices(view);
 	}
 
 	/** Turns any unconsumed battle-log events into queued animation tasks. */
@@ -500,11 +545,50 @@ export class BattleScene implements Scene {
 		return { type: "fight", move, target: { side: 0, slot: 0 } };
 	}
 
-	/** Fills forced replacements with each slot's first available bench creature. */
-	private submitReplacements(game: GameClient, requests: ReplacementSelection[]) {
+	/**
+	 * Resolves the forced replacements requested after a burst of faints.
+	 *
+	 * Enemy slots (side ≠ 0) auto-send their first available bench creature, matching
+	 * the deterministic enemy AI. A player slot (side 0) is decided by
+	 * `decideReplacement`: a lone healthy creature is auto-sent, while two or more open
+	 * a blocking picker so the player chooses which creature to send in — the fainted
+	 * creature is never left active. Because the engine validates one command per
+	 * request, the chosen player creature and the auto enemy creatures are submitted
+	 * together once every player slot has a choice. `playerChoices` caches choices
+	 * across frames while the picker is open.
+	 */
+	private updateReplacement(game: GameClient, view: BattleView, requests: ReplacementSelection[]) {
+		// The first player slot still waiting on a picker choice, if any.
+		let pendingPrompt = requests.find(
+			(request) =>
+				request.side === 0 &&
+				decideReplacement(request.choices).kind === "prompt" &&
+				this.playerChoices.get(request.slot) === undefined,
+		);
+
+		if (pendingPrompt) {
+			this.message = null;
+			if (this.switchMode !== "replacement" || this.switchSlot !== pendingPrompt.slot) {
+				this.switchMode = "replacement";
+				this.switchSlot = pendingPrompt.slot;
+				this.switcher.open(true);
+			}
+			let result = this.switcher.update(
+				game.input,
+				this.switchChoices(view, pendingPrompt.choices),
+			);
+			if (result?.kind === "switch") {
+				this.playerChoices.set(pendingPrompt.slot, result.creature);
+				this.switchMode = null;
+			}
+			return;
+		}
+
+		// Every player prompt is answered: assemble one command per requested slot.
 		let commands: ReplacementCommand[] = [];
 		for (let selection of requests) {
-			let creature = selection.choices[0];
+			let creature =
+				selection.side === 0 ? this.resolvePlayerReplacement(selection) : selection.choices[0];
 			if (creature === undefined) continue;
 			commands.push({
 				type: "replace",
@@ -512,9 +596,100 @@ export class BattleScene implements Scene {
 				creature,
 			});
 		}
+		this.playerChoices.clear();
+		this.switchMode = null;
 		if (commands.length === 0) return;
 		game.dispatch({ type: "submit-battle-replacements", battleId: this.battleId, commands });
 		this.processNewEvents(game, game.engine.selectBattle(this.battleId));
+	}
+
+	/** The creature index to send into one player replacement slot (auto or picked). */
+	private resolvePlayerReplacement(selection: ReplacementSelection): number | undefined {
+		let decision = decideReplacement(selection.choices);
+		if (decision.kind === "auto") return decision.creature;
+		if (decision.kind === "prompt") return this.playerChoices.get(selection.slot);
+		return undefined;
+	}
+
+	/** Opens the voluntary switch picker over the action menu (cancel allowed). */
+	private openVoluntarySwitch(view: BattleView) {
+		if (this.voluntarySwitchChoices(view).length === 0) {
+			// Nothing healthy on the bench to switch to; leave the action menu up.
+			this.enqueueMessage("There's no one else to send in!");
+			return;
+		}
+		this.switchMode = "switch";
+		this.switcher.open(false);
+	}
+
+	/**
+	 * Drives the open voluntary switch picker and submits the switch as a turn action.
+	 *
+	 * Cancelling returns to the action menu. Confirming submits a `switch` turn
+	 * command for the player's lead slot — an engine turn-action that resolves before
+	 * moves and spends the player's turn, so the foe still acts. The chosen creature is
+	 * the team-local bench index the picker reports.
+	 */
+	private updateVoluntarySwitch(game: GameClient, view: BattleView, request: BattlePosition[]) {
+		this.message = null;
+		let result = this.switcher.update(game.input, this.voluntarySwitchChoices(view));
+		if (!result) return;
+		this.switchMode = null;
+		if (result.kind === "cancel") {
+			this.menu.reset();
+			return;
+		}
+		this.submitSwitch(game, request, result.creature);
+	}
+
+	/**
+	 * Submits a voluntary switch for the player's lead slot; foe slots still act.
+	 *
+	 * The switch is one player-side turn command (the engine orders it ahead of moves
+	 * by priority), and each foe slot gets its AI-chosen move, so switching consumes
+	 * the turn exactly like fighting does.
+	 */
+	private submitSwitch(game: GameClient, request: BattlePosition[], creature: number) {
+		let view = game.engine.selectBattle(this.battleId);
+		let commands: TurnCommand[] = request.map((position) =>
+			position.side === 0
+				? { type: "switch", target: { side: 0, slot: position.slot }, creature }
+				: this.enemyCommand(game, view, position),
+		);
+		game.dispatch({ type: "submit-battle-turn", battleId: this.battleId, commands });
+		this.menu.reset();
+		this.processNewEvents(game, game.engine.selectBattle(this.battleId));
+	}
+
+	/** The healthy benched creatures the player may voluntarily switch the lead slot to. */
+	private voluntarySwitchChoices(view: BattleView): SwitchChoice[] {
+		let active = view.allies[0];
+		let choices: number[] = [];
+		view.allies.forEach((ally, index) => {
+			if (index === 0) return; // the active lead cannot switch to itself
+			if (ally.id === active?.id) return;
+			if (ally.currentHP <= 0) return;
+			choices.push(index);
+		});
+		return this.switchChoices(view, choices);
+	}
+
+	/** Maps a list of team-local ally indices to the picker's display rows. */
+	private switchChoices(view: BattleView, choices: number[]): SwitchChoice[] {
+		let rows: SwitchChoice[] = [];
+		for (let creature of choices) {
+			let ally = view.allies[creature];
+			if (!ally) continue;
+			rows.push({
+				creature,
+				name: ally.name,
+				level: ally.level,
+				currentHP: ally.currentHP,
+				maxHP: ally.maxHP,
+				status: ally.status,
+			});
+		}
+		return rows;
 	}
 
 	/** The pending input request, resolved from the most recent request event. */
@@ -546,7 +721,10 @@ export class BattleScene implements Scene {
 			let key = `${side}:${slot}`;
 			let bar = this.bars.get(key);
 			if (!bar) this.bars.set(key, new HpBar(summary.maxHP, summary.currentHP));
-			else if (this.queue.idle) bar.setTarget(summary.currentHP, summary.maxHP);
+			// A slot's bar is reused across replacements; bind it to the active creature
+			// so it snaps to a fresh creature's HP (instead of easing up from 0) and only
+			// eases ordinary damage/heal while the animation queue is idle.
+			else if (this.queue.idle) bar.bindTo(summary.id, summary.currentHP, summary.maxHP);
 			if (summary.currentHP > 0) this.fainted.delete(key);
 		};
 		view.allies.forEach((summary, slot) => refresh(summary, 0, slot));
@@ -564,6 +742,14 @@ export class BattleScene implements Scene {
 			setHp: (position, remaining) => this.barAt(position)?.setTarget(remaining),
 			isSettled: (position) => this.barAt(position)?.settled ?? true,
 			markFainted: (position) => this.fainted.add(`${position.side}:${position.slot}`),
+			switchedIn: (position) => {
+				let key = `${position.side}:${position.slot}`;
+				this.fainted.delete(key);
+				let summary = summaryAt(position);
+				// Snap the reused slot bar onto the fresh creature at a full bar so a
+				// following drain eases down rather than the bar climbing up from 0.
+				if (summary) this.barAt(position)?.bindTo(summary.id, summary.maxHP, summary.maxHP);
+			},
 		};
 	}
 

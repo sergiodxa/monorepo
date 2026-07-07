@@ -41,6 +41,16 @@ export interface BattleHud {
 	isSettled(position: BattlePosition): boolean;
 	/** Marks a slot as fainted for rendering. */
 	markFainted(position: BattlePosition): void;
+	/**
+	 * Rebinds a slot's HP bar to the creature that just switched in.
+	 *
+	 * The slot's bar is reused across replacements, so after a switch it still shows
+	 * the previous (fainted, 0 HP) occupant. Snapping it to the fresh creature's full
+	 * bar means any following damage drains downward instead of the bar re-animating
+	 * up from empty (Bug 2). Also clears the slot's fainted marker so the new creature
+	 * is drawn.
+	 */
+	switchedIn(position: BattlePosition): void;
 }
 
 /**
@@ -121,6 +131,9 @@ export function buildBattleTasks(
 				message(`${hud.nameAt(event.target)} was hurt by ${event.effect.replace(/-/g, " ")}!`);
 				break;
 			case "creature-switched":
+				// Snap the reused slot bar to the fresh creature before narrating, so a
+				// later drain eases downward instead of the bar re-animating up from 0.
+				tasks.push(callbackTask(() => hud.switchedIn(event.target)));
 				message(`Go, ${hud.nameAt(event.target)}!`);
 				break;
 			case "creature-fainted":

@@ -67,3 +67,34 @@ test("setTarget can raise the maximum while pointing at a new value", () => {
 	bar.update(100_000);
 	expect(bar.settled).toBe(true);
 });
+
+test("bindTo snaps to a fresh creature instead of easing up from a fainted 0 (guards Bug 2)", () => {
+	// The slot's bar is reused across replacements. A fainted creature leaves it at 0;
+	// when a fresh full-HP creature takes the slot the bar must jump straight to full
+	// rather than ANIMATING up from the previous occupant's 0 — the Bug 2 symptom.
+	let bar = new HpBar(100, 0); // previous creature fainted at 0
+	bar.bindTo("creature-b", 100, 100); // a fresh full-HP creature takes the slot
+	expect(bar.settled).toBe(true); // snapped straight to 100: no upward animation queued
+	bar.update(100_000);
+	expect(bar.settled).toBe(true);
+});
+
+test("bindTo then a drain on the fresh creature eases downward, not upward", () => {
+	// After a switch-in the bar is snapped to full, so an incoming hit drains it down
+	// (the correct direction) instead of the reused bar climbing up from 0.
+	let bar = new HpBar(100, 0); // previous occupant fainted
+	bar.bindTo("creature-b", 100, 100); // snap to full for the switched-in creature
+	bar.setTarget(60); // the foe hits it: drain toward 60
+	expect(bar.settled).toBe(false);
+	bar.update(400); // rate 100/1000*400 = 40 -> reaches 60
+	expect(bar.settled).toBe(true);
+});
+
+test("bindTo eases ordinary damage while the same creature holds the slot", () => {
+	let bar = new HpBar(100, 100);
+	bar.bindTo("creature-a", 100, 100); // first bind: same creature, holds at 100
+	bar.bindTo("creature-a", 40, 100); // same key: track the new HP the ordinary way
+	expect(bar.settled).toBe(false);
+	bar.update(100_000);
+	expect(bar.settled).toBe(true);
+});

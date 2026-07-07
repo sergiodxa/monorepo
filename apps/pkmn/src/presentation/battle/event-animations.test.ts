@@ -39,6 +39,7 @@ function fakeHud() {
 	let messages: Array<string | null> = [];
 	let hpCalls: Array<{ position: BattlePosition; remaining: number }> = [];
 	let fainted: BattlePosition[] = [];
+	let switchedIn: BattlePosition[] = [];
 	let hud: BattleHud = {
 		setMessage: (text) => {
 			messages.push(text);
@@ -52,8 +53,11 @@ function fakeHud() {
 		markFainted: (position) => {
 			fainted.push(position);
 		},
+		switchedIn: (position) => {
+			switchedIn.push(position);
+		},
 	};
-	return { hud, messages, hpCalls, fainted };
+	return { hud, messages, hpCalls, fainted, switchedIn };
 }
 
 /** Drains a task list, stepping each task with a big dt until it completes. */
@@ -141,6 +145,27 @@ test("creature-switched narrates the switch-in", () => {
 	let { hud, messages } = fakeHud();
 	drain(buildBattleTasks([{ type: "creature-switched", target: TARGET, creature: 1 }], hud));
 	expect(lastMessage(messages)).toBe("Go, slot-1-0!");
+});
+
+test("creature-switched rebinds the slot's HP bar to the fresh creature", () => {
+	let { hud, switchedIn } = fakeHud();
+	drain(buildBattleTasks([{ type: "creature-switched", target: TARGET, creature: 1 }], hud));
+	expect(switchedIn).toEqual([TARGET]);
+});
+
+test("a switch-in then damage rebinds before draining, never animating up from 0", () => {
+	let { hud, switchedIn, hpCalls } = fakeHud();
+	// A fainted slot is replaced, then the fresh creature is hit: the bar must be
+	// rebound to the new creature (so it starts full) before the drain HP task runs,
+	// guarding against the fainted slot's bar re-animating upward (Bug 2).
+	let events: BattleEvent[] = [
+		{ type: "creature-switched", target: TARGET, creature: 1 },
+		{ type: "damage-dealt", target: TARGET, damage: 10, remainingHP: 40 },
+	];
+	drain(buildBattleTasks(events, hud));
+	expect(switchedIn).toEqual([TARGET]);
+	// The rebind happened and the only HP movement is the downward drain to 40.
+	expect(hpCalls).toEqual([{ position: TARGET, remaining: 40 }]);
 });
 
 test("stat-stage-changed narrates a rise or a fall by the sign of the stages", () => {
