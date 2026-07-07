@@ -12,9 +12,11 @@
 import { isFailure, type Result } from "@pkg/result";
 import { createRouter } from "remix/fetch-router";
 
+import { runAtlasExport } from "./atlas-export";
 import { runBinaryExport, runExport, runSpriteExport } from "./export";
 import { PathSafetyError } from "./path-safety";
 import routes from "./routes";
+import { runTrainerExport } from "./trainer-export";
 
 /** Default port for the dev server; chosen to avoid clashing with the game. */
 const DEFAULT_PORT = 4321;
@@ -153,6 +155,24 @@ function createDevRouter(clientBundle: string) {
 			id: data.id,
 			path: data.path,
 			url: data.url,
+			bytesWritten: data.bytesWritten,
+		})),
+	);
+
+	router.map(routes.exportAtlas.action, (ctx) =>
+		handleExport(ctx.request, runAtlasExport, (data) => ({
+			id: data.id,
+			path: data.path,
+			url: data.url,
+			atlasId: data.atlasId,
+			region: data.region,
+			bytesWritten: data.bytesWritten,
+		})),
+	);
+
+	router.map(routes.exportTrainer.action, (ctx) =>
+		handleExport(ctx.request, runTrainerExport, (data) => ({
+			path: data.path,
 			bytesWritten: data.bytesWritten,
 		})),
 	);

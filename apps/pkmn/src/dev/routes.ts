@@ -31,4 +31,6 @@ export default route({
 	export: form("/dev/export"),
 	exportBinary: form("/dev/export/binary"),
 	exportSprite: form("/dev/export/sprite"),
+	exportAtlas: form("/dev/export/atlas"),
+	exportTrainer: form("/dev/export/trainer"),
 });
