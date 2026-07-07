@@ -12,9 +12,28 @@
  * @copyright Sergio Xalambrí 2026
  */
 import { Button, type InputManager } from "../core/input";
+import { SCREEN_WIDTH } from "../core/loop";
+import { gridNavigate } from "../render/grid-nav";
 import { drawText } from "../render/text";
 import * as theme from "../render/theme";
 import { Window } from "../render/window";
+
+import { columnWidthFor } from "./status-layout";
+
+/** Columns in the move menu's grid; moves fill two per row (matches `renderMoves`). */
+const MOVE_COLUMNS = 2;
+
+/** Pixels reserved left of each root label for the selection cursor. */
+const ROOT_CURSOR_GAP = 10;
+
+/** Extra pixels between one root column's label and the next column's cursor. */
+const ROOT_COLUMN_GAP = 4;
+
+/** Pixels from the box's left edge to the first column's label. */
+const ROOT_LABEL_INSET = 8;
+
+/** Right padding inside the root box after the widest second-column label. */
+const ROOT_RIGHT_PAD = 6;
 
 /** One selectable move in the Fight submenu. */
 export interface MoveOption {
@@ -31,6 +50,30 @@ export type BattleMenuResult =
 
 /** Root menu labels in navigation order (a 2x2 grid). */
 const ROOT_LABELS = ["Fight", "Bag", "Creatures", "Run"] as const;
+
+/** The pixel geometry of the root action menu's two-column grid. */
+export interface RootMenuLayout {
+	/** Horizontal distance from one column's label to the next column's label. */
+	stride: number;
+	/** Total width of the framed box. */
+	boxWidth: number;
+}
+
+/**
+ * Sizes the root action menu's columns so labels never collide.
+ *
+ * The column stride is the widest label ("Creatures") plus room for the next
+ * column's cursor and a gap, and the box is wide enough to hold both columns: the
+ * label inset, one stride, the widest second-column label, and right padding. This
+ * is the pure width math behind `renderRoot`, kept testable so the "CreaturesRun"
+ * overrun cannot regress.
+ */
+export function rootMenuLayout(): RootMenuLayout {
+	let stride = columnWidthFor(ROOT_LABELS, ROOT_CURSOR_GAP + ROOT_COLUMN_GAP);
+	let widest = columnWidthFor(ROOT_LABELS, 0);
+	let boxWidth = ROOT_LABEL_INSET + stride + widest + ROOT_RIGHT_PAD;
+	return { stride, boxWidth };
+}
 
 /** Handles battle-menu navigation and rendering. */
 export class BattleCommandMenu {
@@ -94,9 +137,16 @@ export class BattleCommandMenu {
 		let usable = moves.filter((move) => move.id !== null);
 		if (usable.length === 0) return null;
 
-		if (input.isRepeating(Button.Down)) this.moveIndex = (this.moveIndex + 1) % usable.length;
+		// Moves render as a 2-column grid, so navigation follows the grid the player
+		// sees: Left/Right step columns, Up/Down step rows.
+		if (input.isRepeating(Button.Right))
+			this.moveIndex = gridNavigate(this.moveIndex, "right", MOVE_COLUMNS, usable.length);
+		if (input.isRepeating(Button.Left))
+			this.moveIndex = gridNavigate(this.moveIndex, "left", MOVE_COLUMNS, usable.length);
+		if (input.isRepeating(Button.Down))
+			this.moveIndex = gridNavigate(this.moveIndex, "down", MOVE_COLUMNS, usable.length);
 		if (input.isRepeating(Button.Up))
-			this.moveIndex = (this.moveIndex - 1 + usable.length) % usable.length;
+			this.moveIndex = gridNavigate(this.moveIndex, "up", MOVE_COLUMNS, usable.length);
 		if (input.isPressed(Button.B)) {
 			this.mode = "root";
 			return null;
@@ -108,13 +158,22 @@ export class BattleCommandMenu {
 		return null;
 	}
 
-	/** Draws the 2x2 root grid. */
+	/**
+	 * Draws the 2x2 root grid.
+	 *
+	 * Column stride is sized from the widest label ("Creatures") plus room for the
+	 * cursor and a gap, so no label ever overruns the next column ("CreaturesRun").
+	 * The box is anchored to the screen's right edge and widened left to hold both
+	 * columns.
+	 */
 	private renderRoot(ctx: CanvasRenderingContext2D) {
-		Window.frame(ctx, 132, 112, 108, 48);
+		let layout = rootMenuLayout();
+		let boxX = SCREEN_WIDTH - layout.boxWidth;
+		Window.frame(ctx, boxX, 112, layout.boxWidth, 48);
 		for (let index = 0; index < ROOT_LABELS.length; index++) {
-			let x = 148 + (index % 2) * 52;
+			let x = boxX + ROOT_LABEL_INSET + (index % 2) * layout.stride;
 			let y = 122 + Math.floor(index / 2) * 18;
-			if (index === this.rootIndex) Window.cursor(ctx, x - 10, y);
+			if (index === this.rootIndex) Window.cursor(ctx, x - ROOT_CURSOR_GAP, y);
 			drawText(ctx, ROOT_LABELS[index]!, x, y);
 		}
 	}

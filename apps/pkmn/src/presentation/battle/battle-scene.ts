@@ -15,14 +15,13 @@
  */
 import type { BattlePosition, ReplacementSelection, TurnCommand } from "~/game/battle/battle";
 import type { ReplacementCommand } from "~/game/battle/battle";
-import type { State } from "~/game/data/status";
 import type { GameEvent } from "~/game/events";
 import type { BattleView, CreatureSummaryView } from "~/game/selectors";
 import type { MoveSet } from "~/game/world/creature";
 import type { BattleId, CreatureId, PlayerId } from "~/game/world/ids";
 
 import { DamageClass } from "~/game/data/move";
-import { applyMedicine, isMedicineEffect } from "~/game/systems/medicine-system";
+import { isMedicineEffect } from "~/game/systems/medicine-system";
 
 import type { Scene } from "../core/scene";
 
@@ -40,11 +39,13 @@ import { LearnMoveScene } from "../scenes/learn-move";
 import type { SfxPlayer } from "./battle-sfx";
 
 import { AnimationQueue } from "./animation-queue";
+import { BattleBag, type BattleBagItem, battleItemUse } from "./battle-bag";
 import { sfxForGameEvent } from "./battle-sfx";
 import { BattleCommandMenu } from "./command-menu";
 import { chooseEnemyAction, type EnemyMoveOption } from "./enemy-ai";
 import { buildBattleTasks, type BattleHud } from "./event-animations";
 import { HpBar } from "./hp-bar";
+import { statusBoxLayout } from "./status-layout";
 
 /** A money stake settled when a battle ends (used by trainer fights). */
 export interface BattleReward {
@@ -73,6 +74,12 @@ export class BattleScene implements Scene {
 
 	/** The command menu shown on the player's turn. */
 	private readonly menu = new BattleCommandMenu();
+
+	/** The in-battle item menu, opened from the action menu's Bag option. */
+	private readonly bag = new BattleBag();
+
+	/** Whether the Bag item menu is currently open over the action menu. */
+	private bagOpen = false;
 
 	/** HP bars for active slots, keyed by `side:slot`. */
 	private readonly bars = new Map<string, HpBar>();
@@ -185,6 +192,7 @@ export class BattleScene implements Scene {
 	/** Initializes HP bars and queues the intro message. */
 	enter(game: GameClient) {
 		this.audio = game.audio;
+		this.bag.useAudio(game.audio);
 		this.atlas = game.assets.atlas("overworld") ?? buildPlaceholderAtlas();
 		let view = game.engine.selectBattle(this.battleId);
 		this.syncBars(view);
@@ -267,11 +275,15 @@ export class BattleScene implements Scene {
 		let request = this.pendingRequest(view);
 		if (request?.type === "turn") {
 			this.message = null;
+			if (this.bagOpen) {
+				this.updateBag(game, view, request.turn);
+				return;
+			}
 			let moves = this.playerMoves(view);
 			let result = this.menu.update(game.input, moves);
 			if (result?.kind === "fight") this.submitTurn(game, request.turn, result.move);
 			else if (result?.kind === "run") this.submitRun(game, request.turn);
-			else if (result?.kind === "bag") this.useBag(game, request.turn);
+			else if (result?.kind === "bag") this.openBag();
 			// the Creatures (switch) menu is not wired to in-battle switching yet.
 		} else if (request?.type === "replacement") {
 			this.submitReplacements(game, request.replacement);
@@ -293,7 +305,13 @@ export class BattleScene implements Scene {
 		let live = view.winnerSide === null && this.endedWinnerSide === undefined && !this.finishing;
 		if (this.message !== null) this.drawMessage(ctx, this.message);
 		else if (this.queue.idle && turnRequest && live) {
-			this.menu.render(ctx, this.playerMoves(view));
+			if (this.bagOpen) {
+				this.bag.render(
+					ctx,
+					this.battleBagItems(game),
+					view.allies.map((ally) => ally.name),
+				);
+			} else this.menu.render(ctx, this.playerMoves(view));
 		}
 	}
 
@@ -318,52 +336,51 @@ export class BattleScene implements Scene {
 		this.processNewEvents(game, game.engine.selectBattle(this.battleId));
 	}
 
-	/**
-	 * Resolves the Bag command for the current turn.
-	 *
-	 * With no nested Bag UI yet, this auto-picks: a usable medicine on the party
-	 * member that needs it takes priority (healing is the common in-battle use), then
-	 * throwing a ball at a wild target. If neither applies it narrates why.
-	 */
-	private useBag(game: GameClient, request: BattlePosition[]) {
-		if (this.useMedicine(game, request)) return;
-		if (this.canCapture) this.throwBall(game);
-		else this.enqueueMessage("There's nothing usable in the bag right now.");
+	/** Opens the in-battle item menu over the action menu. */
+	private openBag() {
+		this.bagOpen = true;
+		this.bag.reset();
 	}
 
 	/**
-	 * Submits an item-use turn if a bagged medicine can help a party member.
+	 * Drives the open Bag menu for the current turn and routes the chosen item.
 	 *
-	 * Scans the bag for a countable medicine whose effect actually changes some party
-	 * member (using the same pure rule the engine applies), then submits a `use-item`
-	 * turn command for that item and target. Returns whether a turn was submitted so
-	 * the caller can fall back to the capture path when nothing is usable.
+	 * A ball routes to the capture attempt, a medicine submits a `use-item` turn on
+	 * the chosen active party member, and cancelling closes the bag back to the
+	 * action menu. Selecting the bag no longer captures on its own — the player picks
+	 * here — which is the behavior the regression tests lock in.
 	 */
-	private useMedicine(game: GameClient, request: BattlePosition[]): boolean {
-		let view = game.engine.selectBattle(this.battleId);
-		let inventory = game.engine.selectInventory();
-
-		for (let entry of inventory.entries) {
-			if (entry.count <= 0) continue;
-			let item = game.content.items[entry.id];
-			let effect = item && "effect" in item ? item.effect : undefined;
-			if (!effect || !isMedicineEffect(effect)) continue;
-
-			let target = view.allies.findIndex(
-				(ally) =>
-					applyMedicine(effect, {
-						currentHP: ally.currentHP,
-						maxHP: ally.maxHP,
-						status: (ally.status as State | null) ?? null,
-					}).applied,
-			);
-			if (target === -1) continue;
-
-			this.submitUseItem(game, request, entry.id, target);
-			return true;
+	private updateBag(game: GameClient, view: BattleView, request: BattlePosition[]) {
+		let items = this.battleBagItems(game);
+		let targets = view.allies.map((ally) => ally.name);
+		let result = this.bag.update(game.input, items, targets);
+		if (!result) return;
+		if (result.kind === "cancel") {
+			this.bagOpen = false;
+			return;
 		}
+		this.bagOpen = false;
+		if (result.kind === "ball") this.throwBall(game);
+		else this.submitUseItem(game, request, result.itemId, result.target);
+	}
 
-		return false;
+	/**
+	 * Builds the usable battle items the bag lists from the current inventory.
+	 *
+	 * Each stocked item is classified as a ball or a medicine; balls are dropped when
+	 * capture is disallowed (trainer fights), and everything else the bag cannot use
+	 * in battle is left out. Order follows the inventory so the list is stable.
+	 */
+	private battleBagItems(game: GameClient): BattleBagItem[] {
+		let items: BattleBagItem[] = [];
+		for (let entry of game.engine.selectInventory().entries) {
+			if (entry.count <= 0) continue;
+			let use = battleItemUse(game.content.items[entry.id]);
+			if (use === null) continue;
+			if (use === "ball" && !this.canCapture) continue;
+			items.push({ id: entry.id, name: entry.name, count: entry.count, use });
+		}
+		return items;
 	}
 
 	/** Submits a use-item turn for the player's slots (foe slots still act). */
@@ -610,10 +627,20 @@ export class BattleScene implements Scene {
 		y: number,
 		showNumbers: boolean,
 	) {
-		Window.frame(ctx, x, y, 104, 26);
-		drawText(ctx, `${summary.name}`, x + 6, y + 4);
-		drawText(ctx, `L${summary.level}`, x + 98, y + 4, { align: "right" });
-		this.barAt({ side: showNumbers ? 0 : 1, slot: 0 })?.draw(ctx, x + 6, y + 16, 92, showNumbers);
+		// Stack the rows so the HP fraction (when shown) fits inside the frame above
+		// the bar instead of spilling below it.
+		let layout = statusBoxLayout(showNumbers, HpBar.HEIGHT);
+		Window.frame(ctx, x, y, 104, layout.height);
+		drawText(ctx, `${summary.name}`, x + 6, y + layout.nameY);
+		drawText(ctx, `L${summary.level}`, x + 98, y + layout.nameY, { align: "right" });
+		this.barAt({ side: showNumbers ? 0 : 1, slot: 0 })?.draw(
+			ctx,
+			x + 6,
+			y + layout.barY,
+			92,
+			showNumbers,
+			y + layout.hpTextY,
+		);
 	}
 
 	/** Draws the bottom message box with wrapped text. */

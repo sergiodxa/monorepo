@@ -14,6 +14,7 @@ import type { SfxPlayer } from "../battle/battle-sfx";
 
 import { Button, type InputManager } from "../core/input";
 
+import { gridNavigate } from "./grid-nav";
 import { drawText } from "./text";
 import * as theme from "./theme";
 import { Window } from "./window";
@@ -31,10 +32,15 @@ export class ListMenu {
 	 * @param audio - Optional effect player; when given, cursor moves blip
 	 *   `menu-move` and confirm/cancel blip `menu-confirm`/`menu-cancel`. Omitting
 	 *   it (the default) keeps the widget silent and its behavior unchanged.
+	 * @param columns - Items per row. The default `1` keeps the classic linear
+	 *   Up/Down navigation; a value above 1 opts into grid navigation where
+	 *   Left/Right step within a row and Up/Down step between rows, matching a
+	 *   grid layout the caller draws. Other menus that omit it are unaffected.
 	 */
 	constructor(
 		private readonly rows = 5,
 		private audio?: SfxPlayer,
+		private readonly columns = 1,
 	) {}
 
 	/**
@@ -57,14 +63,30 @@ export class ListMenu {
 			return;
 		}
 		let before = this.index;
-		if (input.isRepeating(Button.Down)) this.index = (this.index + 1) % count;
-		if (input.isRepeating(Button.Up)) this.index = (this.index - 1 + count) % count;
+		if (this.columns > 1) {
+			// Grid mode: horizontal keys step within a row, vertical between rows.
+			if (input.isRepeating(Button.Right))
+				this.index = gridNavigate(this.index, "right", this.columns, count);
+			if (input.isRepeating(Button.Left))
+				this.index = gridNavigate(this.index, "left", this.columns, count);
+			if (input.isRepeating(Button.Down))
+				this.index = gridNavigate(this.index, "down", this.columns, count);
+			if (input.isRepeating(Button.Up))
+				this.index = gridNavigate(this.index, "up", this.columns, count);
+		} else {
+			if (input.isRepeating(Button.Down)) this.index = (this.index + 1) % count;
+			if (input.isRepeating(Button.Up)) this.index = (this.index - 1 + count) % count;
+		}
 		if (this.index >= count) this.index = count - 1;
 		if (this.index !== before) this.audio?.playSynthSfx("menu-move");
 
-		if (this.index < this.scroll) this.scroll = this.index;
-		if (this.index >= this.scroll + this.rows) this.scroll = this.index - this.rows + 1;
-		let maxScroll = Math.max(0, count - this.rows);
+		// Scroll tracks the visible window in row units; in grid mode the cursor's
+		// row is its index divided by the column count.
+		let cursorRow = Math.floor(this.index / this.columns);
+		let totalRows = Math.ceil(count / this.columns);
+		if (cursorRow < this.scroll) this.scroll = cursorRow;
+		if (cursorRow >= this.scroll + this.rows) this.scroll = cursorRow - this.rows + 1;
+		let maxScroll = Math.max(0, totalRows - this.rows);
 		if (this.scroll > maxScroll) this.scroll = maxScroll;
 	}
 

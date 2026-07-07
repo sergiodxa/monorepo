@@ -34,8 +34,8 @@ export const HP_BAR_COLOR = {
 	fillMedium: "#e8c020",
 	/** The fill when HP ratio is at or below 20% (`draw`). */
 	fillLow: "#e04030",
-	/** The HP fraction text drawn under the bar (`draw`). */
-	numbers: "#f8f8f8",
+	/** The HP fraction text drawn inside the status box, above the bar (`draw`). Dark for legibility on the light window panel. */
+	numbers: "#202020",
 } as const;
 
 /** Colors for the shared menu/message window in `render/window.ts`. */

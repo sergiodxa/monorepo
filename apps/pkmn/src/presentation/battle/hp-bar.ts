@@ -13,6 +13,8 @@
 import { drawText } from "../render/text";
 import * as theme from "../render/theme";
 
+import { hpText } from "./status-layout";
+
 /** A single combatant's HP bar with an eased displayed value. */
 export class HpBar {
 	/** The HP value currently drawn, eased toward `target`. */
@@ -52,10 +54,27 @@ export class HpBar {
 		return Math.abs(this.displayed - this.target) < 0.5;
 	}
 
-	/** Draws the bar frame, fill, and (optionally) the HP fraction at `(x, y)`. */
-	draw(ctx: CanvasRenderingContext2D, x: number, y: number, width: number, showNumbers: boolean) {
+	/** The bar's fixed pixel height. */
+	static readonly HEIGHT = 5;
+
+	/**
+	 * Draws the bar frame and fill at `(x, y)`, and optionally the HP fraction.
+	 *
+	 * When numbers are shown they are drawn right-aligned to the bar's right edge at
+	 * `numbersY`, which the caller sizes so the text sits *inside* the status box
+	 * above the bar rather than spilling below it. The number color is a dark theme
+	 * value so it reads clearly on the light window panel.
+	 */
+	draw(
+		ctx: CanvasRenderingContext2D,
+		x: number,
+		y: number,
+		width: number,
+		showNumbers: boolean,
+		numbersY = y,
+	) {
 		let ratio = this.max > 0 ? Math.max(0, Math.min(1, this.displayed / this.max)) : 0;
-		let height = 5;
+		let height = HpBar.HEIGHT;
 
 		ctx.fillStyle = theme.HP_BAR_COLOR.outline;
 		ctx.fillRect(x - 1, y - 1, width + 2, height + 2);
@@ -70,7 +89,7 @@ export class HpBar {
 		ctx.fillRect(x, y, Math.round(width * ratio), height);
 
 		if (showNumbers) {
-			drawText(ctx, `${Math.ceil(this.displayed)}/${this.max}`, x + width, y + height + 2, {
+			drawText(ctx, hpText(Math.ceil(this.displayed), this.max), x + width, numbersY, {
 				align: "right",
 				color: theme.HP_BAR_COLOR.numbers,
 			});

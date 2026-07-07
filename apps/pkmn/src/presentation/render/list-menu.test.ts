@@ -150,3 +150,20 @@ test("without an audio player, moving and confirming are safe no-ops", () => {
 	expect(menu.cancelled(fakeInput({ pressed: [Button.B] }))).toBe(true);
 	expect(menu.selected).toBe(1);
 });
+
+test("linear mode ignores Left/Right, keeping other menus unaffected", () => {
+	let menu = new ListMenu();
+	menu.update(fakeInput({ repeating: [Button.Right] }), 5);
+	expect(menu.selected).toBe(0);
+	menu.update(fakeInput({ repeating: [Button.Left] }), 5);
+	expect(menu.selected).toBe(0);
+});
+
+test("grid mode steps Right within a row and Down between rows", () => {
+	let menu = new ListMenu(2, undefined, 2);
+	menu.update(fakeInput({ repeating: [Button.Right] }), 4);
+	expect(menu.selected).toBe(1);
+	menu.reset();
+	menu.update(fakeInput({ repeating: [Button.Down] }), 4);
+	expect(menu.selected).toBe(2);
+});
