@@ -27,7 +27,7 @@ import type {
 	World,
 } from "./world";
 
-import { splitCreatureComponents } from "./components";
+import { createCreatureInstance, splitCreatureComponents } from "./components";
 import { ensureEntityRegistered } from "./entity";
 
 /** Legacy bootstrap shape accepted while world persistence is being migrated. */
@@ -60,6 +60,8 @@ export interface LegacyWorld {
 	creatureHealth?: World["creatureHealth"];
 	/** Split creature status components keyed by entity id. */
 	creatureStatus?: World["creatureStatus"];
+	/** Per-instance creature state components keyed by entity id. */
+	creatureInstance?: World["creatureInstance"];
 	/** Creature ownership components keyed by entity id. */
 	ownership?: World["ownership"];
 	/** Creature placement components keyed by entity id. */
@@ -87,6 +89,7 @@ export function migrateWorld(input: LegacyWorld | World): World {
 		creatureMoves: structuredClone(input.creatureMoves ?? {}),
 		creatureHealth: structuredClone(input.creatureHealth ?? {}),
 		creatureStatus: structuredClone(input.creatureStatus ?? {}),
+		creatureInstance: structuredClone(input.creatureInstance ?? {}),
 		ownership: structuredClone(input.ownership ?? {}),
 		creatureLocation: structuredClone(input.creatureLocation ?? {}),
 		activeBattle: {},
@@ -116,6 +119,10 @@ export function migrateWorld(input: LegacyWorld | World): World {
 
 	for (let entityId of Object.keys(world.creatureIdentity)) {
 		ensureEntityRegistered(world.entities, entityId);
+		// Backfill per-instance state for split-format saves written before the store existed.
+		if (!world.creatureInstance[entityId]) {
+			world.creatureInstance[entityId] = createCreatureInstance();
+		}
 	}
 
 	return world;
@@ -138,6 +145,7 @@ export function applyCreatureComponentSet(
 	world.creatureMoves[creatureId] = components.moves;
 	world.creatureHealth[creatureId] = components.health;
 	world.creatureStatus[creatureId] = components.status;
+	world.creatureInstance[creatureId] = components.instance;
 	if (components.ownership) world.ownership[creatureId] = components.ownership;
 	if (components.location) world.creatureLocation[creatureId] = components.location;
 }

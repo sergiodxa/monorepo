@@ -39,7 +39,7 @@ import {
 	computeCaptureAttempt,
 } from "./systems/capture-system";
 import { spawnEncounter } from "./systems/encounter-system";
-import { evolveCreature, getLevelUpEvolution } from "./systems/evolution-system";
+import { evolveCreature, getItemEvolution, getLevelUpEvolution } from "./systems/evolution-system";
 import { awardBattleExperience, grantCreatureExperience } from "./systems/experience-system";
 import { addInventoryItem, removeInventoryItem } from "./systems/inventory-system";
 import { hasFreeMoveSlot, learnMove, movesLearnedBetween } from "./systems/learn-system";
@@ -145,7 +145,13 @@ export class Engine {
 				];
 			}
 			case "capture-creature": {
-				let captured = captureCreature(this.world, command.playerId, command.creatureId);
+				let captured = captureCreature(
+					this.world,
+					command.playerId,
+					command.creatureId,
+					this.gameData,
+					this.random,
+				);
 				return [
 					{
 						type: "creature-captured",
@@ -282,6 +288,9 @@ export class Engine {
 			}
 			case "submit-battle-turn": {
 				return this.submitBattleTurn(command.battleId, command.commands);
+			}
+			case "use-item-on-creature": {
+				return this.useItemOnCreature(command);
 			}
 			case "withdraw-creature": {
 				if (!moveCreatureToParty(this.world, command.playerId, command.creatureId, command.boxId))
@@ -447,7 +456,13 @@ export class Engine {
 		];
 		if (!attempt.success) return events;
 
-		let captured = captureCreature(this.world, command.playerId, creatureId);
+		let captured = captureCreature(
+			this.world,
+			command.playerId,
+			creatureId,
+			this.gameData,
+			this.random,
+		);
 		markSpeciesCaught(this.world, command.playerId, creature.speciesId);
 		events.push(
 			{
@@ -460,6 +475,36 @@ export class Engine {
 			...this.finalizeBattle(command.battleId, 0, false),
 		);
 		return events;
+	}
+
+	/**
+	 * Uses one overworld item on a creature, currently resolving evolution-stone use.
+	 *
+	 * The item must exist, be owned in the bag, and match the target creature's
+	 * use-item evolution; only then is the creature evolved and one copy of the item
+	 * consumed. A missing item, an empty bag stack, or a non-matching item/species is
+	 * a no-op that returns no events and never touches the bag or the creature, so the
+	 * caller can safely offer any item and let this decide whether it does anything.
+	 */
+	private useItemOnCreature(
+		command: Extract<Command, { type: "use-item-on-creature" }>,
+	): GameEvent[] {
+		let item = this.gameData.items.get(command.itemId);
+		if (!item) return [];
+
+		let target = getItemEvolution(this.gameData, this.world, command.creatureId, command.itemId);
+		if (!target) return [];
+
+		if (!removeInventoryItem(this.world, command.playerId, command.itemId, 1)) return [];
+		let count =
+			this.selectInventory(command.playerId).entries.find((entry) => entry.id === command.itemId)
+				?.count ?? 0;
+
+		evolveCreature(this.world, command.creatureId, target);
+		return [
+			{ type: "inventory-updated", itemId: command.itemId, count },
+			{ type: "creature-evolved", creatureId: command.creatureId, speciesId: target },
+		];
 	}
 
 	/**

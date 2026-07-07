@@ -15,7 +15,7 @@
 import type { GameData } from "~/game/data/game-data";
 import type { MoveId } from "~/game/data/move";
 import type { NatureId } from "~/game/data/nature";
-import type { Species, SpeciesId } from "~/game/data/species";
+import type { Gender, Species, SpeciesId } from "~/game/data/species";
 import type { StatSet } from "~/game/data/stat";
 import type { MoveSet } from "~/game/world/creature";
 import type { CreatureId } from "~/game/world/ids";
@@ -23,6 +23,7 @@ import type { World } from "~/game/world/world";
 
 import { getExperienceForLevel } from "~/game/battle/mechanics";
 import { Stat } from "~/game/data/stat";
+import { createCreatureInstance, rollGender } from "~/game/world/components";
 import { setComponent } from "~/game/world/helpers";
 import { createCreatureId } from "~/game/world/ids";
 
@@ -34,6 +35,8 @@ export interface SpawnEncounterArgs {
 	natureId?: NatureId;
 	iv?: Partial<StatSet>;
 	moveIds?: MoveId[];
+	/** Explicit gender; omit to roll one from the species ratio via the RNG. */
+	gender?: Gender;
 }
 
 /** Creates a wild creature entity at an encounter location and returns its id. */
@@ -68,6 +71,12 @@ export function spawnEncounter(
 	});
 	setComponent(world, world.creatureHealth, creatureId, { damage: 0 });
 	setComponent(world, world.creatureStatus, creatureId, { state: null });
+	setComponent(
+		world,
+		world.creatureInstance,
+		creatureId,
+		createCreatureInstance({ gender: args.gender ?? rollGender(species.gender, random) }),
+	);
 	setComponent(world, world.creatureLocation, creatureId, {
 		kind: "encounter",
 		encounterId: args.encounterId,

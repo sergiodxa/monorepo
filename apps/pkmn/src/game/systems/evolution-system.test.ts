@@ -24,13 +24,21 @@ import { createCreatureId, createPlayerId } from "../world/ids";
 import { migrateWorld } from "../world/migrate";
 import { type World } from "../world/world";
 
-import { evolveCreature, getLevelUpEvolution } from "./evolution-system";
+import {
+	evolveCreature,
+	getItemEvolution,
+	getLevelUpEvolution,
+	getTradeEvolution,
+} from "./evolution-system";
 
 let BASE_SPECIES = "SPECIES_BASE";
 let EVOLVED_SPECIES = "SPECIES_EVOLVED";
 let TRADE_SPECIES = "SPECIES_TRADE";
+let STONE_SPECIES = "SPECIES_STONE";
 let NATURE_ID = "HARDY";
 let MOVE_ID = "MOVE_A";
+let STONE_ITEM_ID = "STONE_ITEM";
+let OTHER_ITEM_ID = "OTHER_ITEM";
 
 /** Builds a flat stat block for predictable creatures. */
 function statSet(value: number) {
@@ -75,13 +83,18 @@ function createGameData(): GameData {
 		species: {
 			[BASE_SPECIES]: species([
 				{ method: EvolutionMethod.Trade, speciesId: TRADE_SPECIES },
+				{ method: EvolutionMethod.Item, speciesId: STONE_SPECIES, itemId: STONE_ITEM_ID },
 				{ method: EvolutionMethod.Level, speciesId: EVOLVED_SPECIES, level: 10 },
 			]),
 			[EVOLVED_SPECIES]: species([]),
 			[TRADE_SPECIES]: species([]),
+			[STONE_SPECIES]: species([]),
 		},
 		moves: { [MOVE_ID]: move },
-		items: {},
+		items: {
+			[STONE_ITEM_ID]: { category: "evolution", attributes: [0] },
+			[OTHER_ITEM_ID]: { category: "evolution", attributes: [0] },
+		} as unknown as GameDataSource["items"],
 		natures: { [NATURE_ID]: { increases: null, decreases: null } },
 		typeChart: {},
 	};
@@ -191,4 +204,42 @@ test("getLevelUpEvolution ignores non-level evolution methods", () => {
 	let { world } = createWorld(id, createCreature(1000));
 
 	expect(getLevelUpEvolution(gameData, world, id)).toBeNull();
+});
+
+test("getItemEvolution returns the target for the matching evolution item", () => {
+	let id = createCreatureId("one");
+	let { world } = createWorld(id, createCreature(125));
+
+	expect(getItemEvolution(createGameData(), world, id, STONE_ITEM_ID)).toBe(STONE_SPECIES);
+});
+
+test("getItemEvolution returns null for an item the species does not evolve with", () => {
+	let id = createCreatureId("one");
+	let { world } = createWorld(id, createCreature(125));
+
+	expect(getItemEvolution(createGameData(), world, id, OTHER_ITEM_ID)).toBeNull();
+});
+
+test("getItemEvolution returns null when the species has no item evolution", () => {
+	let id = createCreatureId("one");
+	let { world } = createWorld(id, createCreature(1000));
+	// The trade-only species carries no use-item evolution at all.
+	world.creatureIdentity[id] = { speciesId: TRADE_SPECIES };
+
+	expect(getItemEvolution(createGameData(), world, id, STONE_ITEM_ID)).toBeNull();
+});
+
+test("getTradeEvolution recognizes the trade trigger from data", () => {
+	let id = createCreatureId("one");
+	let { world } = createWorld(id, createCreature(125));
+
+	expect(getTradeEvolution(createGameData(), world, id)).toBe(TRADE_SPECIES);
+});
+
+test("getTradeEvolution returns null for a species with no trade evolution", () => {
+	let id = createCreatureId("one");
+	let { world } = createWorld(id, createCreature(125));
+	world.creatureIdentity[id] = { speciesId: EVOLVED_SPECIES };
+
+	expect(getTradeEvolution(createGameData(), world, id)).toBeNull();
 });

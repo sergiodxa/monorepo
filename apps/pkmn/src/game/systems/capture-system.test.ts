@@ -11,8 +11,13 @@
  */
 import { expect, test } from "bun:test";
 
+import { unwrap } from "@pkg/result";
+
 import type { LegacyCreatureComponent } from "../world/components";
 
+import { GameData, type GameDataSource } from "../data/game-data";
+import { GrowthRate } from "../data/growth-rate";
+import { Gender, type Species } from "../data/species";
 import { State } from "../data/status";
 import { createCreatureId, createPlayerId } from "../world/ids";
 import { migrateWorld } from "../world/migrate";
@@ -140,6 +145,61 @@ test("computeCaptureAttempt reports a partial shake count from a scripted RNG", 
 		random: () => rolls[index++]!,
 	});
 	expect(result).toEqual({ shakes: 2, success: false });
+});
+
+/** A content source whose one species always rolls female (100% female ratio). */
+function createGameData(): GameData {
+	let species: Species = {
+		number: 1,
+		size: { weight: 10, height: 1 },
+		types: ["normal"],
+		baseExperience: 64,
+		catchRate: 45,
+		growthRate: GrowthRate.MediumFast,
+		stats: {
+			hp: 50,
+			attack: 50,
+			defense: 50,
+			"special-attack": 50,
+			"special-defense": 50,
+			speed: 50,
+		},
+		evolutions: [],
+		learnset: [],
+		gender: { [Gender.Female]: 100 },
+		eggGroup: ["monster"],
+	} as unknown as Species;
+	let source: GameDataSource = {
+		species: { SPECIES_A: species },
+		moves: {},
+		items: {},
+		natures: { HARDY: { increases: null, decreases: null } },
+		typeChart: {},
+	};
+	return unwrap(GameData.create(source));
+}
+
+test("captureCreature rolls a gender when the instance state is missing", () => {
+	let wild = createCreatureId("wild");
+	let { world, playerId } = createWorld([], wild);
+	// Simulate a wild that reached capture without instance state (predates the store).
+	delete world.creatureInstance[wild];
+
+	captureCreature(world, playerId, wild, createGameData(), () => 0.5);
+
+	// The 100%-female species always rolls female, deterministically under any draw.
+	expect(world.creatureInstance[wild]?.gender).toBe(Gender.Female);
+});
+
+test("captureCreature preserves an already-rolled gender instead of re-rolling", () => {
+	let wild = createCreatureId("wild");
+	let { world, playerId } = createWorld([], wild);
+	// The wild already carries a male gender from its spawn roll.
+	world.creatureInstance[wild] = { gender: Gender.Male, heldItemId: null, friendship: 0 };
+
+	captureCreature(world, playerId, wild, createGameData(), () => 0.5);
+
+	expect(world.creatureInstance[wild]?.gender).toBe(Gender.Male);
 });
 
 test("captureCreature places the creature into the party when there is room", () => {

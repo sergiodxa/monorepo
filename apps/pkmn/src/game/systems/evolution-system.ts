@@ -11,6 +11,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 import type { GameData } from "../data/game-data";
+import type { ItemId } from "../data/item";
 import type { SpeciesId } from "../data/species";
 import type { CreatureId } from "../world/ids";
 import type { World } from "../world/world";
@@ -49,6 +50,47 @@ export function getLevelUpEvolution(
 		if (evolution.method === EvolutionMethod.Level && level >= evolution.level) {
 			return evolution.speciesId;
 		}
+	}
+	return null;
+}
+
+/**
+ * Returns the species a creature evolves into when the given item is used on it.
+ *
+ * Resolves only the `Item` trigger: the creature's species must list a use-item
+ * evolution whose required item matches `itemId`. Any other item (or a species with
+ * no matching use-item evolution) returns null, so callers can safely offer every
+ * item and let this decide whether it evolves the target. Pure lookup; never mutates.
+ */
+export function getItemEvolution(
+	gameData: GameData,
+	world: World,
+	creatureId: CreatureId,
+	itemId: ItemId,
+): SpeciesId | null {
+	let creature = createCreatureFromWorld(world, creatureId);
+	for (let evolution of getCreatureSpecies(gameData, creature).evolutions) {
+		if (evolution.method === EvolutionMethod.Item && evolution.itemId === itemId) {
+			return evolution.speciesId;
+		}
+	}
+	return null;
+}
+
+/**
+ * Returns the species a creature evolves into by trade, or null if none applies.
+ *
+ * This is a data-only trigger: the engine exposes the eligibility so a future trade
+ * flow can act on it, but nothing here can fire a trade on its own. Pure lookup.
+ */
+export function getTradeEvolution(
+	gameData: GameData,
+	world: World,
+	creatureId: CreatureId,
+): SpeciesId | null {
+	let creature = createCreatureFromWorld(world, creatureId);
+	for (let evolution of getCreatureSpecies(gameData, creature).evolutions) {
+		if (evolution.method === EvolutionMethod.Trade) return evolution.speciesId;
 	}
 	return null;
 }

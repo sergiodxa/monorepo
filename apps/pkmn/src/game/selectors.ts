@@ -14,6 +14,7 @@ import type { BattleId, CreatureId, PlayerId } from "./world/ids";
 import type { World } from "./world/world";
 
 import { getCreatureCurrentHP, getCreatureLevel, getCreatureStat } from "./battle/mechanics";
+import { Gender } from "./data/species";
 import { Stat } from "./data/stat";
 import { getBattleLog } from "./world/battle";
 import {
@@ -104,6 +105,10 @@ export interface CreatureSummaryView {
 	evs: StatSet;
 	/** Nature identifier as the engine represents it. */
 	nature: NatureId;
+	/** Rolled biological sex for this creature. */
+	gender: Gender;
+	/** Item this creature currently holds, or null when it holds nothing. */
+	heldItemId: string | null;
 }
 
 /** Read model returned when the UI asks for the player summary. */
@@ -231,6 +236,8 @@ export function selectCreatureSummaryView(
 		ivs: structuredClone(components.progress.iv),
 		evs: structuredClone(components.progress.ev),
 		nature: components.progress.natureId,
+		gender: components.instance.gender,
+		heldItemId: components.instance.heldItemId,
 	};
 }
 

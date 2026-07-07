@@ -131,6 +131,20 @@ export namespace Command {
 		speciesId: SpeciesId;
 	}
 
+	/**
+	 * Uses one overworld item on a specific creature.
+	 *
+	 * Today this resolves evolution-stone use: when the item matches the creature's
+	 * use-item evolution the creature evolves and the item is consumed; any other
+	 * item leaves the bag and the creature untouched.
+	 */
+	export interface UseItemOnCreature {
+		type: "use-item-on-creature";
+		playerId: PlayerId;
+		creatureId: CreatureId;
+		itemId: ItemId;
+	}
+
 	/** Fully restores every party creature's HP, status, and PP. */
 	export interface HealParty {
 		type: "heal-party";
@@ -194,4 +208,5 @@ export type Command =
 	| Command.StoreCreature
 	| Command.SubmitBattleReplacements
 	| Command.SubmitBattleTurn
+	| Command.UseItemOnCreature
 	| Command.WithdrawCreature;

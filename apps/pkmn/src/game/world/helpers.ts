@@ -36,6 +36,7 @@ export let PERSISTENT_WORLD_STORE_KEYS = [
 	"creatureMoves",
 	"creatureHealth",
 	"creatureStatus",
+	"creatureInstance",
 	"ownership",
 	"creatureLocation",
 ] as const satisfies Array<keyof World>;
@@ -133,6 +134,7 @@ export function pickPersistentWorld(world: World) {
 		creatureMoves: cloneWithout(world.creatureMoves),
 		creatureHealth: cloneWithout(world.creatureHealth),
 		creatureStatus: cloneWithout(world.creatureStatus),
+		creatureInstance: cloneWithout(world.creatureInstance),
 		ownership: cloneWithout(world.ownership),
 		creatureLocation: cloneWithout(world.creatureLocation),
 	};

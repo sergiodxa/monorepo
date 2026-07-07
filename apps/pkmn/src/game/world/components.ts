@@ -16,10 +16,13 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
+import type { ItemId } from "~/game/data/item";
 import type { NatureId } from "~/game/data/nature";
-import type { SpeciesId } from "~/game/data/species";
+import type { Species, SpeciesId } from "~/game/data/species";
 import type { StatSet } from "~/game/data/stat";
 import type { State } from "~/game/data/status";
+
+import { Gender } from "~/game/data/species";
 
 import type { Creature, MoveSet } from "./creature";
 import type { BattleId, CreatureId, PlayerId } from "./ids";
@@ -66,6 +69,50 @@ export interface CreatureStatusComponent {
 	state: State | null;
 	/** Poison sub-variant when the current status uses poison-specific rules. */
 	poison?: "regular" | "escalating";
+}
+
+/** Per-instance state rolled or assigned to one specific creature. */
+export interface CreatureInstanceComponent {
+	/** Rolled biological sex for this creature; genderless when the species has none. */
+	gender: Gender;
+	/** Item this creature is currently carrying, or null when it holds nothing. */
+	heldItemId: ItemId | null;
+	/** Bond value in the 0..255 range; stored for future bond-driven mechanics. */
+	friendship: number;
+}
+
+/** Default per-instance state used for saves and spawns that predate the store. */
+export const DEFAULT_CREATURE_INSTANCE: CreatureInstanceComponent = {
+	gender: Gender.Genderless,
+	heldItemId: null,
+	friendship: 0,
+};
+
+/** Builds a fresh instance component, filling any omitted field from the default. */
+export function createCreatureInstance(
+	overrides: Partial<CreatureInstanceComponent> = {},
+): CreatureInstanceComponent {
+	return { ...DEFAULT_CREATURE_INSTANCE, ...overrides };
+}
+
+/**
+ * Rolls a biological sex for one creature from its species' gender ratio.
+ *
+ * A species with no ratio (`Gender.Genderless`) always yields genderless. Otherwise
+ * the ratio is a percentage split whose female share is compared against a single
+ * `random()` draw in `[0, 1)`, so the roll is deterministic under a seeded RNG. A
+ * ratio that omits both shares (or lists only one) treats the missing share as zero.
+ */
+export function rollGender(gender: Species["gender"], random: () => number): Gender {
+	if (gender === Gender.Genderless) return Gender.Genderless;
+
+	let femaleShare = gender[Gender.Female] ?? 0;
+	let maleShare = gender[Gender.Male] ?? 0;
+	if (femaleShare <= 0 && maleShare <= 0) return Gender.Genderless;
+	if (maleShare <= 0) return Gender.Female;
+	if (femaleShare <= 0) return Gender.Male;
+
+	return random() * 100 < femaleShare ? Gender.Female : Gender.Male;
 }
 
 /** Ownership metadata for one creature entity. */
@@ -125,6 +172,8 @@ export interface CreatureComponentSet {
 	health: CreatureHealthComponent;
 	/** Current major status condition. */
 	status: CreatureStatusComponent;
+	/** Per-instance rolled state (gender, held item, friendship). */
+	instance: CreatureInstanceComponent;
 	/** Ownership metadata when the creature is owned. */
 	ownership?: OwnershipComponent;
 	/** Current world placement when the creature is placed somewhere. */
@@ -170,6 +219,8 @@ export function splitCreatureComponents(input: CreatureSplitInput): CreatureComp
 			state: creature.status.state,
 			...(creature.status.poison ? { poison: creature.status.poison } : {}),
 		},
+		// The legacy aggregate never carried instance state, so seed the default.
+		instance: createCreatureInstance(),
 		ownership: input.ownerId ? { ownerId: input.ownerId } : undefined,
 		location: input.location ? structuredClone(input.location) : undefined,
 	};

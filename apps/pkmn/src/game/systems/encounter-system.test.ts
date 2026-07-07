@@ -17,7 +17,7 @@ import { unwrap } from "@pkg/result";
 import { GameData, type GameDataSource } from "../data/game-data";
 import { GrowthRate } from "../data/growth-rate";
 import { DamageClass, type Move } from "../data/move";
-import { type Species } from "../data/species";
+import { Gender, type Species } from "../data/species";
 import { Stat } from "../data/stat";
 import { createPlayerId } from "../world/ids";
 import { migrateWorld } from "../world/migrate";
@@ -127,6 +127,69 @@ test("spawnEncounter writes the full component set at an encounter location", ()
 	expect(world.entities).toContain(creatureId);
 });
 
+test("spawnEncounter rolls a gender deterministically from the even ratio", () => {
+	let { world } = createWorld();
+	// The fixture species is a 50/50 ratio: a low draw is female, a high draw is male.
+	let female = spawnEncounter(
+		createGameData(),
+		world,
+		{ encounterId: "route-1", speciesId: SPECIES_ID, level: 5 },
+		() => 0.1,
+	);
+	let male = spawnEncounter(
+		createGameData(),
+		world,
+		{ encounterId: "route-2", speciesId: SPECIES_ID, level: 5 },
+		() => 0.9,
+	);
+
+	expect(world.creatureInstance[female.creatureId]?.gender).toBe(Gender.Female);
+	expect(world.creatureInstance[male.creatureId]?.gender).toBe(Gender.Male);
+	// Instance state also seeds a null held item and zero friendship.
+	expect(world.creatureInstance[female.creatureId]?.heldItemId).toBeNull();
+	expect(world.creatureInstance[female.creatureId]?.friendship).toBe(0);
+});
+
+test("spawnEncounter always yields genderless for a species with no ratio", () => {
+	let { world } = createWorld();
+	// Retarget the fixture species to genderless before loading content.
+	let genderlessSource: GameDataSource = {
+		natures: {
+			[NATURE_A]: { increases: null, decreases: null },
+			[NATURE_B]: { increases: null, decreases: null },
+		},
+		species: {
+			[SPECIES_ID]: {
+				number: 1,
+				size: { weight: 10, height: 1 },
+				types: ["normal"],
+				baseExperience: 64,
+				catchRate: 45,
+				growthRate: GrowthRate.MediumFast,
+				stats: statSet(50),
+				evolutions: [],
+				learnset: [{ level: 1, moveId: TACKLE }],
+				gender: Gender.Genderless,
+				eggGroup: ["monster"],
+			} as unknown as Species,
+		},
+		moves: { [TACKLE]: move(35) },
+		items: {},
+		typeChart: {},
+	};
+	let gameData = unwrap(GameData.create(genderlessSource));
+
+	let { creatureId } = spawnEncounter(
+		gameData,
+		world,
+		{ encounterId: "route-1", speciesId: SPECIES_ID, level: 5 },
+		// Any draw yields genderless; the ratio branch never turns a roll into a sex.
+		() => 0.5,
+	);
+
+	expect(world.creatureInstance[creatureId]?.gender).toBe(Gender.Genderless);
+});
+
 test("spawnEncounter leaves the creature unowned until a capture converts it", () => {
 	let { world } = createWorld();
 	let { creatureId } = spawnEncounter(
@@ -233,6 +296,7 @@ test("spawnEncounter honors explicit nature, IV, and move overrides without the 
 				[Stat.Speed]: 26,
 			},
 			moveIds: [EMBER],
+			gender: Gender.Male,
 		},
 		random,
 	);

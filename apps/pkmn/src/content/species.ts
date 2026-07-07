@@ -15,6 +15,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 import type { Evolution } from "~/game/data/evolution";
+import type { ItemId } from "~/game/data/item";
 import type { Species, SpeciesId } from "~/game/data/species";
 
 import { EvolutionMethod } from "~/game/data/evolution";
@@ -234,6 +235,11 @@ function levelEvolution(speciesId: SpeciesId, level: number): Evolution {
 /** Creates a trade evolution reference without item requirements. */
 function tradeEvolution(speciesId: SpeciesId): Evolution {
 	return { method: EvolutionMethod.Trade, speciesId };
+}
+
+/** Creates an item-triggered evolution reference (e.g. an evolution stone). */
+function itemEvolution(speciesId: SpeciesId, itemId: ItemId): Evolution {
+	return { method: EvolutionMethod.Item, speciesId, itemId };
 }
 
 /**
@@ -873,7 +879,13 @@ export const SPECIES = createSpeciesIndex([
 		],
 	},
 	{ id: "ARBOK", number: 24, types: [Type.POISON], stats: createStats(60, 95, 69, 65, 79, 80) },
-	{ id: "PIKACHU", number: 25, types: [Type.ELECTRIC], stats: createStats(35, 55, 40, 50, 50, 90) },
+	{
+		id: "PIKACHU",
+		number: 25,
+		types: [Type.ELECTRIC],
+		stats: createStats(35, 55, 40, 50, 50, 90),
+		evolutions: [itemEvolution("RAICHU", "THUNDERSTONE")],
+	},
 	{ id: "RAICHU", number: 26, types: [Type.ELECTRIC], stats: createStats(60, 90, 55, 90, 80, 110) },
 	{
 		id: "SANDSHREW",
@@ -979,6 +991,7 @@ export const SPECIES = createSpeciesIndex([
 		types: [Type.POISON],
 		gender: GENDER_DISTRIBUTIONS.FEMALE_ONLY,
 		stats: createStats(70, 62, 67, 55, 55, 56),
+		evolutions: [itemEvolution("NIDOQUEEN", "MOONSTONE")],
 		learnset: [
 			{ level: 1, moveId: "GROWL" },
 			{ level: 1, moveId: "POISON_STING" },
@@ -1062,6 +1075,7 @@ export const SPECIES = createSpeciesIndex([
 		types: [Type.POISON],
 		gender: GENDER_DISTRIBUTIONS.MALE_ONLY,
 		stats: createStats(61, 72, 57, 55, 55, 65),
+		evolutions: [itemEvolution("NIDOKING", "MOONSTONE")],
 		learnset: [
 			{ level: 1, moveId: "FOCUS_ENERGY" },
 			{ level: 1, moveId: "LEER" },
@@ -1103,9 +1117,21 @@ export const SPECIES = createSpeciesIndex([
 			{ level: 1, moveId: "TOXIC_SPIKES" },
 		],
 	},
-	{ id: "CLEFAIRY", number: 35, types: [Type.FAIRY], stats: createStats(70, 45, 48, 60, 65, 35) },
+	{
+		id: "CLEFAIRY",
+		number: 35,
+		types: [Type.FAIRY],
+		stats: createStats(70, 45, 48, 60, 65, 35),
+		evolutions: [itemEvolution("CLEFABLE", "MOONSTONE")],
+	},
 	{ id: "CLEFABLE", number: 36, types: [Type.FAIRY], stats: createStats(95, 70, 73, 95, 90, 60) },
-	{ id: "VULPIX", number: 37, types: [Type.FIRE], stats: createStats(38, 41, 40, 50, 65, 65) },
+	{
+		id: "VULPIX",
+		number: 37,
+		types: [Type.FIRE],
+		stats: createStats(38, 41, 40, 50, 65, 65),
+		evolutions: [itemEvolution("NINETALES", "FIRESTONE")],
+	},
 	{ id: "NINETALES", number: 38, types: [Type.FIRE], stats: createStats(73, 76, 75, 81, 100, 100) },
 	{
 		id: "JIGGLYPUFF",
@@ -1113,6 +1139,7 @@ export const SPECIES = createSpeciesIndex([
 		size: { weight: 5.5, height: 0.5 },
 		types: [Type.NORMAL, Type.FAIRY],
 		stats: createStats(115, 45, 20, 45, 25, 20),
+		evolutions: [itemEvolution("WIGGLYTUFF", "MOONSTONE")],
 		learnset: [
 			{ level: 1, moveId: "CHARM" },
 			{ level: 1, moveId: "COPYCAT" },
@@ -1233,6 +1260,7 @@ export const SPECIES = createSpeciesIndex([
 		number: 44,
 		types: [Type.GRASS, Type.POISON],
 		stats: createStats(60, 65, 70, 85, 75, 40),
+		evolutions: [itemEvolution("VILEPLUME", "LEAFSTONE")],
 		learnset: [
 			{ level: 1, moveId: "ABSORB" },
 			{ level: 1, moveId: "ACID" },
@@ -1522,7 +1550,13 @@ export const SPECIES = createSpeciesIndex([
 			{ level: 57, moveId: "FINAL_GAMBIT" },
 		],
 	},
-	{ id: "GROWLITHE", number: 58, types: [Type.FIRE], stats: createStats(55, 70, 45, 70, 50, 60) },
+	{
+		id: "GROWLITHE",
+		number: 58,
+		types: [Type.FIRE],
+		stats: createStats(55, 70, 45, 70, 50, 60),
+		evolutions: [itemEvolution("ARCANINE", "FIRESTONE")],
+	},
 	{ id: "ARCANINE", number: 59, types: [Type.FIRE], stats: createStats(90, 110, 80, 100, 80, 95) },
 	{
 		id: "POLIWAG",
@@ -1549,7 +1583,13 @@ export const SPECIES = createSpeciesIndex([
 			{ egg: true, moveId: "WATER_PULSE" },
 		],
 	},
-	{ id: "POLIWHIRL", number: 61, types: [Type.WATER], stats: createStats(65, 65, 65, 50, 50, 90) },
+	{
+		id: "POLIWHIRL",
+		number: 61,
+		types: [Type.WATER],
+		stats: createStats(65, 65, 65, 50, 50, 90),
+		evolutions: [itemEvolution("POLIWRATH", "WATERSTONE")],
+	},
 	{
 		id: "POLIWRATH",
 		number: 62,
@@ -1703,6 +1743,7 @@ export const SPECIES = createSpeciesIndex([
 		number: 70,
 		types: [Type.GRASS, Type.POISON],
 		stats: createStats(65, 90, 50, 85, 45, 55),
+		evolutions: [itemEvolution("VICTREEBEL", "LEAFSTONE")],
 		learnset: [
 			{ level: 1, moveId: "GROWTH" },
 			{ level: 1, moveId: "VINE_WHIP" },
@@ -2229,7 +2270,13 @@ export const SPECIES = createSpeciesIndex([
 		],
 	},
 	{ id: "MUK", number: 89, types: [Type.POISON], stats: createStats(105, 105, 75, 65, 100, 50) },
-	{ id: "SHELLDER", number: 90, types: [Type.WATER], stats: createStats(30, 65, 100, 45, 25, 40) },
+	{
+		id: "SHELLDER",
+		number: 90,
+		types: [Type.WATER],
+		stats: createStats(30, 65, 100, 45, 25, 40),
+		evolutions: [itemEvolution("CLOYSTER", "WATERSTONE")],
+	},
 	{
 		id: "CLOYSTER",
 		number: 91,
@@ -2480,6 +2527,7 @@ export const SPECIES = createSpeciesIndex([
 		number: 102,
 		types: [Type.GRASS, Type.PSYCHIC],
 		stats: createStats(60, 40, 80, 60, 45, 40),
+		evolutions: [itemEvolution("EXEGGUTOR", "LEAFSTONE")],
 		learnset: [
 			{ level: 1, moveId: "ABSORB" },
 			{ level: 1, moveId: "HYPNOSIS" },
@@ -2870,6 +2918,7 @@ export const SPECIES = createSpeciesIndex([
 		types: [Type.WATER],
 		gender: GENDER_DISTRIBUTIONS.GENDERLESS,
 		stats: createStats(30, 45, 55, 70, 55, 85),
+		evolutions: [itemEvolution("STARMIE", "WATERSTONE")],
 		learnset: [
 			{ level: 1, moveId: "HARDEN" },
 			{ level: 1, moveId: "TACKLE" },
@@ -3118,6 +3167,11 @@ export const SPECIES = createSpeciesIndex([
 		types: [Type.NORMAL],
 		gender: GENDER_DISTRIBUTIONS.COMMON,
 		stats: createStats(55, 55, 50, 45, 65, 55),
+		evolutions: [
+			itemEvolution("VAPOREON", "WATERSTONE"),
+			itemEvolution("JOLTEON", "THUNDERSTONE"),
+			itemEvolution("FLAREON", "FIRESTONE"),
+		],
 		learnset: [
 			{ level: 1, moveId: "COVET" },
 			{ level: 1, moveId: "GROWL" },

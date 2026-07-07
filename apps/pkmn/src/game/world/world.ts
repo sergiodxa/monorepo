@@ -29,6 +29,7 @@ import type {
 	CreatureComponentSet,
 	CreatureHealthComponent,
 	CreatureIdentityComponent,
+	CreatureInstanceComponent,
 	CreatureLocationComponent,
 	CreatureMovesComponent,
 	CreatureProgressComponent,
@@ -38,7 +39,7 @@ import type {
 import type { EntityId } from "./entity";
 import type { BattleId, CreatureId, PlayerId } from "./ids";
 
-import { mergeCreatureComponents } from "./components";
+import { createCreatureInstance, mergeCreatureComponents } from "./components";
 import { Creature } from "./creature";
 import { requireComponent, type ComponentStore } from "./helpers";
 
@@ -114,6 +115,8 @@ export interface World {
 	creatureHealth: ComponentStore<CreatureHealthComponent>;
 	/** Split creature status components keyed by creature id. */
 	creatureStatus: ComponentStore<CreatureStatusComponent>;
+	/** Per-instance creature state (gender, held item, friendship) keyed by creature id. */
+	creatureInstance: ComponentStore<CreatureInstanceComponent>;
 	/** Ownership components keyed by creature id. */
 	ownership: ComponentStore<OwnershipComponent>;
 	/** Location components keyed by creature id. */
@@ -179,6 +182,8 @@ export function getCreatureComponentSet(
 		moves: requireComponent(world.creatureMoves, creatureId, "creature moves"),
 		health: requireComponent(world.creatureHealth, creatureId, "creature health"),
 		status: requireComponent(world.creatureStatus, creatureId, "creature status"),
+		// Absent on worlds that predate the instance store: fall back to the default.
+		instance: world.creatureInstance[creatureId] ?? createCreatureInstance(),
 		ownership: world.ownership[creatureId],
 		location: world.creatureLocation[creatureId],
 	};
@@ -192,4 +197,33 @@ export function getCreatureComponentSet(
  */
 export function createCreatureFromWorld(world: World, creatureId: CreatureId): Creature {
 	return new Creature(mergeCreatureComponents(getCreatureComponentSet(world, creatureId)));
+}
+
+/** Returns one creature's per-instance state, defaulting when the store has no entry. */
+export function getCreatureInstance(
+	world: World,
+	creatureId: CreatureId,
+): CreatureInstanceComponent {
+	return world.creatureInstance[creatureId] ?? createCreatureInstance();
+}
+
+/** Returns the item one creature currently holds, or null when it holds nothing. */
+export function getCreatureHeldItem(world: World, creatureId: CreatureId): ItemId | null {
+	return getCreatureInstance(world, creatureId).heldItemId;
+}
+
+/**
+ * Sets or clears the item one creature holds and returns the resulting held item.
+ *
+ * Passing null clears the held item. The write preserves the rest of the instance
+ * state and materializes a default record for creatures that predate the store.
+ */
+export function setCreatureHeldItem(
+	world: World,
+	creatureId: CreatureId,
+	heldItemId: ItemId | null,
+): ItemId | null {
+	let instance = getCreatureInstance(world, creatureId);
+	world.creatureInstance[creatureId] = { ...instance, heldItemId };
+	return heldItemId;
 }

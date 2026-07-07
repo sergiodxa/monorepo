@@ -8,12 +8,14 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
+import type { GameData } from "../data/game-data";
 import type { State } from "../data/status";
 import type { CreatureId, PlayerId } from "../world/ids";
 import type { World } from "../world/world";
 
 import { State as StatusState } from "../data/status";
-import { getPlayerParty, getPlayerStorageBoxes } from "../world/world";
+import { createCreatureInstance, rollGender } from "../world/components";
+import { getCreatureComponentSet, getPlayerParty, getPlayerStorageBoxes } from "../world/world";
 
 import { ensureStorageBox } from "./storage-system";
 
@@ -65,10 +67,31 @@ export function computeCaptureAttempt(params: {
 	return { shakes: Math.min(shakes, 3), success: shakes === 4 };
 }
 
-/** Converts one encounter creature into an owned creature and places it in party or storage. */
-export function captureCreature(world: World, playerId: PlayerId, creatureId: CreatureId) {
+/**
+ * Converts one encounter creature into an owned creature and places it in party or storage.
+ *
+ * When `gameData` and `random` are supplied the capture also guarantees per-instance
+ * state exists, rolling a gender from the species ratio for any creature that reached
+ * capture without one (spawned creatures already carry theirs, so this is a no-op for
+ * them). The roll flows through the injected RNG so seeded sessions stay reproducible.
+ */
+export function captureCreature(
+	world: World,
+	playerId: PlayerId,
+	creatureId: CreatureId,
+	gameData?: GameData,
+	random?: () => number,
+) {
 	let party = getPlayerParty(world);
 	world.ownership[creatureId] = { ownerId: playerId };
+
+	if (gameData && random && !world.creatureInstance[creatureId]) {
+		let speciesId = getCreatureComponentSet(world, creatureId).identity.speciesId;
+		let species = gameData.species.get(speciesId);
+		world.creatureInstance[creatureId] = createCreatureInstance(
+			species ? { gender: rollGender(species.gender, random) } : {},
+		);
+	}
 
 	if (party.creatureIds.length < 6) {
 		world.party[playerId] = { creatureIds: [...party.creatureIds, creatureId] };

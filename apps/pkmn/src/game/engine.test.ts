@@ -813,6 +813,99 @@ test("learn-move decline keeps the moveset and reports the declined move", () =>
 	expect(engine.selectCreatureSummary(allyId).moves.map((slot) => slot.id)).toEqual(fullMoveset);
 });
 
+/** A species/target/stone triple pulled from the real Gen-1 stone evolutions. */
+let STONE_SPECIES_ID = "PIKACHU";
+let STONE_EVOLVED_ID = "RAICHU";
+let STONE_ITEM_ID = "THUNDERSTONE";
+/** A different stone that must NOT evolve the stone species. */
+let WRONG_STONE_ITEM_ID = "WATERSTONE";
+
+/** Creates an engine whose single party creature is the stone-evolution species. */
+function createStoneEngine(playerId: string, creatureId: string) {
+	return Engine.create({
+		content: {
+			species: SPECIES,
+			moves: MOVES,
+			items: ITEMS,
+			natures: NATURES,
+			typeChart: TYPE_MATCHUPS,
+		},
+		random: () => 0.5,
+		world: migrateWorld({
+			entities: [playerId, creatureId],
+			playerId,
+			playerProfile: { [playerId]: { name: "Hero" } },
+			party: { [playerId]: { creatureIds: [creatureId] } },
+			inventory: { [playerId]: { items: { [STONE_ITEM_ID]: 1, [WRONG_STONE_ITEM_ID]: 1 } } },
+			bestiary: { [playerId]: { seen: [], caught: [] } },
+			storageBoxes: { [playerId]: { boxes: [] } },
+			creature: { [creatureId]: createBootstrapCreature(STONE_SPECIES_ID) },
+		}),
+	});
+}
+
+test("using the matching evolution stone evolves the creature and consumes the stone", () => {
+	let playerId = createPlayerId("hero");
+	let creatureId = createCreatureId("buddy-1");
+	let engine = createStoneEngine(playerId, creatureId);
+
+	let events = engine.dispatch({
+		type: "use-item-on-creature",
+		playerId,
+		creatureId,
+		itemId: STONE_ITEM_ID,
+	});
+
+	// The creature evolved and the stone was consumed from the bag.
+	expect(events).toEqual([
+		{ type: "inventory-updated", itemId: STONE_ITEM_ID, count: 0 },
+		{ type: "creature-evolved", creatureId, speciesId: STONE_EVOLVED_ID },
+	]);
+	expect(engine.selectCreatureSummary(creatureId).speciesId).toBe(STONE_EVOLVED_ID);
+	expect(
+		engine.selectInventory(playerId).entries.find((entry) => entry.id === STONE_ITEM_ID),
+	).toBeUndefined();
+});
+
+test("using a non-matching stone does nothing and keeps the stone", () => {
+	let playerId = createPlayerId("hero");
+	let creatureId = createCreatureId("buddy-1");
+	let engine = createStoneEngine(playerId, creatureId);
+
+	let events = engine.dispatch({
+		type: "use-item-on-creature",
+		playerId,
+		creatureId,
+		itemId: WRONG_STONE_ITEM_ID,
+	});
+
+	// No match: no events, no species change, and the stone stays in the bag.
+	expect(events).toEqual([]);
+	expect(engine.selectCreatureSummary(creatureId).speciesId).toBe(STONE_SPECIES_ID);
+	expect(
+		engine.selectInventory(playerId).entries.find((entry) => entry.id === WRONG_STONE_ITEM_ID)
+			?.count,
+	).toBe(1);
+});
+
+test("the matching stone evolution is a no-op when the stone is not in the bag", () => {
+	let playerId = createPlayerId("hero");
+	let creatureId = createCreatureId("buddy-1");
+	let engine = createStoneEngine(playerId, creatureId);
+	// Spend the only stone first so the second use finds an empty stack.
+	engine.dispatch({ type: "remove-inventory-item", playerId, itemId: STONE_ITEM_ID, count: 1 });
+
+	let events = engine.dispatch({
+		type: "use-item-on-creature",
+		playerId,
+		creatureId,
+		itemId: STONE_ITEM_ID,
+	});
+
+	expect(events).toEqual([]);
+	expect(engine.selectCreatureSummary(creatureId).speciesId).toBe(STONE_SPECIES_ID);
+});
+
 /** Creates an engine wired for deterministic battles with a chosen RNG and optional starting damage. */
 function createBattleEngine(
 	playerId: string,
