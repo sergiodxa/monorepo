@@ -317,6 +317,119 @@ test("A creature with no held item deals unmodified damage", () => {
 	expect(withoutItem.user.creature.heldItemId).toBe(null);
 });
 
+test("Held-item-power damage scales with the thrown item's fling power", () => {
+	// FLING borrows the held item's power as its own. A heavier item (IRONBALL, 130)
+	// must out-damage a lighter one (CHARCOAL, 30) when everything else is equal.
+	let heavy = createDamageScenario("FLING", PRIMARY_SPECIES_ID, SECONDARY_SPECIES_ID, "IRONBALL");
+	let light = createDamageScenario("FLING", PRIMARY_SPECIES_ID, SECONDARY_SPECIES_ID, "CHARCOAL");
+
+	let heavyDamage = resolveFlingDamage(heavy);
+	let lightDamage = resolveFlingDamage(light);
+
+	expect(heavyDamage).toBeGreaterThan(0);
+	expect(lightDamage).toBeGreaterThan(0);
+	expect(heavyDamage).toBeGreaterThan(lightDamage);
+});
+
+test("Held-item-power damage matches a normal hit at the item's fling power", () => {
+	// The borrowed power flows through the standard formula, so FLING with a 130-power
+	// item deals the same as any physical 130-power Dark move on the same matchup.
+	let fling = createDamageScenario("FLING", PRIMARY_SPECIES_ID, SECONDARY_SPECIES_ID, "IRONBALL");
+	let reference = createDamageScenario(
+		"FLING",
+		PRIMARY_SPECIES_ID,
+		SECONDARY_SPECIES_ID,
+		"IRONBALL",
+	);
+	// Overwrite the reference move with an explicit 130-power physical move so the two
+	// only differ in where the power came from, not in the formula that consumes it.
+	reference.move = { ...reference.move, power: 130, effect: { kind: "none" } };
+
+	expect(resolveFlingDamage(fling)).toBe(resolveFlingDamage(reference));
+});
+
+test("Held-item-power damage does nothing when the user holds no item", () => {
+	let scenario = createDamageScenario("FLING");
+
+	expect(scenario.user.creature.heldItemId).toBe(null);
+	expect(resolveFlingDamage(scenario)).toBe(0);
+});
+
+test("Held-item-power damage does nothing when the held item has no fling power", () => {
+	// LEFTOVERS is a held item with a battle effect but no throw power: there is
+	// nothing to hurl, so the move fails and deals nothing.
+	let scenario = createDamageScenario(
+		"FLING",
+		PRIMARY_SPECIES_ID,
+		SECONDARY_SPECIES_ID,
+		"LEFTOVERS",
+	);
+
+	expect(resolveFlingDamage(scenario)).toBe(0);
+});
+
+test("Held-item-power damage is zeroed by type immunity", () => {
+	// A held item supplies the power, but effectiveness 0 (an immune target) still
+	// zeroes the hit, exactly like any other type-immune attack.
+	let scenario = createDamageScenario(
+		"FLING",
+		PRIMARY_SPECIES_ID,
+		SECONDARY_SPECIES_ID,
+		"IRONBALL",
+	);
+
+	expect(resolveFlingDamage(scenario, Effectiveness.ZERO)).toBe(0);
+});
+
+/**
+ * Resolves held-item-power (FLING-style) damage with the random spread pinned to 1.0
+ * (`floor(0.9375 * 16) = 15`, so `(85 + 15) / 100 = 1`). `effectiveness` feeds both the
+ * pre-formula immunity guard and the in-formula multiply, so a ZERO matchup zeroes the
+ * hit the same way it would for any attack.
+ */
+function resolveFlingDamage(
+	scenario: ReturnType<typeof createDamageScenario>,
+	effectiveness: Effectiveness = Effectiveness.NORMAL,
+) {
+	return getResolvedMoveDamage(
+		{
+			state: scenario.state,
+			gameData: GAME_DATA,
+			random: () => 0.9375,
+			isGrounded: (combatant) => isGrounded(combatant),
+			findEffect: <TKind extends MoveEffect["kind"]>(
+				effects: MoveEffect[],
+				kind: TKind,
+			): Extract<MoveEffect, { kind: TKind }> | null => {
+				for (let effect of effects) {
+					if (effect.kind === kind) return effect as Extract<MoveEffect, { kind: TKind }>;
+				}
+
+				return null;
+			},
+			flattenEffects: (effect: MoveEffect) => [effect],
+			getRemainingHP: () => 100,
+			getTypeEffectiveness: () => effectiveness,
+			getCombatantSide: (combatant) => (combatant === scenario.target ? 1 : 0),
+			getCombatantPosition: (combatant) =>
+				combatant === scenario.target ? { side: 1, slot: 0 } : { side: 0, slot: 0 },
+			getCombatantSpeed: () => 100,
+			getStageModifier: (stage) => {
+				if (stage >= 0) return (2 + stage) / 2;
+				return 2 / (2 + Math.abs(stage));
+			},
+			getCriticalHitChance: () => 0,
+			getStabModifier: () => 1,
+		},
+		scenario.user,
+		scenario.target,
+		{ side: 1, slot: 0 },
+		scenario.move,
+		flattenMoveEffects(scenario.move),
+		scenario.events,
+	);
+}
+
 /**
  * Resolves damage through the full formula with the random spread pinned to 1.0
  * (`floor(0.9375 * 16) = 15`, so `(85 + 15) / 100 = 1`). Neutralizing the spread

@@ -697,10 +697,12 @@ export const ITEMS = {
 	BLACKBELT: {
 		category: "held-items",
 		attributes: [ItemAttribute.Countable, ItemAttribute.Holdable],
+		battleEffect: { flingPower: 30 },
 	},
 	BLACKGLASSES: {
 		category: "held-items",
 		attributes: [ItemAttribute.Countable, ItemAttribute.Holdable],
+		battleEffect: { flingPower: 30 },
 	},
 	BLACKSLUDGE: {
 		category: "held-items",
@@ -725,7 +727,7 @@ export const ITEMS = {
 	CHARCOAL: {
 		category: "held-items",
 		attributes: [ItemAttribute.Countable, ItemAttribute.Holdable],
-		battleEffect: { damageTypeBoost: { type: Type.FIRE, multiplier: 1.1 } },
+		battleEffect: { damageTypeBoost: { type: Type.FIRE, multiplier: 1.1 }, flingPower: 30 },
 	},
 	CHOICEBAND: {
 		category: "held-items",
@@ -766,6 +768,7 @@ export const ITEMS = {
 	DRAGONFANG: {
 		category: "held-items",
 		attributes: [ItemAttribute.Countable, ItemAttribute.Holdable],
+		battleEffect: { flingPower: 70 },
 	},
 	DREADPLATE: {
 		category: "held-items",
@@ -810,6 +813,7 @@ export const ITEMS = {
 	FLAMEORB: {
 		category: "held-items",
 		attributes: [ItemAttribute.Countable, ItemAttribute.Holdable],
+		battleEffect: { flingPower: 30 },
 	},
 	FLAMEPLATE: {
 		category: "held-items",
@@ -834,6 +838,7 @@ export const ITEMS = {
 	GRIPCLAW: {
 		category: "held-items",
 		attributes: [ItemAttribute.Countable, ItemAttribute.Holdable],
+		battleEffect: { flingPower: 90 },
 	},
 	GRISEOUSCORE: {
 		category: "held-items",
@@ -846,6 +851,7 @@ export const ITEMS = {
 	HARDSTONE: {
 		category: "held-items",
 		attributes: [ItemAttribute.Countable, ItemAttribute.Holdable],
+		battleEffect: { flingPower: 100 },
 	},
 	HEARTHFLAMEMASK: {
 		category: "held-items",
@@ -874,6 +880,7 @@ export const ITEMS = {
 	IRONBALL: {
 		category: "held-items",
 		attributes: [ItemAttribute.Countable, ItemAttribute.Holdable],
+		battleEffect: { flingPower: 130 },
 	},
 	IRONPLATE: {
 		category: "held-items",
@@ -895,6 +902,7 @@ export const ITEMS = {
 	LIGHTBALL: {
 		category: "held-items",
 		attributes: [ItemAttribute.Countable, ItemAttribute.Holdable],
+		battleEffect: { flingPower: 30 },
 	},
 	LIGHTCLAY: {
 		category: "held-items",
@@ -907,6 +915,7 @@ export const ITEMS = {
 	LUCKYEGG: {
 		category: "held-items",
 		attributes: [ItemAttribute.Countable, ItemAttribute.Holdable],
+		battleEffect: { flingPower: 30 },
 	},
 	LUMINOUSMOSS: {
 		category: "held-items",
@@ -923,7 +932,7 @@ export const ITEMS = {
 	MAGNET: {
 		category: "held-items",
 		attributes: [ItemAttribute.Countable, ItemAttribute.Holdable],
-		battleEffect: { damageTypeBoost: { type: Type.ELECTRIC, multiplier: 1.1 } },
+		battleEffect: { damageTypeBoost: { type: Type.ELECTRIC, multiplier: 1.1 }, flingPower: 30 },
 	},
 	MEADOWPLATE: {
 		category: "held-items",
@@ -944,6 +953,7 @@ export const ITEMS = {
 	MIRACLESEED: {
 		category: "held-items",
 		attributes: [ItemAttribute.Countable, ItemAttribute.Holdable],
+		battleEffect: { flingPower: 30 },
 	},
 	MIRRORHERB: {
 		category: "held-items",
@@ -960,11 +970,12 @@ export const ITEMS = {
 	MYSTICWATER: {
 		category: "held-items",
 		attributes: [ItemAttribute.Countable, ItemAttribute.Holdable],
-		battleEffect: { damageTypeBoost: { type: Type.WATER, multiplier: 1.1 } },
+		battleEffect: { damageTypeBoost: { type: Type.WATER, multiplier: 1.1 }, flingPower: 30 },
 	},
 	NEVERMELTICE: {
 		category: "held-items",
 		attributes: [ItemAttribute.Countable, ItemAttribute.Holdable],
+		battleEffect: { flingPower: 30 },
 	},
 	NORMALGEM: {
 		category: "held-items",
@@ -977,6 +988,7 @@ export const ITEMS = {
 	POISONBARB: {
 		category: "held-items",
 		attributes: [ItemAttribute.Countable, ItemAttribute.Holdable],
+		battleEffect: { flingPower: 70 },
 	},
 	POWERANKLET: {
 		category: "held-items",
@@ -1057,6 +1069,7 @@ export const ITEMS = {
 	SHARPBEAK: {
 		category: "held-items",
 		attributes: [ItemAttribute.Countable, ItemAttribute.Holdable],
+		battleEffect: { flingPower: 50 },
 	},
 	SHEDSHELL: {
 		category: "held-items",
@@ -1069,10 +1082,12 @@ export const ITEMS = {
 	SILKSCARF: {
 		category: "held-items",
 		attributes: [ItemAttribute.Countable, ItemAttribute.Holdable],
+		battleEffect: { flingPower: 30 },
 	},
 	SILVERPOWDER: {
 		category: "held-items",
 		attributes: [ItemAttribute.Countable, ItemAttribute.Holdable],
+		battleEffect: { flingPower: 30 },
 	},
 	SKYPLATE: {
 		category: "held-items",
@@ -1089,10 +1104,12 @@ export const ITEMS = {
 	SNOWBALL: {
 		category: "held-items",
 		attributes: [ItemAttribute.Countable, ItemAttribute.Holdable],
+		battleEffect: { flingPower: 30 },
 	},
 	SOFTSAND: {
 		category: "held-items",
 		attributes: [ItemAttribute.Countable, ItemAttribute.Holdable],
+		battleEffect: { flingPower: 30 },
 	},
 	SOOTHEBELL: {
 		category: "held-items",
@@ -1105,6 +1122,7 @@ export const ITEMS = {
 	SPELLTAG: {
 		category: "held-items",
 		attributes: [ItemAttribute.Countable, ItemAttribute.Holdable],
+		battleEffect: { flingPower: 30 },
 	},
 	SPLASHPLATE: {
 		category: "held-items",
@@ -1117,6 +1135,7 @@ export const ITEMS = {
 	STICKYBARB: {
 		category: "held-items",
 		attributes: [ItemAttribute.Countable, ItemAttribute.Holdable],
+		battleEffect: { flingPower: 80 },
 	},
 	STONEPLATE: {
 		category: "held-items",
@@ -1133,6 +1152,7 @@ export const ITEMS = {
 	TOXICORB: {
 		category: "held-items",
 		attributes: [ItemAttribute.Countable, ItemAttribute.Holdable],
+		battleEffect: { flingPower: 30 },
 	},
 	TOXICPLATE: {
 		category: "held-items",
@@ -1141,6 +1161,7 @@ export const ITEMS = {
 	TWISTEDSPOON: {
 		category: "held-items",
 		attributes: [ItemAttribute.Countable, ItemAttribute.Holdable],
+		battleEffect: { flingPower: 30 },
 	},
 	UTILITYUMBRELLA: {
 		category: "held-items",

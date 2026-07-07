@@ -93,6 +93,7 @@ export type MoveEffect =
 	| { kind: "rampage"; turns: number }
 	| { kind: "multi-hit"; hits: number | [number, number] }
 	| { kind: "ohko" }
+	| { kind: "power-from-held-item" }
 	| { kind: "fixed-damage"; value: number }
 	| { kind: "fixed-damage"; amount: "user-level" | "half-target-hp" }
 	| { kind: "fixed-damage-user-hp" }

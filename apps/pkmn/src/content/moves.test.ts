@@ -164,5 +164,5 @@ test("power-0 moves still lacking an effect stays at or below the known baseline
 	let stranded = Object.entries(movesById).filter(
 		([, move]) => move.power === 0 && move.effect.kind === "none",
 	);
-	expect(stranded.length).toBeLessThanOrEqual(53);
+	expect(stranded.length).toBeLessThanOrEqual(52);
 });

@@ -145,6 +145,14 @@ export interface HeldItemBattleEffect {
 		type: Type;
 		multiplier: number;
 	};
+	/**
+	 * Base power an item-thrown attack uses when this item is hurled at the target.
+	 * A move whose power is sourced from the wielder's held item reads this value as
+	 * its effective power for that hit; an item that omits it cannot be thrown, so
+	 * such a move has no power source and fails. Heavier or harder items carry more
+	 * power than soft consumables.
+	 */
+	flingPower?: number;
 }
 
 export namespace Item {

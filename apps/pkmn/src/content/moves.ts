@@ -1751,10 +1751,11 @@ export const MOVES = {
 		power: 0,
 		accuracy: 100,
 		pp: 10,
-		// TODO: deferred no-op. Fling's power comes from the user's held item, and
-		// held-item data on combatants is being added by a concurrent task. Model it
-		// once that data (and the item->power mapping) is available.
-		effect: { kind: "none" },
+		// Power is sourced from the user's held item's `flingPower`; the move fails
+		// (deals nothing) when the user holds no item or a fling-less item. Consuming
+		// the thrown item after a hit is not yet wired into the battle flow and is a
+		// documented follow-up.
+		effect: { kind: "power-from-held-item" },
 	},
 	FOCUS_ENERGY: {
 		type: Type.NORMAL,

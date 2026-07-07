@@ -49,12 +49,11 @@ const MAX_EV_YIELD_TOTAL = 3;
  */
 const KNOWN_STRANDED_DAMAGING_MOVES = new Set([
 	// Each remaining entry needs engine support that does not exist yet:
-	// BEAT_UP (per-party-member hits), FLING (held-item power, concurrent task),
-	// PRESENT (random heal-or-damage), SPIT_UP (Stockpile counter). The others
-	// (NIGHT_SHADE, SEISMIC_TOSS, SUPER_FANG, MIRROR_COAT, METAL_BURST) now carry
-	// fixed-damage/counter effects and no longer resolve to a no-op.
+	// BEAT_UP (per-party-member hits), PRESENT (random heal-or-damage),
+	// SPIT_UP (Stockpile counter). The others (NIGHT_SHADE, SEISMIC_TOSS,
+	// SUPER_FANG, MIRROR_COAT, METAL_BURST, FLING) now carry
+	// fixed-damage/counter/held-item-power effects and no longer resolve to a no-op.
 	"BEAT_UP",
-	"FLING",
 	"PRESENT",
 	"SPIT_UP",
 ]);

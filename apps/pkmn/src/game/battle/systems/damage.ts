@@ -109,6 +109,16 @@ export function getResolvedMoveDamage(
 		return Math.max(0, context.getRemainingHP(target) - context.getRemainingHP(user));
 	}
 
+	if (context.findEffect(effects, "power-from-held-item")) {
+		// A held-item-thrown attack has no power of its own: it borrows the power of
+		// the item the user is holding. With nothing to throw (no held item, or an
+		// item that carries no throw power) the move has no power source and fails,
+		// dealing nothing. Otherwise it resolves through the normal formula, where
+		// `getMovePower` reads the same throw power, so effectiveness/immunity, STAB,
+		// stats, and stages all apply exactly as they would to any physical hit.
+		if (getHeldItemPower(context, user) === null) return 0;
+	}
+
 	let effectiveness = context.getTypeEffectiveness(target, move);
 	return calculateDamage(context, user, target, targetPosition, move, effectiveness, events);
 }
@@ -208,6 +218,21 @@ function applyHeldItemTypeBoost(
 	if (!boost || boost.type !== move.type) return damage;
 
 	return Math.floor(damage * boost.multiplier);
+}
+
+/**
+ * Reads the throw power the attacker's held item grants to an item-thrown attack.
+ *
+ * Returns `null` when the wielder holds nothing or holds an item that carries no
+ * throw power, signalling the move has no power source and must fail rather than
+ * fall back to a default. A number is the effective move power for that hit.
+ */
+function getHeldItemPower(context: DamageSystemContext, user: CombatantState): number | null {
+	let heldItemId = user.creature.heldItemId;
+	if (heldItemId === null) return null;
+
+	let power = context.gameData.items.get(heldItemId)?.battleEffect?.flingPower;
+	return power ?? null;
 }
 
 /** Applies direct-damage penalties from major statuses that modify outgoing attacks. */
@@ -347,6 +372,13 @@ function getMovePower(
 	move: Move,
 ): number {
 	let effects = context.flattenEffects(move.effect);
+
+	if (context.findEffect(effects, "power-from-held-item")) {
+		// The absent-item failure is handled ahead of the formula in
+		// `getResolvedMoveDamage`; by the time power is read here the item is known to
+		// supply one, so fall back to the move's own power only defensively.
+		return getHeldItemPower(context, user) ?? move.power;
+	}
 
 	if (context.findEffect(effects, "double-power-on-damaged-target")) {
 		let targetMaxHP = getCreatureStat(context.gameData, target.creature, Stat.HP);

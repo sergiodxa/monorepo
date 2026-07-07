@@ -335,6 +335,14 @@ export class Effects {
 		return [];
 	}
 
+	/** Leaves held-item-power (thrown-item) handling to damage resolution. */
+	static powerFromHeldItem(
+		_effect: Extract<MoveEffect, { kind: "power-from-held-item" }>,
+		_context: Effects.Context,
+	): BattleEvent[] {
+		return [];
+	}
+
 	/** Leaves user-HP fixed damage handling to damage resolution. */
 	static fixedDamageUserHP(
 		_effect: Extract<MoveEffect, { kind: "fixed-damage-user-hp" }>,
@@ -1173,6 +1181,7 @@ const RESOLVERS: ResolverMap = {
 	rampage: Effects.rampage,
 	"multi-hit": Effects.multiHit,
 	ohko: Effects.ohko,
+	"power-from-held-item": Effects.powerFromHeldItem,
 	"fixed-damage": Effects.fixedDamage,
 	"fixed-damage-user-hp": Effects.fixedDamageUserHP,
 	recoil: Effects.recoil,
