@@ -10,6 +10,7 @@ import { expect, test } from "bun:test";
 import { unwrap } from "@pkg/result";
 
 import type { BattleEvent, BattleState } from "~/game/battle/battle";
+import type { ItemId } from "~/game/data/item";
 import type { Move, MoveEffect, MoveId } from "~/game/data/move";
 import type { NatureId } from "~/game/data/nature";
 import type { SpeciesId } from "~/game/data/species";
@@ -276,12 +277,99 @@ test("Counter reflects nothing when the last hit came from another slot", () => 
 	expect(resolveFixedDamage(scenario)).toBe(0);
 });
 
+test("A type-boost held item multiplies matching-type damage", () => {
+	let plain = createDamageScenario("EMBER");
+	let boosted = createDamageScenario("EMBER", PRIMARY_SPECIES_ID, SECONDARY_SPECIES_ID, "CHARCOAL");
+
+	let plainDamage = resolveBoostDamage(plain);
+	let boostedDamage = resolveBoostDamage(boosted);
+
+	// CHARCOAL boosts fire damage by 1.1, flooring the running total.
+	expect(boostedDamage).toBe(Math.floor(plainDamage * 1.1));
+	expect(boostedDamage).toBeGreaterThan(plainDamage);
+});
+
+test("A type-boost held item leaves non-matching-type damage untouched", () => {
+	// TACKLE is a Normal move, so a fire-boost item must not change its damage.
+	let plain = createDamageScenario("TACKLE");
+	let boosted = createDamageScenario(
+		"TACKLE",
+		PRIMARY_SPECIES_ID,
+		SECONDARY_SPECIES_ID,
+		"CHARCOAL",
+	);
+
+	expect(resolveBoostDamage(boosted)).toBe(resolveBoostDamage(plain));
+});
+
+test("A creature with no held item deals unmodified damage", () => {
+	let withItem = createDamageScenario(
+		"EMBER",
+		PRIMARY_SPECIES_ID,
+		SECONDARY_SPECIES_ID,
+		"CHARCOAL",
+	);
+	let withoutItem = createDamageScenario("EMBER");
+
+	// The bare-handed attacker is the regression baseline: the boost only ever adds
+	// damage on top of it, never changes the no-item path.
+	expect(resolveBoostDamage(withoutItem)).toBeLessThan(resolveBoostDamage(withItem));
+	expect(withoutItem.user.creature.heldItemId).toBe(null);
+});
+
+/**
+ * Resolves damage through the full formula with the random spread pinned to 1.0
+ * (`floor(0.9375 * 16) = 15`, so `(85 + 15) / 100 = 1`). Neutralizing the spread
+ * keeps the held-item type-boost the only multiplier that can move the result, so
+ * `floor(base * 1.1)` matches the code exactly.
+ */
+function resolveBoostDamage(scenario: ReturnType<typeof createDamageScenario>) {
+	return getResolvedMoveDamage(
+		{
+			state: scenario.state,
+			gameData: GAME_DATA,
+			random: () => 0.9375,
+			isGrounded: (combatant) => isGrounded(combatant),
+			findEffect: <TKind extends MoveEffect["kind"]>(
+				effects: MoveEffect[],
+				kind: TKind,
+			): Extract<MoveEffect, { kind: TKind }> | null => {
+				for (let effect of effects) {
+					if (effect.kind === kind) return effect as Extract<MoveEffect, { kind: TKind }>;
+				}
+
+				return null;
+			},
+			flattenEffects: (effect: MoveEffect) => [effect],
+			getRemainingHP: () => 100,
+			getTypeEffectiveness: () => 1,
+			getCombatantSide: (combatant) => (combatant === scenario.target ? 1 : 0),
+			getCombatantPosition: (combatant) =>
+				combatant === scenario.target ? { side: 1, slot: 0 } : { side: 0, slot: 0 },
+			getCombatantSpeed: () => 100,
+			getStageModifier: (stage) => {
+				if (stage >= 0) return (2 + stage) / 2;
+				return 2 / (2 + Math.abs(stage));
+			},
+			getCriticalHitChance: () => 0,
+			getStabModifier: () => 1,
+		},
+		scenario.user,
+		scenario.target,
+		{ side: 1, slot: 0 },
+		scenario.move,
+		flattenMoveEffects(scenario.move),
+		scenario.events,
+	);
+}
+
 function createDamageScenario(
 	moveId: MoveId = "TACKLE",
 	userSpeciesId = PRIMARY_SPECIES_ID,
 	targetSpeciesId = SECONDARY_SPECIES_ID,
+	heldItemId: ItemId | null = null,
 ) {
-	let user = new CombatantState(createCreature(userSpeciesId, 255));
+	let user = new CombatantState(createCreature(userSpeciesId, 255, heldItemId));
 	let target = new CombatantState(createCreature(targetSpeciesId));
 	let state = createBattleState();
 	let events: BattleEvent[] = [];
@@ -495,7 +583,7 @@ function createBattleState(): BattleState {
 	};
 }
 
-function createCreature(speciesId: SpeciesId, attackEv = 0) {
+function createCreature(speciesId: SpeciesId, attackEv = 0, heldItemId: ItemId | null = null) {
 	return new Creature({
 		species: speciesId,
 		nature: "HARDY" as NatureId,
@@ -515,6 +603,7 @@ function createCreature(speciesId: SpeciesId, attackEv = 0) {
 			damage: 0,
 			pp: [35, 40, 30, 30],
 		},
+		heldItemId,
 	});
 }
 

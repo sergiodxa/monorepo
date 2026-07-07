@@ -12,6 +12,7 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
+import type { ItemId } from "~/game/data/item";
 import type { MoveId } from "~/game/data/move";
 import type { NatureId } from "~/game/data/nature";
 import type { SpeciesId } from "~/game/data/species";
@@ -46,6 +47,12 @@ export namespace Creature {
 		iv: StatSet;
 		ev: StatSet;
 		size?: SizeData;
+		/**
+		 * Item this creature is carrying, or null/undefined when it holds nothing.
+		 * Optional so persisted creatures and fixtures that predate held items build
+		 * unchanged; absence reads the same as holding nothing.
+		 */
+		heldItemId?: ItemId | null;
 	}
 }
 
@@ -86,6 +93,10 @@ export class Creature {
 
 	get size() {
 		return this.args.size ?? { scale: 128, weight: 128 };
+	}
+
+	get heldItemId() {
+		return this.args.heldItemId ?? null;
 	}
 
 	toJSON(): Creature.Arguments {

@@ -13,6 +13,7 @@ import type { Item } from "~/game/data/item";
 import { ItemAttribute } from "~/game/data/item";
 import { Stat } from "~/game/data/stat";
 import { State } from "~/game/data/status";
+import { Type } from "~/game/data/type";
 
 export const ITEMS = {
 	POKEBALL: {
@@ -724,6 +725,7 @@ export const ITEMS = {
 	CHARCOAL: {
 		category: "held-items",
 		attributes: [ItemAttribute.Countable, ItemAttribute.Holdable],
+		battleEffect: { damageTypeBoost: { type: Type.FIRE, multiplier: 1.1 } },
 	},
 	CHOICEBAND: {
 		category: "held-items",
@@ -884,6 +886,7 @@ export const ITEMS = {
 	LEFTOVERS: {
 		category: "held-items",
 		attributes: [ItemAttribute.Countable, ItemAttribute.Holdable],
+		battleEffect: { endOfTurnHealFraction: 1 / 16 },
 	},
 	LIFEORB: {
 		category: "held-items",
@@ -920,6 +923,7 @@ export const ITEMS = {
 	MAGNET: {
 		category: "held-items",
 		attributes: [ItemAttribute.Countable, ItemAttribute.Holdable],
+		battleEffect: { damageTypeBoost: { type: Type.ELECTRIC, multiplier: 1.1 } },
 	},
 	MEADOWPLATE: {
 		category: "held-items",
@@ -956,6 +960,7 @@ export const ITEMS = {
 	MYSTICWATER: {
 		category: "held-items",
 		attributes: [ItemAttribute.Countable, ItemAttribute.Holdable],
+		battleEffect: { damageTypeBoost: { type: Type.WATER, multiplier: 1.1 } },
 	},
 	NEVERMELTICE: {
 		category: "held-items",

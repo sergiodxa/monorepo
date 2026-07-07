@@ -20,6 +20,7 @@ import type { LegacyCreatureComponent } from "./components";
 import {
 	DEFAULT_CREATURE_INSTANCE,
 	createCreatureInstance,
+	mergeCreatureComponents,
 	rollGender,
 	splitCreatureComponents,
 } from "./components";
@@ -100,4 +101,15 @@ test("splitCreatureComponents seeds the default instance state", () => {
 		creature: legacyCreature(),
 	});
 	expect(components.instance).toEqual(DEFAULT_CREATURE_INSTANCE);
+});
+
+test("mergeCreatureComponents carries the held item into the battle creature", () => {
+	// Regression: the world's stored held item must reach the battle Creature snapshot,
+	// otherwise held-item battle effects (Leftovers, type boosts) never fire in play.
+	let held = splitCreatureComponents({ creatureId: "creature-1", creature: legacyCreature() });
+	held.instance = createCreatureInstance({ heldItemId: "POTION" });
+	expect(mergeCreatureComponents(held).heldItemId).toBe("POTION");
+
+	let empty = splitCreatureComponents({ creatureId: "creature-2", creature: legacyCreature() });
+	expect(mergeCreatureComponents(empty).heldItemId).toBeNull();
 });

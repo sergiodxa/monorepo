@@ -16,6 +16,7 @@ import type { BattleStatStage, MoveId } from "./move";
  * @copyright Sergio Xalambrí 2026
  */
 import type { State } from "./status";
+import type { Type } from "./type";
 
 import { Stat } from "./stat";
 
@@ -119,12 +120,41 @@ export type BattleItemEffect =
 	| BattleItemEffect.CriticalRate
 	| BattleItemEffect.Mist;
 
+/**
+ * Passive battle behavior a held item grants to its wielder.
+ *
+ * These effects apply automatically while a creature carries the item during a
+ * battle, without spending an action. Every field is optional so one item can
+ * express a single behavior or several at once, and an item that holds nothing
+ * relevant simply omits the field. The shape stays content-agnostic: it names
+ * generic mechanics (residual healing, a type-matched damage multiplier) rather
+ * than any specific item, so engine systems can read it without knowing content.
+ */
+export interface HeldItemBattleEffect {
+	/**
+	 * Fraction of the wielder's maximum HP restored at the end of each turn.
+	 * A value of `1 / 16` restores `floor(maxHP / 16)` while the wielder is not
+	 * fainted and not already at full HP.
+	 */
+	endOfTurnHealFraction?: number;
+	/**
+	 * Multiplier applied to the wielder's outgoing damage when the move being used
+	 * matches `type`. Moves of any other type are unaffected.
+	 */
+	damageTypeBoost?: {
+		type: Type;
+		multiplier: number;
+	};
+}
+
 export namespace Item {
 	/** Shared shape for every item regardless of its specialized payload. */
 	export interface Base {
 		category: string;
 		attributes: [ItemAttribute, ...ItemAttribute[]];
 		price?: Price;
+		/** Passive behavior applied while this item is held during a battle. */
+		battleEffect?: HeldItemBattleEffect;
 	}
 
 	export interface Capture extends Base {

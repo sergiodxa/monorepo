@@ -238,6 +238,13 @@ export function applyEndOfTurnEffects(context: EndOfTurnContext): BattleEvent[] 
 				}
 			}
 
+			// A held item's passive heal resolves after residual damage so it can
+			// recover HP the same turn poison/burn/weather chipped it, but only while
+			// the wielder is still standing.
+			if (context.isCombatantFainted(combatant) === false) {
+				applyHeldItemHealing(context, combatant, position, maxHP, events);
+			}
+
 			if (context.isCombatantFainted(combatant)) {
 				context.clearActiveCombatant(position);
 				events.push({ type: "creature-fainted", target: position });
@@ -330,6 +337,43 @@ function applyFlatHealing(
 		0,
 		previous - Math.max(1, Math.floor(maxHP / divisor)),
 	);
+	if (previous === combatant.creature.status.damage) return;
+
+	events.push({
+		type: "damage-dealt",
+		target: position,
+		damage: 0,
+		remainingHP: context.getRemainingHP(combatant),
+	});
+}
+
+/**
+ * Restores HP from a held item's end-of-turn heal fraction, if the wielder has one.
+ *
+ * The amount is `floor(maxHP * fraction)`, clamped so HP never exceeds the maximum,
+ * and the recovery reuses the residual HP-change event so the presentation animates
+ * it like any other between-turn HP movement. A creature at full HP, holding nothing,
+ * or holding an item without an `endOfTurnHealFraction` is left untouched and emits
+ * no event.
+ */
+function applyHeldItemHealing(
+	context: EndOfTurnContext,
+	combatant: CombatantState,
+	position: BattlePosition,
+	maxHP: number,
+	events: BattleEvent[],
+) {
+	let heldItemId = combatant.creature.heldItemId;
+	if (heldItemId === null) return;
+
+	let fraction = context.gameData.items.get(heldItemId)?.battleEffect?.endOfTurnHealFraction;
+	if (fraction === undefined || fraction <= 0) return;
+
+	let previous = combatant.creature.status.damage;
+	if (previous === 0) return;
+
+	let restored = Math.max(1, Math.floor(maxHP * fraction));
+	combatant.creature.status.damage = Math.max(0, previous - restored);
 	if (previous === combatant.creature.status.damage) return;
 
 	events.push({

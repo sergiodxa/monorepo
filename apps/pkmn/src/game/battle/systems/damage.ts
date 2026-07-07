@@ -180,9 +180,34 @@ function calculateDamage(
 		events.push({ type: "critical-hit", target: targetPosition });
 	}
 
+	damage = applyHeldItemTypeBoost(context, user, move, damage);
 	damage = applyMajorStatusDamageModifiers(user, move, damage);
 
 	return Math.floor(damage * ((85 + Math.floor(context.random() * 16)) / 100));
+}
+
+/**
+ * Multiplies outgoing damage when the attacker holds a type-boost item whose type
+ * matches the move being used.
+ *
+ * The multiplier stacks with STAB, effectiveness, and critical modifiers by applying
+ * as one more sequential multiply on the running damage total, flooring the result the
+ * same way the surrounding modifiers do. A creature holding nothing, holding an item
+ * without a `damageTypeBoost`, or using a move of a non-matching type is unaffected.
+ */
+function applyHeldItemTypeBoost(
+	context: DamageSystemContext,
+	user: CombatantState,
+	move: Move,
+	damage: number,
+): number {
+	let heldItemId = user.creature.heldItemId;
+	if (heldItemId === null) return damage;
+
+	let boost = context.gameData.items.get(heldItemId)?.battleEffect?.damageTypeBoost;
+	if (!boost || boost.type !== move.type) return damage;
+
+	return Math.floor(damage * boost.multiplier);
 }
 
 /** Applies direct-damage penalties from major statuses that modify outgoing attacks. */

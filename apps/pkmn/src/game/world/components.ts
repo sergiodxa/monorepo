@@ -256,5 +256,6 @@ export function mergeCreatureComponents(components: CreatureComponentSet): Creat
 		iv: structuredClone(components.progress.iv),
 		ev: structuredClone(components.progress.ev),
 		size: components.progress.size ? structuredClone(components.progress.size) : undefined,
+		heldItemId: components.instance.heldItemId,
 	};
 }
