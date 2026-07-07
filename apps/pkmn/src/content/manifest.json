@@ -1,6 +1,8 @@
 {
 	"images": {},
 	"audio": {},
-	"maps": {},
+	"maps": {
+		"route-1": "/content/maps/route-1.json"
+	},
 	"atlases": {}
 }

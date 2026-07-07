@@ -16,12 +16,21 @@
  * from a file or was generated in code. Only original or openly-licensed art may
  * be declared — never the ripped commercial sheets that sit in `assets/`.
  *
+ * A map entry is either a URL (fetched) or the map JSON inlined as an object;
+ * either way the store validates it through the map loader before registering it,
+ * so a malformed map is logged and skipped rather than crashing the renderer.
+ * Inlining is the reliable form under the Bun HTML dev server (see the `maps`
+ * field doc), which is why authored maps ship as imported JSON modules.
+ *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
+import { isFailure } from "@pkg/result";
+
 import type { AtlasAnimation, Rect } from "../render/atlas";
 import type { TileMap } from "../render/tilemap";
 
+import { loadMap } from "../overworld/map-loader";
 import { Atlas, type AtlasSource } from "../render/atlas";
 
 /** One atlas declaration: an image URL sliced into named (and animated) regions. */
@@ -40,8 +49,15 @@ export interface AssetManifest {
 	images: Record<string, string>;
 	/** Audio id to URL plus optional intro/loop points, in seconds. */
 	audio: Record<string, { url: string; loopStart?: number; loopEnd?: number }>;
-	/** Map id to the URL of its tilemap JSON. */
-	maps: Record<string, string>;
+	/**
+	 * Map id to its tilemap source: either a URL string (fetched at boot) or the
+	 * map JSON inlined as an object. Inlining is the reliable path under the Bun
+	 * HTML dev server, whose SPA fallback returns the app shell for any unknown URL
+	 * rather than the file — so a runtime `fetch` of a content JSON path would get
+	 * HTML, not the map. Authored maps therefore ship as imported JSON modules
+	 * inlined here; the URL form is kept for a future real static file server.
+	 */
+	maps: Record<string, string | object>;
 	/** Atlas id to its image URL and region map (optional; defaults to empty). */
 	atlases?: Record<string, AtlasManifestEntry>;
 }
@@ -109,11 +125,10 @@ export class AssetStore {
 			);
 		}
 
-		for (let [id, url] of mapEntries) {
+		for (let [id, source] of mapEntries) {
 			tasks.push(
-				fetch(url)
-					.then((response) => response.json() as Promise<TileMap>)
-					.then((map) => void this.maps.set(id, map))
+				this.resolveMapSource(source)
+					.then((value) => this.registerMap(id, value))
 					.catch((error) => console.warn(`Failed to load map "${id}":`, error))
 					.finally(step),
 			);
@@ -159,6 +174,34 @@ export class AssetStore {
 	/** Returns the assembled atlas for an id, or null when it is missing. */
 	atlas(id: string): Atlas | null {
 		return this.atlases.get(id) ?? null;
+	}
+
+	/**
+	 * Resolves a manifest map source to its parsed JSON value.
+	 *
+	 * An inline object is used as-is (an imported JSON module, the reliable path
+	 * under the Bun HTML dev server); a string is treated as a URL and fetched.
+	 */
+	private async resolveMapSource(source: string | object): Promise<unknown> {
+		if (typeof source !== "string") return source;
+		let response = await fetch(source);
+		return await response.json();
+	}
+
+	/**
+	 * Validates a map JSON value and registers it under an id.
+	 *
+	 * The value runs through {@link loadMap}, so a malformed map is logged and
+	 * skipped (its getter then returns null and the overworld falls back), never
+	 * registering a broken map that would crash the renderer.
+	 */
+	private registerMap(id: string, value: unknown) {
+		let result = loadMap(value);
+		if (isFailure(result)) {
+			console.warn(`Invalid map "${id}": ${result.error.message}`);
+			return;
+		}
+		this.maps.set(id, result.data);
 	}
 
 	/** Decodes one image URL into an element. */

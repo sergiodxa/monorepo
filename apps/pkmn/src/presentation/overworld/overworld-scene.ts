@@ -131,7 +131,7 @@ export class OverworldScene implements Scene {
 		let data = game.assets.map(this.spawn.mapId) ?? createSampleMap();
 		this.map = new GameMap(data);
 		this.atlas = game.assets.atlas("overworld") ?? buildPlaceholderAtlas();
-		this.renderer = new TileMapRenderer(data, game.assets.image(data.tileset), this.atlas);
+		this.renderer = new TileMapRenderer(data, (imageId) => game.assets.image(imageId), this.atlas);
 		this.player = new PlayerController(this.spawn.x, this.spawn.y, this.spawn.facing);
 		// The trainer fields mid-pool species so its party differs from the starter it fights.
 		let speciesIds = Object.keys(game.content.species);

@@ -18,6 +18,7 @@ import type { Engine } from "~/game/engine";
 import type { GameEvent } from "~/game/events";
 
 import manifest from "~/content/manifest.json";
+import route1 from "~/content/maps/route-1.json";
 
 import type { Scene } from "./scene";
 
@@ -39,8 +40,18 @@ export class GameClient {
 	/** Merged keyboard/gamepad input. */
 	readonly input = new InputManager();
 
-	/** Eagerly-loaded assets addressed by manifest id. */
-	readonly assets = new AssetStore(manifest as AssetManifest);
+	/**
+	 * Eagerly-loaded assets addressed by manifest id.
+	 *
+	 * Authored maps are inlined over their manifest URL entries with the imported
+	 * JSON modules, because the Bun HTML dev server's SPA fallback returns the app
+	 * shell (not the file) for a runtime `fetch` of a content path — so the map must
+	 * be bundled in as a module. `AssetStore` validates each inlined map at boot.
+	 */
+	readonly assets = new AssetStore({
+		...(manifest as AssetManifest),
+		maps: { ...(manifest as AssetManifest).maps, "route-1": route1 },
+	});
 
 	/** Music, effect, and cry playback. */
 	readonly audio = new AudioManager(this.assets);

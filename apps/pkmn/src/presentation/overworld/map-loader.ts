@@ -1,39 +1,129 @@
 /**
- * Map access helpers and a built-in sample map.
+ * Map loading, access helpers, and a built-in sample map.
  *
- * `GameMap` wraps the authored `TileMap` data with the queries movement and
- * encounters need — bounds, collision, encounter membership and rate, warps —
- * keeping those rules out of the renderer and the scene. `createSampleMap`
- * returns a small hand-built map (a walled field with a patch of tall grass) so
- * the overworld is explorable before any authored maps ship; a real game loads
- * maps from the asset store instead.
+ * `loadMap` parses an untrusted JSON value against `MapDataSchema` and then runs
+ * the cross-field invariants a shape schema cannot express — every tile layer is
+ * exactly `width*height` cells long, the collision grid matches, and every
+ * non-empty tile ref names a real tileset — returning a `Result` so a malformed
+ * map surfaces a clear message instead of a broken render. `GameMap` wraps a
+ * validated `TileMap` with the queries movement and encounters need (bounds,
+ * collision, encounter membership and rate, warps) plus tileset/layer access for
+ * the renderer, keeping those rules out of the scene. `createSampleMap` returns a
+ * small hand-built map so the overworld is explorable before authored maps ship.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
+import { failure, type Result, success } from "@pkg/result";
+import { parseSafe } from "remix/data-schema";
+
 import { TILE_SIZE } from "../core/loop";
-import { Collision, type EncounterEntry, type TileMap } from "../render/tilemap";
+import { EMPTY_CELL, type MapData, MapDataSchema, unpackTileRef } from "../render/map-schema";
+import { Collision, type EncounterEntry, type TileMap, type Tileset } from "../render/tilemap";
 
 import type { Npc } from "./npc";
 
-/** Queryable wrapper around one authored map. */
+/** Error describing why a map JSON value failed to load. */
+export class MapLoadError extends Error {
+	/** @param message - Human-readable reason the map is invalid. */
+	constructor(message: string) {
+		super(message);
+		this.name = "MapLoadError";
+	}
+}
+
+/** The three tile layers, in the order they are validated and named in errors. */
+const LAYER_NAMES = ["ground", "decor", "overhead"] as const;
+
+/**
+ * Validates an untrusted parsed JSON value into a typed {@link MapData}.
+ *
+ * Runs `MapDataSchema` first (shape, types, value ranges), then the cross-field
+ * invariants: each layer and the collision grid must hold exactly `width*height`
+ * cells, and every non-empty layer cell must name a tileset index that exists.
+ * Any failure returns a {@link MapLoadError} naming the offending field so the
+ * editor and the loader path both get an actionable message.
+ *
+ * @param value - The parsed JSON value to validate (untrusted).
+ * @returns Success with the validated map, or failure with a {@link MapLoadError}.
+ */
+export function loadMap(value: unknown): Result<MapData, MapLoadError> {
+	let parsed = parseSafe(MapDataSchema, value);
+	if (!parsed.success) {
+		let issue = parsed.issues[0];
+		let where = issue?.path?.length ? ` at ${issue.path.map(String).join(".")}` : "";
+		return failure(new MapLoadError(`Invalid map${where}: ${issue?.message ?? "unknown error"}`));
+	}
+
+	let map = parsed.value;
+	let expected = map.width * map.height;
+
+	for (let name of LAYER_NAMES) {
+		let layer = map.layers[name];
+		if (layer.length !== expected) {
+			return failure(
+				new MapLoadError(
+					`Layer "${name}" has ${layer.length} cells but the ${map.width}x${map.height} map needs ${expected}.`,
+				),
+			);
+		}
+	}
+
+	if (map.collision.length !== expected) {
+		return failure(
+			new MapLoadError(
+				`Collision grid has ${map.collision.length} cells but the ${map.width}x${map.height} map needs ${expected}.`,
+			),
+		);
+	}
+
+	for (let name of LAYER_NAMES) {
+		let layer = map.layers[name];
+		for (let index = 0; index < layer.length; index++) {
+			let cell = layer[index]!;
+			if (cell === EMPTY_CELL) continue;
+			let { tilesetIndex } = unpackTileRef(cell);
+			if (tilesetIndex >= map.tilesets.length) {
+				return failure(
+					new MapLoadError(
+						`Layer "${name}" cell ${index} references tileset ${tilesetIndex} but the map declares only ${map.tilesets.length}.`,
+					),
+				);
+			}
+		}
+	}
+
+	return success(map);
+}
+
+/** Queryable wrapper around one validated map. */
 export class GameMap {
 	/** Tile indices that belong to any encounter zone. */
 	private readonly encounterTiles: Set<number>;
 
-	/** @param data - The authored map this wraps. */
+	/** @param data - The validated map this wraps. */
 	constructor(readonly data: TileMap) {
 		this.encounterTiles = new Set(data.encounters.flatMap((zone) => zone.zone));
 	}
 
 	/** Map width in pixels. */
 	get widthPx(): number {
-		return this.data.width * TILE_SIZE;
+		return this.data.width * this.data.tileWidth;
 	}
 
 	/** Map height in pixels. */
 	get heightPx(): number {
-		return this.data.height * TILE_SIZE;
+		return this.data.height * this.data.tileHeight;
+	}
+
+	/** The map's tilesets, in declaration order (index matches packed tile refs). */
+	get tilesets(): readonly Tileset[] {
+		return this.data.tilesets;
+	}
+
+	/** One tile layer's flat cell array by name (`-1` empty, else a packed tile ref). */
+	layer(name: "ground" | "decor" | "overhead"): number[] {
+		return this.data.layers[name];
 	}
 
 	/** True when a tile is inside the map. */
@@ -122,19 +212,28 @@ export function createSampleMap(): TileMap {
 	for (let y = 3; y <= 7; y++) for (let x = 9; x <= 14; x++) zone.push(y * width + x);
 
 	let ground = new Array<number>(width * height).fill(0);
-	let empty = new Array<number>(width * height).fill(-1);
+	let empty = new Array<number>(width * height).fill(EMPTY_CELL);
 
 	return {
 		id: "route-1",
-		tileset: "overworld",
 		width,
 		height,
+		tileWidth: TILE_SIZE,
+		tileHeight: TILE_SIZE,
+		tilesets: [
+			{
+				id: "overworld",
+				image: "overworld",
+				columns: 8,
+				tileWidth: TILE_SIZE,
+				tileHeight: TILE_SIZE,
+			},
+		],
 		layers: { ground, decor: [...empty], overhead: [...empty] },
 		collision,
 		encounters: [{ zone, table: [], rate: 40 }],
 		warps: [],
-		npcs: [],
-		triggers: [],
+		events: [],
 		bgm: "route-1",
 	};
 }

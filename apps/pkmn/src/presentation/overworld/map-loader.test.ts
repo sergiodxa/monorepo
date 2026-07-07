@@ -1,27 +1,112 @@
 /**
- * Tests for the map wrapper and the built-in sample map.
+ * Tests for the map loader, the map wrapper, and the built-in sample map.
  *
- * Covers `createSampleMap`'s shape (walled 20x15 field with a grass patch and a
- * pond) and the `GameMap` queries movement and encounters depend on: `inBounds`,
- * `isBlocked` for solid/water/out-of-bounds, `isEncounter`, `encounterRate`,
- * `encounterTableAt`, and `warpAt`. Also covers the pure `habitatZones` lookup
- * that scans maps' encounter tables to list the zones where a species appears.
+ * Covers `loadMap`'s validation (a valid map loads; malformed maps — bad layer
+ * length, out-of-range tile ref, unknown tileset index — are rejected with a
+ * clear `MapLoadError`), `createSampleMap`'s shape (a walled 20x15 field with a
+ * grass patch and a pond), and the `GameMap` queries movement and encounters
+ * depend on: `inBounds`, `isBlocked`, `isEncounter`, `encounterRate`,
+ * `encounterTableAt`, `warpAt`, plus the renderer-facing `tilesets`/`layer`
+ * accessors. Also covers the pure `habitatZones` lookup.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 import { expect, test } from "bun:test";
 
+import { isFailure, isSuccess } from "@pkg/result";
+
 import { TILE_SIZE } from "../core/loop";
+import { EMPTY_CELL, packTileRef } from "../render/map-schema";
 import { Collision, type EncounterEntry, type TileMap } from "../render/tilemap";
 
-import { createSampleMap, createSampleNpcs, GameMap, habitatZones } from "./map-loader";
+import {
+	createSampleMap,
+	createSampleNpcs,
+	GameMap,
+	habitatZones,
+	loadMap,
+	MapLoadError,
+} from "./map-loader";
+
+/** A minimal well-formed 2x1 map JSON value, overridden per test. */
+function validMapJson(overrides: Record<string, unknown> = {}) {
+	return {
+		id: "m",
+		width: 2,
+		height: 1,
+		tileWidth: 16,
+		tileHeight: 16,
+		tilesets: [{ id: "t", image: "sheet", columns: 8, tileWidth: 16, tileHeight: 16 }],
+		layers: {
+			ground: [0, EMPTY_CELL],
+			decor: [EMPTY_CELL, EMPTY_CELL],
+			overhead: [EMPTY_CELL, EMPTY_CELL],
+		},
+		collision: [0, 1],
+		...overrides,
+	};
+}
+
+test("loadMap accepts a well-formed map JSON value", () => {
+	let result = loadMap(validMapJson());
+	expect(isSuccess(result)).toBe(true);
+	if (isFailure(result)) return;
+	expect(result.data.id).toBe("m");
+	expect(result.data.tilesets).toHaveLength(1);
+});
+
+test("loadMap rejects a schema-invalid value with a MapLoadError", () => {
+	let result = loadMap({ id: "m" });
+	expect(isFailure(result)).toBe(true);
+	if (!isFailure(result)) return;
+	expect(result.error).toBeInstanceOf(MapLoadError);
+});
+
+test("loadMap rejects a layer whose length does not match width*height", () => {
+	let result = loadMap(
+		validMapJson({
+			layers: { ground: [0], decor: [EMPTY_CELL, EMPTY_CELL], overhead: [EMPTY_CELL, EMPTY_CELL] },
+		}),
+	);
+	expect(isFailure(result)).toBe(true);
+	if (!isFailure(result)) return;
+	expect(result.error.message).toContain('Layer "ground"');
+	expect(result.error.message).toContain("1 cells");
+});
+
+test("loadMap rejects a collision grid of the wrong length", () => {
+	let result = loadMap(validMapJson({ collision: [0] }));
+	expect(isFailure(result)).toBe(true);
+	if (!isFailure(result)) return;
+	expect(result.error.message).toContain("Collision grid");
+});
+
+test("loadMap rejects a tile ref naming a tileset index that does not exist", () => {
+	// Cell packs tileset index 3 but the map declares only one tileset.
+	let result = loadMap(
+		validMapJson({
+			layers: {
+				ground: [packTileRef(3, 0), EMPTY_CELL],
+				decor: [EMPTY_CELL, EMPTY_CELL],
+				overhead: [EMPTY_CELL, EMPTY_CELL],
+			},
+		}),
+	);
+	expect(isFailure(result)).toBe(true);
+	if (!isFailure(result)) return;
+	expect(result.error.message).toContain("references tileset 3");
+});
+
+test("createSampleMap loads through the validator unchanged", () => {
+	let result = loadMap(createSampleMap());
+	expect(isSuccess(result)).toBe(true);
+});
 
 test("createSampleMap returns a 20x15 route with a walled border", () => {
 	let map = createSampleMap();
 	expect(map.width).toBe(20);
 	expect(map.height).toBe(15);
-	// Every border cell is solid.
 	expect(map.collision[0]).toBe(Collision.Solid); // top-left corner
 	expect(map.collision[map.width - 1]).toBe(Collision.Solid); // top-right corner
 	expect(map.collision[(map.height - 1) * map.width]).toBe(Collision.Solid); // bottom-left
@@ -29,7 +114,6 @@ test("createSampleMap returns a 20x15 route with a walled border", () => {
 
 test("createSampleMap carves a walkable interior and a single encounter zone", () => {
 	let map = createSampleMap();
-	// The spawn tile (5,5) is interior and walkable.
 	expect(map.collision[5 * map.width + 5]).toBe(Collision.Walkable);
 	expect(map.encounters).toHaveLength(1);
 	expect(map.encounters[0]!.rate).toBe(40);
@@ -37,9 +121,16 @@ test("createSampleMap carves a walkable interior and a single encounter zone", (
 
 let SAMPLE = new GameMap(createSampleMap());
 
-test("widthPx and heightPx scale the tile grid by the tile size", () => {
+test("widthPx and heightPx scale the tile grid by the map's tile size", () => {
 	expect(SAMPLE.widthPx).toBe(20 * TILE_SIZE);
 	expect(SAMPLE.heightPx).toBe(15 * TILE_SIZE);
+});
+
+test("tilesets and layer expose the renderer-facing map data", () => {
+	expect(SAMPLE.tilesets).toHaveLength(1);
+	expect(SAMPLE.tilesets[0]!.id).toBe("overworld");
+	expect(SAMPLE.layer("ground")).toHaveLength(20 * 15);
+	expect(SAMPLE.layer("overhead").every((cell) => cell === EMPTY_CELL)).toBe(true);
 });
 
 test("inBounds accepts interior tiles and rejects tiles outside the grid", () => {
@@ -82,7 +173,6 @@ test("createSampleNpcs gives the trainer a named, rewarded, multi-creature party
 		{ speciesId: "FIRST", level: 5 },
 		{ speciesId: "SECOND", level: 6 },
 	]);
-	// The healer and shop carry no trainer data.
 	expect(npcs.find((npc) => npc.role === "healer")?.trainer).toBeUndefined();
 });
 
@@ -108,16 +198,13 @@ function mapWith(id: string, speciesIds: string[]): TileMap {
 
 test("habitatZones lists each map whose encounter tables roll the species", () => {
 	let maps = [mapWith("route-1", ["PIDGEY", "RATTATA"]), mapWith("route-2", ["PIDGEY"])];
-	// PIDGEY appears in both zones; the map ids come back in first-seen order.
 	expect(habitatZones(maps, "PIDGEY")).toEqual(["route-1", "route-2"]);
-	// RATTATA only appears on route-1.
 	expect(habitatZones(maps, "RATTATA")).toEqual(["route-1"]);
 });
 
 test("habitatZones returns an empty list for a species in no encounter table", () => {
 	let maps = [mapWith("route-1", ["PIDGEY"])];
 	expect(habitatZones(maps, "MEWTWO")).toEqual([]);
-	// The built-in sample map ships no populated tables, so nothing has a habitat.
 	expect(habitatZones([createSampleMap()], "PIDGEY")).toEqual([]);
 });
 
@@ -147,7 +234,6 @@ test("warpAt finds a warp on its tile and returns null elsewhere", () => {
 
 	expect(map.warpAt(8, 8)).toEqual({ map: "town", x: 1, y: 2 });
 	expect(map.warpAt(5, 5)).toBeNull();
-	// The authored table now flows through encounterTableAt/encounterRate.
 	expect(map.encounterTableAt(2, 2)).toEqual(table);
 	expect(map.encounterRate(2, 2)).toBe(25);
 });
