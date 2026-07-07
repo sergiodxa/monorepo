@@ -1,14 +1,16 @@
 /**
- * Map + Events tool view — an RPG-Maker-XP-style tile-map editor built on the
- * canonical tool-view pattern. The component constructs a {@link MapEditor} once
- * in setup and drives every control through it; there are no framework hooks, so
+ * Map + Events tool view — an RPG-Maker-XP-style multi-map editor built on the
+ * canonical tool-view pattern. The component constructs a {@link MapProject} once in
+ * setup — an ordered set of maps, each its own {@link MapEditor}, with one active —
+ * and drives every control through the active map; there are no framework hooks, so
  * local UI state lives in setup-scope variables and the view re-renders through
  * `handle.update()` when a control changes it. A {@link MapCanvas} DOM helper (the
- * imperative shell around the pure editor) blits the map to a canvas and turns
- * pointer input into paint/erase/fill/event gestures.
+ * imperative shell around the pure editor) blits the active map to a canvas and turns
+ * pointer input into paint/erase/fill/event gestures; switching maps retargets it.
  *
- * The surface has four regions: new-map controls (id, width×height in tiles, tile
- * size), a tileset sidebar (load one or more tileset images from the manifest
+ * The surface adds a map tree (create/select/rename/delete, active map highlighted)
+ * above the per-map controls, then: resize + BGM controls, a tileset sidebar (load one
+ * or more tileset images from the manifest
  * `images`/`atlases` or a URL, each sliced into a clickable tile grid — the
  * selected tile carries its tileset index), a layer/tool bar (ground/decor/
  * overhead/collision plus paint/erase/fill/event, and the collision kind when
@@ -17,7 +19,8 @@
  * one — the RPG-Maker-XP-style modal that edits its {@link MapEvent}'s name and
  * ordered {@link EventPage}s (conditions, graphic, autonomous movement, options,
  * trigger, and the recursive command list) and commits back on OK. Export POSTs the
- * serialized {@link MapData} to the map export action.
+ * active map's serialized {@link MapData} to the map export action; Export all loops
+ * the project's maps through the same action so each is written and registered.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -25,6 +28,7 @@
 
 import type { Handle } from "remix/ui";
 
+import { isFailure } from "@pkg/result";
 import { css, on, ref } from "remix/ui";
 
 import manifest from "~/content/manifest.json";
@@ -53,6 +57,7 @@ import {
 	type TileLayerName,
 	type TileRegion,
 } from "../editors/map-editor";
+import { MapProject } from "../editors/map-project";
 import {
 	canvasSize,
 	eventMarkerStyle,
@@ -224,7 +229,7 @@ class MapCanvas {
 	 *   selection and clipboard).
 	 */
 	constructor(
-		private readonly editor: MapEditor,
+		private editor: MapEditor,
 		private tilesets: Array<LoadedTileset | null>,
 		private readonly onChange: () => void,
 		private readonly onPickEvent: (id: string | null) => void,
@@ -235,6 +240,25 @@ class MapCanvas {
 	/** Whether the select tool is currently armed to stamp the clipboard on click. */
 	get pasteArmed(): boolean {
 		return this.#pasteArmed;
+	}
+
+	/**
+	 * Retargets the canvas at another map's editor and its loaded tilesets (used when
+	 * the map tree switches the active map). Any in-progress drag/paste/hover is
+	 * dropped so a gesture started on the old map never lands on the new one, and the
+	 * canvas re-renders the newly active map.
+	 *
+	 * @param editor The now-active map's editor to render and mutate.
+	 * @param tilesets The loaded tileset images for that map (index-aligned to it).
+	 */
+	setEditor(editor: MapEditor, tilesets: Array<LoadedTileset | null>): void {
+		this.editor = editor;
+		this.tilesets = tilesets;
+		this.#painting = false;
+		this.#dragStart = null;
+		this.#hover = null;
+		this.#pasteArmed = false;
+		this.render();
 	}
 
 	/**
@@ -755,18 +779,38 @@ class MapCanvas {
  * @returns The render function for the map tool.
  */
 export function MapTool(handle: Handle<Record<string, never>>) {
-	let editor = new MapEditor();
+	// The multi-map project: an ordered set of maps, each its own live editor, with one
+	// active. Every editing gesture targets `project.active`, mirrored into `editor`.
+	let project = new MapProject();
+	let editor = project.active;
 
-	// View-owned loaded tileset images, indexed to match the editor's tilesets.
-	let loaded: Array<LoadedTileset | null> = [];
+	// View-owned loaded tileset images per map id, index-aligned to that map's editor's
+	// tilesets. Kept per map (not a single array) so switching maps swaps the images too
+	// and a map's tiles never render against another map's declarations.
+	let loadedByMap = new Map<string, Array<LoadedTileset | null>>([[project.activeMapId, []]]);
+
+	/** The loaded-tileset list for a map id, creating an empty one on first access. */
+	function loadedFor(id: string): Array<LoadedTileset | null> {
+		let existing = loadedByMap.get(id);
+		if (existing) return existing;
+		let fresh: Array<LoadedTileset | null> = [];
+		loadedByMap.set(id, fresh);
+		return fresh;
+	}
+
+	// The active map's loaded images, re-pointed whenever the active map changes.
+	let loaded = loadedFor(project.activeMapId);
 
 	// Local UI state, mirrored back into the view on `handle.update()`.
-	let mapId = "";
-	let bgm = "";
+	let bgm = editor.bgm;
 	let newWidth = editor.width;
 	let newHeight = editor.height;
-	let tileSize = editor.tileWidth;
 	let selectedEventId: string | null = null;
+
+	// Map-tree controls for creating a new map.
+	let newMapId = "";
+	let newMapWidth = editor.width;
+	let newMapHeight = editor.height;
 
 	// The tile under the pointer, mirrored into the coordinate readout.
 	let hoverTile: { x: number; y: number } | null = null;
@@ -794,6 +838,23 @@ export function MapTool(handle: Handle<Record<string, never>>) {
 		},
 		() => void handle.update(),
 	);
+
+	/**
+	 * Re-points `editor`/`loaded` at the currently active map and retargets the canvas
+	 * at it, dropping the previous map's transient selection/hover state. Call after any
+	 * project mutation that can change the active map (new/select/rename/delete).
+	 */
+	function syncActiveMap() {
+		editor = project.active;
+		loaded = loadedFor(project.activeMapId);
+		bgm = editor.bgm;
+		newWidth = editor.width;
+		newHeight = editor.height;
+		selectedEventId = null;
+		hoverTile = null;
+		canvas.setEditor(editor, loaded);
+		canvas.setSelectedEvent(null);
+	}
 
 	/** Reports an outcome inline and re-renders. */
 	function report(message: string, isError: boolean) {
@@ -836,19 +897,70 @@ export function MapTool(handle: Handle<Record<string, never>>) {
 		void handle.update();
 	}
 
-	/** Recreates the map at the new-map control sizes, dropping content. */
-	function createMap() {
-		editor.setId(mapId).createMap(newWidth, newHeight, tileSize, tileSize);
-		selectedEventId = null;
-		report(`New ${editor.width}×${editor.height} map.`, false);
-		refresh();
-	}
-
-	/** Resizes the current map, preserving content. */
+	/** Resizes the active map, preserving content. */
 	function resizeMap() {
 		editor.resize(newWidth, newHeight);
 		selectedEventId = null;
 		report(`Resized to ${editor.width}×${editor.height}.`, false);
+		refresh();
+	}
+
+	/** Adds a fresh map to the project (from the tree's id + size inputs) and selects it. */
+	function addMap() {
+		let result = project.newMap(newMapId, newMapWidth, newMapHeight);
+		if (isFailure(result)) {
+			report(result.error.message, true);
+			return;
+		}
+		let id = result.data;
+		syncActiveMap();
+		newMapId = "";
+		report(`Added map "${id}" (${editor.width}×${editor.height}).`, false);
+		refresh();
+	}
+
+	/** Selects a map from the tree, making it the canvas/tools target. */
+	function selectMap(id: string) {
+		if (id === project.activeMapId) return;
+		let result = project.selectMap(id);
+		if (isFailure(result)) {
+			report(result.error.message, true);
+			return;
+		}
+		syncActiveMap();
+		report(`Editing map "${id}".`, false);
+		refresh();
+	}
+
+	/** Renames a map, re-keying its loaded images so its tiles still resolve. */
+	function renameMap(oldId: string, nextId: string) {
+		let result = project.renameMap(oldId, nextId);
+		if (isFailure(result)) {
+			report(result.error.message, true);
+			return;
+		}
+		let id = result.data;
+		if (id !== oldId) {
+			// Carry the loaded images under the new key so the renamed map keeps its tiles.
+			let images = loadedFor(oldId);
+			loadedByMap.delete(oldId);
+			loadedByMap.set(id, images);
+			if (project.activeMapId === id) loaded = images;
+		}
+		report(`Renamed "${oldId}" → "${id}".`, false);
+		refresh();
+	}
+
+	/** Deletes a map (kept ≥1), dropping its loaded images and re-syncing the active map. */
+	function deleteMap(id: string) {
+		let result = project.deleteMap(id);
+		if (isFailure(result)) {
+			report(result.error.message, true);
+			return;
+		}
+		loadedByMap.delete(id);
+		syncActiveMap();
+		report(`Deleted map "${id}".`, false);
 		refresh();
 	}
 
@@ -914,14 +1026,19 @@ export function MapTool(handle: Handle<Record<string, never>>) {
 		refresh();
 	}
 
-	/** Serializes the current map and POSTs it to the export action. */
-	async function exportMap() {
-		let map = editor.toMapData();
-		if (map.id.length === 0) {
-			report("Enter a map id before exporting.", true);
-			return;
-		}
-		report("Exporting…", false);
+	/**
+	 * POSTs one serialized map to the export action, returning a short outcome line for
+	 * that map. Shared by the single-map export and the export-all loop so both report
+	 * identically. The map id is validated by the project's slug rules, but the server
+	 * re-validates and is the authority on what actually got written.
+	 *
+	 * @param map The serialized map to write.
+	 * @returns A `{ ok, line }` outcome describing the write or the failure.
+	 */
+	async function postMap(map: ReturnType<MapEditor["toMapData"]>): Promise<{
+		ok: boolean;
+		line: string;
+	}> {
 		try {
 			let response = await fetch("/dev/export/map", {
 				method: "POST",
@@ -929,10 +1046,50 @@ export function MapTool(handle: Handle<Record<string, never>>) {
 				body: JSON.stringify(map),
 			});
 			let data = (await response.json()) as { path?: string; url?: string; error?: string };
-			if (response.ok) report(`Wrote ${data.path} and registered "${map.id}" → ${data.url}`, false);
-			else report(`Export failed: ${data.error ?? response.statusText}`, true);
+			if (response.ok) return { ok: true, line: `${map.id} → ${data.path}` };
+			return { ok: false, line: `${map.id}: ${data.error ?? response.statusText}` };
 		} catch (error) {
-			report(`Export failed: ${error instanceof Error ? error.message : String(error)}`, true);
+			return {
+				ok: false,
+				line: `${map.id}: ${error instanceof Error ? error.message : String(error)}`,
+			};
+		}
+	}
+
+	/** Serializes the active map and POSTs it to the export action. */
+	async function exportMap() {
+		let map = editor.toMapData();
+		if (map.id.length === 0) {
+			report("Enter a map id before exporting.", true);
+			return;
+		}
+		report("Exporting…", false);
+		let outcome = await postMap(map);
+		report(outcome.ok ? `Wrote ${outcome.line}.` : `Export failed: ${outcome.line}`, !outcome.ok);
+	}
+
+	/**
+	 * Exports every map in the project in tree order, POSTing each to the same export
+	 * action so each is validated, written to `src/content/maps/<id>.json`, and
+	 * registered in the manifest. Maps are attempted independently; the status line sums
+	 * up how many were written and names any that failed.
+	 */
+	async function exportAll() {
+		let ids = project.mapIds();
+		report(`Exporting ${ids.length} map(s)…`, false);
+		let written = 0;
+		let failures: string[] = [];
+		for (let id of ids) {
+			let mapEditor = project.editor(id);
+			if (mapEditor === null) continue;
+			let outcome = await postMap(mapEditor.toMapData());
+			if (outcome.ok) written++;
+			else failures.push(outcome.line);
+		}
+		if (failures.length === 0) {
+			report(`Exported all ${written} map(s).`, false);
+		} else {
+			report(`Exported ${written} map(s); ${failures.length} failed: ${failures.join("; ")}`, true);
 		}
 	}
 
@@ -943,30 +1100,16 @@ export function MapTool(handle: Handle<Record<string, never>>) {
 				<header mix={css({ display: "grid", gap: "0.25rem" })}>
 					<h2 mix={css({ margin: 0, fontSize: "1.25rem" })}>Map + Events</h2>
 					<p mix={css({ margin: 0, color: "#9ca3af", fontSize: "0.85rem" })}>
-						Compose a tile map across the ground / decor / overhead layers, paint collision, place
-						events, then export it to <code>src/content/maps</code> and register it in the manifest.
+						Manage several maps in one project: pick a map from the tree, compose it across the
+						ground / decor / overhead layers, paint collision, place events, then export the active
+						map (or all of them) to <code>src/content/maps</code> and register each in the manifest.
 					</p>
 				</header>
 
-				{/* New-map controls. */}
+				{/* Active-map controls: resize (content-preserving) + background music. */}
 				<div
 					mix={css({ display: "flex", flexWrap: "wrap", gap: "0.75rem", alignItems: "flex-end" })}
 				>
-					<label mix={LABEL}>
-						Map id
-						<input
-							type="text"
-							value={mapId}
-							placeholder="route-2"
-							mix={[
-								css({ ...FIELD, width: "10rem" }),
-								on<HTMLInputElement, "input">("input", (event) => {
-									mapId = (event.target as HTMLInputElement).value;
-									editor.setId(mapId);
-								}),
-							]}
-						/>
-					</label>
 					<label mix={LABEL}>
 						Width (tiles)
 						<input
@@ -995,28 +1138,9 @@ export function MapTool(handle: Handle<Record<string, never>>) {
 							]}
 						/>
 					</label>
-					<label mix={LABEL}>
-						Tile size (px)
-						<input
-							type="number"
-							min="1"
-							value={String(tileSize)}
-							mix={[
-								css({ ...FIELD, width: "6rem" }),
-								on<HTMLInputElement, "change">("change", (event) => {
-									tileSize = Number((event.target as HTMLInputElement).value);
-								}),
-							]}
-						/>
-					</label>
 					<button
 						type="button"
-						mix={[css(CONTROL_BUTTON), on<HTMLButtonElement, "click">("click", () => createMap())]}
-					>
-						New map
-					</button>
-					<button
-						type="button"
+						title="Resize the active map, preserving its content"
 						mix={[css(CONTROL_BUTTON), on<HTMLButtonElement, "click">("click", () => resizeMap())]}
 					>
 						Resize
@@ -1037,6 +1161,28 @@ export function MapTool(handle: Handle<Record<string, never>>) {
 						/>
 					</label>
 				</div>
+
+				{/* Map tree: the project's maps, plus create/select/rename/delete. */}
+				<MapTreePanel
+					ids={project.mapIds()}
+					activeId={project.activeMapId}
+					newMapId={newMapId}
+					newMapWidth={newMapWidth}
+					newMapHeight={newMapHeight}
+					onNewMapIdInput={(value) => {
+						newMapId = value;
+					}}
+					onNewMapWidthInput={(value) => {
+						newMapWidth = value;
+					}}
+					onNewMapHeightInput={(value) => {
+						newMapHeight = value;
+					}}
+					onAdd={() => addMap()}
+					onSelect={(id) => selectMap(id)}
+					onRename={(oldId, nextId) => renameMap(oldId, nextId)}
+					onDelete={(id) => deleteMap(id)}
+				/>
 
 				{/* Layer + tool + view bar. */}
 				<div
@@ -1527,23 +1673,41 @@ export function MapTool(handle: Handle<Record<string, never>>) {
 					) : null}
 				</div>
 
-				<button
-					type="button"
-					mix={[
-						css({
-							padding: "0.55rem 1rem",
-							fontFamily: "inherit",
-							color: "#052e16",
-							background: "#4ade80",
-							border: "none",
-							borderRadius: "0.375rem",
-							cursor: "pointer",
-						}),
-						on<HTMLButtonElement, "click">("click", () => void exportMap()),
-					]}
-				>
-					Export map
-				</button>
+				<div mix={css({ display: "flex", flexWrap: "wrap", gap: "0.75rem", alignItems: "center" })}>
+					<button
+						type="button"
+						title="Export the active map to src/content/maps and register it"
+						mix={[
+							css({
+								padding: "0.55rem 1rem",
+								fontFamily: "inherit",
+								color: "#052e16",
+								background: "#4ade80",
+								border: "none",
+								borderRadius: "0.375rem",
+								cursor: "pointer",
+							}),
+							on<HTMLButtonElement, "click">("click", () => void exportMap()),
+						]}
+					>
+						Export map
+					</button>
+					<button
+						type="button"
+						title="Export every map in the project and register each in the manifest"
+						mix={[
+							css({
+								...CONTROL_BUTTON,
+								padding: "0.55rem 1rem",
+								borderColor: "#4ade80",
+								color: "#4ade80",
+							}),
+							on<HTMLButtonElement, "click">("click", () => void exportAll()),
+						]}
+					>
+						Export all ({project.size})
+					</button>
+				</div>
 
 				{status ? (
 					<p
@@ -1564,6 +1728,215 @@ export function MapTool(handle: Handle<Record<string, never>>) {
 /** Finds an event on the editor by id, or `null`. */
 function findEvent(editor: MapEditor, id: string): MapEvent | null {
 	return editor.events.find((event) => event.id === id) ?? null;
+}
+
+/** Props for the map-tree panel (the project's list of maps + create controls). */
+interface MapTreePanelProps {
+	/** The project's map ids, in tree order. */
+	ids: string[];
+	/** The id of the active map (highlighted in the list). */
+	activeId: string;
+	/** The id typed into the new-map field. */
+	newMapId: string;
+	/** The width (in tiles) a new map is created at. */
+	newMapWidth: number;
+	/** The height (in tiles) a new map is created at. */
+	newMapHeight: number;
+	/** Called as the new-map id field changes. */
+	onNewMapIdInput: (value: string) => void;
+	/** Called as the new-map width field changes. */
+	onNewMapWidthInput: (value: number) => void;
+	/** Called as the new-map height field changes. */
+	onNewMapHeightInput: (value: number) => void;
+	/** Called to create the new map from the current field values. */
+	onAdd: () => void;
+	/** Called with a map id to make it the active map. */
+	onSelect: (id: string) => void;
+	/** Called with the old and new id to rename a map. */
+	onRename: (oldId: string, newId: string) => void;
+	/** Called with a map id to delete it. */
+	onDelete: (id: string) => void;
+}
+
+/**
+ * The map tree: the project's ordered list of maps (the active one highlighted) with
+ * a create row (id + width×height + New map) above it. Clicking a map selects it;
+ * each row has Rename (prompts for a new id) and Delete (disabled when only one map
+ * remains so a project always keeps at least one). All lifecycle changes are handled
+ * by the parent through the callbacks; this component only renders and dispatches.
+ *
+ * @param handle Component handle exposing the tree props.
+ * @returns The render function for the map-tree panel.
+ */
+function MapTreePanel(handle: Handle<MapTreePanelProps>) {
+	return () => {
+		let props = handle.props;
+		let onlyOne = props.ids.length <= 1;
+		return (
+			<div
+				mix={css({
+					display: "grid",
+					gap: "0.6rem",
+					width: "100%",
+					padding: "0.75rem 1rem",
+					background: "#141417",
+					border: "1px solid #27272a",
+					borderRadius: "0.5rem",
+				})}
+			>
+				<div mix={css({ display: "flex", justifyContent: "space-between", alignItems: "center" })}>
+					<h3 mix={css({ margin: 0, fontSize: "1rem" })}>Maps</h3>
+					<span mix={css({ fontSize: "0.72rem", color: "#9ca3af" })}>
+						{props.ids.length} map{props.ids.length === 1 ? "" : "s"}
+					</span>
+				</div>
+
+				{/* New-map row. */}
+				<div
+					mix={css({ display: "flex", flexWrap: "wrap", gap: "0.5rem", alignItems: "flex-end" })}
+				>
+					<label mix={LABEL}>
+						New map id
+						<input
+							type="text"
+							value={props.newMapId}
+							placeholder="route-2"
+							mix={[
+								css({ ...FIELD, width: "10rem" }),
+								on<HTMLInputElement, "input">("input", (event) => {
+									props.onNewMapIdInput((event.target as HTMLInputElement).value);
+								}),
+							]}
+						/>
+					</label>
+					<label mix={LABEL}>
+						Width
+						<input
+							type="number"
+							min="1"
+							value={String(props.newMapWidth)}
+							mix={[
+								css({ ...FIELD, width: "5rem" }),
+								on<HTMLInputElement, "change">("change", (event) => {
+									props.onNewMapWidthInput(Number((event.target as HTMLInputElement).value));
+								}),
+							]}
+						/>
+					</label>
+					<label mix={LABEL}>
+						Height
+						<input
+							type="number"
+							min="1"
+							value={String(props.newMapHeight)}
+							mix={[
+								css({ ...FIELD, width: "5rem" }),
+								on<HTMLInputElement, "change">("change", (event) => {
+									props.onNewMapHeightInput(Number((event.target as HTMLInputElement).value));
+								}),
+							]}
+						/>
+					</label>
+					<button
+						type="button"
+						mix={[
+							css(CONTROL_BUTTON),
+							on<HTMLButtonElement, "click">("click", () => props.onAdd()),
+						]}
+					>
+						New map
+					</button>
+				</div>
+
+				{/* The map list. */}
+				<ul
+					mix={css({
+						listStyle: "none",
+						margin: 0,
+						padding: 0,
+						display: "grid",
+						gap: "0.25rem",
+						maxHeight: "16rem",
+						overflowY: "auto",
+					})}
+				>
+					{props.ids.map((id) => {
+						let isActive = id === props.activeId;
+						return (
+							<li
+								key={id}
+								mix={css({
+									display: "flex",
+									alignItems: "center",
+									justifyContent: "space-between",
+									gap: "0.5rem",
+									padding: "0.35rem 0.5rem",
+									borderRadius: "0.375rem",
+									background: isActive ? "#1e1b4b" : "#18181b",
+									border: `1px solid ${isActive ? ACCENT : IDLE_BORDER}`,
+								})}
+							>
+								<button
+									type="button"
+									title={`Edit map "${id}"`}
+									mix={[
+										css({
+											flex: "1 1 auto",
+											textAlign: "left",
+											padding: 0,
+											fontFamily: "inherit",
+											fontSize: "0.85rem",
+											color: isActive ? "#c7d2fe" : "#e5e7eb",
+											background: "transparent",
+											border: "none",
+											cursor: "pointer",
+										}),
+										on<HTMLButtonElement, "click">("click", () => props.onSelect(id)),
+									]}
+								>
+									{isActive ? "▸ " : ""}
+									{id}
+								</button>
+								<button
+									type="button"
+									title="Rename this map"
+									mix={[
+										css({ ...CONTROL_BUTTON, padding: "0.15rem 0.4rem", fontSize: "0.72rem" }),
+										on<HTMLButtonElement, "click">("click", () => {
+											let next = window.prompt(`Rename map "${id}" to:`, id);
+											if (next !== null && next.trim() !== id) props.onRename(id, next);
+										}),
+									]}
+								>
+									Rename
+								</button>
+								<button
+									type="button"
+									disabled={onlyOne}
+									title={onlyOne ? "A project must keep at least one map" : "Delete this map"}
+									mix={[
+										css({
+											...CONTROL_BUTTON,
+											padding: "0.15rem 0.4rem",
+											fontSize: "0.72rem",
+											opacity: onlyOne ? 0.45 : 1,
+											cursor: onlyOne ? "not-allowed" : "pointer",
+										}),
+										on<HTMLButtonElement, "click">("click", () => {
+											if (onlyOne) return;
+											props.onDelete(id);
+										}),
+									]}
+								>
+									Delete
+								</button>
+							</li>
+						);
+					})}
+				</ul>
+			</div>
+		);
+	};
 }
 
 /** Props for one tileset's clickable tile-grid palette. */
