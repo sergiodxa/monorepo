@@ -700,11 +700,12 @@ export class Battle {
 	 * are updated, and an `item-used` event carries the outcome to the presentation.
 	 * A no-op result (full HP, unmatched status cure, revive on a healthy target)
 	 * still consumes the turn but reports no change.
+	 * @yields {BattleEvent.ItemUsedEvent} The events resulting from the item use.
 	 */
 	private *resolveItemUse(
 		userPosition: BattlePosition,
 		command: UseItemTurnCommand,
-	): Generator<BattleEvent, void, void> {
+	): Generator<BattleEvent.ItemUsedEvent, void, void> {
 		// A null effect means the owning boundary could not consume the item; the
 		// action is still spent, but nothing is applied and no event is emitted.
 		if (command.effect === null) return;
