@@ -82,6 +82,18 @@ export interface Size {
 	height: number;
 }
 
+/**
+ * Reference to the artwork associated with a species, or `null` for none.
+ *
+ * A sprite is either a named region inside a shared atlas (`{ atlas, region }`)
+ * or a standalone manifest image id (`{ image }`). Both forms hold opaque
+ * identifiers the presentation layer resolves against the asset manifest; the
+ * data layer never dereferences them. The field is optional and defaults to
+ * `null` so existing content stays valid, and the game may ignore it for now —
+ * it exists so the dev-tools species editor can associate creature art.
+ */
+export type SpeciesSprite = { atlas: string; region: string } | { image: string } | null;
+
 export interface Species {
 	/** ID of the creature species */
 	number: number;
@@ -113,6 +125,12 @@ export interface Species {
 	gender: Gender.Genderless | { [K in Gender.Male | Gender.Female]?: number };
 	/** Breeding compatibility group for this creature. */
 	eggGroup: EggGroups;
+	/**
+	 * Artwork associated with this species, or `null`/absent for none. Set by the
+	 * dev-tools species editor; the game may ignore it for now. See
+	 * {@link SpeciesSprite}.
+	 */
+	sprite?: SpeciesSprite;
 }
 
 export function isSpeciesId(value: unknown): value is SpeciesId {
