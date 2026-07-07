@@ -17,7 +17,7 @@ import type { GameDataSource } from "~/game/data/game-data";
 import type { Engine } from "~/game/engine";
 import type { GameEvent } from "~/game/events";
 
-import { MANIFEST } from "../assets/manifest";
+import { MANIFEST } from "~/assets/manifest";
 
 import type { Scene } from "./scene";
 

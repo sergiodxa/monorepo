@@ -6,8 +6,8 @@
  * out by id. The registry ships with no external art: the renderer draws
  * procedural placeholders (and a generated demo atlas) for missing assets, so the
  * game is fully playable before any real art or audio lands. Drop real files
- * under `src/presentation/assets/` and add their ids here to replace the
- * placeholders without touching rendering code.
+ * under `src/assets/` and add their ids here to replace the placeholders
+ * without touching rendering code.
  *
  * LEGAL: only original or openly-licensed art may be listed here. The ripped
  * commercial Pokémon FireRed/LeafGreen sprite sheets that happen to sit in this
@@ -39,7 +39,7 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import type { AssetManifest } from "../core/assets";
+import type { AssetManifest } from "~/presentation/core/assets";
 
 /** The complete set of assets loaded at boot (no external art until one is added). */
 export const MANIFEST: AssetManifest = {
