@@ -11,8 +11,10 @@
  */
 import { describe, expect, test } from "bun:test";
 
+import { isLevelUpMove } from "~/game/data/species";
 import { Stat } from "~/game/data/stat";
 
+import { MOVES } from "./moves";
 import { SPECIES } from "./species";
 
 /** Valid stat keys an EV yield is allowed to use. */
@@ -20,6 +22,13 @@ let STAT_VALUES = Object.values(Stat);
 
 /** Highest combined EV a single species may yield on faint. */
 let MAX_YIELD_TOTAL = 3;
+
+/**
+ * Species whose level-up learnsets were authored so wild-caught creatures learn
+ * moves in normal play. These must each carry a non-empty, ascending level-up
+ * learnset that references only real move ids.
+ */
+let AUTHORED_LEARNSET_SPECIES = ["RATICATE", "ARBOK", "PIKACHU", "RAICHU"];
 
 test("the roster still holds the original 151 species", () => {
 	expect(Object.keys(SPECIES)).toHaveLength(151);
@@ -44,6 +53,30 @@ describe("every species has a valid EV yield", () => {
 			}
 
 			expect(total).toBeLessThanOrEqual(MAX_YIELD_TOTAL);
+		});
+	}
+});
+
+describe("newly-authored species have valid level-up learnsets", () => {
+	for (let id of AUTHORED_LEARNSET_SPECIES) {
+		test(`${id} learns moves by level-up`, () => {
+			let species = SPECIES[id];
+			expect(species).toBeDefined();
+
+			let levelUpMoves = species!.learnset.filter(isLevelUpMove);
+
+			// A wild-caught creature of this species must be able to learn moves.
+			expect(levelUpMoves.length).toBeGreaterThan(0);
+
+			let previousLevel = -1;
+			for (let entry of levelUpMoves) {
+				// Entries are sorted ascending by level (ties allowed).
+				expect(entry.level).toBeGreaterThanOrEqual(previousLevel);
+				previousLevel = entry.level;
+
+				// Every referenced move id resolves in the move roster.
+				expect(MOVES).toHaveProperty(entry.moveId);
+			}
 		});
 	}
 });
