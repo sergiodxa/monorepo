@@ -25,7 +25,9 @@ import { GameClient } from "../core/game-client";
 import { Button } from "../core/input";
 import { TILE_SIZE } from "../core/loop";
 import { HERO_ID, WILD_ID } from "../core/new-game";
+import { type Atlas, drawSprite } from "../render/atlas";
 import { Camera } from "../render/camera";
+import { buildPlaceholderAtlas } from "../render/placeholder-atlas";
 import { drawText } from "../render/text";
 import * as theme from "../render/theme";
 import { TileMapRenderer } from "../render/tilemap";
@@ -66,6 +68,18 @@ export class OverworldScene implements Scene {
 	/** The interactable NPCs on this map (created on enter). */
 	private npcs: Npc[] = [];
 
+	/**
+	 * The atlas the world draws actors from, or null to draw procedurally.
+	 *
+	 * Prefers a manifest atlas ("overworld") and falls back to the generated demo
+	 * atlas; when neither is available (e.g. no DOM), it is null and the scene
+	 * draws the procedural player/NPC sprites exactly as before.
+	 */
+	private atlas: Atlas | null = null;
+
+	/** Milliseconds since enter, driving the character walk-cycle frame. */
+	private elapsed = 0;
+
 	/** Monotonic counter making each battle id unique. */
 	private battleCount = 0;
 
@@ -75,7 +89,8 @@ export class OverworldScene implements Scene {
 	enter(game: GameClient) {
 		let data = game.assets.map(this.spawn.mapId) ?? createSampleMap();
 		this.map = new GameMap(data);
-		this.renderer = new TileMapRenderer(data, game.assets.image(data.tileset));
+		this.atlas = game.assets.atlas("overworld") ?? buildPlaceholderAtlas();
+		this.renderer = new TileMapRenderer(data, game.assets.image(data.tileset), this.atlas);
 		this.player = new PlayerController(this.spawn.x, this.spawn.y, this.spawn.facing);
 		// The trainer fields mid-pool species so its party differs from the starter it fights.
 		let speciesIds = Object.keys(game.content.species);
@@ -92,6 +107,7 @@ export class OverworldScene implements Scene {
 	}
 
 	update(game: GameClient, dt: number) {
+		this.elapsed += dt;
 		if (!this.player.moving && game.input.isPressed(Button.Start)) {
 			game.scenes.push(new MenuScene(this.snapshotState()));
 			return;
@@ -256,17 +272,24 @@ export class OverworldScene implements Scene {
 		game.scenes.push(new BattleScene(battleId));
 	}
 
-	/** Draws the player as a procedural character sprite facing its direction. */
+	/**
+	 * Draws the player from the atlas character region, or procedurally.
+	 *
+	 * The walk frame alternates only while the player is stepping; standing still
+	 * holds frame 0. When the atlas (or the region) is missing, `drawSprite`
+	 * returns false and the original procedural sprite is drawn instead.
+	 */
 	private drawPlayer(ctx: CanvasRenderingContext2D) {
 		let x = Math.round(this.player.pixelX - this.camera.x);
 		let y = Math.round(this.player.pixelY - this.camera.y);
 
-		ctx.fillStyle = theme.PLAYER.body;
-		ctx.fillRect(x + 3, y - 6, 10, 20);
-		ctx.fillStyle = theme.PLAYER.skin;
-		ctx.fillRect(x + 4, y - 8, 8, 6);
+		let frame = this.player.moving && Math.floor(this.elapsed / 180) % 2 === 1 ? 1 : 0;
+		// The 16px character cell sits 8px above the tile so its feet meet the tile.
+		if (drawSprite(ctx, this.atlas, `hero.${this.player.facing}.${frame}`, x, y - 8)) return;
 
-		// A small nub indicating facing.
+		this.drawProceduralActor(ctx, x, y, theme.PLAYER.body);
+
+		// A small nub indicating facing (procedural fallback only).
 		ctx.fillStyle = theme.PLAYER.facingNub;
 		let cx = x + 8;
 		let cy = y + 2;
@@ -280,17 +303,30 @@ export class OverworldScene implements Scene {
 		ctx.fillRect(nx, ny, 2, 2);
 	}
 
-	/** Draws one NPC as a procedural sprite, colored by role, offset by the camera. */
+	/**
+	 * Draws one NPC from the atlas character region, or procedurally.
+	 *
+	 * NPCs share the character art but keep their role label so the three read
+	 * apart; when the atlas is missing they fall back to the role-colored
+	 * procedural sprite, unchanged.
+	 */
 	private drawNpc(ctx: CanvasRenderingContext2D, npc: Npc) {
 		let x = Math.round(npc.x * TILE_SIZE - this.camera.x);
 		let y = Math.round(npc.y * TILE_SIZE - this.camera.y);
 
-		ctx.fillStyle = theme.NPC_COLOR[npc.role];
-		ctx.fillRect(x + 3, y - 6, 10, 20);
-		ctx.fillStyle = theme.PLAYER.skin;
-		ctx.fillRect(x + 4, y - 8, 8, 6);
+		if (!drawSprite(ctx, this.atlas, "hero.down.0", x, y - 8)) {
+			this.drawProceduralActor(ctx, x, y, theme.NPC_COLOR[npc.role]);
+		}
 
 		// The role glyph over the head keeps the three NPCs distinguishable.
 		drawText(ctx, npc.label, x + 8, y - 8, { align: "center", color: theme.TEXT.inverseWhite });
+	}
+
+	/** Draws the shared procedural actor body+head used when no atlas art exists. */
+	private drawProceduralActor(ctx: CanvasRenderingContext2D, x: number, y: number, body: string) {
+		ctx.fillStyle = body;
+		ctx.fillRect(x + 3, y - 6, 10, 20);
+		ctx.fillStyle = theme.PLAYER.skin;
+		ctx.fillRect(x + 4, y - 8, 8, 6);
 	}
 }

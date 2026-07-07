@@ -29,6 +29,8 @@ import type { Scene } from "../core/scene";
 import { GameClient } from "../core/game-client";
 import { Button } from "../core/input";
 import { SCREEN_WIDTH } from "../core/loop";
+import { type Atlas, drawSprite } from "../render/atlas";
+import { buildPlaceholderAtlas } from "../render/placeholder-atlas";
 import { drawText, Typewriter, wrapText } from "../render/text";
 import * as theme from "../render/theme";
 import { Window } from "../render/window";
@@ -107,6 +109,15 @@ export class BattleScene implements Scene {
 	private rewardSettled = false;
 
 	/**
+	 * The atlas creatures are drawn from, or null to draw procedural placeholders.
+	 *
+	 * Prefers a manifest atlas ("overworld") and falls back to the generated demo
+	 * atlas; when neither is available the scene draws the procedural per-species
+	 * blob exactly as before.
+	 */
+	private atlas: Atlas | null = null;
+
+	/**
 	 * @param battleId - The battle this scene presents.
 	 * @param options - Optional stake and capture rules; wild battles pass nothing.
 	 */
@@ -156,6 +167,7 @@ export class BattleScene implements Scene {
 
 	/** Initializes HP bars and queues the intro message. */
 	enter(game: GameClient) {
+		this.atlas = game.assets.atlas("overworld") ?? buildPlaceholderAtlas();
 		let view = game.engine.selectBattle(this.battleId);
 		this.syncBars(view);
 		let foe = view.enemies[0];
@@ -533,7 +545,15 @@ export class BattleScene implements Scene {
 		ctx.fillRect(0, 96, SCREEN_WIDTH, 16);
 	}
 
-	/** Draws one combatant as a procedural placeholder sprite. */
+	/**
+	 * Draws one combatant from the atlas creature region, or procedurally.
+	 *
+	 * The 32px atlas silhouette is centered on the same spot the procedural blob
+	 * used; the back (ally) sprite is mirrored so the two face each other. The
+	 * species initials are still drawn over the sprite so different species read
+	 * apart even sharing one generic silhouette. When no atlas art is available the
+	 * original per-species colored ellipse is drawn instead.
+	 */
 	private drawCreature(
 		ctx: CanvasRenderingContext2D,
 		summary: CreatureSummaryView,
@@ -542,6 +562,15 @@ export class BattleScene implements Scene {
 		back: boolean,
 	) {
 		if (this.fainted.has(`${back ? 0 : 1}:0`)) return;
+
+		if (drawSprite(ctx, this.atlas, "creature.body", x + 8, y + 8, { flipX: back })) {
+			drawText(ctx, initials(summary.speciesId), x + 24, y + 20, {
+				align: "center",
+				color: theme.TEXT.inverseWhite,
+			});
+			return;
+		}
+
 		ctx.fillStyle = colorFor(summary.speciesId);
 		ctx.strokeStyle = theme.CREATURE_PLACEHOLDER.outline;
 		ctx.lineWidth = 1;
@@ -553,7 +582,6 @@ export class BattleScene implements Scene {
 			align: "center",
 			color: theme.TEXT.inverseWhite,
 		});
-		void back;
 	}
 
 	/** Draws a combatant's name, level, and HP bar. */

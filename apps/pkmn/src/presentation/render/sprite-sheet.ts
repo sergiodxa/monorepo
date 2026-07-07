@@ -7,9 +7,45 @@
  * the fixed timestep to drive walk cycles and battle effects. Both work in
  * internal pixels; scaling and smoothing are the client's concern.
  *
+ * A uniform grid is a degenerate atlas, so `gridRegions` bridges the two: it
+ * turns a `columns × rows` grid into a named-region map an `Atlas` can consume,
+ * letting callers address grid frames by name ("prefix.0", "prefix.1", …)
+ * without the atlas needing to know the sheet was a grid. This keeps the older
+ * index-based `SpriteSheet` API working while newer code speaks in regions.
+ *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
+import type { Rect } from "./atlas";
+
+/**
+ * Builds a named-region map for a uniform grid of `frameWidth` x `frameHeight`
+ * cells, laid out left-to-right then top-to-bottom.
+ *
+ * Each cell `i` becomes the region `` `${prefix}${i}` `` (prefix defaults to
+ * `"frame."`), so a grid can be handed to an `Atlas` and addressed by name. Pure:
+ * computes rects from the grid dimensions only, no image or canvas access.
+ */
+export function gridRegions(
+	columns: number,
+	rows: number,
+	frameWidth: number,
+	frameHeight: number,
+	prefix = "frame.",
+): Record<string, Rect> {
+	let regions: Record<string, Rect> = {};
+	let cols = Math.max(1, Math.floor(columns));
+	let rowCount = Math.max(1, Math.floor(rows));
+	for (let index = 0; index < cols * rowCount; index++) {
+		regions[`${prefix}${index}`] = {
+			x: (index % cols) * frameWidth,
+			y: Math.floor(index / cols) * frameHeight,
+			w: frameWidth,
+			h: frameHeight,
+		};
+	}
+	return regions;
+}
 
 /** One image split into a uniform grid of same-size frames. */
 export class SpriteSheet {

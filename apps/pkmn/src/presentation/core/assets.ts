@@ -1,18 +1,38 @@
 /**
  * The typed asset registry and eager loader for the presentation.
  *
- * A single manifest enumerates every image, audio clip, and map the game can
- * use; the store loads them all at boot (the game is small enough for eager
- * loading) and hands out decoded handles by id. Missing files are tolerated so
- * the game still runs before real art and audio exist: image and audio getters
- * return `null` for ids that failed or were never declared, and rendering code
- * falls back to procedural drawing. A manifest id that was declared but is asked
- * for the wrong kind throws, because that is a programming error, not missing art.
+ * A single manifest enumerates every image, audio clip, map, and sprite atlas the
+ * game can use; the store loads them all at boot (the game is small enough for
+ * eager loading) and hands out decoded handles by id. Missing files are tolerated
+ * so the game still runs before real art and audio exist: image, audio, and atlas
+ * getters return `null` for ids that failed or were never declared, and rendering
+ * code falls back to procedural drawing. A manifest id that was declared but is
+ * asked for the wrong kind throws, because that is a programming error, not
+ * missing art.
+ *
+ * An atlas entry pairs an image URL with a named-region map (and optional animated
+ * regions); once its image decodes the store assembles an `Atlas` and exposes it
+ * by id, so renderers blit by region name without knowing whether the art came
+ * from a file or was generated in code. Only original or openly-licensed art may
+ * be declared — never the ripped commercial sheets that sit in `assets/`.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
+import type { AtlasAnimation, Rect } from "../render/atlas";
 import type { TileMap } from "../render/tilemap";
+
+import { Atlas, type AtlasSource } from "../render/atlas";
+
+/** One atlas declaration: an image URL sliced into named (and animated) regions. */
+export interface AtlasManifestEntry {
+	/** URL of the sheet image sliced into regions. */
+	image: string;
+	/** Static regions keyed by name, in source pixels. */
+	regions: Record<string, Rect>;
+	/** Optional animated regions keyed by name. */
+	animations?: Record<string, AtlasAnimation>;
+}
 
 /** Enumerates every asset the game may load, grouped by kind. */
 export interface AssetManifest {
@@ -22,6 +42,8 @@ export interface AssetManifest {
 	audio: Record<string, { url: string; loopStart?: number; loopEnd?: number }>;
 	/** Map id to the URL of its tilemap JSON. */
 	maps: Record<string, string>;
+	/** Atlas id to its image URL and region map (optional; defaults to empty). */
+	atlases?: Record<string, AtlasManifestEntry>;
 }
 
 /** Eagerly loads and hands out every asset named by a manifest. */
@@ -37,6 +59,9 @@ export class AssetStore {
 
 	/** Parsed tilemaps by manifest id (absent when a load failed). */
 	private readonly maps = new Map<string, TileMap>();
+
+	/** Assembled atlases by manifest id (absent when the image failed to load). */
+	private readonly atlases = new Map<string, Atlas>();
 
 	/** @param manifest - The full set of assets to load at boot. */
 	constructor(private readonly manifest: AssetManifest) {}
@@ -54,7 +79,8 @@ export class AssetStore {
 		let imageEntries = Object.entries(this.manifest.images);
 		let audioEntries = Object.entries(this.manifest.audio);
 		let mapEntries = Object.entries(this.manifest.maps);
-		let total = imageEntries.length + audioEntries.length + mapEntries.length;
+		let atlasEntries = Object.entries(this.manifest.atlases ?? {});
+		let total = imageEntries.length + audioEntries.length + mapEntries.length + atlasEntries.length;
 		let loaded = 0;
 		let step = () => onProgress(++loaded, total);
 
@@ -93,6 +119,20 @@ export class AssetStore {
 			);
 		}
 
+		for (let [id, entry] of atlasEntries) {
+			tasks.push(
+				this.loadImage(entry.image)
+					.then((image) => {
+						this.atlases.set(
+							id,
+							new Atlas(image as unknown as AtlasSource, entry.regions, entry.animations ?? {}),
+						);
+					})
+					.catch((error) => console.warn(`Failed to load atlas "${id}":`, error))
+					.finally(step),
+			);
+		}
+
 		await Promise.all(tasks);
 	}
 
@@ -114,6 +154,11 @@ export class AssetStore {
 	/** Returns the parsed tilemap for an id, or null when it is missing. */
 	map(id: string): TileMap | null {
 		return this.maps.get(id) ?? null;
+	}
+
+	/** Returns the assembled atlas for an id, or null when it is missing. */
+	atlas(id: string): Atlas | null {
+		return this.atlases.get(id) ?? null;
 	}
 
 	/** Decodes one image URL into an element. */

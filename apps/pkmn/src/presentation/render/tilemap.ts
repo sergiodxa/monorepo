@@ -16,6 +16,7 @@ import type { Direction } from "../core/direction";
 
 import { SCREEN_HEIGHT, SCREEN_WIDTH, TILE_SIZE } from "../core/loop";
 
+import { type Atlas, drawSprite } from "./atlas";
 import { type Camera } from "./camera";
 import * as theme from "./theme";
 
@@ -84,11 +85,15 @@ export class TileMapRenderer {
 
 	/**
 	 * @param map - The map to render.
-	 * @param tileset - The tileset image, or null to draw procedural tiles.
+	 * @param tileset - The grid tileset image, or null to draw from the atlas or procedurally.
+	 * @param atlas - An optional atlas whose per-collision tile regions are used
+	 *   when no grid tileset is supplied; when it too lacks a region the cell falls
+	 *   back to a flat procedural color, so a map always renders.
 	 */
 	constructor(
 		private readonly map: TileMap,
 		private readonly tileset: HTMLImageElement | null,
+		private readonly atlas: Atlas | null = null,
 	) {
 		this.encounterTiles = new Set(map.encounters.flatMap((zone) => zone.zone));
 		this.prerender();
@@ -146,15 +151,38 @@ export class TileMapRenderer {
 		}
 	}
 
-	/** Colors each cell from its collision value and encounter membership. */
+	/**
+	 * Draws each cell from an atlas tile region, falling back to a flat color.
+	 *
+	 * Per cell it prefers the atlas region for that cell's collision/encounter kind
+	 * (so a dropped-in tile pack shows through); when the atlas or the region is
+	 * absent it fills the flat placeholder color and strokes the debug grid line
+	 * exactly as before, so a map is always visible.
+	 */
 	private drawProcedural(ctx: CanvasRenderingContext2D) {
 		for (let index = 0; index < this.map.collision.length; index++) {
 			let x = (index % this.map.width) * TILE_SIZE;
 			let y = Math.floor(index / this.map.width) * TILE_SIZE;
+			if (drawSprite(ctx, this.atlas, this.tileRegion(index), x, y)) continue;
 			ctx.fillStyle = this.tileColor(index);
 			ctx.fillRect(x, y, TILE_SIZE, TILE_SIZE);
 			ctx.strokeStyle = theme.TILE.gridLine;
 			ctx.strokeRect(x + 0.5, y + 0.5, TILE_SIZE - 1, TILE_SIZE - 1);
+		}
+	}
+
+	/** The atlas region name for one cell's collision value and encounter membership. */
+	private tileRegion(index: number): string {
+		if (this.encounterTiles.has(index)) return "tile.tall-grass";
+		switch (this.map.collision[index]) {
+			case Collision.Solid:
+				return "tile.wall";
+			case Collision.Water:
+				return "tile.water";
+			case Collision.LedgeDown:
+				return "tile.sand";
+			default:
+				return "tile.grass";
 		}
 	}
 

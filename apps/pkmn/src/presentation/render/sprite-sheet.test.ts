@@ -11,7 +11,7 @@
  */
 import { expect, test } from "bun:test";
 
-import { SpriteAnimation, SpriteSheet } from "./sprite-sheet";
+import { gridRegions, SpriteAnimation, SpriteSheet } from "./sprite-sheet";
 
 /** A recording fake context that captures the source rect and transform state. */
 function fakeContext() {
@@ -124,4 +124,26 @@ test("SpriteSheet flipX wraps the blit in a mirrored transform", () => {
 	let ctx = fakeContext();
 	sheet.draw(ctx as unknown as CanvasRenderingContext2D, 0, 0, 0, true);
 	expect(ctx.transforms).toEqual(["save", "translate", "scale", "restore"]);
+});
+
+test("gridRegions lays a grid out left-to-right then top-to-bottom", () => {
+	// 3 columns x 2 rows of 16px cells.
+	let regions = gridRegions(3, 2, 16, 16);
+	expect(Object.keys(regions)).toHaveLength(6);
+	expect(regions["frame.0"]).toEqual({ x: 0, y: 0, w: 16, h: 16 });
+	expect(regions["frame.2"]).toEqual({ x: 32, y: 0, w: 16, h: 16 });
+	// Index 3 wraps to the second row's first column.
+	expect(regions["frame.3"]).toEqual({ x: 0, y: 16, w: 16, h: 16 });
+	expect(regions["frame.5"]).toEqual({ x: 32, y: 16, w: 16, h: 16 });
+});
+
+test("gridRegions honors a custom region-name prefix", () => {
+	let regions = gridRegions(2, 1, 8, 8, "hero.down.");
+	expect(regions["hero.down.0"]).toEqual({ x: 0, y: 0, w: 8, h: 8 });
+	expect(regions["hero.down.1"]).toEqual({ x: 8, y: 0, w: 8, h: 8 });
+});
+
+test("gridRegions clamps degenerate dimensions to at least one cell", () => {
+	let regions = gridRegions(0, 0, 16, 16);
+	expect(Object.keys(regions)).toEqual(["frame.0"]);
 });
