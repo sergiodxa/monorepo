@@ -8,7 +8,9 @@
  */
 import type { BattleEvent } from "./battle/battle";
 import type { ItemId } from "./data/item";
+import type { MoveId } from "./data/move";
 import type { SpeciesId } from "./data/species";
+import type { MoveSet } from "./world/creature";
 import type { BattleId, CreatureId, PlayerId } from "./world/ids";
 
 /** Events emitted by the engine boundary. */
@@ -123,6 +125,37 @@ export namespace GameEvent {
 		shakes: number;
 		success: boolean;
 	}
+
+	/** Reports that a creature learned a move into its moveset. */
+	export interface LearnedMove {
+		type: "learned-move";
+		creatureId: CreatureId;
+		moveId: MoveId;
+		/** The slot the move was written into. */
+		slotIndex: number;
+		/** The move that occupied the slot before this one, if any. */
+		replacedMoveId?: MoveId;
+	}
+
+	/**
+	 * Reports that a creature can learn a move but its move slots are full, so the
+	 * UI must let the player replace a move or skip. Carries the current moveset so
+	 * the prompt can show the four moves alongside the new one.
+	 */
+	export interface CanLearnMove {
+		type: "can-learn-move";
+		creatureId: CreatureId;
+		moveId: MoveId;
+		/** Snapshot of the creature's current four move slots. */
+		currentMoveset: MoveSet;
+	}
+
+	/** Reports that a player declined to learn an offered move. */
+	export interface MoveLearnDeclined {
+		type: "move-learn-declined";
+		creatureId: CreatureId;
+		moveId: MoveId;
+	}
 }
 
 /** High-level engine event emitted after a command is applied. */
@@ -141,4 +174,7 @@ export type GameEvent =
 	| GameEvent.PartyHealed
 	| GameEvent.EncounterSpawned
 	| GameEvent.CreatureCanEvolve
-	| GameEvent.CaptureAttempted;
+	| GameEvent.CaptureAttempted
+	| GameEvent.LearnedMove
+	| GameEvent.CanLearnMove
+	| GameEvent.MoveLearnDeclined;

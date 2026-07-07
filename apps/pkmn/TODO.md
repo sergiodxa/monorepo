@@ -117,7 +117,7 @@
 
 - [x] Implement the capture formula: `computeCaptureAttempt` (in `src/game/systems/capture-system.ts`) runs the Gen 3 catch value + four-shake check, read through the `attempt-capture` command using the ball multiplier and target's live HP/status.
 - [ ] Add EV yield to experience gain: experience is now awarded on victory (`awardBattleExperience`), but per-species `evYield` data and EV application on faint are still missing.
-- [ ] Add level-up move learning: evolution eligibility is now emitted (`creature-can-evolve` after level-ups, via `getLevelUpEvolution`), but nothing offers newly-learnable moves, and `evolve-creature` still accepts any species swap without re-validating the rule.
+- [x] Add level-up move learning: crossing a level in `finalizeBattle` now resolves the species learnset via `movesLearnedBetween` (`src/game/systems/learn-system.ts`), auto-learns into a free slot (emitting `learned-move`) or emits `can-learn-move` when the four slots are full, and the `learn-move` command applies the player's replace/skip choice (`applyLearnedMove`/`learnMove`). `evolve-creature` still accepts any species swap without re-validating the rule.
 - [x] Add the missing `Erratic` growth rate to `src/game/data/growth-rate.ts` (added to `GrowthRate` and `getExperienceForLevel`).
 - [ ] Add per-creature instance state needed by Gen 2/3 mechanics: gender (species ratios exist but instances have none; breeding and attract depend on it), friendship (needed by `EvolutionMethod.Friendship`), and a held-item slot (needed by the planned held-item hooks).
 - [ ] Extend evolution methods for Gen 3 coverage: trade-with-held-item, stat-comparison, and personality/random branches are missing, and `Evolution.ByFriendship` carries a `level` field that friendship evolutions do not use.
@@ -142,3 +142,12 @@
 - [ ] Enforce party/storage invariants in `src/game/systems/storage-system.ts`: depositing the last party member is currently allowed, boxes have no capacity, and ownership is not verified before moving a creature.
 - [ ] Fix `syncBattleState` member mapping for multi-team sides: creature ids are resolved from `playerParty`/`enemyParty` by index, which is wrong once a side has more than one team (latent until multi-team battles are exposed).
 - [ ] Delete or archive `agent-feedback.md`: it reviews the pre-ECS layout (`src/engine/`, `src/domain/`) and is now almost entirely stale.
+
+## Move Learning
+
+- [ ] Author full per-species level-up learnsets: only the three starter families (Bulbasaur/Ivysaur/Venusaur, Charmander/Charmeleon/Charizard, Squirtle/Wartortle/Blastoise) have accurate Gen 3 level-up entries wired into the learn flow in `src/content/species.ts`; every other species still needs its level-up moves authored so `movesLearnedBetween` (in `src/game/systems/learn-system.ts`) has data to work from.
+
+## Review Findings 2026-07-06: Replay harness limitations
+
+- [ ] Let the replay harness record a live session: the `Engine` (`src/game/engine.ts`) exposes neither a seed accessor nor a log of dispatched commands, so a `Recording` (`src/game/replay.ts`) can only be assembled by hand. Add a way to read the seed the engine booted with and to capture the ordered command stream so record-from-live-session becomes possible.
+- [ ] Make `submit-battle-turn` replay-friendly: `getTurnActions` in `src/game/battle/systems/turn-order.ts` throws `RangeError("Turn command count must match the number of requested active slots.")` unless the submitted command count exactly matches the requested active slots. A blind multi-turn replay that does not re-read each turn's request count therefore crashes; the harness needs the request shape surfaced per turn (or a lenient submission path) to replay battles without live selector reads.

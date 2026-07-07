@@ -24,6 +24,7 @@ import type {
 	Selector,
 	StorageView,
 } from "./selectors";
+import type { CreatureId } from "./world/ids";
 import type { World } from "./world/world";
 
 import { Battle as BattleRuntime } from "./battle/battle";
@@ -41,6 +42,7 @@ import { spawnEncounter } from "./systems/encounter-system";
 import { evolveCreature, getLevelUpEvolution } from "./systems/evolution-system";
 import { awardBattleExperience, grantCreatureExperience } from "./systems/experience-system";
 import { addInventoryItem, removeInventoryItem } from "./systems/inventory-system";
+import { hasFreeMoveSlot, learnMove, movesLearnedBetween } from "./systems/learn-system";
 import { isMedicineEffect } from "./systems/medicine-system";
 import { healParty } from "./systems/party-system";
 import { buyItem, changeMoney, sellItem } from "./systems/shop-system";
@@ -179,6 +181,33 @@ export class Engine {
 			case "heal-party": {
 				let count = healParty(this.gameData, this.world, command.playerId);
 				return [{ type: "party-healed", playerId: command.playerId, count }];
+			}
+			case "learn-move": {
+				let result = learnMove(
+					this.gameData,
+					this.world,
+					command.creatureId,
+					command.moveId,
+					command.replaceSlotIndex,
+				);
+				if (!result.learned) {
+					return [
+						{
+							type: "move-learn-declined",
+							creatureId: command.creatureId,
+							moveId: command.moveId,
+						},
+					];
+				}
+				return [
+					{
+						type: "learned-move",
+						creatureId: command.creatureId,
+						moveId: command.moveId,
+						slotIndex: result.slotIndex,
+						...(result.replacedMoveId ? { replacedMoveId: result.replacedMoveId } : {}),
+					},
+				];
 			}
 			case "mark-species-caught": {
 				markSpeciesCaught(this.world, command.playerId, command.speciesId);
@@ -550,6 +579,9 @@ export class Engine {
 				for (let grant of grants) {
 					events.push({ type: "creature-experience-granted", ...grant });
 					if (grant.levelAfter <= grant.levelBefore) continue;
+					events.push(
+						...this.emitLearnableMoves(grant.creatureId, grant.levelBefore, grant.levelAfter),
+					);
 					let choice = getLevelUpEvolution(this.gameData, this.world, grant.creatureId);
 					if (choice) {
 						events.push({
@@ -567,6 +599,48 @@ export class Engine {
 
 		this.battleRuntime.delete(battleId);
 		events.push({ type: "battle-finished", battleId, winnerSide });
+		return events;
+	}
+
+	/**
+	 * Resolves the moves a creature can learn for the levels it just crossed.
+	 *
+	 * For each move pinned to a newly reached level, a creature with a free slot
+	 * auto-learns it (updating the stored moveset and emitting `learned-move`),
+	 * while a creature whose four slots are full instead surfaces a `can-learn-move`
+	 * event so the presentation can prompt the player to replace a move or skip.
+	 * Auto-learning one move can free the next decision, so the moveset is re-read
+	 * from the world for every candidate rather than snapshotted once.
+	 */
+	private emitLearnableMoves(
+		creatureId: CreatureId,
+		levelBefore: number,
+		levelAfter: number,
+	): GameEvent[] {
+		let creature = createCreatureFromWorld(this.world, creatureId);
+		let species = getCreatureSpecies(this.gameData, creature);
+		let events: GameEvent[] = [];
+
+		for (let moveId of movesLearnedBetween(species.learnset, levelBefore, levelAfter)) {
+			let moveset = createCreatureFromWorld(this.world, creatureId).moveset;
+			if (moveset.includes(moveId)) continue;
+
+			if (hasFreeMoveSlot(moveset)) {
+				let result = learnMove(this.gameData, this.world, creatureId, moveId);
+				if (result.learned) {
+					events.push({
+						type: "learned-move",
+						creatureId,
+						moveId,
+						slotIndex: result.slotIndex,
+					});
+				}
+				continue;
+			}
+
+			events.push({ type: "can-learn-move", creatureId, moveId, currentMoveset: moveset });
+		}
+
 		return events;
 	}
 

@@ -24,12 +24,27 @@ import { GrowthRate } from "./growth-rate";
 /** String identifier of a species in loaded game data. */
 export type SpeciesId = string;
 
+/**
+ * A move a creature learns on reaching a given level.
+ *
+ * This is the generic level-up variant of {@link LearnsetEntry}, named so
+ * progression systems can talk about level-up moves without matching against the
+ * whole learnset union. `moveId` is an opaque move identifier string; the engine
+ * never depends on any specific move.
+ */
+export type LevelUpMove = { level: number; moveId: MoveId };
+
 /** A move a creature can learn, and the method by which it is learned */
 export type LearnsetEntry =
-	| { level: number; moveId: MoveId }
+	| LevelUpMove
 	| { tmhm: number }
 	| { tutor: true; moveId: MoveId }
 	| { egg: true; moveId: MoveId };
+
+/** Narrows a learnset entry to its level-up variant. */
+export function isLevelUpMove(entry: LearnsetEntry): entry is LevelUpMove {
+	return "level" in entry && "moveId" in entry;
+}
 
 export enum Gender {
 	Male = "male",

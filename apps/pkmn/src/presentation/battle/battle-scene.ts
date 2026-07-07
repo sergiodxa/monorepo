@@ -18,6 +18,7 @@ import type { ReplacementCommand } from "~/game/battle/battle";
 import type { State } from "~/game/data/status";
 import type { GameEvent } from "~/game/events";
 import type { BattleView, CreatureSummaryView } from "~/game/selectors";
+import type { MoveSet } from "~/game/world/creature";
 import type { BattleId, CreatureId, PlayerId } from "~/game/world/ids";
 
 import { DamageClass } from "~/game/data/move";
@@ -32,6 +33,7 @@ import { drawText, Typewriter, wrapText } from "../render/text";
 import * as theme from "../render/theme";
 import { Window } from "../render/window";
 import { EvolutionScene } from "../scenes/evolution";
+import { LearnMoveScene } from "../scenes/learn-move";
 
 import { AnimationQueue } from "./animation-queue";
 import { BattleCommandMenu } from "./command-menu";
@@ -89,6 +91,16 @@ export class BattleScene implements Scene {
 	/** Creatures that became eligible to evolve during the battle, shown after it ends. */
 	private readonly pendingEvolutions: Array<{ creatureId: CreatureId; speciesId: string }> = [];
 
+	/** Moves auto-learned into a free slot during the battle, narrated after it ends. */
+	private readonly autoLearnedMoves: Array<{ creatureId: CreatureId; moveId: string }> = [];
+
+	/** Full-moveset move offers surfaced during the battle, prompted after it ends. */
+	private readonly pendingLearnMoves: Array<{
+		creatureId: CreatureId;
+		moveId: string;
+		currentMoveset: MoveSet;
+	}> = [];
+
 	/** Whether the money stake has already been settled, so it fires exactly once. */
 	private rewardSettled = false;
 
@@ -126,6 +138,16 @@ export class BattleScene implements Scene {
 			if (event.type === "creature-can-evolve" && event.choices[0]) {
 				this.pendingEvolutions.push({ creatureId: event.creatureId, speciesId: event.choices[0] });
 			}
+			if (event.type === "learned-move") {
+				this.autoLearnedMoves.push({ creatureId: event.creatureId, moveId: event.moveId });
+			}
+			if (event.type === "can-learn-move") {
+				this.pendingLearnMoves.push({
+					creatureId: event.creatureId,
+					moveId: event.moveId,
+					currentMoveset: event.currentMoveset,
+				});
+			}
 			if (event.type === "battle-finished") this.endedWinnerSide = event.winnerSide;
 		}
 	}
@@ -162,10 +184,19 @@ export class BattleScene implements Scene {
 		if (this.finishing) {
 			if (game.input.isPressed(Button.A) || game.input.isPressed(Button.B)) {
 				game.scenes.pop();
-				// Offer any evolutions the level-ups unlocked, back on the overworld.
+				// Offer any evolutions the level-ups unlocked, back on the overworld. Push
+				// these first so the move prompts pushed after them sit on top and resolve
+				// before evolving, matching the level-up-then-evolve order.
 				for (let pending of this.pendingEvolutions) {
 					let name = game.engine.selectCreatureSummary(pending.creatureId).name;
 					game.scenes.push(new EvolutionScene(pending.creatureId, pending.speciesId, name));
+				}
+				// Prompt the player to replace or skip each move offered on a full moveset.
+				for (let pending of this.pendingLearnMoves) {
+					let name = game.engine.selectCreatureSummary(pending.creatureId).name;
+					game.scenes.push(
+						new LearnMoveScene(pending.creatureId, pending.moveId, pending.currentMoveset, name),
+					);
 				}
 			}
 			return;
@@ -173,6 +204,17 @@ export class BattleScene implements Scene {
 
 		let winnerSide = this.endedWinnerSide ?? view.winnerSide;
 		if (winnerSide !== null) {
+			// Narrate auto-learned moves once, before the closing message. Enqueuing makes
+			// the queue non-idle so this block re-runs (and skips the drained list) only
+			// after those lines have played.
+			if (this.autoLearnedMoves.length > 0) {
+				for (let learned of this.autoLearnedMoves) {
+					let name = game.engine.selectCreatureSummary(learned.creatureId).name;
+					this.enqueueMessage(`${name} learned ${learned.moveId}!`);
+				}
+				this.autoLearnedMoves.length = 0;
+				return;
+			}
 			this.message = this.captured
 				? "The wild creature was caught!"
 				: winnerSide === 0

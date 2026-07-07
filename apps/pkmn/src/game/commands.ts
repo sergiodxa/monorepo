@@ -156,6 +156,22 @@ export namespace Command {
 		itemId: ItemId;
 		target?: BattlePosition;
 	}
+
+	/**
+	 * Resolves a pending level-up move offer for one creature.
+	 *
+	 * When the creature has a free slot the move is appended and `replaceSlotIndex`
+	 * is ignored. When its four slots are full, `replaceSlotIndex` names the slot to
+	 * overwrite; an out-of-range or negative index (or an omitted one on a full
+	 * moveset) is treated as declining the move.
+	 */
+	export interface LearnMove {
+		type: "learn-move";
+		creatureId: CreatureId;
+		moveId: MoveId;
+		/** Slot to overwrite when full; out-of-range/negative or omitted declines. */
+		replaceSlotIndex?: number;
+	}
 }
 
 /** Intent submitted through the engine boundary. */
@@ -168,6 +184,7 @@ export type Command =
 	| Command.EvolveCreature
 	| Command.GrantCreatureExperience
 	| Command.HealParty
+	| Command.LearnMove
 	| Command.MarkSpeciesCaught
 	| Command.MarkSpeciesSeen
 	| Command.RemoveInventoryItem

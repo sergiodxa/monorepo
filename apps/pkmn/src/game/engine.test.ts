@@ -599,6 +599,220 @@ function combatantStub(): BattleSideState["teams"][number]["creatures"][number] 
 	return {} as BattleSideState["teams"][number]["creatures"][number];
 }
 
+/** Bulbasaur's medium-fast level-12 experience threshold and the move it then learns. */
+let BULBASAUR_LEVEL_12_EXP = 12 ** 3;
+let RAZOR_LEAF = "RAZOR_LEAF";
+
+/**
+ * Creates an engine whose Bulbasaur ally is one experience short of level 12 and
+ * whose enemy starts fainted, so a single `start-battle` wins immediately and the
+ * awarded experience crosses the level-12 boundary (learning RAZOR_LEAF). The
+ * ally's moveset is supplied so tests can exercise both the auto-learn (free slot)
+ * and full-moveset (prompt) paths.
+ */
+function createLevelUpEngine(
+	playerId: string,
+	enemyId: string,
+	allyId: string,
+	enemyCreatureId: string,
+	allyMoveset: [string, string | null, string | null, string | null],
+) {
+	return Engine.create({
+		content: {
+			species: SPECIES,
+			moves: MOVES,
+			items: ITEMS,
+			natures: NATURES,
+			typeChart: TYPE_MATCHUPS,
+		},
+		random: () => 0.5,
+		world: migrateWorld({
+			entities: [playerId, enemyId, allyId, enemyCreatureId],
+			playerId,
+			playerProfile: { [playerId]: { name: "Hero" }, [enemyId]: { name: "Rival" } },
+			party: {
+				[playerId]: { creatureIds: [allyId] },
+				[enemyId]: { creatureIds: [enemyCreatureId] },
+			},
+			inventory: { [playerId]: { items: {} }, [enemyId]: { items: {} } },
+			bestiary: { [playerId]: { seen: [], caught: [] }, [enemyId]: { seen: [], caught: [] } },
+			storageBoxes: { [playerId]: { boxes: [] }, [enemyId]: { boxes: [] } },
+			creature: {
+				[allyId]: {
+					species: PRIMARY_SPECIES_ID, // Bulbasaur
+					nature: DEFAULT_NATURE_ID,
+					experience: BULBASAUR_LEVEL_12_EXP - 1, // level 11, one point below level 12
+					moveset: allyMoveset,
+					status: {
+						state: null,
+						damage: 0,
+						pp: [35, 20, 20, 20] as [number, number, number, number],
+					},
+					iv: {
+						hp: 31,
+						attack: 31,
+						defense: 31,
+						"special-attack": 31,
+						"special-defense": 31,
+						speed: 31,
+					},
+					ev: { hp: 0, attack: 0, defense: 0, "special-attack": 0, "special-defense": 0, speed: 0 },
+				},
+				[enemyCreatureId]: {
+					species: SECONDARY_SPECIES_ID,
+					nature: DEFAULT_NATURE_ID,
+					experience: 0,
+					moveset: [DAMAGING_MOVE_ID, null, null, null] as [string, null, null, null],
+					// Pre-fainted so the player wins the moment the battle starts.
+					status: {
+						state: null,
+						damage: 9999,
+						pp: [35, 0, 0, 0] as [number, number, number, number],
+					},
+					iv: {
+						hp: 31,
+						attack: 31,
+						defense: 31,
+						"special-attack": 31,
+						"special-defense": 31,
+						speed: 31,
+					},
+					ev: { hp: 0, attack: 0, defense: 0, "special-attack": 0, "special-defense": 0, speed: 0 },
+				},
+			},
+		}),
+	});
+}
+
+test("a level-up auto-learns a move when the moveset has a free slot", () => {
+	let playerId = createPlayerId("hero");
+	let enemyId = createPlayerId("rival");
+	let allyId = createCreatureId("ally-1");
+	let enemyCreatureId = createCreatureId("enemy-1");
+	let engine = createLevelUpEngine(playerId, enemyId, allyId, enemyCreatureId, [
+		"TACKLE",
+		"GROWL",
+		null,
+		null,
+	]);
+
+	let events = engine.dispatch({
+		type: "start-battle",
+		battleId: createBattleId("b1"),
+		playerId,
+		enemyId,
+		playerParty: [allyId],
+		enemyParty: [enemyCreatureId],
+		slots: 1,
+	});
+
+	let learned = events.find((event) => event.type === "learned-move");
+	expect(learned?.type === "learned-move" ? learned.moveId : null).toBe(RAZOR_LEAF);
+	// The move landed in the first free slot and the moveset now holds it.
+	expect(learned?.type === "learned-move" ? learned.slotIndex : null).toBe(2);
+	let summary = engine.selectCreatureSummary(allyId);
+	expect(summary.moves.map((slot) => slot.id)).toEqual(["TACKLE", "GROWL", RAZOR_LEAF, null]);
+	// No prompt event is emitted when the move auto-learns.
+	expect(events.some((event) => event.type === "can-learn-move")).toBe(false);
+});
+
+test("a level-up on a full moveset emits can-learn-move without changing the moveset", () => {
+	let playerId = createPlayerId("hero");
+	let enemyId = createPlayerId("rival");
+	let allyId = createCreatureId("ally-1");
+	let enemyCreatureId = createCreatureId("enemy-1");
+	let fullMoveset: [string, string, string, string] = ["TACKLE", "GROWL", "VINE_WHIP", "GROWTH"];
+	let engine = createLevelUpEngine(playerId, enemyId, allyId, enemyCreatureId, fullMoveset);
+
+	let events = engine.dispatch({
+		type: "start-battle",
+		battleId: createBattleId("b1"),
+		playerId,
+		enemyId,
+		playerParty: [allyId],
+		enemyParty: [enemyCreatureId],
+		slots: 1,
+	});
+
+	let offer = events.find((event) => event.type === "can-learn-move");
+	expect(offer?.type).toBe("can-learn-move");
+	if (offer?.type === "can-learn-move") {
+		expect(offer.moveId).toBe(RAZOR_LEAF);
+		expect(offer.currentMoveset).toEqual(fullMoveset);
+	}
+	// The moveset is untouched until the player resolves the prompt.
+	expect(engine.selectCreatureSummary(allyId).moves.map((slot) => slot.id)).toEqual(fullMoveset);
+	expect(events.some((event) => event.type === "learned-move")).toBe(false);
+});
+
+test("learn-move replace overwrites the chosen slot and reports the replaced move", () => {
+	let playerId = createPlayerId("hero");
+	let enemyId = createPlayerId("rival");
+	let allyId = createCreatureId("ally-1");
+	let enemyCreatureId = createCreatureId("enemy-1");
+	let engine = createLevelUpEngine(playerId, enemyId, allyId, enemyCreatureId, [
+		"TACKLE",
+		"GROWL",
+		"VINE_WHIP",
+		"GROWTH",
+	]);
+	engine.dispatch({
+		type: "start-battle",
+		battleId: createBattleId("b1"),
+		playerId,
+		enemyId,
+		playerParty: [allyId],
+		enemyParty: [enemyCreatureId],
+		slots: 1,
+	});
+
+	let events = engine.dispatch({
+		type: "learn-move",
+		creatureId: allyId,
+		moveId: RAZOR_LEAF,
+		replaceSlotIndex: 1,
+	});
+
+	let learned = events.find((event) => event.type === "learned-move");
+	expect(learned?.type === "learned-move" ? learned.slotIndex : null).toBe(1);
+	expect(learned?.type === "learned-move" ? learned.replacedMoveId : null).toBe("GROWL");
+	expect(engine.selectCreatureSummary(allyId).moves.map((slot) => slot.id)).toEqual([
+		"TACKLE",
+		RAZOR_LEAF,
+		"VINE_WHIP",
+		"GROWTH",
+	]);
+});
+
+test("learn-move decline keeps the moveset and reports the declined move", () => {
+	let playerId = createPlayerId("hero");
+	let enemyId = createPlayerId("rival");
+	let allyId = createCreatureId("ally-1");
+	let enemyCreatureId = createCreatureId("enemy-1");
+	let fullMoveset: [string, string, string, string] = ["TACKLE", "GROWL", "VINE_WHIP", "GROWTH"];
+	let engine = createLevelUpEngine(playerId, enemyId, allyId, enemyCreatureId, fullMoveset);
+	engine.dispatch({
+		type: "start-battle",
+		battleId: createBattleId("b1"),
+		playerId,
+		enemyId,
+		playerParty: [allyId],
+		enemyParty: [enemyCreatureId],
+		slots: 1,
+	});
+
+	// A negative slot means "declined": nothing changes and a decline event is emitted.
+	let events = engine.dispatch({
+		type: "learn-move",
+		creatureId: allyId,
+		moveId: RAZOR_LEAF,
+		replaceSlotIndex: -1,
+	});
+
+	expect(events).toEqual([{ type: "move-learn-declined", creatureId: allyId, moveId: RAZOR_LEAF }]);
+	expect(engine.selectCreatureSummary(allyId).moves.map((slot) => slot.id)).toEqual(fullMoveset);
+});
+
 /** Creates an engine wired for deterministic battles with a chosen RNG and optional starting damage. */
 function createBattleEngine(
 	playerId: string,
