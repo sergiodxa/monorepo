@@ -74,6 +74,29 @@ export class GameMap {
 	}
 }
 
+/**
+ * Lists the zones where a species can be encountered across the given maps.
+ *
+ * Scans every map's encounter tables for the species and collects each map's id
+ * once (in first-seen order) as its zone name, so the detail screen can show
+ * "where to catch" it. A species absent from every table yields an empty list,
+ * which the UI renders as "Unknown". Kept pure and free of any species-name
+ * assumptions so it stays testable without the renderer or the asset store.
+ *
+ * @param maps - The authored maps to search.
+ * @param speciesId - The species identifier to look for in encounter tables.
+ */
+export function habitatZones(maps: readonly TileMap[], speciesId: string): string[] {
+	let zones: string[] = [];
+	for (let map of maps) {
+		let present = map.encounters.some((zone) =>
+			zone.table.some((entry) => entry.speciesId === speciesId),
+		);
+		if (present && !zones.includes(map.id)) zones.push(map.id);
+	}
+	return zones;
+}
+
 /** Builds a small explorable map: a walled field with a tall-grass patch. */
 export function createSampleMap(): TileMap {
 	let width = 20;

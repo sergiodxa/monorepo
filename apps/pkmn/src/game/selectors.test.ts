@@ -1,11 +1,14 @@
 /**
- * Tests for the creature summary selector's stat fields.
+ * Tests for the creature summary and species-detail selectors.
  *
  * Verifies that `selectCreatureSummaryView` exposes a creature's current
  * computed stat values (derived through the shared stat formula), carries its
  * individual values, effort values, and nature through from its progress
  * component without altering them, and that the exposed stat sets are copies
- * rather than references into the world stores.
+ * rather than references into the world stores. Also verifies that
+ * `selectSpeciesDetailView` exposes a species' number, types, and base stats,
+ * reports the player's seen/caught flags, carries the injected habitat through,
+ * and copies the base stats so the view never aliases content.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -25,7 +28,7 @@ import type { StatSet } from "./data/stat";
 import { getCreatureStat } from "./battle/mechanics";
 import { GameData } from "./data/game-data";
 import { Stat } from "./data/stat";
-import { selectCreatureSummaryView } from "./selectors";
+import { selectCreatureSummaryView, selectSpeciesDetailView } from "./selectors";
 import { createCreatureId, createPlayerId } from "./world/ids";
 import { migrateWorld } from "./world/migrate";
 import { createCreatureFromWorld } from "./world/world";
@@ -144,4 +147,65 @@ test("selectCreatureSummaryView copies the stat sets instead of sharing world st
 
 	expect(world.creatureProgress[creatureId]!.iv.hp).toBe(KNOWN_IVS.hp);
 	expect(world.creatureProgress[creatureId]!.ev.speed).toBe(KNOWN_EVS.speed);
+});
+
+/** Builds a world whose player has the given species recorded as seen and caught. */
+function worldWithBestiary(seen: string[], caught: string[]) {
+	let playerId = createPlayerId("hero");
+	return migrateWorld({
+		entities: [playerId],
+		playerId,
+		playerProfile: { [playerId]: { name: "Hero" } },
+		party: { [playerId]: { creatureIds: [] } },
+		inventory: { [playerId]: { items: {} } },
+		bestiary: { [playerId]: { seen, caught } },
+		storageBoxes: { [playerId]: { boxes: [] } },
+		creature: {},
+	});
+}
+
+test("selectSpeciesDetailView exposes the species number, types, and base stats", () => {
+	let data = gameData();
+	let world = worldWithBestiary([SPECIES_ID], []);
+	let species = SPECIES[SPECIES_ID]!;
+
+	let view = selectSpeciesDetailView(data, world, SPECIES_ID, []);
+
+	expect(view.speciesId).toBe(SPECIES_ID);
+	expect(view.number).toBe(species.number);
+	expect(view.types).toEqual([...species.types]);
+	expect(view.baseStats).toEqual(species.stats);
+});
+
+test("selectSpeciesDetailView reports seen and caught flags from the player's record", () => {
+	let data = gameData();
+	let ids = Object.keys(SPECIES);
+	let seenOnly = ids[0]!;
+	let caught = ids[1]!;
+	let unrecorded = ids[2]!;
+	let world = worldWithBestiary([seenOnly, caught], [caught]);
+
+	let seenView = selectSpeciesDetailView(data, world, seenOnly, []);
+	expect(seenView.seen).toBe(true);
+	expect(seenView.caught).toBe(false);
+
+	let caughtView = selectSpeciesDetailView(data, world, caught, []);
+	expect(caughtView.seen).toBe(true);
+	expect(caughtView.caught).toBe(true);
+
+	let unrecordedView = selectSpeciesDetailView(data, world, unrecorded, []);
+	expect(unrecordedView.seen).toBe(false);
+	expect(unrecordedView.caught).toBe(false);
+});
+
+test("selectSpeciesDetailView carries the injected habitat and copies the base stats", () => {
+	let data = gameData();
+	let world = worldWithBestiary([SPECIES_ID], []);
+
+	let view = selectSpeciesDetailView(data, world, SPECIES_ID, ["route-1", "cave-2"]);
+	expect(view.habitat).toEqual(["route-1", "cave-2"]);
+
+	// The exposed base stats must be a copy: mutating them cannot reach content.
+	view.baseStats.hp = 0;
+	expect(SPECIES[SPECIES_ID]!.stats.hp).not.toBe(0);
 });

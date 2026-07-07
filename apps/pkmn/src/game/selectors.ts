@@ -36,6 +36,7 @@ export type Selector =
 	| InventorySelector
 	| PartySelector
 	| PlayerSelector
+	| SpeciesDetailSelector
 	| StorageSelector
 	| ActiveBattleSelector;
 
@@ -75,6 +76,19 @@ export interface CreatureSummarySelector {
 	creatureId: CreatureId;
 }
 
+/** Selects one species-detail view for a recorded species. */
+export interface SpeciesDetailSelector {
+	type: "species-detail";
+	speciesId: string;
+	/**
+	 * Zone names where the species can be found, resolved by the caller from the
+	 * available maps' encounter tables. The engine core holds no map data, so the
+	 * habitat is injected here rather than looked up inside the selector; an empty
+	 * list means no known habitat.
+	 */
+	habitat?: readonly string[];
+}
+
 /** Selects the battle view for the current player's active battle. */
 export interface ActiveBattleSelector {
 	type: "active-battle";
@@ -111,6 +125,30 @@ export interface CreatureSummaryView {
 	gender: Gender;
 	/** Item this creature currently holds, or null when it holds nothing. */
 	heldItemId: string | null;
+}
+
+/** Read model returned when the UI asks for one species' detail entry. */
+export interface SpeciesDetailView {
+	/** The species identifier, engine-generic and franchise-neutral. */
+	speciesId: string;
+	/** Display name for the species; the engine uses the identifier as the name. */
+	name: string;
+	/** The species' dex number as authored in content. */
+	number: number;
+	/** The one or two types the species carries, as opaque type identifiers. */
+	types: [string] | [string, string];
+	/** The species' base stat block, copied so callers cannot mutate content. */
+	baseStats: StatSet;
+	/** Whether the current player has recorded seeing this species. */
+	seen: boolean;
+	/** Whether the current player has recorded catching this species. */
+	caught: boolean;
+	/**
+	 * Zone names where the species can be found, as resolved from the available
+	 * maps' encounter tables. Empty when no habitat is known, which the UI renders
+	 * as "Unknown".
+	 */
+	habitat: string[];
 }
 
 /** Read model returned when the UI asks for the player summary. */
@@ -169,6 +207,7 @@ export type Selection =
 	| InventoryView
 	| PartyView
 	| PlayerView
+	| SpeciesDetailView
 	| StorageView
 	| null;
 
@@ -200,6 +239,9 @@ export function selectView(gameData: GameData, world: World, selector: Selector)
 		}
 		case "party": {
 			return selectPartyView(gameData, world, selector.playerId ?? world.playerId);
+		}
+		case "species-detail": {
+			return selectSpeciesDetailView(gameData, world, selector.speciesId, selector.habitat ?? []);
 		}
 		case "player": {
 			return selectPlayerView(gameData, world, selector.playerId ?? world.playerId);
@@ -320,6 +362,38 @@ export function selectBestiaryView(
 				caught: bestiary.caught.includes(speciesId),
 			};
 		}),
+	};
+}
+
+/**
+ * Builds one species-detail view from authored content and the player's record.
+ *
+ * Reads the authored species entry for its number, types, and base stats, and
+ * the player's bestiary progress for the seen/caught flags. The habitat is not
+ * looked up here — the engine core holds no map data — so the caller passes the
+ * resolved zone names in; they are copied through unchanged (empty when none).
+ * The base stats are cloned so the returned view never aliases content.
+ */
+export function selectSpeciesDetailView(
+	gameData: GameData,
+	world: World,
+	speciesId: string,
+	habitat: readonly string[],
+): SpeciesDetailView {
+	let species = gameData.species.get(speciesId);
+	if (!species) throw new ReferenceError(`Missing species ${speciesId}.`);
+
+	let bestiary = getPlayerBestiary(world);
+
+	return {
+		speciesId,
+		name: speciesId,
+		number: species.number,
+		types: [...species.types] as [string] | [string, string],
+		baseStats: structuredClone(species.stats),
+		seen: bestiary.seen.includes(speciesId),
+		caught: bestiary.caught.includes(speciesId),
+		habitat: [...habitat],
 	};
 }
 

@@ -4,7 +4,8 @@
  * Covers `createSampleMap`'s shape (walled 20x15 field with a grass patch and a
  * pond) and the `GameMap` queries movement and encounters depend on: `inBounds`,
  * `isBlocked` for solid/water/out-of-bounds, `isEncounter`, `encounterRate`,
- * `encounterTableAt`, and `warpAt`.
+ * `encounterTableAt`, and `warpAt`. Also covers the pure `habitatZones` lookup
+ * that scans maps' encounter tables to list the zones where a species appears.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -14,7 +15,7 @@ import { expect, test } from "bun:test";
 import { TILE_SIZE } from "../core/loop";
 import { Collision, type EncounterEntry, type TileMap } from "../render/tilemap";
 
-import { createSampleMap, createSampleNpcs, GameMap } from "./map-loader";
+import { createSampleMap, createSampleNpcs, GameMap, habitatZones } from "./map-loader";
 
 test("createSampleMap returns a 20x15 route with a walled border", () => {
 	let map = createSampleMap();
@@ -91,6 +92,47 @@ test("createSampleNpcs fields the sole species twice when no second is offered",
 		{ speciesId: "ONLY", level: 5 },
 		{ speciesId: "ONLY", level: 6 },
 	]);
+});
+
+/** Builds a map with the given id whose single zone rolls the listed species. */
+function mapWith(id: string, speciesIds: string[]): TileMap {
+	let base = createSampleMap();
+	let table: EncounterEntry[] = speciesIds.map((speciesId) => ({
+		speciesId,
+		minLevel: 2,
+		maxLevel: 4,
+		weight: 1,
+	}));
+	return { ...base, id, encounters: [{ zone: [2 * base.width + 2], table, rate: 25 }] };
+}
+
+test("habitatZones lists each map whose encounter tables roll the species", () => {
+	let maps = [mapWith("route-1", ["PIDGEY", "RATTATA"]), mapWith("route-2", ["PIDGEY"])];
+	// PIDGEY appears in both zones; the map ids come back in first-seen order.
+	expect(habitatZones(maps, "PIDGEY")).toEqual(["route-1", "route-2"]);
+	// RATTATA only appears on route-1.
+	expect(habitatZones(maps, "RATTATA")).toEqual(["route-1"]);
+});
+
+test("habitatZones returns an empty list for a species in no encounter table", () => {
+	let maps = [mapWith("route-1", ["PIDGEY"])];
+	expect(habitatZones(maps, "MEWTWO")).toEqual([]);
+	// The built-in sample map ships no populated tables, so nothing has a habitat.
+	expect(habitatZones([createSampleMap()], "PIDGEY")).toEqual([]);
+});
+
+test("habitatZones lists a map id once even when several zones roll the species", () => {
+	let base = createSampleMap();
+	let table: EncounterEntry[] = [{ speciesId: "ZUBAT", minLevel: 5, maxLevel: 7, weight: 1 }];
+	let multiZone: TileMap = {
+		...base,
+		id: "cave-1",
+		encounters: [
+			{ zone: [10], table, rate: 20 },
+			{ zone: [11], table, rate: 20 },
+		],
+	};
+	expect(habitatZones([multiZone], "ZUBAT")).toEqual(["cave-1"]);
 });
 
 test("warpAt finds a warp on its tile and returns null elsewhere", () => {

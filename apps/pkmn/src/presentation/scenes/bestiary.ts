@@ -2,8 +2,10 @@
  * The bestiary screen: seen and caught progress.
  *
  * Reads the bestiary view and lists every recorded species with its seen/caught
- * state, scrolling through the roster. Cancel returns to the pause menu. It only
- * reads selectors.
+ * state, scrolling through the roster. Confirming a species the player has seen
+ * opens its detail dossier; confirming an entry that is only recorded but not yet
+ * seen does nothing, matching the seen/caught gating the list already shows.
+ * Cancel returns to the pause menu. It only reads selectors.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -15,6 +17,8 @@ import { SCREEN_HEIGHT, SCREEN_WIDTH } from "../core/loop";
 import { ListMenu } from "../render/list-menu";
 import { drawText } from "../render/text";
 import * as theme from "../render/theme";
+
+import { SpeciesDetailScene } from "./species-detail";
 
 /** Lists bestiary progress. */
 export class BestiaryScene implements Scene {
@@ -31,7 +35,17 @@ export class BestiaryScene implements Scene {
 	update(game: GameClient) {
 		let bestiary = game.engine.selectBestiary();
 		this.list.update(game.input, bestiary.entries.length);
-		if (this.list.cancelled(game.input)) game.scenes.pop();
+		if (this.list.cancelled(game.input)) {
+			game.scenes.pop();
+			return;
+		}
+
+		// Confirming opens the detail dossier, but only for a species the player has
+		// actually seen; an unseen (bare record) entry stays non-openable.
+		if (this.list.confirmed(game.input)) {
+			let entry = bestiary.entries[this.list.selected];
+			if (entry?.seen) game.scenes.push(new SpeciesDetailScene(entry.speciesId));
+		}
 	}
 
 	render(game: GameClient, ctx: CanvasRenderingContext2D) {
