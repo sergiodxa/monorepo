@@ -12,6 +12,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 import type { AssetStore } from "./assets";
+import type { SfxName } from "./sfx";
+
+import { playSfx } from "./sfx";
 
 /** A mixable audio category. */
 type Channel = "bgm" | "sfx" | "cries";
@@ -96,6 +99,20 @@ export class AudioManager {
 	/** Plays a one-shot sound effect; overlapping plays are allowed. */
 	playSfx(id: string) {
 		this.playOneShot(id, "sfx");
+	}
+
+	/**
+	 * Plays an original, procedurally-synthesized sound effect on the sfx channel.
+	 *
+	 * The effect is synthesized on the fly (no asset buffer needed) and routed
+	 * through the sfx channel so its volume follows `setVolume("sfx", ...)`. A
+	 * zero sfx-channel volume schedules nothing; an unknown name is a no-op.
+	 */
+	playSynthSfx(name: SfxName | string) {
+		// The sfx channel gain node already scales volume, so pass gain: 1 to avoid
+		// double-attenuating; gate on the channel volume so a muted channel schedules nothing.
+		if (this.channels.sfx.gain.value <= 0) return;
+		playSfx(name, { context: this.context, destination: this.channels.sfx, gain: 1 });
 	}
 
 	/** Plays a creature cry by its species number. */
