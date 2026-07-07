@@ -484,6 +484,116 @@ test("heal-party fully restores a damaged party", () => {
 	expect(after.currentHP).toBe(after.maxHP);
 });
 
+/** The first heal-HP medicine id, used to exercise in-battle item use. */
+let HEAL_ITEM_ID = Object.entries(ITEMS).find(
+	([, item]) => "effect" in item && "kind" in item.effect && item.effect.kind === "heal-hp",
+)![0];
+
+test("using a medicine in battle decrements the bag, spends the turn, and heals", () => {
+	let playerId = createPlayerId("hero");
+	let enemyId = createPlayerId("rival");
+	let allyId = createCreatureId("ally-1");
+	let enemyCreatureId = createCreatureId("enemy-1");
+	// The ally starts hurt so the heal has room to work; the enemy is alive and still
+	// acts this turn, proving the item does not skip the opponent's action.
+	let engine = createBattleEngine(playerId, enemyId, allyId, enemyCreatureId, () => 0.5, 10);
+	let battleId = createBattleId("b1");
+
+	engine.dispatch({ type: "add-inventory-item", playerId, itemId: HEAL_ITEM_ID, count: 2 });
+	engine.dispatch({
+		type: "start-battle",
+		battleId,
+		playerId,
+		enemyId,
+		playerParty: [allyId],
+		enemyParty: [enemyCreatureId],
+		slots: 1,
+	});
+
+	let battle = engine.selectActiveBattle(playerId);
+	let request = battle?.events.at(-1);
+	if (request?.type !== "request-turn-commands") throw new TypeError("Expected a turn request.");
+
+	let events = engine.dispatch({
+		type: "submit-battle-turn",
+		battleId,
+		commands: request.requests.map((position) =>
+			position.side === 0
+				? {
+						type: "use-item" as const,
+						itemId: HEAL_ITEM_ID,
+						effect: { kind: "heal-hp", amount: 1 },
+						creature: 0,
+					}
+				: { type: "fight" as const, move: 0 as const, target: { side: 0, slot: 0 } },
+		),
+	});
+
+	// The bag drops by one and reports the new count.
+	let inventoryEvent = events.find((event) => event.type === "inventory-updated");
+	expect(inventoryEvent?.type === "inventory-updated" ? inventoryEvent.count : null).toBe(1);
+	expect(
+		engine.selectInventory(playerId).entries.find((entry) => entry.id === HEAL_ITEM_ID)?.count,
+	).toBe(1);
+
+	// The item resolved through the battle log and actually restored HP.
+	let appended = events.find((event) => event.type === "battle-events-appended");
+	let logged = appended?.type === "battle-events-appended" ? appended.events : [];
+	let used = logged.find((event) => event.type === "item-used");
+	expect(used?.type === "item-used" ? used.healed : 0).toBeGreaterThan(0);
+
+	// The enemy slot still resolved its own action this turn.
+	expect(logged.some((event) => event.type === "move-used" && event.user.side === 1)).toBe(true);
+});
+
+test("using a medicine that is not in the bag consumes nothing and heals nothing", () => {
+	let playerId = createPlayerId("hero");
+	let enemyId = createPlayerId("rival");
+	let allyId = createCreatureId("ally-1");
+	let enemyCreatureId = createCreatureId("enemy-1");
+	let engine = createBattleEngine(playerId, enemyId, allyId, enemyCreatureId, () => 0.5, 10);
+	let battleId = createBattleId("b1");
+
+	// Note: no add-inventory-item, so the bag has no heal item at all.
+	engine.dispatch({
+		type: "start-battle",
+		battleId,
+		playerId,
+		enemyId,
+		playerParty: [allyId],
+		enemyParty: [enemyCreatureId],
+		slots: 1,
+	});
+
+	let battle = engine.selectActiveBattle(playerId);
+	let request = battle?.events.at(-1);
+	if (request?.type !== "request-turn-commands") throw new TypeError("Expected a turn request.");
+
+	let events = engine.dispatch({
+		type: "submit-battle-turn",
+		battleId,
+		commands: request.requests.map((position) =>
+			position.side === 0
+				? {
+						type: "use-item" as const,
+						itemId: HEAL_ITEM_ID,
+						effect: { kind: "heal-hp", amount: 1 },
+						creature: 0,
+					}
+				: { type: "fight" as const, move: 0 as const, target: { side: 0, slot: 0 } },
+		),
+	});
+
+	// No inventory change and no item-used event: the absent item cannot be used.
+	expect(events.some((event) => event.type === "inventory-updated")).toBe(false);
+	expect(
+		engine.selectInventory(playerId).entries.find((entry) => entry.id === HEAL_ITEM_ID)?.count,
+	).toBeUndefined();
+	let appended = events.find((event) => event.type === "battle-events-appended");
+	let logged = appended?.type === "battle-events-appended" ? appended.events : [];
+	expect(logged.some((event) => event.type === "item-used")).toBe(false);
+});
+
 /** A throwaway combatant placeholder; getFlatCreatureIndex only counts array length. */
 function combatantStub(): BattleSideState["teams"][number]["creatures"][number] {
 	return {} as BattleSideState["teams"][number]["creatures"][number];

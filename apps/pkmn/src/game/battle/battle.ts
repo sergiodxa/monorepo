@@ -13,6 +13,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 import type { GameData } from "~/game/data/game-data";
+import type { ItemId, MedicineEffect } from "~/game/data/item";
 import type {
 	BattleStatStage,
 	FieldEffectType,
@@ -25,6 +26,7 @@ import { DamageClass } from "~/game/data/move";
 import { Stat } from "~/game/data/stat";
 import { State } from "~/game/data/status";
 import { Effectiveness, Type } from "~/game/data/type";
+import { applyMedicine } from "~/game/systems/medicine-system";
 import { Creature } from "~/game/world/creature";
 
 import { CombatantState } from "./combatant-state";
@@ -114,12 +116,29 @@ export interface LeaveTurnCommand {
 	type: "leave-battle";
 }
 
+/**
+ * Uses a recovery item on one creature during a turn, consuming the acting slot's action.
+ *
+ * The command carries the already-resolved medicine effect so the battle layer stays
+ * content-agnostic: the boundary that owns the inventory looks the item up, decrements
+ * it, and submits the generic effect here. `creature` is the team-local index of the
+ * target on the acting slot's team, which may be a benched or fainted teammate. A null
+ * `effect` marks an item the owning boundary could not actually consume (out of stock
+ * or not a medicine); it still spends the action but applies nothing.
+ */
+export interface UseItemTurnCommand {
+	type: "use-item";
+	itemId: ItemId;
+	effect: MedicineEffect | null;
+	creature: number;
+}
+
 export type ReplacementInput = Array<ReplacementCommand | LeaveReplacementCommand>;
 
 type BattleInput = TurnCommand[] | ReplacementInput;
 
 /** A command submitted for one active combatant during a turn. */
-export type TurnCommand = FightCommand | LeaveTurnCommand | SwitchCommand;
+export type TurnCommand = FightCommand | LeaveTurnCommand | SwitchCommand | UseItemTurnCommand;
 
 export namespace BattleEvent {
 	/** Requests commands for every active combatant that can act this turn. */
@@ -278,6 +297,27 @@ export namespace BattleEvent {
 		user: BattlePosition;
 	}
 
+	/** Reports a recovery item used on one creature, with the resulting HP and status. */
+	export interface ItemUsedEvent {
+		type: "item-used";
+		/** The slot whose action was spent using the item. */
+		user: BattlePosition;
+		/** The item consumed from the bag. */
+		itemId: ItemId;
+		/** Side and team-local index of the treated creature. */
+		side: number;
+		team: number;
+		creature: number;
+		/** HP the treated creature holds after the item resolves. */
+		remainingHP: number;
+		/** HP restored by the item (zero for a pure status cure). */
+		healed: number;
+		/** Major status after the item resolves, or null when cured or already healthy. */
+		status: State | null;
+		/** Whether the item revived a fainted creature. */
+		revived: boolean;
+	}
+
 	/** Marks the end of the current turn. */
 	export interface TurnEndedEvent {
 		type: "turn-ended";
@@ -312,6 +352,7 @@ export type BattleEvent =
 	| BattleEvent.HazardTriggeredEvent
 	| BattleEvent.CreatureFaintedEvent
 	| BattleEvent.EscapeFailedEvent
+	| BattleEvent.ItemUsedEvent
 	| BattleEvent.TurnEndedEvent
 	| BattleEvent.BattleFinishedEvent;
 
@@ -582,6 +623,12 @@ export class Battle {
 				continue;
 			}
 
+			if (action.command.type === "use-item") {
+				// Using an item spends this slot's action; the opposing side's move still resolves.
+				for (let event of this.resolveItemUse(action.userPosition, action.command)) yield event;
+				continue;
+			}
+
 			if (this.isCombatantActive(action.userPosition, action.user) === false) continue;
 			if (!action.move || !action.moveId) continue;
 
@@ -641,6 +688,56 @@ export class Battle {
 		for (let event of resolveSwitchAction(this.createRosterSystemContext(), action)) {
 			yield event;
 		}
+	}
+
+	/**
+	 * Applies a recovery item to one creature on the acting slot's side and team.
+	 *
+	 * The item's action is always spent, matching Gen 3 where using an item consumes
+	 * the turn even if it heals nothing. The target is addressed by its team-local
+	 * index so benched and fainted teammates can be treated. The medicine effect is
+	 * resolved against the target's live HP and status, the persistent damage/status
+	 * are updated, and an `item-used` event carries the outcome to the presentation.
+	 * A no-op result (full HP, unmatched status cure, revive on a healthy target)
+	 * still consumes the turn but reports no change.
+	 */
+	private *resolveItemUse(
+		userPosition: BattlePosition,
+		command: UseItemTurnCommand,
+	): Generator<BattleEvent, void, void> {
+		// A null effect means the owning boundary could not consume the item; the
+		// action is still spent, but nothing is applied and no event is emitted.
+		if (command.effect === null) return;
+
+		let side = this.state.sides[userPosition.side];
+		let active = this.getActiveCombatant(userPosition);
+		let teamIndex = active?.teamIndex ?? 0;
+		let combatant = side?.teams[teamIndex]?.creatures[command.creature];
+		if (!combatant) return;
+
+		let maxHP = getCreatureStat(this.gameData, combatant.creature, Stat.HP);
+		let result = applyMedicine(command.effect, {
+			currentHP: maxHP - combatant.creature.status.damage,
+			maxHP,
+			status: combatant.creature.status.state,
+		});
+
+		combatant.creature.status.damage = maxHP - result.currentHP;
+		if (result.status === null) this.clearMajorStatusState(combatant);
+		else combatant.creature.status.state = result.status;
+
+		yield {
+			type: "item-used",
+			user: userPosition,
+			itemId: command.itemId,
+			side: userPosition.side,
+			team: teamIndex,
+			creature: command.creature,
+			remainingHP: result.currentHP,
+			healed: result.healed,
+			status: result.status,
+			revived: result.revived,
+		};
 	}
 
 	private *resolveMove(
@@ -927,7 +1024,10 @@ export class Battle {
 	private isTurnCommands(input: BattleInput): input is TurnCommand[] {
 		return input.every(
 			(command) =>
-				command.type === "fight" || command.type === "leave-battle" || command.type === "switch",
+				command.type === "fight" ||
+				command.type === "leave-battle" ||
+				command.type === "switch" ||
+				command.type === "use-item",
 		);
 	}
 

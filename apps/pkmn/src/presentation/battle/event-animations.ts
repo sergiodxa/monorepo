@@ -69,6 +69,15 @@ export function buildBattleTasks(events: BattleEvent[], hud: BattleHud): Animati
 			case "escape-failed":
 				message("Couldn't get away!");
 				break;
+			case "item-used": {
+				message(`Used the ${event.itemId}.`);
+				if (event.revived) message(`${hud.nameAt(event.user)} was revived!`);
+				// Only the acting slot has a rendered HP bar; drive it toward the
+				// reported HP so healing a benched teammate stays a no-op on screen.
+				if (event.healed > 0 || event.revived)
+					tasks.push(hpTask(event.user, event.remainingHP, hud));
+				break;
+			}
 			case "status-applied":
 				message(`${hud.nameAt(event.target)} was afflicted by ${event.status}!`);
 				break;

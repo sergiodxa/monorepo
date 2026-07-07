@@ -111,6 +111,22 @@ export function getTurnActions(
 			continue;
 		}
 
+		if (command.type === "use-item") {
+			// Using an item resolves at the top of the turn regardless of speed.
+			actions.push({
+				turnOrderRoll: context.random(),
+				user: active.combatant,
+				userPosition: request,
+				command,
+				moveId: null,
+				move: null,
+				priority: Number.POSITIVE_INFINITY,
+				speed: Number.POSITIVE_INFINITY,
+				isChargingRelease: false,
+			});
+			continue;
+		}
+
 		if (command.type === "switch") {
 			if (context.canSwitchCombatant(request, active, command.creature) === false) continue;
 

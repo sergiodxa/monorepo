@@ -4889,6 +4889,107 @@ test("an invalid team count for the battle format throws", () => {
 	).toThrow("must provide either 1 team or 3 teams");
 });
 
+test("using a heal item restores HP, emits an item-used event, and spends the turn", () => {
+	let ally = createPrimaryFixture();
+	// Take damage so a heal has room to work.
+	let maxHP = getCreatureStat(GAME_DATA, ally, Stat.HP);
+	ally.status.damage = maxHP - 1;
+
+	// A non-damaging enemy move so the heal is observable at the end of the turn.
+	let battle = new Battle({
+		gameData: GAME_DATA,
+		sides: [{ teams: [[ally]] }, { teams: [[createModestSecondaryFixtureWithGrowl()]] }],
+		random: () => 1,
+	});
+	let session = battle.start();
+	readEvent(session.next());
+	readEvent(session.next());
+	let request = readEvent(session.next());
+	if (request.type !== "request-turn-commands") throw new TypeError("Expected turn request.");
+
+	let events = collectTurnEvents(session, battle, [
+		{ type: "use-item", itemId: "POTION", effect: { kind: "heal-hp", amount: 20 }, creature: 0 },
+		{ type: "fight", move: 0, target: { side: 0, slot: 0 } },
+	]);
+
+	let used = events.find((event) => event.type === "item-used");
+	if (used?.type !== "item-used") throw new TypeError("Expected an item-used event.");
+	expect(used.itemId).toBe("POTION");
+	expect(used.healed).toBe(20);
+	expect(used.remainingHP).toBe(21);
+	expect(getCreatureCurrentHP(GAME_DATA, ally)).toBe(21);
+	// The item resolves before the enemy's move, and the enemy still acts this turn.
+	let usedIndex = events.findIndex((event) => event.type === "item-used");
+	let enemyMoveIndex = events.findIndex(
+		(event) => event.type === "move-used" && event.user.side === 1,
+	);
+	expect(enemyMoveIndex).toBeGreaterThan(usedIndex);
+});
+
+test("using a status-cure item clears the status without healing HP", () => {
+	let ally = createPrimaryFixture();
+	ally.status.state = State.Poisoned;
+
+	let battle = new Battle({
+		gameData: GAME_DATA,
+		sides: [{ teams: [[ally]] }, { teams: [[createModestSecondaryFixtureWithTackle()]] }],
+		random: () => 1,
+	});
+	let session = battle.start();
+	readEvent(session.next());
+	readEvent(session.next());
+	let request = readEvent(session.next());
+	if (request.type !== "request-turn-commands") throw new TypeError("Expected turn request.");
+
+	let events = collectTurnEvents(session, battle, [
+		{
+			type: "use-item",
+			itemId: "ANTIDOTE",
+			effect: { kind: "cure-status", status: [State.Poisoned] },
+			creature: 0,
+		},
+		{ type: "fight", move: 0, target: { side: 0, slot: 0 } },
+	]);
+
+	let used = events.find((event) => event.type === "item-used");
+	if (used?.type !== "item-used") throw new TypeError("Expected an item-used event.");
+	expect(used.status).toBeNull();
+	expect(used.healed).toBe(0);
+	expect(ally.status.state).toBeNull();
+});
+
+test("using a revive item on a fainted bench creature restores it to half HP", () => {
+	let active = createPrimaryFixture();
+	let benched = createBackupPrimaryFixture();
+	let benchedMaxHP = getCreatureStat(GAME_DATA, benched, Stat.HP);
+	benched.status.damage = benchedMaxHP; // fainted
+
+	let battle = new Battle({
+		gameData: GAME_DATA,
+		sides: [
+			{ teams: [[active, benched]] },
+			{ teams: [[createModestSecondaryFixtureWithTackle()]] },
+		],
+		random: () => 1,
+	});
+	let session = battle.start();
+	readEvent(session.next());
+	readEvent(session.next());
+	let request = readEvent(session.next());
+	if (request.type !== "request-turn-commands") throw new TypeError("Expected turn request.");
+
+	let events = collectTurnEvents(session, battle, [
+		{ type: "use-item", itemId: "REVIVE", effect: { kind: "revive", amount: "half" }, creature: 1 },
+		{ type: "fight", move: 0, target: { side: 0, slot: 0 } },
+	]);
+
+	let used = events.find((event) => event.type === "item-used");
+	if (used?.type !== "item-used") throw new TypeError("Expected an item-used event.");
+	expect(used.revived).toBe(true);
+	expect(used.creature).toBe(1);
+	expect(getCreatureCurrentHP(GAME_DATA, benched)).toBe(Math.max(1, Math.ceil(benchedMaxHP / 2)));
+});
+
 function createPrimaryFixture() {
 	return new Creature({
 		nickname: "Reserve Alpha",

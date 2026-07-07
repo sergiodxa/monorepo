@@ -15,11 +15,13 @@
  */
 import type { BattlePosition, ReplacementSelection, TurnCommand } from "~/game/battle/battle";
 import type { ReplacementCommand } from "~/game/battle/battle";
+import type { State } from "~/game/data/status";
 import type { GameEvent } from "~/game/events";
 import type { BattleView, CreatureSummaryView } from "~/game/selectors";
 import type { BattleId, CreatureId, PlayerId } from "~/game/world/ids";
 
 import { DamageClass } from "~/game/data/move";
+import { applyMedicine, isMedicineEffect } from "~/game/systems/medicine-system";
 
 import type { Scene } from "../core/scene";
 
@@ -190,10 +192,7 @@ export class BattleScene implements Scene {
 			let result = this.menu.update(game.input, moves);
 			if (result?.kind === "fight") this.submitTurn(game, request.turn, result.move);
 			else if (result?.kind === "run") this.submitRun(game, request.turn);
-			else if (result?.kind === "bag") {
-				if (this.canCapture) this.throwBall(game);
-				else this.enqueueMessage("You can't catch a trainer's creature!");
-			}
+			else if (result?.kind === "bag") this.useBag(game, request.turn);
 			// the Creatures (switch) menu is not wired to in-battle switching yet.
 		} else if (request?.type === "replacement") {
 			this.submitReplacements(game, request.replacement);
@@ -233,6 +232,76 @@ export class BattleScene implements Scene {
 		let commands: TurnCommand[] = request.map((position) =>
 			position.side === 0
 				? { type: "fight", move, target: { side: 1, slot: 0 } }
+				: this.enemyCommand(game, view, position),
+		);
+		game.dispatch({ type: "submit-battle-turn", battleId: this.battleId, commands });
+		this.menu.reset();
+		this.processNewEvents(game.engine.selectBattle(this.battleId));
+	}
+
+	/**
+	 * Resolves the Bag command for the current turn.
+	 *
+	 * With no nested Bag UI yet, this auto-picks: a usable medicine on the party
+	 * member that needs it takes priority (healing is the common in-battle use), then
+	 * throwing a ball at a wild target. If neither applies it narrates why.
+	 */
+	private useBag(game: GameClient, request: BattlePosition[]) {
+		if (this.useMedicine(game, request)) return;
+		if (this.canCapture) this.throwBall(game);
+		else this.enqueueMessage("There's nothing usable in the bag right now.");
+	}
+
+	/**
+	 * Submits an item-use turn if a bagged medicine can help a party member.
+	 *
+	 * Scans the bag for a countable medicine whose effect actually changes some party
+	 * member (using the same pure rule the engine applies), then submits a `use-item`
+	 * turn command for that item and target. Returns whether a turn was submitted so
+	 * the caller can fall back to the capture path when nothing is usable.
+	 */
+	private useMedicine(game: GameClient, request: BattlePosition[]): boolean {
+		let view = game.engine.selectBattle(this.battleId);
+		let inventory = game.engine.selectInventory();
+
+		for (let entry of inventory.entries) {
+			if (entry.count <= 0) continue;
+			let item = game.content.items[entry.id];
+			let effect = item && "effect" in item ? item.effect : undefined;
+			if (!effect || !isMedicineEffect(effect)) continue;
+
+			let target = view.allies.findIndex(
+				(ally) =>
+					applyMedicine(effect, {
+						currentHP: ally.currentHP,
+						maxHP: ally.maxHP,
+						status: (ally.status as State | null) ?? null,
+					}).applied,
+			);
+			if (target === -1) continue;
+
+			this.submitUseItem(game, request, entry.id, target);
+			return true;
+		}
+
+		return false;
+	}
+
+	/** Submits a use-item turn for the player's slots (foe slots still act). */
+	private submitUseItem(
+		game: GameClient,
+		request: BattlePosition[],
+		itemId: string,
+		creature: number,
+	) {
+		let view = game.engine.selectBattle(this.battleId);
+		let item = game.content.items[itemId];
+		let effect = item && "effect" in item ? item.effect : undefined;
+		if (!effect || !isMedicineEffect(effect)) return;
+
+		let commands: TurnCommand[] = request.map((position) =>
+			position.side === 0
+				? { type: "use-item", itemId, effect, creature }
 				: this.enemyCommand(game, view, position),
 		);
 		game.dispatch({ type: "submit-battle-turn", battleId: this.battleId, commands });

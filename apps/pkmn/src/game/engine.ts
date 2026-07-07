@@ -41,6 +41,7 @@ import { spawnEncounter } from "./systems/encounter-system";
 import { evolveCreature, getLevelUpEvolution } from "./systems/evolution-system";
 import { awardBattleExperience, grantCreatureExperience } from "./systems/experience-system";
 import { addInventoryItem, removeInventoryItem } from "./systems/inventory-system";
+import { isMedicineEffect } from "./systems/medicine-system";
 import { healParty } from "./systems/party-system";
 import { buyItem, changeMoney, sellItem } from "./systems/shop-system";
 import {
@@ -432,10 +433,46 @@ export class Engine {
 		return events;
 	}
 
-	/** Advances the current battle session with one set of turn commands. */
+	/**
+	 * Advances the current battle session with one set of turn commands.
+	 *
+	 * Player-side `use-item` commands are resolved here because the inventory lives in
+	 * the world, not the battle runtime: each one looks the item up, checks the bag has
+	 * a copy, decrements it, and injects the authored medicine effect the battle layer
+	 * needs. An item with no remaining stock (or one that is not a medicine) is forwarded
+	 * with a null effect so the turn stays well-formed but nothing is applied and the bag
+	 * is untouched; a genuine use reports its removal through the same `inventory-updated`
+	 * event the rest of the engine emits.
+	 */
 	private submitBattleTurn(battleId: string, commands: TurnCommand[]): GameEvent[] {
 		let runtime = this.getBattleRuntime(battleId);
-		return this.collectBattleEvents(battleId, runtime.session.next(commands));
+		let playerId = this.world.battleParticipants[battleId]?.playerId;
+		let prepared: TurnCommand[] = [];
+		let itemEvents: GameEvent[] = [];
+
+		for (let command of commands) {
+			if (command.type !== "use-item") {
+				prepared.push(command);
+				continue;
+			}
+
+			let item = this.gameData.items.get(command.itemId);
+			let effect = item && "effect" in item && isMedicineEffect(item.effect) ? item.effect : null;
+			// Only decrement and apply when the item exists and can actually be spent.
+			if (!playerId || !effect || !removeInventoryItem(this.world, playerId, command.itemId, 1)) {
+				prepared.push({ ...command, effect: null });
+				continue;
+			}
+
+			let count =
+				this.selectInventory(playerId).entries.find((entry) => entry.id === command.itemId)
+					?.count ?? 0;
+			itemEvents.push({ type: "inventory-updated", itemId: command.itemId, count });
+			prepared.push({ ...command, effect });
+		}
+
+		let battleEvents = this.collectBattleEvents(battleId, runtime.session.next(prepared));
+		return [...itemEvents, ...battleEvents];
 	}
 
 	/** Advances the current battle session with one set of replacement choices. */
