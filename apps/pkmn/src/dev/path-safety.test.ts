@@ -18,6 +18,7 @@ describe("validateWritePath accepts allow-listed relative paths", () => {
 		"src/content/species/alpha.json",
 		"src/content/moves.json",
 		"src/assets/sprites/hero.png",
+		"src/assets/hero.png",
 		"src/assets/nested/deep/file.bin",
 	];
 

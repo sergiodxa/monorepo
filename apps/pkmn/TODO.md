@@ -151,3 +151,8 @@
 
 - [ ] Let the replay harness record a live session: the `Engine` (`src/game/engine.ts`) exposes neither a seed accessor nor a log of dispatched commands, so a `Recording` (`src/game/replay.ts`) can only be assembled by hand. Add a way to read the seed the engine booted with and to capture the ordered command stream so record-from-live-session becomes possible.
 - [ ] Make `submit-battle-turn` replay-friendly: `getTurnActions` in `src/game/battle/systems/turn-order.ts` throws `RangeError("Turn command count must match the number of requested active slots.")` unless the submitted command count exactly matches the requested active slots. A blind multi-turn replay that does not re-read each turn's request count therefore crashes; the harness needs the request shape surfaced per turn (or a lenient submission path) to replay battles without live selector reads.
+
+## Dev Tools: Sprite Drawing (Phase 1) follow-ups
+
+- [ ] Assemble exported sprites into atlas `regions` for in-game rendering: `runSpriteExport` (in `src/dev/export.ts`) only registers the PNG under the manifest `images` map. A later phase should let the tool place a sprite into a named atlas region (manifest `atlases[id].regions`) so renderers can blit by region name, and/or pack multiple sprites into a single sheet.
+- [ ] Consider extra editor affordances the Phase 1 tool omits: undo/redo history, a fill-bucket tool, an eyedropper, a recent-color palette, and importing an existing PNG back into the grid for editing. State currently lives entirely in `SpriteEditor`/`PixelGrid` (`src/dev/editors/`), so these are additive.

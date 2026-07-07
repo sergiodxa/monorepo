@@ -9,10 +9,10 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { isFailure } from "@pkg/result";
+import { isFailure, type Result } from "@pkg/result";
 import { createRouter } from "remix/fetch-router";
 
-import { runExport } from "./export";
+import { runBinaryExport, runExport, runSpriteExport } from "./export";
 import { PathSafetyError } from "./path-safety";
 import routes from "./routes";
 
@@ -71,8 +71,9 @@ async function buildClientBundle(): Promise<string> {
 
 /**
  * Builds the dev-tools router. Tool pages serve the HTML shell, `/client.js`
- * serves the pre-built bundle, and the export action validates and writes its
- * payload, mapping validation/path errors to 400/403 and success to 200.
+ * serves the pre-built bundle, and the export actions (text, binary, and sprite)
+ * validate and write their payloads, mapping validation/path errors to 400/403
+ * and success to 200.
  *
  * @param clientBundle The bundled client JS to serve at `/client.js`.
  * @returns A configured router whose `fetch` handles every dev-tools request.
@@ -99,15 +100,30 @@ function createDevRouter(clientBundle: string) {
 		});
 	});
 
-	router.map(routes.export.action, async (ctx) => {
+	/**
+	 * Runs a JSON export handler for a request: parses the body, invokes the
+	 * export function, and maps the outcome to a JSON response. A malformed body
+	 * or payload is a 400, a path-safety rejection a 403, and success returns the
+	 * handler's own result body.
+	 *
+	 * @param request The incoming export request.
+	 * @param run The export function to feed the parsed payload.
+	 * @param body Projects a success result into the JSON response body.
+	 * @returns The JSON response to send.
+	 */
+	async function handleExport<Data>(
+		request: Request,
+		run: (payload: unknown) => Promise<Result<Data, Error>>,
+		body: (data: Data) => Record<string, unknown>,
+	): Promise<Response> {
 		let payload: unknown;
 		try {
-			payload = await ctx.request.json();
+			payload = await request.json();
 		} catch {
 			return Response.json({ error: "Request body must be valid JSON." }, { status: 400 });
 		}
 
-		let result = await runExport(payload);
+		let result = await run(payload);
 		if (isFailure(result)) {
 			// A path-safety rejection is a forbidden target (403); a malformed
 			// payload is a bad request (400).
@@ -115,8 +131,31 @@ function createDevRouter(clientBundle: string) {
 			return Response.json({ error: result.error.message }, { status });
 		}
 
-		return Response.json({ path: result.data.path, bytesWritten: result.data.bytesWritten });
-	});
+		return Response.json(body(result.data));
+	}
+
+	router.map(routes.export.action, (ctx) =>
+		handleExport(ctx.request, runExport, (data) => ({
+			path: data.path,
+			bytesWritten: data.bytesWritten,
+		})),
+	);
+
+	router.map(routes.exportBinary.action, (ctx) =>
+		handleExport(ctx.request, runBinaryExport, (data) => ({
+			path: data.path,
+			bytesWritten: data.bytesWritten,
+		})),
+	);
+
+	router.map(routes.exportSprite.action, (ctx) =>
+		handleExport(ctx.request, runSpriteExport, (data) => ({
+			id: data.id,
+			path: data.path,
+			url: data.url,
+			bytesWritten: data.bytesWritten,
+		})),
+	);
 
 	return router;
 }
