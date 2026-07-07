@@ -66,6 +66,9 @@ export function buildBattleTasks(events: BattleEvent[], hud: BattleHud): Animati
 			case "move-failed":
 				message("But it failed!");
 				break;
+			case "escape-failed":
+				message("Couldn't get away!");
+				break;
 			case "status-applied":
 				message(`${hud.nameAt(event.target)} was afflicted by ${event.status}!`);
 				break;

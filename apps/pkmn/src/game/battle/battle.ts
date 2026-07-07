@@ -272,6 +272,12 @@ export namespace BattleEvent {
 		target: BattlePosition;
 	}
 
+	/** Reports a failed attempt to leave the battle, consuming that combatant's action. */
+	export interface EscapeFailedEvent {
+		type: "escape-failed";
+		user: BattlePosition;
+	}
+
 	/** Marks the end of the current turn. */
 	export interface TurnEndedEvent {
 		type: "turn-ended";
@@ -305,6 +311,7 @@ export type BattleEvent =
 	| BattleEvent.MoveFailedEvent
 	| BattleEvent.HazardTriggeredEvent
 	| BattleEvent.CreatureFaintedEvent
+	| BattleEvent.EscapeFailedEvent
 	| BattleEvent.TurnEndedEvent
 	| BattleEvent.BattleFinishedEvent;
 
@@ -341,6 +348,11 @@ export interface BattleState {
 	sides: [BattleSideState, BattleSideState];
 	field: ReturnType<typeof createFieldEffectState>;
 	delayedAttacks: DelayedAttackState[];
+	/**
+	 * Count of failed escape attempts so far, feeding the escape-odds formula.
+	 * Optional so partial battle-state fixtures need not track it; absent reads as 0.
+	 */
+	escapeAttempts?: number;
 }
 
 /** Long-lived battle session that yields events and accepts turn or replacement input. */
@@ -388,6 +400,7 @@ export class Battle {
 			slots,
 			field: createFieldEffectState(),
 			delayedAttacks: [],
+			escapeAttempts: 0,
 			sides: [
 				this.createSideState(args.sides[0], slots),
 				this.createSideState(args.sides[1], slots),
@@ -554,8 +567,14 @@ export class Battle {
 	private *resolveTurn(requests: BattlePosition[], commands: TurnCommand[]): BattleTurnSession {
 		for (let action of this.getTurnActions(requests, commands)) {
 			if (action.command.type === "leave-battle") {
-				this.forfeitSide(action.userPosition.side);
-				return;
+				if (this.resolveEscapeAttempt(action.userPosition, action.user)) {
+					this.forfeitSide(action.userPosition.side);
+					return;
+				}
+				// A failed escape consumes this combatant's action; the rest of the
+				// turn (the opposing side's move) still resolves.
+				yield { type: "escape-failed", user: action.userPosition };
+				continue;
 			}
 
 			if (action.command.type === "switch") {
@@ -782,6 +801,51 @@ export class Battle {
 		if (side.canLeaveBattle === false) return false;
 		if (combatant.volatile.trapped) return false;
 		return true;
+	}
+
+	/**
+	 * Rolls the standard escape-odds formula for one combatant leaving the battle.
+	 *
+	 * Compares the leaving combatant's effective Speed against the opposing active
+	 * combatant's. A faster (or equal) escapee always gets away. Otherwise the odds
+	 * grow with the running failed-attempt count via
+	 * `F = floor(pSpd * 128 / eSpd) + 30 * attempts`: `F >= 256` always succeeds,
+	 * else success needs `randomInt(0..255) < F`. Each failure bumps the attempt
+	 * counter so repeated tries become more likely. With no opposing combatant the
+	 * escape trivially succeeds.
+	 *
+	 * @returns Whether the escape succeeds; a failure has already incremented the attempt count.
+	 */
+	private resolveEscapeAttempt(position: BattlePosition, combatant: CombatantState): boolean {
+		let opponentSide = position.side === 0 ? 1 : 0;
+		let opponent = this.getOpposingActiveCombatant(opponentSide);
+		if (opponent === null) return true;
+
+		let escapeeSpeed = this.getCombatantSpeed(position, combatant);
+		let opponentSpeed = this.getCombatantSpeed(opponent.position, opponent.combatant);
+		if (escapeeSpeed >= opponentSpeed) return true;
+
+		let attempts = this.state.escapeAttempts ?? 0;
+		let threshold = Math.floor((escapeeSpeed * 128) / opponentSpeed) + 30 * attempts;
+		if (threshold >= 256) return true;
+
+		if (Math.floor(this.getRandomUnit() * 256) < threshold) return true;
+
+		this.state.escapeAttempts = attempts + 1;
+		return false;
+	}
+
+	/** Returns the first active combatant on one side with its position, if any. */
+	private getOpposingActiveCombatant(
+		sideIndex: number,
+	): { position: BattlePosition; combatant: CombatantState } | null {
+		let side = this.state.sides[sideIndex];
+		if (!side) return null;
+		for (let [slotIndex, active] of side.active.entries()) {
+			if (active === null) continue;
+			return { position: { side: sideIndex, slot: slotIndex }, combatant: active.combatant };
+		}
+		return null;
 	}
 
 	private canSwitchCombatant(

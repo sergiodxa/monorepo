@@ -6,8 +6,9 @@
  * toward the values the events report, and when the queue is idle the scene reads
  * the pending request and either opens the command menu (player turn) or fills a
  * forced replacement. Commands are assembled for every requested slot — the
- * player's choice for their side, an automatic move for the opponent's, since the
- * engine has no built-in AI — and dispatched back through the client.
+ * player's choice for their side, and a move chosen by the deterministic enemy AI
+ * for the opponent's, since the engine has no built-in AI — and dispatched back
+ * through the client.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -17,6 +18,8 @@ import type { ReplacementCommand } from "~/game/battle/battle";
 import type { GameEvent } from "~/game/events";
 import type { BattleView, CreatureSummaryView } from "~/game/selectors";
 import type { BattleId, CreatureId, PlayerId } from "~/game/world/ids";
+
+import { DamageClass } from "~/game/data/move";
 
 import type { Scene } from "../core/scene";
 
@@ -30,6 +33,7 @@ import { EvolutionScene } from "../scenes/evolution";
 
 import { AnimationQueue } from "./animation-queue";
 import { BattleCommandMenu } from "./command-menu";
+import { chooseEnemyAction, type EnemyMoveOption } from "./enemy-ai";
 import { buildBattleTasks, type BattleHud } from "./event-animations";
 import { HpBar } from "./hp-bar";
 
@@ -223,12 +227,13 @@ export class BattleScene implements Scene {
 		this.queue.enqueue(...buildBattleTasks(fresh, this.hud(view)));
 	}
 
-	/** Submits a full turn: the player's move plus an automatic move per foe slot. */
+	/** Submits a full turn: the player's move plus an AI-chosen move per foe slot. */
 	private submitTurn(game: GameClient, request: BattlePosition[], move: 0 | 1 | 2 | 3) {
+		let view = game.engine.selectBattle(this.battleId);
 		let commands: TurnCommand[] = request.map((position) =>
 			position.side === 0
 				? { type: "fight", move, target: { side: 1, slot: 0 } }
-				: { type: "fight", move: 0, target: { side: 0, slot: 0 } },
+				: this.enemyCommand(game, view, position),
 		);
 		game.dispatch({ type: "submit-battle-turn", battleId: this.battleId, commands });
 		this.menu.reset();
@@ -294,14 +299,40 @@ export class BattleScene implements Scene {
 
 	/** Submits a fleeing turn for the player's slots (foe slots still act). */
 	private submitRun(game: GameClient, request: BattlePosition[]) {
+		let view = game.engine.selectBattle(this.battleId);
 		let commands: TurnCommand[] = request.map((position) =>
-			position.side === 0
-				? { type: "leave-battle" }
-				: { type: "fight", move: 0, target: { side: 0, slot: 0 } },
+			position.side === 0 ? { type: "leave-battle" } : this.enemyCommand(game, view, position),
 		);
 		game.dispatch({ type: "submit-battle-turn", battleId: this.battleId, commands });
 		this.menu.reset();
 		this.processNewEvents(game.engine.selectBattle(this.battleId));
+	}
+
+	/**
+	 * Builds one foe slot's fight command using the deterministic enemy AI.
+	 *
+	 * Move base power and type come from the authored content the client already
+	 * holds; the defender's typing comes from the player's active creature. The AI
+	 * picks the slot, and the engine's own struggle fallback covers the empty/no-PP
+	 * cases, so this always targets the player's lead slot.
+	 */
+	private enemyCommand(game: GameClient, view: BattleView, position: BattlePosition): TurnCommand {
+		let enemy = view.enemies[position.slot];
+		let defender = view.allies[0];
+		let defenderTypes = defender ? (game.content.species[defender.speciesId]?.types ?? []) : [];
+		let moves: EnemyMoveOption[] = (enemy?.moves ?? []).map((slot, index) => {
+			let move = slot.id !== null ? game.content.moves[slot.id] : undefined;
+			return {
+				index: index as 0 | 1 | 2 | 3,
+				id: slot.id,
+				pp: slot.pp,
+				power: move?.power ?? 0,
+				type: move?.type ?? "",
+				isStatus: move?.damageClass === DamageClass.Status,
+			};
+		});
+		let move = chooseEnemyAction({ moves, defenderTypes, typeChart: game.content.typeChart });
+		return { type: "fight", move, target: { side: 0, slot: 0 } };
 	}
 
 	/** Fills forced replacements with each slot's first available bench creature. */

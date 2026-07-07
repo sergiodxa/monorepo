@@ -439,11 +439,13 @@ test("a side can leave the battle instead of sending a replacement", () => {
 });
 
 test("a side can leave the battle during turn input when escape is allowed", () => {
+	// A faster escapee always gets away, so the leave path resolves as a forfeit
+	// regardless of the random roll.
 	let battle = new Battle({
 		gameData: GAME_DATA,
 		sides: [
-			{ canLeaveBattle: true, teams: [[createPrimaryFixture()]] },
-			{ teams: [[createModestSecondaryFixture()]] },
+			{ canLeaveBattle: true, teams: [[createFastPlayerFixtureWithTackle()]] },
+			{ teams: [[createSlowSecondaryFixtureWithTackle()]] },
 		],
 		random: () => 1,
 	});
@@ -472,6 +474,158 @@ test("a side can leave the battle during turn input when escape is allowed", () 
 
 	expect(lastEvent).toEqual({ type: "battle-finished", winnerSide: 1 });
 	expect(battle.state.winnerSide).toBe(1);
+});
+
+test("escaping always succeeds when the escapee is at least as fast as the opponent", () => {
+	// Fast player (Speed 189) vs slow enemy (Speed 136): pSpd >= eSpd, so the
+	// escape never rolls — it succeeds even with a random that would otherwise fail.
+	let battle = new Battle({
+		gameData: GAME_DATA,
+		sides: [
+			{ canLeaveBattle: true, teams: [[createFastPlayerFixtureWithTackle()]] },
+			{ teams: [[createSlowSecondaryFixtureWithTackle()]] },
+		],
+		random: () => 0.99,
+	});
+	let session = battle.start();
+
+	readEvent(session.next());
+	readEvent(session.next());
+	let request = readEvent(session.next());
+	if (request.type !== "request-turn-commands")
+		throw new TypeError("Expected turn command request.");
+
+	let lastEvent: BattleEvent | null = null;
+	readEvent(
+		session.next([
+			{ type: "leave-battle" },
+			{ type: "fight", move: 0, target: { side: 0, slot: 0 } },
+		]),
+	);
+	while (true) {
+		let result = session.next();
+		lastEvent = readEvent(result);
+		if (result.done) break;
+	}
+
+	expect(lastEvent).toEqual({ type: "battle-finished", winnerSide: 1 });
+	expect(battle.state.escapeAttempts ?? 0).toBe(0);
+});
+
+test("a slower escapee always succeeds once accumulated attempts push the threshold to 256", () => {
+	// Slow player (113) vs fast enemy (214) gives a base F = 67. When the escapee is
+	// slower the base term is always < 128, so only accumulated failures can carry F
+	// past 256: 67 + 30 * 7 = 277 >= 256. Seeding seven prior failures makes this
+	// escape succeed even with a random roll that would otherwise fail.
+	let battle = new Battle({
+		gameData: GAME_DATA,
+		sides: [
+			{ canLeaveBattle: true, teams: [[createSlowPlayerFixtureWithTackle()]] },
+			{ teams: [[createFastSecondaryFixtureWithTackle()]] },
+		],
+		random: () => 0.99,
+	});
+	battle.state.escapeAttempts = 7;
+
+	let session = battle.start();
+	readEvent(session.next());
+	readEvent(session.next());
+	let request = readEvent(session.next());
+	if (request.type !== "request-turn-commands")
+		throw new TypeError("Expected turn command request.");
+
+	let lastEvent: BattleEvent | null = null;
+	readEvent(
+		session.next([
+			{ type: "leave-battle" },
+			{ type: "fight", move: 0, target: { side: 0, slot: 0 } },
+		]),
+	);
+	while (true) {
+		let result = session.next();
+		lastEvent = readEvent(result);
+		if (result.done) break;
+	}
+
+	expect(lastEvent).toEqual({ type: "battle-finished", winnerSide: 1 });
+	// The attempt count is not touched on a success.
+	expect(battle.state.escapeAttempts).toBe(7);
+});
+
+test("a slower escapee escapes when the random roll lands under the threshold", () => {
+	// Slow player (Speed 113) vs fast enemy (Speed 214): F = floor(113*128/214) = 67.
+	// The escape roll is the third random value drawn (two turn-order rolls precede
+	// it); 0 → floor(0*256)=0 < 67 → success.
+	let battle = new Battle({
+		gameData: GAME_DATA,
+		sides: [
+			{ canLeaveBattle: true, teams: [[createSlowPlayerFixtureWithTackle()]] },
+			{ teams: [[createFastSecondaryFixtureWithTackle()]] },
+		],
+		random: createRandomSequence(0.5, 0.5, 0),
+	});
+	let session = battle.start();
+
+	readEvent(session.next());
+	readEvent(session.next());
+	let request = readEvent(session.next());
+	if (request.type !== "request-turn-commands")
+		throw new TypeError("Expected turn command request.");
+
+	let lastEvent: BattleEvent | null = null;
+	readEvent(
+		session.next([
+			{ type: "leave-battle" },
+			{ type: "fight", move: 0, target: { side: 0, slot: 0 } },
+		]),
+	);
+	while (true) {
+		let result = session.next();
+		lastEvent = readEvent(result);
+		if (result.done) break;
+	}
+
+	expect(lastEvent).toEqual({ type: "battle-finished", winnerSide: 1 });
+	expect(battle.state.escapeAttempts ?? 0).toBe(0);
+});
+
+test("a failed escape emits escape-failed, lets the enemy act, and increments attempts", () => {
+	// Same slow-vs-fast pairing (F = 67). The escape roll (third random value) is
+	// 0.5 → floor(0.5*256)=128 >= 67 → failure: the escape is consumed, the enemy's
+	// move still resolves, the battle continues, and the attempt count rises to 1.
+	let battle = new Battle({
+		gameData: GAME_DATA,
+		sides: [
+			{ canLeaveBattle: true, teams: [[createSlowPlayerFixtureWithTackle()]] },
+			{ teams: [[createFastSecondaryFixtureWithTackle()]] },
+		],
+		random: createRandomSequence(0.5, 0.5, 0.5),
+	});
+	let session = battle.start();
+
+	readEvent(session.next());
+	readEvent(session.next());
+	let request = readEvent(session.next());
+	if (request.type !== "request-turn-commands")
+		throw new TypeError("Expected turn command request.");
+
+	let events = collectTurnEvents(session, battle, [
+		{ type: "leave-battle" },
+		{ type: "fight", move: 0, target: { side: 0, slot: 0 } },
+	]);
+
+	let escapeFailed = events.find((event) => event.type === "escape-failed");
+	expect(escapeFailed).toEqual({ type: "escape-failed", user: { side: 0, slot: 0 } });
+
+	// The enemy still acted: its move resolved against the player this turn.
+	let enemyMove = events.find(
+		(event) => event.type === "move-used" && event.user.side === 1 && event.target.side === 0,
+	);
+	expect(enemyMove).toBeDefined();
+
+	// The battle did not end on a failed escape.
+	expect(battle.state.winnerSide).toBe(null);
+	expect(battle.state.escapeAttempts).toBe(1);
 });
 
 test("a trapped or disallowed side cannot leave during turn input", () => {
@@ -6713,6 +6867,44 @@ function createFastSecondaryFixtureWithTackle() {
 			[Stat.SpecialAttack]: 0,
 			[Stat.SpecialDefense]: 0,
 			[Stat.Speed]: 255,
+		},
+		status: createStatus(["TACKLE", "RAZOR_LEAF", "GROWTH", "LEECH_SEED"]),
+	});
+}
+
+function createFastPlayerFixtureWithTackle() {
+	return new Creature({
+		species: PRIMARY_SPECIES_ID,
+		nature: "MODEST" as NatureId,
+		experience: 1000000,
+		moveset: ["TACKLE", "RAZOR_LEAF", "GROWTH", "LEECH_SEED"],
+		iv: createPerfectStats(),
+		ev: {
+			[Stat.HP]: 0,
+			[Stat.Attack]: 0,
+			[Stat.Defense]: 0,
+			[Stat.SpecialAttack]: 0,
+			[Stat.SpecialDefense]: 0,
+			[Stat.Speed]: 255,
+		},
+		status: createStatus(["TACKLE", "RAZOR_LEAF", "GROWTH", "LEECH_SEED"]),
+	});
+}
+
+function createSlowPlayerFixtureWithTackle() {
+	return new Creature({
+		species: PRIMARY_SPECIES_ID,
+		nature: "BRAVE" as NatureId,
+		experience: 1000000,
+		moveset: ["TACKLE", "RAZOR_LEAF", "GROWTH", "LEECH_SEED"],
+		iv: createPerfectStats(),
+		ev: {
+			[Stat.HP]: 0,
+			[Stat.Attack]: 0,
+			[Stat.Defense]: 0,
+			[Stat.SpecialAttack]: 0,
+			[Stat.SpecialDefense]: 0,
+			[Stat.Speed]: 0,
 		},
 		status: createStatus(["TACKLE", "RAZOR_LEAF", "GROWTH", "LEECH_SEED"]),
 	});
