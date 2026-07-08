@@ -1,5 +1,5 @@
 /**
- * Tests for the asset store's map loading and validation.
+ * Tests for the asset store's map loading, validation, and atlas slicing helpers.
  *
  * Focuses on the map path, which is the reliable end-to-end route under the Bun
  * HTML dev server: a manifest map source given as an inline object is validated
@@ -14,7 +14,7 @@ import { expect, test } from "bun:test";
 
 import { createSampleMap } from "../overworld/map-loader";
 
-import { AssetStore, type AssetManifest } from "./assets";
+import { AssetStore, type AssetManifest, expandAtlasRegions } from "./assets";
 
 /** A manifest with no images/audio/atlases and the given inline maps. */
 function manifestWithMaps(maps: AssetManifest["maps"]): AssetManifest {
@@ -39,4 +39,34 @@ test("map(id) returns null for an id the manifest never declared", async () => {
 	let store = new AssetStore(manifestWithMaps({}));
 	await store.loadAll(() => {});
 	expect(store.map("missing")).toBeNull();
+});
+
+test("expandAtlasRegions merges explicit regions with row-major grid slices", () => {
+	let regions = expandAtlasRegions({
+		image: "/assets/sheet.png",
+		regions: {
+			full: { x: 0, y: 0, w: 40, h: 20 },
+			"sprite.6": { x: 20, y: 20, w: 4, h: 4 },
+		},
+		slices: [
+			{
+				prefix: "sprite",
+				x: 1,
+				y: 2,
+				w: 8,
+				h: 8,
+				columns: 2,
+				rows: 2,
+				spacingX: 1,
+				spacingY: 2,
+				start: 5,
+			},
+		],
+	});
+
+	expect(regions.full).toEqual({ x: 0, y: 0, w: 40, h: 20 });
+	expect(regions["sprite.5"]).toEqual({ x: 1, y: 2, w: 8, h: 8 });
+	expect(regions["sprite.6"]).toEqual({ x: 20, y: 20, w: 4, h: 4 });
+	expect(regions["sprite.7"]).toEqual({ x: 1, y: 12, w: 8, h: 8 });
+	expect(regions["sprite.8"]).toEqual({ x: 10, y: 12, w: 8, h: 8 });
 });

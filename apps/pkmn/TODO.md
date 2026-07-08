@@ -159,6 +159,10 @@
 - [ ] Serve content JSON over a real static file server so maps can be `fetch`ed by URL instead of inlined as imported modules. Today `bun run src/index.html` (the game's `start`) is a SPA-fallback server that returns the app shell for any unknown path, so `AssetStore` gets maps as inlined JSON objects (registered in `game-client.ts`); the manifest also lists the intended `/content/maps/<id>.json` URL for when a real server exists.
 - [ ] Load per-tileset images: the renderer resolves each tileset's image by its manifest `image` id (`TileMapRenderer` in `src/presentation/render/tilemap.ts`), but no tileset images are registered in the manifest yet, so maps still render through the procedural collision-colored fallback. Register tileset sheets under manifest `images` and confirm real tiles blit.
 
+## Content Asset Atlases
+
+- [ ] Replace coarse row-major atlas slices in `src/content/manifest.json` with precise hand-named regions for mixed-size sheets that include headers, labels, or multiple sprite sizes, so authored content can reference semantic region names instead of broad `tile.N`/`sprite.N` cells.
+
 ## Dev Tools: Sprite Drawing (Phase 1) follow-ups
 
 - [ ] Assemble exported sprites into atlas `regions` for in-game rendering: `runSpriteExport` (in `src/dev/export.ts`) only registers the PNG under the manifest `images` map. A later phase should let the tool place a sprite into a named atlas region (manifest `atlases[id].regions`) so renderers can blit by region name, and/or pack multiple sprites into a single sheet.

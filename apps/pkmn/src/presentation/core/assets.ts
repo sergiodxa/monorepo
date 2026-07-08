@@ -33,14 +33,74 @@ import type { TileMap } from "../render/tilemap";
 import { loadMap } from "../overworld/map-loader";
 import { Atlas, type AtlasSource } from "../render/atlas";
 
+/** A regular row-major grid inside an atlas, expanded into named static regions. */
+export interface AtlasGridSlice {
+	/** Region-name prefix; cells become `<prefix>.<index>`. */
+	prefix: string;
+	/** Left offset of the first cell in source pixels. */
+	x?: number;
+	/** Top offset of the first cell in source pixels. */
+	y?: number;
+	/** Width of each emitted cell in source pixels. */
+	w: number;
+	/** Height of each emitted cell in source pixels. */
+	h: number;
+	/** Number of whole columns emitted from this grid. */
+	columns: number;
+	/** Number of whole rows emitted from this grid. */
+	rows: number;
+	/** Horizontal gap between adjacent cells in source pixels. */
+	spacingX?: number;
+	/** Vertical gap between adjacent cells in source pixels. */
+	spacingY?: number;
+	/** Starting index used when naming cells, defaulting to zero. */
+	start?: number;
+}
+
 /** One atlas declaration: an image URL sliced into named (and animated) regions. */
 export interface AtlasManifestEntry {
 	/** URL of the sheet image sliced into regions. */
 	image: string;
 	/** Static regions keyed by name, in source pixels. */
 	regions: Record<string, Rect>;
+	/** Optional row-major grids expanded into static regions at load time. */
+	slices?: AtlasGridSlice[];
 	/** Optional animated regions keyed by name. */
 	animations?: Record<string, AtlasAnimation>;
+}
+
+/** Expands grid slices, then overlays explicit regions so hand-authored rects win. */
+export function expandAtlasRegions(entry: AtlasManifestEntry): Record<string, Rect> {
+	let regions: Record<string, Rect> = {};
+	for (let slice of entry.slices ?? []) {
+		appendGridSlice(regions, slice);
+	}
+	for (let [name, rect] of Object.entries(entry.regions)) {
+		regions[name] = { ...rect };
+	}
+	return regions;
+}
+
+/** Adds one grid slice to an atlas region map using row-major naming. */
+function appendGridSlice(regions: Record<string, Rect>, slice: AtlasGridSlice) {
+	let x = slice.x ?? 0;
+	let y = slice.y ?? 0;
+	let spacingX = slice.spacingX ?? 0;
+	let spacingY = slice.spacingY ?? 0;
+	let start = slice.start ?? 0;
+	let index = start;
+
+	for (let row = 0; row < slice.rows; row++) {
+		for (let column = 0; column < slice.columns; column++) {
+			regions[`${slice.prefix}.${index}`] = {
+				x: x + column * (slice.w + spacingX),
+				y: y + row * (slice.h + spacingY),
+				w: slice.w,
+				h: slice.h,
+			};
+			index++;
+		}
+	}
 }
 
 /** Enumerates every asset the game may load, grouped by kind. */
@@ -138,9 +198,10 @@ export class AssetStore {
 			tasks.push(
 				this.loadImage(entry.image)
 					.then((image) => {
+						let regions = expandAtlasRegions(entry);
 						this.atlases.set(
 							id,
-							new Atlas(image as unknown as AtlasSource, entry.regions, entry.animations ?? {}),
+							new Atlas(image as unknown as AtlasSource, regions, entry.animations ?? {}),
 						);
 					})
 					.catch((error) => console.warn(`Failed to load atlas "${id}":`, error))

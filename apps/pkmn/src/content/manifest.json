@@ -4,5 +4,214 @@
 	"maps": {
 		"route-1": "/content/maps/route-1.json"
 	},
-	"atlases": {}
+	"atlases": {
+		"area-previews": {
+			"image": "/assets/area-previews.png",
+			"regions": { "full": { "x": 0, "y": 0, "w": 738, "h": 1176 } },
+			"slices": [{ "prefix": "panel", "w": 240, "h": 160, "columns": 3, "rows": 7 }]
+		},
+		"battle-effects-attack-effects": {
+			"image": "/assets/battle-effects-attack-effects.png",
+			"regions": { "full": { "x": 0, "y": 0, "w": 948, "h": 835 } },
+			"slices": [{ "prefix": "frame", "w": 64, "h": 64, "columns": 14, "rows": 13 }]
+		},
+		"battle-effects-battle-backgrounds": {
+			"image": "/assets/battle-effects-battle-backgrounds.png",
+			"regions": { "full": { "x": 0, "y": 0, "w": 737, "h": 466 } },
+			"slices": [{ "prefix": "background", "w": 240, "h": 112, "columns": 3, "rows": 4 }]
+		},
+		"battle-effects-hp-bars-and-in-battle-menu": {
+			"image": "/assets/battle-effects-hp-bars-and-in-battle-menu.png",
+			"regions": { "full": { "x": 0, "y": 0, "w": 614, "h": 296 } },
+			"slices": [{ "prefix": "tile", "w": 16, "h": 16, "columns": 38, "rows": 18 }]
+		},
+		"battle-effects-move-effects": {
+			"image": "/assets/battle-effects-move-effects.png",
+			"regions": { "full": { "x": 0, "y": 0, "w": 491, "h": 1926 } },
+			"slices": [{ "prefix": "frame", "w": 64, "h": 64, "columns": 7, "rows": 30 }]
+		},
+		"battle-effects-poke-balls": {
+			"image": "/assets/battle-effects-poke-balls.png",
+			"regions": { "full": { "x": 0, "y": 0, "w": 192, "h": 100 } },
+			"slices": [{ "prefix": "sprite", "w": 32, "h": 32, "columns": 6, "rows": 3 }]
+		},
+		"battle-effects-stat-effects": {
+			"image": "/assets/battle-effects-stat-effects.png",
+			"regions": { "full": { "x": 0, "y": 0, "w": 1024, "h": 1288 } },
+			"slices": [{ "prefix": "frame", "w": 64, "h": 64, "columns": 16, "rows": 20 }]
+		},
+		"credits-sequence": {
+			"image": "/assets/credits-sequence.png",
+			"regions": { "full": { "x": 0, "y": 0, "w": 740, "h": 4045 } },
+			"slices": [{ "prefix": "panel", "w": 240, "h": 160, "columns": 3, "rows": 25 }]
+		},
+		"diploma": {
+			"image": "/assets/diploma.png",
+			"regions": { "full": { "x": 0, "y": 0, "w": 497, "h": 409 } },
+			"slices": [{ "prefix": "panel", "w": 240, "h": 160, "columns": 2, "rows": 2 }]
+		},
+		"dodrio-berry-picking": {
+			"image": "/assets/dodrio-berry-picking.png",
+			"regions": { "full": { "x": 0, "y": 0, "w": 573, "h": 389 } },
+			"slices": [{ "prefix": "sprite", "w": 32, "h": 32, "columns": 17, "rows": 12 }]
+		},
+		"ending-pixel-art": {
+			"image": "/assets/ending-pixel-art.png",
+			"regions": { "full": { "x": 0, "y": 0, "w": 343, "h": 346 } },
+			"slices": [{ "prefix": "panel", "w": 160, "h": 160, "columns": 2, "rows": 2 }]
+		},
+		"fame-checker": {
+			"image": "/assets/fame-checker.png",
+			"regions": { "full": { "x": 0, "y": 0, "w": 738, "h": 765 } },
+			"slices": [{ "prefix": "panel", "w": 240, "h": 160, "columns": 3, "rows": 4 }]
+		},
+		"fonts": {
+			"image": "/assets/fonts.png",
+			"regions": { "full": { "x": 0, "y": 0, "w": 632, "h": 583 } },
+			"slices": [{ "prefix": "glyph", "w": 8, "h": 8, "columns": 79, "rows": 72 }]
+		},
+		"ghost-and-fossils": {
+			"image": "/assets/ghost-and-fossils.png",
+			"regions": { "full": { "x": 0, "y": 0, "w": 208, "h": 95 } },
+			"slices": [{ "prefix": "sprite", "w": 64, "h": 64, "columns": 3, "rows": 1 }]
+		},
+		"intro-and-title": {
+			"image": "/assets/intro-and-title.png",
+			"regions": { "full": { "x": 0, "y": 0, "w": 1133, "h": 2933 } },
+			"slices": [{ "prefix": "panel", "w": 240, "h": 160, "columns": 4, "rows": 18 }]
+		},
+		"items": {
+			"image": "/assets/items.png",
+			"regions": { "full": { "x": 0, "y": 0, "w": 721, "h": 525 } },
+			"slices": [{ "prefix": "icon", "w": 24, "h": 24, "columns": 30, "rows": 21 }]
+		},
+		"mail": {
+			"image": "/assets/mail.png",
+			"regions": { "full": { "x": 0, "y": 0, "w": 726, "h": 648 } },
+			"slices": [{ "prefix": "sprite", "w": 32, "h": 32, "columns": 22, "rows": 20 }]
+		},
+		"menu-elements-trainer-card-kit": {
+			"image": "/assets/menu-elements-Trainer%20Card%20Kit.png",
+			"regions": { "full": { "x": 0, "y": 0, "w": 982, "h": 1676 } },
+			"slices": [{ "prefix": "tile", "w": 16, "h": 16, "columns": 61, "rows": 104 }]
+		},
+		"menu-elements-interface-and-bag-screens": {
+			"image": "/assets/menu-elements-interface-and-bag-screens.png",
+			"regions": { "full": { "x": 0, "y": 0, "w": 704, "h": 560 } },
+			"slices": [{ "prefix": "tile", "w": 16, "h": 16, "columns": 44, "rows": 35 }]
+		},
+		"menu-elements-intro-screens": {
+			"image": "/assets/menu-elements-intro-screens.png",
+			"regions": { "full": { "x": 0, "y": 0, "w": 500, "h": 500 } },
+			"slices": [{ "prefix": "panel", "w": 240, "h": 160, "columns": 2, "rows": 3 }]
+		},
+		"menu-elements-menu-frames": {
+			"image": "/assets/menu-elements-menu-frames.png",
+			"regions": { "full": { "x": 0, "y": 0, "w": 304, "h": 188 } },
+			"slices": [{ "prefix": "tile", "w": 16, "h": 16, "columns": 19, "rows": 11 }]
+		},
+		"menu-elements-pc-interface": {
+			"image": "/assets/menu-elements-pc-interface.png",
+			"regions": { "full": { "x": 0, "y": 0, "w": 641, "h": 1240 } },
+			"slices": [{ "prefix": "tile", "w": 16, "h": 16, "columns": 40, "rows": 77 }]
+		},
+		"menu-elements-pokemon-menu": {
+			"image": "/assets/menu-elements-pokemon-menu.png",
+			"regions": { "full": { "x": 0, "y": 0, "w": 495, "h": 288 } },
+			"slices": [{ "prefix": "tile", "w": 16, "h": 16, "columns": 30, "rows": 18 }]
+		},
+		"menu-elements-pokemon-summary-menu": {
+			"image": "/assets/menu-elements-pokemon-summary-menu.png",
+			"regions": { "full": { "x": 0, "y": 0, "w": 490, "h": 500 } },
+			"slices": [{ "prefix": "tile", "w": 16, "h": 16, "columns": 30, "rows": 31 }]
+		},
+		"menu-elements-type-status-icons": {
+			"image": "/assets/menu-elements-type-status-icons.png",
+			"regions": { "full": { "x": 0, "y": 0, "w": 128, "h": 96 } },
+			"slices": [{ "prefix": "icon", "w": 32, "h": 16, "columns": 4, "rows": 6 }]
+		},
+		"overworld-npcs": {
+			"image": "/assets/overworld-npcs.png",
+			"regions": { "full": { "x": 0, "y": 0, "w": 238, "h": 2967 } },
+			"slices": [{ "prefix": "sprite", "w": 16, "h": 16, "columns": 14, "rows": 185 }]
+		},
+		"player-sprites": {
+			"image": "/assets/player-sprites.png",
+			"regions": { "full": { "x": 0, "y": 0, "w": 673, "h": 638 } },
+			"slices": [
+				{ "prefix": "tile", "w": 16, "h": 16, "columns": 42, "rows": 39 },
+				{ "prefix": "sprite", "w": 64, "h": 64, "columns": 10, "rows": 9 }
+			]
+		},
+		"pokedex": {
+			"image": "/assets/pokedex.png",
+			"regions": { "full": { "x": 0, "y": 0, "w": 1000, "h": 2088 } },
+			"slices": [{ "prefix": "tile", "w": 16, "h": 16, "columns": 62, "rows": 130 }]
+		},
+		"pokemon-2nd-generation": {
+			"image": "/assets/pokemon-2nd-generation.png",
+			"regions": { "full": { "x": 0, "y": 0, "w": 777, "h": 921 } },
+			"slices": [{ "prefix": "sprite", "w": 64, "h": 64, "columns": 12, "rows": 14 }]
+		},
+		"pokemon-overworld": {
+			"image": "/assets/pokemon-overworld.png",
+			"regions": { "full": { "x": 0, "y": 0, "w": 349, "h": 197 } },
+			"slices": [{ "prefix": "sprite", "w": 16, "h": 16, "columns": 21, "rows": 12 }]
+		},
+		"pokemon": {
+			"image": "/assets/pokemon.png",
+			"regions": { "full": { "x": 0, "y": 0, "w": 1971, "h": 1836 } },
+			"slices": [{ "prefix": "card", "w": 75, "h": 108, "columns": 26, "rows": 17 }]
+		},
+		"professor-oak-opening-lecture": {
+			"image": "/assets/professor-oak-opening-lecture.png",
+			"regions": { "full": { "x": 0, "y": 0, "w": 738, "h": 1056 } },
+			"slices": [{ "prefix": "panel", "w": 240, "h": 160, "columns": 3, "rows": 6 }]
+		},
+		"slot-machine": {
+			"image": "/assets/slot-machine.png",
+			"regions": { "full": { "x": 0, "y": 0, "w": 813, "h": 1407 } },
+			"slices": [{ "prefix": "tile", "w": 16, "h": 16, "columns": 50, "rows": 87 }]
+		},
+		"tileset-1": {
+			"image": "/assets/tileset-1.png",
+			"regions": { "full": { "x": 0, "y": 0, "w": 1096, "h": 1090 } },
+			"slices": [{ "prefix": "tile", "w": 16, "h": 16, "columns": 68, "rows": 68 }]
+		},
+		"tileset-2": {
+			"image": "/assets/tileset-2.png",
+			"regions": { "full": { "x": 0, "y": 0, "w": 477, "h": 800 } },
+			"slices": [{ "prefix": "tile", "w": 16, "h": 16, "columns": 29, "rows": 50 }]
+		},
+		"tileset-buildings": {
+			"image": "/assets/tileset-buildings.png",
+			"regions": { "full": { "x": 0, "y": 0, "w": 754, "h": 521 } },
+			"slices": [{ "prefix": "tile", "w": 16, "h": 16, "columns": 47, "rows": 32 }]
+		},
+		"tileset": {
+			"image": "/assets/tileset.png",
+			"regions": { "full": { "x": 0, "y": 0, "w": 300, "h": 450 } },
+			"slices": [{ "prefix": "tile", "w": 16, "h": 16, "columns": 18, "rows": 28 }]
+		},
+		"tilesets-animated-tiles": {
+			"image": "/assets/tilesets-animated-tiles.png",
+			"regions": { "full": { "x": 0, "y": 0, "w": 269, "h": 390 } },
+			"slices": [{ "prefix": "tile", "w": 16, "h": 16, "columns": 16, "rows": 24 }]
+		},
+		"town-map": {
+			"image": "/assets/town-map.png",
+			"regions": { "full": { "x": 0, "y": 0, "w": 988, "h": 1256 } },
+			"slices": [{ "prefix": "panel", "w": 240, "h": 160, "columns": 4, "rows": 7 }]
+		},
+		"trading-sprites": {
+			"image": "/assets/trading-sprites.png",
+			"regions": { "full": { "x": 0, "y": 0, "w": 472, "h": 528 } },
+			"slices": [{ "prefix": "sprite", "w": 64, "h": 64, "columns": 7, "rows": 8 }]
+		},
+		"trainers": {
+			"image": "/assets/trainers.png",
+			"regions": { "full": { "x": 0, "y": 0, "w": 536, "h": 1400 } },
+			"slices": [{ "prefix": "sprite", "w": 64, "h": 64, "columns": 8, "rows": 21 }]
+		}
+	}
 }

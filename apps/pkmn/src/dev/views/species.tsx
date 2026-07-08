@@ -45,6 +45,7 @@ import { GrowthRate } from "~/game/data/growth-rate";
 import { EggGroup, Gender } from "~/game/data/species";
 import { Stat } from "~/game/data/stat";
 import { Type } from "~/game/data/type";
+import { expandAtlasRegions, type AtlasManifestEntry } from "~/presentation/core/assets";
 
 import { SpeciesEditor } from "../editors/species-editor";
 import { SPECIES_ID_PATTERN, validateSpeciesId } from "../species-id";
@@ -122,9 +123,9 @@ const REMOVE_BUTTON: Styles = { ...CONTROL_BUTTON, color: "#fca5a5", borderColor
 
 /** Regions available inside a given atlas id, sorted; empty for an unknown atlas. */
 function atlasRegions(atlasId: string): string[] {
-	let atlases = manifest.atlases as Record<string, { regions?: Record<string, unknown> }>;
+	let atlases = manifest.atlases as Record<string, AtlasManifestEntry>;
 	let atlas = atlases[atlasId];
-	return atlas?.regions ? Object.keys(atlas.regions).sort() : [];
+	return atlas ? Object.keys(expandAtlasRegions(atlas)).sort() : [];
 }
 
 /**
