@@ -2,7 +2,8 @@
  * KV-backed session storage adapter for remix/session. It implements SessionStorage
  * by reading, writing, and destroying JSON-serialized session payloads in a key-value
  * store under a configurable key prefix and TTL, validating the stored tuple shape on
- * read. It exists so the app can persist sessions on Cloudflare KV at the edge.
+ * read. It exists so Cloudflare Workers apps can persist Remix sessions on Workers KV —
+ * Remix ships cookie/fs/memory/redis/memcache session stores but none for Workers KV.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -12,7 +13,7 @@ import type { Session, SessionStorage } from "remix/session";
 
 import { createSession } from "remix/session";
 
-import type { KVStore } from "~/app/contracts/kv-store";
+import type { KVStore } from "./kv-store";
 
 /**
  * Default KV TTL used when no custom session lifetime is provided.

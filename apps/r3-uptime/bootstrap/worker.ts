@@ -8,9 +8,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { createD1DatabaseAdapter } from "@pkg/data-table-d1";
 import { createDatabase } from "remix/data-table";
-
-import { createD1DataTableAdapter } from "~/infrastructure/database/d1-data-table-adapter";
 
 import application from "./app";
 
@@ -20,7 +19,7 @@ import application from "./app";
  */
 export default {
 	async fetch(request: Request, env: Cloudflare.Env) {
-		let database = createDatabase(createD1DataTableAdapter(env.DB));
+		let database = createDatabase(createD1DatabaseAdapter(env.DB));
 		let app = application({ database });
 		return await app.fetch(request);
 	},

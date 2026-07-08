@@ -1,6 +1,6 @@
 /**
  * Unit tests for the KV-backed session storage adapter. Using a fake in-memory KV
- * namespace, they verify that a session round-trips its data through save and read
+ * store, they verify that a session round-trips its data through save and read
  * and that destroying a session both deletes its KV key and clears the cookie. They
  * exist to guard the adapter's persistence and destruction behavior against
  * regressions.
@@ -11,15 +11,14 @@
 
 import { describe, expect, test } from "bun:test";
 
-import { KVSessionStorage } from "./kv-session-storage-adapter";
+import type { KVStore } from "./kv-store";
+
+import { KVSessionStorage } from "./kv-session-storage";
 
 describe("KVSessionStorage", () => {
 	test("reads and writes session data", async () => {
 		let kv = createFakeKV();
-		let storage = new KVSessionStorage(kv.kv, {
-			prefix: "test:",
-			ttlSeconds: 60,
-		});
+		let storage = new KVSessionStorage(kv.store, { prefix: "test:", ttlSeconds: 60 });
 
 		let session = await storage.read(null);
 		session.set("userId", "user-123");
@@ -33,7 +32,7 @@ describe("KVSessionStorage", () => {
 
 	test("destroy deletes session key and clears cookie", async () => {
 		let kv = createFakeKV();
-		let storage = new KVSessionStorage(kv.kv);
+		let storage = new KVSessionStorage(kv.store);
 
 		let session = await storage.read(null);
 		session.set("userId", "user-123");
@@ -50,41 +49,28 @@ describe("KVSessionStorage", () => {
 	});
 });
 
+/** Builds an in-memory `KVStore` fake for exercising the adapter without a real KV binding. */
 function createFakeKV() {
 	let values = new Map<string, string>();
 
+	let store: KVStore = {
+		async get(key) {
+			return values.get(key) ?? null;
+		},
+		async put(key, value) {
+			if (typeof value !== "string") return;
+			values.set(key, value);
+		},
+		async delete(key) {
+			values.delete(key);
+		},
+		async list() {
+			return { keys: [...values.keys()].map((name) => ({ name })) };
+		},
+	};
+
 	return {
-		kv: {
-			async get(key: string) {
-				return values.get(key) ?? null;
-			},
-
-			async getWithMetadata(key: string) {
-				return {
-					value: values.get(key) ?? null,
-					metadata: null,
-					cacheStatus: null,
-				};
-			},
-
-			async list() {
-				return {
-					keys: [],
-					list_complete: true,
-					cursor: "",
-				};
-			},
-
-			async put(key: string, value: string | ArrayBuffer | ReadableStream | ArrayBufferView) {
-				if (typeof value !== "string") return;
-				values.set(key, value);
-			},
-
-			async delete(key: string) {
-				values.delete(key);
-			},
-		} as unknown as KVNamespace,
-
+		store,
 		get size() {
 			return values.size;
 		},

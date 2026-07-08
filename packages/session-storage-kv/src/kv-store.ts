@@ -1,8 +1,8 @@
 /**
- * Key-value store contract used across the r3-uptime app. It declares the minimal
- * KVStore interface for getting, putting (with optional TTL), deleting, and listing
- * entries. It exists to decouple app code from any concrete KV implementation so
- * adapters like the KV session storage can depend on an abstraction.
+ * Key-value store contract this package's session storage depends on. It declares
+ * the minimal get/put/delete/list surface a KV-like binding must expose. It exists
+ * so the session storage adapter depends on an abstraction instead of any concrete
+ * KV implementation (Cloudflare Workers KV, an in-memory fake for tests, etc.).
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

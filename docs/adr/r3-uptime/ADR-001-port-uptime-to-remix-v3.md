@@ -828,7 +828,7 @@ Would inherit domain/queue/DO automatically. **Rejected because**: it makes cuto
 
 ## Current Progress
 
-- [ ] Phase 0: Foundation repair
+- [x] Phase 0: Foundation repair
 - [ ] Phase 1: App skeleton — auth, teams, layout
 - [ ] Phase 2: HTTP monitors end-to-end
 - [ ] Phase 3: DNS, TCP, and cron-job monitors
@@ -849,3 +849,6 @@ Would inherit domain/queue/DO automatically. **Rejected because**: it makes cuto
 - **`wrangler d1 migrations apply` tracks applied migrations by filename** in the `d1_migrations` table — that is why copying the migrations directory unchanged makes production consider them already applied.
 - **`bunx wrangler deploy --dry-run`** validates bundling + bindings without uploading; use it liberally.
 - The monorepo root `TODO.md` documents two accepted quirks that also apply here: `ctx.params.x!` is the accepted idiom for context-erased route params, and oxlint `jsx-key` warnings on remix/ui component arrays are a known false positive (do not "fix" them by adding `key` to components).
+- **`database/schema.ts` timestamp columns are `c.integer()`, not `c.text()`.** Other Remix v3 apps in this repo store audit timestamps as ISO text; this app's production D1 database already has `created_at`/`updated_at`/etc. as INTEGER (milliseconds since epoch), written by the OLD APP's Drizzle `timestamp_ms` mode. Write epoch-ms integers (e.g. `Date.now()`), not ISO strings, when inserting/updating these columns in later phases — mixing representations would break ordering and comparisons against existing rows.
+- **`wrangler d1 migrations apply` needs the binding name as a positional argument** (`bunx wrangler d1 migrations apply DB --local`) — omitting it fails with "Not enough non-option arguments" on this wrangler version. `db:local:migrate`/`db:remote:migrate` already pass it.
+- **`wrangler deploy`/`wrangler dev` do not build the Vite app themselves.** Run `bun run build` (`vite build`) first so `dist/client` and `dist/ssr/wrangler.json` exist; only then does `@cloudflare/vite-plugin`'s config redirection make `wrangler deploy --dry-run` (or a real deploy) succeed. A stale `.wrangler/deploy/config.json` pointing at a deleted `dist/` also fails — delete it if you clean `dist/` out from under a redirect.

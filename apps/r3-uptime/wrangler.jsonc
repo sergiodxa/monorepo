@@ -10,7 +10,19 @@
 	"observability": { "enabled": true },
 	"assets": { "directory": "./build/client" },
 
-	// Custom domain routes can be added here when needed
+	"triggers": {
+		"crons": [
+			"* * * * *", // Every minute - uptime monitors + cron job monitors
+			"*/5 * * * *", // Every 5 minutes - TCP monitors
+			"*/10 * * * *", // Every 10 minutes - domain verification
+			"0 * * * *", // Every hour - DNS monitors
+			"0 0 * * *", // Every day at midnight - cleanup
+			"0 1 * * *", // Every day at 1 AM UTC - aggregate daily stats
+			"0 6 * * *", // Every day at 6 AM UTC - SSL checks
+		],
+	},
+
+	// Custom domain route moves here at Phase 10 cutover
 	"routes": [],
 
 	// Secrets Store secrets can be added here when needed
@@ -22,24 +34,39 @@
 		},
 	],
 
-	// KV namespace bindings can be added here when needed
-	"kv_namespaces": [],
+	"kv_namespaces": [
+		{
+			"binding": "KV",
+			"id": "ea5b4a1bb7804692992b013e1627a8ad",
+			"preview_id": "ea5b4a1bb7804692992b013e1627a8ad",
+		},
+	],
 
-	// D1 database bindings can be added here when needed
 	"d1_databases": [
 		{
 			"binding": "DB",
-			"database_name": "<database-name>",
-			"database_id": "<database-id>",
+			"database_name": "ping",
+			"database_id": "b51fff7c-c4dd-412d-8b56-57da405b780e",
+			"preview_database_id": "b51fff7c-c4dd-412d-8b56-57da405b780e",
+			"migrations_dir": "./database/migrations",
 		},
 	],
 
 	// R2 bucket bindings can be added here when needed
 	"r2_buckets": [],
 
-	// Durable Object bindings and migrations can be added here when needed
-	"durable_objects": {
-		"bindings": [],
+	// Only a producer until Phase 10 cutover: a Cloudflare queue can have a single
+	// consumer worker, and the OLD APP (`ping`) still consumes it until then.
+	"queues": {
+		"producers": [{ "binding": "QUEUE", "queue": "ping" }],
 	},
-	"migrations": [],
+
+	"durable_objects": {
+		"bindings": [{ "name": "GEO_FETCH", "class_name": "GeoFetchDO" }],
+	},
+	"migrations": [{ "tag": "add-geo-fetch-do", "new_classes": ["GeoFetchDO"] }],
+
+	"workflows": [{ "name": "ping-workflow", "binding": "PING", "class_name": "Ping" }],
+
+	"analytics_engine_datasets": [{ "binding": "PING_RESULTS", "dataset": "uptime_monitor_results" }],
 }

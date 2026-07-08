@@ -8,11 +8,13 @@
 		"start": "vite preview",
 		"cf:deploy": "bunx wrangler deploy",
 		"cf:typegen": "bunx wrangler types",
-		"db:local:migrate": "bunx wrangler d1 migrations apply --local",
-		"db:remote:migrate": "bunx wrangler d1 migrations apply --remote",
+		"db:local:migrate": "bunx wrangler d1 migrations apply DB --local",
+		"db:remote:migrate": "bunx wrangler d1 migrations apply DB --remote",
 		"typecheck": "tsc --noEmit"
 	},
 	"dependencies": {
+		"@pkg/data-table-d1": "workspace:*",
+		"@pkg/session-storage-kv": "workspace:*",
 		"remix": "3.0.0-beta.5"
 	},
 	"devDependencies": {
