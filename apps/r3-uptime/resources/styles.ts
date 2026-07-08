@@ -8,7 +8,22 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { CSSMixinDescriptor, ElementProps, MixinDescriptor } from "remix/ui";
+
 import { css } from "remix/ui";
+
+/**
+ * Re-types a `css()` mixin for a specific host element. `css()` binds its mixin to
+ * the global `Element`, but `@cloudflare/workers-types` shadows `Element` with
+ * HTMLRewriter's, so a plain `Element` mixin is not assignable to the `mix` prop once
+ * JSX resolves an element to its concrete DOM type (e.g. `<select>`). Only the
+ * compile-time type changes; the runtime value is identical.
+ */
+export function mixFor<Node extends EventTarget>(
+	mixin: CSSMixinDescriptor,
+): MixinDescriptor<Node, CSSMixinDescriptor["args"], ElementProps> {
+	return mixin as unknown as MixinDescriptor<Node, CSSMixinDescriptor["args"], ElementProps>;
+}
 
 /** Page-level flex column filling the viewport height. */
 export const page = css({
@@ -130,6 +145,172 @@ export const emptyState = css({
 	"@media (prefers-color-scheme: dark)": {
 		borderColor: "#404040",
 	},
+});
+
+/** Vertical label + control stack for a form field. */
+export const field = css({
+	display: "flex",
+	flexDirection: "column",
+	gap: 4,
+	marginBottom: 16,
+	fontSize: "0.875rem",
+	fontWeight: 500,
+});
+
+/** Horizontal checkbox + label row for a boolean form field. */
+export const checkboxField = css({
+	display: "flex",
+	alignItems: "center",
+	gap: 8,
+	marginBottom: 16,
+	fontSize: "0.875rem",
+});
+
+/** Text/number/url/select control matching the app's form field style. */
+export const input = css({
+	padding: "8px 10px",
+	borderRadius: 6,
+	border: "1px solid #d4d4d4",
+	fontSize: "0.9375rem",
+	fontFamily: "inherit",
+	background: "#ffffff",
+	color: "inherit",
+	"@media (prefers-color-scheme: dark)": {
+		borderColor: "#404040",
+		background: "#171717",
+	},
+});
+
+/** {@link input} re-typed for `<select>` (see {@link mixFor}). */
+export const selectInput = mixFor<HTMLSelectElement>(input);
+
+/** Destructive action button/link. */
+export const buttonDanger = css({
+	display: "inline-flex",
+	alignItems: "center",
+	justifyContent: "center",
+	padding: "8px 16px",
+	borderRadius: 6,
+	border: "1px solid transparent",
+	background: "#dc2626",
+	color: "#ffffff",
+	fontWeight: 500,
+	cursor: "pointer",
+	"&:hover": { background: "#b91c1c" },
+});
+
+/** Secondary (outline) button/link. */
+export const buttonSecondary = css({
+	display: "inline-flex",
+	alignItems: "center",
+	justifyContent: "center",
+	padding: "8px 16px",
+	borderRadius: 6,
+	border: "1px solid #d4d4d4",
+	background: "transparent",
+	color: "inherit",
+	fontWeight: 500,
+	cursor: "pointer",
+	textDecoration: "none",
+	"@media (prefers-color-scheme: dark)": {
+		borderColor: "#404040",
+	},
+});
+
+/** Native `<dialog>` surface for delete-confirmation prompts. */
+export const dialog = css({
+	padding: 24,
+	borderRadius: 8,
+	border: "1px solid #d4d4d4",
+	maxWidth: 400,
+	"&::backdrop": {
+		background: "rgba(0, 0, 0, 0.4)",
+	},
+	"@media (prefers-color-scheme: dark)": {
+		borderColor: "#404040",
+		background: "#171717",
+		color: "#e5e5e5",
+	},
+});
+
+/** Full-width data table for monitor/result lists. */
+export const table = css({
+	width: "100%",
+	borderCollapse: "collapse",
+	fontSize: "0.875rem",
+	"& th, & td": {
+		textAlign: "left",
+		padding: "8px 12px",
+		borderBottom: "1px solid #e5e5e5",
+	},
+	"@media (prefers-color-scheme: dark)": {
+		"& th, & td": { borderColor: "#262626" },
+	},
+});
+
+/** Row of stat cards on the dashboard. */
+export const statRow = css({
+	display: "flex",
+	flexWrap: "wrap",
+	gap: 16,
+	marginBottom: 24,
+});
+
+/** A single dashboard stat card. */
+export const statCard = css({
+	flex: "1 1 160px",
+	padding: 16,
+	borderRadius: 8,
+	border: "1px solid #e5e5e5",
+	"@media (prefers-color-scheme: dark)": {
+		borderColor: "#262626",
+	},
+});
+
+/** Large numeric value inside a stat card. */
+export const statValue = css({
+	fontSize: "1.75rem",
+	fontWeight: 600,
+	lineHeight: 1.2,
+});
+
+/** Status badge base; combine with a status-specific color mixin. */
+export const badge = css({
+	display: "inline-flex",
+	alignItems: "center",
+	padding: "2px 8px",
+	borderRadius: 999,
+	fontSize: "0.75rem",
+	fontWeight: 600,
+	textTransform: "capitalize",
+});
+
+/** Green "up"/valid/healthy badge color. */
+export const badgeUp = css({
+	background: "#dcfce7",
+	color: "#166534",
+	"@media (prefers-color-scheme: dark)": { background: "#052e16", color: "#4ade80" },
+});
+
+/** Amber "degraded"/expiring/late badge color. */
+export const badgeDegraded = css({
+	background: "#fef3c7",
+	color: "#92400e",
+	"@media (prefers-color-scheme: dark)": { background: "#451a03", color: "#fbbf24" },
+});
+
+/** Red "down"/expired/error badge color. */
+export const badgeDown = css({
+	background: "#fee2e2",
+	color: "#991b1b",
+	"@media (prefers-color-scheme: dark)": { background: "#450a0a", color: "#f87171" },
+});
+
+/** Gray "pending"/unknown/disabled badge color. */
+export const badgeNeutral = css({
+	background: "#f5f5f5",
+	color: "#525252",
+	"@media (prefers-color-scheme: dark)": { background: "#262626", color: "#a3a3a3" },
 });
 
 /** Fixed-position flash toast, auto-dismissed with a CSS animation. */

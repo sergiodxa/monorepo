@@ -22,9 +22,25 @@ import { methodOverride } from "remix/method-override-middleware";
 import { renderWith } from "remix/render-middleware";
 import { renderToStream } from "remix/ui/server";
 
+import {
+	createContentCheck,
+	deleteContentCheck,
+} from "~/app/http/controllers/actions/content-checks";
+import { setDashboardTab } from "~/app/http/controllers/actions/dashboard";
+import {
+	createMonitor,
+	deleteMonitor,
+	playMonitor,
+	updateMonitor,
+} from "~/app/http/controllers/actions/monitors";
+import { updateSsl } from "~/app/http/controllers/actions/ssl";
 import appIndex from "~/app/http/controllers/app/index";
 import teamDashboard from "~/app/http/controllers/app/team/dashboard";
+import httpMonitors from "~/app/http/controllers/app/team/http-monitors";
 import teamIndex from "~/app/http/controllers/app/team/index";
+import monitorEdit from "~/app/http/controllers/app/team/monitor-edit";
+import monitorNew from "~/app/http/controllers/app/team/monitor-new";
+import monitorShow from "~/app/http/controllers/app/team/monitor-show";
 import authController from "~/app/http/controllers/auth";
 import defaultHandler from "~/app/http/controllers/default-handler";
 import healthcheck from "~/app/http/controllers/healthcheck";
@@ -92,6 +108,36 @@ export default function application(options: application.Options) {
 	router.map(routes.app.team.dashboard, {
 		middleware: [requireUser, requireTeam],
 		handler: teamDashboard as RequestHandler<any>,
+	});
+	router.map(routes.app.team.httpMonitors, {
+		middleware: [requireUser, requireTeam],
+		handler: httpMonitors as RequestHandler<any>,
+	});
+	router.map(routes.app.team.monitorNew, {
+		middleware: [requireUser, requireTeam],
+		handler: monitorNew as RequestHandler<any>,
+	});
+	router.map(routes.app.team.monitorShow, {
+		middleware: [requireUser, requireTeam],
+		handler: monitorShow as RequestHandler<any>,
+	});
+	router.map(routes.app.team.monitorEdit, {
+		middleware: [requireUser, requireTeam],
+		handler: monitorEdit as RequestHandler<any>,
+	});
+
+	router.map(routes.actions, {
+		middleware: [requireUser, requireTeam],
+		actions: {
+			createMonitor: createMonitor as RequestHandler<any>,
+			updateMonitor: updateMonitor as RequestHandler<any>,
+			deleteMonitor: deleteMonitor as RequestHandler<any>,
+			playMonitor: playMonitor as RequestHandler<any>,
+			updateSsl: updateSsl as RequestHandler<any>,
+			createContentCheck: createContentCheck as RequestHandler<any>,
+			deleteContentCheck: deleteContentCheck as RequestHandler<any>,
+			setDashboardTab: setDashboardTab as RequestHandler<any>,
+		},
 	});
 
 	return router;

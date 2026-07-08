@@ -1,14 +1,14 @@
 /**
  * Web route table for the r3-uptime app. Declares every URL the fetch-router serves —
- * currently the auth flow, the signed-in team-area entry redirects, and health checks
- * — so controllers, middleware, and views share one source of truth for paths and can
- * build hrefs via `routes.*.href(...)`.
+ * the auth flow, signed-in team-area pages, and their form actions — so controllers,
+ * middleware, and views share one source of truth for paths and can build hrefs via
+ * `routes.*.href(...)`.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
-import { form, get, route } from "remix/fetch-router/routes";
+import { del, form, get, post, route } from "remix/fetch-router/routes";
 
 /**
  * The application route map. Each leaf is a typed route with `.href(params)` for
@@ -31,6 +31,21 @@ export default route({
 		team: {
 			index: get("/app/:team"),
 			dashboard: get("/app/:team/dashboard"),
+			httpMonitors: get("/app/:team/http"),
+			monitorNew: get("/app/:team/monitors/new"),
+			monitorShow: get("/app/:team/monitors/:monitorId"),
+			monitorEdit: get("/app/:team/monitors/:monitorId/edit"),
 		},
+	},
+
+	actions: {
+		createMonitor: post("/actions/:team/create-monitor"),
+		updateMonitor: post("/actions/:team/update-monitor"),
+		deleteMonitor: del("/actions/:team/delete-monitor"),
+		playMonitor: post("/actions/:team/play-monitor"),
+		updateSsl: post("/actions/:team/update-ssl"),
+		createContentCheck: post("/actions/:team/create-content-check"),
+		deleteContentCheck: del("/actions/:team/delete-content-check"),
+		setDashboardTab: post("/actions/:team/set-dashboard-tab"),
 	},
 });

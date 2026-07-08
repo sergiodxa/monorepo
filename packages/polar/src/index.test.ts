@@ -39,6 +39,7 @@ function record(method: string, arg: unknown) {
 let ingestImpl: () => unknown = () => ({});
 let getExternalImpl: () => unknown = () => ({ id: "cus_1" });
 let listCustomersImpl: () => unknown[] = () => [{ id: "cus_1" }];
+let subscriptionsListImpl: () => unknown[][] = () => [[{ id: "sub_1" }], [{ id: "sub_2" }]];
 
 mock.module("@polar-sh/sdk", () => ({
 	Polar: class Polar {
@@ -87,8 +88,7 @@ mock.module("@polar-sh/sdk", () => ({
 				// Async-iterable of pages, mirroring the SDK's paginated response.
 				return {
 					async *[Symbol.asyncIterator]() {
-						yield { result: { items: [{ id: "sub_1" }] } };
-						yield { result: { items: [{ id: "sub_2" }] } };
+						for (let items of subscriptionsListImpl()) yield { result: { items } };
 					},
 				};
 			},
@@ -124,6 +124,7 @@ afterEach(() => {
 	ingestImpl = () => ({});
 	getExternalImpl = () => ({ id: "cus_1" });
 	listCustomersImpl = () => [{ id: "cus_1" }];
+	subscriptionsListImpl = () => [[{ id: "sub_1" }], [{ id: "sub_2" }]];
 });
 
 describe("PolarClient", () => {
@@ -226,6 +227,29 @@ describe("PolarClient", () => {
 		let subs = await polar.listSubscriptions("cus_1");
 		expect(subs).toEqual([{ id: "sub_1" }, { id: "sub_2" }]);
 		expect(calls["subscriptions.list"]).toEqual([{ customerId: "cus_1" }]);
+	});
+
+	describe("hasActiveSubscription", () => {
+		test("returns true when an active subscription matches the product id", async () => {
+			subscriptionsListImpl = () => [[{ id: "sub_1", productId: "prod_1" }]];
+			let polar = new PolarClient({ accessToken: "t" });
+			expect(await polar.hasActiveSubscription("ext_1", "prod_1")).toBe(true);
+			expect(calls["subscriptions.list"]).toEqual([{ externalCustomerId: "ext_1", active: true }]);
+		});
+
+		test("returns false when no subscription matches the product id", async () => {
+			subscriptionsListImpl = () => [[{ id: "sub_1", productId: "prod_other" }]];
+			let polar = new PolarClient({ accessToken: "t" });
+			expect(await polar.hasActiveSubscription("ext_1", "prod_1")).toBe(false);
+		});
+
+		test("returns false instead of throwing when the request fails", async () => {
+			subscriptionsListImpl = () => {
+				throw new Error("network error");
+			};
+			let polar = new PolarClient({ accessToken: "t" });
+			expect(await polar.hasActiveSubscription("ext_1", "prod_1")).toBe(false);
+		});
 	});
 
 	describe("createCheckoutSession", () => {

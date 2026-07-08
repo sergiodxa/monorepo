@@ -1,0 +1,210 @@
+/**
+ * Analytics Engine service for HTTP ping results. Writes ping data points to the
+ * `PING_RESULTS` binding and reads them back through Cloudflare's Analytics Engine SQL
+ * HTTP API (the binding itself only supports writes), with a KV-cached variant so the
+ * dashboard doesn't re-query on every load. Every query is a single-table SELECT with
+ * GROUP BY/ORDER BY/LIMIT only — Analytics Engine's SQL API does not support joins or
+ * subqueries, so a monitor's current status is derived from its 24h success ratio
+ * (100% = up, 0% = down, otherwise degraded) rather than a joined "latest row" lookup.
+ * See `docs/adr/uptime/ADR-001-analytics-engine-migration.md` for the dataset schema.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
+import { failure, isFailure, success, type Result } from "@pkg/result";
+import { env } from "cloudflare:workers";
+
+/** Minimum KV cache TTL, in seconds. */
+const MIN_CACHE_TTL_SECONDS = 60;
+/** Maximum KV cache TTL, in seconds. */
+const MAX_CACHE_TTL_SECONDS = 600;
+
+/** A ping's outcome, matching the `blob3` dimension in the Analytics Engine dataset. */
+export type PingStatus = "up" | "down" | "degraded" | "timeout";
+
+/** A monitor's derived 24h status, shown as its dashboard/list badge. */
+export type MonitorHealth = "up" | "degraded" | "down" | "pending";
+
+/** Per-monitor 24h rollup (see {@link getTeamHttpSummaries}). */
+export interface HttpMonitorSummary {
+	monitorId: string;
+	totalChecks: number;
+	successfulChecks: number;
+	maxResponseTimeMs: number;
+	health: MonitorHealth;
+}
+
+/** A monitor's single most recent check (see {@link getLatestHttpResult}). */
+export interface LatestHttpResult {
+	status: PingStatus;
+	responseTimeMs: number;
+	responseStatus: number;
+	timestamp: string;
+}
+
+/** One point in a monitor's recent latency sparkline (see {@link getMonitorSparkline}). */
+export interface SparklinePoint {
+	timestamp: string;
+	responseTimeMs: number;
+}
+
+/**
+ * Runs a raw SQL query against the Analytics Engine HTTP API.
+ *
+ * @param sql SQL query text (the account's Analytics Engine SQL dialect).
+ */
+export async function queryAnalytics<T>(sql: string): Promise<Result<T[], Error>> {
+	let response = await fetch(
+		`https://api.cloudflare.com/client/v4/accounts/${env.CLOUDFLARE_ACCOUNT_ID}/analytics_engine/sql`,
+		{
+			method: "POST",
+			headers: {
+				Authorization: `Bearer ${env.CLOUDFLARE_ANALYTICS_TOKEN}`,
+				"Content-Type": "text/plain",
+			},
+			body: sql,
+		},
+	);
+
+	if (!response.ok) {
+		return failure(new Error(`Analytics query failed: ${response.status} ${response.statusText}`));
+	}
+
+	let body = (await response.json()) as { data?: T[] };
+	return success(body.data ?? []);
+}
+
+/** {@link queryAnalytics}, cached in KV under `cacheKey` for `ttlSeconds`. */
+export async function queryAnalyticsCached<T>(
+	cacheKey: string,
+	ttlSeconds: number,
+	sql: string,
+): Promise<Result<T[], Error>> {
+	let cached = await env.KV.get<T[]>(cacheKey, "json");
+	if (cached) return success(cached);
+
+	let result = await queryAnalytics<T>(sql);
+	if (!isFailure(result)) {
+		await env.KV.put(cacheKey, JSON.stringify(result.data), { expirationTtl: ttlSeconds });
+	}
+	return result;
+}
+
+/** Builds the dashboard KV cache key for a team and data segment. */
+export function buildCacheKey(teamId: string, segment: string): string {
+	return `cache:${teamId}:dashboard:v1:${segment}`;
+}
+
+/** Clamps a team's minimum monitor interval into a sane KV cache TTL. */
+export function getCacheTtl(minIntervalSeconds: number): number {
+	return Math.max(MIN_CACHE_TTL_SECONDS, Math.min(MAX_CACHE_TTL_SECONDS, minIntervalSeconds));
+}
+
+/** Writes one HTTP ping result as an Analytics Engine data point. */
+export function writeHttpPingResult(params: {
+	monitorId: string;
+	teamId: string;
+	status: PingStatus;
+	responseTimeMs: number;
+	responseStatus: number;
+	expectedStatus: number;
+}): void {
+	env.PING_RESULTS.writeDataPoint({
+		blobs: [params.monitorId, "http", params.status],
+		doubles: [params.responseTimeMs, 1, params.responseStatus, params.expectedStatus],
+		indexes: [params.teamId],
+	});
+}
+
+/** Derives a monitor's health badge: worst-case wins (any down > any degraded > up). */
+function deriveHealth(
+	totalChecks: number,
+	downChecks: number,
+	degradedChecks: number,
+): MonitorHealth {
+	if (totalChecks === 0) return "pending";
+	if (downChecks > 0) return "down";
+	if (degradedChecks > 0) return "degraded";
+	return "up";
+}
+
+/**
+ * Summarizes every HTTP monitor's last 24 hours for a team in one query: total checks
+ * plus a per-status breakdown, from which a health badge and an uptime percentage
+ * (up + degraded, since both mean the endpoint was reachable and correct) are derived.
+ * Cached in KV.
+ */
+export async function getTeamHttpSummaries(
+	teamId: string,
+): Promise<Result<HttpMonitorSummary[], Error>> {
+	let sql = `
+		SELECT
+			blob1 AS monitorId,
+			COUNT(*) AS totalChecks,
+			SUM(CASE WHEN blob3 = 'up' THEN 1 ELSE 0 END) AS upChecks,
+			SUM(CASE WHEN blob3 = 'degraded' THEN 1 ELSE 0 END) AS degradedChecks,
+			SUM(CASE WHEN blob3 = 'down' THEN 1 ELSE 0 END) AS downChecks,
+			MAX(double1) AS maxResponseTimeMs
+		FROM uptime_monitor_results
+		WHERE index1 = '${teamId}' AND blob2 = 'http' AND timestamp >= NOW() - INTERVAL '24' HOUR
+		GROUP BY blob1
+	`;
+
+	let result = await queryAnalyticsCached<{
+		monitorId: string;
+		totalChecks: number;
+		upChecks: number;
+		degradedChecks: number;
+		downChecks: number;
+		maxResponseTimeMs: number;
+	}>(buildCacheKey(teamId, "httpSummaries"), getCacheTtl(60), sql);
+	if (isFailure(result)) return result;
+
+	return success(
+		result.data.map((row) => ({
+			monitorId: row.monitorId,
+			totalChecks: row.totalChecks,
+			successfulChecks: row.upChecks + row.degradedChecks,
+			maxResponseTimeMs: row.maxResponseTimeMs,
+			health: deriveHealth(row.totalChecks, row.downChecks, row.degradedChecks),
+		})),
+	);
+}
+
+/** A monitor's single most recent HTTP check, or `null` when it has none in range. */
+export async function getLatestHttpResult(
+	teamId: string,
+	monitorId: string,
+): Promise<Result<LatestHttpResult | null, Error>> {
+	let sql = `
+		SELECT blob3 AS status, double1 AS responseTimeMs, double3 AS responseStatus, timestamp
+		FROM uptime_monitor_results
+		WHERE index1 = '${teamId}' AND blob1 = '${monitorId}' AND blob2 = 'http'
+		ORDER BY timestamp DESC
+		LIMIT 1
+	`;
+
+	let result = await queryAnalytics<LatestHttpResult>(sql);
+	if (isFailure(result)) return result;
+	return success(result.data[0] ?? null);
+}
+
+/** The last `limit` HTTP ping response times for one monitor, oldest first. */
+export async function getMonitorSparkline(
+	teamId: string,
+	monitorId: string,
+	limit = 20,
+): Promise<Result<SparklinePoint[], Error>> {
+	let sql = `
+		SELECT timestamp, double1 AS responseTimeMs
+		FROM uptime_monitor_results
+		WHERE index1 = '${teamId}' AND blob1 = '${monitorId}' AND blob2 = 'http'
+		ORDER BY timestamp DESC
+		LIMIT ${limit}
+	`;
+
+	let result = await queryAnalytics<SparklinePoint>(sql);
+	if (isFailure(result)) return result;
+	return success([...result.data].reverse());
+}

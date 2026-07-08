@@ -19,6 +19,8 @@ declare module "remix/fetch-router" {
 	interface RequestContext {
 		/** Renders a `remix/ui` node into an HTML `Response`. */
 		render: Renderer<RemixNode>;
+		/** The request's parsed `FormData`, populated by the global `formData()` middleware. */
+		formData: FormData;
 	}
 }
 

@@ -37,6 +37,15 @@ export const language = createCookie("uptime:language", {
 	secure: import.meta.env.PROD,
 });
 
+/** Remembers the dashboard's last-selected monitor-type tab for a year. */
+export const dashboardTab = createCookie("uptime:dashboard-tab", {
+	path: "/",
+	maxAge: 60 * 60 * 24 * 365,
+	httpOnly: true,
+	sameSite: "Lax",
+	secure: import.meta.env.PROD,
+});
+
 /**
  * Narrows a `returnTo` value to a safe same-origin relative path, falling back to
  * `fallback` for anything else (missing, absolute, or protocol-relative `//host`).

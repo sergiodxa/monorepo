@@ -227,6 +227,33 @@ export class PolarClient {
 	}
 
 	/**
+	 * Checks whether a customer (identified by external id) has an active
+	 * subscription to a given product. Used to gate metered features on billing
+	 * status without resolving the Polar-internal customer id first.
+	 *
+	 * @param externalCustomerId - The app-owned external id linked to the customer.
+	 * @param productId - The Polar product id the subscription must be for.
+	 * @returns `true` when an active subscription to `productId` exists; `false` on
+	 * any error (fails closed for feature gating, matching the OLD APP's behavior).
+	 */
+	async hasActiveSubscription(externalCustomerId: string, productId: string): Promise<boolean> {
+		try {
+			let result = await this.client.subscriptions.list({
+				externalCustomerId,
+				active: true,
+			});
+			for await (let page of result) {
+				if (page.result.items.some((subscription) => subscription.productId === productId)) {
+					return true;
+				}
+			}
+			return false;
+		} catch {
+			return false;
+		}
+	}
+
+	/**
 	 * Revoke a subscription immediately, ending entitlement now rather than at
 	 * period end.
 	 *
