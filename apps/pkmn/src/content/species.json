@@ -5,10 +5,7 @@
 			"weight": 6.9,
 			"height": 0.7
 		},
-		"types": [
-			"grass",
-			"poison"
-		],
+		"types": ["grass", "poison"],
 		"baseExperience": 64,
 		"catchRate": 45,
 		"growthRate": "medium-fast",
@@ -112,9 +109,7 @@
 			"male": 87.5,
 			"female": 12.5
 		},
-		"eggGroup": [
-			"indeterminate"
-		]
+		"eggGroup": ["indeterminate"]
 	},
 	"IVYSAUR": {
 		"number": 2,
@@ -122,10 +117,7 @@
 			"weight": 13,
 			"height": 1
 		},
-		"types": [
-			"grass",
-			"poison"
-		],
+		"types": ["grass", "poison"],
 		"baseExperience": 142,
 		"catchRate": 45,
 		"growthRate": "medium-slow",
@@ -230,9 +222,7 @@
 			"male": 87.5,
 			"female": 12.5
 		},
-		"eggGroup": [
-			"indeterminate"
-		]
+		"eggGroup": ["indeterminate"]
 	},
 	"VENUSAUR": {
 		"number": 3,
@@ -240,10 +230,7 @@
 			"weight": 100,
 			"height": 1
 		},
-		"types": [
-			"grass",
-			"poison"
-		],
+		"types": ["grass", "poison"],
 		"baseExperience": 236,
 		"catchRate": 45,
 		"growthRate": "slow",
@@ -350,9 +337,7 @@
 			"male": 87.5,
 			"female": 12.5
 		},
-		"eggGroup": [
-			"indeterminate"
-		]
+		"eggGroup": ["indeterminate"]
 	},
 	"CHARMANDER": {
 		"number": 4,
@@ -360,9 +345,7 @@
 			"weight": 100,
 			"height": 1
 		},
-		"types": [
-			"fire"
-		],
+		"types": ["fire"],
 		"baseExperience": 62,
 		"catchRate": 45,
 		"growthRate": "fast",
@@ -470,9 +453,7 @@
 			"male": 87.5,
 			"female": 12.5
 		},
-		"eggGroup": [
-			"indeterminate"
-		]
+		"eggGroup": ["indeterminate"]
 	},
 	"CHARMELEON": {
 		"number": 5,
@@ -480,9 +461,7 @@
 			"weight": 100,
 			"height": 1
 		},
-		"types": [
-			"fire"
-		],
+		"types": ["fire"],
 		"baseExperience": 142,
 		"catchRate": 45,
 		"growthRate": "fluctuating",
@@ -587,9 +566,7 @@
 			"male": 87.5,
 			"female": 12.5
 		},
-		"eggGroup": [
-			"indeterminate"
-		]
+		"eggGroup": ["indeterminate"]
 	},
 	"CHARIZARD": {
 		"number": 6,
@@ -597,10 +574,7 @@
 			"weight": 100,
 			"height": 1
 		},
-		"types": [
-			"fire",
-			"flying"
-		],
+		"types": ["fire", "flying"],
 		"baseExperience": 240,
 		"catchRate": 45,
 		"growthRate": "slow",
@@ -714,9 +688,7 @@
 			"male": 87.5,
 			"female": 12.5
 		},
-		"eggGroup": [
-			"indeterminate"
-		]
+		"eggGroup": ["indeterminate"]
 	},
 	"SQUIRTLE": {
 		"number": 7,
@@ -724,9 +696,7 @@
 			"weight": 100,
 			"height": 1
 		},
-		"types": [
-			"water"
-		],
+		"types": ["water"],
 		"baseExperience": 100,
 		"catchRate": 45,
 		"growthRate": "medium-fast",
@@ -846,9 +816,7 @@
 			"male": 87.5,
 			"female": 12.5
 		},
-		"eggGroup": [
-			"indeterminate"
-		]
+		"eggGroup": ["indeterminate"]
 	},
 	"WARTORTLE": {
 		"number": 8,
@@ -856,9 +824,7 @@
 			"weight": 100,
 			"height": 1
 		},
-		"types": [
-			"water"
-		],
+		"types": ["water"],
 		"baseExperience": 100,
 		"catchRate": 45,
 		"growthRate": "medium-fast",
@@ -979,9 +945,7 @@
 			"male": 87.5,
 			"female": 12.5
 		},
-		"eggGroup": [
-			"indeterminate"
-		]
+		"eggGroup": ["indeterminate"]
 	},
 	"BLASTOISE": {
 		"number": 9,
@@ -989,9 +953,7 @@
 			"weight": 100,
 			"height": 1
 		},
-		"types": [
-			"water"
-		],
+		"types": ["water"],
 		"baseExperience": 100,
 		"catchRate": 45,
 		"growthRate": "medium-fast",
@@ -1109,9 +1071,7 @@
 			"male": 87.5,
 			"female": 12.5
 		},
-		"eggGroup": [
-			"indeterminate"
-		]
+		"eggGroup": ["indeterminate"]
 	},
 	"CATERPIE": {
 		"number": 10,
@@ -1119,9 +1079,7 @@
 			"weight": 100,
 			"height": 1
 		},
-		"types": [
-			"bug"
-		],
+		"types": ["bug"],
 		"baseExperience": 100,
 		"catchRate": 45,
 		"growthRate": "medium-fast",
@@ -1161,9 +1119,7 @@
 			"male": 50,
 			"female": 50
 		},
-		"eggGroup": [
-			"indeterminate"
-		]
+		"eggGroup": ["indeterminate"]
 	},
 	"METAPOD": {
 		"number": 11,
@@ -1171,9 +1127,7 @@
 			"weight": 100,
 			"height": 1
 		},
-		"types": [
-			"bug"
-		],
+		"types": ["bug"],
 		"baseExperience": 100,
 		"catchRate": 45,
 		"growthRate": "medium-fast",
@@ -1209,9 +1163,7 @@
 			"male": 50,
 			"female": 50
 		},
-		"eggGroup": [
-			"indeterminate"
-		]
+		"eggGroup": ["indeterminate"]
 	},
 	"BUTTERFREE": {
 		"number": 12,
@@ -1219,10 +1171,7 @@
 			"weight": 100,
 			"height": 1
 		},
-		"types": [
-			"bug",
-			"flying"
-		],
+		"types": ["bug", "flying"],
 		"baseExperience": 100,
 		"catchRate": 45,
 		"growthRate": "medium-fast",
@@ -1321,9 +1270,7 @@
 			"male": 50,
 			"female": 50
 		},
-		"eggGroup": [
-			"indeterminate"
-		]
+		"eggGroup": ["indeterminate"]
 	},
 	"WEEDLE": {
 		"number": 13,
@@ -1331,10 +1278,7 @@
 			"weight": 100,
 			"height": 1
 		},
-		"types": [
-			"bug",
-			"poison"
-		],
+		"types": ["bug", "poison"],
 		"baseExperience": 100,
 		"catchRate": 45,
 		"growthRate": "medium-fast",
@@ -1374,9 +1318,7 @@
 			"male": 50,
 			"female": 50
 		},
-		"eggGroup": [
-			"indeterminate"
-		]
+		"eggGroup": ["indeterminate"]
 	},
 	"KAKUNA": {
 		"number": 14,
@@ -1384,10 +1326,7 @@
 			"weight": 100,
 			"height": 1
 		},
-		"types": [
-			"bug",
-			"poison"
-		],
+		"types": ["bug", "poison"],
 		"baseExperience": 100,
 		"catchRate": 45,
 		"growthRate": "medium-fast",
@@ -1423,9 +1362,7 @@
 			"male": 50,
 			"female": 50
 		},
-		"eggGroup": [
-			"indeterminate"
-		]
+		"eggGroup": ["indeterminate"]
 	},
 	"BEEDRILL": {
 		"number": 15,
@@ -1433,10 +1370,7 @@
 			"weight": 100,
 			"height": 1
 		},
-		"types": [
-			"bug",
-			"poison"
-		],
+		"types": ["bug", "poison"],
 		"baseExperience": 100,
 		"catchRate": 45,
 		"growthRate": "medium-fast",
@@ -1531,9 +1465,7 @@
 			"male": 50,
 			"female": 50
 		},
-		"eggGroup": [
-			"indeterminate"
-		]
+		"eggGroup": ["indeterminate"]
 	},
 	"PIDGEY": {
 		"number": 16,
@@ -1541,10 +1473,7 @@
 			"weight": 100,
 			"height": 1
 		},
-		"types": [
-			"normal",
-			"flying"
-		],
+		"types": ["normal", "flying"],
 		"baseExperience": 100,
 		"catchRate": 45,
 		"growthRate": "medium-fast",
@@ -1644,9 +1573,7 @@
 			"male": 50,
 			"female": 50
 		},
-		"eggGroup": [
-			"indeterminate"
-		]
+		"eggGroup": ["indeterminate"]
 	},
 	"PIDGEOTTO": {
 		"number": 17,
@@ -1654,10 +1581,7 @@
 			"weight": 100,
 			"height": 1
 		},
-		"types": [
-			"normal",
-			"flying"
-		],
+		"types": ["normal", "flying"],
 		"baseExperience": 100,
 		"catchRate": 45,
 		"growthRate": "medium-fast",
@@ -1749,9 +1673,7 @@
 			"male": 50,
 			"female": 50
 		},
-		"eggGroup": [
-			"indeterminate"
-		]
+		"eggGroup": ["indeterminate"]
 	},
 	"PIDGEOT": {
 		"number": 18,
@@ -1759,10 +1681,7 @@
 			"weight": 100,
 			"height": 1
 		},
-		"types": [
-			"normal",
-			"flying"
-		],
+		"types": ["normal", "flying"],
 		"baseExperience": 100,
 		"catchRate": 45,
 		"growthRate": "medium-fast",
@@ -1856,9 +1775,7 @@
 			"male": 50,
 			"female": 50
 		},
-		"eggGroup": [
-			"indeterminate"
-		]
+		"eggGroup": ["indeterminate"]
 	},
 	"RATTATA": {
 		"number": 19,
@@ -1866,9 +1783,7 @@
 			"weight": 100,
 			"height": 1
 		},
-		"types": [
-			"normal"
-		],
+		"types": ["normal"],
 		"baseExperience": 100,
 		"catchRate": 45,
 		"growthRate": "medium-fast",
@@ -1988,9 +1903,7 @@
 			"male": 50,
 			"female": 50
 		},
-		"eggGroup": [
-			"indeterminate"
-		]
+		"eggGroup": ["indeterminate"]
 	},
 	"RATICATE": {
 		"number": 20,
@@ -1998,9 +1911,7 @@
 			"weight": 100,
 			"height": 1
 		},
-		"types": [
-			"normal"
-		],
+		"types": ["normal"],
 		"baseExperience": 100,
 		"catchRate": 45,
 		"growthRate": "medium-fast",
@@ -2078,9 +1989,7 @@
 			"male": 50,
 			"female": 50
 		},
-		"eggGroup": [
-			"indeterminate"
-		]
+		"eggGroup": ["indeterminate"]
 	},
 	"SPEAROW": {
 		"number": 21,
@@ -2088,10 +1997,7 @@
 			"weight": 100,
 			"height": 1
 		},
-		"types": [
-			"normal",
-			"flying"
-		],
+		"types": ["normal", "flying"],
 		"baseExperience": 100,
 		"catchRate": 45,
 		"growthRate": "medium-fast",
@@ -2199,9 +2105,7 @@
 			"male": 50,
 			"female": 50
 		},
-		"eggGroup": [
-			"indeterminate"
-		]
+		"eggGroup": ["indeterminate"]
 	},
 	"FEAROW": {
 		"number": 22,
@@ -2209,10 +2113,7 @@
 			"weight": 100,
 			"height": 1
 		},
-		"types": [
-			"normal",
-			"flying"
-		],
+		"types": ["normal", "flying"],
 		"baseExperience": 100,
 		"catchRate": 45,
 		"growthRate": "medium-fast",
@@ -2298,9 +2199,7 @@
 			"male": 50,
 			"female": 50
 		},
-		"eggGroup": [
-			"indeterminate"
-		]
+		"eggGroup": ["indeterminate"]
 	},
 	"EKANS": {
 		"number": 23,
@@ -2308,9 +2207,7 @@
 			"weight": 100,
 			"height": 1
 		},
-		"types": [
-			"poison"
-		],
+		"types": ["poison"],
 		"baseExperience": 100,
 		"catchRate": 45,
 		"growthRate": "medium-fast",
@@ -2430,9 +2327,7 @@
 			"male": 50,
 			"female": 50
 		},
-		"eggGroup": [
-			"indeterminate"
-		]
+		"eggGroup": ["indeterminate"]
 	},
 	"ARBOK": {
 		"number": 24,
@@ -2440,9 +2335,7 @@
 			"weight": 100,
 			"height": 1
 		},
-		"types": [
-			"poison"
-		],
+		"types": ["poison"],
 		"baseExperience": 100,
 		"catchRate": 45,
 		"growthRate": "medium-fast",
@@ -2540,9 +2433,7 @@
 			"male": 50,
 			"female": 50
 		},
-		"eggGroup": [
-			"indeterminate"
-		]
+		"eggGroup": ["indeterminate"]
 	},
 	"PIKACHU": {
 		"number": 25,
@@ -2550,9 +2441,7 @@
 			"weight": 100,
 			"height": 1
 		},
-		"types": [
-			"electric"
-		],
+		"types": ["electric"],
 		"baseExperience": 100,
 		"catchRate": 45,
 		"growthRate": "medium-fast",
@@ -2640,9 +2529,7 @@
 			"male": 50,
 			"female": 50
 		},
-		"eggGroup": [
-			"indeterminate"
-		]
+		"eggGroup": ["indeterminate"]
 	},
 	"RAICHU": {
 		"number": 26,
@@ -2650,9 +2537,7 @@
 			"weight": 100,
 			"height": 1
 		},
-		"types": [
-			"electric"
-		],
+		"types": ["electric"],
 		"baseExperience": 100,
 		"catchRate": 45,
 		"growthRate": "medium-fast",
@@ -2698,9 +2583,7 @@
 			"male": 50,
 			"female": 50
 		},
-		"eggGroup": [
-			"indeterminate"
-		]
+		"eggGroup": ["indeterminate"]
 	},
 	"SANDSHREW": {
 		"number": 27,
@@ -2708,9 +2591,7 @@
 			"weight": 100,
 			"height": 1
 		},
-		"types": [
-			"ground"
-		],
+		"types": ["ground"],
 		"baseExperience": 100,
 		"catchRate": 45,
 		"growthRate": "medium-fast",
@@ -2830,9 +2711,7 @@
 			"male": 50,
 			"female": 50
 		},
-		"eggGroup": [
-			"indeterminate"
-		]
+		"eggGroup": ["indeterminate"]
 	},
 	"SANDSLASH": {
 		"number": 28,
@@ -2840,9 +2719,7 @@
 			"weight": 100,
 			"height": 1
 		},
-		"types": [
-			"ground"
-		],
+		"types": ["ground"],
 		"baseExperience": 100,
 		"catchRate": 45,
 		"growthRate": "medium-fast",
@@ -2960,9 +2837,7 @@
 			"male": 50,
 			"female": 50
 		},
-		"eggGroup": [
-			"indeterminate"
-		]
+		"eggGroup": ["indeterminate"]
 	},
 	"NIDORAN_F": {
 		"number": 29,
@@ -2970,9 +2845,7 @@
 			"weight": 100,
 			"height": 1
 		},
-		"types": [
-			"poison"
-		],
+		"types": ["poison"],
 		"baseExperience": 100,
 		"catchRate": 45,
 		"growthRate": "medium-fast",
@@ -3095,9 +2968,7 @@
 		"gender": {
 			"female": 100
 		},
-		"eggGroup": [
-			"indeterminate"
-		]
+		"eggGroup": ["indeterminate"]
 	},
 	"NIDORINA": {
 		"number": 30,
@@ -3105,9 +2976,7 @@
 			"weight": 100,
 			"height": 1
 		},
-		"types": [
-			"poison"
-		],
+		"types": ["poison"],
 		"baseExperience": 100,
 		"catchRate": 45,
 		"growthRate": "medium-fast",
@@ -3186,9 +3055,7 @@
 		"gender": {
 			"female": 100
 		},
-		"eggGroup": [
-			"indeterminate"
-		]
+		"eggGroup": ["indeterminate"]
 	},
 	"NIDOQUEEN": {
 		"number": 31,
@@ -3196,10 +3063,7 @@
 			"weight": 100,
 			"height": 1
 		},
-		"types": [
-			"poison",
-			"ground"
-		],
+		"types": ["poison", "ground"],
 		"baseExperience": 100,
 		"catchRate": 45,
 		"growthRate": "medium-fast",
@@ -3284,9 +3148,7 @@
 		"gender": {
 			"female": 100
 		},
-		"eggGroup": [
-			"indeterminate"
-		]
+		"eggGroup": ["indeterminate"]
 	},
 	"NIDORAN_M": {
 		"number": 32,
@@ -3294,9 +3156,7 @@
 			"weight": 100,
 			"height": 1
 		},
-		"types": [
-			"poison"
-		],
+		"types": ["poison"],
 		"baseExperience": 100,
 		"catchRate": 45,
 		"growthRate": "medium-fast",
@@ -3427,9 +3287,7 @@
 		"gender": {
 			"male": 100
 		},
-		"eggGroup": [
-			"indeterminate"
-		]
+		"eggGroup": ["indeterminate"]
 	},
 	"NIDORINO": {
 		"number": 33,
@@ -3437,9 +3295,7 @@
 			"weight": 100,
 			"height": 1
 		},
-		"types": [
-			"poison"
-		],
+		"types": ["poison"],
 		"baseExperience": 100,
 		"catchRate": 45,
 		"growthRate": "medium-fast",
@@ -3518,9 +3374,7 @@
 		"gender": {
 			"male": 100
 		},
-		"eggGroup": [
-			"indeterminate"
-		]
+		"eggGroup": ["indeterminate"]
 	},
 	"NIDOKING": {
 		"number": 34,
@@ -3528,10 +3382,7 @@
 			"weight": 100,
 			"height": 1
 		},
-		"types": [
-			"poison",
-			"ground"
-		],
+		"types": ["poison", "ground"],
 		"baseExperience": 100,
 		"catchRate": 45,
 		"growthRate": "medium-fast",
@@ -3616,9 +3467,7 @@
 		"gender": {
 			"male": 100
 		},
-		"eggGroup": [
-			"indeterminate"
-		]
+		"eggGroup": ["indeterminate"]
 	},
 	"CLEFAIRY": {
 		"number": 35,
@@ -3626,9 +3475,7 @@
 			"weight": 100,
 			"height": 1
 		},
-		"types": [
-			"fairy"
-		],
+		"types": ["fairy"],
 		"baseExperience": 100,
 		"catchRate": 45,
 		"growthRate": "medium-fast",
@@ -3655,9 +3502,7 @@
 			"male": 50,
 			"female": 50
 		},
-		"eggGroup": [
-			"indeterminate"
-		]
+		"eggGroup": ["indeterminate"]
 	},
 	"CLEFABLE": {
 		"number": 36,
@@ -3665,9 +3510,7 @@
 			"weight": 100,
 			"height": 1
 		},
-		"types": [
-			"fairy"
-		],
+		"types": ["fairy"],
 		"baseExperience": 100,
 		"catchRate": 45,
 		"growthRate": "medium-fast",
@@ -3688,9 +3531,7 @@
 			"male": 50,
 			"female": 50
 		},
-		"eggGroup": [
-			"indeterminate"
-		]
+		"eggGroup": ["indeterminate"]
 	},
 	"VULPIX": {
 		"number": 37,
@@ -3698,9 +3539,7 @@
 			"weight": 100,
 			"height": 1
 		},
-		"types": [
-			"fire"
-		],
+		"types": ["fire"],
 		"baseExperience": 100,
 		"catchRate": 45,
 		"growthRate": "medium-fast",
@@ -3727,9 +3566,7 @@
 			"male": 50,
 			"female": 50
 		},
-		"eggGroup": [
-			"indeterminate"
-		]
+		"eggGroup": ["indeterminate"]
 	},
 	"NINETALES": {
 		"number": 38,
@@ -3737,9 +3574,7 @@
 			"weight": 100,
 			"height": 1
 		},
-		"types": [
-			"fire"
-		],
+		"types": ["fire"],
 		"baseExperience": 100,
 		"catchRate": 45,
 		"growthRate": "medium-fast",
@@ -3761,9 +3596,7 @@
 			"male": 50,
 			"female": 50
 		},
-		"eggGroup": [
-			"indeterminate"
-		]
+		"eggGroup": ["indeterminate"]
 	},
 	"JIGGLYPUFF": {
 		"number": 39,
@@ -3771,10 +3604,7 @@
 			"weight": 5.5,
 			"height": 0.5
 		},
-		"types": [
-			"normal",
-			"fairy"
-		],
+		"types": ["normal", "fairy"],
 		"baseExperience": 100,
 		"catchRate": 45,
 		"growthRate": "medium-fast",
@@ -3882,9 +3712,7 @@
 			"male": 50,
 			"female": 50
 		},
-		"eggGroup": [
-			"indeterminate"
-		]
+		"eggGroup": ["indeterminate"]
 	},
 	"WIGGLYTUFF": {
 		"number": 40,
@@ -3892,10 +3720,7 @@
 			"weight": 100,
 			"height": 1
 		},
-		"types": [
-			"normal",
-			"fairy"
-		],
+		"types": ["normal", "fairy"],
 		"baseExperience": 100,
 		"catchRate": 45,
 		"growthRate": "medium-fast",
@@ -4001,9 +3826,7 @@
 			"male": 50,
 			"female": 50
 		},
-		"eggGroup": [
-			"indeterminate"
-		]
+		"eggGroup": ["indeterminate"]
 	},
 	"ZUBAT": {
 		"number": 41,
@@ -4011,10 +3834,7 @@
 			"weight": 100,
 			"height": 1
 		},
-		"types": [
-			"poison",
-			"flying"
-		],
+		"types": ["poison", "flying"],
 		"baseExperience": 100,
 		"catchRate": 45,
 		"growthRate": "medium-fast",
@@ -4070,9 +3890,7 @@
 			"male": 50,
 			"female": 50
 		},
-		"eggGroup": [
-			"indeterminate"
-		]
+		"eggGroup": ["indeterminate"]
 	},
 	"GOLBAT": {
 		"number": 42,
@@ -4080,10 +3898,7 @@
 			"weight": 100,
 			"height": 1
 		},
-		"types": [
-			"poison",
-			"flying"
-		],
+		"types": ["poison", "flying"],
 		"baseExperience": 100,
 		"catchRate": 45,
 		"growthRate": "medium-fast",
@@ -4133,9 +3948,7 @@
 			"male": 50,
 			"female": 50
 		},
-		"eggGroup": [
-			"indeterminate"
-		]
+		"eggGroup": ["indeterminate"]
 	},
 	"ODDISH": {
 		"number": 43,
@@ -4143,10 +3956,7 @@
 			"weight": 100,
 			"height": 1
 		},
-		"types": [
-			"grass",
-			"poison"
-		],
+		"types": ["grass", "poison"],
 		"baseExperience": 100,
 		"catchRate": 45,
 		"growthRate": "medium-fast",
@@ -4266,9 +4076,7 @@
 			"male": 50,
 			"female": 50
 		},
-		"eggGroup": [
-			"indeterminate"
-		]
+		"eggGroup": ["indeterminate"]
 	},
 	"GLOOM": {
 		"number": 44,
@@ -4276,10 +4084,7 @@
 			"weight": 100,
 			"height": 1
 		},
-		"types": [
-			"grass",
-			"poison"
-		],
+		"types": ["grass", "poison"],
 		"baseExperience": 100,
 		"catchRate": 45,
 		"growthRate": "medium-fast",
@@ -4399,9 +4204,7 @@
 			"male": 50,
 			"female": 50
 		},
-		"eggGroup": [
-			"indeterminate"
-		]
+		"eggGroup": ["indeterminate"]
 	},
 	"VILEPLUME": {
 		"number": 45,
@@ -4409,10 +4212,7 @@
 			"weight": 100,
 			"height": 1
 		},
-		"types": [
-			"grass",
-			"poison"
-		],
+		"types": ["grass", "poison"],
 		"baseExperience": 100,
 		"catchRate": 45,
 		"growthRate": "medium-fast",
@@ -4530,9 +4330,7 @@
 			"male": 50,
 			"female": 50
 		},
-		"eggGroup": [
-			"indeterminate"
-		]
+		"eggGroup": ["indeterminate"]
 	},
 	"PARAS": {
 		"number": 46,
@@ -4540,10 +4338,7 @@
 			"weight": 100,
 			"height": 1
 		},
-		"types": [
-			"bug",
-			"grass"
-		],
+		"types": ["bug", "grass"],
 		"baseExperience": 100,
 		"catchRate": 45,
 		"growthRate": "medium-fast",
@@ -4603,9 +4398,7 @@
 			"male": 50,
 			"female": 50
 		},
-		"eggGroup": [
-			"indeterminate"
-		]
+		"eggGroup": ["indeterminate"]
 	},
 	"PARASECT": {
 		"number": 47,
@@ -4613,10 +4406,7 @@
 			"weight": 100,
 			"height": 1
 		},
-		"types": [
-			"bug",
-			"grass"
-		],
+		"types": ["bug", "grass"],
 		"baseExperience": 100,
 		"catchRate": 45,
 		"growthRate": "medium-fast",
@@ -4671,9 +4461,7 @@
 			"male": 50,
 			"female": 50
 		},
-		"eggGroup": [
-			"indeterminate"
-		]
+		"eggGroup": ["indeterminate"]
 	},
 	"VENONAT": {
 		"number": 48,
@@ -4681,10 +4469,7 @@
 			"weight": 100,
 			"height": 1
 		},
-		"types": [
-			"bug",
-			"poison"
-		],
+		"types": ["bug", "poison"],
 		"baseExperience": 100,
 		"catchRate": 45,
 		"growthRate": "medium-fast",
@@ -4796,9 +4581,7 @@
 			"male": 50,
 			"female": 50
 		},
-		"eggGroup": [
-			"indeterminate"
-		]
+		"eggGroup": ["indeterminate"]
 	},
 	"VENOMOTH": {
 		"number": 49,
@@ -4806,10 +4589,7 @@
 			"weight": 100,
 			"height": 1
 		},
-		"types": [
-			"bug",
-			"poison"
-		],
+		"types": ["bug", "poison"],
 		"baseExperience": 100,
 		"catchRate": 45,
 		"growthRate": "medium-fast",
@@ -4892,9 +4672,7 @@
 			"male": 50,
 			"female": 50
 		},
-		"eggGroup": [
-			"indeterminate"
-		]
+		"eggGroup": ["indeterminate"]
 	},
 	"DIGLETT": {
 		"number": 50,
@@ -4902,9 +4680,7 @@
 			"weight": 0.8,
 			"height": 0.2
 		},
-		"types": [
-			"ground"
-		],
+		"types": ["ground"],
 		"baseExperience": 100,
 		"catchRate": 45,
 		"growthRate": "medium-fast",
@@ -5004,9 +4780,7 @@
 			"male": 50,
 			"female": 50
 		},
-		"eggGroup": [
-			"indeterminate"
-		]
+		"eggGroup": ["indeterminate"]
 	},
 	"DUGTRIO": {
 		"number": 51,
@@ -5014,9 +4788,7 @@
 			"weight": 100,
 			"height": 1
 		},
-		"types": [
-			"ground"
-		],
+		"types": ["ground"],
 		"baseExperience": 100,
 		"catchRate": 45,
 		"growthRate": "medium-fast",
@@ -5037,9 +4809,7 @@
 			"male": 50,
 			"female": 50
 		},
-		"eggGroup": [
-			"indeterminate"
-		]
+		"eggGroup": ["indeterminate"]
 	},
 	"MEOWTH": {
 		"number": 52,
@@ -5047,9 +4817,7 @@
 			"weight": 100,
 			"height": 1
 		},
-		"types": [
-			"normal"
-		],
+		"types": ["normal"],
 		"baseExperience": 100,
 		"catchRate": 45,
 		"growthRate": "medium-fast",
@@ -5153,9 +4921,7 @@
 			"male": 50,
 			"female": 50
 		},
-		"eggGroup": [
-			"indeterminate"
-		]
+		"eggGroup": ["indeterminate"]
 	},
 	"PERSIAN": {
 		"number": 53,
@@ -5163,9 +4929,7 @@
 			"weight": 100,
 			"height": 1
 		},
-		"types": [
-			"normal"
-		],
+		"types": ["normal"],
 		"baseExperience": 100,
 		"catchRate": 45,
 		"growthRate": "medium-fast",
@@ -5186,9 +4950,7 @@
 			"male": 50,
 			"female": 50
 		},
-		"eggGroup": [
-			"indeterminate"
-		]
+		"eggGroup": ["indeterminate"]
 	},
 	"PSYDUCK": {
 		"number": 54,
@@ -5196,9 +4958,7 @@
 			"weight": 100,
 			"height": 1
 		},
-		"types": [
-			"water"
-		],
+		"types": ["water"],
 		"baseExperience": 100,
 		"catchRate": 45,
 		"growthRate": "medium-fast",
@@ -5310,9 +5070,7 @@
 			"male": 50,
 			"female": 50
 		},
-		"eggGroup": [
-			"indeterminate"
-		]
+		"eggGroup": ["indeterminate"]
 	},
 	"GOLDUCK": {
 		"number": 55,
@@ -5320,9 +5078,7 @@
 			"weight": 100,
 			"height": 1
 		},
-		"types": [
-			"water"
-		],
+		"types": ["water"],
 		"baseExperience": 100,
 		"catchRate": 45,
 		"growthRate": "medium-fast",
@@ -5343,9 +5099,7 @@
 			"male": 50,
 			"female": 50
 		},
-		"eggGroup": [
-			"indeterminate"
-		]
+		"eggGroup": ["indeterminate"]
 	},
 	"MANKEY": {
 		"number": 56,
@@ -5353,9 +5107,7 @@
 			"weight": 100,
 			"height": 1
 		},
-		"types": [
-			"fighting"
-		],
+		"types": ["fighting"],
 		"baseExperience": 100,
 		"catchRate": 45,
 		"growthRate": "medium-fast",
@@ -5471,9 +5223,7 @@
 			"male": 50,
 			"female": 50
 		},
-		"eggGroup": [
-			"indeterminate"
-		]
+		"eggGroup": ["indeterminate"]
 	},
 	"PRIMEAPE": {
 		"number": 57,
@@ -5481,9 +5231,7 @@
 			"weight": 100,
 			"height": 1
 		},
-		"types": [
-			"fighting"
-		],
+		"types": ["fighting"],
 		"baseExperience": 100,
 		"catchRate": 45,
 		"growthRate": "medium-fast",
@@ -5573,9 +5321,7 @@
 			"male": 50,
 			"female": 50
 		},
-		"eggGroup": [
-			"indeterminate"
-		]
+		"eggGroup": ["indeterminate"]
 	},
 	"GROWLITHE": {
 		"number": 58,
@@ -5583,9 +5329,7 @@
 			"weight": 100,
 			"height": 1
 		},
-		"types": [
-			"fire"
-		],
+		"types": ["fire"],
 		"baseExperience": 100,
 		"catchRate": 45,
 		"growthRate": "medium-fast",
@@ -5612,9 +5356,7 @@
 			"male": 50,
 			"female": 50
 		},
-		"eggGroup": [
-			"indeterminate"
-		]
+		"eggGroup": ["indeterminate"]
 	},
 	"ARCANINE": {
 		"number": 59,
@@ -5622,9 +5364,7 @@
 			"weight": 100,
 			"height": 1
 		},
-		"types": [
-			"fire"
-		],
+		"types": ["fire"],
 		"baseExperience": 100,
 		"catchRate": 45,
 		"growthRate": "medium-fast",
@@ -5645,9 +5385,7 @@
 			"male": 50,
 			"female": 50
 		},
-		"eggGroup": [
-			"indeterminate"
-		]
+		"eggGroup": ["indeterminate"]
 	},
 	"POLIWAG": {
 		"number": 60,
@@ -5655,9 +5393,7 @@
 			"weight": 100,
 			"height": 1
 		},
-		"types": [
-			"water"
-		],
+		"types": ["water"],
 		"baseExperience": 100,
 		"catchRate": 45,
 		"growthRate": "medium-fast",
@@ -5749,9 +5485,7 @@
 			"male": 50,
 			"female": 50
 		},
-		"eggGroup": [
-			"indeterminate"
-		]
+		"eggGroup": ["indeterminate"]
 	},
 	"POLIWHIRL": {
 		"number": 61,
@@ -5759,9 +5493,7 @@
 			"weight": 100,
 			"height": 1
 		},
-		"types": [
-			"water"
-		],
+		"types": ["water"],
 		"baseExperience": 100,
 		"catchRate": 45,
 		"growthRate": "medium-fast",
@@ -5788,9 +5520,7 @@
 			"male": 50,
 			"female": 50
 		},
-		"eggGroup": [
-			"indeterminate"
-		]
+		"eggGroup": ["indeterminate"]
 	},
 	"POLIWRATH": {
 		"number": 62,
@@ -5798,10 +5528,7 @@
 			"weight": 100,
 			"height": 1
 		},
-		"types": [
-			"water",
-			"fighting"
-		],
+		"types": ["water", "fighting"],
 		"baseExperience": 100,
 		"catchRate": 45,
 		"growthRate": "medium-fast",
@@ -5895,9 +5622,7 @@
 			"male": 50,
 			"female": 50
 		},
-		"eggGroup": [
-			"indeterminate"
-		]
+		"eggGroup": ["indeterminate"]
 	},
 	"ABRA": {
 		"number": 63,
@@ -5905,9 +5630,7 @@
 			"weight": 100,
 			"height": 1
 		},
-		"types": [
-			"psychic"
-		],
+		"types": ["psychic"],
 		"baseExperience": 100,
 		"catchRate": 45,
 		"growthRate": "medium-fast",
@@ -5939,9 +5662,7 @@
 			"male": 50,
 			"female": 50
 		},
-		"eggGroup": [
-			"indeterminate"
-		]
+		"eggGroup": ["indeterminate"]
 	},
 	"KADABRA": {
 		"number": 64,
@@ -5949,9 +5670,7 @@
 			"weight": 100,
 			"height": 1
 		},
-		"types": [
-			"psychic"
-		],
+		"types": ["psychic"],
 		"baseExperience": 100,
 		"catchRate": 45,
 		"growthRate": "medium-fast",
@@ -6010,9 +5729,7 @@
 			"male": 50,
 			"female": 50
 		},
-		"eggGroup": [
-			"indeterminate"
-		]
+		"eggGroup": ["indeterminate"]
 	},
 	"ALAKAZAM": {
 		"number": 65,
@@ -6020,9 +5737,7 @@
 			"weight": 100,
 			"height": 1
 		},
-		"types": [
-			"psychic"
-		],
+		"types": ["psychic"],
 		"baseExperience": 100,
 		"catchRate": 45,
 		"growthRate": "medium-fast",
@@ -6076,9 +5791,7 @@
 			"male": 50,
 			"female": 50
 		},
-		"eggGroup": [
-			"indeterminate"
-		]
+		"eggGroup": ["indeterminate"]
 	},
 	"MACHOP": {
 		"number": 66,
@@ -6086,9 +5799,7 @@
 			"weight": 100,
 			"height": 1
 		},
-		"types": [
-			"fighting"
-		],
+		"types": ["fighting"],
 		"baseExperience": 100,
 		"catchRate": 45,
 		"growthRate": "medium-fast",
@@ -6148,9 +5859,7 @@
 			"male": 50,
 			"female": 50
 		},
-		"eggGroup": [
-			"indeterminate"
-		]
+		"eggGroup": ["indeterminate"]
 	},
 	"MACHOKE": {
 		"number": 67,
@@ -6158,9 +5867,7 @@
 			"weight": 100,
 			"height": 1
 		},
-		"types": [
-			"fighting"
-		],
+		"types": ["fighting"],
 		"baseExperience": 100,
 		"catchRate": 45,
 		"growthRate": "medium-fast",
@@ -6219,9 +5926,7 @@
 			"male": 50,
 			"female": 50
 		},
-		"eggGroup": [
-			"indeterminate"
-		]
+		"eggGroup": ["indeterminate"]
 	},
 	"MACHAMP": {
 		"number": 68,
@@ -6229,9 +5934,7 @@
 			"weight": 100,
 			"height": 1
 		},
-		"types": [
-			"fighting"
-		],
+		"types": ["fighting"],
 		"baseExperience": 100,
 		"catchRate": 45,
 		"growthRate": "medium-fast",
@@ -6289,9 +5992,7 @@
 			"male": 50,
 			"female": 50
 		},
-		"eggGroup": [
-			"indeterminate"
-		]
+		"eggGroup": ["indeterminate"]
 	},
 	"BELLSPROUT": {
 		"number": 69,
@@ -6299,10 +6000,7 @@
 			"weight": 100,
 			"height": 1
 		},
-		"types": [
-			"grass",
-			"poison"
-		],
+		"types": ["grass", "poison"],
 		"baseExperience": 100,
 		"catchRate": 45,
 		"growthRate": "medium-fast",
@@ -6414,9 +6112,7 @@
 			"male": 50,
 			"female": 50
 		},
-		"eggGroup": [
-			"indeterminate"
-		]
+		"eggGroup": ["indeterminate"]
 	},
 	"WEEPINBELL": {
 		"number": 70,
@@ -6424,10 +6120,7 @@
 			"weight": 100,
 			"height": 1
 		},
-		"types": [
-			"grass",
-			"poison"
-		],
+		"types": ["grass", "poison"],
 		"baseExperience": 100,
 		"catchRate": 45,
 		"growthRate": "medium-fast",
@@ -6539,9 +6232,7 @@
 			"male": 50,
 			"female": 50
 		},
-		"eggGroup": [
-			"indeterminate"
-		]
+		"eggGroup": ["indeterminate"]
 	},
 	"VICTREEBEL": {
 		"number": 71,
@@ -6549,10 +6240,7 @@
 			"weight": 100,
 			"height": 1
 		},
-		"types": [
-			"grass",
-			"poison"
-		],
+		"types": ["grass", "poison"],
 		"baseExperience": 100,
 		"catchRate": 45,
 		"growthRate": "medium-fast",
@@ -6646,9 +6334,7 @@
 			"male": 50,
 			"female": 50
 		},
-		"eggGroup": [
-			"indeterminate"
-		]
+		"eggGroup": ["indeterminate"]
 	},
 	"TENTACOOL": {
 		"number": 72,
@@ -6656,10 +6342,7 @@
 			"weight": 100,
 			"height": 1
 		},
-		"types": [
-			"water",
-			"poison"
-		],
+		"types": ["water", "poison"],
 		"baseExperience": 100,
 		"catchRate": 45,
 		"growthRate": "medium-fast",
@@ -6779,9 +6462,7 @@
 			"male": 50,
 			"female": 50
 		},
-		"eggGroup": [
-			"indeterminate"
-		]
+		"eggGroup": ["indeterminate"]
 	},
 	"TENTACRUEL": {
 		"number": 73,
@@ -6789,10 +6470,7 @@
 			"weight": 100,
 			"height": 1
 		},
-		"types": [
-			"water",
-			"poison"
-		],
+		"types": ["water", "poison"],
 		"baseExperience": 100,
 		"catchRate": 45,
 		"growthRate": "medium-fast",
@@ -6910,9 +6588,7 @@
 			"male": 50,
 			"female": 50
 		},
-		"eggGroup": [
-			"indeterminate"
-		]
+		"eggGroup": ["indeterminate"]
 	},
 	"GEODUDE": {
 		"number": 74,
@@ -6920,10 +6596,7 @@
 			"weight": 100,
 			"height": 1
 		},
-		"types": [
-			"rock",
-			"ground"
-		],
+		"types": ["rock", "ground"],
 		"baseExperience": 100,
 		"catchRate": 45,
 		"growthRate": "medium-fast",
@@ -7035,9 +6708,7 @@
 			"male": 50,
 			"female": 50
 		},
-		"eggGroup": [
-			"indeterminate"
-		]
+		"eggGroup": ["indeterminate"]
 	},
 	"GRAVELER": {
 		"number": 75,
@@ -7045,10 +6716,7 @@
 			"weight": 100,
 			"height": 1
 		},
-		"types": [
-			"rock",
-			"ground"
-		],
+		"types": ["rock", "ground"],
 		"baseExperience": 100,
 		"catchRate": 45,
 		"growthRate": "medium-fast",
@@ -7159,9 +6827,7 @@
 			"male": 50,
 			"female": 50
 		},
-		"eggGroup": [
-			"indeterminate"
-		]
+		"eggGroup": ["indeterminate"]
 	},
 	"GOLEM": {
 		"number": 76,
@@ -7169,10 +6835,7 @@
 			"weight": 100,
 			"height": 1
 		},
-		"types": [
-			"rock",
-			"ground"
-		],
+		"types": ["rock", "ground"],
 		"baseExperience": 100,
 		"catchRate": 45,
 		"growthRate": "medium-fast",
@@ -7278,9 +6941,7 @@
 			"male": 50,
 			"female": 50
 		},
-		"eggGroup": [
-			"indeterminate"
-		]
+		"eggGroup": ["indeterminate"]
 	},
 	"PONYTA": {
 		"number": 77,
@@ -7288,9 +6949,7 @@
 			"weight": 100,
 			"height": 1
 		},
-		"types": [
-			"fire"
-		],
+		"types": ["fire"],
 		"baseExperience": 100,
 		"catchRate": 45,
 		"growthRate": "medium-fast",
@@ -7350,9 +7009,7 @@
 			"male": 50,
 			"female": 50
 		},
-		"eggGroup": [
-			"indeterminate"
-		]
+		"eggGroup": ["indeterminate"]
 	},
 	"RAPIDASH": {
 		"number": 78,
@@ -7360,9 +7017,7 @@
 			"weight": 100,
 			"height": 1
 		},
-		"types": [
-			"fire"
-		],
+		"types": ["fire"],
 		"baseExperience": 100,
 		"catchRate": 45,
 		"growthRate": "medium-fast",
@@ -7383,9 +7038,7 @@
 			"male": 50,
 			"female": 50
 		},
-		"eggGroup": [
-			"indeterminate"
-		]
+		"eggGroup": ["indeterminate"]
 	},
 	"SLOWPOKE": {
 		"number": 79,
@@ -7393,10 +7046,7 @@
 			"weight": 100,
 			"height": 1
 		},
-		"types": [
-			"water",
-			"psychic"
-		],
+		"types": ["water", "psychic"],
 		"baseExperience": 100,
 		"catchRate": 45,
 		"growthRate": "medium-fast",
@@ -7508,9 +7158,7 @@
 			"male": 50,
 			"female": 50
 		},
-		"eggGroup": [
-			"indeterminate"
-		]
+		"eggGroup": ["indeterminate"]
 	},
 	"SLOWBRO": {
 		"number": 80,
@@ -7518,10 +7166,7 @@
 			"weight": 100,
 			"height": 1
 		},
-		"types": [
-			"water",
-			"psychic"
-		],
+		"types": ["water", "psychic"],
 		"baseExperience": 100,
 		"catchRate": 45,
 		"growthRate": "medium-fast",
@@ -7619,9 +7264,7 @@
 			"male": 50,
 			"female": 50
 		},
-		"eggGroup": [
-			"indeterminate"
-		]
+		"eggGroup": ["indeterminate"]
 	},
 	"MAGNEMITE": {
 		"number": 81,
@@ -7629,10 +7272,7 @@
 			"weight": 100,
 			"height": 1
 		},
-		"types": [
-			"electric",
-			"steel"
-		],
+		"types": ["electric", "steel"],
 		"baseExperience": 100,
 		"catchRate": 45,
 		"growthRate": "medium-fast",
@@ -7725,9 +7365,7 @@
 			}
 		],
 		"gender": "genderless",
-		"eggGroup": [
-			"indeterminate"
-		]
+		"eggGroup": ["indeterminate"]
 	},
 	"MAGNETON": {
 		"number": 82,
@@ -7735,10 +7373,7 @@
 			"weight": 100,
 			"height": 1
 		},
-		"types": [
-			"electric",
-			"steel"
-		],
+		"types": ["electric", "steel"],
 		"baseExperience": 100,
 		"catchRate": 45,
 		"growthRate": "medium-fast",
@@ -7825,9 +7460,7 @@
 			}
 		],
 		"gender": "genderless",
-		"eggGroup": [
-			"indeterminate"
-		]
+		"eggGroup": ["indeterminate"]
 	},
 	"FARFETCHD": {
 		"number": 83,
@@ -7835,10 +7468,7 @@
 			"weight": 100,
 			"height": 1
 		},
-		"types": [
-			"normal",
-			"flying"
-		],
+		"types": ["normal", "flying"],
 		"baseExperience": 100,
 		"catchRate": 45,
 		"growthRate": "medium-fast",
@@ -7976,9 +7606,7 @@
 			"male": 50,
 			"female": 50
 		},
-		"eggGroup": [
-			"indeterminate"
-		]
+		"eggGroup": ["indeterminate"]
 	},
 	"DODUO": {
 		"number": 84,
@@ -7986,10 +7614,7 @@
 			"weight": 100,
 			"height": 1
 		},
-		"types": [
-			"normal",
-			"flying"
-		],
+		"types": ["normal", "flying"],
 		"baseExperience": 100,
 		"catchRate": 45,
 		"growthRate": "medium-fast",
@@ -8085,9 +7710,7 @@
 			"male": 50,
 			"female": 50
 		},
-		"eggGroup": [
-			"indeterminate"
-		]
+		"eggGroup": ["indeterminate"]
 	},
 	"DODRIO": {
 		"number": 85,
@@ -8095,10 +7718,7 @@
 			"weight": 100,
 			"height": 1
 		},
-		"types": [
-			"normal",
-			"flying"
-		],
+		"types": ["normal", "flying"],
 		"baseExperience": 100,
 		"catchRate": 45,
 		"growthRate": "medium-fast",
@@ -8192,9 +7812,7 @@
 			"male": 50,
 			"female": 50
 		},
-		"eggGroup": [
-			"indeterminate"
-		]
+		"eggGroup": ["indeterminate"]
 	},
 	"SEEL": {
 		"number": 86,
@@ -8202,9 +7820,7 @@
 			"weight": 100,
 			"height": 1
 		},
-		"types": [
-			"water"
-		],
+		"types": ["water"],
 		"baseExperience": 100,
 		"catchRate": 45,
 		"growthRate": "medium-fast",
@@ -8340,9 +7956,7 @@
 			"male": 50,
 			"female": 50
 		},
-		"eggGroup": [
-			"indeterminate"
-		]
+		"eggGroup": ["indeterminate"]
 	},
 	"DEWGONG": {
 		"number": 87,
@@ -8350,10 +7964,7 @@
 			"weight": 100,
 			"height": 1
 		},
-		"types": [
-			"water",
-			"ice"
-		],
+		"types": ["water", "ice"],
 		"baseExperience": 100,
 		"catchRate": 45,
 		"growthRate": "medium-fast",
@@ -8483,9 +8094,7 @@
 			"male": 50,
 			"female": 50
 		},
-		"eggGroup": [
-			"indeterminate"
-		]
+		"eggGroup": ["indeterminate"]
 	},
 	"GRIMER": {
 		"number": 88,
@@ -8493,9 +8102,7 @@
 			"weight": 100,
 			"height": 1
 		},
-		"types": [
-			"poison"
-		],
+		"types": ["poison"],
 		"baseExperience": 100,
 		"catchRate": 45,
 		"growthRate": "medium-fast",
@@ -8623,9 +8230,7 @@
 			"male": 50,
 			"female": 50
 		},
-		"eggGroup": [
-			"indeterminate"
-		]
+		"eggGroup": ["indeterminate"]
 	},
 	"MUK": {
 		"number": 89,
@@ -8633,9 +8238,7 @@
 			"weight": 100,
 			"height": 1
 		},
-		"types": [
-			"poison"
-		],
+		"types": ["poison"],
 		"baseExperience": 100,
 		"catchRate": 45,
 		"growthRate": "medium-fast",
@@ -8657,9 +8260,7 @@
 			"male": 50,
 			"female": 50
 		},
-		"eggGroup": [
-			"indeterminate"
-		]
+		"eggGroup": ["indeterminate"]
 	},
 	"SHELLDER": {
 		"number": 90,
@@ -8667,9 +8268,7 @@
 			"weight": 100,
 			"height": 1
 		},
-		"types": [
-			"water"
-		],
+		"types": ["water"],
 		"baseExperience": 100,
 		"catchRate": 45,
 		"growthRate": "medium-fast",
@@ -8696,9 +8295,7 @@
 			"male": 50,
 			"female": 50
 		},
-		"eggGroup": [
-			"indeterminate"
-		]
+		"eggGroup": ["indeterminate"]
 	},
 	"CLOYSTER": {
 		"number": 91,
@@ -8706,10 +8303,7 @@
 			"weight": 100,
 			"height": 1
 		},
-		"types": [
-			"water",
-			"ice"
-		],
+		"types": ["water", "ice"],
 		"baseExperience": 100,
 		"catchRate": 45,
 		"growthRate": "medium-fast",
@@ -8803,9 +8397,7 @@
 			"male": 50,
 			"female": 50
 		},
-		"eggGroup": [
-			"indeterminate"
-		]
+		"eggGroup": ["indeterminate"]
 	},
 	"GASTLY": {
 		"number": 92,
@@ -8813,10 +8405,7 @@
 			"weight": 100,
 			"height": 1
 		},
-		"types": [
-			"ghost",
-			"poison"
-		],
+		"types": ["ghost", "poison"],
 		"baseExperience": 100,
 		"catchRate": 45,
 		"growthRate": "medium-fast",
@@ -8932,9 +8521,7 @@
 			"male": 50,
 			"female": 50
 		},
-		"eggGroup": [
-			"indeterminate"
-		]
+		"eggGroup": ["indeterminate"]
 	},
 	"HAUNTER": {
 		"number": 93,
@@ -8942,10 +8529,7 @@
 			"weight": 100,
 			"height": 1
 		},
-		"types": [
-			"ghost",
-			"poison"
-		],
+		"types": ["ghost", "poison"],
 		"baseExperience": 100,
 		"catchRate": 45,
 		"growthRate": "medium-fast",
@@ -9032,9 +8616,7 @@
 			"male": 50,
 			"female": 50
 		},
-		"eggGroup": [
-			"indeterminate"
-		]
+		"eggGroup": ["indeterminate"]
 	},
 	"GENGAR": {
 		"number": 94,
@@ -9042,10 +8624,7 @@
 			"weight": 100,
 			"height": 1
 		},
-		"types": [
-			"ghost",
-			"poison"
-		],
+		"types": ["ghost", "poison"],
 		"baseExperience": 100,
 		"catchRate": 45,
 		"growthRate": "medium-fast",
@@ -9135,9 +8714,7 @@
 			"male": 50,
 			"female": 50
 		},
-		"eggGroup": [
-			"indeterminate"
-		]
+		"eggGroup": ["indeterminate"]
 	},
 	"ONIX": {
 		"number": 95,
@@ -9145,10 +8722,7 @@
 			"weight": 100,
 			"height": 1
 		},
-		"types": [
-			"rock",
-			"ground"
-		],
+		"types": ["rock", "ground"],
 		"baseExperience": 100,
 		"catchRate": 45,
 		"growthRate": "medium-fast",
@@ -9198,9 +8772,7 @@
 			"male": 50,
 			"female": 50
 		},
-		"eggGroup": [
-			"indeterminate"
-		]
+		"eggGroup": ["indeterminate"]
 	},
 	"DROWZEE": {
 		"number": 96,
@@ -9208,9 +8780,7 @@
 			"weight": 100,
 			"height": 1
 		},
-		"types": [
-			"psychic"
-		],
+		"types": ["psychic"],
 		"baseExperience": 100,
 		"catchRate": 45,
 		"growthRate": "medium-fast",
@@ -9326,9 +8896,7 @@
 			"male": 50,
 			"female": 50
 		},
-		"eggGroup": [
-			"indeterminate"
-		]
+		"eggGroup": ["indeterminate"]
 	},
 	"HYPNO": {
 		"number": 97,
@@ -9336,9 +8904,7 @@
 			"weight": 100,
 			"height": 1
 		},
-		"types": [
-			"psychic"
-		],
+		"types": ["psychic"],
 		"baseExperience": 100,
 		"catchRate": 45,
 		"growthRate": "medium-fast",
@@ -9359,9 +8925,7 @@
 			"male": 50,
 			"female": 50
 		},
-		"eggGroup": [
-			"indeterminate"
-		]
+		"eggGroup": ["indeterminate"]
 	},
 	"KRABBY": {
 		"number": 98,
@@ -9369,9 +8933,7 @@
 			"weight": 100,
 			"height": 1
 		},
-		"types": [
-			"water"
-		],
+		"types": ["water"],
 		"baseExperience": 100,
 		"catchRate": 45,
 		"growthRate": "medium-fast",
@@ -9503,9 +9065,7 @@
 			"male": 50,
 			"female": 50
 		},
-		"eggGroup": [
-			"indeterminate"
-		]
+		"eggGroup": ["indeterminate"]
 	},
 	"KINGLER": {
 		"number": 99,
@@ -9513,9 +9073,7 @@
 			"weight": 100,
 			"height": 1
 		},
-		"types": [
-			"water"
-		],
+		"types": ["water"],
 		"baseExperience": 100,
 		"catchRate": 45,
 		"growthRate": "medium-fast",
@@ -9536,9 +9094,7 @@
 			"male": 50,
 			"female": 50
 		},
-		"eggGroup": [
-			"indeterminate"
-		]
+		"eggGroup": ["indeterminate"]
 	},
 	"VOLTORB": {
 		"number": 100,
@@ -9546,9 +9102,7 @@
 			"weight": 100,
 			"height": 1
 		},
-		"types": [
-			"electric"
-		],
+		"types": ["electric"],
 		"baseExperience": 100,
 		"catchRate": 45,
 		"growthRate": "medium-fast",
@@ -9649,9 +9203,7 @@
 			}
 		],
 		"gender": "genderless",
-		"eggGroup": [
-			"indeterminate"
-		]
+		"eggGroup": ["indeterminate"]
 	},
 	"ELECTRODE": {
 		"number": 101,
@@ -9659,9 +9211,7 @@
 			"weight": 100,
 			"height": 1
 		},
-		"types": [
-			"electric"
-		],
+		"types": ["electric"],
 		"baseExperience": 100,
 		"catchRate": 45,
 		"growthRate": "medium-fast",
@@ -9752,9 +9302,7 @@
 			}
 		],
 		"gender": "genderless",
-		"eggGroup": [
-			"indeterminate"
-		]
+		"eggGroup": ["indeterminate"]
 	},
 	"EXEGGCUTE": {
 		"number": 102,
@@ -9762,10 +9310,7 @@
 			"weight": 100,
 			"height": 1
 		},
-		"types": [
-			"grass",
-			"psychic"
-		],
+		"types": ["grass", "psychic"],
 		"baseExperience": 100,
 		"catchRate": 45,
 		"growthRate": "medium-fast",
@@ -9877,9 +9422,7 @@
 			"male": 50,
 			"female": 50
 		},
-		"eggGroup": [
-			"indeterminate"
-		]
+		"eggGroup": ["indeterminate"]
 	},
 	"EXEGGUTOR": {
 		"number": 103,
@@ -9887,10 +9430,7 @@
 			"weight": 100,
 			"height": 1
 		},
-		"types": [
-			"grass",
-			"psychic"
-		],
+		"types": ["grass", "psychic"],
 		"baseExperience": 100,
 		"catchRate": 45,
 		"growthRate": "medium-fast",
@@ -9984,9 +9524,7 @@
 			"male": 50,
 			"female": 50
 		},
-		"eggGroup": [
-			"indeterminate"
-		]
+		"eggGroup": ["indeterminate"]
 	},
 	"CUBONE": {
 		"number": 104,
@@ -9994,9 +9532,7 @@
 			"weight": 100,
 			"height": 1
 		},
-		"types": [
-			"ground"
-		],
+		"types": ["ground"],
 		"baseExperience": 100,
 		"catchRate": 45,
 		"growthRate": "medium-fast",
@@ -10120,9 +9656,7 @@
 			"male": 50,
 			"female": 50
 		},
-		"eggGroup": [
-			"indeterminate"
-		]
+		"eggGroup": ["indeterminate"]
 	},
 	"MAROWAK": {
 		"number": 105,
@@ -10130,9 +9664,7 @@
 			"weight": 100,
 			"height": 1
 		},
-		"types": [
-			"ground"
-		],
+		"types": ["ground"],
 		"baseExperience": 100,
 		"catchRate": 45,
 		"growthRate": "medium-fast",
@@ -10153,9 +9685,7 @@
 			"male": 50,
 			"female": 50
 		},
-		"eggGroup": [
-			"indeterminate"
-		]
+		"eggGroup": ["indeterminate"]
 	},
 	"HITMONLEE": {
 		"number": 106,
@@ -10163,9 +9693,7 @@
 			"weight": 100,
 			"height": 1
 		},
-		"types": [
-			"fighting"
-		],
+		"types": ["fighting"],
 		"baseExperience": 100,
 		"catchRate": 45,
 		"growthRate": "medium-fast",
@@ -10286,9 +9814,7 @@
 		"gender": {
 			"male": 100
 		},
-		"eggGroup": [
-			"indeterminate"
-		]
+		"eggGroup": ["indeterminate"]
 	},
 	"HITMONCHAN": {
 		"number": 107,
@@ -10296,9 +9822,7 @@
 			"weight": 100,
 			"height": 1
 		},
-		"types": [
-			"fighting"
-		],
+		"types": ["fighting"],
 		"baseExperience": 100,
 		"catchRate": 45,
 		"growthRate": "medium-fast",
@@ -10423,9 +9947,7 @@
 		"gender": {
 			"male": 100
 		},
-		"eggGroup": [
-			"indeterminate"
-		]
+		"eggGroup": ["indeterminate"]
 	},
 	"LICKITUNG": {
 		"number": 108,
@@ -10433,9 +9955,7 @@
 			"weight": 100,
 			"height": 1
 		},
-		"types": [
-			"normal"
-		],
+		"types": ["normal"],
 		"baseExperience": 100,
 		"catchRate": 45,
 		"growthRate": "medium-fast",
@@ -10485,9 +10005,7 @@
 			"male": 50,
 			"female": 50
 		},
-		"eggGroup": [
-			"indeterminate"
-		]
+		"eggGroup": ["indeterminate"]
 	},
 	"KOFFING": {
 		"number": 109,
@@ -10495,9 +10013,7 @@
 			"weight": 100,
 			"height": 1
 		},
-		"types": [
-			"poison"
-		],
+		"types": ["poison"],
 		"baseExperience": 100,
 		"catchRate": 45,
 		"growthRate": "medium-fast",
@@ -10609,9 +10125,7 @@
 			"male": 50,
 			"female": 50
 		},
-		"eggGroup": [
-			"indeterminate"
-		]
+		"eggGroup": ["indeterminate"]
 	},
 	"WEEZING": {
 		"number": 110,
@@ -10619,9 +10133,7 @@
 			"weight": 100,
 			"height": 1
 		},
-		"types": [
-			"poison"
-		],
+		"types": ["poison"],
 		"baseExperience": 100,
 		"catchRate": 45,
 		"growthRate": "medium-fast",
@@ -10642,9 +10154,7 @@
 			"male": 50,
 			"female": 50
 		},
-		"eggGroup": [
-			"indeterminate"
-		]
+		"eggGroup": ["indeterminate"]
 	},
 	"RHYHORN": {
 		"number": 111,
@@ -10652,10 +10162,7 @@
 			"weight": 100,
 			"height": 1
 		},
-		"types": [
-			"ground",
-			"rock"
-		],
+		"types": ["ground", "rock"],
 		"baseExperience": 100,
 		"catchRate": 45,
 		"growthRate": "medium-fast",
@@ -10763,9 +10270,7 @@
 			"male": 50,
 			"female": 50
 		},
-		"eggGroup": [
-			"indeterminate"
-		]
+		"eggGroup": ["indeterminate"]
 	},
 	"RHYDON": {
 		"number": 112,
@@ -10773,10 +10278,7 @@
 			"weight": 100,
 			"height": 1
 		},
-		"types": [
-			"ground",
-			"rock"
-		],
+		"types": ["ground", "rock"],
 		"baseExperience": 100,
 		"catchRate": 45,
 		"growthRate": "medium-fast",
@@ -10882,9 +10384,7 @@
 			"male": 50,
 			"female": 50
 		},
-		"eggGroup": [
-			"indeterminate"
-		]
+		"eggGroup": ["indeterminate"]
 	},
 	"CHANSEY": {
 		"number": 113,
@@ -10892,9 +10392,7 @@
 			"weight": 100,
 			"height": 1
 		},
-		"types": [
-			"normal"
-		],
+		"types": ["normal"],
 		"baseExperience": 100,
 		"catchRate": 45,
 		"growthRate": "medium-fast",
@@ -11011,9 +10509,7 @@
 		"gender": {
 			"female": 100
 		},
-		"eggGroup": [
-			"indeterminate"
-		]
+		"eggGroup": ["indeterminate"]
 	},
 	"TANGELA": {
 		"number": 114,
@@ -11021,9 +10517,7 @@
 			"weight": 100,
 			"height": 1
 		},
-		"types": [
-			"grass"
-		],
+		"types": ["grass"],
 		"baseExperience": 100,
 		"catchRate": 45,
 		"growthRate": "medium-fast",
@@ -11044,9 +10538,7 @@
 			"male": 50,
 			"female": 50
 		},
-		"eggGroup": [
-			"indeterminate"
-		]
+		"eggGroup": ["indeterminate"]
 	},
 	"KANGASKHAN": {
 		"number": 115,
@@ -11054,9 +10546,7 @@
 			"weight": 100,
 			"height": 1
 		},
-		"types": [
-			"normal"
-		],
+		"types": ["normal"],
 		"baseExperience": 100,
 		"catchRate": 45,
 		"growthRate": "medium-fast",
@@ -11177,9 +10667,7 @@
 		"gender": {
 			"female": 100
 		},
-		"eggGroup": [
-			"indeterminate"
-		]
+		"eggGroup": ["indeterminate"]
 	},
 	"HORSEA": {
 		"number": 116,
@@ -11187,9 +10675,7 @@
 			"weight": 100,
 			"height": 1
 		},
-		"types": [
-			"water"
-		],
+		"types": ["water"],
 		"baseExperience": 100,
 		"catchRate": 45,
 		"growthRate": "medium-fast",
@@ -11289,9 +10775,7 @@
 			"male": 50,
 			"female": 50
 		},
-		"eggGroup": [
-			"indeterminate"
-		]
+		"eggGroup": ["indeterminate"]
 	},
 	"SEADRA": {
 		"number": 117,
@@ -11299,9 +10783,7 @@
 			"weight": 100,
 			"height": 1
 		},
-		"types": [
-			"water"
-		],
+		"types": ["water"],
 		"baseExperience": 100,
 		"catchRate": 45,
 		"growthRate": "medium-fast",
@@ -11323,9 +10805,7 @@
 			"male": 50,
 			"female": 50
 		},
-		"eggGroup": [
-			"indeterminate"
-		]
+		"eggGroup": ["indeterminate"]
 	},
 	"GOLDEEN": {
 		"number": 118,
@@ -11333,9 +10813,7 @@
 			"weight": 100,
 			"height": 1
 		},
-		"types": [
-			"water"
-		],
+		"types": ["water"],
 		"baseExperience": 100,
 		"catchRate": 45,
 		"growthRate": "medium-fast",
@@ -11447,9 +10925,7 @@
 			"male": 50,
 			"female": 50
 		},
-		"eggGroup": [
-			"indeterminate"
-		]
+		"eggGroup": ["indeterminate"]
 	},
 	"SEAKING": {
 		"number": 119,
@@ -11457,9 +10933,7 @@
 			"weight": 100,
 			"height": 1
 		},
-		"types": [
-			"water"
-		],
+		"types": ["water"],
 		"baseExperience": 100,
 		"catchRate": 45,
 		"growthRate": "medium-fast",
@@ -11480,9 +10954,7 @@
 			"male": 50,
 			"female": 50
 		},
-		"eggGroup": [
-			"indeterminate"
-		]
+		"eggGroup": ["indeterminate"]
 	},
 	"STARYU": {
 		"number": 120,
@@ -11490,9 +10962,7 @@
 			"weight": 100,
 			"height": 1
 		},
-		"types": [
-			"water"
-		],
+		"types": ["water"],
 		"baseExperience": 100,
 		"catchRate": 45,
 		"growthRate": "medium-fast",
@@ -11581,9 +11051,7 @@
 			}
 		],
 		"gender": "genderless",
-		"eggGroup": [
-			"indeterminate"
-		]
+		"eggGroup": ["indeterminate"]
 	},
 	"STARMIE": {
 		"number": 121,
@@ -11591,10 +11059,7 @@
 			"weight": 100,
 			"height": 1
 		},
-		"types": [
-			"water",
-			"psychic"
-		],
+		"types": ["water", "psychic"],
 		"baseExperience": 100,
 		"catchRate": 45,
 		"growthRate": "medium-fast",
@@ -11677,9 +11142,7 @@
 			}
 		],
 		"gender": "genderless",
-		"eggGroup": [
-			"indeterminate"
-		]
+		"eggGroup": ["indeterminate"]
 	},
 	"MR_MIME": {
 		"number": 122,
@@ -11687,10 +11150,7 @@
 			"weight": 100,
 			"height": 1
 		},
-		"types": [
-			"psychic",
-			"fairy"
-		],
+		"types": ["psychic", "fairy"],
 		"baseExperience": 100,
 		"catchRate": 45,
 		"growthRate": "medium-fast",
@@ -11744,9 +11204,7 @@
 			"male": 50,
 			"female": 50
 		},
-		"eggGroup": [
-			"indeterminate"
-		]
+		"eggGroup": ["indeterminate"]
 	},
 	"SCYTHER": {
 		"number": 123,
@@ -11754,10 +11212,7 @@
 			"weight": 100,
 			"height": 1
 		},
-		"types": [
-			"bug",
-			"flying"
-		],
+		"types": ["bug", "flying"],
 		"baseExperience": 100,
 		"catchRate": 45,
 		"growthRate": "medium-fast",
@@ -11851,9 +11306,7 @@
 			"male": 50,
 			"female": 50
 		},
-		"eggGroup": [
-			"indeterminate"
-		]
+		"eggGroup": ["indeterminate"]
 	},
 	"JYNX": {
 		"number": 124,
@@ -11861,10 +11314,7 @@
 			"weight": 100,
 			"height": 1
 		},
-		"types": [
-			"ice",
-			"psychic"
-		],
+		"types": ["ice", "psychic"],
 		"baseExperience": 100,
 		"catchRate": 45,
 		"growthRate": "medium-fast",
@@ -11946,9 +11396,7 @@
 			"male": 50,
 			"female": 50
 		},
-		"eggGroup": [
-			"indeterminate"
-		]
+		"eggGroup": ["indeterminate"]
 	},
 	"ELECTABUZZ": {
 		"number": 125,
@@ -11956,9 +11404,7 @@
 			"weight": 100,
 			"height": 1
 		},
-		"types": [
-			"electric"
-		],
+		"types": ["electric"],
 		"baseExperience": 100,
 		"catchRate": 45,
 		"growthRate": "medium-fast",
@@ -12064,9 +11510,7 @@
 			"male": 50,
 			"female": 50
 		},
-		"eggGroup": [
-			"indeterminate"
-		]
+		"eggGroup": ["indeterminate"]
 	},
 	"MAGMAR": {
 		"number": 126,
@@ -12074,9 +11518,7 @@
 			"weight": 100,
 			"height": 1
 		},
-		"types": [
-			"fire"
-		],
+		"types": ["fire"],
 		"baseExperience": 100,
 		"catchRate": 45,
 		"growthRate": "medium-fast",
@@ -12097,9 +11539,7 @@
 			"male": 50,
 			"female": 50
 		},
-		"eggGroup": [
-			"indeterminate"
-		]
+		"eggGroup": ["indeterminate"]
 	},
 	"PINSIR": {
 		"number": 127,
@@ -12107,9 +11547,7 @@
 			"weight": 100,
 			"height": 1
 		},
-		"types": [
-			"bug"
-		],
+		"types": ["bug"],
 		"baseExperience": 100,
 		"catchRate": 45,
 		"growthRate": "medium-fast",
@@ -12130,9 +11568,7 @@
 			"male": 50,
 			"female": 50
 		},
-		"eggGroup": [
-			"indeterminate"
-		]
+		"eggGroup": ["indeterminate"]
 	},
 	"TAUROS": {
 		"number": 128,
@@ -12140,9 +11576,7 @@
 			"weight": 100,
 			"height": 1
 		},
-		"types": [
-			"normal"
-		],
+		"types": ["normal"],
 		"baseExperience": 100,
 		"catchRate": 45,
 		"growthRate": "medium-fast",
@@ -12228,9 +11662,7 @@
 		"gender": {
 			"male": 100
 		},
-		"eggGroup": [
-			"indeterminate"
-		]
+		"eggGroup": ["indeterminate"]
 	},
 	"MAGIKARP": {
 		"number": 129,
@@ -12238,9 +11670,7 @@
 			"weight": 100,
 			"height": 1
 		},
-		"types": [
-			"water"
-		],
+		"types": ["water"],
 		"baseExperience": 100,
 		"catchRate": 45,
 		"growthRate": "medium-fast",
@@ -12280,9 +11710,7 @@
 			"male": 50,
 			"female": 50
 		},
-		"eggGroup": [
-			"indeterminate"
-		]
+		"eggGroup": ["indeterminate"]
 	},
 	"GYARADOS": {
 		"number": 130,
@@ -12290,10 +11718,7 @@
 			"weight": 100,
 			"height": 1
 		},
-		"types": [
-			"water",
-			"flying"
-		],
+		"types": ["water", "flying"],
 		"baseExperience": 100,
 		"catchRate": 45,
 		"growthRate": "medium-fast",
@@ -12391,9 +11816,7 @@
 			"male": 50,
 			"female": 50
 		},
-		"eggGroup": [
-			"indeterminate"
-		]
+		"eggGroup": ["indeterminate"]
 	},
 	"LAPRAS": {
 		"number": 131,
@@ -12401,10 +11824,7 @@
 			"weight": 100,
 			"height": 1
 		},
-		"types": [
-			"water",
-			"ice"
-		],
+		"types": ["water", "ice"],
 		"baseExperience": 100,
 		"catchRate": 45,
 		"growthRate": "medium-fast",
@@ -12514,9 +11934,7 @@
 			"male": 50,
 			"female": 50
 		},
-		"eggGroup": [
-			"indeterminate"
-		]
+		"eggGroup": ["indeterminate"]
 	},
 	"DITTO": {
 		"number": 132,
@@ -12524,9 +11942,7 @@
 			"weight": 100,
 			"height": 1
 		},
-		"types": [
-			"normal"
-		],
+		"types": ["normal"],
 		"baseExperience": 100,
 		"catchRate": 45,
 		"growthRate": "medium-fast",
@@ -12549,9 +11965,7 @@
 			}
 		],
 		"gender": "genderless",
-		"eggGroup": [
-			"indeterminate"
-		]
+		"eggGroup": ["indeterminate"]
 	},
 	"EEVEE": {
 		"number": 133,
@@ -12559,9 +11973,7 @@
 			"weight": 100,
 			"height": 1
 		},
-		"types": [
-			"normal"
-		],
+		"types": ["normal"],
 		"baseExperience": 100,
 		"catchRate": 45,
 		"growthRate": "medium-fast",
@@ -12695,9 +12107,7 @@
 			"male": 87.5,
 			"female": 12.5
 		},
-		"eggGroup": [
-			"indeterminate"
-		]
+		"eggGroup": ["indeterminate"]
 	},
 	"VAPOREON": {
 		"number": 134,
@@ -12705,9 +12115,7 @@
 			"weight": 100,
 			"height": 1
 		},
-		"types": [
-			"water"
-		],
+		"types": ["water"],
 		"baseExperience": 100,
 		"catchRate": 45,
 		"growthRate": "medium-fast",
@@ -12825,9 +12233,7 @@
 			"male": 87.5,
 			"female": 12.5
 		},
-		"eggGroup": [
-			"indeterminate"
-		]
+		"eggGroup": ["indeterminate"]
 	},
 	"JOLTEON": {
 		"number": 135,
@@ -12835,9 +12241,7 @@
 			"weight": 100,
 			"height": 1
 		},
-		"types": [
-			"electric"
-		],
+		"types": ["electric"],
 		"baseExperience": 100,
 		"catchRate": 45,
 		"growthRate": "medium-fast",
@@ -12955,9 +12359,7 @@
 			"male": 87.5,
 			"female": 12.5
 		},
-		"eggGroup": [
-			"indeterminate"
-		]
+		"eggGroup": ["indeterminate"]
 	},
 	"FLAREON": {
 		"number": 136,
@@ -12965,9 +12367,7 @@
 			"weight": 100,
 			"height": 1
 		},
-		"types": [
-			"fire"
-		],
+		"types": ["fire"],
 		"baseExperience": 100,
 		"catchRate": 45,
 		"growthRate": "medium-fast",
@@ -13081,9 +12481,7 @@
 			"male": 87.5,
 			"female": 12.5
 		},
-		"eggGroup": [
-			"indeterminate"
-		]
+		"eggGroup": ["indeterminate"]
 	},
 	"PORYGON": {
 		"number": 137,
@@ -13091,9 +12489,7 @@
 			"weight": 100,
 			"height": 1
 		},
-		"types": [
-			"normal"
-		],
+		"types": ["normal"],
 		"baseExperience": 100,
 		"catchRate": 45,
 		"growthRate": "medium-fast",
@@ -13168,9 +12564,7 @@
 			}
 		],
 		"gender": "genderless",
-		"eggGroup": [
-			"indeterminate"
-		]
+		"eggGroup": ["indeterminate"]
 	},
 	"OMANYTE": {
 		"number": 138,
@@ -13178,10 +12572,7 @@
 			"weight": 100,
 			"height": 1
 		},
-		"types": [
-			"rock",
-			"water"
-		],
+		"types": ["rock", "water"],
 		"baseExperience": 100,
 		"catchRate": 45,
 		"growthRate": "medium-fast",
@@ -13317,9 +12708,7 @@
 			"male": 87.5,
 			"female": 12.5
 		},
-		"eggGroup": [
-			"indeterminate"
-		]
+		"eggGroup": ["indeterminate"]
 	},
 	"OMASTAR": {
 		"number": 139,
@@ -13327,10 +12716,7 @@
 			"weight": 100,
 			"height": 1
 		},
-		"types": [
-			"rock",
-			"water"
-		],
+		"types": ["rock", "water"],
 		"baseExperience": 100,
 		"catchRate": 45,
 		"growthRate": "medium-fast",
@@ -13416,9 +12802,7 @@
 			"male": 87.5,
 			"female": 12.5
 		},
-		"eggGroup": [
-			"indeterminate"
-		]
+		"eggGroup": ["indeterminate"]
 	},
 	"KABUTO": {
 		"number": 140,
@@ -13426,10 +12810,7 @@
 			"weight": 100,
 			"height": 1
 		},
-		"types": [
-			"rock",
-			"water"
-		],
+		"types": ["rock", "water"],
 		"baseExperience": 100,
 		"catchRate": 45,
 		"growthRate": "medium-fast",
@@ -13557,9 +12938,7 @@
 			"male": 87.5,
 			"female": 12.5
 		},
-		"eggGroup": [
-			"indeterminate"
-		]
+		"eggGroup": ["indeterminate"]
 	},
 	"KABUTOPS": {
 		"number": 141,
@@ -13567,10 +12946,7 @@
 			"weight": 100,
 			"height": 1
 		},
-		"types": [
-			"rock",
-			"water"
-		],
+		"types": ["rock", "water"],
 		"baseExperience": 100,
 		"catchRate": 45,
 		"growthRate": "medium-fast",
@@ -13664,9 +13040,7 @@
 			"male": 87.5,
 			"female": 12.5
 		},
-		"eggGroup": [
-			"indeterminate"
-		]
+		"eggGroup": ["indeterminate"]
 	},
 	"AERODACTYL": {
 		"number": 142,
@@ -13674,10 +13048,7 @@
 			"weight": 100,
 			"height": 1
 		},
-		"types": [
-			"rock",
-			"flying"
-		],
+		"types": ["rock", "flying"],
 		"baseExperience": 100,
 		"catchRate": 45,
 		"growthRate": "medium-fast",
@@ -13779,9 +13150,7 @@
 			"male": 87.5,
 			"female": 12.5
 		},
-		"eggGroup": [
-			"indeterminate"
-		]
+		"eggGroup": ["indeterminate"]
 	},
 	"SNORLAX": {
 		"number": 143,
@@ -13789,9 +13158,7 @@
 			"weight": 460,
 			"height": 2.1
 		},
-		"types": [
-			"normal"
-		],
+		"types": ["normal"],
 		"baseExperience": 100,
 		"catchRate": 45,
 		"growthRate": "medium-fast",
@@ -13941,9 +13308,7 @@
 			"male": 50,
 			"female": 50
 		},
-		"eggGroup": [
-			"indeterminate"
-		]
+		"eggGroup": ["indeterminate"]
 	},
 	"ARTICUNO": {
 		"number": 144,
@@ -13951,10 +13316,7 @@
 			"weight": 100,
 			"height": 1
 		},
-		"types": [
-			"ice",
-			"flying"
-		],
+		"types": ["ice", "flying"],
 		"baseExperience": 100,
 		"catchRate": 45,
 		"growthRate": "medium-fast",
@@ -14037,9 +13399,7 @@
 			}
 		],
 		"gender": "genderless",
-		"eggGroup": [
-			"indeterminate"
-		]
+		"eggGroup": ["indeterminate"]
 	},
 	"ZAPDOS": {
 		"number": 145,
@@ -14047,10 +13407,7 @@
 			"weight": 100,
 			"height": 1
 		},
-		"types": [
-			"electric",
-			"flying"
-		],
+		"types": ["electric", "flying"],
 		"baseExperience": 100,
 		"catchRate": 45,
 		"growthRate": "medium-fast",
@@ -14133,9 +13490,7 @@
 			}
 		],
 		"gender": "genderless",
-		"eggGroup": [
-			"indeterminate"
-		]
+		"eggGroup": ["indeterminate"]
 	},
 	"MOLTRES": {
 		"number": 146,
@@ -14143,10 +13498,7 @@
 			"weight": 100,
 			"height": 1
 		},
-		"types": [
-			"fire",
-			"flying"
-		],
+		"types": ["fire", "flying"],
 		"baseExperience": 100,
 		"catchRate": 45,
 		"growthRate": "medium-fast",
@@ -14229,9 +13581,7 @@
 			}
 		],
 		"gender": "genderless",
-		"eggGroup": [
-			"indeterminate"
-		]
+		"eggGroup": ["indeterminate"]
 	},
 	"DRATINI": {
 		"number": 147,
@@ -14239,9 +13589,7 @@
 			"weight": 100,
 			"height": 1
 		},
-		"types": [
-			"dragon"
-		],
+		"types": ["dragon"],
 		"baseExperience": 100,
 		"catchRate": 45,
 		"growthRate": "medium-fast",
@@ -14349,9 +13697,7 @@
 			"male": 50,
 			"female": 50
 		},
-		"eggGroup": [
-			"indeterminate"
-		]
+		"eggGroup": ["indeterminate"]
 	},
 	"DRAGONAIR": {
 		"number": 148,
@@ -14359,9 +13705,7 @@
 			"weight": 100,
 			"height": 1
 		},
-		"types": [
-			"dragon"
-		],
+		"types": ["dragon"],
 		"baseExperience": 100,
 		"catchRate": 45,
 		"growthRate": "medium-fast",
@@ -14445,9 +13789,7 @@
 			"male": 50,
 			"female": 50
 		},
-		"eggGroup": [
-			"indeterminate"
-		]
+		"eggGroup": ["indeterminate"]
 	},
 	"DRAGONITE": {
 		"number": 149,
@@ -14455,10 +13797,7 @@
 			"weight": 100,
 			"height": 1
 		},
-		"types": [
-			"dragon",
-			"flying"
-		],
+		"types": ["dragon", "flying"],
 		"baseExperience": 100,
 		"catchRate": 45,
 		"growthRate": "medium-fast",
@@ -14560,9 +13899,7 @@
 			"male": 50,
 			"female": 50
 		},
-		"eggGroup": [
-			"indeterminate"
-		]
+		"eggGroup": ["indeterminate"]
 	},
 	"MEWTWO": {
 		"number": 150,
@@ -14570,9 +13907,7 @@
 			"weight": 100,
 			"height": 1
 		},
-		"types": [
-			"psychic"
-		],
+		"types": ["psychic"],
 		"baseExperience": 100,
 		"catchRate": 45,
 		"growthRate": "medium-fast",
@@ -14655,9 +13990,7 @@
 			}
 		],
 		"gender": "genderless",
-		"eggGroup": [
-			"indeterminate"
-		]
+		"eggGroup": ["indeterminate"]
 	},
 	"MEW": {
 		"number": 151,
@@ -14665,9 +13998,7 @@
 			"weight": 100,
 			"height": 1
 		},
-		"types": [
-			"psychic"
-		],
+		"types": ["psychic"],
 		"baseExperience": 100,
 		"catchRate": 45,
 		"growthRate": "medium-fast",
@@ -14734,8 +14065,6 @@
 			}
 		],
 		"gender": "genderless",
-		"eggGroup": [
-			"indeterminate"
-		]
+		"eggGroup": ["indeterminate"]
 	}
 }

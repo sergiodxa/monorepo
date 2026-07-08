@@ -22,17 +22,17 @@ code changes. Example:
 
 ```json
 {
-  "atlases": {
-    "overworld": {
-      "image": "/assets/openly-licensed-overworld.png",
-      "regions": {
-        "tile.grass": { "x": 0, "y": 0, "w": 16, "h": 16 },
-        "hero.down.0": { "x": 0, "y": 16, "w": 16, "h": 16 }
-      },
-      "animations": {
-        "hero.down.walk": { "frames": [], "frameMs": 180, "loop": true }
-      }
-    }
-  }
+	"atlases": {
+		"overworld": {
+			"image": "/assets/openly-licensed-overworld.png",
+			"regions": {
+				"tile.grass": { "x": 0, "y": 0, "w": 16, "h": 16 },
+				"hero.down.0": { "x": 0, "y": 16, "w": 16, "h": 16 }
+			},
+			"animations": {
+				"hero.down.walk": { "frames": [], "frameMs": 180, "loop": true }
+			}
+		}
+	}
 }
 ```
