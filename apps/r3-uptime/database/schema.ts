@@ -508,10 +508,11 @@ export const statusPages = table({
 export type SelectStatusPage = TableRow<typeof statusPages>;
 export type InsertStatusPage = InsertRow<typeof statusPages>;
 
-// Physical table has no `id`/timestamp columns — a plain join row keyed by the pair.
+// Physical table has no `id`/timestamp columns or an enforced unique constraint, but
+// the framework requires at least one primary-key column — the pair is the natural key.
 export const statusPageMonitors = table({
 	name: "status_page_monitors",
-	primaryKey: [],
+	primaryKey: ["status_page_id", "monitor_id"],
 	columns: {
 		status_page_id: c.text(),
 		monitor_id: c.text(),
@@ -523,10 +524,11 @@ export const statusPageMonitors = table({
 export type SelectStatusPageMonitor = TableRow<typeof statusPageMonitors>;
 export type InsertStatusPageMonitor = InsertRow<typeof statusPageMonitors>;
 
-// Physical table has no `id`/timestamp columns — a plain join row keyed by the pair.
+// Physical table has no `id`/timestamp columns or an enforced unique constraint, but
+// the framework requires at least one primary-key column — the pair is the natural key.
 export const statusPageCronJobs = table({
 	name: "status_page_cron_jobs",
-	primaryKey: [],
+	primaryKey: ["status_page_id", "cron_job_monitor_id"],
 	columns: {
 		status_page_id: c.text(),
 		cron_job_monitor_id: c.text(),

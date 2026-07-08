@@ -1,0 +1,11 @@
+{
+	"version": "0.0.1",
+	"configurations": [
+		{
+			"name": "r3-uptime",
+			"runtimeExecutable": "bun",
+			"runtimeArgs": ["run", "--cwd", "apps/r3-uptime", "dev"],
+			"port": 3000
+		}
+	]
+}

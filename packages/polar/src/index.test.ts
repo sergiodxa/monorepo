@@ -37,6 +37,8 @@ function record(method: string, arg: unknown) {
 }
 
 let ingestImpl: () => unknown = () => ({});
+let getExternalImpl: () => unknown = () => ({ id: "cus_1" });
+let listCustomersImpl: () => unknown[] = () => [{ id: "cus_1" }];
 
 mock.module("@polar-sh/sdk", () => ({
 	Polar: class Polar {
@@ -53,6 +55,18 @@ mock.module("@polar-sh/sdk", () => ({
 			get: async (arg: unknown) => {
 				record("customers.get", arg);
 				return { id: "cus_1" };
+			},
+			getExternal: async (arg: unknown) => {
+				record("customers.getExternal", arg);
+				return getExternalImpl();
+			},
+			list: async (arg: unknown) => {
+				record("customers.list", arg);
+				return {
+					async *[Symbol.asyncIterator]() {
+						yield { result: { items: listCustomersImpl() } };
+					},
+				};
 			},
 			update: async (arg: unknown) => {
 				record("customers.update", arg);
@@ -108,6 +122,8 @@ afterEach(() => {
 	validateEventCalls = [];
 	validateEventImpl = () => ({ type: "checkout.updated" });
 	ingestImpl = () => ({});
+	getExternalImpl = () => ({ id: "cus_1" });
+	listCustomersImpl = () => [{ id: "cus_1" }];
 });
 
 describe("PolarClient", () => {
@@ -145,8 +161,51 @@ describe("PolarClient", () => {
 		let polar = new PolarClient({ accessToken: "t" });
 		await polar.updateCustomer("cus_1", { name: "New", metadata: { a: "b" } });
 		expect(calls["customers.update"]).toEqual([
-			{ id: "cus_1", customerUpdate: { name: "New", metadata: { a: "b" } } },
+			{ id: "cus_1", customerUpdate: { name: "New", metadata: { a: "b" }, externalId: undefined } },
 		]);
+	});
+
+	test("updateCustomer forwards externalId when linking a customer", async () => {
+		let polar = new PolarClient({ accessToken: "t" });
+		await polar.updateCustomer("cus_1", { externalId: "sub_123" });
+		expect(calls["customers.update"]).toEqual([
+			{
+				id: "cus_1",
+				customerUpdate: { name: undefined, metadata: undefined, externalId: "sub_123" },
+			},
+		]);
+	});
+
+	describe("getExternalCustomer", () => {
+		test("looks up by external id", async () => {
+			let polar = new PolarClient({ accessToken: "t" });
+			let customer = await polar.getExternalCustomer("sub_123");
+			expect(customer).toEqual({ id: "cus_1" });
+			expect(calls["customers.getExternal"]).toEqual([{ externalId: "sub_123" }]);
+		});
+
+		test("returns null when no customer has that external id", async () => {
+			getExternalImpl = () => {
+				throw new Error("not found");
+			};
+			let polar = new PolarClient({ accessToken: "t" });
+			expect(await polar.getExternalCustomer("missing")).toBeNull();
+		});
+	});
+
+	describe("findCustomerByEmail", () => {
+		test("returns the first matching customer", async () => {
+			let polar = new PolarClient({ accessToken: "t" });
+			let customer = await polar.findCustomerByEmail("jane@example.com");
+			expect(customer).toEqual({ id: "cus_1" });
+			expect(calls["customers.list"]).toEqual([{ email: "jane@example.com" }]);
+		});
+
+		test("returns null when no customer matches", async () => {
+			listCustomersImpl = () => [];
+			let polar = new PolarClient({ accessToken: "t" });
+			expect(await polar.findCustomerByEmail("nobody@example.com")).toBeNull();
+		});
 	});
 
 	test("getSubscription looks up by id", async () => {

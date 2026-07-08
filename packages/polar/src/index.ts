@@ -66,6 +66,8 @@ export interface CustomerUpdate {
 	name?: string;
 	/** Metadata to merge onto the customer record. */
 	metadata?: Record<string, string>;
+	/** External (app-owned) id to link to this customer. */
+	externalId?: string;
 }
 
 /**
@@ -151,6 +153,36 @@ export class PolarClient {
 	}
 
 	/**
+	 * Get a customer by its app-owned external id.
+	 *
+	 * @param externalId - The external id previously linked to the customer.
+	 * @returns The customer object, or `null` when no customer has that external id.
+	 */
+	async getExternalCustomer(externalId: string): Promise<Customer | null> {
+		try {
+			return await this.client.customers.getExternal({ externalId });
+		} catch {
+			return null;
+		}
+	}
+
+	/**
+	 * Find a customer by exact email match.
+	 *
+	 * @param email - The customer's email address.
+	 * @returns The first matching customer, or `null` when none exist.
+	 * @throws {PolarError} When the request fails.
+	 */
+	async findCustomerByEmail(email: string): Promise<Customer | null> {
+		let pages = await this.client.customers.list({ email });
+		for await (let page of pages) {
+			let customer = page.result.items.at(0);
+			if (customer) return customer;
+		}
+		return null;
+	}
+
+	/**
 	 * Update a customer's mutable fields.
 	 *
 	 * @param customerId - The Polar customer ID.
@@ -164,6 +196,7 @@ export class PolarClient {
 			customerUpdate: {
 				name: updates.name,
 				metadata: updates.metadata,
+				externalId: updates.externalId,
 			},
 		});
 	}

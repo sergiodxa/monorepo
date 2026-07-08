@@ -1,51 +1,97 @@
 /**
  * Application bootstrap that assembles the r3-uptime fetch-router. It registers the
- * core middleware stack (async context, form data, method override, database, HTML
- * rendering), mounts the web routes, and wires a request-scoped SSR renderer that
- * resolves and follows nested frame redirects. It exists as the composition root
- * shared by the worker and any other runtime entry point.
+ * core middleware stack (async context, logging, form data, method override, session,
+ * auth, cross-origin protection, HTML rendering), mounts the web routes with their
+ * auth guards, and wires a request-scoped SSR renderer that resolves and follows
+ * nested frame redirects. It exists as the composition root shared by the worker and
+ * any other runtime entry point.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { RequestContext, Router } from "remix/fetch-router";
+import type { Middleware, RequestContext, RequestHandler, Router } from "remix/fetch-router";
 import type { RemixNode } from "remix/ui";
 import type { ResolveFrameContext } from "remix/ui/server";
 
 import { asyncContext } from "remix/async-context-middleware";
-import { Database } from "remix/data-table";
+import { cop } from "remix/cop-middleware";
 import { createRouter } from "remix/fetch-router";
 import { formData } from "remix/form-data-middleware";
 import { methodOverride } from "remix/method-override-middleware";
 import { renderWith } from "remix/render-middleware";
 import { renderToStream } from "remix/ui/server";
 
+import appIndex from "~/app/http/controllers/app/index";
+import teamDashboard from "~/app/http/controllers/app/team/dashboard";
+import teamIndex from "~/app/http/controllers/app/team/index";
+import authController from "~/app/http/controllers/auth";
 import defaultHandler from "~/app/http/controllers/default-handler";
-import database from "~/app/http/middleware/database";
+import healthcheck from "~/app/http/controllers/healthcheck";
+import home from "~/app/http/controllers/home";
+import logoutController from "~/app/http/controllers/logout";
+import auth from "~/app/http/middleware/auth";
+import i18n from "~/app/http/middleware/i18n";
+import logger from "~/app/http/middleware/logger";
+import requireTeam from "~/app/http/middleware/require-team";
+import requireUser from "~/app/http/middleware/require-user";
+import { createSessionMiddleware } from "~/app/http/middleware/session";
 import routes from "~/routes/web";
 
 namespace application {
 	export interface Options {
-		database: Database;
+		/** KV namespace backing session storage. */
+		kv: KVNamespace;
+		/** Secret used to sign the session cookie. */
+		cookieSecret: string;
+		/** Whether the session cookie should be marked `Secure`. */
+		secure: boolean;
 	}
 }
 
 export default function application(options: application.Options) {
+	// Non-tuple `Middleware[]`: values middleware expose on the context are declared
+	// via `declare module "remix/fetch-router"` augmentations in their own files,
+	// not through the transform-typed middleware chain (see AGENTS.md).
+	let globalMiddleware: Middleware[] = [
+		asyncContext(),
+		logger,
+		formData() as Middleware,
+		methodOverride(),
+		createSessionMiddleware(options.kv, options.cookieSecret, options.secure) as Middleware,
+		auth as Middleware,
+		i18n,
+		cop(),
+		renderWith(createHtmlRenderer) as Middleware,
+	];
+
 	let router = createRouter({
-		middleware: [
-			asyncContext(),
-			formData(),
-			methodOverride(),
-			database(options.database),
-			renderWith(createHtmlRenderer),
-		],
+		middleware: globalMiddleware,
 		defaultHandler,
 	});
 
-	router.map(routes, {
-		middleware: [],
-		actions: {},
+	router.map(routes.home, home);
+	router.map(routes.healthcheck, healthcheck);
+	router.map(routes.auth, authController);
+	router.map(routes.logout, logoutController);
+
+	// `createAction`'s handler type fixes its middleware-entries tuple at `[]`, but a
+	// `router.map` middleware array of plain (untransformed) `Middleware` values types
+	// its merged context with an opaque `any[]` entries tuple — the two never unify, so
+	// the handler is cast to accept any context here. `ctx.team`/`ctx.membership` are
+	// still correctly typed inside each handler via the global `declare module`
+	// augmentations in `require-team.ts`, independent of this cast.
+	router.map(routes.app.index, {
+		middleware: [requireUser],
+		handler: appIndex as RequestHandler<any>,
+	});
+	router.map(routes.app.team.index, {
+		middleware: [requireUser, requireTeam],
+		handler: teamIndex as RequestHandler<any>,
+	});
+	router.map(routes.app.team.dashboard, {
+		middleware: [requireUser, requireTeam],
+		handler: teamDashboard as RequestHandler<any>,
 	});
 
 	return router;
