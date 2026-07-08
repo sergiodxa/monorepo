@@ -24,6 +24,7 @@
 		"@pkg/session-storage-kv": "workspace:*",
 		"@pkg/uuid": "workspace:*",
 		"@pkg/validate": "workspace:*",
+		"cron-parser": "^5.5.0",
 		"remix": "3.0.0-beta.5"
 	},
 	"devDependencies": {

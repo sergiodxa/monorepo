@@ -26,7 +26,18 @@ import {
 	createContentCheck,
 	deleteContentCheck,
 } from "~/app/http/controllers/actions/content-checks";
+import {
+	createCronJob,
+	deleteCronJob,
+	updateCronJob,
+} from "~/app/http/controllers/actions/cron-jobs";
 import { setDashboardTab } from "~/app/http/controllers/actions/dashboard";
+import {
+	checkDnsMonitor,
+	createDnsMonitor,
+	deleteDnsMonitor,
+	updateDnsMonitor,
+} from "~/app/http/controllers/actions/dns-monitors";
 import {
 	createMonitor,
 	deleteMonitor,
@@ -34,13 +45,32 @@ import {
 	updateMonitor,
 } from "~/app/http/controllers/actions/monitors";
 import { updateSsl } from "~/app/http/controllers/actions/ssl";
+import {
+	checkTcpMonitor,
+	createTcpMonitor,
+	deleteTcpMonitor,
+	updateTcpMonitor,
+} from "~/app/http/controllers/actions/tcp-monitors";
+import cronJobPing from "~/app/http/controllers/api/cron-job-ping";
 import appIndex from "~/app/http/controllers/app/index";
+import cronJobEdit from "~/app/http/controllers/app/team/cron-job-edit";
+import cronJobNew from "~/app/http/controllers/app/team/cron-job-new";
+import cronJobShow from "~/app/http/controllers/app/team/cron-job-show";
+import cronJobs from "~/app/http/controllers/app/team/cron-jobs";
 import teamDashboard from "~/app/http/controllers/app/team/dashboard";
+import dnsMonitorEdit from "~/app/http/controllers/app/team/dns-monitor-edit";
+import dnsMonitorNew from "~/app/http/controllers/app/team/dns-monitor-new";
+import dnsMonitorShow from "~/app/http/controllers/app/team/dns-monitor-show";
+import dnsMonitors from "~/app/http/controllers/app/team/dns-monitors";
 import httpMonitors from "~/app/http/controllers/app/team/http-monitors";
 import teamIndex from "~/app/http/controllers/app/team/index";
 import monitorEdit from "~/app/http/controllers/app/team/monitor-edit";
 import monitorNew from "~/app/http/controllers/app/team/monitor-new";
 import monitorShow from "~/app/http/controllers/app/team/monitor-show";
+import tcpMonitorEdit from "~/app/http/controllers/app/team/tcp-monitor-edit";
+import tcpMonitorNew from "~/app/http/controllers/app/team/tcp-monitor-new";
+import tcpMonitorShow from "~/app/http/controllers/app/team/tcp-monitor-show";
+import tcpMonitors from "~/app/http/controllers/app/team/tcp-monitors";
 import authController from "~/app/http/controllers/auth";
 import defaultHandler from "~/app/http/controllers/default-handler";
 import healthcheck from "~/app/http/controllers/healthcheck";
@@ -125,6 +155,54 @@ export default function application(options: application.Options) {
 		middleware: [requireUser, requireTeam],
 		handler: monitorEdit as RequestHandler<any>,
 	});
+	router.map(routes.app.team.dnsMonitors, {
+		middleware: [requireUser, requireTeam],
+		handler: dnsMonitors as RequestHandler<any>,
+	});
+	router.map(routes.app.team.dnsMonitorNew, {
+		middleware: [requireUser, requireTeam],
+		handler: dnsMonitorNew as RequestHandler<any>,
+	});
+	router.map(routes.app.team.dnsMonitorShow, {
+		middleware: [requireUser, requireTeam],
+		handler: dnsMonitorShow as RequestHandler<any>,
+	});
+	router.map(routes.app.team.dnsMonitorEdit, {
+		middleware: [requireUser, requireTeam],
+		handler: dnsMonitorEdit as RequestHandler<any>,
+	});
+	router.map(routes.app.team.tcpMonitors, {
+		middleware: [requireUser, requireTeam],
+		handler: tcpMonitors as RequestHandler<any>,
+	});
+	router.map(routes.app.team.tcpMonitorNew, {
+		middleware: [requireUser, requireTeam],
+		handler: tcpMonitorNew as RequestHandler<any>,
+	});
+	router.map(routes.app.team.tcpMonitorShow, {
+		middleware: [requireUser, requireTeam],
+		handler: tcpMonitorShow as RequestHandler<any>,
+	});
+	router.map(routes.app.team.tcpMonitorEdit, {
+		middleware: [requireUser, requireTeam],
+		handler: tcpMonitorEdit as RequestHandler<any>,
+	});
+	router.map(routes.app.team.cronJobs, {
+		middleware: [requireUser, requireTeam],
+		handler: cronJobs as RequestHandler<any>,
+	});
+	router.map(routes.app.team.cronJobNew, {
+		middleware: [requireUser, requireTeam],
+		handler: cronJobNew as RequestHandler<any>,
+	});
+	router.map(routes.app.team.cronJobShow, {
+		middleware: [requireUser, requireTeam],
+		handler: cronJobShow as RequestHandler<any>,
+	});
+	router.map(routes.app.team.cronJobEdit, {
+		middleware: [requireUser, requireTeam],
+		handler: cronJobEdit as RequestHandler<any>,
+	});
 
 	router.map(routes.actions, {
 		middleware: [requireUser, requireTeam],
@@ -137,8 +215,23 @@ export default function application(options: application.Options) {
 			createContentCheck: createContentCheck as RequestHandler<any>,
 			deleteContentCheck: deleteContentCheck as RequestHandler<any>,
 			setDashboardTab: setDashboardTab as RequestHandler<any>,
+			createDnsMonitor: createDnsMonitor as RequestHandler<any>,
+			updateDnsMonitor: updateDnsMonitor as RequestHandler<any>,
+			deleteDnsMonitor: deleteDnsMonitor as RequestHandler<any>,
+			checkDnsMonitor: checkDnsMonitor as RequestHandler<any>,
+			createTcpMonitor: createTcpMonitor as RequestHandler<any>,
+			updateTcpMonitor: updateTcpMonitor as RequestHandler<any>,
+			deleteTcpMonitor: deleteTcpMonitor as RequestHandler<any>,
+			checkTcpMonitor: checkTcpMonitor as RequestHandler<any>,
+			createCronJob: createCronJob as RequestHandler<any>,
+			updateCronJob: updateCronJob as RequestHandler<any>,
+			deleteCronJob: deleteCronJob as RequestHandler<any>,
 		},
 	});
+
+	// Public, unauthenticated: the cron-job ping endpoint (see its controller's
+	// docblock for why it doesn't sit behind `requireUser`/`requireTeam`).
+	router.map(routes.api.cronJobPing, cronJobPing);
 
 	return router;
 }

@@ -18,7 +18,11 @@ import { Database } from "remix/data-table";
 
 import Monitor from "~/app/data/monitor";
 import { GeoFetchDO } from "~/app/do/geo-fetch";
+import { CheckCronJobsJob } from "~/app/jobs/check-cron-jobs";
+import { CheckDnsJob } from "~/app/jobs/check-dns";
+import { CheckTcpJob } from "~/app/jobs/check-tcp";
 import { CleanJob } from "~/app/jobs/clean";
+import { CleanCronJobPingsJob } from "~/app/jobs/clean-cron-job-pings";
 import { PingJob } from "~/app/jobs/ping";
 import { container } from "~/app/lib/container";
 import { Ping } from "~/app/workflows/ping";
@@ -74,7 +78,8 @@ export default {
 	/** Dispatches cron triggers. Only the crons this phase's jobs need are handled. */
 	async scheduled(controller) {
 		await container.scope(async () => {
-			// Every minute: enqueue a `ping` message for every monitor due for a check.
+			// Every minute: enqueue a `ping` message for every monitor due for a check,
+			// plus a sweep of cron-job monitors for late/missed transitions.
 			if (controller.cron === "* * * * *") {
 				let db = getServiceContainer().get(Database);
 				let due = await Monitor.findDue(db, controller.scheduledTime);
@@ -88,11 +93,23 @@ export default {
 						),
 					);
 				}
+				waitUntil(env.QUEUE.send({ type: "checkCronJobs" }));
 			}
 
-			// Daily at midnight: purge old `monitor_results` rows.
+			// Every 5 minutes: sweep every enabled TCP monitor.
+			if (controller.cron === "*/5 * * * *") {
+				waitUntil(env.QUEUE.send({ type: "checkTcp" }));
+			}
+
+			// Every hour: sweep every enabled DNS monitor.
+			if (controller.cron === "0 * * * *") {
+				waitUntil(env.QUEUE.send({ type: "checkDns" }));
+			}
+
+			// Daily at midnight: purge old `monitor_results` and `cron_job_pings` rows.
 			if (controller.cron === "0 0 * * *") {
 				waitUntil(env.QUEUE.send({ type: "clean" }));
+				waitUntil(env.QUEUE.send({ type: "cleanCronJobPings" }));
 			}
 		});
 	},
@@ -117,6 +134,18 @@ export default {
 						break;
 					case "clean":
 						waitUntil(CleanJob.run({ message, uptime }));
+						break;
+					case "checkDns":
+						waitUntil(CheckDnsJob.run({ message, uptime }));
+						break;
+					case "checkTcp":
+						waitUntil(CheckTcpJob.run({ message, uptime }));
+						break;
+					case "checkCronJobs":
+						waitUntil(CheckCronJobsJob.run({ message, uptime }));
+						break;
+					case "cleanCronJobPings":
+						waitUntil(CleanCronJobPingsJob.run({ message, uptime }));
 						break;
 					default:
 						// Valid message, but this phase doesn't implement its job yet.

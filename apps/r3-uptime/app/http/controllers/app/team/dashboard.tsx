@@ -15,7 +15,10 @@ import { Database } from "remix/data-table";
 import { createAction } from "remix/fetch-router";
 import { Session } from "remix/session";
 
+import CronJobMonitor from "~/app/data/cron-job";
+import DnsMonitor from "~/app/data/dns-monitor";
 import Monitor from "~/app/data/monitor";
+import TcpMonitor from "~/app/data/tcp-monitor";
 import { dashboardTab as dashboardTabCookie } from "~/app/http/cookies";
 import { getViewer } from "~/app/http/middleware/auth";
 import { getTeamHttpSummaries, type MonitorHealth } from "~/app/services/analytics";
@@ -54,6 +57,9 @@ export default createAction(
 		let toast = ctx.get(Session)?.get("toast") as Toast | undefined;
 
 		let monitors = await Monitor.listByTeam(db, ctx.team.id);
+		let dnsMonitors = await DnsMonitor.listByTeam(db, ctx.team.id);
+		let tcpMonitors = await TcpMonitor.listByTeam(db, ctx.team.id);
+		let cronJobMonitors = await CronJobMonitor.listByTeam(db, ctx.team.id);
 		let summaries = await getTeamHttpSummaries(ctx.team.id);
 		let analyticsUnavailable = isFailure(summaries);
 		let summaryList = isFailure(summaries) ? [] : summaries.data;
@@ -88,6 +94,9 @@ export default createAction(
 							uptimePercent={uptimePercent}
 							slowestResponseMs={slowestResponseMs}
 							httpRows={httpRows}
+							dnsMonitors={dnsMonitors}
+							tcpMonitors={tcpMonitors}
+							cronJobMonitors={cronJobMonitors}
 							analyticsUnavailable={analyticsUnavailable}
 						/>
 					</AppShell>
