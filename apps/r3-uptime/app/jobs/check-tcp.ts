@@ -2,7 +2,8 @@
  * Background job that sweeps every enabled TCP monitor once per run (a fixed 5-minute
  * cadence — TCP monitors are not staggered by their individual `interval_seconds`,
  * matching how `CheckDnsJob` treats DNS monitors). Attempts a raw TCP connection to
- * each host:port and records the outcome via `TcpMonitor.recordCheckResult`.
+ * each host:port, records the outcome via `TcpMonitor.recordCheckResult`, and
+ * dispatches alerts on a down/timeout result or a recovery back to up.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -11,13 +12,16 @@
 import { Job } from "@pkg/jobs";
 import { getServiceContainer } from "@pkg/service-container";
 import { Database } from "remix/data-table";
+import { Resend } from "resend";
 
 import TcpMonitor from "~/app/data/tcp-monitor";
-import { checkTcpConnection } from "~/app/services/tcp-check";
+import { notifyTcpResult } from "~/app/services/alerts";
+import { checkTcpConnection, type TcpCheckStatus } from "~/app/services/tcp-check";
 
 export class CheckTcpJob extends Job {
 	async perform(): Promise<void> {
 		let db = getServiceContainer().get(Database);
+		let resend = getServiceContainer().get(Resend);
 		let monitors = await TcpMonitor.listEnabled(db);
 
 		let successCount = 0;
@@ -27,6 +31,13 @@ export class CheckTcpJob extends Job {
 			try {
 				let result = await checkTcpConnection(monitor.host, monitor.port, monitor.timeout_ms);
 				await TcpMonitor.recordCheckResult(db, monitor.id, result);
+				await notifyTcpResult(
+					db,
+					resend,
+					monitor,
+					monitor.last_status as TcpCheckStatus | null,
+					result,
+				);
 				successCount++;
 			} catch (error) {
 				errorCount++;

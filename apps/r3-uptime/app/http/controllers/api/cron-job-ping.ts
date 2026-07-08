@@ -15,8 +15,10 @@ import { getServiceContainer } from "@pkg/service-container";
 import * as s from "remix/data-schema";
 import { Database } from "remix/data-table";
 import { createAction } from "remix/fetch-router";
+import { Resend } from "resend";
 
 import CronJobMonitor from "~/app/data/cron-job";
+import { notifyCronJobResult } from "~/app/services/alerts";
 import routes from "~/routes/web";
 
 /** Minimum time between accepted pings for a single monitor. */
@@ -47,6 +49,9 @@ export default createAction(routes.api.cronJobPing, async (ctx) => {
 			ctx.request.headers.get("CF-Connecting-IP") ?? ctx.request.headers.get("X-Forwarded-For"),
 		userAgent: ctx.request.headers.get("User-Agent"),
 	});
+
+	let resend = getServiceContainer().get(Resend);
+	await notifyCronJobResult(db, resend, monitor, monitor.status, wasOnTime ? "healthy" : "late");
 
 	return created({ wasOnTime });
 });

@@ -2,7 +2,8 @@
  * Background job that sweeps every enabled DNS monitor once per run (the OLD APP's
  * hourly cadence — DNS monitors are not staggered by their individual
  * `interval_seconds`, unlike HTTP monitors). Resolves each domain, classifies the
- * result, and records it via `DnsMonitor.recordCheckResult`.
+ * result, records it via `DnsMonitor.recordCheckResult`, and dispatches alerts on a
+ * changed/error result or a recovery back to ok.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -11,13 +12,16 @@
 import { Job } from "@pkg/jobs";
 import { getServiceContainer } from "@pkg/service-container";
 import { Database } from "remix/data-table";
+import { Resend } from "resend";
 
 import DnsMonitor from "~/app/data/dns-monitor";
-import { checkDns, type DnsRecordType } from "~/app/services/dns-check";
+import { notifyDnsResult } from "~/app/services/alerts";
+import { checkDns, type DnsCheckStatus, type DnsRecordType } from "~/app/services/dns-check";
 
 export class CheckDnsJob extends Job {
 	async perform(): Promise<void> {
 		let db = getServiceContainer().get(Database);
+		let resend = getServiceContainer().get(Resend);
 		let monitors = await DnsMonitor.listEnabled(db);
 
 		let successCount = 0;
@@ -32,6 +36,13 @@ export class CheckDnsJob extends Job {
 					monitor.last_value,
 				);
 				await DnsMonitor.recordCheckResult(db, monitor.id, result);
+				await notifyDnsResult(
+					db,
+					resend,
+					monitor,
+					monitor.last_status as DnsCheckStatus | null,
+					result,
+				);
 				successCount++;
 			} catch (error) {
 				errorCount++;

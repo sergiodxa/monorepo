@@ -22,6 +22,7 @@ import { methodOverride } from "remix/method-override-middleware";
 import { renderWith } from "remix/render-middleware";
 import { renderToStream } from "remix/ui/server";
 
+import { createAlert, deleteAlert, updateAlert } from "~/app/http/controllers/actions/alerts";
 import {
 	createContentCheck,
 	deleteContentCheck,
@@ -39,6 +40,12 @@ import {
 	updateDnsMonitor,
 } from "~/app/http/controllers/actions/dns-monitors";
 import {
+	createMaintenanceWindow,
+	deleteMaintenanceWindow,
+	endMaintenanceWindow,
+	updateMaintenanceWindow,
+} from "~/app/http/controllers/actions/maintenance-windows";
+import {
 	createMonitor,
 	deleteMonitor,
 	playMonitor,
@@ -53,6 +60,10 @@ import {
 } from "~/app/http/controllers/actions/tcp-monitors";
 import cronJobPing from "~/app/http/controllers/api/cron-job-ping";
 import appIndex from "~/app/http/controllers/app/index";
+import alertEdit from "~/app/http/controllers/app/team/alert-edit";
+import alertHistory from "~/app/http/controllers/app/team/alert-history";
+import alertNew from "~/app/http/controllers/app/team/alert-new";
+import alerts from "~/app/http/controllers/app/team/alerts";
 import cronJobEdit from "~/app/http/controllers/app/team/cron-job-edit";
 import cronJobNew from "~/app/http/controllers/app/team/cron-job-new";
 import cronJobShow from "~/app/http/controllers/app/team/cron-job-show";
@@ -64,6 +75,9 @@ import dnsMonitorShow from "~/app/http/controllers/app/team/dns-monitor-show";
 import dnsMonitors from "~/app/http/controllers/app/team/dns-monitors";
 import httpMonitors from "~/app/http/controllers/app/team/http-monitors";
 import teamIndex from "~/app/http/controllers/app/team/index";
+import maintenanceWindowEdit from "~/app/http/controllers/app/team/maintenance-window-edit";
+import maintenanceWindowNew from "~/app/http/controllers/app/team/maintenance-window-new";
+import maintenanceWindows from "~/app/http/controllers/app/team/maintenance-windows";
 import monitorEdit from "~/app/http/controllers/app/team/monitor-edit";
 import monitorNew from "~/app/http/controllers/app/team/monitor-new";
 import monitorShow from "~/app/http/controllers/app/team/monitor-show";
@@ -203,6 +217,34 @@ export default function application(options: application.Options) {
 		middleware: [requireUser, requireTeam],
 		handler: cronJobEdit as RequestHandler<any>,
 	});
+	router.map(routes.app.team.alerts, {
+		middleware: [requireUser, requireTeam],
+		handler: alerts as RequestHandler<any>,
+	});
+	router.map(routes.app.team.alertNew, {
+		middleware: [requireUser, requireTeam],
+		handler: alertNew as RequestHandler<any>,
+	});
+	router.map(routes.app.team.alertEdit, {
+		middleware: [requireUser, requireTeam],
+		handler: alertEdit as RequestHandler<any>,
+	});
+	router.map(routes.app.team.alertHistory, {
+		middleware: [requireUser, requireTeam],
+		handler: alertHistory as RequestHandler<any>,
+	});
+	router.map(routes.app.team.maintenanceWindows, {
+		middleware: [requireUser, requireTeam],
+		handler: maintenanceWindows as RequestHandler<any>,
+	});
+	router.map(routes.app.team.maintenanceWindowNew, {
+		middleware: [requireUser, requireTeam],
+		handler: maintenanceWindowNew as RequestHandler<any>,
+	});
+	router.map(routes.app.team.maintenanceWindowEdit, {
+		middleware: [requireUser, requireTeam],
+		handler: maintenanceWindowEdit as RequestHandler<any>,
+	});
 
 	router.map(routes.actions, {
 		middleware: [requireUser, requireTeam],
@@ -226,6 +268,13 @@ export default function application(options: application.Options) {
 			createCronJob: createCronJob as RequestHandler<any>,
 			updateCronJob: updateCronJob as RequestHandler<any>,
 			deleteCronJob: deleteCronJob as RequestHandler<any>,
+			createAlert: createAlert as RequestHandler<any>,
+			updateAlert: updateAlert as RequestHandler<any>,
+			deleteAlert: deleteAlert as RequestHandler<any>,
+			createMaintenanceWindow: createMaintenanceWindow as RequestHandler<any>,
+			updateMaintenanceWindow: updateMaintenanceWindow as RequestHandler<any>,
+			deleteMaintenanceWindow: deleteMaintenanceWindow as RequestHandler<any>,
+			endMaintenanceWindow: endMaintenanceWindow as RequestHandler<any>,
 		},
 	});
 

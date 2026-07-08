@@ -49,6 +49,19 @@ export default function AppShell(handle: Handle<AppShell.Props>) {
 									Dashboard
 								</a>
 							</li>
+							<li>
+								<a href={routes.app.team.alerts.href({ team: team.slug })} mix={[s.link]}>
+									Alerts
+								</a>
+							</li>
+							<li>
+								<a
+									href={routes.app.team.maintenanceWindows.href({ team: team.slug })}
+									mix={[s.link]}
+								>
+									Maintenance
+								</a>
+							</li>
 						</ul>
 					</nav>
 

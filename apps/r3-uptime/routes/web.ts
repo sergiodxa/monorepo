@@ -47,6 +47,13 @@ export default route({
 			cronJobNew: get("/app/:team/cron-jobs/new"),
 			cronJobShow: get("/app/:team/cron-jobs/:monitorId"),
 			cronJobEdit: get("/app/:team/cron-jobs/:monitorId/edit"),
+			alerts: get("/app/:team/alerts"),
+			alertNew: get("/app/:team/alerts/new"),
+			alertEdit: get("/app/:team/alerts/:alertId/edit"),
+			alertHistory: get("/app/:team/alert-history"),
+			maintenanceWindows: get("/app/:team/maintenance"),
+			maintenanceWindowNew: get("/app/:team/maintenance/new"),
+			maintenanceWindowEdit: get("/app/:team/maintenance/:windowId/edit"),
 		},
 	},
 
@@ -70,6 +77,13 @@ export default route({
 		createCronJob: post("/actions/:team/create-cron-job"),
 		updateCronJob: post("/actions/:team/update-cron-job"),
 		deleteCronJob: del("/actions/:team/delete-cron-job"),
+		createAlert: post("/actions/:team/create-alert"),
+		updateAlert: post("/actions/:team/update-alert"),
+		deleteAlert: del("/actions/:team/delete-alert"),
+		createMaintenanceWindow: post("/actions/:team/create-maintenance-window"),
+		updateMaintenanceWindow: post("/actions/:team/update-maintenance-window"),
+		deleteMaintenanceWindow: del("/actions/:team/delete-maintenance-window"),
+		endMaintenanceWindow: post("/actions/:team/end-maintenance-window"),
 	},
 
 	api: {

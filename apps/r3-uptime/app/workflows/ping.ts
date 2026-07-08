@@ -2,9 +2,10 @@
  * The Cloudflare Workflow that runs a single HTTP monitor check end to end: it loads
  * the monitor and its enabled content checks, performs a region-hinted fetch through
  * `GeoFetchDO`, classifies the result (up/degraded/down) against the expected status,
- * degraded threshold, and content checks, then records it to both the `monitor_results`
- * "last checked" cache (see `Monitor.findDue`) and Analytics Engine. Alerting and usage
- * ingestion are later phases (ADR-001 §7); this phase covers the check-and-record loop.
+ * degraded threshold, and content checks, records it to both the `monitor_results`
+ * "last checked" cache (see `Monitor.findDue`) and Analytics Engine, and dispatches
+ * alerts on a down/degraded result or a recovery back to up. Usage ingestion is a
+ * later phase (ADR-001 §7).
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -14,11 +15,15 @@ import type { WorkflowEvent, WorkflowStep } from "cloudflare:workers";
 
 import { createD1DatabaseAdapter } from "@pkg/data-table-d1";
 import { BatchedLogger } from "@pkg/logger";
+import { isFailure } from "@pkg/result";
+import { getServiceContainer } from "@pkg/service-container";
 import { env, WorkflowEntrypoint } from "cloudflare:workers";
 import { createDatabase, type Database } from "remix/data-table";
+import { Resend } from "resend";
 
 import ContentCheck from "~/app/data/content-check";
-import { writeHttpPingResult } from "~/app/services/analytics";
+import { notifyHttpResult } from "~/app/services/alerts";
+import { getLatestHttpResult, writeHttpPingResult } from "~/app/services/analytics";
 import { monitorContentChecks, monitorResults, monitors } from "~/database/schema";
 
 const MS_PER_SECOND = 1000;
@@ -113,6 +118,11 @@ export class Ping extends WorkflowEntrypoint<Cloudflare.Env> {
 		let status = classify(monitor, checkResult, contentChecksPassed);
 		let completedAt = Date.now();
 
+		let previousResult = await step.do("get previous status", async () => {
+			return await getLatestHttpResult(monitor.team_id, monitorId);
+		});
+		let previousStatus = isFailure(previousResult) ? null : (previousResult.data?.status ?? null);
+
 		await step.do("record result", async () => {
 			await db.create(
 				monitorResults,
@@ -133,6 +143,15 @@ export class Ping extends WorkflowEntrypoint<Cloudflare.Env> {
 				responseTimeMs: checkResult.responseTimeMs ?? 0,
 				responseStatus: checkResult.responseStatus ?? 0,
 				expectedStatus: monitor.expected_status,
+			});
+		});
+
+		await step.do("send alerts", async () => {
+			let resend = getServiceContainer().get(Resend);
+			await notifyHttpResult(db, resend, monitor, previousStatus, {
+				status,
+				responseStatus: checkResult.responseStatus ?? 0,
+				responseTimeMs: checkResult.responseTimeMs ?? 0,
 			});
 		});
 

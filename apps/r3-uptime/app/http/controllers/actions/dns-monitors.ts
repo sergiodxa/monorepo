@@ -16,6 +16,7 @@ import { getServiceContainer } from "@pkg/service-container";
 import { validate } from "@pkg/validate";
 import { Database } from "remix/data-table";
 import { Session } from "remix/session";
+import { Resend } from "resend";
 
 import DnsMonitor, { MAX_DNS_MONITORS_PER_TEAM } from "~/app/data/dns-monitor";
 import {
@@ -23,7 +24,8 @@ import {
 	DnsMonitorIdSchema,
 	UpdateDnsMonitorSchema,
 } from "~/app/http/validators/dns-monitor";
-import { checkDns, type DnsRecordType } from "~/app/services/dns-check";
+import { notifyDnsResult } from "~/app/services/alerts";
+import { checkDns, type DnsCheckStatus, type DnsRecordType } from "~/app/services/dns-check";
 import routes from "~/routes/web";
 
 /** POST /actions/:team/create-dns-monitor */
@@ -144,6 +146,13 @@ export async function checkDnsMonitor(ctx: RequestContext<{ team: string }>) {
 		monitor.last_value,
 	);
 	await DnsMonitor.recordCheckResult(db, monitor.id, checkResult);
+	await notifyDnsResult(
+		db,
+		getServiceContainer().get(Resend),
+		monitor,
+		monitor.last_status as DnsCheckStatus | null,
+		checkResult,
+	);
 
 	session?.flash("toast", { intent: "success", message: `Checked "${monitor.name}".` });
 	return redirect(

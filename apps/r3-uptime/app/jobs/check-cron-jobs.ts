@@ -1,9 +1,8 @@
 /**
  * Background job that sweeps every actionable cron-job monitor once per minute,
  * transitioning `healthy` → `late` once its expected arrival passes, and either
- * `healthy` or `late` → `missed` once its grace period also elapses. Alert dispatch
- * on these transitions is a later phase (ADR-001 §7); this job only owns the status
- * state machine described in `docs/cron-job-monitoring.md`.
+ * `healthy` or `late` → `missed` once its grace period also elapses. Dispatches
+ * alerts on every transition into `late`/`missed`, per `docs/cron-job-monitoring.md`.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -12,14 +11,17 @@
 import { Job } from "@pkg/jobs";
 import { getServiceContainer } from "@pkg/service-container";
 import { Database } from "remix/data-table";
+import { Resend } from "resend";
 
 import type { CronJobStatus } from "~/database/schema";
 
 import CronJobMonitor from "~/app/data/cron-job";
+import { notifyCronJobResult } from "~/app/services/alerts";
 
 export class CheckCronJobsJob extends Job {
 	async perform(): Promise<void> {
 		let db = getServiceContainer().get(Database);
+		let resend = getServiceContainer().get(Resend);
 		let monitors = await CronJobMonitor.listActionable(db);
 		let now = Date.now();
 
@@ -45,6 +47,7 @@ export class CheckCronJobsJob extends Job {
 
 			if (newStatus !== null) {
 				await CronJobMonitor.updateStatus(db, monitor.id, newStatus);
+				await notifyCronJobResult(db, resend, monitor, monitor.status, newStatus);
 				transitioned++;
 			}
 		}

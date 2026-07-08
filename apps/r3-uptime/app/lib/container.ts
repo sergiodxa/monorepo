@@ -13,6 +13,7 @@ import { PolarClient } from "@pkg/polar";
 import { ServiceContainer } from "@pkg/service-container";
 import { env } from "cloudflare:workers";
 import { createDatabase, Database } from "remix/data-table";
+import { Resend } from "resend";
 
 import { IdTokenVerificationKeyService } from "~/app/services/id-token-verification-key";
 
@@ -33,4 +34,5 @@ container.singleton(Database, () =>
 	createDatabase(createD1DatabaseAdapter(env.DB), { now: () => Date.now() }),
 );
 container.singleton(PolarClient, () => new PolarClient({ accessToken: env.POLAR_ACCESS_TOKEN }));
+container.singleton(Resend, () => new Resend(env.RESEND_API_TOKEN));
 container.singleton(IdTokenVerificationKeyService, () => new IdTokenVerificationKeyService());

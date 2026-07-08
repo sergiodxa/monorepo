@@ -16,6 +16,7 @@ import { getServiceContainer } from "@pkg/service-container";
 import { validate } from "@pkg/validate";
 import { Database } from "remix/data-table";
 import { Session } from "remix/session";
+import { Resend } from "resend";
 
 import TcpMonitor from "~/app/data/tcp-monitor";
 import {
@@ -23,7 +24,8 @@ import {
 	TcpMonitorIdSchema,
 	UpdateTcpMonitorSchema,
 } from "~/app/http/validators/tcp-monitor";
-import { checkTcpConnection } from "~/app/services/tcp-check";
+import { notifyTcpResult } from "~/app/services/alerts";
+import { checkTcpConnection, type TcpCheckStatus } from "~/app/services/tcp-check";
 import routes from "~/routes/web";
 
 /** POST /actions/:team/create-tcp-monitor */
@@ -124,6 +126,13 @@ export async function checkTcpMonitor(ctx: RequestContext<{ team: string }>) {
 
 	let checkResult = await checkTcpConnection(monitor.host, monitor.port, monitor.timeout_ms);
 	await TcpMonitor.recordCheckResult(db, monitor.id, checkResult);
+	await notifyTcpResult(
+		db,
+		getServiceContainer().get(Resend),
+		monitor,
+		monitor.last_status as TcpCheckStatus | null,
+		checkResult,
+	);
 
 	session?.flash("toast", { intent: "success", message: `Checked "${monitor.name}".` });
 	return redirect(
