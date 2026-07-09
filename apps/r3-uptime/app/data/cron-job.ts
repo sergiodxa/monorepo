@@ -12,7 +12,7 @@
 import type { Database } from "remix/data-table";
 
 import { CronExpressionParser } from "cron-parser";
-import { and, inList, notNull } from "remix/data-table";
+import { and, eq, inList, notNull } from "remix/data-table";
 
 import type { CronJobStatus, InsertCronJobMonitor } from "~/database/schema";
 
@@ -55,6 +55,14 @@ export default class CronJobMonitor {
 	/** Finds a single cron-job monitor by id, regardless of team — used by the public ping endpoint. */
 	static async findById(db: Database, monitorId: string) {
 		return await db.findOne(cronJobMonitors, { where: { id: monitorId } });
+	}
+
+	/** Finds every cron-job monitor in `monitorIds` that belongs to `teamId`. */
+	static async findManyByIdsForTeam(db: Database, teamId: string, monitorIds: string[]) {
+		if (monitorIds.length === 0) return [];
+		return await db.findMany(cronJobMonitors, {
+			where: and(eq("team_id", teamId), inList("id", monitorIds)),
+		});
 	}
 
 	/** Updates a cron-job monitor's editable fields. */

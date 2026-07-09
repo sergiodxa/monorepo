@@ -69,4 +69,22 @@ export default class AlertEvent {
 			limit,
 		});
 	}
+
+	/** Lists the most recent alert-delivery events for a single alert, newest first. */
+	static async listByAlertId(db: Database, alertId: string, limit: number) {
+		return await db.findMany(alertEvents, {
+			where: { alert_id: alertId },
+			orderBy: ["sent_at", "desc"],
+			limit,
+		});
+	}
+
+	/** Lists the most recent alert-delivery events for a single monitor, newest first. */
+	static async listByMonitorId(db: Database, monitorId: string, limit: number) {
+		return await db.findMany(alertEvents, {
+			where: { monitor_id: monitorId },
+			orderBy: ["sent_at", "desc"],
+			limit,
+		});
+	}
 }

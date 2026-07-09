@@ -8,7 +8,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { del, form, get, post, route } from "remix/fetch-router/routes";
+import { del, form, get, post, put, route } from "remix/fetch-router/routes";
 
 /**
  * The application route map. Each leaf is a typed route with `.href(params)` for
@@ -128,6 +128,88 @@ export default route({
 	},
 
 	api: {
+		// Public, unauthenticated (see its controller's docblock) — kept separate from
+		// the bearer-key-gated `v1` group below.
 		cronJobPing: post("/api/v1/cron-jobs/:cronJobId/ping"),
+
+		// Bearer-API-key-gated public REST API. Every leaf here is mapped individually
+		// in `bootstrap/app.tsx` with its own `requireApiKey(scope)` middleware, since a
+		// single `router.map()` group call can only carry one middleware chain shared by
+		// every leaf, and read/write methods on the same resource need different scopes.
+		v1: {
+			status: get("/api/v1/status"),
+			backfillDailyStats: post("/api/v1/backfill-daily-stats"),
+
+			monitorsIndex: get("/api/v1/monitors"),
+			monitorsCreate: post("/api/v1/monitors"),
+			monitorsStats: get("/api/v1/monitors/stats"),
+			monitorShow: get("/api/v1/monitors/:monitorId"),
+			monitorUpdate: put("/api/v1/monitors/:monitorId"),
+			monitorDestroy: del("/api/v1/monitors/:monitorId"),
+			monitorStats: get("/api/v1/monitors/:monitorId/stats"),
+			monitorResults: get("/api/v1/monitors/:monitorId/results"),
+			monitorAlertEvents: get("/api/v1/monitors/:monitorId/alert-events"),
+			monitorContentChecksIndex: get("/api/v1/monitors/:monitorId/content-checks"),
+			monitorContentChecksCreate: post("/api/v1/monitors/:monitorId/content-checks"),
+			monitorContentCheckDestroy: del("/api/v1/monitors/:monitorId/content-checks/:contentCheckId"),
+
+			dnsMonitorsIndex: get("/api/v1/dns-monitors"),
+			dnsMonitorsCreate: post("/api/v1/dns-monitors"),
+			dnsMonitorShow: get("/api/v1/dns-monitors/:dnsMonitorId"),
+			dnsMonitorUpdate: put("/api/v1/dns-monitors/:dnsMonitorId"),
+			dnsMonitorDestroy: del("/api/v1/dns-monitors/:dnsMonitorId"),
+			dnsMonitorResults: get("/api/v1/dns-monitors/:dnsMonitorId/results"),
+
+			tcpMonitorsIndex: get("/api/v1/tcp-monitors"),
+			tcpMonitorsCreate: post("/api/v1/tcp-monitors"),
+			tcpMonitorShow: get("/api/v1/tcp-monitors/:tcpMonitorId"),
+			tcpMonitorUpdate: put("/api/v1/tcp-monitors/:tcpMonitorId"),
+			tcpMonitorDestroy: del("/api/v1/tcp-monitors/:tcpMonitorId"),
+			tcpMonitorResults: get("/api/v1/tcp-monitors/:tcpMonitorId/results"),
+
+			cronJobsIndex: get("/api/v1/cron-jobs"),
+			cronJobsCreate: post("/api/v1/cron-jobs"),
+			cronJobShow: get("/api/v1/cron-jobs/:cronJobId"),
+			cronJobUpdate: put("/api/v1/cron-jobs/:cronJobId"),
+			cronJobDestroy: del("/api/v1/cron-jobs/:cronJobId"),
+
+			alertsIndex: get("/api/v1/alerts"),
+			alertsCreate: post("/api/v1/alerts"),
+			alertShow: get("/api/v1/alerts/:alertId"),
+			alertUpdate: put("/api/v1/alerts/:alertId"),
+			alertDestroy: del("/api/v1/alerts/:alertId"),
+			alertEvents: get("/api/v1/alerts/:alertId/events"),
+
+			maintenanceIndex: get("/api/v1/maintenance"),
+			maintenanceCreate: post("/api/v1/maintenance"),
+			maintenanceShow: get("/api/v1/maintenance/:maintenanceId"),
+			maintenanceUpdate: put("/api/v1/maintenance/:maintenanceId"),
+			maintenanceDestroy: del("/api/v1/maintenance/:maintenanceId"),
+			maintenanceEnd: post("/api/v1/maintenance/:maintenanceId/end"),
+
+			statusPagesIndex: get("/api/v1/status-pages"),
+			statusPagesCreate: post("/api/v1/status-pages"),
+			statusPageShow: get("/api/v1/status-pages/:statusPageId"),
+			statusPageUpdate: put("/api/v1/status-pages/:statusPageId"),
+			statusPageDestroy: del("/api/v1/status-pages/:statusPageId"),
+			statusPageMonitors: put("/api/v1/status-pages/:statusPageId/monitors"),
+
+			invitesIndex: get("/api/v1/invites"),
+			invitesCreate: post("/api/v1/invites"),
+			inviteDestroy: del("/api/v1/invites/:inviteId"),
+
+			memberships: get("/api/v1/memberships"),
+
+			teamShow: get("/api/v1/team"),
+			teamUpdate: put("/api/v1/team"),
+
+			teamDomainsIndex: get("/api/v1/team-domains"),
+			teamDomainsCreate: post("/api/v1/team-domains"),
+			teamDomainsDestroy: del("/api/v1/team-domains"),
+
+			apiKeysIndex: get("/api/v1/api-keys"),
+			apiKeysCreate: post("/api/v1/api-keys"),
+			apiKeyDestroy: del("/api/v1/api-keys/:apiKeyId"),
+		},
 	},
 });
