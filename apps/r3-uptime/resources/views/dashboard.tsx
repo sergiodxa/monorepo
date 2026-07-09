@@ -15,8 +15,12 @@ import type {
 	SelectMonitor,
 	SelectTcpMonitor,
 } from "~/database/schema";
+import type { BadgeTone } from "~/resources/components/badge";
 
 import CronJobMonitor from "~/app/data/cron-job";
+import Badge from "~/resources/components/badge";
+import EmptyState from "~/resources/components/empty-state";
+import StatCard from "~/resources/components/stat-card";
 import * as s from "~/resources/styles";
 import routes from "~/routes/web";
 
@@ -29,30 +33,30 @@ const TABS: Array<{ id: DashboardTab; label: string }> = [
 	{ id: "cron-jobs", label: "Cron jobs" },
 ];
 
-const HEALTH_BADGE_MIX: Record<MonitorHealth, typeof s.badgeUp> = {
-	up: s.badgeUp,
-	degraded: s.badgeDegraded,
-	down: s.badgeDown,
-	pending: s.badgeNeutral,
+const HEALTH_BADGE_TONE: Record<MonitorHealth, BadgeTone> = {
+	up: "up",
+	degraded: "degraded",
+	down: "down",
+	pending: "neutral",
 };
 
-const DNS_STATUS_BADGE_MIX: Record<string, typeof s.badgeUp> = {
-	ok: s.badgeUp,
-	changed: s.badgeDegraded,
-	error: s.badgeDown,
+const DNS_STATUS_BADGE_TONE: Record<string, BadgeTone> = {
+	ok: "up",
+	changed: "degraded",
+	error: "down",
 };
 
-const TCP_STATUS_BADGE_MIX: Record<string, typeof s.badgeUp> = {
-	up: s.badgeUp,
-	timeout: s.badgeDegraded,
-	down: s.badgeDown,
+const TCP_STATUS_BADGE_TONE: Record<string, BadgeTone> = {
+	up: "up",
+	timeout: "degraded",
+	down: "down",
 };
 
-const CRON_JOB_STATUS_BADGE_MIX: Record<string, typeof s.badgeUp> = {
-	healthy: s.badgeUp,
-	late: s.badgeDegraded,
-	missed: s.badgeDown,
-	new: s.badgeNeutral,
+const CRON_JOB_STATUS_BADGE_TONE: Record<string, BadgeTone> = {
+	healthy: "up",
+	late: "degraded",
+	missed: "down",
+	new: "neutral",
 };
 
 namespace DashboardView {
@@ -80,36 +84,29 @@ export default function DashboardView(handle: Handle<DashboardView.Props>) {
 				<h1>{props.team.name}</h1>
 
 				{props.analyticsUnavailable && (
-					<div mix={[s.emptyState]}>
-						<p>Analytics data temporarily unavailable. Please retry later.</p>
-					</div>
+					<EmptyState message="Analytics data temporarily unavailable. Please retry later." />
 				)}
 
 				<div mix={[s.statRow]}>
-					<div mix={[s.statCard]}>
-						<div mix={[s.mutedSmall]}>HTTP monitors</div>
-						<div mix={[s.statValue]}>{props.monitorCount}</div>
-					</div>
-					<div mix={[s.statCard]}>
-						<div mix={[s.mutedSmall]}>Uptime (24h)</div>
-						<div mix={[s.statValue]}>
-							{props.uptimePercent === null ? "—" : `${props.uptimePercent}%`}
-						</div>
-					</div>
-					<div mix={[s.statCard]}>
-						<div mix={[s.mutedSmall]}>Slowest response (24h)</div>
-						<div mix={[s.statValue]}>
-							{props.slowestResponseMs === null ? "—" : `${props.slowestResponseMs}ms`}
-						</div>
-					</div>
-					<div mix={[s.statCard]}>
-						<div mix={[s.mutedSmall]}>SSL certificates</div>
-						<div mix={[s.statValue]}>
-							<span mix={[s.badge, s.badgeUp]}>{props.sslCounts.valid} valid</span>{" "}
-							<span mix={[s.badge, s.badgeDegraded]}>{props.sslCounts.expiring} expiring</span>{" "}
-							<span mix={[s.badge, s.badgeDown]}>{props.sslCounts.expired} expired</span>
-						</div>
-					</div>
+					<StatCard label="HTTP monitors" value={props.monitorCount} />
+					<StatCard
+						label="Uptime (24h)"
+						value={props.uptimePercent === null ? "—" : `${props.uptimePercent}%`}
+					/>
+					<StatCard
+						label="Slowest response (24h)"
+						value={props.slowestResponseMs === null ? "—" : `${props.slowestResponseMs}ms`}
+					/>
+					<StatCard
+						label="SSL certificates"
+						value={
+							<>
+								<Badge tone="up">{props.sslCounts.valid} valid</Badge>{" "}
+								<Badge tone="degraded">{props.sslCounts.expiring} expiring</Badge>{" "}
+								<Badge tone="down">{props.sslCounts.expired} expired</Badge>
+							</>
+						}
+					/>
 				</div>
 
 				<nav mix={[s.row]}>
@@ -141,15 +138,13 @@ function HttpTable(props: {
 }) {
 	if (props.rows.length === 0) {
 		return (
-			<div mix={[s.emptyState]}>
-				<p>No HTTP monitors yet.</p>
-				<a
-					href={routes.app.team.monitorNew.href({ team: props.team.slug })}
-					mix={[s.buttonPrimary]}
-				>
-					Create your first monitor
-				</a>
-			</div>
+			<EmptyState
+				message="No HTTP monitors yet."
+				action={{
+					href: routes.app.team.monitorNew.href({ team: props.team.slug }),
+					label: "Create your first monitor",
+				}}
+			/>
 		);
 	}
 
@@ -176,7 +171,7 @@ function HttpTable(props: {
 							</a>
 						</td>
 						<td>
-							<span mix={[s.badge, HEALTH_BADGE_MIX[health]]}>{health}</span>
+							<Badge tone={HEALTH_BADGE_TONE[health]}>{health}</Badge>
 						</td>
 					</tr>
 				))}
@@ -188,15 +183,13 @@ function HttpTable(props: {
 function DnsTable(props: { team: { slug: string }; monitors: SelectDnsMonitor[] }) {
 	if (props.monitors.length === 0) {
 		return (
-			<div mix={[s.emptyState]}>
-				<p>No DNS monitors yet.</p>
-				<a
-					href={routes.app.team.dnsMonitorNew.href({ team: props.team.slug })}
-					mix={[s.buttonPrimary]}
-				>
-					Create your first DNS monitor
-				</a>
-			</div>
+			<EmptyState
+				message="No DNS monitors yet."
+				action={{
+					href: routes.app.team.dnsMonitorNew.href({ team: props.team.slug }),
+					label: "Create your first DNS monitor",
+				}}
+			/>
 		);
 	}
 
@@ -227,11 +220,9 @@ function DnsTable(props: { team: { slug: string }; monitors: SelectDnsMonitor[] 
 							<code>{monitor.domain}</code>
 						</td>
 						<td>
-							<span
-								mix={[s.badge, DNS_STATUS_BADGE_MIX[monitor.last_status ?? ""] ?? s.badgeNeutral]}
-							>
+							<Badge tone={DNS_STATUS_BADGE_TONE[monitor.last_status ?? ""] ?? "neutral"}>
 								{monitor.last_status ?? "not checked"}
-							</span>
+							</Badge>
 						</td>
 					</tr>
 				))}
@@ -243,15 +234,13 @@ function DnsTable(props: { team: { slug: string }; monitors: SelectDnsMonitor[] 
 function TcpTable(props: { team: { slug: string }; monitors: SelectTcpMonitor[] }) {
 	if (props.monitors.length === 0) {
 		return (
-			<div mix={[s.emptyState]}>
-				<p>No TCP monitors yet.</p>
-				<a
-					href={routes.app.team.tcpMonitorNew.href({ team: props.team.slug })}
-					mix={[s.buttonPrimary]}
-				>
-					Create your first TCP monitor
-				</a>
-			</div>
+			<EmptyState
+				message="No TCP monitors yet."
+				action={{
+					href: routes.app.team.tcpMonitorNew.href({ team: props.team.slug }),
+					label: "Create your first TCP monitor",
+				}}
+			/>
 		);
 	}
 
@@ -284,11 +273,9 @@ function TcpTable(props: { team: { slug: string }; monitors: SelectTcpMonitor[] 
 							</code>
 						</td>
 						<td>
-							<span
-								mix={[s.badge, TCP_STATUS_BADGE_MIX[monitor.last_status ?? ""] ?? s.badgeNeutral]}
-							>
+							<Badge tone={TCP_STATUS_BADGE_TONE[monitor.last_status ?? ""] ?? "neutral"}>
 								{monitor.last_status ?? "pending"}
-							</span>
+							</Badge>
 						</td>
 					</tr>
 				))}
@@ -300,15 +287,13 @@ function TcpTable(props: { team: { slug: string }; monitors: SelectTcpMonitor[] 
 function CronJobsTable(props: { team: { slug: string }; monitors: SelectCronJobMonitor[] }) {
 	if (props.monitors.length === 0) {
 		return (
-			<div mix={[s.emptyState]}>
-				<p>No cron job monitors yet.</p>
-				<a
-					href={routes.app.team.cronJobNew.href({ team: props.team.slug })}
-					mix={[s.buttonPrimary]}
-				>
-					Create your first cron job monitor
-				</a>
-			</div>
+			<EmptyState
+				message="No cron job monitors yet."
+				action={{
+					href: routes.app.team.cronJobNew.href({ team: props.team.slug }),
+					label: "Create your first cron job monitor",
+				}}
+			/>
 		);
 	}
 
@@ -337,9 +322,9 @@ function CronJobsTable(props: { team: { slug: string }; monitors: SelectCronJobM
 						</td>
 						<td>{CronJobMonitor.describeCronExpression(monitor.cron_expression)}</td>
 						<td>
-							<span mix={[s.badge, CRON_JOB_STATUS_BADGE_MIX[monitor.status] ?? s.badgeNeutral]}>
+							<Badge tone={CRON_JOB_STATUS_BADGE_TONE[monitor.status] ?? "neutral"}>
 								{monitor.status}
-							</span>
+							</Badge>
 						</td>
 					</tr>
 				))}
