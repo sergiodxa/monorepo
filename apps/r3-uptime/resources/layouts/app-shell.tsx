@@ -62,6 +62,11 @@ export default function AppShell(handle: Handle<AppShell.Props>) {
 									Maintenance
 								</a>
 							</li>
+							<li>
+								<a href={routes.app.team.statusPages.href({ team: team.slug })} mix={[s.link]}>
+									Status pages
+								</a>
+							</li>
 						</ul>
 					</nav>
 

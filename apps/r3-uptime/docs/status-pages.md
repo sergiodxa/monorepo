@@ -28,9 +28,13 @@ Status pages provide a public or controlled-facing view of service health so use
 The feature is centered on showing:
 
 - HTTP monitors
+- DNS monitors
+- TCP monitors
 - Cron job monitors
 
-The product model also anticipates other monitor types being attachable to status pages.
+SSL monitors are not attachable: the underlying `ssl_monitors` table has no rows in
+production (SSL status is tracked inline on `monitors` instead — see
+`docs/ssl-monitoring.md`), so a picker for it would always be empty.
 
 ## Page-Level Status Model
 
@@ -49,7 +53,9 @@ Included services contribute their own states to the overall page status.
 ## Visibility Model
 
 - `public`: visitors can view the page directly by slug
-- `private`: the page exists for internal or controlled access only
+- `private`: the page exists for internal or controlled access only — it has no
+  public route at all; `/status/:slug` 404s for it. Management (viewing/editing its
+  configuration) still happens through the team's admin pages.
 
 ## Visible Outputs
 
@@ -72,13 +78,9 @@ Included services contribute their own states to the overall page status.
 
 - Status pages are communication features, not raw dashboards.
 - They should present stable, understandable service names and states to end users.
-- A reimplementation should make a clear product decision about how private pages are accessed, since private visibility is part of the feature set.
-
-## Reimplementation Guidance
-
-Preserve these product rules:
-
-- Users must be able to curate which services are shown.
-- The page needs both page-level and component-level status.
-- Empty pages should still be valid.
-- Public visibility must be simple and shareable.
+- Curating attached services always replaces the full set for a page (delete then
+  re-add in the submitted order) rather than diffing — there's no separate reorder
+  action; resubmitting the form is how reordering happens.
+- The overall status is majority-based: it only reads "down" when more than half of
+  the attached, non-unknown services are down or degraded, and "degraded" when any
+  are — not "any failure means the whole page is down."

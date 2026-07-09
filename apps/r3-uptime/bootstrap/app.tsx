@@ -53,6 +53,11 @@ import {
 } from "~/app/http/controllers/actions/monitors";
 import { updateSsl } from "~/app/http/controllers/actions/ssl";
 import {
+	createStatusPage,
+	deleteStatusPage,
+	updateStatusPage,
+} from "~/app/http/controllers/actions/status-pages";
+import {
 	checkTcpMonitor,
 	createTcpMonitor,
 	deleteTcpMonitor,
@@ -81,6 +86,9 @@ import maintenanceWindows from "~/app/http/controllers/app/team/maintenance-wind
 import monitorEdit from "~/app/http/controllers/app/team/monitor-edit";
 import monitorNew from "~/app/http/controllers/app/team/monitor-new";
 import monitorShow from "~/app/http/controllers/app/team/monitor-show";
+import statusPageEdit from "~/app/http/controllers/app/team/status-page-edit";
+import statusPageNew from "~/app/http/controllers/app/team/status-page-new";
+import statusPages from "~/app/http/controllers/app/team/status-pages";
 import tcpMonitorEdit from "~/app/http/controllers/app/team/tcp-monitor-edit";
 import tcpMonitorNew from "~/app/http/controllers/app/team/tcp-monitor-new";
 import tcpMonitorShow from "~/app/http/controllers/app/team/tcp-monitor-show";
@@ -91,6 +99,7 @@ import healthcheck from "~/app/http/controllers/healthcheck";
 import healthcheckAnalyticsEngine from "~/app/http/controllers/healthcheck-analytics-engine";
 import home from "~/app/http/controllers/home";
 import logoutController from "~/app/http/controllers/logout";
+import statusPageController from "~/app/http/controllers/status-page";
 import auth from "~/app/http/middleware/auth";
 import i18n from "~/app/http/middleware/i18n";
 import logger from "~/app/http/middleware/logger";
@@ -136,6 +145,7 @@ export default function application(options: application.Options) {
 	router.map(routes.healthcheckAnalyticsEngine, healthcheckAnalyticsEngine);
 	router.map(routes.auth, authController);
 	router.map(routes.logout, logoutController);
+	router.map(routes.statusPage, statusPageController);
 
 	// `createAction`'s handler type fixes its middleware-entries tuple at `[]`, but a
 	// `router.map` middleware array of plain (untransformed) `Middleware` values types
@@ -247,6 +257,18 @@ export default function application(options: application.Options) {
 		middleware: [requireUser, requireTeam],
 		handler: maintenanceWindowEdit as RequestHandler<any>,
 	});
+	router.map(routes.app.team.statusPages, {
+		middleware: [requireUser, requireTeam],
+		handler: statusPages as RequestHandler<any>,
+	});
+	router.map(routes.app.team.statusPageNew, {
+		middleware: [requireUser, requireTeam],
+		handler: statusPageNew as RequestHandler<any>,
+	});
+	router.map(routes.app.team.statusPageEdit, {
+		middleware: [requireUser, requireTeam],
+		handler: statusPageEdit as RequestHandler<any>,
+	});
 
 	router.map(routes.actions, {
 		middleware: [requireUser, requireTeam],
@@ -277,6 +299,9 @@ export default function application(options: application.Options) {
 			updateMaintenanceWindow: updateMaintenanceWindow as RequestHandler<any>,
 			deleteMaintenanceWindow: deleteMaintenanceWindow as RequestHandler<any>,
 			endMaintenanceWindow: endMaintenanceWindow as RequestHandler<any>,
+			createStatusPage: createStatusPage as RequestHandler<any>,
+			updateStatusPage: updateStatusPage as RequestHandler<any>,
+			deleteStatusPage: deleteStatusPage as RequestHandler<any>,
 		},
 	});
 

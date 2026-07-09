@@ -25,6 +25,13 @@ export function mixFor<Node extends EventTarget>(
 	return mixin as unknown as MixinDescriptor<Node, CSSMixinDescriptor["args"], ElementProps>;
 }
 
+/** Centered, width-capped content column (public pages, the marketing landing page). */
+export const container = css({
+	maxWidth: 768,
+	margin: "0 auto",
+	padding: "40px 20px",
+});
+
 /** Page-level flex column filling the viewport height. */
 export const page = css({
 	display: "flex",
@@ -357,6 +364,68 @@ export const heatmapCellDegraded = css({
 export const heatmapCellDown = css({
 	background: "#ef4444",
 	"@media (prefers-color-scheme: dark)": { background: "#dc2626" },
+});
+
+/** Full-width status banner base; combine with a status-specific color mixin. */
+export const banner = css({
+	display: "flex",
+	alignItems: "center",
+	gap: 10,
+	padding: "14px 18px",
+	borderRadius: 8,
+	border: "1px solid transparent",
+	fontWeight: 600,
+	marginBottom: 24,
+});
+
+/** Green "all systems operational" banner color. */
+export const bannerOperational = css({
+	background: "#f0fdf4",
+	borderColor: "#bbf7d0",
+	color: "#166534",
+	"@media (prefers-color-scheme: dark)": {
+		background: "#052e16",
+		borderColor: "#14532d",
+		color: "#4ade80",
+	},
+});
+
+/** Amber "partial outage" banner color. */
+export const bannerDegraded = css({
+	background: "#fffbeb",
+	borderColor: "#fde68a",
+	color: "#92400e",
+	"@media (prefers-color-scheme: dark)": {
+		background: "#451a03",
+		borderColor: "#78350f",
+		color: "#fbbf24",
+	},
+});
+
+/** Red "major outage" banner color. */
+export const bannerDown = css({
+	background: "#fef2f2",
+	borderColor: "#fecaca",
+	color: "#991b1b",
+	"@media (prefers-color-scheme: dark)": {
+		background: "#450a0a",
+		borderColor: "#7f1d1d",
+		color: "#f87171",
+	},
+});
+
+/** A single service row on the public status page. */
+export const serviceCard = css({
+	display: "flex",
+	flexDirection: "column",
+	gap: 8,
+	padding: 16,
+	borderRadius: 8,
+	border: "1px solid #e5e5e5",
+	marginBottom: 12,
+	"@media (prefers-color-scheme: dark)": {
+		borderColor: "#262626",
+	},
 });
 
 /** Fixed-position flash toast, auto-dismissed with a CSS animation. */

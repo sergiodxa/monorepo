@@ -21,6 +21,7 @@ export default route({
 	home: get("/"),
 	healthcheck: get("/healthcheck"),
 	healthcheckAnalyticsEngine: get("/healthcheck/analytics-engine"),
+	statusPage: get("/status/:slug"),
 
 	// GET = OAuth callback ("index"), POST = starts the OAuth flow ("action").
 	auth: form("/auth"),
@@ -55,6 +56,9 @@ export default route({
 			maintenanceWindows: get("/app/:team/maintenance"),
 			maintenanceWindowNew: get("/app/:team/maintenance/new"),
 			maintenanceWindowEdit: get("/app/:team/maintenance/:windowId/edit"),
+			statusPages: get("/app/:team/status-pages"),
+			statusPageNew: get("/app/:team/status-pages/new"),
+			statusPageEdit: get("/app/:team/status-pages/:statusPageId/edit"),
 		},
 	},
 
@@ -85,6 +89,9 @@ export default route({
 		updateMaintenanceWindow: post("/actions/:team/update-maintenance-window"),
 		deleteMaintenanceWindow: del("/actions/:team/delete-maintenance-window"),
 		endMaintenanceWindow: post("/actions/:team/end-maintenance-window"),
+		createStatusPage: post("/actions/:team/create-status-page"),
+		updateStatusPage: post("/actions/:team/update-status-page"),
+		deleteStatusPage: del("/actions/:team/delete-status-page"),
 	},
 
 	api: {
