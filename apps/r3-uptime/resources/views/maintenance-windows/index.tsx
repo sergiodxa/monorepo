@@ -77,46 +77,48 @@ function Section(
 	return (
 		<div>
 			<h2>{title}</h2>
-			<table mix={[s.table]}>
-				<thead>
-					<tr>
-						<th>Name</th>
-						<th>Scope</th>
-						<th>Starts</th>
-						<th>Ends</th>
-						<th></th>
-					</tr>
-				</thead>
-				<tbody>
-					{windows.map((window) => (
-						<tr key={window.id}>
-							<td>
-								{window.name}
-								{window.is_recurring && <Badge tone="neutral">Recurring</Badge>}
-								{window.ended_early_at !== null && <Badge tone="neutral">Ended early</Badge>}
-							</td>
-							<td>
-								{window.monitor_id
-									? (monitorsById.get(window.monitor_id)?.name ?? "Unknown monitor")
-									: "All monitors"}
-							</td>
-							<td>{new Date(window.starts_at).toLocaleString()}</td>
-							<td>{new Date(window.ends_at).toLocaleString()}</td>
-							<td>
-								<a
-									href={routes.app.team.maintenanceWindowEdit.href({
-										team: team.slug,
-										windowId: window.id,
-									})}
-									mix={[s.link]}
-								>
-									Edit
-								</a>
-							</td>
+			<div mix={[s.tableScroll]}>
+				<table mix={[s.table]}>
+					<thead>
+						<tr>
+							<th>Name</th>
+							<th>Scope</th>
+							<th>Starts</th>
+							<th>Ends</th>
+							<th></th>
 						</tr>
-					))}
-				</tbody>
-			</table>
+					</thead>
+					<tbody>
+						{windows.map((window) => (
+							<tr key={window.id}>
+								<td>
+									{window.name}
+									{window.is_recurring && <Badge tone="neutral">Recurring</Badge>}
+									{window.ended_early_at !== null && <Badge tone="neutral">Ended early</Badge>}
+								</td>
+								<td>
+									{window.monitor_id
+										? (monitorsById.get(window.monitor_id)?.name ?? "Unknown monitor")
+										: "All monitors"}
+								</td>
+								<td>{new Date(window.starts_at).toLocaleString()}</td>
+								<td>{new Date(window.ends_at).toLocaleString()}</td>
+								<td>
+									<a
+										href={routes.app.team.maintenanceWindowEdit.href({
+											team: team.slug,
+											windowId: window.id,
+										})}
+										mix={[s.link]}
+									>
+										Edit
+									</a>
+								</td>
+							</tr>
+						))}
+					</tbody>
+				</table>
+			</div>
 		</div>
 	);
 }

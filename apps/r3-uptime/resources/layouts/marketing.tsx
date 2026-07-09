@@ -23,7 +23,22 @@ namespace MarketingLayout {
 	}
 }
 
-const FOOTER_COLUMNS: Array<{ title: string; links: Array<{ label: string; href: string }> }> = [
+interface FooterColumn {
+	title: string;
+	links: Array<{ label: string; href: string }>;
+}
+
+/**
+ * One entry per footer grid cell. Most cells hold a single column; the last
+ * one bundles Documentation+Legal together, matching the OLD APP's 5-column
+ * footer grid (`sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5`) where those two
+ * groups share a single cell instead of getting one each.
+ */
+type FooterCell =
+	| { kind: "column"; column: FooterColumn }
+	| { kind: "combined"; columns: FooterColumn[] };
+
+const FOOTER_COLUMNS: FooterColumn[] = [
 	{
 		title: "Features",
 		links: [
@@ -108,6 +123,11 @@ const FOOTER_COLUMNS: Array<{ title: string; links: Array<{ label: string; href:
 	},
 ];
 
+const FOOTER_GRID: FooterCell[] = [
+	...FOOTER_COLUMNS.slice(0, 4).map((column): FooterCell => ({ kind: "column", column })),
+	{ kind: "combined", columns: FOOTER_COLUMNS.slice(4) },
+];
+
 export default function MarketingLayout(handle: Handle<MarketingLayout.Props>) {
 	return () => {
 		let { isSignedIn, children } = handle.props;
@@ -122,24 +142,27 @@ export default function MarketingLayout(handle: Handle<MarketingLayout.Props>) {
 					<nav mix={[s.marketingNav]}>
 						<a
 							href={routes.marketing.feature.href({ slug: "monitors" })}
-							mix={[s.marketingNavLink]}
+							mix={[s.marketingNavLink, s.marketingHeaderNavLink]}
 						>
 							Features
 						</a>
 						<a
 							href={routes.marketing.comparison.href({ slug: "uptimerobot" })}
-							mix={[s.marketingNavLink]}
+							mix={[s.marketingNavLink, s.marketingHeaderNavLink]}
 						>
 							Compare
 						</a>
-						<a href={`${routes.home.href()}#pricing`} mix={[s.marketingNavLink]}>
+						<a
+							href={`${routes.home.href()}#pricing`}
+							mix={[s.marketingNavLink, s.marketingHeaderNavLink]}
+						>
 							Pricing
 						</a>
-						<a href={routes.docs.index.href()} mix={[s.marketingNavLink]}>
+						<a href={routes.docs.index.href()} mix={[s.marketingNavLink, s.marketingHeaderNavLink]}>
 							Docs
 						</a>
 
-						<AuthCta isSignedIn={isSignedIn} dashboardLabel="Dashboard" />
+						<AuthCta isSignedIn={isSignedIn} dashboardLabel="Dashboard" size="sm" />
 					</nav>
 				</header>
 
@@ -147,16 +170,31 @@ export default function MarketingLayout(handle: Handle<MarketingLayout.Props>) {
 
 				<footer mix={[s.marketingFooter]}>
 					<div mix={[s.marketingFooterGrid]}>
-						{FOOTER_COLUMNS.map((column) => (
-							<div key={column.title}>
-								<p mix={[s.marketingFooterHeading]}>{column.title}</p>
-								{column.links.map((link) => (
-									<a key={link.href} href={link.href} mix={[s.marketingFooterLink]}>
-										{link.label}
-									</a>
-								))}
-							</div>
-						))}
+						{FOOTER_GRID.map((cell) =>
+							cell.kind === "column" ? (
+								<div key={cell.column.title}>
+									<p mix={[s.marketingFooterHeading]}>{cell.column.title}</p>
+									{cell.column.links.map((link) => (
+										<a key={link.href} href={link.href} mix={[s.marketingFooterLink]}>
+											{link.label}
+										</a>
+									))}
+								</div>
+							) : (
+								<div key="docs-legal" mix={[s.marketingFooterDocsLegalColumn]}>
+									{cell.columns.map((column) => (
+										<div key={column.title}>
+											<p mix={[s.marketingFooterHeading]}>{column.title}</p>
+											{column.links.map((link) => (
+												<a key={link.href} href={link.href} mix={[s.marketingFooterLink]}>
+													{link.label}
+												</a>
+											))}
+										</div>
+									))}
+								</div>
+							),
+						)}
 					</div>
 
 					<div mix={[s.marketingFooterBottom]}>

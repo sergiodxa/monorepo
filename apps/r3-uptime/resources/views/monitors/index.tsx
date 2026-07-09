@@ -59,38 +59,40 @@ export default function HttpMonitorsView(handle: Handle<HttpMonitorsView.Props>)
 						}}
 					/>
 				) : (
-					<table mix={[s.table]}>
-						<thead>
-							<tr>
-								<th>Name</th>
-								<th>URL</th>
-								<th>Status</th>
-							</tr>
-						</thead>
-						<tbody>
-							{rows.map(({ monitor, health }) => (
-								<tr key={monitor.id}>
-									<td>
-										<a
-											href={routes.app.team.monitorShow.href({
-												team: team.slug,
-												monitorId: monitor.id,
-											})}
-											mix={[s.link]}
-										>
-											{monitor.name}
-										</a>
-									</td>
-									<td>
-										<code>{monitor.url}</code>
-									</td>
-									<td>
-										<Badge tone={HEALTH_BADGE_TONE[health]}>{health}</Badge>
-									</td>
+					<div mix={[s.tableScroll]}>
+						<table mix={[s.table]}>
+							<thead>
+								<tr>
+									<th>Name</th>
+									<th>URL</th>
+									<th>Status</th>
 								</tr>
-							))}
-						</tbody>
-					</table>
+							</thead>
+							<tbody>
+								{rows.map(({ monitor, health }) => (
+									<tr key={monitor.id}>
+										<td>
+											<a
+												href={routes.app.team.monitorShow.href({
+													team: team.slug,
+													monitorId: monitor.id,
+												})}
+												mix={[s.link]}
+											>
+												{monitor.name}
+											</a>
+										</td>
+										<td>
+											<code>{monitor.url}</code>
+										</td>
+										<td>
+											<Badge tone={HEALTH_BADGE_TONE[health]}>{health}</Badge>
+										</td>
+									</tr>
+								))}
+							</tbody>
+						</table>
+					</div>
 				)}
 			</div>
 		);

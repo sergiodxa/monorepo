@@ -48,37 +48,39 @@ export default function AlertHistoryView(handle: Handle<AlertHistoryView.Props>)
 				{events.length === 0 ? (
 					<EmptyState message="No alert events yet." />
 				) : (
-					<table mix={[s.table]}>
-						<thead>
-							<tr>
-								<th>Alert</th>
-								<th>Monitor</th>
-								<th>Event</th>
-								<th>Status</th>
-								<th>Sent at</th>
-							</tr>
-						</thead>
-						<tbody>
-							{events.map((event) => (
-								<tr key={event.id}>
-									<td>{alertsById.get(event.alert_id)?.name ?? "Deleted alert"}</td>
-									<td>{event.monitor_name ?? "Unknown monitor"}</td>
-									<td>
-										<Badge tone={EVENT_TYPE_BADGE_TONE[event.event_type] ?? "neutral"}>
-											{event.event_type}
-										</Badge>
-									</td>
-									<td>
-										<Badge tone={STATUS_BADGE_TONE[event.status] ?? "neutral"}>
-											{event.status}
-										</Badge>
-										{event.error_message && <p mix={[s.mutedSmall]}>{event.error_message}</p>}
-									</td>
-									<td>{new Date(event.sent_at).toLocaleString()}</td>
+					<div mix={[s.tableScroll]}>
+						<table mix={[s.table]}>
+							<thead>
+								<tr>
+									<th>Alert</th>
+									<th>Monitor</th>
+									<th>Event</th>
+									<th>Status</th>
+									<th>Sent at</th>
 								</tr>
-							))}
-						</tbody>
-					</table>
+							</thead>
+							<tbody>
+								{events.map((event) => (
+									<tr key={event.id}>
+										<td>{alertsById.get(event.alert_id)?.name ?? "Deleted alert"}</td>
+										<td>{event.monitor_name ?? "Unknown monitor"}</td>
+										<td>
+											<Badge tone={EVENT_TYPE_BADGE_TONE[event.event_type] ?? "neutral"}>
+												{event.event_type}
+											</Badge>
+										</td>
+										<td>
+											<Badge tone={STATUS_BADGE_TONE[event.status] ?? "neutral"}>
+												{event.status}
+											</Badge>
+											{event.error_message && <p mix={[s.mutedSmall]}>{event.error_message}</p>}
+										</td>
+										<td>{new Date(event.sent_at).toLocaleString()}</td>
+									</tr>
+								))}
+							</tbody>
+						</table>
+					</div>
 				)}
 			</div>
 		);

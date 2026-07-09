@@ -149,34 +149,36 @@ function HttpTable(props: {
 	}
 
 	return (
-		<table mix={[s.table]}>
-			<thead>
-				<tr>
-					<th>Name</th>
-					<th>Status</th>
-				</tr>
-			</thead>
-			<tbody>
-				{props.rows.map(({ monitor, health }) => (
-					<tr key={monitor.id}>
-						<td>
-							<a
-								href={routes.app.team.monitorShow.href({
-									team: props.team.slug,
-									monitorId: monitor.id,
-								})}
-								mix={[s.link]}
-							>
-								{monitor.name}
-							</a>
-						</td>
-						<td>
-							<Badge tone={HEALTH_BADGE_TONE[health]}>{health}</Badge>
-						</td>
+		<div mix={[s.tableScroll]}>
+			<table mix={[s.table]}>
+				<thead>
+					<tr>
+						<th>Name</th>
+						<th>Status</th>
 					</tr>
-				))}
-			</tbody>
-		</table>
+				</thead>
+				<tbody>
+					{props.rows.map(({ monitor, health }) => (
+						<tr key={monitor.id}>
+							<td>
+								<a
+									href={routes.app.team.monitorShow.href({
+										team: props.team.slug,
+										monitorId: monitor.id,
+									})}
+									mix={[s.link]}
+								>
+									{monitor.name}
+								</a>
+							</td>
+							<td>
+								<Badge tone={HEALTH_BADGE_TONE[health]}>{health}</Badge>
+							</td>
+						</tr>
+					))}
+				</tbody>
+			</table>
+		</div>
 	);
 }
 
@@ -194,40 +196,42 @@ function DnsTable(props: { team: { slug: string }; monitors: SelectDnsMonitor[] 
 	}
 
 	return (
-		<table mix={[s.table]}>
-			<thead>
-				<tr>
-					<th>Name</th>
-					<th>Domain</th>
-					<th>Status</th>
-				</tr>
-			</thead>
-			<tbody>
-				{props.monitors.map((monitor) => (
-					<tr key={monitor.id}>
-						<td>
-							<a
-								href={routes.app.team.dnsMonitorShow.href({
-									team: props.team.slug,
-									monitorId: monitor.id,
-								})}
-								mix={[s.link]}
-							>
-								{monitor.name}
-							</a>
-						</td>
-						<td>
-							<code>{monitor.domain}</code>
-						</td>
-						<td>
-							<Badge tone={DNS_STATUS_BADGE_TONE[monitor.last_status ?? ""] ?? "neutral"}>
-								{monitor.last_status ?? "not checked"}
-							</Badge>
-						</td>
+		<div mix={[s.tableScroll]}>
+			<table mix={[s.table]}>
+				<thead>
+					<tr>
+						<th>Name</th>
+						<th>Domain</th>
+						<th>Status</th>
 					</tr>
-				))}
-			</tbody>
-		</table>
+				</thead>
+				<tbody>
+					{props.monitors.map((monitor) => (
+						<tr key={monitor.id}>
+							<td>
+								<a
+									href={routes.app.team.dnsMonitorShow.href({
+										team: props.team.slug,
+										monitorId: monitor.id,
+									})}
+									mix={[s.link]}
+								>
+									{monitor.name}
+								</a>
+							</td>
+							<td>
+								<code>{monitor.domain}</code>
+							</td>
+							<td>
+								<Badge tone={DNS_STATUS_BADGE_TONE[monitor.last_status ?? ""] ?? "neutral"}>
+									{monitor.last_status ?? "not checked"}
+								</Badge>
+							</td>
+						</tr>
+					))}
+				</tbody>
+			</table>
+		</div>
 	);
 }
 
@@ -245,42 +249,44 @@ function TcpTable(props: { team: { slug: string }; monitors: SelectTcpMonitor[] 
 	}
 
 	return (
-		<table mix={[s.table]}>
-			<thead>
-				<tr>
-					<th>Name</th>
-					<th>Endpoint</th>
-					<th>Status</th>
-				</tr>
-			</thead>
-			<tbody>
-				{props.monitors.map((monitor) => (
-					<tr key={monitor.id}>
-						<td>
-							<a
-								href={routes.app.team.tcpMonitorShow.href({
-									team: props.team.slug,
-									monitorId: monitor.id,
-								})}
-								mix={[s.link]}
-							>
-								{monitor.name}
-							</a>
-						</td>
-						<td>
-							<code>
-								{monitor.host}:{monitor.port}
-							</code>
-						</td>
-						<td>
-							<Badge tone={TCP_STATUS_BADGE_TONE[monitor.last_status ?? ""] ?? "neutral"}>
-								{monitor.last_status ?? "pending"}
-							</Badge>
-						</td>
+		<div mix={[s.tableScroll]}>
+			<table mix={[s.table]}>
+				<thead>
+					<tr>
+						<th>Name</th>
+						<th>Endpoint</th>
+						<th>Status</th>
 					</tr>
-				))}
-			</tbody>
-		</table>
+				</thead>
+				<tbody>
+					{props.monitors.map((monitor) => (
+						<tr key={monitor.id}>
+							<td>
+								<a
+									href={routes.app.team.tcpMonitorShow.href({
+										team: props.team.slug,
+										monitorId: monitor.id,
+									})}
+									mix={[s.link]}
+								>
+									{monitor.name}
+								</a>
+							</td>
+							<td>
+								<code>
+									{monitor.host}:{monitor.port}
+								</code>
+							</td>
+							<td>
+								<Badge tone={TCP_STATUS_BADGE_TONE[monitor.last_status ?? ""] ?? "neutral"}>
+									{monitor.last_status ?? "pending"}
+								</Badge>
+							</td>
+						</tr>
+					))}
+				</tbody>
+			</table>
+		</div>
 	);
 }
 
@@ -298,37 +304,39 @@ function CronJobsTable(props: { team: { slug: string }; monitors: SelectCronJobM
 	}
 
 	return (
-		<table mix={[s.table]}>
-			<thead>
-				<tr>
-					<th>Name</th>
-					<th>Schedule</th>
-					<th>Status</th>
-				</tr>
-			</thead>
-			<tbody>
-				{props.monitors.map((monitor) => (
-					<tr key={monitor.id}>
-						<td>
-							<a
-								href={routes.app.team.cronJobShow.href({
-									team: props.team.slug,
-									monitorId: monitor.id,
-								})}
-								mix={[s.link]}
-							>
-								{monitor.name}
-							</a>
-						</td>
-						<td>{CronJobMonitor.describeCronExpression(monitor.cron_expression)}</td>
-						<td>
-							<Badge tone={CRON_JOB_STATUS_BADGE_TONE[monitor.status] ?? "neutral"}>
-								{monitor.status}
-							</Badge>
-						</td>
+		<div mix={[s.tableScroll]}>
+			<table mix={[s.table]}>
+				<thead>
+					<tr>
+						<th>Name</th>
+						<th>Schedule</th>
+						<th>Status</th>
 					</tr>
-				))}
-			</tbody>
-		</table>
+				</thead>
+				<tbody>
+					{props.monitors.map((monitor) => (
+						<tr key={monitor.id}>
+							<td>
+								<a
+									href={routes.app.team.cronJobShow.href({
+										team: props.team.slug,
+										monitorId: monitor.id,
+									})}
+									mix={[s.link]}
+								>
+									{monitor.name}
+								</a>
+							</td>
+							<td>{CronJobMonitor.describeCronExpression(monitor.cron_expression)}</td>
+							<td>
+								<Badge tone={CRON_JOB_STATUS_BADGE_TONE[monitor.status] ?? "neutral"}>
+									{monitor.status}
+								</Badge>
+							</td>
+						</tr>
+					))}
+				</tbody>
+			</table>
+		</div>
 	);
 }

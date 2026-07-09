@@ -51,43 +51,45 @@ export default function DnsMonitorsView(handle: Handle<DnsMonitorsView.Props>) {
 						}}
 					/>
 				) : (
-					<table mix={[s.table]}>
-						<thead>
-							<tr>
-								<th>Name</th>
-								<th>Domain</th>
-								<th>Record type</th>
-								<th>Status</th>
-							</tr>
-						</thead>
-						<tbody>
-							{monitors.map((monitor) => (
-								<tr key={monitor.id}>
-									<td>
-										<a
-											href={routes.app.team.dnsMonitorShow.href({
-												team: team.slug,
-												monitorId: monitor.id,
-											})}
-											mix={[s.link]}
-										>
-											{monitor.name}
-										</a>
-										{!monitor.is_enabled && <Badge tone="neutral">Disabled</Badge>}
-									</td>
-									<td>
-										<code>{monitor.domain}</code>
-									</td>
-									<td>{monitor.record_type}</td>
-									<td>
-										<Badge tone={STATUS_BADGE_TONE[monitor.last_status ?? ""] ?? "neutral"}>
-											{monitor.last_status ?? "not checked"}
-										</Badge>
-									</td>
+					<div mix={[s.tableScroll]}>
+						<table mix={[s.table]}>
+							<thead>
+								<tr>
+									<th>Name</th>
+									<th>Domain</th>
+									<th>Record type</th>
+									<th>Status</th>
 								</tr>
-							))}
-						</tbody>
-					</table>
+							</thead>
+							<tbody>
+								{monitors.map((monitor) => (
+									<tr key={monitor.id}>
+										<td>
+											<a
+												href={routes.app.team.dnsMonitorShow.href({
+													team: team.slug,
+													monitorId: monitor.id,
+												})}
+												mix={[s.link]}
+											>
+												{monitor.name}
+											</a>
+											{!monitor.is_enabled && <Badge tone="neutral">Disabled</Badge>}
+										</td>
+										<td>
+											<code>{monitor.domain}</code>
+										</td>
+										<td>{monitor.record_type}</td>
+										<td>
+											<Badge tone={STATUS_BADGE_TONE[monitor.last_status ?? ""] ?? "neutral"}>
+												{monitor.last_status ?? "not checked"}
+											</Badge>
+										</td>
+									</tr>
+								))}
+							</tbody>
+						</table>
+					</div>
 				)}
 			</div>
 		);

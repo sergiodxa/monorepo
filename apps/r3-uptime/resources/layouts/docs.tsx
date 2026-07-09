@@ -28,24 +28,45 @@ export default function DocsLayout(handle: Handle<DocsLayout.Props>) {
 
 		return (
 			<div mix={[s.docsLayout]}>
-				<aside mix={[s.docsSidebar]}>
-					<a href={routes.docs.index.href()} mix={[s.marketingBrand]}>
-						Documentation
-					</a>
+				<div mix={[s.docsTopbar]}>
+					<button
+						type="button"
+						commandfor="docs-sidebar"
+						command="toggle-popover"
+						aria-label="Toggle navigation"
+						mix={[s.sidebarToggle]}
+					>
+						<svg viewBox="0 0 20 20" width={18} height={18} fill="none" aria-hidden="true">
+							<path
+								d="M3 5h14M3 10h14M3 15h14"
+								stroke="currentColor"
+								strokeWidth={1.5}
+								strokeLinecap="round"
+							/>
+						</svg>
+					</button>
+				</div>
 
-					{sections.map((section) => (
-						<div key={section.title}>
-							<p mix={[s.docsSidebarHeading]}>{section.title}</p>
-							{section.docs.map((doc) => (
-								<a key={doc.path} href={doc.path} mix={[s.marketingFooterLink]}>
-									{doc.frontmatter.title}
-								</a>
-							))}
-						</div>
-					))}
-				</aside>
+				<div mix={[s.docsBody]}>
+					<aside id="docs-sidebar" popover="auto" mix={[s.docsSidebar]}>
+						<a href={routes.docs.index.href()} mix={[s.marketingBrand]}>
+							Documentation
+						</a>
 
-				<div mix={[s.docsContent]}>{children}</div>
+						{sections.map((section) => (
+							<div key={section.title}>
+								<p mix={[s.docsSidebarHeading]}>{section.title}</p>
+								{section.docs.map((doc) => (
+									<a key={doc.path} href={doc.path} mix={[s.marketingFooterLink]}>
+										{doc.frontmatter.title}
+									</a>
+								))}
+							</div>
+						))}
+					</aside>
+
+					<div mix={[s.docsContent]}>{children}</div>
+				</div>
 			</div>
 		);
 	};

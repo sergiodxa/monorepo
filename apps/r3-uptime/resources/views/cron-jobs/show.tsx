@@ -124,28 +124,30 @@ export default function CronJobShowView(handle: Handle<CronJobShowView.Props>) {
 				{pings.length === 0 ? (
 					<EmptyState message="No pings yet." />
 				) : (
-					<table mix={[s.table]}>
-						<thead>
-							<tr>
-								<th>Time</th>
-								<th>On time</th>
-								<th>Source IP</th>
-							</tr>
-						</thead>
-						<tbody>
-							{pings.map((ping) => (
-								<tr key={ping.id}>
-									<td>{new Date(ping.created_at).toLocaleString()}</td>
-									<td>
-										<Badge tone={ping.was_on_time ? "up" : "degraded"}>
-											{ping.was_on_time ? "On time" : "Late"}
-										</Badge>
-									</td>
-									<td>{ping.source_ip ?? "—"}</td>
+					<div mix={[s.tableScroll]}>
+						<table mix={[s.table]}>
+							<thead>
+								<tr>
+									<th>Time</th>
+									<th>On time</th>
+									<th>Source IP</th>
 								</tr>
-							))}
-						</tbody>
-					</table>
+							</thead>
+							<tbody>
+								{pings.map((ping) => (
+									<tr key={ping.id}>
+										<td>{new Date(ping.created_at).toLocaleString()}</td>
+										<td>
+											<Badge tone={ping.was_on_time ? "up" : "degraded"}>
+												{ping.was_on_time ? "On time" : "Late"}
+											</Badge>
+										</td>
+										<td>{ping.source_ip ?? "—"}</td>
+									</tr>
+								))}
+							</tbody>
+						</table>
+					</div>
 				)}
 			</div>
 		);

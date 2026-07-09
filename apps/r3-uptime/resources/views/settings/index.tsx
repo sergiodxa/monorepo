@@ -85,114 +85,124 @@ export default function SettingsView(handle: Handle<SettingsView.Props>) {
 					</form>
 				</dialog>
 
-				<table mix={[s.table]}>
-					<thead>
-						<tr>
-							<th>Member</th>
-							<th>Role</th>
-							<th></th>
-						</tr>
-					</thead>
-					<tbody>
-						{members.map((member) => {
-							let subject = subjectsById.get(member.subject_id);
-							let isOwner = member.subject_id === team.owner_id;
-							let nextRole = member.role === "admin" ? "member" : "admin";
+				<div mix={[s.tableScroll]}>
+					<table mix={[s.table]}>
+						<thead>
+							<tr>
+								<th>Member</th>
+								<th>Role</th>
+								<th></th>
+							</tr>
+						</thead>
+						<tbody>
+							{members.map((member) => {
+								let subject = subjectsById.get(member.subject_id);
+								let isOwner = member.subject_id === team.owner_id;
+								let nextRole = member.role === "admin" ? "member" : "admin";
 
-							return (
-								<tr key={member.id}>
-									<td>
-										{subject
-											? `${subject.displayName} (${subject.emailAddress})`
-											: member.subject_id}
-									</td>
-									<td>
-										<Badge tone={isOwner ? "up" : "neutral"}>
-											{isOwner ? "owner" : member.role}
-										</Badge>
-									</td>
-									<td>
-										{!isOwner && (
-											<>
-												<form
-													method="post"
-													action={routes.teamAdminActions.changeRole.href({ team: team.slug })}
-												>
-													<input type="hidden" name="subject_id" value={member.subject_id} />
-													<input type="hidden" name="role" value={nextRole} />
-													<button type="submit" mix={[s.buttonSecondary]}>
-														Make {nextRole}
-													</button>
-												</form>
-												<button
-													type="button"
-													commandfor={`remove-member-${member.id}`}
-													command="show-modal"
-													mix={[s.buttonDanger]}
-												>
-													Remove
-												</button>
-												<dialog id={`remove-member-${member.id}`} mix={[s.dialog]}>
-													<h3>Remove this member?</h3>
+								return (
+									<tr key={member.id}>
+										<td>
+											{subject
+												? `${subject.displayName} (${subject.emailAddress})`
+												: member.subject_id}
+										</td>
+										<td>
+											<Badge tone={isOwner ? "up" : "neutral"}>
+												{isOwner ? "owner" : member.role}
+											</Badge>
+										</td>
+										<td>
+											{!isOwner && (
+												<>
 													<form
 														method="post"
-														action={routes.teamAdminActions.removeMember.href({ team: team.slug })}
+														action={routes.teamAdminActions.changeRole.href({ team: team.slug })}
 													>
 														<input type="hidden" name="subject_id" value={member.subject_id} />
-														<input type="hidden" name="email" value={subject?.emailAddress ?? ""} />
-														<button
-															type="button"
-															commandfor={`remove-member-${member.id}`}
-															command="close"
-															mix={[s.buttonSecondary]}
-														>
-															Cancel
-														</button>
-														<button type="submit" mix={[s.buttonDanger]}>
-															Remove
+														<input type="hidden" name="role" value={nextRole} />
+														<button type="submit" mix={[s.buttonSecondary]}>
+															Make {nextRole}
 														</button>
 													</form>
-												</dialog>
-											</>
-										)}
-									</td>
-								</tr>
-							);
-						})}
-					</tbody>
-				</table>
+													<button
+														type="button"
+														commandfor={`remove-member-${member.id}`}
+														command="show-modal"
+														mix={[s.buttonDanger]}
+													>
+														Remove
+													</button>
+													<dialog id={`remove-member-${member.id}`} mix={[s.dialog]}>
+														<h3>Remove this member?</h3>
+														<form
+															method="post"
+															action={routes.teamAdminActions.removeMember.href({
+																team: team.slug,
+															})}
+														>
+															<input type="hidden" name="subject_id" value={member.subject_id} />
+															<input
+																type="hidden"
+																name="email"
+																value={subject?.emailAddress ?? ""}
+															/>
+															<button
+																type="button"
+																commandfor={`remove-member-${member.id}`}
+																command="close"
+																mix={[s.buttonSecondary]}
+															>
+																Cancel
+															</button>
+															<button type="submit" mix={[s.buttonDanger]}>
+																Remove
+															</button>
+														</form>
+													</dialog>
+												</>
+											)}
+										</td>
+									</tr>
+								);
+							})}
+						</tbody>
+					</table>
+				</div>
 
 				{pendingInvites.length > 0 && (
 					<>
 						<h3>Pending invites</h3>
-						<table mix={[s.table]}>
-							<thead>
-								<tr>
-									<th>Email</th>
-									<th>Invited</th>
-									<th></th>
-								</tr>
-							</thead>
-							<tbody>
-								{pendingInvites.map((invite) => (
-									<tr key={invite.id}>
-										<td>{invite.email}</td>
-										<td>{new Date(invite.created_at).toLocaleDateString()}</td>
-										<td>
-											<form
-												method="post"
-												action={routes.teamAdminActions.revokeInvite.href({ team: team.slug })}
-											>
-												<input type="hidden" name="invite_id" value={invite.id} />
-												<button type="submit" mix={[s.buttonSecondary]}>
-													Revoke
-												</button>
-											</form>
-										</td>
+						<div mix={[s.tableScroll]}>
+							<table mix={[s.table]}>
+								<thead>
+									<tr>
+										<th>Email</th>
+										<th>Invited</th>
+										<th></th>
 									</tr>
-								))}
-							</tbody>
-						</table>
+								</thead>
+								<tbody>
+									{pendingInvites.map((invite) => (
+										<tr key={invite.id}>
+											<td>{invite.email}</td>
+											<td>{new Date(invite.created_at).toLocaleDateString()}</td>
+											<td>
+												<form
+													method="post"
+													action={routes.teamAdminActions.revokeInvite.href({ team: team.slug })}
+												>
+													<input type="hidden" name="invite_id" value={invite.id} />
+													<button type="submit" mix={[s.buttonSecondary]}>
+														Revoke
+													</button>
+												</form>
+											</td>
+										</tr>
+									))}
+								</tbody>
+							</table>
+						</div>
 					</>
 				)}
 
@@ -209,59 +219,61 @@ export default function SettingsView(handle: Handle<SettingsView.Props>) {
 					</button>
 				</form>
 
-				<table mix={[s.table]}>
-					<thead>
-						<tr>
-							<th>Domain</th>
-							<th>Status</th>
-							<th></th>
-						</tr>
-					</thead>
-					<tbody>
-						{domains.map((domain) => (
-							<tr key={domain.id}>
-								<td>{domain.hostname}</td>
-								<td>
-									{domain.verified_at !== null ? (
-										<Badge tone="up">verified</Badge>
-									) : (
-										<>
-											<Badge tone="neutral">pending</Badge>
-											<p mix={[s.mutedSmall]}>
-												Add a TXT record at <code>_ping-verification.{domain.hostname}</code> with
-												value <code>ping_{domain.id}</code>.
-											</p>
-										</>
-									)}
-								</td>
-								<td>
-									{domain.verified_at === null && (
+				<div mix={[s.tableScroll]}>
+					<table mix={[s.table]}>
+						<thead>
+							<tr>
+								<th>Domain</th>
+								<th>Status</th>
+								<th></th>
+							</tr>
+						</thead>
+						<tbody>
+							{domains.map((domain) => (
+								<tr key={domain.id}>
+									<td>{domain.hostname}</td>
+									<td>
+										{domain.verified_at !== null ? (
+											<Badge tone="up">verified</Badge>
+										) : (
+											<>
+												<Badge tone="neutral">pending</Badge>
+												<p mix={[s.mutedSmall]}>
+													Add a TXT record at <code>_ping-verification.{domain.hostname}</code> with
+													value <code>ping_{domain.id}</code>.
+												</p>
+											</>
+										)}
+									</td>
+									<td>
+										{domain.verified_at === null && (
+											<form
+												method="post"
+												action={routes.teamAdminActions.retryDomainVerification.href({
+													team: team.slug,
+												})}
+											>
+												<input type="hidden" name="domain_id" value={domain.id} />
+												<button type="submit" mix={[s.buttonSecondary]}>
+													Retry
+												</button>
+											</form>
+										)}
 										<form
 											method="post"
-											action={routes.teamAdminActions.retryDomainVerification.href({
-												team: team.slug,
-											})}
+											action={routes.teamAdminActions.removeDomain.href({ team: team.slug })}
 										>
 											<input type="hidden" name="domain_id" value={domain.id} />
-											<button type="submit" mix={[s.buttonSecondary]}>
-												Retry
+											<button type="submit" mix={[s.buttonDanger]}>
+												Remove
 											</button>
 										</form>
-									)}
-									<form
-										method="post"
-										action={routes.teamAdminActions.removeDomain.href({ team: team.slug })}
-									>
-										<input type="hidden" name="domain_id" value={domain.id} />
-										<button type="submit" mix={[s.buttonDanger]}>
-											Remove
-										</button>
-									</form>
-								</td>
-							</tr>
-						))}
-					</tbody>
-				</table>
+									</td>
+								</tr>
+							))}
+						</tbody>
+					</table>
+				</div>
 
 				<h2>Billing</h2>
 				<a href={routes.app.team.checkout.href({ team: team.slug })} mix={[s.link]}>

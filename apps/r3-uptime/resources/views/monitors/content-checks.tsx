@@ -42,58 +42,60 @@ export default function ContentChecksSection(handle: Handle<ContentChecksSection
 				</p>
 
 				{contentChecks.length > 0 && (
-					<table mix={[s.table]}>
-						<thead>
-							<tr>
-								<th>Type</th>
-								<th>Value</th>
-								<th>Case sensitive</th>
-								<th>Status</th>
-								<th></th>
-							</tr>
-						</thead>
-						<tbody>
-							{contentChecks.map((check) => (
-								<tr key={check.id}>
-									<td>{TYPE_LABELS[check.type]}</td>
-									<td>
-										<code>{check.value}</code>
-									</td>
-									<td>{check.case_sensitive ? "Yes" : "No"}</td>
-									<td>{check.is_enabled ? "Enabled" : "Disabled"}</td>
-									<td>
-										<button
-											type="button"
-											commandfor={`delete-content-check-${check.id}`}
-											command="show-modal"
-											mix={[s.buttonDanger]}
-										>
-											Delete
-										</button>
-
-										<dialog id={`delete-content-check-${check.id}`} mix={[s.dialog]}>
-											<h3>Delete this content check?</h3>
-											<form method="post" action={deleteAction}>
-												<input type="hidden" name="content_check_id" value={check.id} />
-												<input type="hidden" name="monitor_id" value={monitorId} />
-												<button
-													type="button"
-													commandfor={`delete-content-check-${check.id}`}
-													command="close"
-													mix={[s.buttonSecondary]}
-												>
-													Cancel
-												</button>
-												<button type="submit" mix={[s.buttonDanger]}>
-													Delete
-												</button>
-											</form>
-										</dialog>
-									</td>
+					<div mix={[s.tableScroll]}>
+						<table mix={[s.table]}>
+							<thead>
+								<tr>
+									<th>Type</th>
+									<th>Value</th>
+									<th>Case sensitive</th>
+									<th>Status</th>
+									<th></th>
 								</tr>
-							))}
-						</tbody>
-					</table>
+							</thead>
+							<tbody>
+								{contentChecks.map((check) => (
+									<tr key={check.id}>
+										<td>{TYPE_LABELS[check.type]}</td>
+										<td>
+											<code>{check.value}</code>
+										</td>
+										<td>{check.case_sensitive ? "Yes" : "No"}</td>
+										<td>{check.is_enabled ? "Enabled" : "Disabled"}</td>
+										<td>
+											<button
+												type="button"
+												commandfor={`delete-content-check-${check.id}`}
+												command="show-modal"
+												mix={[s.buttonDanger]}
+											>
+												Delete
+											</button>
+
+											<dialog id={`delete-content-check-${check.id}`} mix={[s.dialog]}>
+												<h3>Delete this content check?</h3>
+												<form method="post" action={deleteAction}>
+													<input type="hidden" name="content_check_id" value={check.id} />
+													<input type="hidden" name="monitor_id" value={monitorId} />
+													<button
+														type="button"
+														commandfor={`delete-content-check-${check.id}`}
+														command="close"
+														mix={[s.buttonSecondary]}
+													>
+														Cancel
+													</button>
+													<button type="submit" mix={[s.buttonDanger]}>
+														Delete
+													</button>
+												</form>
+											</dialog>
+										</td>
+									</tr>
+								))}
+							</tbody>
+						</table>
+					</div>
 				)}
 
 				<form method="post" action={routes.actions.createContentCheck.href({ team: team.slug })}>

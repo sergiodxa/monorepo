@@ -30,6 +30,22 @@ export default function AppShell(handle: Handle<AppShell.Props>) {
 			<div mix={[s.page]}>
 				<header mix={[s.header]}>
 					<div mix={[s.row]}>
+						<button
+							type="button"
+							commandfor="app-sidebar"
+							command="toggle-popover"
+							aria-label="Toggle navigation"
+							mix={[s.sidebarToggle]}
+						>
+							<svg viewBox="0 0 20 20" width={18} height={18} fill="none" aria-hidden="true">
+								<path
+									d="M3 5h14M3 10h14M3 15h14"
+									stroke="currentColor"
+									strokeWidth={1.5}
+									strokeLinecap="round"
+								/>
+							</svg>
+						</button>
 						<strong>Uptime</strong>
 						<span mix={[s.mutedSmall]}>{team.name}</span>
 					</div>
@@ -42,7 +58,7 @@ export default function AppShell(handle: Handle<AppShell.Props>) {
 				</header>
 
 				<div mix={[s.shellBody]}>
-					<nav mix={[s.sidebar]}>
+					<nav id="app-sidebar" popover="auto" mix={[s.sidebar]}>
 						<ul mix={[s.navList]}>
 							<li>
 								<a href={routes.app.team.dashboard.href({ team: team.slug })} mix={[s.navLink]}>

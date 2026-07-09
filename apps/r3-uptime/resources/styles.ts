@@ -207,14 +207,70 @@ export const shellBody = css({
 	minHeight: 0,
 });
 
-/** Sidebar navigation column. */
+/**
+ * Sidebar navigation column. Below the OLD APP's sidebar mobile breakpoint
+ * (768px), this is a native popover — hidden until opened by
+ * {@link sidebarToggle} — rendered as a fixed, full-height overlay drawer with
+ * its own backdrop, matching the OLD APP's `Sidebar` primitive switching to an
+ * `AriaModalOverlay` sheet on mobile. At ≥768px it resets to a normal static
+ * column, always visible regardless of open/closed state (the `!important`s
+ * are required to beat the UA stylesheet's `[popover]:not(:popover-open) {
+ * display: none }`, which otherwise wins on specificity).
+ */
 export const sidebar = css({
-	width: 220,
-	flexShrink: 0,
+	position: "fixed",
+	top: 0,
+	left: 0,
+	bottom: 0,
+	margin: 0,
+	width: "min(80vw, 288px)",
+	maxHeight: "100vh",
 	padding: "16px 12px",
+	border: "none",
 	borderRight: `1px solid ${neutral[200]}`,
+	background: "#ffffff",
+	boxShadow: "0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1)",
+	"&::backdrop": {
+		background: "rgba(0, 0, 0, 0.4)",
+	},
+	"@media (min-width: 768px)": {
+		display: "flex !important",
+		position: "static",
+		top: "auto",
+		left: "auto",
+		bottom: "auto",
+		width: 220,
+		maxHeight: "none",
+		flexShrink: 0,
+		boxShadow: "none",
+	},
 	"@media (prefers-color-scheme: dark)": {
+		background: neutral[950],
 		borderColor: neutral[800],
+	},
+});
+
+/**
+ * The hamburger button that opens {@link sidebar} on mobile via the native
+ * Command Invoker API (`commandfor`/`command="toggle-popover"`). Hidden at
+ * ≥768px, matching the OLD APP's `Sidebar.Trigger` (`md:hidden`).
+ */
+export const sidebarToggle = css({
+	display: "inline-flex",
+	alignItems: "center",
+	justifyContent: "center",
+	width: 32,
+	height: 32,
+	padding: 0,
+	borderRadius: 6,
+	border: "none",
+	background: "transparent",
+	color: "inherit",
+	cursor: "pointer",
+	"&:hover": { background: neutral[100] },
+	"@media (min-width: 768px)": { display: "none" },
+	"@media (prefers-color-scheme: dark)": {
+		"&:hover": { background: neutral[800] },
 	},
 });
 
@@ -254,11 +310,16 @@ export const navLink = css({
 	},
 });
 
-/** Main content area. */
+/**
+ * Main content area, matching the OLD APP's app-page padding (`p-5 md:p-12`):
+ * 20px by default, 48px at ≥768px.
+ */
 export const main = css({
 	flex: 1,
-	padding: 24,
+	padding: 20,
 	overflow: "auto",
+	minWidth: 0,
+	"@media (min-width: 768px)": { padding: 48 },
 });
 
 /** Muted small text (meta info, empty-state copy). */
@@ -413,11 +474,10 @@ export const buttonSecondary = css({
 });
 
 /**
- * Primary call-to-action button/link for marketing pages only (hero, header,
- * final CTA). Unlike the in-app {@link buttonPrimary}, the OLD APP's marketing
- * CTAs use brand green (`bg-primary-600`) at a larger "lg" size — bigger
- * padding, a slightly larger radius, and a subtle `shadow-sm` — measured on the
- * homepage hero's "Start Monitoring" button.
+ * Primary call-to-action button/link for marketing pages — hero and final-CTA
+ * size, matching the OLD APP's `px-6 py-3 text-base font-semibold shadow-lg
+ * hover:shadow-xl bg-primary-600`. For the smaller header/docs-topbar CTA, see
+ * {@link marketingButtonPrimarySmall}.
  */
 export const marketingButtonPrimary = css({
 	display: "inline-flex",
@@ -429,17 +489,46 @@ export const marketingButtonPrimary = css({
 	background: primary[600],
 	color: "#ffffff",
 	fontFamily: "inherit",
+	fontSize: "1rem",
+	fontWeight: 600,
+	cursor: "pointer",
+	boxShadow: "0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1)",
+	"&:hover": {
+		background: primary[700],
+		boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)",
+	},
+});
+
+/**
+ * Smaller primary CTA for the sticky marketing header and docs topbar,
+ * matching the OLD APP's `px-4 py-2 text-sm font-medium shadow-sm
+ * hover:shadow-md bg-primary-600` (vs. {@link marketingButtonPrimary}'s
+ * larger hero/final-CTA sizing).
+ */
+export const marketingButtonPrimarySmall = css({
+	display: "inline-flex",
+	alignItems: "center",
+	justifyContent: "center",
+	padding: "8px 16px",
+	borderRadius: 8,
+	border: "1px solid transparent",
+	background: primary[600],
+	color: "#ffffff",
+	fontFamily: "inherit",
 	fontSize: "0.875rem",
 	fontWeight: 500,
 	cursor: "pointer",
-	boxShadow: "0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1)",
-	"&:hover": { background: primary[700] },
+	boxShadow: "0 1px 2px 0 rgba(0, 0, 0, 0.05)",
+	"&:hover": {
+		background: primary[700],
+		boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1)",
+	},
 });
 
 /**
  * Secondary (outline) button/link for marketing pages only, matching the OLD
- * APP's "View Pricing" hero button (larger "lg" padding/radius, `shadow-sm`,
- * bolder label than the in-app {@link buttonSecondary}).
+ * APP's "View Pricing" hero button (`px-6 py-3 text-base font-semibold
+ * shadow-sm hover:shadow-md`, bolder label than the in-app {@link buttonSecondary}).
  */
 export const marketingButtonSecondary = css({
 	display: "inline-flex",
@@ -455,8 +544,11 @@ export const marketingButtonSecondary = css({
 	fontWeight: 600,
 	cursor: "pointer",
 	textDecoration: "none",
-	boxShadow: "0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1)",
-	"&:hover": { background: neutral[50] },
+	boxShadow: "0 1px 2px 0 rgba(0, 0, 0, 0.05)",
+	"&:hover": {
+		background: neutral[50],
+		boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1)",
+	},
 	"@media (prefers-color-scheme: dark)": {
 		borderColor: neutral[700],
 		background: neutral[900],
@@ -479,6 +571,16 @@ export const dialog = css({
 		background: neutral[900],
 		color: neutral[50],
 	},
+});
+
+/**
+ * Wraps a {@link table} so it scrolls horizontally instead of overflowing the
+ * viewport on narrow screens, matching the OLD APP's monitor-table wrapper
+ * (`-mx-5 w-[calc(100%+2.5rem)] overflow-x-auto px-5 md:mx-0 md:w-full
+ * md:px-0`) — the table itself never becomes a stacked card list.
+ */
+export const tableScroll = css({
+	overflowX: "auto",
 });
 
 /**
@@ -749,10 +851,13 @@ export const marketingNav = css({
 	display: "flex",
 	alignItems: "center",
 	gap: 20,
-	flexWrap: "wrap",
 });
 
-/** A single marketing nav link, measured 14px. */
+/**
+ * A single marketing nav link (measured 14px). Also reused for the
+ * homepage's audience-pill row, so this stays visible at every width — only
+ * {@link marketingHeaderNavLink} (the top-nav-specific variant) hides below `md`.
+ */
 export const marketingNavLink = css({
 	fontSize: "0.875rem",
 	color: neutral[600],
@@ -765,25 +870,42 @@ export const marketingNavLink = css({
 });
 
 /**
+ * Composed alongside {@link marketingNavLink} for the sticky header's own nav
+ * links only. The OLD APP hides these entirely below `md`
+ * (`hidden items-center gap-6 md:flex`) — the marketing site has no
+ * hamburger/drawer, only the logo and CTA remain visible on mobile.
+ */
+export const marketingHeaderNavLink = css({
+	display: "none",
+	"@media (min-width: 768px)": { display: "inline" },
+});
+
+/**
  * Centered, width-capped content column for marketing sections (wider than
  * {@link container}). Matches the OLD APP's header/section wrapper
- * (`max-w-6xl`, measured at 1152px).
+ * (`mx-auto max-w-6xl px-4 sm:px-6 lg:px-8`): capped at 1152px, with padding
+ * that grows from 16px to 24px (≥640px) to 32px (≥1024px).
  */
 export const marketingContainer = css({
 	maxWidth: 1152,
 	margin: "0 auto",
-	padding: "0 24px",
+	padding: "0 16px",
+	"@media (min-width: 640px)": { padding: "0 24px" },
+	"@media (min-width: 1024px)": { padding: "0 32px" },
 });
 
 /**
  * Hero section with a soft gradient background, matching the OLD APP's hero
- * (`bg-gradient-to-b from-primary-50 to-white dark:from-primary-950/20 dark:to-neutral-950`).
- * Vertical padding matches the OLD APP's generous `py-32` hero (measured 128px).
+ * (`bg-gradient-to-b from-primary-50 to-white dark:from-primary-950/20
+ * dark:to-neutral-950 py-16 sm:py-24 lg:py-32`): vertical padding grows from
+ * 64px to 96px (≥640px) to 128px (≥1024px).
  */
 export const marketingHero = css({
-	padding: "128px 0",
+	padding: "64px 0",
 	textAlign: "center",
 	background: `linear-gradient(to bottom, ${primary[50]}, #ffffff)`,
+	"@media (min-width: 640px)": { padding: "96px 0" },
+	"@media (min-width: 1024px)": { padding: "128px 0" },
 	"@media (prefers-color-scheme: dark)": {
 		background: `linear-gradient(to bottom, ${alpha(primary[950], 0.2)}, ${neutral[950]})`,
 	},
@@ -814,18 +936,20 @@ export const marketingBadge = css({
 
 /**
  * Hero/section heading, larger than default `h1`/`h2` sizing, matching the OLD APP's
- * hero `<h1>` (`text-neutral-900 dark:text-neutral-50`, measured 60px/700/tight
- * `1.0` line-height/`-0.025em` tracking at desktop widths).
+ * hero `<h1>` (`text-4xl font-bold tracking-tight sm:text-5xl lg:text-6xl
+ * text-neutral-900 dark:text-neutral-50`): 36px by default, 48px at ≥640px,
+ * 60px at ≥1024px, tight `1.0` line-height/`-0.025em` tracking throughout.
  */
 export const marketingHeroTitle = css({
-	fontSize: "2.5rem",
+	fontSize: "2.25rem",
 	fontWeight: 700,
 	lineHeight: 1,
 	letterSpacing: "-0.025em",
 	margin: "0 auto 16px",
 	maxWidth: 760,
 	color: neutral[900],
-	"@media (min-width: 768px)": { fontSize: "3.75rem" },
+	"@media (min-width: 640px)": { fontSize: "3rem" },
+	"@media (min-width: 1024px)": { fontSize: "3.75rem" },
 	"@media (prefers-color-scheme: dark)": { color: neutral[50] },
 });
 
@@ -840,24 +964,30 @@ export const marketingHeroHighlight = css({
 
 /**
  * Hero/section supporting paragraph, matching the OLD APP's hero description
- * (`text-neutral-600 dark:text-neutral-400`).
+ * (`mt-6 max-w-xl text-lg leading-relaxed text-neutral-600
+ * dark:text-neutral-400`): 18px, `1.625` line-height, capped at 576px (max-w-xl).
  */
 export const marketingLead = css({
 	fontSize: "1.125rem",
 	color: neutral[600],
 	margin: "0 auto 24px",
-	maxWidth: 640,
-	lineHeight: 1.6,
+	maxWidth: 576,
+	lineHeight: 1.625,
 	"@media (prefers-color-scheme: dark)": { color: neutral[400] },
 });
 
-/** Row of short trust/highlight chips under a hero paragraph. */
+/**
+ * Row of short trust/highlight chips under a hero paragraph, matching the OLD
+ * APP's highlights row (`mt-8 flex flex-wrap items-center justify-center
+ * gap-x-6 gap-y-2 text-sm text-neutral-500`): 32px above, 8px between wrapped
+ * rows, 24px between chips on the same row.
+ */
 export const marketingHighlightRow = css({
 	display: "flex",
 	flexWrap: "wrap",
 	justifyContent: "center",
-	gap: 12,
-	marginBottom: 8,
+	gap: "8px 24px",
+	marginTop: 32,
 });
 
 /**
@@ -873,18 +1003,28 @@ export const marketingHighlightChip = css({
 	"@media (prefers-color-scheme: dark)": { color: neutral[400] },
 });
 
-/** Row of call-to-action buttons under a hero. */
+/**
+ * Row of call-to-action buttons under a hero, matching the OLD APP's
+ * (`mt-8 flex flex-col items-center gap-4 sm:flex-row`): stacked and centered
+ * on mobile, side-by-side from ≥640px, with 32px above and 16px between.
+ */
 export const marketingActions = css({
 	display: "flex",
-	flexWrap: "wrap",
-	justifyContent: "center",
-	gap: 12,
-	marginTop: 8,
+	flexDirection: "column",
+	alignItems: "center",
+	gap: 16,
+	marginTop: 32,
+	"@media (min-width: 640px)": { flexDirection: "row", justifyContent: "center" },
 });
 
-/** A generic marketing page section with vertical padding. */
+/**
+ * A generic marketing page section, matching the OLD APP's `py-16 sm:py-24
+ * lg:py-32` section rhythm: 64px by default, 96px at ≥640px, 128px at ≥1024px.
+ */
 export const marketingSection = css({
-	padding: "48px 0",
+	padding: "64px 0",
+	"@media (min-width: 640px)": { padding: "96px 0" },
+	"@media (min-width: 1024px)": { padding: "128px 0" },
 });
 
 /**
@@ -892,40 +1032,51 @@ export const marketingSection = css({
  * OLD APP's alternate sections (`bg-neutral-50 dark:bg-neutral-900/50`).
  */
 export const marketingSectionAlt = css({
-	padding: "48px 0",
+	padding: "64px 0",
 	background: neutral[50],
+	"@media (min-width: 640px)": { padding: "96px 0" },
+	"@media (min-width: 1024px)": { padding: "128px 0" },
 	"@media (prefers-color-scheme: dark)": { background: alpha(neutral[900], 0.5) },
 });
 
 /**
  * Centered heading block at the top of a marketing section. Styles its bare
  * `<h2>` directly (rather than requiring a separate heading mixin at each call
- * site) to match the OLD APP's section headings — measured 36px/700, tight
- * `40px` line-height, and `-0.025em` tracking, which a plain unstyled `<h2>`
- * renders far smaller than.
+ * site) to match the OLD APP's section headings (`text-3xl font-bold
+ * tracking-tight sm:text-4xl`): 30px by default, 36px at ≥640px, tight
+ * `-0.025em` tracking throughout.
  */
 export const marketingSectionHeader = css({
 	textAlign: "center",
 	maxWidth: 640,
 	margin: "0 auto 40px",
 	"& h2": {
-		fontSize: "2.25rem",
+		fontSize: "1.875rem",
 		fontWeight: 700,
-		lineHeight: "2.5rem",
+		lineHeight: "2.25rem",
 		letterSpacing: "-0.025em",
 		margin: "0 0 16px",
 		color: neutral[900],
+	},
+	"@media (min-width: 640px)": {
+		"& h2": { fontSize: "2.25rem", lineHeight: "2.5rem" },
 	},
 	"@media (prefers-color-scheme: dark)": {
 		"& h2": { color: neutral[50] },
 	},
 });
 
-/** Responsive card grid for feature/use-case/audience lists. */
+/**
+ * Responsive card grid for feature/use-case/audience lists, matching the OLD
+ * APP's `grid gap-8 md:grid-cols-2 lg:grid-cols-3`: single column by default,
+ * 2 columns at ≥768px, 3 columns at ≥1024px.
+ */
 export const marketingGrid = css({
 	display: "grid",
-	gap: 20,
-	gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
+	gap: 32,
+	gridTemplateColumns: "1fr",
+	"@media (min-width: 768px)": { gridTemplateColumns: "repeat(2, 1fr)" },
+	"@media (min-width: 1024px)": { gridTemplateColumns: "repeat(3, 1fr)" },
 });
 
 /**
@@ -966,12 +1117,16 @@ export const marketingCardDescription = css({
 	"@media (prefers-color-scheme: dark)": { color: neutral[400] },
 });
 
-/** Row of stat tiles (trust indicators). */
+/**
+ * Row of stat tiles (trust indicators), matching the OLD APP's
+ * `grid grid-cols-2 gap-8 md:grid-cols-4`: 2 columns by default, 4 at ≥768px.
+ */
 export const marketingStatRow = css({
 	display: "grid",
-	gap: 16,
-	gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))",
+	gap: 32,
+	gridTemplateColumns: "repeat(2, 1fr)",
 	textAlign: "center",
+	"@media (min-width: 768px)": { gridTemplateColumns: "repeat(4, 1fr)" },
 });
 
 /**
@@ -995,12 +1150,18 @@ export const marketingStatLabel = css({
 	"@media (prefers-color-scheme: dark)": { color: neutral[400] },
 });
 
-/** Numbered "how it works" step list. */
+/**
+ * Numbered "how it works" step list, matching the OLD APP's card-grid
+ * convention elsewhere on the same pages (`grid gap-6 sm:grid-cols-2
+ * lg:grid-cols-3`): single column by default, 2 at ≥640px, 3 at ≥1024px.
+ */
 export const marketingSteps = css({
 	display: "grid",
-	gap: 20,
-	gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+	gap: 24,
+	gridTemplateColumns: "1fr",
 	counterReset: "marketing-step",
+	"@media (min-width: 640px)": { gridTemplateColumns: "repeat(2, 1fr)" },
+	"@media (min-width: 1024px)": { gridTemplateColumns: "repeat(3, 1fr)" },
 });
 
 /**
@@ -1115,13 +1276,33 @@ export const marketingFooter = css({
 	},
 });
 
-/** Multi-column link grid inside the marketing footer. */
+/**
+ * Multi-column link grid inside the marketing footer, matching the OLD APP's
+ * `grid gap-8 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5`: single column by
+ * default, 2 at ≥640px, 3 at ≥768px, 5 at ≥1024px (Features/Use Cases/
+ * Solutions/Compare/Docs+Legal — the last combined into one column, see
+ * {@link marketingFooterDocsLegalColumn}).
+ */
 export const marketingFooterGrid = css({
 	display: "grid",
-	gap: 24,
-	gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))",
-	maxWidth: 1024,
+	gap: 32,
+	gridTemplateColumns: "1fr",
+	maxWidth: 1152,
 	margin: "0 auto 32px",
+	"@media (min-width: 640px)": { gridTemplateColumns: "repeat(2, 1fr)" },
+	"@media (min-width: 768px)": { gridTemplateColumns: "repeat(3, 1fr)" },
+	"@media (min-width: 1024px)": { gridTemplateColumns: "repeat(5, 1fr)" },
+});
+
+/**
+ * Wraps the footer's combined Documentation+Legal column, matching the OLD
+ * APP's 5th footer column (`flex flex-col gap-8`) which stacks two link
+ * groups inside one grid cell instead of giving each its own column.
+ */
+export const marketingFooterDocsLegalColumn = css({
+	display: "flex",
+	flexDirection: "column",
+	gap: 32,
 });
 
 /**
@@ -1160,7 +1341,7 @@ export const marketingFooterLink = css({
  * copyright line (centered, muted, no separator rule above it).
  */
 export const marketingFooterBottom = css({
-	maxWidth: 1024,
+	maxWidth: 1152,
 	margin: "0 auto",
 	marginTop: 24,
 	textAlign: "center",
@@ -1212,8 +1393,16 @@ export const proseArticle = css({
 	},
 });
 
-/** Two-column docs layout: sidebar navigation + article content. */
+/** Outer docs layout: an optional mobile {@link docsTopbar} above {@link docsBody}. */
 export const docsLayout = css({
+	display: "flex",
+	flexDirection: "column",
+	flex: 1,
+	minHeight: 0,
+});
+
+/** Two-column docs body: sidebar navigation + article content. */
+export const docsBody = css({
 	display: "flex",
 	flex: 1,
 	minHeight: 0,
@@ -1222,12 +1411,56 @@ export const docsLayout = css({
 	width: "100%",
 });
 
-/** Docs sidebar navigation column. */
+/**
+ * Docs sidebar navigation column. Matches the OLD APP's docs sidebar, which
+ * is fully hidden below 768px and replaced by a slide-in `Sheet` drawer
+ * triggered by a hamburger ({@link sidebarToggle}) — reusing the exact same
+ * popover-drawer technique as the app shell's {@link sidebar}.
+ */
 export const docsSidebar = css({
-	width: 240,
-	flexShrink: 0,
+	position: "fixed",
+	top: 0,
+	left: 0,
+	bottom: 0,
+	margin: 0,
+	width: "min(80vw, 288px)",
+	maxHeight: "100vh",
 	padding: "32px 20px",
+	border: "none",
 	borderRight: `1px solid ${neutral[200]}`,
+	background: "#ffffff",
+	boxShadow: "0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1)",
+	"&::backdrop": {
+		background: "rgba(0, 0, 0, 0.4)",
+	},
+	"@media (min-width: 768px)": {
+		display: "block !important",
+		position: "static",
+		top: "auto",
+		left: "auto",
+		bottom: "auto",
+		width: 240,
+		maxHeight: "none",
+		flexShrink: 0,
+		boxShadow: "none",
+	},
+	"@media (prefers-color-scheme: dark)": {
+		background: neutral[950],
+		borderColor: neutral[800],
+	},
+});
+
+/**
+ * Mobile-only topbar holding the docs sidebar's hamburger toggle, hidden at
+ * ≥768px (the OLD APP's docs topbar; here reduced to just the toggle since
+ * this app's docs breadcrumbs/CTA live elsewhere).
+ */
+export const docsTopbar = css({
+	display: "flex",
+	alignItems: "center",
+	padding: "12px 20px",
+	borderBottom: `1px solid ${neutral[200]}`,
+	"@media (min-width: 768px)": { display: "none" },
 	"@media (prefers-color-scheme: dark)": { borderColor: neutral[800] },
 });
 

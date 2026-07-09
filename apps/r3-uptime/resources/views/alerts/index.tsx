@@ -64,41 +64,46 @@ export default function AlertsView(handle: Handle<AlertsView.Props>) {
 						}}
 					/>
 				) : (
-					<table mix={[s.table]}>
-						<thead>
-							<tr>
-								<th>Name</th>
-								<th>Scope</th>
-								<th>Channel</th>
-								<th>Recovery</th>
-								<th>Cooldown</th>
-								<th></th>
-							</tr>
-						</thead>
-						<tbody>
-							{alerts.map((alert) => (
-								<tr key={alert.id}>
-									<td>{alert.name}</td>
-									<td>
-										{alert.monitor_id
-											? (monitorsById.get(alert.monitor_id)?.name ?? "Unknown monitor")
-											: "Team-wide"}
-									</td>
-									<td>{STRATEGY_LABELS[alert.config.strategy] ?? alert.config.strategy}</td>
-									<td>{alert.notify_on_recovery ? "Yes" : "No"}</td>
-									<td>{alert.cooldown_minutes === 0 ? "None" : `${alert.cooldown_minutes}m`}</td>
-									<td>
-										<a
-											href={routes.app.team.alertEdit.href({ team: team.slug, alertId: alert.id })}
-											mix={[s.link]}
-										>
-											Edit
-										</a>
-									</td>
+					<div mix={[s.tableScroll]}>
+						<table mix={[s.table]}>
+							<thead>
+								<tr>
+									<th>Name</th>
+									<th>Scope</th>
+									<th>Channel</th>
+									<th>Recovery</th>
+									<th>Cooldown</th>
+									<th></th>
 								</tr>
-							))}
-						</tbody>
-					</table>
+							</thead>
+							<tbody>
+								{alerts.map((alert) => (
+									<tr key={alert.id}>
+										<td>{alert.name}</td>
+										<td>
+											{alert.monitor_id
+												? (monitorsById.get(alert.monitor_id)?.name ?? "Unknown monitor")
+												: "Team-wide"}
+										</td>
+										<td>{STRATEGY_LABELS[alert.config.strategy] ?? alert.config.strategy}</td>
+										<td>{alert.notify_on_recovery ? "Yes" : "No"}</td>
+										<td>{alert.cooldown_minutes === 0 ? "None" : `${alert.cooldown_minutes}m`}</td>
+										<td>
+											<a
+												href={routes.app.team.alertEdit.href({
+													team: team.slug,
+													alertId: alert.id,
+												})}
+												mix={[s.link]}
+											>
+												Edit
+											</a>
+										</td>
+									</tr>
+								))}
+							</tbody>
+						</table>
+					</div>
 				)}
 			</div>
 		);

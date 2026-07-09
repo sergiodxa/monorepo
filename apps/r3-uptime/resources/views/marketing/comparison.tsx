@@ -70,24 +70,26 @@ export default function ComparisonPageView(handle: Handle<ComparisonPageView.Pro
 					<div mix={[s.marketingContainer]}>
 						<SectionHeader title={`Uptime vs ${competitor}`} description={summary} />
 
-						<table mix={[s.marketingComparisonTable]}>
-							<thead>
-								<tr>
-									<th>Category</th>
-									<th>Uptime</th>
-									<th>{competitor}</th>
-								</tr>
-							</thead>
-							<tbody>
-								{rows.map((row) => (
-									<tr key={row.label}>
-										<td>{row.label}</td>
-										<td>{row.us}</td>
-										<td>{row.them}</td>
+						<div mix={[s.tableScroll]}>
+							<table mix={[s.marketingComparisonTable]}>
+								<thead>
+									<tr>
+										<th>Category</th>
+										<th>Uptime</th>
+										<th>{competitor}</th>
 									</tr>
-								))}
-							</tbody>
-						</table>
+								</thead>
+								<tbody>
+									{rows.map((row) => (
+										<tr key={row.label}>
+											<td>{row.label}</td>
+											<td>{row.us}</td>
+											<td>{row.them}</td>
+										</tr>
+									))}
+								</tbody>
+							</table>
+						</div>
 					</div>
 				</section>
 

@@ -53,39 +53,41 @@ export default function CronJobsView(handle: Handle<CronJobsView.Props>) {
 						}}
 					/>
 				) : (
-					<table mix={[s.table]}>
-						<thead>
-							<tr>
-								<th>Name</th>
-								<th>Schedule</th>
-								<th>Status</th>
-							</tr>
-						</thead>
-						<tbody>
-							{monitors.map((monitor) => (
-								<tr key={monitor.id}>
-									<td>
-										<a
-											href={routes.app.team.cronJobShow.href({
-												team: team.slug,
-												monitorId: monitor.id,
-											})}
-											mix={[s.link]}
-										>
-											{monitor.name}
-										</a>
-										{monitor.enabled_at === null && <Badge tone="neutral">Disabled</Badge>}
-									</td>
-									<td>{CronJobMonitor.describeCronExpression(monitor.cron_expression)}</td>
-									<td>
-										<Badge tone={STATUS_BADGE_TONE[monitor.status] ?? "neutral"}>
-											{monitor.status}
-										</Badge>
-									</td>
+					<div mix={[s.tableScroll]}>
+						<table mix={[s.table]}>
+							<thead>
+								<tr>
+									<th>Name</th>
+									<th>Schedule</th>
+									<th>Status</th>
 								</tr>
-							))}
-						</tbody>
-					</table>
+							</thead>
+							<tbody>
+								{monitors.map((monitor) => (
+									<tr key={monitor.id}>
+										<td>
+											<a
+												href={routes.app.team.cronJobShow.href({
+													team: team.slug,
+													monitorId: monitor.id,
+												})}
+												mix={[s.link]}
+											>
+												{monitor.name}
+											</a>
+											{monitor.enabled_at === null && <Badge tone="neutral">Disabled</Badge>}
+										</td>
+										<td>{CronJobMonitor.describeCronExpression(monitor.cron_expression)}</td>
+										<td>
+											<Badge tone={STATUS_BADGE_TONE[monitor.status] ?? "neutral"}>
+												{monitor.status}
+											</Badge>
+										</td>
+									</tr>
+								))}
+							</tbody>
+						</table>
+					</div>
 				)}
 			</div>
 		);

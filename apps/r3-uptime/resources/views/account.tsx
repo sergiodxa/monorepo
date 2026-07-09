@@ -96,43 +96,45 @@ export default function AccountView(handle: Handle<AccountView.Props>) {
 					</form>
 				</dialog>
 
-				<table mix={[s.table]}>
-					<thead>
-						<tr>
-							<th>Team</th>
-							<th>Role</th>
-							<th></th>
-						</tr>
-					</thead>
-					<tbody>
-						{memberships.map(({ team, role, isOwner }) => {
-							let canLeave = !isOwner && role === "member";
+				<div mix={[s.tableScroll]}>
+					<table mix={[s.table]}>
+						<thead>
+							<tr>
+								<th>Team</th>
+								<th>Role</th>
+								<th></th>
+							</tr>
+						</thead>
+						<tbody>
+							{memberships.map(({ team, role, isOwner }) => {
+								let canLeave = !isOwner && role === "member";
 
-							return (
-								<tr key={team.id}>
-									<td>
-										<a href={routes.app.team.dashboard.href({ team: team.slug })} mix={[s.link]}>
-											{team.name}
-										</a>
-									</td>
-									<td>
-										<Badge tone={isOwner ? "up" : "neutral"}>{isOwner ? "owner" : role}</Badge>
-									</td>
-									<td>
-										{canLeave && (
-											<form method="post" action={routes.accountActions.leaveTeam.href()}>
-												<input type="hidden" name="team_id" value={team.id} />
-												<button type="submit" mix={[s.buttonDanger]}>
-													Leave
-												</button>
-											</form>
-										)}
-									</td>
-								</tr>
-							);
-						})}
-					</tbody>
-				</table>
+								return (
+									<tr key={team.id}>
+										<td>
+											<a href={routes.app.team.dashboard.href({ team: team.slug })} mix={[s.link]}>
+												{team.name}
+											</a>
+										</td>
+										<td>
+											<Badge tone={isOwner ? "up" : "neutral"}>{isOwner ? "owner" : role}</Badge>
+										</td>
+										<td>
+											{canLeave && (
+												<form method="post" action={routes.accountActions.leaveTeam.href()}>
+													<input type="hidden" name="team_id" value={team.id} />
+													<button type="submit" mix={[s.buttonDanger]}>
+														Leave
+													</button>
+												</form>
+											)}
+										</td>
+									</tr>
+								);
+							})}
+						</tbody>
+					</table>
+				</div>
 			</div>
 		);
 	};

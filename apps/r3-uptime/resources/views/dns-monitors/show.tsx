@@ -106,32 +106,36 @@ export default function DnsMonitorShowView(handle: Handle<DnsMonitorShowView.Pro
 				{results.length === 0 ? (
 					<EmptyState message="No checks yet." />
 				) : (
-					<table mix={[s.table]}>
-						<thead>
-							<tr>
-								<th>Checked at</th>
-								<th>Status</th>
-								<th>Value</th>
-								<th>Response time</th>
-							</tr>
-						</thead>
-						<tbody>
-							{results.map((result) => (
-								<tr key={result.id}>
-									<td>{new Date(result.checked_at).toLocaleString()}</td>
-									<td>
-										<Badge tone={STATUS_BADGE_TONE[result.status] ?? "neutral"}>
-											{result.status}
-										</Badge>
-									</td>
-									<td>
-										<code>{result.resolved_value ?? result.error_message ?? "—"}</code>
-									</td>
-									<td>{result.response_time_ms === null ? "—" : `${result.response_time_ms}ms`}</td>
+					<div mix={[s.tableScroll]}>
+						<table mix={[s.table]}>
+							<thead>
+								<tr>
+									<th>Checked at</th>
+									<th>Status</th>
+									<th>Value</th>
+									<th>Response time</th>
 								</tr>
-							))}
-						</tbody>
-					</table>
+							</thead>
+							<tbody>
+								{results.map((result) => (
+									<tr key={result.id}>
+										<td>{new Date(result.checked_at).toLocaleString()}</td>
+										<td>
+											<Badge tone={STATUS_BADGE_TONE[result.status] ?? "neutral"}>
+												{result.status}
+											</Badge>
+										</td>
+										<td>
+											<code>{result.resolved_value ?? result.error_message ?? "—"}</code>
+										</td>
+										<td>
+											{result.response_time_ms === null ? "—" : `${result.response_time_ms}ms`}
+										</td>
+									</tr>
+								))}
+							</tbody>
+						</table>
+					</div>
 				)}
 			</div>
 		);

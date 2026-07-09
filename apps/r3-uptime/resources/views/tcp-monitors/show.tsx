@@ -108,30 +108,34 @@ export default function TcpMonitorShowView(handle: Handle<TcpMonitorShowView.Pro
 				{results.length === 0 ? (
 					<EmptyState message="No checks yet." />
 				) : (
-					<table mix={[s.table]}>
-						<thead>
-							<tr>
-								<th>Checked at</th>
-								<th>Status</th>
-								<th>Response time</th>
-								<th>Error</th>
-							</tr>
-						</thead>
-						<tbody>
-							{results.map((result) => (
-								<tr key={result.id}>
-									<td>{new Date(result.checked_at).toLocaleString()}</td>
-									<td>
-										<Badge tone={STATUS_BADGE_TONE[result.status] ?? "neutral"}>
-											{result.status}
-										</Badge>
-									</td>
-									<td>{result.response_time_ms === null ? "—" : `${result.response_time_ms}ms`}</td>
-									<td>{result.error_message ?? "—"}</td>
+					<div mix={[s.tableScroll]}>
+						<table mix={[s.table]}>
+							<thead>
+								<tr>
+									<th>Checked at</th>
+									<th>Status</th>
+									<th>Response time</th>
+									<th>Error</th>
 								</tr>
-							))}
-						</tbody>
-					</table>
+							</thead>
+							<tbody>
+								{results.map((result) => (
+									<tr key={result.id}>
+										<td>{new Date(result.checked_at).toLocaleString()}</td>
+										<td>
+											<Badge tone={STATUS_BADGE_TONE[result.status] ?? "neutral"}>
+												{result.status}
+											</Badge>
+										</td>
+										<td>
+											{result.response_time_ms === null ? "—" : `${result.response_time_ms}ms`}
+										</td>
+										<td>{result.error_message ?? "—"}</td>
+									</tr>
+								))}
+							</tbody>
+						</table>
+					</div>
 				)}
 			</div>
 		);

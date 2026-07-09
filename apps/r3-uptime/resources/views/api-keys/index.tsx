@@ -54,65 +54,67 @@ export default function ApiKeysView(handle: Handle<ApiKeysView.Props>) {
 				{apiKeys.length === 0 ? (
 					<EmptyState message="No API keys yet." />
 				) : (
-					<table mix={[s.table]}>
-						<thead>
-							<tr>
-								<th>Name</th>
-								<th>Key</th>
-								<th>Scopes</th>
-								<th>Last used</th>
-								<th>Expires</th>
-								<th></th>
-							</tr>
-						</thead>
-						<tbody>
-							{apiKeys.map((apiKey) => {
-								let isExpired = apiKey.expires_at !== null && apiKey.expires_at < Date.now();
+					<div mix={[s.tableScroll]}>
+						<table mix={[s.table]}>
+							<thead>
+								<tr>
+									<th>Name</th>
+									<th>Key</th>
+									<th>Scopes</th>
+									<th>Last used</th>
+									<th>Expires</th>
+									<th></th>
+								</tr>
+							</thead>
+							<tbody>
+								{apiKeys.map((apiKey) => {
+									let isExpired = apiKey.expires_at !== null && apiKey.expires_at < Date.now();
 
-								return (
-									<tr key={apiKey.id}>
-										<td>{apiKey.name}</td>
-										<td>
-											<code>{apiKey.key_prefix}...</code>
-										</td>
-										<td>
-											{apiKey.scopes.map((scope) => (
-												<Badge key={scope} tone="neutral">
-													{scope}
-												</Badge>
-											))}
-										</td>
-										<td>
-											{apiKey.last_used_at
-												? new Date(apiKey.last_used_at).toLocaleString()
-												: "never"}
-										</td>
-										<td>
-											{apiKey.expires_at ? (
-												<Badge tone={isExpired ? "down" : "neutral"}>
-													{new Date(apiKey.expires_at).toLocaleDateString()}
-												</Badge>
-											) : (
-												"never"
-											)}
-										</td>
-										<td>
-											<form
-												method="post"
-												action={routes.teamAdminActions.deleteApiKey.href({ team: team.slug })}
-											>
-												<input type="hidden" name="_method" value="DELETE" />
-												<input type="hidden" name="api_key_id" value={apiKey.id} />
-												<button type="submit" mix={[s.buttonDanger]}>
-													Delete
-												</button>
-											</form>
-										</td>
-									</tr>
-								);
-							})}
-						</tbody>
-					</table>
+									return (
+										<tr key={apiKey.id}>
+											<td>{apiKey.name}</td>
+											<td>
+												<code>{apiKey.key_prefix}...</code>
+											</td>
+											<td>
+												{apiKey.scopes.map((scope) => (
+													<Badge key={scope} tone="neutral">
+														{scope}
+													</Badge>
+												))}
+											</td>
+											<td>
+												{apiKey.last_used_at
+													? new Date(apiKey.last_used_at).toLocaleString()
+													: "never"}
+											</td>
+											<td>
+												{apiKey.expires_at ? (
+													<Badge tone={isExpired ? "down" : "neutral"}>
+														{new Date(apiKey.expires_at).toLocaleDateString()}
+													</Badge>
+												) : (
+													"never"
+												)}
+											</td>
+											<td>
+												<form
+													method="post"
+													action={routes.teamAdminActions.deleteApiKey.href({ team: team.slug })}
+												>
+													<input type="hidden" name="_method" value="DELETE" />
+													<input type="hidden" name="api_key_id" value={apiKey.id} />
+													<button type="submit" mix={[s.buttonDanger]}>
+														Delete
+													</button>
+												</form>
+											</td>
+										</tr>
+									);
+								})}
+							</tbody>
+						</table>
+					</div>
 				)}
 			</div>
 		);

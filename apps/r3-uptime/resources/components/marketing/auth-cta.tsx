@@ -18,6 +18,12 @@ namespace AuthCta {
 		isSignedIn: boolean;
 		startLabel?: string;
 		dashboardLabel?: string;
+		/**
+		 * `"lg"` (default) for hero/final-CTA placements; `"sm"` for the sticky
+		 * header and docs topbar, matching the OLD APP's smaller nav-level CTA
+		 * (`marketingButtonPrimarySmall` vs. `marketingButtonPrimary`).
+		 */
+		size?: "sm" | "lg";
 	}
 }
 
@@ -33,11 +39,13 @@ export default function AuthCta(handle: Handle<AuthCta.Props>) {
 			isSignedIn,
 			startLabel = "Start Monitoring",
 			dashboardLabel = "Go to dashboard",
+			size = "lg",
 		} = handle.props;
+		let buttonMix = size === "sm" ? s.marketingButtonPrimarySmall : s.marketingButtonPrimary;
 
 		if (isSignedIn) {
 			return (
-				<a href={routes.app.index.href()} mix={[s.marketingButtonPrimary]}>
+				<a href={routes.app.index.href()} mix={[buttonMix]}>
 					{dashboardLabel}
 				</a>
 			);
@@ -45,7 +53,7 @@ export default function AuthCta(handle: Handle<AuthCta.Props>) {
 
 		return (
 			<form method="post" action={routes.auth.action.href()}>
-				<button type="submit" mix={[s.marketingButtonPrimary]}>
+				<button type="submit" mix={[buttonMix]}>
 					{startLabel}
 				</button>
 			</form>
