@@ -1,28 +1,14 @@
 /**
  * Tests the account-page actions: creating an additional team, leaving a team (with
- * its owner/admin guard rails), and updating the UI language preference.
- *
- * `@pkg/validate` flattens `FormData`/`URLSearchParams` into a plain object before
- * handing it to the schema, but `remix/data-schema/form-data`'s `f.object()` (which
- * every schema in this app is built with) validates the raw `FormData`/
- * `URLSearchParams` directly and rejects a flattened object with "Expected FormData
- * or URLSearchParams". As shipped, that means `validate(ctx.formData, ...)` always
- * fails — for every action in this app, regardless of whether the submitted data is
- * actually valid. This is a real, reproducible bug in the shared `@pkg/validate`
- * package (flagged separately), not something wrong with these actions. The mock
- * below forwards the form container straight to the schema instead of flattening it,
- * so these tests exercise the actions' real branching instead of always hitting the
- * validation-error path; it can be deleted once the real `@pkg/validate` is fixed.
- *
+ * its owner/admin guard rails), and updating the UI language preference. *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
-import { describe, expect, mock, test } from "bun:test";
+import { describe, expect, test } from "bun:test";
 
 import type { Middleware, RequestHandler } from "remix/fetch-router";
 
-import { failure, success } from "@pkg/result";
 import { ServiceContainer } from "@pkg/service-container";
 import { asyncContext } from "remix/async-context-middleware";
 import { Auth } from "remix/auth-middleware";
@@ -36,27 +22,6 @@ import type { SelectTeam } from "~/database/schema";
 import { createTestDatabase } from "~/app/lib/test/db";
 import { memberships, teams, userPreferences } from "~/database/schema";
 import routes from "~/routes/web";
-
-mock.module("@pkg/validate", () => ({
-	async validate(
-		input: unknown,
-		schema: { "~standard": { validate: (value: unknown) => unknown } },
-	) {
-		let result = (await schema["~standard"].validate(input)) as
-			| { issues: Array<{ message: string }> }
-			| { value: unknown };
-
-		if ("issues" in result && result.issues) {
-			let error = new Error(result.issues[0]?.message ?? "Validation failed") as Error & {
-				issues: Array<{ message: string }>;
-			};
-			error.issues = result.issues;
-			return failure(error);
-		}
-
-		return success((result as { value: unknown }).value);
-	},
-}));
 
 let accountActions = await import("./account");
 let createTeam = accountActions.createTeam as RequestHandler;

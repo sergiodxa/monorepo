@@ -179,7 +179,7 @@ hand-written SQL anywhere in the monorepo. So there's no other consumer to
 regress. The fix sniffs the raw SQL's leading keyword
 (`select`/`with`/`pragma`) to decide whether to take the row-reading `.all()`
 path instead of blindly reading rows for every raw statement, which would
-have broken the *affected-rows* reporting for the raw `DELETE` statements
+have broken the _affected-rows_ reporting for the raw `DELETE` statements
 `app/jobs/clean.ts`/`clean-cron-job-pings.ts` already use correctly today —
 confirmed by tracing `normalizeAffectedRowsForReader`/`-ForRun` to be sure a
 raw `DELETE` isn't accidentally re-routed. Added 3 regression tests to the
@@ -273,6 +273,7 @@ deliberately not reached — lowest priority per the brief's own ordering.
 
 **Three real bugs surfaced by writing real tests, not just inspection** —
 this is exactly the value this backfill was for:
+
 1. The `@pkg/validate` + `f.object()` incompatibility (see above) —
    confirmed and fixed on `main` ahead of merging this branch.
 2. The `@pkg/data-table-d1` raw-SQL row-reading gap (see above) — confirmed
@@ -281,7 +282,7 @@ this is exactly the value this backfill was for:
    the unfixed adapter (pointing at `Monitor.findDue`); after merging,
    un-skip them and confirm they pass against the fixed adapter.
 3. The two `app/lib/test/db.ts` gaps already documented above (JSON-column
-   serialization, raw-statement row-reading in the *test* adapter
+   serialization, raw-statement row-reading in the _test_ adapter
    specifically) — these are test-infrastructure-only, not production bugs,
    and remain unfixed (out of scope, flagged for follow-up).
 

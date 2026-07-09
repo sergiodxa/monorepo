@@ -159,9 +159,7 @@ describe("createD1DatabaseAdapter", () => {
 	test("db.exec() with a raw WITH/CTE query returns rows", async () => {
 		await db.create(users, { id: 1, email: "one@example.com" });
 
-		let result = await db.exec(
-			"WITH ranked AS (SELECT email FROM users) SELECT * FROM ranked",
-		);
+		let result = await db.exec("WITH ranked AS (SELECT email FROM users) SELECT * FROM ranked");
 
 		expect(result.rows).toEqual([{ email: "one@example.com" }]);
 	});

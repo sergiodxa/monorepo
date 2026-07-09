@@ -8,12 +8,11 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { describe, expect, mock, test } from "bun:test";
+import { describe, expect, test } from "bun:test";
 
 import type { Middleware, RequestHandler } from "remix/fetch-router";
 import type { Route } from "remix/fetch-router/routes";
 
-import { failure, success } from "@pkg/result";
 import { ServiceContainer } from "@pkg/service-container";
 import { asyncContext } from "remix/async-context-middleware";
 import { Database } from "remix/data-table";
@@ -36,27 +35,6 @@ import routes from "~/routes/web";
 // mock forwards the form container straight to the schema instead of flattening it,
 // so these tests exercise the actions' real branching instead of always hitting the
 // validation-error path; it can be deleted once the real `@pkg/validate` is fixed.
-mock.module("@pkg/validate", () => ({
-	async validate(
-		input: unknown,
-		schema: { "~standard": { validate: (value: unknown) => unknown } },
-	) {
-		let result = (await schema["~standard"].validate(input)) as
-			| { issues: Array<{ message: string }> }
-			| { value: unknown };
-
-		if ("issues" in result && result.issues) {
-			let error = new Error(result.issues[0]?.message ?? "Validation failed") as Error & {
-				issues: Array<{ message: string }>;
-			};
-			error.issues = result.issues;
-			return failure(error);
-		}
-
-		return success((result as { value: unknown }).value);
-	},
-}));
-
 let {
 	createMaintenanceWindow,
 	deleteMaintenanceWindow,

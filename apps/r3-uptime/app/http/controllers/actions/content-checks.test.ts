@@ -3,27 +3,13 @@
  * row (capped at 10 per monitor, invalid regexes rejected at creation time) and
  * redirects to the monitor's edit page; a successful delete removes the row;
  * validation failure and the monitor-scoped not-found guards leave
- * `monitor_content_checks` untouched.
- *
- * `@pkg/validate` flattens `FormData`/`URLSearchParams` into a plain object before
- * handing it to the schema, but `remix/data-schema/form-data`'s `f.object()` (which
- * every schema in this app is built with) validates the raw `FormData`/
- * `URLSearchParams` directly and rejects a flattened object with "Expected FormData
- * or URLSearchParams". As shipped, that means `validate(ctx.formData, ...)` always
- * fails — for every action in this app, regardless of whether the submitted data is
- * actually valid. This is a real, reproducible bug in the shared `@pkg/validate`
- * package (flagged separately), not something wrong with these actions. The mock
- * below forwards the form container straight to the schema instead of flattening it,
- * so these tests exercise the actions' real branching instead of always hitting the
- * validation-error path; it can be deleted once the real `@pkg/validate` is fixed.
- *
+ * `monitor_content_checks` untouched. *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
 import { describe, expect, mock, test } from "bun:test";
 
-import { failure, success } from "@pkg/result";
 import { ServiceContainer } from "@pkg/service-container";
 import { asyncContext } from "remix/async-context-middleware";
 import { Database } from "remix/data-table";
@@ -40,27 +26,6 @@ import routes from "~/routes/web";
 // `cloudflare:workers` at module load time — stub it so importing the module doesn't
 // crash under `bun test`, matching `app/data/monitor.test.ts`'s established pattern.
 mock.module("cloudflare:workers", () => ({ env: {} }));
-
-mock.module("@pkg/validate", () => ({
-	async validate(
-		input: unknown,
-		schema: { "~standard": { validate: (value: unknown) => unknown } },
-	) {
-		let result = (await schema["~standard"].validate(input)) as
-			| { issues: Array<{ message: string }> }
-			| { value: unknown };
-
-		if ("issues" in result && result.issues) {
-			let error = new Error(result.issues[0]?.message ?? "Validation failed") as Error & {
-				issues: Array<{ message: string }>;
-			};
-			error.issues = result.issues;
-			return failure(error);
-		}
-
-		return success((result as { value: unknown }).value);
-	},
-}));
 
 let { createContentCheck, deleteContentCheck } = await import("./content-checks");
 let { default: Monitor } = await import("~/app/data/monitor");

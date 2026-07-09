@@ -213,16 +213,7 @@ describe("Monitor.ping", () => {
 });
 
 describe("Monitor.findDue", () => {
-	// SKIPPED (not deleted): `Monitor.findDue` reads its result via `db.exec(sql)`
-	// (a `kind: "raw"` operation). Both the production `@pkg/data-table-d1` adapter
-	// and this test's in-memory mirror categorize every `"raw"` operation as a write
-	// and never call the row-reading path, so `db.exec` never returns `.rows` for a
-	// raw SELECT — `findDue` always returns `[]` in production today, regardless of
-	// what's actually due. Flagged as a critical bug (task_05cb6fee's sibling finding,
-	// see the session's flagged tasks) — every scheduled HTTP-monitor check depends on
-	// this query. Left un-skipped: `findDue`'s "not due" branches below, which only
-	// coincidentally pass while this is broken since they also expect `[]`.
-	test.skip("a monitor with no completed result is due", async () => {
+	test("a monitor with no completed result is due", async () => {
 		let { db } = createTestDatabase();
 		let team = await createTeam(db);
 		let monitor = await Monitor.create(db, team.id, "author-1", {
@@ -255,9 +246,7 @@ describe("Monitor.findDue", () => {
 		expect(await Monitor.findDue(db, scheduledAt)).toEqual([]);
 	});
 
-	// SKIPPED: same `db.exec`/`kind: "raw"` bug as above — see the comment on the
-	// first `test.skip` in this block.
-	test.skip("a monitor whose interval has elapsed since its last completed result is due", async () => {
+	test("a monitor whose interval has elapsed since its last completed result is due", async () => {
 		let { db } = createTestDatabase();
 		let team = await createTeam(db);
 		let scheduledAt = Date.now();
@@ -307,9 +296,7 @@ describe("Monitor.findDue", () => {
 		expect(await Monitor.findDue(db, scheduledAt)).toEqual([]);
 	});
 
-	// SKIPPED: same `db.exec`/`kind: "raw"` bug as above — see the comment on the
-	// first `test.skip` in this block.
-	test.skip("a pending (not yet completed) result doesn't count as a completed check", async () => {
+	test("a pending (not yet completed) result doesn't count as a completed check", async () => {
 		let { db } = createTestDatabase();
 		let team = await createTeam(db);
 		let scheduledAt = Date.now();
