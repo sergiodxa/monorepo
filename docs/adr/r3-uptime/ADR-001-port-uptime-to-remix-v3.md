@@ -73,14 +73,14 @@ Cron triggers (all seven must be configured on the NEW APP, and the `scheduled` 
 
 Secrets / vars (names from `apps/uptime/.dev.vars` and `env.*` usage in the OLD APP; all are needed by the NEW APP too):
 
-| Name                                                  | Used for                                                                    |
-| ----------------------------------------------------- | --------------------------------------------------------------------------- |
-| `CLIENT_ID`, `CLIENT_SECRET`                          | OAuth client credentials for auth.sergiodxa.com                             |
-| `POLAR_ACCESS_TOKEN`                                  | Polar billing API                                                           |
-| `RESEND_API_TOKEN`                                    | Sending email (alerts, invites)                                             |
+| Name                                                  | Used for                                                                                                                                                                                                                              |
+| ----------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `CLIENT_ID`, `CLIENT_SECRET`                          | OAuth client credentials for auth.sergiodxa.com                                                                                                                                                                                       |
+| `POLAR_ACCESS_TOKEN`                                  | Polar billing API                                                                                                                                                                                                                     |
+| `RESEND_API_TOKEN`                                    | Sending email (alerts, invites)                                                                                                                                                                                                       |
 | `COOKIE_SESSION_SECRET`                               | Signing the session cookie — a plain secret (`env.COOKIE_SESSION_SECRET` as a string), matching the OLD APP's own `apps/uptime/app/cookies.ts` and `apps/auth-saas`; set via `.dev.vars` locally, `wrangler secret put` in production |
-| `UPTIME_CRON_API_KEY`                                 | Self-monitoring: background jobs ping the app's own cron-job monitor        |
-| `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_ANALYTICS_TOKEN` | Querying the Analytics Engine SQL API                                       |
+| `UPTIME_CRON_API_KEY`                                 | Self-monitoring: background jobs ping the app's own cron-job monitor                                                                                                                                                                  |
+| `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_ANALYTICS_TOKEN` | Querying the Analytics Engine SQL API                                                                                                                                                                                                 |
 
 ### Background Pipeline (must be preserved exactly)
 
