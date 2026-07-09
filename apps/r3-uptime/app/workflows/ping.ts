@@ -12,13 +12,14 @@
  */
 
 import type { WorkflowEvent, WorkflowStep } from "cloudflare:workers";
+import type { Database } from "remix/data-table";
 
 import { createD1DatabaseAdapter } from "@pkg/data-table-d1";
 import { BatchedLogger } from "@pkg/logger";
 import { isFailure } from "@pkg/result";
 import { getServiceContainer } from "@pkg/service-container";
 import { env, WorkflowEntrypoint } from "cloudflare:workers";
-import { createDatabase, type Database } from "remix/data-table";
+import { createDatabase } from "remix/data-table";
 import { Resend } from "resend";
 
 import ContentCheck from "~/app/data/content-check";

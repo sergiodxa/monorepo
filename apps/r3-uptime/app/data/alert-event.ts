@@ -7,7 +7,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { and, eq, gte, type Database } from "remix/data-table";
+import type { Database } from "remix/data-table";
+
+import { and, eq, gte } from "remix/data-table";
 
 import type { AlertEventSnapshot, InsertAlertEvent, SelectAlertEvent } from "~/database/schema";
 

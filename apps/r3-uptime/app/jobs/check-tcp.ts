@@ -14,9 +14,11 @@ import { getServiceContainer } from "@pkg/service-container";
 import { Database } from "remix/data-table";
 import { Resend } from "resend";
 
+import type { TcpCheckStatus } from "~/app/services/tcp-check";
+
 import TcpMonitor from "~/app/data/tcp-monitor";
 import { notifyTcpResult } from "~/app/services/alerts";
-import { checkTcpConnection, type TcpCheckStatus } from "~/app/services/tcp-check";
+import { checkTcpConnection } from "~/app/services/tcp-check";
 
 export class CheckTcpJob extends Job {
 	async perform(): Promise<void> {

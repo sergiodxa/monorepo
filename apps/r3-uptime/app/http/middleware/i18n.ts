@@ -15,6 +15,9 @@ import type { Middleware } from "remix/fetch-router";
 import { getServiceContainer } from "@pkg/service-container";
 import { Database } from "remix/data-table";
 
+import type { Translate } from "~/app/services/translator";
+import type { SupportedLanguage } from "~/database/schema";
+
 import { language as languageCookie } from "~/app/http/cookies";
 import { getViewer } from "~/app/http/middleware/auth";
 import de from "~/app/locales/de";
@@ -23,8 +26,8 @@ import es from "~/app/locales/es";
 import fr from "~/app/locales/fr";
 import it from "~/app/locales/it";
 import ja from "~/app/locales/ja";
-import { createTranslator, type Translate } from "~/app/services/translator";
-import { supportedLanguages, userPreferences, type SupportedLanguage } from "~/database/schema";
+import { createTranslator } from "~/app/services/translator";
+import { supportedLanguages, userPreferences } from "~/database/schema";
 
 declare module "remix/fetch-router" {
 	interface RequestContext {

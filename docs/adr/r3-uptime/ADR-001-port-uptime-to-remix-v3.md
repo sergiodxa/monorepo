@@ -78,7 +78,7 @@ Secrets / vars (names from `apps/uptime/.dev.vars` and `env.*` usage in the OLD 
 | `CLIENT_ID`, `CLIENT_SECRET`                          | OAuth client credentials for auth.sergiodxa.com                             |
 | `POLAR_ACCESS_TOKEN`                                  | Polar billing API                                                           |
 | `RESEND_API_TOKEN`                                    | Sending email (alerts, invites)                                             |
-| `COOKIE_SESSION_SECRET`                               | Signing the session cookie (already bound in the NEW APP via secrets store) |
+| `COOKIE_SESSION_SECRET`                               | Signing the session cookie — a plain secret (`env.COOKIE_SESSION_SECRET` as a string), matching the OLD APP's own `apps/uptime/app/cookies.ts` and `apps/auth-saas`; set via `.dev.vars` locally, `wrangler secret put` in production |
 | `UPTIME_CRON_API_KEY`                                 | Self-monitoring: background jobs ping the app's own cron-job monitor        |
 | `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_ANALYTICS_TOKEN` | Querying the Analytics Engine SQL API                                       |
 
@@ -828,6 +828,8 @@ Would inherit domain/queue/DO automatically. **Rejected because**: it makes cuto
 - Repo rules: root `AGENTS.md`, `apps/r3-uptime/AGENTS.md`, `docs/guides/{package-documentation,app-documentation,adr-writing}.md`
 
 ## Current Progress
+
+**Correction (2026-07-09):** Phase 0 bound `COOKIE_SESSION_SECRET` via `secrets_store_secrets`, which has no local value and blocked every "Not yet done" live-verification note below across Phases 1–5. This was a mistake, not a deliberate choice — neither the OLD APP (`apps/uptime/app/cookies.ts` reads `env.COOKIE_SESSION_SECRET` directly) nor `apps/auth-saas` use Secrets Store for their session secret, and `.dev.vars` already had the right value in plain-var form the whole time. Fixed: it's now a plain secret (see the secrets table above). Live login and every phase's manual verification should actually be possible now — nothing below has been re-verified live yet, so treat each phase's "Not yet done" note as still open until someone does.
 
 - [x] Phase 0: Foundation repair
 - [ ] Phase 1: App skeleton — auth, teams, layout — code complete (container, session/auth/i18n/cop middleware, `requireUser`/`requireTeam`/`requireRole`, `/auth`+`/logout`+`returnTo` cookie, `/app`+`/app/:team`+`/app/:team/dashboard`+`/healthcheck`, app shell + `resources/styles.ts`, locales copied); typecheck/lint/test/build/`wrangler deploy --dry-run` all green. **Not yet done:** a live click-through login against auth.sergiodxa.com — this sandbox has no real `CLIENT_ID`/`CLIENT_SECRET` for a registered localhost redirect URI, and `COOKIE_SESSION_SECRET`'s `secrets_store_secrets` binding has no local value here (`wrangler secrets-store secret create` needs interactive confirmation this session couldn't give). Whoever picks this up next should run `bun run --cwd apps/r3-uptime dev`, sign in for real, confirm the empty dashboard shell renders, and sign out — then check this box.

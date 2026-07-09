@@ -15,16 +15,19 @@ import { Database } from "remix/data-table";
 import { createAction } from "remix/fetch-router";
 import { Session } from "remix/session";
 
+import type { MonitorHealth } from "~/app/services/analytics";
+import type { DashboardTab } from "~/resources/views/dashboard";
+
 import CronJobMonitor from "~/app/data/cron-job";
 import DnsMonitor from "~/app/data/dns-monitor";
 import Monitor from "~/app/data/monitor";
 import TcpMonitor from "~/app/data/tcp-monitor";
 import { dashboardTab as dashboardTabCookie } from "~/app/http/cookies";
 import { getViewer } from "~/app/http/middleware/auth";
-import { getTeamHttpSummaries, type MonitorHealth } from "~/app/services/analytics";
+import { getTeamHttpSummaries } from "~/app/services/analytics";
 import AppShell from "~/resources/layouts/app-shell";
 import DocumentLayout from "~/resources/layouts/document";
-import DashboardView, { type DashboardTab } from "~/resources/views/dashboard";
+import DashboardView from "~/resources/views/dashboard";
 import routes from "~/routes/web";
 
 const DASHBOARD_TABS: readonly DashboardTab[] = ["http", "dns", "tcp", "cron-jobs"];

@@ -9,8 +9,10 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { Database } from "remix/data-table";
+
 import { CronExpressionParser } from "cron-parser";
-import { and, inList, notNull, type Database } from "remix/data-table";
+import { and, inList, notNull } from "remix/data-table";
 
 import type { CronJobStatus, InsertCronJobMonitor } from "~/database/schema";
 

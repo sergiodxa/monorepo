@@ -13,9 +13,11 @@ import { getContext } from "remix/async-context-middleware";
 import { Database } from "remix/data-table";
 import { createAction } from "remix/fetch-router";
 
+import type { MonitorHealth } from "~/app/services/analytics";
+
 import Monitor from "~/app/data/monitor";
 import { getViewer } from "~/app/http/middleware/auth";
-import { getTeamHttpSummaries, type MonitorHealth } from "~/app/services/analytics";
+import { getTeamHttpSummaries } from "~/app/services/analytics";
 import AppShell from "~/resources/layouts/app-shell";
 import DocumentLayout from "~/resources/layouts/document";
 import HttpMonitorsView from "~/resources/views/monitors/index";

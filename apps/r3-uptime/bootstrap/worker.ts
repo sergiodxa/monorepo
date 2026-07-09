@@ -62,15 +62,14 @@ function isSecureHost(request: Request): boolean {
 
 export default {
 	/**
-	 * Handles incoming Worker requests by resolving secrets, opening a container
-	 * scope, and forwarding the request to the app router.
+	 * Handles incoming Worker requests by opening a container scope and forwarding the
+	 * request to the app router.
 	 */
 	async fetch(request: Request) {
 		return await container.scope(async () => {
-			let cookieSecret = await env.COOKIE_SESSION_SECRET.get();
 			let app = application({
 				kv: env.KV,
-				cookieSecret,
+				cookieSecret: env.COOKIE_SESSION_SECRET,
 				secure: isSecureHost(request),
 			});
 			return await app.fetch(request);

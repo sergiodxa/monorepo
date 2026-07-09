@@ -12,7 +12,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { and, eq, isNull, or, type Database } from "remix/data-table";
+import type { Database } from "remix/data-table";
+
+import { and, eq, isNull, or } from "remix/data-table";
 
 import type { InsertMaintenanceWindow, SelectMaintenanceWindow } from "~/database/schema";
 

@@ -10,7 +10,9 @@
 
 import type { Database } from "remix/data-table";
 
-import { monitorContentChecks, type SelectMonitorContentCheck } from "~/database/schema";
+import type { SelectMonitorContentCheck } from "~/database/schema";
+
+import { monitorContentChecks } from "~/database/schema";
 
 export default class ContentCheck {
 	/** Lists every content check for a monitor. */

@@ -9,7 +9,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { and, eq, type Database } from "remix/data-table";
+import type { Database } from "remix/data-table";
+
+import { and, eq } from "remix/data-table";
 
 import { monitorDailyStats } from "~/database/schema";
 

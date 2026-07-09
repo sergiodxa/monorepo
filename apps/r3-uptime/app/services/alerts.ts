@@ -19,7 +19,9 @@
 import type { Database } from "remix/data-table";
 import type { Resend } from "resend";
 
+import type { MaintenanceMonitorKind } from "~/app/data/maintenance-window";
 import type { DnsCheckResult, DnsCheckStatus } from "~/app/services/dns-check";
+import type { SslStatus } from "~/app/services/ssl-info";
 import type { TcpCheckResult, TcpCheckStatus } from "~/app/services/tcp-check";
 import type {
 	AlertEventSnapshot,
@@ -34,8 +36,8 @@ import type {
 
 import Alert from "~/app/data/alert";
 import AlertEvent from "~/app/data/alert-event";
-import MaintenanceWindow, { type MaintenanceMonitorKind } from "~/app/data/maintenance-window";
-import { shouldAlertOnSslStatus, type SslStatus } from "~/app/services/ssl-info";
+import MaintenanceWindow from "~/app/data/maintenance-window";
+import { shouldAlertOnSslStatus } from "~/app/services/ssl-info";
 import routes from "~/routes/web";
 
 const EMAIL_FROM = "Uptime <no-reply@uptime.sergiodxa.com>";

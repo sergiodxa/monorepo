@@ -18,6 +18,8 @@ import { Database } from "remix/data-table";
 import { Session } from "remix/session";
 import { Resend } from "resend";
 
+import type { DnsCheckStatus, DnsRecordType } from "~/app/services/dns-check";
+
 import DnsMonitor, { MAX_DNS_MONITORS_PER_TEAM } from "~/app/data/dns-monitor";
 import {
 	CreateDnsMonitorSchema,
@@ -25,7 +27,7 @@ import {
 	UpdateDnsMonitorSchema,
 } from "~/app/http/validators/dns-monitor";
 import { notifyDnsResult } from "~/app/services/alerts";
-import { checkDns, type DnsCheckStatus, type DnsRecordType } from "~/app/services/dns-check";
+import { checkDns } from "~/app/services/dns-check";
 import routes from "~/routes/web";
 
 /** POST /actions/:team/create-dns-monitor */

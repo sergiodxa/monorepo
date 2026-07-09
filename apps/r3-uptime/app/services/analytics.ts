@@ -12,7 +12,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { failure, isFailure, success, type Result } from "@pkg/result";
+import type { Result } from "@pkg/result";
+
+import { failure, isFailure, success } from "@pkg/result";
 import { env } from "cloudflare:workers";
 
 /** Minimum KV cache TTL, in seconds. */

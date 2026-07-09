@@ -18,6 +18,8 @@ import { Database } from "remix/data-table";
 import { Session } from "remix/session";
 import { Resend } from "resend";
 
+import type { TcpCheckStatus } from "~/app/services/tcp-check";
+
 import TcpMonitor from "~/app/data/tcp-monitor";
 import {
 	CreateTcpMonitorSchema,
@@ -25,7 +27,7 @@ import {
 	UpdateTcpMonitorSchema,
 } from "~/app/http/validators/tcp-monitor";
 import { notifyTcpResult } from "~/app/services/alerts";
-import { checkTcpConnection, type TcpCheckStatus } from "~/app/services/tcp-check";
+import { checkTcpConnection } from "~/app/services/tcp-check";
 import routes from "~/routes/web";
 
 /** POST /actions/:team/create-tcp-monitor */

@@ -14,9 +14,11 @@ import { getServiceContainer } from "@pkg/service-container";
 import { Database } from "remix/data-table";
 import { Resend } from "resend";
 
+import type { DnsCheckStatus, DnsRecordType } from "~/app/services/dns-check";
+
 import DnsMonitor from "~/app/data/dns-monitor";
 import { notifyDnsResult } from "~/app/services/alerts";
-import { checkDns, type DnsCheckStatus, type DnsRecordType } from "~/app/services/dns-check";
+import { checkDns } from "~/app/services/dns-check";
 
 export class CheckDnsJob extends Job {
 	async perform(): Promise<void> {
