@@ -1,6 +1,8 @@
 import { describe, expect, test } from "bun:test";
 
 import { isSuccess, isFailure } from "@pkg/result";
+import * as s from "remix/data-schema";
+import * as f from "remix/data-schema/form-data";
 import { z } from "zod";
 
 import { validate, ValidationError } from "./index";
@@ -526,6 +528,91 @@ describe("validate", () => {
 			if (isSuccess(result)) {
 				expect(result.data.name).toBe("Alice");
 				expect(result.data.age).toBeUndefined();
+			}
+		});
+	});
+
+	// `remix/data-schema/form-data`'s `object()` validates the raw `FormData`/
+	// `URLSearchParams` source directly (it reads fields via `.get()`/`.getAll()`)
+	// instead of a flattened plain object, unlike the Zod/core-`remix/data-schema`
+	// schemas used everywhere else in this file. `validate()` must detect this and
+	// retry with the raw source instead of always failing.
+	describe("with remix/data-schema/form-data schemas", () => {
+		let formSchema = f.object({
+			name: f.field(s.string()),
+			email: f.field(s.string()),
+		});
+
+		test("validates successfully with valid FormData", async () => {
+			let formData = new FormData();
+			formData.append("name", "Alice");
+			formData.append("email", "alice@example.com");
+
+			let result = await validate(formData, formSchema);
+
+			expect(isSuccess(result)).toBe(true);
+			if (isSuccess(result)) {
+				expect(result.data.name).toBe("Alice");
+				expect(result.data.email).toBe("alice@example.com");
+			}
+		});
+
+		test("validates successfully with valid URLSearchParams", async () => {
+			let params = new URLSearchParams();
+			params.append("name", "Bob");
+			params.append("email", "bob@example.com");
+
+			let result = await validate(params, formSchema);
+
+			expect(isSuccess(result)).toBe(true);
+			if (isSuccess(result)) {
+				expect(result.data.name).toBe("Bob");
+				expect(result.data.email).toBe("bob@example.com");
+			}
+		});
+
+		test("returns the field-level failure, not the raw-source rejection, for missing data", async () => {
+			let formData = new FormData();
+			formData.append("name", "Alice");
+			// `email` is missing entirely.
+
+			let result = await validate(formData, formSchema);
+
+			expect(isFailure(result)).toBe(true);
+			if (isFailure(result)) {
+				expect(
+					result.error.issues.some(
+						(issue) => issue.message === "Expected FormData or URLSearchParams",
+					),
+				).toBe(false);
+			}
+		});
+
+		test("does not silently succeed with empty data", async () => {
+			let result = await validate(new FormData(), formSchema);
+
+			expect(isFailure(result)).toBe(true);
+		});
+	});
+
+	// Confirms the fix above didn't change behavior for schemas that already
+	// succeed against the flattened plain object — this is core `remix/data-schema`
+	// (not `form-data`), which, like Zod, expects a plain object rather than the raw
+	// `FormData`/`URLSearchParams` source.
+	describe("with core remix/data-schema (non-form-data) schemas", () => {
+		let coreSchema = s.object({ name: s.string(), email: s.string() });
+
+		test("validates successfully with valid FormData", async () => {
+			let formData = new FormData();
+			formData.append("name", "Carol");
+			formData.append("email", "carol@example.com");
+
+			let result = await validate(formData, coreSchema);
+
+			expect(isSuccess(result)).toBe(true);
+			if (isSuccess(result)) {
+				expect(result.data.name).toBe("Carol");
+				expect(result.data.email).toBe("carol@example.com");
 			}
 		});
 	});

@@ -11,6 +11,7 @@ import { redirect } from "@pkg/http/response";
 import { badRequest, notFound } from "@pkg/http/response/html";
 import { isFailure } from "@pkg/result";
 import { getServiceContainer } from "@pkg/service-container";
+import { validate } from "@pkg/validate";
 import { env, waitUntil } from "cloudflare:workers";
 import { Database } from "remix/data-table";
 import { createAction } from "remix/fetch-router";
@@ -22,12 +23,11 @@ import {
 	RemoveDomainSchema,
 	RetryDomainVerificationSchema,
 } from "~/app/http/validators/team-domain";
-import { validateForm } from "~/app/lib/validate-form";
 import routes from "~/routes/web";
 
 /** POST /actions/:team/add-domain */
 export const addDomain = createAction(routes.teamAdminActions.addDomain, async (ctx) => {
-	let result = await validateForm(ctx.formData, AddDomainSchema);
+	let result = await validate(ctx.formData, AddDomainSchema);
 	let session = ctx.get(Session);
 
 	if (isFailure(result)) {
@@ -59,7 +59,7 @@ export const addDomain = createAction(routes.teamAdminActions.addDomain, async (
 
 /** DELETE /actions/:team/remove-domain */
 export const removeDomain = createAction(routes.teamAdminActions.removeDomain, async (ctx) => {
-	let result = await validateForm(ctx.formData, RemoveDomainSchema);
+	let result = await validate(ctx.formData, RemoveDomainSchema);
 	let session = ctx.get(Session);
 
 	if (isFailure(result)) {
@@ -84,7 +84,7 @@ export const removeDomain = createAction(routes.teamAdminActions.removeDomain, a
 export const retryDomainVerification = createAction(
 	routes.teamAdminActions.retryDomainVerification,
 	async (ctx) => {
-		let result = await validateForm(ctx.formData, RetryDomainVerificationSchema);
+		let result = await validate(ctx.formData, RetryDomainVerificationSchema);
 		let session = ctx.get(Session);
 
 		if (isFailure(result)) {

@@ -13,18 +13,18 @@ import { redirect } from "@pkg/http/response";
 import { badRequest, notFound } from "@pkg/http/response/html";
 import { isFailure } from "@pkg/result";
 import { getServiceContainer } from "@pkg/service-container";
+import { validate } from "@pkg/validate";
 import { Database } from "remix/data-table";
 import { createAction } from "remix/fetch-router";
 import { Session } from "remix/session";
 
 import ApiKey, { MAX_API_KEYS_PER_TEAM } from "~/app/data/api-key";
 import { CreateApiKeySchema, DeleteApiKeySchema } from "~/app/http/validators/api-key";
-import { validateForm } from "~/app/lib/validate-form";
 import routes from "~/routes/web";
 
 /** POST /actions/:team/create-api-key */
 export const createApiKey = createAction(routes.teamAdminActions.createApiKey, async (ctx) => {
-	let result = await validateForm(ctx.formData, CreateApiKeySchema);
+	let result = await validate(ctx.formData, CreateApiKeySchema);
 	let session = ctx.get(Session);
 
 	if (isFailure(result)) {
@@ -52,7 +52,7 @@ export const createApiKey = createAction(routes.teamAdminActions.createApiKey, a
 
 /** DELETE /actions/:team/delete-api-key */
 export const deleteApiKey = createAction(routes.teamAdminActions.deleteApiKey, async (ctx) => {
-	let result = await validateForm(ctx.formData, DeleteApiKeySchema);
+	let result = await validate(ctx.formData, DeleteApiKeySchema);
 	let session = ctx.get(Session);
 
 	if (isFailure(result)) {

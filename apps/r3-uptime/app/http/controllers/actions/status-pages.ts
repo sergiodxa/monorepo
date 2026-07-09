@@ -11,6 +11,7 @@ import { redirect } from "@pkg/http/response";
 import { notFound } from "@pkg/http/response/html";
 import { isFailure } from "@pkg/result";
 import { getServiceContainer } from "@pkg/service-container";
+import { validate } from "@pkg/validate";
 import { Database } from "remix/data-table";
 import { createAction } from "remix/fetch-router";
 import { Session } from "remix/session";
@@ -21,12 +22,11 @@ import {
 	StatusPageIdSchema,
 	UpdateStatusPageSchema,
 } from "~/app/http/validators/status-page";
-import { validateForm } from "~/app/lib/validate-form";
 import routes from "~/routes/web";
 
 /** POST /actions/:team/create-status-page */
 export const createStatusPage = createAction(routes.actions.createStatusPage, async (ctx) => {
-	let result = await validateForm(ctx.formData, CreateStatusPageSchema);
+	let result = await validate(ctx.formData, CreateStatusPageSchema);
 	let session = ctx.get(Session);
 
 	if (isFailure(result)) {
@@ -82,7 +82,7 @@ export const createStatusPage = createAction(routes.actions.createStatusPage, as
 
 /** POST /actions/:team/update-status-page */
 export const updateStatusPage = createAction(routes.actions.updateStatusPage, async (ctx) => {
-	let result = await validateForm(ctx.formData, UpdateStatusPageSchema);
+	let result = await validate(ctx.formData, UpdateStatusPageSchema);
 	let session = ctx.get(Session);
 
 	if (isFailure(result)) {
@@ -144,7 +144,7 @@ export const updateStatusPage = createAction(routes.actions.updateStatusPage, as
 
 /** DELETE /actions/:team/delete-status-page */
 export const deleteStatusPage = createAction(routes.actions.deleteStatusPage, async (ctx) => {
-	let result = await validateForm(ctx.formData, StatusPageIdSchema);
+	let result = await validate(ctx.formData, StatusPageIdSchema);
 	let session = ctx.get(Session);
 
 	if (isFailure(result)) {

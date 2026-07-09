@@ -11,6 +11,7 @@ import { redirect } from "@pkg/http/response";
 import { notFound } from "@pkg/http/response/html";
 import { isFailure } from "@pkg/result";
 import { getServiceContainer } from "@pkg/service-container";
+import { validate } from "@pkg/validate";
 import * as s from "remix/data-schema";
 import * as f from "remix/data-schema/form-data";
 import { Database } from "remix/data-table";
@@ -20,14 +21,13 @@ import { Session } from "remix/session";
 import Monitor from "~/app/data/monitor";
 import { getViewer } from "~/app/http/middleware/auth";
 import { CreateMonitorSchema, UpdateMonitorSchema } from "~/app/http/validators/monitor";
-import { validateForm } from "~/app/lib/validate-form";
 import routes from "~/routes/web";
 
 const MonitorIdSchema = f.object({ monitor_id: f.field(s.string()) });
 
 /** POST /actions/:team/create-monitor */
 export const createMonitor = createAction(routes.actions.createMonitor, async (ctx) => {
-	let result = await validateForm(ctx.formData, CreateMonitorSchema);
+	let result = await validate(ctx.formData, CreateMonitorSchema);
 	let session = ctx.get(Session);
 	let viewer = getViewer();
 	if (!viewer) throw new Error("requireUser must run before this handler");
@@ -55,7 +55,7 @@ export const createMonitor = createAction(routes.actions.createMonitor, async (c
 
 /** POST /actions/:team/update-monitor */
 export const updateMonitor = createAction(routes.actions.updateMonitor, async (ctx) => {
-	let result = await validateForm(ctx.formData, UpdateMonitorSchema);
+	let result = await validate(ctx.formData, UpdateMonitorSchema);
 	let session = ctx.get(Session);
 
 	if (isFailure(result)) {
@@ -89,7 +89,7 @@ export const updateMonitor = createAction(routes.actions.updateMonitor, async (c
 
 /** DELETE /actions/:team/delete-monitor */
 export const deleteMonitor = createAction(routes.actions.deleteMonitor, async (ctx) => {
-	let result = await validateForm(ctx.formData, MonitorIdSchema);
+	let result = await validate(ctx.formData, MonitorIdSchema);
 	let session = ctx.get(Session);
 
 	if (isFailure(result)) {
@@ -116,7 +116,7 @@ export const deleteMonitor = createAction(routes.actions.deleteMonitor, async (c
 
 /** POST /actions/:team/play-monitor — triggers an on-demand check. */
 export const playMonitor = createAction(routes.actions.playMonitor, async (ctx) => {
-	let result = await validateForm(ctx.formData, MonitorIdSchema);
+	let result = await validate(ctx.formData, MonitorIdSchema);
 	let session = ctx.get(Session);
 
 	if (isFailure(result)) {

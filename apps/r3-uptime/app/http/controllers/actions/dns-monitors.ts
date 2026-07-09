@@ -11,6 +11,7 @@ import { redirect } from "@pkg/http/response";
 import { notFound, unprocessableEntity } from "@pkg/http/response/html";
 import { isFailure } from "@pkg/result";
 import { getServiceContainer } from "@pkg/service-container";
+import { validate } from "@pkg/validate";
 import { Database } from "remix/data-table";
 import { createAction } from "remix/fetch-router";
 import { Session } from "remix/session";
@@ -24,14 +25,13 @@ import {
 	DnsMonitorIdSchema,
 	UpdateDnsMonitorSchema,
 } from "~/app/http/validators/dns-monitor";
-import { validateForm } from "~/app/lib/validate-form";
 import { notifyDnsResult } from "~/app/services/alerts";
 import { checkDns } from "~/app/services/dns-check";
 import routes from "~/routes/web";
 
 /** POST /actions/:team/create-dns-monitor */
 export const createDnsMonitor = createAction(routes.actions.createDnsMonitor, async (ctx) => {
-	let result = await validateForm(ctx.formData, CreateDnsMonitorSchema);
+	let result = await validate(ctx.formData, CreateDnsMonitorSchema);
 	let session = ctx.get(Session);
 
 	if (isFailure(result)) {
@@ -68,7 +68,7 @@ export const createDnsMonitor = createAction(routes.actions.createDnsMonitor, as
 
 /** POST /actions/:team/update-dns-monitor */
 export const updateDnsMonitor = createAction(routes.actions.updateDnsMonitor, async (ctx) => {
-	let result = await validateForm(ctx.formData, UpdateDnsMonitorSchema);
+	let result = await validate(ctx.formData, UpdateDnsMonitorSchema);
 	let session = ctx.get(Session);
 
 	if (isFailure(result)) {
@@ -101,7 +101,7 @@ export const updateDnsMonitor = createAction(routes.actions.updateDnsMonitor, as
 
 /** DELETE /actions/:team/delete-dns-monitor */
 export const deleteDnsMonitor = createAction(routes.actions.deleteDnsMonitor, async (ctx) => {
-	let result = await validateForm(ctx.formData, DnsMonitorIdSchema);
+	let result = await validate(ctx.formData, DnsMonitorIdSchema);
 	let session = ctx.get(Session);
 
 	if (isFailure(result)) {
@@ -127,7 +127,7 @@ export const deleteDnsMonitor = createAction(routes.actions.deleteDnsMonitor, as
 
 /** POST /actions/:team/check-dns-monitor — triggers an immediate on-demand check. */
 export const checkDnsMonitor = createAction(routes.actions.checkDnsMonitor, async (ctx) => {
-	let result = await validateForm(ctx.formData, DnsMonitorIdSchema);
+	let result = await validate(ctx.formData, DnsMonitorIdSchema);
 	let session = ctx.get(Session);
 
 	if (isFailure(result)) {

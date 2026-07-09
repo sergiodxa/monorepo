@@ -11,6 +11,7 @@ import { redirect } from "@pkg/http/response";
 import { notFound } from "@pkg/http/response/html";
 import { isFailure } from "@pkg/result";
 import { getServiceContainer } from "@pkg/service-container";
+import { validate } from "@pkg/validate";
 import { Database } from "remix/data-table";
 import { createAction } from "remix/fetch-router";
 import { Session } from "remix/session";
@@ -21,7 +22,6 @@ import {
 	CronJobIdSchema,
 	UpdateCronJobSchema,
 } from "~/app/http/validators/cron-job";
-import { validateForm } from "~/app/lib/validate-form";
 import routes from "~/routes/web";
 
 const INVALID_CRON_MESSAGE = "Please enter a valid cron expression.";
@@ -29,7 +29,7 @@ const GENERIC_ERROR_MESSAGE = "Please check the cron job details and try again."
 
 /** POST /actions/:team/create-cron-job */
 export const createCronJob = createAction(routes.actions.createCronJob, async (ctx) => {
-	let result = await validateForm(ctx.formData, CreateCronJobSchema);
+	let result = await validate(ctx.formData, CreateCronJobSchema);
 	let session = ctx.get(Session);
 
 	if (isFailure(result)) {
@@ -66,7 +66,7 @@ export const createCronJob = createAction(routes.actions.createCronJob, async (c
 
 /** POST /actions/:team/update-cron-job */
 export const updateCronJob = createAction(routes.actions.updateCronJob, async (ctx) => {
-	let result = await validateForm(ctx.formData, UpdateCronJobSchema);
+	let result = await validate(ctx.formData, UpdateCronJobSchema);
 	let session = ctx.get(Session);
 
 	if (isFailure(result)) {
@@ -117,7 +117,7 @@ export const updateCronJob = createAction(routes.actions.updateCronJob, async (c
 
 /** DELETE /actions/:team/delete-cron-job */
 export const deleteCronJob = createAction(routes.actions.deleteCronJob, async (ctx) => {
-	let result = await validateForm(ctx.formData, CronJobIdSchema);
+	let result = await validate(ctx.formData, CronJobIdSchema);
 	let session = ctx.get(Session);
 
 	if (isFailure(result)) {

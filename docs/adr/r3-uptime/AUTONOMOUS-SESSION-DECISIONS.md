@@ -14,6 +14,7 @@ confirm or override when they're back.
 ## Summary — read this first
 
 Everything requested is done and merged to `main`, nothing pushed:
+
 - Phases 8 (API v1), 9 (marketing/docs/sitemap), and 10 (verification-only,
   see below) are complete.
 - Test coverage backfilled across every previously-untested layer (68 new
@@ -24,6 +25,7 @@ Everything requested is done and merged to `main`, nothing pushed:
   branch.
 
 **The two things most worth reading in full before doing anything else:**
+
 1. "Critical bug found via test-writing, fixed directly on `main`" — every
    form action in the app was failing validation unconditionally until
    this session. Fixed and verified, but this predates the session and is
@@ -182,6 +184,62 @@ since none of those branches touch the internals of the 15 action files'
 files; Phase 8 and Phase 9 only touch new files plus `routes/web.ts` /
 `bootstrap/app.tsx`), so this should merge cleanly underneath all three.
 
+### Update: superseded by a real fix in `@pkg/validate` itself
+
+After the above landed, a follow-up request asked me to reconsider fixing
+`@pkg/validate` centrally instead of working around it locally, with a
+specific suggested technique: try the raw `FormData`/`URLSearchParams`
+source against the schema first, falling back to the flattened-object
+conversion only for schemas that reject the raw source.
+
+**I did not implement that exact technique — it's unsafe.** I checked what
+core `remix/data-schema` `s.object()` (and, by extension, most
+StandardSchema object validators) actually does when handed a raw
+`FormData` instance directly: its own type guard (`typeof value !==
+'object'`) does not reject `FormData` — it passes right through, since a
+`FormData` instance genuinely is a JS object. The validator then reads each
+expected field via `input[key]`, which is always `undefined` for a
+`FormData` instance (form fields aren't exposed as own properties, only via
+`.get()`/`.getAll()`). For any schema with only optional fields, that means
+**silent false-success**: `{success: true, value: {allFieldsUndefined}}`
+instead of a clean rejection — a far worse bug than the one being fixed,
+and one that would land silently in whichever other app's schema happened
+to have an all-optional shape. "Try raw first" is only safe if a failure
+against raw input is guaranteed to be *distinguishable* from a
+false-success, and for core object schemas it isn't.
+
+**What I built instead:** the flattened-object attempt still runs first,
+unchanged, for every schema — so every existing consumer's behavior is
+byte-for-byte identical to before this change, no exceptions, since they
+all succeed on that same first attempt. Only if that attempt fails with the
+literal message `"Expected FormData or URLSearchParams"` — the exact,
+specific signal `remix/data-schema/form-data`'s `object()` emits when it's
+handed something other than the raw source — does `validate()` retry with
+the unconverted `FormData`/`URLSearchParams`. This can only ever change the
+outcome for schemas that were *already failing* every single time; it
+cannot turn a working call into a broken one. (Caveat: the `Issue` type
+this package's dependency exposes doesn't carry a stable error `code`
+externally, only a `message` string, so the match is on that exact message
+text — a future wording change in `@remix-run/data-schema` could make the
+match stop firing, but the worst case then is reverting to today's already-
+known bug, not a new regression.)
+
+Added test coverage in `packages/validate/src/index.test.ts` for both
+schema kinds side by side (`remix/data-schema/form-data`'s `f.object()` with
+raw `FormData`/`URLSearchParams`, and core `remix/data-schema`'s `s.object()`
+with the flattened path) — added `remix` as a devDependency for this,
+mirroring how `zod` was already a devDependency purely for this file's
+existing tests. Verified: `packages/validate`'s full suite (34/34, up from
+29), `apps/r3-uptime`'s full suite (795/795, unaffected), and every other
+`@pkg/validate` consumer's full suite (`apps/auth`, `apps/blog`,
+`apps/books`, `apps/uptime` — 388/388) all still pass.
+
+**Cleaned up the now-redundant local workaround**: deleted
+`apps/r3-uptime/app/lib/validate-form.ts` and reverted all 15 action files
+back to importing `validate` from `@pkg/validate` directly — keeping a
+parallel local wrapper around after fixing the actual root cause would
+just be dead-weight indirection for the next person to puzzle over.
+
 ## Second critical bug found via test-writing, fixed directly (commit `459e703`)
 
 The same test-writing pass reported that `@pkg/data-table-d1`'s raw-SQL
@@ -231,7 +289,7 @@ neutral/primary, amber/red/teal-green semantics, Mona Sans). Rewrote every
 mixin in the shared token file to the OLD APP's real values, fixed a few
 view/component files bypassing the shared tokens with their own hardcoded
 hex, and — this is the one worth calling out — found a real bug through
-*visual* verification in a real browser that no amount of code reading
+_visual_ verification in a real browser that no amount of code reading
 would have caught: a marketing card component was an unstyled `<a>` link
 rendering in default browser link-blue with no underline reset. Fixed.
 
@@ -245,7 +303,7 @@ styling decision, and was correctly out of scope for a styling pass.
 **Incident: an agent's cleanup command killed the user's own dev server.**
 The styling agent ran `pkill -f "vite dev"` to stop a temporary preview
 server it started for visual verification, but that pattern also matched
-a pre-existing `vite dev` process in the *primary* checkout (port 3000,
+a pre-existing `vite dev` process in the _primary_ checkout (port 3000,
 running since before this session started) — not just its own worktree's
 process. I confirmed via `ps aux` that no `vite dev` process was running
 anywhere afterward, and restarted it myself via `preview_start` (the

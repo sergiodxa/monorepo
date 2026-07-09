@@ -2,7 +2,7 @@ import type { Result } from "@pkg/result";
 import type { JSONValue } from "@pkg/types";
 import type { StandardSchemaV1 } from "@standard-schema/spec";
 
-import { success, failure } from "@pkg/result";
+import { success, failure, isFailure } from "@pkg/result";
 
 import { ValidationError } from "./validation-error";
 
@@ -74,14 +74,32 @@ export async function validate<Schema extends StandardSchemaV1>(
 		);
 	}
 
-	if (input instanceof FormData) {
-		let data = formDataToObject(input);
-		return validate(data, schema);
-	}
+	if (input instanceof FormData || input instanceof URLSearchParams) {
+		let data = input instanceof FormData ? formDataToObject(input) : urlSearchParamsToObject(input);
+		let result = await validate(data, schema);
 
-	if (input instanceof URLSearchParams) {
-		let data = urlSearchParamsToObject(input);
-		return validate(data, schema);
+		// Some schemas (e.g. `remix/data-schema/form-data`'s `object()`) validate the
+		// raw `FormData`/`URLSearchParams` source directly instead of a flattened
+		// plain object, and reject anything else with this exact message. Retry with
+		// the raw source before giving up, so both schema styles work through this
+		// one `validate()` call without changing behavior for schemas that already
+		// succeed against the flattened object.
+		let wantsRawSource =
+			isFailure(result) &&
+			result.error.issues.some((issue) => issue.message === "Expected FormData or URLSearchParams");
+
+		if (!wantsRawSource) {
+			return result;
+		}
+
+		let rawResult = schema["~standard"].validate(input);
+		if (rawResult instanceof Promise) rawResult = await rawResult;
+
+		if (rawResult.issues) {
+			return failure(new ValidationError(rawResult.issues));
+		}
+
+		return success(rawResult.value);
 	}
 
 	let result = schema["~standard"].validate(input);

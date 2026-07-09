@@ -11,6 +11,7 @@ import { redirect } from "@pkg/http/response";
 import { notFound } from "@pkg/http/response/html";
 import { isFailure } from "@pkg/result";
 import { getServiceContainer } from "@pkg/service-container";
+import { validate } from "@pkg/validate";
 import { Database } from "remix/data-table";
 import { createAction } from "remix/fetch-router";
 import { Session } from "remix/session";
@@ -24,14 +25,13 @@ import {
 	TcpMonitorIdSchema,
 	UpdateTcpMonitorSchema,
 } from "~/app/http/validators/tcp-monitor";
-import { validateForm } from "~/app/lib/validate-form";
 import { notifyTcpResult } from "~/app/services/alerts";
 import { checkTcpConnection } from "~/app/services/tcp-check";
 import routes from "~/routes/web";
 
 /** POST /actions/:team/create-tcp-monitor */
 export const createTcpMonitor = createAction(routes.actions.createTcpMonitor, async (ctx) => {
-	let result = await validateForm(ctx.formData, CreateTcpMonitorSchema);
+	let result = await validate(ctx.formData, CreateTcpMonitorSchema);
 	let session = ctx.get(Session);
 
 	if (isFailure(result)) {
@@ -56,7 +56,7 @@ export const createTcpMonitor = createAction(routes.actions.createTcpMonitor, as
 
 /** POST /actions/:team/update-tcp-monitor */
 export const updateTcpMonitor = createAction(routes.actions.updateTcpMonitor, async (ctx) => {
-	let result = await validateForm(ctx.formData, UpdateTcpMonitorSchema);
+	let result = await validate(ctx.formData, UpdateTcpMonitorSchema);
 	let session = ctx.get(Session);
 
 	if (isFailure(result)) {
@@ -86,7 +86,7 @@ export const updateTcpMonitor = createAction(routes.actions.updateTcpMonitor, as
 
 /** DELETE /actions/:team/delete-tcp-monitor */
 export const deleteTcpMonitor = createAction(routes.actions.deleteTcpMonitor, async (ctx) => {
-	let result = await validateForm(ctx.formData, TcpMonitorIdSchema);
+	let result = await validate(ctx.formData, TcpMonitorIdSchema);
 	let session = ctx.get(Session);
 
 	if (isFailure(result)) {
@@ -112,7 +112,7 @@ export const deleteTcpMonitor = createAction(routes.actions.deleteTcpMonitor, as
 
 /** POST /actions/:team/check-tcp-monitor — triggers an immediate on-demand check. */
 export const checkTcpMonitor = createAction(routes.actions.checkTcpMonitor, async (ctx) => {
-	let result = await validateForm(ctx.formData, TcpMonitorIdSchema);
+	let result = await validate(ctx.formData, TcpMonitorIdSchema);
 	let session = ctx.get(Session);
 
 	if (isFailure(result)) {

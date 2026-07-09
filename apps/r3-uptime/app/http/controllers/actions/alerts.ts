@@ -11,6 +11,7 @@ import { redirect } from "@pkg/http/response";
 import { notFound, unprocessableEntity } from "@pkg/http/response/html";
 import { isFailure } from "@pkg/result";
 import { getServiceContainer } from "@pkg/service-container";
+import { validate } from "@pkg/validate";
 import { Database } from "remix/data-table";
 import { createAction } from "remix/fetch-router";
 import { Session } from "remix/session";
@@ -24,7 +25,6 @@ import {
 	type CreateAlertValues,
 	UpdateAlertSchema,
 } from "~/app/http/validators/alert";
-import { validateForm } from "~/app/lib/validate-form";
 import routes from "~/routes/web";
 
 /** Builds the strategy-specific `AlertConfig` JSON column from the flat form values. */
@@ -55,7 +55,7 @@ function buildConfig(values: CreateAlertValues): AlertConfig {
 
 /** POST /actions/:team/create-alert */
 export const createAlert = createAction(routes.actions.createAlert, async (ctx) => {
-	let result = await validateForm(ctx.formData, CreateAlertSchema);
+	let result = await validate(ctx.formData, CreateAlertSchema);
 	let session = ctx.get(Session);
 
 	if (isFailure(result)) {
@@ -91,7 +91,7 @@ export const createAlert = createAction(routes.actions.createAlert, async (ctx) 
 
 /** POST /actions/:team/update-alert */
 export const updateAlert = createAction(routes.actions.updateAlert, async (ctx) => {
-	let result = await validateForm(ctx.formData, UpdateAlertSchema);
+	let result = await validate(ctx.formData, UpdateAlertSchema);
 	let session = ctx.get(Session);
 
 	if (isFailure(result)) {
@@ -125,7 +125,7 @@ export const updateAlert = createAction(routes.actions.updateAlert, async (ctx) 
 
 /** DELETE /actions/:team/delete-alert */
 export const deleteAlert = createAction(routes.actions.deleteAlert, async (ctx) => {
-	let result = await validateForm(ctx.formData, AlertIdSchema);
+	let result = await validate(ctx.formData, AlertIdSchema);
 	let session = ctx.get(Session);
 
 	if (isFailure(result)) {

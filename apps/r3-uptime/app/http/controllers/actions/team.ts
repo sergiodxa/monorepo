@@ -14,6 +14,7 @@ import { badRequest, notFound } from "@pkg/http/response/html";
 import { PolarClient } from "@pkg/polar";
 import { isFailure } from "@pkg/result";
 import { getServiceContainer } from "@pkg/service-container";
+import { validate } from "@pkg/validate";
 import { Database } from "remix/data-table";
 import { createAction } from "remix/fetch-router";
 import { Session } from "remix/session";
@@ -27,12 +28,11 @@ import {
 	RemoveMemberSchema,
 	UpdateTeamSchema,
 } from "~/app/http/validators/team";
-import { validateForm } from "~/app/lib/validate-form";
 import routes from "~/routes/web";
 
 /** POST /actions/:team/update-team */
 export const updateTeam = createAction(routes.teamAdminActions.updateTeam, async (ctx) => {
-	let result = await validateForm(ctx.formData, UpdateTeamSchema);
+	let result = await validate(ctx.formData, UpdateTeamSchema);
 	let session = ctx.get(Session);
 
 	if (isFailure(result)) {
@@ -58,7 +58,7 @@ export const deleteTeam = createAction(routes.teamAdminActions.deleteTeam, async
 		return badRequest("Only the team owner can delete the team.");
 	}
 
-	let result = await validateForm(ctx.formData, DeleteTeamSchema);
+	let result = await validate(ctx.formData, DeleteTeamSchema);
 	if (isFailure(result)) {
 		return badRequest('Type "DELETE" to confirm.');
 	}
@@ -74,7 +74,7 @@ export const deleteTeam = createAction(routes.teamAdminActions.deleteTeam, async
 
 /** DELETE /actions/:team/remove-member */
 export const removeMember = createAction(routes.teamAdminActions.removeMember, async (ctx) => {
-	let result = await validateForm(ctx.formData, RemoveMemberSchema);
+	let result = await validate(ctx.formData, RemoveMemberSchema);
 	let session = ctx.get(Session);
 
 	if (isFailure(result)) {
@@ -99,7 +99,7 @@ export const removeMember = createAction(routes.teamAdminActions.removeMember, a
 
 /** POST /actions/:team/change-role */
 export const changeRole = createAction(routes.teamAdminActions.changeRole, async (ctx) => {
-	let result = await validateForm(ctx.formData, ChangeRoleSchema);
+	let result = await validate(ctx.formData, ChangeRoleSchema);
 	let session = ctx.get(Session);
 
 	if (isFailure(result)) {
