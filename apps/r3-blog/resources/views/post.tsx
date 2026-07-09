@@ -157,7 +157,7 @@ export function PostView() {
 						]}
 					>
 						{model.post.content ? (
-							MarkdownView({ content: model.post.content })
+							<MarkdownView content={model.post.content} />
 						) : (
 							<p mix={[css({ margin: 0 })]}>No content.</p>
 						)}

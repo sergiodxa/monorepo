@@ -1,10 +1,9 @@
 /**
  * Individual doc page view (`/docs/*slug`). Renders the frontmatter title,
  * description, and last-updated date, followed by the Markdoc content rendered
- * through `@pkg/markdown-remix`'s `renderToRemix`. Calling `renderToRemix` directly
- * (instead of the package's `MarkdownView` JSX wrapper, which destructures its own
- * props React-style and so cannot be used as a `remix/ui` JSX component — see
- * `docs/adr/r3-uptime/ADR-001-port-uptime-to-remix-v3.md` §4.1) sidesteps that.
+ * through `@pkg/markdown-remix`'s `renderToRemix`, called directly rather than via
+ * the package's `MarkdownView` component, since this view already composes the
+ * result into its own layout rather than needing a standalone wrapper element.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

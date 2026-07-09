@@ -97,7 +97,7 @@ export function FieldValue(handle: Handle<{ kind: string; value: unknown }>) {
 		let { kind, value } = handle.props;
 		if (kind === "markdown") {
 			let content = parseMarkdown(typeof value === "string" ? value : "");
-			return content ? <>{MarkdownView({ content })}</> : <></>;
+			return content ? <MarkdownView content={content} /> : <></>;
 		}
 		if (kind === "url") {
 			let url = String(value ?? "");

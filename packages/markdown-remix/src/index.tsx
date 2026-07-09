@@ -25,11 +25,11 @@ export namespace MarkdownView {
 
 /**
  * Renders Markdoc content into the Remix UI runtime.
- *
- * @param props - Markdown content and optional custom tag components
  */
-export function MarkdownView({ content, components }: MarkdownView.Props) {
-	return <>{renderToRemix(content, components)}</>;
+export function MarkdownView({ props }: Handle<MarkdownView.Props>) {
+	let { content, components } = props;
+
+	return () => <>{renderToRemix(content, components)}</>;
 }
 
 export * from "./fence.js";
