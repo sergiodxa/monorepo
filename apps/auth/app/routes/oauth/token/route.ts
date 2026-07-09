@@ -34,6 +34,8 @@ const AuthorizationCodeSchema = z.object({
 	code: z.string(),
 	code_verifier: z.string().optional(),
 	redirect_uri: z.url(),
+	client_id: z.string().optional(),
+	client_secret: z.string().optional(),
 });
 
 const ClientCredentialsSchema = z.object({
@@ -88,8 +90,12 @@ export async function action({ request }: Route.ActionArgs) {
 
 	try {
 		if (body.grant_type === "authorization_code") {
-			// Get client credentials from Authorization header for confidential clients
-			let clientCredentials = getClientCredentialsFromHeader(request.headers);
+			// Confidential clients may authenticate via the Authorization header (RFC
+			// 6749 §2.3.1, preferred) or via client_id/client_secret in the body
+			// (also valid per the same section - e.g. remix/auth's OIDC provider
+			// defaults to body-based client authentication).
+			let clientCredentials =
+				getClientCredentialsFromHeader(request.headers) ?? getClientCredentialsFromBody(body);
 
 			let tokenResult = await oidc.token({
 				type: "authorization_code",
@@ -178,4 +184,10 @@ function getClientCredentialsFromHeader(headers: Headers) {
 	if (!clientId || !clientSecret) return null;
 
 	return { clientId, clientSecret };
+}
+
+function getClientCredentialsFromBody(body: { client_id?: string; client_secret?: string }) {
+	if (!body.client_id || !body.client_secret) return null;
+
+	return { clientId: body.client_id, clientSecret: body.client_secret };
 }
