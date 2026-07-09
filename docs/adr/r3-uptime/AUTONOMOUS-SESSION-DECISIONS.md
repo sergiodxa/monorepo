@@ -193,6 +193,33 @@ tests for `Monitor.findDue`/`AggregateDailyStatsJob` after the tests branch
 merges — they were skipped because of this exact bug and should now be
 un-skippable; I've flagged that as its own follow-up below.
 
+## Phase 10 scoped down to non-destructive verification only
+
+**Decision:** did not attempt the actual deploy/cutover/soak/delete steps in
+the ADR's Phase 10. Instead: re-ran the full verification suite on the
+fully-merged app (typecheck/lint/795 tests/format/build/`wrangler deploy
+--dry-run`, all green); cross-checked every route in `routes/web.ts` against
+the ADR's own URL Surface list by direct inspection rather than trusting any
+agent's self-report; wrote `apps/r3-uptime/README.md`'s "Cutover" section as
+a condensed, actionable runbook for whoever does the real thing.
+
+**Why:** Phase 10's remaining steps are moving production DNS/route traffic,
+running a week-long soak with human monitoring, and deleting a currently-live
+worker. These are exactly the class of action the user's own standing
+instructions call out as needing direct human involvement — high blast
+radius, low reversibility once the OLD APP is deleted, and time-gated in a
+way no amount of autonomous work can substitute for. Marking the ADR
+"Implemented" or running `wrangler deploy` for real were both explicitly
+avoided for the same reason.
+
+**Alternative considered:** deploy to the `workers.dev` URL only (no route
+move, no DNS change) since the ADR describes that as safe/reversible on its
+own. Decided against doing even that autonomously — not because it's risky
+in isolation, but because verifying the deploy meaningfully (browsing every
+page against production data, as the ADR's own step 1 describes) requires a
+human to actually look at it, and there was no benefit to deploying without
+that half of the step also happening.
+
 ## Scope decisions
 
 ### Phase 9: Marketing site, docs, sitemap, polish (committed `cdb4c10` on `r3-uptime-phase9-marketing`)
