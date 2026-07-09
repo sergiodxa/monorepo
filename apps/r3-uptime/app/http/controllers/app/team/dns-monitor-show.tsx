@@ -14,6 +14,7 @@ import { Database } from "remix/data-table";
 import { createAction } from "remix/fetch-router";
 
 import DnsMonitor from "~/app/data/dns-monitor";
+import MonitorDailyStats from "~/app/data/monitor-daily-stats";
 import { getViewer } from "~/app/http/middleware/auth";
 import AppShell from "~/resources/layouts/app-shell";
 import DocumentLayout from "~/resources/layouts/document";
@@ -33,6 +34,7 @@ export default createAction(
 		if (!monitor) return notFound("Not Found");
 
 		let results = await DnsMonitor.listResults(db, monitor.id);
+		let dailyStats = await MonitorDailyStats.listForCurrentYear(db, monitor.id, "dns");
 
 		let renderDocument = DocumentLayout();
 		return ctx.render(
@@ -40,7 +42,12 @@ export default createAction(
 				title: `${ctx.team.name} · ${monitor.name}`,
 				children: (
 					<AppShell team={ctx.team} viewer={viewer}>
-						<DnsMonitorShowView team={ctx.team} monitor={monitor} results={results} />
+						<DnsMonitorShowView
+							team={ctx.team}
+							monitor={monitor}
+							results={results}
+							dailyStats={dailyStats}
+						/>
 					</AppShell>
 				),
 			}),

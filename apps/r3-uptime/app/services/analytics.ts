@@ -208,3 +208,38 @@ export async function getMonitorSparkline(
 	if (isFailure(result)) return result;
 	return success([...result.data].reverse());
 }
+
+/** One HTTP monitor's totals for a single UTC day (see {@link getHttpDailyAggregate}). */
+export interface HttpDailyAggregate {
+	monitorId: string;
+	totalChecks: number;
+	successfulChecks: number;
+	avgResponseTimeMs: number | null;
+	maxResponseTimeMs: number | null;
+}
+
+/**
+ * Every HTTP monitor's totals for one UTC calendar day, across every team — the source
+ * `AggregateDailyStatsJob` rolls into `monitor_daily_stats`. `_sample_interval` weights
+ * each row by how many real events it represents, since Analytics Engine statistically
+ * samples at scale; a plain `COUNT(*)` would undercount under sampling.
+ */
+export async function getHttpDailyAggregate(
+	date: string,
+): Promise<Result<HttpDailyAggregate[], Error>> {
+	let sql = `
+		SELECT
+			blob1 AS monitorId,
+			SUM(_sample_interval * double2) AS totalChecks,
+			SUMIf(_sample_interval * double2, blob3 = 'up') AS successfulChecks,
+			AVG(double1) AS avgResponseTimeMs,
+			MAX(double1) AS maxResponseTimeMs
+		FROM uptime_monitor_results
+		WHERE blob2 = 'http'
+			AND timestamp >= toDateTime('${date} 00:00:00')
+			AND timestamp < toDateTime('${date} 00:00:00') + INTERVAL '1' DAY
+		GROUP BY blob1
+	`;
+
+	return await queryAnalytics<HttpDailyAggregate>(sql);
+}

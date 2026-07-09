@@ -63,6 +63,7 @@ namespace DashboardView {
 		uptimePercent: number | null;
 		slowestResponseMs: number | null;
 		httpRows: Array<{ monitor: SelectMonitor; health: MonitorHealth }>;
+		sslCounts: { valid: number; expiring: number; expired: number };
 		dnsMonitors: SelectDnsMonitor[];
 		tcpMonitors: SelectTcpMonitor[];
 		cronJobMonitors: SelectCronJobMonitor[];
@@ -99,6 +100,14 @@ export default function DashboardView(handle: Handle<DashboardView.Props>) {
 						<div mix={[s.mutedSmall]}>Slowest response (24h)</div>
 						<div mix={[s.statValue]}>
 							{props.slowestResponseMs === null ? "—" : `${props.slowestResponseMs}ms`}
+						</div>
+					</div>
+					<div mix={[s.statCard]}>
+						<div mix={[s.mutedSmall]}>SSL certificates</div>
+						<div mix={[s.statValue]}>
+							<span mix={[s.badge, s.badgeUp]}>{props.sslCounts.valid} valid</span>{" "}
+							<span mix={[s.badge, s.badgeDegraded]}>{props.sslCounts.expiring} expiring</span>{" "}
+							<span mix={[s.badge, s.badgeDown]}>{props.sslCounts.expired} expired</span>
 						</div>
 					</div>
 				</div>

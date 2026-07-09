@@ -13,6 +13,7 @@ import * as s from "remix/data-schema";
 import { Database } from "remix/data-table";
 import { createAction } from "remix/fetch-router";
 
+import MonitorDailyStats from "~/app/data/monitor-daily-stats";
 import TcpMonitor from "~/app/data/tcp-monitor";
 import { getViewer } from "~/app/http/middleware/auth";
 import AppShell from "~/resources/layouts/app-shell";
@@ -33,6 +34,7 @@ export default createAction(
 		if (!monitor) return notFound("Not Found");
 
 		let results = await TcpMonitor.listResults(db, monitor.id);
+		let dailyStats = await MonitorDailyStats.listForCurrentYear(db, monitor.id, "tcp");
 
 		let renderDocument = DocumentLayout();
 		return ctx.render(
@@ -40,7 +42,12 @@ export default createAction(
 				title: `${ctx.team.name} · ${monitor.name}`,
 				children: (
 					<AppShell team={ctx.team} viewer={viewer}>
-						<TcpMonitorShowView team={ctx.team} monitor={monitor} results={results} />
+						<TcpMonitorShowView
+							team={ctx.team}
+							monitor={monitor}
+							results={results}
+							dailyStats={dailyStats}
+						/>
 					</AppShell>
 				),
 			}),

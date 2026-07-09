@@ -18,8 +18,10 @@ import { Database } from "remix/data-table";
 
 import Monitor from "~/app/data/monitor";
 import { GeoFetchDO } from "~/app/do/geo-fetch";
+import { AggregateDailyStatsJob } from "~/app/jobs/aggregate-daily-stats";
 import { CheckCronJobsJob } from "~/app/jobs/check-cron-jobs";
 import { CheckDnsJob } from "~/app/jobs/check-dns";
+import { CheckSslJob } from "~/app/jobs/check-ssl";
 import { CheckTcpJob } from "~/app/jobs/check-tcp";
 import { CleanJob } from "~/app/jobs/clean";
 import { CleanCronJobPingsJob } from "~/app/jobs/clean-cron-job-pings";
@@ -111,6 +113,16 @@ export default {
 				waitUntil(env.QUEUE.send({ type: "clean" }));
 				waitUntil(env.QUEUE.send({ type: "cleanCronJobPings" }));
 			}
+
+			// Daily at 1 AM UTC: roll up yesterday's checks into `monitor_daily_stats`.
+			if (controller.cron === "0 1 * * *") {
+				waitUntil(env.QUEUE.send({ type: "aggregateDailyStats" }));
+			}
+
+			// Daily at 6 AM UTC: re-evaluate SSL certificate status for every HTTP monitor.
+			if (controller.cron === "0 6 * * *") {
+				waitUntil(env.QUEUE.send({ type: "checkSsl" }));
+			}
 		});
 	},
 
@@ -146,6 +158,12 @@ export default {
 						break;
 					case "cleanCronJobPings":
 						waitUntil(CleanCronJobPingsJob.run({ message, uptime }));
+						break;
+					case "checkSsl":
+						waitUntil(CheckSslJob.run({ message, uptime }));
+						break;
+					case "aggregateDailyStats":
+						waitUntil(AggregateDailyStatsJob.run({ message, uptime }));
 						break;
 					default:
 						// Valid message, but this phase doesn't implement its job yet.

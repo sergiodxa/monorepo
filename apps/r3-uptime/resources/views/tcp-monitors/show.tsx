@@ -8,9 +8,14 @@
 
 import type { Handle } from "remix/ui";
 
-import type { SelectTcpMonitor, SelectTcpMonitorResult } from "~/database/schema";
+import type {
+	SelectMonitorDailyStats,
+	SelectTcpMonitor,
+	SelectTcpMonitorResult,
+} from "~/database/schema";
 
 import * as s from "~/resources/styles";
+import Heatmap from "~/resources/views/shared/heatmap";
 import routes from "~/routes/web";
 
 namespace TcpMonitorShowView {
@@ -18,6 +23,7 @@ namespace TcpMonitorShowView {
 		team: { slug: string };
 		monitor: SelectTcpMonitor;
 		results: SelectTcpMonitorResult[];
+		dailyStats: SelectMonitorDailyStats[];
 	}
 }
 
@@ -29,7 +35,7 @@ const STATUS_BADGE_MIX: Record<string, typeof s.badgeUp> = {
 
 export default function TcpMonitorShowView(handle: Handle<TcpMonitorShowView.Props>) {
 	return () => {
-		let { team, monitor, results } = handle.props;
+		let { team, monitor, results, dailyStats } = handle.props;
 
 		let totalChecks = results.length;
 		let upChecks = results.filter((result) => result.status === "up").length;
@@ -98,6 +104,9 @@ export default function TcpMonitorShowView(handle: Handle<TcpMonitorShowView.Pro
 						<div mix={[s.statValue]}>{totalChecks}</div>
 					</div>
 				</div>
+
+				<h2>Uptime history</h2>
+				<Heatmap days={dailyStats} />
 
 				<h2>Check history</h2>
 				{results.length === 0 ? (

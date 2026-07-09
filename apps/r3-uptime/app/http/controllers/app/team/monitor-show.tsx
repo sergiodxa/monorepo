@@ -15,6 +15,7 @@ import { Database } from "remix/data-table";
 import { createAction } from "remix/fetch-router";
 
 import Monitor from "~/app/data/monitor";
+import MonitorDailyStats from "~/app/data/monitor-daily-stats";
 import { getViewer } from "~/app/http/middleware/auth";
 import { getMonitorSparkline } from "~/app/services/analytics";
 import AppShell from "~/resources/layouts/app-shell";
@@ -36,6 +37,7 @@ export default createAction(
 
 		let sparklineResult = await getMonitorSparkline(ctx.team.id, monitor.id);
 		let sparkline = isFailure(sparklineResult) ? [] : sparklineResult.data;
+		let dailyStats = await MonitorDailyStats.listForCurrentYear(db, monitor.id, "http");
 
 		let renderDocument = DocumentLayout();
 		return ctx.render(
@@ -43,7 +45,12 @@ export default createAction(
 				title: `${ctx.team.name} · ${monitor.name}`,
 				children: (
 					<AppShell team={ctx.team} viewer={viewer}>
-						<MonitorShowView team={ctx.team} monitor={monitor} sparkline={sparkline} />
+						<MonitorShowView
+							team={ctx.team}
+							monitor={monitor}
+							sparkline={sparkline}
+							dailyStats={dailyStats}
+						/>
 					</AppShell>
 				),
 			}),

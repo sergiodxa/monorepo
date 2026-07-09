@@ -20,6 +20,7 @@ import { del, form, get, post, route } from "remix/fetch-router/routes";
 export default route({
 	home: get("/"),
 	healthcheck: get("/healthcheck"),
+	healthcheckAnalyticsEngine: get("/healthcheck/analytics-engine"),
 
 	// GET = OAuth callback ("index"), POST = starts the OAuth flow ("action").
 	auth: form("/auth"),

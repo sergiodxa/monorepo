@@ -78,6 +78,13 @@ export default createAction(
 		let slowestResponseMs =
 			summaryList.length > 0 ? Math.max(...summaryList.map((s) => s.maxResponseTimeMs)) : null;
 
+		let sslMonitors = monitors.filter((monitor) => monitor.ssl_monitoring_enabled);
+		let sslCounts = {
+			valid: sslMonitors.filter((monitor) => monitor.ssl_status === "valid").length,
+			expiring: sslMonitors.filter((monitor) => monitor.ssl_status === "expiring").length,
+			expired: sslMonitors.filter((monitor) => monitor.ssl_status === "expired").length,
+		};
+
 		let renderDocument = DocumentLayout();
 		let headers = new Headers();
 		headers.set("Set-Cookie", await dashboardTabCookie.serialize(tab));
@@ -94,6 +101,7 @@ export default createAction(
 							uptimePercent={uptimePercent}
 							slowestResponseMs={slowestResponseMs}
 							httpRows={httpRows}
+							sslCounts={sslCounts}
 							dnsMonitors={dnsMonitors}
 							tcpMonitors={tcpMonitors}
 							cronJobMonitors={cronJobMonitors}

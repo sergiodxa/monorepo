@@ -1,9 +1,7 @@
 /**
  * HTTP monitor detail page. Shows the monitor's configuration, SSL status, a recent
- * latency sparkline from Analytics Engine, and run/edit actions. The 365-day daily
- * history view is a later phase (`monitor_daily_stats` isn't populated until the daily
- * aggregation job exists), so this page focuses on the monitor's current config and
- * recent activity.
+ * latency sparkline from Analytics Engine, a calendar-year uptime heatmap from
+ * `monitor_daily_stats`, and run/edit actions.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -12,11 +10,12 @@
 import type { Handle } from "remix/ui";
 
 import type { SparklinePoint } from "~/app/services/analytics";
-import type { SelectMonitor } from "~/database/schema";
+import type { SelectMonitor, SelectMonitorDailyStats } from "~/database/schema";
 
 import { calculateSslStatus } from "~/app/services/ssl-info";
 import * as s from "~/resources/styles";
 import Sparkline from "~/resources/views/monitors/sparkline";
+import Heatmap from "~/resources/views/shared/heatmap";
 import routes from "~/routes/web";
 
 namespace MonitorShowView {
@@ -24,12 +23,13 @@ namespace MonitorShowView {
 		team: { slug: string };
 		monitor: SelectMonitor;
 		sparkline: SparklinePoint[];
+		dailyStats: SelectMonitorDailyStats[];
 	}
 }
 
 export default function MonitorShowView(handle: Handle<MonitorShowView.Props>) {
 	return () => {
-		let { team, monitor, sparkline } = handle.props;
+		let { team, monitor, sparkline, dailyStats } = handle.props;
 
 		return (
 			<div>
@@ -66,6 +66,9 @@ export default function MonitorShowView(handle: Handle<MonitorShowView.Props>) {
 
 				<h2>Recent response time</h2>
 				<Sparkline points={sparkline} />
+
+				<h2>Uptime history</h2>
+				<Heatmap days={dailyStats} />
 
 				<h2>SSL certificate</h2>
 				{SslSummary({ monitor })}

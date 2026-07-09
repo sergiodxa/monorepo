@@ -14,6 +14,7 @@ import { Database } from "remix/data-table";
 import { createAction } from "remix/fetch-router";
 
 import CronJobMonitor from "~/app/data/cron-job";
+import MonitorDailyStats from "~/app/data/monitor-daily-stats";
 import { getViewer } from "~/app/http/middleware/auth";
 import AppShell from "~/resources/layouts/app-shell";
 import DocumentLayout from "~/resources/layouts/document";
@@ -37,6 +38,7 @@ export default createAction(
 			routes.api.cronJobPing.href({ cronJobId: monitor.id }),
 			ctx.request.url,
 		).toString();
+		let dailyStats = await MonitorDailyStats.listForCurrentYear(db, monitor.id, "cron");
 
 		let renderDocument = DocumentLayout();
 		return ctx.render(
@@ -44,7 +46,13 @@ export default createAction(
 				title: `${ctx.team.name} · ${monitor.name}`,
 				children: (
 					<AppShell team={ctx.team} viewer={viewer}>
-						<CronJobShowView team={ctx.team} monitor={monitor} pings={pings} pingUrl={pingUrl} />
+						<CronJobShowView
+							team={ctx.team}
+							monitor={monitor}
+							pings={pings}
+							pingUrl={pingUrl}
+							dailyStats={dailyStats}
+						/>
 					</AppShell>
 				),
 			}),

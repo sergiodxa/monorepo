@@ -88,6 +88,7 @@ import tcpMonitors from "~/app/http/controllers/app/team/tcp-monitors";
 import authController from "~/app/http/controllers/auth";
 import defaultHandler from "~/app/http/controllers/default-handler";
 import healthcheck from "~/app/http/controllers/healthcheck";
+import healthcheckAnalyticsEngine from "~/app/http/controllers/healthcheck-analytics-engine";
 import home from "~/app/http/controllers/home";
 import logoutController from "~/app/http/controllers/logout";
 import auth from "~/app/http/middleware/auth";
@@ -132,6 +133,7 @@ export default function application(options: application.Options) {
 
 	router.map(routes.home, home);
 	router.map(routes.healthcheck, healthcheck);
+	router.map(routes.healthcheckAnalyticsEngine, healthcheckAnalyticsEngine);
 	router.map(routes.auth, authController);
 	router.map(routes.logout, logoutController);
 

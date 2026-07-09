@@ -9,10 +9,15 @@
 
 import type { Handle } from "remix/ui";
 
-import type { SelectCronJobMonitor, SelectCronJobPing } from "~/database/schema";
+import type {
+	SelectCronJobMonitor,
+	SelectCronJobPing,
+	SelectMonitorDailyStats,
+} from "~/database/schema";
 
 import CronJobMonitor from "~/app/data/cron-job";
 import * as s from "~/resources/styles";
+import Heatmap from "~/resources/views/shared/heatmap";
 import routes from "~/routes/web";
 
 namespace CronJobShowView {
@@ -21,6 +26,7 @@ namespace CronJobShowView {
 		monitor: SelectCronJobMonitor;
 		pings: SelectCronJobPing[];
 		pingUrl: string;
+		dailyStats: SelectMonitorDailyStats[];
 	}
 }
 
@@ -33,7 +39,7 @@ const STATUS_BADGE_MIX: Record<string, typeof s.badgeUp> = {
 
 export default function CronJobShowView(handle: Handle<CronJobShowView.Props>) {
 	return () => {
-		let { team, monitor, pings, pingUrl } = handle.props;
+		let { team, monitor, pings, pingUrl, dailyStats } = handle.props;
 
 		let totalPings = pings.length;
 		let onTimeCount = pings.filter((ping) => ping.was_on_time).length;
@@ -118,6 +124,9 @@ export default function CronJobShowView(handle: Handle<CronJobShowView.Props>) {
 				<pre mix={[s.mutedSmall]}>
 					<code>0 * * * * your-job.sh &amp;&amp; curl -fsS -X POST {pingUrl}</code>
 				</pre>
+
+				<h2>Uptime history</h2>
+				<Heatmap days={dailyStats} />
 
 				<h2>Ping history</h2>
 				{pings.length === 0 ? (

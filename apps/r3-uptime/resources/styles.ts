@@ -313,6 +313,52 @@ export const badgeNeutral = css({
 	"@media (prefers-color-scheme: dark)": { background: "#262626", color: "#a3a3a3" },
 });
 
+/** Horizontally-scrollable row of heatmap week-columns. */
+export const heatmap = css({
+	display: "flex",
+	gap: 3,
+	overflowX: "auto",
+	padding: "4px 0",
+});
+
+/** One week's column of day-cells in the heatmap. */
+export const heatmapWeek = css({
+	display: "flex",
+	flexDirection: "column",
+	gap: 3,
+});
+
+/** One day-cell in the heatmap; combine with a status color mixin. */
+export const heatmapCell = css({
+	width: 11,
+	height: 11,
+	borderRadius: 2,
+});
+
+/** Heatmap cell: no data for that day yet. */
+export const heatmapCellEmpty = css({
+	background: "#f5f5f5",
+	"@media (prefers-color-scheme: dark)": { background: "#262626" },
+});
+
+/** Heatmap cell: fully up for that day. */
+export const heatmapCellUp = css({
+	background: "#22c55e",
+	"@media (prefers-color-scheme: dark)": { background: "#16a34a" },
+});
+
+/** Heatmap cell: degraded for that day. */
+export const heatmapCellDegraded = css({
+	background: "#f59e0b",
+	"@media (prefers-color-scheme: dark)": { background: "#d97706" },
+});
+
+/** Heatmap cell: down for that day. */
+export const heatmapCellDown = css({
+	background: "#ef4444",
+	"@media (prefers-color-scheme: dark)": { background: "#dc2626" },
+});
+
 /** Fixed-position flash toast, auto-dismissed with a CSS animation. */
 export const toast = css({
 	position: "fixed",

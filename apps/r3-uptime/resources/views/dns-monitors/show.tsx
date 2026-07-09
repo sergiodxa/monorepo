@@ -8,9 +8,14 @@
 
 import type { Handle } from "remix/ui";
 
-import type { SelectDnsMonitor, SelectDnsMonitorResult } from "~/database/schema";
+import type {
+	SelectDnsMonitor,
+	SelectDnsMonitorResult,
+	SelectMonitorDailyStats,
+} from "~/database/schema";
 
 import * as s from "~/resources/styles";
+import Heatmap from "~/resources/views/shared/heatmap";
 import routes from "~/routes/web";
 
 namespace DnsMonitorShowView {
@@ -18,6 +23,7 @@ namespace DnsMonitorShowView {
 		team: { slug: string };
 		monitor: SelectDnsMonitor;
 		results: SelectDnsMonitorResult[];
+		dailyStats: SelectMonitorDailyStats[];
 	}
 }
 
@@ -29,7 +35,7 @@ const STATUS_BADGE_MIX: Record<string, typeof s.badgeUp> = {
 
 export default function DnsMonitorShowView(handle: Handle<DnsMonitorShowView.Props>) {
 	return () => {
-		let { team, monitor, results } = handle.props;
+		let { team, monitor, results, dailyStats } = handle.props;
 
 		let totalChecks = results.length;
 		let okChecks = results.filter((result) => result.status === "ok").length;
@@ -104,6 +110,9 @@ export default function DnsMonitorShowView(handle: Handle<DnsMonitorShowView.Pro
 						<div mix={[s.statValue]}>{totalChecks}</div>
 					</div>
 				</div>
+
+				<h2>Uptime history</h2>
+				<Heatmap days={dailyStats} />
 
 				<h2>Result history</h2>
 				{results.length === 0 ? (

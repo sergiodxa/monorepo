@@ -35,6 +35,7 @@ import type {
 import Alert from "~/app/data/alert";
 import AlertEvent from "~/app/data/alert-event";
 import MaintenanceWindow, { type MaintenanceMonitorKind } from "~/app/data/maintenance-window";
+import { shouldAlertOnSslStatus, type SslStatus } from "~/app/services/ssl-info";
 import routes from "~/routes/web";
 
 const EMAIL_FROM = "Uptime <no-reply@uptime.sergiodxa.com>";
@@ -53,7 +54,13 @@ export function dashboardUrl(path: string): string {
 }
 
 export type AlertEventType = SelectAlertEvent["event_type"];
-export type AlertMonitorKind = MaintenanceMonitorKind;
+/**
+ * `"ssl"` isn't a real monitor table — SSL checks run against an HTTP monitor's own
+ * row — so it's resolved and suppressed exactly like `"http"` (same monitor id, same
+ * maintenance windows) but recorded as its own `alert_events.monitor_type` for
+ * accurate history.
+ */
+export type AlertMonitorKind = MaintenanceMonitorKind | "ssl";
 
 export interface DispatchAlertsParams {
 	db: Database;
@@ -69,17 +76,20 @@ export interface DispatchAlertsParams {
 
 /** Runs the full alert pipeline for one monitor status transition. */
 export async function dispatchAlerts(params: DispatchAlertsParams): Promise<void> {
+	let isHttpMonitor = params.monitorType === "http" || params.monitorType === "ssl";
+	let maintenanceMonitorType: MaintenanceMonitorKind =
+		params.monitorType === "http" || params.monitorType === "ssl" ? "http" : params.monitorType;
+
 	let suppressed = await MaintenanceWindow.isSuppressing(params.db, {
 		teamId: params.teamId,
 		monitorId: params.monitorId,
-		monitorType: params.monitorType,
+		monitorType: maintenanceMonitorType,
 	});
 	if (suppressed) return;
 
-	let candidates =
-		params.monitorType === "http"
-			? await Alert.listForHttpMonitor(params.db, params.teamId, params.monitorId)
-			: await Alert.listTeamWide(params.db, params.teamId);
+	let candidates = isHttpMonitor
+		? await Alert.listForHttpMonitor(params.db, params.teamId, params.monitorId)
+		: await Alert.listTeamWide(params.db, params.teamId);
 
 	let applicable =
 		params.eventType === "up" ? candidates.filter((alert) => alert.notify_on_recovery) : candidates;
@@ -436,6 +446,50 @@ export async function notifyCronJobResult(
 		},
 		dashboardUrl: dashboardUrl(
 			routes.app.team.cronJobShow.href({ team: monitor.team_id, monitorId: monitor.id }),
+		),
+	});
+}
+
+/**
+ * Unlike the other `notify*` helpers, this isn't edge-triggered — it fires every day
+ * {@link shouldAlertOnSslStatus} says to, matching `docs/ssl-monitoring.md`'s "alerts
+ * happen around key warning thresholds... and again on expiry" (repeated reminders,
+ * not a one-time transition). Per-alert cooldown is what bounds the repetition.
+ */
+export async function notifySslResult(
+	db: Database,
+	resend: Resend,
+	monitor: SelectMonitor,
+	status: SslStatus,
+	daysUntilExpiry: number | null,
+): Promise<void> {
+	if (!shouldAlertOnSslStatus(status, daysUntilExpiry)) return;
+
+	let hostname: string;
+	try {
+		hostname = new URL(monitor.url).hostname;
+	} catch {
+		hostname = monitor.url;
+	}
+
+	await dispatchAlerts({
+		db,
+		resend,
+		teamId: monitor.team_id,
+		monitorId: monitor.id,
+		monitorType: "ssl",
+		monitorName: monitor.name,
+		eventType: status === "expired" ? "down" : "degraded",
+		snapshot: {
+			type: "ssl",
+			status,
+			expiresAt:
+				monitor.ssl_expires_at === null ? null : new Date(monitor.ssl_expires_at).toISOString(),
+			daysUntilExpiry,
+			hostname,
+		},
+		dashboardUrl: dashboardUrl(
+			routes.app.team.monitorShow.href({ team: monitor.team_id, monitorId: monitor.id }),
 		),
 	});
 }

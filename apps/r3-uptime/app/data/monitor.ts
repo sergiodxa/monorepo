@@ -50,6 +50,11 @@ export default class Monitor {
 		return await db.count(monitors, { where: { team_id: teamId } });
 	}
 
+	/** Lists every monitor with SSL monitoring enabled, across every team. */
+	static async listSslEnabled(db: Database) {
+		return await db.findMany(monitors, { where: { ssl_monitoring_enabled: true } });
+	}
+
 	/** Finds a single monitor scoped to a team, or `null` when it doesn't belong to it. */
 	static async findByIdForTeam(db: Database, teamId: string, monitorId: string) {
 		return await db.findOne(monitors, { where: { id: monitorId, team_id: teamId } });
