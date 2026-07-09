@@ -182,12 +182,21 @@ import tcpMonitorShow from "~/app/http/controllers/app/team/tcp-monitor-show";
 import tcpMonitors from "~/app/http/controllers/app/team/tcp-monitors";
 import authController from "~/app/http/controllers/auth";
 import defaultHandler from "~/app/http/controllers/default-handler";
+import docsIndex from "~/app/http/controllers/docs-index";
+import docsShow from "~/app/http/controllers/docs-show";
 import healthcheck from "~/app/http/controllers/healthcheck";
 import healthcheckAnalyticsEngine from "~/app/http/controllers/healthcheck-analytics-engine";
 import home from "~/app/http/controllers/home";
 import inviteController from "~/app/http/controllers/invite";
 import logoutController from "~/app/http/controllers/logout";
+import marketingAudience from "~/app/http/controllers/marketing-audience";
+import marketingComparison from "~/app/http/controllers/marketing-comparison";
+import marketingFeature from "~/app/http/controllers/marketing-feature";
+import marketingUseCase from "~/app/http/controllers/marketing-use-case";
+import privacy from "~/app/http/controllers/privacy";
+import sitemap from "~/app/http/controllers/sitemap";
 import statusPageController from "~/app/http/controllers/status-page";
+import terms from "~/app/http/controllers/terms";
 import auth from "~/app/http/middleware/auth";
 import i18n from "~/app/http/middleware/i18n";
 import logger from "~/app/http/middleware/logger";
@@ -242,6 +251,18 @@ export default function application(options: application.Options) {
 		middleware: [requireUser],
 		handler: inviteController as RequestHandler<any>,
 	});
+
+	// Public marketing pages, legal pages, docs, and the sitemap. Anonymous, matching
+	// the OLD APP — no requireUser/requireTeam middleware.
+	router.map(routes.marketing.feature, marketingFeature);
+	router.map(routes.marketing.audience, marketingAudience);
+	router.map(routes.marketing.useCase, marketingUseCase);
+	router.map(routes.marketing.comparison, marketingComparison);
+	router.map(routes.legal.privacy, privacy);
+	router.map(routes.legal.terms, terms);
+	router.map(routes.docs.index, docsIndex);
+	router.map(routes.docs.show, docsShow);
+	router.map(routes.sitemap, sitemap);
 
 	// `createAction`'s handler type fixes its middleware-entries tuple at `[]`, but a
 	// `router.map` middleware array of plain (untransformed) `Middleware` values types

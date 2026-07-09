@@ -23,11 +23,34 @@ export default route({
 	healthcheckAnalyticsEngine: get("/healthcheck/analytics-engine"),
 	statusPage: get("/status/:slug"),
 	invite: get("/invite/:inviteId"),
+	sitemap: get("/sitemap.xml"),
 
 	// GET = OAuth callback ("index"), POST = starts the OAuth flow ("action").
 	auth: form("/auth"),
 	// GET = confirmation page ("index"), POST = destroys the session ("action").
 	logout: form("/logout"),
+
+	// Public marketing pages. Each leaf takes a `:slug` param resolved against a
+	// content record in `resources/content/marketing.ts` instead of one static route
+	// per page — see that file's docblock for why (35 near-identical OLD APP pages).
+	marketing: {
+		feature: get("/features/:slug"),
+		audience: get("/for/:slug"),
+		useCase: get("/use-cases/:slug"),
+		comparison: get("/vs/:slug"),
+	},
+
+	legal: {
+		privacy: get("/privacy"),
+		terms: get("/terms"),
+	},
+
+	docs: {
+		index: get("/docs"),
+		// Wildcard: captures every remaining path segment as one `slug` string
+		// (e.g. `concepts/http-monitors`), matching the OLD APP's `docs/*` splat route.
+		show: get("/docs/*slug"),
+	},
 
 	app: {
 		index: get("/app"),
