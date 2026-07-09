@@ -22,7 +22,12 @@ export default createAction(routes.app.team.dnsMonitorNew, () => {
 
 	return ctx.render(
 		<DocumentLayout title={`${ctx.team.name} · New DNS monitor`}>
-			<AppShell team={ctx.team} viewer={viewer}>
+			<AppShell
+				team={ctx.team}
+				teams={ctx.teams}
+				viewer={viewer}
+				isAdmin={ctx.membership.role === "admin"}
+			>
 				<NewDnsMonitorView team={ctx.team} />
 			</AppShell>
 		</DocumentLayout>,

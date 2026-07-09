@@ -140,13 +140,16 @@ function deriveHealth(
 export async function getTeamHttpSummaries(
 	teamId: string,
 ): Promise<Result<HttpMonitorSummary[], Error>> {
+	// Analytics Engine's SQL API rejects `COUNT(*)` ("COUNT() function must have 0
+	// arguments"), so totals are summed from `double2` (always 1 per row, see
+	// writeHttpPingResult) instead — matching how the same dataset is queried elsewhere.
 	let sql = `
 		SELECT
 			blob1 AS monitorId,
-			COUNT(*) AS totalChecks,
-			SUM(CASE WHEN blob3 = 'up' THEN 1 ELSE 0 END) AS upChecks,
-			SUM(CASE WHEN blob3 = 'degraded' THEN 1 ELSE 0 END) AS degradedChecks,
-			SUM(CASE WHEN blob3 = 'down' THEN 1 ELSE 0 END) AS downChecks,
+			SUM(double2) AS totalChecks,
+			SUMIf(double2, blob3 = 'up') AS upChecks,
+			SUMIf(double2, blob3 = 'degraded') AS degradedChecks,
+			SUMIf(double2, blob3 = 'down') AS downChecks,
 			MAX(double1) AS maxResponseTimeMs
 		FROM uptime_monitor_results
 		WHERE index1 = '${teamId}' AND blob2 = 'http' AND timestamp >= NOW() - INTERVAL '24' HOUR
@@ -209,6 +212,79 @@ export async function getMonitorSparkline(
 	let result = await queryAnalytics<SparklinePoint>(sql);
 	if (isFailure(result)) return result;
 	return success([...result.data].reverse());
+}
+
+/** Maximum points kept per monitor after downsampling in {@link getTeamHttpSparklines}. */
+const SPARKLINE_MAX_POINTS = 30;
+
+/**
+ * Buckets `points` (already oldest-first) down to at most `maxPoints` entries by
+ * averaging each bucket's response time — a simple mean-per-bucket downsample, in the
+ * same spirit as (without replicating) the OLD APP's `downsample()` helper.
+ */
+function downsampleSparklinePoints(
+	points: SparklinePoint[],
+	maxPoints = SPARKLINE_MAX_POINTS,
+): SparklinePoint[] {
+	if (points.length <= maxPoints) return points;
+
+	let step = points.length / maxPoints;
+	let result: SparklinePoint[] = [];
+	for (let i = 0; i < maxPoints; i++) {
+		let chunk = points.slice(Math.floor(i * step), Math.floor((i + 1) * step));
+		if (chunk.length === 0) continue;
+		let avgResponseTimeMs =
+			chunk.reduce((sum, point) => sum + point.responseTimeMs, 0) / chunk.length;
+		result.push({
+			timestamp: chunk[chunk.length - 1]!.timestamp,
+			responseTimeMs: avgResponseTimeMs,
+		});
+	}
+	return result;
+}
+
+/**
+ * Every HTTP monitor's recent latency sparkline for a team in one query — unlike
+ * {@link getMonitorSparkline}, which queries a single monitor, this fetches the team's
+ * last `limit` HTTP results across every monitor, groups them by monitor in memory, and
+ * downsamples each group to a chart-friendly point count. Avoids an N+1 query per
+ * monitor on the dashboard table. Cached in KV.
+ */
+export async function getTeamHttpSparklines(
+	teamId: string,
+	limit = 500,
+): Promise<Result<Map<string, SparklinePoint[]>, Error>> {
+	let sql = `
+		SELECT blob1 AS monitorId, timestamp, double1 AS responseTimeMs
+		FROM uptime_monitor_results
+		WHERE index1 = '${teamId}' AND blob2 = 'http'
+		ORDER BY timestamp DESC
+		LIMIT ${limit}
+	`;
+
+	let result = await queryAnalyticsCached<{
+		monitorId: string;
+		timestamp: string;
+		responseTimeMs: number;
+	}>(buildCacheKey(teamId, "httpSparklines"), getCacheTtl(60), sql);
+	if (isFailure(result)) return result;
+
+	let pointsByMonitor = new Map<string, SparklinePoint[]>();
+	for (let row of result.data) {
+		let points = pointsByMonitor.get(row.monitorId);
+		if (!points) pointsByMonitor.set(row.monitorId, (points = []));
+		points.push({ timestamp: row.timestamp, responseTimeMs: row.responseTimeMs });
+	}
+
+	let sparklines = new Map<string, SparklinePoint[]>();
+	for (let [monitorId, points] of pointsByMonitor) {
+		// Rows come back newest-first; reverse to oldest-first before downsampling so
+		// bucket order (and therefore the rendered sparkline's left-to-right direction)
+		// matches getMonitorSparkline's single-monitor result.
+		sparklines.set(monitorId, downsampleSparklinePoints([...points].reverse()));
+	}
+
+	return success(sparklines);
 }
 
 /** One HTTP monitor's totals for a single UTC day (see {@link getHttpDailyAggregate}). */

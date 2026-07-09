@@ -34,7 +34,12 @@ export default createAction(
 
 		return ctx.render(
 			<DocumentLayout title={`${ctx.team.name} · Alert history`}>
-				<AppShell team={ctx.team} viewer={viewer}>
+				<AppShell
+					team={ctx.team}
+					teams={ctx.teams}
+					viewer={viewer}
+					isAdmin={ctx.membership.role === "admin"}
+				>
 					<AlertHistoryView team={ctx.team} events={events} alertsById={alertsById} />
 				</AppShell>
 			</DocumentLayout>,

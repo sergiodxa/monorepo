@@ -32,7 +32,12 @@ export default createAction(
 
 		return ctx.render(
 			<DocumentLayout title={`${ctx.team.name} · Alerts`}>
-				<AppShell team={ctx.team} viewer={viewer}>
+				<AppShell
+					team={ctx.team}
+					teams={ctx.teams}
+					viewer={viewer}
+					isAdmin={ctx.membership.role === "admin"}
+				>
 					<AlertsView team={ctx.team} alerts={alerts} monitorsById={monitorsById} />
 				</AppShell>
 			</DocumentLayout>,

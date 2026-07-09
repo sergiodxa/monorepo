@@ -34,7 +34,12 @@ export default createAction(
 
 		return ctx.render(
 			<DocumentLayout title={`${ctx.team.name} · Edit ${monitor.name}`}>
-				<AppShell team={ctx.team} viewer={viewer}>
+				<AppShell
+					team={ctx.team}
+					teams={ctx.teams}
+					viewer={viewer}
+					isAdmin={ctx.membership.role === "admin"}
+				>
 					<EditDnsMonitorView team={ctx.team} monitor={monitor} />
 				</AppShell>
 			</DocumentLayout>,

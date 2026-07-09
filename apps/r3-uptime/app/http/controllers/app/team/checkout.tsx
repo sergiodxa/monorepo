@@ -35,7 +35,12 @@ export default createAction(
 		if (ctx.membership.subject_id !== ctx.team.owner_id) {
 			return ctx.render(
 				<DocumentLayout title={`${ctx.team.name} · Billing`}>
-					<AppShell team={ctx.team} viewer={viewer}>
+					<AppShell
+						team={ctx.team}
+						teams={ctx.teams}
+						viewer={viewer}
+						isAdmin={ctx.membership.role === "admin"}
+					>
 						<CheckoutView />
 					</AppShell>
 				</DocumentLayout>,

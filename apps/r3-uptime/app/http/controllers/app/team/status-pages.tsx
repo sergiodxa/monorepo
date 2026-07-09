@@ -41,7 +41,12 @@ export default createAction(
 
 		return ctx.render(
 			<DocumentLayout title={`${ctx.team.name} · Status pages`}>
-				<AppShell team={ctx.team} viewer={viewer}>
+				<AppShell
+					team={ctx.team}
+					teams={ctx.teams}
+					viewer={viewer}
+					isAdmin={ctx.membership.role === "admin"}
+				>
 					<StatusPagesView team={ctx.team} pages={pages} countsByPageId={countsByPageId} />
 				</AppShell>
 			</DocumentLayout>,

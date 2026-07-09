@@ -34,6 +34,7 @@ let {
 	getHttpDailyAggregate,
 	getLatestHttpResult,
 	getMonitorSparkline,
+	getTeamHttpSparklines,
 	getTeamHttpSummaries,
 	queryAnalytics,
 	queryAnalyticsCached,
@@ -452,6 +453,76 @@ describe("getMonitorSparkline", () => {
 		await getMonitorSparkline("team-1", "monitor-1", 5);
 		let [, customInit] = fetchMock.mock.calls[0] as [string, RequestInit];
 		expect(customInit.body as string).toContain("LIMIT 5");
+	});
+});
+
+describe("getTeamHttpSparklines", () => {
+	test("groups rows by monitorId and returns each group oldest-first", async () => {
+		globalThis.fetch = mock(
+			async (..._args: unknown[]) =>
+				new Response(
+					JSON.stringify({
+						data: [
+							{ monitorId: "m1", timestamp: "2026-07-09T00:02:00Z", responseTimeMs: 30 },
+							{ monitorId: "m2", timestamp: "2026-07-09T00:01:30Z", responseTimeMs: 99 },
+							{ monitorId: "m1", timestamp: "2026-07-09T00:01:00Z", responseTimeMs: 20 },
+							{ monitorId: "m1", timestamp: "2026-07-09T00:00:00Z", responseTimeMs: 10 },
+						],
+					}),
+				),
+		) as unknown as typeof fetch;
+
+		let result = await getTeamHttpSparklines("team-1");
+		if (isFailure(result)) throw new Error("expected success");
+		expect(result.data.get("m1")).toEqual([
+			{ timestamp: "2026-07-09T00:00:00Z", responseTimeMs: 10 },
+			{ timestamp: "2026-07-09T00:01:00Z", responseTimeMs: 20 },
+			{ timestamp: "2026-07-09T00:02:00Z", responseTimeMs: 30 },
+		]);
+		expect(result.data.get("m2")).toEqual([
+			{ timestamp: "2026-07-09T00:01:30Z", responseTimeMs: 99 },
+		]);
+	});
+
+	test("downsamples a monitor's points to at most 30 bucket-averaged entries", async () => {
+		let rows = Array.from({ length: 90 }, (_, index) => ({
+			monitorId: "m1",
+			timestamp: new Date(index * 60_000).toISOString(),
+			responseTimeMs: index,
+		})).reverse(); // newest-first, matching the query's ORDER BY timestamp DESC
+
+		globalThis.fetch = mock(
+			async (..._args: unknown[]) => new Response(JSON.stringify({ data: rows })),
+		) as unknown as typeof fetch;
+
+		let result = await getTeamHttpSparklines("team-1");
+		if (isFailure(result)) throw new Error("expected success");
+		let points = result.data.get("m1") ?? [];
+		expect(points.length).toBe(30);
+		// Oldest-first: the first bucket averages the earliest (lowest) response times.
+		expect(points[0]?.responseTimeMs).toBeLessThan(points[points.length - 1]?.responseTimeMs ?? 0);
+	});
+
+	test("scopes the query to the given team, http monitors, and requested limit", async () => {
+		let fetchMock = mock(async (..._args: unknown[]) => new Response(JSON.stringify({ data: [] })));
+		globalThis.fetch = fetchMock as unknown as typeof fetch;
+
+		await getTeamHttpSparklines("team-9", 250);
+
+		let [, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+		let body = init.body as string;
+		expect(body).toContain("index1 = 'team-9'");
+		expect(body).toContain("blob2 = 'http'");
+		expect(body).toContain("LIMIT 250");
+	});
+
+	test("returns a failure Result when the underlying query fails", async () => {
+		globalThis.fetch = mock(
+			async (..._args: unknown[]) => new Response("nope", { status: 503 }),
+		) as unknown as typeof fetch;
+
+		let result = await getTeamHttpSparklines("team-1");
+		expect(isFailure(result)).toBe(true);
 	});
 });
 

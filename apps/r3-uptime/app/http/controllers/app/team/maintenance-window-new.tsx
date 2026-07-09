@@ -29,7 +29,12 @@ export default createAction(
 
 		return ctx.render(
 			<DocumentLayout title={`${ctx.team.name} · New maintenance window`}>
-				<AppShell team={ctx.team} viewer={viewer}>
+				<AppShell
+					team={ctx.team}
+					teams={ctx.teams}
+					viewer={viewer}
+					isAdmin={ctx.membership.role === "admin"}
+				>
 					<NewMaintenanceWindowView team={ctx.team} monitors={monitors} />
 				</AppShell>
 			</DocumentLayout>,

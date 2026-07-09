@@ -22,7 +22,12 @@ export default createAction(routes.app.team.cronJobNew, () => {
 
 	return ctx.render(
 		<DocumentLayout title={`${ctx.team.name} · New cron job monitor`}>
-			<AppShell team={ctx.team} viewer={viewer}>
+			<AppShell
+				team={ctx.team}
+				teams={ctx.teams}
+				viewer={viewer}
+				isAdmin={ctx.membership.role === "admin"}
+			>
 				<NewCronJobView team={ctx.team} />
 			</AppShell>
 		</DocumentLayout>,

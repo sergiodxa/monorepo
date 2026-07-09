@@ -23,7 +23,12 @@ export default createAction(routes.app.team.apiKeyNew, () => {
 
 	return ctx.render(
 		<DocumentLayout title={`${ctx.team.name} · New API key`}>
-			<AppShell team={ctx.team} viewer={viewer}>
+			<AppShell
+				team={ctx.team}
+				teams={ctx.teams}
+				viewer={viewer}
+				isAdmin={ctx.membership.role === "admin"}
+			>
 				<NewApiKeyView team={ctx.team} />
 			</AppShell>
 		</DocumentLayout>,

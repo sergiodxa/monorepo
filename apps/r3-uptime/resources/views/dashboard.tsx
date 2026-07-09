@@ -10,7 +10,7 @@ import type { Handle } from "remix/ui";
 
 import { css } from "remix/ui";
 
-import type { MonitorHealth } from "~/app/services/analytics";
+import type { MonitorHealth, SparklinePoint } from "~/app/services/analytics";
 import type {
 	SelectCronJobMonitor,
 	SelectDnsMonitor,
@@ -23,6 +23,7 @@ import CronJobMonitor from "~/app/data/cron-job";
 import Badge from "~/resources/components/badge";
 import EmptyState from "~/resources/components/empty-state";
 import StatCard from "~/resources/components/stat-card";
+import Sparkline from "~/resources/views/monitors/sparkline";
 import routes from "~/routes/web";
 
 export type DashboardTab = "http" | "dns" | "tcp" | "cron-jobs";
@@ -67,7 +68,11 @@ namespace DashboardView {
 		monitorCount: number;
 		uptimePercent: number | null;
 		slowestResponseMs: number | null;
-		httpRows: Array<{ monitor: SelectMonitor; health: MonitorHealth }>;
+		httpRows: Array<{
+			monitor: SelectMonitor;
+			health: MonitorHealth;
+			sparklinePoints: SparklinePoint[];
+		}>;
 		sslCounts: { valid: number; expiring: number; expired: number };
 		dnsMonitors: SelectDnsMonitor[];
 		tcpMonitors: SelectTcpMonitor[];
@@ -153,7 +158,7 @@ export default function DashboardView(handle: Handle<DashboardView.Props>) {
 
 function HttpTable(props: {
 	team: { slug: string };
-	rows: Array<{ monitor: SelectMonitor; health: MonitorHealth }>;
+	rows: Array<{ monitor: SelectMonitor; health: MonitorHealth; sparklinePoints: SparklinePoint[] }>;
 }) {
 	if (props.rows.length === 0) {
 		return (
@@ -189,11 +194,12 @@ function HttpTable(props: {
 				<thead>
 					<tr>
 						<th>Name</th>
+						<th>Latency trend</th>
 						<th>Status</th>
 					</tr>
 				</thead>
 				<tbody>
-					{props.rows.map(({ monitor, health }) => (
+					{props.rows.map(({ monitor, health, sparklinePoints }) => (
 						<tr key={monitor.id}>
 							<td>
 								<a
@@ -214,6 +220,11 @@ function HttpTable(props: {
 								>
 									{monitor.name}
 								</a>
+							</td>
+							<td>
+								<div mix={[css({ color: "oklch(0.6 0.16 142)" })]}>
+									<Sparkline points={sparklinePoints} />
+								</div>
 							</td>
 							<td>
 								<Badge tone={HEALTH_BADGE_TONE[health]}>{health}</Badge>

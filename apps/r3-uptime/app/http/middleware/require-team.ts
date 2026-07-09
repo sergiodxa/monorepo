@@ -23,6 +23,7 @@ declare module "remix/fetch-router" {
 	interface RequestContext {
 		team: SelectTeam;
 		membership: SelectMembership;
+		teams: SelectTeam[];
 	}
 }
 
@@ -49,6 +50,7 @@ export let requireTeam: Middleware = async (ctx, next) => {
 
 	ctx.team = team;
 	ctx.membership = membership;
+	ctx.teams = await Team.listBySubjectId(db, viewer.id);
 
 	return next();
 };

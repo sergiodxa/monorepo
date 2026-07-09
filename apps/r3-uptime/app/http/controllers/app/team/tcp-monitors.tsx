@@ -29,7 +29,12 @@ export default createAction(
 
 		return ctx.render(
 			<DocumentLayout title={`${ctx.team.name} · TCP monitors`}>
-				<AppShell team={ctx.team} viewer={viewer}>
+				<AppShell
+					team={ctx.team}
+					teams={ctx.teams}
+					viewer={viewer}
+					isAdmin={ctx.membership.role === "admin"}
+				>
 					<TcpMonitorsView team={ctx.team} monitors={monitors} />
 				</AppShell>
 			</DocumentLayout>,
