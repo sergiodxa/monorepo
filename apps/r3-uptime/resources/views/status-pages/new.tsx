@@ -7,6 +7,8 @@
 
 import type { Handle } from "remix/ui";
 
+import { css } from "remix/ui";
+
 import type {
 	SelectCronJobMonitor,
 	SelectDnsMonitor,
@@ -14,7 +16,6 @@ import type {
 	SelectTcpMonitor,
 } from "~/database/schema";
 
-import * as s from "~/resources/styles";
 import StatusPageFormFields from "~/resources/views/status-pages/form";
 import routes from "~/routes/web";
 
@@ -42,7 +43,27 @@ export default function NewStatusPageView(handle: Handle<NewStatusPageView.Props
 						tcpMonitors={tcpMonitors}
 						cronJobs={cronJobs}
 					/>
-					<button type="submit" mix={[s.buttonPrimary]}>
+					<button
+						type="submit"
+						mix={[
+							css({
+								display: "inline-flex",
+								alignItems: "center",
+								justifyContent: "center",
+								padding: "8px 16px",
+								borderRadius: 6,
+								border: "1px solid transparent",
+								background: "oklch(0.24 0.005 145)",
+								color: "#ffffff",
+								fontFamily: "inherit",
+								fontSize: "0.875rem",
+								fontWeight: 500,
+								cursor: "pointer",
+								textDecoration: "none",
+								"&:hover": { background: "oklch(0.32 0.006 145)" },
+							}),
+						]}
+					>
 						Create status page
 					</button>
 				</form>

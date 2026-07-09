@@ -10,12 +10,13 @@
 
 import type { Handle } from "remix/ui";
 
+import { css } from "remix/ui";
+
 import type { SelectAlert, SelectAlertEvent } from "~/database/schema";
 import type { BadgeTone } from "~/resources/components/badge";
 
 import Badge from "~/resources/components/badge";
 import EmptyState from "~/resources/components/empty-state";
-import * as s from "~/resources/styles";
 
 namespace AlertHistoryView {
 	export interface Props {
@@ -24,6 +25,13 @@ namespace AlertHistoryView {
 		alertsById: Map<string, SelectAlert>;
 	}
 }
+
+const neutral = {
+	200: "oklch(0.91 0.008 145)",
+	400: "oklch(0.73 0.01 145)",
+	500: "oklch(0.62 0.01 145)",
+	800: "oklch(0.32 0.006 145)",
+} as const;
 
 const STATUS_BADGE_TONE: Record<string, BadgeTone> = {
 	sent: "up",
@@ -48,8 +56,24 @@ export default function AlertHistoryView(handle: Handle<AlertHistoryView.Props>)
 				{events.length === 0 ? (
 					<EmptyState message="No alert events yet." />
 				) : (
-					<div mix={[s.tableScroll]}>
-						<table mix={[s.table]}>
+					<div mix={[css({ overflowX: "auto" })]}>
+						<table
+							mix={[
+								css({
+									width: "100%",
+									borderCollapse: "collapse",
+									fontSize: "0.875rem",
+									"& th, & td": {
+										textAlign: "left",
+										padding: "12px 16px",
+										borderBottom: `1px solid ${neutral[200]}`,
+									},
+									"@media (prefers-color-scheme: dark)": {
+										"& th, & td": { borderColor: neutral[800] },
+									},
+								}),
+							]}
+						>
 							<thead>
 								<tr>
 									<th>Alert</th>
@@ -73,7 +97,19 @@ export default function AlertHistoryView(handle: Handle<AlertHistoryView.Props>)
 											<Badge tone={STATUS_BADGE_TONE[event.status] ?? "neutral"}>
 												{event.status}
 											</Badge>
-											{event.error_message && <p mix={[s.mutedSmall]}>{event.error_message}</p>}
+											{event.error_message && (
+												<p
+													mix={[
+														css({
+															fontSize: "0.8125rem",
+															color: neutral[500],
+															"@media (prefers-color-scheme: dark)": { color: neutral[400] },
+														}),
+													]}
+												>
+													{event.error_message}
+												</p>
+											)}
 										</td>
 										<td>{new Date(event.sent_at).toLocaleString()}</td>
 									</tr>

@@ -9,12 +9,31 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Handle } from "remix/ui";
+import type { CSSMixinDescriptor, ElementProps, Handle, MixinDescriptor } from "remix/ui";
+
+import { css } from "remix/ui";
 
 import type { SelectMonitor } from "~/database/schema";
 
 import Field from "~/resources/components/field";
-import * as s from "~/resources/styles";
+
+const neutral = {
+	50: "oklch(0.98 0.005 145)",
+	200: "oklch(0.91 0.008 145)",
+	700: "oklch(0.42 0.008 145)",
+	900: "oklch(0.24 0.005 145)",
+} as const;
+
+/** {@link mixForSelect} re-types a `css()` mixin for `<select>`. */
+function mixForSelect(
+	mixin: CSSMixinDescriptor,
+): MixinDescriptor<HTMLSelectElement, CSSMixinDescriptor["args"], ElementProps> {
+	return mixin as unknown as MixinDescriptor<
+		HTMLSelectElement,
+		CSSMixinDescriptor["args"],
+		ElementProps
+	>;
+}
 
 const HTTP_METHODS = ["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD"] as const;
 const LOCATION_HINTS = [
@@ -43,7 +62,27 @@ export default function MonitorFormFields(handle: Handle<MonitorFormFields.Props
 		return (
 			<>
 				<Field label="Name">
-					<input type="text" name="name" required defaultValue={monitor?.name} mix={[s.input]} />
+					<input
+						type="text"
+						name="name"
+						required
+						defaultValue={monitor?.name}
+						mix={[
+							css({
+								padding: "8px 12px",
+								borderRadius: 6,
+								border: `1px solid ${neutral[200]}`,
+								fontSize: "0.875rem",
+								fontFamily: "inherit",
+								background: neutral[50],
+								color: "inherit",
+								"@media (prefers-color-scheme: dark)": {
+									borderColor: neutral[700],
+									background: neutral[900],
+								},
+							}),
+						]}
+					/>
 				</Field>
 
 				<Field label="URL">
@@ -53,12 +92,46 @@ export default function MonitorFormFields(handle: Handle<MonitorFormFields.Props
 						required
 						defaultValue={monitor?.url}
 						placeholder="https://example.com"
-						mix={[s.input]}
+						mix={[
+							css({
+								padding: "8px 12px",
+								borderRadius: 6,
+								border: `1px solid ${neutral[200]}`,
+								fontSize: "0.875rem",
+								fontFamily: "inherit",
+								background: neutral[50],
+								color: "inherit",
+								"@media (prefers-color-scheme: dark)": {
+									borderColor: neutral[700],
+									background: neutral[900],
+								},
+							}),
+						]}
 					/>
 				</Field>
 
 				<Field label="Method">
-					<select name="method" defaultValue={monitor?.method ?? "HEAD"} mix={[s.selectInput]}>
+					<select
+						name="method"
+						defaultValue={monitor?.method ?? "HEAD"}
+						mix={[
+							mixForSelect(
+								css({
+									padding: "8px 12px",
+									borderRadius: 6,
+									border: `1px solid ${neutral[200]}`,
+									fontSize: "0.875rem",
+									fontFamily: "inherit",
+									background: neutral[50],
+									color: "inherit",
+									"@media (prefers-color-scheme: dark)": {
+										borderColor: neutral[700],
+										background: neutral[900],
+									},
+								}),
+							),
+						]}
+					>
 						{HTTP_METHODS.map((method) => (
 							<option key={method} value={method}>
 								{method}
@@ -74,7 +147,21 @@ export default function MonitorFormFields(handle: Handle<MonitorFormFields.Props
 						min={100}
 						max={599}
 						defaultValue={monitor?.expected_status ?? 200}
-						mix={[s.input]}
+						mix={[
+							css({
+								padding: "8px 12px",
+								borderRadius: 6,
+								border: `1px solid ${neutral[200]}`,
+								fontSize: "0.875rem",
+								fontFamily: "inherit",
+								background: neutral[50],
+								color: "inherit",
+								"@media (prefers-color-scheme: dark)": {
+									borderColor: neutral[700],
+									background: neutral[900],
+								},
+							}),
+						]}
 					/>
 				</Field>
 
@@ -85,7 +172,21 @@ export default function MonitorFormFields(handle: Handle<MonitorFormFields.Props
 						min={60}
 						max={3600}
 						defaultValue={monitor?.interval_seconds ?? 60}
-						mix={[s.input]}
+						mix={[
+							css({
+								padding: "8px 12px",
+								borderRadius: 6,
+								border: `1px solid ${neutral[200]}`,
+								fontSize: "0.875rem",
+								fontFamily: "inherit",
+								background: neutral[50],
+								color: "inherit",
+								"@media (prefers-color-scheme: dark)": {
+									borderColor: neutral[700],
+									background: neutral[900],
+								},
+							}),
+						]}
 					/>
 				</Field>
 
@@ -96,7 +197,21 @@ export default function MonitorFormFields(handle: Handle<MonitorFormFields.Props
 						min={1}
 						max={60}
 						defaultValue={monitor?.timeout_seconds ?? 10}
-						mix={[s.input]}
+						mix={[
+							css({
+								padding: "8px 12px",
+								borderRadius: 6,
+								border: `1px solid ${neutral[200]}`,
+								fontSize: "0.875rem",
+								fontFamily: "inherit",
+								background: neutral[50],
+								color: "inherit",
+								"@media (prefers-color-scheme: dark)": {
+									borderColor: neutral[700],
+									background: neutral[900],
+								},
+							}),
+						]}
 					/>
 				</Field>
 
@@ -107,7 +222,21 @@ export default function MonitorFormFields(handle: Handle<MonitorFormFields.Props
 						min={1}
 						max={60_000}
 						defaultValue={monitor?.degraded_after_ms ?? 5000}
-						mix={[s.input]}
+						mix={[
+							css({
+								padding: "8px 12px",
+								borderRadius: 6,
+								border: `1px solid ${neutral[200]}`,
+								fontSize: "0.875rem",
+								fontFamily: "inherit",
+								background: neutral[50],
+								color: "inherit",
+								"@media (prefers-color-scheme: dark)": {
+									borderColor: neutral[700],
+									background: neutral[900],
+								},
+							}),
+						]}
 					/>
 				</Field>
 
@@ -115,7 +244,23 @@ export default function MonitorFormFields(handle: Handle<MonitorFormFields.Props
 					<select
 						name="location_hint"
 						defaultValue={monitor?.location_hint ?? "wnam"}
-						mix={[s.selectInput]}
+						mix={[
+							mixForSelect(
+								css({
+									padding: "8px 12px",
+									borderRadius: 6,
+									border: `1px solid ${neutral[200]}`,
+									fontSize: "0.875rem",
+									fontFamily: "inherit",
+									background: neutral[50],
+									color: "inherit",
+									"@media (prefers-color-scheme: dark)": {
+										borderColor: neutral[700],
+										background: neutral[900],
+									},
+								}),
+							),
+						]}
 					>
 						{LOCATION_HINTS.map((hint) => (
 							<option key={hint.value} value={hint.value}>

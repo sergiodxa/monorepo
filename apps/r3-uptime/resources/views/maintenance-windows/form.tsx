@@ -7,12 +7,33 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Handle } from "remix/ui";
+import type { CSSMixinDescriptor, ElementProps, Handle, MixinDescriptor } from "remix/ui";
+
+import { css } from "remix/ui";
 
 import type { SelectMaintenanceWindow, SelectMonitor } from "~/database/schema";
 
 import Field from "~/resources/components/field";
-import * as s from "~/resources/styles";
+
+const neutral = {
+	50: "oklch(0.98 0.005 145)",
+	200: "oklch(0.91 0.008 145)",
+	400: "oklch(0.73 0.01 145)",
+	500: "oklch(0.62 0.01 145)",
+	700: "oklch(0.42 0.008 145)",
+	900: "oklch(0.24 0.005 145)",
+} as const;
+
+/** {@link mixForSelect} re-types a `css()` mixin for `<select>`. */
+function mixForSelect(
+	mixin: CSSMixinDescriptor,
+): MixinDescriptor<HTMLSelectElement, CSSMixinDescriptor["args"], ElementProps> {
+	return mixin as unknown as MixinDescriptor<
+		HTMLSelectElement,
+		CSSMixinDescriptor["args"],
+		ElementProps
+	>;
+}
 
 namespace MaintenanceWindowFormFields {
 	export interface Props {
@@ -37,11 +58,51 @@ export default function MaintenanceWindowFormFields(
 		return (
 			<>
 				<Field label="Name">
-					<input type="text" name="name" required defaultValue={window?.name} mix={[s.input]} />
+					<input
+						type="text"
+						name="name"
+						required
+						defaultValue={window?.name}
+						mix={[
+							css({
+								padding: "8px 12px",
+								borderRadius: 6,
+								border: `1px solid ${neutral[200]}`,
+								fontSize: "0.875rem",
+								fontFamily: "inherit",
+								background: neutral[50],
+								color: "inherit",
+								"@media (prefers-color-scheme: dark)": {
+									borderColor: neutral[700],
+									background: neutral[900],
+								},
+							}),
+						]}
+					/>
 				</Field>
 
 				<Field label="Scope">
-					<select name="monitor_id" defaultValue={window?.monitor_id ?? ""} mix={[s.selectInput]}>
+					<select
+						name="monitor_id"
+						defaultValue={window?.monitor_id ?? ""}
+						mix={[
+							mixForSelect(
+								css({
+									padding: "8px 12px",
+									borderRadius: 6,
+									border: `1px solid ${neutral[200]}`,
+									fontSize: "0.875rem",
+									fontFamily: "inherit",
+									background: neutral[50],
+									color: "inherit",
+									"@media (prefers-color-scheme: dark)": {
+										borderColor: neutral[700],
+										background: neutral[900],
+									},
+								}),
+							),
+						]}
+					>
 						<option value="">All monitors</option>
 						{monitors.map((monitor) => (
 							<option key={monitor.id} value={monitor.id}>
@@ -57,7 +118,21 @@ export default function MaintenanceWindowFormFields(
 						name="starts_at"
 						required
 						defaultValue={window ? toDatetimeLocal(window.starts_at) : undefined}
-						mix={[s.input]}
+						mix={[
+							css({
+								padding: "8px 12px",
+								borderRadius: 6,
+								border: `1px solid ${neutral[200]}`,
+								fontSize: "0.875rem",
+								fontFamily: "inherit",
+								background: neutral[50],
+								color: "inherit",
+								"@media (prefers-color-scheme: dark)": {
+									borderColor: neutral[700],
+									background: neutral[900],
+								},
+							}),
+						]}
 					/>
 				</Field>
 
@@ -67,11 +142,35 @@ export default function MaintenanceWindowFormFields(
 						name="ends_at"
 						required
 						defaultValue={window ? toDatetimeLocal(window.ends_at) : undefined}
-						mix={[s.input]}
+						mix={[
+							css({
+								padding: "8px 12px",
+								borderRadius: 6,
+								border: `1px solid ${neutral[200]}`,
+								fontSize: "0.875rem",
+								fontFamily: "inherit",
+								background: neutral[50],
+								color: "inherit",
+								"@media (prefers-color-scheme: dark)": {
+									borderColor: neutral[700],
+									background: neutral[900],
+								},
+							}),
+						]}
 					/>
 				</Field>
 
-				<label mix={[s.checkboxField]}>
+				<label
+					mix={[
+						css({
+							display: "flex",
+							alignItems: "center",
+							gap: 8,
+							marginBottom: 16,
+							fontSize: "0.875rem",
+						}),
+					]}
+				>
 					<input
 						type="checkbox"
 						name="suppress_alerts"
@@ -81,7 +180,17 @@ export default function MaintenanceWindowFormFields(
 					<span>Suppress alerts during this window</span>
 				</label>
 
-				<label mix={[s.checkboxField]}>
+				<label
+					mix={[
+						css({
+							display: "flex",
+							alignItems: "center",
+							gap: 8,
+							marginBottom: 16,
+							fontSize: "0.875rem",
+						}),
+					]}
+				>
 					<input
 						type="checkbox"
 						name="show_on_status_page"
@@ -91,7 +200,17 @@ export default function MaintenanceWindowFormFields(
 					<span>Show on status page</span>
 				</label>
 
-				<label mix={[s.checkboxField]}>
+				<label
+					mix={[
+						css({
+							display: "flex",
+							alignItems: "center",
+							gap: 8,
+							marginBottom: 16,
+							fontSize: "0.875rem",
+						}),
+					]}
+				>
 					<input
 						type="checkbox"
 						name="is_recurring"
@@ -107,9 +226,31 @@ export default function MaintenanceWindowFormFields(
 						name="recurring_pattern"
 						defaultValue={window?.recurring_pattern ?? ""}
 						placeholder="weekly:monday:02:00-04:00"
-						mix={[s.input]}
+						mix={[
+							css({
+								padding: "8px 12px",
+								borderRadius: 6,
+								border: `1px solid ${neutral[200]}`,
+								fontSize: "0.875rem",
+								fontFamily: "inherit",
+								background: neutral[50],
+								color: "inherit",
+								"@media (prefers-color-scheme: dark)": {
+									borderColor: neutral[700],
+									background: neutral[900],
+								},
+							}),
+						]}
 					/>
-					<p mix={[s.mutedSmall]}>
+					<p
+						mix={[
+							css({
+								fontSize: "0.8125rem",
+								color: neutral[500],
+								"@media (prefers-color-scheme: dark)": { color: neutral[400] },
+							}),
+						]}
+					>
 						<code>daily:HH:MM-HH:MM</code>, <code>weekly:&lt;day&gt;:HH:MM-HH:MM</code>, or{" "}
 						<code>monthly:&lt;day-of-month&gt;:HH:MM-HH:MM</code>, in UTC.
 					</p>

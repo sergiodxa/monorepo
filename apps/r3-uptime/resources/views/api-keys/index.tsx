@@ -9,12 +9,13 @@
 
 import type { Handle } from "remix/ui";
 
+import { css } from "remix/ui";
+
 import type { SelectApiKey, SelectTeam } from "~/database/schema";
 
 import Badge from "~/resources/components/badge";
 import CopyButton from "~/resources/components/copy-button";
 import EmptyState from "~/resources/components/empty-state";
-import * as s from "~/resources/styles";
 import routes from "~/routes/web";
 
 namespace ApiKeysView {
@@ -25,26 +26,73 @@ namespace ApiKeysView {
 	}
 }
 
+const neutral = {
+	200: "oklch(0.91 0.008 145)",
+	300: "oklch(0.83 0.01 145)",
+	700: "oklch(0.42 0.008 145)",
+	800: "oklch(0.32 0.006 145)",
+	900: "oklch(0.24 0.005 145)",
+} as const;
+
+const danger = {
+	600: "oklch(0.58 0.18 25)",
+	700: "oklch(0.48 0.16 25)",
+} as const;
+
 export default function ApiKeysView(handle: Handle<ApiKeysView.Props>) {
 	return () => {
 		let { team, apiKeys, newApiKey } = handle.props;
 
 		return (
 			<div>
-				<div mix={[s.row]}>
+				<div mix={[css({ display: "flex", alignItems: "center", gap: 12 })]}>
 					<h1>API keys</h1>
-					<a href={routes.app.team.apiKeyNew.href({ team: team.slug })} mix={[s.buttonPrimary]}>
+					<a
+						href={routes.app.team.apiKeyNew.href({ team: team.slug })}
+						mix={[
+							css({
+								display: "inline-flex",
+								alignItems: "center",
+								justifyContent: "center",
+								padding: "8px 16px",
+								borderRadius: 6,
+								border: "1px solid transparent",
+								background: neutral[900],
+								color: "#ffffff",
+								fontFamily: "inherit",
+								fontSize: "0.875rem",
+								fontWeight: 500,
+								cursor: "pointer",
+								textDecoration: "none",
+								"&:hover": { background: neutral[800] },
+							}),
+						]}
+					>
 						New API key
 					</a>
 				</div>
 
 				{newApiKey && (
-					<div mix={[s.emptyState]}>
+					<div
+						mix={[
+							css({
+								display: "flex",
+								flexDirection: "column",
+								alignItems: "center",
+								textAlign: "center",
+								gap: 12,
+								padding: "64px 32px",
+								border: `1px dashed ${neutral[300]}`,
+								borderRadius: 12,
+								"@media (prefers-color-scheme: dark)": { borderColor: neutral[700] },
+							}),
+						]}
+					>
 						<p>
 							<strong>{newApiKey.name}</strong> created. Copy this key now — you won't be able to
 							see it again.
 						</p>
-						<div mix={[s.row]}>
+						<div mix={[css({ display: "flex", alignItems: "center", gap: 12 })]}>
 							<code>{newApiKey.key}</code>
 							<CopyButton value={newApiKey.key} label="Copy key" />
 						</div>
@@ -54,8 +102,24 @@ export default function ApiKeysView(handle: Handle<ApiKeysView.Props>) {
 				{apiKeys.length === 0 ? (
 					<EmptyState message="No API keys yet." />
 				) : (
-					<div mix={[s.tableScroll]}>
-						<table mix={[s.table]}>
+					<div mix={[css({ overflowX: "auto" })]}>
+						<table
+							mix={[
+								css({
+									width: "100%",
+									borderCollapse: "collapse",
+									fontSize: "0.875rem",
+									"& th, & td": {
+										textAlign: "left",
+										padding: "12px 16px",
+										borderBottom: `1px solid ${neutral[200]}`,
+									},
+									"@media (prefers-color-scheme: dark)": {
+										"& th, & td": { borderColor: neutral[800] },
+									},
+								}),
+							]}
+						>
 							<thead>
 								<tr>
 									<th>Name</th>
@@ -104,7 +168,27 @@ export default function ApiKeysView(handle: Handle<ApiKeysView.Props>) {
 												>
 													<input type="hidden" name="_method" value="DELETE" />
 													<input type="hidden" name="api_key_id" value={apiKey.id} />
-													<button type="submit" mix={[s.buttonDanger]}>
+													<button
+														type="submit"
+														mix={[
+															css({
+																display: "inline-flex",
+																alignItems: "center",
+																justifyContent: "center",
+																padding: "8px 16px",
+																borderRadius: 6,
+																border: "1px solid transparent",
+																background: danger[600],
+																color: "#ffffff",
+																fontFamily: "inherit",
+																fontSize: "0.875rem",
+																fontWeight: 500,
+																cursor: "pointer",
+																textDecoration: "none",
+																"&:hover": { background: danger[700] },
+															}),
+														]}
+													>
 														Delete
 													</button>
 												</form>

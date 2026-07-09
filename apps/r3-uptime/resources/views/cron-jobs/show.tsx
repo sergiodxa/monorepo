@@ -9,6 +9,8 @@
 
 import type { Handle } from "remix/ui";
 
+import { css } from "remix/ui";
+
 import type {
 	SelectCronJobMonitor,
 	SelectCronJobPing,
@@ -20,7 +22,6 @@ import CronJobMonitor from "~/app/data/cron-job";
 import Badge from "~/resources/components/badge";
 import EmptyState from "~/resources/components/empty-state";
 import StatCard from "~/resources/components/stat-card";
-import * as s from "~/resources/styles";
 import Heatmap from "~/resources/views/shared/heatmap";
 import routes from "~/routes/web";
 
@@ -33,6 +34,17 @@ namespace CronJobShowView {
 		dailyStats: SelectMonitorDailyStats[];
 	}
 }
+
+const neutral = {
+	50: "oklch(0.98 0.005 145)",
+	200: "oklch(0.91 0.008 145)",
+	300: "oklch(0.83 0.01 145)",
+	400: "oklch(0.73 0.01 145)",
+	500: "oklch(0.62 0.01 145)",
+	700: "oklch(0.42 0.008 145)",
+	800: "oklch(0.32 0.006 145)",
+	900: "oklch(0.24 0.005 145)",
+} as const;
 
 const STATUS_BADGE_TONE: Record<string, BadgeTone> = {
 	healthy: "up",
@@ -51,22 +63,77 @@ export default function CronJobShowView(handle: Handle<CronJobShowView.Props>) {
 
 		return (
 			<div>
-				<div mix={[s.row]}>
+				<div mix={[css({ display: "flex", alignItems: "center", gap: 12 })]}>
 					<h1>{monitor.name}</h1>
 					<a
 						href={routes.app.team.cronJobEdit.href({ team: team.slug, monitorId: monitor.id })}
-						mix={[s.buttonSecondary]}
+						mix={[
+							css({
+								display: "inline-flex",
+								alignItems: "center",
+								justifyContent: "center",
+								padding: "8px 16px",
+								borderRadius: 6,
+								border: `2px solid ${neutral[300]}`,
+								background: "#ffffff",
+								color: neutral[500],
+								fontFamily: "inherit",
+								fontSize: "0.875rem",
+								fontWeight: 500,
+								cursor: "pointer",
+								textDecoration: "none",
+								"&:hover": { background: neutral[50] },
+								"@media (prefers-color-scheme: dark)": {
+									background: neutral[900],
+									color: neutral[400],
+									borderColor: neutral[700],
+									"&:hover": { background: neutral[800] },
+								},
+							}),
+						]}
 					>
 						Edit
 					</a>
 				</div>
 
-				{monitor.description && <p mix={[s.mutedSmall]}>{monitor.description}</p>}
+				{monitor.description && (
+					<p
+						mix={[
+							css({
+								fontSize: "0.8125rem",
+								color: neutral[500],
+								"@media (prefers-color-scheme: dark)": { color: neutral[400] },
+							}),
+						]}
+					>
+						{monitor.description}
+					</p>
+				)}
 
-				<div mix={[s.statRow]}>
-					<div mix={[s.statCard]}>
-						<div mix={[s.mutedSmall]}>Schedule</div>
-						<div mix={[s.statValue]}>
+				<div mix={[css({ display: "flex", flexWrap: "wrap", gap: 16, marginBottom: 24 })]}>
+					<div
+						mix={[
+							css({
+								flex: "1 1 160px",
+								padding: 16,
+								borderRadius: 8,
+								border: `1px solid ${neutral[200]}`,
+								"@media (prefers-color-scheme: dark)": { borderColor: neutral[800] },
+							}),
+						]}
+					>
+						<div
+							mix={[
+								css({
+									fontSize: "0.8125rem",
+									color: neutral[500],
+									"@media (prefers-color-scheme: dark)": { color: neutral[400] },
+								}),
+							]}
+						>
+							Schedule
+						</div>
+						<div mix={[css({ fontSize: "1.5rem", fontWeight: 700, lineHeight: "2rem" })]}>
 							{CronJobMonitor.describeCronExpression(monitor.cron_expression)}
 						</div>
 						<code>{monitor.cron_expression}</code>
@@ -81,7 +148,7 @@ export default function CronJobShowView(handle: Handle<CronJobShowView.Props>) {
 					<StatCard label="Grace period" value={`${monitor.grace_period_seconds}s`} />
 				</div>
 
-				<div mix={[s.statRow]}>
+				<div mix={[css({ display: "flex", flexWrap: "wrap", gap: 16, marginBottom: 24 })]}>
 					<StatCard
 						label="Last ping"
 						value={
@@ -103,17 +170,49 @@ export default function CronJobShowView(handle: Handle<CronJobShowView.Props>) {
 				</div>
 
 				<h2>Ping this monitor</h2>
-				<p mix={[s.mutedSmall]}>
+				<p
+					mix={[
+						css({
+							fontSize: "0.8125rem",
+							color: neutral[500],
+							"@media (prefers-color-scheme: dark)": { color: neutral[400] },
+						}),
+					]}
+				>
 					Have your job send a POST request here after it finishes. No authentication required —
 					treat this URL as a secret.
 				</p>
-				<pre mix={[s.mutedSmall]}>
+				<pre
+					mix={[
+						css({
+							fontSize: "0.8125rem",
+							color: neutral[500],
+							"@media (prefers-color-scheme: dark)": { color: neutral[400] },
+						}),
+					]}
+				>
 					<code>POST {pingUrl}</code>
 				</pre>
-				<pre mix={[s.mutedSmall]}>
+				<pre
+					mix={[
+						css({
+							fontSize: "0.8125rem",
+							color: neutral[500],
+							"@media (prefers-color-scheme: dark)": { color: neutral[400] },
+						}),
+					]}
+				>
 					<code>curl -X POST {pingUrl}</code>
 				</pre>
-				<pre mix={[s.mutedSmall]}>
+				<pre
+					mix={[
+						css({
+							fontSize: "0.8125rem",
+							color: neutral[500],
+							"@media (prefers-color-scheme: dark)": { color: neutral[400] },
+						}),
+					]}
+				>
 					<code>0 * * * * your-job.sh &amp;&amp; curl -fsS -X POST {pingUrl}</code>
 				</pre>
 
@@ -124,8 +223,24 @@ export default function CronJobShowView(handle: Handle<CronJobShowView.Props>) {
 				{pings.length === 0 ? (
 					<EmptyState message="No pings yet." />
 				) : (
-					<div mix={[s.tableScroll]}>
-						<table mix={[s.table]}>
+					<div mix={[css({ overflowX: "auto" })]}>
+						<table
+							mix={[
+								css({
+									width: "100%",
+									borderCollapse: "collapse",
+									fontSize: "0.875rem",
+									"& th, & td": {
+										textAlign: "left",
+										padding: "12px 16px",
+										borderBottom: `1px solid ${neutral[200]}`,
+									},
+									"@media (prefers-color-scheme: dark)": {
+										"& th, & td": { borderColor: neutral[800] },
+									},
+								}),
+							]}
+						>
 							<thead>
 								<tr>
 									<th>Time</th>

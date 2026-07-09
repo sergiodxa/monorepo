@@ -8,13 +8,41 @@
 
 import type { Handle } from "remix/ui";
 
-import * as s from "~/resources/styles";
+import { css } from "remix/ui";
 
 export default function CheckoutView(_handle: Handle<Record<string, never>>) {
 	return () => (
-		<div mix={[s.emptyState]}>
+		<div
+			mix={[
+				css({
+					display: "flex",
+					flexDirection: "column",
+					alignItems: "center",
+					textAlign: "center",
+					gap: 12,
+					padding: "64px 32px",
+					border: "1px dashed oklch(0.83 0.01 145)",
+					borderRadius: 12,
+					"@media (prefers-color-scheme: dark)": {
+						borderColor: "oklch(0.42 0.008 145)",
+					},
+				}),
+			]}
+		>
 			<h1>Billing</h1>
-			<p mix={[s.mutedSmall]}>Only the team owner can view and manage billing for this team.</p>
+			<p
+				mix={[
+					css({
+						fontSize: "0.8125rem",
+						color: "oklch(0.62 0.01 145)",
+						"@media (prefers-color-scheme: dark)": {
+							color: "oklch(0.73 0.01 145)",
+						},
+					}),
+				]}
+			>
+				Only the team owner can view and manage billing for this team.
+			</p>
 		</div>
 	);
 }

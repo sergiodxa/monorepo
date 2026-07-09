@@ -10,9 +10,9 @@
 
 import type { Handle } from "remix/ui";
 
-import type { SelectMonitorDailyStats } from "~/database/schema";
+import { css } from "remix/ui";
 
-import * as s from "~/resources/styles";
+import type { SelectMonitorDailyStats } from "~/database/schema";
 
 namespace Heatmap {
 	export interface Props {
@@ -20,10 +20,57 @@ namespace Heatmap {
 	}
 }
 
-const CELL_MIX: Record<string, typeof s.heatmapCellUp> = {
-	up: s.heatmapCellUp,
-	degraded: s.heatmapCellDegraded,
-	down: s.heatmapCellDown,
+/** Horizontally-scrollable row of heatmap week-columns. */
+const heatmap = css({
+	display: "flex",
+	gap: 3,
+	overflowX: "auto",
+	padding: "4px 0",
+});
+
+/** One week's column of day-cells in the heatmap. */
+const heatmapWeek = css({
+	display: "flex",
+	flexDirection: "column",
+	gap: 3,
+});
+
+/** One day-cell in the heatmap; combine with a status color mixin. */
+const heatmapCell = css({
+	width: 11,
+	height: 11,
+	borderRadius: 2,
+});
+
+/** Heatmap cell: no data for that day yet. */
+const heatmapCellEmpty = css({
+	background: "oklch(0.91 0.008 145)",
+	"@media (prefers-color-scheme: dark)": { background: "oklch(0.42 0.008 145)" },
+});
+
+/**
+ * Heatmap cell: fully up for that day. The OLD APP's heatmap legend swatches
+ * (`bg-green-500`, `bg-yellow-500`, `bg-red-500`) have no `dark:` variant, so these
+ * three stay flat across color schemes.
+ */
+const heatmapCellUp = css({
+	background: "oklch(0.7 0.2 155)",
+});
+
+/** Heatmap cell: degraded for that day. */
+const heatmapCellDegraded = css({
+	background: "oklch(0.72 0.18 85)",
+});
+
+/** Heatmap cell: down for that day. */
+const heatmapCellDown = css({
+	background: "oklch(0.68 0.2 25)",
+});
+
+const CELL_MIX: Record<string, typeof heatmapCellUp> = {
+	up: heatmapCellUp,
+	degraded: heatmapCellDegraded,
+	down: heatmapCellDown,
 };
 
 /** Builds Sunday-aligned week columns from Jan 1 of the current year through today. */
@@ -53,12 +100,12 @@ export default function Heatmap(handle: Handle<Heatmap.Props>) {
 		let weeks = buildWeeks();
 
 		return (
-			<div mix={[s.heatmap]}>
+			<div mix={[heatmap]}>
 				{weeks.map((week, weekIndex) => (
-					<div key={weekIndex} mix={[s.heatmapWeek]}>
+					<div key={weekIndex} mix={[heatmapWeek]}>
 						{week.map((date, dayIndex) => {
 							if (date === null) {
-								return <div key={dayIndex} mix={[s.heatmapCell]} />;
+								return <div key={dayIndex} mix={[heatmapCell]} />;
 							}
 							let day = byDate.get(date);
 							let statusMix = day ? CELL_MIX[day.status] : undefined;
@@ -70,7 +117,7 @@ export default function Heatmap(handle: Handle<Heatmap.Props>) {
 											? `${date}: ${day.status} (${day.successful_checks}/${day.total_checks})`
 											: date
 									}
-									mix={[s.heatmapCell, statusMix ?? s.heatmapCellEmpty]}
+									mix={[heatmapCell, statusMix ?? heatmapCellEmpty]}
 								/>
 							);
 						})}

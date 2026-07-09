@@ -12,10 +12,9 @@
 import type { Handle } from "remix/ui";
 
 import { renderToRemix } from "@pkg/markdown-remix";
+import { css } from "remix/ui";
 
 import type { DocFrontmatter } from "~/app/services/docs";
-
-import * as s from "~/resources/styles";
 
 namespace DocShowView {
 	export interface Props {
@@ -23,6 +22,13 @@ namespace DocShowView {
 		frontmatter: DocFrontmatter;
 	}
 }
+
+/** Neutral scale shades used on this page, hue 145. */
+const neutral = {
+	400: "oklch(0.73 0.01 145)",
+	500: "oklch(0.62 0.01 145)",
+	600: "oklch(0.52 0.01 145)",
+} as const;
 
 export default function DocShowView(handle: Handle<DocShowView.Props>) {
 	return () => {
@@ -32,9 +38,32 @@ export default function DocShowView(handle: Handle<DocShowView.Props>) {
 			<article>
 				<header>
 					<h1>{frontmatter.title}</h1>
-					<p mix={[s.docsIntro]}>{frontmatter.description}</p>
+					<p
+						mix={[
+							css({
+								fontSize: "1.0625rem",
+								color: neutral[600],
+								margin: "8px 0 32px",
+								"@media (prefers-color-scheme: dark)": { color: neutral[400] },
+							}),
+						]}
+					>
+						{frontmatter.description}
+					</p>
 					{frontmatter.lastUpdated && (
-						<p mix={[s.mutedSmall]}>Last updated: {frontmatter.lastUpdated}</p>
+						<p
+							mix={[
+								css({
+									fontSize: "0.8125rem",
+									color: neutral[500],
+									"@media (prefers-color-scheme: dark)": {
+										color: neutral[400],
+									},
+								}),
+							]}
+						>
+							Last updated: {frontmatter.lastUpdated}
+						</p>
 					)}
 				</header>
 

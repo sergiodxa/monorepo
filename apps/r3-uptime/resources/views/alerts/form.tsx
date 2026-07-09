@@ -9,12 +9,37 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Handle } from "remix/ui";
+import type { CSSMixinDescriptor, ElementProps, Handle, MixinDescriptor } from "remix/ui";
+
+import { css } from "remix/ui";
 
 import type { SelectAlert, SelectMonitor } from "~/database/schema";
 
 import Field from "~/resources/components/field";
-import * as s from "~/resources/styles";
+
+const neutral = {
+	50: "oklch(0.98 0.005 145)",
+	200: "oklch(0.91 0.008 145)",
+	400: "oklch(0.73 0.01 145)",
+	500: "oklch(0.62 0.01 145)",
+	700: "oklch(0.42 0.008 145)",
+	900: "oklch(0.24 0.005 145)",
+} as const;
+
+/**
+ * Re-types a `css()` mixin for `<select>`. `css()`'s return type doesn't directly fit
+ * `HTMLSelectElement` due to a Cloudflare Workers types conflict; only the compile-time
+ * type changes, the runtime value is identical.
+ */
+function mixForSelect(
+	mixin: CSSMixinDescriptor,
+): MixinDescriptor<HTMLSelectElement, CSSMixinDescriptor["args"], ElementProps> {
+	return mixin as unknown as MixinDescriptor<
+		HTMLSelectElement,
+		CSSMixinDescriptor["args"],
+		ElementProps
+	>;
+}
 
 namespace AlertFormFields {
 	export interface Props {
@@ -33,11 +58,51 @@ export default function AlertFormFields(handle: Handle<AlertFormFields.Props>) {
 		return (
 			<>
 				<Field label="Name">
-					<input type="text" name="name" required defaultValue={alert?.name} mix={[s.input]} />
+					<input
+						type="text"
+						name="name"
+						required
+						defaultValue={alert?.name}
+						mix={[
+							css({
+								padding: "8px 12px",
+								borderRadius: 6,
+								border: `1px solid ${neutral[200]}`,
+								fontSize: "0.875rem",
+								fontFamily: "inherit",
+								background: neutral[50],
+								color: "inherit",
+								"@media (prefers-color-scheme: dark)": {
+									borderColor: neutral[700],
+									background: neutral[900],
+								},
+							}),
+						]}
+					/>
 				</Field>
 
 				<Field label="Scope">
-					<select name="monitor_id" defaultValue={alert?.monitor_id ?? ""} mix={[s.selectInput]}>
+					<select
+						name="monitor_id"
+						defaultValue={alert?.monitor_id ?? ""}
+						mix={[
+							mixForSelect(
+								css({
+									padding: "8px 12px",
+									borderRadius: 6,
+									border: `1px solid ${neutral[200]}`,
+									fontSize: "0.875rem",
+									fontFamily: "inherit",
+									background: neutral[50],
+									color: "inherit",
+									"@media (prefers-color-scheme: dark)": {
+										borderColor: neutral[700],
+										background: neutral[900],
+									},
+								}),
+							),
+						]}
+					>
 						<option value="">Team-wide (every monitor)</option>
 						{monitors.map((monitor) => (
 							<option key={monitor.id} value={monitor.id}>
@@ -48,7 +113,27 @@ export default function AlertFormFields(handle: Handle<AlertFormFields.Props>) {
 				</Field>
 
 				<Field label="Channel">
-					<select name="strategy" defaultValue={config?.strategy ?? "email"} mix={[s.selectInput]}>
+					<select
+						name="strategy"
+						defaultValue={config?.strategy ?? "email"}
+						mix={[
+							mixForSelect(
+								css({
+									padding: "8px 12px",
+									borderRadius: 6,
+									border: `1px solid ${neutral[200]}`,
+									fontSize: "0.875rem",
+									fontFamily: "inherit",
+									background: neutral[50],
+									color: "inherit",
+									"@media (prefers-color-scheme: dark)": {
+										borderColor: neutral[700],
+										background: neutral[900],
+									},
+								}),
+							),
+						]}
+					>
 						<option value="email">Email</option>
 						<option value="webhook">Webhook</option>
 						<option value="slack">Slack</option>
@@ -63,7 +148,21 @@ export default function AlertFormFields(handle: Handle<AlertFormFields.Props>) {
 							type="email"
 							name="email_to"
 							defaultValue={config?.strategy === "email" ? config.config.to : ""}
-							mix={[s.input]}
+							mix={[
+								css({
+									padding: "8px 12px",
+									borderRadius: 6,
+									border: `1px solid ${neutral[200]}`,
+									fontSize: "0.875rem",
+									fontFamily: "inherit",
+									background: neutral[50],
+									color: "inherit",
+									"@media (prefers-color-scheme: dark)": {
+										borderColor: neutral[700],
+										background: neutral[900],
+									},
+								}),
+							]}
 						/>
 					</Field>
 					<Field label="Subject prefix (optional)">
@@ -71,7 +170,21 @@ export default function AlertFormFields(handle: Handle<AlertFormFields.Props>) {
 							type="text"
 							name="email_subject_prefix"
 							defaultValue={config?.strategy === "email" ? config.config.subjectPrefix : ""}
-							mix={[s.input]}
+							mix={[
+								css({
+									padding: "8px 12px",
+									borderRadius: 6,
+									border: `1px solid ${neutral[200]}`,
+									fontSize: "0.875rem",
+									fontFamily: "inherit",
+									background: neutral[50],
+									color: "inherit",
+									"@media (prefers-color-scheme: dark)": {
+										borderColor: neutral[700],
+										background: neutral[900],
+									},
+								}),
+							]}
 						/>
 					</Field>
 				</fieldset>
@@ -83,7 +196,21 @@ export default function AlertFormFields(handle: Handle<AlertFormFields.Props>) {
 							type="url"
 							name="webhook_url"
 							defaultValue={config?.strategy === "webhook" ? config.config.url : ""}
-							mix={[s.input]}
+							mix={[
+								css({
+									padding: "8px 12px",
+									borderRadius: 6,
+									border: `1px solid ${neutral[200]}`,
+									fontSize: "0.875rem",
+									fontFamily: "inherit",
+									background: neutral[50],
+									color: "inherit",
+									"@media (prefers-color-scheme: dark)": {
+										borderColor: neutral[700],
+										background: neutral[900],
+									},
+								}),
+							]}
 						/>
 					</Field>
 					<Field label="Signing secret (optional)">
@@ -91,10 +218,32 @@ export default function AlertFormFields(handle: Handle<AlertFormFields.Props>) {
 							type="text"
 							name="webhook_secret"
 							defaultValue={config?.strategy === "webhook" ? config.config.secret : ""}
-							mix={[s.input]}
+							mix={[
+								css({
+									padding: "8px 12px",
+									borderRadius: 6,
+									border: `1px solid ${neutral[200]}`,
+									fontSize: "0.875rem",
+									fontFamily: "inherit",
+									background: neutral[50],
+									color: "inherit",
+									"@media (prefers-color-scheme: dark)": {
+										borderColor: neutral[700],
+										background: neutral[900],
+									},
+								}),
+							]}
 						/>
 					</Field>
-					<p mix={[s.mutedSmall]}>
+					<p
+						mix={[
+							css({
+								fontSize: "0.8125rem",
+								color: neutral[500],
+								"@media (prefers-color-scheme: dark)": { color: neutral[400] },
+							}),
+						]}
+					>
 						When set, requests carry a <code>Webhook-Signature: sha256=&lt;hex&gt;</code> header —
 						an HMAC-SHA256 of the raw JSON body using this secret.
 					</p>
@@ -107,7 +256,21 @@ export default function AlertFormFields(handle: Handle<AlertFormFields.Props>) {
 							type="url"
 							name="slack_webhook_url"
 							defaultValue={config?.strategy === "slack" ? config.config.webhookUrl : ""}
-							mix={[s.input]}
+							mix={[
+								css({
+									padding: "8px 12px",
+									borderRadius: 6,
+									border: `1px solid ${neutral[200]}`,
+									fontSize: "0.875rem",
+									fontFamily: "inherit",
+									background: neutral[50],
+									color: "inherit",
+									"@media (prefers-color-scheme: dark)": {
+										borderColor: neutral[700],
+										background: neutral[900],
+									},
+								}),
+							]}
 						/>
 					</Field>
 					<Field label="Channel override (optional)">
@@ -116,7 +279,21 @@ export default function AlertFormFields(handle: Handle<AlertFormFields.Props>) {
 							name="slack_channel"
 							defaultValue={config?.strategy === "slack" ? (config.config.channel ?? "") : ""}
 							placeholder="#incidents"
-							mix={[s.input]}
+							mix={[
+								css({
+									padding: "8px 12px",
+									borderRadius: 6,
+									border: `1px solid ${neutral[200]}`,
+									fontSize: "0.875rem",
+									fontFamily: "inherit",
+									background: neutral[50],
+									color: "inherit",
+									"@media (prefers-color-scheme: dark)": {
+										borderColor: neutral[700],
+										background: neutral[900],
+									},
+								}),
+							]}
 						/>
 					</Field>
 				</fieldset>
@@ -128,12 +305,36 @@ export default function AlertFormFields(handle: Handle<AlertFormFields.Props>) {
 							type="url"
 							name="discord_webhook_url"
 							defaultValue={config?.strategy === "discord" ? config.config.webhookUrl : ""}
-							mix={[s.input]}
+							mix={[
+								css({
+									padding: "8px 12px",
+									borderRadius: 6,
+									border: `1px solid ${neutral[200]}`,
+									fontSize: "0.875rem",
+									fontFamily: "inherit",
+									background: neutral[50],
+									color: "inherit",
+									"@media (prefers-color-scheme: dark)": {
+										borderColor: neutral[700],
+										background: neutral[900],
+									},
+								}),
+							]}
 						/>
 					</Field>
 				</fieldset>
 
-				<label mix={[s.checkboxField]}>
+				<label
+					mix={[
+						css({
+							display: "flex",
+							alignItems: "center",
+							gap: 8,
+							marginBottom: 16,
+							fontSize: "0.875rem",
+						}),
+					]}
+				>
 					<input
 						type="checkbox"
 						name="notify_on_recovery"
@@ -150,7 +351,21 @@ export default function AlertFormFields(handle: Handle<AlertFormFields.Props>) {
 						min={0}
 						max={1440}
 						defaultValue={alert?.cooldown_minutes ?? 0}
-						mix={[s.input]}
+						mix={[
+							css({
+								padding: "8px 12px",
+								borderRadius: 6,
+								border: `1px solid ${neutral[200]}`,
+								fontSize: "0.875rem",
+								fontFamily: "inherit",
+								background: neutral[50],
+								color: "inherit",
+								"@media (prefers-color-scheme: dark)": {
+									borderColor: neutral[700],
+									background: neutral[900],
+								},
+							}),
+						]}
 					/>
 				</Field>
 			</>

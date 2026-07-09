@@ -7,12 +7,13 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Handle } from "remix/ui";
+import type { CSSMixinDescriptor, ElementProps, Handle, MixinDescriptor } from "remix/ui";
+
+import { css } from "remix/ui";
 
 import type { SelectMonitorContentCheck } from "~/database/schema";
 
 import Field from "~/resources/components/field";
-import * as s from "~/resources/styles";
 import routes from "~/routes/web";
 
 namespace ContentChecksSection {
@@ -22,6 +23,75 @@ namespace ContentChecksSection {
 		contentChecks: SelectMonitorContentCheck[];
 	}
 }
+
+const neutral = {
+	50: "oklch(0.98 0.005 145)",
+	200: "oklch(0.91 0.008 145)",
+	300: "oklch(0.83 0.01 145)",
+	400: "oklch(0.73 0.01 145)",
+	500: "oklch(0.62 0.01 145)",
+	700: "oklch(0.42 0.008 145)",
+	800: "oklch(0.32 0.006 145)",
+	900: "oklch(0.24 0.005 145)",
+} as const;
+
+const danger = {
+	600: "oklch(0.58 0.18 25)",
+	700: "oklch(0.48 0.16 25)",
+} as const;
+
+/** {@link mixForSelect} re-types a `css()` mixin for `<select>`. */
+function mixForSelect(
+	mixin: CSSMixinDescriptor,
+): MixinDescriptor<HTMLSelectElement, CSSMixinDescriptor["args"], ElementProps> {
+	return mixin as unknown as MixinDescriptor<
+		HTMLSelectElement,
+		CSSMixinDescriptor["args"],
+		ElementProps
+	>;
+}
+
+/** Destructive action button, matching the OLD APP's "Delete Team" button. Reused per row. */
+const buttonDanger = css({
+	display: "inline-flex",
+	alignItems: "center",
+	justifyContent: "center",
+	padding: "8px 16px",
+	borderRadius: 6,
+	border: "1px solid transparent",
+	background: danger[600],
+	color: "#ffffff",
+	fontFamily: "inherit",
+	fontSize: "0.875rem",
+	fontWeight: 500,
+	cursor: "pointer",
+	textDecoration: "none",
+	"&:hover": { background: danger[700] },
+});
+
+/** Secondary (outline) button, matching the OLD APP's "Cancel" button. Reused below. */
+const buttonSecondary = css({
+	display: "inline-flex",
+	alignItems: "center",
+	justifyContent: "center",
+	padding: "8px 16px",
+	borderRadius: 6,
+	border: `2px solid ${neutral[300]}`,
+	background: "#ffffff",
+	color: neutral[500],
+	fontFamily: "inherit",
+	fontSize: "0.875rem",
+	fontWeight: 500,
+	cursor: "pointer",
+	textDecoration: "none",
+	"&:hover": { background: neutral[50] },
+	"@media (prefers-color-scheme: dark)": {
+		background: neutral[900],
+		color: neutral[400],
+		borderColor: neutral[700],
+		"&:hover": { background: neutral[800] },
+	},
+});
 
 const TYPE_LABELS: Record<SelectMonitorContentCheck["type"], string> = {
 	contains: "Contains",
@@ -37,13 +107,37 @@ export default function ContentChecksSection(handle: Handle<ContentChecksSection
 		return (
 			<div>
 				<h2>Content checks</h2>
-				<p mix={[s.mutedSmall]}>
+				<p
+					mix={[
+						css({
+							fontSize: "0.8125rem",
+							color: neutral[500],
+							"@media (prefers-color-scheme: dark)": { color: neutral[400] },
+						}),
+					]}
+				>
 					Up to 10 checks. Every enabled check must pass for the response to count as a match.
 				</p>
 
 				{contentChecks.length > 0 && (
-					<div mix={[s.tableScroll]}>
-						<table mix={[s.table]}>
+					<div mix={[css({ overflowX: "auto" })]}>
+						<table
+							mix={[
+								css({
+									width: "100%",
+									borderCollapse: "collapse",
+									fontSize: "0.875rem",
+									"& th, & td": {
+										textAlign: "left",
+										padding: "12px 16px",
+										borderBottom: `1px solid ${neutral[200]}`,
+									},
+									"@media (prefers-color-scheme: dark)": {
+										"& th, & td": { borderColor: neutral[800] },
+									},
+								}),
+							]}
+						>
 							<thead>
 								<tr>
 									<th>Type</th>
@@ -67,12 +161,28 @@ export default function ContentChecksSection(handle: Handle<ContentChecksSection
 												type="button"
 												commandfor={`delete-content-check-${check.id}`}
 												command="show-modal"
-												mix={[s.buttonDanger]}
+												mix={[buttonDanger]}
 											>
 												Delete
 											</button>
 
-											<dialog id={`delete-content-check-${check.id}`} mix={[s.dialog]}>
+											<dialog
+												id={`delete-content-check-${check.id}`}
+												mix={[
+													css({
+														padding: 24,
+														borderRadius: 8,
+														border: `1px solid ${neutral[300]}`,
+														maxWidth: 400,
+														"&::backdrop": { background: "rgba(0, 0, 0, 0.4)" },
+														"@media (prefers-color-scheme: dark)": {
+															borderColor: neutral[700],
+															background: neutral[900],
+															color: neutral[50],
+														},
+													}),
+												]}
+											>
 												<h3>Delete this content check?</h3>
 												<form method="post" action={deleteAction}>
 													<input type="hidden" name="content_check_id" value={check.id} />
@@ -81,11 +191,11 @@ export default function ContentChecksSection(handle: Handle<ContentChecksSection
 														type="button"
 														commandfor={`delete-content-check-${check.id}`}
 														command="close"
-														mix={[s.buttonSecondary]}
+														mix={[buttonSecondary]}
 													>
 														Cancel
 													</button>
-													<button type="submit" mix={[s.buttonDanger]}>
+													<button type="submit" mix={[buttonDanger]}>
 														Delete
 													</button>
 												</form>
@@ -102,7 +212,27 @@ export default function ContentChecksSection(handle: Handle<ContentChecksSection
 					<input type="hidden" name="monitor_id" value={monitorId} />
 
 					<Field label="Type">
-						<select name="type" defaultValue="contains" mix={[s.selectInput]}>
+						<select
+							name="type"
+							defaultValue="contains"
+							mix={[
+								mixForSelect(
+									css({
+										padding: "8px 12px",
+										borderRadius: 6,
+										border: `1px solid ${neutral[200]}`,
+										fontSize: "0.875rem",
+										fontFamily: "inherit",
+										background: neutral[50],
+										color: "inherit",
+										"@media (prefers-color-scheme: dark)": {
+											borderColor: neutral[700],
+											background: neutral[900],
+										},
+									}),
+								),
+							]}
+						>
 							<option value="contains">Contains</option>
 							<option value="not_contains">Does not contain</option>
 							<option value="regex">Matches regex</option>
@@ -110,15 +240,44 @@ export default function ContentChecksSection(handle: Handle<ContentChecksSection
 					</Field>
 
 					<Field label="Value">
-						<input type="text" name="value" required mix={[s.input]} />
+						<input
+							type="text"
+							name="value"
+							required
+							mix={[
+								css({
+									padding: "8px 12px",
+									borderRadius: 6,
+									border: `1px solid ${neutral[200]}`,
+									fontSize: "0.875rem",
+									fontFamily: "inherit",
+									background: neutral[50],
+									color: "inherit",
+									"@media (prefers-color-scheme: dark)": {
+										borderColor: neutral[700],
+										background: neutral[900],
+									},
+								}),
+							]}
+						/>
 					</Field>
 
-					<label mix={[s.checkboxField]}>
+					<label
+						mix={[
+							css({
+								display: "flex",
+								alignItems: "center",
+								gap: 8,
+								marginBottom: 16,
+								fontSize: "0.875rem",
+							}),
+						]}
+					>
 						<input type="checkbox" name="case_sensitive" value="true" />
 						<span>Case sensitive</span>
 					</label>
 
-					<button type="submit" mix={[s.buttonSecondary]}>
+					<button type="submit" mix={[buttonSecondary]}>
 						Add content check
 					</button>
 				</form>

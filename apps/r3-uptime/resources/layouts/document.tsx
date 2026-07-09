@@ -10,7 +10,14 @@
 
 import type { Handle, RemixNode } from "remix/ui";
 
-import * as s from "~/resources/styles";
+import { css } from "remix/ui";
+
+/** Neutral scale shades used on this page, hue 145. */
+const neutral = { 50: "oklch(0.98 0.005 145)", 950: "oklch(0.16 0.004 145)" };
+
+/** App-wide monospace font stack — the OLD APP renders `<body>` in `font-mono` by default. */
+const fontMono =
+	'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace';
 
 const CLIENT_ENTRY_SRC = import.meta.env.DEV ? "/bootstrap/browser.ts" : "/assets/clientEntry.js";
 
@@ -33,7 +40,19 @@ export default function DocumentLayout(handle: Handle<DocumentLayout.Props>) {
 					{title && <title>{title}</title>}
 					<link rel="modulepreload" href={CLIENT_ENTRY_SRC} />
 				</head>
-				<body mix={[s.documentBody]}>
+				<body
+					mix={[
+						css({
+							background: neutral[50],
+							color: neutral[950],
+							fontFamily: fontMono,
+							"@media (prefers-color-scheme: dark)": {
+								background: neutral[950],
+								color: neutral[50],
+							},
+						}),
+					]}
+				>
 					{children}
 					<script type="module" src={CLIENT_ENTRY_SRC}></script>
 				</body>

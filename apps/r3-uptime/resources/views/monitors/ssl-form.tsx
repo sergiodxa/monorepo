@@ -9,10 +9,11 @@
 
 import type { Handle } from "remix/ui";
 
+import { css } from "remix/ui";
+
 import type { SelectMonitor } from "~/database/schema";
 
 import Field from "~/resources/components/field";
-import * as s from "~/resources/styles";
 import routes from "~/routes/web";
 
 namespace SslForm {
@@ -21,6 +22,14 @@ namespace SslForm {
 		monitor: SelectMonitor;
 	}
 }
+
+const neutral = {
+	50: "oklch(0.98 0.005 145)",
+	200: "oklch(0.91 0.008 145)",
+	700: "oklch(0.42 0.008 145)",
+	800: "oklch(0.32 0.006 145)",
+	900: "oklch(0.24 0.005 145)",
+} as const;
 
 export default function SslForm(handle: Handle<SslForm.Props>) {
 	return () => {
@@ -35,7 +44,17 @@ export default function SslForm(handle: Handle<SslForm.Props>) {
 				<form method="post" action={routes.actions.updateSsl.href({ team: team.slug })}>
 					<input type="hidden" name="monitor_id" value={monitor.id} />
 
-					<label mix={[s.checkboxField]}>
+					<label
+						mix={[
+							css({
+								display: "flex",
+								alignItems: "center",
+								gap: 8,
+								marginBottom: 16,
+								fontSize: "0.875rem",
+							}),
+						]}
+					>
 						<input
 							type="checkbox"
 							name="ssl_monitoring_enabled"
@@ -50,7 +69,21 @@ export default function SslForm(handle: Handle<SslForm.Props>) {
 							type="date"
 							name="ssl_expires_at"
 							defaultValue={expiresAtValue}
-							mix={[s.input]}
+							mix={[
+								css({
+									padding: "8px 12px",
+									borderRadius: 6,
+									border: `1px solid ${neutral[200]}`,
+									fontSize: "0.875rem",
+									fontFamily: "inherit",
+									background: neutral[50],
+									color: "inherit",
+									"@media (prefers-color-scheme: dark)": {
+										borderColor: neutral[700],
+										background: neutral[900],
+									},
+								}),
+							]}
 						/>
 					</Field>
 
@@ -59,7 +92,21 @@ export default function SslForm(handle: Handle<SslForm.Props>) {
 							type="text"
 							name="ssl_issuer"
 							defaultValue={monitor.ssl_issuer ?? ""}
-							mix={[s.input]}
+							mix={[
+								css({
+									padding: "8px 12px",
+									borderRadius: 6,
+									border: `1px solid ${neutral[200]}`,
+									fontSize: "0.875rem",
+									fontFamily: "inherit",
+									background: neutral[50],
+									color: "inherit",
+									"@media (prefers-color-scheme: dark)": {
+										borderColor: neutral[700],
+										background: neutral[900],
+									},
+								}),
+							]}
 						/>
 					</Field>
 
@@ -70,11 +117,45 @@ export default function SslForm(handle: Handle<SslForm.Props>) {
 							min={1}
 							max={365}
 							defaultValue={monitor.ssl_expiry_warning_days}
-							mix={[s.input]}
+							mix={[
+								css({
+									padding: "8px 12px",
+									borderRadius: 6,
+									border: `1px solid ${neutral[200]}`,
+									fontSize: "0.875rem",
+									fontFamily: "inherit",
+									background: neutral[50],
+									color: "inherit",
+									"@media (prefers-color-scheme: dark)": {
+										borderColor: neutral[700],
+										background: neutral[900],
+									},
+								}),
+							]}
 						/>
 					</Field>
 
-					<button type="submit" mix={[s.buttonPrimary]}>
+					<button
+						type="submit"
+						mix={[
+							css({
+								display: "inline-flex",
+								alignItems: "center",
+								justifyContent: "center",
+								padding: "8px 16px",
+								borderRadius: 6,
+								border: "1px solid transparent",
+								background: neutral[900],
+								color: "#ffffff",
+								fontFamily: "inherit",
+								fontSize: "0.875rem",
+								fontWeight: 500,
+								cursor: "pointer",
+								textDecoration: "none",
+								"&:hover": { background: neutral[800] },
+							}),
+						]}
+					>
 						Save SSL settings
 					</button>
 				</form>

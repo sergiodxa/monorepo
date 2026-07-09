@@ -9,11 +9,15 @@
 
 import type { Handle } from "remix/ui";
 
+import { css } from "remix/ui";
+
 import type { SparklinePoint } from "~/app/services/analytics";
 import type { SelectMonitor, SelectMonitorDailyStats } from "~/database/schema";
+import type { BadgeTone } from "~/resources/components/badge";
 
 import { calculateSslStatus } from "~/app/services/ssl-info";
-import * as s from "~/resources/styles";
+import Badge from "~/resources/components/badge";
+import StatCard from "~/resources/components/stat-card";
 import Sparkline from "~/resources/views/monitors/sparkline";
 import Heatmap from "~/resources/views/shared/heatmap";
 import routes from "~/routes/web";
@@ -27,41 +31,66 @@ namespace MonitorShowView {
 	}
 }
 
+const neutral = {
+	50: "oklch(0.98 0.005 145)",
+	300: "oklch(0.83 0.01 145)",
+	400: "oklch(0.73 0.01 145)",
+	500: "oklch(0.62 0.01 145)",
+	700: "oklch(0.42 0.008 145)",
+	800: "oklch(0.32 0.006 145)",
+	900: "oklch(0.24 0.005 145)",
+} as const;
+
+/** Secondary (outline) button/link, matching the OLD APP's "Cancel" button. Reused below. */
+const buttonSecondary = css({
+	display: "inline-flex",
+	alignItems: "center",
+	justifyContent: "center",
+	padding: "8px 16px",
+	borderRadius: 6,
+	border: `2px solid ${neutral[300]}`,
+	background: "#ffffff",
+	color: neutral[500],
+	fontFamily: "inherit",
+	fontSize: "0.875rem",
+	fontWeight: 500,
+	cursor: "pointer",
+	textDecoration: "none",
+	"&:hover": { background: neutral[50] },
+	"@media (prefers-color-scheme: dark)": {
+		background: neutral[900],
+		color: neutral[400],
+		borderColor: neutral[700],
+		"&:hover": { background: neutral[800] },
+	},
+});
+
 export default function MonitorShowView(handle: Handle<MonitorShowView.Props>) {
 	return () => {
 		let { team, monitor, sparkline, dailyStats } = handle.props;
 
 		return (
 			<div>
-				<div mix={[s.row]}>
+				<div mix={[css({ display: "flex", alignItems: "center", gap: 12 })]}>
 					<h1>{monitor.name}</h1>
 					<form method="post" action={routes.actions.playMonitor.href({ team: team.slug })}>
 						<input type="hidden" name="monitor_id" value={monitor.id} />
-						<button type="submit" mix={[s.buttonSecondary]}>
+						<button type="submit" mix={[buttonSecondary]}>
 							Run now
 						</button>
 					</form>
 					<a
 						href={routes.app.team.monitorEdit.href({ team: team.slug, monitorId: monitor.id })}
-						mix={[s.buttonSecondary]}
+						mix={[buttonSecondary]}
 					>
 						Edit
 					</a>
 				</div>
 
-				<div mix={[s.statRow]}>
-					<div mix={[s.statCard]}>
-						<div mix={[s.mutedSmall]}>URL</div>
-						<code>{monitor.url}</code>
-					</div>
-					<div mix={[s.statCard]}>
-						<div mix={[s.mutedSmall]}>Method</div>
-						<div mix={[s.statValue]}>{monitor.method}</div>
-					</div>
-					<div mix={[s.statCard]}>
-						<div mix={[s.mutedSmall]}>Check interval</div>
-						<div mix={[s.statValue]}>{monitor.interval_seconds}s</div>
-					</div>
+				<div mix={[css({ display: "flex", flexWrap: "wrap", gap: 16, marginBottom: 24 })]}>
+					<StatCard label="URL" value={<code>{monitor.url}</code>} />
+					<StatCard label="Method" value={monitor.method} />
+					<StatCard label="Check interval" value={`${monitor.interval_seconds}s`} />
 				</div>
 
 				<h2>Recent response time</h2>
@@ -79,7 +108,19 @@ export default function MonitorShowView(handle: Handle<MonitorShowView.Props>) {
 
 function SslSummary(props: { monitor: SelectMonitor }) {
 	if (!props.monitor.ssl_monitoring_enabled) {
-		return <p mix={[s.mutedSmall]}>SSL monitoring is not enabled for this monitor.</p>;
+		return (
+			<p
+				mix={[
+					css({
+						fontSize: "0.8125rem",
+						color: neutral[500],
+						"@media (prefers-color-scheme: dark)": { color: neutral[400] },
+					}),
+				]}
+			>
+				SSL monitoring is not enabled for this monitor.
+			</p>
+		);
 	}
 
 	let { status, daysUntilExpiry } = calculateSslStatus(
@@ -87,33 +128,20 @@ function SslSummary(props: { monitor: SelectMonitor }) {
 		props.monitor.ssl_expiry_warning_days,
 	);
 
+	let tone: BadgeTone =
+		status === "valid"
+			? "up"
+			: status === "expiring"
+				? "degraded"
+				: status === "expired"
+					? "down"
+					: "neutral";
+
 	return (
-		<div mix={[s.statRow]}>
-			<div mix={[s.statCard]}>
-				<div mix={[s.mutedSmall]}>Status</div>
-				<span
-					mix={[
-						s.badge,
-						status === "valid"
-							? s.badgeUp
-							: status === "expiring"
-								? s.badgeDegraded
-								: status === "expired"
-									? s.badgeDown
-									: s.badgeNeutral,
-					]}
-				>
-					{status}
-				</span>
-			</div>
-			<div mix={[s.statCard]}>
-				<div mix={[s.mutedSmall]}>Days until expiry</div>
-				<div mix={[s.statValue]}>{daysUntilExpiry ?? "—"}</div>
-			</div>
-			<div mix={[s.statCard]}>
-				<div mix={[s.mutedSmall]}>Issuer</div>
-				<div mix={[s.statValue]}>{props.monitor.ssl_issuer ?? "—"}</div>
-			</div>
+		<div mix={[css({ display: "flex", flexWrap: "wrap", gap: 16, marginBottom: 24 })]}>
+			<StatCard label="Status" value={<Badge tone={tone}>{status}</Badge>} />
+			<StatCard label="Days until expiry" value={daysUntilExpiry ?? "—"} />
+			<StatCard label="Issuer" value={props.monitor.ssl_issuer ?? "—"} />
 		</div>
 	);
 }

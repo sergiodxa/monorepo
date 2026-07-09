@@ -10,8 +10,12 @@
 
 import type { Handle } from "remix/ui";
 
-import * as s from "~/resources/styles";
+import { css } from "remix/ui";
+
 import routes from "~/routes/web";
+
+/** Primary (brand) scale shades used on this button, hue 142. */
+const primary = { 600: "oklch(0.6 0.16 142)", 700: "oklch(0.5 0.14 142)" };
 
 namespace AuthCta {
 	export interface Props {
@@ -21,10 +25,43 @@ namespace AuthCta {
 		/**
 		 * `"lg"` (default) for hero/final-CTA placements; `"sm"` for the sticky
 		 * header and docs topbar, matching the OLD APP's smaller nav-level CTA
-		 * (`marketingButtonPrimarySmall` vs. `marketingButtonPrimary`).
+		 * (`px-4 py-2 text-sm font-medium shadow-sm` vs. the hero/final-CTA's
+		 * `px-6 py-3 text-base font-semibold shadow-lg`).
 		 */
 		size?: "sm" | "lg";
 	}
+}
+
+/**
+ * Builds the primary marketing CTA button for a given size, matching the OLD
+ * APP's two CTA sizes (only used here, so no `styles.ts` export is needed).
+ */
+function primaryButtonStyle(size: "sm" | "lg") {
+	let isLarge = size === "lg";
+
+	return css({
+		display: "inline-flex",
+		alignItems: "center",
+		justifyContent: "center",
+		padding: isLarge ? "12px 24px" : "8px 16px",
+		borderRadius: 8,
+		border: "1px solid transparent",
+		background: primary[600],
+		color: "#ffffff",
+		fontFamily: "inherit",
+		fontSize: isLarge ? "1rem" : "0.875rem",
+		fontWeight: isLarge ? 600 : 500,
+		cursor: "pointer",
+		boxShadow: isLarge
+			? "0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1)"
+			: "0 1px 2px 0 rgba(0, 0, 0, 0.05)",
+		"&:hover": {
+			background: primary[700],
+			boxShadow: isLarge
+				? "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)"
+				: "0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1)",
+		},
+	});
 }
 
 /**
@@ -41,7 +78,7 @@ export default function AuthCta(handle: Handle<AuthCta.Props>) {
 			dashboardLabel = "Go to dashboard",
 			size = "lg",
 		} = handle.props;
-		let buttonMix = size === "sm" ? s.marketingButtonPrimarySmall : s.marketingButtonPrimary;
+		let buttonMix = primaryButtonStyle(size);
 
 		if (isSignedIn) {
 			return (

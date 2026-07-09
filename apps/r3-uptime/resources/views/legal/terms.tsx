@@ -10,12 +10,72 @@
 
 import type { Handle } from "remix/ui";
 
-import * as s from "~/resources/styles";
+import { css } from "remix/ui";
+
+/** Neutral scale shades used on this page, hue 145. */
+const neutral = {
+	50: "oklch(0.98 0.005 145)",
+	300: "oklch(0.83 0.01 145)",
+	400: "oklch(0.73 0.01 145)",
+	500: "oklch(0.62 0.01 145)",
+	800: "oklch(0.32 0.006 145)",
+	900: "oklch(0.24 0.005 145)",
+} as const;
 
 export default function TermsView(_handle: Handle) {
 	return () => (
-		<article mix={[s.proseArticle]}>
-			<p mix={[s.mutedSmall]}>Last updated: February 11, 2026</p>
+		<article
+			mix={[
+				css({
+					maxWidth: 720,
+					margin: "0 auto",
+					padding: "48px 24px 80px",
+					lineHeight: 1.75,
+					color: neutral[800],
+					"& h1": {
+						fontSize: "2.25rem",
+						fontWeight: 800,
+						letterSpacing: "-0.025em",
+						marginBottom: 32,
+						color: neutral[900],
+					},
+					"& h2": {
+						fontSize: "1.5rem",
+						fontWeight: 700,
+						marginTop: 48,
+						marginBottom: 24,
+						color: neutral[900],
+					},
+					"& h3": {
+						fontSize: "1.25rem",
+						fontWeight: 600,
+						marginTop: 24,
+						marginBottom: 12,
+						color: neutral[900],
+					},
+					"& p": { margin: "20px 0" },
+					"& ul": { margin: "20px 0", paddingLeft: "1.25rem" },
+					"& li": { marginBottom: 8 },
+					"@media (prefers-color-scheme: dark)": {
+						color: neutral[300],
+						"& h1, & h2, & h3": { color: neutral[50] },
+					},
+				}),
+			]}
+		>
+			<p
+				mix={[
+					css({
+						fontSize: "0.8125rem",
+						color: neutral[500],
+						"@media (prefers-color-scheme: dark)": {
+							color: neutral[400],
+						},
+					}),
+				]}
+			>
+				Last updated: February 11, 2026
+			</p>
 
 			<h1>Terms of Service</h1>
 

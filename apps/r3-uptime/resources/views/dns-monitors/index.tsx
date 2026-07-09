@@ -8,12 +8,13 @@
 
 import type { Handle } from "remix/ui";
 
+import { css } from "remix/ui";
+
 import type { SelectDnsMonitor } from "~/database/schema";
 import type { BadgeTone } from "~/resources/components/badge";
 
 import Badge from "~/resources/components/badge";
 import EmptyState from "~/resources/components/empty-state";
-import * as s from "~/resources/styles";
 import routes from "~/routes/web";
 
 namespace DnsMonitorsView {
@@ -22,6 +23,17 @@ namespace DnsMonitorsView {
 		monitors: SelectDnsMonitor[];
 	}
 }
+
+const neutral = {
+	200: "oklch(0.91 0.008 145)",
+	800: "oklch(0.32 0.006 145)",
+	900: "oklch(0.24 0.005 145)",
+} as const;
+
+const primary = {
+	400: "oklch(0.78 0.16 142)",
+	600: "oklch(0.6 0.16 142)",
+} as const;
 
 const STATUS_BADGE_TONE: Record<string, BadgeTone> = {
 	ok: "up",
@@ -35,9 +47,29 @@ export default function DnsMonitorsView(handle: Handle<DnsMonitorsView.Props>) {
 
 		return (
 			<div>
-				<div mix={[s.row]}>
+				<div mix={[css({ display: "flex", alignItems: "center", gap: 12 })]}>
 					<h1>DNS monitors</h1>
-					<a href={routes.app.team.dnsMonitorNew.href({ team: team.slug })} mix={[s.buttonPrimary]}>
+					<a
+						href={routes.app.team.dnsMonitorNew.href({ team: team.slug })}
+						mix={[
+							css({
+								display: "inline-flex",
+								alignItems: "center",
+								justifyContent: "center",
+								padding: "8px 16px",
+								borderRadius: 6,
+								border: "1px solid transparent",
+								background: neutral[900],
+								color: "#ffffff",
+								fontFamily: "inherit",
+								fontSize: "0.875rem",
+								fontWeight: 500,
+								cursor: "pointer",
+								textDecoration: "none",
+								"&:hover": { background: neutral[800] },
+							}),
+						]}
+					>
 						New DNS monitor
 					</a>
 				</div>
@@ -51,8 +83,24 @@ export default function DnsMonitorsView(handle: Handle<DnsMonitorsView.Props>) {
 						}}
 					/>
 				) : (
-					<div mix={[s.tableScroll]}>
-						<table mix={[s.table]}>
+					<div mix={[css({ overflowX: "auto" })]}>
+						<table
+							mix={[
+								css({
+									width: "100%",
+									borderCollapse: "collapse",
+									fontSize: "0.875rem",
+									"& th, & td": {
+										textAlign: "left",
+										padding: "12px 16px",
+										borderBottom: `1px solid ${neutral[200]}`,
+									},
+									"@media (prefers-color-scheme: dark)": {
+										"& th, & td": { borderColor: neutral[800] },
+									},
+								}),
+							]}
+						>
 							<thead>
 								<tr>
 									<th>Name</th>
@@ -70,7 +118,14 @@ export default function DnsMonitorsView(handle: Handle<DnsMonitorsView.Props>) {
 													team: team.slug,
 													monitorId: monitor.id,
 												})}
-												mix={[s.link]}
+												mix={[
+													css({
+														color: primary[600],
+														textDecoration: "none",
+														"&:hover": { textDecoration: "underline" },
+														"@media (prefers-color-scheme: dark)": { color: primary[400] },
+													}),
+												]}
 											>
 												{monitor.name}
 											</a>

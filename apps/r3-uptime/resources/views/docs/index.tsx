@@ -8,15 +8,31 @@
 
 import type { Handle } from "remix/ui";
 
-import type { DocSection } from "~/app/services/docs";
+import { css } from "remix/ui";
 
-import * as s from "~/resources/styles";
+import type { DocSection } from "~/app/services/docs";
 
 namespace DocsIndexView {
 	export interface Props {
 		sections: DocSection[];
 	}
 }
+
+/** Primary (brand) scale shades used on this page, hue 142. */
+const primary = {
+	400: "oklch(0.78 0.16 142)",
+	600: "oklch(0.6 0.16 142)",
+} as const;
+
+/** Neutral scale shades used on this page, hue 145. */
+const neutral = {
+	50: "oklch(0.98 0.005 145)",
+	200: "oklch(0.91 0.008 145)",
+	400: "oklch(0.73 0.01 145)",
+	600: "oklch(0.52 0.01 145)",
+	800: "oklch(0.32 0.006 145)",
+	900: "oklch(0.24 0.005 145)",
+} as const;
 
 export default function DocsIndexView(handle: Handle<DocsIndexView.Props>) {
 	return () => {
@@ -25,17 +41,83 @@ export default function DocsIndexView(handle: Handle<DocsIndexView.Props>) {
 		return (
 			<>
 				<h1>Documentation</h1>
-				<p mix={[s.docsIntro]}>
+				<p
+					mix={[
+						css({
+							fontSize: "1.0625rem",
+							color: neutral[600],
+							margin: "8px 0 32px",
+							"@media (prefers-color-scheme: dark)": { color: neutral[400] },
+						}),
+					]}
+				>
 					Guides for getting started, understanding each monitor type, the REST API, and team
 					settings.
 				</p>
 
-				<div mix={[s.marketingGrid]}>
+				<div
+					mix={[
+						css({
+							display: "grid",
+							gap: 32,
+							gridTemplateColumns: "1fr",
+							"@media (min-width: 768px)": { gridTemplateColumns: "repeat(2, 1fr)" },
+							"@media (min-width: 1024px)": { gridTemplateColumns: "repeat(3, 1fr)" },
+						}),
+					]}
+				>
 					{sections.map((section) => (
-						<div key={section.title} mix={[s.marketingCard]}>
-							<h3 mix={[s.marketingCardTitle]}>{section.title}</h3>
+						<div
+							key={section.title}
+							mix={[
+								css({
+									display: "block",
+									padding: 24,
+									borderRadius: 12,
+									border: `1px solid ${neutral[200]}`,
+									background: "#ffffff",
+									color: "inherit",
+									textDecoration: "none",
+									"@media (prefers-color-scheme: dark)": {
+										borderColor: neutral[800],
+										background: neutral[900],
+									},
+								}),
+							]}
+						>
+							<h3
+								mix={[
+									css({
+										fontSize: "1.25rem",
+										fontWeight: 600,
+										lineHeight: "1.75rem",
+										margin: "0 0 6px",
+										color: neutral[900],
+										"@media (prefers-color-scheme: dark)": { color: neutral[50] },
+									}),
+								]}
+							>
+								{section.title}
+							</h3>
 							{section.docs.map((doc) => (
-								<a key={doc.path} href={doc.path} mix={[s.marketingFooterLink]}>
+								<a
+									key={doc.path}
+									href={doc.path}
+									mix={[
+										css({
+											display: "block",
+											fontSize: "0.875rem",
+											color: neutral[600],
+											textDecoration: "none",
+											marginBottom: 8,
+											"&:hover": { color: primary[600] },
+											"@media (prefers-color-scheme: dark)": {
+												color: neutral[400],
+												"&:hover": { color: primary[400] },
+											},
+										}),
+									]}
+								>
 									{doc.frontmatter.title}
 								</a>
 							))}

@@ -6,12 +6,35 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Handle } from "remix/ui";
+import type { CSSMixinDescriptor, ElementProps, Handle, MixinDescriptor } from "remix/ui";
+
+import { css } from "remix/ui";
 
 import type { SelectDnsMonitor } from "~/database/schema";
 
 import Field from "~/resources/components/field";
-import * as s from "~/resources/styles";
+
+const neutral = {
+	50: "oklch(0.98 0.005 145)",
+	200: "oklch(0.91 0.008 145)",
+	700: "oklch(0.42 0.008 145)",
+	900: "oklch(0.24 0.005 145)",
+} as const;
+
+/**
+ * Re-types a `css()` mixin for `<select>`. `css()`'s return type doesn't directly fit
+ * `HTMLSelectElement` due to a Cloudflare Workers types conflict; only the compile-time
+ * type changes, the runtime value is identical.
+ */
+function mixForSelect(
+	mixin: CSSMixinDescriptor,
+): MixinDescriptor<HTMLSelectElement, CSSMixinDescriptor["args"], ElementProps> {
+	return mixin as unknown as MixinDescriptor<
+		HTMLSelectElement,
+		CSSMixinDescriptor["args"],
+		ElementProps
+	>;
+}
 
 const RECORD_TYPES = ["A", "AAAA", "CNAME", "MX", "TXT", "NS"] as const;
 const INTERVAL_OPTIONS = [
@@ -38,7 +61,27 @@ export default function DnsMonitorFormFields(handle: Handle<DnsMonitorFormFields
 		return (
 			<>
 				<Field label="Name">
-					<input type="text" name="name" required defaultValue={monitor?.name} mix={[s.input]} />
+					<input
+						type="text"
+						name="name"
+						required
+						defaultValue={monitor?.name}
+						mix={[
+							css({
+								padding: "8px 12px",
+								borderRadius: 6,
+								border: `1px solid ${neutral[200]}`,
+								fontSize: "0.875rem",
+								fontFamily: "inherit",
+								background: neutral[50],
+								color: "inherit",
+								"@media (prefers-color-scheme: dark)": {
+									borderColor: neutral[700],
+									background: neutral[900],
+								},
+							}),
+						]}
+					/>
 				</Field>
 
 				<Field label="Domain">
@@ -48,7 +91,21 @@ export default function DnsMonitorFormFields(handle: Handle<DnsMonitorFormFields
 						required
 						defaultValue={monitor?.domain}
 						placeholder="example.com"
-						mix={[s.input]}
+						mix={[
+							css({
+								padding: "8px 12px",
+								borderRadius: 6,
+								border: `1px solid ${neutral[200]}`,
+								fontSize: "0.875rem",
+								fontFamily: "inherit",
+								background: neutral[50],
+								color: "inherit",
+								"@media (prefers-color-scheme: dark)": {
+									borderColor: neutral[700],
+									background: neutral[900],
+								},
+							}),
+						]}
 					/>
 				</Field>
 
@@ -56,7 +113,23 @@ export default function DnsMonitorFormFields(handle: Handle<DnsMonitorFormFields
 					<select
 						name="record_type"
 						defaultValue={monitor?.record_type ?? "A"}
-						mix={[s.selectInput]}
+						mix={[
+							mixForSelect(
+								css({
+									padding: "8px 12px",
+									borderRadius: 6,
+									border: `1px solid ${neutral[200]}`,
+									fontSize: "0.875rem",
+									fontFamily: "inherit",
+									background: neutral[50],
+									color: "inherit",
+									"@media (prefers-color-scheme: dark)": {
+										borderColor: neutral[700],
+										background: neutral[900],
+									},
+								}),
+							),
+						]}
 					>
 						{RECORD_TYPES.map((type) => (
 							<option key={type} value={type}>
@@ -72,7 +145,21 @@ export default function DnsMonitorFormFields(handle: Handle<DnsMonitorFormFields
 						name="expected_value"
 						defaultValue={monitor?.expected_value ?? ""}
 						placeholder="Leave blank to alert on any change"
-						mix={[s.input]}
+						mix={[
+							css({
+								padding: "8px 12px",
+								borderRadius: 6,
+								border: `1px solid ${neutral[200]}`,
+								fontSize: "0.875rem",
+								fontFamily: "inherit",
+								background: neutral[50],
+								color: "inherit",
+								"@media (prefers-color-scheme: dark)": {
+									borderColor: neutral[700],
+									background: neutral[900],
+								},
+							}),
+						]}
 					/>
 				</Field>
 
@@ -80,7 +167,23 @@ export default function DnsMonitorFormFields(handle: Handle<DnsMonitorFormFields
 					<select
 						name="interval_seconds"
 						defaultValue={monitor?.interval_seconds ?? 3600}
-						mix={[s.selectInput]}
+						mix={[
+							mixForSelect(
+								css({
+									padding: "8px 12px",
+									borderRadius: 6,
+									border: `1px solid ${neutral[200]}`,
+									fontSize: "0.875rem",
+									fontFamily: "inherit",
+									background: neutral[50],
+									color: "inherit",
+									"@media (prefers-color-scheme: dark)": {
+										borderColor: neutral[700],
+										background: neutral[900],
+									},
+								}),
+							),
+						]}
 					>
 						{INTERVAL_OPTIONS.map((option) => (
 							<option key={option.value} value={option.value}>
@@ -90,7 +193,17 @@ export default function DnsMonitorFormFields(handle: Handle<DnsMonitorFormFields
 					</select>
 				</Field>
 
-				<label mix={[s.checkboxField]}>
+				<label
+					mix={[
+						css({
+							display: "flex",
+							alignItems: "center",
+							gap: 8,
+							marginBottom: 16,
+							fontSize: "0.875rem",
+						}),
+					]}
+				>
 					<input
 						type="checkbox"
 						name="is_enabled"

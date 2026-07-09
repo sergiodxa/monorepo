@@ -9,7 +9,7 @@
 
 import type { Handle, RemixNode } from "remix/ui";
 
-import * as s from "~/resources/styles";
+import { css } from "remix/ui";
 
 namespace StatCard {
 	export interface Props {
@@ -18,12 +18,46 @@ namespace StatCard {
 	}
 }
 
-/** Renders a {@link s.statCard} with a muted label and a large value. */
+/** Renders a dashboard stat card with a muted label and a large value. */
 export default function StatCard(handle: Handle<StatCard.Props>) {
 	return () => (
-		<div mix={[s.statCard]}>
-			<div mix={[s.mutedSmall]}>{handle.props.label}</div>
-			<div mix={[s.statValue]}>{handle.props.value}</div>
+		<div
+			mix={[
+				css({
+					flex: "1 1 160px",
+					padding: 16,
+					borderRadius: 8,
+					border: "1px solid oklch(0.91 0.008 145)",
+					"@media (prefers-color-scheme: dark)": {
+						borderColor: "oklch(0.32 0.006 145)",
+					},
+				}),
+			]}
+		>
+			<div
+				mix={[
+					css({
+						fontSize: "0.8125rem",
+						color: "oklch(0.62 0.01 145)",
+						"@media (prefers-color-scheme: dark)": {
+							color: "oklch(0.73 0.01 145)",
+						},
+					}),
+				]}
+			>
+				{handle.props.label}
+			</div>
+			<div
+				mix={[
+					css({
+						fontSize: "1.5rem",
+						fontWeight: 700,
+						lineHeight: "2rem",
+					}),
+				]}
+			>
+				{handle.props.value}
+			</div>
 		</div>
 	);
 }

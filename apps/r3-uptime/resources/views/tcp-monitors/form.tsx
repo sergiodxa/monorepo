@@ -8,10 +8,18 @@
 
 import type { Handle } from "remix/ui";
 
+import { css } from "remix/ui";
+
 import type { SelectTcpMonitor } from "~/database/schema";
 
 import Field from "~/resources/components/field";
-import * as s from "~/resources/styles";
+
+const neutral = {
+	50: "oklch(0.98 0.005 145)",
+	200: "oklch(0.91 0.008 145)",
+	700: "oklch(0.42 0.008 145)",
+	900: "oklch(0.24 0.005 145)",
+} as const;
 
 namespace TcpMonitorFormFields {
 	export interface Props {
@@ -27,7 +35,27 @@ export default function TcpMonitorFormFields(handle: Handle<TcpMonitorFormFields
 		return (
 			<>
 				<Field label="Name">
-					<input type="text" name="name" required defaultValue={monitor?.name} mix={[s.input]} />
+					<input
+						type="text"
+						name="name"
+						required
+						defaultValue={monitor?.name}
+						mix={[
+							css({
+								padding: "8px 12px",
+								borderRadius: 6,
+								border: `1px solid ${neutral[200]}`,
+								fontSize: "0.875rem",
+								fontFamily: "inherit",
+								background: neutral[50],
+								color: "inherit",
+								"@media (prefers-color-scheme: dark)": {
+									borderColor: neutral[700],
+									background: neutral[900],
+								},
+							}),
+						]}
+					/>
 				</Field>
 
 				<Field label="Host">
@@ -37,7 +65,21 @@ export default function TcpMonitorFormFields(handle: Handle<TcpMonitorFormFields
 						required
 						defaultValue={monitor?.host}
 						placeholder="db.example.com"
-						mix={[s.input]}
+						mix={[
+							css({
+								padding: "8px 12px",
+								borderRadius: 6,
+								border: `1px solid ${neutral[200]}`,
+								fontSize: "0.875rem",
+								fontFamily: "inherit",
+								background: neutral[50],
+								color: "inherit",
+								"@media (prefers-color-scheme: dark)": {
+									borderColor: neutral[700],
+									background: neutral[900],
+								},
+							}),
+						]}
 					/>
 				</Field>
 
@@ -49,7 +91,21 @@ export default function TcpMonitorFormFields(handle: Handle<TcpMonitorFormFields
 						min={1}
 						max={65_535}
 						defaultValue={monitor?.port}
-						mix={[s.input]}
+						mix={[
+							css({
+								padding: "8px 12px",
+								borderRadius: 6,
+								border: `1px solid ${neutral[200]}`,
+								fontSize: "0.875rem",
+								fontFamily: "inherit",
+								background: neutral[50],
+								color: "inherit",
+								"@media (prefers-color-scheme: dark)": {
+									borderColor: neutral[700],
+									background: neutral[900],
+								},
+							}),
+						]}
 					/>
 				</Field>
 
@@ -60,7 +116,21 @@ export default function TcpMonitorFormFields(handle: Handle<TcpMonitorFormFields
 						min={100}
 						max={60_000}
 						defaultValue={monitor?.timeout_ms ?? 5000}
-						mix={[s.input]}
+						mix={[
+							css({
+								padding: "8px 12px",
+								borderRadius: 6,
+								border: `1px solid ${neutral[200]}`,
+								fontSize: "0.875rem",
+								fontFamily: "inherit",
+								background: neutral[50],
+								color: "inherit",
+								"@media (prefers-color-scheme: dark)": {
+									borderColor: neutral[700],
+									background: neutral[900],
+								},
+							}),
+						]}
 					/>
 				</Field>
 
@@ -71,11 +141,35 @@ export default function TcpMonitorFormFields(handle: Handle<TcpMonitorFormFields
 						min={10}
 						max={86_400}
 						defaultValue={monitor?.interval_seconds ?? 60}
-						mix={[s.input]}
+						mix={[
+							css({
+								padding: "8px 12px",
+								borderRadius: 6,
+								border: `1px solid ${neutral[200]}`,
+								fontSize: "0.875rem",
+								fontFamily: "inherit",
+								background: neutral[50],
+								color: "inherit",
+								"@media (prefers-color-scheme: dark)": {
+									borderColor: neutral[700],
+									background: neutral[900],
+								},
+							}),
+						]}
 					/>
 				</Field>
 
-				<label mix={[s.checkboxField]}>
+				<label
+					mix={[
+						css({
+							display: "flex",
+							alignItems: "center",
+							gap: 8,
+							marginBottom: 16,
+							fontSize: "0.875rem",
+						}),
+					]}
+				>
 					<input
 						type="checkbox"
 						name="is_enabled"

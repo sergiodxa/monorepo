@@ -8,6 +8,8 @@
 
 import type { Handle } from "remix/ui";
 
+import { css } from "remix/ui";
+
 import type { MonitorHealth } from "~/app/services/analytics";
 import type {
 	SelectCronJobMonitor,
@@ -21,7 +23,6 @@ import CronJobMonitor from "~/app/data/cron-job";
 import Badge from "~/resources/components/badge";
 import EmptyState from "~/resources/components/empty-state";
 import StatCard from "~/resources/components/stat-card";
-import * as s from "~/resources/styles";
 import routes from "~/routes/web";
 
 export type DashboardTab = "http" | "dns" | "tcp" | "cron-jobs";
@@ -87,7 +88,16 @@ export default function DashboardView(handle: Handle<DashboardView.Props>) {
 					<EmptyState message="Analytics data temporarily unavailable. Please retry later." />
 				)}
 
-				<div mix={[s.statRow]}>
+				<div
+					mix={[
+						css({
+							display: "flex",
+							flexWrap: "wrap",
+							gap: 16,
+							marginBottom: 24,
+						}),
+					]}
+				>
 					<StatCard label="HTTP monitors" value={props.monitorCount} />
 					<StatCard
 						label="Uptime (24h)"
@@ -109,13 +119,22 @@ export default function DashboardView(handle: Handle<DashboardView.Props>) {
 					/>
 				</div>
 
-				<nav mix={[s.row]}>
+				<nav mix={[css({ display: "flex", alignItems: "center", gap: 12 })]}>
 					{TABS.map((tab) => (
 						<a
 							key={tab.id}
 							href={`${routes.app.team.dashboard.href({ team: props.team.slug })}?tab=${tab.id}`}
 							aria-current={tab.id === props.tab ? "page" : undefined}
-							mix={[s.link]}
+							mix={[
+								css({
+									color: "oklch(0.6 0.16 142)",
+									textDecoration: "none",
+									"&:hover": { textDecoration: "underline" },
+									"@media (prefers-color-scheme: dark)": {
+										color: "oklch(0.78 0.16 142)",
+									},
+								}),
+							]}
 						>
 							{tab.label}
 						</a>
@@ -149,8 +168,24 @@ function HttpTable(props: {
 	}
 
 	return (
-		<div mix={[s.tableScroll]}>
-			<table mix={[s.table]}>
+		<div mix={[css({ overflowX: "auto" })]}>
+			<table
+				mix={[
+					css({
+						width: "100%",
+						borderCollapse: "collapse",
+						fontSize: "0.875rem",
+						"& th, & td": {
+							textAlign: "left",
+							padding: "12px 16px",
+							borderBottom: "1px solid oklch(0.91 0.008 145)",
+						},
+						"@media (prefers-color-scheme: dark)": {
+							"& th, & td": { borderColor: "oklch(0.32 0.006 145)" },
+						},
+					}),
+				]}
+			>
 				<thead>
 					<tr>
 						<th>Name</th>
@@ -166,7 +201,16 @@ function HttpTable(props: {
 										team: props.team.slug,
 										monitorId: monitor.id,
 									})}
-									mix={[s.link]}
+									mix={[
+										css({
+											color: "oklch(0.6 0.16 142)",
+											textDecoration: "none",
+											"&:hover": { textDecoration: "underline" },
+											"@media (prefers-color-scheme: dark)": {
+												color: "oklch(0.78 0.16 142)",
+											},
+										}),
+									]}
 								>
 									{monitor.name}
 								</a>
@@ -196,8 +240,24 @@ function DnsTable(props: { team: { slug: string }; monitors: SelectDnsMonitor[] 
 	}
 
 	return (
-		<div mix={[s.tableScroll]}>
-			<table mix={[s.table]}>
+		<div mix={[css({ overflowX: "auto" })]}>
+			<table
+				mix={[
+					css({
+						width: "100%",
+						borderCollapse: "collapse",
+						fontSize: "0.875rem",
+						"& th, & td": {
+							textAlign: "left",
+							padding: "12px 16px",
+							borderBottom: "1px solid oklch(0.91 0.008 145)",
+						},
+						"@media (prefers-color-scheme: dark)": {
+							"& th, & td": { borderColor: "oklch(0.32 0.006 145)" },
+						},
+					}),
+				]}
+			>
 				<thead>
 					<tr>
 						<th>Name</th>
@@ -214,7 +274,16 @@ function DnsTable(props: { team: { slug: string }; monitors: SelectDnsMonitor[] 
 										team: props.team.slug,
 										monitorId: monitor.id,
 									})}
-									mix={[s.link]}
+									mix={[
+										css({
+											color: "oklch(0.6 0.16 142)",
+											textDecoration: "none",
+											"&:hover": { textDecoration: "underline" },
+											"@media (prefers-color-scheme: dark)": {
+												color: "oklch(0.78 0.16 142)",
+											},
+										}),
+									]}
 								>
 									{monitor.name}
 								</a>
@@ -249,8 +318,24 @@ function TcpTable(props: { team: { slug: string }; monitors: SelectTcpMonitor[] 
 	}
 
 	return (
-		<div mix={[s.tableScroll]}>
-			<table mix={[s.table]}>
+		<div mix={[css({ overflowX: "auto" })]}>
+			<table
+				mix={[
+					css({
+						width: "100%",
+						borderCollapse: "collapse",
+						fontSize: "0.875rem",
+						"& th, & td": {
+							textAlign: "left",
+							padding: "12px 16px",
+							borderBottom: "1px solid oklch(0.91 0.008 145)",
+						},
+						"@media (prefers-color-scheme: dark)": {
+							"& th, & td": { borderColor: "oklch(0.32 0.006 145)" },
+						},
+					}),
+				]}
+			>
 				<thead>
 					<tr>
 						<th>Name</th>
@@ -267,7 +352,16 @@ function TcpTable(props: { team: { slug: string }; monitors: SelectTcpMonitor[] 
 										team: props.team.slug,
 										monitorId: monitor.id,
 									})}
-									mix={[s.link]}
+									mix={[
+										css({
+											color: "oklch(0.6 0.16 142)",
+											textDecoration: "none",
+											"&:hover": { textDecoration: "underline" },
+											"@media (prefers-color-scheme: dark)": {
+												color: "oklch(0.78 0.16 142)",
+											},
+										}),
+									]}
 								>
 									{monitor.name}
 								</a>
@@ -304,8 +398,24 @@ function CronJobsTable(props: { team: { slug: string }; monitors: SelectCronJobM
 	}
 
 	return (
-		<div mix={[s.tableScroll]}>
-			<table mix={[s.table]}>
+		<div mix={[css({ overflowX: "auto" })]}>
+			<table
+				mix={[
+					css({
+						width: "100%",
+						borderCollapse: "collapse",
+						fontSize: "0.875rem",
+						"& th, & td": {
+							textAlign: "left",
+							padding: "12px 16px",
+							borderBottom: "1px solid oklch(0.91 0.008 145)",
+						},
+						"@media (prefers-color-scheme: dark)": {
+							"& th, & td": { borderColor: "oklch(0.32 0.006 145)" },
+						},
+					}),
+				]}
+			>
 				<thead>
 					<tr>
 						<th>Name</th>
@@ -322,7 +432,16 @@ function CronJobsTable(props: { team: { slug: string }; monitors: SelectCronJobM
 										team: props.team.slug,
 										monitorId: monitor.id,
 									})}
-									mix={[s.link]}
+									mix={[
+										css({
+											color: "oklch(0.6 0.16 142)",
+											textDecoration: "none",
+											"&:hover": { textDecoration: "underline" },
+											"@media (prefers-color-scheme: dark)": {
+												color: "oklch(0.78 0.16 142)",
+											},
+										}),
+									]}
 								>
 									{monitor.name}
 								</a>
