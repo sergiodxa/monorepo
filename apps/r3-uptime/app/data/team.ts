@@ -1,9 +1,16 @@
 /**
  * Data-access model for teams. Finds a team by id or slug, resolves a subject's
- * membership in a team, lists the teams a subject belongs to, auto-joins a subject to
- * teams whose verified domain matches their email, and provisions a personal team with
- * an owning admin membership on first sign-in. Centralizes team lookup and
- * domain-based provisioning so auth and route guards share one implementation.
+ * membership in a team, lists the teams a subject belongs to (with their role),
+ * auto-joins a subject to teams whose verified domain matches their email, and
+ * provisions teams — the personal one on first sign-in and additional ones from the
+ * account page — with an owning admin membership. Also owns team update/delete and
+ * membership add/remove/role-change, and the full delete cascade: unlike the OLD
+ * APP's delete-team action (which only ever cleaned up `monitors`/`alerts`/
+ * `team_domains`/`invites`/`memberships`, orphaning every DNS/TCP/cron-job monitor,
+ * status page, maintenance window, API key, and their own result/event history),
+ * this cascades every team-owned table. Billing (canceling the owner's Polar
+ * subscriptions) is the caller's responsibility, not this class's — it has no Polar
+ * dependency.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -15,8 +22,33 @@ import { isUUID } from "@pkg/uuid";
 import { inList } from "remix/data-table";
 
 import type IdToken from "~/app/auth/value-objects/id-token";
+import type { InsertTeam } from "~/database/schema";
 
-import { memberships, teamDomains, teams } from "~/database/schema";
+import {
+	alertEvents,
+	alerts,
+	apiKeys,
+	cronJobMonitors,
+	cronJobPings,
+	dnsMonitorResults,
+	dnsMonitors,
+	invites,
+	maintenanceWindows,
+	memberships,
+	monitorContentChecks,
+	monitorDailyStats,
+	monitorResults,
+	monitors,
+	statusPageCronJobs,
+	statusPageDnsMonitors,
+	statusPageMonitors,
+	statusPages,
+	statusPageTcpMonitors,
+	tcpMonitorResults,
+	tcpMonitors,
+	teamDomains,
+	teams,
+} from "~/database/schema";
 
 export default class Team {
 	/** Finds a team by its UUID primary key or its unique slug. */
@@ -28,6 +60,11 @@ export default class Team {
 	/** Finds a subject's membership row for a given team, or `null` when not a member. */
 	static async findMembership(db: Database, teamId: string, subjectId: string) {
 		return await db.findOne(memberships, { where: { team_id: teamId, subject_id: subjectId } });
+	}
+
+	/** Lists every membership row for a team. */
+	static async listMembersByTeam(db: Database, teamId: string) {
+		return await db.findMany(memberships, { where: { team_id: teamId } });
 	}
 
 	/** Lists every team a subject belongs to. */
@@ -96,4 +133,176 @@ export default class Team {
 
 		return team;
 	}
+
+	/** Creates an additional team owned by `ownerId`, deriving a unique slug from `name`. */
+	static async createAdditional(db: Database, ownerId: string, name: string) {
+		let slug = await Team.uniqueSlug(db, generateTeamSlug(name));
+
+		let team = await db.create(
+			teams,
+			{ id: crypto.randomUUID(), owner_id: ownerId, name, slug, logo: null },
+			{ touch: true, returnRow: true },
+		);
+
+		await db.create(
+			memberships,
+			{ id: crypto.randomUUID(), subject_id: ownerId, team_id: team.id, role: "admin" },
+			{ touch: true, returnRow: true },
+		);
+
+		return team;
+	}
+
+	/** Appends a short suffix to `slug` until it no longer collides with an existing team. */
+	static async uniqueSlug(db: Database, slug: string): Promise<string> {
+		let candidate = slug;
+		while (await db.findOne(teams, { where: { slug: candidate } })) {
+			candidate = `${slug}-${Math.random().toString(36).slice(2, 8)}`;
+		}
+		return candidate;
+	}
+
+	/** Lists every team a subject belongs to, alongside their role and owner status. */
+	static async listWithRoleBySubjectId(db: Database, subjectId: string) {
+		let rows = await db.findMany(memberships, { where: { subject_id: subjectId } });
+		if (rows.length === 0) return [];
+
+		let roleByTeamId = new Map(
+			rows.map((row): [string, "member" | "admin"] => [
+				row.team_id,
+				row.role as "member" | "admin",
+			]),
+		);
+		let teamRows = await db.findMany(teams, {
+			where: inList(
+				"id",
+				rows.map((row) => row.team_id),
+			),
+		});
+
+		return teamRows.map((team) => ({
+			team,
+			role: roleByTeamId.get(team.id) ?? "member",
+			isOwner: team.owner_id === subjectId,
+		}));
+	}
+
+	/** Updates a team's editable fields. */
+	static async updateById(db: Database, teamId: string, changes: Partial<InsertTeam>) {
+		return await db.update(teams, teamId, changes, { touch: true });
+	}
+
+	/** Adds or changes a subject's role on a team. */
+	static async setRole(db: Database, teamId: string, subjectId: string, role: "member" | "admin") {
+		let membership = await Team.findMembership(db, teamId, subjectId);
+		if (!membership) throw new Error(`No membership for subject ${subjectId} on team ${teamId}`);
+		return await db.update(memberships, membership.id, { role }, { touch: true });
+	}
+
+	/** Removes a subject's membership from a team (used for both admin-removal and self-leave). */
+	static async removeMembership(db: Database, teamId: string, subjectId: string) {
+		let membership = await Team.findMembership(db, teamId, subjectId);
+		if (!membership) return;
+		await db.delete(memberships, membership.id);
+	}
+
+	/**
+	 * Deletes a team and every row it owns, directly or transitively (monitors of
+	 * every type and their result/content-check history, alerts and their events,
+	 * maintenance windows, status pages and their attachment rows, API keys, domains,
+	 * invites, and memberships). Does not touch Polar — cancel the owner's
+	 * subscriptions separately before calling this.
+	 */
+	static async deleteById(db: Database, teamId: string) {
+		let [httpMonitors, dnsMonitorRows, tcpMonitorRows, cronJobRows, alertRows, statusPageRows] =
+			await Promise.all([
+				db.findMany(monitors, { where: { team_id: teamId } }),
+				db.findMany(dnsMonitors, { where: { team_id: teamId } }),
+				db.findMany(tcpMonitors, { where: { team_id: teamId } }),
+				db.findMany(cronJobMonitors, { where: { team_id: teamId } }),
+				db.findMany(alerts, { where: { team_id: teamId } }),
+				db.findMany(statusPages, { where: { team_id: teamId } }),
+			]);
+
+		let monitorIds = [
+			...httpMonitors.map((row) => row.id),
+			...dnsMonitorRows.map((row) => row.id),
+			...tcpMonitorRows.map((row) => row.id),
+			...cronJobRows.map((row) => row.id),
+		];
+
+		if (httpMonitors.length > 0) {
+			let where = inList(
+				"monitor_id",
+				httpMonitors.map((row) => row.id),
+			);
+			await db.deleteMany(monitorResults, { where });
+			await db.deleteMany(monitorContentChecks, { where });
+		}
+		if (dnsMonitorRows.length > 0) {
+			await db.deleteMany(dnsMonitorResults, {
+				where: inList(
+					"dns_monitor_id",
+					dnsMonitorRows.map((row) => row.id),
+				),
+			});
+		}
+		if (tcpMonitorRows.length > 0) {
+			await db.deleteMany(tcpMonitorResults, {
+				where: inList(
+					"tcp_monitor_id",
+					tcpMonitorRows.map((row) => row.id),
+				),
+			});
+		}
+		if (cronJobRows.length > 0) {
+			await db.deleteMany(cronJobPings, {
+				where: inList(
+					"cron_job_monitor_id",
+					cronJobRows.map((row) => row.id),
+				),
+			});
+		}
+		if (monitorIds.length > 0) {
+			await db.deleteMany(monitorDailyStats, { where: inList("monitor_id", monitorIds) });
+		}
+		if (alertRows.length > 0) {
+			await db.deleteMany(alertEvents, {
+				where: inList(
+					"alert_id",
+					alertRows.map((row) => row.id),
+				),
+			});
+		}
+		for (let statusPage of statusPageRows) {
+			await db.deleteMany(statusPageMonitors, { where: { status_page_id: statusPage.id } });
+			await db.deleteMany(statusPageDnsMonitors, { where: { status_page_id: statusPage.id } });
+			await db.deleteMany(statusPageTcpMonitors, { where: { status_page_id: statusPage.id } });
+			await db.deleteMany(statusPageCronJobs, { where: { status_page_id: statusPage.id } });
+		}
+
+		await db.deleteMany(monitors, { where: { team_id: teamId } });
+		await db.deleteMany(dnsMonitors, { where: { team_id: teamId } });
+		await db.deleteMany(tcpMonitors, { where: { team_id: teamId } });
+		await db.deleteMany(cronJobMonitors, { where: { team_id: teamId } });
+		await db.deleteMany(alerts, { where: { team_id: teamId } });
+		await db.deleteMany(maintenanceWindows, { where: { team_id: teamId } });
+		await db.deleteMany(statusPages, { where: { team_id: teamId } });
+		await db.deleteMany(apiKeys, { where: { team_id: teamId } });
+		await db.deleteMany(teamDomains, { where: { team_id: teamId } });
+		await db.deleteMany(invites, { where: { team_id: teamId } });
+		await db.deleteMany(memberships, { where: { team_id: teamId } });
+		await db.delete(teams, teamId);
+	}
+}
+
+/** Derives a URL-safe slug from a team name, matching the OLD APP's `generateSlug`. */
+export function generateTeamSlug(name: string): string {
+	return name
+		.toLowerCase()
+		.replace(/[^a-z0-9\s-]/g, "")
+		.trim()
+		.replace(/\s+/g, "-")
+		.replace(/-+/g, "-")
+		.slice(0, 50);
 }

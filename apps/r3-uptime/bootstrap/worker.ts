@@ -25,7 +25,9 @@ import { CheckSslJob } from "~/app/jobs/check-ssl";
 import { CheckTcpJob } from "~/app/jobs/check-tcp";
 import { CleanJob } from "~/app/jobs/clean";
 import { CleanCronJobPingsJob } from "~/app/jobs/clean-cron-job-pings";
+import { EnqueuePendingDomainsJob } from "~/app/jobs/enqueue-pending-domains";
 import { PingJob } from "~/app/jobs/ping";
+import { VerifyDomainOwnershipJob } from "~/app/jobs/verify-domain-ownership";
 import { container } from "~/app/lib/container";
 import { Ping } from "~/app/workflows/ping";
 
@@ -102,6 +104,11 @@ export default {
 				waitUntil(env.QUEUE.send({ type: "checkTcp" }));
 			}
 
+			// Every 10 minutes: re-enqueue verification for every unverified team domain.
+			if (controller.cron === "*/10 * * * *") {
+				waitUntil(env.QUEUE.send({ type: "enqueuePendingDomains" }));
+			}
+
 			// Every hour: sweep every enabled DNS monitor.
 			if (controller.cron === "0 * * * *") {
 				waitUntil(env.QUEUE.send({ type: "checkDns" }));
@@ -157,6 +164,12 @@ export default {
 						break;
 					case "cleanCronJobPings":
 						waitUntil(CleanCronJobPingsJob.run({ message, uptime }));
+						break;
+					case "enqueuePendingDomains":
+						waitUntil(EnqueuePendingDomainsJob.run({ message, uptime }));
+						break;
+					case "verifyDomainOwnership":
+						waitUntil(VerifyDomainOwnershipJob.run({ message, uptime }));
 						break;
 					case "checkSsl":
 						waitUntil(CheckSslJob.run({ message, uptime }));

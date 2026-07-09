@@ -22,7 +22,9 @@ import { methodOverride } from "remix/method-override-middleware";
 import { renderWith } from "remix/render-middleware";
 import { renderToStream } from "remix/ui/server";
 
+import { createTeam, leaveTeam, updateLanguage } from "~/app/http/controllers/actions/account";
 import { createAlert, deleteAlert, updateAlert } from "~/app/http/controllers/actions/alerts";
+import { createApiKey, deleteApiKey } from "~/app/http/controllers/actions/api-keys";
 import {
 	createContentCheck,
 	deleteContentCheck,
@@ -39,6 +41,7 @@ import {
 	deleteDnsMonitor,
 	updateDnsMonitor,
 } from "~/app/http/controllers/actions/dns-monitors";
+import { createInvite, revokeInvite } from "~/app/http/controllers/actions/invites";
 import {
 	createMaintenanceWindow,
 	deleteMaintenanceWindow,
@@ -63,12 +66,27 @@ import {
 	deleteTcpMonitor,
 	updateTcpMonitor,
 } from "~/app/http/controllers/actions/tcp-monitors";
+import {
+	changeRole,
+	deleteTeam,
+	removeMember,
+	updateTeam,
+} from "~/app/http/controllers/actions/team";
+import {
+	addDomain,
+	removeDomain,
+	retryDomainVerification,
+} from "~/app/http/controllers/actions/team-domains";
 import cronJobPing from "~/app/http/controllers/api/cron-job-ping";
 import appIndex from "~/app/http/controllers/app/index";
+import account from "~/app/http/controllers/app/team/account";
 import alertEdit from "~/app/http/controllers/app/team/alert-edit";
 import alertHistory from "~/app/http/controllers/app/team/alert-history";
 import alertNew from "~/app/http/controllers/app/team/alert-new";
 import alerts from "~/app/http/controllers/app/team/alerts";
+import apiKeyNew from "~/app/http/controllers/app/team/api-key-new";
+import apiKeys from "~/app/http/controllers/app/team/api-keys";
+import checkout from "~/app/http/controllers/app/team/checkout";
 import cronJobEdit from "~/app/http/controllers/app/team/cron-job-edit";
 import cronJobNew from "~/app/http/controllers/app/team/cron-job-new";
 import cronJobShow from "~/app/http/controllers/app/team/cron-job-show";
@@ -86,6 +104,7 @@ import maintenanceWindows from "~/app/http/controllers/app/team/maintenance-wind
 import monitorEdit from "~/app/http/controllers/app/team/monitor-edit";
 import monitorNew from "~/app/http/controllers/app/team/monitor-new";
 import monitorShow from "~/app/http/controllers/app/team/monitor-show";
+import settings from "~/app/http/controllers/app/team/settings";
 import statusPageEdit from "~/app/http/controllers/app/team/status-page-edit";
 import statusPageNew from "~/app/http/controllers/app/team/status-page-new";
 import statusPages from "~/app/http/controllers/app/team/status-pages";
@@ -98,11 +117,13 @@ import defaultHandler from "~/app/http/controllers/default-handler";
 import healthcheck from "~/app/http/controllers/healthcheck";
 import healthcheckAnalyticsEngine from "~/app/http/controllers/healthcheck-analytics-engine";
 import home from "~/app/http/controllers/home";
+import inviteController from "~/app/http/controllers/invite";
 import logoutController from "~/app/http/controllers/logout";
 import statusPageController from "~/app/http/controllers/status-page";
 import auth from "~/app/http/middleware/auth";
 import i18n from "~/app/http/middleware/i18n";
 import logger from "~/app/http/middleware/logger";
+import requireRole from "~/app/http/middleware/require-role";
 import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
 import { createSessionMiddleware } from "~/app/http/middleware/session";
@@ -146,6 +167,10 @@ export default function application(options: application.Options) {
 	router.map(routes.auth, authController);
 	router.map(routes.logout, logoutController);
 	router.map(routes.statusPage, statusPageController);
+	router.map(routes.invite, {
+		middleware: [requireUser],
+		handler: inviteController as RequestHandler<any>,
+	});
 
 	// `createAction`'s handler type fixes its middleware-entries tuple at `[]`, but a
 	// `router.map` middleware array of plain (untransformed) `Middleware` values types
@@ -269,6 +294,26 @@ export default function application(options: application.Options) {
 		middleware: [requireUser, requireTeam],
 		handler: statusPageEdit as RequestHandler<any>,
 	});
+	router.map(routes.app.team.settings, {
+		middleware: [requireUser, requireTeam, requireRole("admin")],
+		handler: settings as RequestHandler<any>,
+	});
+	router.map(routes.app.team.account, {
+		middleware: [requireUser, requireTeam],
+		handler: account as RequestHandler<any>,
+	});
+	router.map(routes.app.team.apiKeys, {
+		middleware: [requireUser, requireTeam, requireRole("admin")],
+		handler: apiKeys as RequestHandler<any>,
+	});
+	router.map(routes.app.team.apiKeyNew, {
+		middleware: [requireUser, requireTeam, requireRole("admin")],
+		handler: apiKeyNew as RequestHandler<any>,
+	});
+	router.map(routes.app.team.checkout, {
+		middleware: [requireUser, requireTeam],
+		handler: checkout as RequestHandler<any>,
+	});
 
 	router.map(routes.actions, {
 		middleware: [requireUser, requireTeam],
@@ -302,6 +347,37 @@ export default function application(options: application.Options) {
 			createStatusPage: createStatusPage as RequestHandler<any>,
 			updateStatusPage: updateStatusPage as RequestHandler<any>,
 			deleteStatusPage: deleteStatusPage as RequestHandler<any>,
+		},
+	});
+
+	// A separate group (see `routes/web.ts`'s docblock on `teamAdminActions`), so
+	// `requireRole("admin")` layers on top of the member-level chain the `actions`
+	// group above uses, without restricting those member-level actions too.
+	router.map(routes.teamAdminActions, {
+		middleware: [requireUser, requireTeam, requireRole("admin")],
+		actions: {
+			updateTeam: updateTeam as RequestHandler<any>,
+			deleteTeam: deleteTeam as RequestHandler<any>,
+			removeMember: removeMember as RequestHandler<any>,
+			changeRole: changeRole as RequestHandler<any>,
+			createInvite: createInvite as RequestHandler<any>,
+			revokeInvite: revokeInvite as RequestHandler<any>,
+			addDomain: addDomain as RequestHandler<any>,
+			removeDomain: removeDomain as RequestHandler<any>,
+			retryDomainVerification: retryDomainVerification as RequestHandler<any>,
+			createApiKey: createApiKey as RequestHandler<any>,
+			deleteApiKey: deleteApiKey as RequestHandler<any>,
+		},
+	});
+
+	// Not team-scoped: reached from the account page, which lists every team the
+	// viewer belongs to rather than acting on the one team in its own URL.
+	router.map(routes.accountActions, {
+		middleware: [requireUser],
+		actions: {
+			createTeam: createTeam as RequestHandler<any>,
+			leaveTeam: leaveTeam as RequestHandler<any>,
+			updateLanguage: updateLanguage as RequestHandler<any>,
 		},
 	});
 

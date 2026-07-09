@@ -35,4 +35,39 @@ export default class Customer {
 	static async hasActiveSubscription(polar: PolarClient, ownerId: string): Promise<boolean> {
 		return await polar.hasActiveSubscription(ownerId, SUBSCRIPTION_PRODUCT_ID);
 	}
+
+	/** Creates a hosted Polar checkout session for the team owner to subscribe. */
+	static async checkout(polar: PolarClient, ownerId: string, successUrl: string): Promise<string> {
+		let customer = await polar.getExternalCustomer(ownerId);
+		let session = await polar.createCheckoutSession(
+			SUBSCRIPTION_PRODUCT_ID,
+			customer?.id,
+			successUrl,
+		);
+		return session.url;
+	}
+
+	/** Creates a hosted Polar customer-portal session for the team owner to manage billing. */
+	static async portal(polar: PolarClient, ownerId: string): Promise<string> {
+		let customer = await polar.getExternalCustomer(ownerId);
+		if (!customer) throw new Error(`No Polar customer found for owner ${ownerId}`);
+		let session = await polar.createPortalSession(customer.id);
+		return session.url;
+	}
+
+	/** Revokes every active monitoring subscription for the team owner (used on team deletion). */
+	static async cancelSubscriptions(polar: PolarClient, ownerId: string): Promise<void> {
+		let customer = await polar.getExternalCustomer(ownerId);
+		if (!customer) return;
+
+		let subscriptions = await polar.listSubscriptions(customer.id);
+		await Promise.all(
+			subscriptions
+				.filter(
+					(subscription) =>
+						subscription.productId === SUBSCRIPTION_PRODUCT_ID && subscription.status === "active",
+				)
+				.map((subscription) => polar.revokeSubscription(subscription.id)),
+		);
+	}
 }

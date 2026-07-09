@@ -8,6 +8,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { AuthSDK } from "@pkg/auth-sdk";
 import { createD1DatabaseAdapter } from "@pkg/data-table-d1";
 import { PolarClient } from "@pkg/polar";
 import { ServiceContainer } from "@pkg/service-container";
@@ -36,3 +37,7 @@ container.singleton(Database, () =>
 container.singleton(PolarClient, () => new PolarClient({ accessToken: env.POLAR_ACCESS_TOKEN }));
 container.singleton(Resend, () => new Resend(env.RESEND_API_TOKEN));
 container.singleton(IdTokenVerificationKeyService, () => new IdTokenVerificationKeyService());
+container.singleton(
+	AuthSDK,
+	() => new AuthSDK({ client: { id: env.CLIENT_ID, secret: env.CLIENT_SECRET } }),
+);

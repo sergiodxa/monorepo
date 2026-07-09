@@ -22,6 +22,7 @@ export default route({
 	healthcheck: get("/healthcheck"),
 	healthcheckAnalyticsEngine: get("/healthcheck/analytics-engine"),
 	statusPage: get("/status/:slug"),
+	invite: get("/invite/:inviteId"),
 
 	// GET = OAuth callback ("index"), POST = starts the OAuth flow ("action").
 	auth: form("/auth"),
@@ -59,6 +60,11 @@ export default route({
 			statusPages: get("/app/:team/status-pages"),
 			statusPageNew: get("/app/:team/status-pages/new"),
 			statusPageEdit: get("/app/:team/status-pages/:statusPageId/edit"),
+			settings: get("/app/:team/settings"),
+			account: get("/app/:team/account"),
+			apiKeys: get("/app/:team/api-keys"),
+			apiKeyNew: get("/app/:team/api-keys/new"),
+			checkout: get("/app/:team/checkout"),
 		},
 	},
 
@@ -92,6 +98,33 @@ export default route({
 		createStatusPage: post("/actions/:team/create-status-page"),
 		updateStatusPage: post("/actions/:team/update-status-page"),
 		deleteStatusPage: del("/actions/:team/delete-status-page"),
+	},
+
+	// A separate route-map group (not a URL prefix — the paths are still
+	// `/actions/:team/...`) purely so `bootstrap/app.tsx` can lay `requireRole("admin")`
+	// over this whole group without also restricting the member-level `actions` above.
+	// `router.map()` requires one middleware chain per call and every leaf of a group
+	// in the same call, so these can't just be extra keys on `actions`.
+	teamAdminActions: {
+		updateTeam: post("/actions/:team/update-team"),
+		deleteTeam: del("/actions/:team/delete-team"),
+		removeMember: del("/actions/:team/remove-member"),
+		changeRole: post("/actions/:team/change-role"),
+		createInvite: post("/actions/:team/create-invite"),
+		revokeInvite: del("/actions/:team/revoke-invite"),
+		addDomain: post("/actions/:team/add-domain"),
+		removeDomain: del("/actions/:team/remove-domain"),
+		retryDomainVerification: post("/actions/:team/retry-domain-verification"),
+		createApiKey: post("/actions/:team/create-api-key"),
+		deleteApiKey: del("/actions/:team/delete-api-key"),
+	},
+
+	// Not team-scoped: reached from the account page, which lists every team the
+	// viewer belongs to rather than acting on the one team in its own URL.
+	accountActions: {
+		createTeam: post("/actions/create-team"),
+		leaveTeam: post("/actions/leave-team"),
+		updateLanguage: post("/actions/update-language"),
 	},
 
 	api: {

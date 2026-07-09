@@ -67,6 +67,21 @@ export default function AppShell(handle: Handle<AppShell.Props>) {
 									Status pages
 								</a>
 							</li>
+							<li>
+								<a href={routes.app.team.apiKeys.href({ team: team.slug })} mix={[s.link]}>
+									API keys
+								</a>
+							</li>
+							<li>
+								<a href={routes.app.team.settings.href({ team: team.slug })} mix={[s.link]}>
+									Settings
+								</a>
+							</li>
+							<li>
+								<a href={routes.app.team.account.href({ team: team.slug })} mix={[s.link]}>
+									Account
+								</a>
+							</li>
 						</ul>
 					</nav>
 
