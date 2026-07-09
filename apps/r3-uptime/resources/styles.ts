@@ -428,6 +428,407 @@ export const serviceCard = css({
 	},
 });
 
+/** Sticky top navigation bar for the public marketing site. */
+export const marketingHeader = css({
+	position: "sticky",
+	top: 0,
+	zIndex: 10,
+	display: "flex",
+	alignItems: "center",
+	justifyContent: "space-between",
+	gap: 16,
+	padding: "14px 24px",
+	borderBottom: "1px solid #e5e5e5",
+	background: "rgba(255, 255, 255, 0.9)",
+	backdropFilter: "blur(6px)",
+	"@media (prefers-color-scheme: dark)": {
+		borderColor: "#262626",
+		background: "rgba(10, 10, 10, 0.9)",
+	},
+});
+
+/** Marketing header brand mark. */
+export const marketingBrand = css({
+	fontWeight: 700,
+	fontSize: "1.125rem",
+	textDecoration: "none",
+	color: "inherit",
+});
+
+/** Horizontal row of marketing nav links. */
+export const marketingNav = css({
+	display: "flex",
+	alignItems: "center",
+	gap: 20,
+	flexWrap: "wrap",
+});
+
+/** A single marketing nav link. */
+export const marketingNavLink = css({
+	fontSize: "0.9375rem",
+	color: "inherit",
+	textDecoration: "none",
+	"&:hover": { color: "#2563eb" },
+});
+
+/** Centered, width-capped content column for marketing sections (wider than {@link container}). */
+export const marketingContainer = css({
+	maxWidth: 1024,
+	margin: "0 auto",
+	padding: "0 24px",
+});
+
+/** Hero section with a soft gradient background. */
+export const marketingHero = css({
+	padding: "64px 0 48px",
+	textAlign: "center",
+	background: "linear-gradient(to bottom, #eff6ff, #ffffff)",
+	"@media (prefers-color-scheme: dark)": {
+		background: "linear-gradient(to bottom, #0c1a2e, #0a0a0a)",
+	},
+});
+
+/** Small pill badge used above hero/section headings. */
+export const marketingBadge = css({
+	display: "inline-flex",
+	alignItems: "center",
+	padding: "4px 12px",
+	borderRadius: 999,
+	fontSize: "0.75rem",
+	fontWeight: 600,
+	background: "#dbeafe",
+	color: "#1d4ed8",
+	marginBottom: 16,
+	"@media (prefers-color-scheme: dark)": {
+		background: "#1e3a5f",
+		color: "#93c5fd",
+	},
+});
+
+/** Hero/section heading, larger than default `h1`/`h2` sizing. */
+export const marketingHeroTitle = css({
+	fontSize: "2.25rem",
+	fontWeight: 700,
+	lineHeight: 1.15,
+	margin: "0 auto 16px",
+	maxWidth: 760,
+	"@media (min-width: 768px)": { fontSize: "3rem" },
+});
+
+/** Emphasized inline span inside a hero title. */
+export const marketingHeroHighlight = css({
+	color: "#2563eb",
+	"@media (prefers-color-scheme: dark)": { color: "#60a5fa" },
+});
+
+/** Hero/section supporting paragraph. */
+export const marketingLead = css({
+	fontSize: "1.125rem",
+	color: "#525252",
+	margin: "0 auto 24px",
+	maxWidth: 640,
+	lineHeight: 1.6,
+	"@media (prefers-color-scheme: dark)": { color: "#a3a3a3" },
+});
+
+/** Row of short trust/highlight chips under a hero paragraph. */
+export const marketingHighlightRow = css({
+	display: "flex",
+	flexWrap: "wrap",
+	justifyContent: "center",
+	gap: 12,
+	marginBottom: 8,
+});
+
+/** One chip inside {@link marketingHighlightRow}. */
+export const marketingHighlightChip = css({
+	display: "inline-flex",
+	alignItems: "center",
+	gap: 6,
+	fontSize: "0.875rem",
+	color: "#404040",
+	"@media (prefers-color-scheme: dark)": { color: "#d4d4d4" },
+});
+
+/** Row of call-to-action buttons under a hero. */
+export const marketingActions = css({
+	display: "flex",
+	flexWrap: "wrap",
+	justifyContent: "center",
+	gap: 12,
+	marginTop: 8,
+});
+
+/** A generic marketing page section with vertical padding. */
+export const marketingSection = css({
+	padding: "48px 0",
+});
+
+/** Same as {@link marketingSection} with an alternating background tint. */
+export const marketingSectionAlt = css({
+	padding: "48px 0",
+	background: "#fafafa",
+	"@media (prefers-color-scheme: dark)": { background: "#111111" },
+});
+
+/** Centered heading block at the top of a marketing section. */
+export const marketingSectionHeader = css({
+	textAlign: "center",
+	maxWidth: 640,
+	margin: "0 auto 40px",
+});
+
+/** Responsive card grid for feature/use-case/audience lists. */
+export const marketingGrid = css({
+	display: "grid",
+	gap: 20,
+	gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
+});
+
+/** One card inside {@link marketingGrid}. */
+export const marketingCard = css({
+	padding: 20,
+	borderRadius: 12,
+	border: "1px solid #e5e5e5",
+	"@media (prefers-color-scheme: dark)": { borderColor: "#262626" },
+});
+
+/** Card/section heading inside a marketing card. */
+export const marketingCardTitle = css({
+	fontSize: "1.0625rem",
+	fontWeight: 600,
+	margin: "0 0 6px",
+});
+
+/** Card description text, muted. */
+export const marketingCardDescription = css({
+	fontSize: "0.9375rem",
+	color: "#525252",
+	margin: 0,
+	lineHeight: 1.55,
+	"@media (prefers-color-scheme: dark)": { color: "#a3a3a3" },
+});
+
+/** Row of stat tiles (trust indicators). */
+export const marketingStatRow = css({
+	display: "grid",
+	gap: 16,
+	gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))",
+	textAlign: "center",
+});
+
+/** Large numeric stat value. */
+export const marketingStatValue = css({
+	fontSize: "1.75rem",
+	fontWeight: 700,
+	fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
+});
+
+/** Muted label under a stat value. */
+export const marketingStatLabel = css({
+	fontSize: "0.8125rem",
+	color: "#737373",
+	"@media (prefers-color-scheme: dark)": { color: "#a3a3a3" },
+});
+
+/** Numbered "how it works" step list. */
+export const marketingSteps = css({
+	display: "grid",
+	gap: 20,
+	gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+	counterReset: "marketing-step",
+});
+
+/** One step inside {@link marketingSteps}, numbered via `::before`. */
+export const marketingStep = css({
+	position: "relative",
+	paddingLeft: 40,
+	counterIncrement: "marketing-step",
+	"&::before": {
+		content: "counter(marketing-step)",
+		position: "absolute",
+		left: 0,
+		top: 0,
+		display: "flex",
+		alignItems: "center",
+		justifyContent: "center",
+		width: 28,
+		height: 28,
+		borderRadius: "50%",
+		background: "#2563eb",
+		color: "#ffffff",
+		fontSize: "0.8125rem",
+		fontWeight: 700,
+	},
+});
+
+/** Native `<details>` FAQ item; no client JS required for the disclosure behavior. */
+export const marketingFaqItem = css({
+	border: "1px solid #e5e5e5",
+	borderRadius: 8,
+	padding: "12px 16px",
+	marginBottom: 12,
+	"@media (prefers-color-scheme: dark)": { borderColor: "#262626" },
+});
+
+/** `<summary>` question row of a {@link marketingFaqItem}. */
+export const marketingFaqQuestion = css({
+	fontWeight: 600,
+	cursor: "pointer",
+});
+
+/** Answer paragraph inside an open {@link marketingFaqItem}. */
+export const marketingFaqAnswer = css({
+	marginTop: 8,
+	color: "#525252",
+	lineHeight: 1.6,
+	"@media (prefers-color-scheme: dark)": { color: "#a3a3a3" },
+});
+
+/** Final call-to-action band near the bottom of a marketing page. */
+export const marketingCtaSection = css({
+	padding: "56px 0",
+	textAlign: "center",
+	background: "#171717",
+	color: "#ffffff",
+});
+
+/** Comparison table used on `/vs/*` pages; extends {@link table} with centered data cells. */
+export const marketingComparisonTable = css({
+	width: "100%",
+	borderCollapse: "collapse",
+	fontSize: "0.9375rem",
+	"& th, & td": {
+		textAlign: "center",
+		padding: "10px 12px",
+		borderBottom: "1px solid #e5e5e5",
+	},
+	"& th:first-child, & td:first-child": { textAlign: "left" },
+	"@media (prefers-color-scheme: dark)": {
+		"& th, & td": { borderColor: "#262626" },
+	},
+});
+
+/** Marketing site footer. */
+export const marketingFooter = css({
+	borderTop: "1px solid #e5e5e5",
+	padding: "48px 24px 24px",
+	"@media (prefers-color-scheme: dark)": { borderColor: "#262626" },
+});
+
+/** Multi-column link grid inside the marketing footer. */
+export const marketingFooterGrid = css({
+	display: "grid",
+	gap: 24,
+	gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))",
+	maxWidth: 1024,
+	margin: "0 auto 32px",
+});
+
+/** One column heading inside the footer grid. */
+export const marketingFooterHeading = css({
+	fontSize: "0.8125rem",
+	fontWeight: 700,
+	textTransform: "uppercase",
+	letterSpacing: "0.03em",
+	color: "#737373",
+	marginBottom: 12,
+	"@media (prefers-color-scheme: dark)": { color: "#a3a3a3" },
+});
+
+/** One link inside a footer column. */
+export const marketingFooterLink = css({
+	display: "block",
+	fontSize: "0.875rem",
+	color: "inherit",
+	textDecoration: "none",
+	marginBottom: 8,
+	"&:hover": { color: "#2563eb" },
+});
+
+/** Bottom copyright row of the marketing footer. */
+export const marketingFooterBottom = css({
+	maxWidth: 1024,
+	margin: "0 auto",
+	paddingTop: 24,
+	borderTop: "1px solid #e5e5e5",
+	fontSize: "0.8125rem",
+	color: "#737373",
+	"@media (prefers-color-scheme: dark)": {
+		borderColor: "#262626",
+		color: "#a3a3a3",
+	},
+});
+
+/** Long-form prose article (legal pages, docs). */
+export const proseArticle = css({
+	maxWidth: 720,
+	margin: "0 auto",
+	padding: "48px 24px 80px",
+	lineHeight: 1.7,
+	"& h1": { fontSize: "2rem", marginBottom: 8 },
+	"& h2": { fontSize: "1.375rem", marginTop: 32, marginBottom: 8 },
+	"& h3": { fontSize: "1.125rem", marginTop: 24, marginBottom: 8 },
+	"& p": { margin: "0 0 16px" },
+	"& ul": { margin: "0 0 16px", paddingLeft: "1.25rem" },
+	"& li": { marginBottom: 8 },
+});
+
+/** Two-column docs layout: sidebar navigation + article content. */
+export const docsLayout = css({
+	display: "flex",
+	flex: 1,
+	minHeight: 0,
+	maxWidth: 1024,
+	margin: "0 auto",
+	width: "100%",
+});
+
+/** Docs sidebar navigation column. */
+export const docsSidebar = css({
+	width: 240,
+	flexShrink: 0,
+	padding: "32px 20px",
+	borderRight: "1px solid #e5e5e5",
+	"@media (prefers-color-scheme: dark)": { borderColor: "#262626" },
+});
+
+/** One doc section heading inside the docs sidebar. */
+export const docsSidebarHeading = css({
+	fontSize: "0.75rem",
+	fontWeight: 700,
+	textTransform: "uppercase",
+	letterSpacing: "0.03em",
+	color: "#737373",
+	margin: "20px 0 8px",
+	"@media (prefers-color-scheme: dark)": { color: "#a3a3a3" },
+});
+
+/** Docs article content column. */
+export const docsContent = css({
+	flex: 1,
+	minWidth: 0,
+	padding: "32px 24px 80px",
+});
+
+/** Intro paragraph under the docs index `<h1>`. */
+export const docsIntro = css({
+	fontSize: "1.0625rem",
+	color: "#525252",
+	margin: "8px 0 32px",
+	"@media (prefers-color-scheme: dark)": { color: "#a3a3a3" },
+});
+
+/** Centered card used for the homepage's "tailored solutions for" audience-chip row. */
+export const marketingAudienceCard = css({
+	padding: 20,
+	borderRadius: 12,
+	border: "1px solid #e5e5e5",
+	marginTop: 24,
+	textAlign: "center",
+	"@media (prefers-color-scheme: dark)": { borderColor: "#262626" },
+});
+
 /** Fixed-position flash toast, auto-dismissed with a CSS animation. */
 export const toast = css({
 	position: "fixed",
