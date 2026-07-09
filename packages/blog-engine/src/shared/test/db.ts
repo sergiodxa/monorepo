@@ -807,10 +807,19 @@ function shouldReadStatement(operation: DataManipulationRequest["operation"]): b
 	}
 
 	if (operation.kind === "raw") {
-		return false;
+		return isReadOnlyRawSql(operation.sql.text);
 	}
 
 	return operation.returning !== undefined;
+}
+
+/**
+ * Mirrors the production D1 adapter's fix for the same gap: a `"raw"` operation
+ * (`db.exec(sqlText, values)`) carries no structural read/write signal, so this
+ * sniffs the leading keyword to decide whether it needs the row-reading path.
+ */
+function isReadOnlyRawSql(sql: string): boolean {
+	return /^\s*(select|with|pragma)\b/i.test(sql);
 }
 
 function isWriteOperationKind(kind: DataManipulationRequest["operation"]["kind"]): boolean {

@@ -167,4 +167,31 @@ describe("createSQLStorageDatabaseAdapter", () => {
 		expect(created.id).toBe(7);
 		expect(created.email).toBe("seven@example.com");
 	});
+
+	test("db.exec() with a raw SELECT returns rows", async () => {
+		await db.create(users, { id: 1, email: "one@example.com" });
+		await db.create(users, { id: 2, email: "two@example.com" });
+
+		let result = await db.exec("SELECT email FROM users WHERE id = ?", [2]);
+
+		expect(result.rows).toEqual([{ email: "two@example.com" }]);
+	});
+
+	test("db.exec() with a raw WITH/CTE query returns rows", async () => {
+		await db.create(users, { id: 1, email: "one@example.com" });
+
+		let result = await db.exec("WITH ranked AS (SELECT email FROM users) SELECT * FROM ranked");
+
+		expect(result.rows).toEqual([{ email: "one@example.com" }]);
+	});
+
+	test("db.exec() with a raw DELETE still reports affectedRows, not rows", async () => {
+		await db.create(users, { id: 1, email: "one@example.com" });
+		await db.create(users, { id: 2, email: "two@example.com" });
+
+		let result = await db.exec("DELETE FROM users WHERE id = ?", [1]);
+
+		expect(result.affectedRows).toBe(1);
+		expect(await db.count(users)).toBe(1);
+	});
 });

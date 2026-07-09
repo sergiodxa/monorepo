@@ -205,7 +205,7 @@ expected field via `input[key]`, which is always `undefined` for a
 instead of a clean rejection — a far worse bug than the one being fixed,
 and one that would land silently in whichever other app's schema happened
 to have an all-optional shape. "Try raw first" is only safe if a failure
-against raw input is guaranteed to be *distinguishable* from a
+against raw input is guaranteed to be _distinguishable_ from a
 false-success, and for core object schemas it isn't.
 
 **What I built instead:** the flattened-object attempt still runs first,
@@ -216,7 +216,7 @@ literal message `"Expected FormData or URLSearchParams"` — the exact,
 specific signal `remix/data-schema/form-data`'s `object()` emits when it's
 handed something other than the raw source — does `validate()` retry with
 the unconverted `FormData`/`URLSearchParams`. This can only ever change the
-outcome for schemas that were *already failing* every single time; it
+outcome for schemas that were _already failing_ every single time; it
 cannot turn a working call into a broken one. (Caveat: the `Issue` type
 this package's dependency exposes doesn't carry a stable error `code`
 externally, only a `message` string, so the match is on that exact message
@@ -357,6 +357,57 @@ in isolation, but because verifying the deploy meaningfully (browsing every
 page against production data, as the ADR's own step 1 describes) requires a
 human to actually look at it, and there was no benefit to deploying without
 that half of the step also happening.
+
+## Follow-up: three more shared-package bugs, found and fixed after the styling merge
+
+After everything above landed, three more reports arrived describing bugs
+found while this session's work was in flight (one via the spawned-task
+chip from the Phase 9 markdown-remix finding; two re-describing the
+`data-table-d1` raw-SQL bug already fixed, but asking for broader scope
+than I'd covered). All three were legitimate and are now fixed directly on
+`main`, no worktrees needed since by this point everything was already
+merged and there was nothing to parallelize against.
+
+**`packages/markdown-remix`'s `MarkdownView` fixed to follow `Handle<Props>`.**
+It was written React-style (`function MarkdownView({ content, components })`),
+which doesn't work as a `remix/ui` JSX component. Fixed to match `Fence` in
+the same package (`function MarkdownView({ props }: Handle<Props>) { return
+() => ...; }`). Verified with a real render through `remix/ui/server`'s
+`renderToString` (not just typecheck) — real Markdoc content in, real
+`<h1>`/`<p>` HTML out — and added that as a permanent regression test.
+
+**Found two consumers relying on the old broken calling convention that my
+first consumer search missed.** I'd only grepped for direct
+`@pkg/markdown-remix` imports; `packages/blog-engine/src/shared/components/post-render.tsx`
+and `apps/r3-blog/resources/views/post.tsx` both import via `@pkg/markdown/client/remix`
+(a re-export), and both called `MarkdownView({ content })` as a plain
+function — the same broken pattern, working only because the old
+implementation happened to accept a bare props object too. Once
+`MarkdownView` was fixed to the correct `Handle<Props>` shape, both of these
+became real typecheck errors (`tsc` caught them immediately). Fixed both to
+proper JSX invocation (`<MarkdownView content={content} />`). Re-ran
+`apps/r3-blog`, `apps/blog-saas`, and `packages/blog-engine`'s full suites
+(66 + 98 tests) — all green. This is exactly the kind of regression a
+narrow "check the obvious import" search misses; the broader
+`grep MarkdownView\(` sweep (direct function-call syntax, not JSX) is what
+actually found both.
+
+**The `data-table-d1` raw-SQL fix had two more affected files I hadn't
+touched.** The original fix only covered `packages/data-table-d1` and
+`apps/r3-uptime/app/lib/test/db.ts`. The same `shouldReadStatement`/
+`shouldReadRows`-never-true-for-`"raw"` pattern was independently copied
+into `packages/data-table-sqlstorage/src/index.ts` (the production Durable
+Object `SqlStorage` adapter — same bug, different backend, structurally
+identical fix and regression tests added), `packages/oidc-provider/src/shared/test/db.ts`,
+and `packages/blog-engine/src/shared/test/db.ts` (both test-only mirrors,
+fixed the same way to stay accurate even though neither package currently
+has a raw-SQL-read call site that exercises the bug). Checked for any other
+`@pkg/data-table-*` package first (only `-d1` and `-sqlstorage` exist) and
+confirmed neither `apps/auth-saas` nor `apps/blog-saas` (the other two
+consumers of `@pkg/data-table-d1`) use the raw-exec path at all, so neither
+fix changes anything for them. Full suites re-verified after each fix:
+`data-table-sqlstorage` (10/10), `oidc-provider` (281/281),
+`blog-engine`/`r3-blog`/`blog-saas` (already covered above).
 
 ## Scope decisions
 

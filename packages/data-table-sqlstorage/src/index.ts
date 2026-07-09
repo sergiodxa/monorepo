@@ -77,7 +77,8 @@ export function createSQLStorageDatabaseAdapter(
 				operation.kind === "select" ||
 				operation.kind === "count" ||
 				operation.kind === "exists" ||
-				hasReturningClause(operation);
+				hasReturningClause(operation) ||
+				(operation.kind === "raw" && isReadOnlyRawSql(statement.text));
 
 			if (shouldReadRows) {
 				let rows = normalizeRows(cursor.toArray());
@@ -791,6 +792,18 @@ function normalizeCountRows(rows: Record<string, unknown>[]): Record<string, unk
 
 		return row;
 	});
+}
+
+/**
+ * Returns `true` when a `db.exec()`/raw SQL statement's text looks like a `SELECT`
+ * (including a `WITH` CTE or a `PRAGMA` read). A `"raw"` operation's kind carries no
+ * structural read/write signal — unlike `select`/`insert`/etc., which the query
+ * builder already knows — so this sniffs the leading keyword to decide whether the
+ * statement's already-executed cursor should be read via `.toArray()`. Without this,
+ * a raw `SELECT` silently gets no rows even though the cursor already holds them.
+ */
+function isReadOnlyRawSql(sql: string): boolean {
+	return /^\s*(select|with|pragma)\b/i.test(sql);
 }
 
 /** Returns `true` when an operation asks for a `returning` clause. */
