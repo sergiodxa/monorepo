@@ -49,6 +49,14 @@ export default class Invite {
 		});
 	}
 
+	/** Lists every invite for a team (pending and accepted), most recently created first. */
+	static async listByTeam(db: Database, teamId: string) {
+		return await db.findMany(invites, {
+			where: { team_id: teamId },
+			orderBy: ["created_at", "desc"],
+		});
+	}
+
 	/** Marks an invite accepted and creates the resulting membership. */
 	static async accept(db: Database, inviteId: string, teamId: string, subjectId: string) {
 		await db.update(invites, inviteId, { accepted_at: Date.now() }, { touch: true });

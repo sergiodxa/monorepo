@@ -10,15 +10,30 @@
 import type { Database } from "remix/data-table";
 
 import { env } from "cloudflare:workers";
+import { and, eq, inList } from "remix/data-table";
 
 import type { InsertMonitor } from "~/database/schema";
 
-import { monitors } from "~/database/schema";
+import { monitorResults, monitors } from "~/database/schema";
 
 /** A monitor due for a check, with the team owner id the usage/billing gate needs. */
 export interface DueMonitor {
 	monitorId: string;
 	ownerId: string;
+}
+
+/** Aggregate uptime/response-time stats for a monitor (or a team's monitors). */
+export interface MonitorStats {
+	total: number;
+	uptime: number | null;
+	lastCheck: number | null;
+	p99: number | null;
+}
+
+interface StatsRow {
+	total: number;
+	uptime: number | null;
+	lastCheck: number | null;
 }
 
 export default class Monitor {
@@ -60,6 +75,14 @@ export default class Monitor {
 		return await db.findOne(monitors, { where: { id: monitorId, team_id: teamId } });
 	}
 
+	/** Finds every monitor in `monitorIds` that belongs to `teamId`. */
+	static async findManyByIdsForTeam(db: Database, teamId: string, monitorIds: string[]) {
+		if (monitorIds.length === 0) return [];
+		return await db.findMany(monitors, {
+			where: and(eq("team_id", teamId), inList("id", monitorIds)),
+		});
+	}
+
 	/** Updates a monitor's editable fields. */
 	static async updateById(db: Database, monitorId: string, changes: Partial<InsertMonitor>) {
 		return await db.update(monitors, monitorId, changes, { touch: true });
@@ -99,5 +122,72 @@ export default class Monitor {
 		);
 
 		return (result.rows ?? []) as unknown as DueMonitor[];
+	}
+
+	/** Lists a monitor's most recent completed results, newest first, with pagination. */
+	static async listResults(
+		db: Database,
+		monitorId: string,
+		options: { limit: number; offset: number },
+	) {
+		let rows = await db.findMany(monitorResults, {
+			where: { monitor_id: monitorId },
+			orderBy: ["created_at", "desc"],
+			limit: options.limit + 1,
+			offset: options.offset,
+		});
+
+		let hasMore = rows.length > options.limit;
+		return { results: hasMore ? rows.slice(0, options.limit) : rows, hasMore };
+	}
+
+	/** Computes total checks, uptime percentage, last-check time, and p99 response time for one monitor. */
+	static async getStatsById(db: Database, monitorId: string): Promise<MonitorStats> {
+		return await Monitor.getStats(db, "r.monitor_id = ?", [monitorId]);
+	}
+
+	/** Computes total checks, uptime percentage, last-check time, and p99 response time across a team. */
+	static async getStatsByTeamId(db: Database, teamId: string): Promise<MonitorStats> {
+		return await Monitor.getStats(db, "m.team_id = ?", [teamId]);
+	}
+
+	private static async getStats(
+		db: Database,
+		scopeClause: string,
+		scopeParams: string[],
+	): Promise<MonitorStats> {
+		let [statsResult, responseTimesResult] = await Promise.all([
+			db.exec(
+				`SELECT
+					COUNT(*) AS total,
+					SUM(CASE WHEN r.response_status = m.expected_status THEN 1 ELSE 0 END) * 100.0 / COUNT(*) AS uptime,
+					MAX(r.completed_at) AS lastCheck
+				 FROM monitor_results r
+				 JOIN monitors m ON r.monitor_id = m.id
+				 WHERE ${scopeClause} AND r.completed_at IS NOT NULL AND r.response_status IS NOT NULL`,
+				scopeParams,
+			),
+			db.exec(
+				`SELECT r.response_time_ms AS responseTimeMs
+				 FROM monitor_results r
+				 JOIN monitors m ON r.monitor_id = m.id
+				 WHERE ${scopeClause} AND r.response_time_ms IS NOT NULL
+				 ORDER BY r.response_time_ms ASC`,
+				scopeParams,
+			),
+		]);
+
+		let [row] = (statsResult.rows ?? []) as unknown as StatsRow[];
+		let responseTimes = (
+			(responseTimesResult.rows ?? []) as unknown as Array<{ responseTimeMs: number }>
+		).map((r) => r.responseTimeMs);
+		let p99Index = Math.floor(responseTimes.length * 0.99);
+
+		return {
+			total: row?.total ?? 0,
+			uptime: row?.uptime ?? null,
+			lastCheck: row?.lastCheck ?? null,
+			p99: responseTimes[p99Index] ?? null,
+		};
 	}
 }

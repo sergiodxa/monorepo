@@ -67,11 +67,11 @@ export default class DnsMonitor {
 	}
 
 	/** Lists a monitor's most recent check results, newest first. */
-	static async listResults(db: Database, monitorId: string) {
+	static async listResults(db: Database, monitorId: string, limit: number = RESULT_HISTORY_LIMIT) {
 		return await db.findMany(dnsMonitorResults, {
 			where: { dns_monitor_id: monitorId },
 			orderBy: ["checked_at", "desc"],
-			limit: RESULT_HISTORY_LIMIT,
+			limit,
 		});
 	}
 

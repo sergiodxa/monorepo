@@ -1,0 +1,125 @@
+/**
+ * API v1 item endpoints for a single DNS monitor: get/update/delete
+ * (`dns-monitors:read`/`dns-monitors:write`) and check-result history
+ * (`dns-monitors:read`), scoped to a monitor owned by the caller's team.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
+import { BadRequest, NotFound } from "@pkg/http/status-code";
+import { isFailure } from "@pkg/result";
+import { getServiceContainer } from "@pkg/service-container";
+import { validate } from "@pkg/validate";
+import * as s from "remix/data-schema";
+import * as checks from "remix/data-schema/checks";
+import { Database } from "remix/data-table";
+import { createAction } from "remix/fetch-router";
+
+import type { InsertDnsMonitor, SelectDnsMonitor } from "~/database/schema";
+
+import DnsMonitor from "~/app/data/dns-monitor";
+import { apiError, apiSuccess, parsePaginationQuery } from "~/app/services/api-response";
+import routes from "~/routes/web";
+
+const DNS_RECORD_TYPES = ["A", "AAAA", "CNAME", "MX", "TXT", "NS"] as const;
+
+const DnsMonitorIdParams = s.object({ dnsMonitorId: s.string() });
+
+/** Maps a DNS monitor row to the OLD APP's exact camelCase JSON shape. */
+function serializeDnsMonitor(monitor: SelectDnsMonitor) {
+	return {
+		id: monitor.id,
+		name: monitor.name,
+		domain: monitor.domain,
+		recordType: monitor.record_type,
+		expectedValue: monitor.expected_value,
+		intervalSeconds: monitor.interval_seconds,
+		isEnabled: monitor.is_enabled,
+		lastCheckedAt: monitor.last_checked_at,
+		lastStatus: monitor.last_status,
+		lastValue: monitor.last_value,
+		createdAt: monitor.created_at,
+		updatedAt: monitor.updated_at,
+	};
+}
+
+const UpdateDnsMonitorSchema = s.object({
+	name: s.optional(s.string().pipe(checks.minLength(1), checks.maxLength(255))),
+	domain: s.optional(s.string().pipe(checks.minLength(1), checks.maxLength(255))),
+	recordType: s.optional(s.enum_(DNS_RECORD_TYPES)),
+	expectedValue: s.optional(s.nullable(s.string().pipe(checks.maxLength(1024)))),
+	intervalSeconds: s.optional(s.number().pipe(checks.min(60), checks.max(86_400))),
+	isEnabled: s.optional(s.boolean()),
+});
+
+/** GET /api/v1/dns-monitors/:dnsMonitorId — a single DNS monitor. */
+export const dnsMonitorShow = createAction(routes.api.v1.dnsMonitorShow, async (ctx) => {
+	let { dnsMonitorId } = s.parse(DnsMonitorIdParams, ctx.params);
+	let db = getServiceContainer().get(Database);
+	let monitor = await DnsMonitor.findByIdForTeam(db, ctx.apiTeam.id, dnsMonitorId);
+	if (!monitor) return apiError("NOT_FOUND", "DNS monitor not found", NotFound);
+	return apiSuccess({ dnsMonitor: serializeDnsMonitor(monitor) });
+});
+
+/** PUT /api/v1/dns-monitors/:dnsMonitorId — updates a DNS monitor's editable fields. */
+export const dnsMonitorUpdate = createAction(routes.api.v1.dnsMonitorUpdate, async (ctx) => {
+	let { dnsMonitorId } = s.parse(DnsMonitorIdParams, ctx.params);
+	let db = getServiceContainer().get(Database);
+	let existing = await DnsMonitor.findByIdForTeam(db, ctx.apiTeam.id, dnsMonitorId);
+	if (!existing) return apiError("NOT_FOUND", "DNS monitor not found", NotFound);
+
+	let result = await validate(ctx.request, UpdateDnsMonitorSchema);
+	if (isFailure(result)) {
+		return apiError(
+			"VALIDATION_ERROR",
+			result.error.issues.map((issue) => issue.message).join(", "),
+			BadRequest,
+		);
+	}
+
+	let changes: Partial<InsertDnsMonitor> = {};
+	if (result.data.name !== undefined) changes.name = result.data.name;
+	if (result.data.domain !== undefined) changes.domain = result.data.domain;
+	if (result.data.recordType !== undefined) changes.record_type = result.data.recordType;
+	if (result.data.expectedValue !== undefined) changes.expected_value = result.data.expectedValue;
+	if (result.data.intervalSeconds !== undefined)
+		changes.interval_seconds = result.data.intervalSeconds;
+	if (result.data.isEnabled !== undefined) changes.is_enabled = result.data.isEnabled;
+
+	let monitor = await DnsMonitor.updateById(db, dnsMonitorId, changes);
+	return apiSuccess({ dnsMonitor: serializeDnsMonitor(monitor) });
+});
+
+/** DELETE /api/v1/dns-monitors/:dnsMonitorId — deletes a DNS monitor. */
+export const dnsMonitorDestroy = createAction(routes.api.v1.dnsMonitorDestroy, async (ctx) => {
+	let { dnsMonitorId } = s.parse(DnsMonitorIdParams, ctx.params);
+	let db = getServiceContainer().get(Database);
+	let existing = await DnsMonitor.findByIdForTeam(db, ctx.apiTeam.id, dnsMonitorId);
+	if (!existing) return apiError("NOT_FOUND", "DNS monitor not found", NotFound);
+
+	await DnsMonitor.deleteById(db, dnsMonitorId);
+	return apiSuccess({ deleted: true });
+});
+
+/** GET /api/v1/dns-monitors/:dnsMonitorId/results — check-result history. */
+export const dnsMonitorResults = createAction(routes.api.v1.dnsMonitorResults, async (ctx) => {
+	let { dnsMonitorId } = s.parse(DnsMonitorIdParams, ctx.params);
+	let db = getServiceContainer().get(Database);
+	let monitor = await DnsMonitor.findByIdForTeam(db, ctx.apiTeam.id, dnsMonitorId);
+	if (!monitor) return apiError("NOT_FOUND", "DNS monitor not found", NotFound);
+
+	let { limit } = parsePaginationQuery(ctx.url, { defaultLimit: 50, maxLimit: 200 });
+	let results = await DnsMonitor.listResults(db, dnsMonitorId, limit);
+
+	return apiSuccess({
+		results: results.map((row) => ({
+			id: row.id,
+			status: row.status,
+			resolvedValue: row.resolved_value,
+			responseTimeMs: row.response_time_ms,
+			errorMessage: row.error_message,
+			checkedAt: row.checked_at,
+		})),
+	});
+});

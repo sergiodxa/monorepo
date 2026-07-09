@@ -99,6 +99,11 @@ export const apiKeyScopes = [
 	"maintenance:write",
 	"dns-monitors:read",
 	"dns-monitors:write",
+	// Every API v1 TCP-monitor endpoint checks for these two scope strings, so they
+	// must be real, grantable scopes — without them no API key could ever carry
+	// TCP-monitor access and those endpoints would be permanently unreachable.
+	"tcp-monitors:read",
+	"tcp-monitors:write",
 	"alerts:read",
 	"alerts:write",
 	"status-pages:read",

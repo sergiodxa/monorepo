@@ -10,11 +10,20 @@
 
 import type { Database } from "remix/data-table";
 
-import type { SelectMonitorContentCheck } from "~/database/schema";
+import type { InsertMonitorContentCheck, SelectMonitorContentCheck } from "~/database/schema";
 
 import { monitorContentChecks } from "~/database/schema";
 
 export default class ContentCheck {
+	/** Creates a content check for a monitor. */
+	static async create(db: Database, monitorId: string, input: InsertMonitorContentCheck) {
+		return await db.create(
+			monitorContentChecks,
+			{ id: crypto.randomUUID(), monitor_id: monitorId, ...input },
+			{ touch: true, returnRow: true },
+		);
+	}
+
 	/** Lists every content check for a monitor. */
 	static async listByMonitor(db: Database, monitorId: string) {
 		return await db.findMany(monitorContentChecks, { where: { monitor_id: monitorId } });
@@ -25,6 +34,11 @@ export default class ContentCheck {
 		return await db.findOne(monitorContentChecks, {
 			where: { id: contentCheckId, monitor_id: monitorId },
 		});
+	}
+
+	/** Deletes a content check. */
+	static async deleteById(db: Database, contentCheckId: string) {
+		return await db.delete(monitorContentChecks, contentCheckId);
 	}
 
 	/**

@@ -59,12 +59,29 @@ export default class TcpMonitor {
 	}
 
 	/** Lists a monitor's most recent check results, newest first. */
-	static async listResults(db: Database, monitorId: string) {
+	static async listResults(db: Database, monitorId: string, limit: number = RESULT_HISTORY_LIMIT) {
 		return await db.findMany(tcpMonitorResults, {
 			where: { tcp_monitor_id: monitorId },
 			orderBy: ["checked_at", "desc"],
-			limit: RESULT_HISTORY_LIMIT,
+			limit,
 		});
+	}
+
+	/** Lists a monitor's most recent check results, newest first, with offset pagination. */
+	static async listResultsPage(
+		db: Database,
+		monitorId: string,
+		options: { limit: number; offset: number },
+	) {
+		let rows = await db.findMany(tcpMonitorResults, {
+			where: { tcp_monitor_id: monitorId },
+			orderBy: ["checked_at", "desc"],
+			limit: options.limit + 1,
+			offset: options.offset,
+		});
+
+		let hasMore = rows.length > options.limit;
+		return { results: hasMore ? rows.slice(0, options.limit) : rows, hasMore };
 	}
 
 	/** Records a check's outcome: inserts a history row and updates the monitor's cached fields. */
