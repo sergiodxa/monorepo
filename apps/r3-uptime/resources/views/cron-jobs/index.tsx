@@ -9,8 +9,11 @@
 import type { Handle } from "remix/ui";
 
 import type { SelectCronJobMonitor } from "~/database/schema";
+import type { BadgeTone } from "~/resources/components/badge";
 
 import CronJobMonitor from "~/app/data/cron-job";
+import Badge from "~/resources/components/badge";
+import EmptyState from "~/resources/components/empty-state";
 import * as s from "~/resources/styles";
 import routes from "~/routes/web";
 
@@ -21,11 +24,11 @@ namespace CronJobsView {
 	}
 }
 
-const STATUS_BADGE_MIX: Record<string, typeof s.badgeUp> = {
-	healthy: s.badgeUp,
-	late: s.badgeDegraded,
-	missed: s.badgeDown,
-	new: s.badgeNeutral,
+const STATUS_BADGE_TONE: Record<string, BadgeTone> = {
+	healthy: "up",
+	late: "degraded",
+	missed: "down",
+	new: "neutral",
 };
 
 export default function CronJobsView(handle: Handle<CronJobsView.Props>) {
@@ -42,12 +45,13 @@ export default function CronJobsView(handle: Handle<CronJobsView.Props>) {
 				</div>
 
 				{monitors.length === 0 ? (
-					<div mix={[s.emptyState]}>
-						<p>No cron job monitors yet.</p>
-						<a href={routes.app.team.cronJobNew.href({ team: team.slug })} mix={[s.buttonPrimary]}>
-							Create your first cron job monitor
-						</a>
-					</div>
+					<EmptyState
+						message="No cron job monitors yet."
+						action={{
+							href: routes.app.team.cronJobNew.href({ team: team.slug }),
+							label: "Create your first cron job monitor",
+						}}
+					/>
 				) : (
 					<table mix={[s.table]}>
 						<thead>
@@ -70,15 +74,13 @@ export default function CronJobsView(handle: Handle<CronJobsView.Props>) {
 										>
 											{monitor.name}
 										</a>
-										{monitor.enabled_at === null && (
-											<span mix={[s.badge, s.badgeNeutral]}>Disabled</span>
-										)}
+										{monitor.enabled_at === null && <Badge tone="neutral">Disabled</Badge>}
 									</td>
 									<td>{CronJobMonitor.describeCronExpression(monitor.cron_expression)}</td>
 									<td>
-										<span mix={[s.badge, STATUS_BADGE_MIX[monitor.status] ?? s.badgeNeutral]}>
+										<Badge tone={STATUS_BADGE_TONE[monitor.status] ?? "neutral"}>
 											{monitor.status}
-										</span>
+										</Badge>
 									</td>
 								</tr>
 							))}

@@ -11,6 +11,7 @@ import type { Handle } from "remix/ui";
 
 import type { SelectMonitorContentCheck } from "~/database/schema";
 
+import Field from "~/resources/components/field";
 import * as s from "~/resources/styles";
 import routes from "~/routes/web";
 
@@ -98,19 +99,17 @@ export default function ContentChecksSection(handle: Handle<ContentChecksSection
 				<form method="post" action={routes.actions.createContentCheck.href({ team: team.slug })}>
 					<input type="hidden" name="monitor_id" value={monitorId} />
 
-					<label mix={[s.field]}>
-						<span>Type</span>
+					<Field label="Type">
 						<select name="type" defaultValue="contains" mix={[s.selectInput]}>
 							<option value="contains">Contains</option>
 							<option value="not_contains">Does not contain</option>
 							<option value="regex">Matches regex</option>
 						</select>
-					</label>
+					</Field>
 
-					<label mix={[s.field]}>
-						<span>Value</span>
+					<Field label="Value">
 						<input type="text" name="value" required mix={[s.input]} />
-					</label>
+					</Field>
 
 					<label mix={[s.checkboxField]}>
 						<input type="checkbox" name="case_sensitive" value="true" />

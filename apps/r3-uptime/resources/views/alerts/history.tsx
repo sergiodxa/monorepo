@@ -11,7 +11,10 @@
 import type { Handle } from "remix/ui";
 
 import type { SelectAlert, SelectAlertEvent } from "~/database/schema";
+import type { BadgeTone } from "~/resources/components/badge";
 
+import Badge from "~/resources/components/badge";
+import EmptyState from "~/resources/components/empty-state";
 import * as s from "~/resources/styles";
 
 namespace AlertHistoryView {
@@ -22,16 +25,16 @@ namespace AlertHistoryView {
 	}
 }
 
-const STATUS_BADGE_MIX: Record<string, typeof s.badgeUp> = {
-	sent: s.badgeUp,
-	skipped_cooldown: s.badgeNeutral,
-	failed: s.badgeDown,
+const STATUS_BADGE_TONE: Record<string, BadgeTone> = {
+	sent: "up",
+	skipped_cooldown: "neutral",
+	failed: "down",
 };
 
-const EVENT_TYPE_BADGE_MIX: Record<string, typeof s.badgeUp> = {
-	up: s.badgeUp,
-	degraded: s.badgeDegraded,
-	down: s.badgeDown,
+const EVENT_TYPE_BADGE_TONE: Record<string, BadgeTone> = {
+	up: "up",
+	degraded: "degraded",
+	down: "down",
 };
 
 export default function AlertHistoryView(handle: Handle<AlertHistoryView.Props>) {
@@ -43,9 +46,7 @@ export default function AlertHistoryView(handle: Handle<AlertHistoryView.Props>)
 				<h1>Alert history</h1>
 
 				{events.length === 0 ? (
-					<div mix={[s.emptyState]}>
-						<p>No alert events yet.</p>
-					</div>
+					<EmptyState message="No alert events yet." />
 				) : (
 					<table mix={[s.table]}>
 						<thead>
@@ -63,14 +64,14 @@ export default function AlertHistoryView(handle: Handle<AlertHistoryView.Props>)
 									<td>{alertsById.get(event.alert_id)?.name ?? "Deleted alert"}</td>
 									<td>{event.monitor_name ?? "Unknown monitor"}</td>
 									<td>
-										<span mix={[s.badge, EVENT_TYPE_BADGE_MIX[event.event_type] ?? s.badgeNeutral]}>
+										<Badge tone={EVENT_TYPE_BADGE_TONE[event.event_type] ?? "neutral"}>
 											{event.event_type}
-										</span>
+										</Badge>
 									</td>
 									<td>
-										<span mix={[s.badge, STATUS_BADGE_MIX[event.status] ?? s.badgeNeutral]}>
+										<Badge tone={STATUS_BADGE_TONE[event.status] ?? "neutral"}>
 											{event.status}
-										</span>
+										</Badge>
 										{event.error_message && <p mix={[s.mutedSmall]}>{event.error_message}</p>}
 									</td>
 									<td>{new Date(event.sent_at).toLocaleString()}</td>

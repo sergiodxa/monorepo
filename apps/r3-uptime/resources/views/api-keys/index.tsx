@@ -11,7 +11,9 @@ import type { Handle } from "remix/ui";
 
 import type { SelectApiKey, SelectTeam } from "~/database/schema";
 
+import Badge from "~/resources/components/badge";
 import CopyButton from "~/resources/components/copy-button";
+import EmptyState from "~/resources/components/empty-state";
 import * as s from "~/resources/styles";
 import routes from "~/routes/web";
 
@@ -50,9 +52,7 @@ export default function ApiKeysView(handle: Handle<ApiKeysView.Props>) {
 				)}
 
 				{apiKeys.length === 0 ? (
-					<div mix={[s.emptyState]}>
-						<p>No API keys yet.</p>
-					</div>
+					<EmptyState message="No API keys yet." />
 				) : (
 					<table mix={[s.table]}>
 						<thead>
@@ -77,9 +77,9 @@ export default function ApiKeysView(handle: Handle<ApiKeysView.Props>) {
 										</td>
 										<td>
 											{apiKey.scopes.map((scope) => (
-												<span key={scope} mix={[s.badge, s.badgeNeutral]}>
+												<Badge key={scope} tone="neutral">
 													{scope}
-												</span>
+												</Badge>
 											))}
 										</td>
 										<td>
@@ -89,9 +89,9 @@ export default function ApiKeysView(handle: Handle<ApiKeysView.Props>) {
 										</td>
 										<td>
 											{apiKey.expires_at ? (
-												<span mix={[s.badge, isExpired ? s.badgeDown : s.badgeNeutral]}>
+												<Badge tone={isExpired ? "down" : "neutral"}>
 													{new Date(apiKey.expires_at).toLocaleDateString()}
-												</span>
+												</Badge>
 											) : (
 												"never"
 											)}

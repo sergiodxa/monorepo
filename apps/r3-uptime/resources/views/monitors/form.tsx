@@ -13,6 +13,7 @@ import type { Handle } from "remix/ui";
 
 import type { SelectMonitor } from "~/database/schema";
 
+import Field from "~/resources/components/field";
 import * as s from "~/resources/styles";
 
 const HTTP_METHODS = ["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD"] as const;
@@ -41,13 +42,11 @@ export default function MonitorFormFields(handle: Handle<MonitorFormFields.Props
 
 		return (
 			<>
-				<label mix={[s.field]}>
-					<span>Name</span>
+				<Field label="Name">
 					<input type="text" name="name" required defaultValue={monitor?.name} mix={[s.input]} />
-				</label>
+				</Field>
 
-				<label mix={[s.field]}>
-					<span>URL</span>
+				<Field label="URL">
 					<input
 						type="url"
 						name="url"
@@ -56,10 +55,9 @@ export default function MonitorFormFields(handle: Handle<MonitorFormFields.Props
 						placeholder="https://example.com"
 						mix={[s.input]}
 					/>
-				</label>
+				</Field>
 
-				<label mix={[s.field]}>
-					<span>Method</span>
+				<Field label="Method">
 					<select name="method" defaultValue={monitor?.method ?? "HEAD"} mix={[s.selectInput]}>
 						{HTTP_METHODS.map((method) => (
 							<option key={method} value={method}>
@@ -67,10 +65,9 @@ export default function MonitorFormFields(handle: Handle<MonitorFormFields.Props
 							</option>
 						))}
 					</select>
-				</label>
+				</Field>
 
-				<label mix={[s.field]}>
-					<span>Expected status code</span>
+				<Field label="Expected status code">
 					<input
 						type="number"
 						name="expected_status"
@@ -79,10 +76,9 @@ export default function MonitorFormFields(handle: Handle<MonitorFormFields.Props
 						defaultValue={monitor?.expected_status ?? 200}
 						mix={[s.input]}
 					/>
-				</label>
+				</Field>
 
-				<label mix={[s.field]}>
-					<span>Check interval (seconds)</span>
+				<Field label="Check interval (seconds)">
 					<input
 						type="number"
 						name="interval_seconds"
@@ -91,10 +87,9 @@ export default function MonitorFormFields(handle: Handle<MonitorFormFields.Props
 						defaultValue={monitor?.interval_seconds ?? 60}
 						mix={[s.input]}
 					/>
-				</label>
+				</Field>
 
-				<label mix={[s.field]}>
-					<span>Timeout (seconds)</span>
+				<Field label="Timeout (seconds)">
 					<input
 						type="number"
 						name="timeout_seconds"
@@ -103,10 +98,9 @@ export default function MonitorFormFields(handle: Handle<MonitorFormFields.Props
 						defaultValue={monitor?.timeout_seconds ?? 10}
 						mix={[s.input]}
 					/>
-				</label>
+				</Field>
 
-				<label mix={[s.field]}>
-					<span>Degraded threshold (ms)</span>
+				<Field label="Degraded threshold (ms)">
 					<input
 						type="number"
 						name="degraded_after_ms"
@@ -115,10 +109,9 @@ export default function MonitorFormFields(handle: Handle<MonitorFormFields.Props
 						defaultValue={monitor?.degraded_after_ms ?? 5000}
 						mix={[s.input]}
 					/>
-				</label>
+				</Field>
 
-				<label mix={[s.field]}>
-					<span>Check region</span>
+				<Field label="Check region">
 					<select
 						name="location_hint"
 						defaultValue={monitor?.location_hint ?? "wnam"}
@@ -130,7 +123,7 @@ export default function MonitorFormFields(handle: Handle<MonitorFormFields.Props
 							</option>
 						))}
 					</select>
-				</label>
+				</Field>
 			</>
 		);
 	};

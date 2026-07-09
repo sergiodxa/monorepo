@@ -10,6 +10,8 @@ import type { Handle } from "remix/ui";
 
 import type { SelectStatusPage } from "~/database/schema";
 
+import Badge from "~/resources/components/badge";
+import EmptyState from "~/resources/components/empty-state";
 import * as s from "~/resources/styles";
 import routes from "~/routes/web";
 
@@ -35,15 +37,13 @@ export default function StatusPagesView(handle: Handle<StatusPagesView.Props>) {
 				</div>
 
 				{pages.length === 0 ? (
-					<div mix={[s.emptyState]}>
-						<p>No status pages yet.</p>
-						<a
-							href={routes.app.team.statusPageNew.href({ team: team.slug })}
-							mix={[s.buttonPrimary]}
-						>
-							Create your first status page
-						</a>
-					</div>
+					<EmptyState
+						message="No status pages yet."
+						action={{
+							href: routes.app.team.statusPageNew.href({ team: team.slug }),
+							label: "Create your first status page",
+						}}
+					/>
 				) : (
 					<table mix={[s.table]}>
 						<thead>
@@ -71,9 +71,9 @@ export default function StatusPagesView(handle: Handle<StatusPagesView.Props>) {
 									</td>
 									<td>{countsByPageId.get(page.id) ?? 0}</td>
 									<td>
-										<span mix={[s.badge, page.is_public ? s.badgeUp : s.badgeNeutral]}>
+										<Badge tone={page.is_public ? "up" : "neutral"}>
 											{page.is_public ? "Public" : "Private"}
-										</span>
+										</Badge>
 									</td>
 									<td>
 										<a

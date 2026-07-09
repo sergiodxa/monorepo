@@ -9,7 +9,10 @@
 import type { Handle } from "remix/ui";
 
 import type { SelectTcpMonitor } from "~/database/schema";
+import type { BadgeTone } from "~/resources/components/badge";
 
+import Badge from "~/resources/components/badge";
+import EmptyState from "~/resources/components/empty-state";
 import * as s from "~/resources/styles";
 import routes from "~/routes/web";
 
@@ -20,10 +23,10 @@ namespace TcpMonitorsView {
 	}
 }
 
-const STATUS_BADGE_MIX: Record<string, typeof s.badgeUp> = {
-	up: s.badgeUp,
-	timeout: s.badgeDegraded,
-	down: s.badgeDown,
+const STATUS_BADGE_TONE: Record<string, BadgeTone> = {
+	up: "up",
+	timeout: "degraded",
+	down: "down",
 };
 
 export default function TcpMonitorsView(handle: Handle<TcpMonitorsView.Props>) {
@@ -40,15 +43,13 @@ export default function TcpMonitorsView(handle: Handle<TcpMonitorsView.Props>) {
 				</div>
 
 				{monitors.length === 0 ? (
-					<div mix={[s.emptyState]}>
-						<p>No TCP monitors yet.</p>
-						<a
-							href={routes.app.team.tcpMonitorNew.href({ team: team.slug })}
-							mix={[s.buttonPrimary]}
-						>
-							Create your first TCP monitor
-						</a>
-					</div>
+					<EmptyState
+						message="No TCP monitors yet."
+						action={{
+							href: routes.app.team.tcpMonitorNew.href({ team: team.slug }),
+							label: "Create your first TCP monitor",
+						}}
+					/>
 				) : (
 					<table mix={[s.table]}>
 						<thead>
@@ -72,7 +73,7 @@ export default function TcpMonitorsView(handle: Handle<TcpMonitorsView.Props>) {
 										>
 											{monitor.name}
 										</a>
-										{!monitor.is_enabled && <span mix={[s.badge, s.badgeNeutral]}>Disabled</span>}
+										{!monitor.is_enabled && <Badge tone="neutral">Disabled</Badge>}
 									</td>
 									<td>
 										<code>
@@ -80,11 +81,9 @@ export default function TcpMonitorsView(handle: Handle<TcpMonitorsView.Props>) {
 										</code>
 									</td>
 									<td>
-										<span
-											mix={[s.badge, STATUS_BADGE_MIX[monitor.last_status ?? ""] ?? s.badgeNeutral]}
-										>
+										<Badge tone={STATUS_BADGE_TONE[monitor.last_status ?? ""] ?? "neutral"}>
 											{monitor.last_status ?? "pending"}
-										</span>
+										</Badge>
 									</td>
 									<td>
 										{monitor.last_response_time_ms === null

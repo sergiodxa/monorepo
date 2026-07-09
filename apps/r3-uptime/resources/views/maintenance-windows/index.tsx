@@ -12,6 +12,8 @@ import type { Handle } from "remix/ui";
 import type { SelectMaintenanceWindow, SelectMonitor } from "~/database/schema";
 
 import MaintenanceWindow from "~/app/data/maintenance-window";
+import Badge from "~/resources/components/badge";
+import EmptyState from "~/resources/components/empty-state";
 import * as s from "~/resources/styles";
 import routes from "~/routes/web";
 
@@ -45,15 +47,13 @@ export default function MaintenanceWindowsView(handle: Handle<MaintenanceWindows
 				</div>
 
 				{windows.length === 0 ? (
-					<div mix={[s.emptyState]}>
-						<p>No maintenance windows yet.</p>
-						<a
-							href={routes.app.team.maintenanceWindowNew.href({ team: team.slug })}
-							mix={[s.buttonPrimary]}
-						>
-							Schedule your first maintenance window
-						</a>
-					</div>
+					<EmptyState
+						message="No maintenance windows yet."
+						action={{
+							href: routes.app.team.maintenanceWindowNew.href({ team: team.slug }),
+							label: "Schedule your first maintenance window",
+						}}
+					/>
 				) : (
 					<>
 						{Section("Active", active, team, monitorsById)}
@@ -92,10 +92,8 @@ function Section(
 						<tr key={window.id}>
 							<td>
 								{window.name}
-								{window.is_recurring && <span mix={[s.badge, s.badgeNeutral]}>Recurring</span>}
-								{window.ended_early_at !== null && (
-									<span mix={[s.badge, s.badgeNeutral]}>Ended early</span>
-								)}
+								{window.is_recurring && <Badge tone="neutral">Recurring</Badge>}
+								{window.ended_early_at !== null && <Badge tone="neutral">Ended early</Badge>}
 							</td>
 							<td>
 								{window.monitor_id

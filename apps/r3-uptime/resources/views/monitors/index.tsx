@@ -11,7 +11,10 @@ import type { Handle } from "remix/ui";
 
 import type { MonitorHealth } from "~/app/services/analytics";
 import type { SelectMonitor } from "~/database/schema";
+import type { BadgeTone } from "~/resources/components/badge";
 
+import Badge from "~/resources/components/badge";
+import EmptyState from "~/resources/components/empty-state";
 import * as s from "~/resources/styles";
 import routes from "~/routes/web";
 
@@ -27,11 +30,11 @@ namespace HttpMonitorsView {
 	}
 }
 
-const HEALTH_BADGE_MIX: Record<MonitorHealth, typeof s.badgeUp> = {
-	up: s.badgeUp,
-	degraded: s.badgeDegraded,
-	down: s.badgeDown,
-	pending: s.badgeNeutral,
+const HEALTH_BADGE_TONE: Record<MonitorHealth, BadgeTone> = {
+	up: "up",
+	degraded: "degraded",
+	down: "down",
+	pending: "neutral",
 };
 
 export default function HttpMonitorsView(handle: Handle<HttpMonitorsView.Props>) {
@@ -48,12 +51,13 @@ export default function HttpMonitorsView(handle: Handle<HttpMonitorsView.Props>)
 				</div>
 
 				{rows.length === 0 ? (
-					<div mix={[s.emptyState]}>
-						<p>No monitors yet.</p>
-						<a href={routes.app.team.monitorNew.href({ team: team.slug })} mix={[s.buttonPrimary]}>
-							Create your first monitor
-						</a>
-					</div>
+					<EmptyState
+						message="No monitors yet."
+						action={{
+							href: routes.app.team.monitorNew.href({ team: team.slug }),
+							label: "Create your first monitor",
+						}}
+					/>
 				) : (
 					<table mix={[s.table]}>
 						<thead>
@@ -81,7 +85,7 @@ export default function HttpMonitorsView(handle: Handle<HttpMonitorsView.Props>)
 										<code>{monitor.url}</code>
 									</td>
 									<td>
-										<span mix={[s.badge, HEALTH_BADGE_MIX[health]]}>{health}</span>
+										<Badge tone={HEALTH_BADGE_TONE[health]}>{health}</Badge>
 									</td>
 								</tr>
 							))}

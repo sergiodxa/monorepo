@@ -10,6 +10,7 @@ import type { Handle } from "remix/ui";
 
 import type { SelectCronJobMonitor } from "~/database/schema";
 
+import Field from "~/resources/components/field";
 import * as s from "~/resources/styles";
 
 namespace CronJobFormFields {
@@ -25,23 +26,20 @@ export default function CronJobFormFields(handle: Handle<CronJobFormFields.Props
 
 		return (
 			<>
-				<label mix={[s.field]}>
-					<span>Name</span>
+				<Field label="Name">
 					<input type="text" name="name" required defaultValue={monitor?.name} mix={[s.input]} />
-				</label>
+				</Field>
 
-				<label mix={[s.field]}>
-					<span>Description (optional)</span>
+				<Field label="Description (optional)">
 					<input
 						type="text"
 						name="description"
 						defaultValue={monitor?.description ?? ""}
 						mix={[s.input]}
 					/>
-				</label>
+				</Field>
 
-				<label mix={[s.field]}>
-					<span>Cron expression</span>
+				<Field label="Cron expression">
 					<input
 						type="text"
 						name="cron_expression"
@@ -50,10 +48,9 @@ export default function CronJobFormFields(handle: Handle<CronJobFormFields.Props
 						placeholder="0 * * * *"
 						mix={[s.input]}
 					/>
-				</label>
+				</Field>
 
-				<label mix={[s.field]}>
-					<span>Timezone</span>
+				<Field label="Timezone">
 					<input
 						type="text"
 						name="timezone"
@@ -62,10 +59,9 @@ export default function CronJobFormFields(handle: Handle<CronJobFormFields.Props
 						placeholder="UTC"
 						mix={[s.input]}
 					/>
-				</label>
+				</Field>
 
-				<label mix={[s.field]}>
-					<span>Grace period (seconds)</span>
+				<Field label="Grace period (seconds)">
 					<input
 						type="number"
 						name="grace_period_seconds"
@@ -74,7 +70,7 @@ export default function CronJobFormFields(handle: Handle<CronJobFormFields.Props
 						defaultValue={monitor?.grace_period_seconds ?? 300}
 						mix={[s.input]}
 					/>
-				</label>
+				</Field>
 
 				<label mix={[s.checkboxField]}>
 					<input

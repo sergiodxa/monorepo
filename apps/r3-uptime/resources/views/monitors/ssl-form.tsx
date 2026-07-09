@@ -11,6 +11,7 @@ import type { Handle } from "remix/ui";
 
 import type { SelectMonitor } from "~/database/schema";
 
+import Field from "~/resources/components/field";
 import * as s from "~/resources/styles";
 import routes from "~/routes/web";
 
@@ -44,28 +45,25 @@ export default function SslForm(handle: Handle<SslForm.Props>) {
 						<span>Enable SSL expiry monitoring</span>
 					</label>
 
-					<label mix={[s.field]}>
-						<span>Expiry date</span>
+					<Field label="Expiry date">
 						<input
 							type="date"
 							name="ssl_expires_at"
 							defaultValue={expiresAtValue}
 							mix={[s.input]}
 						/>
-					</label>
+					</Field>
 
-					<label mix={[s.field]}>
-						<span>Issuer</span>
+					<Field label="Issuer">
 						<input
 							type="text"
 							name="ssl_issuer"
 							defaultValue={monitor.ssl_issuer ?? ""}
 							mix={[s.input]}
 						/>
-					</label>
+					</Field>
 
-					<label mix={[s.field]}>
-						<span>Warning threshold (days)</span>
+					<Field label="Warning threshold (days)">
 						<input
 							type="number"
 							name="ssl_expiry_warning_days"
@@ -74,7 +72,7 @@ export default function SslForm(handle: Handle<SslForm.Props>) {
 							defaultValue={monitor.ssl_expiry_warning_days}
 							mix={[s.input]}
 						/>
-					</label>
+					</Field>
 
 					<button type="submit" mix={[s.buttonPrimary]}>
 						Save SSL settings

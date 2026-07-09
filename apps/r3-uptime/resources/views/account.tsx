@@ -12,6 +12,8 @@ import type { Handle } from "remix/ui";
 
 import type { SelectTeam, SupportedLanguage } from "~/database/schema";
 
+import Badge from "~/resources/components/badge";
+import Field from "~/resources/components/field";
 import * as s from "~/resources/styles";
 import routes from "~/routes/web";
 
@@ -77,10 +79,9 @@ export default function AccountView(handle: Handle<AccountView.Props>) {
 				<dialog id="create-team" mix={[s.dialog]}>
 					<h3>Create a team</h3>
 					<form method="post" action={routes.accountActions.createTeam.href()}>
-						<label mix={[s.field]}>
-							<span>Name</span>
+						<Field label="Name">
 							<input type="text" name="name" required mix={[s.input]} />
-						</label>
+						</Field>
 						<button
 							type="button"
 							commandfor="create-team"
@@ -115,9 +116,7 @@ export default function AccountView(handle: Handle<AccountView.Props>) {
 										</a>
 									</td>
 									<td>
-										<span mix={[s.badge, isOwner ? s.badgeUp : s.badgeNeutral]}>
-											{isOwner ? "owner" : role}
-										</span>
+										<Badge tone={isOwner ? "up" : "neutral"}>{isOwner ? "owner" : role}</Badge>
 									</td>
 									<td>
 										{canLeave && (

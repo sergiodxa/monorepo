@@ -14,8 +14,12 @@ import type {
 	SelectCronJobPing,
 	SelectMonitorDailyStats,
 } from "~/database/schema";
+import type { BadgeTone } from "~/resources/components/badge";
 
 import CronJobMonitor from "~/app/data/cron-job";
+import Badge from "~/resources/components/badge";
+import EmptyState from "~/resources/components/empty-state";
+import StatCard from "~/resources/components/stat-card";
 import * as s from "~/resources/styles";
 import Heatmap from "~/resources/views/shared/heatmap";
 import routes from "~/routes/web";
@@ -30,11 +34,11 @@ namespace CronJobShowView {
 	}
 }
 
-const STATUS_BADGE_MIX: Record<string, typeof s.badgeUp> = {
-	healthy: s.badgeUp,
-	late: s.badgeDegraded,
-	missed: s.badgeDown,
-	new: s.badgeNeutral,
+const STATUS_BADGE_TONE: Record<string, BadgeTone> = {
+	healthy: "up",
+	late: "degraded",
+	missed: "down",
+	new: "neutral",
 };
 
 export default function CronJobShowView(handle: Handle<CronJobShowView.Props>) {
@@ -67,47 +71,35 @@ export default function CronJobShowView(handle: Handle<CronJobShowView.Props>) {
 						</div>
 						<code>{monitor.cron_expression}</code>
 					</div>
-					<div mix={[s.statCard]}>
-						<div mix={[s.mutedSmall]}>Status</div>
-						<span mix={[s.badge, STATUS_BADGE_MIX[monitor.status] ?? s.badgeNeutral]}>
-							{monitor.status}
-						</span>
-					</div>
-					<div mix={[s.statCard]}>
-						<div mix={[s.mutedSmall]}>Timezone</div>
-						<div mix={[s.statValue]}>{monitor.timezone}</div>
-					</div>
-					<div mix={[s.statCard]}>
-						<div mix={[s.mutedSmall]}>Grace period</div>
-						<div mix={[s.statValue]}>{monitor.grace_period_seconds}s</div>
-					</div>
+					<StatCard
+						label="Status"
+						value={
+							<Badge tone={STATUS_BADGE_TONE[monitor.status] ?? "neutral"}>{monitor.status}</Badge>
+						}
+					/>
+					<StatCard label="Timezone" value={monitor.timezone} />
+					<StatCard label="Grace period" value={`${monitor.grace_period_seconds}s`} />
 				</div>
 
 				<div mix={[s.statRow]}>
-					<div mix={[s.statCard]}>
-						<div mix={[s.mutedSmall]}>Last ping</div>
-						<div mix={[s.statValue]}>
-							{monitor.last_ping_at === null
+					<StatCard
+						label="Last ping"
+						value={
+							monitor.last_ping_at === null
 								? "Never"
-								: new Date(monitor.last_ping_at).toLocaleString()}
-						</div>
-					</div>
-					<div mix={[s.statCard]}>
-						<div mix={[s.mutedSmall]}>Next expected</div>
-						<div mix={[s.statValue]}>
-							{monitor.next_expected_at === null
+								: new Date(monitor.last_ping_at).toLocaleString()
+						}
+					/>
+					<StatCard
+						label="Next expected"
+						value={
+							monitor.next_expected_at === null
 								? "—"
-								: new Date(monitor.next_expected_at).toLocaleString()}
-						</div>
-					</div>
-					<div mix={[s.statCard]}>
-						<div mix={[s.mutedSmall]}>On-time rate</div>
-						<div mix={[s.statValue]}>{onTimeRate === null ? "—" : `${onTimeRate}%`}</div>
-					</div>
-					<div mix={[s.statCard]}>
-						<div mix={[s.mutedSmall]}>Total pings</div>
-						<div mix={[s.statValue]}>{totalPings}</div>
-					</div>
+								: new Date(monitor.next_expected_at).toLocaleString()
+						}
+					/>
+					<StatCard label="On-time rate" value={onTimeRate === null ? "—" : `${onTimeRate}%`} />
+					<StatCard label="Total pings" value={totalPings} />
 				</div>
 
 				<h2>Ping this monitor</h2>
@@ -130,9 +122,7 @@ export default function CronJobShowView(handle: Handle<CronJobShowView.Props>) {
 
 				<h2>Ping history</h2>
 				{pings.length === 0 ? (
-					<div mix={[s.emptyState]}>
-						<p>No pings yet.</p>
-					</div>
+					<EmptyState message="No pings yet." />
 				) : (
 					<table mix={[s.table]}>
 						<thead>
@@ -147,9 +137,9 @@ export default function CronJobShowView(handle: Handle<CronJobShowView.Props>) {
 								<tr key={ping.id}>
 									<td>{new Date(ping.created_at).toLocaleString()}</td>
 									<td>
-										<span mix={[s.badge, ping.was_on_time ? s.badgeUp : s.badgeDegraded]}>
+										<Badge tone={ping.was_on_time ? "up" : "degraded"}>
 											{ping.was_on_time ? "On time" : "Late"}
-										</span>
+										</Badge>
 									</td>
 									<td>{ping.source_ip ?? "—"}</td>
 								</tr>

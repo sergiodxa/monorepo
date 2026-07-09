@@ -13,7 +13,11 @@ import type {
 	SelectTcpMonitor,
 	SelectTcpMonitorResult,
 } from "~/database/schema";
+import type { BadgeTone } from "~/resources/components/badge";
 
+import Badge from "~/resources/components/badge";
+import EmptyState from "~/resources/components/empty-state";
+import StatCard from "~/resources/components/stat-card";
 import * as s from "~/resources/styles";
 import Heatmap from "~/resources/views/shared/heatmap";
 import routes from "~/routes/web";
@@ -27,10 +31,10 @@ namespace TcpMonitorShowView {
 	}
 }
 
-const STATUS_BADGE_MIX: Record<string, typeof s.badgeUp> = {
-	up: s.badgeUp,
-	timeout: s.badgeDegraded,
-	down: s.badgeDown,
+const STATUS_BADGE_TONE: Record<string, BadgeTone> = {
+	up: "up",
+	timeout: "degraded",
+	down: "down",
 };
 
 export default function TcpMonitorShowView(handle: Handle<TcpMonitorShowView.Props>) {
@@ -68,41 +72,33 @@ export default function TcpMonitorShowView(handle: Handle<TcpMonitorShowView.Pro
 				</div>
 
 				<div mix={[s.statRow]}>
-					<div mix={[s.statCard]}>
-						<div mix={[s.mutedSmall]}>Endpoint</div>
-						<code>
-							{monitor.host}:{monitor.port}
-						</code>
-					</div>
-					<div mix={[s.statCard]}>
-						<div mix={[s.mutedSmall]}>Status</div>
-						<span mix={[s.badge, STATUS_BADGE_MIX[monitor.last_status ?? ""] ?? s.badgeNeutral]}>
-							{monitor.last_status ?? "pending"}
-						</span>
-					</div>
-					<div mix={[s.statCard]}>
-						<div mix={[s.mutedSmall]}>Check interval</div>
-						<div mix={[s.statValue]}>{monitor.interval_seconds}s</div>
-					</div>
-					<div mix={[s.statCard]}>
-						<div mix={[s.mutedSmall]}>Timeout</div>
-						<div mix={[s.statValue]}>{monitor.timeout_ms}ms</div>
-					</div>
+					<StatCard
+						label="Endpoint"
+						value={
+							<code>
+								{monitor.host}:{monitor.port}
+							</code>
+						}
+					/>
+					<StatCard
+						label="Status"
+						value={
+							<Badge tone={STATUS_BADGE_TONE[monitor.last_status ?? ""] ?? "neutral"}>
+								{monitor.last_status ?? "pending"}
+							</Badge>
+						}
+					/>
+					<StatCard label="Check interval" value={`${monitor.interval_seconds}s`} />
+					<StatCard label="Timeout" value={`${monitor.timeout_ms}ms`} />
 				</div>
 
 				<div mix={[s.statRow]}>
-					<div mix={[s.statCard]}>
-						<div mix={[s.mutedSmall]}>Uptime</div>
-						<div mix={[s.statValue]}>{uptimePercent === null ? "—" : `${uptimePercent}%`}</div>
-					</div>
-					<div mix={[s.statCard]}>
-						<div mix={[s.mutedSmall]}>Avg response time</div>
-						<div mix={[s.statValue]}>{avgResponseTime === null ? "—" : `${avgResponseTime}ms`}</div>
-					</div>
-					<div mix={[s.statCard]}>
-						<div mix={[s.mutedSmall]}>Total checks</div>
-						<div mix={[s.statValue]}>{totalChecks}</div>
-					</div>
+					<StatCard label="Uptime" value={uptimePercent === null ? "—" : `${uptimePercent}%`} />
+					<StatCard
+						label="Avg response time"
+						value={avgResponseTime === null ? "—" : `${avgResponseTime}ms`}
+					/>
+					<StatCard label="Total checks" value={totalChecks} />
 				</div>
 
 				<h2>Uptime history</h2>
@@ -110,9 +106,7 @@ export default function TcpMonitorShowView(handle: Handle<TcpMonitorShowView.Pro
 
 				<h2>Check history</h2>
 				{results.length === 0 ? (
-					<div mix={[s.emptyState]}>
-						<p>No checks yet.</p>
-					</div>
+					<EmptyState message="No checks yet." />
 				) : (
 					<table mix={[s.table]}>
 						<thead>
@@ -128,9 +122,9 @@ export default function TcpMonitorShowView(handle: Handle<TcpMonitorShowView.Pro
 								<tr key={result.id}>
 									<td>{new Date(result.checked_at).toLocaleString()}</td>
 									<td>
-										<span mix={[s.badge, STATUS_BADGE_MIX[result.status] ?? s.badgeNeutral]}>
+										<Badge tone={STATUS_BADGE_TONE[result.status] ?? "neutral"}>
 											{result.status}
-										</span>
+										</Badge>
 									</td>
 									<td>{result.response_time_ms === null ? "—" : `${result.response_time_ms}ms`}</td>
 									<td>{result.error_message ?? "—"}</td>

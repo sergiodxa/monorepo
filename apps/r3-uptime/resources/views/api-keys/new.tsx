@@ -12,6 +12,7 @@ import type { Handle } from "remix/ui";
 import type { SelectTeam } from "~/database/schema";
 
 import { apiKeyScopes } from "~/database/schema";
+import Field from "~/resources/components/field";
 import * as s from "~/resources/styles";
 import routes from "~/routes/web";
 
@@ -29,10 +30,9 @@ export default function NewApiKeyView(handle: Handle<NewApiKeyView.Props>) {
 			<div>
 				<h1>New API key</h1>
 				<form method="post" action={routes.teamAdminActions.createApiKey.href({ team: team.slug })}>
-					<label mix={[s.field]}>
-						<span>Name</span>
+					<Field label="Name">
 						<input type="text" name="name" required mix={[s.input]} />
-					</label>
+					</Field>
 
 					<fieldset mix={[s.field]}>
 						<legend>Scopes</legend>
@@ -44,10 +44,9 @@ export default function NewApiKeyView(handle: Handle<NewApiKeyView.Props>) {
 						))}
 					</fieldset>
 
-					<label mix={[s.field]}>
-						<span>Expires (optional)</span>
+					<Field label="Expires (optional)">
 						<input type="date" name="expires_at" mix={[s.input]} />
-					</label>
+					</Field>
 
 					<button type="submit" mix={[s.buttonPrimary]}>
 						Create API key

@@ -18,6 +18,7 @@ import type {
 	SelectTcpMonitor,
 } from "~/database/schema";
 
+import Field from "~/resources/components/field";
 import * as s from "~/resources/styles";
 
 namespace StatusPageFormFields {
@@ -50,31 +51,26 @@ export default function StatusPageFormFields(handle: Handle<StatusPageFormFields
 
 		return (
 			<>
-				<label mix={[s.field]}>
-					<span>Name</span>
+				<Field label="Name">
 					<input type="text" name="name" required defaultValue={page?.name} mix={[s.input]} />
-				</label>
+				</Field>
 
-				<label mix={[s.field]}>
-					<span>Slug</span>
+				<Field label="Slug">
 					<input type="text" name="slug" required defaultValue={page?.slug} mix={[s.input]} />
 					<p mix={[s.mutedSmall]}>Lowercase letters, numbers, and hyphens only.</p>
-				</label>
+				</Field>
 
-				<label mix={[s.field]}>
-					<span>Title</span>
+				<Field label="Title">
 					<input type="text" name="title" required defaultValue={page?.title} mix={[s.input]} />
-				</label>
+				</Field>
 
-				<label mix={[s.field]}>
-					<span>Description</span>
+				<Field label="Description">
 					<textarea name="description" defaultValue={page?.description ?? ""} mix={[s.input]} />
-				</label>
+				</Field>
 
-				<label mix={[s.field]}>
-					<span>Logo URL</span>
+				<Field label="Logo URL">
 					<input type="url" name="logo_url" defaultValue={page?.logo_url ?? ""} mix={[s.input]} />
-				</label>
+				</Field>
 
 				<label mix={[s.checkboxField]}>
 					<input

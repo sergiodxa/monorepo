@@ -10,6 +10,7 @@ import type { Handle } from "remix/ui";
 
 import type { SelectDnsMonitor } from "~/database/schema";
 
+import Field from "~/resources/components/field";
 import * as s from "~/resources/styles";
 
 const RECORD_TYPES = ["A", "AAAA", "CNAME", "MX", "TXT", "NS"] as const;
@@ -36,13 +37,11 @@ export default function DnsMonitorFormFields(handle: Handle<DnsMonitorFormFields
 
 		return (
 			<>
-				<label mix={[s.field]}>
-					<span>Name</span>
+				<Field label="Name">
 					<input type="text" name="name" required defaultValue={monitor?.name} mix={[s.input]} />
-				</label>
+				</Field>
 
-				<label mix={[s.field]}>
-					<span>Domain</span>
+				<Field label="Domain">
 					<input
 						type="text"
 						name="domain"
@@ -51,10 +50,9 @@ export default function DnsMonitorFormFields(handle: Handle<DnsMonitorFormFields
 						placeholder="example.com"
 						mix={[s.input]}
 					/>
-				</label>
+				</Field>
 
-				<label mix={[s.field]}>
-					<span>Record type</span>
+				<Field label="Record type">
 					<select
 						name="record_type"
 						defaultValue={monitor?.record_type ?? "A"}
@@ -66,10 +64,9 @@ export default function DnsMonitorFormFields(handle: Handle<DnsMonitorFormFields
 							</option>
 						))}
 					</select>
-				</label>
+				</Field>
 
-				<label mix={[s.field]}>
-					<span>Expected value (optional)</span>
+				<Field label="Expected value (optional)">
 					<input
 						type="text"
 						name="expected_value"
@@ -77,10 +74,9 @@ export default function DnsMonitorFormFields(handle: Handle<DnsMonitorFormFields
 						placeholder="Leave blank to alert on any change"
 						mix={[s.input]}
 					/>
-				</label>
+				</Field>
 
-				<label mix={[s.field]}>
-					<span>Check interval</span>
+				<Field label="Check interval">
 					<select
 						name="interval_seconds"
 						defaultValue={monitor?.interval_seconds ?? 3600}
@@ -92,7 +88,7 @@ export default function DnsMonitorFormFields(handle: Handle<DnsMonitorFormFields
 							</option>
 						))}
 					</select>
-				</label>
+				</Field>
 
 				<label mix={[s.checkboxField]}>
 					<input

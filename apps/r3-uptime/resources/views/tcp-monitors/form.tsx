@@ -10,6 +10,7 @@ import type { Handle } from "remix/ui";
 
 import type { SelectTcpMonitor } from "~/database/schema";
 
+import Field from "~/resources/components/field";
 import * as s from "~/resources/styles";
 
 namespace TcpMonitorFormFields {
@@ -25,13 +26,11 @@ export default function TcpMonitorFormFields(handle: Handle<TcpMonitorFormFields
 
 		return (
 			<>
-				<label mix={[s.field]}>
-					<span>Name</span>
+				<Field label="Name">
 					<input type="text" name="name" required defaultValue={monitor?.name} mix={[s.input]} />
-				</label>
+				</Field>
 
-				<label mix={[s.field]}>
-					<span>Host</span>
+				<Field label="Host">
 					<input
 						type="text"
 						name="host"
@@ -40,10 +39,9 @@ export default function TcpMonitorFormFields(handle: Handle<TcpMonitorFormFields
 						placeholder="db.example.com"
 						mix={[s.input]}
 					/>
-				</label>
+				</Field>
 
-				<label mix={[s.field]}>
-					<span>Port</span>
+				<Field label="Port">
 					<input
 						type="number"
 						name="port"
@@ -53,10 +51,9 @@ export default function TcpMonitorFormFields(handle: Handle<TcpMonitorFormFields
 						defaultValue={monitor?.port}
 						mix={[s.input]}
 					/>
-				</label>
+				</Field>
 
-				<label mix={[s.field]}>
-					<span>Timeout (ms)</span>
+				<Field label="Timeout (ms)">
 					<input
 						type="number"
 						name="timeout_ms"
@@ -65,10 +62,9 @@ export default function TcpMonitorFormFields(handle: Handle<TcpMonitorFormFields
 						defaultValue={monitor?.timeout_ms ?? 5000}
 						mix={[s.input]}
 					/>
-				</label>
+				</Field>
 
-				<label mix={[s.field]}>
-					<span>Check interval (seconds)</span>
+				<Field label="Check interval (seconds)">
 					<input
 						type="number"
 						name="interval_seconds"
@@ -77,7 +73,7 @@ export default function TcpMonitorFormFields(handle: Handle<TcpMonitorFormFields
 						defaultValue={monitor?.interval_seconds ?? 60}
 						mix={[s.input]}
 					/>
-				</label>
+				</Field>
 
 				<label mix={[s.checkboxField]}>
 					<input

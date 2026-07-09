@@ -13,7 +13,11 @@ import type {
 	SelectDnsMonitorResult,
 	SelectMonitorDailyStats,
 } from "~/database/schema";
+import type { BadgeTone } from "~/resources/components/badge";
 
+import Badge from "~/resources/components/badge";
+import EmptyState from "~/resources/components/empty-state";
+import StatCard from "~/resources/components/stat-card";
 import * as s from "~/resources/styles";
 import Heatmap from "~/resources/views/shared/heatmap";
 import routes from "~/routes/web";
@@ -27,10 +31,10 @@ namespace DnsMonitorShowView {
 	}
 }
 
-const STATUS_BADGE_MIX: Record<string, typeof s.badgeUp> = {
-	ok: s.badgeUp,
-	changed: s.badgeDegraded,
-	error: s.badgeDown,
+const STATUS_BADGE_TONE: Record<string, BadgeTone> = {
+	ok: "up",
+	changed: "degraded",
+	error: "down",
 };
 
 export default function DnsMonitorShowView(handle: Handle<DnsMonitorShowView.Props>) {
@@ -68,47 +72,31 @@ export default function DnsMonitorShowView(handle: Handle<DnsMonitorShowView.Pro
 				</div>
 
 				<div mix={[s.statRow]}>
-					<div mix={[s.statCard]}>
-						<div mix={[s.mutedSmall]}>Domain</div>
-						<code>{monitor.domain}</code>
-					</div>
-					<div mix={[s.statCard]}>
-						<div mix={[s.mutedSmall]}>Record type</div>
-						<div mix={[s.statValue]}>{monitor.record_type}</div>
-					</div>
-					<div mix={[s.statCard]}>
-						<div mix={[s.mutedSmall]}>Status</div>
-						<span mix={[s.badge, STATUS_BADGE_MIX[monitor.last_status ?? ""] ?? s.badgeNeutral]}>
-							{monitor.last_status ?? "not checked"}
-						</span>
-					</div>
+					<StatCard label="Domain" value={<code>{monitor.domain}</code>} />
+					<StatCard label="Record type" value={monitor.record_type} />
+					<StatCard
+						label="Status"
+						value={
+							<Badge tone={STATUS_BADGE_TONE[monitor.last_status ?? ""] ?? "neutral"}>
+								{monitor.last_status ?? "not checked"}
+							</Badge>
+						}
+					/>
 					{monitor.expected_value && (
-						<div mix={[s.statCard]}>
-							<div mix={[s.mutedSmall]}>Expected value</div>
-							<code>{monitor.expected_value}</code>
-						</div>
+						<StatCard label="Expected value" value={<code>{monitor.expected_value}</code>} />
 					)}
 					{monitor.last_value && (
-						<div mix={[s.statCard]}>
-							<div mix={[s.mutedSmall]}>Current value</div>
-							<code>{monitor.last_value}</code>
-						</div>
+						<StatCard label="Current value" value={<code>{monitor.last_value}</code>} />
 					)}
 				</div>
 
 				<div mix={[s.statRow]}>
-					<div mix={[s.statCard]}>
-						<div mix={[s.mutedSmall]}>Success rate</div>
-						<div mix={[s.statValue]}>{successRate === null ? "—" : `${successRate}%`}</div>
-					</div>
-					<div mix={[s.statCard]}>
-						<div mix={[s.mutedSmall]}>Avg response time</div>
-						<div mix={[s.statValue]}>{avgResponseTime === null ? "—" : `${avgResponseTime}ms`}</div>
-					</div>
-					<div mix={[s.statCard]}>
-						<div mix={[s.mutedSmall]}>Total checks</div>
-						<div mix={[s.statValue]}>{totalChecks}</div>
-					</div>
+					<StatCard label="Success rate" value={successRate === null ? "—" : `${successRate}%`} />
+					<StatCard
+						label="Avg response time"
+						value={avgResponseTime === null ? "—" : `${avgResponseTime}ms`}
+					/>
+					<StatCard label="Total checks" value={totalChecks} />
 				</div>
 
 				<h2>Uptime history</h2>
@@ -116,9 +104,7 @@ export default function DnsMonitorShowView(handle: Handle<DnsMonitorShowView.Pro
 
 				<h2>Result history</h2>
 				{results.length === 0 ? (
-					<div mix={[s.emptyState]}>
-						<p>No checks yet.</p>
-					</div>
+					<EmptyState message="No checks yet." />
 				) : (
 					<table mix={[s.table]}>
 						<thead>
@@ -134,9 +120,9 @@ export default function DnsMonitorShowView(handle: Handle<DnsMonitorShowView.Pro
 								<tr key={result.id}>
 									<td>{new Date(result.checked_at).toLocaleString()}</td>
 									<td>
-										<span mix={[s.badge, STATUS_BADGE_MIX[result.status] ?? s.badgeNeutral]}>
+										<Badge tone={STATUS_BADGE_TONE[result.status] ?? "neutral"}>
 											{result.status}
-										</span>
+										</Badge>
 									</td>
 									<td>
 										<code>{result.resolved_value ?? result.error_message ?? "—"}</code>

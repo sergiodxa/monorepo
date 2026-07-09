@@ -11,6 +11,7 @@ import type { Handle } from "remix/ui";
 
 import type { SelectMaintenanceWindow, SelectMonitor } from "~/database/schema";
 
+import Field from "~/resources/components/field";
 import * as s from "~/resources/styles";
 
 namespace MaintenanceWindowFormFields {
@@ -35,13 +36,11 @@ export default function MaintenanceWindowFormFields(
 
 		return (
 			<>
-				<label mix={[s.field]}>
-					<span>Name</span>
+				<Field label="Name">
 					<input type="text" name="name" required defaultValue={window?.name} mix={[s.input]} />
-				</label>
+				</Field>
 
-				<label mix={[s.field]}>
-					<span>Scope</span>
+				<Field label="Scope">
 					<select name="monitor_id" defaultValue={window?.monitor_id ?? ""} mix={[s.selectInput]}>
 						<option value="">All monitors</option>
 						{monitors.map((monitor) => (
@@ -50,10 +49,9 @@ export default function MaintenanceWindowFormFields(
 							</option>
 						))}
 					</select>
-				</label>
+				</Field>
 
-				<label mix={[s.field]}>
-					<span>Starts at</span>
+				<Field label="Starts at">
 					<input
 						type="datetime-local"
 						name="starts_at"
@@ -61,10 +59,9 @@ export default function MaintenanceWindowFormFields(
 						defaultValue={window ? toDatetimeLocal(window.starts_at) : undefined}
 						mix={[s.input]}
 					/>
-				</label>
+				</Field>
 
-				<label mix={[s.field]}>
-					<span>Ends at</span>
+				<Field label="Ends at">
 					<input
 						type="datetime-local"
 						name="ends_at"
@@ -72,7 +69,7 @@ export default function MaintenanceWindowFormFields(
 						defaultValue={window ? toDatetimeLocal(window.ends_at) : undefined}
 						mix={[s.input]}
 					/>
-				</label>
+				</Field>
 
 				<label mix={[s.checkboxField]}>
 					<input
@@ -104,8 +101,7 @@ export default function MaintenanceWindowFormFields(
 					<span>Recurring</span>
 				</label>
 
-				<label mix={[s.field]}>
-					<span>Recurrence pattern (when recurring)</span>
+				<Field label="Recurrence pattern (when recurring)">
 					<input
 						type="text"
 						name="recurring_pattern"
@@ -117,7 +113,7 @@ export default function MaintenanceWindowFormFields(
 						<code>daily:HH:MM-HH:MM</code>, <code>weekly:&lt;day&gt;:HH:MM-HH:MM</code>, or{" "}
 						<code>monthly:&lt;day-of-month&gt;:HH:MM-HH:MM</code>, in UTC.
 					</p>
-				</label>
+				</Field>
 			</>
 		);
 	};

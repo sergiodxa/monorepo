@@ -17,6 +17,8 @@ import type {
 	SelectTeamDomain,
 } from "~/database/schema";
 
+import Badge from "~/resources/components/badge";
+import Field from "~/resources/components/field";
 import * as s from "~/resources/styles";
 import routes from "~/routes/web";
 
@@ -40,14 +42,12 @@ export default function SettingsView(handle: Handle<SettingsView.Props>) {
 
 				<h2>General</h2>
 				<form method="post" action={routes.teamAdminActions.updateTeam.href({ team: team.slug })}>
-					<label mix={[s.field]}>
-						<span>Name</span>
+					<Field label="Name">
 						<input type="text" name="name" required defaultValue={team.name} mix={[s.input]} />
-					</label>
-					<label mix={[s.field]}>
-						<span>Logo URL</span>
+					</Field>
+					<Field label="Logo URL">
 						<input type="url" name="logo" defaultValue={team.logo ?? ""} mix={[s.input]} />
-					</label>
+					</Field>
 					<button type="submit" mix={[s.buttonPrimary]}>
 						Save changes
 					</button>
@@ -68,10 +68,9 @@ export default function SettingsView(handle: Handle<SettingsView.Props>) {
 						method="post"
 						action={routes.teamAdminActions.createInvite.href({ team: team.slug })}
 					>
-						<label mix={[s.field]}>
-							<span>Email</span>
+						<Field label="Email">
 							<input type="email" name="email" required mix={[s.input]} />
-						</label>
+						</Field>
 						<button
 							type="button"
 							commandfor="invite-member"
@@ -108,9 +107,9 @@ export default function SettingsView(handle: Handle<SettingsView.Props>) {
 											: member.subject_id}
 									</td>
 									<td>
-										<span mix={[s.badge, isOwner ? s.badgeUp : s.badgeNeutral]}>
+										<Badge tone={isOwner ? "up" : "neutral"}>
 											{isOwner ? "owner" : member.role}
-										</span>
+										</Badge>
 									</td>
 									<td>
 										{!isOwner && (
@@ -202,10 +201,9 @@ export default function SettingsView(handle: Handle<SettingsView.Props>) {
 					Verified domains automatically join new sign-ups whose email matches to this team.
 				</p>
 				<form method="post" action={routes.teamAdminActions.addDomain.href({ team: team.slug })}>
-					<label mix={[s.field]}>
-						<span>Domain</span>
+					<Field label="Domain">
 						<input type="text" name="hostname" required placeholder="example.com" mix={[s.input]} />
-					</label>
+					</Field>
 					<button type="submit" mix={[s.buttonSecondary]}>
 						Add domain
 					</button>
@@ -225,10 +223,10 @@ export default function SettingsView(handle: Handle<SettingsView.Props>) {
 								<td>{domain.hostname}</td>
 								<td>
 									{domain.verified_at !== null ? (
-										<span mix={[s.badge, s.badgeUp]}>verified</span>
+										<Badge tone="up">verified</Badge>
 									) : (
 										<>
-											<span mix={[s.badge, s.badgeNeutral]}>pending</span>
+											<Badge tone="neutral">pending</Badge>
 											<p mix={[s.mutedSmall]}>
 												Add a TXT record at <code>_ping-verification.{domain.hostname}</code> with
 												value <code>ping_{domain.id}</code>.

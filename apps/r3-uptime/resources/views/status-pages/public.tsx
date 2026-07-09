@@ -11,7 +11,10 @@ import type { Handle } from "remix/ui";
 
 import type { ServiceStatus } from "~/app/services/status-page";
 import type { SelectMonitorDailyStats, SelectStatusPage } from "~/database/schema";
+import type { BadgeTone } from "~/resources/components/badge";
 
+import Badge from "~/resources/components/badge";
+import EmptyState from "~/resources/components/empty-state";
 import * as s from "~/resources/styles";
 import Heatmap from "~/resources/views/shared/heatmap";
 import routes from "~/routes/web";
@@ -58,11 +61,11 @@ const BANNER_LABEL: Record<ServiceStatus, string> = {
 	unknown: "All Systems Operational",
 };
 
-const BADGE_MIX: Record<ServiceStatus, typeof s.badgeUp> = {
-	operational: s.badgeUp,
-	degraded: s.badgeDegraded,
-	down: s.badgeDown,
-	unknown: s.badgeNeutral,
+const BADGE_TONE: Record<ServiceStatus, BadgeTone> = {
+	operational: "up",
+	degraded: "degraded",
+	down: "down",
+	unknown: "neutral",
 };
 
 const BADGE_LABEL: Record<ServiceStatus, string> = {
@@ -94,18 +97,14 @@ export default function StatusPageView(handle: Handle<StatusPageView.Props>) {
 				)}
 
 				{isEmpty ? (
-					<div mix={[s.emptyState]}>
-						<p>No services are configured for this status page.</p>
-					</div>
+					<EmptyState message="No services are configured for this status page." />
 				) : (
 					<>
 						{heatmapServices.map((service) => (
 							<div key={`${service.kind}-${service.id}`} mix={[s.serviceCard]}>
 								<div mix={[s.row]}>
 									<strong>{service.name}</strong>
-									<span mix={[s.badge, BADGE_MIX[service.status]]}>
-										{BADGE_LABEL[service.status]}
-									</span>
+									<Badge tone={BADGE_TONE[service.status]}>{BADGE_LABEL[service.status]}</Badge>
 								</div>
 								<Heatmap days={service.days} />
 							</div>
@@ -118,9 +117,7 @@ export default function StatusPageView(handle: Handle<StatusPageView.Props>) {
 									<div key={service.id} mix={[s.serviceCard]}>
 										<div mix={[s.row]}>
 											<strong>{service.name}</strong>
-											<span mix={[s.badge, BADGE_MIX[service.status]]}>
-												{BADGE_LABEL[service.status]}
-											</span>
+											<Badge tone={BADGE_TONE[service.status]}>{BADGE_LABEL[service.status]}</Badge>
 										</div>
 										<p mix={[s.mutedSmall]}>
 											Schedule: <code>{service.cronExpression}</code>
