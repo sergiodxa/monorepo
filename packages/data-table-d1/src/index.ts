@@ -109,7 +109,8 @@ export function createD1DatabaseAdapter(
 				operation.kind === "select" ||
 				operation.kind === "count" ||
 				operation.kind === "exists" ||
-				hasReturningClause(operation);
+				hasReturningClause(operation) ||
+				(operation.kind === "raw" && isReadOnlyRawSql(statement.text));
 
 			if (shouldReadRows) {
 				let result = (await prepared.all()) as D1StatementResult;
@@ -746,6 +747,18 @@ function normalizeCountRows(rows: Record<string, unknown>[]): Record<string, unk
 
 		return row;
 	});
+}
+
+/**
+ * Returns `true` when a `db.exec()`/raw SQL statement's text looks like a `SELECT`
+ * (including a `WITH` CTE or a `PRAGMA` read). A `"raw"` operation's kind carries no
+ * structural read/write signal — unlike `select`/`insert`/etc., which the query
+ * builder already knows — so this sniffs the leading keyword to decide whether the
+ * statement needs `.all()` (to get rows back) or `.run()`. Without this, a raw
+ * `SELECT` silently gets no rows: D1's `.run()` never returns `results`.
+ */
+function isReadOnlyRawSql(sql: string): boolean {
+	return /^\s*(select|with|pragma)\b/i.test(sql);
 }
 
 /** Returns `true` when an operation asks for a `returning` clause. */
