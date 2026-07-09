@@ -12,8 +12,13 @@ bun format:fix                  # Fix formatting
 bun lint                        # Check linting (oxlint)
 bun lint:fix                    # Fix linting issues
 bun typecheck                   # TypeScript type checking
-bun test                        # Run all tests
-bun test file-path              # Run a single test file
+bun test --isolate              # Run all tests (--isolate is required: many test files across
+                                 # the monorepo use mock.module(), which permanently overrides a
+                                 # module for the rest of the process once applied — without
+                                 # --isolate, one file's mock leaks into every file that runs
+                                 # after it in the same shared process, causing unrelated
+                                 # failures. --isolate gives every file its own fresh registry.)
+bun test file-path               # Single file/directory scope doesn't need --isolate
 bun test --watch                # Watch mode
 ```
 

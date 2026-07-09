@@ -25,7 +25,7 @@ bun run --cwd apps/r3-uptime db:local:migrate   # apply migrations to local D1
 bun run --cwd apps/r3-uptime dev
 ```
 
-From the repo root: `bun run typecheck`, `bun run lint`, `bun test`, `bun run format:fix`.
+From the repo root: `bun run typecheck`, `bun run lint`, `bun test --isolate`, `bun run format:fix`.
 
 ## Cutover
 

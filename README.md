@@ -44,7 +44,7 @@ Run from the repository root:
 | `bun lint`                     | Check linting              |
 | `bun lint:fix`                 | Fix linting issues         |
 | `bun typecheck`                | TypeScript type checking   |
-| `bun test`                     | Run all tests              |
+| `bun test --isolate`           | Run all tests (`--isolate` is required — see AGENTS.md) |
 | `bun upgrade`                  | Upgrade all workspaces     |
 | `bun upgrade:dry-run`          | Preview all upgrades       |
 | `bun upgrade:apps`             | Upgrade app workspaces     |
