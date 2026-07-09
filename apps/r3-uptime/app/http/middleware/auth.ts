@@ -24,13 +24,13 @@ export interface Viewer {
 	avatar: string;
 }
 
-const SESSION_KEYS = {
-	id: "id",
-	name: "name",
-	email: "email",
-	avatar: "avatar",
-	idToken: "idToken",
-} as const;
+enum SESSION_KEYS {
+	ID = "id",
+	NAME = "name",
+	EMAIL = "email",
+	AVATAR = "avatar",
+	ID_TOKEN = "idToken",
+}
 
 /**
  * Auth middleware that resolves the viewer from session data.
@@ -39,24 +39,24 @@ export let auth = createAuthMiddleware({
 	schemes: [
 		createSessionAuthScheme<Viewer, Viewer>({
 			read(session) {
-				let id = session.get(SESSION_KEYS.id);
+				let id = session.get(SESSION_KEYS.ID);
 				if (typeof id !== "string") return null;
 				return {
 					id,
-					name: String(session.get(SESSION_KEYS.name) ?? ""),
-					email: String(session.get(SESSION_KEYS.email) ?? ""),
-					avatar: String(session.get(SESSION_KEYS.avatar) ?? ""),
+					name: String(session.get(SESSION_KEYS.NAME) ?? ""),
+					email: String(session.get(SESSION_KEYS.EMAIL) ?? ""),
+					avatar: String(session.get(SESSION_KEYS.AVATAR) ?? ""),
 				};
 			},
 			verify(viewer) {
 				return viewer;
 			},
 			invalidate(session) {
-				session.unset(SESSION_KEYS.id);
-				session.unset(SESSION_KEYS.name);
-				session.unset(SESSION_KEYS.email);
-				session.unset(SESSION_KEYS.avatar);
-				session.unset(SESSION_KEYS.idToken);
+				session.unset(SESSION_KEYS.ID);
+				session.unset(SESSION_KEYS.NAME);
+				session.unset(SESSION_KEYS.EMAIL);
+				session.unset(SESSION_KEYS.AVATAR);
+				session.unset(SESSION_KEYS.ID_TOKEN);
 			},
 		}),
 	],
@@ -86,10 +86,10 @@ export function isAuthenticated(): boolean {
 export function login(viewer: Viewer): void {
 	let session = readSession();
 	session.regenerateId();
-	session.set(SESSION_KEYS.id, viewer.id);
-	session.set(SESSION_KEYS.name, viewer.name);
-	session.set(SESSION_KEYS.email, viewer.email);
-	session.set(SESSION_KEYS.avatar, viewer.avatar);
+	session.set(SESSION_KEYS.ID, viewer.id);
+	session.set(SESSION_KEYS.NAME, viewer.name);
+	session.set(SESSION_KEYS.EMAIL, viewer.email);
+	session.set(SESSION_KEYS.AVATAR, viewer.avatar);
 }
 
 /**
@@ -103,7 +103,7 @@ export function logout(): void {
  * Returns the upstream OIDC id token stored at login, used for SSO logout.
  */
 export function getIdToken(): string | null {
-	let idToken = readSession().get(SESSION_KEYS.idToken);
+	let idToken = readSession().get(SESSION_KEYS.ID_TOKEN);
 	return typeof idToken === "string" ? idToken : null;
 }
 
@@ -111,7 +111,7 @@ export function getIdToken(): string | null {
  * Stores the upstream OIDC id token in the session.
  */
 export function setIdToken(idToken: string): void {
-	readSession().set(SESSION_KEYS.idToken, idToken);
+	readSession().set(SESSION_KEYS.ID_TOKEN, idToken);
 }
 
 function readSession() {
