@@ -154,9 +154,12 @@ export const documentBody = css({
 	},
 });
 
-/** Centered, width-capped content column (public pages, the marketing landing page). */
+/**
+ * Centered, width-capped content column (public status pages), matching the OLD
+ * APP's status-page wrapper (`mx-auto max-w-4xl px-4 py-8`, measured at 896px).
+ */
 export const container = css({
-	maxWidth: 768,
+	maxWidth: 896,
 	margin: "0 auto",
 	padding: "40px 20px",
 });
@@ -225,6 +228,32 @@ export const navList = css({
 	gap: 4,
 });
 
+/**
+ * A single sidebar nav item, matching the OLD APP's padded, rounded nav rows
+ * (measured `8px 12px` padding, `8px` radius, muted `neutral-500` label) rather
+ * than a plain colored/underlined text link.
+ */
+export const navLink = css({
+	display: "block",
+	padding: "8px 12px",
+	borderRadius: 8,
+	fontSize: "0.875rem",
+	fontWeight: 500,
+	color: neutral[500],
+	textDecoration: "none",
+	"&:hover": {
+		background: neutral[100],
+		color: neutral[900],
+	},
+	"@media (prefers-color-scheme: dark)": {
+		color: neutral[400],
+		"&:hover": {
+			background: neutral[800],
+			color: neutral[50],
+		},
+	},
+});
+
 /** Main content area. */
 export const main = css({
 	flex: 1,
@@ -252,9 +281,15 @@ export const link = css({
 });
 
 /**
- * Primary call-to-action button/link. The OLD APP's primary CTAs (hero, header,
- * final CTA) use `bg-primary-600` with no `dark:` override, since the brand green
- * already reads correctly against both light and dark surfaces.
+ * Primary action button/link for the signed-in app shell (dashboard, forms,
+ * settings). The OLD APP reserves brand green for marketing CTAs (see
+ * {@link marketingButtonPrimary}) — every in-app primary action (Create Monitor,
+ * Save Changes, Invite Member, Save Language, Create Team, ...) instead uses a
+ * near-black `bg-neutral-900` button, measured across the dashboard header, the
+ * create-monitor form, and team settings. `fontFamily`/`fontSize` are set
+ * explicitly because a bare `<button>` doesn't inherit either from its ancestors
+ * (the browser UA stylesheet resets both), which otherwise renders button labels
+ * in the platform's default control font instead of the app's font stack.
  */
 export const buttonPrimary = css({
 	display: "inline-flex",
@@ -263,22 +298,29 @@ export const buttonPrimary = css({
 	padding: "8px 16px",
 	borderRadius: 6,
 	border: "1px solid transparent",
-	background: primary[600],
+	background: neutral[900],
 	color: "#ffffff",
+	fontFamily: "inherit",
+	fontSize: "0.875rem",
 	fontWeight: 500,
 	cursor: "pointer",
-	"&:hover": { background: primary[700] },
+	"&:hover": { background: neutral[800] },
 });
 
-/** Empty-state placeholder box. */
+/**
+ * Empty-state placeholder box, matching the OLD APP's "No DNS monitors yet"
+ * panel: centered (not left-aligned) content, a bigger radius, and generous
+ * padding (measured `64px 32px`).
+ */
 export const emptyState = css({
 	display: "flex",
 	flexDirection: "column",
-	alignItems: "flex-start",
-	gap: 8,
-	padding: 24,
+	alignItems: "center",
+	textAlign: "center",
+	gap: 12,
+	padding: "64px 32px",
 	border: `1px dashed ${neutral[300]}`,
-	borderRadius: 8,
+	borderRadius: 12,
 	"@media (prefers-color-scheme: dark)": {
 		borderColor: neutral[700],
 	},
@@ -289,7 +331,7 @@ export const field = css({
 	display: "flex",
 	flexDirection: "column",
 	gap: 4,
-	marginBottom: 16,
+	marginBottom: 20,
 	fontSize: "0.875rem",
 	fontWeight: 500,
 });
@@ -303,14 +345,18 @@ export const checkboxField = css({
 	fontSize: "0.875rem",
 });
 
-/** Text/number/url/select control matching the app's form field style. */
+/**
+ * Text/number/url/select control matching the app's form field style. The OLD
+ * APP tints its inputs with a faint `bg-neutral-50` rather than pure white
+ * (measured on the create-monitor and team-settings forms).
+ */
 export const input = css({
-	padding: "8px 10px",
+	padding: "8px 12px",
 	borderRadius: 6,
-	border: `1px solid ${neutral[300]}`,
-	fontSize: "0.9375rem",
+	border: `1px solid ${neutral[200]}`,
+	fontSize: "0.875rem",
 	fontFamily: "inherit",
-	background: "#ffffff",
+	background: neutral[50],
 	color: "inherit",
 	"@media (prefers-color-scheme: dark)": {
 		borderColor: neutral[700],
@@ -321,7 +367,7 @@ export const input = css({
 /** {@link input} re-typed for `<select>` (see {@link mixFor}). */
 export const selectInput = mixFor<HTMLSelectElement>(input);
 
-/** Destructive action button/link. */
+/** Destructive action button/link, matching the OLD APP's "Delete Team" button. */
 export const buttonDanger = css({
 	display: "inline-flex",
 	alignItems: "center",
@@ -331,24 +377,85 @@ export const buttonDanger = css({
 	border: "1px solid transparent",
 	background: danger[600],
 	color: "#ffffff",
+	fontFamily: "inherit",
+	fontSize: "0.875rem",
 	fontWeight: 500,
 	cursor: "pointer",
 	"&:hover": { background: danger[700] },
 });
 
-/** Secondary (outline) button/link. */
+/**
+ * Secondary (outline) button/link for the app shell, matching the OLD APP's
+ * "Cancel" button (2px border, muted `neutral-500` label — measured on the team
+ * settings and create-monitor forms).
+ */
 export const buttonSecondary = css({
 	display: "inline-flex",
 	alignItems: "center",
 	justifyContent: "center",
 	padding: "8px 16px",
 	borderRadius: 6,
-	border: `1px solid ${neutral[300]}`,
+	border: `2px solid ${neutral[300]}`,
 	background: "#ffffff",
-	color: neutral[700],
+	color: neutral[500],
+	fontFamily: "inherit",
+	fontSize: "0.875rem",
 	fontWeight: 500,
 	cursor: "pointer",
 	textDecoration: "none",
+	"&:hover": { background: neutral[50] },
+	"@media (prefers-color-scheme: dark)": {
+		borderColor: neutral[700],
+		background: neutral[900],
+		color: neutral[400],
+		"&:hover": { background: neutral[800] },
+	},
+});
+
+/**
+ * Primary call-to-action button/link for marketing pages only (hero, header,
+ * final CTA). Unlike the in-app {@link buttonPrimary}, the OLD APP's marketing
+ * CTAs use brand green (`bg-primary-600`) at a larger "lg" size — bigger
+ * padding, a slightly larger radius, and a subtle `shadow-sm` — measured on the
+ * homepage hero's "Start Monitoring" button.
+ */
+export const marketingButtonPrimary = css({
+	display: "inline-flex",
+	alignItems: "center",
+	justifyContent: "center",
+	padding: "12px 24px",
+	borderRadius: 8,
+	border: "1px solid transparent",
+	background: primary[600],
+	color: "#ffffff",
+	fontFamily: "inherit",
+	fontSize: "0.875rem",
+	fontWeight: 500,
+	cursor: "pointer",
+	boxShadow: "0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1)",
+	"&:hover": { background: primary[700] },
+});
+
+/**
+ * Secondary (outline) button/link for marketing pages only, matching the OLD
+ * APP's "View Pricing" hero button (larger "lg" padding/radius, `shadow-sm`,
+ * bolder label than the in-app {@link buttonSecondary}).
+ */
+export const marketingButtonSecondary = css({
+	display: "inline-flex",
+	alignItems: "center",
+	justifyContent: "center",
+	padding: "12px 24px",
+	borderRadius: 8,
+	border: `1px solid ${neutral[300]}`,
+	background: "#ffffff",
+	color: neutral[700],
+	fontFamily: "inherit",
+	fontSize: "1rem",
+	fontWeight: 600,
+	cursor: "pointer",
+	textDecoration: "none",
+	boxShadow: "0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1)",
 	"&:hover": { background: neutral[50] },
 	"@media (prefers-color-scheme: dark)": {
 		borderColor: neutral[700],
@@ -374,14 +481,18 @@ export const dialog = css({
 	},
 });
 
-/** Full-width data table for monitor/result lists. */
+/**
+ * Full-width data table for monitor/result lists. Cell padding matches the OLD
+ * APP's monitor tables (measured `12px 16px`, taller and airier than a compact
+ * admin grid).
+ */
 export const table = css({
 	width: "100%",
 	borderCollapse: "collapse",
 	fontSize: "0.875rem",
 	"& th, & td": {
 		textAlign: "left",
-		padding: "8px 12px",
+		padding: "12px 16px",
 		borderBottom: `1px solid ${neutral[200]}`,
 	},
 	"@media (prefers-color-scheme: dark)": {
@@ -408,65 +519,78 @@ export const statCard = css({
 	},
 });
 
-/** Large numeric value inside a stat card. */
+/**
+ * Large numeric value inside a stat card, matching the OLD APP's dashboard stat
+ * cards (measured `24px`/`700`/`32px` line-height).
+ */
 export const statValue = css({
-	fontSize: "1.75rem",
-	fontWeight: 600,
-	lineHeight: 1.2,
+	fontSize: "1.5rem",
+	fontWeight: 700,
+	lineHeight: "2rem",
 });
 
-/** Status badge base; combine with a status-specific color mixin. */
+/**
+ * Status badge base; combine with a status-specific color mixin. The OLD APP's
+ * monitor-status pills (dashboard table, HTTP/DNS/TCP monitor lists) are an
+ * outline style — transparent background, a colored border, and colored text —
+ * not a filled chip; measured padding is `2px 10px`.
+ */
 export const badge = css({
 	display: "inline-flex",
 	alignItems: "center",
-	padding: "2px 8px",
+	padding: "2px 10px",
 	borderRadius: 999,
+	border: "1px solid transparent",
 	fontSize: "0.75rem",
 	fontWeight: 600,
 	textTransform: "capitalize",
 });
 
 /**
- * Green "up"/valid/healthy badge color, matching the OLD APP's status badges
- * (`bg-{color}-100 text-{color}-800 dark:bg-{color}-900/50 dark:text-{color}-200`)
- * translated from Tailwind green to the {@link success} scale.
+ * Green "up"/valid/healthy badge color, matching the OLD APP's status pills
+ * (transparent background, `border-{color}-600 text-{color}-600`, measured on
+ * the dashboard's "Up & Running" and the HTTP monitor list's "Up" badges).
  */
 export const badgeUp = css({
-	background: success[100],
-	color: success[800],
+	background: "transparent",
+	borderColor: success[600],
+	color: success[600],
 	"@media (prefers-color-scheme: dark)": {
-		background: alpha(success[900], 0.5),
-		color: success[200],
+		borderColor: success[400],
+		color: success[400],
 	},
 });
 
 /** Amber "degraded"/expiring/late badge color. */
 export const badgeDegraded = css({
-	background: warning[100],
-	color: warning[800],
+	background: "transparent",
+	borderColor: warning[600],
+	color: warning[600],
 	"@media (prefers-color-scheme: dark)": {
-		background: alpha(warning[900], 0.5),
-		color: warning[200],
+		borderColor: warning[400],
+		color: warning[400],
 	},
 });
 
 /** Red "down"/expired/error badge color. */
 export const badgeDown = css({
-	background: danger[100],
-	color: danger[800],
+	background: "transparent",
+	borderColor: danger[600],
+	color: danger[600],
 	"@media (prefers-color-scheme: dark)": {
-		background: alpha(danger[900], 0.5),
-		color: danger[200],
+		borderColor: danger[400],
+		color: danger[400],
 	},
 });
 
 /** Gray "pending"/unknown/disabled badge color. */
 export const badgeNeutral = css({
-	background: neutral[100],
-	color: neutral[800],
+	background: "transparent",
+	borderColor: neutral[500],
+	color: neutral[500],
 	"@media (prefers-color-scheme: dark)": {
-		background: neutral[800],
-		color: neutral[200],
+		borderColor: neutral[400],
+		color: neutral[400],
 	},
 });
 
@@ -611,10 +735,10 @@ export const marketingHeader = css({
 	},
 });
 
-/** Marketing header brand mark. */
+/** Marketing header brand mark, measured 20px. */
 export const marketingBrand = css({
 	fontWeight: 700,
-	fontSize: "1.125rem",
+	fontSize: "1.25rem",
 	textDecoration: "none",
 	color: neutral[900],
 	"@media (prefers-color-scheme: dark)": { color: neutral[50] },
@@ -628,9 +752,9 @@ export const marketingNav = css({
 	flexWrap: "wrap",
 });
 
-/** A single marketing nav link. */
+/** A single marketing nav link, measured 14px. */
 export const marketingNavLink = css({
-	fontSize: "0.9375rem",
+	fontSize: "0.875rem",
 	color: neutral[600],
 	textDecoration: "none",
 	"&:hover": { color: primary[600] },
@@ -640,9 +764,13 @@ export const marketingNavLink = css({
 	},
 });
 
-/** Centered, width-capped content column for marketing sections (wider than {@link container}). */
+/**
+ * Centered, width-capped content column for marketing sections (wider than
+ * {@link container}). Matches the OLD APP's header/section wrapper
+ * (`max-w-6xl`, measured at 1152px).
+ */
 export const marketingContainer = css({
-	maxWidth: 1024,
+	maxWidth: 1152,
 	margin: "0 auto",
 	padding: "0 24px",
 });
@@ -650,9 +778,10 @@ export const marketingContainer = css({
 /**
  * Hero section with a soft gradient background, matching the OLD APP's hero
  * (`bg-gradient-to-b from-primary-50 to-white dark:from-primary-950/20 dark:to-neutral-950`).
+ * Vertical padding matches the OLD APP's generous `py-32` hero (measured 128px).
  */
 export const marketingHero = css({
-	padding: "64px 0 48px",
+	padding: "128px 0",
 	textAlign: "center",
 	background: `linear-gradient(to bottom, ${primary[50]}, #ffffff)`,
 	"@media (prefers-color-scheme: dark)": {
@@ -662,12 +791,13 @@ export const marketingHero = css({
 
 /**
  * Small pill badge used above hero/section headings, matching the OLD APP's
- * `<Badge color="primary" variant="secondary">` (`@pkg/ui`'s secondary badge tokens).
+ * `<Badge color="primary" variant="secondary">` (`@pkg/ui`'s secondary badge
+ * tokens, measured padding `2px 10px`).
  */
 export const marketingBadge = css({
 	display: "inline-flex",
 	alignItems: "center",
-	padding: "4px 12px",
+	padding: "2px 10px",
 	borderRadius: 999,
 	fontSize: "0.75rem",
 	fontWeight: 600,
@@ -684,16 +814,18 @@ export const marketingBadge = css({
 
 /**
  * Hero/section heading, larger than default `h1`/`h2` sizing, matching the OLD APP's
- * hero `<h1>` (`text-neutral-900 dark:text-neutral-50`).
+ * hero `<h1>` (`text-neutral-900 dark:text-neutral-50`, measured 60px/700/tight
+ * `1.0` line-height/`-0.025em` tracking at desktop widths).
  */
 export const marketingHeroTitle = css({
-	fontSize: "2.25rem",
+	fontSize: "2.5rem",
 	fontWeight: 700,
-	lineHeight: 1.15,
+	lineHeight: 1,
+	letterSpacing: "-0.025em",
 	margin: "0 auto 16px",
 	maxWidth: 760,
 	color: neutral[900],
-	"@media (min-width: 768px)": { fontSize: "3rem" },
+	"@media (min-width: 768px)": { fontSize: "3.75rem" },
 	"@media (prefers-color-scheme: dark)": { color: neutral[50] },
 });
 
@@ -765,11 +897,28 @@ export const marketingSectionAlt = css({
 	"@media (prefers-color-scheme: dark)": { background: alpha(neutral[900], 0.5) },
 });
 
-/** Centered heading block at the top of a marketing section. */
+/**
+ * Centered heading block at the top of a marketing section. Styles its bare
+ * `<h2>` directly (rather than requiring a separate heading mixin at each call
+ * site) to match the OLD APP's section headings — measured 36px/700, tight
+ * `40px` line-height, and `-0.025em` tracking, which a plain unstyled `<h2>`
+ * renders far smaller than.
+ */
 export const marketingSectionHeader = css({
 	textAlign: "center",
 	maxWidth: 640,
 	margin: "0 auto 40px",
+	"& h2": {
+		fontSize: "2.25rem",
+		fontWeight: 700,
+		lineHeight: "2.5rem",
+		letterSpacing: "-0.025em",
+		margin: "0 0 16px",
+		color: neutral[900],
+	},
+	"@media (prefers-color-scheme: dark)": {
+		"& h2": { color: neutral[50] },
+	},
 });
 
 /** Responsive card grid for feature/use-case/audience lists. */
@@ -781,11 +930,12 @@ export const marketingGrid = css({
 
 /**
  * One card inside {@link marketingGrid}, matching the OLD APP's feature cards
- * (`border-neutral-200 bg-white dark:border-neutral-800 dark:bg-neutral-900`).
+ * (`border-neutral-200 bg-white dark:border-neutral-800 dark:bg-neutral-900`,
+ * measured padding `24px`).
  */
 export const marketingCard = css({
 	display: "block",
-	padding: 20,
+	padding: 24,
 	borderRadius: 12,
 	border: `1px solid ${neutral[200]}`,
 	background: "#ffffff",
@@ -797,18 +947,19 @@ export const marketingCard = css({
 	},
 });
 
-/** Card/section heading inside a marketing card. */
+/** Card/section heading inside a marketing card, measured 20px/600/28px line-height. */
 export const marketingCardTitle = css({
-	fontSize: "1.0625rem",
+	fontSize: "1.25rem",
 	fontWeight: 600,
+	lineHeight: "1.75rem",
 	margin: "0 0 6px",
 	color: neutral[900],
 	"@media (prefers-color-scheme: dark)": { color: neutral[50] },
 });
 
-/** Card description text, muted. */
+/** Card description text, muted, measured at the base 16px body size. */
 export const marketingCardDescription = css({
-	fontSize: "0.9375rem",
+	fontSize: "1rem",
 	color: neutral[600],
 	margin: 0,
 	lineHeight: 1.55,
@@ -825,19 +976,21 @@ export const marketingStatRow = css({
 
 /**
  * Large numeric stat value, matching the OLD APP's trust-indicator figures
- * (`text-3xl font-bold text-neutral-900 dark:text-neutral-50`, numerals in `font-mono`).
+ * (`text-3xl font-bold text-neutral-900 dark:text-neutral-50`, numerals in
+ * `font-mono`, measured 30px/700/36px line-height).
  */
 export const marketingStatValue = css({
-	fontSize: "1.75rem",
+	fontSize: "1.875rem",
 	fontWeight: 700,
+	lineHeight: "2.25rem",
 	fontFamily: fontMono,
 	color: neutral[900],
 	"@media (prefers-color-scheme: dark)": { color: neutral[50] },
 });
 
-/** Muted label under a stat value. */
+/** Muted label under a stat value, measured 14px. */
 export const marketingStatLabel = css({
-	fontSize: "0.8125rem",
+	fontSize: "0.875rem",
 	color: neutral[600],
 	"@media (prefers-color-scheme: dark)": { color: neutral[400] },
 });
@@ -980,7 +1133,7 @@ export const marketingFooterHeading = css({
 	fontSize: "0.875rem",
 	fontWeight: 600,
 	color: neutral[900],
-	marginBottom: 12,
+	marginBottom: 16,
 	"@media (prefers-color-scheme: dark)": { color: neutral[50] },
 });
 
@@ -1018,18 +1171,40 @@ export const marketingFooterBottom = css({
 	},
 });
 
-/** Long-form prose article (legal pages, docs). */
+/**
+ * Long-form prose article (legal pages, docs). Heading sizes and paragraph
+ * rhythm match the OLD APP's docs/legal pages (measured: h1 36px/800, h2 24-30px/700,
+ * h3 20px/600, body paragraphs at 16px/1.75 line-height with 20px vertical margin).
+ */
 export const proseArticle = css({
 	maxWidth: 720,
 	margin: "0 auto",
 	padding: "48px 24px 80px",
-	lineHeight: 1.7,
+	lineHeight: 1.75,
 	color: neutral[800],
-	"& h1": { fontSize: "2rem", marginBottom: 8, color: neutral[900] },
-	"& h2": { fontSize: "1.375rem", marginTop: 32, marginBottom: 8, color: neutral[900] },
-	"& h3": { fontSize: "1.125rem", marginTop: 24, marginBottom: 8, color: neutral[900] },
-	"& p": { margin: "0 0 16px" },
-	"& ul": { margin: "0 0 16px", paddingLeft: "1.25rem" },
+	"& h1": {
+		fontSize: "2.25rem",
+		fontWeight: 800,
+		letterSpacing: "-0.025em",
+		marginBottom: 32,
+		color: neutral[900],
+	},
+	"& h2": {
+		fontSize: "1.5rem",
+		fontWeight: 700,
+		marginTop: 48,
+		marginBottom: 24,
+		color: neutral[900],
+	},
+	"& h3": {
+		fontSize: "1.25rem",
+		fontWeight: 600,
+		marginTop: 24,
+		marginBottom: 12,
+		color: neutral[900],
+	},
+	"& p": { margin: "20px 0" },
+	"& ul": { margin: "20px 0", paddingLeft: "1.25rem" },
 	"& li": { marginBottom: 8 },
 	"@media (prefers-color-scheme: dark)": {
 		color: neutral[300],
@@ -1068,10 +1243,33 @@ export const docsSidebarHeading = css({
 });
 
 /** Docs article content column. */
+/**
+ * Docs article content column. Styles the bare `<h1>`/`<h2>`/`<h3>`/`<p>` markup
+ * rendered by the docs index and by the markdown-rendered doc pages — a bare
+ * heading otherwise falls back to the browser's default (much smaller) size,
+ * measured against the OLD APP's docs pages: h1 30px/700/`-0.75px` tracking,
+ * h2 24px/700 with `48px`/`24px` margins, h3 20px/600 with `0`/`12px` margins,
+ * body paragraphs at 16px/1.75 line-height.
+ */
 export const docsContent = css({
 	flex: 1,
 	minWidth: 0,
 	padding: "32px 24px 80px",
+	lineHeight: 1.75,
+	"& h1": {
+		fontSize: "1.875rem",
+		fontWeight: 700,
+		letterSpacing: "-0.025em",
+		lineHeight: 1,
+		margin: "0 0 16px",
+		color: neutral[900],
+	},
+	"& h2": { fontSize: "1.5rem", fontWeight: 700, margin: "48px 0 24px", color: neutral[900] },
+	"& h3": { fontSize: "1.25rem", fontWeight: 600, margin: "0 0 12px", color: neutral[900] },
+	"& p": { margin: "20px 0" },
+	"@media (prefers-color-scheme: dark)": {
+		"& h1, & h2, & h3": { color: neutral[50] },
+	},
 });
 
 /** Intro paragraph under the docs index `<h1>`. */

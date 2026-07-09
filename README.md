@@ -37,20 +37,20 @@ bun run dev              # Start development server
 
 Run from the repository root:
 
-| Command                        | Description                |
-| ------------------------------ | -------------------------- |
-| `bun format`                   | Check formatting           |
-| `bun format:fix`               | Fix formatting             |
-| `bun lint`                     | Check linting              |
-| `bun lint:fix`                 | Fix linting issues         |
-| `bun typecheck`                | TypeScript type checking   |
+| Command                        | Description                                             |
+| ------------------------------ | ------------------------------------------------------- |
+| `bun format`                   | Check formatting                                        |
+| `bun format:fix`               | Fix formatting                                          |
+| `bun lint`                     | Check linting                                           |
+| `bun lint:fix`                 | Fix linting issues                                      |
+| `bun typecheck`                | TypeScript type checking                                |
 | `bun test --isolate`           | Run all tests (`--isolate` is required — see AGENTS.md) |
-| `bun upgrade`                  | Upgrade all workspaces     |
-| `bun upgrade:dry-run`          | Preview all upgrades       |
-| `bun upgrade:apps`             | Upgrade app workspaces     |
-| `bun upgrade:apps:dry-run`     | Preview app upgrades       |
-| `bun upgrade:packages`         | Upgrade package workspaces |
-| `bun upgrade:packages:dry-run` | Preview package upgrades   |
+| `bun upgrade`                  | Upgrade all workspaces                                  |
+| `bun upgrade:dry-run`          | Preview all upgrades                                    |
+| `bun upgrade:apps`             | Upgrade app workspaces                                  |
+| `bun upgrade:apps:dry-run`     | Preview app upgrades                                    |
+| `bun upgrade:packages`         | Upgrade package workspaces                              |
+| `bun upgrade:packages:dry-run` | Preview package upgrades                                |
 
 ## Workspace Imports
 

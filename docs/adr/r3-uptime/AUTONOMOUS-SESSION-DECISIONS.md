@@ -103,7 +103,7 @@ checking the specific file's test output again.
 
 ## Known gap surfaced during test-writing — UPDATE: this assumption was wrong, fixed for real
 
-*(Original note, kept for history):* The shared bun:sqlite test-database
+_(Original note, kept for history):_ The shared bun:sqlite test-database
 adapter built for this test backfill (`apps/r3-uptime/app/lib/test/db.ts`,
 mirroring the production D1 adapter) has no JSON-column serialization step
 — binding a plain JS object into a JSON-typed column (e.g. `alerts.config`,

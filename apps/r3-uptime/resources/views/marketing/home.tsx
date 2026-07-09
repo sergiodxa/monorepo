@@ -232,7 +232,7 @@ export default function HomeView(handle: Handle<HomeView.Props>) {
 
 						<div mix={[s.marketingActions]}>
 							<AuthCta isSignedIn={isSignedIn} dashboardLabel="Open Dashboard" />
-							<a href="#pricing" mix={[s.buttonSecondary]}>
+							<a href="#pricing" mix={[s.marketingButtonSecondary]}>
 								View Pricing
 							</a>
 						</div>

@@ -37,7 +37,7 @@ export default function AuthCta(handle: Handle<AuthCta.Props>) {
 
 		if (isSignedIn) {
 			return (
-				<a href={routes.app.index.href()} mix={[s.buttonPrimary]}>
+				<a href={routes.app.index.href()} mix={[s.marketingButtonPrimary]}>
 					{dashboardLabel}
 				</a>
 			);
@@ -45,7 +45,7 @@ export default function AuthCta(handle: Handle<AuthCta.Props>) {
 
 		return (
 			<form method="post" action={routes.auth.action.href()}>
-				<button type="submit" mix={[s.buttonPrimary]}>
+				<button type="submit" mix={[s.marketingButtonPrimary]}>
 					{startLabel}
 				</button>
 			</form>

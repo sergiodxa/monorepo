@@ -45,40 +45,40 @@ export default function AppShell(handle: Handle<AppShell.Props>) {
 					<nav mix={[s.sidebar]}>
 						<ul mix={[s.navList]}>
 							<li>
-								<a href={routes.app.team.dashboard.href({ team: team.slug })} mix={[s.link]}>
+								<a href={routes.app.team.dashboard.href({ team: team.slug })} mix={[s.navLink]}>
 									Dashboard
 								</a>
 							</li>
 							<li>
-								<a href={routes.app.team.alerts.href({ team: team.slug })} mix={[s.link]}>
+								<a href={routes.app.team.alerts.href({ team: team.slug })} mix={[s.navLink]}>
 									Alerts
 								</a>
 							</li>
 							<li>
 								<a
 									href={routes.app.team.maintenanceWindows.href({ team: team.slug })}
-									mix={[s.link]}
+									mix={[s.navLink]}
 								>
 									Maintenance
 								</a>
 							</li>
 							<li>
-								<a href={routes.app.team.statusPages.href({ team: team.slug })} mix={[s.link]}>
+								<a href={routes.app.team.statusPages.href({ team: team.slug })} mix={[s.navLink]}>
 									Status pages
 								</a>
 							</li>
 							<li>
-								<a href={routes.app.team.apiKeys.href({ team: team.slug })} mix={[s.link]}>
+								<a href={routes.app.team.apiKeys.href({ team: team.slug })} mix={[s.navLink]}>
 									API keys
 								</a>
 							</li>
 							<li>
-								<a href={routes.app.team.settings.href({ team: team.slug })} mix={[s.link]}>
+								<a href={routes.app.team.settings.href({ team: team.slug })} mix={[s.navLink]}>
 									Settings
 								</a>
 							</li>
 							<li>
-								<a href={routes.app.team.account.href({ team: team.slug })} mix={[s.link]}>
+								<a href={routes.app.team.account.href({ team: team.slug })} mix={[s.navLink]}>
 									Account
 								</a>
 							</li>
