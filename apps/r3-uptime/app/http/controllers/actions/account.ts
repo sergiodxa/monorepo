@@ -11,7 +11,6 @@ import { redirect } from "@pkg/http/response";
 import { badRequest, notFound } from "@pkg/http/response/html";
 import { isFailure } from "@pkg/result";
 import { getServiceContainer } from "@pkg/service-container";
-import { validate } from "@pkg/validate";
 import { Database } from "remix/data-table";
 import { createAction } from "remix/fetch-router";
 import { Session } from "remix/session";
@@ -22,6 +21,7 @@ import { language as languageCookie } from "~/app/http/cookies";
 import { getViewer } from "~/app/http/middleware/auth";
 import { UpdateLanguageSchema } from "~/app/http/validators/language";
 import { CreateTeamSchema, LeaveTeamSchema } from "~/app/http/validators/team";
+import { validateForm } from "~/app/lib/validate-form";
 import routes from "~/routes/web";
 
 /** POST /actions/create-team */
@@ -29,7 +29,7 @@ export const createTeam = createAction(routes.accountActions.createTeam, async (
 	let viewer = getViewer();
 	if (!viewer) throw new Error("requireUser must run before this handler");
 
-	let result = await validate(ctx.formData, CreateTeamSchema);
+	let result = await validateForm(ctx.formData, CreateTeamSchema);
 	if (isFailure(result)) {
 		return badRequest("Enter a team name.");
 	}
@@ -47,7 +47,7 @@ export const leaveTeam = createAction(routes.accountActions.leaveTeam, async (ct
 	let viewer = getViewer();
 	if (!viewer) throw new Error("requireUser must run before this handler");
 
-	let result = await validate(ctx.formData, LeaveTeamSchema);
+	let result = await validateForm(ctx.formData, LeaveTeamSchema);
 	let session = ctx.get(Session);
 
 	if (isFailure(result)) {
@@ -79,7 +79,7 @@ export const updateLanguage = createAction(routes.accountActions.updateLanguage,
 	let viewer = getViewer();
 	if (!viewer) throw new Error("requireUser must run before this handler");
 
-	let result = await validate(ctx.formData, UpdateLanguageSchema);
+	let result = await validateForm(ctx.formData, UpdateLanguageSchema);
 	if (isFailure(result)) {
 		return badRequest("Invalid language.");
 	}

@@ -10,7 +10,6 @@ import { redirect } from "@pkg/http/response";
 import { notFound } from "@pkg/http/response/html";
 import { isFailure } from "@pkg/result";
 import { getServiceContainer } from "@pkg/service-container";
-import { validate } from "@pkg/validate";
 import { Database } from "remix/data-table";
 import { createAction } from "remix/fetch-router";
 import { Session } from "remix/session";
@@ -21,13 +20,14 @@ import {
 	MaintenanceWindowIdSchema,
 	UpdateMaintenanceWindowSchema,
 } from "~/app/http/validators/maintenance-window";
+import { validateForm } from "~/app/lib/validate-form";
 import routes from "~/routes/web";
 
 /** POST /actions/:team/create-maintenance-window */
 export const createMaintenanceWindow = createAction(
 	routes.actions.createMaintenanceWindow,
 	async (ctx) => {
-		let result = await validate(ctx.formData, CreateMaintenanceWindowSchema);
+		let result = await validateForm(ctx.formData, CreateMaintenanceWindowSchema);
 		let session = ctx.get(Session);
 
 		if (isFailure(result)) {
@@ -61,7 +61,7 @@ export const createMaintenanceWindow = createAction(
 export const updateMaintenanceWindow = createAction(
 	routes.actions.updateMaintenanceWindow,
 	async (ctx) => {
-		let result = await validate(ctx.formData, UpdateMaintenanceWindowSchema);
+		let result = await validateForm(ctx.formData, UpdateMaintenanceWindowSchema);
 		let session = ctx.get(Session);
 
 		if (isFailure(result)) {
@@ -97,7 +97,7 @@ export const updateMaintenanceWindow = createAction(
 export const deleteMaintenanceWindow = createAction(
 	routes.actions.deleteMaintenanceWindow,
 	async (ctx) => {
-		let result = await validate(ctx.formData, MaintenanceWindowIdSchema);
+		let result = await validateForm(ctx.formData, MaintenanceWindowIdSchema);
 		let session = ctx.get(Session);
 
 		if (isFailure(result)) {
@@ -126,7 +126,7 @@ export const deleteMaintenanceWindow = createAction(
 export const endMaintenanceWindow = createAction(
 	routes.actions.endMaintenanceWindow,
 	async (ctx) => {
-		let result = await validate(ctx.formData, MaintenanceWindowIdSchema);
+		let result = await validateForm(ctx.formData, MaintenanceWindowIdSchema);
 		let session = ctx.get(Session);
 
 		if (isFailure(result)) {

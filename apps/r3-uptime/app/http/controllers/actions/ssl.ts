@@ -11,19 +11,19 @@ import { redirect } from "@pkg/http/response";
 import { notFound } from "@pkg/http/response/html";
 import { isFailure } from "@pkg/result";
 import { getServiceContainer } from "@pkg/service-container";
-import { validate } from "@pkg/validate";
 import { Database } from "remix/data-table";
 import { createAction } from "remix/fetch-router";
 import { Session } from "remix/session";
 
 import Monitor from "~/app/data/monitor";
 import { UpdateSslSchema } from "~/app/http/validators/ssl";
+import { validateForm } from "~/app/lib/validate-form";
 import { calculateSslStatus } from "~/app/services/ssl-info";
 import routes from "~/routes/web";
 
 /** POST /actions/:team/update-ssl */
 export const updateSsl = createAction(routes.actions.updateSsl, async (ctx) => {
-	let result = await validate(ctx.formData, UpdateSslSchema);
+	let result = await validateForm(ctx.formData, UpdateSslSchema);
 	let session = ctx.get(Session);
 
 	if (isFailure(result)) {
