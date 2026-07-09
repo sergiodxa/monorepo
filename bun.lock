@@ -340,6 +340,7 @@
       "name": "@apps/r3-uptime",
       "dependencies": {
         "@edgefirst-dev/jwt": "^1.3.0",
+        "@pkg/auth-sdk": "workspace:*",
         "@pkg/data-table-d1": "workspace:*",
         "@pkg/http": "workspace:*",
         "@pkg/jobs": "workspace:*",
