@@ -71,7 +71,13 @@ export default createController(routes.auth, {
 				let finished: Awaited<ReturnType<typeof finishExternalAuth>>;
 				try {
 					finished = await finishExternalAuth(provider(ctx), ctx);
-				} catch {
+				} catch (error) {
+					ctx.logger.error("auth.callback_failed", {
+						error: error instanceof Error ? error.message : String(error),
+						stack: error instanceof Error ? error.stack : undefined,
+						oauthError: ctx.url.searchParams.get("error"),
+						oauthErrorDescription: ctx.url.searchParams.get("error_description"),
+					});
 					return authError(ctx, "The sign-in attempt could not be completed. Please try again.");
 				}
 

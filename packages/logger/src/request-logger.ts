@@ -120,6 +120,7 @@ const ALLOWED_RESPONSE_HEADERS = new Set([
 	"cache-control",
 	"etag",
 	"last-modified",
+	"location",
 	"x-request-id",
 	"cf-ray",
 	"server-timing",
@@ -152,6 +153,13 @@ function filterResponseHeaders(headers: Headers): Record<string, string> {
 			filtered[lower] = value;
 		}
 	}
+
+	// `set-cookie` is excluded above since its value carries session data, but whether a
+	// cookie was set at all (and which one) is exactly what's needed to debug session/auth
+	// issues, so surface just the cookie names.
+	let cookieNames = headers.getSetCookie?.().map((raw) => raw.split("=")[0]);
+	if (cookieNames && cookieNames.length > 0) filtered["set-cookie-names"] = cookieNames.join(", ");
+
 	return filtered;
 }
 
