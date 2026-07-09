@@ -6,6 +6,12 @@
 			"runtimeExecutable": "bun",
 			"runtimeArgs": ["run", "--cwd", "apps/r3-uptime", "dev"],
 			"port": 3000
+		},
+		{
+			"name": "auth",
+			"runtimeExecutable": "bun",
+			"runtimeArgs": ["run", "--cwd", "apps/auth", "dev"],
+			"port": 3001
 		}
 	]
 }

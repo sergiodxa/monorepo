@@ -12,10 +12,12 @@ import { logger } from "@pkg/logger";
 import { env, waitUntil } from "cloudflare:workers";
 import { type RequestHandler, RouterContextProvider } from "react-router";
 
+import { CloudflareContext } from "~/middleware/cloudflare";
+
 let handler: RequestHandler;
 
 export default {
-	async fetch(request: Request) {
+	async fetch(request: Request, workerEnv: Cloudflare.Env, ctx: ExecutionContext) {
 		let build = await import("virtual:react-router/server-build");
 
 		if (!handler) {
@@ -24,6 +26,7 @@ export default {
 		}
 
 		let context = new RouterContextProvider();
+		context.set(CloudflareContext, { env: workerEnv, ctx, cf: request.cf });
 		return await handler(request, context);
 	},
 
