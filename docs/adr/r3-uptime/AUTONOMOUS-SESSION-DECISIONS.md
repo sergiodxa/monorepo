@@ -101,23 +101,26 @@ command output myself rather than trusting self-reports, and will do the
 same for the final merge. If anything below looks off, it's worth spot
 checking the specific file's test output again.
 
-## Known gap surfaced during test-writing (not fixed, out of scope)
+## Known gap surfaced during test-writing — UPDATE: this assumption was wrong, fixed for real
 
-The shared bun:sqlite test-database adapter built for this test backfill
-(`apps/r3-uptime/app/lib/test/db.ts`, mirroring the production D1 adapter)
-has no JSON-column serialization step — binding a plain JS object into a
-JSON-typed column (e.g. `alerts.config`, `alert_events.snapshot`) throws
-`TypeError: Binding expected string, ... or null`. The agent testing
-`app/services/alerts.ts` worked around this by mocking `Alert`/`AlertEvent`
-data-layer calls instead of exercising them through the real in-memory DB.
-This is worth a follow-up: either the shared test adapter should learn to
-JSON-stringify object/array values on write and parse them on read (matching
-what the production D1 adapter likely already does, since `alerts.config`
-clearly round-trips through production D1 today), or every model with a
-JSON column needs the same mock-based workaround, which erodes the value of
-having a real-DB test harness at all. Not fixed here because it's outside
-any single agent's assigned file scope and touches shared test
-infrastructure other in-flight agents may also be depending on.
+*(Original note, kept for history):* The shared bun:sqlite test-database
+adapter built for this test backfill (`apps/r3-uptime/app/lib/test/db.ts`,
+mirroring the production D1 adapter) has no JSON-column serialization step
+— binding a plain JS object into a JSON-typed column (e.g. `alerts.config`,
+`alert_events.snapshot`) throws `TypeError: Binding expected string, ... or
+null`. The agent testing `app/services/alerts.ts` worked around this by
+mocking `Alert`/`AlertEvent` data-layer calls instead of exercising them
+through the real in-memory DB, and assumed — without checking — that "the
+production D1 adapter likely already does" the right thing, since
+`alerts.config` "clearly round-trips through production D1 today."
+
+**That assumption was wrong.** See the "third real production bug"
+follow-up section below: I checked it directly against the real
+`packages/data-table-d1` adapter and it throws the exact same error in
+production. `alerts.config` does not, in fact, round-trip through
+production D1 today — nothing had ever exercised that path for real. Both
+`packages/data-table-d1` and `packages/data-table-sqlstorage` are now fixed
+to actually serialize/deserialize `c.json()` columns.
 
 ## Second known gap surfaced during test-writing (not fixed, out of scope)
 
@@ -408,6 +411,47 @@ consumers of `@pkg/data-table-d1`) use the raw-exec path at all, so neither
 fix changes anything for them. Full suites re-verified after each fix:
 `data-table-sqlstorage` (10/10), `oidc-provider` (281/281),
 `blog-engine`/`r3-blog`/`blog-saas` (already covered above).
+
+## Follow-up: a third real production bug, self-discovered by re-reading my own notes
+
+Answering "what's missing?" led me to re-read my own earlier note that
+"the production-side equivalent [of the JSON-column serialization gap] is
+flagged separately" — I had never actually verified that claim myself, I'd
+only trusted the sub-agent that found it. Given the other two production
+bugs this session found were both real and severe, I checked this one too
+instead of leaving it as an assumption.
+
+**Confirmed real, via a direct repro against the actual `packages/data-table-d1`
+adapter** (not the test-only mirror): `db.create(alerts, { config: {...} })`
+against a real `c.json()` column throws `TypeError: Binding expected
+string, TypedArray, boolean, number, bigint or null` — `remix/data-table`'s
+core package doesn't serialize JSON columns itself (confirmed by reading
+its source: `c.json()` is just a type tag, with no encode/decode logic
+anywhere in the core library), and neither adapter package did either. This
+means creating an alert, recording an alert event, or creating an API key
+would all throw in production today — the same severity class as the other
+two bugs this session found and fixed.
+
+**Fixed in both `packages/data-table-d1` and `packages/data-table-sqlstorage`**:
+JSON-encode `c.json()`-typed column values before binding (on
+insert/insertMany/update/upsert), JSON-decode them back out of rows read
+from the database, using `remix/data-table`'s `getTableColumnDefinitions()`
+to identify which columns are JSON-typed per table. This is the exact same
+approach the test-coverage backfill had already built for the test-only
+`app/lib/test/db.ts` mirror — I ported that working implementation rather
+than designing a new one. Confirmed the fix works with a real repro (create
+→ returns the object, not a string; read back → still an object, not a
+JSON string) before adding it as a permanent regression test in each
+package's own suite.
+
+**Checked blast radius the same way as the other two fixes**: grepped for
+`c.json()` across the whole monorepo — `apps/r3-uptime` is the only
+consumer of it anywhere, so this fix, too, can only help and cannot
+regress any other app.
+
+Full suites re-verified after this fix: `data-table-d1` (9/9, up from 8),
+`data-table-sqlstorage` (11/11, up from 10), `apps/r3-uptime` (1473
+across the combined run), `auth-saas` typecheck clean.
 
 ## Scope decisions
 

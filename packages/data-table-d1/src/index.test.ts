@@ -87,6 +87,14 @@ let users = table({
 	},
 });
 
+let settings = table({
+	name: "settings",
+	columns: {
+		id: c.integer().primaryKey(),
+		config: c.json(),
+	},
+});
+
 /**
  * Builds a fresh in-memory database, adapter, and `remix/data-table` handle.
  * @returns The `remix/data-table` `db` and the raw `bun:sqlite` instance.
@@ -172,6 +180,18 @@ describe("createD1DatabaseAdapter", () => {
 
 		expect(result.affectedRows).toBe(1);
 		expect(await db.count(users)).toBe(1);
+	});
+
+	test("c.json() columns round-trip through create/findOne without throwing", async () => {
+		await db.exec("CREATE TABLE settings (id INTEGER PRIMARY KEY, config TEXT)");
+
+		let config = { strategy: "email", config: { to: "user@example.com" } };
+		let created = await db.create(settings, { id: 1, config }, { returnRow: true });
+
+		expect(created.config).toEqual(config);
+
+		let found = await db.findOne(settings, { where: { id: 1 } });
+		expect(found?.config).toEqual(config);
 	});
 
 	test("DOCUMENTS D1 limitation: a failing transaction does NOT roll back earlier writes", async () => {

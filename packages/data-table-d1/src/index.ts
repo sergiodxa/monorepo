@@ -10,7 +10,7 @@ import type {
 	TransactionToken,
 } from "remix/data-table";
 
-import { getTableName, getTablePrimaryKey } from "remix/data-table";
+import { getTableColumnDefinitions, getTableName, getTablePrimaryKey } from "remix/data-table";
 
 interface D1AdapterOptions {
 	capabilities?: AdapterCapabilityOverrides;
@@ -100,6 +100,12 @@ export function createD1DatabaseAdapter(
 				};
 			}
 
+			// `c.json()` columns hold JS objects/arrays at the model layer, but D1's
+			// binder accepts only strings/numbers/booleans/null — encode them to JSON
+			// text before binding, and decode any JSON-typed columns back out of rows
+			// read from the database.
+			operation = encodeJsonColumns(operation);
+
 			let statement = compileSqliteStatement(operation);
 			let prepared = db
 				.prepare(statement.text)
@@ -115,6 +121,7 @@ export function createD1DatabaseAdapter(
 			if (shouldReadRows) {
 				let result = (await prepared.all()) as D1StatementResult;
 				let rows = normalizeRows(result.results ?? []);
+				rows = decodeJsonColumns(operation, rows);
 
 				if (operation.kind === "count" || operation.kind === "exists") {
 					rows = normalizeCountRows(rows);
@@ -759,6 +766,104 @@ function normalizeCountRows(rows: Record<string, unknown>[]): Record<string, unk
  */
 function isReadOnlyRawSql(sql: string): boolean {
 	return /^\s*(select|with|pragma)\b/i.test(sql);
+}
+
+/** Returns the names of a table's `c.json()`-typed columns. */
+function getJsonColumnNames(table: StatementTable): Set<string> {
+	let definitions = getTableColumnDefinitions(table);
+	let names = new Set<string>();
+
+	for (let [column, definition] of Object.entries(definitions)) {
+		if (definition.type === "json") names.add(column);
+	}
+
+	return names;
+}
+
+/** JSON-encodes every `c.json()` column in a plain values/changes record. */
+function encodeJsonValues(
+	jsonColumns: Set<string>,
+	values: Record<string, unknown>,
+): Record<string, unknown> {
+	if (jsonColumns.size === 0) return values;
+
+	let encoded: Record<string, unknown> = { ...values };
+
+	for (let column of jsonColumns) {
+		if (column in encoded && encoded[column] !== null && encoded[column] !== undefined) {
+			encoded[column] = JSON.stringify(encoded[column]);
+		}
+	}
+
+	return encoded;
+}
+
+/**
+ * Returns `operation` with every `c.json()` column's value JSON-encoded for binding.
+ * D1's binder only accepts strings/numbers/booleans/null, but `c.json()` columns
+ * hold JS objects/arrays at the model layer.
+ */
+function encodeJsonColumns(operation: DataManipulationOperation): DataManipulationOperation {
+	if (operation.kind === "insert") {
+		let jsonColumns = getJsonColumnNames(operation.table);
+		return { ...operation, values: encodeJsonValues(jsonColumns, operation.values) };
+	}
+
+	if (operation.kind === "insertMany") {
+		let jsonColumns = getJsonColumnNames(operation.table);
+		if (jsonColumns.size === 0) return operation;
+		return {
+			...operation,
+			values: operation.values.map((row) => encodeJsonValues(jsonColumns, row)),
+		};
+	}
+
+	if (operation.kind === "update") {
+		let jsonColumns = getJsonColumnNames(operation.table);
+		return { ...operation, changes: encodeJsonValues(jsonColumns, operation.changes) };
+	}
+
+	if (operation.kind === "upsert") {
+		let jsonColumns = getJsonColumnNames(operation.table);
+		if (jsonColumns.size === 0) return operation;
+		return {
+			...operation,
+			values: encodeJsonValues(jsonColumns, operation.values),
+			update: operation.update ? encodeJsonValues(jsonColumns, operation.update) : operation.update,
+		};
+	}
+
+	return operation;
+}
+
+/** JSON-decodes every `c.json()` column in every row, for operations with a resolvable table. */
+function decodeJsonColumns(
+	operation: DataManipulationOperation,
+	rows: Record<string, unknown>[],
+): Record<string, unknown>[] {
+	if (operation.kind === "raw" || operation.kind === "count" || operation.kind === "exists") {
+		return rows;
+	}
+
+	let jsonColumns = getJsonColumnNames(operation.table);
+	if (jsonColumns.size === 0) return rows;
+
+	return rows.map((row) => {
+		let decoded: Record<string, unknown> = { ...row };
+
+		for (let column of jsonColumns) {
+			let value = decoded[column];
+			if (typeof value === "string") {
+				try {
+					decoded[column] = JSON.parse(value);
+				} catch {
+					// Leave the raw string in place if it somehow isn't valid JSON.
+				}
+			}
+		}
+
+		return decoded;
+	});
 }
 
 /** Returns `true` when an operation asks for a `returning` clause. */
