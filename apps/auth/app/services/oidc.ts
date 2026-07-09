@@ -43,9 +43,11 @@ export default new OIDC("auth.sergiodxa.com", {
 	},
 
 	async findAuthorizationCodeData(code) {
-		// Consume authorization code atomically (RFC 6749 single-use)
+		// Consume authorization code atomically (RFC 6749 single-use). Returning
+		// null (rather than throwing) lets authorizationCodeGrant's own `if (!authz)`
+		// check map this to a proper invalid_grant OAuth error instead of a 500.
 		let result = await env.KV.get(`authz-code:${code}`);
-		if (!result) throw new Error("Authorization code not found.");
+		if (!result) return null;
 
 		// Delete immediately to prevent reuse
 		await env.KV.delete(`authz-code:${code}`);

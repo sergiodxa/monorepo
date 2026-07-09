@@ -175,15 +175,17 @@ export namespace OIDC {
 			}>
 		>;
 
-		findAuthorizationCodeData(code: string): Promise<{
-			clientId: string;
-			subjectId: string;
-			sessionId: string;
-			pkce: { challenge: string; method: "S256" | "plain" } | null;
-			nonce: string | null;
-			scope: string[];
-			authTime?: number;
-		}>;
+		findAuthorizationCodeData(code: string): Promise<
+			Nullable<{
+				clientId: string;
+				subjectId: string;
+				sessionId: string;
+				pkce: { challenge: string; method: "S256" | "plain" } | null;
+				nonce: string | null;
+				scope: string[];
+				authTime?: number;
+			}>
+		>;
 
 		deleteSessionBySubjectId(subjectId: string): Promise<void>;
 		deleteSessionById(sessionId: string): Promise<void>;

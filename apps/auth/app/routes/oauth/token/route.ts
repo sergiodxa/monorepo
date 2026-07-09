@@ -144,8 +144,8 @@ export async function action({ request }: Route.ActionArgs) {
 		}
 	} catch (error) {
 		if (error instanceof OIDCProvider.Error) {
-			logger.info("token_oauth2_error", { code: error.code, message: error.message });
-			return badRequest({ error: error.code, error_description: error.message });
+			logger.info("token_oauth2_error", { code: error.code, description: error.description });
+			return badRequest({ error: error.code, error_description: error.description });
 		}
 
 		if (error instanceof Error) {
