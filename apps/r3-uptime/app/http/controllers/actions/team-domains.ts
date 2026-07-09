@@ -42,7 +42,7 @@ export async function addDomain(ctx: RequestContext<{ team: string }>) {
 	let { hostname } = result.data;
 
 	let existing = await TeamDomain.findByHostnameForTeam(db, ctx.team.id, hostname);
-	if (existing?.verified_at !== null && existing !== null) {
+	if (existing && existing.verified_at !== null) {
 		return badRequest(`${hostname} is already verified for this team.`);
 	}
 

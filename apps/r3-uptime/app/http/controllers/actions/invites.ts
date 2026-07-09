@@ -39,7 +39,7 @@ export async function createInvite(ctx: RequestContext<{ team: string }>) {
 	let { email } = result.data;
 
 	let existing = await Invite.findByEmailForTeam(db, ctx.team.id, email);
-	if (existing?.accepted_at !== null && existing !== null) {
+	if (existing && existing.accepted_at !== null) {
 		return badRequest(`${email} already accepted an invite to this team.`);
 	}
 
