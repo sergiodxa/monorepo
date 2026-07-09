@@ -18,6 +18,7 @@ namespace FaqAccordion {
 	}
 
 	export interface Props {
+		name?: string;
 		items: Item[];
 	}
 }
@@ -27,7 +28,7 @@ export default function FaqAccordion(handle: Handle<FaqAccordion.Props>) {
 	return () => (
 		<>
 			{handle.props.items.map((faq) => (
-				<details key={faq.question} mix={[s.marketingFaqItem]}>
+				<details key={faq.question} mix={[s.marketingFaqItem]} name={handle.props.name}>
 					<summary mix={[s.marketingFaqQuestion]}>{faq.question}</summary>
 					<p mix={[s.marketingFaqAnswer]}>{faq.answer}</p>
 				</details>

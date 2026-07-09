@@ -378,7 +378,7 @@ export default function HomeView(handle: Handle<HomeView.Props>) {
 							description="Find answers to common questions about Uptime."
 						/>
 
-						<FaqAccordion items={FAQS.map((faq) => ({ ...faq }))} />
+						<FaqAccordion name="faq" items={FAQS.map((faq) => ({ ...faq }))} />
 					</div>
 				</section>
 			</>
