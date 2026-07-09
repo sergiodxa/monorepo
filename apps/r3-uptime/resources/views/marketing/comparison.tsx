@@ -12,8 +12,12 @@ import type { Handle } from "remix/ui";
 
 import type { MarketingContent } from "~/resources/content/marketing";
 
+import AuthCta from "~/resources/components/marketing/auth-cta";
+import MarketingCard from "~/resources/components/marketing/card";
+import FaqAccordion from "~/resources/components/marketing/faq-accordion";
+import SectionHeader from "~/resources/components/marketing/section-header";
+import MarketingStep from "~/resources/components/marketing/step";
 import * as s from "~/resources/styles";
-import routes from "~/routes/web";
 
 namespace ComparisonPageView {
 	export interface Props extends MarketingContent.ComparisonPage {
@@ -57,27 +61,14 @@ export default function ComparisonPageView(handle: Handle<ComparisonPageView.Pro
 						</div>
 
 						<div mix={[s.marketingActions]}>
-							{isSignedIn ? (
-								<a href={routes.app.index.href()} mix={[s.buttonPrimary]}>
-									Go to dashboard
-								</a>
-							) : (
-								<form method="post" action={routes.auth.action.href()}>
-									<button type="submit" mix={[s.buttonPrimary]}>
-										Start Monitoring
-									</button>
-								</form>
-							)}
+							<AuthCta isSignedIn={isSignedIn} />
 						</div>
 					</div>
 				</section>
 
 				<section mix={[s.marketingSection]}>
 					<div mix={[s.marketingContainer]}>
-						<div mix={[s.marketingSectionHeader]}>
-							<h2>Uptime vs {competitor}</h2>
-							<p mix={[s.marketingLead]}>{summary}</p>
-						</div>
+						<SectionHeader title={`Uptime vs ${competitor}`} description={summary} />
 
 						<table mix={[s.marketingComparisonTable]}>
 							<thead>
@@ -102,16 +93,15 @@ export default function ComparisonPageView(handle: Handle<ComparisonPageView.Pro
 
 				<section mix={[s.marketingSectionAlt]}>
 					<div mix={[s.marketingContainer]}>
-						<div mix={[s.marketingSectionHeader]}>
-							<h2>Why teams switch to Uptime</h2>
-						</div>
+						<SectionHeader title="Why teams switch to Uptime" />
 
 						<div mix={[s.marketingGrid]}>
 							{features.map((feature) => (
-								<div key={feature.title} mix={[s.marketingCard]}>
-									<h3 mix={[s.marketingCardTitle]}>{feature.title}</h3>
-									<p mix={[s.marketingCardDescription]}>{feature.description}</p>
-								</div>
+								<MarketingCard
+									key={feature.title}
+									title={feature.title}
+									description={feature.description}
+								/>
 							))}
 						</div>
 					</div>
@@ -119,16 +109,11 @@ export default function ComparisonPageView(handle: Handle<ComparisonPageView.Pro
 
 				<section mix={[s.marketingSection]}>
 					<div mix={[s.marketingContainer]}>
-						<div mix={[s.marketingSectionHeader]}>
-							<h2>Getting started</h2>
-						</div>
+						<SectionHeader title="Getting started" />
 
 						<div mix={[s.marketingSteps]}>
 							{steps.map((step) => (
-								<div key={step.title} mix={[s.marketingStep]}>
-									<h3 mix={[s.marketingCardTitle]}>{step.title}</h3>
-									<p mix={[s.marketingCardDescription]}>{step.description}</p>
-								</div>
+								<MarketingStep key={step.title} title={step.title} description={step.description} />
 							))}
 						</div>
 					</div>
@@ -136,16 +121,9 @@ export default function ComparisonPageView(handle: Handle<ComparisonPageView.Pro
 
 				<section mix={[s.marketingSectionAlt]}>
 					<div mix={[s.marketingContainer]}>
-						<div mix={[s.marketingSectionHeader]}>
-							<h2>Frequently asked questions</h2>
-						</div>
+						<SectionHeader title="Frequently asked questions" />
 
-						{faqs.map((faq) => (
-							<details key={faq.question} mix={[s.marketingFaqItem]}>
-								<summary mix={[s.marketingFaqQuestion]}>{faq.question}</summary>
-								<p mix={[s.marketingFaqAnswer]}>{faq.answer}</p>
-							</details>
-						))}
+						<FaqAccordion items={faqs.map((faq) => ({ ...faq }))} />
 					</div>
 				</section>
 
@@ -154,17 +132,7 @@ export default function ComparisonPageView(handle: Handle<ComparisonPageView.Pro
 					<p>Create your first monitor in under 2 minutes. No credit card required to start.</p>
 
 					<div mix={[s.marketingActions]}>
-						{isSignedIn ? (
-							<a href={routes.app.index.href()} mix={[s.buttonPrimary]}>
-								Go to dashboard
-							</a>
-						) : (
-							<form method="post" action={routes.auth.action.href()}>
-								<button type="submit" mix={[s.buttonPrimary]}>
-									Start Monitoring
-								</button>
-							</form>
-						)}
+						<AuthCta isSignedIn={isSignedIn} />
 					</div>
 				</section>
 			</>

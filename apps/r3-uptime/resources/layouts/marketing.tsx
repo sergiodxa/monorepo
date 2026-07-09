@@ -12,6 +12,7 @@
 
 import type { Handle, RemixNode } from "remix/ui";
 
+import AuthCta from "~/resources/components/marketing/auth-cta";
 import * as s from "~/resources/styles";
 import routes from "~/routes/web";
 
@@ -138,17 +139,7 @@ export default function MarketingLayout(handle: Handle<MarketingLayout.Props>) {
 							Docs
 						</a>
 
-						{isSignedIn ? (
-							<a href={routes.app.index.href()} mix={[s.buttonPrimary]}>
-								Dashboard
-							</a>
-						) : (
-							<form method="post" action={routes.auth.action.href()}>
-								<button type="submit" mix={[s.buttonPrimary]}>
-									Start Monitoring
-								</button>
-							</form>
-						)}
+						<AuthCta isSignedIn={isSignedIn} dashboardLabel="Dashboard" />
 					</nav>
 				</header>
 

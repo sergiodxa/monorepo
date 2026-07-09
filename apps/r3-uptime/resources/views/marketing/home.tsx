@@ -15,6 +15,10 @@
 
 import type { Handle } from "remix/ui";
 
+import AuthCta from "~/resources/components/marketing/auth-cta";
+import MarketingCard from "~/resources/components/marketing/card";
+import FaqAccordion from "~/resources/components/marketing/faq-accordion";
+import SectionHeader from "~/resources/components/marketing/section-header";
 import * as s from "~/resources/styles";
 import routes from "~/routes/web";
 
@@ -227,17 +231,7 @@ export default function HomeView(handle: Handle<HomeView.Props>) {
 						</p>
 
 						<div mix={[s.marketingActions]}>
-							{isSignedIn ? (
-								<a href={routes.app.index.href()} mix={[s.buttonPrimary]}>
-									Open Dashboard
-								</a>
-							) : (
-								<form method="post" action={routes.auth.action.href()}>
-									<button type="submit" mix={[s.buttonPrimary]}>
-										Start Monitoring
-									</button>
-								</form>
-							)}
+							<AuthCta isSignedIn={isSignedIn} dashboardLabel="Open Dashboard" />
 							<a href="#pricing" mix={[s.buttonSecondary]}>
 								View Pricing
 							</a>
@@ -276,25 +270,20 @@ export default function HomeView(handle: Handle<HomeView.Props>) {
 
 				<section id="features" mix={[s.marketingSection]}>
 					<div mix={[s.marketingContainer]}>
-						<div mix={[s.marketingSectionHeader]}>
-							<span mix={[s.marketingBadge]}>Features</span>
-							<h2>Powerful Monitoring Made Simple</h2>
-							<p mix={[s.marketingLead]}>
-								Everything you need to keep your services running smoothly, with no unnecessary
-								complexity.
-							</p>
-						</div>
+						<SectionHeader
+							badge="Features"
+							title="Powerful Monitoring Made Simple"
+							description="Everything you need to keep your services running smoothly, with no unnecessary complexity."
+						/>
 
 						<div mix={[s.marketingGrid]}>
 							{FEATURE_LINKS.map((feature) => (
-								<a
+								<MarketingCard
 									key={feature.slug}
 									href={routes.marketing.feature.href({ slug: feature.slug })}
-									mix={[s.marketingCard]}
-								>
-									<h3 mix={[s.marketingCardTitle]}>{feature.title}</h3>
-									<p mix={[s.marketingCardDescription]}>{feature.description}</p>
-								</a>
+									title={feature.title}
+									description={feature.description}
+								/>
 							))}
 						</div>
 					</div>
@@ -302,20 +291,19 @@ export default function HomeView(handle: Handle<HomeView.Props>) {
 
 				<section mix={[s.marketingSectionAlt]}>
 					<div mix={[s.marketingContainer]}>
-						<div mix={[s.marketingSectionHeader]}>
-							<span mix={[s.marketingBadge]}>Complete Feature Set</span>
-							<h2>Everything you need for reliable monitoring</h2>
-							<p mix={[s.marketingLead]}>
-								Advanced capabilities that make monitoring effortless and comprehensive.
-							</p>
-						</div>
+						<SectionHeader
+							badge="Complete Feature Set"
+							title="Everything you need for reliable monitoring"
+							description="Advanced capabilities that make monitoring effortless and comprehensive."
+						/>
 
 						<div mix={[s.marketingGrid]}>
 							{COMPLETE_FEATURES.map((feature) => (
-								<div key={feature.title} mix={[s.marketingCard]}>
-									<h3 mix={[s.marketingCardTitle]}>{feature.title}</h3>
-									<p mix={[s.marketingCardDescription]}>{feature.description}</p>
-								</div>
+								<MarketingCard
+									key={feature.title}
+									title={feature.title}
+									description={feature.description}
+								/>
 							))}
 						</div>
 					</div>
@@ -323,24 +311,20 @@ export default function HomeView(handle: Handle<HomeView.Props>) {
 
 				<section mix={[s.marketingSection]}>
 					<div mix={[s.marketingContainer]}>
-						<div mix={[s.marketingSectionHeader]}>
-							<span mix={[s.marketingBadge]}>Use Cases</span>
-							<h2>Built for every monitoring need</h2>
-							<p mix={[s.marketingLead]}>
-								From simple health checks to complex distributed systems, we've got you covered.
-							</p>
-						</div>
+						<SectionHeader
+							badge="Use Cases"
+							title="Built for every monitoring need"
+							description="From simple health checks to complex distributed systems, we've got you covered."
+						/>
 
 						<div mix={[s.marketingGrid]}>
 							{USE_CASE_LINKS.map((useCase) => (
-								<a
+								<MarketingCard
 									key={useCase.slug}
 									href={routes.marketing.useCase.href({ slug: useCase.slug })}
-									mix={[s.marketingCard]}
-								>
-									<h3 mix={[s.marketingCardTitle]}>{useCase.title}</h3>
-									<p mix={[s.marketingCardDescription]}>{useCase.description}</p>
-								</a>
+									title={useCase.title}
+									description={useCase.description}
+								/>
 							))}
 						</div>
 
@@ -363,48 +347,38 @@ export default function HomeView(handle: Handle<HomeView.Props>) {
 
 				<section id="pricing" mix={[s.marketingSectionAlt]}>
 					<div mix={[s.marketingContainer]}>
-						<div mix={[s.marketingSectionHeader]}>
-							<span mix={[s.marketingBadge]}>Pricing</span>
-							<h2>Simple, Transparent Pricing</h2>
-							<p mix={[s.marketingLead]}>
-								One subscription, no tiers. Pay only for what you use with our straightforward
-								pricing model.
-							</p>
-						</div>
+						<SectionHeader
+							badge="Pricing"
+							title="Simple, Transparent Pricing"
+							description="One subscription, no tiers. Pay only for what you use with our straightforward pricing model."
+						/>
 
 						<div mix={[s.marketingGrid]}>
-							<div mix={[s.marketingCard]}>
-								<h3 mix={[s.marketingCardTitle]}>Base subscription</h3>
-								<p mix={[s.marketingCardDescription]}>$5/month includes your first 5,000 pings.</p>
-							</div>
-							<div mix={[s.marketingCard]}>
-								<h3 mix={[s.marketingCardTitle]}>Additional pings</h3>
-								<p mix={[s.marketingCardDescription]}>$0.001 per ping after the first 5,000.</p>
-							</div>
-							<div mix={[s.marketingCard]}>
-								<h3 mix={[s.marketingCardTitle]}>No hidden fees</h3>
-								<p mix={[s.marketingCardDescription]}>
-									No extra charges for features or integrations. Pay for the pings you use.
-								</p>
-							</div>
+							<MarketingCard
+								title="Base subscription"
+								description="$5/month includes your first 5,000 pings."
+							/>
+							<MarketingCard
+								title="Additional pings"
+								description="$0.001 per ping after the first 5,000."
+							/>
+							<MarketingCard
+								title="No hidden fees"
+								description="No extra charges for features or integrations. Pay for the pings you use."
+							/>
 						</div>
 					</div>
 				</section>
 
 				<section id="faq" mix={[s.marketingSection]}>
 					<div mix={[s.marketingContainer]}>
-						<div mix={[s.marketingSectionHeader]}>
-							<span mix={[s.marketingBadge]}>FAQ</span>
-							<h2>Frequently Asked Questions</h2>
-							<p mix={[s.marketingLead]}>Find answers to common questions about Uptime.</p>
-						</div>
+						<SectionHeader
+							badge="FAQ"
+							title="Frequently Asked Questions"
+							description="Find answers to common questions about Uptime."
+						/>
 
-						{FAQS.map((faq) => (
-							<details key={faq.question} mix={[s.marketingFaqItem]}>
-								<summary mix={[s.marketingFaqQuestion]}>{faq.question}</summary>
-								<p mix={[s.marketingFaqAnswer]}>{faq.answer}</p>
-							</details>
-						))}
+						<FaqAccordion items={FAQS.map((faq) => ({ ...faq }))} />
 					</div>
 				</section>
 			</>
