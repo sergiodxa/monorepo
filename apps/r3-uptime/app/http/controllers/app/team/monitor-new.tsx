@@ -20,15 +20,11 @@ export default createAction(routes.app.team.monitorNew, () => {
 	let viewer = getViewer();
 	if (!viewer) throw new Error("requireUser must run before this handler");
 
-	let renderDocument = DocumentLayout();
 	return ctx.render(
-		renderDocument({
-			title: `${ctx.team.name} · New monitor`,
-			children: (
-				<AppShell team={ctx.team} viewer={viewer}>
-					<NewMonitorView team={ctx.team} />
-				</AppShell>
-			),
-		}),
+		<DocumentLayout title={`${ctx.team.name} · New monitor`}>
+			<AppShell team={ctx.team} viewer={viewer}>
+				<NewMonitorView team={ctx.team} />
+			</AppShell>
+		</DocumentLayout>,
 	);
 });

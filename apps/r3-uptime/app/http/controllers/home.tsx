@@ -32,12 +32,10 @@ export default createAction(
 			teamSlug = teams[0]?.slug ?? null;
 		}
 
-		let renderDocument = DocumentLayout();
 		return ctx.render(
-			renderDocument({
-				title: "Uptime",
-				children: <HomeView viewer={viewer} teamSlug={teamSlug} />,
-			}),
+			<DocumentLayout title="Uptime">
+				<HomeView viewer={viewer} teamSlug={teamSlug} />
+			</DocumentLayout>,
 		);
 	}),
 );

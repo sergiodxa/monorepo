@@ -27,16 +27,12 @@ export default createAction(
 
 		let monitors = await CronJobMonitor.listByTeam(db, ctx.team.id);
 
-		let renderDocument = DocumentLayout();
 		return ctx.render(
-			renderDocument({
-				title: `${ctx.team.name} · Cron job monitors`,
-				children: (
-					<AppShell team={ctx.team} viewer={viewer}>
-						<CronJobsView team={ctx.team} monitors={monitors} />
-					</AppShell>
-				),
-			}),
+			<DocumentLayout title={`${ctx.team.name} · Cron job monitors`}>
+				<AppShell team={ctx.team} viewer={viewer}>
+					<CronJobsView team={ctx.team} monitors={monitors} />
+				</AppShell>
+			</DocumentLayout>,
 		);
 	}),
 );

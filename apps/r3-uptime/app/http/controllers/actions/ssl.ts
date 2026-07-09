@@ -7,14 +7,13 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { RequestContext } from "remix/fetch-router";
-
 import { redirect } from "@pkg/http/response";
 import { notFound } from "@pkg/http/response/html";
 import { isFailure } from "@pkg/result";
 import { getServiceContainer } from "@pkg/service-container";
 import { validate } from "@pkg/validate";
 import { Database } from "remix/data-table";
+import { createAction } from "remix/fetch-router";
 import { Session } from "remix/session";
 
 import Monitor from "~/app/data/monitor";
@@ -23,7 +22,7 @@ import { calculateSslStatus } from "~/app/services/ssl-info";
 import routes from "~/routes/web";
 
 /** POST /actions/:team/update-ssl */
-export async function updateSsl(ctx: RequestContext<{ team: string }>) {
+export const updateSsl = createAction(routes.actions.updateSsl, async (ctx) => {
 	let result = await validate(ctx.formData, UpdateSslSchema);
 	let session = ctx.get(Session);
 
@@ -66,4 +65,4 @@ export async function updateSsl(ctx: RequestContext<{ team: string }>) {
 			status: redirect.Status.SeeOther,
 		},
 	);
-}
+});

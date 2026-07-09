@@ -22,9 +22,11 @@ interface RenderContext {
 /** Renders the fallback 404 document for unmatched routes. */
 export default function defaultHandler(ctx: RenderContext) {
 	let props = NotFoundViewModel.default({ title: "Page Not Found" });
-	let renderDocument = DocumentLayout();
 
-	return ctx.render(renderDocument({ title: props.title, children: <NotFoundView {...props} /> }), {
-		status: 404,
-	});
+	return ctx.render(
+		<DocumentLayout title={props.title}>
+			<NotFoundView {...props} />
+		</DocumentLayout>,
+		{ status: 404 },
+	);
 }

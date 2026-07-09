@@ -44,24 +44,20 @@ export default createAction(
 			StatusPage.getAttachedIds(db, statusPageId),
 		]);
 
-		let renderDocument = DocumentLayout();
 		return ctx.render(
-			renderDocument({
-				title: `${ctx.team.name} · Edit ${page.name}`,
-				children: (
-					<AppShell team={ctx.team} viewer={viewer}>
-						<EditStatusPageView
-							team={ctx.team}
-							page={page}
-							monitors={monitors}
-							dnsMonitors={dnsMonitors}
-							tcpMonitors={tcpMonitors}
-							cronJobs={cronJobs}
-							attachedIds={attachedIds}
-						/>
-					</AppShell>
-				),
-			}),
+			<DocumentLayout title={`${ctx.team.name} · Edit ${page.name}`}>
+				<AppShell team={ctx.team} viewer={viewer}>
+					<EditStatusPageView
+						team={ctx.team}
+						page={page}
+						monitors={monitors}
+						dnsMonitors={dnsMonitors}
+						tcpMonitors={tcpMonitors}
+						cronJobs={cronJobs}
+						attachedIds={attachedIds}
+					/>
+				</AppShell>
+			</DocumentLayout>,
 		);
 	}),
 );

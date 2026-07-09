@@ -35,22 +35,18 @@ export default createAction(
 			CronJobMonitor.listByTeam(db, ctx.team.id),
 		]);
 
-		let renderDocument = DocumentLayout();
 		return ctx.render(
-			renderDocument({
-				title: `${ctx.team.name} · New status page`,
-				children: (
-					<AppShell team={ctx.team} viewer={viewer}>
-						<NewStatusPageView
-							team={ctx.team}
-							monitors={monitors}
-							dnsMonitors={dnsMonitors}
-							tcpMonitors={tcpMonitors}
-							cronJobs={cronJobs}
-						/>
-					</AppShell>
-				),
-			}),
+			<DocumentLayout title={`${ctx.team.name} · New status page`}>
+				<AppShell team={ctx.team} viewer={viewer}>
+					<NewStatusPageView
+						team={ctx.team}
+						monitors={monitors}
+						dnsMonitors={dnsMonitors}
+						tcpMonitors={tcpMonitors}
+						cronJobs={cronJobs}
+					/>
+				</AppShell>
+			</DocumentLayout>,
 		);
 	}),
 );

@@ -21,15 +21,11 @@ export default createAction(routes.app.team.apiKeyNew, () => {
 	let viewer = getViewer();
 	if (!viewer) throw new Error("requireUser must run before this handler");
 
-	let renderDocument = DocumentLayout();
 	return ctx.render(
-		renderDocument({
-			title: `${ctx.team.name} · New API key`,
-			children: (
-				<AppShell team={ctx.team} viewer={viewer}>
-					<NewApiKeyView team={ctx.team} />
-				</AppShell>
-			),
-		}),
+		<DocumentLayout title={`${ctx.team.name} · New API key`}>
+			<AppShell team={ctx.team} viewer={viewer}>
+				<NewApiKeyView team={ctx.team} />
+			</AppShell>
+		</DocumentLayout>,
 	);
 });

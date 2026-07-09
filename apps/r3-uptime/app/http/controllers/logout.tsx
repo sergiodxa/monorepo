@@ -20,8 +20,11 @@ export default createController(routes.logout, {
 	actions: {
 		/** GET /logout — confirmation page. */
 		index(ctx) {
-			let renderDocument = DocumentLayout();
-			return ctx.render(renderDocument({ title: "Sign out", children: <LogoutView /> }));
+			return ctx.render(
+				<DocumentLayout title="Sign out">
+					<LogoutView />
+				</DocumentLayout>,
+			);
 		},
 
 		/** POST /logout — destroys the session and signs out of the identity provider. */

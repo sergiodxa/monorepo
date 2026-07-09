@@ -7,14 +7,13 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { RequestContext } from "remix/fetch-router";
-
 import { redirect } from "@pkg/http/response";
 import { badRequest, notFound } from "@pkg/http/response/html";
 import { isFailure } from "@pkg/result";
 import { getServiceContainer } from "@pkg/service-container";
 import { validate } from "@pkg/validate";
 import { Database } from "remix/data-table";
+import { createAction } from "remix/fetch-router";
 import { Session } from "remix/session";
 
 import Team from "~/app/data/team";
@@ -26,7 +25,7 @@ import { CreateTeamSchema, LeaveTeamSchema } from "~/app/http/validators/team";
 import routes from "~/routes/web";
 
 /** POST /actions/create-team */
-export async function createTeam(ctx: RequestContext) {
+export const createTeam = createAction(routes.accountActions.createTeam, async (ctx) => {
 	let viewer = getViewer();
 	if (!viewer) throw new Error("requireUser must run before this handler");
 
@@ -41,10 +40,10 @@ export async function createTeam(ctx: RequestContext) {
 	return redirect(routes.app.team.dashboard.href({ team: team.slug }), {
 		status: redirect.Status.SeeOther,
 	});
-}
+});
 
 /** POST /actions/leave-team */
-export async function leaveTeam(ctx: RequestContext) {
+export const leaveTeam = createAction(routes.accountActions.leaveTeam, async (ctx) => {
 	let viewer = getViewer();
 	if (!viewer) throw new Error("requireUser must run before this handler");
 
@@ -73,10 +72,10 @@ export async function leaveTeam(ctx: RequestContext) {
 
 	session?.flash("toast", { intent: "success", message: `Left "${team.name}".` });
 	return redirect(routes.home.href(), { status: redirect.Status.SeeOther });
-}
+});
 
 /** POST /actions/update-language */
-export async function updateLanguage(ctx: RequestContext) {
+export const updateLanguage = createAction(routes.accountActions.updateLanguage, async (ctx) => {
 	let viewer = getViewer();
 	if (!viewer) throw new Error("requireUser must run before this handler");
 
@@ -95,4 +94,4 @@ export async function updateLanguage(ctx: RequestContext) {
 		status: redirect.Status.SeeOther,
 		headers,
 	});
-}
+});

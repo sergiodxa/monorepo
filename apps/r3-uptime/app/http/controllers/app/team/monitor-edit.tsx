@@ -35,16 +35,12 @@ export default createAction(
 
 		let contentChecks = await ContentCheck.listByMonitor(db, monitor.id);
 
-		let renderDocument = DocumentLayout();
 		return ctx.render(
-			renderDocument({
-				title: `${ctx.team.name} · Edit ${monitor.name}`,
-				children: (
-					<AppShell team={ctx.team} viewer={viewer}>
-						<EditMonitorView team={ctx.team} monitor={monitor} contentChecks={contentChecks} />
-					</AppShell>
-				),
-			}),
+			<DocumentLayout title={`${ctx.team.name} · Edit ${monitor.name}`}>
+				<AppShell team={ctx.team} viewer={viewer}>
+					<EditMonitorView team={ctx.team} monitor={monitor} contentChecks={contentChecks} />
+				</AppShell>
+			</DocumentLayout>,
 		);
 	}),
 );

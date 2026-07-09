@@ -33,13 +33,11 @@ export default createAction(
 		let { inviteId } = s.parse(s.object({ inviteId: s.string() }), ctx.params);
 		let invite = await Invite.findById(db, inviteId);
 
-		let renderDocument = DocumentLayout();
 		let renderError = (message: string) =>
 			ctx.render(
-				renderDocument({
-					title: "Invite unavailable",
-					children: <InviteErrorView message={message} />,
-				}),
+				<DocumentLayout title="Invite unavailable">
+					<InviteErrorView message={message} />
+				</DocumentLayout>,
 				{ status: 400 },
 			);
 

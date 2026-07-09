@@ -39,16 +39,12 @@ export default createAction(
 		);
 		let countsByPageId = new Map(pages.map((page, index) => [page.id, attachedCounts[index] ?? 0]));
 
-		let renderDocument = DocumentLayout();
 		return ctx.render(
-			renderDocument({
-				title: `${ctx.team.name} · Status pages`,
-				children: (
-					<AppShell team={ctx.team} viewer={viewer}>
-						<StatusPagesView team={ctx.team} pages={pages} countsByPageId={countsByPageId} />
-					</AppShell>
-				),
-			}),
+			<DocumentLayout title={`${ctx.team.name} · Status pages`}>
+				<AppShell team={ctx.team} viewer={viewer}>
+					<StatusPagesView team={ctx.team} pages={pages} countsByPageId={countsByPageId} />
+				</AppShell>
+			</DocumentLayout>,
 		);
 	}),
 );

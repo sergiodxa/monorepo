@@ -30,16 +30,12 @@ export default createAction(
 		let monitors = await Monitor.listByTeam(db, ctx.team.id);
 		let monitorsById = new Map(monitors.map((monitor) => [monitor.id, monitor]));
 
-		let renderDocument = DocumentLayout();
 		return ctx.render(
-			renderDocument({
-				title: `${ctx.team.name} · Alerts`,
-				children: (
-					<AppShell team={ctx.team} viewer={viewer}>
-						<AlertsView team={ctx.team} alerts={alerts} monitorsById={monitorsById} />
-					</AppShell>
-				),
-			}),
+			<DocumentLayout title={`${ctx.team.name} · Alerts`}>
+				<AppShell team={ctx.team} viewer={viewer}>
+					<AlertsView team={ctx.team} alerts={alerts} monitorsById={monitorsById} />
+				</AppShell>
+			</DocumentLayout>,
 		);
 	}),
 );

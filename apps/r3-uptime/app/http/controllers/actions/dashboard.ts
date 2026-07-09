@@ -6,13 +6,12 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { RequestContext } from "remix/fetch-router";
-
 import { redirect } from "@pkg/http/response";
 import { isFailure } from "@pkg/result";
 import { validate } from "@pkg/validate";
 import * as s from "remix/data-schema";
 import * as f from "remix/data-schema/form-data";
+import { createAction } from "remix/fetch-router";
 
 import { dashboardTab } from "~/app/http/cookies";
 import routes from "~/routes/web";
@@ -22,7 +21,7 @@ const DASHBOARD_TABS = ["http", "dns", "tcp", "cron-jobs"] as const;
 const SetDashboardTabSchema = f.object({ tab: f.field(s.enum_(DASHBOARD_TABS)) });
 
 /** POST /actions/:team/set-dashboard-tab */
-export async function setDashboardTab(ctx: RequestContext<{ team: string }>) {
+export const setDashboardTab = createAction(routes.actions.setDashboardTab, async (ctx) => {
 	let result = await validate(ctx.formData, SetDashboardTabSchema);
 
 	let headers = new Headers();
@@ -34,4 +33,4 @@ export async function setDashboardTab(ctx: RequestContext<{ team: string }>) {
 		status: redirect.Status.SeeOther,
 		headers,
 	});
-}
+});

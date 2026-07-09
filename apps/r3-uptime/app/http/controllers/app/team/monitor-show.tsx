@@ -39,21 +39,17 @@ export default createAction(
 		let sparkline = isFailure(sparklineResult) ? [] : sparklineResult.data;
 		let dailyStats = await MonitorDailyStats.listForCurrentYear(db, monitor.id, "http");
 
-		let renderDocument = DocumentLayout();
 		return ctx.render(
-			renderDocument({
-				title: `${ctx.team.name} · ${monitor.name}`,
-				children: (
-					<AppShell team={ctx.team} viewer={viewer}>
-						<MonitorShowView
-							team={ctx.team}
-							monitor={monitor}
-							sparkline={sparkline}
-							dailyStats={dailyStats}
-						/>
-					</AppShell>
-				),
-			}),
+			<DocumentLayout title={`${ctx.team.name} · ${monitor.name}`}>
+				<AppShell team={ctx.team} viewer={viewer}>
+					<MonitorShowView
+						team={ctx.team}
+						monitor={monitor}
+						sparkline={sparkline}
+						dailyStats={dailyStats}
+					/>
+				</AppShell>
+			</DocumentLayout>,
 		);
 	}),
 );

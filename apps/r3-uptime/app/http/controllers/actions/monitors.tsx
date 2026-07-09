@@ -7,8 +7,6 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { RequestContext } from "remix/fetch-router";
-
 import { redirect } from "@pkg/http/response";
 import { notFound } from "@pkg/http/response/html";
 import { isFailure } from "@pkg/result";
@@ -17,6 +15,7 @@ import { validate } from "@pkg/validate";
 import * as s from "remix/data-schema";
 import * as f from "remix/data-schema/form-data";
 import { Database } from "remix/data-table";
+import { createAction } from "remix/fetch-router";
 import { Session } from "remix/session";
 
 import Monitor from "~/app/data/monitor";
@@ -27,7 +26,7 @@ import routes from "~/routes/web";
 const MonitorIdSchema = f.object({ monitor_id: f.field(s.string()) });
 
 /** POST /actions/:team/create-monitor */
-export async function createMonitor(ctx: RequestContext<{ team: string }>) {
+export const createMonitor = createAction(routes.actions.createMonitor, async (ctx) => {
 	let result = await validate(ctx.formData, CreateMonitorSchema);
 	let session = ctx.get(Session);
 	let viewer = getViewer();
@@ -52,10 +51,10 @@ export async function createMonitor(ctx: RequestContext<{ team: string }>) {
 		routes.app.team.monitorShow.href({ team: ctx.team.slug, monitorId: monitor.id }),
 		{ status: redirect.Status.SeeOther },
 	);
-}
+});
 
 /** POST /actions/:team/update-monitor */
-export async function updateMonitor(ctx: RequestContext<{ team: string }>) {
+export const updateMonitor = createAction(routes.actions.updateMonitor, async (ctx) => {
 	let result = await validate(ctx.formData, UpdateMonitorSchema);
 	let session = ctx.get(Session);
 
@@ -86,10 +85,10 @@ export async function updateMonitor(ctx: RequestContext<{ team: string }>) {
 			status: redirect.Status.SeeOther,
 		},
 	);
-}
+});
 
 /** DELETE /actions/:team/delete-monitor */
-export async function deleteMonitor(ctx: RequestContext<{ team: string }>) {
+export const deleteMonitor = createAction(routes.actions.deleteMonitor, async (ctx) => {
 	let result = await validate(ctx.formData, MonitorIdSchema);
 	let session = ctx.get(Session);
 
@@ -113,10 +112,10 @@ export async function deleteMonitor(ctx: RequestContext<{ team: string }>) {
 	return redirect(routes.app.team.httpMonitors.href({ team: ctx.team.slug }), {
 		status: redirect.Status.SeeOther,
 	});
-}
+});
 
 /** POST /actions/:team/play-monitor — triggers an on-demand check. */
-export async function playMonitor(ctx: RequestContext<{ team: string }>) {
+export const playMonitor = createAction(routes.actions.playMonitor, async (ctx) => {
 	let result = await validate(ctx.formData, MonitorIdSchema);
 	let session = ctx.get(Session);
 
@@ -137,4 +136,4 @@ export async function playMonitor(ctx: RequestContext<{ team: string }>) {
 		routes.app.team.monitorShow.href({ team: ctx.team.slug, monitorId: monitor.id }),
 		{ status: redirect.Status.SeeOther },
 	);
-}
+});

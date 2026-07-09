@@ -7,14 +7,13 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { RequestContext } from "remix/fetch-router";
-
 import { redirect } from "@pkg/http/response";
 import { notFound, unprocessableEntity } from "@pkg/http/response/html";
 import { isFailure } from "@pkg/result";
 import { getServiceContainer } from "@pkg/service-container";
 import { validate } from "@pkg/validate";
 import { Database } from "remix/data-table";
+import { createAction } from "remix/fetch-router";
 import { Session } from "remix/session";
 
 import type { AlertConfig } from "~/database/schema";
@@ -55,7 +54,7 @@ function buildConfig(values: CreateAlertValues): AlertConfig {
 }
 
 /** POST /actions/:team/create-alert */
-export async function createAlert(ctx: RequestContext<{ team: string }>) {
+export const createAlert = createAction(routes.actions.createAlert, async (ctx) => {
 	let result = await validate(ctx.formData, CreateAlertSchema);
 	let session = ctx.get(Session);
 
@@ -88,10 +87,10 @@ export async function createAlert(ctx: RequestContext<{ team: string }>) {
 	return redirect(routes.app.team.alerts.href({ team: ctx.team.slug }), {
 		status: redirect.Status.SeeOther,
 	});
-}
+});
 
 /** POST /actions/:team/update-alert */
-export async function updateAlert(ctx: RequestContext<{ team: string }>) {
+export const updateAlert = createAction(routes.actions.updateAlert, async (ctx) => {
 	let result = await validate(ctx.formData, UpdateAlertSchema);
 	let session = ctx.get(Session);
 
@@ -122,10 +121,10 @@ export async function updateAlert(ctx: RequestContext<{ team: string }>) {
 	return redirect(routes.app.team.alerts.href({ team: ctx.team.slug }), {
 		status: redirect.Status.SeeOther,
 	});
-}
+});
 
 /** DELETE /actions/:team/delete-alert */
-export async function deleteAlert(ctx: RequestContext<{ team: string }>) {
+export const deleteAlert = createAction(routes.actions.deleteAlert, async (ctx) => {
 	let result = await validate(ctx.formData, AlertIdSchema);
 	let session = ctx.get(Session);
 
@@ -145,4 +144,4 @@ export async function deleteAlert(ctx: RequestContext<{ team: string }>) {
 	return redirect(routes.app.team.alerts.href({ team: ctx.team.slug }), {
 		status: redirect.Status.SeeOther,
 	});
-}
+});

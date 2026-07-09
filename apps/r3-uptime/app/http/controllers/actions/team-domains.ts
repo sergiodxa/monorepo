@@ -7,8 +7,6 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { RequestContext } from "remix/fetch-router";
-
 import { redirect } from "@pkg/http/response";
 import { badRequest, notFound } from "@pkg/http/response/html";
 import { isFailure } from "@pkg/result";
@@ -16,6 +14,7 @@ import { getServiceContainer } from "@pkg/service-container";
 import { validate } from "@pkg/validate";
 import { env, waitUntil } from "cloudflare:workers";
 import { Database } from "remix/data-table";
+import { createAction } from "remix/fetch-router";
 import { Session } from "remix/session";
 
 import TeamDomain from "~/app/data/team-domain";
@@ -27,7 +26,7 @@ import {
 import routes from "~/routes/web";
 
 /** POST /actions/:team/add-domain */
-export async function addDomain(ctx: RequestContext<{ team: string }>) {
+export const addDomain = createAction(routes.teamAdminActions.addDomain, async (ctx) => {
 	let result = await validate(ctx.formData, AddDomainSchema);
 	let session = ctx.get(Session);
 
@@ -56,10 +55,10 @@ export async function addDomain(ctx: RequestContext<{ team: string }>) {
 	return redirect(routes.app.team.settings.href({ team: ctx.team.slug }), {
 		status: redirect.Status.SeeOther,
 	});
-}
+});
 
 /** DELETE /actions/:team/remove-domain */
-export async function removeDomain(ctx: RequestContext<{ team: string }>) {
+export const removeDomain = createAction(routes.teamAdminActions.removeDomain, async (ctx) => {
 	let result = await validate(ctx.formData, RemoveDomainSchema);
 	let session = ctx.get(Session);
 
@@ -79,29 +78,32 @@ export async function removeDomain(ctx: RequestContext<{ team: string }>) {
 	return redirect(routes.app.team.settings.href({ team: ctx.team.slug }), {
 		status: redirect.Status.SeeOther,
 	});
-}
+});
 
 /** POST /actions/:team/retry-domain-verification */
-export async function retryDomainVerification(ctx: RequestContext<{ team: string }>) {
-	let result = await validate(ctx.formData, RetryDomainVerificationSchema);
-	let session = ctx.get(Session);
+export const retryDomainVerification = createAction(
+	routes.teamAdminActions.retryDomainVerification,
+	async (ctx) => {
+		let result = await validate(ctx.formData, RetryDomainVerificationSchema);
+		let session = ctx.get(Session);
 
-	if (isFailure(result)) {
+		if (isFailure(result)) {
+			return redirect(routes.app.team.settings.href({ team: ctx.team.slug }), {
+				status: redirect.Status.SeeOther,
+			});
+		}
+
+		let db = getServiceContainer().get(Database);
+		let domain = await TeamDomain.findByIdForTeam(db, ctx.team.id, result.data.domain_id);
+		if (!domain) return notFound("Not Found");
+
+		if (domain.verified_at === null) {
+			waitUntil(env.QUEUE.send({ type: "verifyDomainOwnership", teamDomainId: domain.id }));
+		}
+
+		session?.flash("toast", { intent: "success", message: "Verification retried." });
 		return redirect(routes.app.team.settings.href({ team: ctx.team.slug }), {
 			status: redirect.Status.SeeOther,
 		});
-	}
-
-	let db = getServiceContainer().get(Database);
-	let domain = await TeamDomain.findByIdForTeam(db, ctx.team.id, result.data.domain_id);
-	if (!domain) return notFound("Not Found");
-
-	if (domain.verified_at === null) {
-		waitUntil(env.QUEUE.send({ type: "verifyDomainOwnership", teamDomainId: domain.id }));
-	}
-
-	session?.flash("toast", { intent: "success", message: "Verification retried." });
-	return redirect(routes.app.team.settings.href({ team: ctx.team.slug }), {
-		status: redirect.Status.SeeOther,
-	});
-}
+	},
+);

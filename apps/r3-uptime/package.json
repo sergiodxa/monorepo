@@ -17,6 +17,7 @@
 		"@pkg/auth-sdk": "workspace:*",
 		"@pkg/data-table-d1": "workspace:*",
 		"@pkg/http": "workspace:*",
+		"@pkg/i18n": "workspace:*",
 		"@pkg/jobs": "workspace:*",
 		"@pkg/logger": "workspace:*",
 		"@pkg/polar": "workspace:*",

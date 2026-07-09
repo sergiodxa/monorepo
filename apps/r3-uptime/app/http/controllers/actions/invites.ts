@@ -7,14 +7,13 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { RequestContext } from "remix/fetch-router";
-
 import { redirect } from "@pkg/http/response";
 import { badRequest, notFound } from "@pkg/http/response/html";
 import { isFailure } from "@pkg/result";
 import { getServiceContainer } from "@pkg/service-container";
 import { validate } from "@pkg/validate";
 import { Database } from "remix/data-table";
+import { createAction } from "remix/fetch-router";
 import { Session } from "remix/session";
 import { Resend } from "resend";
 
@@ -24,7 +23,7 @@ import { sendInviteEmail } from "~/app/services/invite-email";
 import routes from "~/routes/web";
 
 /** POST /actions/:team/create-invite */
-export async function createInvite(ctx: RequestContext<{ team: string }>) {
+export const createInvite = createAction(routes.teamAdminActions.createInvite, async (ctx) => {
 	let result = await validate(ctx.formData, CreateInviteSchema);
 	let session = ctx.get(Session);
 
@@ -53,10 +52,10 @@ export async function createInvite(ctx: RequestContext<{ team: string }>) {
 	return redirect(routes.app.team.settings.href({ team: ctx.team.slug }), {
 		status: redirect.Status.SeeOther,
 	});
-}
+});
 
 /** DELETE /actions/:team/revoke-invite */
-export async function revokeInvite(ctx: RequestContext<{ team: string }>) {
+export const revokeInvite = createAction(routes.teamAdminActions.revokeInvite, async (ctx) => {
 	let result = await validate(ctx.formData, RevokeInviteSchema);
 	let session = ctx.get(Session);
 
@@ -77,4 +76,4 @@ export async function revokeInvite(ctx: RequestContext<{ team: string }>) {
 	return redirect(routes.app.team.settings.href({ team: ctx.team.slug }), {
 		status: redirect.Status.SeeOther,
 	});
-}
+});

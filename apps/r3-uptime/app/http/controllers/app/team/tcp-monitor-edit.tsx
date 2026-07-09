@@ -32,16 +32,12 @@ export default createAction(
 		let monitor = await TcpMonitor.findByIdForTeam(db, ctx.team.id, monitorId);
 		if (!monitor) return notFound("Not Found");
 
-		let renderDocument = DocumentLayout();
 		return ctx.render(
-			renderDocument({
-				title: `${ctx.team.name} · Edit ${monitor.name}`,
-				children: (
-					<AppShell team={ctx.team} viewer={viewer}>
-						<EditTcpMonitorView team={ctx.team} monitor={monitor} />
-					</AppShell>
-				),
-			}),
+			<DocumentLayout title={`${ctx.team.name} · Edit ${monitor.name}`}>
+				<AppShell team={ctx.team} viewer={viewer}>
+					<EditTcpMonitorView team={ctx.team} monitor={monitor} />
+				</AppShell>
+			</DocumentLayout>,
 		);
 	}),
 );

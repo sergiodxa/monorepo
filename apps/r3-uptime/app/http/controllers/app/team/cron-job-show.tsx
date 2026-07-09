@@ -40,22 +40,18 @@ export default createAction(
 		).toString();
 		let dailyStats = await MonitorDailyStats.listForCurrentYear(db, monitor.id, "cron");
 
-		let renderDocument = DocumentLayout();
 		return ctx.render(
-			renderDocument({
-				title: `${ctx.team.name} · ${monitor.name}`,
-				children: (
-					<AppShell team={ctx.team} viewer={viewer}>
-						<CronJobShowView
-							team={ctx.team}
-							monitor={monitor}
-							pings={pings}
-							pingUrl={pingUrl}
-							dailyStats={dailyStats}
-						/>
-					</AppShell>
-				),
-			}),
+			<DocumentLayout title={`${ctx.team.name} · ${monitor.name}`}>
+				<AppShell team={ctx.team} viewer={viewer}>
+					<CronJobShowView
+						team={ctx.team}
+						monitor={monitor}
+						pings={pings}
+						pingUrl={pingUrl}
+						dailyStats={dailyStats}
+					/>
+				</AppShell>
+			</DocumentLayout>,
 		);
 	}),
 );

@@ -7,14 +7,13 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { RequestContext } from "remix/fetch-router";
-
 import { redirect } from "@pkg/http/response";
 import { notFound } from "@pkg/http/response/html";
 import { isFailure } from "@pkg/result";
 import { getServiceContainer } from "@pkg/service-container";
 import { validate } from "@pkg/validate";
 import { Database } from "remix/data-table";
+import { createAction } from "remix/fetch-router";
 import { Session } from "remix/session";
 import { Resend } from "resend";
 
@@ -31,7 +30,7 @@ import { checkTcpConnection } from "~/app/services/tcp-check";
 import routes from "~/routes/web";
 
 /** POST /actions/:team/create-tcp-monitor */
-export async function createTcpMonitor(ctx: RequestContext<{ team: string }>) {
+export const createTcpMonitor = createAction(routes.actions.createTcpMonitor, async (ctx) => {
 	let result = await validate(ctx.formData, CreateTcpMonitorSchema);
 	let session = ctx.get(Session);
 
@@ -53,10 +52,10 @@ export async function createTcpMonitor(ctx: RequestContext<{ team: string }>) {
 		routes.app.team.tcpMonitorShow.href({ team: ctx.team.slug, monitorId: monitor.id }),
 		{ status: redirect.Status.SeeOther },
 	);
-}
+});
 
 /** POST /actions/:team/update-tcp-monitor */
-export async function updateTcpMonitor(ctx: RequestContext<{ team: string }>) {
+export const updateTcpMonitor = createAction(routes.actions.updateTcpMonitor, async (ctx) => {
 	let result = await validate(ctx.formData, UpdateTcpMonitorSchema);
 	let session = ctx.get(Session);
 
@@ -83,10 +82,10 @@ export async function updateTcpMonitor(ctx: RequestContext<{ team: string }>) {
 		routes.app.team.tcpMonitorShow.href({ team: ctx.team.slug, monitorId: monitor_id }),
 		{ status: redirect.Status.SeeOther },
 	);
-}
+});
 
 /** DELETE /actions/:team/delete-tcp-monitor */
-export async function deleteTcpMonitor(ctx: RequestContext<{ team: string }>) {
+export const deleteTcpMonitor = createAction(routes.actions.deleteTcpMonitor, async (ctx) => {
 	let result = await validate(ctx.formData, TcpMonitorIdSchema);
 	let session = ctx.get(Session);
 
@@ -109,10 +108,10 @@ export async function deleteTcpMonitor(ctx: RequestContext<{ team: string }>) {
 	return redirect(routes.app.team.tcpMonitors.href({ team: ctx.team.slug }), {
 		status: redirect.Status.SeeOther,
 	});
-}
+});
 
 /** POST /actions/:team/check-tcp-monitor — triggers an immediate on-demand check. */
-export async function checkTcpMonitor(ctx: RequestContext<{ team: string }>) {
+export const checkTcpMonitor = createAction(routes.actions.checkTcpMonitor, async (ctx) => {
 	let result = await validate(ctx.formData, TcpMonitorIdSchema);
 	let session = ctx.get(Session);
 
@@ -141,4 +140,4 @@ export async function checkTcpMonitor(ctx: RequestContext<{ team: string }>) {
 		routes.app.team.tcpMonitorShow.href({ team: ctx.team.slug, monitorId: monitor.id }),
 		{ status: redirect.Status.SeeOther },
 	);
-}
+});

@@ -27,16 +27,12 @@ export default createAction(
 
 		let monitors = await TcpMonitor.listByTeam(db, ctx.team.id);
 
-		let renderDocument = DocumentLayout();
 		return ctx.render(
-			renderDocument({
-				title: `${ctx.team.name} · TCP monitors`,
-				children: (
-					<AppShell team={ctx.team} viewer={viewer}>
-						<TcpMonitorsView team={ctx.team} monitors={monitors} />
-					</AppShell>
-				),
-			}),
+			<DocumentLayout title={`${ctx.team.name} · TCP monitors`}>
+				<AppShell team={ctx.team} viewer={viewer}>
+					<TcpMonitorsView team={ctx.team} monitors={monitors} />
+				</AppShell>
+			</DocumentLayout>,
 		);
 	}),
 );

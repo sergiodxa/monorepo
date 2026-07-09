@@ -27,16 +27,12 @@ export default createAction(
 
 		let monitors = await Monitor.listByTeam(db, ctx.team.id);
 
-		let renderDocument = DocumentLayout();
 		return ctx.render(
-			renderDocument({
-				title: `${ctx.team.name} · New alert`,
-				children: (
-					<AppShell team={ctx.team} viewer={viewer}>
-						<NewAlertView team={ctx.team} monitors={monitors} />
-					</AppShell>
-				),
-			}),
+			<DocumentLayout title={`${ctx.team.name} · New alert`}>
+				<AppShell team={ctx.team} viewer={viewer}>
+					<NewAlertView team={ctx.team} monitors={monitors} />
+				</AppShell>
+			</DocumentLayout>,
 		);
 	}),
 );

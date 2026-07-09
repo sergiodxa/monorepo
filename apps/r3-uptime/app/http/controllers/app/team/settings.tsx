@@ -41,22 +41,18 @@ export default createAction(
 			members.map((member) => member.subject_id),
 		);
 
-		let renderDocument = DocumentLayout();
 		return ctx.render(
-			renderDocument({
-				title: `${ctx.team.name} · Settings`,
-				children: (
-					<AppShell team={ctx.team} viewer={viewer}>
-						<SettingsView
-							team={ctx.team}
-							members={members}
-							subjectsById={subjectsById}
-							pendingInvites={pendingInvites}
-							domains={domains}
-						/>
-					</AppShell>
-				),
-			}),
+			<DocumentLayout title={`${ctx.team.name} · Settings`}>
+				<AppShell team={ctx.team} viewer={viewer}>
+					<SettingsView
+						team={ctx.team}
+						members={members}
+						subjectsById={subjectsById}
+						pendingInvites={pendingInvites}
+						domains={domains}
+					/>
+				</AppShell>
+			</DocumentLayout>,
 		);
 	}),
 );

@@ -33,20 +33,16 @@ export default createAction(
 			UserPreferences.findBySubjectId(db, viewer.id),
 		]);
 
-		let renderDocument = DocumentLayout();
 		return ctx.render(
-			renderDocument({
-				title: `${ctx.team.name} · Account`,
-				children: (
-					<AppShell team={ctx.team} viewer={viewer}>
-						<AccountView
-							viewer={viewer}
-							memberships={memberships}
-							preferredLanguage={preferences?.preferred_language ?? null}
-						/>
-					</AppShell>
-				),
-			}),
+			<DocumentLayout title={`${ctx.team.name} · Account`}>
+				<AppShell team={ctx.team} viewer={viewer}>
+					<AccountView
+						viewer={viewer}
+						memberships={memberships}
+						preferredLanguage={preferences?.preferred_language ?? null}
+					/>
+				</AppShell>
+			</DocumentLayout>,
 		);
 	}),
 );

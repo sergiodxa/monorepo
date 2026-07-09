@@ -35,16 +35,12 @@ export default createAction(
 
 		let monitors = await Monitor.listByTeam(db, ctx.team.id);
 
-		let renderDocument = DocumentLayout();
 		return ctx.render(
-			renderDocument({
-				title: `${ctx.team.name} · Edit ${alert.name}`,
-				children: (
-					<AppShell team={ctx.team} viewer={viewer}>
-						<EditAlertView team={ctx.team} alert={alert} monitors={monitors} />
-					</AppShell>
-				),
-			}),
+			<DocumentLayout title={`${ctx.team.name} · Edit ${alert.name}`}>
+				<AppShell team={ctx.team} viewer={viewer}>
+					<EditAlertView team={ctx.team} alert={alert} monitors={monitors} />
+				</AppShell>
+			</DocumentLayout>,
 		);
 	}),
 );

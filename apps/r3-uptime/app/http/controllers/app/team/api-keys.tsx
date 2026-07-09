@@ -36,16 +36,12 @@ export default createAction(
 		let apiKeys = await ApiKey.listByTeam(db, ctx.team.id);
 		let newApiKey = ctx.get(Session)?.get("newApiKey") as NewApiKey | undefined;
 
-		let renderDocument = DocumentLayout();
 		return ctx.render(
-			renderDocument({
-				title: `${ctx.team.name} · API keys`,
-				children: (
-					<AppShell team={ctx.team} viewer={viewer}>
-						<ApiKeysView team={ctx.team} apiKeys={apiKeys} newApiKey={newApiKey} />
-					</AppShell>
-				),
-			}),
+			<DocumentLayout title={`${ctx.team.name} · API keys`}>
+				<AppShell team={ctx.team} viewer={viewer}>
+					<ApiKeysView team={ctx.team} apiKeys={apiKeys} newApiKey={newApiKey} />
+				</AppShell>
+			</DocumentLayout>,
 		);
 	}),
 );

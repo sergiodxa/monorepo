@@ -20,15 +20,11 @@ export default createAction(routes.app.team.tcpMonitorNew, () => {
 	let viewer = getViewer();
 	if (!viewer) throw new Error("requireUser must run before this handler");
 
-	let renderDocument = DocumentLayout();
 	return ctx.render(
-		renderDocument({
-			title: `${ctx.team.name} · New TCP monitor`,
-			children: (
-				<AppShell team={ctx.team} viewer={viewer}>
-					<NewTcpMonitorView team={ctx.team} />
-				</AppShell>
-			),
-		}),
+		<DocumentLayout title={`${ctx.team.name} · New TCP monitor`}>
+			<AppShell team={ctx.team} viewer={viewer}>
+				<NewTcpMonitorView team={ctx.team} />
+			</AppShell>
+		</DocumentLayout>,
 	);
 });

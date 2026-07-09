@@ -88,31 +88,27 @@ export default createAction(
 			expired: sslMonitors.filter((monitor) => monitor.ssl_status === "expired").length,
 		};
 
-		let renderDocument = DocumentLayout();
 		let headers = new Headers();
 		headers.set("Set-Cookie", await dashboardTabCookie.serialize(tab));
 
 		return ctx.render(
-			renderDocument({
-				title: `${ctx.team.name} · Dashboard`,
-				children: (
-					<AppShell team={ctx.team} viewer={viewer} toast={toast}>
-						<DashboardView
-							team={ctx.team}
-							tab={tab}
-							monitorCount={monitors.length}
-							uptimePercent={uptimePercent}
-							slowestResponseMs={slowestResponseMs}
-							httpRows={httpRows}
-							sslCounts={sslCounts}
-							dnsMonitors={dnsMonitors}
-							tcpMonitors={tcpMonitors}
-							cronJobMonitors={cronJobMonitors}
-							analyticsUnavailable={analyticsUnavailable}
-						/>
-					</AppShell>
-				),
-			}),
+			<DocumentLayout title={`${ctx.team.name} · Dashboard`}>
+				<AppShell team={ctx.team} viewer={viewer} toast={toast}>
+					<DashboardView
+						team={ctx.team}
+						tab={tab}
+						monitorCount={monitors.length}
+						uptimePercent={uptimePercent}
+						slowestResponseMs={slowestResponseMs}
+						httpRows={httpRows}
+						sslCounts={sslCounts}
+						dnsMonitors={dnsMonitors}
+						tcpMonitors={tcpMonitors}
+						cronJobMonitors={cronJobMonitors}
+						analyticsUnavailable={analyticsUnavailable}
+					/>
+				</AppShell>
+			</DocumentLayout>,
 			{ headers },
 		);
 	}),

@@ -9,14 +9,13 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { RequestContext } from "remix/fetch-router";
-
 import { redirect } from "@pkg/http/response";
 import { badRequest, notFound } from "@pkg/http/response/html";
 import { isFailure } from "@pkg/result";
 import { getServiceContainer } from "@pkg/service-container";
 import { validate } from "@pkg/validate";
 import { Database } from "remix/data-table";
+import { createAction } from "remix/fetch-router";
 import { Session } from "remix/session";
 
 import ApiKey, { MAX_API_KEYS_PER_TEAM } from "~/app/data/api-key";
@@ -24,7 +23,7 @@ import { CreateApiKeySchema, DeleteApiKeySchema } from "~/app/http/validators/ap
 import routes from "~/routes/web";
 
 /** POST /actions/:team/create-api-key */
-export async function createApiKey(ctx: RequestContext<{ team: string }>) {
+export const createApiKey = createAction(routes.teamAdminActions.createApiKey, async (ctx) => {
 	let result = await validate(ctx.formData, CreateApiKeySchema);
 	let session = ctx.get(Session);
 
@@ -49,10 +48,10 @@ export async function createApiKey(ctx: RequestContext<{ team: string }>) {
 	return redirect(routes.app.team.apiKeys.href({ team: ctx.team.slug }), {
 		status: redirect.Status.SeeOther,
 	});
-}
+});
 
 /** DELETE /actions/:team/delete-api-key */
-export async function deleteApiKey(ctx: RequestContext<{ team: string }>) {
+export const deleteApiKey = createAction(routes.teamAdminActions.deleteApiKey, async (ctx) => {
 	let result = await validate(ctx.formData, DeleteApiKeySchema);
 	let session = ctx.get(Session);
 
@@ -72,4 +71,4 @@ export async function deleteApiKey(ctx: RequestContext<{ team: string }>) {
 	return redirect(routes.app.team.apiKeys.href({ team: ctx.team.slug }), {
 		status: redirect.Status.SeeOther,
 	});
-}
+});

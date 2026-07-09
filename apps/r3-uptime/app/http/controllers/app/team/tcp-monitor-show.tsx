@@ -36,21 +36,17 @@ export default createAction(
 		let results = await TcpMonitor.listResults(db, monitor.id);
 		let dailyStats = await MonitorDailyStats.listForCurrentYear(db, monitor.id, "tcp");
 
-		let renderDocument = DocumentLayout();
 		return ctx.render(
-			renderDocument({
-				title: `${ctx.team.name} · ${monitor.name}`,
-				children: (
-					<AppShell team={ctx.team} viewer={viewer}>
-						<TcpMonitorShowView
-							team={ctx.team}
-							monitor={monitor}
-							results={results}
-							dailyStats={dailyStats}
-						/>
-					</AppShell>
-				),
-			}),
+			<DocumentLayout title={`${ctx.team.name} · ${monitor.name}`}>
+				<AppShell team={ctx.team} viewer={viewer}>
+					<TcpMonitorShowView
+						team={ctx.team}
+						monitor={monitor}
+						results={results}
+						dailyStats={dailyStats}
+					/>
+				</AppShell>
+			</DocumentLayout>,
 		);
 	}),
 );

@@ -7,14 +7,13 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { RequestContext } from "remix/fetch-router";
-
 import { redirect } from "@pkg/http/response";
 import { notFound } from "@pkg/http/response/html";
 import { isFailure } from "@pkg/result";
 import { getServiceContainer } from "@pkg/service-container";
 import { validate } from "@pkg/validate";
 import { Database } from "remix/data-table";
+import { createAction } from "remix/fetch-router";
 import { Session } from "remix/session";
 
 import CronJobMonitor from "~/app/data/cron-job";
@@ -29,7 +28,7 @@ const INVALID_CRON_MESSAGE = "Please enter a valid cron expression.";
 const GENERIC_ERROR_MESSAGE = "Please check the cron job details and try again.";
 
 /** POST /actions/:team/create-cron-job */
-export async function createCronJob(ctx: RequestContext<{ team: string }>) {
+export const createCronJob = createAction(routes.actions.createCronJob, async (ctx) => {
 	let result = await validate(ctx.formData, CreateCronJobSchema);
 	let session = ctx.get(Session);
 
@@ -63,10 +62,10 @@ export async function createCronJob(ctx: RequestContext<{ team: string }>) {
 		routes.app.team.cronJobShow.href({ team: ctx.team.slug, monitorId: monitor.id }),
 		{ status: redirect.Status.SeeOther },
 	);
-}
+});
 
 /** POST /actions/:team/update-cron-job */
-export async function updateCronJob(ctx: RequestContext<{ team: string }>) {
+export const updateCronJob = createAction(routes.actions.updateCronJob, async (ctx) => {
 	let result = await validate(ctx.formData, UpdateCronJobSchema);
 	let session = ctx.get(Session);
 
@@ -114,10 +113,10 @@ export async function updateCronJob(ctx: RequestContext<{ team: string }>) {
 		routes.app.team.cronJobShow.href({ team: ctx.team.slug, monitorId: monitor_id }),
 		{ status: redirect.Status.SeeOther },
 	);
-}
+});
 
 /** DELETE /actions/:team/delete-cron-job */
-export async function deleteCronJob(ctx: RequestContext<{ team: string }>) {
+export const deleteCronJob = createAction(routes.actions.deleteCronJob, async (ctx) => {
 	let result = await validate(ctx.formData, CronJobIdSchema);
 	let session = ctx.get(Session);
 
@@ -137,4 +136,4 @@ export async function deleteCronJob(ctx: RequestContext<{ team: string }>) {
 	return redirect(routes.app.team.cronJobs.href({ team: ctx.team.slug }), {
 		status: redirect.Status.SeeOther,
 	});
-}
+});

@@ -43,9 +43,10 @@ function provider(ctx: { request: Request }) {
 
 /** Renders the sign-in failure page. */
 function authError(ctx: { render: Renderer<RemixNode> }, message: string) {
-	let renderDocument = DocumentLayout();
 	return ctx.render(
-		renderDocument({ title: "Sign-in failed", children: <AuthErrorView message={message} /> }),
+		<DocumentLayout title="Sign-in failed">
+			<AuthErrorView message={message} />
+		</DocumentLayout>,
 		{ status: 400 },
 	);
 }

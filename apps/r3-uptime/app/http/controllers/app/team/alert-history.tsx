@@ -32,16 +32,12 @@ export default createAction(
 		let alertsById = new Map(alerts.map((alert) => [alert.id, alert]));
 		let events = await AlertEvent.listByAlertIds(db, [...alertsById.keys()], HISTORY_LIMIT);
 
-		let renderDocument = DocumentLayout();
 		return ctx.render(
-			renderDocument({
-				title: `${ctx.team.name} · Alert history`,
-				children: (
-					<AppShell team={ctx.team} viewer={viewer}>
-						<AlertHistoryView team={ctx.team} events={events} alertsById={alertsById} />
-					</AppShell>
-				),
-			}),
+			<DocumentLayout title={`${ctx.team.name} · Alert history`}>
+				<AppShell team={ctx.team} viewer={viewer}>
+					<AlertHistoryView team={ctx.team} events={events} alertsById={alertsById} />
+				</AppShell>
+			</DocumentLayout>,
 		);
 	}),
 );

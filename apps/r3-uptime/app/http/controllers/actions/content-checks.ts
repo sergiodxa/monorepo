@@ -6,14 +6,13 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { RequestContext } from "remix/fetch-router";
-
 import { redirect } from "@pkg/http/response";
 import { notFound, unprocessableEntity } from "@pkg/http/response/html";
 import { isFailure } from "@pkg/result";
 import { getServiceContainer } from "@pkg/service-container";
 import { validate } from "@pkg/validate";
 import { Database } from "remix/data-table";
+import { createAction } from "remix/fetch-router";
 import { Session } from "remix/session";
 
 import ContentCheck from "~/app/data/content-check";
@@ -28,7 +27,7 @@ import routes from "~/routes/web";
 const MAX_CONTENT_CHECKS_PER_MONITOR = 10;
 
 /** POST /actions/:team/create-content-check */
-export async function createContentCheck(ctx: RequestContext<{ team: string }>) {
+export const createContentCheck = createAction(routes.actions.createContentCheck, async (ctx) => {
 	let result = await validate(ctx.formData, CreateContentCheckSchema);
 	let session = ctx.get(Session);
 
@@ -73,10 +72,10 @@ export async function createContentCheck(ctx: RequestContext<{ team: string }>) 
 			status: redirect.Status.SeeOther,
 		},
 	);
-}
+});
 
 /** DELETE /actions/:team/delete-content-check */
-export async function deleteContentCheck(ctx: RequestContext<{ team: string }>) {
+export const deleteContentCheck = createAction(routes.actions.deleteContentCheck, async (ctx) => {
 	let result = await validate(ctx.formData, DeleteContentCheckSchema);
 
 	if (isFailure(result)) {
@@ -103,4 +102,4 @@ export async function deleteContentCheck(ctx: RequestContext<{ team: string }>) 
 			status: redirect.Status.SeeOther,
 		},
 	);
-}
+});

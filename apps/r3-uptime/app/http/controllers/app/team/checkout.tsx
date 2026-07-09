@@ -33,16 +33,12 @@ export default createAction(
 		if (!viewer) throw new Error("requireUser must run before this handler");
 
 		if (ctx.membership.subject_id !== ctx.team.owner_id) {
-			let renderDocument = DocumentLayout();
 			return ctx.render(
-				renderDocument({
-					title: `${ctx.team.name} · Billing`,
-					children: (
-						<AppShell team={ctx.team} viewer={viewer}>
-							<CheckoutView />
-						</AppShell>
-					),
-				}),
+				<DocumentLayout title={`${ctx.team.name} · Billing`}>
+					<AppShell team={ctx.team} viewer={viewer}>
+						<CheckoutView />
+					</AppShell>
+				</DocumentLayout>,
 			);
 		}
 

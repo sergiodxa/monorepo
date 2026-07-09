@@ -9,8 +9,6 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { RequestContext } from "remix/fetch-router";
-
 import { redirect } from "@pkg/http/response";
 import { badRequest, notFound } from "@pkg/http/response/html";
 import { PolarClient } from "@pkg/polar";
@@ -18,6 +16,7 @@ import { isFailure } from "@pkg/result";
 import { getServiceContainer } from "@pkg/service-container";
 import { validate } from "@pkg/validate";
 import { Database } from "remix/data-table";
+import { createAction } from "remix/fetch-router";
 import { Session } from "remix/session";
 
 import Customer from "~/app/data/customer";
@@ -32,7 +31,7 @@ import {
 import routes from "~/routes/web";
 
 /** POST /actions/:team/update-team */
-export async function updateTeam(ctx: RequestContext<{ team: string }>) {
+export const updateTeam = createAction(routes.teamAdminActions.updateTeam, async (ctx) => {
 	let result = await validate(ctx.formData, UpdateTeamSchema);
 	let session = ctx.get(Session);
 
@@ -51,10 +50,10 @@ export async function updateTeam(ctx: RequestContext<{ team: string }>) {
 	return redirect(routes.app.team.settings.href({ team: ctx.team.slug }), {
 		status: redirect.Status.SeeOther,
 	});
-}
+});
 
 /** DELETE /actions/:team/delete-team — owner-only in effect (checked here explicitly). */
-export async function deleteTeam(ctx: RequestContext<{ team: string }>) {
+export const deleteTeam = createAction(routes.teamAdminActions.deleteTeam, async (ctx) => {
 	if (ctx.membership.subject_id !== ctx.team.owner_id) {
 		return badRequest("Only the team owner can delete the team.");
 	}
@@ -71,10 +70,10 @@ export async function deleteTeam(ctx: RequestContext<{ team: string }>) {
 	await Team.deleteById(db, ctx.team.id);
 
 	return redirect(routes.home.href(), { status: redirect.Status.SeeOther });
-}
+});
 
 /** DELETE /actions/:team/remove-member */
-export async function removeMember(ctx: RequestContext<{ team: string }>) {
+export const removeMember = createAction(routes.teamAdminActions.removeMember, async (ctx) => {
 	let result = await validate(ctx.formData, RemoveMemberSchema);
 	let session = ctx.get(Session);
 
@@ -96,10 +95,10 @@ export async function removeMember(ctx: RequestContext<{ team: string }>) {
 	return redirect(routes.app.team.settings.href({ team: ctx.team.slug }), {
 		status: redirect.Status.SeeOther,
 	});
-}
+});
 
 /** POST /actions/:team/change-role */
-export async function changeRole(ctx: RequestContext<{ team: string }>) {
+export const changeRole = createAction(routes.teamAdminActions.changeRole, async (ctx) => {
 	let result = await validate(ctx.formData, ChangeRoleSchema);
 	let session = ctx.get(Session);
 
@@ -123,4 +122,4 @@ export async function changeRole(ctx: RequestContext<{ team: string }>) {
 	return redirect(routes.app.team.settings.href({ team: ctx.team.slug }), {
 		status: redirect.Status.SeeOther,
 	});
-}
+});

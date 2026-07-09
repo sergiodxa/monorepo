@@ -44,16 +44,12 @@ export default createAction(
 			health: healthByMonitorId.get(monitor.id) ?? ("pending" as MonitorHealth),
 		}));
 
-		let renderDocument = DocumentLayout();
 		return ctx.render(
-			renderDocument({
-				title: `${ctx.team.name} · HTTP monitors`,
-				children: (
-					<AppShell team={ctx.team} viewer={viewer}>
-						<HttpMonitorsView team={ctx.team} rows={rows} />
-					</AppShell>
-				),
-			}),
+			<DocumentLayout title={`${ctx.team.name} · HTTP monitors`}>
+				<AppShell team={ctx.team} viewer={viewer}>
+					<HttpMonitorsView team={ctx.team} rows={rows} />
+				</AppShell>
+			</DocumentLayout>,
 		);
 	}),
 );

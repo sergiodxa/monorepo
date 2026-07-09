@@ -20,15 +20,11 @@ export default createAction(routes.app.team.dnsMonitorNew, () => {
 	let viewer = getViewer();
 	if (!viewer) throw new Error("requireUser must run before this handler");
 
-	let renderDocument = DocumentLayout();
 	return ctx.render(
-		renderDocument({
-			title: `${ctx.team.name} · New DNS monitor`,
-			children: (
-				<AppShell team={ctx.team} viewer={viewer}>
-					<NewDnsMonitorView team={ctx.team} />
-				</AppShell>
-			),
-		}),
+		<DocumentLayout title={`${ctx.team.name} · New DNS monitor`}>
+			<AppShell team={ctx.team} viewer={viewer}>
+				<NewDnsMonitorView team={ctx.team} />
+			</AppShell>
+		</DocumentLayout>,
 	);
 });

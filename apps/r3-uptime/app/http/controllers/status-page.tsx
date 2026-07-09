@@ -125,21 +125,17 @@ export default createAction(
 			...cronServices.map((service) => service.status),
 		]);
 
-		let renderDocument = DocumentLayout();
 		return ctx.render(
-			renderDocument({
-				title: page.title,
-				children: (
-					<StatusPageView
-						page={page}
-						overallStatus={overallStatus}
-						httpServices={httpServices}
-						dnsServices={dnsServices}
-						tcpServices={tcpServices}
-						cronServices={cronServices}
-					/>
-				),
-			}),
+			<DocumentLayout title={page.title}>
+				<StatusPageView
+					page={page}
+					overallStatus={overallStatus}
+					httpServices={httpServices}
+					dnsServices={dnsServices}
+					tcpServices={tcpServices}
+					cronServices={cronServices}
+				/>
+			</DocumentLayout>,
 		);
 	}),
 );
