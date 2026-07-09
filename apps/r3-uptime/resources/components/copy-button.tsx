@@ -11,6 +11,8 @@ import type { Handle } from "remix/ui";
 
 import { clientEntry, css, on } from "remix/ui";
 
+import { neutral } from "~/resources/styles";
+
 /** Props must be a `type` (not `interface`) to satisfy `SerializableProps`. */
 type CopyButtonProps = { value: string; label?: string };
 
@@ -19,12 +21,12 @@ const button = css({
 	alignItems: "center",
 	padding: "4px 10px",
 	borderRadius: 6,
-	border: "1px solid #d4d4d4",
+	border: `1px solid ${neutral[300]}`,
 	background: "transparent",
 	color: "inherit",
 	fontSize: "0.8125rem",
 	cursor: "pointer",
-	"@media (prefers-color-scheme: dark)": { borderColor: "#404040" },
+	"@media (prefers-color-scheme: dark)": { borderColor: neutral[700] },
 });
 
 export const CopyButton = clientEntry(

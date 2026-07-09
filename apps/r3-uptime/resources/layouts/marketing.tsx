@@ -112,7 +112,7 @@ export default function MarketingLayout(handle: Handle<MarketingLayout.Props>) {
 		let { isSignedIn, children } = handle.props;
 
 		return (
-			<div mix={[s.page]}>
+			<div mix={[s.page, s.marketingFont]}>
 				<header mix={[s.marketingHeader]}>
 					<a href={routes.home.href()} mix={[s.marketingBrand]}>
 						Uptime

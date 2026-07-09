@@ -10,6 +10,8 @@
 
 import type { Handle, RemixNode } from "remix/ui";
 
+import * as s from "~/resources/styles";
+
 const CLIENT_ENTRY_SRC = import.meta.env.DEV ? "/bootstrap/browser.ts" : "/assets/clientEntry.js";
 
 namespace DocumentLayout {
@@ -31,7 +33,7 @@ export default function DocumentLayout(handle: Handle<DocumentLayout.Props>) {
 					{title && <title>{title}</title>}
 					<link rel="modulepreload" href={CLIENT_ENTRY_SRC} />
 				</head>
-				<body>
+				<body mix={[s.documentBody]}>
 					{children}
 					<script type="module" src={CLIENT_ENTRY_SRC}></script>
 				</body>
