@@ -87,7 +87,7 @@ export default function DashboardView(handle: Handle<DashboardView.Props>) {
 
 		return (
 			<div>
-				<h1>{props.team.name}</h1>
+				<h1 mix={[css({ margin: "0 0 24px" })]}>{props.team.name}</h1>
 
 				{props.analyticsUnavailable && (
 					<EmptyState message="Analytics data temporarily unavailable. Please retry later." />

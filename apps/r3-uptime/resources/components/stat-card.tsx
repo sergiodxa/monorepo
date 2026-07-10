@@ -38,6 +38,7 @@ export default function StatCard(handle: Handle<StatCard.Props>) {
 				mix={[
 					css({
 						fontSize: "0.8125rem",
+						marginBottom: 8,
 						color: "oklch(0.62 0.01 145)",
 						"@media (prefers-color-scheme: dark)": {
 							color: "oklch(0.73 0.01 145)",
