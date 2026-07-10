@@ -185,6 +185,7 @@ export default function ContentChecksSection(handle: Handle<ContentChecksSection
 											>
 												<h3>Delete this content check?</h3>
 												<form method="post" action={deleteAction}>
+													<input type="hidden" name="_method" value="DELETE" />
 													<input type="hidden" name="content_check_id" value={check.id} />
 													<input type="hidden" name="monitor_id" value={monitorId} />
 													<button

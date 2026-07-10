@@ -194,6 +194,7 @@ export default function EditMaintenanceWindowView(handle: Handle<EditMaintenance
 						method="post"
 						action={routes.actions.deleteMaintenanceWindow.href({ team: team.slug })}
 					>
+						<input type="hidden" name="_method" value="DELETE" />
 						<input type="hidden" name="window_id" value={window.id} />
 						<button
 							type="button"

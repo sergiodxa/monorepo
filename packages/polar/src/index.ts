@@ -254,6 +254,34 @@ export class PolarClient {
 	}
 
 	/**
+	 * Lists a customer's active subscriptions to a given product, filtering by
+	 * external id and `active: true` server-side (the same query shape as
+	 * {@link hasActiveSubscription}) rather than resolving the Polar-internal
+	 * customer id first and listing unfiltered — that alternate path has been
+	 * observed to return a response shape the SDK's own validation rejects for
+	 * some accounts. Used to revoke subscriptions on team deletion.
+	 *
+	 * @param externalCustomerId - The app-owned external id linked to the customer.
+	 * @param productId - The Polar product id to filter to.
+	 * @returns Every matching active subscription.
+	 * @throws {PolarError} When the request fails.
+	 */
+	async listActiveSubscriptions(
+		externalCustomerId: string,
+		productId: string,
+	): Promise<Subscription[]> {
+		let result = await this.client.subscriptions.list({
+			externalCustomerId,
+			active: true,
+		});
+		let subscriptions: Subscription[] = [];
+		for await (let page of result) {
+			subscriptions.push(...page.result.items.filter((sub) => sub.productId === productId));
+		}
+		return subscriptions;
+	}
+
+	/**
 	 * Revoke a subscription immediately, ending entitlement now rather than at
 	 * period end.
 	 *

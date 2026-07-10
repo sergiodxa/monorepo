@@ -333,6 +333,7 @@ export default function SettingsView(handle: Handle<SettingsView.Props>) {
 																team: team.slug,
 															})}
 														>
+															<input type="hidden" name="_method" value="DELETE" />
 															<input type="hidden" name="subject_id" value={member.subject_id} />
 															<input
 																type="hidden"
@@ -400,6 +401,7 @@ export default function SettingsView(handle: Handle<SettingsView.Props>) {
 													method="post"
 													action={routes.teamAdminActions.revokeInvite.href({ team: team.slug })}
 												>
+													<input type="hidden" name="_method" value="DELETE" />
 													<input type="hidden" name="invite_id" value={invite.id} />
 													<button type="submit" mix={[buttonSecondary]}>
 														Revoke
@@ -527,6 +529,7 @@ export default function SettingsView(handle: Handle<SettingsView.Props>) {
 											method="post"
 											action={routes.teamAdminActions.removeDomain.href({ team: team.slug })}
 										>
+											<input type="hidden" name="_method" value="DELETE" />
 											<input type="hidden" name="domain_id" value={domain.id} />
 											<button type="submit" mix={[buttonDanger]}>
 												Remove
@@ -595,6 +598,7 @@ export default function SettingsView(handle: Handle<SettingsView.Props>) {
 						owns. Type <code>DELETE</code> to confirm.
 					</p>
 					<form method="post" action={routes.teamAdminActions.deleteTeam.href({ team: team.slug })}>
+						<input type="hidden" name="_method" value="DELETE" />
 						<input
 							type="text"
 							name="confirmation"

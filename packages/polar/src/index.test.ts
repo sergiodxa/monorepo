@@ -252,6 +252,35 @@ describe("PolarClient", () => {
 		});
 	});
 
+	describe("listActiveSubscriptions", () => {
+		test("queries by external id and active:true, filtering to the given product", async () => {
+			subscriptionsListImpl = () => [
+				[
+					{ id: "sub_1", productId: "prod_1" },
+					{ id: "sub_2", productId: "prod_other" },
+				],
+				[{ id: "sub_3", productId: "prod_1" }],
+			];
+			let polar = new PolarClient({ accessToken: "t" });
+			let subscriptions = await polar.listActiveSubscriptions("ext_1", "prod_1");
+			expect(subscriptions).toEqual([
+				{ id: "sub_1", productId: "prod_1" },
+				{ id: "sub_3", productId: "prod_1" },
+			]);
+			expect(calls["subscriptions.list"]).toEqual([{ externalCustomerId: "ext_1", active: true }]);
+		});
+
+		test("throws when the request fails", async () => {
+			subscriptionsListImpl = () => {
+				throw new Error("network error");
+			};
+			let polar = new PolarClient({ accessToken: "t" });
+			await expect(polar.listActiveSubscriptions("ext_1", "prod_1")).rejects.toThrow(
+				"network error",
+			);
+		});
+	});
+
 	describe("createCheckoutSession", () => {
 		test("wraps productId in a products array and returns the url", async () => {
 			let polar = new PolarClient({ accessToken: "t" });

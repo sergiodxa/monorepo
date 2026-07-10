@@ -30,6 +30,7 @@ type FakePolarClient = Pick<
 	| "createCheckoutSession"
 	| "createPortalSession"
 	| "listSubscriptions"
+	| "listActiveSubscriptions"
 	| "revokeSubscription"
 >;
 
@@ -48,6 +49,7 @@ function fakePolar(overrides: Partial<FakePolarClient>): PolarClient {
 		createCheckoutSession: notImplemented("createCheckoutSession"),
 		createPortalSession: notImplemented("createPortalSession"),
 		listSubscriptions: notImplemented("listSubscriptions"),
+		listActiveSubscriptions: notImplemented("listActiveSubscriptions"),
 		revokeSubscription: notImplemented("revokeSubscription"),
 		...overrides,
 	};
@@ -224,34 +226,31 @@ describe("Customer.portal", () => {
 });
 
 describe("Customer.cancelSubscriptions", () => {
-	test("does nothing when the owner has no Polar customer", async () => {
-		let polar = fakePolar({ getExternalCustomer: async () => null });
+	test("does nothing when the owner has no active monitoring subscription", async () => {
+		let polar = fakePolar({ listActiveSubscriptions: async () => [] });
 
 		await expect(Customer.cancelSubscriptions(polar, "owner-1")).resolves.toBeUndefined();
 	});
 
-	test("revokes only active subscriptions to the monitoring product", async () => {
-		let customer = polarCustomer({ id: "cus-owner" });
+	test("revokes every active subscription to the monitoring product", async () => {
 		let revokedIds: string[] = [];
 		let polar = fakePolar({
-			getExternalCustomer: async () => customer,
-			listSubscriptions: async () => [
-				subscription({
-					id: "sub-active-match",
-					productId: SUBSCRIPTION_PRODUCT_ID,
-					status: "active",
-				}),
-				subscription({
-					id: "sub-canceled-match",
-					productId: SUBSCRIPTION_PRODUCT_ID,
-					status: "canceled",
-				}),
-				subscription({
-					id: "sub-active-other-product",
-					productId: "other-product",
-					status: "active",
-				}),
-			],
+			listActiveSubscriptions: async (externalCustomerId, productId) => {
+				expect(externalCustomerId).toBe("owner-1");
+				expect(productId).toBe(SUBSCRIPTION_PRODUCT_ID);
+				return [
+					subscription({
+						id: "sub-active-1",
+						productId: SUBSCRIPTION_PRODUCT_ID,
+						status: "active",
+					}),
+					subscription({
+						id: "sub-active-2",
+						productId: SUBSCRIPTION_PRODUCT_ID,
+						status: "active",
+					}),
+				];
+			},
 			revokeSubscription: async (subscriptionId) => {
 				revokedIds.push(subscriptionId);
 				return subscription({ id: subscriptionId, status: "canceled" });
@@ -259,6 +258,16 @@ describe("Customer.cancelSubscriptions", () => {
 		});
 
 		await Customer.cancelSubscriptions(polar, "owner-1");
-		expect(revokedIds).toEqual(["sub-active-match"]);
+		expect(revokedIds).toEqual(["sub-active-1", "sub-active-2"]);
+	});
+
+	test("never throws when Polar fails, so team deletion is never blocked", async () => {
+		let polar = fakePolar({
+			listActiveSubscriptions: async () => {
+				throw new Error("Polar is down");
+			},
+		});
+
+		await expect(Customer.cancelSubscriptions(polar, "owner-1")).resolves.toBeUndefined();
 	});
 });

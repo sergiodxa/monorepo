@@ -74,10 +74,8 @@ function seedTeam(team: SelectTeam, membership: SelectMembership): Middleware {
 /** A fake `PolarClient`, registered on the container in place of the real class. */
 function createFakePolar() {
 	return {
-		getExternalCustomer: mock(async () => ({ id: "cus_1", externalId: "owner-1" })),
-		listSubscriptions: mock(async () => [
+		listActiveSubscriptions: mock(async () => [
 			{ id: "sub_1", productId: "94161883-14eb-42e2-bb26-b4647199cda1", status: "active" },
-			{ id: "sub_2", productId: "94161883-14eb-42e2-bb26-b4647199cda1", status: "canceled" },
 		]),
 		revokeSubscription: mock(async () => ({})),
 	};
@@ -181,7 +179,7 @@ describe("deleteTeam", () => {
 
 		expect(response.status).toBe(400);
 		expect(await response.text()).toContain("Only the team owner");
-		expect(polar.getExternalCustomer).not.toHaveBeenCalled();
+		expect(polar.listActiveSubscriptions).not.toHaveBeenCalled();
 		expect(await db.findOne(teams, { where: { id: team.id } })).not.toBeNull();
 	});
 
@@ -223,7 +221,10 @@ describe("deleteTeam", () => {
 		expect(response.status).toBe(303);
 		expect(response.headers.get("Location")).toBe(routes.home.href());
 
-		expect(polar.getExternalCustomer).toHaveBeenCalledWith("owner-1");
+		expect(polar.listActiveSubscriptions).toHaveBeenCalledWith(
+			"owner-1",
+			"94161883-14eb-42e2-bb26-b4647199cda1",
+		);
 		expect(polar.revokeSubscription).toHaveBeenCalledTimes(1);
 		expect(polar.revokeSubscription).toHaveBeenCalledWith("sub_1");
 

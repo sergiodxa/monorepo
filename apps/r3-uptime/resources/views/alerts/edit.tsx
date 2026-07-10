@@ -148,6 +148,7 @@ export default function EditAlertView(handle: Handle<EditAlertView.Props>) {
 						This can't be undone.
 					</p>
 					<form method="post" action={routes.actions.deleteAlert.href({ team: team.slug })}>
+						<input type="hidden" name="_method" value="DELETE" />
 						<input type="hidden" name="alert_id" value={alert.id} />
 						<button
 							type="button"

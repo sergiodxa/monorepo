@@ -147,6 +147,7 @@ export default function EditTcpMonitorView(handle: Handle<EditTcpMonitorView.Pro
 						This also deletes its check-result history. This can't be undone.
 					</p>
 					<form method="post" action={routes.actions.deleteTcpMonitor.href({ team: team.slug })}>
+						<input type="hidden" name="_method" value="DELETE" />
 						<input type="hidden" name="monitor_id" value={monitor.id} />
 						<button
 							type="button"

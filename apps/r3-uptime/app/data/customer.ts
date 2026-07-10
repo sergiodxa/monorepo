@@ -55,19 +55,20 @@ export default class Customer {
 		return session.url;
 	}
 
-	/** Revokes every active monitoring subscription for the team owner (used on team deletion). */
+	/**
+	 * Revokes every active monitoring subscription for the team owner (used on team
+	 * deletion). Best-effort: a Polar failure here must never block deleting the
+	 * team and its data, so any error is swallowed, matching
+	 * {@link PolarClient.hasActiveSubscription}'s fail-open convention.
+	 */
 	static async cancelSubscriptions(polar: PolarClient, ownerId: string): Promise<void> {
-		let customer = await polar.getExternalCustomer(ownerId);
-		if (!customer) return;
-
-		let subscriptions = await polar.listSubscriptions(customer.id);
-		await Promise.all(
-			subscriptions
-				.filter(
-					(subscription) =>
-						subscription.productId === SUBSCRIPTION_PRODUCT_ID && subscription.status === "active",
-				)
-				.map((subscription) => polar.revokeSubscription(subscription.id)),
-		);
+		try {
+			let subscriptions = await polar.listActiveSubscriptions(ownerId, SUBSCRIPTION_PRODUCT_ID);
+			await Promise.all(
+				subscriptions.map((subscription) => polar.revokeSubscription(subscription.id)),
+			);
+		} catch {
+			// Best-effort — see docblock.
+		}
 	}
 }
