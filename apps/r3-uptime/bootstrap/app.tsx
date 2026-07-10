@@ -160,6 +160,7 @@ import cronJobNew from "~/app/http/controllers/app/team/cron-job-new";
 import cronJobShow from "~/app/http/controllers/app/team/cron-job-show";
 import cronJobs from "~/app/http/controllers/app/team/cron-jobs";
 import teamDashboard from "~/app/http/controllers/app/team/dashboard";
+import dashboardPanel from "~/app/http/controllers/app/team/dashboard-panel";
 import dnsMonitorEdit from "~/app/http/controllers/app/team/dns-monitor-edit";
 import dnsMonitorNew from "~/app/http/controllers/app/team/dns-monitor-new";
 import dnsMonitorShow from "~/app/http/controllers/app/team/dns-monitor-show";
@@ -281,6 +282,10 @@ export default function application(options: application.Options) {
 	router.map(routes.app.team.dashboard, {
 		middleware: [requireUser, requireTeam],
 		handler: teamDashboard as RequestHandler<any>,
+	});
+	router.map(routes.app.team.dashboardPanel, {
+		middleware: [requireUser, requireTeam],
+		handler: dashboardPanel as RequestHandler<any>,
 	});
 	router.map(routes.app.team.httpMonitors, {
 		middleware: [requireUser, requireTeam],

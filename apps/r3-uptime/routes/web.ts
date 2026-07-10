@@ -57,6 +57,10 @@ export default route({
 		team: {
 			index: get("/app/:team"),
 			dashboard: get("/app/:team/dashboard"),
+			// Fragment route: renders just one monitor-type table, loaded into the
+			// dashboard's named "dashboard-panel" `Frame` so switching tabs doesn't
+			// reload the stat cards above it.
+			dashboardPanel: get("/app/:team/dashboard/panel/:type"),
 			httpMonitors: get("/app/:team/http"),
 			monitorNew: get("/app/:team/monitors/new"),
 			monitorShow: get("/app/:team/monitors/:monitorId"),

@@ -70,8 +70,7 @@ export const Logo = clientEntry(
 							mix={[
 								css({ position: "absolute", inset: 0, borderRadius: 6, objectFit: "cover" }),
 								on<HTMLImageElement>("error", (event) => {
-									let img = event.currentTarget as HTMLImageElement;
-									img.style.display = "none";
+									event.currentTarget.style.display = "none";
 								}),
 							]}
 						/>

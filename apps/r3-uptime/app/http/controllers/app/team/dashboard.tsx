@@ -16,16 +16,12 @@ import { createAction } from "remix/fetch-router";
 import { Session } from "remix/session";
 import { css } from "remix/ui";
 
-import type { MonitorHealth, SparklinePoint } from "~/app/services/analytics";
 import type { DashboardTab } from "~/resources/views/dashboard";
 
-import CronJobMonitor from "~/app/data/cron-job";
-import DnsMonitor from "~/app/data/dns-monitor";
 import Monitor from "~/app/data/monitor";
-import TcpMonitor from "~/app/data/tcp-monitor";
 import { dashboardTab as dashboardTabCookie } from "~/app/http/cookies";
 import { getViewer } from "~/app/http/middleware/auth";
-import { getTeamHttpSparklines, getTeamHttpSummaries } from "~/app/services/analytics";
+import { getTeamHttpSummaries } from "~/app/services/analytics";
 import AppShell from "~/resources/layouts/app-shell";
 import DocumentLayout from "~/resources/layouts/document";
 import DashboardView from "~/resources/views/dashboard";
@@ -61,27 +57,9 @@ export default createAction(
 		let toast = ctx.get(Session)?.get("toast") as Toast | undefined;
 
 		let monitors = await Monitor.listByTeam(db, ctx.team.id);
-		let dnsMonitors = await DnsMonitor.listByTeam(db, ctx.team.id);
-		let tcpMonitors = await TcpMonitor.listByTeam(db, ctx.team.id);
-		let cronJobMonitors = await CronJobMonitor.listByTeam(db, ctx.team.id);
-		let [summaries, sparklines] = await Promise.all([
-			getTeamHttpSummaries(ctx.team.id),
-			getTeamHttpSparklines(ctx.team.id),
-		]);
+		let summaries = await getTeamHttpSummaries(ctx.team.id);
 		let analyticsUnavailable = isFailure(summaries);
 		let summaryList = isFailure(summaries) ? [] : summaries.data;
-		let sparklinesByMonitorId: Map<string, SparklinePoint[]> = isFailure(sparklines)
-			? new Map()
-			: sparklines.data;
-		let healthByMonitorId = new Map(
-			summaryList.map((summary) => [summary.monitorId, summary.health]),
-		);
-
-		let httpRows = monitors.map((monitor) => ({
-			monitor,
-			health: healthByMonitorId.get(monitor.id) ?? ("pending" as MonitorHealth),
-			sparklinePoints: sparklinesByMonitorId.get(monitor.id) ?? [],
-		}));
 
 		let totalChecks = summaryList.reduce((sum, summary) => sum + summary.totalChecks, 0);
 		let successfulChecks = summaryList.reduce((sum, summary) => sum + summary.successfulChecks, 0);
@@ -140,11 +118,7 @@ export default createAction(
 						monitorCount={monitors.length}
 						uptimePercent={uptimePercent}
 						slowestResponseMs={slowestResponseMs}
-						httpRows={httpRows}
 						sslCounts={sslCounts}
-						dnsMonitors={dnsMonitors}
-						tcpMonitors={tcpMonitors}
-						cronJobMonitors={cronJobMonitors}
 						analyticsUnavailable={analyticsUnavailable}
 					/>
 				</AppShell>
