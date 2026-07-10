@@ -11,6 +11,8 @@ import type { Handle, RemixNode } from "remix/ui";
 
 import { css } from "remix/ui";
 
+import { status } from "~/resources/theme";
+
 export type BadgeTone = "up" | "degraded" | "down" | "neutral";
 
 namespace Badge {
@@ -37,51 +39,47 @@ const badge = css({
 	textTransform: "capitalize",
 });
 
-/**
- * Green "up"/valid/healthy badge color, matching the OLD APP's status pills
- * (transparent background, `border-{color}-600 text-{color}-600`, measured on
- * the dashboard's "Up & Running" and the HTTP monitor list's "Up" badges).
- */
+/** Green "up"/valid/healthy badge color: transparent background, colored border + text. */
 const badgeUp = css({
 	background: "transparent",
-	borderColor: "oklch(0.62 0.18 155)",
-	color: "oklch(0.62 0.18 155)",
+	borderColor: status.up.light,
+	color: status.up.light,
 	"@media (prefers-color-scheme: dark)": {
-		borderColor: "oklch(0.78 0.2 155)",
-		color: "oklch(0.78 0.2 155)",
+		borderColor: status.up.dark,
+		color: status.up.dark,
 	},
 });
 
 /** Amber "degraded"/expiring/late badge color. */
 const badgeDegraded = css({
 	background: "transparent",
-	borderColor: "oklch(0.62 0.16 85)",
-	color: "oklch(0.62 0.16 85)",
+	borderColor: status.degraded.light,
+	color: status.degraded.light,
 	"@media (prefers-color-scheme: dark)": {
-		borderColor: "oklch(0.8 0.18 85)",
-		color: "oklch(0.8 0.18 85)",
+		borderColor: status.degraded.dark,
+		color: status.degraded.dark,
 	},
 });
 
 /** Red "down"/expired/error badge color. */
 const badgeDown = css({
 	background: "transparent",
-	borderColor: "oklch(0.58 0.18 25)",
-	color: "oklch(0.58 0.18 25)",
+	borderColor: status.down.light,
+	color: status.down.light,
 	"@media (prefers-color-scheme: dark)": {
-		borderColor: "oklch(0.78 0.18 25)",
-		color: "oklch(0.78 0.18 25)",
+		borderColor: status.down.dark,
+		color: status.down.dark,
 	},
 });
 
 /** Gray "pending"/unknown/disabled badge color. */
 const badgeNeutral = css({
 	background: "transparent",
-	borderColor: "oklch(0.62 0.01 145)",
-	color: "oklch(0.62 0.01 145)",
+	borderColor: status.neutral.light,
+	color: status.neutral.light,
 	"@media (prefers-color-scheme: dark)": {
-		borderColor: "oklch(0.73 0.01 145)",
-		color: "oklch(0.73 0.01 145)",
+		borderColor: status.neutral.dark,
+		color: status.neutral.dark,
 	},
 });
 

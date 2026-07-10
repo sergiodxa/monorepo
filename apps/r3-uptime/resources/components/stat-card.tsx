@@ -11,6 +11,8 @@ import type { Handle, RemixNode } from "remix/ui";
 
 import { css } from "remix/ui";
 
+import { neutral } from "~/resources/theme";
+
 namespace StatCard {
 	export interface Props {
 		label: string;
@@ -27,9 +29,9 @@ export default function StatCard(handle: Handle<StatCard.Props>) {
 					flex: "1 1 160px",
 					padding: 16,
 					borderRadius: 8,
-					border: "1px solid oklch(0.91 0.008 145)",
+					border: `1px solid ${neutral[200]}`,
 					"@media (prefers-color-scheme: dark)": {
-						borderColor: "oklch(0.32 0.006 145)",
+						borderColor: neutral[800],
 					},
 				}),
 			]}
@@ -39,9 +41,9 @@ export default function StatCard(handle: Handle<StatCard.Props>) {
 					css({
 						fontSize: "0.8125rem",
 						marginBottom: 8,
-						color: "oklch(0.62 0.01 145)",
+						color: neutral[500],
 						"@media (prefers-color-scheme: dark)": {
-							color: "oklch(0.73 0.01 145)",
+							color: neutral[400],
 						},
 					}),
 				]}

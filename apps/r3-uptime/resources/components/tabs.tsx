@@ -14,17 +14,7 @@ import type { Handle, RemixNode } from "remix/ui";
 
 import { css, link } from "remix/ui";
 
-const neutral = {
-	200: "oklch(0.91 0.008 145)",
-	500: "oklch(0.62 0.01 145)",
-	800: "oklch(0.32 0.006 145)",
-	900: "oklch(0.24 0.005 145)",
-};
-
-const primary = {
-	600: "oklch(0.6 0.16 142)",
-	400: "oklch(0.78 0.16 142)",
-};
+import { neutral, primary } from "~/resources/theme";
 
 const tabList = css({
 	display: "flex",
@@ -47,7 +37,7 @@ const tab = css({
 	borderBottom: "2px solid transparent",
 	"&:hover": { color: neutral[900] },
 	"@media (prefers-color-scheme: dark)": {
-		"&:hover": { color: "oklch(0.98 0.005 145)" },
+		"&:hover": { color: neutral[50] },
 	},
 });
 

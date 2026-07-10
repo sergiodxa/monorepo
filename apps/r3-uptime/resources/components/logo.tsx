@@ -24,61 +24,61 @@ function getInitials(name: string): string {
 	return name.slice(0, 2).toUpperCase() || "?";
 }
 
-export const Logo = clientEntry(
-	"/resources/components/logo.tsx#Logo",
-	function Logo(handle: Handle<LogoProps>) {
-		return () => {
-			let { src, name, size = 24 } = handle.props;
-			let initials = getInitials(name);
+export const Logo = clientEntry(import.meta.url, function Logo(handle: Handle<LogoProps>) {
+	let displayImage = true;
 
-			return (
+	return () => {
+		let { src, name, size = 24 } = handle.props;
+		let initials = getInitials(name);
+
+		return (
+			<span
+				mix={[
+					css({
+						position: "relative",
+						display: "inline-flex",
+						width: size,
+						height: size,
+						flexShrink: 0,
+					}),
+				]}
+			>
 				<span
 					mix={[
 						css({
-							position: "relative",
+							position: "absolute",
+							inset: 0,
 							display: "inline-flex",
-							width: size,
-							height: size,
-							flexShrink: 0,
+							alignItems: "center",
+							justifyContent: "center",
+							borderRadius: 6,
+							background: primary100,
+							color: primary600,
+							fontSize: `${Math.round(size * 0.42)}px`,
+							fontWeight: 700,
 						}),
 					]}
 				>
-					<span
+					{initials}
+				</span>
+				{src && displayImage && (
+					<img
+						src={src}
+						alt={name}
+						width={size}
+						height={size}
 						mix={[
-							css({
-								position: "absolute",
-								inset: 0,
-								display: "inline-flex",
-								alignItems: "center",
-								justifyContent: "center",
-								borderRadius: 6,
-								background: primary100,
-								color: primary600,
-								fontSize: `${Math.round(size * 0.42)}px`,
-								fontWeight: 700,
+							css({ position: "absolute", inset: 0, borderRadius: 6, objectFit: "cover" }),
+							on<HTMLImageElement>("error", () => {
+								displayImage = false;
+								void handle.update();
 							}),
 						]}
-					>
-						{initials}
-					</span>
-					{src && (
-						<img
-							src={src}
-							alt={name}
-							width={size}
-							height={size}
-							mix={[
-								css({ position: "absolute", inset: 0, borderRadius: 6, objectFit: "cover" }),
-								on<HTMLImageElement>("error", (event) => {
-									event.currentTarget.style.display = "none";
-								}),
-							]}
-						/>
-					)}
-				</span>
-			);
-		};
-	},
-);
+					/>
+				)}
+			</span>
+		);
+	};
+});
 
 export default Logo;
