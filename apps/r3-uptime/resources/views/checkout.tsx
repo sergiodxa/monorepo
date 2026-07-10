@@ -29,7 +29,6 @@ export default function CheckoutView(_handle: Handle<Record<string, never>>) {
 				}),
 			]}
 		>
-			<h1 mix={[css({ margin: 0 })]}>Billing</h1>
 			<p
 				mix={[
 					css({

@@ -27,6 +27,7 @@ export default createAction(routes.app.team.dnsMonitorNew, () => {
 				teams={ctx.teams}
 				viewer={viewer}
 				isAdmin={ctx.membership.role === "admin"}
+				breadcrumb="New DNS monitor"
 			>
 				<NewDnsMonitorView team={ctx.team} />
 			</AppShell>

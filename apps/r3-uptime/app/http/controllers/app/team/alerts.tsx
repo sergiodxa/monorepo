@@ -9,8 +9,9 @@ import { inject } from "@pkg/service-container";
 import { getContext } from "remix/async-context-middleware";
 import { Database } from "remix/data-table";
 import { createAction } from "remix/fetch-router";
+import { css } from "remix/ui";
 
-import Alert from "~/app/data/alert";
+import Alert, { MAX_ALERTS_PER_TEAM } from "~/app/data/alert";
 import Monitor from "~/app/data/monitor";
 import { getViewer } from "~/app/http/middleware/auth";
 import AppShell from "~/resources/layouts/app-shell";
@@ -29,6 +30,7 @@ export default createAction(
 		let alerts = await Alert.listByTeam(db, ctx.team.id);
 		let monitors = await Monitor.listByTeam(db, ctx.team.id);
 		let monitorsById = new Map(monitors.map((monitor) => [monitor.id, monitor]));
+		let atLimit = alerts.length >= MAX_ALERTS_PER_TEAM;
 
 		return ctx.render(
 			<DocumentLayout title={`${ctx.team.name} · Alerts`}>
@@ -37,6 +39,49 @@ export default createAction(
 					teams={ctx.teams}
 					viewer={viewer}
 					isAdmin={ctx.membership.role === "admin"}
+					breadcrumb="Alerts"
+					actions={
+						<div mix={[css({ display: "flex", alignItems: "center", gap: 12 })]}>
+							<a
+								href={routes.app.team.alertHistory.href({ team: ctx.team.slug })}
+								mix={[
+									css({
+										color: "oklch(0.6 0.16 142)",
+										textDecoration: "none",
+										"&:hover": { textDecoration: "underline" },
+										"@media (prefers-color-scheme: dark)": { color: "oklch(0.78 0.16 142)" },
+									}),
+								]}
+							>
+								View history
+							</a>
+							{!atLimit && (
+								<a
+									href={routes.app.team.alertNew.href({ team: ctx.team.slug })}
+									mix={[
+										css({
+											display: "inline-flex",
+											alignItems: "center",
+											justifyContent: "center",
+											padding: "8px 16px",
+											borderRadius: 6,
+											border: "1px solid transparent",
+											background: "oklch(0.24 0.005 145)",
+											color: "#ffffff",
+											fontFamily: "inherit",
+											fontSize: "0.875rem",
+											fontWeight: 500,
+											cursor: "pointer",
+											textDecoration: "none",
+											"&:hover": { background: "oklch(0.32 0.006 145)" },
+										}),
+									]}
+								>
+									New alert
+								</a>
+							)}
+						</div>
+					}
 				>
 					<AlertsView team={ctx.team} alerts={alerts} monitorsById={monitorsById} />
 				</AppShell>

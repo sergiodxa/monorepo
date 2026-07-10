@@ -51,8 +51,6 @@ export default function AlertHistoryView(handle: Handle<AlertHistoryView.Props>)
 
 		return (
 			<div>
-				<h1 mix={[css({ margin: "0 0 24px" })]}>Alert history</h1>
-
 				{events.length === 0 ? (
 					<EmptyState message="No alert events yet." />
 				) : (

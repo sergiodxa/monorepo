@@ -42,6 +42,7 @@ export default createAction(
 					teams={ctx.teams}
 					viewer={viewer}
 					isAdmin={ctx.membership.role === "admin"}
+					breadcrumb="Edit maintenance window"
 				>
 					<EditMaintenanceWindowView team={ctx.team} window={window} monitors={monitors} />
 				</AppShell>

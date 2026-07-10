@@ -49,7 +49,6 @@ export default function EditAlertView(handle: Handle<EditAlertView.Props>) {
 
 		return (
 			<div>
-				<h1 mix={[css({ margin: "0 0 24px" })]}>Edit alert</h1>
 				<form method="post" action={routes.actions.updateAlert.href({ team: team.slug })}>
 					<input type="hidden" name="alert_id" value={alert.id} />
 					<AlertFormFields alert={alert} monitors={monitors} />

@@ -65,7 +65,6 @@ export default function EditTcpMonitorView(handle: Handle<EditTcpMonitorView.Pro
 
 		return (
 			<div>
-				<h1 mix={[css({ margin: "0 0 24px" })]}>Edit TCP monitor</h1>
 				<form method="post" action={routes.actions.updateTcpMonitor.href({ team: team.slug })}>
 					<input type="hidden" name="monitor_id" value={monitor.id} />
 					<TcpMonitorFormFields monitor={monitor} />

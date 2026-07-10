@@ -39,6 +39,7 @@ export default createAction(
 					teams={ctx.teams}
 					viewer={viewer}
 					isAdmin={ctx.membership.role === "admin"}
+					breadcrumb="Edit cron job monitor"
 				>
 					<EditCronJobView team={ctx.team} monitor={monitor} />
 				</AppShell>

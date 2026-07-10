@@ -20,7 +20,6 @@ import Badge from "~/resources/components/badge";
 import StatCard from "~/resources/components/stat-card";
 import Sparkline from "~/resources/views/monitors/sparkline";
 import Heatmap from "~/resources/views/shared/heatmap";
-import routes from "~/routes/web";
 
 namespace MonitorShowView {
 	export interface Props {
@@ -41,52 +40,12 @@ const neutral = {
 	900: "oklch(0.24 0.005 145)",
 } as const;
 
-/** Secondary (outline) button/link, matching the OLD APP's "Cancel" button. Reused below. */
-const buttonSecondary = css({
-	display: "inline-flex",
-	alignItems: "center",
-	justifyContent: "center",
-	padding: "8px 16px",
-	borderRadius: 6,
-	border: `2px solid ${neutral[300]}`,
-	background: "#ffffff",
-	color: neutral[500],
-	fontFamily: "inherit",
-	fontSize: "0.875rem",
-	fontWeight: 500,
-	cursor: "pointer",
-	textDecoration: "none",
-	"&:hover": { background: neutral[50] },
-	"@media (prefers-color-scheme: dark)": {
-		background: neutral[900],
-		color: neutral[400],
-		borderColor: neutral[700],
-		"&:hover": { background: neutral[800] },
-	},
-});
-
 export default function MonitorShowView(handle: Handle<MonitorShowView.Props>) {
 	return () => {
-		let { team, monitor, sparkline, dailyStats } = handle.props;
+		let { monitor, sparkline, dailyStats } = handle.props;
 
 		return (
 			<div>
-				<div mix={[css({ display: "flex", alignItems: "center", gap: 12 })]}>
-					<h1 mix={[css({ margin: "0 0 24px" })]}>{monitor.name}</h1>
-					<form method="post" action={routes.actions.playMonitor.href({ team: team.slug })}>
-						<input type="hidden" name="monitor_id" value={monitor.id} />
-						<button type="submit" mix={[buttonSecondary]}>
-							Run now
-						</button>
-					</form>
-					<a
-						href={routes.app.team.monitorEdit.href({ team: team.slug, monitorId: monitor.id })}
-						mix={[buttonSecondary]}
-					>
-						Edit
-					</a>
-				</div>
-
 				<div mix={[css({ display: "flex", flexWrap: "wrap", gap: 16, marginBottom: 24 })]}>
 					<StatCard label="URL" value={<code>{monitor.url}</code>} />
 					<StatCard label="Method" value={monitor.method} />

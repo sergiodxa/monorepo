@@ -48,6 +48,7 @@ export default createAction(
 					teams={ctx.teams}
 					viewer={viewer}
 					isAdmin={ctx.membership.role === "admin"}
+					breadcrumb="Settings"
 				>
 					<SettingsView
 						team={ctx.team}

@@ -28,6 +28,7 @@ export default createAction(routes.app.team.apiKeyNew, () => {
 				teams={ctx.teams}
 				viewer={viewer}
 				isAdmin={ctx.membership.role === "admin"}
+				breadcrumb="New API key"
 			>
 				<NewApiKeyView team={ctx.team} />
 			</AppShell>

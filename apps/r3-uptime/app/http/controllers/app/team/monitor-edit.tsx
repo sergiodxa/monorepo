@@ -42,6 +42,7 @@ export default createAction(
 					teams={ctx.teams}
 					viewer={viewer}
 					isAdmin={ctx.membership.role === "admin"}
+					breadcrumb="Edit monitor"
 				>
 					<EditMonitorView team={ctx.team} monitor={monitor} contentChecks={contentChecks} />
 				</AppShell>

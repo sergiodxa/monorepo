@@ -42,6 +42,7 @@ export default createAction(
 					teams={ctx.teams}
 					viewer={viewer}
 					isAdmin={ctx.membership.role === "admin"}
+					breadcrumb="New status page"
 				>
 					<NewStatusPageView
 						team={ctx.team}

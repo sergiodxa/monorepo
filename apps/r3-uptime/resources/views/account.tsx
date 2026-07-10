@@ -2,7 +2,8 @@
  * Account page: read-only profile (name/email come from the auth server, not
  * locally editable), a language preference select, the list of every team the
  * viewer belongs to with a leave action (members only — owners and admins must
- * leave by deleting the team or being demoted first), and a create-team dialog.
+ * leave by deleting the team or being demoted first), and a create-team dialog
+ * (triggered from the page header's "Create team" action).
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -14,18 +15,16 @@ import { css } from "remix/ui";
 
 import type { SelectTeam, SupportedLanguage } from "~/database/schema";
 
+import Avatar from "~/resources/components/avatar";
 import Badge from "~/resources/components/badge";
 import Field from "~/resources/components/field";
 import routes from "~/routes/web";
 
 const neutral = {
 	50: "oklch(0.98 0.005 145)",
-	100: "oklch(0.96 0.005 145)",
 	200: "oklch(0.91 0.008 145)",
 	300: "oklch(0.83 0.01 145)",
-	400: "oklch(0.73 0.01 145)",
 	500: "oklch(0.62 0.01 145)",
-	600: "oklch(0.52 0.01 145)",
 	700: "oklch(0.42 0.008 145)",
 	800: "oklch(0.32 0.006 145)",
 	900: "oklch(0.24 0.005 145)",
@@ -62,21 +61,22 @@ const LANGUAGE_LABELS: Record<SupportedLanguage, string> = {
 	it: "Italiano",
 };
 
-const buttonPrimary = css({
-	display: "inline-flex",
-	alignItems: "center",
-	justifyContent: "center",
-	padding: "8px 16px",
-	borderRadius: 6,
-	border: "1px solid transparent",
-	background: neutral[900],
-	color: "#ffffff",
-	fontFamily: "inherit",
-	fontSize: "0.875rem",
-	fontWeight: 500,
-	cursor: "pointer",
-	textDecoration: "none",
-	"&:hover": { background: neutral[800] },
+const section = css({ marginBottom: 32 });
+
+const sectionTitle = css({ margin: "0 0 4px" });
+
+const sectionDescription = css({
+	margin: "0 0 16px",
+	fontSize: "0.8125rem",
+	color: neutral[500],
+});
+
+/** Bordered card wrapping each section's actual content, matching the OLD APP's settings cards. */
+const card = css({
+	padding: 20,
+	borderRadius: 8,
+	border: `1px solid ${neutral[200]}`,
+	"@media (prefers-color-scheme: dark)": { borderColor: neutral[800] },
 });
 
 const buttonSecondary = css({
@@ -96,10 +96,27 @@ const buttonSecondary = css({
 	"&:hover": { background: neutral[50] },
 	"@media (prefers-color-scheme: dark)": {
 		background: neutral[900],
-		color: neutral[400],
+		color: "oklch(0.73 0.01 145)",
 		borderColor: neutral[700],
 		"&:hover": { background: neutral[800] },
 	},
+});
+
+const buttonPrimary = css({
+	display: "inline-flex",
+	alignItems: "center",
+	justifyContent: "center",
+	padding: "8px 16px",
+	borderRadius: 6,
+	border: "1px solid transparent",
+	background: neutral[900],
+	color: "#ffffff",
+	fontFamily: "inherit",
+	fontSize: "0.875rem",
+	fontWeight: 500,
+	cursor: "pointer",
+	textDecoration: "none",
+	"&:hover": { background: neutral[800] },
 });
 
 namespace AccountView {
@@ -116,79 +133,179 @@ export default function AccountView(handle: Handle<AccountView.Props>) {
 
 		return (
 			<div>
-				<h1 mix={[css({ margin: "0 0 24px" })]}>Account</h1>
+				<section mix={[section]}>
+					<h2 mix={[sectionTitle]}>Profile</h2>
+					<p mix={[sectionDescription]}>Your personal information.</p>
+					<div mix={[card, css({ display: "flex", alignItems: "center", gap: 16 })]}>
+						<Avatar src={viewer.avatar || null} name={viewer.name} size={48} />
+						<div>
+							<div mix={[css({ fontWeight: 600 })]}>{viewer.name}</div>
+							<a
+								href={`mailto:${viewer.email}`}
+								mix={[
+									css({
+										fontSize: "0.8125rem",
+										color: primary[600],
+										textDecoration: "none",
+										"&:hover": { textDecoration: "underline" },
+										"@media (prefers-color-scheme: dark)": { color: primary[400] },
+									}),
+								]}
+							>
+								{viewer.email}
+							</a>
+						</div>
+					</div>
+				</section>
 
-				<h2>Profile</h2>
-				<p>{viewer.name}</p>
-				<p
-					mix={[
-						css({
-							fontSize: "0.8125rem",
-							color: neutral[500],
-							"@media (prefers-color-scheme: dark)": {
-								color: neutral[400],
-							},
-						}),
-					]}
-				>
-					<a
-						href={`mailto:${viewer.email}`}
-						mix={[
-							css({
-								color: primary[600],
-								textDecoration: "none",
-								"&:hover": { textDecoration: "underline" },
-								"@media (prefers-color-scheme: dark)": {
-									color: primary[400],
-								},
-							}),
-						]}
-					>
-						{viewer.email}
-					</a>
-				</p>
+				<section mix={[section]}>
+					<h2 mix={[sectionTitle]}>Language Preference</h2>
+					<p mix={[sectionDescription]}>Choose your preferred language for the interface.</p>
+					<div mix={[card]}>
+						<form method="post" action={routes.accountActions.updateLanguage.href()}>
+							<Field label="Language">
+								<select
+									name="language"
+									defaultValue={preferredLanguage ?? "auto"}
+									mix={[
+										mixForSelect(
+											css({
+												padding: "8px 12px",
+												borderRadius: 6,
+												border: `1px solid ${neutral[200]}`,
+												fontSize: "0.875rem",
+												fontFamily: "inherit",
+												background: neutral[50],
+												color: "inherit",
+												"@media (prefers-color-scheme: dark)": {
+													borderColor: neutral[700],
+													background: neutral[900],
+												},
+											}),
+										),
+									]}
+								>
+									<option value="auto">Auto-detect</option>
+									{Object.entries(LANGUAGE_LABELS).map(([code, label]) => (
+										<option key={code} value={code}>
+											{label}
+										</option>
+									))}
+								</select>
+							</Field>
+							<p
+								mix={[
+									css({
+										margin: "8px 0 16px",
+										fontSize: "0.8125rem",
+										color: neutral[500],
+									}),
+								]}
+							>
+								Select your preferred language. Auto-detect uses your browser settings.
+							</p>
+							<div mix={[css({ display: "flex", justifyContent: "flex-end" })]}>
+								<button type="submit" mix={[buttonSecondary]}>
+									Save language
+								</button>
+							</div>
+						</form>
+					</div>
+				</section>
 
-				<h2>Language</h2>
-				<form method="post" action={routes.accountActions.updateLanguage.href()}>
-					<select
-						name="language"
-						defaultValue={preferredLanguage ?? "auto"}
-						mix={[
-							mixForSelect(
+				<section>
+					<h2 mix={[sectionTitle]}>Your Teams</h2>
+					<p mix={[sectionDescription]}>Teams you are a member of.</p>
+					<div mix={[card, css({ padding: 0, overflowX: "auto" })]}>
+						<table
+							mix={[
 								css({
-									padding: "8px 12px",
-									borderRadius: 6,
-									border: `1px solid ${neutral[200]}`,
+									width: "100%",
+									borderCollapse: "collapse",
 									fontSize: "0.875rem",
-									fontFamily: "inherit",
-									background: neutral[50],
-									color: "inherit",
+									"& th, & td": {
+										textAlign: "left",
+										padding: "12px 16px",
+										borderBottom: `1px solid ${neutral[200]}`,
+									},
+									"& tr:last-child td": { borderBottom: "none" },
 									"@media (prefers-color-scheme: dark)": {
-										borderColor: neutral[700],
-										background: neutral[900],
+										"& th, & td": { borderColor: neutral[800] },
 									},
 								}),
-							),
-						]}
-					>
-						<option value="auto">Auto-detect</option>
-						{Object.entries(LANGUAGE_LABELS).map(([code, label]) => (
-							<option key={code} value={code}>
-								{label}
-							</option>
-						))}
-					</select>
-					<button type="submit" mix={[buttonSecondary]}>
-						Save language
-					</button>
-				</form>
+							]}
+						>
+							<thead>
+								<tr>
+									<th>Team</th>
+									<th>Role</th>
+									<th></th>
+								</tr>
+							</thead>
+							<tbody>
+								{memberships.map(({ team, role, isOwner }) => {
+									let canLeave = !isOwner && role === "member";
 
-				<div mix={[css({ display: "flex", alignItems: "center", gap: 12 })]}>
-					<h2>Your teams</h2>
-					<button type="button" commandfor="create-team" command="show-modal" mix={[buttonPrimary]}>
-						Create team
-					</button>
-				</div>
+									return (
+										<tr key={team.id}>
+											<td>
+												<a
+													href={routes.app.team.dashboard.href({ team: team.slug })}
+													mix={[
+														css({
+															color: primary[600],
+															textDecoration: "none",
+															"&:hover": { textDecoration: "underline" },
+															"@media (prefers-color-scheme: dark)": {
+																color: primary[400],
+															},
+														}),
+													]}
+												>
+													{team.name}
+												</a>
+											</td>
+											<td>
+												<Badge tone={isOwner ? "up" : "neutral"}>{isOwner ? "owner" : role}</Badge>
+											</td>
+											<td>
+												{canLeave && (
+													<form method="post" action={routes.accountActions.leaveTeam.href()}>
+														<input type="hidden" name="team_id" value={team.id} />
+														<button
+															type="submit"
+															mix={[
+																css({
+																	display: "inline-flex",
+																	alignItems: "center",
+																	justifyContent: "center",
+																	padding: "8px 16px",
+																	borderRadius: 6,
+																	border: "1px solid transparent",
+																	background: danger[600],
+																	color: "#ffffff",
+																	fontFamily: "inherit",
+																	fontSize: "0.875rem",
+																	fontWeight: 500,
+																	cursor: "pointer",
+																	textDecoration: "none",
+																	"&:hover": { background: danger[700] },
+																}),
+															]}
+														>
+															Leave
+														</button>
+													</form>
+												)}
+											</td>
+										</tr>
+									);
+								})}
+							</tbody>
+						</table>
+					</div>
+				</section>
+
 				<dialog
 					id="create-team"
 					mix={[
@@ -240,94 +357,6 @@ export default function AccountView(handle: Handle<AccountView.Props>) {
 						</button>
 					</form>
 				</dialog>
-
-				<div mix={[css({ overflowX: "auto" })]}>
-					<table
-						mix={[
-							css({
-								width: "100%",
-								borderCollapse: "collapse",
-								fontSize: "0.875rem",
-								"& th, & td": {
-									textAlign: "left",
-									padding: "12px 16px",
-									borderBottom: `1px solid ${neutral[200]}`,
-								},
-								"@media (prefers-color-scheme: dark)": {
-									"& th, & td": { borderColor: neutral[800] },
-								},
-							}),
-						]}
-					>
-						<thead>
-							<tr>
-								<th>Team</th>
-								<th>Role</th>
-								<th></th>
-							</tr>
-						</thead>
-						<tbody>
-							{memberships.map(({ team, role, isOwner }) => {
-								let canLeave = !isOwner && role === "member";
-
-								return (
-									<tr key={team.id}>
-										<td>
-											<a
-												href={routes.app.team.dashboard.href({ team: team.slug })}
-												mix={[
-													css({
-														color: primary[600],
-														textDecoration: "none",
-														"&:hover": { textDecoration: "underline" },
-														"@media (prefers-color-scheme: dark)": {
-															color: primary[400],
-														},
-													}),
-												]}
-											>
-												{team.name}
-											</a>
-										</td>
-										<td>
-											<Badge tone={isOwner ? "up" : "neutral"}>{isOwner ? "owner" : role}</Badge>
-										</td>
-										<td>
-											{canLeave && (
-												<form method="post" action={routes.accountActions.leaveTeam.href()}>
-													<input type="hidden" name="team_id" value={team.id} />
-													<button
-														type="submit"
-														mix={[
-															css({
-																display: "inline-flex",
-																alignItems: "center",
-																justifyContent: "center",
-																padding: "8px 16px",
-																borderRadius: 6,
-																border: "1px solid transparent",
-																background: danger[600],
-																color: "#ffffff",
-																fontFamily: "inherit",
-																fontSize: "0.875rem",
-																fontWeight: 500,
-																cursor: "pointer",
-																textDecoration: "none",
-																"&:hover": { background: danger[700] },
-															}),
-														]}
-													>
-														Leave
-													</button>
-												</form>
-											)}
-										</td>
-									</tr>
-								);
-							})}
-						</tbody>
-					</table>
-				</div>
 			</div>
 		);
 	};

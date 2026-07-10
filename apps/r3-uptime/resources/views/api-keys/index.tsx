@@ -45,33 +45,6 @@ export default function ApiKeysView(handle: Handle<ApiKeysView.Props>) {
 
 		return (
 			<div>
-				<div mix={[css({ display: "flex", alignItems: "center", gap: 12 })]}>
-					<h1 mix={[css({ margin: "0 0 24px" })]}>API keys</h1>
-					<a
-						href={routes.app.team.apiKeyNew.href({ team: team.slug })}
-						mix={[
-							css({
-								display: "inline-flex",
-								alignItems: "center",
-								justifyContent: "center",
-								padding: "8px 16px",
-								borderRadius: 6,
-								border: "1px solid transparent",
-								background: neutral[900],
-								color: "#ffffff",
-								fontFamily: "inherit",
-								fontSize: "0.875rem",
-								fontWeight: 500,
-								cursor: "pointer",
-								textDecoration: "none",
-								"&:hover": { background: neutral[800] },
-							}),
-						]}
-					>
-						New API key
-					</a>
-				</div>
-
 				{newApiKey && (
 					<div
 						mix={[

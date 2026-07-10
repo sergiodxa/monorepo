@@ -49,33 +49,6 @@ export default function CronJobsView(handle: Handle<CronJobsView.Props>) {
 
 		return (
 			<div>
-				<div mix={[css({ display: "flex", alignItems: "center", gap: 12 })]}>
-					<h1 mix={[css({ margin: "0 0 24px" })]}>Cron job monitors</h1>
-					<a
-						href={routes.app.team.cronJobNew.href({ team: team.slug })}
-						mix={[
-							css({
-								display: "inline-flex",
-								alignItems: "center",
-								justifyContent: "center",
-								padding: "8px 16px",
-								borderRadius: 6,
-								border: "1px solid transparent",
-								background: neutral[900],
-								color: "#ffffff",
-								fontFamily: "inherit",
-								fontSize: "0.875rem",
-								fontWeight: 500,
-								cursor: "pointer",
-								textDecoration: "none",
-								"&:hover": { background: neutral[800] },
-							}),
-						]}
-					>
-						New cron job monitor
-					</a>
-				</div>
-
 				{monitors.length === 0 ? (
 					<EmptyState
 						message="No cron job monitors yet."

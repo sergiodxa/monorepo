@@ -23,7 +23,6 @@ import Badge from "~/resources/components/badge";
 import EmptyState from "~/resources/components/empty-state";
 import StatCard from "~/resources/components/stat-card";
 import Heatmap from "~/resources/views/shared/heatmap";
-import routes from "~/routes/web";
 
 namespace CronJobShowView {
 	export interface Props {
@@ -55,7 +54,7 @@ const STATUS_BADGE_TONE: Record<string, BadgeTone> = {
 
 export default function CronJobShowView(handle: Handle<CronJobShowView.Props>) {
 	return () => {
-		let { team, monitor, pings, pingUrl, dailyStats } = handle.props;
+		let { monitor, pings, pingUrl, dailyStats } = handle.props;
 
 		let totalPings = pings.length;
 		let onTimeCount = pings.filter((ping) => ping.was_on_time).length;
@@ -63,39 +62,6 @@ export default function CronJobShowView(handle: Handle<CronJobShowView.Props>) {
 
 		return (
 			<div>
-				<div mix={[css({ display: "flex", alignItems: "center", gap: 12 })]}>
-					<h1 mix={[css({ margin: "0 0 24px" })]}>{monitor.name}</h1>
-					<a
-						href={routes.app.team.cronJobEdit.href({ team: team.slug, monitorId: monitor.id })}
-						mix={[
-							css({
-								display: "inline-flex",
-								alignItems: "center",
-								justifyContent: "center",
-								padding: "8px 16px",
-								borderRadius: 6,
-								border: `2px solid ${neutral[300]}`,
-								background: "#ffffff",
-								color: neutral[500],
-								fontFamily: "inherit",
-								fontSize: "0.875rem",
-								fontWeight: 500,
-								cursor: "pointer",
-								textDecoration: "none",
-								"&:hover": { background: neutral[50] },
-								"@media (prefers-color-scheme: dark)": {
-									background: neutral[900],
-									color: neutral[400],
-									borderColor: neutral[700],
-									"&:hover": { background: neutral[800] },
-								},
-							}),
-						]}
-					>
-						Edit
-					</a>
-				</div>
-
 				{monitor.description && (
 					<p
 						mix={[

@@ -12,6 +12,7 @@ import { getContext } from "remix/async-context-middleware";
 import * as s from "remix/data-schema";
 import { Database } from "remix/data-table";
 import { createAction } from "remix/fetch-router";
+import { css } from "remix/ui";
 
 import MonitorDailyStats from "~/app/data/monitor-daily-stats";
 import TcpMonitor from "~/app/data/tcp-monitor";
@@ -20,6 +21,30 @@ import AppShell from "~/resources/layouts/app-shell";
 import DocumentLayout from "~/resources/layouts/document";
 import TcpMonitorShowView from "~/resources/views/tcp-monitors/show";
 import routes from "~/routes/web";
+
+/** Secondary (outline) button/link, matching the OLD APP's "Cancel" button. Reused below. */
+const buttonSecondary = css({
+	display: "inline-flex",
+	alignItems: "center",
+	justifyContent: "center",
+	padding: "8px 16px",
+	borderRadius: 6,
+	border: "2px solid oklch(0.83 0.01 145)",
+	background: "#ffffff",
+	color: "oklch(0.62 0.01 145)",
+	fontFamily: "inherit",
+	fontSize: "0.875rem",
+	fontWeight: 500,
+	cursor: "pointer",
+	textDecoration: "none",
+	"&:hover": { background: "oklch(0.98 0.005 145)" },
+	"@media (prefers-color-scheme: dark)": {
+		background: "oklch(0.24 0.005 145)",
+		color: "oklch(0.73 0.01 145)",
+		borderColor: "oklch(0.42 0.008 145)",
+		"&:hover": { background: "oklch(0.32 0.006 145)" },
+	},
+});
 
 /** GET /app/:team/tcp/:monitorId — a TCP monitor's detail page. */
 export default createAction(
@@ -43,6 +68,29 @@ export default createAction(
 					teams={ctx.teams}
 					viewer={viewer}
 					isAdmin={ctx.membership.role === "admin"}
+					breadcrumb={monitor.name}
+					actions={
+						<div mix={[css({ display: "flex", alignItems: "center", gap: 12 })]}>
+							<form
+								method="post"
+								action={routes.actions.checkTcpMonitor.href({ team: ctx.team.slug })}
+							>
+								<input type="hidden" name="monitor_id" value={monitor.id} />
+								<button type="submit" mix={[buttonSecondary]}>
+									Check now
+								</button>
+							</form>
+							<a
+								href={routes.app.team.tcpMonitorEdit.href({
+									team: ctx.team.slug,
+									monitorId: monitor.id,
+								})}
+								mix={[buttonSecondary]}
+							>
+								Edit
+							</a>
+						</div>
+					}
 				>
 					<TcpMonitorShowView
 						team={ctx.team}

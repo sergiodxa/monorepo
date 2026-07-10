@@ -39,6 +39,7 @@ export default createAction(
 					teams={ctx.teams}
 					viewer={viewer}
 					isAdmin={ctx.membership.role === "admin"}
+					breadcrumb="Edit DNS monitor"
 				>
 					<EditDnsMonitorView team={ctx.team} monitor={monitor} />
 				</AppShell>

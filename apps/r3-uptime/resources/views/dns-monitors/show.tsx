@@ -21,7 +21,6 @@ import Badge from "~/resources/components/badge";
 import EmptyState from "~/resources/components/empty-state";
 import StatCard from "~/resources/components/stat-card";
 import Heatmap from "~/resources/views/shared/heatmap";
-import routes from "~/routes/web";
 
 namespace DnsMonitorShowView {
 	export interface Props {
@@ -51,7 +50,7 @@ const STATUS_BADGE_TONE: Record<string, BadgeTone> = {
 
 export default function DnsMonitorShowView(handle: Handle<DnsMonitorShowView.Props>) {
 	return () => {
-		let { team, monitor, results, dailyStats } = handle.props;
+		let { monitor, results, dailyStats } = handle.props;
 
 		let totalChecks = results.length;
 		let okChecks = results.filter((result) => result.status === "ok").length;
@@ -67,71 +66,6 @@ export default function DnsMonitorShowView(handle: Handle<DnsMonitorShowView.Pro
 
 		return (
 			<div>
-				<div mix={[css({ display: "flex", alignItems: "center", gap: 12 })]}>
-					<h1 mix={[css({ margin: "0 0 24px" })]}>{monitor.name}</h1>
-					<form method="post" action={routes.actions.checkDnsMonitor.href({ team: team.slug })}>
-						<input type="hidden" name="monitor_id" value={monitor.id} />
-						<button
-							type="submit"
-							mix={[
-								css({
-									display: "inline-flex",
-									alignItems: "center",
-									justifyContent: "center",
-									padding: "8px 16px",
-									borderRadius: 6,
-									border: `2px solid ${neutral[300]}`,
-									background: "#ffffff",
-									color: neutral[500],
-									fontFamily: "inherit",
-									fontSize: "0.875rem",
-									fontWeight: 500,
-									cursor: "pointer",
-									textDecoration: "none",
-									"&:hover": { background: neutral[50] },
-									"@media (prefers-color-scheme: dark)": {
-										background: neutral[900],
-										color: neutral[400],
-										borderColor: neutral[700],
-										"&:hover": { background: neutral[800] },
-									},
-								}),
-							]}
-						>
-							Check now
-						</button>
-					</form>
-					<a
-						href={routes.app.team.dnsMonitorEdit.href({ team: team.slug, monitorId: monitor.id })}
-						mix={[
-							css({
-								display: "inline-flex",
-								alignItems: "center",
-								justifyContent: "center",
-								padding: "8px 16px",
-								borderRadius: 6,
-								border: `2px solid ${neutral[300]}`,
-								background: "#ffffff",
-								color: neutral[500],
-								fontFamily: "inherit",
-								fontSize: "0.875rem",
-								fontWeight: 500,
-								cursor: "pointer",
-								textDecoration: "none",
-								"&:hover": { background: neutral[50] },
-								"@media (prefers-color-scheme: dark)": {
-									background: neutral[900],
-									color: neutral[400],
-									borderColor: neutral[700],
-									"&:hover": { background: neutral[800] },
-								},
-							}),
-						]}
-					>
-						Edit
-					</a>
-				</div>
-
 				<div mix={[css({ display: "flex", flexWrap: "wrap", gap: 16, marginBottom: 24 })]}>
 					<StatCard label="Domain" value={<code>{monitor.domain}</code>} />
 					<StatCard label="Record type" value={monitor.record_type} />

@@ -32,7 +32,6 @@ export default function NewAlertView(handle: Handle<NewAlertView.Props>) {
 
 		return (
 			<div>
-				<h1 mix={[css({ margin: "0 0 24px" })]}>New alert</h1>
 				<form method="post" action={routes.actions.createAlert.href({ team: team.slug })}>
 					<AlertFormFields monitors={monitors} />
 					<button

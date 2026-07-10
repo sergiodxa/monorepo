@@ -27,7 +27,6 @@ export default function NewMaintenanceWindowView(handle: Handle<NewMaintenanceWi
 
 		return (
 			<div>
-				<h1 mix={[css({ margin: "0 0 24px" })]}>New maintenance window</h1>
 				<form
 					method="post"
 					action={routes.actions.createMaintenanceWindow.href({ team: team.slug })}

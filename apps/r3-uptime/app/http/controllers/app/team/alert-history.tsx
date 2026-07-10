@@ -39,6 +39,7 @@ export default createAction(
 					teams={ctx.teams}
 					viewer={viewer}
 					isAdmin={ctx.membership.role === "admin"}
+					breadcrumb="Alert history"
 				>
 					<AlertHistoryView team={ctx.team} events={events} alertsById={alertsById} />
 				</AppShell>

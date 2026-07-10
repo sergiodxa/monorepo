@@ -51,48 +51,6 @@ export default function AlertsView(handle: Handle<AlertsView.Props>) {
 
 		return (
 			<div>
-				<div mix={[css({ display: "flex", alignItems: "center", gap: 12 })]}>
-					<h1 mix={[css({ margin: "0 0 24px" })]}>Alerts</h1>
-					<a
-						href={routes.app.team.alertHistory.href({ team: team.slug })}
-						mix={[
-							css({
-								color: primary[600],
-								textDecoration: "none",
-								"&:hover": { textDecoration: "underline" },
-								"@media (prefers-color-scheme: dark)": { color: primary[400] },
-							}),
-						]}
-					>
-						View history
-					</a>
-					{!atLimit && (
-						<a
-							href={routes.app.team.alertNew.href({ team: team.slug })}
-							mix={[
-								css({
-									display: "inline-flex",
-									alignItems: "center",
-									justifyContent: "center",
-									padding: "8px 16px",
-									borderRadius: 6,
-									border: "1px solid transparent",
-									background: neutral[900],
-									color: "#ffffff",
-									fontFamily: "inherit",
-									fontSize: "0.875rem",
-									fontWeight: 500,
-									cursor: "pointer",
-									textDecoration: "none",
-									"&:hover": { background: neutral[800] },
-								}),
-							]}
-						>
-							New alert
-						</a>
-					)}
-				</div>
-
 				{atLimit && (
 					<p
 						mix={[

@@ -14,6 +14,7 @@ import { getContext } from "remix/async-context-middleware";
 import { Database } from "remix/data-table";
 import { createAction } from "remix/fetch-router";
 import { Session } from "remix/session";
+import { css } from "remix/ui";
 
 import type { MonitorHealth, SparklinePoint } from "~/app/services/analytics";
 import type { DashboardTab } from "~/resources/views/dashboard";
@@ -105,6 +106,32 @@ export default createAction(
 					teams={ctx.teams}
 					viewer={viewer}
 					isAdmin={ctx.membership.role === "admin"}
+					breadcrumb="Dashboard"
+					actions={
+						<a
+							href={routes.app.team.monitorNew.href({ team: ctx.team.slug })}
+							mix={[
+								css({
+									display: "inline-flex",
+									alignItems: "center",
+									justifyContent: "center",
+									padding: "8px 16px",
+									borderRadius: 6,
+									border: "1px solid transparent",
+									background: "oklch(0.24 0.005 145)",
+									color: "#ffffff",
+									fontFamily: "inherit",
+									fontSize: "0.875rem",
+									fontWeight: 500,
+									cursor: "pointer",
+									textDecoration: "none",
+									"&:hover": { background: "oklch(0.32 0.006 145)" },
+								}),
+							]}
+						>
+							Create monitor
+						</a>
+					}
 					toast={toast}
 				>
 					<DashboardView

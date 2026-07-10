@@ -1,9 +1,36 @@
 /**
- * Signed-in app shell layout: header (logo, team name), a sidebar navigation column
- * (team switcher, icon nav links, admin-only group, user menu), the page's main
- * content, and an optional flash toast. Every `/app/:team/*` page composes its
- * content into this shell. It exists as the shared frame every team-area page
- * renders inside.
+ * Signed-in app shell layout: a full-height sidebar (team switcher, icon nav links,
+ * admin-only group, user menu) on the left, and a header (breadcrumb + page-specific
+ * quick actions) above the page's main content on the right. Every `/app/:team/*`
+ * page composes its content into this shell. It exists as the shared frame every
+ * team-area page renders inside.
+ *
+ * At ≥768px this is a CSS grid with a named-area layout:
+ *
+ * ```
+ * | team picker | header  |
+ * | nav list    | content |
+ * | user menu   | content |
+ * ```
+ *
+ * — a grid rather than nested flex rows/columns because the team-picker cell and the
+ * header cell need to share exactly one row's height (so the divider below the team
+ * picker lines up with the divider below the header): the grid's default
+ * `align-items: stretch` gives every cell in a row the row's full height for free,
+ * with no hardcoded pixel height to keep in sync between two unrelated elements.
+ *
+ * The sidebar's three sections (team picker / nav list / user menu) are DOM children
+ * of one `<nav popover>` element (so the mobile off-canvas drawer can show/hide them
+ * as a single unit), but at ≥768px that `<nav>` switches to `display: contents` —
+ * generating no box of its own — so its three children become direct items of the
+ * outer grid instead of one flex column inside a "sidebar" grid cell. Below 768px,
+ * `grid-area` on those children is simply inert (their containing block isn't a grid
+ * there), and the `<nav>` lays them out as an ordinary flex column, exactly like the
+ * mobile drawer always has.
+ *
+ * There is no separate top-level header spanning the sidebar's width — the team
+ * switcher already names the team once, in the sidebar, so a page never repeats it a
+ * second time as a header title or a third time as its own `<h1>`.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -13,6 +40,8 @@ import type { Handle, RemixNode } from "remix/ui";
 
 import { css } from "remix/ui";
 
+import Avatar from "~/resources/components/avatar";
+import Logo from "~/resources/components/logo";
 import routes from "~/routes/web";
 
 /** Neutral scale shades used on this page, hue 145. */
@@ -20,7 +49,6 @@ const neutral = {
 	50: "oklch(0.98 0.005 145)",
 	100: "oklch(0.96 0.005 145)",
 	200: "oklch(0.91 0.008 145)",
-	300: "oklch(0.83 0.01 145)",
 	400: "oklch(0.73 0.01 145)",
 	500: "oklch(0.62 0.01 145)",
 	800: "oklch(0.32 0.006 145)",
@@ -28,27 +56,27 @@ const neutral = {
 	950: "oklch(0.16 0.004 145)",
 };
 
-/** Primary (brand) scale shades used on this page, hue 142. */
-const primary100 = "oklch(0.92 0.08 142)";
-const primary600 = "oklch(0.6 0.16 142)";
-
 /**
- * Page-level flex column hard-capped to exactly one viewport height. This must be
- * `height` (not `minHeight`), and paired with `overflow: hidden`: `minHeight` is only
- * a floor, so if the sidebar's own nav-item list is taller than the viewport, the
- * whole page would grow to match it instead of the sidebar scrolling internally —
- * that's also what makes the header+content row below a well-defined (not
- * content-driven/circular) height for `flex: 1` to divide up.
+ * The page shell. Below 768px, a plain flex column — the sidebar `<nav>` is either
+ * closed (`display: none`, no box) or an off-canvas overlay (top-layer, outside
+ * normal flow either way), so header+main are simply the only flex children that
+ * matter. At ≥768px it becomes the two-column, three-row grid described above.
  */
 const page = css({
 	display: "flex",
 	flexDirection: "column",
 	height: "100vh",
 	overflow: "hidden",
+	"@media (min-width: 768px)": {
+		display: "grid",
+		gridTemplateColumns: "220px 1fr",
+		gridTemplateRows: "auto 1fr auto",
+		gridTemplateAreas: `"teampicker header" "nav content" "usermenu content"`,
+	},
 });
 
-/** Horizontal group of inline items (nav links, user info). */
-const row = css({ display: "flex", alignItems: "center", gap: 12 });
+/** Horizontal group of inline items (nav toggle + breadcrumb, action buttons). */
+const row = css({ display: "flex", alignItems: "center", gap: 12, minWidth: 0 });
 
 /**
  * The hamburger button that opens the sidebar on mobile via the native Command
@@ -67,31 +95,46 @@ const sidebarToggle = css({
 	background: "transparent",
 	color: "inherit",
 	cursor: "pointer",
+	flexShrink: 0,
 	"&:hover": { background: neutral[100] },
 	"@media (min-width: 768px)": { display: "none" },
 	"@media (prefers-color-scheme: dark)": { "&:hover": { background: neutral[800] } },
 });
 
-/** Muted small text (meta info). */
-const mutedSmall = css({
-	fontSize: "0.8125rem",
-	color: neutral[500],
-	"@media (prefers-color-scheme: dark)": { color: neutral[400] },
+/** The header cell: nav toggle + breadcrumb on the left, quick actions on the right. */
+const header = css({
+	display: "flex",
+	alignItems: "center",
+	justifyContent: "space-between",
+	gap: 16,
+	padding: "12px 20px",
+	borderBottom: `1px solid ${neutral[200]}`,
+	flexShrink: 0,
+	"@media (min-width: 768px)": { gridArea: "header" },
+	"@media (prefers-color-scheme: dark)": { borderColor: neutral[800] },
+});
+
+/** The current page/section name, replacing what used to be each page's own `<h1>`. */
+const breadcrumbText = css({
+	fontSize: "0.9375rem",
+	fontWeight: 600,
+	overflow: "hidden",
+	textOverflow: "ellipsis",
+	whiteSpace: "nowrap",
+	color: neutral[900],
+	"@media (prefers-color-scheme: dark)": { color: neutral[50] },
 });
 
 /**
- * The sidebar's popover drawer/column. Below the OLD APP's sidebar mobile breakpoint
- * (768px), this is a native popover — hidden until opened by the header's hamburger
- * button — rendered as a fixed, full-height overlay drawer with its own backdrop,
- * matching the OLD APP's `Sidebar` primitive switching to an `AriaModalOverlay` sheet
- * on mobile. At ≥768px it resets to a normal static column, always visible regardless
- * of open/closed state (the `!important`s are required to beat the UA stylesheet's
+ * The sidebar's popover drawer. Below 768px this is a native popover — hidden until
+ * opened by the header's hamburger button — rendered as a fixed, full-height overlay
+ * drawer with its own backdrop, matching the OLD APP's `Sidebar` primitive switching
+ * to an `AriaModalOverlay` sheet on mobile: a flex column of its three sections, with
+ * the middle one (`navCell`, below) independently scrollable so the team picker and
+ * user menu stay pinned. At ≥768px it becomes `display: contents` (see the file
+ * docblock) — the `!important`s throughout are required to beat the UA stylesheet's
  * `[popover]:not(:popover-open) { display: none }`, which otherwise wins on
- * specificity). It's a flex column — team picker on top, nav lists in the middle, user
- * menu pushed to the bottom via `marginTop: auto` — but that `display: flex` can only
- * be set for the desktop case and for the mobile `:popover-open` state: setting it
- * unconditionally would itself beat the UA's closed-state `display: none` and leave the
- * drawer stuck open below 768px.
+ * specificity.
  */
 const sidebarNav = css({
 	position: "fixed",
@@ -100,41 +143,24 @@ const sidebarNav = css({
 	bottom: 0,
 	margin: 0,
 	// The UA popover stylesheet applies `height: fit-content` to every `[popover]`
-	// element regardless of open state — left unset, that beats the parent flex
-	// row's default `align-items: stretch`, so the nav never actually reaches the
-	// row's full height and `marginTop: "auto"` on the user-menu block below has no
-	// extra space to push into. Force it to fill instead.
+	// element regardless of open state — left unset, that beats this element's
+	// intended full-height drawer size below 768px.
 	height: "100%",
-	// Without this, `height: 100%` sizes only the content box, and this element's own
-	// `padding` below is added on top — the rendered box ends up taller than its
-	// flex container by exactly the vertical padding, overflowing past the viewport.
 	boxSizing: "border-box",
-	// Belt-and-suspenders: now that the page shell hard-caps to one viewport height,
-	// this should rarely trigger, but if the nav-item list is ever taller than the
-	// available height (a very short window, or a team with many nav items), it
-	// scrolls internally instead of silently clipping the user menu at the bottom.
-	overflowY: "auto",
-	gap: 12,
+	display: "none",
+	flexDirection: "column",
+	overflow: "hidden",
 	width: "min(80vw, 288px)",
 	maxHeight: "100vh",
-	padding: "16px 12px",
+	padding: 0,
 	border: "none",
 	borderRight: `1px solid ${neutral[200]}`,
 	background: "#ffffff",
 	boxShadow: "0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1)",
 	"&::backdrop": { background: "rgba(0, 0, 0, 0.4)" },
-	"&:popover-open": { display: "flex", flexDirection: "column" },
+	"&:popover-open": { display: "flex !important" },
 	"@media (min-width: 768px)": {
-		display: "flex !important",
-		flexDirection: "column",
-		position: "static",
-		top: "auto",
-		left: "auto",
-		bottom: "auto",
-		width: 220,
-		maxHeight: "none",
-		flexShrink: 0,
-		boxShadow: "none",
+		display: "contents !important",
 	},
 	"@media (prefers-color-scheme: dark)": {
 		background: neutral[950],
@@ -142,12 +168,70 @@ const sidebarNav = css({
 	},
 });
 
-/** Plain (non-interactive) row used for the team picker when the viewer has one team. */
+/**
+ * Top sidebar cell: the team picker. Shares row 1 with `header` at ≥768px — the
+ * grid's default `align-items: stretch` gives both the same height, so their
+ * `borderBottom`s land at the same y — with a matching `borderRight` to continue the
+ * vertical divider between the sidebar and the content column.
+ */
+const teamPickerCell = css({
+	display: "flex",
+	alignItems: "center",
+	padding: "10px 12px",
+	flexShrink: 0,
+	"@media (min-width: 768px)": {
+		gridArea: "teampicker",
+		padding: "0 16px",
+		borderBottom: `1px solid ${neutral[200]}`,
+		borderRight: `1px solid ${neutral[200]}`,
+	},
+	"@media (prefers-color-scheme: dark)": { borderColor: neutral[800] },
+});
+
+/**
+ * Middle sidebar cell: the primary + admin-only nav lists. Independently scrollable
+ * (`overflow-y: auto`, `minHeight: 0`) so a long nav list never pushes the user menu
+ * below the sidebar's own scroll instead of staying pinned to the bottom.
+ */
+const navCell = css({
+	display: "flex",
+	flexDirection: "column",
+	gap: 12,
+	flex: 1,
+	minHeight: 0,
+	overflowY: "auto",
+	padding: "8px 12px",
+	"@media (min-width: 768px)": {
+		gridArea: "nav",
+		borderRight: `1px solid ${neutral[200]}`,
+	},
+	"@media (prefers-color-scheme: dark)": { borderColor: neutral[800] },
+});
+
+/** Bottom sidebar cell: the user menu. */
+const userMenuCell = css({
+	padding: "8px 12px",
+	flexShrink: 0,
+	"@media (min-width: 768px)": {
+		gridArea: "usermenu",
+		padding: "8px 16px 16px",
+		borderRight: `1px solid ${neutral[200]}`,
+	},
+	"@media (prefers-color-scheme: dark)": { borderColor: neutral[800] },
+});
+
+/**
+ * Plain (non-interactive) row used for the team picker when the viewer has one team.
+ * `minWidth: 0` is required for `truncatedLabel`'s ellipsis to actually kick in —
+ * without it, this row (and the sidebar itself) would rather grow past its intended
+ * width than truncate the team name.
+ */
 const teamPickerRow = css({
 	display: "flex",
 	alignItems: "center",
 	gap: 8,
-	padding: "6px 8px",
+	minWidth: 0,
+	width: "100%",
 });
 
 /** Interactive team/user-menu trigger button, styled to look like the plain row above. */
@@ -156,7 +240,9 @@ const menuTriggerButton = css({
 	alignItems: "center",
 	gap: 8,
 	width: "100%",
+	minWidth: 0,
 	padding: "6px 8px",
+	margin: "-6px -8px",
 	border: "none",
 	borderRadius: 8,
 	background: "transparent",
@@ -166,43 +252,6 @@ const menuTriggerButton = css({
 	color: "inherit",
 	"&:hover": { background: neutral[100] },
 	"@media (prefers-color-scheme: dark)": { "&:hover": { background: neutral[800] } },
-});
-
-/** 24x24 rounded-square image, used for a team's logo. */
-const teamLogoImage = css({ width: 24, height: 24, borderRadius: 6, objectFit: "cover" });
-
-/** 24x24 rounded-square initials fallback, used when a team has no logo. */
-const teamLogoFallback = css({
-	display: "inline-flex",
-	alignItems: "center",
-	justifyContent: "center",
-	width: 24,
-	height: 24,
-	borderRadius: 6,
-	background: primary100,
-	color: primary600,
-	fontSize: "0.6875rem",
-	fontWeight: 700,
-	flexShrink: 0,
-});
-
-/** 24x24 circular image, used for the viewer's avatar. */
-const avatarImage = css({ width: 24, height: 24, borderRadius: 999, objectFit: "cover" });
-
-/** 24x24 circular initials fallback, used when the viewer has no avatar. */
-const avatarFallback = css({
-	display: "inline-flex",
-	alignItems: "center",
-	justifyContent: "center",
-	width: 24,
-	height: 24,
-	borderRadius: 999,
-	background: neutral[200],
-	color: neutral[900],
-	fontSize: "0.6875rem",
-	fontWeight: 700,
-	flexShrink: 0,
-	"@media (prefers-color-scheme: dark)": { background: neutral[800], color: neutral[50] },
 });
 
 /** Truncated name/label text next to a logo/avatar in the team picker and user menu. */
@@ -226,7 +275,7 @@ const truncatedLabel = css({
  * top-layer rendering escapes normal containing-block rules). Since this app is
  * platform-only (no floating-ui/JS positioning), we place the panel near the
  * sidebar's left edge (always at viewport x=0, in both mobile-drawer and
- * desktop-static-column modes) with a fixed `top`/`bottom` offset instead.
+ * desktop-grid modes) with a fixed `top`/`bottom` offset instead.
  */
 function dropdownPanel(edge: { top: number } | { bottom: number }) {
 	return css({
@@ -308,12 +357,24 @@ const navLink = css({
 	},
 });
 
+/** The page's main content area (grid area "content", spanning both content-side rows at ≥768px). */
+const main = css({
+	minWidth: 0,
+	padding: 20,
+	overflow: "auto",
+	"@media (min-width: 768px)": { gridArea: "content", padding: 48 },
+});
+
 namespace AppShell {
 	export interface Props {
 		team: { id: string; slug: string; name: string; logo: string | null };
 		teams: Array<{ id: string; slug: string; name: string; logo: string | null }>;
 		viewer: { name: string; email: string; avatar: string };
 		isAdmin: boolean;
+		/** Current page/section name, shown in the header in place of a per-page `<h1>`. */
+		breadcrumb: string;
+		/** Page-specific quick actions (e.g. "Create monitor"), shown at the end of the header. */
+		actions?: RemixNode;
 		toast?: { intent: "success" | "error"; message: string };
 		children: RemixNode;
 	}
@@ -321,7 +382,7 @@ namespace AppShell {
 
 export default function AppShell(handle: Handle<AppShell.Props>) {
 	return () => {
-		let { team, teams, viewer, isAdmin, toast, children } = handle.props;
+		let { team, teams, viewer, isAdmin, breadcrumb, actions, toast, children } = handle.props;
 
 		let primaryNavItems: Array<{ href: string; label: string; icon: RemixNode }> = [
 			{
@@ -524,62 +585,13 @@ export default function AppShell(handle: Handle<AppShell.Props>) {
 			},
 		];
 
-		let teamInitials = team.name.slice(0, 2).toUpperCase();
-		let avatarInitials =
-			viewer.name
-				.split(" ")
-				.filter(Boolean)
-				.map((part) => part[0])
-				.join("")
-				.toUpperCase()
-				.slice(0, 2) || "?";
-
 		return (
 			<div mix={[page]}>
-				<header
-					mix={[
-						css({
-							display: "flex",
-							alignItems: "center",
-							justifyContent: "space-between",
-							gap: 16,
-							padding: "12px 20px",
-							borderBottom: `1px solid ${neutral[200]}`,
-							"@media (prefers-color-scheme: dark)": { borderColor: neutral[800] },
-						}),
-					]}
-				>
-					<div mix={[row]}>
-						<button
-							type="button"
-							commandfor="app-sidebar"
-							command="toggle-popover"
-							aria-label="Toggle navigation"
-							mix={[sidebarToggle]}
-						>
-							<svg viewBox="0 0 20 20" width={18} height={18} fill="none" aria-hidden="true">
-								<path
-									d="M3 5h14M3 10h14M3 15h14"
-									stroke="currentColor"
-									strokeWidth={1.5}
-									strokeLinecap="round"
-								/>
-							</svg>
-						</button>
-						<strong>Uptime</strong>
-						<span mix={[mutedSmall]}>{team.name}</span>
-					</div>
-				</header>
-
-				<div mix={[css({ display: "flex", flex: 1, minHeight: 0 })]}>
-					<nav id="app-sidebar" popover="auto" mix={[sidebarNav]}>
+				<nav id="app-sidebar" popover="auto" mix={[sidebarNav]}>
+					<div mix={[teamPickerCell]}>
 						{teams.length <= 1 ? (
 							<div mix={[teamPickerRow]}>
-								{team.logo ? (
-									<img src={team.logo} alt="" mix={[teamLogoImage]} />
-								) : (
-									<span mix={[teamLogoFallback]}>{teamInitials}</span>
-								)}
+								<Logo src={team.logo} name={team.name} />
 								<span mix={[truncatedLabel]}>{team.name}</span>
 							</div>
 						) : (
@@ -591,13 +603,16 @@ export default function AppShell(handle: Handle<AppShell.Props>) {
 									aria-label="Switch team"
 									mix={[menuTriggerButton]}
 								>
-									{team.logo ? (
-										<img src={team.logo} alt="" mix={[teamLogoImage]} />
-									) : (
-										<span mix={[teamLogoFallback]}>{teamInitials}</span>
-									)}
+									<Logo src={team.logo} name={team.name} />
 									<span mix={[truncatedLabel]}>{team.name}</span>
-									<svg viewBox="0 0 20 20" width={14} height={14} fill="none" aria-hidden="true">
+									<svg
+										viewBox="0 0 20 20"
+										width={14}
+										height={14}
+										fill="none"
+										aria-hidden="true"
+										mix={[css({ flexShrink: 0 })]}
+									>
 										<path
 											d="M6 8l4 4 4-4"
 											stroke="currentColor"
@@ -615,11 +630,7 @@ export default function AppShell(handle: Handle<AppShell.Props>) {
 													href={routes.app.team.dashboard.href({ team: t.slug })}
 													mix={[dropdownItem]}
 												>
-													{t.logo ? (
-														<img src={t.logo} alt="" mix={[teamLogoImage]} />
-													) : (
-														<span mix={[teamLogoFallback]}>{t.name.slice(0, 2).toUpperCase()}</span>
-													)}
+													<Logo src={t.logo} name={t.name} />
 													<span mix={[truncatedLabel]}>{t.name}</span>
 													{t.slug === team.slug && (
 														<svg
@@ -645,7 +656,9 @@ export default function AppShell(handle: Handle<AppShell.Props>) {
 								</div>
 							</>
 						)}
+					</div>
 
+					<div mix={[navCell]}>
 						<ul mix={[navList]}>
 							{primaryNavItems.map((item) => (
 								<li key={item.href}>
@@ -677,56 +690,70 @@ export default function AppShell(handle: Handle<AppShell.Props>) {
 								</ul>
 							</>
 						)}
+					</div>
 
-						<div mix={[css({ marginTop: "auto" })]}>
-							<button
-								type="button"
-								commandfor="user-menu"
-								command="toggle-popover"
-								aria-label="Account menu"
-								mix={[menuTriggerButton]}
+					<div mix={[userMenuCell]}>
+						<button
+							type="button"
+							commandfor="user-menu"
+							command="toggle-popover"
+							aria-label="Account menu"
+							mix={[menuTriggerButton]}
+						>
+							<Avatar src={viewer.avatar || null} name={viewer.name} />
+							<span mix={[truncatedLabel]}>{viewer.name}</span>
+							<svg
+								viewBox="0 0 20 20"
+								width={14}
+								height={14}
+								fill="none"
+								aria-hidden="true"
+								mix={[css({ flexShrink: 0 })]}
 							>
-								{viewer.avatar ? (
-									<img src={viewer.avatar} alt="" mix={[avatarImage]} />
-								) : (
-									<span mix={[avatarFallback]}>{avatarInitials}</span>
-								)}
-								<span mix={[truncatedLabel]}>{viewer.name}</span>
-								<svg viewBox="0 0 20 20" width={14} height={14} fill="none" aria-hidden="true">
-									<path
-										d="M6 8l4 4 4-4"
-										stroke="currentColor"
-										strokeWidth={1.5}
-										strokeLinecap="round"
-										strokeLinejoin="round"
-									/>
-								</svg>
-							</button>
-							<div id="user-menu" popover="auto" mix={[dropdownPanel({ bottom: 76 })]}>
-								<a href={routes.app.team.account.href({ team: team.slug })} mix={[dropdownItem]}>
-									Account
-								</a>
-								<a href={routes.logout.index.href()} mix={[dropdownItem]}>
-									Sign out
-								</a>
-							</div>
+								<path
+									d="M6 8l4 4 4-4"
+									stroke="currentColor"
+									strokeWidth={1.5}
+									strokeLinecap="round"
+									strokeLinejoin="round"
+								/>
+							</svg>
+						</button>
+						<div id="user-menu" popover="auto" mix={[dropdownPanel({ bottom: 76 })]}>
+							<a href={routes.app.team.account.href({ team: team.slug })} mix={[dropdownItem]}>
+								Account
+							</a>
+							<a href={routes.logout.index.href()} mix={[dropdownItem]}>
+								Sign out
+							</a>
 						</div>
-					</nav>
+					</div>
+				</nav>
 
-					<main
-						mix={[
-							css({
-								flex: 1,
-								padding: 20,
-								overflow: "auto",
-								minWidth: 0,
-								"@media (min-width: 768px)": { padding: 48 },
-							}),
-						]}
-					>
-						{children}
-					</main>
+				<div mix={[header]}>
+					<div mix={[row]}>
+						<button
+							type="button"
+							commandfor="app-sidebar"
+							command="toggle-popover"
+							aria-label="Toggle navigation"
+							mix={[sidebarToggle]}
+						>
+							<svg viewBox="0 0 20 20" width={18} height={18} fill="none" aria-hidden="true">
+								<path
+									d="M3 5h14M3 10h14M3 15h14"
+									stroke="currentColor"
+									strokeWidth={1.5}
+									strokeLinecap="round"
+								/>
+							</svg>
+						</button>
+						<span mix={[breadcrumbText]}>{breadcrumb}</span>
+					</div>
+					{actions && <div mix={[row]}>{actions}</div>}
 				</div>
+
+				<main mix={[main]}>{children}</main>
 
 				{toast && (
 					<p

@@ -27,6 +27,7 @@ export default createAction(routes.app.team.cronJobNew, () => {
 				teams={ctx.teams}
 				viewer={viewer}
 				isAdmin={ctx.membership.role === "admin"}
+				breadcrumb="New cron job monitor"
 			>
 				<NewCronJobView team={ctx.team} />
 			</AppShell>

@@ -27,6 +27,7 @@ export default createAction(routes.app.team.tcpMonitorNew, () => {
 				teams={ctx.teams}
 				viewer={viewer}
 				isAdmin={ctx.membership.role === "admin"}
+				breadcrumb="New TCP monitor"
 			>
 				<NewTcpMonitorView team={ctx.team} />
 			</AppShell>
