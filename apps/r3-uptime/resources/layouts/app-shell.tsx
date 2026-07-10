@@ -69,7 +69,8 @@ const page = css({
 	overflow: "hidden",
 	"@media (min-width: 768px)": {
 		display: "grid",
-		gridTemplateColumns: "220px 1fr",
+		// 256px (16rem), matching the OLD APP's `--sidebar-width`.
+		gridTemplateColumns: "256px 1fr",
 		gridTemplateRows: "auto 1fr auto",
 		gridTemplateAreas: `"teampicker header" "nav content" "usermenu content"`,
 	},
@@ -234,7 +235,12 @@ const teamPickerRow = css({
 	width: "100%",
 });
 
-/** Interactive team/user-menu trigger button, styled to look like the plain row above. */
+/**
+ * Interactive team/user-menu trigger button, styled to look like the plain row
+ * above. `width: 100%` alone (no negative-margin "bleed" trick) keeps its left/right
+ * edges flush with its parent cell's own padding on both sides equally — the cell's
+ * padding IS the button's margin from the sidebar's edge.
+ */
 const menuTriggerButton = css({
 	display: "flex",
 	alignItems: "center",
@@ -242,7 +248,6 @@ const menuTriggerButton = css({
 	width: "100%",
 	minWidth: 0,
 	padding: "6px 8px",
-	margin: "-6px -8px",
 	border: "none",
 	borderRadius: 8,
 	background: "transparent",
@@ -266,6 +271,45 @@ const truncatedLabel = css({
 	color: neutral[900],
 	"@media (prefers-color-scheme: dark)": { color: neutral[50] },
 });
+
+/**
+ * The "switch" affordance icon at the end of the team-picker/user-menu triggers.
+ * Explicitly colored to match `truncatedLabel` — `currentColor` alone isn't reliable
+ * here, since the icon and the label are siblings rather than parent/child, so they
+ * don't necessarily inherit the same computed color.
+ */
+const menuChevronIcon = css({
+	flexShrink: 0,
+	color: neutral[900],
+	"@media (prefers-color-scheme: dark)": { color: neutral[50] },
+});
+
+/**
+ * A compact "expand/switch" indicator (up-chevron over down-chevron), matching the
+ * OLD APP's `ChevronsUpDownIcon`. A plain value-returning function, not a
+ * `Handle`-based component — called directly (`{chevronsUpDownIcon()}`) since it's
+ * just inlined markup, not a reusable JSX element type.
+ */
+function chevronsUpDownIcon() {
+	return (
+		<svg
+			viewBox="0 0 20 20"
+			width={14}
+			height={14}
+			fill="none"
+			aria-hidden="true"
+			mix={[menuChevronIcon]}
+		>
+			<path
+				d="M6 8l4-4 4 4M6 12l4 4 4-4"
+				stroke="currentColor"
+				strokeWidth={1.5}
+				strokeLinecap="round"
+				strokeLinejoin="round"
+			/>
+		</svg>
+	);
+}
 
 /**
  * Fixed, viewport-relative dropdown panel for the team-picker/user-menu popovers.
@@ -318,15 +362,6 @@ const dropdownItem = css({
 		color: neutral[50],
 		"&:hover": { background: neutral[800] },
 	},
-});
-
-/** Horizontal rule separating the primary nav group from the admin-only group. */
-const navDivider = css({
-	height: 1,
-	margin: "4px 8px",
-	border: "none",
-	background: neutral[200],
-	"@media (prefers-color-scheme: dark)": { background: neutral[800] },
 });
 
 /** A nav-list `<ul>` (used for both the primary and admin-only groups). */
@@ -605,22 +640,7 @@ export default function AppShell(handle: Handle<AppShell.Props>) {
 								>
 									<Logo src={team.logo} name={team.name} />
 									<span mix={[truncatedLabel]}>{team.name}</span>
-									<svg
-										viewBox="0 0 20 20"
-										width={14}
-										height={14}
-										fill="none"
-										aria-hidden="true"
-										mix={[css({ flexShrink: 0 })]}
-									>
-										<path
-											d="M6 8l4 4 4-4"
-											stroke="currentColor"
-											strokeWidth={1.5}
-											strokeLinecap="round"
-											strokeLinejoin="round"
-										/>
-									</svg>
+									{chevronsUpDownIcon()}
 								</button>
 								<div id="team-picker-menu" popover="auto" mix={[dropdownPanel({ top: 64 })]}>
 									<ul mix={[navList]}>
@@ -671,24 +691,21 @@ export default function AppShell(handle: Handle<AppShell.Props>) {
 						</ul>
 
 						{isAdmin && (
-							<>
-								<hr mix={[navDivider]} />
-								<ul mix={[navList]}>
-									{adminNavItems.map((item) => (
-										<li key={item.href}>
-											<a
-												href={item.href}
-												target={item.target}
-												rel={item.target ? "noreferrer" : undefined}
-												mix={[navLink]}
-											>
-												{item.icon}
-												<span>{item.label}</span>
-											</a>
-										</li>
-									))}
-								</ul>
-							</>
+							<ul mix={[navList, css({ marginTop: "auto" })]}>
+								{adminNavItems.map((item) => (
+									<li key={item.href}>
+										<a
+											href={item.href}
+											target={item.target}
+											rel={item.target ? "noreferrer" : undefined}
+											mix={[navLink]}
+										>
+											{item.icon}
+											<span>{item.label}</span>
+										</a>
+									</li>
+								))}
+							</ul>
 						)}
 					</div>
 
@@ -702,22 +719,7 @@ export default function AppShell(handle: Handle<AppShell.Props>) {
 						>
 							<Avatar src={viewer.avatar || null} name={viewer.name} />
 							<span mix={[truncatedLabel]}>{viewer.name}</span>
-							<svg
-								viewBox="0 0 20 20"
-								width={14}
-								height={14}
-								fill="none"
-								aria-hidden="true"
-								mix={[css({ flexShrink: 0 })]}
-							>
-								<path
-									d="M6 8l4 4 4-4"
-									stroke="currentColor"
-									strokeWidth={1.5}
-									strokeLinecap="round"
-									strokeLinejoin="round"
-								/>
-							</svg>
+							{chevronsUpDownIcon()}
 						</button>
 						<div id="user-menu" popover="auto" mix={[dropdownPanel({ bottom: 76 })]}>
 							<a href={routes.app.team.account.href({ team: team.slug })} mix={[dropdownItem]}>
