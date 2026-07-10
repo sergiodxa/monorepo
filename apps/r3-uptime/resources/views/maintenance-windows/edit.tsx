@@ -94,7 +94,7 @@ export default function EditMaintenanceWindowView(handle: Handle<EditMaintenance
 
 		return (
 			<div>
-				<h1>Edit maintenance window</h1>
+				<h1 mix={[css({ margin: "0 0 24px" })]}>Edit maintenance window</h1>
 				<form
 					method="post"
 					action={routes.actions.updateMaintenanceWindow.href({ team: team.slug })}

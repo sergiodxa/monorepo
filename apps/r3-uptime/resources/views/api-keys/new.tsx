@@ -37,7 +37,7 @@ export default function NewApiKeyView(handle: Handle<NewApiKeyView.Props>) {
 
 		return (
 			<div>
-				<h1>New API key</h1>
+				<h1 mix={[css({ margin: "0 0 24px" })]}>New API key</h1>
 				<form method="post" action={routes.teamAdminActions.createApiKey.href({ team: team.slug })}>
 					<Field label="Name">
 						<input

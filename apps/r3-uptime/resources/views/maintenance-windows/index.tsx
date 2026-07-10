@@ -49,7 +49,7 @@ export default function MaintenanceWindowsView(handle: Handle<MaintenanceWindows
 		return (
 			<div>
 				<div mix={[css({ display: "flex", alignItems: "center", gap: 12 })]}>
-					<h1>Maintenance windows</h1>
+					<h1 mix={[css({ margin: "0 0 24px" })]}>Maintenance windows</h1>
 					<a
 						href={routes.app.team.maintenanceWindowNew.href({ team: team.slug })}
 						mix={[

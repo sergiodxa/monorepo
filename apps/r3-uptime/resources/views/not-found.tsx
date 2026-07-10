@@ -45,7 +45,7 @@ export default function NotFoundView(handle: Handle<NotFoundView.Setup>) {
 						}),
 					]}
 				>
-					<h1>{title}</h1>
+					<h1 mix={[css({ margin: 0 })]}>{title}</h1>
 					<p
 						mix={[
 							css({

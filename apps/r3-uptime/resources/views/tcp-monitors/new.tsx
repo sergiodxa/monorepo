@@ -21,7 +21,7 @@ namespace NewTcpMonitorView {
 export default function NewTcpMonitorView(handle: Handle<NewTcpMonitorView.Props>) {
 	return () => (
 		<div>
-			<h1>New TCP monitor</h1>
+			<h1 mix={[css({ margin: "0 0 24px" })]}>New TCP monitor</h1>
 			<form
 				method="post"
 				action={routes.actions.createTcpMonitor.href({ team: handle.props.team.slug })}

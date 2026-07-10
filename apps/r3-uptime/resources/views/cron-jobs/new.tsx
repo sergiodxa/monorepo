@@ -26,7 +26,7 @@ const neutral = {
 export default function NewCronJobView(handle: Handle<NewCronJobView.Props>) {
 	return () => (
 		<div>
-			<h1>New cron job monitor</h1>
+			<h1 mix={[css({ margin: "0 0 24px" })]}>New cron job monitor</h1>
 			<form
 				method="post"
 				action={routes.actions.createCronJob.href({ team: handle.props.team.slug })}

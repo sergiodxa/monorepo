@@ -52,7 +52,7 @@ export default function AlertsView(handle: Handle<AlertsView.Props>) {
 		return (
 			<div>
 				<div mix={[css({ display: "flex", alignItems: "center", gap: 12 })]}>
-					<h1>Alerts</h1>
+					<h1 mix={[css({ margin: "0 0 24px" })]}>Alerts</h1>
 					<a
 						href={routes.app.team.alertHistory.href({ team: team.slug })}
 						mix={[

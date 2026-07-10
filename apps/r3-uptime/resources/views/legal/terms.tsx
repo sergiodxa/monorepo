@@ -36,6 +36,7 @@ export default function TermsView(_handle: Handle) {
 						fontSize: "2.25rem",
 						fontWeight: 800,
 						letterSpacing: "-0.025em",
+						marginTop: 0,
 						marginBottom: 32,
 						color: neutral[900],
 					},

@@ -48,7 +48,7 @@ export default function TcpMonitorsView(handle: Handle<TcpMonitorsView.Props>) {
 		return (
 			<div>
 				<div mix={[css({ display: "flex", alignItems: "center", gap: 12 })]}>
-					<h1>TCP monitors</h1>
+					<h1 mix={[css({ margin: "0 0 24px" })]}>TCP monitors</h1>
 					<a
 						href={routes.app.team.tcpMonitorNew.href({ team: team.slug })}
 						mix={[

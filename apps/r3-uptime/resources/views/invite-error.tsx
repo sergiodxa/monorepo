@@ -39,7 +39,7 @@ export default function InviteErrorView(handle: Handle<InviteErrorView.Props>) {
 					}),
 				]}
 			>
-				<h1>Invite unavailable</h1>
+				<h1 mix={[css({ margin: 0 })]}>Invite unavailable</h1>
 				<p
 					mix={[
 						css({

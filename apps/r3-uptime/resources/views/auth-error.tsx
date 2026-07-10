@@ -39,7 +39,7 @@ export default function AuthErrorView(handle: Handle<AuthErrorView.Props>) {
 					}),
 				]}
 			>
-				<h1>Sign-in failed</h1>
+				<h1 mix={[css({ margin: 0 })]}>Sign-in failed</h1>
 				<p
 					mix={[
 						css({

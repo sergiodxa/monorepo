@@ -35,7 +35,7 @@ export default function NewStatusPageView(handle: Handle<NewStatusPageView.Props
 
 		return (
 			<div>
-				<h1>New status page</h1>
+				<h1 mix={[css({ margin: "0 0 24px" })]}>New status page</h1>
 				<form method="post" action={routes.actions.createStatusPage.href({ team: team.slug })}>
 					<StatusPageFormFields
 						monitors={monitors}

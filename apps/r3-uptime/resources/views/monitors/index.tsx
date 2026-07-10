@@ -56,7 +56,7 @@ export default function HttpMonitorsView(handle: Handle<HttpMonitorsView.Props>)
 		return (
 			<div>
 				<div mix={[css({ display: "flex", alignItems: "center", gap: 12 })]}>
-					<h1>HTTP monitors</h1>
+					<h1 mix={[css({ margin: "0 0 24px" })]}>HTTP monitors</h1>
 					<a
 						href={routes.app.team.monitorNew.href({ team: team.slug })}
 						mix={[

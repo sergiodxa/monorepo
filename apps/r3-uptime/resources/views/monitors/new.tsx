@@ -22,7 +22,7 @@ namespace NewMonitorView {
 export default function NewMonitorView(handle: Handle<NewMonitorView.Props>) {
 	return () => (
 		<div>
-			<h1>New monitor</h1>
+			<h1 mix={[css({ margin: "0 0 24px" })]}>New monitor</h1>
 			<form
 				method="post"
 				action={routes.actions.createMonitor.href({ team: handle.props.team.slug })}

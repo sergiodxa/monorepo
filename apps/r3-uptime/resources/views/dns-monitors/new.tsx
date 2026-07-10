@@ -26,7 +26,7 @@ const neutral = {
 export default function NewDnsMonitorView(handle: Handle<NewDnsMonitorView.Props>) {
 	return () => (
 		<div>
-			<h1>New DNS monitor</h1>
+			<h1 mix={[css({ margin: "0 0 24px" })]}>New DNS monitor</h1>
 			<form
 				method="post"
 				action={routes.actions.createDnsMonitor.href({ team: handle.props.team.slug })}

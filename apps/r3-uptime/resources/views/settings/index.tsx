@@ -120,7 +120,7 @@ export default function SettingsView(handle: Handle<SettingsView.Props>) {
 
 		return (
 			<div>
-				<h1>Settings</h1>
+				<h1 mix={[css({ margin: "0 0 24px" })]}>Settings</h1>
 
 				<h2>General</h2>
 				<form method="post" action={routes.teamAdminActions.updateTeam.href({ team: team.slug })}>

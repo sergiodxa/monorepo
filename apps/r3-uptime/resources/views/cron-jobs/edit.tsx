@@ -47,7 +47,7 @@ export default function EditCronJobView(handle: Handle<EditCronJobView.Props>) {
 
 		return (
 			<div>
-				<h1>Edit cron job monitor</h1>
+				<h1 mix={[css({ margin: "0 0 24px" })]}>Edit cron job monitor</h1>
 				<form method="post" action={routes.actions.updateCronJob.href({ team: team.slug })}>
 					<input type="hidden" name="monitor_id" value={monitor.id} />
 					<CronJobFormFields monitor={monitor} />

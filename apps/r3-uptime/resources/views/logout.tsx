@@ -33,7 +33,7 @@ export default function LogoutView(_handle: Handle) {
 					}),
 				]}
 			>
-				<h1>Sign out?</h1>
+				<h1 mix={[css({ margin: 0 })]}>Sign out?</h1>
 				<form method="post" action={routes.logout.action.href()}>
 					<button
 						type="submit"

@@ -50,7 +50,7 @@ export default function CronJobsView(handle: Handle<CronJobsView.Props>) {
 		return (
 			<div>
 				<div mix={[css({ display: "flex", alignItems: "center", gap: 12 })]}>
-					<h1>Cron job monitors</h1>
+					<h1 mix={[css({ margin: "0 0 24px" })]}>Cron job monitors</h1>
 					<a
 						href={routes.app.team.cronJobNew.href({ team: team.slug })}
 						mix={[

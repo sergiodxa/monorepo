@@ -168,7 +168,7 @@ export default function StatusPageView(handle: Handle<StatusPageView.Props>) {
 				<div mix={[css({ display: "flex", alignItems: "center", gap: 12 })]}>
 					{page.logo_url && <img src={page.logo_url} alt={page.name} width={40} height={40} />}
 					<div>
-						<h1>{page.title}</h1>
+						<h1 mix={[css({ margin: "0 0 4px" })]}>{page.title}</h1>
 						{page.description && (
 							<p
 								mix={[

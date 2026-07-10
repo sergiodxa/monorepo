@@ -72,7 +72,7 @@ export default function MonitorShowView(handle: Handle<MonitorShowView.Props>) {
 		return (
 			<div>
 				<div mix={[css({ display: "flex", alignItems: "center", gap: 12 })]}>
-					<h1>{monitor.name}</h1>
+					<h1 mix={[css({ margin: "0 0 24px" })]}>{monitor.name}</h1>
 					<form method="post" action={routes.actions.playMonitor.href({ team: team.slug })}>
 						<input type="hidden" name="monitor_id" value={monitor.id} />
 						<button type="submit" mix={[buttonSecondary]}>

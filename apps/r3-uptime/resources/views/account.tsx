@@ -116,7 +116,7 @@ export default function AccountView(handle: Handle<AccountView.Props>) {
 
 		return (
 			<div>
-				<h1>Account</h1>
+				<h1 mix={[css({ margin: "0 0 24px" })]}>Account</h1>
 
 				<h2>Profile</h2>
 				<p>{viewer.name}</p>

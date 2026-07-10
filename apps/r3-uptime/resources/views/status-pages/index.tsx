@@ -42,7 +42,7 @@ export default function StatusPagesView(handle: Handle<StatusPagesView.Props>) {
 		return (
 			<div>
 				<div mix={[css({ display: "flex", alignItems: "center", gap: 12 })]}>
-					<h1>Status pages</h1>
+					<h1 mix={[css({ margin: "0 0 24px" })]}>Status pages</h1>
 					<a
 						href={routes.app.team.statusPageNew.href({ team: team.slug })}
 						mix={[

@@ -78,7 +78,7 @@ export default function EditStatusPageView(handle: Handle<EditStatusPageView.Pro
 
 		return (
 			<div>
-				<h1>Edit status page</h1>
+				<h1 mix={[css({ margin: "0 0 24px" })]}>Edit status page</h1>
 				<form method="post" action={routes.actions.updateStatusPage.href({ team: team.slug })}>
 					<input type="hidden" name="status_page_id" value={page.id} />
 					<StatusPageFormFields
