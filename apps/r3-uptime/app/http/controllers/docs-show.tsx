@@ -12,7 +12,6 @@ import { isFailure } from "@pkg/result";
 import * as s from "remix/data-schema";
 import { createAction } from "remix/fetch-router";
 
-import NotFoundViewModel from "~/app/http/view-models/not-found";
 import { getDocLoader, listDocs, markdown } from "~/app/services/docs";
 import DocsLayout from "~/resources/layouts/docs";
 import DocumentLayout from "~/resources/layouts/document";
@@ -26,7 +25,10 @@ export default createAction(routes.docs.show, async (ctx) => {
 	let sections = await listDocs();
 
 	let renderNotFound = () => {
-		let props = NotFoundViewModel.default({ title: "Doc Not Found" });
+		let props = {
+			title: "Doc Not Found",
+			description: "The page you're looking for doesn't exist or may have moved.",
+		};
 		return ctx.render(
 			<DocumentLayout title={props.title}>
 				<NotFoundView {...props} />

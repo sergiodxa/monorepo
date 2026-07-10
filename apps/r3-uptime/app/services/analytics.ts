@@ -54,27 +54,39 @@ export interface SparklinePoint {
 /**
  * Runs a raw SQL query against the Analytics Engine HTTP API.
  *
+ * Wrapped in a try/catch: this call can throw (network hiccup, DNS blip, an
+ * unexpectedly non-JSON body) rather than merely returning a non-ok response, and
+ * every caller here composes several of these behind a `Promise.all` — one
+ * transient failure must degrade to `failure(...)` for that one query, not crash
+ * the whole page with an uncaught exception.
+ *
  * @param sql SQL query text (the account's Analytics Engine SQL dialect).
  */
 export async function queryAnalytics<T>(sql: string): Promise<Result<T[], Error>> {
-	let response = await fetch(
-		`https://api.cloudflare.com/client/v4/accounts/${env.CLOUDFLARE_ACCOUNT_ID}/analytics_engine/sql`,
-		{
-			method: "POST",
-			headers: {
-				Authorization: `Bearer ${env.CLOUDFLARE_ANALYTICS_TOKEN}`,
-				"Content-Type": "text/plain",
+	try {
+		let response = await fetch(
+			`https://api.cloudflare.com/client/v4/accounts/${env.CLOUDFLARE_ACCOUNT_ID}/analytics_engine/sql`,
+			{
+				method: "POST",
+				headers: {
+					Authorization: `Bearer ${env.CLOUDFLARE_ANALYTICS_TOKEN}`,
+					"Content-Type": "text/plain",
+				},
+				body: sql,
 			},
-			body: sql,
-		},
-	);
+		);
 
-	if (!response.ok) {
-		return failure(new Error(`Analytics query failed: ${response.status} ${response.statusText}`));
+		if (!response.ok) {
+			return failure(
+				new Error(`Analytics query failed: ${response.status} ${response.statusText}`),
+			);
+		}
+
+		let body = (await response.json()) as { data?: T[] };
+		return success(body.data ?? []);
+	} catch (error) {
+		return failure(error instanceof Error ? error : new Error(String(error)));
 	}
-
-	let body = (await response.json()) as { data?: T[] };
-	return success(body.data ?? []);
 }
 
 /** {@link queryAnalytics}, cached in KV under `cacheKey` for `ttlSeconds`. */

@@ -13,7 +13,6 @@ import * as s from "remix/data-schema";
 import { createAction } from "remix/fetch-router";
 
 import { getViewer } from "~/app/http/middleware/auth";
-import NotFoundViewModel from "~/app/http/view-models/not-found";
 import { features } from "~/resources/content/marketing";
 import DocumentLayout from "~/resources/layouts/document";
 import MarketingLayout from "~/resources/layouts/marketing";
@@ -28,7 +27,10 @@ export default createAction(routes.marketing.feature, async (ctx) => {
 
 	let content = features[slug];
 	if (!content) {
-		let props = NotFoundViewModel.default({ title: "Page Not Found" });
+		let props = {
+			title: "Page Not Found",
+			description: "The page you're looking for doesn't exist or may have moved.",
+		};
 		return ctx.render(
 			<DocumentLayout title={props.title}>
 				<NotFoundView {...props} />

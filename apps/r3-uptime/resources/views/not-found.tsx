@@ -14,12 +14,13 @@ import type { Handle } from "remix/ui";
 
 import { css } from "remix/ui";
 
-import type { NotFoundViewModel } from "~/app/http/view-models/not-found";
-
 import routes from "~/routes/web";
 
 namespace NotFoundView {
-	export interface Setup extends NotFoundViewModel.DefaultOutput {}
+	export interface Setup {
+		title: string;
+		description: string;
+	}
 }
 
 export default function NotFoundView(handle: Handle<NotFoundView.Setup>) {

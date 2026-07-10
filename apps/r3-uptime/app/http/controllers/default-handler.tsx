@@ -11,7 +11,6 @@
 import type { Renderer } from "remix/render-middleware";
 import type { RemixNode } from "remix/ui";
 
-import NotFoundViewModel from "~/app/http/view-models/not-found";
 import DocumentLayout from "~/resources/layouts/document";
 import NotFoundView from "~/resources/views/not-found";
 
@@ -21,7 +20,10 @@ interface RenderContext {
 
 /** Renders the fallback 404 document for unmatched routes. */
 export default function defaultHandler(ctx: RenderContext) {
-	let props = NotFoundViewModel.default({ title: "Page Not Found" });
+	let props = {
+		title: "Page Not Found",
+		description: "The page you're looking for doesn't exist or may have moved.",
+	};
 
 	return ctx.render(
 		<DocumentLayout title={props.title}>
