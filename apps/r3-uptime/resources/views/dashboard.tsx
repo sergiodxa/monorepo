@@ -115,16 +115,30 @@ export default function DashboardView(handle: Handle<DashboardView.Props>) {
 					<StatCard
 						label="SSL certificates"
 						value={
-							<>
-								<Badge tone="up">{props.sslCounts.valid} valid</Badge>{" "}
-								<Badge tone="degraded">{props.sslCounts.expiring} expiring</Badge>{" "}
+							<div mix={[css({ display: "flex", flexWrap: "wrap", gap: 8 })]}>
+								<Badge tone="up">{props.sslCounts.valid} valid</Badge>
+								<Badge tone="degraded">{props.sslCounts.expiring} expiring</Badge>
 								<Badge tone="down">{props.sslCounts.expired} expired</Badge>
-							</>
+							</div>
 						}
 					/>
 				</div>
 
-				<nav mix={[css({ display: "flex", alignItems: "center", gap: 12 })]}>
+				<nav
+					mix={[
+						css({
+							display: "flex",
+							alignItems: "center",
+							gap: 12,
+							marginBottom: 16,
+							paddingBottom: 12,
+							borderBottom: "1px solid oklch(0.91 0.008 145)",
+							"@media (prefers-color-scheme: dark)": {
+								borderColor: "oklch(0.32 0.006 145)",
+							},
+						}),
+					]}
+				>
 					{TABS.map((tab) => (
 						<a
 							key={tab.id}

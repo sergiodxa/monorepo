@@ -32,8 +32,20 @@ const neutral = {
 const primary100 = "oklch(0.92 0.08 142)";
 const primary600 = "oklch(0.6 0.16 142)";
 
-/** Page-level flex column filling the viewport height. */
-const page = css({ display: "flex", flexDirection: "column", minHeight: "100vh" });
+/**
+ * Page-level flex column hard-capped to exactly one viewport height. This must be
+ * `height` (not `minHeight`), and paired with `overflow: hidden`: `minHeight` is only
+ * a floor, so if the sidebar's own nav-item list is taller than the viewport, the
+ * whole page would grow to match it instead of the sidebar scrolling internally —
+ * that's also what makes the header+content row below a well-defined (not
+ * content-driven/circular) height for `flex: 1` to divide up.
+ */
+const page = css({
+	display: "flex",
+	flexDirection: "column",
+	height: "100vh",
+	overflow: "hidden",
+});
 
 /** Horizontal group of inline items (nav links, user info). */
 const row = css({ display: "flex", alignItems: "center", gap: 12 });
@@ -87,6 +99,21 @@ const sidebarNav = css({
 	left: 0,
 	bottom: 0,
 	margin: 0,
+	// The UA popover stylesheet applies `height: fit-content` to every `[popover]`
+	// element regardless of open state — left unset, that beats the parent flex
+	// row's default `align-items: stretch`, so the nav never actually reaches the
+	// row's full height and `marginTop: "auto"` on the user-menu block below has no
+	// extra space to push into. Force it to fill instead.
+	height: "100%",
+	// Without this, `height: 100%` sizes only the content box, and this element's own
+	// `padding` below is added on top — the rendered box ends up taller than its
+	// flex container by exactly the vertical padding, overflowing past the viewport.
+	boxSizing: "border-box",
+	// Belt-and-suspenders: now that the page shell hard-caps to one viewport height,
+	// this should rarely trigger, but if the nav-item list is ever taller than the
+	// available height (a very short window, or a team with many nav items), it
+	// scrolls internally instead of silently clipping the user menu at the bottom.
+	overflowY: "auto",
 	gap: 12,
 	width: "min(80vw, 288px)",
 	maxHeight: "100vh",
@@ -187,6 +214,8 @@ const truncatedLabel = css({
 	whiteSpace: "nowrap",
 	fontSize: "0.875rem",
 	fontWeight: 500,
+	color: neutral[900],
+	"@media (prefers-color-scheme: dark)": { color: neutral[50] },
 });
 
 /**

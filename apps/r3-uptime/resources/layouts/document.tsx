@@ -43,6 +43,7 @@ export default function DocumentLayout(handle: Handle<DocumentLayout.Props>) {
 				<body
 					mix={[
 						css({
+							margin: 0,
 							background: neutral[50],
 							color: neutral[950],
 							fontFamily: fontMono,
