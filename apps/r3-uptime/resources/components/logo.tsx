@@ -24,61 +24,64 @@ function getInitials(name: string): string {
 	return name.slice(0, 2).toUpperCase() || "?";
 }
 
-export const Logo = clientEntry(import.meta.url, function Logo(handle: Handle<LogoProps>) {
-	let displayImage = true;
+export const Logo = clientEntry(
+	"/resources/components/logo.tsx#Logo",
+	function Logo(handle: Handle<LogoProps>) {
+		let displayImage = true;
 
-	return () => {
-		let { src, name, size = 24 } = handle.props;
-		let initials = getInitials(name);
+		return () => {
+			let { src, name, size = 24 } = handle.props;
+			let initials = getInitials(name);
 
-		return (
-			<span
-				mix={[
-					css({
-						position: "relative",
-						display: "inline-flex",
-						width: size,
-						height: size,
-						flexShrink: 0,
-					}),
-				]}
-			>
+			return (
 				<span
 					mix={[
 						css({
-							position: "absolute",
-							inset: 0,
+							position: "relative",
 							display: "inline-flex",
-							alignItems: "center",
-							justifyContent: "center",
-							borderRadius: 6,
-							background: primary100,
-							color: primary600,
-							fontSize: `${Math.round(size * 0.42)}px`,
-							fontWeight: 700,
+							width: size,
+							height: size,
+							flexShrink: 0,
 						}),
 					]}
 				>
-					{initials}
-				</span>
-				{src && displayImage && (
-					<img
-						src={src}
-						alt={name}
-						width={size}
-						height={size}
+					<span
 						mix={[
-							css({ position: "absolute", inset: 0, borderRadius: 6, objectFit: "cover" }),
-							on<HTMLImageElement>("error", () => {
-								displayImage = false;
-								void handle.update();
+							css({
+								position: "absolute",
+								inset: 0,
+								display: "inline-flex",
+								alignItems: "center",
+								justifyContent: "center",
+								borderRadius: 6,
+								background: primary100,
+								color: primary600,
+								fontSize: `${Math.round(size * 0.42)}px`,
+								fontWeight: 700,
 							}),
 						]}
-					/>
-				)}
-			</span>
-		);
-	};
-});
+					>
+						{initials}
+					</span>
+					{src && displayImage && (
+						<img
+							src={src}
+							alt={name}
+							width={size}
+							height={size}
+							mix={[
+								css({ position: "absolute", inset: 0, borderRadius: 6, objectFit: "cover" }),
+								on<HTMLImageElement>("error", () => {
+									displayImage = false;
+									void handle.update();
+								}),
+							]}
+						/>
+					)}
+				</span>
+			);
+		};
+	},
+);
 
 export default Logo;
