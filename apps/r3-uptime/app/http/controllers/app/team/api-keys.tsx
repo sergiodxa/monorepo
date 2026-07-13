@@ -16,6 +16,9 @@ import { css } from "remix/ui";
 
 import ApiKey from "~/app/data/api-key";
 import { getViewer } from "~/app/http/middleware/auth";
+import requireRole from "~/app/http/middleware/require-role";
+import requireTeam from "~/app/http/middleware/require-team";
+import requireUser from "~/app/http/middleware/require-user";
 import AppShell from "~/resources/layouts/app-shell";
 import DocumentLayout from "~/resources/layouts/document";
 import ApiKeysView from "~/resources/views/api-keys/index";
@@ -27,9 +30,9 @@ interface NewApiKey {
 }
 
 /** GET /app/:team/api-keys — the team's API keys list. */
-export default createAction(
-	routes.app.team.apiKeys,
-	inject([Database] as const, async (db) => {
+export default createAction(routes.app.team.apiKeys, {
+	middleware: [requireUser, requireTeam, requireRole("admin")],
+	handler: inject([Database] as const, async (db) => {
 		let ctx = getContext();
 		let viewer = getViewer();
 		if (!viewer) throw new Error("requireUser must run before this handler");
@@ -76,4 +79,4 @@ export default createAction(
 			</DocumentLayout>,
 		);
 	}),
-);
+});

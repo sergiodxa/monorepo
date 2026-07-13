@@ -10,13 +10,13 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Middleware, RequestContext, RequestHandler, Router } from "remix/fetch-router";
+import type { Middleware, RequestContext, Router } from "remix/fetch-router";
 import type { RemixNode } from "remix/ui";
 import type { ResolveFrameContext } from "remix/ui/server";
 
 import { asyncContext } from "remix/async-context-middleware";
 import { cop } from "remix/cop-middleware";
-import { createRouter } from "remix/fetch-router";
+import { createController, createRouter } from "remix/fetch-router";
 import { formData } from "remix/form-data-middleware";
 import { methodOverride } from "remix/method-override-middleware";
 import { renderWith } from "remix/render-middleware";
@@ -201,7 +201,6 @@ import terms from "~/app/http/controllers/terms";
 import auth from "~/app/http/middleware/auth";
 import i18n from "~/app/http/middleware/i18n";
 import logger from "~/app/http/middleware/logger";
-import requireApiKey from "~/app/http/middleware/require-api-key";
 import requireRole from "~/app/http/middleware/require-role";
 import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
@@ -248,10 +247,7 @@ export default function application(options: application.Options) {
 	router.map(routes.auth, authController);
 	router.map(routes.logout, logoutController);
 	router.map(routes.statusPage, statusPageController);
-	router.map(routes.invite, {
-		middleware: [requireUser],
-		handler: inviteController as RequestHandler<any>,
-	});
+	router.map(routes.invite, inviteController);
 
 	// Public marketing pages, legal pages, docs, and the sitemap. Anonymous, matching
 	// the OLD APP — no requireUser/requireTeam middleware.
@@ -265,218 +261,120 @@ export default function application(options: application.Options) {
 	router.map(routes.docs.show, docsShow);
 	router.map(routes.sitemap, sitemap);
 
-	// `createAction`'s handler type fixes its middleware-entries tuple at `[]`, but a
-	// `router.map` middleware array of plain (untransformed) `Middleware` values types
-	// its merged context with an opaque `any[]` entries tuple — the two never unify, so
-	// the handler is cast to accept any context here. `ctx.team`/`ctx.membership` are
-	// still correctly typed inside each handler via the global `declare module`
-	// augmentations in `require-team.ts`, independent of this cast.
-	router.map(routes.app.index, {
-		middleware: [requireUser],
-		handler: appIndex as RequestHandler<any>,
-	});
-	router.map(routes.app.team.index, {
-		middleware: [requireUser, requireTeam],
-		handler: teamIndex as RequestHandler<any>,
-	});
-	router.map(routes.app.team.dashboard, {
-		middleware: [requireUser, requireTeam],
-		handler: teamDashboard as RequestHandler<any>,
-	});
-	router.map(routes.app.team.dashboardPanel, {
-		middleware: [requireUser, requireTeam],
-		handler: dashboardPanel as RequestHandler<any>,
-	});
-	router.map(routes.app.team.httpMonitors, {
-		middleware: [requireUser, requireTeam],
-		handler: httpMonitors as RequestHandler<any>,
-	});
-	router.map(routes.app.team.monitorNew, {
-		middleware: [requireUser, requireTeam],
-		handler: monitorNew as RequestHandler<any>,
-	});
-	router.map(routes.app.team.monitorShow, {
-		middleware: [requireUser, requireTeam],
-		handler: monitorShow as RequestHandler<any>,
-	});
-	router.map(routes.app.team.monitorEdit, {
-		middleware: [requireUser, requireTeam],
-		handler: monitorEdit as RequestHandler<any>,
-	});
-	router.map(routes.app.team.dnsMonitors, {
-		middleware: [requireUser, requireTeam],
-		handler: dnsMonitors as RequestHandler<any>,
-	});
-	router.map(routes.app.team.dnsMonitorNew, {
-		middleware: [requireUser, requireTeam],
-		handler: dnsMonitorNew as RequestHandler<any>,
-	});
-	router.map(routes.app.team.dnsMonitorShow, {
-		middleware: [requireUser, requireTeam],
-		handler: dnsMonitorShow as RequestHandler<any>,
-	});
-	router.map(routes.app.team.dnsMonitorEdit, {
-		middleware: [requireUser, requireTeam],
-		handler: dnsMonitorEdit as RequestHandler<any>,
-	});
-	router.map(routes.app.team.tcpMonitors, {
-		middleware: [requireUser, requireTeam],
-		handler: tcpMonitors as RequestHandler<any>,
-	});
-	router.map(routes.app.team.tcpMonitorNew, {
-		middleware: [requireUser, requireTeam],
-		handler: tcpMonitorNew as RequestHandler<any>,
-	});
-	router.map(routes.app.team.tcpMonitorShow, {
-		middleware: [requireUser, requireTeam],
-		handler: tcpMonitorShow as RequestHandler<any>,
-	});
-	router.map(routes.app.team.tcpMonitorEdit, {
-		middleware: [requireUser, requireTeam],
-		handler: tcpMonitorEdit as RequestHandler<any>,
-	});
-	router.map(routes.app.team.cronJobs, {
-		middleware: [requireUser, requireTeam],
-		handler: cronJobs as RequestHandler<any>,
-	});
-	router.map(routes.app.team.cronJobNew, {
-		middleware: [requireUser, requireTeam],
-		handler: cronJobNew as RequestHandler<any>,
-	});
-	router.map(routes.app.team.cronJobShow, {
-		middleware: [requireUser, requireTeam],
-		handler: cronJobShow as RequestHandler<any>,
-	});
-	router.map(routes.app.team.cronJobEdit, {
-		middleware: [requireUser, requireTeam],
-		handler: cronJobEdit as RequestHandler<any>,
-	});
-	router.map(routes.app.team.alerts, {
-		middleware: [requireUser, requireTeam],
-		handler: alerts as RequestHandler<any>,
-	});
-	router.map(routes.app.team.alertNew, {
-		middleware: [requireUser, requireTeam],
-		handler: alertNew as RequestHandler<any>,
-	});
-	router.map(routes.app.team.alertEdit, {
-		middleware: [requireUser, requireTeam],
-		handler: alertEdit as RequestHandler<any>,
-	});
-	router.map(routes.app.team.alertHistory, {
-		middleware: [requireUser, requireTeam],
-		handler: alertHistory as RequestHandler<any>,
-	});
-	router.map(routes.app.team.maintenanceWindows, {
-		middleware: [requireUser, requireTeam],
-		handler: maintenanceWindows as RequestHandler<any>,
-	});
-	router.map(routes.app.team.maintenanceWindowNew, {
-		middleware: [requireUser, requireTeam],
-		handler: maintenanceWindowNew as RequestHandler<any>,
-	});
-	router.map(routes.app.team.maintenanceWindowEdit, {
-		middleware: [requireUser, requireTeam],
-		handler: maintenanceWindowEdit as RequestHandler<any>,
-	});
-	router.map(routes.app.team.statusPages, {
-		middleware: [requireUser, requireTeam],
-		handler: statusPages as RequestHandler<any>,
-	});
-	router.map(routes.app.team.statusPageNew, {
-		middleware: [requireUser, requireTeam],
-		handler: statusPageNew as RequestHandler<any>,
-	});
-	router.map(routes.app.team.statusPageEdit, {
-		middleware: [requireUser, requireTeam],
-		handler: statusPageEdit as RequestHandler<any>,
-	});
-	router.map(routes.app.team.settings, {
-		middleware: [requireUser, requireTeam, requireRole("admin")],
-		handler: settings as RequestHandler<any>,
-	});
-	router.map(routes.app.team.account, {
-		middleware: [requireUser, requireTeam],
-		handler: account as RequestHandler<any>,
-	});
-	router.map(routes.app.team.apiKeys, {
-		middleware: [requireUser, requireTeam, requireRole("admin")],
-		handler: apiKeys as RequestHandler<any>,
-	});
-	router.map(routes.app.team.apiKeyNew, {
-		middleware: [requireUser, requireTeam, requireRole("admin")],
-		handler: apiKeyNew as RequestHandler<any>,
-	});
-	router.map(routes.app.team.checkout, {
-		middleware: [requireUser, requireTeam],
-		handler: checkout as RequestHandler<any>,
-	});
+	// Each of these controllers bakes its own `requireUser`/`requireTeam` (and, where
+	// noted, `requireRole`) chain into its `createAction` call instead of supplying
+	// middleware here, so `router.map()` can take the controller's default export
+	// directly with no `RequestHandler` cast — see e.g. `app/team/dashboard.tsx`.
+	router.map(routes.app.index, appIndex);
+	router.map(routes.app.team.index, teamIndex);
+	router.map(routes.app.team.dashboard, teamDashboard);
+	router.map(routes.app.team.dashboardPanel, dashboardPanel);
+	router.map(routes.app.team.httpMonitors, httpMonitors);
+	router.map(routes.app.team.monitorNew, monitorNew);
+	router.map(routes.app.team.monitorShow, monitorShow);
+	router.map(routes.app.team.monitorEdit, monitorEdit);
+	router.map(routes.app.team.dnsMonitors, dnsMonitors);
+	router.map(routes.app.team.dnsMonitorNew, dnsMonitorNew);
+	router.map(routes.app.team.dnsMonitorShow, dnsMonitorShow);
+	router.map(routes.app.team.dnsMonitorEdit, dnsMonitorEdit);
+	router.map(routes.app.team.tcpMonitors, tcpMonitors);
+	router.map(routes.app.team.tcpMonitorNew, tcpMonitorNew);
+	router.map(routes.app.team.tcpMonitorShow, tcpMonitorShow);
+	router.map(routes.app.team.tcpMonitorEdit, tcpMonitorEdit);
+	router.map(routes.app.team.cronJobs, cronJobs);
+	router.map(routes.app.team.cronJobNew, cronJobNew);
+	router.map(routes.app.team.cronJobShow, cronJobShow);
+	router.map(routes.app.team.cronJobEdit, cronJobEdit);
+	router.map(routes.app.team.alerts, alerts);
+	router.map(routes.app.team.alertNew, alertNew);
+	router.map(routes.app.team.alertEdit, alertEdit);
+	router.map(routes.app.team.alertHistory, alertHistory);
+	router.map(routes.app.team.maintenanceWindows, maintenanceWindows);
+	router.map(routes.app.team.maintenanceWindowNew, maintenanceWindowNew);
+	router.map(routes.app.team.maintenanceWindowEdit, maintenanceWindowEdit);
+	router.map(routes.app.team.statusPages, statusPages);
+	router.map(routes.app.team.statusPageNew, statusPageNew);
+	router.map(routes.app.team.statusPageEdit, statusPageEdit);
+	router.map(routes.app.team.settings, settings);
+	router.map(routes.app.team.account, account);
+	router.map(routes.app.team.apiKeys, apiKeys);
+	router.map(routes.app.team.apiKeyNew, apiKeyNew);
+	router.map(routes.app.team.checkout, checkout);
 
-	router.map(routes.actions, {
-		middleware: [requireUser, requireTeam],
-		actions: {
-			createMonitor: createMonitor as RequestHandler<any>,
-			updateMonitor: updateMonitor as RequestHandler<any>,
-			deleteMonitor: deleteMonitor as RequestHandler<any>,
-			playMonitor: playMonitor as RequestHandler<any>,
-			updateSsl: updateSsl as RequestHandler<any>,
-			createContentCheck: createContentCheck as RequestHandler<any>,
-			deleteContentCheck: deleteContentCheck as RequestHandler<any>,
-			setDashboardTab: setDashboardTab as RequestHandler<any>,
-			createDnsMonitor: createDnsMonitor as RequestHandler<any>,
-			updateDnsMonitor: updateDnsMonitor as RequestHandler<any>,
-			deleteDnsMonitor: deleteDnsMonitor as RequestHandler<any>,
-			checkDnsMonitor: checkDnsMonitor as RequestHandler<any>,
-			createTcpMonitor: createTcpMonitor as RequestHandler<any>,
-			updateTcpMonitor: updateTcpMonitor as RequestHandler<any>,
-			deleteTcpMonitor: deleteTcpMonitor as RequestHandler<any>,
-			checkTcpMonitor: checkTcpMonitor as RequestHandler<any>,
-			createCronJob: createCronJob as RequestHandler<any>,
-			updateCronJob: updateCronJob as RequestHandler<any>,
-			deleteCronJob: deleteCronJob as RequestHandler<any>,
-			createAlert: createAlert as RequestHandler<any>,
-			updateAlert: updateAlert as RequestHandler<any>,
-			deleteAlert: deleteAlert as RequestHandler<any>,
-			createMaintenanceWindow: createMaintenanceWindow as RequestHandler<any>,
-			updateMaintenanceWindow: updateMaintenanceWindow as RequestHandler<any>,
-			deleteMaintenanceWindow: deleteMaintenanceWindow as RequestHandler<any>,
-			endMaintenanceWindow: endMaintenanceWindow as RequestHandler<any>,
-			createStatusPage: createStatusPage as RequestHandler<any>,
-			updateStatusPage: updateStatusPage as RequestHandler<any>,
-			deleteStatusPage: deleteStatusPage as RequestHandler<any>,
-		},
-	});
+	router.map(
+		routes.actions,
+		createController(routes.actions, {
+			middleware: [requireUser, requireTeam],
+			actions: {
+				createMonitor,
+				updateMonitor,
+				deleteMonitor,
+				playMonitor,
+				updateSsl,
+				createContentCheck,
+				deleteContentCheck,
+				setDashboardTab,
+				createDnsMonitor,
+				updateDnsMonitor,
+				deleteDnsMonitor,
+				checkDnsMonitor,
+				createTcpMonitor,
+				updateTcpMonitor,
+				deleteTcpMonitor,
+				checkTcpMonitor,
+				createCronJob,
+				updateCronJob,
+				deleteCronJob,
+				createAlert,
+				updateAlert,
+				deleteAlert,
+				createMaintenanceWindow,
+				updateMaintenanceWindow,
+				deleteMaintenanceWindow,
+				endMaintenanceWindow,
+				createStatusPage,
+				updateStatusPage,
+				deleteStatusPage,
+			},
+		}),
+	);
 
 	// A separate group (see `routes/web.ts`'s docblock on `teamAdminActions`), so
 	// `requireRole("admin")` layers on top of the member-level chain the `actions`
 	// group above uses, without restricting those member-level actions too.
-	router.map(routes.teamAdminActions, {
-		middleware: [requireUser, requireTeam, requireRole("admin")],
-		actions: {
-			updateTeam: updateTeam as RequestHandler<any>,
-			deleteTeam: deleteTeam as RequestHandler<any>,
-			removeMember: removeMember as RequestHandler<any>,
-			changeRole: changeRole as RequestHandler<any>,
-			createInvite: createInvite as RequestHandler<any>,
-			revokeInvite: revokeInvite as RequestHandler<any>,
-			addDomain: addDomain as RequestHandler<any>,
-			removeDomain: removeDomain as RequestHandler<any>,
-			retryDomainVerification: retryDomainVerification as RequestHandler<any>,
-			createApiKey: createApiKey as RequestHandler<any>,
-			deleteApiKey: deleteApiKey as RequestHandler<any>,
-		},
-	});
+	router.map(
+		routes.teamAdminActions,
+		createController(routes.teamAdminActions, {
+			middleware: [requireUser, requireTeam, requireRole("admin")],
+			actions: {
+				updateTeam,
+				deleteTeam,
+				removeMember,
+				changeRole,
+				createInvite,
+				revokeInvite,
+				addDomain,
+				removeDomain,
+				retryDomainVerification,
+				createApiKey,
+				deleteApiKey,
+			},
+		}),
+	);
 
 	// Not team-scoped: reached from the account page, which lists every team the
 	// viewer belongs to rather than acting on the one team in its own URL.
-	router.map(routes.accountActions, {
-		middleware: [requireUser],
-		actions: {
-			createTeam: createTeam as RequestHandler<any>,
-			leaveTeam: leaveTeam as RequestHandler<any>,
-			updateLanguage: updateLanguage as RequestHandler<any>,
-		},
-	});
+	router.map(
+		routes.accountActions,
+		createController(routes.accountActions, {
+			middleware: [requireUser],
+			actions: {
+				createTeam,
+				leaveTeam,
+				updateLanguage,
+			},
+		}),
+	);
 
 	// Public, unauthenticated: the cron-job ping endpoint (see its controller's
 	// docblock for why it doesn't sit behind `requireUser`/`requireTeam`).
@@ -485,262 +383,79 @@ export default function application(options: application.Options) {
 	// Bearer-API-key-gated REST API. Each leaf is mapped individually so read/write
 	// methods on the same resource can require different scopes (see `routes/web.ts`'s
 	// docblock on the `api.v1` group).
-	router.map(routes.api.v1.status, {
-		middleware: [requireApiKey("monitors:read")],
-		handler: statusShow as RequestHandler<any>,
-	});
-	router.map(routes.api.v1.backfillDailyStats, {
-		middleware: [requireApiKey("monitors:write")],
-		handler: backfillDailyStatsCreate as RequestHandler<any>,
-	});
+	router.map(routes.api.v1.status, statusShow);
+	router.map(routes.api.v1.backfillDailyStats, backfillDailyStatsCreate);
 
-	router.map(routes.api.v1.monitorsIndex, {
-		middleware: [requireApiKey("monitors:read")],
-		handler: monitorsIndex as RequestHandler<any>,
-	});
-	router.map(routes.api.v1.monitorsCreate, {
-		middleware: [requireApiKey("monitors:write")],
-		handler: monitorsCreate as RequestHandler<any>,
-	});
-	router.map(routes.api.v1.monitorsStats, {
-		middleware: [requireApiKey("monitors:read")],
-		handler: monitorsStats as RequestHandler<any>,
-	});
-	router.map(routes.api.v1.monitorShow, {
-		middleware: [requireApiKey("monitors:read")],
-		handler: apiMonitorShow as RequestHandler<any>,
-	});
-	router.map(routes.api.v1.monitorUpdate, {
-		middleware: [requireApiKey("monitors:write")],
-		handler: monitorUpdate as RequestHandler<any>,
-	});
-	router.map(routes.api.v1.monitorDestroy, {
-		middleware: [requireApiKey("monitors:write")],
-		handler: monitorDestroy as RequestHandler<any>,
-	});
-	router.map(routes.api.v1.monitorStats, {
-		middleware: [requireApiKey("monitors:read")],
-		handler: monitorStats as RequestHandler<any>,
-	});
-	router.map(routes.api.v1.monitorResults, {
-		middleware: [requireApiKey("monitors:read")],
-		handler: monitorResults as RequestHandler<any>,
-	});
-	router.map(routes.api.v1.monitorAlertEvents, {
-		middleware: [requireApiKey("alerts:read")],
-		handler: monitorAlertEvents as RequestHandler<any>,
-	});
-	router.map(routes.api.v1.monitorContentChecksIndex, {
-		middleware: [requireApiKey("monitors:read")],
-		handler: monitorContentChecksIndex as RequestHandler<any>,
-	});
-	router.map(routes.api.v1.monitorContentChecksCreate, {
-		middleware: [requireApiKey("monitors:write")],
-		handler: monitorContentChecksCreate as RequestHandler<any>,
-	});
-	router.map(routes.api.v1.monitorContentCheckDestroy, {
-		middleware: [requireApiKey("monitors:write")],
-		handler: monitorContentCheckDestroy as RequestHandler<any>,
-	});
+	router.map(routes.api.v1.monitorsIndex, monitorsIndex);
+	router.map(routes.api.v1.monitorsCreate, monitorsCreate);
+	router.map(routes.api.v1.monitorsStats, monitorsStats);
+	router.map(routes.api.v1.monitorShow, apiMonitorShow);
+	router.map(routes.api.v1.monitorUpdate, monitorUpdate);
+	router.map(routes.api.v1.monitorDestroy, monitorDestroy);
+	router.map(routes.api.v1.monitorStats, monitorStats);
+	router.map(routes.api.v1.monitorResults, monitorResults);
+	router.map(routes.api.v1.monitorAlertEvents, monitorAlertEvents);
+	router.map(routes.api.v1.monitorContentChecksIndex, monitorContentChecksIndex);
+	router.map(routes.api.v1.monitorContentChecksCreate, monitorContentChecksCreate);
+	router.map(routes.api.v1.monitorContentCheckDestroy, monitorContentCheckDestroy);
 
-	router.map(routes.api.v1.dnsMonitorsIndex, {
-		middleware: [requireApiKey("dns-monitors:read")],
-		handler: dnsMonitorsIndex as RequestHandler<any>,
-	});
-	router.map(routes.api.v1.dnsMonitorsCreate, {
-		middleware: [requireApiKey("dns-monitors:write")],
-		handler: dnsMonitorsCreate as RequestHandler<any>,
-	});
-	router.map(routes.api.v1.dnsMonitorShow, {
-		middleware: [requireApiKey("dns-monitors:read")],
-		handler: apiDnsMonitorShow as RequestHandler<any>,
-	});
-	router.map(routes.api.v1.dnsMonitorUpdate, {
-		middleware: [requireApiKey("dns-monitors:write")],
-		handler: dnsMonitorUpdate as RequestHandler<any>,
-	});
-	router.map(routes.api.v1.dnsMonitorDestroy, {
-		middleware: [requireApiKey("dns-monitors:write")],
-		handler: dnsMonitorDestroy as RequestHandler<any>,
-	});
-	router.map(routes.api.v1.dnsMonitorResults, {
-		middleware: [requireApiKey("dns-monitors:read")],
-		handler: dnsMonitorResults as RequestHandler<any>,
-	});
+	router.map(routes.api.v1.dnsMonitorsIndex, dnsMonitorsIndex);
+	router.map(routes.api.v1.dnsMonitorsCreate, dnsMonitorsCreate);
+	router.map(routes.api.v1.dnsMonitorShow, apiDnsMonitorShow);
+	router.map(routes.api.v1.dnsMonitorUpdate, dnsMonitorUpdate);
+	router.map(routes.api.v1.dnsMonitorDestroy, dnsMonitorDestroy);
+	router.map(routes.api.v1.dnsMonitorResults, dnsMonitorResults);
 
-	router.map(routes.api.v1.tcpMonitorsIndex, {
-		middleware: [requireApiKey("tcp-monitors:read")],
-		handler: tcpMonitorsIndex as RequestHandler<any>,
-	});
-	router.map(routes.api.v1.tcpMonitorsCreate, {
-		middleware: [requireApiKey("tcp-monitors:write")],
-		handler: tcpMonitorsCreate as RequestHandler<any>,
-	});
-	router.map(routes.api.v1.tcpMonitorShow, {
-		middleware: [requireApiKey("tcp-monitors:read")],
-		handler: apiTcpMonitorShow as RequestHandler<any>,
-	});
-	router.map(routes.api.v1.tcpMonitorUpdate, {
-		middleware: [requireApiKey("tcp-monitors:write")],
-		handler: tcpMonitorUpdate as RequestHandler<any>,
-	});
-	router.map(routes.api.v1.tcpMonitorDestroy, {
-		middleware: [requireApiKey("tcp-monitors:write")],
-		handler: tcpMonitorDestroy as RequestHandler<any>,
-	});
-	router.map(routes.api.v1.tcpMonitorResults, {
-		middleware: [requireApiKey("tcp-monitors:read")],
-		handler: tcpMonitorResults as RequestHandler<any>,
-	});
+	router.map(routes.api.v1.tcpMonitorsIndex, tcpMonitorsIndex);
+	router.map(routes.api.v1.tcpMonitorsCreate, tcpMonitorsCreate);
+	router.map(routes.api.v1.tcpMonitorShow, apiTcpMonitorShow);
+	router.map(routes.api.v1.tcpMonitorUpdate, tcpMonitorUpdate);
+	router.map(routes.api.v1.tcpMonitorDestroy, tcpMonitorDestroy);
+	router.map(routes.api.v1.tcpMonitorResults, tcpMonitorResults);
 
-	router.map(routes.api.v1.cronJobsIndex, {
-		middleware: [requireApiKey("cron-jobs:read")],
-		handler: cronJobsIndex as RequestHandler<any>,
-	});
-	router.map(routes.api.v1.cronJobsCreate, {
-		middleware: [requireApiKey("cron-jobs:write")],
-		handler: cronJobsCreate as RequestHandler<any>,
-	});
-	router.map(routes.api.v1.cronJobShow, {
-		middleware: [requireApiKey("cron-jobs:read")],
-		handler: apiCronJobShow as RequestHandler<any>,
-	});
-	router.map(routes.api.v1.cronJobUpdate, {
-		middleware: [requireApiKey("cron-jobs:write")],
-		handler: cronJobUpdate as RequestHandler<any>,
-	});
-	router.map(routes.api.v1.cronJobDestroy, {
-		middleware: [requireApiKey("cron-jobs:write")],
-		handler: cronJobDestroy as RequestHandler<any>,
-	});
+	router.map(routes.api.v1.cronJobsIndex, cronJobsIndex);
+	router.map(routes.api.v1.cronJobsCreate, cronJobsCreate);
+	router.map(routes.api.v1.cronJobShow, apiCronJobShow);
+	router.map(routes.api.v1.cronJobUpdate, cronJobUpdate);
+	router.map(routes.api.v1.cronJobDestroy, cronJobDestroy);
 
-	router.map(routes.api.v1.alertsIndex, {
-		middleware: [requireApiKey("alerts:read")],
-		handler: alertsIndex as RequestHandler<any>,
-	});
-	router.map(routes.api.v1.alertsCreate, {
-		middleware: [requireApiKey("alerts:write")],
-		handler: alertsCreate as RequestHandler<any>,
-	});
-	router.map(routes.api.v1.alertShow, {
-		middleware: [requireApiKey("alerts:read")],
-		handler: alertShow as RequestHandler<any>,
-	});
-	router.map(routes.api.v1.alertUpdate, {
-		middleware: [requireApiKey("alerts:write")],
-		handler: alertUpdate as RequestHandler<any>,
-	});
-	router.map(routes.api.v1.alertDestroy, {
-		middleware: [requireApiKey("alerts:write")],
-		handler: alertDestroy as RequestHandler<any>,
-	});
-	router.map(routes.api.v1.alertEvents, {
-		middleware: [requireApiKey("alerts:read")],
-		handler: alertEvents as RequestHandler<any>,
-	});
+	router.map(routes.api.v1.alertsIndex, alertsIndex);
+	router.map(routes.api.v1.alertsCreate, alertsCreate);
+	router.map(routes.api.v1.alertShow, alertShow);
+	router.map(routes.api.v1.alertUpdate, alertUpdate);
+	router.map(routes.api.v1.alertDestroy, alertDestroy);
+	router.map(routes.api.v1.alertEvents, alertEvents);
 
-	router.map(routes.api.v1.maintenanceIndex, {
-		middleware: [requireApiKey("maintenance:read")],
-		handler: maintenanceIndex as RequestHandler<any>,
-	});
-	router.map(routes.api.v1.maintenanceCreate, {
-		middleware: [requireApiKey("maintenance:write")],
-		handler: maintenanceCreate as RequestHandler<any>,
-	});
-	router.map(routes.api.v1.maintenanceShow, {
-		middleware: [requireApiKey("maintenance:read")],
-		handler: maintenanceShow as RequestHandler<any>,
-	});
-	router.map(routes.api.v1.maintenanceUpdate, {
-		middleware: [requireApiKey("maintenance:write")],
-		handler: maintenanceUpdate as RequestHandler<any>,
-	});
-	router.map(routes.api.v1.maintenanceDestroy, {
-		middleware: [requireApiKey("maintenance:write")],
-		handler: maintenanceDestroy as RequestHandler<any>,
-	});
-	router.map(routes.api.v1.maintenanceEnd, {
-		middleware: [requireApiKey("maintenance:write")],
-		handler: maintenanceEnd as RequestHandler<any>,
-	});
+	router.map(routes.api.v1.maintenanceIndex, maintenanceIndex);
+	router.map(routes.api.v1.maintenanceCreate, maintenanceCreate);
+	router.map(routes.api.v1.maintenanceShow, maintenanceShow);
+	router.map(routes.api.v1.maintenanceUpdate, maintenanceUpdate);
+	router.map(routes.api.v1.maintenanceDestroy, maintenanceDestroy);
+	router.map(routes.api.v1.maintenanceEnd, maintenanceEnd);
 
-	router.map(routes.api.v1.statusPagesIndex, {
-		middleware: [requireApiKey("status-pages:read")],
-		handler: statusPagesIndex as RequestHandler<any>,
-	});
-	router.map(routes.api.v1.statusPagesCreate, {
-		middleware: [requireApiKey("status-pages:write")],
-		handler: statusPagesCreate as RequestHandler<any>,
-	});
-	router.map(routes.api.v1.statusPageShow, {
-		middleware: [requireApiKey("status-pages:read")],
-		handler: statusPageShow as RequestHandler<any>,
-	});
-	router.map(routes.api.v1.statusPageUpdate, {
-		middleware: [requireApiKey("status-pages:write")],
-		handler: statusPageUpdate as RequestHandler<any>,
-	});
-	router.map(routes.api.v1.statusPageDestroy, {
-		middleware: [requireApiKey("status-pages:write")],
-		handler: statusPageDestroy as RequestHandler<any>,
-	});
-	router.map(routes.api.v1.statusPageMonitors, {
-		middleware: [requireApiKey("status-pages:write")],
-		handler: statusPageMonitors as RequestHandler<any>,
-	});
+	router.map(routes.api.v1.statusPagesIndex, statusPagesIndex);
+	router.map(routes.api.v1.statusPagesCreate, statusPagesCreate);
+	router.map(routes.api.v1.statusPageShow, statusPageShow);
+	router.map(routes.api.v1.statusPageUpdate, statusPageUpdate);
+	router.map(routes.api.v1.statusPageDestroy, statusPageDestroy);
+	router.map(routes.api.v1.statusPageMonitors, statusPageMonitors);
 
-	router.map(routes.api.v1.invitesIndex, {
-		middleware: [requireApiKey("invites:read")],
-		handler: invitesIndex as RequestHandler<any>,
-	});
-	router.map(routes.api.v1.invitesCreate, {
-		middleware: [requireApiKey("invites:write")],
-		handler: invitesCreate as RequestHandler<any>,
-	});
-	router.map(routes.api.v1.inviteDestroy, {
-		middleware: [requireApiKey("invites:write")],
-		handler: inviteDestroy as RequestHandler<any>,
-	});
+	router.map(routes.api.v1.invitesIndex, invitesIndex);
+	router.map(routes.api.v1.invitesCreate, invitesCreate);
+	router.map(routes.api.v1.inviteDestroy, inviteDestroy);
 
-	router.map(routes.api.v1.memberships, {
-		middleware: [requireApiKey("teams:read")],
-		handler: membershipsIndex as RequestHandler<any>,
-	});
+	router.map(routes.api.v1.memberships, membershipsIndex);
 
-	router.map(routes.api.v1.teamShow, {
-		middleware: [requireApiKey("teams:read")],
-		handler: teamShow as RequestHandler<any>,
-	});
-	router.map(routes.api.v1.teamUpdate, {
-		middleware: [requireApiKey("teams:write")],
-		handler: teamUpdate as RequestHandler<any>,
-	});
+	router.map(routes.api.v1.teamShow, teamShow);
+	router.map(routes.api.v1.teamUpdate, teamUpdate);
 
-	router.map(routes.api.v1.teamDomainsIndex, {
-		middleware: [requireApiKey("team-domains:read")],
-		handler: teamDomainsIndex as RequestHandler<any>,
-	});
-	router.map(routes.api.v1.teamDomainsCreate, {
-		middleware: [requireApiKey("team-domains:write")],
-		handler: teamDomainsCreate as RequestHandler<any>,
-	});
-	router.map(routes.api.v1.teamDomainsDestroy, {
-		middleware: [requireApiKey("team-domains:write")],
-		handler: teamDomainsDestroy as RequestHandler<any>,
-	});
+	router.map(routes.api.v1.teamDomainsIndex, teamDomainsIndex);
+	router.map(routes.api.v1.teamDomainsCreate, teamDomainsCreate);
+	router.map(routes.api.v1.teamDomainsDestroy, teamDomainsDestroy);
 
-	router.map(routes.api.v1.apiKeysIndex, {
-		middleware: [requireApiKey("api-keys:read")],
-		handler: apiKeysIndex as RequestHandler<any>,
-	});
-	router.map(routes.api.v1.apiKeysCreate, {
-		middleware: [requireApiKey("api-keys:write")],
-		handler: apiKeysCreate as RequestHandler<any>,
-	});
-	router.map(routes.api.v1.apiKeyDestroy, {
-		middleware: [requireApiKey("api-keys:write")],
-		handler: apiKeyDestroy as RequestHandler<any>,
-	});
+	router.map(routes.api.v1.apiKeysIndex, apiKeysIndex);
+	router.map(routes.api.v1.apiKeysCreate, apiKeysCreate);
+	router.map(routes.api.v1.apiKeyDestroy, apiKeyDestroy);
 
 	return router;
 }

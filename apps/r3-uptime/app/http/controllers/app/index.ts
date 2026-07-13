@@ -14,12 +14,13 @@ import { createAction } from "remix/fetch-router";
 
 import Team from "~/app/data/team";
 import { getViewer } from "~/app/http/middleware/auth";
+import requireUser from "~/app/http/middleware/require-user";
 import routes from "~/routes/web";
 
 /** GET /app — redirects to the viewer's team. */
-export default createAction(
-	routes.app.index,
-	inject([Database] as const, async (db) => {
+export default createAction(routes.app.index, {
+	middleware: [requireUser],
+	handler: inject([Database] as const, async (db) => {
 		let viewer = getViewer();
 		if (!viewer) throw new Error("requireUser must run before this handler");
 
@@ -31,4 +32,4 @@ export default createAction(
 			status: redirect.Status.SeeOther,
 		});
 	}),
-);
+});

@@ -20,6 +20,7 @@ import type { SelectMonitorContentCheck } from "~/database/schema";
 
 import ContentCheck from "~/app/data/content-check";
 import Monitor from "~/app/data/monitor";
+import requireApiKey from "~/app/http/middleware/require-api-key";
 import { apiError, apiSuccess } from "~/app/services/api-response";
 import routes from "~/routes/web";
 
@@ -60,9 +61,9 @@ const CreateContentCheckSchema = s
 	}, "Invalid regular expression");
 
 /** GET /api/v1/monitors/:monitorId/content-checks — lists a monitor's content checks. */
-export const monitorContentChecksIndex = createAction(
-	routes.api.v1.monitorContentChecksIndex,
-	async (ctx) => {
+export const monitorContentChecksIndex = createAction(routes.api.v1.monitorContentChecksIndex, {
+	middleware: [requireApiKey("monitors:read")],
+	handler: async (ctx) => {
 		let { monitorId } = s.parse(MonitorIdParams, ctx.params);
 		let db = getServiceContainer().get(Database);
 		let monitor = await Monitor.findByIdForTeam(db, ctx.apiTeam.id, monitorId);
@@ -71,12 +72,12 @@ export const monitorContentChecksIndex = createAction(
 		let contentChecks = await ContentCheck.listByMonitor(db, monitorId);
 		return apiSuccess({ contentChecks: contentChecks.map(serializeContentCheck) });
 	},
-);
+});
 
 /** POST /api/v1/monitors/:monitorId/content-checks — creates a content check. */
-export const monitorContentChecksCreate = createAction(
-	routes.api.v1.monitorContentChecksCreate,
-	async (ctx) => {
+export const monitorContentChecksCreate = createAction(routes.api.v1.monitorContentChecksCreate, {
+	middleware: [requireApiKey("monitors:write")],
+	handler: async (ctx) => {
 		let { monitorId } = s.parse(MonitorIdParams, ctx.params);
 		let db = getServiceContainer().get(Database);
 		let monitor = await Monitor.findByIdForTeam(db, ctx.apiTeam.id, monitorId);
@@ -100,12 +101,12 @@ export const monitorContentChecksCreate = createAction(
 
 		return apiSuccess({ contentCheck: serializeContentCheck(contentCheck) }, Created);
 	},
-);
+});
 
 /** DELETE /api/v1/monitors/:monitorId/content-checks/:contentCheckId — deletes a content check. */
-export const monitorContentCheckDestroy = createAction(
-	routes.api.v1.monitorContentCheckDestroy,
-	async (ctx) => {
+export const monitorContentCheckDestroy = createAction(routes.api.v1.monitorContentCheckDestroy, {
+	middleware: [requireApiKey("monitors:write")],
+	handler: async (ctx) => {
 		let { monitorId, contentCheckId } = s.parse(ContentCheckParams, ctx.params);
 		let db = getServiceContainer().get(Database);
 		let monitor = await Monitor.findByIdForTeam(db, ctx.apiTeam.id, monitorId);
@@ -117,4 +118,4 @@ export const monitorContentCheckDestroy = createAction(
 		await ContentCheck.deleteById(db, contentCheckId);
 		return apiSuccess({ success: true });
 	},
-);
+});

@@ -21,6 +21,8 @@ import CronJobMonitor from "~/app/data/cron-job";
 import DnsMonitor from "~/app/data/dns-monitor";
 import Monitor from "~/app/data/monitor";
 import TcpMonitor from "~/app/data/tcp-monitor";
+import requireTeam from "~/app/http/middleware/require-team";
+import requireUser from "~/app/http/middleware/require-user";
 import { getTeamHttpSparklines, getTeamHttpSummaries } from "~/app/services/analytics";
 import DashboardPanelView from "~/resources/views/dashboard-panel";
 import routes from "~/routes/web";
@@ -28,9 +30,9 @@ import routes from "~/routes/web";
 const DASHBOARD_TABS = ["http", "dns", "tcp", "cron-jobs"] as const;
 
 /** GET /app/:team/dashboard/panel/:type — one monitor-type table, fragment-only. */
-export default createAction(
-	routes.app.team.dashboardPanel,
-	inject([Database] as const, async (db) => {
+export default createAction(routes.app.team.dashboardPanel, {
+	middleware: [requireUser, requireTeam],
+	handler: inject([Database] as const, async (db) => {
 		let ctx = getContext();
 		let { type } = s.parse(s.object({ type: s.enum_(DASHBOARD_TABS) }), ctx.params);
 
@@ -71,4 +73,4 @@ export default createAction(
 
 		return ctx.render(<DashboardPanelView tab="http" team={ctx.team} httpRows={httpRows} />);
 	}),
-);
+});

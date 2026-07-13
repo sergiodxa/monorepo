@@ -16,6 +16,7 @@ import { createAction } from "remix/fetch-router";
 import type { SelectMonitor } from "~/database/schema";
 
 import Monitor from "~/app/data/monitor";
+import requireApiKey from "~/app/http/middleware/require-api-key";
 import { apiSuccess } from "~/app/services/api-response";
 import { monitorResults } from "~/database/schema";
 import routes from "~/routes/web";
@@ -55,40 +56,43 @@ async function statusFor(db: Database, monitor: SelectMonitor): Promise<MonitorS
 }
 
 /** GET /api/v1/status — the team's overall status across every HTTP monitor. */
-export const statusShow = createAction(routes.api.v1.status, async (ctx) => {
-	let db = getServiceContainer().get(Database);
-	let monitors = await Monitor.listByTeam(db, ctx.apiTeam.id);
-	let monitorStatuses = await Promise.all(monitors.map((monitor) => statusFor(db, monitor)));
+export const statusShow = createAction(routes.api.v1.status, {
+	middleware: [requireApiKey("monitors:read")],
+	handler: async (ctx) => {
+		let db = getServiceContainer().get(Database);
+		let monitors = await Monitor.listByTeam(db, ctx.apiTeam.id);
+		let monitorStatuses = await Promise.all(monitors.map((monitor) => statusFor(db, monitor)));
 
-	let enabledMonitors = monitorStatuses.filter((monitor) => monitor.enabled);
-	let downMonitors = enabledMonitors.filter((monitor) => monitor.status === "down");
-	// Degraded status is not currently tracked per monitor result; reserved for future use.
-	let degradedMonitors: MonitorStatusEntry[] = [];
+		let enabledMonitors = monitorStatuses.filter((monitor) => monitor.enabled);
+		let downMonitors = enabledMonitors.filter((monitor) => monitor.status === "down");
+		/** Degraded status is not currently tracked per monitor result; reserved for future use. */
+		let degradedMonitors: MonitorStatusEntry[] = [];
 
-	let overallStatus: "operational" | "degraded" | "partial_outage" | "major_outage" | "unknown";
-	if (enabledMonitors.length === 0) {
-		overallStatus = "unknown";
-	} else if (downMonitors.length === enabledMonitors.length) {
-		overallStatus = "major_outage";
-	} else if (downMonitors.length > 0) {
-		overallStatus = "partial_outage";
-	} else if (degradedMonitors.length > 0) {
-		overallStatus = "degraded";
-	} else {
-		overallStatus = "operational";
-	}
+		let overallStatus: "operational" | "degraded" | "partial_outage" | "major_outage" | "unknown";
+		if (enabledMonitors.length === 0) {
+			overallStatus = "unknown";
+		} else if (downMonitors.length === enabledMonitors.length) {
+			overallStatus = "major_outage";
+		} else if (downMonitors.length > 0) {
+			overallStatus = "partial_outage";
+		} else if (degradedMonitors.length > 0) {
+			overallStatus = "degraded";
+		} else {
+			overallStatus = "operational";
+		}
 
-	return apiSuccess({
-		status: {
-			overall: overallStatus,
-			monitors: monitorStatuses,
-			summary: {
-				total: monitors.length,
-				up: monitorStatuses.filter((monitor) => monitor.status === "up").length,
-				down: downMonitors.length,
-				degraded: degradedMonitors.length,
-				unknown: monitorStatuses.filter((monitor) => monitor.status === "unknown").length,
+		return apiSuccess({
+			status: {
+				overall: overallStatus,
+				monitors: monitorStatuses,
+				summary: {
+					total: monitors.length,
+					up: monitorStatuses.filter((monitor) => monitor.status === "up").length,
+					down: downMonitors.length,
+					degraded: degradedMonitors.length,
+					unknown: monitorStatuses.filter((monitor) => monitor.status === "unknown").length,
+				},
 			},
-		},
-	});
+		});
+	},
 });

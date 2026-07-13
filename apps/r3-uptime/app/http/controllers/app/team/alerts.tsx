@@ -14,15 +14,17 @@ import { css } from "remix/ui";
 import Alert, { MAX_ALERTS_PER_TEAM } from "~/app/data/alert";
 import Monitor from "~/app/data/monitor";
 import { getViewer } from "~/app/http/middleware/auth";
+import requireTeam from "~/app/http/middleware/require-team";
+import requireUser from "~/app/http/middleware/require-user";
 import AppShell from "~/resources/layouts/app-shell";
 import DocumentLayout from "~/resources/layouts/document";
 import AlertsView from "~/resources/views/alerts/index";
 import routes from "~/routes/web";
 
 /** GET /app/:team/alerts — the team's alerts list. */
-export default createAction(
-	routes.app.team.alerts,
-	inject([Database] as const, async (db) => {
+export default createAction(routes.app.team.alerts, {
+	middleware: [requireUser, requireTeam],
+	handler: inject([Database] as const, async (db) => {
 		let ctx = getContext();
 		let viewer = getViewer();
 		if (!viewer) throw new Error("requireUser must run before this handler");
@@ -88,4 +90,4 @@ export default createAction(
 			</DocumentLayout>,
 		);
 	}),
-);
+});

@@ -13,21 +13,25 @@ import { Database } from "remix/data-table";
 import { createAction } from "remix/fetch-router";
 
 import Invite from "~/app/data/invite";
+import requireApiKey from "~/app/http/middleware/require-api-key";
 import { apiError, apiSuccess } from "~/app/services/api-response";
 import routes from "~/routes/web";
 
 const InviteIdParams = s.object({ inviteId: s.string() });
 
 /** DELETE /api/v1/invites/:inviteId — revokes a pending invite. */
-export const inviteDestroy = createAction(routes.api.v1.inviteDestroy, async (ctx) => {
-	let { inviteId } = s.parse(InviteIdParams, ctx.params);
-	let db = getServiceContainer().get(Database);
-	let invite = await Invite.findByIdForTeam(db, ctx.apiTeam.id, inviteId);
-	if (!invite) return apiError("NOT_FOUND", "Invite not found", NotFound);
-	if (invite.accepted_at !== null) {
-		return apiError("VALIDATION_ERROR", "This invite was already accepted.", BadRequest);
-	}
+export const inviteDestroy = createAction(routes.api.v1.inviteDestroy, {
+	middleware: [requireApiKey("invites:write")],
+	handler: async (ctx) => {
+		let { inviteId } = s.parse(InviteIdParams, ctx.params);
+		let db = getServiceContainer().get(Database);
+		let invite = await Invite.findByIdForTeam(db, ctx.apiTeam.id, inviteId);
+		if (!invite) return apiError("NOT_FOUND", "Invite not found", NotFound);
+		if (invite.accepted_at !== null) {
+			return apiError("VALIDATION_ERROR", "This invite was already accepted.", BadRequest);
+		}
 
-	await Invite.revoke(db, inviteId);
-	return apiSuccess({ deleted: true });
+		await Invite.revoke(db, inviteId);
+		return apiSuccess({ deleted: true });
+	},
 });

@@ -24,6 +24,7 @@ import Alert from "~/app/data/alert";
 import AlertEvent from "~/app/data/alert-event";
 import Monitor from "~/app/data/monitor";
 import { serializeAlertSafe, serializeAlertStrategyOnly } from "~/app/http/controllers/api/alerts";
+import requireApiKey from "~/app/http/middleware/require-api-key";
 import { apiError, apiSuccess, parsePaginationQuery } from "~/app/services/api-response";
 import routes from "~/routes/web";
 
@@ -37,78 +38,90 @@ const UpdateAlertSchema = s.object({
 });
 
 /** GET /api/v1/alerts/:alertId — a single alert with sensitive config stripped. */
-export const alertShow = createAction(routes.api.v1.alertShow, async (ctx) => {
-	let { alertId } = s.parse(AlertIdParams, ctx.params);
-	let db = getServiceContainer().get(Database);
-	let alert = await Alert.findByIdForTeam(db, ctx.apiTeam.id, alertId);
-	if (!alert) return apiError("NOT_FOUND", "Alert not found", NotFound);
-	return apiSuccess({ alert: serializeAlertSafe(alert) });
+export const alertShow = createAction(routes.api.v1.alertShow, {
+	middleware: [requireApiKey("alerts:read")],
+	handler: async (ctx) => {
+		let { alertId } = s.parse(AlertIdParams, ctx.params);
+		let db = getServiceContainer().get(Database);
+		let alert = await Alert.findByIdForTeam(db, ctx.apiTeam.id, alertId);
+		if (!alert) return apiError("NOT_FOUND", "Alert not found", NotFound);
+		return apiSuccess({ alert: serializeAlertSafe(alert) });
+	},
 });
 
 /** PUT /api/v1/alerts/:alertId — updates an alert's non-channel fields. */
-export const alertUpdate = createAction(routes.api.v1.alertUpdate, async (ctx) => {
-	let { alertId } = s.parse(AlertIdParams, ctx.params);
-	let db = getServiceContainer().get(Database);
-	let existing = await Alert.findByIdForTeam(db, ctx.apiTeam.id, alertId);
-	if (!existing) return apiError("NOT_FOUND", "Alert not found", NotFound);
+export const alertUpdate = createAction(routes.api.v1.alertUpdate, {
+	middleware: [requireApiKey("alerts:write")],
+	handler: async (ctx) => {
+		let { alertId } = s.parse(AlertIdParams, ctx.params);
+		let db = getServiceContainer().get(Database);
+		let existing = await Alert.findByIdForTeam(db, ctx.apiTeam.id, alertId);
+		if (!existing) return apiError("NOT_FOUND", "Alert not found", NotFound);
 
-	let result = await validate(ctx.request, UpdateAlertSchema);
-	if (isFailure(result)) {
-		return apiError(
-			"VALIDATION_ERROR",
-			result.error.issues.map((issue) => issue.message).join(", "),
-			BadRequest,
-		);
-	}
+		let result = await validate(ctx.request, UpdateAlertSchema);
+		if (isFailure(result)) {
+			return apiError(
+				"VALIDATION_ERROR",
+				result.error.issues.map((issue) => issue.message).join(", "),
+				BadRequest,
+			);
+		}
 
-	if (result.data.monitorId) {
-		let monitor = await Monitor.findByIdForTeam(db, ctx.apiTeam.id, result.data.monitorId);
-		if (!monitor) return apiError("NOT_FOUND", "Monitor not found", NotFound);
-	}
+		if (result.data.monitorId) {
+			let monitor = await Monitor.findByIdForTeam(db, ctx.apiTeam.id, result.data.monitorId);
+			if (!monitor) return apiError("NOT_FOUND", "Monitor not found", NotFound);
+		}
 
-	let changes: Partial<InsertAlert> = {};
-	if (result.data.name !== undefined) changes.name = result.data.name;
-	if (result.data.notifyOnRecovery !== undefined)
-		changes.notify_on_recovery = result.data.notifyOnRecovery;
-	if (result.data.cooldownMinutes !== undefined)
-		changes.cooldown_minutes = result.data.cooldownMinutes;
-	if (result.data.monitorId !== undefined) changes.monitor_id = result.data.monitorId;
+		let changes: Partial<InsertAlert> = {};
+		if (result.data.name !== undefined) changes.name = result.data.name;
+		if (result.data.notifyOnRecovery !== undefined)
+			changes.notify_on_recovery = result.data.notifyOnRecovery;
+		if (result.data.cooldownMinutes !== undefined)
+			changes.cooldown_minutes = result.data.cooldownMinutes;
+		if (result.data.monitorId !== undefined) changes.monitor_id = result.data.monitorId;
 
-	let alert = await Alert.updateById(db, alertId, changes);
-	return apiSuccess({ alert: serializeAlertStrategyOnly(alert) });
+		let alert = await Alert.updateById(db, alertId, changes);
+		return apiSuccess({ alert: serializeAlertStrategyOnly(alert) });
+	},
 });
 
 /** DELETE /api/v1/alerts/:alertId — deletes an alert. */
-export const alertDestroy = createAction(routes.api.v1.alertDestroy, async (ctx) => {
-	let { alertId } = s.parse(AlertIdParams, ctx.params);
-	let db = getServiceContainer().get(Database);
-	let existing = await Alert.findByIdForTeam(db, ctx.apiTeam.id, alertId);
-	if (!existing) return apiError("NOT_FOUND", "Alert not found", NotFound);
+export const alertDestroy = createAction(routes.api.v1.alertDestroy, {
+	middleware: [requireApiKey("alerts:write")],
+	handler: async (ctx) => {
+		let { alertId } = s.parse(AlertIdParams, ctx.params);
+		let db = getServiceContainer().get(Database);
+		let existing = await Alert.findByIdForTeam(db, ctx.apiTeam.id, alertId);
+		if (!existing) return apiError("NOT_FOUND", "Alert not found", NotFound);
 
-	await Alert.deleteById(db, alertId);
-	return apiSuccess({ deleted: true });
+		await Alert.deleteById(db, alertId);
+		return apiSuccess({ deleted: true });
+	},
 });
 
 /** GET /api/v1/alerts/:alertId/events — delivery-event history for one alert. */
-export const alertEvents = createAction(routes.api.v1.alertEvents, async (ctx) => {
-	let { alertId } = s.parse(AlertIdParams, ctx.params);
-	let db = getServiceContainer().get(Database);
-	let alert = await Alert.findByIdForTeam(db, ctx.apiTeam.id, alertId);
-	if (!alert) return apiError("NOT_FOUND", "Alert not found", NotFound);
+export const alertEvents = createAction(routes.api.v1.alertEvents, {
+	middleware: [requireApiKey("alerts:read")],
+	handler: async (ctx) => {
+		let { alertId } = s.parse(AlertIdParams, ctx.params);
+		let db = getServiceContainer().get(Database);
+		let alert = await Alert.findByIdForTeam(db, ctx.apiTeam.id, alertId);
+		if (!alert) return apiError("NOT_FOUND", "Alert not found", NotFound);
 
-	let { limit } = parsePaginationQuery(ctx.url, { defaultLimit: 50, maxLimit: 200 });
-	let events = await AlertEvent.listByAlertId(db, alertId, limit);
+		let { limit } = parsePaginationQuery(ctx.url, { defaultLimit: 50, maxLimit: 200 });
+		let events = await AlertEvent.listByAlertId(db, alertId, limit);
 
-	return apiSuccess({
-		events: events.map((event) => ({
-			id: event.id,
-			alertId: event.alert_id,
-			monitorId: event.monitor_id,
-			eventType: event.event_type,
-			status: event.status,
-			sentAt: event.sent_at,
-			errorMessage: event.error_message,
-			createdAt: event.created_at,
-		})),
-	});
+		return apiSuccess({
+			events: events.map((event) => ({
+				id: event.id,
+				alertId: event.alert_id,
+				monitorId: event.monitor_id,
+				eventType: event.event_type,
+				status: event.status,
+				sentAt: event.sent_at,
+				errorMessage: event.error_message,
+				createdAt: event.created_at,
+			})),
+		});
+	},
 });

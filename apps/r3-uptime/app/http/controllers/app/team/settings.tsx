@@ -16,6 +16,9 @@ import Invite from "~/app/data/invite";
 import Team from "~/app/data/team";
 import TeamDomain from "~/app/data/team-domain";
 import { getViewer } from "~/app/http/middleware/auth";
+import requireRole from "~/app/http/middleware/require-role";
+import requireTeam from "~/app/http/middleware/require-team";
+import requireUser from "~/app/http/middleware/require-user";
 import { resolveSubjects } from "~/app/services/subjects";
 import AppShell from "~/resources/layouts/app-shell";
 import DocumentLayout from "~/resources/layouts/document";
@@ -23,9 +26,9 @@ import SettingsView from "~/resources/views/settings/index";
 import routes from "~/routes/web";
 
 /** GET /app/:team/settings — team settings: general, members, domains, danger zone. */
-export default createAction(
-	routes.app.team.settings,
-	inject([Database, AuthSDK] as const, async (db, authSdk) => {
+export default createAction(routes.app.team.settings, {
+	middleware: [requireUser, requireTeam, requireRole("admin")],
+	handler: inject([Database, AuthSDK] as const, async (db, authSdk) => {
 		let ctx = getContext();
 		let viewer = getViewer();
 		if (!viewer) throw new Error("requireUser must run before this handler");
@@ -61,4 +64,4 @@ export default createAction(
 			</DocumentLayout>,
 		);
 	}),
-);
+});

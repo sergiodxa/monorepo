@@ -17,15 +17,17 @@ import { css } from "remix/ui";
 import DnsMonitor from "~/app/data/dns-monitor";
 import MonitorDailyStats from "~/app/data/monitor-daily-stats";
 import { getViewer } from "~/app/http/middleware/auth";
+import requireTeam from "~/app/http/middleware/require-team";
+import requireUser from "~/app/http/middleware/require-user";
 import AppShell from "~/resources/layouts/app-shell";
 import DocumentLayout from "~/resources/layouts/document";
 import DnsMonitorShowView from "~/resources/views/dns-monitors/show";
 import routes from "~/routes/web";
 
 /** GET /app/:team/dns/:monitorId — a DNS monitor's detail page. */
-export default createAction(
-	routes.app.team.dnsMonitorShow,
-	inject([Database] as const, async (db) => {
+export default createAction(routes.app.team.dnsMonitorShow, {
+	middleware: [requireUser, requireTeam],
+	handler: inject([Database] as const, async (db) => {
 		let ctx = getContext();
 		let viewer = getViewer();
 		if (!viewer) throw new Error("requireUser must run before this handler");
@@ -50,6 +52,7 @@ export default createAction(
 							<form
 								method="post"
 								action={routes.actions.checkDnsMonitor.href({ team: ctx.team.slug })}
+								mix={[css({ margin: 0 })]}
 							>
 								<input type="hidden" name="monitor_id" value={monitor.id} />
 								<button
@@ -127,4 +130,4 @@ export default createAction(
 			</DocumentLayout>,
 		);
 	}),
-);
+});

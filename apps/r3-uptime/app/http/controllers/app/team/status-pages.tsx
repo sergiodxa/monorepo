@@ -13,15 +13,17 @@ import { css } from "remix/ui";
 
 import StatusPage from "~/app/data/status-page";
 import { getViewer } from "~/app/http/middleware/auth";
+import requireTeam from "~/app/http/middleware/require-team";
+import requireUser from "~/app/http/middleware/require-user";
 import AppShell from "~/resources/layouts/app-shell";
 import DocumentLayout from "~/resources/layouts/document";
 import StatusPagesView from "~/resources/views/status-pages/index";
 import routes from "~/routes/web";
 
 /** GET /app/:team/status-pages — the team's status pages list. */
-export default createAction(
-	routes.app.team.statusPages,
-	inject([Database] as const, async (db) => {
+export default createAction(routes.app.team.statusPages, {
+	middleware: [requireUser, requireTeam],
+	handler: inject([Database] as const, async (db) => {
 		let ctx = getContext();
 		let viewer = getViewer();
 		if (!viewer) throw new Error("requireUser must run before this handler");
@@ -79,4 +81,4 @@ export default createAction(
 			</DocumentLayout>,
 		);
 	}),
-);
+});

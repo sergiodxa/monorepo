@@ -16,15 +16,17 @@ import { createAction } from "remix/fetch-router";
 import ContentCheck from "~/app/data/content-check";
 import Monitor from "~/app/data/monitor";
 import { getViewer } from "~/app/http/middleware/auth";
+import requireTeam from "~/app/http/middleware/require-team";
+import requireUser from "~/app/http/middleware/require-user";
 import AppShell from "~/resources/layouts/app-shell";
 import DocumentLayout from "~/resources/layouts/document";
 import EditMonitorView from "~/resources/views/monitors/edit";
 import routes from "~/routes/web";
 
 /** GET /app/:team/monitors/:monitorId/edit — a monitor's edit form. */
-export default createAction(
-	routes.app.team.monitorEdit,
-	inject([Database] as const, async (db) => {
+export default createAction(routes.app.team.monitorEdit, {
+	middleware: [requireUser, requireTeam],
+	handler: inject([Database] as const, async (db) => {
 		let ctx = getContext();
 		let viewer = getViewer();
 		if (!viewer) throw new Error("requireUser must run before this handler");
@@ -49,4 +51,4 @@ export default createAction(
 			</DocumentLayout>,
 		);
 	}),
-);
+});

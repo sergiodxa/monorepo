@@ -12,15 +12,17 @@ import { createAction } from "remix/fetch-router";
 
 import Monitor from "~/app/data/monitor";
 import { getViewer } from "~/app/http/middleware/auth";
+import requireTeam from "~/app/http/middleware/require-team";
+import requireUser from "~/app/http/middleware/require-user";
 import AppShell from "~/resources/layouts/app-shell";
 import DocumentLayout from "~/resources/layouts/document";
 import NewAlertView from "~/resources/views/alerts/new";
 import routes from "~/routes/web";
 
 /** GET /app/:team/alerts/new — the new alert form. */
-export default createAction(
-	routes.app.team.alertNew,
-	inject([Database] as const, async (db) => {
+export default createAction(routes.app.team.alertNew, {
+	middleware: [requireUser, requireTeam],
+	handler: inject([Database] as const, async (db) => {
 		let ctx = getContext();
 		let viewer = getViewer();
 		if (!viewer) throw new Error("requireUser must run before this handler");
@@ -41,4 +43,4 @@ export default createAction(
 			</DocumentLayout>,
 		);
 	}),
-);
+});

@@ -18,6 +18,8 @@ import { css } from "remix/ui";
 import Monitor from "~/app/data/monitor";
 import MonitorDailyStats from "~/app/data/monitor-daily-stats";
 import { getViewer } from "~/app/http/middleware/auth";
+import requireTeam from "~/app/http/middleware/require-team";
+import requireUser from "~/app/http/middleware/require-user";
 import { getMonitorSparkline } from "~/app/services/analytics";
 import AppShell from "~/resources/layouts/app-shell";
 import DocumentLayout from "~/resources/layouts/document";
@@ -49,9 +51,9 @@ const buttonSecondary = css({
 });
 
 /** GET /app/:team/monitors/:monitorId — a monitor's detail page. */
-export default createAction(
-	routes.app.team.monitorShow,
-	inject([Database] as const, async (db) => {
+export default createAction(routes.app.team.monitorShow, {
+	middleware: [requireUser, requireTeam],
+	handler: inject([Database] as const, async (db) => {
 		let ctx = getContext();
 		let viewer = getViewer();
 		if (!viewer) throw new Error("requireUser must run before this handler");
@@ -74,7 +76,11 @@ export default createAction(
 					breadcrumb={monitor.name}
 					actions={
 						<div mix={[css({ display: "flex", alignItems: "center", gap: 12 })]}>
-							<form method="post" action={routes.actions.playMonitor.href({ team: ctx.team.slug })}>
+							<form
+								method="post"
+								action={routes.actions.playMonitor.href({ team: ctx.team.slug })}
+								mix={[css({ margin: 0 })]}
+							>
 								<input type="hidden" name="monitor_id" value={monitor.id} />
 								<button type="submit" mix={[buttonSecondary]}>
 									Run now
@@ -102,4 +108,4 @@ export default createAction(
 			</DocumentLayout>,
 		);
 	}),
-);
+});

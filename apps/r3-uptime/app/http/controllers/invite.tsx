@@ -18,14 +18,15 @@ import { createAction } from "remix/fetch-router";
 
 import Invite from "~/app/data/invite";
 import { getViewer } from "~/app/http/middleware/auth";
+import requireUser from "~/app/http/middleware/require-user";
 import DocumentLayout from "~/resources/layouts/document";
 import InviteErrorView from "~/resources/views/invite-error";
 import routes from "~/routes/web";
 
 /** GET /invite/:inviteId — accepts a team invite for the signed-in account. */
-export default createAction(
-	routes.invite,
-	inject([Database] as const, async (db) => {
+export default createAction(routes.invite, {
+	middleware: [requireUser],
+	handler: inject([Database] as const, async (db) => {
 		let ctx = getContext();
 		let viewer = getViewer();
 		if (!viewer) throw new Error("requireUser must run before this handler");
@@ -55,4 +56,4 @@ export default createAction(
 			status: redirect.Status.SeeOther,
 		});
 	}),
-);
+});

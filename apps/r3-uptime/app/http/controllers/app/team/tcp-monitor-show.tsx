@@ -17,6 +17,8 @@ import { css } from "remix/ui";
 import MonitorDailyStats from "~/app/data/monitor-daily-stats";
 import TcpMonitor from "~/app/data/tcp-monitor";
 import { getViewer } from "~/app/http/middleware/auth";
+import requireTeam from "~/app/http/middleware/require-team";
+import requireUser from "~/app/http/middleware/require-user";
 import AppShell from "~/resources/layouts/app-shell";
 import DocumentLayout from "~/resources/layouts/document";
 import TcpMonitorShowView from "~/resources/views/tcp-monitors/show";
@@ -47,9 +49,9 @@ const buttonSecondary = css({
 });
 
 /** GET /app/:team/tcp/:monitorId — a TCP monitor's detail page. */
-export default createAction(
-	routes.app.team.tcpMonitorShow,
-	inject([Database] as const, async (db) => {
+export default createAction(routes.app.team.tcpMonitorShow, {
+	middleware: [requireUser, requireTeam],
+	handler: inject([Database] as const, async (db) => {
 		let ctx = getContext();
 		let viewer = getViewer();
 		if (!viewer) throw new Error("requireUser must run before this handler");
@@ -74,6 +76,7 @@ export default createAction(
 							<form
 								method="post"
 								action={routes.actions.checkTcpMonitor.href({ team: ctx.team.slug })}
+								mix={[css({ margin: 0 })]}
 							>
 								<input type="hidden" name="monitor_id" value={monitor.id} />
 								<button type="submit" mix={[buttonSecondary]}>
@@ -102,4 +105,4 @@ export default createAction(
 			</DocumentLayout>,
 		);
 	}),
-);
+});

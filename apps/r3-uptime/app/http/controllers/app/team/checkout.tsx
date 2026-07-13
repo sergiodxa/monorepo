@@ -19,15 +19,17 @@ import { createAction } from "remix/fetch-router";
 
 import Customer from "~/app/data/customer";
 import { getViewer } from "~/app/http/middleware/auth";
+import requireTeam from "~/app/http/middleware/require-team";
+import requireUser from "~/app/http/middleware/require-user";
 import AppShell from "~/resources/layouts/app-shell";
 import DocumentLayout from "~/resources/layouts/document";
 import CheckoutView from "~/resources/views/checkout";
 import routes from "~/routes/web";
 
 /** GET /app/:team/checkout — redirects the owner to Polar-hosted billing. */
-export default createAction(
-	routes.app.team.checkout,
-	inject([PolarClient] as const, async (polar) => {
+export default createAction(routes.app.team.checkout, {
+	middleware: [requireUser, requireTeam],
+	handler: inject([PolarClient] as const, async (polar) => {
 		let ctx = getContext();
 		let viewer = getViewer();
 		if (!viewer) throw new Error("requireUser must run before this handler");
@@ -63,4 +65,4 @@ export default createAction(
 
 		return redirect(url, { status: redirect.Status.SeeOther });
 	}),
-);
+});

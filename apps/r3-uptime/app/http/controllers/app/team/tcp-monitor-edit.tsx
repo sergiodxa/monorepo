@@ -15,15 +15,17 @@ import { createAction } from "remix/fetch-router";
 
 import TcpMonitor from "~/app/data/tcp-monitor";
 import { getViewer } from "~/app/http/middleware/auth";
+import requireTeam from "~/app/http/middleware/require-team";
+import requireUser from "~/app/http/middleware/require-user";
 import AppShell from "~/resources/layouts/app-shell";
 import DocumentLayout from "~/resources/layouts/document";
 import EditTcpMonitorView from "~/resources/views/tcp-monitors/edit";
 import routes from "~/routes/web";
 
 /** GET /app/:team/tcp/:monitorId/edit — a TCP monitor's edit form. */
-export default createAction(
-	routes.app.team.tcpMonitorEdit,
-	inject([Database] as const, async (db) => {
+export default createAction(routes.app.team.tcpMonitorEdit, {
+	middleware: [requireUser, requireTeam],
+	handler: inject([Database] as const, async (db) => {
 		let ctx = getContext();
 		let viewer = getViewer();
 		if (!viewer) throw new Error("requireUser must run before this handler");
@@ -46,4 +48,4 @@ export default createAction(
 			</DocumentLayout>,
 		);
 	}),
-);
+});

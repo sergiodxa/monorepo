@@ -18,6 +18,8 @@ import type { MonitorHealth } from "~/app/services/analytics";
 
 import Monitor from "~/app/data/monitor";
 import { getViewer } from "~/app/http/middleware/auth";
+import requireTeam from "~/app/http/middleware/require-team";
+import requireUser from "~/app/http/middleware/require-user";
 import { getTeamHttpSummaries } from "~/app/services/analytics";
 import AppShell from "~/resources/layouts/app-shell";
 import DocumentLayout from "~/resources/layouts/document";
@@ -25,9 +27,9 @@ import HttpMonitorsView from "~/resources/views/monitors/index";
 import routes from "~/routes/web";
 
 /** GET /app/:team/http — the team's HTTP monitors list. */
-export default createAction(
-	routes.app.team.httpMonitors,
-	inject([Database] as const, async (db) => {
+export default createAction(routes.app.team.httpMonitors, {
+	middleware: [requireUser, requireTeam],
+	handler: inject([Database] as const, async (db) => {
 		let ctx = getContext();
 		let viewer = getViewer();
 		if (!viewer) throw new Error("requireUser must run before this handler");
@@ -84,4 +86,4 @@ export default createAction(
 			</DocumentLayout>,
 		);
 	}),
-);
+});

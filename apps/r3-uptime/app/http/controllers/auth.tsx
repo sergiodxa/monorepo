@@ -59,7 +59,7 @@ export default createController(routes.auth, {
 			let response = await startExternalAuth(provider(ctx), ctx, {
 				returnTo: cookieReturnTo ?? undefined,
 			});
-			// The value now lives in the session-backed OAuth transaction; drop the cookie.
+			/** The value now lives in the session-backed OAuth transaction; drop the cookie. */
 			response.headers.append("Set-Cookie", await returnTo.serialize("", { maxAge: 0 }));
 			return response;
 		},

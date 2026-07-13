@@ -9,28 +9,33 @@ import { getContext } from "remix/async-context-middleware";
 import { createAction } from "remix/fetch-router";
 
 import { getViewer } from "~/app/http/middleware/auth";
+import requireTeam from "~/app/http/middleware/require-team";
+import requireUser from "~/app/http/middleware/require-user";
 import AppShell from "~/resources/layouts/app-shell";
 import DocumentLayout from "~/resources/layouts/document";
 import NewTcpMonitorView from "~/resources/views/tcp-monitors/new";
 import routes from "~/routes/web";
 
 /** GET /app/:team/tcp/new — the new TCP monitor form. */
-export default createAction(routes.app.team.tcpMonitorNew, () => {
-	let ctx = getContext();
-	let viewer = getViewer();
-	if (!viewer) throw new Error("requireUser must run before this handler");
+export default createAction(routes.app.team.tcpMonitorNew, {
+	middleware: [requireUser, requireTeam],
+	handler: () => {
+		let ctx = getContext();
+		let viewer = getViewer();
+		if (!viewer) throw new Error("requireUser must run before this handler");
 
-	return ctx.render(
-		<DocumentLayout title={`${ctx.team.name} · New TCP monitor`}>
-			<AppShell
-				team={ctx.team}
-				teams={ctx.teams}
-				viewer={viewer}
-				isAdmin={ctx.membership.role === "admin"}
-				breadcrumb="New TCP monitor"
-			>
-				<NewTcpMonitorView team={ctx.team} />
-			</AppShell>
-		</DocumentLayout>,
-	);
+		return ctx.render(
+			<DocumentLayout title={`${ctx.team.name} · New TCP monitor`}>
+				<AppShell
+					team={ctx.team}
+					teams={ctx.teams}
+					viewer={viewer}
+					isAdmin={ctx.membership.role === "admin"}
+					breadcrumb="New TCP monitor"
+				>
+					<NewTcpMonitorView team={ctx.team} />
+				</AppShell>
+			</DocumentLayout>,
+		);
+	},
 });

@@ -21,6 +21,7 @@ import type { InsertMonitor, SelectMonitor } from "~/database/schema";
 
 import AlertEvent from "~/app/data/alert-event";
 import Monitor from "~/app/data/monitor";
+import requireApiKey from "~/app/http/middleware/require-api-key";
 import { apiError, apiSuccess, parsePaginationQuery } from "~/app/services/api-response";
 import routes from "~/routes/web";
 
@@ -68,118 +69,136 @@ const UpdateMonitorSchema = s.object({
 });
 
 /** GET /api/v1/monitors/:monitorId — a single HTTP monitor. */
-export const monitorShow = createAction(routes.api.v1.monitorShow, async (ctx) => {
-	let { monitorId } = s.parse(MonitorIdParams, ctx.params);
-	let db = getServiceContainer().get(Database);
-	let monitor = await Monitor.findByIdForTeam(db, ctx.apiTeam.id, monitorId);
-	if (!monitor) return apiError("NOT_FOUND", "Monitor not found", NotFound);
-	return apiSuccess({ monitor: serializeMonitor(monitor) });
+export const monitorShow = createAction(routes.api.v1.monitorShow, {
+	middleware: [requireApiKey("monitors:read")],
+	handler: async (ctx) => {
+		let { monitorId } = s.parse(MonitorIdParams, ctx.params);
+		let db = getServiceContainer().get(Database);
+		let monitor = await Monitor.findByIdForTeam(db, ctx.apiTeam.id, monitorId);
+		if (!monitor) return apiError("NOT_FOUND", "Monitor not found", NotFound);
+		return apiSuccess({ monitor: serializeMonitor(monitor) });
+	},
 });
 
 /** PUT /api/v1/monitors/:monitorId — updates an HTTP monitor's editable fields. */
-export const monitorUpdate = createAction(routes.api.v1.monitorUpdate, async (ctx) => {
-	let { monitorId } = s.parse(MonitorIdParams, ctx.params);
-	let db = getServiceContainer().get(Database);
-	let existing = await Monitor.findByIdForTeam(db, ctx.apiTeam.id, monitorId);
-	if (!existing) return apiError("NOT_FOUND", "Monitor not found", NotFound);
+export const monitorUpdate = createAction(routes.api.v1.monitorUpdate, {
+	middleware: [requireApiKey("monitors:write")],
+	handler: async (ctx) => {
+		let { monitorId } = s.parse(MonitorIdParams, ctx.params);
+		let db = getServiceContainer().get(Database);
+		let existing = await Monitor.findByIdForTeam(db, ctx.apiTeam.id, monitorId);
+		if (!existing) return apiError("NOT_FOUND", "Monitor not found", NotFound);
 
-	let result = await validate(ctx.request, UpdateMonitorSchema);
-	if (isFailure(result)) {
-		return apiError(
-			"VALIDATION_ERROR",
-			result.error.issues.map((issue) => issue.message).join(", "),
-			BadRequest,
-		);
-	}
+		let result = await validate(ctx.request, UpdateMonitorSchema);
+		if (isFailure(result)) {
+			return apiError(
+				"VALIDATION_ERROR",
+				result.error.issues.map((issue) => issue.message).join(", "),
+				BadRequest,
+			);
+		}
 
-	let changes: Partial<InsertMonitor> = {};
-	if (result.data.name !== undefined) changes.name = result.data.name;
-	if (result.data.url !== undefined) changes.url = result.data.url;
-	if (result.data.method !== undefined) changes.method = result.data.method;
-	if (result.data.expectedStatus !== undefined)
-		changes.expected_status = result.data.expectedStatus;
-	if (result.data.intervalSeconds !== undefined)
-		changes.interval_seconds = result.data.intervalSeconds;
-	if (result.data.degradedAfterMs !== undefined)
-		changes.degraded_after_ms = result.data.degradedAfterMs;
-	if (result.data.timeoutSeconds !== undefined)
-		changes.timeout_seconds = result.data.timeoutSeconds;
-	if (result.data.locationHint !== undefined) changes.location_hint = result.data.locationHint;
-	if (result.data.enabled !== undefined)
-		changes.enabled_at = result.data.enabled ? Date.now() : null;
-	if (result.data.sslMonitoringEnabled !== undefined)
-		changes.ssl_monitoring_enabled = result.data.sslMonitoringEnabled;
-	if (result.data.sslExpiryWarningDays !== undefined)
-		changes.ssl_expiry_warning_days = result.data.sslExpiryWarningDays;
+		let changes: Partial<InsertMonitor> = {};
+		if (result.data.name !== undefined) changes.name = result.data.name;
+		if (result.data.url !== undefined) changes.url = result.data.url;
+		if (result.data.method !== undefined) changes.method = result.data.method;
+		if (result.data.expectedStatus !== undefined)
+			changes.expected_status = result.data.expectedStatus;
+		if (result.data.intervalSeconds !== undefined)
+			changes.interval_seconds = result.data.intervalSeconds;
+		if (result.data.degradedAfterMs !== undefined)
+			changes.degraded_after_ms = result.data.degradedAfterMs;
+		if (result.data.timeoutSeconds !== undefined)
+			changes.timeout_seconds = result.data.timeoutSeconds;
+		if (result.data.locationHint !== undefined) changes.location_hint = result.data.locationHint;
+		if (result.data.enabled !== undefined)
+			changes.enabled_at = result.data.enabled ? Date.now() : null;
+		if (result.data.sslMonitoringEnabled !== undefined)
+			changes.ssl_monitoring_enabled = result.data.sslMonitoringEnabled;
+		if (result.data.sslExpiryWarningDays !== undefined)
+			changes.ssl_expiry_warning_days = result.data.sslExpiryWarningDays;
 
-	let monitor = await Monitor.updateById(db, monitorId, changes);
-	return apiSuccess({ monitor: serializeMonitor(monitor) });
+		let monitor = await Monitor.updateById(db, monitorId, changes);
+		return apiSuccess({ monitor: serializeMonitor(monitor) });
+	},
 });
 
 /** DELETE /api/v1/monitors/:monitorId — deletes an HTTP monitor. */
-export const monitorDestroy = createAction(routes.api.v1.monitorDestroy, async (ctx) => {
-	let { monitorId } = s.parse(MonitorIdParams, ctx.params);
-	let db = getServiceContainer().get(Database);
-	let existing = await Monitor.findByIdForTeam(db, ctx.apiTeam.id, monitorId);
-	if (!existing) return apiError("NOT_FOUND", "Monitor not found", NotFound);
+export const monitorDestroy = createAction(routes.api.v1.monitorDestroy, {
+	middleware: [requireApiKey("monitors:write")],
+	handler: async (ctx) => {
+		let { monitorId } = s.parse(MonitorIdParams, ctx.params);
+		let db = getServiceContainer().get(Database);
+		let existing = await Monitor.findByIdForTeam(db, ctx.apiTeam.id, monitorId);
+		if (!existing) return apiError("NOT_FOUND", "Monitor not found", NotFound);
 
-	await Monitor.deleteById(db, monitorId);
-	return apiSuccess({ deleted: true });
+		await Monitor.deleteById(db, monitorId);
+		return apiSuccess({ deleted: true });
+	},
 });
 
 /** GET /api/v1/monitors/:monitorId/stats — aggregate stats for one monitor. */
-export const monitorStats = createAction(routes.api.v1.monitorStats, async (ctx) => {
-	let { monitorId } = s.parse(MonitorIdParams, ctx.params);
-	let db = getServiceContainer().get(Database);
-	let monitor = await Monitor.findByIdForTeam(db, ctx.apiTeam.id, monitorId);
-	if (!monitor) return apiError("NOT_FOUND", "Monitor not found", NotFound);
+export const monitorStats = createAction(routes.api.v1.monitorStats, {
+	middleware: [requireApiKey("monitors:read")],
+	handler: async (ctx) => {
+		let { monitorId } = s.parse(MonitorIdParams, ctx.params);
+		let db = getServiceContainer().get(Database);
+		let monitor = await Monitor.findByIdForTeam(db, ctx.apiTeam.id, monitorId);
+		if (!monitor) return apiError("NOT_FOUND", "Monitor not found", NotFound);
 
-	let stats = await Monitor.getStatsById(db, monitorId);
-	return apiSuccess({ stats });
+		let stats = await Monitor.getStatsById(db, monitorId);
+		return apiSuccess({ stats });
+	},
 });
 
 /** GET /api/v1/monitors/:monitorId/results — paginated check-result history. */
-export const monitorResults = createAction(routes.api.v1.monitorResults, async (ctx) => {
-	let { monitorId } = s.parse(MonitorIdParams, ctx.params);
-	let db = getServiceContainer().get(Database);
-	let monitor = await Monitor.findByIdForTeam(db, ctx.apiTeam.id, monitorId);
-	if (!monitor) return apiError("NOT_FOUND", "Monitor not found", NotFound);
+export const monitorResults = createAction(routes.api.v1.monitorResults, {
+	middleware: [requireApiKey("monitors:read")],
+	handler: async (ctx) => {
+		let { monitorId } = s.parse(MonitorIdParams, ctx.params);
+		let db = getServiceContainer().get(Database);
+		let monitor = await Monitor.findByIdForTeam(db, ctx.apiTeam.id, monitorId);
+		if (!monitor) return apiError("NOT_FOUND", "Monitor not found", NotFound);
 
-	let { limit, offset } = parsePaginationQuery(ctx.url, { defaultLimit: 50, maxLimit: 100 });
-	let { results, hasMore } = await Monitor.listResults(db, monitorId, { limit, offset });
+		let { limit, offset } = parsePaginationQuery(ctx.url, { defaultLimit: 50, maxLimit: 100 });
+		let { results, hasMore } = await Monitor.listResults(db, monitorId, { limit, offset });
 
-	return apiSuccess({
-		results: results.map((row) => ({
-			id: row.id,
-			responseStatus: row.response_status,
-			responseTimeMs: row.response_time_ms,
-			completedAt: row.completed_at,
-			createdAt: row.created_at,
-		})),
-		pagination: { limit, offset, hasMore },
-	});
+		return apiSuccess({
+			results: results.map((row) => ({
+				id: row.id,
+				responseStatus: row.response_status,
+				responseTimeMs: row.response_time_ms,
+				completedAt: row.completed_at,
+				createdAt: row.created_at,
+			})),
+			pagination: { limit, offset, hasMore },
+		});
+	},
 });
 
 /** GET /api/v1/monitors/:monitorId/alert-events — alert-delivery history for one monitor. */
-export const monitorAlertEvents = createAction(routes.api.v1.monitorAlertEvents, async (ctx) => {
-	let { monitorId } = s.parse(MonitorIdParams, ctx.params);
-	let db = getServiceContainer().get(Database);
-	let monitor = await Monitor.findByIdForTeam(db, ctx.apiTeam.id, monitorId);
-	if (!monitor) return apiError("NOT_FOUND", "Monitor not found", NotFound);
+export const monitorAlertEvents = createAction(routes.api.v1.monitorAlertEvents, {
+	middleware: [requireApiKey("alerts:read")],
+	handler: async (ctx) => {
+		let { monitorId } = s.parse(MonitorIdParams, ctx.params);
+		let db = getServiceContainer().get(Database);
+		let monitor = await Monitor.findByIdForTeam(db, ctx.apiTeam.id, monitorId);
+		if (!monitor) return apiError("NOT_FOUND", "Monitor not found", NotFound);
 
-	let { limit } = parsePaginationQuery(ctx.url, { defaultLimit: 50, maxLimit: 200 });
-	let events = await AlertEvent.listByMonitorId(db, monitorId, limit);
+		let { limit } = parsePaginationQuery(ctx.url, { defaultLimit: 50, maxLimit: 200 });
+		let events = await AlertEvent.listByMonitorId(db, monitorId, limit);
 
-	return apiSuccess({
-		events: events.map((event) => ({
-			id: event.id,
-			alertId: event.alert_id,
-			monitorId: event.monitor_id,
-			eventType: event.event_type,
-			status: event.status,
-			sentAt: event.sent_at,
-			errorMessage: event.error_message,
-			createdAt: event.created_at,
-		})),
-	});
+		return apiSuccess({
+			events: events.map((event) => ({
+				id: event.id,
+				alertId: event.alert_id,
+				monitorId: event.monitor_id,
+				eventType: event.event_type,
+				status: event.status,
+				sentAt: event.sent_at,
+				errorMessage: event.error_message,
+				createdAt: event.created_at,
+			})),
+		});
+	},
 });

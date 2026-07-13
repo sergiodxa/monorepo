@@ -13,6 +13,8 @@ import { createAction } from "remix/fetch-router";
 import Alert from "~/app/data/alert";
 import AlertEvent from "~/app/data/alert-event";
 import { getViewer } from "~/app/http/middleware/auth";
+import requireTeam from "~/app/http/middleware/require-team";
+import requireUser from "~/app/http/middleware/require-user";
 import AppShell from "~/resources/layouts/app-shell";
 import DocumentLayout from "~/resources/layouts/document";
 import AlertHistoryView from "~/resources/views/alerts/history";
@@ -21,9 +23,9 @@ import routes from "~/routes/web";
 const HISTORY_LIMIT = 100;
 
 /** GET /app/:team/alert-history — the team's alert delivery history. */
-export default createAction(
-	routes.app.team.alertHistory,
-	inject([Database] as const, async (db) => {
+export default createAction(routes.app.team.alertHistory, {
+	middleware: [requireUser, requireTeam],
+	handler: inject([Database] as const, async (db) => {
 		let ctx = getContext();
 		let viewer = getViewer();
 		if (!viewer) throw new Error("requireUser must run before this handler");
@@ -46,4 +48,4 @@ export default createAction(
 			</DocumentLayout>,
 		);
 	}),
-);
+});

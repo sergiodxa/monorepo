@@ -22,6 +22,7 @@ import { createAction } from "remix/fetch-router";
 import type { SelectStatusPage } from "~/database/schema";
 
 import StatusPage from "~/app/data/status-page";
+import requireApiKey from "~/app/http/middleware/require-api-key";
 import { apiError, apiSuccess } from "~/app/services/api-response";
 import routes from "~/routes/web";
 
@@ -62,38 +63,44 @@ const CreateStatusPageSchema = s.object({
 });
 
 /** GET /api/v1/status-pages — lists the team's status pages. */
-export const statusPagesIndex = createAction(routes.api.v1.statusPagesIndex, async (ctx) => {
-	let db = getServiceContainer().get(Database);
-	let statusPages = await StatusPage.listByTeam(db, ctx.apiTeam.id);
-	return apiSuccess({ statusPages: statusPages.map(serializeStatusPage) });
+export const statusPagesIndex = createAction(routes.api.v1.statusPagesIndex, {
+	middleware: [requireApiKey("status-pages:read")],
+	handler: async (ctx) => {
+		let db = getServiceContainer().get(Database);
+		let statusPages = await StatusPage.listByTeam(db, ctx.apiTeam.id);
+		return apiSuccess({ statusPages: statusPages.map(serializeStatusPage) });
+	},
 });
 
 /** POST /api/v1/status-pages — creates a status page for the team. */
-export const statusPagesCreate = createAction(routes.api.v1.statusPagesCreate, async (ctx) => {
-	let result = await validate(ctx.request, CreateStatusPageSchema);
-	if (isFailure(result)) {
-		return apiError(
-			"VALIDATION_ERROR",
-			result.error.issues.map((issue) => issue.message).join(", "),
-			BadRequest,
-		);
-	}
+export const statusPagesCreate = createAction(routes.api.v1.statusPagesCreate, {
+	middleware: [requireApiKey("status-pages:write")],
+	handler: async (ctx) => {
+		let result = await validate(ctx.request, CreateStatusPageSchema);
+		if (isFailure(result)) {
+			return apiError(
+				"VALIDATION_ERROR",
+				result.error.issues.map((issue) => issue.message).join(", "),
+				BadRequest,
+			);
+		}
 
-	let db = getServiceContainer().get(Database);
-	if (await StatusPage.isSlugTaken(db, result.data.slug)) {
-		return apiError("VALIDATION_ERROR", "Slug is already in use", BadRequest);
-	}
+		let db = getServiceContainer().get(Database);
+		if (await StatusPage.isSlugTaken(db, result.data.slug)) {
+			return apiError("VALIDATION_ERROR", "Slug is already in use", BadRequest);
+		}
 
-	let statusPage = await StatusPage.create(db, ctx.apiTeam.id, {
-		name: result.data.name,
-		slug: result.data.slug,
-		title: result.data.title ?? result.data.name,
-		description: result.data.description ?? null,
-		logo_url: result.data.logoUrl ?? null,
-		custom_domain: result.data.customDomain ?? null,
-		is_public: result.data.isPublic,
-		show_overall_status: result.data.showOverallStatus,
-	});
+		let statusPage = await StatusPage.create(db, ctx.apiTeam.id, {
+			name: result.data.name,
+			slug: result.data.slug,
+			title: result.data.title ?? result.data.name,
+			description: result.data.description ?? null,
+			logo_url: result.data.logoUrl ?? null,
+			custom_domain: result.data.customDomain ?? null,
+			is_public: result.data.isPublic,
+			show_overall_status: result.data.showOverallStatus,
+		});
 
-	return apiSuccess({ statusPage: serializeStatusPage(statusPage) }, Created);
+		return apiSuccess({ statusPage: serializeStatusPage(statusPage) }, Created);
+	},
 });

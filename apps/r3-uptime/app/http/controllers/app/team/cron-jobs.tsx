@@ -13,15 +13,17 @@ import { css } from "remix/ui";
 
 import CronJobMonitor from "~/app/data/cron-job";
 import { getViewer } from "~/app/http/middleware/auth";
+import requireTeam from "~/app/http/middleware/require-team";
+import requireUser from "~/app/http/middleware/require-user";
 import AppShell from "~/resources/layouts/app-shell";
 import DocumentLayout from "~/resources/layouts/document";
 import CronJobsView from "~/resources/views/cron-jobs/index";
 import routes from "~/routes/web";
 
 /** GET /app/:team/cron-jobs — the team's cron-job monitors list. */
-export default createAction(
-	routes.app.team.cronJobs,
-	inject([Database] as const, async (db) => {
+export default createAction(routes.app.team.cronJobs, {
+	middleware: [requireUser, requireTeam],
+	handler: inject([Database] as const, async (db) => {
 		let ctx = getContext();
 		let viewer = getViewer();
 		if (!viewer) throw new Error("requireUser must run before this handler");
@@ -67,4 +69,4 @@ export default createAction(
 			</DocumentLayout>,
 		);
 	}),
-);
+});

@@ -19,6 +19,7 @@ import { createAction } from "remix/fetch-router";
 import type { InsertTcpMonitor, SelectTcpMonitor } from "~/database/schema";
 
 import TcpMonitor from "~/app/data/tcp-monitor";
+import requireApiKey from "~/app/http/middleware/require-api-key";
 import { apiError, apiSuccess, parsePaginationQuery } from "~/app/services/api-response";
 import routes from "~/routes/web";
 
@@ -52,72 +53,87 @@ const UpdateTcpMonitorSchema = s.object({
 });
 
 /** GET /api/v1/tcp-monitors/:tcpMonitorId — a single TCP monitor. */
-export const tcpMonitorShow = createAction(routes.api.v1.tcpMonitorShow, async (ctx) => {
-	let { tcpMonitorId } = s.parse(TcpMonitorIdParams, ctx.params);
-	let db = getServiceContainer().get(Database);
-	let monitor = await TcpMonitor.findByIdForTeam(db, ctx.apiTeam.id, tcpMonitorId);
-	if (!monitor) return apiError("NOT_FOUND", "TCP monitor not found", NotFound);
-	return apiSuccess({ monitor: serializeTcpMonitor(monitor) });
+export const tcpMonitorShow = createAction(routes.api.v1.tcpMonitorShow, {
+	middleware: [requireApiKey("tcp-monitors:read")],
+	handler: async (ctx) => {
+		let { tcpMonitorId } = s.parse(TcpMonitorIdParams, ctx.params);
+		let db = getServiceContainer().get(Database);
+		let monitor = await TcpMonitor.findByIdForTeam(db, ctx.apiTeam.id, tcpMonitorId);
+		if (!monitor) return apiError("NOT_FOUND", "TCP monitor not found", NotFound);
+		return apiSuccess({ monitor: serializeTcpMonitor(monitor) });
+	},
 });
 
 /** PUT /api/v1/tcp-monitors/:tcpMonitorId — updates a TCP monitor's editable fields. */
-export const tcpMonitorUpdate = createAction(routes.api.v1.tcpMonitorUpdate, async (ctx) => {
-	let { tcpMonitorId } = s.parse(TcpMonitorIdParams, ctx.params);
-	let db = getServiceContainer().get(Database);
-	let existing = await TcpMonitor.findByIdForTeam(db, ctx.apiTeam.id, tcpMonitorId);
-	if (!existing) return apiError("NOT_FOUND", "TCP monitor not found", NotFound);
+export const tcpMonitorUpdate = createAction(routes.api.v1.tcpMonitorUpdate, {
+	middleware: [requireApiKey("tcp-monitors:write")],
+	handler: async (ctx) => {
+		let { tcpMonitorId } = s.parse(TcpMonitorIdParams, ctx.params);
+		let db = getServiceContainer().get(Database);
+		let existing = await TcpMonitor.findByIdForTeam(db, ctx.apiTeam.id, tcpMonitorId);
+		if (!existing) return apiError("NOT_FOUND", "TCP monitor not found", NotFound);
 
-	let result = await validate(ctx.request, UpdateTcpMonitorSchema);
-	if (isFailure(result)) {
-		return apiError(
-			"VALIDATION_ERROR",
-			result.error.issues.map((issue) => issue.message).join(", "),
-			BadRequest,
-		);
-	}
+		let result = await validate(ctx.request, UpdateTcpMonitorSchema);
+		if (isFailure(result)) {
+			return apiError(
+				"VALIDATION_ERROR",
+				result.error.issues.map((issue) => issue.message).join(", "),
+				BadRequest,
+			);
+		}
 
-	let changes: Partial<InsertTcpMonitor> = {};
-	if (result.data.name !== undefined) changes.name = result.data.name;
-	if (result.data.host !== undefined) changes.host = result.data.host;
-	if (result.data.port !== undefined) changes.port = result.data.port;
-	if (result.data.timeoutMs !== undefined) changes.timeout_ms = result.data.timeoutMs;
-	if (result.data.intervalSeconds !== undefined)
-		changes.interval_seconds = result.data.intervalSeconds;
-	if (result.data.isEnabled !== undefined) changes.is_enabled = result.data.isEnabled;
+		let changes: Partial<InsertTcpMonitor> = {};
+		if (result.data.name !== undefined) changes.name = result.data.name;
+		if (result.data.host !== undefined) changes.host = result.data.host;
+		if (result.data.port !== undefined) changes.port = result.data.port;
+		if (result.data.timeoutMs !== undefined) changes.timeout_ms = result.data.timeoutMs;
+		if (result.data.intervalSeconds !== undefined)
+			changes.interval_seconds = result.data.intervalSeconds;
+		if (result.data.isEnabled !== undefined) changes.is_enabled = result.data.isEnabled;
 
-	let monitor = await TcpMonitor.updateById(db, tcpMonitorId, changes);
-	return apiSuccess({ monitor: serializeTcpMonitor(monitor) });
+		let monitor = await TcpMonitor.updateById(db, tcpMonitorId, changes);
+		return apiSuccess({ monitor: serializeTcpMonitor(monitor) });
+	},
 });
 
 /** DELETE /api/v1/tcp-monitors/:tcpMonitorId — deletes a TCP monitor. */
-export const tcpMonitorDestroy = createAction(routes.api.v1.tcpMonitorDestroy, async (ctx) => {
-	let { tcpMonitorId } = s.parse(TcpMonitorIdParams, ctx.params);
-	let db = getServiceContainer().get(Database);
-	let existing = await TcpMonitor.findByIdForTeam(db, ctx.apiTeam.id, tcpMonitorId);
-	if (!existing) return apiError("NOT_FOUND", "TCP monitor not found", NotFound);
+export const tcpMonitorDestroy = createAction(routes.api.v1.tcpMonitorDestroy, {
+	middleware: [requireApiKey("tcp-monitors:write")],
+	handler: async (ctx) => {
+		let { tcpMonitorId } = s.parse(TcpMonitorIdParams, ctx.params);
+		let db = getServiceContainer().get(Database);
+		let existing = await TcpMonitor.findByIdForTeam(db, ctx.apiTeam.id, tcpMonitorId);
+		if (!existing) return apiError("NOT_FOUND", "TCP monitor not found", NotFound);
 
-	await TcpMonitor.deleteById(db, tcpMonitorId);
-	return apiSuccess({ deleted: true });
+		await TcpMonitor.deleteById(db, tcpMonitorId);
+		return apiSuccess({ deleted: true });
+	},
 });
 
 /** GET /api/v1/tcp-monitors/:tcpMonitorId/results — paginated check-result history. */
-export const tcpMonitorResults = createAction(routes.api.v1.tcpMonitorResults, async (ctx) => {
-	let { tcpMonitorId } = s.parse(TcpMonitorIdParams, ctx.params);
-	let db = getServiceContainer().get(Database);
-	let monitor = await TcpMonitor.findByIdForTeam(db, ctx.apiTeam.id, tcpMonitorId);
-	if (!monitor) return apiError("NOT_FOUND", "TCP monitor not found", NotFound);
+export const tcpMonitorResults = createAction(routes.api.v1.tcpMonitorResults, {
+	middleware: [requireApiKey("tcp-monitors:read")],
+	handler: async (ctx) => {
+		let { tcpMonitorId } = s.parse(TcpMonitorIdParams, ctx.params);
+		let db = getServiceContainer().get(Database);
+		let monitor = await TcpMonitor.findByIdForTeam(db, ctx.apiTeam.id, tcpMonitorId);
+		if (!monitor) return apiError("NOT_FOUND", "TCP monitor not found", NotFound);
 
-	let { limit, offset } = parsePaginationQuery(ctx.url, { defaultLimit: 50, maxLimit: 200 });
-	let { results, hasMore } = await TcpMonitor.listResultsPage(db, tcpMonitorId, { limit, offset });
+		let { limit, offset } = parsePaginationQuery(ctx.url, { defaultLimit: 50, maxLimit: 200 });
+		let { results, hasMore } = await TcpMonitor.listResultsPage(db, tcpMonitorId, {
+			limit,
+			offset,
+		});
 
-	return apiSuccess({
-		results: results.map((row) => ({
-			id: row.id,
-			status: row.status,
-			responseTimeMs: row.response_time_ms,
-			errorMessage: row.error_message,
-			checkedAt: row.checked_at,
-		})),
-		pagination: { limit, offset, hasMore },
-	});
+		return apiSuccess({
+			results: results.map((row) => ({
+				id: row.id,
+				status: row.status,
+				responseTimeMs: row.response_time_ms,
+				errorMessage: row.error_message,
+				checkedAt: row.checked_at,
+			})),
+			pagination: { limit, offset, hasMore },
+		});
+	},
 });

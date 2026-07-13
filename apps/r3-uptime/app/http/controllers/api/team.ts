@@ -18,6 +18,7 @@ import { createAction } from "remix/fetch-router";
 import type { InsertTeam, SelectTeam } from "~/database/schema";
 
 import Team from "~/app/data/team";
+import requireApiKey from "~/app/http/middleware/require-api-key";
 import { apiError, apiSuccess } from "~/app/services/api-response";
 import routes from "~/routes/web";
 
@@ -45,26 +46,32 @@ const UpdateTeamSchema = s
 	);
 
 /** GET /api/v1/team — the authenticated team's profile. */
-export const teamShow = createAction(routes.api.v1.teamShow, async (ctx) => {
-	return apiSuccess({ team: serializeTeam(ctx.apiTeam) });
+export const teamShow = createAction(routes.api.v1.teamShow, {
+	middleware: [requireApiKey("teams:read")],
+	handler: async (ctx) => {
+		return apiSuccess({ team: serializeTeam(ctx.apiTeam) });
+	},
 });
 
 /** PUT /api/v1/team — updates the authenticated team's name and/or logo. */
-export const teamUpdate = createAction(routes.api.v1.teamUpdate, async (ctx) => {
-	let result = await validate(ctx.request, UpdateTeamSchema);
-	if (isFailure(result)) {
-		return apiError(
-			"VALIDATION_ERROR",
-			result.error.issues.map((issue) => issue.message).join(", "),
-			BadRequest,
-		);
-	}
+export const teamUpdate = createAction(routes.api.v1.teamUpdate, {
+	middleware: [requireApiKey("teams:write")],
+	handler: async (ctx) => {
+		let result = await validate(ctx.request, UpdateTeamSchema);
+		if (isFailure(result)) {
+			return apiError(
+				"VALIDATION_ERROR",
+				result.error.issues.map((issue) => issue.message).join(", "),
+				BadRequest,
+			);
+		}
 
-	let changes: Partial<InsertTeam> = {};
-	if (result.data.name !== undefined) changes.name = result.data.name;
-	if (result.data.logoUrl !== undefined) changes.logo = result.data.logoUrl;
+		let changes: Partial<InsertTeam> = {};
+		if (result.data.name !== undefined) changes.name = result.data.name;
+		if (result.data.logoUrl !== undefined) changes.logo = result.data.logoUrl;
 
-	let db = getServiceContainer().get(Database);
-	let team = await Team.updateById(db, ctx.apiTeam.id, changes);
-	return apiSuccess({ team: serializeTeam(team) });
+		let db = getServiceContainer().get(Database);
+		let team = await Team.updateById(db, ctx.apiTeam.id, changes);
+		return apiSuccess({ team: serializeTeam(team) });
+	},
 });

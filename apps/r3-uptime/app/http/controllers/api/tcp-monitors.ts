@@ -19,6 +19,7 @@ import { createAction } from "remix/fetch-router";
 import type { SelectTcpMonitor } from "~/database/schema";
 
 import TcpMonitor from "~/app/data/tcp-monitor";
+import requireApiKey from "~/app/http/middleware/require-api-key";
 import { apiError, apiSuccess } from "~/app/services/api-response";
 import routes from "~/routes/web";
 
@@ -50,32 +51,38 @@ const CreateTcpMonitorSchema = s.object({
 });
 
 /** GET /api/v1/tcp-monitors — lists the team's TCP monitors. */
-export const tcpMonitorsIndex = createAction(routes.api.v1.tcpMonitorsIndex, async (ctx) => {
-	let db = getServiceContainer().get(Database);
-	let tcpMonitors = await TcpMonitor.listByTeam(db, ctx.apiTeam.id);
-	return apiSuccess({ monitors: tcpMonitors.map(serializeTcpMonitor) });
+export const tcpMonitorsIndex = createAction(routes.api.v1.tcpMonitorsIndex, {
+	middleware: [requireApiKey("tcp-monitors:read")],
+	handler: async (ctx) => {
+		let db = getServiceContainer().get(Database);
+		let tcpMonitors = await TcpMonitor.listByTeam(db, ctx.apiTeam.id);
+		return apiSuccess({ monitors: tcpMonitors.map(serializeTcpMonitor) });
+	},
 });
 
 /** POST /api/v1/tcp-monitors — creates a TCP monitor for the team. */
-export const tcpMonitorsCreate = createAction(routes.api.v1.tcpMonitorsCreate, async (ctx) => {
-	let result = await validate(ctx.request, CreateTcpMonitorSchema);
-	if (isFailure(result)) {
-		return apiError(
-			"VALIDATION_ERROR",
-			result.error.issues.map((issue) => issue.message).join(", "),
-			BadRequest,
-		);
-	}
+export const tcpMonitorsCreate = createAction(routes.api.v1.tcpMonitorsCreate, {
+	middleware: [requireApiKey("tcp-monitors:write")],
+	handler: async (ctx) => {
+		let result = await validate(ctx.request, CreateTcpMonitorSchema);
+		if (isFailure(result)) {
+			return apiError(
+				"VALIDATION_ERROR",
+				result.error.issues.map((issue) => issue.message).join(", "),
+				BadRequest,
+			);
+		}
 
-	let db = getServiceContainer().get(Database);
-	let monitor = await TcpMonitor.create(db, ctx.apiTeam.id, {
-		name: result.data.name,
-		host: result.data.host,
-		port: result.data.port,
-		timeout_ms: result.data.timeoutMs,
-		interval_seconds: result.data.intervalSeconds,
-		is_enabled: result.data.isEnabled,
-	});
+		let db = getServiceContainer().get(Database);
+		let monitor = await TcpMonitor.create(db, ctx.apiTeam.id, {
+			name: result.data.name,
+			host: result.data.host,
+			port: result.data.port,
+			timeout_ms: result.data.timeoutMs,
+			interval_seconds: result.data.intervalSeconds,
+			is_enabled: result.data.isEnabled,
+		});
 
-	return apiSuccess({ monitor: serializeTcpMonitor(monitor) }, Created);
+		return apiSuccess({ monitor: serializeTcpMonitor(monitor) }, Created);
+	},
 });

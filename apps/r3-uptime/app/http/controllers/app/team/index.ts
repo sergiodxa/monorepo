@@ -9,11 +9,16 @@
 import { redirect } from "@pkg/http/response";
 import { createAction } from "remix/fetch-router";
 
+import requireTeam from "~/app/http/middleware/require-team";
+import requireUser from "~/app/http/middleware/require-user";
 import routes from "~/routes/web";
 
 /** GET /app/:team — redirects to the team's dashboard. */
-export default createAction(routes.app.team.index, (ctx) => {
-	return redirect(routes.app.team.dashboard.href({ team: ctx.team.slug }), {
-		status: redirect.Status.SeeOther,
-	});
+export default createAction(routes.app.team.index, {
+	middleware: [requireUser, requireTeam],
+	handler: (ctx) => {
+		return redirect(routes.app.team.dashboard.href({ team: ctx.team.slug }), {
+			status: redirect.Status.SeeOther,
+		});
+	},
 });

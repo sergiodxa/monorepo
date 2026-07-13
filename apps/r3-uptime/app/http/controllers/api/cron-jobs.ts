@@ -21,6 +21,7 @@ import { createAction } from "remix/fetch-router";
 import type { SelectCronJobMonitor } from "~/database/schema";
 
 import CronJobMonitor from "~/app/data/cron-job";
+import requireApiKey from "~/app/http/middleware/require-api-key";
 import { apiError, apiSuccess } from "~/app/services/api-response";
 import routes from "~/routes/web";
 
@@ -54,39 +55,45 @@ const CreateCronJobSchema = s.object({
 });
 
 /** GET /api/v1/cron-jobs — lists the team's cron-job monitors. */
-export const cronJobsIndex = createAction(routes.api.v1.cronJobsIndex, async (ctx) => {
-	let db = getServiceContainer().get(Database);
-	let cronJobs = await CronJobMonitor.listByTeam(db, ctx.apiTeam.id);
-	return apiSuccess({ cronJobs: cronJobs.map(serializeCronJob) });
+export const cronJobsIndex = createAction(routes.api.v1.cronJobsIndex, {
+	middleware: [requireApiKey("cron-jobs:read")],
+	handler: async (ctx) => {
+		let db = getServiceContainer().get(Database);
+		let cronJobs = await CronJobMonitor.listByTeam(db, ctx.apiTeam.id);
+		return apiSuccess({ cronJobs: cronJobs.map(serializeCronJob) });
+	},
 });
 
 /** POST /api/v1/cron-jobs — creates a cron-job monitor for the team. */
-export const cronJobsCreate = createAction(routes.api.v1.cronJobsCreate, async (ctx) => {
-	let result = await validate(ctx.request, CreateCronJobSchema);
-	if (isFailure(result)) {
-		return apiError(
-			"VALIDATION_ERROR",
-			result.error.issues.map((issue) => issue.message).join(", "),
-			BadRequest,
-		);
-	}
+export const cronJobsCreate = createAction(routes.api.v1.cronJobsCreate, {
+	middleware: [requireApiKey("cron-jobs:write")],
+	handler: async (ctx) => {
+		let result = await validate(ctx.request, CreateCronJobSchema);
+		if (isFailure(result)) {
+			return apiError(
+				"VALIDATION_ERROR",
+				result.error.issues.map((issue) => issue.message).join(", "),
+				BadRequest,
+			);
+		}
 
-	try {
-		CronJobMonitor.validateCronExpression(result.data.cronExpression, result.data.timezone);
-	} catch {
-		return apiError("VALIDATION_ERROR", "Invalid cron expression", BadRequest);
-	}
+		try {
+			CronJobMonitor.validateCronExpression(result.data.cronExpression, result.data.timezone);
+		} catch {
+			return apiError("VALIDATION_ERROR", "Invalid cron expression", BadRequest);
+		}
 
-	let db = getServiceContainer().get(Database);
-	let cronJob = await CronJobMonitor.create(db, ctx.apiTeam.id, {
-		name: result.data.name,
-		description: result.data.description ?? null,
-		cron_expression: result.data.cronExpression,
-		grace_period_seconds: result.data.gracePeriodSeconds,
-		timezone: result.data.timezone,
-		alert_on_late: result.data.alertOnLate,
-		enabled_at: result.data.enabled ? Date.now() : null,
-	});
+		let db = getServiceContainer().get(Database);
+		let cronJob = await CronJobMonitor.create(db, ctx.apiTeam.id, {
+			name: result.data.name,
+			description: result.data.description ?? null,
+			cron_expression: result.data.cronExpression,
+			grace_period_seconds: result.data.gracePeriodSeconds,
+			timezone: result.data.timezone,
+			alert_on_late: result.data.alertOnLate,
+			enabled_at: result.data.enabled ? Date.now() : null,
+		});
 
-	return apiSuccess({ cronJob: serializeCronJob(cronJob) }, Created);
+		return apiSuccess({ cronJob: serializeCronJob(cronJob) }, Created);
+	},
 });
