@@ -82,15 +82,10 @@ export default route({
 					count: get("/app/:team/dashboard/cards/count/:resource"),
 				},
 			},
-			/**
-			 * HTTP monitors are the odd one out: the list page lives at `/app/:team/http`,
-			 * a different base path than `new`/`show`/`edit` below, so its `index` stays a
-			 * separate leaf instead of joining the `resources()` call.
-			 */
-			monitors: {
-				index: get("/app/:team/http"),
-				...resources("/app/:team/monitors", { param: "monitorId", only: ["new", "show", "edit"] }),
-			},
+			monitors: resources("/app/:team/monitors", {
+				param: "monitorId",
+				only: ["index", "new", "show", "edit"],
+			}),
 			dnsMonitors: resources("/app/:team/dns", {
 				param: "monitorId",
 				only: ["index", "new", "show", "edit"],
