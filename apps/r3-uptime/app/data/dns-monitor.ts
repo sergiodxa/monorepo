@@ -10,6 +10,8 @@
 
 import type { Database } from "remix/data-table";
 
+import { generateUUID } from "@pkg/uuid";
+
 import type { DnsCheckResult } from "~/app/services/dns-check";
 import type { InsertDnsMonitor } from "~/database/schema";
 
@@ -26,7 +28,7 @@ export default class DnsMonitor {
 	static async create(db: Database, teamId: string, input: InsertDnsMonitor) {
 		return await db.create(
 			dnsMonitors,
-			{ id: crypto.randomUUID(), team_id: teamId, ...input },
+			{ id: generateUUID(), team_id: teamId, ...input },
 			{ touch: true, returnRow: true },
 		);
 	}
@@ -86,7 +88,7 @@ export default class DnsMonitor {
 		await db.create(
 			dnsMonitorResults,
 			{
-				id: crypto.randomUUID(),
+				id: generateUUID(),
 				dns_monitor_id: monitorId,
 				status: result.status,
 				resolved_value: result.resolvedValue,

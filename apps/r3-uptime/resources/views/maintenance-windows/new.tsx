@@ -21,6 +21,7 @@ namespace NewMaintenanceWindowView {
 	}
 }
 
+/** Renders the empty maintenance-window form for scheduling a new window. */
 export default function NewMaintenanceWindowView(handle: Handle<NewMaintenanceWindowView.Props>) {
 	return () => {
 		let { team, monitors } = handle.props;

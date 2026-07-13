@@ -22,6 +22,7 @@ namespace EditDnsMonitorView {
 	}
 }
 
+/** Renders the DNS monitor form pre-filled with the current values, plus a delete-confirmation dialog that warns check-result history is deleted too. */
 export default function EditDnsMonitorView(handle: Handle<EditDnsMonitorView.Props>) {
 	return () => {
 		let { team, monitor } = handle.props;

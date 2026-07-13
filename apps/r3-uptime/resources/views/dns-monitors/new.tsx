@@ -19,6 +19,7 @@ namespace NewDnsMonitorView {
 	}
 }
 
+/** Renders the empty DNS monitor form for creating a new monitor. */
 export default function NewDnsMonitorView(handle: Handle<NewDnsMonitorView.Props>) {
 	return () => (
 		<div>

@@ -20,9 +20,8 @@ namespace MarketingCard {
 }
 
 /**
- * One card inside a marketing grid, matching the OLD APP's feature cards
- * (`border-neutral-200 bg-white dark:border-neutral-800 dark:bg-neutral-900`,
- * measured padding `24px`).
+ * One card inside a marketing grid: a white/near-black card with a neutral
+ * border, `24px` padding, and a 12px radius.
  */
 const marketingCard = css({
 	display: "block",

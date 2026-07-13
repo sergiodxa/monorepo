@@ -25,7 +25,7 @@ import routes from "~/routes/web";
 
 const TcpMonitorIdParams = s.object({ tcpMonitorId: s.string() });
 
-/** Maps a TCP monitor row to the OLD APP's exact camelCase JSON shape. */
+/** Maps a TCP monitor row to its public camelCase JSON shape. */
 function serializeTcpMonitor(monitor: SelectTcpMonitor) {
 	return {
 		id: monitor.id,

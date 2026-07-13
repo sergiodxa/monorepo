@@ -182,6 +182,7 @@ namespace application {
 	}
 }
 
+/** Builds the app's fetch-router: global middleware, then every route mapped to its controller. */
 export default function application(options: application.Options) {
 	// Non-tuple `Middleware[]`: values middleware expose on the context are declared
 	// via `declare module "remix/fetch-router"` augmentations in their own files,
@@ -213,8 +214,8 @@ export default function application(options: application.Options) {
 	router.map(routes.statusPage, statusPageController);
 	router.map(routes.invite, inviteController);
 
-	// Public marketing pages, legal pages, docs, and the sitemap. Anonymous, matching
-	// the OLD APP — no requireUser/requireTeam middleware.
+	// Public marketing pages, legal pages, docs, and the sitemap. Anonymous — no
+	// requireUser/requireTeam middleware.
 	router.map(routes.marketing.feature, marketingFeature);
 	router.map(routes.marketing.audience, marketingAudience);
 	router.map(routes.marketing.useCase, marketingUseCase);

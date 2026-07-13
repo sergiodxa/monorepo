@@ -9,6 +9,7 @@
 
 import type { Database } from "remix/data-table";
 
+import { generateUUID } from "@pkg/uuid";
 import { and, eq, gte } from "remix/data-table";
 
 import type { AlertEventSnapshot, InsertAlertEvent, SelectAlertEvent } from "~/database/schema";
@@ -25,7 +26,7 @@ export default class AlertEvent {
 	) {
 		return await db.create(
 			alertEvents,
-			{ id: crypto.randomUUID(), sent_at: Date.now(), ...input },
+			{ id: generateUUID(), sent_at: Date.now(), ...input },
 			{ touch: true, returnRow: true },
 		);
 	}

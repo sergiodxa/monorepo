@@ -12,6 +12,7 @@
 
 import type { Database } from "remix/data-table";
 
+import { generateUUID } from "@pkg/uuid";
 import { and, eq, isNull, or } from "remix/data-table";
 
 import type { InsertAlert } from "~/database/schema";
@@ -26,7 +27,7 @@ export default class Alert {
 	static async create(db: Database, teamId: string, input: InsertAlert) {
 		return await db.create(
 			alerts,
-			{ id: crypto.randomUUID(), team_id: teamId, ...input },
+			{ id: generateUUID(), team_id: teamId, ...input },
 			{ touch: true, returnRow: true },
 		);
 	}

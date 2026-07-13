@@ -13,6 +13,7 @@ import { css } from "remix/ui";
 
 import { neutral } from "~/resources/theme";
 
+/** Renders the static Privacy Policy prose; takes no props. */
 export default function PrivacyView(_handle: Handle) {
 	return () => (
 		<article

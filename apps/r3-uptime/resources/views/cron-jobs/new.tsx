@@ -19,6 +19,7 @@ namespace NewCronJobView {
 	}
 }
 
+/** Renders the empty cron-job form for creating a new monitor. */
 export default function NewCronJobView(handle: Handle<NewCronJobView.Props>) {
 	return () => (
 		<div>

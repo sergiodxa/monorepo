@@ -31,6 +31,7 @@ const STATUS_BADGE_TONE: Record<string, BadgeTone> = {
 	error: "down",
 };
 
+/** Renders the DNS monitor table with domain/record-type/status, or an empty state with a create CTA. */
 export default function DnsMonitorsView(handle: Handle<DnsMonitorsView.Props>) {
 	return () => {
 		let { team, monitors } = handle.props;

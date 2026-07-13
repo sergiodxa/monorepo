@@ -1,7 +1,7 @@
 /**
- * Background job that sweeps every enabled DNS monitor once per run (the OLD APP's
+ * Background job that sweeps every enabled DNS monitor once per run on a fixed
  * hourly cadence — DNS monitors are not staggered by their individual
- * `interval_seconds`, unlike HTTP monitors). Resolves each domain, classifies the
+ * `interval_seconds`, unlike HTTP monitors. Resolves each domain, classifies the
  * result, records it via `DnsMonitor.recordCheckResult`, and dispatches alerts on a
  * changed/error result or a recovery back to ok.
  *

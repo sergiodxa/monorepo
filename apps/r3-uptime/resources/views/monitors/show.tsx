@@ -31,6 +31,7 @@ namespace MonitorShowView {
 	}
 }
 
+/** Renders configuration stat cards, the recent-latency sparkline, the uptime heatmap, and an SSL status summary (or a "not enabled" note when SSL monitoring is off). */
 export default function MonitorShowView(handle: Handle<MonitorShowView.Props>) {
 	return () => {
 		let { monitor, sparkline, dailyStats } = handle.props;

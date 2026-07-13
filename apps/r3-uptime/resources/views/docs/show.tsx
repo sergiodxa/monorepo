@@ -25,6 +25,7 @@ namespace DocShowView {
 	}
 }
 
+/** Renders a single doc's frontmatter header followed by its Markdoc `content`. */
 export default function DocShowView(handle: Handle<DocShowView.Props>) {
 	return () => {
 		let { content, frontmatter } = handle.props;

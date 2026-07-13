@@ -10,6 +10,8 @@
 
 import type { Database } from "remix/data-table";
 
+import { generateUUID } from "@pkg/uuid";
+
 import type { TcpCheckResult } from "~/app/services/tcp-check";
 import type { InsertTcpMonitor } from "~/database/schema";
 
@@ -23,7 +25,7 @@ export default class TcpMonitor {
 	static async create(db: Database, teamId: string, input: InsertTcpMonitor) {
 		return await db.create(
 			tcpMonitors,
-			{ id: crypto.randomUUID(), team_id: teamId, ...input },
+			{ id: generateUUID(), team_id: teamId, ...input },
 			{ touch: true, returnRow: true },
 		);
 	}
@@ -91,7 +93,7 @@ export default class TcpMonitor {
 		await db.create(
 			tcpMonitorResults,
 			{
-				id: crypto.randomUUID(),
+				id: generateUUID(),
 				tcp_monitor_id: monitorId,
 				status: result.status,
 				response_time_ms: result.responseTimeMs,

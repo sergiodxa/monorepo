@@ -44,11 +44,13 @@ const primary = {
 };
 
 namespace ComparisonPageView {
+	/** Adds `isSignedIn` (drives the CTA's copy/target) on top of the raw comparison content shape. */
 	export interface Props extends MarketingContent.ComparisonPage {
 		isSignedIn: boolean;
 	}
 }
 
+/** Renders the comparison page sections, populated entirely from `handle.props`. */
 export default function ComparisonPageView(handle: Handle<ComparisonPageView.Props>) {
 	return () => {
 		let {

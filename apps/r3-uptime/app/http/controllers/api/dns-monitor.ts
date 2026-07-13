@@ -27,7 +27,7 @@ const DNS_RECORD_TYPES = ["A", "AAAA", "CNAME", "MX", "TXT", "NS"] as const;
 
 const DnsMonitorIdParams = s.object({ dnsMonitorId: s.string() });
 
-/** Maps a DNS monitor row to the OLD APP's exact camelCase JSON shape. */
+/** Maps a DNS monitor row to its public camelCase JSON shape. */
 function serializeDnsMonitor(monitor: SelectDnsMonitor) {
 	return {
 		id: monitor.id,

@@ -1,12 +1,9 @@
 /**
  * API v1 endpoint that triggers an on-demand daily-stats rollup: enqueues an
- * `aggregateDailyStats` queue message and returns 202 Accepted. The OLD APP's
- * equivalent route enqueued a `backfillDailyStats` message that no queue consumer on
- * either app ever handled (a dead message, silently dropped) — this uses the real,
- * already-wired `aggregateDailyStats` message type (see `bootstrap/worker.ts`) so the
- * trigger actually does something. Also, unlike the OLD APP's version, this sits
- * behind `requireApiKey` like every other `/api/v1/*` endpoint — the OLD APP left it
- * fully unauthenticated, which let any caller enqueue jobs against the shared queue.
+ * `aggregateDailyStats` queue message (see `bootstrap/worker.ts` for the consumer
+ * that handles it) and returns 202 Accepted. Sits behind `requireApiKey`, like every
+ * other `/api/v1/*` endpoint, since without authentication any caller could enqueue
+ * jobs against the shared queue.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

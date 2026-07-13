@@ -26,6 +26,7 @@ namespace EditMonitorView {
 	}
 }
 
+/** Renders the general-settings form pre-filled with the current values, followed by the content-checks section and the SSL monitoring form. */
 export default function EditMonitorView(handle: Handle<EditMonitorView.Props>) {
 	return () => {
 		let { team, monitor, contentChecks } = handle.props;

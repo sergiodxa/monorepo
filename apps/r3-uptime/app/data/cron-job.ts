@@ -11,6 +11,7 @@
 
 import type { Database } from "remix/data-table";
 
+import { generateUUID } from "@pkg/uuid";
 import { CronExpressionParser } from "cron-parser";
 import { and, eq, inList, notNull } from "remix/data-table";
 
@@ -34,7 +35,7 @@ export default class CronJobMonitor {
 
 		return await db.create(
 			cronJobMonitors,
-			{ id: crypto.randomUUID(), team_id: teamId, next_expected_at: nextExpectedAt, ...input },
+			{ id: generateUUID(), team_id: teamId, next_expected_at: nextExpectedAt, ...input },
 			{ touch: true, returnRow: true },
 		);
 	}
@@ -124,7 +125,7 @@ export default class CronJobMonitor {
 		await db.create(
 			cronJobPings,
 			{
-				id: crypto.randomUUID(),
+				id: generateUUID(),
 				cron_job_monitor_id: monitor.id,
 				was_on_time: wasOnTime,
 				source_ip: metadata.sourceIp,

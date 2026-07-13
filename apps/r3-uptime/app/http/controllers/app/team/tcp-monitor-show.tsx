@@ -24,7 +24,7 @@ import DocumentLayout from "~/resources/layouts/document";
 import TcpMonitorShowView from "~/resources/views/tcp-monitors/show";
 import routes from "~/routes/web";
 
-/** Secondary (outline) button/link, matching the OLD APP's "Cancel" button. Reused below. */
+/** Secondary (outline) button/link style, reused below for both actions. */
 const buttonSecondary = css({
 	display: "inline-flex",
 	alignItems: "center",

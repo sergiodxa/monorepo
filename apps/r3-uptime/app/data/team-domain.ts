@@ -10,6 +10,7 @@
 
 import type { Database } from "remix/data-table";
 
+import { generateUUID } from "@pkg/uuid";
 import { isNull } from "remix/data-table";
 
 import { teamDomains } from "~/database/schema";
@@ -19,7 +20,7 @@ export default class TeamDomain {
 	static async create(db: Database, teamId: string, hostname: string) {
 		return await db.create(
 			teamDomains,
-			{ id: crypto.randomUUID(), team_id: teamId, hostname, verified_at: null },
+			{ id: generateUUID(), team_id: teamId, hostname, verified_at: null },
 			{ touch: true, returnRow: true },
 		);
 	}

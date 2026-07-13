@@ -18,6 +18,7 @@ namespace NewTcpMonitorView {
 	}
 }
 
+/** Renders the empty TCP monitor form for creating a new monitor. */
 export default function NewTcpMonitorView(handle: Handle<NewTcpMonitorView.Props>) {
 	return () => (
 		<div>

@@ -1,7 +1,7 @@
 /**
  * Form actions for creating and revoking team invites. Requires
  * `requireRole("admin")`. Creating an invite for an email that already has a pending
- * invite resends it instead of creating a duplicate row, matching the OLD APP.
+ * invite resends it instead of creating a duplicate row.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

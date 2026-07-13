@@ -1,7 +1,7 @@
 /**
  * Unit tests for API key generation/hashing — format and hash stability matter
- * because the format must stay byte-identical to the OLD APP's for production keys
- * to keep verifying at cutover.
+ * because the format must stay byte-identical to what already generated production
+ * keys, for those keys to keep verifying at cutover.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

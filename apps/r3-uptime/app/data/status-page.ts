@@ -2,18 +2,19 @@
  * Data-access model for status pages: CRUD, slug uniqueness, and curating which
  * HTTP/DNS/TCP monitors and cron-job monitors a page shows and in what order. Item
  * curation always replaces the full attached set for a page (delete every existing
- * row, then bulk-insert the new one) rather than diffing, matching the OLD APP's
- * whole-list-resubmit pattern — the form always posts the complete selection, so
- * there's nothing to diff. `status_page_ssl_monitors` is deliberately never
- * populated here: the underlying `ssl_monitors` table has no rows in production
- * (SSL status lives inline on `monitors` instead — see Phase 5's dashboard card),
- * so an SSL picker would always be empty.
+ * row, then bulk-insert the new one) rather than diffing, since the form always posts
+ * the complete selection each time — there's nothing to diff against.
+ * `status_page_ssl_monitors` is deliberately never populated here: the underlying
+ * `ssl_monitors` table has no rows in production (SSL status lives inline on `monitors`
+ * instead — see Phase 5's dashboard card), so an SSL picker would always be empty.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
 import type { Database } from "remix/data-table";
+
+import { generateUUID } from "@pkg/uuid";
 
 import type { InsertStatusPage } from "~/database/schema";
 
@@ -38,7 +39,7 @@ export default class StatusPage {
 	static async create(db: Database, teamId: string, input: InsertStatusPage) {
 		return await db.create(
 			statusPages,
-			{ id: crypto.randomUUID(), team_id: teamId, ...input },
+			{ id: generateUUID(), team_id: teamId, ...input },
 			{ touch: true, returnRow: true },
 		);
 	}
@@ -102,7 +103,7 @@ export default class StatusPage {
 		await db.createMany(
 			statusPageDnsMonitors,
 			dnsMonitorIds.map((dnsMonitorId, order) => ({
-				id: crypto.randomUUID(),
+				id: generateUUID(),
 				status_page_id: statusPageId,
 				dns_monitor_id: dnsMonitorId,
 				order,
@@ -117,7 +118,7 @@ export default class StatusPage {
 		await db.createMany(
 			statusPageTcpMonitors,
 			tcpMonitorIds.map((tcpMonitorId, order) => ({
-				id: crypto.randomUUID(),
+				id: generateUUID(),
 				status_page_id: statusPageId,
 				tcp_monitor_id: tcpMonitorId,
 				order,

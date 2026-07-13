@@ -8,6 +8,8 @@
 
 import type { Database } from "remix/data-table";
 
+import { generateUUID } from "@pkg/uuid";
+
 import type { SupportedLanguage } from "~/database/schema";
 
 import { userPreferences } from "~/database/schema";
@@ -33,7 +35,7 @@ export default class UserPreferences {
 
 		return await db.create(
 			userPreferences,
-			{ id: crypto.randomUUID(), subject_id: subjectId, preferred_language: language },
+			{ id: generateUUID(), subject_id: subjectId, preferred_language: language },
 			{ touch: true, returnRow: true },
 		);
 	}

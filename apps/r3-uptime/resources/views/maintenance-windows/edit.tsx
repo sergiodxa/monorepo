@@ -67,6 +67,7 @@ const buttonDanger = css({
 	"&:hover": { background: danger[700] },
 });
 
+/** Renders the maintenance-window form pre-filled with the current values, an "end maintenance now" action shown only while the window is currently active, and a delete-confirmation dialog. */
 export default function EditMaintenanceWindowView(handle: Handle<EditMaintenanceWindowView.Props>) {
 	return () => {
 		let { team, window, monitors } = handle.props;

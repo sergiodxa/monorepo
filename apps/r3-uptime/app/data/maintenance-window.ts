@@ -2,11 +2,10 @@
  * Data-access model for maintenance windows: CRUD over `maintenance_windows`, the
  * "end early" lifecycle action, and `isSuppressing` — the single active/recurring-aware
  * check both the dashboard status badge and `app/services/alerts.ts` use, so a
- * recurring window's current occurrence is treated as active everywhere consistently
- * (the OLD APP's list page and its alert-suppression check disagreed on this). Like
- * `alerts`, `monitor_id` scoping only ever applies to HTTP monitors — the table has no
- * `monitor_type` column to disambiguate, so DNS/TCP/cron-job checks only ever match
- * team-wide windows (`monitor_id IS NULL`).
+ * recurring window's current occurrence is treated as active consistently everywhere
+ * it's checked. Like `alerts`, `monitor_id` scoping only ever applies to HTTP monitors —
+ * the table has no `monitor_type` column to disambiguate, so DNS/TCP/cron-job checks
+ * only ever match team-wide windows (`monitor_id IS NULL`).
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -14,6 +13,7 @@
 
 import type { Database } from "remix/data-table";
 
+import { generateUUID } from "@pkg/uuid";
 import { and, eq, isNull, or } from "remix/data-table";
 
 import type { InsertMaintenanceWindow, SelectMaintenanceWindow } from "~/database/schema";
@@ -48,7 +48,7 @@ export default class MaintenanceWindow {
 	static async create(db: Database, teamId: string, input: InsertMaintenanceWindow) {
 		return await db.create(
 			maintenanceWindows,
-			{ id: crypto.randomUUID(), team_id: teamId, ...input },
+			{ id: generateUUID(), team_id: teamId, ...input },
 			{ touch: true, returnRow: true },
 		);
 	}

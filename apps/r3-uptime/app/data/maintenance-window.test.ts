@@ -1,3 +1,14 @@
+/**
+ * Unit tests for `MaintenanceWindow`'s pure helpers: `parseRecurringPattern` (the
+ * `"daily|weekly|monthly:..."` string format `recurring_pattern` rows store) and
+ * `isRecurringPatternActive` (whether a recurring pattern's current occurrence covers a
+ * given instant, in UTC wall-clock time). The class's CRUD/database methods aren't
+ * exercised in this file.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { describe, expect, test } from "bun:test";
 
 import { isRecurringPatternActive, parseRecurringPattern } from "~/app/data/maintenance-window";

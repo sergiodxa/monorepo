@@ -1,10 +1,10 @@
 /**
  * Pure status-derivation helpers for the public status page: mapping each monitor
  * type's own status representation onto the shared `ServiceStatus` scale, and
- * combining every attached item's status into one page-level status. Mirrors the
- * OLD APP's majority-based overall-status rule (down/degraded items outnumbering
- * healthy ones tips the page to "down", any at all tips it to "degraded") rather
- * than "any failure means the whole page is down".
+ * combining every attached item's status into one page-level status using a
+ * majority-based rule (down/degraded items outnumbering healthy ones tips the page
+ * to "down", any at all tips it to "degraded") rather than "any failure means the
+ * whole page is down".
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -50,8 +50,8 @@ export function deriveCronStatus(status: CronJobStatus): ServiceStatus {
 
 /**
  * Combines every attached item's status into one page-level status. An empty list
- * (or a list where every item is still `"unknown"`) reads as `"operational"`,
- * matching the OLD APP's empty-status-page default.
+ * (or a list where every item is still `"unknown"`) reads as `"operational"`, the
+ * default for a status page with nothing attached to it yet.
  */
 export function computeOverallStatus(statuses: ServiceStatus[]): ServiceStatus {
 	let relevant = statuses.filter((status) => status !== "unknown");

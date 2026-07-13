@@ -27,6 +27,7 @@ const button = css({
 	"@media (prefers-color-scheme: dark)": { borderColor: "oklch(0.42 0.008 145)" },
 });
 
+/** Copies {@link CopyButtonProps.value} to the clipboard on click, swapping its label to "Copied!" for 2 seconds. */
 export const CopyButton = clientEntry(
 	"/resources/components/copy-button.tsx#CopyButton",
 	function CopyButton(handle: Handle<CopyButtonProps>) {

@@ -10,6 +10,7 @@ import type { Handle } from "remix/ui";
 
 import { css } from "remix/ui";
 
+/** Renders the "owner only" notice shown to non-owner team members who reach the billing page; takes no props. */
 export default function CheckoutView(_handle: Handle<Record<string, never>>) {
 	return () => (
 		<div

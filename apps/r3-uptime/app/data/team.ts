@@ -4,13 +4,12 @@
  * auto-joins a subject to teams whose verified domain matches their email, and
  * provisions teams — the personal one on first sign-in and additional ones from the
  * account page — with an owning admin membership. Also owns team update/delete and
- * membership add/remove/role-change, and the full delete cascade: unlike the OLD
- * APP's delete-team action (which only ever cleaned up `monitors`/`alerts`/
- * `team_domains`/`invites`/`memberships`, orphaning every DNS/TCP/cron-job monitor,
- * status page, maintenance window, API key, and their own result/event history),
- * this cascades every team-owned table. Billing (canceling the owner's Polar
- * subscriptions) is the caller's responsibility, not this class's — it has no Polar
- * dependency.
+ * membership add/remove/role-change, and the full delete cascade: deleting a team
+ * removes every DNS/TCP/HTTP/cron-job monitor it owns along with their result and
+ * content-check history, alerts and their events, maintenance windows, status pages
+ * and their attachment rows, API keys, domains, invites, and memberships, so nothing
+ * is left orphaned. Billing (canceling the owner's Polar subscriptions) is the
+ * caller's responsibility, not this class's — it has no Polar dependency.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -18,7 +17,7 @@
 
 import type { Database } from "remix/data-table";
 
-import { isUUID } from "@pkg/uuid";
+import { generateUUID, isUUID } from "@pkg/uuid";
 import { inList } from "remix/data-table";
 
 import type IdToken from "~/app/auth/value-objects/id-token";
@@ -96,7 +95,7 @@ export default class Team {
 				db.create(
 					memberships,
 					{
-						id: crypto.randomUUID(),
+						id: generateUUID(),
 						subject_id: idToken.subject,
 						team_id: domain.team_id,
 						role: "member",
@@ -116,7 +115,7 @@ export default class Team {
 		let team = await db.create(
 			teams,
 			{
-				id: crypto.randomUUID(),
+				id: generateUUID(),
 				owner_id: idToken.subject,
 				name: `${idToken.name}'s Team`,
 				slug: `${idToken.username.toLowerCase()}-team`,
@@ -127,7 +126,7 @@ export default class Team {
 
 		await db.create(
 			memberships,
-			{ id: crypto.randomUUID(), subject_id: idToken.subject, team_id: team.id, role: "admin" },
+			{ id: generateUUID(), subject_id: idToken.subject, team_id: team.id, role: "admin" },
 			{ touch: true, returnRow: true },
 		);
 
@@ -140,13 +139,13 @@ export default class Team {
 
 		let team = await db.create(
 			teams,
-			{ id: crypto.randomUUID(), owner_id: ownerId, name, slug, logo: null },
+			{ id: generateUUID(), owner_id: ownerId, name, slug, logo: null },
 			{ touch: true, returnRow: true },
 		);
 
 		await db.create(
 			memberships,
-			{ id: crypto.randomUUID(), subject_id: ownerId, team_id: team.id, role: "admin" },
+			{ id: generateUUID(), subject_id: ownerId, team_id: team.id, role: "admin" },
 			{ touch: true, returnRow: true },
 		);
 
@@ -296,7 +295,7 @@ export default class Team {
 	}
 }
 
-/** Derives a URL-safe slug from a team name, matching the OLD APP's `generateSlug`. */
+/** Derives a URL-safe slug from a team name: lowercased, non-alphanumeric characters stripped, whitespace hyphenated, and capped at 50 characters. */
 export function generateTeamSlug(name: string): string {
 	return name
 		.toLowerCase()

@@ -105,6 +105,7 @@ namespace SettingsView {
 	}
 }
 
+/** Renders the team settings page; every destructive action (remove member, delete team) is gated behind a `<dialog>` confirmation. */
 export default function SettingsView(handle: Handle<SettingsView.Props>) {
 	return () => {
 		let { team, members, subjectsById, pendingInvites, domains } = handle.props;

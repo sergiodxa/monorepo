@@ -160,6 +160,7 @@ const HEADER_NAV_LINKS = [
 	{ href: routes.docs.index.href(), label: "Docs" },
 ];
 
+/** Renders the sticky header nav and multi-column footer around `children`; the header's CTA switches on {@link MarketingLayout.Props.isSignedIn}. */
 export default function MarketingLayout(handle: Handle<MarketingLayout.Props>) {
 	return () => {
 		let { isSignedIn, children } = handle.props;

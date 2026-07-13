@@ -23,6 +23,7 @@ namespace NotFoundView {
 	}
 }
 
+/** Renders the 404 body using the `title`/`description` the caller supplies via `Setup`. */
 export default function NotFoundView(handle: Handle<NotFoundView.Setup>) {
 	return () => {
 		let { title, description } = handle.props;

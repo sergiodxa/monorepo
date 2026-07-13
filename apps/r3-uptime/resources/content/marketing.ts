@@ -3,10 +3,9 @@
  * `/for/:slug`, 7 `/use-cases/:slug`, and 10 `/vs/:slug` pages. Each record supplies
  * the copy a shared page template (`resources/views/marketing/*`) renders, so the 35
  * near-identical marketing routes are data plus one template per page family instead
- * of 35 bespoke view files. Meta titles/descriptions are carried over verbatim from
- * the OLD APP's `app/locales/en.ts` `landing.*.meta` keys; supporting copy (feature
- * bullets, steps, FAQs, comparison rows) is written fresh to the same structure and
- * intent as the OLD APP's per-page components.
+ * of 35 bespoke view files. Each page's meta title/description is its canonical
+ * marketing copy; supporting copy (feature bullets, steps, FAQs, comparison rows) is
+ * written fresh to a consistent structure per page family.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

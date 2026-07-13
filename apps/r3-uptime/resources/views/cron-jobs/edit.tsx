@@ -22,6 +22,7 @@ namespace EditCronJobView {
 	}
 }
 
+/** Renders the cron-job form pre-filled with the current values, plus a delete-confirmation dialog that warns ping history is deleted too. */
 export default function EditCronJobView(handle: Handle<EditCronJobView.Props>) {
 	return () => {
 		let { team, monitor } = handle.props;

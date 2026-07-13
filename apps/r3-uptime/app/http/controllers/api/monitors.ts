@@ -27,7 +27,7 @@ import routes from "~/routes/web";
 const HTTP_METHODS = ["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD"] as const;
 const LOCATION_HINTS = ["wnam", "enam", "sam", "weur", "eeur", "apac", "oc", "afr", "me"] as const;
 
-/** Maps a monitor row to the OLD APP's exact camelCase JSON shape. */
+/** Maps a monitor row to its public camelCase JSON shape. */
 function serializeMonitor(monitor: SelectMonitor) {
 	return {
 		id: monitor.id,

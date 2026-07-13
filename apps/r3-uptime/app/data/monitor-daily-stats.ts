@@ -11,6 +11,7 @@
 
 import type { Database } from "remix/data-table";
 
+import { generateUUID } from "@pkg/uuid";
 import { and, eq } from "remix/data-table";
 
 import { monitorDailyStats } from "~/database/schema";
@@ -44,7 +45,7 @@ export default class MonitorDailyStats {
 
 		return await db.create(
 			monitorDailyStats,
-			{ id: crypto.randomUUID(), p95_response_time_ms: null, ...input },
+			{ id: generateUUID(), p95_response_time_ms: null, ...input },
 			{ touch: true, returnRow: true },
 		);
 	}

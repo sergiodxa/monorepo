@@ -107,6 +107,7 @@ namespace AccountView {
 	}
 }
 
+/** Renders the account page body: profile, language preference, and team list. The "Leave" button per team only shows for members who aren't the owner. */
 export default function AccountView(handle: Handle<AccountView.Props>) {
 	return () => {
 		let { viewer, memberships, preferredLanguage } = handle.props;

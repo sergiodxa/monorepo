@@ -22,6 +22,7 @@ namespace NewApiKeyView {
 	}
 }
 
+/** Renders the new API key form, listing every value of `apiKeyScopes` as a scope checkbox. */
 export default function NewApiKeyView(handle: Handle<NewApiKeyView.Props>) {
 	return () => {
 		let { team } = handle.props;

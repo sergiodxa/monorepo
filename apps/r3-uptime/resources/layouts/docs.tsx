@@ -81,6 +81,7 @@ namespace DocsLayout {
 	}
 }
 
+/** Renders the docs sidebar (grouped by {@link DocsLayout.Props.sections}) plus `children` as the article column. */
 export default function DocsLayout(handle: Handle<DocsLayout.Props>) {
 	return () => {
 		let { sections, children } = handle.props;

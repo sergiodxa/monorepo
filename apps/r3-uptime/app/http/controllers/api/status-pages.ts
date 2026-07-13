@@ -2,9 +2,8 @@
  * API v1 collection endpoints for status pages: `GET /api/v1/status-pages` lists a
  * team's pages and `POST /api/v1/status-pages` creates one with a globally-unique
  * slug. Requires `status-pages:read`/`status-pages:write` via `requireApiKey`. Only
- * HTTP-monitor and cron-job attachments are exposed over the API, matching the OLD
- * APP's own `/api/v1/status-pages*` contract (DNS/TCP attachments have no API
- * surface there either).
+ * HTTP-monitor and cron-job attachments are exposed over the API; DNS/TCP
+ * attachments have no API surface.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -28,7 +27,7 @@ import routes from "~/routes/web";
 
 const SLUG_PATTERN = /^[a-z0-9-]+$/;
 
-/** Maps a status-page row to the OLD APP's exact camelCase JSON shape. */
+/** Maps a status-page row to its public camelCase JSON shape. */
 export function serializeStatusPage(page: SelectStatusPage) {
 	return {
 		id: page.id,

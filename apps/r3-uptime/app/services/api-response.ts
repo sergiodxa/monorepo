@@ -14,6 +14,7 @@ import type { StatusCode } from "@pkg/http/status-code";
 
 import { json } from "@pkg/http/response";
 import { Ok } from "@pkg/http/status-code";
+import { generateUUID } from "@pkg/uuid";
 
 /** Envelope for a successful API response. */
 export interface ApiSuccessBody<T> {
@@ -30,7 +31,7 @@ export interface ApiErrorBody {
 export function apiSuccess<T>(data: T, status: StatusCode = Ok): Response {
 	let body: ApiSuccessBody<T> = {
 		data,
-		meta: { requestId: crypto.randomUUID(), timestamp: new Date().toISOString() },
+		meta: { requestId: generateUUID(), timestamp: new Date().toISOString() },
 	};
 	return json(body, status);
 }

@@ -29,6 +29,7 @@ namespace NewStatusPageView {
 	}
 }
 
+/** Renders the empty status-page form for creating a new page. */
 export default function NewStatusPageView(handle: Handle<NewStatusPageView.Props>) {
 	return () => {
 		let { team, monitors, dnsMonitors, tcpMonitors, cronJobs } = handle.props;

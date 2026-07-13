@@ -1,8 +1,8 @@
 /**
- * API key generation and hashing. Keys look like `uptime_<64 hex chars>` — the exact
- * format the OLD APP's `apps/uptime/app/middleware/api-auth.ts` already generated and
- * hashed production keys with, so this must stay byte-identical or every existing
- * key stops verifying at cutover. Only the SHA-256 hash and a 15-character prefix
+ * API key generation and hashing. Keys look like `uptime_<64 hex chars>` — this exact
+ * format and hash must stay byte-identical to what already generated and hashed
+ * production keys, or every existing key stops verifying at cutover. Only the
+ * SHA-256 hash and a 15-character prefix
  * (enough to display, never enough to guess the rest) are ever persisted — the raw
  * key is shown to the user exactly once, at creation time.
  *

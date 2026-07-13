@@ -20,6 +20,7 @@ namespace DocsIndexView {
 	}
 }
 
+/** Renders one card per entry in `sections`, listing every doc within it. */
 export default function DocsIndexView(handle: Handle<DocsIndexView.Props>) {
 	return () => {
 		let { sections } = handle.props;

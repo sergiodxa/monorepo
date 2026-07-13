@@ -3,10 +3,10 @@
  * under `resources/docs/**` via `import.meta.glob`, validates their frontmatter with
  * `remix/data-schema`, and groups entries into ordered sections for the docs index
  * and sidebar. Resolves a single slug's loader for the `/docs/*slug` page. These are
- * the OLD APP's real public docs content (getting started, concepts, API reference,
- * team & settings) ported verbatim — a distinct, publicly-served set from this repo's
- * `docs/*.md` engineering feature specs (`docs/README.md`), which describe product
- * behavior for reimplementers and are never surfaced to end users.
+ * the real public docs content (getting started, concepts, API reference, team &
+ * settings) — a distinct, publicly-served set from this repo's `docs/*.md`
+ * engineering feature specs (`docs/README.md`), which describe product behavior for
+ * reimplementers and are never surfaced to end users.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

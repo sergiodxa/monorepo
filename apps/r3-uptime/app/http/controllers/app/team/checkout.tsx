@@ -1,11 +1,11 @@
 /**
  * Billing entry point. Owners get redirected to a hosted Polar checkout session (no
  * active subscription) or the hosted customer portal (already subscribed) — billing
- * is 100% Polar-hosted, matching the OLD APP. Non-owners see a message instead of a
- * redirect: only the owner can manage billing. This intentionally drops the OLD
- * APP's usage-quantities view shown to non-owners on this page, since `@pkg/polar`
- * has no equivalent to the raw SDK's `meters.quantities` call it used — a
- * team-usage view is a bigger, separate feature, not a one-line port.
+ * is 100% Polar-hosted. Non-owners see a message instead of a redirect: only the
+ * owner can manage billing. This intentionally has no usage-quantities view for
+ * non-owners, since `@pkg/polar` has no equivalent to the raw SDK's
+ * `meters.quantities` call — a team-usage view would be a bigger, separate feature,
+ * not a one-line addition.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

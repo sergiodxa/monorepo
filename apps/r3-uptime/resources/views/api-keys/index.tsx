@@ -27,6 +27,7 @@ namespace ApiKeysView {
 	}
 }
 
+/** Renders the API keys list; shows a one-time reveal card for `newApiKey` above the table when it's present. */
 export default function ApiKeysView(handle: Handle<ApiKeysView.Props>) {
 	return () => {
 		let { team, apiKeys, newApiKey } = handle.props;

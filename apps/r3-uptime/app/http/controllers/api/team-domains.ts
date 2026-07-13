@@ -1,7 +1,7 @@
 /**
  * API v1 endpoints for the authenticated team's domains: list/add (`team-domains:read`/
- * `team-domains:write`) and remove one by id, given in the JSON body rather than the
- * URL — matching the OLD APP's `DELETE /api/v1/team-domains` contract.
+ * `team-domains:write`) and remove one by id, given in the JSON body rather than as a
+ * route param.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -23,7 +23,7 @@ import requireApiKey from "~/app/http/middleware/require-api-key";
 import { apiError, apiSuccess } from "~/app/services/api-response";
 import routes from "~/routes/web";
 
-/** Maps a team-domain row to the OLD APP's exact camelCase JSON shape. */
+/** Maps a team-domain row to its public camelCase JSON shape. */
 function serializeTeamDomain(domain: SelectTeamDomain) {
 	return {
 		id: domain.id,

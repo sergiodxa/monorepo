@@ -1,3 +1,12 @@
+/**
+ * Unit tests for SSL certificate status calculation: classifying a certificate as
+ * valid/expiring/expired from its expiry date and warning threshold, and which of
+ * those states warrant a daily alert.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
 import { describe, expect, test } from "bun:test";
 
 import { calculateSslStatus, shouldAlertOnSslStatus } from "~/app/services/ssl-info";

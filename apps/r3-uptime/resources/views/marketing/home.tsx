@@ -248,6 +248,7 @@ const FAQS = [
 	},
 ] as const;
 
+/** Renders the marketing homepage from the module-level content constants (`TRUST_INDICATORS`, `FEATURE_LINKS`, etc.) declared above. */
 export default function HomeView(handle: Handle<HomeView.Props>) {
 	return () => {
 		let { isSignedIn } = handle.props;

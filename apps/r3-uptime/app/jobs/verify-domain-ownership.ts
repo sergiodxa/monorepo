@@ -1,7 +1,7 @@
 /**
  * Background job that checks one team domain's DNS TXT record for the ownership
- * token and marks it verified on a match. Ported from the OLD APP: a DNS-over-HTTPS
- * lookup of `_ping-verification.<hostname>` must return a TXT record whose value is
+ * token and marks it verified on a match. A DNS-over-HTTPS lookup of
+ * `_ping-verification.<hostname>` must return a TXT record whose value is
  * the literal string `ping_<teamDomainId>` (the DNS-JSON API returns TXT record
  * content JSON-quoted, hence comparing against `JSON.stringify(...)`). A miss isn't
  * an error — `EnqueuePendingDomainsJob` retries every unverified domain again on the

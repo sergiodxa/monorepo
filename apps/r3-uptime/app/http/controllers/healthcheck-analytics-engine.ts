@@ -1,11 +1,11 @@
 /**
- * Health check controller for the Analytics Engine dependency, matching the OLD APP's
- * response contract exactly (`503` only when the write binding itself is missing; a
- * failed read-API probe reports `200 { status: "degraded" }` rather than `503`, since
- * writes still work and the dashboard falls back gracefully — see
- * `app/services/analytics.ts`'s `isFailure` handling throughout). It exists as a
- * separate uptime target from `/healthcheck` because Analytics Engine and D1 are
- * independent dependencies that can fail without each other.
+ * Health check controller for the Analytics Engine dependency. Responds `503` only
+ * when the write binding itself is missing; a failed read-API probe reports
+ * `200 { status: "degraded" }` rather than `503`, since writes still work and the
+ * dashboard falls back gracefully (see `app/services/analytics.ts`'s `isFailure`
+ * handling throughout). It exists as a separate uptime target from `/healthcheck`
+ * because Analytics Engine and D1 are independent dependencies that can fail without
+ * each other.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

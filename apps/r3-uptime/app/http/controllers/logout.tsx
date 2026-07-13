@@ -1,8 +1,8 @@
 /**
  * Logout controller for `/logout`. The `index` (GET) shows a confirmation page; the
  * `action` (POST) destroys the local session and redirects through the auth server's
- * RP-initiated logout endpoint (SSO sign-out) with `Clear-Site-Data`, matching the OLD
- * APP's session-clearing behavior.
+ * RP-initiated logout endpoint (SSO sign-out), also sending `Clear-Site-Data` so the
+ * browser drops any other locally cached state.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

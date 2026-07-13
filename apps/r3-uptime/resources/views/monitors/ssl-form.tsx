@@ -24,6 +24,7 @@ namespace SslForm {
 	}
 }
 
+/** Renders the SSL monitoring toggle plus manually-entered expiry date/issuer/warning-threshold fields, pre-filled from `monitor`. */
 export default function SslForm(handle: Handle<SslForm.Props>) {
 	return () => {
 		let { team, monitor } = handle.props;

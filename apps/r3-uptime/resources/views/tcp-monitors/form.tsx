@@ -22,6 +22,7 @@ namespace TcpMonitorFormFields {
 	}
 }
 
+/** Renders the host/port/timeout/interval fields, pre-filled from `monitor` when editing. */
 export default function TcpMonitorFormFields(handle: Handle<TcpMonitorFormFields.Props>) {
 	return () => {
 		let monitor = handle.props.monitor;

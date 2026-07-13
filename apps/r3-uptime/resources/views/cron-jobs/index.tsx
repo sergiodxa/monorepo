@@ -33,6 +33,7 @@ const STATUS_BADGE_TONE: Record<string, BadgeTone> = {
 	new: "neutral",
 };
 
+/** Renders the cron-job monitor table with schedule/status, or an empty state with a create CTA. */
 export default function CronJobsView(handle: Handle<CronJobsView.Props>) {
 	return () => {
 		let { team, monitors } = handle.props;

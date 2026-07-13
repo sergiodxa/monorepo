@@ -39,6 +39,7 @@ const HEALTH_BADGE_TONE: Record<MonitorHealth, BadgeTone> = {
 	pending: "neutral",
 };
 
+/** Renders the HTTP monitor table with each row's 24h health badge, or an empty state with a create CTA. */
 export default function HttpMonitorsView(handle: Handle<HttpMonitorsView.Props>) {
 	return () => {
 		let { team, rows } = handle.props;

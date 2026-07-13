@@ -22,9 +22,8 @@ namespace SectionHeader {
 /**
  * Centered heading block at the top of a marketing section. Styles its bare
  * `<h2>` directly (rather than requiring a separate heading mixin at each call
- * site) to match the OLD APP's section headings (`text-3xl font-bold
- * tracking-tight sm:text-4xl`): 30px by default, 36px at ≥640px, tight
- * `-0.025em` tracking throughout.
+ * site): bold, 30px by default and 36px at ≥640px, with tight `-0.025em`
+ * tracking throughout.
  */
 const marketingSectionHeader = css({
 	textAlign: "center",
@@ -47,9 +46,8 @@ const marketingSectionHeader = css({
 });
 
 /**
- * Small pill badge used above hero/section headings, matching the OLD APP's
- * `<Badge color="primary" variant="secondary">` (`@pkg/ui`'s secondary badge
- * tokens, measured padding `2px 10px`).
+ * Small pill badge used above hero/section headings: a brand-green outline
+ * chip, padding `2px 10px`.
  */
 const marketingBadge = css({
 	display: "inline-flex",
@@ -70,9 +68,8 @@ const marketingBadge = css({
 });
 
 /**
- * Hero/section supporting paragraph, matching the OLD APP's hero description
- * (`mt-6 max-w-xl text-lg leading-relaxed text-neutral-600
- * dark:text-neutral-400`): 18px, `1.625` line-height, capped at 576px (max-w-xl).
+ * Hero/section supporting paragraph: 18px, muted color, `1.625` line-height,
+ * capped at 576px wide.
  */
 const marketingLead = css({
 	fontSize: "1.125rem",

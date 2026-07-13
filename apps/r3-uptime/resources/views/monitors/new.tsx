@@ -19,6 +19,7 @@ namespace NewMonitorView {
 	}
 }
 
+/** Renders the empty HTTP monitor form for creating a new monitor. */
 export default function NewMonitorView(handle: Handle<NewMonitorView.Props>) {
 	return () => (
 		<div mix={[css({ maxWidth: 640 })]}>

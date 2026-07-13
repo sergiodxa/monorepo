@@ -2,8 +2,8 @@
  * API v1 item endpoints for a single alert: get/update/delete (`alerts:read`/
  * `alerts:write`) and its delivery-event history (`alerts:read`). Update only ever
  * touches `name`/`notifyOnRecovery`/`cooldownMinutes`/`monitorId` — the channel
- * strategy and its config are immutable after creation, matching the OLD APP (delete
- * and recreate to change channel).
+ * strategy and its config are immutable after creation; delete and recreate the
+ * alert to change channel.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

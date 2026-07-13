@@ -48,6 +48,7 @@ namespace DnsMonitorFormFields {
 	}
 }
 
+/** Renders the domain/record-type/expected-value/interval fields, pre-filled from `monitor` when editing. Leaving "expected value" blank alerts on any change instead of a mismatch. */
 export default function DnsMonitorFormFields(handle: Handle<DnsMonitorFormFields.Props>) {
 	return () => {
 		let monitor = handle.props.monitor;

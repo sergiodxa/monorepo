@@ -25,8 +25,7 @@ namespace FaqAccordion {
 
 /**
  * Native `<details>` FAQ item; no client JS required for the disclosure behavior.
- * Matches the OLD APP's FAQ accordion items (`border-neutral-200 bg-white
- * dark:border-neutral-800 dark:bg-neutral-900`).
+ * A white/near-black card with a neutral border.
  */
 const marketingFaqItem = css({
 	border: "1px solid oklch(0.91 0.008 145)",
@@ -41,8 +40,8 @@ const marketingFaqItem = css({
 });
 
 /**
- * `<summary>` question row of a {@link marketingFaqItem}, matching the OLD APP's
- * `Accordion.Trigger` (`font-semibold text-neutral-900 dark:text-neutral-50`).
+ * `<summary>` question row of a {@link marketingFaqItem}: bold, high-contrast
+ * text, clickable to expand the answer.
  */
 const marketingFaqQuestion = css({
 	fontWeight: 600,
@@ -52,9 +51,8 @@ const marketingFaqQuestion = css({
 });
 
 /**
- * Answer paragraph inside an open {@link marketingFaqItem}, matching the OLD APP's
- * `Accordion.Content` divider and muted text (`border-t border-neutral-200
- * text-neutral-600 dark:border-neutral-800 dark:text-neutral-400`).
+ * Answer paragraph inside an open {@link marketingFaqItem}: a top divider plus
+ * muted text.
  */
 const marketingFaqAnswer = css({
 	marginTop: 8,

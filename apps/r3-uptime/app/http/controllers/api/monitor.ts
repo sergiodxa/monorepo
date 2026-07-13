@@ -30,7 +30,7 @@ const LOCATION_HINTS = ["wnam", "enam", "sam", "weur", "eeur", "apac", "oc", "af
 
 const MonitorIdParams = s.object({ monitorId: s.string() });
 
-/** Maps a monitor row to the OLD APP's exact camelCase JSON shape. */
+/** Maps a monitor row to its public camelCase JSON shape. */
 function serializeMonitor(monitor: SelectMonitor) {
 	return {
 		id: monitor.id,

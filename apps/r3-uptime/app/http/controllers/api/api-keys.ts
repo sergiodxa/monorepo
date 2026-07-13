@@ -24,7 +24,7 @@ import { apiError, apiSuccess } from "~/app/services/api-response";
 import { apiKeyScopes } from "~/database/schema";
 import routes from "~/routes/web";
 
-/** Maps an API-key row to the OLD APP's exact camelCase JSON shape, without its hash. */
+/** Maps an API-key row to its public JSON shape (camelCase fields), omitting the key hash. */
 function serializeApiKey(apiKey: SelectApiKey) {
 	return {
 		id: apiKey.id,

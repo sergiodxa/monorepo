@@ -9,12 +9,14 @@
 
 import type { Database } from "remix/data-table";
 
+import { generateUUID } from "@pkg/uuid";
+
 import type { ApiKeyScope } from "~/database/schema";
 
 import { generateApiKey } from "~/app/services/api-key";
 import { apiKeys } from "~/database/schema";
 
-/** Maximum number of API keys a team may have at once, matching the OLD APP's limit. */
+/** Maximum number of API keys a team may have at once. */
 export const MAX_API_KEYS_PER_TEAM = 10;
 
 export default class ApiKey {
@@ -29,7 +31,7 @@ export default class ApiKey {
 		let record = await db.create(
 			apiKeys,
 			{
-				id: crypto.randomUUID(),
+				id: generateUUID(),
 				team_id: teamId,
 				name: input.name,
 				scopes: input.scopes,

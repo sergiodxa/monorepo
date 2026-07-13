@@ -1,9 +1,7 @@
 /**
  * Public status page controller. Loads a page by slug — private pages 404, since
- * this route is the page's only access path and `docs/status-pages.md` leaves the
- * private-access story to the reimplementer; this keeps the OLD APP's answer
- * (private pages have no public route at all) rather than inventing a new one.
- * Resolves every attached HTTP/DNS/TCP/cron-job monitor's current status and
+ * this route is the page's only access path and private pages have no public route
+ * at all. Resolves every attached HTTP/DNS/TCP/cron-job monitor's current status and
  * 365-day heatmap, and combines them into one page-level status.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)

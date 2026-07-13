@@ -27,6 +27,7 @@ namespace DocumentLayout {
 	}
 }
 
+/** Renders the outer `<html>`/`<head>`/`<body>` shell around `children`, with an optional `<title>` and the client entry script. */
 export default function DocumentLayout(handle: Handle<DocumentLayout.Props>) {
 	return () => {
 		let { title, children } = handle.props;

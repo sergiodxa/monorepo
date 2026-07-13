@@ -19,6 +19,7 @@ namespace InviteErrorView {
 	}
 }
 
+/** Renders the invite-unavailable message page, showing `message` verbatim as supplied by the controller. */
 export default function InviteErrorView(handle: Handle<InviteErrorView.Props>) {
 	return () => (
 		<main mix={[css({ display: "flex", flexDirection: "column", minHeight: "100vh" })]}>

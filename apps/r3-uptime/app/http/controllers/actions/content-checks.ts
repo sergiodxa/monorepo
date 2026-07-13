@@ -10,6 +10,7 @@ import { redirect } from "@pkg/http/response";
 import { notFound, unprocessableEntity } from "@pkg/http/response/html";
 import { isFailure } from "@pkg/result";
 import { getServiceContainer } from "@pkg/service-container";
+import { generateUUID } from "@pkg/uuid";
 import { validate } from "@pkg/validate";
 import { Database } from "remix/data-table";
 import { createAction } from "remix/fetch-router";
@@ -57,7 +58,7 @@ export const createContentCheck = createAction(
 		await db.create(
 			monitorContentChecks,
 			{
-				id: crypto.randomUUID(),
+				id: generateUUID(),
 				monitor_id,
 				type,
 				value,

@@ -33,6 +33,7 @@ namespace DashboardView {
 const row = css({ display: "flex", flexWrap: "wrap", gap: 16, marginBottom: 16 });
 const countsRow = css({ display: "flex", flexWrap: "wrap", gap: 16, marginBottom: 24 });
 
+/** Renders the dashboard shell's stat-card row and tab panel, each as an independently-loading `Frame`. */
 export default function DashboardView(handle: Handle<DashboardView.Props>) {
 	return () => {
 		let props = handle.props;

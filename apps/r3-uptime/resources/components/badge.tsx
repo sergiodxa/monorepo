@@ -23,10 +23,9 @@ namespace Badge {
 }
 
 /**
- * Status badge base; combine with a status-specific color mixin. The OLD APP's
- * monitor-status pills (dashboard table, HTTP/DNS/TCP monitor lists) are an
+ * Status badge base; combine with a status-specific color mixin. Renders as an
  * outline style — transparent background, a colored border, and colored text —
- * not a filled chip; measured padding is `2px 10px`.
+ * not a filled chip; padding is `2px 10px`.
  */
 const badge = css({
 	display: "inline-flex",

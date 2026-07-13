@@ -88,6 +88,7 @@ namespace MonitorFormFields {
 	}
 }
 
+/** Renders the URL/method/expected-status/interval/timeout/degraded-threshold/region fields, pre-filled from `monitor` when editing and defaulted to a HEAD check expecting status 200 when creating. */
 export default function MonitorFormFields(handle: Handle<MonitorFormFields.Props>) {
 	return () => {
 		let monitor = handle.props.monitor;

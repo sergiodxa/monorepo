@@ -2,8 +2,7 @@
  * API v1 collection endpoints for team invites: `GET /api/v1/invites` lists every
  * invite (pending and accepted) and `POST /api/v1/invites` creates a pending one.
  * Requires `invites:read`/`invites:write` via `requireApiKey`. Unlike the web invite
- * flow, this does not send an email — matching the OLD APP's API v1 behavior, which
- * only inserts the row.
+ * flow, this only inserts the row and does not send an email.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -25,7 +24,7 @@ import requireApiKey from "~/app/http/middleware/require-api-key";
 import { apiError, apiSuccess } from "~/app/services/api-response";
 import routes from "~/routes/web";
 
-/** Maps an invite row to the OLD APP's exact camelCase JSON shape. */
+/** Maps an invite row to its public camelCase JSON shape. */
 function serializeInvite(invite: SelectInvite) {
 	return {
 		id: invite.id,

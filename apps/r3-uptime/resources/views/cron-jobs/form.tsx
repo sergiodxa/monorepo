@@ -22,6 +22,7 @@ namespace CronJobFormFields {
 	}
 }
 
+/** Renders the schedule/grace-period/alert fields, pre-filled from `monitor` when editing and defaulted to an hourly UTC schedule when creating. */
 export default function CronJobFormFields(handle: Handle<CronJobFormFields.Props>) {
 	return () => {
 		let monitor = handle.props.monitor;

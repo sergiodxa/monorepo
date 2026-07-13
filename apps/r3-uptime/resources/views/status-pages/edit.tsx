@@ -53,6 +53,7 @@ const buttonDanger = css({
 	"&:hover": { background: danger[700] },
 });
 
+/** Renders the status-page form pre-filled with the current values and attached monitors, plus a delete-confirmation dialog. */
 export default function EditStatusPageView(handle: Handle<EditStatusPageView.Props>) {
 	return () => {
 		let { team, page, monitors, dnsMonitors, tcpMonitors, cronJobs, attachedIds } = handle.props;

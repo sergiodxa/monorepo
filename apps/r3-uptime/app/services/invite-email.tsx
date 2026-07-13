@@ -2,7 +2,7 @@
  * Sends the team-invite email. Renders the remix/ui email body to an HTML string
  * (Resend's SDK only renders React trees itself, and this app doesn't use React) and
  * fires the send without blocking the caller — a failed invite email shouldn't fail
- * the invite itself, matching the OLD APP's fire-and-forget `waitUntil` send.
+ * the invite itself, so the send is fire-and-forget.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

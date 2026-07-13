@@ -38,6 +38,7 @@ const STATUS_BADGE_TONE: Record<string, BadgeTone> = {
 	error: "down",
 };
 
+/** Renders configuration/status stat cards, success-rate and response-time stats computed from `results`, the uptime heatmap, and the result history table. */
 export default function DnsMonitorShowView(handle: Handle<DnsMonitorShowView.Props>) {
 	return () => {
 		let { monitor, results, dailyStats } = handle.props;

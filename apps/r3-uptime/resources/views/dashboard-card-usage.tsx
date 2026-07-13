@@ -22,6 +22,7 @@ namespace DashboardCardUsageView {
 	}
 }
 
+/** Renders the usage stat card, falling back to an error card when both `consumed` and `usage` are `null`. */
 export default function DashboardCardUsageView(handle: Handle<DashboardCardUsageView.Props>) {
 	return () => {
 		let { usage, consumed } = handle.props;

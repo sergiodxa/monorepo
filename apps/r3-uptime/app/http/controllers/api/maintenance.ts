@@ -24,7 +24,7 @@ import requireApiKey from "~/app/http/middleware/require-api-key";
 import { apiError, apiSuccess } from "~/app/services/api-response";
 import routes from "~/routes/web";
 
-/** Maps a maintenance-window row to the OLD APP's exact camelCase JSON shape. */
+/** Maps a maintenance-window row to its public camelCase JSON shape. */
 export function serializeMaintenanceWindow(window: SelectMaintenanceWindow) {
 	return {
 		id: window.id,

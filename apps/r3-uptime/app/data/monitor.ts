@@ -13,6 +13,7 @@
 
 import type { Database } from "remix/data-table";
 
+import { generateUUID } from "@pkg/uuid";
 import { env } from "cloudflare:workers";
 import { CronExpressionParser } from "cron-parser";
 import { and, eq, inList, notNull } from "remix/data-table";
@@ -56,7 +57,7 @@ export default class Monitor {
 		return await db.create(
 			monitors,
 			{
-				id: crypto.randomUUID(),
+				id: generateUUID(),
 				team_id: teamId,
 				author_id: authorId,
 				enabled_at: Date.now(),

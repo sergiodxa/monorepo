@@ -38,6 +38,7 @@ const STATUS_BADGE_TONE: Record<string, BadgeTone> = {
 	down: "down",
 };
 
+/** Renders configuration/status stat cards, uptime and response-time stats computed from `results`, the uptime heatmap, and the check history table. */
 export default function TcpMonitorShowView(handle: Handle<TcpMonitorShowView.Props>) {
 	return () => {
 		let { monitor, results, dailyStats } = handle.props;

@@ -37,6 +37,7 @@ namespace StatusPageFormFields {
 	}
 }
 
+/** Renders the page identity fields plus one checkbox fieldset per attachable monitor type (hidden when that type has no monitors), pre-checked from the `attached*Ids` props. */
 export default function StatusPageFormFields(handle: Handle<StatusPageFormFields.Props>) {
 	return () => {
 		let {

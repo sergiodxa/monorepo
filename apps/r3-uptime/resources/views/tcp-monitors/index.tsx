@@ -31,6 +31,7 @@ const STATUS_BADGE_TONE: Record<string, BadgeTone> = {
 	down: "down",
 };
 
+/** Renders the TCP monitor table with endpoint/status/response time, or an empty state with a create CTA. */
 export default function TcpMonitorsView(handle: Handle<TcpMonitorsView.Props>) {
 	return () => {
 		let { team, monitors } = handle.props;

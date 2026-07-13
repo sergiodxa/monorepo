@@ -23,6 +23,7 @@ import SectionHeader from "~/resources/components/marketing/section-header";
 import MarketingStep from "~/resources/components/marketing/step";
 
 namespace MarketingPageView {
+	/** Adds `isSignedIn` (drives the CTA's copy/target) on top of the raw marketing-page content shape. */
 	export interface Props extends MarketingContent.Page {
 		isSignedIn: boolean;
 	}
@@ -49,6 +50,7 @@ const neutral = {
 	950: "oklch(0.16 0.004 145)",
 } as const;
 
+/** Renders the generic marketing page sections, populated entirely from `handle.props`. */
 export default function MarketingPageView(handle: Handle<MarketingPageView.Props>) {
 	return () => {
 		let { isSignedIn, badge, title, highlight, description, highlights, features, steps, faqs } =

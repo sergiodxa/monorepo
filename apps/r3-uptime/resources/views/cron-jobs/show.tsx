@@ -42,6 +42,7 @@ const STATUS_BADGE_TONE: Record<string, BadgeTone> = {
 	new: "neutral",
 };
 
+/** Renders schedule/status stat cards, the ping URL with copy-paste integration snippets, the uptime heatmap, and the ping history table. */
 export default function CronJobShowView(handle: Handle<CronJobShowView.Props>) {
 	return () => {
 		let { monitor, pings, pingUrl, dailyStats } = handle.props;

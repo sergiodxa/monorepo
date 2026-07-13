@@ -13,6 +13,7 @@ import { css } from "remix/ui";
 
 import routes from "~/routes/web";
 
+/** Renders the sign-out confirmation form that posts to the logout action; takes no props. */
 export default function LogoutView(_handle: Handle) {
 	return () => (
 		<main mix={[css({ display: "flex", flexDirection: "column", minHeight: "100vh" })]}>

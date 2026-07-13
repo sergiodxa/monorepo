@@ -1,7 +1,7 @@
 /**
  * Server-rendered response-time sparkline: a plain inline `<svg>` polyline computed
- * from recent Analytics Engine points. Replaces the OLD APP's recharts `LineChart`,
- * which this app doesn't ship (see ADR-001 §4.4 — no client-side chart library).
+ * from recent Analytics Engine points, with no client-side charting library involved
+ * (see ADR-001 §4.4).
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -20,6 +20,7 @@ namespace Sparkline {
 	}
 }
 
+/** Renders the polyline scaled to fit `points`, or a "No recent data yet." message when empty. */
 export default function Sparkline(handle: Handle<Sparkline.Props>) {
 	return () => {
 		let { points } = handle.props;

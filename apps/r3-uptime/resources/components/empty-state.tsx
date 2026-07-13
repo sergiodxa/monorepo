@@ -25,9 +25,8 @@ namespace EmptyState {
 }
 
 /**
- * Empty-state placeholder box, matching the OLD APP's "No DNS monitors yet"
- * panel: centered (not left-aligned) content, a bigger radius, and generous
- * padding (measured `64px 32px`).
+ * Empty-state placeholder box: centered (not left-aligned) content, a large
+ * border radius, and generous padding (`64px 32px`).
  */
 const emptyState = css({
 	display: "flex",
@@ -45,9 +44,9 @@ const emptyState = css({
 
 /**
  * Primary action button/link for the signed-in app shell (dashboard, forms,
- * settings). The OLD APP reserves brand green for marketing CTAs — every
- * in-app primary action (Create Monitor, Save Changes, Invite Member, ...)
- * instead uses a near-black button.
+ * settings). Uses a near-black background rather than brand green, since green
+ * is reserved for marketing CTAs; every in-app primary action (Create Monitor,
+ * Save Changes, Invite Member, ...) shares this style.
  */
 const buttonPrimary = css({
 	display: "inline-flex",

@@ -19,6 +19,7 @@ namespace AuthErrorView {
 	}
 }
 
+/** Renders the sign-in-failed message page, showing `message` verbatim as supplied by the controller. */
 export default function AuthErrorView(handle: Handle<AuthErrorView.Props>) {
 	return () => (
 		<main mix={[css({ display: "flex", flexDirection: "column", minHeight: "100vh" })]}>

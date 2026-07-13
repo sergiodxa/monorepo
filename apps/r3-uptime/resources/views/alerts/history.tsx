@@ -39,6 +39,7 @@ const EVENT_TYPE_BADGE_TONE: Record<string, BadgeTone> = {
 	down: "down",
 };
 
+/** Renders the delivery-attempt table, or an empty state when no alert has fired yet. */
 export default function AlertHistoryView(handle: Handle<AlertHistoryView.Props>) {
 	return () => {
 		let { events, alertsById } = handle.props;

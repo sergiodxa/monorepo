@@ -10,6 +10,8 @@
 
 import type { Database } from "remix/data-table";
 
+import { generateUUID } from "@pkg/uuid";
+
 import type { InsertMonitorContentCheck, SelectMonitorContentCheck } from "~/database/schema";
 
 import { monitorContentChecks } from "~/database/schema";
@@ -19,7 +21,7 @@ export default class ContentCheck {
 	static async create(db: Database, monitorId: string, input: InsertMonitorContentCheck) {
 		return await db.create(
 			monitorContentChecks,
-			{ id: crypto.randomUUID(), monitor_id: monitorId, ...input },
+			{ id: generateUUID(), monitor_id: monitorId, ...input },
 			{ touch: true, returnRow: true },
 		);
 	}

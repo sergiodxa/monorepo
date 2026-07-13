@@ -3,8 +3,8 @@
  * accepted and creating the resulting membership as two sequential writes, since D1
  * has no real transactions — see `AGENTS.md`), and the pending-invites list shown on
  * the team settings page. Invite "expiration" is a display-only concept computed by
- * the caller from `created_at`, matching the OLD APP: there's no `expires_at` column
- * and an old invite can still be accepted.
+ * the caller from `created_at` — there's no `expires_at` column, so an old invite can
+ * still be accepted.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -12,6 +12,7 @@
 
 import type { Database } from "remix/data-table";
 
+import { generateUUID } from "@pkg/uuid";
 import { and, eq, isNull } from "remix/data-table";
 
 import { invites, memberships } from "~/database/schema";
@@ -21,7 +22,7 @@ export default class Invite {
 	static async create(db: Database, teamId: string, senderId: string, email: string) {
 		return await db.create(
 			invites,
-			{ id: crypto.randomUUID(), team_id: teamId, sender_id: senderId, email, accepted_at: null },
+			{ id: generateUUID(), team_id: teamId, sender_id: senderId, email, accepted_at: null },
 			{ touch: true, returnRow: true },
 		);
 	}
@@ -62,7 +63,7 @@ export default class Invite {
 		await db.update(invites, inviteId, { accepted_at: Date.now() }, { touch: true });
 		await db.create(
 			memberships,
-			{ id: crypto.randomUUID(), team_id: teamId, subject_id: subjectId, role: "member" },
+			{ id: generateUUID(), team_id: teamId, subject_id: subjectId, role: "member" },
 			{ touch: true, returnRow: true },
 		);
 	}

@@ -18,6 +18,7 @@ import { createD1DatabaseAdapter } from "@pkg/data-table-d1";
 import { BatchedLogger } from "@pkg/logger";
 import { isFailure } from "@pkg/result";
 import { getServiceContainer } from "@pkg/service-container";
+import { generateUUID } from "@pkg/uuid";
 import { env, WorkflowEntrypoint } from "cloudflare:workers";
 import { createDatabase } from "remix/data-table";
 import { Resend } from "resend";
@@ -31,12 +32,21 @@ const MS_PER_SECOND = 1000;
 /** Location hints that route through the EU jurisdiction for GDPR compliance. */
 const EU_LOCATION_HINTS = new Set(["eeur", "enam"]);
 
+/**
+ * Parameters passed to a `Ping` workflow instance when it's triggered.
+ */
 export namespace Ping {
 	export interface WorkflowParams {
 		monitorId: string;
 	}
 }
 
+/**
+ * Cloudflare Workflow entrypoint for the `Ping` workflow (see file docblock for what
+ * a single run does). Builds its own D1-backed database per run rather than resolving
+ * one from the service container, since a workflow step can be replayed independently
+ * of the request that triggered it.
+ */
 export class Ping extends WorkflowEntrypoint<Cloudflare.Env> {
 	private getDb(): Database {
 		return createDatabase(createD1DatabaseAdapter(env.DB), { now: () => Date.now() });
@@ -128,7 +138,7 @@ export class Ping extends WorkflowEntrypoint<Cloudflare.Env> {
 			await db.create(
 				monitorResults,
 				{
-					id: crypto.randomUUID(),
+					id: generateUUID(),
 					monitor_id: monitorId,
 					response_status: checkResult.responseStatus,
 					response_time_ms: checkResult.responseTimeMs,

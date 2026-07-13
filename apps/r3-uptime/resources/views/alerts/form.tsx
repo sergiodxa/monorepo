@@ -42,6 +42,7 @@ namespace AlertFormFields {
 	}
 }
 
+/** Renders the name/scope/channel fields plus all four channel-specific fieldsets, pre-filled from `alert` when editing. */
 export default function AlertFormFields(handle: Handle<AlertFormFields.Props>) {
 	return () => {
 		let { monitors, alert } = handle.props;

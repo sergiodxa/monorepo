@@ -13,6 +13,7 @@ import { css } from "remix/ui";
 
 import { neutral } from "~/resources/theme";
 
+/** Renders the static Terms of Service prose; takes no props. */
 export default function TermsView(_handle: Handle) {
 	return () => (
 		<article

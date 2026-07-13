@@ -24,6 +24,7 @@ namespace EditAlertView {
 	}
 }
 
+/** Renders the alert form pre-filled with the current values, plus a delete-confirmation dialog gated behind a native `<dialog>`. */
 export default function EditAlertView(handle: Handle<EditAlertView.Props>) {
 	return () => {
 		let { team, alert, monitors } = handle.props;

@@ -436,6 +436,7 @@ namespace AppShell {
 	}
 }
 
+/** Renders the sidebar (team picker, primary nav, admin-only nav, user menu) plus header and main content area around `children`. */
 export default function AppShell(handle: Handle<AppShell.Props>) {
 	return () => {
 		let { team, teams, viewer, isAdmin, breadcrumb, currentPath, actions, toast, children } =

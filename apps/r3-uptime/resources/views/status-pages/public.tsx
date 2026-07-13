@@ -131,6 +131,7 @@ const BADGE_LABEL: Record<ServiceStatus, string> = {
 	unknown: "Unknown",
 };
 
+/** Renders the public status page: an optional overall-status banner, one card per attached HTTP/DNS/TCP monitor with a 365-day heatmap, cron-job cards with schedule and last-ping time, or an empty state when nothing is attached. */
 export default function StatusPageView(handle: Handle<StatusPageView.Props>) {
 	return () => {
 		let { page, overallStatus, httpServices, dnsServices, tcpServices, cronServices } =

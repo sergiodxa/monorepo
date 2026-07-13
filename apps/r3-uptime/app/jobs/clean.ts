@@ -2,8 +2,8 @@
  * Scheduled maintenance job that purges old `monitor_results` rows. That table now
  * exists only as the "last checked" cache `Monitor.findDue` reads to schedule the next
  * ping — analytics and history live in Analytics Engine — so retention is a plain
- * age cutoff rather than the OLD APP's orphaned-row cleanup (its `completed_at IS
- * NULL` condition targeted a world where this table held full ping history).
+ * age cutoff. A row whose `completed_at` is still `NULL` (an in-flight or pending
+ * check) is never matched by the cutoff and is left alone.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

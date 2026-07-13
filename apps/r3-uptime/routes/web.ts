@@ -307,8 +307,8 @@ export default route({
 			teamShow: get("/api/v1/team"),
 			teamUpdate: put("/api/v1/team"),
 
-			// `destroy` takes the id in the JSON body rather than the URL — matching the
-			// OLD APP's `DELETE /api/v1/team-domains` contract — so it can't come from
+			// `destroy` takes the id in the JSON body rather than the URL (`DELETE
+			// /api/v1/team-domains` with no id segment), so it can't come from
 			// `resources()`'s `:id`-param shape and is added by hand instead.
 			teamDomains: {
 				...resources("/api/v1/team-domains", { only: ["index", "create"] }),

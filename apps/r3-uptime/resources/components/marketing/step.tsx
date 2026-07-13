@@ -18,8 +18,8 @@ namespace MarketingStep {
 }
 
 /**
- * One step inside a numbered steps grid, numbered via `::before`, matching the OLD
- * APP's step circles (`bg-primary-600 text-white`).
+ * One step inside a numbered steps grid, numbered via a `::before` circle in
+ * the brand green with white text.
  */
 const marketingStep = css({
 	position: "relative",

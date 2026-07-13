@@ -1,16 +1,14 @@
 /**
  * Shared alert-dispatch pipeline used by every check path (the HTTP `Ping` workflow,
  * `CheckDnsJob`, `CheckTcpJob`, `CheckCronJobsJob`, and the cron-job ping endpoint) —
- * one module instead of the OLD APP's four independently duplicated (and
- * inconsistently behaved) dispatch implementations. For every qualifying event it:
- * skips entirely when an active, suppressing maintenance window covers the monitor;
- * otherwise resolves the applicable alerts (monitor-specific + team-wide for HTTP,
- * team-wide only for other monitor types — see `app/data/alert.ts`), skips any alert
- * still in cooldown, delivers the rest (email/webhook/Slack/Discord), and records
- * every outcome to `alert_events`. Cooldown and recovery notifications are enforced
- * uniformly for every monitor type, and webhook deliveries carry a real HMAC-SHA256
- * signature — the OLD APP only implemented these consistently for HTTP monitors,
- * despite documenting them as a universal feature.
+ * one module instead of one dispatch implementation duplicated per monitor type. For
+ * every qualifying event it: skips entirely when an active, suppressing maintenance
+ * window covers the monitor; otherwise resolves the applicable alerts
+ * (monitor-specific + team-wide for HTTP, team-wide only for other monitor types —
+ * see `app/data/alert.ts`), skips any alert still in cooldown, delivers the rest
+ * (email/webhook/Slack/Discord), and records every outcome to `alert_events`.
+ * Cooldown and recovery notifications, and a real HMAC-SHA256 signature on webhook
+ * deliveries, are enforced uniformly for every monitor type.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -45,8 +43,8 @@ const EMAIL_REPLY_TO = "hello@sergiodxa.com";
 
 /**
  * Production origin for links inside alert messages. Background jobs have no request
- * to derive an origin from, so this is a fixed constant like the OLD APP used — it'll
- * need to move to the NEW APP's own custom domain at the Phase 10 cutover.
+ * to derive an origin from, so this is a fixed constant — it'll need to move to this
+ * app's own custom domain at the Phase 10 cutover.
  */
 const DASHBOARD_ORIGIN = "https://uptime.sergiodxa.com";
 
@@ -312,10 +310,9 @@ async function hmacSha256Hex(secret: string, payload: string): Promise<string> {
 
 /**
  * Per-monitor-type policy on top of {@link dispatchAlerts}: alert on every non-healthy
- * result (cooldown is what prevents repeat spam, matching the OLD APP's one correctly
- * behaved case — HTTP), and only alert `up` on a genuine recovery (the previous result
- * was not healthy). A `previousStatus` of `null` (never checked before) never counts
- * as a recovery.
+ * result (cooldown is what prevents repeat spam), and only alert `up` on a genuine
+ * recovery (the previous result was not healthy). A `previousStatus` of `null` (never
+ * checked before) never counts as a recovery.
  */
 export async function notifyHttpResult(
 	db: Database,

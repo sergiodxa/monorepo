@@ -27,6 +27,7 @@ namespace MaintenanceWindowsView {
 	}
 }
 
+/** Renders the team's maintenance windows split into "Active"/"Upcoming"/"Past" sections (each hidden when empty), or an empty state with a schedule CTA when there are none at all. */
 export default function MaintenanceWindowsView(handle: Handle<MaintenanceWindowsView.Props>) {
 	return () => {
 		let { team, windows, monitorsById } = handle.props;

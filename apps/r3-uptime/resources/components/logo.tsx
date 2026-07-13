@@ -24,6 +24,7 @@ function getInitials(name: string): string {
 	return name.slice(0, 2).toUpperCase() || "?";
 }
 
+/** Renders `src` if given, falling back to {@link getInitials} when there's no image or it fails to load. */
 export const Logo = clientEntry(
 	"/resources/components/logo.tsx#Logo",
 	function Logo(handle: Handle<LogoProps>) {

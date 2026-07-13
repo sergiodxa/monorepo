@@ -32,6 +32,7 @@ const STRATEGY_LABELS: Record<string, string> = {
 	discord: "Discord",
 };
 
+/** Renders the alert table with an at-limit warning banner once the team hits `MAX_ALERTS_PER_TEAM`, or an empty state with a create-alert CTA. */
 export default function AlertsView(handle: Handle<AlertsView.Props>) {
 	return () => {
 		let { team, alerts, monitorsById } = handle.props;

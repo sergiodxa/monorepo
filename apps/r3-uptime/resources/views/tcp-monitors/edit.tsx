@@ -40,6 +40,7 @@ const buttonDanger = css({
 	"&:hover": { background: danger[700] },
 });
 
+/** Renders the TCP monitor form pre-filled with the current values, plus a delete-confirmation dialog that warns check-result history is deleted too. */
 export default function EditTcpMonitorView(handle: Handle<EditTcpMonitorView.Props>) {
 	return () => {
 		let { team, monitor } = handle.props;

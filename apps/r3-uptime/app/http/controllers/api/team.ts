@@ -22,7 +22,7 @@ import requireApiKey from "~/app/http/middleware/require-api-key";
 import { apiError, apiSuccess } from "~/app/services/api-response";
 import routes from "~/routes/web";
 
-/** Maps a team row to the OLD APP's exact camelCase JSON shape. */
+/** Maps a team row to its public camelCase JSON shape. */
 function serializeTeam(team: SelectTeam) {
 	return {
 		id: team.id,

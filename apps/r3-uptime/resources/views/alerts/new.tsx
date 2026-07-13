@@ -22,6 +22,7 @@ namespace NewAlertView {
 	}
 }
 
+/** Renders the empty alert form for creating a new alert. */
 export default function NewAlertView(handle: Handle<NewAlertView.Props>) {
 	return () => {
 		let { team, monitors } = handle.props;

@@ -25,7 +25,7 @@ import requireApiKey from "~/app/http/middleware/require-api-key";
 import { apiError, apiSuccess } from "~/app/services/api-response";
 import routes from "~/routes/web";
 
-/** Maps a cron-job monitor row to the OLD APP's exact camelCase JSON shape. */
+/** Maps a cron-job monitor row to its public camelCase JSON shape. */
 function serializeCronJob(monitor: SelectCronJobMonitor) {
 	return {
 		id: monitor.id,

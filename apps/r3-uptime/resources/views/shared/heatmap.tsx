@@ -1,8 +1,8 @@
 /**
- * 365-day (calendar-year) uptime heatmap: one column per week, one cell per day,
- * colored by that day's `monitor_daily_stats.status`. Days with no data (not yet
- * reached, or the monitor didn't exist yet) render as empty cells. Weeks start on
- * Sunday, matching the OLD APP's calendar-year framing (`docs/analytics.md`).
+ * Calendar-year uptime heatmap: one column per week, one cell per day, colored by
+ * that day's `monitor_daily_stats.status`. Days with no data (not yet reached, or
+ * the monitor didn't exist yet) render as empty cells. Weeks start on Sunday, from
+ * January 1st of the current year through today (see `docs/analytics.md`).
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -49,9 +49,9 @@ const heatmapCellEmpty = css({
 });
 
 /**
- * Heatmap cell: fully up for that day. The OLD APP's heatmap legend swatches
- * (`bg-green-500`, `bg-yellow-500`, `bg-red-500`) have no `dark:` variant, so these
- * three stay flat across color schemes.
+ * Heatmap cell: fully up for that day. This and the degraded/down variants below
+ * intentionally have no dark-mode override, so all three stay flat across color
+ * schemes.
  */
 const heatmapCellUp = css({
 	background: "oklch(0.7 0.2 155)",
@@ -94,6 +94,7 @@ function buildWeeks(): Array<Array<string | null>> {
 	return weeks;
 }
 
+/** Renders the calendar-year heatmap grid for `days`, using {@link buildWeeks} for the week layout. */
 export default function Heatmap(handle: Handle<Heatmap.Props>) {
 	return () => {
 		let byDate = new Map(handle.props.days.map((day) => [day.date, day]));

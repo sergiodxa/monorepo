@@ -34,6 +34,7 @@ function getInitials(name: string): string {
 		.toUpperCase();
 }
 
+/** Renders `src` if given, falling back to {@link getInitials} when there's no image or it fails to load. */
 export const Avatar = clientEntry(
 	"/resources/components/avatar.tsx#Avatar",
 	function Avatar(handle: Handle<AvatarProps>) {

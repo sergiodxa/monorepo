@@ -25,6 +25,7 @@ namespace StatusPagesView {
 	}
 }
 
+/** Renders the status-page table with a link to each public page and its attached-item count, or an empty state with a create CTA. */
 export default function StatusPagesView(handle: Handle<StatusPagesView.Props>) {
 	return () => {
 		let { team, pages, countsByPageId } = handle.props;

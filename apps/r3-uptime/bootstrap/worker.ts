@@ -36,9 +36,9 @@ import application from "./app";
 export { GeoFetchDO, Ping };
 
 /**
- * Every queue message type the worker understands. Message shapes are the cutover
- * seam with the OLD APP's still-running queue consumer — renaming a `type` string or
- * payload field breaks messages already in flight.
+ * Every queue message type the worker understands. Message shapes are a stable
+ * contract with whatever is already enqueuing or processing messages — renaming a
+ * `type` string or payload field breaks messages already in flight.
  */
 const QueueMessageSchema = s.variant("type", {
 	ping: s.object({ type: s.literal("ping"), monitorId: s.string(), ownerId: s.string() }),

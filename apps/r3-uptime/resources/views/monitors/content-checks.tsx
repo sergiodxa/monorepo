@@ -84,6 +84,7 @@ const TYPE_LABELS: Record<SelectMonitorContentCheck["type"], string> = {
 	regex: "Matches regex",
 };
 
+/** Renders the monitor's existing content checks (each with its own delete-confirmation dialog) plus a form to add a new one, capped at 10 checks. */
 export default function ContentChecksSection(handle: Handle<ContentChecksSection.Props>) {
 	return () => {
 		let { team, monitorId, contentChecks } = handle.props;

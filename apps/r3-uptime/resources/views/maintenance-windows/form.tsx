@@ -41,6 +41,7 @@ function toDatetimeLocal(epochMs: number): string {
 	return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
 }
 
+/** Renders the scope/schedule/recurrence fields, pre-filled from `window` when editing. */
 export default function MaintenanceWindowFormFields(
 	handle: Handle<MaintenanceWindowFormFields.Props>,
 ) {

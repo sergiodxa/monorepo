@@ -1,8 +1,7 @@
 /**
  * API v1 item endpoints for a single status page: get/update/delete
  * (`status-pages:read`/`status-pages:write`) and replacing its HTTP-monitor and
- * cron-job attachments in one call. DNS/TCP attachments have no API surface,
- * matching the OLD APP.
+ * cron-job attachments in one call. DNS/TCP attachments have no API surface.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -30,7 +29,7 @@ import routes from "~/routes/web";
 const SLUG_PATTERN = /^[a-z0-9-]+$/;
 const StatusPageIdParams = s.object({ statusPageId: s.string() });
 
-/** Loads a page plus its curated HTTP-monitor/cron-job id lists, in the OLD APP's shape. */
+/** Loads a page plus its curated HTTP-monitor/cron-job id lists. */
 async function loadWithAttachments(db: Database, teamId: string, statusPageId: string) {
 	let statusPage = await StatusPage.findByIdForTeam(db, teamId, statusPageId);
 	if (!statusPage) return null;

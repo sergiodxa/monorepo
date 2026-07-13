@@ -29,7 +29,7 @@ const CONTENT_CHECK_TYPES = ["contains", "not_contains", "regex"] as const;
 const MonitorIdParams = s.object({ monitorId: s.string() });
 const ContentCheckParams = s.object({ monitorId: s.string(), contentCheckId: s.string() });
 
-/** Maps a content-check row to the OLD APP's exact camelCase JSON shape. */
+/** Maps a content-check row to its public camelCase JSON shape. */
 function serializeContentCheck(check: SelectMonitorContentCheck) {
 	return {
 		id: check.id,
