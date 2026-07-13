@@ -15,7 +15,7 @@ import { validate } from "@pkg/validate";
 import * as s from "remix/data-schema";
 import * as checks from "remix/data-schema/checks";
 import { Database } from "remix/data-table";
-import { createAction } from "remix/fetch-router";
+import { createController } from "remix/fetch-router";
 
 import type { SelectMonitor } from "~/database/schema";
 
@@ -64,53 +64,64 @@ const CreateMonitorSchema = s.object({
 	sslExpiryWarningDays: s.defaulted(s.number().pipe(checks.min(1), checks.max(365)), 30),
 });
 
-/** GET /api/v1/monitors — lists the team's HTTP monitors. */
-export const monitorsIndex = createAction(routes.api.v1.monitorsIndex, {
-	middleware: [requireApiKey("monitors:read")],
-	handler: async (ctx) => {
-		let db = getServiceContainer().get(Database);
-		let monitors = await Monitor.listByTeam(db, ctx.apiTeam.id);
-		return apiSuccess({ monitors: monitors.map(serializeMonitor) });
-	},
-});
+/** Route leaves this controller handles, grouped for a single `router.map()` call. */
+export const monitorsRoutes = {
+	monitorsIndex: routes.api.v1.monitors.index,
+	monitorsCreate: routes.api.v1.monitors.create,
+	monitorsStats: routes.api.v1.monitors.stats,
+};
 
-/** POST /api/v1/monitors — creates an HTTP monitor for the team. */
-export const monitorsCreate = createAction(routes.api.v1.monitorsCreate, {
-	middleware: [requireApiKey("monitors:write")],
-	handler: async (ctx) => {
-		let result = await validate(ctx.request, CreateMonitorSchema);
-		if (isFailure(result)) {
-			return apiError(
-				"VALIDATION_ERROR",
-				result.error.issues.map((issue) => issue.message).join(", "),
-				BadRequest,
-			);
-		}
+export default createController(monitorsRoutes, {
+	actions: {
+		/** GET /api/v1/monitors — lists the team's HTTP monitors. */
+		monitorsIndex: {
+			middleware: [requireApiKey("monitors:read")],
+			handler: async (ctx) => {
+				let db = getServiceContainer().get(Database);
+				let monitors = await Monitor.listByTeam(db, ctx.apiTeam.id);
+				return apiSuccess({ monitors: monitors.map(serializeMonitor) });
+			},
+		},
 
-		let db = getServiceContainer().get(Database);
-		let monitor = await Monitor.create(db, ctx.apiTeam.id, ctx.apiTeam.owner_id, {
-			name: result.data.name,
-			url: result.data.url,
-			method: result.data.method,
-			expected_status: result.data.expectedStatus,
-			interval_seconds: result.data.intervalSeconds,
-			degraded_after_ms: result.data.degradedAfterMs,
-			timeout_seconds: result.data.timeoutSeconds,
-			location_hint: result.data.locationHint,
-			ssl_monitoring_enabled: result.data.sslMonitoringEnabled,
-			ssl_expiry_warning_days: result.data.sslExpiryWarningDays,
-		});
+		/** POST /api/v1/monitors — creates an HTTP monitor for the team. */
+		monitorsCreate: {
+			middleware: [requireApiKey("monitors:write")],
+			handler: async (ctx) => {
+				let result = await validate(ctx.request, CreateMonitorSchema);
+				if (isFailure(result)) {
+					return apiError(
+						"VALIDATION_ERROR",
+						result.error.issues.map((issue) => issue.message).join(", "),
+						BadRequest,
+					);
+				}
 
-		return apiSuccess({ monitor: serializeMonitor(monitor) }, Created);
-	},
-});
+				let db = getServiceContainer().get(Database);
+				let monitor = await Monitor.create(db, ctx.apiTeam.id, ctx.apiTeam.owner_id, {
+					name: result.data.name,
+					url: result.data.url,
+					method: result.data.method,
+					expected_status: result.data.expectedStatus,
+					interval_seconds: result.data.intervalSeconds,
+					degraded_after_ms: result.data.degradedAfterMs,
+					timeout_seconds: result.data.timeoutSeconds,
+					location_hint: result.data.locationHint,
+					ssl_monitoring_enabled: result.data.sslMonitoringEnabled,
+					ssl_expiry_warning_days: result.data.sslExpiryWarningDays,
+				});
 
-/** GET /api/v1/monitors/stats — aggregate stats across every monitor on the team. */
-export const monitorsStats = createAction(routes.api.v1.monitorsStats, {
-	middleware: [requireApiKey("monitors:read")],
-	handler: async (ctx) => {
-		let db = getServiceContainer().get(Database);
-		let stats = await Monitor.getStatsByTeamId(db, ctx.apiTeam.id);
-		return apiSuccess({ stats });
+				return apiSuccess({ monitor: serializeMonitor(monitor) }, Created);
+			},
+		},
+
+		/** GET /api/v1/monitors/stats — aggregate stats across every monitor on the team. */
+		monitorsStats: {
+			middleware: [requireApiKey("monitors:read")],
+			handler: async (ctx) => {
+				let db = getServiceContainer().get(Database);
+				let stats = await Monitor.getStatsByTeamId(db, ctx.apiTeam.id);
+				return apiSuccess({ stats });
+			},
+		},
 	},
 });

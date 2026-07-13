@@ -14,7 +14,7 @@ import { validate } from "@pkg/validate";
 import * as s from "remix/data-schema";
 import * as checks from "remix/data-schema/checks";
 import { Database } from "remix/data-table";
-import { createAction } from "remix/fetch-router";
+import { createController } from "remix/fetch-router";
 
 import type { SelectMonitorContentCheck } from "~/database/schema";
 
@@ -60,62 +60,73 @@ const CreateContentCheckSchema = s
 		}
 	}, "Invalid regular expression");
 
-/** GET /api/v1/monitors/:monitorId/content-checks — lists a monitor's content checks. */
-export const monitorContentChecksIndex = createAction(routes.api.v1.monitorContentChecksIndex, {
-	middleware: [requireApiKey("monitors:read")],
-	handler: async (ctx) => {
-		let { monitorId } = s.parse(MonitorIdParams, ctx.params);
-		let db = getServiceContainer().get(Database);
-		let monitor = await Monitor.findByIdForTeam(db, ctx.apiTeam.id, monitorId);
-		if (!monitor) return apiError("NOT_FOUND", "Monitor not found", NotFound);
+/** Route leaves this controller handles, grouped for a single `router.map()` call. */
+export const monitorContentChecksRoutes = {
+	monitorContentChecksIndex: routes.api.v1.monitors.contentChecks.index,
+	monitorContentChecksCreate: routes.api.v1.monitors.contentChecks.create,
+	monitorContentCheckDestroy: routes.api.v1.monitors.contentChecks.destroy,
+};
 
-		let contentChecks = await ContentCheck.listByMonitor(db, monitorId);
-		return apiSuccess({ contentChecks: contentChecks.map(serializeContentCheck) });
-	},
-});
+export default createController(monitorContentChecksRoutes, {
+	actions: {
+		/** GET /api/v1/monitors/:monitorId/content-checks — lists a monitor's content checks. */
+		monitorContentChecksIndex: {
+			middleware: [requireApiKey("monitors:read")],
+			handler: async (ctx) => {
+				let { monitorId } = s.parse(MonitorIdParams, ctx.params);
+				let db = getServiceContainer().get(Database);
+				let monitor = await Monitor.findByIdForTeam(db, ctx.apiTeam.id, monitorId);
+				if (!monitor) return apiError("NOT_FOUND", "Monitor not found", NotFound);
 
-/** POST /api/v1/monitors/:monitorId/content-checks — creates a content check. */
-export const monitorContentChecksCreate = createAction(routes.api.v1.monitorContentChecksCreate, {
-	middleware: [requireApiKey("monitors:write")],
-	handler: async (ctx) => {
-		let { monitorId } = s.parse(MonitorIdParams, ctx.params);
-		let db = getServiceContainer().get(Database);
-		let monitor = await Monitor.findByIdForTeam(db, ctx.apiTeam.id, monitorId);
-		if (!monitor) return apiError("NOT_FOUND", "Monitor not found", NotFound);
+				let contentChecks = await ContentCheck.listByMonitor(db, monitorId);
+				return apiSuccess({ contentChecks: contentChecks.map(serializeContentCheck) });
+			},
+		},
 
-		let result = await validate(ctx.request, CreateContentCheckSchema);
-		if (isFailure(result)) {
-			return apiError(
-				"VALIDATION_ERROR",
-				result.error.issues.map((issue) => issue.message).join(", "),
-				BadRequest,
-			);
-		}
+		/** POST /api/v1/monitors/:monitorId/content-checks — creates a content check. */
+		monitorContentChecksCreate: {
+			middleware: [requireApiKey("monitors:write")],
+			handler: async (ctx) => {
+				let { monitorId } = s.parse(MonitorIdParams, ctx.params);
+				let db = getServiceContainer().get(Database);
+				let monitor = await Monitor.findByIdForTeam(db, ctx.apiTeam.id, monitorId);
+				if (!monitor) return apiError("NOT_FOUND", "Monitor not found", NotFound);
 
-		let contentCheck = await ContentCheck.create(db, monitorId, {
-			type: result.data.type,
-			value: result.data.value,
-			case_sensitive: result.data.caseSensitive,
-			is_enabled: result.data.isEnabled,
-		});
+				let result = await validate(ctx.request, CreateContentCheckSchema);
+				if (isFailure(result)) {
+					return apiError(
+						"VALIDATION_ERROR",
+						result.error.issues.map((issue) => issue.message).join(", "),
+						BadRequest,
+					);
+				}
 
-		return apiSuccess({ contentCheck: serializeContentCheck(contentCheck) }, Created);
-	},
-});
+				let contentCheck = await ContentCheck.create(db, monitorId, {
+					type: result.data.type,
+					value: result.data.value,
+					case_sensitive: result.data.caseSensitive,
+					is_enabled: result.data.isEnabled,
+				});
 
-/** DELETE /api/v1/monitors/:monitorId/content-checks/:contentCheckId — deletes a content check. */
-export const monitorContentCheckDestroy = createAction(routes.api.v1.monitorContentCheckDestroy, {
-	middleware: [requireApiKey("monitors:write")],
-	handler: async (ctx) => {
-		let { monitorId, contentCheckId } = s.parse(ContentCheckParams, ctx.params);
-		let db = getServiceContainer().get(Database);
-		let monitor = await Monitor.findByIdForTeam(db, ctx.apiTeam.id, monitorId);
-		if (!monitor) return apiError("NOT_FOUND", "Monitor not found", NotFound);
+				return apiSuccess({ contentCheck: serializeContentCheck(contentCheck) }, Created);
+			},
+		},
 
-		let contentCheck = await ContentCheck.findByIdForMonitor(db, monitorId, contentCheckId);
-		if (!contentCheck) return apiError("NOT_FOUND", "Content check not found", NotFound);
+		/** DELETE /api/v1/monitors/:monitorId/content-checks/:contentCheckId — deletes a content check. */
+		monitorContentCheckDestroy: {
+			middleware: [requireApiKey("monitors:write")],
+			handler: async (ctx) => {
+				let { monitorId, contentCheckId } = s.parse(ContentCheckParams, ctx.params);
+				let db = getServiceContainer().get(Database);
+				let monitor = await Monitor.findByIdForTeam(db, ctx.apiTeam.id, monitorId);
+				if (!monitor) return apiError("NOT_FOUND", "Monitor not found", NotFound);
 
-		await ContentCheck.deleteById(db, contentCheckId);
-		return apiSuccess({ success: true });
+				let contentCheck = await ContentCheck.findByIdForMonitor(db, monitorId, contentCheckId);
+				if (!contentCheck) return apiError("NOT_FOUND", "Content check not found", NotFound);
+
+				await ContentCheck.deleteById(db, contentCheckId);
+				return apiSuccess({ success: true });
+			},
+		},
 	},
 });

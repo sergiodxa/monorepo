@@ -16,7 +16,7 @@ import { validate } from "@pkg/validate";
 import * as s from "remix/data-schema";
 import * as checks from "remix/data-schema/checks";
 import { Database } from "remix/data-table";
-import { createAction } from "remix/fetch-router";
+import { createController } from "remix/fetch-router";
 
 import type { AlertConfig, SelectAlert } from "~/database/schema";
 
@@ -138,58 +138,68 @@ function buildConfig(values: CreateAlertValues): AlertConfig {
 	}
 }
 
-/** GET /api/v1/alerts — lists the team's alerts with sensitive config stripped. */
-export const alertsIndex = createAction(routes.api.v1.alertsIndex, {
-	middleware: [requireApiKey("alerts:read")],
-	handler: async (ctx) => {
-		let db = getServiceContainer().get(Database);
-		let alerts = await Alert.listByTeam(db, ctx.apiTeam.id);
-		return apiSuccess({ alerts: alerts.map(serializeAlertSafe) });
-	},
-});
+/** Route leaves this controller handles, grouped for a single `router.map()` call. */
+export const alertsRoutes = {
+	alertsIndex: routes.api.v1.alerts.index,
+	alertsCreate: routes.api.v1.alerts.create,
+};
 
-/** POST /api/v1/alerts — creates an alert for the team, up to {@link MAX_ALERTS_PER_TEAM}. */
-export const alertsCreate = createAction(routes.api.v1.alertsCreate, {
-	middleware: [requireApiKey("alerts:write")],
-	handler: async (ctx) => {
-		let db = getServiceContainer().get(Database);
+export default createController(alertsRoutes, {
+	actions: {
+		/** GET /api/v1/alerts — lists the team's alerts with sensitive config stripped. */
+		alertsIndex: {
+			middleware: [requireApiKey("alerts:read")],
+			handler: async (ctx) => {
+				let db = getServiceContainer().get(Database);
+				let alerts = await Alert.listByTeam(db, ctx.apiTeam.id);
+				return apiSuccess({ alerts: alerts.map(serializeAlertSafe) });
+			},
+		},
 
-		let existingCount = await Alert.countByTeam(db, ctx.apiTeam.id);
-		if (existingCount >= MAX_ALERTS_PER_TEAM) {
-			return apiError(
-				"LIMIT_EXCEEDED",
-				`Maximum of ${MAX_ALERTS_PER_TEAM} alerts per team`,
-				BadRequest,
-			);
-		}
+		/** POST /api/v1/alerts — creates an alert for the team, up to {@link MAX_ALERTS_PER_TEAM}. */
+		alertsCreate: {
+			middleware: [requireApiKey("alerts:write")],
+			handler: async (ctx) => {
+				let db = getServiceContainer().get(Database);
 
-		let result = await validate(ctx.request, CreateAlertSchema);
-		if (isFailure(result)) {
-			return apiError(
-				"VALIDATION_ERROR",
-				result.error.issues.map((issue) => issue.message).join(", "),
-				BadRequest,
-			);
-		}
+				let existingCount = await Alert.countByTeam(db, ctx.apiTeam.id);
+				if (existingCount >= MAX_ALERTS_PER_TEAM) {
+					return apiError(
+						"LIMIT_EXCEEDED",
+						`Maximum of ${MAX_ALERTS_PER_TEAM} alerts per team`,
+						BadRequest,
+					);
+				}
 
-		if (result.data.monitorId) {
-			let monitor = await Monitor.findByIdForTeam(db, ctx.apiTeam.id, result.data.monitorId);
-			if (!monitor) return apiError("NOT_FOUND", "Monitor not found", NotFound);
-		}
+				let result = await validate(ctx.request, CreateAlertSchema);
+				if (isFailure(result)) {
+					return apiError(
+						"VALIDATION_ERROR",
+						result.error.issues.map((issue) => issue.message).join(", "),
+						BadRequest,
+					);
+				}
 
-		/**
-		 * `CreateAlertSchema`'s inferred output loses its per-branch literal discriminant
-		 * (see `CreateAlertValues`'s comment); the runtime shape is still guaranteed by
-		 * that same schema, so this restates it for `buildConfig`'s exhaustive switch.
-		 */
-		let alert = await Alert.create(db, ctx.apiTeam.id, {
-			name: result.data.name,
-			monitor_id: result.data.monitorId ?? null,
-			notify_on_recovery: result.data.notifyOnRecovery,
-			cooldown_minutes: result.data.cooldownMinutes,
-			config: buildConfig(result.data as CreateAlertValues),
-		});
+				if (result.data.monitorId) {
+					let monitor = await Monitor.findByIdForTeam(db, ctx.apiTeam.id, result.data.monitorId);
+					if (!monitor) return apiError("NOT_FOUND", "Monitor not found", NotFound);
+				}
 
-		return apiSuccess({ alert: serializeAlertStrategyOnly(alert) }, Created);
+				/**
+				 * `CreateAlertSchema`'s inferred output loses its per-branch literal discriminant
+				 * (see `CreateAlertValues`'s comment); the runtime shape is still guaranteed by
+				 * that same schema, so this restates it for `buildConfig`'s exhaustive switch.
+				 */
+				let alert = await Alert.create(db, ctx.apiTeam.id, {
+					name: result.data.name,
+					monitor_id: result.data.monitorId ?? null,
+					notify_on_recovery: result.data.notifyOnRecovery,
+					cooldown_minutes: result.data.cooldownMinutes,
+					config: buildConfig(result.data as CreateAlertValues),
+				});
+
+				return apiSuccess({ alert: serializeAlertStrategyOnly(alert) }, Created);
+			},
+		},
 	},
 });

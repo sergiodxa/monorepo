@@ -14,7 +14,7 @@ import { validate } from "@pkg/validate";
 import * as s from "remix/data-schema";
 import * as checks from "remix/data-schema/checks";
 import { Database } from "remix/data-table";
-import { createAction } from "remix/fetch-router";
+import { createController } from "remix/fetch-router";
 
 import type { SelectDnsMonitor } from "~/database/schema";
 
@@ -52,39 +52,49 @@ const CreateDnsMonitorSchema = s.object({
 	isEnabled: s.defaulted(s.boolean(), true),
 });
 
-/** GET /api/v1/dns-monitors — lists the team's DNS monitors. */
-export const dnsMonitorsIndex = createAction(routes.api.v1.dnsMonitorsIndex, {
-	middleware: [requireApiKey("dns-monitors:read")],
-	handler: async (ctx) => {
-		let db = getServiceContainer().get(Database);
-		let dnsMonitors = await DnsMonitor.listByTeam(db, ctx.apiTeam.id);
-		return apiSuccess({ dnsMonitors: dnsMonitors.map(serializeDnsMonitor) });
-	},
-});
+/** Route leaves this controller handles, grouped for a single `router.map()` call. */
+export const dnsMonitorsRoutes = {
+	dnsMonitorsIndex: routes.api.v1.dnsMonitors.index,
+	dnsMonitorsCreate: routes.api.v1.dnsMonitors.create,
+};
 
-/** POST /api/v1/dns-monitors — creates a DNS monitor for the team. */
-export const dnsMonitorsCreate = createAction(routes.api.v1.dnsMonitorsCreate, {
-	middleware: [requireApiKey("dns-monitors:write")],
-	handler: async (ctx) => {
-		let result = await validate(ctx.request, CreateDnsMonitorSchema);
-		if (isFailure(result)) {
-			return apiError(
-				"VALIDATION_ERROR",
-				result.error.issues.map((issue) => issue.message).join(", "),
-				BadRequest,
-			);
-		}
+export default createController(dnsMonitorsRoutes, {
+	actions: {
+		/** GET /api/v1/dns-monitors — lists the team's DNS monitors. */
+		dnsMonitorsIndex: {
+			middleware: [requireApiKey("dns-monitors:read")],
+			handler: async (ctx) => {
+				let db = getServiceContainer().get(Database);
+				let dnsMonitors = await DnsMonitor.listByTeam(db, ctx.apiTeam.id);
+				return apiSuccess({ dnsMonitors: dnsMonitors.map(serializeDnsMonitor) });
+			},
+		},
 
-		let db = getServiceContainer().get(Database);
-		let dnsMonitor = await DnsMonitor.create(db, ctx.apiTeam.id, {
-			name: result.data.name,
-			domain: result.data.domain,
-			record_type: result.data.recordType,
-			expected_value: result.data.expectedValue ?? null,
-			interval_seconds: result.data.intervalSeconds,
-			is_enabled: result.data.isEnabled,
-		});
+		/** POST /api/v1/dns-monitors — creates a DNS monitor for the team. */
+		dnsMonitorsCreate: {
+			middleware: [requireApiKey("dns-monitors:write")],
+			handler: async (ctx) => {
+				let result = await validate(ctx.request, CreateDnsMonitorSchema);
+				if (isFailure(result)) {
+					return apiError(
+						"VALIDATION_ERROR",
+						result.error.issues.map((issue) => issue.message).join(", "),
+						BadRequest,
+					);
+				}
 
-		return apiSuccess({ dnsMonitor: serializeDnsMonitor(dnsMonitor) }, Created);
+				let db = getServiceContainer().get(Database);
+				let dnsMonitor = await DnsMonitor.create(db, ctx.apiTeam.id, {
+					name: result.data.name,
+					domain: result.data.domain,
+					record_type: result.data.recordType,
+					expected_value: result.data.expectedValue ?? null,
+					interval_seconds: result.data.intervalSeconds,
+					is_enabled: result.data.isEnabled,
+				});
+
+				return apiSuccess({ dnsMonitor: serializeDnsMonitor(dnsMonitor) }, Created);
+			},
+		},
 	},
 });

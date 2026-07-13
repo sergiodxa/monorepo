@@ -14,7 +14,7 @@ import { getServiceContainer } from "@pkg/service-container";
 import { validate } from "@pkg/validate";
 import * as s from "remix/data-schema";
 import { Database } from "remix/data-table";
-import { createAction } from "remix/fetch-router";
+import { createController } from "remix/fetch-router";
 
 import type { SelectMaintenanceWindow } from "~/database/schema";
 
@@ -58,45 +58,55 @@ const CreateMaintenanceSchema = s
 	})
 	.refine((value) => value.endsAt > value.startsAt, "endsAt must be after startsAt");
 
-/** GET /api/v1/maintenance — lists the team's maintenance windows. */
-export const maintenanceIndex = createAction(routes.api.v1.maintenanceIndex, {
-	middleware: [requireApiKey("maintenance:read")],
-	handler: async (ctx) => {
-		let db = getServiceContainer().get(Database);
-		let windows = await MaintenanceWindow.listByTeam(db, ctx.apiTeam.id);
-		return apiSuccess({ maintenanceWindows: windows.map(serializeMaintenanceWindow) });
-	},
-});
+/** Route leaves this controller handles, grouped for a single `router.map()` call. */
+export const maintenanceRoutes = {
+	maintenanceIndex: routes.api.v1.maintenance.index,
+	maintenanceCreate: routes.api.v1.maintenance.create,
+};
 
-/** POST /api/v1/maintenance — creates a maintenance window for the team. */
-export const maintenanceCreate = createAction(routes.api.v1.maintenanceCreate, {
-	middleware: [requireApiKey("maintenance:write")],
-	handler: async (ctx) => {
-		let result = await validate(ctx.request, CreateMaintenanceSchema);
-		if (isFailure(result)) {
-			return apiError(
-				"VALIDATION_ERROR",
-				result.error.issues.map((issue) => issue.message).join(", "),
-				BadRequest,
-			);
-		}
+export default createController(maintenanceRoutes, {
+	actions: {
+		/** GET /api/v1/maintenance — lists the team's maintenance windows. */
+		maintenanceIndex: {
+			middleware: [requireApiKey("maintenance:read")],
+			handler: async (ctx) => {
+				let db = getServiceContainer().get(Database);
+				let windows = await MaintenanceWindow.listByTeam(db, ctx.apiTeam.id);
+				return apiSuccess({ maintenanceWindows: windows.map(serializeMaintenanceWindow) });
+			},
+		},
 
-		let db = getServiceContainer().get(Database);
+		/** POST /api/v1/maintenance — creates a maintenance window for the team. */
+		maintenanceCreate: {
+			middleware: [requireApiKey("maintenance:write")],
+			handler: async (ctx) => {
+				let result = await validate(ctx.request, CreateMaintenanceSchema);
+				if (isFailure(result)) {
+					return apiError(
+						"VALIDATION_ERROR",
+						result.error.issues.map((issue) => issue.message).join(", "),
+						BadRequest,
+					);
+				}
 
-		if (result.data.monitorId) {
-			let monitor = await Monitor.findByIdForTeam(db, ctx.apiTeam.id, result.data.monitorId);
-			if (!monitor) return apiError("NOT_FOUND", "Monitor not found", NotFound);
-		}
+				let db = getServiceContainer().get(Database);
 
-		let window = await MaintenanceWindow.create(db, ctx.apiTeam.id, {
-			monitor_id: result.data.monitorId ?? null,
-			name: result.data.name,
-			starts_at: result.data.startsAt,
-			ends_at: result.data.endsAt,
-			suppress_alerts: result.data.suppressAlerts,
-			show_on_status_page: result.data.showOnStatusPage,
-		});
+				if (result.data.monitorId) {
+					let monitor = await Monitor.findByIdForTeam(db, ctx.apiTeam.id, result.data.monitorId);
+					if (!monitor) return apiError("NOT_FOUND", "Monitor not found", NotFound);
+				}
 
-		return apiSuccess({ maintenanceWindow: serializeMaintenanceWindow(window) }, Created);
+				let window = await MaintenanceWindow.create(db, ctx.apiTeam.id, {
+					monitor_id: result.data.monitorId ?? null,
+					name: result.data.name,
+					starts_at: result.data.startsAt,
+					ends_at: result.data.endsAt,
+					suppress_alerts: result.data.suppressAlerts,
+					show_on_status_page: result.data.showOnStatusPage,
+				});
+
+				return apiSuccess({ maintenanceWindow: serializeMaintenanceWindow(window) }, Created);
+			},
+		},
 	},
 });

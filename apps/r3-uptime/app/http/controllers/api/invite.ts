@@ -20,7 +20,7 @@ import routes from "~/routes/web";
 const InviteIdParams = s.object({ inviteId: s.string() });
 
 /** DELETE /api/v1/invites/:inviteId — revokes a pending invite. */
-export const inviteDestroy = createAction(routes.api.v1.inviteDestroy, {
+export const inviteDestroy = createAction(routes.api.v1.invites.destroy, {
 	middleware: [requireApiKey("invites:write")],
 	handler: async (ctx) => {
 		let { inviteId } = s.parse(InviteIdParams, ctx.params);

@@ -16,7 +16,7 @@ import { validate } from "@pkg/validate";
 import * as s from "remix/data-schema";
 import * as checks from "remix/data-schema/checks";
 import { Database } from "remix/data-table";
-import { createAction } from "remix/fetch-router";
+import { createController } from "remix/fetch-router";
 
 import type { SelectInvite } from "~/database/schema";
 
@@ -40,31 +40,46 @@ function serializeInvite(invite: SelectInvite) {
 
 const CreateInviteSchema = s.object({ email: s.string().pipe(checks.email()) });
 
-/** GET /api/v1/invites — lists every invite (pending and accepted) for the team. */
-export const invitesIndex = createAction(routes.api.v1.invitesIndex, {
-	middleware: [requireApiKey("invites:read")],
-	handler: async (ctx) => {
-		let db = getServiceContainer().get(Database);
-		let invites = await Invite.listByTeam(db, ctx.apiTeam.id);
-		return apiSuccess({ invites: invites.map(serializeInvite) });
-	},
-});
+/** Route leaves this controller handles, grouped for a single `router.map()` call. */
+export const invitesRoutes = {
+	invitesIndex: routes.api.v1.invites.index,
+	invitesCreate: routes.api.v1.invites.create,
+};
 
-/** POST /api/v1/invites — creates a pending invite for the team. */
-export const invitesCreate = createAction(routes.api.v1.invitesCreate, {
-	middleware: [requireApiKey("invites:write")],
-	handler: async (ctx) => {
-		let result = await validate(ctx.request, CreateInviteSchema);
-		if (isFailure(result)) {
-			return apiError(
-				"VALIDATION_ERROR",
-				result.error.issues.map((issue) => issue.message).join(", "),
-				BadRequest,
-			);
-		}
+export default createController(invitesRoutes, {
+	actions: {
+		/** GET /api/v1/invites — lists every invite (pending and accepted) for the team. */
+		invitesIndex: {
+			middleware: [requireApiKey("invites:read")],
+			handler: async (ctx) => {
+				let db = getServiceContainer().get(Database);
+				let invites = await Invite.listByTeam(db, ctx.apiTeam.id);
+				return apiSuccess({ invites: invites.map(serializeInvite) });
+			},
+		},
 
-		let db = getServiceContainer().get(Database);
-		let invite = await Invite.create(db, ctx.apiTeam.id, ctx.apiTeam.owner_id, result.data.email);
-		return apiSuccess({ invite: serializeInvite(invite) }, Created);
+		/** POST /api/v1/invites — creates a pending invite for the team. */
+		invitesCreate: {
+			middleware: [requireApiKey("invites:write")],
+			handler: async (ctx) => {
+				let result = await validate(ctx.request, CreateInviteSchema);
+				if (isFailure(result)) {
+					return apiError(
+						"VALIDATION_ERROR",
+						result.error.issues.map((issue) => issue.message).join(", "),
+						BadRequest,
+					);
+				}
+
+				let db = getServiceContainer().get(Database);
+				let invite = await Invite.create(
+					db,
+					ctx.apiTeam.id,
+					ctx.apiTeam.owner_id,
+					result.data.email,
+				);
+				return apiSuccess({ invite: serializeInvite(invite) }, Created);
+			},
+		},
 	},
 });

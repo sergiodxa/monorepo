@@ -14,7 +14,7 @@ import { validate } from "@pkg/validate";
 import * as s from "remix/data-schema";
 import * as checks from "remix/data-schema/checks";
 import { Database } from "remix/data-table";
-import { createAction } from "remix/fetch-router";
+import { createController } from "remix/fetch-router";
 
 import type { SelectTeamDomain } from "~/database/schema";
 
@@ -41,53 +41,64 @@ const CreateTeamDomainSchema = s.object({
 
 const DeleteTeamDomainSchema = s.object({ id: s.string() });
 
-/** GET /api/v1/team-domains — lists the team's domains. */
-export const teamDomainsIndex = createAction(routes.api.v1.teamDomainsIndex, {
-	middleware: [requireApiKey("team-domains:read")],
-	handler: async (ctx) => {
-		let db = getServiceContainer().get(Database);
-		let teamDomains = await TeamDomain.listByTeam(db, ctx.apiTeam.id);
-		return apiSuccess({ teamDomains: teamDomains.map(serializeTeamDomain) });
-	},
-});
+/** Route leaves this controller handles, grouped for a single `router.map()` call. */
+export const teamDomainsRoutes = {
+	teamDomainsIndex: routes.api.v1.teamDomains.index,
+	teamDomainsCreate: routes.api.v1.teamDomains.create,
+	teamDomainsDestroy: routes.api.v1.teamDomains.destroy,
+};
 
-/** POST /api/v1/team-domains — adds a domain for the team, pending verification. */
-export const teamDomainsCreate = createAction(routes.api.v1.teamDomainsCreate, {
-	middleware: [requireApiKey("team-domains:write")],
-	handler: async (ctx) => {
-		let result = await validate(ctx.request, CreateTeamDomainSchema);
-		if (isFailure(result)) {
-			return apiError(
-				"VALIDATION_ERROR",
-				result.error.issues.map((issue) => issue.message).join(", "),
-				BadRequest,
-			);
-		}
+export default createController(teamDomainsRoutes, {
+	actions: {
+		/** GET /api/v1/team-domains — lists the team's domains. */
+		teamDomainsIndex: {
+			middleware: [requireApiKey("team-domains:read")],
+			handler: async (ctx) => {
+				let db = getServiceContainer().get(Database);
+				let teamDomains = await TeamDomain.listByTeam(db, ctx.apiTeam.id);
+				return apiSuccess({ teamDomains: teamDomains.map(serializeTeamDomain) });
+			},
+		},
 
-		let db = getServiceContainer().get(Database);
-		let teamDomain = await TeamDomain.create(db, ctx.apiTeam.id, result.data.hostname);
-		return apiSuccess({ teamDomain: serializeTeamDomain(teamDomain) }, Created);
-	},
-});
+		/** POST /api/v1/team-domains — adds a domain for the team, pending verification. */
+		teamDomainsCreate: {
+			middleware: [requireApiKey("team-domains:write")],
+			handler: async (ctx) => {
+				let result = await validate(ctx.request, CreateTeamDomainSchema);
+				if (isFailure(result)) {
+					return apiError(
+						"VALIDATION_ERROR",
+						result.error.issues.map((issue) => issue.message).join(", "),
+						BadRequest,
+					);
+				}
 
-/** DELETE /api/v1/team-domains — removes a domain by id (given in the JSON body). */
-export const teamDomainsDestroy = createAction(routes.api.v1.teamDomainsDestroy, {
-	middleware: [requireApiKey("team-domains:write")],
-	handler: async (ctx) => {
-		let result = await validate(ctx.request, DeleteTeamDomainSchema);
-		if (isFailure(result)) {
-			return apiError(
-				"VALIDATION_ERROR",
-				result.error.issues.map((issue) => issue.message).join(", "),
-				BadRequest,
-			);
-		}
+				let db = getServiceContainer().get(Database);
+				let teamDomain = await TeamDomain.create(db, ctx.apiTeam.id, result.data.hostname);
+				return apiSuccess({ teamDomain: serializeTeamDomain(teamDomain) }, Created);
+			},
+		},
 
-		let db = getServiceContainer().get(Database);
-		let teamDomain = await TeamDomain.findByIdForTeam(db, ctx.apiTeam.id, result.data.id);
-		if (!teamDomain) return apiError("NOT_FOUND", "Team domain not found", NotFound);
+		/** DELETE /api/v1/team-domains — removes a domain by id (given in the JSON body). */
+		teamDomainsDestroy: {
+			middleware: [requireApiKey("team-domains:write")],
+			handler: async (ctx) => {
+				let result = await validate(ctx.request, DeleteTeamDomainSchema);
+				if (isFailure(result)) {
+					return apiError(
+						"VALIDATION_ERROR",
+						result.error.issues.map((issue) => issue.message).join(", "),
+						BadRequest,
+					);
+				}
 
-		await TeamDomain.deleteById(db, result.data.id);
-		return apiSuccess({ deleted: true });
+				let db = getServiceContainer().get(Database);
+				let teamDomain = await TeamDomain.findByIdForTeam(db, ctx.apiTeam.id, result.data.id);
+				if (!teamDomain) return apiError("NOT_FOUND", "Team domain not found", NotFound);
+
+				await TeamDomain.deleteById(db, result.data.id);
+				return apiSuccess({ deleted: true });
+			},
+		},
 	},
 });

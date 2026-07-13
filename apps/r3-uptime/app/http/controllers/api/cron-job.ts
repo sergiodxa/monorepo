@@ -15,7 +15,7 @@ import { validate } from "@pkg/validate";
 import * as s from "remix/data-schema";
 import * as checks from "remix/data-schema/checks";
 import { Database } from "remix/data-table";
-import { createAction } from "remix/fetch-router";
+import { createController } from "remix/fetch-router";
 
 import type { InsertCronJobMonitor, SelectCronJobMonitor } from "~/database/schema";
 
@@ -55,80 +55,94 @@ const UpdateCronJobSchema = s.object({
 	enabled: s.optional(s.boolean()),
 });
 
-/** GET /api/v1/cron-jobs/:cronJobId — a single cron-job monitor. */
-export const cronJobShow = createAction(routes.api.v1.cronJobShow, {
-	middleware: [requireApiKey("cron-jobs:read")],
-	handler: async (ctx) => {
-		let { cronJobId } = s.parse(CronJobIdParams, ctx.params);
-		let db = getServiceContainer().get(Database);
-		let cronJob = await CronJobMonitor.findByIdForTeam(db, ctx.apiTeam.id, cronJobId);
-		if (!cronJob) return apiError("NOT_FOUND", "Cron job not found", NotFound);
-		return apiSuccess({ cronJob: serializeCronJob(cronJob) });
-	},
-});
+/** Route leaves this controller handles, grouped for a single `router.map()` call. */
+export const cronJobRoutes = {
+	cronJobShow: routes.api.v1.cronJobs.show,
+	cronJobUpdate: routes.api.v1.cronJobs.update,
+	cronJobDestroy: routes.api.v1.cronJobs.destroy,
+};
 
-/** PUT /api/v1/cron-jobs/:cronJobId — updates a cron-job monitor's editable fields. */
-export const cronJobUpdate = createAction(routes.api.v1.cronJobUpdate, {
-	middleware: [requireApiKey("cron-jobs:write")],
-	handler: async (ctx) => {
-		let { cronJobId } = s.parse(CronJobIdParams, ctx.params);
-		let db = getServiceContainer().get(Database);
-		let existing = await CronJobMonitor.findByIdForTeam(db, ctx.apiTeam.id, cronJobId);
-		if (!existing) return apiError("NOT_FOUND", "Cron job not found", NotFound);
+export default createController(cronJobRoutes, {
+	actions: {
+		/** GET /api/v1/cron-jobs/:cronJobId — a single cron-job monitor. */
+		cronJobShow: {
+			middleware: [requireApiKey("cron-jobs:read")],
+			handler: async (ctx) => {
+				let { cronJobId } = s.parse(CronJobIdParams, ctx.params);
+				let db = getServiceContainer().get(Database);
+				let cronJob = await CronJobMonitor.findByIdForTeam(db, ctx.apiTeam.id, cronJobId);
+				if (!cronJob) return apiError("NOT_FOUND", "Cron job not found", NotFound);
+				return apiSuccess({ cronJob: serializeCronJob(cronJob) });
+			},
+		},
 
-		let result = await validate(ctx.request, UpdateCronJobSchema);
-		if (isFailure(result)) {
-			return apiError(
-				"VALIDATION_ERROR",
-				result.error.issues.map((issue) => issue.message).join(", "),
-				BadRequest,
-			);
-		}
+		/** PUT /api/v1/cron-jobs/:cronJobId — updates a cron-job monitor's editable fields. */
+		cronJobUpdate: {
+			middleware: [requireApiKey("cron-jobs:write")],
+			handler: async (ctx) => {
+				let { cronJobId } = s.parse(CronJobIdParams, ctx.params);
+				let db = getServiceContainer().get(Database);
+				let existing = await CronJobMonitor.findByIdForTeam(db, ctx.apiTeam.id, cronJobId);
+				if (!existing) return apiError("NOT_FOUND", "Cron job not found", NotFound);
 
-		let changes: Partial<InsertCronJobMonitor> = {};
-		if (result.data.name !== undefined) changes.name = result.data.name;
-		if (result.data.description !== undefined) changes.description = result.data.description;
-		if (result.data.gracePeriodSeconds !== undefined)
-			changes.grace_period_seconds = result.data.gracePeriodSeconds;
-		if (result.data.timezone !== undefined) changes.timezone = result.data.timezone;
-		if (result.data.alertOnLate !== undefined) changes.alert_on_late = result.data.alertOnLate;
-		if (result.data.enabled !== undefined)
-			changes.enabled_at = result.data.enabled ? Date.now() : null;
+				let result = await validate(ctx.request, UpdateCronJobSchema);
+				if (isFailure(result)) {
+					return apiError(
+						"VALIDATION_ERROR",
+						result.error.issues.map((issue) => issue.message).join(", "),
+						BadRequest,
+					);
+				}
 
-		if (result.data.cronExpression !== undefined) {
-			let timezone = result.data.timezone ?? existing.timezone;
-			try {
-				CronJobMonitor.validateCronExpression(result.data.cronExpression, timezone);
-			} catch {
-				return apiError("VALIDATION_ERROR", "Invalid cron expression", BadRequest);
-			}
-			changes.cron_expression = result.data.cronExpression;
-			changes.next_expected_at = CronJobMonitor.calculateNextExpected(
-				result.data.cronExpression,
-				timezone,
-			);
-		} else if (result.data.timezone !== undefined && result.data.timezone !== existing.timezone) {
-			changes.next_expected_at = CronJobMonitor.calculateNextExpected(
-				existing.cron_expression,
-				result.data.timezone,
-			);
-		}
+				let changes: Partial<InsertCronJobMonitor> = {};
+				if (result.data.name !== undefined) changes.name = result.data.name;
+				if (result.data.description !== undefined) changes.description = result.data.description;
+				if (result.data.gracePeriodSeconds !== undefined)
+					changes.grace_period_seconds = result.data.gracePeriodSeconds;
+				if (result.data.timezone !== undefined) changes.timezone = result.data.timezone;
+				if (result.data.alertOnLate !== undefined) changes.alert_on_late = result.data.alertOnLate;
+				if (result.data.enabled !== undefined)
+					changes.enabled_at = result.data.enabled ? Date.now() : null;
 
-		let cronJob = await CronJobMonitor.updateById(db, cronJobId, changes);
-		return apiSuccess({ cronJob: serializeCronJob(cronJob) });
-	},
-});
+				if (result.data.cronExpression !== undefined) {
+					let timezone = result.data.timezone ?? existing.timezone;
+					try {
+						CronJobMonitor.validateCronExpression(result.data.cronExpression, timezone);
+					} catch {
+						return apiError("VALIDATION_ERROR", "Invalid cron expression", BadRequest);
+					}
+					changes.cron_expression = result.data.cronExpression;
+					changes.next_expected_at = CronJobMonitor.calculateNextExpected(
+						result.data.cronExpression,
+						timezone,
+					);
+				} else if (
+					result.data.timezone !== undefined &&
+					result.data.timezone !== existing.timezone
+				) {
+					changes.next_expected_at = CronJobMonitor.calculateNextExpected(
+						existing.cron_expression,
+						result.data.timezone,
+					);
+				}
 
-/** DELETE /api/v1/cron-jobs/:cronJobId — deletes a cron-job monitor. */
-export const cronJobDestroy = createAction(routes.api.v1.cronJobDestroy, {
-	middleware: [requireApiKey("cron-jobs:write")],
-	handler: async (ctx) => {
-		let { cronJobId } = s.parse(CronJobIdParams, ctx.params);
-		let db = getServiceContainer().get(Database);
-		let existing = await CronJobMonitor.findByIdForTeam(db, ctx.apiTeam.id, cronJobId);
-		if (!existing) return apiError("NOT_FOUND", "Cron job not found", NotFound);
+				let cronJob = await CronJobMonitor.updateById(db, cronJobId, changes);
+				return apiSuccess({ cronJob: serializeCronJob(cronJob) });
+			},
+		},
 
-		await CronJobMonitor.deleteById(db, cronJobId);
-		return apiSuccess({ deleted: true });
+		/** DELETE /api/v1/cron-jobs/:cronJobId — deletes a cron-job monitor. */
+		cronJobDestroy: {
+			middleware: [requireApiKey("cron-jobs:write")],
+			handler: async (ctx) => {
+				let { cronJobId } = s.parse(CronJobIdParams, ctx.params);
+				let db = getServiceContainer().get(Database);
+				let existing = await CronJobMonitor.findByIdForTeam(db, ctx.apiTeam.id, cronJobId);
+				if (!existing) return apiError("NOT_FOUND", "Cron job not found", NotFound);
+
+				await CronJobMonitor.deleteById(db, cronJobId);
+				return apiSuccess({ deleted: true });
+			},
+		},
 	},
 });

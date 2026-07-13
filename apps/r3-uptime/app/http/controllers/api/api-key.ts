@@ -20,7 +20,7 @@ import routes from "~/routes/web";
 const ApiKeyIdParams = s.object({ apiKeyId: s.string() });
 
 /** DELETE /api/v1/api-keys/:apiKeyId — revokes an API key for the team. */
-export const apiKeyDestroy = createAction(routes.api.v1.apiKeyDestroy, {
+export const apiKeyDestroy = createAction(routes.api.v1.apiKeys.destroy, {
 	middleware: [requireApiKey("api-keys:write")],
 	handler: async (ctx) => {
 		let { apiKeyId } = s.parse(ApiKeyIdParams, ctx.params);

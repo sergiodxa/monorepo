@@ -14,7 +14,7 @@ import { validate } from "@pkg/validate";
 import * as s from "remix/data-schema";
 import * as checks from "remix/data-schema/checks";
 import { Database } from "remix/data-table";
-import { createAction } from "remix/fetch-router";
+import { createController } from "remix/fetch-router";
 
 import type { SelectApiKey } from "~/database/schema";
 
@@ -50,42 +50,52 @@ const CreateApiKeySchema = s.object({
 	),
 });
 
-/** GET /api/v1/api-keys — lists the team's API keys (metadata only). */
-export const apiKeysIndex = createAction(routes.api.v1.apiKeysIndex, {
-	middleware: [requireApiKey("api-keys:read")],
-	handler: async (ctx) => {
-		let db = getServiceContainer().get(Database);
-		let keys = await ApiKey.listByTeam(db, ctx.apiTeam.id);
-		return apiSuccess({ apiKeys: keys.map(serializeApiKey) });
-	},
-});
+/** Route leaves this controller handles, grouped for a single `router.map()` call. */
+export const apiKeysRoutes = {
+	apiKeysIndex: routes.api.v1.apiKeys.index,
+	apiKeysCreate: routes.api.v1.apiKeys.create,
+};
 
-/** POST /api/v1/api-keys — creates a new API key for the team, returning the plaintext key once. */
-export const apiKeysCreate = createAction(routes.api.v1.apiKeysCreate, {
-	middleware: [requireApiKey("api-keys:write")],
-	handler: async (ctx) => {
-		let db = getServiceContainer().get(Database);
+export default createController(apiKeysRoutes, {
+	actions: {
+		/** GET /api/v1/api-keys — lists the team's API keys (metadata only). */
+		apiKeysIndex: {
+			middleware: [requireApiKey("api-keys:read")],
+			handler: async (ctx) => {
+				let db = getServiceContainer().get(Database);
+				let keys = await ApiKey.listByTeam(db, ctx.apiTeam.id);
+				return apiSuccess({ apiKeys: keys.map(serializeApiKey) });
+			},
+		},
 
-		let existingCount = await ApiKey.countByTeam(db, ctx.apiTeam.id);
-		if (existingCount >= MAX_API_KEYS_PER_TEAM) {
-			return apiError("LIMIT_EXCEEDED", "API key limit reached for this team", BadRequest);
-		}
+		/** POST /api/v1/api-keys — creates a new API key for the team, returning the plaintext key once. */
+		apiKeysCreate: {
+			middleware: [requireApiKey("api-keys:write")],
+			handler: async (ctx) => {
+				let db = getServiceContainer().get(Database);
 
-		let result = await validate(ctx.request, CreateApiKeySchema);
-		if (isFailure(result)) {
-			return apiError(
-				"VALIDATION_ERROR",
-				result.error.issues.map((issue) => issue.message).join(", "),
-				BadRequest,
-			);
-		}
+				let existingCount = await ApiKey.countByTeam(db, ctx.apiTeam.id);
+				if (existingCount >= MAX_API_KEYS_PER_TEAM) {
+					return apiError("LIMIT_EXCEEDED", "API key limit reached for this team", BadRequest);
+				}
 
-		let { record, key } = await ApiKey.create(db, ctx.apiTeam.id, {
-			name: result.data.name,
-			scopes: result.data.scopes,
-			expires_at: result.data.expiresAt ?? null,
-		});
+				let result = await validate(ctx.request, CreateApiKeySchema);
+				if (isFailure(result)) {
+					return apiError(
+						"VALIDATION_ERROR",
+						result.error.issues.map((issue) => issue.message).join(", "),
+						BadRequest,
+					);
+				}
 
-		return apiSuccess({ apiKey: serializeApiKey(record), key }, Created);
+				let { record, key } = await ApiKey.create(db, ctx.apiTeam.id, {
+					name: result.data.name,
+					scopes: result.data.scopes,
+					expires_at: result.data.expiresAt ?? null,
+				});
+
+				return apiSuccess({ apiKey: serializeApiKey(record), key }, Created);
+			},
+		},
 	},
 });

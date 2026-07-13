@@ -77,75 +77,35 @@ import {
 	removeDomain,
 	retryDomainVerification,
 } from "~/app/http/controllers/actions/team-domains";
-import {
-	alertDestroy,
-	alertEvents,
-	alertShow,
-	alertUpdate,
-} from "~/app/http/controllers/api/alert";
-import { alertsCreate, alertsIndex } from "~/app/http/controllers/api/alerts";
+import alertController, { alertRoutes } from "~/app/http/controllers/api/alert";
+import alertsController, { alertsRoutes } from "~/app/http/controllers/api/alerts";
 import { apiKeyDestroy } from "~/app/http/controllers/api/api-key";
-import { apiKeysCreate, apiKeysIndex } from "~/app/http/controllers/api/api-keys";
+import apiKeysController, { apiKeysRoutes } from "~/app/http/controllers/api/api-keys";
 import { backfillDailyStatsCreate } from "~/app/http/controllers/api/backfill-daily-stats";
-import {
-	cronJobDestroy,
-	cronJobShow as apiCronJobShow,
-	cronJobUpdate,
-} from "~/app/http/controllers/api/cron-job";
+import cronJobController, { cronJobRoutes } from "~/app/http/controllers/api/cron-job";
 import cronJobPing from "~/app/http/controllers/api/cron-job-ping";
-import { cronJobsCreate, cronJobsIndex } from "~/app/http/controllers/api/cron-jobs";
-import {
-	dnsMonitorDestroy,
-	dnsMonitorResults,
-	dnsMonitorShow as apiDnsMonitorShow,
-	dnsMonitorUpdate,
-} from "~/app/http/controllers/api/dns-monitor";
-import { dnsMonitorsCreate, dnsMonitorsIndex } from "~/app/http/controllers/api/dns-monitors";
+import cronJobsController, { cronJobsRoutes } from "~/app/http/controllers/api/cron-jobs";
+import dnsMonitorController, { dnsMonitorRoutes } from "~/app/http/controllers/api/dns-monitor";
+import dnsMonitorsController, { dnsMonitorsRoutes } from "~/app/http/controllers/api/dns-monitors";
 import { inviteDestroy } from "~/app/http/controllers/api/invite";
-import { invitesCreate, invitesIndex } from "~/app/http/controllers/api/invites";
-import { maintenanceCreate, maintenanceIndex } from "~/app/http/controllers/api/maintenance";
-import {
-	maintenanceDestroy,
-	maintenanceEnd,
-	maintenanceShow,
-	maintenanceUpdate,
+import invitesController, { invitesRoutes } from "~/app/http/controllers/api/invites";
+import maintenanceController, { maintenanceRoutes } from "~/app/http/controllers/api/maintenance";
+import maintenanceWindowController, {
+	maintenanceWindowRoutes,
 } from "~/app/http/controllers/api/maintenance-window";
 import { membershipsIndex } from "~/app/http/controllers/api/memberships";
-import {
-	monitorAlertEvents,
-	monitorDestroy,
-	monitorResults,
-	monitorShow as apiMonitorShow,
-	monitorStats,
-	monitorUpdate,
-} from "~/app/http/controllers/api/monitor";
-import {
-	monitorContentCheckDestroy,
-	monitorContentChecksCreate,
-	monitorContentChecksIndex,
+import monitorController, { monitorRoutes } from "~/app/http/controllers/api/monitor";
+import monitorContentChecksController, {
+	monitorContentChecksRoutes,
 } from "~/app/http/controllers/api/monitor-content-checks";
-import { monitorsCreate, monitorsIndex, monitorsStats } from "~/app/http/controllers/api/monitors";
+import monitorsController, { monitorsRoutes } from "~/app/http/controllers/api/monitors";
 import { statusShow } from "~/app/http/controllers/api/status";
-import {
-	statusPageDestroy,
-	statusPageMonitors,
-	statusPageShow,
-	statusPageUpdate,
-} from "~/app/http/controllers/api/status-page";
-import { statusPagesCreate, statusPagesIndex } from "~/app/http/controllers/api/status-pages";
-import {
-	tcpMonitorDestroy,
-	tcpMonitorResults,
-	tcpMonitorShow as apiTcpMonitorShow,
-	tcpMonitorUpdate,
-} from "~/app/http/controllers/api/tcp-monitor";
-import { tcpMonitorsCreate, tcpMonitorsIndex } from "~/app/http/controllers/api/tcp-monitors";
-import { teamShow, teamUpdate } from "~/app/http/controllers/api/team";
-import {
-	teamDomainsCreate,
-	teamDomainsDestroy,
-	teamDomainsIndex,
-} from "~/app/http/controllers/api/team-domains";
+import statusPageApiController, { statusPageRoutes } from "~/app/http/controllers/api/status-page";
+import statusPagesController, { statusPagesRoutes } from "~/app/http/controllers/api/status-pages";
+import tcpMonitorController, { tcpMonitorRoutes } from "~/app/http/controllers/api/tcp-monitor";
+import tcpMonitorsController, { tcpMonitorsRoutes } from "~/app/http/controllers/api/tcp-monitors";
+import teamController, { teamRoutes } from "~/app/http/controllers/api/team";
+import teamDomainsController, { teamDomainsRoutes } from "~/app/http/controllers/api/team-domains";
 import appIndex from "~/app/http/controllers/app/index";
 import account from "~/app/http/controllers/app/team/account";
 import alertEdit from "~/app/http/controllers/app/team/alert-edit";
@@ -160,6 +120,9 @@ import cronJobNew from "~/app/http/controllers/app/team/cron-job-new";
 import cronJobShow from "~/app/http/controllers/app/team/cron-job-show";
 import cronJobs from "~/app/http/controllers/app/team/cron-jobs";
 import teamDashboard from "~/app/http/controllers/app/team/dashboard";
+import dashboardCardCounts from "~/app/http/controllers/app/team/dashboard-card-counts";
+import dashboardCardOverview from "~/app/http/controllers/app/team/dashboard-card-overview";
+import dashboardCardUsage from "~/app/http/controllers/app/team/dashboard-card-usage";
 import dashboardPanel from "~/app/http/controllers/app/team/dashboard-panel";
 import dnsMonitorEdit from "~/app/http/controllers/app/team/dns-monitor-edit";
 import dnsMonitorNew from "~/app/http/controllers/app/team/dns-monitor-new";
@@ -269,6 +232,9 @@ export default function application(options: application.Options) {
 	router.map(routes.app.team.index, teamIndex);
 	router.map(routes.app.team.dashboard, teamDashboard);
 	router.map(routes.app.team.dashboardPanel, dashboardPanel);
+	router.map(routes.app.team.dashboardCardUsage, dashboardCardUsage);
+	router.map(routes.app.team.dashboardCardOverview, dashboardCardOverview);
+	router.map(routes.app.team.dashboardCardCounts, dashboardCardCounts);
 	router.map(routes.app.team.httpMonitors, httpMonitors);
 	router.map(routes.app.team.monitorNew, monitorNew);
 	router.map(routes.app.team.monitorShow, monitorShow);
@@ -380,82 +346,48 @@ export default function application(options: application.Options) {
 	// docblock for why it doesn't sit behind `requireUser`/`requireTeam`).
 	router.map(routes.api.cronJobPing, cronJobPing);
 
-	// Bearer-API-key-gated REST API. Each leaf is mapped individually so read/write
-	// methods on the same resource can require different scopes (see `routes/web.ts`'s
-	// docblock on the `api.v1` group).
+	// Bearer-API-key-gated REST API. Each file with 2+ actions is wired through a
+	// single `createController()` call keyed by that file's own exported route-map
+	// object (e.g. `monitorRoutes`), so read/write methods on the same resource can
+	// still require different scopes via each action's own `middleware` (see
+	// `routes/web.ts`'s docblock on the `api.v1` group). Single-action files stay
+	// plain `createAction()` default exports mapped directly to their one route.
 	router.map(routes.api.v1.status, statusShow);
 	router.map(routes.api.v1.backfillDailyStats, backfillDailyStatsCreate);
 
-	router.map(routes.api.v1.monitorsIndex, monitorsIndex);
-	router.map(routes.api.v1.monitorsCreate, monitorsCreate);
-	router.map(routes.api.v1.monitorsStats, monitorsStats);
-	router.map(routes.api.v1.monitorShow, apiMonitorShow);
-	router.map(routes.api.v1.monitorUpdate, monitorUpdate);
-	router.map(routes.api.v1.monitorDestroy, monitorDestroy);
-	router.map(routes.api.v1.monitorStats, monitorStats);
-	router.map(routes.api.v1.monitorResults, monitorResults);
-	router.map(routes.api.v1.monitorAlertEvents, monitorAlertEvents);
-	router.map(routes.api.v1.monitorContentChecksIndex, monitorContentChecksIndex);
-	router.map(routes.api.v1.monitorContentChecksCreate, monitorContentChecksCreate);
-	router.map(routes.api.v1.monitorContentCheckDestroy, monitorContentCheckDestroy);
+	router.map(monitorsRoutes, monitorsController);
+	router.map(monitorRoutes, monitorController);
+	router.map(monitorContentChecksRoutes, monitorContentChecksController);
 
-	router.map(routes.api.v1.dnsMonitorsIndex, dnsMonitorsIndex);
-	router.map(routes.api.v1.dnsMonitorsCreate, dnsMonitorsCreate);
-	router.map(routes.api.v1.dnsMonitorShow, apiDnsMonitorShow);
-	router.map(routes.api.v1.dnsMonitorUpdate, dnsMonitorUpdate);
-	router.map(routes.api.v1.dnsMonitorDestroy, dnsMonitorDestroy);
-	router.map(routes.api.v1.dnsMonitorResults, dnsMonitorResults);
+	router.map(dnsMonitorsRoutes, dnsMonitorsController);
+	router.map(dnsMonitorRoutes, dnsMonitorController);
 
-	router.map(routes.api.v1.tcpMonitorsIndex, tcpMonitorsIndex);
-	router.map(routes.api.v1.tcpMonitorsCreate, tcpMonitorsCreate);
-	router.map(routes.api.v1.tcpMonitorShow, apiTcpMonitorShow);
-	router.map(routes.api.v1.tcpMonitorUpdate, tcpMonitorUpdate);
-	router.map(routes.api.v1.tcpMonitorDestroy, tcpMonitorDestroy);
-	router.map(routes.api.v1.tcpMonitorResults, tcpMonitorResults);
+	router.map(tcpMonitorsRoutes, tcpMonitorsController);
+	router.map(tcpMonitorRoutes, tcpMonitorController);
 
-	router.map(routes.api.v1.cronJobsIndex, cronJobsIndex);
-	router.map(routes.api.v1.cronJobsCreate, cronJobsCreate);
-	router.map(routes.api.v1.cronJobShow, apiCronJobShow);
-	router.map(routes.api.v1.cronJobUpdate, cronJobUpdate);
-	router.map(routes.api.v1.cronJobDestroy, cronJobDestroy);
+	router.map(cronJobsRoutes, cronJobsController);
+	router.map(cronJobRoutes, cronJobController);
 
-	router.map(routes.api.v1.alertsIndex, alertsIndex);
-	router.map(routes.api.v1.alertsCreate, alertsCreate);
-	router.map(routes.api.v1.alertShow, alertShow);
-	router.map(routes.api.v1.alertUpdate, alertUpdate);
-	router.map(routes.api.v1.alertDestroy, alertDestroy);
-	router.map(routes.api.v1.alertEvents, alertEvents);
+	router.map(alertsRoutes, alertsController);
+	router.map(alertRoutes, alertController);
 
-	router.map(routes.api.v1.maintenanceIndex, maintenanceIndex);
-	router.map(routes.api.v1.maintenanceCreate, maintenanceCreate);
-	router.map(routes.api.v1.maintenanceShow, maintenanceShow);
-	router.map(routes.api.v1.maintenanceUpdate, maintenanceUpdate);
-	router.map(routes.api.v1.maintenanceDestroy, maintenanceDestroy);
-	router.map(routes.api.v1.maintenanceEnd, maintenanceEnd);
+	router.map(maintenanceRoutes, maintenanceController);
+	router.map(maintenanceWindowRoutes, maintenanceWindowController);
 
-	router.map(routes.api.v1.statusPagesIndex, statusPagesIndex);
-	router.map(routes.api.v1.statusPagesCreate, statusPagesCreate);
-	router.map(routes.api.v1.statusPageShow, statusPageShow);
-	router.map(routes.api.v1.statusPageUpdate, statusPageUpdate);
-	router.map(routes.api.v1.statusPageDestroy, statusPageDestroy);
-	router.map(routes.api.v1.statusPageMonitors, statusPageMonitors);
+	router.map(statusPagesRoutes, statusPagesController);
+	router.map(statusPageRoutes, statusPageApiController);
 
-	router.map(routes.api.v1.invitesIndex, invitesIndex);
-	router.map(routes.api.v1.invitesCreate, invitesCreate);
-	router.map(routes.api.v1.inviteDestroy, inviteDestroy);
+	router.map(invitesRoutes, invitesController);
+	router.map(routes.api.v1.invites.destroy, inviteDestroy);
 
 	router.map(routes.api.v1.memberships, membershipsIndex);
 
-	router.map(routes.api.v1.teamShow, teamShow);
-	router.map(routes.api.v1.teamUpdate, teamUpdate);
+	router.map(teamRoutes, teamController);
 
-	router.map(routes.api.v1.teamDomainsIndex, teamDomainsIndex);
-	router.map(routes.api.v1.teamDomainsCreate, teamDomainsCreate);
-	router.map(routes.api.v1.teamDomainsDestroy, teamDomainsDestroy);
+	router.map(teamDomainsRoutes, teamDomainsController);
 
-	router.map(routes.api.v1.apiKeysIndex, apiKeysIndex);
-	router.map(routes.api.v1.apiKeysCreate, apiKeysCreate);
-	router.map(routes.api.v1.apiKeyDestroy, apiKeyDestroy);
+	router.map(apiKeysRoutes, apiKeysController);
+	router.map(routes.api.v1.apiKeys.destroy, apiKeyDestroy);
 
 	return router;
 }

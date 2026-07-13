@@ -13,7 +13,7 @@ import { validate } from "@pkg/validate";
 import * as s from "remix/data-schema";
 import * as checks from "remix/data-schema/checks";
 import { Database } from "remix/data-table";
-import { createAction } from "remix/fetch-router";
+import { createController } from "remix/fetch-router";
 
 import type { InsertTeam, SelectTeam } from "~/database/schema";
 
@@ -45,33 +45,43 @@ const UpdateTeamSchema = s
 		"At least one field must be provided",
 	);
 
-/** GET /api/v1/team — the authenticated team's profile. */
-export const teamShow = createAction(routes.api.v1.teamShow, {
-	middleware: [requireApiKey("teams:read")],
-	handler: async (ctx) => {
-		return apiSuccess({ team: serializeTeam(ctx.apiTeam) });
-	},
-});
+/** Route leaves this controller handles, grouped for a single `router.map()` call. */
+export const teamRoutes = {
+	teamShow: routes.api.v1.teamShow,
+	teamUpdate: routes.api.v1.teamUpdate,
+};
 
-/** PUT /api/v1/team — updates the authenticated team's name and/or logo. */
-export const teamUpdate = createAction(routes.api.v1.teamUpdate, {
-	middleware: [requireApiKey("teams:write")],
-	handler: async (ctx) => {
-		let result = await validate(ctx.request, UpdateTeamSchema);
-		if (isFailure(result)) {
-			return apiError(
-				"VALIDATION_ERROR",
-				result.error.issues.map((issue) => issue.message).join(", "),
-				BadRequest,
-			);
-		}
+export default createController(teamRoutes, {
+	actions: {
+		/** GET /api/v1/team — the authenticated team's profile. */
+		teamShow: {
+			middleware: [requireApiKey("teams:read")],
+			handler: async (ctx) => {
+				return apiSuccess({ team: serializeTeam(ctx.apiTeam) });
+			},
+		},
 
-		let changes: Partial<InsertTeam> = {};
-		if (result.data.name !== undefined) changes.name = result.data.name;
-		if (result.data.logoUrl !== undefined) changes.logo = result.data.logoUrl;
+		/** PUT /api/v1/team — updates the authenticated team's name and/or logo. */
+		teamUpdate: {
+			middleware: [requireApiKey("teams:write")],
+			handler: async (ctx) => {
+				let result = await validate(ctx.request, UpdateTeamSchema);
+				if (isFailure(result)) {
+					return apiError(
+						"VALIDATION_ERROR",
+						result.error.issues.map((issue) => issue.message).join(", "),
+						BadRequest,
+					);
+				}
 
-		let db = getServiceContainer().get(Database);
-		let team = await Team.updateById(db, ctx.apiTeam.id, changes);
-		return apiSuccess({ team: serializeTeam(team) });
+				let changes: Partial<InsertTeam> = {};
+				if (result.data.name !== undefined) changes.name = result.data.name;
+				if (result.data.logoUrl !== undefined) changes.logo = result.data.logoUrl;
+
+				let db = getServiceContainer().get(Database);
+				let team = await Team.updateById(db, ctx.apiTeam.id, changes);
+				return apiSuccess({ team: serializeTeam(team) });
+			},
+		},
 	},
 });

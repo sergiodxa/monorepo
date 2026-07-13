@@ -42,7 +42,7 @@ const BEARER_PATTERN = /^Bearer\s+(.+)$/i;
  * valid key missing `scope`, otherwise forwarding to the handler with
  * `ctx.apiKey`/`ctx.apiTeam` set.
  * @example
- * router.map(routes.api.v1.monitorsIndex, {
+ * router.map(routes.api.v1.monitors.index, {
  * 	middleware: [requireApiKey("monitors:read")],
  * 	handler: monitorsIndex,
  * });

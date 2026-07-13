@@ -15,7 +15,7 @@ import { validate } from "@pkg/validate";
 import * as s from "remix/data-schema";
 import * as checks from "remix/data-schema/checks";
 import { Database } from "remix/data-table";
-import { createAction } from "remix/fetch-router";
+import { createController } from "remix/fetch-router";
 
 import type { InsertStatusPage } from "~/database/schema";
 
@@ -61,125 +61,137 @@ const UpdateStatusPageSchema = s.object({
 	showOverallStatus: s.optional(s.boolean()),
 });
 
-/** GET /api/v1/status-pages/:statusPageId — a status page with its attachment id lists. */
-export const statusPageShow = createAction(routes.api.v1.statusPageShow, {
-	middleware: [requireApiKey("status-pages:read")],
-	handler: async (ctx) => {
-		let { statusPageId } = s.parse(StatusPageIdParams, ctx.params);
-		let db = getServiceContainer().get(Database);
-		let statusPage = await loadWithAttachments(db, ctx.apiTeam.id, statusPageId);
-		if (!statusPage) return apiError("NOT_FOUND", "Status page not found", NotFound);
-		return apiSuccess({ statusPage });
-	},
-});
-
-/** PUT /api/v1/status-pages/:statusPageId — updates a status page's own fields. */
-export const statusPageUpdate = createAction(routes.api.v1.statusPageUpdate, {
-	middleware: [requireApiKey("status-pages:write")],
-	handler: async (ctx) => {
-		let { statusPageId } = s.parse(StatusPageIdParams, ctx.params);
-		let db = getServiceContainer().get(Database);
-		let existing = await StatusPage.findByIdForTeam(db, ctx.apiTeam.id, statusPageId);
-		if (!existing) return apiError("NOT_FOUND", "Status page not found", NotFound);
-
-		let result = await validate(ctx.request, UpdateStatusPageSchema);
-		if (isFailure(result)) {
-			return apiError(
-				"VALIDATION_ERROR",
-				result.error.issues.map((issue) => issue.message).join(", "),
-				BadRequest,
-			);
-		}
-
-		if (
-			result.data.slug !== undefined &&
-			(await StatusPage.isSlugTaken(db, result.data.slug, existing.id))
-		) {
-			return apiError("VALIDATION_ERROR", "Slug is already in use", BadRequest);
-		}
-
-		let changes: Partial<InsertStatusPage> = {};
-		if (result.data.name !== undefined) changes.name = result.data.name;
-		if (result.data.slug !== undefined) changes.slug = result.data.slug;
-		if (result.data.title !== undefined) changes.title = result.data.title;
-		if (result.data.description !== undefined)
-			changes.description = result.data.description ?? null;
-		if (result.data.logoUrl !== undefined) changes.logo_url = result.data.logoUrl ?? null;
-		if (result.data.customDomain !== undefined)
-			changes.custom_domain = result.data.customDomain ?? null;
-		if (result.data.isPublic !== undefined) changes.is_public = result.data.isPublic;
-		if (result.data.showOverallStatus !== undefined)
-			changes.show_overall_status = result.data.showOverallStatus;
-
-		if (Object.keys(changes).length > 0) await StatusPage.updateById(db, statusPageId, changes);
-
-		let statusPage = await loadWithAttachments(db, ctx.apiTeam.id, statusPageId);
-		if (!statusPage)
-			return apiError("INTERNAL_ERROR", "Failed to load updated status page", BadRequest);
-		return apiSuccess({ statusPage });
-	},
-});
-
-/** DELETE /api/v1/status-pages/:statusPageId — deletes a status page and its attachments. */
-export const statusPageDestroy = createAction(routes.api.v1.statusPageDestroy, {
-	middleware: [requireApiKey("status-pages:write")],
-	handler: async (ctx) => {
-		let { statusPageId } = s.parse(StatusPageIdParams, ctx.params);
-		let db = getServiceContainer().get(Database);
-		let existing = await StatusPage.findByIdForTeam(db, ctx.apiTeam.id, statusPageId);
-		if (!existing) return apiError("NOT_FOUND", "Status page not found", NotFound);
-
-		await StatusPage.deleteById(db, statusPageId);
-		return apiSuccess({ deleted: true });
-	},
-});
-
 const UpdateAssociationsSchema = s.object({
 	monitorIds: s.defaulted(s.array(s.string()), []),
 	cronJobIds: s.defaulted(s.array(s.string()), []),
 });
 
-/** PUT /api/v1/status-pages/:statusPageId/monitors — replaces attached monitors/cron jobs. */
-export const statusPageMonitors = createAction(routes.api.v1.statusPageMonitors, {
-	middleware: [requireApiKey("status-pages:write")],
-	handler: async (ctx) => {
-		let { statusPageId } = s.parse(StatusPageIdParams, ctx.params);
-		let db = getServiceContainer().get(Database);
-		let statusPage = await StatusPage.findByIdForTeam(db, ctx.apiTeam.id, statusPageId);
-		if (!statusPage) return apiError("NOT_FOUND", "Status page not found", NotFound);
+/** Route leaves this controller handles, grouped for a single `router.map()` call. */
+export const statusPageRoutes = {
+	statusPageShow: routes.api.v1.statusPages.show,
+	statusPageUpdate: routes.api.v1.statusPages.update,
+	statusPageDestroy: routes.api.v1.statusPages.destroy,
+	statusPageMonitors: routes.api.v1.statusPages.monitors,
+};
 
-		let result = await validate(ctx.request, UpdateAssociationsSchema);
-		if (isFailure(result)) {
-			return apiError(
-				"VALIDATION_ERROR",
-				result.error.issues.map((issue) => issue.message).join(", "),
-				BadRequest,
-			);
-		}
+export default createController(statusPageRoutes, {
+	actions: {
+		/** GET /api/v1/status-pages/:statusPageId — a status page with its attachment id lists. */
+		statusPageShow: {
+			middleware: [requireApiKey("status-pages:read")],
+			handler: async (ctx) => {
+				let { statusPageId } = s.parse(StatusPageIdParams, ctx.params);
+				let db = getServiceContainer().get(Database);
+				let statusPage = await loadWithAttachments(db, ctx.apiTeam.id, statusPageId);
+				if (!statusPage) return apiError("NOT_FOUND", "Status page not found", NotFound);
+				return apiSuccess({ statusPage });
+			},
+		},
 
-		let { monitorIds, cronJobIds } = result.data;
+		/** PUT /api/v1/status-pages/:statusPageId — updates a status page's own fields. */
+		statusPageUpdate: {
+			middleware: [requireApiKey("status-pages:write")],
+			handler: async (ctx) => {
+				let { statusPageId } = s.parse(StatusPageIdParams, ctx.params);
+				let db = getServiceContainer().get(Database);
+				let existing = await StatusPage.findByIdForTeam(db, ctx.apiTeam.id, statusPageId);
+				if (!existing) return apiError("NOT_FOUND", "Status page not found", NotFound);
 
-		if (monitorIds.length > 0) {
-			let found = await Monitor.findManyByIdsForTeam(db, ctx.apiTeam.id, monitorIds);
-			if (found.length !== monitorIds.length) {
-				return apiError("NOT_FOUND", "One or more monitors not found", NotFound);
-			}
-		}
+				let result = await validate(ctx.request, UpdateStatusPageSchema);
+				if (isFailure(result)) {
+					return apiError(
+						"VALIDATION_ERROR",
+						result.error.issues.map((issue) => issue.message).join(", "),
+						BadRequest,
+					);
+				}
 
-		if (cronJobIds.length > 0) {
-			let found = await CronJobMonitor.findManyByIdsForTeam(db, ctx.apiTeam.id, cronJobIds);
-			if (found.length !== cronJobIds.length) {
-				return apiError("NOT_FOUND", "One or more cron jobs not found", NotFound);
-			}
-		}
+				if (
+					result.data.slug !== undefined &&
+					(await StatusPage.isSlugTaken(db, result.data.slug, existing.id))
+				) {
+					return apiError("VALIDATION_ERROR", "Slug is already in use", BadRequest);
+				}
 
-		await StatusPage.setMonitors(db, statusPageId, monitorIds);
-		await StatusPage.setCronJobs(db, statusPageId, cronJobIds);
+				let changes: Partial<InsertStatusPage> = {};
+				if (result.data.name !== undefined) changes.name = result.data.name;
+				if (result.data.slug !== undefined) changes.slug = result.data.slug;
+				if (result.data.title !== undefined) changes.title = result.data.title;
+				if (result.data.description !== undefined)
+					changes.description = result.data.description ?? null;
+				if (result.data.logoUrl !== undefined) changes.logo_url = result.data.logoUrl ?? null;
+				if (result.data.customDomain !== undefined)
+					changes.custom_domain = result.data.customDomain ?? null;
+				if (result.data.isPublic !== undefined) changes.is_public = result.data.isPublic;
+				if (result.data.showOverallStatus !== undefined)
+					changes.show_overall_status = result.data.showOverallStatus;
 
-		return apiSuccess({
-			statusPage: serializeStatusPage(statusPage),
-			monitors: monitorIds,
-			cronJobs: cronJobIds,
-		});
+				if (Object.keys(changes).length > 0) await StatusPage.updateById(db, statusPageId, changes);
+
+				let statusPage = await loadWithAttachments(db, ctx.apiTeam.id, statusPageId);
+				if (!statusPage)
+					return apiError("INTERNAL_ERROR", "Failed to load updated status page", BadRequest);
+				return apiSuccess({ statusPage });
+			},
+		},
+
+		/** DELETE /api/v1/status-pages/:statusPageId — deletes a status page and its attachments. */
+		statusPageDestroy: {
+			middleware: [requireApiKey("status-pages:write")],
+			handler: async (ctx) => {
+				let { statusPageId } = s.parse(StatusPageIdParams, ctx.params);
+				let db = getServiceContainer().get(Database);
+				let existing = await StatusPage.findByIdForTeam(db, ctx.apiTeam.id, statusPageId);
+				if (!existing) return apiError("NOT_FOUND", "Status page not found", NotFound);
+
+				await StatusPage.deleteById(db, statusPageId);
+				return apiSuccess({ deleted: true });
+			},
+		},
+
+		/** PUT /api/v1/status-pages/:statusPageId/monitors — replaces attached monitors/cron jobs. */
+		statusPageMonitors: {
+			middleware: [requireApiKey("status-pages:write")],
+			handler: async (ctx) => {
+				let { statusPageId } = s.parse(StatusPageIdParams, ctx.params);
+				let db = getServiceContainer().get(Database);
+				let statusPage = await StatusPage.findByIdForTeam(db, ctx.apiTeam.id, statusPageId);
+				if (!statusPage) return apiError("NOT_FOUND", "Status page not found", NotFound);
+
+				let result = await validate(ctx.request, UpdateAssociationsSchema);
+				if (isFailure(result)) {
+					return apiError(
+						"VALIDATION_ERROR",
+						result.error.issues.map((issue) => issue.message).join(", "),
+						BadRequest,
+					);
+				}
+
+				let { monitorIds, cronJobIds } = result.data;
+
+				if (monitorIds.length > 0) {
+					let found = await Monitor.findManyByIdsForTeam(db, ctx.apiTeam.id, monitorIds);
+					if (found.length !== monitorIds.length) {
+						return apiError("NOT_FOUND", "One or more monitors not found", NotFound);
+					}
+				}
+
+				if (cronJobIds.length > 0) {
+					let found = await CronJobMonitor.findManyByIdsForTeam(db, ctx.apiTeam.id, cronJobIds);
+					if (found.length !== cronJobIds.length) {
+						return apiError("NOT_FOUND", "One or more cron jobs not found", NotFound);
+					}
+				}
+
+				await StatusPage.setMonitors(db, statusPageId, monitorIds);
+				await StatusPage.setCronJobs(db, statusPageId, cronJobIds);
+
+				return apiSuccess({
+					statusPage: serializeStatusPage(statusPage),
+					monitors: monitorIds,
+					cronJobs: cronJobIds,
+				});
+			},
+		},
 	},
 });
