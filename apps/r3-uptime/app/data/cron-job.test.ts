@@ -273,7 +273,7 @@ describe("CronJobMonitor.listActionable", () => {
 		});
 		await CronJobMonitor.updateStatus(db, missed.id, "missed");
 
-		// Still "new" — never received a first ping, and has no next_expected_at yet.
+		/** Still "new" — never received a first ping, and has no next_expected_at yet. */
 		await CronJobMonitor.create(db, "team-1", {
 			name: "New",
 			description: null,

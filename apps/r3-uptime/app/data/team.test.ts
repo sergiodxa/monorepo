@@ -166,9 +166,11 @@ async function seedFullTeam(db: Database, ownerSubjectId: string) {
 			team_id: team.id,
 			monitor_id: monitor.id,
 			name: "Downtime alert",
-			// The test adapter binds SQLite parameters directly, so a `c.json()` column's
-			// value must already be a string — stringify it and cast past the column's
-			// declared object type (`AlertConfig`) rather than fighting the type system.
+			/**
+			 * The test adapter binds SQLite parameters directly, so a `c.json()` column's
+			 * value must already be a string — stringify it and cast past the column's
+			 * declared object type (`AlertConfig`) rather than fighting the type system.
+			 */
 			config: JSON.stringify({
 				strategy: "webhook",
 				config: { url: "https://hooks.example.com", secret: "s3cr3t" },
@@ -217,8 +219,10 @@ async function seedFullTeam(db: Database, ownerSubjectId: string) {
 			name: "CI key",
 			key_hash: "hash",
 			key_prefix: "uptime_abc123456",
-			// Same rationale as `alerts.config` above: stringify for the SQLite binding,
-			// cast past the column's declared array type.
+			/**
+			 * Same rationale as `alerts.config` above: stringify for the SQLite binding,
+			 * cast past the column's declared array type.
+			 */
 			scopes: JSON.stringify(["monitors:read"]) as unknown as ApiKeyScope[],
 		},
 		{ touch: true, returnRow: true },

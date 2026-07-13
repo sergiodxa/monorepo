@@ -60,14 +60,16 @@ async function postDnsMonitorAction(
 	} as unknown as Resend);
 
 	let router = createRouter({ middleware: [asyncContext(), formData()] });
-	// Cast `router.map` itself (rather than its arguments) so this helper can map
-	// several differently-shaped routes without losing type-checking elsewhere.
+	/**
+	 * Casts `router.map` itself (rather than its arguments) so this helper can map
+	 * several differently-shaped routes without losing type-checking elsewhere.
+	 */
 	(router.map as (target: unknown, handler: unknown) => void)(route, {
 		middleware: [teamContextMiddleware(team, membership)],
 		handler: action,
 	});
 
-	// `del(...)` routes (e.g. `delete-dns-monitor`) only match a real HTTP `DELETE` request.
+	/** `del(...)` routes (e.g. `delete-dns-monitor`) only match a real HTTP `DELETE` request. */
 	let request = new Request(`https://uptime.test${route.href({ team: team.slug })}`, {
 		method: route.method,
 		body: new URLSearchParams(body),

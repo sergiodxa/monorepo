@@ -485,11 +485,12 @@ describe("getTeamHttpSparklines", () => {
 	});
 
 	test("downsamples a monitor's points to at most 30 bucket-averaged entries", async () => {
+		/** Generated newest-first, matching the query's ORDER BY timestamp DESC. */
 		let rows = Array.from({ length: 90 }, (_, index) => ({
 			monitorId: "m1",
 			timestamp: new Date(index * 60_000).toISOString(),
 			responseTimeMs: index,
-		})).reverse(); // newest-first, matching the query's ORDER BY timestamp DESC
+		})).reverse();
 
 		globalThis.fetch = mock(
 			async (..._args: unknown[]) => new Response(JSON.stringify({ data: rows })),
@@ -499,7 +500,7 @@ describe("getTeamHttpSparklines", () => {
 		if (isFailure(result)) throw new Error("expected success");
 		let points = result.data.get("m1") ?? [];
 		expect(points.length).toBe(30);
-		// Oldest-first: the first bucket averages the earliest (lowest) response times.
+		/** Oldest-first: the first bucket averages the earliest (lowest) response times. */
 		expect(points[0]?.responseTimeMs).toBeLessThan(points[points.length - 1]?.responseTimeMs ?? 0);
 	});
 

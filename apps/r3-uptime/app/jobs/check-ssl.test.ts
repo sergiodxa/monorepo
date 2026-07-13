@@ -58,19 +58,23 @@ let notifySslResultMock = mock(
 	},
 );
 
-// `~/app/data/monitor` (imported transitively by `./check-ssl`) reads `env` from
-// `cloudflare:workers` at module load. The repo-root `bunfig.toml` preload stubs this
-// automatically for `bun test` run from the repo root, but not when run from this
-// package's own directory (as instructed), so it's stubbed explicitly here too.
+/**
+ * `~/app/data/monitor` (imported transitively by `./check-ssl`) reads `env` from
+ * `cloudflare:workers` at module load. The repo-root `bunfig.toml` preload stubs this
+ * automatically for `bun test` run from the repo root, but not when run from this
+ * package's own directory (as instructed), so it's stubbed explicitly here too.
+ */
 mock.module("cloudflare:workers", () => ({
 	env: new Proxy({} as Record<string, unknown>, { get: (_target, prop: string) => `test-${prop}` }),
 }));
 
 mock.module("~/app/services/ssl-info", () => ({ calculateSslStatus: calculateSslStatusMock }));
-// All four `notify*` exports are stubbed here (not just `notifySslResult`) because
-// `check-dns.test.ts`, `check-tcp.test.ts`, and `check-cron-jobs.test.ts` mock this same
-// module path — `bun test` shares one module registry across files in a run, so a mock
-// missing an export another file's job imports fails with "export not found".
+/**
+ * All four `notify*` exports are stubbed here (not just `notifySslResult`) because
+ * `check-dns.test.ts`, `check-tcp.test.ts`, and `check-cron-jobs.test.ts` mock this same
+ * module path — `bun test` shares one module registry across files in a run, so a mock
+ * missing an export another file's job imports fails with "export not found".
+ */
 mock.module("~/app/services/alerts", () => ({
 	notifySslResult: notifySslResultMock,
 	notifyDnsResult: mock(async () => {}),
@@ -79,8 +83,10 @@ mock.module("~/app/services/alerts", () => ({
 }));
 
 let { CheckSslJob } = await import("./check-ssl");
-// Imported dynamically, after the `cloudflare:workers` mock above, since `Monitor`
-// itself reads `env` at module load and a static import would be hoisted before it.
+/**
+ * Imported dynamically, after the `cloudflare:workers` mock above, since `Monitor`
+ * itself reads `env` at module load and a static import would be hoisted before it.
+ */
 let { default: Monitor } = await import("~/app/data/monitor");
 
 function makeJob() {
@@ -176,8 +182,10 @@ describe("CheckSslJob", () => {
 
 	test("continues checking remaining monitors and counts an error when calculateSslStatus throws", async () => {
 		let { db } = createTestDatabase();
-		// Distinct expiry timestamps so the mock below can tell the two monitors apart —
-		// two `Date.now()`-based defaults could otherwise collide within the same millisecond.
+		/**
+		 * Distinct expiry timestamps so the mock below can tell the two monitors apart —
+		 * two `Date.now()`-based defaults could otherwise collide within the same millisecond.
+		 */
 		let failing = await seedMonitor(db, {
 			url: "https://fails.example.com",
 			ssl_expires_at: Date.now() + 1 * 24 * 60 * 60 * 1000,
@@ -201,7 +209,7 @@ describe("CheckSslJob", () => {
 		expect(completed?.successCount).toBe(1);
 		expect(completed?.errorCount).toBe(1);
 
-		// The failing monitor's cached fields are untouched — updateById never ran for it.
+		/** The failing monitor's cached fields are untouched — updateById never ran for it. */
 		let failedRow = await Monitor.findByIdForTeam(db, "team-1", failing.id);
 		expect(failedRow?.ssl_last_checked_at).toBeNull();
 

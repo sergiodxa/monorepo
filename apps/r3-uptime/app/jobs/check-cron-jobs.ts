@@ -28,8 +28,10 @@ export class CheckCronJobsJob extends Job {
 		let transitioned = 0;
 
 		for (let monitor of monitors) {
-			// `listActionable` only returns rows with a `next_expected_at`, but narrow again
-			// here so this loop's arithmetic doesn't need a non-null assertion.
+			/**
+			 * `listActionable` only returns rows with a `next_expected_at`, but narrow again
+			 * here so this loop's arithmetic doesn't need a non-null assertion.
+			 */
 			if (monitor.next_expected_at === null) continue;
 
 			let missedThreshold = monitor.next_expected_at + monitor.grace_period_seconds * 1000;

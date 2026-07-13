@@ -22,9 +22,11 @@ import { createTestDatabase } from "~/app/lib/test/db";
 import { memberships, monitorContentChecks, teams } from "~/database/schema";
 import routes from "~/routes/web";
 
-// `app/data/monitor.ts` (imported by `./content-checks`) reads `env` from
-// `cloudflare:workers` at module load time — stub it so importing the module doesn't
-// crash under `bun test`, matching `app/data/monitor.test.ts`'s established pattern.
+/**
+ * `app/data/monitor.ts` (imported by `./content-checks`) reads `env` from
+ * `cloudflare:workers` at module load time — stub it so importing the module doesn't
+ * crash under `bun test`, matching `app/data/monitor.test.ts`'s established pattern.
+ */
 mock.module("cloudflare:workers", () => ({ env: {} }));
 
 let { createContentCheck, deleteContentCheck } = await import("./content-checks");
@@ -52,14 +54,16 @@ async function postContentCheckAction(
 	container.singleton(Database, () => db);
 
 	let router = createRouter({ middleware: [asyncContext(), formData()] });
-	// Cast `router.map` itself (rather than its arguments) so this helper can map
-	// several differently-shaped routes without losing type-checking elsewhere.
+	/**
+	 * Casts `router.map` itself (rather than its arguments) so this helper can map
+	 * several differently-shaped routes without losing type-checking elsewhere.
+	 */
 	(router.map as (target: unknown, handler: unknown) => void)(route, {
 		middleware: [teamContextMiddleware(team, membership)],
 		handler: action,
 	});
 
-	// `del(...)` routes (e.g. `delete-content-check`) only match a real HTTP `DELETE` request.
+	/** `del(...)` routes (e.g. `delete-content-check`) only match a real HTTP `DELETE` request. */
 	let request = new Request(`https://uptime.test${route.href({ team: team.slug })}`, {
 		method: route.method,
 		body: new URLSearchParams(body),

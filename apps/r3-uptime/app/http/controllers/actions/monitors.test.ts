@@ -36,16 +36,18 @@ mock.module("cloudflare:workers", () => ({
 	waitUntil: (promise: Promise<unknown>) => promise,
 }));
 
-// `@pkg/validate`'s `validate()` flattens `FormData`/`URLSearchParams` into a plain
-// object before handing it to the schema, but `remix/data-schema/form-data`'s
-// `f.object()` (which every schema in this app is built with) validates the raw
-// `FormData`/`URLSearchParams` directly and rejects a flattened object with "Expected
-// FormData or URLSearchParams". As shipped, that means `validate(ctx.formData, ...)`
-// always fails, regardless of whether the submitted data is actually valid — a real,
-// reproducible bug in the shared `@pkg/validate` package (flagged separately). This
-// mock forwards the form container straight to the schema instead of flattening it,
-// so these tests exercise the actions' real branching instead of always hitting the
-// validation-error path; it can be deleted once the real `@pkg/validate` is fixed.
+/**
+ * `@pkg/validate`'s `validate()` flattens `FormData`/`URLSearchParams` into a plain
+ * object before handing it to the schema, but `remix/data-schema/form-data`'s
+ * `f.object()` (which every schema in this app is built with) validates the raw
+ * `FormData`/`URLSearchParams` directly and rejects a flattened object with "Expected
+ * FormData or URLSearchParams". As shipped, that means `validate(ctx.formData, ...)`
+ * always fails, regardless of whether the submitted data is actually valid — a real,
+ * reproducible bug in the shared `@pkg/validate` package (flagged separately). This
+ * mock forwards the form container straight to the schema instead of flattening it,
+ * so these tests exercise the actions' real branching instead of always hitting the
+ * validation-error path; it can be deleted once the real `@pkg/validate` is fixed.
+ */
 let { createMonitor, deleteMonitor, playMonitor, updateMonitor } = await import("./monitors");
 
 /** Creates an in-memory database seeded with one team and a member's membership. */
@@ -216,8 +218,10 @@ describe("updateMonitor", () => {
 describe("deleteMonitor", () => {
 	test("deletes the monitor and redirects to the HTTP monitors list", async () => {
 		let { db, team } = await createFixture();
-		// `deleteMonitor` itself gates on owner/admin — the default fixture membership is
-		// a plain member, so this needs its own admin membership rather than a member's.
+		/**
+		 * `deleteMonitor` itself gates on owner/admin — the default fixture membership is
+		 * a plain member, so this needs its own admin membership rather than a member's.
+		 */
 		let membership = await db.create(
 			memberships,
 			{ id: crypto.randomUUID(), subject_id: "admin-1", team_id: team.id, role: "admin" },

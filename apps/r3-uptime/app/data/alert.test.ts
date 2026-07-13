@@ -136,7 +136,7 @@ describe("Alert.listByTeam", () => {
 		});
 		await Alert.create(db, "team-2", { monitor_id: null, name: "Other team", config: emailConfig });
 
-		// Backdate the first alert so ordering doesn't depend on same-millisecond ties.
+		/** Backdate the first alert so ordering doesn't depend on same-millisecond ties. */
 		await Alert.updateById(db, first.id, { created_at: Date.now() - 60_000 });
 
 		let alerts = await Alert.listByTeam(db, "team-1");

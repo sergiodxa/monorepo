@@ -152,9 +152,11 @@ function deriveHealth(
 export async function getTeamHttpSummaries(
 	teamId: string,
 ): Promise<Result<HttpMonitorSummary[], Error>> {
-	// Analytics Engine's SQL API rejects `COUNT(*)` ("COUNT() function must have 0
-	// arguments"), so totals are summed from `double2` (always 1 per row, see
-	// writeHttpPingResult) instead — matching how the same dataset is queried elsewhere.
+	/**
+	 * Analytics Engine's SQL API rejects `COUNT(*)` ("COUNT() function must have 0
+	 * arguments"), so totals are summed from `double2` (always 1 per row, see
+	 * writeHttpPingResult) instead — matching how the same dataset is queried elsewhere.
+	 */
 	let sql = `
 		SELECT
 			blob1 AS monitorId,
@@ -231,8 +233,7 @@ const SPARKLINE_MAX_POINTS = 30;
 
 /**
  * Buckets `points` (already oldest-first) down to at most `maxPoints` entries by
- * averaging each bucket's response time — a simple mean-per-bucket downsample, in the
- * same spirit as (without replicating) the OLD APP's `downsample()` helper.
+ * averaging each bucket's response time — a simple mean-per-bucket downsample.
  */
 function downsampleSparklinePoints(
 	points: SparklinePoint[],
@@ -290,9 +291,11 @@ export async function getTeamHttpSparklines(
 
 	let sparklines = new Map<string, SparklinePoint[]>();
 	for (let [monitorId, points] of pointsByMonitor) {
-		// Rows come back newest-first; reverse to oldest-first before downsampling so
-		// bucket order (and therefore the rendered sparkline's left-to-right direction)
-		// matches getMonitorSparkline's single-monitor result.
+		/**
+		 * Rows come back newest-first; reverse to oldest-first before downsampling so
+		 * bucket order (and therefore the rendered sparkline's left-to-right direction)
+		 * matches getMonitorSparkline's single-monitor result.
+		 */
 		sparklines.set(monitorId, downsampleSparklinePoints([...points].reverse()));
 	}
 

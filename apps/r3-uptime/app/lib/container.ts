@@ -28,9 +28,11 @@ import { IdTokenVerificationKeyService } from "~/app/services/id-token-verificat
  */
 export const container = new ServiceContainer();
 
-// `now` is overridden to epoch-ms because `database/schema.ts` declares timestamp
-// columns as `c.integer()` to match the frozen production schema; the library's
-// default `now()` returns a `Date`, which D1 cannot bind.
+/**
+ * `now` is overridden to epoch-ms because `database/schema.ts` declares timestamp
+ * columns as `c.integer()` to match the frozen production schema; the library's
+ * default `now()` returns a `Date`, which D1 cannot bind.
+ */
 container.singleton(Database, () =>
 	createDatabase(createD1DatabaseAdapter(env.DB), { now: () => Date.now() }),
 );

@@ -1,9 +1,8 @@
 /**
- * Test-only Bun SQLite database adapter mirroring the production `@pkg/data-table-d1`
- * adapter's SQL compilation, plus a helper that applies every migration in
- * `database/migrations/` to a fresh in-memory database. Lets models, jobs, and
- * controllers run against a real SQL engine in unit tests instead of hand-rolled
- * mocks.
+ * Test-only Bun SQLite database adapter that compiles the same SQL statements as
+ * production, plus a helper that applies every migration in `database/migrations/`
+ * to a fresh in-memory database. Lets models, jobs, and controllers run against a
+ * real SQL engine in unit tests instead of hand-rolled mocks.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -89,10 +88,12 @@ export function createBunSqliteDatabaseAdapter(
 				};
 			}
 
-			// `c.json()` columns hold JS objects/arrays at the model layer, but neither
-			// `bun:sqlite` nor D1's binder accepts anything but strings/numbers/booleans/
-			// null — encode them to JSON text before binding, and decode any JSON-typed
-			// columns back out of rows read from the database.
+			/**
+			 * `c.json()` columns hold JS objects/arrays at the model layer, but neither
+			 * `bun:sqlite` nor D1's binder accepts anything but strings/numbers/booleans/
+			 * null — encode them to JSON text before binding, and decode any JSON-typed
+			 * columns back out of rows read from the database.
+			 */
 			operation = encodeJsonColumns(operation);
 
 			let statement = compileSqliteStatement(operation);
@@ -203,19 +204,19 @@ export function createBunSqliteDatabaseAdapter(
 	};
 }
 
-// JSON column encoding/decoding
-//
-// Neither `bun:sqlite` nor D1's binder accepts a plain object/array as a bound
-// value, but `c.json()` columns (e.g. `alerts.config`, `alert_events.snapshot`,
-// `api_keys.scopes`) are always given real JS values at the model layer. The
-// production `@pkg/data-table-d1` adapter has this exact same gap (it never
-// serializes/deserializes `json`-typed columns either), so a write with a real
-// object throws there too — this is a real latent bug, not something specific to
-// this test adapter. Encoding/decoding here keeps model and controller tests able
-// to exercise JSON columns at all; it does not paper over the production bug, which
-// is tracked separately.
-
-/** Column names declared `c.json()` on `table`, resolved from its metadata. */
+/**
+ * Neither `bun:sqlite` nor D1's binder accepts a plain object/array as a bound
+ * value, but `c.json()` columns (e.g. `alerts.config`, `alert_events.snapshot`,
+ * `api_keys.scopes`) are always given real JS values at the model layer. The
+ * production database adapter has this exact same gap (it never serializes/
+ * deserializes `json`-typed columns either), so a write with a real object throws
+ * there too — this is a real latent bug, not something specific to this test
+ * adapter. Encoding/decoding here keeps model and controller tests able to
+ * exercise JSON columns at all; it does not paper over the production bug, which
+ * is tracked separately.
+ *
+ * Column names declared `c.json()` on `table`, resolved from its metadata.
+ */
 function getJsonColumnNames(table: StatementTable): Set<string> {
 	let definitions = getTableColumnDefinitions(table);
 	let names = new Set<string>();
@@ -300,7 +301,7 @@ function decodeJsonColumns(
 				try {
 					decoded[column] = JSON.parse(value);
 				} catch {
-					// Leave the raw string in place if it somehow isn't valid JSON.
+					/** Leaves the raw string in place if it somehow isn't valid JSON. */
 				}
 			}
 		}
@@ -308,8 +309,6 @@ function decodeJsonColumns(
 		return decoded;
 	});
 }
-
-// SQL Compilation (mirrors the production D1 adapter's SQL compilation)
 
 type JoinClause = Extract<DataManipulationOperation, { kind: "select" }>["joins"][number];
 type UpsertStatement = Extract<DataManipulationOperation, { kind: "upsert" }>;
@@ -835,8 +834,6 @@ function collectColumns(rows: Record<string, unknown>[]): string[] {
 	return columns;
 }
 
-// Result normalization
-
 function normalizeRows(rows: unknown[]): Record<string, unknown>[] {
 	return rows.map((row) => {
 		if (typeof row !== "object" || row === null) {
@@ -938,9 +935,9 @@ function shouldReadStatement(operation: DataManipulationRequest["operation"]): b
 }
 
 /**
- * Mirrors `@pkg/data-table-d1`'s fix for the same gap: a `"raw"` operation
- * (`db.exec(sqlText, values)`) carries no structural read/write signal, so this
- * sniffs the leading keyword to decide whether it needs the row-reading path.
+ * A `"raw"` operation (`db.exec(sqlText, values)`) carries no structural read/write
+ * signal, so this sniffs the leading keyword to decide whether it needs the
+ * row-reading path.
  */
 function isReadOnlyRawSql(sql: string): boolean {
 	return /^\s*(select|with|pragma)\b/i.test(sql);

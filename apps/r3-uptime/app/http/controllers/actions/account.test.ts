@@ -236,7 +236,6 @@ describe("POST /actions/leave-team", () => {
 			routes.accountActions.leaveTeam,
 			viewer,
 			db,
-			// `team_id` is intentionally omitted; `unrelated` just keeps the body non-empty.
 			{ unrelated: "value" },
 			{ Referer: "https://uptime.test/app" },
 		);

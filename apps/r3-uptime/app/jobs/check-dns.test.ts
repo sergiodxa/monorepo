@@ -51,10 +51,12 @@ let notifyDnsResultMock = mock(
 );
 
 mock.module("~/app/services/dns-check", () => ({ checkDns: checkDnsMock }));
-// All four `notify*` exports are stubbed here (not just `notifyDnsResult`) because
-// `check-tcp.test.ts`, `check-cron-jobs.test.ts`, and `check-ssl.test.ts` mock this same
-// module path — `bun test` shares one module registry across files in a run, so a mock
-// missing an export another file's job imports fails with "export not found".
+/**
+ * All four `notify*` exports are stubbed here (not just `notifyDnsResult`) because
+ * `check-tcp.test.ts`, `check-cron-jobs.test.ts`, and `check-ssl.test.ts` mock this same
+ * module path — `bun test` shares one module registry across files in a run, so a mock
+ * missing an export another file's job imports fails with "export not found".
+ */
 mock.module("~/app/services/alerts", () => ({
 	notifyDnsResult: notifyDnsResultMock,
 	notifyTcpResult: mock(async () => {}),
@@ -171,7 +173,7 @@ describe("CheckDnsJob", () => {
 		expect(completed?.successCount).toBe(1);
 		expect(completed?.errorCount).toBe(1);
 
-		// The failing monitor's cached fields are untouched — recordCheckResult never ran for it.
+		/** The failing monitor's cached fields are untouched — recordCheckResult never ran for it. */
 		let failedRow = await DnsMonitor.findByIdForTeam(db, "team-1", failing.id);
 		expect(failedRow?.last_status).toBeNull();
 

@@ -37,8 +37,10 @@ describe("TcpMonitor.create", () => {
 		expect(monitor.team_id).toBe(teamId);
 		expect(monitor.host).toBe("db.example.com");
 		expect(monitor.port).toBe(5432);
-		// SQLite (and the production D1 adapter, identically) round-trips boolean
-		// columns as 0/1, not real booleans — assert truthiness, not strict `true`.
+		/**
+		 * SQLite (and the production D1 adapter, identically) round-trips boolean
+		 * columns as 0/1, not real booleans — assert truthiness, not strict `true`.
+		 */
 		expect(monitor.is_enabled).toBeTruthy();
 	});
 });
@@ -48,8 +50,10 @@ describe("TcpMonitor.listByTeam", () => {
 		let { db } = createTestDatabase();
 		let teamId = crypto.randomUUID();
 		let first = await TcpMonitor.create(db, teamId, tcpMonitorInput());
-		// Force a distinct `created_at` so the ordering assertion below is
-		// deterministic — two creates in the same millisecond would otherwise tie.
+		/**
+		 * Force a distinct `created_at` so the ordering assertion below is
+		 * deterministic — two creates in the same millisecond would otherwise tie.
+		 */
 		await db.update(
 			tcpMonitors,
 			first.id,
@@ -153,8 +157,10 @@ describe("TcpMonitor.listResults", () => {
 		let { db } = createTestDatabase();
 		let monitor = await TcpMonitor.create(db, crypto.randomUUID(), tcpMonitorInput());
 		let now = Date.now();
-		// Inserted directly (rather than via `recordCheckResult`) so `checked_at` can be
-		// set to explicit, distinct timestamps instead of racing on `Date.now()`.
+		/**
+		 * Inserted directly (rather than via `recordCheckResult`) so `checked_at` can be
+		 * set to explicit, distinct timestamps instead of racing on `Date.now()`.
+		 */
 		await db.create(tcpMonitorResults, {
 			id: crypto.randomUUID(),
 			tcp_monitor_id: monitor.id,

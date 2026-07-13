@@ -95,8 +95,10 @@ describe("TeamDomain.listByTeam", () => {
 		let { db } = createTestDatabase();
 		let teamId = crypto.randomUUID();
 		let first = await TeamDomain.create(db, teamId, "a.example.com");
-		// Force a distinct `created_at` so the ordering assertion below is
-		// deterministic — two creates in the same millisecond would otherwise tie.
+		/**
+		 * Force a distinct `created_at` so the ordering assertion below is
+		 * deterministic — two creates in the same millisecond would otherwise tie.
+		 */
 		await db.update(
 			teamDomains,
 			first.id,

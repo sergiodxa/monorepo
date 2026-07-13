@@ -40,10 +40,12 @@ let notifyCronJobResultMock = mock(
 	},
 );
 
-// All four `notify*` exports are stubbed here (not just `notifyCronJobResult`) because
-// `check-dns.test.ts`, `check-tcp.test.ts`, and `check-ssl.test.ts` mock this same
-// module path — `bun test` shares one module registry across files in a run, so a mock
-// missing an export another file's job imports fails with "export not found".
+/**
+ * All four `notify*` exports are stubbed here (not just `notifyCronJobResult`) because
+ * `check-dns.test.ts`, `check-tcp.test.ts`, and `check-ssl.test.ts` mock this same
+ * module path — `bun test` shares one module registry across files in a run, so a mock
+ * missing an export another file's job imports fails with "export not found".
+ */
 mock.module("~/app/services/alerts", () => ({
 	notifyCronJobResult: notifyCronJobResultMock,
 	notifyDnsResult: mock(async () => {}),

@@ -59,9 +59,9 @@ describe("isRecurringPatternActive", () => {
 			startTime: "02:00",
 			endTime: "04:00",
 		};
-		// 2026-01-05 is a Monday.
+		/** 2026-01-05 is a Monday. */
 		expect(isRecurringPatternActive(pattern, new Date("2026-01-05T03:00:00Z"))).toBe(true);
-		// 2026-01-06 is a Tuesday.
+		/** 2026-01-06 is a Tuesday. */
 		expect(isRecurringPatternActive(pattern, new Date("2026-01-06T03:00:00Z"))).toBe(false);
 	});
 
@@ -72,7 +72,7 @@ describe("isRecurringPatternActive", () => {
 			startTime: "02:00",
 			endTime: "04:00",
 		};
-		// February 2026 has 28 days, so day 31 clamps to the 28th.
+		/** February 2026 has 28 days, so day 31 clamps to the 28th. */
 		expect(isRecurringPatternActive(pattern, new Date("2026-02-28T03:00:00Z"))).toBe(true);
 		expect(isRecurringPatternActive(pattern, new Date("2026-02-27T03:00:00Z"))).toBe(false);
 	});

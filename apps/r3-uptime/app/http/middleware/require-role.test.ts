@@ -15,7 +15,7 @@ import type { SelectMembership, SelectTeam } from "~/database/schema";
 
 import requireRole from "~/app/http/middleware/require-role";
 
-// Side-effect import: declares `ctx.team` / `ctx.membership` on `RequestContext`.
+/** Side-effect import: declares `ctx.team` / `ctx.membership` on `RequestContext`. */
 import "~/app/http/middleware/require-team";
 
 function createTeam(overrides: Partial<SelectTeam> = {}): SelectTeam {

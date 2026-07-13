@@ -202,8 +202,10 @@ describe("AlertEvent.isInCooldown", () => {
 			monitor_name: "My site",
 		});
 
-		// Backdate `sent_at` past the 30-minute cooldown window — `record()` always
-		// stamps `Date.now()`, so this is the only way to exercise the boundary.
+		/**
+		 * Backdate `sent_at` past the 30-minute cooldown window — `record()` always
+		 * stamps `Date.now()`, so this is the only way to exercise the boundary.
+		 */
 		await db.update(alertEvents, row.id, { sent_at: Date.now() - 31 * 60_000 });
 
 		let inCooldown = await AlertEvent.isInCooldown(db, "alert-1", "monitor-1", "down", 30);
@@ -275,7 +277,7 @@ describe("AlertEvent.listByAlertIds", () => {
 			monitor_type: "http",
 			monitor_name: "Other site",
 		});
-		// An event for an alert not in the requested list must never show up.
+		/** An event for an alert not in the requested list must never show up. */
 		await AlertEvent.record(db, {
 			alert_id: "alert-3",
 			monitor_id: "monitor-3",

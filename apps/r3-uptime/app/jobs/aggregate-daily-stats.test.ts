@@ -57,10 +57,12 @@ async function runJob(db: Database) {
  * adapter can't answer them.
  */
 function stubRawAggregateExec(db: Database, rowsByTable: Record<string, unknown[]>): void {
-	// `db.exec` is also the dispatch point the query builder uses internally for
-	// `findMany`/`create`/`delete` (any non-string, non-`SqlStatement` argument), so only
-	// raw SQL-string calls are intercepted here; everything else falls through to the
-	// real implementation, or `MonitorDailyStats.upsertDay`'s own reads/writes would break.
+	/**
+	 * `db.exec` is also the dispatch point the query builder uses internally for
+	 * `findMany`/`create`/`delete` (any non-string, non-`SqlStatement` argument), so only
+	 * raw SQL-string calls are intercepted here; everything else falls through to the
+	 * real implementation, or `MonitorDailyStats.upsertDay`'s own reads/writes would break.
+	 */
 	let original = (db.exec as (...args: unknown[]) => Promise<unknown>).bind(db);
 	(db as unknown as { exec: unknown }).exec = mock(
 		async (statement: unknown, values?: unknown[]) => {

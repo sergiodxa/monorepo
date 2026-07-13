@@ -35,8 +35,10 @@ describe("StatusPage.create", () => {
 
 		expect(page.team_id).toBe(teamId);
 		expect(page.slug).toBe("acme");
-		// SQLite (and the production D1 adapter, identically) round-trips boolean
-		// columns as 0/1, not real booleans — assert truthiness, not strict `true`.
+		/**
+		 * SQLite (and the production D1 adapter, identically) round-trips boolean
+		 * columns as 0/1, not real booleans — assert truthiness, not strict `true`.
+		 */
 		expect(page.is_public).toBeTruthy();
 	});
 });
@@ -46,8 +48,10 @@ describe("StatusPage.listByTeam", () => {
 		let { db } = createTestDatabase();
 		let teamId = crypto.randomUUID();
 		let first = await StatusPage.create(db, teamId, statusPageInput());
-		// Force a distinct `created_at` so the ordering assertion below is
-		// deterministic — two creates in the same millisecond would otherwise tie.
+		/**
+		 * Force a distinct `created_at` so the ordering assertion below is
+		 * deterministic — two creates in the same millisecond would otherwise tie.
+		 */
 		await db.update(statusPages, first.id, { created_at: first.created_at - 1000 });
 		let second = await StatusPage.create(db, teamId, statusPageInput());
 
