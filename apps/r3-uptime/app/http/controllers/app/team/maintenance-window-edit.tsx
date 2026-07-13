@@ -24,7 +24,7 @@ import EditMaintenanceWindowView from "~/resources/views/maintenance-windows/edi
 import routes from "~/routes/web";
 
 /** GET /app/:team/maintenance/:windowId/edit — a maintenance window's edit form. */
-export default createAction(routes.app.team.maintenanceWindowEdit, {
+export default createAction(routes.app.team.maintenanceWindows.edit, {
 	middleware: [requireUser, requireTeam],
 	handler: inject([Database] as const, async (db) => {
 		let ctx = getContext();

@@ -23,7 +23,7 @@ import EditTcpMonitorView from "~/resources/views/tcp-monitors/edit";
 import routes from "~/routes/web";
 
 /** GET /app/:team/tcp/:monitorId/edit — a TCP monitor's edit form. */
-export default createAction(routes.app.team.tcpMonitorEdit, {
+export default createAction(routes.app.team.tcpMonitors.edit, {
 	middleware: [requireUser, requireTeam],
 	handler: inject([Database] as const, async (db) => {
 		let ctx = getContext();

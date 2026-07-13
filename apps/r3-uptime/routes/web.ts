@@ -82,36 +82,49 @@ export default route({
 					count: get("/app/:team/dashboard/cards/count/:resource"),
 				},
 			},
-			httpMonitors: get("/app/:team/http"),
-			monitorNew: get("/app/:team/monitors/new"),
-			monitorShow: get("/app/:team/monitors/:monitorId"),
-			monitorEdit: get("/app/:team/monitors/:monitorId/edit"),
-			dnsMonitors: get("/app/:team/dns"),
-			dnsMonitorNew: get("/app/:team/dns/new"),
-			dnsMonitorShow: get("/app/:team/dns/:monitorId"),
-			dnsMonitorEdit: get("/app/:team/dns/:monitorId/edit"),
-			tcpMonitors: get("/app/:team/tcp"),
-			tcpMonitorNew: get("/app/:team/tcp/new"),
-			tcpMonitorShow: get("/app/:team/tcp/:monitorId"),
-			tcpMonitorEdit: get("/app/:team/tcp/:monitorId/edit"),
-			cronJobs: get("/app/:team/cron-jobs"),
-			cronJobNew: get("/app/:team/cron-jobs/new"),
-			cronJobShow: get("/app/:team/cron-jobs/:monitorId"),
-			cronJobEdit: get("/app/:team/cron-jobs/:monitorId/edit"),
-			alerts: get("/app/:team/alerts"),
-			alertNew: get("/app/:team/alerts/new"),
-			alertEdit: get("/app/:team/alerts/:alertId/edit"),
-			alertHistory: get("/app/:team/alert-history"),
-			maintenanceWindows: get("/app/:team/maintenance"),
-			maintenanceWindowNew: get("/app/:team/maintenance/new"),
-			maintenanceWindowEdit: get("/app/:team/maintenance/:windowId/edit"),
-			statusPages: get("/app/:team/status-pages"),
-			statusPageNew: get("/app/:team/status-pages/new"),
-			statusPageEdit: get("/app/:team/status-pages/:statusPageId/edit"),
+			/**
+			 * HTTP monitors are the odd one out: the list page lives at `/app/:team/http`,
+			 * a different base path than `new`/`show`/`edit` below, so its `index` stays a
+			 * separate leaf instead of joining the `resources()` call.
+			 */
+			monitors: {
+				index: get("/app/:team/http"),
+				...resources("/app/:team/monitors", { param: "monitorId", only: ["new", "show", "edit"] }),
+			},
+			dnsMonitors: resources("/app/:team/dns", {
+				param: "monitorId",
+				only: ["index", "new", "show", "edit"],
+			}),
+			tcpMonitors: resources("/app/:team/tcp", {
+				param: "monitorId",
+				only: ["index", "new", "show", "edit"],
+			}),
+			cronJobs: resources("/app/:team/cron-jobs", {
+				param: "monitorId",
+				only: ["index", "new", "show", "edit"],
+			}),
+			/**
+			 * No `show` page — alerts only have list/new/edit. `alertHistory` lives at
+			 * `/app/:team/alert-history`, a different base path, so it stays a separate leaf.
+			 */
+			alerts: {
+				...resources("/app/:team/alerts", { param: "alertId", only: ["index", "new", "edit"] }),
+				history: get("/app/:team/alert-history"),
+			},
+			/** No `show` page. */
+			maintenanceWindows: resources("/app/:team/maintenance", {
+				param: "windowId",
+				only: ["index", "new", "edit"],
+			}),
+			/** No `show` page — the public status page itself is `routes.statusPage`. */
+			statusPages: resources("/app/:team/status-pages", {
+				param: "statusPageId",
+				only: ["index", "new", "edit"],
+			}),
 			settings: get("/app/:team/settings"),
 			account: get("/app/:team/account"),
-			apiKeys: get("/app/:team/api-keys"),
-			apiKeyNew: get("/app/:team/api-keys/new"),
+			/** No `show`/`edit` pages. */
+			apiKeys: resources("/app/:team/api-keys", { only: ["index", "new"] }),
 			checkout: get("/app/:team/checkout"),
 		},
 	},

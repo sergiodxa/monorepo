@@ -43,7 +43,7 @@ export default function CronJobsView(handle: Handle<CronJobsView.Props>) {
 					<EmptyState
 						message="No cron job monitors yet."
 						action={{
-							href: routes.app.team.cronJobNew.href({ team: team.slug }),
+							href: routes.app.team.cronJobs.new.href({ team: team.slug }),
 							label: "Create your first cron job monitor",
 						}}
 					/>
@@ -78,7 +78,7 @@ export default function CronJobsView(handle: Handle<CronJobsView.Props>) {
 									<tr key={monitor.id}>
 										<td>
 											<a
-												href={routes.app.team.cronJobShow.href({
+												href={routes.app.team.cronJobs.show.href({
 													team: team.slug,
 													monitorId: monitor.id,
 												})}

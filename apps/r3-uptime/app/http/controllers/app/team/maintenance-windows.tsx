@@ -22,7 +22,7 @@ import MaintenanceWindowsView from "~/resources/views/maintenance-windows/index"
 import routes from "~/routes/web";
 
 /** GET /app/:team/maintenance — the team's maintenance windows list. */
-export default createAction(routes.app.team.maintenanceWindows, {
+export default createAction(routes.app.team.maintenanceWindows.index, {
 	middleware: [requireUser, requireTeam],
 	handler: inject([Database] as const, async (db) => {
 		let ctx = getContext();
@@ -43,7 +43,7 @@ export default createAction(routes.app.team.maintenanceWindows, {
 					breadcrumb="Maintenance windows"
 					actions={
 						<a
-							href={routes.app.team.maintenanceWindowNew.href({ team: ctx.team.slug })}
+							href={routes.app.team.maintenanceWindows.new.href({ team: ctx.team.slug })}
 							mix={[
 								css({
 									display: "inline-flex",

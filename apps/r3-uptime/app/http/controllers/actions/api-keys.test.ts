@@ -120,7 +120,7 @@ describe("POST /actions/:team/create-api-key", () => {
 
 		expect(response.status).toBe(303);
 		expect(response.headers.get("Location")).toBe(
-			routes.app.team.apiKeys.href({ team: team.slug }),
+			routes.app.team.apiKeys.index.href({ team: team.slug }),
 		);
 
 		let created = await db.findOne(apiKeys, { where: { team_id: team.id } });
@@ -146,7 +146,7 @@ describe("POST /actions/:team/create-api-key", () => {
 
 		expect(response.status).toBe(303);
 		expect(response.headers.get("Location")).toBe(
-			routes.app.team.apiKeyNew.href({ team: team.slug }),
+			routes.app.team.apiKeys.new.href({ team: team.slug }),
 		);
 		expect(await db.count(apiKeys, { where: { team_id: team.id } })).toBe(0);
 	});
@@ -236,7 +236,7 @@ describe("DELETE /actions/:team/delete-api-key", () => {
 
 		expect(response.status).toBe(303);
 		expect(response.headers.get("Location")).toBe(
-			routes.app.team.apiKeys.href({ team: team.slug }),
+			routes.app.team.apiKeys.index.href({ team: team.slug }),
 		);
 		expect(await db.findOne(apiKeys, { where: { id: apiKey.id } })).toBeNull();
 	});
@@ -304,7 +304,7 @@ describe("DELETE /actions/:team/delete-api-key", () => {
 
 		expect(response.status).toBe(303);
 		expect(response.headers.get("Location")).toBe(
-			routes.app.team.apiKeys.href({ team: team.slug }),
+			routes.app.team.apiKeys.index.href({ team: team.slug }),
 		);
 		expect(await db.findOne(apiKeys, { where: { id: apiKey.id } })).not.toBeNull();
 	});

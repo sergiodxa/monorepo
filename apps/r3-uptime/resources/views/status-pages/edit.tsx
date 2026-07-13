@@ -98,7 +98,7 @@ export default function EditStatusPageView(handle: Handle<EditStatusPageView.Pro
 				</form>
 
 				<a
-					href={routes.app.team.statusPages.href({ team: team.slug })}
+					href={routes.app.team.statusPages.index.href({ team: team.slug })}
 					mix={[
 						css({
 							color: primary[600],

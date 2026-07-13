@@ -59,7 +59,7 @@ export default function EditAlertView(handle: Handle<EditAlertView.Props>) {
 				</form>
 
 				<a
-					href={routes.app.team.alerts.href({ team: team.slug })}
+					href={routes.app.team.alerts.index.href({ team: team.slug })}
 					mix={[
 						css({
 							color: primary[600],

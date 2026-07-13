@@ -39,7 +39,7 @@ export const createTcpMonitor = createAction(routes.actions.createTcpMonitor, as
 			intent: "error",
 			message: "Please check the TCP monitor details and try again.",
 		});
-		return redirect(routes.app.team.tcpMonitorNew.href({ team: ctx.team.slug }), {
+		return redirect(routes.app.team.tcpMonitors.new.href({ team: ctx.team.slug }), {
 			status: redirect.Status.SeeOther,
 		});
 	}
@@ -49,7 +49,7 @@ export const createTcpMonitor = createAction(routes.actions.createTcpMonitor, as
 
 	session?.flash("toast", { intent: "success", message: `TCP monitor "${monitor.name}" created.` });
 	return redirect(
-		routes.app.team.tcpMonitorShow.href({ team: ctx.team.slug, monitorId: monitor.id }),
+		routes.app.team.tcpMonitors.show.href({ team: ctx.team.slug, monitorId: monitor.id }),
 		{ status: redirect.Status.SeeOther },
 	);
 });
@@ -80,7 +80,7 @@ export const updateTcpMonitor = createAction(routes.actions.updateTcpMonitor, as
 
 	session?.flash("toast", { intent: "success", message: "TCP monitor updated." });
 	return redirect(
-		routes.app.team.tcpMonitorShow.href({ team: ctx.team.slug, monitorId: monitor_id }),
+		routes.app.team.tcpMonitors.show.href({ team: ctx.team.slug, monitorId: monitor_id }),
 		{ status: redirect.Status.SeeOther },
 	);
 });
@@ -91,7 +91,7 @@ export const deleteTcpMonitor = createAction(routes.actions.deleteTcpMonitor, as
 	let session = ctx.get(Session);
 
 	if (isFailure(result)) {
-		return redirect(routes.app.team.tcpMonitors.href({ team: ctx.team.slug }), {
+		return redirect(routes.app.team.tcpMonitors.index.href({ team: ctx.team.slug }), {
 			status: redirect.Status.SeeOther,
 		});
 	}
@@ -106,7 +106,7 @@ export const deleteTcpMonitor = createAction(routes.actions.deleteTcpMonitor, as
 		intent: "success",
 		message: `TCP monitor "${existing.name}" deleted.`,
 	});
-	return redirect(routes.app.team.tcpMonitors.href({ team: ctx.team.slug }), {
+	return redirect(routes.app.team.tcpMonitors.index.href({ team: ctx.team.slug }), {
 		status: redirect.Status.SeeOther,
 	});
 });
@@ -117,7 +117,7 @@ export const checkTcpMonitor = createAction(routes.actions.checkTcpMonitor, asyn
 	let session = ctx.get(Session);
 
 	if (isFailure(result)) {
-		return redirect(routes.app.team.tcpMonitors.href({ team: ctx.team.slug }), {
+		return redirect(routes.app.team.tcpMonitors.index.href({ team: ctx.team.slug }), {
 			status: redirect.Status.SeeOther,
 		});
 	}
@@ -138,7 +138,7 @@ export const checkTcpMonitor = createAction(routes.actions.checkTcpMonitor, asyn
 
 	session?.flash("toast", { intent: "success", message: `Checked "${monitor.name}".` });
 	return redirect(
-		routes.app.team.tcpMonitorShow.href({ team: ctx.team.slug, monitorId: monitor.id }),
+		routes.app.team.tcpMonitors.show.href({ team: ctx.team.slug, monitorId: monitor.id }),
 		{ status: redirect.Status.SeeOther },
 	);
 });

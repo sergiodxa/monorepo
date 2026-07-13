@@ -54,7 +54,11 @@ export default function DocumentLayout(handle: Handle<DocumentLayout.Props>) {
 					]}
 				>
 					{children}
-					<script type="module" src={CLIENT_ENTRY_SRC}></script>
+					{/* `async`, not the implicit defer of a plain module script — a deferred
+					script waits for this whole streamed response to finish parsing, so a
+					non-blocking Frame's later-arriving <template> would never get picked up
+					until the slowest Frame on the page had already resolved. */}
+					<script type="module" async src={CLIENT_ENTRY_SRC}></script>
 				</body>
 			</html>
 		);

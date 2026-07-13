@@ -19,7 +19,7 @@ import NewApiKeyView from "~/resources/views/api-keys/new";
 import routes from "~/routes/web";
 
 /** GET /app/:team/api-keys/new — the new API key form. */
-export default createAction(routes.app.team.apiKeyNew, {
+export default createAction(routes.app.team.apiKeys.new, {
 	middleware: [requireUser, requireTeam, requireRole("admin")],
 	handler: () => {
 		let ctx = getContext();

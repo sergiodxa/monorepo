@@ -23,31 +23,29 @@ import DashboardCardUsageView from "~/resources/views/dashboard-card-usage";
 import routes from "~/routes/web";
 
 /**
- * Fetches the team's active-subscription check alongside its actual Polar ping usage
- * and its estimated consumption, all three in parallel via `Promise.allSettled` — the
- * subscription check is itself a Polar API round-trip, so awaiting it before starting
- * the other two roughly doubled this card's latency for no benefit, since the other
- * two are cheap to compute speculatively and their result is simply discarded below
- * when there's no active subscription. A failure in `consumed` or `usage` alone still
- * lets the other render, rather than discarding both. Each resolves to `null` —
- * rendered as "unavailable" by the view — when the team's owner has no active
- * subscription or that specific fetch failed, since "usage unavailable" must never be
- * shown to the user as "0 used".
+ * Fetches the team's actual Polar ping usage for the current month and, independently,
+ * the estimated consumption its current monitor settings project — via
+ * `Promise.allSettled` so a failure in either one still lets the other render, rather
+ * than discarding both. Gates on the subscription check first (not run in parallel
+ * with the other two) so a team with no active subscription never pays for Polar's
+ * usage-query latency or the estimate query, only to discard both results. Each
+ * resolves to `null` — rendered as "unavailable" by the view — when the team's owner
+ * has no active subscription or that specific fetch failed, since "usage unavailable"
+ * must never be shown to the user as "0 used".
  */
 async function getPingUsage(
 	db: Database,
 	polar: PolarClient,
 	team: { id: string; owner_id: string },
 ): Promise<{ consumed: number | null; usage: number | null }> {
+	let hasActiveSubscription = await Customer.hasActiveSubscription(polar, team.owner_id);
+	if (!hasActiveSubscription) return { consumed: null, usage: null };
+
 	let now = new Date();
-	let [subscriptionResult, consumedResult, usageResult] = await Promise.allSettled([
-		Customer.hasActiveSubscription(polar, team.owner_id),
+	let [consumedResult, usageResult] = await Promise.allSettled([
 		Customer.getUsagePerMonth(polar, team.owner_id, team.id, now),
 		Monitor.estimateConsumedPingsByTeam(db, team.id, now),
 	]);
-
-	let hasActiveSubscription = subscriptionResult.status === "fulfilled" && subscriptionResult.value;
-	if (!hasActiveSubscription) return { consumed: null, usage: null };
 
 	return {
 		consumed: consumedResult.status === "fulfilled" ? consumedResult.value : null,

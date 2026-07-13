@@ -57,7 +57,7 @@ export default function EditDnsMonitorView(handle: Handle<EditDnsMonitorView.Pro
 				</form>
 
 				<a
-					href={routes.app.team.dnsMonitorShow.href({ team: team.slug, monitorId: monitor.id })}
+					href={routes.app.team.dnsMonitors.show.href({ team: team.slug, monitorId: monitor.id })}
 					mix={[
 						css({
 							color: primary[600],

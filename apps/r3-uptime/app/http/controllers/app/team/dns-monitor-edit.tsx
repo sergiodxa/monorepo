@@ -23,7 +23,7 @@ import EditDnsMonitorView from "~/resources/views/dns-monitors/edit";
 import routes from "~/routes/web";
 
 /** GET /app/:team/dns/:monitorId/edit — a DNS monitor's edit form. */
-export default createAction(routes.app.team.dnsMonitorEdit, {
+export default createAction(routes.app.team.dnsMonitors.edit, {
 	middleware: [requireUser, requireTeam],
 	handler: inject([Database] as const, async (db) => {
 		let ctx = getContext();

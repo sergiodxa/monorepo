@@ -25,7 +25,7 @@ import DnsMonitorShowView from "~/resources/views/dns-monitors/show";
 import routes from "~/routes/web";
 
 /** GET /app/:team/dns/:monitorId — a DNS monitor's detail page. */
-export default createAction(routes.app.team.dnsMonitorShow, {
+export default createAction(routes.app.team.dnsMonitors.show, {
 	middleware: [requireUser, requireTeam],
 	handler: inject([Database] as const, async (db) => {
 		let ctx = getContext();
@@ -86,7 +86,7 @@ export default createAction(routes.app.team.dnsMonitorShow, {
 								</button>
 							</form>
 							<a
-								href={routes.app.team.dnsMonitorEdit.href({
+								href={routes.app.team.dnsMonitors.edit.href({
 									team: ctx.team.slug,
 									monitorId: monitor.id,
 								})}

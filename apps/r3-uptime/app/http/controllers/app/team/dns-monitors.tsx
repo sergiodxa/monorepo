@@ -21,7 +21,7 @@ import DnsMonitorsView from "~/resources/views/dns-monitors/index";
 import routes from "~/routes/web";
 
 /** GET /app/:team/dns — the team's DNS monitors list. */
-export default createAction(routes.app.team.dnsMonitors, {
+export default createAction(routes.app.team.dnsMonitors.index, {
 	middleware: [requireUser, requireTeam],
 	handler: inject([Database] as const, async (db) => {
 		let ctx = getContext();
@@ -40,7 +40,7 @@ export default createAction(routes.app.team.dnsMonitors, {
 					breadcrumb="DNS monitors"
 					actions={
 						<a
-							href={routes.app.team.dnsMonitorNew.href({ team: ctx.team.slug })}
+							href={routes.app.team.dnsMonitors.new.href({ team: ctx.team.slug })}
 							mix={[
 								css({
 									display: "inline-flex",

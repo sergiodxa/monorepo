@@ -42,7 +42,7 @@ export default function MaintenanceWindowsView(handle: Handle<MaintenanceWindows
 					<EmptyState
 						message="No maintenance windows yet."
 						action={{
-							href: routes.app.team.maintenanceWindowNew.href({ team: team.slug }),
+							href: routes.app.team.maintenanceWindows.new.href({ team: team.slug }),
 							label: "Schedule your first maintenance window",
 						}}
 					/>
@@ -113,7 +113,7 @@ function Section(
 								<td>{new Date(window.ends_at).toLocaleString()}</td>
 								<td>
 									<a
-										href={routes.app.team.maintenanceWindowEdit.href({
+										href={routes.app.team.maintenanceWindows.edit.href({
 											team: team.slug,
 											windowId: window.id,
 										})}

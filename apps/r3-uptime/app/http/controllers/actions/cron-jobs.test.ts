@@ -124,7 +124,7 @@ describe("POST /actions/:team/create-cron-job", () => {
 
 		expect(response.status).toBe(303);
 		expect(response.headers.get("Location")).toBe(
-			routes.app.team.cronJobShow.href({ team: team.slug, monitorId: created!.id }),
+			routes.app.team.cronJobs.show.href({ team: team.slug, monitorId: created!.id }),
 		);
 	});
 
@@ -144,7 +144,7 @@ describe("POST /actions/:team/create-cron-job", () => {
 
 		expect(response.status).toBe(303);
 		expect(response.headers.get("Location")).toBe(
-			routes.app.team.cronJobNew.href({ team: team.slug }),
+			routes.app.team.cronJobs.new.href({ team: team.slug }),
 		);
 		expect(await db.count(cronJobMonitors, { where: { team_id: team.id } })).toBe(0);
 	});
@@ -165,7 +165,7 @@ describe("POST /actions/:team/create-cron-job", () => {
 
 		expect(response.status).toBe(303);
 		expect(response.headers.get("Location")).toBe(
-			routes.app.team.cronJobNew.href({ team: team.slug }),
+			routes.app.team.cronJobs.new.href({ team: team.slug }),
 		);
 		expect(await db.count(cronJobMonitors, { where: { team_id: team.id } })).toBe(0);
 	});
@@ -206,7 +206,7 @@ describe("POST /actions/:team/update-cron-job", () => {
 
 		expect(response.status).toBe(303);
 		expect(response.headers.get("Location")).toBe(
-			routes.app.team.cronJobShow.href({ team: team.slug, monitorId: monitor.id }),
+			routes.app.team.cronJobs.show.href({ team: team.slug, monitorId: monitor.id }),
 		);
 
 		let updated = await db.findOne(cronJobMonitors, { where: { id: monitor.id } });
@@ -290,7 +290,7 @@ describe("POST /actions/:team/update-cron-job", () => {
 
 		expect(response.status).toBe(303);
 		expect(response.headers.get("Location")).toBe(
-			routes.app.team.cronJobEdit.href({ team: team.slug, monitorId: monitor.id }),
+			routes.app.team.cronJobs.edit.href({ team: team.slug, monitorId: monitor.id }),
 		);
 		let unchanged = await db.findOne(cronJobMonitors, { where: { id: monitor.id } });
 		expect(unchanged?.name).toBe("Original");
@@ -371,7 +371,7 @@ describe("DELETE /actions/:team/delete-cron-job", () => {
 
 		expect(response.status).toBe(303);
 		expect(response.headers.get("Location")).toBe(
-			routes.app.team.cronJobs.href({ team: team.slug }),
+			routes.app.team.cronJobs.index.href({ team: team.slug }),
 		);
 		expect(await db.findOne(cronJobMonitors, { where: { id: monitor.id } })).toBeNull();
 	});
@@ -447,7 +447,7 @@ describe("DELETE /actions/:team/delete-cron-job", () => {
 
 		expect(response.status).toBe(303);
 		expect(response.headers.get("Location")).toBe(
-			routes.app.team.cronJobs.href({ team: team.slug }),
+			routes.app.team.cronJobs.index.href({ team: team.slug }),
 		);
 		expect(await db.findOne(cronJobMonitors, { where: { id: monitor.id } })).not.toBeNull();
 	});

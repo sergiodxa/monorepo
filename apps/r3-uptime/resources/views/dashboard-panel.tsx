@@ -158,7 +158,7 @@ function HttpTable(handle: Handle<HttpTable.Props>) {
 				<EmptyState
 					message="No HTTP monitors yet."
 					action={{
-						href: routes.app.team.monitorNew.href({ team: team.slug }),
+						href: routes.app.team.monitors.new.href({ team: team.slug }),
 						label: "Create your first monitor",
 					}}
 				/>
@@ -180,7 +180,7 @@ function HttpTable(handle: Handle<HttpTable.Props>) {
 							<tr key={monitor.id}>
 								<td>
 									<a
-										href={routes.app.team.monitorShow.href({
+										href={routes.app.team.monitors.show.href({
 											team: team.slug,
 											monitorId: monitor.id,
 										})}
@@ -222,7 +222,7 @@ function DnsTable(handle: Handle<DnsTable.Props>) {
 				<EmptyState
 					message="No DNS monitors yet."
 					action={{
-						href: routes.app.team.dnsMonitorNew.href({ team: team.slug }),
+						href: routes.app.team.dnsMonitors.new.href({ team: team.slug }),
 						label: "Create your first DNS monitor",
 					}}
 				/>
@@ -244,7 +244,7 @@ function DnsTable(handle: Handle<DnsTable.Props>) {
 							<tr key={monitor.id}>
 								<td>
 									<a
-										href={routes.app.team.dnsMonitorShow.href({
+										href={routes.app.team.dnsMonitors.show.href({
 											team: team.slug,
 											monitorId: monitor.id,
 										})}
@@ -286,7 +286,7 @@ function TcpTable(handle: Handle<TcpTable.Props>) {
 				<EmptyState
 					message="No TCP monitors yet."
 					action={{
-						href: routes.app.team.tcpMonitorNew.href({ team: team.slug }),
+						href: routes.app.team.tcpMonitors.new.href({ team: team.slug }),
 						label: "Create your first TCP monitor",
 					}}
 				/>
@@ -308,7 +308,7 @@ function TcpTable(handle: Handle<TcpTable.Props>) {
 							<tr key={monitor.id}>
 								<td>
 									<a
-										href={routes.app.team.tcpMonitorShow.href({
+										href={routes.app.team.tcpMonitors.show.href({
 											team: team.slug,
 											monitorId: monitor.id,
 										})}
@@ -352,7 +352,7 @@ function CronJobsTable(handle: Handle<CronJobsTable.Props>) {
 				<EmptyState
 					message="No cron job monitors yet."
 					action={{
-						href: routes.app.team.cronJobNew.href({ team: team.slug }),
+						href: routes.app.team.cronJobs.new.href({ team: team.slug }),
 						label: "Create your first cron job monitor",
 					}}
 				/>
@@ -374,7 +374,7 @@ function CronJobsTable(handle: Handle<CronJobsTable.Props>) {
 							<tr key={monitor.id}>
 								<td>
 									<a
-										href={routes.app.team.cronJobShow.href({
+										href={routes.app.team.cronJobs.show.href({
 											team: team.slug,
 											monitorId: monitor.id,
 										})}

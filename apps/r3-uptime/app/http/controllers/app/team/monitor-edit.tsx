@@ -24,7 +24,7 @@ import EditMonitorView from "~/resources/views/monitors/edit";
 import routes from "~/routes/web";
 
 /** GET /app/:team/monitors/:monitorId/edit — a monitor's edit form. */
-export default createAction(routes.app.team.monitorEdit, {
+export default createAction(routes.app.team.monitors.edit, {
 	middleware: [requireUser, requireTeam],
 	handler: inject([Database] as const, async (db) => {
 		let ctx = getContext();

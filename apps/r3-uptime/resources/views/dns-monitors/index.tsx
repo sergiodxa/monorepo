@@ -41,7 +41,7 @@ export default function DnsMonitorsView(handle: Handle<DnsMonitorsView.Props>) {
 					<EmptyState
 						message="No DNS monitors yet."
 						action={{
-							href: routes.app.team.dnsMonitorNew.href({ team: team.slug }),
+							href: routes.app.team.dnsMonitors.new.href({ team: team.slug }),
 							label: "Create your first DNS monitor",
 						}}
 					/>
@@ -77,7 +77,7 @@ export default function DnsMonitorsView(handle: Handle<DnsMonitorsView.Props>) {
 									<tr key={monitor.id}>
 										<td>
 											<a
-												href={routes.app.team.dnsMonitorShow.href({
+												href={routes.app.team.dnsMonitors.show.href({
 													team: team.slug,
 													monitorId: monitor.id,
 												})}

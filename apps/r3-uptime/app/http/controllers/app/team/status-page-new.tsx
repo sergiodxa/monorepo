@@ -23,7 +23,7 @@ import NewStatusPageView from "~/resources/views/status-pages/new";
 import routes from "~/routes/web";
 
 /** GET /app/:team/status-pages/new — the new status-page form. */
-export default createAction(routes.app.team.statusPageNew, {
+export default createAction(routes.app.team.statusPages.new, {
 	middleware: [requireUser, requireTeam],
 	handler: inject([Database] as const, async (db) => {
 		let ctx = getContext();

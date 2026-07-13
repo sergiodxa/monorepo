@@ -22,7 +22,7 @@ import AlertsView from "~/resources/views/alerts/index";
 import routes from "~/routes/web";
 
 /** GET /app/:team/alerts — the team's alerts list. */
-export default createAction(routes.app.team.alerts, {
+export default createAction(routes.app.team.alerts.index, {
 	middleware: [requireUser, requireTeam],
 	handler: inject([Database] as const, async (db) => {
 		let ctx = getContext();
@@ -45,7 +45,7 @@ export default createAction(routes.app.team.alerts, {
 					actions={
 						<div mix={[css({ display: "flex", alignItems: "center", gap: 12 })]}>
 							<a
-								href={routes.app.team.alertHistory.href({ team: ctx.team.slug })}
+								href={routes.app.team.alerts.history.href({ team: ctx.team.slug })}
 								mix={[
 									css({
 										color: "oklch(0.6 0.16 142)",
@@ -59,7 +59,7 @@ export default createAction(routes.app.team.alerts, {
 							</a>
 							{!atLimit && (
 								<a
-									href={routes.app.team.alertNew.href({ team: ctx.team.slug })}
+									href={routes.app.team.alerts.new.href({ team: ctx.team.slug })}
 									mix={[
 										css({
 											display: "inline-flex",

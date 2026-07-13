@@ -20,7 +20,7 @@ import NewMaintenanceWindowView from "~/resources/views/maintenance-windows/new"
 import routes from "~/routes/web";
 
 /** GET /app/:team/maintenance/new — the new maintenance-window form. */
-export default createAction(routes.app.team.maintenanceWindowNew, {
+export default createAction(routes.app.team.maintenanceWindows.new, {
 	middleware: [requireUser, requireTeam],
 	handler: inject([Database] as const, async (db) => {
 		let ctx = getContext();

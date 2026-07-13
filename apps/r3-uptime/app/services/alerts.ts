@@ -343,7 +343,7 @@ export async function notifyHttpResult(
 			url: monitor.url,
 		},
 		dashboardUrl: dashboardUrl(
-			routes.app.team.monitorShow.href({ team: monitor.team_id, monitorId: monitor.id }),
+			routes.app.team.monitors.show.href({ team: monitor.team_id, monitorId: monitor.id }),
 		),
 	});
 }
@@ -375,7 +375,7 @@ export async function notifyDnsResult(
 			recordType: monitor.record_type,
 		},
 		dashboardUrl: dashboardUrl(
-			routes.app.team.dnsMonitorShow.href({ team: monitor.team_id, monitorId: monitor.id }),
+			routes.app.team.dnsMonitors.show.href({ team: monitor.team_id, monitorId: monitor.id }),
 		),
 	});
 }
@@ -407,7 +407,7 @@ export async function notifyTcpResult(
 			port: monitor.port,
 		},
 		dashboardUrl: dashboardUrl(
-			routes.app.team.tcpMonitorShow.href({ team: monitor.team_id, monitorId: monitor.id }),
+			routes.app.team.tcpMonitors.show.href({ team: monitor.team_id, monitorId: monitor.id }),
 		),
 	});
 }
@@ -447,7 +447,7 @@ export async function notifyCronJobResult(
 			timezone: monitor.timezone,
 		},
 		dashboardUrl: dashboardUrl(
-			routes.app.team.cronJobShow.href({ team: monitor.team_id, monitorId: monitor.id }),
+			routes.app.team.cronJobs.show.href({ team: monitor.team_id, monitorId: monitor.id }),
 		),
 	});
 }
@@ -491,7 +491,7 @@ export async function notifySslResult(
 			hostname,
 		},
 		dashboardUrl: dashboardUrl(
-			routes.app.team.monitorShow.href({ team: monitor.team_id, monitorId: monitor.id }),
+			routes.app.team.monitors.show.href({ team: monitor.team_id, monitorId: monitor.id }),
 		),
 	});
 }

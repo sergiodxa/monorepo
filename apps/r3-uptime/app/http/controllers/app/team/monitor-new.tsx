@@ -17,7 +17,7 @@ import NewMonitorView from "~/resources/views/monitors/new";
 import routes from "~/routes/web";
 
 /** GET /app/:team/monitors/new — the new monitor form. */
-export default createAction(routes.app.team.monitorNew, {
+export default createAction(routes.app.team.monitors.new, {
 	middleware: [requireUser, requireTeam],
 	handler: () => {
 		let ctx = getContext();

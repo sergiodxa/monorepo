@@ -107,7 +107,7 @@ export default function EditMaintenanceWindowView(handle: Handle<EditMaintenance
 				</form>
 
 				<a
-					href={routes.app.team.maintenanceWindows.href({ team: team.slug })}
+					href={routes.app.team.maintenanceWindows.index.href({ team: team.slug })}
 					mix={[
 						css({
 							color: primary[600],

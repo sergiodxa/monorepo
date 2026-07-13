@@ -17,7 +17,7 @@ import NewTcpMonitorView from "~/resources/views/tcp-monitors/new";
 import routes from "~/routes/web";
 
 /** GET /app/:team/tcp/new — the new TCP monitor form. */
-export default createAction(routes.app.team.tcpMonitorNew, {
+export default createAction(routes.app.team.tcpMonitors.new, {
 	middleware: [requireUser, requireTeam],
 	handler: () => {
 		let ctx = getContext();

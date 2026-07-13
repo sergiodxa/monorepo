@@ -112,7 +112,7 @@ describe("createMaintenanceWindow", () => {
 
 		expect(response.status).toBe(303);
 		expect(response.headers.get("Location")).toBe(
-			routes.app.team.maintenanceWindows.href({ team: team.slug }),
+			routes.app.team.maintenanceWindows.index.href({ team: team.slug }),
 		);
 
 		let created = await db.findOne(maintenanceWindows, { where: { team_id: team.id } });
@@ -136,7 +136,7 @@ describe("createMaintenanceWindow", () => {
 
 		expect(response.status).toBe(303);
 		expect(response.headers.get("Location")).toBe(
-			routes.app.team.maintenanceWindowNew.href({ team: team.slug }),
+			routes.app.team.maintenanceWindows.new.href({ team: team.slug }),
 		);
 
 		let matching = await db.findMany(maintenanceWindows, { where: { team_id: team.id } });
@@ -182,7 +182,7 @@ describe("updateMaintenanceWindow", () => {
 
 		expect(response.status).toBe(303);
 		expect(response.headers.get("Location")).toBe(
-			routes.app.team.maintenanceWindows.href({ team: team.slug }),
+			routes.app.team.maintenanceWindows.index.href({ team: team.slug }),
 		);
 
 		let updated = await db.findOne(maintenanceWindows, { where: { id: window.id } });
@@ -247,7 +247,7 @@ describe("updateMaintenanceWindow", () => {
 
 		expect(response.status).toBe(303);
 		expect(response.headers.get("Location")).toBe(
-			routes.app.team.maintenanceWindows.href({ team: team.slug }),
+			routes.app.team.maintenanceWindows.index.href({ team: team.slug }),
 		);
 
 		let unchanged = await db.findOne(maintenanceWindows, { where: { id: window.id } });
@@ -288,7 +288,7 @@ describe("deleteMaintenanceWindow", () => {
 
 		expect(response.status).toBe(303);
 		expect(response.headers.get("Location")).toBe(
-			routes.app.team.maintenanceWindows.href({ team: team.slug }),
+			routes.app.team.maintenanceWindows.index.href({ team: team.slug }),
 		);
 
 		let found = await db.findOne(maintenanceWindows, { where: { id: window.id } });
@@ -381,7 +381,7 @@ describe("endMaintenanceWindow", () => {
 
 		expect(response.status).toBe(303);
 		expect(response.headers.get("Location")).toBe(
-			routes.app.team.maintenanceWindows.href({ team: team.slug }),
+			routes.app.team.maintenanceWindows.index.href({ team: team.slug }),
 		);
 
 		let updated = await db.findOne(maintenanceWindows, { where: { id: window.id } });

@@ -23,7 +23,7 @@ import routes from "~/routes/web";
 const HISTORY_LIMIT = 100;
 
 /** GET /app/:team/alert-history — the team's alert delivery history. */
-export default createAction(routes.app.team.alertHistory, {
+export default createAction(routes.app.team.alerts.history, {
 	middleware: [requireUser, requireTeam],
 	handler: inject([Database] as const, async (db) => {
 		let ctx = getContext();

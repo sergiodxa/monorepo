@@ -51,7 +51,7 @@ const buttonSecondary = css({
 });
 
 /** GET /app/:team/monitors/:monitorId — a monitor's detail page. */
-export default createAction(routes.app.team.monitorShow, {
+export default createAction(routes.app.team.monitors.show, {
 	middleware: [requireUser, requireTeam],
 	handler: inject([Database] as const, async (db) => {
 		let ctx = getContext();
@@ -87,7 +87,7 @@ export default createAction(routes.app.team.monitorShow, {
 								</button>
 							</form>
 							<a
-								href={routes.app.team.monitorEdit.href({
+								href={routes.app.team.monitors.edit.href({
 									team: ctx.team.slug,
 									monitorId: monitor.id,
 								})}

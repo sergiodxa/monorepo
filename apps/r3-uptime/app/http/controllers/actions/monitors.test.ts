@@ -132,7 +132,7 @@ describe("createMonitor", () => {
 		expect(created?.name).toBe("Homepage");
 		expect(created?.author_id).toBe(membership.subject_id);
 		expect(response.headers.get("Location")).toBe(
-			routes.app.team.monitorShow.href({ team: team.slug, monitorId: created!.id }),
+			routes.app.team.monitors.show.href({ team: team.slug, monitorId: created!.id }),
 		);
 		expect(pingCreate).toHaveBeenCalledTimes(1);
 	});
@@ -153,7 +153,7 @@ describe("createMonitor", () => {
 
 		expect(response.status).toBe(303);
 		expect(response.headers.get("Location")).toBe(
-			routes.app.team.monitorNew.href({ team: team.slug }),
+			routes.app.team.monitors.new.href({ team: team.slug }),
 		);
 
 		let matching = await db.findMany(monitors, { where: { team_id: team.id } });
@@ -190,7 +190,7 @@ describe("updateMonitor", () => {
 
 		expect(response.status).toBe(303);
 		expect(response.headers.get("Location")).toBe(
-			routes.app.team.monitorShow.href({ team: team.slug, monitorId: monitor.id }),
+			routes.app.team.monitors.show.href({ team: team.slug, monitorId: monitor.id }),
 		);
 
 		let updated = await db.findOne(monitors, { where: { id: monitor.id } });
@@ -252,7 +252,7 @@ describe("deleteMonitor", () => {
 
 		expect(response.status).toBe(303);
 		expect(response.headers.get("Location")).toBe(
-			routes.app.team.httpMonitors.href({ team: team.slug }),
+			routes.app.team.monitors.index.href({ team: team.slug }),
 		);
 
 		expect(await db.findOne(monitors, { where: { id: monitor.id } })).toBeNull();
@@ -338,7 +338,7 @@ describe("playMonitor", () => {
 
 		expect(response.status).toBe(303);
 		expect(response.headers.get("Location")).toBe(
-			routes.app.team.monitorShow.href({ team: team.slug, monitorId: monitor.id }),
+			routes.app.team.monitors.show.href({ team: team.slug, monitorId: monitor.id }),
 		);
 		expect(pingCreate).toHaveBeenCalledTimes(1);
 	});

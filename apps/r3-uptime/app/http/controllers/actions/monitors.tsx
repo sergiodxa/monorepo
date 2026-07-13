@@ -37,7 +37,7 @@ export const createMonitor = createAction(routes.actions.createMonitor, async (c
 			intent: "error",
 			message: "Please check the monitor details and try again.",
 		});
-		return redirect(routes.app.team.monitorNew.href({ team: ctx.team.slug }), {
+		return redirect(routes.app.team.monitors.new.href({ team: ctx.team.slug }), {
 			status: redirect.Status.SeeOther,
 		});
 	}
@@ -48,7 +48,7 @@ export const createMonitor = createAction(routes.actions.createMonitor, async (c
 
 	session?.flash("toast", { intent: "success", message: `Monitor "${monitor.name}" created.` });
 	return redirect(
-		routes.app.team.monitorShow.href({ team: ctx.team.slug, monitorId: monitor.id }),
+		routes.app.team.monitors.show.href({ team: ctx.team.slug, monitorId: monitor.id }),
 		{ status: redirect.Status.SeeOther },
 	);
 });
@@ -81,7 +81,7 @@ export const updateMonitor = createAction(routes.actions.updateMonitor, async (c
 
 	session?.flash("toast", { intent: "success", message: "Monitor updated." });
 	return redirect(
-		routes.app.team.monitorShow.href({ team: ctx.team.slug, monitorId: monitor_id }),
+		routes.app.team.monitors.show.href({ team: ctx.team.slug, monitorId: monitor_id }),
 		{
 			status: redirect.Status.SeeOther,
 		},
@@ -94,7 +94,7 @@ export const deleteMonitor = createAction(routes.actions.deleteMonitor, async (c
 	let session = ctx.get(Session);
 
 	if (isFailure(result)) {
-		return redirect(routes.app.team.httpMonitors.href({ team: ctx.team.slug }), {
+		return redirect(routes.app.team.monitors.index.href({ team: ctx.team.slug }), {
 			status: redirect.Status.SeeOther,
 		});
 	}
@@ -110,7 +110,7 @@ export const deleteMonitor = createAction(routes.actions.deleteMonitor, async (c
 	await Monitor.deleteById(db, result.data.monitor_id);
 
 	session?.flash("toast", { intent: "success", message: `Monitor "${existing.name}" deleted.` });
-	return redirect(routes.app.team.httpMonitors.href({ team: ctx.team.slug }), {
+	return redirect(routes.app.team.monitors.index.href({ team: ctx.team.slug }), {
 		status: redirect.Status.SeeOther,
 	});
 });
@@ -121,7 +121,7 @@ export const playMonitor = createAction(routes.actions.playMonitor, async (ctx) 
 	let session = ctx.get(Session);
 
 	if (isFailure(result)) {
-		return redirect(routes.app.team.httpMonitors.href({ team: ctx.team.slug }), {
+		return redirect(routes.app.team.monitors.index.href({ team: ctx.team.slug }), {
 			status: redirect.Status.SeeOther,
 		});
 	}
@@ -134,7 +134,7 @@ export const playMonitor = createAction(routes.actions.playMonitor, async (ctx) 
 
 	session?.flash("toast", { intent: "success", message: `Check queued for "${monitor.name}".` });
 	return redirect(
-		routes.app.team.monitorShow.href({ team: ctx.team.slug, monitorId: monitor.id }),
+		routes.app.team.monitors.show.href({ team: ctx.team.slug, monitorId: monitor.id }),
 		{ status: redirect.Status.SeeOther },
 	);
 });

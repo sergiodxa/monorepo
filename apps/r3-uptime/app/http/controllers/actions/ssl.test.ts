@@ -121,7 +121,7 @@ describe("updateSsl", () => {
 
 		expect(response.status).toBe(303);
 		expect(response.headers.get("Location")).toBe(
-			routes.app.team.monitorEdit.href({ team: team.slug, monitorId: monitor.id }),
+			routes.app.team.monitors.edit.href({ team: team.slug, monitorId: monitor.id }),
 		);
 
 		let updated = await db.findOne(monitors, { where: { id: monitor.id } });

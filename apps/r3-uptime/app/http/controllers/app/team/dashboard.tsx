@@ -71,7 +71,7 @@ export default createAction(routes.app.team.dashboard.index, {
 					breadcrumb="Dashboard"
 					actions={
 						<a
-							href={routes.app.team.monitorNew.href({ team: ctx.team.slug })}
+							href={routes.app.team.monitors.new.href({ team: ctx.team.slug })}
 							mix={[
 								css({
 									display: "inline-flex",

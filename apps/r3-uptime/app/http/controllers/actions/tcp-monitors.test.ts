@@ -128,7 +128,7 @@ describe("createTcpMonitor", () => {
 		expect(created).not.toBeNull();
 		expect(created?.name).toBe("Redis");
 		expect(response.headers.get("Location")).toBe(
-			routes.app.team.tcpMonitorShow.href({ team: team.slug, monitorId: created!.id }),
+			routes.app.team.tcpMonitors.show.href({ team: team.slug, monitorId: created!.id }),
 		);
 	});
 
@@ -147,7 +147,7 @@ describe("createTcpMonitor", () => {
 
 		expect(response.status).toBe(303);
 		expect(response.headers.get("Location")).toBe(
-			routes.app.team.tcpMonitorNew.href({ team: team.slug }),
+			routes.app.team.tcpMonitors.new.href({ team: team.slug }),
 		);
 
 		let matching = await db.findMany(tcpMonitors, { where: { team_id: team.id } });
@@ -182,7 +182,7 @@ describe("updateTcpMonitor", () => {
 
 		expect(response.status).toBe(303);
 		expect(response.headers.get("Location")).toBe(
-			routes.app.team.tcpMonitorShow.href({ team: team.slug, monitorId: monitor.id }),
+			routes.app.team.tcpMonitors.show.href({ team: team.slug, monitorId: monitor.id }),
 		);
 
 		let updated = await db.findOne(tcpMonitors, { where: { id: monitor.id } });
@@ -242,7 +242,7 @@ describe("deleteTcpMonitor", () => {
 
 		expect(response.status).toBe(303);
 		expect(response.headers.get("Location")).toBe(
-			routes.app.team.tcpMonitors.href({ team: team.slug }),
+			routes.app.team.tcpMonitors.index.href({ team: team.slug }),
 		);
 
 		expect(await db.findOne(tcpMonitors, { where: { id: monitor.id } })).toBeNull();
@@ -294,7 +294,7 @@ describe("checkTcpMonitor", () => {
 
 		expect(response.status).toBe(303);
 		expect(response.headers.get("Location")).toBe(
-			routes.app.team.tcpMonitorShow.href({ team: team.slug, monitorId: monitor.id }),
+			routes.app.team.tcpMonitors.show.href({ team: team.slug, monitorId: monitor.id }),
 		);
 
 		let updated = await db.findOne(tcpMonitors, { where: { id: monitor.id } });

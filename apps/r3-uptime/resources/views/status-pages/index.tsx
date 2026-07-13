@@ -35,7 +35,7 @@ export default function StatusPagesView(handle: Handle<StatusPagesView.Props>) {
 					<EmptyState
 						message="No status pages yet."
 						action={{
-							href: routes.app.team.statusPageNew.href({ team: team.slug }),
+							href: routes.app.team.statusPages.new.href({ team: team.slug }),
 							label: "Create your first status page",
 						}}
 					/>
@@ -96,7 +96,7 @@ export default function StatusPagesView(handle: Handle<StatusPagesView.Props>) {
 										</td>
 										<td>
 											<a
-												href={routes.app.team.statusPageEdit.href({
+												href={routes.app.team.statusPages.edit.href({
 													team: team.slug,
 													statusPageId: page.id,
 												})}

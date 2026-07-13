@@ -24,7 +24,7 @@ import EditAlertView from "~/resources/views/alerts/edit";
 import routes from "~/routes/web";
 
 /** GET /app/:team/alerts/:alertId/edit — an alert's edit form. */
-export default createAction(routes.app.team.alertEdit, {
+export default createAction(routes.app.team.alerts.edit, {
 	middleware: [requireUser, requireTeam],
 	handler: inject([Database] as const, async (db) => {
 		let ctx = getContext();

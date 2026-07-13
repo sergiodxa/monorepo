@@ -61,7 +61,7 @@ export const updateSsl = createAction(routes.actions.updateSsl, async (ctx) => {
 
 	session?.flash("toast", { intent: "success", message: "SSL settings saved." });
 	return redirect(
-		routes.app.team.monitorEdit.href({ team: ctx.team.slug, monitorId: monitor_id }),
+		routes.app.team.monitors.edit.href({ team: ctx.team.slug, monitorId: monitor_id }),
 		{
 			status: redirect.Status.SeeOther,
 		},

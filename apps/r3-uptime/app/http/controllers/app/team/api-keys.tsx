@@ -30,7 +30,7 @@ interface NewApiKey {
 }
 
 /** GET /app/:team/api-keys — the team's API keys list. */
-export default createAction(routes.app.team.apiKeys, {
+export default createAction(routes.app.team.apiKeys.index, {
 	middleware: [requireUser, requireTeam, requireRole("admin")],
 	handler: inject([Database] as const, async (db) => {
 		let ctx = getContext();
@@ -50,7 +50,7 @@ export default createAction(routes.app.team.apiKeys, {
 					breadcrumb="API keys"
 					actions={
 						<a
-							href={routes.app.team.apiKeyNew.href({ team: ctx.team.slug })}
+							href={routes.app.team.apiKeys.new.href({ team: ctx.team.slug })}
 							mix={[
 								css({
 									display: "inline-flex",

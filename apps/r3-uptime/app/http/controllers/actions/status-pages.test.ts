@@ -124,7 +124,7 @@ describe("createStatusPage", () => {
 
 		expect(response.status).toBe(303);
 		expect(response.headers.get("Location")).toBe(
-			routes.app.team.statusPages.href({ team: team.slug }),
+			routes.app.team.statusPages.index.href({ team: team.slug }),
 		);
 
 		let page = await db.findOne(statusPages, {
@@ -170,7 +170,7 @@ describe("createStatusPage", () => {
 
 		expect(response.status).toBe(303);
 		expect(response.headers.get("Location")).toBe(
-			routes.app.team.statusPageNew.href({ team: team.slug }),
+			routes.app.team.statusPages.new.href({ team: team.slug }),
 		);
 
 		let matching = await db.findMany(statusPages, { where: { team_id: team.id, slug: "taken" } });
@@ -196,7 +196,7 @@ describe("createStatusPage", () => {
 
 		expect(response.status).toBe(303);
 		expect(response.headers.get("Location")).toBe(
-			routes.app.team.statusPageNew.href({ team: team.slug }),
+			routes.app.team.statusPages.new.href({ team: team.slug }),
 		);
 
 		let matching = await db.findMany(statusPages, { where: { team_id: team.id } });
@@ -240,7 +240,7 @@ describe("updateStatusPage", () => {
 
 		expect(response.status).toBe(303);
 		expect(response.headers.get("Location")).toBe(
-			routes.app.team.statusPages.href({ team: team.slug }),
+			routes.app.team.statusPages.index.href({ team: team.slug }),
 		);
 
 		let updated = await db.findOne(statusPages, { where: { id: page.id } });
@@ -319,7 +319,7 @@ describe("updateStatusPage", () => {
 
 		expect(response.status).toBe(303);
 		expect(response.headers.get("Location")).toBe(
-			routes.app.team.statusPageEdit.href({ team: team.slug, statusPageId: page.id }),
+			routes.app.team.statusPages.edit.href({ team: team.slug, statusPageId: page.id }),
 		);
 
 		let unchanged = await db.findOne(statusPages, { where: { id: page.id } });
@@ -362,7 +362,7 @@ describe("deleteStatusPage", () => {
 
 		expect(response.status).toBe(303);
 		expect(response.headers.get("Location")).toBe(
-			routes.app.team.statusPages.href({ team: team.slug }),
+			routes.app.team.statusPages.index.href({ team: team.slug }),
 		);
 
 		expect(await db.findOne(statusPages, { where: { id: page.id } })).toBeNull();

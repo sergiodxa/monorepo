@@ -25,7 +25,7 @@ import CronJobShowView from "~/resources/views/cron-jobs/show";
 import routes from "~/routes/web";
 
 /** GET /app/:team/cron-jobs/:monitorId — a cron-job monitor's detail page. */
-export default createAction(routes.app.team.cronJobShow, {
+export default createAction(routes.app.team.cronJobs.show, {
 	middleware: [requireUser, requireTeam],
 	handler: inject([Database] as const, async (db) => {
 		let ctx = getContext();
@@ -53,7 +53,7 @@ export default createAction(routes.app.team.cronJobShow, {
 					breadcrumb={monitor.name}
 					actions={
 						<a
-							href={routes.app.team.cronJobEdit.href({
+							href={routes.app.team.cronJobs.edit.href({
 								team: ctx.team.slug,
 								monitorId: monitor.id,
 							})}

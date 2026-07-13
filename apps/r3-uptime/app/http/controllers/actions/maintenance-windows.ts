@@ -35,7 +35,7 @@ export const createMaintenanceWindow = createAction(
 				intent: "error",
 				message: "Please check the maintenance window details and try again.",
 			});
-			return redirect(routes.app.team.maintenanceWindowNew.href({ team: ctx.team.slug }), {
+			return redirect(routes.app.team.maintenanceWindows.new.href({ team: ctx.team.slug }), {
 				status: redirect.Status.SeeOther,
 			});
 		}
@@ -51,7 +51,7 @@ export const createMaintenanceWindow = createAction(
 			intent: "success",
 			message: `Maintenance window "${window.name}" created.`,
 		});
-		return redirect(routes.app.team.maintenanceWindows.href({ team: ctx.team.slug }), {
+		return redirect(routes.app.team.maintenanceWindows.index.href({ team: ctx.team.slug }), {
 			status: redirect.Status.SeeOther,
 		});
 	},
@@ -71,7 +71,7 @@ export const updateMaintenanceWindow = createAction(
 			});
 			return redirect(
 				ctx.request.headers.get("Referer") ??
-					routes.app.team.maintenanceWindows.href({ team: ctx.team.slug }),
+					routes.app.team.maintenanceWindows.index.href({ team: ctx.team.slug }),
 				{ status: redirect.Status.SeeOther },
 			);
 		}
@@ -87,7 +87,7 @@ export const updateMaintenanceWindow = createAction(
 		});
 
 		session?.flash("toast", { intent: "success", message: "Maintenance window updated." });
-		return redirect(routes.app.team.maintenanceWindows.href({ team: ctx.team.slug }), {
+		return redirect(routes.app.team.maintenanceWindows.index.href({ team: ctx.team.slug }), {
 			status: redirect.Status.SeeOther,
 		});
 	},
@@ -101,7 +101,7 @@ export const deleteMaintenanceWindow = createAction(
 		let session = ctx.get(Session);
 
 		if (isFailure(result)) {
-			return redirect(routes.app.team.maintenanceWindows.href({ team: ctx.team.slug }), {
+			return redirect(routes.app.team.maintenanceWindows.index.href({ team: ctx.team.slug }), {
 				status: redirect.Status.SeeOther,
 			});
 		}
@@ -116,7 +116,7 @@ export const deleteMaintenanceWindow = createAction(
 			intent: "success",
 			message: `Maintenance window "${existing.name}" deleted.`,
 		});
-		return redirect(routes.app.team.maintenanceWindows.href({ team: ctx.team.slug }), {
+		return redirect(routes.app.team.maintenanceWindows.index.href({ team: ctx.team.slug }), {
 			status: redirect.Status.SeeOther,
 		});
 	},
@@ -130,7 +130,7 @@ export const endMaintenanceWindow = createAction(
 		let session = ctx.get(Session);
 
 		if (isFailure(result)) {
-			return redirect(routes.app.team.maintenanceWindows.href({ team: ctx.team.slug }), {
+			return redirect(routes.app.team.maintenanceWindows.index.href({ team: ctx.team.slug }), {
 				status: redirect.Status.SeeOther,
 			});
 		}
@@ -142,7 +142,7 @@ export const endMaintenanceWindow = createAction(
 		await MaintenanceWindow.endEarly(db, result.data.window_id);
 
 		session?.flash("toast", { intent: "success", message: `Ended "${existing.name}" early.` });
-		return redirect(routes.app.team.maintenanceWindows.href({ team: ctx.team.slug }), {
+		return redirect(routes.app.team.maintenanceWindows.index.href({ team: ctx.team.slug }), {
 			status: redirect.Status.SeeOther,
 		});
 	},

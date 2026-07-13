@@ -49,7 +49,7 @@ const buttonSecondary = css({
 });
 
 /** GET /app/:team/tcp/:monitorId — a TCP monitor's detail page. */
-export default createAction(routes.app.team.tcpMonitorShow, {
+export default createAction(routes.app.team.tcpMonitors.show, {
 	middleware: [requireUser, requireTeam],
 	handler: inject([Database] as const, async (db) => {
 		let ctx = getContext();
@@ -84,7 +84,7 @@ export default createAction(routes.app.team.tcpMonitorShow, {
 								</button>
 							</form>
 							<a
-								href={routes.app.team.tcpMonitorEdit.href({
+								href={routes.app.team.tcpMonitors.edit.href({
 									team: ctx.team.slug,
 									monitorId: monitor.id,
 								})}

@@ -34,7 +34,7 @@ export const createStatusPage = createAction(routes.actions.createStatusPage, as
 			intent: "error",
 			message: "Please check the status page details and try again.",
 		});
-		return redirect(routes.app.team.statusPageNew.href({ team: ctx.team.slug }), {
+		return redirect(routes.app.team.statusPages.new.href({ team: ctx.team.slug }), {
 			status: redirect.Status.SeeOther,
 		});
 	}
@@ -55,7 +55,7 @@ export const createStatusPage = createAction(routes.actions.createStatusPage, as
 			intent: "error",
 			message: `Slug "${values.slug}" is already taken.`,
 		});
-		return redirect(routes.app.team.statusPageNew.href({ team: ctx.team.slug }), {
+		return redirect(routes.app.team.statusPages.new.href({ team: ctx.team.slug }), {
 			status: redirect.Status.SeeOther,
 		});
 	}
@@ -75,7 +75,7 @@ export const createStatusPage = createAction(routes.actions.createStatusPage, as
 	]);
 
 	session?.flash("toast", { intent: "success", message: `Status page "${page.name}" created.` });
-	return redirect(routes.app.team.statusPages.href({ team: ctx.team.slug }), {
+	return redirect(routes.app.team.statusPages.index.href({ team: ctx.team.slug }), {
 		status: redirect.Status.SeeOther,
 	});
 });
@@ -92,7 +92,7 @@ export const updateStatusPage = createAction(routes.actions.updateStatusPage, as
 		});
 		return redirect(
 			ctx.request.headers.get("Referer") ??
-				routes.app.team.statusPages.href({ team: ctx.team.slug }),
+				routes.app.team.statusPages.index.href({ team: ctx.team.slug }),
 			{ status: redirect.Status.SeeOther },
 		);
 	}
@@ -118,7 +118,7 @@ export const updateStatusPage = createAction(routes.actions.updateStatusPage, as
 			message: `Slug "${values.slug}" is already taken.`,
 		});
 		return redirect(
-			routes.app.team.statusPageEdit.href({ team: ctx.team.slug, statusPageId: status_page_id }),
+			routes.app.team.statusPages.edit.href({ team: ctx.team.slug, statusPageId: status_page_id }),
 			{ status: redirect.Status.SeeOther },
 		);
 	}
@@ -137,7 +137,7 @@ export const updateStatusPage = createAction(routes.actions.updateStatusPage, as
 	]);
 
 	session?.flash("toast", { intent: "success", message: "Status page updated." });
-	return redirect(routes.app.team.statusPages.href({ team: ctx.team.slug }), {
+	return redirect(routes.app.team.statusPages.index.href({ team: ctx.team.slug }), {
 		status: redirect.Status.SeeOther,
 	});
 });
@@ -148,7 +148,7 @@ export const deleteStatusPage = createAction(routes.actions.deleteStatusPage, as
 	let session = ctx.get(Session);
 
 	if (isFailure(result)) {
-		return redirect(routes.app.team.statusPages.href({ team: ctx.team.slug }), {
+		return redirect(routes.app.team.statusPages.index.href({ team: ctx.team.slug }), {
 			status: redirect.Status.SeeOther,
 		});
 	}
@@ -163,7 +163,7 @@ export const deleteStatusPage = createAction(routes.actions.deleteStatusPage, as
 		intent: "success",
 		message: `Status page "${existing.name}" deleted.`,
 	});
-	return redirect(routes.app.team.statusPages.href({ team: ctx.team.slug }), {
+	return redirect(routes.app.team.statusPages.index.href({ team: ctx.team.slug }), {
 		status: redirect.Status.SeeOther,
 	});
 });

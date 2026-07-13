@@ -41,7 +41,7 @@ export default function TcpMonitorsView(handle: Handle<TcpMonitorsView.Props>) {
 					<EmptyState
 						message="No TCP monitors yet."
 						action={{
-							href: routes.app.team.tcpMonitorNew.href({ team: team.slug }),
+							href: routes.app.team.tcpMonitors.new.href({ team: team.slug }),
 							label: "Create your first TCP monitor",
 						}}
 					/>
@@ -77,7 +77,7 @@ export default function TcpMonitorsView(handle: Handle<TcpMonitorsView.Props>) {
 									<tr key={monitor.id}>
 										<td>
 											<a
-												href={routes.app.team.tcpMonitorShow.href({
+												href={routes.app.team.tcpMonitors.show.href({
 													team: team.slug,
 													monitorId: monitor.id,
 												})}

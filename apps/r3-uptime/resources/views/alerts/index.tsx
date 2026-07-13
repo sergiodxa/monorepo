@@ -57,7 +57,7 @@ export default function AlertsView(handle: Handle<AlertsView.Props>) {
 					<EmptyState
 						message="No alerts yet."
 						action={{
-							href: routes.app.team.alertNew.href({ team: team.slug }),
+							href: routes.app.team.alerts.new.href({ team: team.slug }),
 							label: "Create your first alert",
 						}}
 					/>
@@ -104,7 +104,7 @@ export default function AlertsView(handle: Handle<AlertsView.Props>) {
 										<td>{alert.cooldown_minutes === 0 ? "None" : `${alert.cooldown_minutes}m`}</td>
 										<td>
 											<a
-												href={routes.app.team.alertEdit.href({
+												href={routes.app.team.alerts.edit.href({
 													team: team.slug,
 													alertId: alert.id,
 												})}

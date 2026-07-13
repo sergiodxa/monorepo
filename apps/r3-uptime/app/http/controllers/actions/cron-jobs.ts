@@ -34,7 +34,7 @@ export const createCronJob = createAction(routes.actions.createCronJob, async (c
 
 	if (isFailure(result)) {
 		session?.flash("toast", { intent: "error", message: GENERIC_ERROR_MESSAGE });
-		return redirect(routes.app.team.cronJobNew.href({ team: ctx.team.slug }), {
+		return redirect(routes.app.team.cronJobs.new.href({ team: ctx.team.slug }), {
 			status: redirect.Status.SeeOther,
 		});
 	}
@@ -45,7 +45,7 @@ export const createCronJob = createAction(routes.actions.createCronJob, async (c
 		CronJobMonitor.validateCronExpression(values.cron_expression, values.timezone);
 	} catch {
 		session?.flash("toast", { intent: "error", message: INVALID_CRON_MESSAGE });
-		return redirect(routes.app.team.cronJobNew.href({ team: ctx.team.slug }), {
+		return redirect(routes.app.team.cronJobs.new.href({ team: ctx.team.slug }), {
 			status: redirect.Status.SeeOther,
 		});
 	}
@@ -59,7 +59,7 @@ export const createCronJob = createAction(routes.actions.createCronJob, async (c
 
 	session?.flash("toast", { intent: "success", message: `Cron job "${monitor.name}" created.` });
 	return redirect(
-		routes.app.team.cronJobShow.href({ team: ctx.team.slug, monitorId: monitor.id }),
+		routes.app.team.cronJobs.show.href({ team: ctx.team.slug, monitorId: monitor.id }),
 		{ status: redirect.Status.SeeOther },
 	);
 });
@@ -89,7 +89,7 @@ export const updateCronJob = createAction(routes.actions.updateCronJob, async (c
 	} catch {
 		session?.flash("toast", { intent: "error", message: INVALID_CRON_MESSAGE });
 		return redirect(
-			routes.app.team.cronJobEdit.href({ team: ctx.team.slug, monitorId: monitor_id }),
+			routes.app.team.cronJobs.edit.href({ team: ctx.team.slug, monitorId: monitor_id }),
 			{ status: redirect.Status.SeeOther },
 		);
 	}
@@ -111,7 +111,7 @@ export const updateCronJob = createAction(routes.actions.updateCronJob, async (c
 
 	session?.flash("toast", { intent: "success", message: "Cron job updated." });
 	return redirect(
-		routes.app.team.cronJobShow.href({ team: ctx.team.slug, monitorId: monitor_id }),
+		routes.app.team.cronJobs.show.href({ team: ctx.team.slug, monitorId: monitor_id }),
 		{ status: redirect.Status.SeeOther },
 	);
 });
@@ -122,7 +122,7 @@ export const deleteCronJob = createAction(routes.actions.deleteCronJob, async (c
 	let session = ctx.get(Session);
 
 	if (isFailure(result)) {
-		return redirect(routes.app.team.cronJobs.href({ team: ctx.team.slug }), {
+		return redirect(routes.app.team.cronJobs.index.href({ team: ctx.team.slug }), {
 			status: redirect.Status.SeeOther,
 		});
 	}
@@ -134,7 +134,7 @@ export const deleteCronJob = createAction(routes.actions.deleteCronJob, async (c
 	await CronJobMonitor.deleteById(db, result.data.monitor_id);
 
 	session?.flash("toast", { intent: "success", message: `Cron job "${existing.name}" deleted.` });
-	return redirect(routes.app.team.cronJobs.href({ team: ctx.team.slug }), {
+	return redirect(routes.app.team.cronJobs.index.href({ team: ctx.team.slug }), {
 		status: redirect.Status.SeeOther,
 	});
 });

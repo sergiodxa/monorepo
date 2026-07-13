@@ -17,7 +17,7 @@ import NewDnsMonitorView from "~/resources/views/dns-monitors/new";
 import routes from "~/routes/web";
 
 /** GET /app/:team/dns/new — the new DNS monitor form. */
-export default createAction(routes.app.team.dnsMonitorNew, {
+export default createAction(routes.app.team.dnsMonitors.new, {
 	middleware: [requireUser, requireTeam],
 	handler: () => {
 		let ctx = getContext();

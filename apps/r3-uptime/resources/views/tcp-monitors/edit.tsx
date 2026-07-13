@@ -75,7 +75,7 @@ export default function EditTcpMonitorView(handle: Handle<EditTcpMonitorView.Pro
 				</form>
 
 				<a
-					href={routes.app.team.tcpMonitorShow.href({ team: team.slug, monitorId: monitor.id })}
+					href={routes.app.team.tcpMonitors.show.href({ team: team.slug, monitorId: monitor.id })}
 					mix={[
 						css({
 							color: primary[600],

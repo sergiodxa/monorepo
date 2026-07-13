@@ -49,7 +49,7 @@ export default function HttpMonitorsView(handle: Handle<HttpMonitorsView.Props>)
 					<EmptyState
 						message="No monitors yet."
 						action={{
-							href: routes.app.team.monitorNew.href({ team: team.slug }),
+							href: routes.app.team.monitors.new.href({ team: team.slug }),
 							label: "Create your first monitor",
 						}}
 					/>
@@ -84,7 +84,7 @@ export default function HttpMonitorsView(handle: Handle<HttpMonitorsView.Props>)
 									<tr key={monitor.id}>
 										<td>
 											<a
-												href={routes.app.team.monitorShow.href({
+												href={routes.app.team.monitors.show.href({
 													team: team.slug,
 													monitorId: monitor.id,
 												})}

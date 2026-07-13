@@ -27,7 +27,7 @@ import HttpMonitorsView from "~/resources/views/monitors/index";
 import routes from "~/routes/web";
 
 /** GET /app/:team/http — the team's HTTP monitors list. */
-export default createAction(routes.app.team.httpMonitors, {
+export default createAction(routes.app.team.monitors.index, {
 	middleware: [requireUser, requireTeam],
 	handler: inject([Database] as const, async (db) => {
 		let ctx = getContext();
@@ -57,7 +57,7 @@ export default createAction(routes.app.team.httpMonitors, {
 					breadcrumb="HTTP monitors"
 					actions={
 						<a
-							href={routes.app.team.monitorNew.href({ team: ctx.team.slug })}
+							href={routes.app.team.monitors.new.href({ team: ctx.team.slug })}
 							mix={[
 								css({
 									display: "inline-flex",

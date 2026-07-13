@@ -27,7 +27,7 @@ import EditStatusPageView from "~/resources/views/status-pages/edit";
 import routes from "~/routes/web";
 
 /** GET /app/:team/status-pages/:statusPageId/edit — a status page's edit form. */
-export default createAction(routes.app.team.statusPageEdit, {
+export default createAction(routes.app.team.statusPages.edit, {
 	middleware: [requireUser, requireTeam],
 	handler: inject([Database] as const, async (db) => {
 		let ctx = getContext();

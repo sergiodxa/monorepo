@@ -458,7 +458,7 @@ export default function AppShell(handle: Handle<AppShell.Props>) {
 				),
 			},
 			{
-				href: routes.app.team.httpMonitors.href({ team: team.slug }),
+				href: routes.app.team.monitors.index.href({ team: team.slug }),
 				label: "HTTP Monitors",
 				icon: (
 					<svg viewBox="0 0 20 20" width={16} height={16} fill="none" aria-hidden="true">
@@ -481,7 +481,7 @@ export default function AppShell(handle: Handle<AppShell.Props>) {
 				),
 			},
 			{
-				href: routes.app.team.dnsMonitors.href({ team: team.slug }),
+				href: routes.app.team.dnsMonitors.index.href({ team: team.slug }),
 				label: "DNS Monitors",
 				icon: (
 					<svg viewBox="0 0 20 20" width={16} height={16} fill="none" aria-hidden="true">
@@ -496,7 +496,7 @@ export default function AppShell(handle: Handle<AppShell.Props>) {
 				),
 			},
 			{
-				href: routes.app.team.tcpMonitors.href({ team: team.slug }),
+				href: routes.app.team.tcpMonitors.index.href({ team: team.slug }),
 				label: "TCP Monitors",
 				icon: (
 					<svg viewBox="0 0 20 20" width={16} height={16} fill="none" aria-hidden="true">
@@ -513,7 +513,7 @@ export default function AppShell(handle: Handle<AppShell.Props>) {
 				),
 			},
 			{
-				href: routes.app.team.cronJobs.href({ team: team.slug }),
+				href: routes.app.team.cronJobs.index.href({ team: team.slug }),
 				label: "Cron Jobs",
 				icon: (
 					<svg viewBox="0 0 20 20" width={16} height={16} fill="none" aria-hidden="true">
@@ -529,7 +529,7 @@ export default function AppShell(handle: Handle<AppShell.Props>) {
 				),
 			},
 			{
-				href: routes.app.team.alerts.href({ team: team.slug }),
+				href: routes.app.team.alerts.index.href({ team: team.slug }),
 				label: "Alerts",
 				icon: (
 					<svg viewBox="0 0 20 20" width={16} height={16} fill="none" aria-hidden="true">
@@ -550,7 +550,7 @@ export default function AppShell(handle: Handle<AppShell.Props>) {
 				),
 			},
 			{
-				href: routes.app.team.maintenanceWindows.href({ team: team.slug }),
+				href: routes.app.team.maintenanceWindows.index.href({ team: team.slug }),
 				label: "Maintenance",
 				icon: (
 					<svg viewBox="0 0 20 20" width={16} height={16} fill="none" aria-hidden="true">
@@ -565,7 +565,7 @@ export default function AppShell(handle: Handle<AppShell.Props>) {
 				),
 			},
 			{
-				href: routes.app.team.statusPages.href({ team: team.slug }),
+				href: routes.app.team.statusPages.index.href({ team: team.slug }),
 				label: "Status pages",
 				icon: (
 					<svg viewBox="0 0 20 20" width={16} height={16} fill="none" aria-hidden="true">
@@ -610,7 +610,7 @@ export default function AppShell(handle: Handle<AppShell.Props>) {
 				),
 			},
 			{
-				href: routes.app.team.apiKeys.href({ team: team.slug }),
+				href: routes.app.team.apiKeys.index.href({ team: team.slug }),
 				label: "API keys",
 				icon: (
 					<svg viewBox="0 0 20 20" width={16} height={16} fill="none" aria-hidden="true">

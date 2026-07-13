@@ -118,7 +118,9 @@ describe("POST /actions/:team/create-alert", () => {
 		);
 
 		expect(response.status).toBe(303);
-		expect(response.headers.get("Location")).toBe(routes.app.team.alerts.href({ team: team.slug }));
+		expect(response.headers.get("Location")).toBe(
+			routes.app.team.alerts.index.href({ team: team.slug }),
+		);
 
 		let created = await db.findOne(alerts, { where: { team_id: team.id } });
 		expect(created?.name).toBe("Site down");
@@ -144,7 +146,7 @@ describe("POST /actions/:team/create-alert", () => {
 
 		expect(response.status).toBe(303);
 		expect(response.headers.get("Location")).toBe(
-			routes.app.team.alertNew.href({ team: team.slug }),
+			routes.app.team.alerts.new.href({ team: team.slug }),
 		);
 		expect(await db.count(alerts, { where: { team_id: team.id } })).toBe(0);
 	});
@@ -231,7 +233,9 @@ describe("POST /actions/:team/update-alert", () => {
 		);
 
 		expect(response.status).toBe(303);
-		expect(response.headers.get("Location")).toBe(routes.app.team.alerts.href({ team: team.slug }));
+		expect(response.headers.get("Location")).toBe(
+			routes.app.team.alerts.index.href({ team: team.slug }),
+		);
 
 		let updated = await db.findOne(alerts, { where: { id: alert.id } });
 		expect(updated?.name).toBe("New name");
@@ -332,7 +336,9 @@ describe("POST /actions/:team/delete-alert", () => {
 		);
 
 		expect(response.status).toBe(303);
-		expect(response.headers.get("Location")).toBe(routes.app.team.alerts.href({ team: team.slug }));
+		expect(response.headers.get("Location")).toBe(
+			routes.app.team.alerts.index.href({ team: team.slug }),
+		);
 		expect(await db.findOne(alerts, { where: { id: alert.id } })).toBeNull();
 	});
 
@@ -396,7 +402,9 @@ describe("POST /actions/:team/delete-alert", () => {
 		);
 
 		expect(response.status).toBe(303);
-		expect(response.headers.get("Location")).toBe(routes.app.team.alerts.href({ team: team.slug }));
+		expect(response.headers.get("Location")).toBe(
+			routes.app.team.alerts.index.href({ team: team.slug }),
+		);
 		expect(await db.findOne(alerts, { where: { id: alert.id } })).not.toBeNull();
 	});
 });

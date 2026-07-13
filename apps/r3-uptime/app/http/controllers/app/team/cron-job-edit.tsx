@@ -23,7 +23,7 @@ import EditCronJobView from "~/resources/views/cron-jobs/edit";
 import routes from "~/routes/web";
 
 /** GET /app/:team/cron-jobs/:monitorId/edit — a cron-job monitor's edit form. */
-export default createAction(routes.app.team.cronJobEdit, {
+export default createAction(routes.app.team.cronJobs.edit, {
 	middleware: [requireUser, requireTeam],
 	handler: inject([Database] as const, async (db) => {
 		let ctx = getContext();

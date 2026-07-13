@@ -20,7 +20,7 @@ import NewAlertView from "~/resources/views/alerts/new";
 import routes from "~/routes/web";
 
 /** GET /app/:team/alerts/new — the new alert form. */
-export default createAction(routes.app.team.alertNew, {
+export default createAction(routes.app.team.alerts.new, {
 	middleware: [requireUser, requireTeam],
 	handler: inject([Database] as const, async (db) => {
 		let ctx = getContext();

@@ -138,7 +138,7 @@ describe("POST /actions/:team/create-dns-monitor", () => {
 
 		expect(response.status).toBe(303);
 		expect(response.headers.get("Location")).toBe(
-			routes.app.team.dnsMonitorShow.href({ team: team.slug, monitorId: created!.id }),
+			routes.app.team.dnsMonitors.show.href({ team: team.slug, monitorId: created!.id }),
 		);
 	});
 
@@ -158,7 +158,7 @@ describe("POST /actions/:team/create-dns-monitor", () => {
 
 		expect(response.status).toBe(303);
 		expect(response.headers.get("Location")).toBe(
-			routes.app.team.dnsMonitorNew.href({ team: team.slug }),
+			routes.app.team.dnsMonitors.new.href({ team: team.slug }),
 		);
 		expect(await db.count(dnsMonitors, { where: { team_id: team.id } })).toBe(0);
 	});
@@ -238,7 +238,7 @@ describe("POST /actions/:team/update-dns-monitor", () => {
 
 		expect(response.status).toBe(303);
 		expect(response.headers.get("Location")).toBe(
-			routes.app.team.dnsMonitorShow.href({ team: team.slug, monitorId: monitor.id }),
+			routes.app.team.dnsMonitors.show.href({ team: team.slug, monitorId: monitor.id }),
 		);
 		let updated = await db.findOne(dnsMonitors, { where: { id: monitor.id } });
 		expect(updated?.name).toBe("New name");
@@ -354,7 +354,7 @@ describe("DELETE /actions/:team/delete-dns-monitor", () => {
 
 		expect(response.status).toBe(303);
 		expect(response.headers.get("Location")).toBe(
-			routes.app.team.dnsMonitors.href({ team: team.slug }),
+			routes.app.team.dnsMonitors.index.href({ team: team.slug }),
 		);
 		expect(await db.findOne(dnsMonitors, { where: { id: monitor.id } })).toBeNull();
 	});
@@ -428,7 +428,7 @@ describe("DELETE /actions/:team/delete-dns-monitor", () => {
 
 		expect(response.status).toBe(303);
 		expect(response.headers.get("Location")).toBe(
-			routes.app.team.dnsMonitors.href({ team: team.slug }),
+			routes.app.team.dnsMonitors.index.href({ team: team.slug }),
 		);
 		expect(await db.findOne(dnsMonitors, { where: { id: monitor.id } })).not.toBeNull();
 	});
@@ -477,7 +477,7 @@ describe("POST /actions/:team/check-dns-monitor", () => {
 
 			expect(response.status).toBe(303);
 			expect(response.headers.get("Location")).toBe(
-				routes.app.team.dnsMonitorShow.href({ team: team.slug, monitorId: monitor.id }),
+				routes.app.team.dnsMonitors.show.href({ team: team.slug, monitorId: monitor.id }),
 			);
 
 			let checked = await db.findOne(dnsMonitors, { where: { id: monitor.id } });
@@ -556,7 +556,7 @@ describe("POST /actions/:team/check-dns-monitor", () => {
 
 			expect(response.status).toBe(303);
 			expect(response.headers.get("Location")).toBe(
-				routes.app.team.dnsMonitors.href({ team: team.slug }),
+				routes.app.team.dnsMonitors.index.href({ team: team.slug }),
 			);
 			expect(fetchSpy).not.toHaveBeenCalled();
 		} finally {

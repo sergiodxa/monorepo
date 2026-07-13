@@ -21,7 +21,7 @@ import StatusPagesView from "~/resources/views/status-pages/index";
 import routes from "~/routes/web";
 
 /** GET /app/:team/status-pages — the team's status pages list. */
-export default createAction(routes.app.team.statusPages, {
+export default createAction(routes.app.team.statusPages.index, {
 	middleware: [requireUser, requireTeam],
 	handler: inject([Database] as const, async (db) => {
 		let ctx = getContext();
@@ -52,7 +52,7 @@ export default createAction(routes.app.team.statusPages, {
 					breadcrumb="Status pages"
 					actions={
 						<a
-							href={routes.app.team.statusPageNew.href({ team: ctx.team.slug })}
+							href={routes.app.team.statusPages.new.href({ team: ctx.team.slug })}
 							mix={[
 								css({
 									display: "inline-flex",

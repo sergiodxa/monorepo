@@ -63,7 +63,7 @@ export const createAlert = createAction(routes.actions.createAlert, async (ctx) 
 			intent: "error",
 			message: "Please check the alert details and try again.",
 		});
-		return redirect(routes.app.team.alertNew.href({ team: ctx.team.slug }), {
+		return redirect(routes.app.team.alerts.new.href({ team: ctx.team.slug }), {
 			status: redirect.Status.SeeOther,
 		});
 	}
@@ -84,7 +84,7 @@ export const createAlert = createAction(routes.actions.createAlert, async (ctx) 
 	});
 
 	session?.flash("toast", { intent: "success", message: `Alert "${alert.name}" created.` });
-	return redirect(routes.app.team.alerts.href({ team: ctx.team.slug }), {
+	return redirect(routes.app.team.alerts.index.href({ team: ctx.team.slug }), {
 		status: redirect.Status.SeeOther,
 	});
 });
@@ -100,7 +100,8 @@ export const updateAlert = createAction(routes.actions.updateAlert, async (ctx) 
 			message: "Please check the alert details and try again.",
 		});
 		return redirect(
-			ctx.request.headers.get("Referer") ?? routes.app.team.alerts.href({ team: ctx.team.slug }),
+			ctx.request.headers.get("Referer") ??
+				routes.app.team.alerts.index.href({ team: ctx.team.slug }),
 			{ status: redirect.Status.SeeOther },
 		);
 	}
@@ -118,7 +119,7 @@ export const updateAlert = createAction(routes.actions.updateAlert, async (ctx) 
 	});
 
 	session?.flash("toast", { intent: "success", message: "Alert updated." });
-	return redirect(routes.app.team.alerts.href({ team: ctx.team.slug }), {
+	return redirect(routes.app.team.alerts.index.href({ team: ctx.team.slug }), {
 		status: redirect.Status.SeeOther,
 	});
 });
@@ -129,7 +130,7 @@ export const deleteAlert = createAction(routes.actions.deleteAlert, async (ctx) 
 	let session = ctx.get(Session);
 
 	if (isFailure(result)) {
-		return redirect(routes.app.team.alerts.href({ team: ctx.team.slug }), {
+		return redirect(routes.app.team.alerts.index.href({ team: ctx.team.slug }), {
 			status: redirect.Status.SeeOther,
 		});
 	}
@@ -141,7 +142,7 @@ export const deleteAlert = createAction(routes.actions.deleteAlert, async (ctx) 
 	await Alert.deleteById(db, result.data.alert_id);
 
 	session?.flash("toast", { intent: "success", message: `Alert "${existing.name}" deleted.` });
-	return redirect(routes.app.team.alerts.href({ team: ctx.team.slug }), {
+	return redirect(routes.app.team.alerts.index.href({ team: ctx.team.slug }), {
 		status: redirect.Status.SeeOther,
 	});
 });

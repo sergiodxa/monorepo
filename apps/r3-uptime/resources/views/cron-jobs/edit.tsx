@@ -57,7 +57,7 @@ export default function EditCronJobView(handle: Handle<EditCronJobView.Props>) {
 				</form>
 
 				<a
-					href={routes.app.team.cronJobShow.href({ team: team.slug, monitorId: monitor.id })}
+					href={routes.app.team.cronJobs.show.href({ team: team.slug, monitorId: monitor.id })}
 					mix={[
 						css({
 							color: primary[600],

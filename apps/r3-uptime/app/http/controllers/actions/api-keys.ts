@@ -29,7 +29,7 @@ export const createApiKey = createAction(routes.teamAdminActions.createApiKey, a
 
 	if (isFailure(result)) {
 		session?.flash("toast", { intent: "error", message: "Please check the API key details." });
-		return redirect(routes.app.team.apiKeyNew.href({ team: ctx.team.slug }), {
+		return redirect(routes.app.team.apiKeys.new.href({ team: ctx.team.slug }), {
 			status: redirect.Status.SeeOther,
 		});
 	}
@@ -45,7 +45,7 @@ export const createApiKey = createAction(routes.teamAdminActions.createApiKey, a
 	let { record, key } = await ApiKey.create(db, ctx.team.id, { name, scopes, expires_at });
 
 	session?.flash("newApiKey", { name: record.name, key });
-	return redirect(routes.app.team.apiKeys.href({ team: ctx.team.slug }), {
+	return redirect(routes.app.team.apiKeys.index.href({ team: ctx.team.slug }), {
 		status: redirect.Status.SeeOther,
 	});
 });
@@ -56,7 +56,7 @@ export const deleteApiKey = createAction(routes.teamAdminActions.deleteApiKey, a
 	let session = ctx.get(Session);
 
 	if (isFailure(result)) {
-		return redirect(routes.app.team.apiKeys.href({ team: ctx.team.slug }), {
+		return redirect(routes.app.team.apiKeys.index.href({ team: ctx.team.slug }), {
 			status: redirect.Status.SeeOther,
 		});
 	}
@@ -68,7 +68,7 @@ export const deleteApiKey = createAction(routes.teamAdminActions.deleteApiKey, a
 	await ApiKey.deleteById(db, apiKey.id);
 
 	session?.flash("toast", { intent: "success", message: `API key "${apiKey.name}" deleted.` });
-	return redirect(routes.app.team.apiKeys.href({ team: ctx.team.slug }), {
+	return redirect(routes.app.team.apiKeys.index.href({ team: ctx.team.slug }), {
 		status: redirect.Status.SeeOther,
 	});
 });

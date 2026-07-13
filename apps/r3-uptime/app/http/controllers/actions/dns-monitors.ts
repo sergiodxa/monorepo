@@ -39,7 +39,7 @@ export const createDnsMonitor = createAction(routes.actions.createDnsMonitor, as
 			intent: "error",
 			message: "Please check the DNS monitor details and try again.",
 		});
-		return redirect(routes.app.team.dnsMonitorNew.href({ team: ctx.team.slug }), {
+		return redirect(routes.app.team.dnsMonitors.new.href({ team: ctx.team.slug }), {
 			status: redirect.Status.SeeOther,
 		});
 	}
@@ -61,7 +61,7 @@ export const createDnsMonitor = createAction(routes.actions.createDnsMonitor, as
 
 	session?.flash("toast", { intent: "success", message: `DNS monitor "${monitor.name}" created.` });
 	return redirect(
-		routes.app.team.dnsMonitorShow.href({ team: ctx.team.slug, monitorId: monitor.id }),
+		routes.app.team.dnsMonitors.show.href({ team: ctx.team.slug, monitorId: monitor.id }),
 		{ status: redirect.Status.SeeOther },
 	);
 });
@@ -95,7 +95,7 @@ export const updateDnsMonitor = createAction(routes.actions.updateDnsMonitor, as
 
 	session?.flash("toast", { intent: "success", message: "DNS monitor updated." });
 	return redirect(
-		routes.app.team.dnsMonitorShow.href({ team: ctx.team.slug, monitorId: monitor_id }),
+		routes.app.team.dnsMonitors.show.href({ team: ctx.team.slug, monitorId: monitor_id }),
 		{ status: redirect.Status.SeeOther },
 	);
 });
@@ -106,7 +106,7 @@ export const deleteDnsMonitor = createAction(routes.actions.deleteDnsMonitor, as
 	let session = ctx.get(Session);
 
 	if (isFailure(result)) {
-		return redirect(routes.app.team.dnsMonitors.href({ team: ctx.team.slug }), {
+		return redirect(routes.app.team.dnsMonitors.index.href({ team: ctx.team.slug }), {
 			status: redirect.Status.SeeOther,
 		});
 	}
@@ -121,7 +121,7 @@ export const deleteDnsMonitor = createAction(routes.actions.deleteDnsMonitor, as
 		intent: "success",
 		message: `DNS monitor "${existing.name}" deleted.`,
 	});
-	return redirect(routes.app.team.dnsMonitors.href({ team: ctx.team.slug }), {
+	return redirect(routes.app.team.dnsMonitors.index.href({ team: ctx.team.slug }), {
 		status: redirect.Status.SeeOther,
 	});
 });
@@ -132,7 +132,7 @@ export const checkDnsMonitor = createAction(routes.actions.checkDnsMonitor, asyn
 	let session = ctx.get(Session);
 
 	if (isFailure(result)) {
-		return redirect(routes.app.team.dnsMonitors.href({ team: ctx.team.slug }), {
+		return redirect(routes.app.team.dnsMonitors.index.href({ team: ctx.team.slug }), {
 			status: redirect.Status.SeeOther,
 		});
 	}
@@ -158,7 +158,7 @@ export const checkDnsMonitor = createAction(routes.actions.checkDnsMonitor, asyn
 
 	session?.flash("toast", { intent: "success", message: `Checked "${monitor.name}".` });
 	return redirect(
-		routes.app.team.dnsMonitorShow.href({ team: ctx.team.slug, monitorId: monitor.id }),
+		routes.app.team.dnsMonitors.show.href({ team: ctx.team.slug, monitorId: monitor.id }),
 		{ status: redirect.Status.SeeOther },
 	);
 });

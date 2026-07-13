@@ -17,7 +17,7 @@ import NewCronJobView from "~/resources/views/cron-jobs/new";
 import routes from "~/routes/web";
 
 /** GET /app/:team/cron-jobs/new — the new cron-job monitor form. */
-export default createAction(routes.app.team.cronJobNew, {
+export default createAction(routes.app.team.cronJobs.new, {
 	middleware: [requireUser, requireTeam],
 	handler: () => {
 		let ctx = getContext();

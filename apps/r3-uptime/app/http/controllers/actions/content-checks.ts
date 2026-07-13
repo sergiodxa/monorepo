@@ -67,7 +67,7 @@ export const createContentCheck = createAction(routes.actions.createContentCheck
 
 	session?.flash("toast", { intent: "success", message: "Content check added." });
 	return redirect(
-		routes.app.team.monitorEdit.href({ team: ctx.team.slug, monitorId: monitor_id }),
+		routes.app.team.monitors.edit.href({ team: ctx.team.slug, monitorId: monitor_id }),
 		{
 			status: redirect.Status.SeeOther,
 		},
@@ -97,7 +97,7 @@ export const deleteContentCheck = createAction(routes.actions.deleteContentCheck
 
 	ctx.get(Session)?.flash("toast", { intent: "success", message: "Content check removed." });
 	return redirect(
-		routes.app.team.monitorEdit.href({ team: ctx.team.slug, monitorId: monitor_id }),
+		routes.app.team.monitors.edit.href({ team: ctx.team.slug, monitorId: monitor_id }),
 		{
 			status: redirect.Status.SeeOther,
 		},

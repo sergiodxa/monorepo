@@ -21,7 +21,7 @@ import TcpMonitorsView from "~/resources/views/tcp-monitors/index";
 import routes from "~/routes/web";
 
 /** GET /app/:team/tcp — the team's TCP monitors list. */
-export default createAction(routes.app.team.tcpMonitors, {
+export default createAction(routes.app.team.tcpMonitors.index, {
 	middleware: [requireUser, requireTeam],
 	handler: inject([Database] as const, async (db) => {
 		let ctx = getContext();
@@ -40,7 +40,7 @@ export default createAction(routes.app.team.tcpMonitors, {
 					breadcrumb="TCP monitors"
 					actions={
 						<a
-							href={routes.app.team.tcpMonitorNew.href({ team: ctx.team.slug })}
+							href={routes.app.team.tcpMonitors.new.href({ team: ctx.team.slug })}
 							mix={[
 								css({
 									display: "inline-flex",

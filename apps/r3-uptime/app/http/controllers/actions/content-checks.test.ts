@@ -123,7 +123,7 @@ describe("POST /actions/:team/create-content-check", () => {
 
 		expect(response.status).toBe(303);
 		expect(response.headers.get("Location")).toBe(
-			routes.app.team.monitorEdit.href({ team: team.slug, monitorId: monitor.id }),
+			routes.app.team.monitors.edit.href({ team: team.slug, monitorId: monitor.id }),
 		);
 
 		let created = await db.findOne(monitorContentChecks, { where: { monitor_id: monitor.id } });
@@ -258,7 +258,7 @@ describe("DELETE /actions/:team/delete-content-check", () => {
 
 		expect(response.status).toBe(303);
 		expect(response.headers.get("Location")).toBe(
-			routes.app.team.monitorEdit.href({ team: team.slug, monitorId: monitor.id }),
+			routes.app.team.monitors.edit.href({ team: team.slug, monitorId: monitor.id }),
 		);
 		expect(await db.findOne(monitorContentChecks, { where: { id: check.id } })).toBeNull();
 	});
