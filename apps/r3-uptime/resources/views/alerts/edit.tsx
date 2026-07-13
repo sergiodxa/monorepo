@@ -30,7 +30,7 @@ export default function EditAlertView(handle: Handle<EditAlertView.Props>) {
 
 		return (
 			<div>
-				<form method="post" action={routes.actions.updateAlert.href({ team: team.slug })}>
+				<form method="post" action={routes.actions.alert.update.href({ team: team.slug })}>
 					<input type="hidden" name="alert_id" value={alert.id} />
 					<AlertFormFields alert={alert} monitors={monitors} />
 					<button
@@ -127,7 +127,7 @@ export default function EditAlertView(handle: Handle<EditAlertView.Props>) {
 					>
 						This can't be undone.
 					</p>
-					<form method="post" action={routes.actions.deleteAlert.href({ team: team.slug })}>
+					<form method="post" action={routes.actions.alert.delete.href({ team: team.slug })}>
 						<input type="hidden" name="_method" value="DELETE" />
 						<input type="hidden" name="alert_id" value={alert.id} />
 						<button

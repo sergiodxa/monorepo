@@ -114,7 +114,7 @@ describe("POST /actions/:team/create-content-check", () => {
 
 		let response = await postContentCheckAction(
 			createContentCheck,
-			routes.actions.createContentCheck,
+			routes.actions.monitor.http.createContentCheck,
 			team,
 			membership,
 			db,
@@ -140,7 +140,7 @@ describe("POST /actions/:team/create-content-check", () => {
 
 		let response = await postContentCheckAction(
 			createContentCheck,
-			routes.actions.createContentCheck,
+			routes.actions.monitor.http.createContentCheck,
 			team,
 			membership,
 			db,
@@ -162,7 +162,7 @@ describe("POST /actions/:team/create-content-check", () => {
 
 		let response = await postContentCheckAction(
 			createContentCheck,
-			routes.actions.createContentCheck,
+			routes.actions.monitor.http.createContentCheck,
 			team,
 			membership,
 			db,
@@ -182,7 +182,7 @@ describe("POST /actions/:team/create-content-check", () => {
 
 		let response = await postContentCheckAction(
 			createContentCheck,
-			routes.actions.createContentCheck,
+			routes.actions.monitor.http.createContentCheck,
 			team,
 			membership,
 			db,
@@ -216,7 +216,7 @@ describe("POST /actions/:team/create-content-check", () => {
 
 		let response = await postContentCheckAction(
 			createContentCheck,
-			routes.actions.createContentCheck,
+			routes.actions.monitor.http.createContentCheck,
 			team,
 			membership,
 			db,
@@ -249,7 +249,7 @@ describe("DELETE /actions/:team/delete-content-check", () => {
 
 		let response = await postContentCheckAction(
 			deleteContentCheck,
-			routes.actions.deleteContentCheck,
+			routes.actions.monitor.http.deleteContentCheck,
 			team,
 			membership,
 			db,
@@ -284,7 +284,7 @@ describe("DELETE /actions/:team/delete-content-check", () => {
 
 		let response = await postContentCheckAction(
 			deleteContentCheck,
-			routes.actions.deleteContentCheck,
+			routes.actions.monitor.http.deleteContentCheck,
 			team,
 			membership,
 			db,
@@ -316,7 +316,7 @@ describe("DELETE /actions/:team/delete-content-check", () => {
 
 		let response = await postContentCheckAction(
 			deleteContentCheck,
-			routes.actions.deleteContentCheck,
+			routes.actions.monitor.http.deleteContentCheck,
 			team,
 			membership,
 			db,
@@ -347,7 +347,7 @@ describe("DELETE /actions/:team/delete-content-check", () => {
 
 		let response = await postContentCheckAction(
 			deleteContentCheck,
-			routes.actions.deleteContentCheck,
+			routes.actions.monitor.http.deleteContentCheck,
 			team,
 			membership,
 			db,

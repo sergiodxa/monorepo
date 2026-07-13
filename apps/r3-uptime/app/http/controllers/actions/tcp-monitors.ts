@@ -30,7 +30,7 @@ import { checkTcpConnection } from "~/app/services/tcp-check";
 import routes from "~/routes/web";
 
 /** POST /actions/:team/create-tcp-monitor */
-export const createTcpMonitor = createAction(routes.actions.createTcpMonitor, async (ctx) => {
+export const createTcpMonitor = createAction(routes.actions.monitor.tcp.create, async (ctx) => {
 	let result = await validate(ctx.formData, CreateTcpMonitorSchema);
 	let session = ctx.get(Session);
 
@@ -55,7 +55,7 @@ export const createTcpMonitor = createAction(routes.actions.createTcpMonitor, as
 });
 
 /** POST /actions/:team/update-tcp-monitor */
-export const updateTcpMonitor = createAction(routes.actions.updateTcpMonitor, async (ctx) => {
+export const updateTcpMonitor = createAction(routes.actions.monitor.tcp.update, async (ctx) => {
 	let result = await validate(ctx.formData, UpdateTcpMonitorSchema);
 	let session = ctx.get(Session);
 
@@ -86,7 +86,7 @@ export const updateTcpMonitor = createAction(routes.actions.updateTcpMonitor, as
 });
 
 /** DELETE /actions/:team/delete-tcp-monitor */
-export const deleteTcpMonitor = createAction(routes.actions.deleteTcpMonitor, async (ctx) => {
+export const deleteTcpMonitor = createAction(routes.actions.monitor.tcp.delete, async (ctx) => {
 	let result = await validate(ctx.formData, TcpMonitorIdSchema);
 	let session = ctx.get(Session);
 
@@ -112,7 +112,7 @@ export const deleteTcpMonitor = createAction(routes.actions.deleteTcpMonitor, as
 });
 
 /** POST /actions/:team/check-tcp-monitor — triggers an immediate on-demand check. */
-export const checkTcpMonitor = createAction(routes.actions.checkTcpMonitor, async (ctx) => {
+export const checkTcpMonitor = createAction(routes.actions.monitor.tcp.check, async (ctx) => {
 	let result = await validate(ctx.formData, TcpMonitorIdSchema);
 	let session = ctx.get(Session);
 

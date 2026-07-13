@@ -111,7 +111,7 @@ describe("POST /actions/:team/create-api-key", () => {
 
 		let response = await postApiKeyAction(
 			createApiKey,
-			routes.teamAdminActions.createApiKey,
+			routes.teamAdminActions.apiKey.create,
 			team,
 			membership,
 			db,
@@ -137,7 +137,7 @@ describe("POST /actions/:team/create-api-key", () => {
 
 		let response = await postApiKeyAction(
 			createApiKey,
-			routes.teamAdminActions.createApiKey,
+			routes.teamAdminActions.apiKey.create,
 			team,
 			membership,
 			db,
@@ -158,7 +158,7 @@ describe("POST /actions/:team/create-api-key", () => {
 
 		let response = await postApiKeyAction(
 			createApiKey,
-			routes.teamAdminActions.createApiKey,
+			routes.teamAdminActions.apiKey.create,
 			team,
 			membership,
 			db,
@@ -193,7 +193,7 @@ describe("POST /actions/:team/create-api-key", () => {
 
 		let response = await postApiKeyAction(
 			createApiKey,
-			routes.teamAdminActions.createApiKey,
+			routes.teamAdminActions.apiKey.create,
 			team,
 			membership,
 			db,
@@ -227,7 +227,7 @@ describe("DELETE /actions/:team/delete-api-key", () => {
 
 		let response = await postApiKeyAction(
 			deleteApiKey,
-			routes.teamAdminActions.deleteApiKey,
+			routes.teamAdminActions.apiKey.delete,
 			team,
 			membership,
 			db,
@@ -263,7 +263,7 @@ describe("DELETE /actions/:team/delete-api-key", () => {
 
 		let response = await postApiKeyAction(
 			deleteApiKey,
-			routes.teamAdminActions.deleteApiKey,
+			routes.teamAdminActions.apiKey.delete,
 			team,
 			membership,
 			db,
@@ -295,7 +295,7 @@ describe("DELETE /actions/:team/delete-api-key", () => {
 
 		let response = await postApiKeyAction(
 			deleteApiKey,
-			routes.teamAdminActions.deleteApiKey,
+			routes.teamAdminActions.apiKey.delete,
 			team,
 			membership,
 			db,

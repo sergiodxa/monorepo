@@ -34,7 +34,10 @@ export default function SslForm(handle: Handle<SslForm.Props>) {
 		return (
 			<div>
 				<h2>SSL certificate monitoring</h2>
-				<form method="post" action={routes.actions.updateSsl.href({ team: team.slug })}>
+				<form
+					method="post"
+					action={routes.actions.monitor.http.updateSsl.href({ team: team.slug })}
+				>
 					<input type="hidden" name="monitor_id" value={monitor.id} />
 
 					<label

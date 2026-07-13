@@ -51,7 +51,7 @@ export default createAction(routes.app.team.dnsMonitors.show, {
 						<div mix={[css({ display: "flex", alignItems: "center", gap: 12 })]}>
 							<form
 								method="post"
-								action={routes.actions.checkDnsMonitor.href({ team: ctx.team.slug })}
+								action={routes.actions.monitor.dns.check.href({ team: ctx.team.slug })}
 								mix={[css({ margin: 0 })]}
 							>
 								<input type="hidden" name="monitor_id" value={monitor.id} />

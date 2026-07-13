@@ -88,13 +88,13 @@ async function send(
 	container.instance(Database, db);
 
 	let router = createRouter({ middleware: [asyncContext(), formData() as Middleware] });
-	router.map(routes.actions.updateSsl, {
+	router.map(routes.actions.monitor.http.updateSsl, {
 		middleware: [seedTeam(team, membership)],
 		handler: updateSsl as RequestHandler<any>,
 	});
 
 	let request = new Request(
-		new URL(routes.actions.updateSsl.href({ team: team.slug }), "https://uptime.test"),
+		new URL(routes.actions.monitor.http.updateSsl.href({ team: team.slug }), "https://uptime.test"),
 		{
 			method: "POST",
 			headers: { "content-type": "application/x-www-form-urlencoded" },

@@ -110,7 +110,7 @@ describe("POST /actions/:team/create-cron-job", () => {
 
 		let response = await postCronJobAction(
 			createCronJob,
-			routes.actions.createCronJob,
+			routes.actions.cronJob.create,
 			team,
 			membership,
 			db,
@@ -135,7 +135,7 @@ describe("POST /actions/:team/create-cron-job", () => {
 
 		let response = await postCronJobAction(
 			createCronJob,
-			routes.actions.createCronJob,
+			routes.actions.cronJob.create,
 			team,
 			membership,
 			db,
@@ -156,7 +156,7 @@ describe("POST /actions/:team/create-cron-job", () => {
 
 		let response = await postCronJobAction(
 			createCronJob,
-			routes.actions.createCronJob,
+			routes.actions.cronJob.create,
 			team,
 			membership,
 			db,
@@ -197,7 +197,7 @@ describe("POST /actions/:team/update-cron-job", () => {
 
 		let response = await postCronJobAction(
 			updateCronJob,
-			routes.actions.updateCronJob,
+			routes.actions.cronJob.update,
 			team,
 			membership,
 			db,
@@ -240,7 +240,7 @@ describe("POST /actions/:team/update-cron-job", () => {
 
 		let response = await postCronJobAction(
 			updateCronJob,
-			routes.actions.updateCronJob,
+			routes.actions.cronJob.update,
 			team,
 			membership,
 			db,
@@ -277,7 +277,7 @@ describe("POST /actions/:team/update-cron-job", () => {
 
 		let response = await postCronJobAction(
 			updateCronJob,
-			routes.actions.updateCronJob,
+			routes.actions.cronJob.update,
 			team,
 			membership,
 			db,
@@ -321,7 +321,7 @@ describe("POST /actions/:team/update-cron-job", () => {
 
 		let response = await postCronJobAction(
 			updateCronJob,
-			routes.actions.updateCronJob,
+			routes.actions.cronJob.update,
 			team,
 			membership,
 			db,
@@ -362,7 +362,7 @@ describe("DELETE /actions/:team/delete-cron-job", () => {
 
 		let response = await postCronJobAction(
 			deleteCronJob,
-			routes.actions.deleteCronJob,
+			routes.actions.cronJob.delete,
 			team,
 			membership,
 			db,
@@ -402,7 +402,7 @@ describe("DELETE /actions/:team/delete-cron-job", () => {
 
 		let response = await postCronJobAction(
 			deleteCronJob,
-			routes.actions.deleteCronJob,
+			routes.actions.cronJob.delete,
 			team,
 			membership,
 			db,
@@ -438,7 +438,7 @@ describe("DELETE /actions/:team/delete-cron-job", () => {
 
 		let response = await postCronJobAction(
 			deleteCronJob,
-			routes.actions.deleteCronJob,
+			routes.actions.cronJob.delete,
 			team,
 			membership,
 			db,

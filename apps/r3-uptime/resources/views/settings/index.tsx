@@ -112,7 +112,7 @@ export default function SettingsView(handle: Handle<SettingsView.Props>) {
 		return (
 			<div>
 				<h2>General</h2>
-				<form method="post" action={routes.teamAdminActions.updateTeam.href({ team: team.slug })}>
+				<form method="post" action={routes.teamAdminActions.team.update.href({ team: team.slug })}>
 					<Field label="Name">
 						<input
 							type="text"
@@ -194,7 +194,7 @@ export default function SettingsView(handle: Handle<SettingsView.Props>) {
 					<h3>Invite a member</h3>
 					<form
 						method="post"
-						action={routes.teamAdminActions.createInvite.href({ team: team.slug })}
+						action={routes.teamAdminActions.invite.create.href({ team: team.slug })}
 					>
 						<Field label="Email">
 							<input
@@ -280,7 +280,9 @@ export default function SettingsView(handle: Handle<SettingsView.Props>) {
 												<>
 													<form
 														method="post"
-														action={routes.teamAdminActions.changeRole.href({ team: team.slug })}
+														action={routes.teamAdminActions.member.changeRole.href({
+															team: team.slug,
+														})}
 													>
 														<input type="hidden" name="subject_id" value={member.subject_id} />
 														<input type="hidden" name="role" value={nextRole} />
@@ -318,7 +320,7 @@ export default function SettingsView(handle: Handle<SettingsView.Props>) {
 														<h3>Remove this member?</h3>
 														<form
 															method="post"
-															action={routes.teamAdminActions.removeMember.href({
+															action={routes.teamAdminActions.member.remove.href({
 																team: team.slug,
 															})}
 														>
@@ -388,7 +390,7 @@ export default function SettingsView(handle: Handle<SettingsView.Props>) {
 											<td>
 												<form
 													method="post"
-													action={routes.teamAdminActions.revokeInvite.href({ team: team.slug })}
+													action={routes.teamAdminActions.invite.revoke.href({ team: team.slug })}
 												>
 													<input type="hidden" name="_method" value="DELETE" />
 													<input type="hidden" name="invite_id" value={invite.id} />
@@ -419,7 +421,7 @@ export default function SettingsView(handle: Handle<SettingsView.Props>) {
 				>
 					Verified domains automatically join new sign-ups whose email matches to this team.
 				</p>
-				<form method="post" action={routes.teamAdminActions.addDomain.href({ team: team.slug })}>
+				<form method="post" action={routes.teamAdminActions.domain.add.href({ team: team.slug })}>
 					<Field label="Domain">
 						<input
 							type="text"
@@ -504,7 +506,7 @@ export default function SettingsView(handle: Handle<SettingsView.Props>) {
 										{domain.verified_at === null && (
 											<form
 												method="post"
-												action={routes.teamAdminActions.retryDomainVerification.href({
+												action={routes.teamAdminActions.domain.retryVerification.href({
 													team: team.slug,
 												})}
 											>
@@ -516,7 +518,7 @@ export default function SettingsView(handle: Handle<SettingsView.Props>) {
 										)}
 										<form
 											method="post"
-											action={routes.teamAdminActions.removeDomain.href({ team: team.slug })}
+											action={routes.teamAdminActions.domain.remove.href({ team: team.slug })}
 										>
 											<input type="hidden" name="_method" value="DELETE" />
 											<input type="hidden" name="domain_id" value={domain.id} />
@@ -586,7 +588,10 @@ export default function SettingsView(handle: Handle<SettingsView.Props>) {
 						This permanently deletes the team and every monitor, alert, status page, and API key it
 						owns. Type <code>DELETE</code> to confirm.
 					</p>
-					<form method="post" action={routes.teamAdminActions.deleteTeam.href({ team: team.slug })}>
+					<form
+						method="post"
+						action={routes.teamAdminActions.team.delete.href({ team: team.slug })}
+					>
 						<input type="hidden" name="_method" value="DELETE" />
 						<input
 							type="text"

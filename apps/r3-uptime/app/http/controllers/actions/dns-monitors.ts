@@ -30,7 +30,7 @@ import { checkDns } from "~/app/services/dns-check";
 import routes from "~/routes/web";
 
 /** POST /actions/:team/create-dns-monitor */
-export const createDnsMonitor = createAction(routes.actions.createDnsMonitor, async (ctx) => {
+export const createDnsMonitor = createAction(routes.actions.monitor.dns.create, async (ctx) => {
 	let result = await validate(ctx.formData, CreateDnsMonitorSchema);
 	let session = ctx.get(Session);
 
@@ -67,7 +67,7 @@ export const createDnsMonitor = createAction(routes.actions.createDnsMonitor, as
 });
 
 /** POST /actions/:team/update-dns-monitor */
-export const updateDnsMonitor = createAction(routes.actions.updateDnsMonitor, async (ctx) => {
+export const updateDnsMonitor = createAction(routes.actions.monitor.dns.update, async (ctx) => {
 	let result = await validate(ctx.formData, UpdateDnsMonitorSchema);
 	let session = ctx.get(Session);
 
@@ -101,7 +101,7 @@ export const updateDnsMonitor = createAction(routes.actions.updateDnsMonitor, as
 });
 
 /** DELETE /actions/:team/delete-dns-monitor */
-export const deleteDnsMonitor = createAction(routes.actions.deleteDnsMonitor, async (ctx) => {
+export const deleteDnsMonitor = createAction(routes.actions.monitor.dns.delete, async (ctx) => {
 	let result = await validate(ctx.formData, DnsMonitorIdSchema);
 	let session = ctx.get(Session);
 
@@ -127,7 +127,7 @@ export const deleteDnsMonitor = createAction(routes.actions.deleteDnsMonitor, as
 });
 
 /** POST /actions/:team/check-dns-monitor — triggers an immediate on-demand check. */
-export const checkDnsMonitor = createAction(routes.actions.checkDnsMonitor, async (ctx) => {
+export const checkDnsMonitor = createAction(routes.actions.monitor.dns.check, async (ctx) => {
 	let result = await validate(ctx.formData, DnsMonitorIdSchema);
 	let session = ctx.get(Session);
 

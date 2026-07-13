@@ -125,7 +125,7 @@ describe("POST /actions/:team/create-dns-monitor", () => {
 
 		let response = await postDnsMonitorAction(
 			createDnsMonitor,
-			routes.actions.createDnsMonitor,
+			routes.actions.monitor.dns.create,
 			team,
 			membership,
 			db,
@@ -149,7 +149,7 @@ describe("POST /actions/:team/create-dns-monitor", () => {
 
 		let response = await postDnsMonitorAction(
 			createDnsMonitor,
-			routes.actions.createDnsMonitor,
+			routes.actions.monitor.dns.create,
 			team,
 			membership,
 			db,
@@ -190,7 +190,7 @@ describe("POST /actions/:team/create-dns-monitor", () => {
 
 		let response = await postDnsMonitorAction(
 			createDnsMonitor,
-			routes.actions.createDnsMonitor,
+			routes.actions.monitor.dns.create,
 			team,
 			membership,
 			db,
@@ -229,7 +229,7 @@ describe("POST /actions/:team/update-dns-monitor", () => {
 
 		let response = await postDnsMonitorAction(
 			updateDnsMonitor,
-			routes.actions.updateDnsMonitor,
+			routes.actions.monitor.dns.update,
 			team,
 			membership,
 			db,
@@ -269,7 +269,7 @@ describe("POST /actions/:team/update-dns-monitor", () => {
 
 		let response = await postDnsMonitorAction(
 			updateDnsMonitor,
-			routes.actions.updateDnsMonitor,
+			routes.actions.monitor.dns.update,
 			team,
 			membership,
 			db,
@@ -305,7 +305,7 @@ describe("POST /actions/:team/update-dns-monitor", () => {
 
 		let response = await postDnsMonitorAction(
 			updateDnsMonitor,
-			routes.actions.updateDnsMonitor,
+			routes.actions.monitor.dns.update,
 			team,
 			membership,
 			db,
@@ -345,7 +345,7 @@ describe("DELETE /actions/:team/delete-dns-monitor", () => {
 
 		let response = await postDnsMonitorAction(
 			deleteDnsMonitor,
-			routes.actions.deleteDnsMonitor,
+			routes.actions.monitor.dns.delete,
 			team,
 			membership,
 			db,
@@ -384,7 +384,7 @@ describe("DELETE /actions/:team/delete-dns-monitor", () => {
 
 		let response = await postDnsMonitorAction(
 			deleteDnsMonitor,
-			routes.actions.deleteDnsMonitor,
+			routes.actions.monitor.dns.delete,
 			team,
 			membership,
 			db,
@@ -419,7 +419,7 @@ describe("DELETE /actions/:team/delete-dns-monitor", () => {
 
 		let response = await postDnsMonitorAction(
 			deleteDnsMonitor,
-			routes.actions.deleteDnsMonitor,
+			routes.actions.monitor.dns.delete,
 			team,
 			membership,
 			db,
@@ -468,7 +468,7 @@ describe("POST /actions/:team/check-dns-monitor", () => {
 
 			let response = await postDnsMonitorAction(
 				checkDnsMonitor,
-				routes.actions.checkDnsMonitor,
+				routes.actions.monitor.dns.check,
 				team,
 				membership,
 				db,
@@ -519,7 +519,7 @@ describe("POST /actions/:team/check-dns-monitor", () => {
 
 			let response = await postDnsMonitorAction(
 				checkDnsMonitor,
-				routes.actions.checkDnsMonitor,
+				routes.actions.monitor.dns.check,
 				team,
 				membership,
 				db,
@@ -547,7 +547,7 @@ describe("POST /actions/:team/check-dns-monitor", () => {
 
 			let response = await postDnsMonitorAction(
 				checkDnsMonitor,
-				routes.actions.checkDnsMonitor,
+				routes.actions.monitor.dns.check,
 				team,
 				membership,
 				db,

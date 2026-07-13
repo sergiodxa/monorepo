@@ -110,7 +110,7 @@ describe("POST /actions/:team/create-alert", () => {
 
 		let response = await postAlertAction(
 			createAlert,
-			routes.actions.createAlert,
+			routes.actions.alert.create,
 			team,
 			membership,
 			db,
@@ -137,7 +137,7 @@ describe("POST /actions/:team/create-alert", () => {
 
 		let response = await postAlertAction(
 			createAlert,
-			routes.actions.createAlert,
+			routes.actions.alert.create,
 			team,
 			membership,
 			db,
@@ -158,7 +158,7 @@ describe("POST /actions/:team/create-alert", () => {
 
 		let response = await postAlertAction(
 			createAlert,
-			routes.actions.createAlert,
+			routes.actions.alert.create,
 			team,
 			membership,
 			db,
@@ -192,7 +192,7 @@ describe("POST /actions/:team/create-alert", () => {
 
 		let response = await postAlertAction(
 			createAlert,
-			routes.actions.createAlert,
+			routes.actions.alert.create,
 			team,
 			membership,
 			db,
@@ -225,7 +225,7 @@ describe("POST /actions/:team/update-alert", () => {
 
 		let response = await postAlertAction(
 			updateAlert,
-			routes.actions.updateAlert,
+			routes.actions.alert.update,
 			team,
 			membership,
 			db,
@@ -262,7 +262,7 @@ describe("POST /actions/:team/update-alert", () => {
 
 		let response = await postAlertAction(
 			updateAlert,
-			routes.actions.updateAlert,
+			routes.actions.alert.update,
 			team,
 			membership,
 			db,
@@ -294,7 +294,7 @@ describe("POST /actions/:team/update-alert", () => {
 
 		let response = await postAlertAction(
 			updateAlert,
-			routes.actions.updateAlert,
+			routes.actions.alert.update,
 			team,
 			membership,
 			db,
@@ -328,7 +328,7 @@ describe("POST /actions/:team/delete-alert", () => {
 
 		let response = await postAlertAction(
 			deleteAlert,
-			routes.actions.deleteAlert,
+			routes.actions.alert.delete,
 			team,
 			membership,
 			db,
@@ -363,7 +363,7 @@ describe("POST /actions/:team/delete-alert", () => {
 
 		let response = await postAlertAction(
 			deleteAlert,
-			routes.actions.deleteAlert,
+			routes.actions.alert.delete,
 			team,
 			membership,
 			db,
@@ -394,7 +394,7 @@ describe("POST /actions/:team/delete-alert", () => {
 
 		let response = await postAlertAction(
 			deleteAlert,
-			routes.actions.deleteAlert,
+			routes.actions.alert.delete,
 			team,
 			membership,
 			db,

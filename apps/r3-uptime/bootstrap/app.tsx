@@ -269,64 +269,134 @@ export default function application(options: application.Options) {
 	router.map(routes.app.team.apiKeys.new, apiKeyNew);
 	router.map(routes.app.team.checkout, checkout);
 
+	// `routes.actions` is now nested by resource (see its docblock in `routes/web.ts`),
+	// and `createController()` only accepts a route map whose every key is a leaf
+	// `Route` — a nested group key types as `never` in its `actions` object — so each
+	// leaf group below gets its own `router.map()`/`createController()` call instead of
+	// one call across the whole `actions` tree. All of them still share the same
+	// member-level `[requireUser, requireTeam]` chain, repeated as an inline array at
+	// each call site rather than a shared variable — inline arrays are what let
+	// TypeScript infer the middleware-provided context (see this file's imports'
+	// `remix/fetch-router` README on `createController()`).
 	router.map(
-		routes.actions,
-		createController(routes.actions, {
+		routes.actions.monitor.http,
+		createController(routes.actions.monitor.http, {
 			middleware: [requireUser, requireTeam],
 			actions: {
-				createMonitor,
-				updateMonitor,
-				deleteMonitor,
-				playMonitor,
+				create: createMonitor,
+				update: updateMonitor,
+				delete: deleteMonitor,
+				play: playMonitor,
 				updateSsl,
 				createContentCheck,
 				deleteContentCheck,
-				setDashboardTab,
-				createDnsMonitor,
-				updateDnsMonitor,
-				deleteDnsMonitor,
-				checkDnsMonitor,
-				createTcpMonitor,
-				updateTcpMonitor,
-				deleteTcpMonitor,
-				checkTcpMonitor,
-				createCronJob,
-				updateCronJob,
-				deleteCronJob,
-				createAlert,
-				updateAlert,
-				deleteAlert,
-				createMaintenanceWindow,
-				updateMaintenanceWindow,
-				deleteMaintenanceWindow,
-				endMaintenanceWindow,
-				createStatusPage,
-				updateStatusPage,
-				deleteStatusPage,
 			},
 		}),
 	);
+	router.map(
+		routes.actions.monitor.dns,
+		createController(routes.actions.monitor.dns, {
+			middleware: [requireUser, requireTeam],
+			actions: {
+				create: createDnsMonitor,
+				update: updateDnsMonitor,
+				delete: deleteDnsMonitor,
+				check: checkDnsMonitor,
+			},
+		}),
+	);
+	router.map(
+		routes.actions.monitor.tcp,
+		createController(routes.actions.monitor.tcp, {
+			middleware: [requireUser, requireTeam],
+			actions: {
+				create: createTcpMonitor,
+				update: updateTcpMonitor,
+				delete: deleteTcpMonitor,
+				check: checkTcpMonitor,
+			},
+		}),
+	);
+	router.map(
+		routes.actions.cronJob,
+		createController(routes.actions.cronJob, {
+			middleware: [requireUser, requireTeam],
+			actions: { create: createCronJob, update: updateCronJob, delete: deleteCronJob },
+		}),
+	);
+	router.map(
+		routes.actions.alert,
+		createController(routes.actions.alert, {
+			middleware: [requireUser, requireTeam],
+			actions: { create: createAlert, update: updateAlert, delete: deleteAlert },
+		}),
+	);
+	router.map(
+		routes.actions.maintenanceWindow,
+		createController(routes.actions.maintenanceWindow, {
+			middleware: [requireUser, requireTeam],
+			actions: {
+				create: createMaintenanceWindow,
+				update: updateMaintenanceWindow,
+				delete: deleteMaintenanceWindow,
+				end: endMaintenanceWindow,
+			},
+		}),
+	);
+	router.map(
+		routes.actions.statusPage,
+		createController(routes.actions.statusPage, {
+			middleware: [requireUser, requireTeam],
+			actions: { create: createStatusPage, update: updateStatusPage, delete: deleteStatusPage },
+		}),
+	);
+	// `setDashboardTab` bakes its own `requireUser`/`requireTeam` chain into its own
+	// `createAction()` call (see `app/http/controllers/actions/dashboard.ts`), the same
+	// pattern the `app.team.*` page controllers above use, since it's a single `Route`
+	// rather than a `RouteMap` and so can't take a controller-level `middleware` option.
+	router.map(routes.actions.setDashboardTab, setDashboardTab);
 
 	// A separate group (see `routes/web.ts`'s docblock on `teamAdminActions`), so
 	// `requireRole("admin")` layers on top of the member-level chain the `actions`
-	// group above uses, without restricting those member-level actions too.
+	// group above uses, without restricting those member-level actions too. Same
+	// one-call-per-leaf-group constraint as `actions` above applies here too.
 	router.map(
-		routes.teamAdminActions,
-		createController(routes.teamAdminActions, {
+		routes.teamAdminActions.team,
+		createController(routes.teamAdminActions.team, {
+			middleware: [requireUser, requireTeam, requireRole("admin")],
+			actions: { update: updateTeam, delete: deleteTeam },
+		}),
+	);
+	router.map(
+		routes.teamAdminActions.member,
+		createController(routes.teamAdminActions.member, {
+			middleware: [requireUser, requireTeam, requireRole("admin")],
+			actions: { remove: removeMember, changeRole },
+		}),
+	);
+	router.map(
+		routes.teamAdminActions.invite,
+		createController(routes.teamAdminActions.invite, {
+			middleware: [requireUser, requireTeam, requireRole("admin")],
+			actions: { create: createInvite, revoke: revokeInvite },
+		}),
+	);
+	router.map(
+		routes.teamAdminActions.domain,
+		createController(routes.teamAdminActions.domain, {
 			middleware: [requireUser, requireTeam, requireRole("admin")],
 			actions: {
-				updateTeam,
-				deleteTeam,
-				removeMember,
-				changeRole,
-				createInvite,
-				revokeInvite,
-				addDomain,
-				removeDomain,
-				retryDomainVerification,
-				createApiKey,
-				deleteApiKey,
+				add: addDomain,
+				remove: removeDomain,
+				retryVerification: retryDomainVerification,
 			},
+		}),
+	);
+	router.map(
+		routes.teamAdminActions.apiKey,
+		createController(routes.teamAdminActions.apiKey, {
+			middleware: [requireUser, requireTeam, requireRole("admin")],
+			actions: { create: createApiKey, delete: deleteApiKey },
 		}),
 	);
 

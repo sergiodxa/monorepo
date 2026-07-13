@@ -32,7 +32,7 @@ export default function EditMonitorView(handle: Handle<EditMonitorView.Props>) {
 
 		return (
 			<div>
-				<form method="post" action={routes.actions.updateMonitor.href({ team: team.slug })}>
+				<form method="post" action={routes.actions.monitor.http.update.href({ team: team.slug })}>
 					<input type="hidden" name="monitor_id" value={monitor.id} />
 					<MonitorFormFields monitor={monitor} />
 					<button

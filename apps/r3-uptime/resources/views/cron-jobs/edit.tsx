@@ -28,7 +28,7 @@ export default function EditCronJobView(handle: Handle<EditCronJobView.Props>) {
 
 		return (
 			<div>
-				<form method="post" action={routes.actions.updateCronJob.href({ team: team.slug })}>
+				<form method="post" action={routes.actions.cronJob.update.href({ team: team.slug })}>
 					<input type="hidden" name="monitor_id" value={monitor.id} />
 					<CronJobFormFields monitor={monitor} />
 					<button
@@ -125,7 +125,7 @@ export default function EditCronJobView(handle: Handle<EditCronJobView.Props>) {
 					>
 						This also deletes its ping history. This can't be undone.
 					</p>
-					<form method="post" action={routes.actions.deleteCronJob.href({ team: team.slug })}>
+					<form method="post" action={routes.actions.cronJob.delete.href({ team: team.slug })}>
 						<input type="hidden" name="_method" value="DELETE" />
 						<input type="hidden" name="monitor_id" value={monitor.id} />
 						<button

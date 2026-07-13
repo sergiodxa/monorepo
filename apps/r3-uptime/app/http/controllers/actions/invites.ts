@@ -23,7 +23,7 @@ import { sendInviteEmail } from "~/app/services/invite-email";
 import routes from "~/routes/web";
 
 /** POST /actions/:team/create-invite */
-export const createInvite = createAction(routes.teamAdminActions.createInvite, async (ctx) => {
+export const createInvite = createAction(routes.teamAdminActions.invite.create, async (ctx) => {
 	let result = await validate(ctx.formData, CreateInviteSchema);
 	let session = ctx.get(Session);
 
@@ -55,7 +55,7 @@ export const createInvite = createAction(routes.teamAdminActions.createInvite, a
 });
 
 /** DELETE /actions/:team/revoke-invite */
-export const revokeInvite = createAction(routes.teamAdminActions.revokeInvite, async (ctx) => {
+export const revokeInvite = createAction(routes.teamAdminActions.invite.revoke, async (ctx) => {
 	let result = await validate(ctx.formData, RevokeInviteSchema);
 	let session = ctx.get(Session);
 

@@ -24,7 +24,7 @@ export default function NewCronJobView(handle: Handle<NewCronJobView.Props>) {
 		<div>
 			<form
 				method="post"
-				action={routes.actions.createCronJob.href({ team: handle.props.team.slug })}
+				action={routes.actions.cronJob.create.href({ team: handle.props.team.slug })}
 			>
 				<CronJobFormFields />
 				<button

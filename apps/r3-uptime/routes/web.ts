@@ -129,36 +129,62 @@ export default route({
 		},
 	},
 
+	/**
+	 * None of these leaves carry an id in the URL (only `:team`) — the record being
+	 * acted on comes from a form-body field instead (e.g. a hidden `monitor_id` input),
+	 * so `resources()`'s `:param`-in-URL shape doesn't fit here. Grouped by resource
+	 * instead, with every path string unchanged from the old flat map. `monitor.http`
+	 * also carries the SSL-settings and content-check actions since both are
+	 * sub-resources of an HTTP monitor, even though they're implemented in their own
+	 * controller files (`ssl.ts`, `content-checks.ts`). `setDashboardTab` doesn't belong
+	 * to any resource, so it stays a standalone leaf.
+	 */
 	actions: {
-		createMonitor: post("/actions/:team/create-monitor"),
-		updateMonitor: post("/actions/:team/update-monitor"),
-		deleteMonitor: del("/actions/:team/delete-monitor"),
-		playMonitor: post("/actions/:team/play-monitor"),
-		updateSsl: post("/actions/:team/update-ssl"),
-		createContentCheck: post("/actions/:team/create-content-check"),
-		deleteContentCheck: del("/actions/:team/delete-content-check"),
+		monitor: {
+			http: {
+				create: post("/actions/:team/create-monitor"),
+				update: post("/actions/:team/update-monitor"),
+				delete: del("/actions/:team/delete-monitor"),
+				play: post("/actions/:team/play-monitor"),
+				updateSsl: post("/actions/:team/update-ssl"),
+				createContentCheck: post("/actions/:team/create-content-check"),
+				deleteContentCheck: del("/actions/:team/delete-content-check"),
+			},
+			dns: {
+				create: post("/actions/:team/create-dns-monitor"),
+				update: post("/actions/:team/update-dns-monitor"),
+				delete: del("/actions/:team/delete-dns-monitor"),
+				check: post("/actions/:team/check-dns-monitor"),
+			},
+			tcp: {
+				create: post("/actions/:team/create-tcp-monitor"),
+				update: post("/actions/:team/update-tcp-monitor"),
+				delete: del("/actions/:team/delete-tcp-monitor"),
+				check: post("/actions/:team/check-tcp-monitor"),
+			},
+		},
+		cronJob: {
+			create: post("/actions/:team/create-cron-job"),
+			update: post("/actions/:team/update-cron-job"),
+			delete: del("/actions/:team/delete-cron-job"),
+		},
+		alert: {
+			create: post("/actions/:team/create-alert"),
+			update: post("/actions/:team/update-alert"),
+			delete: del("/actions/:team/delete-alert"),
+		},
+		maintenanceWindow: {
+			create: post("/actions/:team/create-maintenance-window"),
+			update: post("/actions/:team/update-maintenance-window"),
+			delete: del("/actions/:team/delete-maintenance-window"),
+			end: post("/actions/:team/end-maintenance-window"),
+		},
+		statusPage: {
+			create: post("/actions/:team/create-status-page"),
+			update: post("/actions/:team/update-status-page"),
+			delete: del("/actions/:team/delete-status-page"),
+		},
 		setDashboardTab: post("/actions/:team/set-dashboard-tab"),
-		createDnsMonitor: post("/actions/:team/create-dns-monitor"),
-		updateDnsMonitor: post("/actions/:team/update-dns-monitor"),
-		deleteDnsMonitor: del("/actions/:team/delete-dns-monitor"),
-		checkDnsMonitor: post("/actions/:team/check-dns-monitor"),
-		createTcpMonitor: post("/actions/:team/create-tcp-monitor"),
-		updateTcpMonitor: post("/actions/:team/update-tcp-monitor"),
-		deleteTcpMonitor: del("/actions/:team/delete-tcp-monitor"),
-		checkTcpMonitor: post("/actions/:team/check-tcp-monitor"),
-		createCronJob: post("/actions/:team/create-cron-job"),
-		updateCronJob: post("/actions/:team/update-cron-job"),
-		deleteCronJob: del("/actions/:team/delete-cron-job"),
-		createAlert: post("/actions/:team/create-alert"),
-		updateAlert: post("/actions/:team/update-alert"),
-		deleteAlert: del("/actions/:team/delete-alert"),
-		createMaintenanceWindow: post("/actions/:team/create-maintenance-window"),
-		updateMaintenanceWindow: post("/actions/:team/update-maintenance-window"),
-		deleteMaintenanceWindow: del("/actions/:team/delete-maintenance-window"),
-		endMaintenanceWindow: post("/actions/:team/end-maintenance-window"),
-		createStatusPage: post("/actions/:team/create-status-page"),
-		updateStatusPage: post("/actions/:team/update-status-page"),
-		deleteStatusPage: del("/actions/:team/delete-status-page"),
 	},
 
 	/**
@@ -166,20 +192,31 @@ export default route({
 	 * `/actions/:team/...`) purely so `bootstrap/app.tsx` can lay `requireRole("admin")`
 	 * over this whole group without also restricting the member-level `actions` above.
 	 * `router.map()` requires one middleware chain per call and every leaf of a group
-	 * in the same call, so these can't just be extra keys on `actions`.
+	 * in the same call, so these can't just be extra keys on `actions`. Grouped by
+	 * sub-resource, same rationale (and same no-id-in-URL shape) as `actions` above.
 	 */
 	teamAdminActions: {
-		updateTeam: post("/actions/:team/update-team"),
-		deleteTeam: del("/actions/:team/delete-team"),
-		removeMember: del("/actions/:team/remove-member"),
-		changeRole: post("/actions/:team/change-role"),
-		createInvite: post("/actions/:team/create-invite"),
-		revokeInvite: del("/actions/:team/revoke-invite"),
-		addDomain: post("/actions/:team/add-domain"),
-		removeDomain: del("/actions/:team/remove-domain"),
-		retryDomainVerification: post("/actions/:team/retry-domain-verification"),
-		createApiKey: post("/actions/:team/create-api-key"),
-		deleteApiKey: del("/actions/:team/delete-api-key"),
+		team: {
+			update: post("/actions/:team/update-team"),
+			delete: del("/actions/:team/delete-team"),
+		},
+		member: {
+			remove: del("/actions/:team/remove-member"),
+			changeRole: post("/actions/:team/change-role"),
+		},
+		invite: {
+			create: post("/actions/:team/create-invite"),
+			revoke: del("/actions/:team/revoke-invite"),
+		},
+		domain: {
+			add: post("/actions/:team/add-domain"),
+			remove: del("/actions/:team/remove-domain"),
+			retryVerification: post("/actions/:team/retry-domain-verification"),
+		},
+		apiKey: {
+			create: post("/actions/:team/create-api-key"),
+			delete: del("/actions/:team/delete-api-key"),
+		},
 	},
 
 	/**

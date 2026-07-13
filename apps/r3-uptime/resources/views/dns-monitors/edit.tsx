@@ -28,7 +28,7 @@ export default function EditDnsMonitorView(handle: Handle<EditDnsMonitorView.Pro
 
 		return (
 			<div>
-				<form method="post" action={routes.actions.updateDnsMonitor.href({ team: team.slug })}>
+				<form method="post" action={routes.actions.monitor.dns.update.href({ team: team.slug })}>
 					<input type="hidden" name="monitor_id" value={monitor.id} />
 					<DnsMonitorFormFields monitor={monitor} />
 					<button
@@ -125,7 +125,7 @@ export default function EditDnsMonitorView(handle: Handle<EditDnsMonitorView.Pro
 					>
 						This also deletes its check-result history. This can't be undone.
 					</p>
-					<form method="post" action={routes.actions.deleteDnsMonitor.href({ team: team.slug })}>
+					<form method="post" action={routes.actions.monitor.dns.delete.href({ team: team.slug })}>
 						<input type="hidden" name="_method" value="DELETE" />
 						<input type="hidden" name="monitor_id" value={monitor.id} />
 						<button

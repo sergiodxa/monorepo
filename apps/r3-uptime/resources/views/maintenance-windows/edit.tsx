@@ -77,7 +77,7 @@ export default function EditMaintenanceWindowView(handle: Handle<EditMaintenance
 			<div>
 				<form
 					method="post"
-					action={routes.actions.updateMaintenanceWindow.href({ team: team.slug })}
+					action={routes.actions.maintenanceWindow.update.href({ team: team.slug })}
 				>
 					<input type="hidden" name="window_id" value={window.id} />
 					<MaintenanceWindowFormFields window={window} monitors={monitors} />
@@ -123,7 +123,7 @@ export default function EditMaintenanceWindowView(handle: Handle<EditMaintenance
 				{isActive && (
 					<form
 						method="post"
-						action={routes.actions.endMaintenanceWindow.href({ team: team.slug })}
+						action={routes.actions.maintenanceWindow.end.href({ team: team.slug })}
 					>
 						<input type="hidden" name="window_id" value={window.id} />
 						<button type="submit" mix={[buttonSecondary]}>
@@ -172,7 +172,7 @@ export default function EditMaintenanceWindowView(handle: Handle<EditMaintenance
 					</p>
 					<form
 						method="post"
-						action={routes.actions.deleteMaintenanceWindow.href({ team: team.slug })}
+						action={routes.actions.maintenanceWindow.delete.href({ team: team.slug })}
 					>
 						<input type="hidden" name="_method" value="DELETE" />
 						<input type="hidden" name="window_id" value={window.id} />

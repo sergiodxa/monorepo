@@ -54,7 +54,7 @@ function buildConfig(values: CreateAlertValues): AlertConfig {
 }
 
 /** POST /actions/:team/create-alert */
-export const createAlert = createAction(routes.actions.createAlert, async (ctx) => {
+export const createAlert = createAction(routes.actions.alert.create, async (ctx) => {
 	let result = await validate(ctx.formData, CreateAlertSchema);
 	let session = ctx.get(Session);
 
@@ -90,7 +90,7 @@ export const createAlert = createAction(routes.actions.createAlert, async (ctx) 
 });
 
 /** POST /actions/:team/update-alert */
-export const updateAlert = createAction(routes.actions.updateAlert, async (ctx) => {
+export const updateAlert = createAction(routes.actions.alert.update, async (ctx) => {
 	let result = await validate(ctx.formData, UpdateAlertSchema);
 	let session = ctx.get(Session);
 
@@ -125,7 +125,7 @@ export const updateAlert = createAction(routes.actions.updateAlert, async (ctx) 
 });
 
 /** DELETE /actions/:team/delete-alert */
-export const deleteAlert = createAction(routes.actions.deleteAlert, async (ctx) => {
+export const deleteAlert = createAction(routes.actions.alert.delete, async (ctx) => {
 	let result = await validate(ctx.formData, AlertIdSchema);
 	let session = ctx.get(Session);
 

@@ -19,7 +19,7 @@ import { forbidden } from "@pkg/http/response/html";
  * @returns Middleware responding 403 when the viewer is neither the owner nor holds
  * one of `roles`.
  * @example
- * router.map(routes.actions.deleteMonitor, {
+ * router.map(routes.actions.monitor.http.delete, {
  * 	middleware: [requireUser, requireTeam, requireRole("admin")],
  * 	handler,
  * });

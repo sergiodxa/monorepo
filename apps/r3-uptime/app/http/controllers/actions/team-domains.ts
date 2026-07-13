@@ -26,7 +26,7 @@ import {
 import routes from "~/routes/web";
 
 /** POST /actions/:team/add-domain */
-export const addDomain = createAction(routes.teamAdminActions.addDomain, async (ctx) => {
+export const addDomain = createAction(routes.teamAdminActions.domain.add, async (ctx) => {
 	let result = await validate(ctx.formData, AddDomainSchema);
 	let session = ctx.get(Session);
 
@@ -58,7 +58,7 @@ export const addDomain = createAction(routes.teamAdminActions.addDomain, async (
 });
 
 /** DELETE /actions/:team/remove-domain */
-export const removeDomain = createAction(routes.teamAdminActions.removeDomain, async (ctx) => {
+export const removeDomain = createAction(routes.teamAdminActions.domain.remove, async (ctx) => {
 	let result = await validate(ctx.formData, RemoveDomainSchema);
 	let session = ctx.get(Session);
 
@@ -82,7 +82,7 @@ export const removeDomain = createAction(routes.teamAdminActions.removeDomain, a
 
 /** POST /actions/:team/retry-domain-verification */
 export const retryDomainVerification = createAction(
-	routes.teamAdminActions.retryDomainVerification,
+	routes.teamAdminActions.domain.retryVerification,
 	async (ctx) => {
 		let result = await validate(ctx.formData, RetryDomainVerificationSchema);
 		let session = ctx.get(Session);

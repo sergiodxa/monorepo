@@ -24,7 +24,7 @@ export default function NewDnsMonitorView(handle: Handle<NewDnsMonitorView.Props
 		<div>
 			<form
 				method="post"
-				action={routes.actions.createDnsMonitor.href({ team: handle.props.team.slug })}
+				action={routes.actions.monitor.dns.create.href({ team: handle.props.team.slug })}
 			>
 				<DnsMonitorFormFields />
 				<button

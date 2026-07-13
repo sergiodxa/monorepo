@@ -25,7 +25,7 @@ import routes from "~/routes/web";
 
 /** POST /actions/:team/create-maintenance-window */
 export const createMaintenanceWindow = createAction(
-	routes.actions.createMaintenanceWindow,
+	routes.actions.maintenanceWindow.create,
 	async (ctx) => {
 		let result = await validate(ctx.formData, CreateMaintenanceWindowSchema);
 		let session = ctx.get(Session);
@@ -59,7 +59,7 @@ export const createMaintenanceWindow = createAction(
 
 /** POST /actions/:team/update-maintenance-window */
 export const updateMaintenanceWindow = createAction(
-	routes.actions.updateMaintenanceWindow,
+	routes.actions.maintenanceWindow.update,
 	async (ctx) => {
 		let result = await validate(ctx.formData, UpdateMaintenanceWindowSchema);
 		let session = ctx.get(Session);
@@ -95,7 +95,7 @@ export const updateMaintenanceWindow = createAction(
 
 /** DELETE /actions/:team/delete-maintenance-window */
 export const deleteMaintenanceWindow = createAction(
-	routes.actions.deleteMaintenanceWindow,
+	routes.actions.maintenanceWindow.delete,
 	async (ctx) => {
 		let result = await validate(ctx.formData, MaintenanceWindowIdSchema);
 		let session = ctx.get(Session);
@@ -124,7 +124,7 @@ export const deleteMaintenanceWindow = createAction(
 
 /** POST /actions/:team/end-maintenance-window */
 export const endMaintenanceWindow = createAction(
-	routes.actions.endMaintenanceWindow,
+	routes.actions.maintenanceWindow.end,
 	async (ctx) => {
 		let result = await validate(ctx.formData, MaintenanceWindowIdSchema);
 		let session = ctx.get(Session);

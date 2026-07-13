@@ -78,7 +78,7 @@ export default createAction(routes.app.team.monitors.show, {
 						<div mix={[css({ display: "flex", alignItems: "center", gap: 12 })]}>
 							<form
 								method="post"
-								action={routes.actions.playMonitor.href({ team: ctx.team.slug })}
+								action={routes.actions.monitor.http.play.href({ team: ctx.team.slug })}
 								mix={[css({ margin: 0 })]}
 							>
 								<input type="hidden" name="monitor_id" value={monitor.id} />

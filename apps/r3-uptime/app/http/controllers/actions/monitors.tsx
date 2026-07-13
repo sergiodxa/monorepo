@@ -26,7 +26,7 @@ import routes from "~/routes/web";
 const MonitorIdSchema = f.object({ monitor_id: f.field(s.string()) });
 
 /** POST /actions/:team/create-monitor */
-export const createMonitor = createAction(routes.actions.createMonitor, async (ctx) => {
+export const createMonitor = createAction(routes.actions.monitor.http.create, async (ctx) => {
 	let result = await validate(ctx.formData, CreateMonitorSchema);
 	let session = ctx.get(Session);
 	let viewer = getViewer();
@@ -54,7 +54,7 @@ export const createMonitor = createAction(routes.actions.createMonitor, async (c
 });
 
 /** POST /actions/:team/update-monitor */
-export const updateMonitor = createAction(routes.actions.updateMonitor, async (ctx) => {
+export const updateMonitor = createAction(routes.actions.monitor.http.update, async (ctx) => {
 	let result = await validate(ctx.formData, UpdateMonitorSchema);
 	let session = ctx.get(Session);
 
@@ -89,7 +89,7 @@ export const updateMonitor = createAction(routes.actions.updateMonitor, async (c
 });
 
 /** DELETE /actions/:team/delete-monitor */
-export const deleteMonitor = createAction(routes.actions.deleteMonitor, async (ctx) => {
+export const deleteMonitor = createAction(routes.actions.monitor.http.delete, async (ctx) => {
 	let result = await validate(ctx.formData, MonitorIdSchema);
 	let session = ctx.get(Session);
 
@@ -116,7 +116,7 @@ export const deleteMonitor = createAction(routes.actions.deleteMonitor, async (c
 });
 
 /** POST /actions/:team/play-monitor — triggers an on-demand check. */
-export const playMonitor = createAction(routes.actions.playMonitor, async (ctx) => {
+export const playMonitor = createAction(routes.actions.monitor.http.play, async (ctx) => {
 	let result = await validate(ctx.formData, MonitorIdSchema);
 	let session = ctx.get(Session);
 

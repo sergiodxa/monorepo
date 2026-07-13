@@ -87,7 +87,7 @@ const TYPE_LABELS: Record<SelectMonitorContentCheck["type"], string> = {
 export default function ContentChecksSection(handle: Handle<ContentChecksSection.Props>) {
 	return () => {
 		let { team, monitorId, contentChecks } = handle.props;
-		let deleteAction = routes.actions.deleteContentCheck.href({ team: team.slug });
+		let deleteAction = routes.actions.monitor.http.deleteContentCheck.href({ team: team.slug });
 
 		return (
 			<div>
@@ -194,7 +194,10 @@ export default function ContentChecksSection(handle: Handle<ContentChecksSection
 					</div>
 				)}
 
-				<form method="post" action={routes.actions.createContentCheck.href({ team: team.slug })}>
+				<form
+					method="post"
+					action={routes.actions.monitor.http.createContentCheck.href({ team: team.slug })}
+				>
 					<input type="hidden" name="monitor_id" value={monitorId} />
 
 					<Field label="Type">

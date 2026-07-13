@@ -29,7 +29,7 @@ export default function NewMaintenanceWindowView(handle: Handle<NewMaintenanceWi
 			<div>
 				<form
 					method="post"
-					action={routes.actions.createMaintenanceWindow.href({ team: team.slug })}
+					action={routes.actions.maintenanceWindow.create.href({ team: team.slug })}
 				>
 					<MaintenanceWindowFormFields monitors={monitors} />
 					<button

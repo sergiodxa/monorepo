@@ -75,7 +75,7 @@ export default createAction(routes.app.team.tcpMonitors.show, {
 						<div mix={[css({ display: "flex", alignItems: "center", gap: 12 })]}>
 							<form
 								method="post"
-								action={routes.actions.checkTcpMonitor.href({ team: ctx.team.slug })}
+								action={routes.actions.monitor.tcp.check.href({ team: ctx.team.slug })}
 								mix={[css({ margin: 0 })]}
 							>
 								<input type="hidden" name="monitor_id" value={monitor.id} />

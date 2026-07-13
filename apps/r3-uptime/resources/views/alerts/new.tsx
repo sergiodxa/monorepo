@@ -28,7 +28,7 @@ export default function NewAlertView(handle: Handle<NewAlertView.Props>) {
 
 		return (
 			<div>
-				<form method="post" action={routes.actions.createAlert.href({ team: team.slug })}>
+				<form method="post" action={routes.actions.alert.create.href({ team: team.slug })}>
 					<AlertFormFields monitors={monitors} />
 					<button
 						type="submit"

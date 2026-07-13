@@ -23,7 +23,7 @@ import { CreateApiKeySchema, DeleteApiKeySchema } from "~/app/http/validators/ap
 import routes from "~/routes/web";
 
 /** POST /actions/:team/create-api-key */
-export const createApiKey = createAction(routes.teamAdminActions.createApiKey, async (ctx) => {
+export const createApiKey = createAction(routes.teamAdminActions.apiKey.create, async (ctx) => {
 	let result = await validate(ctx.formData, CreateApiKeySchema);
 	let session = ctx.get(Session);
 
@@ -51,7 +51,7 @@ export const createApiKey = createAction(routes.teamAdminActions.createApiKey, a
 });
 
 /** DELETE /actions/:team/delete-api-key */
-export const deleteApiKey = createAction(routes.teamAdminActions.deleteApiKey, async (ctx) => {
+export const deleteApiKey = createAction(routes.teamAdminActions.apiKey.delete, async (ctx) => {
 	let result = await validate(ctx.formData, DeleteApiKeySchema);
 	let session = ctx.get(Session);
 

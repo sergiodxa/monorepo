@@ -31,7 +31,7 @@ import {
 import routes from "~/routes/web";
 
 /** POST /actions/:team/update-team */
-export const updateTeam = createAction(routes.teamAdminActions.updateTeam, async (ctx) => {
+export const updateTeam = createAction(routes.teamAdminActions.team.update, async (ctx) => {
 	let result = await validate(ctx.formData, UpdateTeamSchema);
 	let session = ctx.get(Session);
 
@@ -53,7 +53,7 @@ export const updateTeam = createAction(routes.teamAdminActions.updateTeam, async
 });
 
 /** DELETE /actions/:team/delete-team — owner-only in effect (checked here explicitly). */
-export const deleteTeam = createAction(routes.teamAdminActions.deleteTeam, async (ctx) => {
+export const deleteTeam = createAction(routes.teamAdminActions.team.delete, async (ctx) => {
 	if (ctx.membership.subject_id !== ctx.team.owner_id) {
 		return badRequest("Only the team owner can delete the team.");
 	}
@@ -73,7 +73,7 @@ export const deleteTeam = createAction(routes.teamAdminActions.deleteTeam, async
 });
 
 /** DELETE /actions/:team/remove-member */
-export const removeMember = createAction(routes.teamAdminActions.removeMember, async (ctx) => {
+export const removeMember = createAction(routes.teamAdminActions.member.remove, async (ctx) => {
 	let result = await validate(ctx.formData, RemoveMemberSchema);
 	let session = ctx.get(Session);
 
@@ -98,7 +98,7 @@ export const removeMember = createAction(routes.teamAdminActions.removeMember, a
 });
 
 /** POST /actions/:team/change-role */
-export const changeRole = createAction(routes.teamAdminActions.changeRole, async (ctx) => {
+export const changeRole = createAction(routes.teamAdminActions.member.changeRole, async (ctx) => {
 	let result = await validate(ctx.formData, ChangeRoleSchema);
 	let session = ctx.get(Session);
 

@@ -23,7 +23,7 @@ export default function NewTcpMonitorView(handle: Handle<NewTcpMonitorView.Props
 		<div>
 			<form
 				method="post"
-				action={routes.actions.createTcpMonitor.href({ team: handle.props.team.slug })}
+				action={routes.actions.monitor.tcp.create.href({ team: handle.props.team.slug })}
 			>
 				<TcpMonitorFormFields />
 				<button

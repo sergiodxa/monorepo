@@ -25,7 +25,7 @@ import {
 import routes from "~/routes/web";
 
 /** POST /actions/:team/create-status-page */
-export const createStatusPage = createAction(routes.actions.createStatusPage, async (ctx) => {
+export const createStatusPage = createAction(routes.actions.statusPage.create, async (ctx) => {
 	let result = await validate(ctx.formData, CreateStatusPageSchema);
 	let session = ctx.get(Session);
 
@@ -81,7 +81,7 @@ export const createStatusPage = createAction(routes.actions.createStatusPage, as
 });
 
 /** POST /actions/:team/update-status-page */
-export const updateStatusPage = createAction(routes.actions.updateStatusPage, async (ctx) => {
+export const updateStatusPage = createAction(routes.actions.statusPage.update, async (ctx) => {
 	let result = await validate(ctx.formData, UpdateStatusPageSchema);
 	let session = ctx.get(Session);
 
@@ -143,7 +143,7 @@ export const updateStatusPage = createAction(routes.actions.updateStatusPage, as
 });
 
 /** DELETE /actions/:team/delete-status-page */
-export const deleteStatusPage = createAction(routes.actions.deleteStatusPage, async (ctx) => {
+export const deleteStatusPage = createAction(routes.actions.statusPage.delete, async (ctx) => {
 	let result = await validate(ctx.formData, StatusPageIdSchema);
 	let session = ctx.get(Session);
 

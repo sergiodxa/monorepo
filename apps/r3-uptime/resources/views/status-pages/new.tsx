@@ -35,7 +35,7 @@ export default function NewStatusPageView(handle: Handle<NewStatusPageView.Props
 
 		return (
 			<div>
-				<form method="post" action={routes.actions.createStatusPage.href({ team: team.slug })}>
+				<form method="post" action={routes.actions.statusPage.create.href({ team: team.slug })}>
 					<StatusPageFormFields
 						monitors={monitors}
 						dnsMonitors={dnsMonitors}

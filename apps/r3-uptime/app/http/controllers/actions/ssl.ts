@@ -22,7 +22,7 @@ import { calculateSslStatus } from "~/app/services/ssl-info";
 import routes from "~/routes/web";
 
 /** POST /actions/:team/update-ssl */
-export const updateSsl = createAction(routes.actions.updateSsl, async (ctx) => {
+export const updateSsl = createAction(routes.actions.monitor.http.updateSsl, async (ctx) => {
 	let result = await validate(ctx.formData, UpdateSslSchema);
 	let session = ctx.get(Session);
 

@@ -125,7 +125,7 @@ export default function ApiKeysView(handle: Handle<ApiKeysView.Props>) {
 											<td>
 												<form
 													method="post"
-													action={routes.teamAdminActions.deleteApiKey.href({ team: team.slug })}
+													action={routes.teamAdminActions.apiKey.delete.href({ team: team.slug })}
 												>
 													<input type="hidden" name="_method" value="DELETE" />
 													<input type="hidden" name="api_key_id" value={apiKey.id} />

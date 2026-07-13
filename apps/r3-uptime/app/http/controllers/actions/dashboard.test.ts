@@ -46,7 +46,11 @@ async function postSetDashboardTab(
 	let router = createRouter({ middleware: [asyncContext(), formData()] });
 	router.map(routes.actions.setDashboardTab, {
 		middleware: [teamContextMiddleware(team, null) as never],
-		handler: setDashboardTab as RequestHandler,
+		// `setDashboardTab` bakes its own `requireUser`/`requireTeam` chain in (see
+		// `app/http/controllers/actions/dashboard.ts`), so this test reaches past it to
+		// the bare handler and supplies `teamContextMiddleware` instead, standing in for
+		// that real chain the same way the rest of this file already does.
+		handler: (setDashboardTab as { handler: RequestHandler }).handler,
 	});
 
 	let request = new Request(

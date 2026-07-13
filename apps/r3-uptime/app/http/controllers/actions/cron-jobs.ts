@@ -28,7 +28,7 @@ const INVALID_CRON_MESSAGE = "Please enter a valid cron expression.";
 const GENERIC_ERROR_MESSAGE = "Please check the cron job details and try again.";
 
 /** POST /actions/:team/create-cron-job */
-export const createCronJob = createAction(routes.actions.createCronJob, async (ctx) => {
+export const createCronJob = createAction(routes.actions.cronJob.create, async (ctx) => {
 	let result = await validate(ctx.formData, CreateCronJobSchema);
 	let session = ctx.get(Session);
 
@@ -65,7 +65,7 @@ export const createCronJob = createAction(routes.actions.createCronJob, async (c
 });
 
 /** POST /actions/:team/update-cron-job */
-export const updateCronJob = createAction(routes.actions.updateCronJob, async (ctx) => {
+export const updateCronJob = createAction(routes.actions.cronJob.update, async (ctx) => {
 	let result = await validate(ctx.formData, UpdateCronJobSchema);
 	let session = ctx.get(Session);
 
@@ -117,7 +117,7 @@ export const updateCronJob = createAction(routes.actions.updateCronJob, async (c
 });
 
 /** DELETE /actions/:team/delete-cron-job */
-export const deleteCronJob = createAction(routes.actions.deleteCronJob, async (ctx) => {
+export const deleteCronJob = createAction(routes.actions.cronJob.delete, async (ctx) => {
 	let result = await validate(ctx.formData, CronJobIdSchema);
 	let session = ctx.get(Session);
 
