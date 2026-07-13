@@ -18,6 +18,7 @@ import type { BadgeTone } from "~/resources/components/badge";
 import { calculateSslStatus } from "~/app/services/ssl-info";
 import Badge from "~/resources/components/badge";
 import StatCard from "~/resources/components/stat-card";
+import { neutral } from "~/resources/theme";
 import Sparkline from "~/resources/views/monitors/sparkline";
 import Heatmap from "~/resources/views/shared/heatmap";
 
@@ -29,16 +30,6 @@ namespace MonitorShowView {
 		dailyStats: SelectMonitorDailyStats[];
 	}
 }
-
-const neutral = {
-	50: "oklch(0.98 0.005 145)",
-	300: "oklch(0.83 0.01 145)",
-	400: "oklch(0.73 0.01 145)",
-	500: "oklch(0.62 0.01 145)",
-	700: "oklch(0.42 0.008 145)",
-	800: "oklch(0.32 0.006 145)",
-	900: "oklch(0.24 0.005 145)",
-} as const;
 
 export default function MonitorShowView(handle: Handle<MonitorShowView.Props>) {
 	return () => {

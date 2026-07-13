@@ -1,8 +1,7 @@
 /**
  * Terms of Service view. Static prose covering accounts, acceptable use, billing,
- * data retention, service availability, liability, and termination, ported
- * verbatim in structure and meaning from the OLD APP's `_landing.terms` route,
- * rendered inside the shared `MarketingLayout` chrome.
+ * data retention, service availability, liability, and termination, rendered
+ * inside the shared `MarketingLayout` chrome.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -12,15 +11,7 @@ import type { Handle } from "remix/ui";
 
 import { css } from "remix/ui";
 
-/** Neutral scale shades used on this page, hue 145. */
-const neutral = {
-	50: "oklch(0.98 0.005 145)",
-	300: "oklch(0.83 0.01 145)",
-	400: "oklch(0.73 0.01 145)",
-	500: "oklch(0.62 0.01 145)",
-	800: "oklch(0.32 0.006 145)",
-	900: "oklch(0.24 0.005 145)",
-} as const;
+import { neutral } from "~/resources/theme";
 
 export default function TermsView(_handle: Handle) {
 	return () => (

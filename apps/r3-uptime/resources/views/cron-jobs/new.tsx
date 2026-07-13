@@ -9,6 +9,7 @@ import type { Handle } from "remix/ui";
 
 import { css } from "remix/ui";
 
+import { neutral } from "~/resources/theme";
 import CronJobFormFields from "~/resources/views/cron-jobs/form";
 import routes from "~/routes/web";
 
@@ -17,11 +18,6 @@ namespace NewCronJobView {
 		team: { slug: string };
 	}
 }
-
-const neutral = {
-	800: "oklch(0.32 0.006 145)",
-	900: "oklch(0.24 0.005 145)",
-} as const;
 
 export default function NewCronJobView(handle: Handle<NewCronJobView.Props>) {
 	return () => (

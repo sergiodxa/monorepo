@@ -24,17 +24,16 @@ namespace AuthCta {
 		dashboardLabel?: string;
 		/**
 		 * `"lg"` (default) for hero/final-CTA placements; `"sm"` for the sticky
-		 * header and docs topbar, matching the OLD APP's smaller nav-level CTA
-		 * (`px-4 py-2 text-sm font-medium shadow-sm` vs. the hero/final-CTA's
-		 * `px-6 py-3 text-base font-semibold shadow-lg`).
+		 * header and docs topbar, which use smaller padding, font size, and
+		 * font weight than the hero/final-CTA's larger button.
 		 */
 		size?: "sm" | "lg";
 	}
 }
 
 /**
- * Builds the primary marketing CTA button for a given size, matching the OLD
- * APP's two CTA sizes (only used here, so no `styles.ts` export is needed).
+ * Builds the primary marketing CTA button for a given size (only used here,
+ * so no `styles.ts` export is needed).
  */
 function primaryButtonStyle(size: "sm" | "lg") {
 	let isLarge = size === "lg";

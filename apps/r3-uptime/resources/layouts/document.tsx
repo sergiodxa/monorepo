@@ -12,10 +12,9 @@ import type { Handle, RemixNode } from "remix/ui";
 
 import { css } from "remix/ui";
 
-/** Neutral scale shades used on this page, hue 145. */
-const neutral = { 50: "oklch(0.98 0.005 145)", 950: "oklch(0.16 0.004 145)" };
+import { neutral } from "~/resources/theme";
 
-/** App-wide monospace font stack — the OLD APP renders `<body>` in `font-mono` by default. */
+/** App-wide monospace font stack rendered on `<body>` by default. */
 const fontMono =
 	'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace';
 

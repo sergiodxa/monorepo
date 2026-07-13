@@ -1,7 +1,5 @@
 /**
- * New API key form. Exposes every scope the schema supports (the OLD APP's create
- * form only exposed 7 of the 20 defined scopes; this fixes that gap rather than
- * porting the stale subset).
+ * New API key form. Exposes every scope the schema supports (all 20 defined scopes).
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -15,6 +13,7 @@ import type { SelectTeam } from "~/database/schema";
 
 import { apiKeyScopes } from "~/database/schema";
 import Field from "~/resources/components/field";
+import { neutral } from "~/resources/theme";
 import routes from "~/routes/web";
 
 namespace NewApiKeyView {
@@ -22,14 +21,6 @@ namespace NewApiKeyView {
 		team: SelectTeam;
 	}
 }
-
-const neutral = {
-	50: "oklch(0.98 0.005 145)",
-	200: "oklch(0.91 0.008 145)",
-	700: "oklch(0.42 0.008 145)",
-	800: "oklch(0.32 0.006 145)",
-	900: "oklch(0.24 0.005 145)",
-} as const;
 
 export default function NewApiKeyView(handle: Handle<NewApiKeyView.Props>) {
 	return () => {

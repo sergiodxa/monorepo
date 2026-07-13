@@ -1,10 +1,10 @@
 /**
  * Shared chrome for the public marketing site: a sticky top nav (brand, feature/docs
- * links, sign-in or dashboard call to action) and a multi-column footer mirroring the
- * OLD APP's `LandingHeader`/`LandingFooter` structure. Every `/features/:slug`,
- * `/for/:slug`, `/use-cases/:slug`, `/vs/:slug`, `/privacy`, `/terms`, `/docs`, and
- * the homepage compose their content into this layout. It exists so those 40+ public
- * pages share one header/footer instead of repeating the chrome per page.
+ * links, sign-in or dashboard call to action) and a multi-column footer. Every
+ * `/features/:slug`, `/for/:slug`, `/use-cases/:slug`, `/vs/:slug`, `/privacy`,
+ * `/terms`, `/docs`, and the homepage compose their content into this layout. It
+ * exists so those 40+ public pages share one header/footer instead of repeating
+ * the chrome per page.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -15,6 +15,7 @@ import type { Handle, RemixNode } from "remix/ui";
 import { css } from "remix/ui";
 
 import AuthCta from "~/resources/components/marketing/auth-cta";
+import { primary } from "~/resources/theme";
 import routes from "~/routes/web";
 
 /** Neutral scale shades used on this page, hue 145. */
@@ -29,10 +30,7 @@ const neutral = {
 	950: "oklch(0.16 0.004 145)",
 };
 
-/** Primary (brand) scale shades used on this page, hue 142. */
-const primary = { 600: "oklch(0.6 0.16 142)", 400: "oklch(0.78 0.16 142)" };
-
-/** Marketing/docs font stack — the OLD APP's `--font-sans` (Mona Sans, with system fallbacks). */
+/** Marketing/docs font stack: Mona Sans, with system fallbacks. */
 const fontSans =
 	'"Mona Sans", ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji"';
 
@@ -58,9 +56,8 @@ interface FooterColumn {
 
 /**
  * One entry per footer grid cell. Most cells hold a single column; the last
- * one bundles Documentation+Legal together, matching the OLD APP's 5-column
- * footer grid (`sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5`) where those two
- * groups share a single cell instead of getting one each.
+ * one bundles Documentation and Legal together into a single cell instead of
+ * each getting its own.
  */
 type FooterCell =
 	| { kind: "column"; column: FooterColumn }
@@ -207,9 +204,8 @@ export default function MarketingLayout(handle: Handle<MarketingLayout.Props>) {
 
 					<nav mix={[css({ display: "flex", alignItems: "center", gap: 20 })]}>
 						{/*
-						 * The OLD APP hides these nav links entirely below `md` —
-						 * no hamburger/drawer here, only the logo and CTA remain
-						 * visible on mobile.
+						 * Hidden entirely below `md` — no hamburger/drawer here,
+						 * only the logo and CTA remain visible on mobile.
 						 */}
 						{HEADER_NAV_LINKS.map((link) => (
 							<a
@@ -309,8 +305,7 @@ export default function MarketingLayout(handle: Handle<MarketingLayout.Props>) {
 									))}
 								</div>
 							) : (
-								// Bundles Documentation+Legal into one grid cell, matching
-								// the OLD APP's 5th footer column (`flex flex-col gap-8`).
+								/** Bundles Documentation and Legal into a single footer grid cell. */
 								<div
 									key="docs-legal"
 									mix={[css({ display: "flex", flexDirection: "column", gap: 32 })]}

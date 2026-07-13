@@ -20,6 +20,7 @@ import type { BadgeTone } from "~/resources/components/badge";
 import Badge from "~/resources/components/badge";
 import EmptyState from "~/resources/components/empty-state";
 import StatCard from "~/resources/components/stat-card";
+import { neutral } from "~/resources/theme";
 import Heatmap from "~/resources/views/shared/heatmap";
 
 namespace DnsMonitorShowView {
@@ -30,17 +31,6 @@ namespace DnsMonitorShowView {
 		dailyStats: SelectMonitorDailyStats[];
 	}
 }
-
-const neutral = {
-	50: "oklch(0.98 0.005 145)",
-	200: "oklch(0.91 0.008 145)",
-	300: "oklch(0.83 0.01 145)",
-	400: "oklch(0.73 0.01 145)",
-	500: "oklch(0.62 0.01 145)",
-	700: "oklch(0.42 0.008 145)",
-	800: "oklch(0.32 0.006 145)",
-	900: "oklch(0.24 0.005 145)",
-} as const;
 
 const STATUS_BADGE_TONE: Record<string, BadgeTone> = {
 	ok: "up",

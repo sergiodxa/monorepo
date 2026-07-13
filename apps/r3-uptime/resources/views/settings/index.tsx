@@ -21,6 +21,7 @@ import type {
 
 import Badge from "~/resources/components/badge";
 import Field from "~/resources/components/field";
+import { danger, primary } from "~/resources/theme";
 import routes from "~/routes/web";
 
 const neutral = {
@@ -35,16 +36,6 @@ const neutral = {
 	800: "oklch(0.32 0.006 145)",
 	900: "oklch(0.24 0.005 145)",
 	950: "oklch(0.16 0.004 145)",
-} as const;
-
-const primary = {
-	600: "oklch(0.6 0.16 142)",
-	400: "oklch(0.78 0.16 142)",
-} as const;
-
-const danger = {
-	600: "oklch(0.58 0.18 25)",
-	700: "oklch(0.48 0.16 25)",
 } as const;
 
 const buttonPrimary = css({

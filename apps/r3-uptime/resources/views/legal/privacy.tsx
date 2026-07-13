@@ -1,8 +1,7 @@
 /**
  * Privacy Policy view. Static GDPR-oriented prose covering data collected, usage,
- * sharing, retention, rights, security, and cookies, ported verbatim in structure
- * and meaning from the OLD APP's `_landing.privacy` route, rendered inside the
- * shared `MarketingLayout` chrome.
+ * sharing, retention, rights, security, and cookies, rendered inside the shared
+ * `MarketingLayout` chrome.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -12,15 +11,7 @@ import type { Handle } from "remix/ui";
 
 import { css } from "remix/ui";
 
-/** Neutral scale shades used on this page, hue 145. */
-const neutral = {
-	50: "oklch(0.98 0.005 145)",
-	300: "oklch(0.83 0.01 145)",
-	400: "oklch(0.73 0.01 145)",
-	500: "oklch(0.62 0.01 145)",
-	800: "oklch(0.32 0.006 145)",
-	900: "oklch(0.24 0.005 145)",
-} as const;
+import { neutral } from "~/resources/theme";
 
 export default function PrivacyView(_handle: Handle) {
 	return () => (

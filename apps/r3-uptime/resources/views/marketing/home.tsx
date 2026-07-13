@@ -1,13 +1,11 @@
 /**
  * The real marketing homepage, replacing the placeholder `resources/views/home.tsx`.
- * Ports the OLD APP's landing page sections — hero, trust indicators, feature grid,
- * complete feature set, use cases with audience chips, a static pricing explanation,
- * and an FAQ accordion — using `remix/ui` JSX and the `MarketingLayout` chrome. The
- * OLD APP's interactive monitor-frequency pricing calculator (client-side React
- * state + a drag slider) is intentionally not ported: it is not one of this app's
- * approved client-side islands (see the ADR's `resources/components/copy-button.tsx`
- * precedent), so this renders the same pricing facts as static, server-rendered copy
- * instead of an interactive widget.
+ * Renders a hero, trust indicators, feature grid, complete feature set, use cases
+ * with audience chips, a static pricing explanation, and an FAQ accordion, using
+ * `remix/ui` JSX and the `MarketingLayout` chrome. Pricing renders as static,
+ * server-rendered copy rather than an interactive calculator: a client-side pricing
+ * slider is not one of this app's approved client-side islands (see the ADR's
+ * `resources/components/copy-button.tsx` precedent).
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -361,7 +359,6 @@ export default function HomeView(handle: Handle<HomeView.Props>) {
 							]}
 						>
 							<AuthCta isSignedIn={isSignedIn} dashboardLabel="Open Dashboard" />
-							{/* Matches the OLD APP's "View Pricing" hero button (px-6 py-3 text-base font-semibold shadow-sm). */}
 							<a
 								href="#pricing"
 								mix={[
@@ -477,7 +474,6 @@ export default function HomeView(handle: Handle<HomeView.Props>) {
 							}),
 						]}
 					>
-						{/* Trust indicators, matching the OLD APP's `grid grid-cols-2 gap-8 md:grid-cols-4`. */}
 						<div
 							mix={[
 								css({

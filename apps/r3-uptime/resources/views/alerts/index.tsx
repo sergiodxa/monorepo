@@ -14,6 +14,7 @@ import type { SelectAlert, SelectMonitor } from "~/database/schema";
 
 import { MAX_ALERTS_PER_TEAM } from "~/app/data/alert";
 import EmptyState from "~/resources/components/empty-state";
+import { neutral, primary } from "~/resources/theme";
 import routes from "~/routes/web";
 
 namespace AlertsView {
@@ -23,19 +24,6 @@ namespace AlertsView {
 		monitorsById: Map<string, SelectMonitor>;
 	}
 }
-
-const neutral = {
-	200: "oklch(0.91 0.008 145)",
-	400: "oklch(0.73 0.01 145)",
-	500: "oklch(0.62 0.01 145)",
-	800: "oklch(0.32 0.006 145)",
-	900: "oklch(0.24 0.005 145)",
-} as const;
-
-const primary = {
-	400: "oklch(0.78 0.16 142)",
-	600: "oklch(0.6 0.16 142)",
-} as const;
 
 const STRATEGY_LABELS: Record<string, string> = {
 	email: "Email",

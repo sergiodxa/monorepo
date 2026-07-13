@@ -17,6 +17,7 @@ import type { BadgeTone } from "~/resources/components/badge";
 
 import Badge from "~/resources/components/badge";
 import EmptyState from "~/resources/components/empty-state";
+import { neutral } from "~/resources/theme";
 
 namespace AlertHistoryView {
 	export interface Props {
@@ -25,13 +26,6 @@ namespace AlertHistoryView {
 		alertsById: Map<string, SelectAlert>;
 	}
 }
-
-const neutral = {
-	200: "oklch(0.91 0.008 145)",
-	400: "oklch(0.73 0.01 145)",
-	500: "oklch(0.62 0.01 145)",
-	800: "oklch(0.32 0.006 145)",
-} as const;
 
 const STATUS_BADGE_TONE: Record<string, BadgeTone> = {
 	sent: "up",

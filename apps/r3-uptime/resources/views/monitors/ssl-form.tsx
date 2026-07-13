@@ -14,6 +14,7 @@ import { css } from "remix/ui";
 import type { SelectMonitor } from "~/database/schema";
 
 import Field from "~/resources/components/field";
+import { neutral } from "~/resources/theme";
 import routes from "~/routes/web";
 
 namespace SslForm {
@@ -22,14 +23,6 @@ namespace SslForm {
 		monitor: SelectMonitor;
 	}
 }
-
-const neutral = {
-	50: "oklch(0.98 0.005 145)",
-	200: "oklch(0.91 0.008 145)",
-	700: "oklch(0.42 0.008 145)",
-	800: "oklch(0.32 0.006 145)",
-	900: "oklch(0.24 0.005 145)",
-} as const;
 
 export default function SslForm(handle: Handle<SslForm.Props>) {
 	return () => {

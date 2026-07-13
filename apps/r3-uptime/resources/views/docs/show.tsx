@@ -16,19 +16,14 @@ import { css } from "remix/ui";
 
 import type { DocFrontmatter } from "~/app/services/docs";
 
+import { neutral } from "~/resources/theme";
+
 namespace DocShowView {
 	export interface Props {
 		content: unknown;
 		frontmatter: DocFrontmatter;
 	}
 }
-
-/** Neutral scale shades used on this page, hue 145. */
-const neutral = {
-	400: "oklch(0.73 0.01 145)",
-	500: "oklch(0.62 0.01 145)",
-	600: "oklch(0.52 0.01 145)",
-} as const;
 
 export default function DocShowView(handle: Handle<DocShowView.Props>) {
 	return () => {
@@ -42,7 +37,7 @@ export default function DocShowView(handle: Handle<DocShowView.Props>) {
 						mix={[
 							css({
 								fontSize: "1.0625rem",
-								color: neutral[600],
+								color: "oklch(0.52 0.01 145)",
 								margin: "8px 0 32px",
 								"@media (prefers-color-scheme: dark)": { color: neutral[400] },
 							}),

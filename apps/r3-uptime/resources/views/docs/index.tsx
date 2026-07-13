@@ -12,27 +12,13 @@ import { css } from "remix/ui";
 
 import type { DocSection } from "~/app/services/docs";
 
+import { neutral, primary } from "~/resources/theme";
+
 namespace DocsIndexView {
 	export interface Props {
 		sections: DocSection[];
 	}
 }
-
-/** Primary (brand) scale shades used on this page, hue 142. */
-const primary = {
-	400: "oklch(0.78 0.16 142)",
-	600: "oklch(0.6 0.16 142)",
-} as const;
-
-/** Neutral scale shades used on this page, hue 145. */
-const neutral = {
-	50: "oklch(0.98 0.005 145)",
-	200: "oklch(0.91 0.008 145)",
-	400: "oklch(0.73 0.01 145)",
-	600: "oklch(0.52 0.01 145)",
-	800: "oklch(0.32 0.006 145)",
-	900: "oklch(0.24 0.005 145)",
-} as const;
 
 export default function DocsIndexView(handle: Handle<DocsIndexView.Props>) {
 	return () => {
@@ -45,7 +31,7 @@ export default function DocsIndexView(handle: Handle<DocsIndexView.Props>) {
 					mix={[
 						css({
 							fontSize: "1.0625rem",
-							color: neutral[600],
+							color: "oklch(0.52 0.01 145)",
 							margin: "8px 0 32px",
 							"@media (prefers-color-scheme: dark)": { color: neutral[400] },
 						}),
@@ -107,7 +93,7 @@ export default function DocsIndexView(handle: Handle<DocsIndexView.Props>) {
 										css({
 											display: "block",
 											fontSize: "0.875rem",
-											color: neutral[600],
+											color: "oklch(0.52 0.01 145)",
 											textDecoration: "none",
 											marginBottom: 8,
 											"&:hover": { color: primary[600] },

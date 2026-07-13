@@ -15,7 +15,11 @@ import { neutral } from "~/resources/theme";
 
 namespace StatCard {
 	export interface Props {
-		label: string;
+		/**
+		 * Usually plain text, but accepts any node so a card can italicize part of its
+		 * label (e.g. the dashboard's "Slowest Endpoint" card naming the monitor).
+		 */
+		label: RemixNode;
 		value: RemixNode;
 	}
 }

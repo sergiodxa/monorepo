@@ -16,6 +16,7 @@ import type { SelectMaintenanceWindow, SelectMonitor } from "~/database/schema";
 import MaintenanceWindow from "~/app/data/maintenance-window";
 import Badge from "~/resources/components/badge";
 import EmptyState from "~/resources/components/empty-state";
+import { neutral, primary } from "~/resources/theme";
 import routes from "~/routes/web";
 
 namespace MaintenanceWindowsView {
@@ -25,17 +26,6 @@ namespace MaintenanceWindowsView {
 		monitorsById: Map<string, SelectMonitor>;
 	}
 }
-
-const neutral = {
-	200: "oklch(0.91 0.008 145)",
-	800: "oklch(0.32 0.006 145)",
-	900: "oklch(0.24 0.005 145)",
-} as const;
-
-const primary = {
-	400: "oklch(0.78 0.16 142)",
-	600: "oklch(0.6 0.16 142)",
-} as const;
 
 export default function MaintenanceWindowsView(handle: Handle<MaintenanceWindowsView.Props>) {
 	return () => {

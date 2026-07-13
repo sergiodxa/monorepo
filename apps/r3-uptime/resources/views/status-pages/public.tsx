@@ -17,39 +17,22 @@ import type { BadgeTone } from "~/resources/components/badge";
 
 import Badge from "~/resources/components/badge";
 import EmptyState from "~/resources/components/empty-state";
+import { neutral, primary } from "~/resources/theme";
 import Heatmap from "~/resources/views/shared/heatmap";
 import routes from "~/routes/web";
 
-/** Primary (brand) scale shades used on this page, hue 142. */
-const primary = {
-	400: "oklch(0.78 0.16 142)",
-	600: "oklch(0.6 0.16 142)",
-} as const;
-
-/** Neutral scale shades used on this page, hue 145. */
-const neutral = {
-	200: "oklch(0.91 0.008 145)",
-	400: "oklch(0.73 0.01 145)",
-	500: "oklch(0.62 0.01 145)",
-	800: "oklch(0.32 0.006 145)",
-	900: "oklch(0.24 0.005 145)",
-} as const;
-
-/** Success scale shades used on this page, hue 155. */
 const success = {
 	50: "oklch(0.98 0.02 155)",
 	200: "oklch(0.92 0.09 155)",
 	800: "oklch(0.44 0.11 155)",
 } as const;
 
-/** Warning scale shades used on this page, hue 85. */
 const warning = {
 	50: "oklch(0.98 0.02 85)",
 	200: "oklch(0.92 0.12 85)",
 	800: "oklch(0.42 0.12 85)",
 } as const;
 
-/** Danger scale shades used on this page, hue 25. */
 const danger = {
 	50: "oklch(0.98 0.02 25)",
 	200: "oklch(0.92 0.1 25)",

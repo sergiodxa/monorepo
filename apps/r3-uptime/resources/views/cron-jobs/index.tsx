@@ -16,6 +16,7 @@ import type { BadgeTone } from "~/resources/components/badge";
 import CronJobMonitor from "~/app/data/cron-job";
 import Badge from "~/resources/components/badge";
 import EmptyState from "~/resources/components/empty-state";
+import { neutral, primary } from "~/resources/theme";
 import routes from "~/routes/web";
 
 namespace CronJobsView {
@@ -24,17 +25,6 @@ namespace CronJobsView {
 		monitors: SelectCronJobMonitor[];
 	}
 }
-
-const neutral = {
-	200: "oklch(0.91 0.008 145)",
-	800: "oklch(0.32 0.006 145)",
-	900: "oklch(0.24 0.005 145)",
-} as const;
-
-const primary = {
-	400: "oklch(0.78 0.16 142)",
-	600: "oklch(0.6 0.16 142)",
-} as const;
 
 const STATUS_BADGE_TONE: Record<string, BadgeTone> = {
 	healthy: "up",

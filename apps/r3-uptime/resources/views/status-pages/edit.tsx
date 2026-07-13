@@ -19,6 +19,7 @@ import type {
 	SelectTcpMonitor,
 } from "~/database/schema";
 
+import { danger, neutral, primary } from "~/resources/theme";
 import StatusPageFormFields from "~/resources/views/status-pages/form";
 import routes from "~/routes/web";
 
@@ -34,27 +35,7 @@ namespace EditStatusPageView {
 	}
 }
 
-const neutral = {
-	50: "oklch(0.98 0.005 145)",
-	300: "oklch(0.83 0.01 145)",
-	400: "oklch(0.73 0.01 145)",
-	500: "oklch(0.62 0.01 145)",
-	700: "oklch(0.42 0.008 145)",
-	800: "oklch(0.32 0.006 145)",
-	900: "oklch(0.24 0.005 145)",
-} as const;
-
-const primary = {
-	400: "oklch(0.78 0.16 142)",
-	600: "oklch(0.6 0.16 142)",
-} as const;
-
-const danger = {
-	600: "oklch(0.58 0.18 25)",
-	700: "oklch(0.48 0.16 25)",
-} as const;
-
-/** Destructive action button, matching the OLD APP's "Delete Team" button. Reused twice below. */
+/** Destructive action button, reused twice below. */
 const buttonDanger = css({
 	display: "inline-flex",
 	alignItems: "center",

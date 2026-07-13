@@ -16,6 +16,7 @@ import type { SelectApiKey, SelectTeam } from "~/database/schema";
 import Badge from "~/resources/components/badge";
 import CopyButton from "~/resources/components/copy-button";
 import EmptyState from "~/resources/components/empty-state";
+import { danger, neutral } from "~/resources/theme";
 import routes from "~/routes/web";
 
 namespace ApiKeysView {
@@ -25,19 +26,6 @@ namespace ApiKeysView {
 		newApiKey?: { name: string; key: string };
 	}
 }
-
-const neutral = {
-	200: "oklch(0.91 0.008 145)",
-	300: "oklch(0.83 0.01 145)",
-	700: "oklch(0.42 0.008 145)",
-	800: "oklch(0.32 0.006 145)",
-	900: "oklch(0.24 0.005 145)",
-} as const;
-
-const danger = {
-	600: "oklch(0.58 0.18 25)",
-	700: "oklch(0.48 0.16 25)",
-} as const;
 
 export default function ApiKeysView(handle: Handle<ApiKeysView.Props>) {
 	return () => {

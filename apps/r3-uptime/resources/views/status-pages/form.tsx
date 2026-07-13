@@ -21,15 +21,7 @@ import type {
 } from "~/database/schema";
 
 import Field from "~/resources/components/field";
-
-const neutral = {
-	50: "oklch(0.98 0.005 145)",
-	200: "oklch(0.91 0.008 145)",
-	400: "oklch(0.73 0.01 145)",
-	500: "oklch(0.62 0.01 145)",
-	700: "oklch(0.42 0.008 145)",
-	900: "oklch(0.24 0.005 145)",
-} as const;
+import { neutral } from "~/resources/theme";
 
 namespace StatusPageFormFields {
 	export interface Props {

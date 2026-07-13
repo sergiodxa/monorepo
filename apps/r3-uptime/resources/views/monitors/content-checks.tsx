@@ -14,6 +14,7 @@ import { css } from "remix/ui";
 import type { SelectMonitorContentCheck } from "~/database/schema";
 
 import Field from "~/resources/components/field";
+import { danger, neutral } from "~/resources/theme";
 import routes from "~/routes/web";
 
 namespace ContentChecksSection {
@@ -23,22 +24,6 @@ namespace ContentChecksSection {
 		contentChecks: SelectMonitorContentCheck[];
 	}
 }
-
-const neutral = {
-	50: "oklch(0.98 0.005 145)",
-	200: "oklch(0.91 0.008 145)",
-	300: "oklch(0.83 0.01 145)",
-	400: "oklch(0.73 0.01 145)",
-	500: "oklch(0.62 0.01 145)",
-	700: "oklch(0.42 0.008 145)",
-	800: "oklch(0.32 0.006 145)",
-	900: "oklch(0.24 0.005 145)",
-} as const;
-
-const danger = {
-	600: "oklch(0.58 0.18 25)",
-	700: "oklch(0.48 0.16 25)",
-} as const;
 
 /** {@link mixForSelect} re-types a `css()` mixin for `<select>`. */
 function mixForSelect(
@@ -51,7 +36,7 @@ function mixForSelect(
 	>;
 }
 
-/** Destructive action button, matching the OLD APP's "Delete Team" button. Reused per row. */
+/** Destructive action button. Reused per row. */
 const buttonDanger = css({
 	display: "inline-flex",
 	alignItems: "center",
@@ -69,7 +54,7 @@ const buttonDanger = css({
 	"&:hover": { background: danger[700] },
 });
 
-/** Secondary (outline) button, matching the OLD APP's "Cancel" button. Reused below. */
+/** Secondary (outline) button. Reused below. */
 const buttonSecondary = css({
 	display: "inline-flex",
 	alignItems: "center",

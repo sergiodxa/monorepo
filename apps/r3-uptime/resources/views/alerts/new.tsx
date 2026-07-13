@@ -11,6 +11,7 @@ import { css } from "remix/ui";
 
 import type { SelectMonitor } from "~/database/schema";
 
+import { neutral } from "~/resources/theme";
 import AlertFormFields from "~/resources/views/alerts/form";
 import routes from "~/routes/web";
 
@@ -20,11 +21,6 @@ namespace NewAlertView {
 		monitors: SelectMonitor[];
 	}
 }
-
-const neutral = {
-	800: "oklch(0.32 0.006 145)",
-	900: "oklch(0.24 0.005 145)",
-} as const;
 
 export default function NewAlertView(handle: Handle<NewAlertView.Props>) {
 	return () => {

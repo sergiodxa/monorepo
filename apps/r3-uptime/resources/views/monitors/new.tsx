@@ -21,7 +21,7 @@ namespace NewMonitorView {
 
 export default function NewMonitorView(handle: Handle<NewMonitorView.Props>) {
 	return () => (
-		<div>
+		<div mix={[css({ maxWidth: 640 })]}>
 			<form
 				method="post"
 				action={routes.actions.createMonitor.href({ team: handle.props.team.slug })}

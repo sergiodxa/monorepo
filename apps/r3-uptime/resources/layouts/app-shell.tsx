@@ -69,7 +69,6 @@ const page = css({
 	overflow: "hidden",
 	"@media (min-width: 768px)": {
 		display: "grid",
-		// 256px (16rem), matching the OLD APP's `--sidebar-width`.
 		gridTemplateColumns: "256px 1fr",
 		gridTemplateRows: "auto 1fr auto",
 		gridTemplateAreas: `"teampicker header" "nav content" "usermenu content"`,
@@ -81,8 +80,8 @@ const row = css({ display: "flex", alignItems: "center", gap: 12, minWidth: 0 })
 
 /**
  * The hamburger button that opens the sidebar on mobile via the native Command
- * Invoker API (`commandfor`/`command="toggle-popover"`). Hidden at ≥768px,
- * matching the OLD APP's `Sidebar.Trigger` (`md:hidden`).
+ * Invoker API (`commandfor`/`command="toggle-popover"`). Hidden at ≥768px, where the
+ * sidebar is always visible and a toggle would be redundant.
  */
 const sidebarToggle = css({
 	display: "inline-flex",
@@ -102,13 +101,19 @@ const sidebarToggle = css({
 	"@media (prefers-color-scheme: dark)": { "&:hover": { background: neutral[800] } },
 });
 
-/** The header cell: nav toggle + breadcrumb on the left, quick actions on the right. */
+/**
+ * The header cell: nav toggle + breadcrumb on the left, quick actions on the right.
+ * `height` (with `boxSizing: border-box`, so padding/border count toward it) is fixed
+ * at 64px so pages that pass no `actions` don't render a shorter header row.
+ */
 const header = css({
 	display: "flex",
 	alignItems: "center",
 	justifyContent: "space-between",
 	gap: 16,
-	padding: "12px 20px",
+	height: 64,
+	boxSizing: "border-box",
+	padding: "0 20px",
 	borderBottom: `1px solid ${neutral[200]}`,
 	flexShrink: 0,
 	"@media (min-width: 768px)": { gridArea: "header" },
@@ -129,11 +134,10 @@ const breadcrumbText = css({
 /**
  * The sidebar's popover drawer. Below 768px this is a native popover — hidden until
  * opened by the header's hamburger button — rendered as a fixed, full-height overlay
- * drawer with its own backdrop, matching the OLD APP's `Sidebar` primitive switching
- * to an `AriaModalOverlay` sheet on mobile: a flex column of its three sections, with
- * the middle one (`navCell`, below) independently scrollable so the team picker and
- * user menu stay pinned. At ≥768px it becomes `display: contents` (see the file
- * docblock) — the `!important`s throughout are required to beat the UA stylesheet's
+ * sheet with its own backdrop: a flex column of its three sections, with the middle
+ * one (`navCell`, below) independently scrollable so the team picker and user menu
+ * stay pinned. At ≥768px it becomes `display: contents` (see the file docblock) —
+ * the `!important`s throughout are required to beat the UA stylesheet's
  * `[popover]:not(:popover-open) { display: none }`, which otherwise wins on
  * specificity.
  */
@@ -143,9 +147,11 @@ const sidebarNav = css({
 	left: 0,
 	bottom: 0,
 	margin: 0,
-	// The UA popover stylesheet applies `height: fit-content` to every `[popover]`
-	// element regardless of open state — left unset, that beats this element's
-	// intended full-height drawer size below 768px.
+	/**
+	 * The UA popover stylesheet applies `height: fit-content` to every `[popover]`
+	 * element regardless of open state — left unset, that beats this element's
+	 * intended full-height drawer size below 768px.
+	 */
 	height: "100%",
 	boxSizing: "border-box",
 	display: "none",
@@ -284,14 +290,9 @@ const menuChevronIcon = css({
 	"@media (prefers-color-scheme: dark)": { color: neutral[50] },
 });
 
-/**
- * A compact "expand/switch" indicator (up-chevron over down-chevron), matching the
- * OLD APP's `ChevronsUpDownIcon`. A plain value-returning function, not a
- * `Handle`-based component — called directly (`{chevronsUpDownIcon()}`) since it's
- * just inlined markup, not a reusable JSX element type.
- */
-function chevronsUpDownIcon() {
-	return (
+/** A compact up/down chevron pair, the "expand/switch" indicator for the team-picker and user-menu trigger buttons. */
+function ChevronsUpDownIcon(_handle: Handle<Record<string, never>>) {
+	return () => (
 		<svg
 			viewBox="0 0 20 20"
 			width={14}
@@ -324,11 +325,13 @@ function chevronsUpDownIcon() {
 function dropdownPanel(edge: { top: number } | { bottom: number }) {
 	return css({
 		position: "fixed",
-		// The UA popover stylesheet defaults [popover] elements to `inset: 0` (plus
-		// `margin: auto` for auto-centering). Both `top` and `bottom` must be given
-		// explicit values here (one of them "auto") — otherwise the UA's own `top: 0`/
-		// `bottom: 0` wins the over-constrained vertical box model against whichever
-		// side we didn't set, and our offset is silently ignored.
+		/**
+		 * The UA popover stylesheet defaults [popover] elements to `inset: 0` (plus
+		 * `margin: auto` for auto-centering). Both `top` and `bottom` must be given
+		 * explicit values here (one of them "auto") — otherwise the UA's own `top: 0`/
+		 * `bottom: 0` wins the over-constrained vertical box model against whichever
+		 * side we didn't set, and our offset is silently ignored.
+		 */
 		top: "top" in edge ? edge.top : "auto",
 		bottom: "bottom" in edge ? edge.bottom : "auto",
 		left: 12,
@@ -392,6 +395,17 @@ const navLink = css({
 	},
 });
 
+/**
+ * Applied on top of {@link navLink} for whichever item's `href` matches the current
+ * page, so the "you are here" state reads as a persistent selection rather than the
+ * same transient background {@link navLink}'s `&:hover` uses.
+ */
+const navLinkActive = css({
+	background: neutral[200],
+	color: neutral[900],
+	"@media (prefers-color-scheme: dark)": { background: neutral[800], color: neutral[50] },
+});
+
 /** The page's main content area (grid area "content", spanning both content-side rows at ≥768px). */
 const main = css({
 	minWidth: 0,
@@ -408,6 +422,13 @@ namespace AppShell {
 		isAdmin: boolean;
 		/** Current page/section name, shown in the header in place of a per-page `<h1>`. */
 		breadcrumb: string;
+		/**
+		 * The current request's URL path (e.g. `ctx.url.pathname`), compared against
+		 * each nav item's `href` to mark the matching link as the active one. Optional
+		 * since not every caller passes it yet; nav links simply render with no active
+		 * state until a given page's controller starts passing it.
+		 */
+		currentPath?: string;
 		/** Page-specific quick actions (e.g. "Create monitor"), shown at the end of the header. */
 		actions?: RemixNode;
 		toast?: { intent: "success" | "error"; message: string };
@@ -417,7 +438,8 @@ namespace AppShell {
 
 export default function AppShell(handle: Handle<AppShell.Props>) {
 	return () => {
-		let { team, teams, viewer, isAdmin, breadcrumb, actions, toast, children } = handle.props;
+		let { team, teams, viewer, isAdmin, breadcrumb, currentPath, actions, toast, children } =
+			handle.props;
 
 		let primaryNavItems: Array<{ href: string; label: string; icon: RemixNode }> = [
 			{
@@ -640,9 +662,9 @@ export default function AppShell(handle: Handle<AppShell.Props>) {
 								>
 									<Logo src={team.logo} name={team.name} />
 									<span mix={[truncatedLabel]}>{team.name}</span>
-									{chevronsUpDownIcon()}
+									<ChevronsUpDownIcon />
 								</button>
-								<div id="team-picker-menu" popover="auto" mix={[dropdownPanel({ top: 64 })]}>
+								<div id="team-picker-menu" popover="auto" mix={[dropdownPanel({ top: 47 })]}>
 									<ul mix={[navList]}>
 										{teams.map((t) => (
 											<li key={t.id}>
@@ -682,7 +704,11 @@ export default function AppShell(handle: Handle<AppShell.Props>) {
 						<ul mix={[navList]}>
 							{primaryNavItems.map((item) => (
 								<li key={item.href}>
-									<a href={item.href} mix={[navLink]}>
+									<a
+										href={item.href}
+										aria-current={item.href === currentPath ? "page" : undefined}
+										mix={item.href === currentPath ? [navLink, navLinkActive] : [navLink]}
+									>
 										{item.icon}
 										<span>{item.label}</span>
 									</a>
@@ -698,7 +724,8 @@ export default function AppShell(handle: Handle<AppShell.Props>) {
 											href={item.href}
 											target={item.target}
 											rel={item.target ? "noreferrer" : undefined}
-											mix={[navLink]}
+											aria-current={item.href === currentPath ? "page" : undefined}
+											mix={item.href === currentPath ? [navLink, navLinkActive] : [navLink]}
 										>
 											{item.icon}
 											<span>{item.label}</span>
@@ -719,9 +746,9 @@ export default function AppShell(handle: Handle<AppShell.Props>) {
 						>
 							<Avatar src={viewer.avatar || null} name={viewer.name} />
 							<span mix={[truncatedLabel]}>{viewer.name}</span>
-							{chevronsUpDownIcon()}
+							<ChevronsUpDownIcon />
 						</button>
-						<div id="user-menu" popover="auto" mix={[dropdownPanel({ bottom: 76 })]}>
+						<div id="user-menu" popover="auto" mix={[dropdownPanel({ bottom: 58 })]}>
 							<a href={routes.app.team.account.href({ team: team.slug })} mix={[dropdownItem]}>
 								Account
 							</a>

@@ -14,6 +14,7 @@ import { css } from "remix/ui";
 
 import type { DocSection } from "~/app/services/docs";
 
+import { primary } from "~/resources/theme";
 import routes from "~/routes/web";
 
 /** Neutral scale shades used on this page, hue 145. */
@@ -28,9 +29,6 @@ const neutral = {
 	900: "oklch(0.24 0.005 145)",
 	950: "oklch(0.16 0.004 145)",
 };
-
-/** Primary (brand) scale shades used on this page, hue 142. */
-const primary = { 600: "oklch(0.6 0.16 142)", 400: "oklch(0.78 0.16 142)" };
 
 /**
  * The hamburger button that opens the sidebar on mobile via the native Command
@@ -134,10 +132,9 @@ export default function DocsLayout(handle: Handle<DocsLayout.Props>) {
 				>
 					{/*
 					 * Fully hidden below 768px and replaced by a slide-in native
-					 * popover drawer triggered by the hamburger above, matching the
-					 * OLD APP's docs sidebar (a `Sheet`-based mobile drawer). At
-					 * ≥768px this resets to a normal static column (`!important`
-					 * beats the UA `[popover]:not(:popover-open) { display: none }`).
+					 * popover drawer triggered by the hamburger above. At ≥768px
+					 * this resets to a normal static column (`!important` beats
+					 * the UA `[popover]:not(:popover-open) { display: none }`).
 					 */}
 					<aside
 						id="docs-sidebar"

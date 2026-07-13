@@ -18,28 +18,8 @@ import type { SelectTeam, SupportedLanguage } from "~/database/schema";
 import Avatar from "~/resources/components/avatar";
 import Badge from "~/resources/components/badge";
 import Field from "~/resources/components/field";
+import { danger, neutral, primary } from "~/resources/theme";
 import routes from "~/routes/web";
-
-const neutral = {
-	50: "oklch(0.98 0.005 145)",
-	200: "oklch(0.91 0.008 145)",
-	300: "oklch(0.83 0.01 145)",
-	500: "oklch(0.62 0.01 145)",
-	700: "oklch(0.42 0.008 145)",
-	800: "oklch(0.32 0.006 145)",
-	900: "oklch(0.24 0.005 145)",
-	950: "oklch(0.16 0.004 145)",
-} as const;
-
-const primary = {
-	600: "oklch(0.6 0.16 142)",
-	400: "oklch(0.78 0.16 142)",
-} as const;
-
-const danger = {
-	600: "oklch(0.58 0.18 25)",
-	700: "oklch(0.48 0.16 25)",
-} as const;
 
 /** {@link css}'s return type doesn't fit `HTMLSelectElement` (Cloudflare Workers types conflict). */
 function mixForSelect(
@@ -71,7 +51,7 @@ const sectionDescription = css({
 	color: neutral[500],
 });
 
-/** Bordered card wrapping each section's actual content, matching the OLD APP's settings cards. */
+/** Bordered card wrapping each section's actual content. */
 const card = css({
 	padding: 20,
 	borderRadius: 8,
@@ -96,7 +76,7 @@ const buttonSecondary = css({
 	"&:hover": { background: neutral[50] },
 	"@media (prefers-color-scheme: dark)": {
 		background: neutral[900],
-		color: "oklch(0.73 0.01 145)",
+		color: neutral[400],
 		borderColor: neutral[700],
 		"&:hover": { background: neutral[800] },
 	},
