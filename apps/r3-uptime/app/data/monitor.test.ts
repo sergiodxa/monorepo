@@ -15,7 +15,14 @@ import { describe, expect, mock, test } from "bun:test";
 import type { Database } from "remix/data-table";
 
 import { createTestDatabase } from "~/app/lib/test/db";
-import { monitorResults, monitors, teams } from "~/database/schema";
+import {
+	cronJobMonitors,
+	dnsMonitors,
+	monitorResults,
+	monitors,
+	tcpMonitors,
+	teams,
+} from "~/database/schema";
 
 /** The shape `Monitor.ping` passes to `env.PING.create(...)`. */
 interface PingWorkflowInput {
@@ -23,9 +30,11 @@ interface PingWorkflowInput {
 	params: { monitorId: string };
 }
 
-// `Monitor.ping` calls `env.PING.create(...)`, a Workflow binding with nothing to
-// assert on besides "it was called with the right id shape" — stub it so importing
-// the module doesn't crash and so `ping` can assert on the call.
+/**
+ * `Monitor.ping` calls `env.PING.create(...)`, a Workflow binding with nothing to
+ * assert on besides "it was called with the right id shape" — stub it so importing
+ * the module doesn't crash and so `ping` can assert on the call.
+ */
 let pingCreate = mock(async (_input: PingWorkflowInput) => ({}));
 mock.module("cloudflare:workers", () => ({ env: { PING: { create: pingCreate } } }));
 
@@ -74,8 +83,10 @@ describe("Monitor.listByTeam", () => {
 			name: "First",
 			url: "https://a.example.com",
 		});
-		// Force a distinct `created_at` so the ordering assertion below is
-		// deterministic — two creates in the same millisecond would otherwise tie.
+		/**
+		 * Force a distinct `created_at` so the ordering assertion below is
+		 * deterministic — two creates in the same millisecond would otherwise tie.
+		 */
 		await db.update(monitors, first.id, { created_at: first.created_at - 1000 }, { touch: false });
 		let second = await Monitor.create(db, team.id, "author-1", {
 			name: "Second",
@@ -277,7 +288,7 @@ describe("Monitor.findDue", () => {
 			url: "https://example.com",
 			interval_seconds: 60,
 		});
-		// Old enough to be due on its own, but a more recent completed result exists.
+		/** Old enough to be due on its own, but a more recent completed result exists. */
 		await db.create(monitorResults, {
 			id: crypto.randomUUID(),
 			monitor_id: monitor.id,
@@ -350,5 +361,116 @@ describe("Monitor.findDue", () => {
 		await Monitor.updateById(db, monitor.id, { enabled_at: null });
 
 		expect(await Monitor.findDue(db, scheduledAt)).toEqual([]);
+	});
+});
+
+describe("Monitor.estimateConsumedPingsByTeam", () => {
+	test("projects HTTP/DNS/TCP monitors from their interval and sums cron occurrences", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeam(db);
+		let date = new Date("2026-07-15T12:00:00.000Z");
+
+		// 31-day month, checking every 3600s -> 24 checks/day * 31 = 744.
+		await Monitor.create(db, team.id, "author-1", {
+			name: "HTTP",
+			url: "https://example.com",
+			interval_seconds: 3600,
+		});
+		await db.create(dnsMonitors, {
+			id: crypto.randomUUID(),
+			team_id: team.id,
+			name: "DNS",
+			domain: "example.com",
+			record_type: "A",
+			interval_seconds: 3600,
+			is_enabled: true,
+		});
+		await db.create(tcpMonitors, {
+			id: crypto.randomUUID(),
+			team_id: team.id,
+			name: "TCP",
+			host: "example.com",
+			port: 443,
+			interval_seconds: 3600,
+			is_enabled: true,
+		});
+		// Runs once a day at midnight -> 31 occurrences in July.
+		await db.create(cronJobMonitors, {
+			id: crypto.randomUUID(),
+			team_id: team.id,
+			name: "Nightly job",
+			cron_expression: "0 0 * * *",
+			timezone: "UTC",
+			enabled_at: Date.now(),
+		});
+
+		let estimate = await Monitor.estimateConsumedPingsByTeam(db, team.id, date);
+		// 744 (http) + 744 (dns) + 744 (tcp) = 2232, plus cron occurrences strictly
+		// after the 1st at midnight through the 31st: 30.
+		expect(estimate).toBe(2262);
+	});
+
+	test("ignores disabled monitors and jobs", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeam(db);
+		let date = new Date("2026-07-15T12:00:00.000Z");
+
+		let monitor = await Monitor.create(db, team.id, "author-1", {
+			name: "HTTP",
+			url: "https://example.com",
+			interval_seconds: 3600,
+		});
+		await Monitor.updateById(db, monitor.id, { enabled_at: null });
+		await db.create(dnsMonitors, {
+			id: crypto.randomUUID(),
+			team_id: team.id,
+			name: "DNS",
+			domain: "example.com",
+			record_type: "A",
+			interval_seconds: 3600,
+			is_enabled: false,
+		});
+		await db.create(cronJobMonitors, {
+			id: crypto.randomUUID(),
+			team_id: team.id,
+			name: "Disabled job",
+			cron_expression: "0 0 * * *",
+			timezone: "UTC",
+			enabled_at: null,
+		});
+
+		expect(await Monitor.estimateConsumedPingsByTeam(db, team.id, date)).toBe(0);
+	});
+
+	test("never counts another team's monitors", async () => {
+		let { db } = createTestDatabase();
+		let teamA = await createTeam(db);
+		let teamB = await createTeam(db);
+		let date = new Date("2026-07-15T12:00:00.000Z");
+
+		await Monitor.create(db, teamB.id, "author-1", {
+			name: "HTTP",
+			url: "https://example.com",
+			interval_seconds: 3600,
+		});
+
+		expect(await Monitor.estimateConsumedPingsByTeam(db, teamA.id, date)).toBe(0);
+	});
+
+	test("skips a cron job with an invalid expression instead of throwing", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeam(db);
+		let date = new Date("2026-07-15T12:00:00.000Z");
+
+		await db.create(cronJobMonitors, {
+			id: crypto.randomUUID(),
+			team_id: team.id,
+			name: "Broken job",
+			cron_expression: "not a cron expression",
+			timezone: "UTC",
+			enabled_at: Date.now(),
+		});
+
+		expect(await Monitor.estimateConsumedPingsByTeam(db, team.id, date)).toBe(0);
 	});
 });

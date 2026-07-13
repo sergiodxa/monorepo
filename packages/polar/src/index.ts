@@ -351,6 +351,45 @@ export class PolarClient {
 	}
 
 	/**
+	 * Get the total quantity recorded on a usage meter for a customer (identified by
+	 * external id) within a date range, optionally narrowed by metadata matching the
+	 * shape the usage events were ingested with (e.g. `{ teamId }`). Used to show a
+	 * customer's consumption for a billing period without exposing Polar's raw
+	 * meter/event query shapes to callers.
+	 *
+	 * @param externalCustomerId - The app-owned external id linked to the customer.
+	 * @param meterId - The Polar meter id to query (e.g. a "ping" usage meter).
+	 * @param range - The inclusive `start`/`end` of the period to sum.
+	 * @param metadata - Optional metadata filter matching the event's ingested metadata.
+	 * @returns The summed quantity for the period.
+	 * @throws {PolarError} When the request fails.
+	 *
+	 * @example
+	 * ```ts
+	 * let consumed = await polar.getMeterUsage(ownerId, meterId, {
+	 * 	start: startOfMonth(new Date()),
+	 * 	end: endOfMonth(new Date()),
+	 * }, { teamId });
+	 * ```
+	 */
+	async getMeterUsage(
+		externalCustomerId: string,
+		meterId: string,
+		range: { start: Date; end: Date },
+		metadata: Record<string, string> = {},
+	): Promise<number> {
+		let { total } = await this.client.meters.quantities({
+			externalCustomerId,
+			startTimestamp: range.start,
+			endTimestamp: range.end,
+			interval: "month",
+			id: meterId,
+			metadata,
+		});
+		return total;
+	}
+
+	/**
 	 * Ingest one or more usage events for metered billing.
 	 *
 	 * @param events - The events to ingest.

@@ -93,7 +93,7 @@ export class Ping extends WorkflowEntrypoint<Cloudflare.Env> {
 					: env.GEO_FETCH;
 				let stub = namespace.get(id, { locationHint });
 
-				// A content check needs the body, so HEAD becomes GET to retrieve one.
+				/** A content check needs the body, so HEAD becomes GET to retrieve one. */
 				let method = hasContentChecks && monitor.method === "HEAD" ? "GET" : monitor.method;
 				let signal = AbortSignal.timeout(monitor.timeout_seconds * MS_PER_SECOND);
 

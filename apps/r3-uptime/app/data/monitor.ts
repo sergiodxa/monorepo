@@ -1,7 +1,11 @@
 /**
  * Data-access model for HTTP monitors. Exposes CRUD over the `monitors` table scoped
- * to a team, triggering an on-demand check via the `PING` workflow, and the scheduling
- * query the `scheduled` handler uses every minute to find monitors due for a check.
+ * to a team, triggering an on-demand check via the `PING` workflow, the scheduling
+ * query the `scheduled` handler uses every minute to find monitors due for a check,
+ * and an estimated monthly ping-consumption figure across every monitor type (HTTP,
+ * DNS, TCP, cron) — the dashboard's usage card shows this alongside Polar's actual
+ * billed usage, since Polar doesn't offer a "what would this cost at current
+ * settings" projection.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -10,11 +14,21 @@
 import type { Database } from "remix/data-table";
 
 import { env } from "cloudflare:workers";
-import { and, eq, inList } from "remix/data-table";
+import { CronExpressionParser } from "cron-parser";
+import { and, eq, inList, notNull } from "remix/data-table";
 
 import type { InsertMonitor } from "~/database/schema";
 
-import { monitorResults, monitors } from "~/database/schema";
+import {
+	cronJobMonitors,
+	dnsMonitors,
+	monitorResults,
+	monitors,
+	tcpMonitors,
+} from "~/database/schema";
+
+/** Safety cap on cron occurrences counted per job, guarding against a pathological expression. */
+const MAX_CRON_OCCURRENCES_PER_MONTH = 100_000;
 
 /** A monitor due for a check, with the team owner id the usage/billing gate needs. */
 export interface DueMonitor {
@@ -189,5 +203,64 @@ export default class Monitor {
 			lastCheck: row?.lastCheck ?? null,
 			p99: responseTimes[p99Index] ?? null,
 		};
+	}
+
+	/**
+	 * Estimates a team's total ping consumption for the calendar month containing
+	 * `date`, across every monitor type: HTTP/DNS/TCP monitors are projected as
+	 * `monthMilliseconds / intervalMs` (how many checks their interval would produce
+	 * over the whole month), and cron jobs are counted by walking their cron
+	 * expression's occurrences with `cron-parser`. This is a projection based on
+	 * current settings, not the team's actual Polar-billed usage (which only reflects
+	 * checks that have already run) — the dashboard shows both figures side by side.
+	 */
+	static async estimateConsumedPingsByTeam(
+		db: Database,
+		teamId: string,
+		date: Date,
+	): Promise<number> {
+		let start = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), 1));
+		let end = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth() + 1, 0, 23, 59, 59, 999));
+		let monthMs = end.getTime() - start.getTime();
+
+		let [httpMonitors, teamDnsMonitors, teamTcpMonitors, teamCronJobs] = await Promise.all([
+			db.findMany(monitors, { where: and(eq("team_id", teamId), notNull("enabled_at")) }),
+			db.findMany(dnsMonitors, { where: { team_id: teamId, is_enabled: true } }),
+			db.findMany(tcpMonitors, { where: { team_id: teamId, is_enabled: true } }),
+			db.findMany(cronJobMonitors, { where: and(eq("team_id", teamId), notNull("enabled_at")) }),
+		]);
+
+		let httpPings = httpMonitors.reduce((sum, m) => sum + monthMs / (m.interval_seconds * 1000), 0);
+		let dnsPings = teamDnsMonitors.reduce(
+			(sum, m) => sum + monthMs / (m.interval_seconds * 1000),
+			0,
+		);
+		let tcpPings = teamTcpMonitors.reduce(
+			(sum, m) => sum + monthMs / (m.interval_seconds * 1000),
+			0,
+		);
+
+		let cronPings = 0;
+		for (let job of teamCronJobs) {
+			try {
+				let interval = CronExpressionParser.parse(job.cron_expression, {
+					currentDate: start,
+					tz: job.timezone ?? "UTC",
+				});
+
+				let occurrences = 0;
+				let next = interval.next();
+				while (next.toDate() <= end) {
+					occurrences++;
+					if (occurrences > MAX_CRON_OCCURRENCES_PER_MONTH) break;
+					next = interval.next();
+				}
+				cronPings += occurrences;
+			} catch {
+				// Skip jobs with an unparsable cron expression rather than fail the whole estimate.
+			}
+		}
+
+		return Math.round(httpPings + dnsPings + tcpPings + cronPings);
 	}
 }

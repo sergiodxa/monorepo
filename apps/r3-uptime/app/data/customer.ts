@@ -15,6 +15,9 @@ import type IdToken from "~/app/auth/value-objects/id-token";
 /** The Polar product id a paying team's owner must hold an active subscription to. */
 const SUBSCRIPTION_PRODUCT_ID = "94161883-14eb-42e2-bb26-b4647199cda1";
 
+/** The Polar meter id tracking ingested `ping` usage events. */
+const PING_METER_ID = "22fabd9b-8b03-4cc2-8981-230717267cd5";
+
 export default class Customer {
 	/**
 	 * Finds or creates the Polar customer for a signed-in subject, linking the
@@ -34,6 +37,19 @@ export default class Customer {
 	/** Whether the team owner (by external id) has an active monitoring subscription. */
 	static async hasActiveSubscription(polar: PolarClient, ownerId: string): Promise<boolean> {
 		return await polar.hasActiveSubscription(ownerId, SUBSCRIPTION_PRODUCT_ID);
+	}
+
+	/**
+	 * The team's Polar-billed `ping` usage for the calendar month containing `date`,
+	 * scoped to `teamId` via the meter's ingested metadata (see
+	 * `~/app/jobs/ping.ts`/`~/workflows/ping.ts` for where usage would be ingested).
+	 * Throws when the request fails or the owner has no Polar customer — callers on
+	 * a billing dashboard should treat that as "usage unavailable" rather than "0".
+	 */
+	static async getUsagePerMonth(polar: PolarClient, ownerId: string, teamId: string, date: Date) {
+		let start = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), 1));
+		let end = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth() + 1, 0, 23, 59, 59, 999));
+		return await polar.getMeterUsage(ownerId, PING_METER_ID, { start, end }, { teamId });
 	}
 
 	/** Creates a hosted Polar checkout session for the team owner to subscribe. */
@@ -68,7 +84,7 @@ export default class Customer {
 				subscriptions.map((subscription) => polar.revokeSubscription(subscription.id)),
 			);
 		} catch {
-			// Best-effort — see docblock.
+			// intentionally empty
 		}
 	}
 }
