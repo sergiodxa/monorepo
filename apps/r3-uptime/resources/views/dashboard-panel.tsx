@@ -107,7 +107,10 @@ export default function DashboardPanelView(handle: Handle<DashboardPanelView.Pro
 
 		return (
 			<>
-				<TabList aria-label="Monitor type">
+				<TabList
+					aria-label="Monitor type"
+					activeIndex={TABS.findIndex((tab) => tab.id === props.tab)}
+				>
 					{TABS.map((tab) => (
 						<Tab
 							key={tab.id}

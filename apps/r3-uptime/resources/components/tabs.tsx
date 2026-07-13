@@ -6,6 +6,13 @@
  * every tabbed view in this app (currently just the dashboard) shares one ARIA-correct
  * tab bar instead of hand-rolling `role`/`aria-selected` per page.
  *
+ * The active-tab indicator is one shared, absolutely-positioned bar rather than a
+ * border on each `Tab`, so it can slide between tabs on `transform` alone — no client
+ * JS, since every tab has the same fixed width and the indicator's `translateX` is a
+ * plain `activeIndex * TAB_WIDTH` computed server-side. A named `Frame` reload
+ * (`dashboard-panel`) diffs rather than replaces this markup, so the indicator persists
+ * as the same DOM node across a tab switch and the `transition` actually animates.
+ *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
@@ -16,10 +23,12 @@ import { css, link } from "remix/ui";
 
 import { neutral, primary } from "~/resources/theme";
 
+/** Every tab's fixed width, in px — must be wide enough for the longest label. */
+const TAB_WIDTH = 110;
+
 const tabList = css({
+	position: "relative",
 	display: "flex",
-	alignItems: "center",
-	gap: 24,
 	marginBottom: 16,
 	borderBottom: `1px solid ${neutral[200]}`,
 	"@media (prefers-color-scheme: dark)": { borderColor: neutral[800] },
@@ -28,13 +37,13 @@ const tabList = css({
 const tab = css({
 	display: "inline-flex",
 	alignItems: "center",
+	justifyContent: "center",
+	width: TAB_WIDTH,
 	padding: "0 0 12px",
-	marginBottom: -1,
 	fontSize: "0.875rem",
 	fontWeight: 500,
 	color: neutral[500],
 	textDecoration: "none",
-	borderBottom: "2px solid transparent",
 	"&:hover": { color: neutral[900] },
 	"@media (prefers-color-scheme: dark)": {
 		"&:hover": { color: neutral[50] },
@@ -44,27 +53,44 @@ const tab = css({
 const tabActive = css({
 	color: primary[600],
 	fontWeight: 600,
-	borderBottomColor: primary[600],
 	"&:hover": { color: primary[600] },
 	"@media (prefers-color-scheme: dark)": {
 		color: primary[400],
-		borderBottomColor: primary[400],
 		"&:hover": { color: primary[400] },
 	},
+});
+
+const indicator = css({
+	position: "absolute",
+	bottom: -1,
+	left: 0,
+	width: TAB_WIDTH,
+	height: 2,
+	background: primary[600],
+	transition: "transform 0.2s ease",
+	"@media (prefers-color-scheme: dark)": { background: primary[400] },
 });
 
 namespace TabList {
 	export interface Props {
 		"aria-label": string;
+		/** Index of the active `Tab` among its siblings, for the sliding indicator. */
+		activeIndex: number;
 		children: RemixNode;
 	}
 }
 
-/** `role="tablist"` wrapper; place one `Tab` per child. */
+/** `role="tablist"` wrapper with a sliding active-tab indicator; place one `Tab` per child. */
 export function TabList(handle: Handle<TabList.Props>) {
 	return () => (
 		<div role="tablist" aria-label={handle.props["aria-label"]} mix={[tabList]}>
 			{handle.props.children}
+			<div
+				mix={[
+					indicator,
+					css({ transform: `translateX(${handle.props.activeIndex * TAB_WIDTH}px)` }),
+				]}
+			/>
 		</div>
 	);
 }
