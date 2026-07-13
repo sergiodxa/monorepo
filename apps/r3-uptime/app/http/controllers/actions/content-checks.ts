@@ -36,7 +36,7 @@ export const createContentCheck = createAction(routes.actions.createContentCheck
 			intent: "error",
 			message: "Please check the content check and try again.",
 		});
-		return redirect(routes.app.team.dashboard.href({ team: ctx.team.slug }), {
+		return redirect(routes.app.team.dashboard.index.href({ team: ctx.team.slug }), {
 			status: redirect.Status.SeeOther,
 		});
 	}
@@ -79,7 +79,7 @@ export const deleteContentCheck = createAction(routes.actions.deleteContentCheck
 	let result = await validate(ctx.formData, DeleteContentCheckSchema);
 
 	if (isFailure(result)) {
-		return redirect(routes.app.team.dashboard.href({ team: ctx.team.slug }), {
+		return redirect(routes.app.team.dashboard.index.href({ team: ctx.team.slug }), {
 			status: redirect.Status.SeeOther,
 		});
 	}

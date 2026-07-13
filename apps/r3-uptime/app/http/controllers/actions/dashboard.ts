@@ -29,7 +29,7 @@ export const setDashboardTab = createAction(routes.actions.setDashboardTab, asyn
 		headers.set("Set-Cookie", await dashboardTab.serialize(result.data.tab));
 	}
 
-	return redirect(routes.app.team.dashboard.href({ team: ctx.team.slug }), {
+	return redirect(routes.app.team.dashboard.index.href({ team: ctx.team.slug }), {
 		status: redirect.Status.SeeOther,
 		headers,
 	});

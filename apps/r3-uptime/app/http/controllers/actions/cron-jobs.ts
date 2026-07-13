@@ -72,7 +72,8 @@ export const updateCronJob = createAction(routes.actions.updateCronJob, async (c
 	if (isFailure(result)) {
 		session?.flash("toast", { intent: "error", message: GENERIC_ERROR_MESSAGE });
 		return redirect(
-			ctx.request.headers.get("Referer") ?? routes.app.team.dashboard.href({ team: ctx.team.slug }),
+			ctx.request.headers.get("Referer") ??
+				routes.app.team.dashboard.index.href({ team: ctx.team.slug }),
 			{ status: redirect.Status.SeeOther },
 		);
 	}

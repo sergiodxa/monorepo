@@ -443,7 +443,7 @@ export default function AppShell(handle: Handle<AppShell.Props>) {
 
 		let primaryNavItems: Array<{ href: string; label: string; icon: RemixNode }> = [
 			{
-				href: routes.app.team.dashboard.href({ team: team.slug }),
+				href: routes.app.team.dashboard.index.href({ team: team.slug }),
 				label: "Dashboard",
 				icon: (
 					<svg viewBox="0 0 20 20" width={16} height={16} fill="none" aria-hidden="true">
@@ -669,7 +669,7 @@ export default function AppShell(handle: Handle<AppShell.Props>) {
 										{teams.map((t) => (
 											<li key={t.id}>
 												<a
-													href={routes.app.team.dashboard.href({ team: t.slug })}
+													href={routes.app.team.dashboard.index.href({ team: t.slug })}
 													mix={[dropdownItem]}
 												>
 													<Logo src={t.logo} name={t.name} />

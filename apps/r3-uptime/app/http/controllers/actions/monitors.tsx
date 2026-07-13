@@ -64,7 +64,8 @@ export const updateMonitor = createAction(routes.actions.updateMonitor, async (c
 			message: "Please check the monitor details and try again.",
 		});
 		return redirect(
-			ctx.request.headers.get("Referer") ?? routes.app.team.dashboard.href({ team: ctx.team.slug }),
+			ctx.request.headers.get("Referer") ??
+				routes.app.team.dashboard.index.href({ team: ctx.team.slug }),
 			{
 				status: redirect.Status.SeeOther,
 			},

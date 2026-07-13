@@ -37,7 +37,7 @@ export const createTeam = createAction(routes.accountActions.createTeam, async (
 	let db = getServiceContainer().get(Database);
 	let team = await Team.createAdditional(db, viewer.id, result.data.name);
 
-	return redirect(routes.app.team.dashboard.href({ team: team.slug }), {
+	return redirect(routes.app.team.dashboard.index.href({ team: team.slug }), {
 		status: redirect.Status.SeeOther,
 	});
 });

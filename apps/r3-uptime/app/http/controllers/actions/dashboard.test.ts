@@ -85,7 +85,7 @@ describe("POST /actions/:team/set-dashboard-tab", () => {
 
 		expect(response.status).toBe(303);
 		expect(response.headers.get("Location")).toBe(
-			routes.app.team.dashboard.href({ team: team.slug }),
+			routes.app.team.dashboard.index.href({ team: team.slug }),
 		);
 		expect(response.headers.get("Set-Cookie")).not.toBeNull();
 		expect(response.headers.get("Set-Cookie")).toContain("uptime:dashboard-tab=ZG5z");
@@ -99,7 +99,7 @@ describe("POST /actions/:team/set-dashboard-tab", () => {
 
 		expect(response.status).toBe(303);
 		expect(response.headers.get("Location")).toBe(
-			routes.app.team.dashboard.href({ team: team.slug }),
+			routes.app.team.dashboard.index.href({ team: team.slug }),
 		);
 		expect(response.headers.get("Set-Cookie")).toBeNull();
 	});

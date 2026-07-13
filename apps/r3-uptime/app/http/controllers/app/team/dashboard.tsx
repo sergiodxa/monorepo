@@ -41,7 +41,7 @@ interface Toast {
 }
 
 /** GET /app/:team/dashboard — the team's dashboard shell. */
-export default createAction(routes.app.team.dashboard, {
+export default createAction(routes.app.team.dashboard.index, {
 	middleware: [requireUser, requireTeam],
 	handler: async () => {
 		let ctx = getContext();

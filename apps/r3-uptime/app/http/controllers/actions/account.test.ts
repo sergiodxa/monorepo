@@ -128,7 +128,7 @@ describe("POST /actions/create-team", () => {
 
 		expect(response.status).toBe(303);
 		expect(response.headers.get("Location")).toBe(
-			routes.app.team.dashboard.href({ team: created!.slug }),
+			routes.app.team.dashboard.index.href({ team: created!.slug }),
 		);
 
 		let membership = await db.findOne(memberships, {

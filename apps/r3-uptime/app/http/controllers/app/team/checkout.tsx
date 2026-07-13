@@ -58,7 +58,7 @@ export default createAction(routes.app.team.checkout, {
 					polar,
 					ctx.team.owner_id,
 					new URL(
-						routes.app.team.dashboard.href({ team: ctx.team.slug }),
+						routes.app.team.dashboard.index.href({ team: ctx.team.slug }),
 						ctx.request.url,
 					).toString(),
 				);

@@ -111,8 +111,8 @@ export default function DashboardPanelView(handle: Handle<DashboardPanelView.Pro
 					{TABS.map((tab) => (
 						<Tab
 							key={tab.id}
-							href={`${routes.app.team.dashboard.href({ team: props.team.slug })}?tab=${tab.id}`}
-							frameSrc={routes.app.team.dashboardPanel.href({
+							href={`${routes.app.team.dashboard.index.href({ team: props.team.slug })}?tab=${tab.id}`}
+							frameSrc={routes.app.team.dashboard.panel.href({
 								team: props.team.slug,
 								type: tab.id,
 							})}

@@ -1,9 +1,11 @@
 /**
- * Team dashboard view. Shows three stat-card `Frame`s — usage, overview (uptime +
- * slowest endpoint), and per-monitor-type counts — each with a skeleton `fallback` so
- * none of them block the page's initial render, above a named `Frame` that loads the
- * tab bar and its monitor-type table together, so a tab switch keeps the tab bar's
- * active state in sync with the table it swapped in without reloading the stat cards.
+ * Team dashboard view. Shows eight independent stat-card `Frame`s — usage, uptime,
+ * slowest endpoint, and one count per monitor type (HTTP, DNS, TCP, cron jobs, SSL) —
+ * each with its own skeleton `fallback` so no single card's fetch (notably usage, a
+ * Polar API call) ever blocks another card or the page's initial render, above a named
+ * `Frame` that loads the tab bar and its monitor-type table together, so a tab switch
+ * keeps the tab bar's active state in sync with the table it swapped in without
+ * reloading the stat cards.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -40,27 +42,67 @@ export default function DashboardView(handle: Handle<DashboardView.Props>) {
 				<div mix={[row]}>
 					<Frame
 						name="dashboard-card-usage"
-						src={routes.app.team.dashboardCardUsage.href({ team: props.team.slug })}
+						src={routes.app.team.dashboard.cards.usage.href({ team: props.team.slug })}
 						fallback={<StatCardSkeleton count={1} />}
 					/>
 					<Frame
-						name="dashboard-card-overview"
-						src={routes.app.team.dashboardCardOverview.href({ team: props.team.slug })}
-						fallback={<StatCardSkeleton count={2} />}
+						name="dashboard-card-uptime"
+						src={routes.app.team.dashboard.cards.uptime.href({ team: props.team.slug })}
+						fallback={<StatCardSkeleton count={1} />}
+					/>
+					<Frame
+						name="dashboard-card-slowest-endpoint"
+						src={routes.app.team.dashboard.cards.slowestEndpoint.href({ team: props.team.slug })}
+						fallback={<StatCardSkeleton count={1} />}
 					/>
 				</div>
 
 				<div mix={[countsRow]}>
 					<Frame
-						name="dashboard-card-counts"
-						src={routes.app.team.dashboardCardCounts.href({ team: props.team.slug })}
-						fallback={<StatCardSkeleton count={5} />}
+						name="dashboard-card-count-http"
+						src={routes.app.team.dashboard.cards.count.href({
+							team: props.team.slug,
+							resource: "http",
+						})}
+						fallback={<StatCardSkeleton count={1} />}
+					/>
+					<Frame
+						name="dashboard-card-count-dns"
+						src={routes.app.team.dashboard.cards.count.href({
+							team: props.team.slug,
+							resource: "dns",
+						})}
+						fallback={<StatCardSkeleton count={1} />}
+					/>
+					<Frame
+						name="dashboard-card-count-tcp"
+						src={routes.app.team.dashboard.cards.count.href({
+							team: props.team.slug,
+							resource: "tcp",
+						})}
+						fallback={<StatCardSkeleton count={1} />}
+					/>
+					<Frame
+						name="dashboard-card-count-cron-jobs"
+						src={routes.app.team.dashboard.cards.count.href({
+							team: props.team.slug,
+							resource: "cron-jobs",
+						})}
+						fallback={<StatCardSkeleton count={1} />}
+					/>
+					<Frame
+						name="dashboard-card-count-ssl"
+						src={routes.app.team.dashboard.cards.count.href({
+							team: props.team.slug,
+							resource: "ssl",
+						})}
+						fallback={<StatCardSkeleton count={1} />}
 					/>
 				</div>
 
 				<Frame
 					name="dashboard-panel"
-					src={routes.app.team.dashboardPanel.href({ team: props.team.slug, type: props.tab })}
+					src={routes.app.team.dashboard.panel.href({ team: props.team.slug, type: props.tab })}
 					fallback={<EmptyState message="Loading…" />}
 				/>
 			</div>

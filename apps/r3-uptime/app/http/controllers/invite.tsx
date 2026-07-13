@@ -52,7 +52,7 @@ export default createAction(routes.invite, {
 
 		await Invite.accept(db, invite.id, invite.team_id, viewer.id);
 
-		return redirect(routes.app.team.dashboard.href({ team: invite.team_id }), {
+		return redirect(routes.app.team.dashboard.index.href({ team: invite.team_id }), {
 			status: redirect.Status.SeeOther,
 		});
 	}),

@@ -32,7 +32,8 @@ export const updateSsl = createAction(routes.actions.updateSsl, async (ctx) => {
 			message: "Please check the SSL settings and try again.",
 		});
 		return redirect(
-			ctx.request.headers.get("Referer") ?? routes.app.team.dashboard.href({ team: ctx.team.slug }),
+			ctx.request.headers.get("Referer") ??
+				routes.app.team.dashboard.index.href({ team: ctx.team.slug }),
 			{
 				status: redirect.Status.SeeOther,
 			},

@@ -30,7 +30,7 @@ import routes from "~/routes/web";
 const DASHBOARD_TABS = ["http", "dns", "tcp", "cron-jobs"] as const;
 
 /** GET /app/:team/dashboard/panel/:type — one monitor-type table, fragment-only. */
-export default createAction(routes.app.team.dashboardPanel, {
+export default createAction(routes.app.team.dashboard.panel, {
 	middleware: [requireUser, requireTeam],
 	handler: inject([Database] as const, async (db) => {
 		let ctx = getContext();

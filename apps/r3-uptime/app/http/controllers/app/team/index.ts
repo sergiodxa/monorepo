@@ -17,7 +17,7 @@ import routes from "~/routes/web";
 export default createAction(routes.app.team.index, {
 	middleware: [requireUser, requireTeam],
 	handler: (ctx) => {
-		return redirect(routes.app.team.dashboard.href({ team: ctx.team.slug }), {
+		return redirect(routes.app.team.dashboard.index.href({ team: ctx.team.slug }), {
 			status: redirect.Status.SeeOther,
 		});
 	},

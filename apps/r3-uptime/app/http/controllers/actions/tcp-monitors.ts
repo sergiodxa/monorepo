@@ -65,7 +65,8 @@ export const updateTcpMonitor = createAction(routes.actions.updateTcpMonitor, as
 			message: "Please check the TCP monitor details and try again.",
 		});
 		return redirect(
-			ctx.request.headers.get("Referer") ?? routes.app.team.dashboard.href({ team: ctx.team.slug }),
+			ctx.request.headers.get("Referer") ??
+				routes.app.team.dashboard.index.href({ team: ctx.team.slug }),
 			{ status: redirect.Status.SeeOther },
 		);
 	}

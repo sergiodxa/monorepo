@@ -230,7 +230,7 @@ export default function AccountView(handle: Handle<AccountView.Props>) {
 										<tr key={team.id}>
 											<td>
 												<a
-													href={routes.app.team.dashboard.href({ team: team.slug })}
+													href={routes.app.team.dashboard.index.href({ team: team.slug })}
 													mix={[
 														css({
 															color: primary[600],

@@ -13,39 +13,43 @@ import type { Handle } from "remix/ui";
 import StatCard from "~/resources/components/stat-card";
 import Subtitle from "~/resources/components/subtitle";
 
-/** The team's Polar ping usage for the current month, `null` when unavailable (see
- * the usage controller's `getPingUsage`). */
-export interface PingUsage {
-	consumed: number;
-	estimated: number;
-}
-
 namespace DashboardCardUsageView {
 	export interface Props {
-		pingUsage: PingUsage | null;
+		/** Actual Polar-reported usage for the current month, `null` when unavailable. */
+		consumed: number | null;
+		/** Estimated monthly consumption from current monitor settings, `null` when unavailable. */
+		usage: number | null;
 	}
 }
 
 export default function DashboardCardUsageView(handle: Handle<DashboardCardUsageView.Props>) {
 	return () => {
-		let { pingUsage } = handle.props;
+		let { usage, consumed } = handle.props;
 
-		return pingUsage ? (
+		if (consumed === null && usage === null) {
+			return (
+				<StatCard
+					label="Error"
+					value={
+						<>
+							-<Subtitle>Failed to load data</Subtitle>
+						</>
+					}
+				/>
+			);
+		}
+
+		return (
 			<StatCard
 				label="Monthly Pings Usage"
 				value={
 					<>
-						{pingUsage.consumed.toLocaleString()}
-						<Subtitle>Out of {pingUsage.estimated.toLocaleString()} estimated</Subtitle>
-					</>
-				}
-			/>
-		) : (
-			<StatCard
-				label="Error"
-				value={
-					<>
-						-<Subtitle>Failed to load data</Subtitle>
+						{consumed === null ? "—" : consumed.toLocaleString()}
+						<Subtitle>
+							{usage === null
+								? "Estimate unavailable"
+								: `Out of ${usage.toLocaleString()} estimated`}
+						</Subtitle>
 					</>
 				}
 			/>
