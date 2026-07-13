@@ -29,27 +29,43 @@ import routes from "~/routes/web";
 
 const DASHBOARD_TABS = ["http", "dns", "tcp", "cron-jobs"] as const;
 
+/**
+ * Short, private cache window on every response — long enough that a
+ * `<link rel="prefetch">` for an inactive tab gets reused by the real `Frame` fetch a
+ * moment later if the user does click it, short enough that monitor status can't go
+ * meaningfully stale for someone who leaves the tab open.
+ */
+const CACHE_CONTROL = "private, max-age=5";
+
 /** GET /app/:team/dashboard/panel/:type — one monitor-type table, fragment-only. */
 export default createAction(routes.app.team.dashboard.panel, {
 	middleware: [requireUser, requireTeam],
 	handler: inject([Database] as const, async (db) => {
 		let ctx = getContext();
 		let { type } = s.parse(s.object({ type: s.enum_(DASHBOARD_TABS) }), ctx.params);
+		let headers = { "Cache-Control": CACHE_CONTROL };
 
 		if (type === "dns") {
 			let dnsMonitors = await DnsMonitor.listByTeam(db, ctx.team.id);
-			return ctx.render(<DashboardPanelView tab="dns" team={ctx.team} dnsMonitors={dnsMonitors} />);
+			return ctx.render(
+				<DashboardPanelView tab="dns" team={ctx.team} dnsMonitors={dnsMonitors} />,
+				{ headers },
+			);
 		}
 
 		if (type === "tcp") {
 			let tcpMonitors = await TcpMonitor.listByTeam(db, ctx.team.id);
-			return ctx.render(<DashboardPanelView tab="tcp" team={ctx.team} tcpMonitors={tcpMonitors} />);
+			return ctx.render(
+				<DashboardPanelView tab="tcp" team={ctx.team} tcpMonitors={tcpMonitors} />,
+				{ headers },
+			);
 		}
 
 		if (type === "cron-jobs") {
 			let cronJobMonitors = await CronJobMonitor.listByTeam(db, ctx.team.id);
 			return ctx.render(
 				<DashboardPanelView tab="cron-jobs" team={ctx.team} cronJobMonitors={cronJobMonitors} />,
+				{ headers },
 			);
 		}
 
@@ -71,6 +87,8 @@ export default createAction(routes.app.team.dashboard.panel, {
 			sparklinePoints: sparklinesByMonitorId.get(monitor.id) ?? [],
 		}));
 
-		return ctx.render(<DashboardPanelView tab="http" team={ctx.team} httpRows={httpRows} />);
+		return ctx.render(<DashboardPanelView tab="http" team={ctx.team} httpRows={httpRows} />, {
+			headers,
+		});
 	}),
 });

@@ -107,6 +107,21 @@ export default function DashboardPanelView(handle: Handle<DashboardPanelView.Pro
 
 		return (
 			<>
+				{/*
+				 * Native browser prefetch for every inactive tab's fragment — no JS
+				 * trigger needed, the browser fetches these as soon as it parses them.
+				 * Reused by the click-triggered `Frame` fetch since both requests hit
+				 * the same URL and the controller responds with a short `Cache-Control`.
+				 */}
+				{TABS.filter((tab) => tab.id !== props.tab).map((tab) => (
+					<link
+						key={tab.id}
+						rel="prefetch"
+						as="fetch"
+						href={routes.app.team.dashboard.panel.href({ team: props.team.slug, type: tab.id })}
+					/>
+				))}
+
 				<TabList
 					aria-label="Monitor type"
 					activeIndex={TABS.findIndex((tab) => tab.id === props.tab)}

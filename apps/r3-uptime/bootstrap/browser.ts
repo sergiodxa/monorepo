@@ -11,8 +11,6 @@
 
 import { run } from "remix/ui";
 
-import { consumePrefetchedFrame } from "~/resources/frame-prefetch";
-
 const clientModules = import.meta.glob([
 	"!../**/*.server.*",
 	"../resources/**/*.{ts,tsx}",
@@ -41,12 +39,6 @@ run({
 		return entry;
 	},
 	async resolveFrame(src, signal, target) {
-		let prefetched = consumePrefetchedFrame(src);
-		if (prefetched) {
-			let response = await prefetched;
-			return response.body ?? response.text();
-		}
-
 		let headers = new Headers({ accept: "text/html" });
 		if (target) headers.set("x-remix-target", target);
 
