@@ -19,8 +19,9 @@
 
 import type { Handle, RemixNode } from "remix/ui";
 
-import { css, link } from "remix/ui";
+import { clientEntry, css, link, on } from "remix/ui";
 
+import { prefetchFrame } from "~/resources/frame-prefetch";
 import { neutral, primary } from "~/resources/theme";
 
 /** Every tab's fixed width, in px — must be wide enough for the longest label. */
@@ -96,7 +97,8 @@ export function TabList(handle: Handle<TabList.Props>) {
 }
 
 namespace Tab {
-	export interface Props {
+	/** Props must be a `type` (not `interface`) to satisfy `SerializableProps`. */
+	export type Props = {
 		/**
 		 * The real, bookmarkable page URL — becomes both the rendered `href` and the
 		 * browser's visible location after a click, so a hard reload or a link opened
@@ -111,31 +113,45 @@ namespace Tab {
 		/** Fragment-only URL the named `Frame` actually fetches; defaults to `href`. */
 		frameSrc?: string;
 		children: RemixNode;
-	}
-}
-
-/** A single `role="tab"` link. Navigates a named `Frame` when `frameTarget` is set. */
-export function Tab(handle: Handle<Tab.Props>) {
-	return () => {
-		let { href, active, controls, frameTarget, frameSrc, children } = handle.props;
-
-		return (
-			<a
-				href={href}
-				role="tab"
-				aria-selected={active}
-				aria-controls={controls}
-				tabIndex={active ? 0 : -1}
-				mix={[
-					tab,
-					active && tabActive,
-					link(href, frameTarget ? { target: frameTarget, src: frameSrc } : {}),
-				]}
-			>
-				{children}
-			</a>
-		);
 	};
 }
+
+/**
+ * A single `role="tab"` link. Navigates a named `Frame` when `frameTarget` is set.
+ * Hovering or focusing a tab that targets a `Frame` starts fetching its content right
+ * away, so the eventual click's `resolveFrame` call can reuse the already-in-flight
+ * response instead of waiting for a fresh round-trip.
+ */
+export const Tab = clientEntry<Tab.Props>(
+	"/resources/components/tabs.tsx#Tab",
+	function Tab(handle: Handle<Tab.Props>) {
+		return () => {
+			let { href, active, controls, frameTarget, frameSrc, children } = handle.props;
+
+			let prefetch = () => {
+				if (frameTarget) prefetchFrame(frameSrc ?? href, frameTarget);
+			};
+
+			return (
+				<a
+					href={href}
+					role="tab"
+					aria-selected={active}
+					aria-controls={controls}
+					tabIndex={active ? 0 : -1}
+					mix={[
+						tab,
+						active && tabActive,
+						link(href, frameTarget ? { target: frameTarget, src: frameSrc } : {}),
+						frameTarget && on("mouseenter", prefetch),
+						frameTarget && on("focus", prefetch),
+					]}
+				>
+					{children}
+				</a>
+			);
+		};
+	},
+);
 
 export default { TabList, Tab };
