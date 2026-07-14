@@ -1,5 +1,6 @@
 /**
- * New TCP monitor page controller. Requires `requireUser` + `requireTeam`.
+ * New TCP monitor form page controller. Posts to the `create-tcp-monitor` action.
+ * Requires `requireUser` + `requireTeam`.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -11,9 +12,10 @@ import { createAction } from "remix/fetch-router";
 import { getViewer } from "~/app/http/middleware/auth";
 import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
+import Button from "~/resources/components/button";
 import AppShell from "~/resources/layouts/app-shell";
 import DocumentLayout from "~/resources/layouts/document";
-import NewTcpMonitorView from "~/resources/views/tcp-monitors/new";
+import TcpMonitorFormFields from "~/resources/views/tcp-monitors/form";
 import routes from "~/routes/web";
 
 /** GET /app/:team/tcp/new — the new TCP monitor form. */
@@ -32,19 +34,27 @@ export default createAction(routes.app.team.tcpMonitors.new, {
 					teams={ctx.teams}
 					viewer={viewer}
 					isAdmin={ctx.membership.role === "admin"}
-					heading="Create TCP Monitor"
+					heading={ctx.i18next.t("page.createTcpMonitor.header.title")}
 					breadcrumbs={[
 						{
-							label: "Dashboard",
+							label: ctx.i18next.t("app.layout.sidebar.navigation.items.dashboard"),
 							href: routes.app.team.dashboard.index.href({ team: ctx.team.slug }),
 						},
 						{
-							label: "TCP Monitors",
+							label: ctx.i18next.t("page.createTcpMonitor.header.breadcrumb.tcpMonitors"),
 							href: routes.app.team.tcpMonitors.index.href({ team: ctx.team.slug }),
 						},
 					]}
 				>
-					<NewTcpMonitorView team={ctx.team} />
+					<div>
+						<form
+							method="post"
+							action={routes.actions.monitor.tcp.create.href({ team: ctx.team.slug })}
+						>
+							<TcpMonitorFormFields />
+							<Button type="submit">{ctx.i18next.t("page.createTcpMonitor.form.cta")}</Button>
+						</form>
+					</div>
 				</AppShell>
 			</DocumentLayout>,
 		);

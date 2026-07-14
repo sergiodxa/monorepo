@@ -50,7 +50,7 @@ const connector = css({
 	"@media (prefers-color-scheme: dark)": { background: "oklch(0.4 0.01 145)" },
 });
 
-/** Single flex row of the last 90 days' bars — fills whatever width its containing card gives it; the card itself is what's capped to a sensible width (see `~/resources/views/status-pages/public.tsx`), not this component. */
+/** Single flex row of the last 90 days' bars — fills whatever width its containing card gives it; the card itself is what's capped to a sensible width (see `~/app/http/controllers/status-page.tsx`), not this component. */
 const heatmapRow = css({
 	display: "flex",
 	alignItems: "stretch",

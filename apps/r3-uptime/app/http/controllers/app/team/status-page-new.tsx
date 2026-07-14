@@ -17,9 +17,10 @@ import TcpMonitor from "~/app/data/tcp-monitor";
 import { getViewer } from "~/app/http/middleware/auth";
 import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
+import Button from "~/resources/components/button";
 import AppShell from "~/resources/layouts/app-shell";
 import DocumentLayout from "~/resources/layouts/document";
-import NewStatusPageView from "~/resources/views/status-pages/new";
+import StatusPageFormFields from "~/resources/views/status-pages/form";
 import routes from "~/routes/web";
 
 /** GET /app/:team/status-pages/new — the new status-page form. */
@@ -45,21 +46,28 @@ export default createAction(routes.app.team.statusPages.new, {
 					teams={ctx.teams}
 					viewer={viewer}
 					isAdmin={ctx.membership.role === "admin"}
-					heading="Create Status Page"
+					heading={ctx.i18next.t("page.createStatusPage.header.title")}
 					breadcrumbs={[
 						{
-							label: "Status Pages",
+							label: ctx.i18next.t("app.layout.sidebar.navigation.items.statusPages"),
 							href: routes.app.team.statusPages.index.href({ team: ctx.team.slug }),
 						},
 					]}
 				>
-					<NewStatusPageView
-						team={ctx.team}
-						monitors={monitors}
-						dnsMonitors={dnsMonitors}
-						tcpMonitors={tcpMonitors}
-						cronJobs={cronJobs}
-					/>
+					<div>
+						<form
+							method="post"
+							action={routes.actions.statusPage.create.href({ team: ctx.team.slug })}
+						>
+							<StatusPageFormFields
+								monitors={monitors}
+								dnsMonitors={dnsMonitors}
+								tcpMonitors={tcpMonitors}
+								cronJobs={cronJobs}
+							/>
+							<Button type="submit">{ctx.i18next.t("page.statusPages.form.cta")}</Button>
+						</form>
+					</div>
 				</AppShell>
 			</DocumentLayout>,
 		);

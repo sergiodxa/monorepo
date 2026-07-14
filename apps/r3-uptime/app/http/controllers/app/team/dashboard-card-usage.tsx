@@ -19,7 +19,8 @@ import Customer from "~/app/data/customer";
 import Monitor from "~/app/data/monitor";
 import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
-import DashboardCardUsageView from "~/resources/views/dashboard-card-usage";
+import StatCard from "~/resources/components/stat-card";
+import Subtitle from "~/resources/components/subtitle";
 import routes from "~/routes/web";
 
 /**
@@ -29,8 +30,8 @@ import routes from "~/routes/web";
  * than discarding both. Gates on the subscription check first (not run in parallel
  * with the other two) so a team with no active subscription never pays for Polar's
  * usage-query latency or the estimate query, only to discard both results. Each
- * resolves to `null` — rendered as "unavailable" by the view — when the team's owner
- * has no active subscription or that specific fetch failed, since "usage unavailable"
+ * resolves to `null` — rendered below as "unavailable" — when the team's owner has
+ * no active subscription or that specific fetch failed, since "usage unavailable"
  * must never be shown to the user as "0 used".
  */
 async function getPingUsage(
@@ -61,6 +62,36 @@ export default createAction(routes.app.team.dashboard.cards.usage, {
 
 		let { consumed, usage } = await getPingUsage(db, polar, ctx.team);
 
-		return ctx.render(<DashboardCardUsageView usage={usage} consumed={consumed} />);
+		if (consumed === null && usage === null) {
+			return ctx.render(
+				<StatCard
+					label={ctx.i18next.t("page.dashboard.error.card.label")}
+					value={
+						<>
+							{ctx.i18next.t("page.dashboard.error.card.value")}
+							<Subtitle>{ctx.i18next.t("page.dashboard.error.card.description")}</Subtitle>
+						</>
+					}
+				/>,
+			);
+		}
+
+		return ctx.render(
+			<StatCard
+				label={ctx.i18next.t("page.dashboard.stats.monitors.label")}
+				value={
+					<>
+						{consumed === null ? "—" : consumed.toLocaleString()}
+						<Subtitle>
+							{usage === null
+								? "Estimate unavailable"
+								: ctx.i18next.t("page.dashboard.stats.monitors.description", {
+										estimated: usage.toLocaleString(),
+									})}
+						</Subtitle>
+					</>
+				}
+			/>,
+		);
 	}),
 });

@@ -14,9 +14,10 @@ import Monitor from "~/app/data/monitor";
 import { getViewer } from "~/app/http/middleware/auth";
 import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
+import Button from "~/resources/components/button";
 import AppShell from "~/resources/layouts/app-shell";
 import DocumentLayout from "~/resources/layouts/document";
-import NewAlertView from "~/resources/views/alerts/new";
+import AlertFormFields from "~/resources/views/alerts/form";
 import routes from "~/routes/web";
 
 /** GET /app/:team/alerts/new — the new alert form. */
@@ -30,19 +31,29 @@ export default createAction(routes.app.team.alerts.new, {
 		let monitors = await Monitor.listByTeam(db, ctx.team.id);
 
 		return ctx.render(
-			<DocumentLayout title={`${ctx.team.name} · Create Alert`}>
+			<DocumentLayout
+				title={`${ctx.team.name} · ${ctx.i18next.t("page.createAlert.header.title")}`}
+			>
 				<AppShell
 					team={ctx.team}
 					currentPath={ctx.url.pathname}
 					teams={ctx.teams}
 					viewer={viewer}
 					isAdmin={ctx.membership.role === "admin"}
-					heading="Create Alert"
+					heading={ctx.i18next.t("page.createAlert.header.title")}
 					breadcrumbs={[
-						{ label: "Alerts", href: routes.app.team.alerts.index.href({ team: ctx.team.slug }) },
+						{
+							label: ctx.i18next.t("app.layout.sidebar.navigation.items.alerts"),
+							href: routes.app.team.alerts.index.href({ team: ctx.team.slug }),
+						},
 					]}
 				>
-					<NewAlertView team={ctx.team} monitors={monitors} />
+					<div>
+						<form method="post" action={routes.actions.alert.create.href({ team: ctx.team.slug })}>
+							<AlertFormFields monitors={monitors} />
+							<Button type="submit">{ctx.i18next.t("page.alerts.form.cta")}</Button>
+						</form>
+					</div>
 				</AppShell>
 			</DocumentLayout>,
 		);

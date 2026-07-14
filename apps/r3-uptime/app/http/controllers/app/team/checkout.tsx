@@ -16,6 +16,7 @@ import { PolarClient } from "@pkg/polar";
 import { inject } from "@pkg/service-container";
 import { getContext } from "remix/async-context-middleware";
 import { createAction } from "remix/fetch-router";
+import { css } from "remix/ui";
 
 import Customer from "~/app/data/customer";
 import { getViewer } from "~/app/http/middleware/auth";
@@ -23,7 +24,6 @@ import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
 import AppShell from "~/resources/layouts/app-shell";
 import DocumentLayout from "~/resources/layouts/document";
-import CheckoutView from "~/resources/views/checkout";
 import routes from "~/routes/web";
 
 /** GET /app/:team/checkout — redirects the owner to Polar-hosted billing. */
@@ -43,9 +43,39 @@ export default createAction(routes.app.team.checkout, {
 						teams={ctx.teams}
 						viewer={viewer}
 						isAdmin={ctx.membership.role === "admin"}
-						heading="Billing"
+						heading={ctx.i18next.t("page.billing.header.title")}
 					>
-						<CheckoutView />
+						<div
+							mix={[
+								css({
+									display: "flex",
+									flexDirection: "column",
+									alignItems: "center",
+									textAlign: "center",
+									gap: 12,
+									padding: "64px 32px",
+									border: "1px dashed oklch(0.83 0.01 145)",
+									borderRadius: 12,
+									"@media (prefers-color-scheme: dark)": {
+										borderColor: "oklch(0.42 0.008 145)",
+									},
+								}),
+							]}
+						>
+							<p
+								mix={[
+									css({
+										fontSize: "0.8125rem",
+										color: "oklch(0.62 0.01 145)",
+										"@media (prefers-color-scheme: dark)": {
+											color: "oklch(0.73 0.01 145)",
+										},
+									}),
+								]}
+							>
+								Only the team owner can view and manage billing for this team.
+							</p>
+						</div>
 					</AppShell>
 				</DocumentLayout>,
 			);

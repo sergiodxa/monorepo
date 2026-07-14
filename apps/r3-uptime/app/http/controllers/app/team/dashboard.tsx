@@ -3,11 +3,11 @@
  * falling back to the persisted cookie, then "http") and persists it back to the
  * cookie so a later visit without `?tab=` remembers it, then renders the dashboard
  * shell. All of the dashboard's actual data — the stat cards' usage/overview/count
- * figures and the tab table — loads via named `Frame`s the view points at their own
- * fragment routes (`dashboard-card-usage.tsx`, `-overview.tsx`, `-counts.tsx`,
- * `dashboard-panel.tsx`), so this controller no longer blocks on any of it (notably
- * Polar's API, the slowest of those fetches) before it can render the page shell.
- * Requires `requireUser` + `requireTeam`.
+ * figures and the tab table — loads via named `Frame`s pointed at their own
+ * fragment routes (`dashboard-card-usage.tsx`, `-uptime.tsx`, `-slowest-endpoint.tsx`,
+ * `-count.tsx`, `dashboard-panel.tsx`), so this controller no longer blocks on any of
+ * it (notably Polar's API, the slowest of those fetches) before it can render the
+ * page shell. Requires `requireUser` + `requireTeam`.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -16,17 +16,19 @@
 import { getContext } from "remix/async-context-middleware";
 import { createAction } from "remix/fetch-router";
 import { Session } from "remix/session";
+import { css, Frame } from "remix/ui";
 
-import type { DashboardTab } from "~/resources/views/dashboard";
+import type { DashboardTab } from "~/app/http/controllers/app/team/dashboard-panel";
 
 import { dashboardTab as dashboardTabCookie } from "~/app/http/cookies";
 import { getViewer } from "~/app/http/middleware/auth";
 import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
+import Empty from "~/resources/components/empty";
 import LinkButton from "~/resources/components/link-button";
+import StatCardSkeleton from "~/resources/components/stat-card-skeleton";
 import AppShell from "~/resources/layouts/app-shell";
 import DocumentLayout from "~/resources/layouts/document";
-import DashboardView from "~/resources/views/dashboard";
 import routes from "~/routes/web";
 
 const DASHBOARD_TABS: readonly DashboardTab[] = ["http", "dns", "tcp", "cron-jobs"];
@@ -69,15 +71,86 @@ export default createAction(routes.app.team.dashboard.index, {
 					teams={ctx.teams}
 					viewer={viewer}
 					isAdmin={ctx.membership.role === "admin"}
-					heading="Dashboard"
+					heading={ctx.i18next.t("page.dashboard.header.title")}
 					actions={
 						<LinkButton href={routes.app.team.monitors.new.href({ team: ctx.team.slug })}>
-							Create monitor
+							{ctx.i18next.t("page.dashboard.header.action.create")}
 						</LinkButton>
 					}
 					toast={toast}
 				>
-					<DashboardView team={ctx.team} tab={tab} />
+					<div>
+						<div mix={css({ display: "flex", flexWrap: "wrap", gap: 16, marginBottom: 16 })}>
+							<Frame
+								name="dashboard-card-usage"
+								src={routes.app.team.dashboard.cards.usage.href({ team: ctx.team.slug })}
+								fallback={<StatCardSkeleton count={1} />}
+							/>
+							<Frame
+								name="dashboard-card-uptime"
+								src={routes.app.team.dashboard.cards.uptime.href({ team: ctx.team.slug })}
+								fallback={<StatCardSkeleton count={1} />}
+							/>
+							<Frame
+								name="dashboard-card-slowest-endpoint"
+								src={routes.app.team.dashboard.cards.slowestEndpoint.href({ team: ctx.team.slug })}
+								fallback={<StatCardSkeleton count={1} />}
+							/>
+						</div>
+
+						<div mix={css({ display: "flex", flexWrap: "wrap", gap: 16, marginBottom: 24 })}>
+							<Frame
+								name="dashboard-card-count-http"
+								src={routes.app.team.dashboard.cards.count.href({
+									team: ctx.team.slug,
+									resource: "http",
+								})}
+								fallback={<StatCardSkeleton count={1} />}
+							/>
+							<Frame
+								name="dashboard-card-count-dns"
+								src={routes.app.team.dashboard.cards.count.href({
+									team: ctx.team.slug,
+									resource: "dns",
+								})}
+								fallback={<StatCardSkeleton count={1} />}
+							/>
+							<Frame
+								name="dashboard-card-count-tcp"
+								src={routes.app.team.dashboard.cards.count.href({
+									team: ctx.team.slug,
+									resource: "tcp",
+								})}
+								fallback={<StatCardSkeleton count={1} />}
+							/>
+							<Frame
+								name="dashboard-card-count-cron-jobs"
+								src={routes.app.team.dashboard.cards.count.href({
+									team: ctx.team.slug,
+									resource: "cron-jobs",
+								})}
+								fallback={<StatCardSkeleton count={1} />}
+							/>
+							<Frame
+								name="dashboard-card-count-ssl"
+								src={routes.app.team.dashboard.cards.count.href({
+									team: ctx.team.slug,
+									resource: "ssl",
+								})}
+								fallback={<StatCardSkeleton count={1} />}
+							/>
+						</div>
+
+						<Frame
+							name="dashboard-panel"
+							src={routes.app.team.dashboard.panel.href({ team: ctx.team.slug, type: tab })}
+							fallback={
+								<Empty>
+									<Empty.Description>Loading…</Empty.Description>
+								</Empty>
+							}
+						/>
+					</div>
 				</AppShell>
 			</DocumentLayout>,
 			{ headers },
