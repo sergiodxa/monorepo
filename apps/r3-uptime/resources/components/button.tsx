@@ -31,6 +31,14 @@ namespace Button {
 
 /** Shared box model every variant/size builds on; kept separate so `LinkButton` reuses it verbatim. */
 export const buttonBase = css({
+	/**
+	 * Without this, a `<button>` keeps the browser's native control chrome
+	 * (`appearance: auto`) layered underneath our own border/background, which
+	 * on Chromium/macOS renders as a thick embossed ring around the button —
+	 * exactly the oversized border (and buttons visually fusing together with
+	 * no apparent gap) reported live.
+	 */
+	appearance: "none",
 	display: "inline-flex",
 	alignItems: "center",
 	justifyContent: "center",
