@@ -48,29 +48,22 @@ interface EmptyIconProps {
 }
 
 const emptyIcon = css({
-	display: "flex",
-	width: 48,
-	height: 48,
+	display: "inline-flex",
 	alignItems: "center",
 	justifyContent: "center",
+	padding: 12,
+	aspectRatio: "1 / 1",
 	borderRadius: "9999px",
 	border: `1px solid ${neutral[300]}`,
 	background: neutral[100],
 	color: "inherit",
-	/**
-	 * Constrains the icon to a fixed, smaller-than-the-badge size no matter what
-	 * `size` prop the icon itself was given — without this, an icon sized to fill
-	 * the badge (e.g. 48px in a 48px circle) touches the circle's edge and reads
-	 * as visually broken.
-	 */
-	"& svg": { width: 24, height: 24 },
 	"@media (prefers-color-scheme: dark)": {
 		borderColor: neutral[700],
 		background: neutral[800],
 	},
 });
 
-/** Circular badge around a resource icon, padded so the icon always renders smaller than the badge; the icon picks up its color from here via `currentColor`. */
+/** Circular badge that sizes itself to its icon plus padding (kept square via `aspect-ratio`); the icon picks up its color from here via `currentColor`. */
 function EmptyIcon(handle: Handle<EmptyIconProps>) {
 	return () => (
 		<div mix={[emptyIcon]} aria-hidden>
