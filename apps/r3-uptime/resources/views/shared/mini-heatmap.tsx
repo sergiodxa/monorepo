@@ -50,6 +50,16 @@ const connector = css({
 	"@media (prefers-color-scheme: dark)": { background: "oklch(0.4 0.01 145)" },
 });
 
+/**
+ * Wraps the range caption and the row of bars together, capped at a `maxWidth`
+ * so each bar stays a thin line even on very wide status pages — without this,
+ * 90 bars stretching to fill the card's full 896px width would grow noticeably
+ * thicker than the reference's dense, narrow-line look. The caption shares this
+ * cap too, so "90 days ago"/"Today" stay aligned with the bars' own ends instead
+ * of spanning wider than the row they describe.
+ */
+const heatmapWidth = css({ maxWidth: 480 });
+
 /** Single flex row of the last 90 days' bars. */
 const heatmapRow = css({
 	display: "flex",
@@ -174,7 +184,7 @@ export default function MiniHeatmap(handle: Handle<MiniHeatmap.Props>) {
 
 		return (
 			<div>
-				<div mix={[rangeCaption]}>
+				<div mix={[heatmapWidth, rangeCaption]}>
 					<span mix={[caption]}>90 days ago</span>
 					<div mix={[connector]} />
 					{uptime !== null && <span mix={[caption]}>{uptime}</span>}
@@ -182,7 +192,7 @@ export default function MiniHeatmap(handle: Handle<MiniHeatmap.Props>) {
 					<span mix={[caption]}>Today</span>
 				</div>
 
-				<div mix={[heatmapRow]}>
+				<div mix={[heatmapWidth, heatmapRow]}>
 					{dates.map((date) => {
 						let day = byDate.get(date);
 						let statusMix = day ? CELL_MIX[day.status] : undefined;
