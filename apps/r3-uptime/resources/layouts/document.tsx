@@ -14,9 +14,25 @@ import { css } from "remix/ui";
 
 import { neutral } from "~/resources/theme";
 
-/** App-wide monospace font stack rendered on `<body>` by default. */
-const fontMono =
-	'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace';
+/** App-wide sans-serif font stack rendered on `<body>` by default: Mona Sans, with system fallbacks. */
+const fontSans =
+	'"Mona Sans", ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji"';
+
+/**
+ * Raw `@font-face` rule for Mona Sans. Emitted as a plain `<style>` tag rather than
+ * through the `css()` mixin because that mixin scopes every rule to a generated
+ * element class name, which can't express a top-level, unscoped at-rule like this.
+ */
+const fontFaceCss = `
+	@font-face {
+		font-family: "Mona Sans";
+		font-display: swap;
+		font-weight: 100 900;
+		src:
+			local("Mona Sans"),
+			url("/fonts/mona-sans.woff2") format("woff2");
+	}
+`;
 
 const CLIENT_ENTRY_SRC = import.meta.env.DEV ? "/bootstrap/browser.ts" : "/assets/clientEntry.js";
 
@@ -39,6 +55,7 @@ export default function DocumentLayout(handle: Handle<DocumentLayout.Props>) {
 					<meta name="viewport" content="width=device-width, initial-scale=1" />
 					{title && <title>{title}</title>}
 					<link rel="modulepreload" href={CLIENT_ENTRY_SRC} />
+					<style>{fontFaceCss}</style>
 				</head>
 				<body
 					mix={[
@@ -46,7 +63,7 @@ export default function DocumentLayout(handle: Handle<DocumentLayout.Props>) {
 							margin: 0,
 							background: neutral[50],
 							color: neutral[950],
-							fontFamily: fontMono,
+							fontFamily: fontSans,
 							"@media (prefers-color-scheme: dark)": {
 								background: neutral[950],
 								color: neutral[50],
