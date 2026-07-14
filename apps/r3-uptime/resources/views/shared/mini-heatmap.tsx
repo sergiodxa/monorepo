@@ -1,12 +1,14 @@
 /**
- * 30-day uptime heatmap for the public status page: a single row of thin vertical
- * bars for the last 30 days (today inclusive), one per day, colored by that day's
+ * 90-day uptime heatmap for the public status page: a single row of thin vertical
+ * bars for the last 90 days (today inclusive), one per day, colored by that day's
  * `monitor_daily_stats.status`. Days with no data (not yet reached, or the monitor
  * didn't exist yet) render as empty bars. A caption row sits above the bars —
- * "30 days ago" and "Today" at each end, the aggregate uptime percentage in the
+ * "90 days ago" and "Today" at each end, the aggregate uptime percentage in the
  * middle, joined by connector lines — matching the common status-page pattern of
  * dense vertical bars rather than a calendar-style grid (that's the year-long
- * `Heatmap` component instead, used on the monitor detail page).
+ * `Heatmap` component instead, used on the monitor detail page). The bars stretch
+ * to fill the full row width (no per-bar max width), so the row never trails off
+ * into empty space regardless of how many days actually have data.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -32,7 +34,7 @@ const caption = css({
 	"@media (prefers-color-scheme: dark)": { color: "oklch(0.65 0.01 145)" },
 });
 
-/** Caption row above the row of bars: "30 days ago" — connector — "99.9% uptime" — connector — "Today". */
+/** Caption row above the row of bars: "90 days ago" — connector — "99.9% uptime" — connector — "Today". */
 const rangeCaption = css({
 	display: "flex",
 	alignItems: "center",
@@ -48,7 +50,7 @@ const connector = css({
 	"@media (prefers-color-scheme: dark)": { background: "oklch(0.4 0.01 145)" },
 });
 
-/** Single flex row of the last 30 days' bars. */
+/** Single flex row of the last 90 days' bars. */
 const heatmapRow = css({
 	display: "flex",
 	alignItems: "stretch",
@@ -79,11 +81,15 @@ const legendSwatch = css({
 	borderRadius: 2,
 });
 
-/** One day-bar in the row; thin, tightly packed, and full-height — combine with a status color mixin. */
+/**
+ * One day-bar in the row; thin, tightly packed, and full-height — combine with a
+ * status color mixin. No `maxWidth` cap: every bar shares `flex: 1` equally, so
+ * the row of bars always stretches to fill the card's full width instead of
+ * clumping to one side with empty space trailing off.
+ */
 const heatmapCell = css({
 	flex: 1,
-	minWidth: 3,
-	maxWidth: 6,
+	minWidth: 2,
 	borderRadius: 1,
 });
 
@@ -118,24 +124,37 @@ const CELL_MIX: Record<string, typeof heatmapCellUp> = {
 	down: heatmapCellDown,
 };
 
-/** The last 30 days (today inclusive) as `"YYYY-MM-DD"` strings, oldest first. */
-function buildLast30Days(): string[] {
+/** How many trailing days the row of bars covers. */
+const DAYS = 90;
+
+/** The last {@link DAYS} days (today inclusive) as `"YYYY-MM-DD"` strings, oldest first. */
+function buildLastNDays(): string[] {
 	let today = new Date();
 	let end = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate()));
 
 	let dates: string[] = [];
-	for (let i = 29; i >= 0; i--) {
+	for (let i = DAYS - 1; i >= 0; i--) {
 		dates.push(new Date(end.getTime() - i * 24 * 60 * 60 * 1000).toISOString().slice(0, 10));
 	}
 	return dates;
 }
 
-/** Aggregate uptime across `days` as a formatted percentage, or `null` when there's no data at all. */
-function calculateUptimePercentage(days: SelectMonitorDailyStats[]): string | null {
+/**
+ * Aggregate uptime across `days` as a formatted percentage, or `null` when
+ * there's no data at all. `days` may cover more than {@link DAYS} (the caller
+ * passes a full year's worth) — this only sums entries whose `date` falls in
+ * `dates`, so the percentage matches the same window the bars render.
+ */
+function calculateUptimePercentage(
+	days: SelectMonitorDailyStats[],
+	dates: string[],
+): string | null {
+	let windowDates = new Set(dates);
 	let totalChecks = 0;
 	let successfulChecks = 0;
 
 	for (let day of days) {
+		if (!windowDates.has(day.date)) continue;
 		totalChecks += day.total_checks;
 		successfulChecks += day.successful_checks;
 	}
@@ -146,17 +165,17 @@ function calculateUptimePercentage(days: SelectMonitorDailyStats[]): string | nu
 	return `${percentage.toFixed(percentage === 100 ? 0 : 2)}% uptime`;
 }
 
-/** Renders a single-row, last-30-days heatmap for `days`, as thin vertical bars with a range/uptime caption above and a status-color legend below. */
+/** Renders a single-row, last-90-days heatmap for `days`, as thin vertical bars with a range/uptime caption above and a status-color legend below. */
 export default function MiniHeatmap(handle: Handle<MiniHeatmap.Props>) {
 	return () => {
 		let byDate = new Map(handle.props.days.map((day) => [day.date, day]));
-		let dates = buildLast30Days();
-		let uptime = calculateUptimePercentage(handle.props.days);
+		let dates = buildLastNDays();
+		let uptime = calculateUptimePercentage(handle.props.days, dates);
 
 		return (
 			<div>
 				<div mix={[rangeCaption]}>
-					<span mix={[caption]}>30 days ago</span>
+					<span mix={[caption]}>90 days ago</span>
 					<div mix={[connector]} />
 					{uptime !== null && <span mix={[caption]}>{uptime}</span>}
 					<div mix={[connector]} />
