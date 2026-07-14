@@ -7,6 +7,7 @@
  */
 
 import { notFound } from "@pkg/http/response/html";
+import { PencilIcon, PlayIcon, RefreshCwIcon } from "@pkg/lucide-remix";
 import { inject } from "@pkg/service-container";
 import { getContext } from "remix/async-context-middleware";
 import * as s from "remix/data-schema";
@@ -48,7 +49,14 @@ export default createAction(routes.app.team.dnsMonitors.show, {
 					teams={ctx.teams}
 					viewer={viewer}
 					isAdmin={ctx.membership.role === "admin"}
-					breadcrumb={monitor.name}
+					heading={`DNS Monitor "${monitor.name}"`}
+					breadcrumbs={[
+						{
+							label: "DNS Monitors",
+							href: routes.app.team.dnsMonitors.index.href({ team: ctx.team.slug }),
+						},
+						{ label: monitor.name },
+					]}
 					actions={
 						<div mix={[css({ display: "flex", alignItems: "center", gap: 12 })]}>
 							<form
@@ -58,9 +66,20 @@ export default createAction(routes.app.team.dnsMonitors.show, {
 							>
 								<input type="hidden" name="monitor_id" value={monitor.id} />
 								<Button type="submit" variant="outline">
-									Check now
+									<PlayIcon size={16} strokeWidth={1.5} />
+									Check Now
 								</Button>
 							</form>
+							<LinkButton
+								variant="outline"
+								href={routes.app.team.dnsMonitors.show.href({
+									team: ctx.team.slug,
+									monitorId: monitor.id,
+								})}
+							>
+								<RefreshCwIcon size={16} strokeWidth={1.5} />
+								Refresh
+							</LinkButton>
 							<LinkButton
 								variant="outline"
 								href={routes.app.team.dnsMonitors.edit.href({
@@ -68,6 +87,7 @@ export default createAction(routes.app.team.dnsMonitors.show, {
 									monitorId: monitor.id,
 								})}
 							>
+								<PencilIcon size={16} strokeWidth={1.5} />
 								Edit
 							</LinkButton>
 						</div>

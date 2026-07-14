@@ -54,7 +54,7 @@ import {
 	SettingsIcon,
 	WrenchIcon,
 } from "@pkg/lucide-remix";
-import { css } from "remix/ui";
+import { css, Fragment } from "remix/ui";
 
 import Avatar from "~/resources/components/avatar";
 import Logo from "~/resources/components/logo";
@@ -146,6 +146,41 @@ const breadcrumbText = css({
 	color: neutral[900],
 	"@media (prefers-color-scheme: dark)": { color: neutral[50] },
 });
+
+/**
+ * Wraps the small breadcrumb trail and the bold {@link breadcrumbText} heading in a
+ * single column so both sit stacked, vertically centered within the fixed-height
+ * {@link header} row.
+ */
+const headingColumn = css({
+	display: "flex",
+	flexDirection: "column",
+	justifyContent: "center",
+	gap: 2,
+	minWidth: 0,
+});
+
+/** The small, muted trail of parent pages shown above the bold heading. */
+const breadcrumbTrail = css({
+	display: "flex",
+	alignItems: "center",
+	gap: 4,
+	fontSize: "0.75rem",
+	color: neutral[500],
+	overflow: "hidden",
+	textOverflow: "ellipsis",
+	whiteSpace: "nowrap",
+});
+
+/** A linked (non-current) breadcrumb segment. */
+const breadcrumbLink = css({
+	color: "inherit",
+	textDecoration: "none",
+	"&:hover": { textDecoration: "underline" },
+});
+
+/** The `›` glyph separating breadcrumb segments. */
+const breadcrumbSeparator = css({ flexShrink: 0 });
 
 /**
  * The sidebar's popover drawer. Below 768px this is a native popover — hidden until
@@ -414,8 +449,15 @@ namespace AppShell {
 		teams: Array<{ id: string; slug: string; name: string; logo: string | null }>;
 		viewer: { name: string; email: string; avatar: string };
 		isAdmin: boolean;
-		/** Current page/section name, shown in the header in place of a per-page `<h1>`. */
-		breadcrumb: string;
+		/** Bold page title, shown in the header in place of a per-page `<h1>`. */
+		heading: string;
+		/**
+		 * Small trail of parent pages shown above {@link AppShell.Props.heading}. Omit
+		 * (or pass an empty array) to render no trail at all, e.g. on the dashboard.
+		 * Segments with no `href` (typically only the last, current-page segment)
+		 * render as plain text instead of a link.
+		 */
+		breadcrumbs?: Array<{ label: string; href?: string }>;
 		/**
 		 * The current request's URL path (e.g. `ctx.url.pathname`), compared against
 		 * each nav item's `href` to mark the matching link as the active one. Optional
@@ -433,8 +475,18 @@ namespace AppShell {
 /** Renders the sidebar (team picker, primary nav, admin-only nav, user menu) plus header and main content area around `children`. */
 export default function AppShell(handle: Handle<AppShell.Props>) {
 	return () => {
-		let { team, teams, viewer, isAdmin, breadcrumb, currentPath, actions, toast, children } =
-			handle.props;
+		let {
+			team,
+			teams,
+			viewer,
+			isAdmin,
+			heading,
+			breadcrumbs,
+			currentPath,
+			actions,
+			toast,
+			children,
+		} = handle.props;
 
 		let primaryNavItems: Array<{ href: string; label: string; icon: RemixNode }> = [
 			{
@@ -615,7 +667,29 @@ export default function AppShell(handle: Handle<AppShell.Props>) {
 						>
 							<PanelLeftIcon size={18} strokeWidth={1.5} />
 						</button>
-						<span mix={[breadcrumbText]}>{breadcrumb}</span>
+						<div mix={[headingColumn]}>
+							{breadcrumbs && breadcrumbs.length > 0 && (
+								<div mix={[breadcrumbTrail]}>
+									{breadcrumbs.map((crumb, index) => (
+										<Fragment key={`${crumb.label}-${index}`}>
+											{index > 0 && (
+												<span mix={[breadcrumbSeparator]} aria-hidden="true">
+													›
+												</span>
+											)}
+											{crumb.href ? (
+												<a href={crumb.href} mix={[breadcrumbLink]}>
+													{crumb.label}
+												</a>
+											) : (
+												<span>{crumb.label}</span>
+											)}
+										</Fragment>
+									))}
+								</div>
+							)}
+							<span mix={[breadcrumbText]}>{heading}</span>
+						</div>
 					</div>
 					{actions && <div mix={[row]}>{actions}</div>}
 				</div>

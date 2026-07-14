@@ -31,7 +31,18 @@ export default createAction(routes.app.team.cronJobs.new, {
 					teams={ctx.teams}
 					viewer={viewer}
 					isAdmin={ctx.membership.role === "admin"}
-					breadcrumb="New cron job monitor"
+					heading="Create Cron Job"
+					breadcrumbs={[
+						{
+							label: "Dashboard",
+							href: routes.app.team.dashboard.index.href({ team: ctx.team.slug }),
+						},
+						{
+							label: "Cron Jobs",
+							href: routes.app.team.cronJobs.index.href({ team: ctx.team.slug }),
+						},
+						{ label: "Create Cron Job" },
+					]}
 				>
 					<NewCronJobView team={ctx.team} />
 				</AppShell>

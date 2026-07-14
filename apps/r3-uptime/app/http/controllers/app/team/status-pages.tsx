@@ -5,6 +5,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { PlusIcon } from "@pkg/lucide-remix";
 import { inject } from "@pkg/service-container";
 import { getContext } from "remix/async-context-middleware";
 import { Database } from "remix/data-table";
@@ -49,10 +50,18 @@ export default createAction(routes.app.team.statusPages.index, {
 					teams={ctx.teams}
 					viewer={viewer}
 					isAdmin={ctx.membership.role === "admin"}
-					breadcrumb="Status pages"
+					heading="Status Pages"
+					breadcrumbs={[
+						{
+							label: "Dashboard",
+							href: routes.app.team.dashboard.index.href({ team: ctx.team.slug }),
+						},
+						{ label: "Status Pages" },
+					]}
 					actions={
 						<LinkButton href={routes.app.team.statusPages.new.href({ team: ctx.team.slug })}>
-							New status page
+							<PlusIcon size={16} strokeWidth={1.5} />
+							Create Status Page
 						</LinkButton>
 					}
 				>

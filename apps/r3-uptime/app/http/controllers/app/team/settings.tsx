@@ -51,7 +51,7 @@ export default createAction(routes.app.team.settings, {
 					teams={ctx.teams}
 					viewer={viewer}
 					isAdmin={ctx.membership.role === "admin"}
-					breadcrumb="Settings"
+					heading="Team Settings"
 				>
 					<SettingsView
 						team={ctx.team}

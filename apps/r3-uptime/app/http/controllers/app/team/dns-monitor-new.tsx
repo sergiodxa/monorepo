@@ -31,7 +31,14 @@ export default createAction(routes.app.team.dnsMonitors.new, {
 					teams={ctx.teams}
 					viewer={viewer}
 					isAdmin={ctx.membership.role === "admin"}
-					breadcrumb="New DNS monitor"
+					heading="Create DNS Monitor"
+					breadcrumbs={[
+						{
+							label: "DNS Monitors",
+							href: routes.app.team.dnsMonitors.index.href({ team: ctx.team.slug }),
+						},
+						{ label: "Create DNS Monitor" },
+					]}
 				>
 					<NewDnsMonitorView team={ctx.team} />
 				</AppShell>

@@ -38,13 +38,20 @@ export default createAction(routes.app.team.statusPages.new, {
 		]);
 
 		return ctx.render(
-			<DocumentLayout title={`${ctx.team.name} · New status page`}>
+			<DocumentLayout title={`${ctx.team.name} · Create Status Page`}>
 				<AppShell
 					team={ctx.team}
 					teams={ctx.teams}
 					viewer={viewer}
 					isAdmin={ctx.membership.role === "admin"}
-					breadcrumb="New status page"
+					heading="Create Status Page"
+					breadcrumbs={[
+						{
+							label: "Status Pages",
+							href: routes.app.team.statusPages.index.href({ team: ctx.team.slug }),
+						},
+						{ label: "Create Status Page" },
+					]}
 				>
 					<NewStatusPageView
 						team={ctx.team}

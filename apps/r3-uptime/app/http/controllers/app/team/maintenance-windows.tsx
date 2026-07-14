@@ -5,6 +5,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { PlusIcon } from "@pkg/lucide-remix";
 import { inject } from "@pkg/service-container";
 import { getContext } from "remix/async-context-middleware";
 import { Database } from "remix/data-table";
@@ -40,10 +41,18 @@ export default createAction(routes.app.team.maintenanceWindows.index, {
 					teams={ctx.teams}
 					viewer={viewer}
 					isAdmin={ctx.membership.role === "admin"}
-					breadcrumb="Maintenance windows"
+					heading="Maintenance Windows"
+					breadcrumbs={[
+						{
+							label: "Dashboard",
+							href: routes.app.team.dashboard.index.href({ team: ctx.team.slug }),
+						},
+						{ label: "Maintenance Windows" },
+					]}
 					actions={
 						<LinkButton href={routes.app.team.maintenanceWindows.new.href({ team: ctx.team.slug })}>
-							New maintenance window
+							<PlusIcon size={16} strokeWidth={1.5} />
+							Schedule Maintenance
 						</LinkButton>
 					}
 				>

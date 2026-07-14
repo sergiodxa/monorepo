@@ -41,7 +41,11 @@ export default createAction(routes.app.team.alerts.history, {
 					teams={ctx.teams}
 					viewer={viewer}
 					isAdmin={ctx.membership.role === "admin"}
-					breadcrumb="Alert history"
+					heading="Alert History"
+					breadcrumbs={[
+						{ label: "Alerts", href: routes.app.team.alerts.index.href({ team: ctx.team.slug }) },
+						{ label: "Alert History" },
+					]}
 				>
 					<AlertHistoryView team={ctx.team} events={events} alertsById={alertsById} />
 				</AppShell>

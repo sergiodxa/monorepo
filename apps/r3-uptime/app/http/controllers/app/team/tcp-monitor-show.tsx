@@ -7,6 +7,7 @@
  */
 
 import { notFound } from "@pkg/http/response/html";
+import { PencilIcon } from "@pkg/lucide-remix";
 import { inject } from "@pkg/service-container";
 import { getContext } from "remix/async-context-middleware";
 import * as s from "remix/data-schema";
@@ -48,7 +49,18 @@ export default createAction(routes.app.team.tcpMonitors.show, {
 					teams={ctx.teams}
 					viewer={viewer}
 					isAdmin={ctx.membership.role === "admin"}
-					breadcrumb={monitor.name}
+					heading={monitor.name}
+					breadcrumbs={[
+						{
+							label: "Dashboard",
+							href: routes.app.team.dashboard.index.href({ team: ctx.team.slug }),
+						},
+						{
+							label: "TCP Monitors",
+							href: routes.app.team.tcpMonitors.index.href({ team: ctx.team.slug }),
+						},
+						{ label: monitor.name },
+					]}
 					actions={
 						<div mix={[css({ display: "flex", alignItems: "center", gap: 12 })]}>
 							<form
@@ -68,6 +80,7 @@ export default createAction(routes.app.team.tcpMonitors.show, {
 								})}
 								variant="outline"
 							>
+								<PencilIcon size={16} strokeWidth={1.5} />
 								Edit
 							</LinkButton>
 						</div>

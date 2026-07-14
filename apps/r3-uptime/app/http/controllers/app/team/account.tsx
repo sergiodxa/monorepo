@@ -7,6 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { PlusIcon } from "@pkg/lucide-remix";
 import { inject } from "@pkg/service-container";
 import { getContext } from "remix/async-context-middleware";
 import { Database } from "remix/data-table";
@@ -43,10 +44,11 @@ export default createAction(routes.app.team.account, {
 					teams={ctx.teams}
 					viewer={viewer}
 					isAdmin={ctx.membership.role === "admin"}
-					breadcrumb="Account"
+					heading="Account"
 					actions={
 						<Button type="button" commandfor="create-team" command="show-modal">
-							Create team
+							<PlusIcon size={16} strokeWidth={1.5} />
+							Create Team
 						</Button>
 					}
 				>

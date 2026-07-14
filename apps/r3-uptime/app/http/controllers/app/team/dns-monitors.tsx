@@ -5,6 +5,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { PlusIcon } from "@pkg/lucide-remix";
 import { inject } from "@pkg/service-container";
 import { getContext } from "remix/async-context-middleware";
 import { Database } from "remix/data-table";
@@ -37,10 +38,18 @@ export default createAction(routes.app.team.dnsMonitors.index, {
 					teams={ctx.teams}
 					viewer={viewer}
 					isAdmin={ctx.membership.role === "admin"}
-					breadcrumb="DNS monitors"
+					heading="DNS Monitors"
+					breadcrumbs={[
+						{
+							label: "Dashboard",
+							href: routes.app.team.dashboard.index.href({ team: ctx.team.slug }),
+						},
+						{ label: "DNS Monitors" },
+					]}
 					actions={
 						<LinkButton href={routes.app.team.dnsMonitors.new.href({ team: ctx.team.slug })}>
-							New DNS monitor
+							<PlusIcon size={16} strokeWidth={1.5} />
+							Create DNS Monitor
 						</LinkButton>
 					}
 				>

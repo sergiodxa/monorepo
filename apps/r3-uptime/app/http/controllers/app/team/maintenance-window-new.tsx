@@ -36,7 +36,14 @@ export default createAction(routes.app.team.maintenanceWindows.new, {
 					teams={ctx.teams}
 					viewer={viewer}
 					isAdmin={ctx.membership.role === "admin"}
-					breadcrumb="New maintenance window"
+					heading="Schedule Maintenance"
+					breadcrumbs={[
+						{
+							label: "Maintenance",
+							href: routes.app.team.maintenanceWindows.index.href({ team: ctx.team.slug }),
+						},
+						{ label: "Schedule Maintenance" },
+					]}
 				>
 					<NewMaintenanceWindowView team={ctx.team} monitors={monitors} />
 				</AppShell>

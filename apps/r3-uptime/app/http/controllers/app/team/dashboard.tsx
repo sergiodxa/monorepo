@@ -68,7 +68,7 @@ export default createAction(routes.app.team.dashboard.index, {
 					teams={ctx.teams}
 					viewer={viewer}
 					isAdmin={ctx.membership.role === "admin"}
-					breadcrumb="Dashboard"
+					heading="Dashboard"
 					actions={
 						<LinkButton href={routes.app.team.monitors.new.href({ team: ctx.team.slug })}>
 							Create monitor

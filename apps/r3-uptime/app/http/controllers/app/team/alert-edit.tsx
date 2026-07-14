@@ -44,7 +44,12 @@ export default createAction(routes.app.team.alerts.edit, {
 					teams={ctx.teams}
 					viewer={viewer}
 					isAdmin={ctx.membership.role === "admin"}
-					breadcrumb="Edit alert"
+					heading="Edit Alert"
+					breadcrumbs={[
+						{ label: "Alerts", href: routes.app.team.alerts.index.href({ team: ctx.team.slug }) },
+						{ label: alert.name },
+						{ label: "Edit Alert" },
+					]}
 				>
 					<EditAlertView team={ctx.team} alert={alert} monitors={monitors} />
 				</AppShell>

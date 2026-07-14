@@ -7,6 +7,7 @@
  */
 
 import { notFound } from "@pkg/http/response/html";
+import { PencilIcon } from "@pkg/lucide-remix";
 import { inject } from "@pkg/service-container";
 import { getContext } from "remix/async-context-middleware";
 import * as s from "remix/data-schema";
@@ -50,7 +51,18 @@ export default createAction(routes.app.team.cronJobs.show, {
 					teams={ctx.teams}
 					viewer={viewer}
 					isAdmin={ctx.membership.role === "admin"}
-					breadcrumb={monitor.name}
+					heading={monitor.name}
+					breadcrumbs={[
+						{
+							label: "Dashboard",
+							href: routes.app.team.dashboard.index.href({ team: ctx.team.slug }),
+						},
+						{
+							label: "Cron Jobs",
+							href: routes.app.team.cronJobs.index.href({ team: ctx.team.slug }),
+						},
+						{ label: monitor.name },
+					]}
 					actions={
 						<LinkButton
 							variant="outline"
@@ -59,6 +71,7 @@ export default createAction(routes.app.team.cronJobs.show, {
 								monitorId: monitor.id,
 							})}
 						>
+							<PencilIcon size={16} strokeWidth={1.5} />
 							Edit
 						</LinkButton>
 					}

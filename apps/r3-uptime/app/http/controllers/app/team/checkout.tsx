@@ -42,7 +42,7 @@ export default createAction(routes.app.team.checkout, {
 						teams={ctx.teams}
 						viewer={viewer}
 						isAdmin={ctx.membership.role === "admin"}
-						breadcrumb="Billing"
+						heading="Billing"
 					>
 						<CheckoutView />
 					</AppShell>

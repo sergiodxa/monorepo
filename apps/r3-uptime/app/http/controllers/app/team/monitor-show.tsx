@@ -7,13 +7,14 @@
  */
 
 import { notFound } from "@pkg/http/response/html";
+import { PencilIcon, PlayIcon, RefreshCwIcon } from "@pkg/lucide-remix";
 import { isFailure } from "@pkg/result";
 import { inject } from "@pkg/service-container";
 import { getContext } from "remix/async-context-middleware";
 import * as s from "remix/data-schema";
 import { Database } from "remix/data-table";
 import { createAction } from "remix/fetch-router";
-import { css } from "remix/ui";
+import { css, Fragment } from "remix/ui";
 
 import Monitor from "~/app/data/monitor";
 import MonitorDailyStats from "~/app/data/monitor-daily-stats";
@@ -51,9 +52,16 @@ export default createAction(routes.app.team.monitors.show, {
 					teams={ctx.teams}
 					viewer={viewer}
 					isAdmin={ctx.membership.role === "admin"}
-					breadcrumb={monitor.name}
+					heading={monitor.name}
+					breadcrumbs={[
+						{
+							label: "Dashboard",
+							href: routes.app.team.dashboard.index.href({ team: ctx.team.slug }),
+						},
+						{ label: monitor.name },
+					]}
 					actions={
-						<div mix={[css({ display: "flex", alignItems: "center", gap: 12 })]}>
+						<Fragment>
 							<form
 								method="post"
 								action={routes.actions.monitor.http.play.href({ team: ctx.team.slug })}
@@ -61,7 +69,8 @@ export default createAction(routes.app.team.monitors.show, {
 							>
 								<input type="hidden" name="monitor_id" value={monitor.id} />
 								<Button type="submit" variant="outline">
-									Run now
+									<PlayIcon size={16} strokeWidth={1.5} />
+									Run Monitor
 								</Button>
 							</form>
 							<LinkButton
@@ -71,9 +80,14 @@ export default createAction(routes.app.team.monitors.show, {
 								})}
 								variant="outline"
 							>
-								Edit
+								<PencilIcon size={16} strokeWidth={1.5} />
+								Edit Monitor
 							</LinkButton>
-						</div>
+							<LinkButton href={ctx.url.pathname} variant="outline">
+								<RefreshCwIcon size={16} strokeWidth={1.5} />
+								Refresh
+							</LinkButton>
+						</Fragment>
 					}
 				>
 					<MonitorShowView

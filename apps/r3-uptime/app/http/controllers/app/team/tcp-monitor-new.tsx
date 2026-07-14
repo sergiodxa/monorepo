@@ -31,7 +31,18 @@ export default createAction(routes.app.team.tcpMonitors.new, {
 					teams={ctx.teams}
 					viewer={viewer}
 					isAdmin={ctx.membership.role === "admin"}
-					breadcrumb="New TCP monitor"
+					heading="Create TCP Monitor"
+					breadcrumbs={[
+						{
+							label: "Dashboard",
+							href: routes.app.team.dashboard.index.href({ team: ctx.team.slug }),
+						},
+						{
+							label: "TCP Monitors",
+							href: routes.app.team.tcpMonitors.index.href({ team: ctx.team.slug }),
+						},
+						{ label: "Create TCP Monitor" },
+					]}
 				>
 					<NewTcpMonitorView team={ctx.team} />
 				</AppShell>

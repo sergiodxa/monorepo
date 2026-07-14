@@ -30,13 +30,17 @@ export default createAction(routes.app.team.alerts.new, {
 		let monitors = await Monitor.listByTeam(db, ctx.team.id);
 
 		return ctx.render(
-			<DocumentLayout title={`${ctx.team.name} · New alert`}>
+			<DocumentLayout title={`${ctx.team.name} · Create Alert`}>
 				<AppShell
 					team={ctx.team}
 					teams={ctx.teams}
 					viewer={viewer}
 					isAdmin={ctx.membership.role === "admin"}
-					breadcrumb="New alert"
+					heading="Create Alert"
+					breadcrumbs={[
+						{ label: "Alerts", href: routes.app.team.alerts.index.href({ team: ctx.team.slug }) },
+						{ label: "Create Alert" },
+					]}
 				>
 					<NewAlertView team={ctx.team} monitors={monitors} />
 				</AppShell>

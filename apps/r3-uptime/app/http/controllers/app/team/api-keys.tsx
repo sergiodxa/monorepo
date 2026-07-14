@@ -7,6 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { PlusIcon } from "@pkg/lucide-remix";
 import { inject } from "@pkg/service-container";
 import { getContext } from "remix/async-context-middleware";
 import { Database } from "remix/data-table";
@@ -47,11 +48,14 @@ export default createAction(routes.app.team.apiKeys.index, {
 					teams={ctx.teams}
 					viewer={viewer}
 					isAdmin={ctx.membership.role === "admin"}
-					breadcrumb="API keys"
+					heading="API Keys"
 					actions={
-						<LinkButton href={routes.app.team.apiKeys.new.href({ team: ctx.team.slug })}>
-							New API key
-						</LinkButton>
+						apiKeys.length < 10 && (
+							<LinkButton href={routes.app.team.apiKeys.new.href({ team: ctx.team.slug })}>
+								<PlusIcon size={16} strokeWidth={1.5} />
+								Create API Key
+							</LinkButton>
+						)
 					}
 				>
 					<ApiKeysView team={ctx.team} apiKeys={apiKeys} newApiKey={newApiKey} />

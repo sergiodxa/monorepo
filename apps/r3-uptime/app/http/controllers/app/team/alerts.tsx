@@ -5,6 +5,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { BellPlusIcon, HistoryIcon } from "@pkg/lucide-remix";
 import { inject } from "@pkg/service-container";
 import { getContext } from "remix/async-context-middleware";
 import { Database } from "remix/data-table";
@@ -42,25 +43,27 @@ export default createAction(routes.app.team.alerts.index, {
 					teams={ctx.teams}
 					viewer={viewer}
 					isAdmin={ctx.membership.role === "admin"}
-					breadcrumb="Alerts"
+					heading="Alerts"
+					breadcrumbs={[
+						{
+							label: "Dashboard",
+							href: routes.app.team.dashboard.index.href({ team: ctx.team.slug }),
+						},
+						{ label: "Alerts" },
+					]}
 					actions={
 						<div mix={[css({ display: "flex", alignItems: "center", gap: 12 })]}>
-							<a
+							<LinkButton
+								variant="outline"
 								href={routes.app.team.alerts.history.href({ team: ctx.team.slug })}
-								mix={[
-									css({
-										color: "oklch(0.6 0.16 142)",
-										textDecoration: "none",
-										"&:hover": { textDecoration: "underline" },
-										"@media (prefers-color-scheme: dark)": { color: "oklch(0.78 0.16 142)" },
-									}),
-								]}
 							>
-								View history
-							</a>
+								<HistoryIcon size={16} strokeWidth={1.5} />
+								View History
+							</LinkButton>
 							{!atLimit && (
 								<LinkButton href={routes.app.team.alerts.new.href({ team: ctx.team.slug })}>
-									New alert
+									<BellPlusIcon size={16} strokeWidth={1.5} />
+									Create Alert
 								</LinkButton>
 							)}
 						</div>

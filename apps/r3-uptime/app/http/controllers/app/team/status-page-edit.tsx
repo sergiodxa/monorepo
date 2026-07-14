@@ -53,7 +53,15 @@ export default createAction(routes.app.team.statusPages.edit, {
 					teams={ctx.teams}
 					viewer={viewer}
 					isAdmin={ctx.membership.role === "admin"}
-					breadcrumb="Edit status page"
+					heading="Edit Status Page"
+					breadcrumbs={[
+						{
+							label: "Status Pages",
+							href: routes.app.team.statusPages.index.href({ team: ctx.team.slug }),
+						},
+						{ label: page.name },
+						{ label: "Edit Status Page" },
+					]}
 				>
 					<EditStatusPageView
 						team={ctx.team}

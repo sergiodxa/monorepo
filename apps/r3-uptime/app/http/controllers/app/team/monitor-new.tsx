@@ -31,7 +31,7 @@ export default createAction(routes.app.team.monitors.new, {
 					teams={ctx.teams}
 					viewer={viewer}
 					isAdmin={ctx.membership.role === "admin"}
-					breadcrumb="New monitor"
+					heading="Create Monitor"
 				>
 					<NewMonitorView team={ctx.team} />
 				</AppShell>

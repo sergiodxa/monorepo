@@ -7,6 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { PlusIcon } from "@pkg/lucide-remix";
 import { isFailure } from "@pkg/result";
 import { inject } from "@pkg/service-container";
 import { getContext } from "remix/async-context-middleware";
@@ -54,10 +55,18 @@ export default createAction(routes.app.team.monitors.index, {
 					teams={ctx.teams}
 					viewer={viewer}
 					isAdmin={ctx.membership.role === "admin"}
-					breadcrumb="HTTP monitors"
+					heading="HTTP Monitors"
+					breadcrumbs={[
+						{
+							label: "Dashboard",
+							href: routes.app.team.dashboard.index.href({ team: ctx.team.slug }),
+						},
+						{ label: "HTTP Monitors" },
+					]}
 					actions={
 						<LinkButton href={routes.app.team.monitors.new.href({ team: ctx.team.slug })}>
-							New monitor
+							<PlusIcon size={16} strokeWidth={1.5} />
+							Create Monitor
 						</LinkButton>
 					}
 				>

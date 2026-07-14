@@ -44,7 +44,21 @@ export default createAction(routes.app.team.monitors.edit, {
 					teams={ctx.teams}
 					viewer={viewer}
 					isAdmin={ctx.membership.role === "admin"}
-					breadcrumb="Edit monitor"
+					heading="Edit Monitor"
+					breadcrumbs={[
+						{
+							label: "Dashboard",
+							href: routes.app.team.dashboard.index.href({ team: ctx.team.slug }),
+						},
+						{
+							label: monitor.name,
+							href: routes.app.team.monitors.show.href({
+								team: ctx.team.slug,
+								monitorId: monitor.id,
+							}),
+						},
+						{ label: "Edit Monitor" },
+					]}
 				>
 					<EditMonitorView team={ctx.team} monitor={monitor} contentChecks={contentChecks} />
 				</AppShell>
