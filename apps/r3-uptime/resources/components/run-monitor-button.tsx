@@ -3,11 +3,12 @@
  * works with no JS at all (a plain navigating submit, same as before this
  * component existed) — `on("submit")` only runs once hydrated, where it
  * intercepts the submit to `fetch()` the same action instead, so clicking
- * doesn't navigate away, and spins the icon while the request is in flight.
- * `Monitor.ping` only queues a workflow run — the check itself finishes
- * asynchronously — so "done" here means "the queue request completed",
- * matching the old app's own fetcher-driven spinner (tied to request state,
- * not to whether the queued check has finished).
+ * doesn't navigate away, and swaps the play icon for a spinning loader icon
+ * while the request is in flight. `Monitor.ping` only queues a workflow run
+ * — the check itself finishes asynchronously — so "done" here means "the
+ * queue request completed", matching the old app's own fetcher-driven
+ * spinner (tied to request state, not to whether the queued check has
+ * finished).
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -15,7 +16,7 @@
 
 import type { Handle } from "remix/ui";
 
-import { PlayIcon } from "@pkg/lucide-remix";
+import { LoaderIcon, PlayIcon } from "@pkg/lucide-remix";
 import { clientEntry, css, on } from "remix/ui";
 
 import { buttonBase, buttonSizeMix, buttonVariantMix } from "~/resources/components/button";
@@ -65,7 +66,11 @@ export const RunMonitorButton = clientEntry(
 					disabled={pending}
 					mix={[buttonBase, buttonSizeMix.md, buttonVariantMix.outline.neutral]}
 				>
-					<PlayIcon size={16} strokeWidth={1.5} mix={[pending && spinner]} />
+					{pending ? (
+						<LoaderIcon size={16} strokeWidth={1.5} mix={[spinner]} />
+					) : (
+						<PlayIcon size={16} strokeWidth={1.5} />
+					)}
 					Run Monitor
 				</button>
 			</form>
