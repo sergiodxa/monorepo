@@ -18,7 +18,7 @@ import type {
 import type { BadgeTone } from "~/resources/components/badge";
 
 import Badge from "~/resources/components/badge";
-import EmptyState from "~/resources/components/empty-state";
+import { Empty, EmptyDescription } from "~/resources/components/empty";
 import StatCard from "~/resources/components/stat-card";
 import { neutral } from "~/resources/theme";
 import Heatmap from "~/resources/views/shared/heatmap";
@@ -92,7 +92,9 @@ export default function TcpMonitorShowView(handle: Handle<TcpMonitorShowView.Pro
 
 				<h2>Check history</h2>
 				{results.length === 0 ? (
-					<EmptyState message="No checks yet." />
+					<Empty>
+						<EmptyDescription>No checks yet.</EmptyDescription>
+					</Empty>
 				) : (
 					<div mix={[css({ overflowX: "auto" })]}>
 						<table

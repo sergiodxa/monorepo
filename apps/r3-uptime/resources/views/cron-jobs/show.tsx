@@ -20,7 +20,7 @@ import type { BadgeTone } from "~/resources/components/badge";
 
 import CronJobMonitor from "~/app/data/cron-job";
 import Badge from "~/resources/components/badge";
-import EmptyState from "~/resources/components/empty-state";
+import { Empty, EmptyDescription } from "~/resources/components/empty";
 import StatCard from "~/resources/components/stat-card";
 import { neutral } from "~/resources/theme";
 import Heatmap from "~/resources/views/shared/heatmap";
@@ -178,7 +178,9 @@ export default function CronJobShowView(handle: Handle<CronJobShowView.Props>) {
 
 				<h2>Ping history</h2>
 				{pings.length === 0 ? (
-					<EmptyState message="No pings yet." />
+					<Empty>
+						<EmptyDescription>No pings yet.</EmptyDescription>
+					</Empty>
 				) : (
 					<div mix={[css({ overflowX: "auto" })]}>
 						<table

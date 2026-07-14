@@ -8,6 +8,7 @@
 
 import type { Handle } from "remix/ui";
 
+import { ClockIcon, PlusIcon } from "@pkg/lucide-remix";
 import { css } from "remix/ui";
 
 import type { SelectCronJobMonitor } from "~/database/schema";
@@ -15,7 +16,14 @@ import type { BadgeTone } from "~/resources/components/badge";
 
 import CronJobMonitor from "~/app/data/cron-job";
 import Badge from "~/resources/components/badge";
-import EmptyState from "~/resources/components/empty-state";
+import {
+	Empty,
+	EmptyAction,
+	EmptyDescription,
+	EmptyIcon,
+	EmptyTitle,
+} from "~/resources/components/empty";
+import LinkButton from "~/resources/components/link-button";
 import { neutral, primary } from "~/resources/theme";
 import routes from "~/routes/web";
 
@@ -41,13 +49,21 @@ export default function CronJobsView(handle: Handle<CronJobsView.Props>) {
 		return (
 			<div>
 				{monitors.length === 0 ? (
-					<EmptyState
-						message="No cron job monitors yet."
-						action={{
-							href: routes.app.team.cronJobs.new.href({ team: team.slug }),
-							label: "Create your first cron job monitor",
-						}}
-					/>
+					<Empty>
+						<EmptyIcon>
+							<ClockIcon size={48} strokeWidth={1.5} />
+						</EmptyIcon>
+						<EmptyTitle>No cron jobs yet</EmptyTitle>
+						<EmptyDescription>
+							Create a cron job monitor to track your scheduled tasks.
+						</EmptyDescription>
+						<EmptyAction>
+							<LinkButton href={routes.app.team.cronJobs.new.href({ team: team.slug })}>
+								<PlusIcon size={20} strokeWidth={1.5} />
+								Create Cron Job
+							</LinkButton>
+						</EmptyAction>
+					</Empty>
 				) : (
 					<div mix={[css({ overflowX: "auto" })]}>
 						<table

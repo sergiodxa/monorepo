@@ -9,13 +9,21 @@
 
 import type { Handle } from "remix/ui";
 
+import { PlusIcon, WrenchIcon } from "@pkg/lucide-remix";
 import { css } from "remix/ui";
 
 import type { SelectMaintenanceWindow, SelectMonitor } from "~/database/schema";
 
 import MaintenanceWindow from "~/app/data/maintenance-window";
 import Badge from "~/resources/components/badge";
-import EmptyState from "~/resources/components/empty-state";
+import {
+	Empty,
+	EmptyAction,
+	EmptyDescription,
+	EmptyIcon,
+	EmptyTitle,
+} from "~/resources/components/empty";
+import LinkButton from "~/resources/components/link-button";
 import { neutral, primary } from "~/resources/theme";
 import routes from "~/routes/web";
 
@@ -40,13 +48,21 @@ export default function MaintenanceWindowsView(handle: Handle<MaintenanceWindows
 		return (
 			<div>
 				{windows.length === 0 ? (
-					<EmptyState
-						message="No maintenance windows yet."
-						action={{
-							href: routes.app.team.maintenanceWindows.new.href({ team: team.slug }),
-							label: "Schedule your first maintenance window",
-						}}
-					/>
+					<Empty>
+						<EmptyIcon>
+							<WrenchIcon size={48} strokeWidth={1.5} />
+						</EmptyIcon>
+						<EmptyTitle>No maintenance windows</EmptyTitle>
+						<EmptyDescription>
+							Schedule maintenance windows to suppress alerts during planned downtime.
+						</EmptyDescription>
+						<EmptyAction>
+							<LinkButton href={routes.app.team.maintenanceWindows.new.href({ team: team.slug })}>
+								<PlusIcon size={20} strokeWidth={1.5} />
+								Schedule Maintenance
+							</LinkButton>
+						</EmptyAction>
+					</Empty>
 				) : (
 					<>
 						{Section("Active", active, team, monitorsById)}

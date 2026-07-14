@@ -17,7 +17,7 @@ import { css, Frame } from "remix/ui";
 
 import type { DashboardTab } from "~/resources/views/dashboard-panel";
 
-import EmptyState from "~/resources/components/empty-state";
+import { Empty, EmptyDescription } from "~/resources/components/empty";
 import StatCardSkeleton from "~/resources/components/stat-card-skeleton";
 import routes from "~/routes/web";
 
@@ -104,7 +104,11 @@ export default function DashboardView(handle: Handle<DashboardView.Props>) {
 				<Frame
 					name="dashboard-panel"
 					src={routes.app.team.dashboard.panel.href({ team: props.team.slug, type: props.tab })}
-					fallback={<EmptyState message="Loading…" />}
+					fallback={
+						<Empty>
+							<EmptyDescription>Loading…</EmptyDescription>
+						</Empty>
+					}
 				/>
 			</div>
 		);

@@ -22,6 +22,7 @@
 
 import type { Handle } from "remix/ui";
 
+import { MonitorIcon, PlusIcon } from "@pkg/lucide-remix";
 import { css } from "remix/ui";
 
 import type { MonitorStatus } from "~/app/services/analytics";
@@ -30,7 +31,14 @@ import type { BadgeTone } from "~/resources/components/badge";
 
 import Badge from "~/resources/components/badge";
 import Button from "~/resources/components/button";
-import EmptyState from "~/resources/components/empty-state";
+import {
+	Empty,
+	EmptyAction,
+	EmptyDescription,
+	EmptyIcon,
+	EmptyTitle,
+} from "~/resources/components/empty";
+import LinkButton from "~/resources/components/link-button";
 import MonitorRowActions from "~/resources/components/monitor-row-actions";
 import { neutral, primary } from "~/resources/theme";
 import routes from "~/routes/web";
@@ -90,13 +98,21 @@ export default function HttpMonitorsView(handle: Handle<HttpMonitorsView.Props>)
 		return (
 			<div>
 				{rows.length === 0 ? (
-					<EmptyState
-						message="No monitors yet."
-						action={{
-							href: routes.app.team.monitors.new.href({ team: team.slug }),
-							label: "Create your first monitor",
-						}}
-					/>
+					<Empty>
+						<EmptyIcon>
+							<MonitorIcon size={48} strokeWidth={1.5} />
+						</EmptyIcon>
+						<EmptyTitle>No HTTP monitors yet</EmptyTitle>
+						<EmptyDescription>
+							Create an HTTP monitor to start tracking your endpoints.
+						</EmptyDescription>
+						<EmptyAction>
+							<LinkButton href={routes.app.team.monitors.new.href({ team: team.slug })}>
+								<PlusIcon size={20} strokeWidth={1.5} />
+								Create Monitor
+							</LinkButton>
+						</EmptyAction>
+					</Empty>
 				) : (
 					<div mix={[css({ overflowX: "auto" })]}>
 						<table

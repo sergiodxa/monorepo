@@ -9,6 +9,7 @@
 
 import type { Handle } from "remix/ui";
 
+import { ActivityIcon, ClockIcon, GlobeIcon, NetworkIcon, PlusIcon } from "@pkg/lucide-remix";
 import { css } from "remix/ui";
 
 import type { MonitorHealth, SparklinePoint } from "~/app/services/analytics";
@@ -22,7 +23,14 @@ import type { BadgeTone } from "~/resources/components/badge";
 
 import CronJobMonitor from "~/app/data/cron-job";
 import Badge from "~/resources/components/badge";
-import EmptyState from "~/resources/components/empty-state";
+import {
+	Empty,
+	EmptyAction,
+	EmptyDescription,
+	EmptyIcon,
+	EmptyTitle,
+} from "~/resources/components/empty";
+import LinkButton from "~/resources/components/link-button";
 import { Tab, TabList } from "~/resources/components/tabs";
 import { neutral, primary } from "~/resources/theme";
 import Sparkline from "~/resources/views/monitors/sparkline";
@@ -173,13 +181,21 @@ function HttpTable(handle: Handle<HttpTable.Props>) {
 
 		if (rows.length === 0) {
 			return (
-				<EmptyState
-					message="No HTTP monitors yet."
-					action={{
-						href: routes.app.team.monitors.new.href({ team: team.slug }),
-						label: "Create your first monitor",
-					}}
-				/>
+				<Empty>
+					<EmptyIcon>
+						<ActivityIcon size={48} strokeWidth={1.5} />
+					</EmptyIcon>
+					<EmptyTitle>No HTTP monitors yet</EmptyTitle>
+					<EmptyDescription>
+						Create an HTTP monitor to start tracking your endpoints.
+					</EmptyDescription>
+					<EmptyAction>
+						<LinkButton href={routes.app.team.monitors.new.href({ team: team.slug })}>
+							<PlusIcon size={20} strokeWidth={1.5} />
+							Create Monitor
+						</LinkButton>
+					</EmptyAction>
+				</Empty>
 			);
 		}
 
@@ -237,13 +253,19 @@ function DnsTable(handle: Handle<DnsTable.Props>) {
 
 		if (monitors.length === 0) {
 			return (
-				<EmptyState
-					message="No DNS monitors yet."
-					action={{
-						href: routes.app.team.dnsMonitors.new.href({ team: team.slug }),
-						label: "Create your first DNS monitor",
-					}}
-				/>
+				<Empty>
+					<EmptyIcon>
+						<GlobeIcon size={48} strokeWidth={1.5} />
+					</EmptyIcon>
+					<EmptyTitle>No DNS monitors yet</EmptyTitle>
+					<EmptyDescription>Create a DNS monitor to track DNS record changes.</EmptyDescription>
+					<EmptyAction>
+						<LinkButton href={routes.app.team.dnsMonitors.new.href({ team: team.slug })}>
+							<PlusIcon size={20} strokeWidth={1.5} />
+							Create DNS Monitor
+						</LinkButton>
+					</EmptyAction>
+				</Empty>
 			);
 		}
 
@@ -301,13 +323,21 @@ function TcpTable(handle: Handle<TcpTable.Props>) {
 
 		if (monitors.length === 0) {
 			return (
-				<EmptyState
-					message="No TCP monitors yet."
-					action={{
-						href: routes.app.team.tcpMonitors.new.href({ team: team.slug }),
-						label: "Create your first TCP monitor",
-					}}
-				/>
+				<Empty>
+					<EmptyIcon>
+						<NetworkIcon size={48} strokeWidth={1.5} />
+					</EmptyIcon>
+					<EmptyTitle>No TCP monitors yet</EmptyTitle>
+					<EmptyDescription>
+						Create a TCP monitor to check if ports are open and responsive.
+					</EmptyDescription>
+					<EmptyAction>
+						<LinkButton href={routes.app.team.tcpMonitors.new.href({ team: team.slug })}>
+							<PlusIcon size={20} strokeWidth={1.5} />
+							Create TCP Monitor
+						</LinkButton>
+					</EmptyAction>
+				</Empty>
 			);
 		}
 
@@ -367,13 +397,21 @@ function CronJobsTable(handle: Handle<CronJobsTable.Props>) {
 
 		if (monitors.length === 0) {
 			return (
-				<EmptyState
-					message="No cron job monitors yet."
-					action={{
-						href: routes.app.team.cronJobs.new.href({ team: team.slug }),
-						label: "Create your first cron job monitor",
-					}}
-				/>
+				<Empty>
+					<EmptyIcon>
+						<ClockIcon size={48} strokeWidth={1.5} />
+					</EmptyIcon>
+					<EmptyTitle>No cron jobs yet</EmptyTitle>
+					<EmptyDescription>
+						Create a cron job monitor to track your scheduled tasks.
+					</EmptyDescription>
+					<EmptyAction>
+						<LinkButton href={routes.app.team.cronJobs.new.href({ team: team.slug })}>
+							<PlusIcon size={20} strokeWidth={1.5} />
+							Create Cron Job
+						</LinkButton>
+					</EmptyAction>
+				</Empty>
 			);
 		}
 

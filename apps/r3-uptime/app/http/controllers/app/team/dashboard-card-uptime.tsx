@@ -16,7 +16,7 @@ import { createAction } from "remix/fetch-router";
 import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
 import { getTeamHttpSummaries } from "~/app/services/analytics";
-import EmptyState from "~/resources/components/empty-state";
+import { Empty, EmptyDescription } from "~/resources/components/empty";
 import StatCard from "~/resources/components/stat-card";
 import Subtitle from "~/resources/components/subtitle";
 import routes from "~/routes/web";
@@ -31,7 +31,11 @@ export default createAction(routes.app.team.dashboard.cards.uptime, {
 
 		if (isFailure(summaries)) {
 			return ctx.render(
-				<EmptyState message="Analytics data temporarily unavailable. Please retry later." />,
+				<Empty>
+					<EmptyDescription>
+						Analytics data temporarily unavailable. Please retry later.
+					</EmptyDescription>
+				</Empty>,
 			);
 		}
 

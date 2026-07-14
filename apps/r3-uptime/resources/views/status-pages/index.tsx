@@ -8,12 +8,20 @@
 
 import type { Handle } from "remix/ui";
 
+import { FileTextIcon, PlusIcon } from "@pkg/lucide-remix";
 import { css } from "remix/ui";
 
 import type { SelectStatusPage } from "~/database/schema";
 
 import Badge from "~/resources/components/badge";
-import EmptyState from "~/resources/components/empty-state";
+import {
+	Empty,
+	EmptyAction,
+	EmptyDescription,
+	EmptyIcon,
+	EmptyTitle,
+} from "~/resources/components/empty";
+import LinkButton from "~/resources/components/link-button";
 import { neutral, primary } from "~/resources/theme";
 import routes from "~/routes/web";
 
@@ -33,13 +41,21 @@ export default function StatusPagesView(handle: Handle<StatusPagesView.Props>) {
 		return (
 			<div>
 				{pages.length === 0 ? (
-					<EmptyState
-						message="No status pages yet."
-						action={{
-							href: routes.app.team.statusPages.new.href({ team: team.slug }),
-							label: "Create your first status page",
-						}}
-					/>
+					<Empty>
+						<EmptyIcon>
+							<FileTextIcon size={48} strokeWidth={1.5} />
+						</EmptyIcon>
+						<EmptyTitle>No status pages yet</EmptyTitle>
+						<EmptyDescription>
+							Create a status page to share your system status with your users.
+						</EmptyDescription>
+						<EmptyAction>
+							<LinkButton href={routes.app.team.statusPages.new.href({ team: team.slug })}>
+								<PlusIcon size={20} strokeWidth={1.5} />
+								Create Status Page
+							</LinkButton>
+						</EmptyAction>
+					</Empty>
 				) : (
 					<div mix={[css({ overflowX: "auto" })]}>
 						<table

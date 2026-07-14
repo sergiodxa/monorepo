@@ -8,12 +8,20 @@
 
 import type { Handle } from "remix/ui";
 
+import { BellIcon, PlusIcon } from "@pkg/lucide-remix";
 import { css } from "remix/ui";
 
 import type { SelectAlert, SelectMonitor } from "~/database/schema";
 
 import { MAX_ALERTS_PER_TEAM } from "~/app/data/alert";
-import EmptyState from "~/resources/components/empty-state";
+import {
+	Empty,
+	EmptyAction,
+	EmptyDescription,
+	EmptyIcon,
+	EmptyTitle,
+} from "~/resources/components/empty";
+import LinkButton from "~/resources/components/link-button";
 import { neutral, primary } from "~/resources/theme";
 import routes from "~/routes/web";
 
@@ -55,13 +63,21 @@ export default function AlertsView(handle: Handle<AlertsView.Props>) {
 				)}
 
 				{alerts.length === 0 ? (
-					<EmptyState
-						message="No alerts yet."
-						action={{
-							href: routes.app.team.alerts.new.href({ team: team.slug }),
-							label: "Create your first alert",
-						}}
-					/>
+					<Empty>
+						<EmptyIcon>
+							<BellIcon size={48} strokeWidth={1.5} />
+						</EmptyIcon>
+						<EmptyTitle>No alerts configured</EmptyTitle>
+						<EmptyDescription>
+							Create an alert to get notified when your monitors go down.
+						</EmptyDescription>
+						<EmptyAction>
+							<LinkButton href={routes.app.team.alerts.new.href({ team: team.slug })}>
+								<PlusIcon size={20} strokeWidth={1.5} />
+								Create Alert
+							</LinkButton>
+						</EmptyAction>
+					</Empty>
 				) : (
 					<div mix={[css({ overflowX: "auto" })]}>
 						<table

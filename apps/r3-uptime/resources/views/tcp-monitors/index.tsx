@@ -8,13 +8,21 @@
 
 import type { Handle } from "remix/ui";
 
+import { NetworkIcon, PlusIcon } from "@pkg/lucide-remix";
 import { css } from "remix/ui";
 
 import type { SelectTcpMonitor } from "~/database/schema";
 import type { BadgeTone } from "~/resources/components/badge";
 
 import Badge from "~/resources/components/badge";
-import EmptyState from "~/resources/components/empty-state";
+import {
+	Empty,
+	EmptyAction,
+	EmptyDescription,
+	EmptyIcon,
+	EmptyTitle,
+} from "~/resources/components/empty";
+import LinkButton from "~/resources/components/link-button";
 import { neutral, primary } from "~/resources/theme";
 import routes from "~/routes/web";
 
@@ -39,13 +47,21 @@ export default function TcpMonitorsView(handle: Handle<TcpMonitorsView.Props>) {
 		return (
 			<div>
 				{monitors.length === 0 ? (
-					<EmptyState
-						message="No TCP monitors yet."
-						action={{
-							href: routes.app.team.tcpMonitors.new.href({ team: team.slug }),
-							label: "Create your first TCP monitor",
-						}}
-					/>
+					<Empty>
+						<EmptyIcon>
+							<NetworkIcon size={48} strokeWidth={1.5} />
+						</EmptyIcon>
+						<EmptyTitle>No TCP monitors yet</EmptyTitle>
+						<EmptyDescription>
+							Create a TCP monitor to check if ports are open and responsive.
+						</EmptyDescription>
+						<EmptyAction>
+							<LinkButton href={routes.app.team.tcpMonitors.new.href({ team: team.slug })}>
+								<PlusIcon size={20} strokeWidth={1.5} />
+								Create TCP Monitor
+							</LinkButton>
+						</EmptyAction>
+					</Empty>
 				) : (
 					<div mix={[css({ overflowX: "auto" })]}>
 						<table

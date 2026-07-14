@@ -10,14 +10,23 @@
 
 import type { Handle } from "remix/ui";
 
+import { BellIcon, HistoryIcon } from "@pkg/lucide-remix";
 import { css } from "remix/ui";
 
 import type { SelectAlert, SelectAlertEvent } from "~/database/schema";
 import type { BadgeTone } from "~/resources/components/badge";
 
 import Badge from "~/resources/components/badge";
-import EmptyState from "~/resources/components/empty-state";
+import {
+	Empty,
+	EmptyAction,
+	EmptyDescription,
+	EmptyIcon,
+	EmptyTitle,
+} from "~/resources/components/empty";
+import LinkButton from "~/resources/components/link-button";
 import { neutral } from "~/resources/theme";
+import routes from "~/routes/web";
 
 namespace AlertHistoryView {
 	export interface Props {
@@ -42,12 +51,27 @@ const EVENT_TYPE_BADGE_TONE: Record<string, BadgeTone> = {
 /** Renders the delivery-attempt table, or an empty state when no alert has fired yet. */
 export default function AlertHistoryView(handle: Handle<AlertHistoryView.Props>) {
 	return () => {
-		let { events, alertsById } = handle.props;
+		let { team, events, alertsById } = handle.props;
 
 		return (
 			<div>
 				{events.length === 0 ? (
-					<EmptyState message="No alert events yet." />
+					<Empty>
+						<EmptyIcon>
+							<HistoryIcon size={48} strokeWidth={1.5} />
+						</EmptyIcon>
+						<EmptyTitle>No alert events yet</EmptyTitle>
+						<EmptyDescription>
+							Alert events will appear here when monitors trigger alerts. Configure alerts to get
+							started.
+						</EmptyDescription>
+						<EmptyAction>
+							<LinkButton href={routes.app.team.alerts.index.href({ team: team.slug })}>
+								<BellIcon size={20} strokeWidth={1.5} />
+								View Alerts
+							</LinkButton>
+						</EmptyAction>
+					</Empty>
 				) : (
 					<div mix={[css({ overflowX: "auto" })]}>
 						<table

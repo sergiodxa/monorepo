@@ -9,6 +9,7 @@
 
 import type { Handle } from "remix/ui";
 
+import { KeyIcon, PlusIcon } from "@pkg/lucide-remix";
 import { css } from "remix/ui";
 
 import type { SelectApiKey, SelectTeam } from "~/database/schema";
@@ -16,7 +17,14 @@ import type { SelectApiKey, SelectTeam } from "~/database/schema";
 import Badge from "~/resources/components/badge";
 import Button from "~/resources/components/button";
 import CopyButton from "~/resources/components/copy-button";
-import EmptyState from "~/resources/components/empty-state";
+import {
+	Empty,
+	EmptyAction,
+	EmptyDescription,
+	EmptyIcon,
+	EmptyTitle,
+} from "~/resources/components/empty";
+import LinkButton from "~/resources/components/link-button";
 import { neutral } from "~/resources/theme";
 import routes from "~/routes/web";
 
@@ -63,7 +71,21 @@ export default function ApiKeysView(handle: Handle<ApiKeysView.Props>) {
 				)}
 
 				{apiKeys.length === 0 ? (
-					<EmptyState message="No API keys yet." />
+					<Empty>
+						<EmptyIcon>
+							<KeyIcon size={48} strokeWidth={1.5} />
+						</EmptyIcon>
+						<EmptyTitle>No API keys yet</EmptyTitle>
+						<EmptyDescription>
+							Create an API key to access the Uptime API programmatically.
+						</EmptyDescription>
+						<EmptyAction>
+							<LinkButton href={routes.app.team.apiKeys.new.href({ team: team.slug })}>
+								<PlusIcon size={20} strokeWidth={1.5} />
+								Create API Key
+							</LinkButton>
+						</EmptyAction>
+					</Empty>
 				) : (
 					<div mix={[css({ overflowX: "auto" })]}>
 						<table
