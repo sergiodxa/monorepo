@@ -10,6 +10,7 @@ import type { Handle } from "remix/ui";
 
 import { css } from "remix/ui";
 
+import Button from "~/resources/components/button";
 import MonitorFormFields from "~/resources/views/monitors/form";
 import routes from "~/routes/web";
 
@@ -28,29 +29,7 @@ export default function NewMonitorView(handle: Handle<NewMonitorView.Props>) {
 				action={routes.actions.monitor.http.create.href({ team: handle.props.team.slug })}
 			>
 				<MonitorFormFields />
-				<button
-					type="submit"
-					mix={[
-						css({
-							display: "inline-flex",
-							alignItems: "center",
-							justifyContent: "center",
-							padding: "8px 16px",
-							borderRadius: 6,
-							border: "1px solid transparent",
-							background: "oklch(0.24 0.005 145)",
-							color: "#ffffff",
-							fontFamily: "inherit",
-							fontSize: "0.875rem",
-							fontWeight: 500,
-							cursor: "pointer",
-							textDecoration: "none",
-							"&:hover": { background: "oklch(0.32 0.006 145)" },
-						}),
-					]}
-				>
-					Create monitor
-				</button>
+				<Button type="submit">Create monitor</Button>
 			</form>
 		</div>
 	);

@@ -11,13 +11,13 @@ import { inject } from "@pkg/service-container";
 import { getContext } from "remix/async-context-middleware";
 import { Database } from "remix/data-table";
 import { createAction } from "remix/fetch-router";
-import { css } from "remix/ui";
 
 import Team from "~/app/data/team";
 import UserPreferences from "~/app/data/user-preferences";
 import { getViewer } from "~/app/http/middleware/auth";
 import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
+import Button from "~/resources/components/button";
 import AppShell from "~/resources/layouts/app-shell";
 import DocumentLayout from "~/resources/layouts/document";
 import AccountView from "~/resources/views/account";
@@ -45,31 +45,9 @@ export default createAction(routes.app.team.account, {
 					isAdmin={ctx.membership.role === "admin"}
 					breadcrumb="Account"
 					actions={
-						<button
-							type="button"
-							commandfor="create-team"
-							command="show-modal"
-							mix={[
-								css({
-									display: "inline-flex",
-									alignItems: "center",
-									justifyContent: "center",
-									gap: 6,
-									padding: "8px 16px",
-									borderRadius: 6,
-									border: "1px solid transparent",
-									background: "oklch(0.24 0.005 145)",
-									color: "#ffffff",
-									fontFamily: "inherit",
-									fontSize: "0.875rem",
-									fontWeight: 500,
-									cursor: "pointer",
-									"&:hover": { background: "oklch(0.32 0.006 145)" },
-								}),
-							]}
-						>
+						<Button type="button" commandfor="create-team" command="show-modal">
 							Create team
-						</button>
+						</Button>
 					}
 				>
 					<AccountView

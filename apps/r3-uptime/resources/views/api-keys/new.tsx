@@ -12,6 +12,7 @@ import { css } from "remix/ui";
 import type { SelectTeam } from "~/database/schema";
 
 import { apiKeyScopes } from "~/database/schema";
+import Button from "~/resources/components/button";
 import Field from "~/resources/components/field";
 import { neutral } from "~/resources/theme";
 import routes from "~/routes/web";
@@ -110,29 +111,7 @@ export default function NewApiKeyView(handle: Handle<NewApiKeyView.Props>) {
 						/>
 					</Field>
 
-					<button
-						type="submit"
-						mix={[
-							css({
-								display: "inline-flex",
-								alignItems: "center",
-								justifyContent: "center",
-								padding: "8px 16px",
-								borderRadius: 6,
-								border: "1px solid transparent",
-								background: neutral[900],
-								color: "#ffffff",
-								fontFamily: "inherit",
-								fontSize: "0.875rem",
-								fontWeight: 500,
-								cursor: "pointer",
-								textDecoration: "none",
-								"&:hover": { background: neutral[800] },
-							}),
-						]}
-					>
-						Create API key
-					</button>
+					<Button type="submit">Create API key</Button>
 				</form>
 			</div>
 		);

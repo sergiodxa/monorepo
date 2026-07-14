@@ -13,9 +13,36 @@ import { css } from "remix/ui";
 import type { SelectMaintenanceWindow, SelectMonitor } from "~/database/schema";
 
 import MaintenanceWindow from "~/app/data/maintenance-window";
-import { danger, neutral, primary } from "~/resources/theme";
+import Button from "~/resources/components/button";
+import { neutral, primary } from "~/resources/theme";
 import MaintenanceWindowFormFields from "~/resources/views/maintenance-windows/form";
 import routes from "~/routes/web";
+
+const cancelLink = css({
+	color: primary[600],
+	textDecoration: "none",
+	"&:hover": { textDecoration: "underline" },
+	"@media (prefers-color-scheme: dark)": { color: primary[400] },
+});
+
+const dialog = css({
+	padding: 24,
+	borderRadius: 8,
+	border: `1px solid ${neutral[300]}`,
+	maxWidth: 400,
+	"&::backdrop": { background: "rgba(0, 0, 0, 0.4)" },
+	"@media (prefers-color-scheme: dark)": {
+		borderColor: neutral[700],
+		background: neutral[900],
+		color: neutral[50],
+	},
+});
+
+const dialogText = css({
+	fontSize: "0.8125rem",
+	color: neutral[500],
+	"@media (prefers-color-scheme: dark)": { color: neutral[400] },
+});
 
 namespace EditMaintenanceWindowView {
 	export interface Props {
@@ -24,48 +51,6 @@ namespace EditMaintenanceWindowView {
 		monitors: SelectMonitor[];
 	}
 }
-
-/** Secondary (outline) button/link. Reused twice below. */
-const buttonSecondary = css({
-	display: "inline-flex",
-	alignItems: "center",
-	justifyContent: "center",
-	padding: "8px 16px",
-	borderRadius: 6,
-	border: `2px solid ${neutral[300]}`,
-	background: "#ffffff",
-	color: neutral[500],
-	fontFamily: "inherit",
-	fontSize: "0.875rem",
-	fontWeight: 500,
-	cursor: "pointer",
-	textDecoration: "none",
-	"&:hover": { background: neutral[50] },
-	"@media (prefers-color-scheme: dark)": {
-		background: neutral[900],
-		color: neutral[400],
-		borderColor: neutral[700],
-		"&:hover": { background: neutral[800] },
-	},
-});
-
-/** Destructive action button. Reused twice below. */
-const buttonDanger = css({
-	display: "inline-flex",
-	alignItems: "center",
-	justifyContent: "center",
-	padding: "8px 16px",
-	borderRadius: 6,
-	border: "1px solid transparent",
-	background: danger[600],
-	color: "#ffffff",
-	fontFamily: "inherit",
-	fontSize: "0.875rem",
-	fontWeight: 500,
-	cursor: "pointer",
-	textDecoration: "none",
-	"&:hover": { background: danger[700] },
-});
 
 /** Renders the maintenance-window form pre-filled with the current values, an "end maintenance now" action shown only while the window is currently active, and a delete-confirmation dialog. */
 export default function EditMaintenanceWindowView(handle: Handle<EditMaintenanceWindowView.Props>) {
@@ -82,41 +67,12 @@ export default function EditMaintenanceWindowView(handle: Handle<EditMaintenance
 				>
 					<input type="hidden" name="window_id" value={window.id} />
 					<MaintenanceWindowFormFields window={window} monitors={monitors} />
-					<button
-						type="submit"
-						mix={[
-							css({
-								display: "inline-flex",
-								alignItems: "center",
-								justifyContent: "center",
-								padding: "8px 16px",
-								borderRadius: 6,
-								border: "1px solid transparent",
-								background: neutral[900],
-								color: "#ffffff",
-								fontFamily: "inherit",
-								fontSize: "0.875rem",
-								fontWeight: 500,
-								cursor: "pointer",
-								textDecoration: "none",
-								"&:hover": { background: neutral[800] },
-							}),
-						]}
-					>
-						Save changes
-					</button>
+					<Button type="submit">Save changes</Button>
 				</form>
 
 				<a
 					href={routes.app.team.maintenanceWindows.index.href({ team: team.slug })}
-					mix={[
-						css({
-							color: primary[600],
-							textDecoration: "none",
-							"&:hover": { textDecoration: "underline" },
-							"@media (prefers-color-scheme: dark)": { color: primary[400] },
-						}),
-					]}
+					mix={[cancelLink]}
 				>
 					Cancel
 				</a>
@@ -127,67 +83,41 @@ export default function EditMaintenanceWindowView(handle: Handle<EditMaintenance
 						action={routes.actions.maintenanceWindow.end.href({ team: team.slug })}
 					>
 						<input type="hidden" name="window_id" value={window.id} />
-						<button type="submit" mix={[buttonSecondary]}>
+						<Button type="submit" variant="outline">
 							End maintenance now
-						</button>
+						</Button>
 					</form>
 				)}
 
 				<h2>Danger zone</h2>
-				<button
+				<Button
 					type="button"
+					color="danger"
 					commandfor="delete-maintenance-window"
 					command="show-modal"
-					mix={[buttonDanger]}
 				>
 					Delete maintenance window
-				</button>
-				<dialog
-					id="delete-maintenance-window"
-					mix={[
-						css({
-							padding: 24,
-							borderRadius: 8,
-							border: `1px solid ${neutral[300]}`,
-							maxWidth: 400,
-							"&::backdrop": { background: "rgba(0, 0, 0, 0.4)" },
-							"@media (prefers-color-scheme: dark)": {
-								borderColor: neutral[700],
-								background: neutral[900],
-								color: neutral[50],
-							},
-						}),
-					]}
-				>
+				</Button>
+				<dialog id="delete-maintenance-window" mix={[dialog]}>
 					<h3>Delete this maintenance window?</h3>
-					<p
-						mix={[
-							css({
-								fontSize: "0.8125rem",
-								color: neutral[500],
-								"@media (prefers-color-scheme: dark)": { color: neutral[400] },
-							}),
-						]}
-					>
-						This can't be undone.
-					</p>
+					<p mix={[dialogText]}>This can't be undone.</p>
 					<form
 						method="post"
 						action={routes.actions.maintenanceWindow.delete.href({ team: team.slug })}
 					>
 						<input type="hidden" name="_method" value="DELETE" />
 						<input type="hidden" name="window_id" value={window.id} />
-						<button
+						<Button
 							type="button"
+							variant="outline"
 							commandfor="delete-maintenance-window"
 							command="close"
-							mix={[buttonSecondary]}
 						>
 							Cancel
-						</button>
-						<button type="submit" mix={[buttonDanger]}>
+						</Button>
+						<Button type="submit" color="danger">
 							Delete
-						</button>
+						</Button>
 					</form>
 				</dialog>
 			</div>

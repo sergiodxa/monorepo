@@ -20,8 +20,9 @@ import type {
 } from "~/database/schema";
 
 import Badge from "~/resources/components/badge";
+import Button from "~/resources/components/button";
 import Field from "~/resources/components/field";
-import { danger, primary } from "~/resources/theme";
+import { primary } from "~/resources/theme";
 import routes from "~/routes/web";
 
 const neutral = {
@@ -37,63 +38,6 @@ const neutral = {
 	900: "oklch(0.24 0.005 145)",
 	950: "oklch(0.16 0.004 145)",
 } as const;
-
-const buttonPrimary = css({
-	display: "inline-flex",
-	alignItems: "center",
-	justifyContent: "center",
-	padding: "8px 16px",
-	borderRadius: 6,
-	border: "1px solid transparent",
-	background: neutral[900],
-	color: "#ffffff",
-	fontFamily: "inherit",
-	fontSize: "0.875rem",
-	fontWeight: 500,
-	cursor: "pointer",
-	textDecoration: "none",
-	"&:hover": { background: neutral[800] },
-});
-
-const buttonSecondary = css({
-	display: "inline-flex",
-	alignItems: "center",
-	justifyContent: "center",
-	padding: "8px 16px",
-	borderRadius: 6,
-	border: `2px solid ${neutral[300]}`,
-	background: "#ffffff",
-	color: neutral[500],
-	fontFamily: "inherit",
-	fontSize: "0.875rem",
-	fontWeight: 500,
-	cursor: "pointer",
-	textDecoration: "none",
-	"&:hover": { background: neutral[50] },
-	"@media (prefers-color-scheme: dark)": {
-		background: neutral[900],
-		color: neutral[400],
-		borderColor: neutral[700],
-		"&:hover": { background: neutral[800] },
-	},
-});
-
-const buttonDanger = css({
-	display: "inline-flex",
-	alignItems: "center",
-	justifyContent: "center",
-	padding: "8px 16px",
-	borderRadius: 6,
-	border: "1px solid transparent",
-	background: danger[600],
-	color: "#ffffff",
-	fontFamily: "inherit",
-	fontSize: "0.875rem",
-	fontWeight: 500,
-	cursor: "pointer",
-	textDecoration: "none",
-	"&:hover": { background: danger[700] },
-});
 
 namespace SettingsView {
 	export interface Props {
@@ -159,20 +103,13 @@ export default function SettingsView(handle: Handle<SettingsView.Props>) {
 							]}
 						/>
 					</Field>
-					<button type="submit" mix={[buttonPrimary]}>
-						Save changes
-					</button>
+					<Button type="submit">Save changes</Button>
 				</form>
 
 				<h2>Members</h2>
-				<button
-					type="button"
-					commandfor="invite-member"
-					command="show-modal"
-					mix={[buttonSecondary]}
-				>
+				<Button type="button" variant="outline" commandfor="invite-member" command="show-modal">
 					Invite member
-				</button>
+				</Button>
 				<dialog
 					id="invite-member"
 					mix={[
@@ -219,17 +156,10 @@ export default function SettingsView(handle: Handle<SettingsView.Props>) {
 								]}
 							/>
 						</Field>
-						<button
-							type="button"
-							commandfor="invite-member"
-							command="close"
-							mix={[buttonSecondary]}
-						>
+						<Button type="button" variant="outline" commandfor="invite-member" command="close">
 							Cancel
-						</button>
-						<button type="submit" mix={[buttonPrimary]}>
-							Send invite
-						</button>
+						</Button>
+						<Button type="submit">Send invite</Button>
 					</form>
 				</dialog>
 
@@ -287,18 +217,18 @@ export default function SettingsView(handle: Handle<SettingsView.Props>) {
 													>
 														<input type="hidden" name="subject_id" value={member.subject_id} />
 														<input type="hidden" name="role" value={nextRole} />
-														<button type="submit" mix={[buttonSecondary]}>
+														<Button type="submit" variant="outline">
 															Make {nextRole}
-														</button>
+														</Button>
 													</form>
-													<button
+													<Button
 														type="button"
+														color="danger"
 														commandfor={`remove-member-${member.id}`}
 														command="show-modal"
-														mix={[buttonDanger]}
 													>
 														Remove
-													</button>
+													</Button>
 													<dialog
 														id={`remove-member-${member.id}`}
 														mix={[
@@ -332,17 +262,17 @@ export default function SettingsView(handle: Handle<SettingsView.Props>) {
 																name="email"
 																value={subject?.emailAddress ?? ""}
 															/>
-															<button
+															<Button
 																type="button"
+																variant="outline"
 																commandfor={`remove-member-${member.id}`}
 																command="close"
-																mix={[buttonSecondary]}
 															>
 																Cancel
-															</button>
-															<button type="submit" mix={[buttonDanger]}>
+															</Button>
+															<Button type="submit" color="danger">
 																Remove
-															</button>
+															</Button>
 														</form>
 													</dialog>
 												</>
@@ -395,9 +325,9 @@ export default function SettingsView(handle: Handle<SettingsView.Props>) {
 												>
 													<input type="hidden" name="_method" value="DELETE" />
 													<input type="hidden" name="invite_id" value={invite.id} />
-													<button type="submit" mix={[buttonSecondary]}>
+													<Button type="submit" variant="outline">
 														Revoke
-													</button>
+													</Button>
 												</form>
 											</td>
 										</tr>
@@ -446,9 +376,9 @@ export default function SettingsView(handle: Handle<SettingsView.Props>) {
 							]}
 						/>
 					</Field>
-					<button type="submit" mix={[buttonSecondary]}>
+					<Button type="submit" variant="outline">
 						Add domain
-					</button>
+					</Button>
 				</form>
 
 				<div mix={[css({ overflowX: "auto" })]}>
@@ -512,9 +442,9 @@ export default function SettingsView(handle: Handle<SettingsView.Props>) {
 												})}
 											>
 												<input type="hidden" name="domain_id" value={domain.id} />
-												<button type="submit" mix={[buttonSecondary]}>
+												<Button type="submit" variant="outline">
 													Retry
-												</button>
+												</Button>
 											</form>
 										)}
 										<form
@@ -523,9 +453,9 @@ export default function SettingsView(handle: Handle<SettingsView.Props>) {
 										>
 											<input type="hidden" name="_method" value="DELETE" />
 											<input type="hidden" name="domain_id" value={domain.id} />
-											<button type="submit" mix={[buttonDanger]}>
+											<Button type="submit" color="danger">
 												Remove
-											</button>
+											</Button>
 										</form>
 									</td>
 								</tr>
@@ -552,9 +482,9 @@ export default function SettingsView(handle: Handle<SettingsView.Props>) {
 				</a>
 
 				<h2>Danger zone</h2>
-				<button type="button" commandfor="delete-team" command="show-modal" mix={[buttonDanger]}>
+				<Button type="button" color="danger" commandfor="delete-team" command="show-modal">
 					Delete team
-				</button>
+				</Button>
 				<dialog
 					id="delete-team"
 					mix={[
@@ -614,12 +544,12 @@ export default function SettingsView(handle: Handle<SettingsView.Props>) {
 								}),
 							]}
 						/>
-						<button type="button" commandfor="delete-team" command="close" mix={[buttonSecondary]}>
+						<Button type="button" variant="outline" commandfor="delete-team" command="close">
 							Cancel
-						</button>
-						<button type="submit" mix={[buttonDanger]}>
+						</Button>
+						<Button type="submit" color="danger">
 							Delete team
-						</button>
+						</Button>
 					</form>
 				</dialog>
 			</div>

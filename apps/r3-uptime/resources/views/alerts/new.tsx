@@ -7,11 +7,9 @@
 
 import type { Handle } from "remix/ui";
 
-import { css } from "remix/ui";
-
 import type { SelectMonitor } from "~/database/schema";
 
-import { neutral } from "~/resources/theme";
+import Button from "~/resources/components/button";
 import AlertFormFields from "~/resources/views/alerts/form";
 import routes from "~/routes/web";
 
@@ -31,29 +29,7 @@ export default function NewAlertView(handle: Handle<NewAlertView.Props>) {
 			<div>
 				<form method="post" action={routes.actions.alert.create.href({ team: team.slug })}>
 					<AlertFormFields monitors={monitors} />
-					<button
-						type="submit"
-						mix={[
-							css({
-								display: "inline-flex",
-								alignItems: "center",
-								justifyContent: "center",
-								padding: "8px 16px",
-								borderRadius: 6,
-								border: "1px solid transparent",
-								background: neutral[900],
-								color: "#ffffff",
-								fontFamily: "inherit",
-								fontSize: "0.875rem",
-								fontWeight: 500,
-								cursor: "pointer",
-								textDecoration: "none",
-								"&:hover": { background: neutral[800] },
-							}),
-						]}
-					>
-						Create alert
-					</button>
+					<Button type="submit">Create alert</Button>
 				</form>
 			</div>
 		);

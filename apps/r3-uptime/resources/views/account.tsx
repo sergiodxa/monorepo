@@ -17,8 +17,9 @@ import type { SelectTeam, SupportedLanguage } from "~/database/schema";
 
 import Avatar from "~/resources/components/avatar";
 import Badge from "~/resources/components/badge";
+import Button from "~/resources/components/button";
 import Field from "~/resources/components/field";
-import { danger, neutral, primary } from "~/resources/theme";
+import { neutral, primary } from "~/resources/theme";
 import routes from "~/routes/web";
 
 /** {@link css}'s return type doesn't fit `HTMLSelectElement` (Cloudflare Workers types conflict). */
@@ -57,46 +58,6 @@ const card = css({
 	borderRadius: 8,
 	border: `1px solid ${neutral[200]}`,
 	"@media (prefers-color-scheme: dark)": { borderColor: neutral[800] },
-});
-
-const buttonSecondary = css({
-	display: "inline-flex",
-	alignItems: "center",
-	justifyContent: "center",
-	padding: "8px 16px",
-	borderRadius: 6,
-	border: `2px solid ${neutral[300]}`,
-	background: "#ffffff",
-	color: neutral[500],
-	fontFamily: "inherit",
-	fontSize: "0.875rem",
-	fontWeight: 500,
-	cursor: "pointer",
-	textDecoration: "none",
-	"&:hover": { background: neutral[50] },
-	"@media (prefers-color-scheme: dark)": {
-		background: neutral[900],
-		color: neutral[400],
-		borderColor: neutral[700],
-		"&:hover": { background: neutral[800] },
-	},
-});
-
-const buttonPrimary = css({
-	display: "inline-flex",
-	alignItems: "center",
-	justifyContent: "center",
-	padding: "8px 16px",
-	borderRadius: 6,
-	border: "1px solid transparent",
-	background: neutral[900],
-	color: "#ffffff",
-	fontFamily: "inherit",
-	fontSize: "0.875rem",
-	fontWeight: 500,
-	cursor: "pointer",
-	textDecoration: "none",
-	"&:hover": { background: neutral[800] },
 });
 
 namespace AccountView {
@@ -186,9 +147,9 @@ export default function AccountView(handle: Handle<AccountView.Props>) {
 								Select your preferred language. Auto-detect uses your browser settings.
 							</p>
 							<div mix={[css({ display: "flex", justifyContent: "flex-end" })]}>
-								<button type="submit" mix={[buttonSecondary]}>
+								<Button type="submit" variant="outline">
 									Save language
-								</button>
+								</Button>
 							</div>
 						</form>
 					</div>
@@ -253,29 +214,9 @@ export default function AccountView(handle: Handle<AccountView.Props>) {
 												{canLeave && (
 													<form method="post" action={routes.accountActions.leaveTeam.href()}>
 														<input type="hidden" name="team_id" value={team.id} />
-														<button
-															type="submit"
-															mix={[
-																css({
-																	display: "inline-flex",
-																	alignItems: "center",
-																	justifyContent: "center",
-																	padding: "8px 16px",
-																	borderRadius: 6,
-																	border: "1px solid transparent",
-																	background: danger[600],
-																	color: "#ffffff",
-																	fontFamily: "inherit",
-																	fontSize: "0.875rem",
-																	fontWeight: 500,
-																	cursor: "pointer",
-																	textDecoration: "none",
-																	"&:hover": { background: danger[700] },
-																}),
-															]}
-														>
+														<Button type="submit" color="danger">
 															Leave
-														</button>
+														</Button>
 													</form>
 												)}
 											</td>
@@ -330,12 +271,10 @@ export default function AccountView(handle: Handle<AccountView.Props>) {
 								]}
 							/>
 						</Field>
-						<button type="button" commandfor="create-team" command="close" mix={[buttonSecondary]}>
+						<Button type="button" variant="outline" commandfor="create-team" command="close">
 							Cancel
-						</button>
-						<button type="submit" mix={[buttonPrimary]}>
-							Create team
-						</button>
+						</Button>
+						<Button type="submit">Create team</Button>
 					</form>
 				</dialog>
 			</div>

@@ -7,9 +7,7 @@
 
 import type { Handle } from "remix/ui";
 
-import { css } from "remix/ui";
-
-import { neutral } from "~/resources/theme";
+import Button from "~/resources/components/button";
 import CronJobFormFields from "~/resources/views/cron-jobs/form";
 import routes from "~/routes/web";
 
@@ -28,29 +26,7 @@ export default function NewCronJobView(handle: Handle<NewCronJobView.Props>) {
 				action={routes.actions.cronJob.create.href({ team: handle.props.team.slug })}
 			>
 				<CronJobFormFields />
-				<button
-					type="submit"
-					mix={[
-						css({
-							display: "inline-flex",
-							alignItems: "center",
-							justifyContent: "center",
-							padding: "8px 16px",
-							borderRadius: 6,
-							border: "1px solid transparent",
-							background: neutral[900],
-							color: "#ffffff",
-							fontFamily: "inherit",
-							fontSize: "0.875rem",
-							fontWeight: 500,
-							cursor: "pointer",
-							textDecoration: "none",
-							"&:hover": { background: neutral[800] },
-						}),
-					]}
-				>
-					Create cron job monitor
-				</button>
+				<Button type="submit">Create cron job monitor</Button>
 			</form>
 		</div>
 	);

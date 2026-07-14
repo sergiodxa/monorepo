@@ -11,6 +11,7 @@ import type { Handle } from "remix/ui";
 
 import { css } from "remix/ui";
 
+import Button from "~/resources/components/button";
 import routes from "~/routes/web";
 
 /** Renders the sign-out confirmation form that posts to the logout action; takes no props. */
@@ -36,29 +37,7 @@ export default function LogoutView(_handle: Handle) {
 			>
 				<h1 mix={[css({ margin: 0 })]}>Sign out?</h1>
 				<form method="post" action={routes.logout.action.href()}>
-					<button
-						type="submit"
-						mix={[
-							css({
-								display: "inline-flex",
-								alignItems: "center",
-								justifyContent: "center",
-								padding: "8px 16px",
-								borderRadius: 6,
-								border: "1px solid transparent",
-								background: "oklch(0.24 0.005 145)",
-								color: "#ffffff",
-								fontFamily: "inherit",
-								fontSize: "0.875rem",
-								fontWeight: 500,
-								cursor: "pointer",
-								textDecoration: "none",
-								"&:hover": { background: "oklch(0.32 0.006 145)" },
-							}),
-						]}
-					>
-						Sign out
-					</button>
+					<Button type="submit">Sign out</Button>
 				</form>
 			</div>
 		</main>

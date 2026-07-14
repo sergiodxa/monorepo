@@ -14,9 +14,10 @@ import { css } from "remix/ui";
 import type { SelectApiKey, SelectTeam } from "~/database/schema";
 
 import Badge from "~/resources/components/badge";
+import Button from "~/resources/components/button";
 import CopyButton from "~/resources/components/copy-button";
 import EmptyState from "~/resources/components/empty-state";
-import { danger, neutral } from "~/resources/theme";
+import { neutral } from "~/resources/theme";
 import routes from "~/routes/web";
 
 namespace ApiKeysView {
@@ -130,29 +131,9 @@ export default function ApiKeysView(handle: Handle<ApiKeysView.Props>) {
 												>
 													<input type="hidden" name="_method" value="DELETE" />
 													<input type="hidden" name="api_key_id" value={apiKey.id} />
-													<button
-														type="submit"
-														mix={[
-															css({
-																display: "inline-flex",
-																alignItems: "center",
-																justifyContent: "center",
-																padding: "8px 16px",
-																borderRadius: 6,
-																border: "1px solid transparent",
-																background: danger[600],
-																color: "#ffffff",
-																fontFamily: "inherit",
-																fontSize: "0.875rem",
-																fontWeight: 500,
-																cursor: "pointer",
-																textDecoration: "none",
-																"&:hover": { background: danger[700] },
-															}),
-														]}
-													>
+													<Button type="submit" color="danger">
 														Delete
-													</button>
+													</Button>
 												</form>
 											</td>
 										</tr>

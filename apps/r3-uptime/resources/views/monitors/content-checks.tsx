@@ -13,8 +13,9 @@ import { css } from "remix/ui";
 
 import type { SelectMonitorContentCheck } from "~/database/schema";
 
+import Button from "~/resources/components/button";
 import Field from "~/resources/components/field";
-import { danger, neutral } from "~/resources/theme";
+import { neutral } from "~/resources/theme";
 import routes from "~/routes/web";
 
 namespace ContentChecksSection {
@@ -35,48 +36,6 @@ function mixForSelect(
 		ElementProps
 	>;
 }
-
-/** Destructive action button. Reused per row. */
-const buttonDanger = css({
-	display: "inline-flex",
-	alignItems: "center",
-	justifyContent: "center",
-	padding: "8px 16px",
-	borderRadius: 6,
-	border: "1px solid transparent",
-	background: danger[600],
-	color: "#ffffff",
-	fontFamily: "inherit",
-	fontSize: "0.875rem",
-	fontWeight: 500,
-	cursor: "pointer",
-	textDecoration: "none",
-	"&:hover": { background: danger[700] },
-});
-
-/** Secondary (outline) button. Reused below. */
-const buttonSecondary = css({
-	display: "inline-flex",
-	alignItems: "center",
-	justifyContent: "center",
-	padding: "8px 16px",
-	borderRadius: 6,
-	border: `2px solid ${neutral[300]}`,
-	background: "#ffffff",
-	color: neutral[500],
-	fontFamily: "inherit",
-	fontSize: "0.875rem",
-	fontWeight: 500,
-	cursor: "pointer",
-	textDecoration: "none",
-	"&:hover": { background: neutral[50] },
-	"@media (prefers-color-scheme: dark)": {
-		background: neutral[900],
-		color: neutral[400],
-		borderColor: neutral[700],
-		"&:hover": { background: neutral[800] },
-	},
-});
 
 const TYPE_LABELS: Record<SelectMonitorContentCheck["type"], string> = {
 	contains: "Contains",
@@ -143,14 +102,14 @@ export default function ContentChecksSection(handle: Handle<ContentChecksSection
 										<td>{check.case_sensitive ? "Yes" : "No"}</td>
 										<td>{check.is_enabled ? "Enabled" : "Disabled"}</td>
 										<td>
-											<button
+											<Button
 												type="button"
+												color="danger"
 												commandfor={`delete-content-check-${check.id}`}
 												command="show-modal"
-												mix={[buttonDanger]}
 											>
 												Delete
-											</button>
+											</Button>
 
 											<dialog
 												id={`delete-content-check-${check.id}`}
@@ -174,17 +133,17 @@ export default function ContentChecksSection(handle: Handle<ContentChecksSection
 													<input type="hidden" name="_method" value="DELETE" />
 													<input type="hidden" name="content_check_id" value={check.id} />
 													<input type="hidden" name="monitor_id" value={monitorId} />
-													<button
+													<Button
 														type="button"
+														variant="outline"
 														commandfor={`delete-content-check-${check.id}`}
 														command="close"
-														mix={[buttonSecondary]}
 													>
 														Cancel
-													</button>
-													<button type="submit" mix={[buttonDanger]}>
+													</Button>
+													<Button type="submit" color="danger">
 														Delete
-													</button>
+													</Button>
 												</form>
 											</dialog>
 										</td>
@@ -267,9 +226,9 @@ export default function ContentChecksSection(handle: Handle<ContentChecksSection
 						<span>Case sensitive</span>
 					</label>
 
-					<button type="submit" mix={[buttonSecondary]}>
+					<Button type="submit" variant="outline">
 						Add content check
-					</button>
+					</Button>
 				</form>
 			</div>
 		);

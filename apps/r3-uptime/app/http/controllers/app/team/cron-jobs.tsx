@@ -9,12 +9,12 @@ import { inject } from "@pkg/service-container";
 import { getContext } from "remix/async-context-middleware";
 import { Database } from "remix/data-table";
 import { createAction } from "remix/fetch-router";
-import { css } from "remix/ui";
 
 import CronJobMonitor from "~/app/data/cron-job";
 import { getViewer } from "~/app/http/middleware/auth";
 import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
+import LinkButton from "~/resources/components/link-button";
 import AppShell from "~/resources/layouts/app-shell";
 import DocumentLayout from "~/resources/layouts/document";
 import CronJobsView from "~/resources/views/cron-jobs/index";
@@ -39,29 +39,9 @@ export default createAction(routes.app.team.cronJobs.index, {
 					isAdmin={ctx.membership.role === "admin"}
 					breadcrumb="Cron job monitors"
 					actions={
-						<a
-							href={routes.app.team.cronJobs.new.href({ team: ctx.team.slug })}
-							mix={[
-								css({
-									display: "inline-flex",
-									alignItems: "center",
-									justifyContent: "center",
-									padding: "8px 16px",
-									borderRadius: 6,
-									border: "1px solid transparent",
-									background: "oklch(0.24 0.005 145)",
-									color: "#ffffff",
-									fontFamily: "inherit",
-									fontSize: "0.875rem",
-									fontWeight: 500,
-									cursor: "pointer",
-									textDecoration: "none",
-									"&:hover": { background: "oklch(0.32 0.006 145)" },
-								}),
-							]}
-						>
+						<LinkButton href={routes.app.team.cronJobs.new.href({ team: ctx.team.slug })}>
 							New cron job monitor
-						</a>
+						</LinkButton>
 					}
 				>
 					<CronJobsView team={ctx.team} monitors={monitors} />

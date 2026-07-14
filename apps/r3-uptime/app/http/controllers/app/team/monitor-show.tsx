@@ -21,34 +21,12 @@ import { getViewer } from "~/app/http/middleware/auth";
 import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
 import { getMonitorSparkline } from "~/app/services/analytics";
+import Button from "~/resources/components/button";
+import LinkButton from "~/resources/components/link-button";
 import AppShell from "~/resources/layouts/app-shell";
 import DocumentLayout from "~/resources/layouts/document";
 import MonitorShowView from "~/resources/views/monitors/show";
 import routes from "~/routes/web";
-
-/** Secondary (outline) button/link style, reused below for both actions. */
-const buttonSecondary = css({
-	display: "inline-flex",
-	alignItems: "center",
-	justifyContent: "center",
-	padding: "8px 16px",
-	borderRadius: 6,
-	border: "2px solid oklch(0.83 0.01 145)",
-	background: "#ffffff",
-	color: "oklch(0.62 0.01 145)",
-	fontFamily: "inherit",
-	fontSize: "0.875rem",
-	fontWeight: 500,
-	cursor: "pointer",
-	textDecoration: "none",
-	"&:hover": { background: "oklch(0.98 0.005 145)" },
-	"@media (prefers-color-scheme: dark)": {
-		background: "oklch(0.24 0.005 145)",
-		color: "oklch(0.73 0.01 145)",
-		borderColor: "oklch(0.42 0.008 145)",
-		"&:hover": { background: "oklch(0.32 0.006 145)" },
-	},
-});
 
 /** GET /app/:team/monitors/:monitorId — a monitor's detail page. */
 export default createAction(routes.app.team.monitors.show, {
@@ -82,19 +60,19 @@ export default createAction(routes.app.team.monitors.show, {
 								mix={[css({ margin: 0 })]}
 							>
 								<input type="hidden" name="monitor_id" value={monitor.id} />
-								<button type="submit" mix={[buttonSecondary]}>
+								<Button type="submit" variant="outline">
 									Run now
-								</button>
+								</Button>
 							</form>
-							<a
+							<LinkButton
 								href={routes.app.team.monitors.edit.href({
 									team: ctx.team.slug,
 									monitorId: monitor.id,
 								})}
-								mix={[buttonSecondary]}
+								variant="outline"
 							>
 								Edit
-							</a>
+							</LinkButton>
 						</div>
 					}
 				>

@@ -7,10 +7,9 @@
 
 import type { Handle } from "remix/ui";
 
-import { css } from "remix/ui";
-
 import type { SelectMonitor } from "~/database/schema";
 
+import Button from "~/resources/components/button";
 import MaintenanceWindowFormFields from "~/resources/views/maintenance-windows/form";
 import routes from "~/routes/web";
 
@@ -33,29 +32,7 @@ export default function NewMaintenanceWindowView(handle: Handle<NewMaintenanceWi
 					action={routes.actions.maintenanceWindow.create.href({ team: team.slug })}
 				>
 					<MaintenanceWindowFormFields monitors={monitors} />
-					<button
-						type="submit"
-						mix={[
-							css({
-								display: "inline-flex",
-								alignItems: "center",
-								justifyContent: "center",
-								padding: "8px 16px",
-								borderRadius: 6,
-								border: "1px solid transparent",
-								background: "oklch(0.24 0.005 145)",
-								color: "#ffffff",
-								fontFamily: "inherit",
-								fontSize: "0.875rem",
-								fontWeight: 500,
-								cursor: "pointer",
-								textDecoration: "none",
-								"&:hover": { background: "oklch(0.32 0.006 145)" },
-							}),
-						]}
-					>
-						Create maintenance window
-					</button>
+					<Button type="submit">Create maintenance window</Button>
 				</form>
 			</div>
 		);

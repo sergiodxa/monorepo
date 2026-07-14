@@ -12,6 +12,8 @@ import type { Handle, RemixNode } from "remix/ui";
 
 import { css } from "remix/ui";
 
+import LinkButton from "~/resources/components/link-button";
+
 namespace EmptyState {
 	export interface Action {
 		href: string;
@@ -42,38 +44,13 @@ const emptyState = css({
 	},
 });
 
-/**
- * Primary action button/link for the signed-in app shell (dashboard, forms,
- * settings). Uses a near-black background rather than brand green, since green
- * is reserved for marketing CTAs; every in-app primary action (Create Monitor,
- * Save Changes, Invite Member, ...) shares this style.
- */
-const buttonPrimary = css({
-	display: "inline-flex",
-	alignItems: "center",
-	justifyContent: "center",
-	padding: "8px 16px",
-	borderRadius: 6,
-	border: "1px solid transparent",
-	background: "oklch(0.24 0.005 145)",
-	color: "#ffffff",
-	fontFamily: "inherit",
-	fontSize: "0.875rem",
-	fontWeight: 500,
-	cursor: "pointer",
-	textDecoration: "none",
-	"&:hover": { background: "oklch(0.32 0.006 145)" },
-});
-
 /** Renders {@link EmptyState.Props.message} with an optional {@link EmptyState.Props.action} link. */
 export default function EmptyState(handle: Handle<EmptyState.Props>) {
 	return () => (
 		<div mix={[emptyState]}>
 			<p>{handle.props.message}</p>
 			{handle.props.action && (
-				<a href={handle.props.action.href} mix={[buttonPrimary]}>
-					{handle.props.action.label}
-				</a>
+				<LinkButton href={handle.props.action.href}>{handle.props.action.label}</LinkButton>
 			)}
 		</div>
 	);
