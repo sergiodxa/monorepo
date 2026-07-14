@@ -12,6 +12,7 @@
 
 import type { Handle } from "remix/ui";
 
+import { CheckIcon } from "@pkg/lucide-remix";
 import { css } from "remix/ui";
 
 import type { MarketingContent } from "~/resources/content/marketing";
@@ -174,7 +175,8 @@ export default function MarketingPageView(handle: Handle<MarketingPageView.Props
 										}),
 									]}
 								>
-									✓ {item}
+									<CheckIcon size={16} />
+									{item}
 								</span>
 							))}
 						</div>

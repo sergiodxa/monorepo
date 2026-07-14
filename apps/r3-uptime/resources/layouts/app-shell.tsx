@@ -38,6 +38,22 @@
 
 import type { Handle, RemixNode } from "remix/ui";
 
+import {
+	ActivityIcon,
+	BellIcon,
+	BookOpenIcon,
+	CheckIcon,
+	ChevronsUpDownIcon,
+	ClockIcon,
+	FileTextIcon,
+	GlobeIcon,
+	KeyIcon,
+	MonitorCogIcon,
+	NetworkIcon,
+	PanelLeftIcon,
+	SettingsIcon,
+	WrenchIcon,
+} from "@pkg/lucide-remix";
 import { css } from "remix/ui";
 
 import Avatar from "~/resources/components/avatar";
@@ -290,28 +306,6 @@ const menuChevronIcon = css({
 	"@media (prefers-color-scheme: dark)": { color: neutral[50] },
 });
 
-/** A compact up/down chevron pair, the "expand/switch" indicator for the team-picker and user-menu trigger buttons. */
-function ChevronsUpDownIcon(_handle: Handle<Record<string, never>>) {
-	return () => (
-		<svg
-			viewBox="0 0 20 20"
-			width={14}
-			height={14}
-			fill="none"
-			aria-hidden="true"
-			mix={[menuChevronIcon]}
-		>
-			<path
-				d="M6 8l4-4 4 4M6 12l4 4 4-4"
-				stroke="currentColor"
-				strokeWidth={1.5}
-				strokeLinecap="round"
-				strokeLinejoin="round"
-			/>
-		</svg>
-	);
-}
-
 /**
  * Fixed, viewport-relative dropdown panel for the team-picker/user-menu popovers.
  * Native `popover` elements are promoted to the top layer and, unless positioned
@@ -446,145 +440,42 @@ export default function AppShell(handle: Handle<AppShell.Props>) {
 			{
 				href: routes.app.team.dashboard.index.href({ team: team.slug }),
 				label: "Dashboard",
-				icon: (
-					<svg viewBox="0 0 20 20" width={16} height={16} fill="none" aria-hidden="true">
-						<path
-							d="M2 10h3l2-6 4 12 2-6h5"
-							stroke="currentColor"
-							strokeWidth={1.5}
-							strokeLinecap="round"
-							strokeLinejoin="round"
-						/>
-					</svg>
-				),
+				icon: <ActivityIcon size={16} strokeWidth={1.5} />,
 			},
 			{
 				href: routes.app.team.monitors.index.href({ team: team.slug }),
 				label: "HTTP Monitors",
-				icon: (
-					<svg viewBox="0 0 20 20" width={16} height={16} fill="none" aria-hidden="true">
-						<rect
-							x="2"
-							y="3"
-							width="16"
-							height="11"
-							rx="1.5"
-							stroke="currentColor"
-							strokeWidth={1.5}
-						/>
-						<path
-							d="M6 17h8M10 14v3"
-							stroke="currentColor"
-							strokeWidth={1.5}
-							strokeLinecap="round"
-						/>
-					</svg>
-				),
+				icon: <MonitorCogIcon size={16} strokeWidth={1.5} />,
 			},
 			{
 				href: routes.app.team.dnsMonitors.index.href({ team: team.slug }),
 				label: "DNS Monitors",
-				icon: (
-					<svg viewBox="0 0 20 20" width={16} height={16} fill="none" aria-hidden="true">
-						<circle cx="10" cy="10" r="7" stroke="currentColor" strokeWidth={1.5} />
-						<path
-							d="M3 10h14M10 3c2.2 2 2.2 12 0 14M10 3c-2.2 2-2.2 12 0 14"
-							stroke="currentColor"
-							strokeWidth={1.5}
-							strokeLinecap="round"
-						/>
-					</svg>
-				),
+				icon: <GlobeIcon size={16} strokeWidth={1.5} />,
 			},
 			{
 				href: routes.app.team.tcpMonitors.index.href({ team: team.slug }),
 				label: "TCP Monitors",
-				icon: (
-					<svg viewBox="0 0 20 20" width={16} height={16} fill="none" aria-hidden="true">
-						<circle cx="4" cy="4" r="2" stroke="currentColor" strokeWidth={1.5} />
-						<circle cx="16" cy="4" r="2" stroke="currentColor" strokeWidth={1.5} />
-						<circle cx="10" cy="16" r="2" stroke="currentColor" strokeWidth={1.5} />
-						<path
-							d="M4 6v2a3 3 0 003 3h1M16 6v2a3 3 0 01-3 3h-1"
-							stroke="currentColor"
-							strokeWidth={1.5}
-							strokeLinecap="round"
-						/>
-					</svg>
-				),
+				icon: <NetworkIcon size={16} strokeWidth={1.5} />,
 			},
 			{
 				href: routes.app.team.cronJobs.index.href({ team: team.slug }),
 				label: "Cron Jobs",
-				icon: (
-					<svg viewBox="0 0 20 20" width={16} height={16} fill="none" aria-hidden="true">
-						<circle cx="10" cy="10" r="7" stroke="currentColor" strokeWidth={1.5} />
-						<path
-							d="M10 6v4l3 2"
-							stroke="currentColor"
-							strokeWidth={1.5}
-							strokeLinecap="round"
-							strokeLinejoin="round"
-						/>
-					</svg>
-				),
+				icon: <ClockIcon size={16} strokeWidth={1.5} />,
 			},
 			{
 				href: routes.app.team.alerts.index.href({ team: team.slug }),
 				label: "Alerts",
-				icon: (
-					<svg viewBox="0 0 20 20" width={16} height={16} fill="none" aria-hidden="true">
-						<path
-							d="M5.5 8a4.5 4.5 0 019 0c0 3.5 1.3 4.5 1.3 4.5h-11.6S5.5 11.5 5.5 8z"
-							stroke="currentColor"
-							strokeWidth={1.5}
-							strokeLinecap="round"
-							strokeLinejoin="round"
-						/>
-						<path
-							d="M8.3 15.5a1.7 1.7 0 003.4 0"
-							stroke="currentColor"
-							strokeWidth={1.5}
-							strokeLinecap="round"
-						/>
-					</svg>
-				),
+				icon: <BellIcon size={16} strokeWidth={1.5} />,
 			},
 			{
 				href: routes.app.team.maintenanceWindows.index.href({ team: team.slug }),
 				label: "Maintenance",
-				icon: (
-					<svg viewBox="0 0 20 20" width={16} height={16} fill="none" aria-hidden="true">
-						<path
-							d="M13.3 4.7a3.3 3.3 0 00-4.5 4l-5.3 5.3 2 2 5.3-5.3a3.3 3.3 0 004-4.5l-2.1 2.1-2-2z"
-							stroke="currentColor"
-							strokeWidth={1.5}
-							strokeLinecap="round"
-							strokeLinejoin="round"
-						/>
-					</svg>
-				),
+				icon: <WrenchIcon size={16} strokeWidth={1.5} />,
 			},
 			{
 				href: routes.app.team.statusPages.index.href({ team: team.slug }),
 				label: "Status pages",
-				icon: (
-					<svg viewBox="0 0 20 20" width={16} height={16} fill="none" aria-hidden="true">
-						<path
-							d="M6 2.5h5.5L15 6v11.5H6z"
-							stroke="currentColor"
-							strokeWidth={1.5}
-							strokeLinecap="round"
-							strokeLinejoin="round"
-						/>
-						<path
-							d="M8 9.5h6M8 12.5h6M8 15.5h3.5"
-							stroke="currentColor"
-							strokeWidth={1.5}
-							strokeLinecap="round"
-						/>
-					</svg>
-				),
+				icon: <FileTextIcon size={16} strokeWidth={1.5} />,
 			},
 		];
 
@@ -598,48 +489,17 @@ export default function AppShell(handle: Handle<AppShell.Props>) {
 				href: routes.docs.index.href(),
 				label: "Docs",
 				target: "_blank",
-				icon: (
-					<svg viewBox="0 0 20 20" width={16} height={16} fill="none" aria-hidden="true">
-						<path
-							d="M2.5 5c1.8-1 4.5-1 6.5 0v10.5c-2-1-4.7-1-6.5 0V5zM17.5 5c-1.8-1-4.5-1-6.5 0v10.5c2-1 4.7-1 6.5 0V5z"
-							stroke="currentColor"
-							strokeWidth={1.5}
-							strokeLinecap="round"
-							strokeLinejoin="round"
-						/>
-					</svg>
-				),
+				icon: <BookOpenIcon size={16} strokeWidth={1.5} />,
 			},
 			{
 				href: routes.app.team.apiKeys.index.href({ team: team.slug }),
 				label: "API keys",
-				icon: (
-					<svg viewBox="0 0 20 20" width={16} height={16} fill="none" aria-hidden="true">
-						<circle cx="6" cy="14" r="2.8" stroke="currentColor" strokeWidth={1.5} />
-						<path
-							d="M8.2 11.8L16 4M12.5 7.5l1.7 1.7M14.7 5.3l1.7 1.7"
-							stroke="currentColor"
-							strokeWidth={1.5}
-							strokeLinecap="round"
-							strokeLinejoin="round"
-						/>
-					</svg>
-				),
+				icon: <KeyIcon size={16} strokeWidth={1.5} />,
 			},
 			{
 				href: routes.app.team.settings.href({ team: team.slug }),
 				label: "Settings",
-				icon: (
-					<svg viewBox="0 0 20 20" width={16} height={16} fill="none" aria-hidden="true">
-						<circle cx="10" cy="10" r="2.8" stroke="currentColor" strokeWidth={1.5} />
-						<path
-							d="M10 3v2M10 15v2M4 4.2l1.4 1.4M14.6 14.4l1.4 1.4M3 10h2M15 10h2M4 15.8l1.4-1.4M14.6 5.6l1.4-1.4"
-							stroke="currentColor"
-							strokeWidth={1.5}
-							strokeLinecap="round"
-						/>
-					</svg>
-				),
+				icon: <SettingsIcon size={16} strokeWidth={1.5} />,
 			},
 		];
 
@@ -663,7 +523,7 @@ export default function AppShell(handle: Handle<AppShell.Props>) {
 								>
 									<Logo src={team.logo} name={team.name} />
 									<span mix={[truncatedLabel]}>{team.name}</span>
-									<ChevronsUpDownIcon />
+									<ChevronsUpDownIcon size={14} strokeWidth={1.5} mix={[menuChevronIcon]} />
 								</button>
 								<div id="team-picker-menu" popover="auto" mix={[dropdownPanel({ top: 47 })]}>
 									<ul mix={[navList]}>
@@ -675,23 +535,7 @@ export default function AppShell(handle: Handle<AppShell.Props>) {
 												>
 													<Logo src={t.logo} name={t.name} />
 													<span mix={[truncatedLabel]}>{t.name}</span>
-													{t.slug === team.slug && (
-														<svg
-															viewBox="0 0 20 20"
-															width={14}
-															height={14}
-															fill="none"
-															aria-hidden="true"
-														>
-															<path
-																d="M4 10l4 4 8-9"
-																stroke="currentColor"
-																strokeWidth={1.5}
-																strokeLinecap="round"
-																strokeLinejoin="round"
-															/>
-														</svg>
-													)}
+													{t.slug === team.slug && <CheckIcon size={14} strokeWidth={1.5} />}
 												</a>
 											</li>
 										))}
@@ -747,7 +591,7 @@ export default function AppShell(handle: Handle<AppShell.Props>) {
 						>
 							<Avatar src={viewer.avatar || null} name={viewer.name} />
 							<span mix={[truncatedLabel]}>{viewer.name}</span>
-							<ChevronsUpDownIcon />
+							<ChevronsUpDownIcon size={14} strokeWidth={1.5} mix={[menuChevronIcon]} />
 						</button>
 						<div id="user-menu" popover="auto" mix={[dropdownPanel({ bottom: 58 })]}>
 							<a href={routes.app.team.account.href({ team: team.slug })} mix={[dropdownItem]}>
@@ -769,14 +613,7 @@ export default function AppShell(handle: Handle<AppShell.Props>) {
 							aria-label="Toggle navigation"
 							mix={[sidebarToggle]}
 						>
-							<svg viewBox="0 0 20 20" width={18} height={18} fill="none" aria-hidden="true">
-								<path
-									d="M3 5h14M3 10h14M3 15h14"
-									stroke="currentColor"
-									strokeWidth={1.5}
-									strokeLinecap="round"
-								/>
-							</svg>
+							<PanelLeftIcon size={18} strokeWidth={1.5} />
 						</button>
 						<span mix={[breadcrumbText]}>{breadcrumb}</span>
 					</div>

@@ -346,6 +346,7 @@
         "@pkg/i18n": "workspace:*",
         "@pkg/jobs": "workspace:*",
         "@pkg/logger": "workspace:*",
+        "@pkg/lucide-remix": "workspace:*",
         "@pkg/markdown-remix": "workspace:*",
         "@pkg/markdown-server": "workspace:*",
         "@pkg/polar": "workspace:*",

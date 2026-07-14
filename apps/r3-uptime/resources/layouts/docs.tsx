@@ -10,6 +10,7 @@
 
 import type { Handle, RemixNode } from "remix/ui";
 
+import { MenuIcon } from "@pkg/lucide-remix";
 import { css } from "remix/ui";
 
 import type { DocSection } from "~/app/services/docs";
@@ -108,14 +109,7 @@ export default function DocsLayout(handle: Handle<DocsLayout.Props>) {
 						aria-label="Toggle navigation"
 						mix={[sidebarToggle]}
 					>
-						<svg viewBox="0 0 20 20" width={18} height={18} fill="none" aria-hidden="true">
-							<path
-								d="M3 5h14M3 10h14M3 15h14"
-								stroke="currentColor"
-								strokeWidth={1.5}
-								strokeLinecap="round"
-							/>
-						</svg>
+						<MenuIcon size={18} strokeWidth={1.5} />
 					</button>
 				</div>
 

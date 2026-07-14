@@ -13,6 +13,7 @@
 
 import type { Handle } from "remix/ui";
 
+import { CheckIcon } from "@pkg/lucide-remix";
 import { css } from "remix/ui";
 
 import AuthCta from "~/resources/components/marketing/auth-cta";
@@ -419,7 +420,8 @@ export default function HomeView(handle: Handle<HomeView.Props>) {
 									}),
 								]}
 							>
-								✓ Free to start
+								<CheckIcon size={16} />
+								Free to start
 							</span>
 							<span
 								mix={[
@@ -433,7 +435,8 @@ export default function HomeView(handle: Handle<HomeView.Props>) {
 									}),
 								]}
 							>
-								✓ Pay for automation
+								<CheckIcon size={16} />
+								Pay for automation
 							</span>
 							<span
 								mix={[
@@ -447,7 +450,8 @@ export default function HomeView(handle: Handle<HomeView.Props>) {
 									}),
 								]}
 							>
-								✓ Cancel anytime
+								<CheckIcon size={16} />
+								Cancel anytime
 							</span>
 						</div>
 					</div>
