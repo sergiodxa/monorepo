@@ -65,7 +65,7 @@ bunx react-router routes --json # Extract React Router routes as JSON for AI age
 - MUST use `interface` when possible, and `type` only when necessary (e.g. for union types)
 - MUST import `env` from `cloudflare:workers` and never from `process.env` or other sources
 - MUST extend root `tsconfig.json` in all packages and applications
-- MUST update `.oxfmtrc.json` to include new apps with their Tailwind configuration
+- MUST update `.oxfmtrc.json` to include new apps with their formatting and style configuration
 - MUST suggest new content for my blog when some pattern, package, feature, etc. could be interesting to write about and add it to [](./content/ideas.md)
 - MUST add new rules to this document when necessary, and update existing ones if they become outdated or need clarification
 - MUST follow the guidelines in this document, and suggest improvements when necessary
@@ -74,6 +74,7 @@ bunx react-router routes --json # Extract React Router routes as JSON for AI age
 - MUST check what Remix v3 provides before hand-rolling middleware/helpers — prefer `remix/cop-middleware`, `remix/session-middleware`, `createAction`/`createController`, `remix/data-schema`, `remix/auth`, and `remix/ui` over custom equivalents
 - MUST resolve app services (Database, API clients) through `@pkg/service-container` (ADR-008) via `inject([...])` / `getServiceContainer()`; keep request-lifecycle values (session, current user, tenant, request logger) in middleware/context, never in the container
 - MUST render server HTML as `remix/ui` JSX with `css()` mixins; never build HTML from strings (`remix/html-template` or inline HTML template literals)
+- MUST build application UI with `remix/ui`, not React components/hooks or Tailwind utility classes; style with `css()` mixins through `mix`, and attach behavior with Remix UI mixins or native HTML platform features
 - MUST build dialogs, popovers, menus, tooltips, and disclosure UI with native HTML platform features instead of JavaScript: `<dialog>` (with `.showModal()`/`::backdrop`) for modals, the Popover API (`popover` + `popovertarget` attributes) for popovers/menus/tooltips, the Command Invoker API (`<button commandfor command>` with `command="show-modal"`/`"close"`/`"toggle-popover"`/`"show-popover"`/`"hide-popover"` or `command="--custom"` handled via the `command` event) to wire buttons to targets declaratively, and `<details>`/`<summary>` for disclosures — reach for JS only for behavior the platform genuinely cannot express, and prefer progressive enhancement over JS-driven open/close state
 - MUST call the global `fetch` directly; never add an injectable fetch parameter (e.g. `fetchImpl: typeof fetch = fetch`)
 - MUST describe code on its own terms in comments; never name another app or package as the source of a pattern (e.g. "mirrors the r3-blog app")

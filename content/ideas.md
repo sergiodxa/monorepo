@@ -4,6 +4,17 @@ This document contains potential articles and tutorials based on patterns and co
 
 ## ARTICLES (Explanations/Opinions)
 
+### Applying Apple's Human Interface Guidelines to Web Apps
+
+Apple's HIG is written for native platforms, but its principles map well to responsive web apps when translated into Remix UI and browser primitives: mobile-first task focus, desktop sidebars and toolbars, safe-area-aware fixed UI, semantic controls, visible gesture alternatives, `css()` mixins, and motion/color preferences.
+
+**Mentions:** Apple HIG, iOS web design, macOS web design, responsive layouts, safe areas, touch targets, Remix UI, `css()` mixins, web platform primitives.
+
+_Relevant Files_:
+
+- `.agents/skills/apple-hig-web-app-guidelines/SKILL.md`
+- `.agents/skills/apple-hig-web-app-guidelines/rules/adaptive-ios-macos-layouts.md`
+
 ### Building Multi-Tenant Applications with Cloudflare Durable Objects
 
 Each tenant runs as a Durable Object with its own SQLite database (`SqlStorage`), providing strong data isolation. A generic example can be a project-management platform where each workspace maps to one Durable Object, with host-based routing via `cf.hostMetadata` and region-aware location hints.
