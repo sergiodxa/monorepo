@@ -11,6 +11,7 @@
 		"format:fix": "bunx oxfmt",
 		"lint": "oxlint --deny-warnings",
 		"lint:fix": "oxlint --deny-warnings --fix",
+		"test": "bun test --isolate",
 		"typecheck": "bun run --workspaces typecheck",
 		"upgrade": "bun scripts/upgrade-dependencies.ts",
 		"upgrade:dry-run": "bun scripts/upgrade-dependencies.ts --dry-run",
