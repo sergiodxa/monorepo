@@ -1,0 +1,22 @@
+{
+	"name": "@pkg/lucide-remix",
+	"version": "0.0.1",
+	"private": true,
+	"type": "module",
+	"sideEffects": false,
+	"exports": {
+		".": "./src/index.ts"
+	},
+	"scripts": {
+		"typecheck": "tsc --noEmit",
+		"generate": "bun run scripts/generate-icons.ts"
+	},
+	"dependencies": {
+		"remix": "3.0.0-beta.5"
+	},
+	"devDependencies": {
+		"@types/bun": "^1.3.14",
+		"@types/node": "^26.0.0",
+		"lucide-static": "^1.16.0"
+	}
+}
