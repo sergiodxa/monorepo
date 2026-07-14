@@ -1,7 +1,11 @@
 /**
- * HTTP monitors list controller. Lists the team's monitors with their 24h health
- * badge (derived from Analytics Engine; see `app/services/analytics.ts`). Requires
- * `requireUser` + `requireTeam`.
+ * HTTP monitors list controller. Lists the team's monitors, each paired with its
+ * single most recent Analytics Engine result (see `getLatestHttpResult` in
+ * `app/services/analytics.ts`), fetched one query per monitor in parallel via
+ * `Promise.all` — the same "one query per monitor, run in parallel" pattern this app
+ * already uses elsewhere for per-row Analytics Engine data. From that latest result, a
+ * per-monitor status (up/degraded/down/unknown) is derived via `calculateMonitorStatus`.
+ * Requires `requireUser` + `requireTeam`.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -14,13 +18,11 @@ import { getContext } from "remix/async-context-middleware";
 import { Database } from "remix/data-table";
 import { createAction } from "remix/fetch-router";
 
-import type { MonitorHealth } from "~/app/services/analytics";
-
 import Monitor from "~/app/data/monitor";
 import { getViewer } from "~/app/http/middleware/auth";
 import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
-import { getTeamHttpSummaries } from "~/app/services/analytics";
+import { calculateMonitorStatus, getLatestHttpResult } from "~/app/services/analytics";
 import LinkButton from "~/resources/components/link-button";
 import AppShell from "~/resources/layouts/app-shell";
 import DocumentLayout from "~/resources/layouts/document";
@@ -36,17 +38,22 @@ export default createAction(routes.app.team.monitors.index, {
 		if (!viewer) throw new Error("requireUser must run before this handler");
 
 		let monitors = await Monitor.listByTeam(db, ctx.team.id);
-		let summaries = await getTeamHttpSummaries(ctx.team.id);
-		let healthByMonitorId = new Map<string, MonitorHealth>(
-			isFailure(summaries)
-				? []
-				: summaries.data.map((summary) => [summary.monitorId, summary.health]),
+
+		let latestResults = await Promise.all(
+			monitors.map((monitor) => getLatestHttpResult(ctx.team.id, monitor.id)),
 		);
 
-		let rows = monitors.map((monitor) => ({
-			monitor,
-			health: healthByMonitorId.get(monitor.id) ?? ("pending" as MonitorHealth),
-		}));
+		let rows = monitors.map((monitor, index) => {
+			let latestResult = latestResults[index]!;
+			let latest = isFailure(latestResult) ? null : latestResult.data;
+
+			return {
+				monitor,
+				status: calculateMonitorStatus(latest, monitor.expected_status, monitor.degraded_after_ms),
+				responseTimeMs: latest?.responseTimeMs ?? null,
+				lastCheckedAt: latest?.timestamp ?? null,
+			};
+		});
 
 		return ctx.render(
 			<DocumentLayout title={`${ctx.team.name} · HTTP monitors`}>

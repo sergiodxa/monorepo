@@ -45,6 +45,26 @@ export interface LatestHttpResult {
 	timestamp: string;
 }
 
+/** A monitor's status as derived from its single most recent HTTP result (see {@link calculateMonitorStatus}). */
+export type MonitorStatus = "up" | "degraded" | "down" | "unknown";
+
+/**
+ * Derives a monitor's status from its latest result: `unknown` with no result yet (or
+ * a null response status), `down` when the response status doesn't match what's
+ * expected, `degraded` once the response time reaches the configured threshold, `up`
+ * otherwise.
+ */
+export function calculateMonitorStatus(
+	latestResult: LatestHttpResult | null,
+	expectedStatus: number,
+	degradedAfterMs: number,
+): MonitorStatus {
+	if (!latestResult || latestResult.responseStatus == null) return "unknown";
+	if (latestResult.responseStatus !== expectedStatus) return "down";
+	if (latestResult.responseTimeMs >= degradedAfterMs) return "degraded";
+	return "up";
+}
+
 /** One point in a monitor's recent latency sparkline (see {@link getMonitorSparkline}). */
 export interface SparklinePoint {
 	timestamp: string;
