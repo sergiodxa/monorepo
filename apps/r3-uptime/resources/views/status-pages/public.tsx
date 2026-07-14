@@ -9,6 +9,13 @@
 
 import type { Handle } from "remix/ui";
 
+import {
+	CircleCheckBigIcon,
+	CircleMinusIcon,
+	CircleXIcon,
+	ClockIcon,
+	TriangleAlertIcon,
+} from "@pkg/lucide-remix";
 import { css } from "remix/ui";
 
 import type { ServiceStatus } from "~/app/services/status-page";
@@ -17,7 +24,7 @@ import type { BadgeTone } from "~/resources/components/badge";
 
 import Badge from "~/resources/components/badge";
 import EmptyState from "~/resources/components/empty-state";
-import { neutral, primary } from "~/resources/theme";
+import { neutral, primary, status } from "~/resources/theme";
 import Heatmap from "~/resources/views/shared/heatmap";
 import routes from "~/routes/web";
 
@@ -117,6 +124,19 @@ const BANNER_LABEL: Record<ServiceStatus, string> = {
 	unknown: "All Systems Operational",
 };
 
+/**
+ * Icon shown in the overall-status banner. `computeOverallStatus` never actually
+ * returns `"unknown"`, but this mirrors {@link BANNER_MIX} and {@link BANNER_LABEL}
+ * by aliasing it to the operational icon rather than surfacing a separate "unknown"
+ * banner state.
+ */
+const BANNER_ICON: Record<ServiceStatus, typeof CircleCheckBigIcon> = {
+	operational: CircleCheckBigIcon,
+	degraded: TriangleAlertIcon,
+	down: CircleXIcon,
+	unknown: CircleCheckBigIcon,
+};
+
 const BADGE_TONE: Record<ServiceStatus, BadgeTone> = {
 	operational: "up",
 	degraded: "degraded",
@@ -131,6 +151,48 @@ const BADGE_LABEL: Record<ServiceStatus, string> = {
 	unknown: "Unknown",
 };
 
+/** Status icon shown left of each card's name, and (operational/degraded/down only) in the overall-status banner. */
+const STATUS_ICON: Record<ServiceStatus, typeof CircleCheckBigIcon> = {
+	operational: CircleCheckBigIcon,
+	degraded: TriangleAlertIcon,
+	down: CircleXIcon,
+	unknown: CircleMinusIcon,
+};
+
+/** Colors a status icon to match its {@link BadgeTone}; combine with the icon's `mix` prop. */
+const ICON_COLOR_MIX: Record<BadgeTone, ReturnType<typeof css>> = {
+	up: css({
+		color: status.up.light,
+		"@media (prefers-color-scheme: dark)": { color: status.up.dark },
+	}),
+	degraded: css({
+		color: status.degraded.light,
+		"@media (prefers-color-scheme: dark)": { color: status.degraded.dark },
+	}),
+	down: css({
+		color: status.down.light,
+		"@media (prefers-color-scheme: dark)": { color: status.down.dark },
+	}),
+	neutral: css({
+		color: status.neutral.light,
+		"@media (prefers-color-scheme: dark)": { color: status.neutral.dark },
+	}),
+};
+
+namespace CardStatusIcon {
+	export interface Props {
+		status: ServiceStatus;
+	}
+}
+
+/** Colored status icon shown to the left of a card's name, next to its {@link Badge} pill. */
+function CardStatusIcon(handle: Handle<CardStatusIcon.Props>) {
+	return () => {
+		let Icon = STATUS_ICON[handle.props.status];
+		return <Icon size={16} mix={[ICON_COLOR_MIX[BADGE_TONE[handle.props.status]]]} />;
+	};
+}
+
 /** Renders the public status page: an optional overall-status banner, one card per attached HTTP/DNS/TCP monitor with a 365-day heatmap, cron-job cards with schedule and last-ping time, or an empty state when nothing is attached. */
 export default function StatusPageView(handle: Handle<StatusPageView.Props>) {
 	return () => {
@@ -138,6 +200,7 @@ export default function StatusPageView(handle: Handle<StatusPageView.Props>) {
 			handle.props;
 		let heatmapServices = [...httpServices, ...dnsServices, ...tcpServices];
 		let isEmpty = heatmapServices.length === 0 && cronServices.length === 0;
+		let BannerIcon = BANNER_ICON[overallStatus];
 
 		return (
 			<main
@@ -149,26 +212,45 @@ export default function StatusPageView(handle: Handle<StatusPageView.Props>) {
 					}),
 				]}
 			>
-				<div mix={[css({ display: "flex", alignItems: "center", gap: 12 })]}>
-					{page.logo_url && <img src={page.logo_url} alt={page.name} width={40} height={40} />}
-					<div>
-						<h1 mix={[css({ margin: "0 0 4px" })]}>{page.title}</h1>
-						{page.description && (
-							<p
-								mix={[
-									css({
-										fontSize: "0.8125rem",
-										color: neutral[500],
-										"@media (prefers-color-scheme: dark)": {
-											color: neutral[400],
-										},
-									}),
-								]}
-							>
-								{page.description}
-							</p>
-						)}
-					</div>
+				<div
+					mix={[
+						css({
+							display: "flex",
+							flexDirection: "column",
+							alignItems: "center",
+							textAlign: "center",
+							gap: 4,
+							marginBottom: 32,
+						}),
+					]}
+				>
+					{page.logo_url && (
+						<img
+							src={page.logo_url}
+							alt={page.name}
+							width={64}
+							height={64}
+							mix={[css({ marginBottom: 12 })]}
+						/>
+					)}
+					<h1 mix={[css({ margin: "0 0 4px", fontSize: "1.875rem", fontWeight: 700 })]}>
+						{page.title}
+					</h1>
+					{page.description && (
+						<p
+							mix={[
+								css({
+									fontSize: "0.8125rem",
+									color: neutral[500],
+									"@media (prefers-color-scheme: dark)": {
+										color: neutral[400],
+									},
+								}),
+							]}
+						>
+							{page.description}
+						</p>
+					)}
 				</div>
 
 				{page.show_overall_status && (
@@ -177,6 +259,7 @@ export default function StatusPageView(handle: Handle<StatusPageView.Props>) {
 							css({
 								display: "flex",
 								alignItems: "center",
+								justifyContent: "center",
 								gap: 10,
 								padding: "14px 18px",
 								borderRadius: 8,
@@ -187,7 +270,8 @@ export default function StatusPageView(handle: Handle<StatusPageView.Props>) {
 							BANNER_MIX[overallStatus],
 						]}
 					>
-						{BANNER_LABEL[overallStatus]}
+						<BannerIcon size={22} />
+						<span>{BANNER_LABEL[overallStatus]}</span>
 					</div>
 				)}
 
@@ -216,6 +300,7 @@ export default function StatusPageView(handle: Handle<StatusPageView.Props>) {
 								]}
 							>
 								<div mix={[css({ display: "flex", alignItems: "center", gap: 12 })]}>
+									<CardStatusIcon status={service.status} />
 									<strong>{service.name}</strong>
 									<Badge tone={BADGE_TONE[service.status]}>{BADGE_LABEL[service.status]}</Badge>
 								</div>
@@ -247,12 +332,16 @@ export default function StatusPageView(handle: Handle<StatusPageView.Props>) {
 										]}
 									>
 										<div mix={[css({ display: "flex", alignItems: "center", gap: 12 })]}>
+											<CardStatusIcon status={service.status} />
 											<strong>{service.name}</strong>
 											<Badge tone={BADGE_TONE[service.status]}>{BADGE_LABEL[service.status]}</Badge>
 										</div>
 										<p
 											mix={[
 												css({
+													display: "flex",
+													alignItems: "center",
+													gap: 4,
 													fontSize: "0.8125rem",
 													color: neutral[500],
 													"@media (prefers-color-scheme: dark)": {
@@ -261,7 +350,10 @@ export default function StatusPageView(handle: Handle<StatusPageView.Props>) {
 												}),
 											]}
 										>
-											Schedule: <code>{service.cronExpression}</code>
+											<ClockIcon size={12} />
+											<span>
+												Schedule: <code>{service.cronExpression}</code>
+											</span>
 										</p>
 										<p
 											mix={[
