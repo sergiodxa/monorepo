@@ -1,29 +1,15 @@
 /**
- * Client island: a row's view/edit/delete actions menu, opened from a kebab-icon
- * trigger. Built on `remix/ui/menu`'s `Menu`/`MenuItem` rather than a hand-rolled
- * `commandfor`/`[popover]` pair, because `Menu`'s trigger positions its panel via
- * `remix/ui/anchor`'s `anchor()` — which computes explicit pixel `top`/`left` from
- * the trigger's own `getBoundingClientRect()` and writes them onto the panel's
- * inline style — rather than relying on the panel's CSS containing block. That
- * sidesteps the exact problem a plain `position: absolute` panel has once a
- * `[popover]` is promoted to the top layer: at that point its containing block is
- * the viewport, not any DOM ancestor, so per-row panels positioned via CSS alone
- * all resolve to the same spot regardless of which row's trigger opened them.
- *
- * `Menu`'s open/close and its `anchor()` positioning both run entirely in JS (its
- * trigger sets no `commandfor`/`popovertarget`, only a click listener that calls
- * `showPopover()`/`hidePopover()` on the panel) — with no JS, clicking the trigger
- * does nothing at all. So each row needs its own hydrated instance of this
- * component, the same way `~/resources/components/logo.tsx` already hydrates one
- * instance per team in the sidebar's team-picker list — multiple instances of one
- * client island already work on this page's own layout.
- *
- * View/edit navigate via `location.href` (there's no native fallback without JS,
- * since `MenuItem`'s underlying element is a `<div role="menuitem">`, not an `<a>`).
- * Delete opens this row's own SSR-rendered confirmation `<dialog>` (rendered by the
- * caller, matching `~/resources/views/monitors/edit.tsx`'s dialog markup) via
- * `showModal()` — the dialog itself needs no hydration, `showModal()` is a plain
- * `HTMLDialogElement` method.
+ * A row's view/edit/delete actions menu, opened from a kebab-icon trigger — pure
+ * SSR, no client JS. Uses the native Popover API (`commandfor`/`command`) exactly
+ * like `~/resources/layouts/app-shell.tsx`'s team-picker/user-menu dropdowns, but
+ * anchors the panel to its own trigger via CSS anchor positioning (`anchor-name` on
+ * the trigger, `position-anchor`/`anchor()` on the panel) instead of a fixed
+ * viewport offset — anchor positioning computes the panel's position per-instance
+ * in the browser's own layout engine, so N independently-positioned triggers (one
+ * per table row) each get a correctly-placed panel with zero JS, sidestepping the
+ * exact problem a plain `position: absolute` panel has once a `[popover]` is
+ * promoted to the top layer (its containing block becomes the viewport, not any
+ * DOM ancestor, so every row's panel would otherwise resolve to the same spot).
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -32,96 +18,137 @@
 import type { Handle } from "remix/ui";
 
 import { EllipsisVerticalIcon, EyeIcon, PencilIcon, TrashIcon } from "@pkg/lucide-remix";
-import { clientEntry, css, on } from "remix/ui";
-import { Menu, MenuItem } from "remix/ui/menu";
+import { css } from "remix/ui";
 
-import { danger } from "~/resources/theme";
+import { danger, neutral } from "~/resources/theme";
 
-/** Props must be a `type` (not `interface`) to satisfy `SerializableProps`. */
-type MonitorRowActionsProps = {
-	monitorName: string;
-	viewHref: string;
-	editHref: string;
-	deleteDialogId: string;
-};
+namespace MonitorRowActions {
+	export interface Props {
+		monitorName: string;
+		viewHref: string;
+		editHref: string;
+		deleteDialogId: string;
+	}
+}
 
-/** Square, icon-only trigger — overrides `Menu`'s default text-button layout (label + trailing chevron). */
-const triggerStyle = css({
-	width: 32,
-	height: 32,
-	padding: 0,
+/** Square, icon-only trigger. */
+const trigger = css({
 	display: "inline-flex",
 	alignItems: "center",
 	justifyContent: "center",
-	/**
-	 * `!important` because `Menu`'s own built-in trigger-indicator style (the
-	 * trailing chevron every `Menu` renders, regardless of `label` content) has
-	 * equal-or-higher specificity than a plain `& > svg:last-child` override —
-	 * a two-icon trigger like this one has no use for that indicator at all.
-	 */
-	"& > svg:last-child": { display: "none !important" },
+	width: 32,
+	height: 32,
+	padding: 0,
+	borderRadius: 6,
+	border: `1px solid ${neutral[300]}`,
+	background: "#ffffff",
+	color: "inherit",
+	cursor: "pointer",
+	"&:hover": { background: neutral[50] },
+	"@media (prefers-color-scheme: dark)": {
+		background: neutral[900],
+		borderColor: neutral[700],
+		"&:hover": { background: neutral[800] },
+	},
 });
 
-const menuItem = css({ display: "flex", alignItems: "center", gap: 8 });
+/**
+ * Panel anchored to its own trigger: below it, right edges aligned (so it never
+ * overflows past the table's right edge, since the trigger sits in the last
+ * column). Falls back to the UA's default centered-viewport popover position in
+ * browsers without anchor positioning support — a graceful, if imperfect,
+ * degradation rather than a broken popover.
+ */
+function panel(anchorName: string) {
+	return css({
+		position: "absolute",
+		positionAnchor: anchorName,
+		// `position-area` places the panel in a region relative to the anchor
+		// (below it, right edges flush) without needing to hand-compute each
+		// axis via `anchor()` — `bottom span-left` reads as "below the anchor,
+		// spanning toward its left" (i.e. right-aligned to the anchor).
+		positionArea: "bottom span-left",
+		marginTop: 4,
+		width: 160,
+		margin: 0,
+		padding: 6,
+		borderRadius: 8,
+		border: `1px solid ${neutral[200]}`,
+		background: "#ffffff",
+		boxShadow: "0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1)",
+		"&::backdrop": { background: "rgba(0, 0, 0, 0.2)" },
+		"@media (prefers-color-scheme: dark)": {
+			background: neutral[950],
+			borderColor: neutral[800],
+		},
+	});
+}
 
-/** Applied on top of {@link menuItem} for the destructive "Delete" entry. */
-const menuItemDanger = css({ color: danger[600] });
+/** Single row inside the panel. */
+const item = css({
+	display: "flex",
+	alignItems: "center",
+	gap: 8,
+	width: "100%",
+	padding: "6px 8px",
+	border: "none",
+	borderRadius: 6,
+	background: "transparent",
+	color: neutral[900],
+	fontFamily: "inherit",
+	fontSize: "0.875rem",
+	textAlign: "left",
+	textDecoration: "none",
+	cursor: "pointer",
+	"&:hover": { background: neutral[100] },
+	"@media (prefers-color-scheme: dark)": {
+		color: neutral[50],
+		"&:hover": { background: neutral[800] },
+	},
+});
 
-/** Renders a row's kebab-icon menu (view/edit/delete), positioned next to its own trigger via `Menu`'s JS-driven `anchor()`. */
-export const MonitorRowActions = clientEntry(
-	"/resources/components/monitor-row-actions.tsx#MonitorRowActions",
-	function MonitorRowActions(handle: Handle<MonitorRowActionsProps>) {
-		return () => {
-			let { monitorName, viewHref, editHref, deleteDialogId } = handle.props;
+/** Applied on top of {@link item} for the destructive "Delete" entry. */
+const itemDanger = css({ color: danger[600] });
 
-			return (
-				<Menu
-					label={<EllipsisVerticalIcon size={16} strokeWidth={1.5} />}
+/** Renders a row's kebab-icon menu (view/edit/delete), CSS-anchored to its own trigger. */
+export default function MonitorRowActions(handle: Handle<MonitorRowActions.Props>) {
+	return () => {
+		let { monitorName, viewHref, editHref, deleteDialogId } = handle.props;
+		let menuId = `row-menu-${deleteDialogId}`;
+		let anchorName = `--row-menu-${deleteDialogId}`;
+
+		return (
+			<>
+				<button
+					type="button"
+					commandfor={menuId}
+					command="toggle-popover"
 					aria-label={`Actions for ${monitorName}`}
-					mix={[triggerStyle]}
+					mix={[trigger, css({ anchorName })]}
 				>
-					<MenuItem
-						name="view"
-						mix={[
-							menuItem,
-							on("click", () => {
-								location.href = viewHref;
-							}),
-						]}
-					>
+					<EllipsisVerticalIcon size={16} strokeWidth={1.5} />
+				</button>
+
+				<div id={menuId} popover="auto" mix={[panel(anchorName)]}>
+					<a href={viewHref} mix={[item]}>
 						<EyeIcon size={16} strokeWidth={1.5} />
 						<span>View</span>
-					</MenuItem>
-					<MenuItem
-						name="edit"
-						mix={[
-							menuItem,
-							on("click", () => {
-								location.href = editHref;
-							}),
-						]}
-					>
+					</a>
+					<a href={editHref} mix={[item]}>
 						<PencilIcon size={16} strokeWidth={1.5} />
 						<span>Edit</span>
-					</MenuItem>
-					<MenuItem
-						name="delete"
-						mix={[
-							menuItem,
-							menuItemDanger,
-							on("click", () => {
-								let dialog = document.getElementById(deleteDialogId);
-								if (dialog instanceof HTMLDialogElement) dialog.showModal();
-							}),
-						]}
+					</a>
+					<button
+						type="button"
+						commandfor={deleteDialogId}
+						command="show-modal"
+						mix={[item, itemDanger]}
 					>
 						<TrashIcon size={16} strokeWidth={1.5} />
 						<span>Delete</span>
-					</MenuItem>
-				</Menu>
-			);
-		};
-	},
-);
-
-export default MonitorRowActions;
+					</button>
+				</div>
+			</>
+		);
+	};
+}
