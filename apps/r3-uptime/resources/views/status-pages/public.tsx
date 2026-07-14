@@ -206,7 +206,7 @@ export default function StatusPageView(handle: Handle<StatusPageView.Props>) {
 			<main
 				mix={[
 					css({
-						maxWidth: 896,
+						maxWidth: 640,
 						margin: "0 auto",
 						padding: "40px 20px",
 					}),
