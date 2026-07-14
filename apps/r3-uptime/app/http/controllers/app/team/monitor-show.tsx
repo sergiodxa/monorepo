@@ -7,14 +7,14 @@
  */
 
 import { notFound } from "@pkg/http/response/html";
-import { PencilIcon, PlayIcon, RefreshCwIcon } from "@pkg/lucide-remix";
+import { PencilIcon, RefreshCwIcon } from "@pkg/lucide-remix";
 import { isFailure } from "@pkg/result";
 import { inject } from "@pkg/service-container";
 import { getContext } from "remix/async-context-middleware";
 import * as s from "remix/data-schema";
 import { Database } from "remix/data-table";
 import { createAction } from "remix/fetch-router";
-import { css, Fragment } from "remix/ui";
+import { Fragment } from "remix/ui";
 
 import Monitor from "~/app/data/monitor";
 import MonitorDailyStats from "~/app/data/monitor-daily-stats";
@@ -22,8 +22,8 @@ import { getViewer } from "~/app/http/middleware/auth";
 import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
 import { getMonitorSparkline } from "~/app/services/analytics";
-import Button from "~/resources/components/button";
 import LinkButton from "~/resources/components/link-button";
+import RunMonitorButton from "~/resources/components/run-monitor-button";
 import AppShell from "~/resources/layouts/app-shell";
 import DocumentLayout from "~/resources/layouts/document";
 import MonitorShowView from "~/resources/views/monitors/show";
@@ -66,17 +66,10 @@ export default createAction(routes.app.team.monitors.show, {
 					]}
 					actions={
 						<Fragment>
-							<form
-								method="post"
+							<RunMonitorButton
 								action={routes.actions.monitor.http.play.href({ team: ctx.team.slug })}
-								mix={[css({ margin: 0 })]}
-							>
-								<input type="hidden" name="monitor_id" value={monitor.id} />
-								<Button type="submit" variant="outline">
-									<PlayIcon size={16} strokeWidth={1.5} />
-									Run Monitor
-								</Button>
-							</form>
+								monitorId={monitor.id}
+							/>
 							<LinkButton
 								href={routes.app.team.monitors.edit.href({
 									team: ctx.team.slug,
