@@ -1,8 +1,9 @@
 /**
- * Compound empty-state box — centered dashed-border card. Compose `EmptyIcon`,
- * `EmptyTitle`, `EmptyDescription`, and `EmptyAction` inside it for a full "no X
- * yet" state with a call to action, or just `EmptyDescription` alone for a
- * lighter-weight inline placeholder (a loading fallback, an empty table).
+ * Compound empty-state box — centered dashed-border card. Compose `Empty.Icon`,
+ * `Empty.Title`, `Empty.Description`, and `Empty.Action` inside it for a full
+ * "no X yet" state with a call to action, or just `Empty.Description` alone for
+ * a lighter-weight inline placeholder (a loading fallback, an empty table). Only
+ * `Empty` itself needs importing — the rest hang off it as static properties.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -37,15 +38,13 @@ const empty = css({
 	},
 });
 
-/** Centered dashed-border container; place {@link EmptyIcon}/{@link EmptyTitle}/{@link EmptyDescription}/{@link EmptyAction} inside. */
-export function Empty(handle: Handle<Empty.Props>) {
+/** Centered dashed-border container; place `Empty.Icon`/`Empty.Title`/`Empty.Description`/`Empty.Action` inside. */
+export default function Empty(handle: Handle<Empty.Props>) {
 	return () => <div mix={[empty]}>{handle.props.children}</div>;
 }
 
-namespace EmptyIcon {
-	export interface Props {
-		children: RemixNode;
-	}
+interface EmptyIconProps {
+	children: RemixNode;
 }
 
 const emptyIcon = css({
@@ -58,14 +57,21 @@ const emptyIcon = css({
 	border: `1px solid ${neutral[300]}`,
 	background: neutral[100],
 	color: "inherit",
+	/**
+	 * Constrains the icon to a fixed, smaller-than-the-badge size no matter what
+	 * `size` prop the icon itself was given — without this, an icon sized to fill
+	 * the badge (e.g. 48px in a 48px circle) touches the circle's edge and reads
+	 * as visually broken.
+	 */
+	"& svg": { width: 24, height: 24 },
 	"@media (prefers-color-scheme: dark)": {
 		borderColor: neutral[700],
 		background: neutral[800],
 	},
 });
 
-/** Circular badge around a resource icon; the icon itself picks up its color from here via `currentColor`. */
-export function EmptyIcon(handle: Handle<EmptyIcon.Props>) {
+/** Circular badge around a resource icon, padded so the icon always renders smaller than the badge; the icon picks up its color from here via `currentColor`. */
+function EmptyIcon(handle: Handle<EmptyIconProps>) {
 	return () => (
 		<div mix={[emptyIcon]} aria-hidden>
 			{handle.props.children}
@@ -73,10 +79,8 @@ export function EmptyIcon(handle: Handle<EmptyIcon.Props>) {
 	);
 }
 
-namespace EmptyTitle {
-	export interface Props {
-		children: RemixNode;
-	}
+interface EmptyTitleProps {
+	children: RemixNode;
 }
 
 const emptyTitle = css({
@@ -88,14 +92,12 @@ const emptyTitle = css({
 });
 
 /** Bold, compact heading. */
-export function EmptyTitle(handle: Handle<EmptyTitle.Props>) {
+function EmptyTitle(handle: Handle<EmptyTitleProps>) {
 	return () => <h3 mix={[emptyTitle]}>{handle.props.children}</h3>;
 }
 
-namespace EmptyDescription {
-	export interface Props {
-		children: RemixNode;
-	}
+interface EmptyDescriptionProps {
+	children: RemixNode;
 }
 
 const emptyDescription = css({
@@ -107,21 +109,22 @@ const emptyDescription = css({
 });
 
 /** Muted supporting copy below the title. */
-export function EmptyDescription(handle: Handle<EmptyDescription.Props>) {
+function EmptyDescription(handle: Handle<EmptyDescriptionProps>) {
 	return () => <p mix={[emptyDescription]}>{handle.props.children}</p>;
 }
 
-namespace EmptyAction {
-	export interface Props {
-		children: RemixNode;
-	}
+interface EmptyActionProps {
+	children: RemixNode;
 }
 
 const emptyAction = css({ marginTop: 4 });
 
 /** Wraps the primary call-to-action (a `LinkButton`/`Button`) with a bit of extra top spacing. */
-export function EmptyAction(handle: Handle<EmptyAction.Props>) {
+function EmptyAction(handle: Handle<EmptyActionProps>) {
 	return () => <div mix={[emptyAction]}>{handle.props.children}</div>;
 }
 
-export default { Empty, EmptyIcon, EmptyTitle, EmptyDescription, EmptyAction };
+Empty.Icon = EmptyIcon;
+Empty.Title = EmptyTitle;
+Empty.Description = EmptyDescription;
+Empty.Action = EmptyAction;

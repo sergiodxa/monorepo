@@ -15,13 +15,7 @@ import type { SelectTcpMonitor } from "~/database/schema";
 import type { BadgeTone } from "~/resources/components/badge";
 
 import Badge from "~/resources/components/badge";
-import {
-	Empty,
-	EmptyAction,
-	EmptyDescription,
-	EmptyIcon,
-	EmptyTitle,
-} from "~/resources/components/empty";
+import Empty from "~/resources/components/empty";
 import LinkButton from "~/resources/components/link-button";
 import { neutral, primary } from "~/resources/theme";
 import routes from "~/routes/web";
@@ -48,19 +42,19 @@ export default function TcpMonitorsView(handle: Handle<TcpMonitorsView.Props>) {
 			<div>
 				{monitors.length === 0 ? (
 					<Empty>
-						<EmptyIcon>
-							<NetworkIcon size={48} strokeWidth={1.5} />
-						</EmptyIcon>
-						<EmptyTitle>No TCP monitors yet</EmptyTitle>
-						<EmptyDescription>
+						<Empty.Icon>
+							<NetworkIcon size={24} strokeWidth={1.5} />
+						</Empty.Icon>
+						<Empty.Title>No TCP monitors yet</Empty.Title>
+						<Empty.Description>
 							Create a TCP monitor to check if ports are open and responsive.
-						</EmptyDescription>
-						<EmptyAction>
+						</Empty.Description>
+						<Empty.Action>
 							<LinkButton href={routes.app.team.tcpMonitors.new.href({ team: team.slug })}>
 								<PlusIcon size={20} strokeWidth={1.5} />
 								Create TCP Monitor
 							</LinkButton>
-						</EmptyAction>
+						</Empty.Action>
 					</Empty>
 				) : (
 					<div mix={[css({ overflowX: "auto" })]}>

@@ -19,7 +19,7 @@ import Monitor from "~/app/data/monitor";
 import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
 import { getTeamHttpSummaries } from "~/app/services/analytics";
-import { Empty, EmptyDescription } from "~/resources/components/empty";
+import Empty from "~/resources/components/empty";
 import StatCard from "~/resources/components/stat-card";
 import Subtitle from "~/resources/components/subtitle";
 import routes from "~/routes/web";
@@ -38,9 +38,9 @@ export default createAction(routes.app.team.dashboard.cards.slowestEndpoint, {
 		if (isFailure(summaries)) {
 			return ctx.render(
 				<Empty>
-					<EmptyDescription>
+					<Empty.Description>
 						Analytics data temporarily unavailable. Please retry later.
-					</EmptyDescription>
+					</Empty.Description>
 				</Empty>,
 			);
 		}

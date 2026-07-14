@@ -15,13 +15,7 @@ import type { SelectDnsMonitor } from "~/database/schema";
 import type { BadgeTone } from "~/resources/components/badge";
 
 import Badge from "~/resources/components/badge";
-import {
-	Empty,
-	EmptyAction,
-	EmptyDescription,
-	EmptyIcon,
-	EmptyTitle,
-} from "~/resources/components/empty";
+import Empty from "~/resources/components/empty";
 import LinkButton from "~/resources/components/link-button";
 import { neutral, primary } from "~/resources/theme";
 import routes from "~/routes/web";
@@ -48,17 +42,17 @@ export default function DnsMonitorsView(handle: Handle<DnsMonitorsView.Props>) {
 			<div>
 				{monitors.length === 0 ? (
 					<Empty>
-						<EmptyIcon>
-							<GlobeIcon size={48} strokeWidth={1.5} />
-						</EmptyIcon>
-						<EmptyTitle>No DNS monitors yet</EmptyTitle>
-						<EmptyDescription>Create a DNS monitor to track DNS record changes.</EmptyDescription>
-						<EmptyAction>
+						<Empty.Icon>
+							<GlobeIcon size={24} strokeWidth={1.5} />
+						</Empty.Icon>
+						<Empty.Title>No DNS monitors yet</Empty.Title>
+						<Empty.Description>Create a DNS monitor to track DNS record changes.</Empty.Description>
+						<Empty.Action>
 							<LinkButton href={routes.app.team.dnsMonitors.new.href({ team: team.slug })}>
 								<PlusIcon size={20} strokeWidth={1.5} />
 								Create DNS Monitor
 							</LinkButton>
-						</EmptyAction>
+						</Empty.Action>
 					</Empty>
 				) : (
 					<div mix={[css({ overflowX: "auto" })]}>

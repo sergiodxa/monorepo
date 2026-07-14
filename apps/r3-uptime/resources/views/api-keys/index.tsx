@@ -17,13 +17,7 @@ import type { SelectApiKey, SelectTeam } from "~/database/schema";
 import Badge from "~/resources/components/badge";
 import Button from "~/resources/components/button";
 import CopyButton from "~/resources/components/copy-button";
-import {
-	Empty,
-	EmptyAction,
-	EmptyDescription,
-	EmptyIcon,
-	EmptyTitle,
-} from "~/resources/components/empty";
+import Empty from "~/resources/components/empty";
 import LinkButton from "~/resources/components/link-button";
 import { neutral } from "~/resources/theme";
 import routes from "~/routes/web";
@@ -72,19 +66,19 @@ export default function ApiKeysView(handle: Handle<ApiKeysView.Props>) {
 
 				{apiKeys.length === 0 ? (
 					<Empty>
-						<EmptyIcon>
-							<KeyIcon size={48} strokeWidth={1.5} />
-						</EmptyIcon>
-						<EmptyTitle>No API keys yet</EmptyTitle>
-						<EmptyDescription>
+						<Empty.Icon>
+							<KeyIcon size={24} strokeWidth={1.5} />
+						</Empty.Icon>
+						<Empty.Title>No API keys yet</Empty.Title>
+						<Empty.Description>
 							Create an API key to access the Uptime API programmatically.
-						</EmptyDescription>
-						<EmptyAction>
+						</Empty.Description>
+						<Empty.Action>
 							<LinkButton href={routes.app.team.apiKeys.new.href({ team: team.slug })}>
 								<PlusIcon size={20} strokeWidth={1.5} />
 								Create API Key
 							</LinkButton>
-						</EmptyAction>
+						</Empty.Action>
 					</Empty>
 				) : (
 					<div mix={[css({ overflowX: "auto" })]}>

@@ -14,13 +14,7 @@ import { css } from "remix/ui";
 import type { SelectAlert, SelectMonitor } from "~/database/schema";
 
 import { MAX_ALERTS_PER_TEAM } from "~/app/data/alert";
-import {
-	Empty,
-	EmptyAction,
-	EmptyDescription,
-	EmptyIcon,
-	EmptyTitle,
-} from "~/resources/components/empty";
+import Empty from "~/resources/components/empty";
 import LinkButton from "~/resources/components/link-button";
 import { neutral, primary } from "~/resources/theme";
 import routes from "~/routes/web";
@@ -64,19 +58,19 @@ export default function AlertsView(handle: Handle<AlertsView.Props>) {
 
 				{alerts.length === 0 ? (
 					<Empty>
-						<EmptyIcon>
-							<BellIcon size={48} strokeWidth={1.5} />
-						</EmptyIcon>
-						<EmptyTitle>No alerts configured</EmptyTitle>
-						<EmptyDescription>
+						<Empty.Icon>
+							<BellIcon size={24} strokeWidth={1.5} />
+						</Empty.Icon>
+						<Empty.Title>No alerts configured</Empty.Title>
+						<Empty.Description>
 							Create an alert to get notified when your monitors go down.
-						</EmptyDescription>
-						<EmptyAction>
+						</Empty.Description>
+						<Empty.Action>
 							<LinkButton href={routes.app.team.alerts.new.href({ team: team.slug })}>
 								<PlusIcon size={20} strokeWidth={1.5} />
 								Create Alert
 							</LinkButton>
-						</EmptyAction>
+						</Empty.Action>
 					</Empty>
 				) : (
 					<div mix={[css({ overflowX: "auto" })]}>

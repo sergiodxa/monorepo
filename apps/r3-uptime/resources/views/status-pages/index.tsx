@@ -14,13 +14,7 @@ import { css } from "remix/ui";
 import type { SelectStatusPage } from "~/database/schema";
 
 import Badge from "~/resources/components/badge";
-import {
-	Empty,
-	EmptyAction,
-	EmptyDescription,
-	EmptyIcon,
-	EmptyTitle,
-} from "~/resources/components/empty";
+import Empty from "~/resources/components/empty";
 import LinkButton from "~/resources/components/link-button";
 import { neutral, primary } from "~/resources/theme";
 import routes from "~/routes/web";
@@ -42,19 +36,19 @@ export default function StatusPagesView(handle: Handle<StatusPagesView.Props>) {
 			<div>
 				{pages.length === 0 ? (
 					<Empty>
-						<EmptyIcon>
-							<FileTextIcon size={48} strokeWidth={1.5} />
-						</EmptyIcon>
-						<EmptyTitle>No status pages yet</EmptyTitle>
-						<EmptyDescription>
+						<Empty.Icon>
+							<FileTextIcon size={24} strokeWidth={1.5} />
+						</Empty.Icon>
+						<Empty.Title>No status pages yet</Empty.Title>
+						<Empty.Description>
 							Create a status page to share your system status with your users.
-						</EmptyDescription>
-						<EmptyAction>
+						</Empty.Description>
+						<Empty.Action>
 							<LinkButton href={routes.app.team.statusPages.new.href({ team: team.slug })}>
 								<PlusIcon size={20} strokeWidth={1.5} />
 								Create Status Page
 							</LinkButton>
-						</EmptyAction>
+						</Empty.Action>
 					</Empty>
 				) : (
 					<div mix={[css({ overflowX: "auto" })]}>

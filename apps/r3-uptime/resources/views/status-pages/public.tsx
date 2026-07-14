@@ -23,7 +23,7 @@ import type { SelectMonitorDailyStats, SelectStatusPage } from "~/database/schem
 import type { BadgeTone } from "~/resources/components/badge";
 
 import Badge from "~/resources/components/badge";
-import { Empty, EmptyDescription } from "~/resources/components/empty";
+import Empty from "~/resources/components/empty";
 import { neutral, primary, status } from "~/resources/theme";
 import MiniHeatmap from "~/resources/views/shared/mini-heatmap";
 import routes from "~/routes/web";
@@ -277,7 +277,7 @@ export default function StatusPageView(handle: Handle<StatusPageView.Props>) {
 
 				{isEmpty ? (
 					<Empty>
-						<EmptyDescription>No services are configured for this status page.</EmptyDescription>
+						<Empty.Description>No services are configured for this status page.</Empty.Description>
 					</Empty>
 				) : (
 					<>

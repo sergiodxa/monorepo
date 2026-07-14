@@ -16,13 +16,7 @@ import type { SelectMaintenanceWindow, SelectMonitor } from "~/database/schema";
 
 import MaintenanceWindow from "~/app/data/maintenance-window";
 import Badge from "~/resources/components/badge";
-import {
-	Empty,
-	EmptyAction,
-	EmptyDescription,
-	EmptyIcon,
-	EmptyTitle,
-} from "~/resources/components/empty";
+import Empty from "~/resources/components/empty";
 import LinkButton from "~/resources/components/link-button";
 import { neutral, primary } from "~/resources/theme";
 import routes from "~/routes/web";
@@ -49,19 +43,19 @@ export default function MaintenanceWindowsView(handle: Handle<MaintenanceWindows
 			<div>
 				{windows.length === 0 ? (
 					<Empty>
-						<EmptyIcon>
-							<WrenchIcon size={48} strokeWidth={1.5} />
-						</EmptyIcon>
-						<EmptyTitle>No maintenance windows</EmptyTitle>
-						<EmptyDescription>
+						<Empty.Icon>
+							<WrenchIcon size={24} strokeWidth={1.5} />
+						</Empty.Icon>
+						<Empty.Title>No maintenance windows</Empty.Title>
+						<Empty.Description>
 							Schedule maintenance windows to suppress alerts during planned downtime.
-						</EmptyDescription>
-						<EmptyAction>
+						</Empty.Description>
+						<Empty.Action>
 							<LinkButton href={routes.app.team.maintenanceWindows.new.href({ team: team.slug })}>
 								<PlusIcon size={20} strokeWidth={1.5} />
 								Schedule Maintenance
 							</LinkButton>
-						</EmptyAction>
+						</Empty.Action>
 					</Empty>
 				) : (
 					<>

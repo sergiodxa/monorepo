@@ -23,13 +23,7 @@ import type { BadgeTone } from "~/resources/components/badge";
 
 import CronJobMonitor from "~/app/data/cron-job";
 import Badge from "~/resources/components/badge";
-import {
-	Empty,
-	EmptyAction,
-	EmptyDescription,
-	EmptyIcon,
-	EmptyTitle,
-} from "~/resources/components/empty";
+import Empty from "~/resources/components/empty";
 import LinkButton from "~/resources/components/link-button";
 import { Tab, TabList } from "~/resources/components/tabs";
 import { neutral, primary } from "~/resources/theme";
@@ -182,19 +176,19 @@ function HttpTable(handle: Handle<HttpTable.Props>) {
 		if (rows.length === 0) {
 			return (
 				<Empty>
-					<EmptyIcon>
-						<ActivityIcon size={48} strokeWidth={1.5} />
-					</EmptyIcon>
-					<EmptyTitle>No HTTP monitors yet</EmptyTitle>
-					<EmptyDescription>
+					<Empty.Icon>
+						<ActivityIcon size={24} strokeWidth={1.5} />
+					</Empty.Icon>
+					<Empty.Title>No HTTP monitors yet</Empty.Title>
+					<Empty.Description>
 						Create an HTTP monitor to start tracking your endpoints.
-					</EmptyDescription>
-					<EmptyAction>
+					</Empty.Description>
+					<Empty.Action>
 						<LinkButton href={routes.app.team.monitors.new.href({ team: team.slug })}>
 							<PlusIcon size={20} strokeWidth={1.5} />
 							Create Monitor
 						</LinkButton>
-					</EmptyAction>
+					</Empty.Action>
 				</Empty>
 			);
 		}
@@ -254,17 +248,17 @@ function DnsTable(handle: Handle<DnsTable.Props>) {
 		if (monitors.length === 0) {
 			return (
 				<Empty>
-					<EmptyIcon>
-						<GlobeIcon size={48} strokeWidth={1.5} />
-					</EmptyIcon>
-					<EmptyTitle>No DNS monitors yet</EmptyTitle>
-					<EmptyDescription>Create a DNS monitor to track DNS record changes.</EmptyDescription>
-					<EmptyAction>
+					<Empty.Icon>
+						<GlobeIcon size={24} strokeWidth={1.5} />
+					</Empty.Icon>
+					<Empty.Title>No DNS monitors yet</Empty.Title>
+					<Empty.Description>Create a DNS monitor to track DNS record changes.</Empty.Description>
+					<Empty.Action>
 						<LinkButton href={routes.app.team.dnsMonitors.new.href({ team: team.slug })}>
 							<PlusIcon size={20} strokeWidth={1.5} />
 							Create DNS Monitor
 						</LinkButton>
-					</EmptyAction>
+					</Empty.Action>
 				</Empty>
 			);
 		}
@@ -324,19 +318,19 @@ function TcpTable(handle: Handle<TcpTable.Props>) {
 		if (monitors.length === 0) {
 			return (
 				<Empty>
-					<EmptyIcon>
-						<NetworkIcon size={48} strokeWidth={1.5} />
-					</EmptyIcon>
-					<EmptyTitle>No TCP monitors yet</EmptyTitle>
-					<EmptyDescription>
+					<Empty.Icon>
+						<NetworkIcon size={24} strokeWidth={1.5} />
+					</Empty.Icon>
+					<Empty.Title>No TCP monitors yet</Empty.Title>
+					<Empty.Description>
 						Create a TCP monitor to check if ports are open and responsive.
-					</EmptyDescription>
-					<EmptyAction>
+					</Empty.Description>
+					<Empty.Action>
 						<LinkButton href={routes.app.team.tcpMonitors.new.href({ team: team.slug })}>
 							<PlusIcon size={20} strokeWidth={1.5} />
 							Create TCP Monitor
 						</LinkButton>
-					</EmptyAction>
+					</Empty.Action>
 				</Empty>
 			);
 		}
@@ -398,19 +392,19 @@ function CronJobsTable(handle: Handle<CronJobsTable.Props>) {
 		if (monitors.length === 0) {
 			return (
 				<Empty>
-					<EmptyIcon>
-						<ClockIcon size={48} strokeWidth={1.5} />
-					</EmptyIcon>
-					<EmptyTitle>No cron jobs yet</EmptyTitle>
-					<EmptyDescription>
+					<Empty.Icon>
+						<ClockIcon size={24} strokeWidth={1.5} />
+					</Empty.Icon>
+					<Empty.Title>No cron jobs yet</Empty.Title>
+					<Empty.Description>
 						Create a cron job monitor to track your scheduled tasks.
-					</EmptyDescription>
-					<EmptyAction>
+					</Empty.Description>
+					<Empty.Action>
 						<LinkButton href={routes.app.team.cronJobs.new.href({ team: team.slug })}>
 							<PlusIcon size={20} strokeWidth={1.5} />
 							Create Cron Job
 						</LinkButton>
-					</EmptyAction>
+					</Empty.Action>
 				</Empty>
 			);
 		}

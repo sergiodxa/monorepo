@@ -16,13 +16,7 @@ import type { BadgeTone } from "~/resources/components/badge";
 
 import CronJobMonitor from "~/app/data/cron-job";
 import Badge from "~/resources/components/badge";
-import {
-	Empty,
-	EmptyAction,
-	EmptyDescription,
-	EmptyIcon,
-	EmptyTitle,
-} from "~/resources/components/empty";
+import Empty from "~/resources/components/empty";
 import LinkButton from "~/resources/components/link-button";
 import { neutral, primary } from "~/resources/theme";
 import routes from "~/routes/web";
@@ -50,19 +44,19 @@ export default function CronJobsView(handle: Handle<CronJobsView.Props>) {
 			<div>
 				{monitors.length === 0 ? (
 					<Empty>
-						<EmptyIcon>
-							<ClockIcon size={48} strokeWidth={1.5} />
-						</EmptyIcon>
-						<EmptyTitle>No cron jobs yet</EmptyTitle>
-						<EmptyDescription>
+						<Empty.Icon>
+							<ClockIcon size={24} strokeWidth={1.5} />
+						</Empty.Icon>
+						<Empty.Title>No cron jobs yet</Empty.Title>
+						<Empty.Description>
 							Create a cron job monitor to track your scheduled tasks.
-						</EmptyDescription>
-						<EmptyAction>
+						</Empty.Description>
+						<Empty.Action>
 							<LinkButton href={routes.app.team.cronJobs.new.href({ team: team.slug })}>
 								<PlusIcon size={20} strokeWidth={1.5} />
 								Create Cron Job
 							</LinkButton>
-						</EmptyAction>
+						</Empty.Action>
 					</Empty>
 				) : (
 					<div mix={[css({ overflowX: "auto" })]}>

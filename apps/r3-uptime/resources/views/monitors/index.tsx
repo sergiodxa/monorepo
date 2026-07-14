@@ -31,13 +31,7 @@ import type { BadgeTone } from "~/resources/components/badge";
 
 import Badge from "~/resources/components/badge";
 import Button from "~/resources/components/button";
-import {
-	Empty,
-	EmptyAction,
-	EmptyDescription,
-	EmptyIcon,
-	EmptyTitle,
-} from "~/resources/components/empty";
+import Empty from "~/resources/components/empty";
 import LinkButton from "~/resources/components/link-button";
 import MonitorRowActions from "~/resources/components/monitor-row-actions";
 import { neutral, primary } from "~/resources/theme";
@@ -99,19 +93,19 @@ export default function HttpMonitorsView(handle: Handle<HttpMonitorsView.Props>)
 			<div>
 				{rows.length === 0 ? (
 					<Empty>
-						<EmptyIcon>
-							<MonitorIcon size={48} strokeWidth={1.5} />
-						</EmptyIcon>
-						<EmptyTitle>No HTTP monitors yet</EmptyTitle>
-						<EmptyDescription>
+						<Empty.Icon>
+							<MonitorIcon size={24} strokeWidth={1.5} />
+						</Empty.Icon>
+						<Empty.Title>No HTTP monitors yet</Empty.Title>
+						<Empty.Description>
 							Create an HTTP monitor to start tracking your endpoints.
-						</EmptyDescription>
-						<EmptyAction>
+						</Empty.Description>
+						<Empty.Action>
 							<LinkButton href={routes.app.team.monitors.new.href({ team: team.slug })}>
 								<PlusIcon size={20} strokeWidth={1.5} />
 								Create Monitor
 							</LinkButton>
-						</EmptyAction>
+						</Empty.Action>
 					</Empty>
 				) : (
 					<div mix={[css({ overflowX: "auto" })]}>

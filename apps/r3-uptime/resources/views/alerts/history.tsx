@@ -17,13 +17,7 @@ import type { SelectAlert, SelectAlertEvent } from "~/database/schema";
 import type { BadgeTone } from "~/resources/components/badge";
 
 import Badge from "~/resources/components/badge";
-import {
-	Empty,
-	EmptyAction,
-	EmptyDescription,
-	EmptyIcon,
-	EmptyTitle,
-} from "~/resources/components/empty";
+import Empty from "~/resources/components/empty";
 import LinkButton from "~/resources/components/link-button";
 import { neutral } from "~/resources/theme";
 import routes from "~/routes/web";
@@ -57,20 +51,20 @@ export default function AlertHistoryView(handle: Handle<AlertHistoryView.Props>)
 			<div>
 				{events.length === 0 ? (
 					<Empty>
-						<EmptyIcon>
-							<HistoryIcon size={48} strokeWidth={1.5} />
-						</EmptyIcon>
-						<EmptyTitle>No alert events yet</EmptyTitle>
-						<EmptyDescription>
+						<Empty.Icon>
+							<HistoryIcon size={24} strokeWidth={1.5} />
+						</Empty.Icon>
+						<Empty.Title>No alert events yet</Empty.Title>
+						<Empty.Description>
 							Alert events will appear here when monitors trigger alerts. Configure alerts to get
 							started.
-						</EmptyDescription>
-						<EmptyAction>
+						</Empty.Description>
+						<Empty.Action>
 							<LinkButton href={routes.app.team.alerts.index.href({ team: team.slug })}>
 								<BellIcon size={20} strokeWidth={1.5} />
 								View Alerts
 							</LinkButton>
-						</EmptyAction>
+						</Empty.Action>
 					</Empty>
 				) : (
 					<div mix={[css({ overflowX: "auto" })]}>
