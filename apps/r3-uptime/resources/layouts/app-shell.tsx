@@ -258,7 +258,7 @@ const navCell = css({
 	flex: 1,
 	minHeight: 0,
 	overflowY: "auto",
-	padding: "8px 12px",
+	padding: "16px 12px",
 	"@media (min-width: 768px)": {
 		gridArea: "nav",
 		borderRight: `1px solid ${neutral[200]}`,
@@ -268,11 +268,13 @@ const navCell = css({
 
 /** Bottom sidebar cell: the user menu. */
 const userMenuCell = css({
-	padding: "8px 12px",
+	padding: 16,
+	borderTop: `1px solid ${neutral[200]}`,
 	flexShrink: 0,
 	"@media (min-width: 768px)": {
 		gridArea: "usermenu",
-		padding: "8px 16px 16px",
+		padding: 16,
+		borderTop: `1px solid ${neutral[200]}`,
 		borderRight: `1px solid ${neutral[200]}`,
 	},
 	"@media (prefers-color-scheme: dark)": { borderColor: neutral[800] },
@@ -488,9 +490,24 @@ export default function AppShell(handle: Handle<AppShell.Props>) {
 			children,
 		} = handle.props;
 
+		let dashboardHref = routes.app.team.dashboard.index.href({ team: team.slug });
+
+		/**
+		 * A nav item is active on an exact match, or (for every item except the
+		 * dashboard) when `currentPath` is nested under it, e.g. so "HTTP Monitors"
+		 * stays highlighted on a specific monitor's own detail/edit page. The
+		 * dashboard link is excluded from the prefix check since it's never a parent
+		 * of another route the way the other nav items are.
+		 */
+		function isNavItemActive(href: string): boolean {
+			if (currentPath === undefined) return false;
+			if (currentPath === href) return true;
+			return href !== dashboardHref && currentPath.startsWith(`${href}/`);
+		}
+
 		let primaryNavItems: Array<{ href: string; label: string; icon: RemixNode }> = [
 			{
-				href: routes.app.team.dashboard.index.href({ team: team.slug }),
+				href: dashboardHref,
 				label: "Dashboard",
 				icon: <ActivityIcon size={16} strokeWidth={1.5} />,
 			},
@@ -603,8 +620,8 @@ export default function AppShell(handle: Handle<AppShell.Props>) {
 								<li key={item.href}>
 									<a
 										href={item.href}
-										aria-current={item.href === currentPath ? "page" : undefined}
-										mix={item.href === currentPath ? [navLink, navLinkActive] : [navLink]}
+										aria-current={isNavItemActive(item.href) ? "page" : undefined}
+										mix={isNavItemActive(item.href) ? [navLink, navLinkActive] : [navLink]}
 									>
 										{item.icon}
 										<span>{item.label}</span>
@@ -621,8 +638,8 @@ export default function AppShell(handle: Handle<AppShell.Props>) {
 											href={item.href}
 											target={item.target}
 											rel={item.target ? "noreferrer" : undefined}
-											aria-current={item.href === currentPath ? "page" : undefined}
-											mix={item.href === currentPath ? [navLink, navLinkActive] : [navLink]}
+											aria-current={isNavItemActive(item.href) ? "page" : undefined}
+											mix={isNavItemActive(item.href) ? [navLink, navLinkActive] : [navLink]}
 										>
 											{item.icon}
 											<span>{item.label}</span>

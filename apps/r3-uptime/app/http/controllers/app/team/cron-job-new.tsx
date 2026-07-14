@@ -28,6 +28,7 @@ export default createAction(routes.app.team.cronJobs.new, {
 			<DocumentLayout title={`${ctx.team.name} · New cron job monitor`}>
 				<AppShell
 					team={ctx.team}
+					currentPath={ctx.url.pathname}
 					teams={ctx.teams}
 					viewer={viewer}
 					isAdmin={ctx.membership.role === "admin"}

@@ -35,6 +35,7 @@ export default createAction(routes.app.team.dnsMonitors.index, {
 			<DocumentLayout title={`${ctx.team.name} · DNS monitors`}>
 				<AppShell
 					team={ctx.team}
+					currentPath={ctx.url.pathname}
 					teams={ctx.teams}
 					viewer={viewer}
 					isAdmin={ctx.membership.role === "admin"}

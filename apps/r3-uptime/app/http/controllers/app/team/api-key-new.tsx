@@ -30,6 +30,7 @@ export default createAction(routes.app.team.apiKeys.new, {
 			<DocumentLayout title={`${ctx.team.name} · New API key`}>
 				<AppShell
 					team={ctx.team}
+					currentPath={ctx.url.pathname}
 					teams={ctx.teams}
 					viewer={viewer}
 					isAdmin={ctx.membership.role === "admin"}

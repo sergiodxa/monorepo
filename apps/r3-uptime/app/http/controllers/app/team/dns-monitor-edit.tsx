@@ -38,6 +38,7 @@ export default createAction(routes.app.team.dnsMonitors.edit, {
 			<DocumentLayout title={`${ctx.team.name} · Edit ${monitor.name}`}>
 				<AppShell
 					team={ctx.team}
+					currentPath={ctx.url.pathname}
 					teams={ctx.teams}
 					viewer={viewer}
 					isAdmin={ctx.membership.role === "admin"}

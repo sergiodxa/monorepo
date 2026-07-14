@@ -39,6 +39,7 @@ export default createAction(routes.app.team.checkout, {
 				<DocumentLayout title={`${ctx.team.name} · Billing`}>
 					<AppShell
 						team={ctx.team}
+						currentPath={ctx.url.pathname}
 						teams={ctx.teams}
 						viewer={viewer}
 						isAdmin={ctx.membership.role === "admin"}

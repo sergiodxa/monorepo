@@ -38,6 +38,7 @@ export default createAction(routes.app.team.maintenanceWindows.index, {
 			<DocumentLayout title={`${ctx.team.name} · Maintenance windows`}>
 				<AppShell
 					team={ctx.team}
+					currentPath={ctx.url.pathname}
 					teams={ctx.teams}
 					viewer={viewer}
 					isAdmin={ctx.membership.role === "admin"}

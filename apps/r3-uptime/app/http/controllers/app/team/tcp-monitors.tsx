@@ -35,6 +35,7 @@ export default createAction(routes.app.team.tcpMonitors.index, {
 			<DocumentLayout title={`${ctx.team.name} · TCP monitors`}>
 				<AppShell
 					team={ctx.team}
+					currentPath={ctx.url.pathname}
 					teams={ctx.teams}
 					viewer={viewer}
 					isAdmin={ctx.membership.role === "admin"}

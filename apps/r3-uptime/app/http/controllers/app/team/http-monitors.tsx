@@ -52,6 +52,7 @@ export default createAction(routes.app.team.monitors.index, {
 			<DocumentLayout title={`${ctx.team.name} · HTTP monitors`}>
 				<AppShell
 					team={ctx.team}
+					currentPath={ctx.url.pathname}
 					teams={ctx.teams}
 					viewer={viewer}
 					isAdmin={ctx.membership.role === "admin"}

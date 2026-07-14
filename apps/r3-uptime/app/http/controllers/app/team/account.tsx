@@ -41,6 +41,7 @@ export default createAction(routes.app.team.account, {
 			<DocumentLayout title={`${ctx.team.name} · Account`}>
 				<AppShell
 					team={ctx.team}
+					currentPath={ctx.url.pathname}
 					teams={ctx.teams}
 					viewer={viewer}
 					isAdmin={ctx.membership.role === "admin"}

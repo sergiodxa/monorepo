@@ -40,6 +40,7 @@ export default createAction(routes.app.team.alerts.index, {
 			<DocumentLayout title={`${ctx.team.name} · Alerts`}>
 				<AppShell
 					team={ctx.team}
+					currentPath={ctx.url.pathname}
 					teams={ctx.teams}
 					viewer={viewer}
 					isAdmin={ctx.membership.role === "admin"}

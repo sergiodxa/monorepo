@@ -47,6 +47,7 @@ export default createAction(routes.app.team.statusPages.index, {
 			<DocumentLayout title={`${ctx.team.name} · Status pages`}>
 				<AppShell
 					team={ctx.team}
+					currentPath={ctx.url.pathname}
 					teams={ctx.teams}
 					viewer={viewer}
 					isAdmin={ctx.membership.role === "admin"}
