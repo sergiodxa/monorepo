@@ -1,10 +1,13 @@
 /**
- * Client island: posts to the "run monitor" action via `fetch()` instead of a
- * plain form submit, so clicking doesn't navigate away, and shows a spinning
- * icon while the request is in flight. `Monitor.ping` only queues a workflow
- * run — the check itself finishes asynchronously — so "done" here means "the
- * queue request completed", matching the old app's own fetcher-driven spinner
- * (tied to request state, not to whether the queued check has finished).
+ * Client island: a real `<form>` posting to the "run monitor" action, so it
+ * works with no JS at all (a plain navigating submit, same as before this
+ * component existed) — `on("submit")` only runs once hydrated, where it
+ * intercepts the submit to `fetch()` the same action instead, so clicking
+ * doesn't navigate away, and spins the icon while the request is in flight.
+ * `Monitor.ping` only queues a workflow run — the check itself finishes
+ * asynchronously — so "done" here means "the queue request completed",
+ * matching the old app's own fetcher-driven spinner (tied to request state,
+ * not to whether the queued check has finished).
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -35,20 +38,20 @@ export const RunMonitorButton = clientEntry(
 		let pending = false;
 
 		return () => (
-			<button
-				type="button"
-				disabled={pending}
+			<form
+				method="post"
+				action={handle.props.action}
 				mix={[
-					buttonBase,
-					buttonSizeMix.md,
-					buttonVariantMix.outline.neutral,
-					on("click", async () => {
+					css({ margin: 0 }),
+					on("submit", async (event) => {
+						event.preventDefault();
 						pending = true;
 						handle.update();
 						try {
-							let body = new FormData();
-							body.set("monitor_id", handle.props.monitorId);
-							await fetch(handle.props.action, { method: "POST", body });
+							await fetch(handle.props.action, {
+								method: "POST",
+								body: new FormData(event.currentTarget),
+							});
 						} finally {
 							pending = false;
 							handle.update();
@@ -56,9 +59,16 @@ export const RunMonitorButton = clientEntry(
 					}),
 				]}
 			>
-				<PlayIcon size={16} strokeWidth={1.5} mix={[pending && spinner]} />
-				Run Monitor
-			</button>
+				<input type="hidden" name="monitor_id" value={handle.props.monitorId} />
+				<button
+					type="submit"
+					disabled={pending}
+					mix={[buttonBase, buttonSizeMix.md, buttonVariantMix.outline.neutral]}
+				>
+					<PlayIcon size={16} strokeWidth={1.5} mix={[pending && spinner]} />
+					Run Monitor
+				</button>
+			</form>
 		);
 	},
 );
